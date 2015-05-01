@@ -18,3 +18,4 @@
   // c++11 code here
 #endif
 ```
+* For heterogenous hardware support (CPU/GPU). Hope the GPU-specific component could be isolated easily. That is too say if we use `USE_CUDA` macro to wrap gpu-related code, the macro should not be everywhere in the project.
