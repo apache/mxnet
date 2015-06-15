@@ -8,23 +8,20 @@
 #include <dmlc/base.h>
 #include <mshadow/tensor.h>
 #include "./base.h"
-#include "./ref_counter.h"
 
 namespace mxnet {
-/*! \brief to be moved to dag engine */
-typedef uint64_t NodeId;
+
+
 /*!
  * \brief ndarray interface, reuse mshadow::TBlob
  *    for storage layer
  */
-class NArray{
+class NArray {
  public:
   // default copy/move constructor will be OK
   NArray() {}
   ~NArray() {
-    if (ref_counter_.value() == 1) {
-      // engine->ScheduleDelete
-    }
+
   }
   
  private:

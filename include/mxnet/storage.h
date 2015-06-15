@@ -33,15 +33,12 @@ public:
    * \param dev_mask the device mask of the target device, can be cpu::kDevMask or gpu::kDevMask
    * \param dev_id the device ID of the target device
    */
-  virtual Handle Alloc(size_t size, int dev_mask, int dev_id);
+  virtual Handle Alloc(size_t size, int dev_mask, int dev_id) = 0;
   /*!
    * \brief free the space represened the handle
    * \param handle the handle to memory to be freed
    */
-  virtual void Free(Handle handle);
-
- protected:
-  
+  virtual void Free(Handle handle) = 0;  
 };
 }
 #endif  // MXNET_STORAGE_H_

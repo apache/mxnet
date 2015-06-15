@@ -47,18 +47,19 @@ ifneq ($(ADD_LDFLAGS), NONE)
 endif
 
 OBJ = storage.o
+OBJCXX11 = engine.o
 
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
 
 .PHONY: clean all
 
-all: $(OBJ)
+all: $(OBJ) $(OBJCXX11)
 
 $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
 storage.o: src/storage/storage.cc
-
+engine.o: src/dag_engine/simple_engine.cc
 
 $(BIN) :
 	$(CXX) $(CFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
