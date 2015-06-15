@@ -47,7 +47,7 @@ ifneq ($(ADD_LDFLAGS), NONE)
 endif
 
 OBJ = storage.o
-OBJCXX11 = engine.o
+OBJCXX11 = engine.o narray.o
 
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
 
@@ -60,6 +60,7 @@ $(DMLC_CORE)/libdmlc.a:
 
 storage.o: src/storage/storage.cc
 engine.o: src/dag_engine/simple_engine.cc
+narray.o: src/narray/narray.cc
 
 $(BIN) :
 	$(CXX) $(CFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)

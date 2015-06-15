@@ -77,6 +77,8 @@ class DAGEngine {
   virtual void WaitForVar(Variable var) {}
   /*! \brief wait until all the activity of dag engine finishes */
   virtual void WaitForAll() {}
+  /*! \return DAG engine singleton */
+  static DAGEngine *Get();
 };
 }  // namespace mxnet
 #endif  // MXNET_DAG_ENGINE_H_

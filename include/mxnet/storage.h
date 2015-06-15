@@ -38,7 +38,9 @@ public:
    * \brief free the space represened the handle
    * \param handle the handle to memory to be freed
    */
-  virtual void Free(Handle handle) = 0;  
+  virtual void Free(Handle handle) = 0;
+  /*! \return storage manager singleton */
+  static StorageManager *Get();  
 };
 }
 #endif  // MXNET_STORAGE_H_

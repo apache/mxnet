@@ -23,6 +23,11 @@ class SimpleEngine : public DAGEngine {
     // that have the info about the variable
     // use ptr directly instead of ID because this avoids an indirect mapping
     return NULL;
-  }
+  }  
 };
+// implements the singleton factory
+DAGEngine* DAGEngine::Get() {
+  static SimpleEngine engine;
+  return &engine;
+}
 }  // namespace mxnet
