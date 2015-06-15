@@ -27,3 +27,6 @@
 *.out
 *.app
 *~
+dmlc-core
+mshadow
+config.mk
