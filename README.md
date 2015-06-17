@@ -1,5 +1,7 @@
-# cxx-minerva
+# MXNet
+This is a on going experimental project.
 
+# Guidelines
 * Use google c style
 * Put module header in [include](include)
   - move them to ```project-name/include``` when we finalized the name
