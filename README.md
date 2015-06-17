@@ -1,5 +1,5 @@
 # MXNet
-This is a on going experimental project.
+This is an experimental project to put cxxnet and minerva together.
 
 # Guidelines
 * Use google c style
