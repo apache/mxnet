@@ -4,8 +4,8 @@
  * \brief activation operator of mxnet
  */
 
-#ifndef ACTIVATION_OP_INL_HPP
-#define ACTIVATION_OP_INL_HPP
+#ifndef SRC_OPERATOR_ACTIVATION_OP_INL_HPP_
+#define SRC_OPERATOR_ACTIVATION_OP_INL_HPP_
 #pragma once
 #include <mxnet/operator.h>
 #include <vector>
@@ -34,7 +34,8 @@ class ActivationOp : public Operator {
     mshadow::Tensor<xpu, 2> out = out_data[0].FlatTo2D(stream);
     out = mshadow::expr::F<ForwardOp>(in);
   }
-  virtual void Backward(RunContext ctx,
+  virtual void Backward(Option opt,
+                        RunContext ctx,
                         const std::vector<TBlob> &grad_next,
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_grad,
@@ -56,6 +57,6 @@ class ActivationOp : public Operator {
 };  // class ActivationOp
 }  // namespace mxnet
 
-#endif  // ACTIVATION_OP_INL_HPP
+#endif  // SRC_OPERATOR_ACTIVATION_OP_INL_HPP_
 
 

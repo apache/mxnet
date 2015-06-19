@@ -26,6 +26,8 @@ class Operator {
   struct Option {
     /*! \brief whether it is training phase*/
     int is_train;
+    /*! \brief whether propagate gradient to x in backprop */
+    int prop_grad;
   };
   /*! \briref gradient request type the request can have */
   enum GradReqType {
@@ -43,7 +45,7 @@ class Operator {
    * \param name parameter name
    * \param val string for configuration
    */
-  virtual void SetParam(const char *name, const char *val) {}  
+  virtual void SetParam(const char *name, const char *val) {}
   /*!
    * \brief inter the shape of output given the input data
    * \param in_shape the shape of input arguments of the operator
@@ -73,7 +75,8 @@ class Operator {
    * \param req_types request types of the gradient saving operation
    * \sa GradReqType
    */
-  virtual void Backward(RunContext ctx,
+  virtual void Backward(Option opt,
+                        RunContext ctx,
                         const std::vector<TBlob> &grad_next,
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_grad,
