@@ -6,6 +6,7 @@
 #ifndef MXNET_STORAGE_H_
 #define MXNET_STORAGE_H_
 #include "./base.h"
+#include "./tensor_blob.h"
 
 namespace mxnet {
 /*! \brief memory allocator of storage */
@@ -17,23 +18,20 @@ public:
   struct Handle {
     /*! \brief pointer to the data */
     void *dptr;
-    /*! \brief device mask of the memory */
-    int dev_mask;
-    /*! \brief device id of the memory */
-    int dev_id;
+    /*! \brief context information about device and deviceID */
+    Context ctx;
     /*!
      * \brief internal handle reserved for manager,
      *   user should not change or use this
      */
-    void *handle_;        
+    void *handle_; 
   };  
   /*!
    * \brief allocate a new contiguous memory for a given size
    * \param size the total size of memory in bytes
-   * \param dev_mask the device mask of the target device, can be cpu::kDevMask or gpu::kDevMask
-   * \param dev_id the device ID of the target device
+   * \param ctx context information about the device and deviceID 
    */
-  virtual Handle Alloc(size_t size, int dev_mask, int dev_id) = 0;
+  virtual Handle Alloc(size_t size, Context ctx) = 0;
   /*!
    * \brief free the space represened the handle
    * \param handle the handle to memory to be freed

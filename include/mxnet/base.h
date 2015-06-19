@@ -16,6 +16,13 @@
 #endif
 
 /*!
+ *\brief whether to use cuda support
+ */
+#ifndef MXNET_USE_CUDA
+#define MXNET_USE_CUDA MSHADOW_USE_CUDA
+#endif
+
+/*!
  *\brief whether to use cudnn library for convolution
  */
 #ifndef MXNET_USE_CUDNN
@@ -30,6 +37,5 @@ typedef mshadow::gpu gpu;
 typedef mshadow::index_t index_t;
 /*! \brief data type that will be used to store ndarray */
 typedef mshadow::default_real_t real_t;
-
 }  // namespace mxnet
 #endif  // MXNET_BASE_H_

@@ -7,10 +7,14 @@
 #define MXNET_NARRAY_H_
 #include <memory>
 #include <dmlc/base.h>
-#include <mshadow/tensor.h>
 #include "./base.h"
 #include "./storage.h"
+#include "./tensor_blob.h"
 #include "./dag_engine.h"
+// check c++11
+#if DMLC_USE_CXX11 == 0
+#error "cxx11 was required for narray module"
+#endif
 
 namespace mxnet {
 /*!
@@ -23,38 +27,37 @@ class NArray {
   /*!
    * \brief constructing a new dynamic NArray 
    * \param shape the shape of array
-   * \param dev_mask the device type of the NArray can be cpu::kDevMask or gpu::kDevMask
-   * \param dev_id the device id of the specific device, needed for GPU
+   * \param ctx context of NArray
    */
-  NArray(const mshadow::TShape &shape, int dev_mask, int dev_id)
-      : ptr_(new Chunk(shape, dev_mask, dev_id)) {
+  NArray(const TShape &shape, Context ctx)
+      : ptr_(new Chunk(shape, ctx, false)) {
   }
   /*!
    * \brief constructing a static NArray that shares data with TBlob
    *  Use with caution: allocate ONLY ONE NArray for each TBlob, 
    *  make sure the memory region is available through out the life of NArray
    * \param data the memory content of static data
+   * \param dev_id the device id this tensor sits at
    */  
-  NArray(const mshadow::TBlob &data)
-      : ptr_(new Chunk(data)) {
+  NArray(const TBlob &data, int dev_id)
+      : ptr_(new Chunk(data, dev_id)) {
   }
   /*!
    * \return the shape of current NArray    
    */
-  inline const mshadow::TShape &shape() const {
+  inline const TShape &shape() const {
     return ptr_->data.shape_;
   }
   /*!
-   * \return the device mask of NArray,
-   * this indicate which device the memory resides, can be cpu::kDevMask or gpu::kDevMask
+   * \return the context of NArray, this function is only valid when the NArray is not empty
    */
-  inline int dev_mask() const {
-    return ptr_->data.dev_mask_;
+  inline Context ctx() const {
+    return ptr_->shandle.ctx;
   }
   /*! \return whether this narray is not initialized */
   inline bool is_empty() const {
     return ptr_.get() == nullptr;
-  }
+  }  
 
  private:
   /*! \brief the real data chunk that backs NArray */
@@ -64,35 +67,49 @@ class NArray {
     /*! \brief variable from DAG engine */
     DAGEngine::Variable var;
     /*! \brief holds the data content */
-    mshadow::TBlob data;
+    TBlob data;
     /*!
      * \brief if this is true, this means the data do not come
      * from StorageManager, and do not need to be freed
      */
     bool static_data;
+    /*! \brief whether allocation is delayed */
+    bool delay_alloc;
     /*! \brief default cosntructor */
-    Chunk() : static_data(true) {
+    Chunk() : static_data(true), delay_alloc(false) {
       var  = DAGEngine::Get()->NewVar();
     }
     /*! \brief construct from static data */    
-    Chunk(const mshadow::TBlob &data)
-        : data(data), static_data(true) {
-      var  = DAGEngine::Get()->NewVar();
+    Chunk(const TBlob &data, int dev_id)
+        : data(data),
+          static_data(true),
+          delay_alloc(false) {
+      var = DAGEngine::Get()->NewVar();
+      shandle.ctx = Context(data.dev_mask_, dev_id);
     }
     /*! \brief construct a new chunk */
-    Chunk(const mshadow::TShape &shape, int dev_mask, int dev_id)
-        : static_data(false) {
-      shandle = StorageManager::Get()->Alloc(shape.Size(), dev_mask, dev_id);
-      var  = DAGEngine::Get()->NewVar();
-      data = mshadow::TBlob(shandle.dptr, shape, dev_mask);      
+    Chunk(const TShape &shape, Context ctx, bool delay_alloc_)
+        : static_data(false), delay_alloc(true) {
+      var = DAGEngine::Get()->NewVar();
+      data.shape_ = shape;
+      shandle.ctx = ctx;
+      if (!delay_alloc_) this->Alloc();
+    }
+    /*! \brief allocated the space */
+    inline void Alloc(void) {
+      CHECK(delay_alloc) << "memory already allocated";
+      shandle = StorageManager::Get()->Alloc(data.shape_.Size() * sizeof(real_t), shandle.ctx);
+      data = TBlob(static_cast<real_t*>(shandle.dptr), data.shape_, shandle.ctx.dev_mask);
+      delay_alloc = false;
     }
     /*! \brief destructor */
     ~Chunk() {
-      if (static_data) { 
-        DAGEngine::Get()->PushDelete([]{}, var);
+      if (static_data) {
+        DAGEngine::Get()->PushDelete([](RunContext s) {}, var);
       } else {
+        CHECK(!delay_alloc) << "deleted before allocation";
         StorageManager::Handle h = this->shandle;
-        DAGEngine::Get()->PushDelete([h] {
+        DAGEngine::Get()->PushDelete([h](RunContext s) {
             StorageManager::Get()->Free(h);
           }, var);
       }
@@ -100,13 +117,46 @@ class NArray {
   };
   /*! \brief internal data of NArray */
   std::shared_ptr<Chunk> ptr_;
-  // list of friend functions
-  friend NArray operator+(const NArray &lhs, const NArray &rhs);
-  friend NArray operator*(const NArray &lhs, const NArray &rhs);
+  /*!
+   * \brief constructing a new dynamic NArray 
+   * \param shape the shape of array
+   * \param ctx context of NArray
+   * \param delay_alloc whether delay the allocation
+   */
+  NArray(const TShape &shape, Context ctx, bool delay_alloc)
+      : ptr_(new Chunk(shape, ctx, delay_alloc)) {
+  }  
+  // add friend to helper functions
+  template<typename OP>
+  friend NArray BinaryEWise(const NArray &lhs, const NArray &rhs);
 };
-
+/*!
+ * \brief elementwise add
+ * \param lhs left operand
+ * \param rhs right operand
+ * \return a new result narray
+ */
 NArray operator+(const NArray &lhs, const NArray &rhs);
+/*!
+ * \brief elementwise substraction
+ * \param lhs left operand
+ * \param rhs right operand
+ * \return a new result narray
+ */
+NArray operator-(const NArray &lhs, const NArray &rhs);
+/*!
+ * \brief elementwise multiplication
+ * \param lhs left operand
+ * \param rhs right operand
+ * \return a new result narray
+ */
 NArray operator*(const NArray &lhs, const NArray &rhs);
-
+/*!
+ * \brief elementwise division
+ * \param lhs left operand
+ * \param rhs right operand
+ * \return a new result narray
+ */
+NArray operator/(const NArray &lhs, const NArray &rhs);
 }  // namespace mxnet
 #endif  // MXNET_NARRAY_H_

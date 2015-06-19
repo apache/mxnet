@@ -6,9 +6,9 @@
 #ifndef MXNET_OPERATOR_H_
 #define MXNET_OPERATOR_H_
 #include <dmlc/base.h>
-#include <mshadow/tensor.h>
 #include "./base.h"
 #include "./narray.h"
+#include "./tensor_blob.h"
 
 namespace mxnet {
 /*!
@@ -18,14 +18,25 @@ namespace mxnet {
  *  This interface relies on pre-allocated memory in TBlob, the caller need to set
  *  the memory region in TBlob correctly before calling Forward and Backward
  *
- * \sa mshadow::TBlob, mshadow::TShape
+ * \sa TBlob, TShape
  */
 class Operator {
  public:
-  /*! \brief context to pass into the forward function */
-  struct Context {
+  /*! \brief option to pass into the forward function */
+  struct Option {
     /*! \brief whether it is training phase*/
     int is_train;
+  };
+  /*! \briref gradient request type the request can have */
+  enum GradReqType {
+    /*! \brief no operation, do not write gradient */
+    kNullOp = 0,
+    /*! \brief write gradient to provided space */
+    kWriteTo = 1,
+    /*! \brief same as kWriteTo, but provided space is same as space of input-data */
+    kWriteInplace = 2,
+    /*! \brief add to the provided space */
+    kAddTo = 3
   };
   /*!
    * \brief set param for the operator from string
@@ -38,34 +49,35 @@ class Operator {
    * \param in_shape the shape of input arguments of the operator
    * \param out_shape the shape of outputs of the operator
    */
-  virtual void InferShape(const std::vector<mshadow::TShape> &in_shape,
-                          std::vector<mshadow::TShape> *out_shape) = 0;
+  virtual void InferShape(const std::vector<TShape> &in_shape,
+                          std::vector<TShape> *out_shape) = 0;
   /*!
    * \brief perform a forward operation of operator, save the output to TBlob
-   * \param ctx context on Forward such as whether this is training phase
+   * \param opt option on Forward such as whether this is training phase
+   * \param ctx runtime context
    * \param in_data array of input data
    * \param out_data array of output data,
    *        the space of TBlob in out_data must be pre-allocated with InferShape
    */
-  virtual void Forward(Context ctx,
-                       const std::vector<mshadow::TBlob> &in_data,
-                       const std::vector<mshadow::TBlob> &out_data) = 0;
+  virtual void Forward(Option opt,
+                       RunContext ctx,
+                       const std::vector<TBlob> &in_data,
+                       const std::vector<TBlob> &out_data) = 0;
   /*!
    * \brief perform a backward operation of the operator to get the gradient
+   * \param ctx runtime context
    * \param grad_next the gradient value we get from output of the operator
    * \param in_data the array of input data
    * \param out_grad array of output gradient, there could be three possible TBlob
    *  in the each element in the array
    * \param req_types request types of the gradient saving operation
-   *
-   *  out_grad[i].dptr_ == NULL: means we do not need the gradient
-   *  out_grad[i].dptr_ == in_data[i].dptr_: means the gradient need can be saved inplace
-   *  out_grad[i].dptr_ != in_data[i].dptr_: means the gradient space is newly allocated
+   * \sa GradReqType
    */
-  virtual void Backward(const std::vector<mshadow::TBlob> &grad_next,
-                        const std::vector<mshadow::TBlob> &in_data,
-                        const std::vector<mshadow::TBlob> &out_grad,
-                        const std::vector<int> req);
+  virtual void Backward(RunContext ctx,
+                        const std::vector<TBlob> &grad_next,
+                        const std::vector<TBlob> &in_data,
+                        const std::vector<TBlob> &out_grad,
+                        const std::vector<GradReqType> req);
 };
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_H_

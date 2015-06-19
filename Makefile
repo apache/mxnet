@@ -46,14 +46,15 @@ ifneq ($(ADD_LDFLAGS), NONE)
 	LDFLAGS += $(ADD_LDFLAGS)
 endif
 
-OBJ = storage.o
-OBJCXX11 = engine.o narray.o
+OBJ = storage.o narray_op_cpu.o
+OBJCXX11 = engine.o narray.o 
+CUOBJ = narray_op_gpu.o
 
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
 
 .PHONY: clean all
 
-all: $(OBJ) $(OBJCXX11)
+all: $(OBJ) $(OBJCXX11) $(CUOBJ)
 
 $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
@@ -61,6 +62,8 @@ $(DMLC_CORE)/libdmlc.a:
 storage.o: src/storage/storage.cc
 engine.o: src/dag_engine/simple_engine.cc
 narray.o: src/narray/narray.cc
+narray_op_cpu.o: src/narray/narray_op_cpu.cc src/narray/narray_op-inl.h
+narray_op_gpu.o: src/narray/narray_op_gpu.cu src/narray/narray_op-inl.h
 
 $(BIN) :
 	$(CXX) $(CFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
