@@ -4,13 +4,13 @@
  * \brief activation operator of mxnet
  */
 
-#ifndef SRC_OPERATOR_ACTIVATION_OP_INL_HPP_
-#define SRC_OPERATOR_ACTIVATION_OP_INL_HPP_
-#pragma once
+#ifndef MXNET_ACTIVATION_OP_INL_HPP_
+#define MXNET_ACTIVATION_OP_INL_HPP_
 #include <mxnet/operator.h>
 #include <vector>
 
 namespace mxnet {
+namespace op {
 template<typename xpu, typename ForwardOp, typename BackOp>
 class ActivationOp : public Operator {
  public:
@@ -24,14 +24,12 @@ class ActivationOp : public Operator {
                        RunContext ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<TBlob> &out_data) {
-    CHECK(out_data.size() == 1) << \
-                           "Activation Op: only 1 output data is allowed";
-    CHECK(in_data.size() == 1) << \
-                          "Activation Op: only 1 input data is allowed";
+    CHECK(out_data.size() == 1);
+    CHECK(in_data.size() == 1);
     mshadow::Stream<xpu> *stream = \
       static_cast<mshadow::Stream<xpu> *>(ctx.stream);
-    mshadow::Tensor<xpu, 2> in = in_data[0].FlatTo2D(stream);
-    mshadow::Tensor<xpu, 2> out = out_data[0].FlatTo2D(stream);
+    mshadow::Tensor<xpu, 2> in = in_data[0].FlatTo2D<xpu, real_t>(stream);
+    mshadow::Tensor<xpu, 2> out = out_data[0].FlatTo2D<xpu, real_t>(stream);
     out = mshadow::expr::F<ForwardOp>(in);
   }
   virtual void Backward(Option opt,
@@ -39,24 +37,22 @@ class ActivationOp : public Operator {
                         const std::vector<TBlob> &grad_next,
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_grad,
-                        const std::vector<GradReqType> req) {
-    CHECK(grad_next.size() == 1) << \
-                            "Activation Op: only 1 input grad is allowed";
-    CHECK(in_data.size() == 1) << \
-                          "Activation Op: only 1 input data is allowed";
-    CHECK(req.size() == 1) << \
-                      "Activation Op: only 1 req is allowed";
-    CHECK(req[0] == kWriteInplace) << \
-                  "Activation Op: only support inplace mode";
+                        const std::vector<GradReqType> &req) {
+    CHECK(grad_next.size() == 1);
+    CHECK(in_data.size() == 1);
+    CHECK(out_grad.size() == 1);
+    CHECK(req.size() == 1);
+    CHECK(req[0] == kWriteInplace);
     mshadow::Stream<xpu> *stream = \
       static_cast<mshadow::Stream<xpu> *>(ctx.stream);
-    mshadow::Tensor<xpu, 2> grad = grad_next[0].FlatTo2D(stream);
-    mshadow::Tensor<xpu, 2> data = in_data[0].FlatTo2D(stream);
-    data = mshadow::expr::F<BackOp>(data) * grad;
+    mshadow::Tensor<xpu, 2> grad = grad_next[0].FlatTo2D<xpu, real_t>(stream);
+    mshadow::Tensor<xpu, 2> data = in_data[0].FlatTo2D<xpu, real_t>(stream);
+    Assign(mshadow::expr::F<BackOp>(data) * grad, data, req[0]);
   }
 };  // class ActivationOp
+}  // namespace op
 }  // namespace mxnet
 
-#endif  // SRC_OPERATOR_ACTIVATION_OP_INL_HPP_
+#endif  // MXNET_ACTIVATION_OP_INL_HPP_
 
 
