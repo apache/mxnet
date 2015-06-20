@@ -40,6 +40,7 @@ endif
 
 ifneq ($(ADD_CFLAGS), NONE)
 	CFLAGS += $(ADD_CFLAGS)
+	CFLAGS += -DDMLC_USE_CXX11=1
 endif
 
 ifneq ($(ADD_LDFLAGS), NONE)
@@ -47,8 +48,8 @@ ifneq ($(ADD_LDFLAGS), NONE)
 endif
 
 OBJ = storage.o narray_op_cpu.o
-OBJCXX11 = engine.o narray.o 
-CUOBJ = narray_op_gpu.o
+OBJCXX11 = engine.o narray.o operator.o
+CUOBJ = narray_op_gpu.o operator_gpu.o
 
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
 
@@ -64,6 +65,8 @@ engine.o: src/dag_engine/simple_engine.cc
 narray.o: src/narray/narray.cc
 narray_op_cpu.o: src/narray/narray_op_cpu.cc src/narray/narray_op-inl.h
 narray_op_gpu.o: src/narray/narray_op_gpu.cu src/narray/narray_op-inl.h
+operator.o: src/operator/operator.cc
+operator_gpu.o: src/operator/operator.cu
 
 $(BIN) :
 	$(CXX) $(CFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
@@ -72,13 +75,13 @@ $(OBJ) :
 	$(CXX) -c $(CFLAGS) -o $@ $(firstword $(filter %.cpp %.c %.cc, $^) )
 
 $(OBJCXX11) :
-	$(CXX) -std=c++0x -c $(CFLAGS) -o $@ $(firstword $(filter %.cpp %.c %.cc, $^) )
+	$(CXX) -std=c++11 -c $(CFLAGS) -o $@ $(firstword $(filter %.cpp %.c %.cc, $^) )
 
 $(SLIB) :
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
 $(CUOBJ) :
-	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $(filter %.cu, $^)
+	$(NVCC) --std=c++11 -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $(filter %.cu, $^)
 
 $(CUBIN) :
 	$(NVCC) -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" -Xlinker "$(LDFLAGS)" $(filter %.cu %.cpp %.o, $^)

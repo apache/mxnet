@@ -19,7 +19,7 @@ namespace mxnet {
 namespace narray {
 // true implementation
 template<typename xpu, typename OP>
-inline void Eval_(const TBlob &lhs, const TBlob &rhs, TBlob ret, RunContext ctx) {  
+inline void Eval_(const TBlob &lhs, const TBlob &rhs, TBlob ret, RunContext ctx) {
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = static_cast<mshadow::Stream<xpu>*>(ctx.stream);
   ret.FlatTo2D<xpu, real_t>(s)

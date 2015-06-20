@@ -4,8 +4,8 @@
  * \brief extra mshadow operation for mxnet
  * \author Bing Xu
  */
-#ifndef SRC_OPERATOR_OP_H_
-#define SRC_OPERATOR_OP_H_
+#ifndef MXNET_MSHADOW_OPERATOR_OP_H_
+#define MXNET_MSHADOW_OPERATOR_OP_H_
 #pragma once
 
 #include <algorithm>
@@ -38,7 +38,7 @@ struct sigmoid_grad {
 /*! \brief Rectified Linear Operation */
 struct relu {
   MSHADOW_XINLINE static real_t Map(real_t a) {
-    return std::max(a, 0.0f);
+    return a > 0.0f ? a : 0.0f;
   }
 };
 struct relu_grad {
@@ -103,7 +103,7 @@ struct square_root {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // SRC_OPERATOR_OP_H_
+#endif  // MXNET_MSHADOW_OPERATOR_OP_H_
 
 
 

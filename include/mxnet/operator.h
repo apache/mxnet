@@ -80,7 +80,7 @@ class Operator {
                         const std::vector<TBlob> &grad_next,
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_grad,
-                        const std::vector<GradReqType> req);
+                        const std::vector<GradReqType> &req);
 };
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_H_
