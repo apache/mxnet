@@ -41,13 +41,15 @@ struct Param {
   int reserved[64];
   inline void SetParam(const char *name, const char* val) {
     if (!strcmp(name, "nhidden")) num_hidden = atoi(val);
+    if (!strcmp(name, "num_input_node")) num_input_node = atoi(val);
+    if (!strcmp(name, "num_input_channel")) num_input_channel = atoi(val);
     if (!strcmp(name, "nchannel")) num_channel = atoi(val);
     if (!strcmp(name, "ngroup")) num_group = atoi(val);
     if (!strcmp(name, "kernel_size")) {
       kernel_y = kernel_x = atoi(val);
     }
-    if (!strcmp(name, "kernel_height")) kernel_height = atoi(val);
-    if (!strcmp(name, "kernel_width")) kernel_width = atoi(val);
+    if (!strcmp(name, "kernel_height")) kernel_y = atoi(val);
+    if (!strcmp(name, "kernel_width")) kernel_x = atoi(val);
     if (!strcmp(name, "stride")) {
       stride_y = stride_x = atoi(val);
     }

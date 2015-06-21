@@ -26,8 +26,6 @@ class Operator {
   struct Option {
     /*! \brief whether it is training phase*/
     int is_train;
-    /*! \brief whether propagate gradient to x in backprop */
-    int prop_grad;
   };
   /*! \briref gradient request type the request can have */
   enum GradReqType {
@@ -40,6 +38,19 @@ class Operator {
     /*! \brief add to the provided space */
     kAddTo = 3
   };
+  /*! \brief argument request type the request can have */
+  enum ArgReqType {
+    /*! \brief weight arg*/
+    kWeightArg = 0,
+    /*! \brief bias arg*/
+    kBiasArg = 1,
+    /*! \brief data args */
+    kDataArg = 2,
+  };
+  /*! \brief get request input arguments
+   *  \param args empty vector of reqest argument type
+   */
+  virtual void DescribeArgs(std::vector<ArgReqType> *args) = 0;
   /*!
    * \brief set param for the operator from string
    * \param name parameter name
@@ -49,9 +60,14 @@ class Operator {
   /*!
    * \brief inter the shape of output given the input data
    * \param in_shape the shape of input arguments of the operator
+   *                 For unknown shape, left TShape size to 0,
+   *                 InferShape will try to fix a correct shape;
+   *                 For known shape, InferShape will check shape
+   *
    * \param out_shape the shape of outputs of the operator
+   *                  InferShape will modify the vector to fill output TShape
    */
-  virtual void InferShape(const std::vector<TShape> &in_shape,
+  virtual void InferShape(std::vector<TShape> &in_shape,
                           std::vector<TShape> *out_shape) = 0;
   /*!
    * \brief perform a forward operation of operator, save the output to TBlob
@@ -75,8 +91,7 @@ class Operator {
    * \param req_types request types of the gradient saving operation
    * \sa GradReqType
    */
-  virtual void Backward(Option opt,
-                        RunContext ctx,
+  virtual void Backward(RunContext ctx,
                         const std::vector<TBlob> &grad_next,
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_grad,

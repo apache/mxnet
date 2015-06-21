@@ -9,10 +9,10 @@
 namespace mxnet {
 namespace op {
 
-Operator * CreateOperator(OpType type) {
+Operator *CreateOperator(OpType type) {
   return OperatorFactory<cpu>(type);
 }
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
 
