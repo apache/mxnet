@@ -52,7 +52,8 @@ class ActivationOp : public Operator {
       static_cast<mshadow::Stream<xpu> *>(ctx.stream);
     mshadow::Tensor<xpu, 2> grad = grad_next[0].FlatTo2D<xpu, real_t>(stream);
     mshadow::Tensor<xpu, 2> data = in_data[0].FlatTo2D<xpu, real_t>(stream);
-    Assign(data, mshadow::expr::F<BackOp>(data) * grad, req[0]);
+    mshadow::Tensor<xpu, 2> out = in_data[0].FlatTo2D<xpu, real_t>(stream);
+    Assign(out, mshadow::expr::F<BackOp>(data) * grad, req[0]);
   }
 };  // class ActivationOp
 }  // namespace op
