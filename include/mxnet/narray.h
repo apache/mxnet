@@ -7,6 +7,7 @@
 #define MXNET_NARRAY_H_
 #include <memory>
 #include <dmlc/base.h>
+#include <dmlc/logging.h>
 #include "./base.h"
 #include "./storage.h"
 #include "./tensor_blob.h"
@@ -25,7 +26,7 @@ class NArray {
   /*! \brief default cosntructor */
   NArray() {}
   /*!
-   * \brief constructing a new dynamic NArray 
+   * \brief constructing a new dynamic NArray
    * \param shape the shape of array
    * \param ctx context of NArray
    */
@@ -34,16 +35,16 @@ class NArray {
   }
   /*!
    * \brief constructing a static NArray that shares data with TBlob
-   *  Use with caution: allocate ONLY ONE NArray for each TBlob, 
+   *  Use with caution: allocate ONLY ONE NArray for each TBlob,
    *  make sure the memory region is available through out the life of NArray
    * \param data the memory content of static data
    * \param dev_id the device id this tensor sits at
-   */  
+   */
   NArray(const TBlob &data, int dev_id)
       : ptr_(new Chunk(data, dev_id)) {
   }
   /*!
-   * \return the shape of current NArray    
+   * \return the shape of current NArray
    */
   inline const TShape &shape() const {
     return ptr_->data.shape_;
@@ -57,7 +58,7 @@ class NArray {
   /*! \return whether this narray is not initialized */
   inline bool is_empty() const {
     return ptr_.get() == nullptr;
-  }  
+  }
 
  private:
   /*! \brief the real data chunk that backs NArray */
@@ -79,7 +80,7 @@ class NArray {
     Chunk() : static_data(true), delay_alloc(false) {
       var  = DAGEngine::Get()->NewVar();
     }
-    /*! \brief construct from static data */    
+    /*! \brief construct from static data */
     Chunk(const TBlob &data, int dev_id)
         : data(data),
           static_data(true),
@@ -118,14 +119,14 @@ class NArray {
   /*! \brief internal data of NArray */
   std::shared_ptr<Chunk> ptr_;
   /*!
-   * \brief constructing a new dynamic NArray 
+   * \brief constructing a new dynamic NArray
    * \param shape the shape of array
    * \param ctx context of NArray
    * \param delay_alloc whether delay the allocation
    */
   NArray(const TShape &shape, Context ctx, bool delay_alloc)
       : ptr_(new Chunk(shape, ctx, delay_alloc)) {
-  }  
+  }
   // add friend to helper functions
   template<typename OP>
   friend NArray BinaryEWise(const NArray &lhs, const NArray &rhs);
