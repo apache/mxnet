@@ -69,7 +69,7 @@ class Operator {
    *     in_shape allows unknown elements, which are checked by shape.ndim() == 0.
    *     For unknown shapes, InferShape will try to fill in the correct Shape in in_shape
    *     For known shapes, InferShape will check shape consistency
-   *  
+   *
    *     common practice: set the shape of data input, and usually weight's shape can be infered
    *
    * \param out_shape the shape of outputs of the operator
@@ -81,7 +81,7 @@ class Operator {
    * \brief perform a forward operation of operator, save the output to TBlob
    * \param opt option on Forward such as whether this is training phase
    * \param ctx runtime context
-   * \param in_data array of input data
+   * \param in_data array of input data, it is const
    * \param out_data array of output data,
    *        the space of TBlob in out_data must be pre-allocated with InferShape
    */
@@ -97,6 +97,7 @@ class Operator {
    * \param out_grad array of output gradient, there could be three possible TBlob
    *  in the each element in the array
    * \param req_types request types of the gradient saving operation
+   *                  only inplace will change input data
    * \sa GradReqType
    */
   virtual void Backward(RunContext ctx,
@@ -104,7 +105,7 @@ class Operator {
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<GradReqType> &req);
-  
+
   /*!
    * \brief factory unction, create a new operator
    * \param type the type of operator
