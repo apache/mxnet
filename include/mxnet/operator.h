@@ -47,6 +47,12 @@ class Operator {
     /*! \brief bias argument */
     kBiasArg = 2
   };
+  enum Property {
+    /*! \brief Op contains interanl state, won't influence engine schedule */
+    kContainInteralState = 1,
+    /*! \brief Op forward require random number, will influence engine schedule */
+    kForwardRequireRnd = 2,
+  };
   /*!
    * \brief get types of input argument of this oeprator
    * \return a vector corresponding to type of each argument
@@ -55,6 +61,14 @@ class Operator {
   virtual std::vector<ArgType> DescribeArgs() const {
     // default most of layers only have one data argument
     return std::vector<ArgType>(1, kDataArg);
+  }
+  /*!
+   * \brief describe property of op
+   * \return a bit map in int
+   */
+  virtual int DescribeProperty() const {
+    // default most of layer only conatin internal state
+    return kContainInteralState;
   }
   /*!
    * \brief set param for the operator from string
