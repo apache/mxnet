@@ -45,7 +45,6 @@ class ActivationOp : public Operator {
     CHECK(in_data.size() == 1);
     CHECK(out_grad.size() == 1);
     CHECK(req.size() == 1);
-    CHECK(req[0] == kWriteInplace);
     mshadow::Stream<xpu> *stream = \
       static_cast<mshadow::Stream<xpu> *>(ctx.stream);
     mshadow::Tensor<xpu, 2> grad = grad_next[0].FlatTo2D<xpu, real_t>(stream);
