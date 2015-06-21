@@ -6,10 +6,10 @@
 */
 #ifndef MXNET_OPERATOR_PARAM_H_
 #define MXNET_OPERATOR_PARAM_H_
-#pragma once
 
 namespace mxnet {
 namespace op {
+/*! \brief possible parameter for each operator */
 struct Param {
   /*! \brief number of hidden layers */
   int num_hidden;

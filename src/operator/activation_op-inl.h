@@ -1,30 +1,28 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file activation_op-inl.hpp
+ * \file activation_op-inl.h
  * \brief activation operator of mxnet
  */
 
-#ifndef MXNET_ACTIVATION_OP_INL_HPP_
-#define MXNET_ACTIVATION_OP_INL_HPP_
-#include <mxnet/operator.h>
+#ifndef MXNET_OPERATOR_ACTIVATION_OP_INL_H_
+#define MXNET_OPERATOR_ACTIVATION_OP_INL_H_
+
 #include <vector>
-#include "./assign_helper.h"
+#include <dmlc/logging.h>
+#include <mxnet/operator.h>
+#include "./operator_common.h"
 
 namespace mxnet {
 namespace op {
 template<typename xpu, typename ForwardOp, typename BackOp>
 class ActivationOp : public Operator {
  public:
-  virtual void DescribeArgs(std::vector<ArgReqType> *args) {
-      args->clear();
-      args->push_back(kDataArg);
-  }
-  virtual void InferShape(std::vector<TShape> &in_shape,
+  virtual void InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape) {
-    CHECK(in_shape.size() == 1) << "Only 1 input is allowed";
-    CHECK(in_shape[0].Size() > 0) << "Must set input data shape";
-    TShape out = in_shape[0];
-    out_shape->push_back(out);
+    CHECK(in_shape->size() == 1) << "Only 1 input is allowed";
+    CHECK((*in_shape)[0].ndim() != 0 ) << "Require data shape to be known";
+    out_shape->clear();
+    out_shape->push_back((*in_shape)[0]);
   }
   virtual void Forward(Option opt,
                        RunContext ctx,
@@ -53,12 +51,10 @@ class ActivationOp : public Operator {
     mshadow::Tensor<xpu, 2> grad = grad_next[0].FlatTo2D<xpu, real_t>(stream);
     mshadow::Tensor<xpu, 2> data = in_data[0].FlatTo2D<xpu, real_t>(stream);
     mshadow::Tensor<xpu, 2> out = in_data[0].FlatTo2D<xpu, real_t>(stream);
-    Assign(out, mshadow::expr::F<BackOp>(data) * grad, req[0]);
+    Assign(out, req[0], mshadow::expr::F<BackOp>(data) * grad);
   }
 };  // class ActivationOp
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_ACTIVATION_OP_INL_HPP_
-
-
+#endif  // MXNET_OPERATOR_ACTIVATION_OP_INL_H_

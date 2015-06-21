@@ -1,13 +1,12 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file op.h
+ * \file mshadow_op.h
  * \brief extra mshadow operation for mxnet
  * \author Bing Xu
  */
 #ifndef MXNET_MSHADOW_OPERATOR_OP_H_
 #define MXNET_MSHADOW_OPERATOR_OP_H_
-#pragma once
-
+#include <mxnet/base.h>
 #include <algorithm>
 
 namespace mxnet {
@@ -104,6 +103,4 @@ struct square_root {
 }  // namespace mxnet
 
 #endif  // MXNET_MSHADOW_OPERATOR_OP_H_
-
-
 
