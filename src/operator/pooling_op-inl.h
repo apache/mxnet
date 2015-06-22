@@ -19,10 +19,6 @@ namespace op {
 template<typename xpu, typename Reducer, OpType mode>
 class PoolingOp : public Operator {
  public:
-  virtual std::vector<ArgType> DescribeArgs() const {
-    ArgType ret[] = {kDataArg};
-    return std::vector<ArgType>(ret, ret + 1);
-  }
   virtual void SetParam(const char *name, const char *val) {
     param_.SetParam(name, val);
   }

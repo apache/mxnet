@@ -13,6 +13,8 @@
 #include "./fully_connect_op-inl.h"
 #include "./convolution_op-inl.h"
 #include "./pooling_op-inl.h"
+#include "./reshape_op-inl.h"
+
 
 namespace mxnet {
 namespace op {
@@ -34,6 +36,10 @@ inline Operator *CreateOperator_(OpType type) {
       return new PoolingOp<xpu, mshadow::red::maximum, kMaxPooling>();
     case kAvgPooling:
       return new PoolingOp<xpu, mshadow::red::sum, kAvgPooling>();
+    case kFlatten:
+      return new ReshapeOp<xpu, true>();
+    case kReshape:
+      return new ReshapeOp<xpu, false>();
     default: LOG(FATAL) << "unknown OpType";
   }
   return NULL;

@@ -57,6 +57,8 @@ enum OpType {
   kMaxPooling = 3,
   kAvgPooling = 4,
   kSumPooling = 5,
+  kFlatten = 6,
+  kReshape = 7,
 };
 
 /*!
