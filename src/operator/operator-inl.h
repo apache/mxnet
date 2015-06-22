@@ -11,11 +11,13 @@
 #include "./mshadow_op.h"
 #include "./activation_op-inl.h"
 #include "./fully_connect_op-inl.h"
+#include "./convolution_op-inl.h"
+
 
 namespace mxnet {
 namespace op {
 /*!
- * \brief device invariant function to create operators 
+ * \brief device invariant function to create operators
  * \param type the type of operator
  * \tparam xpu the device type we are at
  */
@@ -26,6 +28,8 @@ inline Operator *CreateOperator_(OpType type) {
       return new ActivationOp<xpu, relu, relu_grad>();
     case kFullc:
       return new FullyConnectOp<xpu>();
+    case kConv:
+      return new ConvolutionOp<xpu>();
     default: LOG(FATAL) << "unknown OpType";
   }
   return NULL;
