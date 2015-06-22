@@ -40,15 +40,14 @@ endif
 
 ifneq ($(ADD_CFLAGS), NONE)
 	CFLAGS += $(ADD_CFLAGS)
-	CFLAGS += -DDMLC_USE_CXX11=1
 endif
 
 ifneq ($(ADD_LDFLAGS), NONE)
 	LDFLAGS += $(ADD_LDFLAGS)
 endif
 
-OBJ = storage.o narray_op_cpu.o operator.o operator_cpu.o
-OBJCXX11 = engine.o narray.o
+OBJ = storage.o narray_op_cpu.o operator.o operator_cpu.o 
+OBJCXX11 = engine.o narray.o mxnet_wrapper.o
 CUOBJ = narray_op_gpu.o operator_gpu.o
 
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
@@ -68,6 +67,7 @@ narray_op_gpu.o: src/narray/narray_op_gpu.cu src/narray/narray_op-inl.h
 operator.o: src/operator/operator.cc
 operator_cpu.o: src/operator/operator_cpu.cc
 operator_gpu.o: src/operator/operator_gpu.cu
+mxnet_wrapper.o: wrapper/mxnet_wrapper.cc
 
 $(BIN) :
 	$(CXX) $(CFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)

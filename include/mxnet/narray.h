@@ -56,7 +56,7 @@ class NArray {
     return ptr_->shandle.ctx;
   }
   /*! \return whether this narray is not initialized */
-  inline bool is_empty() const {
+  inline bool is_none() const {
     return ptr_.get() == nullptr;
   }
 
