@@ -12,7 +12,7 @@
 #include "./activation_op-inl.h"
 #include "./fully_connect_op-inl.h"
 #include "./convolution_op-inl.h"
-
+#include "./pooling_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -30,6 +30,10 @@ inline Operator *CreateOperator_(OpType type) {
       return new FullyConnectOp<xpu>();
     case kConv:
       return new ConvolutionOp<xpu>();
+    case kMaxPooling:
+      return new PoolingOp<xpu, mshadow::red::maximum, kMaxPooling>();
+    case kAvgPooling:
+      return new PoolingOp<xpu, mshadow::red::sum, kAvgPooling>();
     default: LOG(FATAL) << "unknown OpType";
   }
   return NULL;

@@ -101,7 +101,7 @@ class ConvolutionOp : public Operator {
                                      param_.kernel_x,
                                      param_.stride_y);
         //  TODO: make mshadow support dual stride
-      } else{
+      } else {
         temp_col_ = unpack_patch2col(pad(data.Slice(i,i+step),
                                          param_.pad_y, param_.pad_x),
                                      param_.kernel_y,
@@ -196,7 +196,7 @@ class ConvolutionOp : public Operator {
                                 param_.kernel_y,
                                 param_.kernel_x,
                                 param_.stride_y));
-          //  TODO: dual stride
+        //  TODO: dual stride
         } else {
           mshadow::Shape<4> pshape = data.Slice(i, i + step).shape_;
           pshape[2] += 2 * param_.pad_y; pshape[3] += 2 * param_.pad_x;
@@ -209,7 +209,7 @@ class ConvolutionOp : public Operator {
                                      param_.kernel_x,
                                      param_.stride_y),
                       data[i][0].shape_));
-          //  TODO: dual stride
+        //  TODO: dual stride
         }
       }
     }

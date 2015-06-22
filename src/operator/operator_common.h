@@ -15,7 +15,7 @@
 namespace mxnet {
 namespace op {
 /*!
- * \brief assign the expression to out according to request 
+ * \brief assign the expression to out according to request
  * \param out the data to be assigned
  * \param req the assignment request
  * \param exp the expression
@@ -52,11 +52,15 @@ inline void ShapeAssignCheck(TShape &out, const TS &shape) {
 /*! \brief type of operators */
 enum OpType {
   kReLU = 0,
-  kFullc = 1
+  kFullc = 1,
+  kConv = 2,
+  kMaxPooling = 3,
+  kAvgPooling = 4,
+  kSumPooling = 5,
 };
 
 /*!
- * \brief device invariant function to create operators 
+ * \brief device invariant function to create operators
  * \param type the type of operator
  * \tparam xpu the device type we are at
  */
