@@ -59,6 +59,7 @@ enum OpType {
   kSumPooling = 5,
   kFlatten = 6,
   kReshape = 7,
+  kDropout = 8,
 };
 
 /*!
@@ -67,7 +68,7 @@ enum OpType {
  * \tparam xpu the device type we are at
  */
 template<typename xpu>
-Operator *CreateOperator(OpType type);
+Operator *CreateOperator(OpType type, mshadow::Random<xpu> *prnd);
 }  //namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_COMMON_H_

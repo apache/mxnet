@@ -14,7 +14,7 @@
 #include "./convolution_op-inl.h"
 #include "./pooling_op-inl.h"
 #include "./reshape_op-inl.h"
-
+#include "./dropout_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -24,7 +24,7 @@ namespace op {
  * \tparam xpu the device type we are at
  */
 template<typename xpu>
-inline Operator *CreateOperator_(OpType type) {
+inline Operator *CreateOperator_(OpType type, mshadow::Random<xpu> *prnd) {
   switch (type) {
     case kReLU:
       return new ActivationOp<xpu, relu, relu_grad>();
@@ -40,6 +40,8 @@ inline Operator *CreateOperator_(OpType type) {
       return new ReshapeOp<xpu, true>();
     case kReshape:
       return new ReshapeOp<xpu, false>();
+    case kDropout:
+      return new DropoutOp<xpu>(prnd);
     default: LOG(FATAL) << "unknown OpType";
   }
   return NULL;

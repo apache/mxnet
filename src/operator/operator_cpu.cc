@@ -10,8 +10,9 @@ namespace mxnet {
 namespace op {
 
 template<>
-Operator *CreateOperator<cpu>(OpType type) {  
-  return CreateOperator_<cpu>(type);
+Operator *CreateOperator<cpu>(OpType type,
+                              mshadow::Random<cpu> *prnd) {
+  return CreateOperator_<cpu>(type, prnd);
 }
 
 }  // namespace op
