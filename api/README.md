@@ -1,0 +1,1 @@
+This folder contains a C style API of mxnet, allowing building API of different languages 

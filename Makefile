@@ -47,7 +47,7 @@ ifneq ($(ADD_LDFLAGS), NONE)
 endif
 
 OBJ = storage.o narray_op_cpu.o operator.o operator_cpu.o 
-OBJCXX11 = engine.o narray.o mxnet_wrapper.o
+OBJCXX11 = engine.o narray.o mxnet_api.o
 CUOBJ = narray_op_gpu.o operator_gpu.o
 
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
@@ -67,7 +67,7 @@ narray_op_gpu.o: src/narray/narray_op_gpu.cu src/narray/narray_op-inl.h
 operator.o: src/operator/operator.cc
 operator_cpu.o: src/operator/operator_cpu.cc
 operator_gpu.o: src/operator/operator_gpu.cu
-mxnet_wrapper.o: wrapper/mxnet_wrapper.cc
+mxnet_api.o: api/mxnet_api.cc
 
 $(BIN) :
 	$(CXX) $(CFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
