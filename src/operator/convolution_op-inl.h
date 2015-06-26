@@ -71,6 +71,8 @@ class ConvolutionOp : public Operator {
                        const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    // TODO: check the BLAS Handle, be careful
+    // maybe need blas handle from context   
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK(in_data.size() == expected);
     CHECK(out_data.size() == 1);
@@ -134,6 +136,8 @@ class ConvolutionOp : public Operator {
                         const std::vector<GradReqType> &req) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    // TODO: check the BLAS Handle, be careful
+    // maybe need blas handle from context   
     CHECK(grad_next.size() == 1);
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK(in_data.size() == expected && out_grad.size() == expected);
