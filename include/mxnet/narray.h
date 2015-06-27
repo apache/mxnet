@@ -50,6 +50,12 @@ class NArray {
     return ptr_->data.shape_;
   }
   /*!
+   * \return the data TBlob
+   */
+  inline const TBlob &data() const {
+    return ptr_->data;
+  }
+  /*!
    * \return the context of NArray, this function is only valid when the NArray is not empty
    */
   inline Context ctx() const {
@@ -58,6 +64,11 @@ class NArray {
   /*! \return whether this narray is not initialized */
   inline bool is_none() const {
     return ptr_.get() == nullptr;
+  }
+  /*! \brief wait until the result of the NArray is computed */
+  inline void Wait() const {
+    if (is_none()) return;
+    DAGEngine::Get()->WaitForVar(ptr_->var);
   }
   /*!
    * \brief set all the elements in narray to be scalar

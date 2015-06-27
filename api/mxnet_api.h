@@ -26,7 +26,7 @@ typedef float mx_float;
 /*! \brief handle to NArray */
 typedef void *NArrayHandle;
 /*! \brief handle to a mxnet narray function that changes NArray */
-typedef void *FunctionHandle;
+typedef const void *FunctionHandle;
 /*! \brief handle to a symbol that can be bind as operator */
 typedef void *SymbolHandle;
 /*! \brief handle to a NArrayOperator */
@@ -105,25 +105,27 @@ MXNET_DLL int MXNArrayFree(NArrayHandle handle);
  * \param out_pdata pointer holder to get data pointer of the shape
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayGetShape(NArrayHandle *handle,
+MXNET_DLL int MXNArrayGetShape(NArrayHandle handle,
                                mx_uint *out_dim,
-                               mx_uint **out_pdata);
+                               const mx_uint **out_pdata);
 /*!
  * \brief get the content of the data in NArray
  * \param handle the handle to the narray
  * \param out_pdata pointer holder to get pointer of data
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayGetData(NArrayHandle *handle,
+MXNET_DLL int MXNArrayGetData(NArrayHandle handle,
                               mx_float **out_pdata);
 /*!
  * \brief get the device of the NArray
  * \param handle the handle to the narray
- * \param out_device the output device mask
+ * \param out_dev_mask the output device mask
+ * \param out_dev_id the output device id
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayGetDevice(NArrayHandle *handle,
-                                int *out_device);
+MXNET_DLL int MXNArrayGetDevice(NArrayHandle handle,
+                                int *out_dev_mask,
+                                int *out_dev_id);
 
 //--------------------------------
 // Part 2: functions on NArray
