@@ -156,29 +156,30 @@ MXNET_DLL int MXFuncGetName(FunctionHandle fun,
 /*!
  * \brief get the argument requirements of the function
  * \param num_use_vars how many NArrays to be passed in as used_vars
- * \param num_mutate_vars how many NArrays to be passed in as mutate_vars
  * \param num_scalars scalar variable is needed
+ * \param num_mutate_vars how many NArrays to be passed in as mutate_vars
  * \return 0 when success, -1 when failure happens
  * \sa MXFuncInvoke
  */
 MXNET_DLL int MXFuncDescribeArgs(FunctionHandle fun,
                                  mx_uint *num_use_vars,
-                                 mx_uint *num_mutate_vars,
-                                 mx_uint *num_scalars);
+                                 mx_uint *num_scalars,
+                                 mx_uint *num_mutate_vars);
+
 /*!
  * \brief invoke a function, the array size of passed in arguments
  *   must match the values in the 
  * \param fun the function
  * \param use_vars the normal arguments passed to function
- * \param mutate_vars the mutate arguments
  * \param scalar_args the scalar qarguments
+ * \param mutate_vars the mutate arguments
  * \return 0 when success, -1 when failure happens 
  * \sa MXFuncDescribeArgs
  */
 MXNET_DLL int MXFuncInvoke(FunctionHandle fun,
                            NArrayHandle *use_vars,
-                           NArrayHandle *mutate_vars,
-                           mx_float *scalar_args);
+                           mx_float *scalar_args,
+                           NArrayHandle *mutate_vars);
 
 //--------------------------------------------
 // Part 3: symbolic configuration generation

@@ -118,7 +118,7 @@ class Operator {
                         const std::vector<TBlob> &grad_next,
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_grad,
-                        const std::vector<GradReqType> &req);
+                        const std::vector<GradReqType> &req) = 0;
   /*!
    * \brief factory unction, create a new operator
    * \param type the type of operator

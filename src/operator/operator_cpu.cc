@@ -8,11 +8,12 @@
 
 namespace mxnet {
 namespace op {
+// todo add managing for prnd
+mshadow::Random<cpu> prnd_cpu(0);
 
 template<>
-Operator *CreateOperator<cpu>(OpType type,
-                              mshadow::Random<cpu> *prnd) {
-  return CreateOperator_<cpu>(type, prnd);
+Operator *CreateOperator<cpu>(OpType type) {
+  return CreateOperator_<cpu>(type, &prnd_cpu);
 }
 
 }  // namespace op

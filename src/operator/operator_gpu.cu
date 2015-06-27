@@ -11,10 +11,11 @@
 namespace mxnet {
 namespace op {
 
+mshadow::Random<gpu> prnd_gpu(0);
+
 template<>
-Operator *CreateOperator<gpu>(OpType type,
-                              mshadow::Random<gpu> *prnd) {
-  return CreateOperator_<gpu>(type, prnd);
+Operator *CreateOperator<gpu>(OpType type) {
+  return CreateOperator_<gpu>(type, &prnd_gpu);
 }
 
 } // namespace op

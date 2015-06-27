@@ -65,10 +65,9 @@ enum OpType {
 /*!
  * \brief device invariant function to create operators
  * \param type the type of operator
- * \tparam xpu the device type we are at
  */
 template<typename xpu>
-Operator *CreateOperator(OpType type, mshadow::Random<xpu> *prnd);
+Operator *CreateOperator(OpType type);
 }  //namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_COMMON_H_

@@ -8,6 +8,7 @@
 #define MXNET_OPERATOR_INL_H_
 #include <mxnet/base.h>
 #include <dmlc/logging.h>
+#include <mxnet/operator.h>
 #include "./mshadow_op.h"
 #include "./activation_op-inl.h"
 #include "./fully_connect_op-inl.h"

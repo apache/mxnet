@@ -18,4 +18,8 @@ void NaiveStorageManager::Free(StorageManager::Handle handle) {
   char *dptr = static_cast<char*>(handle.dptr);
   delete [] dptr;
 }
+StorageManager *StorageManager::Get() {
+  static NaiveStorageManager inst;
+  return &inst;
+}
 }  // namespace mxnet
