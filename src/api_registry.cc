@@ -4,8 +4,8 @@
 
 namespace mxnet {
 
-NArrayFunRegistry::Entry &
-NArrayFunRegistry::Register(const std::string name) {
+FunctionRegistry::Entry &
+FunctionRegistry::Register(const std::string name) {
   CHECK(fmap_.count(name) == 0);
   Entry *e = new Entry(name);
   fmap_[name] = e;
@@ -15,14 +15,14 @@ NArrayFunRegistry::Register(const std::string name) {
   return *e;
 }
 
-NArrayFunRegistry::~NArrayFunRegistry() {
+FunctionRegistry::~FunctionRegistry() {
   for (auto p = fmap_.begin(); p != fmap_.end(); ++p) {
     delete p->second;
   }
 }
 
-NArrayFunRegistry *NArrayFunRegistry::Get() {
-  static NArrayFunRegistry instance;
+FunctionRegistry *FunctionRegistry::Get() {
+  static FunctionRegistry instance;
   return &instance;
 }
 

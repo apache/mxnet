@@ -16,6 +16,7 @@ namespace narray {
 struct BinaryBase {
   inline static TShape GetShape(const TShape &lshape, const TShape &rshape) {
     CHECK(lshape == rshape) << "operands shape mismatch";
+    CHECK(lshape.ndim() != 0) << "source operand have zero dimension shape";
     return lshape;
   }
 };

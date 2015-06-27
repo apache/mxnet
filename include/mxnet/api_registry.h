@@ -18,12 +18,12 @@
 
 namespace mxnet {
 /*! \brief registry of NArray functions */
-class NArrayFunRegistry {
+class FunctionRegistry {
  public:
   /*! \brief definition of NArray function */
   typedef std::function<void (NArray **used_vars,
                               real_t *scalars,
-                              NArray **mutate_vars)> NArrayFun;
+                              NArray **mutate_vars)> Function;
   /*! \brief registry entry */
   struct Entry {
     /*! \brief function name */
@@ -35,7 +35,7 @@ class NArrayFunRegistry {
     /*! \brief number of scalars used by this function */
     unsigned num_scalars;
     /*! \brief the real function */
-    NArrayFun body;    
+    Function body;    
     /*!
      * \brief constructor 
      * \param name name of the function
@@ -75,7 +75,7 @@ class NArrayFunRegistry {
      * \param f function body to set
      * \return ref to the registered entry, used to set properties
      */
-    inline Entry &set_body(NArrayFun f) {
+    inline Entry &set_body(Function f) {
       body = f; return *this;
     }
     /*!
@@ -106,7 +106,7 @@ class NArrayFunRegistry {
     }
   };  // Entry    
   /*! \return get a singleton */
-  static NArrayFunRegistry *Get();
+  static FunctionRegistry *Get();
   /*!
    * \brief register a name function under name
    * \param name name of the function
@@ -114,17 +114,18 @@ class NArrayFunRegistry {
    */
   Entry &Register(const std::string name);
   /*! \return list of functions in the registry */
-  inline const std::vector<const Entry*> &List() const {
-    return fun_list_;
+  inline static const std::vector<const Entry*> &List() {
+    return Get()->fun_list_;
   }
   /*!
    * \brief find an function entry with corresponding name 
    * \param name name of the function
    * \return the corresponding function, can be NULL
    */
-  inline const Entry *Find(const std::string &name) const {
-    auto p = fmap_.find(name);
-    if (p != fmap_.end()) {
+  inline static const Entry *Find(const std::string &name) {
+    auto &fmap = Get()->fmap_;
+    auto p = fmap.find(name);
+    if (p != fmap.end()) {
       return p->second;
     } else {
       return nullptr;
@@ -137,9 +138,9 @@ class NArrayFunRegistry {
   /*! \brief map of name->function */
   std::map<std::string, Entry*> fmap_;
   /*! \brief constructor */
-  NArrayFunRegistry() {}
+  FunctionRegistry() {}
   /*! \brief destructor */
-  ~NArrayFunRegistry();
+  ~FunctionRegistry();
 };
 
 /*!
@@ -159,7 +160,7 @@ class NArrayFunRegistry {
  */
 #define REGISTER_NARRAY_FUN(name)                                \
   static auto __ ## name ## _narray_fun__ =                      \
-      ::mxnet::NArrayFunRegistry::Get()->Register("" # name)
+      ::mxnet::FunctionRegistry::Get()->Register("" # name)
 
 }  // namespace mxnet
 #endif  // MXNET_API_REGISTRY_H_

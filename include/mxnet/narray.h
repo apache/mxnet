@@ -59,6 +59,40 @@ class NArray {
   inline bool is_none() const {
     return ptr_.get() == nullptr;
   }
+  /*!
+   * \brief set all the elements in narray to be scalar
+   * \param scalar the scalar to set
+   * \return reference of self
+   */
+  NArray &operator=(real_t scalar);
+  /*!
+   * \brief elementwise add to current space
+   *  this mutate the current NArray
+   * \param src the data to add
+   * \return reference of self
+   */
+  NArray &operator+=(const NArray &src);
+  /*!
+   * \brief elementwise subtract from current narray
+   * this mutate the current NArray
+   * \param src the data to substract
+   * \return reference of self
+   */
+  NArray &operator-=(const NArray &src);
+  /*!
+   * \brief elementwise multiplication to current narray
+   *  this mutate the current NArray
+   * \param src the data to substract
+   * \return reference of self
+   */
+  NArray &operator*=(const NArray &src);
+  /*!
+   * \brief elementwise division from current narray
+   *  this mutate the current NArray
+   * \param src the data to substract
+   * \return reference of self
+   */
+  NArray &operator/=(const NArray &src);
 
  private:
   /*! \brief the real data chunk that backs NArray */

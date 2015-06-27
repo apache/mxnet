@@ -52,6 +52,13 @@ inline NArray BinaryEWiseRet(const NArray &lhs,
   return ret;
 }
 
+template<typename OP>
+inline NArray &BinaryEWiseApply(NArray *dst,
+                                const NArray &src) {                               
+  BinaryEWise<OP>(*dst, src, dst);
+  return *dst;
+}
+
 NArray operator+(const NArray &lhs, const NArray &rhs) {
   return BinaryEWiseRet<narray::Plus>(lhs, rhs);
 }
@@ -65,7 +72,20 @@ NArray operator/(const NArray &lhs, const NArray &rhs) {
   return BinaryEWiseRet<narray::Div>(lhs, rhs);
 }
 
+NArray &NArray::operator+=(const NArray &src) {
+  return BinaryEWiseApply<narray::Plus>(this, src);
+}
+NArray &NArray::operator-=(const NArray &src) {
+  return BinaryEWiseApply<narray::Minus>(this, src);
+}
+NArray &NArray::operator*=(const NArray &src) {
+  return BinaryEWiseApply<narray::Mul>(this, src);
+}
+NArray &NArray::operator/=(const NArray &src) {
+  return BinaryEWiseApply<narray::Div>(this, src);
+}
 
+// register API function
 REGISTER_NARRAY_FUN(Plus).set_function(BinaryEWise<narray::Plus>);
 REGISTER_NARRAY_FUN(Minus).set_function(BinaryEWise<narray::Minus>);
 REGISTER_NARRAY_FUN(Mul).set_function(BinaryEWise<narray::Mul>);
