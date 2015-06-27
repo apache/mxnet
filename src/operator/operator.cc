@@ -11,7 +11,7 @@ template<typename xpu>
 Operator *CreateOperator(OpType type);
 
 
-OpType GetOpTpe(const char *type) {
+OpType GetOpType(const char *type) {
   if (!strcmp(type, "relu")) return kReLU;
   if (!strcmp(type, "fullc")) return kFullc;
   LOG(FATAL) << "unknown operator type " << type;
@@ -21,8 +21,8 @@ OpType GetOpTpe(const char *type) {
 
 // implementing the context
 Operator *Operator::Create(const char *type,
-                          Context ctx) {
-  op::OpType otype = op::GetOpTpe(type);
+                           Context ctx) {
+  op::OpType otype = op::GetOpType(type);
   if (ctx.dev_mask == cpu::kDevMask) {
     return op::CreateOperator<cpu>(otype);
   }

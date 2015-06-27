@@ -56,7 +56,7 @@ class NArray {
     return ptr_->shandle.ctx;
   }
   /*! \return whether this narray is not initialized */
-  inline bool is_empty() const {
+  inline bool is_none() const {
     return ptr_.get() == nullptr;
   }
 
@@ -94,14 +94,15 @@ class NArray {
       var = DAGEngine::Get()->NewVar();
       data.shape_ = shape;
       shandle.ctx = ctx;
-      if (!delay_alloc_) this->Alloc();
+      if (!delay_alloc_) this->CheckAndAlloc();
     }
-    /*! \brief allocated the space */
-    inline void Alloc(void) {
-      CHECK(delay_alloc) << "memory already allocated";
-      shandle = StorageManager::Get()->Alloc(data.shape_.Size() * sizeof(real_t), shandle.ctx);
-      data = TBlob(static_cast<real_t*>(shandle.dptr), data.shape_, shandle.ctx.dev_mask);
-      delay_alloc = false;
+    /*! \brief check if delay alloc is on, do alloc if not yet done */
+    inline void CheckAndAlloc(void) {
+      if (delay_alloc) {
+        shandle = StorageManager::Get()->Alloc(data.shape_.Size() * sizeof(real_t), shandle.ctx);
+        data = TBlob(static_cast<real_t*>(shandle.dptr), data.shape_, shandle.ctx.dev_mask);
+        delay_alloc = false;
+      }
     }
     /*! \brief destructor */
     ~Chunk() {
@@ -129,7 +130,7 @@ class NArray {
   }
   // add friend to helper functions
   template<typename OP>
-  friend NArray BinaryEWise(const NArray &lhs, const NArray &rhs);
+  friend void BinaryEWise(const NArray &lhs, const NArray &rhs, NArray *out);
 };
 /*!
  * \brief elementwise add
