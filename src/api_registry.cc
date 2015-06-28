@@ -10,8 +10,6 @@ FunctionRegistry::Register(const std::string name) {
   Entry *e = new Entry(name);
   fmap_[name] = e;
   fun_list_.push_back(e);
-  // delete me later
-  LOG(INFO) << "register function " << name;
   return *e;
 }
 

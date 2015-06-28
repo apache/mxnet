@@ -78,7 +78,6 @@ class NArray(object):
         pdata = ctypes.POINTER(ctypes.c_float)()
         check_call(lib.MXNArrayGetData(self.handle, ctypes.byref(pdata)))        
         shape = self.get_shape()
-        print shape
         return ctypes2numpy(pdata, shape)
 
 

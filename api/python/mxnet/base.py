@@ -101,7 +101,6 @@ class FunctionRegistry:
         check_call(lib.MXListFunctions(ctypes.byref(size),
                                        ctypes.byref(plist)))
         hmap = {}
-        print size.value
         for i in range(size.value):
             h = plist[i]
             name = ctypes.c_char_p()
