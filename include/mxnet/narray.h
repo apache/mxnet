@@ -29,9 +29,11 @@ class NArray {
    * \brief constructing a new dynamic NArray
    * \param shape the shape of array
    * \param ctx context of NArray
+   * \param delay_alloc whether delay the allocation
    */
-  NArray(const TShape &shape, Context ctx)
-      : ptr_(new Chunk(shape, ctx, false)) {
+  NArray(const TShape &shape, Context ctx,
+         bool delay_alloc = false)
+      : ptr_(new Chunk(shape, ctx, delay_alloc)) {
   }
   /*!
    * \brief constructing a static NArray that shares data with TBlob
@@ -104,6 +106,17 @@ class NArray {
    * \return reference of self
    */
   NArray &operator/=(const NArray &src);
+  /*!
+   * \brief return transpose of current NArray
+   * \return a new transposed NArray
+   */
+  NArray T() const;
+  /*!
+   * \brief return a new copy this NArray
+   * \param ctx the new context of this NArray
+   * \return the new copy
+   */
+  NArray Copy(Context ctx) const;
 
  private:
   /*! \brief the real data chunk that backs NArray */
@@ -152,31 +165,38 @@ class NArray {
     /*! \brief destructor */
     ~Chunk() {
       if (static_data) {
-        DAGEngine::Get()->PushDelete([](RunContext s) {}, var);
+        DAGEngine::Get()->PushDelete([](RunContext s) {}, shandle.ctx, var);
       } else {
         CHECK(!delay_alloc) << "deleted before allocation";
         StorageManager::Handle h = this->shandle;
         DAGEngine::Get()->PushDelete([h](RunContext s) {
             StorageManager::Get()->Free(h);
-          }, var);
+          }, shandle.ctx, var);
       }
     }
   };
   /*! \brief internal data of NArray */
   std::shared_ptr<Chunk> ptr_;
-  /*!
-   * \brief constructing a new dynamic NArray
-   * \param shape the shape of array
-   * \param ctx context of NArray
-   * \param delay_alloc whether delay the allocation
-   */
-  NArray(const TShape &shape, Context ctx, bool delay_alloc)
-      : ptr_(new Chunk(shape, ctx, delay_alloc)) {
-  }
   // add friend to helper functions
+  friend void CopyFromTo(const NArray &from, NArray *to);
   template<typename OP>
-  friend void BinaryEWise(const NArray &lhs, const NArray &rhs, NArray *out);
+  friend void BinaryOp(const NArray &lhs, const NArray &rhs, NArray *out);
+  template<typename OP>
+  friend void UnaryOp(const NArray &lhs, const NArray &rhs, NArray *out);
 };
+
+/*!
+ * \brief issue an copy operation from one NArray to another
+ *  the two narray can sit on different devices
+ *  this operation will be scheduled by the engine
+ *
+ *  NOTE: this function name explicitly marks the order of from and to
+ *     due to different possible convention carried by copy function
+ * \param from the narray we want to copy data from
+ * \param to the target narray
+ */
+void CopyFromTo(const NArray &from, NArray *to);
+
 /*!
  * \brief elementwise add
  * \param lhs left operand

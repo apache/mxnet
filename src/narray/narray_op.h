@@ -34,7 +34,13 @@ struct Div : public BinaryBase {
   typedef mshadow::op::div mshadow_op;
 };
 template<typename Device, typename OP>
-void Eval(const TBlob &lhs, const TBlob &rhs, TBlob ret, RunContext ctx);
+void Eval(const TBlob &lhs, const TBlob &rhs, TBlob *ret, RunContext ctx);
+
+// copy function when only cpu is involved
+template<typename DeviceFrom, typename DeviceTo>
+void Copy(const TBlob &from, TBlob *to,
+          Context from_ctx, Context to_ctx,
+          RunContext ctx);
 
 }  // namespace narray
 }  // namespace mxnet

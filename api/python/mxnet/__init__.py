@@ -9,4 +9,4 @@ Version : 0.10
 """
 from __future__ import absolute_import
 from .narray import NArray
-from .narray import zeros_shared
+from .context import Context, current_context

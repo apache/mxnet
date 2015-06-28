@@ -8,13 +8,27 @@ from .base import lib
 from .base import op
 from .base import c_array
 from .base import mx_uint, mx_float, NArrayHandle
-from .base import ctypes2numpy
+from .base import ctypes2numpy_shared
 from .base import invoke
 from .base import check_call
 from .base import MXNetError
+from .context import Context
 
 def _new_empty_handle():
     """Return a new empty handle
+
+    Empty handle can be used to hold result
+    
+    Returns
+    -------
+    a new empty narray handle
+    """
+    h = NArrayHandle()
+    check_call(lib.MXNArrayCreateNone(ctypes.byref(h)))
+    return h
+
+def _new_alloc_handle(shape, ctx, delay_alloc):
+    """Return a new handle with specified shape, context
     
     Empty handle is only used to hold results
     Returns
@@ -22,7 +36,13 @@ def _new_empty_handle():
     a new empty narray handle
     """
     h = NArrayHandle()
-    check_call(lib.MXNArrayCreateNone(ctypes.byref(h)))
+    check_call(lib.MXNArrayCreate(
+        c_array(mx_uint, shape),
+        len(shape),
+        ctx.device_mask,
+        ctx.device_id,
+        int(delay_alloc),
+        ctypes.byref(h)))
     return h
 
 class NArray(object):
@@ -100,21 +120,64 @@ class NArray(object):
             self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
         return tuple(pdata[i] for i in range(ndim.value))
 
-    def to_numpy(self):
-        """Return a copy of numpy NArray
+    @property
+    def context(self):
+        """Get context of current NArray
         
         Returns
         -------
-        a tuple representing shape of current narray
+        the context of current NArray
+        """
+        dev_mask = ctypes.c_int()
+        dev_id = ctypes.c_int()
+        check_call(lib.MXNArrayGetContext(
+            self.handle, ctypes.byref(dev_mask), ctypes.byref(dev_id)))
+        return Context(Context.devmask2type[dev_mask.value], dev_id.value)
+
+    @property
+    def numpy(self):
+        """Return a numpy representation of current array
+        
+        This array have to sit on CPU
+        
+        Returns
+        -------
+        a numpy array view
         """
         self.wait()
         pdata = ctypes.POINTER(mx_float)()
-        check_call(lib.MXNArrayGetData(self.handle, ctypes.byref(pdata)))
-        return ctypes2numpy(pdata, self.shape)
+        check_call(lib.MXNArrayGetData(self.handle, ctypes.byref(pdata)))        
+        return ctypes2numpy_shared(pdata, self.shape)
+    
+    def copyto(self, other):
+        """copy the content of current array to othe        
+        
+        When other is NArray, the content is copied over.
+        When other is a Context, a new NArray in the context
+        will be created as target
+        
+        Parameters
+        ----------
+        other : NArray or Context
+            another narray we want to copy to,
+            or target context we want copy the data to
+        
+        Returns
+        -------
+        the copy target NArray
+        """
+        if isinstance(other, NArray):
+            invoke(op.copy, (self.handle,), (), (other.handle,))
+            return other
+        elif isinstance(other, Context):
+            hret = _new_alloc_handle(self.shape, other, True)
+            invoke(op.copy, (self.handle,), (), (hret,))
+            return NArray(handle = hret)
+        else:
+            raise MXNetError('copyto do not support type ' + type(other))
 
-
-def zeros_shared(shape):
-    """Create a new CPU based narray that shares memory content with a numpy array
+def create(shape, ctx = Context.default_ctx):
+    """Create a new NArray, with specified shape
     
     Parameters
     ----------
@@ -123,15 +186,7 @@ def zeros_shared(shape):
 
     Returns
     -------
-    a new NArray that shares memory with numpy.narray
+    a new NArray
     """
-    h = NArrayHandle()
-    data = np.zeros(shape, dtype = np.float32)
-    ndim = len(shape)
-    check_call(lib.MXNArrayCreateShareMem(
-        data.ctypes.data,
-        c_array(mx_uint, shape), 
-        ndim, ctypes.byref(h)))
-    ret = NArray(handle = h)
-    ret.numpy = data
-    return ret
+    return NArray(handle = _new_alloc_handle(shape, ctx, False))
+

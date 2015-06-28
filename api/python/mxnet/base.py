@@ -74,6 +74,22 @@ def check_call(ret):
         raise MXNetError(lib.MXGetLastError());
 
 
+def c_str(string):
+    """Create ctypes char * from a python string
+    
+    Parameters
+    ----------
+    string : string type
+        python string
+
+    Returns
+    -------
+    a char pointer that can be passed to C API
+    """
+    
+    return ctypes.c_char_p(string.encode('utf-8'))
+
+
 def c_array(ctype, values):
     """Create ctypes array from a python array
     
@@ -81,6 +97,7 @@ def c_array(ctype, values):
     ----------
     ctype : ctypes data type
         data type of the array we want to convert to
+
     values : tuple or list
         data content
 
@@ -91,8 +108,10 @@ def c_array(ctype, values):
     return (ctype * len(values))(*values)
 
 
-def ctypes2numpy(cptr, shape):
-    """Convert a ctypes pointer to a numpy array.
+def ctypes2numpy_shared(cptr, shape):
+    """Convert a ctypes pointer to a numpy array 
+
+    The result numpy array shares the memory with the pointer
     
     Parameters
     ----------
@@ -104,14 +123,15 @@ def ctypes2numpy(cptr, shape):
 
     Returns
     -------
-    a copy of nupy array : numpy array
+    a numpy array : numpy array
     """
     if not isinstance(cptr, ctypes.POINTER(mx_float)):
         raise RuntimeError('expected float pointer')
-    res = np.zeros(shape, dtype = np.float32)
-    if not ctypes.memmove(res.ctypes.data, cptr, res.size * res.strides[-1]):
-        raise RuntimeError('memmove failed')
-    return res
+    size = 1
+    for s in shape:
+        size *= s
+    dbuffer = (mx_float * size).from_address(ctypes.addressof(cptr.contents))
+    return np.frombuffer(dbuffer, dtype = np.float32).reshape(shape)
 
 #------------------------------
 # get list of functon pointers

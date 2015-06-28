@@ -3,6 +3,7 @@
 namespace mxnet {
 class SimpleEngine : public DAGEngine {
  public:
+
   virtual void Push(AsyncOp exec_fun,
                     Context exec_ctx,
                     const std::vector<Variable> &use_vars,
@@ -14,10 +15,18 @@ class SimpleEngine : public DAGEngine {
                     Context exec_ctx,
                     const std::vector<Variable> &use_vars,
                     const std::vector<Variable> &mutate_vars) {
-    exec_fun(RunContext());
+    if (exec_ctx.dev_mask == gpu::kDevMask) {
+      ctx_.stream = &stream;
+      mshadow::SetDevice<gpu>(exec_ctx.dev_id);
+      exec_fun(ctx_);
+    } else {
+      exec_fun(ctx_);
+    }
   }
-  virtual void PushDelete(Op delete_fun, Variable var) {
-    delete_fun(RunContext());
+  virtual void PushDelete(Op delete_fun,
+                          Context exec_ctx,
+                          Variable var) {
+    this->Push(delete_fun, exec_ctx, {}, {var});
   }
   virtual Variable NewVar() {
     // in practice return a ptr to a cell
@@ -25,6 +34,10 @@ class SimpleEngine : public DAGEngine {
     // use ptr directly instead of ID because this avoids an indirect mapping
     return NULL;
   }
+
+ private:
+  RunContext ctx_;
+  mshadow::Stream<gpu> stream;
 };
 // implements the singleton factory
 DAGEngine* DAGEngine::Get() {

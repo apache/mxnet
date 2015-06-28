@@ -81,6 +81,8 @@ MXNET_DLL int MXNArrayCreateShareMem(mx_float *data,
  * \param ndim the dimension of the shape
  * \param dev_mask device mask, specify device we want to take
  * \param dev_id the device id of the specific device
+ * \param delay_alloc whether to delay allocation until
+ *    the narray is first mutated
  * \param out the returning handle
  * \return 0 when success, -1 when failure happens
  */
@@ -88,6 +90,7 @@ MXNET_DLL int MXNArrayCreate(const mx_uint *shape,
                              mx_uint ndim,
                              int dev_mask,
                              int dev_id,
+                             int delay_alloc,
                              NArrayHandle *out);
 /*!
  * \brief wait until all the operation with respect NArray
@@ -127,15 +130,15 @@ MXNET_DLL int MXNArrayGetShape(NArrayHandle handle,
 MXNET_DLL int MXNArrayGetData(NArrayHandle handle,
                               mx_float **out_pdata);
 /*!
- * \brief get the device of the NArray
+ * \brief get the context of the NArray
  * \param handle the handle to the narray
  * \param out_dev_mask the output device mask
  * \param out_dev_id the output device id
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayGetDevice(NArrayHandle handle,
-                                int *out_dev_mask,
-                                int *out_dev_id);
+MXNET_DLL int MXNArrayGetContext(NArrayHandle handle,
+                                 int *out_dev_mask,
+                                 int *out_dev_id);
 
 //--------------------------------
 // Part 2: functions on NArray

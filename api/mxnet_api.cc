@@ -66,10 +66,12 @@ int MXNArrayCreate(const mx_uint *shape,
                    mx_uint ndim,
                    int dev_mask,
                    int dev_id,
+                   int delay_alloc,
                    NArrayHandle *out) {
   API_BEGIN();
   *out = new NArray(TShape(shape, shape + ndim),
-                    Context(dev_mask, dev_id));
+                    Context(dev_mask, dev_id),
+                    delay_alloc != 0);
   API_END();
 }
 
@@ -122,9 +124,9 @@ int MXNArrayGetData(NArrayHandle handle,
   API_END();
 }
 
-int MXNArrayGetDevice(NArrayHandle handle,
-                      int *out_dev_mask,
-                      int *out_dev_id) {
+int MXNArrayGetContext(NArrayHandle handle,
+                       int *out_dev_mask,
+                       int *out_dev_id) {
   API_BEGIN();
   NArray *arr = static_cast<NArray*>(handle);
   if (!arr->is_none()) {

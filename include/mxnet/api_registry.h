@@ -87,12 +87,28 @@ class FunctionRegistry {
     inline Entry &set_function(void fbinary(const NArray &lhs,
                                             const NArray &rhs,
                                             NArray *out)) {
-      body = [fbinary] (NArray **used_vars, real_t *s, NArray **mutate_vars) {
+      body = [fbinary] (NArray **used_vars,
+                        real_t *s, NArray **mutate_vars) {
         fbinary(*used_vars[0], *used_vars[1], mutate_vars[0]);
       };
       num_use_vars = 2; num_mutate_vars = 1;
       return *this;
-    }                                           
+    }                             
+    /*!
+     * \brief set the function body to a unary NArray function
+     *  this will also auto set the parameters correctly
+     * \param unary function body to set
+     * \return ref to the registered entry, used to set properties
+     */
+    inline Entry &set_function(void funary(const NArray &src,
+                                           NArray *out)) {
+      body = [funary] (NArray **used_vars,
+                       real_t *s, NArray **mutate_vars) {
+        funary(*used_vars[0], mutate_vars[0]);
+      };
+      num_use_vars = 1; num_mutate_vars = 1;
+      return *this;
+    }
     /*!
      * \brief invoke the function
      * \param use_vars variables used by the function
