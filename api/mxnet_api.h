@@ -34,6 +34,16 @@ typedef void *OperatorHandle;
 /*! \brief handle to a DataIterator */
 typedef void *DataIterHandle;
 
+/*!
+ * \brief return str message of the last error
+ *  all function in this file will return 0 when success
+ *  and -1 when an error occured,
+ *  MXGetLastError can be called to retrieve the error
+ *
+ *  this function is threadsafe and can be called by different thread
+ */
+MXNET_DLL const char *MXGetLastError();
+
 //--------------------------------
 // Part 1: NArray creation and deletion
 //--------------------------------

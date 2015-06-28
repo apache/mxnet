@@ -4,6 +4,6 @@
 
 int main(int argc, char *argv[]) {
   auto fadd = mxnet::FunctionRegistry::Find("Plus");
-  printf("f.name=%s\n", fadd->name.c_str());
+  printf("f.name=%s\n", fadd->name.c_str());  
   return 0;
 }

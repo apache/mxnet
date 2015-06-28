@@ -1,3 +1,5 @@
+#include <dmlc/base.h>
+#include <dmlc/logging.h>
 #include <mxnet/base.h>
 #include <mxnet/narray.h>
 #include <mxnet/api_registry.h>
@@ -11,14 +13,35 @@ using namespace mxnet;
 // macro to guard beginning and end section of all functions
 // every function starts with API_BEGIN(); and finishes with API_END();
 #define API_BEGIN() try {
-#define API_END() } catch(MXNetException &e) { return MXHandleException(e); } return 0;
+#define API_END() } catch(dmlc::Error &e) { return MXHandleException(e); } return 0;
+
+/*! 
+ * \brief a helper function for error handling
+ *  will set the last error to be str_set when it is not NULL
+ * \param str_set the error to set
+ * \return a pointer message to last error
+ */
+const char *MXSetGetLastError_(const char *str_set) {
+  // use last_error to record last error
+  static thread_local std::string last_error;
+  if (str_set != NULL) {
+    last_error = str_set;
+  }
+  return last_error.c_str();
+}
+
+/*! \brief return str message of the last error */
+const char *MXGetLastError() {
+  return MXSetGetLastError_(NULL);
+}
 
 /*!
  * \brief handle exception throwed out
  * \param e the exception
  * \return the return value of API after exception is handled
  */
-int MXHandleException(const MXNetException &e) {
+int MXHandleException(const dmlc::Error &e) {
+  MXSetGetLastError_(e.what());
   return -1;
 }
 
@@ -88,8 +111,8 @@ int MXNArrayGetData(NArrayHandle handle,
   API_BEGIN();
   NArray *arr = static_cast<NArray*>(handle);
   if (!arr->is_none()) {
-    // TODO: change to exception
-    CHECK(arr->ctx().dev_mask != cpu::kDevMask);
+    CHECK(arr->ctx().dev_mask == cpu::kDevMask)
+        << "MXNArrayGetData can only be called for NArray on CPU";
     const TBlob &b = arr->data();
     CHECK(b.CheckContiguous());
     *out_pdata = b.FlatTo2D<cpu, mx_float>().dptr_;

@@ -86,8 +86,8 @@ NArray &NArray::operator/=(const NArray &src) {
 }
 
 // register API function
-REGISTER_NARRAY_FUN(Plus).set_function(BinaryEWise<narray::Plus>);
-REGISTER_NARRAY_FUN(Minus).set_function(BinaryEWise<narray::Minus>);
-REGISTER_NARRAY_FUN(Mul).set_function(BinaryEWise<narray::Mul>);
-REGISTER_NARRAY_FUN(Div).set_function(BinaryEWise<narray::Div>);
+REGISTER_NARRAY_FUN(plus).set_function(BinaryEWise<narray::Plus>);
+REGISTER_NARRAY_FUN(minus).set_function(BinaryEWise<narray::Minus>);
+REGISTER_NARRAY_FUN(mul).set_function(BinaryEWise<narray::Mul>);
+REGISTER_NARRAY_FUN(div).set_function(BinaryEWise<narray::Div>);
 }  // namespace mxnet
