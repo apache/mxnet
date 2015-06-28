@@ -7,5 +7,6 @@ The interface is designed in collaboration by authors of three projects.
 
 Version : 0.10
 """
-from narray import NArray
-from narray import zeros_shared
+from __future__ import absolute_import
+from .narray import NArray
+from .narray import zeros_shared

@@ -1,15 +1,17 @@
 # coding: utf-8
 """NArray interface of mxnet"""
+from __future__ import absolute_import
+
 import ctypes
 import numpy as np
-from base import lib
-from base import op
-from base import c_array
-from base import ctypes2numpy
-from base import invoke
-from base import check_call
-from base import new_narray_handle
-from base import MXNetError
+from .base import lib
+from .base import op
+from .base import c_array
+from .base import ctypes2numpy
+from .base import invoke
+from .base import check_call
+from .base import new_narray_handle
+from .base import MXNetError
 
 # function handles
 _h_plus = op.plus
