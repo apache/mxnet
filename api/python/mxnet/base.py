@@ -16,15 +16,17 @@ if sys.version_info[0] == 3:
 else:
     string_types = basestring,
 
+
 class MXNetError(Exception):
+    """Error that will be throwed by all mxnet functions"""
     pass
 
 
 def _load_lib():
-    """load libary by looking at possible path"""
-    api_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-    api_path = os.path.join(api_path, '../../')
-    dll_path = [api_path]
+    """load libary by searching possible path"""
+    curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+    api_path = os.path.join(curr_path, '../../')
+    dll_path = [api_path, curr_path]
     if os.name == 'nt':
         if platform.architecture()[0] == '64bit':
             dll_path.append(os.path.join(api_path, '../windows/x64/Release/'))
@@ -44,47 +46,67 @@ def _load_lib():
     return lib
 
 
+# library instance of mxnet
 lib = _load_lib()
+
+# type definitions
+mx_uint = ctypes.c_uint
+mx_float = ctypes.c_float
+NArrayHandle = ctypes.c_void_p
+FunctionHandle = ctypes.c_void_p
 
 #----------------------------
 # helper function definition
 #----------------------------
-def check_call(ret):
-    """check the return value of C API call
 
-    this function will raise exception when error occurs    
+def check_call(ret):
+    """Check the return value of C API call
+
+    This function will raise exception when error occurs.
+    Wrap every API call with this function
+
+    Parameters
+    ----------
+    ret : int
+        return value from API calls
     """
     if ret != 0:
         raise MXNetError(lib.MXGetLastError());
 
 
-def new_narray_handle():
-    """return a new empty handle
-
-    Returns
-    -------
-    a new empty narray handle
-    """
-    h = ctypes.c_void_p()
-    check_call(lib.MXNArrayCreateNone(ctypes.byref(h)))
-    return h
-
 def c_array(ctype, values):
-    """get ctypes array 
+    """Create ctypes array from a python array
     
     Parameters
     ----------
     ctype : ctypes data type
         data type of the array we want to convert to
-    values : tuple like
+    values : tuple or list
         data content
+
+    Returns
+    -------
+    created ctypes array
     """
     return (ctype * len(values))(*values)
 
+
 def ctypes2numpy(cptr, shape):
-    """convert a ctypes pointer array to a numpy array.
+    """Convert a ctypes pointer to a numpy array.
+    
+    Parameters
+    ----------
+    cptr : ctypes.POINTER(mx_float)
+        pointer to the memory region
+
+    shape : tuple
+        shape of target narray
+
+    Returns
+    -------
+    a copy of nupy array : numpy array
     """
-    if not isinstance(cptr, ctypes.POINTER(ctypes.c_float)):
+    if not isinstance(cptr, ctypes.POINTER(mx_float)):
         raise RuntimeError('expected float pointer')
     res = np.zeros(shape, dtype = np.float32)
     if not ctypes.memmove(res.ctypes.data, cptr, res.size * res.strides[-1]):
@@ -94,7 +116,7 @@ def ctypes2numpy(cptr, shape):
 #------------------------------
 # get list of functon pointers
 #------------------------------
-class FunctionRegistry:
+class _FunctionRegistry:    
     def __init__(self):
         plist = ctypes.POINTER(ctypes.c_void_p)()
         size = ctypes.c_uint()
@@ -109,15 +131,15 @@ class FunctionRegistry:
         self.__dict__.update(hmap)
 
 # handle to function registry
-op = FunctionRegistry()
+op = _FunctionRegistry()
 
 
 def invoke(fhandle, used_vars, scalars, mutate_vars):
-    """invoke a function handle by passing in arguments as tuples
+    """Invoke a function handle by passing in arguments as tuples
 
     Parameters
     ----------
-    fhandle : ctypes.c_void_p
+    fhandle : FunctionHandle
         function handle of C API
     
     used_vars : tuple
@@ -131,6 +153,6 @@ def invoke(fhandle, used_vars, scalars, mutate_vars):
     """
     check_call(lib.MXFuncInvoke(
         fhandle,
-        c_array(ctypes.c_void_p, used_vars),
-        c_array(ctypes.c_float, scalars),
-        c_array(ctypes.c_void_p, mutate_vars)))
+        c_array(NArrayHandle, used_vars),
+        c_array(mx_float, scalars),
+        c_array(NArrayHandle, mutate_vars)))
