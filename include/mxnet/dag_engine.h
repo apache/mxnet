@@ -78,9 +78,12 @@ class DAGEngine {
    * depending on var is completed
    *
    * \param delete_fun a function that will be called after var is deleted
+   * \param exec_ctx execution context
    * \param var the variable to be deleted
    */
-  virtual void PushDelete(Op delete_fun, Variable var) = 0;  
+  virtual void PushDelete(Op delete_fun,
+                          Context exec_ctx,
+                          Variable var) = 0;  
   /*!
    * \brief allocate a new variable, the variable can then
    *  be used to schedul the operation concurrently via dependency patterns 

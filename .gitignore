@@ -31,6 +31,12 @@ dmlc-core
 mshadow
 config.mk
 
+*.pyc
+.Rhistory
+*log
+Debug
+*suo
+
 # vim
 *.swp
 *.swo

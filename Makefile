@@ -40,22 +40,23 @@ endif
 
 ifneq ($(ADD_CFLAGS), NONE)
 	CFLAGS += $(ADD_CFLAGS)
-	CFLAGS += -DDMLC_USE_CXX11=1
 endif
 
 ifneq ($(ADD_LDFLAGS), NONE)
 	LDFLAGS += $(ADD_LDFLAGS)
 endif
 
-OBJ = storage.o narray_op_cpu.o operator.o operator_cpu.o
-OBJCXX11 = engine.o narray.o threaded_engine.o
+BIN = test/api_registry_test
+OBJ = storage.o narray_op_cpu.o operator.o operator_cpu.o 
+OBJCXX11 = engine.o narray.o mxnet_api.o api_registry.o threaded_engine.o
 CUOBJ = narray_op_gpu.o operator_gpu.o
-
+SLIB = api/libmxnet.so
+ALIB = api/libmxnet.a
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
 
 .PHONY: clean all
 
-all: $(OBJ) $(OBJCXX11) $(CUOBJ)
+all: $(ALIB) $(SLIB) $(BIN)
 
 $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
@@ -69,9 +70,16 @@ narray_op_gpu.o: src/narray/narray_op_gpu.cu src/narray/narray_op-inl.h
 operator.o: src/operator/operator.cc
 operator_cpu.o: src/operator/operator_cpu.cc
 operator_gpu.o: src/operator/operator_gpu.cu
+api_registry.o: src/api_registry.cc
+mxnet_api.o: api/mxnet_api.cc
+
+api/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)
+api/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ)
+
+test/api_registry_test: test/api_registry_test.cc api/libmxnet.a
 
 $(BIN) :
-	$(CXX) $(CFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
+	$(CXX) $(CFLAGS) -std=c++11 -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
 $(OBJ) :
 	$(CXX) -c $(CFLAGS) -o $@ $(firstword $(filter %.cpp %.c %.cc, $^) )
@@ -82,6 +90,9 @@ $(OBJCXX11) :
 $(SLIB) :
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
+$(ALIB):
+	ar cr $@ $+
+
 $(CUOBJ) :
 	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $(filter %.cu, $^)
 
@@ -89,5 +100,5 @@ $(CUBIN) :
 	$(NVCC) -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" -Xlinker "$(LDFLAGS)" $(filter %.cu %.cpp %.o, $^)
 
 clean:
-	$(RM) $(OBJ) $(OBJCXX11) $(BIN) $(CUBIN) $(CUOBJ) $(SLIB) *~ */*~ */*/*~
+	$(RM) $(OBJ) $(OBJCXX11) $(BIN) $(CUBIN) $(CUOBJ) $(SLIB) $(ALIB) *~ */*~ */*/*~ */*/*/*~
 	cd $(DMLC_CORE); make clean; cd -

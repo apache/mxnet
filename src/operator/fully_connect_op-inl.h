@@ -59,6 +59,8 @@ class FullyConnectOp : public Operator {
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK(in_data.size() == expected);
     CHECK(out_data.size() == 1);
+    // TODO: check the BLAS Handle, be careful
+    // maybe need blas handle from context   
     Stream<xpu> *s = static_cast<Stream<xpu> *>(ctx.stream);
     Tensor<xpu, 2> data = in_data[0].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> wmat = in_data[1].get<xpu, 2, real_t>(s);
@@ -79,7 +81,9 @@ class FullyConnectOp : public Operator {
     CHECK(grad_next.size() == 1);
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK(in_data.size() == expected && out_grad.size() == expected);
-    CHECK(req.size() == 3);
+    CHECK(req.size() == expected);
+    // TODO: check the BLAS Handle, be careful
+    // maybe need blas handle from context   
     Stream<xpu> *s = static_cast<Stream<xpu> *>(ctx.stream);
     Tensor<xpu, 2> data = in_data[0].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> wmat = in_data[1].get<xpu, 2, real_t>(s);

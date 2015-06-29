@@ -5,6 +5,7 @@
  */
 #ifndef MXNET_BASE_H_
 #define MXNET_BASE_H_
+#include <string>
 #include <dmlc/base.h>
 #include <mshadow/tensor.h>
 

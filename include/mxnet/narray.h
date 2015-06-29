@@ -29,9 +29,11 @@ class NArray {
    * \brief constructing a new dynamic NArray
    * \param shape the shape of array
    * \param ctx context of NArray
+   * \param delay_alloc whether delay the allocation
    */
-  NArray(const TShape &shape, Context ctx)
-      : ptr_(new Chunk(shape, ctx, false)) {
+  NArray(const TShape &shape, Context ctx,
+         bool delay_alloc = false)
+      : ptr_(new Chunk(shape, ctx, delay_alloc)) {
   }
   /*!
    * \brief constructing a static NArray that shares data with TBlob
@@ -50,15 +52,71 @@ class NArray {
     return ptr_->data.shape_;
   }
   /*!
+   * \return the data TBlob
+   */
+  inline const TBlob &data() const {
+    return ptr_->data;
+  }
+  /*!
    * \return the context of NArray, this function is only valid when the NArray is not empty
    */
   inline Context ctx() const {
     return ptr_->shandle.ctx;
   }
   /*! \return whether this narray is not initialized */
-  inline bool is_empty() const {
+  inline bool is_none() const {
     return ptr_.get() == nullptr;
   }
+  /*! \brief wait until the result of the NArray is computed */
+  inline void Wait() const {
+    if (is_none()) return;
+    DAGEngine::Get()->WaitForVar(ptr_->var);
+  }
+  /*!
+   * \brief set all the elements in narray to be scalar
+   * \param scalar the scalar to set
+   * \return reference of self
+   */
+  NArray &operator=(real_t scalar);
+  /*!
+   * \brief elementwise add to current space
+   *  this mutate the current NArray
+   * \param src the data to add
+   * \return reference of self
+   */
+  NArray &operator+=(const NArray &src);
+  /*!
+   * \brief elementwise subtract from current narray
+   * this mutate the current NArray
+   * \param src the data to substract
+   * \return reference of self
+   */
+  NArray &operator-=(const NArray &src);
+  /*!
+   * \brief elementwise multiplication to current narray
+   *  this mutate the current NArray
+   * \param src the data to substract
+   * \return reference of self
+   */
+  NArray &operator*=(const NArray &src);
+  /*!
+   * \brief elementwise division from current narray
+   *  this mutate the current NArray
+   * \param src the data to substract
+   * \return reference of self
+   */
+  NArray &operator/=(const NArray &src);
+  /*!
+   * \brief return transpose of current NArray
+   * \return a new transposed NArray
+   */
+  NArray T() const;
+  /*!
+   * \brief return a new copy this NArray
+   * \param ctx the new context of this NArray
+   * \return the new copy
+   */
+  NArray Copy(Context ctx) const;
 
  private:
   /*! \brief the real data chunk that backs NArray */
@@ -94,43 +152,51 @@ class NArray {
       var = DAGEngine::Get()->NewVar();
       data.shape_ = shape;
       shandle.ctx = ctx;
-      if (!delay_alloc_) this->Alloc();
+      if (!delay_alloc_) this->CheckAndAlloc();
     }
-    /*! \brief allocated the space */
-    inline void Alloc(void) {
-      CHECK(delay_alloc) << "memory already allocated";
-      shandle = StorageManager::Get()->Alloc(data.shape_.Size() * sizeof(real_t), shandle.ctx);
-      data = TBlob(static_cast<real_t*>(shandle.dptr), data.shape_, shandle.ctx.dev_mask);
-      delay_alloc = false;
+    /*! \brief check if delay alloc is on, do alloc if not yet done */
+    inline void CheckAndAlloc(void) {
+      if (delay_alloc) {
+        shandle = StorageManager::Get()->Alloc(data.shape_.Size() * sizeof(real_t), shandle.ctx);
+        data = TBlob(static_cast<real_t*>(shandle.dptr), data.shape_, shandle.ctx.dev_mask);
+        delay_alloc = false;
+      }
     }
     /*! \brief destructor */
     ~Chunk() {
       if (static_data) {
-        DAGEngine::Get()->PushDelete([](RunContext s) {}, var);
+        DAGEngine::Get()->PushDelete([](RunContext s) {}, shandle.ctx, var);
       } else {
         CHECK(!delay_alloc) << "deleted before allocation";
         StorageManager::Handle h = this->shandle;
         DAGEngine::Get()->PushDelete([h](RunContext s) {
             StorageManager::Get()->Free(h);
-          }, var);
+          }, shandle.ctx, var);
       }
     }
   };
   /*! \brief internal data of NArray */
   std::shared_ptr<Chunk> ptr_;
-  /*!
-   * \brief constructing a new dynamic NArray
-   * \param shape the shape of array
-   * \param ctx context of NArray
-   * \param delay_alloc whether delay the allocation
-   */
-  NArray(const TShape &shape, Context ctx, bool delay_alloc)
-      : ptr_(new Chunk(shape, ctx, delay_alloc)) {
-  }
   // add friend to helper functions
+  friend void CopyFromTo(const NArray &from, NArray *to);
   template<typename OP>
-  friend NArray BinaryEWise(const NArray &lhs, const NArray &rhs);
+  friend void BinaryOp(const NArray &lhs, const NArray &rhs, NArray *out);
+  template<typename OP>
+  friend void UnaryOp(const NArray &lhs, const NArray &rhs, NArray *out);
 };
+
+/*!
+ * \brief issue an copy operation from one NArray to another
+ *  the two narray can sit on different devices
+ *  this operation will be scheduled by the engine
+ *
+ *  NOTE: this function name explicitly marks the order of from and to
+ *     due to different possible convention carried by copy function
+ * \param from the narray we want to copy data from
+ * \param to the target narray
+ */
+void CopyFromTo(const NArray &from, NArray *to);
+
 /*!
  * \brief elementwise add
  * \param lhs left operand
