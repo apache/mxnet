@@ -48,7 +48,7 @@ ifneq ($(ADD_LDFLAGS), NONE)
 endif
 
 OBJ = storage.o narray_op_cpu.o operator.o operator_cpu.o
-OBJCXX11 = engine.o narray.o
+OBJCXX11 = engine.o narray.o threaded_engine.o
 CUOBJ = narray_op_gpu.o operator_gpu.o
 
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
@@ -62,6 +62,7 @@ $(DMLC_CORE)/libdmlc.a:
 
 storage.o: src/storage/storage.cc
 engine.o: src/dag_engine/simple_engine.cc
+threaded_engine.o: src/dag_engine/threaded_engine.cc src/common/concurrent_blocking_queue.h src/common/spin_lock.h
 narray.o: src/narray/narray.cc
 narray_op_cpu.o: src/narray/narray_op_cpu.cc src/narray/narray_op-inl.h
 narray_op_gpu.o: src/narray/narray_op_gpu.cu src/narray/narray_op-inl.h

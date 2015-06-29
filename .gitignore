@@ -30,3 +30,8 @@
 dmlc-core
 mshadow
 config.mk
+
+# vim
+*.swp
+*.swo
+*.swn
