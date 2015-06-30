@@ -12,6 +12,8 @@ from .base import check_call
 from .base import MXNetError
 from .context import Context
 
+# op is implicitly imported from .function
+# as a singleton of _FunctionRegistry
 global op
 
 def _new_empty_handle():

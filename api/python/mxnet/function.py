@@ -6,14 +6,14 @@ import ctypes
 from .base import lib
 from .base import c_array
 from .base import mx_uint, mx_float, NArrayHandle, FunctionHandle
-from .base import check_call
+from .base import check_call, MXNetError
 from .narray import NArray, _new_empty_handle
 
 class _Function:
     # constants for type masks
     NARRAY_ARG_BEFORE_SCALAR = 1
-    SCALAR_ARG_BEFORE_NARRAY = 2
-    ACCEPT_EMPTY_MUTATE_TARGET = 3
+    SCALAR_ARG_BEFORE_NARRAY = 1 << 1
+    ACCEPT_EMPTY_MUTATE_TARGET = 1 << 2
 
     def __init__(self, handle, name):
         """Initialize the function with handle
@@ -27,6 +27,7 @@ class _Function:
             the name of the function
         """
         self.handle = handle
+        self.name = name
         n_used_vars = mx_uint()
         n_scalars = mx_uint()
         n_mutate_vars = mx_uint()
@@ -70,14 +71,16 @@ class _Function:
         """
         if 'mutate_vars' in kwargs:
             mutate_vars = kwargs['mutate_vars']
+            if isinstance(mutate_vars, NArray):
+                mutate_vars = (mutate_vars,)
             if len(mutate_vars) != self.n_mutate_vars:
-                raise MXNetError('expect %d mutate_vars in function %s', self.n_mutate_vars, self.name)
+                raise MXNetError('expect %d mutate_vars in op.%s', self.n_mutate_vars, self.name)
         else:
             if self.accept_empty_mutate:
                 mutate_vars = tuple(
                     NArray(_new_empty_handle()) for i in range(self.n_mutate_vars))
-            else:                
-                raise MXNetError('mutate_vars argument is required to call this function')
+            else:
+                raise MXNetError('mutate_vars argument is required to call op.%s' % self.name)
                 
         self.invoke_with_handle_([args[i].handle for i in self.use_vars_range],
                                  [args[i] for i in self.scalar_range],
