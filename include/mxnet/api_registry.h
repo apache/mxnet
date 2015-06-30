@@ -17,13 +17,31 @@
 #include "./narray.h"
 
 namespace mxnet {
+
+/*! \brief mask information on how functions can be exposed */
+enum FunctionTypeMask {
+  /*! \brief all the use_vars should go before scalar */
+  kNArrayArgBeforeScalar = 1,
+  /*! \brief all the scalar should go before use_vars */
+  kScalarArgBeforeNArray = 1 << 1,
+  /*!
+   * \brief whether this function allows the handles in the target to
+   *  be empty NArray that are not yet initialized, and will initialize
+   *  them when the function is invoked.
+   *
+   *  most function should support this, except copy between different
+   *  devices, which requires the NArray to be pre-initialized with context
+   */
+  kAcceptEmptyMutateTarget = 1 << 2
+};
+
 /*! \brief registry of NArray functions */
 class FunctionRegistry {
  public:
   /*! \brief definition of NArray function */
   typedef std::function<void (NArray **used_vars,
                               real_t *scalars,
-                              NArray **mutate_vars)> Function;
+                              NArray **mutate_vars)> Function;  
   /*! \brief registry entry */
   struct Entry {
     /*! \brief function name */
@@ -34,6 +52,8 @@ class FunctionRegistry {
     unsigned num_mutate_vars;
     /*! \brief number of scalars used by this function */
     unsigned num_scalars;
+    /*! \brief information on how function should be called from API */
+    int type_mask;
     /*! \brief the real function */
     Function body;    
     /*!
@@ -45,6 +65,7 @@ class FunctionRegistry {
           num_use_vars(0),
           num_mutate_vars(0),
           num_scalars(0),
+          type_mask(0),
           body(nullptr) {}
     /*!
      * \brief set the number of mutate variables
@@ -79,6 +100,14 @@ class FunctionRegistry {
       body = f; return *this;
     }
     /*!
+     * \brief set the function body
+     * \param f function body to set
+     * \return ref to the registered entry, used to set properties
+     */
+    inline Entry &set_type_mask(int tmask) {
+      type_mask = tmask; return *this;
+    }
+    /*!
      * \brief set the function body to a binary NArray function
      *  this will also auto set the parameters correctly
      * \param fbinary function body to set
@@ -92,6 +121,7 @@ class FunctionRegistry {
         fbinary(*used_vars[0], *used_vars[1], mutate_vars[0]);
       };
       num_use_vars = 2; num_mutate_vars = 1;
+      type_mask = kNArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
       return *this;
     }                             
     /*!
@@ -107,6 +137,7 @@ class FunctionRegistry {
         funary(*used_vars[0], mutate_vars[0]);
       };
       num_use_vars = 1; num_mutate_vars = 1;
+      type_mask = kNArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
       return *this;
     }
     /*!

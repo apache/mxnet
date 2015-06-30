@@ -8,7 +8,10 @@ print(a.numpy)
 
 c = b * a
 
+cc = mx.op.mul(b, a)
+
 print(c.context)
+print(cc.numpy)
 
 d = c.copyto(mx.Context('cpu', 0))
 

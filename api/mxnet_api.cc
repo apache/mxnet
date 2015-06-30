@@ -164,15 +164,17 @@ int MXFuncGetName(FunctionHandle fun,
   API_END();
 }
 
-int MXFuncDescribeArgs(FunctionHandle fun,
-                       mx_uint *num_use_vars,
-                       mx_uint *num_scalars,
-                       mx_uint *num_mutate_vars) {
+int MXFuncDescribe(FunctionHandle fun,
+                   mx_uint *num_use_vars,
+                   mx_uint *num_scalars,
+                   mx_uint *num_mutate_vars,
+                   int *type_mask) {
   API_BEGIN();
   auto *f = static_cast<const FunctionRegistry::Entry *>(fun);
   *num_use_vars = f->num_use_vars;
   *num_scalars = f->num_scalars;
   *num_mutate_vars = f->num_mutate_vars;
+  *type_mask = f->type_mask;
   API_END();
 }
 

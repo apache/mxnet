@@ -144,5 +144,10 @@ REGISTER_NARRAY_FUN(minus).set_function(BinaryOp<narray::Minus>);
 REGISTER_NARRAY_FUN(mul).set_function(BinaryOp<narray::Mul>);
 REGISTER_NARRAY_FUN(div).set_function(BinaryOp<narray::Div>);
 
-REGISTER_NARRAY_FUN(copy).set_function(CopyFromTo);
+// copy function is special
+//that we need to remove kAcceptEmptyMutateTarget from it
+REGISTER_NARRAY_FUN(copy)
+.set_function(CopyFromTo)
+.set_type_mask(kNArrayArgBeforeScalar);
+
 }  // namespace mxnet

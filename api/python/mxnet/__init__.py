@@ -8,5 +8,10 @@ The interface is designed in collaboration by authors of three projects.
 Version : 0.10
 """
 from __future__ import absolute_import
-from .narray import NArray
+
 from .context import Context, current_context
+from .narray import NArray, _init_function_registry
+from .function import _FunctionRegistry
+
+# this is a global function registry that can be used to invoke functions
+op = _init_function_registry(_FunctionRegistry())

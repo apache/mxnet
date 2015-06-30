@@ -48,7 +48,8 @@ endif
 
 BIN = test/api_registry_test
 OBJ = storage.o narray_op_cpu.o operator.o operator_cpu.o 
-OBJCXX11 = engine.o narray.o mxnet_api.o api_registry.o threaded_engine.o
+# add threaded engine after it is done
+OBJCXX11 = engine.o narray.o mxnet_api.o api_registry.o engine.o
 CUOBJ = narray_op_gpu.o operator_gpu.o
 SLIB = api/libmxnet.so
 ALIB = api/libmxnet.a

@@ -5,14 +5,14 @@ from __future__ import absolute_import
 import ctypes
 import numpy as np
 from .base import lib
-from .base import op
 from .base import c_array
 from .base import mx_uint, mx_float, NArrayHandle
 from .base import ctypes2numpy_shared
-from .base import invoke
 from .base import check_call
 from .base import MXNetError
 from .context import Context
+
+global op
 
 def _new_empty_handle():
     """Return a new empty handle
@@ -67,7 +67,7 @@ class NArray(object):
     def __add__(self, other):
         hret = _new_empty_handle()
         if isinstance(other, NArray):
-            invoke(op.plus, (other.handle, self.handle), (), (hret,))
+            op.plus.invoke_with_handle_((other.handle, self.handle), (), (hret,))
         else:
             raise MXNetError('type %s not supported' % str(type(other)))
         return NArray(handle = hret)
@@ -78,7 +78,7 @@ class NArray(object):
     def __sub__(self, other):
         hret = _new_empty_handle()
         if isinstance(other, NArray):
-            invoke(op.minus, (other.handle, self.handle), (), (hret,))
+            op.minus.invoke_with_handle_((other.handle, self.handle), (), (hret,))
         else:
             raise MXNetError('type %s not supported' % str(type(other)))
         return NArray(handle = hret)
@@ -86,7 +86,7 @@ class NArray(object):
     def __mul__(self, other):
         hret = _new_empty_handle()
         if isinstance(other, NArray):
-            invoke(op.mul, (other.handle, self.handle), (), (hret,))
+            op.mul.invoke_with_handle_((other.handle, self.handle), (), (hret,))
         else:
             raise MXNetError('type %s not supported' % str(type(other)))
         return NArray(handle = hret)
@@ -97,7 +97,7 @@ class NArray(object):
     def __div__(self, other):
         hret = _new_empty_handle()
         if isinstance(other, NArray):
-            invoke(op.div, (other.handle, self.handle), (), (hret,))
+            op.div.invoke_with_handle_((other.handle, self.handle), (), (hret,))
         else:
             raise MXNetError('type %s not supported' % str(type(other)))
         return NArray(handle = hret)
@@ -167,11 +167,11 @@ class NArray(object):
         the copy target NArray
         """
         if isinstance(other, NArray):
-            invoke(op.copy, (self.handle,), (), (other.handle,))
+            op.copy.invoke_with_handle_((self.handle,), (), (other.handle,))
             return other
         elif isinstance(other, Context):
             hret = _new_alloc_handle(self.shape, other, True)
-            invoke(op.copy, (self.handle,), (), (hret,))
+            op.copy.invoke_with_handle_((self.handle,), (), (hret,))
             return NArray(handle = hret)
         else:
             raise MXNetError('copyto do not support type ' + type(other))
@@ -190,3 +190,16 @@ def create(shape, ctx = Context.default_ctx):
     """
     return NArray(handle = _new_alloc_handle(shape, ctx, False))
 
+def _init_function_registry(new_op):
+    """Initialize the global variable op with new_op
+    
+    This function is used to resolve cyclic dependency of .narray on function
+    
+    Parameters
+    ----------
+    new_op : function._FunctionRegistry
+        a FunctionRegistry to pass in in startup
+    """
+    global op
+    op = new_op
+    return op

@@ -173,13 +173,15 @@ MXNET_DLL int MXFuncGetName(FunctionHandle fun,
  * \param num_use_vars how many NArrays to be passed in as used_vars
  * \param num_scalars scalar variable is needed
  * \param num_mutate_vars how many NArrays to be passed in as mutate_vars
+ * \param type_mask the type mask of this function
  * \return 0 when success, -1 when failure happens
  * \sa MXFuncInvoke
  */
-MXNET_DLL int MXFuncDescribeArgs(FunctionHandle fun,
-                                 mx_uint *num_use_vars,
-                                 mx_uint *num_scalars,
-                                 mx_uint *num_mutate_vars);
+MXNET_DLL int MXFuncDescribe(FunctionHandle fun,
+                             mx_uint *num_use_vars,
+                             mx_uint *num_scalars,
+                             mx_uint *num_mutate_vars,
+                             int *type_mask);
 
 /*!
  * \brief invoke a function, the array size of passed in arguments
