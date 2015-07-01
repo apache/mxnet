@@ -31,7 +31,7 @@ template<typename T> class ConcurrentBlockingQueue {
         queue_.pop_front();
         if (queue_.empty())
           has_elmt_ = false;
-        return false;
+        return true;
       }
     }
     {
@@ -44,9 +44,9 @@ template<typename T> class ConcurrentBlockingQueue {
         queue_.pop_front();
         if (queue_.empty())
           has_elmt_ = false;
-        return false;
+        return true;
       } else {
-        return true;        
+        return false;        
       }
     }
   }

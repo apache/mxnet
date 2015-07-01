@@ -159,7 +159,7 @@ class ThreadedEngine : public DAGEngine {
   }
   void WorkerRoutine(int thrid) {
     OpDescr* opd = nullptr;
-    while(! worker_queues_[thrid]->Pop(opd)) {
+    while(worker_queues_[thrid]->Pop(opd)) {
       LOG(INFO) << "worker thread #" << thrid << " got operator " << opd;
       opd->op(GetRunContext(opd->exec_ctx), [this, opd] () { this->OnOpFinished(opd); });
       opd = nullptr;
