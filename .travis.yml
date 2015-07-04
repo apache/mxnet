@@ -28,6 +28,7 @@ addons:
       - clang
 
 before_install:
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
   - scripts/build_dmlc.sh
   - export TRAVIS=dmlc-core/scripts/travis
   - source ${TRAVIS}/travis_setup_env.sh
@@ -39,7 +40,6 @@ install:
 
 
 script:
-  - $CXX --version
   - scripts/travis_script.sh
 
 
@@ -57,4 +57,4 @@ notifications:
   email:
     on_success: change
     on_failure: always
-  slack: dmlc:mKX5kxjqTP6fBb89lXD3G5f3
+  slack: dmlc:NmroCzntCiWOuxUZpii40USd

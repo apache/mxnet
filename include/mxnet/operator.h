@@ -27,7 +27,7 @@ class Operator {
     /*! \brief whether it is training phase*/
     int is_train;
   };
-  /*! \briref gradient request type the request can have */
+  /*! \brief gradient request type the request can have */
   enum GradReqType {
     /*! \brief no operation, do not write gradient */
     kNullOp = 0,
@@ -47,6 +47,7 @@ class Operator {
     /*! \brief bias argument */
     kBiasArg = 2
   };
+  /*! \brief Property for engine schedule */
   enum Property {
     /*! \brief Op contains interanl state, won't influence engine schedule */
     kContainInteralState = 1,
@@ -110,7 +111,7 @@ class Operator {
    * \param in_data the array of input data
    * \param out_grad array of output gradient, there could be three possible TBlob
    *  in the each element in the array
-   * \param req_types request types of the gradient saving operation
+   * \param req request types of the gradient saving operation
    *                  only inplace will change input data
    * \sa GradReqType
    */
@@ -123,6 +124,7 @@ class Operator {
    * \brief factory unction, create a new operator
    * \param type the type of operator
    * \param ctx the context device type of operator
+   * \return a pointer of Operator object
    */
   static Operator *Create(const char *type, Context ctx);
 };

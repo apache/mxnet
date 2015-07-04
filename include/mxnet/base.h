@@ -32,7 +32,9 @@
 
 /*! \brief namespace of mxnet */
 namespace mxnet {
+/*! \brief mxnet cpu */
 typedef mshadow::cpu cpu;
+/*! \brief mxnet gpu */
 typedef mshadow::gpu gpu;
 /*! \brief index type usually use unsigned */
 typedef mshadow::index_t index_t;

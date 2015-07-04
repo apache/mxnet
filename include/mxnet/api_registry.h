@@ -41,7 +41,7 @@ class FunctionRegistry {
   /*! \brief definition of NArray function */
   typedef std::function<void (NArray **used_vars,
                               real_t *scalars,
-                              NArray **mutate_vars)> Function;  
+                              NArray **mutate_vars)> Function;
   /*! \brief registry entry */
   struct Entry {
     /*! \brief function name */
@@ -55,9 +55,9 @@ class FunctionRegistry {
     /*! \brief information on how function should be called from API */
     int type_mask;
     /*! \brief the real function */
-    Function body;    
+    Function body;
     /*!
-     * \brief constructor 
+     * \brief constructor
      * \param name name of the function
      */
     Entry(const std::string &name)
@@ -71,7 +71,7 @@ class FunctionRegistry {
      * \brief set the number of mutate variables
      * \param n number of mutate variablesx
      * \return ref to the registered entry, used to set properties
-     */    
+     */
     inline Entry &set_num_use_vars(unsigned n) {
       num_use_vars = n; return *this;
     }
@@ -100,8 +100,8 @@ class FunctionRegistry {
       body = f; return *this;
     }
     /*!
-     * \brief set the function body
-     * \param f function body to set
+     * \brief set type mask
+     * \param tmask typemask
      * \return ref to the registered entry, used to set properties
      */
     inline Entry &set_type_mask(int tmask) {
@@ -123,11 +123,11 @@ class FunctionRegistry {
       num_use_vars = 2; num_mutate_vars = 1;
       type_mask = kNArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
       return *this;
-    }                             
+    }
     /*!
      * \brief set the function body to a unary NArray function
      *  this will also auto set the parameters correctly
-     * \param unary function body to set
+     * \param funary function body to set
      * \return ref to the registered entry, used to set properties
      */
     inline Entry &set_function(void funary(const NArray &src,
@@ -151,7 +151,7 @@ class FunctionRegistry {
                            NArray **mutate_vars) const {
       body(use_vars, scalars, mutate_vars);
     }
-  };  // Entry    
+  };  // Entry
   /*! \return get a singleton */
   static FunctionRegistry *Get();
   /*!
@@ -165,7 +165,7 @@ class FunctionRegistry {
     return Get()->fun_list_;
   }
   /*!
-   * \brief find an function entry with corresponding name 
+   * \brief find an function entry with corresponding name
    * \param name name of the function
    * \return the corresponding function, can be NULL
    */
@@ -178,7 +178,7 @@ class FunctionRegistry {
       return nullptr;
     }
   }
-  
+
  private:
   /*! \brief list of functions */
   std::vector<const Entry*> fun_list_;
