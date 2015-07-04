@@ -10,6 +10,7 @@
 #define MXNET_EXTERN_C extern "C"
 #endif
 
+/*! \brief MXNET_DLL prefix for windows" */
 #ifdef _MSC_VER
 #define MXNET_DLL MXNET_EXTERN_C __declspec(dllexport)
 #else
@@ -41,6 +42,7 @@ typedef void *DataIterHandle;
  *  MXGetLastError can be called to retrieve the error
  *
  *  this function is threadsafe and can be called by different thread
+ *  \return error info
  */
 MXNET_DLL const char *MXGetLastError();
 
@@ -64,7 +66,7 @@ MXNET_DLL int MXNArrayCreateNone(NArrayHandle *out);
  *   see the data content inside, call MXNArrayWait
  *   the caller must also keep the data content alive and not being gc
  *   during the liveness of NArray, usually by keep a ref to the data content obj
- *   
+ *
  * \param data floating point pointer to the head of memory
  * \param shape the shape of the memory
  * \param ndim number of dimension of the shape
@@ -106,7 +108,7 @@ MXNET_DLL int MXNArrayWait(NArrayHandle handle);
  */
 MXNET_DLL int MXNArrayWaitAll();
 /*!
- * \brief free the narray handle 
+ * \brief free the narray handle
  * \param handle the handle to be freed
  * \return 0 when success, -1 when failure happens
  */
@@ -147,7 +149,7 @@ MXNET_DLL int MXNArrayGetContext(NArrayHandle handle,
  * \brief list all the available functions handles
  *   most user can use it to list all the needed functions
  * \param out_size the size of returned array
- * \param out_size the output function array
+ * \param out_array the output function array
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXListFunctions(mx_uint *out_size,
@@ -161,7 +163,7 @@ MXNET_DLL int MXListFunctions(mx_uint *out_size,
 MXNET_DLL int MXGetFunction(const char *name,
                             FunctionHandle *out);
 /*!
- * \brief get the name of function handle 
+ * \brief get the name of function handle
  * \param fun the function handle
  * \param out_name the name of the function
  * \return 0 when success, -1 when failure happens
@@ -170,6 +172,7 @@ MXNET_DLL int MXFuncGetName(FunctionHandle fun,
                             const char **out_name);
 /*!
  * \brief get the argument requirements of the function
+ * \param fun input function handle
  * \param num_use_vars how many NArrays to be passed in as used_vars
  * \param num_scalars scalar variable is needed
  * \param num_mutate_vars how many NArrays to be passed in as mutate_vars
@@ -185,12 +188,12 @@ MXNET_DLL int MXFuncDescribe(FunctionHandle fun,
 
 /*!
  * \brief invoke a function, the array size of passed in arguments
- *   must match the values in the 
+ *   must match the values in the
  * \param fun the function
  * \param use_vars the normal arguments passed to function
  * \param scalar_args the scalar qarguments
  * \param mutate_vars the mutate arguments
- * \return 0 when success, -1 when failure happens 
+ * \return 0 when success, -1 when failure happens
  * \sa MXFuncDescribeArgs
  */
 MXNET_DLL int MXFuncInvoke(FunctionHandle fun,
@@ -250,7 +253,7 @@ MXNET_DLL int MXOpFree(OperatorHandle op);
  * \brief return an array to describe the arguments
  *  of this operator
  * \param out_size the size of output array
- * \oaram out_array the array of parameter requirments
+ * \param out_array the array of parameter requirments
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXOpDescribeArgs(mx_uint *out_size,
