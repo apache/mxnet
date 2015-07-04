@@ -15,9 +15,9 @@
 // handling in the future
 using namespace mxnet;
 
-// macro to guard beginning and end section of all functions
-// every function starts with API_BEGIN(); and finishes with API_END();
+/*! \brief  macro to guard beginning and end section of all functions */
 #define API_BEGIN() try {
+/*! \brief every function starts with API_BEGIN(); and finishes with API_END(); */
 #define API_END() } catch(dmlc::Error &e) { return MXHandleException(e); } return 0;
 
 /*!
