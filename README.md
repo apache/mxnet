@@ -1,4 +1,7 @@
 # MXNet
+
+[![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
+
 This is a project that combines lessons and ideas we learnt from [cxxnet](https://github.com/dmlc/cxxnet), [minerva](https://github.com/dmlc/minerva) and [purine2](https://github.com/purine/purine2).
 - The interface is designed in collaboration by authors of three projects.
 - Nothing is yet working
@@ -11,7 +14,7 @@ This is a project that combines lessons and ideas we learnt from [cxxnet](https:
   - Ref headers in [dmlc-core/include](https://github.com/dmlc/dmlc-core/tree/master/include/dmlc)
   - Use the same style as dmlc-core
 * Minimize dependency, if possible only depend on dmlc-core
-* Macro Guard CXX11 code by 
+* Macro Guard CXX11 code by
   - Try to make interface compile when c++11 was not avaialable(but with some functionalities pieces missing)
 ```c++
 #include <dmlc/base.h>
