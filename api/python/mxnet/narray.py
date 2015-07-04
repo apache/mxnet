@@ -1,9 +1,9 @@
 # coding: utf-8
+# pylint: disable=invalid-name
 """NArray interface of mxnet"""
 from __future__ import absolute_import
 
 import ctypes
-import numpy as np
 from .base import lib
 from .base import c_array
 from .base import mx_uint, mx_float, NArrayHandle
@@ -20,7 +20,6 @@ def _new_empty_handle():
     """Return a new empty handle
 
     Empty handle can be used to hold result
-    
     Returns
     -------
     a new empty narray handle
@@ -31,7 +30,7 @@ def _new_empty_handle():
 
 def _new_alloc_handle(shape, ctx, delay_alloc):
     """Return a new handle with specified shape, context
-    
+
     Empty handle is only used to hold results
     Returns
     -------
@@ -49,8 +48,8 @@ def _new_alloc_handle(shape, ctx, delay_alloc):
 
 class NArray(object):
     """NArray object in mxnet
-    
-    NArray is basic ndarray like data structure in mxnet    
+
+    NArray is basic ndarray like data structure in mxnet
     """
     def __init__(self, handle):
         """initialize a new NArray
@@ -58,7 +57,7 @@ class NArray(object):
         Parameters
         ----------
         handle : NArrayHandle
-            NArray handle of C API        
+            NArray handle of C API
         """
         assert isinstance(handle, NArrayHandle)
         self.handle = handle
@@ -72,7 +71,7 @@ class NArray(object):
             op.plus.invoke_with_handle_((other.handle, self.handle), (), (hret,))
         else:
             raise MXNetError('type %s not supported' % str(type(other)))
-        return NArray(handle = hret)
+        return NArray(handle=hret)
 
     def __radd__(self, other):
         return self.__add__(other)
@@ -83,7 +82,7 @@ class NArray(object):
             op.minus.invoke_with_handle_((other.handle, self.handle), (), (hret,))
         else:
             raise MXNetError('type %s not supported' % str(type(other)))
-        return NArray(handle = hret)
+        return NArray(handle=hret)
 
     def __mul__(self, other):
         hret = _new_empty_handle()
@@ -91,7 +90,7 @@ class NArray(object):
             op.mul.invoke_with_handle_((other.handle, self.handle), (), (hret,))
         else:
             raise MXNetError('type %s not supported' % str(type(other)))
-        return NArray(handle = hret)
+        return NArray(handle=hret)
 
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -102,8 +101,8 @@ class NArray(object):
             op.div.invoke_with_handle_((other.handle, self.handle), (), (hret,))
         else:
             raise MXNetError('type %s not supported' % str(type(other)))
-        return NArray(handle = hret)
-    
+        return NArray(handle=hret)
+
     def wait(self):
         """Wait until the data on current NArray is available"""
         check_call(lib.MXNArrayWait(self.handle))
@@ -111,7 +110,7 @@ class NArray(object):
     @property
     def shape(self):
         """Get shape of current NArray
-        
+
         Returns
         -------
         a tuple representing shape of current narray
@@ -125,7 +124,7 @@ class NArray(object):
     @property
     def context(self):
         """Get context of current NArray
-        
+
         Returns
         -------
         the context of current NArray
@@ -139,31 +138,31 @@ class NArray(object):
     @property
     def numpy(self):
         """Return a numpy representation of current array
-        
+
         This array have to sit on CPU
-        
+
         Returns
         -------
         a numpy array view
         """
         self.wait()
         pdata = ctypes.POINTER(mx_float)()
-        check_call(lib.MXNArrayGetData(self.handle, ctypes.byref(pdata)))        
+        check_call(lib.MXNArrayGetData(self.handle, ctypes.byref(pdata)))
         return ctypes2numpy_shared(pdata, self.shape)
-    
+
     def copyto(self, other):
-        """copy the content of current array to othe        
-        
+        """copy the content of current array to othe
+
         When other is NArray, the content is copied over.
         When other is a Context, a new NArray in the context
         will be created as target
-        
+
         Parameters
         ----------
         other : NArray or Context
             another narray we want to copy to,
             or target context we want copy the data to
-        
+
         Returns
         -------
         the copy target NArray
@@ -174,13 +173,13 @@ class NArray(object):
         elif isinstance(other, Context):
             hret = _new_alloc_handle(self.shape, other, True)
             op.copy.invoke_with_handle_((self.handle,), (), (hret,))
-            return NArray(handle = hret)
+            return NArray(handle=hret)
         else:
             raise MXNetError('copyto do not support type ' + type(other))
 
-def create(shape, ctx = Context.default_ctx):
+def create(shape, ctx=Context.default_ctx):
     """Create a new NArray, with specified shape
-    
+
     Parameters
     ----------
     shape : tuple
@@ -190,13 +189,13 @@ def create(shape, ctx = Context.default_ctx):
     -------
     a new NArray
     """
-    return NArray(handle = _new_alloc_handle(shape, ctx, False))
+    return NArray(handle=_new_alloc_handle(shape, ctx, False))
 
 def _init_function_registry(new_op):
     """Initialize the global variable op with new_op
-    
+
     This function is used to resolve cyclic dependency of .narray on function
-    
+
     Parameters
     ----------
     new_op : function._FunctionRegistry

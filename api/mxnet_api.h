@@ -352,4 +352,4 @@ MXNET_DLL int MXIOGetData(DataIterHandle handle,
 MXNET_DLL int MXIOGetLabel(DataIterHandle handle,
                            NArrayHandle *out);
 
-#endif  // MXNET_WRAPPER_H_
+#endif  // MXNET_API_H_

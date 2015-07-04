@@ -1,7 +1,8 @@
+#pylint: skip-file
 import mxnet as mx
 
-a = mx.narray.create((3000,4000))
-b = mx.narray.create((3000,4000))
+a = mx.narray.create((3000, 4000))
+b = mx.narray.create((3000, 4000))
 a.numpy[:] = 10
 b.numpy[:] = 11
 print(a.numpy)

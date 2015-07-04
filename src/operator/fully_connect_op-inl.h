@@ -7,9 +7,9 @@
 #ifndef MXNET_OPERATOR_FULLY_CONNECT_OP_INL_H_
 #define MXNET_OPERATOR_FULLY_CONNECT_OP_INL_H_
 
-#include <vector>
 #include <dmlc/logging.h>
 #include <mxnet/operator.h>
+#include <vector>
 #include "./operator_common.h"
 #include "./param.h"
 
@@ -33,15 +33,15 @@ class FullyConnectOp : public Operator {
                           std::vector<TShape> *out_shape) {
     using namespace mshadow;
     if (param_.no_bias == 0) {
-      CHECK(in_shape->size() == 3) << "Input:[data, weight, bias]";
+      CHECK_EQ(in_shape->size(), 3) << "Input:[data, weight, bias]";
     } else {
-      CHECK(in_shape->size() == 2) << "Input:[data, weight]";
+      CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
     }
-    CHECK(param_.num_hidden > 0);
+    CHECK_GT(param_.num_hidden, 0);
     const TShape &dshape = (*in_shape)[0];
-    CHECK(dshape.ndim() == 4) << \
+    CHECK_EQ(dshape.ndim(), 4) << \
         "Input data should be 4D in batch-1-1-hidden";
-    CHECK(dshape.ndim() != 0) << "Require data shape to be known";
+    CHECK_NE(dshape.ndim(), 0) << "Require data shape to be known";
     ShapeAssignCheck((*in_shape)[1], Shape2(param_.num_hidden, dshape[3]));
     if (param_.no_bias == 0) {
       ShapeAssignCheck((*in_shape)[2], Shape1(param_.num_hidden));
@@ -57,10 +57,10 @@ class FullyConnectOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     size_t expected = param_.no_bias == 0 ? 3 : 2;
-    CHECK(in_data.size() == expected);
-    CHECK(out_data.size() == 1);
-    // TODO: check the BLAS Handle, be careful
-    // maybe need blas handle from context   
+    CHECK_EQ(in_data.size(), expected);
+    CHECK_EQ(out_data.size(), 1);
+    // TODO(bing): check the BLAS Handle, be careful
+    // maybe need blas handle from context
     Stream<xpu> *s = static_cast<Stream<xpu> *>(ctx.stream);
     Tensor<xpu, 2> data = in_data[0].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> wmat = in_data[1].get<xpu, 2, real_t>(s);
@@ -78,18 +78,18 @@ class FullyConnectOp : public Operator {
                         const std::vector<GradReqType> &req) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK(grad_next.size() == 1);
+    CHECK_EQ(grad_next.size(), 1);
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK(in_data.size() == expected && out_grad.size() == expected);
-    CHECK(req.size() == expected);
-    // TODO: check the BLAS Handle, be careful
-    // maybe need blas handle from context   
+    CHECK_EQ(req.size(), expected);
+    // TODO(bing): check the BLAS Handle, be careful
+    //  maybe need blas handle from context
     Stream<xpu> *s = static_cast<Stream<xpu> *>(ctx.stream);
     Tensor<xpu, 2> data = in_data[0].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> wmat = in_data[1].get<xpu, 2, real_t>(s);
     Tensor<xpu, 2> grad = grad_next[0].FlatTo2D<xpu, real_t>(s);
     //  backprop
-    CHECK(req[1] != kWriteInplace) << "cannot write weight inplace";
+    CHECK_NE(req[1], kWriteInplace) << "cannot write weight inplace";
     // gradient of weight
     Tensor<xpu, 2> gwmat = out_grad[1].get<xpu, 2, real_t>(s);
     Assign(gwmat, req[1], dot(grad.T(), data));
@@ -102,6 +102,7 @@ class FullyConnectOp : public Operator {
     Tensor<xpu, 2> gdata = out_grad[0].FlatTo2D<xpu, real_t>(s);
     Assign(gdata, req[0], dot(grad, wmat));
   }
+
  private:
   Param param_;
 };  // class FullyConnectOp

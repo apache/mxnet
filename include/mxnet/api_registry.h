@@ -13,6 +13,8 @@
 #endif
 #include <map>
 #include <functional>
+#include <string>
+#include <vector>
 #include "./base.h"
 #include "./narray.h"
 
@@ -60,7 +62,7 @@ class FunctionRegistry {
      * \brief constructor
      * \param name name of the function
      */
-    Entry(const std::string &name)
+    explicit Entry(const std::string &name)
         : name(name),
           num_use_vars(0),
           num_mutate_vars(0),

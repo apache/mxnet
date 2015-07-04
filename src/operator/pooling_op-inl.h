@@ -4,8 +4,8 @@
  * \brief pooling operator
  * \author Bing Xu
 */
-#ifndef MXNET_POOLING_OP_INL_H_
-#define MXNET_POOLING_OP_INL_H_
+#ifndef MXNET_OPERATOR_POOLING_OP_INL_H_
+#define MXNET_OPERATOR_POOLING_OP_INL_H_
 
 #include <mxnet/operator.h>
 #include <algorithm>
@@ -24,14 +24,14 @@ class PoolingOp : public Operator {
   }
   virtual void InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape) {
-    CHECK(in_shape->size() == 1) << "Input: [data]";
-    CHECK(param_.kernel_y > 0);
-    CHECK(param_.kernel_x > 0);
+    CHECK_EQ(in_shape->size(), 1) << "Input: [data]";
+    CHECK_GT(param_.kernel_y, 0);
+    CHECK_GT(param_.kernel_x, 0);
     const int ksize_y = static_cast<index_t>(param_.kernel_y);
     const int ksize_x = static_cast<index_t>(param_.kernel_x);
     const int pad_y = static_cast<index_t>(param_.pad_y);
     const int pad_x = static_cast<index_t>(param_.pad_x);
-    //  TODO: dual stride
+    // TODO(bing): dual stride
     const int kstride = static_cast<index_t>(param_.stride_y);
     mshadow::Shape<4> ishape = (*in_shape)[0].get<4>();
     oshape_ = ishape;
@@ -50,8 +50,8 @@ class PoolingOp : public Operator {
                        RunContext ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<TBlob> &out_data) {
-    CHECK(in_data.size() == 1);
-    CHECK(out_data.size() == 0);
+    CHECK_EQ(in_data.size(), 1);
+    CHECK_EQ(out_data.size(), 0);
     if (!(temp_.shape_ == oshape_)) {
       temp_.Resize(oshape_);
     }
@@ -59,7 +59,7 @@ class PoolingOp : public Operator {
     const int ksize_x = param_.kernel_x;
     const int pad_y = param_.pad_y;
     const int pad_x = param_.pad_x;
-    //  TODO: dual stride
+    // TODO(bing): dual stride
     const int kstride = param_.stride_y;
     using namespace mshadow;
     using namespace mshadow::expr;
@@ -90,15 +90,15 @@ class PoolingOp : public Operator {
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<GradReqType> &req) {
-    CHECK(grad_next.size() == 1);
-    CHECK(in_data.size() == 1);
-    CHECK(out_grad.size() == 1);
-    CHECK(req.size() == 1);
+    CHECK_EQ(grad_next.size(), 1);
+    CHECK_EQ(in_data.size(), 1);
+    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(req.size(), 1);
     const int ksize_y = param_.kernel_y;
     const int ksize_x = param_.kernel_x;
     const int pad_y = param_.pad_y;
     const int pad_x = param_.pad_x;
-    //  TODO: dual stride
+    // TODO(bing): dual stride
     const int kstride = param_.stride_y;
     using namespace mshadow;
     using namespace mshadow::expr;
@@ -149,4 +149,4 @@ class PoolingOp : public Operator {
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_POOLING_OP_INL_H_
+#endif  // MXNET_OPERATOR_POOLING_OP_INL_H_

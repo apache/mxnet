@@ -23,7 +23,7 @@ namespace op {
  * \tparam Exp expression type
  */
 template<typename OType, typename Exp>
-inline void Assign(OType &out,
+inline void Assign(OType &out, // NOLINT(*)
                    Operator::GradReqType req,
                    const Exp &exp) {
   switch (req) {
@@ -41,7 +41,7 @@ inline void Assign(OType &out,
  * \param shape the infered shape
  */
 template<typename TS>
-inline void ShapeAssignCheck(TShape &out, const TS &shape) {
+inline void ShapeAssignCheck(TShape &out, const TS &shape) { // NOLINT(*)
   if (out.ndim() == 0) {
     out = shape;
   } else {
@@ -68,6 +68,6 @@ enum OpType {
  */
 template<typename xpu>
 Operator *CreateOperator(OpType type);
-}  //namespace op
+}  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_COMMON_H_
+#endif  // MXNET_OPERATOR_OPERATOR_COMMON_H_

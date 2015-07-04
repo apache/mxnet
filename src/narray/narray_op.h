@@ -3,8 +3,8 @@
  * \file narray_op.h
  * \brief the real execution functions of narray operations
  */
-#ifndef MXNET_NARRAY_OP_H_
-#define MXNET_NARRAY_OP_H_
+#ifndef MXNET_NARRAY_NARRAY_OP_H_
+#define MXNET_NARRAY_NARRAY_OP_H_
 #include <dmlc/logging.h>
 #include <mshadow/tensor.h>
 #include <mxnet/base.h>
@@ -44,4 +44,4 @@ void Copy(const TBlob &from, TBlob *to,
 
 }  // namespace narray
 }  // namespace mxnet
-#endif  // MXNET_NARRAY_OP_H_
+#endif  // MXNET_NARRAY_NARRAY_OP_H_

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# pylint: disable=invalid-name
 # coding: utf-8
 """MXNet: a concise, fast and flexible framework for deep learning
 

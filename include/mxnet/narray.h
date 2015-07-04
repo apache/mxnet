@@ -5,9 +5,9 @@
  */
 #ifndef MXNET_NARRAY_H_
 #define MXNET_NARRAY_H_
-#include <memory>
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
+#include <memory>
 #include "./base.h"
 #include "./storage.h"
 #include "./tensor_blob.h"

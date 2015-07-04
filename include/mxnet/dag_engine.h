@@ -13,6 +13,7 @@
 #endif
 
 #include <functional>
+#include <vector>
 #include "./base.h"
 #include "./tensor_blob.h"
 
@@ -24,7 +25,7 @@ namespace mxnet {
 class DAGEngine {
  public:
   /*!
-   * \brief operation to pass to DAG engine 
+   * \brief operation to pass to DAG engine
    * \param ctx runtime context
    */
   typedef std::function<void(RunContext rctx)> Op;
@@ -35,16 +36,16 @@ class DAGEngine {
    * \param ctx runtime context
    * \param on_complete a callback function used to notify the engine the action completes
    */
-  typedef std::function<void(RunContext ctx, Callback on_complete)> AsyncOp;  
+  typedef std::function<void(RunContext ctx, Callback on_complete)> AsyncOp;
   /*!
    * \brief variable of dag engine, used to specify dependencies
    *  defined to be a pointer, that can points to a internal data structure
    *  of the engine itself
    *
    *  Design detail: we choose pointer instead of some ID to avoid
-   *  indirect map lookup. usually, Variable directly points to the content we need 
+   *  indirect map lookup. usually, Variable directly points to the content we need
    */
-  typedef void *Variable;  
+  typedef void *Variable;
   /*!
    * \brief Push an asynchronize operation to the DAG engine
    * \param exec_fun execution funtion, this function takes a parameter on_complete
@@ -55,7 +56,7 @@ class DAGEngine {
    */
   virtual void Push(AsyncOp exec_fun,
                     Context exec_ctx,
-                    const std::vector<Variable> &use_vars, 
+                    const std::vector<Variable> &use_vars,
                     const std::vector<Variable> &mutate_vars) = 0;
   /*!
    * \brief Push an synchronize operation to the DAG engine
@@ -66,7 +67,7 @@ class DAGEngine {
    */
   virtual void Push(Op exec_fun,
                     Context exec_ctx,
-                    const std::vector<Variable> &use_vars, 
+                    const std::vector<Variable> &use_vars,
                     const std::vector<Variable> &mutate_vars) {
     this->Push([exec_fun](RunContext ctx, Callback on_complete) {
         exec_fun(ctx); on_complete();
@@ -83,15 +84,15 @@ class DAGEngine {
    */
   virtual void PushDelete(Op delete_fun,
                           Context exec_ctx,
-                          Variable var) = 0;  
+                          Variable var) = 0;
   /*!
    * \brief allocate a new variable, the variable can then
-   *  be used to schedul the operation concurrently via dependency patterns 
+   *  be used to schedul the operation concurrently via dependency patterns
    * \return thew new variable allocated
    */
   virtual Variable NewVar() = 0;
   /*!
-   * \brief wait for variable var 
+   * \brief wait for variable var
    * \param var the variable we should wait for, this function returns when all the operations
    *  related to var has been completed
    */

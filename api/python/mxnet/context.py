@@ -2,14 +2,13 @@
 """ code for context management """
 from __future__ import absolute_import
 
-class Context:
+class Context(object):
     """Context representing device and device id in mxnet"""
-    # static class variable 
+    # static class variable
     default_ctx = None
-    devmask2type = { 1: 'cpu', 2: 'gpu'}
-    devtype2mask = {'cpu': 1, 'gpu': 2 }
-    
-    def __init__(self, device_type, device_id = 0):
+    devmask2type = {1: 'cpu', 2: 'gpu'}
+    devtype2mask = {'cpu': 1, 'gpu': 2}
+    def __init__(self, device_type, device_id=0):
         """Constructing a context
 
         Parameters
@@ -40,9 +39,9 @@ class Context:
         return self
 
     def __exit__(self, type, value, trace):
-        Context.default_ctx= self._old_ctx
+        Context.default_ctx = self._old_ctx
 
-# initialize the default context in Context        
+# initialize the default context in Context
 Context.default_ctx = Context('cpu', 0)
 
 def current_context():

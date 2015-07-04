@@ -11,7 +11,7 @@
 namespace mxnet {
 /*! \brief memory allocator of storage */
 class StorageManager {
-public:
+ public:
   /*!
    * \brief storage handle the represents storage information
    */
@@ -40,6 +40,6 @@ public:
   virtual void Free(Handle handle) = 0;
   /*! \return storage manager singleton */
   static StorageManager *Get();
-};
-}
+};  // class StorageManager
+}  // namespace mxnet
 #endif  // MXNET_STORAGE_H_

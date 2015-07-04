@@ -7,6 +7,7 @@
 #define MXNET_OPERATOR_H_
 // this file will be seen by cuda, no c++11 for now
 #include <dmlc/base.h>
+#include <vector>
 #include "./base.h"
 #include "./tensor_blob.h"
 

@@ -1,15 +1,17 @@
 # coding: utf-8
+# pylint: disable=invalid-name
 """NArray functions support of mxnet"""
 from __future__ import absolute_import
 
 import ctypes
 from .base import lib
 from .base import c_array
-from .base import mx_uint, mx_float, NArrayHandle, FunctionHandle
+from .base import mx_uint, mx_float, NArrayHandle
 from .base import check_call, MXNetError
 from .narray import NArray, _new_empty_handle
 
-class _Function:
+class _Function(object):
+    """Function Object"""
     # constants for type masks
     NARRAY_ARG_BEFORE_SCALAR = 1
     SCALAR_ARG_BEFORE_NARRAY = 1 << 1
@@ -46,7 +48,7 @@ class _Function:
         if (self.type_mask & _Function.NARRAY_ARG_BEFORE_SCALAR) != 0:
             self.use_vars_range = range(0, self.n_used_vars)
             self.scalar_range = range(self.n_used_vars,
-                                      self.n_used_vars + self.n_scalars) 
+                                      self.n_used_vars + self.n_scalars)
         else:
             self.scalar_range = range(0, self.n_scalars)
             self.use_vars_range = range(self.n_scalars,
@@ -61,10 +63,8 @@ class _Function:
         ----------
         *args: positional arguments
             positional arguments of input scalars and NArray
-        
         mutate_vars: kwarg(optional)
-            provide the NArray to store the result of the operation        
-        
+            provide the NArray to store the result of the operation
         Returns
         -------
         the result NArrays of mutated result
@@ -81,7 +81,7 @@ class _Function:
                     NArray(_new_empty_handle()) for i in range(self.n_mutate_vars))
             else:
                 raise MXNetError('mutate_vars argument is required to call op.%s' % self.name)
-                
+
         self.invoke_with_handle_([args[i].handle for i in self.use_vars_range],
                                  [args[i] for i in self.scalar_range],
                                  [v.handle for v in mutate_vars])
@@ -92,15 +92,15 @@ class _Function:
 
     def invoke_with_handle_(self, use_vars, scalars, mutate_vars):
         """Invoke this function by passing in arguments as tuples
-        
+
         This is a very primitive call to the function handle that
         involves passing in a C handle
-        
+
         Parameters
         ----------
         fhandle : FunctionHandle
             function handle of C API
-        
+
         use_vars : tuple
             tuple of NArray handles
 
@@ -116,7 +116,8 @@ class _Function:
             c_array(mx_float, scalars),
             c_array(NArrayHandle, mutate_vars)))
 
-class _FunctionRegistry:    
+class _FunctionRegistry(object):
+    """Function Registry"""
     def __init__(self):
         plist = ctypes.POINTER(ctypes.c_void_p)()
         size = ctypes.c_uint()

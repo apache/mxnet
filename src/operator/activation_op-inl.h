@@ -7,9 +7,9 @@
 #ifndef MXNET_OPERATOR_ACTIVATION_OP_INL_H_
 #define MXNET_OPERATOR_ACTIVATION_OP_INL_H_
 
-#include <vector>
 #include <dmlc/logging.h>
 #include <mxnet/operator.h>
+#include <vector>
 #include "./operator_common.h"
 
 namespace mxnet {
@@ -19,8 +19,8 @@ class ActivationOp : public Operator {
  public:
   virtual void InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape) {
-    CHECK(in_shape->size() == 1) << "Only 1 input is allowed";
-    CHECK((*in_shape)[0].ndim() != 0 ) << "Require data shape to be known";
+    CHECK_EQ(in_shape->size(), 1) << "Only 1 input is allowed";
+    CHECK_NE((*in_shape)[0].ndim(), 0) << "Require data shape to be known";
     out_shape->clear();
     out_shape->push_back((*in_shape)[0]);
   }
@@ -28,8 +28,8 @@ class ActivationOp : public Operator {
                        RunContext ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<TBlob> &out_data) {
-    CHECK(out_data.size() == 1);
-    CHECK(in_data.size() == 1);
+    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(in_data.size(), 1);
     mshadow::Stream<xpu> *stream = \
       static_cast<mshadow::Stream<xpu> *>(ctx.stream);
     mshadow::Tensor<xpu, 2> in = in_data[0].FlatTo2D<xpu, real_t>(stream);
@@ -41,10 +41,10 @@ class ActivationOp : public Operator {
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<GradReqType> &req) {
-    CHECK(grad_next.size() == 1);
-    CHECK(in_data.size() == 1);
-    CHECK(out_grad.size() == 1);
-    CHECK(req.size() == 1);
+    CHECK_EQ(grad_next.size(), 1);
+    CHECK_EQ(in_data.size(), 1);
+    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(req.size(), 1);
     mshadow::Stream<xpu> *stream = \
       static_cast<mshadow::Stream<xpu> *>(ctx.stream);
     mshadow::Tensor<xpu, 2> grad = grad_next[0].FlatTo2D<xpu, real_t>(stream);

@@ -1,3 +1,8 @@
+/*!
+ *  Copyright (c) 2015 by Contributors
+ * \file mxnet_api.cc
+ * \brief C API of mxnet
+ */
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
 #include <mxnet/base.h>
@@ -15,7 +20,7 @@ using namespace mxnet;
 #define API_BEGIN() try {
 #define API_END() } catch(dmlc::Error &e) { return MXHandleException(e); } return 0;
 
-/*! 
+/*!
  * \brief a helper function for error handling
  *  will set the last error to be str_set when it is not NULL
  * \param str_set the error to set
@@ -105,7 +110,7 @@ int MXNArrayGetShape(NArrayHandle handle,
   } else {
     *out_dim = 0;
   }
-  API_END();  
+  API_END();
 }
 
 int MXNArrayGetData(NArrayHandle handle,
@@ -145,7 +150,7 @@ int MXListFunctions(mx_uint *out_size,
   API_BEGIN();
   auto &vec = FunctionRegistry::List();
   *out_size = static_cast<mx_uint>(vec.size());
-  *out_array = (FunctionHandle*)(dmlc::BeginPtr(vec));
+  *out_array = (FunctionHandle*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
   API_END();
 }
 
@@ -153,7 +158,7 @@ int MXGetFunction(const char *name,
                   FunctionHandle *out) {
   API_BEGIN();
   *out = FunctionRegistry::Find(name);
-  API_END();  
+  API_END();
 }
 
 int MXFuncGetName(FunctionHandle fun,
@@ -184,8 +189,8 @@ int MXFuncInvoke(FunctionHandle fun,
                  NArrayHandle *mutate_vars) {
   API_BEGIN();
   auto *f = static_cast<const FunctionRegistry::Entry *>(fun);
-  (*f)((NArray**)(use_vars),
+  (*f)((NArray**)(use_vars),  //  NOLINT(*)
        scalar_args,
-       (NArray**)(mutate_vars));
-  API_END();  
+       (NArray**)(mutate_vars));  // NOLINT(*)
+  API_END();
 }

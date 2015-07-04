@@ -1,4 +1,5 @@
 # coding: utf-8
+# pylint: disable=invalid-name
 """ ctypes library of mxnet and helper functions """
 from __future__ import absolute_import
 
@@ -71,12 +72,11 @@ def check_call(ret):
         return value from API calls
     """
     if ret != 0:
-        raise MXNetError(lib.MXGetLastError());
+        raise MXNetError(lib.MXGetLastError())
 
 
 def c_str(string):
     """Create ctypes char * from a python string
-    
     Parameters
     ----------
     string : string type
@@ -86,13 +86,12 @@ def c_str(string):
     -------
     a char pointer that can be passed to C API
     """
-    
     return ctypes.c_char_p(string.encode('utf-8'))
 
 
 def c_array(ctype, values):
     """Create ctypes array from a python array
-    
+
     Parameters
     ----------
     ctype : ctypes data type
@@ -109,10 +108,10 @@ def c_array(ctype, values):
 
 
 def ctypes2numpy_shared(cptr, shape):
-    """Convert a ctypes pointer to a numpy array 
+    """Convert a ctypes pointer to a numpy array
 
     The result numpy array shares the memory with the pointer
-    
+
     Parameters
     ----------
     cptr : ctypes.POINTER(mx_float)
@@ -131,5 +130,5 @@ def ctypes2numpy_shared(cptr, shape):
     for s in shape:
         size *= s
     dbuffer = (mx_float * size).from_address(ctypes.addressof(cptr.contents))
-    return np.frombuffer(dbuffer, dtype = np.float32).reshape(shape)
+    return np.frombuffer(dbuffer, dtype=np.float32).reshape(shape)
 
