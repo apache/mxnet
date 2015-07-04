@@ -119,8 +119,6 @@ lint:
 doc:
 	doxygen doc/Doxyfile
 
-
-
 clean:
 	$(RM) $(OBJ) $(OBJCXX11) $(BIN) $(CUBIN) $(CUOBJ) $(SLIB) $(ALIB) *~ */*~ */*/*~ */*/*/*~
 	cd $(DMLC_CORE); make clean; cd -

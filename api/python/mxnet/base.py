@@ -24,7 +24,7 @@ class MXNetError(Exception):
 
 
 def _load_lib():
-    """load libary by searching possible path"""
+    """load libary by searching possible path."""
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
     api_path = os.path.join(curr_path, '../../')
     dll_path = [api_path, curr_path]
@@ -48,7 +48,7 @@ def _load_lib():
 
 
 # library instance of mxnet
-lib = _load_lib()
+_LIB = _load_lib()
 
 # type definitions
 mx_uint = ctypes.c_uint
@@ -72,7 +72,7 @@ def check_call(ret):
         return value from API calls
     """
     if ret != 0:
-        raise MXNetError(lib.MXGetLastError())
+        raise MXNetError(_LIB.MXGetLastError())
 
 
 def c_str(string):

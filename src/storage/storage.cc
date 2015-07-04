@@ -1,3 +1,4 @@
+// Copyright (c) 2015 by Contributors
 #include <mshadow/tensor.h>
 #include <mxnet/storage.h>
 namespace mxnet {

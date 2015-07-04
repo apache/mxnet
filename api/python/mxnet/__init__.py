@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, protected-access
 # coding: utf-8
 """MXNet: a concise, fast and flexible framework for deep learning
 
@@ -11,8 +11,8 @@ Version : 0.10
 from __future__ import absolute_import
 
 from .context import Context, current_context
-from .narray import NArray, _init_function_registry
+from .narray import NArray
 from .function import _FunctionRegistry
 
 # this is a global function registry that can be used to invoke functions
-op = _init_function_registry(_FunctionRegistry())
+op = NArray._init_function_registry(_FunctionRegistry())

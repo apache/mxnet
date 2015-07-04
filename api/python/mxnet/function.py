@@ -1,17 +1,16 @@
 # coding: utf-8
-# pylint: disable=invalid-name
 """NArray functions support of mxnet"""
 from __future__ import absolute_import
 
 import ctypes
-from .base import lib
+from .base import _LIB
 from .base import c_array
 from .base import mx_uint, mx_float, NArrayHandle
 from .base import check_call, MXNetError
 from .narray import NArray, _new_empty_handle
 
 class _Function(object):
-    """Function Object"""
+    """Function Object."""
     # constants for type masks
     NARRAY_ARG_BEFORE_SCALAR = 1
     SCALAR_ARG_BEFORE_NARRAY = 1 << 1
@@ -34,7 +33,7 @@ class _Function(object):
         n_scalars = mx_uint()
         n_mutate_vars = mx_uint()
         type_mask = ctypes.c_int()
-        check_call(lib.MXFuncDescribe(
+        check_call(_LIB.MXFuncDescribe(
             self.handle,
             ctypes.byref(n_used_vars),
             ctypes.byref(n_scalars),
@@ -110,7 +109,7 @@ class _Function(object):
         mutate_vars : tuple
             tuple of NArray handles to mutate
         """
-        check_call(lib.MXFuncInvoke(
+        check_call(_LIB.MXFuncInvoke(
             self.handle,
             c_array(NArrayHandle, use_vars),
             c_array(mx_float, scalars),
@@ -121,12 +120,12 @@ class _FunctionRegistry(object):
     def __init__(self):
         plist = ctypes.POINTER(ctypes.c_void_p)()
         size = ctypes.c_uint()
-        check_call(lib.MXListFunctions(ctypes.byref(size),
-                                       ctypes.byref(plist)))
+        check_call(_LIB.MXListFunctions(ctypes.byref(size),
+                                        ctypes.byref(plist)))
         hmap = {}
         for i in range(size.value):
-            h = plist[i]
+            hdl = plist[i]
             name = ctypes.c_char_p()
-            check_call(lib.MXFuncGetName(h, ctypes.byref(name)))
-            hmap[name.value] = _Function(h, name.value)
+            check_call(_LIB.MXFuncGetName(hdl, ctypes.byref(name)))
+            hmap[name.value] = _Function(hdl, name.value)
         self.__dict__.update(hmap)

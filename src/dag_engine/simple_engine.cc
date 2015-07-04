@@ -1,9 +1,9 @@
+// Copyright (c) 2015 by Contributors
 #include <dmlc/logging.h>
 #include <mxnet/dag_engine.h>
 namespace mxnet {
 class SimpleEngine : public DAGEngine {
  public:
-
   virtual void Push(AsyncOp exec_fun,
                     Context exec_ctx,
                     const std::vector<Variable> &use_vars,
