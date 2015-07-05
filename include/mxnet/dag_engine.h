@@ -54,10 +54,10 @@ class DAGEngine {
    * \param use_vars the variables that current operation will use(but not mutate)
    * \param mutate_vars the variables that current operation will mutate
    */
-  virtual void Push(AsyncOp exec_fun,
-                    Context exec_ctx,
-                    const std::vector<Variable> &use_vars,
-                    const std::vector<Variable> &mutate_vars) = 0;
+  virtual void PushAsync(AsyncOp exec_fun,
+                         Context exec_ctx,
+                         const std::vector<Variable> &use_vars,
+                         const std::vector<Variable> &mutate_vars) = 0;
   /*!
    * \brief Push an synchronize operation to the DAG engine
    * \param exec_fun execution funtion that executes the operation
@@ -69,9 +69,10 @@ class DAGEngine {
                     Context exec_ctx,
                     const std::vector<Variable> &use_vars,
                     const std::vector<Variable> &mutate_vars) {
-    this->Push([exec_fun](RunContext ctx, Callback on_complete) {
-        exec_fun(ctx); on_complete();
-      }, exec_ctx, use_vars, mutate_vars);
+    AsyncOp f = [exec_fun](RunContext ctx, Callback on_complete) {
+      exec_fun(ctx); on_complete();
+    };
+    this->PushAsync(f, exec_ctx, use_vars, mutate_vars);
   }
   /*!
    * \brief schedule the delete of variable var,

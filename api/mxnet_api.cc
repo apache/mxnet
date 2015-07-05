@@ -8,7 +8,74 @@
 #include <mxnet/base.h>
 #include <mxnet/narray.h>
 #include <mxnet/api_registry.h>
+#include <mutex>
 #include "./mxnet_api.h"
+
+// macro hanlding for threadlocal variables
+#ifdef __GNUC__
+  #define MX_TREAD_LOCAL __thread
+#elif __STDC_VERSION__ >= 201112L
+  #define  MX_TREAD_LOCAL _Thread_local
+#elif defined(_MSC_VER)
+  #define MX_TREAD_LOCAL __declspec(thread)
+#endif
+
+#ifndef MX_TREAD_LOCAL
+#message("Warning: Threadlocal is not enabled");
+#endif
+
+/*!
+ * \brief helper to store error message in threadlocal storage
+ */
+class MXAPIErrorMessageHelper {
+ public:
+  /*! \brief get a single instance out from */
+  static MXAPIErrorMessageHelper *Get() {
+    static MXAPIErrorMessageHelper inst;
+    return &inst;
+  }
+  /*!
+   * \brief a helper function for error handling
+   *  will set the last error to be str_set when it is not NULL
+   * \param str_set the error to set
+   * \return a pointer message to last error
+   */
+  static const char *SetGetLastError(const char *str_set) {
+    // use last_error to record last error
+    static MX_TREAD_LOCAL std::string *last_error = NULL;
+    if (last_error == NULL) {
+      last_error = new std::string();
+      Get()->RegisterDelete(last_error);
+    }
+    if (str_set != NULL) {
+      *last_error = str_set;
+    }
+    return last_error->c_str();
+  }
+
+ private:
+  /*! \brief constructor */
+  MXAPIErrorMessageHelper() {}
+  /*! \brief destructor */
+  ~MXAPIErrorMessageHelper() {
+    for (size_t i = 0; i < data_.size(); ++i) {
+      delete data_[i];
+    }
+  }
+  /*!
+   * \brief register str for internal deletion
+   * \param str the string pointer
+   */
+  void RegisterDelete(std::string *str) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    data_.push_back(str);
+    lock.unlock();
+  }
+  /*! \brief internal mutex */
+  std::mutex mutex_;
+  /*!\brief internal data */
+  std::vector<std::string*> data_;
+};
 
 // NOTE: all functions return 0 upon success
 // consider add try/catch block for user error
@@ -20,24 +87,9 @@ using namespace mxnet;
 /*! \brief every function starts with API_BEGIN(); and finishes with API_END(); */
 #define API_END() } catch(dmlc::Error &e) { return MXHandleException(e); } return 0;
 
-/*!
- * \brief a helper function for error handling
- *  will set the last error to be str_set when it is not NULL
- * \param str_set the error to set
- * \return a pointer message to last error
- */
-const char *MXSetGetLastError_(const char *str_set) {
-  // use last_error to record last error
-  static thread_local std::string last_error;
-  if (str_set != NULL) {
-    last_error = str_set;
-  }
-  return last_error.c_str();
-}
-
 /*! \brief return str message of the last error */
 const char *MXGetLastError() {
-  return MXSetGetLastError_(NULL);
+  return MXAPIErrorMessageHelper::SetGetLastError(NULL);
 }
 
 /*!
@@ -46,7 +98,7 @@ const char *MXGetLastError() {
  * \return the return value of API after exception is handled
  */
 int MXHandleException(const dmlc::Error &e) {
-  MXSetGetLastError_(e.what());
+  MXAPIErrorMessageHelper::SetGetLastError(e.what());
   return -1;
 }
 

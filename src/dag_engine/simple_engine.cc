@@ -4,10 +4,10 @@
 namespace mxnet {
 class SimpleEngine : public DAGEngine {
  public:
-  virtual void Push(AsyncOp exec_fun,
-                    Context exec_ctx,
-                    const std::vector<Variable> &use_vars,
-                    const std::vector<Variable> &mutate_vars) {
+  virtual void PushAsync(AsyncOp exec_fun,
+                         Context exec_ctx,
+                         const std::vector<Variable> &use_vars,
+                         const std::vector<Variable> &mutate_vars) {
     // cannot schedule async using naive way because deps are not captured
     LOG(FATAL) << "cannot schedule async operations";
   }
