@@ -67,17 +67,18 @@ class ThreadedEngine : public DAGEngine {
         exec_fun(ctx); on_complete();
       }, exec_ctx, use_vars, mutate_vars);
   }
-  void PushDelete(Op delete_fun, Variable var) override {
+  void PushDelete(Op delete_fun, Context exec_ctx, Variable var) override {
     // TODO
     this->Push([delete_fun, var] (RunContext ctx) {
           delete_fun(ctx);
-          delete static_cast<VarDescr*>(var);
-        }, Context()/* TODO exec_ctx is missing?*/, {}, {var});
+          delete static_cast<VarDescr*>(var); // TODO use variable pool instead
+        }, exec_ctx, {}, {var});
   }
   Variable NewVar() override {
     // in practice return a ptr to a cell
     // that have the info about the variable
     // use ptr directly instead of ID because this avoids an indirect mapping
+    // TODO use variable pool instead
     VarDescr* vd = new VarDescr;
     vd->lock = SPINLOCK_INITIALIZER;
     vd->rw = 0;
@@ -119,7 +120,6 @@ class ThreadedEngine : public DAGEngine {
         ++vard->rw;
       }
       if (vard->rw == 0) {
-        // if the next one is a delete
         // pop the next write
         vard->waitings.pop();
         vard->rw = -1;
@@ -153,14 +153,15 @@ class ThreadedEngine : public DAGEngine {
   }
   void OnDepsResolved(OpDescr* opd) {
     static default_random_engine generator;
-    static uniform_int_distribution<int> distribution(0, numthreads_);
+    static uniform_int_distribution<int> distribution(0, numthreads_ - 1);
     int thrid = distribution(generator);
+    //LOG(INFO) << "schedule operator " << opd << " to thread #" << thrid;
     worker_queues_[thrid]->Push(opd);
   }
   void WorkerRoutine(int thrid) {
     OpDescr* opd = nullptr;
     while(! worker_queues_[thrid]->Pop(opd)) {
-      LOG(INFO) << "worker thread #" << thrid << " got operator " << opd;
+      //LOG(INFO) << "worker thread #" << thrid << " got operator " << opd;
       opd->op(GetRunContext(opd->exec_ctx), [this, opd] () { this->OnOpFinished(opd); });
       opd = nullptr;
     }
