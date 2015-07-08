@@ -54,7 +54,8 @@ ifneq ($(ADD_LDFLAGS), NONE)
 	LDFLAGS += $(ADD_LDFLAGS)
 endif
 
-BIN = test/api_registry_test
+#BIN = test/test_threaded_engine test/api_registry_test 
+BIN = test/api_registry_test 
 OBJ = storage.o narray_op_cpu.o operator.o operator_cpu.o
 # add threaded engine after it is done
 OBJCXX11 = engine.o narray.o mxnet_api.o api_registry.o
@@ -76,7 +77,7 @@ $(DMLC_CORE)/libdmlc.a:
 
 storage.o: src/storage/storage.cc
 engine.o: src/dag_engine/simple_engine.cc
-threaded_engine.o: src/dag_engine/threaded_engine.cc src/common/concurrent_blocking_queue.h src/common/spin_lock.h
+#engine.o: src/dag_engine/threaded_engine.cc src/common/concurrent_blocking_queue.h src/common/spin_lock.h
 narray.o: src/narray/narray.cc
 narray_op_cpu.o: src/narray/narray_op_cpu.cc src/narray/narray_op-inl.h
 narray_op_gpu.o: src/narray/narray_op_gpu.cu src/narray/narray_op-inl.h
@@ -90,6 +91,7 @@ api/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)
 api/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ)
 
 test/api_registry_test: test/api_registry_test.cc api/libmxnet.a
+#test/test_threaded_engine: test/test_threaded_engine.cc api/libmxnet.a
 
 $(BIN) :
 	$(CXX) $(CFLAGS) -std=c++0x -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
