@@ -4,11 +4,11 @@
  * \brief dropout operator
  * \author Bing Xu
 */
-#ifndef MXNET_DROPOUT_OP_INL_H_
-#define MXNET_DROPOUT_OP_INL_H_
+#ifndef MXNET_OPERATOR_DROPOUT_OP_INL_H_
+#define MXNET_OPERATOR_DROPOUT_OP_INL_H_
 
-#include <vector>
 #include <mxnet/operator.h>
+#include <vector>
 #include "./mshadow_op.h"
 
 namespace mxnet {
@@ -16,7 +16,7 @@ namespace op {
 template<typename xpu>
 class DropoutOp : public Operator {
  public:
-  DropoutOp(mshadow::Random<xpu> *prnd)
+  explicit DropoutOp(mshadow::Random<xpu> *prnd)
       : prnd_(prnd), mask_used_(false) {}
   virtual int DescribeProperty() const {
     return kForwardRequireRnd | kContainInteralState;
@@ -24,11 +24,11 @@ class DropoutOp : public Operator {
   virtual void SetParam(const char *name, const char* val) {
     if (!strcmp("threshold", name)) pkeep_ = \
       static_cast<real_t>(1.0f - atof(val));
-    CHECK(pkeep_ > 0) << "invalid dropout threshold";
+    CHECK_GT(pkeep_, 0) << "invalid dropout threshold";
   }
   virtual void InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape) {
-    CHECK(in_shape->size() == 1) << "Input: [data]";
+    CHECK_EQ(in_shape->size(), 1) << "Input: [data]";
     out_shape->clear();
     out_shape->push_back((*in_shape)[0]);
   }
@@ -36,8 +36,8 @@ class DropoutOp : public Operator {
                        RunContext ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<TBlob> &out_data) {
-    CHECK(in_data.size() == 1);
-    CHECK(out_data.size() == 1);
+    CHECK_EQ(in_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1);
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<xpu> *s = static_cast<Stream<xpu> *>(ctx.stream);
@@ -61,9 +61,9 @@ class DropoutOp : public Operator {
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<GradReqType> &req) {
-    CHECK(grad_next.size() == 1);
-    CHECK(out_grad.size() == 1);
-    CHECK(req.size() == 1);
+    CHECK_EQ(grad_next.size(), 1);
+    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(req.size(), 1);
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<xpu> *s = static_cast<Stream<xpu> *>(ctx.stream);
@@ -90,4 +90,4 @@ class DropoutOp : public Operator {
 };  // class DropoutOp
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_DROPOUT_OP_INL_H_
+#endif  // MXNET_OPERATOR_DROPOUT_OP_INL_H_

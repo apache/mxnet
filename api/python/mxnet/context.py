@@ -2,15 +2,15 @@
 """ code for context management """
 from __future__ import absolute_import
 
-class Context:
+class Context(object):
     """Context representing device and device id in mxnet"""
-    # static class variable 
+    # static class variable
     default_ctx = None
-    devmask2type = { 1: 'cpu', 2: 'gpu'}
-    devtype2mask = {'cpu': 1, 'gpu': 2 }
-    
-    def __init__(self, device_type, device_id = 0):
-        """Constructing a context
+    devmask2type = {1: 'cpu', 2: 'gpu'}
+    devtype2mask = {'cpu': 1, 'gpu': 2}
+
+    def __init__(self, device_type, device_id=0):
+        """Constructing a context.
 
         Parameters
         ----------
@@ -22,9 +22,16 @@ class Context:
         """
         self.device_mask = Context.devtype2mask[device_type]
         self.device_id = device_id
+        self._old_ctx = None
 
     @property
     def device_type(self):
+        """Return device type of current context.
+
+        Returns
+        -------
+        device_type : str
+        """
         return Context.devmask2type[self.device_mask]
 
     def __str__(self):
@@ -39,12 +46,17 @@ class Context:
         Context.default_ctx = self
         return self
 
-    def __exit__(self, type, value, trace):
-        Context.default_ctx= self._old_ctx
+    def __exit__(self, ptype, value, trace):
+        Context.default_ctx = self._old_ctx
 
-# initialize the default context in Context        
+# initialize the default context in Context
 Context.default_ctx = Context('cpu', 0)
 
 def current_context():
-    """Return the current context"""
+    """Return the current context.
+
+    Returns
+    -------
+    default_ctx : Context
+    """
     return Context.default_ctx

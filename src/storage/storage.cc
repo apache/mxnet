@@ -1,19 +1,21 @@
+// Copyright (c) 2015 by Contributors
 #include <mshadow/tensor.h>
 #include <mxnet/storage.h>
 namespace mxnet {
 class NaiveStorageManager : public StorageManager {
  public:
   virtual Handle Alloc(size_t size, Context ctx);
-  virtual void Free(Handle handle);  
+  virtual void Free(Handle handle);
 };
 
 StorageManager::Handle
 NaiveStorageManager::Alloc(size_t size, Context ctx) {
   Handle hd;
   hd.ctx = ctx;
-  hd.handle_ = NULL;  
+  hd.handle_ = NULL;
   if (ctx.dev_mask == cpu::kDevMask) {
-    cudaMallocHost(&hd.dptr, size);    
+    hd.dptr = calloc(size, sizeof(real_t));
+    // cudaMallocHost(&hd.dptr, size);
   } else {
 #if MXNET_USE_CUDA
     cudaMalloc(&hd.dptr, size);
@@ -23,7 +25,9 @@ NaiveStorageManager::Alloc(size_t size, Context ctx) {
 }
 void NaiveStorageManager::Free(StorageManager::Handle handle) {
   if (handle.ctx.dev_mask == cpu::kDevMask) {
-    cudaFreeHost(handle.dptr);
+    free(handle.dptr);
+    handle.dptr = NULL;
+    // cudaFreeHost(handle.dptr);
   } else {
 #if MXNET_USE_CUDA
     cudaFree(handle.dptr);

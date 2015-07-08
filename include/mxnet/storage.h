@@ -11,7 +11,7 @@
 namespace mxnet {
 /*! \brief memory allocator of storage */
 class StorageManager {
-public:
+ public:
   /*!
    * \brief storage handle the represents storage information
    */
@@ -24,12 +24,13 @@ public:
      * \brief internal handle reserved for manager,
      *   user should not change or use this
      */
-    void *handle_; 
-  };  
+    void *handle_;
+  };
   /*!
    * \brief allocate a new contiguous memory for a given size
    * \param size the total size of memory in bytes
-   * \param ctx context information about the device and deviceID 
+   * \param ctx context information about the device and deviceID
+   * \return Handle struct
    */
   virtual Handle Alloc(size_t size, Context ctx) = 0;
   /*!
@@ -38,7 +39,7 @@ public:
    */
   virtual void Free(Handle handle) = 0;
   /*! \return storage manager singleton */
-  static StorageManager *Get();  
-};
-}
+  static StorageManager *Get();
+};  // class StorageManager
+}  // namespace mxnet
 #endif  // MXNET_STORAGE_H_

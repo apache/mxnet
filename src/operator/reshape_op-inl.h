@@ -4,8 +4,11 @@
  * \brief
  * \author Bing Xu
 */
-#ifndef MXNET_RESHAPE_OP_INL_H_
-#define MXNET_RESHAPE_OP_INL_H_
+#ifndef MXNET_OPERATOR_RESHAPE_OP_INL_H_
+#define MXNET_OPERATOR_RESHAPE_OP_INL_H_
+
+#include <mxnet/operator.h>
+#include <vector>
 
 namespace mxnet {
 namespace op {
@@ -19,7 +22,7 @@ class ReshapeOp : public Operator {
   }
   virtual void InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape) {
-    CHECK(in_shape->size() == 1);
+    CHECK_EQ(in_shape->size(), 1);
     ishape_ = (*in_shape)[0].get<4>();
     oshape_[0] = ishape_[0];
     if (flatten) {
@@ -27,7 +30,7 @@ class ReshapeOp : public Operator {
       oshape_[2] = 1;
       oshape_[3] = ishape_[1] * ishape_[2] * ishape_[3];
     }
-    CHECK(oshape_.Size() == ishape_.Size()) << "Incorrect new shape";
+    CHECK_EQ(oshape_.Size(), ishape_.Size()) << "Incorrect new shape";
     TShape ts;
     ts = oshape_;
     out_shape->clear();
@@ -37,8 +40,8 @@ class ReshapeOp : public Operator {
                        RunContext ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<TBlob> &out_data) {
-    CHECK(in_data.size() == 1);
-    CHECK(out_data.size() == 1);
+    CHECK_EQ(in_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1);
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<xpu> *s = static_cast<Stream<xpu> *>(ctx.stream);
@@ -51,9 +54,9 @@ class ReshapeOp : public Operator {
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<GradReqType> &req) {
-    CHECK(grad_next.size() == 1);
-    CHECK(out_grad.size() == 1);
-    CHECK(req.size() == 1);
+    CHECK_EQ(grad_next.size(), 1);
+    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(req.size(), 1);
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<xpu> *s = static_cast<Stream<xpu> *>(ctx.stream);
@@ -61,11 +64,12 @@ class ReshapeOp : public Operator {
     Tensor<xpu, 4> out = out_grad[0].get<xpu, 4, real_t>(s);
     Assign(out, req[0], reshape(grad, ishape_));
   }
+
  private:
   mshadow::Shape<4> oshape_;
   mshadow::Shape<4> ishape_;
-}; // class Operator
+};  // class Operator
 
-} //  namespace op
-} //  namespace mxnet
-#endif  // MXNET_RESHAPE_OP_INL_H_
+}  //  namespace op
+}  //  namespace mxnet
+#endif  // MXNET_OPERATOR_RESHAPE_OP_INL_H_

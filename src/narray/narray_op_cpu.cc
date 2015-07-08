@@ -1,3 +1,9 @@
+/*!
+ *  Copyright (c) 2015 by Contributors
+ * \file narray_op_cpu.cc
+ * \brief
+ */
+
 // this will be invoked by gcc and compile CPU version
 #include "./narray_op.h"
 #include "./narray_op-inl.h"

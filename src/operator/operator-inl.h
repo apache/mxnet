@@ -4,8 +4,8 @@
  * \brief device invarient code to create operators
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_INL_H_
-#define MXNET_OPERATOR_INL_H_
+#ifndef MXNET_OPERATOR_OPERATOR_INL_H_
+#define MXNET_OPERATOR_OPERATOR_INL_H_
 #include <mxnet/base.h>
 #include <dmlc/logging.h>
 #include <mxnet/operator.h>
@@ -49,4 +49,4 @@ inline Operator *CreateOperator_(OpType type, mshadow::Random<xpu> *prnd) {
 }
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_INL_H_
+#endif  // MXNET_OPERATOR_OPERATOR_INL_H_

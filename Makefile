@@ -12,6 +12,10 @@ ifndef DMLC_CORE
 	DMLC_CORE = dmlc-core
 endif
 
+ifndef RABIT
+	RABIT = rabit
+endif
+
 # use customized config file
 include $(config)
 include mshadow/make/mshadow.mk
@@ -24,6 +28,10 @@ CFLAGS += -g -O3 -I./mshadow/ -I./dmlc-core/include -fPIC -Iinclude $(MSHADOW_CF
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 ROOTDIR = $(CURDIR)
+
+ifndef LINT_LANG
+	LINT_LANG="all"
+endif
 
 # setup opencv
 ifeq ($(USE_OPENCV),1)
@@ -46,15 +54,21 @@ ifneq ($(ADD_LDFLAGS), NONE)
 	LDFLAGS += $(ADD_LDFLAGS)
 endif
 
-BIN = test/test_threaded_engine #test/api_registry_test
-OBJ = storage.o narray_op_cpu.o operator.o operator_cpu.o 
-OBJCXX11 = engine.o narray.o api_registry.o
-CUOBJ = narray_op_gpu.o operator_gpu.o
+#BIN = test/test_threaded_engine test/api_registry_test 
+BIN = test/api_registry_test 
+OBJ = storage.o narray_op_cpu.o operator.o operator_cpu.o
+# add threaded engine after it is done
+OBJCXX11 = engine.o narray.o mxnet_api.o api_registry.o
+CUOBJ =
 SLIB = api/libmxnet.so
 ALIB = api/libmxnet.a
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
 
-.PHONY: clean all
+ifeq ($(USE_CUDA), 1)
+	CUOBJ += narray_op_gpu.o operator_gpu.o
+endif
+
+.PHONY: clean all test lint doc
 
 all: $(ALIB) $(SLIB) $(BIN)
 
@@ -62,8 +76,8 @@ $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
 storage.o: src/storage/storage.cc
-#engine.o: src/dag_engine/simple_engine.cc
-engine.o: src/dag_engine/threaded_engine.cc src/common/concurrent_blocking_queue.h src/common/spin_lock.h
+engine.o: src/dag_engine/simple_engine.cc
+#engine.o: src/dag_engine/threaded_engine.cc src/common/concurrent_blocking_queue.h src/common/spin_lock.h
 narray.o: src/narray/narray.cc
 narray_op_cpu.o: src/narray/narray_op_cpu.cc src/narray/narray_op-inl.h
 narray_op_gpu.o: src/narray/narray_op_gpu.cu src/narray/narray_op-inl.h
@@ -77,16 +91,16 @@ api/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)
 api/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ)
 
 test/api_registry_test: test/api_registry_test.cc api/libmxnet.a
-test/test_threaded_engine: test/test_threaded_engine.cc api/libmxnet.a
+#test/test_threaded_engine: test/test_threaded_engine.cc api/libmxnet.a
 
 $(BIN) :
-	$(CXX) $(CFLAGS) -std=c++11 -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
+	$(CXX) $(CFLAGS) -std=c++0x -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
 $(OBJ) :
 	$(CXX) -c $(CFLAGS) -o $@ $(firstword $(filter %.cpp %.c %.cc, $^) )
 
 $(OBJCXX11) :
-	$(CXX) -std=c++11 -c $(CFLAGS) -o $@ $(firstword $(filter %.cpp %.c %.cc, $^) )
+	$(CXX) -std=c++0x -c $(CFLAGS) -o $@ $(firstword $(filter %.cpp %.c %.cc, $^) )
 
 $(SLIB) :
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
@@ -100,6 +114,14 @@ $(CUOBJ) :
 $(CUBIN) :
 	$(NVCC) -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" -Xlinker "$(LDFLAGS)" $(filter %.cu %.cpp %.o, $^)
 
+
+lint:
+	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts test api
+
+doc:
+	doxygen doc/Doxyfile
+
 clean:
 	$(RM) $(OBJ) $(OBJCXX11) $(BIN) $(CUBIN) $(CUOBJ) $(SLIB) $(ALIB) *~ */*~ */*/*~ */*/*/*~
 	cd $(DMLC_CORE); make clean; cd -
+

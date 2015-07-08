@@ -1,3 +1,8 @@
+/*!
+ *  Copyright (c) 2015 by Contributors
+ * \file narray.cc
+ * \brief
+ */
 #include <dmlc/logging.h>
 #include <mxnet/narray.h>
 #include <mxnet/api_registry.h>
@@ -10,7 +15,7 @@ namespace mxnet {
  * \param lhs left operand
  * \param rhs right operand
  * \param out the output narray
- * \param binary_op the real 
+ * \param binary_op the real
  */
 template<typename OP>
 inline void BinaryOp(const NArray &lhs,
@@ -107,7 +112,7 @@ inline NArray BinaryOpRet(const NArray &lhs,
 
 template<typename OP>
 inline NArray &BinaryOpApply(NArray *dst,
-                             const NArray &src) {                               
+                             const NArray &src) {
   BinaryOp<OP>(*dst, src, dst);
   return *dst;
 }
@@ -144,5 +149,10 @@ REGISTER_NARRAY_FUN(minus).set_function(BinaryOp<narray::Minus>);
 REGISTER_NARRAY_FUN(mul).set_function(BinaryOp<narray::Mul>);
 REGISTER_NARRAY_FUN(div).set_function(BinaryOp<narray::Div>);
 
-REGISTER_NARRAY_FUN(copy).set_function(CopyFromTo);
+//  copy function is special
+//  that we need to remove kAcceptEmptyMutateTarget from it
+REGISTER_NARRAY_FUN(copy)
+.set_function(CopyFromTo)
+.set_type_mask(kNArrayArgBeforeScalar);
+
 }  // namespace mxnet

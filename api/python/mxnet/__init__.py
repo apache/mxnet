@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# pylint: disable=invalid-name, protected-access
 # coding: utf-8
 """MXNet: a concise, fast and flexible framework for deep learning
 
@@ -8,5 +9,10 @@ The interface is designed in collaboration by authors of three projects.
 Version : 0.10
 """
 from __future__ import absolute_import
-from .narray import NArray
+
 from .context import Context, current_context
+from .narray import NArray
+from .function import _FunctionRegistry
+
+# this is a global function registry that can be used to invoke functions
+op = NArray._init_function_registry(_FunctionRegistry())

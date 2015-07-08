@@ -5,9 +5,9 @@
  */
 #ifndef MXNET_BASE_H_
 #define MXNET_BASE_H_
-#include <string>
 #include <dmlc/base.h>
 #include <mshadow/tensor.h>
+#include <string>
 
 /*!
  *\brief whether to use opencv support
@@ -32,7 +32,9 @@
 
 /*! \brief namespace of mxnet */
 namespace mxnet {
+/*! \brief mxnet cpu */
 typedef mshadow::cpu cpu;
+/*! \brief mxnet gpu */
 typedef mshadow::gpu gpu;
 /*! \brief index type usually use unsigned */
 typedef mshadow::index_t index_t;

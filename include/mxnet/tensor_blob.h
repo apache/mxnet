@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file tensor_blob.h
- * \brief tensor blob used to hold static memory used by 
+ * \brief tensor blob used to hold static memory used by
  */
 #ifndef MXNET_TENSOR_BLOB_H_
 #define MXNET_TENSOR_BLOB_H_
@@ -12,12 +12,12 @@ namespace mxnet {
 struct Context {
   /*! \brief the device type we run the op can be cpu::kDevMask or gpu::kDevMask */
   int dev_mask;
-  /*! \brief device id we are going to run it on */  
+  /*! \brief device id we are going to run it on */
   int dev_id;
   /*! \brief constructor */
   Context() : dev_mask(cpu::kDevMask), dev_id(0) {}
   /*!
-   * \brief constructor of context 
+   * \brief constructor of context
    * \param dev_mask the device mask
    * \param dev_id the device id
    */
@@ -26,6 +26,7 @@ struct Context {
   /*!
    * \brief check if current context equals another one
    * \param b another context to compare
+   * \return whether dev mask and id are same
    */
   inline bool operator==(const Context &b) const {
     return dev_mask == b.dev_mask && dev_id == b.dev_id;
@@ -39,7 +40,7 @@ struct Context {
  */
 struct RunContext {
   /*!
-   * \brief the stream of the device, can be NULL or Stream<gpu>* in GPU mode   
+   * \brief the stream of the device, can be NULL or Stream<gpu>* in GPU mode
    */
   void *stream;
 };

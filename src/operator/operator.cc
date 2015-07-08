@@ -1,7 +1,13 @@
-#include <cstring>
+/*!
+ *  Copyright (c) 2015 by Contributors
+ * \file operator.cc
+ * \brief
+ * \author: Bing Xu
+ */
 #include <dmlc/logging.h>
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
+#include <cstring>
 #include "./operator_common.h"
 
 namespace mxnet {
@@ -17,7 +23,7 @@ OpType GetOpType(const char *type) {
   LOG(FATAL) << "unknown operator type " << type;
   return kReLU;
 }
-}
+}  // namespace op
 
 // implementing the context
 Operator *Operator::Create(const char *type,
@@ -34,6 +40,5 @@ Operator *Operator::Create(const char *type,
 #endif
   }
   return NULL;
-}
-
+}  // namespace op
 }  // namespace mxnet

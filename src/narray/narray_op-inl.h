@@ -1,3 +1,10 @@
+/*!
+ *  Copyright (c) 2015 by Contributors
+ * \file narray_op-inl.h
+ * \brief
+ */
+#ifndef MXNET_NARRAY_NARRAY_OP_INL_H_
+#define MXNET_NARRAY_NARRAY_OP_INL_H_
 #include "./narray_op.h"
 // this file will be included twice by CPU and GPU
 // macro to help specialize evaluation function
@@ -34,3 +41,5 @@ DECL_BINARY(DEVICE, Mul, Eval_)
 DECL_BINARY(DEVICE, Div, Eval_)
 }  // namespace narray
 }  // namespace mxnet
+
+#endif  // MXNET_NARRAY_NARRAY_OP_INL_H_

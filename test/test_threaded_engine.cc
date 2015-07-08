@@ -1,7 +1,7 @@
+// Copyright (c) 2015 by Contributors
 #include <iostream>
 #include <vector>
 #include <unistd.h>
-
 #include <mxnet/dag_engine.h>
 
 using namespace std;
