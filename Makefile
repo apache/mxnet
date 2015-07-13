@@ -54,11 +54,11 @@ ifneq ($(ADD_LDFLAGS), NONE)
 	LDFLAGS += $(ADD_LDFLAGS)
 endif
 
-#BIN = test/test_threaded_engine test/api_registry_test 
-BIN = test/api_registry_test 
+#BIN = test/test_threaded_engine test/api_registry_test
+BIN = test/api_registry_test
 OBJ = storage.o narray_op_cpu.o operator.o operator_cpu.o
 # add threaded engine after it is done
-OBJCXX11 = engine.o narray.o mxnet_api.o api_registry.o
+OBJCXX11 = engine.o narray.o mxnet_api.o api_registry.o symbol.o
 CUOBJ =
 SLIB = api/libmxnet.so
 ALIB = api/libmxnet.a
@@ -84,6 +84,7 @@ narray_op_gpu.o: src/narray/narray_op_gpu.cu src/narray/narray_op-inl.h
 operator.o: src/operator/operator.cc
 operator_cpu.o: src/operator/operator_cpu.cc
 operator_gpu.o: src/operator/operator_gpu.cu
+symbol.o: src/symbol/symbol.cc
 api_registry.o: src/api_registry.cc
 mxnet_api.o: api/mxnet_api.cc
 
@@ -124,4 +125,3 @@ doc:
 clean:
 	$(RM) $(OBJ) $(OBJCXX11) $(BIN) $(CUBIN) $(CUOBJ) $(SLIB) $(ALIB) *~ */*~ */*/*~ */*/*/*~
 	cd $(DMLC_CORE); make clean; cd -
-
