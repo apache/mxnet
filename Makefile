@@ -57,7 +57,7 @@ endif
 BIN = test/api_registry_test
 OBJ = storage.o narray_op_cpu.o operator.o operator_cpu.o
 # add threaded engine after it is done
-OBJCXX11 = engine.o narray.o mxnet_api.o api_registry.o
+OBJCXX11 = engine.o narray.o mxnet_api.o api_registry.o narray_operator.o
 CUOBJ =
 SLIB = api/libmxnet.so
 ALIB = api/libmxnet.a
@@ -85,6 +85,7 @@ operator_cpu.o: src/operator/operator_cpu.cc
 operator_gpu.o: src/operator/operator_gpu.cu
 api_registry.o: src/api_registry.cc
 mxnet_api.o: api/mxnet_api.cc
+narray_operator.o: src/narray_operator/narray_operator.cc
 
 api/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)
 api/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ)

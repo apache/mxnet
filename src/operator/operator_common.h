@@ -11,7 +11,7 @@
 
 #include <dmlc/logging.h>
 #include <mxnet/operator.h>
-
+#include <mxnet/base.h>
 namespace mxnet {
 namespace op {
 /*!
@@ -24,13 +24,13 @@ namespace op {
  */
 template<typename OType, typename Exp>
 inline void Assign(OType &out, // NOLINT(*)
-                   Operator::GradReqType req,
+                   GradReqType req,
                    const Exp &exp) {
   switch (req) {
-    case Operator::kNullOp: break;
-    case Operator::kWriteTo:
-    case Operator::kWriteInplace: out = exp; break;
-    case Operator::kAddTo: out += exp; break;
+    case kNullOp: break;
+    case kWriteTo:
+    case kWriteInplace: out = exp; break;
+    case kAddTo: out += exp; break;
     default: LOG(FATAL) << "not reached";
   }
 }
