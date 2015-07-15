@@ -113,10 +113,14 @@ class Symbol {
     return ret;
   }
   /*!
-   * \brief create
+   * \brief c api for CreateSymbol, this can be registered with SymbolCreatorRegistry
+   * \param num_param the number of params
+   * \param keys the key for the params
+   * \param vals values of the params
+   * \param out stores the returning symbol
    */
   template <typename Atomic>
-  friend void CreateSymbol(int, const char**, const char**, Symbol**);
+  friend void CreateSymbol(int num_param, const char** keys, const char** vals, Symbol** out);
 };
 
 template <typename Atomic>
