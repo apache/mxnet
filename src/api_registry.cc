@@ -29,4 +29,26 @@ FunctionRegistry *FunctionRegistry::Get() {
   return &instance;
 }
 
+// SymbolCreatorRegistry
+
+SymbolCreatorRegistry::Entry&
+SymbolCreatorRegistry::Register(const std::string& name) {
+  CHECK_EQ(fmap_.count(name), 0);
+  Entry *e = new Entry(name);
+  fmap_[name] = e;
+  fun_list_.push_back(e);
+  return *e;
+}
+
+SymbolCreatorRegistry::~SymbolCreatorRegistry() {
+  for (auto p = fmap_.begin(); p != fmap_.end(); ++p) {
+    delete p->second;
+  }
+}
+
+SymbolCreatorRegistry *SymbolCreatorRegistry::Get() {
+  static SymbolCreatorRegistry instance;
+  return &instance;
+}
+
 }  // namespace mxnet

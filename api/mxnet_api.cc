@@ -246,3 +246,78 @@ int MXFuncInvoke(FunctionHandle fun,
        (NArray**)(mutate_vars));  // NOLINT(*)
   API_END();
 }
+
+int MXSymFree(SymbolHandle sym) {
+  API_BEGIN();
+  delete static_cast<Symbol*>(sym);
+  API_END();
+}
+
+int MXSymCreatorDescribe(SymbolCreatorHandle sym_creator,
+                         mx_uint *use_param) {
+  API_BEGIN();
+  auto *sc = static_cast<const SymbolCreatorRegistry::Entry *>(sym_creator);
+  *use_param = sc->use_param ? 1 : 0;
+  API_END();
+}
+
+int MXSymCreatorInvoke(SymbolCreatorHandle sym_creator,
+                       int count,
+                       const char** keys,
+                       const char** vals,
+                       SymbolHandle* out) {
+  API_BEGIN();
+  const SymbolCreatorRegistry::Entry *sc =
+      static_cast<const SymbolCreatorRegistry::Entry *>(sym_creator);
+  sc->body(count, keys, vals, (Symbol**)(out));  //  NOLINT(*)
+  API_END();
+}
+
+int MXListSymCreators(mx_uint *out_size,
+                      SymbolCreatorHandle **out_array) {
+  API_BEGIN();
+  auto &vec = SymbolCreatorRegistry::List();
+  *out_size = static_cast<mx_uint>(vec.size());
+  *out_array = (SymbolCreatorHandle*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
+  API_END();
+}
+
+int MXGetSymCreator(const char *name,
+                    SymbolCreatorHandle *out) {
+  API_BEGIN();
+  *out = SymbolCreatorRegistry::Find(name);
+  API_END();
+}
+
+int MXSymCreatorGetName(SymbolCreatorHandle sym_creator,
+                        const char **out_name) {
+  API_BEGIN();
+  auto *f = static_cast<const SymbolCreatorRegistry::Entry *>(sym_creator);
+  *out_name = f->name.c_str();
+  API_END();
+}
+
+int MXSymbolCompose(SymbolHandle sym,
+                    mx_uint num_args,
+                    const char** keys,
+                    SymbolHandle* args,
+                    SymbolHandle* out) {
+  API_BEGIN();
+  const Symbol* s = static_cast<const Symbol*>(sym);
+  Symbol* ret = new Symbol;
+  if (keys == NULL) {
+    std::vector<Symbol> pos_args;
+    for (mx_uint i = 0; i < num_args; ++i) {
+      pos_args.push_back(*(Symbol*)(args[i]));  //  NOLINT(*)
+    }
+    *ret = (*s)(pos_args);
+  } else {
+    std::unordered_map<std::string, Symbol> kwargs;
+    for (mx_uint i = 0; i < num_args; ++i) {
+      kwargs[keys[i]] = *(Symbol*)(args[i]);  //  NOLINT(*)
+    }
+    *ret = (*s)(kwargs);
+  }
+  *out = ret;
+  API_END();
+}

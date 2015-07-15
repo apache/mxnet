@@ -28,6 +28,8 @@ typedef float mx_float;
 typedef void *NArrayHandle;
 /*! \brief handle to a mxnet narray function that changes NArray */
 typedef const void *FunctionHandle;
+/*! \brief handle to a function that takes param and creates symbol */
+typedef const void *SymbolCreatorHandle;
 /*! \brief handle to a symbol that can be bind as operator */
 typedef void *SymbolHandle;
 /*! \brief handle to a NArrayOperator */
@@ -217,17 +219,69 @@ MXNET_DLL int MXSymCreateFromConfig(const char *cfg,
  * \param sym the symbol
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSymFree(SymbolHandle *sym);
+MXNET_DLL int MXSymFree(SymbolHandle sym);
 /*!
- * \brief set the parameter in to current symbol
- * \param sym the symbol
- * \param name name of the parameter
- * \param val value of the parameter
+ * \brief query if the symbol creator needs param.
+ * \param sym_creator the symbol creator handle
+ * \param use_param describe if the symbol creator requires param
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSymSetParam(SymbolHandle sym,
-                            const char *name,
-                            const char *val);
+MXNET_DLL int MXSymCreatorDescribe(SymbolCreatorHandle sym_creator,
+                                   mx_uint *use_param);
+/*!
+ * \brief invoke registered symbol creator through its handle.
+ * \param sym_creator pointer to the symbolcreator function.
+ * \param count the number of the key value pairs in the param.
+ * \param keys an array of c str.
+ * \param vals the corresponding values of the keys.
+ * \param out pointer to the created symbol handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymCreatorInvoke(SymbolCreatorHandle sym_creator,
+                                 int count,
+                                 const char** keys,
+                                 const char** vals,
+                                 SymbolHandle* out);
+/*!
+ * \brief list all the available sym_creator
+ *   most user can use it to list all the needed sym_creators
+ * \param out_size the size of returned array
+ * \param out_array the output sym_creators
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXListSymCreators(mx_uint *out_size,
+                                SymbolCreatorHandle **out_array);
+/*!
+ * \brief get the sym_creator by name
+ * \param name the name of the sym_creator
+ * \param out the corresponding sym_creator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXGetSymCreator(const char *name,
+                              SymbolCreatorHandle *out);
+/*!
+ * \brief get the name of sym_creator handle
+ * \param sym_creator the sym_creator handle
+ * \param out_name the name of the sym_creator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymCreatorGetName(SymbolCreatorHandle sym_creator,
+                                  const char **out_name);
+/*!
+ * \brief compose the symbol on other symbol
+ * \param sym the symbol to apply
+ * \param num_args number of arguments
+ * \param keys the key of keyword args (optional)
+ * \param args arguments to sym
+ * \param out the resulting symbol
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolCompose(SymbolHandle sym,
+                              mx_uint num_args,
+                              const char** keys,
+                              SymbolHandle* args,
+                              SymbolHandle* out);
+
 //--------------------------------------------
 // Part 4: operator interface on NArray
 //--------------------------------------------
