@@ -261,7 +261,7 @@ MXNET_DLL int MXGetSymCreator(const char *name,
                               SymbolCreatorHandle *out);
 /*!
  * \brief get the name of sym_creator handle
- * \param fun the sym_creator handle
+ * \param sym_creator the sym_creator handle
  * \param out_name the name of the sym_creator
  * \return 0 when success, -1 when failure happens
  */

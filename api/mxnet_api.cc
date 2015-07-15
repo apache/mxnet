@@ -269,7 +269,7 @@ int MXSymCreatorInvoke(SymbolCreatorHandle sym_creator,
   API_BEGIN();
   const SymbolCreatorRegistry::Entry *sc =
       static_cast<const SymbolCreatorRegistry::Entry *>(sym_creator);
-  sc->body(count, keys, vals, (Symbol**)(out));
+  sc->body(count, keys, vals, (Symbol**)(out));  //  NOLINT(*)
   API_END();
 }
 
@@ -308,13 +308,13 @@ int MXSymbolCompose(SymbolHandle sym,
   if (keys == NULL) {
     std::vector<Symbol> pos_args;
     for (mx_uint i = 0; i < num_args; ++i) {
-      pos_args.push_back(*(Symbol*)(args[i]));
+      pos_args.push_back(*(Symbol*)(args[i]));  //  NOLINT(*)
     }
     *ret = (*s)(pos_args);
   } else {
     std::unordered_map<std::string, Symbol> kwargs;
     for (mx_uint i = 0; i < num_args; ++i) {
-      kwargs[keys[i]] = *(Symbol*)(args[i]);
+      kwargs[keys[i]] = *(Symbol*)(args[i]);  //  NOLINT(*)
     }
     *ret = (*s)(kwargs);
   }

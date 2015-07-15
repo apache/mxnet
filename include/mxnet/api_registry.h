@@ -258,6 +258,7 @@ class SymbolCreatorRegistry {
       return nullptr;
     }
   }
+
  private:
   /*! \brief list of functions */
   std::vector<const Entry*> fun_list_;
