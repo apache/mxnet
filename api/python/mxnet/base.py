@@ -55,6 +55,7 @@ mx_uint = ctypes.c_uint
 mx_float = ctypes.c_float
 NArrayHandle = ctypes.c_void_p
 FunctionHandle = ctypes.c_void_p
+SymbolCreatorHandle = ctypes.c_void_p
 SymbolHandle = ctypes.c_void_p
 
 #----------------------------
@@ -132,4 +133,3 @@ def ctypes2numpy_shared(cptr, shape):
         size *= s
     dbuffer = (mx_float * size).from_address(ctypes.addressof(cptr.contents))
     return np.frombuffer(dbuffer, dtype=np.float32).reshape(shape)
-
