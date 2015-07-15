@@ -33,9 +33,9 @@ class Symbol {
    */
   struct Node {
     /*! wrapped atomic symbol */
-    AtomicSymbol* sym_ = nullptr;
+    AtomicSymbol* sym_;
     /*! name of the node */
-    std::string name_ = "";
+    std::string name_;
     /*! inputs to this node */
     std::vector<std::shared_ptr<Node> > in_symbol_;
     /*! index of the inputs if the inputs are tuple */
@@ -45,18 +45,18 @@ class Symbol {
     /*!
      * \brief constructor
      */
-    explicit Node(AtomicSymbol* sym = NULL, const std::string& name = "");
+    explicit Node(AtomicSymbol* sym = nullptr, const std::string& name = "");
     /*!
      * \brief destructor
      */
-    virtual ~Node();
+    ~Node();
   };
   /*! \brief the head node of the Symbol, it could be shared in many graphs */
   std::shared_ptr<Node> head_;
   /*! \brief if the head has multiple return values, index is used to specify */
   int index_;
   /*! \brief find the nodes that use placeholder arguments */
-  std::shared_ptr<std::vector<std::pair<Node*, int> > > arg_users_;
+  std::unique_ptr<std::vector<std::pair<Node*, int> > > arg_users_;
   /*! \brief find arg users */
   void FindArgUsers();
 

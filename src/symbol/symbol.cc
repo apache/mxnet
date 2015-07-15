@@ -9,7 +9,9 @@
 
 namespace mxnet {
 
-Symbol::Node::Node(AtomicSymbol* sym, const std::string& name) : sym_(sym), name_(name) {}
+Symbol::Node::Node(AtomicSymbol* sym, const std::string& name)
+    : sym_(sym), name_(name) {
+}
 
 Symbol::Node::~Node() {
   if (sym_) {
@@ -91,6 +93,7 @@ Symbol Symbol::operator () (const std::vector<Symbol>& args) const {
     CHECK_NE(args[i].index_, -1) << "Argument " << i << " is a tuple, scalar is required";
     arg_user.first->in_index_[arg_user.second] = args[i].index_;
   }
+  s.arg_users_.reset();
   return s;
 }
 
@@ -111,6 +114,7 @@ Symbol Symbol::operator () (const std::unordered_map<std::string, Symbol>& kwarg
       arg_user.first->in_index_[arg_user.second] = bind.index_;
     }
   }
+  s.arg_users_.reset();
   // TODO(linmin): report error if kwargs contains non-existing keys
   return s;
 }
