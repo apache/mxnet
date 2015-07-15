@@ -56,7 +56,7 @@ class Symbol {
   /*! \brief if the head has multiple return values, index is used to specify */
   int index_;
   /*! \brief find the nodes that use placeholder arguments */
-  std::unique_ptr<std::vector<std::pair<Node*, int> > > arg_users_;
+  std::shared_ptr<std::vector<std::pair<Node*, int> > > arg_users_;
   /*! \brief find arg users */
   void FindArgUsers();
 

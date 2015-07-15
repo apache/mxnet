@@ -55,6 +55,7 @@ mx_uint = ctypes.c_uint
 mx_float = ctypes.c_float
 NArrayHandle = ctypes.c_void_p
 FunctionHandle = ctypes.c_void_p
+SymbolHandle = ctypes.c_void_p
 
 #----------------------------
 # helper function definition
