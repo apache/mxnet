@@ -4,10 +4,10 @@ from __future__ import absolute_import
 
 import ctypes
 from .base import _LIB
-from .base import c_array
-from .base import mx_uint, mx_float, NArrayHandle
-from .base import check_call, MXNetError
-from .narray import NArray, _new_empty_handle
+from .base import c_array, c_str
+from .base import mx_uint, SymbolHandle
+from .base import check_call
+from .symbol import Symbol
 
 class _SymbolCreator(object):
     """SymbolCreator is a function that takes Param and return symbol"""
@@ -25,6 +25,7 @@ class _SymbolCreator(object):
         """
         self.handle = handle
         self.name = name
+        use_param = mx_uint()
         check_call(_LIB.MXSymCreatorDescribe(
             self.handle,
             ctypes.byref(use_param)))
@@ -41,8 +42,8 @@ class _SymbolCreator(object):
         -------
         the resulting symbol
         """
-        keys = c_array(ctypes.c_char_p, map(c_str, kwargs.keys()))
-        vals = c_array(ctypes.c_char_p, map(c_str, map(str, kwargs.values())))
+        keys = c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()])
+        vals = c_array(ctypes.c_char_p, [c_str(str(val)) for val in kwargs.values()])
         sym_handle = SymbolHandle()
         check_call(_LIB.MXSymCreatorInvoke(
             self.handle,

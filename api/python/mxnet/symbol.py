@@ -4,10 +4,9 @@ from __future__ import absolute_import
 
 import ctypes
 from .base import _LIB
-from .base import c_array
-from .base import mx_uint, mx_float, SymbolHandle
-from .base import check_call, MXNetError
-from .narray import NArray, _new_empty_handle
+from .base import c_array, c_str
+from .base import SymbolHandle
+from .base import check_call
 
 class Symbol(object):
     """SymbolCreator is a function that takes Param and return symbol"""
@@ -15,6 +14,16 @@ class Symbol(object):
 
     @staticmethod
     def _init_symbol_creator_registry(symbol_creator_registry):
+        """Initialize symbol creator registry
+
+        Parameters
+        ----------
+        symbol_creator_registry:
+            pass in symbol_creator_registry
+        Returns
+        -------
+        the passed in registry
+        """
         _registry = symbol_creator_registry
         return _registry
 
@@ -44,11 +53,11 @@ class Symbol(object):
         assert (len(args) == 0 or len(kwargs) == 0)
         for arg in args:
             assert isinstance(arg, Symbol)
-        for key, val in kwargs:
+        for _, val in kwargs:
             assert isinstance(val, Symbol)
         num_args = len(args) + len(kwargs)
         if len(kwargs) != 0:
-            keys = c_array(ctypes.c_char_p, map(c_str, kwargs.keys()))
+            keys = c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()])
             args = c_array(SymbolHandle, kwargs.values())
         else:
             keys = None
