@@ -4,17 +4,17 @@
  * \brief dropout operator
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_DROPOUT_OP_INL_H_
-#define MXNET_OPERATOR_DROPOUT_OP_INL_H_
+#ifndef MXNET_STATIC_OPERATOR_DROPOUT_OP_INL_H_
+#define MXNET_STATIC_OPERATOR_DROPOUT_OP_INL_H_
 
-#include <mxnet/operator.h>
+#include <mxnet/static_operator.h>
 #include <vector>
 #include "./mshadow_op.h"
 
 namespace mxnet {
 namespace op {
 template<typename xpu>
-class DropoutOp : public Operator {
+class DropoutOp : public StaticOperator {
  public:
   explicit DropoutOp(mshadow::Random<xpu> *prnd)
       : prnd_(prnd), mask_used_(false) {}
@@ -90,4 +90,4 @@ class DropoutOp : public Operator {
 };  // class DropoutOp
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_DROPOUT_OP_INL_H_
+#endif  // MXNET_STATIC_OPERATOR_DROPOUT_OP_INL_H_

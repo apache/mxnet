@@ -4,20 +4,20 @@
  * \brief pooling operator
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_POOLING_OP_INL_H_
-#define MXNET_OPERATOR_POOLING_OP_INL_H_
+#ifndef MXNET_STATIC_OPERATOR_POOLING_OP_INL_H_
+#define MXNET_STATIC_OPERATOR_POOLING_OP_INL_H_
 
-#include <mxnet/operator.h>
+#include <mxnet/static_operator.h>
 #include <algorithm>
 #include <vector>
 #include "./param.h"
-#include "./operator_common.h"
+#include "./static_operator_common.h"
 
 
 namespace mxnet {
 namespace op {
 template<typename xpu, typename Reducer, OpType mode>
-class PoolingOp : public Operator {
+class PoolingOp : public StaticOperator {
  public:
   virtual void SetParam(const char *name, const char *val) {
     param_.SetParam(name, val);
@@ -149,4 +149,4 @@ class PoolingOp : public Operator {
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_POOLING_OP_INL_H_
+#endif  // MXNET_STATIC_OPERATOR_POOLING_OP_INL_H_

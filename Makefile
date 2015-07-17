@@ -56,16 +56,16 @@ endif
 
 #BIN = test/test_threaded_engine test/api_registry_test
 BIN = test/api_registry_test
-OBJ = storage.o narray_op_cpu.o operator.o operator_cpu.o
+OBJ = storage.o narray_op_cpu.o static_operator.o static_operator_cpu.o
 # add threaded engine after it is done
-OBJCXX11 = engine.o narray.o mxnet_api.o api_registry.o symbol.o narray_operator.o
+OBJCXX11 = engine.o narray.o mxnet_api.o api_registry.o symbol.o operator.o
 CUOBJ =
 SLIB = api/libmxnet.so
 ALIB = api/libmxnet.a
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
 
 ifeq ($(USE_CUDA), 1)
-	CUOBJ += narray_op_gpu.o operator_gpu.o
+	CUOBJ += narray_op_gpu.o static_operator_gpu.o
 endif
 
 .PHONY: clean all test lint doc
@@ -81,13 +81,13 @@ engine.o: src/dag_engine/simple_engine.cc
 narray.o: src/narray/narray.cc
 narray_op_cpu.o: src/narray/narray_op_cpu.cc src/narray/narray_op-inl.h
 narray_op_gpu.o: src/narray/narray_op_gpu.cu src/narray/narray_op-inl.h
-operator.o: src/operator/operator.cc
-operator_cpu.o: src/operator/operator_cpu.cc
-operator_gpu.o: src/operator/operator_gpu.cu
+static_operator.o: src/static_operator/static_operator.cc
+static_operator_cpu.o: src/static_operator/static_operator_cpu.cc
+static_operator_gpu.o: src/static_operator/static_operator_gpu.cu
 symbol.o: src/symbol/symbol.cc
 api_registry.o: src/api_registry.cc
 mxnet_api.o: api/mxnet_api.cc
-narray_operator.o: src/narray_operator/narray_operator.cc
+operator.o: src/operator/operator.cc
 
 api/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)
 api/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ)

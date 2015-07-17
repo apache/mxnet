@@ -4,16 +4,16 @@
  * \brief
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_RESHAPE_OP_INL_H_
-#define MXNET_OPERATOR_RESHAPE_OP_INL_H_
+#ifndef MXNET_STATIC_OPERATOR_RESHAPE_OP_INL_H_
+#define MXNET_STATIC_OPERATOR_RESHAPE_OP_INL_H_
 
-#include <mxnet/operator.h>
+#include <mxnet/static_operator.h>
 #include <vector>
 
 namespace mxnet {
 namespace op {
 template<typename xpu, bool flatten>
-class ReshapeOp : public Operator {
+class ReshapeOp : public StaticOperator {
  public:
   virtual void SetParam(const char *name, const char *val) {
     if (!strcmp(name, "out_ch")) oshape_[1] = atoi(val);
@@ -72,4 +72,4 @@ class ReshapeOp : public Operator {
 
 }  //  namespace op
 }  //  namespace mxnet
-#endif  // MXNET_OPERATOR_RESHAPE_OP_INL_H_
+#endif  // MXNET_STATIC_OPERATOR_RESHAPE_OP_INL_H_

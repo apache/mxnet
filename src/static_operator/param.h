@@ -4,8 +4,8 @@
  * \brief operator params
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_PARAM_H_
-#define MXNET_OPERATOR_PARAM_H_
+#ifndef MXNET_STATIC_OPERATOR_PARAM_H_
+#define MXNET_STATIC_OPERATOR_PARAM_H_
 
 namespace mxnet {
 namespace op {
@@ -68,6 +68,6 @@ struct Param {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_PARAM_H_
+#endif  // MXNET_STATIC_OPERATOR_PARAM_H_
 
 

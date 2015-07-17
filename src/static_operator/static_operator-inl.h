@@ -1,14 +1,14 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file operator-inl.h
- * \brief device invarient code to create operators
+ * \file static_operator-inl.h
+ * \brief static device invarient code to create operators
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_OPERATOR_INL_H_
-#define MXNET_OPERATOR_OPERATOR_INL_H_
+#ifndef MXNET_STATIC_OPERATOR_STATIC_OPERATOR_INL_H_
+#define MXNET_STATIC_OPERATOR_STATIC_OPERATOR_INL_H_
 #include <mxnet/base.h>
 #include <dmlc/logging.h>
-#include <mxnet/operator.h>
+#include <mxnet/static_operator.h>
 #include "./mshadow_op.h"
 #include "./activation_op-inl.h"
 #include "./fully_connect_op-inl.h"
@@ -25,7 +25,7 @@ namespace op {
  * \tparam xpu the device type we are at
  */
 template<typename xpu>
-inline Operator *CreateOperator_(OpType type, mshadow::Random<xpu> *prnd) {
+inline StaticOperator *CreateOperator_(OpType type, mshadow::Random<xpu> *prnd) {
   switch (type) {
     case kReLU:
       return new ActivationOp<xpu, relu, relu_grad>();
@@ -49,4 +49,4 @@ inline Operator *CreateOperator_(OpType type, mshadow::Random<xpu> *prnd) {
 }
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_OPERATOR_INL_H_
+#endif  // MXNET_STATIC_OPERATOR_STATIC_OPERATOR_INL_H_

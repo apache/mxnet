@@ -4,19 +4,19 @@
  * \brief convolution op
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_CONVOLUTION_OP_INL_H_
-#define MXNET_OPERATOR_CONVOLUTION_OP_INL_H_
+#ifndef MXNET_STATIC_OPERATOR_CONVOLUTION_OP_INL_H_
+#define MXNET_STATIC_OPERATOR_CONVOLUTION_OP_INL_H_
 
-#include <mxnet/operator.h>
+#include <mxnet/static_operator.h>
 #include <vector>
 #include <algorithm>
-#include "./operator_common.h"
+#include "./static_operator_common.h"
 #include "./param.h"
 
 namespace mxnet {
 namespace op {
 template<typename xpu>
-class ConvolutionOp : public Operator {
+class ConvolutionOp : public StaticOperator {
  public:
   virtual std::vector<ArgType> DescribeArgs() const {
     ArgType ret[] = {kDataArg, kWeightArg, kBiasArg};
@@ -266,4 +266,4 @@ class ConvolutionOp : public Operator {
 };  // class ConvolutionOp
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_CONVOLUTION_OP_INL_H_
+#endif  // MXNET_STATIC_OPERATOR_CONVOLUTION_OP_INL_H_
