@@ -12,7 +12,7 @@ from .symbol import Symbol
 class _SymbolCreator(object):
     """SymbolCreator is a function that takes Param and return symbol"""
 
-    def __init__(self, handle, name):
+    def __init__(self, name):
         """Initialize the function with handle
 
         Parameters
@@ -23,11 +23,10 @@ class _SymbolCreator(object):
         name : string
             the name of the function
         """
-        self.handle = handle
         self.name = name
         use_param = mx_uint()
-        check_call(_LIB.MXSymCreatorDescribe(
-            self.handle,
+        check_call(_LIB.MXSymDescribe(
+            c_str(self.name),
             ctypes.byref(use_param)))
         self.use_param = use_param.value
 
@@ -45,8 +44,8 @@ class _SymbolCreator(object):
         keys = c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()])
         vals = c_array(ctypes.c_char_p, [c_str(str(val)) for val in kwargs.values()])
         sym_handle = SymbolHandle()
-        check_call(_LIB.MXSymCreatorInvoke(
-            self.handle,
+        check_call(_LIB.MXSymCreate(
+            c_str(self.name),
             mx_uint(len(kwargs)),
             keys,
             vals,
@@ -56,14 +55,12 @@ class _SymbolCreator(object):
 class _SymbolCreatorRegistry(object):
     """Function Registry"""
     def __init__(self):
-        plist = ctypes.POINTER(ctypes.c_void_p)()
+        plist = ctypes.POINTER(ctypes.c_char_p)()
         size = ctypes.c_uint()
-        check_call(_LIB.MXListSymCreators(ctypes.byref(size),
-                                          ctypes.byref(plist)))
+        check_call(_LIB.MXListSyms(ctypes.byref(size),
+                                   ctypes.byref(plist)))
         hmap = {}
         for i in range(size.value):
-            hdl = plist[i]
-            name = ctypes.c_char_p()
-            check_call(_LIB.MXSymCreatorGetName(hdl, ctypes.byref(name)))
-            hmap[name.value] = _SymbolCreator(hdl, name.value)
+            name = plist[i]
+            hmap[name.value] = _SymbolCreator(name.value)
         self.__dict__.update(hmap)

@@ -138,4 +138,28 @@ std::vector<std::string> Symbol::ListArgs() {
   return ret;
 }
 
+void CCreateSymbol(const char* type_str, int num_param, const char** keys, const char** vals,
+                  Symbol** out) {
+  Symbol* s = new Symbol;
+  AtomicSymbol* atom = AtomicSymbolRegistry::Make(type_str);
+  for (int i = 0; i < num_param; ++i) {
+    atom->SetParam(keys[i], vals[i]);
+  }
+  std::vector<std::string> args = atom->DescribeArguments();
+  std::vector<std::string> rets = atom->DescribeReturns();
+  // set head_
+  s->head_ = std::make_shared<Symbol::Node>(atom, "");
+  // set index_
+  s->index_ = rets.size() > 1 ? -1 : 0;
+  // set head_->in_index_
+  s->head_->in_index_ = std::vector<int>(args.size(), 0);
+  // set head_->in_symbol_
+  for (auto name : args) {
+    s->head_->in_symbol_.push_back(std::make_shared<Symbol::Node>(nullptr, name));
+  }
+  // set head_->out_shape_
+  s->head_->out_shape_ = std::vector<TShape>(rets.size());
+  *out = s;
+}
+
 }  // namespace mxnet

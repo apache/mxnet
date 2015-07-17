@@ -7,6 +7,7 @@
 #define MXNET_SYMBOL_H_
 
 #include <mxnet/atomic_symbol.h>
+#include <mxnet/atomic_symbol_registry.h>
 #include <vector>
 #include <memory>
 #include <string>
@@ -32,15 +33,15 @@ class Symbol {
    *  with input symbols.
    */
   struct Node {
-    /*! wrapped atomic symbol */
+    /*! \brief wrapped atomic symbol */
     AtomicSymbol* sym_;
-    /*! name of the node */
+    /*! \brief name of the node */
     std::string name_;
-    /*! inputs to this node */
+    /*! \brief inputs to this node */
     std::vector<std::shared_ptr<Node> > in_symbol_;
-    /*! index of the inputs if the inputs are tuple */
+    /*! \brief index of the inputs if the inputs are tuple */
     std::vector<int> in_index_;
-    /*! the output shape of the wrapped symbol */
+    /*! \brief the output shape of the wrapped symbol */
     std::vector<TShape> out_shape_;
     /*!
      * \brief constructor
@@ -61,6 +62,10 @@ class Symbol {
   void FindArgUsers();
 
  public:
+  /*!
+   * \brief declare virtual destructor in case it is subclassed.
+   */
+  virtual ~Symbol() {}
   /*!
    *  \brief bind to device and returns an NArrayOperator.
    *  \param ctx context of the operator
@@ -95,11 +100,12 @@ class Symbol {
   virtual std::vector<std::string> ListArgs();
   /*!
    * \brief create atomic symbol wrapped in symbol
+   * \param type_str the type string of the AtomicSymbol
    * \param param the parameter stored as key value pairs
    * \return the constructed Symbol
    */
-  template <typename Atomic>
-  static Symbol CreateSymbol(const std::vector<std::pair<std::string, std::string> >& param) {
+  static Symbol CreateSymbol(const std::string& type_str,
+                             const std::vector<std::pair<std::string, std::string> >& param) {
     Symbol* s;
     std::vector<const char*> keys(param.size());
     std::vector<const char*> vals(param.size());
@@ -107,45 +113,22 @@ class Symbol {
       keys.push_back(p.first.c_str());
       vals.push_back(p.second.c_str());
     }
-    CreateSymbol<Atomic>(param.size(), &keys[0], &vals[0], &s);
+    CCreateSymbol(type_str.c_str(), param.size(), &keys[0], &vals[0], &s);
     Symbol ret = *s;
     delete s;
     return ret;
   }
   /*!
    * \brief c api for CreateSymbol, this can be registered with SymbolCreatorRegistry
+   * \param type_str the type string of the AtomicSymbol
    * \param num_param the number of params
    * \param keys the key for the params
    * \param vals values of the params
    * \param out stores the returning symbol
    */
-  template <typename Atomic>
-  friend void CreateSymbol(int num_param, const char** keys, const char** vals, Symbol** out);
+  friend void CCreateSymbol(const char* type_str, int num_param, const char** keys,
+                           const char** vals, Symbol** out);
 };
-
-template <typename Atomic>
-void CreateSymbol(int num_param, const char** keys, const char** vals, Symbol** out) {
-  Symbol* s = new Symbol;
-  Atomic* atom = new Atomic;
-  for (int i = 0; i < num_param; ++i) {
-    atom->SetParam(keys[i], vals[i]);
-  }
-  std::vector<std::string> args = atom->DescribeArguments();
-  std::vector<std::string> rets = atom->DescribeReturns();
-  // set head_
-  s->head_ = std::make_shared<Symbol::Node>(atom, "");
-  // set index_
-  s->index_ = rets.size() > 1 ? -1 : 0;
-  // set head_->in_index_
-  s->head_->in_index_ = std::vector<int>(args.size(), 0);
-  // set head_->in_symbol_
-  for (auto name : args) {
-    s->head_->in_symbol_.push_back(std::make_shared<Symbol::Node>(nullptr, name));
-  }
-  // set head_->out_shape_
-  s->head_->out_shape_ = std::vector<TShape>(rets.size());
-  *out = s;
-}
 
 }  // namespace mxnet
 #endif  // MXNET_SYMBOL_H_

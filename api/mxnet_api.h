@@ -215,6 +215,20 @@ MXNET_DLL int MXFuncInvoke(FunctionHandle fun,
 MXNET_DLL int MXSymCreateFromConfig(const char *cfg,
                                     SymbolHandle *out);
 /*!
+ * \brief invoke registered symbol creator through its handle.
+ * \param type_str the type of the AtomicSymbol
+ * \param num_param the number of the key value pairs in the param.
+ * \param keys an array of c str.
+ * \param vals the corresponding values of the keys.
+ * \param out pointer to the created symbol handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymCreate(const char *type_str,
+                          int num_param,
+                          const char** keys,
+                          const char** vals,
+                          SymbolHandle* out);
+/*!
  * \brief free the symbol handle
  * \param sym the symbol
  * \return 0 when success, -1 when failure happens
@@ -222,26 +236,12 @@ MXNET_DLL int MXSymCreateFromConfig(const char *cfg,
 MXNET_DLL int MXSymFree(SymbolHandle sym);
 /*!
  * \brief query if the symbol creator needs param.
- * \param sym_creator the symbol creator handle
+ * \param type_str the type of the AtomicSymbol
  * \param use_param describe if the symbol creator requires param
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSymCreatorDescribe(SymbolCreatorHandle sym_creator,
-                                   mx_uint *use_param);
-/*!
- * \brief invoke registered symbol creator through its handle.
- * \param sym_creator pointer to the symbolcreator function.
- * \param count the number of the key value pairs in the param.
- * \param keys an array of c str.
- * \param vals the corresponding values of the keys.
- * \param out pointer to the created symbol handle
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXSymCreatorInvoke(SymbolCreatorHandle sym_creator,
-                                 int count,
-                                 const char** keys,
-                                 const char** vals,
-                                 SymbolHandle* out);
+MXNET_DLL int MXSymDescribe(const char *type_str,
+                            mx_uint *use_param);
 /*!
  * \brief list all the available sym_creator
  *   most user can use it to list all the needed sym_creators
@@ -249,24 +249,8 @@ MXNET_DLL int MXSymCreatorInvoke(SymbolCreatorHandle sym_creator,
  * \param out_array the output sym_creators
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXListSymCreators(mx_uint *out_size,
-                                SymbolCreatorHandle **out_array);
-/*!
- * \brief get the sym_creator by name
- * \param name the name of the sym_creator
- * \param out the corresponding sym_creator
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXGetSymCreator(const char *name,
-                              SymbolCreatorHandle *out);
-/*!
- * \brief get the name of sym_creator handle
- * \param sym_creator the sym_creator handle
- * \param out_name the name of the sym_creator
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXSymCreatorGetName(SymbolCreatorHandle sym_creator,
-                                  const char **out_name);
+MXNET_DLL int MXListSyms(mx_uint *out_size,
+                         const char ***out_array);
 /*!
  * \brief compose the symbol on other symbol
  * \param sym the symbol to apply

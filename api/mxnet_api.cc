@@ -7,6 +7,7 @@
 #include <dmlc/logging.h>
 #include <mxnet/base.h>
 #include <mxnet/narray.h>
+#include <mxnet/atomic_symbol_registry.h>
 #include <mxnet/api_registry.h>
 #include <mutex>
 #include "./mxnet_api.h"
@@ -243,7 +244,17 @@ int MXFuncInvoke(FunctionHandle fun,
   auto *f = static_cast<const FunctionRegistry::Entry *>(fun);
   (*f)((NArray**)(use_vars),  //  NOLINT(*)
        scalar_args,
-       (NArray**)(mutate_vars));  // NOLINT(*)
+       (NArray**)(mutate_vars));  //  NOLINT(*)
+  API_END();
+}
+
+int MXSymCreate(const char *type_str,
+                int num_param,
+                const char** keys,
+                const char** vals,
+                SymbolHandle* out) {
+  API_BEGIN();
+  CCreateSymbol(type_str, num_param, keys, vals, (Symbol**)out);  //  NOLINT(*)
   API_END();
 }
 
@@ -253,47 +264,23 @@ int MXSymFree(SymbolHandle sym) {
   API_END();
 }
 
-int MXSymCreatorDescribe(SymbolCreatorHandle sym_creator,
-                         mx_uint *use_param) {
+int MXSymDescribe(const char *type_str,
+                  mx_uint *use_param) {
   API_BEGIN();
-  auto *sc = static_cast<const SymbolCreatorRegistry::Entry *>(sym_creator);
-  *use_param = sc->use_param ? 1 : 0;
+  *use_param = AtomicSymbolRegistry::Find(type_str)->use_param ? 1 : 0;
   API_END();
 }
 
-int MXSymCreatorInvoke(SymbolCreatorHandle sym_creator,
-                       int count,
-                       const char** keys,
-                       const char** vals,
-                       SymbolHandle* out) {
+int MXListSyms(mx_uint *out_size,
+               const char ***out_array) {
   API_BEGIN();
-  const SymbolCreatorRegistry::Entry *sc =
-      static_cast<const SymbolCreatorRegistry::Entry *>(sym_creator);
-  sc->body(count, keys, vals, (Symbol**)(out));  //  NOLINT(*)
-  API_END();
-}
-
-int MXListSymCreators(mx_uint *out_size,
-                      SymbolCreatorHandle **out_array) {
-  API_BEGIN();
-  auto &vec = SymbolCreatorRegistry::List();
+  auto &vec = AtomicSymbolRegistry::List();
   *out_size = static_cast<mx_uint>(vec.size());
-  *out_array = (SymbolCreatorHandle*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
-  API_END();
-}
-
-int MXGetSymCreator(const char *name,
-                    SymbolCreatorHandle *out) {
-  API_BEGIN();
-  *out = SymbolCreatorRegistry::Find(name);
-  API_END();
-}
-
-int MXSymCreatorGetName(SymbolCreatorHandle sym_creator,
-                        const char **out_name) {
-  API_BEGIN();
-  auto *f = static_cast<const SymbolCreatorRegistry::Entry *>(sym_creator);
-  *out_name = f->name.c_str();
+  std::vector<const char*> type_strs;
+  for (auto entry : vec) {
+    type_strs.push_back(entry->type_str.c_str());
+  }
+  *out_array = (const char**)(dmlc::BeginPtr(type_strs));  //  NOLINT(*)
   API_END();
 }
 

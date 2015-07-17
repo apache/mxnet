@@ -67,6 +67,11 @@ class AtomicSymbol {
    *  Calling bind from the Symbol wrapper would generate a NArrayOperator.
    */
   virtual Operator* Bind(Context ctx) const = 0;
+  /*!
+   * \brief return the type string of the atomic symbol
+   *  subclasses override this function.
+   */
+  virtual std::string TypeString() const = 0;
   friend class Symbol;
 };
 
