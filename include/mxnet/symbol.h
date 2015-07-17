@@ -32,15 +32,15 @@ class Symbol {
    *  with input symbols.
    */
   struct Node {
-    /*! wrapped atomic symbol */
+    /*! \brief wrapped atomic symbol */
     AtomicSymbol* sym_;
-    /*! name of the node */
+    /*! \brief name of the node */
     std::string name_;
-    /*! inputs to this node */
+    /*! \brief inputs to this node */
     std::vector<std::shared_ptr<Node> > in_symbol_;
-    /*! index of the inputs if the inputs are tuple */
+    /*! \brief index of the inputs if the inputs are tuple */
     std::vector<int> in_index_;
-    /*! the output shape of the wrapped symbol */
+    /*! \brief the output shape of the wrapped symbol */
     std::vector<TShape> out_shape_;
     /*!
      * \brief constructor
