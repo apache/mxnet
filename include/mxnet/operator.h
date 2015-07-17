@@ -27,6 +27,11 @@ namespace mxnet {
  */
 class Operator {
  public:
+  /*!
+   * \brief construct Operator from StaticOperator and Context
+   * \param op StaticOperator to wrap
+   * \param ctx Context of the Operator
+   */
   Operator(StaticOperator* op, Context ctx);
   /*!
    * \brief get types of input argument of this oeprator
@@ -61,6 +66,10 @@ class Operator {
   virtual void InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape);
 
+  /*!
+   * \brief set the context of the Operator
+   * \param ctx the context to be set to
+   */
   virtual void SetContext(Context ctx);
   /*!
    * \brief perform a forward operation of operator, save the output to TBlob
