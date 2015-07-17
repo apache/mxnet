@@ -72,6 +72,10 @@ class NArray {
     if (is_none()) return;
     DAGEngine::Get()->WaitForVar(ptr_->var);
   }
+  /*! \return the associated DAG variable of the narray.*/
+  inline DAGEngine::Variable Var() const {
+    return ptr_->var;
+  }
   /*!
    * \brief set all the elements in narray to be scalar
    * \param scalar the scalar to set

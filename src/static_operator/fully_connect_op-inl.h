@@ -4,19 +4,19 @@
  * \brief fully connect operator
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_FULLY_CONNECT_OP_INL_H_
-#define MXNET_OPERATOR_FULLY_CONNECT_OP_INL_H_
+#ifndef MXNET_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
+#define MXNET_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
 
 #include <dmlc/logging.h>
-#include <mxnet/operator.h>
+#include <mxnet/static_operator.h>
 #include <vector>
-#include "./operator_common.h"
+#include "./static_operator_common.h"
 #include "./param.h"
 
 namespace mxnet {
 namespace op {
 template<typename xpu>
-class FullyConnectOp : public Operator {
+class FullyConnectOp : public StaticOperator {
  public:
   virtual std::vector<ArgType> DescribeArgs() const {
     ArgType ret[] = {kDataArg, kWeightArg, kBiasArg};
@@ -109,5 +109,5 @@ class FullyConnectOp : public Operator {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_FULLY_CONNECT_OP_INL_H_
+#endif  // MXNET_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
 

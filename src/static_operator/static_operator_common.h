@@ -1,17 +1,17 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file operator_common.h
+ * \file static_operator_common.h
  * \brief common internal header of most operators
  *   this header includes utility functions operator can use
  *   common type definitions
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_OPERATOR_COMMON_H_
-#define MXNET_OPERATOR_OPERATOR_COMMON_H_
+#ifndef MXNET_STATIC_OPERATOR_STATIC_OPERATOR_COMMON_H_
+#define MXNET_STATIC_OPERATOR_STATIC_OPERATOR_COMMON_H_
 
 #include <dmlc/logging.h>
-#include <mxnet/operator.h>
-
+#include <mxnet/static_operator.h>
+#include <mxnet/base.h>
 namespace mxnet {
 namespace op {
 /*!
@@ -24,13 +24,13 @@ namespace op {
  */
 template<typename OType, typename Exp>
 inline void Assign(OType &out, // NOLINT(*)
-                   Operator::GradReqType req,
+                   GradReqType req,
                    const Exp &exp) {
   switch (req) {
-    case Operator::kNullOp: break;
-    case Operator::kWriteTo:
-    case Operator::kWriteInplace: out = exp; break;
-    case Operator::kAddTo: out += exp; break;
+    case kNullOp: break;
+    case kWriteTo:
+    case kWriteInplace: out = exp; break;
+    case kAddTo: out += exp; break;
     default: LOG(FATAL) << "not reached";
   }
 }
@@ -67,7 +67,7 @@ enum OpType {
  * \param type the type of operator
  */
 template<typename xpu>
-Operator *CreateOperator(OpType type);
+StaticOperator *CreateOperator(OpType type);
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_OPERATOR_COMMON_H_
+#endif  // MXNET_STATIC_OPERATOR_STATIC_OPERATOR_COMMON_H_

@@ -4,18 +4,18 @@
  * \brief activation operator of mxnet
  */
 
-#ifndef MXNET_OPERATOR_ACTIVATION_OP_INL_H_
-#define MXNET_OPERATOR_ACTIVATION_OP_INL_H_
+#ifndef MXNET_STATIC_OPERATOR_ACTIVATION_OP_INL_H_
+#define MXNET_STATIC_OPERATOR_ACTIVATION_OP_INL_H_
 
 #include <dmlc/logging.h>
-#include <mxnet/operator.h>
+#include <mxnet/static_operator.h>
 #include <vector>
-#include "./operator_common.h"
+#include "./static_operator_common.h"
 
 namespace mxnet {
 namespace op {
 template<typename xpu, typename ForwardOp, typename BackOp>
-class ActivationOp : public Operator {
+class ActivationOp : public StaticOperator {
  public:
   virtual void InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape) {
@@ -57,4 +57,4 @@ class ActivationOp : public Operator {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_ACTIVATION_OP_INL_H_
+#endif  // MXNET_STATIC_OPERATOR_ACTIVATION_OP_INL_H_
