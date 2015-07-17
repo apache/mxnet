@@ -63,6 +63,10 @@ class Symbol {
 
  public:
   /*!
+   * \brief declare virtual destructor in case it is subclassed.
+   */
+  virtual ~Symbol() {}
+  /*!
    *  \brief bind to device and returns an NArrayOperator.
    *  \param ctx context of the operator
    *  \return returns the pointer to a created NArrayOperator. It is on the user to delete.
