@@ -7,6 +7,7 @@
 #define MXNET_SYMBOL_H_
 
 #include <mxnet/atomic_symbol.h>
+#include <mxnet/atomic_symbol_registry.h>
 #include <vector>
 #include <memory>
 #include <string>
@@ -95,11 +96,12 @@ class Symbol {
   virtual std::vector<std::string> ListArgs();
   /*!
    * \brief create atomic symbol wrapped in symbol
+   * \param type_str the type string of the AtomicSymbol
    * \param param the parameter stored as key value pairs
    * \return the constructed Symbol
    */
-  template <typename Atomic>
-  static Symbol CreateSymbol(const std::vector<std::pair<std::string, std::string> >& param) {
+  static Symbol CreateSymbol(const std::string& type_str,
+                             const std::vector<std::pair<std::string, std::string> >& param) {
     Symbol* s;
     std::vector<const char*> keys(param.size());
     std::vector<const char*> vals(param.size());
@@ -107,26 +109,27 @@ class Symbol {
       keys.push_back(p.first.c_str());
       vals.push_back(p.second.c_str());
     }
-    CreateSymbol<Atomic>(param.size(), &keys[0], &vals[0], &s);
+    CCreateSymbol(type_str.c_str(), param.size(), &keys[0], &vals[0], &s);
     Symbol ret = *s;
     delete s;
     return ret;
   }
   /*!
    * \brief c api for CreateSymbol, this can be registered with SymbolCreatorRegistry
+   * \param type_str the type string of the AtomicSymbol
    * \param num_param the number of params
    * \param keys the key for the params
    * \param vals values of the params
    * \param out stores the returning symbol
    */
-  template <typename Atomic>
-  friend void CreateSymbol(int num_param, const char** keys, const char** vals, Symbol** out);
+  friend void CCreateSymbol(const char* type_str, int num_param, const char** keys,
+                           const char** vals, Symbol** out);
 };
 
-template <typename Atomic>
-void CreateSymbol(int num_param, const char** keys, const char** vals, Symbol** out) {
+void CCreateSymbol(const char* type_str, int num_param, const char** keys, const char** vals,
+                  Symbol** out) {
   Symbol* s = new Symbol;
-  Atomic* atom = new Atomic;
+  AtomicSymbol* atom = AtomicSymbolRegistry::Make(type_str);
   for (int i = 0; i < num_param; ++i) {
     atom->SetParam(keys[i], vals[i]);
   }
