@@ -3,8 +3,8 @@
  * \file registry.h
  * \brief registry that registers all sorts of functions
  */
-#ifndef MXNET_API_REGISTRY_H_
-#define MXNET_API_REGISTRY_H_
+#ifndef MXNET_REGISTRY_H_
+#define MXNET_REGISTRY_H_
 
 #include <dmlc/base.h>
 #include <map>
@@ -218,5 +218,75 @@ struct NArrayFunctionEntry {
       ::mxnet::Registry<NArrayFunctionEntry>::Get()->Register("" # name)
 #endif  // DMLC_USE_CXX11
 
+class Symbol;
+/*! \brief AtomicSymbolEntry to register */
+struct AtomicSymbolEntry {
+  /*! \brief typedef Creator function */
+  typedef AtomicSymbol*(*Creator)();
+  /*! \brief if AtomicSymbol use param */
+  bool use_param;
+  /*! \brief name of the entry */
+  std::string name;
+  /*! \brief function body to create AtomicSymbol */
+  Creator body;
+  /*! \brief singleton is created when no param is needed for the AtomicSymbol */
+  Symbol *singleton_symbol;
+  /*! \brief constructor */
+  explicit AtomicSymbolEntry(const std::string& name)
+      : use_param(true), name(name), body(NULL), singleton_symbol(NULL) {}
+  /*!
+   * \brief set if param is needed by this AtomicSymbol
+   */
+  inline AtomicSymbolEntry &set_use_param(bool use_param) {
+    this->use_param = use_param;
+    return *this;
+  }
+  /*!
+   * \brief set the function body
+   */
+  inline AtomicSymbolEntry &set_body(Creator body) {
+    this->body = body;
+    return *this;
+  }
+  /*!
+   * \brief return the singleton symbol
+   */
+  Symbol *GetSingletonSymbol();
+  /*! \brief destructor */
+  ~AtomicSymbolEntry();
+  /*!
+   * \brief invoke the function
+   * \return the created AtomicSymbol
+   */
+  inline AtomicSymbol* operator () () const {
+    return body();
+  }
+
+ private:
+  /*! \brief disable copy constructor */
+  AtomicSymbolEntry(const AtomicSymbolEntry& other) {}
+  /*! \brief disable assignment operator */
+  const AtomicSymbolEntry& operator = (const AtomicSymbolEntry& other) { return *this; }
+};
+
+/*!
+ * \brief macro to register AtomicSymbol to AtomicSymbolFactory
+ *
+ * Example: the following code is example to register aplus
+ * \code
+ *
+ * REGISTER_ATOMIC_SYMBOL(fullc)
+ * .set_use_param(false)
+ *
+ * \endcode
+ */
+#define REGISTER_ATOMIC_SYMBOL(name, AtomicSymbolType)                  \
+  AtomicSymbol* __make_ ## AtomicSymbolType ## __() {                   \
+    return new AtomicSymbolType;                                        \
+  }                                                                     \
+  static AtomicSymbolEntry& __ ## name ## _atomic_symbol__ =            \
+      ::mxnet::Registry<AtomicSymbolEntry>::Get()->Register("" # name)  \
+      .set_body(__make_ ## AtomicSymbolType ## __)
+
 }  // namespace mxnet
-#endif  // MXNET_API_REGISTRY_H_
+#endif  // MXNET_REGISTRY_H_

@@ -29,9 +29,11 @@ typedef void *NArrayHandle;
 /*! \brief handle to a mxnet narray function that changes NArray */
 typedef const void *FunctionHandle;
 /*! \brief handle to a function that takes param and creates symbol */
-typedef const void *SymbolCreatorHandle;
+typedef void *AtomicSymbolCreator;
 /*! \brief handle to a symbol that can be bind as operator */
 typedef void *SymbolHandle;
+/*! \brief handle to a AtomicSymbol */
+typedef void *AtomicSymbolHandle;
 /*! \brief handle to a NArrayOperator */
 typedef void *OperatorHandle;
 /*! \brief handle to a DataIterator */
@@ -212,45 +214,52 @@ MXNET_DLL int MXFuncInvoke(FunctionHandle fun,
  * \param out created symbol handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSymCreateFromConfig(const char *cfg,
-                                    SymbolHandle *out);
+MXNET_DLL int MXSymbolCreateFromConfig(const char *cfg,
+                                       SymbolHandle *out);
 /*!
- * \brief invoke registered symbol creator through its handle.
- * \param type_str the type of the AtomicSymbol
- * \param num_param the number of the key value pairs in the param.
- * \param keys an array of c str.
- * \param vals the corresponding values of the keys.
+ * \brief create Symbol by wrapping AtomicSymbol
+ * \param creator the AtomicSymbolCreator
+ * \param num_param the number of parameters
+ * \param keys the keys to the params
+ * \param vals the vals of the params
  * \param out pointer to the created symbol handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSymCreate(const char *type_str,
-                          int num_param,
-                          const char** keys,
-                          const char** vals,
-                          SymbolHandle* out);
+MXNET_DLL int MXSymbolCreateFromAtomicSymbol(AtomicSymbolCreator creator,
+                                             int num_param,
+                                             const char **keys,
+                                             const char **vals,
+                                             SymbolHandle *out);
 /*!
  * \brief free the symbol handle
- * \param sym the symbol
+ * \param symbol the symbol
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSymFree(SymbolHandle sym);
+MXNET_DLL int MXSymbolFree(SymbolHandle symbol);
 /*!
- * \brief query if the symbol creator needs param.
- * \param type_str the type of the AtomicSymbol
- * \param use_param describe if the symbol creator requires param
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXSymDescribe(const char *type_str,
-                            mx_uint *use_param);
-/*!
- * \brief list all the available sym_creator
- *   most user can use it to list all the needed sym_creators
+ * \brief list all the available AtomicSymbolEntry
  * \param out_size the size of returned array
- * \param out_array the output sym_creators
+ * \param out_array the output AtomicSymbolCreator array
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXListSyms(mx_uint *out_size,
-                         const char ***out_array);
+MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
+                                               AtomicSymbolCreator **out_array);
+/*!
+ * \brief get the singleton Symbol of the AtomicSymbol if any
+ * \param creator the AtomicSymbolCreator
+ * \param out the returned singleton Symbol of the AtomicSymbol the creator stands for
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolGetSingleton(AtomicSymbolCreator creator,
+                                   SymbolHandle *out);
+/*!
+ * \brief get the singleton Symbol of the AtomicSymbol if any
+ * \param creator the AtomicSymbolCreator
+ * \param out the returned name of the creator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
+                                          const char **out);
 /*!
  * \brief compose the symbol on other symbol
  * \param sym the symbol to apply

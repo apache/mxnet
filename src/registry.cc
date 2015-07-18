@@ -6,6 +6,7 @@
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
 #include <mxnet/registry.h>
+#include <mxnet/symbol.h>
 
 namespace mxnet {
 
@@ -28,5 +29,26 @@ Registry<Entry> *Registry<Entry>::Get() {
 template NArrayFunctionEntry &Registry<NArrayFunctionEntry>::Register(const std::string& name);
 template Registry<NArrayFunctionEntry> *Registry<NArrayFunctionEntry>::Get();
 #endif
+
+Symbol *AtomicSymbolEntry::GetSingletonSymbol() {
+  if (singleton_symbol) {
+    return singleton_symbol;
+  } else if (body && !use_param) {
+    singleton_symbol = new Symbol;
+    *singleton_symbol = Symbol::Create(body());
+    return singleton_symbol;
+  } else {
+    return NULL;
+  }
+}
+
+AtomicSymbolEntry::~AtomicSymbolEntry()  {
+  if (singleton_symbol) {
+    delete singleton_symbol;
+  }
+}
+
+template AtomicSymbolEntry &Registry<AtomicSymbolEntry>::Register(const std::string& name);
+template Registry<AtomicSymbolEntry> *Registry<AtomicSymbolEntry>::Get();
 
 }  // namespace mxnet
