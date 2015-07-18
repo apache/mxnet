@@ -14,7 +14,7 @@
 #include "./tensor_blob.h"
 
 namespace mxnet {
-class Operator;
+class StaticOperator;
 /*!
  * \brief AtomicSymbol is the base class of all atomic symbols.
  *  This is not meant to be used by user, it should be wrapped in Symbol, so that the same instance
@@ -66,7 +66,7 @@ class AtomicSymbol {
    *  Bind function of AtomicSymbol does not return NArrayOperator, but static operator.
    *  Calling bind from the Symbol wrapper would generate a NArrayOperator.
    */
-  virtual Operator* Bind(Context ctx) const = 0;
+  virtual StaticOperator* Bind(Context ctx) const = 0;
   /*!
    * \brief return the type string of the atomic symbol
    *  subclasses override this function.

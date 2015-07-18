@@ -34,38 +34,10 @@ class Operator {
    */
   Operator(StaticOperator* op, Context ctx);
   /*!
-   * \brief get types of input argument of this oeprator
-   * \return a vector corresponding to type of each argument
-   *  this order is same as the order of inputs in Forward, InferShape and Backward
-   */
-  virtual std::vector<ArgType> DescribeArgs() const;
-  /*!
    * \brief describe property of op
    * \return a bit map in int
    */
   virtual int DescribeProperty() const;
-  /*!
-   * \brief set param for the operator from string
-   * \param name parameter name
-   * \param val string for configuration
-   */
-  virtual void SetParam(const char *name, const char *val);
-  /*!
-   * \brief inter the shapes of outputs and unknown input arguments
-   * \param in_shape the shape of input arguments of the operator
-   *     this should be of same length as the vector returned by DescribeArgs
-   *     in_shape allows unknown elements, which are checked by shape.ndim() == 0.
-   *     For unknown shapes, InferShape will try to fill in the correct Shape in in_shape
-   *     For known shapes, InferShape will check shape consistency
-   *
-   *     common practice: set the shape of data input, and usually weight's shape can be infered
-   *
-   * \param out_shape the shape of outputs of the operator
-   *     InferShape will modify the vector to fill output TShape
-   */
-  virtual void InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape);
-
   /*!
    * \brief set the context of the Operator
    * \param ctx the context to be set to

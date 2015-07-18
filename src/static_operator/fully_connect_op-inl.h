@@ -18,6 +18,14 @@ namespace op {
 template<typename xpu>
 class FullyConnectOp : public StaticOperator {
  public:
+  FullyConnectOp () {
+    // Do nothing.
+  }
+
+  FullyConnectOp (param p) {
+    this->param = p;
+  }
+
   virtual std::vector<ArgType> DescribeArgs() const {
     ArgType ret[] = {kDataArg, kWeightArg, kBiasArg};
     if (param_.no_bias == 0) {
@@ -25,30 +33,6 @@ class FullyConnectOp : public StaticOperator {
     } else {
       return std::vector<ArgType>(ret, ret + 2);
     }
-  }
-  virtual void SetParam(const char *name, const char *val) {
-    param_.SetParam(name, val);
-  }
-  virtual void InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape) {
-    using namespace mshadow;
-    if (param_.no_bias == 0) {
-      CHECK_EQ(in_shape->size(), 3) << "Input:[data, weight, bias]";
-    } else {
-      CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
-    }
-    CHECK_GT(param_.num_hidden, 0);
-    const TShape &dshape = (*in_shape)[0];
-    CHECK_EQ(dshape.ndim(), 4) << \
-        "Input data should be 4D in batch-1-1-hidden";
-    CHECK_NE(dshape.ndim(), 0) << "Require data shape to be known";
-    ShapeAssignCheck((*in_shape)[1], Shape2(param_.num_hidden, dshape[3]));
-    if (param_.no_bias == 0) {
-      ShapeAssignCheck((*in_shape)[2], Shape1(param_.num_hidden));
-    }
-    out_shape->clear();
-    out_shape->push_back(dshape);
-    (*out_shape)[0][3] = param_.num_hidden;
   }
   virtual void Forward(Option opt,
                        RunContext ctx,
@@ -102,7 +86,6 @@ class FullyConnectOp : public StaticOperator {
     Tensor<xpu, 2> gdata = out_grad[0].FlatTo2D<xpu, real_t>(s);
     Assign(gdata, req[0], dot(grad, wmat));
   }
-
  private:
   Param param_;
 };  // class FullyConnectOp
