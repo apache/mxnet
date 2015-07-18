@@ -8,7 +8,7 @@
 #include <mxnet/base.h>
 #include <mxnet/narray.h>
 #include <mxnet/atomic_symbol_registry.h>
-#include <mxnet/api_registry.h>
+#include <mxnet/registry.h>
 #include <mutex>
 #include "./mxnet_api.h"
 
@@ -201,7 +201,7 @@ int MXNArrayGetContext(NArrayHandle handle,
 int MXListFunctions(mx_uint *out_size,
                     FunctionHandle **out_array) {
   API_BEGIN();
-  auto &vec = FunctionRegistry::List();
+  auto &vec = Registry<NArrayFunctionEntry>::List();
   *out_size = static_cast<mx_uint>(vec.size());
   *out_array = (FunctionHandle*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
   API_END();
@@ -210,14 +210,14 @@ int MXListFunctions(mx_uint *out_size,
 int MXGetFunction(const char *name,
                   FunctionHandle *out) {
   API_BEGIN();
-  *out = FunctionRegistry::Find(name);
+  *out = Registry<NArrayFunctionEntry>::Find(name);
   API_END();
 }
 
 int MXFuncGetName(FunctionHandle fun,
                   const char **out_name) {
   API_BEGIN();
-  auto *f = static_cast<const FunctionRegistry::Entry *>(fun);
+  auto *f = static_cast<const NArrayFunctionEntry*>(fun);
   *out_name = f->name.c_str();
   API_END();
 }
@@ -228,7 +228,7 @@ int MXFuncDescribe(FunctionHandle fun,
                    mx_uint *num_mutate_vars,
                    int *type_mask) {
   API_BEGIN();
-  auto *f = static_cast<const FunctionRegistry::Entry *>(fun);
+  auto *f = static_cast<const NArrayFunctionEntry*>(fun);
   *num_use_vars = f->num_use_vars;
   *num_scalars = f->num_scalars;
   *num_mutate_vars = f->num_mutate_vars;
@@ -241,7 +241,7 @@ int MXFuncInvoke(FunctionHandle fun,
                  mx_float *scalar_args,
                  NArrayHandle *mutate_vars) {
   API_BEGIN();
-  auto *f = static_cast<const FunctionRegistry::Entry *>(fun);
+  auto *f = static_cast<const NArrayFunctionEntry*>(fun);
   (*f)((NArray**)(use_vars),  //  NOLINT(*)
        scalar_args,
        (NArray**)(mutate_vars));  //  NOLINT(*)
