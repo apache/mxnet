@@ -25,16 +25,19 @@ class _SymbolCreator(object):
         """
         self.name = name
         self.handle = handle
-        singleton_ = ctypes.c_void_p()
+        singleton_ = SymbolHandle()
         check_call(_LIB.MXSymbolGetSingleton(self.handle, ctypes.byref(singleton_)))
-        self.singleton = Symbol(singleton_)
+        if singleton_:
+            self.singleton = Symbol(singleton_)
+        else:
+            self.singleton = None
 
     def __call__(self, **kwargs):
         """Invoke creator of symbol by passing kwargs
 
         Parameters
         ----------
-        params : **kwargs
+        **kwargs
             provide the params necessary for the symbol creation
         Returns
         -------

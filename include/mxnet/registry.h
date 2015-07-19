@@ -38,8 +38,8 @@ class Registry {
    * \return the corresponding function, can be NULL
    */
   inline static const Entry *Find(const std::string &name) {
-    auto &fmap = Get()->fmap_;
-    auto p = fmap.find(name);
+    const std::map<std::string, Entry*> &fmap = Get()->fmap_;
+    typename std::map<std::string, Entry*>::const_iterator p = fmap.find(name);
     if (p != fmap.end()) {
       return p->second;
     } else {
@@ -281,11 +281,11 @@ struct AtomicSymbolEntry {
  * \endcode
  */
 #define REGISTER_ATOMIC_SYMBOL(name, AtomicSymbolType)                  \
-  AtomicSymbol* __make_ ## AtomicSymbolType ## __() {                   \
+  ::mxnet::AtomicSymbol* __make_ ## AtomicSymbolType ## __() {          \
     return new AtomicSymbolType;                                        \
   }                                                                     \
-  static AtomicSymbolEntry& __ ## name ## _atomic_symbol__ =            \
-      ::mxnet::Registry<AtomicSymbolEntry>::Get()->Register("" # name)  \
+  static ::mxnet::AtomicSymbolEntry& __ ## name ## _atomic_symbol__ =   \
+      ::mxnet::Registry<::mxnet::AtomicSymbolEntry>::Get()->Register("" # name) \
       .set_body(__make_ ## AtomicSymbolType ## __)
 
 }  // namespace mxnet
