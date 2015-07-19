@@ -5,6 +5,7 @@
  */
 #include <dmlc/logging.h>
 #include <mxnet/symbol.h>
+#include <mxnet/registry.h>
 #include <iterator>
 
 namespace mxnet {
@@ -138,28 +139,34 @@ std::vector<std::string> Symbol::ListArgs() {
   return ret;
 }
 
-void CCreateSymbol(const char* type_str, int num_param, const char** keys, const char** vals,
-                  Symbol** out) {
-  Symbol* s = new Symbol;
-  AtomicSymbol* atom = AtomicSymbolRegistry::Make(type_str);
-  for (int i = 0; i < num_param; ++i) {
-    atom->SetParam(keys[i], vals[i]);
-  }
-  std::vector<std::string> args = atom->DescribeArguments();
-  std::vector<std::string> rets = atom->DescribeReturns();
+Symbol Symbol::Create(AtomicSymbol *atomic_symbol)  {
+  Symbol s;
+  std::vector<std::string> args = atomic_symbol->DescribeArguments();
+  std::vector<std::string> rets = atomic_symbol->DescribeReturns();
   // set head_
-  s->head_ = std::make_shared<Symbol::Node>(atom, "");
+  s.head_ = std::make_shared<Symbol::Node>(atomic_symbol, "");
   // set index_
-  s->index_ = rets.size() > 1 ? -1 : 0;
+  s.index_ = rets.size() > 1 ? -1 : 0;
   // set head_->in_index_
-  s->head_->in_index_ = std::vector<int>(args.size(), 0);
+  s.head_->in_index_ = std::vector<int>(args.size(), 0);
   // set head_->in_symbol_
   for (auto name : args) {
-    s->head_->in_symbol_.push_back(std::make_shared<Symbol::Node>(nullptr, name));
+    s.head_->in_symbol_.push_back(std::make_shared<Symbol::Node>(nullptr, name));
   }
   // set head_->out_shape_
-  s->head_->out_shape_ = std::vector<TShape>(rets.size());
-  *out = s;
+  s.head_->out_shape_ = std::vector<TShape>(rets.size());
+  return s;
+}
+
+Symbol Symbol::Create(const std::string& type_name,
+                      const std::vector<std::pair<std::string, std::string> >& param) {
+  const AtomicSymbolEntry *entry = Registry<AtomicSymbolEntry>::Find(type_name);
+  CHECK_NE(entry, NULL) << type_name << " is not a valid Symbol type";
+  AtomicSymbol* atomic_symbol = (*entry)();
+  for (auto p : param) {
+    atomic_symbol->SetParam(p.first.c_str(), p.second.c_str());
+  }
+  return Create(atomic_symbol);
 }
 
 }  // namespace mxnet
