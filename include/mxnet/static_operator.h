@@ -24,15 +24,6 @@ namespace mxnet {
 class StaticOperator {
  public:
   /*!
-   * \brief get types of input argument of this oeprator
-   * \return a vector corresponding to type of each argument
-   *  this order is same as the order of inputs in Forward, InferShape and Backward
-   */
-  virtual std::vector<ArgType> DescribeArgs() const {
-    // default most of layers only have one data argument
-    return std::vector<ArgType>(1, kDataArg);
-  }
-  /*!
    * \brief describe property of op
    * \return a bit map in int
    */
@@ -40,27 +31,6 @@ class StaticOperator {
     // default most of layer only conatin internal state
     return kContainInteralState;
   }
-  /*!
-   * \brief set param for the StaticOperator from string
-   * \param name parameter name
-   * \param val string for configuration
-   */
-  virtual void SetParam(const char *name, const char *val) {}
-  /*!
-   * \brief inter the shapes of outputs and unknown input arguments
-   * \param in_shape the shape of input arguments of the StaticOperator
-   *     this should be of same length as the vector returned by DescribeArgs
-   *     in_shape allows unknown elements, which are checked by shape.ndim() == 0.
-   *     For unknown shapes, InferShape will try to fill in the correct Shape in in_shape
-   *     For known shapes, InferShape will check shape consistency
-   *
-   *     common practice: set the shape of data input, and usually weight's shape can be infered
-   *
-   * \param out_shape the shape of outputs of the StaticOperator
-   *     InferShape will modify the vector to fill output TShape
-   */
-  virtual void InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape) = 0;
   /*!
    * \brief perform a forward operation of StaticOperator, save the output to TBlob
    * \param opt option on Forward such as whether this is training phase

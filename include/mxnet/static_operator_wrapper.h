@@ -1,17 +1,18 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file operator.h
+ * \file static_operator_wrapper.h
  * \brief operator interface of mxnet
  * \author Naiyan Wang
  */
-#ifndef MXNET_OPERATOR_H_
-#define MXNET_OPERATOR_H_
+#ifndef MXNET_STATIC_OPERATOR_WRAPPER_H_
+#define MXNET_STATIC_OPERATOR_WRAPPER_H_
 // this file will be seen by cuda, no c++11 for now
 #include <dmlc/base.h>
 #include <vector>
 #include "./base.h"
 #include "./tensor_blob.h"
 #include "./static_operator.h"
+#include "./operator.h"
 #include "./narray.h"
 #include "./dag_engine.h"
 
@@ -25,8 +26,14 @@ namespace mxnet {
  *
  * \sa Operator
  */
-class Operator {
+class StaticOperatorWrapper: public Operator {
  public:
+  /*!
+   * \brief construct Operator from StaticOperator and Context
+   * \param op StaticOperator to wrap
+   * \param ctx Context of the Operator
+   */
+  StaticOperatorWrapper(StaticOperator* op, Context ctx);
   /*!
    * \brief describe property of op
    * \return a bit map in int
@@ -48,7 +55,7 @@ class Operator {
   virtual void Forward(Option opt,
                        RunContext ctx,
                        const std::vector<NArray> &in_data,
-                       const std::vector<NArray> &out_data) = 0;
+                       const std::vector<NArray> &out_data);
   /*!
    * \brief perform a backward operation of the operator to get the gradient
    * \param ctx runtime context
@@ -64,10 +71,11 @@ class Operator {
                         const std::vector<NArray> &grad_next,
                         const std::vector<NArray> &in_data,
                         const std::vector<NArray> &out_grad,
-                        const std::vector<GradReqType> &req) = 0;
+                        const std::vector<GradReqType> &req);
 
- protected:
-  Context global_ctx;
+ private:
+  /* \brief the static operator */
+  StaticOperator* op;
 };
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_H_
+#endif  // MXNET_STATIC_OPERATOR_WRAPPER_H_

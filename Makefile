@@ -87,7 +87,7 @@ static_operator_gpu.o: src/static_operator/static_operator_gpu.cu
 symbol.o: src/symbol/symbol.cc
 registry.o: src/registry.cc
 mxnet_api.o: api/mxnet_api.cc
-operator.o: src/operator/operator.cc
+operator.o: src/operator/static_operator_wrapper.cc
 
 api/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)
 api/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ)

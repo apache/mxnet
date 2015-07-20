@@ -4,55 +4,21 @@
  * \brief the implementation of narray operator
  * \author Naiyan Wang
  */
-#include <mxnet/operator.h>
+#include <mxnet/static_operator_wrapper.h>
 
 namespace mxnet {
 
-  Operator::Operator(StaticOperator* op, Context ctx) {
+  StaticOperatorWrapper::StaticOperatorWrapper(StaticOperator* op, Context ctx) {
     this->op = op;
     this->global_ctx = ctx;
-  }
-  /*!
-   * \brief get types of input argument of this oeprator
-   * \return a vector corresponding to type of each argument
-   *  this order is same as the order of inputs in Forward, InferShape and Backward
-   */
-  std::vector<ArgType> Operator::DescribeArgs() const {
-    // default most of layers only have one data argument
-    return op->DescribeArgs();
   }
   /*!
    * \brief describe property of op
    * \return a bit map in int
    */
-  int Operator::DescribeProperty() const {
+  int StaticOperatorWrapper::DescribeProperty() const {
     // default most of layer only conatin internal state
     return op->DescribeProperty();
-  }
-  /*!
-   * \brief set param for the operator from string
-   * \param name parameter name
-   * \param val string for configuration
-   */
-  void Operator::SetParam(const char *name, const char *val) {
-    op->SetParam(name, val);
-  }
-  /*!
-   * \brief inter the shapes of outputs and unknown input arguments
-   * \param in_shape the shape of input arguments of the operator
-   *     this should be of same length as the vector returned by DescribeArgs
-   *     in_shape allows unknown elements, which are checked by shape.ndim() == 0.
-   *     For unknown shapes, InferShape will try to fill in the correct Shape in in_shape
-   *     For known shapes, InferShape will check shape consistency
-   *
-   *     common practice: set the shape of data input, and usually weight's shape can be infered
-   *
-   * \param out_shape the shape of outputs of the operator
-   *     InferShape will modify the vector to fill output TShape
-   */
-  void Operator::InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape) {
-    op->InferShape(in_shape, out_shape);
   }
   /*!
    * \brief perform a forward operation of operator, save the output to TBlob
@@ -62,7 +28,7 @@ namespace mxnet {
    * \param out_data array of output data,
    *        the space of TBlob in out_data must be pre-allocated with InferShape
    */
-  void Operator::Forward(Option opt,
+  void StaticOperatorWrapper::Forward(Option opt,
                        RunContext ctx,
                        const std::vector<NArray> &in_data,
                        const std::vector<NArray> &out_data) {
@@ -93,7 +59,7 @@ namespace mxnet {
    *                  only inplace will change input data
    * \sa GradReqType
    */
-  void Operator::Backward(RunContext ctx,
+  void StaticOperatorWrapper::Backward(RunContext ctx,
                         const std::vector<NArray> &grad_next,
                         const std::vector<NArray> &in_data,
                         const std::vector<NArray> &out_grad,
@@ -120,7 +86,7 @@ namespace mxnet {
       }, global_ctx, used_var, mutate_var);
   }
 
-  void Operator::SetContext(Context ctx) {
+  void StaticOperatorWrapper::SetContext(Context ctx) {
     this->global_ctx = ctx;
   }
 

@@ -22,7 +22,7 @@ class FullyConnectOp : public StaticOperator {
     // Do nothing.
   }
 
-  FullyConnectOp (param p) {
+  FullyConnectOp (Param p) {
     this->param = p;
   }
 
