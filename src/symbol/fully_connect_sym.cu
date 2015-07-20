@@ -7,7 +7,7 @@
 
 namespace mxnet {
   template <>
-  StaticOperator* FullyConnectSymbol<gpu>::Bind(Context ctx) const {
+  StaticOperator* FullyConnectSymbol::Bind<gpu>(Context ctx) const {
     return Bind_<gpu>(ctx);
   }
 }

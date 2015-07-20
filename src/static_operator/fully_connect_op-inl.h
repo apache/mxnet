@@ -23,7 +23,7 @@ class FullyConnectOp : public StaticOperator {
   }
 
   FullyConnectOp (Param p) {
-    this->param = p;
+    this->param_ = p;
   }
 
   virtual std::vector<ArgType> DescribeArgs() const {
