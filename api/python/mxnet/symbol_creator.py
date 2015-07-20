@@ -12,7 +12,7 @@ from .symbol import Symbol
 class _SymbolCreator(object):
     """SymbolCreator is a function that takes Param and return symbol"""
 
-    def __init__(self, name):
+    def __init__(self, name, handle):
         """Initialize the function with handle
 
         Parameters
@@ -24,18 +24,20 @@ class _SymbolCreator(object):
             the name of the function
         """
         self.name = name
-        use_param = mx_uint()
-        check_call(_LIB.MXSymDescribe(
-            c_str(self.name),
-            ctypes.byref(use_param)))
-        self.use_param = use_param.value
+        self.handle = handle
+        singleton_ = SymbolHandle()
+        check_call(_LIB.MXSymbolGetSingleton(self.handle, ctypes.byref(singleton_)))
+        if singleton_:
+            self.singleton = Symbol(singleton_)
+        else:
+            self.singleton = None
 
     def __call__(self, **kwargs):
         """Invoke creator of symbol by passing kwargs
 
         Parameters
         ----------
-        params : kwargs
+        **kwargs
             provide the params necessary for the symbol creation
         Returns
         -------
@@ -44,8 +46,8 @@ class _SymbolCreator(object):
         keys = c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()])
         vals = c_array(ctypes.c_char_p, [c_str(str(val)) for val in kwargs.values()])
         sym_handle = SymbolHandle()
-        check_call(_LIB.MXSymCreate(
-            c_str(self.name),
+        check_call(_LIB.MXSymbolCreateFromAtomicSymbol(
+            self.handle,
             mx_uint(len(kwargs)),
             keys,
             vals,
@@ -55,12 +57,13 @@ class _SymbolCreator(object):
 class _SymbolCreatorRegistry(object):
     """Function Registry"""
     def __init__(self):
-        plist = ctypes.POINTER(ctypes.c_char_p)()
+        plist = ctypes.POINTER(ctypes.c_void_p)()
         size = ctypes.c_uint()
-        check_call(_LIB.MXListSyms(ctypes.byref(size),
-                                   ctypes.byref(plist)))
+        check_call(_LIB.MXSymbolListAtomicSymbolCreators(ctypes.byref(size),
+                                                         ctypes.byref(plist)))
         hmap = {}
+        name = ctypes.c_char_p()
         for i in range(size.value):
-            name = plist[i]
-            hmap[name.value] = _SymbolCreator(name.value)
+            name = _LIB.MXSymbolGetAtomicSymbolName(plist[i], ctypes.byref(name))
+            hmap[name.value] = _SymbolCreator(name.value, plist[i])
         self.__dict__.update(hmap)

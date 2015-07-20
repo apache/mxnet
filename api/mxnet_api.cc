@@ -7,8 +7,9 @@
 #include <dmlc/logging.h>
 #include <mxnet/base.h>
 #include <mxnet/narray.h>
-#include <mxnet/atomic_symbol_registry.h>
-#include <mxnet/api_registry.h>
+#include <mxnet/symbol.h>
+#include <mxnet/atomic_symbol.h>
+#include <mxnet/registry.h>
 #include <mutex>
 #include "./mxnet_api.h"
 
@@ -201,7 +202,7 @@ int MXNArrayGetContext(NArrayHandle handle,
 int MXListFunctions(mx_uint *out_size,
                     FunctionHandle **out_array) {
   API_BEGIN();
-  auto &vec = FunctionRegistry::List();
+  auto &vec = Registry<NArrayFunctionEntry>::List();
   *out_size = static_cast<mx_uint>(vec.size());
   *out_array = (FunctionHandle*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
   API_END();
@@ -210,14 +211,14 @@ int MXListFunctions(mx_uint *out_size,
 int MXGetFunction(const char *name,
                   FunctionHandle *out) {
   API_BEGIN();
-  *out = FunctionRegistry::Find(name);
+  *out = Registry<NArrayFunctionEntry>::Find(name);
   API_END();
 }
 
 int MXFuncGetName(FunctionHandle fun,
                   const char **out_name) {
   API_BEGIN();
-  auto *f = static_cast<const FunctionRegistry::Entry *>(fun);
+  auto *f = static_cast<const NArrayFunctionEntry*>(fun);
   *out_name = f->name.c_str();
   API_END();
 }
@@ -228,7 +229,7 @@ int MXFuncDescribe(FunctionHandle fun,
                    mx_uint *num_mutate_vars,
                    int *type_mask) {
   API_BEGIN();
-  auto *f = static_cast<const FunctionRegistry::Entry *>(fun);
+  auto *f = static_cast<const NArrayFunctionEntry*>(fun);
   *num_use_vars = f->num_use_vars;
   *num_scalars = f->num_scalars;
   *num_mutate_vars = f->num_mutate_vars;
@@ -241,46 +242,57 @@ int MXFuncInvoke(FunctionHandle fun,
                  mx_float *scalar_args,
                  NArrayHandle *mutate_vars) {
   API_BEGIN();
-  auto *f = static_cast<const FunctionRegistry::Entry *>(fun);
+  auto *f = static_cast<const NArrayFunctionEntry*>(fun);
   (*f)((NArray**)(use_vars),  //  NOLINT(*)
        scalar_args,
        (NArray**)(mutate_vars));  //  NOLINT(*)
   API_END();
 }
 
-int MXSymCreate(const char *type_str,
-                int num_param,
-                const char** keys,
-                const char** vals,
-                SymbolHandle* out) {
+int MXSymbolCreateFromAtomicSymbol(AtomicSymbolCreator creator,
+                                   int num_param,
+                                   const char **keys,
+                                   const char **vals,
+                                   SymbolHandle *out) {
   API_BEGIN();
-  CCreateSymbol(type_str, num_param, keys, vals, (Symbol**)out);  //  NOLINT(*)
-  API_END();
-}
-
-int MXSymFree(SymbolHandle sym) {
-  API_BEGIN();
-  delete static_cast<Symbol*>(sym);
-  API_END();
-}
-
-int MXSymDescribe(const char *type_str,
-                  mx_uint *use_param) {
-  API_BEGIN();
-  *use_param = AtomicSymbolRegistry::Find(type_str)->use_param ? 1 : 0;
-  API_END();
-}
-
-int MXListSyms(mx_uint *out_size,
-               const char ***out_array) {
-  API_BEGIN();
-  auto &vec = AtomicSymbolRegistry::List();
-  *out_size = static_cast<mx_uint>(vec.size());
-  std::vector<const char*> type_strs;
-  for (auto entry : vec) {
-    type_strs.push_back(entry->type_str.c_str());
+  AtomicSymbolEntry *e = static_cast<AtomicSymbolEntry *>(creator);
+  *out = static_cast<SymbolHandle>(new Symbol);
+  AtomicSymbol *atomic_symbol = (*e)();
+  for (int i = 0; i < num_param; ++i) {
+    atomic_symbol->SetParam(keys[i], vals[i]);
   }
-  *out_array = (const char**)(dmlc::BeginPtr(type_strs));  //  NOLINT(*)
+  *static_cast<Symbol*>(*out) = Symbol::Create(atomic_symbol);
+  API_END();
+}
+
+int MXSymbolFree(SymbolHandle symbol) {
+  API_BEGIN();
+  delete static_cast<Symbol*>(symbol);
+  API_END();
+}
+
+int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
+                                     AtomicSymbolCreator **out_array) {
+  API_BEGIN();
+  auto &vec = Registry<AtomicSymbolEntry>::List();
+  *out_size = static_cast<mx_uint>(vec.size());
+  *out_array = (AtomicSymbolCreator*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
+  API_END();
+}
+
+int MXSymbolGetSingleton(AtomicSymbolCreator creator,
+                         SymbolHandle *out) {
+  API_BEGIN();
+  AtomicSymbolEntry *e = static_cast<AtomicSymbolEntry *>(creator);
+  *out = static_cast<SymbolHandle>(e->GetSingletonSymbol());
+  API_END();
+}
+
+int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
+                                const char **out) {
+  API_BEGIN();
+  AtomicSymbolEntry *e = static_cast<AtomicSymbolEntry *>(creator);
+  *out = e->name.c_str();
   API_END();
 }
 

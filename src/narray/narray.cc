@@ -5,7 +5,7 @@
  */
 #include <dmlc/logging.h>
 #include <mxnet/narray.h>
-#include <mxnet/api_registry.h>
+#include <mxnet/registry.h>
 #include <mshadow/tensor.h>
 #include "./narray_op.h"
 
