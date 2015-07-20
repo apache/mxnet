@@ -4,17 +4,19 @@
  * \brief fully connect operator
  * \author Bing Xu
 */
-#ifndef MXNET_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
-#define MXNET_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
+#ifndef MXNET_SYMBOL_FULLY_CONNECT_SYM_INL_H_
+#define MXNET_SYMBOL_FULLY_CONNECT_SYM_INL_H_
 
 #include <dmlc/logging.h>
 #include <mxnet/static_operator.h>
+#include <mxnet/atomic_symbol.h>
 #include <vector>
-#include "./static_operator_common.h"
-#include "./param.h"
 #include "../static_operator/fully_connect_op-inl.h"
+#include "../static_operator/param.h"
 
 namespace mxnet {
+using namespace mxnet::op;
+
 template<typename xpu>
 class FullyConnectSymbol : public AtomicSymbol {
  public:
@@ -28,12 +30,16 @@ class FullyConnectSymbol : public AtomicSymbol {
   }
 
   virtual std::vector<std::string> DescribeReturns() const {
-  	return std::vector();
+    std::string temp = "output";
+    std::vector<std::string> v;
+    v.push_back(temp);
+  	return v;
   }
 
-  virtual void SetParam(const char *name, const char *val) const {
+  virtual void SetParam(const char *name, const char *val) {                                
     param_.SetParam(name, val);
   }
+  
   virtual void InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape) const {
     using namespace mshadow;
@@ -71,8 +77,8 @@ class FullyConnectSymbol : public AtomicSymbol {
    *  Bind function of AtomicSymbol does not return Operator, but static operator.
    *  Calling bind from the Symbol wrapper would generate a Operator.
    */
-  virtual StaticOperator* Bind(Context ctx) const {
-  	return new FullyConnectOp<xpu>(param_);
+  virtual StaticOperator* Bind_(Context ctx) const {
+  	
   }
 
   virtual std::string TypeString() const {
@@ -83,5 +89,5 @@ class FullyConnectSymbol : public AtomicSymbol {
 };  // class FullyConnectSymbol
 }  // namespace mxnet
 
-#endif  // MXNET_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
+#endif  // MXNET_SYMBOL_FULLY_CONNECT_SYM_INL_H_
 
