@@ -39,7 +39,7 @@ class FullyConnectSymbol : public AtomicSymbol {
   virtual void SetParam(const char *name, const char *val) {                                
     param_.SetParam(name, val);
   }
-  
+
   virtual void InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape) const {
     using namespace mshadow;
@@ -72,13 +72,14 @@ class FullyConnectSymbol : public AtomicSymbol {
   	fc_sym->param = this->param;
   	return fc_sym;
   }
+
   /*!
    * \brief Bind this AtomicSymbol to a context and get back a static operator
    *  Bind function of AtomicSymbol does not return Operator, but static operator.
    *  Calling bind from the Symbol wrapper would generate a Operator.
    */
   virtual StaticOperator* Bind_(Context ctx) const {
-  	
+    return new FullyConnectSymbol<xpu>(param_);
   }
 
   virtual std::string TypeString() const {
