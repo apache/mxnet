@@ -3,9 +3,10 @@
  * \file fully_connect_sym.cc
  * \brief fully connect operator symbol
 */
-#include "./fully_connect_sym-inl.h"
+#include "../static_operator/fully_connect_op-inl.h"
 
 namespace mxnet {
+namespace op {
   std::vector<std::string> FullyConnectSymbol::DescribeArguments() const {
     std::string ret[] = {"data", "weight", "bias"};
     if (param_.no_bias == 0) {
@@ -60,11 +61,24 @@ namespace mxnet {
     return fc_sym;
   }
   std::string FullyConnectSymbol::TypeString() const {
-    return "Fully Connected";
+    return "fully_connected";
   }
 
   template<>
-  StaticOperator* FullyConnectSymbol::Bind<cpu>(Context ctx) const {
-    return Bind_<cpu>(ctx);
+  StaticOperator* FullyConnectSymbol::Bind_<cpu>(Context ctx) const {
+    return new FullyConnectOp<cpu>(param_);
   }
-}
+
+  StaticOperator* FullyConnectSymbol::Bind(Context ctx) const {
+    if (ctx.dev_mask == cpu::kDevMask) {
+      return Bind_<cpu>(ctx);
+    } else {
+#if MXNET_USE_CUDA
+      return Bind_<gpu>(ctx);
+#else
+      LOG(FATAL) << "GPU is not enabled";
+#endif
+    }
+  }
+} // namespace op
+} // namespace mxnet
