@@ -23,7 +23,7 @@ namespace op {
     return v;
   }
 
-  void FullyConnectSymbol::SetParam(const char *name, const char *val) {              
+  void FullyConnectSymbol::SetParam(const char *name, const char *val) {
     param_.SetParam(name, val);
   }
 
@@ -50,11 +50,6 @@ namespace op {
     return true;
   }
 
-  /*!
-   * \brief Copy this AtomicSymbol and returns a pointer to the copied object.
-   *  this is a function because different subclass of AtomicSymbol would copy differently.
-   * \return a pointer to the copied atomic symbol
-   */
   AtomicSymbol* FullyConnectSymbol::Copy() const {
     FullyConnectSymbol* fc_sym = new FullyConnectSymbol();
     fc_sym->param_ = this->param_;
@@ -80,5 +75,5 @@ namespace op {
 #endif
     }
   }
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet

@@ -60,7 +60,7 @@ class StaticOperator {
                         const std::vector<TBlob> &out_grad,
                         const std::vector<GradReqType> &req) = 0;
   /*!
-   * \brief factory unction, create a new StaticOperator
+   * \brief factory function, create a new StaticOperator
    * \param type the type of StaticOperator
    * \param ctx the context device type of StaticOperator
    * \return a pointer of StaticOperator object

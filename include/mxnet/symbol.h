@@ -15,9 +15,9 @@
 #include <unordered_map>
 #include "./base.h"
 #include "./tensor_blob.h"
+#include "./operator.h"
 
 namespace mxnet {
-class NArrayOperator;
 /*!
  * \brief Symbol is the wrapper of AtomicSymbol, the reason for this indirection is that Symbol
  *  should support expressions and often passed by value. While AtomicSymbol have many subclasses,
@@ -67,11 +67,11 @@ class Symbol {
    */
   virtual ~Symbol() {}
   /*!
-   *  \brief bind to device and returns an NArrayOperator.
+   *  \brief bind to device and returns an operator.
    *  \param ctx context of the operator
-   *  \return returns the pointer to a created NArrayOperator. It is on the user to delete.
+   *  \return returns the pointer to a created operator. It is on the user to delete.
    */
-  virtual NArrayOperator* Bind(Context ctx) const { return nullptr; }
+  virtual Operator* Bind(Context ctx) const { return nullptr; }
   /*!
    * \brief copy the symbol
    * \return a deep copy of the graph

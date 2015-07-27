@@ -4,7 +4,7 @@
  * \brief the implementation of narray operator
  * \author Naiyan Wang
  */
-#include <mxnet/static_operator_wrapper.h>
+#include "./static_operator_wrapper.h"
 
 namespace mxnet {
 
@@ -37,11 +37,11 @@ namespace mxnet {
     std::vector<TBlob> in;
     std::vector<TBlob> out;
     for (size_t i = 0; i < in_data.size(); ++i) {
-      used_var.push_back(in_data[i].Var());
+      used_var.push_back(in_data[i].var());
       in.push_back(in_data[i].data());
     }
     for (size_t i = 0; i < out_data.size(); ++i) {
-      mutate_var.push_back(out_data[i].Var());
+      mutate_var.push_back(out_data[i].var());
       out.push_back(out_data[i].data());
     }
     DAGEngine::Get()->Push([this, opt, ctx, in, out](RunContext ctx) {
@@ -70,15 +70,15 @@ namespace mxnet {
     std::vector<TBlob> grad_out;
     std::vector<TBlob> data;
     for (size_t i = 0; i < grad_next.size(); ++i) {
-      used_var.push_back(grad_next[i].Var());
+      used_var.push_back(grad_next[i].var());
       grad_in.push_back(grad_next[i].data());
     }
     for (size_t i = 0; i < in_data.size(); ++i) {
-      used_var.push_back(in_data[i].Var());
+      used_var.push_back(in_data[i].var());
       data.push_back(in_data[i].data());
     }
     for (size_t i = 0; i < out_grad.size(); ++i) {
-      mutate_var.push_back(out_grad[i].Var());
+      mutate_var.push_back(out_grad[i].var());
       grad_out.push_back(out_grad[i].data());
     }
     DAGEngine::Get()->Push([this, ctx, grad_in, grad_out, data, req](RunContext ctx) {

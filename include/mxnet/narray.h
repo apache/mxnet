@@ -73,7 +73,7 @@ class NArray {
     DAGEngine::Get()->WaitForVar(ptr_->var);
   }
   /*! \return the associated DAG variable of the narray.*/
-  inline DAGEngine::Variable Var() const {
+  inline DAGEngine::Variable var() const {
     return ptr_->var;
   }
   /*!

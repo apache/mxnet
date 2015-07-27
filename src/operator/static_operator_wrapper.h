@@ -4,17 +4,17 @@
  * \brief operator interface of mxnet
  * \author Naiyan Wang
  */
-#ifndef MXNET_STATIC_OPERATOR_WRAPPER_H_
-#define MXNET_STATIC_OPERATOR_WRAPPER_H_
+#ifndef MXNET_OPERATOR_STATIC_OPERATOR_WRAPPER_H_
+#define MXNET_OPERATOR_STATIC_OPERATOR_WRAPPER_H_
 // this file will be seen by cuda, no c++11 for now
 #include <dmlc/base.h>
+#include <mxnet/base.h>
+#include <mxnet/tensor_blob.h>
+#include <mxnet/static_operator.h>
+#include <mxnet/operator.h>
+#include <mxnet/narray.h>
+#include <mxnet/dag_engine.h>
 #include <vector>
-#include "./base.h"
-#include "./tensor_blob.h"
-#include "./static_operator.h"
-#include "./operator.h"
-#include "./narray.h"
-#include "./dag_engine.h"
 
 namespace mxnet {
 /*!
@@ -78,4 +78,4 @@ class StaticOperatorWrapper: public Operator {
   StaticOperator* op;
 };
 }  // namespace mxnet
-#endif  // MXNET_STATIC_OPERATOR_WRAPPER_H_
+#endif  // MXNET_OPERATOR_STATIC_OPERATOR_WRAPPER_H_

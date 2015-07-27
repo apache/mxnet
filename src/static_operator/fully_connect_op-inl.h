@@ -1,8 +1,7 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file fully_connect_op-inl.h
- * \brief fully connect operator
- * \author Bing Xu
+ * \brief fully connect operator and symbol
 */
 #ifndef MXNET_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
 #define MXNET_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
@@ -11,31 +10,34 @@
 #include <mxnet/static_operator.h>
 #include <mxnet/atomic_symbol.h>
 #include <vector>
+#include <string>
 #include "./static_operator_common.h"
 #include "./param.h"
 
 namespace mxnet {
 namespace op {
-
+/**
+ * \brief This is the implementation of fully connected layer.
+ * 
+ * \tparam xpu The device that the op will be executed on.
+ */
 template<typename xpu>
 class FullyConnectOp : public StaticOperator {
  public:
-  FullyConnectOp () {
+  /*!
+   * \brief default constructor
+   */  
+  FullyConnectOp() {
     // Do nothing.
   }
 
-  FullyConnectOp (Param p) {
+  /*!
+   * \brief constructor with parameters. Used in Bind() in corresponding symbol.
+   */
+  explicit FullyConnectOp(Param p) {
     this->param_ = p;
   }
 
-  virtual std::vector<ArgType> DescribeArgs() const {
-    ArgType ret[] = {kDataArg, kWeightArg, kBiasArg};
-    if (param_.no_bias == 0) {
-      return std::vector<ArgType>(ret, ret + 3);
-    } else {
-      return std::vector<ArgType>(ret, ret + 2);
-    }
-  }
   virtual void Forward(Option opt,
                        RunContext ctx,
                        const std::vector<TBlob> &in_data,
@@ -57,6 +59,7 @@ class FullyConnectOp : public StaticOperator {
       out += repmat(bias, data.size(0));
     }
   }
+
   virtual void Backward(RunContext ctx,
                         const std::vector<TBlob> &grad_next,
                         const std::vector<TBlob> &in_data,
@@ -88,10 +91,15 @@ class FullyConnectOp : public StaticOperator {
     Tensor<xpu, 2> gdata = out_grad[0].FlatTo2D<xpu, real_t>(s);
     Assign(gdata, req[0], dot(grad, wmat));
   }
+
  private:
+  /** The param of the fully connected layer.*/
   Param param_;
 };  // class FullyConnectOp
 
+/**
+ * @brief The symbol part of the fully connected layer.
+ */
 class FullyConnectSymbol : public AtomicSymbol {
  public:
   virtual std::vector<std::string> DescribeArguments() const;
@@ -103,24 +111,23 @@ class FullyConnectSymbol : public AtomicSymbol {
   virtual bool InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape) const;
 
-  /*!
-   * \brief Copy this AtomicSymbol and returns a pointer to the copied object.
-   *  this is a virtual function because different subclass of AtomicSymbol would copy differently.
-   * \return a pointer to the copied atomic symbol
-   */
   virtual AtomicSymbol* Copy() const;
 
   StaticOperator* Bind(Context ctx) const;
-  /*!
-   * \brief Bind this AtomicSymbol to a context and get back a static operator
-   *  Bind function of AtomicSymbol does not return Operator, but static operator.
-   *  Calling bind from the Symbol wrapper would generate a Operator.
+
+  virtual std::string TypeString() const;
+
+  /**
+   * @brief This is the template function of bind() implementation.
+   * 
+   * @param ctx The device context
+   * @return A device dependent static operator can be used for execution.
    */
   template<typename xpu>
   StaticOperator* Bind_(Context ctx) const;
 
-  virtual std::string TypeString() const;
  private:
+  /** The param of the fully connected layer.*/
   Param param_;
 };  // class FullyConnectSymbol
 

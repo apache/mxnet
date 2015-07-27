@@ -12,11 +12,12 @@
 
 namespace mxnet {
 namespace op {
-// declare the operator
-template<typename xpu>
-StaticOperator *CreateOperator(OpType type);
-
-
+/**
+ * @brief return a OpType based on string description
+ * 
+ * @param type the string description of operators
+ * @return the OpType indicated the type of operators
+ */
 OpType GetOpType(const char *type) {
   if (!strcmp(type, "relu")) return kReLU;
   if (!strcmp(type, "fullc")) return kFullc;
@@ -25,7 +26,6 @@ OpType GetOpType(const char *type) {
 }
 }  // namespace op
 
-// implementing the context
 StaticOperator *StaticOperator::Create(const char *type,
                            Context ctx) {
   op::OpType otype = op::GetOpType(type);
