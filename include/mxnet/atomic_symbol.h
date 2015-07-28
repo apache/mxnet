@@ -14,7 +14,7 @@
 #include "./tensor_blob.h"
 
 namespace mxnet {
-class Operator;
+class StaticOperator;
 /*!
  * \brief AtomicSymbol is the base class of all atomic symbols.
  *  This is not meant to be used by user, it should be wrapped in Symbol, so that the same instance
@@ -54,7 +54,7 @@ class AtomicSymbol {
    *     InferShape will modify the vector to fill output TShape
    * \return if the shape inference is successful, return true, else return false.
    */
-  virtual bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) = 0;
+  virtual bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) const = 0;
   /*!
    * \brief Copy this AtomicSymbol and returns a pointer to the copied object.
    *  this is a virtual function because different subclass of AtomicSymbol would copy differently.
@@ -66,7 +66,8 @@ class AtomicSymbol {
    *  Bind function of AtomicSymbol does not return NArrayOperator, but static operator.
    *  Calling bind from the Symbol wrapper would generate a NArrayOperator.
    */
-  virtual Operator* Bind(Context ctx) const = 0;
+  template<typename xpu>
+  StaticOperator* Bind(Context ctx) const;
   /*!
    * \brief return the type string of the atomic symbol
    *  subclasses override this function.
