@@ -16,6 +16,7 @@
 #include "./base.h"
 #include "./tensor_blob.h"
 #include "./operator.h"
+#include "./static_graph.h"
 
 namespace mxnet {
 /*!
@@ -28,30 +29,6 @@ namespace mxnet {
  */
 class Symbol {
  protected:
-  /*!
-   * \brief Node is the container of AtomicSymbol, it also stores the connection of the AtomicSymbol
-   *  with input symbols.
-   */
-  struct Node {
-    /*! \brief wrapped atomic symbol */
-    AtomicSymbol* sym_;
-    /*! \brief name of the node */
-    std::string name_;
-    /*! \brief inputs to this node */
-    std::vector<std::shared_ptr<Node> > in_symbol_;
-    /*! \brief index of the inputs if the inputs are tuple */
-    std::vector<int> in_index_;
-    /*! \brief the output shape of the wrapped symbol */
-    std::vector<TShape> out_shape_;
-    /*!
-     * \brief constructor
-     */
-    explicit Node(AtomicSymbol* sym = nullptr, const std::string& name = "");
-    /*!
-     * \brief destructor
-     */
-    ~Node();
-  };
   /*! \brief the head node of the Symbol, it could be shared in many graphs */
   std::shared_ptr<Node> head_;
   /*! \brief if the head has multiple return values, index is used to specify */
@@ -60,7 +37,7 @@ class Symbol {
   std::shared_ptr<std::vector<std::pair<Node*, int> > > arg_users_;
   /*! \brief find arg users */
   void FindArgUsers();
-
+  void dfs_(const std::shared_ptr<Node> node, StaticGraph& graph);
  public:
   /*!
    * \brief declare virtual destructor in case it is subclassed.
@@ -98,6 +75,8 @@ class Symbol {
    * \return the arguments list of this symbol, they can be either named or unnamed (empty string).
    */
   virtual std::vector<std::string> ListArgs();
+
+  virtual StaticGraph ToStaticGraph();
   /*!
    * \brief create Symbol by wrapping AtomicSymbol
    */

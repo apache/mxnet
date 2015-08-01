@@ -6,19 +6,10 @@
 #include <dmlc/logging.h>
 #include <mxnet/symbol.h>
 #include <mxnet/registry.h>
+#include <mxnet/static_graph.h>
 #include <iterator>
 
 namespace mxnet {
-
-Symbol::Node::Node(AtomicSymbol* sym, const std::string& name)
-    : sym_(sym), name_(name) {
-}
-
-Symbol::Node::~Node() {
-  if (sym_) {
-    delete sym_;
-  }
-}
 
 void Symbol::FindArgUsers() {
   arg_users_.reset(new std::vector<std::pair<Node*, int> >);
@@ -144,14 +135,14 @@ Symbol Symbol::Create(AtomicSymbol *atomic_symbol)  {
   std::vector<std::string> args = atomic_symbol->DescribeArguments();
   std::vector<std::string> rets = atomic_symbol->DescribeReturns();
   // set head_
-  s.head_ = std::make_shared<Symbol::Node>(atomic_symbol, "");
+  s.head_ = std::make_shared<Node>(atomic_symbol, "");
   // set index_
   s.index_ = rets.size() > 1 ? -1 : 0;
   // set head_->in_index_
   s.head_->in_index_ = std::vector<int>(args.size(), 0);
   // set head_->in_symbol_
   for (auto name : args) {
-    s.head_->in_symbol_.push_back(std::make_shared<Symbol::Node>(nullptr, name));
+    s.head_->in_symbol_.push_back(std::make_shared<Node>(nullptr, name));
   }
   // set head_->out_shape_
   s.head_->out_shape_ = std::vector<TShape>(rets.size());
@@ -167,6 +158,26 @@ Symbol Symbol::Create(const std::string& type_name,
     atomic_symbol->SetParam(p.first.c_str(), p.second.c_str());
   }
   return Create(atomic_symbol);
+}
+
+StaticGraph Symbol::ToStaticGraph() {
+  StaticGraph graph;
+  dfs_(this->head_, graph);
+  return graph;
+}
+
+
+void Symbol::dfs_(const std::shared_ptr<Node> node, StaticGraph& graph) {
+  int id = graph.FindNodeByName(node->name_, node);
+  for (size_t i = 0; i < node->in_symbol_.size(); ++i) {
+    std::shared_ptr<Node> parent = node->in_symbol_[i];
+    int parent_id = graph.FindNodeByName(parent->name_, node);
+    graph.connected_graph[parent_id].push_back(id);
+    graph.output_index[parent_id].push_back(node->in_index_[i]);
+    if (parent->sym_) {
+      dfs_(parent, graph);
+    }
+  }
 }
 
 }  // namespace mxnet
