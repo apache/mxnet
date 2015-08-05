@@ -60,8 +60,8 @@ OBJ = storage.o narray_op_cpu.o static_operator.o static_operator_cpu.o atomic_s
 # add threaded engine after it is done
 OBJCXX11 = engine.o narray.o mxnet_api.o registry.o symbol.o operator.o
 CUOBJ =
-SLIB = api/libmxnet.so
-ALIB = api/libmxnet.a
+SLIB = lib/libmxnet.so
+ALIB = lib/libmxnet.a
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
 
 ifeq ($(USE_CUDA), 1)
@@ -86,15 +86,15 @@ static_operator_cpu.o: src/static_operator/static_operator_cpu.cc
 static_operator_gpu.o: src/static_operator/static_operator_gpu.cu
 symbol.o: src/symbol/symbol.cc
 registry.o: src/registry.cc
-mxnet_api.o: api/mxnet_api.cc
+mxnet_api.o: src/api/mxnet_api.cc
 operator.o: src/operator/static_operator_wrapper.cc
 atomic_symbol_cpu.o: src/symbol/fully_connect_sym.cc
 atomic_symbol_gpu.o: src/symbol/fully_connect_sym.cu
 
-api/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)
-api/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ)
+lib/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)
+lib/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ)
 
-test/api_registry_test: test/api_registry_test.cc api/libmxnet.a
+test/api_registry_test: test/api_registry_test.cc lib/libmxnet.a
 #test/test_threaded_engine: test/test_threaded_engine.cc api/libmxnet.a
 
 $(BIN) :

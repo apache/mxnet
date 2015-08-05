@@ -26,7 +26,7 @@ class MXNetError(Exception):
 def _load_lib():
     """load libary by searching possible path."""
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-    api_path = os.path.join(curr_path, '../../')
+    api_path = os.path.join(curr_path, '../../lib/')
     dll_path = [api_path, curr_path]
     if os.name == 'nt':
         if platform.architecture()[0] == '64bit':
