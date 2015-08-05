@@ -3,8 +3,8 @@
  * \file mxnet_api.h
  * \brief C API of mxnet
  */
-#ifndef MXNET_API_H_
-#define MXNET_API_H_
+#ifndef MXNET_API_MXNET_API_H_
+#define MXNET_API_MXNET_API_H_
 
 #ifdef __cplusplus
 #define MXNET_EXTERN_C extern "C"
@@ -399,4 +399,4 @@ MXNET_DLL int MXIOGetData(DataIterHandle handle,
 MXNET_DLL int MXIOGetLabel(DataIterHandle handle,
                            NArrayHandle *out);
 
-#endif  // MXNET_API_H_
+#endif  // MXNET_API_MXNET_API_H_
