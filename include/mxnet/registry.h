@@ -285,7 +285,7 @@ struct AtomicSymbolEntry {
     return new AtomicSymbolType;                                        \
   }                                                                     \
   static ::mxnet::AtomicSymbolEntry& __ ## name ## _atomic_symbol__ =   \
-      ::mxnet::Registry<::mxnet::AtomicSymbolEntry>::Get()->Register("" # name) \
+      ::mxnet::Registry< ::mxnet::AtomicSymbolEntry >::Get()->Register("" # name) \
       .set_body(__make_ ## AtomicSymbolType ## __)
 
 }  // namespace mxnet
