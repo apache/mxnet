@@ -11,7 +11,6 @@
 #include <mxnet/static_operator.h>
 #include "./mshadow_op.h"
 #include "./activation_op-inl.h"
-#include "./fully_connect_op-inl.h"
 #include "./convolution_op-inl.h"
 #include "./pooling_op-inl.h"
 #include "./reshape_op-inl.h"
@@ -29,8 +28,6 @@ inline StaticOperator *CreateOperator_(OpType type, mshadow::Random<xpu> *prnd) 
   switch (type) {
     case kReLU:
       return new ActivationOp<xpu, relu, relu_grad>();
-    case kFullc:
-      return new FullyConnectOp<xpu>();
     case kConv:
       return new ConvolutionOp<xpu>();
     case kMaxPooling:
