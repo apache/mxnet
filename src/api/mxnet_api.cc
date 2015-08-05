@@ -10,8 +10,8 @@
 #include <mxnet/symbol.h>
 #include <mxnet/atomic_symbol.h>
 #include <mxnet/registry.h>
+#include <mxnet/api.h>
 #include <mutex>
-#include "./mxnet_api.h"
 
 // macro hanlding for threadlocal variables
 #ifdef __GNUC__

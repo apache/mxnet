@@ -1,4 +1,5 @@
 // Copyright (c) 2015 by Contributors
+#include <mshadow/tensor.h>
 #include <dmlc/logging.h>
 #include <mxnet/dag_engine.h>
 namespace mxnet {

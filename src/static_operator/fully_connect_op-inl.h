@@ -18,19 +18,12 @@ namespace mxnet {
 namespace op {
 /**
  * \brief This is the implementation of fully connected layer.
- * 
+ *
  * \tparam xpu The device that the op will be executed on.
  */
 template<typename xpu>
 class FullyConnectOp : public StaticOperator {
  public:
-  /*!
-   * \brief default constructor
-   */  
-  FullyConnectOp() {
-    // Do nothing.
-  }
-
   /*!
    * \brief constructor with parameters. Used in Bind() in corresponding symbol.
    */
@@ -102,29 +95,62 @@ class FullyConnectOp : public StaticOperator {
  */
 class FullyConnectSymbol : public AtomicSymbol {
  public:
-  virtual std::vector<std::string> DescribeArguments() const;
+  virtual std::vector<std::string> DescribeArguments() const {
+    std::string ret[] = {"data", "weight", "bias"};
+    if (param_.no_bias == 0) {
+      return std::vector<std::string>(ret, ret + 3);
+    } else {
+      return std::vector<std::string>(ret, ret + 2);
+    }
+  }
 
-  virtual std::vector<std::string> DescribeReturns() const;
-
-  virtual void SetParam(const char *name, const char *val);
+  virtual void SetParam(const char *name, const char *val) {
+    param_.SetParam(name, val);
+  }
 
   virtual bool InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape) const;
+                          std::vector<TShape> *out_shape) const {
+    using namespace mshadow;
+    if (param_.no_bias == 0) {
+      CHECK_EQ(in_shape->size(), 3) << "Input:[data, weight, bias]";
+    } else {
+      CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
+    }
+    CHECK_GT(param_.num_hidden, 0);
+    const TShape &dshape = (*in_shape)[0];
+    CHECK_EQ(dshape.ndim(), 4) << \
+        "Input data should be 4D in batch-1-1-hidden";
+    CHECK_NE(dshape.ndim(), 0) << "Require data shape to be known";
+    ShapeAssignCheck((*in_shape)[1], Shape2(param_.num_hidden, dshape[3]));
+    if (param_.no_bias == 0) {
+      ShapeAssignCheck((*in_shape)[2], Shape1(param_.num_hidden));
+    }
+    out_shape->clear();
+    out_shape->push_back(dshape);
+    (*out_shape)[0][3] = param_.num_hidden;
+    return true;
+  }
 
-  virtual AtomicSymbol* Copy() const;
+  virtual AtomicSymbol* Copy() const {
+    FullyConnectSymbol* fc_sym = new FullyConnectSymbol();
+    fc_sym->param_ = this->param_;
+    return fc_sym;
+  }
 
-  StaticOperator* Bind(Context ctx) const;
-
-  virtual std::string TypeString() const;
+  virtual std::string TypeString() const {
+    return "FullyConnected";
+  }
 
   /**
    * @brief This is the template function of bind() implementation.
-   * 
+   *
    * @param ctx The device context
    * @return A device dependent static operator can be used for execution.
    */
   template<typename xpu>
   StaticOperator* Bind_(Context ctx) const;
+  // the real bind
+  StaticOperator* Bind(Context ctx) const;
 
  private:
   /** The param of the fully connected layer.*/
@@ -135,4 +161,3 @@ class FullyConnectSymbol : public AtomicSymbol {
 }  // namespace mxnet
 
 #endif  // MXNET_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
-

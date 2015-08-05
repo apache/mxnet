@@ -31,9 +31,15 @@ class AtomicSymbol {
    */
   virtual ~AtomicSymbol();
   /*! \brief get the descriptions of inputs for this symbol */
-  virtual std::vector<std::string> DescribeArguments() const = 0;
+  virtual std::vector<std::string> DescribeArguments() const {
+    // default implementation returns "data"
+    return std::vector<std::string>(1, std::string("data"));
+  }
   /*! \brief get the descriptions of outputs for this symbol */
-  virtual std::vector<std::string> DescribeReturns() const = 0;
+  virtual std::vector<std::string> DescribeReturns() const {
+    // default implementation returns "output"
+    return std::vector<std::string>(1, std::string("output"));
+  }
   /*!
    *  \brief set param for the symbol from string
    *  \param name parameter name
