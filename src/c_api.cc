@@ -10,7 +10,7 @@
 #include <mxnet/symbol.h>
 #include <mxnet/atomic_symbol.h>
 #include <mxnet/registry.h>
-#include <mxnet/api.h>
+#include <mxnet/c_api.h>
 #include <mutex>
 
 // macro hanlding for threadlocal variables

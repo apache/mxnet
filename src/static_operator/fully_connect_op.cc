@@ -21,6 +21,7 @@ StaticOperator* FullyConnectSymbol::Bind(Context ctx) const {
     return Bind_<gpu>(ctx);
     #else
     LOG(FATAL) << "GPU is not enabled";
+    return NULL;
     #endif
   }
 }

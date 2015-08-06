@@ -14,6 +14,7 @@
 #include "./tensor_blob.h"
 
 namespace mxnet {
+// forward declare StaticOperator
 class StaticOperator;
 /*!
  * \brief AtomicSymbol is the base class of all atomic symbols.
@@ -23,13 +24,9 @@ class StaticOperator;
 class AtomicSymbol {
  public:
   /*!
-   * \brief Constructor with param as the argument.
-   */
-  AtomicSymbol();
-  /*!
    * \brief virtual destructor
    */
-  virtual ~AtomicSymbol();
+  virtual ~AtomicSymbol() {}
   /*! \brief get the descriptions of inputs for this symbol */
   virtual std::vector<std::string> DescribeArguments() const {
     // default implementation returns "data"

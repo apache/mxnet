@@ -1,34 +1,39 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file operator.cc
- * \brief the implementation of narray operator
+ * \file static_operator.cc
+ * \brief the implementation of static operator
  * \author Naiyan Wang
  */
-#include "./static_operator_wrapper.h"
+#include <dmlc/base.h>
+#include <mxnet/base.h>
+#include <mxnet/tensor_blob.h>
+#include <mxnet/static_operator.h>
+#include <mxnet/operator.h>
+#include <mxnet/narray.h>
+#include <mxnet/dag_engine.h>
+#include <vector>
 
 namespace mxnet {
+namespace op {
+/*!
+ * \brief StaticOperatorWrapper that wraps a static_operator
+ *  This class do not need to be seen by others, so it sit in cc file.
+ * \sa Operator, StaticOperator
+ */
+class StaticOperatorWrapper: public Operator {
+ public:
+  StaticOperatorWrapper(StaticOperator* op, Context ctx)
+      : op_(op), ctx_(ctx) {}
 
-  StaticOperatorWrapper::StaticOperatorWrapper(StaticOperator* op, Context ctx) {
-    this->op = op;
-    this->global_ctx = ctx;
+  virtual ~StaticOperatorWrapper() {
+    delete op_;
   }
-  /*!
-   * \brief describe property of op
-   * \return a bit map in int
-   */
-  int StaticOperatorWrapper::DescribeProperty() const {
-    // default most of layer only conatin internal state
-    return op->DescribeProperty();
+
+  virtual int DescribeProperty() const {
+    return op_->DescribeProperty();
   }
-  /*!
-   * \brief perform a forward operation of operator, save the output to TBlob
-   * \param opt option on Forward such as whether this is training phase
-   * \param ctx runtime context
-   * \param in_data array of input data, it is const
-   * \param out_data array of output data,
-   *        the space of TBlob in out_data must be pre-allocated with InferShape
-   */
-  void StaticOperatorWrapper::Forward(Option opt,
+
+  virtual void Forward(Option opt,
                        RunContext ctx,
                        const std::vector<NArray> &in_data,
                        const std::vector<NArray> &out_data) {
@@ -45,21 +50,11 @@ namespace mxnet {
       out.push_back(out_data[i].data());
     }
     DAGEngine::Get()->Push([this, opt, ctx, in, out](RunContext ctx) {
-      op->Forward(opt, ctx, in, out);
-      }, global_ctx, used_var, mutate_var);
+        op_->Forward(opt, ctx, in, out);
+      }, ctx_, used_var, mutate_var);
   }
-  /*!
-   * \brief perform a backward operation of the operator to get the gradient
-   * \param ctx runtime context
-   * \param grad_next the gradient value we get from output of the operator
-   * \param in_data the array of input data
-   * \param out_grad array of output gradient, there could be three possible TBlob
-   *  in the each element in the array
-   * \param req request types of the gradient saving operation
-   *                  only inplace will change input data
-   * \sa GradReqType
-   */
-  void StaticOperatorWrapper::Backward(RunContext ctx,
+
+  virtual void Backward(RunContext ctx,
                         const std::vector<NArray> &grad_next,
                         const std::vector<NArray> &in_data,
                         const std::vector<NArray> &out_grad,
@@ -82,12 +77,21 @@ namespace mxnet {
       grad_out.push_back(out_grad[i].data());
     }
     DAGEngine::Get()->Push([this, ctx, grad_in, grad_out, data, req](RunContext ctx) {
-      op->Backward(ctx, grad_in, data, grad_out, req);
-      }, global_ctx, used_var, mutate_var);
+        op_->Backward(ctx, grad_in, data, grad_out, req);
+      }, ctx_, used_var, mutate_var);
   }
 
-  void StaticOperatorWrapper::SetContext(Context ctx) {
-    this->global_ctx = ctx;
-  }
+ private:
+  /* \brief the static operator */
+  StaticOperator* op_;
+  /** \brief the global context denots the device info. */
+  Context ctx_;
+};
+}  // namespace op
+
+// implements CreateWrapper
+Operator *Operator::CreateWrapper(StaticOperator *op, Context ctx) {
+  return new op::StaticOperatorWrapper(op, ctx);
+}
 
 }  // namespace mxnet

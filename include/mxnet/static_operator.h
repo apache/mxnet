@@ -23,6 +23,8 @@ namespace mxnet {
  */
 class StaticOperator {
  public:
+  /*! \brief destructor */
+  virtual ~StaticOperator() {}
   /*!
    * \brief describe property of op
    * \return a bit map in int

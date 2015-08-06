@@ -26,16 +26,13 @@ namespace mxnet {
  */
 class Operator {
  public:
+  /*! \brief destructor */
+  virtual ~Operator() {}
   /*!
    * \brief describe property of op
    * \return a bit map in int
    */
-  virtual int DescribeProperty() const;
-  /*!
-   * \brief set the global context of the Operator
-   * \param ctx the context to be set to
-   */
-  virtual void SetContext(Context ctx);
+  virtual int DescribeProperty() const = 0;
   /*!
    * \brief perform a forward operation of operator, save the output to NArray
    *        This method only pushes an execution request to the DAG engine, and
@@ -68,12 +65,14 @@ class Operator {
                         const std::vector<NArray> &in_data,
                         const std::vector<NArray> &out_grad,
                         const std::vector<GradReqType> &req) = 0;
-
- protected:
-  /**
-   * \brief the global context denots the device info.
+  /*!
+   * \brief Create a wrapper of static operator to wrap it into Operator.
+   *  This function takes ownership of op
+   * \param op static operator to wrap from
+   * \param ctx context of the created operator
+   * \return a wrapper operator
    */
-  Context global_ctx;
+  static Operator *CreateWrapper(StaticOperator *op, Context ctx);
 };  // class operator
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_H_

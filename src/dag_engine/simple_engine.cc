@@ -17,9 +17,13 @@ class SimpleEngine : public DAGEngine {
                     const std::vector<Variable> &use_vars,
                     const std::vector<Variable> &mutate_vars) {
     if (exec_ctx.dev_mask == gpu::kDevMask) {
+#if MXNET_USE_CUDA
       ctx_.stream = &stream;
       mshadow::SetDevice<gpu>(exec_ctx.dev_id);
       exec_fun(ctx_);
+#else
+      LOG(FATAL) << "GPU is not enabled";
+#endif
     } else {
       exec_fun(ctx_);
     }
