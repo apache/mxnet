@@ -65,5 +65,5 @@ class _SymbolCreatorRegistry(object):
         name = ctypes.c_char_p()
         for i in range(size.value):
             name = _LIB.MXSymbolGetAtomicSymbolName(plist[i], ctypes.byref(name))
-            hmap[name.value] = _SymbolCreator(name.value, plist[i])
+            hmap[name] = _SymbolCreator(name, plist[i])
         self.__dict__.update(hmap)

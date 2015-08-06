@@ -121,7 +121,7 @@ $(CUBIN) :
 
 
 lint:
-	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts test api
+	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts test python
 
 doc:
 	doxygen doc/Doxyfile

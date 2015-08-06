@@ -6,7 +6,6 @@
 MXNet is a project that evolves from cxxnet, minerva and purine2.
 The interface is designed in collaboration by authors of three projects.
 
-Version : 0.10
 """
 from __future__ import absolute_import
 
@@ -15,6 +14,8 @@ from .narray import NArray
 from .function import _FunctionRegistry
 from .symbol import Symbol
 from .symbol_creator import _SymbolCreatorRegistry
+
+__version__ = "0.1.0"
 
 # this is a global function registry that can be used to invoke functions
 op = NArray._init_function_registry(_FunctionRegistry())
