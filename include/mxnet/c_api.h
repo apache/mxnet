@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file mxnet_api.h
+ * \file c_api.h
  * \brief C API of mxnet
  */
 #ifndef MXNET_C_API_H_
