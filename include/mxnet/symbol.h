@@ -19,6 +19,7 @@
 #include "./static_graph.h"
 
 namespace mxnet {
+class CompositeOperator;
 /*!
  * \brief Symbol is the wrapper of AtomicSymbol, the reason for this indirection is that Symbol
  *  should support expressions and often passed by value. While AtomicSymbol have many subclasses,
@@ -28,6 +29,37 @@ namespace mxnet {
  *  A atomic symbol can be seen as a special case of the composite symbol with only the head node.
  */
 class Symbol {
+ public:
+  /*!
+   * \brief Node is the container of AtomicSymbol, it also stores the connection of the AtomicSymbol
+   *  with input symbols.
+   */
+  struct Node {
+    /*! \brief wrapped atomic symbol */
+    AtomicSymbol* sym_;
+    /*! \brief name of the node */
+    std::string name_;
+    /*! \brief inputs to this node */
+    std::vector<std::shared_ptr<Node> > in_symbol_;
+    /*! \brief index of the inputs if the inputs are tuple */
+    std::vector<int> in_index_;
+    /*! \brief the output shape of the wrapped symbol */
+    std::vector<TShape> out_shape_;
+    /*!
+     * \brief constructor
+     */
+    explicit Node(AtomicSymbol* sym = nullptr, const std::string& name = "") :
+      sym_(sym), name_(name) {
+    }
+    /*!
+     * \brief destructor
+     */
+    ~Node() {
+      if (sym_) {
+        delete sym_;
+      }
+    }
+  };
  protected:
   /*! \brief the head node of the Symbol, it could be shared in many graphs */
   std::shared_ptr<Node> head_;
@@ -37,7 +69,13 @@ class Symbol {
   std::shared_ptr<std::vector<std::pair<Node*, int> > > arg_users_;
   /*! \brief find arg users */
   void FindArgUsers();
-  void dfs_(const std::shared_ptr<Node> node, StaticGraph& graph);
+  /**
+   * @brief Recursively parse the symbol to equivalent static graph.
+   * 
+   * @param node The current node in dfs
+   * @param graph The static graph
+   */
+  void Dfs(const std::shared_ptr<Node> node, StaticGraph& graph);
  public:
   /*!
    * \brief declare virtual destructor in case it is subclassed.
@@ -48,7 +86,14 @@ class Symbol {
    *  \param ctx context of the operator
    *  \return returns the pointer to a created operator. It is on the user to delete.
    */
-  virtual Operator* Bind(Context ctx) const { return nullptr; }
+  virtual CompositeOperator* Bind(Context ctx) const { return nullptr; }
+  /**
+   * @brief Bind the symbol to a composite operator
+   * 
+   * @param in A map denotes name and corresponding NArray for binding
+   * @return The composite operator
+   */
+  virtual CompositeOperator* Bind(Context ctx, const std::unordered_map<std::string, NArray>& in);
   /*!
    * \brief copy the symbol
    * \return a deep copy of the graph
@@ -75,7 +120,10 @@ class Symbol {
    * \return the arguments list of this symbol, they can be either named or unnamed (empty string).
    */
   virtual std::vector<std::string> ListArgs();
-
+  /**
+   * @brief Convert current symbol to its equivalent static graph representation.
+   * @return the static graph
+   */
   virtual StaticGraph ToStaticGraph();
   /*!
    * \brief create Symbol by wrapping AtomicSymbol

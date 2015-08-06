@@ -12,54 +12,26 @@
 #include <memory>
 #include "./atomic_symbol.h"
 namespace mxnet {
-  struct NodeMetaInfo{
-    /*! \brief wrapped atomic symbol */
-    AtomicSymbol* sym_;
-    /*! \brief name of the node */
-    std::string name_;
-  };
-
-  /*!
-   * \brief Node is the container of AtomicSymbol, it also stores the connection of the AtomicSymbol
-   *  with input symbols.
-   */
-  struct Node {
-
-    NodeMetaInfo info_;
-    /*! \brief inputs to this node */
-    std::vector<std::shared_ptr<Node> > in_symbol_;
-    /*! \brief index of the inputs if the inputs are tuple */
-    std::vector<int> in_index_;
-    /*! \brief the output shape of the wrapped symbol */
-    std::vector<TShape> out_shape_;
-    /*!
-     * \brief constructor
-     */
-    explicit Node(AtomicSymbol* sym = nullptr, const std::string& name = "") {
-        info_.sym_ = sym;
-        info_.name_ = name;
-    }
-    /*!
-     * \brief destructor
-     */
-    ~Node() {
-      if (info_.sym_) {
-        delete info_.sym_;
-      }
-    }
-  };
-
+  
   struct StaticGraph {
+    struct StaticNode {
+      /*! \brief wrapped atomic symbol */
+      AtomicSymbol* sym_;
+      /*! \brief name of the node */
+      std::string name_;
+    };
     std::unordered_map<std::string, int> name_id_map;
-    std::vector<NodeMetaInfo> nodes;
+    std::vector<StaticNode> nodes;
     std::vector<std::vector<int> > output_index;
     std::vector<std::vector<int> > connected_graph;
-
-    int FindNodeByName(const std::string& name, const std::shared_ptr<Node> node) {
+    int FindNodeByName(const std::string& name, const AtomicSymbol* sym) {
       int id = 0;
       if (name_id_map.find(name) == name_id_map.end()) {
         name_id_map[name] = name_id_map.size();
-        nodes.push_back(node->info_);
+        StaticNode static_node;
+        static_node.sym_ = sym->Copy();
+        static_node.name_ = name;
+        nodes.push_back(static_node);
         output_index.push_back(std::vector<int>());
         connected_graph.push_back(std::vector<int>());
         id = name_id_map.size();

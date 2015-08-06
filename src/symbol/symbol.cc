@@ -22,7 +22,7 @@ void Symbol::FindArgUsers() {
       stk.pop_back();
     } else {
       Node* next_level = back.first->in_symbol_[back.second].get();
-      if (next_level->info_.sym_) {
+      if (next_level->sym_) {
         stk.push_back({next_level, 0});
       } else {  // back uses next_level which is a placeholder
         arg_users_->push_back({back.first, back.second});
@@ -42,10 +42,10 @@ Symbol Symbol::Copy() const {
     Node* back = stk.back();
     stk.pop_back();
     if (old_new.count(back) == 0) {
-      if (back->info_.sym_) {
-        old_new[back] = std::make_shared<Node>(back->info_.sym_->Copy(), back->info_.name_);
+      if (back->sym_) {
+        old_new[back] = std::make_shared<Node>(back->sym_->Copy(), back->name_);
       } else {
-        old_new[back] = std::make_shared<Node>(nullptr, back->info_.name_);
+        old_new[back] = std::make_shared<Node>(nullptr, back->name_);
       }
     }
     for (const std::shared_ptr<Node>& n : back->in_symbol_) {
@@ -98,7 +98,7 @@ Symbol Symbol::operator () (const std::unordered_map<std::string, Symbol>& kwarg
       << s.arg_users_->size() << " provided " << kwargs.size();
   for (size_t i = 0; i < s.arg_users_->size(); ++i) {
     const std::pair<Node*, int>& arg_user = (*s.arg_users_)[i];
-    const std::string& name = arg_user.first->info_.name_;
+    const std::string& name = arg_user.first->name_;
     if (!(name == "") && kwargs.count(name) != 0) {
       const Symbol& bind = kwargs.at(name);
       arg_user.first->in_symbol_[arg_user.second] = bind.head_;
@@ -125,7 +125,7 @@ std::vector<std::string> Symbol::ListArgs() {
   }
   std::transform(arg_users_->begin(), arg_users_->end(), std::back_inserter(ret),
       [&](const std::pair<Node*, int>& n) -> std::string {
-        return n.first->in_symbol_[n.second]->info_.name_;
+        return n.first->in_symbol_[n.second]->name_;
       });
   return ret;
 }
@@ -162,20 +162,25 @@ Symbol Symbol::Create(const std::string& type_name,
 
 StaticGraph Symbol::ToStaticGraph() {
   StaticGraph graph;
-  dfs_(this->head_, graph);
+  Dfs(this->head_, graph);
   return graph;
 }
 
+CompositeOperator* Symbol::Bind(Context ctx, const std::unordered_map<std::string, NArray>& in) {
+  StaticGraph graph = this->ToStaticGraph();
+  return NULL;
+  //TODO: pass the graph and in to initlialize a composite op.
+}
 
-void Symbol::dfs_(const std::shared_ptr<Node> node, StaticGraph& graph) {
-  int id = graph.FindNodeByName(node->info_.name_, node);
+void Symbol::Dfs(const std::shared_ptr<Node> node, StaticGraph& graph) {
+  int id = graph.FindNodeByName(node->name_, node->sym_);
   for (size_t i = 0; i < node->in_symbol_.size(); ++i) {
     std::shared_ptr<Node> parent = node->in_symbol_[i];
-    int parent_id = graph.FindNodeByName(parent->info_.name_, node);
+    int parent_id = graph.FindNodeByName(parent->name_, parent->sym_);
     graph.connected_graph[parent_id].push_back(id);
     graph.output_index[parent_id].push_back(node->in_index_[i]);
-    if (parent->info_.sym_) {
-      dfs_(parent, graph);
+    if (parent->sym_) {
+      Dfs(parent, graph);
     }
   }
 }
