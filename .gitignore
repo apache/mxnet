@@ -27,8 +27,16 @@
 *.out
 *.app
 *~
+
+# doc
+doc/html
+doc/latex
+doc/doc
+
+#dmlc
 dmlc-core
 mshadow
+rabit
 config.mk
 
 *.pyc

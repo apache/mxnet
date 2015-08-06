@@ -162,23 +162,23 @@ Symbol Symbol::Create(const std::string& type_name,
 
 StaticGraph Symbol::ToStaticGraph() {
   StaticGraph graph;
-  Dfs(this->head_, graph);
+  Dfs(this->head_, &graph);
   return graph;
 }
 
 CompositeOperator* Symbol::Bind(Context ctx, const std::unordered_map<std::string, NArray>& in) {
   StaticGraph graph = this->ToStaticGraph();
   return NULL;
-  //TODO: pass the graph and in to initlialize a composite op.
+  // TODO(bing): pass the graph and in to initlialize a composite op.
 }
 
-void Symbol::Dfs(const std::shared_ptr<Node> node, StaticGraph& graph) {
-  int id = graph.FindNodeByName(node->name_, node->sym_);
+void Symbol::Dfs(const std::shared_ptr<Node> node, StaticGraph *graph) {
+  int id = graph->FindNodeByName(node->name_, node->sym_);
   for (size_t i = 0; i < node->in_symbol_.size(); ++i) {
     std::shared_ptr<Node> parent = node->in_symbol_[i];
-    int parent_id = graph.FindNodeByName(parent->name_, parent->sym_);
-    graph.connected_graph[parent_id].push_back(id);
-    graph.output_index[parent_id].push_back(node->in_index_[i]);
+    int parent_id = graph->FindNodeByName(parent->name_, parent->sym_);
+    graph->connected_graph[parent_id].push_back(id);
+    graph->output_index[parent_id].push_back(node->in_index_[i]);
     if (parent->sym_) {
       Dfs(parent, graph);
     }

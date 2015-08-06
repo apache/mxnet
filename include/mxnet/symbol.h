@@ -60,6 +60,7 @@ class Symbol {
       }
     }
   };
+
  protected:
   /*! \brief the head node of the Symbol, it could be shared in many graphs */
   std::shared_ptr<Node> head_;
@@ -71,11 +72,12 @@ class Symbol {
   void FindArgUsers();
   /**
    * @brief Recursively parse the symbol to equivalent static graph.
-   * 
+   *
    * @param node The current node in dfs
    * @param graph The static graph
    */
-  void Dfs(const std::shared_ptr<Node> node, StaticGraph& graph);
+  void Dfs(const std::shared_ptr<Node> node, StaticGraph *graph);
+
  public:
   /*!
    * \brief declare virtual destructor in case it is subclassed.
@@ -88,10 +90,10 @@ class Symbol {
    */
   virtual CompositeOperator* Bind(Context ctx) const { return nullptr; }
   /**
-   * @brief Bind the symbol to a composite operator
-   * 
-   * @param in A map denotes name and corresponding NArray for binding
-   * @return The composite operator
+   * \brief Bind the symbol to a composite operator
+   * \param ctx context of the operator
+   * \param in A map denotes name and corresponding NArray for binding
+   * \return The composite operator
    */
   virtual CompositeOperator* Bind(Context ctx, const std::unordered_map<std::string, NArray>& in);
   /*!
