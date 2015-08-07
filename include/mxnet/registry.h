@@ -229,18 +229,9 @@ struct AtomicSymbolEntry {
   std::string name;
   /*! \brief function body to create AtomicSymbol */
   Creator body;
-  /*! \brief singleton is created when no param is needed for the AtomicSymbol */
-  Symbol *singleton_symbol;
   /*! \brief constructor */
   explicit AtomicSymbolEntry(const std::string& name)
-      : use_param(true), name(name), body(NULL), singleton_symbol(NULL) {}
-  /*!
-   * \brief set if param is needed by this AtomicSymbol
-   */
-  inline AtomicSymbolEntry &set_use_param(bool use_param) {
-    this->use_param = use_param;
-    return *this;
-  }
+      : use_param(true), name(name), body(NULL) {}
   /*!
    * \brief set the function body
    */
@@ -248,12 +239,6 @@ struct AtomicSymbolEntry {
     this->body = body;
     return *this;
   }
-  /*!
-   * \brief return the singleton symbol
-   */
-  Symbol *GetSingletonSymbol();
-  /*! \brief destructor */
-  ~AtomicSymbolEntry();
   /*!
    * \brief invoke the function
    * \return the created AtomicSymbol

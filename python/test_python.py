@@ -1,4 +1,4 @@
-#pylint: skip-file
+# pylint: skip-file
 import mxnet as mx
 
 a = mx.narray.create((3000, 4000))
