@@ -209,13 +209,21 @@ MXNET_DLL int MXFuncInvoke(FunctionHandle fun,
 // Part 3: symbolic configuration generation
 //--------------------------------------------
 /*!
- * \brief create symbol from config
- * \param cfg configuration string
- * \param out created symbol handle
+ * \brief list all the available AtomicSymbolEntry
+ * \param out_size the size of returned array
+ * \param out_array the output AtomicSymbolCreator array
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSymbolCreateFromConfig(const char *cfg,
-                                       SymbolHandle *out);
+MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
+                                               AtomicSymbolCreator **out_array);
+/*!
+ * \brief Get the name of AtomicSymbol.
+ * \param creator the AtomicSymbolCreator
+ * \param out the returned name of the creator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
+                                          const char **out);
 /*!
  * \brief create Symbol by wrapping AtomicSymbol
  * \param creator the AtomicSymbolCreator
@@ -231,50 +239,79 @@ MXNET_DLL int MXSymbolCreateFromAtomicSymbol(AtomicSymbolCreator creator,
                                              const char **vals,
                                              SymbolHandle *out);
 /*!
- * \brief free the symbol handle
+ * \brief Create a Variable Symbol.
+ * \param name name of the variable
+ * \param out pointer to the created symbol handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolCreateVariable(const char *name, SymbolHandle *out);
+/*!
+ * \brief Create symbol from config.
+ * \param cfg configuration string
+ * \param out created symbol handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolCreateFromConfig(const char *cfg,
+                                       SymbolHandle *out);
+/*!
+ * \brief Free the symbol handle.
  * \param symbol the symbol
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolFree(SymbolHandle symbol);
 /*!
- * \brief list all the available AtomicSymbolEntry
- * \param out_size the size of returned array
- * \param out_array the output AtomicSymbolCreator array
+ * \brief Copy the symbol to another handle
+ * \param symbol the source symbol
+ * \param out used to hold the result of copy
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
-                                               AtomicSymbolCreator **out_array);
+MXNET_DLL int MXSymbolCopy(SymbolHandle symbol, SymbolHandle *out);
 /*!
- * \brief get the singleton Symbol of the AtomicSymbol if any
- * \param creator the AtomicSymbolCreator
- * \param out the returned singleton Symbol of the AtomicSymbol the creator stands for
+ * \brief Print the content of symbol, used for debug.
+ * \param symbol the symbol
+ * \param out_str pointer to hold the output string of the printing.
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSymbolGetSingleton(AtomicSymbolCreator creator,
-                                   SymbolHandle *out);
+MXNET_DLL int MXSymbolPrint(SymbolHandle symbol, const char **out_str);
 /*!
- * \brief get the singleton Symbol of the AtomicSymbol if any
- * \param creator the AtomicSymbolCreator
- * \param out the returned name of the creator
+ * \brief List arguments in the symbol.
+ * \param symbol the symbol
+ * \param out_size output size
+ * \param out_str_array pointer to hold the output string array
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
-                                          const char **out);
+MXNET_DLL int MXSymbolListArguments(SymbolHandle symbol,
+                                    mx_uint *out_size,
+                                    const char ***out_str_array);
 /*!
- * \brief compose the symbol on other symbol
+ * \brief List returns in the symbol.
+ * \param symbol the symbol
+ * \param out_size output size
+ * \param out_str_array pointer to hold the output string array
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolListReturns(SymbolHandle symbol,
+                                    mx_uint *out_size,
+                                    const char ***out_str_array);
+/*!
+ * \brief Compose the symbol on other symbols.
+ *
+ *  This function will change the sym hanlde.
+ *  To achieve function apply behavior, copy the symbol first
+ *  before apply.
+ *
  * \param sym the symbol to apply
+ * \param name the name of symbol
  * \param num_args number of arguments
  * \param keys the key of keyword args (optional)
  * \param args arguments to sym
- * \param out the resulting symbol
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolCompose(SymbolHandle sym,
+                              const char *name,
                               mx_uint num_args,
                               const char** keys,
-                              SymbolHandle* args,
-                              SymbolHandle* out);
-
+                              SymbolHandle* args);
 //--------------------------------------------
 // Part 4: operator interface on NArray
 //--------------------------------------------
