@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2015 by Contributors
+ * Copyright (c) 2015 by Contributors
  * \file storage.h
  * \brief the memory allocator that manages the memory across multiple devices
  */
@@ -9,6 +9,7 @@
 #include "./tensor_blob.h"
 
 namespace mxnet {
+
 /*! \brief memory allocator of storage */
 class StorageManager {
  public:
@@ -17,14 +18,9 @@ class StorageManager {
    */
   struct Handle {
     /*! \brief pointer to the data */
-    void *dptr;
+    void* dptr;
     /*! \brief context information about device and deviceID */
     Context ctx;
-    /*!
-     * \brief internal handle reserved for manager,
-     *   user should not change or use this
-     */
-    void *handle_;
   };
   /*!
    * \brief allocate a new contiguous memory for a given size
@@ -32,14 +28,23 @@ class StorageManager {
    * \param ctx context information about the device and deviceID
    * \return Handle struct
    */
-  virtual Handle Alloc(size_t size, Context ctx) = 0;
+  Handle Alloc(size_t size, Context ctx);
   /*!
    * \brief free the space represened the handle
    * \param handle the handle to memory to be freed
    */
-  virtual void Free(Handle handle) = 0;
+  void Free(Handle handle);
   /*! \return storage manager singleton */
-  static StorageManager *Get();
+  static StorageManager* Get();
+
+ private:
+  /*!
+   * \brief disabled constructors
+   */
+  StorageManager() {}
+  DISALLOW_COPY_AND_ASSIGN(StorageManager);
 };  // class StorageManager
+
 }  // namespace mxnet
+
 #endif  // MXNET_STORAGE_H_
