@@ -3,7 +3,6 @@
  * \file gpu_storage.h
  * \brief GPU storage implementation.
  */
-
 #ifndef MXNET_STORAGE_GPU_STORAGE_H_
 #define MXNET_STORAGE_GPU_STORAGE_H_
 
