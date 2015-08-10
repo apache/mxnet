@@ -5,6 +5,10 @@
 #include <dmlc/logging.h>
 #include <cstdlib>
 
+#ifndef _ISOC11_SOURCE
+#define _ISOC11_SOURCE
+#endif  // _ISOC11_SOURCE
+
 namespace mxnet {
 namespace storage {
 
