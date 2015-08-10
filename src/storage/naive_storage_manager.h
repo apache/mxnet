@@ -27,7 +27,7 @@ class NaiveStorageManager final : public StorageManager {
    */
   ~NaiveStorageManager() = default;
   void* Alloc(size_t size) override;
-  void Free(void* ptr) override;
+  void Free(void* ptr, size_t) override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(NaiveStorageManager);

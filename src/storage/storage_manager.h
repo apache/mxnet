@@ -25,8 +25,9 @@ class StorageManager {
   /*!
    * \brief Deallocation.
    * \param ptr Pointer to deallocate.
+   * \param size Size of the storage.
    */
-  virtual void* Free(void* ptr) = 0;
+  virtual void* Free(void* ptr, size_t size) = 0;
   /*!
    * \brief Destructor.
    */
