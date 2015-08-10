@@ -8,7 +8,7 @@
 
 #include <dmlc/logging.h>
 
-#ifdef MXNET_USE_CUDA
+#if MXNET_USE_CUDA
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
@@ -100,7 +100,7 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
 
 #endif  // MXNET_USE_CUDA
 
-#ifdef MXNET_USE_CUDNN
+#if MXNET_USE_CUDNN
 
 #include <cudnn.h>
 
