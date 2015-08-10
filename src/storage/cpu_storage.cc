@@ -4,7 +4,7 @@
 #define _ISOC11_SOURCE
 #include "./cpu_storage.h"
 #include <dmlc/logging.h>
-#include <cstdlib>
+#include <stdlib.h>
 
 namespace mxnet {
 namespace storage {
