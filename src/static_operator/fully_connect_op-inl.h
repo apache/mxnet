@@ -95,7 +95,7 @@ class FullyConnectOp : public StaticOperator {
  */
 class FullyConnectSymbol : public AtomicSymbol {
  public:
-  virtual std::vector<std::string> DescribeArguments() const {
+  virtual std::vector<std::string> ListArguments() const {
     std::string ret[] = {"data", "weight", "bias"};
     if (param_.no_bias == 0) {
       return std::vector<std::string>(ret, ret + 3);
