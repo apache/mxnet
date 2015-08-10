@@ -56,7 +56,7 @@ endif
 
 #BIN = test/test_threaded_engine test/api_registry_test
 BIN = test/api_registry_test
-OBJ = storage.o narray_op_cpu.o static_operator.o static_operator_cpu.o
+OBJ = narray_op_cpu.o static_operator.o static_operator_cpu.o
 # add threaded engine after it is done
 OBJCXX11 = engine.o narray.o c_api.o registry.o symbol.o operator.o fully_connect_op_cpu.o cpu_storage.o gpu_storage.o storage.o
 CUOBJ =
