@@ -1,13 +1,10 @@
 /*!
  * Copyright (c) 2015 by Contributors
  */
+#define _ISOC11_SOURCE
 #include "./cpu_storage.h"
 #include <dmlc/logging.h>
 #include <cstdlib>
-
-#ifndef _ISOC11_SOURCE
-#define _ISOC11_SOURCE
-#endif  // _ISOC11_SOURCE
 
 namespace mxnet {
 namespace storage {
