@@ -27,7 +27,7 @@ class GpuStorage {
    * \param ptr Pointer to deallocate.
    */
   static void Free(void* ptr);
-};
+};  // class GpuStorage
 
 }  // namespace storage
 }  // namespace mxnet

@@ -31,15 +31,15 @@ class NaiveStorageManager final : public StorageManager {
 
  private:
   DISALLOW_COPY_AND_ASSIGN(NaiveStorageManager);
-};
+};  // class NaiveStorageManager
 
 template <class DeviceStorage>
-void* NaiveStorageManager::Alloc(size_t size) {
+void* NaiveStorageManager<DeviceStorage>::Alloc(size_t size) {
   return DeviceStorage::Alloc(size);
 }
 
 template <class DeviceStorage>
-void NaiveStorageManager::Free(void* ptr) {
+void NaiveStorageManager<DeviceStorage>::Free(void* ptr, size_t) {
   DeviceStorage::Free(ptr);
 }
 

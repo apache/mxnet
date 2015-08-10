@@ -27,12 +27,12 @@ class StorageManager {
    * \param ptr Pointer to deallocate.
    * \param size Size of the storage.
    */
-  virtual void* Free(void* ptr, size_t size) = 0;
+  virtual void Free(void* ptr, size_t size) = 0;
   /*!
    * \brief Destructor.
    */
   virtual ~StorageManager() = default;
-};
+};  // namespace StorageManager
 
 }  // namespace storage
 }  // namespace mxnet

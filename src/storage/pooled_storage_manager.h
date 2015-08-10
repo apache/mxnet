@@ -36,14 +36,14 @@ class PooledStorageManager final : public StorageManager {
   size_t used_memory_ = 0;
   std::unordered_map<size_t, std::vector<void*>> memory_pool_;
   DISALLOW_COPY_AND_ASSIGN(PooledStorageManager);
-};
+};  // class PooledStorageManager
 
-templace <class DeviceStorage, size_t kThreshold>
+template <class DeviceStorage, size_t kThreshold>
 void* PooledStorageManager<DeviceStorage, kThreshold>::Alloc(size_t size) {
   auto&& reuse_it = memory_pool_.find(size);
   if (reuse_it == memory_pool_.end() || reuse_it->second.size() == 0) {
     if (kThreshold <= used_memory_) {
-        ReleaseAll();
+      ReleaseAll();
     }
     used_memory_ += size;
     return DeviceStorage::Alloc(size);
@@ -55,8 +55,9 @@ void* PooledStorageManager<DeviceStorage, kThreshold>::Alloc(size_t size) {
   }
 }
 
-templace <class DeviceStorage, size_t kThreshold>
-void PooledStorageManager<DeviceStorage, kThreshold>::Free(void* ptr, size_t size) {
+template <class DeviceStorage, size_t kThreshold>
+void PooledStorageManager<DeviceStorage, kThreshold>::Free(void* ptr,
+                                                           size_t size) {
   auto&& reuse_pool = memory_pool_[size];
   reuse_pool.push_back(ptr);
 }
@@ -65,7 +66,7 @@ template <class DeviceStorage, size_t kThreshold>
 void PooledStorageManager<DeviceStorage, kThreshold>::ReleaseAll() {
   for (auto&& i : memory_pool_) {
     for (auto&& j : i.second) {
-      DeviceStorage::Free(i.second);
+      DeviceStorage::Free(j);
       used_memory_ -= i.first;
     }
   }

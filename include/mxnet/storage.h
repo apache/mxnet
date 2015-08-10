@@ -1,49 +1,69 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file storage.h
- * \brief the memory allocator that manages the memory across multiple devices
+ * \brief Storage manager across multiple devices.
  */
 #ifndef MXNET_STORAGE_H_
 #define MXNET_STORAGE_H_
+
+#include <memory>
 #include "./base.h"
 #include "./tensor_blob.h"
 
 namespace mxnet {
 
-/*! \brief memory allocator of storage */
-class StorageManager {
+/*!
+ * \brief Storage manager across multiple devices.
+ */
+class Storage {
  public:
   /*!
-   * \brief storage handle the represents storage information
+   * \brief Storage handle.
    */
   struct Handle {
-    /*! \brief pointer to the data */
+    /*!
+     * \brief Pointer to the data.
+     */
     void* dptr;
-    /*! \brief context information about device and deviceID */
+    /*!
+     * \brief Size of the storage.
+     */
+    size_t size;
+    /*!
+     * \brief Context information about device and ID.
+     */
     Context ctx;
   };
   /*!
-   * \brief allocate a new contiguous memory for a given size
-   * \param size the total size of memory in bytes
-   * \param ctx context information about the device and deviceID
-   * \return Handle struct
+   * \brief Allocate a new contiguous memory for a given size.
+   * \param size Total size of memory in bytes.
+   * \param ctx Context information about the device and ID.
+   * \return Handle struct.
    */
   Handle Alloc(size_t size, Context ctx);
   /*!
-   * \brief free the space represened the handle
-   * \param handle the handle to memory to be freed
+   * \brief Free storage.
+   * \param handle Handle struect.
    */
   void Free(Handle handle);
-  /*! \return storage manager singleton */
-  static StorageManager* Get();
+  /*!
+   * \brief Destructor.
+   */
+  ~Storage();
+  /*!
+   * \return Storage singleton.
+   */
+  static Storage* Get();
 
  private:
   /*!
-   * \brief disabled constructors
+   * \brief Hidden constructors.
    */
-  StorageManager() {}
-  DISALLOW_COPY_AND_ASSIGN(StorageManager);
-};  // class StorageManager
+  Storage();
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
+  DISALLOW_COPY_AND_ASSIGN(Storage);
+};  // class Storage
 
 }  // namespace mxnet
 

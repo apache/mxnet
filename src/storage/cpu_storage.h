@@ -33,7 +33,7 @@ class CpuStorage {
    * \brief Alignment of allocation.
    */
   static constexpr size_t alignment_ = 16;
-};
+};  // class CpuStorage
 
 }  // namespace storage
 }  // namespace mxnet
