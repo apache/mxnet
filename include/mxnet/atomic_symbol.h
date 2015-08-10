@@ -28,12 +28,12 @@ class AtomicSymbol {
    */
   virtual ~AtomicSymbol() {}
   /*! \brief get the descriptions of inputs for this symbol */
-  virtual std::vector<std::string> DescribeArguments() const {
+  virtual std::vector<std::string> ListArguments() const {
     // default implementation returns "data"
     return std::vector<std::string>(1, std::string("data"));
   }
   /*! \brief get the descriptions of outputs for this symbol */
-  virtual std::vector<std::string> DescribeReturns() const {
+  virtual std::vector<std::string> ListReturns() const {
     // default implementation returns "output"
     return std::vector<std::string>(1, std::string("output"));
   }
@@ -77,6 +77,13 @@ class AtomicSymbol {
    */
   virtual std::string TypeString() const = 0;
   friend class Symbol;
+
+  /*!
+   * \brief create atomic symbol by type name
+   * \param type_name the type string of the AtomicSymbol
+   * \return a new constructed AtomicSymbol
+   */
+  static AtomicSymbol *Create(const char* type_name);
 };
 
 }  // namespace mxnet
