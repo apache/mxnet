@@ -62,22 +62,6 @@ class Symbol {
    */
   Symbol operator[] (int index) const;
   /*!
-   * \brief infer the shapes of outputs and unknown input arguments
-   * \param in_shape the shape of input arguments of the operator
-   *     this should be of same length as the vector returned by ListArguments
-   *     in_shape allows unknown elements, which are checked by shape.ndim() == 0.
-   *     For unknown shapes, InferShape will try to fill in the correct Shape in in_shape
-   *     For known shapes, InferShape will check shape consistency
-   *
-   *     common practice: set the shape of data input, and usually weight's shape can be infered
-   *
-   * \param out_shape the shape of outputs of the operator
-   *     InferShape will modify the vector to fill output TShape
-   * \return if the shape inference is successful, return true, else return false.
-   */
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape);
-  /*!
    * \brief Compose the symbol with arguments, this changes current symbol.
    *
    * The positional arguments passed in must be complete(contain all arguments).
@@ -121,6 +105,26 @@ class Symbol {
     Symbol s = this->Copy();
     s.Compose(kwargs, name);
     return s;
+  }
+  /*!
+   * \brief infer the shapes of outputs and unknown input arguments
+   * \param in_shape the shape of input arguments of the operator
+   *     this should be of same length as the vector returned by ListArguments
+   *     in_shape allows unknown elements, which are checked by shape.ndim() == 0.
+   *     For unknown shapes, InferShape will try to fill in the correct Shape in in_shape
+   *     For known shapes, InferShape will check shape consistency
+   *
+   *     common practice: set the shape of data input, and usually weight's shape can be infered
+   *
+   * \param out_shape the shape of outputs of the operator
+   *     InferShape will modify the vector to fill output TShape
+   * \return if the shape inference is successful, return true, else return false.
+   */
+  inline bool InferShape(std::vector<TShape> *in_shape,
+                         std::vector<TShape> *out_shape) {
+    StaticGraph g;
+    Symbol::Convert({*this}, &g);
+    return g.InferShape(in_shape, out_shape);
   }
   /*!
    * \brief create Symbol by wrapping AtomicSymbol
@@ -219,8 +223,7 @@ class Symbol {
    */
   template<typename FVisit>
   inline void DFSVisit(FVisit fvisit) const {
-    std::vector<DataEntry> tmp = { head_ };
-    DFSVisit(tmp, fvisit);
+    DFSVisit({*this}, fvisit);
   }
   /*!
    * \brief Visit all the nodes in left-to-right depth first order.
@@ -232,15 +235,17 @@ class Symbol {
    * \tparam FVisit visiting function type
    */
   template<typename FVisit>
-  static inline void DFSVisit(const std::vector<DataEntry> &heads,
-                               FVisit fvisit) {
+  static inline void DFSVisit(const std::vector<Symbol> &heads,
+                              FVisit fvisit) {
     std::vector<Node*> stack;
     std::unordered_set<Node*> visited;
     // put the head into the graph
     for (auto &head : heads) {
-      Node *ptr = head.source.get();
-      stack.push_back(ptr);
-      visited.insert(ptr);
+      Node *ptr = head.head_.source.get();
+      if (visited.count(ptr) == 0) {
+        stack.push_back(ptr);
+        visited.insert(ptr);
+      }
     }
     while (!stack.empty()) {
       Node* back = stack.back();
@@ -255,12 +260,6 @@ class Symbol {
       }
     }
   }
-  /*! \brief Toposort the symbol
-   *  \prarm heads symbol's head
-   *  \prarm ret sorted nodes
-   */
-  static inline void Toposort(const std::vector<DataEntry> &heads,
-                              std::vector<Node*> *ret);
   /*!
    * \brief Find duplicate arguments in the composition
    * \param out the map of argument-name -> occurence count

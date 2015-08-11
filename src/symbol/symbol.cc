@@ -250,71 +250,6 @@ std::vector<std::string> Symbol::ListArguments() const {
   }
 }
 
-inline void Symbol::Toposort(const std::vector<DataEntry> &heads,
-                            std::vector<Node*> *ret) {
-  std::unordered_map<Node*, int> out_degree;
-  std::queue<Node*> queue;
-  ret->clear();
-  size_t idx = 0;
-  DFSVisit(heads,
-          [&out_degree](Node* node) {
-      for (auto &entry : node->inputs) {
-        Node *ptr = entry.source.get();
-        auto iter = out_degree.find(ptr);
-        if (iter == out_degree.end()) {
-          out_degree[ptr] = 0;
-        } else {
-          iter->second += 1;
-        }
-      }
-    });
-  for (auto &entry : heads) {
-    queue.push(entry.source.get());
-  }
-  idx = out_degree.size();
-  ret->resize(idx);
-  --idx;
-  while (queue.size() > 0) {
-    Node *node = queue.front();
-    queue.pop();
-    ret->at(idx--) = node;
-    for (auto it = node->inputs.rbegin(); it != node->inputs.rend(); ++it) {
-      Node *ptr = it->source.get();
-      out_degree[ptr] -= 1;
-      if (out_degree[ptr] == 0) {
-        queue.push(ptr);
-      }
-    }
-  }
-}
-
-bool Symbol::InferShape(std::vector<TShape> *in_shape,
-                        std::vector<TShape> *out_shape) {
-  bool success = true;
-  StaticGraph graph;
-  auto input_args = this->ListArguments();
-  std::vector<Symbol> tmp_arg = {*this};
-  CHECK(in_shape->size() == input_args.size()) << "Input shape should be same to arguments";
-  out_shape->clear();
-  Convert(tmp_arg, &graph);
-  for (size_t i = 0; i < in_shape->size(); ++i) {
-    graph.nodes[graph.in_args_node_id[i]].in_shape.push_back(in_shape->at(i));
-  }
-  for (auto &nd : graph.nodes) {
-    success &= nd.sym->InferShape(&nd.in_shape, &nd.out_shape);
-  }
-  //  copy result back
-  for (size_t i = 0; i < in_shape->size(); ++i) {
-    in_shape->at(i) = graph.nodes[graph.in_args_node_id[i]].in_shape[0];
-  }
-  for (auto i : graph.return_node_id) {
-    for (auto sp : graph.nodes[i].out_shape) {
-      out_shape->push_back(sp);
-    }
-  }
-  return success;
-}
-
 std::vector<std::string> Symbol::ListReturns() const {
   return head_.source->sym->ListReturns();
 }
@@ -323,49 +258,58 @@ Symbol Symbol::Create(AtomicSymbol *atomic_symbol)  {
   // use special representation for atomic symbol
   Symbol s;
   s.head_ = DataEntry(std::make_shared<Node>(atomic_symbol, ""),
-                      atomic_symbol->ListReturns().size() > 1 ? -1 : 0);
+                      atomic_symbol->NumReturns() > 1 ? -1 : 0);
   return s;
 }
 
 void Symbol::Convert(const std::vector<Symbol> &heads, StaticGraph *out_graph) {
   // TODO(bing): Check unique name
-  std::vector<Node*> nodes;
-  std::unordered_map<Node*, int> node_id_dic;
-  std::vector<DataEntry> arg(heads.size());
-  for (size_t i = 0; i < heads.size(); ++i) {
-    arg[i] = heads[i].head_;
-  }
-  Toposort(arg, &nodes);
-  out_graph->nodes.resize(nodes.size());
-  //  set up dict
-  for (size_t i = 0; i < nodes.size(); ++i) {
-    node_id_dic[nodes[i]] = i;
-  }
-  //  copy
-  for (size_t i = 0; i < nodes.size(); ++i) {
-    out_graph->name_id_map[nodes[i]->name] = i;
-    if (!nodes[i]->is_variable()) {
-      out_graph->nodes[i].sym.reset(nodes[i]->sym->Copy());
+  std::vector<Node*> node_order;
+  std::unordered_map<Node*, uint32_t> node_index;
+  auto &arg_nodes = out_graph->arg_nodes;
+  arg_nodes.clear();
+
+  DFSVisit(heads, [&node_order, &node_index, &arg_nodes](Node *n) {
+      uint32_t nid = static_cast<uint32_t>(node_index.size());
+      node_index[n] = nid;
+      if (n->is_variable()) {
+        arg_nodes.push_back(nid);
+      }
+      node_order.push_back(n);
+    });
+  // setup nodes
+  out_graph->nodes.resize(node_index.size());
+  for (uint32_t nid = 0; nid < node_order.size(); ++nid) {
+    if (node_order[nid]->sym != nullptr) {
+      out_graph->nodes[nid].sym.reset(node_order[nid]->sym->Copy());
+    } else {
+      out_graph->nodes[nid].sym.reset(nullptr);
     }
-    out_graph->nodes[i].name = nodes[i]->name;
-    for (auto &entry : nodes[i]->inputs) {
-      out_graph->nodes[i].inputs_index.push_back(node_id_dic[entry.source.get()]);
-      out_graph->nodes[node_id_dic[entry.source.get()]].outputs_index.push_back(i);
+    out_graph->nodes[nid].name = node_order[nid]->name;
+    auto &inputs = out_graph->nodes[nid].inputs;
+    inputs.clear();
+    for (const DataEntry &src : node_order[nid]->inputs) {
+      StaticGraph::DataEntry e;
+      e.index = src.index;
+      e.source_id = node_index[src.source.get()];
+      inputs.push_back(e);
     }
   }
-  // set input map
-  for (auto const &head : heads) {
-    auto input_args = head.ListArguments();
-    out_graph->in_args_node_id.resize(input_args.size());
-    for (size_t i = 0; i < input_args.size(); ++i) {
-      out_graph->in_args_node_id[i] = out_graph->name_id_map[input_args[i]];
+  // setup heads
+  out_graph->outputs.clear();
+  for (auto &head : heads) {
+    StaticGraph::DataEntry e;
+    e.source_id = node_index[head.head_.source.get()];
+    if (head.head_.index == -1) {
+      int nout = head.head_.source->sym->NumReturns();
+      for (int i = 0; i < nout; ++i) {
+        e.index = i;
+        out_graph->outputs.push_back(e);
+      }
+    } else {
+      e.index = head.head_.index;
+      out_graph->outputs.push_back(e);
     }
-  }
-  // set output map
-  out_graph->return_node_id.resize(heads.size());
-  for (size_t i = 0; i < heads.size(); ++i) {
-    out_graph->return_node_id[i] = out_graph->name_id_map[heads[i].head_.source->name];
   }
 }
-
 }  // namespace mxnet
