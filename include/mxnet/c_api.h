@@ -246,6 +246,16 @@ MXNET_DLL int MXSymbolCreateFromAtomicSymbol(AtomicSymbolCreator creator,
  */
 MXNET_DLL int MXSymbolCreateVariable(const char *name, SymbolHandle *out);
 /*!
+ * \brief Create a Symbol by grouping list of symbols together
+ * \param num_symbols number of symbols to be grouped
+ * \param symbols array of symbol handles
+ * \param out pointer to the created symbol handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolCreateGroup(mx_uint num_symbols,
+                                  SymbolHandle *symbols,
+                                  SymbolHandle *out);
+/*!
  * \brief Create symbol from config.
  * \param cfg configuration string
  * \param out created symbol handle

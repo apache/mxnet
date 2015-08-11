@@ -106,3 +106,26 @@ class _SymbolCreatorRegistry(object):
         handle = SymbolHandle()
         check_call(_LIB.MXSymbolCreateVariable(name, ctypes.byref(handle)))
         return Symbol(handle)
+
+    def Group(self, symbols):
+        """Create a symbolic variable that groups several symbols together.
+
+        Parameters
+        ----------
+        symbols : list
+            List of symbols to be grouped.
+
+        Returns
+        -------
+        sym : Symbol
+            The created group symbol.
+        """
+        ihandles = []
+        for sym in symbols:
+            if not isinstance(sym, Symbol):
+                raise TypeError('Expect Symbols in the list input')
+            ihandles.append(sym.handle)
+        handle = SymbolHandle()
+        check_call(_LIB.MXSymbolCreateGroup(
+            len(ihandles), c_array(SymbolHandle, ihandles), ctypes.byref(handle)))
+        return Symbol(handle)

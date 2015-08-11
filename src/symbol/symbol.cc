@@ -33,13 +33,15 @@ Symbol Symbol::Copy() const {
   }
   // set the head
   Symbol s;
-  s.head_ = DataEntry(old_new[head_.source.get()], head_.index);
+  for (auto &head : heads_) {
+    s.heads_.push_back(DataEntry(old_new[head.source.get()], head.index));
+  }
   return s;
 }
 
 void Symbol::Print(std::ostream &os) const {
-  if (head_.source->is_atomic()) {
-    os << "AtomicSymbol "<< " Type:" << head_.source->sym->TypeString() << '\n'
+  if (this->is_atomic()) {
+    os << "AtomicSymbol "<< " Type:" << heads_[0].source->sym->TypeString() << '\n'
        << "Inputs:";
     std::vector<std::string> args = this->ListArguments();
     for (size_t i = 0; i < args.size(); ++i) {
@@ -47,6 +49,11 @@ void Symbol::Print(std::ostream &os) const {
     }
   } else {
     // use DFSVisit to copy all the nodes
+    os << "Outputs:\n";
+    for (size_t i = 0; i < heads_.size(); ++i) {
+      os << "\toutput[" << i << "]=" << heads_[i].source->name
+         << '(' << heads_[i].index << ")\n";
+    }
     this->DFSVisit([&os](Node *node) {
         if (node->is_variable()) {
           os << "Variable:" << node->name << '\n';
@@ -81,23 +88,24 @@ int Symbol::FindDuplicateArgs(std::unordered_map<std::string, int> *out) const {
 
 void Symbol::Compose(const std::vector<Symbol>& args,
                      const std::string& name) {
-  CHECK(!head_.source->is_variable()) << "PlaceHolder cannot be composed";
-  head_.source->name = name;
+  CHECK_EQ(NumReturns(), 1) << "Only composition of value function is supported currently";
+  CHECK(!heads_[0].source->is_variable()) << "Variable cannot be composed";
+  heads_[0].source->name = name;
   for (size_t i = 0; i < args.size(); ++i) {
-    CHECK_NE(args[i].head_.index, -1)
+    CHECK_NE(args[i].NumReturns(), 1)
         << "Argument " << i << " is a tuple, scalar is required";
   }
   // positional arguments requires all arguments for now.
   // TODO(bing) consider partial assignments
-  if (head_.source->is_atomic()) {
+  if (this->is_atomic()) {
     // atomic symbol do not have place holder for all the arguments
-    std::vector<std::string> req_args = head_.source->sym->ListArguments();
+    std::vector<std::string> req_args = heads_[0].source->sym->ListArguments();
     CHECK_EQ(args.size(), req_args.size())
         << "Incorrect number of arguments, requires " << req_args.size()
         << ", provided " << args.size();
-    head_.source->inputs.resize(args.size());
+    heads_[0].source->inputs.resize(args.size());
     for (size_t i = 0; i < args.size(); ++i) {
-      head_.source->inputs[i] = args[i].head_;
+      heads_[0].source->inputs[i] = args[i].heads_[0];
     }
   } else {
     // find all the place holders
@@ -114,7 +122,7 @@ void Symbol::Compose(const std::vector<Symbol>& args,
             auto iter = replace_map.find(e->source.get());
             if (iter == replace_map.end()) {
               if (arg_counter < args.size()) {
-                target = &(args[arg_counter].head_);
+                target = &(args[arg_counter].heads_[0]);
                 replace_map[e->source.get()] = target;
               }
               ++arg_counter;
@@ -137,38 +145,38 @@ void Symbol::Compose(const std::vector<Symbol>& args,
 
 void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
                      const std::string& name) {
-  CHECK(!head_.source->is_variable()) << "PlaceHolder cannot be composed";
-  head_.source->name = name;
+  CHECK_EQ(NumReturns(), 1) << "Only composition of value function is supported currently";
+  CHECK(!heads_[0].source->is_variable()) << "Variable cannot be composed";
+  heads_[0].source->name = name;
   for (const auto& kv : kwargs) {
-    CHECK_NE(kv.second.head_.index, -1)
+    CHECK_EQ(kv.second.NumReturns(), 1)
         << "Keyword Argument " << kv.first << " is a tuple, scalar is required";
   }
   size_t nmatched = 0;
-  if (head_.source->is_atomic()) {
+  if (this->is_atomic()) {
     // atomic symbol do not have place holder for all the arguments
-    std::vector<std::string> req_args = head_.source->sym->ListArguments();
-    head_.source->inputs.resize(req_args.size());
+    std::vector<std::string> req_args = heads_[0].source->sym->ListArguments();
+    heads_[0].source->inputs.resize(req_args.size());
     for (size_t i = 0; i < req_args.size(); ++i) {
       auto iter = kwargs.find(req_args[i]);
       if (iter != kwargs.end()) {
-        head_.source->inputs[i] = iter->second.head_;
-
+        heads_[0].source->inputs[i] = iter->second.heads_[0];
         ++nmatched;
       } else {
         // create a variable node
         // TODO(bing): think of naming convention
         if (name.length() == 0) {
-          head_.source->inputs[i] = DataEntry(
+          heads_[0].source->inputs[i] = DataEntry(
               std::make_shared<Node>(nullptr, req_args[i]), 0);
         } else {
-          head_.source->inputs[i] = DataEntry(
+          heads_[0].source->inputs[i] = DataEntry(
               std::make_shared<Node>(nullptr, name + '_' + req_args[i]), 0);
         }
       }
     }
     // if things goes wrong recover the old state
     if (nmatched != kwargs.size()) {
-      head_.source->inputs.clear();
+      heads_[0].source->inputs.clear();
     }
   } else {
     // find all the arguments positions
@@ -194,7 +202,7 @@ void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
             const DataEntry *target = nullptr;
             auto iter = kwargs.find(e->source->name);
             if (iter != kwargs.end()) {
-              target = &(iter->second.head_);
+              target = &(iter->second.heads_[0]);
               // count how many arguments have been matched.
               if (visited.count(e->source.get()) == 0) {
                 visited.insert(e->source.get());
@@ -228,18 +236,22 @@ void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
   }
 }
 
-Symbol Symbol::operator[] (int index) const {
-  CHECK_EQ(head_.index, -1) << "Current symbol can't be indexed because it returns a scalar.";
-  CHECK_GE(index, 0) << "Symbol only accept nonnegative index";
-  Symbol s = *this;
-  s.head_.index = index;
-  return s;
+Symbol Symbol::operator[] (size_t index) const {
+  size_t nreturn = NumReturns();
+  CHECK_LT(index, nreturn) << "Symbol only accept nonnegative index";
+  if (nreturn == 1) {
+    return *this;
+  } else {
+    Symbol s;
+    s.heads_.push_back(heads_[index]);
+    return s;
+  }
 }
 
 std::vector<std::string> Symbol::ListArguments() const {
   std::vector<std::string> ret;
-  if (head_.source->is_atomic()) {
-    return head_.source->sym->ListArguments();
+  if (this->is_atomic()) {
+    return heads_[0].source->sym->ListArguments();
   } else {
     this->DFSVisit([&ret](Node *node) {
         if (node->is_variable()) {
@@ -251,25 +263,43 @@ std::vector<std::string> Symbol::ListArguments() const {
 }
 
 std::vector<std::string> Symbol::ListReturns() const {
-  return head_.source->sym->ListReturns();
+  std::vector<std::string> ret;
+  for (auto &head : heads_) {
+    if (head.source->is_variable()) {
+      ret.push_back(head.source->name);
+    } else {
+      // TODO(bing) rethink about output naming
+      auto &hname = head.source->name;
+      std::string rname = head.source->sym->ListReturns()[head.index];
+      if (hname.length() == 0) {
+        ret.push_back(std::move(rname));
+      } else {
+        ret.push_back(hname + '_' + rname);
+      }
+    }
+  }
+  return std::move(ret);
 }
 
 Symbol Symbol::Create(AtomicSymbol *atomic_symbol)  {
   // use special representation for atomic symbol
+  auto node = std::make_shared<Node>(atomic_symbol, "");
+  size_t nret = atomic_symbol->NumReturns();
   Symbol s;
-  s.head_ = DataEntry(std::make_shared<Node>(atomic_symbol, ""),
-                      atomic_symbol->NumReturns() > 1 ? -1 : 0);
+  for (uint32_t i = 0; i < nret; ++i) {
+    s.heads_.push_back(DataEntry(node, i));
+  }
   return s;
 }
 
-void Symbol::Convert(const std::vector<Symbol> &heads, StaticGraph *out_graph) {
+void Symbol::ToStaticGraph(StaticGraph *out_graph) const {
   // TODO(bing): Check unique name
   std::vector<Node*> node_order;
   std::unordered_map<Node*, uint32_t> node_index;
   auto &arg_nodes = out_graph->arg_nodes;
   arg_nodes.clear();
 
-  DFSVisit(heads, [&node_order, &node_index, &arg_nodes](Node *n) {
+  this->DFSVisit([&node_order, &node_index, &arg_nodes](Node *n) {
       uint32_t nid = static_cast<uint32_t>(node_index.size());
       node_index[n] = nid;
       if (n->is_variable()) {
@@ -297,19 +327,11 @@ void Symbol::Convert(const std::vector<Symbol> &heads, StaticGraph *out_graph) {
   }
   // setup heads
   out_graph->outputs.clear();
-  for (auto &head : heads) {
+  for (auto &head : heads_) {
     StaticGraph::DataEntry e;
-    e.source_id = node_index[head.head_.source.get()];
-    if (head.head_.index == -1) {
-      int nout = head.head_.source->sym->NumReturns();
-      for (int i = 0; i < nout; ++i) {
-        e.index = i;
-        out_graph->outputs.push_back(e);
-      }
-    } else {
-      e.index = head.head_.index;
-      out_graph->outputs.push_back(e);
-    }
+    e.source_id = node_index[head.source.get()];
+    e.index = head.index;
+    out_graph->outputs.push_back(e);
   }
 }
 }  // namespace mxnet

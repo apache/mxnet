@@ -20,4 +20,8 @@ print "-" * 10
 composed_fc4 = fc4(fc3_data=fc2, name='composed')
 print composed_fc4.debug_str()
 
+multi_out = mx.sym.Group([composed_fc4, fc2])
 
+print multi_out.debug_str()
+print multi_out.list_arguments()
+print multi_out.list_returns()

@@ -60,7 +60,7 @@ class Symbol {
    * \param index index of multi output
    * \return the symbol corresponds to the indexed element.
    */
-  Symbol operator[] (int index) const;
+  Symbol operator[] (size_t index) const;
   /*!
    * \brief Compose the symbol with arguments, this changes current symbol.
    *
@@ -83,6 +83,14 @@ class Symbol {
   void Compose(const std::unordered_map<std::string, Symbol>& kwargs,
                const std::string& name);
   /*!
+   * \brief Convert a list of symbols into static graph
+   *
+   *  The user can go further to call bind function on static graph
+   *
+   * \param out_graph the pointer holder of the output graph
+   */
+  void ToStaticGraph(StaticGraph *out_graph) const;
+  /*!
    * \brief Apply the symbol as a function, compose with arguments
    * \param args positional arguments for the symbol
    * \param name name of returned symbol.
@@ -101,7 +109,7 @@ class Symbol {
    * \return a new symbol which is the composition of current symbol with its arguments
    */
   inline Symbol operator () (const std::unordered_map<std::string, Symbol>& kwargs,
-                             const std::string& name) {
+                             const std::string& name) const {
     Symbol s = this->Copy();
     s.Compose(kwargs, name);
     return s;
@@ -121,10 +129,17 @@ class Symbol {
    * \return if the shape inference is successful, return true, else return false.
    */
   inline bool InferShape(std::vector<TShape> *in_shape,
-                         std::vector<TShape> *out_shape) {
+                         std::vector<TShape> *out_shape) const {
     StaticGraph g;
-    Symbol::Convert({*this}, &g);
+    this->ToStaticGraph(&g);
     return g.InferShape(in_shape, out_shape);
+  }
+  /*!
+   * \brief get number of outputs of this symbol
+   * \return number of outputs
+   */
+  inline size_t NumReturns() const {
+    return heads_.size();
   }
   /*!
    * \brief create Symbol by wrapping AtomicSymbol
@@ -136,20 +151,24 @@ class Symbol {
    */
   static Symbol Create(AtomicSymbol *atomic_symbol);
   /*!
-   * \brief create equivalence of symbols from static graphs
+   * \brief create equivalence of symbol from static graphs
    * \param graph the static graph
-   * \return list of Symbols representing outputs of the graph
+   * \return the created symbol
    */
-  static std::vector<Symbol> Create(const StaticGraph &graph);
+  static Symbol Create(const StaticGraph &graph);
+
   /*!
-   * \brief Convert a list of symbols into static graph
-   *
-   *  The user can go further to call bind function on static graph
-   *
-   * \param heads the heads of the graph
-   * \param out_graph the pointer holder of the output graph
+   * \brief create equivalence of symbol by grouping the symbols together
+   * \param symbols list of symbols
+   * \return the grouped symbol
    */
-  static void Convert(const std::vector<Symbol> &heads, StaticGraph *out_graph);
+  static Symbol CreateGroup(const std::vector<Symbol> &symbols) {
+    Symbol ret;
+    for (const auto &s : symbols) {
+      ret.heads_.insert(ret.heads_.end(), s.heads_.begin(), s.heads_.end());
+    }
+    return std::move(ret);
+  }
   /*!
    * \brief create variable symbol node
    * \param name name of the variable
@@ -157,7 +176,7 @@ class Symbol {
    */
   inline static Symbol CreateVariable(const std::string &name) {
     Symbol s;
-    s.head_ = DataEntry(std::make_shared<Node>(nullptr, name), 0);
+    s.heads_.push_back(DataEntry(std::make_shared<Node>(nullptr, name), 0));
     return std::move(s);
   }
 
@@ -170,13 +189,12 @@ class Symbol {
     std::shared_ptr<Node> source;
     /*!
      * \brief index of output from the source.
-     * If index == -1, it represents all the outputs.
      */
-    int index;
+    uint32_t index;
     /*! \brief enabled default copy constructor */
     DataEntry() {}
     /*! \brief constructor from index */
-    DataEntry(std::shared_ptr<Node> source, int index)
+    DataEntry(std::shared_ptr<Node> source, uint32_t index)
         : source(source), index(index) {}
   };
   /*!
@@ -212,18 +230,14 @@ class Symbol {
       return sym == nullptr;
     }
   };
-  /*! \brief the head node of the Symbol */
-  DataEntry head_;
-
- private:
-  /*! \brief DFS Visit for symbol with single head
-   *   This function call is specail case for DFSVisit_
-   *  \param fvisit function applied for each visit.
-   *  \tparam FVisit visiting function type
+  /*!
+   * \brief the head nodes of Symbols
+   * This head is only effective when
    */
-  template<typename FVisit>
-  inline void DFSVisit(FVisit fvisit) const {
-    DFSVisit({*this}, fvisit);
+  std::vector<DataEntry> heads_;
+  /*! \return whwther the symbol is AtomicSymbol */
+  inline bool is_atomic() const {
+    return heads_.size() == 1 && heads_[0].source->is_atomic();
   }
   /*!
    * \brief Visit all the nodes in left-to-right depth first order.
@@ -235,13 +249,12 @@ class Symbol {
    * \tparam FVisit visiting function type
    */
   template<typename FVisit>
-  static inline void DFSVisit(const std::vector<Symbol> &heads,
-                              FVisit fvisit) {
+  inline void DFSVisit(FVisit fvisit) const {
     std::vector<Node*> stack;
     std::unordered_set<Node*> visited;
     // put the head into the graph
-    for (auto &head : heads) {
-      Node *ptr = head.head_.source.get();
+    for (auto &head : heads_) {
+      Node *ptr = head.source.get();
       if (visited.count(ptr) == 0) {
         stack.push_back(ptr);
         visited.insert(ptr);
