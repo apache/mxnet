@@ -85,6 +85,7 @@ static_operator.o: src/static_operator/static_operator.cc
 static_operator_cpu.o: src/static_operator/static_operator_cpu.cc
 static_operator_gpu.o: src/static_operator/static_operator_gpu.cu
 symbol.o: src/symbol/symbol.cc
+static_graph.o : src/symbol/static_graph.cc
 registry.o: src/registry.cc
 c_api.o: src/c_api.cc
 operator.o: src/operator/static_operator_wrapper.cc

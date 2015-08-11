@@ -13,7 +13,7 @@
 
 namespace mxnet {
 /*!
- * \brief static StaticOperator interface (current interface have not yet todo with scheduler),
+ * \brief StaticOperator interface
  *  StaticOperator is a stateful object that can be used to call forward and backprop
  *
  *  This interface relies on pre-allocated memory in TBlob, the caller need to set

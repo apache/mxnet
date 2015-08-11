@@ -37,6 +37,10 @@ class AtomicSymbol {
     // default implementation returns "output"
     return std::vector<std::string>(1, std::string("output"));
   }
+  /*! \brief number of outputs of the symbol */
+  virtual int NumReturns() const {
+    return 1;
+  }
   /*!
    *  \brief set param for the symbol from string
    *  \param name parameter name
