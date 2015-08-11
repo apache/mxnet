@@ -7,8 +7,7 @@
 #include <dmlc/logging.h>
 #include <mxnet/base.h>
 #include <mxnet/narray.h>
-#include <mxnet/symbol.h>
-#include <mxnet/atomic_symbol.h>
+#include <mxnet/symbolic.h>
 #include <mxnet/registry.h>
 #include <mxnet/c_api.h>
 #include <mutex>

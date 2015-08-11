@@ -6,8 +6,6 @@
  */
 #include <dmlc/base.h>
 #include <mxnet/base.h>
-#include <mxnet/tensor_blob.h>
-#include <mxnet/static_operator.h>
 #include <mxnet/operator.h>
 #include <mxnet/narray.h>
 #include <mxnet/dag_engine.h>

@@ -3,12 +3,12 @@
  * \file fully_connect_op-inl.h
  * \brief fully connect operator and symbol
 */
-#ifndef MXNET_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
-#define MXNET_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
+#ifndef MXNET_OPERATOR_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
+#define MXNET_OPERATOR_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
 
 #include <dmlc/logging.h>
-#include <mxnet/static_operator.h>
-#include <mxnet/atomic_symbol.h>
+#include <mxnet/operator.h>
+#include <mxnet/symbolic.h>
 #include <vector>
 #include <string>
 #include "./static_operator_common.h"
@@ -160,4 +160,4 @@ class FullyConnectSymbol : public AtomicSymbol {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
+#endif  // MXNET_OPERATOR_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_

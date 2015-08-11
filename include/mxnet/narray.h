@@ -10,7 +10,6 @@
 #include <memory>
 #include "./base.h"
 #include "./storage.h"
-#include "./tensor_blob.h"
 #include "./dag_engine.h"
 // check c++11
 #if DMLC_USE_CXX11 == 0

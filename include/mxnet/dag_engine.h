@@ -15,7 +15,6 @@
 #include <functional>
 #include <vector>
 #include "./base.h"
-#include "./tensor_blob.h"
 
 namespace mxnet {
 /*!

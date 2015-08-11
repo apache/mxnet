@@ -12,7 +12,7 @@
 #include <vector>
 #include "./base.h"
 #include "./narray.h"
-#include "./symbol.h"
+#include "./symbolic.h"
 
 namespace mxnet {
 

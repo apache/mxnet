@@ -4,9 +4,8 @@
  * \brief symbol of mxnet
  */
 #include <dmlc/logging.h>
-#include <mxnet/symbol.h>
+#include <mxnet/symbolic.h>
 #include <mxnet/registry.h>
-#include <mxnet/static_graph.h>
 #include <vector>
 #include <sstream>
 #include <unordered_map>
