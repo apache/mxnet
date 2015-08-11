@@ -34,11 +34,13 @@ class CompositeOperator : public Operator {
   /*! \brief Make operator by using graph
    *  \param ctx ctx context of the created operator
    *  \param in input narray
-   *  \param graph input static graph
+   *  \param grad gradient narray
+   *  \param req gradient request
    */
   void Bind(Context ctx,
             const std::vector<NArray> &in,
-            std::shared_ptr<StaticGraph> graph);
+            const std::vector<NArray> &grad
+            const std::vector<GradReqType> &req);
   /*!
    * \brief perform a forward operation of operator, save the output to NArray
    *        This method only pushes an execution request to the DAG engine, and
@@ -54,6 +56,12 @@ class CompositeOperator : public Operator {
                        RunContext ctx,
                        const std::vector<NArray> &in_data,
                        const std::vector<NArray> &out_data);
+  /*!
+   * \brief perform a forward operation of operator (no change to binded NArray)
+   * \param opt option on Forward such as whether this is training phase
+   * \param ctx runtime context
+   */
+  virtual void Forward(Option opt, RunContext ctx);
   /*!
    * \brief perform a backward operation of the operator to get the gradient
    *        This method only pushes an execution request to the DAG engine, and
@@ -72,29 +80,42 @@ class CompositeOperator : public Operator {
                         const std::vector<NArray> &out_grad,
                         const std::vector<GradReqType> &req);
   /*!
-   * \brief perform an extraction operation to get feature map 
+   * \brief perform a backward operation of the operator to get the gradient
+   *        No change to Binded NArray
+   * \param ctx runtime context
+   */
+   virtual void Backward(RunContext ctx);
+  /*!
+   * \brief perform an extraction operation to get feature map
    * \param name of symbol need to be extracted
    * \return empty narray for invalid name or narray of the feature map
    */
   virtual NArray Extract(const std::string &symbol_name);
 
  private:
-  /*! \brief 
+  /*!
+   * \brief Update connections data in/after bind
+   *  \param in input narray
+   *  \param grad gradient narray
+   *  \param req gradient request
+   */
+  inline void UpdateConnection(const std::vector<NArray> &in,
+                               const std::vector<NArray> &grad,
+                               const std::vector<GradReqType> &req);
+  /*!
+   * \brief Structure for connection
+  */
   struct Connection {
-
+    std::unique_ptr<Operator> op;
+    std::vector<NArray> input;
+    std::vector<NArray> feature_map;
+    std::vector<NArray> grad;
+    std::vector<GradReqType> req;
   };
-  /*! \brief static operators for each node */
-  std::vector<unique_ptr<Operator> > static_ops_;
-  /*! \brief feature map for each op */
-  std::vector<std::vector<NArray> > feature_maps_;
-  /*! \brief input NArray link */
-  std::vector<std::vector<NArray> > in_data_;
-  /*! \brief input NArray gradient */
-  std::vector<std::vector<NArray> > in_grad_;
-  /*! \brief output NArray link */
-  std::vector<std::vector<NArray> > out_data_;
+  /*! \brief connections */
+  std::vector<Connection> connections;
   /*! \brief static graph */
-  std::shared_ptr<StaticGraph> graph_;
+  StaticGraph graph_;
 };  // class CompositeOperator
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_COMPOSITE_OPERATOR_H_
