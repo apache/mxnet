@@ -7,8 +7,7 @@
 #include <dmlc/logging.h>
 #include <mxnet/base.h>
 #include <mxnet/narray.h>
-#include <mxnet/symbol.h>
-#include <mxnet/atomic_symbol.h>
+#include <mxnet/symbolic.h>
 #include <mxnet/registry.h>
 #include <mxnet/c_api.h>
 #include <mutex>
@@ -99,11 +98,11 @@ using namespace mxnet;
 
 /*! \brief  macro to guard beginning and end section of all functions */
 #define API_BEGIN() try {
-/*! \brief every function starts with API_BEGIN(); 
+/*! \brief every function starts with API_BEGIN();
      and finishes with API_END() or API_END_HANDLE_ERROR */
 #define API_END() } catch(dmlc::Error &e) { return MXHandleException(e); } return 0;
 /*!
- * \brief every function starts with API_BEGIN(); 
+ * \brief every function starts with API_BEGIN();
  *   and finishes with API_END() or API_END_HANDLE_ERROR
  *   The finally clause contains procedure to cleanup states when an error happens.
  */
@@ -317,6 +316,21 @@ int MXSymbolCreateVariable(const char *name, SymbolHandle *out) {
   API_END_HANDLE_ERROR(delete s);
 }
 
+int MXSymbolCreateGroup(mx_uint num_symbols,
+                        SymbolHandle *symbols,
+                        SymbolHandle *out) {
+  MXAPISymbolWrapper *s = new MXAPISymbolWrapper();
+  MXAPISymbolWrapper **sym_arr = (MXAPISymbolWrapper**)symbols; // NOLINT(*)
+  API_BEGIN();
+  std::vector<Symbol> syms;
+  for (mx_uint i = 0; i < num_symbols; ++i) {
+    syms.push_back(sym_arr[i]->sym);
+  }
+  s->sym = Symbol::CreateGroup(syms);
+  *out = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
 int MXSymbolFree(SymbolHandle symbol) {
   API_BEGIN();
   delete static_cast<MXAPISymbolWrapper*>(symbol);
@@ -348,11 +362,10 @@ int MXSymbolListArguments(SymbolHandle symbol,
                           const char ***out_str_array) {
   MXAPISymbolWrapper *s = static_cast<MXAPISymbolWrapper*>(symbol);
   API_BEGIN();
-  if (s->ret_vec_charp.size() == 0) {
-    s->ret_vec_str = std::move((s->sym).ListArguments());
-    for (size_t i = 0; i < s->ret_vec_str.size(); ++i) {
-      s->ret_vec_charp.push_back(s->ret_vec_str[i].c_str());
-    }
+  s->ret_vec_str = std::move((s->sym).ListArguments());
+  s->ret_vec_charp.clear();
+  for (size_t i = 0; i < s->ret_vec_str.size(); ++i) {
+    s->ret_vec_charp.push_back(s->ret_vec_str[i].c_str());
   }
   *out_size = static_cast<mx_uint>(s->ret_vec_charp.size());
   *out_str_array = dmlc::BeginPtr(s->ret_vec_charp);
@@ -364,12 +377,10 @@ int MXSymbolListReturns(SymbolHandle symbol,
                           const char ***out_str_array) {
   MXAPISymbolWrapper *s = static_cast<MXAPISymbolWrapper*>(symbol);
   API_BEGIN();
+  s->ret_vec_str = std::move((s->sym).ListReturns());
   s->ret_vec_charp.clear();
-  if (s->ret_vec_charp.size() == 0) {
-    s->ret_vec_str = std::move((s->sym).ListReturns());
-    for (size_t i = 0; i < s->ret_vec_str.size(); ++i) {
-      s->ret_vec_charp.push_back(s->ret_vec_str[i].c_str());
-    }
+  for (size_t i = 0; i < s->ret_vec_str.size(); ++i) {
+    s->ret_vec_charp.push_back(s->ret_vec_str[i].c_str());
   }
   *out_size = static_cast<mx_uint>(s->ret_vec_charp.size());
   *out_str_array = dmlc::BeginPtr(s->ret_vec_charp);

@@ -6,7 +6,7 @@
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
 #include <mxnet/registry.h>
-#include <mxnet/symbol.h>
+#include <mxnet/symbolic.h>
 
 namespace mxnet {
 

@@ -4,7 +4,7 @@
  * \brief static graph of mxnet
  */
 #include <dmlc/logging.h>
-#include <mxnet/static_graph.h>
+#include <mxnet/symbolic.h>
 #include <vector>
 #include <queue>
 

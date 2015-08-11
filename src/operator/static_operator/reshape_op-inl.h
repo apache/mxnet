@@ -4,10 +4,10 @@
  * \brief
  * \author Bing Xu
 */
-#ifndef MXNET_STATIC_OPERATOR_RESHAPE_OP_INL_H_
-#define MXNET_STATIC_OPERATOR_RESHAPE_OP_INL_H_
+#ifndef MXNET_OPERATOR_STATIC_OPERATOR_RESHAPE_OP_INL_H_
+#define MXNET_OPERATOR_STATIC_OPERATOR_RESHAPE_OP_INL_H_
 
-#include <mxnet/static_operator.h>
+#include <mxnet/operator.h>
 #include <vector>
 
 namespace mxnet {
@@ -72,4 +72,4 @@ class ReshapeOp : public StaticOperator {
 
 }  //  namespace op
 }  //  namespace mxnet
-#endif  // MXNET_STATIC_OPERATOR_RESHAPE_OP_INL_H_
+#endif  // MXNET_OPERATOR_STATIC_OPERATOR_RESHAPE_OP_INL_H_

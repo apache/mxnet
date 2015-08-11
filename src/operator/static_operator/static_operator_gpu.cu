@@ -5,7 +5,6 @@
  * \author Bing Xu
 */
 #include <mxnet/base.h>
-#include <mxnet/tensor_blob.h>
 #include "static_operator-inl.h"
 
 namespace mxnet {

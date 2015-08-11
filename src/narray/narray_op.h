@@ -8,7 +8,6 @@
 #include <dmlc/logging.h>
 #include <mshadow/tensor.h>
 #include <mxnet/base.h>
-#include <mxnet/tensor_blob.h>
 
 namespace mxnet {
 /*! \brief namespace to support all possible NArray operator */

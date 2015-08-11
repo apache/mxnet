@@ -6,7 +6,7 @@
  */
 #include <dmlc/logging.h>
 #include <mxnet/base.h>
-#include <mxnet/static_operator.h>
+#include <mxnet/operator.h>
 #include <cstring>
 #include "./static_operator_common.h"
 

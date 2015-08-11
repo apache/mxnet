@@ -6,13 +6,12 @@
 */
 #ifndef MXNET_OPERATOR_COMPOSITE_OPERATOR_H_
 #define MXNET_OPERATOR_COMPOSITE_OPERATOR_H_
+#include <mxnet/base.h>
+#include <mxnet/symbolic.h>
+#include <mxnet/operator.h>
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include "./atomic_symbol.h"
-#include "./base.h"
-#include "./static_graph.h"
-#include "./static_operator.h"
 
 namespace mxnet {
 /*!
@@ -34,11 +33,13 @@ class CompositeOperator : public Operator {
   /*! \brief Make operator by using graph
    *  \param ctx ctx context of the created operator
    *  \param in input narray
-   *  \param graph input static graph
+   *  \param grad gradient narray
+   *  \param req gradient request
    */
   void Bind(Context ctx,
             const std::vector<NArray> &in,
-            std::shared_ptr<StaticGraph> graph);
+            const std::vector<NArray> &grad
+            const std::vector<GradReqType> &req);
   /*!
    * \brief perform a forward operation of operator, save the output to NArray
    *        This method only pushes an execution request to the DAG engine, and
@@ -54,6 +55,11 @@ class CompositeOperator : public Operator {
                        RunContext ctx,
                        const std::vector<NArray> &in_data,
                        const std::vector<NArray> &out_data);
+  /*!
+   * \brief perform a forward operation of operator (no change to binded NArray)
+   * \param opt option on Forward such as whether this is training phase
+   */
+  virtual void Forward(Option opt);
   /*!
    * \brief perform a backward operation of the operator to get the gradient
    *        This method only pushes an execution request to the DAG engine, and
@@ -72,31 +78,54 @@ class CompositeOperator : public Operator {
                         const std::vector<NArray> &out_grad,
                         const std::vector<GradReqType> &req);
   /*!
-   * \brief perform an extraction operation to get feature map 
+   * \brief perform a backward operation of the operator to get the gradient
+   *        No change to Binded NArray
+   */
+  virtual void Backward();
+  /*!
+   * \brief perform an extraction operation to get feature map
    * \param name of symbol need to be extracted
    * \return empty narray for invalid name or narray of the feature map
    */
   virtual NArray Extract(const std::string &symbol_name);
 
  private:
-  /*! \brief 
-  struct Connection {
-
+  /*!
+   * \brief Update connections data in/after bind
+   *  \param in input narray
+   *  \param grad gradient narray
+   *  \param req gradient request
+   */
+  void UpdateConnection(const std::vector<NArray> &in,
+                        const std::vector<NArray> &grad,
+                        const std::vector<GradReqType> &req);
+  /*!
+   * \brief Allocate each op node
+   */
+  void AllocateNodes(RunContext ctx);
+  /*!
+   * \brief Structure for OpNode
+  */
+  struct OpNode {
+    /*! \brief Static Operator */
+    std::unique_ptr<Operator> op;
+    /*! \brief inputs (init after setting output correctly) */
+    std::vector<NArray> inputs;
+    /*! \brief outputs */
+    std::vector<NArray> outputs;
+    /*! \brief gradient for output */
+    std::vector<NArray> outputs_grad;
+    /*! \brief gradient req for grad */
+    std::vector<GradReqType> req;
+    /*! \brief is variable */
+    bool is_variable;
   };
-  /*! \brief static operators for each node */
-  std::vector<unique_ptr<Operator> > static_ops_;
-  /*! \brief feature map for each op */
-  std::vector<std::vector<NArray> > feature_maps_;
-  /*! \brief input NArray link */
-  std::vector<std::vector<NArray> > in_data_;
-  /*! \brief input NArray gradient */
-  std::vector<std::vector<NArray> > in_grad_;
-  /*! \brief output NArray link */
-  std::vector<std::vector<NArray> > out_data_;
+  /*! \brief connections */
+  std::vector<OpNode> nodes_;
+  /*! \brief topo order of connections */
+  std::vector<uint_32> topo_order_;
   /*! \brief static graph */
-  std::shared_ptr<StaticGraph> graph_;
+  StaticGraph graph_;
 };  // class CompositeOperator
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_COMPOSITE_OPERATOR_H_
-
-

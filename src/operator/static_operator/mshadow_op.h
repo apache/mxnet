@@ -4,8 +4,8 @@
  * \brief extra mshadow operation for mxnet
  * \author Bing Xu
  */
-#ifndef MXNET_STATIC_OPERATOR_MSHADOW_OP_H_
-#define MXNET_STATIC_OPERATOR_MSHADOW_OP_H_
+#ifndef MXNET_OPERATOR_STATIC_OPERATOR_MSHADOW_OP_H_
+#define MXNET_OPERATOR_STATIC_OPERATOR_MSHADOW_OP_H_
 #include <mxnet/base.h>
 #include <algorithm>
 
@@ -102,5 +102,5 @@ struct square_root {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_STATIC_OPERATOR_MSHADOW_OP_H_
+#endif  // MXNET_OPERATOR_STATIC_OPERATOR_MSHADOW_OP_H_
 
