@@ -56,16 +56,16 @@ endif
 
 #BIN = test/test_threaded_engine test/api_registry_test
 BIN = test/api_registry_test
-OBJ = storage.o narray_op_cpu.o static_operator.o static_operator_cpu.o
+OBJ = storage.o narray_op_cpu.o
 # add threaded engine after it is done
-OBJCXX11 = engine.o narray.o c_api.o registry.o symbol.o operator.o  fully_connect_op_cpu.o
+OBJCXX11 = engine.o narray.o c_api.o registry.o symbol.o fully_connect_op_cpu.o
 CUOBJ =
 SLIB = lib/libmxnet.so
 ALIB = lib/libmxnet.a
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
 
 ifeq ($(USE_CUDA), 1)
-	CUOBJ += narray_op_gpu.o static_operator_gpu.o  fully_connect_op_gpu.o
+	CUOBJ += narray_op_gpu.o fully_connect_op_gpu.o
 endif
 
 .PHONY: clean all test lint doc

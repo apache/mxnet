@@ -8,26 +8,15 @@
 namespace mxnet {
 namespace op {
 template<>
-StaticOperator* FullyConnectSymbol::Bind_<cpu>(Context ctx) const {
-  return new FullyConnectOp<cpu>(param_);
+StaticOperator* CreateFullyConnectedOp<cpu>(Param param) {
+  return new FullyConnectOp<cpu>(param);
 }
 
-// put this after the template specialization
+// DO_BIND_DISPATCH comes from static_operator_common.h
 StaticOperator* FullyConnectSymbol::Bind(Context ctx) const {
-  if (ctx.dev_mask == cpu::kDevMask) {
-    return Bind_<cpu>(ctx);
-  } else {
-    #if MXNET_USE_CUDA
-    return Bind_<gpu>(ctx);
-    #else
-    LOG(FATAL) << "GPU is not enabled";
-    return NULL;
-    #endif
-  }
+  DO_BIND_DISPATCH(CreateFullyConnectedOp, param_);
 }
 
-// register the symbol
 REGISTER_ATOMIC_SYMBOL(FullyConnected, FullyConnectSymbol);
-
 }  // namespace op
 }  // namespace mxnet
