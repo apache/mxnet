@@ -85,6 +85,14 @@ class StaticOperator {
 };
 
 #if DMLC_USE_CXX11
+                        const std::vector<TBlob> &out_grad,
+                        const std::vector<TBlob> &in_data,
+                        const std::vector<TBlob> &out_data,
+                        const std::vector<OpReqType> &req,
+                        const std::vector<TBlob> &in_grad) = 0;
+};
+
+#if DMLC_USE_CXX11
 /*!
  * \brief Operator interface.
  *  Operator is an object can have Forward and Backward function.
