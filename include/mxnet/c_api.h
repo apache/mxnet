@@ -385,6 +385,7 @@ MXNET_DLL int MXOpForward(OperatorHandle op,
  * \param op the operator handle
  * \param grad_next array of output gradients
  * \param in_data array of input narray to the operator
+ * \param out_data array of output narray to the operator
  * \param out_grad array to holds the gradient on these input
  *    can be NULL if that position request is kNullOp
  * \param reqs gradient request type
@@ -394,6 +395,7 @@ MXNET_DLL int MXOpForward(OperatorHandle op,
 MXNET_DLL int MXOpBackward(OperatorHandle op,
                            NArrayHandle *grad_next,
                            NArrayHandle *in_data,
+                           NArrayHandle *out_data,
                            NArrayHandle *out_grad,
                            mx_uint *reqs);
 

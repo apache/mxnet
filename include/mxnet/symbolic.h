@@ -12,7 +12,8 @@
 #include <memory>
 #include <string>
 #include <map>
-#if DMLC_USE_CXX11 == 1
+#include <utility>
+#if DMLC_USE_CXX11
 #include <unordered_map>
 #include <unordered_set>
 #endif
@@ -21,6 +22,7 @@
 namespace mxnet {
 // forward declare StaticOperator
 class StaticOperator;
+#if DMLC_USE_CXX11
 /*!
  * \brief AtomicSymbol is the base class of all atomic symbols.
  *  This is not meant to be used by user, it should be wrapped in Symbol, so that the same instance
@@ -78,15 +80,129 @@ class AtomicSymbol {
    *  Bind function of AtomicSymbol does not return NArrayOperator, but static operator.
    *  Calling bind from the Symbol wrapper would generate a NArrayOperator.
    */
-  template<typename xpu>
   StaticOperator* Bind(Context ctx) const;
   /*!
    * \brief return the type string of the atomic symbol
    *  subclasses override this function.
    */
   virtual std::string TypeString() const = 0;
-  friend class Symbol;
-
+  /*!
+   * \brief Declare the input requirement of Backward pass.
+   *
+   *  Only the returned list of variables will be used in Backward.
+   *  This function is used for memory optimization.
+   *  It is adviced to override and only return what is actually needed.
+   *  If this function is not overriden, all the variables will be valid in Backward.
+   *
+   * \code
+   *  // The following code declares Backward need out_grad[0], in_data[0],in_data[1]
+   *  vector<int> BackwardInputs(const vector<int> &out_grad,
+   *                             const vector<int> &in_data,
+   *                             const vector<int> &out_data) const {
+   *    return {out_grad[0], in_data[0], in_data[1]};
+   *  }
+   * \endcode
+   * \param out_grad gradient of outputs in backward pass.
+   * \param in_data the input data in forward pass.
+   * \param out_data the output data in forward pass.
+   * \return an integer vector indicating the input requirments
+   * \sa BackwardInputs
+   */
+  virtual std::vector<int> DeclareBackwardDependency(
+      const std::vector<int> &out_grad,
+      const std::vector<int> &in_data,
+      const std::vector<int> &out_data) const {
+    // By default requires to see all the things.
+    // remember to override this function to get a better performance.
+    std::vector<int> ret = out_grad;
+    ret.insert(ret.end(), in_data.begin(), in_data.end());
+    ret.insert(ret.end(), out_data.begin(), out_data.end());
+    return ret;
+  }
+  /*!
+   * \brief Get possible forward inplace options.
+   *  This function enables optimization to reuse memory of inputs in output.
+   *  Only override when necessary, by default in-place is disabled.
+   *
+   * \code
+   *  // The following code says out_data[0] can share data with in_data[0]
+   *  vector<pair<int,int> > ForwardInplaceOption(const vector<int> &in_data,
+   *                                              const vector<int> &out_data) const {
+   *    return {{out_data[0], in_data[0]}};
+   *  }
+   * \endcode
+   * \return list of pair of integers taken from the inputs vector,
+   *   indicating possible in place operations.
+   */
+  virtual std::vector<std::pair<int, int> > ForwardInplaceOption(
+      const std::vector<int> &in_data,
+      const std::vector<int> &out_data) const {
+    return std::vector<std::pair<int, int> >();
+  }
+  /*!
+   * \brief Get possible backward inplace options.
+   *  This function enables optimization to reuse memory of inputs in output.
+   *  Only override when necessary, by default in-place is disabled.
+   *
+   * \code
+   *  // The following code says in_grad[0] can share data with in_data[0]
+   *  vector<pair<int,int> > BackwardInplaceOption(
+   *                 const std::vector<int> &out_grad,
+   *                 const std::vector<int> &in_data,
+   *                 const std::vector<int> &out_data,
+   *                 const std::vector<int> &in_grad) const {
+   *    return {in_grad[0], in_data[0]}};
+   *  }
+   * \endcode
+   * \return list of pair of integers taken from the inputs vector,
+   *   indicating possible in place operations.
+   */
+  virtual std::vector<std::pair<int, int> > BackwardInplaceOption(
+      const std::vector<int> &out_grad,
+      const std::vector<int> &in_data,
+      const std::vector<int> &out_data,
+      const std::vector<int> &in_grad) const {
+    return std::vector<std::pair<int, int> >();
+  }
+  /*!
+   * \brief Get Backward Input Dependency for generic types of data.
+   *  Normally T can be pointer of Symbol::DataEntry, or NArray.
+   *  This function will select the result list of T according to DeclareBackwardDependency.
+   *
+   * \param in_data the input data in forward pass.
+   * \param out_data the output data in forward pass.
+   * \param out_grad gradient of outputs in backward pass.
+   * \tparam T the generic type parameter.
+   * \return vector of inputs the Backward Operation depends on.
+   * \sa DeclareBackwardDependency
+   */
+  template<typename T>
+  inline std::vector<T> BackwardInputs(const std::vector<T> &in_data,
+                                       const std::vector<T> &out_data,
+                                       const std::vector<T> &out_grad) const {
+    int cnt = 0;
+    std::vector<T> all_vec;
+    std::vector<int> in_data_idx, out_data_idx, out_grad_idx;
+    for (size_t i = 0; i < in_data.size(); ++i) {
+      in_data_idx.push_back(cnt++);
+      all_vec.push_back(in_data[i]);
+    }
+    for (size_t i = 0; i < out_data.size(); ++i) {
+      out_data_idx.push_back(cnt++);
+      all_vec.push_back(out_data[i]);
+    }
+    for (size_t i = 0; i < out_grad.size(); ++i) {
+      out_grad_idx.push_back(cnt++);
+      all_vec.push_back(out_data[i]);
+    }
+    std::vector<int> ret_idx = this->DeclareBackwardDependency(
+        in_data_idx, out_data_idx, out_grad_idx);
+    std::vector<T> ret;
+    for (size_t i = 0; i < ret_idx.size(); ++i) {
+      ret.push_back(all_vec[ret_idx[i]]);
+    }
+    return ret;
+  }
   /*!
    * \brief create atomic symbol by type name
    * \param type_name the type string of the AtomicSymbol
@@ -94,7 +210,7 @@ class AtomicSymbol {
    */
   static AtomicSymbol *Create(const char* type_name);
 };
-#if DMLC_USE_CXX11 == 1
+
 /*!
  * \brief StaticGraph is the configuration of computation graphs.
  *  This is the "configuration file" of mxnet.
@@ -162,8 +278,6 @@ class StaticGraph {
   bool InferShape(std::vector<TShape> *in_shape,
                   std::vector<TShape> *out_shape) const;
 };
-#endif
-#if DMLC_USE_CXX11 == 1
 /*!
  * \brief Symbol is used to represent dynamically generated symbolic computation graph.
  *
@@ -422,6 +536,6 @@ class Symbol {
    */
   int FindDuplicateArgs(std::unordered_map<std::string, int> *out) const;
 };
-#endif
+#endif  // DMLC_USE_CXX11
 }  // namespace mxnet
 #endif  // MXNET_SYMBOLIC_H_
