@@ -55,27 +55,29 @@ class StaticOperatorWrapper: public Operator {
   virtual void Backward(RunContext ctx,
                         const std::vector<NArray> &grad_next,
                         const std::vector<NArray> &in_data,
+                        const std::vector<NArray> &out_data,
                         const std::vector<NArray> &out_grad,
                         const std::vector<GradReqType> &req) {
     std::vector<DAGEngine::Variable> used_var;
     std::vector<DAGEngine::Variable> mutate_var;
     std::vector<TBlob> grad_in;
     std::vector<TBlob> grad_out;
-    std::vector<TBlob> data;
+    std::vector<TBlob> data_in;
+    std::vector<TBlob> data_out;
     for (size_t i = 0; i < grad_next.size(); ++i) {
       used_var.push_back(grad_next[i].var());
       grad_in.push_back(grad_next[i].data());
     }
     for (size_t i = 0; i < in_data.size(); ++i) {
       used_var.push_back(in_data[i].var());
-      data.push_back(in_data[i].data());
+      data_in.push_back(in_data[i].data());
     }
     for (size_t i = 0; i < out_grad.size(); ++i) {
       mutate_var.push_back(out_grad[i].var());
       grad_out.push_back(out_grad[i].data());
     }
-    DAGEngine::Get()->Push([this, ctx, grad_in, grad_out, data, req](RunContext ctx) {
-        op_->Backward(ctx, grad_in, data, grad_out, req);
+    DAGEngine::Get()->Push([this, ctx, grad_in, grad_out, data_in, data_out, req](RunContext ctx) {
+        op_->Backward(ctx, grad_in, data_in, data_out, grad_out, req);
       }, ctx_, used_var, mutate_var);
   }
 

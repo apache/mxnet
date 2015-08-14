@@ -53,6 +53,7 @@ class StaticOperator {
    * \param ctx runtime context
    * \param grad_next the gradient value we get from output of the StaticOperator
    * \param in_data the array of input data
+   * \param out_data the array of output data
    * \param out_grad array of output gradient, there could be three possible TBlob
    *  in the each element in the array
    * \param req request types of the gradient saving operation
@@ -62,6 +63,7 @@ class StaticOperator {
   virtual void Backward(RunContext ctx,
                         const std::vector<TBlob> &grad_next,
                         const std::vector<TBlob> &in_data,
+                        const std::vector<TBlob> &out_data,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<GradReqType> &req) = 0;
   /*!
@@ -113,6 +115,7 @@ class Operator {
    * \param ctx runtime context
    * \param grad_next the gradient value of the output of the operator, used by chain rule.
    * \param in_data the array of input data
+   * \param out_data the array of output data
    * \param out_grad array of output gradient
    * \param req request types of the gradient saving operation
    *                  only inplace will change input data
@@ -121,6 +124,7 @@ class Operator {
   virtual void Backward(RunContext ctx,
                         const std::vector<NArray> &grad_next,
                         const std::vector<NArray> &in_data,
+                        const std::vector<NArray> &out_data,
                         const std::vector<NArray> &out_grad,
                         const std::vector<GradReqType> &req) = 0;
   /*!

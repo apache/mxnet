@@ -56,6 +56,7 @@ class FullyConnectOp : public StaticOperator {
   virtual void Backward(RunContext ctx,
                         const std::vector<TBlob> &grad_next,
                         const std::vector<TBlob> &in_data,
+                        const std::vector<TBlob> &out_data,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<GradReqType> &req) {
     using namespace mshadow;

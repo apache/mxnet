@@ -67,6 +67,7 @@ class CompositeOperator : public Operator {
    * \param ctx runtime context
    * \param grad_next the gradient value of the output of the operator, used by chain rule.
    * \param in_data the array of input data
+   * \param out_data the array of output data
    * \param out_grad array of output gradient
    * \param req request types of the gradient saving operation
    *                  only inplace will change input data
@@ -75,6 +76,7 @@ class CompositeOperator : public Operator {
   virtual void Backward(RunContext ctx,
                         const std::vector<NArray> &grad_next,
                         const std::vector<NArray> &in_data,
+                        const std::vector<NArray> &out_data,
                         const std::vector<NArray> &out_grad,
                         const std::vector<GradReqType> &req);
   /*!
