@@ -225,7 +225,7 @@ MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
 MXNET_DLL int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
                                           const char **out);
 /*!
- * \brief create Symbol by wrapping AtomicSymbol
+ * \brief Create an AtomicSymbol.
  * \param creator the AtomicSymbolCreator
  * \param num_param the number of parameters
  * \param keys the keys to the params
@@ -233,11 +233,11 @@ MXNET_DLL int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
  * \param out pointer to the created symbol handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSymbolCreateFromAtomicSymbol(AtomicSymbolCreator creator,
-                                             int num_param,
-                                             const char **keys,
-                                             const char **vals,
-                                             SymbolHandle *out);
+MXNET_DLL int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
+                                         int num_param,
+                                         const char **keys,
+                                         const char **vals,
+                                         SymbolHandle *out);
 /*!
  * \brief Create a Variable Symbol.
  * \param name name of the variable

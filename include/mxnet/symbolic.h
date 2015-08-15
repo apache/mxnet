@@ -1,216 +1,29 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file symbolic.h
- * \brief
- * \author Bing Xu
+ * \brief Symbolic interface of mxnet.
+ * \author Min Lin, Bing Xu
 */
-
 #ifndef MXNET_SYMBOLIC_H_
 #define MXNET_SYMBOLIC_H_
 
+#include <dmlc/base.h>
 #include <vector>
 #include <memory>
 #include <string>
-#include <map>
 #include <utility>
-#if DMLC_USE_CXX11
 #include <unordered_map>
 #include <unordered_set>
-#endif
 #include "./base.h"
+#include "./narray.h"
+#include "./operator.h"
+
+// check c++11
+#if DMLC_USE_CXX11 == 0
+#error "CXX11 was required for symbolic module"
+#endif
 
 namespace mxnet {
-// forward declare StaticOperator
-class StaticOperator;
-#if DMLC_USE_CXX11
-/*!
- * \brief AtomicSymbol is the base class of all atomic symbols.
- *  This is not meant to be used by user, it should be wrapped in Symbol, so that the same instance
- *  of AtomicSymbol can be shared in the graphs of different Symbols
- */
-class AtomicSymbol {
- public:
-  /*!
-   * \brief virtual destructor
-   */
-  virtual ~AtomicSymbol() {}
-  /*! \brief get the descriptions of inputs for this symbol */
-  virtual std::vector<std::string> ListArguments() const {
-    // default implementation returns "data"
-    return std::vector<std::string>(1, std::string("data"));
-  }
-  /*! \brief get the descriptions of outputs for this symbol */
-  virtual std::vector<std::string> ListReturns() const {
-    // default implementation returns "output"
-    return std::vector<std::string>(1, std::string("output"));
-  }
-  /*! \brief number of outputs of the symbol */
-  virtual int NumReturns() const {
-    return 1;
-  }
-  /*!
-   *  \brief set param for the symbol from string
-   *  \param name parameter name
-   *  \param val string for the configuration
-   */
-  virtual void SetParam(const char *name, const char *val) {}
-  /*!
-   * \brief infer the shapes of outputs and unknown input arguments
-   * \param in_shape the shape of input arguments of the operator
-   *     this should be of same length as the vector returned by DescribeArgs
-   *     in_shape allows unknown elements, which are checked by shape.ndim() == 0.
-   *     For unknown shapes, InferShape will try to fill in the correct Shape in in_shape
-   *     For known shapes, InferShape will check shape consistency
-   *
-   *     common practice: set the shape of data input, and usually weight's shape can be infered
-   *
-   * \param out_shape the shape of outputs of the operator
-   *     InferShape will modify the vector to fill output TShape
-   * \return if the shape inference is successful, return true, else return false.
-   */
-  virtual bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) const = 0;
-  /*!
-   * \brief Copy this AtomicSymbol and returns a pointer to the copied object.
-   *  this is a virtual function because different subclass of AtomicSymbol would copy differently.
-   * \return a pointer to the copied atomic symbol
-   */
-  virtual AtomicSymbol* Copy() const = 0;
-  /*!
-   * \brief Bind this AtomicSymbol to a context and get back a static operator
-   *  Bind function of AtomicSymbol does not return NArrayOperator, but static operator.
-   *  Calling bind from the Symbol wrapper would generate a NArrayOperator.
-   */
-  StaticOperator* Bind(Context ctx) const;
-  /*!
-   * \brief return the type string of the atomic symbol
-   *  subclasses override this function.
-   */
-  virtual std::string TypeString() const = 0;
-  /*!
-   * \brief Declare the input requirement of Backward pass.
-   *
-   *  Only the returned list of variables will be used in Backward.
-   *  This function is used for memory optimization.
-   *  It is adviced to override and only return what is actually needed.
-   *  If this function is not overriden, all the variables will be valid in Backward.
-   *
-   * \code
-   *  // The following code declares Backward need out_grad[0], in_data[0],in_data[1]
-   *  vector<int> BackwardInputs(const vector<int> &out_grad,
-   *                             const vector<int> &in_data,
-   *                             const vector<int> &out_data) const {
-   *    return {out_grad[0], in_data[0], in_data[1]};
-   *  }
-   * \endcode
-   * \param out_grad gradient of outputs in backward pass.
-   * \param in_data the input data in forward pass.
-   * \param out_data the output data in forward pass.
-   * \return an integer vector indicating the input requirments
-   * \sa BackwardInputs
-   */
-  virtual std::vector<int> DeclareBackwardDependency(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const {
-    // By default requires to see all the things.
-    // remember to override this function to get a better performance.
-    std::vector<int> ret = out_grad;
-    ret.insert(ret.end(), in_data.begin(), in_data.end());
-    ret.insert(ret.end(), out_data.begin(), out_data.end());
-    return ret;
-  }
-  /*!
-   * \brief Get possible forward inplace options.
-   *  This function enables optimization to reuse memory of inputs in output.
-   *  Only override when necessary, by default in-place is disabled.
-   *
-   * \code
-   *  // The following code says out_data[0] can share data with in_data[0]
-   *  vector<pair<int,int> > ForwardInplaceOption(const vector<int> &in_data,
-   *                                              const vector<int> &out_data) const {
-   *    return {{out_data[0], in_data[0]}};
-   *  }
-   * \endcode
-   * \return list of pair of integers taken from the inputs vector,
-   *   indicating possible in place operations.
-   */
-  virtual std::vector<std::pair<int, int> > ForwardInplaceOption(
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const {
-    return std::vector<std::pair<int, int> >();
-  }
-  /*!
-   * \brief Get possible backward inplace options.
-   *  This function enables optimization to reuse memory of inputs in output.
-   *  Only override when necessary, by default in-place is disabled.
-   *
-   * \code
-   *  // The following code says in_grad[0] can share data with in_data[0]
-   *  vector<pair<int,int> > BackwardInplaceOption(
-   *                 const std::vector<int> &out_grad,
-   *                 const std::vector<int> &in_data,
-   *                 const std::vector<int> &out_data,
-   *                 const std::vector<int> &in_grad) const {
-   *    return {in_grad[0], in_data[0]}};
-   *  }
-   * \endcode
-   * \return list of pair of integers taken from the inputs vector,
-   *   indicating possible in place operations.
-   */
-  virtual std::vector<std::pair<int, int> > BackwardInplaceOption(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data,
-      const std::vector<int> &in_grad) const {
-    return std::vector<std::pair<int, int> >();
-  }
-  /*!
-   * \brief Get Backward Input Dependency for generic types of data.
-   *  Normally T can be pointer of Symbol::DataEntry, or NArray.
-   *  This function will select the result list of T according to DeclareBackwardDependency.
-   *
-   * \param in_data the input data in forward pass.
-   * \param out_data the output data in forward pass.
-   * \param out_grad gradient of outputs in backward pass.
-   * \tparam T the generic type parameter.
-   * \return vector of inputs the Backward Operation depends on.
-   * \sa DeclareBackwardDependency
-   */
-  template<typename T>
-  inline std::vector<T> BackwardInputs(const std::vector<T> &in_data,
-                                       const std::vector<T> &out_data,
-                                       const std::vector<T> &out_grad) const {
-    int cnt = 0;
-    std::vector<T> all_vec;
-    std::vector<int> in_data_idx, out_data_idx, out_grad_idx;
-    for (size_t i = 0; i < in_data.size(); ++i) {
-      in_data_idx.push_back(cnt++);
-      all_vec.push_back(in_data[i]);
-    }
-    for (size_t i = 0; i < out_data.size(); ++i) {
-      out_data_idx.push_back(cnt++);
-      all_vec.push_back(out_data[i]);
-    }
-    for (size_t i = 0; i < out_grad.size(); ++i) {
-      out_grad_idx.push_back(cnt++);
-      all_vec.push_back(out_data[i]);
-    }
-    std::vector<int> ret_idx = this->DeclareBackwardDependency(
-        in_data_idx, out_data_idx, out_grad_idx);
-    std::vector<T> ret;
-    for (size_t i = 0; i < ret_idx.size(); ++i) {
-      ret.push_back(all_vec[ret_idx[i]]);
-    }
-    return ret;
-  }
-  /*!
-   * \brief create atomic symbol by type name
-   * \param type_name the type string of the AtomicSymbol
-   * \return a new constructed AtomicSymbol
-   */
-  static AtomicSymbol *Create(const char* type_name);
-};
-
 /*!
  * \brief StaticGraph is the configuration of computation graphs.
  *  This is the "configuration file" of mxnet.
@@ -222,16 +35,13 @@ class StaticGraph {
   struct DataEntry {
     /*! \brief the source node id in the computation graph */
     uint32_t source_id;
-    /*!
-     * \brief index of output from the source.
-     * If index == -1, it represents all the outputs.
-     */
-    int32_t index;
+    /*! \brief index of output from the source. */
+    uint32_t index;
   };
   /*! \brief Operation Node in static graph */
   struct Node {
-    /*! \brief wrapped atomic symbol */
-    std::unique_ptr<AtomicSymbol> sym;
+    /*! \brief wrapped operator property */
+    std::unique_ptr<OperatorProperty> op;
     /*! \brief name of the node */
     std::string name;
     /*! \brief inputs (node_id, index) for of the nodes*/
@@ -278,6 +88,7 @@ class StaticGraph {
   bool InferShape(std::vector<TShape> *in_shape,
                   std::vector<TShape> *out_shape) const;
 };
+
 /*!
  * \brief Symbol is used to represent dynamically generated symbolic computation graph.
  *
@@ -352,24 +163,15 @@ class Symbol {
    * \param name name of returned symbol.
    * \return a new Symbol which is the composition of current symbol with its arguments
    */
-  inline Symbol operator () (const std::vector<Symbol>& args,
-                             const std::string& name) const {
-    Symbol s = this->Copy();
-    s.Compose(args, name);
-    return s;
-  }
+  Symbol operator () (const std::vector<Symbol>& args, const std::string& name) const;
   /*!
    * \brief compose with named arguments
    * \param kwargs keyword arguments for the symbol
    * \param name name of returned symbol.
    * \return a new symbol which is the composition of current symbol with its arguments
    */
-  inline Symbol operator () (const std::unordered_map<std::string, Symbol>& kwargs,
-                             const std::string& name) const {
-    Symbol s = this->Copy();
-    s.Compose(kwargs, name);
-    return s;
-  }
+  Symbol operator () (const std::unordered_map<std::string, Symbol>& kwargs,
+                      const std::string& name) const;
   /*!
    * \brief infer the shapes of outputs and unknown input arguments
    * \param in_shape the shape of input arguments of the operator
@@ -384,12 +186,7 @@ class Symbol {
    *     InferShape will modify the vector to fill output TShape
    * \return if the shape inference is successful, return true, else return false.
    */
-  inline bool InferShape(std::vector<TShape> *in_shape,
-                         std::vector<TShape> *out_shape) const {
-    StaticGraph g;
-    this->ToStaticGraph(&g);
-    return g.InferShape(in_shape, out_shape);
-  }
+  bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) const;
   /*!
    * \brief get number of outputs of this symbol
    * \return number of outputs
@@ -398,54 +195,41 @@ class Symbol {
     return heads_.size();
   }
   /*!
-   * \brief create Symbol by wrapping AtomicSymbol
-   * This function takes the ownership of atomic_symbol.
+   * \brief create Symbol by wrapping OperatorProperty
+   * This function takes the ownership of op
    *
-   * \param atomic_symbol the AtomicSymbol
+   * \param op the OperatorProperty of the Operator
    * \return Symbol
-   * \sa AtomicSymbol::Create
+   * \sa OperatorProperty::Create
    */
-  static Symbol Create(AtomicSymbol *atomic_symbol);
+  static Symbol Create(OperatorProperty *op);
   /*!
    * \brief create equivalence of symbol from static graphs
    * \param graph the static graph
    * \return the created symbol
    */
   static Symbol Create(const StaticGraph &graph);
-
   /*!
    * \brief create equivalence of symbol by grouping the symbols together
    * \param symbols list of symbols
    * \return the grouped symbol
    */
-  static Symbol CreateGroup(const std::vector<Symbol> &symbols) {
-    Symbol ret;
-    for (const auto &s : symbols) {
-      ret.heads_.insert(ret.heads_.end(), s.heads_.begin(), s.heads_.end());
-    }
-    return std::move(ret);
-  }
+  static Symbol CreateGroup(const std::vector<Symbol> &symbols);
   /*!
    * \brief create variable symbol node
    * \param name name of the variable
    * \return the new variable
    */
-  inline static Symbol CreateVariable(const std::string &name) {
-    Symbol s;
-    s.heads_.push_back(DataEntry(std::make_shared<Node>(nullptr, name), 0));
-    return std::move(s);
-  }
+  static Symbol CreateVariable(const std::string &name);
 
  protected:
-  // forward declare Node
+  // Decalre node, internal data structure.
   struct Node;
   /*! \brief an entry that represents output data from a node */
   struct DataEntry {
     /*! \brief the source node of this data */
     std::shared_ptr<Node> source;
-    /*!
-     * \brief index of output from the source.
-     */
+    /*! \brief index of output from the source. */
     uint32_t index;
     /*! \brief enabled default copy constructor */
     DataEntry() {}
@@ -454,47 +238,14 @@ class Symbol {
         : source(source), index(index) {}
   };
   /*!
-   * \brief Node is represents node of an operator in the symbolic graph.
-   *
-   * It stores connection to the inputs to function represented by AtomicSymbol
-   * NOTE on data structure: there are three types of node:
-   * - Normal node: contains all the necessary elements of a graph.
-   * - AtomicSymbol: the inputs_ is empty, represents an AtomicSymbol that has not been applied.
-   * - Variable: the sym_ is nullptr, represents an named Variable of tensors that can be composed.
-   */
-  struct Node {
-    /*! \brief wrapped atomic symbol */
-    std::unique_ptr<AtomicSymbol> sym;
-    /*! \brief name of the node */
-    std::string name;
-    /*! \brief inputs to this node */
-    std::vector<DataEntry> inputs;
-    /*!
-     * \brief constructor
-     * \param sym the AtomicSymbol to construct the symbol
-     * \param name the name of the symbol
-     */
-    explicit Node(AtomicSymbol* sym = nullptr, const std::string& name = "")
-        : sym(sym), name(name) {
-    }
-    /*! \return Whether the symbol is AtomicSymbol */
-    inline bool is_atomic() const {
-      return inputs.size() == 0 && sym != nullptr;
-    }
-    /*! \return Whetehr the symbolc is a PlaceHolder */
-    inline bool is_variable() const {
-      return sym == nullptr;
-    }
-  };
-  /*!
    * \brief the head nodes of Symbols
    * This head is only effective when
    */
   std::vector<DataEntry> heads_;
-  /*! \return whwther the symbol is AtomicSymbol */
-  inline bool is_atomic() const {
-    return heads_.size() == 1 && heads_[0].source->is_atomic();
-  }
+
+ private:
+  /*! \return whwther the symbol is atomic */
+  inline bool is_atomic() const;
   /*!
    * \brief Visit all the nodes in left-to-right depth first order.
    *
@@ -505,30 +256,7 @@ class Symbol {
    * \tparam FVisit visiting function type
    */
   template<typename FVisit>
-  inline void DFSVisit(FVisit fvisit) const {
-    std::vector<Node*> stack;
-    std::unordered_set<Node*> visited;
-    // put the head into the graph
-    for (auto &head : heads_) {
-      Node *ptr = head.source.get();
-      if (visited.count(ptr) == 0) {
-        stack.push_back(ptr);
-        visited.insert(ptr);
-      }
-    }
-    while (!stack.empty()) {
-      Node* back = stack.back();
-      stack.pop_back();
-      fvisit(back);
-      for (auto it = back->inputs.rbegin(); it != back->inputs.rend(); ++it) {
-        Node *ptr = it->source.get();
-        if (visited.count(ptr) == 0) {
-          stack.push_back(ptr);
-          visited.insert(ptr);
-        }
-      }
-    }
-  }
+  inline void DFSVisit(FVisit fvisit) const;
   /*!
    * \brief Find duplicate arguments in the composition
    * \param out the map of argument-name -> occurence count
@@ -536,6 +264,48 @@ class Symbol {
    */
   int FindDuplicateArgs(std::unordered_map<std::string, int> *out) const;
 };
-#endif  // DMLC_USE_CXX11
+
+/*!
+ * \brief Executor of a computation graph.
+ *  Executor can be created by Binding a symbol.
+ */
+class Executor {
+ public:
+  /*! \brief destructor */
+  virtual ~Executor() {}
+  /*!
+   * \brief Perform a Forward operation of Operator
+   *  After this operation, user can get the result by using function head.
+   */
+  virtual void Forward() = 0;
+  /*!
+   * \brief Perform a Backward operation of the Operator.
+   *  This must be called after Forward.
+   *  After this operation, NArrays specified by grad_in_args_store will be updated accordingly.
+   * \param head_grads the gradient of head nodes to be backproped.
+   */
+  virtual void Backward(const std::vector<NArray> &head_grads) = 0;
+  /*!
+   * \brief get array of heads in the executor.
+   * \return array of heads in the executor.
+   */
+  virtual const std::vector<NArray> &heads() const = 0;
+  /*!
+   * \brief Create an operator by bind symbol with context and arguments.
+   *  If user do not want to compute the gradients of i-th argument, grad_req_type[i] can be kNullOp.
+   *
+   * \param ctx the context of binding.
+   * \param symbol the symbol that specifies the output of Forward pass.
+   * \param in_args the NArray that stores the input arguments to the symbol.
+   * \param arg_grad_store NArray that is used to store the gradient output of the input arguments.
+   * \param grad_req_type requirment type of gradient saving. Can only be in {kNullOp, kAddTo, kWriteTo}.
+   * \return a new executor.
+   */
+  static Executor *Bind(Symbol symbol,
+                        Context ctx,
+                        const std::vector<NArray> &in_args,
+                        const std::vector<NArray> &arg_grad_store,
+                        const std::vector<OpReqType> &grad_req_type);
+};  // class operator
 }  // namespace mxnet
 #endif  // MXNET_SYMBOLIC_H_

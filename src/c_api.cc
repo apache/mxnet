@@ -9,6 +9,7 @@
 #include <mxnet/narray.h>
 #include <mxnet/symbolic.h>
 #include <mxnet/registry.h>
+#include <mxnet/operator.h>
 #include <mxnet/c_api.h>
 #include <mutex>
 #include <memory>
@@ -275,7 +276,7 @@ int MXFuncInvoke(FunctionHandle fun,
 int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
                                      AtomicSymbolCreator **out_array) {
   API_BEGIN();
-  auto &vec = Registry<AtomicSymbolEntry>::List();
+  auto &vec = Registry<OperatorPropertyEntry>::List();
   *out_size = static_cast<mx_uint>(vec.size());
   *out_array = (AtomicSymbolCreator*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
   API_END();
@@ -284,28 +285,28 @@ int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
 int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
                                 const char **out) {
   API_BEGIN();
-  AtomicSymbolEntry *e = static_cast<AtomicSymbolEntry *>(creator);
+  OperatorPropertyEntry *e = static_cast<OperatorPropertyEntry *>(creator);
   *out = e->name.c_str();
   API_END();
 }
 
-int MXSymbolCreateFromAtomicSymbol(AtomicSymbolCreator creator,
-                                   int num_param,
-                                   const char **keys,
-                                   const char **vals,
-                                   SymbolHandle *out) {
+int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
+                               int num_param,
+                               const char **keys,
+                               const char **vals,
+                               SymbolHandle *out) {
   MXAPISymbolWrapper *s = new MXAPISymbolWrapper();
-  AtomicSymbol *atomic_symbol = nullptr;
+  OperatorProperty *op = nullptr;
 
   API_BEGIN();
-  AtomicSymbolEntry *e = static_cast<AtomicSymbolEntry *>(creator);
-  atomic_symbol = (*e)();
+  OperatorPropertyEntry *e = static_cast<OperatorPropertyEntry *>(creator);
+  op = (*e)();
   for (int i = 0; i < num_param; ++i) {
-    atomic_symbol->SetParam(keys[i], vals[i]);
+    op->SetParam(keys[i], vals[i]);
   }
-  s->sym = Symbol::Create(atomic_symbol);
+  s->sym = Symbol::Create(op);
   *out = s;
-  API_END_HANDLE_ERROR(delete s; delete atomic_symbol);
+  API_END_HANDLE_ERROR(delete s; delete op);
 }
 
 int MXSymbolCreateVariable(const char *name, SymbolHandle *out) {

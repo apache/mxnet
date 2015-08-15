@@ -1,17 +1,17 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file static_operator_common.h
+ * \file  operator_common.h
  * \brief common internal header of most operators
  *   this header includes utility functions operator can use
- *   common type definitions
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_STATIC_OPERATOR_STATIC_OPERATOR_COMMON_H_
-#define MXNET_OPERATOR_STATIC_OPERATOR_STATIC_OPERATOR_COMMON_H_
+#ifndef MXNET_OPERATOR_OPERATOR_COMMON_H_
+#define MXNET_OPERATOR_OPERATOR_COMMON_H_
 
 #include <dmlc/logging.h>
 #include <mxnet/operator.h>
 #include <mxnet/base.h>
+
 namespace mxnet {
 namespace op {
 /*!
@@ -49,7 +49,7 @@ inline void ShapeAssignCheck(TShape &out, const TS &shape) { // NOLINT(*)
   }
 }
 
-// definition of micro
+// helper macro to implement bind dispatch
 #if MXNET_USE_CUDA
 #define DO_BIND_DISPATCH(Method, ...)                                \
     if (ctx.dev_mask == cpu::kDevMask) {                             \
@@ -69,4 +69,4 @@ inline void ShapeAssignCheck(TShape &out, const TS &shape) { // NOLINT(*)
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_STATIC_OPERATOR_STATIC_OPERATOR_COMMON_H_
+#endif  // MXNET_OPERATOR_OPERATOR_COMMON_H_

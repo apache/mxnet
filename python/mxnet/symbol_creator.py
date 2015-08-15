@@ -61,10 +61,10 @@ class _SymbolCreator(object):
         param_keys = c_array(ctypes.c_char_p, param_keys)
         param_vals = c_array(ctypes.c_char_p, param_vals)
         sym_handle = SymbolHandle()
-        check_call(_LIB.MXSymbolCreateFromAtomicSymbol( \
-                self.handle, len(param_keys), \
-                param_keys, param_vals, \
-                ctypes.byref(sym_handle)))
+        check_call(_LIB.MXSymbolCreateAtomicSymbol(
+            self.handle, len(param_keys),
+            param_keys, param_vals,
+            ctypes.byref(sym_handle)))
 
         if len(args) != 0 and len(symbol_kwargs) != 0:
             raise TypeError('%s can only accept input \

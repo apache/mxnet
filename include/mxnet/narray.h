@@ -5,6 +5,7 @@
  */
 #ifndef MXNET_NARRAY_H_
 #define MXNET_NARRAY_H_
+
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
 #include <memory>

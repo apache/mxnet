@@ -30,7 +30,7 @@ template NArrayFunctionEntry &Registry<NArrayFunctionEntry>::Register(const std:
 template Registry<NArrayFunctionEntry> *Registry<NArrayFunctionEntry>::Get();
 #endif
 
-template AtomicSymbolEntry &Registry<AtomicSymbolEntry>::Register(const std::string& name);
-template Registry<AtomicSymbolEntry> *Registry<AtomicSymbolEntry>::Get();
+template OperatorPropertyEntry &Registry<OperatorPropertyEntry>::Register(const std::string& name);
+template Registry<OperatorPropertyEntry> *Registry<OperatorPropertyEntry>::Get();
 
 }  // namespace mxnet
