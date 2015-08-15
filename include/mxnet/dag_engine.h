@@ -15,6 +15,7 @@
 #include <functional>
 #include <vector>
 #include "./base.h"
+#include "./context.h"
 
 namespace mxnet {
 /*!

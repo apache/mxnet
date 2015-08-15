@@ -12,14 +12,9 @@
 #include <string>
 #include <utility>
 #include "./base.h"
+#include "./context.h"
 
 namespace mxnet {
-/*! \brief option to pass into the forward function */
-struct Option {
-  /*! \brief whether it is training phase*/
-  int is_train;
-};
-
 /*! \brief operation request type to Forward and Backward */
 enum OpReqType {
   /*! \brief no operation, do not write anything */
@@ -34,6 +29,28 @@ enum OpReqType {
   kWriteInplace,
   /*! \brief add to the provided space */
   kAddTo
+};
+
+/*!
+ * \brief All the possible information needed by Operator.Forward and Backward
+ *  This is the superset of RunContext.
+ *  We use this data structure to bookkeep everything needed by Forward and Backward.
+ * \sa Resource
+ */
+struct OpContext {
+  /*! \brief whether it is training phase */
+  int is_train;
+  /*! \brief Stream we are running on */
+  void *stream;
+  /*! \brief Resources requested by the operator */
+  std::vector<Resource> requested;
+  /*!
+   * \brief set the RunContext related parts
+   * \param ctx the context
+   */
+  inline void SetRunContext(const RunContext &ctx) {
+    stream = ctx.stream;
+  }
 };
 
 /*!
@@ -54,30 +71,28 @@ class Operator {
   virtual ~Operator() {}
   /*!
    * \brief perform a forward operation of Operator, save the output to TBlob.
-   * \param opt option on Forward such as whether this is training phase.
-   * \param ctx runtime context
+   * \param ctx runtime context available to this call
    * \param in_data array of input data, it is const
    * \param req the request types of saving operation, can only be kWriteTo or kWriteInplace.
    * \param out_data array of output data, pointer is used to indicate that this is holder
    *        the space of TBlob in out_data must be pre-allocated with InferShape
-   * \sa OpReqType
+   * \sa OpReqType, OpContext
    */
-  virtual void Forward(Option opt,
-                       RunContext ctx,
+  virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data) = 0;
   /*!
-   * \brief Perform a backward Operation, write gradient to the in_grad.
-   * \param ctx runtime context
+   * \brief Perform a Backward Operation, write gradient to the in_grad.
+   * \param ctx runtime context available to this call
    * \param out_grad the gradient value we get from output of the Operator
    * \param in_data the array of input data.
    * \param out_data the array of output data.
    * \param req request types of the saving operation, can be all types.
    * \param in_grad the array of gradient we need to write to.
-   * \sa OpReqType
+   * \sa OpReqType, OpContext
    */
-  virtual void Backward(RunContext ctx,
+  virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_data,
@@ -114,9 +129,24 @@ class OperatorProperty {
   virtual std::vector<std::string> ListReturns() const {
     return {"output"};
   }
-  /*! \return number of outputs of the Operator */
+  /*! \return number of real return values of the Operator */
   virtual int NumReturns() const {
     return 1;
+  }
+  /*!
+   * \brief get number of visible return values during Symbol creation.
+   *  If NumVisibleReturns() = k, and NumReturns() = n.
+   *  The first k returns will be presented in the resulting symbol.
+   *
+   *  The rest of the returns can be used for auxiliary states for Backward.
+   *  For example, Dropout will return [data, mask], with NumVisibleReturns() == 1.
+   *  So when user call sym = Dropout(input), only data is presented in sym.
+   *  But all the returns will be presented in out_data parameter of Backward if requested.
+   *
+   * \return number of default return values
+   */
+  virtual int NumVisibleReturns() const {
+    return NumReturns();
   }
   /*!
    *  \brief Set the parameters of the Operator.
@@ -154,6 +184,27 @@ class OperatorProperty {
    *  subclasses override this function.
    */
   virtual std::string TypeString() const = 0;
+  //--------------------------------------------------------
+  // All the below functions are optional to override.
+  //--------------------------------------------------------
+  /*!
+   * \brief Declare additional resource required in forward pass.
+   *  These additional resources will be presented in OpContext.requested
+   *  in the same order of the returned Resource.
+   * \return Additional resource request
+   */
+  virtual std::vector<ResourceRequest> ForwardResource() const {
+    return std::vector<ResourceRequest>();
+  }
+  /*!
+   * \brief Decalre additional resource required in backward pass.
+   *  These additional resources will be presented in OpContext.requested
+   *  in the same order of the returned Resource.
+   * \return Additional resource request
+   */
+  virtual std::vector<ResourceRequest> BackwardResource() const {
+    return std::vector<ResourceRequest>();
+  }
   /*!
    * \brief Declare the input requirement of Backward pass.
    *
