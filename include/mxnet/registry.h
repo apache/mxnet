@@ -10,9 +10,10 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <functional>
 #include "./base.h"
 #include "./narray.h"
-#include "./symbolic.h"
+#include "./operator.h"
 
 namespace mxnet {
 
@@ -63,9 +64,6 @@ class Registry {
   }
 };
 
-/*! NArrayFunctionEntry requires c++11 */
-#if DMLC_USE_CXX11
-#include <functional>
 /*! \brief mask information on how functions can be exposed */
 enum FunctionTypeMask {
   /*! \brief all the use_vars should go before scalar */
@@ -216,46 +214,45 @@ struct NArrayFunctionEntry {
 #define REGISTER_NARRAY_FUN(name)                                \
   static auto __ ## name ## _narray_fun__ =                      \
       ::mxnet::Registry<NArrayFunctionEntry>::Get()->Register("" # name)
-#endif  // DMLC_USE_CXX11
 
-class Symbol;
-/*! \brief AtomicSymbolEntry to register */
-struct AtomicSymbolEntry {
+
+/*! \brief OperatorPropertyEntry to register */
+struct OperatorPropertyEntry {
   /*! \brief typedef Creator function */
-  typedef AtomicSymbol*(*Creator)();
-  /*! \brief if AtomicSymbol use param */
+  typedef OperatorProperty*(*Creator)();
+  /*! \brief if OperatorProperty use param */
   bool use_param;
   /*! \brief name of the entry */
   std::string name;
-  /*! \brief function body to create AtomicSymbol */
+  /*! \brief function body to create OperatorProperty */
   Creator body;
   /*! \brief constructor */
-  explicit AtomicSymbolEntry(const std::string& name)
+  explicit OperatorPropertyEntry(const std::string& name)
       : use_param(true), name(name), body(NULL) {}
   /*!
    * \brief set the function body
    */
-  inline AtomicSymbolEntry &set_body(Creator body) {
+  inline OperatorPropertyEntry &set_body(Creator body) {
     this->body = body;
     return *this;
   }
   /*!
    * \brief invoke the function
-   * \return the created AtomicSymbol
+   * \return the created OperatorProperty
    */
-  inline AtomicSymbol* operator () () const {
+  inline OperatorProperty* operator () () const {
     return body();
   }
 
  private:
   /*! \brief disable copy constructor */
-  AtomicSymbolEntry(const AtomicSymbolEntry& other) {}
+  OperatorPropertyEntry(const OperatorPropertyEntry& other) {}
   /*! \brief disable assignment operator */
-  const AtomicSymbolEntry& operator = (const AtomicSymbolEntry& other) { return *this; }
+  const OperatorPropertyEntry& operator = (const OperatorPropertyEntry& other) { return *this; }
 };
 
 /*!
- * \brief macro to register AtomicSymbol to AtomicSymbolFactory
+ * \brief macro to register OperatorProperty to OperatorPropertyFactory
  *
  * Example: the following code is example to register aplus
  * \code
@@ -265,13 +262,13 @@ struct AtomicSymbolEntry {
  *
  * \endcode
  */
-#define REGISTER_ATOMIC_SYMBOL(name, AtomicSymbolType)                  \
-  ::mxnet::AtomicSymbol* __make_ ## AtomicSymbolType ## __() {          \
-    return new AtomicSymbolType;                                        \
+#define REGISTER_OP_PROPERTY(name, OperatorPropertyType)                \
+  ::mxnet::OperatorProperty* __make_ ## OperatorPropertyType ## __() {  \
+    return new OperatorPropertyType;                                    \
   }                                                                     \
-  static ::mxnet::AtomicSymbolEntry& __ ## name ## _atomic_symbol__ =   \
-      ::mxnet::Registry< ::mxnet::AtomicSymbolEntry >::Get()->Register("" # name) \
-      .set_body(__make_ ## AtomicSymbolType ## __)
+  static ::mxnet::OperatorPropertyEntry& __ ## name ## _atomic_symbol__ = \
+      ::mxnet::Registry< ::mxnet::OperatorPropertyEntry >::Get()->Register("" # name) \
+      .set_body(__make_ ## OperatorPropertyType ## __)
 
 }  // namespace mxnet
 #endif  // MXNET_REGISTRY_H_

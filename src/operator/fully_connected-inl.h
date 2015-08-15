@@ -3,37 +3,33 @@
  * \file fully_connect_op-inl.h
  * \brief fully connect operator and symbol
 */
-#ifndef MXNET_OPERATOR_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
-#define MXNET_OPERATOR_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
+#ifndef MXNET_OPERATOR_FULLY_CONNECTED_INL_H_
+#define MXNET_OPERATOR_FULLY_CONNECTED_INL_H_
 
 #include <dmlc/logging.h>
 #include <mxnet/operator.h>
-#include <mxnet/symbolic.h>
 #include <vector>
 #include <string>
 #include <utility>
-#include "./static_operator_common.h"
+#include "./operator_common.h"
 #include "./param.h"
 
 namespace mxnet {
 namespace op {
+
 // Declare enumeration of input order to make code more intuitive.
 // These enums are only visible within this header
-enum FullyConnectOpInputs {kData, kWeight, kBias};
-enum FullyConnectOpOutputs {kOut};
+enum FullyConnectedOpInputs {kData, kWeight, kBias};
+enum FullyConnectedOpOutputs {kOut};
 
 /**
- * \brief This is the implementation of fully connected layer.
- *
+ * \brief This is the implementation of fully connected operator.
  * \tparam xpu The device that the op will be executed on.
  */
 template<typename xpu>
-class FullyConnectOp : public StaticOperator {
+class FullyConnectedOp : public Operator {
  public:
-  /*!
-   * \brief constructor with parameters. Used in Bind() in corresponding symbol.
-   */
-  explicit FullyConnectOp(Param p) {
+  explicit FullyConnectedOp(Param p) {
     this->param_ = p;
   }
 
@@ -97,17 +93,14 @@ class FullyConnectOp : public StaticOperator {
  private:
   /** The param of the fully connected layer.*/
   Param param_;
-};  // class FullyConnectOp
+};  // class FullyConnectedOp
 
-// Decalre factory function, used for dispatch specialization
+// Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-StaticOperator* CreateFullyConnectedOp(Param param);
+Operator* CreateFullyConnectedOp(Param param);
 
 #if DMLC_USE_CXX11
-/**
- * @brief The symbol part of the fully connected layer.
- */
-class FullyConnectSymbol : public AtomicSymbol {
+class FullyConnectedProp : public OperatorProperty {
  public:
   virtual std::vector<std::string> ListArguments() const {
     if (param_.no_bias == 0) {
@@ -144,14 +137,14 @@ class FullyConnectSymbol : public AtomicSymbol {
     return true;
   }
 
-  virtual AtomicSymbol* Copy() const {
-    FullyConnectSymbol* fc_sym = new FullyConnectSymbol();
+  virtual OperatorProperty* Copy() const {
+    FullyConnectedProp* fc_sym = new FullyConnectedProp();
     fc_sym->param_ = this->param_;
     return fc_sym;
   }
 
   virtual std::string TypeString() const {
-    return "FullyConnected";
+    return "FullyConnecteded";
   }
   // decalre dependency and inplace optimization options
   virtual std::vector<int> DeclareBackwardDependency(
@@ -169,15 +162,12 @@ class FullyConnectSymbol : public AtomicSymbol {
     return {{in_grad[kData], in_data[kData]}};
   }
 
-  // bind function
-  StaticOperator* Bind(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const;
 
  private:
-  /** The param of the fully connected layer.*/
   Param param_;
-};  // class FullyConnectSymbol
+};  // class FullyConnectedSymbol
 #endif
 }  // namespace op
 }  // namespace mxnet
-
-#endif  // MXNET_OPERATOR_STATIC_OPERATOR_FULLY_CONNECT_OP_INL_H_
+#endif  // MXNET_OPERATOR_FULLY_CONNECTED_INL_H_

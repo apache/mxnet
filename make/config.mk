@@ -49,7 +49,7 @@ PS_PATH = NONE
 PS_THIRD_PATH = NONE
 
 # whether compile with rabit
-USE_RABIT_PS = 1
+USE_RABIT_PS = 0
 RABIT_PATH = rabit
 
 # use openmp iterator

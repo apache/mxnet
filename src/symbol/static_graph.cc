@@ -8,6 +8,7 @@
 #include <vector>
 #include <queue>
 
+namespace mxnet {
 std::vector<uint32_t> StaticGraph::TopoSort() const {
   std::vector<int> out_degree(nodes.size(), 0);
   for (const Node &n : nodes) {
@@ -38,20 +39,19 @@ std::vector<uint32_t> StaticGraph::TopoSort() const {
   return std::move(ret);
 }
 
-bool StaticGraph::InferShape(const std::vector<uint32_t> &topo_order,
-                             std::vector<std::vector<TShape> > *node_out_shapes) const {
-  bool success = true;
+bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
+                                  std::vector<std::vector<TShape> > *node_out_shapes) const {
   for (uint32_t nid : topo_order) {
     const Node &node = nodes[nid];
-    if (node.sym != nullptr) {
+    if (node.op != nullptr) {
       std::vector<TShape> in_shape;
       for (const DataEntry &e : node.inputs) {
-        in_shape.push_back(node_out_shapes[e.source_id][e.index]);
+        in_shape.push_back((*node_out_shapes)[e.source_id][e.index]);
       }
-      if (!node.sym->InferShape(&in_shape, &(*node_out_shapes)[nid])) return false;
+      if (!node.op->InferShape(&in_shape, &(*node_out_shapes)[nid])) return false;
       for (size_t i = 0; i < node.inputs.size(); ++i) {
         const DataEntry &e = node.inputs[i];
-        node_out_shapes[e.source_id][e.index] = in_shape[i];
+        (*node_out_shapes)[e.source_id][e.index] = in_shape[i];
       }
     }
   }
@@ -63,23 +63,25 @@ bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
   std::vector<std::vector<TShape> > node_out_shapes(nodes.size());
   for (size_t i = 0; i < nodes.size(); ++i) {
     int nout = 1;
-    if (nodes[i].sym != nullptr) {
-      nout = nodes[i].sym->NumReturns();
+    if (nodes[i].op != nullptr) {
+      nout = nodes[i].op->NumReturns();
     }
     node_out_shapes[i].resize(nout);
   }
   CHECK(in_shape->size() == arg_nodes.size())
         << "Wrong number of inputs to infer shape";
   for (size_t i = 0; i < arg_nodes.size(); ++i) {
-      node_out_shapes[nid][0] = (*in_shape)[i];
+    node_out_shapes[arg_nodes[i]][0] = (*in_shape)[i];
   }
   if (!InferNodeShapes(this->TopoSort(),
                        &node_out_shapes)) return false;
   for (size_t i = 0; i < arg_nodes.size(); ++i) {
-    (*in_shape)[i] = node_out_shapes[nid][0];
+    (*in_shape)[i] = node_out_shapes[arg_nodes[i]][0];
   }
   for (size_t i = 0; i < outputs.size(); ++i) {
     DataEntry e = outputs[i];
     (*out_shape)[i] = node_out_shapes[e.source_id][e.index];
   }
+  return true;
 }
+}  // namespace mxnet
