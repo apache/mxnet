@@ -33,8 +33,7 @@ class FullyConnectedOp : public Operator {
     this->param_ = p;
   }
 
-  virtual void Forward(Option opt,
-                       RunContext ctx,
+  virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data) {
@@ -57,7 +56,7 @@ class FullyConnectedOp : public Operator {
     }
   }
 
-  virtual void Backward(RunContext ctx,
+  virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_data,

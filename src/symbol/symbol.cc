@@ -368,7 +368,7 @@ bool Symbol::InferShape(std::vector<TShape> *in_shape,
 Symbol Symbol::Create(OperatorProperty *op)  {
   // use special representation for atomic symbol
   auto node = std::make_shared<Node>(op, "");
-  size_t nret = op->NumReturns();
+  size_t nret = op->NumVisibleReturns();
   Symbol s;
   for (uint32_t i = 0; i < nret; ++i) {
     s.heads_.push_back(DataEntry(node, i));

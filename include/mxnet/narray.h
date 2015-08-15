@@ -10,7 +10,9 @@
 #include <dmlc/logging.h>
 #include <memory>
 #include "./base.h"
+#include "./context.h"
 #include "./storage.h"
+#include "./context.h"
 #include "./dag_engine.h"
 // check c++11
 #if DMLC_USE_CXX11 == 0

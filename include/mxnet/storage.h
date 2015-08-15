@@ -6,6 +6,7 @@
 #ifndef MXNET_STORAGE_H_
 #define MXNET_STORAGE_H_
 #include "./base.h"
+#include "./context.h"
 
 namespace mxnet {
 /*! \brief memory allocator of storage */
