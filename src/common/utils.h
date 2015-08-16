@@ -57,10 +57,11 @@ struct UniqueIf<T[kSize]> {
 }  // namespace helper
 
 /*!
- * \brief Constructs an object of type `T` and wraps it in a `std::unique_ptr`.
+ * \brief Constructs an object of type `T` and wraps it in a
+ *        `std``::``unique_ptr`.
  * \param args List of arguments with which an instance of `T` will be
  *             constructed.
- * \return `std::unique_ptr` of an instance of type `T`.
+ * \return `std``::``unique_ptr` of an instance of type `T`.
  *
  * Constructs a non-array type `T`. The arguments `args` are passed to the
  * constructor of `T`. The function does not participate in the overload
@@ -72,9 +73,10 @@ typename helper::UniqueIf<T>::SingleObject MakeUnique(Args&&... args) {
 }
 
 /*!
- * \brief Constructs an object of type `T` and wraps it in a `std::unique_ptr`.
+ * \brief Constructs an object of type `T` and wraps it in a
+ *        `std``::``unique_ptr`.
  * \param n The size of the array to construct.
- * \return `std::unique_ptr` of an instance of type `T`.
+ * \return `std``::``unique_ptr` of an instance of type `T`.
  *
  * Constructs an array of unknown bound `T`. The function does not participate
  * in the overload resolution unless `T` is an array of unknown bound.
@@ -86,7 +88,8 @@ typename helper::UniqueIf<T>::UnknownBound MakeUnique(size_t n) {
 }
 
 /*!
- * \brief Constructs an object of type `T` and wraps it in a `std::unique_ptr`.
+ * \brief Constructs an object of type `T` and wraps it in a
+ *        `std``::``unique_ptr`.
  * \param args List of arguments with which an instance of `T` will be
  *             constructed.
  *
