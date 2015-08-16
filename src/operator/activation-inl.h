@@ -39,7 +39,7 @@ class ActivationOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
-    out = F<ForwardOp>(data);
+    Assign(out, req[kOut], F<ForwardOp>(data));
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -68,7 +68,9 @@ Operator* CreateActivationOp(ActivationOpType type);
 #if DMLC_USE_CXX11
 class ActivationProp : public OperatorProperty {
  public:
-  ActivationProp() : type_(kUnknown) {}
+  explicit ActivationProp() : type_(kUnknown) {}
+
+  explicit ActivationProp(ActivationOpType type) : type_(type) {}
 
   virtual void SetParam(const char *name, const char *val) {
     if (!strcmp(name, "type")) {
@@ -90,8 +92,7 @@ class ActivationProp : public OperatorProperty {
   }
 
   virtual OperatorProperty* Copy() const {
-    auto ptr = new ActivationProp();
-    ptr->type_ = this->type_;
+    auto ptr = new ActivationProp(type_);
     return ptr;
   }
 
