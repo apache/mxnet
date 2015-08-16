@@ -3,8 +3,8 @@
  * \file cuda_utils.h
  * \brief CUDA debugging utilities.
  */
-#ifndef MXNET_CUDA_UTILS_H_
-#define MXNET_CUDA_UTILS_H_
+#ifndef MXNET_COMMON_CUDA_UTILS_H_
+#define MXNET_COMMON_CUDA_UTILS_H_
 
 #include <dmlc/logging.h>
 
@@ -13,6 +13,9 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 #include <curand.h>
+
+namespace common {
+namespace cuda {
 
 inline const char* CublasGetErrorString(cublasStatus_t error) {
   switch (error) {
@@ -72,6 +75,9 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
   return "Unknown cuRAND status";
 }
 
+}  // namespace cuda
+}  // namespace common
+
 #define CHECK_CUDA_ERROR(msg)                                                \
   {                                                                          \
     cudaError_t e = cudaGetLastError();                                      \
@@ -84,18 +90,18 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
     CHECK_EQ(e, cudaSuccess) << "CUDA: " << cudaGetErrorString(e); \
   }
 
-#define CUBLAS_CALL(func)                         \
-  {                                               \
-    cublasStatus_t e = (func);                    \
-    CHECK_EQ(e, CUBLAS_STATUS_SUCCESS)            \
-        << "cuBLAS: " << CublasGetErrorString(e); \
+#define CUBLAS_CALL(func)                                       \
+  {                                                             \
+    cublasStatus_t e = (func);                                  \
+    CHECK_EQ(e, CUBLAS_STATUS_SUCCESS)                          \
+        << "cuBLAS: " << common::cuda::CublasGetErrorString(e); \
   }
 
-#define CURAND_CALL(func)                         \
-  {                                               \
-    curandStatus_t e = (func);                    \
-    CHECK_EQ(e, CURAND_STATUS_SUCCESS)            \
-        << "cuRAND: " << CurandGetErrorString(e); \
+#define CURAND_CALL(func)                                       \
+  {                                                             \
+    curandStatus_t e = (func);                                  \
+    CHECK_EQ(e, CURAND_STATUS_SUCCESS)                          \
+        << "cuRAND: " << common::cuda::CurandGetErrorString(e); \
   }
 
 #endif  // MXNET_USE_CUDA
@@ -112,4 +118,4 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
 
 #endif  // MXNET_USE_CUDNN
 
-#endif  // MXNET_CUDA_UTILS_H_
+#endif  // MXNET_COMMON_CUDA_UTILS_H_
