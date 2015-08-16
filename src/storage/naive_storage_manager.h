@@ -6,7 +6,7 @@
 #ifndef MXNET_STORAGE_NAIVE_STORAGE_MANAGER_H_
 #define MXNET_STORAGE_NAIVE_STORAGE_MANAGER_H_
 
-#include "./storage_manager.h"
+#include "storage_manager.h"
 #include "mxnet/base.h"
 
 namespace mxnet {

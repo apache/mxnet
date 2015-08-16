@@ -5,11 +5,11 @@
 #include <mshadow/tensor.h>
 #include <dmlc/logging.h>
 #include <array>
-#include "./storage_manager.h"
-#include "./naive_storage_manager.h"
-#include "./pooled_storage_manager.h"
-#include "./cpu_device_storage.h"
-#include "./gpu_device_storage.h"
+#include "storage_manager.h"
+#include "naive_storage_manager.h"
+#include "pooled_storage_manager.h"
+#include "cpu_device_storage.h"
+#include "gpu_device_storage.h"
 #include "../common/cuda_utils.h"
 #include "../common/utils.h"
 
@@ -17,7 +17,7 @@ namespace mxnet {
 
 struct Storage::Impl {
   static constexpr size_t kPoolThreshold = 4096 * 1024 * 1024ul;
-  static constexpr size_t kMaxNumberOfDevices = 2;
+  static constexpr size_t kMaxNumberOfDevices = 3;
   static constexpr size_t kMaxNumberOfDeviceIDs = 16;
 
   template <class DeviceStorage>

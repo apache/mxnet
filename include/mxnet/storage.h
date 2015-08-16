@@ -7,8 +7,8 @@
 #define MXNET_STORAGE_H_
 
 #include <memory>
-#include "./base.h"
-#include "./tensor_blob.h"
+#include "base.h"
+#include "tensor_blob.h"
 
 namespace mxnet {
 

@@ -8,7 +8,7 @@
 
 #include <unordered_map>
 #include <vector>
-#include "./storage_manager.h"
+#include "storage_manager.h"
 #include "mxnet/base.h"
 
 namespace mxnet {
