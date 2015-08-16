@@ -20,7 +20,7 @@ namespace op {
 // // These enums are only visible within this header
 enum ActivationOpInputs {kData};
 enum ActivationOpOutputs {kOut};
-enum ActivationOpType {kReLU};
+enum ActivationOpType {kUnknown, kReLU, kSigmoid, kTanh};
 /**
  * \brief This is the implementation of activation operator.
  * \tparam xpu The device that the op will be executed on.
@@ -34,7 +34,6 @@ class ActivationOp : public Operator {
                        const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(req[kOut], kWriteTo);
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -56,9 +55,9 @@ class ActivationOp : public Operator {
     CHECK_EQ(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2> out_gradient = out_grad[kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> output = out_data[kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> grad = out_grad[kOut].FlatTo2D<xpu, real_t>(s);
-    Assign(grad, req[kData], F<BackwardOp>(out_gradient * F<ForwardOp>(data)));
+    Assign(grad, req[kData], F<BackwardOp>(out_gradient * output));
   }
 };  // class ActivationOp
 
@@ -69,33 +68,35 @@ Operator* CreateActivationOp(ActivationOpType type);
 #if DMLC_USE_CXX11
 class ActivationProp : public OperatorProperty {
  public:
+  ActivationProp() : type_(kUnknown) {}
+
   virtual void SetParam(const char *name, const char *val) {
     if (!strcmp(name, "type")) {
-      if (!strcmp(val, "relu")) {
-        type_ = kReLU;
-      }
+      if (!strcmp(val, "relu")) type_ = kReLU;
+      if (!strcmp(val, "sigmoid")) type_ = kSigmoid;
+      if (!strcmp(val, "tanh")) type_ = kTanh;
     }
-    // TODO(bing): check optype valid
+    CHECK(type_ >= kReLU && type_ <= kTanh) << "Invalid activation type";
   }
   virtual bool InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape) const {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 1) << "Input:[data]";
     const TShape &dshape = in_shape->at(0);
+    if (dshape.ndim() == 0) return false;
     out_shape->clear();
     out_shape->push_back(dshape);
     return true;
   }
 
   virtual OperatorProperty* Copy() const {
-    return new ActivationProp();
+    auto ptr = new ActivationProp();
+    ptr->type_ = this->type_;
+    return ptr;
   }
 
   virtual std::string TypeString() const {
-    switch (type_) {
-      case kReLU: return "Activation : ReLU";
-      default: return "Invalid Activation";
-    }
+    return "Activation";
   }
 
   // decalre dependency and inplace optimization options
@@ -103,7 +104,7 @@ class ActivationProp : public OperatorProperty {
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data) const {
-    return {out_grad[kOut], in_data[kData]};
+    return {out_grad[kOut], out_data[kData]};
   }
 
   virtual std::vector<std::pair<int, int> > BackwardInplaceOption(
@@ -111,7 +112,13 @@ class ActivationProp : public OperatorProperty {
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
       const std::vector<int> &in_grad) const {
-    return {};
+    return {{out_grad[kData], in_grad[kData]}};
+  }
+
+  virtual std::vector<std::pair<int, int> > ForwardInplaceOption(
+      const std::vector<int> &in_data,
+      const std::vector<int> &out_data) const {
+    return {{in_data[kData], out_data[kData]}};
   }
 
   Operator* CreateOperator(Context ctx) const;
@@ -120,21 +127,6 @@ class ActivationProp : public OperatorProperty {
   ActivationOpType type_;
 };
 #endif  // DMLC_USE_CXX11
-
-namespace act {
-/*! \brief Rectified Linear Operation */
-struct relu {
-  MSHADOW_XINLINE static real_t Map(real_t a) {
-    return a > 0.0f ? a : 0.0f;
-  }
-};
-struct relu_grad {
-  MSHADOW_XINLINE static real_t Map(real_t a) {
-    return a > 0.0f ? 1.0f : 0.0f;
-  }
-};
-
-}  // namespace act
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_ACTIVATION_INL_H_

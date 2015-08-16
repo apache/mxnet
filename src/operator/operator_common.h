@@ -11,6 +11,7 @@
 #include <dmlc/logging.h>
 #include <mxnet/operator.h>
 #include <mxnet/base.h>
+#include <string>
 
 namespace mxnet {
 namespace op {
