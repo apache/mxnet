@@ -37,7 +37,7 @@ class ActivationOp : public Operator {
     CHECK_EQ(req[kOut], kWriteTo);
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
-    Stream<xpu> *s = static_cast<Stream<xpu> *>(ctx.stream);
+    Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
     out = F<ForwardOp>(data);
@@ -54,7 +54,7 @@ class ActivationOp : public Operator {
     CHECK_EQ(out_grad.size(), 1);
     CHECK(in_data.size() == 1 && in_grad.size() == 1);
     CHECK_EQ(req.size(), 1);
-    Stream<xpu> *s = static_cast<Stream<xpu> *>(ctx.stream);
+    Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2> out_gradient = out_grad[kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> grad = out_grad[kOut].FlatTo2D<xpu, real_t>(s);

@@ -49,10 +49,9 @@ typedef void *DataIterHandle;
  *  \return error info
  */
 MXNET_DLL const char *MXGetLastError();
-
-//--------------------------------
+//-------------------------------------
 // Part 1: NArray creation and deletion
-//--------------------------------
+//-------------------------------------
 /*!
  * \brief create a NArray handle that is not initialized
  *  can be used to pass in as mutate variables
@@ -189,7 +188,6 @@ MXNET_DLL int MXFuncDescribe(FunctionHandle fun,
                              mx_uint *num_scalars,
                              mx_uint *num_mutate_vars,
                              int *type_mask);
-
 /*!
  * \brief invoke a function, the array size of passed in arguments
  *   must match the values in the
@@ -301,8 +299,8 @@ MXNET_DLL int MXSymbolListArguments(SymbolHandle symbol,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolListReturns(SymbolHandle symbol,
-                                    mx_uint *out_size,
-                                    const char ***out_str_array);
+                                  mx_uint *out_size,
+                                  const char ***out_str_array);
 /*!
  * \brief Compose the symbol on other symbols.
  *
@@ -322,6 +320,36 @@ MXNET_DLL int MXSymbolCompose(SymbolHandle sym,
                               mx_uint num_args,
                               const char** keys,
                               SymbolHandle* args);
+/*!
+ * \brief infer shape of unknown input shapes given the known one.
+ *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
+ *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *
+ * \param num_args numbe of input arguments.
+ * \param keys the key of keyword args (optional)
+ * \param arg_ind_ptr the head pointer of the rows in CSR
+ * \param arg_shape_data the content of the CSR
+ * \param in_shape_size sizeof the returning array of in_shapes
+ * \param in_shape_ndim returning array of shape dimensions of eachs input shape.
+ * \param in_shape_data returning array of pointers to head of the input shape.
+ * \param out_shape_size sizeof the returning array of out_shapes
+ * \param out_shape_ndim returning array of shape dimensions of eachs input shape.
+ * \param out_shape_data returning array of pointers to head of the input shape.
+ * \param complete whether infer shape completes or more information is needed.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
+                                 mx_uint num_args,
+                                 const char** keys,
+                                 const mx_uint *arg_ind_ptr,
+                                 const mx_uint *arg_shape_data,
+                                 mx_uint *in_shape_size,
+                                 const mx_uint **in_shape_ndim,
+                                 const mx_uint ***in_shape_data,
+                                 mx_uint *out_shape_size,
+                                 const mx_uint **out_shape_ndim,
+                                 const mx_uint ***out_shape_data,
+                                 int *complete);
 //--------------------------------------------
 // Part 4: operator interface on NArray
 //--------------------------------------------
@@ -352,24 +380,6 @@ MXNET_DLL int MXOpFree(OperatorHandle op);
  */
 MXNET_DLL int MXOpDescribeArgs(mx_uint *out_size,
                                int **out_array);
-/*!
- * \brief infer shape of unknown input shapes given the known one
- *  this function do not return the shape of output
- *  the shapes are packed into a CSR matrix represened by ind_ptr and shape_array
- *
- *  When the function returns, it return a new CSR matrix by updating ind_ptr,
- *  and return the content in the return value
- *
- * \param ind_ptr the head pointer of the rows in CSR
- * \param shape_array the content of the CSR
- * \param out_nout number of output arguments of this operation
- * \param out_array another content of CSR with infered shape
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXOpInferShape(mx_uint *ind_ptr,
-                             mx_uint *shape_array,
-                             mx_uint *out_nout,
-                             mx_uint *out_array);
 /*!
  * \brief call forward on the operator
  * \param op the operator handle

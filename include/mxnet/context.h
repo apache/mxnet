@@ -6,6 +6,8 @@
 #ifndef MXNET_CONTEXT_H_
 #define MXNET_CONTEXT_H_
 
+#include "./base.h"
+
 namespace mxnet {
 
 /*! \brief Context information about the execution enviroment */

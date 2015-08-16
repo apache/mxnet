@@ -40,16 +40,18 @@ enum OpReqType {
 struct OpContext {
   /*! \brief whether it is training phase */
   int is_train;
-  /*! \brief Stream we are running on */
-  void *stream;
+  /*! \brief RunContext related resources */
+  RunContext run_ctx;
   /*! \brief Resources requested by the operator */
   std::vector<Resource> requested;
   /*!
-   * \brief set the RunContext related parts
-   * \param ctx the context
+   * \brief get mshadow stream from Context
+   * \return the mshadow stream
+   * \tparam xpu the device type of the stream
    */
-  inline void SetRunContext(const RunContext &ctx) {
-    stream = ctx.stream;
+  template<typename xpu>
+  inline mshadow::Stream<xpu>* get_stream() const {
+    return static_cast<mshadow::Stream<xpu>*>(run_ctx.stream);
   }
 };
 
@@ -84,13 +86,22 @@ class Operator {
                        const std::vector<TBlob> &out_data) = 0;
   /*!
    * \brief Perform a Backward Operation, write gradient to the in_grad.
+   *
+   * Convention:
+   *   out_grad.size() == OperatorProperty.NumVisibleReturns()
+   *   out_data.size() == OperatorProperty.NumReturns()
+   * out_data can contain additional invisible returns that remembers the
+   * state carried from the Forward pass. For example mask in the dropout.
+   *
+   * The gradients are passed from visible returns in this function.
+   *
    * \param ctx runtime context available to this call
-   * \param out_grad the gradient value we get from output of the Operator
+   * \param out_grad the gradient value we get from of the Operator.
    * \param in_data the array of input data.
    * \param out_data the array of output data.
    * \param req request types of the saving operation, can be all types.
    * \param in_grad the array of gradient we need to write to.
-   * \sa OpReqType, OpContext
+   * \sa OpReqType, OpContext, OperatorProperty
    */
   virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
@@ -166,7 +177,8 @@ class OperatorProperty {
    *
    * \param out_shape the shape of outputs of the operator
    *     InferShape will modify the vector to fill output TShape
-   * \return if the shape inference is successful, return true, else return false.
+   * \return true if the shape inference is successful, false if there is not enough information.
+   * \throws dmlc::Error if the known arg_shapes are inconsistent.
    */
   virtual bool InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape) const = 0;

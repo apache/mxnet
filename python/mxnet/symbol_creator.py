@@ -54,7 +54,7 @@ class _SymbolCreator(object):
             if isinstance(v, Symbol):
                 symbol_kwargs[k] = v
             else:
-                param_keys.append(k)
+                param_keys.append(c_str(k))
                 param_vals.append(c_str(str(v)))
 
         # create atomic symbol

@@ -11,6 +11,7 @@
 #include <mxnet/registry.h>
 #include <mxnet/operator.h>
 #include <mxnet/c_api.h>
+#include <vector>
 #include <mutex>
 #include <memory>
 
@@ -27,61 +28,76 @@
 #message("Warning: Threadlocal is not enabled");
 #endif
 
-/*! \brief symbol wrapper to easily hold returning information */
-struct MXAPISymbolWrapper {
-  /*! \brief the actual symbol */
-  mxnet::Symbol sym;
+using namespace mxnet;
+
+/*! \brief entry to to easily hold returning information */
+struct MXAPIThreadLocalEntry {
+  /*! \brief holds last error message */
+  std::string last_error;
   /*! \brief result holder for returning string */
   std::string ret_str;
   /*! \brief result holder for returning strings */
   std::vector<std::string> ret_vec_str;
   /*! \brief result holder for returning string pointers */
   std::vector<const char *> ret_vec_charp;
+  /*! \brief result holder for returning shapes */
+  std::vector<TShape> arg_shapes, out_shapes;
+  /*! \brief result holder for returning shape dimensions */
+  std::vector<mx_uint> arg_shape_ndim, out_shape_ndim;
+  /*! \brief result holder for returning shape pointer */
+  std::vector<const mx_uint*> arg_shape_data, out_shape_data;
+  // helper function to setup return value of shape array
+  inline static void SetupShapeArrayReturn(
+      const std::vector<TShape> &shapes,
+      std::vector<mx_uint> *ndim,
+      std::vector<const mx_uint*> *data) {
+    ndim->resize(shapes.size());
+    data->resize(shapes.size());
+    for (size_t i = 0; i < shapes.size(); ++i) {
+      ndim->at(i) = shapes[i].ndim();
+      data->at(i) = shapes[i].data();
+    }
+  }
 };
 
 /*!
- * \brief helper to store error message in threadlocal storage
+ * \brief A threadlocal store to store threadlocal variables.
+ *  Will return a thread local singleton of type T
+ * \tparam T the type we like to store
  */
-class MXAPIErrorMessageHelper {
+class MXAPIThreadLocalStore {
  public:
-  /*! \brief get a single instance out from */
-  static MXAPIErrorMessageHelper *Get() {
-    static MXAPIErrorMessageHelper inst;
-    return &inst;
-  }
-  /*!
-   * \brief a helper function for error handling
-   *  will set the last error to be str_set when it is not NULL
-   * \param str_set the error to set
-   * \return a pointer message to last error
-   */
-  static const char *SetGetLastError(const char *str_set) {
-    // use last_error to record last error
-    static MX_TREAD_LOCAL std::string *last_error = NULL;
-    if (last_error == NULL) {
-      last_error = new std::string();
-      Get()->RegisterDelete(last_error);
+  /*! \brief store return entry */
+  typedef MXAPIThreadLocalEntry T;
+  /*! \return get a thread local singleton */
+  static T* Get() {
+    static MX_TREAD_LOCAL T* ptr = nullptr;
+    if (ptr == nullptr) {
+      ptr = new T();
+      Singleton()->RegisterDelete(ptr);
     }
-    if (str_set != NULL) {
-      *last_error = str_set;
-    }
-    return last_error->c_str();
+    return ptr;
   }
 
  private:
   /*! \brief constructor */
-  MXAPIErrorMessageHelper() {}
+  MXAPIThreadLocalStore() {}
   /*! \brief destructor */
-  ~MXAPIErrorMessageHelper() {
+  ~MXAPIThreadLocalStore() {
     for (size_t i = 0; i < data_.size(); ++i) {
       delete data_[i];
     }
+  }
+  /*! \return singleton of the store */
+  static MXAPIThreadLocalStore *Singleton() {
+    static MXAPIThreadLocalStore inst;
+    return &inst;
   }
   /*!
    * \brief register str for internal deletion
    * \param str the string pointer
    */
-  void RegisterDelete(std::string *str) {
+  void RegisterDelete(T *str) {
     std::unique_lock<std::mutex> lock(mutex_);
     data_.push_back(str);
     lock.unlock();
@@ -89,13 +105,12 @@ class MXAPIErrorMessageHelper {
   /*! \brief internal mutex */
   std::mutex mutex_;
   /*!\brief internal data */
-  std::vector<std::string*> data_;
+  std::vector<T*> data_;
 };
 
 // NOTE: all functions return 0 upon success
 // consider add try/catch block for user error
 // handling in the future
-using namespace mxnet;
 
 /*! \brief  macro to guard beginning and end section of all functions */
 #define API_BEGIN() try {
@@ -111,7 +126,7 @@ using namespace mxnet;
 
 /*! \brief return str message of the last error */
 const char *MXGetLastError() {
-  return MXAPIErrorMessageHelper::SetGetLastError(NULL);
+  return MXAPIThreadLocalStore::Get()->last_error.c_str();
 }
 
 /*!
@@ -120,7 +135,7 @@ const char *MXGetLastError() {
  * \return the return value of API after exception is handled
  */
 int MXHandleException(const dmlc::Error &e) {
-  MXAPIErrorMessageHelper::SetGetLastError(e.what());
+  MXAPIThreadLocalStore::Get()->last_error = e.what();
   return -1;
 }
 
@@ -295,7 +310,7 @@ int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
                                const char **keys,
                                const char **vals,
                                SymbolHandle *out) {
-  MXAPISymbolWrapper *s = new MXAPISymbolWrapper();
+  Symbol *s = new Symbol();
   OperatorProperty *op = nullptr;
 
   API_BEGIN();
@@ -304,15 +319,15 @@ int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
   for (int i = 0; i < num_param; ++i) {
     op->SetParam(keys[i], vals[i]);
   }
-  s->sym = Symbol::Create(op);
+  *s = Symbol::Create(op);
   *out = s;
   API_END_HANDLE_ERROR(delete s; delete op);
 }
 
 int MXSymbolCreateVariable(const char *name, SymbolHandle *out) {
-  MXAPISymbolWrapper *s = new MXAPISymbolWrapper();
+  Symbol *s = new Symbol();
   API_BEGIN();
-  s->sym = Symbol::CreateVariable(name);
+  *s = Symbol::CreateVariable(name);
   *out = s;
   API_END_HANDLE_ERROR(delete s);
 }
@@ -320,71 +335,72 @@ int MXSymbolCreateVariable(const char *name, SymbolHandle *out) {
 int MXSymbolCreateGroup(mx_uint num_symbols,
                         SymbolHandle *symbols,
                         SymbolHandle *out) {
-  MXAPISymbolWrapper *s = new MXAPISymbolWrapper();
-  MXAPISymbolWrapper **sym_arr = (MXAPISymbolWrapper**)symbols; // NOLINT(*)
+  Symbol *s = new Symbol();
+  Symbol **sym_arr = (Symbol**)symbols; // NOLINT(*)
   API_BEGIN();
   std::vector<Symbol> syms;
   for (mx_uint i = 0; i < num_symbols; ++i) {
-    syms.push_back(sym_arr[i]->sym);
+    syms.push_back(*sym_arr[i]);
   }
-  s->sym = Symbol::CreateGroup(syms);
+  *s = Symbol::CreateGroup(syms);
   *out = s;
   API_END_HANDLE_ERROR(delete s);
 }
 
 int MXSymbolFree(SymbolHandle symbol) {
   API_BEGIN();
-  delete static_cast<MXAPISymbolWrapper*>(symbol);
+  delete static_cast<Symbol*>(symbol);
   API_END();
 }
 
 int MXSymbolCopy(SymbolHandle symbol, SymbolHandle *out) {
-  MXAPISymbolWrapper *s = new MXAPISymbolWrapper();
-
+  Symbol *s = new Symbol();
   API_BEGIN();
-  s->sym = (static_cast<const MXAPISymbolWrapper*>(symbol)->sym).Copy();
+  *s = static_cast<const Symbol*>(symbol)->Copy();
   *out = s;
   API_END_HANDLE_ERROR(delete s);
 }
 
 int MXSymbolPrint(SymbolHandle symbol, const char **out_str) {
-  MXAPISymbolWrapper *s = static_cast<MXAPISymbolWrapper*>(symbol);
-
+  Symbol *s = static_cast<Symbol*>(symbol);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
   std::ostringstream os;
-  (s->sym).Print(os);
-  s->ret_str = os.str();
-  *out_str = (s->ret_str).c_str();
+  s->Print(os);
+  ret->ret_str = os.str();
+  *out_str = (ret->ret_str).c_str();
   API_END();
 }
 
 int MXSymbolListArguments(SymbolHandle symbol,
                           mx_uint *out_size,
                           const char ***out_str_array) {
-  MXAPISymbolWrapper *s = static_cast<MXAPISymbolWrapper*>(symbol);
+  Symbol *s = static_cast<Symbol*>(symbol);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
-  s->ret_vec_str = std::move((s->sym).ListArguments());
-  s->ret_vec_charp.clear();
-  for (size_t i = 0; i < s->ret_vec_str.size(); ++i) {
-    s->ret_vec_charp.push_back(s->ret_vec_str[i].c_str());
+  ret->ret_vec_str = std::move(s->ListArguments());
+  ret->ret_vec_charp.clear();
+  for (size_t i = 0; i < ret->ret_vec_str.size(); ++i) {
+    ret->ret_vec_charp.push_back(ret->ret_vec_str[i].c_str());
   }
-  *out_size = static_cast<mx_uint>(s->ret_vec_charp.size());
-  *out_str_array = dmlc::BeginPtr(s->ret_vec_charp);
+  *out_size = static_cast<mx_uint>(ret->ret_vec_charp.size());
+  *out_str_array = dmlc::BeginPtr(ret->ret_vec_charp);
   API_END();
 }
 
 int MXSymbolListReturns(SymbolHandle symbol,
-                          mx_uint *out_size,
-                          const char ***out_str_array) {
-  MXAPISymbolWrapper *s = static_cast<MXAPISymbolWrapper*>(symbol);
+                        mx_uint *out_size,
+                        const char ***out_str_array) {
+  Symbol *s = static_cast<Symbol*>(symbol);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
-  s->ret_vec_str = std::move((s->sym).ListReturns());
-  s->ret_vec_charp.clear();
-  for (size_t i = 0; i < s->ret_vec_str.size(); ++i) {
-    s->ret_vec_charp.push_back(s->ret_vec_str[i].c_str());
+  ret->ret_vec_str = std::move(s->ListReturns());
+  ret->ret_vec_charp.clear();
+  for (size_t i = 0; i < ret->ret_vec_str.size(); ++i) {
+    ret->ret_vec_charp.push_back(ret->ret_vec_str[i].c_str());
   }
-  *out_size = static_cast<mx_uint>(s->ret_vec_charp.size());
-  *out_str_array = dmlc::BeginPtr(s->ret_vec_charp);
+  *out_size = static_cast<mx_uint>(ret->ret_vec_charp.size());
+  *out_str_array = dmlc::BeginPtr(ret->ret_vec_charp);
   API_END();
 }
 
@@ -397,19 +413,68 @@ int MXSymbolCompose(SymbolHandle sym,
   std::string s_name;
   if (name != nullptr) s_name = name;
 
-  MXAPISymbolWrapper* s = static_cast<MXAPISymbolWrapper*>(sym);
+  Symbol* s = static_cast<Symbol*>(sym);
   if (keys == nullptr && num_args != 0) {
     std::vector<Symbol> pos_args;
     for (mx_uint i = 0; i < num_args; ++i) {
-      pos_args.push_back(((MXAPISymbolWrapper*)(args[i]))->sym);  //  NOLINT(*)
+      pos_args.push_back(*((Symbol*)args[i]));  //  NOLINT(*)
     }
-    (s->sym).Compose(pos_args, s_name);
+    s->Compose(pos_args, s_name);
   } else {
     std::unordered_map<std::string, Symbol> kwargs;
     for (mx_uint i = 0; i < num_args; ++i) {
-      kwargs[keys[i]] = ((MXAPISymbolWrapper*)(args[i]))->sym;  //  NOLINT(*)
+      kwargs[keys[i]] = *((Symbol*)args[i]);  //  NOLINT(*)
     }
-    (s->sym).Compose(kwargs, s_name);
+    s->Compose(kwargs, s_name);
+  }
+  API_END();
+}
+
+int MXSymbolInferShape(SymbolHandle sym,
+                       mx_uint num_args,
+                       const char** keys,
+                       const mx_uint *arg_ind_ptr,
+                       const mx_uint *arg_shape_data,
+                       mx_uint *in_shape_size,
+                       const mx_uint **in_shape_ndim,
+                       const mx_uint ***in_shape_data,
+                       mx_uint *out_shape_size,
+                       const mx_uint **out_shape_ndim,
+                       const mx_uint ***out_shape_data,
+                       int *complete) {
+  Symbol *s = static_cast<Symbol*>(sym);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  bool succ;
+  API_BEGIN();
+  if (keys == nullptr && num_args != 0) {
+    ret->arg_shapes.clear();
+    for (mx_uint i = 0; i < num_args; ++i) {
+      ret->arg_shapes.push_back(TShape(arg_shape_data + arg_ind_ptr[i],
+                                       arg_shape_data + arg_ind_ptr[i+1]));
+    }
+    succ = s->InferShape(&(ret->arg_shapes), &(ret->out_shapes));
+  } else {
+    std::unordered_map<std::string, TShape> kwargs;
+    for (mx_uint i = 0; i < num_args; ++i) {
+      kwargs[keys[i]] = TShape(arg_shape_data + arg_ind_ptr[i],
+                               arg_shape_data + arg_ind_ptr[i+1]);
+    }
+    succ = s->InferShape(kwargs, &(ret->arg_shapes), &(ret->out_shapes));
+  }
+  if (succ) {
+    MXAPIThreadLocalEntry::SetupShapeArrayReturn(
+        ret->arg_shapes, &(ret->arg_shape_ndim), &(ret->arg_shape_data));
+    MXAPIThreadLocalEntry::SetupShapeArrayReturn(
+        ret->out_shapes, &(ret->out_shape_ndim), &(ret->out_shape_data));
+    *in_shape_size = static_cast<mx_uint>(ret->arg_shapes.size());
+    *in_shape_ndim = dmlc::BeginPtr(ret->arg_shape_ndim);
+    *in_shape_data = dmlc::BeginPtr(ret->arg_shape_data);
+    *out_shape_size = static_cast<mx_uint>(ret->out_shapes.size());
+    *out_shape_ndim = dmlc::BeginPtr(ret->out_shape_ndim);
+    *out_shape_data = dmlc::BeginPtr(ret->out_shape_data);
+    *complete = 1;
+  } else {
+    *complete = 0;
   }
   API_END();
 }

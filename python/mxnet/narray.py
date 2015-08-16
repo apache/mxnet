@@ -134,7 +134,7 @@ class NArray(object):
         pdata = ctypes.POINTER(mx_uint)()
         check_call(_LIB.MXNArrayGetShape(
             self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
-        return tuple(pdata[i] for i in range(ndim.value))
+        return tuple(pdata[:ndim.value])
 
     @property
     def context(self):
