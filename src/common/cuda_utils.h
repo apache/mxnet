@@ -54,7 +54,7 @@ inline const char* CublasGetErrorString(cublasStatus_t error) {
 
 /*!
  * \brief Get string representation of cuRAND errors.
- * \param error The error.
+ * \param status The status.
  * \return String representation.
  */
 inline const char* CurandGetErrorString(curandStatus_t status) {
@@ -92,18 +92,34 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
 }  // namespace cuda
 }  // namespace common
 
+/*!
+ * \brief Check CUDA error.
+ * \param msg Message to print if an error occured.
+ */
 #define CHECK_CUDA_ERROR(msg)                                                \
   {                                                                          \
     cudaError_t e = cudaGetLastError();                                      \
     CHECK_EQ(e, cudaSuccess) << (msg) << " CUDA: " << cudaGetErrorString(e); \
   }
 
+/*!
+ * \brief Protected CUDA call.
+ * \param func Expression to call.
+ *
+ * It checks for CUDA errors after invocation of the expression.
+ */
 #define CUDA_CALL(func)                                            \
   {                                                                \
     cudaError_t e = (func);                                        \
     CHECK_EQ(e, cudaSuccess) << "CUDA: " << cudaGetErrorString(e); \
   }
 
+/*!
+ * \brief Protected cuBLAS call.
+ * \param func Expression to call.
+ *
+ * It checks for cuBLAS errors after invocation of the expression.
+ */
 #define CUBLAS_CALL(func)                                       \
   {                                                             \
     cublasStatus_t e = (func);                                  \
@@ -111,6 +127,12 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
         << "cuBLAS: " << common::cuda::CublasGetErrorString(e); \
   }
 
+/*!
+ * \brief Protected cuRAND call.
+ * \param func Expression to call.
+ *
+ * It checks for cuRAND errors after invocation of the expression.
+ */
 #define CURAND_CALL(func)                                       \
   {                                                             \
     curandStatus_t e = (func);                                  \
