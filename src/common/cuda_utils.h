@@ -17,6 +17,11 @@
 namespace common {
 namespace cuda {
 
+/*!
+ * \brief Get string representation of cuBLAS errors.
+ * \param error The error.
+ * \return String representation.
+ */
 inline const char* CublasGetErrorString(cublasStatus_t error) {
   switch (error) {
     case CUBLAS_STATUS_SUCCESS:
@@ -43,6 +48,11 @@ inline const char* CublasGetErrorString(cublasStatus_t error) {
   return "Unknown cuBLAS status";
 }
 
+/*!
+ * \brief Get string representation of cuRAND errors.
+ * \param error The error.
+ * \return String representation.
+ */
 inline const char* CurandGetErrorString(curandStatus_t status) {
   switch (status) {
     case CURAND_STATUS_SUCCESS:
