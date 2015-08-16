@@ -250,6 +250,8 @@ class OperatorProperty {
    *    return {{out_data[0], in_data[0]}};
    *  }
    * \endcode
+   * \param in_data The input data in forward pass.
+   * \param out_data The output data in forward pass.
    * \return list of pair of integers taken from the inputs vector,
    *   indicating possible in place operations.
    */
@@ -273,6 +275,10 @@ class OperatorProperty {
    *    return {in_grad[0], in_data[0]}};
    *  }
    * \endcode
+   * \param in_data The input data in forward pass.
+   * \param out_data The output data in forward pass.
+   * \param in_grad Gradient of inputs in backward pass.
+   * \param out_grad Gradient of outputs in backward pass.
    * \return list of pair of integers taken from the inputs vector,
    *   indicating possible in place operations.
    */

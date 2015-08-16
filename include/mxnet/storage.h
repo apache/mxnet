@@ -1,45 +1,70 @@
 /*!
- *  Copyright (c) 2015 by Contributors
+ * Copyright (c) 2015 by Contributors
  * \file storage.h
- * \brief the memory allocator that manages the memory across multiple devices
+ * \brief Storage manager across multiple devices.
  */
 #ifndef MXNET_STORAGE_H_
 #define MXNET_STORAGE_H_
-#include "./base.h"
-#include "./context.h"
+
+#include <memory>
+#include "base.h"
+#include "context.h"
 
 namespace mxnet {
-/*! \brief memory allocator of storage */
-class StorageManager {
+
+/*!
+ * \brief Storage manager across multiple devices.
+ */
+class Storage {
  public:
   /*!
-   * \brief storage handle the represents storage information
+   * \brief Storage handle.
    */
   struct Handle {
-    /*! \brief pointer to the data */
-    void *dptr;
-    /*! \brief context information about device and deviceID */
-    Context ctx;
     /*!
-     * \brief internal handle reserved for manager,
-     *   user should not change or use this
+     * \brief Pointer to the data.
      */
-    void *handle_;
+    void* dptr;
+    /*!
+     * \brief Size of the storage.
+     */
+    size_t size;
+    /*!
+     * \brief Context information about device and ID.
+     */
+    Context ctx;
   };
   /*!
-   * \brief allocate a new contiguous memory for a given size
-   * \param size the total size of memory in bytes
-   * \param ctx context information about the device and deviceID
-   * \return Handle struct
+   * \brief Allocate a new contiguous memory for a given size.
+   * \param size Total size of memory in bytes.
+   * \param ctx Context information about the device and ID.
+   * \return Handle struct.
    */
-  virtual Handle Alloc(size_t size, Context ctx) = 0;
+  Handle Alloc(size_t size, Context ctx);
   /*!
-   * \brief free the space represened the handle
-   * \param handle the handle to memory to be freed
+   * \brief Free storage.
+   * \param handle Handle struect.
    */
-  virtual void Free(Handle handle) = 0;
-  /*! \return storage manager singleton */
-  static StorageManager *Get();
-};  // class StorageManager
+  void Free(Handle handle);
+  /*!
+   * \brief Destructor.
+   */
+  ~Storage();
+  /*!
+   * \return Storage singleton.
+   */
+  static Storage* Get();
+
+ private:
+  /*!
+   * \brief Hidden constructors.
+   */
+  Storage();
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
+  DISALLOW_COPY_AND_ASSIGN(Storage);
+};  // class Storage
+
 }  // namespace mxnet
+
 #endif  // MXNET_STORAGE_H_
