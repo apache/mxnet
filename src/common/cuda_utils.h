@@ -15,6 +15,10 @@
 #include <curand.h>
 
 namespace common {
+
+/*!
+ * \brief CUDA utilities.
+ */
 namespace cuda {
 
 /*!

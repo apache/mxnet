@@ -13,6 +13,9 @@
 #include <thread>
 #include <cstdio>
 
+/*!
+ * \brief Common components.
+ */
 namespace common {
 
 /*!
