@@ -7,11 +7,12 @@
 #include <dmlc/logging.h>
 #include <mxnet/base.h>
 #include <mxnet/narray.h>
-#include <mxnet/symbol.h>
-#include <mxnet/atomic_symbol.h>
+#include <mxnet/symbolic.h>
 #include <mxnet/registry.h>
+#include <mxnet/operator.h>
 #include <mxnet/c_api.h>
 #include <mutex>
+#include <memory>
 
 // macro hanlding for threadlocal variables
 #ifdef __GNUC__
@@ -25,6 +26,18 @@
 #ifndef MX_TREAD_LOCAL
 #message("Warning: Threadlocal is not enabled");
 #endif
+
+/*! \brief symbol wrapper to easily hold returning information */
+struct MXAPISymbolWrapper {
+  /*! \brief the actual symbol */
+  mxnet::Symbol sym;
+  /*! \brief result holder for returning string */
+  std::string ret_str;
+  /*! \brief result holder for returning strings */
+  std::vector<std::string> ret_vec_str;
+  /*! \brief result holder for returning string pointers */
+  std::vector<const char *> ret_vec_charp;
+};
 
 /*!
  * \brief helper to store error message in threadlocal storage
@@ -86,8 +99,15 @@ using namespace mxnet;
 
 /*! \brief  macro to guard beginning and end section of all functions */
 #define API_BEGIN() try {
-/*! \brief every function starts with API_BEGIN(); and finishes with API_END(); */
+/*! \brief every function starts with API_BEGIN();
+     and finishes with API_END() or API_END_HANDLE_ERROR */
 #define API_END() } catch(dmlc::Error &e) { return MXHandleException(e); } return 0;
+/*!
+ * \brief every function starts with API_BEGIN();
+ *   and finishes with API_END() or API_END_HANDLE_ERROR
+ *   The finally clause contains procedure to cleanup states when an error happens.
+ */
+#define API_END_HANDLE_ERROR(Finalize) } catch(dmlc::Error &e) { Finalize; return MXHandleException(e); } return 0; // NOLINT(*)
 
 /*! \brief return str message of the last error */
 const char *MXGetLastError() {
@@ -249,74 +269,147 @@ int MXFuncInvoke(FunctionHandle fun,
   API_END();
 }
 
-int MXSymbolCreateFromAtomicSymbol(AtomicSymbolCreator creator,
-                                   int num_param,
-                                   const char **keys,
-                                   const char **vals,
-                                   SymbolHandle *out) {
-  API_BEGIN();
-  AtomicSymbolEntry *e = static_cast<AtomicSymbolEntry *>(creator);
-  *out = static_cast<SymbolHandle>(new Symbol);
-  AtomicSymbol *atomic_symbol = (*e)();
-  for (int i = 0; i < num_param; ++i) {
-    atomic_symbol->SetParam(keys[i], vals[i]);
-  }
-  *static_cast<Symbol*>(*out) = Symbol::Create(atomic_symbol);
-  API_END();
-}
-
-int MXSymbolFree(SymbolHandle symbol) {
-  API_BEGIN();
-  delete static_cast<Symbol*>(symbol);
-  API_END();
-}
+//--------------------------------------------
+// Part 3: symbolic configuration generation
+//--------------------------------------------
 
 int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
                                      AtomicSymbolCreator **out_array) {
   API_BEGIN();
-  auto &vec = Registry<AtomicSymbolEntry>::List();
+  auto &vec = Registry<OperatorPropertyEntry>::List();
   *out_size = static_cast<mx_uint>(vec.size());
   *out_array = (AtomicSymbolCreator*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
-  API_END();
-}
-
-int MXSymbolGetSingleton(AtomicSymbolCreator creator,
-                         SymbolHandle *out) {
-  API_BEGIN();
-  AtomicSymbolEntry *e = static_cast<AtomicSymbolEntry *>(creator);
-  *out = static_cast<SymbolHandle>(e->GetSingletonSymbol());
   API_END();
 }
 
 int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
                                 const char **out) {
   API_BEGIN();
-  AtomicSymbolEntry *e = static_cast<AtomicSymbolEntry *>(creator);
+  OperatorPropertyEntry *e = static_cast<OperatorPropertyEntry *>(creator);
   *out = e->name.c_str();
   API_END();
 }
 
+int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
+                               int num_param,
+                               const char **keys,
+                               const char **vals,
+                               SymbolHandle *out) {
+  MXAPISymbolWrapper *s = new MXAPISymbolWrapper();
+  OperatorProperty *op = nullptr;
+
+  API_BEGIN();
+  OperatorPropertyEntry *e = static_cast<OperatorPropertyEntry *>(creator);
+  op = (*e)();
+  for (int i = 0; i < num_param; ++i) {
+    op->SetParam(keys[i], vals[i]);
+  }
+  s->sym = Symbol::Create(op);
+  *out = s;
+  API_END_HANDLE_ERROR(delete s; delete op);
+}
+
+int MXSymbolCreateVariable(const char *name, SymbolHandle *out) {
+  MXAPISymbolWrapper *s = new MXAPISymbolWrapper();
+  API_BEGIN();
+  s->sym = Symbol::CreateVariable(name);
+  *out = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
+int MXSymbolCreateGroup(mx_uint num_symbols,
+                        SymbolHandle *symbols,
+                        SymbolHandle *out) {
+  MXAPISymbolWrapper *s = new MXAPISymbolWrapper();
+  MXAPISymbolWrapper **sym_arr = (MXAPISymbolWrapper**)symbols; // NOLINT(*)
+  API_BEGIN();
+  std::vector<Symbol> syms;
+  for (mx_uint i = 0; i < num_symbols; ++i) {
+    syms.push_back(sym_arr[i]->sym);
+  }
+  s->sym = Symbol::CreateGroup(syms);
+  *out = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
+int MXSymbolFree(SymbolHandle symbol) {
+  API_BEGIN();
+  delete static_cast<MXAPISymbolWrapper*>(symbol);
+  API_END();
+}
+
+int MXSymbolCopy(SymbolHandle symbol, SymbolHandle *out) {
+  MXAPISymbolWrapper *s = new MXAPISymbolWrapper();
+
+  API_BEGIN();
+  s->sym = (static_cast<const MXAPISymbolWrapper*>(symbol)->sym).Copy();
+  *out = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
+int MXSymbolPrint(SymbolHandle symbol, const char **out_str) {
+  MXAPISymbolWrapper *s = static_cast<MXAPISymbolWrapper*>(symbol);
+
+  API_BEGIN();
+  std::ostringstream os;
+  (s->sym).Print(os);
+  s->ret_str = os.str();
+  *out_str = (s->ret_str).c_str();
+  API_END();
+}
+
+int MXSymbolListArguments(SymbolHandle symbol,
+                          mx_uint *out_size,
+                          const char ***out_str_array) {
+  MXAPISymbolWrapper *s = static_cast<MXAPISymbolWrapper*>(symbol);
+  API_BEGIN();
+  s->ret_vec_str = std::move((s->sym).ListArguments());
+  s->ret_vec_charp.clear();
+  for (size_t i = 0; i < s->ret_vec_str.size(); ++i) {
+    s->ret_vec_charp.push_back(s->ret_vec_str[i].c_str());
+  }
+  *out_size = static_cast<mx_uint>(s->ret_vec_charp.size());
+  *out_str_array = dmlc::BeginPtr(s->ret_vec_charp);
+  API_END();
+}
+
+int MXSymbolListReturns(SymbolHandle symbol,
+                          mx_uint *out_size,
+                          const char ***out_str_array) {
+  MXAPISymbolWrapper *s = static_cast<MXAPISymbolWrapper*>(symbol);
+  API_BEGIN();
+  s->ret_vec_str = std::move((s->sym).ListReturns());
+  s->ret_vec_charp.clear();
+  for (size_t i = 0; i < s->ret_vec_str.size(); ++i) {
+    s->ret_vec_charp.push_back(s->ret_vec_str[i].c_str());
+  }
+  *out_size = static_cast<mx_uint>(s->ret_vec_charp.size());
+  *out_str_array = dmlc::BeginPtr(s->ret_vec_charp);
+  API_END();
+}
+
 int MXSymbolCompose(SymbolHandle sym,
+                    const char *name,
                     mx_uint num_args,
                     const char** keys,
-                    SymbolHandle* args,
-                    SymbolHandle* out) {
+                    SymbolHandle* args) {
   API_BEGIN();
-  const Symbol* s = static_cast<const Symbol*>(sym);
-  Symbol* ret = new Symbol;
-  if (keys == NULL) {
+  std::string s_name;
+  if (name != nullptr) s_name = name;
+
+  MXAPISymbolWrapper* s = static_cast<MXAPISymbolWrapper*>(sym);
+  if (keys == nullptr && num_args != 0) {
     std::vector<Symbol> pos_args;
     for (mx_uint i = 0; i < num_args; ++i) {
-      pos_args.push_back(*(Symbol*)(args[i]));  //  NOLINT(*)
+      pos_args.push_back(((MXAPISymbolWrapper*)(args[i]))->sym);  //  NOLINT(*)
     }
-    *ret = (*s)(pos_args);
+    (s->sym).Compose(pos_args, s_name);
   } else {
     std::unordered_map<std::string, Symbol> kwargs;
     for (mx_uint i = 0; i < num_args; ++i) {
-      kwargs[keys[i]] = *(Symbol*)(args[i]);  //  NOLINT(*)
+      kwargs[keys[i]] = ((MXAPISymbolWrapper*)(args[i]))->sym;  //  NOLINT(*)
     }
-    *ret = (*s)(kwargs);
+    (s->sym).Compose(kwargs, s_name);
   }
-  *out = ret;
   API_END();
 }

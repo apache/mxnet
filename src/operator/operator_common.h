@@ -1,17 +1,17 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file static_operator_common.h
+ * \file  operator_common.h
  * \brief common internal header of most operators
  *   this header includes utility functions operator can use
- *   common type definitions
  * \author Bing Xu
 */
-#ifndef MXNET_STATIC_OPERATOR_STATIC_OPERATOR_COMMON_H_
-#define MXNET_STATIC_OPERATOR_STATIC_OPERATOR_COMMON_H_
+#ifndef MXNET_OPERATOR_OPERATOR_COMMON_H_
+#define MXNET_OPERATOR_OPERATOR_COMMON_H_
 
 #include <dmlc/logging.h>
-#include <mxnet/static_operator.h>
+#include <mxnet/operator.h>
 #include <mxnet/base.h>
+
 namespace mxnet {
 namespace op {
 /*!
@@ -24,7 +24,7 @@ namespace op {
  */
 template<typename OType, typename Exp>
 inline void Assign(OType &out, // NOLINT(*)
-                   GradReqType req,
+                   OpReqType req,
                    const Exp &exp) {
   switch (req) {
     case kNullOp: break;
@@ -49,25 +49,24 @@ inline void ShapeAssignCheck(TShape &out, const TS &shape) { // NOLINT(*)
   }
 }
 
-/*! \brief type of operators */
-enum OpType {
-  kReLU = 0,
-  kFullc = 1,
-  kConv = 2,
-  kMaxPooling = 3,
-  kAvgPooling = 4,
-  kSumPooling = 5,
-  kFlatten = 6,
-  kReshape = 7,
-  kDropout = 8,
-};
+// helper macro to implement bind dispatch
+#if MXNET_USE_CUDA
+#define DO_BIND_DISPATCH(Method, ...)                                \
+    if (ctx.dev_mask == cpu::kDevMask) {                             \
+      return Method<cpu>(__VA_ARGS__);                               \
+    } else {                                                         \
+      return Method<gpu>(__VA_ARGS__);                               \
+    }
+#else
+#define DO_BIND_DISPATCH(Method, ...)                                \
+  if (ctx.dev_mask == cpu::kDevMask) {                               \
+    return Method<cpu>(__VA_ARGS__);                                 \
+  } else {                                                           \
+    LOG(FATAL) << "GPU is not enabled";                              \
+    return nullptr;                                                  \
+  }
+#endif
 
-/*!
- * \brief device invariant function to create operators
- * \param type the type of operator
- */
-template<typename xpu>
-StaticOperator *CreateOperator(OpType type);
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_STATIC_OPERATOR_STATIC_OPERATOR_COMMON_H_
+#endif  // MXNET_OPERATOR_OPERATOR_COMMON_H_

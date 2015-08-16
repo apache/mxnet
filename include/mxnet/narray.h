@@ -5,12 +5,14 @@
  */
 #ifndef MXNET_NARRAY_H_
 #define MXNET_NARRAY_H_
+
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
 #include <memory>
 #include "./base.h"
+#include "./context.h"
 #include "./storage.h"
-#include "./tensor_blob.h"
+#include "./context.h"
 #include "./dag_engine.h"
 // check c++11
 #if DMLC_USE_CXX11 == 0

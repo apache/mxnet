@@ -1,11 +1,13 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file param.h
- * \brief operator params
+ * \brief Common operator parameters
  * \author Bing Xu
 */
-#ifndef MXNET_STATIC_OPERATOR_PARAM_H_
-#define MXNET_STATIC_OPERATOR_PARAM_H_
+#ifndef MXNET_OPERATOR_PARAM_H_
+#define MXNET_OPERATOR_PARAM_H_
+
+#include <cstring>
 
 namespace mxnet {
 namespace op {
@@ -39,6 +41,12 @@ struct Param {
   int num_input_node;
   /*! \brief reserved fields, for future compatibility */
   int reserved[64];
+
+  // constructor
+  Param() {
+    memset(this, 0, sizeof(Param));
+  }
+
   inline void SetParam(const char *name, const char* val) {
     if (!strcmp(name, "nhidden")) num_hidden = atoi(val);
     if (!strcmp(name, "num_input_node")) num_input_node = atoi(val);
@@ -68,6 +76,5 @@ struct Param {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_STATIC_OPERATOR_PARAM_H_
-
+#endif  // MXNET_OPERATOR_PARAM_H_
 

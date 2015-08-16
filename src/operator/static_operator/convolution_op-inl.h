@@ -4,10 +4,10 @@
  * \brief convolution op
  * \author Bing Xu
 */
-#ifndef MXNET_STATIC_OPERATOR_CONVOLUTION_OP_INL_H_
-#define MXNET_STATIC_OPERATOR_CONVOLUTION_OP_INL_H_
+#ifndef MXNET_OPERATOR_STATIC_OPERATOR_CONVOLUTION_OP_INL_H_
+#define MXNET_OPERATOR_STATIC_OPERATOR_CONVOLUTION_OP_INL_H_
 
-#include <mxnet/static_operator.h>
+#include <mxnet/operator.h>
 #include <vector>
 #include <algorithm>
 #include "./static_operator_common.h"
@@ -134,6 +134,7 @@ class ConvolutionOp : public StaticOperator {
   virtual void Backward(RunContext ctx,
                         const std::vector<TBlob> &grad_next,
                         const std::vector<TBlob> &in_data,
+                        const std::vector<TBlob> &out_data,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<GradReqType> &req) {
     using namespace mshadow;
@@ -266,4 +267,4 @@ class ConvolutionOp : public StaticOperator {
 };  // class ConvolutionOp
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_STATIC_OPERATOR_CONVOLUTION_OP_INL_H_
+#endif  // MXNET_OPERATOR_STATIC_OPERATOR_CONVOLUTION_OP_INL_H_
