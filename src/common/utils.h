@@ -38,7 +38,7 @@ struct UniqueIf<T[kSize]> {
 template <class T, class... Args>
 typename helper::UniqueIf<T>::SingleObject MakeUnique(Args&&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-};
+}
 
 template <class T>
 typename helper::UniqueIf<T>::UnknownBound MakeUnique(size_t n) {
