@@ -7,6 +7,7 @@
 #include <mxnet/symbolic.h>
 #include <vector>
 #include <queue>
+#include <map>
 #include "../operator/operator_common.h"
 
 namespace mxnet {
@@ -76,7 +77,7 @@ bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
         const DataEntry& e = node.inputs[i];
         (*node_out_shapes)[e.source_id][e.index] = in_shape[i];
       }
-    } else if (node.is_backward()) {
+    } else if (nodes[nid].is_backward()) {
       // simply use shapes from forward pass to assign backward shape
       const Node& forward = nodes[node.backward_source_id];
       CHECK(forward.is_forward());
@@ -149,5 +150,104 @@ bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
     (*out_shape)[i] = node_out_shapes[e.source_id][e.index];
   }
   return true;
+}
+
+void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
+                                   std::vector<std::vector<DataEntry> > *arg_grads) {
+  arg_grads->clear();
+  head_grad_nodes->clear();
+  // get topo order of nodes, before new nodes are added
+  std::vector<uint32_t> topo_order = TopoSort();
+  // map out_data entry to out_grad
+  std::map<DataEntry, std::vector<DataEntry> > grad_map;
+  // allocate head gradient nodes
+  for (DataEntry head : heads) {
+    uint32_t nid = static_cast<uint32_t>(nodes.size());
+    // create a variable node for gradient input
+    nodes.push_back(Node());
+    Node &node = nodes[nid];
+    std::ostringstream os;
+    os << nodes[head.source_id].name << '_' << head.index << "_grad";
+    // TODO(bing): add index to name
+    node.name = os.str();
+    DataEntry igrad(nid, 0);
+    head_grad_nodes->push_back(nid);
+    // update gradient map
+    auto it = grad_map.find(head);
+    if (it == grad_map.end()) {
+      grad_map[head] = {igrad};
+    } else {
+      it->second.push_back(igrad);
+    }
+  }
+  // do backward pass traverse
+  for (auto it = topo_order.rbegin(); it != topo_order.rend(); ++it) {
+    uint32_t nid = *it;
+    // skip variables
+    if (nodes[nid].is_variable()) continue;
+    CHECK(nodes[nid].is_forward()) << "Do not support Backward of Backward";
+    // get out_grad and out_data entry
+    std::vector<DataEntry> out_grad, out_data;
+    // nvisible is out_grad.size()
+    int nvisible = nodes[nid].op->NumVisibleReturns();
+    // ntotal is out_data.size()
+    int ntotal = nodes[nid].op->NumReturns();
+    // check all outpus
+    for (int i = 0; i < ntotal; ++i) {
+      DataEntry odata(nid, static_cast<uint32_t>(i));
+      out_data.push_back(odata);
+      if (i >= nvisible) continue;
+      // get out_grad
+      auto it = grad_map.find(odata);
+      CHECK(it != grad_map.end()) << "bad graph";
+      std::vector<DataEntry> &gnodes = it->second;
+      if (gnodes.size() == 1) {
+        out_grad.push_back(gnodes[0]);
+      } else {
+        // find multiple gradients, need aggregate
+        std::ostringstream os_size, os_name;
+        uint32_t agg_node_id = static_cast<uint32_t>(nodes.size());
+        nodes.push_back(Node());
+        Node &agg_node = nodes[agg_node_id];
+        agg_node.op.reset(OperatorProperty::Create("ElementWiseSum"));
+        os_size << gnodes.size();
+        agg_node.op->Init({{"size", os_size.str()}});
+        os_name << nodes[nid].name << '_' << i << "_out_grad_agg";
+        agg_node.name = os_name.str();
+        agg_node.inputs = gnodes;
+        out_grad.push_back(DataEntry(agg_node_id, 0));
+      }
+    }
+    // Create a gradient backward node
+    nodes.push_back(Node());
+    uint32_t grad_node_id = static_cast<uint32_t>(nodes.size());
+    Node &grad_node = nodes[grad_node_id];
+    // Point to the corresponding source
+    grad_node.backward_source_id = nid;
+    // select out the dependent inputs
+    grad_node.inputs = nodes[nid].op->BackwardInputs(
+        out_grad, nodes[nid].inputs, out_data);
+    grad_node.name = nodes[nid].name + "_backward";
+
+    // update gradient map
+    for (size_t i = 0; i < nodes[nid].inputs.size(); ++i) {
+      DataEntry idata = nodes[nid].inputs[i];
+      DataEntry igrad(grad_node_id, static_cast<uint32_t>(i));
+      auto it = grad_map.find(idata);
+      if (it == grad_map.end()) {
+        grad_map[idata] = {igrad};
+      } else {
+        it->second.push_back(igrad);
+      }
+    }
+  }
+  // create return values of arg_grads
+  arg_grads->resize(arg_nodes.size());
+  for (size_t i = 0; i < arg_nodes.size(); ++i) {
+    DataEntry odata(arg_nodes[i], 0);
+    auto it = grad_map.find(odata);
+    CHECK(it != grad_map.end()) << "bad graph";
+    arg_grads->at(i) = it->second;
+  }
 }
 }  // namespace mxnet

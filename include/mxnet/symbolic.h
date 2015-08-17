@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <functional>
 #include <unordered_map>
 #include <unordered_set>
 #include "./base.h"
@@ -37,6 +38,32 @@ class StaticGraph {
     uint32_t source_id;
     /*! \brief index of output from the source. */
     uint32_t index;
+    /*! \brief default constructor */
+    DataEntry() {}
+    /*!
+     * \brief constructor with source and index
+     * \param source_id source id
+     * \param index node index
+     */
+    DataEntry(uint32_t source_id, uint32_t index)
+        : source_id(source_id), index(index) {}
+    /*!
+     * \brief compare equality
+     * \param other the other entry to compare
+     * \return whether two entries equals to each other
+     */
+    inline bool operator==(const DataEntry &other) const {
+      return source_id == other.source_id && index == other.index;
+    }
+    /*!
+     * \brief comparator, allows to use map
+     * \param other the other entry to compare
+     * \return whether two entries is smaller than the other
+     */
+    inline bool operator<(const DataEntry &other) const {
+      if (source_id == other.source_id) return index < other.index;
+      return source_id < other.source_id;
+    }
   };
   /*!
    * \brief Operation Node in static graphs.
@@ -131,10 +158,11 @@ class StaticGraph {
    *  The head and input of Backward pass will be returned by head_grad_nodes and arg_grads.
    *
    * \param head_grad_nodes used to store the created head gradient inputs for backward pass.
-   * \param arg_grads used to store the gradient nodes
+<<<<<<< HEAD
+   * \param arg_grads used to store gradients to args, can be multiple one if an argument is used by operator
    */
   void MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
-                        std::vector<DataEntry> *arg_grads) const;
+                        std::vector<std::vector<DataEntry> > *arg_grads);
 };
 
 /*!
