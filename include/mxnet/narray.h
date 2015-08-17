@@ -128,14 +128,14 @@ class NArray {
   /*! \brief the real data chunk that backs NArray */
   struct Chunk {
     /*! \brief storage handlefrom storage engine */
-    StorageManager::Handle shandle;
+    Storage::Handle shandle;
     /*! \brief variable from DAG engine */
     DAGEngine::Variable var;
     /*! \brief holds the data content */
     TBlob data;
     /*!
      * \brief if this is true, this means the data do not come
-     * from StorageManager, and do not need to be freed
+     * from Storage, and do not need to be freed
      */
     bool static_data;
     /*! \brief whether allocation is delayed */
@@ -163,7 +163,7 @@ class NArray {
     /*! \brief check if delay alloc is on, do alloc if not yet done */
     inline void CheckAndAlloc(void) {
       if (delay_alloc) {
-        shandle = StorageManager::Get()->Alloc(data.shape_.Size() * sizeof(real_t), shandle.ctx);
+        shandle = Storage::Get()->Alloc(data.shape_.Size() * sizeof(real_t), shandle.ctx);
         data = TBlob(static_cast<real_t*>(shandle.dptr), data.shape_, shandle.ctx.dev_mask);
         delay_alloc = false;
       }
@@ -174,9 +174,9 @@ class NArray {
         DAGEngine::Get()->PushDelete([](RunContext s) {}, shandle.ctx, var);
       } else {
         CHECK(!delay_alloc) << "deleted before allocation";
-        StorageManager::Handle h = this->shandle;
+        Storage::Handle h = this->shandle;
         DAGEngine::Get()->PushDelete([h](RunContext s) {
-            StorageManager::Get()->Free(h);
+            Storage::Get()->Free(h);
           }, shandle.ctx, var);
       }
     }

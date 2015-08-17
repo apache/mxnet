@@ -49,3 +49,7 @@ Debug
 *.swp
 *.swo
 *.swn
+
+# Emacs
+.clang_complete
+.dir-locals.el
