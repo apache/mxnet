@@ -9,6 +9,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
+#include <map>
 #include <vector>
 #include <string>
 #include <utility>

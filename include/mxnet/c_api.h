@@ -325,6 +325,7 @@ MXNET_DLL int MXSymbolCompose(SymbolHandle sym,
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
  *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
  *
+ * \param sym symbol handle
  * \param num_args numbe of input arguments.
  * \param keys the key of keyword args (optional)
  * \param arg_ind_ptr the head pointer of the rows in CSR
