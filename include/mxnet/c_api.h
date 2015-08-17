@@ -38,8 +38,9 @@ typedef void *AtomicSymbolHandle;
 typedef void *OperatorHandle;
 /*! \brief handle to a DataIterator */
 typedef void *DataIterHandle;
-
-/*!
+/*! \brief handle to an Executor */
+typedef void *ExecutorHandle;
+/*
  * \brief return str message of the last error
  *  all function in this file will return 0 when success
  *  and -1 when an error occured,
@@ -325,6 +326,7 @@ MXNET_DLL int MXSymbolCompose(SymbolHandle sym,
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
  *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
  *
+ * \param sym symbol handle
  * \param num_args numbe of input arguments.
  * \param keys the key of keyword args (optional)
  * \param arg_ind_ptr the head pointer of the rows in CSR
@@ -457,5 +459,66 @@ MXNET_DLL int MXIOGetData(DataIterHandle handle,
  */
 MXNET_DLL int MXIOGetLabel(DataIterHandle handle,
                            NArrayHandle *out);
+
+//--------------------------------------------
+// Part 56: Executor
+//--------------------------------------------
+/*!
+ * \brief Executor forward method
+ *
+ * \param handle executor handle
+ * \param len length of narray handles
+ * \param input input NArray handles
+ *
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXExecutorForward(ExecutorHandle handle,
+                                mx_uint len,
+                                NArrayHandle *input);
+
+/**
+ * \brief Excecutor run backward
+ *
+ * \param handle execute handle
+ * \param len lenth
+ * \param head_grads NArray handle for heads' gradient
+ *
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXExecutorBackward(ExecutorHandle handle,
+                                 mx_uint len,
+                                 NArrayHandle *head_grads);
+
+/**
+ * \brief Get executor's head NArray
+ *
+ * \param handle executor handle
+ * \param out_size output narray vector size
+ * \param out out put narray handles
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXExecutorHeads(ExecutorHandle handle,
+                              mx_uint *out_size,
+                              NArrayHandle **out);
+
+/**
+ * \brief Generate Executor from symbol
+ *
+ * \param handle executor hanlde (to be generated)
+ * \param symbol_handle symbol handle
+ * \param len length
+ * \param in_args in args array
+ * \param arg_grad_store arg grads handle array
+ * \param grad_req_type grad req array
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXExecutorBind(ExecutorHandle handle,
+                             SymbolHandle symbol_handle,
+                             int dev_mask,
+                             int dev_id,
+                             mx_uint len,
+                             NArrayHandle *in_args,
+                             NArrayHandle *arg_grad_store,
+                             mx_uint *grad_req_type);
 
 #endif  // MXNET_C_API_H_

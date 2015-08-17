@@ -480,3 +480,70 @@ int MXSymbolInferShape(SymbolHandle sym,
   }
   API_END();
 }
+
+MXNET_DLL int MXExecutorForward(ExecutorHandle handle,
+                                mx_uint len,
+                                NArrayHandle *args) {
+  API_BEGIN();
+  Executor *exec = static_cast<Executor*>(handle);
+  NArray **args_ptr = reinterpret_cast<NArray**>(args);
+  std::vector<NArray> narrays;
+  for (mx_uint i = 0; i < len; ++i) {
+    narrays.emplace_back(*(args_ptr[i]));
+  }
+  exec->Forward(narrays);
+  API_END();
+}
+
+
+MXNET_DLL int MXExecutorBackward(ExecutorHandle handle,
+                                 mx_uint len,
+                                NArrayHandle *head_grads) {
+  API_BEGIN();
+  Executor *exec = static_cast<Executor*>(handle);
+  std::vector<NArray> narrays;
+  NArray **args_ptr = reinterpret_cast<NArray**>(head_grads);
+  for (mx_uint i = 0; i < len; ++i) {
+    narrays.push_back(*(args_ptr[i]));
+  }
+  exec->Backward(narrays);
+  API_END();
+}
+
+
+MXNET_DLL int MXExecutorHeads(ExecutorHandle handle,
+                              mx_uint *out_size,
+                              NArrayHandle **out) {
+  API_BEGIN();
+  Executor *exec = static_cast<Executor*>(handle);
+  std::vector<NArray> ret = exec->heads();
+
+  API_END();
+}
+
+MXNET_DLL int MXExecutorBind(ExecutorHandle handle,
+                             SymbolHandle symbol_handle,
+                             int dev_mask,
+                             int dev_id,
+                             mx_uint len,
+                             NArrayHandle *in_args,
+                             NArrayHandle *arg_grad_store,
+                             mx_uint *grad_req_type) {
+  API_BEGIN();
+  Executor *exec = static_cast<Executor*>(handle);
+  Symbol *symb = static_cast<Symbol*>(symbol_handle);
+  Context ctx = Context(dev_mask, dev_id);
+  NArray **in_args_ptr = reinterpret_cast<NArray**>(in_args);
+  NArray **arg_grad_ptr = reinterpret_cast<NArray**>(arg_grad_store);
+  std::vector<NArray> in_args_vec;
+  std::vector<NArray> arg_grad_vec;
+  std::vector<OpReqType> grad_req_vec;
+  for (mx_uint i = 0; i < len; ++i) {
+    in_args_vec.push_back(*(in_args_ptr[i]));
+    arg_grad_vec.push_back(*(arg_grad_ptr[i]));
+    grad_req_vec.push_back(static_cast<OpReqType>(grad_req_type[i]));
+  }
+  handle = exec->Bind(*symb, ctx, in_args_vec, arg_grad_vec, grad_req_vec);
+  API_END();
+}
+

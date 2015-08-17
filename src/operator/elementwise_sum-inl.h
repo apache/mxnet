@@ -11,6 +11,7 @@
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <cstring>
+#include <map>
 #include <string>
 #include <vector>
 #include <utility>

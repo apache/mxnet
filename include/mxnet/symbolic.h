@@ -365,7 +365,7 @@ class Executor {
    * \brief Perform a Forward operation of Operator
    *  After this operation, user can get the result by using function head.
    */
-  virtual void Forward() = 0;
+  virtual void Forward(const std::vector<NArray> &inputs) = 0;
   /*!
    * \brief Perform a Backward operation of the Operator.
    *  This must be called after Forward.

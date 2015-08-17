@@ -11,6 +11,7 @@
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <cstring>
+#include <map>
 #include <string>
 #include <vector>
 #include <utility>
@@ -28,8 +29,8 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
   // use int for enumeration
   int type;
   DMLC_DECLARE_PARAMETER(ActivationParam) {
-    // TODO(bing) support enum, str->int mapping
-    DMLC_DECLARE_FIELD(type).set_default(kReLU);
+    DMLC_DECLARE_FIELD(type).set_default(kReLU).add_enum("relu", kReLU).\
+      add_enum("sigmoid", kSigmoid).add_enum("tanh", kTanh);
   }
 };
 
