@@ -127,6 +127,12 @@ class OperatorProperty {
    */
   virtual ~OperatorProperty() {}
   /*!
+   *  \brief Initialize the Operator by setting the parameters
+   *  This function need to be called before all other functions.
+   *  \param kwargs the keyword arguments parameters
+   */
+  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
+  /*!
    * \brief Get input arguments of the Operator.
    * \return vector of arguments.
    */
@@ -159,12 +165,6 @@ class OperatorProperty {
   virtual int NumVisibleReturns() const {
     return NumReturns();
   }
-  /*!
-   *  \brief Set the parameters of the Operator.
-   *  \param name parameter name
-   *  \param val string for the configuration
-   */
-  virtual void SetParam(const char *name, const char *val) {}
   /*!
    * \brief infer the shapes of outputs and unknown input arguments
    * \param in_shape the shape of input arguments of the operator

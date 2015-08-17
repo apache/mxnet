@@ -121,6 +121,20 @@ class StaticGraph {
    */
   bool InferShape(std::vector<TShape>* in_shape,
                   std::vector<TShape>* out_shape) const;
+  /*!
+   * \brief Add a full backward pass in the static graph.
+   *  This function will add gradient nodes for each heads,
+   *  and add the backward pass to backprop the gradients all
+   *  the way to the arguments.
+   *
+   *  This will change the nodes field in the StaticGraph, but will not change other fields.
+   *  The head and input of Backward pass will be returned by head_grad_nodes and arg_grads.
+   *
+   * \param head_grad_nodes used to store the created head gradient inputs for backward pass.
+   * \param arg_grads used to store the gradient nodes
+   */
+  void MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
+                        std::vector<DataEntry> *arg_grads) const;
 };
 
 /*!

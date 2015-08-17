@@ -58,14 +58,14 @@ endif
 BIN = test/api_registry_test
 OBJ = storage.o narray_op_cpu.o
 # add threaded engine after it is done
-OBJCXX11 = engine.o narray.o c_api.o registry.o symbol.o fully_connected_cpu.o static_graph.o activation_cpu.o
+OBJCXX11 = engine.o narray.o c_api.o registry.o symbol.o fully_connected_cpu.o static_graph.o activation_cpu.o elementwise_sum_cpu.o
 CUOBJ =
 SLIB = lib/libmxnet.so
 ALIB = lib/libmxnet.a
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
 
 ifeq ($(USE_CUDA), 1)
-	CUOBJ += narray_op_gpu.o fully_connected_gpu.o activation_gpu.o
+	CUOBJ += narray_op_gpu.o fully_connected_gpu.o activation_gpu.o elementwise_sum_gpu.o
 endif
 
 .PHONY: clean all test lint doc
@@ -89,6 +89,8 @@ fully_connected_cpu.o: src/operator/fully_connected.cc
 fully_connected_gpu.o: src/operator/fully_connected.cu
 activation_cpu.o: src/operator/activation.cc
 activation_gpu.o: src/operator/activation.cu
+elementwise_sum_cpu.o: src/operator/elementwise_sum.cc
+elementwise_sum_gpu.o: src/operator/elementwise_sum.cu
 
 lib/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)
 lib/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ)

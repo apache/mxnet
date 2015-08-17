@@ -316,9 +316,11 @@ int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
   API_BEGIN();
   OperatorPropertyEntry *e = static_cast<OperatorPropertyEntry *>(creator);
   op = (*e)();
+  std::vector<std::pair<std::string, std::string> > kwargs;
   for (int i = 0; i < num_param; ++i) {
-    op->SetParam(keys[i], vals[i]);
+    kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
   }
+  op->Init(kwargs);
   *s = Symbol::Create(op);
   *out = s;
   API_END_HANDLE_ERROR(delete s; delete op);

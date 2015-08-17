@@ -25,12 +25,18 @@ Registry<Entry> *Registry<Entry>::Get() {
   return &instance;
 }
 
-#if DMLC_USE_CXX11
+
 template NArrayFunctionEntry &Registry<NArrayFunctionEntry>::Register(const std::string& name);
 template Registry<NArrayFunctionEntry> *Registry<NArrayFunctionEntry>::Get();
-#endif
 
 template OperatorPropertyEntry &Registry<OperatorPropertyEntry>::Register(const std::string& name);
 template Registry<OperatorPropertyEntry> *Registry<OperatorPropertyEntry>::Get();
 
+// implementation of all factory functions
+OperatorProperty *OperatorProperty::Create(const char* type_name) {
+  auto *creator = Registry<OperatorPropertyEntry>::Find(type_name);
+  CHECK_NE(creator, nullptr)
+      << "Cannot find Operator " << type_name << " in registry";
+  return (*creator)();
+}
 }  // namespace mxnet

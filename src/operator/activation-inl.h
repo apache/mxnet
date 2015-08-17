@@ -1,12 +1,14 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file activation-inl.h
- * \brief
+ * \brief Activation operator
  * \author Bing Xu
 */
 #ifndef MXNET_OPERATOR_ACTIVATION_INL_H_
 #define MXNET_OPERATOR_ACTIVATION_INL_H_
+
 #include <dmlc/logging.h>
+#include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <cstring>
 #include <string>
@@ -20,7 +22,17 @@ namespace op {
 // // These enums are only visible within this header
 enum ActivationOpInputs {kData};
 enum ActivationOpOutputs {kOut};
-enum ActivationOpType {kUnknown, kReLU, kSigmoid, kTanh};
+enum ActivationOpType {kReLU, kSigmoid, kTanh};
+
+struct ActivationParam : public dmlc::Parameter<ActivationParam> {
+  // use int for enumeration
+  int type;
+  DMLC_DECLARE_PARAMETER(ActivationParam) {
+    // TODO(bing) support enum, str->int mapping
+    DMLC_DECLARE_FIELD(type).set_default(kReLU);
+  }
+};
+
 /**
  * \brief This is the implementation of activation operator.
  * \tparam xpu The device that the op will be executed on.
@@ -54,32 +66,26 @@ class ActivationOp : public Operator {
     CHECK(in_data.size() == 1 && in_grad.size() == 1);
     CHECK_EQ(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> out_gradient = out_grad[kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> output = out_data[kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> grad = out_grad[kOut].FlatTo2D<xpu, real_t>(s);
-    Assign(grad, req[kData], F<BackwardOp>(out_gradient * output));
+    Tensor<xpu, 2> m_out_grad = out_grad[kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> m_out_data = out_data[kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> m_in_grad = in_grad[kData].FlatTo2D<xpu, real_t>(s);
+    Assign(m_in_grad, req[kData], F<BackwardOp>(m_out_data) * m_out_grad);
   }
 };  // class ActivationOp
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateActivationOp(ActivationOpType type);
+Operator* CreateOp(ActivationParam type);
 
 #if DMLC_USE_CXX11
 class ActivationProp : public OperatorProperty {
  public:
-  explicit ActivationProp() : type_(kUnknown) {}
-
-  explicit ActivationProp(ActivationOpType type) : type_(type) {}
-
-  virtual void SetParam(const char *name, const char *val) {
-    if (!strcmp(name, "type")) {
-      if (!strcmp(val, "relu")) type_ = kReLU;
-      if (!strcmp(val, "sigmoid")) type_ = kSigmoid;
-      if (!strcmp(val, "tanh")) type_ = kTanh;
-    }
-    CHECK(type_ >= kReLU && type_ <= kTanh) << "Invalid activation type";
+  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+    // TODO(bing) change directly to vector of pairs begin end
+    std::map<std::string, std::string> kmap(kwargs.begin(), kwargs.end());
+    param_.Init(kmap);
   }
+
   virtual bool InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape) const {
     using namespace mshadow;
@@ -92,7 +98,8 @@ class ActivationProp : public OperatorProperty {
   }
 
   virtual OperatorProperty* Copy() const {
-    auto ptr = new ActivationProp(type_);
+    auto ptr = new ActivationProp();
+    ptr->param_ = param_;
     return ptr;
   }
 
@@ -105,7 +112,7 @@ class ActivationProp : public OperatorProperty {
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data) const {
-    return {out_grad[kOut], out_data[kData]};
+    return {out_grad[kOut], out_data[kOut]};
   }
 
   virtual std::vector<std::pair<int, int> > BackwardInplaceOption(
@@ -113,19 +120,19 @@ class ActivationProp : public OperatorProperty {
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
       const std::vector<int> &in_grad) const {
-    return {{out_grad[kData], in_grad[kData]}};
+    return {{out_grad[kOut], in_grad[kData]}};
   }
 
   virtual std::vector<std::pair<int, int> > ForwardInplaceOption(
       const std::vector<int> &in_data,
       const std::vector<int> &out_data) const {
-    return {{in_data[kData], out_data[kData]}};
+    return {{in_data[kData], out_data[kOut]}};
   }
 
   Operator* CreateOperator(Context ctx) const;
 
  private:
-  ActivationOpType type_;
+  ActivationParam param_;
 };
 #endif  // DMLC_USE_CXX11
 }  // namespace op

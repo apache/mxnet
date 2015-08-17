@@ -7,7 +7,7 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateFullyConnectedOp<gpu>(Param param) {
+Operator* CreateOp<gpu>(FullyConnectedParam param) {
   return new FullyConnectedOp<gpu>(param);
 }
 }  // namespace op

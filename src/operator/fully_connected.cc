@@ -8,14 +8,16 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateFullyConnectedOp<cpu>(Param param) {
+Operator* CreateOp<cpu>(FullyConnectedParam param) {
   return new FullyConnectedOp<cpu>(param);
 }
 
 // DO_BIND_DISPATCH comes from static_operator_common.h
 Operator* FullyConnectedProp::CreateOperator(Context ctx) const {
-  DO_BIND_DISPATCH(CreateFullyConnectedOp, param_);
+  DO_BIND_DISPATCH(CreateOp, param_);
 }
+
+DMLC_REGISTER_PARAMETER(FullyConnectedParam);
 
 REGISTER_OP_PROPERTY(FullyConnected, FullyConnectedProp);
 }  // namespace op
