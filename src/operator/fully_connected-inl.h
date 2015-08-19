@@ -14,7 +14,7 @@
 #include <string>
 #include <utility>
 #include "./operator_common.h"
-#include "./param.h"
+
 
 namespace mxnet {
 namespace op {
@@ -122,9 +122,7 @@ class FullyConnectedProp : public OperatorProperty {
   }
 
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
-    // TODO(bing) change directly to vector of pairs begin end
-    std::map<std::string, std::string> kmap(kwargs.begin(), kwargs.end());
-    param_.Init(kmap);
+    param_.Init(kwargs);
   }
 
   virtual bool InferShape(std::vector<TShape> *in_shape,
@@ -181,7 +179,7 @@ class FullyConnectedProp : public OperatorProperty {
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
       const std::vector<int> &in_grad) const {
-    return {{in_grad[kData], in_data[kData]}};
+    return {{in_data[kData], in_grad[kData]}};
   }
 
   Operator* CreateOperator(Context ctx) const;
