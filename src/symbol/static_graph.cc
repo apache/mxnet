@@ -152,6 +152,18 @@ bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
   return true;
 }
 
+StaticGraph::Node StaticGraph::CreateSumNode(
+    const std::vector<DataEntry> &grad_source) {
+  // find multiple gradients, need aggregate
+  std::ostringstream os_size;
+  Node agg_node;
+  agg_node.op.reset(OperatorProperty::Create("ElementWiseSum"));
+  os_size << grad_source.size();
+  agg_node.op->Init({{"size", os_size.str()}});
+  agg_node.inputs = grad_source;
+  return std::move(agg_node);
+}
+
 void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
                                    std::vector<std::vector<DataEntry> > *arg_grads) {
   arg_grads->clear();
@@ -162,14 +174,15 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
   std::map<DataEntry, std::vector<DataEntry> > grad_map;
   // allocate head gradient nodes
   for (DataEntry head : heads) {
-    uint32_t nid = static_cast<uint32_t>(nodes.size());
-    // create a variable node for gradient input
-    nodes.push_back(Node());
-    Node &node = nodes[nid];
+    Node node;
     std::ostringstream os;
     os << nodes[head.source_id].name << '_' << head.index << "_grad";
     // TODO(bing): add index to name
     node.name = os.str();
+    // node id
+    uint32_t nid = static_cast<uint32_t>(nodes.size());
+    nodes.push_back(std::move(node));
+    // create a variable node for gradient input
     DataEntry igrad(nid, 0);
     head_grad_nodes->push_back(nid);
     // update gradient map
@@ -204,31 +217,25 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
       if (gnodes.size() == 1) {
         out_grad.push_back(gnodes[0]);
       } else {
-        // find multiple gradients, need aggregate
-        std::ostringstream os_size, os_name;
-        uint32_t agg_node_id = static_cast<uint32_t>(nodes.size());
-        nodes.push_back(Node());
-        Node &agg_node = nodes[agg_node_id];
-        agg_node.op.reset(OperatorProperty::Create("ElementWiseSum"));
-        os_size << gnodes.size();
-        agg_node.op->Init({{"size", os_size.str()}});
+        std::ostringstream os_name;
+        Node agg_node = StaticGraph::CreateSumNode(gnodes);
         os_name << nodes[nid].name << '_' << i << "_out_grad_agg";
         agg_node.name = os_name.str();
-        agg_node.inputs = gnodes;
+        uint32_t agg_node_id = static_cast<uint32_t>(nodes.size());
+        nodes.push_back(std::move(agg_node));
         out_grad.push_back(DataEntry(agg_node_id, 0));
       }
     }
     // Create a gradient backward node
-    nodes.push_back(Node());
-    uint32_t grad_node_id = static_cast<uint32_t>(nodes.size());
-    Node &grad_node = nodes[grad_node_id];
+    Node grad_node;
     // Point to the corresponding source
     grad_node.backward_source_id = nid;
     // select out the dependent inputs
     grad_node.inputs = nodes[nid].op->BackwardInputs(
         out_grad, nodes[nid].inputs, out_data);
     grad_node.name = nodes[nid].name + "_backward";
-
+    uint32_t grad_node_id = static_cast<uint32_t>(nodes.size());
+    nodes.push_back(std::move(grad_node));
     // update gradient map
     for (size_t i = 0; i < nodes[nid].inputs.size(); ++i) {
       DataEntry idata = nodes[nid].inputs[i];

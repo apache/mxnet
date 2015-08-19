@@ -486,12 +486,10 @@ MXNET_DLL int MXExecutorForward(ExecutorHandle handle,
                                 NArrayHandle *args) {
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
-  NArray **args_ptr = reinterpret_cast<NArray**>(args);
-  std::vector<NArray> narrays;
-  for (mx_uint i = 0; i < len; ++i) {
-    narrays.emplace_back(*(args_ptr[i]));
-  }
-  exec->Forward(narrays);
+  CHECK_EQ(len, 0)
+      << "forward do not take narray for now";
+  // TODO(bing): remove args for now
+  exec->Forward();
   API_END();
 }
 

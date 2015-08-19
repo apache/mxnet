@@ -8,6 +8,7 @@
 #define MXNET_OPERATOR_H_
 
 #include <dmlc/base.h>
+#include <dmlc/logging.h>
 #include <vector>
 #include <string>
 #include <utility>
@@ -108,7 +109,9 @@ class Operator {
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_data,
                         const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad) = 0;
+                        const std::vector<TBlob> &in_grad) {
+    LOG(FATAL) << "Backward is not implemented";
+  }
 };
 
 #if DMLC_USE_CXX11
@@ -255,27 +258,35 @@ class OperatorProperty {
    *  This function enables optimization to reuse memory of inputs in output.
    *  Only override when necessary, by default in-place is disabled.
    *
+   *  The reason for void* type in the out_data is to distinguish the order
+   *  of mappings between the two, compiler will report error when
+   *  in_data and out_data's order in the pair get reversed.
+   *
    * \code
    *  // The following code says out_data[0] can share data with in_data[0]
-   *  vector<pair<int,int> > ForwardInplaceOption(const vector<int> &in_data,
-   *                                              const vector<int> &out_data) const {
-   *    return {{out_data[0], in_data[0]}};
+   *  vector<pair<int, void*> > ForwardInplaceOption(const vector<int> &in_data,
+   *                                                 const vector<void*> &out_data) const {
+   *    return {{in_data[0], out_data[0]}};
    *  }
    * \endcode
    * \param in_data The input data in forward pass.
    * \param out_data The output data in forward pass.
-   * \return list of pair of integers taken from the inputs vector,
+   * \return list of pair of that maps input->output,
    *   indicating possible in place operations.
    */
-  virtual std::vector<std::pair<int, int> > ForwardInplaceOption(
+  virtual std::vector<std::pair<int, void*> > ForwardInplaceOption(
       const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const {
-    return std::vector<std::pair<int, int> >();
+      const std::vector<void*> &out_data) const {
+    return std::vector<std::pair<int, void*> >();
   }
   /*!
    * \brief Get possible backward inplace options.
    *  This function enables optimization to reuse memory of inputs in output.
    *  Only override when necessary, by default in-place is disabled.
+   *
+   *  The reason for void* type in the in_grad is to distinguish the order
+   *  of mappings between the two, compiler will report error when
+   *  in_data and out_data's order in the pair get reversed.
    *
    * \code
    *  // The following code says in_grad[0] can share data with in_data[0]
@@ -284,22 +295,22 @@ class OperatorProperty {
    *                 const std::vector<int> &in_data,
    *                 const std::vector<int> &out_data,
    *                 const std::vector<int> &in_grad) const {
-   *    return {in_grad[0], in_data[0]}};
+   *    return {in_data[0], in_grad[0]}};
    *  }
    * \endcode
    * \param in_data The input data in forward pass.
    * \param out_data The output data in forward pass.
    * \param in_grad Gradient of inputs in backward pass.
    * \param out_grad Gradient of outputs in backward pass.
-   * \return list of pair of integers taken from the inputs vector,
+   * \return list of pair of that maps input->output,
    *   indicating possible in place operations.
    */
-  virtual std::vector<std::pair<int, int> > BackwardInplaceOption(
+  virtual std::vector<std::pair<int, void*> > BackwardInplaceOption(
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
-      const std::vector<int> &in_grad) const {
-    return std::vector<std::pair<int, int> >();
+      const std::vector<void*> &in_grad) const {
+    return std::vector<std::pair<int, void*> >();
   }
   /*!
    * \brief Get Backward Input Dependency for generic types of data.
@@ -314,31 +325,35 @@ class OperatorProperty {
    * \sa DeclareBackwardDependency
    */
   template<typename T>
-  inline std::vector<T> BackwardInputs(const std::vector<T> &in_data,
-                                       const std::vector<T> &out_data,
-                                       const std::vector<T> &out_grad) const {
-    int cnt = 0;
-    std::vector<T> all_vec;
-    std::vector<int> in_data_idx, out_data_idx, out_grad_idx;
-    for (size_t i = 0; i < in_data.size(); ++i) {
-      in_data_idx.push_back(cnt++);
-      all_vec.push_back(in_data[i]);
+  inline std::vector<T> BackwardInputs(const std::vector<T> &out_grad,
+                                       const std::vector<T> &in_data,
+                                       const std::vector<T> &out_data) const {
+    int counter = 0;
+    std::vector<int> out_grad_index(out_grad.size());
+    std::vector<int> in_data_index(out_data.size());
+    std::vector<int> out_data_index(out_data.size());
+    for (size_t i = 0; i < out_grad_index.size(); ++i) {
+      out_grad_index[i] = counter++;
     }
-    for (size_t i = 0; i < out_data.size(); ++i) {
-      out_data_idx.push_back(cnt++);
-      all_vec.push_back(out_data[i]);
+    for (size_t i = 0; i < in_data_index.size(); ++i) {
+      in_data_index[i] = counter++;
     }
-    for (size_t i = 0; i < out_grad.size(); ++i) {
-      out_grad_idx.push_back(cnt++);
-      all_vec.push_back(out_data[i]);
+    for (size_t i = 0; i < out_data_index.size(); ++i) {
+      out_data_index[i] = counter++;
     }
-    std::vector<int> ret_idx = this->DeclareBackwardDependency(
-        in_data_idx, out_data_idx, out_grad_idx);
-    std::vector<T> ret;
-    for (size_t i = 0; i < ret_idx.size(); ++i) {
-      ret.push_back(all_vec[ret_idx[i]]);
+    std::vector<T> all_data;
+    all_data.insert(all_data.end(), out_grad.begin(), out_grad.end());
+    all_data.insert(all_data.end(), in_data.begin(), in_data.end());
+    all_data.insert(all_data.end(), out_data.begin(), out_data.end());
+
+    std::vector<int> ret_index = this->DeclareBackwardDependency(
+        out_grad_index, in_data_index, out_data_index);
+
+    std::vector<T> ret(ret_index.size());
+    for (size_t i = 0; i < ret_index.size(); ++i) {
+      ret[i] = all_data[ret_index[i]];
     }
-    return ret;
+    return std::move(ret);
   }
   /*!
    * \brief create OperatorProperty

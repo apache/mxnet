@@ -158,11 +158,17 @@ class StaticGraph {
    *  The head and input of Backward pass will be returned by head_grad_nodes and arg_grads.
    *
    * \param head_grad_nodes used to store the created head gradient inputs for backward pass.
-<<<<<<< HEAD
    * \param arg_grads used to store gradients to args, can be multiple one if an argument is used by operator
    */
   void MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
                         std::vector<std::vector<DataEntry> > *arg_grads);
+
+  /*!
+   * \brief create a sum node that aggregates gradient together
+   * \param grad_source the source of the inputs.
+   * \return a created ElementWiseSum node
+   */
+  static Node CreateSumNode(const std::vector<DataEntry> &grad_source);
 };
 
 /*!
@@ -365,7 +371,7 @@ class Executor {
    * \brief Perform a Forward operation of Operator
    *  After this operation, user can get the result by using function head.
    */
-  virtual void Forward(const std::vector<NArray> &inputs) = 0;
+  virtual void Forward() = 0;
   /*!
    * \brief Perform a Backward operation of the Operator.
    *  This must be called after Forward.

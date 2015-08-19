@@ -29,8 +29,8 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
   // use int for enumeration
   int type;
   DMLC_DECLARE_PARAMETER(ActivationParam) {
-    DMLC_DECLARE_FIELD(type).set_default(kReLU).add_enum("relu", kReLU)\
-      .add_enum("sigmoid", kSigmoid).add_enum("tanh", kTanh);
+    DMLC_DECLARE_FIELD(type).set_default(kReLU).add_enum("relu", kReLU).\
+      add_enum("sigmoid", kSigmoid).add_enum("tanh", kTanh);
   }
 };
 
@@ -116,17 +116,17 @@ class ActivationProp : public OperatorProperty {
     return {out_grad[kOut], out_data[kOut]};
   }
 
-  virtual std::vector<std::pair<int, int> > BackwardInplaceOption(
+  virtual std::vector<std::pair<int, void*> > BackwardInplaceOption(
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
-      const std::vector<int> &in_grad) const {
+      const std::vector<void*> &in_grad) const {
     return {{out_grad[kOut], in_grad[kData]}};
   }
 
-  virtual std::vector<std::pair<int, int> > ForwardInplaceOption(
+  virtual std::vector<std::pair<int, void*> > ForwardInplaceOption(
       const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const {
+      const std::vector<void*> &out_data) const {
     return {{in_data[kData], out_data[kOut]}};
   }
 

@@ -25,7 +25,6 @@ namespace mxnet {
  */
 class NArray {
  public:
-  typedef std::pair<Storage::Handle, DAGEngine::Variable> ChunkSkin;
   /*! \brief default cosntructor */
   NArray() {}
   /*!
@@ -36,8 +35,7 @@ class NArray {
    */
   NArray(const TShape &shape, Context ctx,
          bool delay_alloc = false)
-      : ptr_(std::make_shared<Chunk>(shape, ctx, delay_alloc)) {
-        // Change to std::make_shared
+      : ptr_(new Chunk(shape, ctx, delay_alloc)) {
   }
   /*!
    * \brief constructing a static NArray that shares data with TBlob
@@ -47,7 +45,7 @@ class NArray {
    * \param dev_id the device id this tensor sits at
    */
   NArray(const TBlob &data, int dev_id)
-      : ptr_(std::make_shared<Chunk>(data, dev_id)) {
+      : ptr_(new Chunk(data, dev_id)) {
   }
   /*!
    * \return the shape of current NArray

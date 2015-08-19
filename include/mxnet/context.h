@@ -33,6 +33,14 @@ struct Context {
   inline bool operator==(const Context &b) const {
     return dev_mask == b.dev_mask && dev_id == b.dev_id;
   }
+  /*!
+   * \brief check if current context not equals another one
+   * \param b another context to compare
+   * \return whether they are not the same
+   */
+  inline bool operator!=(const Context &b) const {
+    return !(*this == b);
+  }
 };
 
 /*!

@@ -174,11 +174,11 @@ class FullyConnectedProp : public OperatorProperty {
     return {out_grad[kOut], in_data[kData], in_data[kWeight]};
   }
 
-  virtual std::vector<std::pair<int, int> > BackwardInplaceOption(
+  virtual std::vector<std::pair<int, void*> > BackwardInplaceOption(
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
-      const std::vector<int> &in_grad) const {
+      const std::vector<void*> &in_grad) const {
     return {{in_data[kData], in_grad[kData]}};
   }
 

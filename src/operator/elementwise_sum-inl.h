@@ -146,17 +146,17 @@ class ElementWiseSumProp : public OperatorProperty {
     return out_grad;
   }
 
-  virtual std::vector<std::pair<int, int> > BackwardInplaceOption(
+  virtual std::vector<std::pair<int, void*> > BackwardInplaceOption(
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
-      const std::vector<int> &in_grad) const {
+      const std::vector<void*> &in_grad) const {
     return {{out_grad[0], in_grad[0]}};
   }
 
-  virtual std::vector<std::pair<int, int> > ForwardInplaceOption(
+  virtual std::vector<std::pair<int, void*> > ForwardInplaceOption(
       const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const {
+      const std::vector<void*> &out_data) const {
     return {{in_data[0], out_data[0]}};
   }
 
