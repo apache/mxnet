@@ -124,7 +124,7 @@ class _FunctionRegistry(object):
                                         ctypes.byref(plist)))
         hmap = {}
         for i in range(size.value):
-            hdl = plist[i]
+            hdl = ctypes.c_void_p(plist[i])
             name = ctypes.c_char_p()
             check_call(_LIB.MXFuncGetName(hdl, ctypes.byref(name)))
             hmap[name.value] = _Function(hdl, name.value)
