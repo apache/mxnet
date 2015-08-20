@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-locals
+# pylint: disable=invalid-name, protected-access, too-many-locals, fixme
 """Symbol support of mxnet"""
 from __future__ import absolute_import
 
@@ -7,7 +7,6 @@ import ctypes
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, NArrayHandle, ExecutorHandle, SymbolHandle
 from .base import check_call
-from .narray import NArray
 from .context import Context
 from .executor import Executor
 

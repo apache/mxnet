@@ -8,6 +8,7 @@
 
 #include <mxnet/symbolic.h>
 #include <memory>
+#include <string>
 #include <vector>
 #include <utility>
 #include "./graph_memory_allocator.h"
