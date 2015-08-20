@@ -39,6 +39,10 @@ class GraphExecutor : public Executor {
     this->InitDataEntryInfo(in_args, arg_grad_store, grad_req_type);
     this->InitDataEntryMemory();
     this->InitOpNodes();
+    // TODO(bing): remove me when things are OK
+    LOG(INFO) << "-----Execution memory plan-----\n"
+              << DebugStr() << '\n'
+              << "------------------------------\n";
   }
 
  protected:
@@ -79,6 +83,7 @@ class GraphExecutor : public Executor {
         : op_req(kNullOp),
           inplace_op_id(-1),
           type(kNotInitialized),
+          storage_id(GraphStorageAllocator::kBadStorageID),
           ref_count(0) {}
   };
   // all the information needed to push the op to engine
@@ -159,6 +164,8 @@ class GraphExecutor : public Executor {
   void InitOpNodes();
   // run ops from topo order start to end
   void RunOps(size_t topo_start, size_t topo_end);
+  // get debug string
+  std::string DebugStr() const;
   // internal computational graph
   StaticGraph graph_;
   // topological order of nodes in computation graph

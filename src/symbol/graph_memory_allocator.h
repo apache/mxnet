@@ -29,7 +29,9 @@ namespace mxnet {
 class GraphStorageAllocator {
  public:
   /*! \brief resource index */
-  typedef uint64_t StorageID;
+  typedef int64_t StorageID;
+  /*! \brief bad storage id */
+  static const StorageID kBadStorageID = -1;
   /*! \brief constructor to the graph memory allocator */
   explicit GraphStorageAllocator(StaticGraph *graph);
   /*!
@@ -103,26 +105,25 @@ GraphStorageAllocator::Alloc(Context ctx, size_t size) {
 GraphStorageAllocator::StorageID
 GraphStorageAllocator::Request(Context ctx, TShape shape, uint32_t node_id) {
   size_t size = shape.Size();
-  if (free_.count(size) != 0) {
-    auto begin = free_.lower_bound(size);
-    auto end = free_.upper_bound(size);
-    // vector of possible candidates
-    for (auto it = begin; it != end; ++it) {
-      StorageEntry *e = it->second;
-      if (e->ctx != ctx) continue;
-      // Use exect matching strategy
-      // TODO(bing): think of other strategies, for example, rough match.
-      if (e->max_size != size) continue;
-      // find a exact match, erase from map and return
-      free_.erase(it);
-      return e->id;
-    }
+  auto begin = free_.lower_bound(size);
+  auto end = free_.upper_bound(size);
+  // vector of possible candidates
+  for (auto it = begin; it != end; ++it) {
+    StorageEntry *e = it->second;
+    if (e->ctx != ctx) continue;
+    // Use exect matching strategy
+    // TODO(bing): think of other strategies, for example, rough match.
+    if (e->max_size != size) continue;
+    // find a exact match, erase from map and return
+    free_.erase(it);
+    return e->id;
   }
   // cannot find anything return a new one.
   return this->Alloc(ctx, size);
 }
 
 void GraphStorageAllocator::Release(StorageID id, uint32_t node_id) {
+  CHECK_NE(id, kBadStorageID);
   StorageEntry *e = data_[id].get();
   free_.insert({e->max_size, e});
 }
@@ -136,10 +137,9 @@ void GraphStorageAllocator::InitStorages() {
 }
 
 NArray GraphStorageAllocator::Get(StorageID id, TShape shape) {
+  CHECK_NE(id, kBadStorageID);
   StorageEntry *e = data_[id].get();
-  // TODO(bing): change to return e->data.Slice(0, shape.Size()).Reshape(shape);
-  // once we are able to get NArray that shares memory from a big chunk.
-  return NArray(shape, e->ctx);
+  return e->data.Slice(0, shape.Size()).Reshape(shape);
 }
 }  // namespace mxnet
 #endif  // MXNET_SYMBOL_GRAPH_MEMORY_ALLOCATOR_H_
