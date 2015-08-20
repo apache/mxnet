@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <functional>
 #include <unordered_map>
 #include <unordered_set>
 #include "./base.h"
@@ -37,8 +38,45 @@ class StaticGraph {
     uint32_t source_id;
     /*! \brief index of output from the source. */
     uint32_t index;
+    /*! \brief default constructor */
+    DataEntry() {}
+    /*!
+     * \brief constructor with source and index
+     * \param source_id source id
+     * \param index node index
+     */
+    DataEntry(uint32_t source_id, uint32_t index)
+        : source_id(source_id), index(index) {}
+    /*!
+     * \brief compare equality
+     * \param other the other entry to compare
+     * \return whether two entries equals to each other
+     */
+    inline bool operator==(const DataEntry &other) const {
+      return source_id == other.source_id && index == other.index;
+    }
+    /*!
+     * \brief comparator, allows to use map
+     * \param other the other entry to compare
+     * \return whether two entries is smaller than the other
+     */
+    inline bool operator<(const DataEntry &other) const {
+      if (source_id == other.source_id) return index < other.index;
+      return source_id < other.source_id;
+    }
   };
-  /*! \brief Operation Node in static graph */
+  /*!
+   * \brief Operation Node in static graphs.
+   *  There are two types of node, Forward and Backward Node.
+   *
+   *  - Forward node corresponds to the op.Forward
+   *  - Backward node corresponds to the Backward pass,
+   *    where the corresponding forward node is indicated by backward_source_id.
+   *    The op field in Backward node is nullptr
+   *
+   *  The reason we explicit support Backward node is to allow special treatment
+   *  such as shape inference and state sharing with Forward pass.
+   */
   struct Node {
     /*! \brief wrapped operator property */
     std::unique_ptr<OperatorProperty> op;
@@ -46,13 +84,36 @@ class StaticGraph {
     std::string name;
     /*! \brief inputs (node_id, index) for of the nodes*/
     std::vector<DataEntry> inputs;
+    /*!
+     * \brief If this field is nonnegative, this indicates this
+     *  Node is corresponds to a Backward Operation of Operator.
+     *  backward_source_id will points to the corresponding Forward Node.
+     *
+     *  For normal node, this field is -1.
+     *  When the node is a Backward node, the op field will be nullptr
+     */
+    int32_t backward_source_id;
+    /*! \brief default constructor */
+    Node() : backward_source_id(-1) {}
+    /*! \return whether the node is forward op node */
+    inline bool is_forward() const {
+      return op != nullptr;
+    }
+    /*! \return whether the node is backward op node */
+    inline bool is_backward() const {
+      return backward_source_id != -1;
+    }
+    /*! \return whether the node is variable node */
+    inline bool is_variable() const {
+      return op == nullptr && !is_backward();
+    }
   };
   /*! \brief all nodes in the graph */
   std::vector<Node> nodes;
-  /*! \brief index is nodes that correspods to arguments */
+  /*! \brief index of nodes that correspods to arguments */
   std::vector<uint32_t> arg_nodes;
-  /*! \brief outputs(heads) of the graph */
-  std::vector<DataEntry> outputs;
+  /*! \brief heads outputs of the graph */
+  std::vector<DataEntry> heads;
   // funtions to help inference in static graph
   /*!
    * \brief Perform a topological sort on the graph
@@ -85,8 +146,29 @@ class StaticGraph {
    *     InferShape will modify the vector to fill output TShape
    * \return if the shape inference is successful, return true, else return false.
    */
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape) const;
+  bool InferShape(std::vector<TShape>* in_shape,
+                  std::vector<TShape>* out_shape) const;
+  /*!
+   * \brief Add a full backward pass in the static graph.
+   *  This function will add gradient nodes for each heads,
+   *  and add the backward pass to backprop the gradients all
+   *  the way to the arguments.
+   *
+   *  This will change the nodes field in the StaticGraph, but will not change other fields.
+   *  The head and input of Backward pass will be returned by head_grad_nodes and arg_grads.
+   *
+   * \param head_grad_nodes used to store the created head gradient inputs for backward pass.
+   * \param arg_grads used to store gradients to args, can be multiple one if an argument is used by operator
+   */
+  void MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
+                        std::vector<std::vector<DataEntry> > *arg_grads);
+
+  /*!
+   * \brief create a sum node that aggregates gradient together
+   * \param grad_source the source of the inputs.
+   * \return a created ElementWiseSum node
+   */
+  static Node CreateSumNode(const std::vector<DataEntry> &grad_source);
 };
 
 /*!
@@ -174,7 +256,7 @@ class Symbol {
                       const std::string& name) const;
   /*!
    * \brief infer the shapes of outputs and unknown input arguments
-   * \param in_shape the shape of input arguments of the operator
+   * \param arg_shapes the shape of input arguments of the operator
    *     this should be of same length as the vector returned by ListArguments
    *     in_shape allows unknown elements, which are checked by shape.ndim() == 0.
    *     For unknown shapes, InferShape will try to fill in the correct Shape in in_shape
@@ -182,11 +264,23 @@ class Symbol {
    *
    *     common practice: set the shape of data input, and usually weight's shape can be infered
    *
-   * \param out_shape the shape of outputs of the operator
-   *     InferShape will modify the vector to fill output TShape
-   * \return if the shape inference is successful, return true, else return false.
+   * \param out_shapes Use to store the infered shapes of outputs.
+   * \return true if the shape inference is successful, false if there is not enough information.
+   * \throws dmlc::Error if the known arg_shapes are inconsistent.
    */
-  bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) const;
+  bool InferShape(std::vector<TShape> *arg_shapes,
+                  std::vector<TShape> *out_shapes) const;
+  /*!
+   * \brief infer the shapes by providing shapes of known arguments.
+   * \param known_arg_shapes map of argument name to shape of arguments with known shapes.
+   * \param arg_shapes used to store infered shapes of arguments.
+   * \param out_shapes used to store infered shapes of outputs.
+   * \return true if the shape inference is successful, false if there is not enough information.
+   * \throws dmlc::Error if the known arg_shapes are inconsistent.
+   */
+  bool InferShape(const std::unordered_map<std::string, TShape> &known_arg_shapes,
+                  std::vector<TShape> *arg_shapes,
+                  std::vector<TShape> *out_shapes) const;
   /*!
    * \brief get number of outputs of this symbol
    * \return number of outputs

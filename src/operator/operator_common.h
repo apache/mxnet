@@ -11,6 +11,7 @@
 #include <dmlc/logging.h>
 #include <mxnet/operator.h>
 #include <mxnet/base.h>
+#include <string>
 
 namespace mxnet {
 namespace op {
@@ -34,20 +35,39 @@ inline void Assign(OType &out, // NOLINT(*)
     default: LOG(FATAL) << "not reached";
   }
 }
+
+/*! \brief exception throwed by InferShape error */
+struct InferShapeError {
+  /*! \brief analyze message */
+  std::string msg;
+  /*! \brief corresponding input index */
+  int index;
+  // constructor
+  InferShapeError(std::string msg, int index)
+      : msg(msg), index(index) {}
+};
+
 /*!
- * \brief assign shape to out if out is unknown
- *  otherwise check consistency
- * \param out the output shape to be stored
+ * \brief macro assign shape to out if out is unknown otherwise check consistency
+ *  Use macro so we can see the error file more clearly
+ * \param shape_array the shape array to store the result
+ * \param index the index of in the array
  * \param shape the infered shape
  */
-template<typename TS>
-inline void ShapeAssignCheck(TShape &out, const TS &shape) { // NOLINT(*)
-  if (out.ndim() == 0) {
-    out = shape;
-  } else {
-    CHECK(out == shape) << "InferShape:: shape inconsistent";
+#define SHAPE_ASSIGN_CHECK(shape_array, index, shape)                   \
+  {                                                                     \
+    auto &out = (shape_array)[index];                                   \
+    if (out.ndim() == 0) {                                              \
+      out = shape;                                                      \
+    } else {                                                            \
+      if (out != shape) {                                               \
+        std::ostringstream os;                                          \
+        os << "Shape inconsistent, Provided " <<  '='<< out << ','      \
+           << " inferred shape=" << shape;                              \
+        throw ::mxnet::op::InferShapeError(os.str(), index);            \
+      }                                                                 \
+    }                                                                   \
   }
-}
 
 // helper macro to implement bind dispatch
 #if MXNET_USE_CUDA

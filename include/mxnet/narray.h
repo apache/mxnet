@@ -35,7 +35,7 @@ class NArray {
    */
   NArray(const TShape &shape, Context ctx,
          bool delay_alloc = false)
-      : ptr_(new Chunk(shape, ctx, delay_alloc)) {
+      : ptr_(new Chunk(shape.Size(), ctx, delay_alloc)), shape_(shape), offset_(0) {
   }
   /*!
    * \brief constructing a static NArray that shares data with TBlob
@@ -45,19 +45,20 @@ class NArray {
    * \param dev_id the device id this tensor sits at
    */
   NArray(const TBlob &data, int dev_id)
-      : ptr_(new Chunk(data, dev_id)) {
+      : ptr_(new Chunk(data, dev_id)), shape_(data.shape_), offset_(0) {
   }
   /*!
    * \return the shape of current NArray
    */
   inline const TShape &shape() const {
-    return ptr_->data.shape_;
+    return shape_;
   }
   /*!
    * \return the data TBlob
    */
-  inline const TBlob &data() const {
-    return ptr_->data;
+  inline TBlob data() const {
+    return TBlob(static_cast<real_t*>(ptr_->shandle.dptr) + offset_, \
+                                      shape_, ptr_->shandle.ctx.dev_mask);
   }
   /*!
    * \return the context of NArray, this function is only valid when the NArray is not empty
@@ -123,6 +124,43 @@ class NArray {
    * \return the new copy
    */
   NArray Copy(Context ctx) const;
+  /*!
+   * \brief Slice a NArray
+   *
+   * \param begin begin index in first dim
+   * \param end end index in first dim
+   *
+   * \return sliced NArray
+   */
+  inline NArray Slice(index_t begin, index_t end) const {
+    NArray ret = *this;
+    CHECK_GE(shape_.ndim(), 0) << "NArray not initialized";
+    CHECK_GE(shape_[0], end) << "Chunk is smaller than required";
+    size_t length = 1;
+    if (shape_.ndim() == 1) {
+      ret.offset_= begin;
+    } else {
+      for (index_t i = 1; i < shape_.ndim(); ++i) {
+        length *= shape_[i];
+      }
+      ret.offset_ = begin * length;
+    }
+    ret.shape_[0] = end - begin;
+    return ret;
+  }
+  /*!
+   * \brief Reshape current NArray
+   *
+   * \param shape new shape
+   * \return NArray in new shape
+   */
+  inline NArray Reshape(const TShape &shape) const {
+    CHECK_GE(shape_.Size(), shape.Size()) \
+      << "required shape is larger than chunk";
+    NArray ret = *this;
+    ret.shape_ = shape;
+    return ret;
+  }
 
  private:
   /*! \brief the real data chunk that backs NArray */
@@ -131,8 +169,6 @@ class NArray {
     Storage::Handle shandle;
     /*! \brief variable from DAG engine */
     DAGEngine::Variable var;
-    /*! \brief holds the data content */
-    TBlob data;
     /*!
      * \brief if this is true, this means the data do not come
      * from Storage, and do not need to be freed
@@ -146,25 +182,25 @@ class NArray {
     }
     /*! \brief construct from static data */
     Chunk(const TBlob &data, int dev_id)
-        : data(data),
-          static_data(true),
+        : static_data(true),
           delay_alloc(false) {
       var = DAGEngine::Get()->NewVar();
       shandle.ctx = Context(data.dev_mask_, dev_id);
+      shandle.dptr = data.dptr_;
+      shandle.size = data.shape_.Size() * sizeof(real_t);
     }
     /*! \brief construct a new chunk */
-    Chunk(const TShape &shape, Context ctx, bool delay_alloc_)
+    Chunk(uint64_t size, Context ctx, bool delay_alloc_)
         : static_data(false), delay_alloc(true) {
       var = DAGEngine::Get()->NewVar();
-      data.shape_ = shape;
+      shandle.size = size * sizeof(real_t);
       shandle.ctx = ctx;
       if (!delay_alloc_) this->CheckAndAlloc();
     }
     /*! \brief check if delay alloc is on, do alloc if not yet done */
     inline void CheckAndAlloc(void) {
       if (delay_alloc) {
-        shandle = Storage::Get()->Alloc(data.shape_.Size() * sizeof(real_t), shandle.ctx);
-        data = TBlob(static_cast<real_t*>(shandle.dptr), data.shape_, shandle.ctx.dev_mask);
+        shandle = Storage::Get()->Alloc(shandle.size, shandle.ctx);
         delay_alloc = false;
       }
     }
@@ -183,6 +219,11 @@ class NArray {
   };
   /*! \brief internal data of NArray */
   std::shared_ptr<Chunk> ptr_;
+  /*! \brief shape of current NArray */
+  TShape shape_;
+  /*! \brief offset in chunk */
+  size_t offset_;
+
   // add friend to helper functions
   friend void CopyFromTo(const NArray &from, NArray *to);
   template<typename OP>

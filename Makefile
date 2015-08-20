@@ -58,14 +58,14 @@ endif
 BIN = test/api_registry_test test/test_storage
 OBJ = narray_op_cpu.o
 # add threaded engine after it is done
-OBJCXX11 = engine.o narray.o c_api.o registry.o symbol.o storage.o fully_connected_cpu.o static_graph.o
+OBJCXX11 = engine.o narray.o c_api.o registry.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o elementwise_sum_cpu.o graph_executor.o pooling_cpu.o
 CUOBJ =
 SLIB = lib/libmxnet.so
 ALIB = lib/libmxnet.a
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
 
 ifeq ($(USE_CUDA), 1)
-	CUOBJ += narray_op_gpu.o fully_connected_gpu.o
+	CUOBJ += narray_op_gpu.o fully_connected_gpu.o activation_gpu.o elementwise_sum_gpu.o pooling_gpu.o
 endif
 
 .PHONY: clean all test lint doc
@@ -81,12 +81,19 @@ narray.o: src/narray/narray.cc
 narray_op_cpu.o: src/narray/narray_op_cpu.cc src/narray/narray_op-inl.h
 narray_op_gpu.o: src/narray/narray_op_gpu.cu src/narray/narray_op-inl.h
 symbol.o: src/symbol/symbol.cc
+graph_executor.o: src/symbol/graph_executor.cc
 static_graph.o : src/symbol/static_graph.cc
 registry.o: src/registry.cc
 c_api.o: src/c_api.cc
 operator.o: src/operator/static_operator_wrapper.cc
 fully_connected_cpu.o: src/operator/fully_connected.cc
 fully_connected_gpu.o: src/operator/fully_connected.cu
+activation_cpu.o: src/operator/activation.cc
+activation_gpu.o: src/operator/activation.cu
+elementwise_sum_cpu.o: src/operator/elementwise_sum.cc
+elementwise_sum_gpu.o: src/operator/elementwise_sum.cu
+pooling_cpu.o: src/operator/pooling.cc
+pooling_gpu.o: src/operator/pooling.cu
 
 
 lib/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)

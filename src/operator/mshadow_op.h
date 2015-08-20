@@ -1,17 +1,18 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file mshadow_op.h
- * \brief extra mshadow operation for mxnet
+ * \brief
  * \author Bing Xu
- */
-#ifndef MXNET_OPERATOR_STATIC_OPERATOR_MSHADOW_OP_H_
-#define MXNET_OPERATOR_STATIC_OPERATOR_MSHADOW_OP_H_
+*/
+#ifndef MXNET_OPERATOR_MSHADOW_OP_H_
+#define MXNET_OPERATOR_MSHADOW_OP_H_
+
 #include <mxnet/base.h>
-#include <algorithm>
 
 namespace mxnet {
-/*! \brief operations for ActivationLayer */
 namespace op {
+namespace mshadow_op {
+/*! \brief identity Operation */
 struct identity {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return a;
@@ -98,9 +99,7 @@ struct square_root {
     return sqrt(a);
   }
 };
-
+}  // namespace mshadow_op
 }  // namespace op
 }  // namespace mxnet
-
-#endif  // MXNET_OPERATOR_STATIC_OPERATOR_MSHADOW_OP_H_
-
+#endif  // MXNET_OPERATOR_MSHADOW_OP_H_

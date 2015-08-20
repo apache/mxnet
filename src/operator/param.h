@@ -35,10 +35,6 @@ struct Param {
   int no_bias;
   /*! \brief maximum temp_col_size allowed in each layer */
   int temp_col_max;
-  /*! \brief number of input channels */
-  int num_input_channel;
-  /*! \brief number of input hidden nodes, used by fullc */
-  int num_input_node;
   /*! \brief reserved fields, for future compatibility */
   int reserved[64];
 
@@ -48,11 +44,9 @@ struct Param {
   }
 
   inline void SetParam(const char *name, const char* val) {
-    if (!strcmp(name, "nhidden")) num_hidden = atoi(val);
-    if (!strcmp(name, "num_input_node")) num_input_node = atoi(val);
-    if (!strcmp(name, "num_input_channel")) num_input_channel = atoi(val);
-    if (!strcmp(name, "nchannel")) num_channel = atoi(val);
-    if (!strcmp(name, "ngroup")) num_group = atoi(val);
+    if (!strcmp(name, "num_hidden")) num_hidden = atoi(val);
+    if (!strcmp(name, "num_channel")) num_channel = atoi(val);
+    if (!strcmp(name, "num_group")) num_group = atoi(val);
     if (!strcmp(name, "kernel_size")) {
       kernel_y = kernel_x = atoi(val);
     }

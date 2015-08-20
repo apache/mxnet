@@ -8,6 +8,7 @@
 #define MXNET_OPERATOR_H_
 
 #include <dmlc/base.h>
+#include <dmlc/logging.h>
 #include <vector>
 #include <string>
 #include <utility>
@@ -40,16 +41,18 @@ enum OpReqType {
 struct OpContext {
   /*! \brief whether it is training phase */
   int is_train;
-  /*! \brief Stream we are running on */
-  void *stream;
+  /*! \brief RunContext related resources */
+  RunContext run_ctx;
   /*! \brief Resources requested by the operator */
   std::vector<Resource> requested;
   /*!
-   * \brief set the RunContext related parts
-   * \param ctx the context
+   * \brief get mshadow stream from Context
+   * \return the mshadow stream
+   * \tparam xpu the device type of the stream
    */
-  inline void SetRunContext(const RunContext &ctx) {
-    stream = ctx.stream;
+  template<typename xpu>
+  inline mshadow::Stream<xpu>* get_stream() const {
+    return static_cast<mshadow::Stream<xpu>*>(run_ctx.stream);
   }
 };
 
@@ -84,20 +87,31 @@ class Operator {
                        const std::vector<TBlob> &out_data) = 0;
   /*!
    * \brief Perform a Backward Operation, write gradient to the in_grad.
+   *
+   * Convention:
+   *   out_grad.size() == OperatorProperty.NumVisibleReturns()
+   *   out_data.size() == OperatorProperty.NumReturns()
+   * out_data can contain additional invisible returns that remembers the
+   * state carried from the Forward pass. For example mask in the dropout.
+   *
+   * The gradients are passed from visible returns in this function.
+   *
    * \param ctx runtime context available to this call
-   * \param out_grad the gradient value we get from output of the Operator
+   * \param out_grad the gradient value we get from of the Operator.
    * \param in_data the array of input data.
    * \param out_data the array of output data.
    * \param req request types of the saving operation, can be all types.
    * \param in_grad the array of gradient we need to write to.
-   * \sa OpReqType, OpContext
+   * \sa OpReqType, OpContext, OperatorProperty
    */
   virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_data,
                         const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad) = 0;
+                        const std::vector<TBlob> &in_grad) {
+    LOG(FATAL) << "Backward is not implemented";
+  }
 };
 
 #if DMLC_USE_CXX11
@@ -115,6 +129,12 @@ class OperatorProperty {
    * \brief virtual destructor
    */
   virtual ~OperatorProperty() {}
+  /*!
+   *  \brief Initialize the Operator by setting the parameters
+   *  This function need to be called before all other functions.
+   *  \param kwargs the keyword arguments parameters
+   */
+  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
   /*!
    * \brief Get input arguments of the Operator.
    * \return vector of arguments.
@@ -149,12 +169,6 @@ class OperatorProperty {
     return NumReturns();
   }
   /*!
-   *  \brief Set the parameters of the Operator.
-   *  \param name parameter name
-   *  \param val string for the configuration
-   */
-  virtual void SetParam(const char *name, const char *val) {}
-  /*!
    * \brief infer the shapes of outputs and unknown input arguments
    * \param in_shape the shape of input arguments of the operator
    *     this should be of same length as the vector returned by DescribeArgs
@@ -166,7 +180,8 @@ class OperatorProperty {
    *
    * \param out_shape the shape of outputs of the operator
    *     InferShape will modify the vector to fill output TShape
-   * \return if the shape inference is successful, return true, else return false.
+   * \return true if the shape inference is successful, false if there is not enough information.
+   * \throws dmlc::Error if the known arg_shapes are inconsistent.
    */
   virtual bool InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape) const = 0;
@@ -243,27 +258,35 @@ class OperatorProperty {
    *  This function enables optimization to reuse memory of inputs in output.
    *  Only override when necessary, by default in-place is disabled.
    *
+   *  The reason for void* type in the out_data is to distinguish the order
+   *  of mappings between the two, compiler will report error when
+   *  in_data and out_data's order in the pair get reversed.
+   *
    * \code
    *  // The following code says out_data[0] can share data with in_data[0]
-   *  vector<pair<int,int> > ForwardInplaceOption(const vector<int> &in_data,
-   *                                              const vector<int> &out_data) const {
-   *    return {{out_data[0], in_data[0]}};
+   *  vector<pair<int, void*> > ForwardInplaceOption(const vector<int> &in_data,
+   *                                                 const vector<void*> &out_data) const {
+   *    return {{in_data[0], out_data[0]}};
    *  }
    * \endcode
    * \param in_data The input data in forward pass.
    * \param out_data The output data in forward pass.
-   * \return list of pair of integers taken from the inputs vector,
+   * \return list of pair of that maps input->output,
    *   indicating possible in place operations.
    */
-  virtual std::vector<std::pair<int, int> > ForwardInplaceOption(
+  virtual std::vector<std::pair<int, void*> > ForwardInplaceOption(
       const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const {
-    return std::vector<std::pair<int, int> >();
+      const std::vector<void*> &out_data) const {
+    return std::vector<std::pair<int, void*> >();
   }
   /*!
    * \brief Get possible backward inplace options.
    *  This function enables optimization to reuse memory of inputs in output.
    *  Only override when necessary, by default in-place is disabled.
+   *
+   *  The reason for void* type in the in_grad is to distinguish the order
+   *  of mappings between the two, compiler will report error when
+   *  in_data and out_data's order in the pair get reversed.
    *
    * \code
    *  // The following code says in_grad[0] can share data with in_data[0]
@@ -272,22 +295,22 @@ class OperatorProperty {
    *                 const std::vector<int> &in_data,
    *                 const std::vector<int> &out_data,
    *                 const std::vector<int> &in_grad) const {
-   *    return {in_grad[0], in_data[0]}};
+   *    return {in_data[0], in_grad[0]}};
    *  }
    * \endcode
    * \param in_data The input data in forward pass.
    * \param out_data The output data in forward pass.
    * \param in_grad Gradient of inputs in backward pass.
    * \param out_grad Gradient of outputs in backward pass.
-   * \return list of pair of integers taken from the inputs vector,
+   * \return list of pair of that maps input->output,
    *   indicating possible in place operations.
    */
-  virtual std::vector<std::pair<int, int> > BackwardInplaceOption(
+  virtual std::vector<std::pair<int, void*> > BackwardInplaceOption(
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
-      const std::vector<int> &in_grad) const {
-    return std::vector<std::pair<int, int> >();
+      const std::vector<void*> &in_grad) const {
+    return std::vector<std::pair<int, void*> >();
   }
   /*!
    * \brief Get Backward Input Dependency for generic types of data.
@@ -302,31 +325,35 @@ class OperatorProperty {
    * \sa DeclareBackwardDependency
    */
   template<typename T>
-  inline std::vector<T> BackwardInputs(const std::vector<T> &in_data,
-                                       const std::vector<T> &out_data,
-                                       const std::vector<T> &out_grad) const {
-    int cnt = 0;
-    std::vector<T> all_vec;
-    std::vector<int> in_data_idx, out_data_idx, out_grad_idx;
-    for (size_t i = 0; i < in_data.size(); ++i) {
-      in_data_idx.push_back(cnt++);
-      all_vec.push_back(in_data[i]);
+  inline std::vector<T> BackwardInputs(const std::vector<T> &out_grad,
+                                       const std::vector<T> &in_data,
+                                       const std::vector<T> &out_data) const {
+    int counter = 0;
+    std::vector<int> out_grad_index(out_grad.size());
+    std::vector<int> in_data_index(in_data.size());
+    std::vector<int> out_data_index(out_data.size());
+    for (size_t i = 0; i < out_grad_index.size(); ++i) {
+      out_grad_index[i] = counter++;
     }
-    for (size_t i = 0; i < out_data.size(); ++i) {
-      out_data_idx.push_back(cnt++);
-      all_vec.push_back(out_data[i]);
+    for (size_t i = 0; i < in_data_index.size(); ++i) {
+      in_data_index[i] = counter++;
     }
-    for (size_t i = 0; i < out_grad.size(); ++i) {
-      out_grad_idx.push_back(cnt++);
-      all_vec.push_back(out_data[i]);
+    for (size_t i = 0; i < out_data_index.size(); ++i) {
+      out_data_index[i] = counter++;
     }
-    std::vector<int> ret_idx = this->DeclareBackwardDependency(
-        in_data_idx, out_data_idx, out_grad_idx);
-    std::vector<T> ret;
-    for (size_t i = 0; i < ret_idx.size(); ++i) {
-      ret.push_back(all_vec[ret_idx[i]]);
+    std::vector<T> all_data;
+    all_data.insert(all_data.end(), out_grad.begin(), out_grad.end());
+    all_data.insert(all_data.end(), in_data.begin(), in_data.end());
+    all_data.insert(all_data.end(), out_data.begin(), out_data.end());
+
+    std::vector<int> ret_index = this->DeclareBackwardDependency(
+        out_grad_index, in_data_index, out_data_index);
+
+    std::vector<T> ret(ret_index.size());
+    for (size_t i = 0; i < ret_index.size(); ++i) {
+      ret[i] = all_data[ret_index[i]];
     }
-    return ret;
+    return std::move(ret);
   }
   /*!
    * \brief create OperatorProperty

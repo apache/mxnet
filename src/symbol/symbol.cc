@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file symbol.cc
- * \brief symbol of mxnet
+  *\file symbol.cc
+  *\brief symbol of mxnet
  */
 #include <dmlc/logging.h>
 #include <mxnet/symbolic.h>
@@ -12,13 +12,13 @@
 
 namespace mxnet {
 /*!
- * \brief Node is represents node of an operator in the symbolic graph.
+  *\brief Node is represents node of an operator in the symbolic graph.
  *
- * It stores connection to the inputs to function represented by OperatorProperty
- * NOTE on data structure: there are three types of node:
- * - Normal node: contains all the necessary elements of a graph.
- * - OperatorProperty: the inputs_ is empty, represents an OperatorProperty that has not been applied.
- * - Variable: the sym_ is nullptr, represents an named Variable of tensors that can be composed.
+  *It stores connection to the inputs to function represented by OperatorProperty
+  *NOTE on data structure: there are three types of node:
+  *- Normal node: contains all the necessary elements of a graph.
+  *- OperatorProperty: the inputs_ is empty, represents an OperatorProperty that has not been applied.
+  *- Variable: the sym_ is nullptr, represents an named Variable of tensors that can be composed.
  */
 struct Symbol::Node {
   /*! \brief Operator of this node */
@@ -28,11 +28,11 @@ struct Symbol::Node {
   /*! \brief inputs to this node */
   std::vector<DataEntry> inputs;
   /*!
-   * \brief constructor
-   * \param op the OperatorProperty to construct the Node
-   * \param name the name of the symbol
+    *\brief constructor
+    *\param op the OperatorProperty to construct the Node
+    *\param name the name of the symbol
    */
-  explicit Node(OperatorProperty* op = nullptr, const std::string& name = "")
+  explicit Node(OperatorProperty *op = nullptr, const std::string& name = "")
       : op(op), name(name) {
   }
   /*! \return Whether the symbol is atomic */
@@ -63,7 +63,7 @@ inline void Symbol::DFSVisit(FVisit fvisit) const {
     }
   }
   while (!stack.empty()) {
-    Node* back = stack.back();
+    Node *back = stack.back();
     stack.pop_back();
     fvisit(back);
     for (auto it = back->inputs.rbegin(); it != back->inputs.rend(); ++it) {
@@ -72,6 +72,28 @@ inline void Symbol::DFSVisit(FVisit fvisit) const {
         stack.push_back(ptr);
         visited.insert(ptr);
       }
+    }
+  }
+}
+
+// helper function to handle keyword argument mismatch
+// throw approperiate messages
+template<typename TMap>
+inline void KeywordArgumentMismatch(const char *source,
+                                    const TMap &kwargs,
+                                    const std::vector<std::string> args) {
+  std::unordered_set<std::string> keys(args.begin(), args.end());
+  std::ostringstream head, msg;
+  msg << "\nCandidate arguments:\n";
+  for (size_t i = 0; i < args.size(); ++i) {
+    msg << "\t[" << i << ']' << args[i] << '\n';
+  }
+
+  for (const auto& kv : kwargs) {
+    if (keys.count(kv.first) == 0) {
+      LOG(FATAL) << source
+                 << "Keyword argument name " << kv.first << " not found."
+                 << msg.str();
     }
   }
 }
@@ -328,19 +350,8 @@ void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
     }
   }
   if (nmatched != kwargs.size()) {
-    // Error message handling
-    std::vector<std::string> req_args = this->ListArguments();
-    std::unordered_set<std::string> keys(req_args.begin(), req_args.end());
-    std::ostringstream msg;
-    msg << "\nCandidate arguments:\n";
-    for (size_t i = 0; i < req_args.size(); ++i) {
-      msg << "\t[" << i << ']' << req_args[i] << '\n';
-    }
-    for (const auto& kv : kwargs) {
-      CHECK_NE(keys.count(kv.first), 0)
-          << "Keyword Argument " << kv.first << " not found in arguments."
-          << msg.str();
-    }
+    KeywordArgumentMismatch(
+        "Symbol.Compose", kwargs, ListArguments());
   }
 }
 
@@ -358,11 +369,34 @@ Symbol Symbol::operator () (const std::unordered_map<std::string, Symbol>& kwarg
   return s;
 }
 
-bool Symbol::InferShape(std::vector<TShape> *in_shape,
-                        std::vector<TShape> *out_shape) const {
+bool Symbol::InferShape(std::vector<TShape> *arg_shapes,
+                        std::vector<TShape> *out_shapes) const {
   StaticGraph g;
   this->ToStaticGraph(&g);
-  return g.InferShape(in_shape, out_shape);
+  return g.InferShape(arg_shapes, out_shapes);
+}
+
+bool Symbol::InferShape(const std::unordered_map<std::string, TShape>& known_arg_shapes,
+                        std::vector<TShape> *arg_shapes,
+                        std::vector<TShape> *out_shapes) const {
+  StaticGraph g;
+  this->ToStaticGraph(&g);
+  arg_shapes->clear();
+  arg_shapes->resize(g.arg_nodes.size(), TShape());
+  size_t nmatched = 0;
+  for (size_t i = 0; i < g.arg_nodes.size(); ++i) {
+    const std::string& name = g.nodes[g.arg_nodes[i]].name;
+    auto it = known_arg_shapes.find(name);
+    if (it != known_arg_shapes.end()) {
+      arg_shapes->at(i) = it->second;
+      ++nmatched;
+    }
+  }
+  if (nmatched != known_arg_shapes.size()) {
+    KeywordArgumentMismatch(
+        "Symbol.InterShape", known_arg_shapes, ListArguments());
+  }
+  return g.InferShape(arg_shapes, out_shapes);
 }
 
 Symbol Symbol::Create(OperatorProperty *op)  {
@@ -424,12 +458,12 @@ void Symbol::ToStaticGraph(StaticGraph *out_graph) const {
     }
   }
   // setup heads
-  out_graph->outputs.clear();
+  out_graph->heads.clear();
   for (auto &head : heads_) {
     StaticGraph::DataEntry e;
     e.source_id = node_index[head.source.get()];
     e.index = head.index;
-    out_graph->outputs.push_back(e);
+    out_graph->heads.push_back(e);
   }
 }
 }  // namespace mxnet
