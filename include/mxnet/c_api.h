@@ -38,7 +38,7 @@ typedef void *AtomicSymbolHandle;
 typedef void *ExecutorHandle;
 /*! \brief handle to a DataIterator */
 typedef void *DataIterHandle;
-/*
+/*!
  * \brief return str message of the last error
  *  all function in this file will return 0 when success
  *  and -1 when an error occured,
@@ -389,6 +389,8 @@ MXNET_DLL int MXExecutorHeads(ExecutorHandle handle,
  * \brief Generate Executor from symbol
  *
  * \param symbol_handle symbol handle
+ * \param dev_mask device mask
+ * \param dev_id device id
  * \param len length
  * \param in_args in args array
  * \param arg_grad_store arg grads handle array

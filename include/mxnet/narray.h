@@ -138,7 +138,7 @@ class NArray {
     CHECK_GE(shape_[0], end) << "Chunk is smaller than required";
     size_t length = 1;
     if (shape_.ndim() == 1) {
-      ret.offset_= begin;
+      ret.offset_ = begin;
     } else {
       for (index_t i = 1; i < shape_.ndim(); ++i) {
         length *= shape_[i];

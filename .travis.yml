@@ -26,6 +26,7 @@ addons:
       - gcc-4.8
       - g++-4.8
       - clang
+      - python-numpy
 
 before_install:
   - export NVCC_PREFIX=${HOME}
