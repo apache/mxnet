@@ -34,12 +34,10 @@ typedef void *AtomicSymbolCreator;
 typedef void *SymbolHandle;
 /*! \brief handle to a AtomicSymbol */
 typedef void *AtomicSymbolHandle;
-/*! \brief handle to a NArrayOperator */
-typedef void *OperatorHandle;
-/*! \brief handle to a DataIterator */
-typedef void *DataIterHandle;
 /*! \brief handle to an Executor */
 typedef void *ExecutorHandle;
+/*! \brief handle to a DataIterator */
+typedef void *DataIterHandle;
 /*
  * \brief return str message of the last error
  *  all function in this file will return 0 when success
@@ -353,63 +351,59 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
                                  const mx_uint ***out_shape_data,
                                  int *complete);
 //--------------------------------------------
-// Part 4: operator interface on NArray
+// Part 4: Executor interface
 //--------------------------------------------
 /*!
- * \brief create operator from symbol
- * \param sym the symbol to create operator from
- * \param dev_mask device mask to indicate the device type
- * \param dev_id the device id we want to bind the symbol to
- * \param out the corresponding function handle
+ * \brief Executor forward method
+ *
+ * \param handle executor handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXOpCreate(SymbolHandle sym,
-                         int dev_mask,
-                         int dev_id,
-                         OperatorHandle *out);
+MXNET_DLL int MXExecutorForward(ExecutorHandle handle);
 /*!
- * \brief free the operator handle
- * \param op the handle to be freed
+ * \brief Excecutor run backward
+ *
+ * \param handle execute handle
+ * \param len lenth
+ * \param head_grads NArray handle for heads' gradient
+ *
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXOpFree(OperatorHandle op);
+MXNET_DLL int MXExecutorBackward(ExecutorHandle handle,
+                                 mx_uint len,
+                                 NArrayHandle *head_grads);
+
 /*!
- * \brief return an array to describe the arguments
- *  of this operator
- * \param out_size the size of output array
- * \param out_array the array of parameter requirments
+ * \brief Get executor's head NArray
+ *
+ * \param handle executor handle
+ * \param out_size output narray vector size
+ * \param out out put narray handles
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXOpDescribeArgs(mx_uint *out_size,
-                               int **out_array);
+MXNET_DLL int MXExecutorHeads(ExecutorHandle handle,
+                              mx_uint *out_size,
+                              NArrayHandle **out);
+
 /*!
- * \brief call forward on the operator
- * \param op the operator handle
- * \param in_data array of input narray to the operator
- * \param out_data array of output NArray to hold the result
+ * \brief Generate Executor from symbol
+ *
+ * \param symbol_handle symbol handle
+ * \param len length
+ * \param in_args in args array
+ * \param arg_grad_store arg grads handle array
+ * \param grad_req_type grad req array
+ * \param out output executor handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXOpForward(OperatorHandle op,
-                          NArrayHandle *in_data,
-                          NArrayHandle *out_data);
-/*!
- * \brief call backward on the operator
- * \param op the operator handle
- * \param grad_next array of output gradients
- * \param in_data array of input narray to the operator
- * \param out_data array of output narray to the operator
- * \param out_grad array to holds the gradient on these input
- *    can be NULL if that position request is kNullOp
- * \param reqs gradient request type
- * \return 0 when success, -1 when failure happens
- * \sa mxnet::Operator::GradReqType
- */
-MXNET_DLL int MXOpBackward(OperatorHandle op,
-                           NArrayHandle *grad_next,
-                           NArrayHandle *in_data,
-                           NArrayHandle *out_data,
-                           NArrayHandle *out_grad,
-                           mx_uint *reqs);
+MXNET_DLL int MXExecutorBind(SymbolHandle symbol_handle,
+                             int dev_mask,
+                             int dev_id,
+                             mx_uint len,
+                             NArrayHandle *in_args,
+                             NArrayHandle *arg_grad_store,
+                             mx_uint *grad_req_type,
+                             ExecutorHandle *out);
 
 //--------------------------------------------
 // Part 5: IO Interface
@@ -459,66 +453,5 @@ MXNET_DLL int MXIOGetData(DataIterHandle handle,
  */
 MXNET_DLL int MXIOGetLabel(DataIterHandle handle,
                            NArrayHandle *out);
-
-//--------------------------------------------
-// Part 56: Executor
-//--------------------------------------------
-/*!
- * \brief Executor forward method
- *
- * \param handle executor handle
- * \param len length of narray handles
- * \param input input NArray handles
- *
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXExecutorForward(ExecutorHandle handle,
-                                mx_uint len,
-                                NArrayHandle *input);
-
-/**
- * \brief Excecutor run backward
- *
- * \param handle execute handle
- * \param len lenth
- * \param head_grads NArray handle for heads' gradient
- *
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXExecutorBackward(ExecutorHandle handle,
-                                 mx_uint len,
-                                 NArrayHandle *head_grads);
-
-/**
- * \brief Get executor's head NArray
- *
- * \param handle executor handle
- * \param out_size output narray vector size
- * \param out out put narray handles
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXExecutorHeads(ExecutorHandle handle,
-                              mx_uint *out_size,
-                              NArrayHandle **out);
-
-/**
- * \brief Generate Executor from symbol
- *
- * \param handle executor hanlde (to be generated)
- * \param symbol_handle symbol handle
- * \param len length
- * \param in_args in args array
- * \param arg_grad_store arg grads handle array
- * \param grad_req_type grad req array
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXExecutorBind(ExecutorHandle handle,
-                             SymbolHandle symbol_handle,
-                             int dev_mask,
-                             int dev_id,
-                             mx_uint len,
-                             NArrayHandle *in_args,
-                             NArrayHandle *arg_grad_store,
-                             mx_uint *grad_req_type);
 
 #endif  // MXNET_C_API_H_

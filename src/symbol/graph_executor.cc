@@ -23,9 +23,9 @@ class GraphExecutor::BackwardOpWrapper : public Operator {
   explicit BackwardOpWrapper(const OperatorProperty *prop,
                              std::shared_ptr<Operator> forward_op)
       : op_(forward_op) {
-    out_grad_.resize(prop->NumReturns());
+    out_grad_.resize(prop->NumVisibleReturns());
     in_data_.resize(prop->ListArguments().size());
-    out_data_.resize(prop->NumVisibleReturns());
+    out_data_.resize(prop->NumReturns());
 
     std::vector<TBlob*> out_grad_ptr(out_grad_.size());
     for (size_t i = 0; i < out_grad_.size(); ++i) {
@@ -40,7 +40,7 @@ class GraphExecutor::BackwardOpWrapper : public Operator {
       out_data_ptr[i] = &out_data_[i];
     }
     arg_data_ptr_ = prop->BackwardInputs(
-        out_grad_ptr, out_data_ptr, in_data_ptr);
+        out_grad_ptr, in_data_ptr, out_data_ptr);
   }
   // implement forward
   virtual void Forward(const OpContext &ctx,
@@ -127,9 +127,9 @@ inline std::vector<std::pair<T, T> > GraphExecutor::GetInplaceOption(
     // forward property
     const OperatorProperty *fwd = graph_.nodes[node.backward_source_id].op.get();
 
-    std::vector<int> out_grad_index(fwd->NumReturns());
-    std::vector<int> out_data_index(fwd->NumVisibleReturns());
+    std::vector<int> out_grad_index(fwd->NumVisibleReturns());
     std::vector<int> in_data_index(fwd->ListArguments().size());
+    std::vector<int> out_data_index(fwd->NumReturns());
     CHECK_EQ(in_data_index.size(), out_data.size());
     int counter = 0;
     for (size_t i = 0; i < out_grad_index.size(); ++i) {
@@ -306,7 +306,6 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NArray> &in_args,
 void GraphExecutor::InitDataEntryMemory() {
   // use allocator to allocate memory.
   GraphStorageAllocator allocator(&graph_);
-
   for (size_t i = 0; i < topo_order_.size(); ++i) {
     uint32_t nid = topo_order_[i];
     if (!op_nodes_[nid].activated) continue;
@@ -328,6 +327,7 @@ void GraphExecutor::InitDataEntryMemory() {
       CHECK_NE(out_data[i]->type, kInternalAllocated);
     }
     auto inplace = GetInplaceOption(nid, in_data, out_data);
+
     for (std::pair<DataEntryInfo*, DataEntryInfo*> kv : inplace) {
       DataEntryInfo* in = kv.first;
       DataEntryInfo* out = kv.second;
@@ -363,13 +363,14 @@ void GraphExecutor::InitDataEntryMemory() {
         continue;
       }
       // if we decrease it to zero, means we are ready to relase
-      if (--in->ref_count == 0) {
+      --in->ref_count;
+      if (in->ref_count == 0 && in->type == kInternalAllocated) {
         allocator.Release(in->storage_id, nid);
       }
     }
     // check out again, if there is ref_count == 0, release it
     for (DataEntryInfo *out : out_data) {
-      if (out->ref_count == 0) {
+      if (out->ref_count == 0 && out->type == kInternalAllocated) {
         allocator.Release(out->storage_id, nid);
       }
     }
@@ -443,6 +444,28 @@ void GraphExecutor::RunOps(size_t topo_start, size_t topo_end) {
           exec.mutate_vars);
     }
   }
+}
+
+std::string GraphExecutor::DebugStr() const {
+  std::ostringstream os;
+  os << "num_forward_nodes=" << num_forward_nodes_ << '\n';
+  for (size_t i = 0; i < topo_order_.size(); ++i) {
+    uint32_t nid = topo_order_[i];
+    if (!op_nodes_[nid].activated) continue;
+    os << "Op " << i << ":" << graph_.nodes[nid].name << '\n';
+    for (size_t j = 0; j < op_nodes_[nid].outputs.size(); ++j) {
+      const DataEntryInfo &info = op_nodes_[nid].outputs[j];
+      os << "\toutput[" << j << "]: shape=" << info.shape;
+      if (info.storage_id != GraphStorageAllocator::kBadStorageID) {
+        os << ", storage_id=" << info.storage_id;
+      }
+      if (info.inplace_op_id != -1) {
+        os << ", inplace_consumer=" << graph_.nodes[info.inplace_op_id].name;
+      }
+      os << '\n';
+    }
+  }
+  return os.str();
 }
 
 void GraphExecutor::Forward() {

@@ -126,13 +126,13 @@ class NArray {
   NArray Copy(Context ctx) const;
   /*!
    * \brief Slice a NArray
-   * 
+   *
    * \param begin begin index in first dim
    * \param end end index in first dim
-   * 
+   *
    * \return sliced NArray
    */
-  NArray Slice(index_t begin, index_t end) {
+  inline NArray Slice(index_t begin, index_t end) const {
     NArray ret = *this;
     CHECK_GE(shape_.ndim(), 0) << "NArray not initialized";
     CHECK_GE(shape_[0], end) << "Chunk is smaller than required";
@@ -145,15 +145,16 @@ class NArray {
       }
       ret.offset_ = begin * length;
     }
+    ret.shape_[0] = end - begin;
     return ret;
   }
   /*!
    * \brief Reshape current NArray
-   * 
+   *
    * \param shape new shape
    * \return NArray in new shape
    */
-  NArray Reshape(const TShape &shape) {
+  inline NArray Reshape(const TShape &shape) const {
     CHECK_GE(shape_.Size(), shape.Size()) \
       << "required shape is larger than chunk";
     NArray ret = *this;

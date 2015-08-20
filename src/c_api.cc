@@ -40,6 +40,8 @@ struct MXAPIThreadLocalEntry {
   std::vector<std::string> ret_vec_str;
   /*! \brief result holder for returning string pointers */
   std::vector<const char *> ret_vec_charp;
+  /*! \brief result holder for returning handles */
+  std::vector<void *> ret_handles;
   /*! \brief result holder for returning shapes */
   std::vector<TShape> arg_shapes, out_shapes;
   /*! \brief result holder for returning shape dimensions */
@@ -481,52 +483,53 @@ int MXSymbolInferShape(SymbolHandle sym,
   API_END();
 }
 
-MXNET_DLL int MXExecutorForward(ExecutorHandle handle,
-                                mx_uint len,
-                                NArrayHandle *args) {
+int MXExecutorForward(ExecutorHandle handle) {
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
-  CHECK_EQ(len, 0)
-      << "forward do not take narray for now";
-  // TODO(bing): remove args for now
   exec->Forward();
   API_END();
 }
 
-
-MXNET_DLL int MXExecutorBackward(ExecutorHandle handle,
-                                 mx_uint len,
-                                NArrayHandle *head_grads) {
+int MXExecutorBackward(ExecutorHandle handle,
+                       mx_uint len,
+                       NArrayHandle *head_grads) {
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
   std::vector<NArray> narrays;
   NArray **args_ptr = reinterpret_cast<NArray**>(head_grads);
   for (mx_uint i = 0; i < len; ++i) {
-    narrays.push_back(*(args_ptr[i]));
+    narrays.push_back(*args_ptr[i]);
   }
   exec->Backward(narrays);
   API_END();
 }
 
-
-MXNET_DLL int MXExecutorHeads(ExecutorHandle handle,
-                              mx_uint *out_size,
-                              NArrayHandle **out) {
+int MXExecutorHeads(ExecutorHandle handle,
+                    mx_uint *out_size,
+                    NArrayHandle **out) {
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
-  std::vector<NArray> ret = exec->heads();
-
+  std::vector<NArray> heads = exec->heads();
+  ret->ret_handles.resize(heads.size());
+  for (size_t i = 0; i < heads.size(); ++i) {
+    NArray *ptr = new NArray();
+    *ptr = heads[i];
+    ret->ret_handles[i] = ptr;
+  }
+  *out_size = heads.size();
+  *out = dmlc::BeginPtr(ret->ret_handles);
   API_END();
 }
 
-MXNET_DLL int MXExecutorBind(ExecutorHandle handle,
-                             SymbolHandle symbol_handle,
-                             int dev_mask,
-                             int dev_id,
-                             mx_uint len,
-                             NArrayHandle *in_args,
-                             NArrayHandle *arg_grad_store,
-                             mx_uint *grad_req_type) {
+int MXExecutorBind(SymbolHandle symbol_handle,
+                   int dev_mask,
+                   int dev_id,
+                   mx_uint len,
+                   NArrayHandle *in_args,
+                   NArrayHandle *arg_grad_store,
+                   mx_uint *grad_req_type,
+                   ExecutorHandle *out) {
   API_BEGIN();
   Symbol *symb = static_cast<Symbol*>(symbol_handle);
   Context ctx = Context(dev_mask, dev_id);
@@ -540,7 +543,7 @@ MXNET_DLL int MXExecutorBind(ExecutorHandle handle,
     arg_grad_vec.push_back(*(arg_grad_ptr[i]));
     grad_req_vec.push_back(static_cast<OpReqType>(grad_req_type[i]));
   }
-  handle = Executor::Bind(*symb, ctx, in_args_vec, arg_grad_vec, grad_req_vec);
+  *out = Executor::Bind(*symb, ctx, in_args_vec, arg_grad_vec, grad_req_vec);
   API_END();
 }
 

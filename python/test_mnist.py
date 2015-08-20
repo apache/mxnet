@@ -4,10 +4,13 @@ import numpy as np
 import os, cPickle, gzip
 
 def Softmax(x):
+    batch, nidden = x.shape
     maxes = np.max(x, axis=1)
-    x -= maxes.reshape(maxes.shape[0], 1)
-    e = np.exp(x)
-    return e / np.sum(e, axis=1)
+    x -= maxes.reshape(batch, 1)
+    x = np.exp(x)
+    norm = np.sum(x, axis=1)
+    prob = x / norm.reshape((batch, 1))
+    return prob
 
 def CalAcc(out, label):
     pred = np.argmax(out, axis=1)
@@ -63,45 +66,47 @@ batch_size = 100
 data = mx.sym.Variable('data')
 fc1 = mx.sym.FullyConnected(data=data, name='fc1', num_hidden=160)
 act1 = mx.sym.Activation(data = fc1, name='relu1', type="relu")
-fc2 = mx.sym.FullyConnected(data=act1, name='fc2', num_hidden=10)
+fc2 = mx.sym.FullyConnected(data = act1, name='fc2', num_hidden=10)
 args_list = fc2.list_arguments()
-
 # infer shape
 data_shape = (batch_size, 784)
 arg_shapes, out_shapes = fc2.infer_shape(data=data_shape)
 arg_narrays = [mx.narray.create(shape) for shape in arg_shapes]
 grad_narrays = [mx.narray.create(shape) for shape in arg_shapes]
 mom_narrays = [mx.narray.create(shape) for shape in arg_shapes]
-out_narray = mx.narray.create(out_shapes[0])
 inputs = dict(zip(args_list, arg_narrays))
 
+np.random.seed(0)
 # set random weight
 for name, narray in inputs.items():
     if "weight" in name:
-        narray.numpy[:, :] = np.random.uniform(-0.01, 0.01, narray.numpy.shape)
+        narray.numpy[:, :] = np.random.uniform(-0.001, 0.001, narray.numpy.shape)
+    if "bias" in name:
+        narray.numpy[:] = 0.0
 
-
+req = ['write_to' for i in range(len(arg_narrays))]
 # bind executer
-# exec = bind(fc2, args_narray, grad_narray, req)
+# TODO(bing): think of a better bind interface
+executor = fc2.bind(mx.Context('cpu'), arg_narrays, grad_narrays, req)
 # update
+
+out_narray = executor.heads()[0]
+grad_narray = mx.narray.create(out_narray.shape)
 
 epoch = 10
 momentum = 0.9
-lr = 0.01
+lr = 0.001
 wd = 0.0004
 
 def Update(mom, grad, weight):
-    if len(mom.numpy.shape) == 1:
-        mom.numpy[:] = mom.numpy * momentum - lr * (grad.numpy + wd * weight.numpy)
-    else:
-        mom.numpy[:, :] = mom.numpy * momentum - lr * (grad.numpy + wd * weight.numpy)
-    weight += mom
+    weight.numpy[:] -= lr * grad.numpy[:]
 
 block = zip(mom_narrays, grad_narrays, arg_narrays)
 
 
-train = MNISTIter("train")
-valid = MNISTIter("valid")
+train = MNISTIter("train", batch_size)
+valid = MNISTIter("valid", batch_size)
+
 for i in xrange(epoch):
     # train
     print "Epoch %d" % i
@@ -109,18 +114,22 @@ for i in xrange(epoch):
     val_acc = 0.0
     while train.Next():
         data, label = train.Get()
-        inputs["data"].numpy[:,:] = data
-        # exec.Forward(args_narray)
+        inputs["data"].numpy[:] = data
+        executor.forward()
+        out_narray.numpy[:] = Softmax(out_narray.numpy)
         train_acc += CalAcc(out_narray.numpy, label)
-        SetGradient(out_narray.numpy, label)
-        # exec.Backward(out_narray)
+        grad_narray.numpy[:] = out_narray.numpy
+        SetGradient(grad_narray.numpy, label)
+        executor.backward([grad_narray])
+
         for mom, grad, weight in block:
             Update(mom, grad, weight)
+
     # evaluate
     while valid.Next():
         data, label = valid.Get()
-        inputs["data"].numpy[:,:] = data
-        # exec.Forward([ inputs["data"] ])
+        inputs["data"].numpy[:] = data
+        executor.forward()
         val_acc += CalAcc(out_narray.numpy, label)
     print "Train Acc: ", train_acc / train.nbatch
     print "Valid Acc: ", val_acc / valid.nbatch

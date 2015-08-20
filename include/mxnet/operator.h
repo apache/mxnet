@@ -330,7 +330,7 @@ class OperatorProperty {
                                        const std::vector<T> &out_data) const {
     int counter = 0;
     std::vector<int> out_grad_index(out_grad.size());
-    std::vector<int> in_data_index(out_data.size());
+    std::vector<int> in_data_index(in_data.size());
     std::vector<int> out_data_index(out_data.size());
     for (size_t i = 0; i < out_grad_index.size(); ++i) {
       out_grad_index[i] = counter++;
