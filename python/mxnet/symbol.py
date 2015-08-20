@@ -253,7 +253,7 @@ class Executor(object):
             if not isinstance(obj, NArray):
                 raise TypeError("inputs must be NArray")
         narray = c_array([item.handle for item in inputs])
-        check_call(_LIB.MXExecutorForward (self.hanlde, mx_uint(len(inputs), narray))
+        check_call(_LIB.MXExecutorForward (self.hanlde, mx_uint(len(inputs), narray)))
 
     def backward(self, grads):
         """do backward on heads' grads
@@ -269,7 +269,7 @@ class Executor(object):
             if not isinstance(obj, NArray):
                 raise TypeError("inputs must be NArray")
         narray = c_array(NArrayHandle, [item.handle for item in grads])
-        check_call(_LIB.MXExecutorForward (self.hanlde, mx_uint(len(grads), narray))
+        check_call(_LIB.MXExecutorForward (self.hanlde, mx_uint(len(grads), narray)))
 
     def heads(self):
         """list all heads' output narray
@@ -311,9 +311,9 @@ def Bind(sym, ctx, args, args_grad, reqs):
         raise TypeError("Context type error")
     args_handle = c_array(NArrayHandle, [item.handle for item in args])
     args_grad_handle = c_array(NArrayHandle, [item.handle for item in args_grad])
-    reqs_array = c_array(mx_uint, mx_uint(enum[item]) for item in req)
+    reqs_array = c_array(mx_uint, [mx_uint(enum[item]) for item in req])
     handle = ExecutorHandle()
     check_call(_LIB.MXExecutorBind(handle, sym.handle, \
         mx_uint(ctx.device_mask), mx_uint(ctx.device_id), \
-        args_handle, args_grad_handle, reqs_array)
-    return Executor(handle);
+        mx_uint(len(args), args_handle, args_grad_handle, reqs_array)))
+    return Executor(handle)

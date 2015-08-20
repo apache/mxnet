@@ -528,7 +528,6 @@ MXNET_DLL int MXExecutorBind(ExecutorHandle handle,
                              NArrayHandle *arg_grad_store,
                              mx_uint *grad_req_type) {
   API_BEGIN();
-  Executor *exec = static_cast<Executor*>(handle);
   Symbol *symb = static_cast<Symbol*>(symbol_handle);
   Context ctx = Context(dev_mask, dev_id);
   NArray **in_args_ptr = reinterpret_cast<NArray**>(in_args);
@@ -541,7 +540,7 @@ MXNET_DLL int MXExecutorBind(ExecutorHandle handle,
     arg_grad_vec.push_back(*(arg_grad_ptr[i]));
     grad_req_vec.push_back(static_cast<OpReqType>(grad_req_type[i]));
   }
-  handle = exec->Bind(*symb, ctx, in_args_vec, arg_grad_vec, grad_req_vec);
+  handle = Executor::Bind(*symb, ctx, in_args_vec, arg_grad_vec, grad_req_vec);
   API_END();
 }
 

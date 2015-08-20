@@ -37,14 +37,16 @@ inline void BinaryOp(const NArray &lhs,
     case cpu::kDevMask:
       DAGEngine::Get()->Push([lhs, rhs, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
-          narray::Eval<cpu, OP>(lhs.ptr_->data, rhs.ptr_->data, &ret.ptr_->data, ctx);
+          TBlob tmp = ret.data();
+          narray::Eval<cpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
         }, lhs.ctx(), {lhs.ptr_->var, rhs.ptr_->var}, {ret.ptr_->var});
       break;
 #if MXNET_USE_CUDA
     case gpu::kDevMask:
       DAGEngine::Get()->Push([lhs, rhs, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
-          narray::Eval<gpu, OP>(lhs.ptr_->data, rhs.ptr_->data, &ret.ptr_->data, ctx);
+          TBlob tmp = ret.data();
+          narray::Eval<gpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
         }, lhs.ctx(), {lhs.ptr_->var, rhs.ptr_->var}, {ret.ptr_->var});
       break;
 #endif
@@ -64,14 +66,16 @@ void CopyFromTo(const NArray &from, NArray *to) {
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     DAGEngine::Get()->Push([from, ret](RunContext ctx) {
         ret.ptr_->CheckAndAlloc();
-        narray::Copy<cpu, cpu>(from.ptr_->data, &ret.ptr_->data,
+        TBlob tmp = ret.data();
+        narray::Copy<cpu, cpu>(from.data(), &tmp,
                                from.ctx(), ret.ctx(), ctx);
       }, from.ctx(), {from.ptr_->var}, {ret.ptr_->var});
   } else if (a == cpu::kDevMask && b == gpu::kDevMask) {
 #if MXNET_USE_CUDA
     DAGEngine::Get()->Push([from, ret](RunContext ctx) {
         ret.ptr_->CheckAndAlloc();
-        narray::Copy<cpu, gpu>(from.ptr_->data, &ret.ptr_->data,
+        TBlob tmp = ret.data();
+        narray::Copy<cpu, gpu>(from.data(), &tmp,
                                from.ctx(), ret.ctx(), ctx);
       }, ret.ctx(), {from.ptr_->var}, {ret.ptr_->var});
 #else
@@ -81,7 +85,8 @@ void CopyFromTo(const NArray &from, NArray *to) {
 #if MXNET_USE_CUDA
     DAGEngine::Get()->Push([from, ret](RunContext ctx) {
         ret.ptr_->CheckAndAlloc();
-        narray::Copy<gpu, cpu>(from.ptr_->data, &ret.ptr_->data,
+        TBlob tmp = ret.data();
+        narray::Copy<gpu, cpu>(from.data(), &tmp,
                                from.ctx(), ret.ctx(), ctx);
       }, from.ctx(), {from.ptr_->var}, {ret.ptr_->var});
 #else
@@ -91,7 +96,8 @@ void CopyFromTo(const NArray &from, NArray *to) {
 #if MXNET_USE_CUDA
     DAGEngine::Get()->Push([from, ret](RunContext ctx) {
         ret.ptr_->CheckAndAlloc();
-        narray::Copy<gpu, gpu>(from.ptr_->data, &ret.ptr_->data,
+        TBlob tmp = ret.data();
+        narray::Copy<gpu, gpu>(from.data(), &tmp,
                                from.ctx(), ret.ctx(), ctx);
       }, from.ctx(), {from.ptr_->var}, {ret.ptr_->var});
 #else
