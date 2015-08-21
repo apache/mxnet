@@ -1,1 +1,6 @@
+html
+latex
+*.sh
+_*
 doxygen
+*.pyc
