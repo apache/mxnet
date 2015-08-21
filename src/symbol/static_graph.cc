@@ -46,7 +46,7 @@ std::vector<uint32_t> StaticGraph::TopoSort() const {
       }
     }
   }
-  return std::move(ret);
+  return ret;
 }
 
 bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
@@ -161,7 +161,7 @@ StaticGraph::Node StaticGraph::CreateSumNode(
   os_size << grad_source.size();
   agg_node.op->Init({{"size", os_size.str()}});
   agg_node.inputs = grad_source;
-  return std::move(agg_node);
+  return agg_node;
 }
 
 void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
