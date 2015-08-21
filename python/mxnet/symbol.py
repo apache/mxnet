@@ -4,30 +4,16 @@
 from __future__ import absolute_import
 
 import ctypes
+import sys
 from .base import _LIB
-from .base import c_array, c_str, mx_uint, NArrayHandle, ExecutorHandle, SymbolHandle
+from .base import c_array, c_str, mx_uint, string_types
+from .base import NArrayHandle, ExecutorHandle, SymbolHandle
 from .base import check_call
 from .context import Context
 from .executor import Executor
 
 class Symbol(object):
     """Symbol is symbolic graph of the mxnet."""
-    _registry = None
-
-    @staticmethod
-    def _init_symbol_creator_registry(symbol_creator_registry):
-        """Initialize symbol creator registry
-
-        Parameters
-        ----------
-        symbol_creator_registry:
-            pass in symbol_creator_registry
-        Returns
-        -------
-        the passed in registry
-        """
-        _registry = symbol_creator_registry
-        return _registry
 
     def __init__(self, handle):
         """Initialize the function with handle
@@ -257,3 +243,113 @@ class Symbol(object):
                                        reqs_array,
                                        ctypes.byref(handle)))
         return Executor(handle)
+
+
+def Variable(name):
+    """Create a symbolic variable with specified name.
+
+    Parameters
+    ----------
+    name : str
+       Name of the variable.
+
+    Returns
+    -------
+    variable : Symbol
+        The created variable symbol.
+    """
+    if not isinstance(name, string_types):
+        raise TypeError('Expect a string for variable `name`')
+    handle = SymbolHandle()
+    check_call(_LIB.MXSymbolCreateVariable(name, ctypes.byref(handle)))
+    return Symbol(handle)
+
+
+def Group(symbols):
+    """Create a symbolic variable that groups several symbols together.
+
+    Parameters
+    ----------
+    symbols : list
+        List of symbols to be grouped.
+
+    Returns
+    -------
+    sym : Symbol
+        The created group symbol.
+     """
+    ihandles = []
+    for sym in symbols:
+        if not isinstance(sym, Symbol):
+            raise TypeError('Expect Symbols in the list input')
+        ihandles.append(sym.handle)
+    handle = SymbolHandle()
+    check_call(_LIB.MXSymbolCreateGroup(
+        len(ihandles), c_array(SymbolHandle, ihandles), ctypes.byref(handle)))
+    return Symbol(handle)
+
+
+def _make_atomic_symbol_function(handle, func_name):
+    """Create an atomic symbol function by handle and funciton name."""
+    def creator(*args, **kwargs):
+        """Activation Operator of Neural Net.
+        The parameters listed below can be passed in as keyword arguments.
+
+        Parameters
+        ----------
+        name : string, required.
+            Name of the resulting symbol.
+
+        Returns
+        -------
+        symbol: Symbol
+            the resulting symbol
+        """
+        param_keys = []
+        param_vals = []
+        symbol_kwargs = {}
+        name = kwargs.pop('name', None)
+
+        for k, v in kwargs.items():
+            if isinstance(v, Symbol):
+                symbol_kwargs[k] = v
+            else:
+                param_keys.append(c_str(k))
+                param_vals.append(c_str(str(v)))
+        # create atomic symbol
+        param_keys = c_array(ctypes.c_char_p, param_keys)
+        param_vals = c_array(ctypes.c_char_p, param_vals)
+        sym_handle = SymbolHandle()
+        check_call(_LIB.MXSymbolCreateAtomicSymbol(
+            handle, len(param_keys),
+            param_keys, param_vals,
+            ctypes.byref(sym_handle)))
+
+        if len(args) != 0 and len(symbol_kwargs) != 0:
+            raise TypeError('%s can only accept input \
+                Symbols either as positional or keyword arguments, not both' % func_name)
+
+        s = Symbol(sym_handle)
+        s._compose(*args, name=name, **symbol_kwargs)
+        return s
+    creator.__name__ = func_name
+    return creator
+
+
+def _init_module_functions():
+    """List and add all the atomic symbol functions to current module."""
+    plist = ctypes.POINTER(ctypes.c_void_p)()
+    size = ctypes.c_uint()
+    check_call(_LIB.MXSymbolListAtomicSymbolCreators(ctypes.byref(size),
+                                                     ctypes.byref(plist)))
+    module_obj = sys.modules[__name__]
+    for i in range(size.value):
+        hdl = ctypes.c_void_p(plist[i])
+        name = ctypes.c_char_p()
+        check_call(_LIB.MXSymbolGetAtomicSymbolName(hdl, ctypes.byref(name)))
+        function = _make_atomic_symbol_function(hdl, name.value)
+        setattr(module_obj, function.__name__, function)
+
+# Initialize the atomic symbo in startups
+_init_module_functions()
+
