@@ -85,36 +85,27 @@ class StaticGraph {
     /*! \brief inputs (node_id, index) for of the nodes*/
     std::vector<DataEntry> inputs;
     /*!
-     * \brief source node id; if this field is negative, it means this
-     *  Node is a forward node. If this field is nonnegative, it
-     *  means this Node is the gradient of the source node.
-     */
-    int32_t source_id;
-    /*!
-     * \brief backward; if this field is true, that means this node
-     *  represents the backward function of the op. Else, it
-     *  represents the forward function.  When it represents the
-     *  backward function, itself has not op but shares from the
-     *  source node. It is because the backward function shares the
-     *  states from the forward, and they need to share op.
+     * \brief If this field is nonnegative, this indicates this
+     *  Node is corresponds to a Backward Operation of Operator.
+     *  backward_source_id will points to the corresponding Forward Node.
      *
-     * Since we support gradient of gradient, a forward node can also
-     * be the gradient of another node. See source id.
+     *  For normal node, this field is -1.
+     *  When the node is a Backward node, the op field will be nullptr
      */
-    bool backward;
+    int32_t backward_source_id;
     /*! \brief default constructor */
-    Node() : source_id(-1), backward(false) {}
+    Node() : backward_source_id(-1) {}
     /*! \return whether the node is forward op node */
     inline bool is_forward() const {
-      return !backward && !is_variable();
+      return op != nullptr;
     }
     /*! \return whether the node is backward op node */
     inline bool is_backward() const {
-      return backward;
+      return backward_source_id != -1;
     }
     /*! \return whether the node is variable node */
     inline bool is_variable() const {
-      return op == nullptr && source_id == -1;
+      return op == nullptr && !is_backward();
     }
   };
   /*! \brief all nodes in the graph */

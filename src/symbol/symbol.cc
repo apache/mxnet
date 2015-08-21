@@ -1,7 +1,7 @@
 /*!
- * Copyright (c) 2015 by Contributors
- * \file symbol.cc
- * \brief symbol of mxnet
+ *  Copyright (c) 2015 by Contributors
+  *\file symbol.cc
+  *\brief symbol of mxnet
  */
 #include <dmlc/logging.h>
 #include <mxnet/symbolic.h>
@@ -12,13 +12,13 @@
 
 namespace mxnet {
 /*!
- * \brief Node is represents node of an operator in the symbolic graph.
+  *\brief Node is represents node of an operator in the symbolic graph.
  *
- * It stores connection to the inputs to function represented by OperatorProperty
- * NOTE on data structure: there are three types of node:
- * - Normal node: contains all the necessary elements of a graph.
- * - OperatorProperty: the inputs_ is empty, represents an OperatorProperty that has not been applied.
- * - Variable: the sym_ is nullptr, represents an named Variable of tensors that can be composed.
+  *It stores connection to the inputs to function represented by OperatorProperty
+  *NOTE on data structure: there are three types of node:
+  *- Normal node: contains all the necessary elements of a graph.
+  *- OperatorProperty: the inputs_ is empty, represents an OperatorProperty that has not been applied.
+  *- Variable: the sym_ is nullptr, represents an named Variable of tensors that can be composed.
  */
 struct Symbol::Node {
   /*! \brief Operator of this node */
@@ -201,7 +201,7 @@ std::vector<std::string> Symbol::ListReturns() const {
       }
     }
   }
-  return ret;
+  return std::move(ret);
 }
 
 Symbol Symbol::operator[] (size_t index) const {
@@ -415,13 +415,13 @@ Symbol Symbol::CreateGroup(const std::vector<Symbol> &symbols) {
   for (const auto &s : symbols) {
     ret.heads_.insert(ret.heads_.end(), s.heads_.begin(), s.heads_.end());
   }
-  return ret;
+  return std::move(ret);
 }
 
 Symbol Symbol::CreateVariable(const std::string &name) {
   Symbol s;
   s.heads_.push_back(DataEntry(std::make_shared<Node>(nullptr, name), 0));
-  return s;
+  return std::move(s);
 }
 
 void Symbol::ToStaticGraph(StaticGraph *out_graph) const {

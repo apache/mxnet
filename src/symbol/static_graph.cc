@@ -18,7 +18,7 @@ std::vector<uint32_t> StaticGraph::TopoSort() const {
       ++out_degree[e.source_id];
     }
     if (n.is_backward()) {
-      ++out_degree[n.source_id];
+      ++out_degree[n.backward_source_id];
     }
   }
   std::vector<uint32_t> ret(nodes.size());
@@ -41,12 +41,12 @@ std::vector<uint32_t> StaticGraph::TopoSort() const {
       }
     }
     if (n.is_backward()) {
-      if (--out_degree[n.source_id] == 0) {
-        queue.push(n.source_id);
+      if (--out_degree[n.backward_source_id] == 0) {
+        queue.push(n.backward_source_id);
       }
     }
   }
-  return ret;
+  return std::move(ret);
 }
 
 bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
@@ -79,7 +79,7 @@ bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
       }
     } else if (nodes[nid].is_backward()) {
       // simply use shapes from forward pass to assign backward shape
-      const Node& forward = nodes[node.source_id];
+      const Node& forward = nodes[node.backward_source_id];
       CHECK(forward.is_forward());
       std::vector<TShape>& in_grad_shapes = (*node_out_shapes)[nid];
       CHECK(in_grad_shapes.size() == forward.inputs.size());
@@ -99,7 +99,7 @@ bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
         }
       }
       // consistent check for input shapes
-      auto& out_data_shapes = (*node_out_shapes)[node.source_id];
+      auto& out_data_shapes = (*node_out_shapes)[node.backward_source_id];
       // use BackwardInputs to select entries corresponding to node.inputs
       auto in_shape = forward.op->BackwardInputs(
           out_data_shapes, in_grad_shapes, out_data_shapes);
@@ -130,7 +130,7 @@ bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
     if (nodes[i].is_forward()) {
       nout = nodes[i].op->NumReturns();
     } else if (nodes[i].is_backward()) {
-      nout = static_cast<int>(nodes[nodes[i].source_id].inputs.size());
+      nout = static_cast<int>(nodes[nodes[i].backward_source_id].inputs.size());
     }
     node_out_shapes[i].resize(nout);
   }
@@ -161,7 +161,7 @@ StaticGraph::Node StaticGraph::CreateSumNode(
   os_size << grad_source.size();
   agg_node.op->Init({{"size", os_size.str()}});
   agg_node.inputs = grad_source;
-  return agg_node;
+  return std::move(agg_node);
 }
 
 void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
@@ -198,6 +198,7 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
     uint32_t nid = *it;
     // skip variables
     if (nodes[nid].is_variable()) continue;
+    CHECK(nodes[nid].is_forward()) << "Do not support Backward of Backward";
     // get out_grad and out_data entry
     std::vector<DataEntry> out_grad, out_data;
     // nvisible is out_grad.size()
@@ -228,13 +229,7 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
     // Create a gradient backward node
     Node grad_node;
     // Point to the corresponding source
-    grad_node.source_id = nid;
-    // reverse the source node
-    grad_node.backward = !(nodes[grad_node.source_id].backward);
-    // if grad node is a forward node, needs to have its own OpProperty
-    if (!grad_node.backward) {
-      grad_node.op.reset(nodes[nodes[nid].source_id].op->Copy());
-    }
+    grad_node.backward_source_id = nid;
     // select out the dependent inputs
     grad_node.inputs = nodes[nid].op->BackwardInputs(
         out_grad, nodes[nid].inputs, out_data);
