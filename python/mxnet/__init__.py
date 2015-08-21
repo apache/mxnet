@@ -12,11 +12,10 @@ from __future__ import absolute_import
 from .context import Context, current_context
 from .narray import NArray
 from .function import _FunctionRegistry
-from .symbol import Symbol
-from .symbol_creator import _SymbolCreatorRegistry
+from . import symbol
 
 __version__ = "0.1.0"
 
 # this is a global function registry that can be used to invoke functions
 op = NArray._init_function_registry(_FunctionRegistry())
-sym = Symbol._init_symbol_creator_registry(_SymbolCreatorRegistry())
+
