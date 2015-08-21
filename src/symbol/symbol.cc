@@ -201,7 +201,7 @@ std::vector<std::string> Symbol::ListReturns() const {
       }
     }
   }
-  return std::move(ret);
+  return ret;
 }
 
 Symbol Symbol::operator[] (size_t index) const {
@@ -415,13 +415,13 @@ Symbol Symbol::CreateGroup(const std::vector<Symbol> &symbols) {
   for (const auto &s : symbols) {
     ret.heads_.insert(ret.heads_.end(), s.heads_.begin(), s.heads_.end());
   }
-  return std::move(ret);
+  return ret;
 }
 
 Symbol Symbol::CreateVariable(const std::string &name) {
   Symbol s;
   s.heads_.push_back(DataEntry(std::make_shared<Node>(nullptr, name), 0));
-  return std::move(s);
+  return s;
 }
 
 void Symbol::ToStaticGraph(StaticGraph *out_graph) const {
