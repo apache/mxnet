@@ -1,7 +1,7 @@
 /*!
- *  Copyright (c) 2015 by Contributors
-  *\file symbol.cc
-  *\brief symbol of mxnet
+ * Copyright (c) 2015 by Contributors
+ * \file symbol.cc
+ * \brief symbol of mxnet
  */
 #include <dmlc/logging.h>
 #include <mxnet/symbolic.h>
@@ -12,13 +12,13 @@
 
 namespace mxnet {
 /*!
-  *\brief Node is represents node of an operator in the symbolic graph.
+ * \brief Node is represents node of an operator in the symbolic graph.
  *
-  *It stores connection to the inputs to function represented by OperatorProperty
-  *NOTE on data structure: there are three types of node:
-  *- Normal node: contains all the necessary elements of a graph.
-  *- OperatorProperty: the inputs_ is empty, represents an OperatorProperty that has not been applied.
-  *- Variable: the sym_ is nullptr, represents an named Variable of tensors that can be composed.
+ * It stores connection to the inputs to function represented by OperatorProperty
+ * NOTE on data structure: there are three types of node:
+ * - Normal node: contains all the necessary elements of a graph.
+ * - OperatorProperty: the inputs_ is empty, represents an OperatorProperty that has not been applied.
+ * - Variable: the sym_ is nullptr, represents an named Variable of tensors that can be composed.
  */
 struct Symbol::Node {
   /*! \brief Operator of this node */
