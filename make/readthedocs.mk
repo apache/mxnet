@@ -30,7 +30,7 @@ USE_CUDNN_PATH = NONE
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
 USE_STATIC_MKL = NONE
-USE_BLAS = blas
+USE_BLAS = NONE
 #
 # add path to intel libary, you may need it
 # for MKL, if you did not add the path to enviroment variable
@@ -52,7 +52,7 @@ USE_OPENMP_ITER = 0
 ADD_LDFLAGS =
 
 # the additional compile flags you want to add
-ADD_CFLAGS =
+ADD_CFLAGS = -DMSHADOW_STAND_ALONE=1
 #
 # If use MKL, choose static link automaticly to fix python wrapper
 #
