@@ -80,7 +80,7 @@ GraphExecutor::GetResource(uint32_t node_id) const {
     return node.op->ForwardResource();
   } else {
     CHECK(node.is_backward());
-    return graph_.nodes[node.backward_source_id].op->BackwardResource();
+    return graph_.nodes[node.source_id].op->BackwardResource();
   }
 }
 
@@ -90,7 +90,7 @@ inline int GraphExecutor::GetNumOutputs(uint32_t node_id) const {
     return node.op->NumReturns();
   } else if (node.is_backward()) {
     return static_cast<int>(
-        graph_.nodes[node.backward_source_id].op->ListArguments().size());
+        graph_.nodes[node.source_id].op->ListArguments().size());
   } else {
     CHECK(node.is_variable());
     return 1;
@@ -125,7 +125,7 @@ inline std::vector<std::pair<T, T> > GraphExecutor::GetInplaceOption(
   } else {
     CHECK(node.is_backward());
     // forward property
-    const OperatorProperty *fwd = graph_.nodes[node.backward_source_id].op.get();
+    const OperatorProperty *fwd = graph_.nodes[node.source_id].op.get();
 
     std::vector<int> out_grad_index(fwd->NumVisibleReturns());
     std::vector<int> in_data_index(fwd->ListArguments().size());
@@ -406,8 +406,8 @@ void GraphExecutor::InitOpNodes() {
     } else {
       CHECK(graph_.nodes[nid].is_backward());
       op_node.op.reset(new BackwardOpWrapper(
-          graph_.nodes[graph_.nodes[nid].backward_source_id].op.get(),
-          op_nodes_[graph_.nodes[nid].backward_source_id].op));
+          graph_.nodes[graph_.nodes[nid].source_id].op.get(),
+          op_nodes_[graph_.nodes[nid].source_id].op));
     }
     bool allow_cache = true;
     for (StaticGraph::DataEntry e : graph_.nodes[nid].inputs) {
