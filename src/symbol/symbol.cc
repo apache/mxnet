@@ -52,24 +52,24 @@ inline bool Symbol::is_atomic() const {
 // implementation of template functions
 template<typename FVisit>
 inline void Symbol::DFSVisit(FVisit fvisit) const {
-  std::vector<Node*> stack;
+  std::vector<const std::shared_ptr<Node>*> stack;
   std::unordered_set<Node*> visited;
   // put the head into the graph
   for (auto &head : heads_) {
     Node *ptr = head.source.get();
     if (visited.count(ptr) == 0) {
-      stack.push_back(ptr);
+      stack.push_back(&head.source);
       visited.insert(ptr);
     }
   }
   while (!stack.empty()) {
-    Node *back = stack.back();
+    const std::shared_ptr<Node> *back = stack.back();
     stack.pop_back();
-    fvisit(back);
-    for (auto it = back->inputs.rbegin(); it != back->inputs.rend(); ++it) {
+    fvisit(*back);
+    for (auto it = back->get()->inputs.rbegin(); it != back->get()->inputs.rend(); ++it) {
       Node *ptr = it->source.get();
       if (visited.count(ptr) == 0) {
-        stack.push_back(ptr);
+        stack.push_back(&it->source);
         visited.insert(ptr);
       }
     }
@@ -101,7 +101,7 @@ inline void KeywordArgumentMismatch(const char *source,
 int Symbol::FindDuplicateArgs(std::unordered_map<std::string, int> *out) const {
   out->clear();
   int max_dup = 1;
-  this->DFSVisit([out, &max_dup](Node *node) {
+  this->DFSVisit([out, &max_dup](const std::shared_ptr<Node> &node) {
       if (node->is_variable()) {
         auto iter = out->find(node->name);
         if (iter == out->end()) {
@@ -119,11 +119,11 @@ int Symbol::FindDuplicateArgs(std::unordered_map<std::string, int> *out) const {
 Symbol Symbol::Copy() const {
   std::unordered_map<Node*, std::shared_ptr<Node> > old_new;
   // use DFSVisit to copy all the nodes
-  this->DFSVisit([&old_new](Node *node) {
+  this->DFSVisit([&old_new](const std::shared_ptr<Node> &node) {
       if (node->op == nullptr) {
-        old_new[node] = std::make_shared<Node>(nullptr, node->name);
+        old_new[node.get()] = std::make_shared<Node>(nullptr, node->name);
       } else {
-        old_new[node] =  std::make_shared<Node>(node->op->Copy(), node->name);
+        old_new[node.get()] =  std::make_shared<Node>(node->op->Copy(), node->name);
       }
     });
   // connect nodes of new graph
@@ -156,7 +156,7 @@ void Symbol::Print(std::ostream &os) const {
       os << "\toutput[" << i << "]=" << heads_[i].source->name
          << '(' << heads_[i].index << ")\n";
     }
-    this->DFSVisit([&os](Node *node) {
+    this->DFSVisit([&os](const std::shared_ptr<Node> &node) {
         if (node->is_variable()) {
           os << "Variable:" << node->name << '\n';
         } else {
@@ -176,7 +176,7 @@ std::vector<std::string> Symbol::ListArguments() const {
   if (this->is_atomic()) {
     return heads_[0].source->op->ListArguments();
   } else {
-    this->DFSVisit([&ret](Node *node) {
+    this->DFSVisit([&ret](const std::shared_ptr<Node> &node) {
         if (node->is_variable()) {
           ret.push_back(node->name);
         }
@@ -243,7 +243,8 @@ void Symbol::Compose(const std::vector<Symbol>& args,
     std::unordered_map<Node*, const DataEntry*> replace_map;
     std::vector<std::pair<DataEntry*, const DataEntry*> > replace_plan;
     // replace map stores the existing replacement plan for arguments node
-    this->DFSVisit([&arg_counter, &replace_map, &replace_plan, &args](Node *node) {
+    this->DFSVisit([&arg_counter, &replace_map, &replace_plan, &args]
+                   (const std::shared_ptr<Node> &node) {
         // visit all the childs, find possible replacement
         for (size_t i = 0; i < node->inputs.size(); ++i) {
           DataEntry *e = &(node->inputs[i]);
@@ -324,7 +325,8 @@ void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
     std::vector<std::pair<DataEntry*, const DataEntry*> > replace_plan;
     std::unordered_set<Node *> visited;
     // replace map stores the existing replacement plan for arguments node
-    this->DFSVisit([&nmatched, &visited, &kwargs, &replace_plan](Node *node) {
+    this->DFSVisit([&nmatched, &visited, &kwargs, &replace_plan]
+                   (const std::shared_ptr<Node> &node) {
         // visit all the childs, find possible replacement
         for (size_t i = 0; i < node->inputs.size(); ++i) {
           DataEntry *e = &(node->inputs[i]);
@@ -431,13 +433,13 @@ void Symbol::ToStaticGraph(StaticGraph *out_graph) const {
   auto &arg_nodes = out_graph->arg_nodes;
   arg_nodes.clear();
 
-  this->DFSVisit([&node_order, &node_index, &arg_nodes](Node *n) {
+  this->DFSVisit([&node_order, &node_index, &arg_nodes](const std::shared_ptr<Node> &n) {
       uint32_t nid = static_cast<uint32_t>(node_index.size());
-      node_index[n] = nid;
+      node_index[n.get()] = nid;
       if (n->is_variable()) {
         arg_nodes.push_back(nid);
       }
-      node_order.push_back(n);
+      node_order.push_back(n.get());
     });
   // setup nodes
   out_graph->nodes.resize(node_index.size());
