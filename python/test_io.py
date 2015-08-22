@@ -18,4 +18,3 @@ while dataiter.next():
     label = dataiter.getlabel()
     print label.numpy
     '''
-
