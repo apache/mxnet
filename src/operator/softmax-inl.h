@@ -59,8 +59,8 @@ class SoftmaxOp : public Operator {
     using namespace mshadow::expr;
     CHECK_EQ(in_data.size(), 2);
     CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_grad.size(), 1);
-    CHECK_EQ(req.size(), 1);
+    CHECK_GE(in_grad.size(), 1);
+    CHECK_GE(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 1> label = in_data[kLabel].get<xpu, 1, real_t>(s);
     Tensor<xpu, 2> out = out_grad[kOut].FlatTo2D<xpu, real_t>(s);
@@ -96,9 +96,9 @@ class SoftmaxProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 2) << "Input:[data, label]";
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
+    SHAPE_ASSIGN_CHECK(*in_shape, kLabel, Shape1(dshape[0]));
     out_shape->clear();
     out_shape->push_back(dshape);
-    out_shape->emplace_back(Shape1(dshape[0]));
     return true;
   }
 
@@ -116,7 +116,7 @@ class SoftmaxProp : public OperatorProperty {
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data) const {
-    return {out_data[kOut], in_data[kLabel]};
+    return {in_data[kLabel], out_data[kOut]};
   }
 
   virtual std::vector<std::pair<int, void*> > BackwardInplaceOption(
