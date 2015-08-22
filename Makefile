@@ -3,7 +3,7 @@ ifdef CXXNET_CONFIG
 	config = $(CXXNET_CONFIG)
 else ifneq ("$(wildcard ./config.mk)","")
 	config = config.mk
-else 
+else
 	config = make/config.mk
 endif
 endif
@@ -129,7 +129,7 @@ $(CUBIN) :
 lint:
 	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts test python
 
-doc:
+doxygen:
 	doxygen doc/Doxyfile
 
 clean:

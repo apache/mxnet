@@ -255,7 +255,7 @@ struct OperatorPropertyEntry {
   }
   /*!
    * \brief set the parameter documents.
-   * \param description the description.
+   * \param param_doc the parameter documentation.
    * \return reference to self.
    */
   inline OperatorPropertyEntry &set_param_doc(const std::string &param_doc) {

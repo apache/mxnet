@@ -340,7 +340,6 @@ def _make_atomic_symbol_function(handle):
         return s
     creator.__name__ = func_name
     creator.__doc__ = docs.value
-    print creator.__doc__
     return creator
 
 
