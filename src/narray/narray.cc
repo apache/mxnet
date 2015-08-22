@@ -7,7 +7,7 @@
 #include <mxnet/narray.h>
 #include <mxnet/registry.h>
 #include <mshadow/tensor.h>
-#include "./narray_op.h"
+#include "./narray_function.h"
 
 namespace mxnet {
 /*!
@@ -150,14 +150,14 @@ NArray &NArray::operator/=(const NArray &src) {
 }
 
 // register API function
-REGISTER_NARRAY_FUN(plus).set_function(BinaryOp<narray::Plus>);
-REGISTER_NARRAY_FUN(minus).set_function(BinaryOp<narray::Minus>);
-REGISTER_NARRAY_FUN(mul).set_function(BinaryOp<narray::Mul>);
-REGISTER_NARRAY_FUN(div).set_function(BinaryOp<narray::Div>);
+MXNET_REGISTER_NARRAY_FUN(plus).set_function(BinaryOp<narray::Plus>);
+MXNET_REGISTER_NARRAY_FUN(minus).set_function(BinaryOp<narray::Minus>);
+MXNET_REGISTER_NARRAY_FUN(mul).set_function(BinaryOp<narray::Mul>);
+MXNET_REGISTER_NARRAY_FUN(div).set_function(BinaryOp<narray::Div>);
 
-//  copy function is special
-//  that we need to remove kAcceptEmptyMutateTarget from it
-REGISTER_NARRAY_FUN(copy)
+// copy function is special
+// that we need to remove kAcceptEmptyMutateTarget from it
+MXNET_REGISTER_NARRAY_FUN(copy)
 .set_function(CopyFromTo)
 .set_type_mask(kNArrayArgBeforeScalar);
 

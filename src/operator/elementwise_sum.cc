@@ -19,6 +19,9 @@ Operator* ElementWiseSumProp::CreateOperator(Context ctx) const {
 
 DMLC_REGISTER_PARAMETER(ElementWiseSumParam);
 
-REGISTER_OP_PROPERTY(ElementWiseSum, ElementWiseSumProp);
+MXNET_REGISTER_OP_PROPERTY(ElementWiseSum, ElementWiseSumProp)
+.describe("Perform an elementwise sum over all the inputs.")
+.add_arguments(ElementWiseSumParam::__FIELDS__());
+
 }  // namespace op
 }  // namespace mxnet

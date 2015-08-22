@@ -241,7 +241,7 @@ int MXNArrayGetContext(NArrayHandle handle,
 int MXListFunctions(mx_uint *out_size,
                     FunctionHandle **out_array) {
   API_BEGIN();
-  auto &vec = Registry<NArrayFunctionEntry>::List();
+  auto &vec = dmlc::Registry<NArrayFunctionReg>::List();
   *out_size = static_cast<mx_uint>(vec.size());
   *out_array = (FunctionHandle*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
   API_END();
@@ -250,14 +250,14 @@ int MXListFunctions(mx_uint *out_size,
 int MXGetFunction(const char *name,
                   FunctionHandle *out) {
   API_BEGIN();
-  *out = Registry<NArrayFunctionEntry>::Find(name);
+  *out = dmlc::Registry<NArrayFunctionReg>::Find(name);
   API_END();
 }
 
 int MXFuncGetName(FunctionHandle fun,
                   const char **out_name) {
   API_BEGIN();
-  auto *f = static_cast<const NArrayFunctionEntry*>(fun);
+  auto *f = static_cast<const NArrayFunctionReg*>(fun);
   *out_name = f->name.c_str();
   API_END();
 }
@@ -268,7 +268,7 @@ int MXFuncDescribe(FunctionHandle fun,
                    mx_uint *num_mutate_vars,
                    int *type_mask) {
   API_BEGIN();
-  auto *f = static_cast<const NArrayFunctionEntry*>(fun);
+  auto *f = static_cast<const NArrayFunctionReg*>(fun);
   *num_use_vars = f->num_use_vars;
   *num_scalars = f->num_scalars;
   *num_mutate_vars = f->num_mutate_vars;
@@ -281,10 +281,10 @@ int MXFuncInvoke(FunctionHandle fun,
                  mx_float *scalar_args,
                  NArrayHandle *mutate_vars) {
   API_BEGIN();
-  auto *f = static_cast<const NArrayFunctionEntry*>(fun);
-  (*f)((NArray**)(use_vars),  //  NOLINT(*)
-       scalar_args,
-       (NArray**)(mutate_vars));  //  NOLINT(*)
+  auto *f = static_cast<const NArrayFunctionReg*>(fun);
+  f->body((NArray**)(use_vars),  //  NOLINT(*)
+          scalar_args,
+          (NArray**)(mutate_vars));  //  NOLINT(*)
   API_END();
 }
 
@@ -295,7 +295,7 @@ int MXFuncInvoke(FunctionHandle fun,
 int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
                                      AtomicSymbolCreator **out_array) {
   API_BEGIN();
-  auto &vec = Registry<OperatorPropertyEntry>::List();
+  auto &vec = dmlc::Registry<OperatorPropertyReg>::List();
   *out_size = static_cast<mx_uint>(vec.size());
   *out_array = (AtomicSymbolCreator*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
   API_END();
@@ -304,51 +304,39 @@ int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
 int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
                                 const char **out) {
   API_BEGIN();
-  OperatorPropertyEntry *e = static_cast<OperatorPropertyEntry *>(creator);
+  OperatorPropertyReg *e = static_cast<OperatorPropertyReg *>(creator);
   *out = e->name.c_str();
   API_END();
 }
 
-int MXSymbolGetAtomicSymbolDoc(AtomicSymbolCreator creator,
-                               const char **out) {
-  OperatorPropertyEntry *e = static_cast<OperatorPropertyEntry *>(creator);
+int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
+                                const char **name,
+                                const char **description,
+                                mx_uint *num_args,
+                                const char ***arg_names,
+                                const char ***arg_type_infos,
+                                const char ***arg_descriptions) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  OperatorPropertyReg *e = static_cast<OperatorPropertyReg *>(creator);
+
   API_BEGIN();
-  std::ostringstream os, os_param;
-  if (e->description.length() != 0) {
-    os << e->description << "\n\n";
-  } else {
-    os << "Symbolic Operator "<< e->name << "\n\n";
+
+  *name = e->name.c_str();
+  *description = e->description.c_str();
+  *num_args = static_cast<mx_uint>(e->arguments.size());
+  ret->ret_vec_charp.clear();
+  for (size_t i = 0; i < e->arguments.size(); ++i) {
+    ret->ret_vec_charp.push_back(e->arguments[i].name.c_str());
   }
-  // get parameter doc
-  for (auto kv : e->arguments) {
-    os_param << kv.first << " : Symbol\n";
-    if (kv.second.length() != 0) {
-      os_param << "    " << kv.second << '\n';
-    }
+  for (size_t i = 0; i < e->arguments.size(); ++i) {
+    ret->ret_vec_charp.push_back(e->arguments[i].type_info_str.c_str());
   }
-  os_param << e->param_doc;
-  std::string param_doc = os_param.str();
-  if (param_doc.length() != 0) {
-    os << "Parameters\n"
-       << "----------\n"
-       << param_doc << '\n';
-  } else {
-    os << "Parameters\n"
-       << "----------\n"
-       << "args\n"
-       << "    Positional arguments to the Symbol.\n\n"
-       << "kwargs\n"
-       << "    Keyword arguments to the Symbol.\n\n";
+  for (size_t i = 0; i < e->arguments.size(); ++i) {
+    ret->ret_vec_charp.push_back(e->arguments[i].description.c_str());
   }
-  // generate return
-  os << "Returns\n"
-     << "-------\n"
-     << "output : Symbol\n"
-     << "    "
-     << "The result output symbol.\n";
-  ret->ret_str = os.str();
-  *out = ret->ret_str.c_str();
+  *arg_names = dmlc::BeginPtr(ret->ret_vec_charp);
+  *arg_type_infos = dmlc::BeginPtr(ret->ret_vec_charp) + e->arguments.size();
+  *arg_descriptions = dmlc::BeginPtr(ret->ret_vec_charp) + (e->arguments.size() * 2);
   API_END();
 }
 
@@ -361,8 +349,8 @@ int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
   OperatorProperty *op = nullptr;
 
   API_BEGIN();
-  OperatorPropertyEntry *e = static_cast<OperatorPropertyEntry *>(creator);
-  op = (*e)();
+  OperatorPropertyReg *e = static_cast<OperatorPropertyReg *>(creator);
+  op = e->body();
   std::vector<std::pair<std::string, std::string> > kwargs;
   for (int i = 0; i < num_param; ++i) {
     kwargs.push_back({std::string(keys[i]), std::string(vals[i])});

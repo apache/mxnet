@@ -28,7 +28,11 @@ Operator* PoolingProp::CreateOperator(Context ctx) const {
 
 DMLC_REGISTER_PARAMETER(PoolingParam);
 
-REGISTER_OP_PROPERTY(Pooling, PoolingProp);
+MXNET_REGISTER_OP_PROPERTY(Pooling, PoolingProp)
+.describe("Perform spatial pooling on inputs.")
+.add_argument("data", "Symbol", "Input data to the pooling operator.")
+.add_arguments(PoolingParam::__FIELDS__());
+
 }  // namespace op
 }  // namespace mxnet
 

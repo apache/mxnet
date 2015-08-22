@@ -1,12 +1,12 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file narray_op_cpu.cc
+ * \file narray_function_cpu.cc
  * \brief
  */
 
 // this will be invoked by gcc and compile CPU version
-#include "./narray_op.h"
-#include "./narray_op-inl.h"
+#include "./narray_function.h"
+#include "./narray_function-inl.h"
 
 namespace mxnet {
 namespace narray {

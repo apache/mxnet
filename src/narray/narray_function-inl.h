@@ -1,15 +1,15 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file narray_op-inl.h
+ * \file narray_function-inl.h
  * \brief
  */
-#ifndef MXNET_NARRAY_NARRAY_OP_INL_H_
-#define MXNET_NARRAY_NARRAY_OP_INL_H_
-#include "./narray_op.h"
+#ifndef MXNET_NARRAY_NARRAY_FUNCTION_INL_H_
+#define MXNET_NARRAY_NARRAY_FUNCTION_INL_H_
+#include "./narray_function.h"
 // this file will be included twice by CPU and GPU
 // macro to help specialize evaluation function
 #ifndef DECL_BINARY
-#define DECL_BINARY(XPU, OP, FUN)                                         \
+#define DECL_BINARY(XPU, OP, FUN)                                       \
   template<>                                                            \
   void Eval<XPU, OP>(const TBlob &lhs, const TBlob &rhs, TBlob *ret, RunContext ctx) { \
     FUN<XPU, OP>(lhs, rhs, ret, ctx);                                   \
@@ -42,4 +42,4 @@ DECL_BINARY(DEVICE, Div, Eval_)
 }  // namespace narray
 }  // namespace mxnet
 
-#endif  // MXNET_NARRAY_NARRAY_OP_INL_H_
+#endif  // MXNET_NARRAY_NARRAY_FUNCTION_INL_H_

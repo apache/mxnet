@@ -40,8 +40,9 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     DMLC_DECLARE_FIELD(stride_y).set_range(1, 10000);
     DMLC_DECLARE_FIELD(pad_x).set_default(0).set_range(0, 10000);
     DMLC_DECLARE_FIELD(pad_y).set_default(0).set_range(0, 10000);
-    DMLC_DECLARE_FIELD(type).set_default(kMaxPooling)\
-      .add_enum("max", kMaxPooling).add_enum("avg", kAvgPooling)\
+    DMLC_DECLARE_FIELD(type).set_default(kMaxPooling)
+      .add_enum("max", kMaxPooling)
+      .add_enum("avg", kAvgPooling)
       .add_enum("sum", kSumPooling);
   }
 };

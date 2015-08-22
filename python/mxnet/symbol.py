@@ -292,10 +292,38 @@ def Group(symbols):
 def _make_atomic_symbol_function(handle):
     """Create an atomic symbol function by handle and funciton name."""
     name = ctypes.c_char_p()
-    docs = ctypes.c_char_p()
-    check_call(_LIB.MXSymbolGetAtomicSymbolName(handle, ctypes.byref(name)))
-    check_call(_LIB.MXSymbolGetAtomicSymbolDoc(handle, ctypes.byref(docs)))
-    func_name = name.value;
+    desc = ctypes.c_char_p()
+    num_args = mx_uint()
+    arg_names = ctypes.POINTER(ctypes.c_char_p)()
+    arg_types = ctypes.POINTER(ctypes.c_char_p)()
+    arg_descs = ctypes.POINTER(ctypes.c_char_p)()
+
+    check_call(_LIB.MXSymbolGetAtomicSymbolInfo(
+            handle, ctypes.byref(name), ctypes.byref(desc),
+            ctypes.byref(num_args),
+            ctypes.byref(arg_names),
+            ctypes.byref(arg_types),
+            ctypes.byref(arg_descs)))
+    func_name = name.value
+    param_str = []
+    for i in range(num_args.value):
+        ret = '%s : %s' % (arg_names[i], arg_types[i])
+        if len(arg_descs[i]) != 0:
+            ret += '\n    ' + arg_descs[i]
+        param_str.append(ret)
+
+    doc_str = ('%s\n\n' +
+               'Parameters\n' +
+               '----------\n' +
+               '%s\n' +
+               'name : string, required.\n' +
+               '    Name of the resulting symbol.\n\n' +
+               'Returns\n' +
+               '-------\n' +
+               'symbol: Symbol\n'+
+               '    The result symbol.')
+
+    doc_str = doc_str % (desc.value, '\n'.join(param_str))
 
     def creator(*args, **kwargs):
         """Activation Operator of Neural Net.
@@ -338,8 +366,9 @@ def _make_atomic_symbol_function(handle):
         s = Symbol(sym_handle)
         s._compose(*args, name=name, **symbol_kwargs)
         return s
+
     creator.__name__ = func_name
-    creator.__doc__ = docs.value
+    creator.__doc__ = doc_str
     return creator
 
 
@@ -347,6 +376,7 @@ def _init_module_functions():
     """List and add all the atomic symbol functions to current module."""
     plist = ctypes.POINTER(ctypes.c_void_p)()
     size = ctypes.c_uint()
+
     check_call(_LIB.MXSymbolListAtomicSymbolCreators(ctypes.byref(size),
                                                      ctypes.byref(plist)))
     module_obj = sys.modules[__name__]

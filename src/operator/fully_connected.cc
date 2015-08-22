@@ -19,11 +19,11 @@ Operator* FullyConnectedProp::CreateOperator(Context ctx) const {
 
 DMLC_REGISTER_PARAMETER(FullyConnectedParam);
 
-REGISTER_OP_PROPERTY(FullyConnected, FullyConnectedProp)
+MXNET_REGISTER_OP_PROPERTY(FullyConnected, FullyConnectedProp)
 .describe("Apply matrix multiplication to input then add a bias.")
-.add_argument("data", "Input data to the FullyConnectedOp.")
-.add_argument("weight", "Weight matrix.")
-.add_argument("bias", "Bias parameter.")
-.set_param_doc(FullyConnectedParam::__DOC__());
+.add_argument("data", "Symbol", "Input data to the FullyConnectedOp.")
+.add_argument("weight", "Symbol", "Weight matrix.")
+.add_argument("bias", "Symbol", "Bias parameter.")
+.add_arguments(FullyConnectedParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet
