@@ -289,8 +289,14 @@ def Group(symbols):
     return Symbol(handle)
 
 
-def _make_atomic_symbol_function(handle, func_name):
+def _make_atomic_symbol_function(handle):
     """Create an atomic symbol function by handle and funciton name."""
+    name = ctypes.c_char_p()
+    docs = ctypes.c_char_p()
+    check_call(_LIB.MXSymbolGetAtomicSymbolName(handle, ctypes.byref(name)))
+    check_call(_LIB.MXSymbolGetAtomicSymbolDoc(handle, ctypes.byref(docs)))
+    func_name = name.value;
+
     def creator(*args, **kwargs):
         """Activation Operator of Neural Net.
         The parameters listed below can be passed in as keyword arguments.
@@ -333,6 +339,8 @@ def _make_atomic_symbol_function(handle, func_name):
         s._compose(*args, name=name, **symbol_kwargs)
         return s
     creator.__name__ = func_name
+    creator.__doc__ = docs.value
+    print creator.__doc__
     return creator
 
 
@@ -345,9 +353,7 @@ def _init_module_functions():
     module_obj = sys.modules[__name__]
     for i in range(size.value):
         hdl = ctypes.c_void_p(plist[i])
-        name = ctypes.c_char_p()
-        check_call(_LIB.MXSymbolGetAtomicSymbolName(hdl, ctypes.byref(name)))
-        function = _make_atomic_symbol_function(hdl, name.value)
+        function = _make_atomic_symbol_function(hdl)
         setattr(module_obj, function.__name__, function)
 
 # Initialize the atomic symbo in startups
