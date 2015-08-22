@@ -556,6 +556,29 @@ MXNET_DLL int MXDataIterGetIterInfo(AtomicSymbolCreator creator,
  */
 MXNET_DLL int MXDataIterFree(DataIterHandle handle);
 /*!
+ * \brief create an data iterator by name
+ * \param iter_name iterator name
+ * \param out the handle to the iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXIOCreateByName(const char *iter_name,
+                                   DataIterHandle *out);
+/*!
+ * \brief set parameter value
+ * \param handle the handle to iterator
+ * \param name parameter name
+ * \param val parameter value
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXIOSetParam(DataIterHandle handle,
+                            const char *name, const char *val);
+/*!
+ * \brief Init after set parameter
+ * \param handle the handle to iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXIOInit(DataIterHandle handle);
+/*!
  * \brief move iterator to next position
  * \param handle the handle to iterator
  * \param out return value of next

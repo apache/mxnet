@@ -30,9 +30,6 @@ class DataIter(object):
     def __call__(self, *args, **kwargs):
         """Invoke iterator as function on inputs. Init params.
 
-    def __call__(self, *args, **kwargs):
-        """Invoke iterator as function on inputs. Init params.
-
         Parameters
         ---------
         args:
