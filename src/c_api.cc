@@ -9,6 +9,7 @@
 #include <mxnet/narray.h>
 #include <mxnet/symbolic.h>
 #include <mxnet/operator.h>
+#include <mxnet/io.h>
 #include <mxnet/c_api.h>
 #include <vector>
 #include <sstream>
@@ -597,3 +598,52 @@ int MXExecutorBind(SymbolHandle symbol_handle,
   API_END();
 }
 
+int MXIOCreateFromConfig(const char *cfg, DataIterHandle *out) {
+  API_BEGIN();
+  *out = static_cast<DataIterHandle>(CreateIteratorFromConfig(cfg));
+  API_END();
+}
+
+int MXIOCreateByName(const char *iter_name, DataIterHandle *out) {
+  API_BEGIN();
+  *out = static_cast<DataIterHandle>(CreateIteratorByName(iter_name));
+  API_END();
+}
+
+int MXIOSetParam(DataIterHandle handle, const char *name, const char *val) {
+  API_BEGIN();
+  static_cast<IIterator<DataBatch>* >(handle)->SetParam(name, val);
+  API_END();
+}
+
+int MXIOInit(DataIterHandle handle) {
+  API_BEGIN();
+  static_cast<IIterator<DataBatch>* >(handle)->Init();
+  API_END();
+}
+
+int MXIOBeforeFirst(DataIterHandle handle) {
+  API_BEGIN();
+  static_cast<IIterator<DataBatch>* >(handle)->BeforeFirst();
+  API_END();
+}
+
+int MXIONext(DataIterHandle handle, int *out) {
+  API_BEGIN();
+  *out = static_cast<IIterator<DataBatch>* >(handle)->Next();
+  API_END();
+}
+
+int MXIOGetLabel(DataIterHandle handle, NArrayHandle *out) {
+  API_BEGIN();
+  DataBatch db = static_cast<IIterator<DataBatch>* >(handle)->Value();
+  *out = new NArray(db.data[1], 0);
+  API_END();
+}
+
+int MXIOGetData(DataIterHandle handle, NArrayHandle *out) {
+  API_BEGIN();
+  DataBatch db = static_cast<IIterator<DataBatch>* >(handle)->Value();
+  *out = new NArray(db.data[0], 0);
+  API_END();
+}
