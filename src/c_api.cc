@@ -12,6 +12,8 @@
 #include <mxnet/operator.h>
 #include <mxnet/c_api.h>
 #include <vector>
+#include <sstream>
+#include <string>
 #include <mutex>
 #include <memory>
 
@@ -304,6 +306,49 @@ int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
   API_BEGIN();
   OperatorPropertyEntry *e = static_cast<OperatorPropertyEntry *>(creator);
   *out = e->name.c_str();
+  API_END();
+}
+
+int MXSymbolGetAtomicSymbolDoc(AtomicSymbolCreator creator,
+                               const char **out) {
+  OperatorPropertyEntry *e = static_cast<OperatorPropertyEntry *>(creator);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  std::ostringstream os, os_param;
+  if (e->description.length() != 0) {
+    os << e->description << "\n\n";
+  } else {
+    os << "Symbolic Operator "<< e->name << "\n\n";
+  }
+  // get parameter doc
+  for (auto kv : e->arguments) {
+    os_param << kv.first << " : Symbol\n";
+    if (kv.second.length() != 0) {
+      os_param << "    " << kv.second << '\n';
+    }
+  }
+  os_param << e->param_doc;
+  std::string param_doc = os_param.str();
+  if (param_doc.length() != 0) {
+    os << "Parameters\n"
+       << "----------\n"
+       << param_doc << '\n';
+  } else {
+    os << "Parameters\n"
+       << "----------\n"
+       << "args\n"
+       << "    Positional arguments to the Symbol.\n\n"
+       << "kwargs\n"
+       << "    Keyword arguments to the Symbol.\n\n";
+  }
+  // generate return
+  os << "Returns\n"
+     << "-------\n"
+     << "output : Symbol\n"
+     << "    "
+     << "The result output symbol.\n";
+  ret->ret_str = os.str();
+  *out = ret->ret_str.c_str();
   API_END();
 }
 

@@ -30,8 +30,10 @@ struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
   DMLC_DECLARE_PARAMETER(FullyConnectedParam) {
     // TODO(bing) change to only set lower bound
     // add support for boolean
-    DMLC_DECLARE_FIELD(num_hidden).set_range(1, 100000);
-    DMLC_DECLARE_FIELD(no_bias).set_default(false);
+    DMLC_DECLARE_FIELD(num_hidden).set_range(1, 100000)
+        .describe("Number of hidden nodes of the output.");
+    DMLC_DECLARE_FIELD(no_bias).set_default(false)
+        .describe("Whether to disable bias parameter.");
   }
 };
 

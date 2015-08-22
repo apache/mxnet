@@ -30,7 +30,11 @@ Operator *ActivationProp::CreateOperator(Context ctx) const {
 
 DMLC_REGISTER_PARAMETER(ActivationParam);
 
-REGISTER_OP_PROPERTY(Activation, ActivationProp);
+REGISTER_OP_PROPERTY(Activation, ActivationProp)
+.describe("Apply activation function to input.")
+.add_argument("data", "Input data to activation function.")
+.set_param_doc(ActivationParam::__DOC__());
+
 }  // namespace op
 }  // namespace mxnet
 

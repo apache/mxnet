@@ -94,14 +94,11 @@ class SoftmaxProp : public OperatorProperty {
                           std::vector<TShape> *out_shape) const {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2) << "Input:[data, label]";
-    const TShape &dshape = in_shape->at(kData);
-    TShape &lshape = in_shape->at(kLabel);
+    const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
-    if (lshape.ndim() == 0) {
-      SHAPE_ASSIGN_CHECK(*in_shape, kLabel, Shape1(dshape[1]))
-    }
     out_shape->clear();
     out_shape->push_back(dshape);
+    out_shape->emplace_back(Shape1(dshape[0]));
     return true;
   }
 

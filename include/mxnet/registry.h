@@ -224,6 +224,12 @@ struct OperatorPropertyEntry {
   bool use_param;
   /*! \brief name of the entry */
   std::string name;
+  /*! \brief description of operator */
+  std::string description;
+  /*! \brief pair of name description the arguments */
+  std::vector<std::pair<std::string, std::string> > arguments;
+  /*! \brief documentation to parameters */
+  std::string param_doc;
   /*! \brief function body to create OperatorProperty */
   Creator body;
   /*! \brief constructor */
@@ -231,9 +237,40 @@ struct OperatorPropertyEntry {
       : use_param(true), name(name), body(NULL) {}
   /*!
    * \brief set the function body
+   * \param body body to set
+   * \return reference to self.
    */
   inline OperatorPropertyEntry &set_body(Creator body) {
     this->body = body;
+    return *this;
+  }
+  /*!
+   * \brief describe the operator.
+   * \param description the description.
+   * \return reference to self.
+   */
+  inline OperatorPropertyEntry &describe(const std::string &description) {
+    this->description = description;
+    return *this;
+  }
+  /*!
+   * \brief set the parameter documents.
+   * \param description the description.
+   * \return reference to self.
+   */
+  inline OperatorPropertyEntry &set_param_doc(const std::string &param_doc) {
+    this->param_doc = param_doc;
+    return *this;
+  }
+  /*!
+   * \brief add argument to the entry.
+   * \param name name of the argument.
+   * \param desc description of the argument.
+   * \return reference to self.
+   */
+  inline OperatorPropertyEntry &add_argument(const std::string &name,
+                                             const std::string &desc) {
+    arguments.push_back(std::make_pair(name, desc));
     return *this;
   }
   /*!

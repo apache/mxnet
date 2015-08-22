@@ -222,6 +222,14 @@ MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
 MXNET_DLL int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
                                           const char **out);
 /*!
+ * \brief Get the docstring of AtomicSymbol.
+ * \param creator the AtomicSymbolCreator
+ * \param out the returned name of the creator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolGetAtomicSymbolDoc(AtomicSymbolCreator creator,
+                                         const char **out);
+/*!
  * \brief Create an AtomicSymbol.
  * \param creator the AtomicSymbolCreator
  * \param num_param the number of parameters
