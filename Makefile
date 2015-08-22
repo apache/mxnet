@@ -103,8 +103,8 @@ softmax_cpu.o: src/operator/softmax.cc
 softmax_gpu.o: src/operator/softmax.cu
 io.o: src/io/io.cc
 
-lib/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)
-lib/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ)
+lib/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ) $(LIB_DEP)
+lib/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ) $(LIB_DEP)
 
 test/test_storage: test/test_storage.cc lib/libmxnet.a
 test/io_mnist_test: test/io_mnist_test.cc lib/libmxnet.a $(DMLC_CORE)/libdmlc.a
