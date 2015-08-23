@@ -12,6 +12,7 @@ from __future__ import absolute_import
 from .context import Context, current_context
 from . import narray
 from . import symbol
+from . import io
 
 __version__ = "0.1.0"
 
