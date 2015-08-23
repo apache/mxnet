@@ -3,6 +3,7 @@
  */
 #include "mxnet/dag_engine.h"
 #include "simple_engine.h"
+#include "dag_engine_impl.h"
 
 namespace mxnet {
 

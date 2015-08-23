@@ -26,12 +26,12 @@ namespace engine {
 /*!
  * \brief Inner representation of variable.
  */
-class Variable;
+struct Var;
 
 /*!
  * \brief Inner representation of operator.
  */
-class Operator;
+struct Opr;
 
 }  // namespace engine
 
@@ -57,11 +57,11 @@ class DAGEngine {
    *        pointer, that points to an internal data structure of the engine
    *        itself.
    */
-  using Variable = engine::Variable*;
+  using Variable = engine::Var*;
   /*!
    * \brief Operator of the engine.
    */
-  using Operator = engine::Operator*;
+  using Operator = engine::Opr*;
   /*!
    * \brief Allocate a new variable, the variable can then
    *        be used to schedule the operation concurrently via dependency
@@ -155,7 +155,7 @@ class DAGEngine {
 
  private:
   DISALLOW_COPY_AND_ASSIGN(DAGEngine);
-};
+};  // class DAGEngine
 
 }  // namespace mxnet
 

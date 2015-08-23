@@ -1,52 +1,33 @@
 /*!
  * Copyright (c) 2015 by Contributors
  */
+#include "simple_engine.h"
 #include <mshadow/tensor.h>
 #include <dmlc/logging.h>
-#include "mxnet/dag_engine.h"
 
 namespace mxnet {
 
-class SimpleEngine : public DAGEngine {
- public:
-  virtual void PushAsync(AsyncOp exec_fun, Context exec_ctx,
-                         const std::vector<Variable>& use_vars,
-                         const std::vector<Variable>& mutate_vars) {
-    // cannot schedule async using naive way because deps are not captured
-    LOG(FATAL) << "cannot schedule async operations";
-  }
-  virtual void Push(Op exec_fun, Context exec_ctx,
-                    const std::vector<Variable>& use_vars,
-                    const std::vector<Variable>& mutate_vars) {
-    if (exec_ctx.dev_mask == gpu::kDevMask) {
-#if MXNET_USE_CUDA
-      ctx_.stream = &stream;
-      mshadow::SetDevice<gpu>(exec_ctx.dev_id);
-      exec_fun(ctx_);
-#else
-      LOG(FATAL) << "GPU is not enabled";
-#endif
-    } else {
-      exec_fun(ctx_);
-    }
-  }
-  virtual void PushDelete(Op delete_fun, Context exec_ctx, Variable var) {
-    this->Push(delete_fun, exec_ctx, {}, {var});
-  }
-  virtual Variable NewVar() {
-    // in practice return a ptr to a cell
-    // that have the info about the variable
-    // use ptr directly instead of ID because this avoids an indirect mapping
-    return NULL;
-  }
+namespace engine {
 
- private:
-  RunContext ctx_;
-  mshadow::Stream<gpu> stream;
-};
-// implements the singleton factory
-DAGEngine* DAGEngine::Get() {
-  static SimpleEngine engine;
-  return &engine;
+SimpleEngine::SimpleEngine() = default;
+
+SimpleEngine::~SimpleEngine() = default;
+
+SimpleEngine::Variable SimpleEngine::NewVar() { return new Var{}; }
+
+SimpleEngine::Operator SimpleEngine::NewOperator(
+    SimpleEngine::AsyncFn fn, std::vector<Variable> const& use_vars,
+    std::vector<Variable> const& mutate_vars) {
+  return new Opr{fn, use_vars, mutate_vars};
 }
+
+void SimpleEngine::DeleteOperator(Operator op) {
+  delete op;
+}
+
+void SimpleEngine::Push(Operator op, Context exec_ctx) {
+}
+
+}  // namespace engine
+
 }  // namespace mxnet

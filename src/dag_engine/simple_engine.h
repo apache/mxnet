@@ -5,40 +5,49 @@
 #define MXNET_DAG_ENGINE_SIMPLE_ENGINE_H_
 
 #include <vector>
+#include <functional>
 #include "mxnet/dag_engine.h"
+#include "dag_engine_impl.h"
 
 namespace mxnet {
 
 namespace engine {
 
-class Variable {};
+struct OprBlock;
 
-class Operator {};
+struct VersionedVarBlock {
+  VersionedVarBlock* next = nullptr;
+  OprBlock* waiting = nullptr;
+};  // struct VersionedVarBlock
+
+struct OprBlock {
+  std::function<void()> fn;
+  VersionedVarBlock* trigger;
+  Opr* opr;
+};  // struct OprBlock
 
 class SimpleEngine final : public DAGEngine {
  public:
-  Variable NewVar() override { return new engine::Variable; }
-
+  SimpleEngine();
+  ~SimpleEngine();
+  Variable NewVar() override;
   Operator NewOperator(AsyncFn, std::vector<Variable> const&,
-                       std::vector<Variable> const&) override {
-    return new engine::Operator;
-  }
-
-  void DeleteOperator(Operator op) override {
-    delete op;
-  }
-
-  void Push(Operator op, Context) override{};
+                       std::vector<Variable> const&) override;
+  void DeleteOperator(Operator op) override;
+  void Push(Operator op, Context) override;
 
   void PushAsync(AsyncFn, Context, std::vector<Variable> const&,
                  std::vector<Variable> const&) override{};
 
-  void PushDelete(Fn, Context, Variable) override {};
+  void PushDelete(Fn, Context, Variable) override{};
 
-  void WaitForVar(Variable) override {};
+  void WaitForVar(Variable) override{};
 
-  void WaitForAll() override {};
-};
+  void WaitForAll() override{};
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(SimpleEngine);
+};  // class SimpleEngine
 
 }  // namespace engine
 
