@@ -67,7 +67,7 @@ block = zip(mom_narrays, grad_narrays, arg_narrays)
 
 train_dataiter = mx.io.MNISTIterator(path_img="/home/tianjun/data/mnist/train-images-idx3-ubyte",
         path_label="/home/tianjun/data/mnist/train-labels-idx1-ubyte",
-        batch_size=100, shuffle=1, silent=1, input_flat="flat")
+        batch_size=100, shuffle=1, silent=1, input_flat="flat", seed_data=1)
 train_dataiter.beforefirst()
 val_dataiter = mx.io.MNISTIterator(path_img="/home/tianjun/data/mnist/t10k-images-idx3-ubyte",
         path_label="/home/tianjun/data/mnist/t10k-labels-idx1-ubyte",
@@ -108,6 +108,4 @@ for i in xrange(epoch):
     print "Valid Acc: ", val_acc / val_nbatch
     train_dataiter.beforefirst()
     val_dataiter.beforefirst()
-
-
 

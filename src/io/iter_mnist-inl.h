@@ -13,7 +13,9 @@
 #include <dmlc/parameter.h>
 #include <string>
 #include <vector>
-#include "../utils/random.h"
+#include <utility>
+#include <map>
+#include "../common/utils.h"
 
 namespace mxnet {
 namespace io {
@@ -29,6 +31,8 @@ struct MNISTParam : public dmlc::Parameter<MNISTParam> {
   int batch_size;
   /*! \brief data mode */
   int input_flat;
+  /*! \brief random seed */
+  int seed_data;
   // declare parameters in header file
   DMLC_DECLARE_PARAMETER(MNISTParam) {
     DMLC_DECLARE_FIELD(path_img).set_default("./train-images-idx3-ubyte")
@@ -36,32 +40,28 @@ struct MNISTParam : public dmlc::Parameter<MNISTParam> {
     DMLC_DECLARE_FIELD(path_label).set_default("./train-labels-idx1-ubyte")
         .describe("Mnist label path.");
     DMLC_DECLARE_FIELD(shuffle).set_default(false)
-        .describe("Whether to shuffle data."); 
+        .describe("Whether to shuffle data.");
     DMLC_DECLARE_FIELD(silent).set_default(false)
-        .describe("Whether to print out data info."); 
+        .describe("Whether to print out data info.");
     DMLC_DECLARE_FIELD(batch_size).set_range(1, 100000).set_default(128)
         .describe("Batch Size.");
     DMLC_DECLARE_FIELD(input_flat).add_enum("flat", 1)
         .add_enum("noflat", 0).set_default(1)
         .describe("Whether to flat the data into 1D.");
+    DMLC_DECLARE_FIELD(seed_data).set_default(0)
+        .describe("Random Seed.");
   }
 };
-    
+
 class MNISTIterator: public IIterator<DataBatch> {
  public:
   MNISTIterator(void) {
     img_.dptr_ = NULL;
     inst_offset_ = 0;
-    rnd.Seed(kRandMagic);
     out_.data.resize(2);
   }
   virtual ~MNISTIterator(void) {
     if (img_.dptr_ != NULL) delete []img_.dptr_;
-  }
-  virtual void SetParam(const char *name, const char *val) {
-    std::map<std::string, std::string> kwargs;
-    kwargs[name] = val;
-    param.Init(kwargs);
   }
   // intialize iterator loads data in
   virtual void Init(void) {
@@ -111,6 +111,7 @@ class MNISTIterator: public IIterator<DataBatch> {
     param.Init(kmap);
     this->Init();
   }
+
  private:
   inline void LoadImage(void) {
     dmlc::Stream *stdimg = dmlc::Stream::Create(param.path_img.c_str(), "r");
@@ -151,7 +152,7 @@ class MNISTIterator: public IIterator<DataBatch> {
     delete stdlabel;
   }
   inline void Shuffle(void) {
-    rnd.Shuffle(&inst_);
+    std::shuffle(inst_.begin(), inst_.end(), common::RANDOM_ENGINE(kRandMagic+param.seed_data));
     std::vector<float> tmplabel(labels_.size());
     mshadow::TensorContainer<cpu, 3> tmpimg(img_.shape_);
     for (size_t i = 0; i < inst_.size(); ++i) {
@@ -191,8 +192,6 @@ class MNISTIterator: public IIterator<DataBatch> {
   unsigned inst_offset_;
   /*! \brief instance index */
   std::vector<unsigned> inst_;
-  // random sampler
-  utils::RandomSampler rnd;
   // magic number to setup randomness
   static const int kRandMagic = 0;
 };  // class MNISTIterator
