@@ -75,6 +75,7 @@ FunctionHandle = ctypes.c_void_p
 SymbolCreatorHandle = ctypes.c_void_p
 SymbolHandle = ctypes.c_void_p
 ExecutorHandle = ctypes.c_void_p
+DataIterCreatorHandle = ctypes.c_void_p
 DataIterHandle = ctypes.c_void_p
 #----------------------------
 # helper function definition

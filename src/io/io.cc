@@ -23,7 +23,7 @@ namespace mxnet {
       if (!strcmp(name, "iter")) {
         if (!strcmp(val, "mnist")) {
             CHECK(it == NULL) << "mnist cannot chain over other iterator";
-            it = new MNISTIterator(); continue;
+            it = new io::MNISTIterator(); continue;
         }
         CHECK(!strcmp(val, "mnist")) << "Currently only have mnist iterator";
       }
@@ -52,7 +52,7 @@ namespace mxnet {
     // Currently only support mnist
     if (!strcmp(iter_name, "mnist")) {
       CHECK(it == NULL) << "mnist cannot chain over other iterator";
-      it = new MNISTIterator();
+      it = new io::MNISTIterator();
     }
     CHECK(!strcmp(iter_name, "mnist")) << "Currently only have mnist iterator";
     return it;
