@@ -652,7 +652,7 @@ int MXIOGetData(DataIterHandle handle, NArrayHandle *out) {
 int MXListIOIters(mx_uint *out_size,
                     DataIterCreator **out_array) {
   API_BEGIN();
-  auto &vec = Registry<IOIteratorEntry>::List();
+  auto &vec = dmlc::Registry<DataIteratorReg>::List();
   *out_size = static_cast<mx_uint>(vec.size());
   *out_array = (DataIterCreator*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
   API_END();
@@ -661,7 +661,7 @@ int MXListIOIters(mx_uint *out_size,
 int MXIOIterGetName(DataIterCreator iter,
                   const char **out_name) {
   API_BEGIN();
-  auto *f = static_cast<const IOIteratorEntry*>(iter);
+  auto *f = static_cast<const DataIteratorReg*>(iter);
   *out_name = f->name.c_str();
   API_END();
 }
@@ -671,8 +671,8 @@ int MXCreateIOIterator(DataIterCreator creator,
                                const char **keys,
                                const char **vals,
                                DataIterHandle *out) {
-  IOIteratorEntry *e = static_cast<IOIteratorEntry *>(creator);
-  IIterator<DataBatch> *iter = (*e)();
+  DataIteratorReg *e = static_cast<DataIteratorReg *>(creator);
+  IIterator<DataBatch> *iter = e->body();
   API_BEGIN();
   std::vector<std::pair<std::string, std::string> > kwargs;
   for (int i = 0; i < num_param; ++i) {
@@ -683,6 +683,11 @@ int MXCreateIOIterator(DataIterCreator creator,
   API_END_HANDLE_ERROR(delete iter);
 }
 
+int MXDataIterFree(DataIterHandle iter) {
+  API_BEGIN();
+  delete static_cast<IIterator<DataBatch> *>(symbol);
+  API_END();
+}
 
 
 
