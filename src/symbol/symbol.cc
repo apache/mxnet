@@ -21,6 +21,8 @@ namespace mxnet {
  * - Variable: the sym_ is nullptr, represents an named Variable of tensors that can be composed.
  */
 struct Symbol::Node {
+  /*! \brief source node of the current node */
+  std::shared_ptr<Symbol::Node> backward_source_node;
   /*! \brief Operator of this node */
   std::unique_ptr<OperatorProperty> op;
   /*! \brief name of the node */
@@ -41,7 +43,7 @@ struct Symbol::Node {
   }
   /*! \return Whether it is unit variable */
   inline bool is_variable() const {
-    return op == nullptr;
+    return op == nullptr && !backward_source_node;
   }
 };
 
@@ -159,7 +161,13 @@ void Symbol::Print(std::ostream &os) const {
         if (node->is_variable()) {
           os << "Variable:" << node->name << '\n';
         } else {
-          os << "Name: " << node->name << " Type:" << node->op->TypeString() << '\n'
+          std::string type_string;
+          if (!node->backward_source_node) {
+            type_string = node->op->TypeString();
+          } else {
+            type_string = node->backward_source_node->op->TypeString();
+          }
+          os << "Name: " << node->name << " Type:" << type_string << '\n'
              << "Inputs:\n";
           for (size_t i = 0; i < node->inputs.size(); ++i) {
             os << "\targ[" << i << "]=" << node->inputs[i].source->name
@@ -370,6 +378,50 @@ Symbol Symbol::operator () (const std::unordered_map<std::string, Symbol>& kwarg
   Symbol s = this->Copy();
   s.Compose(kwargs, name);
   return s;
+}
+
+Symbol Symbol::Grad(const std::vector<std::string>& wrt) const {
+  StaticGraph g;
+  this->ToStaticGraph(&g);
+  uint32_t num_nodes = g.nodes.size();
+  std::vector<uint32_t> head_grad_nodes;
+  std::vector<StaticGraph::DataEntry> arg_grads;
+  g.MakeBackwardPass(&head_grad_nodes, &arg_grads);
+  std::vector<std::shared_ptr<Node> > shared_node;
+  this->DFSVisit([&shared_node](const std::shared_ptr<Node> &n) {
+      shared_node.push_back(n);
+    });
+  for (std::vector<StaticGraph::Node>::const_iterator it = g.nodes.begin() + num_nodes;
+       it != g.nodes.end(); ++it) {
+    auto sym_node = std::make_shared<Symbol::Node>();
+    sym_node->name = it->name;
+    if (it->backward_source_id != -1) {
+      sym_node->backward_source_node = shared_node[it->backward_source_id];
+    }
+    shared_node.push_back(sym_node);
+    for (auto e : it->inputs) {
+      Symbol::DataEntry entry(shared_node[e.source_id], e.index);
+      sym_node->inputs.push_back(std::move(entry));
+    }
+  }
+  // make arg lookup dict
+  auto arg_list = ListArguments();
+  std::unordered_map<std::string, uint32_t> arg_index;
+  for (uint32_t i = 0; i < arg_list.size(); ++i) {
+    arg_index[arg_list[i]] = i;
+  }
+  // generate the heads
+  Symbol ret;
+  for (const std::string& name : wrt) {
+    if (arg_index.find(name) != arg_index.end()) {
+      uint32_t index = arg_index[name];
+      Symbol::DataEntry entry(shared_node[arg_grads[index].source_id], arg_grads[index].index);
+      ret.heads_.push_back(entry);
+    } else {
+      KeywordArgumentMismatch("Symbol.Grad ", wrt, arg_list);
+    }
+  }
+  return ret;
 }
 
 bool Symbol::InferShape(std::vector<TShape> *arg_shapes,

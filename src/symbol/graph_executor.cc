@@ -2,7 +2,7 @@
  * Copyright (c) 2015 by Contributors
  * \file graph_executor.cc
  * \brief Executor to execute the Graph.
-*/
+ */
 #include <dmlc/logging.h>
 #include <mxnet/symbolic.h>
 #include <memory>
@@ -200,7 +200,7 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
 }
 
 void GraphExecutor::InitGraph(Symbol symbol, Context ctx, bool need_backward) {
-  // initialize all internal daa structures
+  // initialize all internal data structures
   symbol.ToStaticGraph(&graph_);
   num_forward_nodes_  = graph_.nodes.size();
   if (need_backward) {
