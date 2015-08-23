@@ -162,10 +162,10 @@ def run_build_mxnet(folder):
     """Run the doxygen make command in the designated folder."""
     try:
         subprocess.call('cd ..; rm -rf dmlc-core;' +
-                        'git clone https://github.com/dmlc/dmlc-core')
+                        'git clone https://github.com/dmlc/dmlc-core', shell = True)
         subprocess.call('cd ..; rm -rf mshadow;' +
-                        'git clone https://github.com/dmlc/mshadow')
-        subprocess.call('cd ..; cp/make/readthedocs.mk config.mk')
+                        'git clone https://github.com/dmlc/mshadow', shell = True)
+        subprocess.call('cd ..; cp/make/readthedocs.mk config.mk', shell = True)
         retcode = subprocess.call("cd %s; make" % folder, shell=True)
         if retcode < 0:
             sys.stderr.write("build terminated by signal %s" % (-retcode))
@@ -183,7 +183,7 @@ def generate_doxygen_xml(app):
 def setup(app):
     # Add hook for building doxygen xml when needed
     # no c++ API for now
-    # app.connect("builder-inited", generate_doxygen_xml)
+    app.connect("builder-inited", generate_doxygen_xml)
     app.add_config_value('recommonmark_config', {
             'url_resolver': lambda url: github_doc_root + url,
             }, True)
