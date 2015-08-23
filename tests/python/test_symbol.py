@@ -20,9 +20,9 @@ def test_compose():
     net2 = mx.symbol.FullyConnected(name='fc3', num_hidden=10)
     net2 = mx.symbol.Activation(data=net2)
     net2 = mx.symbol.FullyConnected(data=net2, name='fc4', num_hidden=20)
-    print net2.debug_str()
+    print(net2.debug_str())
 
     composed = net2(fc3_data=net1, name='composed')
-    print composed.debug_str()
+    print(composed.debug_str())
     multi_out = mx.symbol.Group([composed, net1])
     assert len(multi_out.list_returns()) == 2

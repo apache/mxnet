@@ -16,8 +16,8 @@ fi
 cp make/config.mk config.mk
 echo "USE_BLAS=blas" >> config.mk
 echo "USE_CUDNN=0" >> config.mk
-echo "CXX=g++-4.6" >> config.mk
-export CXX="g++-4.6"
+echo "CXX=g++-4.8" >> config.mk
+export CXX="g++-4.8"
 
 
 if [ ${TASK} == "build" ]; then

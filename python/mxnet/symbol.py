@@ -277,7 +277,7 @@ def Variable(name):
     if not isinstance(name, string_types):
         raise TypeError('Expect a string for variable `name`')
     handle = SymbolHandle()
-    check_call(_LIB.MXSymbolCreateVariable(name, ctypes.byref(handle)))
+    check_call(_LIB.MXSymbolCreateVariable(c_str(name), ctypes.byref(handle)))
     return Symbol(handle)
 
 
