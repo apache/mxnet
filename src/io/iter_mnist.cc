@@ -10,7 +10,7 @@ namespace mxnet {
 namespace io {
 
 DMLC_REGISTER_PARAMETER(MNISTParam);
-MXNET_REGISTER_IO_ITER(MNIST, MNISTIterator)
+MXNET_REGISTER_IO_ITER(MNISTIterator, MNISTIterator)
     .describe("Create MNISTIterator")
     .add_arguments(MNISTParam::__FIELDS__());
 
