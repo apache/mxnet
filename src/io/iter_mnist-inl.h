@@ -57,10 +57,7 @@ class MNISTIterator: public IIterator<DataBatch> {
  public:
   MNISTIterator(void) {
     img_.dptr_ = NULL;
-    mode_ = 1;
     inst_offset_ = 0;
-    silent_ = 0;
-    shuffle_ = 0;
     rnd.Seed(kRandMagic);
     out_.data.resize(2);
   }
@@ -68,15 +65,9 @@ class MNISTIterator: public IIterator<DataBatch> {
     if (img_.dptr_ != NULL) delete []img_.dptr_;
   }
   virtual void SetParam(const char *name, const char *val) {
-    if (!strcmp(name, "silent")) silent_ = atoi(val);
-    if (!strcmp(name, "batch_size")) batch_size_ = (index_t)atoi(val);
-    if (!strcmp(name, "input_flat")) mode_ = atoi(val);
-    if (!strcmp(name, "shuffle")) shuffle_ = atoi(val);
-    if (!strcmp(name, "index_offset")) inst_offset_ = atoi(val);
-    if (!strcmp(name, "path_img")) path_img = val;
-    if (!strcmp(name, "path_label")) path_label = val;
-    if (!strcmp(name, "path_img")) path_img = val;
-    if (!strcmp(name, "seed_data")) rnd.Seed(kRandMagic + atoi(val));
+    std::map<std::string, std::string> kwargs;
+    kwargs[name] = val;
+    param.Init(kwargs);
   }
   // intialize iterator loads data in
   virtual void Init(void) {

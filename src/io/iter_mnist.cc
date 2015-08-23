@@ -4,6 +4,7 @@
  * \brief register mnist iterator
  * \author Tianjun Xiao
 */
+#include <mxnet/registry.h> 
 #include "./iter_mnist-inl.h"
 
 namespace mxnet {
