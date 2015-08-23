@@ -121,7 +121,7 @@ inline std::vector<std::pair<T, T> > GraphExecutor::GetInplaceOption(
       remap[i].first = in_data[rmap_index[i].first];
       remap[i].second = *static_cast<const T*>(rmap_index[i].second);
     }
-    return std::move(remap);
+    return remap;
   } else {
     CHECK(node.is_backward());
     // forward property
@@ -161,7 +161,7 @@ inline std::vector<std::pair<T, T> > GraphExecutor::GetInplaceOption(
       remap[i].first = *args_array[remap_index[i].first];
       remap[i].second = *static_cast<T*>(remap_index[i].second);
     }
-    return std::move(remap);
+    return remap;
   }
 }
 
@@ -196,7 +196,7 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
     op_ctx_ptr->run_ctx = ctx;
     op->Forward(*op_ctx_ptr, in_data, req, out_data);
   };
-  return std::move(exec);
+  return exec;
 }
 
 void GraphExecutor::InitGraph(Symbol symbol, Context ctx, bool need_backward) {

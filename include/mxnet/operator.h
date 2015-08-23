@@ -354,7 +354,7 @@ class OperatorProperty {
     for (size_t i = 0; i < ret_index.size(); ++i) {
       ret[i] = all_data[ret_index[i]];
     }
-    return std::move(ret);
+    return ret;
   }
   /*!
    * \brief create OperatorProperty

@@ -65,7 +65,7 @@ class MNISTIter(object):
 batch_size = 100
 data = mx.symbol.Variable('data')
 fc1 = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=160)
-act1 = mx.symbol.Activation(data = fc1, name='relu1', type="relu")
+act1 = mx.symbol.Activation(data = fc1, name='relu1', act_type="relu")
 fc2 = mx.symbol.FullyConnected(data = act1, name='fc2', num_hidden=10)
 args_list = fc2.list_arguments()
 # infer shape
