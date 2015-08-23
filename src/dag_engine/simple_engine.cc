@@ -96,7 +96,7 @@ void SimpleEngine::Push(Operator op, Context exec_ctx) {
     previous->lock.unlock();
   }
   auto callback = [this, first]() { OnComplete(first); };
-  // TODO do something useful
+  // TODO(hotpxl) do something useful
   RunContext ctx{};
   opr_block->fn = [opr, ctx, callback]() { opr->fn(ctx, callback); };
   if (--opr_block == 0) {
