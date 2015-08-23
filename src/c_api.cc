@@ -693,5 +693,3 @@ int MXDataIterGetData(DataIterHandle handle, NArrayHandle *out) {
   *out = new NArray(db.data[0], 0);
   API_END();
 }
-
-
