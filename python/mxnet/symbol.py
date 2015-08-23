@@ -297,11 +297,11 @@ def _make_atomic_symbol_function(handle):
     arg_types = ctypes.POINTER(ctypes.c_char_p)()
     arg_descs = ctypes.POINTER(ctypes.c_char_p)()
 
-    check_call(_LIB.MXSymbolGetAtomicSymbolInfo(
-            handle, ctypes.byref(name), ctypes.byref(desc),
-            ctypes.byref(num_args),
-            ctypes.byref(arg_names),
-            ctypes.byref(arg_types),
+    check_call(_LIB.MXSymbolGetAtomicSymbolInfo( \
+            handle, ctypes.byref(name), ctypes.byref(desc), \
+            ctypes.byref(num_args), \
+            ctypes.byref(arg_names), \
+            ctypes.byref(arg_types), \
             ctypes.byref(arg_descs)))
     func_name = name.value
     param_str = []

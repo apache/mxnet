@@ -31,7 +31,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   int pool_type;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
     // TODO(bing) change to only set lower bound
-    int shape[] = {0,0};
+    int shape[] = {0, 0};
     DMLC_DECLARE_FIELD(kernel).describe("pooling kernel size: (y, x)");
     DMLC_DECLARE_FIELD(pool_type).set_default(kMaxPooling)
       .add_enum("max", kMaxPooling)

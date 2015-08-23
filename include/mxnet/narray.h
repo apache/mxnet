@@ -312,7 +312,7 @@ struct NArrayFunctionReg
   /*!
    * \brief constructor
    */
-  explicit NArrayFunctionReg()
+  NArrayFunctionReg()
       : num_use_vars(0),
         num_mutate_vars(0),
         num_scalars(0),

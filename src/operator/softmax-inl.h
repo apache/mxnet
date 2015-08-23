@@ -83,7 +83,7 @@ Operator* CreateOp(SoftmaxParam param);
 #if DMLC_USE_CXX11
 class SoftmaxProp : public OperatorProperty {
  public:
-  virtual std::vector<std::string> ListArguments() const override {
+  virtual std::vector<std::string> ListArguments() const {
     return {"data", "label"};
   }
 
@@ -135,9 +135,9 @@ class SoftmaxProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
+
  private:
   SoftmaxParam param_;
-
 };  // class SoftmaxProp
 #endif  // DMLC_USE_CXX11
 

@@ -1,4 +1,5 @@
 # coding: utf-8
+# pylint: disable=invalid-name, protected-access, too-many-locals, fixme, no-member
 """NArray interface of mxnet"""
 from __future__ import absolute_import
 
@@ -192,11 +193,11 @@ def _make_narray_function(handle):
     n_scalars = mx_uint()
     n_mutate_vars = mx_uint()
     type_mask = ctypes.c_int()
-    check_call(_LIB.MXFuncDescribe(
-            handle,
-            ctypes.byref(n_used_vars),
-            ctypes.byref(n_scalars),
-            ctypes.byref(n_mutate_vars),
+    check_call(_LIB.MXFuncDescribe( \
+            handle, \
+            ctypes.byref(n_used_vars), \
+            ctypes.byref(n_scalars), \
+            ctypes.byref(n_mutate_vars), \
             ctypes.byref(type_mask)))
     n_mutate_vars = n_mutate_vars.value
     n_used_vars = n_used_vars.value
@@ -219,11 +220,11 @@ def _make_narray_function(handle):
     arg_types = ctypes.POINTER(ctypes.c_char_p)()
     arg_descs = ctypes.POINTER(ctypes.c_char_p)()
 
-    check_call(_LIB.MXFuncGetInfo(
-            handle, ctypes.byref(name), ctypes.byref(desc),
-            ctypes.byref(num_args),
-            ctypes.byref(arg_names),
-            ctypes.byref(arg_types),
+    check_call(_LIB.MXFuncGetInfo( \
+            handle, ctypes.byref(name), ctypes.byref(desc), \
+            ctypes.byref(num_args), \
+            ctypes.byref(arg_names), \
+            ctypes.byref(arg_types), \
             ctypes.byref(arg_descs)))
     func_name = name.value
 
@@ -257,10 +258,10 @@ def _make_narray_function(handle):
             if not accept_empty_mutate:
                 raise TypeError('argument out is required to call %s' % func_name)
             out = NArray(_new_empty_handle())
-        check_call(_LIB.MXFuncInvoke(
-                handle,
-                c_array(NArrayHandle, (lhs.handle, rhs.handle)),
-                c_array(mx_float, ()),
+        check_call(_LIB.MXFuncInvoke( \
+                handle, \
+                c_array(NArrayHandle, (lhs.handle, rhs.handle)), \
+                c_array(mx_float, ()), \
                 c_array(NArrayHandle, (out.handle,))))
         return out
 
@@ -273,10 +274,10 @@ def _make_narray_function(handle):
             if not accept_empty_mutate:
                 raise TypeError('argument out is required to call %s' % func_name)
             out = NArray(_new_empty_handle())
-        check_call(_LIB.MXFuncInvoke(
-                handle,
-                c_array(NArrayHandle, (src.handle)),
-                c_array(mx_float, ()),
+        check_call(_LIB.MXFuncInvoke( \
+                handle, \
+                c_array(NArrayHandle, (src.handle)), \
+                c_array(mx_float, ()), \
                 c_array(NArrayHandle, (out.handle,))))
         return out
 
@@ -307,19 +308,19 @@ def _make_narray_function(handle):
                     NArray(_new_empty_handle()) for i in range(n_mutate_vars))
             else:
                 raise TypeError('argument out is required to call %s' % func_name)
-        check_call(_LIB.MXFuncInvoke(
-                handle,
-                c_array(NArrayHandle, [args[i].handle for i in use_vars_range]),
-                c_array(mx_float, [args[i] for i in scalar_range]),
+        check_call(_LIB.MXFuncInvoke( \
+                handle, \
+                c_array(NArrayHandle, [args[i].handle for i in use_vars_range]), \
+                c_array(mx_float, [args[i] for i in scalar_range]), \
                 c_array(NArrayHandle, [v.handle for v in mutate_vars])))
         if n_mutate_vars == 1:
             return mutate_vars[0]
         else:
             return mutate_vars
     # End of function declaration
-    if n_mutate_vars == 1 and n_used_vars ==2 and n_scalars == 0:
+    if n_mutate_vars == 1 and n_used_vars == 2 and n_scalars == 0:
         ret_function = binary_narray_function
-    elif n_mutate_vars == 1 and n_used_vars ==2 and n_scalars == 0:
+    elif n_mutate_vars == 1 and n_used_vars == 2 and n_scalars == 0:
         ret_function = unary_narray_function
     else:
         ret_function = generic_narray_function
