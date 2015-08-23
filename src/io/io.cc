@@ -5,12 +5,17 @@
 #include <mxnet/io.h>
 #include <dmlc/logging.h>
 #include <dmlc/config.h>
+#include <dmlc/registry.h>
 #include <mshadow/tensor.h>
 #include <string>
 #include <vector>
 #include <fstream>
 #include "iter_mnist-inl.h"
 #include "../utils/random.h"
+
+namespace dmlc {
+DMLC_REGISTRY_ENABLE(::mxnet::DataIteratorReg);
+}  // namespace dmlc
 
 namespace mxnet {
   IIterator<DataBatch> *CreateIterator(

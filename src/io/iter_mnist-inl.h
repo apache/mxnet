@@ -30,14 +30,20 @@ struct MNISTParam : public dmlc::Parameter<MNISTParam> {
   /*! \brief data mode */
   int input_flat;
   // declare parameters in header file
-  DMLC_DECLARE_PARAMETER(Param) {
-    DMLC_DECLARE_FIELD(path_img).set_default("./train-images-idx3-ubyte");
-    DMLC_DECLARE_FIELD(path_label).set_default("./train-labels-idx1-ubyte");
-    DMLC_DECLARE_FIELD(shuffle).set_default(false); 
-    DMLC_DECLARE_FIELD(silent).set_default(false); 
-    DMLC_DECLARE_FIELD(batch_size).set_default(128);
+  DMLC_DECLARE_PARAMETER(MNISTParam) {
+    DMLC_DECLARE_FIELD(path_img).set_default("./train-images-idx3-ubyte")
+        .describe("Mnist image path.");
+    DMLC_DECLARE_FIELD(path_label).set_default("./train-labels-idx1-ubyte")
+        .describe("Mnist label path.");
+    DMLC_DECLARE_FIELD(shuffle).set_default(false)
+        .describe("Whether to shuffle data."); 
+    DMLC_DECLARE_FIELD(silent).set_default(false)
+        .describe("Whether to print out data info."); 
+    DMLC_DECLARE_FIELD(batch_size).set_range(1, 100000).set_default(128)
+        .describe("Batch Size.");
     DMLC_DECLARE_FIELD(input_flat).add_enum("flat", 1)
-        .add_enum("noflat", 0).set_default(1);
+        .add_enum("noflat", 0).set_default(1)
+        .describe("Whether to flat the data into 1D.");
   }
 };
     

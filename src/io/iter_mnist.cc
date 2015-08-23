@@ -4,14 +4,15 @@
  * \brief register mnist iterator
  * \author Tianjun Xiao
 */
-#include <mxnet/registry.h> 
 #include "./iter_mnist-inl.h"
 
 namespace mxnet {
 namespace io {
 
 DMLC_REGISTER_PARAMETER(MNISTParam);
-REGISTER_IO_ITER(mnist, MNISTIterator);
+MXNET_REGISTER_IO_ITER(MNIST, MNISTIterator)
+    .describe("Create MNISTIterator")
+    .add_arguments(MNISTParam::__FIELDS__());
 
 }  // namespace io
 }  // namespace mxnet
