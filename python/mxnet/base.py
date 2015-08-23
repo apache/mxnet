@@ -9,13 +9,18 @@ import ctypes
 import platform
 import numpy as np
 
+__all__ = ['MXNetError']
 #----------------------------
 # library loading
 #----------------------------
 if sys.version_info[0] == 3:
     string_types = str,
+    # this function is needed for python3
+    # to convert ctypes.char_p .value back to python str
+    py_str = lambda x: x.decode('utf-8')
 else:
     string_types = basestring,
+    py_str = lambda x: x
 
 
 class MXNetError(Exception):
@@ -86,8 +91,7 @@ def check_call(ret):
         return value from API calls
     """
     if ret != 0:
-        raise MXNetError(_LIB.MXGetLastError())
-
+        raise MXNetError(py_str(_LIB.MXGetLastError()))
 
 def c_str(string):
     """Create ctypes char * from a python string
@@ -98,7 +102,8 @@ def c_str(string):
 
     Returns
     -------
-    a char pointer that can be passed to C API
+    str : c_char_p
+        A char pointer that can be passed to C API
     """
     return ctypes.c_char_p(string.encode('utf-8'))
 
@@ -116,7 +121,8 @@ def c_array(ctype, values):
 
     Returns
     -------
-    created ctypes array
+    out : ctypes array
+        Created ctypes array
     """
     return (ctype * len(values))(*values)
 
@@ -136,7 +142,8 @@ def ctypes2numpy_shared(cptr, shape):
 
     Returns
     -------
-    a numpy array : numpy array
+    out : numpy_array
+        A numpy array : numpy array
     """
     if not isinstance(cptr, ctypes.POINTER(mx_float)):
         raise RuntimeError('expected float pointer')
@@ -145,3 +152,5 @@ def ctypes2numpy_shared(cptr, shape):
         size *= s
     dbuffer = (mx_float * size).from_address(ctypes.addressof(cptr.contents))
     return np.frombuffer(dbuffer, dtype=np.float32).reshape(shape)
+
+
