@@ -161,7 +161,7 @@ class StaticGraph {
    * \param arg_grads used to store gradients to args, can be multiple one if an argument is used by operator
    */
   void MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
-                        std::vector<std::vector<DataEntry> > *arg_grads);
+                        std::vector<DataEntry> *arg_grads);
 
   /*!
    * \brief create a sum node that aggregates gradient together

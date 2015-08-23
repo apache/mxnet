@@ -177,7 +177,7 @@ class GraphExecutor : public Executor {
   // head gradient node in the graph, if there is backward pass
   std::vector<uint32_t> head_grad_nodes_;
   // argument node in the graph, if there is backward pass
-  std::vector<std::vector<StaticGraph::DataEntry> > arg_grads_;
+  std::vector<StaticGraph::DataEntry> arg_grads_;
   // operational nodes
   std::vector<OpNode> op_nodes_;
   // head NArrays
