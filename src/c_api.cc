@@ -10,6 +10,7 @@
 #include <mxnet/symbolic.h>
 #include <mxnet/operator.h>
 #include <mxnet/io.h>
+#include <mxnet/io.h>
 #include <mxnet/c_api.h>
 #include <vector>
 #include <sstream>
