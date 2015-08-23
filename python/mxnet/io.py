@@ -132,9 +132,9 @@ def _make_io_iterator(handle):
         param_keys = []
         param_vals = []
 
-        for k, v in kwargs.items():
+        for k, val in kwargs.items():
             param_keys.append(c_str(k))
-            param_vals.append(c_str(str(v)))
+            param_vals.append(c_str(str(val)))
         # create atomic symbol
         param_keys = c_array(ctypes.c_char_p, param_keys)
         param_vals = c_array(ctypes.c_char_p, param_vals)
