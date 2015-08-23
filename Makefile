@@ -64,7 +64,7 @@ endif
 #BIN = test/test_threaded_engine test/api_registry_test
 OBJ = narray_function_cpu.o
 # add threaded engine after it is done
-OBJCXX11 = engine.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o
+OBJCXX11 = engine.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o io.o
 CUOBJ =
 SLIB = lib/libmxnet.so
 ALIB = lib/libmxnet.a
@@ -101,11 +101,13 @@ pooling_cpu.o: src/operator/pooling.cc
 pooling_gpu.o: src/operator/pooling.cu
 softmax_cpu.o: src/operator/softmax.cc
 softmax_gpu.o: src/operator/softmax.cu
+io.o: src/io/io.cc
 
 lib/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)
 lib/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ)
 
 test/test_storage: test/test_storage.cc lib/libmxnet.a
+test/io_mnist_test: test/io_mnist_test.cc lib/libmxnet.a $(DMLC_CORE)/libdmlc.a
 #test/test_threaded_engine: test/test_threaded_engine.cc api/libmxnet.a
 
 $(BIN) :
