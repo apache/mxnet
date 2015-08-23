@@ -21,6 +21,8 @@ namespace mxnet {
  * - Variable: the sym_ is nullptr, represents an named Variable of tensors that can be composed.
  */
 struct Symbol::Node {
+  /*! \brief source node of the current node */
+  std::shared_ptr<Symbol::Node> backward_source_node;
   /*! \brief Operator of this node */
   std::unique_ptr<OperatorProperty> op;
   /*! \brief name of the node */
@@ -41,7 +43,7 @@ struct Symbol::Node {
   }
   /*! \return Whether it is unit variable */
   inline bool is_variable() const {
-    return op == nullptr;
+    return op == nullptr && !backward_source_node;
   }
 };
 
@@ -52,24 +54,24 @@ inline bool Symbol::is_atomic() const {
 // implementation of template functions
 template<typename FVisit>
 inline void Symbol::DFSVisit(FVisit fvisit) const {
-  std::vector<Node*> stack;
+  std::vector<const std::shared_ptr<Node>*> stack;
   std::unordered_set<Node*> visited;
   // put the head into the graph
   for (auto &head : heads_) {
     Node *ptr = head.source.get();
     if (visited.count(ptr) == 0) {
-      stack.push_back(ptr);
+      stack.push_back(&head.source);
       visited.insert(ptr);
     }
   }
   while (!stack.empty()) {
-    Node *back = stack.back();
+    const std::shared_ptr<Node> *back = stack.back();
     stack.pop_back();
-    fvisit(back);
-    for (auto it = back->inputs.rbegin(); it != back->inputs.rend(); ++it) {
+    fvisit(*back);
+    for (auto it = back->get()->inputs.rbegin(); it != back->get()->inputs.rend(); ++it) {
       Node *ptr = it->source.get();
       if (visited.count(ptr) == 0) {
-        stack.push_back(ptr);
+        stack.push_back(&it->source);
         visited.insert(ptr);
       }
     }
@@ -78,10 +80,9 @@ inline void Symbol::DFSVisit(FVisit fvisit) const {
 
 // helper function to handle keyword argument mismatch
 // throw approperiate messages
-template<typename TMap>
 inline void KeywordArgumentMismatch(const char *source,
-                                    const TMap &kwargs,
-                                    const std::vector<std::string> args) {
+                                    const std::vector<std::string> &user_args,
+                                    const std::vector<std::string> &args) {
   std::unordered_set<std::string> keys(args.begin(), args.end());
   std::ostringstream head, msg;
   msg << "\nCandidate arguments:\n";
@@ -89,10 +90,10 @@ inline void KeywordArgumentMismatch(const char *source,
     msg << "\t[" << i << ']' << args[i] << '\n';
   }
 
-  for (const auto& kv : kwargs) {
-    if (keys.count(kv.first) == 0) {
+  for (const auto& key : user_args) {
+    if (keys.count(key) == 0) {
       LOG(FATAL) << source
-                 << "Keyword argument name " << kv.first << " not found."
+                 << "Keyword argument name " << key << " not found."
                  << msg.str();
     }
   }
@@ -101,7 +102,7 @@ inline void KeywordArgumentMismatch(const char *source,
 int Symbol::FindDuplicateArgs(std::unordered_map<std::string, int> *out) const {
   out->clear();
   int max_dup = 1;
-  this->DFSVisit([out, &max_dup](Node *node) {
+  this->DFSVisit([out, &max_dup](const std::shared_ptr<Node> &node) {
       if (node->is_variable()) {
         auto iter = out->find(node->name);
         if (iter == out->end()) {
@@ -119,11 +120,11 @@ int Symbol::FindDuplicateArgs(std::unordered_map<std::string, int> *out) const {
 Symbol Symbol::Copy() const {
   std::unordered_map<Node*, std::shared_ptr<Node> > old_new;
   // use DFSVisit to copy all the nodes
-  this->DFSVisit([&old_new](Node *node) {
+  this->DFSVisit([&old_new](const std::shared_ptr<Node> &node) {
       if (node->op == nullptr) {
-        old_new[node] = std::make_shared<Node>(nullptr, node->name);
+        old_new[node.get()] = std::make_shared<Node>(nullptr, node->name);
       } else {
-        old_new[node] =  std::make_shared<Node>(node->op->Copy(), node->name);
+        old_new[node.get()] =  std::make_shared<Node>(node->op->Copy(), node->name);
       }
     });
   // connect nodes of new graph
@@ -156,11 +157,17 @@ void Symbol::Print(std::ostream &os) const {
       os << "\toutput[" << i << "]=" << heads_[i].source->name
          << '(' << heads_[i].index << ")\n";
     }
-    this->DFSVisit([&os](Node *node) {
+    this->DFSVisit([&os](const std::shared_ptr<Node> &node) {
         if (node->is_variable()) {
           os << "Variable:" << node->name << '\n';
         } else {
-          os << "Name: " << node->name << " Type:" << node->op->TypeString() << '\n'
+          std::string type_string;
+          if (!node->backward_source_node) {
+            type_string = node->op->TypeString();
+          } else {
+            type_string = node->backward_source_node->op->TypeString();
+          }
+          os << "Name: " << node->name << " Type:" << type_string << '\n'
              << "Inputs:\n";
           for (size_t i = 0; i < node->inputs.size(); ++i) {
             os << "\targ[" << i << "]=" << node->inputs[i].source->name
@@ -176,7 +183,7 @@ std::vector<std::string> Symbol::ListArguments() const {
   if (this->is_atomic()) {
     return heads_[0].source->op->ListArguments();
   } else {
-    this->DFSVisit([&ret](Node *node) {
+    this->DFSVisit([&ret](const std::shared_ptr<Node> &node) {
         if (node->is_variable()) {
           ret.push_back(node->name);
         }
@@ -243,7 +250,8 @@ void Symbol::Compose(const std::vector<Symbol>& args,
     std::unordered_map<Node*, const DataEntry*> replace_map;
     std::vector<std::pair<DataEntry*, const DataEntry*> > replace_plan;
     // replace map stores the existing replacement plan for arguments node
-    this->DFSVisit([&arg_counter, &replace_map, &replace_plan, &args](Node *node) {
+    this->DFSVisit([&arg_counter, &replace_map, &replace_plan, &args]
+                   (const std::shared_ptr<Node> &node) {
         // visit all the childs, find possible replacement
         for (size_t i = 0; i < node->inputs.size(); ++i) {
           DataEntry *e = &(node->inputs[i]);
@@ -324,7 +332,8 @@ void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
     std::vector<std::pair<DataEntry*, const DataEntry*> > replace_plan;
     std::unordered_set<Node *> visited;
     // replace map stores the existing replacement plan for arguments node
-    this->DFSVisit([&nmatched, &visited, &kwargs, &replace_plan](Node *node) {
+    this->DFSVisit([&nmatched, &visited, &kwargs, &replace_plan]
+                   (const std::shared_ptr<Node> &node) {
         // visit all the childs, find possible replacement
         for (size_t i = 0; i < node->inputs.size(); ++i) {
           DataEntry *e = &(node->inputs[i]);
@@ -350,8 +359,10 @@ void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
     }
   }
   if (nmatched != kwargs.size()) {
-    KeywordArgumentMismatch(
-        "Symbol.Compose", kwargs, ListArguments());
+    std::vector<std::string> keys(kwargs.size());
+    std::transform(kwargs.begin(), kwargs.end(), keys.begin(),
+                   [](decltype(*kwargs.begin())& kv)->std::string { return kv.first; });
+    KeywordArgumentMismatch("Symbol.Compose", keys, ListArguments());
   }
 }
 
@@ -367,6 +378,50 @@ Symbol Symbol::operator () (const std::unordered_map<std::string, Symbol>& kwarg
   Symbol s = this->Copy();
   s.Compose(kwargs, name);
   return s;
+}
+
+Symbol Symbol::Grad(const std::vector<std::string>& wrt) const {
+  StaticGraph g;
+  this->ToStaticGraph(&g);
+  uint32_t num_nodes = g.nodes.size();
+  std::vector<uint32_t> head_grad_nodes;
+  std::vector<StaticGraph::DataEntry> arg_grads;
+  g.MakeBackwardPass(&head_grad_nodes, &arg_grads);
+  std::vector<std::shared_ptr<Node> > shared_node;
+  this->DFSVisit([&shared_node](const std::shared_ptr<Node> &n) {
+      shared_node.push_back(n);
+    });
+  for (std::vector<StaticGraph::Node>::const_iterator it = g.nodes.begin() + num_nodes;
+       it != g.nodes.end(); ++it) {
+    auto sym_node = std::make_shared<Symbol::Node>();
+    sym_node->name = it->name;
+    if (it->backward_source_id != -1) {
+      sym_node->backward_source_node = shared_node[it->backward_source_id];
+    }
+    shared_node.push_back(sym_node);
+    for (auto e : it->inputs) {
+      Symbol::DataEntry entry(shared_node[e.source_id], e.index);
+      sym_node->inputs.push_back(std::move(entry));
+    }
+  }
+  // make arg lookup dict
+  auto arg_list = ListArguments();
+  std::unordered_map<std::string, uint32_t> arg_index;
+  for (uint32_t i = 0; i < arg_list.size(); ++i) {
+    arg_index[arg_list[i]] = i;
+  }
+  // generate the heads
+  Symbol ret;
+  for (const std::string& name : wrt) {
+    if (arg_index.find(name) != arg_index.end()) {
+      uint32_t index = arg_index[name];
+      Symbol::DataEntry entry(shared_node[arg_grads[index].source_id], arg_grads[index].index);
+      ret.heads_.push_back(entry);
+    } else {
+      KeywordArgumentMismatch("Symbol.Grad ", wrt, arg_list);
+    }
+  }
+  return ret;
 }
 
 bool Symbol::InferShape(std::vector<TShape> *arg_shapes,
@@ -393,8 +448,10 @@ bool Symbol::InferShape(const std::unordered_map<std::string, TShape>& known_arg
     }
   }
   if (nmatched != known_arg_shapes.size()) {
-    KeywordArgumentMismatch(
-        "Symbol.InterShape", known_arg_shapes, ListArguments());
+    std::vector<std::string> keys(known_arg_shapes.size());
+    std::transform(known_arg_shapes.begin(), known_arg_shapes.end(), keys.begin(),
+                   [](decltype(*known_arg_shapes.begin())& kv)->std::string { return kv.first; });
+    KeywordArgumentMismatch("Symbol.InterShape", keys, ListArguments());
   }
   return g.InferShape(arg_shapes, out_shapes);
 }
@@ -431,13 +488,13 @@ void Symbol::ToStaticGraph(StaticGraph *out_graph) const {
   auto &arg_nodes = out_graph->arg_nodes;
   arg_nodes.clear();
 
-  this->DFSVisit([&node_order, &node_index, &arg_nodes](Node *n) {
+  this->DFSVisit([&node_order, &node_index, &arg_nodes](const std::shared_ptr<Node> &n) {
       uint32_t nid = static_cast<uint32_t>(node_index.size());
-      node_index[n] = nid;
+      node_index[n.get()] = nid;
       if (n->is_variable()) {
         arg_nodes.push_back(nid);
       }
-      node_order.push_back(n);
+      node_order.push_back(n.get());
     });
   // setup nodes
   out_graph->nodes.resize(node_index.size());

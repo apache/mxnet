@@ -484,6 +484,19 @@ int MXSymbolCompose(SymbolHandle sym,
   API_END();
 }
 
+int MXSymbolGrad(SymbolHandle sym, mx_uint num_wrt, const char** wrt, SymbolHandle* out) {
+  API_BEGIN();
+  Symbol* s = static_cast<Symbol*>(sym);
+  std::vector<std::string> wrts(num_wrt);
+  for (mx_uint i = 0; i < num_wrt; ++i) {
+    wrts[i] = wrt[i];
+  }
+  Symbol* ret = new Symbol;
+  *ret = s->Grad(wrts);
+  *out = ret;
+  API_END();
+}
+
 int MXSymbolInferShape(SymbolHandle sym,
                        mx_uint num_args,
                        const char** keys,
@@ -596,4 +609,3 @@ int MXExecutorBind(SymbolHandle symbol_handle,
   *out = Executor::Bind(*symb, ctx, in_args_vec, arg_grad_vec, grad_req_vec);
   API_END();
 }
-

@@ -3,7 +3,7 @@
  * \file symbolic.h
  * \brief Symbolic interface of mxnet.
  * \author Min Lin, Bing Xu
-*/
+ */
 #ifndef MXNET_SYMBOLIC_H_
 #define MXNET_SYMBOLIC_H_
 
@@ -161,7 +161,7 @@ class StaticGraph {
    * \param arg_grads used to store gradients to args, can be multiple one if an argument is used by operator
    */
   void MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
-                        std::vector<std::vector<DataEntry> > *arg_grads);
+                        std::vector<DataEntry> *arg_grads);
 
   /*!
    * \brief create a sum node that aggregates gradient together
@@ -254,6 +254,13 @@ class Symbol {
    */
   Symbol operator () (const std::unordered_map<std::string, Symbol>& kwargs,
                       const std::string& name) const;
+  /*!
+   * \brief get the gradient graph
+   * \param wrt with respect to the input
+   * \return the new symbol with gradient graph
+   */
+  Symbol Grad(const std::vector<std::string>& wrt) const;
+
   /*!
    * \brief infer the shapes of outputs and unknown input arguments
    * \param arg_shapes the shape of input arguments of the operator

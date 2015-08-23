@@ -2,7 +2,7 @@
  * Copyright (c) 2015 by Contributors
  * \file graph_executor.cc
  * \brief Executor to execute the Graph.
-*/
+ */
 #include <dmlc/logging.h>
 #include <mxnet/symbolic.h>
 #include <memory>
@@ -200,7 +200,7 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
 }
 
 void GraphExecutor::InitGraph(Symbol symbol, Context ctx, bool need_backward) {
-  // initialize all internal daa structures
+  // initialize all internal data structures
   symbol.ToStaticGraph(&graph_);
   num_forward_nodes_  = graph_.nodes.size();
   if (need_backward) {
@@ -252,21 +252,13 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NArray> &in_args,
       if (grad_req_type[i] == kNullOp) continue;
       CHECK_NE(grad_req_type[i], kWriteInplace)
           << "Gradient request can only be nullop, add, write";
-      std::vector<StaticGraph::DataEntry> &grad_source = arg_grads_[i];
-      CHECK_GE(grad_source.size(), 1);
-      // TODO(bing) add a aggregation node here
-      if (grad_source.size() > 1) {
-        CHECK_EQ(grad_req_type[i], kAddTo)
-            << "The gradient contains multiple variables,";
-      }
-      for (StaticGraph::DataEntry e : grad_source) {
-        DataEntryInfo &info = op_nodes_[e.source_id].outputs[e.index];
-        info.type = kBindByExternal;
-        info.op_req = grad_req_type[i];
-        info.data = arg_grad_store[i];
-        ++info.ref_count;
-        op_nodes_[e.source_id].activated = true;
-      }
+      StaticGraph::DataEntry &grad_source = arg_grads_[i];
+      DataEntryInfo &info = op_nodes_[grad_source.source_id].outputs[grad_source.index];
+      info.type = kBindByExternal;
+      info.op_req = grad_req_type[i];
+      info.data = arg_grad_store[i];
+      ++info.ref_count;
+      op_nodes_[grad_source.source_id].activated = true;
     }
     // setup head gradient
     for (uint32_t nid : head_grad_nodes_) {

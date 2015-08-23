@@ -153,9 +153,7 @@ def run_doxygen(folder):
     """Run the doxygen make command in the designated folder."""
     try:
         retcode = subprocess.call("cd %s; make doxygen" % folder, shell=True)
-        retcode = subprocess.call("rm -rf _build/html/doxygen", shell=True)
-        retcode = subprocess.call("mkdir _build", shell=True)
-        retcode = subprocess.call("mkdir _build/html", shell=True)
+        retcode = subprocess.call("cp -rf doxygen/html _build/html/doxygen", shell=True)
         if retcode < 0:
             sys.stderr.write("doxygen terminated by signal %s" % (-retcode))
     except OSError as e:
