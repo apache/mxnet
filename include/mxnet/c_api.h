@@ -556,28 +556,52 @@ MXNET_DLL int MXDataIterGetIterInfo(AtomicSymbolCreator creator,
  */
 MXNET_DLL int MXDataIterFree(DataIterHandle handle);
 /*!
- * \brief create an data iterator by name
- * \param iter_name iterator name
- * \param out the handle to the iterator
+ * \brief get the name of iterator entry
+ * \param iter iterator entry
+ * \param out_name the name of the iterator
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXIOCreateByName(const char *iter_name,
-                                   DataIterHandle *out);
+MXNET_DLL int MXDataIterGetName(DataIterCreator iter,
+                            const char **out_name);
 /*!
- * \brief set parameter value
- * \param handle the handle to iterator
- * \param name parameter name
- * \param val parameter value
+ * \brief init an iterator, init with parameters
+ * the array size of passed in arguments
+ * \param handle of the iterator creator
+ * \param num_param number of parameter
+ * \param keys parameter keys
+ * \param vals parameter values
+ * \param out resulting iterator
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXIOSetParam(DataIterHandle handle,
-                            const char *name, const char *val);
+MXNET_DLL int MXDataIterCreateIter(DataIterCreator handle,
+                               int num_param,
+                               const char **keys,
+                               const char **vals,
+                               DataIterHandle *out);
 /*!
- * \brief Init after set parameter
- * \param handle the handle to iterator
+ * \brief Get the detailed information about data iterator.
+ * \param creator the DataIterCreator.
+ * \param name The returned name of the creator.
+ * \param description The returned description of the symbol.
+ * \param num_args Number of arguments.
+ * \param arg_names Name of the arguments.
+ * \param arg_type_infos Type informations about the arguments.
+ * \param arg_descriptions Description information about the arguments.
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXIOInit(DataIterHandle handle);
+MXNET_DLL int MXDataIterGetIterInfo(AtomicSymbolCreator creator,
+                                          const char **name,
+                                          const char **description,
+                                          mx_uint *num_args,
+                                          const char ***arg_names,
+                                          const char ***arg_type_infos,
+                                          const char ***arg_descriptions);
+/*!
+ * \brief free the handle to the IO module
+ * \param handle the handle pointer to the data iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterFree(DataIterHandle handle);
 /*!
  * \brief move iterator to next position
  * \param handle the handle to iterator
@@ -609,37 +633,5 @@ MXNET_DLL int MXDataIterGetData(DataIterHandle handle,
  */
 MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
                            NArrayHandle *out);
-/*!
- * \brief list all the available iterator entries
- * \param out_size the size of returned iterators
- * \param out_array the output iteratos entries
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXListIOIters(mx_uint *out_size,
-                              DataIterCreator **out_array);
-/*!
- * \brief get the name of iterator entry
- * \param iter iterator entry
- * \param out_name the name of the iterator
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXIOIterGetName(DataIterCreator iter,
-                            const char **out_name);
-/*!
- * \brief create an iterator, init with parameters
- * the array size of passed in arguments
- * \param creator IOIterator Enrty
- * \param num_param number of parameter
- * \param keys parameter keys
- * \param vals parameter values
- * \param out pointer to the data iterator
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXCreateIOIterator(DataIterCreator creator,
-                               int num_param,
-                               const char **keys,
-                               const char **vals,
-                               DataIterHandle *out);
-
 
 #endif  // MXNET_C_API_H_

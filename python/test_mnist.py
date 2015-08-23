@@ -108,4 +108,3 @@ for i in xrange(epoch):
     print "Valid Acc: ", val_acc / val_nbatch
     train_dataiter.beforefirst()
     val_dataiter.beforefirst()
-
