@@ -1,13 +1,17 @@
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file narray.cc
- * \brief
+ * \brief narry module of mxnet
  */
 #include <dmlc/logging.h>
+#include <dmlc/registry.h>
 #include <mxnet/narray.h>
-#include <mxnet/registry.h>
 #include <mshadow/tensor.h>
 #include "./narray_function.h"
+
+namespace dmlc {
+DMLC_REGISTRY_ENABLE(::mxnet::NArrayFunctionReg);
+}  // namespace dmlc
 
 namespace mxnet {
 /*!
@@ -150,14 +154,15 @@ NArray &NArray::operator/=(const NArray &src) {
 }
 
 // register API function
-MXNET_REGISTER_NARRAY_FUN(plus).set_function(BinaryOp<narray::Plus>);
-MXNET_REGISTER_NARRAY_FUN(minus).set_function(BinaryOp<narray::Minus>);
-MXNET_REGISTER_NARRAY_FUN(mul).set_function(BinaryOp<narray::Mul>);
-MXNET_REGISTER_NARRAY_FUN(div).set_function(BinaryOp<narray::Div>);
+// those with underscore will be registered at NArray
+MXNET_REGISTER_NARRAY_FUN(_plus).set_function(BinaryOp<narray::Plus>);
+MXNET_REGISTER_NARRAY_FUN(_minus).set_function(BinaryOp<narray::Minus>);
+MXNET_REGISTER_NARRAY_FUN(_mul).set_function(BinaryOp<narray::Mul>);
+MXNET_REGISTER_NARRAY_FUN(_div).set_function(BinaryOp<narray::Div>);
 
 // copy function is special
 // that we need to remove kAcceptEmptyMutateTarget from it
-MXNET_REGISTER_NARRAY_FUN(copy)
+MXNET_REGISTER_NARRAY_FUN(_copyto)
 .set_function(CopyFromTo)
 .set_type_mask(kNArrayArgBeforeScalar);
 

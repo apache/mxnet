@@ -4,8 +4,6 @@
  * \brief
  * \author Bing Xu
 */
-
-#include <mxnet/registry.h>
 #include "./softmax-inl.h"
 
 namespace mxnet {

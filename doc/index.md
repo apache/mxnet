@@ -3,7 +3,7 @@ MXNet Documentation
 
 Contents
 --------
-* [Python API Reference](python/python_api.md)
+* [Python User Guide](python/python_guide.md)
 * [C++ Developer Guide](cpp/cpp_guide.md)
 
 Indices and tables

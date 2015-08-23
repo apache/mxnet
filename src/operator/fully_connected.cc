@@ -3,7 +3,6 @@
  * \file fully_connected.cc
  * \brief fully connect operator
 */
-#include <mxnet/registry.h>
 #include "./fully_connected-inl.h"
 namespace mxnet {
 namespace op {

@@ -4,8 +4,6 @@
  * \brief activation op
  * \author Bing Xu
 */
-
-#include <mxnet/registry.h>
 #include "./activation-inl.h"
 #include "./mshadow_op.h"
 

@@ -57,7 +57,7 @@ endif
 #BIN = test/test_threaded_engine test/api_registry_test
 OBJ = narray_function_cpu.o
 # add threaded engine after it is done
-OBJCXX11 = engine.o narray.o c_api.o registry.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o
+OBJCXX11 = engine.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o
 CUOBJ =
 SLIB = lib/libmxnet.so
 ALIB = lib/libmxnet.a
@@ -82,9 +82,8 @@ narray_function_gpu.o: src/narray/narray_function.cu src/narray/narray_function-
 symbol.o: src/symbol/symbol.cc
 graph_executor.o: src/symbol/graph_executor.cc
 static_graph.o : src/symbol/static_graph.cc
-registry.o: src/registry.cc
+operator.o: src/operator/operator.cc
 c_api.o: src/c_api.cc
-operator.o: src/operator/static_operator_wrapper.cc
 fully_connected_cpu.o: src/operator/fully_connected.cc
 fully_connected_gpu.o: src/operator/fully_connected.cu
 activation_cpu.o: src/operator/activation.cc

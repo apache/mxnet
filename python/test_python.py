@@ -9,7 +9,7 @@ print(a.numpy)
 
 c = b * a
 
-cc = mx.op.mul(b, a)
+cc = mx.narray.NArray._mul(b, a)
 
 print(c.context)
 print(cc.numpy)

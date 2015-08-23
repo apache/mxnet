@@ -9,6 +9,7 @@
 
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
+#include <dmlc/registry.h>
 #include <vector>
 #include <string>
 #include <utility>
@@ -363,5 +364,36 @@ class OperatorProperty {
   static OperatorProperty *Create(const char* type_name);
 };
 #endif
+
+
+/*! \brief typedef the factory function of operator property */
+typedef OperatorProperty *(*OperatorPropertyFactory)();
+/*!
+ * \brief Registry entry for OperatorProperty factory functions.
+ */
+struct OperatorPropertyReg
+    : public dmlc::FunctionRegEntryBase<OperatorPropertyReg,
+                                        OperatorPropertyFactory> {
+};
+
+//--------------------------------------------------------------
+// The following part are API Registration of Operators
+//--------------------------------------------------------------
+/*!
+ * \brief Macro to register OperatorProperty
+ *
+ * \code
+ * // example of registering a fully connected operator
+ * REGISTER_OP_PROPERTY(FullyConnected, FullyConnectedOpProp)
+ * .describe("Fully connected layer");
+ *
+ * \endcode
+ */
+#define MXNET_REGISTER_OP_PROPERTY(name, OperatorPropertyType)          \
+  static ::mxnet::OperatorProperty* __create__ ## OperatorPropertyType ## __() { \
+    return new OperatorPropertyType;                                    \
+  }                                                                     \
+  DMLC_REGISTRY_REGISTER(::mxnet::OperatorPropertyReg, OperatorPropertyReg, name) \
+  .set_body(__create__ ## OperatorPropertyType ## __)
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_H_

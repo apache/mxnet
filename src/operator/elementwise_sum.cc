@@ -3,7 +3,6 @@
  * \file elementwise_sum.cc
  * \brief elementwise sum operator
 */
-#include <mxnet/registry.h>
 #include "./elementwise_sum-inl.h"
 namespace mxnet {
 namespace op {

@@ -226,7 +226,6 @@ class Symbol(object):
         """
         # TODO(bing): consider a more friendly interface
         # For example, pass in args_grad by dict
-
         enum = {"null" : 0, "write_to" : 1, "in_place":2, "add_to" : 3}
         if not isinstance(ctx, Context):
             raise TypeError("Context type error")
@@ -322,7 +321,6 @@ def _make_atomic_symbol_function(handle):
                '-------\n' +
                'symbol: Symbol\n'+
                '    The result symbol.')
-
     doc_str = doc_str % (desc.value, '\n'.join(param_str))
 
     def creator(*args, **kwargs):
@@ -372,7 +370,7 @@ def _make_atomic_symbol_function(handle):
     return creator
 
 
-def _init_module_functions():
+def _init_symbol_module():
     """List and add all the atomic symbol functions to current module."""
     plist = ctypes.POINTER(ctypes.c_void_p)()
     size = ctypes.c_uint()
@@ -386,5 +384,4 @@ def _init_module_functions():
         setattr(module_obj, function.__name__, function)
 
 # Initialize the atomic symbo in startups
-_init_module_functions()
-
+_init_symbol_module()
