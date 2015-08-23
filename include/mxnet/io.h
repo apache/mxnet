@@ -6,6 +6,7 @@
 #ifndef MXNET_IO_H_
 #define MXNET_IO_H_
 #include <dmlc/data.h>
+#include <dmlc/registry.h>
 #include <vector>
 #include <string>
 #include <utility>
@@ -106,5 +107,34 @@ IIterator<DataBatch> *CreateIteratorFromConfig(const char* cfg_path);
  * \return the data IIterator ptr
  */
 IIterator<DataBatch> *CreateIteratorByName(const char* iter_name);
+
+/*! \brief typedef the factory function of data iterator */
+typedef IIterator<DataBatch> *(*DataIteratorFactory)();
+/*!
+ * \brief Registry entry for DataIterator factory functions.
+ */
+struct DataIteratorReg
+    : public dmlc::FunctionRegEntryBase<DataIteratorReg,
+                                        DataIteratorFactory> {
+};
+//--------------------------------------------------------------
+// The following part are API Registration of Iterators
+//--------------------------------------------------------------
+/*!
+ * \brief Macro to register Iterators
+ *
+ * \code
+ * // example of registering a mnist iterator
+ * REGISTER_IO_ITERATOR(MNIST, MNISTIterator)
+ * .describe("Mnist data iterator");
+ *
+ * \endcode
+ */
+#define MXNET_REGISTER_IO_ITER(name, DataIteratorType)          \
+  static ::mxnet::IIterator<DataBatch>* __create__ ## DataIteratorType ## __() { \
+    return new DataIteratorType;                                    \
+  }                                                                     \
+  DMLC_REGISTRY_REGISTER(::mxnet::DataIteratorReg, DataIteratorReg, name) \
+  .set_body(__create__ ## DataIteratorType ## __)
 }  // namespace mxnet
 #endif  // MXNET_IO_H_

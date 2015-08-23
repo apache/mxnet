@@ -5,16 +5,35 @@ from __future__ import absolute_import
 
 import ctypes
 from .base import _LIB
+from .base import c_array, c_str, mx_uint, string_types
 from .base import DataIterHandle, NArrayHandle
 from .base import check_call
 from .narray import NArray
 
 class DataIter(object):
-    """DataIter object in mxnet
+    """DataIter object in mxnet. List all the needed functions here. """
 
-    DataIter is a wrapper for C++ DataIter functions
-    """
+    def __init__(self, handle):
+        """Initialize with handle
 
+        Parameters
+        ----------
+        handle : DataIterHandle
+            the handle to the underlying C++ Data Iterator
+        """
+        self.handle = handle
+
+    def __del__(self):
+        check_call(_LIB.MXDataIterFree(self.handle))
+
+    
+    
+    
+    
+    
+    
+    
+    
     def __init__(self):
         """initialize a new dataiter
 
