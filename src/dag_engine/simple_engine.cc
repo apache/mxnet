@@ -1,21 +1,23 @@
-// Copyright (c) 2015 by Contributors
+/*!
+ * Copyright (c) 2015 by Contributors
+ */
 #include <mshadow/tensor.h>
 #include <dmlc/logging.h>
-#include <mxnet/dag_engine.h>
+#include "mxnet/dag_engine.h"
+
 namespace mxnet {
+
 class SimpleEngine : public DAGEngine {
  public:
-  virtual void PushAsync(AsyncOp exec_fun,
-                         Context exec_ctx,
-                         const std::vector<Variable> &use_vars,
-                         const std::vector<Variable> &mutate_vars) {
+  virtual void PushAsync(AsyncOp exec_fun, Context exec_ctx,
+                         const std::vector<Variable>& use_vars,
+                         const std::vector<Variable>& mutate_vars) {
     // cannot schedule async using naive way because deps are not captured
     LOG(FATAL) << "cannot schedule async operations";
   }
-  virtual void Push(Op exec_fun,
-                    Context exec_ctx,
-                    const std::vector<Variable> &use_vars,
-                    const std::vector<Variable> &mutate_vars) {
+  virtual void Push(Op exec_fun, Context exec_ctx,
+                    const std::vector<Variable>& use_vars,
+                    const std::vector<Variable>& mutate_vars) {
     if (exec_ctx.dev_mask == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       ctx_.stream = &stream;
@@ -28,9 +30,7 @@ class SimpleEngine : public DAGEngine {
       exec_fun(ctx_);
     }
   }
-  virtual void PushDelete(Op delete_fun,
-                          Context exec_ctx,
-                          Variable var) {
+  virtual void PushDelete(Op delete_fun, Context exec_ctx, Variable var) {
     this->Push(delete_fun, exec_ctx, {}, {var});
   }
   virtual Variable NewVar() {

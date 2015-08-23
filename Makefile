@@ -57,7 +57,7 @@ endif
 #BIN = test/test_threaded_engine test/api_registry_test
 OBJ = narray_function_cpu.o
 # add threaded engine after it is done
-OBJCXX11 = engine.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o
+OBJCXX11 = dag_engine.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o
 CUOBJ =
 SLIB = lib/libmxnet.so
 ALIB = lib/libmxnet.a
@@ -75,7 +75,7 @@ $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
 storage.o: src/storage/storage.cc
-engine.o: src/dag_engine/simple_engine.cc
+dag_engine.o: src/dag_engine/dag_engine.cc
 narray.o: src/narray/narray.cc
 narray_function_cpu.o: src/narray/narray_function.cc src/narray/narray_function-inl.h
 narray_function_gpu.o: src/narray/narray_function.cu src/narray/narray_function-inl.h
