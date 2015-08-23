@@ -22,6 +22,9 @@ DAGEngine::~DAGEngine() = default;
 DAGEngine::DAGEngine() = default;
 
 DAGEngine* DAGEngine::Get() {
+  /*!
+   * \brief Change specific engine to use.
+   */
   using EngineImplementation = engine::SimpleEngine;
 
   static EngineImplementation inst;

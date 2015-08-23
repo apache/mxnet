@@ -4,8 +4,11 @@
 #ifndef MXNET_DAG_ENGINE_SIMPLE_ENGINE_H_
 #define MXNET_DAG_ENGINE_SIMPLE_ENGINE_H_
 
+#include <dmlc/base.h>
+#include <dmlc/concurrency.h>
 #include <vector>
 #include <functional>
+#include <atomic>
 #include "mxnet/dag_engine.h"
 #include "dag_engine_impl.h"
 
@@ -13,18 +16,39 @@ namespace mxnet {
 
 namespace engine {
 
+// TODO
+// 1. Workers
+// 2. Runtime context
+
+struct SimpleOpr;
 struct OprBlock;
 
 struct VersionedVarBlock {
-  VersionedVarBlock* next = nullptr;
-  OprBlock* waiting = nullptr;
+  VersionedVarBlock* next{nullptr};
+  VersionedVarBlock* join{nullptr};
+  OprBlock* trigger{nullptr};
+  dmlc::Spinlock lock;
+  bool waiting{false};
 };  // struct VersionedVarBlock
 
 struct OprBlock {
   std::function<void()> fn;
-  VersionedVarBlock* trigger;
-  Opr* opr;
+  std::atomic<std::size_t> wait{0};
 };  // struct OprBlock
+
+struct SimpleVar final : public Var {
+  VersionedVarBlock* var{nullptr};
+
+  static SimpleVar* CastFromBase(Var* ptr);
+};  // struct SimpleVar
+
+struct SimpleOpr final : public Opr {
+  DAGEngine::AsyncFn fn;
+  std::vector<SimpleVar*> use_vars;
+  std::vector<SimpleVar*> mutate_vars;
+
+  static SimpleOpr* CastFromBase(Opr* ptr);
+};  // struct SimpleOpr
 
 class SimpleEngine final : public DAGEngine {
  public:
@@ -45,7 +69,10 @@ class SimpleEngine final : public DAGEngine {
 
   void WaitForAll() override{};
 
+  void OnComplete(VersionedVarBlock* var);
+
  private:
+  dmlc::ConcurrentBlockingQueue<OprBlock*> task_queue_;
   DISALLOW_COPY_AND_ASSIGN(SimpleEngine);
 };  // class SimpleEngine
 
