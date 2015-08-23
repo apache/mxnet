@@ -101,15 +101,20 @@ pooling_cpu.o: src/operator/pooling.cc
 pooling_gpu.o: src/operator/pooling.cu
 softmax_cpu.o: src/operator/softmax.cc
 softmax_gpu.o: src/operator/softmax.cu
+<<<<<<< HEAD
 convolution_cpu.o: src/operator/convolution.cc
 convolution_gpu.o: src/operator/convolution.cu
 reshape_cpu.o: src/operator/reshape.cc
 reshape_gpu.o: src/operator/reshape.cu
+=======
+io.o: src/io/io.cc
+>>>>>>> finish merge remote master
 
 lib/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)
 lib/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ)
 
 test/test_storage: test/test_storage.cc lib/libmxnet.a
+test/io_mnist_test: test/io_mnist_test.cc lib/libmxnet.a $(DMLC_CORE)/libdmlc.a
 #test/test_threaded_engine: test/test_threaded_engine.cc api/libmxnet.a
 
 $(BIN) :
