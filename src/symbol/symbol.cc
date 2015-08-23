@@ -78,10 +78,9 @@ inline void Symbol::DFSVisit(FVisit fvisit) const {
 
 // helper function to handle keyword argument mismatch
 // throw approperiate messages
-template<typename TMap>
 inline void KeywordArgumentMismatch(const char *source,
-                                    const TMap &kwargs,
-                                    const std::vector<std::string> args) {
+                                    const std::vector<std::string> &user_args,
+                                    const std::vector<std::string> &args) {
   std::unordered_set<std::string> keys(args.begin(), args.end());
   std::ostringstream head, msg;
   msg << "\nCandidate arguments:\n";
@@ -89,10 +88,10 @@ inline void KeywordArgumentMismatch(const char *source,
     msg << "\t[" << i << ']' << args[i] << '\n';
   }
 
-  for (const auto& kv : kwargs) {
-    if (keys.count(kv.first) == 0) {
+  for (const auto& key : user_args) {
+    if (keys.count(key) == 0) {
       LOG(FATAL) << source
-                 << "Keyword argument name " << kv.first << " not found."
+                 << "Keyword argument name " << key << " not found."
                  << msg.str();
     }
   }
@@ -352,8 +351,10 @@ void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
     }
   }
   if (nmatched != kwargs.size()) {
-    KeywordArgumentMismatch(
-        "Symbol.Compose", kwargs, ListArguments());
+    std::vector<std::string> keys(kwargs.size());
+    std::transform(kwargs.begin(), kwargs.end(), keys.begin(),
+                   [](decltype(*kwargs.begin())& kv)->std::string { return kv.first; });
+    KeywordArgumentMismatch("Symbol.Compose", keys, ListArguments());
   }
 }
 
@@ -395,8 +396,10 @@ bool Symbol::InferShape(const std::unordered_map<std::string, TShape>& known_arg
     }
   }
   if (nmatched != known_arg_shapes.size()) {
-    KeywordArgumentMismatch(
-        "Symbol.InterShape", known_arg_shapes, ListArguments());
+    std::vector<std::string> keys(known_arg_shapes.size());
+    std::transform(known_arg_shapes.begin(), known_arg_shapes.end(), keys.begin(),
+                   [](decltype(*known_arg_shapes.begin())& kv)->std::string { return kv.first; });
+    KeywordArgumentMismatch("Symbol.InterShape", keys, ListArguments());
   }
   return g.InferShape(arg_shapes, out_shapes);
 }
