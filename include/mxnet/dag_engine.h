@@ -94,18 +94,18 @@ class DAGEngine {
   virtual void Push(Operator op, Context exec_ctx) = 0;
   /*!
    * \brief Push an synchronous operation to the DAG engine.
-   * \param exec_fun Execution funtion that executes the operation.
+   * \param exec_fun Execution function that executes the operation.
    * \param exec_ctx Execution context.
    * \param use_vars The variables that current operation will use but not
    *                 mutate.
    * \param mutate_vars The variables that current operation will mutate.
    */
-  virtual void Push(Fn exec_fun, Context exec_ctx,
-                    std::vector<Variable> const& use_vars,
-                    std::vector<Variable> const& mutate_vars);
+  void Push(Fn exec_fun, Context exec_ctx,
+            std::vector<Variable> const& use_vars,
+            std::vector<Variable> const& mutate_vars);
   /*!
    * \brief Push an asynchronous operation to the DAG engine.
-   * \param exec_fun Execution funtion, this function takes a parameter
+   * \param exec_fun Execution function, this function takes a parameter
    *                 on_complete that must be called when the execution
    *                 completes.
    * \param exec_ctx Execution context.
