@@ -10,6 +10,7 @@
 #include <mxnet/symbolic.h>
 #include <mxnet/operator.h>
 #include <mxnet/io.h>
+#include <mxnet/io.h>
 #include <mxnet/c_api.h>
 #include <vector>
 #include <sstream>
@@ -647,3 +648,41 @@ int MXIOGetData(DataIterHandle handle, NArrayHandle *out) {
   *out = new NArray(db.data[0], 0);
   API_END();
 }
+
+int MXListIOIters(mx_uint *out_size,
+                    DataIterCreator **out_array) {
+  API_BEGIN();
+  auto &vec = Registry<IOIteratorEntry>::List();
+  *out_size = static_cast<mx_uint>(vec.size());
+  *out_array = (DataIterCreator*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
+  API_END();
+}
+
+int MXIOIterGetName(DataIterCreator iter,
+                  const char **out_name) {
+  API_BEGIN();
+  auto *f = static_cast<const IOIteratorEntry*>(iter);
+  *out_name = f->name.c_str();
+  API_END();
+}
+
+int MXCreateIOIterator(DataIterCreator creator,
+                               int num_param,
+                               const char **keys,
+                               const char **vals,
+                               DataIterHandle *out) {
+  IOIteratorEntry *e = static_cast<IOIteratorEntry *>(creator);
+  IIterator<DataBatch> *iter = (*e)();
+  API_BEGIN();
+  std::vector<std::pair<std::string, std::string> > kwargs;
+  for (int i = 0; i < num_param; ++i) {
+    kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
+  }
+  iter->InitParams(kwargs);
+  *out = iter;
+  API_END_HANDLE_ERROR(delete iter);
+}
+
+
+
+

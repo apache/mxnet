@@ -36,6 +36,8 @@ typedef void *SymbolHandle;
 typedef void *AtomicSymbolHandle;
 /*! \brief handle to an Executor */
 typedef void *ExecutorHandle;
+/*! \brief handle a dataiter creator */
+typedef void *DataIterCreator;
 /*! \brief handle to a DataIterator */
 typedef void *DataIterHandle;
 /*!
@@ -506,5 +508,37 @@ MXNET_DLL int MXIOGetData(DataIterHandle handle,
  */
 MXNET_DLL int MXIOGetLabel(DataIterHandle handle,
                            NArrayHandle *out);
+/*!
+ * \brief list all the available iterator entries
+ * \param out_size the size of returned iterators
+ * \param out_array the output iteratos entries
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXListIOIters(mx_uint *out_size,
+                              DataIterCreator **out_array);
+/*!
+ * \brief get the name of iterator entry
+ * \param iter iterator entry
+ * \param out_name the name of the iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXIOIterGetName(DataIterCreator iter,
+                            const char **out_name);
+/*!
+ * \brief create an iterator, init with parameters
+ * the array size of passed in arguments
+ * \param creator IOIterator Enrty
+ * \param num_param number of parameter
+ * \param keys parameter keys
+ * \param vals parameter values
+ * \param out pointer to the data iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXCreateIOIterator(DataIterCreator creator,
+                               int num_param,
+                               const char **keys,
+                               const char **vals,
+                               DataIterHandle *out);
+
 
 #endif  // MXNET_C_API_H_
