@@ -25,25 +25,24 @@ enum PoolingOpOutputs {kOut};
 enum PoolingOpType {kMaxPooling, kAvgPooling, kSumPooling};
 
 struct PoolingParam : public dmlc::Parameter<PoolingParam> {
-  int kernel_x;
-  int kernel_y;
-  int stride_x;
-  int stride_y;
-  int pad_x;
-  int pad_y;
-  int type;
+  TShape kernel;
+  TShape stride;
+  TShape pad;
+  int pool_type;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
     // TODO(bing) change to only set lower bound
-    DMLC_DECLARE_FIELD(kernel_x).set_range(1, 10000);
-    DMLC_DECLARE_FIELD(kernel_y).set_range(1, 10000);
-    DMLC_DECLARE_FIELD(stride_x).set_range(1, 10000);
-    DMLC_DECLARE_FIELD(stride_y).set_range(1, 10000);
-    DMLC_DECLARE_FIELD(pad_x).set_default(0).set_range(0, 10000);
-    DMLC_DECLARE_FIELD(pad_y).set_default(0).set_range(0, 10000);
-    DMLC_DECLARE_FIELD(type).set_default(kMaxPooling)
+    int shape[] = {0,0};
+    DMLC_DECLARE_FIELD(kernel).describe("pooling kernel size: (y, x)");
+    DMLC_DECLARE_FIELD(pool_type).set_default(kMaxPooling)
       .add_enum("max", kMaxPooling)
       .add_enum("avg", kAvgPooling)
-      .add_enum("sum", kSumPooling);
+      .add_enum("sum", kSumPooling)
+      .describe("Pooling type to be applied.");
+    DMLC_DECLARE_FIELD(pad).set_default(TShape(shape, shape + 2))
+      .describe("pad for pooling: (y, x)");
+    shape[0] = shape[1] = 1;
+    DMLC_DECLARE_FIELD(stride).set_default(TShape(shape, shape + 2))
+      .describe("stride: for pooling (y, x)");
   }
 };
 
@@ -52,6 +51,7 @@ class PoolingOp : public Operator {
  public:
   explicit PoolingOp(PoolingParam p) {
     this->param_ = p;
+    std::cout << param_.kernel << std::endl;
   }
 
   virtual void Forward(const OpContext &ctx,
@@ -68,19 +68,19 @@ class PoolingOp : public Operator {
     Tensor<xpu, 4> out = out_data[kOut].get<xpu, 4, real_t>(s);
     mshadow::Shape<2> out_shape = Shape2(out.shape_[2], out.shape_[3]);
     // TODO(bing): dual stride in mshadow
-    if (param_.type == kMaxPooling || param_.type == kSumPooling) {
-      out = pool<Reducer>(pad(data, param_.pad_y, param_.pad_x),
+    if (param_.pool_type == kMaxPooling || param_.pool_type == kSumPooling) {
+      out = pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                           out_shape,
-                          param_.kernel_y,
-                          param_.kernel_x,
-                          param_.kernel_y);
-    } else if (param_.type == kAvgPooling) {
-      out = (1.0f / (param_.kernel_y * param_.kernel_x)) * \
-            pool<Reducer>(pad(data, param_.pad_y, param_.pad_x),
+                          param_.kernel[0],
+                          param_.kernel[1],
+                          param_.kernel[0]);
+    } else if (param_.pool_type == kAvgPooling) {
+      out = (1.0f / (param_.kernel[0] * param_.kernel[1])) * \
+            pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                           out_shape,
-                          param_.kernel_y,
-                          param_.kernel_x,
-                          param_.kernel_y);
+                          param_.kernel[0],
+                          param_.kernel[1],
+                          param_.kernel[0]);
     }
   }
 
@@ -106,29 +106,29 @@ class PoolingOp : public Operator {
 
     mshadow::Shape<2> in_shape = Shape2(data.shape_[2], data.shape_[3]);
 
-    if (param_.type == kMaxPooling || param_.type == kSumPooling) {
+    if (param_.pool_type == kMaxPooling || param_.pool_type == kSumPooling) {
       Assign(input_grad, req[kData],
-             crop(unpool<Reducer>(pad(data, param_.pad_y, param_.pad_x),
+             crop(unpool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                                   pad(output_data, 0, 0),
                                   pad(grad, 0, 0),
-                                  param_.kernel_y,
-                                  param_.kernel_x,
-                                  param_.stride_y),
+                                  param_.kernel[0],
+                                  param_.kernel[1],
+                                  param_.stride[0]),
                   in_shape,
-                  param_.pad_y,
-                  param_.pad_x));
-    } else if (param_.type == kAvgPooling) {
+                  param_.pad[0],
+                  param_.pad[1]));
+    } else if (param_.pool_type == kAvgPooling) {
       Assign(input_grad, req[kData],
-             (1.0f / param_.kernel_y / param_.kernel_x) *\
-             crop(unpool<Reducer>(pad(data, param_.pad_y, param_.pad_x),
+             (1.0f / param_.kernel[0] / param_.kernel[1]) *\
+             crop(unpool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                                   pad(output_data, 0, 0),
                                   pad(grad, 0, 0),
-                                  param_.kernel_y,
-                                  param_.kernel_x,
-                                  param_.stride_y),
+                                  param_.kernel[0],
+                                  param_.kernel[1],
+                                  param_.stride[0]),
                   in_shape,
-                  param_.pad_y,
-                  param_.pad_x));
+                  param_.pad[0],
+                  param_.pad[1]));
     }
   }
 
@@ -155,10 +155,10 @@ class PoolingProp : public OperatorProperty {
       "Pooling: Input data should be 4D in (batch, channel, y, x)";
     TShape oshape = dshape;
     if (dshape.ndim() ==  0) return false;
-    oshape[2] = std::min(dshape[2] + 2 * param_.pad_y - param_.kernel_y + param_.stride_y - 1,
-                         dshape[2] + 2 * param_.pad_y - 1) / param_.stride_y + 1;
-    oshape[3] = std::min(dshape[3] + 2 * param_.pad_x - param_.kernel_x + param_.stride_x - 1,
-                         dshape[3] + 2 * param_.pad_x - 1) / param_.stride_x + 1;
+    oshape[2] = std::min(dshape[2] + 2 * param_.pad[0] - param_.kernel[0] + param_.stride[0] - 1,
+                         dshape[2] + 2 * param_.pad[0] - 1) / param_.stride[0] + 1;
+    oshape[3] = std::min(dshape[3] + 2 * param_.pad[1] - param_.kernel[1] + param_.stride[1] - 1,
+                         dshape[3] + 2 * param_.pad[1] - 1) / param_.stride[1] + 1;
     CHECK(oshape[2] > 0 && oshape[3] > 0) << "Pooling: kernel size exceed input";
     out_shape->clear();
     out_shape->push_back(oshape);

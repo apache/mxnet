@@ -11,7 +11,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<gpu>(ActivationParam param) {
-  switch(param.type) {
+  switch(param.act_type) {
     case kReLU: return new ActivationOp<gpu, mshadow_op::relu, mshadow_op::relu_grad>();
     case kSigmoid: return new ActivationOp<gpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad>();
     case kTanh: return new ActivationOp<gpu, mshadow_op::tanh, mshadow_op::tanh_grad>();

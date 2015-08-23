@@ -10,7 +10,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<cpu>(PoolingParam param) {
-  switch (param.type) {
+  switch (param.pool_type) {
     case kMaxPooling: return new PoolingOp<cpu, mshadow::red::maximum>(param);
     case kAvgPooling: return new PoolingOp<cpu, mshadow::red::sum>(param);
     case kSumPooling: return new PoolingOp<cpu, mshadow::red::sum>(param);

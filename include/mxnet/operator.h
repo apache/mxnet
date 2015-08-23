@@ -363,8 +363,6 @@ class OperatorProperty {
    */
   static OperatorProperty *Create(const char* type_name);
 };
-#endif
-
 
 /*! \brief typedef the factory function of operator property */
 typedef OperatorProperty *(*OperatorPropertyFactory)();
@@ -395,5 +393,6 @@ struct OperatorPropertyReg
   }                                                                     \
   DMLC_REGISTRY_REGISTER(::mxnet::OperatorPropertyReg, OperatorPropertyReg, name) \
   .set_body(__create__ ## OperatorPropertyType ## __)
+#endif  // DMLC_USE_CXX11
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_H_

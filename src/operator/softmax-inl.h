@@ -26,7 +26,8 @@ enum SoftmaxOpOutputs {kOut};
 struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
   float grad_scale;
   DMLC_DECLARE_PARAMETER(SoftmaxParam) {
-    DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f);
+    DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
+      .describe("Scale the gradient by a float factor");
   };
 };
 
@@ -63,7 +64,7 @@ class SoftmaxOp : public Operator {
     CHECK_GE(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 1> label = in_data[kLabel].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 2> out = out_grad[kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> grad = in_grad[kData].FlatTo2D<xpu, real_t>(s);
     SoftmaxGrad(grad, out, label);
     if (param_.grad_scale < 1.0) {
@@ -124,7 +125,7 @@ class SoftmaxProp : public OperatorProperty {
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
       const std::vector<void*> &in_grad) const {
-    return {{out_grad[kOut], in_grad[kData]}};
+    return {{out_data[kOut], in_grad[kData]}};
   }
 
   virtual std::vector<std::pair<int, void*> > ForwardInplaceOption(
