@@ -5,7 +5,7 @@ Contents
 --------
 * [Python User Guide](python/python_guide.md)
 * [C++ Developer Guide](cpp/cpp_guide.md)
-* [Doxygen Version of C++ API](https://mxnet.readthedocs.org/latest/doxygen)
+* [Doxygen Version of C++ API](https://mxnet.readthedocs.org/en/latest/doxygen)
 
 Indices and tables
 ------------------
