@@ -26,7 +26,7 @@ class DataIter(object):
 
     def __del__(self):
         check_call(_LIB.MXDataIterFree(self.handle))
-        
+
     def __call__(self, *args, **kwargs):
         """Invoke iterator as function on inputs. Init params.
 

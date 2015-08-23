@@ -21,13 +21,6 @@ template<typename DType>
 class IIterator : public dmlc::DataIter<DType> {
  public:
   /*!
-   * \brief set the parameter
-   * \param name name of parameter
-   * \param val  value of parameter
-   */
-  virtual void SetParam(const char *name, const char *val) = 0;
-  /*!
->>>>>>> pass python mnist test, begin cleaning
    * \brief set the parameters and init iter
    * \param kwargs key-value pairs
    */ 
