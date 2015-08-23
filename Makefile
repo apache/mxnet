@@ -112,8 +112,6 @@ lib/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ) $(LIB_DEP)
 lib/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ) $(LIB_DEP)
 
 test/test_storage: test/test_storage.cc lib/libmxnet.a
-#test/io_mnist_test: test/io_mnist_test.cc lib/libmxnet.a $(DMLC_CORE)/libdmlc.a
-#test/test_threaded_engine: test/test_threaded_engine.cc api/libmxnet.a
 
 $(BIN) :
 	$(CXX) $(CFLAGS) -std=c++0x -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
