@@ -1,13 +1,7 @@
-#-----------------------------------------------------
-#  cxxnet: the configuration compile script
-#
-#  This is the default configuration setup for cxxnet
-#  If you want to change configuration, do the following steps:
-#
-#  - copy this file to the root folder
-#  - modify the configuration you want
-#  - type make or make -j n for parallel build
-#----------------------------------------------------
+#--------------------------------------------------------
+# Configuration for document generation with less deps
+# The library may not run, but doc generation could work
+#--------------------------------------------------------
 
 # choice of compiler
 export CC = gcc
@@ -36,7 +30,7 @@ USE_CUDNN_PATH = NONE
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
 USE_STATIC_MKL = NONE
-USE_BLAS = blas
+USE_BLAS = NONE
 #
 # add path to intel libary, you may need it
 # for MKL, if you did not add the path to enviroment variable
@@ -53,12 +47,12 @@ USE_RABIT_PS = 0
 RABIT_PATH = rabit
 
 # use openmp iterator
-USE_OPENMP_ITER = 1
+USE_OPENMP_ITER = 0
 # the additional link flags you want to add
 ADD_LDFLAGS =
 
 # the additional compile flags you want to add
-ADD_CFLAGS =
+ADD_CFLAGS = -DMSHADOW_STAND_ALONE=1
 #
 # If use MKL, choose static link automaticly to fix python wrapper
 #
@@ -75,7 +69,7 @@ USE_HDFS = 0
 
 # whether use AWS S3 support during compile
 # this will allow cxxnet to directly save/load model from s3
-USE_S3 = 1
+USE_S3 = 0
 
 # path to libjvm.so
 LIBJVM=$(JAVA_HOME)/jre/lib/amd64/server

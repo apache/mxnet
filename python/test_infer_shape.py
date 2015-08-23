@@ -1,11 +1,11 @@
 # pylint: skip-file
 import mxnet as mx
 
-data = mx.sym.Variable('data')
+data = mx.symbol.Variable('data')
 
-fc1 = mx.sym.FullyConnected(data=data, name='fc1', num_hidden=1000)
-fc2 = mx.sym.FullyConnected(data=fc1, name='fc2', num_hidden=10)
-fc3 = mx.sym.FullyConnected( name='fc2', num_hidden=10)
+fc1 = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=1000)
+fc2 = mx.symbol.FullyConnected(data=fc1, name='fc2', num_hidden=10)
+fc3 = mx.symbol.FullyConnected( name='fc2', num_hidden=10)
 
 print fc2.list_arguments()
 

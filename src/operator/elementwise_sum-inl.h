@@ -26,7 +26,8 @@ enum ElementWiseSumOpOutputs {kOut};
 struct ElementWiseSumParam : public dmlc::Parameter<ElementWiseSumParam> {
   int size;
   DMLC_DECLARE_PARAMETER(ElementWiseSumParam) {
-    DMLC_DECLARE_FIELD(size).set_range(1, 100);
+    DMLC_DECLARE_FIELD(size).set_range(1, 100)
+        .describe("Number of inputs to be sumed.");
   }
 };
 

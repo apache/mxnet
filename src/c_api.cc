@@ -8,10 +8,11 @@
 #include <mxnet/base.h>
 #include <mxnet/narray.h>
 #include <mxnet/symbolic.h>
-#include <mxnet/registry.h>
 #include <mxnet/operator.h>
 #include <mxnet/c_api.h>
 #include <vector>
+#include <sstream>
+#include <string>
 #include <mutex>
 #include <memory>
 
@@ -118,13 +119,13 @@ class MXAPIThreadLocalStore {
 #define API_BEGIN() try {
 /*! \brief every function starts with API_BEGIN();
      and finishes with API_END() or API_END_HANDLE_ERROR */
-#define API_END() } catch(dmlc::Error &e) { return MXHandleException(e); } return 0;
+#define API_END() } catch(dmlc::Error &_except_) { return MXHandleException(_except_); } return 0;
 /*!
  * \brief every function starts with API_BEGIN();
  *   and finishes with API_END() or API_END_HANDLE_ERROR
  *   The finally clause contains procedure to cleanup states when an error happens.
  */
-#define API_END_HANDLE_ERROR(Finalize) } catch(dmlc::Error &e) { Finalize; return MXHandleException(e); } return 0; // NOLINT(*)
+#define API_END_HANDLE_ERROR(Finalize) } catch(dmlc::Error &_except_) { Finalize; return MXHandleException(_except_); } return 0; // NOLINT(*)
 
 /*! \brief return str message of the last error */
 const char *MXGetLastError() {
@@ -139,6 +140,39 @@ const char *MXGetLastError() {
 int MXHandleException(const dmlc::Error &e) {
   MXAPIThreadLocalStore::Get()->last_error = e.what();
   return -1;
+}
+
+// Internal function to get the information
+// from function registry
+// Used to implement MXSymbolGetAtomicSymbolInfo and MXFuncGetInfo
+template<typename FunRegType>
+inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
+                                   const char **name,
+                                   const char **description,
+                                   mx_uint *num_args,
+                                   const char ***arg_names,
+                                   const char ***arg_type_infos,
+                                   const char ***arg_descriptions) {
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+
+  API_BEGIN();
+  *name = e->name.c_str();
+  *description = e->description.c_str();
+  *num_args = static_cast<mx_uint>(e->arguments.size());
+  ret->ret_vec_charp.clear();
+  for (size_t i = 0; i < e->arguments.size(); ++i) {
+    ret->ret_vec_charp.push_back(e->arguments[i].name.c_str());
+  }
+  for (size_t i = 0; i < e->arguments.size(); ++i) {
+    ret->ret_vec_charp.push_back(e->arguments[i].type_info_str.c_str());
+  }
+  for (size_t i = 0; i < e->arguments.size(); ++i) {
+    ret->ret_vec_charp.push_back(e->arguments[i].description.c_str());
+  }
+  *arg_names = dmlc::BeginPtr(ret->ret_vec_charp);
+  *arg_type_infos = dmlc::BeginPtr(ret->ret_vec_charp) + e->arguments.size();
+  *arg_descriptions = dmlc::BeginPtr(ret->ret_vec_charp) + (e->arguments.size() * 2);
+  API_END();
 }
 
 // NOTE: return value is added in API_END
@@ -239,7 +273,7 @@ int MXNArrayGetContext(NArrayHandle handle,
 int MXListFunctions(mx_uint *out_size,
                     FunctionHandle **out_array) {
   API_BEGIN();
-  auto &vec = Registry<NArrayFunctionEntry>::List();
+  auto &vec = dmlc::Registry<NArrayFunctionReg>::List();
   *out_size = static_cast<mx_uint>(vec.size());
   *out_array = (FunctionHandle*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
   API_END();
@@ -248,16 +282,20 @@ int MXListFunctions(mx_uint *out_size,
 int MXGetFunction(const char *name,
                   FunctionHandle *out) {
   API_BEGIN();
-  *out = Registry<NArrayFunctionEntry>::Find(name);
+  *out = dmlc::Registry<NArrayFunctionReg>::Find(name);
   API_END();
 }
 
-int MXFuncGetName(FunctionHandle fun,
-                  const char **out_name) {
-  API_BEGIN();
-  auto *f = static_cast<const NArrayFunctionEntry*>(fun);
-  *out_name = f->name.c_str();
-  API_END();
+int MXFuncGetInfo(FunctionHandle fun,
+                  const char **name,
+                  const char **description,
+                  mx_uint *num_args,
+                  const char ***arg_names,
+                  const char ***arg_type_infos,
+                  const char ***arg_descriptions) {
+  return MXAPIGetFunctionRegInfo(static_cast<const NArrayFunctionReg *>(fun),
+                                 name, description, num_args,
+                                 arg_names, arg_type_infos, arg_descriptions);
 }
 
 int MXFuncDescribe(FunctionHandle fun,
@@ -266,7 +304,7 @@ int MXFuncDescribe(FunctionHandle fun,
                    mx_uint *num_mutate_vars,
                    int *type_mask) {
   API_BEGIN();
-  auto *f = static_cast<const NArrayFunctionEntry*>(fun);
+  auto *f = static_cast<const NArrayFunctionReg*>(fun);
   *num_use_vars = f->num_use_vars;
   *num_scalars = f->num_scalars;
   *num_mutate_vars = f->num_mutate_vars;
@@ -279,10 +317,10 @@ int MXFuncInvoke(FunctionHandle fun,
                  mx_float *scalar_args,
                  NArrayHandle *mutate_vars) {
   API_BEGIN();
-  auto *f = static_cast<const NArrayFunctionEntry*>(fun);
-  (*f)((NArray**)(use_vars),  //  NOLINT(*)
-       scalar_args,
-       (NArray**)(mutate_vars));  //  NOLINT(*)
+  auto *f = static_cast<const NArrayFunctionReg*>(fun);
+  f->body((NArray**)(use_vars),  //  NOLINT(*)
+          scalar_args,
+          (NArray**)(mutate_vars));  //  NOLINT(*)
   API_END();
 }
 
@@ -293,7 +331,7 @@ int MXFuncInvoke(FunctionHandle fun,
 int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
                                      AtomicSymbolCreator **out_array) {
   API_BEGIN();
-  auto &vec = Registry<OperatorPropertyEntry>::List();
+  auto &vec = dmlc::Registry<OperatorPropertyReg>::List();
   *out_size = static_cast<mx_uint>(vec.size());
   *out_array = (AtomicSymbolCreator*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
   API_END();
@@ -302,9 +340,21 @@ int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
 int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
                                 const char **out) {
   API_BEGIN();
-  OperatorPropertyEntry *e = static_cast<OperatorPropertyEntry *>(creator);
+  OperatorPropertyReg *e = static_cast<OperatorPropertyReg *>(creator);
   *out = e->name.c_str();
   API_END();
+}
+
+int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
+                                const char **name,
+                                const char **description,
+                                mx_uint *num_args,
+                                const char ***arg_names,
+                                const char ***arg_type_infos,
+                                const char ***arg_descriptions) {
+  OperatorPropertyReg *e = static_cast<OperatorPropertyReg *>(creator);
+  return MXAPIGetFunctionRegInfo(e, name, description, num_args,
+                                 arg_names, arg_type_infos, arg_descriptions);
 }
 
 int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
@@ -316,8 +366,8 @@ int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
   OperatorProperty *op = nullptr;
 
   API_BEGIN();
-  OperatorPropertyEntry *e = static_cast<OperatorPropertyEntry *>(creator);
-  op = (*e)();
+  OperatorPropertyReg *e = static_cast<OperatorPropertyReg *>(creator);
+  op = e->body();
   std::vector<std::pair<std::string, std::string> > kwargs;
   for (int i = 0; i < num_param; ++i) {
     kwargs.push_back({std::string(keys[i]), std::string(vals[i])});

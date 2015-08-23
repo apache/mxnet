@@ -55,17 +55,16 @@ ifneq ($(ADD_LDFLAGS), NONE)
 endif
 
 #BIN = test/test_threaded_engine test/api_registry_test
-BIN = test/api_registry_test test/test_storage
-OBJ = narray_op_cpu.o
+OBJ = narray_function_cpu.o
 # add threaded engine after it is done
-OBJCXX11 = engine.o narray.o c_api.o registry.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o elementwise_sum_cpu.o graph_executor.o pooling_cpu.o
+OBJCXX11 = engine.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o
 CUOBJ =
 SLIB = lib/libmxnet.so
 ALIB = lib/libmxnet.a
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
 
 ifeq ($(USE_CUDA), 1)
-	CUOBJ += narray_op_gpu.o fully_connected_gpu.o activation_gpu.o elementwise_sum_gpu.o pooling_gpu.o
+	CUOBJ += narray_function_gpu.o fully_connected_gpu.o activation_gpu.o elementwise_sum_gpu.o pooling_gpu.o softmax_gpu.o
 endif
 
 .PHONY: clean all test lint doc
@@ -78,14 +77,13 @@ $(DMLC_CORE)/libdmlc.a:
 storage.o: src/storage/storage.cc
 engine.o: src/dag_engine/simple_engine.cc
 narray.o: src/narray/narray.cc
-narray_op_cpu.o: src/narray/narray_op_cpu.cc src/narray/narray_op-inl.h
-narray_op_gpu.o: src/narray/narray_op_gpu.cu src/narray/narray_op-inl.h
+narray_function_cpu.o: src/narray/narray_function.cc src/narray/narray_function-inl.h
+narray_function_gpu.o: src/narray/narray_function.cu src/narray/narray_function-inl.h
 symbol.o: src/symbol/symbol.cc
 graph_executor.o: src/symbol/graph_executor.cc
 static_graph.o : src/symbol/static_graph.cc
-registry.o: src/registry.cc
+operator.o: src/operator/operator.cc
 c_api.o: src/c_api.cc
-operator.o: src/operator/static_operator_wrapper.cc
 fully_connected_cpu.o: src/operator/fully_connected.cc
 fully_connected_gpu.o: src/operator/fully_connected.cu
 activation_cpu.o: src/operator/activation.cc
@@ -94,12 +92,12 @@ elementwise_sum_cpu.o: src/operator/elementwise_sum.cc
 elementwise_sum_gpu.o: src/operator/elementwise_sum.cu
 pooling_cpu.o: src/operator/pooling.cc
 pooling_gpu.o: src/operator/pooling.cu
-
+softmax_cpu.o: src/operator/softmax.cc
+softmax_gpu.o: src/operator/softmax.cu
 
 lib/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)
 lib/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ)
 
-test/api_registry_test: test/api_registry_test.cc lib/libmxnet.a
 test/test_storage: test/test_storage.cc lib/libmxnet.a
 #test/test_threaded_engine: test/test_threaded_engine.cc api/libmxnet.a
 
@@ -128,7 +126,7 @@ $(CUBIN) :
 lint:
 	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts test python
 
-doc:
+doxygen:
 	doxygen doc/Doxyfile
 
 clean:

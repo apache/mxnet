@@ -11,7 +11,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<gpu>(PoolingParam param) {
-  switch (param.type) {
+  switch (param.pool_type) {
     case kMaxPooling: return new PoolingOp<gpu, mshadow::red::maximum>(param);
     case kAvgPooling: return new PoolingOp<gpu, mshadow::red::sum>(param);
     case kSumPooling: return new PoolingOp<gpu, mshadow::red::sum>(param);

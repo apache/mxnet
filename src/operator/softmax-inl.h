@@ -1,11 +1,11 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file activation-inl.h
- * \brief Activation operator
+ * \file softmax-inl.h
+ * \brief
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_ACTIVATION_INL_H_
-#define MXNET_OPERATOR_ACTIVATION_INL_H_
+#ifndef MXNET_OPERATOR_SOFTMAX_INL_H_
+#define MXNET_OPERATOR_SOFTMAX_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -19,43 +19,35 @@
 
 namespace mxnet {
 namespace op {
-// Declare enumeration of input order to make code more intuitive.
-// // These enums are only visible within this header
-enum ActivationOpInputs {kData};
-enum ActivationOpOutputs {kOut};
-enum ActivationOpType {kReLU, kSigmoid, kTanh};
 
-struct ActivationParam : public dmlc::Parameter<ActivationParam> {
-  // use int for enumeration
-  int act_type;
-  DMLC_DECLARE_PARAMETER(ActivationParam) {
-    DMLC_DECLARE_FIELD(act_type).set_default(kReLU)
-        .add_enum("relu", kReLU)
-        .add_enum("sigmoid", kSigmoid)
-        .add_enum("tanh", kTanh)
-        .describe("Activation function to be applied.");
-  }
+enum SoftmaxOpInputs {kData, kLabel};
+enum SoftmaxOpOutputs {kOut};
+
+struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
+  float grad_scale;
+  DMLC_DECLARE_PARAMETER(SoftmaxParam) {
+    DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
+      .describe("Scale the gradient by a float factor");
+  };
 };
 
-/**
- * \brief This is the implementation of activation operator.
- * \tparam xpu The device that the op will be executed on.
- */
-template<typename xpu, typename ForwardOp, typename BackwardOp>
-class ActivationOp : public Operator {
+template<typename xpu>
+class SoftmaxOp : public Operator {
  public:
+  explicit SoftmaxOp(SoftmaxParam param) : param_(param) {}
+
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(in_data.size(), 2) << "Softmax Input: [data, label]";
+    CHECK_EQ(out_data.size(), 1) << "Softmax Output: [output]";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
-    Assign(out, req[kOut], F<ForwardOp>(data));
+    Softmax(data, out);
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -66,57 +58,66 @@ class ActivationOp : public Operator {
                         const std::vector<TBlob> &in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    CHECK_EQ(in_data.size(), 2);
     CHECK_EQ(out_grad.size(), 1);
-    CHECK(in_data.size() == 1 && in_grad.size() == 1);
-    CHECK_EQ(req.size(), 1);
+    CHECK_GE(in_grad.size(), 1);
+    CHECK_GE(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> m_out_grad = out_grad[kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> m_out_data = out_data[kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> m_in_grad = in_grad[kData].FlatTo2D<xpu, real_t>(s);
-    Assign(m_in_grad, req[kData], F<BackwardOp>(m_out_data) * m_out_grad);
+    Tensor<xpu, 1> label = in_data[kLabel].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> grad = in_grad[kData].FlatTo2D<xpu, real_t>(s);
+    SoftmaxGrad(grad, out, label);
+    if (param_.grad_scale < 1.0) {
+      grad *= param_.grad_scale;
+    }
   }
-};  // class ActivationOp
+
+ private:
+  SoftmaxParam param_;
+};  // class SoftmaxOp
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(ActivationParam type);
+Operator* CreateOp(SoftmaxParam param);
 
 #if DMLC_USE_CXX11
-class ActivationProp : public OperatorProperty {
+class SoftmaxProp : public OperatorProperty {
  public:
+  virtual std::vector<std::string> ListArguments() const {
+    return {"data", "label"};
+  }
+
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
-    // TODO(bing) change directly to vector of pairs begin end
-    std::map<std::string, std::string> kmap(kwargs.begin(), kwargs.end());
-    param_.Init(kmap);
+    param_.Init(kwargs);
   }
 
   virtual bool InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape) const {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1) << "Input:[data]";
+    CHECK_EQ(in_shape->size(), 2) << "Input:[data, label]";
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
+    SHAPE_ASSIGN_CHECK(*in_shape, kLabel, Shape1(dshape[0]));
     out_shape->clear();
     out_shape->push_back(dshape);
     return true;
   }
 
   virtual OperatorProperty* Copy() const {
-    auto ptr = new ActivationProp();
+    auto ptr = new SoftmaxProp();
     ptr->param_ = param_;
     return ptr;
   }
 
   virtual std::string TypeString() const {
-    return "Activation";
+    return "Softmax";
   }
 
-  // decalre dependency and inplace optimization options
   virtual std::vector<int> DeclareBackwardDependency(
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data) const {
-    return {out_grad[kOut], out_data[kOut]};
+    return {in_data[kLabel], out_data[kOut]};
   }
 
   virtual std::vector<std::pair<int, void*> > BackwardInplaceOption(
@@ -124,7 +125,7 @@ class ActivationProp : public OperatorProperty {
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
       const std::vector<void*> &in_grad) const {
-    return {{out_grad[kOut], in_grad[kData]}};
+    return {{out_data[kOut], in_grad[kData]}};
   }
 
   virtual std::vector<std::pair<int, void*> > ForwardInplaceOption(
@@ -136,10 +137,10 @@ class ActivationProp : public OperatorProperty {
   Operator* CreateOperator(Context ctx) const;
 
  private:
-  ActivationParam param_;
-};
+  SoftmaxParam param_;
+};  // class SoftmaxProp
 #endif  // DMLC_USE_CXX11
+
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_ACTIVATION_INL_H_
-
+#endif  // MXNET_OPERATOR_SOFTMAX_INL_H_

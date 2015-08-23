@@ -4,15 +4,13 @@
  * \brief
  * \author Bing Xu
 */
-
-#include <mxnet/registry.h>
 #include "./pooling-inl.h"
 
 namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<cpu>(PoolingParam param) {
-  switch (param.type) {
+  switch (param.pool_type) {
     case kMaxPooling: return new PoolingOp<cpu, mshadow::red::maximum>(param);
     case kAvgPooling: return new PoolingOp<cpu, mshadow::red::sum>(param);
     case kSumPooling: return new PoolingOp<cpu, mshadow::red::sum>(param);
@@ -28,7 +26,11 @@ Operator* PoolingProp::CreateOperator(Context ctx) const {
 
 DMLC_REGISTER_PARAMETER(PoolingParam);
 
-REGISTER_OP_PROPERTY(Pooling, PoolingProp);
+MXNET_REGISTER_OP_PROPERTY(Pooling, PoolingProp)
+.describe("Perform spatial pooling on inputs.")
+.add_argument("data", "Symbol", "Input data to the pooling operator.")
+.add_arguments(PoolingParam::__FIELDS__());
+
 }  // namespace op
 }  // namespace mxnet
 

@@ -226,7 +226,6 @@ class Symbol(object):
         """
         # TODO(bing): consider a more friendly interface
         # For example, pass in args_grad by dict
-
         enum = {"null" : 0, "write_to" : 1, "in_place":2, "add_to" : 3}
         if not isinstance(ctx, Context):
             raise TypeError("Context type error")
@@ -289,8 +288,41 @@ def Group(symbols):
     return Symbol(handle)
 
 
-def _make_atomic_symbol_function(handle, func_name):
+def _make_atomic_symbol_function(handle):
     """Create an atomic symbol function by handle and funciton name."""
+    name = ctypes.c_char_p()
+    desc = ctypes.c_char_p()
+    num_args = mx_uint()
+    arg_names = ctypes.POINTER(ctypes.c_char_p)()
+    arg_types = ctypes.POINTER(ctypes.c_char_p)()
+    arg_descs = ctypes.POINTER(ctypes.c_char_p)()
+
+    check_call(_LIB.MXSymbolGetAtomicSymbolInfo( \
+            handle, ctypes.byref(name), ctypes.byref(desc), \
+            ctypes.byref(num_args), \
+            ctypes.byref(arg_names), \
+            ctypes.byref(arg_types), \
+            ctypes.byref(arg_descs)))
+    func_name = name.value
+    param_str = []
+    for i in range(num_args.value):
+        ret = '%s : %s' % (arg_names[i], arg_types[i])
+        if len(arg_descs[i]) != 0:
+            ret += '\n    ' + arg_descs[i]
+        param_str.append(ret)
+
+    doc_str = ('%s\n\n' +
+               'Parameters\n' +
+               '----------\n' +
+               '%s\n' +
+               'name : string, required.\n' +
+               '    Name of the resulting symbol.\n\n' +
+               'Returns\n' +
+               '-------\n' +
+               'symbol: Symbol\n'+
+               '    The result symbol.')
+    doc_str = doc_str % (desc.value, '\n'.join(param_str))
+
     def creator(*args, **kwargs):
         """Activation Operator of Neural Net.
         The parameters listed below can be passed in as keyword arguments.
@@ -332,24 +364,24 @@ def _make_atomic_symbol_function(handle, func_name):
         s = Symbol(sym_handle)
         s._compose(*args, name=name, **symbol_kwargs)
         return s
+
     creator.__name__ = func_name
+    creator.__doc__ = doc_str
     return creator
 
 
-def _init_module_functions():
+def _init_symbol_module():
     """List and add all the atomic symbol functions to current module."""
     plist = ctypes.POINTER(ctypes.c_void_p)()
     size = ctypes.c_uint()
+
     check_call(_LIB.MXSymbolListAtomicSymbolCreators(ctypes.byref(size),
                                                      ctypes.byref(plist)))
     module_obj = sys.modules[__name__]
     for i in range(size.value):
         hdl = ctypes.c_void_p(plist[i])
-        name = ctypes.c_char_p()
-        check_call(_LIB.MXSymbolGetAtomicSymbolName(hdl, ctypes.byref(name)))
-        function = _make_atomic_symbol_function(hdl, name.value)
+        function = _make_atomic_symbol_function(hdl)
         setattr(module_obj, function.__name__, function)
 
 # Initialize the atomic symbo in startups
-_init_module_functions()
-
+_init_symbol_module()

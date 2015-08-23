@@ -1,7 +1,7 @@
 // this will be invoked by nvcc and compile GPU version
 #include <dmlc/logging.h>
-#include "./narray_op.h"
-#include "./narray_op-inl.h"
+#include "./narray_function.h"
+#include "./narray_function-inl.h"
 
 namespace mxnet {
 namespace narray {
@@ -11,7 +11,7 @@ void Copy<cpu, gpu>(const TBlob &from, TBlob *to,
                     RunContext ctx) {
   mshadow::Copy(to->FlatTo2D<gpu, real_t>(),
                 from.FlatTo2D<cpu, real_t>(),
-                static_cast<mshadow::Stream<gpu>*>(ctx.stream));  
+                static_cast<mshadow::Stream<gpu>*>(ctx.stream));
 }
 
 template<>
@@ -20,7 +20,7 @@ void Copy<gpu, cpu>(const TBlob &from, TBlob *to,
                     RunContext ctx) {
   mshadow::Copy(to->FlatTo2D<cpu, real_t>(),
                 from.FlatTo2D<gpu, real_t>(),
-                static_cast<mshadow::Stream<gpu>*>(ctx.stream));  
+                static_cast<mshadow::Stream<gpu>*>(ctx.stream));
 }
 
 template<>
@@ -33,7 +33,7 @@ void Copy<gpu, gpu>(const TBlob &from, TBlob *to,
                    static_cast<mshadow::Stream<gpu>*>(ctx.stream));
    } else {
      CHECK(from.CheckContiguous() && to->CheckContiguous())
-         << "copy across only support continugous memory";     
+         << "copy across only support continugous memory";
      mshadow::Stream<gpu> *s = static_cast<mshadow::Stream<gpu>*>(ctx.stream);
      CHECK(s != NULL) << "need stream in GPU context";
      cudaMemcpyPeerAsync(to->dptr_,
