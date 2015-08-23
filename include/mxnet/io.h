@@ -21,12 +21,6 @@ template<typename DType>
 class IIterator : public dmlc::DataIter<DType> {
  public:
   /*!
-   * \brief set the parameter
-   * \param name name of parameter
-   * \param val  value of parameter
-   */
-  virtual void SetParam(const char *name, const char *val) = 0;
-  /*!
    * \brief set the parameters and init iter
    * \param kwargs key-value pairs
    */ 
@@ -88,25 +82,6 @@ struct DataBatch {
   /*! \brief giving name to the data */
   void Naming(std::vector<std::string> names);
 };  // struct DataBatch
-
-/*!
- * \brief create the databatch iterator IIterator
- * \param cfg configure settings key=vale pair
- * \return the data IIterator ptr
- */
-IIterator<DataBatch> *CreateIterator(const std::vector<std::pair<std::string, std::string> > &cfg);
-/*!
- * \brief create the databatch iterator IIterator from config file
- * \param cfg_path configure file path
- * \return the data IIterator ptr
- */
-IIterator<DataBatch> *CreateIteratorFromConfig(const char* cfg_path);
-/*!
- * \brief create the databatch iterator IIterator by iter name
- * \param iter_name can be mnist, imgrec and so on
- * \return the data IIterator ptr
- */
-IIterator<DataBatch> *CreateIteratorByName(const char* iter_name);
 
 /*! \brief typedef the factory function of data iterator */
 typedef IIterator<DataBatch> *(*DataIteratorFactory)();

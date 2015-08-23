@@ -10,11 +10,17 @@
 #include <memory>
 #include <type_traits>
 #include <utility>
+#include <random>
 #endif  // DMLC_USE_CXX11
 
 namespace common {
 
 #if DMLC_USE_CXX11
+
+/*!
+ * \brief Random Engine
+ */
+typedef std::mt19937 RANDOM_ENGINE;
 
 /*!
  * \brief Helper functions.

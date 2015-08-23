@@ -6,7 +6,7 @@ from __future__ import absolute_import
 import ctypes
 import sys
 from .base import _LIB
-from .base import c_array, c_str, mx_uint, string_types
+from .base import c_array, c_str, mx_uint
 from .base import DataIterHandle, NArrayHandle
 from .base import check_call
 from .narray import NArray
@@ -26,7 +26,7 @@ class DataIter(object):
 
     def __del__(self):
         check_call(_LIB.MXDataIterFree(self.handle))
-        
+
     def __call__(self, *args, **kwargs):
         """Invoke iterator as function on inputs. Init params.
 
@@ -43,9 +43,9 @@ class DataIter(object):
         """
         if len(args) != 0:
             raise TypeError('data iterator only accept \
-                    keyword arguments')     
+                    keyword arguments')
         num_args = len(kwargs)
-        keys = c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()]) 
+        keys = c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()])
         vals = c_array(ctypes.c_char_p, [c_str(val) for val in kwargs.values()])
         check_call(_LIB.MXDataIterSetInit( \
                 self.handle, num_args, keys, vals))
@@ -131,8 +131,6 @@ def _make_io_iterator(handle):
         """
         param_keys = []
         param_vals = []
-        symbol_kwargs = {}
-        name = kwargs.pop('name', None)
 
         for k, v in kwargs.items():
             param_keys.append(c_str(k))
@@ -160,9 +158,7 @@ def _init_io_module():
     """List and add all the data iterators to current module."""
     plist = ctypes.POINTER(ctypes.c_void_p)()
     size = ctypes.c_uint()
-
-    check_call(_LIB.MXListDataIters(ctypes.byref(size),ctypes.byref(plist)))
-
+    check_call(_LIB.MXListDataIters(ctypes.byref(size), ctypes.byref(plist)))
     module_obj = sys.modules[__name__]
     for i in range(size.value):
         hdl = ctypes.c_void_p(plist[i])
