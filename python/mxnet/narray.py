@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 
 import ctypes
+import sys
 from .base import _LIB
 from .base import c_array
 from .base import mx_uint, mx_float, NArrayHandle, FunctionHandle
@@ -185,7 +186,6 @@ def _make_narray_function(handle):
     """Create a NArray function from the FunctionHandle."""
     # Constants for type masks.
     NARRAY_ARG_BEFORE_SCALAR = 1
-    SCALAR_ARG_BEFORE_NARRAY = 1 << 1
     ACCEPT_EMPTY_MUTATE_TARGET = 1 << 2
     # Get the property of NArray
     n_mutate_vars = 0
@@ -335,6 +335,8 @@ def _init_narray_module():
     size = ctypes.c_uint()
     check_call(_LIB.MXListFunctions(ctypes.byref(size),
                                     ctypes.byref(plist)))
+
+    module_obj = sys.modules[__name__]
     for i in range(size.value):
         hdl = FunctionHandle(plist[i])
         function = _make_narray_function(hdl)
