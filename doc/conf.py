@@ -158,26 +158,12 @@ def run_doxygen(folder):
     except OSError as e:
         sys.stderr.write("doxygen execution failed: %s" % e)
 
-def run_build_mxnet(folder):
-    """Run the doxygen make command in the designated folder."""
-    try:
-        subprocess.call('cd ..; rm -rf dmlc-core;' +
-                        'git clone https://github.com/dmlc/dmlc-core', shell = True)
-        subprocess.call('cd ..; rm -rf mshadow;' +
-                        'git clone https://github.com/dmlc/mshadow', shell = True)
-        subprocess.call('cd ..; cp/make/readthedocs.mk config.mk', shell = True)
-        retcode = subprocess.call("cd %s; make" % folder, shell=True)
-        if retcode < 0:
-            sys.stderr.write("build terminated by signal %s" % (-retcode))
-    except OSError as e:
-        sys.stderr.write("build execution failed: %s" % e)
 
 def generate_doxygen_xml(app):
     """Run the doxygen make commands if we're on the ReadTheDocs server"""
     read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
     if read_the_docs_build:
         run_doxygen('..')
-        run_build_mxnet('..')
     sys.stderr.write('The Lib path: %s\n' % str(os.listdir('../lib')))
 
 def setup(app):
