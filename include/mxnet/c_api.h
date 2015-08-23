@@ -348,6 +348,19 @@ MXNET_DLL int MXSymbolCompose(SymbolHandle sym,
                               const char** keys,
                               SymbolHandle* args);
 /*!
+ * \brief Get the gradient graph of the symbol
+ *
+ * \param sym the symbol to get gradient
+ * \param num_wrt number of arguments to get gradient
+ * \param wrt the name of the arguments to get gradient
+ * \param out the returned symbol that has gradient
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolGrad(SymbolHandle sym,
+                           mx_uint num_wrt,
+                           const char** wrt,
+                           SymbolHandle* out);
+/*!
  * \brief infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
  *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.

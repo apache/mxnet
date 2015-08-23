@@ -165,7 +165,7 @@ StaticGraph::Node StaticGraph::CreateSumNode(
 }
 
 void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
-                                   std::vector<std::vector<DataEntry> > *arg_grads) {
+                                   std::vector<DataEntry> *arg_grads) {
   arg_grads->clear();
   head_grad_nodes->clear();
   // get topo order of nodes, before new nodes are added
@@ -254,7 +254,17 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
     DataEntry odata(arg_nodes[i], 0);
     auto it = grad_map.find(odata);
     CHECK(it != grad_map.end()) << "bad graph";
-    arg_grads->at(i) = it->second;
+    if (it->second.size() == 1) {
+      arg_grads->at(i) = it->second[0];
+    } else {
+      std::ostringstream os_name;
+      Node agg_node = StaticGraph::CreateSumNode(it->second);
+      os_name << nodes[arg_nodes[i]].name << "_grad_agg";
+      agg_node.name = os_name.str();
+      uint32_t agg_node_id = static_cast<uint32_t>(nodes.size());
+      nodes.push_back(std::move(agg_node));
+      arg_grads->at(i) = DataEntry(agg_node_id, 0);
+    }
   }
 }
 }  // namespace mxnet

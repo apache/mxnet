@@ -243,6 +243,21 @@ class Symbol(object):
                                        ctypes.byref(handle)))
         return Executor(handle)
 
+    def grad(self, wrt):
+        """get the autodiff of current symbol.
+
+        Parameters
+        ----------
+        wrt: Array of String
+            keyword arguments of the symbol that the gradients are taken.
+        """
+        handle = SymbolHandle()
+        c_wrt = c_array(ctypes.c_char_p, [c_str(key) for key in wrt])
+        check_call(_LIB.MXSymbolGrad(self.handle,
+                                     mx_uint(len(wrt)),
+                                     c_wrt,
+                                     ctypes.byref(handle)))
+        return Symbol(handle)
 
 def Variable(name):
     """Create a symbolic variable with specified name.
