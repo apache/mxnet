@@ -7,6 +7,12 @@ def CalAcc(out, label):
     pred = np.argmax(out, axis=1)
     return np.sum(pred == label.transpose()) * 1.0 / out.shape[0]
 
+def SetGradient(out_grad, label):
+    assert(out_grad.shape[0] == label.shape[0])
+    for i in xrange(label.shape[0]):
+        k = label[i]
+        out_grad[i][k] -= 1.0
+
 # symbol net
 batch_size = 100
 data = mx.symbol.Variable('data')
@@ -18,10 +24,8 @@ fc2 = mx.symbol.FullyConnected(data = fl, name='fc2', num_hidden=10)
 softmax = mx.symbol.Softmax(data = fc2, name = 'sm')
 args_list = softmax.list_arguments()
 # infer shape
-#data_shape = (batch_size, 784)
-
-data_shape = (batch_size, 1, 28, 28)
-arg_shapes, out_shapes = softmax.infer_shape(data=data_shape)
+data_shape = (batch_size, 1, 1, 784)
+arg_shapes, out_shapes = fc2.infer_shape(data=data_shape)
 arg_narrays = [mx.narray.create(shape) for shape in arg_shapes]
 grad_narrays = [mx.narray.create(shape) for shape in arg_shapes]
 mom_narrays = [mx.narray.create(shape) for shape in arg_shapes]
@@ -96,4 +100,3 @@ for i in xrange(epoch):
     print "Valid Acc: ", val_acc / val_nbatch
     train_dataiter.beforefirst()
     val_dataiter.beforefirst()
-
