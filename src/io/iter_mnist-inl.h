@@ -58,16 +58,10 @@ class MNISTIterator: public IIterator<DataBatch> {
   MNISTIterator(void) {
     img_.dptr_ = NULL;
     inst_offset_ = 0;
-    rnd.Seed(kRandMagic);
     out_.data.resize(2);
   }
   virtual ~MNISTIterator(void) {
     if (img_.dptr_ != NULL) delete []img_.dptr_;
-  }
-  virtual void SetParam(const char *name, const char *val) {
-    std::map<std::string, std::string> kwargs;
-    kwargs[name] = val;
-    param.Init(kwargs);
   }
   // intialize iterator loads data in
   virtual void Init(void) {
