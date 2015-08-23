@@ -1,22 +1,21 @@
 #pylint: skip-file
 import mxnet as mx
+import numpy as np
+import os
 
-dataiter = mx.io.DataIter()
-#a.createfromcfg('/home/tianjun/mxnet/mxnet/MNIST.conf')
-dataiter.createbyname('mnist')
-dataiter.setparam('path_img', "/home/tianjun/data/mnist/train-images-idx3-ubyte")
-dataiter.setparam('path_label', "/home/tianjun/data/mnist/train-labels-idx1-ubyte")
-dataiter.setparam('shuffle', '1')
-dataiter.setparam('seed_data', '2')
-dataiter.setparam('batch_size', '100')
-
-dataiter.init()
+dataiter = mx.io.MNISTIterator(path_img="/home/tianjun/data/mnist/train-images-idx3-ubyte",
+        path_label="/home/tianjun/data/mnist/train-labels-idx1-ubyte",
+        batch_size=100, shuffle=1, silent=1, input_flat="flat")
 
 dataiter.beforefirst()
 
-for i in range(100):
-    dataiter.next()
-    info = "Batch %d" % (i)
+idx = 0
+while dataiter.next():
+    info = "Batch %d" % (idx)
+    idx += 1
     print info
-    label = dataiter.getdata()
+    '''
+    label = dataiter.getlabel()
     print label.numpy
+    '''
+

@@ -106,9 +106,10 @@ class MNISTIterator: public IIterator<DataBatch> {
   virtual const DataBatch &Value(void) const {
     return out_;
   }
-  virtual void InitParams(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  virtual void SetInit(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     std::map<std::string, std::string> kmap(kwargs.begin(), kwargs.end());
     param.Init(kmap);
+    this->Init();
   }
  private:
   inline void LoadImage(void) {
