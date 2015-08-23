@@ -25,6 +25,11 @@ class IIterator : public dmlc::DataIter<DType> {
    * \param val  value of parameter
    */
   virtual void SetParam(const char *name, const char *val) = 0;
+  /*!
+   * \brief init the parameter
+   * \param kwargs key-value pairs
+   */ 
+  virtual void InitParams(const std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
   /*! \brief initalize the iterator so that we can use the iterator */
   virtual void Init(void) = 0;
   /*! \brief set before first of the item */
