@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 
 import ctypes
+import sys
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, string_types
 from .base import DataIterHandle, NArrayHandle
@@ -25,65 +26,42 @@ class DataIter(object):
 
     def __del__(self):
         check_call(_LIB.MXDataIterFree(self.handle))
+        
+    def __call__(self, *args, **kwargs):
+        """Invoke iterator as function on inputs. Init params.
 
-    
-    
-    
-    
-    
-    
-    
-    
-    def __init__(self):
-        """initialize a new dataiter
+        Parameters
+        ---------
+        args:
+            provide positional arguments, should not be given.
 
+        kwargs:
+            provide keyword arguments
+        Returns
+        -------
+        the inited iterator
         """
-        self._datahandle = None
-
-    def createfromcfg(self, cfg_path):
-        """create a dataiter from config file
-
-        cfg_path is the path of configure file
-        """
-        hdl = DataIterHandle()
-        check_call(_LIB.MXIOCreateFromConfig(ctypes.c_char_p(cfg_path), ctypes.byref(hdl)))
-        self._datahandle = hdl
-
-    def createbyname(self, iter_name):
-        """create a dataiter by the name
-
-        iter_name can be mnist imgrec or so on
-        """
-        hdl = DataIterHandle()
-        check_call(_LIB.MXIOCreateByName(ctypes.c_char_p(iter_name), ctypes.byref(hdl)))
-        self._datahandle = hdl
-
-    def setparam(self, name, val):
-        """set param value for dataiter
-
-        name prameter name
-        val parameter value
-        """
-        check_call(_LIB.MXIOSetParam(self._datahandle, ctypes.c_char_p(name), ctypes.c_char_p(val)))
-
-    def init(self):
-        """init dataiter
-
-        """
-        check_call(_LIB.MXIOInit(self._datahandle))
+        if len(args) != 0:
+            raise TypeError('data iterator only accept \
+                    keyword arguments')     
+        num_args = len(kwargs)
+        keys = c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()]) 
+        vals = c_array(ctypes.c_char_p, [c_str(val) for val in kwargs.values()])
+        check_call(_LIB.MXDataIterSetInit( \
+                self.handle, num_args, keys, vals))
 
     def beforefirst(self):
         """set loc to 0
 
         """
-        check_call(_LIB.MXIOBeforeFirst(self._datahandle))
+        check_call(_LIB.MXDataIterBeforeFirst(self.handle))
 
     def next(self):
         """init dataiter
 
         """
         next_res = ctypes.c_int(0)
-        check_call(_LIB.MXIONext(self._datahandle, ctypes.byref(next_res)))
+        check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
         return next_res.value
 
     def getdata(self):
@@ -91,7 +69,7 @@ class DataIter(object):
 
         """
         hdl = NArrayHandle()
-        check_call(_LIB.MXIOGetData(self._datahandle, ctypes.byref(hdl)))
+        check_call(_LIB.MXDataIterGetData(self.handle, ctypes.byref(hdl)))
         return NArray(hdl)
 
     def getlabel(self):
@@ -99,5 +77,97 @@ class DataIter(object):
 
         """
         hdl = NArrayHandle()
-        check_call(_LIB.MXIOGetLabel(self._datahandle, ctypes.byref(hdl)))
+        check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
         return NArray(hdl)
+
+def _make_io_iterator(handle):
+    """Create an io iterator by handle."""
+    name = ctypes.c_char_p()
+    desc = ctypes.c_char_p()
+    num_args = mx_uint()
+    arg_names = ctypes.POINTER(ctypes.c_char_p)()
+    arg_types = ctypes.POINTER(ctypes.c_char_p)()
+    arg_descs = ctypes.POINTER(ctypes.c_char_p)()
+
+    check_call(_LIB.MXDataIterGetIterInfo( \
+            handle, ctypes.byref(name), ctypes.byref(desc), \
+            ctypes.byref(num_args), \
+            ctypes.byref(arg_names), \
+            ctypes.byref(arg_types), \
+            ctypes.byref(arg_descs)))
+    iter_name = name.value
+    param_str = []
+    for i in range(num_args.value):
+        ret = '%s : %s' % (arg_names[i], arg_types[i])
+        if len(arg_descs[i]) != 0:
+            ret += '\n    ' + arg_descs[i]
+        param_str.append(ret)
+
+    doc_str = ('%s\n\n' +
+               'Parameters\n' +
+               '----------\n' +
+               '%s\n' +
+               'name : string, required.\n' +
+               '    Name of the resulting data iterator.\n\n' +
+               'Returns\n' +
+               '-------\n' +
+               'iterator: Iterator\n'+
+               '    The result iterator.')
+    doc_str = doc_str % (desc.value, '\n'.join(param_str))
+
+    def creator(*args, **kwargs):
+        """Create an iterator.
+        The parameters listed below can be passed in as keyword arguments.
+
+        Parameters
+        ----------
+        name : string, required.
+            Name of the resulting data iterator.
+
+        Returns
+        -------
+        symbol: Symbol
+            the resulting symbol
+        """
+        param_keys = []
+        param_vals = []
+        symbol_kwargs = {}
+        name = kwargs.pop('name', None)
+
+        for k, v in kwargs.items():
+            param_keys.append(c_str(k))
+            param_vals.append(c_str(str(v)))
+        # create atomic symbol
+        param_keys = c_array(ctypes.c_char_p, param_keys)
+        param_vals = c_array(ctypes.c_char_p, param_vals)
+        iter_handle = DataIterHandle()
+        check_call(_LIB.MXDataIterCreateIter(
+            handle, len(param_keys),
+            param_keys, param_vals,
+            ctypes.byref(iter_handle)))
+
+        if len(args):
+            raise TypeError('%s can only accept keyword arguments' % iter_name)
+
+        return DataIter(iter_handle)
+
+    creator.__name__ = iter_name
+    creator.__doc__ = doc_str
+    return creator
+
+
+def _init_io_module():
+    """List and add all the data iterators to current module."""
+    plist = ctypes.POINTER(ctypes.c_void_p)()
+    size = ctypes.c_uint()
+
+    check_call(_LIB.MXListDataIters(ctypes.byref(size),ctypes.byref(plist)))
+
+    module_obj = sys.modules[__name__]
+    for i in range(size.value):
+        hdl = ctypes.c_void_p(plist[i])
+        dataiter = _make_io_iterator(hdl)
+        setattr(module_obj, dataiter.__name__, dataiter)
+
+# Initialize the io in startups
+_init_io_module()
