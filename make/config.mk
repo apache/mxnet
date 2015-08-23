@@ -14,6 +14,9 @@ export CC = gcc
 export CXX = g++
 export NVCC = nvcc
 
+# whether compile with debug
+DEBUG = 0
+
 # whether use CUDA during compile
 USE_CUDA = 0
 
