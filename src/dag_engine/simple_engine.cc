@@ -2,7 +2,6 @@
  * Copyright (c) 2015 by Contributors
  */
 #include "simple_engine.h"
-#include <dmlc/logging.h>
 #include <cassert>
 #include <algorithm>
 #include <utility>
@@ -103,7 +102,11 @@ void SimpleEngine::Push(Operator op, Context exec_ctx) {
   auto callback = [this, first]() { OnComplete(first); };
   RunContext rctx{};
   rctx.stream = nullptr;
-  opr_block->fn = [exec_ctx, opr, rctx, callback]() {
+  /*!
+   * Unsafe to capture a pointer. Manually move out function.
+   */
+  auto fn = opr->fn;
+  opr_block->fn = [exec_ctx, fn, rctx, callback]() {
     if (exec_ctx.dev_mask == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       CUDA_CALL(cudaSetDevice(exec_ctx.dev_id));
@@ -111,7 +114,7 @@ void SimpleEngine::Push(Operator op, Context exec_ctx) {
       LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA
     }
-    opr->fn(rctx, callback);
+    fn(rctx, callback);
   };
   if (--opr_block->wait == 0) {
     task_queue_.Push(opr_block);
@@ -127,14 +130,22 @@ void SimpleEngine::PushAsync(AsyncFn fn, Context exec_ctx,
 }
 
 void SimpleEngine::PushDelete(Fn delete_fn, Context exec_ctx, Variable var) {
-  auto&& callback = [delete_fn, var](RunContext ctx) {
-    // If you used `var` after `PushDelete`, then the following will be
-    // undefined
-    delete SimpleVar::CastFromBase(var)->var;
-    delete var;
+  auto&& var_block = SimpleVar::CastFromBase(var)->var;
+  auto&& func = [delete_fn, var, var_block](RunContext ctx) {
+    /*!
+     * Mark variable block as not waiting, so during `SimpleEngine::OnComplete`
+     * it could be recycled.
+     */
+    var_block->waiting = false;
     delete_fn(ctx);
   };
-  Push(callback, exec_ctx, {}, {var});
+  Push(func, exec_ctx, {}, {var});
+  /*!
+   * Delete and empty `var`. If you use this `var` again, hopefully there will
+   * an immediate and loud error.
+   */
+  var_block = nullptr;
+  delete var;
 }
 
 void SimpleEngine::WaitForVar(Variable var) {
