@@ -135,8 +135,7 @@ class FullyConnectedProp : public OperatorProperty {
     } else {
       CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
     }
-    CHECK_GT(param_.num_hidden, 0);
-    const TShape &dshape = (*in_shape)[0];
+    const TShape &dshape = (*in_shape)[kData];
     // require data to be known
     if (dshape.ndim() ==  0) return false;
 
