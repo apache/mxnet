@@ -142,7 +142,8 @@ void SimpleEngine::WaitForVar(Variable var) {
   std::mutex m;
   std::unique_lock<std::mutex> lock{m};
   std::atomic<bool> done{false};
-  auto&& callback = [&cv, &done](RunContext) {
+  auto&& callback = [&cv, &m, &done](RunContext) {
+    std::unique_lock<std::mutex> lock{m};
     done.store(true);
     cv.notify_all();
   };
@@ -194,8 +195,11 @@ void SimpleEngine::ThreadWorker() {
     assert(opr_block->wait.load() == 0);
     opr_block->fn();
     delete opr_block;
-    if (--pending_ == 0) {
-      finished_cv_.notify_all();
+    {
+      std::unique_lock<std::mutex> lock{finished_m_};
+      if (--pending_ == 0) {
+        finished_cv_.notify_all();
+      }
     }
   }
 }
