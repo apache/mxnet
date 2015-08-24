@@ -128,10 +128,10 @@ void SimpleEngine::PushAsync(AsyncFn fn, Context exec_ctx,
 
 void SimpleEngine::PushDelete(Fn delete_fn, Context exec_ctx, Variable var) {
   auto&& callback = [delete_fn, var](RunContext ctx) {
-    delete var;
     // If you used `var` after `PushDelete`, then the following will be
     // undefined
     delete SimpleVar::CastFromBase(var)->var;
+    delete var;
     delete_fn(ctx);
   };
   Push(callback, exec_ctx, {}, {var});
