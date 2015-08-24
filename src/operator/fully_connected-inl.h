@@ -139,16 +139,9 @@ class FullyConnectedProp : public OperatorProperty {
     // require data to be known
     if (dshape.ndim() ==  0) return false;
 
-    index_t num_input;
-    if (dshape.ndim() == 4) {
-      // TODO(bing) consider deprecate 4D input
-      CHECK(dshape[1] == 1 && dshape[2] == 1);
-      num_input = dshape[3];
-    } else {
-      CHECK_EQ(dshape.ndim(), 2)
-          << "FullyConnecteded: Input data should be 2D in (batch, num_hidden)";
-      num_input = dshape[1];
-    }
+    index_t num_input = 0;
+    mshadow::Shape<2> ishape = dshape.FlatTo2D();
+    num_input = ishape[1];
     SHAPE_ASSIGN_CHECK(*in_shape, kWeight, Shape2(param_.num_hidden, num_input));
     if (!param_.no_bias) {
       SHAPE_ASSIGN_CHECK(*in_shape, kBias, Shape1(param_.num_hidden));
