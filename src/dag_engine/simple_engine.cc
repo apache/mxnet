@@ -14,9 +14,11 @@ SimpleVar* SimpleVar::CastFromBase(Var* v) { return v->Cast<SimpleVar>(); }
 
 SimpleOpr* SimpleOpr::CastFromBase(Opr* o) { return o->Cast<SimpleOpr>(); }
 
-SimpleEngine::SimpleEngine() = default;
+SimpleEngine::SimpleEngine() : thread_pool_{[this]() { ThreadWorker(); }} {}
 
-SimpleEngine::~SimpleEngine() = default;
+SimpleEngine::~SimpleEngine() {
+  task_queue_.SignalForKill();
+}
 
 SimpleEngine::Variable SimpleEngine::NewVar() {
   auto ret = new SimpleVar{};
@@ -134,6 +136,15 @@ void SimpleEngine::OnComplete(VersionedVarBlock* trigger) {
       }
       cur = cur->next;
     }
+  }
+}
+
+void SimpleEngine::ThreadWorker() {
+  OprBlock* opr_block;
+  while (task_queue_.Pop(&opr_block)) {
+    assert(opr_block->wait.load() == 0);
+    opr_block->fn();
+    delete opr_block;
   }
 }
 

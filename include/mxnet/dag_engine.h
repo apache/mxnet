@@ -141,7 +141,7 @@ class DAGEngine {
   /*!
    * \brief Virtual destructor.
    */
-  virtual ~DAGEngine();
+  virtual ~DAGEngine() noexcept(false);
   /*!
    * \return DAG engine singleton.
    */

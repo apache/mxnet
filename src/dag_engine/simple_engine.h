@@ -11,14 +11,11 @@
 #include <atomic>
 #include "mxnet/dag_engine.h"
 #include "dag_engine_impl.h"
+#include "thread_pool.h"
 
 namespace mxnet {
 
 namespace engine {
-
-// TODO(hotpxl)
-// 1. Workers
-// 2. Runtime context
 
 struct SimpleOpr;
 struct OprBlock;
@@ -53,7 +50,7 @@ struct SimpleOpr final : public Opr {
 class SimpleEngine final : public DAGEngine {
  public:
   SimpleEngine();
-  ~SimpleEngine();
+  ~SimpleEngine() noexcept(false);
   Variable NewVar() override;
   Operator NewOperator(AsyncFn, std::vector<Variable> const&,
                        std::vector<Variable> const&) override;
@@ -70,9 +67,12 @@ class SimpleEngine final : public DAGEngine {
   void WaitForAll() override{};
 
   void OnComplete(VersionedVarBlock* var);
+  void ThreadWorker();
 
  private:
+  static constexpr std::size_t kNumWorkingThreads = 16;
   dmlc::ConcurrentBlockingQueue<OprBlock*> task_queue_;
+  ThreadPool<kNumWorkingThreads> thread_pool_;
   DISALLOW_COPY_AND_ASSIGN(SimpleEngine);
 };  // class SimpleEngine
 
