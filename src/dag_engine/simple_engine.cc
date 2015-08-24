@@ -2,6 +2,7 @@
  * Copyright (c) 2015 by Contributors
  */
 #include "simple_engine.h"
+#include <dmlc/logging.h>
 #include <cassert>
 #include <algorithm>
 #include <utility>
@@ -16,9 +17,7 @@ SimpleOpr* SimpleOpr::CastFromBase(Opr* o) { return o->Cast<SimpleOpr>(); }
 
 SimpleEngine::SimpleEngine() : thread_pool_{[this]() { ThreadWorker(); }} {}
 
-SimpleEngine::~SimpleEngine() {
-  task_queue_.SignalForKill();
-}
+SimpleEngine::~SimpleEngine() noexcept(false) { task_queue_.SignalForKill(); }
 
 SimpleEngine::Variable SimpleEngine::NewVar() {
   auto ret = new SimpleVar{};
@@ -100,8 +99,9 @@ void SimpleEngine::Push(Operator op, Context exec_ctx) {
   auto callback = [this, first]() { OnComplete(first); };
   // TODO(hotpxl) do something useful
   RunContext ctx{};
+  ctx.stream = nullptr;
   opr_block->fn = [opr, ctx, callback]() { opr->fn(ctx, callback); };
-  if (--opr_block == 0) {
+  if (--opr_block->wait == 0) {
     task_queue_.Push(opr_block);
   }
 }

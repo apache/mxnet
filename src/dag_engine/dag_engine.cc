@@ -17,7 +17,7 @@ void DAGEngine::Push(Fn exec_fun, Context exec_ctx,
   PushAsync(f, exec_ctx, use_vars, mutate_vars);
 }
 
-DAGEngine::~DAGEngine() noexcept(false) = default;
+DAGEngine::~DAGEngine() noexcept(false) {}
 
 DAGEngine::DAGEngine() = default;
 

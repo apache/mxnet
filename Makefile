@@ -54,8 +54,8 @@ ifneq ($(ADD_LDFLAGS), NONE)
 	LDFLAGS += $(ADD_LDFLAGS)
 endif
 
+BIN = test/test_simple_engine
 OBJ = narray_function_cpu.o
-# add threaded engine after it is done
 OBJCXX11 = dag_engine.o simple_engine.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o
 CUOBJ =
 SLIB = lib/libmxnet.so
@@ -99,6 +99,7 @@ lib/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)
 lib/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ)
 
 test/test_storage: test/test_storage.cc lib/libmxnet.a
+test/test_simple_engine: test/test_simple_engine.cc lib/libmxnet.a
 
 $(BIN) :
 	$(CXX) $(CFLAGS) -std=c++0x -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
@@ -112,7 +113,7 @@ $(OBJCXX11) :
 $(SLIB) :
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
-$(ALIB):
+$(ALIB): $(OBJ) $(OBJCXX11)
 	ar cr $@ $+
 
 $(CUOBJ) :
