@@ -30,7 +30,8 @@ int main() {
         {var}, {}));
     engine->Push(oprs.at(i), mxnet::Context{});
   }
-  std::this_thread::sleep_for(std::chrono::seconds{1});
+  engine->WaitForAll();
+  // std::this_thread::sleep_for(std::chrono::seconds{1});
 
   printf("============= Test #2 ==============\n");
   var = engine->NewVar();
@@ -44,19 +45,8 @@ int main() {
         {}, {var}));
     engine->Push(oprs.at(i), mxnet::Context{});
   }
-  std::this_thread::sleep_for(std::chrono::seconds{1});
+  // std::this_thread::sleep_for(std::chrono::seconds{1});
+  engine->WaitForAll();
 
-  // usleep(1000000);
-
-  // // Test #2
-  // cout << "============= Test #2 ==============" << endl;
-  // for (int i = 0; i < 10; ++i) {
-  //   engine->Push([i] (RunContext rctx) { Foo(rctx, i); },
-  //       exec_ctx, {}, vars);
-  // }
-
-  // usleep(1000000);
-
-  // // Test #3
   return 0;
 }

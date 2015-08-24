@@ -9,6 +9,8 @@
 #include <vector>
 #include <functional>
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include "mxnet/dag_engine.h"
 #include "dag_engine_impl.h"
 #include "thread_pool.h"
@@ -76,15 +78,17 @@ class SimpleEngine final : public DAGEngine {
    * \brief Overriding methods.
    */
   Variable NewVar() override;
-  Operator NewOperator(AsyncFn, std::vector<Variable> const&,
-                       std::vector<Variable> const&) override;
+  Operator NewOperator(AsyncFn fn, std::vector<Variable> const& use_vars,
+                       std::vector<Variable> const& mutate_vars) override;
   void DeleteOperator(Operator op) override;
-  void Push(Operator op, Context) override;
-  void PushAsync(AsyncFn, Context, std::vector<Variable> const&,
-                 std::vector<Variable> const&) override{};
-  void PushDelete(Fn, Context, Variable) override{};
-  void WaitForVar(Variable) override{};
-  void WaitForAll() override{};
+  void Push(Operator op, Context exec_ctx) override;
+  using DAGEngine::Push;
+  void PushAsync(AsyncFn exec_fun, Context exec_ctx,
+                 std::vector<Variable> const& use_vars,
+                 std::vector<Variable> const& mutate_vars) override;
+  void PushDelete(Fn delete_fn, Context exec_ctx, Variable var) override;
+  void WaitForVar(Variable var) override;
+  void WaitForAll() override;
   /*!
    * \brief Callback on operation completion.
    *
@@ -103,6 +107,12 @@ class SimpleEngine final : public DAGEngine {
    * \brief Concurrency for thread pool.
    */
   static constexpr std::size_t kNumWorkingThreads = 16;
+  /*!
+   * \brief Number of pending operations.
+   */
+  std::atomic<std::size_t> pending_;
+  std::condition_variable finished_cv_;
+  std::mutex finished_m_;
   /*!
    * \brief Task queue.
    */

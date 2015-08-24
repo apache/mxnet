@@ -6,6 +6,9 @@
 #include <cassert>
 #include <algorithm>
 #include <utility>
+#include <condition_variable>
+#include <mutex>
+#include "../common/cuda_utils.h"
 
 namespace mxnet {
 
@@ -15,7 +18,8 @@ SimpleVar* SimpleVar::CastFromBase(Var* v) { return v->Cast<SimpleVar>(); }
 
 SimpleOpr* SimpleOpr::CastFromBase(Opr* o) { return o->Cast<SimpleOpr>(); }
 
-SimpleEngine::SimpleEngine() : thread_pool_{[this]() { ThreadWorker(); }} {}
+SimpleEngine::SimpleEngine()
+    : pending_{0}, thread_pool_{[this]() { ThreadWorker(); }} {}
 
 SimpleEngine::~SimpleEngine() noexcept(false) { task_queue_.SignalForKill(); }
 
@@ -42,9 +46,9 @@ SimpleEngine::Operator SimpleEngine::NewOperator(
 void SimpleEngine::DeleteOperator(Operator op) { delete op; }
 
 void SimpleEngine::Push(Operator op, Context exec_ctx) {
-  static_cast<void>(exec_ctx);
   auto opr = SimpleOpr::CastFromBase(op);
   auto opr_block = new OprBlock{};
+  ++pending_;
   opr_block->wait.store(opr->use_vars.size() + opr->mutate_vars.size() + 1);
   // Add reading dependencies.
   auto add_dependency = [&opr_block](SimpleVar* i) {
@@ -97,13 +101,58 @@ void SimpleEngine::Push(Operator op, Context exec_ctx) {
     previous->lock.unlock();
   }
   auto callback = [this, first]() { OnComplete(first); };
-  // TODO(hotpxl) do something useful
-  RunContext ctx{};
-  ctx.stream = nullptr;
-  opr_block->fn = [opr, ctx, callback]() { opr->fn(ctx, callback); };
+  RunContext rctx{};
+  rctx.stream = nullptr;
+  opr_block->fn = [exec_ctx, opr, rctx, callback]() {
+    if (exec_ctx.dev_mask == gpu::kDevMask) {
+#if MXNET_USE_CUDA
+      CUDA_CALL(cudaSetDevice(exec_ctx.dev_id));
+#else  // MXNET_USE_CUDA
+      LOG(FATAL) << "Please compile with CUDA enabled";
+#endif  // MXNET_USE_CUDA
+    }
+    opr->fn(rctx, callback);
+  };
   if (--opr_block->wait == 0) {
     task_queue_.Push(opr_block);
   }
+}
+
+void SimpleEngine::PushAsync(AsyncFn fn, Context exec_ctx,
+                             std::vector<Variable> const& use_vars,
+                             std::vector<Variable> const& mutate_vars) {
+  auto&& opr = NewOperator(fn, use_vars, mutate_vars);
+  Push(opr, exec_ctx);
+  DeleteOperator(opr);
+}
+
+void SimpleEngine::PushDelete(Fn delete_fn, Context exec_ctx, Variable var) {
+  auto&& callback = [delete_fn, var](RunContext ctx) {
+    delete var;
+    // If you used `var` after `PushDelete`, then the following will be
+    // undefined
+    delete SimpleVar::CastFromBase(var)->var;
+    delete_fn(ctx);
+  };
+  Push(callback, exec_ctx, {}, {var});
+}
+
+void SimpleEngine::WaitForVar(Variable var) {
+  std::condition_variable cv;
+  std::mutex m;
+  std::unique_lock<std::mutex> lock{m};
+  std::atomic<bool> done{false};
+  auto&& callback = [&cv, &done](RunContext) {
+    done.store(true);
+    cv.notify_all();
+  };
+  cv.wait(lock, [&done]() { return done.load(); });
+  Push(callback, Context{}, {var}, {});
+}
+
+void SimpleEngine::WaitForAll() {
+  std::unique_lock<std::mutex> lock{finished_m_};
+  finished_cv_.wait(lock, [this]() { return pending_.load() == 0; });
 }
 
 void SimpleEngine::OnComplete(VersionedVarBlock* trigger) {
@@ -145,6 +194,9 @@ void SimpleEngine::ThreadWorker() {
     assert(opr_block->wait.load() == 0);
     opr_block->fn();
     delete opr_block;
+    if (--pending_ == 0) {
+      finished_cv_.notify_all();
+    }
   }
 }
 
