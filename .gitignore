@@ -53,3 +53,6 @@ Debug
 # Emacs
 .clang_complete
 .dir-locals.el
+__pycache__
+*.pkl
+*

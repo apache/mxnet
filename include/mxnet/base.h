@@ -6,6 +6,7 @@
 #ifndef MXNET_BASE_H_
 #define MXNET_BASE_H_
 #include <dmlc/base.h>
+#include <dmlc/type_traits.h>
 #include <mshadow/tensor.h>
 #include <string>
 
@@ -45,6 +46,5 @@ typedef mshadow::default_real_t real_t;
 typedef mshadow::TShape TShape;
 /*! \brief storage container type */
 typedef mshadow::TBlob TBlob;
-
 }  // namespace mxnet
 #endif  // MXNET_BASE_H_

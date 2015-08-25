@@ -1,12 +1,12 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-locals, fixme
+# pylint: disable=invalid-name, protected-access, fixme
 """Symbol support of mxnet"""
 from __future__ import absolute_import
 
 import ctypes
 import sys
 from .base import _LIB
-from .base import c_array, c_str, mx_uint, string_types
+from .base import c_array, c_str, mx_uint, py_str, string_types
 from .base import NArrayHandle, ExecutorHandle, SymbolHandle
 from .base import check_call
 from .context import Context
@@ -92,8 +92,8 @@ class Symbol(object):
         else:
             keys = None
             args = c_array(SymbolHandle, [s.handle for s in args])
-        check_call(_LIB.MXSymbolCompose( \
-                self.handle, name, num_args, keys, args))
+        check_call(_LIB.MXSymbolCompose(
+            self.handle, name, num_args, keys, args))
 
     def list_arguments(self):
         """List all the arguments in the symbol.
@@ -105,9 +105,9 @@ class Symbol(object):
         """
         size = ctypes.c_uint()
         sarr = ctypes.POINTER(ctypes.c_char_p)()
-        check_call(_LIB.MXSymbolListArguments( \
-                self.handle, ctypes.byref(size), ctypes.byref(sarr)))
-        return [sarr[i] for i in range(size.value)]
+        check_call(_LIB.MXSymbolListArguments(
+            self.handle, ctypes.byref(size), ctypes.byref(sarr)))
+        return [py_str(sarr[i]) for i in range(size.value)]
 
     def list_returns(self):
         """List all returns in the symbol.
@@ -119,9 +119,9 @@ class Symbol(object):
         """
         size = ctypes.c_uint()
         sarr = ctypes.POINTER(ctypes.c_char_p)()
-        check_call(_LIB.MXSymbolListReturns( \
-                self.handle, ctypes.byref(size), ctypes.byref(sarr)))
-        return [sarr[i] for i in range(size.value)]
+        check_call(_LIB.MXSymbolListReturns(
+            self.handle, ctypes.byref(size), ctypes.byref(sarr)))
+        return [py_str(sarr[i]) for i in range(size.value)]
 
     def infer_shape(self, *args, **kwargs):
         """Infer the shape of outputs and arguments of given known shapes of arguments.
@@ -148,6 +148,7 @@ class Symbol(object):
             List of shapes of outputs.
             The order is in the same order as list_returns()
         """
+        # pylint: disable=too-many-locals
         if len(args) != 0 and len(kwargs) != 0:
             raise ValueError('Can only specify known argument \
                     shapes either by positional or kwargs way.')
@@ -176,26 +177,27 @@ class Symbol(object):
         out_shape_ndim = ctypes.POINTER(mx_uint)()
         out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
         complete = ctypes.c_int()
-        check_call(_LIB.MXSymbolInferShape( \
-                self.handle, len(indptr) - 1, \
-                c_array(ctypes.c_char_p, keys), \
-                c_array(mx_uint, indptr), \
-                c_array(mx_uint, sdata), \
-                ctypes.byref(arg_shape_size), \
-                ctypes.byref(arg_shape_ndim), \
-                ctypes.byref(arg_shape_data), \
-                ctypes.byref(out_shape_size), \
-                ctypes.byref(out_shape_ndim), \
-                ctypes.byref(out_shape_data), \
-                ctypes.byref(complete)))
+        check_call(_LIB.MXSymbolInferShape(
+            self.handle, len(indptr) - 1,
+            c_array(ctypes.c_char_p, keys),
+            c_array(mx_uint, indptr),
+            c_array(mx_uint, sdata),
+            ctypes.byref(arg_shape_size),
+            ctypes.byref(arg_shape_ndim),
+            ctypes.byref(arg_shape_data),
+            ctypes.byref(out_shape_size),
+            ctypes.byref(out_shape_ndim),
+            ctypes.byref(out_shape_data),
+            ctypes.byref(complete)))
         if complete.value != 0:
-            arg_shapes = [tuple(arg_shape_data[i][:arg_shape_ndim[i]]) \
-                    for i in range(arg_shape_size.value)]
-            out_shapes = [tuple(out_shape_data[i][:out_shape_ndim[i]]) \
-                    for i in range(out_shape_size.value)]
+            arg_shapes = [
+                tuple(arg_shape_data[i][:arg_shape_ndim[i]]) for i in range(arg_shape_size.value)]
+            out_shapes = [
+                tuple(out_shape_data[i][:out_shape_ndim[i]]) for i in range(out_shape_size.value)]
             return (arg_shapes, out_shapes)
         else:
             return (None, None)
+        # pylint: enable=too-many-locals
 
     def debug_str(self):
         """Get a debug string.
@@ -206,9 +208,9 @@ class Symbol(object):
             Debug string of the symbol.
         """
         debug_str = ctypes.c_char_p()
-        check_call(_LIB.MXSymbolPrint( \
-                self.handle, ctypes.byref(debug_str)))
-        return debug_str.value
+        check_call(_LIB.MXSymbolPrint(
+            self.handle, ctypes.byref(debug_str)))
+        return py_str(debug_str.value)
 
     def bind(self, ctx, args, args_grad, reqs):
         """bind current symbol to get an executor.
@@ -243,6 +245,21 @@ class Symbol(object):
                                        ctypes.byref(handle)))
         return Executor(handle)
 
+    def grad(self, wrt):
+        """get the autodiff of current symbol.
+
+        Parameters
+        ----------
+        wrt: Array of String
+            keyword arguments of the symbol that the gradients are taken.
+        """
+        handle = SymbolHandle()
+        c_wrt = c_array(ctypes.c_char_p, [c_str(key) for key in wrt])
+        check_call(_LIB.MXSymbolGrad(self.handle,
+                                     mx_uint(len(wrt)),
+                                     c_wrt,
+                                     ctypes.byref(handle)))
+        return Symbol(handle)
 
 def Variable(name):
     """Create a symbolic variable with specified name.
@@ -260,7 +277,7 @@ def Variable(name):
     if not isinstance(name, string_types):
         raise TypeError('Expect a string for variable `name`')
     handle = SymbolHandle()
-    check_call(_LIB.MXSymbolCreateVariable(name, ctypes.byref(handle)))
+    check_call(_LIB.MXSymbolCreateVariable(c_str(name), ctypes.byref(handle)))
     return Symbol(handle)
 
 
@@ -297,18 +314,18 @@ def _make_atomic_symbol_function(handle):
     arg_types = ctypes.POINTER(ctypes.c_char_p)()
     arg_descs = ctypes.POINTER(ctypes.c_char_p)()
 
-    check_call(_LIB.MXSymbolGetAtomicSymbolInfo( \
-            handle, ctypes.byref(name), ctypes.byref(desc), \
-            ctypes.byref(num_args), \
-            ctypes.byref(arg_names), \
-            ctypes.byref(arg_types), \
-            ctypes.byref(arg_descs)))
-    func_name = name.value
+    check_call(_LIB.MXSymbolGetAtomicSymbolInfo(
+        handle, ctypes.byref(name), ctypes.byref(desc),
+        ctypes.byref(num_args),
+        ctypes.byref(arg_names),
+        ctypes.byref(arg_types),
+        ctypes.byref(arg_descs)))
+    func_name = py_str(name.value)
     param_str = []
     for i in range(num_args.value):
-        ret = '%s : %s' % (arg_names[i], arg_types[i])
+        ret = '%s : %s' % (py_str(arg_names[i]), py_str(arg_types[i]))
         if len(arg_descs[i]) != 0:
-            ret += '\n    ' + arg_descs[i]
+            ret += '\n    ' + py_str(arg_descs[i])
         param_str.append(ret)
 
     doc_str = ('%s\n\n' +
@@ -321,7 +338,7 @@ def _make_atomic_symbol_function(handle):
                '-------\n' +
                'symbol: Symbol\n'+
                '    The result symbol.')
-    doc_str = doc_str % (desc.value, '\n'.join(param_str))
+    doc_str = doc_str % (py_str(desc.value), '\n'.join(param_str))
 
     def creator(*args, **kwargs):
         """Activation Operator of Neural Net.
@@ -358,8 +375,9 @@ def _make_atomic_symbol_function(handle):
             ctypes.byref(sym_handle)))
 
         if len(args) != 0 and len(symbol_kwargs) != 0:
-            raise TypeError('%s can only accept input \
-                Symbols either as positional or keyword arguments, not both' % func_name)
+            raise TypeError(
+                '%s can only accept input'
+                'Symbols either as positional or keyword arguments, not both' % func_name)
 
         s = Symbol(sym_handle)
         s._compose(*args, name=name, **symbol_kwargs)
@@ -379,7 +397,7 @@ def _init_symbol_module():
                                                      ctypes.byref(plist)))
     module_obj = sys.modules[__name__]
     for i in range(size.value):
-        hdl = ctypes.c_void_p(plist[i])
+        hdl = SymbolHandle(plist[i])
         function = _make_atomic_symbol_function(hdl)
         setattr(module_obj, function.__name__, function)
 

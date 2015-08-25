@@ -1,12 +1,11 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-locals, fixme, no-member
 """NArray interface of mxnet"""
 from __future__ import absolute_import
 
 import ctypes
 import sys
 from .base import _LIB
-from .base import c_array
+from .base import c_array, py_str
 from .base import mx_uint, mx_float, NArrayHandle, FunctionHandle
 from .base import ctypes2numpy_shared
 from .base import check_call
@@ -49,7 +48,7 @@ class NArray(object):
 
     NArray is basic ndarray/Tensor like data structure in mxnet.
     """
-
+    # pylint: disable= no-member
     def __init__(self, handle):
         """initialize a new NArray
 
@@ -165,7 +164,7 @@ class NArray(object):
             return NArray._copyto(self, out=hret)
         else:
             raise TypeError('copyto do not support type ' + type(other))
-
+    # pylint: enable= no-member
 
 def create(shape, ctx=Context.default_ctx):
     """Create a new NArray, with specified shape.
@@ -181,10 +180,9 @@ def create(shape, ctx=Context.default_ctx):
     """
     return NArray(handle=_new_alloc_handle(shape, ctx, False))
 
-
+# pylint: disable=too-many-locals, invalid-name
 def _make_narray_function(handle):
     """Create a NArray function from the FunctionHandle."""
-    # Constants for type masks.
     NARRAY_ARG_BEFORE_SCALAR = 1
     ACCEPT_EMPTY_MUTATE_TARGET = 1 << 2
     # Get the property of NArray
@@ -193,12 +191,12 @@ def _make_narray_function(handle):
     n_scalars = mx_uint()
     n_mutate_vars = mx_uint()
     type_mask = ctypes.c_int()
-    check_call(_LIB.MXFuncDescribe( \
-            handle, \
-            ctypes.byref(n_used_vars), \
-            ctypes.byref(n_scalars), \
-            ctypes.byref(n_mutate_vars), \
-            ctypes.byref(type_mask)))
+    check_call(_LIB.MXFuncDescribe(
+        handle,
+        ctypes.byref(n_used_vars),
+        ctypes.byref(n_scalars),
+        ctypes.byref(n_mutate_vars),
+        ctypes.byref(type_mask)))
     n_mutate_vars = n_mutate_vars.value
     n_used_vars = n_used_vars.value
     n_scalars = n_scalars.value
@@ -220,19 +218,19 @@ def _make_narray_function(handle):
     arg_types = ctypes.POINTER(ctypes.c_char_p)()
     arg_descs = ctypes.POINTER(ctypes.c_char_p)()
 
-    check_call(_LIB.MXFuncGetInfo( \
-            handle, ctypes.byref(name), ctypes.byref(desc), \
-            ctypes.byref(num_args), \
-            ctypes.byref(arg_names), \
-            ctypes.byref(arg_types), \
-            ctypes.byref(arg_descs)))
-    func_name = name.value
+    check_call(_LIB.MXFuncGetInfo(
+        handle, ctypes.byref(name), ctypes.byref(desc),
+        ctypes.byref(num_args),
+        ctypes.byref(arg_names),
+        ctypes.byref(arg_types),
+        ctypes.byref(arg_descs)))
+    func_name = py_str(name.value)
 
     param_str = []
     for i in range(num_args.value):
-        ret = '%s : %s' % (arg_names[i], arg_types[i])
+        ret = '%s : %s' % (py_str(arg_names[i]), py_str(arg_types[i]))
         if len(arg_descs[i]) != 0:
-            ret += '\n    ' + arg_descs[i]
+            ret += '\n    ' + py_str(arg_descs[i])
         param_str.append(ret)
 
     doc_str = ('%s\n\n' +
@@ -245,7 +243,7 @@ def _make_narray_function(handle):
                '-------\n' +
                'out : NArray\n'+
                '    The output of binary function.')
-    doc_str = doc_str % (desc.value, '\n'.join(param_str))
+    doc_str = doc_str % (py_str(desc.value), '\n'.join(param_str))
 
     # Definition of internal functions.
     def binary_narray_function(lhs, rhs, out=None):
@@ -258,11 +256,10 @@ def _make_narray_function(handle):
             if not accept_empty_mutate:
                 raise TypeError('argument out is required to call %s' % func_name)
             out = NArray(_new_empty_handle())
-        check_call(_LIB.MXFuncInvoke( \
-                handle, \
-                c_array(NArrayHandle, (lhs.handle, rhs.handle)), \
-                c_array(mx_float, ()), \
-                c_array(NArrayHandle, (out.handle,))))
+        check_call(_LIB.MXFuncInvoke(handle,
+                                     c_array(NArrayHandle, (lhs.handle, rhs.handle)),
+                                     c_array(mx_float, ()),
+                                     c_array(NArrayHandle, (out.handle,))))
         return out
 
     def unary_narray_function(src, out=None):
@@ -327,7 +324,7 @@ def _make_narray_function(handle):
     ret_function.__name__ = func_name
     ret_function.__doc__ = doc_str
     return ret_function
-
+# pylint: enable=too-many-locals, invalid-name
 
 def _init_narray_module():
     """List and add all the narray functions to current module."""
