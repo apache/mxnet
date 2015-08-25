@@ -28,8 +28,8 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   TShape kernel;
   TShape stride;
   TShape pad;
-  int nb_filter;
-  int nb_group;
+  uint32_t nb_filter;
+  uint32_t nb_group;
   uint32_t nstep;
   bool no_bias;
   DMLC_DECLARE_PARAMETER(ConvolutionParam) {
@@ -71,7 +71,11 @@ class ConvolutionOp : public Operator {
     // TODO(bing): check the BLAS Handle, be careful
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 3> wmat = in_data[kWeight].get<xpu, 3, real_t>(s);
+    uint32_t ws[] = {param_.nb_group,
+                     param_.nb_filter / param_.nb_group,
+                     data.shape_[1] / param_.nb_group * param_.kernel[0] * param_.kernel[1]};
+    TShape wmat_shape(ws, ws + 3);
+    Tensor<xpu, 3> wmat = in_data[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
     Tensor<xpu, 4> out = out_data[kOut].get<xpu, 4, real_t>(s);
     this->InitTemp(data.shape_, out.shape_);
     const index_t nbatch = data.size(0);
@@ -128,13 +132,18 @@ class ConvolutionOp : public Operator {
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     CHECK_EQ(req.size(), expected);
+    CHECK_EQ(in_data[kWeight].CheckContiguous(), true);
     // get data
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 3> wmat = in_data[kWeight].get<xpu, 3, real_t>(s);
+    uint32_t ws[] = {param_.nb_group,
+                     param_.nb_filter / param_.nb_group,
+                     data.shape_[1] / param_.nb_group * param_.kernel[0] * param_.kernel[1]};
+    TShape wmat_shape(ws, ws + 3);
+    Tensor<xpu, 3> wmat = in_data[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
     Tensor<xpu, 4> grad = out_grad[kOut].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> gdata = in_grad[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 3> gwmat = in_grad[kWeight].get<xpu, 3, real_t>(s);
+    Tensor<xpu, 3> gwmat = in_grad[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
     this->InitTemp(data.shape_, grad.shape_);
     const index_t nbatch = data.size(0);
     for (index_t i = 0; i < nbatch; i += param_.nstep) {
@@ -251,11 +260,9 @@ class ConvolutionProp : public OperatorProperty {
     if (dshape.ndim() ==  0) return false;
     CHECK_EQ(dshape.ndim(), 4) \
       << "Input data should be 4D in batch-nb_filter-y-x";
-    SHAPE_ASSIGN_CHECK(*in_shape, \
-                       kWeight, \
-                       Shape3(param_.nb_group, \
-                              param_.nb_filter / param_.nb_group, \
-                              dshape[1] / param_.nb_group * param_.kernel[0] * param_.kernel[1]));
+    SHAPE_ASSIGN_CHECK(*in_shape,
+                       kWeight,
+                       Shape4(param_.nb_filter, dshape[1], param_.kernel[0], param_.kernel[1]));
     if (!param_.no_bias) {
       SHAPE_ASSIGN_CHECK(*in_shape, kBias, Shape1(param_.nb_filter));
     }
