@@ -60,6 +60,7 @@ class FullyConnectedOp : public Operator {
     CHECK_EQ(out_data.size(), 1);
     // TODO(bing): check the BLAS Handle, be careful
     // maybe need blas handle from context
+    // TODO(bing): judge shape to remove flatten op
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> wmat = in_data[kWeight].get<xpu, 2, real_t>(s);
