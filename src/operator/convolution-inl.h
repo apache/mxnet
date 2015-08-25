@@ -35,19 +35,19 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   DMLC_DECLARE_PARAMETER(ConvolutionParam) {
     int shape[] = {1, 1};
     DMLC_DECLARE_FIELD(kernel).describe("convolution kernel size: (y, x)");
-    DMLC_DECLARE_FIELD(stride).describe("convolution stride: (y, x)")
-      .set_default(TShape(shape, shape + 2));
+    DMLC_DECLARE_FIELD(stride).set_default(TShape(shape, shape + 2))
+      .describe("convolution stride: (y, x)");
     shape[0] = shape[1] = 0;
-    DMLC_DECLARE_FIELD(pad).describe("pad for convolution: (y, x)")
-      .set_default(TShape(shape, shape + 2));
-    DMLC_DECLARE_FIELD(nb_filter).describe("convolution filter(channel) number")
-      .set_range(1, 100000);
+    DMLC_DECLARE_FIELD(pad).set_default(TShape(shape, shape + 2))
+      .describe("pad for convolution: (y, x)");
+    DMLC_DECLARE_FIELD(nb_filter).set_range(1, 100000)
+      .describe("convolution filter(channel) number");
     DMLC_DECLARE_FIELD(nb_group).set_default(1)
       .describe("number of groups partition");
-    DMLC_DECLARE_FIELD(nstep)
-      .describe("process n images once").set_default(2).set_range(1, 10000);
+    DMLC_DECLARE_FIELD(nstep).set_default(2).set_range(1, 10000)
+      .describe("process n images once");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
-        .describe("Whether to disable bias parameter.");
+      .describe("Whether to disable bias parameter.");
   }
 };
 
@@ -139,22 +139,22 @@ class ConvolutionOp : public Operator {
     const index_t nbatch = data.size(0);
     for (index_t i = 0; i < nbatch; i += param_.nstep) {
       const index_t step = std::min(param_.nstep, nbatch - i);
-      temp_col_.Resize(mshadow::Shape2(shape_colunit_[0], \
+      temp_col_.Resize(mshadow::Shape2(shape_colunit_[0],
                                        shape_colunit_[1] * step));
-      temp_dst_.Resize(mshadow::Shape3(shape_dstunit_[0], \
+      temp_dst_.Resize(mshadow::Shape3(shape_dstunit_[0],
                                        shape_dstunit_[1], shape_dstunit_[2] * step));
       temp_dst_ = reshape(swapaxis<1, 0>(grad.Slice(i, i + step)), temp_dst_.shape_);
       if (param_.pad[0] == 0 && param_.pad[1] == 0) {
         // TODO(bing): dual stride
-        temp_col_ = unpack_patch2col(data.Slice(i, i + step), \
-                                     param_.kernel[0], \
-                                     param_.kernel[1], \
+        temp_col_ = unpack_patch2col(data.Slice(i, i + step),
+                                     param_.kernel[0],
+                                     param_.kernel[1],
                                      param_.stride[0]);
       } else {
         // TODO(bing): dual stride
-        temp_col_ = unpack_patch2col(pad(data.Slice(i, i + step), param_.pad[0], param_.pad[1]), \
-                                     param_.kernel[0], \
-                                     param_.kernel[1], \
+        temp_col_ = unpack_patch2col(pad(data.Slice(i, i + step), param_.pad[0], param_.pad[1]),
+                                     param_.kernel[0],
+                                     param_.kernel[1],
                                      param_.stride[0]);
       }
       const index_t gstride = temp_col_.size(0) / param_.nb_group;
@@ -168,20 +168,20 @@ class ConvolutionOp : public Operator {
           tmpc = dot(wmat[gid].T(), temp_dst_[gid]);
         }
         if (param_.pad[0] == 0 && param_.pad[1] == 0) {
-          gdata.Slice(i, i + step) = pack_col2patch(temp_col_, \
-                                                    data.Slice(i, i + step).shape_, \
-                                                    param_.kernel[0], \
-                                                    param_.kernel[1], \
+          gdata.Slice(i, i + step) = pack_col2patch(temp_col_,
+                                                    data.Slice(i, i + step).shape_,
+                                                    param_.kernel[0],
+                                                    param_.kernel[1],
                                                     param_.stride[0]);
         } else {
           mshadow::Shape<4> pshape = data.Slice(i, i + step).shape_;
           pshape[2] += 2 * param_.pad[0];
           pshape[3] += 2 * param_.pad[1];
-          gdata.Slice(i, i + step) = crop(pack_col2patch(temp_col_, \
-                                                         pshape, \
-                                                         param_.kernel[0], \
-                                                         param_.kernel[1], \
-                                                         param_.stride[0]), \
+          gdata.Slice(i, i + step) = crop(pack_col2patch(temp_col_,
+                                                         pshape,
+                                                         param_.kernel[0],
+                                                         param_.kernel[1],
+                                                         param_.stride[0]),
                                           gdata[i][0].shape_);
         }
       }
