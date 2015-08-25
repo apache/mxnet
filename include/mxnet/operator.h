@@ -89,13 +89,21 @@ class Operator {
   /*!
    * \brief Perform a Backward Operation, write gradient to the in_grad.
    *
+   * \note
    * Convention:
    *   out_grad.size() == OperatorProperty.NumVisibleReturns()
    *   out_data.size() == OperatorProperty.NumReturns()
    * out_data can contain additional invisible returns that remembers the
    * state carried from the Forward pass. For example mask in the dropout.
-   *
    * The gradients are passed from visible returns in this function.
+   *
+   * \par
+   * Not all the TBlobs in the arguments will be available
+   * if you override the DeclareBackwardDependency of corresponding OperatorProperty class.
+   * Only the dependencies you declared will be available at corresponding position,
+   * the rest of the parameters are simply dummy where you will get a nullptr.
+   * You will be safe if you use the default DeclareBackwardDependency.
+   * But only declare what you need will give engine more chance for optimization.
    *
    * \param ctx runtime context available to this call
    * \param out_grad the gradient value we get from of the Operator.
@@ -103,7 +111,7 @@ class Operator {
    * \param out_data the array of output data.
    * \param req request types of the saving operation, can be all types.
    * \param in_grad the array of gradient we need to write to.
-   * \sa OpReqType, OpContext, OperatorProperty
+   * \sa OperatorProperty, OpReqType, OpContext
    */
   virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,

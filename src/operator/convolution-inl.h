@@ -33,21 +33,35 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   uint32_t nstep;
   bool no_bias;
   DMLC_DECLARE_PARAMETER(ConvolutionParam) {
-    int shape[] = {1, 1};
-    DMLC_DECLARE_FIELD(kernel).describe("convolution kernel size: (y, x)");
-    DMLC_DECLARE_FIELD(stride).describe("convolution stride: (y, x)")
-      .set_default(TShape(shape, shape + 2));
-    shape[0] = shape[1] = 0;
-    DMLC_DECLARE_FIELD(pad).describe("pad for convolution: (y, x)")
-      .set_default(TShape(shape, shape + 2));
-    DMLC_DECLARE_FIELD(nb_filter).describe("convolution filter(channel) number")
-      .set_range(1, 100000);
+    DMLC_DECLARE_FIELD(kernel)
+      .set_expect_ndim(2).enforce_nonzero()
+      .describe("convolution kernel size: (y, x)");
+
+    int stride_shape[] = {1, 1};
+    DMLC_DECLARE_FIELD(stride)
+      .set_expect_ndim(2).enforce_nonzero()
+      .set_default(TShape(stride_shape, stride_shape + 2))
+      .describe("convolution stride: (y, x)");
+
+    int pad_shape[] = {1, 1};
+    DMLC_DECLARE_FIELD(pad)
+      .set_expect_ndim(2)
+      .set_default(TShape(pad_shape, pad_shape + 2))
+      .describe("pad for convolution: (y, x)");
+
+    DMLC_DECLARE_FIELD(nb_filter)
+      .set_lower_bound(1)
+      .describe("convolution filter(channel) number");
+
     DMLC_DECLARE_FIELD(nb_group).set_default(1)
       .describe("number of groups partition");
+
     DMLC_DECLARE_FIELD(nstep)
-      .describe("process n images once").set_default(2).set_range(1, 10000);
+      .set_default(2).set_range(1, 10000)
+      .describe("process n images once");
+
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
-        .describe("Whether to disable bias parameter.");
+      .describe("Whether to disable bias parameter.");
   }
 };
 
