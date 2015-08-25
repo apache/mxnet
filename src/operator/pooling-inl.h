@@ -51,7 +51,6 @@ class PoolingOp : public Operator {
  public:
   explicit PoolingOp(PoolingParam p) {
     this->param_ = p;
-    std::cout << param_.kernel << std::endl;
   }
 
   virtual void Forward(const OpContext &ctx,

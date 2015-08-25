@@ -60,6 +60,7 @@ class FullyConnectedOp : public Operator {
     CHECK_EQ(out_data.size(), 1);
     // TODO(bing): check the BLAS Handle, be careful
     // maybe need blas handle from context
+    // TODO(bing): judge shape to remove flatten op
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> wmat = in_data[kWeight].get<xpu, 2, real_t>(s);
@@ -135,21 +136,13 @@ class FullyConnectedProp : public OperatorProperty {
     } else {
       CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
     }
-    CHECK_GT(param_.num_hidden, 0);
-    const TShape &dshape = (*in_shape)[0];
+    const TShape &dshape = (*in_shape)[kData];
     // require data to be known
     if (dshape.ndim() ==  0) return false;
 
-    index_t num_input;
-    if (dshape.ndim() == 4) {
-      // TODO(bing) consider deprecate 4D input
-      CHECK(dshape[1] == 1 && dshape[2] == 1);
-      num_input = dshape[3];
-    } else {
-      CHECK_EQ(dshape.ndim(), 2)
-          << "FullyConnecteded: Input data should be 2D in (batch, num_hidden)";
-      num_input = dshape[1];
-    }
+    index_t num_input = 0;
+    mshadow::Shape<2> ishape = dshape.FlatTo2D();
+    num_input = ishape[1];
     SHAPE_ASSIGN_CHECK(*in_shape, kWeight, Shape2(param_.num_hidden, num_input));
     if (!param_.no_bias) {
       SHAPE_ASSIGN_CHECK(*in_shape, kBias, Shape1(param_.num_hidden));
