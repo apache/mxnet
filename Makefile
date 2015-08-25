@@ -61,7 +61,7 @@ ifneq ($(ADD_LDFLAGS), NONE)
 	LDFLAGS += $(ADD_LDFLAGS)
 endif
 
-BIN = test/test_simple_engine
+BIN = tests/test_simple_engine
 OBJ = narray_function_cpu.o
 OBJCXX11 = flatten_cpu.o dag_engine.o simple_engine.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o convolution_cpu.o
 CUOBJ =
@@ -109,8 +109,8 @@ flatten_gpu.o: src/operator/flatten.cu
 lib/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)
 lib/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ)
 
-test/test_storage: test/test_storage.cc lib/libmxnet.a
-test/test_simple_engine: test/test_simple_engine.cc lib/libmxnet.a
+tests/test_storage: tests/test_storage.cc lib/libmxnet.a
+tests/test_simple_engine: tests/test_simple_engine.cc lib/libmxnet.a
 
 $(BIN) :
 	$(CXX) $(CFLAGS) -std=c++0x -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
