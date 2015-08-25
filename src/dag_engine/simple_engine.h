@@ -6,12 +6,12 @@
 
 #include <dmlc/base.h>
 #include <dmlc/concurrency.h>
+#include <dmlc/logging.h>
 #include <vector>
 #include <functional>
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
-#include "mxnet/dag_engine.h"
 #include "dag_engine_impl.h"
 #include "thread_pool.h"
 
@@ -23,32 +23,55 @@ namespace engine {
  * \brief Forward declarations.
  */
 struct SimpleOpr;
-struct OprBlock;
-
-/*!
- * \brief Variable with version information.
- */
-struct VersionedVarBlock {
-  VersionedVarBlock* next{nullptr};
-  VersionedVarBlock* join{nullptr};
-  OprBlock* trigger{nullptr};
-  dmlc::Spinlock lock;
-  bool waiting{false};
-};  // struct VersionedVarBlock
 
 /*!
  * \brief Operation in the queue.
  */
 struct OprBlock {
-  std::function<void()> fn;
+#ifdef DAG_ENGINE_DEBUG
+  static std::size_t counter;
+  OprBlock() { LOG(INFO) << __func__ << " " << ++counter; }
+  ~OprBlock() { LOG(INFO) << __func__ << " " << --counter; }
+#endif  // DAG_ENGINE_DEBUG
   std::atomic<std::size_t> wait{0};
+  SimpleOpr* opr{nullptr};
+  Context ctx;
+  RunContext rctx;
 };  // struct OprBlock
+
+/*!
+ * \brief Variable with version information.
+ */
+struct VersionedVarBlock {
+#ifdef DAG_ENGINE_DEBUG
+  static std::size_t counter;
+  VersionedVarBlock() { LOG(INFO) << __func__ << " " << ++counter; }
+  ~VersionedVarBlock() { LOG(INFO) << __func__ << " " << --counter; }
+#endif  // DAG_ENGINE_DEBUG
+  VersionedVarBlock* next{nullptr};
+  OprBlock* trigger{nullptr};
+  dmlc::Spinlock lock;
+  bool write{false};
+};  // struct VersionedVarBlock
 
 /*!
  * \brief Variable implementation.
  */
 struct SimpleVar final : public Var {
-  VersionedVarBlock* var{nullptr};
+#ifdef DAG_ENGINE_DEBUG
+  static std::size_t counter;
+  SimpleVar() { LOG(INFO) << __func__ << " " << ++counter; }
+  ~SimpleVar() { LOG(INFO) << __func__ << " " << --counter; }
+#endif  // DAG_ENGINE_DEBUG
+  VersionedVarBlock* head{nullptr};
+  VersionedVarBlock* pending_write{nullptr};
+  std::atomic<std::size_t> num_pending_reads{0};
+  /*!
+   * If true, then there are no current or future processing of the chain. It is
+   * implicitly locked by `lock` in `head`.
+   */
+  bool ready_to_read{true};
+  bool to_delete{false};
 
   static SimpleVar* CastFromBase(Var* ptr);
 };  // struct SimpleVar
@@ -57,9 +80,15 @@ struct SimpleVar final : public Var {
  * \brief Operator implementation.
  */
 struct SimpleOpr final : public Opr {
+#ifdef DAG_ENGINE_DEBUG
+  static std::size_t counter;
+  SimpleOpr() { LOG(INFO) << __func__ << " " << ++counter; }
+  ~SimpleOpr() { LOG(INFO) << __func__ << " " << --counter; }
+#endif  // DAG_ENGINE_DEBUG
   DAGEngine::AsyncFn fn;
   std::vector<SimpleVar*> use_vars;
   std::vector<SimpleVar*> mutate_vars;
+  bool temporary{false};
 
   static SimpleOpr* CastFromBase(Opr* ptr);
 };  // struct SimpleOpr
@@ -77,9 +106,9 @@ class SimpleEngine final : public DAGEngine {
   /*!
    * \brief Overriding methods.
    */
-  Variable NewVar() override;
-  Operator NewOperator(AsyncFn fn, std::vector<Variable> const& use_vars,
-                       std::vector<Variable> const& mutate_vars) override;
+  SimpleVar* NewVar() override;
+  SimpleOpr* NewOperator(AsyncFn fn, std::vector<Variable> const& use_vars,
+                         std::vector<Variable> const& mutate_vars) override;
   void DeleteOperator(Operator op) override;
   void Push(Operator op, Context exec_ctx) override;
   using DAGEngine::Push;
@@ -94,7 +123,7 @@ class SimpleEngine final : public DAGEngine {
    *
    * On operation completion, this will trigger subsequent operations.
    */
-  void OnComplete(VersionedVarBlock* var);
+  void OnComplete(SimpleOpr* simple_opr);
   /*!
    * \brief Worker.
    *

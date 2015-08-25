@@ -2,6 +2,7 @@
  * Copyright (c) 2015 by Contributors
  */
 #include "simple_engine.h"
+#include <dmlc/logging.h>
 #include <cassert>
 #include <algorithm>
 #include <utility>
@@ -13,6 +14,13 @@ namespace mxnet {
 
 namespace engine {
 
+#ifdef DAG_ENGINE_DEBUG
+std::size_t OprBlock::counter = 0;
+std::size_t VersionedVarBlock::counter = 0;
+std::size_t SimpleVar::counter = 0;
+std::size_t SimpleOpr::counter = 0;
+#endif  // DAG_ENGINE_DEBUG
+
 SimpleVar* SimpleVar::CastFromBase(Var* v) { return v->Cast<SimpleVar>(); }
 
 SimpleOpr* SimpleOpr::CastFromBase(Opr* o) { return o->Cast<SimpleOpr>(); }
@@ -22,15 +30,15 @@ SimpleEngine::SimpleEngine()
 
 SimpleEngine::~SimpleEngine() noexcept(false) { task_queue_.SignalForKill(); }
 
-SimpleEngine::Variable SimpleEngine::NewVar() {
+SimpleVar* SimpleEngine::NewVar() {
   auto ret = new SimpleVar{};
-  ret->var = new VersionedVarBlock{};
+  ret->head = new VersionedVarBlock{};
   return ret;
 }
 
-SimpleEngine::Operator SimpleEngine::NewOperator(
-    SimpleEngine::AsyncFn fn, std::vector<Variable> const& use_vars,
-    std::vector<Variable> const& mutate_vars) {
+SimpleOpr* SimpleEngine::NewOperator(SimpleEngine::AsyncFn fn,
+                                     std::vector<Variable> const& use_vars,
+                                     std::vector<Variable> const& mutate_vars) {
   auto ret = new SimpleOpr{};
   ret->fn = fn;
   ret->use_vars.resize(use_vars.size());
@@ -39,83 +47,96 @@ SimpleEngine::Operator SimpleEngine::NewOperator(
                  SimpleVar::CastFromBase);
   std::transform(mutate_vars.begin(), mutate_vars.end(),
                  ret->mutate_vars.begin(), SimpleVar::CastFromBase);
+#ifdef DAG_ENGINE_DEBUG
+  // Check for duplicates.
+  auto use = use_vars;
+  auto mutate = mutate_vars;
+  auto use_size = use.size();
+  auto mutate_size = mutate.size();
+  std::sort(use.begin(), use.end());
+  std::sort(mutate.begin(), mutate.end());
+  for (std::size_t i = 0; i < use_size; ++i) {
+    if (i != 0 && use.at(i) == use.at(i - 1)) {
+      LOG(FATAL) << "duplicate items found in `use_vars`";
+    }
+  }
+  for (std::size_t i = 0; i < mutate_size; ++i) {
+    if (i != 0 && mutate.at(i) == mutate.at(i - 1)) {
+      LOG(FATAL) << "duplicate items found in `mutate_vars`";
+    }
+  }
+  std::size_t j = 0;
+  for (std::size_t i = 0; i < use_size; ++i) {
+    while (j < mutate_size && mutate.at(j) < use.at(i)) {
+      ++j;
+    }
+    if (j == mutate_size) {
+      break;
+    }
+    if (mutate.at(j) == use.at(i)) {
+      LOG(FATAL)
+          << "duplicate items found between `use_vars` and `mutate_vars`";
+    }
+  }
+#endif  // DAG_ENGINE_DEBUG
   return ret;
 }
 
-void SimpleEngine::DeleteOperator(Operator op) { delete op; }
+void SimpleEngine::DeleteOperator(Operator op) {
+  auto&& simple_opr = SimpleOpr::CastFromBase(op);
+  std::vector<Variable> deps{};
+  deps.reserve(simple_opr->use_vars.size() + simple_opr->mutate_vars.size());
+  deps.insert(deps.end(), simple_opr->use_vars.begin(),
+              simple_opr->use_vars.end());
+  deps.insert(deps.end(), simple_opr->mutate_vars.begin(),
+              simple_opr->mutate_vars.end());
+  auto&& func = [simple_opr](RunContext) { delete simple_opr; };
+  Push(func, Context{}, {}, deps);
+}
 
 void SimpleEngine::Push(Operator op, Context exec_ctx) {
-  auto opr = SimpleOpr::CastFromBase(op);
+  auto simple_opr = SimpleOpr::CastFromBase(op);
   auto opr_block = new OprBlock{};
+  opr_block->opr = simple_opr;
+  opr_block->wait.store(simple_opr->use_vars.size() +
+                        simple_opr->mutate_vars.size() + 1);
+  opr_block->ctx = exec_ctx;
+  opr_block->rctx = RunContext{nullptr};
   ++pending_;
-  opr_block->wait.store(opr->use_vars.size() + opr->mutate_vars.size() + 1);
-  // Add reading dependencies.
-  auto add_dependency = [&opr_block](SimpleVar* i) {
-    std::lock_guard<dmlc::Spinlock> lock{i->var->lock};
-    if (!i->var->waiting) {
-      assert(i->var->next == nullptr);
-      assert(i->var->join == nullptr);
-      assert(i->var->trigger == nullptr);
+  // Add read dependencies.
+  for (auto&& i : simple_opr->use_vars) {
+    std::lock_guard<dmlc::Spinlock> lock{i->head->lock};
+    if (i->ready_to_read) {
+      assert(i->pending_write == nullptr);
+      ++i->num_pending_reads;
       --opr_block->wait;
     } else {
-      auto new_var = new VersionedVarBlock{};
-      new_var->waiting = true;
-      assert(i->var->next == nullptr);
-      i->var->next = new_var;
-      i->var->trigger = opr_block;
-      i->var = new_var;
+      auto new_var_block = new VersionedVarBlock{};
+      assert(i->head->next == nullptr);
+      assert(i->head->trigger == nullptr);
+      assert(i->head->write == false);
+      i->head->next = new_var_block;
+      i->head->trigger = opr_block;
+      i->head = new_var_block;
     }
-  };
-  std::for_each(opr->use_vars.begin(), opr->use_vars.end(), add_dependency);
-  std::for_each(opr->mutate_vars.begin(), opr->mutate_vars.end(),
-                add_dependency);
-  // Add mutation dependencies.
-  VersionedVarBlock* first = nullptr;
-  VersionedVarBlock* previous = nullptr;
-  for (auto i : opr->mutate_vars) {
-    i->var->lock.lock();
-    if (!i->var->waiting) {
-      assert(i->var->next == nullptr);
-      assert(i->var->join == nullptr);
-      assert(i->var->trigger == nullptr);
-      i->var->waiting = true;
-    } else {
-      auto new_var = new VersionedVarBlock{};
-      new_var->waiting = true;
-      // Moving out from old block, set flag to false.
-      i->var->waiting = false;
-      new_var->lock.lock();
-      i->var->lock.unlock();
-      i->var = new_var;
-    }
-    if (first == nullptr) {
-      first = i->var;
-    } else {
-      previous->join = i->var;
-      previous->lock.unlock();
-    }
-    previous = i->var;
   }
-  if (previous != nullptr) {
-    previous->lock.unlock();
-  }
-  auto callback = [this, first]() { OnComplete(first); };
-  RunContext rctx{};
-  rctx.stream = nullptr;
-  /*!
-   * Unsafe to capture a pointer. Manually move out function.
-   */
-  auto fn = opr->fn;
-  opr_block->fn = [exec_ctx, fn, rctx, callback]() {
-    if (exec_ctx.dev_mask == gpu::kDevMask) {
-#if MXNET_USE_CUDA
-      CUDA_CALL(cudaSetDevice(exec_ctx.dev_id));
-#else  // MXNET_USE_CUDA
-      LOG(FATAL) << "Please compile with CUDA enabled";
-#endif  // MXNET_USE_CUDA
+  // Add write dependencies.
+  for (auto&& i : simple_opr->mutate_vars) {
+    std::lock_guard<dmlc::Spinlock> lock{i->head->lock};
+    auto new_var_block = new VersionedVarBlock{};
+    i->head->next = new_var_block;
+    i->head->trigger = opr_block;
+    i->head->write = true;
+    if (i->ready_to_read) {
+      ++i->num_pending_reads;
+      i->pending_write = i->head;
+      if (--i->num_pending_reads == 0) {
+        --opr_block->wait;
+      }
+      i->ready_to_read = false;
     }
-    fn(rctx, callback);
-  };
+    i->head = new_var_block;
+  }
   if (--opr_block->wait == 0) {
     task_queue_.Push(opr_block);
   }
@@ -125,27 +146,21 @@ void SimpleEngine::PushAsync(AsyncFn fn, Context exec_ctx,
                              std::vector<Variable> const& use_vars,
                              std::vector<Variable> const& mutate_vars) {
   auto&& opr = NewOperator(fn, use_vars, mutate_vars);
+  opr->temporary = true;
   Push(opr, exec_ctx);
-  DeleteOperator(opr);
 }
 
 void SimpleEngine::PushDelete(Fn delete_fn, Context exec_ctx, Variable var) {
-  auto&& var_block = SimpleVar::CastFromBase(var)->var;
-  auto&& func = [delete_fn, var, var_block](RunContext ctx) {
+  auto&& simple_var = SimpleVar::CastFromBase(var);
+  auto&& func = [delete_fn, simple_var](RunContext ctx) {
     /*!
-     * Mark variable block as not waiting, so during `SimpleEngine::OnComplete`
-     * it could be recycled.
+     * Mark variable as orphan, so during `SimpleEngine::OnComplete` it could be
+     * recycled.
      */
-    var_block->waiting = false;
+    simple_var->to_delete = true;
     delete_fn(ctx);
   };
   Push(func, exec_ctx, {}, {var});
-  /*!
-   * Delete and empty `var`. If you use this `var` again, hopefully there will
-   * an immediate and loud error.
-   */
-  var_block = nullptr;
-  delete var;
 }
 
 void SimpleEngine::WaitForVar(Variable var) {
@@ -158,8 +173,8 @@ void SimpleEngine::WaitForVar(Variable var) {
     done.store(true);
     cv.notify_all();
   };
-  cv.wait(lock, [&done]() { return done.load(); });
   Push(callback, Context{}, {var}, {});
+  cv.wait(lock, [&done]() { return done.load(); });
 }
 
 void SimpleEngine::WaitForAll() {
@@ -167,35 +182,51 @@ void SimpleEngine::WaitForAll() {
   finished_cv_.wait(lock, [this]() { return pending_.load() == 0; });
 }
 
-void SimpleEngine::OnComplete(VersionedVarBlock* trigger) {
-  auto head = trigger;
-  while (head != nullptr) {
-    auto cur = head;
-    head = trigger->join;
-    VersionedVarBlock* previous = nullptr;
-    // Food for thought. This could also be `while true`.
-    while (cur != nullptr) {
-      std::lock_guard<dmlc::Spinlock> lock{cur->lock};
-      assert((cur->next == nullptr) || cur->waiting);
-      assert((previous == nullptr) || (cur->join == nullptr));
-      assert((cur->trigger == nullptr) == (cur->next == nullptr));
-      if (cur->trigger != nullptr && --cur->trigger->wait == 0) {
-        task_queue_.Push(cur->trigger);
+void SimpleEngine::OnComplete(SimpleOpr* simple_opr) {
+  for (auto&& i : simple_opr->use_vars) {
+    if (--i->num_pending_reads == 0 && i->pending_write != nullptr) {
+      if (--i->pending_write->trigger->wait == 0) {
+        task_queue_.Push(i->pending_write->trigger);
       }
-      if (previous != nullptr) {
-        delete previous;
-      }
-      previous = cur;
-      if (cur->next == nullptr) {
-        if (!cur->waiting) {
-          // No `SimpleOpr` is on this block. Safe to delete.
-          delete cur;
+    }
+  }
+  for (auto&& i : simple_opr->mutate_vars) {
+    assert(i->ready_to_read == false);
+    auto head = i->pending_write->next;
+    delete i->pending_write;
+    i->pending_write = nullptr;
+    if (i->to_delete) {
+      delete head;
+      delete i;
+    } else {
+      while (true) {
+        std::lock_guard<dmlc::Spinlock> lock{head->lock};
+        if (head->write == true) {
+          ++i->num_pending_reads;
+          i->pending_write = head;
+          if (--i->num_pending_reads == 0) {
+            if (--head->trigger->wait == 0) {
+              task_queue_.Push(head->trigger);
+            }
+          }
+          break;
+        } else if (head->next == nullptr) {
+          i->ready_to_read = true;
+          break;
         } else {
-          cur->waiting = false;
+          if (--head->trigger->wait == 0) {
+            ++i->num_pending_reads;
+            task_queue_.Push(head->trigger);
+          }
+          head = head->next;
         }
-        break;
       }
-      cur = cur->next;
+    }
+  }
+  {
+    std::unique_lock<std::mutex> lock{finished_m_};
+    if (--pending_ == 0) {
+      finished_cv_.notify_all();
     }
   }
 }
@@ -204,14 +235,20 @@ void SimpleEngine::ThreadWorker() {
   OprBlock* opr_block;
   while (task_queue_.Pop(&opr_block)) {
     assert(opr_block->wait.load() == 0);
-    opr_block->fn();
-    delete opr_block;
-    {
-      std::unique_lock<std::mutex> lock{finished_m_};
-      if (--pending_ == 0) {
-        finished_cv_.notify_all();
-      }
+    auto simple_opr = opr_block->opr;
+    auto callback = [this, simple_opr]() { OnComplete(simple_opr); };
+    if (opr_block->ctx.dev_mask == gpu::kDevMask) {
+#if MXNET_USE_CUDA
+      CUDA_CALL(cudaSetDevice(opr_block->ctx.dev_id));
+#else  // MXNET_USE_CUDA
+      LOG(FATAL) << "Please compile with CUDA enabled";
+#endif  // MXNET_USE_CUDA
     }
+    simple_opr->fn(opr_block->rctx, callback);
+    if (simple_opr->temporary) {
+      delete simple_opr;
+    }
+    delete opr_block;
   }
 }
 
