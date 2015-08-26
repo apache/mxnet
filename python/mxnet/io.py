@@ -33,14 +33,14 @@ class DataIter(object):
         """
         return self
 
-    def beforefirst(self):
+    def reset(self):
         """set loc to 0
 
         """
         check_call(_LIB.MXDataIterBeforeFirst(self.handle))
 
     def next(self):
-        """get next data from iterator
+        """get next data batch from iterator
 
         Returns
         -------
