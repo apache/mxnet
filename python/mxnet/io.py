@@ -31,23 +31,16 @@ class DataIter(object):
         """make the class iterable
 
         """
-        if len(args) != 0:
-            raise TypeError('data iterator only accept \
-                    keyword arguments')     
-        num_args = len(kwargs)
-        keys = c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()]) 
-        vals = c_array(ctypes.c_char_p, [c_str(val) for val in kwargs.values()])
-        check_call(_LIB.MXDataIterSetInit( \
-                self.handle, num_args, keys, vals))
-
-    def beforefirst(self):
+        return self
+    
+    def reset(self):
         """set loc to 0
 
         """
         check_call(_LIB.MXDataIterBeforeFirst(self.handle))
 
     def next(self):
-        """get next data from iterator
+        """get next data batch from iterator
 
         Returns
         -------
