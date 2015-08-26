@@ -504,6 +504,13 @@ void Symbol::ToStaticGraph(StaticGraph *out_graph) const {
     } else {
       out_graph->nodes[nid].op.reset(nullptr);
     }
+    // backward source
+    if (node_order[nid]->backward_source_node) {
+      out_graph->nodes[nid].backward_source_id =
+          node_index[node_order[nid]->backward_source_node.get()];
+    } else {
+      out_graph->nodes[nid].backward_source_id = -1;
+    }
     out_graph->nodes[nid].name = node_order[nid]->name;
     auto &inputs = out_graph->nodes[nid].inputs;
     inputs.clear();

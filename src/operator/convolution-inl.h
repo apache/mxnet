@@ -21,33 +21,33 @@
 namespace mxnet {
 namespace op {
 
-enum FullyConnectedOpInputs {kData, kWeight, kBias};
-enum FullyConnectedOpOutputs {kOut};
+enum ConvolutionOpInputs {kData, kWeight, kBias};
+enum ConvolutionOpOutputs {kOut};
 
 struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   TShape kernel;
   TShape stride;
   TShape pad;
-  int nb_filter;
-  int nb_group;
+  uint32_t nb_filter;
+  uint32_t nb_group;
   uint32_t nstep;
   bool no_bias;
   DMLC_DECLARE_PARAMETER(ConvolutionParam) {
     int shape[] = {1, 1};
     DMLC_DECLARE_FIELD(kernel).describe("convolution kernel size: (y, x)");
-    DMLC_DECLARE_FIELD(stride).describe("convolution stride: (y, x)")
-      .set_default(TShape(shape, shape + 2));
+    DMLC_DECLARE_FIELD(stride).set_default(TShape(shape, shape + 2))
+      .describe("convolution stride: (y, x)");
     shape[0] = shape[1] = 0;
-    DMLC_DECLARE_FIELD(pad).describe("pad for convolution: (y, x)")
-      .set_default(TShape(shape, shape + 2));
-    DMLC_DECLARE_FIELD(nb_filter).describe("convolution filter(channel) number")
-      .set_range(1, 100000);
+    DMLC_DECLARE_FIELD(pad).set_default(TShape(shape, shape + 2))
+      .describe("pad for convolution: (y, x)");
+    DMLC_DECLARE_FIELD(nb_filter).set_range(1, 100000)
+      .describe("convolution filter(channel) number");
     DMLC_DECLARE_FIELD(nb_group).set_default(1)
       .describe("number of groups partition");
-    DMLC_DECLARE_FIELD(nstep)
-      .describe("process n images once").set_default(2).set_range(1, 10000);
+    DMLC_DECLARE_FIELD(nstep).set_default(2).set_range(1, 10000)
+      .describe("process n images once");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
-        .describe("Whether to disable bias parameter.");
+      .describe("Whether to disable bias parameter.");
   }
 };
 
@@ -71,7 +71,11 @@ class ConvolutionOp : public Operator {
     // TODO(bing): check the BLAS Handle, be careful
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 3> wmat = in_data[kWeight].get<xpu, 3, real_t>(s);
+    uint32_t ws[] = {param_.nb_group,
+                     param_.nb_filter / param_.nb_group,
+                     data.shape_[1] / param_.nb_group * param_.kernel[0] * param_.kernel[1]};
+    TShape wmat_shape(ws, ws + 3);
+    Tensor<xpu, 3> wmat = in_data[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
     Tensor<xpu, 4> out = out_data[kOut].get<xpu, 4, real_t>(s);
     this->InitTemp(data.shape_, out.shape_);
     const index_t nbatch = data.size(0);
@@ -128,33 +132,38 @@ class ConvolutionOp : public Operator {
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     CHECK_EQ(req.size(), expected);
+    CHECK_EQ(in_data[kWeight].CheckContiguous(), true);
     // get data
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 3> wmat = in_data[kWeight].get<xpu, 3, real_t>(s);
+    uint32_t ws[] = {param_.nb_group,
+                     param_.nb_filter / param_.nb_group,
+                     data.shape_[1] / param_.nb_group * param_.kernel[0] * param_.kernel[1]};
+    TShape wmat_shape(ws, ws + 3);
+    Tensor<xpu, 3> wmat = in_data[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
     Tensor<xpu, 4> grad = out_grad[kOut].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> gdata = in_grad[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 3> gwmat = in_grad[kWeight].get<xpu, 3, real_t>(s);
+    Tensor<xpu, 3> gwmat = in_grad[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
     this->InitTemp(data.shape_, grad.shape_);
     const index_t nbatch = data.size(0);
     for (index_t i = 0; i < nbatch; i += param_.nstep) {
       const index_t step = std::min(param_.nstep, nbatch - i);
-      temp_col_.Resize(mshadow::Shape2(shape_colunit_[0], \
+      temp_col_.Resize(mshadow::Shape2(shape_colunit_[0],
                                        shape_colunit_[1] * step));
-      temp_dst_.Resize(mshadow::Shape3(shape_dstunit_[0], \
+      temp_dst_.Resize(mshadow::Shape3(shape_dstunit_[0],
                                        shape_dstunit_[1], shape_dstunit_[2] * step));
       temp_dst_ = reshape(swapaxis<1, 0>(grad.Slice(i, i + step)), temp_dst_.shape_);
       if (param_.pad[0] == 0 && param_.pad[1] == 0) {
         // TODO(bing): dual stride
-        temp_col_ = unpack_patch2col(data.Slice(i, i + step), \
-                                     param_.kernel[0], \
-                                     param_.kernel[1], \
+        temp_col_ = unpack_patch2col(data.Slice(i, i + step),
+                                     param_.kernel[0],
+                                     param_.kernel[1],
                                      param_.stride[0]);
       } else {
         // TODO(bing): dual stride
-        temp_col_ = unpack_patch2col(pad(data.Slice(i, i + step), param_.pad[0], param_.pad[1]), \
-                                     param_.kernel[0], \
-                                     param_.kernel[1], \
+        temp_col_ = unpack_patch2col(pad(data.Slice(i, i + step), param_.pad[0], param_.pad[1]),
+                                     param_.kernel[0],
+                                     param_.kernel[1],
                                      param_.stride[0]);
       }
       const index_t gstride = temp_col_.size(0) / param_.nb_group;
@@ -168,20 +177,20 @@ class ConvolutionOp : public Operator {
           tmpc = dot(wmat[gid].T(), temp_dst_[gid]);
         }
         if (param_.pad[0] == 0 && param_.pad[1] == 0) {
-          gdata.Slice(i, i + step) = pack_col2patch(temp_col_, \
-                                                    data.Slice(i, i + step).shape_, \
-                                                    param_.kernel[0], \
-                                                    param_.kernel[1], \
+          gdata.Slice(i, i + step) = pack_col2patch(temp_col_,
+                                                    data.Slice(i, i + step).shape_,
+                                                    param_.kernel[0],
+                                                    param_.kernel[1],
                                                     param_.stride[0]);
         } else {
           mshadow::Shape<4> pshape = data.Slice(i, i + step).shape_;
           pshape[2] += 2 * param_.pad[0];
           pshape[3] += 2 * param_.pad[1];
-          gdata.Slice(i, i + step) = crop(pack_col2patch(temp_col_, \
-                                                         pshape, \
-                                                         param_.kernel[0], \
-                                                         param_.kernel[1], \
-                                                         param_.stride[0]), \
+          gdata.Slice(i, i + step) = crop(pack_col2patch(temp_col_,
+                                                         pshape,
+                                                         param_.kernel[0],
+                                                         param_.kernel[1],
+                                                         param_.stride[0]),
                                           gdata[i][0].shape_);
         }
       }
@@ -251,11 +260,9 @@ class ConvolutionProp : public OperatorProperty {
     if (dshape.ndim() ==  0) return false;
     CHECK_EQ(dshape.ndim(), 4) \
       << "Input data should be 4D in batch-nb_filter-y-x";
-    SHAPE_ASSIGN_CHECK(*in_shape, \
-                       kWeight, \
-                       Shape3(param_.nb_group, \
-                              param_.nb_filter / param_.nb_group, \
-                              dshape[1] / param_.nb_group * param_.kernel[0] * param_.kernel[1]));
+    SHAPE_ASSIGN_CHECK(*in_shape,
+                       kWeight,
+                       Shape4(param_.nb_filter, dshape[1], param_.kernel[0], param_.kernel[1]));
     if (!param_.no_bias) {
       SHAPE_ASSIGN_CHECK(*in_shape, kBias, Shape1(param_.nb_filter));
     }

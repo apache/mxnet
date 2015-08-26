@@ -55,4 +55,3 @@ Debug
 .dir-locals.el
 __pycache__
 *.pkl
-*

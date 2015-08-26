@@ -31,18 +31,25 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   int pool_type;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
     // TODO(bing) change to only set lower bound
-    int shape[] = {0, 0};
-    DMLC_DECLARE_FIELD(kernel).describe("pooling kernel size: (y, x)");
+    DMLC_DECLARE_FIELD(kernel)
+      .set_expect_ndim(2).enforce_nonzero()
+      .describe("pooling kernel size: (y, x)");
+
     DMLC_DECLARE_FIELD(pool_type).set_default(kMaxPooling)
       .add_enum("max", kMaxPooling)
       .add_enum("avg", kAvgPooling)
       .add_enum("sum", kSumPooling)
       .describe("Pooling type to be applied.");
-    DMLC_DECLARE_FIELD(pad).set_default(TShape(shape, shape + 2))
-      .describe("pad for pooling: (y, x)");
-    shape[0] = shape[1] = 1;
-    DMLC_DECLARE_FIELD(stride).set_default(TShape(shape, shape + 2))
+
+    int stride_shape[] = {1, 1};
+    DMLC_DECLARE_FIELD(stride).set_default(TShape(stride_shape, stride_shape + 2))
+      .set_expect_ndim(2).enforce_nonzero()
       .describe("stride: for pooling (y, x)");
+
+    int pad_shape[] = {0, 0};
+    DMLC_DECLARE_FIELD(pad).set_default(TShape(pad_shape, pad_shape + 2))
+      .set_expect_ndim(2)
+      .describe("pad for pooling: (y, x)");
   }
 };
 
