@@ -5,14 +5,14 @@
  * \author Bing Xu
 */
 
-#include "./flatten-inl.h"
+#include "./reshape-inl.h"
 
 
 namespace mxnet {
 namespace op {
 template<>
   Operator *CreateOp<gpu>() {
-  return new FlattenOp<gpu>();
+  return new ReshapeOp<gpu>();
 }
 
 }  // namespace op

@@ -21,11 +21,11 @@ Operator* ConvolutionProp::CreateOperator(Context ctx) const {
 DMLC_REGISTER_PARAMETER(ConvolutionParam);
 
 MXNET_REGISTER_OP_PROPERTY(Convolution, ConvolutionProp)
-.describe("Apply convolution to input then add a bias.")
 .add_argument("data", "Symbol", "Input data to the ConvolutionOp.")
 .add_argument("weight", "Symbol", "Weight matrix.")
 .add_argument("bias", "Symbol", "Bias parameter.")
-.add_arguments(ConvolutionParam::__FIELDS__());
+.add_arguments(ConvolutionParam::__FIELDS__())
+.describe("Apply convolution to input then add a bias.");
 
 }  // namespace op
 }  // namespace mxnet
