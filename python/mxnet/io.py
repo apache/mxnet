@@ -27,31 +27,11 @@ class DataIter(object):
     def __del__(self):
         check_call(_LIB.MXDataIterFree(self.handle))
 
-    def __call__(self, *args, **kwargs):
-        """Invoke iterator as function on inputs. Init params.
+    def __iter__(self):
+        """make the class iterable
 
-    def __call__(self, *args, **kwargs):
-        """Invoke iterator as function on inputs. Init params.
-
-        Parameters
-        ---------
-        args:
-            provide positional arguments, should not be given.
-
-        kwargs:
-            provide keyword arguments
-        Returns
-        -------
-        the inited iterator
         """
-        if len(args) != 0:
-            raise TypeError('data iterator only accept \
-                    keyword arguments')     
-        num_args = len(kwargs)
-        keys = c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()]) 
-        vals = c_array(ctypes.c_char_p, [c_str(val) for val in kwargs.values()])
-        check_call(_LIB.MXDataIterSetInit( \
-                self.handle, num_args, keys, vals))
+        return self
 
     def beforefirst(self):
         """set loc to 0
@@ -60,13 +40,31 @@ class DataIter(object):
         check_call(_LIB.MXDataIterBeforeFirst(self.handle))
 
     def next(self):
-        """init dataiter
+        """get next data from iterator
+        
+        Returns
+        -------
+        labels and images for the next batch
+        """
+        next_res = ctypes.c_int(0)
+        check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
+        if next_res.value:
+            return self.getdata(), self.getlabel()
+        else:
+            self.reset()
+            raise StopIteration
 
+    def iter_next(self):
+        """iterate to next data with return value
+
+        Returns
+        -------
+        return true if success
         """
         next_res = ctypes.c_int(0)
         check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
         return next_res.value
-
+    
     def getdata(self):
         """get data from batch
 
@@ -129,8 +127,8 @@ def _make_io_iterator(handle):
 
         Returns
         -------
-        symbol: Symbol
-            the resulting symbol
+        dataiter: Dataiter
+            the resulting data iterator
         """
         param_keys = []
         param_vals = []

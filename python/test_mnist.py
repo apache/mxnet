@@ -65,14 +65,14 @@ def Update(mom, grad, weight):
 block = zip(mom_narrays, grad_narrays, arg_narrays)
 
 
-train_dataiter = mx.io.MNISTIterator(path_img="/home/tianjun/data/mnist/train-images-idx3-ubyte",
-        path_label="/home/tianjun/data/mnist/train-labels-idx1-ubyte",
-        batch_size=100, shuffle=1, silent=1, input_flat="flat", seed_data=1)
-train_dataiter.beforefirst()
-val_dataiter = mx.io.MNISTIterator(path_img="/home/tianjun/data/mnist/t10k-images-idx3-ubyte",
-        path_label="/home/tianjun/data/mnist/t10k-labels-idx1-ubyte",
-        batch_size=100, shuffle=1, silent=1, input_flat="flat")
-val_dataiter.beforefirst()
+train_dataiter = mx.io.MNISTIter(
+        image="/home/tianjun/data/mnist/train-images-idx3-ubyte",
+        label="/home/tianjun/data/mnist/train-labels-idx1-ubyte",
+        batch_size=100, shuffle=1, silent=0, flat=1, seed=1)
+val_dataiter = mx.io.MNISTIter(
+        image="/home/tianjun/data/mnist/t10k-images-idx3-ubyte",
+        label="/home/tianjun/data/mnist/t10k-labels-idx1-ubyte",
+        batch_size=100, shuffle=1, silent=0, flat=1)
 
 for i in xrange(epoch):
     # train
@@ -81,10 +81,11 @@ for i in xrange(epoch):
     val_acc = 0.0
     train_nbatch = 0
     val_nbatch = 0
-    while train_dataiter.next():
-        data = train_dataiter.getdata()
-        label = train_dataiter.getlabel().numpy.astype(np.int32)
-        inputs["data"].numpy[:] = data.numpy
+    
+    for data, label in train_dataiter:
+        data = data.numpy
+        label = label.numpy.astype(np.int32)
+        inputs["data"].numpy[:] = data
         executor.forward()
         out_narray.numpy[:] = Softmax(out_narray.numpy)
         train_acc += CalAcc(out_narray.numpy, label)
@@ -97,14 +98,12 @@ for i in xrange(epoch):
             Update(mom, grad, weight)
 
     # evaluate
-    while val_dataiter.next():
-        data = val_dataiter.getdata()
-        label = val_dataiter.getlabel().numpy.astype(np.int32)
-        inputs["data"].numpy[:] = data.numpy
+    for data, label in val_dataiter:
+        data = data.numpy
+        label = label.numpy.astype(np.int32)
+        inputs["data"].numpy[:] = data
         executor.forward()
         val_acc += CalAcc(out_narray.numpy, label)
         val_nbatch += 1
     print "Train Acc: ", train_acc / train_nbatch
     print "Valid Acc: ", val_acc / val_nbatch
-    train_dataiter.beforefirst()
-    val_dataiter.beforefirst()

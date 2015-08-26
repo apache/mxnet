@@ -462,14 +462,6 @@ MXNET_DLL int MXExecutorBind(SymbolHandle symbol_handle,
 MXNET_DLL int MXListDataIters(mx_uint *out_size,
                               DataIterCreator **out_array);
 /*!
- * \brief get the name of iterator entry
- * \param iter iterator entry
- * \param out_name the name of the iterator
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXDataIterGetName(DataIterCreator iter,
-                            const char **out_name);
-/*!
  * \brief init an iterator, init with parameters
  * the array size of passed in arguments
  * \param handle of the iterator creator
@@ -611,7 +603,7 @@ MXNET_DLL int MXDataIterFree(DataIterHandle handle);
 MXNET_DLL int MXDataIterNext(DataIterHandle handle,
                        int *out);
 /*!
- * \brief call iterator.BeforeFirst
+ * \brief call iterator.Reset
  * \param handle the handle to iterator
  * \return 0 when success, -1 when failure happens
  */

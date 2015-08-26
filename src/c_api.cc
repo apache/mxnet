@@ -624,14 +624,6 @@ int MXListDataIters(mx_uint *out_size,
   API_END();
 }
 
-int MXDataIterGetName(DataIterCreator iter,
-                  const char **out_name) {
-  API_BEGIN();
-  auto *f = static_cast<const DataIteratorReg*>(iter);
-  *out_name = f->name.c_str();
-  API_END();
-}
-
 int MXDataIterGetIterInfo(DataIterCreator creator,
                                 const char **name,
                                 const char **description,
@@ -657,7 +649,8 @@ int MXDataIterCreateIter(DataIterCreator creator,
   for (int i = 0; i < num_param; ++i) {
     kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
   }
-  iter->SetInit(kwargs);
+  iter->Init(kwargs);
+  iter->BeforeFirst();
   *out = iter;
   API_END_HANDLE_ERROR(delete iter);
 }
