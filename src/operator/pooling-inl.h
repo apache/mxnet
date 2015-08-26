@@ -66,7 +66,6 @@ class PoolingOp : public Operator {
                        const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(req[kOut], kWriteTo);
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -75,18 +74,22 @@ class PoolingOp : public Operator {
     mshadow::Shape<2> out_shape = Shape2(out.shape_[2], out.shape_[3]);
     // TODO(bing): dual stride in mshadow
     if (param_.pool_type == kMaxPooling || param_.pool_type == kSumPooling) {
-      out = pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
-                          out_shape,
-                          param_.kernel[0],
-                          param_.kernel[1],
-                          param_.kernel[0]);
-    } else if (param_.pool_type == kAvgPooling) {
-      out = (1.0f / (param_.kernel[0] * param_.kernel[1])) * \
+      Assign(out,
+             req[kOut],
             pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                           out_shape,
                           param_.kernel[0],
                           param_.kernel[1],
-                          param_.kernel[0]);
+                          param_.kernel[0]));
+    } else if (param_.pool_type == kAvgPooling) {
+      Assign(out,
+             req[kOut],
+             (1.0f / (param_.kernel[0] * param_.kernel[1])) * \
+             pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
+                          out_shape,
+                          param_.kernel[0],
+                          param_.kernel[1],
+                          param_.kernel[0]));
     }
   }
 
