@@ -21,8 +21,8 @@
 namespace mxnet {
 namespace op {
 
-enum FullyConnectedOpInputs {kData, kWeight, kBias};
-enum FullyConnectedOpOutputs {kOut};
+enum ConvolutionOpInputs {kData, kWeight, kBias};
+enum ConvolutionOpOutputs {kOut};
 
 struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   TShape kernel;
