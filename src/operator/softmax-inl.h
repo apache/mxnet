@@ -47,7 +47,7 @@ class SoftmaxOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
-    Softmax(data, out);
+    Softmax(out, data);
   }
 
   virtual void Backward(const OpContext &ctx,
