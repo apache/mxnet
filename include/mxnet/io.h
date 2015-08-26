@@ -24,10 +24,8 @@ class IIterator : public dmlc::DataIter<DType> {
    * \brief set the parameters and init iter
    * \param kwargs key-value pairs
    */ 
-  virtual void SetInit(const std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
-  /*! \brief initalize the iterator so that we can use the iterator */
-  virtual void Init(void) = 0;
-  /*! \brief set before first of the item */
+  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
+  /*! \brief reset the iterator */
   virtual void BeforeFirst(void) = 0;
   /*! \brief move to next item */
   virtual bool Next(void) = 0;
