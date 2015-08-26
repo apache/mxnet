@@ -41,7 +41,7 @@ class DataIter(object):
 
     def next(self):
         """get next data from iterator
-        
+
         Returns
         -------
         labels and images for the next batch
@@ -64,7 +64,7 @@ class DataIter(object):
         next_res = ctypes.c_int(0)
         check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
         return next_res.value
-    
+
     def getdata(self):
         """get data from batch
 
