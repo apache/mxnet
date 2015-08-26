@@ -27,6 +27,7 @@ MXNET_REGISTER_OP_PROPERTY(Reshape, ReshapeProp)
 
 MXNET_REGISTER_OP_PROPERTY(Flatten, FlattenProp)
 .add_argument("data", "Symbol", "Input data to  flatten.")
+.add_arguments(ReshapeParam::__FIELDS__())
 .describe("Flatten input");
 }  // namespace op
 }  // namespace mxnet
