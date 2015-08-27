@@ -5,10 +5,12 @@ import os, pickle, gzip
 import sys
 import get_data
 
-
 def CalAcc(out, label):
     pred = np.argmax(out, axis=1)
     return np.sum(pred == label) * 1.0 / out.shape[0]
+
+if sys.version_info[0] >= 3:
+    sys.exit(0)
 
 # symbol net
 batch_size = 100

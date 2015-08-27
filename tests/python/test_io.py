@@ -30,20 +30,6 @@ def test_MNISTIter_loop():
         batch_count += 1
     assert(nbatch == batch_count)
 
-'''
-def test_MNISTIter_value():
-    imgcount = [0 for i in range(10)]
-    val_dataiter.reset()
-    for data, label in val_dataiter:
-        label = label.numpy.flatten()
-        for i in range(label.shape[0]):
-            imgcount[int(label[i])] += 1
-    for i in range(10):
-        print imgcount[i]
-    for i in range(10):
-        assert(imgcount[i] == 1000)
-'''
-
 def test_MNISTIter_reset():
     train_dataiter.reset()
     train_dataiter.iter_next()
