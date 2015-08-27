@@ -76,7 +76,7 @@ val_dataiter = mx.io.MNISTIter(
 def test_mnist():
     acc_train = 0.0
     acc_val = 0.0
-    for i in xrange(epoch):
+    for i in range(epoch):
         # train
         print("Epoch %d" % i)
         train_acc = 0.0

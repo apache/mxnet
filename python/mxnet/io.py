@@ -54,6 +54,9 @@ class DataIter(object):
             self.reset()
             raise StopIteration
 
+    # make it work for both python2 and 3
+    __next__ = next
+
     def iter_next(self):
         """iterate to next data with return value
 
