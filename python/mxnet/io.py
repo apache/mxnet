@@ -6,7 +6,7 @@ from __future__ import absolute_import
 import ctypes
 import sys
 from .base import _LIB
-from .base import c_array, c_str, mx_uint
+from .base import c_array, c_str, mx_uint, py_str
 from .base import DataIterHandle, NArrayHandle
 from .base import check_call
 from .narray import NArray
@@ -96,12 +96,12 @@ def _make_io_iterator(handle):
             ctypes.byref(arg_names), \
             ctypes.byref(arg_types), \
             ctypes.byref(arg_descs)))
-    iter_name = name.value
+    iter_name = py_str(name.value)
     param_str = []
     for i in range(num_args.value):
         ret = '%s : %s' % (arg_names[i], arg_types[i])
         if len(arg_descs[i]) != 0:
-            ret += '\n    ' + arg_descs[i]
+            ret += '\n    ' + py_str(arg_descs[i])
         param_str.append(ret)
 
     doc_str = ('%s\n\n' +

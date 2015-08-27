@@ -454,7 +454,7 @@ MXNET_DLL int MXExecutorBind(SymbolHandle symbol_handle,
 // Part 5: IO Interface
 //--------------------------------------------
 /*!
- * \brief list all the available iterator entries
+ * \brief List all the available iterator entries
  * \param out_size the size of returned iterators
  * \param out_array the output iteratos entries
  * \return 0 when success, -1 when failure happens
@@ -462,7 +462,7 @@ MXNET_DLL int MXExecutorBind(SymbolHandle symbol_handle,
 MXNET_DLL int MXListDataIters(mx_uint *out_size,
                               DataIterCreator **out_array);
 /*!
- * \brief init an iterator, init with parameters
+ * \brief Init an iterator, init with parameters
  * the array size of passed in arguments
  * \param handle of the iterator creator
  * \param num_param number of parameter
@@ -495,13 +495,13 @@ MXNET_DLL int MXDataIterGetIterInfo(AtomicSymbolCreator creator,
                                           const char ***arg_type_infos,
                                           const char ***arg_descriptions);
 /*!
- * \brief free the handle to the IO module
+ * \brief Free the handle to the IO module
  * \param handle the handle pointer to the data iterator
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDataIterFree(DataIterHandle handle);
 /*!
- * \brief get the name of iterator entry
+ * \brief Get the name of iterator entry
  * \param iter iterator entry
  * \param out_name the name of the iterator
  * \return 0 when success, -1 when failure happens
@@ -509,7 +509,7 @@ MXNET_DLL int MXDataIterFree(DataIterHandle handle);
 MXNET_DLL int MXDataIterGetName(DataIterCreator iter,
                             const char **out_name);
 /*!
- * \brief init an iterator, init with parameters
+ * \brief Init an iterator, init with parameters
  * the array size of passed in arguments
  * \param handle of the iterator creator
  * \param num_param number of parameter
@@ -542,13 +542,13 @@ MXNET_DLL int MXDataIterGetIterInfo(AtomicSymbolCreator creator,
                                           const char ***arg_type_infos,
                                           const char ***arg_descriptions);
 /*!
- * \brief free the handle to the IO module
+ * \brief Free the handle to the IO module
  * \param handle the handle pointer to the data iterator
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDataIterFree(DataIterHandle handle);
 /*!
- * \brief get the name of iterator entry
+ * \brief Get the name of iterator entry
  * \param iter iterator entry
  * \param out_name the name of the iterator
  * \return 0 when success, -1 when failure happens
@@ -556,7 +556,7 @@ MXNET_DLL int MXDataIterFree(DataIterHandle handle);
 MXNET_DLL int MXDataIterGetName(DataIterCreator iter,
                             const char **out_name);
 /*!
- * \brief init an iterator, init with parameters
+ * \brief Init an iterator, init with parameters
  * the array size of passed in arguments
  * \param handle of the iterator creator
  * \param num_param number of parameter
@@ -589,13 +589,13 @@ MXNET_DLL int MXDataIterGetIterInfo(AtomicSymbolCreator creator,
                                           const char ***arg_type_infos,
                                           const char ***arg_descriptions);
 /*!
- * \brief free the handle to the IO module
+ * \brief Free the handle to the IO module
  * \param handle the handle pointer to the data iterator
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDataIterFree(DataIterHandle handle);
 /*!
- * \brief move iterator to next position
+ * \brief Move iterator to next position
  * \param handle the handle to iterator
  * \param out return value of next
  * \return 0 when success, -1 when failure happens
@@ -603,14 +603,14 @@ MXNET_DLL int MXDataIterFree(DataIterHandle handle);
 MXNET_DLL int MXDataIterNext(DataIterHandle handle,
                        int *out);
 /*!
- * \brief call iterator.Reset
+ * \brief Call iterator.Reset
  * \param handle the handle to iterator
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDataIterBeforeFirst(DataIterHandle handle);
 
 /*!
- * \brief get the handle to the NArray of underlying data
+ * \brief Get the handle to the NArray of underlying data
  * \param handle the handle pointer to the data iterator
  * \param out handle to underlying data NArray
  * \return 0 when success, -1 when failure happens
@@ -618,7 +618,7 @@ MXNET_DLL int MXDataIterBeforeFirst(DataIterHandle handle);
 MXNET_DLL int MXDataIterGetData(DataIterHandle handle,
                           NArrayHandle *out);
 /*!
- * \brief get the handle to the NArray of underlying label
+ * \brief Get the handle to the NArray of underlying label
  * \param handle the handle pointer to the data iterator
  * \param out the handle to underlying label NArray
  * \return 0 when success, -1 when failure happens

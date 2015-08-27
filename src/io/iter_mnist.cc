@@ -4,7 +4,6 @@
  * \brief register mnist iterator
  * \author Tianjun Xiao
 */
-#include <mshadow/tensor.h>
 #include <mxnet/io.h>
 #include <mxnet/base.h>
 #include <dmlc/io.h>
@@ -38,14 +37,14 @@ struct MNISTParam : public dmlc::Parameter<MNISTParam> {
         .describe("Mnist image path.");
     DMLC_DECLARE_FIELD(label).set_default("./train-labels-idx1-ubyte")
         .describe("Mnist label path.");
-    DMLC_DECLARE_FIELD(shuffle).set_default(false)
+    DMLC_DECLARE_FIELD(batch_size).set_lower_bound(1).set_default(128)
+        .describe("Batch Size.");
+    DMLC_DECLARE_FIELD(shuffle).set_default(true)
         .describe("Whether to shuffle data.");
+    DMLC_DECLARE_FIELD(flat).set_default(false)
+        .describe("Whether to flat the data into 1D.");
     DMLC_DECLARE_FIELD(silent).set_default(false)
         .describe("Whether to print out data info.");
-    DMLC_DECLARE_FIELD(batch_size).set_range(1, 100000).set_default(128)
-        .describe("Batch Size.");
-    DMLC_DECLARE_FIELD(flat).set_default(true)
-        .describe("Whether to flat the data into 1D.");
     DMLC_DECLARE_FIELD(seed).set_default(0)
         .describe("Random Seed.");
   }
@@ -64,40 +63,49 @@ class MNISTIter: public IIterator<DataBatch> {
   // intialize iterator loads data in
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     std::map<std::string, std::string> kmap(kwargs.begin(), kwargs.end());
-    param.Init(kmap);
+    param_.Init(kmap);
     this->LoadImage();
     this->LoadLabel();
     // set name
     this->SetDataName(std::string("data"));
     this->SetDataName(std::string("label"));
-    if (param.flat) {
-      batch_data_.shape_ = mshadow::Shape4(param.batch_size, 1, 1, img_.size(1) * img_.size(2));
+    if (param_.flat) {
+      batch_data_.shape_ = mshadow::Shape4(param_.batch_size, 1, 1, img_.size(1) * img_.size(2));
     } else {
-      batch_data_.shape_ = mshadow::Shape4(param.batch_size, 1, img_.size(1), img_.size(2));
+      batch_data_.shape_ = mshadow::Shape4(param_.batch_size, 1, img_.size(1), img_.size(2));
     }
     out_.inst_index = NULL;
-    batch_label_.shape_ = mshadow::Shape2(param.batch_size, 1);
+    batch_label_.shape_ = mshadow::Shape2(param_.batch_size, 1);
     batch_label_.stride_ = 1;
     batch_data_.stride_ = batch_data_.size(3);
-    out_.batch_size = param.batch_size;
-    if (param.shuffle) this->Shuffle();
-    if (param.silent == 0) {
+    out_.batch_size = param_.batch_size;
+    if (param_.shuffle) this->Shuffle();
+    if (param_.silent == 0) {
       mshadow::Shape<4> s = batch_data_.shape_;
-      printf("MNISTIter: load %u images, shuffle=%d, shape=%u,%u,%u,%u\n",
-             (unsigned)img_.size(0), param.shuffle, s[0], s[1], s[2], s[3]);
+      if (param_.flat) {
+        LOG(INFO) << "MNISTIter: load " << (unsigned)img_.size(0) << " images, shuffle=" 
+            << param_.shuffle << ", shape=" << s[0] << "," << s[3];
+      } else {
+        LOG(INFO) << "MNISTIter: load " << (unsigned)img_.size(0) << " images, shuffle=" 
+            << param_.shuffle << ", shape=" << s[0] << "," << s[1] << "," << s[2] << "," 
+            << s[3];
+      }
     }
   }
   virtual void BeforeFirst(void) {
     this->loc_ = 0;
   }
   virtual bool Next(void) {
-    if (loc_ + param.batch_size <= img_.size(0)) {
+    if (loc_ + param_.batch_size <= img_.size(0)) {
       batch_data_.dptr_ = img_[loc_].dptr_;
       batch_label_.dptr_ = &labels_[loc_];
-      out_.data[0] = TBlob(batch_data_);
+      if (param_.flat)
+          out_.data[0] = TBlob(batch_data_.FlatTo2D());
+      else
+          out_.data[0] = TBlob(batch_data_);
       out_.data[1] = TBlob(batch_label_);
       out_.inst_index = &inst_[loc_];
-      loc_ += param.batch_size;
+      loc_ += param_.batch_size;
       return true;
     } else {
       return false;
@@ -109,7 +117,7 @@ class MNISTIter: public IIterator<DataBatch> {
 
  private:
   inline void LoadImage(void) {
-    dmlc::Stream *stdimg = dmlc::Stream::Create(param.image.c_str(), "r");
+    dmlc::Stream *stdimg = dmlc::Stream::Create(param_.image.c_str(), "r");
     ReadInt(stdimg);
     int image_count = ReadInt(stdimg);
     int image_rows  = ReadInt(stdimg);
@@ -134,7 +142,7 @@ class MNISTIter: public IIterator<DataBatch> {
     delete stdimg;
   }
   inline void LoadLabel(void) {
-    dmlc::Stream *stdlabel = dmlc::Stream::Create(param.label.c_str(), "r");
+    dmlc::Stream *stdlabel = dmlc::Stream::Create(param_.label.c_str(), "r");
     ReadInt(stdlabel);
     int labels_count = ReadInt(stdlabel);
     labels_.resize(labels_count);
@@ -147,7 +155,7 @@ class MNISTIter: public IIterator<DataBatch> {
     delete stdlabel;
   }
   inline void Shuffle(void) {
-    std::shuffle(inst_.begin(), inst_.end(), common::RANDOM_ENGINE(kRandMagic+param.seed));
+    std::shuffle(inst_.begin(), inst_.end(), common::RANDOM_ENGINE(kRandMagic+param_.seed));
     std::vector<float> tmplabel(labels_.size());
     mshadow::TensorContainer<cpu, 3> tmpimg(img_.shape_);
     for (size_t i = 0; i < inst_.size(); ++i) {
@@ -170,7 +178,7 @@ class MNISTIter: public IIterator<DataBatch> {
 
  private:
   /*! \brief MNIST iter params */
-  MNISTParam param;
+  MNISTParam param_;
   /*! \brief output */
   DataBatch out_;
   /*! \brief current location */
@@ -193,7 +201,9 @@ class MNISTIter: public IIterator<DataBatch> {
 
 DMLC_REGISTER_PARAMETER(MNISTParam);
 MXNET_REGISTER_IO_ITER(MNISTIter, MNISTIter)
-    .describe("Create MNISTIter")
+    .describe("Create data iterator for MNIST hand-written digit number \
+            recogonition dataset, which include 50000 training images and \
+            10000 testing images. All images are 28 * 28 gray-scaled.")
     .add_arguments(MNISTParam::__FIELDS__());
 }  // namespace io
 }  // namespace mxnet
