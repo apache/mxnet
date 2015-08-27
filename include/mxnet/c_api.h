@@ -501,7 +501,7 @@ MXNET_DLL int MXDataIterGetIterInfo(AtomicSymbolCreator creator,
  */
 MXNET_DLL int MXDataIterFree(DataIterHandle handle);
 /*!
- * \brief Get the name of iterator entry
+ * \brief get the name of iterator entry
  * \param iter iterator entry
  * \param out_name the name of the iterator
  * \return 0 when success, -1 when failure happens
