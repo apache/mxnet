@@ -4,6 +4,8 @@ import numpy as np
 import os, gzip
 import pickle as pickle
 import sys
+import get_data
+
 def CalAcc(out, label):
     pred = np.argmax(out, axis=1)
     return np.sum(pred == label) * 1.0 / out.shape[0]
@@ -49,13 +51,16 @@ def Update(grad, weight):
 
 block = zip(grad_narrays, arg_narrays)
 
+#check data
+get_data.GetMNIST_ubyte()
+
 train_dataiter = mx.io.MNISTIter(
-        image="/home/tianjun/data/mnist/train-images-idx3-ubyte",
-        label="/home/tianjun/data/mnist/train-labels-idx1-ubyte",
+        image="data/train-images-idx3-ubyte",
+        label="data/train-labels-idx1-ubyte",
         batch_size=batch_size, shuffle=1, flat=1, silent=0, seed=10)
 val_dataiter = mx.io.MNISTIter(
-        image="/home/tianjun/data/mnist/t10k-images-idx3-ubyte",
-        label="/home/tianjun/data/mnist/t10k-labels-idx1-ubyte",
+        image="data/t10k-images-idx3-ubyte",
+        label="data/t10k-labels-idx1-ubyte",
         batch_size=batch_size, shuffle=1, flat=1, silent=0)
 
 def test_mlp():
