@@ -1,11 +1,18 @@
 # pylint: skip-file
 import mxnet as mx
 import numpy as np
-import os, cPickle, gzip
-
+import os, gzip
+import pickle as pickle
+import sys
 def CalAcc(out, label):
     pred = np.argmax(out, axis=1)
     return np.sum(pred == label) * 1.0 / out.shape[0]
+
+def IgnorePython3():
+    if sys.version_info[0] >= 3:
+        # TODO(tianjun): use IO instead of pickle
+        # Python3 pickle is not able to load data correctly
+        sys.exit(0)
 
 
 # load data
@@ -14,7 +21,8 @@ class MNISTIter(object):
         if not os.path.exists('mnist.pkl.gz'):
             os.system("wget http://deeplearning.net/data/mnist/mnist.pkl.gz")
         f = gzip.open('mnist.pkl.gz', 'rb')
-        train_set, valid_set, test_set = cPickle.load(f)
+        IgnorePython3()
+        train_set, valid_set, test_set = pickle.load(f)
         f.close()
         if which_set == 'train':
             self.data = train_set[0]
@@ -51,32 +59,27 @@ class MNISTIter(object):
                     self.label[start:end])
 
 
-
 # symbol net
 batch_size = 100
 data = mx.symbol.Variable('data')
-fc1 = mx.symbol.Convolution(data = data, name='conv1', nb_filter=32, kernel=(7,7), stride=(2,2), nstep=10, no_bias=1)
+fc1 = mx.symbol.FullyConnected(data = data, name='fc1', num_hidden=128)
 act1 = mx.symbol.Activation(data = fc1, name='relu1', act_type="relu")
-mp = mx.symbol.Pooling(data = act1, name = 'mp', kernel=(2,2), stride=(2,2), pool_type='avg')
-fl = mx.symbol.Flatten(data = mp, name="flatten")
-fc2 = mx.symbol.FullyConnected(data = fl, name='fc2', num_hidden=10)
-softmax = mx.symbol.Softmax(data = fc2, name = 'sm')
+fc2 = mx.symbol.FullyConnected(data = act1, name = 'fc2', num_hidden = 64)
+act2 = mx.symbol.Activation(data = fc2, name='relu2', act_type="relu")
+fc3 = mx.symbol.FullyConnected(data = act2, name='fc3', num_hidden=10)
+softmax = mx.symbol.Softmax(data = fc3, name = 'sm')
 args_list = softmax.list_arguments()
 # infer shape
-#data_shape = (batch_size, 784)
-
-data_shape = (batch_size, 1, 28, 28)
+data_shape = (batch_size, 784)
 arg_shapes, out_shapes = softmax.infer_shape(data=data_shape)
 arg_narrays = [mx.narray.create(shape) for shape in arg_shapes]
 grad_narrays = [mx.narray.create(shape) for shape in arg_shapes]
-mom_narrays = [mx.narray.create(shape) for shape in arg_shapes]
 inputs = dict(zip(args_list, arg_narrays))
-print zip(args_list, arg_shapes)
 np.random.seed(0)
 # set random weight
 for name, narray in inputs.items():
     if "weight" in name:
-        narray.numpy[:, :] = np.random.uniform(-0.001, 0.001, narray.numpy.shape)
+        narray.numpy[:, :] = np.random.uniform(-0.07, 0.07, narray.numpy.shape)
     if "bias" in name:
         narray.numpy[:] = 0.0
 
@@ -89,47 +92,51 @@ executor = softmax.bind(mx.Context('cpu'), arg_narrays, grad_narrays, req)
 out_narray = executor.heads()[0]
 grad_narray = mx.narray.create(out_narray.shape)
 
-epoch = 10
-momentum = 0.9
-lr = 0.001
+epoch = 9
+lr = 0.1
 wd = 0.0004
+def Update(grad, weight):
+    weight.numpy[:] -= lr * grad.numpy[:]  / batch_size
 
-def Update(mom, grad, weight):
-    weight.numpy[:] -= lr * grad.numpy[:]
-
-block = zip(mom_narrays, grad_narrays, arg_narrays)
-
-
-train = MNISTIter("train", batch_size, False)
-valid = MNISTIter("valid", batch_size, False)
-
-for i in xrange(epoch):
-    # train
-    print "Epoch %d" % i
-    train_acc = 0.0
-    val_acc = 0.0
-    while train.Next():
-        data, label = train.Get()
-        inputs["data"].numpy[:] = data
-        inputs["sm_label"].numpy[:] = label
-        executor.forward()
-        train_acc += CalAcc(out_narray.numpy, label)
-        grad_narray.numpy[:] = out_narray.numpy
-        executor.backward([grad_narray])
-
-        for mom, grad, weight in block:
-            Update(mom, grad, weight)
-
-    # evaluate
-    while valid.Next():
-        data, label = valid.Get()
-        inputs["data"].numpy[:] = data
-        executor.forward()
-        val_acc += CalAcc(out_narray.numpy, label)
-    print "Train Acc: ", train_acc / train.nbatch
-    print "Valid Acc: ", val_acc / valid.nbatch
-    train.BeforeFirst()
-    valid.BeforeFirst()
+block = zip(grad_narrays, arg_narrays)
 
 
+
+train = MNISTIter("train", batch_size, True)
+valid = MNISTIter("valid", batch_size, True)
+
+def test_mlp():
+    acc_train = 0.
+    acc_val = 0.
+    for i in range(epoch):
+        # train
+        print("Epoch %d" % i)
+        train_acc = 0.0
+        val_acc = 0.0
+        while train.Next():
+            data, label = train.Get()
+            inputs["data"].numpy[:] = data
+            inputs["sm_label"].numpy[:] = label
+            executor.forward()
+            train_acc += CalAcc(out_narray.numpy, label)
+            grad_narray.numpy[:] = out_narray.numpy
+            executor.backward([grad_narray])
+
+            for grad, weight in block:
+                Update(grad, weight)
+
+        # evaluate
+        while valid.Next():
+            data, label = valid.Get()
+            inputs["data"].numpy[:] = data
+            executor.forward()
+            val_acc += CalAcc(out_narray.numpy, label)
+        acc_train = train_acc / train.nbatch
+        acc_val = val_acc / valid.nbatch
+        print("Train Acc: ", train_acc / train.nbatch)
+        print("Valid Acc: ", val_acc / valid.nbatch)
+        train.BeforeFirst()
+        valid.BeforeFirst()
+    assert(acc_train > 0.98)
+    assert(acc_val > 0.97)
 

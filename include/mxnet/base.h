@@ -55,6 +55,8 @@ typedef mshadow::TBlob TBlob;
 namespace dmlc {
 // Add a few patches to support TShape in dmlc/parameter.
 DMLC_DECLARE_TYPE_NAME(mxnet::TShape, "Shape(tuple)");
+DMLC_DECLARE_TYPE_NAME(uint32_t, "unsigned int");
+
 
 namespace parameter {
 template<>

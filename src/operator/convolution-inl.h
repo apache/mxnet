@@ -101,7 +101,7 @@ class ConvolutionOp : public Operator {
         // TODO(bing): make mshadow support dual stride
       }
       const index_t gstride = temp_col_.size(0) / param_.nb_group;
-      for (int gid = 0; gid < param_.nb_group; ++gid) {
+      for (uint32_t gid = 0; gid < param_.nb_group; ++gid) {
         mshadow::Tensor<xpu, 2> tmpc = temp_col_.Slice(gstride * gid,
                                                        gstride * (gid + 1));
         temp_dst_[gid] = dot(wmat[gid], tmpc);
@@ -148,9 +148,9 @@ class ConvolutionOp : public Operator {
     const index_t nbatch = data.size(0);
     for (index_t i = 0; i < nbatch; i += param_.nstep) {
       const index_t step = std::min(param_.nstep, nbatch - i);
-      temp_col_.Resize(mshadow::Shape2(shape_colunit_[0],
+      temp_col_.Resize(Shape2(shape_colunit_[0],
                                        shape_colunit_[1] * step));
-      temp_dst_.Resize(mshadow::Shape3(shape_dstunit_[0],
+      temp_dst_.Resize(Shape3(shape_dstunit_[0],
                                        shape_dstunit_[1], shape_dstunit_[2] * step));
       temp_dst_ = reshape(swapaxis<1, 0>(grad.Slice(i, i + step)), temp_dst_.shape_);
       if (param_.pad[0] == 0 && param_.pad[1] == 0) {
@@ -167,13 +167,18 @@ class ConvolutionOp : public Operator {
                                      param_.stride[0]);
       }
       const index_t gstride = temp_col_.size(0) / param_.nb_group;
-      for (int gid = 0; gid < param_.nb_group; ++gid) {
-        mshadow::Tensor<xpu, 2> tmpc = temp_col_.Slice(gstride * gid, gstride * (gid + 1));
-        gwmat[gid] += dot(temp_dst_[gid], tmpc.T());
+      for (uint32_t gid = 0; gid < param_.nb_group; ++gid) {
+        Tensor<xpu, 2> tmpc = temp_col_.Slice(gstride * gid, gstride * (gid + 1));
+        if (i == 0) {
+          Tensor<xpu, 2> tmp_gwmat = gwmat[gid];
+          Assign(tmp_gwmat, req[kWeight], dot(temp_dst_[gid], tmpc.T()));
+        } else {
+          gwmat[gid] += dot(temp_dst_[gid], tmpc.T());
+        }
       }
       if (req[kData] == kWriteTo) {
-        for (int gid = 0; gid < param_.nb_group; ++gid) {
-          mshadow::Tensor<xpu, 2> tmpc = temp_col_.Slice(gstride * gid, gstride * (gid + 1));
+        for (uint32_t gid = 0; gid < param_.nb_group; ++gid) {
+          Tensor<xpu, 2> tmpc = temp_col_.Slice(gstride * gid, gstride * (gid + 1));
           tmpc = dot(wmat[gid].T(), temp_dst_[gid]);
         }
         if (param_.pad[0] == 0 && param_.pad[1] == 0) {
@@ -183,7 +188,7 @@ class ConvolutionOp : public Operator {
                                                     param_.kernel[1],
                                                     param_.stride[0]);
         } else {
-          mshadow::Shape<4> pshape = data.Slice(i, i + step).shape_;
+          Shape<4> pshape = data.Slice(i, i + step).shape_;
           pshape[2] += 2 * param_.pad[0];
           pshape[3] += 2 * param_.pad[1];
           gdata.Slice(i, i + step) = crop(pack_col2patch(temp_col_,
@@ -197,8 +202,7 @@ class ConvolutionOp : public Operator {
     }
     if (!param_.no_bias) {
       Tensor<xpu, 1> gbias = in_grad[kBias].get<xpu, 1, real_t>(s);
-      // Assign(gbias, req[kBias], sumall_except_dim<1>(grad);
-      gbias += sumall_except_dim<1>(grad);
+      Assign(gbias, req[kBias], sumall_except_dim<1>(grad));
     }
   }
 
