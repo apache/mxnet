@@ -9,6 +9,7 @@
 #include <mxnet/narray.h>
 #include <mxnet/symbolic.h>
 #include <mxnet/operator.h>
+#include <mxnet/io.h>
 #include <mxnet/c_api.h>
 #include <vector>
 #include <sstream>
@@ -607,5 +608,80 @@ int MXExecutorBind(SymbolHandle symbol_handle,
     grad_req_vec.push_back(static_cast<OpReqType>(grad_req_type[i]));
   }
   *out = Executor::Bind(*symb, ctx, in_args_vec, arg_grad_vec, grad_req_vec);
+  API_END();
+}
+
+//--------------------------------------------
+// Part 5: IO Interface
+//--------------------------------------------
+int MXListDataIters(mx_uint *out_size,
+                    DataIterCreator **out_array) {
+  API_BEGIN();
+  auto &vec = dmlc::Registry<DataIteratorReg>::List();
+  *out_size = static_cast<mx_uint>(vec.size());
+  *out_array = (DataIterCreator*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
+  API_END();
+}
+
+int MXDataIterGetIterInfo(DataIterCreator creator,
+                                const char **name,
+                                const char **description,
+                                mx_uint *num_args,
+                                const char ***arg_names,
+                                const char ***arg_type_infos,
+                                const char ***arg_descriptions) {
+  DataIteratorReg *e = static_cast<DataIteratorReg *>(creator);
+  return MXAPIGetFunctionRegInfo(e, name, description, num_args,
+                                 arg_names, arg_type_infos, arg_descriptions);
+}
+
+int MXDataIterCreateIter(DataIterCreator creator,
+                               int num_param,
+                               const char **keys,
+                               const char **vals,
+                               DataIterHandle *out) {
+  IIterator<DataBatch> *iter = nullptr;
+  API_BEGIN();
+  DataIteratorReg *e = static_cast<DataIteratorReg *>(creator);
+  iter = e->body();
+  std::vector<std::pair<std::string, std::string> > kwargs;
+  for (int i = 0; i < num_param; ++i) {
+    kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
+  }
+  iter->Init(kwargs);
+  iter->BeforeFirst();
+  *out = iter;
+  API_END_HANDLE_ERROR(delete iter);
+}
+
+int MXDataIterFree(DataIterHandle handle) {
+  API_BEGIN();
+  delete static_cast<IIterator<DataBatch> *>(handle);
+  API_END();
+}
+
+int MXDataIterBeforeFirst(DataIterHandle handle) {
+  API_BEGIN();
+  static_cast<IIterator<DataBatch>* >(handle)->BeforeFirst();
+  API_END();
+}
+
+int MXDataIterNext(DataIterHandle handle, int *out) {
+  API_BEGIN();
+  *out = static_cast<IIterator<DataBatch>* >(handle)->Next();
+  API_END();
+}
+
+int MXDataIterGetLabel(DataIterHandle handle, NArrayHandle *out) {
+  API_BEGIN();
+  DataBatch db = static_cast<IIterator<DataBatch>* >(handle)->Value();
+  *out = new NArray(db.data[1], 0);
+  API_END();
+}
+
+int MXDataIterGetData(DataIterHandle handle, NArrayHandle *out) {
+  API_BEGIN();
+  DataBatch db = static_cast<IIterator<DataBatch>* >(handle)->Value();
+  *out = new NArray(db.data[0], 0);
   API_END();
 }
