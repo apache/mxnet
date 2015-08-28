@@ -10,9 +10,6 @@ def CalAcc(out, label):
     pred = np.argmax(out, axis=1)
     return np.sum(pred == label) * 1.0 / out.shape[0]
 
-if sys.version_info[0] >= 3:
-    sys.exit(0)
-
 # symbol net
 batch_size = 100
 data = mx.symbol.Variable('data')
@@ -52,7 +49,7 @@ wd = 0.0004
 def Update(grad, weight):
     weight.numpy[:] -= lr * grad.numpy[:]  / batch_size
 
-block = zip(grad_narrays, arg_narrays)
+block = list(zip(grad_narrays, arg_narrays))
 
 #check data
 get_data.GetMNIST_ubyte()
@@ -60,11 +57,11 @@ get_data.GetMNIST_ubyte()
 train_dataiter = mx.io.MNISTIter(
         image="data/train-images-idx3-ubyte",
         label="data/train-labels-idx1-ubyte",
-        batch_size=batch_size, shuffle=1, flat=1, silent=0, seed=10)
+        batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
 val_dataiter = mx.io.MNISTIter(
         image="data/t10k-images-idx3-ubyte",
         label="data/t10k-labels-idx1-ubyte",
-        batch_size=batch_size, shuffle=1, flat=1, silent=0)
+        batch_size=batch_size, shuffle=True, flat=True, silent=False)
 
 def test_mlp():
     acc_train = 0.
@@ -102,6 +99,8 @@ def test_mlp():
         acc_val = val_acc / val_nbatch
         print("Train Acc: ", train_acc / train_nbatch)
         print("Valid Acc: ", val_acc / val_nbatch)
+        train_dataiter.reset()
+        val_dataiter.reset()
     assert(acc_train > 0.98)
     assert(acc_val > 0.97)
 

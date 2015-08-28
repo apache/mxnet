@@ -25,10 +25,6 @@ def test_MNISTIter_loop():
     for data, label in train_dataiter:
         batch_count += 1
     assert(nbatch == batch_count)
-    batch_count = 0
-    while train_dataiter.iter_next():
-        batch_count += 1
-    assert(nbatch == batch_count)
 
 def test_MNISTIter_reset():
     train_dataiter.reset()

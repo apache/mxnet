@@ -51,7 +51,6 @@ class DataIter(object):
         if next_res.value:
             return self.getdata(), self.getlabel()
         else:
-            self.reset()
             raise StopIteration
 
     # make it work for both python2 and 3

@@ -81,14 +81,14 @@ class MNISTIter: public IIterator<DataBatch> {
     out_.batch_size = param_.batch_size;
     if (param_.shuffle) this->Shuffle();
     if (param_.silent == 0) {
-      mshadow::Shape<4> s = batch_data_.shape_;
+      mshadow::TShape s;
+      s = batch_data_.shape_;
       if (param_.flat) {
         LOG(INFO) << "MNISTIter: load " << (unsigned)img_.size(0) << " images, shuffle="
-            << param_.shuffle << ", shape=" << s[0] << "," << s[3];
+            << param_.shuffle << ", shape=" << s.FlatTo2D();
       } else {
         LOG(INFO) << "MNISTIter: load " << (unsigned)img_.size(0) << " images, shuffle="
-            << param_.shuffle << ", shape=" << s[0] << "," << s[1] << "," << s[2] << ","
-            << s[3];
+            << param_.shuffle << ", shape=" << s;
       }
     }
   }
