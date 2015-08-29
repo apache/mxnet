@@ -34,9 +34,6 @@ doc/latex
 doc/doc
 
 #dmlc
-dmlc-core
-mshadow
-rabit
 config.mk
 
 *.pyc
