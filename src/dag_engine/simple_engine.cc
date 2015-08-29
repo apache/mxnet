@@ -188,8 +188,8 @@ void SimpleEngine::OnComplete(SimpleOpr* simple_opr) {
    * Mark complete for read variables.
    */
   for (auto&& i : simple_opr->use_vars) {
+    std::lock_guard<std::mutex> lock{i->m};
     if (--i->num_pending_reads == 0) {
-      std::lock_guard<std::mutex> lock{i->m};
       if (i->pending_write != nullptr &&
           --i->pending_write->trigger->wait == 0) {
         task_queue_.Push(i->pending_write->trigger);
@@ -200,7 +200,7 @@ void SimpleEngine::OnComplete(SimpleOpr* simple_opr) {
    * Mark complete for write variables.
    */
   for (auto&& i : simple_opr->mutate_vars) {
-    SimpleVar* to_delete = nullptr;
+    bool to_delete = false;
     {
       std::lock_guard<std::mutex> lock{i->m};
       assert(i->ready_to_read == false);
@@ -210,7 +210,7 @@ void SimpleEngine::OnComplete(SimpleOpr* simple_opr) {
       if (i->to_delete) {
         assert(head->next == nullptr);
         delete head;
-        to_delete = i;
+        to_delete = true;
       } else {
         while (true) {
           if (head->write == true) {
@@ -237,8 +237,8 @@ void SimpleEngine::OnComplete(SimpleOpr* simple_opr) {
         }
       }
     }
-    if (to_delete != nullptr) {
-      delete to_delete;
+    if (to_delete) {
+      delete i;
     }
   }
   {

@@ -62,11 +62,8 @@ struct SimpleVar final : public Var {
   SimpleVar() { LOG(INFO) << __func__ << " " << ++counter; }
   ~SimpleVar() { LOG(INFO) << __func__ << " " << --counter; }
 #endif  // DAG_ENGINE_DEBUG
-  std::atomic<std::size_t> num_pending_reads{0};
-  /*!
-   * Protects everything except `num_pending_reads`.
-   */
   std::mutex m;
+  std::size_t num_pending_reads{0};
   VersionedVarBlock* head{nullptr};
   VersionedVarBlock* pending_write{nullptr};
   /*!
