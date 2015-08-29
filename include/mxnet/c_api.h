@@ -36,6 +36,8 @@ typedef void *SymbolHandle;
 typedef void *AtomicSymbolHandle;
 /*! \brief handle to an Executor */
 typedef void *ExecutorHandle;
+/*! \brief handle a dataiter creator */
+typedef void *DataIterCreator;
 /*! \brief handle to a DataIterator */
 typedef void *DataIterHandle;
 /*!
@@ -452,49 +454,176 @@ MXNET_DLL int MXExecutorBind(SymbolHandle symbol_handle,
 // Part 5: IO Interface
 //--------------------------------------------
 /*!
- * \brief create an data iterator from configs string
- * \param cfg config string that contains the
- *    configuration about the iterator
- * \param out the handle to the iterator
+ * \brief List all the available iterator entries
+ * \param out_size the size of returned iterators
+ * \param out_array the output iteratos entries
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXIOCreateFromConfig(const char *cfg,
-                                   DataIterHandle *out);
+MXNET_DLL int MXListDataIters(mx_uint *out_size,
+                              DataIterCreator **out_array);
 /*!
- * \brief move iterator to next position
+ * \brief Init an iterator, init with parameters
+ * the array size of passed in arguments
+ * \param handle of the iterator creator
+ * \param num_param number of parameter
+ * \param keys parameter keys
+ * \param vals parameter values
+ * \param out resulting iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterCreateIter(DataIterCreator handle,
+                               int num_param,
+                               const char **keys,
+                               const char **vals,
+                               DataIterHandle *out);
+/*!
+ * \brief Get the detailed information about data iterator.
+ * \param creator the DataIterCreator.
+ * \param name The returned name of the creator.
+ * \param description The returned description of the symbol.
+ * \param num_args Number of arguments.
+ * \param arg_names Name of the arguments.
+ * \param arg_type_infos Type informations about the arguments.
+ * \param arg_descriptions Description information about the arguments.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterGetIterInfo(AtomicSymbolCreator creator,
+                                          const char **name,
+                                          const char **description,
+                                          mx_uint *num_args,
+                                          const char ***arg_names,
+                                          const char ***arg_type_infos,
+                                          const char ***arg_descriptions);
+/*!
+ * \brief Free the handle to the IO module
+ * \param handle the handle pointer to the data iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterFree(DataIterHandle handle);
+/*!
+ * \brief get the name of iterator entry
+ * \param iter iterator entry
+ * \param out_name the name of the iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterGetName(DataIterCreator iter,
+                            const char **out_name);
+/*!
+ * \brief Init an iterator, init with parameters
+ * the array size of passed in arguments
+ * \param handle of the iterator creator
+ * \param num_param number of parameter
+ * \param keys parameter keys
+ * \param vals parameter values
+ * \param out resulting iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterCreateIter(DataIterCreator handle,
+                               int num_param,
+                               const char **keys,
+                               const char **vals,
+                               DataIterHandle *out);
+/*!
+ * \brief Get the detailed information about data iterator.
+ * \param creator the DataIterCreator.
+ * \param name The returned name of the creator.
+ * \param description The returned description of the symbol.
+ * \param num_args Number of arguments.
+ * \param arg_names Name of the arguments.
+ * \param arg_type_infos Type informations about the arguments.
+ * \param arg_descriptions Description information about the arguments.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterGetIterInfo(AtomicSymbolCreator creator,
+                                          const char **name,
+                                          const char **description,
+                                          mx_uint *num_args,
+                                          const char ***arg_names,
+                                          const char ***arg_type_infos,
+                                          const char ***arg_descriptions);
+/*!
+ * \brief Free the handle to the IO module
+ * \param handle the handle pointer to the data iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterFree(DataIterHandle handle);
+/*!
+ * \brief Get the name of iterator entry
+ * \param iter iterator entry
+ * \param out_name the name of the iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterGetName(DataIterCreator iter,
+                            const char **out_name);
+/*!
+ * \brief Init an iterator, init with parameters
+ * the array size of passed in arguments
+ * \param handle of the iterator creator
+ * \param num_param number of parameter
+ * \param keys parameter keys
+ * \param vals parameter values
+ * \param out resulting iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterCreateIter(DataIterCreator handle,
+                               int num_param,
+                               const char **keys,
+                               const char **vals,
+                               DataIterHandle *out);
+/*!
+ * \brief Get the detailed information about data iterator.
+ * \param creator the DataIterCreator.
+ * \param name The returned name of the creator.
+ * \param description The returned description of the symbol.
+ * \param num_args Number of arguments.
+ * \param arg_names Name of the arguments.
+ * \param arg_type_infos Type informations about the arguments.
+ * \param arg_descriptions Description information about the arguments.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterGetIterInfo(AtomicSymbolCreator creator,
+                                          const char **name,
+                                          const char **description,
+                                          mx_uint *num_args,
+                                          const char ***arg_names,
+                                          const char ***arg_type_infos,
+                                          const char ***arg_descriptions);
+/*!
+ * \brief Free the handle to the IO module
+ * \param handle the handle pointer to the data iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterFree(DataIterHandle handle);
+/*!
+ * \brief Move iterator to next position
  * \param handle the handle to iterator
  * \param out return value of next
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXIONext(DataIterHandle handle,
+MXNET_DLL int MXDataIterNext(DataIterHandle handle,
                        int *out);
 /*!
- * \brief call iterator.BeforeFirst
+ * \brief Call iterator.Reset
  * \param handle the handle to iterator
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXIOBeforeFirst(DataIterHandle handle);
+MXNET_DLL int MXDataIterBeforeFirst(DataIterHandle handle);
+
 /*!
- * \brief free the handle to the IO module
- * \param handle the handle pointer to the data iterator
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXIOFree(DataIterHandle handle);
-/*!
- * \brief get the handle to the NArray of underlying data
+ * \brief Get the handle to the NArray of underlying data
  * \param handle the handle pointer to the data iterator
  * \param out handle to underlying data NArray
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXIOGetData(DataIterHandle handle,
+MXNET_DLL int MXDataIterGetData(DataIterHandle handle,
                           NArrayHandle *out);
 /*!
- * \brief get the handle to the NArray of underlying label
+ * \brief Get the handle to the NArray of underlying label
  * \param handle the handle pointer to the data iterator
  * \param out the handle to underlying label NArray
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXIOGetLabel(DataIterHandle handle,
+MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
                            NArrayHandle *out);
 
 #endif  // MXNET_C_API_H_

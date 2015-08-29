@@ -63,7 +63,7 @@ endif
 
 BIN = tests/test_simple_engine
 OBJ = narray_function_cpu.o
-OBJCXX11 = reshape_cpu.o dag_engine.o simple_engine.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o convolution_cpu.o
+OBJCXX11 = reshape_cpu.o dag_engine.o simple_engine.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o convolution_cpu.o io.o iter_mnist.o
 CUOBJ =
 SLIB = lib/libmxnet.so
 ALIB = lib/libmxnet.a
@@ -105,9 +105,11 @@ convolution_cpu.o: src/operator/convolution.cc
 convolution_gpu.o: src/operator/convolution.cu
 reshape_cpu.o: src/operator/reshape.cc
 reshape_gpu.o: src/operator/reshape.cu
+io.o: src/io/io.cc
+iter_mnist.o: src/io/iter_mnist.cc
 
-lib/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ)
-lib/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ)
+lib/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ) $(LIB_DEP)
+lib/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ) $(LIB_DEP)
 
 tests/test_storage: tests/test_storage.cc lib/libmxnet.a
 tests/test_simple_engine: tests/test_simple_engine.cc lib/libmxnet.a

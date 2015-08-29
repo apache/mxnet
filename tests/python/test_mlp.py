@@ -4,60 +4,11 @@ import numpy as np
 import os, gzip
 import pickle as pickle
 import sys
+import get_data
+
 def CalAcc(out, label):
     pred = np.argmax(out, axis=1)
     return np.sum(pred == label) * 1.0 / out.shape[0]
-
-def IgnorePython3():
-    if sys.version_info[0] >= 3:
-        # TODO(tianjun): use IO instead of pickle
-        # Python3 pickle is not able to load data correctly
-        sys.exit(0)
-
-
-# load data
-class MNISTIter(object):
-    def __init__(self, which_set, batch_size=100, flatten=True):
-        if not os.path.exists('mnist.pkl.gz'):
-            os.system("wget http://deeplearning.net/data/mnist/mnist.pkl.gz")
-        f = gzip.open('mnist.pkl.gz', 'rb')
-        IgnorePython3()
-        train_set, valid_set, test_set = pickle.load(f)
-        f.close()
-        if which_set == 'train':
-            self.data = train_set[0]
-            self.label = np.asarray(train_set[1])
-        elif which_set == 'valid':
-            self.data = valid_set[0]
-            self.label = np.asarray(valid_set[1])
-        else:
-            self.data = test_set[0]
-            self.data = np.asarray(test_set[1])
-        self.flatten = flatten
-        self.batch_size = batch_size
-        self.nbatch = self.data.shape[0] / batch_size
-        assert(self.data.shape[0] % batch_size == 0) # I am lazy
-        self.now_idx = -1
-    def BeforeFirst(self):
-        self.now_idx = -1
-    def Next(self):
-        self.now_idx += 1
-        if self.now_idx == self.nbatch:
-            return False
-        return True
-    def Get(self):
-        if self.now_idx < 0:
-            raise Exception("Iterator is at head")
-        elif self.now_idx >= self.nbatch:
-            raise Exception("Iterator is at end")
-        start = self.now_idx * self.batch_size
-        end = (self.now_idx + 1) * self.batch_size
-        if self.flatten:
-            return (self.data[start:end, :], self.label[start:end])
-        else:
-            return (self.data[start:end, :].reshape(batch_size, 1, 28, 28),
-                    self.label[start:end])
-
 
 # symbol net
 batch_size = 100
@@ -98,12 +49,19 @@ wd = 0.0004
 def Update(grad, weight):
     weight.numpy[:] -= lr * grad.numpy[:]  / batch_size
 
-block = zip(grad_narrays, arg_narrays)
+block = list(zip(grad_narrays, arg_narrays))
 
+#check data
+get_data.GetMNIST_ubyte()
 
-
-train = MNISTIter("train", batch_size, True)
-valid = MNISTIter("valid", batch_size, True)
+train_dataiter = mx.io.MNISTIter(
+        image="data/train-images-idx3-ubyte",
+        label="data/train-labels-idx1-ubyte",
+        batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
+val_dataiter = mx.io.MNISTIter(
+        image="data/t10k-images-idx3-ubyte",
+        label="data/t10k-labels-idx1-ubyte",
+        batch_size=batch_size, shuffle=True, flat=True, silent=False)
 
 def test_mlp():
     acc_train = 0.
@@ -113,12 +71,16 @@ def test_mlp():
         print("Epoch %d" % i)
         train_acc = 0.0
         val_acc = 0.0
-        while train.Next():
-            data, label = train.Get()
+        train_nbatch = 0
+        val_nbatch = 0
+        for data, label in train_dataiter:
+            data = data.numpy
+            label = label.numpy.flatten()
             inputs["data"].numpy[:] = data
             inputs["sm_label"].numpy[:] = label
             executor.forward()
             train_acc += CalAcc(out_narray.numpy, label)
+            train_nbatch += 1
             grad_narray.numpy[:] = out_narray.numpy
             executor.backward([grad_narray])
 
@@ -126,17 +88,19 @@ def test_mlp():
                 Update(grad, weight)
 
         # evaluate
-        while valid.Next():
-            data, label = valid.Get()
+        for data, label in val_dataiter:
+            data = data.numpy
+            label = label.numpy.flatten()
             inputs["data"].numpy[:] = data
             executor.forward()
             val_acc += CalAcc(out_narray.numpy, label)
-        acc_train = train_acc / train.nbatch
-        acc_val = val_acc / valid.nbatch
-        print("Train Acc: ", train_acc / train.nbatch)
-        print("Valid Acc: ", val_acc / valid.nbatch)
-        train.BeforeFirst()
-        valid.BeforeFirst()
+            val_nbatch += 1
+        acc_train = train_acc / train_nbatch
+        acc_val = val_acc / val_nbatch
+        print("Train Acc: ", train_acc / train_nbatch)
+        print("Valid Acc: ", val_acc / val_nbatch)
+        train_dataiter.reset()
+        val_dataiter.reset()
     assert(acc_train > 0.98)
     assert(acc_val > 0.97)
 
