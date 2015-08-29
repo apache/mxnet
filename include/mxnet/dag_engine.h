@@ -61,7 +61,7 @@ class DAGEngine {
   /*!
    * \brief Operator of the engine.
    */
-  using Operator = engine::Opr*;
+  using OprHandle = engine::Opr*;
   /*!
    * \brief Allocate a new variable, the variable can then
    *        be used to schedule the operation concurrently via dependency
@@ -78,20 +78,20 @@ class DAGEngine {
    * \param mutate_vars Teh variables that current operation will mutate.
    * \return The new operator allocated.
    */
-  virtual Operator NewOperator(AsyncFn fn,
-                               std::vector<Variable> const& use_vars,
-                               std::vector<Variable> const& mutate_vars) = 0;
+  virtual OprHandle NewOperator(AsyncFn fn,
+                                std::vector<Variable> const& use_vars,
+                                std::vector<Variable> const& mutate_vars) = 0;
   /*!
    * \brief Delete the given operator.
    * \param op The operator to delete.
    */
-  virtual void DeleteOperator(Operator op) = 0;
+  virtual void DeleteOperator(OprHandle op) = 0;
   /*!
    * \brief Push an operator to the engine.
    * \param op The operator to push.
    * \param exec_ctx Execution context.
    */
-  virtual void Push(Operator op, Context exec_ctx) = 0;
+  virtual void Push(OprHandle op, Context exec_ctx) = 0;
   /*!
    * \brief Push an synchronous operation to the DAG engine.
    * \param exec_fun Execution function that executes the operation.

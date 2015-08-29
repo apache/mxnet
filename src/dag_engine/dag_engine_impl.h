@@ -30,20 +30,22 @@ struct Opr {
 
 template <typename T>
 T* Var::Cast() {
-  static_assert(std::is_base_of<Var, T>::value, "must inherit `mxnet::engine::Var`");
+  static_assert(std::is_base_of<Var, T>::value,
+                "must inherit `mxnet::engine::Var`");
 #ifndef DAG_ENGINE_DEBUG
   return static_cast<T*>(this);
-#else  // DAG_ENGINE_DEBUG
+#else   // DAG_ENGINE_DEBUG
   return dynamic_cast<T*>(this);
 #endif  // DAG_ENGINE_DEBUG
 }
 
 template <typename T>
 T* Opr::Cast() {
-  static_assert(std::is_base_of<Opr, T>::value, "must inherit `mxnet::engine::Opr`");
+  static_assert(std::is_base_of<Opr, T>::value,
+                "must inherit `mxnet::engine::Opr`");
 #ifndef DAG_ENGINE_DEBUG
   return static_cast<T*>(this);
-#else  // DAG_ENGINE_DEBUG
+#else   // DAG_ENGINE_DEBUG
   return dynamic_cast<T*>(this);
 #endif  // DAG_ENGINE_DEBUG
 }

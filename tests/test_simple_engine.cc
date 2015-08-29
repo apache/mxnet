@@ -15,7 +15,7 @@ void Foo(mxnet::RunContext, int i) { printf("The fox says %d\n", i); }
 int main() {
   auto&& engine = mxnet::DAGEngine::Get();
   auto&& var = engine->NewVar();
-  std::vector<mxnet::DAGEngine::Operator> oprs;
+  std::vector<mxnet::DAGEngine::OprHandle> oprs;
 
   // Test #1
   printf("============= Test #1 ==============\n");
@@ -36,6 +36,7 @@ int main() {
     engine->DeleteOperator(i);
   }
   engine->PushDelete([](mxnet::RunContext) {}, mxnet::Context{}, var);
+  engine->WaitForAll();
 
   printf("============= Test #2 ==============\n");
   var = engine->NewVar();
@@ -56,21 +57,21 @@ int main() {
     engine->DeleteOperator(i);
   }
   engine->PushDelete([](mxnet::RunContext) {}, mxnet::Context{}, var);
-  engine->WaitForAll();
 
   printf("============= Test #3 ==============\n");
   var = engine->NewVar();
   oprs.clear();
   engine->WaitForVar(var);
   engine->PushDelete([](mxnet::RunContext) {}, mxnet::Context{}, var);
+  engine->WaitForAll();
 
   printf("============= Test #4 ==============\n");
   var = engine->NewVar();
   oprs.clear();
   oprs.push_back(engine->NewOperator(
       [](mxnet::RunContext ctx, mxnet::DAGEngine::Callback cb) {
-        Foo(ctx, 42);
         std::this_thread::sleep_for(std::chrono::seconds{2});
+        Foo(ctx, 42);
         cb();
       },
       {}, {var}));
@@ -82,6 +83,7 @@ int main() {
     engine->DeleteOperator(i);
   }
   engine->PushDelete([](mxnet::RunContext) {}, mxnet::Context{}, var);
+  engine->WaitForAll();
 
   printf("============= Test #5 ==============\n");
   var = engine->NewVar();
@@ -103,6 +105,9 @@ int main() {
     engine->DeleteOperator(i);
   }
   engine->PushDelete([](mxnet::RunContext) {}, mxnet::Context{}, var);
+  engine->WaitForAll();
+  var = nullptr;
+  oprs.clear();
 
   return 0;
 }
