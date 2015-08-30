@@ -30,14 +30,15 @@ class GraphExecutor : public Executor {
                    Context ctx,
                    const std::vector<NArray> &in_args,
                    const std::vector<NArray> &arg_grad_store,
-                   const std::vector<OpReqType> &grad_req_type) {
+                   const std::vector<OpReqType> &grad_req_type,
+                   const std::vector<NArray> &aux_args) {
     CHECK_EQ(grad_req_type.size(), arg_grad_store.size());
     bool need_backward = false;
     for (auto req : grad_req_type) {
       if (req != kNullOp) need_backward = true;
     }
     this->InitGraph(symbol, ctx, need_backward);
-    this->InitDataEntryInfo(in_args, arg_grad_store, grad_req_type);
+    this->InitDataEntryInfo(in_args, arg_grad_store, grad_req_type, aux_args);
     this->InitDataEntryMemory();
     this->InitOpNodes();
     // TODO(bing): remove me when things are OK
@@ -106,6 +107,8 @@ class GraphExecutor : public Executor {
     Context ctx;
     // data entry information about outputs of op
     std::vector<DataEntryInfo> outputs;
+    // auxiliary data information of op
+    std::vector<DataEntryInfo> aux_args;
     // The following parts are constructed in InitOpNodes
     // the real operator
     std::shared_ptr<Operator> op;
@@ -158,7 +161,8 @@ class GraphExecutor : public Executor {
   // initialize internal DataEntryInfo, reference counting
   void InitDataEntryInfo(const std::vector<NArray> &in_args,
                          const std::vector<NArray> &arg_grad_store,
-                         const std::vector<OpReqType> &grad_req_type);
+                         const std::vector<OpReqType> &grad_req_type,
+                         const std::vector<NArray> &aux_args);
   // initialize internal data entries NArray
   void InitDataEntryMemory();
   // initialize OpNode data structure

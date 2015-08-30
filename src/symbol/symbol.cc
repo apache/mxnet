@@ -211,6 +211,26 @@ std::vector<std::string> Symbol::ListReturns() const {
   return ret;
 }
 
+std::vector<std::string> Symbol::ListAuxiliaryArgs() const {
+  std::vector<std::string> ret;
+  if (this->is_atomic()) {
+    return heads_[0].source->op->ListAuxiliaryArgs();
+  } else {
+    this->DFSVisit([&ret](const std::shared_ptr<Node> &node) {
+        if (node->op != nullptr) {
+          auto aux_args = node->op->ListAuxiliaryArgs();
+          if (aux_args.size() > 0) {
+            auto &hname = node->name;
+            for (auto const &aux : aux_args) {
+              ret.push_back(hname + '_' + aux);
+            }
+          }
+        }
+      });
+    return ret;
+  }
+}
+
 Symbol Symbol::operator[] (size_t index) const {
   size_t nreturn = NumReturns();
   CHECK_LT(index, nreturn) << "Symbol only accept nonnegative index";
@@ -425,15 +445,17 @@ Symbol Symbol::Grad(const std::vector<std::string>& wrt) const {
 }
 
 bool Symbol::InferShape(std::vector<TShape> *arg_shapes,
-                        std::vector<TShape> *out_shapes) const {
+                        std::vector<TShape> *out_shapes,
+                        std::vector<TShape> *aux_shapes) const {
   StaticGraph g;
   this->ToStaticGraph(&g);
-  return g.InferShape(arg_shapes, out_shapes);
+  return g.InferShape(arg_shapes, out_shapes, aux_shapes);
 }
 
 bool Symbol::InferShape(const std::unordered_map<std::string, TShape>& known_arg_shapes,
                         std::vector<TShape> *arg_shapes,
-                        std::vector<TShape> *out_shapes) const {
+                        std::vector<TShape> *out_shapes,
+                        std::vector<TShape> *aux_shapes) const {
   StaticGraph g;
   this->ToStaticGraph(&g);
   arg_shapes->clear();
@@ -453,7 +475,7 @@ bool Symbol::InferShape(const std::unordered_map<std::string, TShape>& known_arg
                    [](decltype(*known_arg_shapes.begin())& kv)->std::string { return kv.first; });
     KeywordArgumentMismatch("Symbol.InterShape", keys, ListArguments());
   }
-  return g.InferShape(arg_shapes, out_shapes);
+  return g.InferShape(arg_shapes, out_shapes, aux_shapes);
 }
 
 Symbol Symbol::Create(OperatorProperty *op)  {

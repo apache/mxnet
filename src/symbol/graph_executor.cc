@@ -46,14 +46,15 @@ class GraphExecutor::BackwardOpWrapper : public Operator {
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data) {
+                       const std::vector<TBlob> &out_data,
+                       const std::vector<TBlob> &aux_args) {
     // set things correctly
     CHECK(arg_data_ptr_.size() == in_data.size());
     for (size_t i = 0; i < in_data.size(); ++i) {
       *(arg_data_ptr_[i]) = in_data[i];
     }
     // redirect internally
-    op_->Backward(ctx, out_grad_, in_data_, out_data_, req, out_data);
+    op_->Backward(ctx, out_grad_, in_data_, out_data_, req, out_data, aux_args);
   }
 
  private:
@@ -170,18 +171,25 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
   OpNode& op_node = op_nodes_[nid];
   Operator *op = op_node.op.get();
   std::vector<OpReqType> req;
-  std::vector<TBlob> in_data, out_data;
+  std::vector<TBlob> in_data, out_data, aux_args;
   in_data.reserve(graph_.nodes[nid].inputs.size());
   out_data.reserve(op_node.outputs.size());
   req.reserve(op_node.outputs.size());
+  aux_args.reserve(op_node.aux_args.size());
 
   OpExecEntry exec;
+  // output
   for (const DataEntryInfo& out : op_node.outputs) {
     out_data.push_back(out.data.data());
     exec.mutate_vars.push_back(out.data.var());
     req.push_back(out.op_req);
   }
-
+  // aux
+  for (const DataEntryInfo& aux : op_node.aux_args) {
+    aux_args.push_back(aux.data.data());
+    exec.mutate_vars.push_back(aux.data.var());
+  }
+  // input
   for (StaticGraph::DataEntry e : graph_.nodes[nid].inputs) {
     const DataEntryInfo &info = op_nodes_[e.source_id].outputs[e.index];
     in_data.push_back(info.data.data());
@@ -192,9 +200,9 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
   }
 
   OpContext* op_ctx_ptr = &op_node.op_ctx;
-  exec.exec_fun = [op, op_ctx_ptr, in_data, req, out_data] (RunContext ctx) {
+  exec.exec_fun = [op, op_ctx_ptr, in_data, req, out_data, aux_args] (RunContext ctx) {
     op_ctx_ptr->run_ctx = ctx;
-    op->Forward(*op_ctx_ptr, in_data, req, out_data);
+    op->Forward(*op_ctx_ptr, in_data, req, out_data, aux_args);
   };
   return exec;
 }
@@ -228,7 +236,8 @@ void GraphExecutor::InitGraph(Symbol symbol, Context ctx, bool need_backward) {
 
 void GraphExecutor::InitDataEntryInfo(const std::vector<NArray> &in_args,
                                       const std::vector<NArray> &arg_grad_store,
-                                      const std::vector<OpReqType> &grad_req_type) {
+                                      const std::vector<OpReqType> &grad_req_type,
+                                      const std::vector<NArray> &aux_args) {
   CHECK_EQ(arg_grad_store.size(), grad_req_type.size());
   CHECK_EQ(in_args.size(), graph_.arg_nodes.size());
   // bind inputs
@@ -280,17 +289,35 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NArray> &in_args,
 
   // shape inference
   std::vector<std::vector<TShape> > out_shapes(op_nodes_.size());
+  std::vector<std::vector<TShape> > aux_shapes(op_nodes_.size());
   for (size_t i = 0; i < out_shapes.size(); ++i) {
     out_shapes[i].resize(op_nodes_[i].outputs.size());
   }
   for (size_t i = 0; i < graph_.arg_nodes.size(); ++i) {
     out_shapes[graph_.arg_nodes[i]][0] = in_args[i].shape();
   }
-  CHECK(graph_.InferNodeShapes(topo_order_, &out_shapes))
+  CHECK(graph_.InferNodeShapes(topo_order_, &out_shapes, &aux_shapes))
       << "Shape inference cannot be complete in bind";
   for (size_t i = 0; i < out_shapes.size(); ++i) {
     for (size_t j = 0; j < out_shapes[i].size(); ++j) {
       op_nodes_[i].outputs[j].shape = out_shapes[i][j];
+    }
+  }
+  // bind aux args
+  size_t aux_narray_idx = 0;
+  for (size_t i = 0; i < aux_shapes.size(); ++i) {
+    op_nodes_[i].aux_args.resize(aux_shapes[i].size());
+    for (size_t j = 0; j < aux_shapes[i].size(); ++j) {
+      DataEntryInfo &info = op_nodes_[i].aux_args[j];
+      info.shape = aux_shapes[i][j];
+      info.type = kBindByExternal;
+      CHECK_GT(aux_args.size(), aux_narray_idx)
+        << "Input auxiliary NArray is less than required";
+      info.data = aux_args[aux_narray_idx++];
+      CHECK_EQ(info.data.data().shape_, info.shape)
+        << "Incorrect NArray shape"
+        << " Input: " << info.data.data().shape_
+        << " Desired: " << info.shape;
     }
   }
 }
@@ -480,9 +507,10 @@ Executor *Executor::Bind(Symbol symbol,
                          Context ctx,
                          const std::vector<NArray> &in_args,
                          const std::vector<NArray> &arg_grad_store,
-                         const std::vector<OpReqType> &grad_req_type) {
+                         const std::vector<OpReqType> &grad_req_type,
+                         const std::vector<NArray> &aux_args) {
   GraphExecutor *exec = new GraphExecutor();
-  exec->Init(symbol, ctx, in_args, arg_grad_store, grad_req_type);
+  exec->Init(symbol, ctx, in_args, arg_grad_store, grad_req_type, aux_args);
   return exec;
 }
 }  // namespace mxnet

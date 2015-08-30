@@ -61,7 +61,8 @@ class ConvolutionOp : public Operator {
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data) {
+                       const std::vector<TBlob> &out_data,
+                       const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(req[kOut], kWriteTo);
@@ -124,7 +125,8 @@ class ConvolutionOp : public Operator {
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_data,
                         const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad) {
+                        const std::vector<TBlob> &in_grad,
+                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
     // TODO(bing): check the BLAS Handle, be careful
@@ -253,7 +255,8 @@ class ConvolutionProp : public OperatorProperty {
   }
 
   virtual bool InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape) const {
+                          std::vector<TShape> *out_shape,
+                          std::vector<TShape> *aux_shape) const {
     using namespace mshadow;
     if (!param_.no_bias) {
       CHECK_EQ(in_shape->size(), 3) << "Input:[data, weight, bias]";

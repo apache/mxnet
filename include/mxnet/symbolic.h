@@ -131,7 +131,8 @@ class StaticGraph {
    * \return if the shape inference is successful, return true, else return false.
    */
   bool InferNodeShapes(const std::vector<uint32_t> &topo_order,
-                       std::vector<std::vector<TShape> > *node_out_shapes) const;
+                       std::vector<std::vector<TShape> > *node_out_shapes,
+                       std::vector<std::vector<TShape> > *node_aux_shapes) const;
   /*!
    * \brief infer the shapes of outputs and unknown input arguments
    * \param in_shape the shape of input arguments of the operator
@@ -147,7 +148,8 @@ class StaticGraph {
    * \return if the shape inference is successful, return true, else return false.
    */
   bool InferShape(std::vector<TShape>* in_shape,
-                  std::vector<TShape>* out_shape) const;
+                  std::vector<TShape>* out_shape,
+                  std::vector<TShape>* aux_shape) const;
   /*!
    * \brief Add a full backward pass in the static graph.
    *  This function will add gradient nodes for each heads,
@@ -204,6 +206,8 @@ class Symbol {
   std::vector<std::string> ListArguments() const;
   /*! \return get the descriptions of outputs for this symbol */
   std::vector<std::string> ListReturns() const;
+  /*! \return get the descriptions of auxiliary data for this symbol */
+  std::vector<std::string> ListAuxiliaryArgs() const;
   /*!
    * \brief get the index th element from the returned tuple.
    * \param index index of multi output
@@ -276,7 +280,8 @@ class Symbol {
    * \throws dmlc::Error if the known arg_shapes are inconsistent.
    */
   bool InferShape(std::vector<TShape> *arg_shapes,
-                  std::vector<TShape> *out_shapes) const;
+                  std::vector<TShape> *out_shapes,
+                  std::vector<TShape> *aux_shapes) const;
   /*!
    * \brief infer the shapes by providing shapes of known arguments.
    * \param known_arg_shapes map of argument name to shape of arguments with known shapes.
@@ -287,7 +292,8 @@ class Symbol {
    */
   bool InferShape(const std::unordered_map<std::string, TShape> &known_arg_shapes,
                   std::vector<TShape> *arg_shapes,
-                  std::vector<TShape> *out_shapes) const;
+                  std::vector<TShape> *out_shapes,
+                  std::vector<TShape> *aux_shapes) const;
   /*!
    * \brief get number of outputs of this symbol
    * \return number of outputs
@@ -406,7 +412,8 @@ class Executor {
                         Context ctx,
                         const std::vector<NArray> &in_args,
                         const std::vector<NArray> &arg_grad_store,
-                        const std::vector<OpReqType> &grad_req_type);
+                        const std::vector<OpReqType> &grad_req_type,
+                        const std::vector<NArray> &aux_args);
 };  // class operator
 }  // namespace mxnet
 #endif  // MXNET_SYMBOLIC_H_
