@@ -14,6 +14,7 @@ You are welcomed to also take look at the API reference page Listed in below, or
 List of Python Documents
 ------------------------
 * [NArray API](narray.md)
+* [Data Loading API](io.md)
 * [Symbolic API](symbol.md)
 
 Getting Started with NArray
@@ -75,6 +76,7 @@ print(cpu_array.numpy)
 
 In common workflow, it is encouraged to copy the data into a GPU NArray,
 do as much as computation as you can, and copy it back to CPU.
+
 
 ### Automatically Parallelizing Computation
 So far you have learnt the basics of NArray, hope you like the flavor so far.
@@ -143,6 +145,53 @@ print(a_gpu1.copyto(mx.Context('cpu')).numpy)
 print(a_gpu2.copyto(mx.Context('cpu')).numpy)
 ```
 As usual, mxnet will automatically do all the parallelization for you, to give you maximum efficiency.
+
+### Save Load NArray
+It is important to save your work after some computations.
+We provide two ways to allow you to save and load the NArray objects.
+The first way is the naural pythonic way, using pickle. NArray is pickle compatible,
+which means you can simply pickle the NArray like what you did with numpy.ndarray.
+
+The following code gives example of pickling NArray.
+```python
+import numpy as np
+import mxnet as mx
+import pickle as pkl
+
+a = mx.narray.create((10, 10))
+a.numpy[:] = 10
+
+data = pkl.dumps(a)
+a2 = pkl.loads(data)
+
+assert np.sum(a2.numpy != a.numpy) == 0
+```
+
+However, in some scenarios, you may also want to save the results and loads them in in other languages that
+are supported by mxnet. To achieve that, you can use ```narray.save``` and ```narray.load```.
+What is more, you can directly save and load from cloud such as S3, HDFS:) By simply building mxnet with S3 support.
+
+The following code is an example on how you can save list of narray into S3 storage and load them back.
+```python
+import numpy as np
+import mxnet as mx
+
+a = mx.narray.create((10, 10))
+a.numpy[:] = 10
+
+# save a list of narray
+data = mx.narray.save('s3://mybucket/mydata.bin', [a])
+a2 = mx.narray.load('s3://mybucket/mydata.bin')
+
+assert np.sum(a2[0].numpy != a.numpy) == 0
+
+# can also save a dict of narray
+data = mx.narray.save('s3://mybucket/mydata.bin', {'data1': a, 'data2': a})
+narray_dict = mx.narray.load('s3://mybucket/mydata.bin')
+```
+In this way, you can always store your experiment on the cloud:)
+As usually, we support both flavors for you, and you can choose which one you like to use.
+
 
 Symbolic API and Differentiation
 --------------------------------

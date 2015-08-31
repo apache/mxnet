@@ -153,6 +153,69 @@ NArray &NArray::operator/=(const NArray &src) {
   return BinaryOpApply<narray::Div>(this, src);
 }
 
+void NArray::Save(dmlc::Stream *strm) const {
+  // save shape
+  shape_.Save(strm);
+  if (is_none()) return;
+  // save context
+  Context ctx = this->ctx();
+  ctx.Save(strm);
+  TBlob save_data;
+  NArray temp;
+  if (ctx.dev_mask != cpu::kDevMask) {
+    temp = this->Copy(Context(cpu::kDevMask, 0));
+    temp.Wait();
+    save_data = temp.data();
+  } else {
+    this->Wait();
+    save_data = this->data();
+  }
+  // save type flag
+  int32_t type_flag = save_data.type_flag_;
+  CHECK(type_flag == mshadow::DataType<real_t>::kFlag)
+      << "Only support float NArray so far";
+  strm->Write(&type_flag, sizeof(type_flag));
+  CHECK(save_data.CheckContiguous());
+  // save data: need to change this after more type mask is supported
+  size_t type_size = sizeof(real_t);
+  strm->Write(save_data.dptr_, type_size * shape_.Size());
+}
+
+bool NArray::Load(dmlc::Stream *strm) {
+  // load shape
+  TShape shape;
+  if (!shape.Load(strm)) return false;
+  if (shape.ndim() == 0) {
+    *this = NArray(); return true;
+  }
+  // load context
+  Context ctx;
+  if (!ctx.Load(strm)) return false;
+  // load type flag
+  int32_t type_flag;
+  if (strm->Read(&type_flag, sizeof(type_flag)) != sizeof(type_flag)) return false;
+  CHECK(type_flag == mshadow::DataType<real_t>::kFlag)
+      << "Only support float NArray so far";
+  // load data into CPUbu
+  NArray temp(shape, Context(cpu::kDevMask, ctx.dev_id));
+  TBlob load_data = temp.data();
+  size_t type_size = sizeof(real_t);
+  size_t nread = type_size * shape.Size();
+
+  if (strm->Read(load_data.dptr_, nread) != nread) return false;
+  if (ctx.dev_mask == cpu::kDevMask) {
+    *this = std::move(temp); return true;
+  } else {
+    *this = temp.Copy(ctx); return true;
+  }
+}
+
+NArray NArray::Copy(Context ctx) const {
+  NArray ret(shape(), ctx, true);
+  CopyFromTo(*this, &ret);
+  return ret;
+}
+
 // register API function
 // those with underscore will be registered at NArray
 MXNET_REGISTER_NARRAY_FUN(_plus).set_function(BinaryOp<narray::Plus>);

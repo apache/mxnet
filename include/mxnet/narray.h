@@ -8,6 +8,8 @@
 
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
+#include <dmlc/io.h>
+#include <dmlc/type_traits.h>
 #include <dmlc/registry.h>
 #include <memory>
 #include "./base.h"
@@ -36,7 +38,7 @@ class NArray {
    */
   NArray(const TShape &shape, Context ctx,
          bool delay_alloc = false)
-      : ptr_(new Chunk(shape.Size(), ctx, delay_alloc)), shape_(shape), offset_(0) {
+      : ptr_(std::make_shared<Chunk>(shape.Size(), ctx, delay_alloc)), shape_(shape), offset_(0) {
   }
   /*!
    * \brief constructing a static NArray that shares data with TBlob
@@ -46,7 +48,7 @@ class NArray {
    * \param dev_id the device id this tensor sits at
    */
   NArray(const TBlob &data, int dev_id)
-      : ptr_(new Chunk(data, dev_id)), shape_(data.shape_), offset_(0) {
+      : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_), offset_(0) {
   }
   /*!
    * \return the shape of current NArray
@@ -80,6 +82,17 @@ class NArray {
   inline DAGEngine::Variable var() const {
     return ptr_->var;
   }
+  /*!
+   * \brief save the content into binary stream
+   * \param strm the output stream
+   */
+  void Save(dmlc::Stream *strm) const;
+  /*!
+   * \brief load the content from binary stream
+   * \param strm the output stream
+   * \return whether the load is successful
+   */
+  bool Load(dmlc::Stream *strm);
   /*!
    * \brief set all the elements in narray to be scalar
    * \param scalar the scalar to set
@@ -127,16 +140,14 @@ class NArray {
   NArray Copy(Context ctx) const;
   /*!
    * \brief Slice a NArray
-   *
    * \param begin begin index in first dim
    * \param end end index in first dim
-   *
    * \return sliced NArray
    */
   inline NArray Slice(index_t begin, index_t end) const {
     NArray ret = *this;
-    CHECK_GE(shape_.ndim(), 0) << "NArray not initialized";
-    CHECK_GE(shape_[0], end) << "Chunk is smaller than required";
+    CHECK(!is_none()) << "NArray is not initialized";
+    CHECK_GE(shape_[0], end) << "Slice end index out of range";
     size_t length = 1;
     if (shape_.ndim() == 1) {
       ret.offset_ = begin;
@@ -150,14 +161,13 @@ class NArray {
     return ret;
   }
   /*!
-   * \brief Reshape current NArray
-   *
+   * \brief Get an reshaped NArray
    * \param shape new shape
    * \return NArray in new shape
    */
   inline NArray Reshape(const TShape &shape) const {
-    CHECK_GE(shape_.Size(), shape.Size()) \
-      << "required shape is larger than chunk";
+    CHECK_GE(shape_.Size(), shape.Size())
+        << "NArray.Reshape: target shape size is different from current shape";
     NArray ret = *this;
     ret.shape_ = shape;
     return ret;
@@ -402,4 +412,8 @@ struct NArrayFunctionReg
   DMLC_REGISTRY_REGISTER(::mxnet::NArrayFunctionReg, NArrayFunctionReg, name)
 
 }  // namespace mxnet
+
+namespace dmlc {
+DMLC_DECLARE_TRAITS(has_saveload, mxnet::NArray, true);
+}  // namespace dmlc
 #endif  // MXNET_NARRAY_H_

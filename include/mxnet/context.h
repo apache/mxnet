@@ -6,6 +6,8 @@
 #ifndef MXNET_CONTEXT_H_
 #define MXNET_CONTEXT_H_
 
+#include <dmlc/io.h>
+#include <dmlc/type_traits.h>
 #include "./base.h"
 
 namespace mxnet {
@@ -13,9 +15,9 @@ namespace mxnet {
 /*! \brief Context information about the execution enviroment */
 struct Context {
   /*! \brief the device type we run the op can be cpu::kDevMask or gpu::kDevMask */
-  int dev_mask;
+  int32_t dev_mask;
   /*! \brief device id we are going to run it on */
-  int dev_id;
+  int32_t dev_id;
   /*! \brief constructor */
   Context() : dev_mask(cpu::kDevMask), dev_id(0) {}
   /*!
@@ -40,6 +42,24 @@ struct Context {
    */
   inline bool operator!=(const Context &b) const {
     return !(*this == b);
+  }
+  /*!
+   * \brief save the content into binary stream
+   * \param strm the output stream
+   */
+  void Save(dmlc::Stream *strm) const {
+    strm->Write(&dev_mask, sizeof(dev_mask));
+    strm->Write(&dev_id, sizeof(dev_id));
+  }
+  /*!
+   * \brief load the content from binary stream
+   * \param strm the output stream
+   * \return whether the load is successful
+   */
+  bool Load(dmlc::Stream *strm) {
+    if (strm->Read(&dev_mask, sizeof(int32_t)) != sizeof(int32_t)) return false;
+    if (strm->Read(&dev_id, sizeof(int32_t)) != sizeof(int32_t)) return false;
+    return true;
   }
 };
 
