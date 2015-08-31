@@ -19,6 +19,8 @@
 
 /*! \brief manually define unsigned int */
 typedef unsigned int mx_uint;
+/*! \brief manually define unsigned long int */
+typedef unsigned long int mx_ulong;  // NOLINT(*)
 /*! \brief manually define unsigned int */
 typedef float mx_float;
 // all the handles are simply void *
@@ -62,26 +64,6 @@ MXNET_DLL const char *MXGetLastError();
  */
 MXNET_DLL int MXNArrayCreateNone(NArrayHandle *out);
 /*!
- * \brief create a NArray that shares the memory content with data
- *   NOTE: use this with caution, specifically, do not directly operate
- *   on original memory content unless you think you are confident to do so
- *   note that NArray operations are asynchronize and ONLY dependency between
- *   NArrays can be captured, when you are done with NArray and want to
- *   see the data content inside, call MXNArrayWait
- *   the caller must also keep the data content alive and not being gc
- *   during the liveness of NArray, usually by keep a ref to the data content obj
- *
- * \param data floating point pointer to the head of memory
- * \param shape the shape of the memory
- * \param ndim number of dimension of the shape
- * \param out the returning handle
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXNArrayCreateShareMem(mx_float *data,
-                                     mx_uint *shape,
-                                     mx_uint ndim,
-                                     NArrayHandle *out);
-/*!
  * \brief create a NArray with specified shape
  * \param shape the pointer to the shape
  * \param ndim the dimension of the shape
@@ -98,6 +80,52 @@ MXNET_DLL int MXNArrayCreate(const mx_uint *shape,
                              int dev_id,
                              int delay_alloc,
                              NArrayHandle *out);
+/*!
+ * \brief create a NArray handle that is loaded from raw bytes.
+ * \param buf the head of the raw bytes
+ * \param size size of the raw bytes
+ * \param out the returning handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNArrayLoadFromRawBytes(const void *buf,
+                                       mx_ulong size,
+                                       NArrayHandle *out);
+/*!
+ * \brief save the NArray into raw bytes.
+ * \param handle the NArray handle
+ * \param out_size size of the raw bytes
+ * \param out_buf the head of returning memory bytes.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNArraySaveRawBytes(NArrayHandle handle,
+                                   mx_ulong *out_size,
+                                   const char **out_buf);
+/*!
+ * \brief Save list of narray into the file.
+ * \param fname name of the file.
+ * \param num_args number of arguments to save.
+ * \param args the array of NArrayHandles to be saved.
+ * \param keys the name of the NArray, optional, can be NULL
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNArrayListSave(const char* fname,
+                               mx_uint num_args,
+                               NArrayHandle* args,
+                               const char** keys);
+/*!
+ * \brief Load list of narray from the file.
+ * \param fname name of the file.
+ * \param out_size number of narray loaded.
+ * \param out_arr head of the returning narray handles.
+ * \param out_name_size size of output name arrray.
+ * \param out_names the names of returning NArrays, can be NULL
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNArrayListLoad(const char* fname,
+                               mx_uint *out_size,
+                               NArrayHandle** out_arr,
+                               mx_uint *out_name_size,
+                               const char*** out_names);
 /*!
  * \brief wait until all the operation with respect NArray
  *  to this NArray is finished, always call this before fetching data out

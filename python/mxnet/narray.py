@@ -4,10 +4,10 @@ from __future__ import absolute_import
 
 import ctypes
 import sys
-from .base import _LIB
-from .base import c_array, py_str
+from .base import _LIB, string_types
+from .base import c_array, py_str, c_str
 from .base import mx_uint, mx_float, NArrayHandle, FunctionHandle
-from .base import ctypes2numpy_shared
+from .base import ctypes2numpy_shared, ctypes2buffer
 from .base import check_call
 from .context import Context
 
@@ -93,6 +93,29 @@ class NArray(object):
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
+    def __getstate__(self):
+        this = self.__dict__.copy()
+        handle = this['handle']
+        if handle is not None:
+            length = ctypes.c_ulong()
+            cptr = ctypes.POINTER(ctypes.c_char)()
+            check_call(_LIB.MXNArraySaveRawBytes(self.handle,
+                                                 ctypes.byref(length),
+                                                 ctypes.byref(cptr)))
+            this['handle'] = ctypes2buffer(cptr, length.value)
+        return this
+
+    def __setstate__(self, state):
+        handle = state['handle']
+        if handle is not None:
+            buf = handle
+            handle = NArrayHandle()
+            ptr = (ctypes.c_char * len(buf)).from_buffer(buf)
+            length = ctypes.c_ulong(len(buf))
+            check_call(_LIB.MXNArrayLoadFromRawBytes(ptr, length, ctypes.byref(handle)))
+            state['handle'] = handle
+        self.__dict__.update(state)
+
     def wait(self):
         """Wait until the data on current NArray is available."""
         check_call(_LIB.MXNArrayWait(self.handle))
@@ -166,19 +189,101 @@ class NArray(object):
             raise TypeError('copyto do not support type ' + type(other))
     # pylint: enable= no-member
 
-def create(shape, ctx=Context.default_ctx):
+
+def create(shape, ctx=None):
     """Create a new NArray, with specified shape.
 
     Parameters
     ----------
     shape : tuple
-        shape of the NArray
+        shape of the NArray.
+
+    ctx : Context, optional
+        The context of the NArray, default to current default context.
 
     Returns
     -------
-    a new NArray
+    out: Array
+        The created NArray.
     """
+    if ctx is None:
+        ctx = Context.default_ctx
     return NArray(handle=_new_alloc_handle(shape, ctx, False))
+
+
+def load(fname):
+    """Load narray from binary file.
+
+    You can also use pickle to do the job if you only work on python.
+    The advantage of load/save is the file is language agnostic.
+    This means the file saved using save can be loaded by other language binding of mxnet.
+
+    Parameters
+    ----------
+    fname : str
+        The name of the file
+
+    Returns
+    -------
+    out : list of NArray or dict of str to NArray
+        List of NArray or dict of str->NArray, depending on what was saved.
+    """
+    if not isinstance(fname, string_types):
+        raise TypeError('fname need to be string')
+    out_size = mx_uint()
+    out_name_size = mx_uint()
+    handles = ctypes.POINTER(NArrayHandle)()
+    names = ctypes.POINTER(ctypes.c_char_p)()
+    check_call(_LIB.MXNArrayListLoad(c_str(fname),
+                                     ctypes.byref(out_size),
+                                     ctypes.byref(handles),
+                                     ctypes.byref(out_name_size),
+                                     ctypes.byref(names)))
+    if out_name_size.value == 0:
+        return [NArray(NArrayHandle(handles[i])) for i in range(out_size.value)]
+    else:
+        assert out_name_size.value == out_size.value
+        return dict(
+            (py_str(names[i]), NArray(NArrayHandle(handles[i]))) for i in range(out_size.value))
+
+
+def save(fname, data):
+    """Save list of NArray or dict of str->NArray to binary file.
+
+    You can also use pickle to do the job if you only work on python.
+    The advantage of load/save is the file is language agnostic.
+    This means the file saved using save can be loaded by other language binding of mxnet.
+
+    Parameters
+    ----------
+    fname : str
+        The name of the file
+
+    data : list of NArray or dict of str to NArray
+        The data to be saved.
+    """
+    handles = []
+    if isinstance(data, dict):
+        keys = []
+        for key, val in data.items():
+            if not isinstance(key, string_types):
+                raise TypeError('save only accept dict str->NArray or list of NArray')
+            if not isinstance(val, NArray):
+                raise TypeError('save only accept dict str->NArray or list of NArray')
+            keys.append(c_str(key))
+            handles.append(val.handle)
+        keys = c_array(ctypes.c_char_p, keys)
+    else:
+        for val in data:
+            if not isinstance(val, NArray):
+                raise TypeError('save only accept dict str->NArray or list of NArray')
+            handles.append(val.handle)
+        keys = None
+    check_call(_LIB.MXNArrayListSave(c_str(fname),
+                                     len(handles),
+                                     c_array(NArrayHandle, handles),
+                                     keys))
+
 
 # pylint: disable=too-many-locals, invalid-name
 def _make_narray_function(handle):

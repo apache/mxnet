@@ -128,6 +128,29 @@ def c_array(ctype, values):
     return (ctype * len(values))(*values)
 
 
+def ctypes2buffer(cptr, length):
+    """Convert ctypes pointer to buffer type.
+
+    Parameters
+    ----------
+    cptr : ctypes.POINTER(ctypes.c_char)
+        pointer to the raw memory region
+    length : int
+        the length of the buffer
+
+    Returns
+    -------
+    buffer : bytearray
+        The raw byte memory buffer
+    """
+    if not isinstance(cptr, ctypes.POINTER(ctypes.c_char)):
+        raise TypeError('expected char pointer')
+    res = bytearray(length)
+    rptr = (ctypes.c_char * length).from_buffer(res)
+    if not ctypes.memmove(rptr, cptr, length):
+        raise RuntimeError('memmove failed')
+    return res
+
 def ctypes2numpy_shared(cptr, shape):
     """Convert a ctypes pointer to a numpy array
 

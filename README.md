@@ -24,4 +24,8 @@ This is a project that combines lessons and ideas we learnt from [cxxnet](https:
   // c++11 code here
 #endif
 ```
+  - Update the dependencies by 
+```
+git submodule foreach --recursive git pull origin master
+```
 * For heterogenous hardware support (CPU/GPU). Hope the GPU-specific component could be isolated easily. That is too say if we use `USE_CUDA` macro to wrap gpu-related code, the macro should not be everywhere in the project.

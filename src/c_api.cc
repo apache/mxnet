@@ -5,6 +5,8 @@
  */
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
+#include <dmlc/io.h>
+#include <dmlc/memory_io.h>
 #include <mxnet/base.h>
 #include <mxnet/narray.h>
 #include <mxnet/symbolic.h>
@@ -206,9 +208,104 @@ int MXNArrayCreate(const mx_uint *shape,
   API_END();
 }
 
+int MXNArrayLoadFromRawBytes(const void *buf,
+                             mx_ulong size,
+                             NArrayHandle *out) {
+  NArray *ptr = nullptr;
+  API_BEGIN();
+  dmlc::MemoryFixedSizeStream strm((void*)buf, size); // NOLINT(*)
+  ptr = new NArray();
+  if (!ptr->Load(&strm)) {
+    throw dmlc::Error("Invalid NArray serialization format");
+  }
+  *out = ptr;
+  API_END_HANDLE_ERROR(delete ptr);
+}
+
+int MXNArraySaveRawBytes(NArrayHandle handle,
+                         mx_ulong *out_size,
+                         const char **out_buf) {
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  ret->ret_str.resize(0);
+  dmlc::MemoryStringStream strm(&ret->ret_str);
+  static_cast<NArray*>(handle)->Save(&strm);
+  *out_size = ret->ret_str.length();
+  *out_buf = ret->ret_str.c_str();
+  API_END();
+}
+
 int MXNArrayWait(NArrayHandle handle) {
   API_BEGIN();
   static_cast<NArray*>(handle)->Wait();
+  API_END();
+}
+
+const int kMXAPINArrayListMagic = 0x112;
+
+int MXNArrayListSave(const char* fname,
+                     mx_uint num_args,
+                     NArrayHandle* args,
+                     const char** keys) {
+  API_BEGIN();
+  std::vector<NArray> data(num_args);
+  std::vector<std::string> names;
+  for (mx_uint i = 0; i < num_args; ++i) {
+    data[i] = *static_cast<NArray*>(args[i]);
+  }
+  if (keys != nullptr) {
+    names.resize(num_args);
+    for (mx_uint i = 0; i < num_args; ++i) {
+      names[i] = keys[i];
+    }
+  }
+  std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(fname, "w"));
+  uint64_t header = kMXAPINArrayListMagic, reserved = 0;
+  fo->Write(&header, sizeof(header));
+  fo->Write(&reserved, sizeof(reserved));
+  fo->Write(data);
+  fo->Write(names);
+  API_END();
+}
+
+int MXNArrayListLoad(const char* fname,
+                     mx_uint *out_size,
+                     NArrayHandle** out_arr,
+                     mx_uint *out_name_size,
+                     const char*** out_names) {
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  ret->ret_vec_str.clear();
+  API_BEGIN();
+  std::vector<NArray> data;
+  std::vector<std::string> &names = ret->ret_vec_str;
+  std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
+  uint64_t header, reserved;
+  CHECK(fi->Read(&header))
+      << "Invalid NArray file format";
+  CHECK(fi->Read(&reserved))
+      << "Invalid NArray file format";
+  CHECK(header == kMXAPINArrayListMagic)
+      << "Invalid NArray file format";
+  CHECK(fi->Read(&data))
+      << "Invalid NArray file format";
+  CHECK(fi->Read(&names))
+      << "Invalid NArray file format";
+  CHECK(names.size() == 0 || names.size() == data.size())
+      << "Invalid NArray file format";
+  ret->ret_handles.resize(data.size());
+  for (size_t i = 0; i < data.size(); ++i) {
+    NArray *ptr = new NArray();
+    *ptr = data[i];
+    ret->ret_handles[i] = ptr;
+  }
+  ret->ret_vec_charp.resize(names.size());
+  for (size_t i = 0; i < names.size(); ++i) {
+    ret->ret_vec_charp[i] = names[i].c_str();
+  }
+  *out_size = static_cast<mx_uint>(data.size());
+  *out_arr = dmlc::BeginPtr(ret->ret_handles);
+  *out_name_size = static_cast<mx_uint>(names.size());
+  *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
   API_END();
 }
 

@@ -1,0 +1,9 @@
+[submodule "mshadow"]
+	path = mshadow
+	url = https://github.com/dmlc/mshadow.git
+[submodule "rabit"]
+	path = rabit
+	url = https://github.com/dmlc/rabit.git
+[submodule "dmlc-core"]
+	path = dmlc-core
+	url = https://github.com/dmlc/dmlc-core.git
