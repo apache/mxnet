@@ -61,10 +61,9 @@ ifneq ($(ADD_LDFLAGS), NONE)
 	LDFLAGS += $(ADD_LDFLAGS)
 endif
 
-#BIN = test/test_threaded_engine test/api_registry_test
+BIN = tests/test_simple_engine
 OBJ = narray_function_cpu.o
-# add threaded engine after it is done
-OBJCXX11 = reshape_cpu.o engine.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o convolution_cpu.o io.o iter_mnist.o
+OBJCXX11 = reshape_cpu.o dag_engine.o simple_engine.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o convolution_cpu.o io.o iter_mnist.o
 CUOBJ =
 SLIB = lib/libmxnet.so
 ALIB = lib/libmxnet.a
@@ -82,7 +81,8 @@ $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
 storage.o: src/storage/storage.cc
-engine.o: src/dag_engine/simple_engine.cc
+dag_engine.o: src/dag_engine/dag_engine.cc
+simple_engine.o: src/dag_engine/simple_engine.cc
 narray.o: src/narray/narray.cc
 narray_function_cpu.o: src/narray/narray_function.cc src/narray/narray_function-inl.h
 narray_function_gpu.o: src/narray/narray_function.cu src/narray/narray_function-inl.h
@@ -111,7 +111,8 @@ iter_mnist.o: src/io/iter_mnist.cc
 lib/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ) $(LIB_DEP)
 lib/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ) $(LIB_DEP)
 
-test/test_storage: test/test_storage.cc lib/libmxnet.a
+tests/test_storage: tests/test_storage.cc lib/libmxnet.a
+tests/test_simple_engine: tests/test_simple_engine.cc lib/libmxnet.a
 
 $(BIN) :
 	$(CXX) $(CFLAGS) -std=c++0x -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
@@ -125,7 +126,7 @@ $(OBJCXX11) :
 $(SLIB) :
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
-$(ALIB):
+$(ALIB): $(OBJ) $(OBJCXX11)
 	ar cr $@ $+
 
 $(CUOBJ) :
