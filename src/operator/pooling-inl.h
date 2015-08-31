@@ -154,13 +154,13 @@ Operator* CreateOp(PoolingParam param);
 #if DMLC_USE_CXX11
 class PoolingProp : public OperatorProperty {
  public:
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
   }
 
-  virtual bool InferShape(std::vector<TShape> *in_shape,
+  bool InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape,
-                          std::vector<TShape> *aux_shape) const {
+                          std::vector<TShape> *aux_shape) const override {
     CHECK_EQ(in_shape->size(), 1);
     const TShape &dshape = (*in_shape)[0];
     CHECK_EQ(dshape.ndim(), 4) << \
@@ -177,28 +177,28 @@ class PoolingProp : public OperatorProperty {
     return true;
   }
 
-  virtual OperatorProperty* Copy() const {
+  OperatorProperty* Copy() const override {
     PoolingProp *prop_sym = new PoolingProp();
     prop_sym->param_ = this->param_;
     return prop_sym;
   }
 
-  virtual std::string TypeString() const {
+  std::string TypeString() const override {
     return "Pooling";
   }
 
-  virtual std::vector<int> DeclareBackwardDependency(
+  std::vector<int> DeclareBackwardDependency(
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const {
+      const std::vector<int> &out_data) const override {
     return {out_grad[kOut], in_data[kData], out_data[kOut]};
   }
 
-  virtual std::vector<std::pair<int, int> > BackwardInplaceOption(
+  std::vector<std::pair<int, void*> > BackwardInplaceOption(
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
-      const std::vector<int> &in_grad) const {
+      const std::vector<void*> &in_grad) const override {
     return {{in_data[kData], in_grad[kData]}};
   }
 

@@ -459,13 +459,13 @@ int MXSymbolListReturns(SymbolHandle symbol,
   API_END();
 }
 
-int MXSymbolListAuxiliaryArgs(SymbolHandle symbol,
+int MXSymbolListAuxiliaryStates(SymbolHandle symbol,
                                     mx_uint *out_size,
                                     const char ***out_str_array) {
   Symbol *s = static_cast<Symbol*>(symbol);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
-  ret->ret_vec_str = std::move(s->ListAuxiliaryArgs());
+  ret->ret_vec_str = std::move(s->ListAuxiliaryStates());
   ret->ret_vec_charp.clear();
   for (size_t i = 0; i < ret->ret_vec_str.size(); ++i) {
     ret->ret_vec_charp.push_back(ret->ret_vec_str[i].c_str());
@@ -617,28 +617,28 @@ int MXExecutorBind(SymbolHandle symbol_handle,
                    NArrayHandle *in_args,
                    NArrayHandle *arg_grad_store,
                    mx_uint *grad_req_type,
-                   mx_uint aux_args_len,
-                   NArrayHandle *aux_args,
+                   mx_uint aux_states_len,
+                   NArrayHandle *aux_states,
                    ExecutorHandle *out) {
   API_BEGIN();
   Symbol *symb = static_cast<Symbol*>(symbol_handle);
   Context ctx = Context(dev_mask, dev_id);
   NArray **in_args_ptr = reinterpret_cast<NArray**>(in_args);
   NArray **arg_grad_ptr = reinterpret_cast<NArray**>(arg_grad_store);
-  NArray **aux_args_ptr = reinterpret_cast<NArray**>(aux_args);
+  NArray **aux_states_ptr = reinterpret_cast<NArray**>(aux_states);
   std::vector<NArray> in_args_vec;
   std::vector<NArray> arg_grad_vec;
   std::vector<OpReqType> grad_req_vec;
-  std::vector<NArray> aux_args_vec;
+  std::vector<NArray> aux_states_vec;
   for (mx_uint i = 0; i < len; ++i) {
     in_args_vec.push_back(*(in_args_ptr[i]));
     arg_grad_vec.push_back(*(arg_grad_ptr[i]));
     grad_req_vec.push_back(static_cast<OpReqType>(grad_req_type[i]));
   }
-  for (mx_uint i = 0; i < aux_args_len; ++i) {
-    aux_args_vec.push_back(*(aux_args_ptr[i]));
+  for (mx_uint i = 0; i < aux_states_len; ++i) {
+    aux_states_vec.push_back(*(aux_states_ptr[i]));
   }
-  *out = Executor::Bind(*symb, ctx, in_args_vec, arg_grad_vec, grad_req_vec, aux_args_vec);
+  *out = Executor::Bind(*symb, ctx, in_args_vec, arg_grad_vec, grad_req_vec, aux_states_vec);
   API_END();
 }
 

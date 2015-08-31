@@ -211,14 +211,14 @@ std::vector<std::string> Symbol::ListReturns() const {
   return ret;
 }
 
-std::vector<std::string> Symbol::ListAuxiliaryArgs() const {
+std::vector<std::string> Symbol::ListAuxiliaryStates() const {
   std::vector<std::string> ret;
   if (this->is_atomic()) {
-    return heads_[0].source->op->ListAuxiliaryArgs();
+    return heads_[0].source->op->ListAuxiliaryStates();
   } else {
     this->DFSVisit([&ret](const std::shared_ptr<Node> &node) {
         if (node->op != nullptr) {
-          auto aux_args = node->op->ListAuxiliaryArgs();
+          auto aux_args = node->op->ListAuxiliaryStates();
           if (aux_args.size() > 0) {
             auto &hname = node->name;
             for (auto const &aux : aux_args) {

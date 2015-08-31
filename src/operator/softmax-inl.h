@@ -85,17 +85,17 @@ Operator* CreateOp(SoftmaxParam param);
 #if DMLC_USE_CXX11
 class SoftmaxProp : public OperatorProperty {
  public:
-  virtual std::vector<std::string> ListArguments() const {
+  std::vector<std::string> ListArguments() const override {
     return {"data", "label"};
   }
 
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
   }
 
-  virtual bool InferShape(std::vector<TShape> *in_shape,
+  bool InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape,
-                          std::vector<TShape> *aux_shape) const {
+                          std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2) << "Input:[data, label]";
     const TShape &dshape = in_shape->at(0);
@@ -106,34 +106,34 @@ class SoftmaxProp : public OperatorProperty {
     return true;
   }
 
-  virtual OperatorProperty* Copy() const {
+  OperatorProperty* Copy() const override {
     auto ptr = new SoftmaxProp();
     ptr->param_ = param_;
     return ptr;
   }
 
-  virtual std::string TypeString() const {
+  std::string TypeString() const override {
     return "Softmax";
   }
 
-  virtual std::vector<int> DeclareBackwardDependency(
+  std::vector<int> DeclareBackwardDependency(
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const {
+      const std::vector<int> &out_data) const override {
     return {in_data[kLabel], out_data[kOut]};
   }
 
-  virtual std::vector<std::pair<int, void*> > BackwardInplaceOption(
+  std::vector<std::pair<int, void*> > BackwardInplaceOption(
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
-      const std::vector<void*> &in_grad) const {
+      const std::vector<void*> &in_grad) const override {
     return {{out_data[kOut], in_grad[kData]}};
   }
 
-  virtual std::vector<std::pair<int, void*> > ForwardInplaceOption(
+  std::vector<std::pair<int, void*> > ForwardInplaceOption(
       const std::vector<int> &in_data,
-      const std::vector<void*> &out_data) const {
+      const std::vector<void*> &out_data) const override {
     return {{in_data[kData], out_data[kOut]}};
   }
 

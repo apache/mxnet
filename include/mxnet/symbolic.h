@@ -128,6 +128,7 @@ class StaticGraph {
    *
    * \param topo_order The topological order of node index, as created by TopoSort.
    * \param node_out_shapes The shapes of the each outputs of nodes in the graph.
+   * \param node_aux_shapes The shapes of the each auxiliary states of nodes in the graph.
    * \return if the shape inference is successful, return true, else return false.
    */
   bool InferNodeShapes(const std::vector<uint32_t> &topo_order,
@@ -144,6 +145,8 @@ class StaticGraph {
    *     common practice: set the shape of data input, and usually weight's shape can be infered
    *
    * \param out_shape the shape of outputs of the operator
+   *     InferShape will modify the vector to fill output TShape
+   * \param aux_shape the shape of auxiliary states of the operator
    *     InferShape will modify the vector to fill output TShape
    * \return if the shape inference is successful, return true, else return false.
    */
@@ -207,7 +210,7 @@ class Symbol {
   /*! \return get the descriptions of outputs for this symbol */
   std::vector<std::string> ListReturns() const;
   /*! \return get the descriptions of auxiliary data for this symbol */
-  std::vector<std::string> ListAuxiliaryArgs() const;
+  std::vector<std::string> ListAuxiliaryStates() const;
   /*!
    * \brief get the index th element from the returned tuple.
    * \param index index of multi output
@@ -276,6 +279,7 @@ class Symbol {
    *     common practice: set the shape of data input, and usually weight's shape can be infered
    *
    * \param out_shapes Use to store the infered shapes of outputs.
+   * \param aux_shapes Use to store the infered shapes of auxiliary states
    * \return true if the shape inference is successful, false if there is not enough information.
    * \throws dmlc::Error if the known arg_shapes are inconsistent.
    */
@@ -287,6 +291,7 @@ class Symbol {
    * \param known_arg_shapes map of argument name to shape of arguments with known shapes.
    * \param arg_shapes used to store infered shapes of arguments.
    * \param out_shapes used to store infered shapes of outputs.
+   * \param aux_shapes Use to store the infered shapes of auxiliary states
    * \return true if the shape inference is successful, false if there is not enough information.
    * \throws dmlc::Error if the known arg_shapes are inconsistent.
    */
@@ -406,6 +411,7 @@ class Executor {
    * \param in_args the NArray that stores the input arguments to the symbol.
    * \param arg_grad_store NArray that is used to store the gradient output of the input arguments.
    * \param grad_req_type requirment type of gradient saving. Can only be in {kNullOp, kAddTo, kWriteTo}.
+   * \param aux_states NArray that is used as internal state in op
    * \return a new executor.
    */
   static Executor *Bind(Symbol symbol,
@@ -413,7 +419,7 @@ class Executor {
                         const std::vector<NArray> &in_args,
                         const std::vector<NArray> &arg_grad_store,
                         const std::vector<OpReqType> &grad_req_type,
-                        const std::vector<NArray> &aux_args);
+                        const std::vector<NArray> &aux_states);
 };  // class operator
 }  // namespace mxnet
 #endif  // MXNET_SYMBOLIC_H_

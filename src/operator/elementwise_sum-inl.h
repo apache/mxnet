@@ -112,15 +112,15 @@ Operator* CreateOp(ElementWiseSumParam param);
 #if DMLC_USE_CXX11
 class ElementWiseSumProp : public OperatorProperty {
  public:
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     // TODO(bing) change directly to vector of pairs begin end
     std::map<std::string, std::string> kmap(kwargs.begin(), kwargs.end());
     param_.Init(kmap);
   }
 
-  virtual bool InferShape(std::vector<TShape> *in_shape,
+  bool InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape,
-                          std::vector<TShape> *aux_shape) const {
+                          std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.size));
     const TShape &dshape = in_shape->at(0);
@@ -133,34 +133,34 @@ class ElementWiseSumProp : public OperatorProperty {
     return true;
   }
 
-  virtual OperatorProperty* Copy() const {
+  OperatorProperty* Copy() const override {
     auto ptr = new ElementWiseSumProp();
     ptr->param_ = param_;
     return ptr;
   }
 
-  virtual std::string TypeString() const {
+  std::string TypeString() const override {
     return "ElementWiseSum";
   }
 
-  virtual std::vector<int> DeclareBackwardDependency(
+  std::vector<int> DeclareBackwardDependency(
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const {
+      const std::vector<int> &out_data) const override {
     return out_grad;
   }
 
-  virtual std::vector<std::pair<int, void*> > BackwardInplaceOption(
+  std::vector<std::pair<int, void*> > BackwardInplaceOption(
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
-      const std::vector<void*> &in_grad) const {
+      const std::vector<void*> &in_grad) const override {
     return {{out_grad[0], in_grad[0]}};
   }
 
-  virtual std::vector<std::pair<int, void*> > ForwardInplaceOption(
+  std::vector<std::pair<int, void*> > ForwardInplaceOption(
       const std::vector<int> &in_data,
-      const std::vector<void*> &out_data) const {
+      const std::vector<void*> &out_data) const override {
     return {{in_data[0], out_data[0]}};
   }
 

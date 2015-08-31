@@ -123,8 +123,8 @@ class Symbol(object):
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
-    def list_auxiliary_args(self):
-        """List all auxiliary data in the symbool.
+    def list_auxiliary_states(self):
+        """List all auxiliary states in the symbool.
 
         Returns
         -------
@@ -133,7 +133,7 @@ class Symbol(object):
         """
         size = ctypes.c_uint()
         sarr = ctypes.POINTER(ctypes.c_char_p)()
-        check_call(_LIB.MXSymbolListAuxiliaryArgs(
+        check_call(_LIB.MXSymbolListAuxiliaryStates(
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
@@ -237,7 +237,7 @@ class Symbol(object):
             self.handle, ctypes.byref(debug_str)))
         return py_str(debug_str.value)
 
-    def bind(self, ctx, args, args_grad, reqs, aux_args=[]):
+    def bind(self, ctx, args, args_grad, reqs, aux_states=None):
         """bind current symbol to get an executor.
 
         Parameters
@@ -250,14 +250,16 @@ class Symbol(object):
             input args' gradient
         reqs: Array of enum
             graident requirements
-        aux_args: Array of NArray
-            input auxiliary args to the symbol
+        aux_states: Array of NArray
+            input auxiliary states to the symbol
         """
         # TODO(bing): consider a more friendly interface
         # For example, pass in args_grad by dict
         enum = {"null" : 0, "write_to" : 1, "in_place":2, "add_to" : 3}
         if not isinstance(ctx, Context):
             raise TypeError("Context type error")
+        if aux_states == None:
+            aux_states = []
         args_handle = c_array(NArrayHandle, [item.handle for item in args])
         args_grad_handle = c_array(NArrayHandle, [item.handle for item in args_grad])
         reqs_array = c_array(mx_uint, [mx_uint(enum[item]) for item in reqs])

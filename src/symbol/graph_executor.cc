@@ -47,14 +47,14 @@ class GraphExecutor::BackwardOpWrapper : public Operator {
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
+                       const std::vector<TBlob> &aux_states) {
     // set things correctly
     CHECK(arg_data_ptr_.size() == in_data.size());
     for (size_t i = 0; i < in_data.size(); ++i) {
       *(arg_data_ptr_[i]) = in_data[i];
     }
     // redirect internally
-    op_->Backward(ctx, out_grad_, in_data_, out_data_, req, out_data, aux_args);
+    op_->Backward(ctx, out_grad_, in_data_, out_data_, req, out_data, aux_states);
   }
 
  private:
@@ -171,11 +171,11 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
   OpNode& op_node = op_nodes_[nid];
   Operator *op = op_node.op.get();
   std::vector<OpReqType> req;
-  std::vector<TBlob> in_data, out_data, aux_args;
+  std::vector<TBlob> in_data, out_data, aux_states;
   in_data.reserve(graph_.nodes[nid].inputs.size());
   out_data.reserve(op_node.outputs.size());
   req.reserve(op_node.outputs.size());
-  aux_args.reserve(op_node.aux_args.size());
+  aux_states.reserve(op_node.aux_states.size());
 
   OpExecEntry exec;
   // output
@@ -185,8 +185,8 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
     req.push_back(out.op_req);
   }
   // aux
-  for (const DataEntryInfo& aux : op_node.aux_args) {
-    aux_args.push_back(aux.data.data());
+  for (const DataEntryInfo& aux : op_node.aux_states) {
+    aux_states.push_back(aux.data.data());
     exec.mutate_vars.push_back(aux.data.var());
   }
   // input
@@ -200,9 +200,9 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
   }
 
   OpContext* op_ctx_ptr = &op_node.op_ctx;
-  exec.exec_fun = [op, op_ctx_ptr, in_data, req, out_data, aux_args] (RunContext ctx) {
+  exec.exec_fun = [op, op_ctx_ptr, in_data, req, out_data, aux_states] (RunContext ctx) {
     op_ctx_ptr->run_ctx = ctx;
-    op->Forward(*op_ctx_ptr, in_data, req, out_data, aux_args);
+    op->Forward(*op_ctx_ptr, in_data, req, out_data, aux_states);
   };
   return exec;
 }
@@ -237,7 +237,7 @@ void GraphExecutor::InitGraph(Symbol symbol, Context ctx, bool need_backward) {
 void GraphExecutor::InitDataEntryInfo(const std::vector<NArray> &in_args,
                                       const std::vector<NArray> &arg_grad_store,
                                       const std::vector<OpReqType> &grad_req_type,
-                                      const std::vector<NArray> &aux_args) {
+                                      const std::vector<NArray> &aux_states) {
   CHECK_EQ(arg_grad_store.size(), grad_req_type.size());
   CHECK_EQ(in_args.size(), graph_.arg_nodes.size());
   // bind inputs
@@ -306,14 +306,14 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NArray> &in_args,
   // bind aux args
   size_t aux_narray_idx = 0;
   for (size_t i = 0; i < aux_shapes.size(); ++i) {
-    op_nodes_[i].aux_args.resize(aux_shapes[i].size());
+    op_nodes_[i].aux_states.resize(aux_shapes[i].size());
     for (size_t j = 0; j < aux_shapes[i].size(); ++j) {
-      DataEntryInfo &info = op_nodes_[i].aux_args[j];
+      DataEntryInfo &info = op_nodes_[i].aux_states[j];
       info.shape = aux_shapes[i][j];
       info.type = kBindByExternal;
-      CHECK_GT(aux_args.size(), aux_narray_idx)
+      CHECK_GT(aux_states.size(), aux_narray_idx)
         << "Input auxiliary NArray is less than required";
-      info.data = aux_args[aux_narray_idx++];
+      info.data = aux_states[aux_narray_idx++];
       CHECK_EQ(info.data.data().shape_, info.shape)
         << "Incorrect NArray shape"
         << " Input: " << info.data.data().shape_
@@ -508,9 +508,9 @@ Executor *Executor::Bind(Symbol symbol,
                          const std::vector<NArray> &in_args,
                          const std::vector<NArray> &arg_grad_store,
                          const std::vector<OpReqType> &grad_req_type,
-                         const std::vector<NArray> &aux_args) {
+                         const std::vector<NArray> &aux_states) {
   GraphExecutor *exec = new GraphExecutor();
-  exec->Init(symbol, ctx, in_args, arg_grad_store, grad_req_type, aux_args);
+  exec->Init(symbol, ctx, in_args, arg_grad_store, grad_req_type, aux_states);
   return exec;
 }
 }  // namespace mxnet
