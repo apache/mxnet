@@ -442,12 +442,13 @@ void GraphExecutor::InitOpNodes() {
   }
 }
 
-void GraphExecutor::RunOps(size_t topo_start, size_t topo_end) {
+void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
   for (size_t i = topo_start; i < topo_end; ++i) {
     uint32_t nid = topo_order_[i];
     if (!op_nodes_[nid].activated) continue;
     if (graph_.nodes[nid].is_variable()) continue;
     OpNode& opnode = op_nodes_[nid];
+    opnode.op_ctx.is_train = is_train;
     if (opnode.cached_exec.exec_fun != nullptr) {
       DAGEngine::Get()->Push(
           opnode.cached_exec.exec_fun,
@@ -487,8 +488,8 @@ std::string GraphExecutor::DebugStr() const {
   return os.str();
 }
 
-void GraphExecutor::Forward() {
-  RunOps(0, num_forward_nodes_);
+void GraphExecutor::Forward(bool is_train) {
+  RunOps(is_train, 0, num_forward_nodes_);
 }
 
 void GraphExecutor::Backward(const std::vector<NArray> &head_grads) {
@@ -500,7 +501,7 @@ void GraphExecutor::Backward(const std::vector<NArray> &head_grads) {
     CHECK_EQ(info.type, kTobeBindByExternal);
     info.data = head_grads[i];
   }
-  RunOps(num_forward_nodes_, topo_order_.size());
+  RunOps(true, num_forward_nodes_, topo_order_.size());
 }
 
 Executor *Executor::Bind(Symbol symbol,

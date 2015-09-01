@@ -366,8 +366,8 @@ MXNET_DLL int MXSymbolListReturns(SymbolHandle symbol,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolListAuxiliaryStates(SymbolHandle symbol,
-                                    mx_uint *out_size,
-                                    const char ***out_str_array);
+                                          mx_uint *out_size,
+                                          const char ***out_str_array);
 /*!
  * \brief Compose the symbol on other symbols.
  *
@@ -444,9 +444,10 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
  * \brief Executor forward method
  *
  * \param handle executor handle
+ * \param is_train bool value to indicate whether the forward pass is for evaluation
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXExecutorForward(ExecutorHandle handle);
+MXNET_DLL int MXExecutorForward(ExecutorHandle handle, bool is_train);
 /*!
  * \brief Excecutor run backward
  *

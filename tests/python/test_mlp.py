@@ -13,16 +13,16 @@ def CalAcc(out, label):
 # symbol net
 batch_size = 100
 data = mx.symbol.Variable('data')
-fc1 = mx.symbol.FullyConnected(data = data, name='fc1', num_hidden=128)
+fc1 = mx.symbol.FullyConnected(data = data, name='fc1', nb_hidden=128)
 act1 = mx.symbol.Activation(data = fc1, name='relu1', act_type="relu")
-fc2 = mx.symbol.FullyConnected(data = act1, name = 'fc2', num_hidden = 64)
+fc2 = mx.symbol.FullyConnected(data = act1, name = 'fc2', nb_hidden = 64)
 act2 = mx.symbol.Activation(data = fc2, name='relu2', act_type="relu")
-fc3 = mx.symbol.FullyConnected(data = act2, name='fc3', num_hidden=10)
+fc3 = mx.symbol.FullyConnected(data = act2, name='fc3', nb_hidden=10)
 softmax = mx.symbol.Softmax(data = fc3, name = 'sm')
 args_list = softmax.list_arguments()
 # infer shape
 data_shape = (batch_size, 784)
-arg_shapes, out_shapes = softmax.infer_shape(data=data_shape)
+arg_shapes, out_shapes, aux_shapes = softmax.infer_shape(data=data_shape)
 arg_narrays = [mx.narray.create(shape) for shape in arg_shapes]
 grad_narrays = [mx.narray.create(shape) for shape in arg_shapes]
 inputs = dict(zip(args_list, arg_narrays))
@@ -104,3 +104,5 @@ def test_mlp():
     assert(acc_train > 0.98)
     assert(acc_val > 0.97)
 
+if __name__ == "__main__":
+    test_mlp()

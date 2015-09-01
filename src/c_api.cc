@@ -557,8 +557,8 @@ int MXSymbolListReturns(SymbolHandle symbol,
 }
 
 int MXSymbolListAuxiliaryStates(SymbolHandle symbol,
-                                    mx_uint *out_size,
-                                    const char ***out_str_array) {
+                                mx_uint *out_size,
+                                const char ***out_str_array) {
   Symbol *s = static_cast<Symbol*>(symbol);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
@@ -668,10 +668,10 @@ int MXSymbolInferShape(SymbolHandle sym,
   API_END();
 }
 
-int MXExecutorForward(ExecutorHandle handle) {
+int MXExecutorForward(ExecutorHandle handle, bool is_train) {
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
-  exec->Forward();
+  exec->Forward(is_train);
   API_END();
 }
 

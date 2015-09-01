@@ -8,9 +8,9 @@ def test_mlp2_infer_shape():
     out = models.mlp2()
     # infer shape
     data_shape = (100, 100)
-    arg_shapes, out_shapes = out.infer_shape(data=data_shape)
+    arg_shapes, out_shapes, aux_shapes = out.infer_shape(data=data_shape)
     arg_shape_dict = dict(zip(out.list_arguments(), arg_shapes))
-
+    print(len(aux_shapes))
     assert len(out_shapes) == 1
     assert out_shapes[0] == (100, 10)
     true_shapes = {'fc2_bias': (10,),
@@ -26,5 +26,8 @@ def test_mlp2_infer_error():
     out = models.mlp2()
     weight_shape= (1, 100)
     data_shape = (100, 100)
-    arg_shapes, out_shapes = out.infer_shape(data=data_shape, fc1_weight=weight_shape)
+    arg_shapes, out_shapes, aux_shapes = out.infer_shape(data=data_shape, fc1_weight=weight_shape)
 
+if __name__ == "__main__":
+    test_mlp2_infer_shape()
+    test_mlp2_infer_error()

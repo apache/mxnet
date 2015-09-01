@@ -20,7 +20,7 @@ namespace mxnet {
 class GraphExecutor : public Executor {
  public:
   virtual ~GraphExecutor() {}
-  virtual void Forward();
+  virtual void Forward(bool is_train);
   virtual void Backward(const std::vector<NArray> &head_grads);
   virtual const std::vector<NArray> &heads() const {
     return heads_narray_;
@@ -168,7 +168,7 @@ class GraphExecutor : public Executor {
   // initialize OpNode data structure
   void InitOpNodes();
   // run ops from topo order start to end
-  void RunOps(size_t topo_start, size_t topo_end);
+  void RunOps(bool is_train, size_t topo_start, size_t topo_end);
   // get debug string
   std::string DebugStr() const;
   // internal computational graph

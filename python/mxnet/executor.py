@@ -23,9 +23,16 @@ class Executor(object):
             raise TypeError("Handle type error")
         self.handle = handle
 
-    def forward(self):
-        """Do forward."""
-        check_call(_LIB.MXExecutorForward(self.handle))
+    def forward(self, is_train=True):
+        """Do forward.
+
+        Parameters
+        ----------
+        is_train: bool
+            whether this forward is for evaluation purpose
+            Note: for test only network, please indicate in Bind (TODO)
+        """
+        check_call(_LIB.MXExecutorForward(self.handle, is_train))
 
     def backward(self, grads):
         """Do backward on heads' gradient.

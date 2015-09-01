@@ -45,6 +45,7 @@ class ReshapeOp : public Operator {
     CHECK_EQ(out_data.size(), 1);
     if (req[kOut] == kNullOp) return;
     Stream<xpu> *s = ctx.get_stream<xpu>();
+    // TODO(bing): potentail bug here for non-4D input
     Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> out = out_data[kOut].get<xpu, 4, real_t>(s);
     CHECK_EQ(data.CheckContiguous(), true);

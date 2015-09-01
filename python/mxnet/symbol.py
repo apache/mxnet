@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, fixme
+# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments
 """Symbol support of mxnet"""
 from __future__ import absolute_import
 
@@ -263,7 +263,7 @@ class Symbol(object):
         args_handle = c_array(NArrayHandle, [item.handle for item in args])
         args_grad_handle = c_array(NArrayHandle, [item.handle for item in args_grad])
         reqs_array = c_array(mx_uint, [mx_uint(enum[item]) for item in reqs])
-        aux_args_handle = c_array(NArrayHandle, [item.handle for item in aux_args])
+        aux_args_handle = c_array(NArrayHandle, [item.handle for item in aux_states])
         handle = ExecutorHandle()
         check_call(_LIB.MXExecutorBind(self.handle,
                                        mx_uint(ctx.device_mask),
@@ -272,7 +272,7 @@ class Symbol(object):
                                        args_handle,
                                        args_grad_handle,
                                        reqs_array,
-                                       len(aux_args),
+                                       len(aux_states),
                                        aux_args_handle,
                                        ctypes.byref(handle)))
         return Executor(handle)

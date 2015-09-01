@@ -19,7 +19,7 @@
 
 namespace mxnet {
 namespace op {
-enum BatchNormOpInputs {kData, kWeight, kBias};
+enum BatchNormOpInputs {kData, kGamma, kBeta};
 enum BatchNormOpOutputs {kOut, kOutNoAffine, kMean, kVar};
 enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};
 
@@ -54,13 +54,14 @@ class BatchNormOp : public Operator {
       CHECK_EQ(out_data.size(), 4);
       CHECK_EQ(req.size(), 4);
     } else {
-      CHECK_EQ(out_data.size(), 1);
-      CHECK_EQ(req.size(), 1);
+      CHECK_GE(out_data.size(), 1);
+      CHECK_GE(req.size(), 1);
       CHECK_EQ(req[kOut], kWriteTo);
     }
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    const real_t scale = in_data[kData].shape_[1] / in_data[kData].shape_.Size();
+    const real_t scale = static_cast<real_t>(in_data[kData].shape_[1]) /
+                         static_cast<real_t>(in_data[kData].shape_.Size());
     Tensor<xpu, 4> data;
     Tensor<xpu, 4> out, out_no_affine;
     if (in_data[kData].ndim() == 2) {
@@ -78,8 +79,8 @@ class BatchNormOp : public Operator {
         out_no_affine = out_data[kOutNoAffine].get<xpu, 4, real_t>(s);
       }
     }
-    Tensor<xpu, 1> slope = in_data[kWeight].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1> bias = in_data[kBias].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1> slope = in_data[kGamma].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1> bias = in_data[kBeta].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> moving_mean = aux_states[kMovingMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> moving_var = aux_states[kMovingVar].get<xpu, 1, real_t>(s);
     // cal
@@ -119,7 +120,8 @@ class BatchNormOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data, grad, grad_in;
     Tensor<xpu, 4> out, out_no_affine;
-    real_t scale = out_data[kOut].shape_[1] / out_data[kOut].shape_.Size();
+    const real_t scale = static_cast<real_t>(out_data[kOut].shape_[1]) /
+                         static_cast<real_t>(out_data[kOut].shape_.Size());
     if (in_data[kData].ndim() == 2) {
       uint32_t ds[] = {out_data[kOut].shape_[0], out_data[kOut].shape_[1], 1, 1};
       TShape dshape(ds, ds + 4);
@@ -138,10 +140,10 @@ class BatchNormOp : public Operator {
     this->Init(ctx, out.shape_);
     Tensor<xpu, 1> mean = out_data[kMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> var = out_data[kVar].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1> slope = in_data[kWeight].get<xpu, 1, real_t>(s);
-    // Tensor<xpu, 1> bias = in_data[kBias].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1> gslope = in_grad[kWeight].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1> gbias = in_grad[kBias].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1> slope = in_data[kGamma].get<xpu, 1, real_t>(s);
+    // Tensor<xpu, 1> bias = in_data[kBeta].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1> gslope = in_grad[kGamma].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1> gbias = in_grad[kBeta].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> gmean = tmp_[0];
     Tensor<xpu, 1> gvar = tmp_[1];
     Tensor<xpu, 1> tmp = tmp_[2];
@@ -156,8 +158,8 @@ class BatchNormOp : public Operator {
     tmp *= gvar;
     gmean += tmp;
     // assign
-    Assign(gslope, req[kWeight], sumall_except_dim<1>(grad * out_no_affine));
-    Assign(gbias, req[kBias], sumall_except_dim<1>(grad));
+    Assign(gslope, req[kGamma], sumall_except_dim<1>(grad * out_no_affine));
+    Assign(gbias, req[kBeta], sumall_except_dim<1>(grad));
     Assign(grad_in, req[kData], (grad * broadcast<1>(slope, data.shape_)) *
       broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps), data.shape_) +
       broadcast<1>(gvar, data.shape_) * scale * 2.0f * (data - broadcast<1>(mean, data.shape_)) +
@@ -194,7 +196,7 @@ class BatchNormProp : public OperatorProperty {
                           std::vector<TShape> *out_shape,
                           std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 3) << "Input:[data, weight, bias]";
+    CHECK_EQ(in_shape->size(), 3) << "Input:[data, gamma, beta]";
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
     in_shape->at(1) = TShape(Shape1(dshape[1]));
@@ -226,7 +228,7 @@ class BatchNormProp : public OperatorProperty {
       const std::vector<int> &out_data) const override {
     return {out_grad[kOut],
             out_data[kOut], out_data[kOutNoAffine], out_data[kMean], out_data[kVar],
-            in_data[kData], in_data[kWeight], in_data[kBias]};
+            in_data[kData], in_data[kGamma], in_data[kBeta]};
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
@@ -246,7 +248,7 @@ class BatchNormProp : public OperatorProperty {
   }
 
   std::vector<std::string> ListArguments() const override {
-    return {"data", "weight", "bias"};
+    return {"data", "gamma", "beta"};
   }
 
   std::vector<std::string> ListReturns() const override {

@@ -212,23 +212,24 @@ std::vector<std::string> Symbol::ListReturns() const {
 }
 
 std::vector<std::string> Symbol::ListAuxiliaryStates() const {
+  // TODO(linmin, bing): better solution
   std::vector<std::string> ret;
-  if (this->is_atomic()) {
-    return heads_[0].source->op->ListAuxiliaryStates();
-  } else {
-    this->DFSVisit([&ret](const std::shared_ptr<Node> &node) {
-        if (node->op != nullptr) {
-          auto aux_args = node->op->ListAuxiliaryStates();
-          if (aux_args.size() > 0) {
-            auto &hname = node->name;
-            for (auto const &aux : aux_args) {
-              ret.push_back(hname + '_' + aux);
-            }
-          }
+  StaticGraph g;
+  this->ToStaticGraph(&g);
+  std::vector<uint32_t> topo_order = g.TopoSort();
+  for (uint32_t nid : topo_order) {
+    const auto& node = g.nodes[nid];
+    if (node.op != nullptr) {
+      auto aux_args = node.op->ListAuxiliaryStates();
+      if (aux_args.size() > 0) {
+        auto &hname = node.name;
+        for (auto const &aux : aux_args) {
+          ret.push_back(hname + '_' + aux);
         }
-      });
-    return ret;
+      }
+    }
   }
+  return ret;
 }
 
 Symbol Symbol::operator[] (size_t index) const {

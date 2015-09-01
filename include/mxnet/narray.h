@@ -414,6 +414,7 @@ struct NArrayFunctionReg
 }  // namespace mxnet
 
 namespace dmlc {
+/*!\brief traits */
 DMLC_DECLARE_TRAITS(has_saveload, mxnet::NArray, true);
 }  // namespace dmlc
 #endif  // MXNET_NARRAY_H_
