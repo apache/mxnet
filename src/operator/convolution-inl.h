@@ -61,7 +61,8 @@ class ConvolutionOp : public Operator {
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data) {
+                       const std::vector<TBlob> &out_data,
+                       const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(req[kOut], kWriteTo);
@@ -77,7 +78,7 @@ class ConvolutionOp : public Operator {
     TShape wmat_shape(ws, ws + 3);
     Tensor<xpu, 3> wmat = in_data[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
     Tensor<xpu, 4> out = out_data[kOut].get<xpu, 4, real_t>(s);
-    this->InitTemp(data.shape_, out.shape_);
+    this->InitTemp(ctx, data.shape_, out.shape_);
     const index_t nbatch = data.size(0);
     for (index_t i = 0; i < nbatch; i += param_.nstep) {
       const index_t step = std::min(param_.nstep, nbatch - i);
@@ -124,7 +125,8 @@ class ConvolutionOp : public Operator {
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_data,
                         const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad) {
+                        const std::vector<TBlob> &in_grad,
+                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
     // TODO(bing): check the BLAS Handle, be careful
@@ -144,7 +146,7 @@ class ConvolutionOp : public Operator {
     Tensor<xpu, 4> grad = out_grad[kOut].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> gdata = in_grad[kData].get<xpu, 4, real_t>(s);
     Tensor<xpu, 3> gwmat = in_grad[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
-    this->InitTemp(data.shape_, grad.shape_);
+    this->InitTemp(ctx, data.shape_, grad.shape_);
     const index_t nbatch = data.size(0);
     for (index_t i = 0; i < nbatch; i += param_.nstep) {
       const index_t step = std::min(param_.nstep, nbatch - i);
@@ -208,7 +210,8 @@ class ConvolutionOp : public Operator {
 
  private:
   // TODO(bing): use global resource allocator
-  inline void InitTemp(const mshadow::Shape<4> &ishape,
+  inline void InitTemp(const OpContext &ctx,
+                       const mshadow::Shape<4> &ishape,
                        const mshadow::Shape<4> &oshape) {
     const int ksize_y = param_.kernel[0];
     const int ksize_x = param_.kernel[1];
@@ -219,6 +222,9 @@ class ConvolutionOp : public Operator {
                                      oshape[2] * oshape[3]);
     int nop = (ishape[0] + param_.nstep - 1) / param_.nstep;
     param_.nstep = (ishape[0] + nop - 1) / nop;
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    temp_col_.set_stream(s);
+    temp_dst_.set_stream(s);
     temp_col_.Resize(mshadow::Shape2(shape_colunit_[0],
                                      shape_colunit_[1] * param_.nstep));
     temp_dst_.Resize(mshadow::Shape3(shape_dstunit_[0],
@@ -240,7 +246,7 @@ Operator* CreateOp(ConvolutionParam param);
 #if DMLC_USE_CXX11
 class ConvolutionProp : public OperatorProperty {
  public:
-  virtual std::vector<std::string> ListArguments() const {
+  std::vector<std::string> ListArguments() const override {
     if (!param_.no_bias) {
       return {"data", "weight", "bias"};
     } else {
@@ -248,12 +254,13 @@ class ConvolutionProp : public OperatorProperty {
     }
   }
 
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
   }
 
-  virtual bool InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape) const {
+  bool InferShape(std::vector<TShape> *in_shape,
+                          std::vector<TShape> *out_shape,
+                          std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     if (!param_.no_bias) {
       CHECK_EQ(in_shape->size(), 3) << "Input:[data, weight, bias]";
@@ -292,28 +299,28 @@ class ConvolutionProp : public OperatorProperty {
     return true;
   }
 
-  virtual OperatorProperty* Copy() const {
+  OperatorProperty* Copy() const override {
     auto ptr = new ConvolutionProp();
     ptr->param_ = param_;
     return ptr;
   }
 
-  virtual std::string TypeString() const {
+  std::string TypeString() const override {
     return "Convolution";
   }
 
-  virtual std::vector<int> DeclareBackwardDependency(
+  std::vector<int> DeclareBackwardDependency(
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const {
+      const std::vector<int> &out_data) const override {
     return {out_grad[kOut], in_data[kData], in_data[kWeight]};
   }
 
-  virtual std::vector<std::pair<int, void*> > BackwardInplaceOption(
+  std::vector<std::pair<int, void*> > BackwardInplaceOption(
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
-      const std::vector<void*> &in_grad) const {
+      const std::vector<void*> &in_grad) const override {
     return {{in_data[kData], in_grad[kData]}};
   }
 

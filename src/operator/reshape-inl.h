@@ -36,7 +36,8 @@ class ReshapeOp : public Operator {
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data) {
+                       const std::vector<TBlob> &out_data,
+                       const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(in_data.size(), 1);
@@ -44,6 +45,7 @@ class ReshapeOp : public Operator {
     CHECK_EQ(out_data.size(), 1);
     if (req[kOut] == kNullOp) return;
     Stream<xpu> *s = ctx.get_stream<xpu>();
+    // TODO(bing): potentail bug here for non-4D input
     Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> out = out_data[kOut].get<xpu, 4, real_t>(s);
     CHECK_EQ(data.CheckContiguous(), true);
@@ -58,7 +60,8 @@ class ReshapeOp : public Operator {
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_data,
                         const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad) {
+                        const std::vector<TBlob> &in_grad,
+                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(req.size(), 1);
@@ -86,16 +89,17 @@ class ReshapeProp : public OperatorProperty {
 
   explicit ReshapeProp(ReshapeParam param) : param_(param) {}
 
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
   }
 
-  virtual std::string TypeString() const {
+  std::string TypeString() const override {
     return "Reshape";
   }
 
-  virtual bool InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape) const {
+  bool InferShape(std::vector<TShape> *in_shape,
+                          std::vector<TShape> *out_shape,
+                          std::vector<TShape> *aux_shape) const override {
     CHECK_EQ(in_shape->size(), 1) << "Input: [data]";
     const TShape &dshape = in_shape->at(kData);
     if (dshape.ndim() == 0) return false;
@@ -108,30 +112,30 @@ class ReshapeProp : public OperatorProperty {
     return true;
   }
 
-  virtual OperatorProperty* Copy() const {
+  OperatorProperty* Copy() const override {
     auto ptr = new ReshapeProp();
     ptr->param_ = param_;
     return ptr;
   }
 
-  virtual std::vector<int> DeclareBackwardDependency(
+  std::vector<int> DeclareBackwardDependency(
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const {
+      const std::vector<int> &out_data) const override {
     return {out_grad[kOut]};
   }
 
-  virtual std::vector<std::pair<int, void*> > ForwardInplaceOption(
+  std::vector<std::pair<int, void*> > ForwardInplaceOption(
       const std::vector<int> &in_data,
-      const std::vector<void*> &out_data) const {
+      const std::vector<void*> &out_data) const override {
     return {{in_data[kData], out_data[kOut]}};
   }
 
-  virtual std::vector<std::pair<int, void*> > BackwardInplaceOption(
+  std::vector<std::pair<int, void*> > BackwardInplaceOption(
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
-      const std::vector<void*> &in_grad) const {
+      const std::vector<void*> &in_grad) const override {
     return {{out_grad[kOut], in_grad[kData]}};
   }
 
@@ -143,14 +147,15 @@ class ReshapeProp : public OperatorProperty {
 
 class FlattenProp : public ReshapeProp {
  public:
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {}
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {}
 
-  virtual std::string TypeString() const {
+  std::string TypeString() const override {
     return "Flatten";
   }
 
-  virtual bool InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape) const {
+  bool InferShape(std::vector<TShape> *in_shape,
+                          std::vector<TShape> *out_shape,
+                          std::vector<TShape> *aux_shape) const override {
     CHECK_EQ(in_shape->size(), 1) << "Input: [data]";
     const TShape &dshape = in_shape->at(kData);
     if (dshape.ndim() == 0) return false;
@@ -163,7 +168,7 @@ class FlattenProp : public ReshapeProp {
     return true;
   }
 
-  virtual OperatorProperty* Copy() const {
+  OperatorProperty* Copy() const override {
     auto ptr = new FlattenProp();
     return ptr;
   }

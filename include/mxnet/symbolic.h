@@ -128,10 +128,12 @@ class StaticGraph {
    *
    * \param topo_order The topological order of node index, as created by TopoSort.
    * \param node_out_shapes The shapes of the each outputs of nodes in the graph.
+   * \param node_aux_shapes The shapes of the each auxiliary states of nodes in the graph.
    * \return if the shape inference is successful, return true, else return false.
    */
   bool InferNodeShapes(const std::vector<uint32_t> &topo_order,
-                       std::vector<std::vector<TShape> > *node_out_shapes) const;
+                       std::vector<std::vector<TShape> > *node_out_shapes,
+                       std::vector<std::vector<TShape> > *node_aux_shapes) const;
   /*!
    * \brief infer the shapes of outputs and unknown input arguments
    * \param in_shape the shape of input arguments of the operator
@@ -144,10 +146,13 @@ class StaticGraph {
    *
    * \param out_shape the shape of outputs of the operator
    *     InferShape will modify the vector to fill output TShape
+   * \param aux_shape the shape of auxiliary states of the operator
+   *     InferShape will modify the vector to fill output TShape
    * \return if the shape inference is successful, return true, else return false.
    */
   bool InferShape(std::vector<TShape>* in_shape,
-                  std::vector<TShape>* out_shape) const;
+                  std::vector<TShape>* out_shape,
+                  std::vector<TShape>* aux_shape) const;
   /*!
    * \brief Add a full backward pass in the static graph.
    *  This function will add gradient nodes for each heads,
@@ -204,6 +209,8 @@ class Symbol {
   std::vector<std::string> ListArguments() const;
   /*! \return get the descriptions of outputs for this symbol */
   std::vector<std::string> ListReturns() const;
+  /*! \return get the descriptions of auxiliary data for this symbol */
+  std::vector<std::string> ListAuxiliaryStates() const;
   /*!
    * \brief get the index th element from the returned tuple.
    * \param index index of multi output
@@ -272,22 +279,26 @@ class Symbol {
    *     common practice: set the shape of data input, and usually weight's shape can be infered
    *
    * \param out_shapes Use to store the infered shapes of outputs.
+   * \param aux_shapes Use to store the infered shapes of auxiliary states
    * \return true if the shape inference is successful, false if there is not enough information.
    * \throws dmlc::Error if the known arg_shapes are inconsistent.
    */
   bool InferShape(std::vector<TShape> *arg_shapes,
-                  std::vector<TShape> *out_shapes) const;
+                  std::vector<TShape> *out_shapes,
+                  std::vector<TShape> *aux_shapes) const;
   /*!
    * \brief infer the shapes by providing shapes of known arguments.
    * \param known_arg_shapes map of argument name to shape of arguments with known shapes.
    * \param arg_shapes used to store infered shapes of arguments.
    * \param out_shapes used to store infered shapes of outputs.
+   * \param aux_shapes Use to store the infered shapes of auxiliary states
    * \return true if the shape inference is successful, false if there is not enough information.
    * \throws dmlc::Error if the known arg_shapes are inconsistent.
    */
   bool InferShape(const std::unordered_map<std::string, TShape> &known_arg_shapes,
                   std::vector<TShape> *arg_shapes,
-                  std::vector<TShape> *out_shapes) const;
+                  std::vector<TShape> *out_shapes,
+                  std::vector<TShape> *aux_shapes) const;
   /*!
    * \brief get number of outputs of this symbol
    * \return number of outputs
@@ -378,7 +389,7 @@ class Executor {
    * \brief Perform a Forward operation of Operator
    *  After this operation, user can get the result by using function head.
    */
-  virtual void Forward() = 0;
+  virtual void Forward(bool is_train) = 0;
   /*!
    * \brief Perform a Backward operation of the Operator.
    *  This must be called after Forward.
@@ -400,13 +411,15 @@ class Executor {
    * \param in_args the NArray that stores the input arguments to the symbol.
    * \param arg_grad_store NArray that is used to store the gradient output of the input arguments.
    * \param grad_req_type requirment type of gradient saving. Can only be in {kNullOp, kAddTo, kWriteTo}.
+   * \param aux_states NArray that is used as internal state in op
    * \return a new executor.
    */
   static Executor *Bind(Symbol symbol,
                         Context ctx,
                         const std::vector<NArray> &in_args,
                         const std::vector<NArray> &arg_grad_store,
-                        const std::vector<OpReqType> &grad_req_type);
+                        const std::vector<OpReqType> &grad_req_type,
+                        const std::vector<NArray> &aux_states);
 };  // class operator
 }  // namespace mxnet
 #endif  // MXNET_SYMBOLIC_H_

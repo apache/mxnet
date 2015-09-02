@@ -80,12 +80,15 @@ class Operator {
    * \param req the request types of saving operation, can only be kWriteTo or kWriteInplace.
    * \param out_data array of output data, pointer is used to indicate that this is holder
    *        the space of TBlob in out_data must be pre-allocated with InferShape
+   * \param aux_states Auxiliary states of operator. Normally operator doesn't 
+   *        need, epecial case like Batch Norm requires.
    * \sa OpReqType, OpContext
    */
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data) = 0;
+                       const std::vector<TBlob> &out_data,
+                       const std::vector<TBlob> &aux_states) = 0;
   /*!
    * \brief Perform a Backward Operation, write gradient to the in_grad.
    *
@@ -111,6 +114,7 @@ class Operator {
    * \param out_data the array of output data.
    * \param req request types of the saving operation, can be all types.
    * \param in_grad the array of gradient we need to write to.
+   * \param aux_states Auxiliary states of operator. Normally operator doesn't need
    * \sa OperatorProperty, OpReqType, OpContext
    */
   virtual void Backward(const OpContext &ctx,
@@ -118,7 +122,8 @@ class Operator {
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_data,
                         const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad) {
+                        const std::vector<TBlob> &in_grad,
+                        const std::vector<TBlob> &aux_states) {
     LOG(FATAL) << "Backward is not implemented";
   }
 };
@@ -158,6 +163,13 @@ class OperatorProperty {
   virtual std::vector<std::string> ListReturns() const {
     return {"output"};
   }
+  /*!
+   * \brief Get name of auxilary states of Operator
+   * \return name of return values.
+   */
+  virtual std::vector<std::string> ListAuxiliaryStates() const {
+    return {};
+  }
   /*! \return number of real return values of the Operator */
   virtual int NumReturns() const {
     return 1;
@@ -189,11 +201,14 @@ class OperatorProperty {
    *
    * \param out_shape the shape of outputs of the operator
    *     InferShape will modify the vector to fill output TShape
+   * \param aux_shape the shape of auxiliary states of the operator
+   *     InferShape will modify the vector to fill output TShape
    * \return true if the shape inference is successful, false if there is not enough information.
    * \throws dmlc::Error if the known arg_shapes are inconsistent.
    */
   virtual bool InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape) const = 0;
+                          std::vector<TShape> *out_shape,
+                          std::vector<TShape> *aux_shape) const = 0;
   /*!
    * \brief Copy this OperatorProperty.
    * \return a pointer to the copied OperatorProperty

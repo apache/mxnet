@@ -359,6 +359,16 @@ MXNET_DLL int MXSymbolListReturns(SymbolHandle symbol,
                                   mx_uint *out_size,
                                   const char ***out_str_array);
 /*!
+ * \brief List auxiliary states in the symbol.
+ * \param symbol the symbol
+ * \param out_size output size
+ * \param out_str_array pointer to hold the output string array
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolListAuxiliaryStates(SymbolHandle symbol,
+                                          mx_uint *out_size,
+                                          const char ***out_str_array);
+/*!
  * \brief Compose the symbol on other symbols.
  *
  *  This function will change the sym hanlde.
@@ -406,6 +416,9 @@ MXNET_DLL int MXSymbolGrad(SymbolHandle sym,
  * \param out_shape_size sizeof the returning array of out_shapes
  * \param out_shape_ndim returning array of shape dimensions of eachs input shape.
  * \param out_shape_data returning array of pointers to head of the input shape.
+ * \param aux_shape_size sizeof the returning array of aux_shapes
+ * \param aux_shape_ndim returning array of shape dimensions of eachs auxiliary shape.
+ * \param aux_shape_data returning array of pointers to head of the auxiliary shape.
  * \param complete whether infer shape completes or more information is needed.
  * \return 0 when success, -1 when failure happens
  */
@@ -420,6 +433,9 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
                                  mx_uint *out_shape_size,
                                  const mx_uint **out_shape_ndim,
                                  const mx_uint ***out_shape_data,
+                                 mx_uint *aux_shape_size,
+                                 const mx_uint **aux_shape_ndim,
+                                 const mx_uint ***aux_shape_data,
                                  int *complete);
 //--------------------------------------------
 // Part 4: Executor interface
@@ -428,9 +444,10 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
  * \brief Executor forward method
  *
  * \param handle executor handle
+ * \param is_train bool value to indicate whether the forward pass is for evaluation
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXExecutorForward(ExecutorHandle handle);
+MXNET_DLL int MXExecutorForward(ExecutorHandle handle, bool is_train);
 /*!
  * \brief Excecutor run backward
  *
@@ -466,6 +483,8 @@ MXNET_DLL int MXExecutorHeads(ExecutorHandle handle,
  * \param in_args in args array
  * \param arg_grad_store arg grads handle array
  * \param grad_req_type grad req array
+ * \param aux_states_len length of auxiliary states
+ * \param aux_states auxiliary states array
  * \param out output executor handle
  * \return 0 when success, -1 when failure happens
  */
@@ -476,6 +495,8 @@ MXNET_DLL int MXExecutorBind(SymbolHandle symbol_handle,
                              NArrayHandle *in_args,
                              NArrayHandle *arg_grad_store,
                              mx_uint *grad_req_type,
+                             mx_uint aux_states_len,
+                             NArrayHandle *aux_states,
                              ExecutorHandle *out);
 
 //--------------------------------------------

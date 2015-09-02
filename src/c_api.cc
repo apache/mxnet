@@ -47,11 +47,11 @@ struct MXAPIThreadLocalEntry {
   /*! \brief result holder for returning handles */
   std::vector<void *> ret_handles;
   /*! \brief result holder for returning shapes */
-  std::vector<TShape> arg_shapes, out_shapes;
+  std::vector<TShape> arg_shapes, out_shapes, aux_shapes;
   /*! \brief result holder for returning shape dimensions */
-  std::vector<mx_uint> arg_shape_ndim, out_shape_ndim;
+  std::vector<mx_uint> arg_shape_ndim, out_shape_ndim, aux_shape_ndim;
   /*! \brief result holder for returning shape pointer */
-  std::vector<const mx_uint*> arg_shape_data, out_shape_data;
+  std::vector<const mx_uint*> arg_shape_data, out_shape_data, aux_shape_data;
   // helper function to setup return value of shape array
   inline static void SetupShapeArrayReturn(
       const std::vector<TShape> &shapes,
@@ -556,6 +556,22 @@ int MXSymbolListReturns(SymbolHandle symbol,
   API_END();
 }
 
+int MXSymbolListAuxiliaryStates(SymbolHandle symbol,
+                                mx_uint *out_size,
+                                const char ***out_str_array) {
+  Symbol *s = static_cast<Symbol*>(symbol);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  ret->ret_vec_str = std::move(s->ListAuxiliaryStates());
+  ret->ret_vec_charp.clear();
+  for (size_t i = 0; i < ret->ret_vec_str.size(); ++i) {
+    ret->ret_vec_charp.push_back(ret->ret_vec_str[i].c_str());
+  }
+  *out_size = static_cast<mx_uint>(ret->ret_vec_charp.size());
+  *out_str_array = dmlc::BeginPtr(ret->ret_vec_charp);
+  API_END();
+}
+
 int MXSymbolCompose(SymbolHandle sym,
                     const char *name,
                     mx_uint num_args,
@@ -606,6 +622,9 @@ int MXSymbolInferShape(SymbolHandle sym,
                        mx_uint *out_shape_size,
                        const mx_uint **out_shape_ndim,
                        const mx_uint ***out_shape_data,
+                       mx_uint *aux_shape_size,
+                       const mx_uint **aux_shape_ndim,
+                       const mx_uint ***aux_shape_data,
                        int *complete) {
   Symbol *s = static_cast<Symbol*>(sym);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
@@ -617,26 +636,31 @@ int MXSymbolInferShape(SymbolHandle sym,
       ret->arg_shapes.push_back(TShape(arg_shape_data + arg_ind_ptr[i],
                                        arg_shape_data + arg_ind_ptr[i+1]));
     }
-    succ = s->InferShape(&(ret->arg_shapes), &(ret->out_shapes));
+    succ = s->InferShape(&(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
   } else {
     std::unordered_map<std::string, TShape> kwargs;
     for (mx_uint i = 0; i < num_args; ++i) {
       kwargs[keys[i]] = TShape(arg_shape_data + arg_ind_ptr[i],
                                arg_shape_data + arg_ind_ptr[i+1]);
     }
-    succ = s->InferShape(kwargs, &(ret->arg_shapes), &(ret->out_shapes));
+    succ = s->InferShape(kwargs, &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
   }
   if (succ) {
     MXAPIThreadLocalEntry::SetupShapeArrayReturn(
         ret->arg_shapes, &(ret->arg_shape_ndim), &(ret->arg_shape_data));
     MXAPIThreadLocalEntry::SetupShapeArrayReturn(
         ret->out_shapes, &(ret->out_shape_ndim), &(ret->out_shape_data));
+    MXAPIThreadLocalEntry::SetupShapeArrayReturn(
+        ret->aux_shapes, &(ret->aux_shape_ndim), &(ret->aux_shape_data));
     *in_shape_size = static_cast<mx_uint>(ret->arg_shapes.size());
     *in_shape_ndim = dmlc::BeginPtr(ret->arg_shape_ndim);
     *in_shape_data = dmlc::BeginPtr(ret->arg_shape_data);
     *out_shape_size = static_cast<mx_uint>(ret->out_shapes.size());
     *out_shape_ndim = dmlc::BeginPtr(ret->out_shape_ndim);
     *out_shape_data = dmlc::BeginPtr(ret->out_shape_data);
+    *aux_shape_size = static_cast<mx_uint>(ret->aux_shapes.size());
+    *aux_shape_ndim = dmlc::BeginPtr(ret->aux_shape_ndim);
+    *aux_shape_data = dmlc::BeginPtr(ret->aux_shape_data);
     *complete = 1;
   } else {
     *complete = 0;
@@ -644,10 +668,10 @@ int MXSymbolInferShape(SymbolHandle sym,
   API_END();
 }
 
-int MXExecutorForward(ExecutorHandle handle) {
+int MXExecutorForward(ExecutorHandle handle, bool is_train) {
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
-  exec->Forward();
+  exec->Forward(is_train);
   API_END();
 }
 
@@ -690,21 +714,28 @@ int MXExecutorBind(SymbolHandle symbol_handle,
                    NArrayHandle *in_args,
                    NArrayHandle *arg_grad_store,
                    mx_uint *grad_req_type,
+                   mx_uint aux_states_len,
+                   NArrayHandle *aux_states,
                    ExecutorHandle *out) {
   API_BEGIN();
   Symbol *symb = static_cast<Symbol*>(symbol_handle);
   Context ctx = Context(dev_mask, dev_id);
   NArray **in_args_ptr = reinterpret_cast<NArray**>(in_args);
   NArray **arg_grad_ptr = reinterpret_cast<NArray**>(arg_grad_store);
+  NArray **aux_states_ptr = reinterpret_cast<NArray**>(aux_states);
   std::vector<NArray> in_args_vec;
   std::vector<NArray> arg_grad_vec;
   std::vector<OpReqType> grad_req_vec;
+  std::vector<NArray> aux_states_vec;
   for (mx_uint i = 0; i < len; ++i) {
     in_args_vec.push_back(*(in_args_ptr[i]));
     arg_grad_vec.push_back(*(arg_grad_ptr[i]));
     grad_req_vec.push_back(static_cast<OpReqType>(grad_req_type[i]));
   }
-  *out = Executor::Bind(*symb, ctx, in_args_vec, arg_grad_vec, grad_req_vec);
+  for (mx_uint i = 0; i < aux_states_len; ++i) {
+    aux_states_vec.push_back(*(aux_states_ptr[i]));
+  }
+  *out = Executor::Bind(*symb, ctx, in_args_vec, arg_grad_vec, grad_req_vec, aux_states_vec);
   API_END();
 }
 

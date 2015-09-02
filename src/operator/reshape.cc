@@ -22,12 +22,12 @@ Operator* ReshapeProp::CreateOperator(Context ctx) const {
 DMLC_REGISTER_PARAMETER(ReshapeParam);
 
 MXNET_REGISTER_OP_PROPERTY(Reshape, ReshapeProp)
-.add_argument("data", "Symbol", "Input data to  flatten.")
-.describe("Reshape input to target shape");
+.describe("Reshape input to target shape")
+.add_argument("data", "Symbol", "Input data to  reshape.")
+.add_arguments(ReshapeParam::__FIELDS__());
 
 MXNET_REGISTER_OP_PROPERTY(Flatten, FlattenProp)
-.add_argument("data", "Symbol", "Input data to  flatten.")
-.add_arguments(ReshapeParam::__FIELDS__())
-.describe("Flatten input");
+.describe("Flatten input")
+.add_argument("data", "Symbol", "Input data to  flatten.");
 }  // namespace op
 }  // namespace mxnet

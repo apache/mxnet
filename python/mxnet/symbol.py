@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, fixme
+# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments
 """Symbol support of mxnet"""
 from __future__ import absolute_import
 
@@ -123,6 +123,20 @@ class Symbol(object):
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
+    def list_auxiliary_states(self):
+        """List all auxiliary states in the symbool.
+
+        Returns
+        -------
+        args: list of string
+            List of all the auxiliary
+        """
+        size = ctypes.c_uint()
+        sarr = ctypes.POINTER(ctypes.c_char_p)()
+        check_call(_LIB.MXSymbolListAuxiliaryStates(
+            self.handle, ctypes.byref(size), ctypes.byref(sarr)))
+        return [py_str(sarr[i]) for i in range(size.value)]
+
     def infer_shape(self, *args, **kwargs):
         """Infer the shape of outputs and arguments of given known shapes of arguments.
 
@@ -147,6 +161,9 @@ class Symbol(object):
         out_shapes : list of tuple or None
             List of shapes of outputs.
             The order is in the same order as list_returns()
+        aux_shapes : list of tuple or None
+            List of shapes of outputs.
+            The order is in the same order as list_auxiliary()
         """
         # pylint: disable=too-many-locals
         if len(args) != 0 and len(kwargs) != 0:
@@ -176,6 +193,9 @@ class Symbol(object):
         out_shape_size = mx_uint()
         out_shape_ndim = ctypes.POINTER(mx_uint)()
         out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
+        aux_shape_size = mx_uint()
+        aux_shape_ndim = ctypes.POINTER(mx_uint)()
+        aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
         complete = ctypes.c_int()
         check_call(_LIB.MXSymbolInferShape(
             self.handle, len(indptr) - 1,
@@ -188,13 +208,18 @@ class Symbol(object):
             ctypes.byref(out_shape_size),
             ctypes.byref(out_shape_ndim),
             ctypes.byref(out_shape_data),
+            ctypes.byref(aux_shape_size),
+            ctypes.byref(aux_shape_ndim),
+            ctypes.byref(aux_shape_data),
             ctypes.byref(complete)))
         if complete.value != 0:
             arg_shapes = [
                 tuple(arg_shape_data[i][:arg_shape_ndim[i]]) for i in range(arg_shape_size.value)]
             out_shapes = [
                 tuple(out_shape_data[i][:out_shape_ndim[i]]) for i in range(out_shape_size.value)]
-            return (arg_shapes, out_shapes)
+            aux_shapes = [
+                tuple(aux_shape_data[i][:aux_shape_ndim[i]]) for i in range(aux_shape_size.value)]
+            return (arg_shapes, out_shapes, aux_shapes)
         else:
             return (None, None)
         # pylint: enable=too-many-locals
@@ -212,7 +237,7 @@ class Symbol(object):
             self.handle, ctypes.byref(debug_str)))
         return py_str(debug_str.value)
 
-    def bind(self, ctx, args, args_grad, reqs):
+    def bind(self, ctx, args, args_grad, reqs, aux_states=None):
         """bind current symbol to get an executor.
 
         Parameters
@@ -225,15 +250,20 @@ class Symbol(object):
             input args' gradient
         reqs: Array of enum
             graident requirements
+        aux_states: Array of NArray
+            input auxiliary states to the symbol
         """
         # TODO(bing): consider a more friendly interface
         # For example, pass in args_grad by dict
         enum = {"null" : 0, "write_to" : 1, "in_place":2, "add_to" : 3}
         if not isinstance(ctx, Context):
             raise TypeError("Context type error")
+        if aux_states == None:
+            aux_states = []
         args_handle = c_array(NArrayHandle, [item.handle for item in args])
         args_grad_handle = c_array(NArrayHandle, [item.handle for item in args_grad])
         reqs_array = c_array(mx_uint, [mx_uint(enum[item]) for item in reqs])
+        aux_args_handle = c_array(NArrayHandle, [item.handle for item in aux_states])
         handle = ExecutorHandle()
         check_call(_LIB.MXExecutorBind(self.handle,
                                        mx_uint(ctx.device_mask),
@@ -242,6 +272,8 @@ class Symbol(object):
                                        args_handle,
                                        args_grad_handle,
                                        reqs_array,
+                                       len(aux_states),
+                                       aux_args_handle,
                                        ctypes.byref(handle)))
         return Executor(handle)
 

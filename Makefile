@@ -63,14 +63,14 @@ endif
 
 BIN = tests/test_simple_engine
 OBJ = narray_function_cpu.o
-OBJCXX11 = reshape_cpu.o dag_engine.o simple_engine.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o convolution_cpu.o io.o iter_mnist.o
+OBJCXX11 = batch_norm_cpu.o reshape_cpu.o dag_engine.o simple_engine.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o convolution_cpu.o io.o iter_mnist.o
 CUOBJ =
 SLIB = lib/libmxnet.so
 ALIB = lib/libmxnet.a
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
 
 ifeq ($(USE_CUDA), 1)
-	CUOBJ += reshape_gpu.o narray_function_gpu.o fully_connected_gpu.o activation_gpu.o elementwise_sum_gpu.o pooling_gpu.o softmax_gpu.o convolution_gpu.o
+	CUOBJ += batch_norm_gpu.o reshape_gpu.o narray_function_gpu.o fully_connected_gpu.o activation_gpu.o elementwise_sum_gpu.o pooling_gpu.o softmax_gpu.o convolution_gpu.o
 endif
 
 .PHONY: clean all test lint doc
@@ -105,6 +105,8 @@ convolution_cpu.o: src/operator/convolution.cc
 convolution_gpu.o: src/operator/convolution.cu
 reshape_cpu.o: src/operator/reshape.cc
 reshape_gpu.o: src/operator/reshape.cu
+batch_norm_cpu.o: src/operator/batch_norm.cc
+batch_norm_gpu.o: src/operator/batch_norm.cu
 io.o: src/io/io.cc
 iter_mnist.o: src/io/iter_mnist.cc
 

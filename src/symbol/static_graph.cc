@@ -50,7 +50,8 @@ std::vector<uint32_t> StaticGraph::TopoSort() const {
 }
 
 bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
-                                  std::vector<std::vector<TShape> > *node_out_shapes) const {
+                                  std::vector<std::vector<TShape> > *node_out_shapes,
+                                  std::vector<std::vector<TShape> > *node_aux_shapes) const {
   for (uint32_t nid : topo_order) {
     const Node& node = nodes[nid];
     if (node.is_forward()) {
@@ -59,7 +60,9 @@ bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
         in_shape.push_back((*node_out_shapes)[e.source_id][e.index]);
       }
       try {
-        if (!node.op->InferShape(&in_shape, &(*node_out_shapes)[nid])) return false;
+        if (!node.op->InferShape(&in_shape,
+                                 &(*node_out_shapes)[nid],
+                                 &(*node_aux_shapes)[nid])) return false;
       } catch (const op::InferShapeError &err) {
         // error handling
         const std::string &op_name = node.name;
@@ -123,8 +126,10 @@ bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
 }
 
 bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
-                             std::vector<TShape> *out_shape) const {
+                             std::vector<TShape> *out_shape,
+                             std::vector<TShape> *aux_shape) const {
   std::vector<std::vector<TShape> > node_out_shapes(nodes.size());
+  std::vector<std::vector<TShape> > node_aux_shapes(nodes.size());
   for (size_t i = 0; i < nodes.size(); ++i) {
     int nout = 1;
     if (nodes[i].is_forward()) {
@@ -140,7 +145,8 @@ bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
     node_out_shapes[arg_nodes[i]][0] = (*in_shape)[i];
   }
   if (!InferNodeShapes(this->TopoSort(),
-                       &node_out_shapes)) return false;
+                       &node_out_shapes,
+                       &node_aux_shapes)) return false;
   for (size_t i = 0; i < arg_nodes.size(); ++i) {
     (*in_shape)[i] = node_out_shapes[arg_nodes[i]][0];
   }
@@ -148,6 +154,13 @@ bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
   for (size_t i = 0; i < heads.size(); ++i) {
     const DataEntry &e = heads[i];
     (*out_shape)[i] = node_out_shapes[e.source_id][e.index];
+  }
+  for (size_t i = 0; i < node_aux_shapes.size(); ++i) {
+    if (node_aux_shapes[i].size() > 0) {
+      for (auto const &shape : node_aux_shapes[i]) {
+        aux_shape->push_back(shape);
+      }
+    }
   }
   return true;
 }

@@ -20,7 +20,7 @@ namespace mxnet {
 class GraphExecutor : public Executor {
  public:
   virtual ~GraphExecutor() {}
-  virtual void Forward();
+  virtual void Forward(bool is_train);
   virtual void Backward(const std::vector<NArray> &head_grads);
   virtual const std::vector<NArray> &heads() const {
     return heads_narray_;
@@ -30,14 +30,15 @@ class GraphExecutor : public Executor {
                    Context ctx,
                    const std::vector<NArray> &in_args,
                    const std::vector<NArray> &arg_grad_store,
-                   const std::vector<OpReqType> &grad_req_type) {
+                   const std::vector<OpReqType> &grad_req_type,
+                   const std::vector<NArray> &aux_states) {
     CHECK_EQ(grad_req_type.size(), arg_grad_store.size());
     bool need_backward = false;
     for (auto req : grad_req_type) {
       if (req != kNullOp) need_backward = true;
     }
     this->InitGraph(symbol, ctx, need_backward);
-    this->InitDataEntryInfo(in_args, arg_grad_store, grad_req_type);
+    this->InitDataEntryInfo(in_args, arg_grad_store, grad_req_type, aux_states);
     this->InitDataEntryMemory();
     this->InitOpNodes();
     // TODO(bing): remove me when things are OK
@@ -106,6 +107,8 @@ class GraphExecutor : public Executor {
     Context ctx;
     // data entry information about outputs of op
     std::vector<DataEntryInfo> outputs;
+    // auxiliary data information of op
+    std::vector<DataEntryInfo> aux_states;
     // The following parts are constructed in InitOpNodes
     // the real operator
     std::shared_ptr<Operator> op;
@@ -158,13 +161,14 @@ class GraphExecutor : public Executor {
   // initialize internal DataEntryInfo, reference counting
   void InitDataEntryInfo(const std::vector<NArray> &in_args,
                          const std::vector<NArray> &arg_grad_store,
-                         const std::vector<OpReqType> &grad_req_type);
+                         const std::vector<OpReqType> &grad_req_type,
+                         const std::vector<NArray> &aux_states);
   // initialize internal data entries NArray
   void InitDataEntryMemory();
   // initialize OpNode data structure
   void InitOpNodes();
   // run ops from topo order start to end
-  void RunOps(size_t topo_start, size_t topo_end);
+  void RunOps(bool is_train, size_t topo_start, size_t topo_end);
   // get debug string
   std::string DebugStr() const;
   // internal computational graph
