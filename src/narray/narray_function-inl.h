@@ -16,6 +16,14 @@
   }
 #endif
 
+#ifndef DECL_SCALAR
+#define DECL_SCALAR(XPU, OP, FUN)                                       \
+  template<>                                                            \
+  void Eval<XPU, OP>(const TBlob &lhs, const real_t &rhs, TBlob *ret, RunContext ctx) { \
+    FUN<XPU, OP>(lhs, rhs, ret, ctx);                                   \
+  }
+#endif
+
 #if defined(__CUDACC__)
 #define DEVICE gpu
 #else
@@ -26,7 +34,7 @@ namespace mxnet {
 namespace narray {
 // true implementation
 template<typename xpu, typename OP>
-inline void Eval_(const TBlob &lhs, const TBlob &rhs,
+inline void EvalBinary_(const TBlob &lhs, const TBlob &rhs,
                   TBlob *ret, RunContext ctx) {
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = static_cast<mshadow::Stream<xpu>*>(ctx.stream);
@@ -34,11 +42,24 @@ inline void Eval_(const TBlob &lhs, const TBlob &rhs,
       = F<typename OP::mshadow_op>(lhs.FlatTo2D<xpu, real_t>(s),
                                    rhs.FlatTo2D<xpu, real_t>(s));
 }
+
+template<typename xpu, typename OP>
+inline void EvalScalar_(const TBlob &lhs, const real_t &rhs,
+                        TBlob *ret, RunContext ctx) {
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = static_cast<mshadow::Stream<xpu>*>(ctx.stream);
+  ret->FlatTo2D<xpu, real_t>(s)
+    = F<typename OP::mshadow_op>(lhs.FlatTo2D<xpu, real_t>(s), rhs);
+}
 // declarations
-DECL_BINARY(DEVICE, Plus, Eval_)
-DECL_BINARY(DEVICE, Minus, Eval_)
-DECL_BINARY(DEVICE, Mul, Eval_)
-DECL_BINARY(DEVICE, Div, Eval_)
+DECL_BINARY(DEVICE, Plus, EvalBinary_)
+DECL_BINARY(DEVICE, Minus, EvalBinary_)
+DECL_BINARY(DEVICE, Mul, EvalBinary_)
+DECL_BINARY(DEVICE, Div, EvalBinary_)
+DECL_SCALAR(DEVICE, Plus, EvalScalar_)
+DECL_SCALAR(DEVICE, Minus, EvalScalar_)
+DECL_SCALAR(DEVICE, Mul, EvalScalar_)
+DECL_SCALAR(DEVICE, Div, EvalScalar_)
 }  // namespace narray
 }  // namespace mxnet
 
