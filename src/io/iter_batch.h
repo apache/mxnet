@@ -36,7 +36,7 @@ struct BatchParam : public dmlc::Parameter<BatchParam> {
     DMLC_DECLARE_FIELD(test_skipread_).set_default(false)
         .describe("Skip read for testing.");
     DMLC_DECLARE_FIELD(silent_).set_default(false)
-        .describe("Whether to print batch information.")
+        .describe("Whether to print batch information.");
   }
 };
     
@@ -48,7 +48,7 @@ public:
   }
   virtual ~BatchAdaptIter(void) {
     delete base_;
-    out_.FreeSpaceDense();
+    FreeSpaceDense();
   }
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
@@ -57,7 +57,7 @@ public:
     for (size_t i = 0; i < kwargs_left.size(); i++) {
       if (!strcmp(kwargs_left[i].first.c_str(), "input_shape")) {
         CHECK(sscanf(kwargs_left[i].second.c_str(), "%u,%u,%u", &shape_[1], &shape_[2], &shape_[3]) == 3)
-          << "input_shape must be three consecutive integers without space example: 1,1,200 ")
+          << "input_shape must be three consecutive integers without space example: 1,1,200 ";
       }
     }
     // init base iterator
@@ -88,13 +88,13 @@ public:
 
     while (base_->Next()) {
       const DataInst& d = base_->Value();
-      mshadow::Copy(label[top], d.data[1].get<mshadow::cpu, 2, float>());
+      mshadow::Copy(label[top], d.data[1].get<mshadow::cpu, 1, float>());
       out_.inst_index[top] = d.index;
-      mshadow::Copy(data[top], d.data[0].get<mshadow::cpu, 4, float>());
+      mshadow::Copy(data[top], d.data[0].get<mshadow::cpu, 3, float>());
 
       if (++ top >= param_.batch_size_) {
-        out.data[0] = TBlob(data);
-        out.data[1] = TBlob(label);
+        out_.data[0] = TBlob(data);
+        out_.data[1] = TBlob(label);
         return true;
       }
     }
@@ -105,16 +105,16 @@ public:
         for (; top < param_.batch_size_; ++top, ++num_overflow_) {
           CHECK(base_->Next()) << "number of input must be bigger than batch size";
           const DataInst& d = base_->Value();
-          mshadow::Copy(label[top], d.data[1].get<mshadow::cpu, 2, float>());
+          mshadow::Copy(label[top], d.data[1].get<mshadow::cpu, 1, float>());
           out_.inst_index[top] = d.index;
-          mshadow::Copy(data[top], d.data[0].get<mshadow::cpu, 4, float>());
+          mshadow::Copy(data[top], d.data[0].get<mshadow::cpu, 3, float>());
         }
         out_.num_batch_padd = num_overflow_;
       } else {
-        out_.num_batch_padd = batch_size_ - top;
+        out_.num_batch_padd = param_.batch_size_ - top;
       }
-      out.data[0] = TBlob(data);
-      out.data[1] = TBlob(label);
+      out_.data[0] = TBlob(data);
+      out_.data[1] = TBlob(label);
       return true;
     }
     return false;
@@ -124,6 +124,8 @@ public:
     return out_;
   }
 private:
+  /*! \brief batch parameters */
+  BatchParam param_;
   /*! \brief base iterator */
   IIterator<DataInst> *base_;
   /*! \brief input shape */
@@ -141,16 +143,16 @@ private:
   // Functions that allocate and free tensor space
   inline void AllocSpaceDense(bool pad = false) { 
     data = mshadow::NewTensor<mshadow::cpu>(shape_, 0.0f, pad);
-    mshadow::Shape<2> lshape = mshadow::Shape2(batch_size, label_width);
+    mshadow::Shape<2> lshape = mshadow::Shape2(param_.batch_size_, param_.label_width_);
     label = mshadow::NewTensor<mshadow::cpu>(lshape, 0.0f, pad);
-    out_.inst_index = new unsigned[batch_size];
-    out_.batch_size = batch_size;
+    out_.inst_index = new unsigned[param_.batch_size_];
+    out_.batch_size = param_.batch_size_;
     out_.data.resize(2);
   }
   /*! \brief auxiliary function to free space, if needed, dense only */
   inline void FreeSpaceDense(void) {
     if (label.dptr_ != NULL) {
-      delete [] inst_index;
+      delete [] out_.inst_index;
       mshadow::FreeSpace(&label);
       mshadow::FreeSpace(&data);
       label.dptr_ = NULL;

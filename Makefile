@@ -13,10 +13,15 @@ ifndef DMLC_CORE
 endif
 
 
+ifneq ($(USE_OPENMP_ITER), 1)
+	export NO_OPENMP = 1
+endif
+
 # use customized config file
 include $(config)
 include mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
+unexport NO_OPENMP
 
 # all tge possible warning tread
 WARNFLAGS= -Wall
@@ -39,10 +44,21 @@ endif
 
 # setup opencv
 ifeq ($(USE_OPENCV),1)
-	CFLAGS+= -DCXXNET_USE_OPENCV=1
+	CFLAGS+= -DMXNET_USE_OPENCV=1
 	LDFLAGS+= `pkg-config --libs opencv`
 else
-	CFLAGS+= -DCXXNET_USE_OPENCV=0
+	CFLAGS+= -DMXNET_USE_OPENCV=0
+endif
+
+# setup opencv
+ifeq ($(USE_OPENCV_DECODER),1)
+	CFLAGS+= -DMXNET_USE_OPENCV_DECODER=1
+else
+	CFLAGS+= -DMXNET_USE_OPENCV_DECODER=0
+endif
+
+ifeq ($(USE_OPENMP_ITER), 1)
+	CFLAGS += -fopenmp
 endif
 
 ifeq ($(USE_CUDNN), 1)
@@ -62,7 +78,7 @@ endif
 ENGINE=naive_engine.o
 BIN = tests/test_simple_engine
 OBJ = narray_function_cpu.o
-OBJCXX11 = narray.o c_api.o operator.o symbol.o storage.o static_graph.o graph_executor.o io.o iter_mnist.o $(ENGINE)
+OBJCXX11 = narray.o c_api.o operator.o symbol.o storage.o static_graph.o graph_executor.o io.o iter_mnist.o iter_image_recordio.o $(ENGINE)
 CUOBJ = narray_function_gpu.o
 SLIB = lib/libmxnet.so
 ALIB = lib/libmxnet.a
@@ -92,6 +108,7 @@ operator.o: src/operator/operator.cc
 c_api.o: src/c_api.cc
 io.o: src/io/io.cc
 iter_mnist.o: src/io/iter_mnist.cc src/io/*.h
+iter_image_recordio.o: src/io/iter_image_recordio.cc
 
 # Rules for operators
 OPERATOR_HDR=$(wildcard src/operator/*-inl.h)

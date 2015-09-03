@@ -7,10 +7,11 @@
 #ifndef MXNET_INST_VECTOR_H_
 #define MXNET_INST_VECTOR_H_
 
-#include "./data.h"
-#include <vector>
+#include <mxnet/io.h>
+#include <mxnet/base.h>
 #include <dmlc/base.h>
 #include <mshadow/tensor.h>
+#include <vector>
 
 namespace mxnet {
 namespace io {
@@ -30,7 +31,7 @@ class TensorVector {
     CHECK(i + 1 < offset_.size());
     CHECK(shape_[i].Size() == offset_[i + 1] - offset_[i]);
     return mshadow::Tensor<cpu, dim, DType>
-        ((DType*)BeginPtr(content_) + offset_[i], shape_[i]);
+        ((DType*)dmlc::BeginPtr(content_) + offset_[i], shape_[i]);
   }
   inline mshadow::Tensor<cpu, dim, DType> Back() const {
     return (*this)[Size() - 1];
@@ -73,8 +74,8 @@ class InstVector {
   inline DataInst operator[](size_t i) const {
     DataInst inst;
     inst.index = index_[i];
-    inst.data = data_[i];
-    inst.label = label_[i];
+    inst.data.push_back(TBlob(data_[i]));
+    inst.data.push_back(TBlob(label_[i]));
     return inst;
   }
   // get back of instance vector

@@ -121,7 +121,7 @@ struct DataIteratorReg
  */
 #define MXNET_REGISTER_IO_CHAINED_ITER(name, ChainedDataIterType, HoldingDataIterType)          \
   static ::mxnet::IIterator<DataBatch>* __create__ ## ChainedDataIteratorType ## __() { \
-    return new HoldingDataIteratorType(new ChainedDataIterType);                                    \
+    return new HoldingDataIterType(new ChainedDataIterType);                                    \
   }                                                                     \
   DMLC_REGISTRY_REGISTER(::mxnet::DataIteratorReg, DataIteratorReg, name) \
   .set_body(__create__ ## ChainedDataIteratorType ## __)

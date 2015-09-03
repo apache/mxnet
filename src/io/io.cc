@@ -4,14 +4,18 @@
 
 #include <mxnet/io.h>
 #include <dmlc/registry.h>
-#include <image_augmenter.h>
-#include <>
-#include <iter_batch.h>
+#include "./image_augmenter.h"
+#include "./iter_batch.h"
 
 // Registers
 namespace dmlc {
 DMLC_REGISTRY_ENABLE(::mxnet::DataIteratorReg);
+}  // namespace dmlc
+
+namespace mxnet {
+namespace io {
 // Register parameters in header files
 DMLC_REGISTER_PARAMETER(BatchParam);
-DMLC_REGISTER_PARAMETER(ImageAugmenterParam);
-}  // namespace dmlc
+DMLC_REGISTER_PARAMETER(ImageAugmentParam);
+}  // namespace mxnet
+}  // namespace io
