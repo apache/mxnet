@@ -54,25 +54,26 @@ inline bool Symbol::is_atomic() const {
 // implementation of template functions
 template<typename FVisit>
 inline void Symbol::DFSVisit(FVisit fvisit) const {
-  std::vector<const std::shared_ptr<Node>*> stack;
+  std::vector<std::pair<const std::shared_ptr<Node>*, uint32_t> > stack;
   std::unordered_set<Node*> visited;
   // put the head into the graph
   for (auto &head : heads_) {
     Node *ptr = head.source.get();
     if (visited.count(ptr) == 0) {
-      stack.push_back(&head.source);
-      visited.insert(ptr);
+      stack.push_back(std::make_pair(&head.source, 0));
     }
   }
   while (!stack.empty()) {
-    const std::shared_ptr<Node> *back = stack.back();
-    stack.pop_back();
-    fvisit(*back);
-    for (auto it = back->get()->inputs.rbegin(); it != back->get()->inputs.rend(); ++it) {
-      Node *ptr = it->source.get();
-      if (visited.count(ptr) == 0) {
-        stack.push_back(&it->source);
-        visited.insert(ptr);
+    std::pair<const std::shared_ptr<Node> *, uint32_t>& back = stack.back();
+    if (back.second == back.first->get()->inputs.size()) {
+      fvisit(*(back.first));
+      visited.insert(back.first->get());
+      stack.pop_back();
+    } else {
+      std::vector<Symbol::DataEntry>& inputs = back.first->get()->inputs;
+      Symbol::DataEntry& input = inputs.at(back.second++);
+      if (visited.count(input.source.get()) == 0) {
+        stack.push_back(std::make_pair(&input.source, 0));
       }
     }
   }
