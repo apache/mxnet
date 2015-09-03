@@ -199,6 +199,10 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
     }
   }
 
+  for (const Resource& r : op_node.op_ctx.requested) {
+    exec.mutate_vars.push_back(static_cast<DAGEngine::Variable>(r.var));
+  }
+
   OpContext* op_ctx_ptr = &op_node.op_ctx;
   exec.exec_fun = [op, op_ctx_ptr, in_data, req, out_data, aux_states] (RunContext ctx) {
     op_ctx_ptr->run_ctx = ctx;
@@ -374,6 +378,20 @@ void GraphExecutor::InitDataEntryMemory() {
         out->type = kInternalAllocated;
       }
     }
+    // resource
+    const std::vector<ResourceRequest>& reqs = GetResource(nid);
+    op_nodes_[nid].resources.resize(reqs.size());
+    op_nodes_[nid].op_ctx.requested.resize(reqs.size());
+    for (uint32_t i = 0; i < reqs.size(); ++i) {
+      op_nodes_[nid].resources[i].req = reqs[i];
+    }
+    // allocate resource
+    for (ResourceEntry& entry : op_nodes_[nid].resources) {
+      if (entry.req.type == Resource::kTempSpace) {
+        entry.storage_id =
+            allocator.Request(op_nodes_[nid].ctx, mshadow::Shape1(entry.req.space_size), nid);
+      }
+    }
     // then free inputs
     for (DataEntryInfo *in : in_data) {
       // ref_count == 0 means it is taken by inplace op
@@ -393,6 +411,12 @@ void GraphExecutor::InitDataEntryMemory() {
         allocator.Release(out->storage_id, nid);
       }
     }
+    // release the resource, as soon as the forward is finished we can release it.
+    for (ResourceEntry& res : op_nodes_[nid].resources) {
+      if (res.req.type == Resource::kTempSpace) {
+        allocator.Release(res.storage_id, nid);
+      }
+    }
   }
   // one pass complete, allocate real memory
   allocator.InitStorages();
@@ -405,6 +429,18 @@ void GraphExecutor::InitDataEntryMemory() {
       if (out.type == kInternalAllocated) {
         out.data = allocator.Get(out.storage_id, out.shape);
       }
+    }
+    // get the pointer to the tempspace
+    std::vector<Resource>& resources = op_nodes_[nid].op_ctx.requested;
+    for (uint32_t i = 0; i < resources.size(); ++i) {
+      ResourceEntry& entry = op_nodes_[nid].resources[i];
+      if (entry.req.type == Resource::kTempSpace) {
+        entry.data = allocator.Get(entry.storage_id,
+                                   mshadow::Shape1(entry.req.space_size));
+      }
+      entry.tblob = entry.data.data();
+      resources[i].ptr = &entry.tblob;
+      resources[i].var = static_cast<void*>(entry.data.var());
     }
   }
   for (StaticGraph::DataEntry e : graph_.heads) {
