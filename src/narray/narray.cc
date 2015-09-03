@@ -38,21 +38,95 @@ inline void BinaryOp(const NArray &lhs,
   NArray ret = *out;
   // redirect everything to mshadow operations
   switch (lhs.ctx().dev_mask) {
-    case cpu::kDevMask:
-      DAGEngine::Get()->Push([lhs, rhs, ret](RunContext ctx) {
-          ret.ptr_->CheckAndAlloc();
-          TBlob tmp = ret.data();
-          narray::Eval<cpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
-        }, lhs.ctx(), {lhs.ptr_->var, rhs.ptr_->var}, {ret.ptr_->var});
+    case cpu::kDevMask: {
+      auto func = [lhs, rhs, ret](RunContext ctx) {
+        ret.ptr_->CheckAndAlloc();
+        TBlob tmp = ret.data();
+        narray::Eval<cpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
+      };
+      if (lhs.ptr_->var == ret.ptr_->var && rhs.ptr_->var == ret.ptr_->var) {
+        DAGEngine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
+      } else if (lhs.ptr_->var == ret.ptr_->var) {
+        DAGEngine::Get()->Push(func, lhs.ctx(), {rhs.ptr_->var}, {ret.ptr_->var});
+      } else if (rhs.ptr_->var == ret.ptr_->var) {
+        DAGEngine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var}, {ret.ptr_->var});
+      } else {
+        DAGEngine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var, rhs.ptr_->var}, {ret.ptr_->var});
+      }
       break;
+    }
 #if MXNET_USE_CUDA
-    case gpu::kDevMask:
-      DAGEngine::Get()->Push([lhs, rhs, ret](RunContext ctx) {
-          ret.ptr_->CheckAndAlloc();
-          TBlob tmp = ret.data();
-          narray::Eval<gpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
-        }, lhs.ctx(), {lhs.ptr_->var, rhs.ptr_->var}, {ret.ptr_->var});
+    case gpu::kDevMask: {
+      auto func = [lhs, rhs, ret](RunContext ctx) {
+        ret.ptr_->CheckAndAlloc();
+        TBlob tmp = ret.data();
+        narray::Eval<gpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
+      };
+      if (lhs.ptr_->var == ret.ptr_->var && rhs.ptr_->var == ret.ptr_->var) {
+        DAGEngine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
+      } else if (lhs.ptr_->var == ret.ptr_->var) {
+        DAGEngine::Get()->Push(func, lhs.ctx(), {rhs.ptr_->var}, {ret.ptr_->var});
+      } else if (rhs.ptr_->var == ret.ptr_->var) {
+        DAGEngine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var}, {ret.ptr_->var});
+      } else {
+        DAGEngine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var, rhs.ptr_->var}, {ret.ptr_->var});
+      }
       break;
+    }
+#endif
+    default: LOG(FATAL) << "GPU is not enabled";
+  }
+}
+
+/*!
+ * \brief run a binary operation
+ * \param lhs left operand
+ * \param rhs right operand
+ * \param out the output narray
+ * \param binary_op the real
+ */
+template<typename OP>
+inline void ScalarOp(const NArray &lhs,
+                     const real_t &rhs,
+                     NArray *out) {
+  if (out->is_none()) {
+    *out = NArray(OP::GetShape(lhs.shape(), lhs.shape()), lhs.ctx(), true);
+  } else {
+    CHECK(out->ctx() == lhs.ctx()) << "target context mismatch";
+    CHECK(out->shape() == OP::GetShape(lhs.shape(), lhs.shape()))
+        << "target shape mismatch";
+  }
+  // important: callback must always capture by value
+  NArray ret = *out;
+  // redirect everything to mshadow operations
+  switch (lhs.ctx().dev_mask) {
+    case cpu::kDevMask: {
+      auto func = [lhs, rhs, ret](RunContext ctx) {
+        ret.ptr_->CheckAndAlloc();
+        TBlob tmp = ret.data();
+        narray::Eval<cpu, OP>(lhs.data(), rhs, &tmp, ctx);
+      };
+      if (lhs.ptr_->var == ret.ptr_->var) {
+        DAGEngine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
+      } else {
+        DAGEngine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var}, {ret.ptr_->var});
+      }
+      break;
+    }
+#if MXNET_USE_CUDA
+    case gpu::kDevMask: {
+      auto func = [lhs, rhs, ret](RunContext ctx) {
+        ret.ptr_->CheckAndAlloc();
+        TBlob tmp = ret.data();
+        narray::Eval<gpu, OP>(lhs.data(), rhs, &tmp, ctx);
+      };
+      if (lhs.ptr_->var == ret.ptr_->var) {
+        DAGEngine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
+      } else {
+        DAGEngine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var}, {ret.ptr_->var});
+      }
+      break;
+    }
 #endif
     default: LOG(FATAL) << "GPU is not enabled";
   }
@@ -121,12 +195,27 @@ inline NArray BinaryOpRet(const NArray &lhs,
 }
 
 template<typename OP>
+inline NArray ScalarOpRet(const NArray &lhs,
+                          const real_t &rhs) {
+  NArray ret;
+  ScalarOp<OP>(lhs, rhs, &ret);
+  return ret;
+}
+
+template<typename OP>
 inline NArray &BinaryOpApply(NArray *dst,
                              const NArray &src) {
   BinaryOp<OP>(*dst, src, dst);
   return *dst;
 }
 
+template<typename OP>
+inline NArray &ScalarOpApply(NArray *dst,
+                             const real_t &src) {
+  ScalarOp<OP>(*dst, src, dst);
+  return *dst;
+}
+// Binary
 NArray operator+(const NArray &lhs, const NArray &rhs) {
   return BinaryOpRet<narray::Plus>(lhs, rhs);
 }
@@ -139,7 +228,20 @@ NArray operator*(const NArray &lhs, const NArray &rhs) {
 NArray operator/(const NArray &lhs, const NArray &rhs) {
   return BinaryOpRet<narray::Div>(lhs, rhs);
 }
-
+// Scalar
+NArray operator+(const NArray &lhs, const real_t &rhs) {
+  return ScalarOpRet<narray::Plus>(lhs, rhs);
+}
+NArray operator-(const NArray &lhs, const real_t &rhs) {
+  return ScalarOpRet<narray::Minus>(lhs, rhs);
+}
+NArray operator*(const NArray &lhs, const real_t &rhs) {
+  return ScalarOpRet<narray::Mul>(lhs, rhs);
+}
+NArray operator/(const NArray &lhs, const real_t &rhs) {
+  return ScalarOpRet<narray::Div>(lhs, rhs);
+}
+// Binary
 NArray &NArray::operator+=(const NArray &src) {
   return BinaryOpApply<narray::Plus>(this, src);
 }
@@ -151,6 +253,19 @@ NArray &NArray::operator*=(const NArray &src) {
 }
 NArray &NArray::operator/=(const NArray &src) {
   return BinaryOpApply<narray::Div>(this, src);
+}
+// Scalar
+NArray &NArray::operator+=(const real_t &src) {
+  return ScalarOpApply<narray::Plus>(this, src);
+}
+NArray &NArray::operator-=(const real_t &src) {
+  return ScalarOpApply<narray::Minus>(this, src);
+}
+NArray &NArray::operator*=(const real_t &src) {
+  return ScalarOpApply<narray::Mul>(this, src);
+}
+NArray &NArray::operator/=(const real_t &src) {
+  return ScalarOpApply<narray::Div>(this, src);
 }
 
 void NArray::Save(dmlc::Stream *strm) const {
@@ -223,6 +338,11 @@ MXNET_REGISTER_NARRAY_FUN(_minus).set_function(BinaryOp<narray::Minus>);
 MXNET_REGISTER_NARRAY_FUN(_mul).set_function(BinaryOp<narray::Mul>);
 MXNET_REGISTER_NARRAY_FUN(_div).set_function(BinaryOp<narray::Div>);
 
+///////
+MXNET_REGISTER_NARRAY_FUN(_plus_scalar).set_function(ScalarOp<narray::Plus>);
+MXNET_REGISTER_NARRAY_FUN(_minus_scalar).set_function(ScalarOp<narray::Minus>);
+MXNET_REGISTER_NARRAY_FUN(_mul_scalar).set_function(ScalarOp<narray::Mul>);
+MXNET_REGISTER_NARRAY_FUN(_div_scalar).set_function(ScalarOp<narray::Div>);
 // copy function is special
 // that we need to remove kAcceptEmptyMutateTarget from it
 MXNET_REGISTER_NARRAY_FUN(_copyto)

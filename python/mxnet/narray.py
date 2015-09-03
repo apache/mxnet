@@ -66,6 +66,8 @@ class NArray(object):
     def __add__(self, other):
         if isinstance(other, NArray):
             return NArray._plus(self, other)
+        elif isinstance(other, float) or isinstance(other, int):
+            return NArray._plus_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -75,12 +77,16 @@ class NArray(object):
     def __sub__(self, other):
         if isinstance(other, NArray):
             return NArray._minus(self, other)
+        elif isinstance(other, float) or isinstance(other, int):
+            return NArray._minus_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __mul__(self, other):
         if isinstance(other, NArray):
             return NArray._mul(self, other)
+        elif isinstance(other, float) or isinstance(other, int):
+            return NArray._mul_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -90,8 +96,16 @@ class NArray(object):
     def __div__(self, other):
         if isinstance(other, NArray):
             return NArray._div(self, other)
+        elif isinstance(other, float) or isinstance(other, int):
+            return NArray._div_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
+
+    def __idiv__(self, other):
+        return self.__div__(other)
+
+    def __truediv__(self, other):
+        return self.__div__(other)
 
     def __getstate__(self):
         this = self.__dict__.copy()

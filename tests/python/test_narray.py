@@ -53,6 +53,16 @@ def test_narray_copy():
     assert np.sum(np.abs(c.numpy != d.numpy)) == 0.0
 
 
+def test_narray_scalar():
+    c = mx.narray.create((10,10))
+    d = mx.narray.create((10,10))
+    c.numpy[:] = 0.5
+    d.numpy[:] = 1.0
+    d -= c * 2 / 3 * 6.0
+    c += 0.5
+    assert(np.sum(c.numpy) == 100)
+    assert(np.sum(d.numpy) == -100)
+
 def test_narray_pickle():
     np.random.seed(0)
     maxdim = 5
@@ -97,3 +107,4 @@ if __name__ == '__main__':
     test_narray_saveload()
     test_narray_copy()
     test_narray_elementwise()
+    test_narray_scalar()

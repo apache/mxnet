@@ -107,12 +107,26 @@ class NArray {
    */
   NArray &operator+=(const NArray &src);
   /*!
+   * \brief elementwise add to current space
+   *  this mutate the current NArray
+   * \param src the data to add
+   * \return reference of self
+   */
+  NArray &operator+=(const real_t &src);
+  /*!
    * \brief elementwise subtract from current narray
    * this mutate the current NArray
    * \param src the data to substract
    * \return reference of self
    */
   NArray &operator-=(const NArray &src);
+  /*!
+   * \brief elementwise subtract from current narray
+   * this mutate the current NArray
+   * \param src the data to substract
+   * \return reference of self
+   */
+  NArray &operator-=(const real_t &src);
   /*!
    * \brief elementwise multiplication to current narray
    *  this mutate the current NArray
@@ -121,12 +135,26 @@ class NArray {
    */
   NArray &operator*=(const NArray &src);
   /*!
+   * \brief elementwise multiplication to current narray
+   *  this mutate the current NArray
+   * \param src the data to substract
+   * \return reference of self
+   */
+  NArray &operator*=(const real_t &src);
+  /*!
    * \brief elementwise division from current narray
    *  this mutate the current NArray
    * \param src the data to substract
    * \return reference of self
    */
   NArray &operator/=(const NArray &src);
+  /*!
+   * \brief elementwise division from current narray
+   *  this mutate the current NArray
+   * \param src the data to substract
+   * \return reference of self
+   */
+  NArray &operator/=(const real_t &src);
   /*!
    * \brief return transpose of current NArray
    * \return a new transposed NArray
@@ -241,6 +269,8 @@ class NArray {
   friend void BinaryOp(const NArray &lhs, const NArray &rhs, NArray *out);
   template<typename OP>
   friend void UnaryOp(const NArray &lhs, const NArray &rhs, NArray *out);
+  template<typename OP>
+  friend void ScalarOp(const NArray &lhs, const real_t &rhs, NArray *out);
 };
 
 /*!
@@ -263,6 +293,13 @@ void CopyFromTo(const NArray &from, NArray *to);
  */
 NArray operator+(const NArray &lhs, const NArray &rhs);
 /*!
+ * \brief elementwise add
+ * \param lhs left operand
+ * \param rhs right operand
+ * \return a new result narray
+ */
+NArray operator+(const NArray &lhs, const real_t &rhs);
+/*!
  * \brief elementwise substraction
  * \param lhs left operand
  * \param rhs right operand
@@ -270,12 +307,26 @@ NArray operator+(const NArray &lhs, const NArray &rhs);
  */
 NArray operator-(const NArray &lhs, const NArray &rhs);
 /*!
+ * \brief elementwise substraction
+ * \param lhs left operand
+ * \param rhs right operand
+ * \return a new result narray
+ */
+NArray operator-(const NArray &lhs, const real_t &rhs);
+/*!
  * \brief elementwise multiplication
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result narray
  */
-NArray operator*(const NArray &lhs, const NArray &rhs);
+NArray operator*(const NArray &lhs, const NArray &rhs);\
+/*!
+ * \brief elementwise multiplication
+ * \param lhs left operand
+ * \param rhs right operand
+ * \return a new result narray
+ */
+NArray operator*(const NArray &lhs, const real_t &rhs);
 /*!
  * \brief elementwise division
  * \param lhs left operand
@@ -283,6 +334,13 @@ NArray operator*(const NArray &lhs, const NArray &rhs);
  * \return a new result narray
  */
 NArray operator/(const NArray &lhs, const NArray &rhs);
+/*!
+ * \brief elementwise division
+ * \param lhs left operand
+ * \param rhs right operand
+ * \return a new result narray
+ */
+NArray operator/(const NArray &lhs, const real_t &rhs);
 
 //--------------------------------------------------------------
 // The following part are API Registration of NArray functions.
@@ -344,6 +402,25 @@ struct NArrayFunctionReg
     type_mask = kNArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
     this->add_argument("lhs", "NArray", "Left operand to the function.");
     this->add_argument("rhs", "NArray", "Right operand to the function.");
+    return *this;
+  }
+  /*!
+   * \brief set the function body to a binary NArray function
+   *  this will also auto set the parameters correctly
+   * \param fscalar function body to set
+   * \return ref to the registered entry, used to set properties
+   */
+  inline NArrayFunctionReg &set_function(void fscalar(const NArray &lhs,
+                                                      const real_t &rhs,
+                                                      NArray *out)) {
+    body = [fscalar] (NArray **used_vars,
+                       real_t *s, NArray **mutate_vars) {
+      fscalar(*used_vars[0], s[0], mutate_vars[0]);
+    };
+    num_use_vars = 1; num_mutate_vars = 1; num_scalars = 1;
+    type_mask = kNArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
+    this->add_argument("lhs", "NArray", "Left operand to the function.");
+    this->add_argument("rhs", "real_t", "Right operand to the function.");
     return *this;
   }
   /*!
