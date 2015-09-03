@@ -39,3 +39,18 @@ def test_MNISTIter_reset():
     label_1 = train_dataiter.getlabel().numpy.flatten()
     assert(sum(label_0 - label_1) == 0)
 
+def test_ImageRecIter():
+    dataiter = mx.io.ImageRecordIter(path_imgrec="data/val_cxxnet.rec",
+            image_mean="data/val_cxxnet_mean.bin",
+            rand_crop=True,
+            rand_mirror=True,
+            input_shape="3,224,224",
+            batch_size=128)
+
+
+
+
+
+
+
+

@@ -13,7 +13,7 @@
   #include <opencv2/opencv.hpp>
 #endif
 
-namespace cxxnet {
+namespace mxnet {
 namespace utils {
 
 #if MXNET_USE_OPENCV_DECODER == 0

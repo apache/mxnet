@@ -19,7 +19,6 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
   int crop_y_start_;
   /*! \brief whether we do nonrandom croping */
   int crop_x_start_;
-  /*! \brief Indicate the max ratation angle for augmentation, we will random rotate */
   /*! \brief [-max_rotate_angle, max_rotate_angle] */
   int max_rotate_angle_;
   /*! \brief max aspect ratio */
@@ -77,6 +76,7 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
         .describe("Rotate angle");
     DMLC_DECLARE_FIELD(fill_value_).set_default(255)
         .describe("Filled value while padding");
+  }
 };
 
 /*! \brief helper class to do image augmentation */
@@ -99,7 +99,7 @@ class ImageAugmenter {
                        << "input_shape must be three consecutive integers without space example: 1,1,200 ";
         }
         if (!strcmp(kwargs_left[i].first.c_str(), "rotate_list")) {
-          char* val = kwargs_left[i].second.c_str();
+          const char* val = kwargs_left[i].second.c_str();
           const char *end = val + strlen(val);
           char buf[128];
           while (val < end) {
@@ -121,9 +121,9 @@ class ImageAugmenter {
   virtual cv::Mat Process(const cv::Mat &src,
                           common::RANDOM_ENGINE *prnd) {
     // shear
-    float s = common::NextDouble(prnd) * param_.max_shear_ratio_ * 2 - param_.max_shear_ratio_;
+    float s = NextDouble(prnd) * param_.max_shear_ratio_ * 2 - param_.max_shear_ratio_;
     // rotate
-    int angle = common::NextUInt32(param_.max_rotate_angle_ * 2, prnd) - param_.max_rotate_angle_;
+    int angle = NextUInt32(param_.max_rotate_angle_ * 2, prnd) - param_.max_rotate_angle_;
     if (param_.rotate_ > 0) angle = param_.rotate_;
     if (rotate_list_.size() > 0) {
       angle = rotate_list_[NextUInt32(rotate_list_.size() - 1, prnd)];
@@ -160,7 +160,7 @@ class ImageAugmenter {
       mshadow::index_t rand_crop_size = NextUInt32(param_.max_crop_size_- param_.min_crop_size_+1, prnd)+ param_.min_crop_size_;
       mshadow::index_t y = res.rows - rand_crop_size;
       mshadow::index_t x = res.cols - rand_crop_size;
-      if (rand_crop_ != 0) {
+      if (param_.rand_crop_ != 0) {
         y = NextUInt32(y + 1, prnd);
         x = NextUInt32(x + 1, prnd);
       }
@@ -171,8 +171,8 @@ class ImageAugmenter {
       cv::resize(res(roi), res, cv::Size(shape_[1], shape_[2]));
     }
     else{
-      utils::Check(static_cast<mshadow::index_t>(res.cols) >= shape_[1] && static_cast<mshadow::index_t>(res.rows) >= shape_[2],
-        "input image size smaller than input shape");
+      CHECK(static_cast<mshadow::index_t>(res.cols) >= shape_[1] && static_cast<mshadow::index_t>(res.rows) >= shape_[2]) 
+          << "input image size smaller than input shape";
       mshadow::index_t y = res.rows - shape_[2];
       mshadow::index_t x = res.cols - shape_[1];
       if (param_.rand_crop_ != 0) {
@@ -240,9 +240,9 @@ class ImageAugmenter {
  private:
   // whether skip processing
   inline bool NeedProcess(void) const {
-    if (max_rotate_angle_ > 0 || max_shear_ratio_ > 0.0f
-        || rotate_ > 0 || rotate_list_.size() > 0) return true;
-    if (min_crop_size_ > 0 && max_crop_size_ > 0) return true;
+    if (param_.max_rotate_angle_ > 0 || param_.max_shear_ratio_ > 0.0f
+        || param_.rotate_ > 0 || rotate_list_.size() > 0) return true;
+    if (param_.min_crop_size_ > 0 && param_.max_crop_size_ > 0) return true;
     return false;
   }
   // temp input space
@@ -252,6 +252,7 @@ class ImageAugmenter {
   // rotation param
   cv::Mat rotateM;
   // parameters
+  ImageAugmentParam param_;
   /*! \brief input shape */
   mshadow::Shape<4> shape_;
   /*! \brief list of possible rotate angle */

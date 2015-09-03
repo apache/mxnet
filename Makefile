@@ -16,10 +16,15 @@ ifndef RABIT
 	RABIT = rabit
 endif
 
+ifneq ($(USE_OPENMP_ITER), 1)
+	export NO_OPENMP = 1
+endif
+
 # use customized config file
 include $(config)
 include mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
+unexport NO_OPENMP
 
 # all tge possible warning tread
 WARNFLAGS= -Wall
@@ -42,10 +47,21 @@ endif
 
 # setup opencv
 ifeq ($(USE_OPENCV),1)
-	CFLAGS+= -DCXXNET_USE_OPENCV=1
+	CFLAGS+= -DMXNET_USE_OPENCV=1
 	LDFLAGS+= `pkg-config --libs opencv`
 else
-	CFLAGS+= -DCXXNET_USE_OPENCV=0
+	CFLAGS+= -DMXNET_USE_OPENCV=0
+endif
+
+# setup opencv
+ifeq ($(USE_OPENCV_DECODER),1)
+	CFLAGS+= -DMXNET_USE_OPENCV_DECODER=1
+else
+	CFLAGS+= -DMXNET_USE_OPENCV_DECODER=0
+endif
+
+ifeq ($(USE_OPENMP_ITER), 1)
+	CFLAGS += -fopenmp
 endif
 
 ifeq ($(USE_CUDNN), 1)
@@ -64,7 +80,7 @@ endif
 #BIN = test/test_threaded_engine test/api_registry_test
 OBJ = narray_function_cpu.o
 # add threaded engine after it is done
-OBJCXX11 = reshape_cpu.o engine.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o convolution_cpu.o io.o iter_mnist.o
+OBJCXX11 = reshape_cpu.o engine.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o convolution_cpu.o io.o iter_mnist.o iter_image_recordio.o
 CUOBJ =
 SLIB = lib/libmxnet.so
 ALIB = lib/libmxnet.a
@@ -107,6 +123,7 @@ reshape_cpu.o: src/operator/reshape.cc
 reshape_gpu.o: src/operator/reshape.cu
 io.o: src/io/io.cc
 iter_mnist.o: src/io/iter_mnist.cc
+iter_image_recordio.o: src/io/iter_image_recordio.cc
 
 lib/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ) $(LIB_DEP)
 lib/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ) $(LIB_DEP)
