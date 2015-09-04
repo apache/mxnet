@@ -130,6 +130,20 @@ class NArray(object):
             state['handle'] = handle
         self.__dict__.update(state)
 
+    def __setitem__(self, in_slice, value):
+        """Set narray value"""
+        if in_slice.step != None:
+            raise Exception("Set NArray should use empty index array[:] = target_array")
+        if isinstance(value, NArray) == False:
+            raise TypeError('type %s not supported' % str(type(value)))
+        value.copyto(self)
+
+    def __getitem__(self, in_slice):
+        """Get narray"""
+        if in_slice.step != None:
+            raise Exception("Set NArray should use empty index array[:] += value")
+        return self
+
     def wait(self):
         """Wait until the data on current NArray is available."""
         check_call(_LIB.MXNArrayWait(self.handle))
