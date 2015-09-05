@@ -59,7 +59,7 @@ struct VersionedVarBlock
  * \brief Variable implementation.
  */
 class ThreadedVar final : public Var,
-                           public common::ObjectPoolAllocatable<ThreadedVar> {
+                          public common::ObjectPoolAllocatable<ThreadedVar> {
  public:
 #if DAG_ENGINE_DEBUG
   static std::atomic<std::size_t> counter;

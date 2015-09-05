@@ -74,8 +74,7 @@ void ThreadedVar::CompleteReadDependency(Dispatcher dispatcher) {
 }
 
 template <typename Dispatcher>
-bool ThreadedVar::CompleteWriteDependency(
-    Dispatcher dispatcher) {
+bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
   std::lock_guard<std::mutex> lock{m_};
   assert(ready_to_read_ == false);
   auto cur_head = pending_write_->next;
