@@ -8,11 +8,13 @@
 
 namespace mxnet {
 
+DAGEngine::~DAGEngine() noexcept(false) {}
+
 DAGEngine* DAGEngine::Get() {
   /*!
    * \brief Change specific engine to use.
    */
-  using EngineImplementation = engine::NaiveEngine;
+  using EngineImplementation = engine::ThreadedEngine;
 
   static EngineImplementation inst;
   return &inst;

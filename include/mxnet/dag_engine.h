@@ -141,13 +141,11 @@ class DAGEngine {
   /*!
    * \brief Virtual destructor.
    */
-  virtual ~DAGEngine() noexcept(false) {}
+  virtual ~DAGEngine() noexcept(false);
   /*!
    * \return DAG engine singleton.
    */
   static DAGEngine* Get();
-
-  // remove DISALLOW_COPY_AND_ASSIGN since this is virtual class.
 };  // class DAGEngine
 
 }  // namespace mxnet
