@@ -412,7 +412,7 @@ def _make_narray_function(handle):
         """Internal binary function
         """
         if out:
-            if isinstance(out, NArray):
+            if isinstance(out, NArray) == False:
                 raise TypeError('out must be NArray')
         else:
             if not accept_empty_mutate:
@@ -427,7 +427,7 @@ def _make_narray_function(handle):
     def unary_narray_function(src, out=None):
         """internal NArray function"""
         if out:
-            if isinstance(out, NArray):
+            if isinstance(out, NArray) == False:
                 raise TypeError('out must be NArray')
         else:
             if not accept_empty_mutate:
