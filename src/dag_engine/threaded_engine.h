@@ -65,11 +65,13 @@ class ThreadedVar final : public Var,
   static std::atomic<std::size_t> counter;
   ~ThreadedVar() { LOG(INFO) << __func__ << " " << --counter; }
 #endif  // DAG_ENGINE_DEBUG
-  ThreadedVar(VersionedVarBlock* head);
+  explicit ThreadedVar(VersionedVarBlock* head);
   void AppendReadDependency(OprBlock* opr_block);
   void AppendWriteDependency(OprBlock* opr_block);
-  void CompleteReadDependency(dmlc::ConcurrentBlockingQueue<OprBlock*>&);
-  bool CompleteWriteDependency(dmlc::ConcurrentBlockingQueue<OprBlock*>&);
+  template <typename Dispatcher>
+  void CompleteReadDependency(Dispatcher dispatcher);
+  template <typename Dispatcher>
+  bool CompleteWriteDependency(Dispatcher dispatcher);
   void SetToDelete();
 
   static ThreadedVar* CastFromBase(Var* ptr);

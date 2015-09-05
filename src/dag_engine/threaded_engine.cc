@@ -63,18 +63,19 @@ void ThreadedVar::AppendWriteDependency(OprBlock* opr_block) {
   head_ = new_var_block;
 }
 
-void ThreadedVar::CompleteReadDependency(
-    dmlc::ConcurrentBlockingQueue<OprBlock*>& task_queue) {
+template <typename Dispatcher>
+void ThreadedVar::CompleteReadDependency(Dispatcher dispatcher) {
   std::lock_guard<std::mutex> lock{m_};
   if (--num_pending_reads_ == 0) {
     if (pending_write_ != nullptr && --pending_write_->trigger->wait == 0) {
-      task_queue.Push(pending_write_->trigger);
+      dispatcher(pending_write_->trigger);
     }
   }
 }
 
+template <typename Dispatcher>
 bool ThreadedVar::CompleteWriteDependency(
-    dmlc::ConcurrentBlockingQueue<OprBlock*>& task_queue) {
+    Dispatcher dispatcher) {
   std::lock_guard<std::mutex> lock{m_};
   assert(ready_to_read_ == false);
   auto cur_head = pending_write_->next;
@@ -91,7 +92,7 @@ bool ThreadedVar::CompleteWriteDependency(
         pending_write_ = cur_head;
         if (--num_pending_reads_ == 0) {
           if (--cur_head->trigger->wait == 0) {
-            task_queue.Push(cur_head->trigger);
+            dispatcher(cur_head->trigger);
           }
         }
         break;
@@ -101,7 +102,7 @@ bool ThreadedVar::CompleteWriteDependency(
       } else {
         ++num_pending_reads_;
         if (--cur_head->trigger->wait == 0) {
-          task_queue.Push(cur_head->trigger);
+          dispatcher(cur_head->trigger);
         }
         auto prev = cur_head;
         cur_head = cur_head->next;
@@ -272,13 +273,14 @@ void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
    * Mark complete for read variables.
    */
   for (auto&& i : threaded_opr->use_vars) {
-    i->CompleteReadDependency(task_queue_);
+    i->CompleteReadDependency([this](OprBlock* opr) { task_queue_.Push(opr); });
   }
   /*!
    * Mark complete for write variables.
    */
   for (auto&& i : threaded_opr->mutate_vars) {
-    bool to_delete = i->CompleteWriteDependency(task_queue_);
+    bool to_delete = i->CompleteWriteDependency(
+        [this](OprBlock* opr) { task_queue_.Push(opr); });
     if (to_delete) {
       ThreadedVar::Delete(i);
     }
