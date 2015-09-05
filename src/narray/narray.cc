@@ -85,7 +85,7 @@ inline void BinaryOp(const NArray &lhs,
  * \param out the output narray
  * \param binary_op the real
  */
-template<typename OP>
+template<typename OP, bool reverse>
 inline void ScalarOp(const NArray &lhs,
                      const real_t &rhs,
                      NArray *out) {
@@ -104,7 +104,7 @@ inline void ScalarOp(const NArray &lhs,
       auto func = [lhs, rhs, ret](RunContext ctx) {
         ret.ptr_->CheckAndAlloc();
         TBlob tmp = ret.data();
-        narray::Eval<cpu, OP>(lhs.data(), rhs, &tmp, ctx);
+        narray::Eval<cpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
       };
       if (lhs.ptr_->var == ret.ptr_->var) {
         DAGEngine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
@@ -118,7 +118,7 @@ inline void ScalarOp(const NArray &lhs,
       auto func = [lhs, rhs, ret](RunContext ctx) {
         ret.ptr_->CheckAndAlloc();
         TBlob tmp = ret.data();
-        narray::Eval<gpu, OP>(lhs.data(), rhs, &tmp, ctx);
+        narray::Eval<gpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
       };
       if (lhs.ptr_->var == ret.ptr_->var) {
         DAGEngine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
@@ -194,11 +194,11 @@ inline NArray BinaryOpRet(const NArray &lhs,
   return ret;
 }
 
-template<typename OP>
+template<typename OP, bool reverse>
 inline NArray ScalarOpRet(const NArray &lhs,
                           const real_t &rhs) {
   NArray ret;
-  ScalarOp<OP>(lhs, rhs, &ret);
+  ScalarOp<OP, reverse>(lhs, rhs, &ret);
   return ret;
 }
 
@@ -212,7 +212,7 @@ inline NArray &BinaryOpApply(NArray *dst,
 template<typename OP>
 inline NArray &ScalarOpApply(NArray *dst,
                              const real_t &src) {
-  ScalarOp<OP>(*dst, src, dst);
+  ScalarOp<OP, false>(*dst, src, dst);
   return *dst;
 }
 // Binary
@@ -230,16 +230,16 @@ NArray operator/(const NArray &lhs, const NArray &rhs) {
 }
 // Scalar
 NArray operator+(const NArray &lhs, const real_t &rhs) {
-  return ScalarOpRet<narray::Plus>(lhs, rhs);
+  return ScalarOpRet<narray::Plus, false>(lhs, rhs);
 }
 NArray operator-(const NArray &lhs, const real_t &rhs) {
-  return ScalarOpRet<narray::Minus>(lhs, rhs);
+  return ScalarOpRet<narray::Minus, false>(lhs, rhs);
 }
 NArray operator*(const NArray &lhs, const real_t &rhs) {
-  return ScalarOpRet<narray::Mul>(lhs, rhs);
+  return ScalarOpRet<narray::Mul, false>(lhs, rhs);
 }
 NArray operator/(const NArray &lhs, const real_t &rhs) {
-  return ScalarOpRet<narray::Div>(lhs, rhs);
+  return ScalarOpRet<narray::Div, false>(lhs, rhs);
 }
 // Binary
 NArray &NArray::operator+=(const NArray &src) {
@@ -338,11 +338,21 @@ MXNET_REGISTER_NARRAY_FUN(_minus).set_function(BinaryOp<narray::Minus>);
 MXNET_REGISTER_NARRAY_FUN(_mul).set_function(BinaryOp<narray::Mul>);
 MXNET_REGISTER_NARRAY_FUN(_div).set_function(BinaryOp<narray::Div>);
 
-///////
-MXNET_REGISTER_NARRAY_FUN(_plus_scalar).set_function(ScalarOp<narray::Plus>);
-MXNET_REGISTER_NARRAY_FUN(_minus_scalar).set_function(ScalarOp<narray::Minus>);
-MXNET_REGISTER_NARRAY_FUN(_mul_scalar).set_function(ScalarOp<narray::Mul>);
-MXNET_REGISTER_NARRAY_FUN(_div_scalar).set_function(ScalarOp<narray::Div>);
+// register API function
+// those with underscore will be registered at NArray
+// scalar
+MXNET_REGISTER_NARRAY_FUN(_plus_scalar).set_function(ScalarOp<narray::Plus, false>);
+MXNET_REGISTER_NARRAY_FUN(_minus_scalar).set_function(ScalarOp<narray::Minus, false>);
+MXNET_REGISTER_NARRAY_FUN(_mul_scalar).set_function(ScalarOp<narray::Mul, false>);
+MXNET_REGISTER_NARRAY_FUN(_div_scalar).set_function(ScalarOp<narray::Div, false>);
+
+// register API function
+// those with underscore will be registered at NArray
+// scalar
+// reverse scalar
+MXNET_REGISTER_NARRAY_FUN(_rminus_scalar).set_function(ScalarOp<narray::Minus, true>);
+MXNET_REGISTER_NARRAY_FUN(_rdiv_scalar).set_function(ScalarOp<narray::Div, true>);
+
 // copy function is special
 // that we need to remove kAcceptEmptyMutateTarget from it
 MXNET_REGISTER_NARRAY_FUN(_copyto)

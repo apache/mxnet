@@ -98,6 +98,12 @@ class NArray(object):
             return NArray._minus_scalar(self, float(other), out=self)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
+    
+    def __rsub__(self, other):
+        if isinstance(other, numeric_types):
+            return NArray._rminus_scalar(self, float(other))
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
 
     def __mul__(self, other):
         if isinstance(other, NArray):
@@ -123,6 +129,12 @@ class NArray(object):
             return NArray._div(self, other)
         elif isinstance(other, numeric_types):
             return NArray._div_scalar(self, float(other))
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __rdiv__(self, other):
+        if isinstance(other, numeric_types):
+            return NArray._rdiv_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 

@@ -36,7 +36,7 @@ struct Div : public BinaryBase {
 template<typename Device, typename OP>
 void Eval(const TBlob &lhs, const TBlob &rhs, TBlob *ret, RunContext ctx);
 
-template<typename Device, typename OP>
+template<typename Device, typename OP, bool reverse>
 void Eval(const TBlob &lhs, const real_t &rhs, TBlob *ret, RunContext ctx);
 
 // copy function when only cpu is involved

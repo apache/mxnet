@@ -17,10 +17,10 @@
 #endif
 
 #ifndef DECL_SCALAR
-#define DECL_SCALAR(XPU, OP, FUN)                                       \
+#define DECL_SCALAR(XPU, OP, FUN, REVERSE)                                       \
   template<>                                                            \
-  void Eval<XPU, OP>(const TBlob &lhs, const real_t &rhs, TBlob *ret, RunContext ctx) { \
-    FUN<XPU, OP>(lhs, rhs, ret, ctx);                                   \
+  void Eval<XPU, OP, REVERSE>(const TBlob &lhs, const real_t &rhs, TBlob *ret, RunContext ctx) { \
+    FUN<XPU, OP, REVERSE>(lhs, rhs, ret, ctx);                                   \
   }
 #endif
 
@@ -43,23 +43,33 @@ inline void EvalBinary_(const TBlob &lhs, const TBlob &rhs,
                                    rhs.FlatTo2D<xpu, real_t>(s));
 }
 
-template<typename xpu, typename OP>
+template<typename xpu, typename OP, bool reverse>
 inline void EvalScalar_(const TBlob &lhs, const real_t &rhs,
                         TBlob *ret, RunContext ctx) {
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = static_cast<mshadow::Stream<xpu>*>(ctx.stream);
-  ret->FlatTo2D<xpu, real_t>(s)
-    = F<typename OP::mshadow_op>(lhs.FlatTo2D<xpu, real_t>(s), rhs);
+  if (reverse) {
+    ret->FlatTo2D<xpu, real_t>(s)
+      = F<typename OP::mshadow_op>(rhs, lhs.FlatTo2D<xpu, real_t>(s));
+  } else {
+    ret->FlatTo2D<xpu, real_t>(s)
+      = F<typename OP::mshadow_op>(lhs.FlatTo2D<xpu, real_t>(s), rhs);
+  }
 }
 // declarations
 DECL_BINARY(DEVICE, Plus, EvalBinary_)
 DECL_BINARY(DEVICE, Minus, EvalBinary_)
 DECL_BINARY(DEVICE, Mul, EvalBinary_)
 DECL_BINARY(DEVICE, Div, EvalBinary_)
-DECL_SCALAR(DEVICE, Plus, EvalScalar_)
-DECL_SCALAR(DEVICE, Minus, EvalScalar_)
-DECL_SCALAR(DEVICE, Mul, EvalScalar_)
-DECL_SCALAR(DEVICE, Div, EvalScalar_)
+DECL_SCALAR(DEVICE, Plus, EvalScalar_, true)
+DECL_SCALAR(DEVICE, Minus, EvalScalar_, true)
+DECL_SCALAR(DEVICE, Mul, EvalScalar_, true)
+DECL_SCALAR(DEVICE, Div, EvalScalar_, true)
+// for reverse seq
+DECL_SCALAR(DEVICE, Plus, EvalScalar_, false)
+DECL_SCALAR(DEVICE, Minus, EvalScalar_, false)
+DECL_SCALAR(DEVICE, Mul, EvalScalar_, false)
+DECL_SCALAR(DEVICE, Div, EvalScalar_, false)
 }  // namespace narray
 }  // namespace mxnet
 

@@ -269,7 +269,7 @@ class NArray {
   friend void BinaryOp(const NArray &lhs, const NArray &rhs, NArray *out);
   template<typename OP>
   friend void UnaryOp(const NArray &lhs, const NArray &rhs, NArray *out);
-  template<typename OP>
+  template<typename OP, bool reverse>
   friend void ScalarOp(const NArray &lhs, const real_t &rhs, NArray *out);
 };
 
