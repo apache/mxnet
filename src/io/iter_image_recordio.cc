@@ -31,7 +31,7 @@ class ImageLabelMap {
   explicit ImageLabelMap(const char *path_imglist,
                          mshadow::index_t label_width,
                          bool silent) {
-    label_width_ = label_width;
+    label_width = label_width;
     image_index_.clear();
     label_.clear();
     idx2label_.clear();
@@ -45,7 +45,7 @@ class ImageLabelMap {
       // skip space
       while (isspace(*p) && p != end) ++p;
       image_index_.push_back(static_cast<size_t>(atol(p)));
-      for (size_t i = 0; i < label_width_; ++i) {
+      for (size_t i = 0; i < label_width; ++i) {
         // skip till space
         while (!isspace(*p) && p != end) ++p;
         // skip space
@@ -58,7 +58,7 @@ class ImageLabelMap {
     // be careful not to resize label_ afterwards
     idx2label_.reserve(image_index_.size());
     for (size_t i = 0; i < image_index_.size(); ++i) {
-      idx2label_[image_index_[i]] = dmlc::BeginPtr(label_) + i * label_width_;
+      idx2label_[image_index_[i]] = dmlc::BeginPtr(label_) + i * label_width;
     }
     if (!silent) {
       LOG(INFO) << "Loaded ImageList from " << path_imglist << ' '
@@ -70,12 +70,12 @@ class ImageLabelMap {
     std::unordered_map<size_t, real_t*>::const_iterator it
         = idx2label_.find(imid);
     CHECK(it != idx2label_.end()) << "fail to find imagelabel for id " << imid;
-    return mshadow::Tensor<cpu, 1>(it->second, mshadow::Shape1(label_width_));
+    return mshadow::Tensor<cpu, 1>(it->second, mshadow::Shape1(label_width));
   }
 
  private:
   // label with_
-  mshadow::index_t label_width_;
+  mshadow::index_t label_width;
   // image index of each record
   std::vector<size_t> image_index_;
   // real label content
@@ -87,32 +87,32 @@ class ImageLabelMap {
 // Define image record parser parameters
 struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   /*! \brief path to image list */
-  std::string path_imglist_;
+  std::string path_imglist;
   /*! \brief path to image recordio */
-  std::string path_imgrec_;
+  std::string path_imgrec;
   /*! \brief number of threads */
-  int nthread_;
+  int nthread;
   /*! \brief whether to remain silent */
-  bool silent_;
+  bool silent;
   /*! \brief number of distributed worker */
-  int dist_num_worker_, dist_worker_rank_;
+  int dist_num_worker, dist_worker_rank;
   /*! \brief label-width */
-  int label_width_;
+  int label_width;
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageRecParserParam) {
-    DMLC_DECLARE_FIELD(path_imglist_).set_default("")
+    DMLC_DECLARE_FIELD(path_imglist).set_default("")
         .describe("Path to image list.");
-    DMLC_DECLARE_FIELD(path_imgrec_).set_default("./data/imgrec.rec")
+    DMLC_DECLARE_FIELD(path_imgrec).set_default("./data/imgrec.rec")
         .describe("Path to image record file.");
-    DMLC_DECLARE_FIELD(nthread_).set_lower_bound(1).set_default(4)
+    DMLC_DECLARE_FIELD(nthread).set_lower_bound(1).set_default(4)
         .describe("Number of thread to do parsing.");
-    DMLC_DECLARE_FIELD(label_width_).set_lower_bound(1).set_default(1)
+    DMLC_DECLARE_FIELD(label_width).set_lower_bound(1).set_default(1)
         .describe("How many labels for an image.");
-    DMLC_DECLARE_FIELD(silent_).set_default(false)
+    DMLC_DECLARE_FIELD(silent).set_default(false)
         .describe("Whether to output parser information.");
-    DMLC_DECLARE_FIELD(dist_num_worker_).set_lower_bound(1).set_default(1)
+    DMLC_DECLARE_FIELD(dist_num_worker).set_lower_bound(1).set_default(1)
         .describe("Dist worker number.");
-    DMLC_DECLARE_FIELD(dist_worker_rank_).set_default(0)
+    DMLC_DECLARE_FIELD(dist_worker_rank).set_default(0)
         .describe("Dist worker rank.");
   }
 };
@@ -170,12 +170,12 @@ inline void ImageRecordIOParser::Init(const std::vector<std::pair<std::string, s
   {
     maxthread = std::max(omp_get_num_procs() / 2 - 1, 1);
   }
-  param_.nthread_ = std::min(maxthread, param_.nthread_);
-  #pragma omp parallel num_threads(param_.nthread_)
+  param_.nthread = std::min(maxthread, param_.nthread);
+  #pragma omp parallel num_threads(param_.nthread)
   {
     threadget = omp_get_num_threads();
   }
-  param_.nthread_ = threadget;
+  param_.nthread = threadget;
   // setup decoders
   for (int i = 0; i < threadget; ++i) {
     augmenters_.push_back(new ImageAugmenter());
@@ -187,27 +187,27 @@ inline void ImageRecordIOParser::Init(const std::vector<std::pair<std::string, s
   // TODO, hack
   const char *ps_rank = getenv("PS_RANK");
   if (ps_rank != NULL) {
-    param_.dist_worker_rank_ = atoi(ps_rank);
+    param_.dist_worker_rank = atoi(ps_rank);
   }
 
-  if (param_.path_imglist_.length() != 0) {
-    label_map_ = new ImageLabelMap(param_.path_imglist_.c_str(),
-                                   param_.label_width_, param_.silent_ != 0);
+  if (param_.path_imglist.length() != 0) {
+    label_map_ = new ImageLabelMap(param_.path_imglist.c_str(),
+                                   param_.label_width, param_.silent != 0);
   } else {
-    param_.label_width_ = 1;
+    param_.label_width = 1;
   }
-  CHECK(param_.path_imgrec_.length() != 0)
+  CHECK(param_.path_imgrec.length() != 0)
     << "ImageRecordIOIterator: must specify image_rec";
 #if MSHADOW_DIST_PS
     // TODO move to a better place
-    param_.dist_num_worker_ = ::ps::RankSize();
-    param_.dist_worker_rank_ = ::ps::MyRank();
-    LOG(INFO) << "rank " << param_.dist_worker_rank_
-              << " in " << param_.dist_num_worker_;
+    param_.dist_num_worker = ::ps::RankSize();
+    param_.dist_worker_rank = ::ps::MyRank();
+    LOG(INFO) << "rank " << param_.dist_worker_rank
+              << " in " << param_.dist_num_worker;
 #endif
   source_ = dmlc::InputSplit::Create
-      (param_.path_imgrec_.c_str(), param_.dist_worker_rank_,
-       param_.dist_num_worker_, "recordio");
+      (param_.path_imgrec.c_str(), param_.dist_worker_rank,
+       param_.dist_num_worker, "recordio");
   // use 64 MB chunk when possible
   source_->HintChunkSize(8 << 20UL);
 }
@@ -217,12 +217,12 @@ ParseNext(std::vector<InstVector> *out_vec) {
   CHECK(source_ != NULL);
   dmlc::InputSplit::Blob chunk;
   if (!source_->NextChunk(&chunk)) return false;
-  out_vec->resize(param_.nthread_);
-  #pragma omp parallel num_threads(param_.nthread_)
+  out_vec->resize(param_.nthread);
+  #pragma omp parallel num_threads(param_.nthread)
   {
-    CHECK(omp_get_num_threads() == param_.nthread_);
+    CHECK(omp_get_num_threads() == param_.nthread);
     int tid = omp_get_thread_num();
-    dmlc::RecordIOChunkReader reader(chunk, tid, param_.nthread_);
+    dmlc::RecordIOChunkReader reader(chunk, tid, param_.nthread);
     ImageRecordIO rec;
     dmlc::InputSplit::Blob blob;
     // image data
@@ -237,7 +237,7 @@ ParseNext(std::vector<InstVector> *out_vec) {
       res = augmenters_[tid]->Process(res, prnds_[tid]);
       out.Push(static_cast<unsigned>(rec.image_index()),
                mshadow::Shape3(3, res.rows, res.cols),
-               mshadow::Shape1(param_.label_width_));
+               mshadow::Shape1(param_.label_width));
       DataInst inst = out.Back();
       // turn datainst into tensor
       mshadow::Tensor<mshadow::cpu, 3> data = inst.data[0].get<mshadow::cpu, 3, float>(); 
