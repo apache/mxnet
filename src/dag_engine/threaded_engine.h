@@ -97,8 +97,6 @@ struct ThreadedOpr final : public Opr,
   bool temporary{false};
 
   static ThreadedOpr* CastFromBase(Opr* ptr);
-  static ThreadedOpr* New();
-  static void Delete(ThreadedOpr* ptr);
 };  // struct ThreadedOpr
 
 /*!
