@@ -4,10 +4,10 @@
 #ifndef MXNET_COMMON_OBJECT_POOL_H_
 #define MXNET_COMMON_OBJECT_POOL_H_
 #include <dmlc/logging.h>
-#include <malloc.h>
 #include <cstdlib>
 #include <mutex>
 #include <utility>
+#include <vector>
 
 namespace common {
 
@@ -62,6 +62,13 @@ class ObjectPool {
    * \brief Head of free list.
    */
   LinkedList* head_{nullptr};
+  /*!
+   * \brief Pages allocated.
+   */
+  std::vector<void*> allocated_;
+  /*!
+   * \brief Private constructor.
+   */
   ObjectPool();
   /*!
    * \brief Allocate a page of raw objects.
@@ -81,7 +88,8 @@ struct ObjectPoolAllocatable {
    * \brief Create new object.
    * \return Pointer to the new object.
    */
-  static T* New();
+  template <typename... Args>
+  static T* New(Args&&... args);
   /*!
    * \brief Delete an existing object.
    * \param ptr The pointer to delete.
@@ -91,9 +99,12 @@ struct ObjectPoolAllocatable {
   static void Delete(T* ptr);
 };  // struct ObjectPoolAllocatable
 
-// TODO(hotpxl) free all memory allocated
 template <typename T>
-ObjectPool<T>::~ObjectPool() = default;
+ObjectPool<T>::~ObjectPool() {
+  for (auto i : allocated_) {
+    free(i);
+  }
+}
 
 template <typename T>
 template <typename... Args>
@@ -138,7 +149,8 @@ void ObjectPool<T>::AllocateChunk() {
   void* new_chunk_ptr;
   int ret = posix_memalign(&new_chunk_ptr, kPageSize, kPageSize);
   CHECK_EQ(ret, 0) << "Allocation failed";
-  auto&& new_chunk = static_cast<LinkedList*>(new_chunk_ptr);
+  allocated_.emplace_back(new_chunk_ptr);
+  auto new_chunk = static_cast<LinkedList*>(new_chunk_ptr);
   auto size = kPageSize / sizeof(LinkedList);
   for (std::size_t i = 0; i < size - 1; ++i) {
     new_chunk[i].next = &new_chunk[i + 1];
@@ -148,13 +160,14 @@ void ObjectPool<T>::AllocateChunk() {
 }
 
 template <typename T>
-T* ObjectPoolAllocatable<T>::New() {
-  return ObjectPool<T>::Get()->New();
+template <typename... Args>
+T* ObjectPoolAllocatable<T>::New(Args&&... args) {
+  return ObjectPool<T>::Get()->New(std::forward<Args>(args)...);
 }
 
 template <typename T>
 void ObjectPoolAllocatable<T>::Delete(T* ptr) {
-  return ObjectPool<T>::Get()->Delete(ptr);
+  ObjectPool<T>::Get()->Delete(ptr);
 }
 
 }  // namespace common

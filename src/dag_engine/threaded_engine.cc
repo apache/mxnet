@@ -5,9 +5,9 @@
 #include <dmlc/logging.h>
 #include <cassert>
 #include <algorithm>
-#include <utility>
 #include <condition_variable>
 #include <mutex>
+#include <utility>
 #include "../common/cuda_utils.h"
 
 namespace mxnet {
@@ -20,6 +20,102 @@ std::atomic<std::size_t> VersionedVarBlock::counter{0};
 std::atomic<std::size_t> ThreadedVar::counter{0};
 std::atomic<std::size_t> ThreadedOpr::counter{0};
 #endif  // DAG_ENGINE_DEBUG
+
+ThreadedVar::ThreadedVar(VersionedVarBlock* head) : head_{head} {
+#if DAG_ENGINE_DEBUG
+  LOG(INFO) << __func__ << " " << ++counter;
+#endif  // DAG_ENGINE_DEBUG
+}
+void ThreadedVar::AppendReadDependency(OprBlock* opr_block) {
+  std::lock_guard<std::mutex> lock{m_};
+  if (ready_to_read_) {
+    assert(pending_write_ == nullptr);
+    ++num_pending_reads_;
+    --opr_block->wait;
+  } else {
+    auto&& new_var_block = VersionedVarBlock::New();
+    assert(head_->next == nullptr);
+    assert(head_->trigger == nullptr);
+    assert(head_->write == false);
+    head_->next = new_var_block;
+    head_->trigger = opr_block;
+    head_ = new_var_block;
+  }
+}
+
+void ThreadedVar::AppendWriteDependency(OprBlock* opr_block) {
+  std::lock_guard<std::mutex> lock{m_};
+  auto&& new_var_block = VersionedVarBlock::New();
+  head_->next = new_var_block;
+  head_->trigger = opr_block;
+  head_->write = true;
+  if (ready_to_read_) {
+    /*!
+     * Raise `num_pending_reads_` temporarily to avoid premature triggering.
+     */
+    ++num_pending_reads_;
+    pending_write_ = head_;
+    if (--num_pending_reads_ == 0) {
+      --opr_block->wait;
+    }
+    ready_to_read_ = false;
+  }
+  head_ = new_var_block;
+}
+
+void ThreadedVar::CompleteReadDependency(
+    dmlc::ConcurrentBlockingQueue<OprBlock*>& task_queue) {
+  std::lock_guard<std::mutex> lock{m_};
+  if (--num_pending_reads_ == 0) {
+    if (pending_write_ != nullptr && --pending_write_->trigger->wait == 0) {
+      task_queue.Push(pending_write_->trigger);
+    }
+  }
+}
+
+bool ThreadedVar::CompleteWriteDependency(
+    dmlc::ConcurrentBlockingQueue<OprBlock*>& task_queue) {
+  std::lock_guard<std::mutex> lock{m_};
+  assert(ready_to_read_ == false);
+  auto cur_head = pending_write_->next;
+  VersionedVarBlock::Delete(pending_write_);
+  pending_write_ = nullptr;
+  if (to_delete_) {
+    assert(cur_head->next == nullptr);
+    VersionedVarBlock::Delete(cur_head);
+    return true;
+  } else {
+    while (true) {
+      if (cur_head->write == true) {
+        ++num_pending_reads_;
+        pending_write_ = cur_head;
+        if (--num_pending_reads_ == 0) {
+          if (--cur_head->trigger->wait == 0) {
+            task_queue.Push(cur_head->trigger);
+          }
+        }
+        break;
+      } else if (cur_head->next == nullptr) {
+        ready_to_read_ = true;
+        break;
+      } else {
+        ++num_pending_reads_;
+        if (--cur_head->trigger->wait == 0) {
+          task_queue.Push(cur_head->trigger);
+        }
+        auto prev = cur_head;
+        cur_head = cur_head->next;
+        VersionedVarBlock::Delete(prev);
+      }
+    }
+    return false;
+  }
+}
+
+void ThreadedVar::SetToDelete() {
+  std::lock_guard<std::mutex> lock{m_};
+  to_delete_ = true;
+}
 
 ThreadedVar* ThreadedVar::CastFromBase(Var* v) {
   return v->Cast<ThreadedVar>();
@@ -37,8 +133,7 @@ ThreadedEngine::~ThreadedEngine() noexcept(false) {
 }
 
 ThreadedVar* ThreadedEngine::NewVar() {
-  auto ret = ThreadedVar::New();
-  ret->head = VersionedVarBlock::New();
+  auto ret = ThreadedVar::New(VersionedVarBlock::New());
   return ret;
 }
 
@@ -123,40 +218,11 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
   ++pending_;
   // Add read dependencies.
   for (auto&& i : threaded_opr->use_vars) {
-    std::lock_guard<std::mutex> lock{i->m};
-    if (i->ready_to_read) {
-      assert(i->pending_write == nullptr);
-      ++i->num_pending_reads;
-      --opr_block->wait;
-    } else {
-      auto&& new_var_block = VersionedVarBlock::New();
-      assert(i->head->next == nullptr);
-      assert(i->head->trigger == nullptr);
-      assert(i->head->write == false);
-      i->head->next = new_var_block;
-      i->head->trigger = opr_block;
-      i->head = new_var_block;
-    }
+    i->AppendReadDependency(opr_block);
   }
   // Add write dependencies.
   for (auto&& i : threaded_opr->mutate_vars) {
-    std::lock_guard<std::mutex> lock{i->m};
-    auto&& new_var_block = VersionedVarBlock::New();
-    i->head->next = new_var_block;
-    i->head->trigger = opr_block;
-    i->head->write = true;
-    if (i->ready_to_read) {
-      /*!
-       * Raise `num_pending_reads` temporarily to avoid premature triggering.
-       */
-      ++i->num_pending_reads;
-      i->pending_write = i->head;
-      if (--i->num_pending_reads == 0) {
-        --opr_block->wait;
-      }
-      i->ready_to_read = false;
-    }
-    i->head = new_var_block;
+    i->AppendWriteDependency(opr_block);
   }
   if (--opr_block->wait == 0) {
     task_queue_.Push(opr_block);
@@ -176,10 +242,9 @@ void ThreadedEngine::PushDelete(Fn delete_fn, Context exec_ctx, Variable var) {
   auto&& func = [delete_fn, threaded_var](RunContext ctx) {
     /*!
      * Mark variable as orphan, so during `ThreadedEngine::OnComplete` it could
-     * be
-     * recycled.
+     * be recycled.
      */
-    threaded_var->to_delete = true;
+    threaded_var->SetToDelete();
     delete_fn(ctx);
   };
   Push(func, exec_ctx, {}, {var});
@@ -207,55 +272,13 @@ void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
    * Mark complete for read variables.
    */
   for (auto&& i : threaded_opr->use_vars) {
-    std::lock_guard<std::mutex> lock{i->m};
-    if (--i->num_pending_reads == 0) {
-      if (i->pending_write != nullptr &&
-          --i->pending_write->trigger->wait == 0) {
-        task_queue_.Push(i->pending_write->trigger);
-      }
-    }
+    i->CompleteReadDependency(task_queue_);
   }
   /*!
    * Mark complete for write variables.
    */
   for (auto&& i : threaded_opr->mutate_vars) {
-    bool to_delete = false;
-    {
-      std::lock_guard<std::mutex> lock{i->m};
-      assert(i->ready_to_read == false);
-      auto head = i->pending_write->next;
-      VersionedVarBlock::Delete(i->pending_write);
-      i->pending_write = nullptr;
-      if (i->to_delete) {
-        assert(head->next == nullptr);
-        VersionedVarBlock::Delete(head);
-        to_delete = true;
-      } else {
-        while (true) {
-          if (head->write == true) {
-            ++i->num_pending_reads;
-            i->pending_write = head;
-            if (--i->num_pending_reads == 0) {
-              if (--head->trigger->wait == 0) {
-                task_queue_.Push(head->trigger);
-              }
-            }
-            break;
-          } else if (head->next == nullptr) {
-            i->ready_to_read = true;
-            break;
-          } else {
-            ++i->num_pending_reads;
-            if (--head->trigger->wait == 0) {
-              task_queue_.Push(head->trigger);
-            }
-            auto prev = head;
-            head = head->next;
-            VersionedVarBlock::Delete(prev);
-          }
-        }
-      }
-    }
+    bool to_delete = i->CompleteWriteDependency(task_queue_);
     if (to_delete) {
       ThreadedVar::Delete(i);
     }

@@ -58,27 +58,36 @@ struct VersionedVarBlock
 /*!
  * \brief Variable implementation.
  */
-struct ThreadedVar final : public Var,
+class ThreadedVar final : public Var,
                            public common::ObjectPoolAllocatable<ThreadedVar> {
+ public:
 #if DAG_ENGINE_DEBUG
   static std::atomic<std::size_t> counter;
-  ThreadedVar() { LOG(INFO) << __func__ << " " << ++counter; }
   ~ThreadedVar() { LOG(INFO) << __func__ << " " << --counter; }
 #endif  // DAG_ENGINE_DEBUG
-  std::mutex m;
-  std::size_t num_pending_reads{0};
-  VersionedVarBlock* head{nullptr};
-  VersionedVarBlock* pending_write{nullptr};
+  ThreadedVar(VersionedVarBlock* head);
+  void AppendReadDependency(OprBlock* opr_block);
+  void AppendWriteDependency(OprBlock* opr_block);
+  void CompleteReadDependency(dmlc::ConcurrentBlockingQueue<OprBlock*>&);
+  bool CompleteWriteDependency(dmlc::ConcurrentBlockingQueue<OprBlock*>&);
+  void SetToDelete();
+
+  static ThreadedVar* CastFromBase(Var* ptr);
+
+ private:
+  // TODO(hotpxl) change this to spinlock for faster runtime
+  std::mutex m_;
+  std::size_t num_pending_reads_{0};
+  VersionedVarBlock* head_{nullptr};
+  VersionedVarBlock* pending_write_{nullptr};
   /*!
    * If true, then there are no current or future processing of the chain.
    */
-  bool ready_to_read{true};
+  bool ready_to_read_{true};
   /*!
    * If true, delete after operation completes.
    */
-  bool to_delete{false};
-
-  static ThreadedVar* CastFromBase(Var* ptr);
+  bool to_delete_{false};
 };  // struct ThreadedVar
 
 /*!
