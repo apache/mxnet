@@ -7,13 +7,13 @@
 #include <utility>
 #include "mxnet/dag_engine.h"
 
-// #define DAG_ENGINE_DEBUG
+#define DAG_ENGINE_DEBUG 0
 
 namespace mxnet {
 namespace engine {
 
 struct Var {
-#ifdef DAG_ENGINE_DEBUG
+#if DAG_ENGINE_DEBUG
   virtual ~Var() = default;
 #endif  // DAG_ENGINE_DEBUG
   template <typename T>
@@ -21,7 +21,7 @@ struct Var {
 };  // struct Var
 
 struct Opr {
-#ifdef DAG_ENGINE_DEBUG
+#if DAG_ENGINE_DEBUG
   virtual ~Opr() = default;
 #endif  // DAG_ENGINE_DEBUG
   template <typename T>
@@ -32,10 +32,10 @@ template <typename T>
 T* Var::Cast() {
   static_assert(std::is_base_of<Var, T>::value,
                 "must inherit `mxnet::engine::Var`");
-#ifndef DAG_ENGINE_DEBUG
-  return static_cast<T*>(this);
-#else   // DAG_ENGINE_DEBUG
+#if DAG_ENGINE_DEBUG
   return dynamic_cast<T*>(this);
+#else   // DAG_ENGINE_DEBUG
+  return static_cast<T*>(this);
 #endif  // DAG_ENGINE_DEBUG
 }
 
@@ -43,10 +43,10 @@ template <typename T>
 T* Opr::Cast() {
   static_assert(std::is_base_of<Opr, T>::value,
                 "must inherit `mxnet::engine::Opr`");
-#ifndef DAG_ENGINE_DEBUG
-  return static_cast<T*>(this);
-#else   // DAG_ENGINE_DEBUG
+#if DAG_ENGINE_DEBUG
   return dynamic_cast<T*>(this);
+#else   // DAG_ENGINE_DEBUG
+  return static_cast<T*>(this);
 #endif  // DAG_ENGINE_DEBUG
 }
 

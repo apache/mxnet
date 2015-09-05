@@ -14,7 +14,7 @@ namespace mxnet {
 
 namespace engine {
 
-#ifdef DAG_ENGINE_DEBUG
+#if DAG_ENGINE_DEBUG
 std::atomic<std::size_t> OprBlock::counter{0};
 std::atomic<std::size_t> VersionedVarBlock::counter{0};
 std::atomic<std::size_t> SimpleVar::counter{0};
@@ -47,7 +47,7 @@ SimpleOpr* SimpleEngine::NewOperator(SimpleEngine::AsyncFn fn,
                  SimpleVar::CastFromBase);
   std::transform(mutate_vars.begin(), mutate_vars.end(),
                  ret->mutate_vars.begin(), SimpleVar::CastFromBase);
-#ifdef DAG_ENGINE_DEBUG
+#if DAG_ENGINE_DEBUG
   // Check for duplicates.
   auto use = use_vars;
   auto mutate = mutate_vars;

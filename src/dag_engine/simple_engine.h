@@ -29,7 +29,7 @@ struct SimpleOpr;
  * \brief Operation in the queue.
  */
 struct OprBlock : public common::ObjectPoolAllocatable<OprBlock> {
-#ifdef DAG_ENGINE_DEBUG
+#if DAG_ENGINE_DEBUG
   static std::atomic<std::size_t> counter;
   OprBlock() { LOG(INFO) << __func__ << " " << ++counter; }
   ~OprBlock() { LOG(INFO) << __func__ << " " << --counter; }
@@ -45,7 +45,7 @@ struct OprBlock : public common::ObjectPoolAllocatable<OprBlock> {
  */
 struct VersionedVarBlock
     : public common::ObjectPoolAllocatable<VersionedVarBlock> {
-#ifdef DAG_ENGINE_DEBUG
+#if DAG_ENGINE_DEBUG
   static std::atomic<std::size_t> counter;
   VersionedVarBlock() { LOG(INFO) << __func__ << " " << ++counter; }
   ~VersionedVarBlock() { LOG(INFO) << __func__ << " " << --counter; }
@@ -60,7 +60,7 @@ struct VersionedVarBlock
  */
 struct SimpleVar final : public Var,
                          public common::ObjectPoolAllocatable<SimpleVar> {
-#ifdef DAG_ENGINE_DEBUG
+#if DAG_ENGINE_DEBUG
   static std::atomic<std::size_t> counter;
   SimpleVar() { LOG(INFO) << __func__ << " " << ++counter; }
   ~SimpleVar() { LOG(INFO) << __func__ << " " << --counter; }
@@ -86,7 +86,7 @@ struct SimpleVar final : public Var,
  */
 struct SimpleOpr final : public Opr,
                          public common::ObjectPoolAllocatable<SimpleOpr> {
-#ifdef DAG_ENGINE_DEBUG
+#if DAG_ENGINE_DEBUG
   static std::atomic<std::size_t> counter;
   SimpleOpr() { LOG(INFO) << __func__ << " " << ++counter; }
   ~SimpleOpr() { LOG(INFO) << __func__ << " " << --counter; }
