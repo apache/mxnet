@@ -113,7 +113,9 @@ class SimpleEngine final : public DAGEngine {
                          std::vector<Variable> const& mutate_vars) override;
   void DeleteOperator(OprHandle op) override;
   void Push(OprHandle op, Context exec_ctx) override;
-  using DAGEngine::Push;
+  void Push(Fn exec_fun, Context exec_ctx,
+            std::vector<Variable> const& use_vars,
+            std::vector<Variable> const& mutate_vars) override;
   void PushAsync(AsyncFn exec_fun, Context exec_ctx,
                  std::vector<Variable> const& use_vars,
                  std::vector<Variable> const& mutate_vars) override;

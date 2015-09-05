@@ -94,6 +94,16 @@ void SimpleEngine::DeleteOperator(OprHandle op) {
   Push(func, Context{}, {}, deps);
 }
 
+void SimpleEngine::Push(Fn exec_fun, Context exec_ctx,
+                        std::vector<Variable> const& use_vars,
+                        std::vector<Variable> const& mutate_vars) {
+  auto f = [exec_fun](RunContext ctx, Callback on_complete) {
+    exec_fun(ctx);
+    on_complete();
+  };
+  PushAsync(f, exec_ctx, use_vars, mutate_vars);
+}
+
 void SimpleEngine::Push(OprHandle op, Context exec_ctx) {
   auto&& simple_opr = SimpleOpr::CastFromBase(op);
   auto&& opr_block = new OprBlock{};
