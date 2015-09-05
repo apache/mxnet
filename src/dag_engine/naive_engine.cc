@@ -29,9 +29,17 @@ class NaiveEngine : public DAGEngine {
   void Push(Fn exec_fun, Context exec_ctx,
             std::vector<Variable> const& use_vars,
             std::vector<Variable> const& mutate_vars) override {
-    RunContext ctx;
-    ctx.stream = nullptr;
-    exec_fun(ctx);
+    if (exec_ctx.dev_mask == gpu::kDevMask) {
+      ctx_.stream = &stream_;
+#if MXNET_USE_CUDA
+      mshadow::SetDevice<gpu>(exec_ctx.dev_id);
+      exec_fun(ctx_);
+#else
+      LOG(FATAL) << "GPU is not enabled";
+#endif
+    } else {
+      exec_fun(ctx_);
+    }
   }
 
   void PushAsync(AsyncFn exec_fun, Context exec_ctx,
@@ -41,9 +49,7 @@ class NaiveEngine : public DAGEngine {
   }
 
   void PushDelete(Fn delete_fun, Context exec_ctx, Variable var) override {
-    RunContext ctx;
-    ctx.stream = nullptr;
-    delete_fun(ctx);
+    this->Push(delete_fun, exec_ctx, {}, {var});
   }
 
   void WaitForVar(Variable var) override {
@@ -51,6 +57,10 @@ class NaiveEngine : public DAGEngine {
 
   void WaitForAll() override {
   }
+
+ private:
+  RunContext ctx_;
+  mshadow::Stream<gpu> stream_;
 };
 
 }  // namespace engine
