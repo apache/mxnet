@@ -134,8 +134,7 @@ ObjectPool<T>::ObjectPool() {
 
 template <typename T>
 void ObjectPool<T>::AllocateChunk() {
-  static_assert(kPageSize % sizeof(LinkedList) == 0,
-                "Could not align to page size.");
+  static_assert(sizeof(LinkedList) <= kPageSize, "Object too big.");
   void* new_chunk_ptr;
   int ret = posix_memalign(&new_chunk_ptr, kPageSize, kPageSize);
   CHECK_EQ(ret, 0) << "Allocation failed";

@@ -1,7 +1,7 @@
 /*!
  * Copyright (c) 2015 by Contributors
  */
-#include "simple_engine.h"
+#include "threaded_engine.h"
 #include <dmlc/logging.h>
 #include <cassert>
 #include <algorithm>
@@ -17,36 +17,42 @@ namespace engine {
 #if DAG_ENGINE_DEBUG
 std::atomic<std::size_t> OprBlock::counter{0};
 std::atomic<std::size_t> VersionedVarBlock::counter{0};
-std::atomic<std::size_t> SimpleVar::counter{0};
-std::atomic<std::size_t> SimpleOpr::counter{0};
+std::atomic<std::size_t> ThreadedVar::counter{0};
+std::atomic<std::size_t> ThreadedOpr::counter{0};
 #endif  // DAG_ENGINE_DEBUG
 
-SimpleVar* SimpleVar::CastFromBase(Var* v) { return v->Cast<SimpleVar>(); }
+ThreadedVar* ThreadedVar::CastFromBase(Var* v) {
+  return v->Cast<ThreadedVar>();
+}
 
-SimpleOpr* SimpleOpr::CastFromBase(Opr* o) { return o->Cast<SimpleOpr>(); }
+ThreadedOpr* ThreadedOpr::CastFromBase(Opr* o) {
+  return o->Cast<ThreadedOpr>();
+}
 
-SimpleEngine::SimpleEngine()
+ThreadedEngine::ThreadedEngine()
     : pending_{0}, thread_pool_{[this]() { ThreadWorker(); }} {}
 
-SimpleEngine::~SimpleEngine() noexcept(false) { task_queue_.SignalForKill(); }
+ThreadedEngine::~ThreadedEngine() noexcept(false) {
+  task_queue_.SignalForKill();
+}
 
-SimpleVar* SimpleEngine::NewVar() {
-  auto ret = SimpleVar::New();
+ThreadedVar* ThreadedEngine::NewVar() {
+  auto ret = ThreadedVar::New();
   ret->head = VersionedVarBlock::New();
   return ret;
 }
 
-SimpleOpr* SimpleEngine::NewOperator(SimpleEngine::AsyncFn fn,
-                                     std::vector<Variable> const& use_vars,
-                                     std::vector<Variable> const& mutate_vars) {
-  auto ret = SimpleOpr::New();
+ThreadedOpr* ThreadedEngine::NewOperator(
+    ThreadedEngine::AsyncFn fn, std::vector<Variable> const& use_vars,
+    std::vector<Variable> const& mutate_vars) {
+  auto ret = ThreadedOpr::New();
   ret->fn = fn;
   ret->use_vars.resize(use_vars.size());
   ret->mutate_vars.resize(mutate_vars.size());
   std::transform(use_vars.begin(), use_vars.end(), ret->use_vars.begin(),
-                 SimpleVar::CastFromBase);
+                 ThreadedVar::CastFromBase);
   std::transform(mutate_vars.begin(), mutate_vars.end(),
-                 ret->mutate_vars.begin(), SimpleVar::CastFromBase);
+                 ret->mutate_vars.begin(), ThreadedVar::CastFromBase);
 #if DAG_ENGINE_DEBUG
   // Check for duplicates.
   auto use = use_vars;
@@ -82,21 +88,23 @@ SimpleOpr* SimpleEngine::NewOperator(SimpleEngine::AsyncFn fn,
   return ret;
 }
 
-void SimpleEngine::DeleteOperator(OprHandle op) {
-  auto&& simple_opr = SimpleOpr::CastFromBase(op);
+void ThreadedEngine::DeleteOperator(OprHandle op) {
+  auto&& threaded_opr = ThreadedOpr::CastFromBase(op);
   std::vector<Variable> deps{};
-  deps.reserve(simple_opr->use_vars.size() + simple_opr->mutate_vars.size());
-  deps.insert(deps.end(), simple_opr->use_vars.begin(),
-              simple_opr->use_vars.end());
-  deps.insert(deps.end(), simple_opr->mutate_vars.begin(),
-              simple_opr->mutate_vars.end());
-  auto&& func = [simple_opr](RunContext) { SimpleOpr::Delete(simple_opr); };
+  deps.reserve(threaded_opr->use_vars.size() +
+               threaded_opr->mutate_vars.size());
+  deps.insert(deps.end(), threaded_opr->use_vars.begin(),
+              threaded_opr->use_vars.end());
+  deps.insert(deps.end(), threaded_opr->mutate_vars.begin(),
+              threaded_opr->mutate_vars.end());
+  auto&& func =
+      [threaded_opr](RunContext) { ThreadedOpr::Delete(threaded_opr); };
   Push(func, Context{}, {}, deps);
 }
 
-void SimpleEngine::Push(Fn exec_fun, Context exec_ctx,
-                        std::vector<Variable> const& use_vars,
-                        std::vector<Variable> const& mutate_vars) {
+void ThreadedEngine::Push(Fn exec_fun, Context exec_ctx,
+                          std::vector<Variable> const& use_vars,
+                          std::vector<Variable> const& mutate_vars) {
   auto f = [exec_fun](RunContext ctx, Callback on_complete) {
     exec_fun(ctx);
     on_complete();
@@ -104,17 +112,17 @@ void SimpleEngine::Push(Fn exec_fun, Context exec_ctx,
   PushAsync(f, exec_ctx, use_vars, mutate_vars);
 }
 
-void SimpleEngine::Push(OprHandle op, Context exec_ctx) {
-  auto&& simple_opr = SimpleOpr::CastFromBase(op);
+void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
+  auto&& threaded_opr = ThreadedOpr::CastFromBase(op);
   auto&& opr_block = OprBlock::New();
-  opr_block->opr = simple_opr;
-  opr_block->wait.store(simple_opr->use_vars.size() +
-                        simple_opr->mutate_vars.size() + 1);
+  opr_block->opr = threaded_opr;
+  opr_block->wait.store(threaded_opr->use_vars.size() +
+                        threaded_opr->mutate_vars.size() + 1);
   opr_block->ctx = exec_ctx;
   opr_block->rctx = RunContext{nullptr};
   ++pending_;
   // Add read dependencies.
-  for (auto&& i : simple_opr->use_vars) {
+  for (auto&& i : threaded_opr->use_vars) {
     std::lock_guard<std::mutex> lock{i->m};
     if (i->ready_to_read) {
       assert(i->pending_write == nullptr);
@@ -131,7 +139,7 @@ void SimpleEngine::Push(OprHandle op, Context exec_ctx) {
     }
   }
   // Add write dependencies.
-  for (auto&& i : simple_opr->mutate_vars) {
+  for (auto&& i : threaded_opr->mutate_vars) {
     std::lock_guard<std::mutex> lock{i->m};
     auto&& new_var_block = VersionedVarBlock::New();
     i->head->next = new_var_block;
@@ -155,28 +163,29 @@ void SimpleEngine::Push(OprHandle op, Context exec_ctx) {
   }
 }
 
-void SimpleEngine::PushAsync(AsyncFn fn, Context exec_ctx,
-                             std::vector<Variable> const& use_vars,
-                             std::vector<Variable> const& mutate_vars) {
+void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
+                               std::vector<Variable> const& use_vars,
+                               std::vector<Variable> const& mutate_vars) {
   auto&& opr = NewOperator(fn, use_vars, mutate_vars);
   opr->temporary = true;
   Push(opr, exec_ctx);
 }
 
-void SimpleEngine::PushDelete(Fn delete_fn, Context exec_ctx, Variable var) {
-  auto&& simple_var = SimpleVar::CastFromBase(var);
-  auto&& func = [delete_fn, simple_var](RunContext ctx) {
+void ThreadedEngine::PushDelete(Fn delete_fn, Context exec_ctx, Variable var) {
+  auto&& threaded_var = ThreadedVar::CastFromBase(var);
+  auto&& func = [delete_fn, threaded_var](RunContext ctx) {
     /*!
-     * Mark variable as orphan, so during `SimpleEngine::OnComplete` it could be
+     * Mark variable as orphan, so during `ThreadedEngine::OnComplete` it could
+     * be
      * recycled.
      */
-    simple_var->to_delete = true;
+    threaded_var->to_delete = true;
     delete_fn(ctx);
   };
   Push(func, exec_ctx, {}, {var});
 }
 
-void SimpleEngine::WaitForVar(Variable var) {
+void ThreadedEngine::WaitForVar(Variable var) {
   std::unique_lock<std::mutex> lock{finished_m_};
   std::atomic<bool> done{false};
   auto&& callback = [this, &done](RunContext) {
@@ -188,16 +197,16 @@ void SimpleEngine::WaitForVar(Variable var) {
   finished_cv_.wait(lock, [&done]() { return done.load(); });
 }
 
-void SimpleEngine::WaitForAll() {
+void ThreadedEngine::WaitForAll() {
   std::unique_lock<std::mutex> lock{finished_m_};
   finished_cv_.wait(lock, [this]() { return pending_.load() == 0; });
 }
 
-void SimpleEngine::OnComplete(SimpleOpr* simple_opr) {
+void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   /*!
    * Mark complete for read variables.
    */
-  for (auto&& i : simple_opr->use_vars) {
+  for (auto&& i : threaded_opr->use_vars) {
     std::lock_guard<std::mutex> lock{i->m};
     if (--i->num_pending_reads == 0) {
       if (i->pending_write != nullptr &&
@@ -209,7 +218,7 @@ void SimpleEngine::OnComplete(SimpleOpr* simple_opr) {
   /*!
    * Mark complete for write variables.
    */
-  for (auto&& i : simple_opr->mutate_vars) {
+  for (auto&& i : threaded_opr->mutate_vars) {
     bool to_delete = false;
     {
       std::lock_guard<std::mutex> lock{i->m};
@@ -248,7 +257,7 @@ void SimpleEngine::OnComplete(SimpleOpr* simple_opr) {
       }
     }
     if (to_delete) {
-      SimpleVar::Delete(i);
+      ThreadedVar::Delete(i);
     }
   }
   {
@@ -259,15 +268,15 @@ void SimpleEngine::OnComplete(SimpleOpr* simple_opr) {
   }
 }
 
-void SimpleEngine::ThreadWorker() {
+void ThreadedEngine::ThreadWorker() {
   OprBlock* opr_block;
   while (task_queue_.Pop(&opr_block)) {
     assert(opr_block->wait.load() == 0);
-    auto simple_opr = opr_block->opr;
-    auto callback = [this, simple_opr]() {
-      OnComplete(simple_opr);
-      if (simple_opr->temporary) {
-        SimpleOpr::Delete(simple_opr);
+    auto threaded_opr = opr_block->opr;
+    auto callback = [this, threaded_opr]() {
+      OnComplete(threaded_opr);
+      if (threaded_opr->temporary) {
+        ThreadedOpr::Delete(threaded_opr);
       }
     };
     if (opr_block->ctx.dev_mask == gpu::kDevMask) {
@@ -277,7 +286,7 @@ void SimpleEngine::ThreadWorker() {
       LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA
     }
-    simple_opr->fn(opr_block->rctx, callback);
+    threaded_opr->fn(opr_block->rctx, callback);
     OprBlock::Delete(opr_block);
   }
 }

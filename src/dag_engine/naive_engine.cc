@@ -65,8 +65,4 @@ class NaiveEngine : public DAGEngine {
 
 }  // namespace engine
 
-DAGEngine* DAGEngine::Get() {
-  static mxnet::engine::NaiveEngine engine;
-  return &engine;
-}
 }  // namespace mxnet

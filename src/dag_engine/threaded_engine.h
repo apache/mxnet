@@ -1,8 +1,8 @@
 /*!
  * Copyright (c) 2015 by Contributors
  */
-#ifndef MXNET_DAG_ENGINE_SIMPLE_ENGINE_H_
-#define MXNET_DAG_ENGINE_SIMPLE_ENGINE_H_
+#ifndef MXNET_DAG_ENGINE_THREADED_ENGINE_H_
+#define MXNET_DAG_ENGINE_THREADED_ENGINE_H_
 
 #include <dmlc/base.h>
 #include <dmlc/concurrency.h>
@@ -23,7 +23,7 @@ namespace engine {
 /*!
  * \brief Forward declarations.
  */
-struct SimpleOpr;
+struct ThreadedOpr;
 
 /*!
  * \brief Operation in the queue.
@@ -35,7 +35,7 @@ struct OprBlock : public common::ObjectPoolAllocatable<OprBlock> {
   ~OprBlock() { LOG(INFO) << __func__ << " " << --counter; }
 #endif  // DAG_ENGINE_DEBUG
   std::atomic<std::size_t> wait{0};
-  SimpleOpr* opr{nullptr};
+  ThreadedOpr* opr{nullptr};
   Context ctx;
   RunContext rctx;
 };  // struct OprBlock
@@ -58,12 +58,12 @@ struct VersionedVarBlock
 /*!
  * \brief Variable implementation.
  */
-struct SimpleVar final : public Var,
-                         public common::ObjectPoolAllocatable<SimpleVar> {
+struct ThreadedVar final : public Var,
+                           public common::ObjectPoolAllocatable<ThreadedVar> {
 #if DAG_ENGINE_DEBUG
   static std::atomic<std::size_t> counter;
-  SimpleVar() { LOG(INFO) << __func__ << " " << ++counter; }
-  ~SimpleVar() { LOG(INFO) << __func__ << " " << --counter; }
+  ThreadedVar() { LOG(INFO) << __func__ << " " << ++counter; }
+  ~ThreadedVar() { LOG(INFO) << __func__ << " " << --counter; }
 #endif  // DAG_ENGINE_DEBUG
   std::mutex m;
   std::size_t num_pending_reads{0};
@@ -78,45 +78,45 @@ struct SimpleVar final : public Var,
    */
   bool to_delete{false};
 
-  static SimpleVar* CastFromBase(Var* ptr);
-};  // struct SimpleVar
+  static ThreadedVar* CastFromBase(Var* ptr);
+};  // struct ThreadedVar
 
 /*!
  * \brief Operator implementation.
  */
-struct SimpleOpr final : public Opr,
-                         public common::ObjectPoolAllocatable<SimpleOpr> {
+struct ThreadedOpr final : public Opr,
+                           public common::ObjectPoolAllocatable<ThreadedOpr> {
 #if DAG_ENGINE_DEBUG
   static std::atomic<std::size_t> counter;
-  SimpleOpr() { LOG(INFO) << __func__ << " " << ++counter; }
-  ~SimpleOpr() { LOG(INFO) << __func__ << " " << --counter; }
+  ThreadedOpr() { LOG(INFO) << __func__ << " " << ++counter; }
+  ~ThreadedOpr() { LOG(INFO) << __func__ << " " << --counter; }
 #endif  // DAG_ENGINE_DEBUG
   DAGEngine::AsyncFn fn;
-  std::vector<SimpleVar*> use_vars;
-  std::vector<SimpleVar*> mutate_vars;
+  std::vector<ThreadedVar*> use_vars;
+  std::vector<ThreadedVar*> mutate_vars;
   bool temporary{false};
 
-  static SimpleOpr* CastFromBase(Opr* ptr);
-  static SimpleOpr* New();
-  static void Delete(SimpleOpr* ptr);
-};  // struct SimpleOpr
+  static ThreadedOpr* CastFromBase(Opr* ptr);
+  static ThreadedOpr* New();
+  static void Delete(ThreadedOpr* ptr);
+};  // struct ThreadedOpr
 
 /*!
  * \brief Engine implementation.
  */
-class SimpleEngine final : public DAGEngine {
+class ThreadedEngine final : public DAGEngine {
  public:
   /*!
    * \brief Constructor and destructor.
    */
-  SimpleEngine();
-  ~SimpleEngine() noexcept(false);
+  ThreadedEngine();
+  ~ThreadedEngine() noexcept(false);
   /*!
    * \brief Overriding methods.
    */
-  SimpleVar* NewVar() override;
-  SimpleOpr* NewOperator(AsyncFn fn, std::vector<Variable> const& use_vars,
-                         std::vector<Variable> const& mutate_vars) override;
+  ThreadedVar* NewVar() override;
+  ThreadedOpr* NewOperator(AsyncFn fn, std::vector<Variable> const& use_vars,
+                           std::vector<Variable> const& mutate_vars) override;
   void DeleteOperator(OprHandle op) override;
   void Push(OprHandle op, Context exec_ctx) override;
   void Push(Fn exec_fun, Context exec_ctx,
@@ -133,7 +133,7 @@ class SimpleEngine final : public DAGEngine {
    *
    * On operation completion, this will trigger subsequent operations.
    */
-  void OnComplete(SimpleOpr* simple_opr);
+  void OnComplete(ThreadedOpr* threaded_opr);
   /*!
    * \brief Worker.
    *
@@ -166,11 +166,11 @@ class SimpleEngine final : public DAGEngine {
   /*!
    * \brief Disallow copy construction and assignment.
    */
-  DISALLOW_COPY_AND_ASSIGN(SimpleEngine);
-};  // class SimpleEngine
+  DISALLOW_COPY_AND_ASSIGN(ThreadedEngine);
+};  // class ThreadedEngine
 
 }  // namespace engine
 
 }  // namespace mxnet
 
-#endif  // MXNET_DAG_ENGINE_SIMPLE_ENGINE_H_
+#endif  // MXNET_DAG_ENGINE_THREADED_ENGINE_H_
