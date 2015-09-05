@@ -238,19 +238,19 @@ class Symbol(object):
         return py_str(debug_str.value)
 
     def bind(self, ctx, args, args_grad, reqs, aux_states=None):
-        """bind current symbol to get an executor.
+        """Bind current symbol to get an executor.
 
         Parameters
         ----------
-        ctx: Context
+        ctx : Context
             context executor to run on
-        args: Array of NArray
+        args : Array of NArray
             input args to the symbol
-        args_grad: Array of NArray
+        args_grad : Array of NArray
             input args' gradient
-        reqs: Array of enum
+        reqs : Array of enum
             graident requirements
-        aux_states: Array of NArray
+        aux_states : Array of NArray
             input auxiliary states to the symbol
         """
         # TODO(bing): consider a more friendly interface
@@ -278,11 +278,11 @@ class Symbol(object):
         return Executor(handle)
 
     def grad(self, wrt):
-        """get the autodiff of current symbol.
+        """Get the autodiff of current symbol.
 
         Parameters
         ----------
-        wrt: Array of String
+        wrt : Array of String
             keyword arguments of the symbol that the gradients are taken.
         """
         handle = SymbolHandle()
@@ -292,6 +292,7 @@ class Symbol(object):
                                      c_wrt,
                                      ctypes.byref(handle)))
         return Symbol(handle)
+
 
 def Variable(name):
     """Create a symbolic variable with specified name.
