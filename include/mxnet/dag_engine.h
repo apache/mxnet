@@ -100,9 +100,9 @@ class DAGEngine {
    *                 mutate.
    * \param mutate_vars The variables that current operation will mutate.
    */
-  void Push(Fn exec_fun, Context exec_ctx,
-            std::vector<Variable> const& use_vars,
-            std::vector<Variable> const& mutate_vars);
+  virtual void Push(Fn exec_fun, Context exec_ctx,
+                    std::vector<Variable> const& use_vars,
+                    std::vector<Variable> const& mutate_vars) = 0;
   /*!
    * \brief Push an asynchronous operation to the DAG engine.
    * \param exec_fun Execution function, this function takes a parameter
@@ -141,20 +141,13 @@ class DAGEngine {
   /*!
    * \brief Virtual destructor.
    */
-  virtual ~DAGEngine() noexcept(false);
+  virtual ~DAGEngine() noexcept(false) {}
   /*!
    * \return DAG engine singleton.
    */
   static DAGEngine* Get();
 
- protected:
-  /*!
-   * \brief Hidden constructors.
-   */
-  DAGEngine();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DAGEngine);
+  // remove DISALLOW_COPY_AND_ASSIGN since this is virtual class.
 };  // class DAGEngine
 
 }  // namespace mxnet

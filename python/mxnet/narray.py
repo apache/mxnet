@@ -71,6 +71,14 @@ class NArray(object):
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
+    def __iadd__(self, other):
+        if isinstance(other, NArray):
+            return NArray._plus(self, other, out=self)
+        elif isinstance(other, float) or isinstance(other, int):
+            return NArray._plus_scalar(self, float(other), out=self)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
     def __radd__(self, other):
         return self.__add__(other)
 
@@ -82,11 +90,27 @@ class NArray(object):
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
+    def __isub__(self, other):
+        if isinstance(other, NArray):
+            return NArray._minus(self, other, out=self)
+        elif isinstance(other, float) or isinstance(other, int):
+            return NArray._minus_scalar(self, float(other), out=self)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
     def __mul__(self, other):
         if isinstance(other, NArray):
             return NArray._mul(self, other)
         elif isinstance(other, float) or isinstance(other, int):
             return NArray._mul_scalar(self, float(other))
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __imul__(self, other):
+        if isinstance(other, NArray):
+            return NArray._mul(self, other, out=self)
+        elif isinstance(other, float) or isinstance(other, int):
+            return NArray._mul_scalar(self, float(other), out=self)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -102,7 +126,12 @@ class NArray(object):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __idiv__(self, other):
-        return self.__div__(other)
+        if isinstance(other, NArray):
+            return NArray._div(self, other, out=self)
+        elif isinstance(other, float) or isinstance(other, int):
+            return NArray._div_scalar(self, float(other), out=self)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
 
     def __truediv__(self, other):
         return self.__div__(other)
@@ -129,6 +158,20 @@ class NArray(object):
             check_call(_LIB.MXNArrayLoadFromRawBytes(ptr, length, ctypes.byref(handle)))
             state['handle'] = handle
         self.__dict__.update(state)
+
+    def __setitem__(self, in_slice, value):
+        """Set narray value"""
+        if in_slice.step != None:
+            raise Exception("Set NArray should use empty index array[:] = target_array")
+        if isinstance(value, NArray) == False:
+            raise TypeError('type %s not supported' % str(type(value)))
+        value.copyto(self)
+
+    def __getitem__(self, in_slice):
+        """Get narray"""
+        if in_slice.step != None:
+            raise Exception("Set NArray should use empty index array[:] += value")
+        return self
 
     def wait(self):
         """Wait until the data on current NArray is available."""
@@ -369,7 +412,7 @@ def _make_narray_function(handle):
         """Internal binary function
         """
         if out:
-            if isinstance(out, NArray):
+            if isinstance(out, NArray) == False:
                 raise TypeError('out must be NArray')
         else:
             if not accept_empty_mutate:
@@ -384,7 +427,7 @@ def _make_narray_function(handle):
     def unary_narray_function(src, out=None):
         """internal NArray function"""
         if out:
-            if isinstance(out, NArray):
+            if isinstance(out, NArray) == False:
                 raise TypeError('out must be NArray')
         else:
             if not accept_empty_mutate:

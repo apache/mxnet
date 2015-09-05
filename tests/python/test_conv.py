@@ -64,7 +64,7 @@ lr = 0.1
 wd = 0.0004
 
 def Update(grad, weight):
-    weight.numpy[:] -= lr * grad.numpy[:] / batch_size
+    weight[:] -= lr * grad / batch_size
 
 block = list(zip(grad_narrays, arg_narrays))
 
