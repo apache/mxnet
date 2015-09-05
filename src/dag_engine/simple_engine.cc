@@ -31,15 +31,15 @@ SimpleEngine::SimpleEngine()
 SimpleEngine::~SimpleEngine() noexcept(false) { task_queue_.SignalForKill(); }
 
 SimpleVar* SimpleEngine::NewVar() {
-  auto ret = new SimpleVar{};
-  ret->head = new VersionedVarBlock{};
+  auto ret = SimpleVar::New();
+  ret->head = VersionedVarBlock::New();
   return ret;
 }
 
 SimpleOpr* SimpleEngine::NewOperator(SimpleEngine::AsyncFn fn,
                                      std::vector<Variable> const& use_vars,
                                      std::vector<Variable> const& mutate_vars) {
-  auto ret = new SimpleOpr{};
+  auto ret = SimpleOpr::New();
   ret->fn = fn;
   ret->use_vars.resize(use_vars.size());
   ret->mutate_vars.resize(mutate_vars.size());
@@ -90,7 +90,7 @@ void SimpleEngine::DeleteOperator(OprHandle op) {
               simple_opr->use_vars.end());
   deps.insert(deps.end(), simple_opr->mutate_vars.begin(),
               simple_opr->mutate_vars.end());
-  auto&& func = [simple_opr](RunContext) { delete simple_opr; };
+  auto&& func = [simple_opr](RunContext) { SimpleOpr::Delete(simple_opr); };
   Push(func, Context{}, {}, deps);
 }
 
@@ -106,7 +106,7 @@ void SimpleEngine::Push(Fn exec_fun, Context exec_ctx,
 
 void SimpleEngine::Push(OprHandle op, Context exec_ctx) {
   auto&& simple_opr = SimpleOpr::CastFromBase(op);
-  auto&& opr_block = new OprBlock{};
+  auto&& opr_block = OprBlock::New();
   opr_block->opr = simple_opr;
   opr_block->wait.store(simple_opr->use_vars.size() +
                         simple_opr->mutate_vars.size() + 1);
@@ -121,7 +121,7 @@ void SimpleEngine::Push(OprHandle op, Context exec_ctx) {
       ++i->num_pending_reads;
       --opr_block->wait;
     } else {
-      auto&& new_var_block = new VersionedVarBlock{};
+      auto&& new_var_block = VersionedVarBlock::New();
       assert(i->head->next == nullptr);
       assert(i->head->trigger == nullptr);
       assert(i->head->write == false);
@@ -133,7 +133,7 @@ void SimpleEngine::Push(OprHandle op, Context exec_ctx) {
   // Add write dependencies.
   for (auto&& i : simple_opr->mutate_vars) {
     std::lock_guard<std::mutex> lock{i->m};
-    auto&& new_var_block = new VersionedVarBlock{};
+    auto&& new_var_block = VersionedVarBlock::New();
     i->head->next = new_var_block;
     i->head->trigger = opr_block;
     i->head->write = true;
@@ -215,11 +215,11 @@ void SimpleEngine::OnComplete(SimpleOpr* simple_opr) {
       std::lock_guard<std::mutex> lock{i->m};
       assert(i->ready_to_read == false);
       auto head = i->pending_write->next;
-      delete i->pending_write;
+      VersionedVarBlock::Delete(i->pending_write);
       i->pending_write = nullptr;
       if (i->to_delete) {
         assert(head->next == nullptr);
-        delete head;
+        VersionedVarBlock::Delete(head);
         to_delete = true;
       } else {
         while (true) {
@@ -242,13 +242,13 @@ void SimpleEngine::OnComplete(SimpleOpr* simple_opr) {
             }
             auto prev = head;
             head = head->next;
-            delete prev;
+            VersionedVarBlock::Delete(prev);
           }
         }
       }
     }
     if (to_delete) {
-      delete i;
+      SimpleVar::Delete(i);
     }
   }
   {
@@ -267,7 +267,7 @@ void SimpleEngine::ThreadWorker() {
     auto callback = [this, simple_opr]() {
       OnComplete(simple_opr);
       if (simple_opr->temporary) {
-        delete simple_opr;
+        SimpleOpr::Delete(simple_opr);
       }
     };
     if (opr_block->ctx.dev_mask == gpu::kDevMask) {
@@ -278,7 +278,7 @@ void SimpleEngine::ThreadWorker() {
 #endif  // MXNET_USE_CUDA
     }
     simple_opr->fn(opr_block->rctx, callback);
-    delete opr_block;
+    OprBlock::Delete(opr_block);
   }
 }
 

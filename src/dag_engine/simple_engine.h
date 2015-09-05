@@ -14,6 +14,7 @@
 #include <mutex>
 #include "dag_engine_impl.h"
 #include "thread_pool.h"
+#include "../common/object_pool.h"
 
 namespace mxnet {
 
@@ -27,7 +28,7 @@ struct SimpleOpr;
 /*!
  * \brief Operation in the queue.
  */
-struct OprBlock {
+struct OprBlock : public common::ObjectPoolAllocatable<OprBlock> {
 #ifdef DAG_ENGINE_DEBUG
   static std::atomic<std::size_t> counter;
   OprBlock() { LOG(INFO) << __func__ << " " << ++counter; }
@@ -42,7 +43,8 @@ struct OprBlock {
 /*!
  * \brief Variable with version information.
  */
-struct VersionedVarBlock {
+struct VersionedVarBlock
+    : public common::ObjectPoolAllocatable<VersionedVarBlock> {
 #ifdef DAG_ENGINE_DEBUG
   static std::atomic<std::size_t> counter;
   VersionedVarBlock() { LOG(INFO) << __func__ << " " << ++counter; }
@@ -56,7 +58,8 @@ struct VersionedVarBlock {
 /*!
  * \brief Variable implementation.
  */
-struct SimpleVar final : public Var {
+struct SimpleVar final : public Var,
+                         public common::ObjectPoolAllocatable<SimpleVar> {
 #ifdef DAG_ENGINE_DEBUG
   static std::atomic<std::size_t> counter;
   SimpleVar() { LOG(INFO) << __func__ << " " << ++counter; }
@@ -81,7 +84,8 @@ struct SimpleVar final : public Var {
 /*!
  * \brief Operator implementation.
  */
-struct SimpleOpr final : public Opr {
+struct SimpleOpr final : public Opr,
+                         public common::ObjectPoolAllocatable<SimpleOpr> {
 #ifdef DAG_ENGINE_DEBUG
   static std::atomic<std::size_t> counter;
   SimpleOpr() { LOG(INFO) << __func__ << " " << ++counter; }
@@ -93,6 +97,8 @@ struct SimpleOpr final : public Opr {
   bool temporary{false};
 
   static SimpleOpr* CastFromBase(Opr* ptr);
+  static SimpleOpr* New();
+  static void Delete(SimpleOpr* ptr);
 };  // struct SimpleOpr
 
 /*!
