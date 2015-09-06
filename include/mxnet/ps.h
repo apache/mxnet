@@ -8,9 +8,9 @@
 #include "dmlc/io.h"
 #include "narray.h"
 
-#if DMLC_USE_CXX11 == 0
-#error "C++11 was required for ps module."
-#endif
+#if DMLC_USE_CXX11
+#include <functional>
+#endif  // DMLC_USE_CXX11
 
 namespace mxnet {
 namespace ps {
@@ -21,6 +21,43 @@ namespace ps {
  * Worker node can push data (gradient) to the servers and pull data (aggregated
  * gradient or weight) back. A worker is bind to a particular device, namely a
  * worker can only push and pull data with the same \a device_id
+ *
+ * Example to implement allreduce
+ * \code
+ *   // on worker node:
+ *   NArray data;
+ *   // init data...
+ *   Worker comm;
+ *   comm.Push(0, data);
+ *   comm.Pull(0, &data);
+ *   data.Wait();
+ *
+ *   // on server node:
+ *   Server store;
+ * \endcode
+ *
+ * Example to implement asynchronous SGD
+ * \code
+ *   // on worker node:
+ *   NArray weight, grad;
+ *   if (NodeInfo::Root()) {
+ *     // init weight ...
+ *     comm.Push(0, weight);
+ *   }
+ *   comm.Pull(0, &weight);
+ *   // compute grad
+ *   comm.Push(0, grad);
+ *
+ *   // on server node:
+ *   auto updater = [](const NArray& recv, NArray* weight) {
+ *     if (weight->Empty()) {
+ *        *weight = recv; // recv is the init weight
+ *     } else {
+ *        *weight += 0.1 * recv; // recv is grad
+ *     }
+ *   }
+ *   Server store(false, updater);
+ * \endcode
  */
 class Worker {
  public:
@@ -33,6 +70,10 @@ class Worker {
    * finished.
    *
    * One can wait the push is finished via `data.Wait()`
+   *
+   * For each push, each server node will apply a user-defined server handle to merge
+   * the value sent to the one maintained by itself. See \ref Server for more
+   * details.
    *
    * \param key the key for pushing
    * \param value the value for pushing
@@ -49,33 +90,53 @@ class Worker {
    *
    * One can wait the pull is finished via `data.Wait()`
    *
+   * System will guarantee that the all pushes issued by this worker have been
+   * applied, namely the server handle has been triggered.
+   *
    * \param key the key for pulling
    * \param value data for pulling, should be pre-allocated
    */
   void Pull(int key, NArray* value);
+
+ private:
 };
 
 
+#if DMLC_USE_CXX11
 /**
  * \brief A PS server node
  *
- * a server node maintains data (weight), and allows user-defined handle to
- * modify the data
+ * A server node maintains data (weight or aggregated gradient), and allows
+ * user-defined handle to modify the data
  */
 class Server {
  public:
   /**
+   * \brief user-defined handle
+   */
+  using Handle = std::function<void(const NArray&, NArray*)>;
+
+  /**
    * \brief constructor
    *
-   * The server node triggers the user-defined handle in two ways:
-   * - online: the handle is called every time when data received from a
-   * worker. often used for asynchronous optimization
-   * - batch: the handle is called after data have been aggregated over all
-   * workers. often used for synchronous optimization
+   * Given a key, assume \a x is the received value and \a y is the value stored
+   * on the server node. The server updates \a y by `h(x, &y)`. The default \a h
+   * is ASSIGN, namely `*y = x`.
+   *
+   * The handle is triggered in two ways:
+   *
+   * - online: \a h is called every time when \a x is received from a worker. It
+   * is often used for asynchronous optimization.
+   *
+   * - batch: \a h is called after data have been aggregated over all
+   * workers. Assume \f$ x_i \f$ is received from worker i. Then the server
+   * first computes \f$\sum_{i=0}^n x = x_i\f$, and then applies \a h. It is often
+   * used for synchronous optimization
    *
    * \param batch true for batch, false for online
+   * \param h user-defined handle, default is assign
    */
-  explicit Server(bool batch = true);
+  explicit Server(bool batch = true, const Handle& h = Handle());
 
   /**
    * \brief Load from disk
@@ -87,14 +148,7 @@ class Server {
    */
   void Save(dmlc::Stream *fo);
 };
-
-/**
- * \brief user-defined handle
- * \param recv_data data (gradient) received from users
- * \param my_data data (weight) maintained on the server
- */
-void ServerHandle(const NArray& recv_data, NArray my_data);
-
+#endif  // DMLC_USE_CXX11
 
 }  // namespace ps
 }  // namespace mxnet
