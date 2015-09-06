@@ -25,12 +25,29 @@ def check_bind_with_uniform(uf, gf, dim):
 
     executor = ret.bind(mx.Context('cpu'),
                         args=[lhs_arr, rhs_arr],
-                        args_grad=[lhs_grad, rhs_grad],
-                        reqs=['write_to'] * 2)
+                        args_grad=[lhs_grad, rhs_grad])
+
+    exec3 = ret.bind(mx.Context('cpu'),
+                     args=[lhs_arr, rhs_arr])
+
+
+    exec4 = ret.bind(mx.Context('cpu'),
+                     args={'rhs': rhs_arr, 'lhs': lhs_arr})
+
+    exec4 = ret.bind(mx.Context('cpu'),
+                     args={'rhs': rhs_arr, 'lhs': lhs_arr},
+                     args_grad={'lhs': lhs_grad, 'rhs': rhs_grad})
+
     executor.forward()
+    exec3.forward()
+    exec4.forward()
     out2 = executor.heads()[0].numpy
     out1 = uf(lhs_arr.numpy, rhs_arr.numpy)
+    out3 = exec3.heads()[0].numpy
+    out4 = exec4.heads()[0].numpy
     assert reldiff(out1, out2) < 1e-6
+    assert reldiff(out1, out3) < 1e-6
+    assert reldiff(out1, out4) < 1e-6
     # test gradient
     out_grad = mx.narray.create(shape)
     out_grad.numpy[:] = np.ones(shape)

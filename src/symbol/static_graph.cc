@@ -172,7 +172,7 @@ StaticGraph::Node StaticGraph::CreateSumNode(
   Node agg_node;
   agg_node.op.reset(OperatorProperty::Create("ElementWiseSum"));
   os_size << grad_source.size();
-  agg_node.op->Init({{"size", os_size.str()}});
+  agg_node.op->Init({{"num_args", os_size.str()}});
   agg_node.inputs = grad_source;
   return agg_node;
 }

@@ -20,7 +20,8 @@ DMLC_REGISTER_PARAMETER(ElementWiseSumParam);
 
 MXNET_REGISTER_OP_PROPERTY(ElementWiseSum, ElementWiseSumProp)
 .describe("Perform an elementwise sum over all the inputs.")
-.add_arguments(ElementWiseSumParam::__FIELDS__());
+.add_arguments(ElementWiseSumParam::__FIELDS__())
+.set_key_var_num_args("num_args");
 
 }  // namespace op
 }  // namespace mxnet

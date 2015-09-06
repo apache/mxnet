@@ -34,10 +34,9 @@ for name, narray in inputs.items():
     if "bias" in name:
         narray.numpy[:] = 0.0
 
-req = ['write_to' for i in range(len(arg_narrays))]
 # bind executer
 # TODO(bing): think of a better bind interface
-executor = softmax.bind(mx.Context('cpu'), arg_narrays, grad_narrays, req)
+executor = softmax.bind(mx.Context('cpu'), arg_narrays, grad_narrays)
 # update
 
 out_narray = executor.heads()[0]

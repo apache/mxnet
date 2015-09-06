@@ -449,8 +449,10 @@ int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                 mx_uint *num_args,
                                 const char ***arg_names,
                                 const char ***arg_type_infos,
-                                const char ***arg_descriptions) {
+                                const char ***arg_descriptions,
+                                const char **key_var_num_args) {
   OperatorPropertyReg *e = static_cast<OperatorPropertyReg *>(creator);
+  *key_var_num_args = e->key_var_num_args.c_str();
   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
                                  arg_names, arg_type_infos, arg_descriptions);
 }
@@ -729,8 +731,15 @@ int MXExecutorBind(SymbolHandle symbol_handle,
   std::vector<NArray> aux_states_vec;
   for (mx_uint i = 0; i < len; ++i) {
     in_args_vec.push_back(*(in_args_ptr[i]));
-    arg_grad_vec.push_back(*(arg_grad_ptr[i]));
-    grad_req_vec.push_back(static_cast<OpReqType>(grad_req_type[i]));
+    if (arg_grad_ptr[i] == nullptr) {
+      arg_grad_vec.push_back(NArray());
+      grad_req_vec.push_back(kNullOp);
+      LOG(INFO) << "nop";
+    } else {
+      LOG(INFO) << "grad=" << grad_req_type[i];
+      arg_grad_vec.push_back(*(arg_grad_ptr[i]));
+      grad_req_vec.push_back(static_cast<OpReqType>(grad_req_type[i]));
+    }
   }
   for (mx_uint i = 0; i < aux_states_len; ++i) {
     aux_states_vec.push_back(*(aux_states_ptr[i]));
