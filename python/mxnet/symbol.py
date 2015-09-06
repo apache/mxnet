@@ -15,6 +15,7 @@ from .executor import Executor
 class Symbol(object):
     """Symbol is symbolic graph of the mxnet."""
 
+    # pylint: disable=no-member
     def __init__(self, handle):
         """Initialize the function with handle
 
@@ -24,6 +25,39 @@ class Symbol(object):
             the handle to the underlying C++ Symbol
         """
         self.handle = handle
+
+    def __add__(self, other):
+        if isinstance(other, Symbol):
+            return Symbol._Plus(self, other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        if isinstance(other, Symbol):
+            return Symbol._Minus(self, other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __mul__(self, other):
+        if isinstance(other, Symbol):
+            return Symbol._Mul(self, other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __div__(self, other):
+        if isinstance(other, Symbol):
+            return Symbol._Div(self, other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __truediv__(self, other):
+        return self.__div__(other)
 
     def __del__(self):
         check_call(_LIB.MXSymbolFree(self.handle))
@@ -238,19 +272,19 @@ class Symbol(object):
         return py_str(debug_str.value)
 
     def bind(self, ctx, args, args_grad, reqs, aux_states=None):
-        """bind current symbol to get an executor.
+        """Bind current symbol to get an executor.
 
         Parameters
         ----------
-        ctx: Context
+        ctx : Context
             context executor to run on
-        args: Array of NArray
+        args : Array of NArray
             input args to the symbol
-        args_grad: Array of NArray
+        args_grad : Array of NArray
             input args' gradient
-        reqs: Array of enum
+        reqs : Array of enum
             graident requirements
-        aux_states: Array of NArray
+        aux_states : Array of NArray
             input auxiliary states to the symbol
         """
         # TODO(bing): consider a more friendly interface
@@ -278,11 +312,11 @@ class Symbol(object):
         return Executor(handle)
 
     def grad(self, wrt):
-        """get the autodiff of current symbol.
+        """Get the autodiff of current symbol.
 
         Parameters
         ----------
-        wrt: Array of String
+        wrt : Array of String
             keyword arguments of the symbol that the gradients are taken.
         """
         handle = SymbolHandle()
@@ -292,6 +326,8 @@ class Symbol(object):
                                      c_wrt,
                                      ctypes.byref(handle)))
         return Symbol(handle)
+    # pylint: enable= no-member
+
 
 def Variable(name):
     """Create a symbolic variable with specified name.
@@ -431,7 +467,10 @@ def _init_symbol_module():
     for i in range(size.value):
         hdl = SymbolHandle(plist[i])
         function = _make_atomic_symbol_function(hdl)
-        setattr(module_obj, function.__name__, function)
+        if function.__name__.startswith('_'):
+            setattr(Symbol, function.__name__, staticmethod(function))
+        else:
+            setattr(module_obj, function.__name__, function)
 
 # Initialize the atomic symbo in startups
 _init_symbol_module()

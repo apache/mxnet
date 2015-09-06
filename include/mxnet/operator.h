@@ -80,7 +80,7 @@ class Operator {
    * \param req the request types of saving operation, can only be kWriteTo or kWriteInplace.
    * \param out_data array of output data, pointer is used to indicate that this is holder
    *        the space of TBlob in out_data must be pre-allocated with InferShape
-   * \param aux_states Auxiliary states of operator. Normally operator doesn't 
+   * \param aux_states Auxiliary states of operator. Normally operator doesn't
    *        need, epecial case like Batch Norm requires.
    * \sa OpReqType, OpContext
    */
@@ -411,11 +411,12 @@ struct OperatorPropertyReg
  * \endcode
  */
 #define MXNET_REGISTER_OP_PROPERTY(name, OperatorPropertyType)          \
-  static ::mxnet::OperatorProperty* __create__ ## OperatorPropertyType ## __() { \
+  static ::mxnet::OperatorProperty* __create__ ## OperatorProperty ## name ## __() { \
     return new OperatorPropertyType;                                    \
   }                                                                     \
   DMLC_REGISTRY_REGISTER(::mxnet::OperatorPropertyReg, OperatorPropertyReg, name) \
-  .set_body(__create__ ## OperatorPropertyType ## __)
+  .set_body(__create__ ## OperatorProperty ## name ## __)
+
 #endif  // DMLC_USE_CXX11
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_H_

@@ -269,8 +269,9 @@ class NArray {
   friend void BinaryOp(const NArray &lhs, const NArray &rhs, NArray *out);
   template<typename OP>
   friend void UnaryOp(const NArray &lhs, const NArray &rhs, NArray *out);
-  template<typename OP>
+  template<typename OP, bool reverse>
   friend void ScalarOp(const NArray &lhs, const real_t &rhs, NArray *out);
+  friend void SetValueOp(const real_t &rhs, NArray *out);
 };
 
 /*!
@@ -385,6 +386,23 @@ struct NArrayFunctionReg
         num_mutate_vars(0),
         num_scalars(0),
         type_mask(0) {}
+  /*!
+   * \brief set the function body to a NArray setvalue function
+   *  this will also auto set the parameters correctly
+   * \param fsetvalue function body to set
+   * \return ref to the registered entry, used to set properties
+   */
+  inline NArrayFunctionReg &set_function(void fsetvalue(const real_t &rhs,
+                                                        NArray *out)) {
+    body = [fsetvalue] (NArray **used_vars,
+                       real_t *s, NArray **mutate_vars) {
+      fsetvalue(s[0], mutate_vars[0]);
+    };
+    num_mutate_vars = 1; num_scalars = 1;
+    // type_mask = kNArrayArgBeforeScalar;
+    this->add_argument("rhs", "real_t", "Right operand to the function.");
+    return *this;
+  }
   /*!
    * \brief set the function body to a binary NArray function
    *  this will also auto set the parameters correctly
