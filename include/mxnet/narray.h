@@ -271,6 +271,7 @@ class NArray {
   friend void UnaryOp(const NArray &lhs, const NArray &rhs, NArray *out);
   template<typename OP, bool reverse>
   friend void ScalarOp(const NArray &lhs, const real_t &rhs, NArray *out);
+  friend void SetValueOp(const NArray &lhs, const real_t &rhs, NArray *out);
 };
 
 /*!

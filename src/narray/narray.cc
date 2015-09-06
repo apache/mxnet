@@ -78,6 +78,40 @@ inline void BinaryOp(const NArray &lhs,
   }
 }
 
+inline void SetValueOp(const NArray &lhs, const real_t &rhs, NArray *out) {
+  if (out->is_none()) {
+    *out = NArray(lhs.shape(), lhs.ctx(), true);
+  } else {
+    CHECK(out->ctx() == lhs.ctx()) << "target context mismatch";
+    CHECK(out->shape() == lhs.shape())
+        << "target shape mismatch";
+  }
+  // important: callback must always capture by value
+  NArray ret = *out;
+  switch (ret.ctx().dev_mask) {
+    case cpu::kDevMask: {
+      auto func = [rhs, ret](RunContext ctx) {
+        ret.ptr_->CheckAndAlloc();
+        TBlob tmp = ret.data();
+        narray::Eval<cpu>(rhs, &tmp, ctx);
+      };
+      DAGEngine::Get()->Push(func, ret.ctx(), {}, {ret.ptr_->var});
+      break;
+    }
+#if MXNET_USE_CUDA
+    case gpu::kDevMask: {
+      auto func = [rhs, ret](RunContext ctx) {
+        ret.ptr_->CheckAndAlloc();
+        TBlob tmp = ret.data();
+        narray::Eval<gpu>(rhs, &tmp, ctx);
+      };
+      DAGEngine::Get()->Push(func, ret.ctx(), {}, {ret.ptr_->var});
+      break;
+    }
+#endif
+    default: LOG(FATAL) << "GPU is not enabled";
+  }
+}
 /*!
  * \brief run a binary operation
  * \param lhs left operand
@@ -215,6 +249,7 @@ inline NArray &ScalarOpApply(NArray *dst,
   ScalarOp<OP, false>(*dst, src, dst);
   return *dst;
 }
+
 // Binary
 NArray operator+(const NArray &lhs, const NArray &rhs) {
   return BinaryOpRet<narray::Plus>(lhs, rhs);
@@ -242,6 +277,11 @@ NArray operator/(const NArray &lhs, const real_t &rhs) {
   return ScalarOpRet<narray::Div, false>(lhs, rhs);
 }
 // Binary
+NArray &NArray::operator=(real_t scalar) {
+  SetValueOp(*this, scalar, this);
+  return *this; 
+}
+
 NArray &NArray::operator+=(const NArray &src) {
   return BinaryOpApply<narray::Plus>(this, src);
 }
@@ -333,6 +373,8 @@ NArray NArray::Copy(Context ctx) const {
 
 // register API function
 // those with underscore will be registered at NArray
+MXNET_REGISTER_NARRAY_FUN(_set_value).set_function(SetValueOp);
+
 MXNET_REGISTER_NARRAY_FUN(_plus).set_function(BinaryOp<narray::Plus>);
 MXNET_REGISTER_NARRAY_FUN(_minus).set_function(BinaryOp<narray::Minus>);
 MXNET_REGISTER_NARRAY_FUN(_mul).set_function(BinaryOp<narray::Mul>);

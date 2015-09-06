@@ -44,7 +44,7 @@ def test_narray_elementwise():
             check_with_uniform(lambda x, y: x + y, 2, dim)
             check_with_uniform(lambda x, y: x - y, 2, dim)
             check_with_uniform(lambda x, y: x * y, 2, dim)
-            # check_with_uniform(lambda x, y: x / y, 2, dim)
+            check_with_uniform(lambda x, y: x / y, 2, dim)
 
 def test_narray_copy():
     c = mx.narray.create((10,10))
@@ -60,8 +60,12 @@ def test_narray_scalar():
     d.numpy[:] = 1.0
     d -= c * 2 / 3 * 6.0
     c += 0.5
-    assert(np.sum(c.numpy) == 100)
-    assert(np.sum(d.numpy) == -100)
+    assert(np.sum(c.numpy) - 100 < 1e-5)
+    assert(np.sum(d.numpy) + 100 < 1e-5)
+    c[:] = 2
+    assert(np.sum(c.numpy) - 200 < 1e-5)
+    d = -c + 2
+    assert(np.sum(c.numpy) < 1e-5)
 
 def test_narray_pickle():
     np.random.seed(0)

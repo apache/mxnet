@@ -24,6 +24,16 @@
   }
 #endif
 
+#ifndef DECL_SETVALUE
+#define DECL_SETVALUE(XPU)                                       \
+  template<>                                                            \
+  void Eval<XPU>(const real_t &rhs, TBlob *ret, RunContext ctx) { \
+    mshadow::Stream<XPU> *s = static_cast<mshadow::Stream<XPU>*>(ctx.stream);    \
+    ret->FlatTo2D<XPU, real_t>(s) = rhs;                          \
+  }
+#endif
+
+
 #if defined(__CUDACC__)
 #define DEVICE gpu
 #else
@@ -56,6 +66,8 @@ inline void EvalScalar_(const TBlob &lhs, const real_t &rhs,
       = F<typename OP::mshadow_op>(lhs.FlatTo2D<xpu, real_t>(s), rhs);
   }
 }
+
+
 // declarations
 DECL_BINARY(DEVICE, Plus, EvalBinary_)
 DECL_BINARY(DEVICE, Minus, EvalBinary_)
@@ -70,6 +82,8 @@ DECL_SCALAR(DEVICE, Plus, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Minus, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Mul, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Div, EvalScalar_, false)
+//
+DECL_SETVALUE(DEVICE)
 }  // namespace narray
 }  // namespace mxnet
 
