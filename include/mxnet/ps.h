@@ -15,6 +15,31 @@
 namespace mxnet {
 namespace ps {
 
+/*! \brief A PS node */
+class Node {
+ public:
+  Node() {}
+  virtual ~Node() {}
+
+  /*! \brief Gets rank of this node in its group, which is in [0, GroupSize) */
+  int Rank();
+
+  /*! \brief Get the size of this node group. */
+  int GroupSize() { return IsWorker() ? NumWorkers() : NumServer(); }
+
+  /*! \brief Returns the number of worker nodes */
+  static int NumWorkers();
+
+  /*! \brief Returns the number of server nodes */
+  static int NumServers();
+
+  /*! \brief Returns true if this process runs workers */
+  static bool IsWorker();
+
+  /*!\brief Returns true if this process only run servers */
+  static bool IsServer();
+};
+
 /*!
  * \brief A PS worker node
  *
@@ -60,7 +85,7 @@ namespace ps {
  *   Server store(false, updater);
  * \endcode
  */
-class Worker {
+class Worker : public Node {
  public:
   /*!
    * \brief push data to the server nodes
@@ -75,6 +100,9 @@ class Worker {
    * For each push, each server node will apply a user-defined server handle to merge
    * the value sent to the one maintained by itself. See \ref Server for more
    * details.
+   *
+   * For a given \a key, the \a value should be always has the same size over
+   * all workers.
    *
    * \param key the key for pushing
    * \param value the value for pushing
@@ -98,8 +126,6 @@ class Worker {
    * \param value data for pulling, should be pre-allocated
    */
   void Pull(int key, NArray* value);
-
- private:
 };
 
 
@@ -151,36 +177,6 @@ class Server : public Node {
 };
 #endif  // DMLC_USE_CXX11
 
-/**
- * \brief A PS node
- */
-class Node {
- public:
-  Node() {}
-  virtual ~Node() {}
-
-  /**
-   * \brief Gets rank of this node in its group
-   *
-   * The rank is an integer in [0, \ref WorldlSize).
-   */
-  int Rank();
-
-  /*! \brief Get the size of the node group. */
-  int GroupSize() { return IsWorker() ? NumWorkers() : NumServer(); }
-
-  /*! \brief Returns the number of worker nodes */
-  static int NumWorkers();
-
-  /*! \brief Returns the number of server nodes */
-  static int NumServers();
-
-  /*! \brief Returns true if this process runs workers */
-  static bool IsWorker();
-
-  /*!\brief Returns true if this process only run servers */
-  static bool IsServer();
-};
 
 }  // namespace ps
 }  // namespace mxnet
