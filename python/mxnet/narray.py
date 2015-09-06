@@ -98,7 +98,7 @@ class NArray(object):
             return NArray._minus_scalar(self, float(other), out=self)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
-    
+
     def __rsub__(self, other):
         if isinstance(other, numeric_types):
             return NArray._rminus_scalar(self, float(other))
@@ -179,14 +179,13 @@ class NArray(object):
         """Set narray value"""
         if in_slice.step != None:
             raise Exception("Set NArray should use empty index array[:] = target_array")
-        if isinstance(value, NArray) == True:
+        if isinstance(value, NArray):
             if value.handle is not self.handle:
                 value.copyto(self)
         elif isinstance(value, numeric_types):
-            return NArray._set_value(self, float(value), out=self)
+            return NArray._set_value(float(value), out=self)
         else:
             raise TypeError('type %s not supported' % str(type(value)))
-        
 
     def __getitem__(self, in_slice):
         """Get narray"""

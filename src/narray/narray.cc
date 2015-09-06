@@ -78,14 +78,8 @@ inline void BinaryOp(const NArray &lhs,
   }
 }
 
-inline void SetValueOp(const NArray &lhs, const real_t &rhs, NArray *out) {
-  if (out->is_none()) {
-    *out = NArray(lhs.shape(), lhs.ctx(), true);
-  } else {
-    CHECK(out->ctx() == lhs.ctx()) << "target context mismatch";
-    CHECK(out->shape() == lhs.shape())
-        << "target shape mismatch";
-  }
+inline void SetValueOp(const real_t &rhs, NArray *out) {
+  CHECK_NE(out->is_none(), true) << "Set value target must not be empty";
   // important: callback must always capture by value
   NArray ret = *out;
   switch (ret.ctx().dev_mask) {
@@ -278,8 +272,8 @@ NArray operator/(const NArray &lhs, const real_t &rhs) {
 }
 // Binary
 NArray &NArray::operator=(real_t scalar) {
-  SetValueOp(*this, scalar, this);
-  return *this; 
+  SetValueOp(scalar, this);
+  return *this;
 }
 
 NArray &NArray::operator+=(const NArray &src) {
