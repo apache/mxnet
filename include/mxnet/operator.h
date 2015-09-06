@@ -395,6 +395,24 @@ typedef OperatorProperty *(*OperatorPropertyFactory)();
 struct OperatorPropertyReg
     : public dmlc::FunctionRegEntryBase<OperatorPropertyReg,
                                         OperatorPropertyFactory> {
+  /*!
+   * \brief Set key_var_num_args
+   *  When this is set, the API caller is required to pass in a
+   *  argument with key=key_num_args.c_str(), and value=num_args.
+   *  num_args is number of positional argument when calling the function.
+   *
+   *  This is used to pass in length of positional arguments
+   *  for operators that can take variable length of input.
+   *  Most operators do not need to set this property.
+   *
+   * \param key the key name to be set
+   */
+  inline OperatorPropertyReg& set_key_var_num_args(const std::string &key) {  // NOLINT(*)
+    this->key_var_num_args = key;
+    return *this;
+  }
+  /*! \brief The key num_args name. */
+  std::string key_var_num_args;
 };
 
 //--------------------------------------------------------------

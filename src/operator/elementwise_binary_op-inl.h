@@ -18,30 +18,30 @@
 namespace mxnet {
 namespace op {
 
-enum ElementwiseBinaryOpInputs {kLhs, kRhs};
-enum ElementwiseBinaryOpOutputs {kOut};
-enum ElementwiseBinaryOpType {kPlus, kMinus, kMul, kDiv};
+enum ElementWiseBinaryOpInputs {kLhs, kRhs};
+enum ElementWiseBinaryOpOutputs {kOut};
+enum ElementWiseBinaryOpType {kPlus, kMinus, kMul, kDiv};
 
 template<typename Op>
-inline ElementwiseBinaryOpType GetOpType();
+inline ElementWiseBinaryOpType GetOpType();
 
 template<typename Op>
 inline const char* GetOpTypeString();
 
 template<>
-inline ElementwiseBinaryOpType GetOpType<mshadow::op::plus>() {
+inline ElementWiseBinaryOpType GetOpType<mshadow::op::plus>() {
   return kPlus;
 }
 template<>
-inline ElementwiseBinaryOpType GetOpType<mshadow::op::minus>() {
+inline ElementWiseBinaryOpType GetOpType<mshadow::op::minus>() {
   return kMinus;
 }
 template<>
-inline ElementwiseBinaryOpType GetOpType<mshadow::op::mul>() {
+inline ElementWiseBinaryOpType GetOpType<mshadow::op::mul>() {
   return kMul;
 }
 template<>
-inline ElementwiseBinaryOpType GetOpType<mshadow::op::div>() {
+inline ElementWiseBinaryOpType GetOpType<mshadow::op::div>() {
   return kDiv;
 }
 
@@ -65,7 +65,7 @@ inline const char* GetOpTypeString<mshadow::op::div>() {
 }
 
 template<typename xpu, typename ForwardOp>
-class ElementwiseBinaryOp : public Operator {
+class ElementWiseBinaryOp : public Operator {
  public:
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
@@ -132,16 +132,16 @@ class ElementwiseBinaryOp : public Operator {
       }
     }
   }
-};  // class ElementwiseBinaryOp
+};  // class ElementWiseBinaryOp
 
 
 template<typename xpu>
-inline Operator* CreateElementwiseBinaryOp_(ElementwiseBinaryOpType type) {
+inline Operator* CreateElementWiseBinaryOp_(ElementWiseBinaryOpType type) {
   switch (type) {
-    case kPlus: return new ElementwiseBinaryOp<xpu, mshadow::op::plus>();
-    case kMinus: return new ElementwiseBinaryOp<xpu, mshadow::op::minus>();
-    case kMul: return new ElementwiseBinaryOp<xpu, mshadow::op::mul>();
-    case kDiv: return new ElementwiseBinaryOp<xpu, mshadow::op::div>();
+    case kPlus: return new ElementWiseBinaryOp<xpu, mshadow::op::plus>();
+    case kMinus: return new ElementWiseBinaryOp<xpu, mshadow::op::minus>();
+    case kMul: return new ElementWiseBinaryOp<xpu, mshadow::op::mul>();
+    case kDiv: return new ElementWiseBinaryOp<xpu, mshadow::op::div>();
   }
   LOG(FATAL) << "uknown op type";
   return NULL;
@@ -149,11 +149,11 @@ inline Operator* CreateElementwiseBinaryOp_(ElementwiseBinaryOpType type) {
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateElementwiseBinaryOp(ElementwiseBinaryOpType type);
+Operator* CreateElementWiseBinaryOp(ElementWiseBinaryOpType type);
 
 #if DMLC_USE_CXX11
 template<typename ForwardOp>
-class ElementwiseBinaryOpProp : public OperatorProperty {
+class ElementWiseBinaryOpProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     CHECK_EQ(kwargs.size(), 0)
@@ -183,7 +183,7 @@ class ElementwiseBinaryOpProp : public OperatorProperty {
   }
 
   OperatorProperty* Copy() const override {
-    return new ElementwiseBinaryOpProp<ForwardOp>();
+    return new ElementWiseBinaryOpProp<ForwardOp>();
   }
 
   std::string TypeString() const override {

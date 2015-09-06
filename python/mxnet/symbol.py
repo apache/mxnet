@@ -505,24 +505,35 @@ def _make_atomic_symbol_function(handle):
     """Create an atomic symbol function by handle and funciton name."""
     name = ctypes.c_char_p()
     desc = ctypes.c_char_p()
+    key_var_num_args = ctypes.c_char_p()
     num_args = mx_uint()
     arg_names = ctypes.POINTER(ctypes.c_char_p)()
     arg_types = ctypes.POINTER(ctypes.c_char_p)()
     arg_descs = ctypes.POINTER(ctypes.c_char_p)()
+
 
     check_call(_LIB.MXSymbolGetAtomicSymbolInfo(
         handle, ctypes.byref(name), ctypes.byref(desc),
         ctypes.byref(num_args),
         ctypes.byref(arg_names),
         ctypes.byref(arg_types),
-        ctypes.byref(arg_descs)))
+        ctypes.byref(arg_descs),
+        ctypes.byref(key_var_num_args)))
+    key_var_num_args = py_str(key_var_num_args.value)
     func_name = py_str(name.value)
     param_str = []
     for i in range(num_args.value):
-        ret = '%s : %s' % (py_str(arg_names[i]), py_str(arg_types[i]))
+        key = py_str(arg_names[i])
+        if key == key_var_num_args:
+            continue
+        ret = '%s : %s' % (key, py_str(arg_types[i]))
         if len(arg_descs[i]) != 0:
             ret += '\n    ' + py_str(arg_descs[i])
         param_str.append(ret)
+
+    desc = py_str(desc.value)
+    if key_var_num_args:
+        desc = '\nThis function support variable length of positional input.'
 
     doc_str = ('%s\n\n' +
                'Parameters\n' +
@@ -534,7 +545,7 @@ def _make_atomic_symbol_function(handle):
                '-------\n' +
                'symbol: Symbol\n'+
                '    The result symbol.')
-    doc_str = doc_str % (py_str(desc.value), '\n'.join(param_str))
+    doc_str = doc_str % (desc, '\n'.join(param_str))
 
     def creator(*args, **kwargs):
         """Activation Operator of Neural Net.
@@ -555,6 +566,10 @@ def _make_atomic_symbol_function(handle):
         symbol_kwargs = {}
         name = kwargs.pop('name', None)
 
+        if key_var_num_args and key_var_num_args not in kwargs:
+            param_keys.append(c_str(key_var_num_args))
+            param_vals.append(c_str(str(len(args))))
+
         for k, v in kwargs.items():
             if isinstance(v, Symbol):
                 symbol_kwargs[k] = v
@@ -574,6 +589,10 @@ def _make_atomic_symbol_function(handle):
             raise TypeError(
                 '%s can only accept input'
                 'Symbols either as positional or keyword arguments, not both' % func_name)
+        if key_var_num_args and len(symbol_kwargs) != 0:
+            raise ValueError('This function support variable length of Symbol arguments.\n' +
+                             'Please pass all the input Symbols via positional arguments' +
+                             ' instead of keyword arguments.')
 
         s = Symbol(sym_handle)
         s._compose(*args, name=name, **symbol_kwargs)
