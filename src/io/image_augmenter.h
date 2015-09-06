@@ -263,24 +263,6 @@ class ImageAugmenter {
     return tmpres;
   }
 
-  virtual void OpencvProcess(unsigned char *dptr, size_t sz,
-                       mshadow::TensorContainer<cpu, 3> *p_data,
-                       common::RANDOM_ENGINE *prnd) {
-    cv::Mat buf(1, sz, CV_8U, dptr);
-    cv::Mat res = cv::imdecode(buf, 1);
-    res = this->OpencvProcess(res, prnd);
-    p_data->Resize(mshadow::Shape3(3, res.rows, res.cols));
-    for (index_t i = 0; i < p_data->size(1); ++i) {
-      for (index_t j = 0; j < p_data->size(2); ++j) {
-        cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
-        (*p_data)[0][i][j] = bgr[2];
-        (*p_data)[1][i][j] = bgr[1];
-        (*p_data)[2][i][j] = bgr[0];
-      }
-    }
-    res.release();
-  }
-
   void TensorProcess(mshadow::TensorContainer<cpu, 3> *p_data,
                        common::RANDOM_ENGINE *prnd) {
     img_.Resize(mshadow::Shape3((*p_data).shape_[0], param_.input_shape[1], param_.input_shape[2]));
@@ -337,7 +319,7 @@ class ImageAugmenter {
         }
       }
     }
-    out_.data = img_;
+    (*p_data) = img_;
   } 
 
   inline void CreateMeanImg(void) {
@@ -371,7 +353,25 @@ class ImageAugmenter {
     meanfile_ready_ = true;
   }
 
-
+  virtual void Process(unsigned char *dptr, size_t sz,
+                       mshadow::TensorContainer<cpu, 3> *p_data,
+                       common::RANDOM_ENGINE *prnd) {
+    cv::Mat buf(1, sz, CV_8U, dptr);
+    cv::Mat res = cv::imdecode(buf, 1);
+    res = this->OpencvProcess(res, prnd);
+    p_data->Resize(mshadow::Shape3(3, res.rows, res.cols));
+    for (index_t i = 0; i < p_data->size(1); ++i) {
+      for (index_t j = 0; j < p_data->size(2); ++j) {
+        cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
+        (*p_data)[0][i][j] = bgr[2];
+        (*p_data)[1][i][j] = bgr[1];
+        (*p_data)[2][i][j] = bgr[0];
+      }
+    }
+    res.release();
+    this->TensorProcess(p_data, prnd);
+  }
+ 
  private:
   // whether skip opencv processing
   inline bool NeedOpencvProcess(void) const {
