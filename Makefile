@@ -137,7 +137,7 @@ $(CUBIN) :
 	$(NVCC) -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" -Xlinker "$(LDFLAGS)" $(filter %.cu %.cpp %.o, $^)
 
 lint:
-	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts test python
+	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python
 
 doxygen:
 	doxygen doc/Doxyfile

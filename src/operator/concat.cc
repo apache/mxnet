@@ -21,8 +21,9 @@ Operator* ConcatProp::CreateOperator(Context ctx) const {
 DMLC_REGISTER_PARAMETER(ConcatParam);
 
 MXNET_REGISTER_OP_PROPERTY(Concat, ConcatProp)
-.describe("Perform an feature concat over all the inputs.")
-.add_arguments(ConcatParam::__FIELDS__());
+.describe("Perform an feature concat on channel dim (dim 1) over all the inputs.")
+.add_arguments(ConcatParam::__FIELDS__())
+.set_key_var_num_args("num_args");
 
 }  // namespace op
 }  // namespace mxnet

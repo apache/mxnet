@@ -25,7 +25,7 @@ enum ConcatOpOutputs {kOut};
 struct ConcatParam : public dmlc::Parameter<ConcatParam> {
   int num_args;
   DMLC_DECLARE_PARAMETER(ConcatParam) {
-    DMLC_DECLARE_FIELD(num_args).set_range(1,  5)
+    DMLC_DECLARE_FIELD(num_args).set_range(1,  6)
       .describe("Number of inputs to be concated.");
   }
 };  // struct ConcatParam
@@ -47,7 +47,7 @@ class ConcatOp : public Operator {
     CHECK_EQ(out_data.size(), 1);
     CHECK_EQ(req[kOut], kWriteTo);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    std::vector<Tensor<xpu, 4> > data;
+    std::vector<Tensor<xpu, 4> > data(size_);
     Tensor<xpu, 4> out;
     if (in_data[kData0].ndim() == 2) {
       uint32_t dim = 0;
@@ -66,7 +66,7 @@ class ConcatOp : public Operator {
       }
       out = out_data[kOut].get<xpu, 4, real_t>(s);
     }
-    switch(size_) {
+    switch (size_) {
       case 2:
         Assign(out, req[kOut],
                concat<1>(data[kData0], data[kData1]));
@@ -106,18 +106,18 @@ class ConcatOp : public Operator {
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(in_grad.size(), static_cast<size_t>(size_));
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    std::vector<Tensor<xpu, 4> > grad_in;
+    std::vector<Tensor<xpu, 4> > grad_in(size_);
     Tensor<xpu, 4> grad;
     if (out_grad[kOut].ndim() == 2) {
       uint32_t dim = 0;
       for (int i = 0; i < size_; ++i) {
-        uint32_t ds[] = {in_grad[i].shape_[0], in_grad[kData0].shape_[1], 1, 1};
+        uint32_t ds[] = {in_grad[i].shape_[0], in_grad[i].shape_[1], 1, 1};
         TShape dshape(ds, ds + 4);
         grad_in[i] = in_grad[i].get_with_shape<xpu, 4, real_t>(dshape, s);
-        dim += in_grad[kData0].shape_[1];
+        dim += in_grad[i].shape_[1];
         CHECK_EQ(req[i], kWriteTo);
       }
-      uint32_t ds_out[] = {in_data[kData0].shape_[0], dim, 1, 1};
+      uint32_t ds_out[] = {in_grad[kData0].shape_[0], dim, 1, 1};
       TShape dshape_out(ds_out, ds_out + 4);
       grad = out_grad[kOut].get_with_shape<xpu, 4, real_t>(dshape_out, s);
     } else {
@@ -127,25 +127,29 @@ class ConcatOp : public Operator {
       }
       grad = out_grad[kOut].get<xpu, 4, real_t>(s);
     }
-    switch(size_) {
-      case 2:
+    switch (size_) {
+      case 2: {
         concat<1>(grad_in[kData0], grad_in[kData1]) = grad;
         break;
-      case 3:
+      }
+      case 3: {
         concat<1>(grad_in[kData0],
                   concat<1>(grad_in[kData1], grad_in[kData2])) = grad;
         break;
-      case 4:
+      }
+      case 4: {
         concat<1>(grad_in[kData0],
                   concat<1>(grad_in[kData1],
                             concat<1>(grad_in[kData2], grad_in[kData3]))) = grad;
         break;
-      case 5:
+      }
+      case 5: {
         concat<1>(grad_in[kData0],
                   concat<1>(grad_in[kData1],
                             concat<1>(grad_in[kData2],
                                       concat<1>(grad_in[kData3], grad_in[kData4])))) = grad;
         break;
+      }
       default:
         LOG(FATAL) << "Incorrect concat size_: " << size_;
     }
@@ -172,7 +176,7 @@ class ConcatProp : public OperatorProperty {
     }
     return ret;
   }
-  
+
   bool InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape,
                           std::vector<TShape> *aux_shape) const override {
@@ -180,8 +184,8 @@ class ConcatProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
     TShape dshape = in_shape->at(kData0);
     if (dshape.ndim() == 0) return false;
-    CHECK(dshape.ndim() > 1);
-    for (int i = 1; i < param_.size; ++i) {
+    CHECK_GT(dshape.ndim(), 1);
+    for (int i = 1; i < param_.num_args; ++i) {
       const TShape &tmp = in_shape->at(i);
       if (tmp.ndim() == 0) return false;
       for (uint32_t j = 0; j < dshape.ndim(); ++j) {
@@ -212,18 +216,6 @@ class ConcatProp : public OperatorProperty {
       const std::vector<int> &in_data,
       const std::vector<int> &out_data) const override {
     return out_grad;
-  }
-
-  std::vector<std::pair<int, void*> > BackwardInplaceOption(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data,
-      const std::vector<void*> &in_grad) const override {
-    std::vector<std::pair<int, void*> > ret;
-    for (int i = 0; i < param_.num_args; ++i) {
-      ret.emplace_back(in_data[i], in_grad[i]);
-    }
-    return ret;
   }
 
   Operator* CreateOperator(Context ctx) const;
