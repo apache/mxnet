@@ -729,8 +729,13 @@ int MXExecutorBind(SymbolHandle symbol_handle,
   std::vector<NArray> aux_states_vec;
   for (mx_uint i = 0; i < len; ++i) {
     in_args_vec.push_back(*(in_args_ptr[i]));
-    arg_grad_vec.push_back(*(arg_grad_ptr[i]));
-    grad_req_vec.push_back(static_cast<OpReqType>(grad_req_type[i]));
+    if (arg_grad_ptr[i] == nullptr) {
+      arg_grad_vec.push_back(NArray());
+      grad_req_vec.push_back(kNullOp);
+    } else {
+      arg_grad_vec.push_back(*(arg_grad_ptr[i]));
+      grad_req_vec.push_back(static_cast<OpReqType>(grad_req_type[i]));
+    }
   }
   for (mx_uint i = 0; i < aux_states_len; ++i) {
     aux_states_vec.push_back(*(aux_states_ptr[i]));

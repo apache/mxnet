@@ -10,7 +10,9 @@ from .base import c_array, c_str, mx_uint, py_str, string_types
 from .base import NArrayHandle, ExecutorHandle, SymbolHandle
 from .base import check_call
 from .context import Context
+from .narray import NArray
 from .executor import Executor
+
 
 class Symbol(object):
     """Symbol is symbolic graph of the mxnet."""
@@ -115,7 +117,7 @@ class Symbol(object):
         for arg in args:
             if not isinstance(arg, Symbol):
                 raise TypeError('Compose expect `Symbol` as arguments')
-        for _, val in kwargs.items():
+        for val in kwargs.values():
             if not isinstance(val, Symbol):
                 raise TypeError('Compose expect `Symbol` as arguments')
 
@@ -148,7 +150,7 @@ class Symbol(object):
 
         Returns
         -------
-        args: list of string
+        returns : list of string
             List of all the returns.
         """
         size = ctypes.c_uint()
@@ -162,8 +164,15 @@ class Symbol(object):
 
         Returns
         -------
-        args: list of string
-            List of all the auxiliary
+        aux_states : list of string
+            List the names of the auxiliary states.
+
+        Notes
+        -----
+        Auxiliary states are special states of symbols that do not corresponds to an argument,
+        and do not have gradient. But still be useful for the specific operations.
+        A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
+        Most operators do not have Auxiliary states.
         """
         size = ctypes.c_uint()
         sarr = ctypes.POINTER(ctypes.c_char_p)()
@@ -175,7 +184,7 @@ class Symbol(object):
         """Infer the shape of outputs and arguments of given known shapes of arguments.
 
         User can either pass in the known shapes in positional way or keyword argument way.
-        Pair of Nones is returned if there is not enough information passed in.
+        Tuple of Nones is returned if there is not enough information passed in.
         An error will be raised if there is inconsistency found in the known shapes passed in.
 
         Parameters
@@ -255,7 +264,7 @@ class Symbol(object):
                 tuple(aux_shape_data[i][:aux_shape_ndim[i]]) for i in range(aux_shape_size.value)]
             return (arg_shapes, out_shapes, aux_shapes)
         else:
-            return (None, None)
+            return (None, None, None)
         # pylint: enable=too-many-locals
 
     def debug_str(self):
@@ -271,33 +280,145 @@ class Symbol(object):
             self.handle, ctypes.byref(debug_str)))
         return py_str(debug_str.value)
 
-    def bind(self, ctx, args, args_grad, reqs, aux_states=None):
+    @staticmethod
+    def _get_narray_handle(arg_key, args, arg_names, allow_missing):
+        """Helper function to get narray handles from various inputs.
+
+        Parameters
+        ----------
+        arg_key : str
+            The name of argument, used for error message.
+
+        args : list of NArray or dict of str->NArray
+            Input arguments to the symbols.
+            If type is list of NArray, the position is in the same order of arg_names.
+            If type is dict of str->NArray, then it maps the name of arguments
+            to the corresponding NArray,
+
+        args_names : list of string
+            List of argument names.
+
+        allow_missing : boolean
+            Whether missing argument is allowed.
+            When allowed, the missing handle will be set to None(null)
+
+        Returns
+        -------
+        handles : list of NArrayHandle
+            The positional list of NArrayHandles generated from input.
+        """
+        # setup args
+        arg_handles = []
+        if isinstance(args, list):
+            if len(args) != len(arg_names):
+                raise ValueError('Length of %s do not match number of arguments' % arg_key)
+            for narr in args:
+                if not isinstance(narr, NArray):
+                    raise TypeError('Only Accept list of NArrays or dict of str->NArray')
+                arg_handles.append(narr.handle)
+        elif isinstance(args, dict):
+            for name in arg_names:
+                if name in arg_names:
+                    narr = args[name]
+                    if not isinstance(narr, NArray):
+                        raise TypeError('Only Accept list of NArrays or dict of str->NArray')
+                    arg_handles.append(narr.handle)
+                else:
+                    if allow_missing:
+                        arg_handles.append(None)
+                    else:
+                        raise ValueError('Must specify all the arguments in %s' % arg_key)
+        else:
+            raise TypeError('Only Accept list of NArrays or dict of str->NArray')
+        return c_array(NArrayHandle, arg_handles)
+
+    def bind(self, ctx, args, args_grad=None, grad_req='write', aux_states=None):
         """Bind current symbol to get an executor.
 
         Parameters
         ----------
         ctx : Context
-            context executor to run on
-        args : Array of NArray
-            input args to the symbol
-        args_grad : Array of NArray
-            input args' gradient
-        reqs : Array of enum
-            graident requirements
-        aux_states : Array of NArray
-            input auxiliary states to the symbol
+            The device context the generated executor to run on.
+
+        args : list of NArray or dict of str->NArray
+            Input arguments to the symbol.
+            - If type is list of NArray, the position is in the same order of list_arguments.
+            - If type is dict of str->NArray, then it maps the name of arguments
+              to the corresponding NArray,
+            - In either case, all the arguments must be provided.
+
+        args_grad : list of NArray or dict of str->NArray, optional
+            When specified, args_grad provide NArrays to hold
+            the result of gradient value in backward.
+            - If type is list of NArray, the position is in the same order of list_arguments.
+            - If type is dict of str->NArray, then it maps the name of arguments
+              to the corresponding NArray.
+            - When the type is dict of str->NArray, users only need to provide the dict
+              for needed argument gradient.
+              Only the specified argument gradient will be calculated.
+
+        grad_req : {'write', 'add', 'null'}, or list of str or dict of str->str, optional
+            Specifies how we should update the gradient to the args_grad.
+            - 'write' means everytime gradient is write to specified args_grad NArray.
+            - 'add' means everytime gradient is add to the specified NArray.
+            - 'null' means no action is taken, the gradient may not be calculated.
+
+        aux_states : list of NArray, or dict of str->NArray, optional
+            Input auxiliary states to the symbol, only need to specify when
+            list_auxiliary_states is not empty.
+            - If type is list of NArray, the position is in the same order of list_auxiliary_states
+            - If type is dict of str->NArray, then it maps the name of auxiliary_states
+              to the corresponding NArray,
+            - In either case, all the auxiliary_states need to be provided.
+
+        Returns
+        -------
+        executor : mxnet.Executor
+            The generated Executor
+
+        Notes
+        -----
+        Auxiliary states are special states of symbols that do not corresponds to an argument,
+        and do not have gradient. But still be useful for the specific operations.
+        A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
+        Most operators do not have auxiliary states and this parameter can be safely ignored.
+
+        User can give up gradient by using a dict in args_grad and only specify
+        gradient they interested in.
         """
-        # TODO(bing): consider a more friendly interface
-        # For example, pass in args_grad by dict
-        enum = {"null" : 0, "write_to" : 1, "in_place":2, "add_to" : 3}
         if not isinstance(ctx, Context):
             raise TypeError("Context type error")
-        if aux_states == None:
+
+        args_handle = self._get_narray_handle('args', args, self.list_arguments(), False)
+        # setup args gradient
+        if args_grad is None:
+            args_grad_handle = c_array(NArrayHandle, [None] * len(args))
+        else:
+            args_grad_handle = self._get_narray_handle('args_grad', args_grad,
+                                                       self.list_arguments(), True)
+
+        if aux_states is None:
             aux_states = []
-        args_handle = c_array(NArrayHandle, [item.handle for item in args])
-        args_grad_handle = c_array(NArrayHandle, [item.handle for item in args_grad])
-        reqs_array = c_array(mx_uint, [mx_uint(enum[item]) for item in reqs])
-        aux_args_handle = c_array(NArrayHandle, [item.handle for item in aux_states])
+        aux_args_handle = self._get_narray_handle('aux_states', aux_states,
+                                                  self.list_auxiliary_states(), False)
+
+        # setup requirements
+        req_map = {'null' : 0, 'write' : 1, 'add' : 3}
+        if isinstance(grad_req, string_types):
+            if grad_req not in req_map:
+                raise ValueError('grad_req must be in %s' % str(req_map))
+            reqs_array = c_array(mx_uint, [mx_uint(req_map[grad_req])] * len(self.list_arguments()))
+        elif isinstance(grad_req, list):
+            reqs_array = c_array(mx_uint, [mx_uint(req_map[item]) for item in grad_req])
+        elif isinstance(grad_req, dict):
+            req_array = []
+            for name in self.list_arguments():
+                if name in grad_req:
+                    req_array.append(mx_uint(req_map[grad_req[name]]))
+                else:
+                    req_array.append(mx_uint(0))
+            req_array = c_array(mx_uint, req_array)
+
         handle = ExecutorHandle()
         check_call(_LIB.MXExecutorBind(self.handle,
                                        mx_uint(ctx.device_mask),
@@ -314,10 +435,17 @@ class Symbol(object):
     def grad(self, wrt):
         """Get the autodiff of current symbol.
 
+        This function can only be used if current symbol is a loss function.
+
         Parameters
         ----------
         wrt : Array of String
             keyword arguments of the symbol that the gradients are taken.
+
+        Returns
+        -------
+        grad : Symbol
+            A gradient Symbol with returns to be the corresponding gradients.
         """
         handle = SymbolHandle()
         c_wrt = c_array(ctypes.c_char_p, [c_str(key) for key in wrt])
