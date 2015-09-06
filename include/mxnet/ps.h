@@ -40,7 +40,8 @@ namespace ps {
  * \code
  *   // on worker node:
  *   NArray weight, grad;
- *   if (NodeInfo::Root()) {
+ *   Worker comm;
+ *   if (comm.Rank() == 0) {
  *     // init weight ...
  *     comm.Push(0, weight);
  *   }
@@ -109,7 +110,7 @@ class Worker {
  * A server node maintains data (weight or aggregated gradient), and allows
  * user-defined handle to modify the data
  */
-class Server {
+class Server : public Node {
  public:
   /**
    * \brief user-defined handle
@@ -149,6 +150,37 @@ class Server {
   void Save(dmlc::Stream *fo);
 };
 #endif  // DMLC_USE_CXX11
+
+/**
+ * \brief A PS node
+ */
+class Node {
+ public:
+  Node() {}
+  virtual ~Node() {}
+
+  /**
+   * \brief Gets rank of this node in its group
+   *
+   * The rank is an integer in [0, \ref WorldlSize).
+   */
+  int Rank();
+
+  /*! \brief Get the size of the node group. */
+  int GroupSize() { return IsWorker() ? NumWorkers() : NumServer(); }
+
+  /*! \brief Returns the number of worker nodes */
+  static int NumWorkers();
+
+  /*! \brief Returns the number of server nodes */
+  static int NumServers();
+
+  /*! \brief Returns true if this process runs workers */
+  static bool IsWorker();
+
+  /*!\brief Returns true if this process only run servers */
+  static bool IsServer();
+};
 
 }  // namespace ps
 }  // namespace mxnet
