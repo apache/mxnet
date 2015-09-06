@@ -18,44 +18,42 @@ namespace ps {
 /*!
  * \brief A PS worker node
  *
- * a worker node can push data (gradient) to the servers and also pull data
- * (weight) back
+ * Worker node can push data (gradient) to the servers and pull data (aggregated
+ * gradient or weight) back. A worker is bind to a particular device, namely a
+ * worker can only push and pull data with the same \a device_id
  */
 class Worker {
  public:
   /*!
-   * \brief push \a data to the server nodes
+   * \brief push data to the server nodes
    *
-   * This function returns after adding a push operator to the engine. Any
-   * following operator requiring writing \a data will be blocked until the
-   * actual push is finished.
+   * Push the key-value pair (\a key, \a value) to the server nodes.  This
+   * function returns after adding a push operator to the engine. Any following
+   * operator requiring writing \a value will be blocked until the actual push is
+   * finished.
    *
-   * \param data data for pushing
+   * One can wait the push is finished via `data.Wait()`
+   *
+   * \param key the key for pushing
+   * \param value the value for pushing
    */
-  void Push(const NArray& data);
+  void Push(int key, const NArray& value);
 
   /*!
    * \brief pull data from the server nodes
    *
-   * This function returns after adding a pull operator to the engine. Any
-   * following operator requiring reading \a data will be blocked until the
-   * actual pull is finished.
+   * Pull the \a value associated with the \a key from the servers.  This
+   * function returns after adding a pull operator to the engine. Any following
+   * operator requiring reading \a data will be blocked until the actual pull is
+   * finished.
    *
-   * \param data data for pulling, should be pre-allocated
+   * One can wait the pull is finished via `data.Wait()`
+   *
+   * \param key the key for pulling
+   * \param value data for pulling, should be pre-allocated
    */
-  void Pull(NArray& data);
-
-  /**
-   * \brief wait until a push/pull finished
-   *
-   * Wait until data has already pushed to the servers or pulled back from the
-   * servers
-   *
-   * \param data data for waiting
-   */
-  void Wait(const NArray& data);
+  void Pull(int key, NArray* value);
 };
-
 
 
 /**
