@@ -262,6 +262,11 @@ MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
  * \param arg_names Name of the arguments.
  * \param arg_type_infos Type informations about the arguments.
  * \param arg_descriptions Description information about the arguments.
+ * \param key_var_num_args The keyword argument for specifying variable number of arguments.
+ *            When this parameter has non-zero length, the function allows variable number
+ *            of positional arguments, and will need the caller to pass it in in
+ *            MXSymbolCreateAtomicSymbol,
+ *            With key = key_var_num_args, and value = number of positional arguments.
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
@@ -270,15 +275,8 @@ MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                           mx_uint *num_args,
                                           const char ***arg_names,
                                           const char ***arg_type_infos,
-                                          const char ***arg_descriptions);
-/*!
- * \brief Get the docstring of AtomicSymbol.
- * \param creator the AtomicSymbolCreator
- * \param out the returned name of the creator
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXSymbolGetAtomicSymbolDoc(AtomicSymbolCreator creator,
-                                         const char **out);
+                                          const char ***arg_descriptions,
+                                          const char **key_var_num_args);
 /*!
  * \brief Create an AtomicSymbol.
  * \param creator the AtomicSymbolCreator

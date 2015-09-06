@@ -34,7 +34,7 @@ class GPUDeviceStorage {
 };  // class GPUDeviceStorage
 
 inline void* GPUDeviceStorage::Alloc(size_t size) {
-  void* ret;
+  void* ret = nullptr;
 #if MXNET_USE_CUDA
   CUDA_CALL(cudaMalloc(&ret, size));
 #else   // MXNET_USE_CUDA
