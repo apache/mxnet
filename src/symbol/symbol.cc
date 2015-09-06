@@ -250,8 +250,9 @@ void Symbol::Compose(const std::vector<Symbol>& args,
   CHECK(!heads_[0].source->is_variable()) << "Variable cannot be composed";
   heads_[0].source->name = name;
   for (size_t i = 0; i < args.size(); ++i) {
-    CHECK_NE(args[i].NumReturns(), 1)
-        << "Argument " << i << " is a tuple, scalar is required";
+    CHECK_EQ(args[i].NumReturns(), 1)
+        << "Argument " << i << " is a tuple with " <<  args[i].NumReturns()
+        << " elements, scalar is required";
   }
   // positional arguments requires all arguments for now.
   // TODO(bing) consider partial assignments
