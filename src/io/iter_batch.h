@@ -63,7 +63,7 @@ public:
     kwargs_left = param_.InitAllowUnknown(kwargs);
     // init base iterator
     base_->Init(kwargs);
-    mshadow::Shape<4> tshape = shape_;
+    mshadow::Shape<4> tshape = param_.input_shape;
     tshape[0] = param_.batch_size;
     AllocSpaceDense(false);
   }
@@ -141,7 +141,7 @@ private:
   mshadow::Tensor<mshadow::cpu, 4> data;
   // Functions that allocate and free tensor space
   inline void AllocSpaceDense(bool pad = false) { 
-    data = mshadow::NewTensor<mshadow::cpu>(shape_, 0.0f, pad);
+    data = mshadow::NewTensor<mshadow::cpu>(param_.input_shape, 0.0f, pad);
     mshadow::Shape<2> lshape = mshadow::Shape2(param_.batch_size, param_.label_width);
     label = mshadow::NewTensor<mshadow::cpu>(lshape, 0.0f, pad);
     out_.inst_index = new unsigned[param_.batch_size];

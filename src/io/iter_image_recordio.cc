@@ -98,6 +98,8 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   int dist_num_worker, dist_worker_rank;
   /*! \brief label-width */
   int label_width;
+  /*! \brief input shape */
+  TShape input_shape;
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageRecParserParam) {
     DMLC_DECLARE_FIELD(path_imglist).set_default("")
@@ -114,6 +116,10 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
         .describe("Dist worker number.");
     DMLC_DECLARE_FIELD(dist_worker_rank).set_default(0)
         .describe("Dist worker rank.");
+    float input_shape_default = {3, 224, 224};
+    DMLC_DECLARE_FIELD(input_shape).set_default(TShape(input_shape_default, input_shape_default + 3))
+        .set_expect_ndim(3).enforce_nonzero()
+        .describe("Input shape of the neural net");  
   }
 };
 
@@ -229,33 +235,19 @@ ParseNext(std::vector<InstVector> *out_vec) {
     InstVector &out = (*out_vec)[tid];
     out.Clear();
     while (reader.NextRecord(&blob)) {
-      // result holder
-      cv::Mat res;
-      rec.Load(blob.dptr, blob.size);
-      cv::Mat buf(1, rec.content_size, CV_8U, rec.content);
-      res = cv::imdecode(buf, 1);
-      res = augmenters_[tid]->Process(res, prnds_[tid]);
       out.Push(static_cast<unsigned>(rec.image_index()),
-               mshadow::Shape3(3, res.rows, res.cols),
+               mshadow::Shape3(param_.input_shape[0], param_.input_shape[0], param_.input_shape[0]),
                mshadow::Shape1(param_.label_width));
       DataInst inst = out.Back();
       // turn datainst into tensor
       mshadow::Tensor<mshadow::cpu, 3> data = inst.data[0].get<mshadow::cpu, 3, float>(); 
       mshadow::Tensor<mshadow::cpu, 1> label = inst.data[1].get<mshadow::cpu, 1, float>(); 
-      for (int i = 0; i < res.rows; ++i) {
-        for (int j = 0; j < res.cols; ++j) {
-          cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
-          data[0][i][j] = bgr[2];
-          data[1][i][j] = bgr[1];
-          data[2][i][j] = bgr[0];
-        }
-      }
+      augmenters_[tid]->Process(rec.content, rec.content_size, &data, prnd);
       if (label_map_ != NULL) {
         mshadow::Copy(label, label_map_->Find(rec.image_index()));
       } else {
         label[0] = rec.header.label;
       }
-      res.release();
     }
   }
   return true;
