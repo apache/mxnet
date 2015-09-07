@@ -16,12 +16,11 @@ def check_bind_with_uniform(uf, gf, dim):
     rhs = mx.symbol.Variable('rhs')
     ret = uf(lhs, rhs)
     assert ret.list_arguments() == ['lhs', 'rhs']
-    lhs_arr = mx.narray.create(shape)
-    rhs_arr = mx.narray.create(shape)
-    lhs_grad = mx.narray.create(shape)
-    rhs_grad = mx.narray.create(shape)
-    lhs_arr.numpy[:] = np.random.uniform(-10, 10, shape)
-    rhs_arr.numpy[:] = np.random.uniform(-10, 10, shape)
+    lhs_arr = mx.narray.array(np.random.uniform(-10, 10, shape))
+    rhs_arr = mx.narray.array(np.random.uniform(-10, 10, shape))
+    lhs_grad = mx.narray.empty(shape)
+    rhs_grad = mx.narray.empty(shape)
+
 
     executor = ret.bind(mx.Context('cpu'),
                         args=[lhs_arr, rhs_arr],
@@ -41,22 +40,21 @@ def check_bind_with_uniform(uf, gf, dim):
     executor.forward()
     exec3.forward()
     exec4.forward()
-    out2 = executor.heads()[0].numpy
-    out1 = uf(lhs_arr.numpy, rhs_arr.numpy)
-    out3 = exec3.heads()[0].numpy
-    out4 = exec4.heads()[0].numpy
+    out2 = executor.heads()[0].asnumpy()
+    out1 = uf(lhs_arr.asnumpy(), rhs_arr.asnumpy())
+    out3 = exec3.heads()[0].asnumpy()
+    out4 = exec4.heads()[0].asnumpy()
     assert reldiff(out1, out2) < 1e-6
     assert reldiff(out1, out3) < 1e-6
     assert reldiff(out1, out4) < 1e-6
     # test gradient
-    out_grad = mx.narray.create(shape)
-    out_grad.numpy[:] = np.ones(shape)
-    lhs_grad2, rhs_grad2 = gf(out_grad.numpy,
-                              lhs_arr.numpy,
-                              rhs_arr.numpy)
+    out_grad = mx.narray.array(np.ones(shape))
+    lhs_grad2, rhs_grad2 = gf(out_grad.asnumpy(),
+                              lhs_arr.asnumpy(),
+                              rhs_arr.asnumpy())
     executor.backward([out_grad])
-    assert reldiff(lhs_grad.numpy, lhs_grad2) < 1e-6
-    assert reldiff(rhs_grad.numpy, rhs_grad2) < 1e-6
+    assert reldiff(lhs_grad.asnumpy(), lhs_grad2) < 1e-6
+    assert reldiff(rhs_grad.asnumpy(), rhs_grad2) < 1e-6
 
 
 def test_bind():
@@ -79,3 +77,5 @@ def test_bind():
                                     dim)
 
 
+if __name__ == "__main__":
+    test_bind()
