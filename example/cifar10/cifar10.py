@@ -188,7 +188,7 @@ block = list(zip(grad_narrays, arg_narrays))
 get_data.GetCifar10()
 train_dataiter = mx.io.ImageRecordIter(
         path_imgrec="data/cifar/train.rec",
-        mean_img="data/cifar10/cifar_mean.bin",
+        mean_img="data/cifar/cifar_mean.bin",
         rand_crop=True,
         rand_mirror=True,
         input_shape=(3,28,28),
