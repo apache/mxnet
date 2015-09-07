@@ -25,12 +25,12 @@ enum FullyConnectedOpInputs {kData, kWeight, kBias};
 enum FullyConnectedOpOutputs {kOut};
 
 struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
-  int nb_hidden;
+  int num_hidden;
   bool no_bias;
   DMLC_DECLARE_PARAMETER(FullyConnectedParam) {
     // TODO(bing) change to only set lower bound
     // add support for boolean
-    DMLC_DECLARE_FIELD(nb_hidden).set_range(1, 100000)
+    DMLC_DECLARE_FIELD(num_hidden).set_range(1, 100000)
         .describe("Number of hidden nodes of the output.");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
         .describe("Whether to disable bias parameter.");
@@ -146,12 +146,12 @@ class FullyConnectedProp : public OperatorProperty {
     index_t num_input = 0;
     mshadow::Shape<2> ishape = dshape.FlatTo2D();
     num_input = ishape[1];
-    SHAPE_ASSIGN_CHECK(*in_shape, kWeight, Shape2(param_.nb_hidden, num_input));
+    SHAPE_ASSIGN_CHECK(*in_shape, kWeight, Shape2(param_.num_hidden, num_input));
     if (!param_.no_bias) {
-      SHAPE_ASSIGN_CHECK(*in_shape, kBias, Shape1(param_.nb_hidden));
+      SHAPE_ASSIGN_CHECK(*in_shape, kBias, Shape1(param_.num_hidden));
     }
     out_shape->clear();
-    out_shape->push_back(Shape2(dshape[0], param_.nb_hidden));
+    out_shape->push_back(Shape2(dshape[0], param_.num_hidden));
     return true;
   }
 
