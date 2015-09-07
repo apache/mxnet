@@ -1,4 +1,5 @@
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file image_augmenter_opencv.hpp
  * \brief threaded version of page iterator
  * \author Naiyan Wang, Tianqi Chen, Tianjun Xiao
@@ -7,6 +8,10 @@
 #define MXNET_IO_IMAGE_AUGMENTER_H_
 
 #include <opencv2/opencv.hpp>
+#include <utility>
+#include <string>
+#include <algorithm>
+#include <vector>
 #include "../common/utils.h"
 
 namespace mxnet {
@@ -41,6 +46,7 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
   int rotate;
   /*! \brief filled color while padding */
   int fill_value;
+  // The following are params for tensor process
   /*! \brief whether to mirror the image */
   bool mirror;
   /*! \brief whether to perform rand mirror the image */
@@ -55,14 +61,17 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
   float mean_b;
   /*! \brief shape of the image data*/
   TShape input_shape;
+  /*! \brief scale on color space */
+  float scale;
   /*! \brief maximum ratio of contrast variation */
-  float max_random_contrast_;
+  float max_random_contrast;
   /*! \brief maximum value of illumination variation */
-  float max_random_illumination_;
+  float max_random_illumination;
+  /*! \brief whether to print augment info */
+  bool silent;
   // declare parameters
-  // TODO: didn't understand the range for some params
   DMLC_DECLARE_PARAMETER(ImageAugmentParam) {
-    DMLC_DECLARE_FIELD(rand_crop_).set_default(true)
+    DMLC_DECLARE_FIELD(rand_crop).set_default(true)
         .describe("Whether we de random cropping");
     DMLC_DECLARE_FIELD(crop_y_start).set_default(-1)
         .describe("Where to nonrandom crop on y");
@@ -81,7 +90,7 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
     DMLC_DECLARE_FIELD(max_random_scale).set_default(1.0f)
         .describe("Maxmum scale ratio");
     DMLC_DECLARE_FIELD(min_random_scale).set_default(1.0f)
-        .describe("Minimum scale ratio");       
+        .describe("Minimum scale ratio");
     DMLC_DECLARE_FIELD(max_img_size).set_default(1e10f)
         .describe("Maxmum image size");
     DMLC_DECLARE_FIELD(min_img_size).set_default(0.0f)
@@ -99,13 +108,16 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
     DMLC_DECLARE_FIELD(mean_r).set_default(0.0f)
         .describe("Mean value on R channel");
     DMLC_DECLARE_FIELD(mean_g).set_default(0.0f)
-        .describe("Mean value on G channel");   
+        .describe("Mean value on G channel");
     DMLC_DECLARE_FIELD(mean_b).set_default(0.0f)
         .describe("Mean value on B channel");
-    float input_shape_default = {3, 224, 224};
-    DMLC_DECLARE_FIELD(input_shape).set_default(TShape(input_shape_default, input_shape_default + 3))
+    index_t input_shape_default[] = {3, 224, 224};
+    DMLC_DECLARE_FIELD(input_shape)
+        .set_default(TShape(input_shape_default, input_shape_default + 3))
         .set_expect_ndim(3).enforce_nonzero()
         .describe("Input shape of the neural net");
+    DMLC_DECLARE_FIELD(scale).set_default(1.0f)
+        .describe("Scale in color space");
     DMLC_DECLARE_FIELD(max_random_contrast).set_default(0.0f)
         .describe("Maximum ratio of contrast variation");
     DMLC_DECLARE_FIELD(max_random_illumination).set_default(0.0f)
@@ -123,7 +135,6 @@ class ImageAugmenter {
   }
   virtual ~ImageAugmenter() {
   }
-  // TODO: Hack the shape and rotate list, didn't use param
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     kwargs_left = param_.InitAllowUnknown(kwargs);
@@ -142,7 +153,7 @@ class ImageAugmenter {
     if (param_.mean_img.length() != 0) {
       dmlc::Stream *fi = dmlc::Stream::Create(param_.mean_img.c_str(), "r", true);
       if (fi == NULL) {
-        this->CreateMeanImg();
+        meanfile_ready_ = false;
       } else {
         if (param_.silent == 0) {
           printf("loading mean image from %s\n", param_.mean_img.c_str());
@@ -174,15 +185,18 @@ class ImageAugmenter {
     float a = cos(angle / 180.0 * M_PI);
     float b = sin(angle / 180.0 * M_PI);
     // scale
-    float scale = NextDouble(prnd) * (param_.max_random_scale - param_.min_random_scale) + param_.min_random_scale;
+    float scale = NextDouble(prnd) * \
+        (param_.max_random_scale - param_.min_random_scale) + param_.min_random_scale;
     // aspect ratio
-    float ratio = NextDouble(prnd) * param_.max_aspect_ratio * 2 - param_.max_aspect_ratio + 1;
+    float ratio = NextDouble(prnd) * \
+        param_.max_aspect_ratio * 2 - param_.max_aspect_ratio + 1;
     float hs = 2 * scale / (1 + ratio);
     float ws = ratio * hs;
     // new width and height
-    float new_width = std::max(param_.min_img_size, std::min(param_.max_img_size, scale * src.cols));
-    float new_height = std::max(param_.min_img_size, std::min(param_.max_img_size, scale * src.rows));
-    //printf("%f %f %f %f %f %f %f %f %f\n", s, a, b, scale, ratio, hs, ws, new_width, new_height);
+    float new_width = std::max(param_.min_img_size, \
+            std::min(param_.max_img_size, scale * src.cols));
+    float new_height = std::max(param_.min_img_size, \
+            std::min(param_.max_img_size, scale * src.rows));
     cv::Mat M(2, 3, CV_32F);
     M.at<float>(0, 0) = hs * a - s * b * ws;
     M.at<float>(1, 0) = -b * ws;
@@ -192,42 +206,42 @@ class ImageAugmenter {
     float ori_center_height = M.at<float>(1, 0) * src.cols + M.at<float>(1, 1) * src.rows;
     M.at<float>(0, 2) = (new_width - ori_center_width) / 2;
     M.at<float>(1, 2) = (new_height - ori_center_height) / 2;
-    cv::warpAffine(src, temp, M, cv::Size(new_width, new_height),
+    cv::warpAffine(src, temp_, M, cv::Size(new_width, new_height),
                      cv::INTER_LINEAR,
                      cv::BORDER_CONSTANT,
                      cv::Scalar(param_.fill_value, param_.fill_value, param_.fill_value));
-    cv::Mat res = temp;
+    cv::Mat res = temp_;
     // crop
-    if (param_.max_crop_size != -1 || param_.min_crop_size != -1){
-      CHECK(res.cols >= param_.max_crop_size && res.rows >= param_.max_crop_size && param_.max_crop_size >= param_.min_crop_size)
+    if (param_.max_crop_size != -1 || param_.min_crop_size != -1) {
+      CHECK(res.cols >= param_.max_crop_size && res.rows >= \
+              param_.max_crop_size && param_.max_crop_size >= param_.min_crop_size)
           << "input image size smaller than max_crop_size";
-      mshadow::index_t rand_crop_size = NextUInt32(param_.max_crop_size- param_.min_crop_size+1, prnd)+ param_.min_crop_size;
+      mshadow::index_t rand_crop_size = NextUInt32(param_.max_crop_size \
+              - param_.min_crop_size+1, prnd)+ param_.min_crop_size;
       mshadow::index_t y = res.rows - rand_crop_size;
       mshadow::index_t x = res.cols - rand_crop_size;
       if (param_.rand_crop != 0) {
         y = NextUInt32(y + 1, prnd);
         x = NextUInt32(x + 1, prnd);
-      }
-      else {
+      } else {
         y /= 2; x /= 2;
       }
       cv::Rect roi(x, y, rand_crop_size, rand_crop_size);
       cv::resize(res(roi), res, cv::Size(param_.input_shape[1], param_.input_shape[2]));
-    }
-    else{
-      CHECK(static_cast<mshadow::index_t>(res.cols) >= param_.input_shape[1] && static_cast<mshadow::index_t>(res.rows) >= param_.input_shape[2]) 
-          << "input image size smaller than input shape";
-      mshadow::index_t y = res.rows - param_.input_shape[2];
-      mshadow::index_t x = res.cols - param_.input_shape[1];
-      if (param_.rand_crop_ != 0) {
-        y = NextUInt32(y + 1, prnd);
-        x = NextUInt32(x + 1, prnd);
-      }
-      else {
-        y /= 2; x /= 2;
-      }
-      cv::Rect roi(x, y, param_.input_shape[1], param_.input_shape[2]);
-      res = res(roi);
+    } else {
+        CHECK(static_cast<mshadow::index_t>(res.cols) >= param_.input_shape[1] \
+                && static_cast<mshadow::index_t>(res.rows) >= param_.input_shape[2])
+            << "input image size smaller than input shape";
+        mshadow::index_t y = res.rows - param_.input_shape[2];
+        mshadow::index_t x = res.cols - param_.input_shape[1];
+        if (param_.rand_crop != 0) {
+            y = NextUInt32(y + 1, prnd);
+            x = NextUInt32(x + 1, prnd);
+        } else {
+            y /= 2; x /= 2;
+        }
+        cv::Rect roi(x, y, param_.input_shape[1], param_.input_shape[2]);
+        res = res(roi);
     }
     return res;
   }
@@ -251,20 +265,32 @@ class ImageAugmenter {
       }
     }
     res = this->OpencvProcess(res, prnd);
-    tmpres.Resize(mshadow::Shape3(3, res.rows, res.cols));
-    for (index_t i = 0; i < tmpres.size(1); ++i) {
-      for (index_t j = 0; j < tmpres.size(2); ++j) {
+    tmpres_.Resize(mshadow::Shape3(3, res.rows, res.cols));
+    for (index_t i = 0; i < tmpres_.size(1); ++i) {
+      for (index_t j = 0; j < tmpres_.size(2); ++j) {
         cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
-        tmpres[0][i][j] = bgr[2];
-        tmpres[1][i][j] = bgr[1];
-        tmpres[2][i][j] = bgr[0];
+        tmpres_[0][i][j] = bgr[2];
+        tmpres_[1][i][j] = bgr[1];
+        tmpres_[2][i][j] = bgr[0];
       }
     }
-    return tmpres;
+    return tmpres_;
   }
 
   void TensorProcess(mshadow::TensorContainer<cpu, 3> *p_data,
                        common::RANDOM_ENGINE *prnd) {
+    // Check Newly Created mean image
+    if (meanfile_ready_ == false && param_.mean_img.length() != 0) {
+      dmlc::Stream *fi = dmlc::Stream::Create(param_.mean_img.c_str(), "r", true);
+      if (fi != NULL) {
+        if (param_.silent == 0) {
+          printf("loading mean image from %s\n", param_.mean_img.c_str());
+        }
+        meanimg_.LoadBinary(*fi);
+        delete fi;
+        meanfile_ready_ = true;
+      }
+    }
     img_.Resize(mshadow::Shape3((*p_data).shape_[0], param_.input_shape[1], param_.input_shape[2]));
     if (param_.input_shape[1] == 1) {
       img_ = (*p_data) * param_.scale;
@@ -285,72 +311,51 @@ class ImageAugmenter {
       if (p_data->size(2) != param_.input_shape[2] && param_.crop_x_start != -1) {
         xx = param_.crop_x_start;
       }
-      float contrast = NextDouble(prnd) * param_.max_random_contrast * 2 - param_.max_random_contrast + 1;
-      float illumination = NextDouble(prnd) * param_.max_random_illumination * 2 - param_.max_random_illumination;
+      float contrast = NextDouble(prnd) * param_.max_random_contrast \
+                       * 2 - param_.max_random_contrast + 1;
+      float illumination = NextDouble(prnd) * param_.max_random_illumination \
+                           * 2 - param_.max_random_illumination;
       if (param_.mean_r > 0.0f || param_.mean_g > 0.0f || param_.mean_b > 0.0f) {
         // substract mean value
-        (*p_data)[0] -= param_.mean_b; (*p_data)[1] -= param_.mean_g; (*p_data)[2] -= param_.mean_r;
-        if ((param_.rand_mirror != 0 && NextDouble(rnd) < 0.5f) || param_.mirror == 1) {
-          img_ = mirror(crop((*p_data) * contrast + illumination, img_[0].shape_, yy, xx)) * param_.scale;
+        (*p_data)[0] -= param_.mean_b;
+        (*p_data)[1] -= param_.mean_g;
+        (*p_data)[2] -= param_.mean_r;
+        if ((param_.rand_mirror != 0 && NextDouble(prnd) < 0.5f) || param_.mirror == 1) {
+          img_ = mirror(crop((*p_data) * contrast + illumination, \
+                      img_[0].shape_, yy, xx)) * param_.scale;
         } else {
-          img_ = crop((*p_data) * contrast + illumination, img_[0].shape_, yy, xx) * param_.scale ;
+          img_ = crop((*p_data) * contrast + illumination, \
+                  img_[0].shape_, yy, xx) * param_.scale;
         }
       } else if (!meanfile_ready_ || param_.mean_img.length() == 0) {
         // do not substract anything
-        if (param_.rand_mirror != 0 && NextDouble(prnd) < 0.5f) {
+        if ((param_.rand_mirror != 0 && NextDouble(prnd) < 0.5f) || param_.mirror == 1) {
           img_ = mirror(crop((*p_data), img_[0].shape_, yy, xx)) * param_.scale;
         } else {
-          img_ = crop((*p_data), img_[0].shape_, yy, xx) * param_.scale ;
+          img_ = crop((*p_data), img_[0].shape_, yy, xx) * param_.scale;
         }
       } else {
         // substract mean image
         if ((param_.rand_mirror != 0 && NextDouble(prnd) < 0.5f) || param_.mirror == 1) {
           if (p_data->shape_ == meanimg_.shape_) {
-            img_ = mirror(crop(((*p_data) - meanimg_) * contrast + illumination, img_[0].shape_, yy, xx)) * param_.scale;
+            img_ = mirror(crop(((*p_data) - meanimg_) * contrast \
+                        + illumination, img_[0].shape_, yy, xx)) * param_.scale;
           } else {
-            img_ = (mirror(crop((*p_data), img_[0].shape_, yy, xx) - meanimg_) * contrast + illumination) * param_.scale;
+            img_ = (mirror(crop((*p_data), img_[0].shape_, yy, xx) - meanimg_) \
+                    * contrast + illumination) * param_.scale;
           }
         } else {
-          if (p_data->shape_ == meanimg_.shape_){
-            img_ = crop(((*p_data) - meanimg_) * contrast + illumination, img_[0].shape_, yy, xx) * param_.scale;
+          if (p_data->shape_ == meanimg_.shape_) {
+            img_ = crop(((*p_data) - meanimg_) * contrast + illumination, \
+                    img_[0].shape_, yy, xx) * param_.scale;
           } else {
-            img_ = ((crop((*p_data), img_[0].shape_, yy, xx) - meanimg_) * contrast + illumination) * param_.scale;
+            img_ = ((crop((*p_data), img_[0].shape_, yy, xx) - meanimg_) * \
+                    contrast + illumination) * param_.scale;
           }
         }
       }
     }
     (*p_data) = img_;
-  } 
-
-  inline void CreateMeanImg(void) {
-    if (silent_ == 0) {
-      printf("cannot find %s: create mean image, this will take some time...\n", name_meanimg_.c_str());
-    }
-    time_t start = time(NULL);
-    unsigned long elapsed = 0;
-    size_t imcnt = 1;
-
-    CHECK(this->Next_()) << "input iterator failed.";
-    meanimg_.Resize(mshadow::Shape3(shape_[0], shape_[1], shape_[2]));
-    mshadow::Copy(meanimg_, img_);
-    while (this->Next()) {
-      meanimg_ += img_; imcnt += 1;
-      elapsed = (long)(time(NULL) - start);
-      if (imcnt % 1000 == 0 && silent_ == 0) {
-        printf("\r                                                               \r");
-        printf("[%8lu] images processed, %ld sec elapsed", imcnt, elapsed);
-        fflush(stdout);
-      }
-    }
-    meanimg_ *= (1.0f / imcnt);
-
-    dmlc::Stream *fo = dmlc::Stream::Create(name_meanimg_.c_str(), "w");
-    meanimg_.SaveBinary(*fo);
-    delete fo;
-    if (silent_ == 0) {
-      printf("save mean image to %s..\n", name_meanimg_.c_str());
-    }
-    meanfile_ready_ = true;
   }
 
   virtual void Process(unsigned char *dptr, size_t sz,
@@ -358,7 +363,8 @@ class ImageAugmenter {
                        common::RANDOM_ENGINE *prnd) {
     cv::Mat buf(1, sz, CV_8U, dptr);
     cv::Mat res = cv::imdecode(buf, 1);
-    res = this->OpencvProcess(res, prnd);
+    if (NeedOpencvProcess())
+        res = this->OpencvProcess(res, prnd);
     p_data->Resize(mshadow::Shape3(3, res.rows, res.cols));
     for (index_t i = 0; i < p_data->size(1); ++i) {
       for (index_t j = 0; j < p_data->size(2); ++j) {
@@ -371,7 +377,7 @@ class ImageAugmenter {
     res.release();
     this->TensorProcess(p_data, prnd);
   }
- 
+
  private:
   // whether skip opencv processing
   inline bool NeedOpencvProcess(void) const {
@@ -391,7 +397,7 @@ class ImageAugmenter {
   // rotation param
   cv::Mat rotateM_;
   // whether the mean file is ready
-  bool menafile_ready_;
+  bool meanfile_ready_;
   // parameters
   ImageAugmentParam param_;
   /*! \brief input shape */
@@ -400,5 +406,5 @@ class ImageAugmenter {
   std::vector<int> rotate_list_;
 };
 }  // namespace io
-}  // namespace cxxnet
-#endif
+}  // namespace mxnet
+#endif  // MXNET_IO_IMAGE_AUGMENTER_H_

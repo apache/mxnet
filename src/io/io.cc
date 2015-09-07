@@ -17,5 +17,5 @@ namespace io {
 // Register parameters in header files
 DMLC_REGISTER_PARAMETER(BatchParam);
 DMLC_REGISTER_PARAMETER(ImageAugmentParam);
-}  // namespace mxnet
 }  // namespace io
+}  // namespace mxnet

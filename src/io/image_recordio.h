@@ -1,4 +1,5 @@
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file image_recordio.h
  * \brief image recordio struct
  */
@@ -7,6 +8,7 @@
 
 #include <dmlc/base.h>
 #include <dmlc/io.h>
+#include <string>
 
 namespace mxnet {
 namespace io {
@@ -67,9 +69,9 @@ struct ImageRecordIO {
    */
   inline void SaveHeader(std::string *blob) const {
     blob->resize(sizeof(header));
-    std::memcpy(dmlc::BeginPtr(*blob), &header, sizeof(header));    
-  }  
-}; 
+    std::memcpy(dmlc::BeginPtr(*blob), &header, sizeof(header));
+  }
+};
 }  // namespace io
 }  // namespace mxnet
 #endif  // MXNET_IO_IMAGE_RECORDIO_H_
