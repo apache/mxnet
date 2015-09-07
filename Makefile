@@ -86,7 +86,7 @@ all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 SRC = $(wildcard src/*.cc src/*/*.cc)
 OBJ = $(patsubst src/%.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*.cu)
-CUOBJ = $(patsubst src/%.cu, build/%_gpu.o, $(CU_SRC))
+CUOBJ = $(patsubst src/%.cu, build/%_gpu.o, $(CUSRC))
 
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
 ALL_DEP = $(OBJ) $(LIB_DEP)
@@ -104,7 +104,7 @@ build/%_gpu.o: src/%.cu
 	$(CXX) $(CFLAGS) -MM -MT build/$*_gpu.o $< >build/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $<
 
-lib/libmxnet.a:  $(ALL_DEP)
+lib/libmxnet.a: $(ALL_DEP)
 	ar crv $@ $(filter %.o, $?)
 
 lib/libmxnet.so: $(ALL_DEP)
