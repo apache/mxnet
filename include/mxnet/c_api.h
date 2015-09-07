@@ -127,12 +127,47 @@ MXNET_DLL int MXNArrayListLoad(const char* fname,
                                mx_uint *out_name_size,
                                const char*** out_names);
 /*!
- * \brief wait until all the operation with respect NArray
- *  to this NArray is finished, always call this before fetching data out
+ * \brief Perform a synchronize copy from a continugous CPU memory region.
+ *
+ *  This function will call WaitToWrite before the copy is performed.
+ *  This is useful to copy data from existing memory region that are
+ *  not wrapped by NArray(thus dependency not being tracked).
+ *
+ * \param handle the NArray handle
+ * \param data the data source to copy from.
+ * \param size the memory size we want to copy from.
+ */
+MXNET_DLL int MXNArraySyncCopyFromCPU(NArrayHandle handle,
+                                      const mx_float *data,
+                                      size_t size);
+/*!
+ * \brief Perform a synchronize copyto a continugous CPU memory region.
+ *
+ *  This function will call WaitToRead before the copy is performed.
+ *  This is useful to copy data from existing memory region that are
+ *  not wrapped by NArray(thus dependency not being tracked).
+ *
+ * \param handle the NArray handle
+ * \param data the data source to copy into.
+ * \param size the memory size we want to copy into.
+ */
+MXNET_DLL int MXNArraySyncCopyToCPU(NArrayHandle handle,
+                                    mx_float *data,
+                                    size_t size);
+/*!
+ * \brief Wait until all the pending writes with respect NArray are finished.
+ *  Always call this before read data out synchronizely.
  * \param handle the NArray handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayWait(NArrayHandle handle);
+MXNET_DLL int MXNArrayWaitToRead(NArrayHandle handle);
+/*!
+ * \brief Wait until all the pending read/write with respect NArray are finished.
+ *  Always call this before write data into NArray synchronizely.
+ * \param handle the NArray handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNArrayWaitToWrite(NArrayHandle handle);
 /*!
  * \brief wait until all delayed operations in
  *   the system is completed

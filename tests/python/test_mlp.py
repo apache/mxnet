@@ -23,16 +23,16 @@ args_list = softmax.list_arguments()
 # infer shape
 data_shape = (batch_size, 784)
 arg_shapes, out_shapes, aux_shapes = softmax.infer_shape(data=data_shape)
-arg_narrays = [mx.narray.create(shape) for shape in arg_shapes]
-grad_narrays = [mx.narray.create(shape) for shape in arg_shapes]
+arg_narrays = [mx.narray.empty(shape) for shape in arg_shapes]
+grad_narrays = [mx.narray.empty(shape) for shape in arg_shapes]
 inputs = dict(zip(args_list, arg_narrays))
 np.random.seed(0)
 # set random weight
 for name, narray in inputs.items():
     if "weight" in name:
-        narray.numpy[:, :] = np.random.uniform(-0.07, 0.07, narray.numpy.shape)
+        narray[:] = np.random.uniform(-0.07, 0.07, narray.shape)
     if "bias" in name:
-        narray.numpy[:] = 0.0
+        narray[:] = 0.0
 
 # bind executer
 # TODO(bing): think of a better bind interface
@@ -40,7 +40,7 @@ executor = softmax.bind(mx.Context('cpu'), arg_narrays, grad_narrays)
 # update
 
 out_narray = executor.heads()[0]
-grad_narray = mx.narray.create(out_narray.shape)
+grad_narray = mx.narray.empty(out_narray.shape)
 
 epoch = 9
 lr = 0.1
@@ -74,14 +74,13 @@ def test_mlp():
         train_nbatch = 0
         val_nbatch = 0
         for data, label in train_dataiter:
-            data = data.numpy
-            label = label.numpy.flatten()
-            inputs["data"].numpy[:] = data
-            inputs["sm_label"].numpy[:] = label
+            label = label.asnumpy().flatten()
+            inputs["data"][:] = data
+            inputs["sm_label"][:] = label
             executor.forward()
-            train_acc += CalAcc(out_narray.numpy, label)
+            train_acc += CalAcc(out_narray.asnumpy(), label)
             train_nbatch += 1
-            grad_narray.numpy[:] = out_narray.numpy
+            grad_narray[:] = out_narray
             executor.backward([grad_narray])
 
             for grad, weight in block:
@@ -89,11 +88,10 @@ def test_mlp():
 
         # evaluate
         for data, label in val_dataiter:
-            data = data.numpy
-            label = label.numpy.flatten()
-            inputs["data"].numpy[:] = data
+            label = label.asnumpy().flatten()
+            inputs["data"][:] = data
             executor.forward()
-            val_acc += CalAcc(out_narray.numpy, label)
+            val_acc += CalAcc(out_narray.asnumpy(), label)
             val_nbatch += 1
         acc_train = train_acc / train_nbatch
         acc_val = val_acc / val_nbatch

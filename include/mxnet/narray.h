@@ -73,9 +73,25 @@ class NArray {
   inline bool is_none() const {
     return ptr_.get() == nullptr;
   }
-  /*! \brief wait until the result of the NArray is computed */
-  inline void Wait() const {
+  /*!
+   * \brief Block until all the pending write operations with respect
+   *    to current NArray are finished, and read can be performed.
+   */
+  inline void WaitToRead() const {
     if (is_none()) return;
+    Engine::Get()->WaitForVar(ptr_->var);
+  }
+  /*!
+   * \brief Block until all the pending read/write operations with respect
+   *    to current NArray are finished, and write can be performed.
+   */
+  inline void WaitToWrite() const {
+    if (is_none()) return;
+    /*!
+     * Push an empty mutable function to flush all preceding reads to the
+     * variable.
+     */
+    Engine::Get()->Push([](RunContext) {}, Context{}, {}, {ptr_->var});
     Engine::Get()->WaitForVar(ptr_->var);
   }
   /*! \return the associated variable of the narray.*/
@@ -166,6 +182,28 @@ class NArray {
    * \return the new copy
    */
   NArray Copy(Context ctx) const;
+  /*!
+   * \brief Do a synchronize copy from a continugous CPU memory region.
+   *
+   *  This function will call WaitToWrite before the copy is performed.
+   *  This is useful to copy data from existing memory region that are
+   *  not wrapped by NArray(thus dependency not being tracked).
+   *
+   * \param data the data source to copy from.
+   * \param size the memory size we want to copy from.
+   */
+  void SyncCopyFromCPU(const real_t *data, size_t size) const;
+  /*!
+   * \brief Do a synchronize copy to a continugous CPU memory region.
+   *
+   *  This function will call WaitToRead before the copy is performed.
+   *  This is useful to copy data from existing memory region that are
+   *  not wrapped by NArray(thus dependency not being tracked).
+   *
+   * \param data the data source to copyinto.
+   * \param size the memory size we want to copy into.
+   */
+  void SyncCopyToCPU(real_t *data, size_t size) const;
   /*!
    * \brief Slice a NArray
    * \param begin begin index in first dim

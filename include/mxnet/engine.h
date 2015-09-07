@@ -133,9 +133,9 @@ class Engine {
   virtual void DeleteVariable(Fn delete_fun, Context exec_ctx,
                               VarHandle var) = 0;
   /*!
-   * \brief Wait for variable.
-   * \param var The variable we should wait for, this function returns when all
-   *            the operations related to var has been completed.
+   * \brief Wait for a variable.
+   * \param var The variable we should wait for. This function returns when all
+   *            the variable is ready.
    */
   virtual void WaitForVar(VarHandle var) = 0;
   /*!

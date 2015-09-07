@@ -18,21 +18,19 @@ def check_with_uniform(uf, arg_shapes, dim=None):
     narray_arg = []
     numpy_arg = []
     for s in arg_shapes:
-        narr = mx.narray.create(s)
         npy = np.random.uniform(-10, 10, s)
-        narr.numpy[:] = npy
+        narr = mx.narray.array(npy)
         narray_arg.append(narr)
         numpy_arg.append(npy)
     out1 = uf(*narray_arg)
     out2 = uf(*numpy_arg)
     assert out1.shape == out2.shape
-    assert reldiff(out1.numpy, out2) < 1e-6
+    assert reldiff(out1.asnumpy(), out2) < 1e-6
 
 
 def random_narray(dim):
     shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
-    data = mx.narray.create(shape)
-    data.numpy[:] = np.random.uniform(-10, 10, data.shape)
+    data= mx.narray.array(np.random.uniform(-10, 10, shape))
     return data
 
 def test_narray_elementwise():
@@ -47,25 +45,24 @@ def test_narray_elementwise():
             check_with_uniform(lambda x, y: x / y, 2, dim)
 
 def test_narray_copy():
-    c = mx.narray.create((10,10))
-    c.numpy[:] = np.random.uniform(-10, 10, c.shape)
+    c = mx.narray.array(np.random.uniform(-10, 10, (10, 10)))
     d = c.copyto(mx.Context('cpu', 0))
-    assert np.sum(np.abs(c.numpy != d.numpy)) == 0.0
+    assert np.sum(np.abs(c.asnumpy() != d.asnumpy())) == 0.0
 
 
 def test_narray_scalar():
-    c = mx.narray.create((10,10))
-    d = mx.narray.create((10,10))
-    c.numpy[:] = 0.5
-    d.numpy[:] = 1.0
+    c = mx.narray.empty((10,10))
+    d = mx.narray.empty((10,10))
+    c[:] = 0.5
+    d[:] = 1.0
     d -= c * 2 / 3 * 6.0
     c += 0.5
-    assert(np.sum(c.numpy) - 100 < 1e-5)
-    assert(np.sum(d.numpy) + 100 < 1e-5)
+    assert(np.sum(c.asnumpy()) - 100 < 1e-5)
+    assert(np.sum(d.asnumpy()) + 100 < 1e-5)
     c[:] = 2
-    assert(np.sum(c.numpy) - 200 < 1e-5)
+    assert(np.sum(c.asnumpy()) - 200 < 1e-5)
     d = -c + 2
-    assert(np.sum(c.numpy) < 1e-5)
+    assert(np.sum(c.asnumpy()) < 1e-5)
 
 def test_narray_pickle():
     np.random.seed(0)
@@ -74,13 +71,13 @@ def test_narray_pickle():
     for repeat in range(nrepeat):
         for dim in range(1, maxdim):
             a = random_narray(dim)
-            b = mx.narray.create(a.shape)
-            a.numpy[:] = np.random.uniform(-10, 10, a.shape)
-            b.numpy[:] = np.random.uniform(-10, 10, a.shape)
+            b = mx.narray.empty(a.shape)
+            a[:] = np.random.uniform(-10, 10, a.shape)
+            b[:] = np.random.uniform(-10, 10, a.shape)
             a = a + b
             data = pkl.dumps(a)
             a2 = pkl.loads(data)
-            assert np.sum(a.numpy != a2.numpy) == 0
+            assert np.sum(a.asnumpy() != a2.asnumpy()) == 0
 
 
 def test_narray_saveload():
@@ -96,14 +93,14 @@ def test_narray_saveload():
         data2 = mx.narray.load(fname)
         assert len(data) == len(data2)
         for x, y in zip(data, data2):
-            assert np.sum(x.numpy != y.numpy) == 0
+            assert np.sum(x.asnumpy() != y.asnumpy()) == 0
         dmap = {'narray xx %s' % i : x for i, x in enumerate(data)}
         mx.narray.save(fname, dmap)
         dmap2 = mx.narray.load(fname)
         assert len(dmap2) == len(dmap)
         for k, x in dmap.items():
             y = dmap2[k]
-            assert np.sum(x.numpy != y.numpy) == 0
+            assert np.sum(x.asnumpy() != y.asnumpy()) == 0
     os.remove(fname)
 
 if __name__ == '__main__':
@@ -112,3 +109,4 @@ if __name__ == '__main__':
     test_narray_copy()
     test_narray_elementwise()
     test_narray_scalar()
+

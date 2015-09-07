@@ -20,24 +20,24 @@ def check_elementwise_sum_with_shape(shape, n):
     # forward
     inputs = [mx.symbol.Variable('arg%d' % i) for i in range(n)]
     out = mx.symbol.ElementWiseSum(*inputs, name='esum')
-    arr = [mx.narray.create(shape) for i in range(n)]
-    arr_grad = [mx.narray.create(shape) for i in range(n)]
+    arr = [mx.narray.empty(shape) for i in range(n)]
+    arr_grad = [mx.narray.empty(shape) for i in range(n)]
     for i in range(n):
-        arr[i].numpy[:] = np.random.uniform(-10, 10, shape)
+        arr[i][:] = np.random.uniform(-10, 10, shape)
     exec1 = out.bind(mx.Context('cpu'),
                      args=arr,
                      args_grad=arr_grad)
-    out1 = exec1.heads()[0].numpy
+    out1 = exec1.heads()[0].asnumpy()
     exec1.forward()
-    out1 = exec1.heads()[0].numpy
-    out = sum(a.numpy for a  in arr)
+    out1 = exec1.heads()[0].asnumpy()
+    out = sum(a.asnumpy() for a  in arr)
     assert reldiff(out, out1) < 1e-6
-    out_grad = mx.narray.create(shape)
-    out_grad.numpy[:] = np.random.uniform(-10, 10, shape)
+    out_grad = mx.narray.empty(shape)
+    out_grad[:] = np.random.uniform(-10, 10, shape)
     # backward
     exec1.backward([out_grad])
     for a in arr_grad:
-        assert same(a.numpy, out_grad.numpy)
+        assert same(a.asnumpy(), out_grad.asnumpy())
 
 
 def test_elementwise_sum():
@@ -58,27 +58,27 @@ def check_concat_with_shape(shapes):
 
     inputs = [mx.symbol.Variable('arg%d' % i) for i in range(n)]
     out = mx.symbol.Concat(*inputs, name='conc')
-    arr = [mx.narray.create(shape) for shape in shapes]
+    arr = [mx.narray.empty(shape) for shape in shapes]
     for i in range(n):
         arr[i][:] = shapes[i][1]
-    arr_np = [np.copy(narray.numpy) for narray in arr]
-    arr_grad = [mx.narray.create(shape) for shape in shapes]
+    arr_np = [np.copy(narray.asnumpy()) for narray in arr]
+    arr_grad = [mx.narray.empty(shape) for shape in shapes]
     args = out.list_arguments()
     arg_shapes, out_shapes, aux_shapes = out.infer_shape(**dict(zip(args, shapes)))
-    out_grad = mx.narray.create(out_shapes[0])
+    out_grad = mx.narray.empty(out_shapes[0])
     exec1 = out.bind(mx.Context('cpu'),
                      args=arr,
                      args_grad=arr_grad)
     exec1.forward()
     out1 = exec1.heads()[0]
-    ret = np.concatenate([narray.numpy for narray in arr], axis=1)
-    assert same(out1.numpy, ret)
+    ret = np.concatenate([narray.asnumpy() for narray in arr], axis=1)
+    assert same(out1.asnumpy(), ret)
     # backward
     out1.copyto(out_grad)
     out_grad[:] += 1
     exec1.backward([out_grad])
     for grad, np_grad in zip(arr_grad, arr_np):
-        assert same(grad.numpy, np_grad + 1)
+        assert same(grad.asnumpy(), np_grad + 1)
 
 def test_concat():
     n = 2
