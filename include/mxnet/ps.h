@@ -13,96 +13,69 @@
 #endif  // DMLC_USE_CXX11
 
 namespace mxnet {
-namespace ps {
 
-/*! \brief A PS node */
-class Node {
- public:
-  Node() {}
-  virtual ~Node() {}
-
-  /*! \brief Gets rank of this node in its group, which is in [0, GroupSize) */
-  int Rank();
-
-  /*! \brief Get the size of this node group. */
-  int GroupSize() { return IsWorker() ? NumWorkers() : NumServer(); }
-
-  /*! \brief Returns the number of worker nodes */
-  static int NumWorkers();
-
-  /*! \brief Returns the number of server nodes */
-  static int NumServers();
-
-  /*! \brief Returns true if this process runs workers */
-  static bool IsWorker();
-
-  /*!\brief Returns true if this process only run servers */
-  static bool IsServer();
-};
-
-/*!
- * \brief A PS worker node
+/**
+ * \brief distributed key-value store
  *
- * Worker node can push data (gradient) to the servers and pull data (aggregated
- * gradient or weight) back. A worker is bind to a particular device, namely a
- * worker can only push and pull data with the same \a device_id
+ * A distributed key-value store which synchronous data over multiple devices
+ * and multiple machines. It supports user-defined updaters
  *
  * Example to implement allreduce
  * \code
- *   // on worker node:
  *   NArray data;
  *   // init data...
- *   Worker comm;
- *   comm.Push(0, data);
- *   comm.Pull(0, &data);
+ *   KVStore store;
+ *   store.Push(0, data);
+ *   store.Pull(0, &data);
  *   data.Wait();
- *
- *   // on server node:
- *   Server store;
  * \endcode
  *
  * Example to implement asynchronous SGD
  * \code
- *   // on worker node:
- *   NArray weight, grad;
- *   Worker comm;
- *   if (comm.Rank() == 0) {
- *     // init weight ...
- *     comm.Push(0, weight);
- *   }
- *   comm.Pull(0, &weight);
- *   // compute grad
- *   comm.Push(0, grad);
- *
- *   // on server node:
+ *   Worker store;
  *   auto updater = [](const NArray& recv, NArray* weight) {
- *     if (weight->Empty()) {
- *        *weight = recv; // recv is the init weight
- *     } else {
- *        *weight += 0.1 * recv; // recv is grad
- *     }
+ *     *weight += 0.1 * recv; // recv is grad
  *   }
- *   Server store(false, updater);
- * \endcode
+ *   store.Register(false, updater);
+ *
+ *   NArray weight, grad;
+ *   if (store.GetRank() == 0) {
+ *     store.Init(0, weight);
+ *   }
+ *   store.Pull(0, &weight);
+ *   // compute grad
+ *   store.Push(0, grad);
  */
-class Worker : public Node {
+class KVStore {
  public:
-  /*!
-   * \brief push data to the server nodes
+
+  /*! \brief Gets rank of this node in its group, which is in [0, GroupSize) */
+  int GetRank();
+
+  /*! \brief Get the size of this node group. */
+  int GetGroupSize();
+
+  /**
+   * \brief Init data
    *
-   * Push the key-value pair (\a key, \a value) to the server nodes.  This
+   * Init \a key with \a value.
+   */
+  void Init(int key, const NArray& value);
+
+  /*!
+   * \brief push data to the store
+   *
+   * Push the key-value pair (\a key, \a value) to the store.  This
    * function returns after adding a push operator to the engine. Any following
    * operator requiring writing \a value will be blocked until the actual push is
    * finished.
    *
    * One can wait the push is finished via `data.Wait()`
    *
-   * For each push, each server node will apply a user-defined server handle to merge
-   * the value sent to the one maintained by itself. See \ref Server for more
-   * details.
+   * For each push, a user-defined updater is called to merge
+   * the value sent to the one maintained by itself.
    *
    * For a given \a key, the \a value should be always has the same size over
-   * all workers.
    *
    * \param key the key for pushing
    * \param value the value for pushing
@@ -112,43 +85,35 @@ class Worker : public Node {
   /*!
    * \brief pull data from the server nodes
    *
-   * Pull the \a value associated with the \a key from the servers.  This
+   * Pull the \a value associated with the \a key from the store.  This
    * function returns after adding a pull operator to the engine. Any following
    * operator requiring reading \a data will be blocked until the actual pull is
    * finished.
    *
    * One can wait the pull is finished via `data.Wait()`
    *
-   * System will guarantee that the all pushes issued by this worker have been
-   * applied, namely the server handle has been triggered.
+   * Before sending back the value, the store will wait all pushed issued by
+   * this worker on \a key have been applied (updater has been triggered)
+   * and \a value is initialized
    *
    * \param key the key for pulling
    * \param value data for pulling, should be pre-allocated
    */
   void Pull(int key, NArray* value);
-};
-
 
 #if DMLC_USE_CXX11
-/**
- * \brief A PS server node
- *
- * A server node maintains data (weight or aggregated gradient), and allows
- * user-defined handle to modify the data
- */
-class Server : public Node {
- public:
   /**
-   * \brief user-defined handle
+   * \brief user-defined updater
    */
-  using Handle = std::function<void(const NArray&, NArray*)>;
+  using Updater = std::function<void(const NArray&, NArray*)>;
 
   /**
-   * \brief constructor
+   * \brief register updater
    *
-   * Given a key, assume \a x is the received value and \a y is the value stored
-   * on the server node. The server updates \a y by `h(x, &y)`. The default \a h
-   * is ASSIGN, namely `*y = x`.
+   * The server allows user-defined handle to modify the data.  Given a key,
+   * assume \a x is the received value and \a y is the value stored on the server
+   * node. The server updates \a y by `h(x, &y)`. The default \a h is ASSIGN,
+   * namely `*y = x`.
    *
    * The handle is triggered in two ways:
    *
@@ -161,23 +126,11 @@ class Server : public Node {
    * used for synchronous optimization
    *
    * \param batch true for batch, false for online
-   * \param h user-defined handle, default is assign
+   * \param updt user-defined updater, default is assign
    */
-  explicit Server(bool batch = true, const Handle& h = Handle());
-
-  /**
-   * \brief Load from disk
-   */
-  void Load(dmlc::Stream *fi);
-
-  /**
-   * \brief Save to disk
-   */
-  void Save(dmlc::Stream *fo);
-};
+  void Register(bool batch = true, const Updater& updt = Updater());
 #endif  // DMLC_USE_CXX11
+};
 
-
-}  // namespace ps
 }  // namespace mxnet
 #endif  // MXNET_PS_H_
