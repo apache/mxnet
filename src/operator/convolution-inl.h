@@ -178,7 +178,7 @@ class ConvolutionOp : public Operator {
           gwmat[gid] += dot(temp_dst_[gid], tmpc.T());
         }
       }
-      if (req[kData] == kWriteTo) {
+      if (req[kData] == kWriteTo || req[kData] == kWriteInplace) {
         for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
           Tensor<xpu, 2> tmpc = temp_col_.Slice(gstride * gid, gstride * (gid + 1));
           tmpc = dot(wmat[gid].T(), temp_dst_[gid]);
@@ -283,6 +283,8 @@ class ConvolutionProp : public OperatorProperty {
     const index_t ksize_x = static_cast<index_t>(param_.kernel[1]);
     const index_t kstride = static_cast<index_t>(param_.stride[0]);
     // TODO(bing) : support dual stride
+    CHECK_EQ(param_.stride[0], param_.stride[1])
+      << "Only support same stride now";
     CHECK_EQ(dshape[1] % param_.num_group, 0) \
       << "input num_filter must divide group size";
     CHECK_EQ(param_.num_filter % param_.num_group, 0) \
