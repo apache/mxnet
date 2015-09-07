@@ -42,16 +42,14 @@ def test_MNISTIter():
 
 def test_ImageRecIter():
     dataiter = mx.io.ImageRecordIter(
-            #path_imglist="data/smallset/val_cxxnet5000.txt", 
             path_imgrec="data/val_cxxnet.rec",
-            #mean_img="data/smallset/image_net_mean.bin",
+            mean_img="data/smallset/image_net_mean.bin",
             rand_crop=True,
             mirror=True,
             input_shape=(3,227,227),
             batch_size=100,
             nthread=1,
             seed=10)
-    # Test label read 
     labelcount = [0 for i in range(1000)] 
     batchcount = 0
     for data, label in dataiter:
@@ -64,7 +62,6 @@ def test_ImageRecIter():
         img = Image.fromarray(imgdata)
         imgpath = "data/smallset/test_3.jpg"
         img.save(imgpath, format='JPEG')
-
         exit(0)
         print batchcount
         sys.stdout.flush()
@@ -72,9 +69,36 @@ def test_ImageRecIter():
         nplabel = label.numpy
         for i in range(nplabel.shape[0]):
             labelcount[int(nplabel[i])] += 1
-    # Test image
 
+def test_Cifar10Rec():
+    dataiter = mx.io.ImageRecordIter(
+            path_imgrec="data/cifar/test.rec",
+            mean_img="data/cifar/cifar10_mean.bin",
+            rand_crop=True,
+            rand_mirror=True,
+            input_shape=(3,28,28),
+            batch_size=100,
+            nthread=1)
+    labelcount = [0 for i in range(10)] 
+    batchcount = 0
+    for data, label in dataiter:
+        npdata = data.numpy
+        print npdata[0,:,:,:]
+        imgdata = np.zeros([28, 28, 3], dtype=np.uint8)
+        imgdata[:,:,0] = npdata[0,2,:,:]
+        imgdata[:,:,1] = npdata[0,1,:,:]
+        imgdata[:,:,2] = npdata[0,0,:,:]
+        img = Image.fromarray(imgdata)
+        imgpath = "data/cifar/test.jpg"
+        img.save(imgpath, format='JPEG')
+        exit(0)
+        print batchcount
+        sys.stdout.flush()
+        batchcount += 1
+        nplabel = label.numpy
+        for i in range(nplabel.shape[0]):
+            labelcount[int(nplabel[i])] += 1
 
 if __name__ == '__main__':
-    test_ImageRecIter()
+    test_Cifar10Rec()
 
