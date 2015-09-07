@@ -5,10 +5,11 @@ from __future__ import absolute_import
 import ctypes
 import warnings
 import sys
+import numpy as np
 from .base import _LIB, string_types, numeric_types
 from .base import c_array, py_str, c_str
 from .base import mx_uint, mx_float, NArrayHandle, FunctionHandle
-from .base import ctypes2numpy_shared, ctypes2buffer
+from .base import ctypes2buffer
 from .base import check_call
 from .context import Context
 
@@ -183,7 +184,9 @@ class NArray(object):
             if value.handle is not self.handle:
                 value.copyto(self)
         elif isinstance(value, numeric_types):
-            return NArray._set_value(float(value), out=self)
+            NArray._set_value(float(value), out=self)
+        elif isinstance(value, (np.ndarray, np.generic)):
+            self._sync_copyfrom(value)
         else:
             raise TypeError('type %s not supported' % str(type(value)))
 
@@ -193,9 +196,47 @@ class NArray(object):
             raise Exception("Set NArray should use empty index array[:] += value")
         return self
 
-    def wait(self):
-        """Wait until the data on current NArray is available."""
-        check_call(_LIB.MXNArrayWait(self.handle))
+    def _sync_copyfrom(self, source_array):
+        """Peform an synchronize copy from the array.
+
+        Parameters
+        ----------
+        source_array : array_like
+            The data source we should like to copy from.
+        """
+        if not isinstance(source_array, np.ndarray):
+            try:
+                source_array = np.array(source_array, dtype=np.float32)
+            except:
+                raise TypeError('array must be an array_like data,' +
+                                'type %s is not supported' % str(type(array)))
+        source_array = np.ascontiguousarray(source_array, dtype=np.float32)
+
+        if source_array.shape != self.shape:
+            raise ValueError('array shape do not match the shape of NArray')
+
+        check_call(_LIB.MXNArraySyncCopyFromCPU(
+            self.handle,
+            source_array.ctypes.data_as(ctypes.POINTER(mx_float)),
+            source_array.size))
+
+    def wait_to_read(self):
+        """Block until all pending writes operations on current NArray are finished.
+
+        This function will return when all the pending writes to the current
+        NArray finishes. There can still be pending read going on when the
+        function returns.
+        """
+        check_call(_LIB.MXNArrayWaitToRead(self.handle))
+
+    def wait_to_write(self):
+        """Block until all pending read/write operations on current NArray are finished.
+
+        This function will return when all the pending writes to the current
+        NArray finishes. There can still be pending read going on when the
+        function returns.
+        """
+        check_call(_LIB.MXNArrayWaitToWrite(self.handle))
 
     @property
     def shape(self):
@@ -217,7 +258,8 @@ class NArray(object):
 
         Returns
         -------
-        the context of current NArray
+        context : mxnet.Context
+            The context of current NArray.
         """
         dev_mask = ctypes.c_int()
         dev_id = ctypes.c_int()
@@ -225,20 +267,20 @@ class NArray(object):
             self.handle, ctypes.byref(dev_mask), ctypes.byref(dev_id)))
         return Context(Context.devmask2type[dev_mask.value], dev_id.value)
 
-    @property
-    def numpy(self):
-        """Return a numpy representation of current array.
-
-        This array have to sit on CPU
+    def asnumpy(self):
+        """Return a copied numpy array of current array.
 
         Returns
         -------
-        a numpy array view
+        array : numpy.ndarray
+            A copy of array content.
         """
-        self.wait()
-        pdata = ctypes.POINTER(mx_float)()
-        check_call(_LIB.MXNArrayGetData(self.handle, ctypes.byref(pdata)))
-        return ctypes2numpy_shared(pdata, self.shape)
+        data = np.empty(self.shape, dtype=np.float32)
+        check_call(_LIB.MXNArraySyncCopyToCPU(
+            self.handle,
+            data.ctypes.data,
+            data.size))
+        return data
 
     def copyto(self, other):
         """Copy the content of current array to other.
@@ -271,8 +313,8 @@ class NArray(object):
     # pylint: enable= no-member
 
 
-def create(shape, ctx=None):
-    """Create a new NArray, with specified shape.
+def empty(shape, ctx=None):
+    """Create an empty uninitialized new NArray, with specified shape.
 
     Parameters
     ----------
@@ -290,6 +332,33 @@ def create(shape, ctx=None):
     if ctx is None:
         ctx = Context.default_ctx
     return NArray(handle=_new_alloc_handle(shape, ctx, False))
+
+
+def array(source_array, ctx=None):
+    """Create a new NArray that copies content from source_array.
+
+    Parameters
+    ----------
+    source_array : array_like
+        Source data to create NArray from.
+
+    ctx : Context, optional
+        The context of the NArray, default to current default context.
+
+    Returns
+    -------
+    out: Array
+        The created NArray.
+    """
+
+    if not isinstance(source_array, np.ndarray):
+        try:
+            source_array = np.array(source_array, dtype=np.float32)
+        except:
+            raise TypeError('source_array must be array like object')
+    arr = empty(source_array.shape, ctx)
+    arr[:] = source_array
+    return arr
 
 
 def load(fname):

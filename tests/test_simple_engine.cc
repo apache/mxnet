@@ -61,7 +61,7 @@ int main() {
   printf("============= Test #3 ==============\n");
   var = engine->NewVar();
   oprs.clear();
-  engine->WaitForVar(var);
+  engine->WaitToWrite(var);
   engine->PushDelete([](mxnet::RunContext) {}, mxnet::Context{}, var);
   engine->WaitForAll();
 
@@ -77,7 +77,7 @@ int main() {
       {}, {var}));
   engine->Push(oprs.at(0), mxnet::Context{});
   LOG(INFO) << "Operator pushed, should wait for 2 seconds.";
-  engine->WaitForVar(var);
+  engine->WaitToWrite(var);
   LOG(INFO) << "OK, here I am.";
   for (auto&& i : oprs) {
     engine->DeleteOperator(i);
@@ -97,7 +97,7 @@ int main() {
       {var}, {}));
   engine->Push(oprs.at(0), mxnet::Context{});
   LOG(INFO) << "Operator pushed, should not wait.";
-  engine->WaitForVar(var);
+  engine->WaitToWrite(var);
   LOG(INFO) << "OK, here I am.";
   engine->WaitForAll();
   LOG(INFO) << "That was 2 seconds.";

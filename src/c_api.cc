@@ -235,9 +235,31 @@ int MXNArraySaveRawBytes(NArrayHandle handle,
   API_END();
 }
 
-int MXNArrayWait(NArrayHandle handle) {
+int MXNArraySyncCopyFromCPU(NArrayHandle handle,
+                            const mx_float *data,
+                            size_t size) {
   API_BEGIN();
-  static_cast<NArray*>(handle)->Wait();
+  static_cast<NArray*>(handle)->SyncCopyFromCPU(data, size);
+  API_END();
+}
+
+int MXNArraySyncCopyToCPU(NArrayHandle handle,
+                          mx_float *data,
+                          size_t size) {
+  API_BEGIN();
+  static_cast<NArray*>(handle)->SyncCopyToCPU(data, size);
+  API_END();
+}
+
+int MXNArrayWaitToRead(NArrayHandle handle) {
+  API_BEGIN();
+  static_cast<NArray*>(handle)->WaitToRead();
+  API_END();
+}
+
+int MXNArrayWaitToWrite(NArrayHandle handle) {
+  API_BEGIN();
+  static_cast<NArray*>(handle)->WaitToWrite();
   API_END();
 }
 

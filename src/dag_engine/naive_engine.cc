@@ -66,7 +66,10 @@ class NaiveEngine : public DAGEngine {
     this->Push(delete_fun, exec_ctx, {}, {var});
   }
 
-  void WaitForVar(Variable var) override {
+  void WaitToRead(Variable var) override {
+  }
+
+  void WaitToWrite(Variable var) override {
   }
 
   void WaitForAll() override {

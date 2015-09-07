@@ -129,11 +129,29 @@ class DAGEngine {
    */
   virtual void PushDelete(Fn delete_fun, Context exec_ctx, Variable var) = 0;
   /*!
-   * \brief Wait for variable.
-   * \param var The variable we should wait for, this function returns when all
-   *            the operations related to var has been completed.
+   * \brief Wait to read a variable.
+   *
+   *  The caller should read the content immediately in a synchronized way,
+   *  before any subsequent write operations are issued.
+   *  The subsequent write operations to the variable can destroy the content.
+   *
+   * \param var The variable we should wait for,
+   *            This function returns when all the write operations to this
+   *            var has been completed.
    */
-  virtual void WaitForVar(Variable var) = 0;
+  virtual void WaitToRead(Variable var) = 0;
+  /*!
+   * \brief Wait to write a variable.
+   *
+   *  The caller should rwrite the content immediately in a synchronized way,
+   *  before any subsequent write operations are issued.
+   *  The subsequent write operations to the variable can destroy the content.
+   *
+   * \param var The variable we should wait for,
+   *            This function returns when all the read/write operations
+   *            on var has been completed.
+   */
+  virtual void WaitToWrite(Variable var) = 0;
   /*!
    * \brief Wait until all the activity of dag engine finishes.
    */
