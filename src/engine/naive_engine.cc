@@ -7,7 +7,7 @@
 namespace mxnet {
 namespace engine {
 
-NaiveEngine::Variable NaiveEngine::NewVar() { return nullptr; }
+NaiveEngine::VarHandle NaiveEngine::NewVariable() { return nullptr; }
 
 NaiveEngine::NaiveEngine() {
 #if MXNET_USE_CUDA
@@ -23,8 +23,8 @@ NaiveEngine::~NaiveEngine() {
 }
 
 NaiveEngine::OprHandle NaiveEngine::NewOperator(AsyncFn,
-                                                std::vector<Variable> const&,
-                                                std::vector<Variable> const&) {
+                                                std::vector<VarHandle> const&,
+                                                std::vector<VarHandle> const&) {
   LOG(FATAL) << "Not implemented";
   return nullptr;
 }
@@ -34,8 +34,8 @@ void NaiveEngine::DeleteOperator(OprHandle) { LOG(FATAL) << "Not implemented"; }
 void NaiveEngine::Push(OprHandle, Context) { LOG(FATAL) << "Not implemented"; }
 
 void NaiveEngine::Push(Fn exec_fun, Context exec_ctx,
-                       std::vector<Variable> const&,
-                       std::vector<Variable> const&) {
+                       std::vector<VarHandle> const&,
+                       std::vector<VarHandle> const&) {
   if (exec_ctx.dev_mask == gpu::kDevMask) {
 #if MXNET_USE_CUDA
     mshadow::SetDevice<gpu>(exec_ctx.dev_id);
@@ -50,16 +50,17 @@ void NaiveEngine::Push(Fn exec_fun, Context exec_ctx,
   }
 }
 
-void NaiveEngine::PushAsync(AsyncFn, Context, std::vector<Variable> const&,
-                            std::vector<Variable> const&) {
+void NaiveEngine::PushAsync(AsyncFn, Context, std::vector<VarHandle> const&,
+                            std::vector<VarHandle> const&) {
   LOG(FATAL) << "Not implemented";
 }
 
-void NaiveEngine::PushDelete(Fn delete_fun, Context exec_ctx, Variable var) {
+void NaiveEngine::DeleteVariable(Fn delete_fun, Context exec_ctx,
+                                 VarHandle var) {
   this->Push(delete_fun, exec_ctx, {}, {var});
 }
 
-void NaiveEngine::WaitForVar(Variable) {}
+void NaiveEngine::WaitForVar(VarHandle) {}
 
 void NaiveEngine::WaitForAll() {}
 

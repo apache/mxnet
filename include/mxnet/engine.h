@@ -57,7 +57,7 @@ class Engine {
    *        pointer, that points to an internal data structure of the engine
    *        itself.
    */
-  using Variable = engine::Var*;
+  using VarHandle = engine::Var*;
   /*!
    * \brief Operator of the engine.
    */
@@ -68,22 +68,25 @@ class Engine {
    *        patterns.
    * \return The new variable allocated.
    */
-  virtual Variable NewVar() = 0;
+  virtual VarHandle NewVariable() = 0;
   /*!
    * \brief Create a new operator. The returned operator could be saved
    *        externally so that it could be resued for scheduling.
    * \param fn The execution function.
-   * \param use_vars The variables that current operation will use but not
-   *                 mutate.
-   * \param mutate_vars Teh variables that current operation will mutate.
+   * \param const_vars The variables that current operation will use but not
+   *                   mutate.
+   * \param mutable_vars The variables that current operation will mutate.
    * \return The new operator allocated.
    */
   virtual OprHandle NewOperator(AsyncFn fn,
-                                std::vector<Variable> const& use_vars,
-                                std::vector<Variable> const& mutate_vars) = 0;
+                                std::vector<VarHandle> const& const_vars,
+                                std::vector<VarHandle> const& mutable_vars) = 0;
   /*!
    * \brief Delete the given operator.
    * \param op The operator to delete.
+   *
+   * The delete will not happen immediately, but will wait until all the
+   * operations using this operator are completed.
    */
   virtual void DeleteOperator(OprHandle op) = 0;
   /*!
@@ -96,44 +99,45 @@ class Engine {
    * \brief Push an synchronous operation to the engine.
    * \param exec_fun Execution function that executes the operation.
    * \param exec_ctx Execution context.
-   * \param use_vars The variables that current operation will use but not
-   *                 mutate.
-   * \param mutate_vars The variables that current operation will mutate.
+   * \param const_vars The variables that current operation will use but not
+   *                   mutate.
+   * \param mutable_vars The variables that current operation will mutate.
    */
   virtual void Push(Fn exec_fun, Context exec_ctx,
-                    std::vector<Variable> const& use_vars,
-                    std::vector<Variable> const& mutate_vars) = 0;
+                    std::vector<VarHandle> const& const_vars,
+                    std::vector<VarHandle> const& mutable_vars) = 0;
   /*!
    * \brief Push an asynchronous operation to the engine.
    * \param exec_fun Execution function, this function takes a parameter
    *                 on_complete that must be called when the execution
    *                 completes.
    * \param exec_ctx Execution context.
-   * \param use_vars The variables that current operation will use but not
-   *                 mutate.
-   * \param mutate_vars The variables that current operation will mutate.
+   * \param const_vars The variables that current operation will use but not
+   *                   mutate.
+   * \param mutable_vars The variables that current operation will mutate.
    */
   virtual void PushAsync(AsyncFn exec_fun, Context exec_ctx,
-                         std::vector<Variable> const& use_vars,
-                         std::vector<Variable> const& mutate_vars) = 0;
+                         std::vector<VarHandle> const& const_vars,
+                         std::vector<VarHandle> const& mutable_vars) = 0;
   /*!
    * \brief Schedule the delete of a variable.
    *
    * The delete will not happen immediately, but will wait until all the
-   * operations depending on var is completed.
+   * operations depending on var are completed.
    *
    * \param delete_fun A function that will be called after the variable is
    *                   deleted.
    * \param exec_ctx Execution context.
    * \param var The variable to be deleted.
    */
-  virtual void PushDelete(Fn delete_fun, Context exec_ctx, Variable var) = 0;
+  virtual void DeleteVariable(Fn delete_fun, Context exec_ctx,
+                              VarHandle var) = 0;
   /*!
    * \brief Wait for variable.
    * \param var The variable we should wait for, this function returns when all
    *            the operations related to var has been completed.
    */
-  virtual void WaitForVar(Variable var) = 0;
+  virtual void WaitForVar(VarHandle var) = 0;
   /*!
    * \brief Wait until all the activity of engine finishes.
    */

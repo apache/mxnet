@@ -14,7 +14,7 @@ void Foo(mxnet::RunContext, int i) { printf("The fox says %d\n", i); }
 
 int main() {
   auto&& engine = mxnet::Engine::Get();
-  auto&& var = engine->NewVar();
+  auto&& var = engine->NewVariable();
   std::vector<mxnet::Engine::OprHandle> oprs;
 
   // Test #1
@@ -39,7 +39,7 @@ int main() {
   engine->WaitForAll();
 
   printf("============= Test #2 ==============\n");
-  var = engine->NewVar();
+  var = engine->NewVariable();
   oprs.clear();
   for (int i = 0; i < 10; ++i) {
     oprs.push_back(engine->NewOperator(
@@ -59,14 +59,14 @@ int main() {
   engine->PushDelete([](mxnet::RunContext) {}, mxnet::Context{}, var);
 
   printf("============= Test #3 ==============\n");
-  var = engine->NewVar();
+  var = engine->NewVariable();
   oprs.clear();
   engine->WaitForVar(var);
   engine->PushDelete([](mxnet::RunContext) {}, mxnet::Context{}, var);
   engine->WaitForAll();
 
   printf("============= Test #4 ==============\n");
-  var = engine->NewVar();
+  var = engine->NewVariable();
   oprs.clear();
   oprs.push_back(engine->NewOperator(
       [](mxnet::RunContext ctx, mxnet::Engine::Callback cb) {
@@ -86,7 +86,7 @@ int main() {
   engine->WaitForAll();
 
   printf("============= Test #5 ==============\n");
-  var = engine->NewVar();
+  var = engine->NewVariable();
   oprs.clear();
   oprs.push_back(engine->NewOperator(
       [](mxnet::RunContext ctx, mxnet::Engine::Callback cb) {

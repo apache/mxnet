@@ -15,19 +15,19 @@ class NaiveEngine final : public Engine {
  public:
   NaiveEngine();
   ~NaiveEngine();
-  Variable NewVar() override;
-  OprHandle NewOperator(AsyncFn fn, std::vector<Variable> const& use_vars,
-                        std::vector<Variable> const& mutate_vars) override;
+  VarHandle NewVariable() override;
+  OprHandle NewOperator(AsyncFn fn, std::vector<VarHandle> const& const_vars,
+                        std::vector<VarHandle> const& mutable_vars) override;
   void DeleteOperator(OprHandle op) override;
   void Push(OprHandle op, Context exec_ctx) override;
   void Push(Fn exec_fun, Context exec_ctx,
-            std::vector<Variable> const& use_vars,
-            std::vector<Variable> const& mutate_vars) override;
+            std::vector<VarHandle> const& const_vars,
+            std::vector<VarHandle> const& mutable_vars) override;
   void PushAsync(AsyncFn exec_fun, Context exec_ctx,
-                 std::vector<Variable> const& use_vars,
-                 std::vector<Variable> const& mutate_vars) override;
-  void PushDelete(Fn delete_fun, Context exec_ctx, Variable var) override;
-  void WaitForVar(Variable var) override;
+                 std::vector<VarHandle> const& const_vars,
+                 std::vector<VarHandle> const& mutable_vars) override;
+  void DeleteVariable(Fn delete_fun, Context exec_ctx, VarHandle var) override;
+  void WaitForVar(VarHandle var) override;
   void WaitForAll() override;
 
  private:

@@ -132,38 +132,38 @@ ThreadedEngine::~ThreadedEngine() noexcept(false) {
   task_queue_.SignalForKill();
 }
 
-ThreadedVar* ThreadedEngine::NewVar() {
+ThreadedVar* ThreadedEngine::NewVariable() {
   auto ret = ThreadedVar::New(VersionedVarBlock::New());
   return ret;
 }
 
 ThreadedOpr* ThreadedEngine::NewOperator(
-    ThreadedEngine::AsyncFn fn, std::vector<Variable> const& use_vars,
-    std::vector<Variable> const& mutate_vars) {
+    ThreadedEngine::AsyncFn fn, std::vector<VarHandle> const& const_vars,
+    std::vector<VarHandle> const& mutable_vars) {
   auto ret = ThreadedOpr::New();
   ret->fn = fn;
-  ret->use_vars.resize(use_vars.size());
-  ret->mutate_vars.resize(mutate_vars.size());
-  std::transform(use_vars.begin(), use_vars.end(), ret->use_vars.begin(),
+  ret->const_vars.resize(const_vars.size());
+  ret->mutable_vars.resize(mutable_vars.size());
+  std::transform(const_vars.begin(), const_vars.end(), ret->const_vars.begin(),
                  ThreadedVar::CastFromBase);
-  std::transform(mutate_vars.begin(), mutate_vars.end(),
-                 ret->mutate_vars.begin(), ThreadedVar::CastFromBase);
+  std::transform(mutable_vars.begin(), mutable_vars.end(),
+                 ret->mutable_vars.begin(), ThreadedVar::CastFromBase);
 #if ENGINE_DEBUG
   // Check for duplicates.
-  auto use = use_vars;
-  auto mutate = mutate_vars;
+  auto use = const_vars;
+  auto mutate = mutable_vars;
   auto use_size = use.size();
   auto mutate_size = mutate.size();
   std::sort(use.begin(), use.end());
   std::sort(mutate.begin(), mutate.end());
   for (std::size_t i = 0; i < use_size; ++i) {
     if (i != 0 && use.at(i) == use.at(i - 1)) {
-      LOG(FATAL) << "duplicate items found in `use_vars`";
+      LOG(FATAL) << "duplicate items found in `const_vars`";
     }
   }
   for (std::size_t i = 0; i < mutate_size; ++i) {
     if (i != 0 && mutate.at(i) == mutate.at(i - 1)) {
-      LOG(FATAL) << "duplicate items found in `mutate_vars`";
+      LOG(FATAL) << "duplicate items found in `mutable_vars`";
     }
   }
   std::size_t j = 0;
@@ -176,7 +176,7 @@ ThreadedOpr* ThreadedEngine::NewOperator(
     }
     if (mutate.at(j) == use.at(i)) {
       LOG(FATAL)
-          << "duplicate items found between `use_vars` and `mutate_vars`";
+          << "duplicate items found between `const_vars` and `mutable_vars`";
     }
   }
 #endif  // ENGINE_DEBUG
@@ -185,43 +185,43 @@ ThreadedOpr* ThreadedEngine::NewOperator(
 
 void ThreadedEngine::DeleteOperator(OprHandle op) {
   auto&& threaded_opr = ThreadedOpr::CastFromBase(op);
-  std::vector<Variable> deps{};
-  deps.reserve(threaded_opr->use_vars.size() +
-               threaded_opr->mutate_vars.size());
-  deps.insert(deps.end(), threaded_opr->use_vars.begin(),
-              threaded_opr->use_vars.end());
-  deps.insert(deps.end(), threaded_opr->mutate_vars.begin(),
-              threaded_opr->mutate_vars.end());
+  std::vector<VarHandle> deps{};
+  deps.reserve(threaded_opr->const_vars.size() +
+               threaded_opr->mutable_vars.size());
+  deps.insert(deps.end(), threaded_opr->const_vars.begin(),
+              threaded_opr->const_vars.end());
+  deps.insert(deps.end(), threaded_opr->mutable_vars.begin(),
+              threaded_opr->mutable_vars.end());
   auto&& func =
       [threaded_opr](RunContext) { ThreadedOpr::Delete(threaded_opr); };
   Push(func, Context{}, {}, deps);
 }
 
 void ThreadedEngine::Push(Fn exec_fun, Context exec_ctx,
-                          std::vector<Variable> const& use_vars,
-                          std::vector<Variable> const& mutate_vars) {
+                          std::vector<VarHandle> const& const_vars,
+                          std::vector<VarHandle> const& mutable_vars) {
   auto f = [exec_fun](RunContext ctx, Callback on_complete) {
     exec_fun(ctx);
     on_complete();
   };
-  PushAsync(f, exec_ctx, use_vars, mutate_vars);
+  PushAsync(f, exec_ctx, const_vars, mutable_vars);
 }
 
 void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
   auto&& threaded_opr = ThreadedOpr::CastFromBase(op);
   auto&& opr_block = OprBlock::New();
   opr_block->opr = threaded_opr;
-  opr_block->wait.store(threaded_opr->use_vars.size() +
-                        threaded_opr->mutate_vars.size() + 1);
+  opr_block->wait.store(threaded_opr->const_vars.size() +
+                        threaded_opr->mutable_vars.size() + 1);
   opr_block->ctx = exec_ctx;
   opr_block->rctx = RunContext{nullptr};
   ++pending_;
   // Add read dependencies.
-  for (auto&& i : threaded_opr->use_vars) {
+  for (auto&& i : threaded_opr->const_vars) {
     i->AppendReadDependency(opr_block);
   }
   // Add write dependencies.
-  for (auto&& i : threaded_opr->mutate_vars) {
+  for (auto&& i : threaded_opr->mutable_vars) {
     i->AppendWriteDependency(opr_block);
   }
   if (--opr_block->wait == 0) {
@@ -230,14 +230,15 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
 }
 
 void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
-                               std::vector<Variable> const& use_vars,
-                               std::vector<Variable> const& mutate_vars) {
-  auto&& opr = NewOperator(fn, use_vars, mutate_vars);
+                               std::vector<VarHandle> const& const_vars,
+                               std::vector<VarHandle> const& mutable_vars) {
+  auto&& opr = NewOperator(fn, const_vars, mutable_vars);
   opr->temporary = true;
   Push(opr, exec_ctx);
 }
 
-void ThreadedEngine::PushDelete(Fn delete_fn, Context exec_ctx, Variable var) {
+void ThreadedEngine::DeleteVariable(Fn delete_fn, Context exec_ctx,
+                                    VarHandle var) {
   auto&& threaded_var = ThreadedVar::CastFromBase(var);
   auto&& func = [delete_fn, threaded_var](RunContext ctx) {
     /*!
@@ -250,7 +251,7 @@ void ThreadedEngine::PushDelete(Fn delete_fn, Context exec_ctx, Variable var) {
   Push(func, exec_ctx, {}, {var});
 }
 
-void ThreadedEngine::WaitForVar(Variable var) {
+void ThreadedEngine::WaitForVar(VarHandle var) {
   std::unique_lock<std::mutex> lock{finished_m_};
   std::atomic<bool> done{false};
   auto&& callback = [this, &done](RunContext) {
@@ -271,13 +272,13 @@ void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   /*!
    * Mark complete for read variables.
    */
-  for (auto&& i : threaded_opr->use_vars) {
+  for (auto&& i : threaded_opr->const_vars) {
     i->CompleteReadDependency([this](OprBlock* opr) { task_queue_.Push(opr); });
   }
   /*!
    * Mark complete for write variables.
    */
-  for (auto&& i : threaded_opr->mutate_vars) {
+  for (auto&& i : threaded_opr->mutable_vars) {
     bool to_delete = i->CompleteWriteDependency(
         [this](OprBlock* opr) { task_queue_.Push(opr); });
     if (to_delete) {

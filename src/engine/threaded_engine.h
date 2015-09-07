@@ -103,8 +103,8 @@ struct ThreadedOpr final : public Opr,
   ~ThreadedOpr() { LOG(INFO) << __func__ << " " << --counter; }
 #endif  // ENGINE_DEBUG
   Engine::AsyncFn fn;
-  std::vector<ThreadedVar*> use_vars;
-  std::vector<ThreadedVar*> mutate_vars;
+  std::vector<ThreadedVar*> const_vars;
+  std::vector<ThreadedVar*> mutable_vars;
   bool temporary{false};
 
   static ThreadedOpr* CastFromBase(Opr* ptr);
@@ -123,19 +123,19 @@ class ThreadedEngine final : public Engine {
   /*!
    * \brief Overriding methods.
    */
-  ThreadedVar* NewVar() override;
-  ThreadedOpr* NewOperator(AsyncFn fn, std::vector<Variable> const& use_vars,
-                           std::vector<Variable> const& mutate_vars) override;
+  ThreadedVar* NewVariable() override;
+  ThreadedOpr* NewOperator(AsyncFn fn, std::vector<VarHandle> const& const_vars,
+                           std::vector<VarHandle> const& mutable_vars) override;
   void DeleteOperator(OprHandle op) override;
   void Push(OprHandle op, Context exec_ctx) override;
   void Push(Fn exec_fun, Context exec_ctx,
-            std::vector<Variable> const& use_vars,
-            std::vector<Variable> const& mutate_vars) override;
+            std::vector<VarHandle> const& const_vars,
+            std::vector<VarHandle> const& mutable_vars) override;
   void PushAsync(AsyncFn exec_fun, Context exec_ctx,
-                 std::vector<Variable> const& use_vars,
-                 std::vector<Variable> const& mutate_vars) override;
-  void PushDelete(Fn delete_fn, Context exec_ctx, Variable var) override;
-  void WaitForVar(Variable var) override;
+                 std::vector<VarHandle> const& const_vars,
+                 std::vector<VarHandle> const& mutable_vars) override;
+  void DeleteVariable(Fn delete_fn, Context exec_ctx, VarHandle var) override;
+  void WaitForVar(VarHandle var) override;
   void WaitForAll() override;
   /*!
    * \brief Callback on operation completion.

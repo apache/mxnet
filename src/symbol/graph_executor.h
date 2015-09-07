@@ -93,9 +93,9 @@ class GraphExecutor : public Executor {
     // execution function for
     Engine::Fn exec_fun;
     // variables to read from
-    std::vector<Engine::Variable> use_vars;
+    std::vector<Engine::VarHandle> use_vars;
     // variables to mutate
-    std::vector<Engine::Variable> mutate_vars;
+    std::vector<Engine::VarHandle> mutate_vars;
     // constructor
     OpExecEntry() : exec_fun(nullptr) {}
   };
