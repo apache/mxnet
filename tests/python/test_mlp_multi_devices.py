@@ -32,16 +32,15 @@ params = [[mx.narray.create(s, d) for s in param_shapes] for d in devs];
 grads = [[mx.narray.create(s, d) for s in param_shapes] for d in devs];
 
 # only need to init param on device 0
-mx.kvstore.init(devs)
-
+mx.kvstore.init_devices(devs)
+sync_keys = [i for i,m in enumerate(param_names) if "weight" in m or "bias" in m]
 np.random.seed(0)
-for i, v in enumerate(params[0]):
-    if "weight" in param_names[i]:
-        v.numpy[:, :] = np.random.uniform(-0.07, 0.07, v.numpy.shape)
-        mx.kvstore.insert(i, v)
-    if "bias" in param_names[i]:
-        v.numpy[:] = 0.0
-        mx.kvstore.insert(i, v)
+for k in sync_keys:
+    if "weight" in param_names[k]:
+        params[0][k].numpy[:, :] = np.random.uniform(-0.07, 0.07, v.numpy.shape)
+    else:
+        params[0][k].numpy[:] = 0
+mx.kvstore.init([(k,params[0][k]) for k in sync_keys])
 
 # register param updater
 def make_updater(env):
@@ -86,32 +85,29 @@ def test_mlp():
         for data, label in train_dataiter:
             data = data.numpy
             label = label.numpy.flatten()
+            k = batch_size / num_devs
 
             for d in range(num_devs):
                 # feed input
-                k = batch_size / num_devs
                 idx = range(d*k, (d+1)*k)
                 params[d][param_names.index('data')].numpy[:] = data[idx,:]
                 params[d][param_names.index('mlp_label')].numpy[:] = label[idx]
 
                 # pull weight
-                for j, m in enumerate(param_names):
-                    if 'weight' in m or 'bias' in m:
-                        mx.kvstore.pull(i, params[d][j])
+                mx.kvstore.pull([(k,params[d][k]) for k in sync_keys])
 
                 # forward and backward
                 executors[d].forward()
-                # TODO copyto should not block execution?
                 executors[d].heads()[0].copyto(forward_out[d])
                 executors[d].backward([forward_out[d]])
 
                 # push gradient
-                for j, m in enumerate(param_names):
-                    if 'weight' in m or 'bias' in m:
-                        mx.kvstore.pull(i, grads[d][j])
+                mx.kvstore.push([(k, grads[d][k]) for k in sync_keys])
 
-            # TODO should evalute accuray here? otherwise the above forloop will not
-            # be paralleled?
+            # evaluate. cannot put into the above for loop since it is blocked
+            # until all forwards are finished
+            for d in range(num_devs):
+                train_acc += cal_acc(forward_out[d].numpy, label[range(d*k, (d+1)*k)])
 
         train_acc /= train_nbatch
         train_nbatch += 1
