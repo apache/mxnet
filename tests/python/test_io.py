@@ -5,7 +5,7 @@ import os, gzip
 import pickle as pickle
 import sys
 import get_data
-from PIL import Image
+#from PIL import Image
 
 
 def test_MNISTIter():
@@ -40,6 +40,7 @@ def test_MNISTIter():
     label_1 = train_dataiter.getlabel().numpy.flatten()
     assert(sum(label_0 - label_1) == 0)
 
+'''
 def test_ImageRecIter():
     dataiter = mx.io.ImageRecordIter(
             path_imgrec="data/val_cxxnet.rec",
@@ -82,7 +83,6 @@ def test_Cifar10Rec():
     labelcount = [0 for i in range(10)] 
     batchcount = 0
     for data, label in dataiter:
-        '''
         npdata = data.numpy
         print npdata[0,:,:,:]
         imgdata = np.zeros([28, 28, 3], dtype=np.uint8)
@@ -93,7 +93,6 @@ def test_Cifar10Rec():
         imgpath = "data/cifar/test.jpg"
         img.save(imgpath, format='JPEG')
         exit(0)
-        '''
         print "Batch: ", batchcount
         sys.stdout.flush()
         batchcount += 1
@@ -102,5 +101,4 @@ def test_Cifar10Rec():
             labelcount[int(nplabel[i])] += 1
     for i in range(10):
         assert(labelcount[i] == 1000)
-if __name__ == '__main__':
-    test_Cifar10Rec()
+'''
