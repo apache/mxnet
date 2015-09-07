@@ -17,8 +17,8 @@ namespace mxnet {
 /**
  * \brief distributed key-value store
  *
- * A distributed key-value store which synchronous data over multiple devices
- * and multiple machines. It supports user-defined updaters
+ * A distributed key-value store for data synchronization over multiple
+ * devices/machines. It supports user-defined updater
  *
  * Example to implement allreduce
  * \code
