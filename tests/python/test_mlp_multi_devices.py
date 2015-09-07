@@ -40,7 +40,7 @@ for k in sync_keys:
         params[0][k].numpy[:, :] = np.random.uniform(-0.07, 0.07, v.numpy.shape)
     else:
         params[0][k].numpy[:] = 0
-mx.kvstore.init([(k,params[0][k]) for k in sync_keys])
+mx.kvstore.init((k,params[0][k]) for k in sync_keys)
 
 # register param updater
 def make_updater(env):
@@ -94,7 +94,7 @@ def test_mlp():
                 params[d][param_names.index('mlp_label')].numpy[:] = label[idx]
 
                 # pull weight
-                mx.kvstore.pull([(k,params[d][k]) for k in sync_keys])
+                mx.kvstore.pull((k,params[d][k]) for k in sync_keys)
 
                 # forward and backward
                 executors[d].forward()
@@ -102,7 +102,7 @@ def test_mlp():
                 executors[d].backward([forward_out[d]])
 
                 # push gradient
-                mx.kvstore.push([(k, grads[d][k]) for k in sync_keys])
+                mx.kvstore.push((k, grads[d][k]) for k in sync_keys)
 
             # evaluate. cannot put into the above for loop since it is blocked
             # until all forwards are finished

@@ -3,8 +3,8 @@
 
 from __future__ import absolute_import
 
-def init(contexts):
-    """ Init key-value store with a list of context
+def init_devices(contexts):
+    """ Init key-value store with a list of device contexts
 
     Parameters
     ----------
@@ -12,29 +12,23 @@ def init(contexts):
        The list of local devices used by this process
     """
 
-def insert(key, value):
-    """ Insert a key-value pair into the store
+def init(kv_list):
+    """ Initialize a list of key-value pairs
 
     Parameters
     ----------
-    key : int
-        The key
-    value : NArray
-        The value
+    kv_list : tuple or list/generator of tuples
+        a key-value tuple or a list of key-value tuples
     """
 
-def push(key, value):
+def push(kv_list):
     """ Push a value into the store
 
     Parameters
     ----------
-    key : int
-        The key
-    value : NArray
-        The value
     """
 
-def pull(key, value):
+def pull(kv_list):
     """ Pull the value from the store
 
     Parameters
