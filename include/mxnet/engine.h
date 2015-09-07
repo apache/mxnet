@@ -134,8 +134,8 @@ class Engine {
                               VarHandle var) = 0;
   /*!
    * \brief Wait for a variable.
-   * \param var The variable we should wait for. This function returns when all
-   *            the variable is ready.
+   * \param var The variable we should wait for. This function returns when the
+   *            variable is ready.
    */
   virtual void WaitForVar(VarHandle var) = 0;
   /*!
