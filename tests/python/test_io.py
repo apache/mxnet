@@ -30,14 +30,14 @@ def test_MNISTIter():
     # test_reset
     train_dataiter.reset()
     train_dataiter.iter_next()
-    label_0 = train_dataiter.getlabel().numpy.flatten()
+    label_0 = train_dataiter.getlabel().asnumpy().flatten()
     train_dataiter.iter_next()
     train_dataiter.iter_next()
     train_dataiter.iter_next()
     train_dataiter.iter_next()
     train_dataiter.reset()
     train_dataiter.iter_next()
-    label_1 = train_dataiter.getlabel().numpy.flatten()
+    label_1 = train_dataiter.getlabel().asnumpy().flatten()
     assert(sum(label_0 - label_1) == 0)
 
 '''
@@ -102,3 +102,6 @@ def test_Cifar10Rec():
     for i in range(10):
         assert(labelcount[i] == 1000)
 '''
+
+if __name__ == "__main__":
+    test_MNISTIter()
