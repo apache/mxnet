@@ -31,7 +31,7 @@ struct MNISTParam : public dmlc::Parameter<MNISTParam> {
   bool flat;
   /*! \brief random seed */
   int seed;
-  // declare parameters in header file
+  // declare parameters
   DMLC_DECLARE_PARAMETER(MNISTParam) {
     DMLC_DECLARE_FIELD(image).set_default("./train-images-idx3-ubyte")
         .describe("Mnist image path.");
@@ -155,7 +155,7 @@ class MNISTIter: public IIterator<DataBatch> {
     delete stdlabel;
   }
   inline void Shuffle(void) {
-    std::shuffle(inst_.begin(), inst_.end(), common::RANDOM_ENGINE(kRandMagic+param_.seed));
+    std::shuffle(inst_.begin(), inst_.end(), common::RANDOM_ENGINE(kRandMagic + param_.seed));
     std::vector<float> tmplabel(labels_.size());
     mshadow::TensorContainer<cpu, 3> tmpimg(img_.shape_);
     for (size_t i = 0; i < inst_.size(); ++i) {
