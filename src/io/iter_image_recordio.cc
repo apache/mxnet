@@ -1,9 +1,9 @@
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file iter_image_recordio-inl.hpp
  * \brief recordio data
 iterator
  */
-#include <cstdlib>
 #include <dmlc/base.h>
 #include <dmlc/io.h>
 #include <dmlc/omp.h>
@@ -13,11 +13,11 @@ iterator
 #include <dmlc/threadediter.h>
 #include <unordered_map>
 #include <vector>
+#include <cstdlib>
 #include "./inst_vector.h"
 #include "./image_recordio.h"
 #include "./image_augmenter.h"
 #include "./iter_batch.h"
-#include "../utils/decoder.h"
 namespace mxnet {
 namespace io {
 /*! \brief data structure to hold labels for images */
@@ -31,7 +31,7 @@ class ImageLabelMap {
   explicit ImageLabelMap(const char *path_imglist,
                          mshadow::index_t label_width,
                          bool silent) {
-    label_width = label_width;
+    this->label_width = label_width;
     image_index_.clear();
     label_.clear();
     idx2label_.clear();
@@ -116,10 +116,11 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
         .describe("Dist worker number.");
     DMLC_DECLARE_FIELD(dist_worker_rank).set_default(0)
         .describe("Dist worker rank.");
-    float input_shape_default = {3, 224, 224};
-    DMLC_DECLARE_FIELD(input_shape).set_default(TShape(input_shape_default, input_shape_default + 3))
+    index_t input_shape_default[] = {3, 224, 224};
+    DMLC_DECLARE_FIELD(input_shape)
+        .set_default(TShape(input_shape_default, input_shape_default + 3))
         .set_expect_ndim(3).enforce_nonzero()
-        .describe("Input shape of the neural net");  
+        .describe("Input shape of the neural net");
   }
 };
 
@@ -143,7 +144,7 @@ class ImageRecordIOParser {
   }
   // initialize the parser
   inline void Init(const std::vector<std::pair<std::string, std::string> >& kwargs);
-  
+
   // set record to the head
   inline void BeforeFirst(void) {
     return source_->BeforeFirst();
@@ -151,11 +152,12 @@ class ImageRecordIOParser {
   // parse next set of records, return an array of
   // instance vector to the user
   inline bool ParseNext(std::vector<InstVector> *out);
+
  private:
   // magic nyumber to see prng
   static const int kRandMagic = 111;
   /*! \brief parameters */
-  ImageRecParserParam param_; 
+  ImageRecParserParam param_;
   /*! \brief augmenters */
   std::vector<ImageAugmenter*> augmenters_;
   /*! \brief random samplers */
@@ -164,9 +166,12 @@ class ImageRecordIOParser {
   dmlc::InputSplit *source_;
   /*! \brief label information, if any */
   ImageLabelMap *label_map_;
+  /*! \brief temp space */
+  mshadow::TensorContainer<cpu, 3> img_;
 };
 
-inline void ImageRecordIOParser::Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+inline void ImageRecordIOParser::Init(
+        const std::vector<std::pair<std::string, std::string> >& kwargs) {
   // initialize parameter
   std::vector<std::pair<std::string, std::string> > kwargs_left;
   // init image rec param
@@ -185,12 +190,11 @@ inline void ImageRecordIOParser::Init(const std::vector<std::pair<std::string, s
   // setup decoders
   for (int i = 0; i < threadget; ++i) {
     augmenters_.push_back(new ImageAugmenter());
-    augmenters_[i]->Init(kwargs_left);
+    augmenters_[i]->Init(kwargs);
     prnds_.push_back(new common::RANDOM_ENGINE((i + 1) * kRandMagic));
   }
-  
+
   // handling for hadoop
-  // TODO, hack
   const char *ps_rank = getenv("PS_RANK");
   if (ps_rank != NULL) {
     param_.dist_worker_rank = atoi(ps_rank);
@@ -205,7 +209,6 @@ inline void ImageRecordIOParser::Init(const std::vector<std::pair<std::string, s
   CHECK(param_.path_imgrec.length() != 0)
     << "ImageRecordIOIterator: must specify image_rec";
 #if MSHADOW_DIST_PS
-    // TODO move to a better place
     param_.dist_num_worker = ::ps::RankSize();
     param_.dist_worker_rank = ::ps::MyRank();
     LOG(INFO) << "rank " << param_.dist_worker_rank
@@ -235,14 +238,16 @@ ParseNext(std::vector<InstVector> *out_vec) {
     InstVector &out = (*out_vec)[tid];
     out.Clear();
     while (reader.NextRecord(&blob)) {
+      rec.Load(blob.dptr, blob.size);
       out.Push(static_cast<unsigned>(rec.image_index()),
-               mshadow::Shape3(param_.input_shape[0], param_.input_shape[0], param_.input_shape[0]),
+               mshadow::Shape3(param_.input_shape[0], param_.input_shape[1], param_.input_shape[2]),
                mshadow::Shape1(param_.label_width));
       DataInst inst = out.Back();
       // turn datainst into tensor
-      mshadow::Tensor<mshadow::cpu, 3> data = inst.data[0].get<mshadow::cpu, 3, float>(); 
-      mshadow::Tensor<mshadow::cpu, 1> label = inst.data[1].get<mshadow::cpu, 1, float>(); 
-      augmenters_[tid]->Process(rec.content, rec.content_size, &data, prnd);
+      mshadow::Tensor<mshadow::cpu, 3> data = inst.data[0].get<mshadow::cpu, 3, float>();
+      mshadow::Tensor<mshadow::cpu, 1> label = inst.data[1].get<mshadow::cpu, 1, float>();
+      augmenters_[tid]->Process(rec.content, rec.content_size, &img_, prnds_[tid]);
+      mshadow::Copy(data, img_);
       if (label_map_ != NULL) {
         mshadow::Copy(label, label_map_->Find(rec.image_index()));
       } else {
@@ -259,12 +264,20 @@ struct ImageRecordParam: public dmlc::Parameter<ImageRecordParam> {
   bool shuffle;
   /*! \brief random seed */
   int seed;
+  /*! \brief mean file string*/
+  std::string mean_img;
+  /*! \brief whether to remain silent */
+  bool silent;
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageRecordParam) {
     DMLC_DECLARE_FIELD(shuffle).set_default(true)
         .describe("Whether to shuffle data.");
     DMLC_DECLARE_FIELD(seed).set_default(0)
         .describe("Random Seed.");
+    DMLC_DECLARE_FIELD(mean_img).set_default("./data/mean.bin")
+        .describe("Path to image mean file.");
+    DMLC_DECLARE_FIELD(silent).set_default(false)
+        .describe("Whether to output information.");
   }
 };
 
@@ -283,8 +296,8 @@ class ImageRecordIter : public IIterator<DataInst> {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     // init image rec param
     kwargs_left = param_.InitAllowUnknown(kwargs);
-    // use the left kwarg to init parser
-    parser_.Init(kwargs_left);
+    // use the kwarg to init parser
+    parser_.Init(kwargs);
     // init thread iter
     iter_.set_max_capacity(4);
     iter_.Init([this](std::vector<InstVector> **dptr) {
@@ -294,6 +307,15 @@ class ImageRecordIter : public IIterator<DataInst> {
         return parser_.ParseNext(*dptr);
       },
       [this]() { parser_.BeforeFirst(); });
+    // Check Meanfile
+    if (param_.mean_img.length() != 0) {
+      dmlc::Stream *fi = dmlc::Stream::Create(param_.mean_img.c_str(), "r", true);
+      if (fi == NULL) {
+        this->CreateMeanImg();
+      } else {
+        delete fi;
+      }
+    }
     inst_ptr_ = 0;
   }
   virtual void BeforeFirst(void) {
@@ -320,7 +342,8 @@ class ImageRecordIter : public IIterator<DataInst> {
         }
         // shuffle instance order if needed
         if (shuffle_ != 0) {
-            std::shuffle(inst_order_.begin(), inst_order_.end(), common::RANDOM_ENGINE(kRandMagic + param_.seed));
+            std::shuffle(inst_order_.begin(), inst_order_.end(), \
+                    common::RANDOM_ENGINE(kRandMagic + param_.seed));
         }
         inst_ptr_ = 0;
       }
@@ -332,6 +355,40 @@ class ImageRecordIter : public IIterator<DataInst> {
   }
 
  private:
+  inline void CreateMeanImg(void) {
+    if (param_.silent == 0) {
+      printf("cannot find %s: create mean image, this will take some time...\n",
+              param_.mean_img.c_str());
+    }
+    time_t start = time(NULL);
+    uint64_t elapsed = 0;
+    size_t imcnt = 1;
+    this->BeforeFirst();
+    CHECK(this->Next()) << "input iterator failed.";
+    // Get the first data
+    mshadow::Tensor<mshadow::cpu, 3> img_tensor = out_.data[0].get<mshadow::cpu, 3, float>();
+    meanimg_.Resize(img_tensor.shape_);
+    mshadow::Copy(meanimg_, img_tensor);
+    while (this->Next()) {
+      mshadow::Tensor<mshadow::cpu, 3> img_tensor = out_.data[0].get<mshadow::cpu, 3, float>();
+      meanimg_ += img_tensor; imcnt += 1;
+      elapsed = (uint64_t)(time(NULL) - start);
+      if (imcnt % 1000 == 0 && param_.silent == 0) {
+        printf("\r                                                               \r");
+        printf("[%8lu] images processed, %ld sec elapsed", imcnt, elapsed);
+        fflush(stdout);
+      }
+    }
+    meanimg_ *= (1.0f / imcnt);
+
+    dmlc::Stream *fo = dmlc::Stream::Create(param_.mean_img.c_str(), "w");
+    meanimg_.SaveBinary(*fo);
+    delete fo;
+    if (param_.silent == 0) {
+      printf("save mean image to %s..\n", param_.mean_img.c_str());
+    }
+  }
+
   // random magic
   static const int kRandMagic = 111;
   // output instance
@@ -350,6 +407,8 @@ class ImageRecordIter : public IIterator<DataInst> {
   dmlc::ThreadedIter<std::vector<InstVector> > iter_;
   // parameters
   ImageRecordParam param_;
+  // mean image
+  mshadow::TensorContainer<cpu, 3> meanimg_;
 };
 DMLC_REGISTER_PARAMETER(ImageRecParserParam);
 DMLC_REGISTER_PARAMETER(ImageRecordParam);

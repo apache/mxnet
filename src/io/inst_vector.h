@@ -1,11 +1,12 @@
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file inst_vector.h
  * \brief holder of a sequence of DataInst in CPU
  *        that are not necessarily of same shape
  */
 
-#ifndef MXNET_INST_VECTOR_H_
-#define MXNET_INST_VECTOR_H_
+#ifndef MXNET_IO_INST_VECTOR_H_
+#define MXNET_IO_INST_VECTOR_H_
 
 #include <mxnet/io.h>
 #include <mxnet/base.h>
@@ -31,7 +32,7 @@ class TensorVector {
     CHECK(i + 1 < offset_.size());
     CHECK(shape_[i].Size() == offset_[i + 1] - offset_[i]);
     return mshadow::Tensor<cpu, dim, DType>
-        ((DType*)dmlc::BeginPtr(content_) + offset_[i], shape_[i]);
+        ((DType*)dmlc::BeginPtr(content_) + offset_[i], shape_[i]);  // NOLINT(*)
   }
   inline mshadow::Tensor<cpu, dim, DType> Back() const {
     return (*this)[Size() - 1];
@@ -52,6 +53,7 @@ class TensorVector {
     content_.clear();
     shape_.clear();
   }
+
  private:
   // offset of the data content
   std::vector<size_t> offset_;
@@ -66,7 +68,7 @@ class TensorVector {
  * non-uniform shape data instance in a shape efficient way
  */
 class InstVector {
- public:  
+ public:
   inline size_t Size(void) const {
     return index_.size();
   }
@@ -94,8 +96,8 @@ class InstVector {
     data_.Push(dshape);
     label_.Push(lshape);
   }
-  
- private:  
+
+ private:
   /*! \brief index of the data */
   std::vector<unsigned> index_;
   // label
@@ -105,4 +107,4 @@ class InstVector {
 };
 }  // namespace io
 }  // namespace mxnet
-#endif  // MXNET_TENSOR_VECTOR_H_
+#endif  // MXNET_IO_INST_VECTOR_H_
