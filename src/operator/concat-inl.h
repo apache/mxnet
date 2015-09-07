@@ -192,7 +192,11 @@ class ConcatProp : public OperatorProperty {
         if (j == 1) {
           dshape[1] += tmp[1];
         } else {
-          CHECK_EQ(dshape[j], tmp[j]);
+          CHECK_EQ(dshape[j], tmp[j])
+            << "Incorrect shape[" << i << "]: "
+            << tmp << ". "
+            << "(first input shape: "
+            << dshape << ")";
         }
       }
     }
