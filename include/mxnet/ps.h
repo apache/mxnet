@@ -49,18 +49,22 @@ namespace mxnet {
 class KVStore {
  public:
 
-  /*! \brief Gets rank of this node in its group, which is in [0, GroupSize) */
-  int GetRank();
-
-  /*! \brief Get the size of this node group. */
-  int GetGroupSize();
+  /**
+   * \brief get singleton instance
+   */
+  static KVStore* Get();
 
   /**
-   * \brief Init data
-   *
-   * Init \a key with \a value.
+   * \brief Init with the local devices
    */
-  void Init(int key, const NArray& value);
+  void Init(const std::vector<Context>& devices);
+
+  /**
+   * \brief  data
+   *
+   * insert a key-value pair. One must insert before push and pull
+   */
+  void Insert(int key, const NArray& value);
 
   /*!
    * \brief push data to the store
@@ -130,6 +134,13 @@ class KVStore {
    */
   void Register(bool batch = true, const Updater& updt = Updater());
 #endif  // DMLC_USE_CXX11
+
+  /*! \brief Gets rank of this node in its group, which is in [0, GroupSize) */
+  int GetRank();
+
+  /*! \brief Get the number of nodes in this group. */
+  int GetGroupSize();
+
 };
 
 }  // namespace mxnet
