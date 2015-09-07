@@ -1,8 +1,8 @@
 /*!
  * Copyright (c) 2015 by Contributors
  */
-#ifndef MXNET_DAG_ENGINE_THREADED_ENGINE_H_
-#define MXNET_DAG_ENGINE_THREADED_ENGINE_H_
+#ifndef MXNET_ENGINE_THREADED_ENGINE_H_
+#define MXNET_ENGINE_THREADED_ENGINE_H_
 
 #include <dmlc/base.h>
 #include <dmlc/concurrency.h>
@@ -12,7 +12,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
-#include "dag_engine_impl.h"
+#include "engine_impl.h"
 #include "thread_pool.h"
 #include "../common/object_pool.h"
 
@@ -29,11 +29,11 @@ struct ThreadedOpr;
  * \brief Operation in the queue.
  */
 struct OprBlock : public common::ObjectPoolAllocatable<OprBlock> {
-#if DAG_ENGINE_DEBUG
+#if ENGINE_DEBUG
   static std::atomic<std::size_t> counter;
   OprBlock() { LOG(INFO) << __func__ << " " << ++counter; }
   ~OprBlock() { LOG(INFO) << __func__ << " " << --counter; }
-#endif  // DAG_ENGINE_DEBUG
+#endif  // ENGINE_DEBUG
   std::atomic<std::size_t> wait{0};
   ThreadedOpr* opr{nullptr};
   Context ctx;
@@ -45,11 +45,11 @@ struct OprBlock : public common::ObjectPoolAllocatable<OprBlock> {
  */
 struct VersionedVarBlock
     : public common::ObjectPoolAllocatable<VersionedVarBlock> {
-#if DAG_ENGINE_DEBUG
+#if ENGINE_DEBUG
   static std::atomic<std::size_t> counter;
   VersionedVarBlock() { LOG(INFO) << __func__ << " " << ++counter; }
   ~VersionedVarBlock() { LOG(INFO) << __func__ << " " << --counter; }
-#endif  // DAG_ENGINE_DEBUG
+#endif  // ENGINE_DEBUG
   VersionedVarBlock* next{nullptr};
   OprBlock* trigger{nullptr};
   bool write{false};
@@ -61,10 +61,10 @@ struct VersionedVarBlock
 class ThreadedVar final : public Var,
                           public common::ObjectPoolAllocatable<ThreadedVar> {
  public:
-#if DAG_ENGINE_DEBUG
+#if ENGINE_DEBUG
   static std::atomic<std::size_t> counter;
   ~ThreadedVar() { LOG(INFO) << __func__ << " " << --counter; }
-#endif  // DAG_ENGINE_DEBUG
+#endif  // ENGINE_DEBUG
   explicit ThreadedVar(VersionedVarBlock* head);
   void AppendReadDependency(OprBlock* opr_block);
   void AppendWriteDependency(OprBlock* opr_block);
@@ -97,12 +97,12 @@ class ThreadedVar final : public Var,
  */
 struct ThreadedOpr final : public Opr,
                            public common::ObjectPoolAllocatable<ThreadedOpr> {
-#if DAG_ENGINE_DEBUG
+#if ENGINE_DEBUG
   static std::atomic<std::size_t> counter;
   ThreadedOpr() { LOG(INFO) << __func__ << " " << ++counter; }
   ~ThreadedOpr() { LOG(INFO) << __func__ << " " << --counter; }
-#endif  // DAG_ENGINE_DEBUG
-  DAGEngine::AsyncFn fn;
+#endif  // ENGINE_DEBUG
+  Engine::AsyncFn fn;
   std::vector<ThreadedVar*> use_vars;
   std::vector<ThreadedVar*> mutate_vars;
   bool temporary{false};
@@ -113,7 +113,7 @@ struct ThreadedOpr final : public Opr,
 /*!
  * \brief Engine implementation.
  */
-class ThreadedEngine final : public DAGEngine {
+class ThreadedEngine final : public Engine {
  public:
   /*!
    * \brief Constructor and destructor.
@@ -182,4 +182,4 @@ class ThreadedEngine final : public DAGEngine {
 
 }  // namespace mxnet
 
-#endif  // MXNET_DAG_ENGINE_THREADED_ENGINE_H_
+#endif  // MXNET_ENGINE_THREADED_ENGINE_H_

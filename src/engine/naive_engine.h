@@ -1,17 +1,17 @@
 /*!
  * Copyright (c) 2015 by Contributors
  */
-#ifndef MXNET_DAG_ENGINE_NAIVE_ENGINE_H_
-#define MXNET_DAG_ENGINE_NAIVE_ENGINE_H_
+#ifndef MXNET_ENGINE_NAIVE_ENGINE_H_
+#define MXNET_ENGINE_NAIVE_ENGINE_H_
 
 #include <vector>
-#include "dag_engine_impl.h"
+#include "engine_impl.h"
 
 namespace mxnet {
 
 namespace engine {
 
-class NaiveEngine final : public DAGEngine {
+class NaiveEngine final : public Engine {
  public:
   NaiveEngine();
   ~NaiveEngine();
@@ -41,4 +41,4 @@ class NaiveEngine final : public DAGEngine {
 
 }  // namespace mxnet
 
-#endif  // MXNET_DAG_ENGINE_NAIVE_ENGINE_H_
+#endif  // MXNET_ENGINE_NAIVE_ENGINE_H_

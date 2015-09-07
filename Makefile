@@ -60,7 +60,7 @@ endif
 
 BIN = tests/test_threaded_engine
 OBJ = narray_function_cpu.o
-OBJCXX11 = narray.o c_api.o operator.o symbol.o storage.o static_graph.o graph_executor.o io.o iter_mnist.o dag_engine.o naive_engine.o threaded_engine.o
+OBJCXX11 = narray.o c_api.o operator.o symbol.o storage.o static_graph.o graph_executor.o io.o iter_mnist.o engine.o naive_engine.o threaded_engine.o
 CUOBJ = narray_function_gpu.o
 SLIB = lib/libmxnet.so
 ALIB = lib/libmxnet.a
@@ -77,9 +77,9 @@ $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
 storage.o: src/storage/storage.cc
-naive_engine.o:  src/dag_engine/naive_engine.cc
-dag_engine.o: src/dag_engine/dag_engine.cc
-threaded_engine.o: src/dag_engine/threaded_engine.cc 
+naive_engine.o:  src/engine/naive_engine.cc
+engine.o: src/engine/engine.cc
+threaded_engine.o: src/engine/threaded_engine.cc 
 narray.o: src/narray/narray.cc
 narray_function_cpu.o: src/narray/narray_function.cc src/narray/narray_function-inl.h
 narray_function_gpu.o: src/narray/narray_function.cu src/narray/narray_function-inl.h

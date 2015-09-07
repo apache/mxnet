@@ -14,17 +14,17 @@ namespace mxnet {
 
 namespace engine {
 
-#if DAG_ENGINE_DEBUG
+#if ENGINE_DEBUG
 std::atomic<std::size_t> OprBlock::counter{0};
 std::atomic<std::size_t> VersionedVarBlock::counter{0};
 std::atomic<std::size_t> ThreadedVar::counter{0};
 std::atomic<std::size_t> ThreadedOpr::counter{0};
-#endif  // DAG_ENGINE_DEBUG
+#endif  // ENGINE_DEBUG
 
 ThreadedVar::ThreadedVar(VersionedVarBlock* head) : head_{head} {
-#if DAG_ENGINE_DEBUG
+#if ENGINE_DEBUG
   LOG(INFO) << __func__ << " " << ++counter;
-#endif  // DAG_ENGINE_DEBUG
+#endif  // ENGINE_DEBUG
 }
 void ThreadedVar::AppendReadDependency(OprBlock* opr_block) {
   std::lock_guard<std::mutex> lock{m_};
@@ -148,7 +148,7 @@ ThreadedOpr* ThreadedEngine::NewOperator(
                  ThreadedVar::CastFromBase);
   std::transform(mutate_vars.begin(), mutate_vars.end(),
                  ret->mutate_vars.begin(), ThreadedVar::CastFromBase);
-#if DAG_ENGINE_DEBUG
+#if ENGINE_DEBUG
   // Check for duplicates.
   auto use = use_vars;
   auto mutate = mutate_vars;
@@ -179,7 +179,7 @@ ThreadedOpr* ThreadedEngine::NewOperator(
           << "duplicate items found between `use_vars` and `mutate_vars`";
     }
   }
-#endif  // DAG_ENGINE_DEBUG
+#endif  // ENGINE_DEBUG
   return ret;
 }
 

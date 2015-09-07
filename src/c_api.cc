@@ -311,7 +311,7 @@ int MXNArrayListLoad(const char* fname,
 
 int MXNArrayWaitAll() {
   API_BEGIN();
-  DAGEngine::Get()->WaitForAll();
+  Engine::Get()->WaitForAll();
   API_END();
 }
 

@@ -1,14 +1,14 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file dag_engine.h
- * \brief DAG engine that schedules data.
+ * \file engine.h
+ * \brief Engine that schedules data.
  */
-#ifndef MXNET_DAG_ENGINE_H_
-#define MXNET_DAG_ENGINE_H_
+#ifndef MXNET_ENGINE_H_
+#define MXNET_ENGINE_H_
 #include <dmlc/base.h>
 
 #if DMLC_USE_CXX11 == 0
-#error "C++11 was required for DAG engine module."
+#error "C++11 was required for engine module."
 #endif
 
 #include <functional>
@@ -36,12 +36,12 @@ struct Opr;
 }  // namespace engine
 
 /*!
- * \brief Dynamic dataflow DAG engine that schedules operations.
+ * \brief Dynamic dataflow engine that schedules operations.
  */
-class DAGEngine {
+class Engine {
  public:
   /*!
-   * \brief Operation to pass to DAG engine.
+   * \brief Operation to pass to engine.
    */
   using Fn = std::function<void(RunContext)>;
   /*!
@@ -49,11 +49,11 @@ class DAGEngine {
    */
   using Callback = std::function<void()>;
   /*!
-   * \brief Asynchronous operation to pass to DAG engine.
+   * \brief Asynchronous operation to pass to engine.
    */
   using AsyncFn = std::function<void(RunContext, Callback)>;
   /*!
-   * \brief Variable of dag engine, used to specify dependencies defined to be a
+   * \brief Variable of engine, used to specify dependencies defined to be a
    *        pointer, that points to an internal data structure of the engine
    *        itself.
    */
@@ -93,7 +93,7 @@ class DAGEngine {
    */
   virtual void Push(OprHandle op, Context exec_ctx) = 0;
   /*!
-   * \brief Push an synchronous operation to the DAG engine.
+   * \brief Push an synchronous operation to the engine.
    * \param exec_fun Execution function that executes the operation.
    * \param exec_ctx Execution context.
    * \param use_vars The variables that current operation will use but not
@@ -104,7 +104,7 @@ class DAGEngine {
                     std::vector<Variable> const& use_vars,
                     std::vector<Variable> const& mutate_vars) = 0;
   /*!
-   * \brief Push an asynchronous operation to the DAG engine.
+   * \brief Push an asynchronous operation to the engine.
    * \param exec_fun Execution function, this function takes a parameter
    *                 on_complete that must be called when the execution
    *                 completes.
@@ -135,19 +135,19 @@ class DAGEngine {
    */
   virtual void WaitForVar(Variable var) = 0;
   /*!
-   * \brief Wait until all the activity of dag engine finishes.
+   * \brief Wait until all the activity of engine finishes.
    */
   virtual void WaitForAll() = 0;
   /*!
    * \brief Virtual destructor.
    */
-  virtual ~DAGEngine() noexcept(false);
+  virtual ~Engine() noexcept(false);
   /*!
-   * \return DAG engine singleton.
+   * \return Engine singleton.
    */
-  static DAGEngine* Get();
-};  // class DAGEngine
+  static Engine* Get();
+};  // class Engine
 
 }  // namespace mxnet
 
-#endif  // MXNET_DAG_ENGINE_H_
+#endif  // MXNET_ENGINE_H_

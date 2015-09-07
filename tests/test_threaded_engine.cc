@@ -8,20 +8,20 @@
 #include <chrono>
 #include <vector>
 
-#include "mxnet/dag_engine.h"
+#include "mxnet/engine.h"
 
 void Foo(mxnet::RunContext, int i) { printf("The fox says %d\n", i); }
 
 int main() {
-  auto&& engine = mxnet::DAGEngine::Get();
+  auto&& engine = mxnet::Engine::Get();
   auto&& var = engine->NewVar();
-  std::vector<mxnet::DAGEngine::OprHandle> oprs;
+  std::vector<mxnet::Engine::OprHandle> oprs;
 
   // Test #1
   printf("============= Test #1 ==============\n");
   for (int i = 0; i < 10; ++i) {
     oprs.push_back(engine->NewOperator(
-        [i](mxnet::RunContext ctx, mxnet::DAGEngine::Callback cb) {
+        [i](mxnet::RunContext ctx, mxnet::Engine::Callback cb) {
           Foo(ctx, i);
           std::this_thread::sleep_for(std::chrono::seconds{1});
           cb();
@@ -43,7 +43,7 @@ int main() {
   oprs.clear();
   for (int i = 0; i < 10; ++i) {
     oprs.push_back(engine->NewOperator(
-        [i](mxnet::RunContext ctx, mxnet::DAGEngine::Callback cb) {
+        [i](mxnet::RunContext ctx, mxnet::Engine::Callback cb) {
           Foo(ctx, i);
           std::this_thread::sleep_for(std::chrono::milliseconds{500});
           cb();
@@ -69,7 +69,7 @@ int main() {
   var = engine->NewVar();
   oprs.clear();
   oprs.push_back(engine->NewOperator(
-      [](mxnet::RunContext ctx, mxnet::DAGEngine::Callback cb) {
+      [](mxnet::RunContext ctx, mxnet::Engine::Callback cb) {
         std::this_thread::sleep_for(std::chrono::seconds{2});
         Foo(ctx, 42);
         cb();
@@ -89,7 +89,7 @@ int main() {
   var = engine->NewVar();
   oprs.clear();
   oprs.push_back(engine->NewOperator(
-      [](mxnet::RunContext ctx, mxnet::DAGEngine::Callback cb) {
+      [](mxnet::RunContext ctx, mxnet::Engine::Callback cb) {
         Foo(ctx, 42);
         std::this_thread::sleep_for(std::chrono::seconds{2});
         cb();

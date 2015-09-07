@@ -1,8 +1,8 @@
 /*!
  * Copyright (c) 2015 by Contributors
  */
-#ifndef MXNET_DAG_ENGINE_THREAD_POOL_H_
-#define MXNET_DAG_ENGINE_THREAD_POOL_H_
+#ifndef MXNET_ENGINE_THREAD_POOL_H_
+#define MXNET_ENGINE_THREAD_POOL_H_
 
 #include <dmlc/base.h>
 #include <cstddef>
@@ -64,4 +64,4 @@ ThreadPool<kSize>::~ThreadPool() noexcept(false) {
 }  // namespace engine
 }  // namespace mxnet
 
-#endif  // MXNET_DAG_ENGINE_THREAD_POOL_H_
+#endif  // MXNET_ENGINE_THREAD_POOL_H_
