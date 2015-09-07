@@ -9,6 +9,19 @@ namespace engine {
 
 NaiveEngine::Variable NaiveEngine::NewVar() { return nullptr; }
 
+NaiveEngine::NaiveEngine() {
+#if MXNET_USE_CUDA
+  stream_ = mshadow::NewStream<gpu>(true, false);
+  ctx_.stream = stream_;
+#endif
+}
+
+NaiveEngine::~NaiveEngine() {
+#if MXNET_USE_CUDA
+  mshadow::DeleteStream(stream_);
+#endif
+}
+
 NaiveEngine::OprHandle NaiveEngine::NewOperator(AsyncFn,
                                                 std::vector<Variable> const&,
                                                 std::vector<Variable> const&) {
@@ -24,10 +37,11 @@ void NaiveEngine::Push(Fn exec_fun, Context exec_ctx,
                        std::vector<Variable> const&,
                        std::vector<Variable> const&) {
   if (exec_ctx.dev_mask == gpu::kDevMask) {
-    ctx_.stream = &stream_;
 #if MXNET_USE_CUDA
     mshadow::SetDevice<gpu>(exec_ctx.dev_id);
+    ctx_.stream = stream_;
     exec_fun(ctx_);
+    stream_->Wait();
 #else
     LOG(FATAL) << "GPU is not enabled";
 #endif

@@ -80,7 +80,7 @@ class Operator {
    * \param req the request types of saving operation, can only be kWriteTo or kWriteInplace.
    * \param out_data array of output data, pointer is used to indicate that this is holder
    *        the space of TBlob in out_data must be pre-allocated with InferShape
-   * \param aux_states Auxiliary states of operator. Normally operator doesn't 
+   * \param aux_states Auxiliary states of operator. Normally operator doesn't
    *        need, epecial case like Batch Norm requires.
    * \sa OpReqType, OpContext
    */
@@ -395,6 +395,24 @@ typedef OperatorProperty *(*OperatorPropertyFactory)();
 struct OperatorPropertyReg
     : public dmlc::FunctionRegEntryBase<OperatorPropertyReg,
                                         OperatorPropertyFactory> {
+  /*!
+   * \brief Set key_var_num_args
+   *  When this is set, the API caller is required to pass in a
+   *  argument with key=key_num_args.c_str(), and value=num_args.
+   *  num_args is number of positional argument when calling the function.
+   *
+   *  This is used to pass in length of positional arguments
+   *  for operators that can take variable length of input.
+   *  Most operators do not need to set this property.
+   *
+   * \param key the key name to be set
+   */
+  inline OperatorPropertyReg& set_key_var_num_args(const std::string &key) {  // NOLINT(*)
+    this->key_var_num_args = key;
+    return *this;
+  }
+  /*! \brief The key num_args name. */
+  std::string key_var_num_args;
 };
 
 //--------------------------------------------------------------
@@ -411,11 +429,12 @@ struct OperatorPropertyReg
  * \endcode
  */
 #define MXNET_REGISTER_OP_PROPERTY(name, OperatorPropertyType)          \
-  static ::mxnet::OperatorProperty* __create__ ## OperatorPropertyType ## __() { \
+  static ::mxnet::OperatorProperty* __create__ ## OperatorProperty ## name ## __() { \
     return new OperatorPropertyType;                                    \
   }                                                                     \
   DMLC_REGISTRY_REGISTER(::mxnet::OperatorPropertyReg, OperatorPropertyReg, name) \
-  .set_body(__create__ ## OperatorPropertyType ## __)
+  .set_body(__create__ ## OperatorProperty ## name ## __)
+
 #endif  // DMLC_USE_CXX11
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_H_

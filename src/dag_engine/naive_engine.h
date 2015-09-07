@@ -13,6 +13,8 @@ namespace engine {
 
 class NaiveEngine final : public DAGEngine {
  public:
+  NaiveEngine();
+  ~NaiveEngine();
   Variable NewVar() override;
   OprHandle NewOperator(AsyncFn fn, std::vector<Variable> const& use_vars,
                         std::vector<Variable> const& mutate_vars) override;
@@ -30,7 +32,9 @@ class NaiveEngine final : public DAGEngine {
 
  private:
   RunContext ctx_;
-  mshadow::Stream<gpu> stream_;
+#if MXNET_USE_CUDA
+  mshadow::Stream<gpu>* stream_;
+#endif
 };  // class NaiveEngine
 
 }  // namespace engine

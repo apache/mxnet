@@ -12,9 +12,6 @@ ifndef DMLC_CORE
 	DMLC_CORE = dmlc-core
 endif
 
-ifndef RABIT
-	RABIT = rabit
-endif
 
 # use customized config file
 include $(config)
@@ -63,15 +60,14 @@ endif
 
 BIN = tests/test_threaded_engine
 OBJ = narray_function_cpu.o
-OBJCXX11 = batch_norm_cpu.o reshape_cpu.o narray.o c_api.o operator.o symbol.o storage.o fully_connected_cpu.o static_graph.o activation_cpu.o graph_executor.o softmax_cpu.o elementwise_sum_cpu.o pooling_cpu.o convolution_cpu.o io.o iter_mnist.o dag_engine.o naive_engine.o threaded_engine.o
-CUOBJ =
+OBJCXX11 = narray.o c_api.o operator.o symbol.o storage.o static_graph.o graph_executor.o io.o iter_mnist.o dag_engine.o naive_engine.o threaded_engine.o
+CUOBJ = narray_function_gpu.o
 SLIB = lib/libmxnet.so
 ALIB = lib/libmxnet.a
 LIB_DEP = $(DMLC_CORE)/libdmlc.a
-
-ifeq ($(USE_CUDA), 1)
-	CUOBJ += batch_norm_gpu.o reshape_gpu.o narray_function_gpu.o fully_connected_gpu.o activation_gpu.o elementwise_sum_gpu.o pooling_gpu.o softmax_gpu.o convolution_gpu.o
-endif
+ALL_DEP = $(OBJ) $(OBJCXX11) $(LIB_DEP)
+# common headers, change them will results in rebuild of all files
+COMMON_HEADERS=include/mxnet/*.h src/common/*.h
 
 .PHONY: clean all test lint doc
 
@@ -87,32 +83,32 @@ threaded_engine.o: src/dag_engine/threaded_engine.cc
 narray.o: src/narray/narray.cc
 narray_function_cpu.o: src/narray/narray_function.cc src/narray/narray_function-inl.h
 narray_function_gpu.o: src/narray/narray_function.cu src/narray/narray_function-inl.h
-symbol.o: src/symbol/symbol.cc
-graph_executor.o: src/symbol/graph_executor.cc
-static_graph.o : src/symbol/static_graph.cc
+symbol.o: src/symbol/symbol.cc src/symbol/*.h
+graph_executor.o: src/symbol/graph_executor.cc src/symbol/*.h
+static_graph.o : src/symbol/static_graph.cc src/symbol/*.h
 operator.o: src/operator/operator.cc
 c_api.o: src/c_api.cc
-fully_connected_cpu.o: src/operator/fully_connected.cc
-fully_connected_gpu.o: src/operator/fully_connected.cu
-activation_cpu.o: src/operator/activation.cc
-activation_gpu.o: src/operator/activation.cu
-elementwise_sum_cpu.o: src/operator/elementwise_sum.cc
-elementwise_sum_gpu.o: src/operator/elementwise_sum.cu
-pooling_cpu.o: src/operator/pooling.cc
-pooling_gpu.o: src/operator/pooling.cu
-softmax_cpu.o: src/operator/softmax.cc
-softmax_gpu.o: src/operator/softmax.cu
-convolution_cpu.o: src/operator/convolution.cc
-convolution_gpu.o: src/operator/convolution.cu
-reshape_cpu.o: src/operator/reshape.cc
-reshape_gpu.o: src/operator/reshape.cu
-batch_norm_cpu.o: src/operator/batch_norm.cc
-batch_norm_gpu.o: src/operator/batch_norm.cu
 io.o: src/io/io.cc
-iter_mnist.o: src/io/iter_mnist.cc
+iter_mnist.o: src/io/iter_mnist.cc src/io/*.h
 
-lib/libmxnet.a: $(OBJ) $(OBJCXX11) $(CUOBJ) $(LIB_DEP)
-lib/libmxnet.so: $(OBJ) $(OBJCXX11) $(CUOBJ) $(LIB_DEP)
+# Rules for operators
+OPERATOR_HDR=$(wildcard src/operator/*-inl.h)
+OPERATOR_OBJ=$(patsubst %-inl.h, %_cpu.o, $(OPERATOR_HDR))
+OPERATOR_CUOBJ=$(patsubst %-inl.h, %_gpu.o, $(OPERATOR_HDR))
+
+ALL_DEP += $(OPERATOR_OBJ)
+ifeq ($(USE_CUDA), 1)
+	ALL_DEP += $(OPERATOR_CUOBJ) $(CUOBJ)
+endif
+
+src/operator/%_cpu.o : src/operator/%.cc src/operator/%-inl.h src/operator/mshadow_op.h src/operator/operator_common.h $(COMMON_HEADERS)
+	$(CXX) -std=c++0x -c $(CFLAGS) -o $@  $(filter %.cpp %.c %.cc, $^)
+
+src/operator/%_gpu.o : src/operator/%.cu src/operator/%-inl.h src/operator/operator_common.h src/operator/mshadow_op.h $(COMMON_HEADERS)
+	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $(filter %.cu, $^)
+
+lib/libmxnet.a:  $(ALL_DEP)
+lib/libmxnet.so: $(ALL_DEP)
 
 tests/test_storage: tests/test_storage.cc lib/libmxnet.a
 tests/test_threaded_engine: tests/test_threaded_engine.cc lib/libmxnet.a
@@ -120,10 +116,10 @@ tests/test_threaded_engine: tests/test_threaded_engine.cc lib/libmxnet.a
 $(BIN) :
 	$(CXX) $(CFLAGS) -std=c++0x -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
-$(OBJ) :
+$(OBJ) : $(COMMON_HEADERS)
 	$(CXX) -c $(CFLAGS) -o $@ $(filter %.cpp %.c %.cc, $^)
 
-$(OBJCXX11) :
+$(OBJCXX11) : $(COMMON_HEADERS)
 	$(CXX) -std=c++0x -c $(CFLAGS) -o $@  $(filter %.cpp %.c %.cc, $^)
 
 $(SLIB) :
@@ -132,19 +128,18 @@ $(SLIB) :
 $(ALIB): $(OBJ) $(OBJCXX11)
 	ar cr $@ $+
 
-$(CUOBJ) :
+$(CUOBJ) :$(COMMON_HEADERS)
 	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $(filter %.cu, $^)
 
 $(CUBIN) :
 	$(NVCC) -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" -Xlinker "$(LDFLAGS)" $(filter %.cu %.cpp %.o, $^)
 
-
 lint:
-	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts test python
+	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python
 
 doxygen:
 	doxygen doc/Doxyfile
 
 clean:
-	$(RM) $(OBJ) $(OBJCXX11) $(BIN) $(CUBIN) $(CUOBJ) $(SLIB) $(ALIB) *~ */*~ */*/*~ */*/*/*~
+	$(RM) $(ALL_DEP) $(SLIB) $(ALIB) *~ */*~ */*/*~ */*/*/*~
 	cd $(DMLC_CORE); make clean; cd -

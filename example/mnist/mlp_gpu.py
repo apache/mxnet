@@ -23,20 +23,28 @@ args_list = softmax.list_arguments()
 # infer shape
 data_shape = (batch_size, 784)
 arg_shapes, out_shapes, aux_shapes = softmax.infer_shape(data=data_shape)
-arg_narrays = [mx.narray.create(shape) for shape in arg_shapes]
-grad_narrays = [mx.narray.create(shape) for shape in arg_shapes]
+
+arg_narrays = [mx.narray.create(shape, ctx=mx.Context("gpu")) for shape in arg_shapes]
+grad_narrays = [mx.narray.create(shape, ctx=mx.Context("gpu")) for shape in arg_shapes]
+
 inputs = dict(zip(args_list, arg_narrays))
+
+name2shape = dict(zip(args_list, arg_shapes))
+pred = mx.narray.create(out_shapes[0])
+
 np.random.seed(0)
 # set random weight
 for name, narray in inputs.items():
     if "weight" in name:
-        narray.numpy[:, :] = np.random.uniform(-0.07, 0.07, narray.numpy.shape)
+        tmp = mx.narray.create(name2shape[name])
+        tmp.numpy[:] = np.random.uniform(-0.07, 0.07, name2shape[name])
+        tmp.copyto(narray)
     if "bias" in name:
-        narray.numpy[:] = 0.0
+        narray[:] = 0.0
 
 # bind executer
 # TODO(bing): think of a better bind interface
-executor = softmax.bind(mx.Context('cpu'), arg_narrays, grad_narrays)
+executor = softmax.bind(mx.Context('gpu'), arg_narrays, grad_narrays)
 # update
 
 out_narray = executor.heads()[0]
@@ -63,6 +71,8 @@ val_dataiter = mx.io.MNISTIter(
         label="data/t10k-labels-idx1-ubyte",
         batch_size=batch_size, shuffle=True, flat=True, silent=False)
 
+tmp_label = mx.narray.create(name2shape["sm_label"])
+
 def test_mlp():
     acc_train = 0.
     acc_val = 0.
@@ -74,14 +84,15 @@ def test_mlp():
         train_nbatch = 0
         val_nbatch = 0
         for data, label in train_dataiter:
-            data = data.numpy
-            label = label.numpy.flatten()
-            inputs["data"].numpy[:] = data
-            inputs["sm_label"].numpy[:] = label
+            data = data
+            tmp_label.numpy[:] = label.numpy.reshape(tmp_label.shape)
+            data.copyto(inputs["data"])
+            tmp_label.copyto(inputs["sm_label"])
             executor.forward()
-            train_acc += CalAcc(out_narray.numpy, label)
+            out_narray.copyto(pred)
+            train_acc += CalAcc(pred.numpy, label.numpy.flatten())
             train_nbatch += 1
-            grad_narray.numpy[:] = out_narray.numpy
+            out_narray.copyto(grad_narray)
             executor.backward([grad_narray])
 
             for grad, weight in block:
@@ -89,11 +100,12 @@ def test_mlp():
 
         # evaluate
         for data, label in val_dataiter:
-            data = data.numpy
+            data = data
             label = label.numpy.flatten()
-            inputs["data"].numpy[:] = data
+            data.copyto(inputs["data"])
             executor.forward()
-            val_acc += CalAcc(out_narray.numpy, label)
+            out_narray.copyto(pred)
+            val_acc += CalAcc(pred.numpy, label)
             val_nbatch += 1
         acc_train = train_acc / train_nbatch
         acc_val = val_acc / val_nbatch

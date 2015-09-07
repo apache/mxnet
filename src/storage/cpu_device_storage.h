@@ -38,7 +38,13 @@ class CPUDeviceStorage {
 };  // class CPUDeviceStorage
 
 inline void* CPUDeviceStorage::Alloc(size_t size) {
+#ifdef __APPLE__
+  return CHECK_NOTNULL(malloc(size));
+#elif _MSC_VER
+  return CHECK_NOTNULL(_aligned_malloc(size, alignment_));
+#else
   return CHECK_NOTNULL(memalign(alignment_, size));
+#endif
 }
 
 inline void CPUDeviceStorage::Free(void* ptr) { free(ptr); }

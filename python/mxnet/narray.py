@@ -3,8 +3,9 @@
 from __future__ import absolute_import
 
 import ctypes
+import warnings
 import sys
-from .base import _LIB, string_types
+from .base import _LIB, string_types, numeric_types
 from .base import c_array, py_str, c_str
 from .base import mx_uint, mx_float, NArrayHandle, FunctionHandle
 from .base import ctypes2numpy_shared, ctypes2buffer
@@ -66,7 +67,7 @@ class NArray(object):
     def __add__(self, other):
         if isinstance(other, NArray):
             return NArray._plus(self, other)
-        elif isinstance(other, float) or isinstance(other, int):
+        elif isinstance(other, numeric_types):
             return NArray._plus_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
@@ -74,7 +75,7 @@ class NArray(object):
     def __iadd__(self, other):
         if isinstance(other, NArray):
             return NArray._plus(self, other, out=self)
-        elif isinstance(other, float) or isinstance(other, int):
+        elif isinstance(other, numeric_types):
             return NArray._plus_scalar(self, float(other), out=self)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
@@ -85,7 +86,7 @@ class NArray(object):
     def __sub__(self, other):
         if isinstance(other, NArray):
             return NArray._minus(self, other)
-        elif isinstance(other, float) or isinstance(other, int):
+        elif isinstance(other, numeric_types):
             return NArray._minus_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
@@ -93,23 +94,32 @@ class NArray(object):
     def __isub__(self, other):
         if isinstance(other, NArray):
             return NArray._minus(self, other, out=self)
-        elif isinstance(other, float) or isinstance(other, int):
+        elif isinstance(other, numeric_types):
             return NArray._minus_scalar(self, float(other), out=self)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __rsub__(self, other):
+        if isinstance(other, numeric_types):
+            return NArray._rminus_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __mul__(self, other):
         if isinstance(other, NArray):
             return NArray._mul(self, other)
-        elif isinstance(other, float) or isinstance(other, int):
+        elif isinstance(other, numeric_types):
             return NArray._mul_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
+    def __neg__(self):
+        return NArray._mul_scalar(self, -1.0, out=self)
+
     def __imul__(self, other):
         if isinstance(other, NArray):
             return NArray._mul(self, other, out=self)
-        elif isinstance(other, float) or isinstance(other, int):
+        elif isinstance(other, numeric_types):
             return NArray._mul_scalar(self, float(other), out=self)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
@@ -120,15 +130,21 @@ class NArray(object):
     def __div__(self, other):
         if isinstance(other, NArray):
             return NArray._div(self, other)
-        elif isinstance(other, float) or isinstance(other, int):
+        elif isinstance(other, numeric_types):
             return NArray._div_scalar(self, float(other))
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __rdiv__(self, other):
+        if isinstance(other, numeric_types):
+            return NArray._rdiv_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __idiv__(self, other):
         if isinstance(other, NArray):
             return NArray._div(self, other, out=self)
-        elif isinstance(other, float) or isinstance(other, int):
+        elif isinstance(other, numeric_types):
             return NArray._div_scalar(self, float(other), out=self)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
@@ -163,9 +179,13 @@ class NArray(object):
         """Set narray value"""
         if in_slice.step != None:
             raise Exception("Set NArray should use empty index array[:] = target_array")
-        if isinstance(value, NArray) == False:
+        if isinstance(value, NArray):
+            if value.handle is not self.handle:
+                value.copyto(self)
+        elif isinstance(value, numeric_types):
+            return NArray._set_value(float(value), out=self)
+        else:
             raise TypeError('type %s not supported' % str(type(value)))
-        value.copyto(self)
 
     def __getitem__(self, in_slice):
         """Get narray"""
@@ -238,6 +258,10 @@ class NArray(object):
             The copy target NArray
         """
         if isinstance(other, NArray):
+            if other.handle is self.handle:
+                warnings.warn('copy an array to itself, is it intended?',
+                              RuntimeWarning)
+                return
             return NArray._copyto(self, out=other)
         elif isinstance(other, Context):
             hret = NArray(_new_alloc_handle(self.shape, other, True))
