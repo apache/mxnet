@@ -35,7 +35,7 @@ int main() {
   for (auto&& i : oprs) {
     engine->DeleteOperator(i);
   }
-  engine->PushDelete([](mxnet::RunContext) {}, mxnet::Context{}, var);
+  engine->DeleteVariable([](mxnet::RunContext) {}, mxnet::Context{}, var);
   engine->WaitForAll();
 
   printf("============= Test #2 ==============\n");
@@ -56,13 +56,13 @@ int main() {
   for (auto&& i : oprs) {
     engine->DeleteOperator(i);
   }
-  engine->PushDelete([](mxnet::RunContext) {}, mxnet::Context{}, var);
+  engine->DeleteVariable([](mxnet::RunContext) {}, mxnet::Context{}, var);
 
   printf("============= Test #3 ==============\n");
   var = engine->NewVariable();
   oprs.clear();
   engine->WaitForVar(var);
-  engine->PushDelete([](mxnet::RunContext) {}, mxnet::Context{}, var);
+  engine->DeleteVariable([](mxnet::RunContext) {}, mxnet::Context{}, var);
   engine->WaitForAll();
 
   printf("============= Test #4 ==============\n");
@@ -82,7 +82,7 @@ int main() {
   for (auto&& i : oprs) {
     engine->DeleteOperator(i);
   }
-  engine->PushDelete([](mxnet::RunContext) {}, mxnet::Context{}, var);
+  engine->DeleteVariable([](mxnet::RunContext) {}, mxnet::Context{}, var);
   engine->WaitForAll();
 
   printf("============= Test #5 ==============\n");
@@ -104,7 +104,7 @@ int main() {
   for (auto&& i : oprs) {
     engine->DeleteOperator(i);
   }
-  engine->PushDelete([](mxnet::RunContext) {}, mxnet::Context{}, var);
+  engine->DeleteVariable([](mxnet::RunContext) {}, mxnet::Context{}, var);
   engine->WaitForAll();
   var = nullptr;
   oprs.clear();
