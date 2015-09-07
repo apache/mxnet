@@ -17,6 +17,10 @@ ifneq ($(USE_OPENMP_ITER), 1)
 	export NO_OPENMP = 1
 endif
 
+ifneq ($(USE_OPENMP_ITER), 1)
+	export NO_OPENMP = 1
+endif
+
 # use customized config file
 include $(config)
 include mshadow/make/mshadow.mk
@@ -108,7 +112,7 @@ operator.o: src/operator/operator.cc
 c_api.o: src/c_api.cc
 io.o: src/io/io.cc
 iter_mnist.o: src/io/iter_mnist.cc src/io/*.h
-iter_image_recordio.o: src/io/iter_image_recordio.cc
+iter_image_recordio.o: src/io/iter_image_recordio.cc src/io/*.h
 
 # Rules for operators
 OPERATOR_HDR=$(wildcard src/operator/*-inl.h)
