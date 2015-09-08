@@ -261,6 +261,10 @@ class BatchNormProp : public OperatorProperty {
 
   Operator* CreateOperator(Context ctx) const;
 
+  std::vector<ResourceRequest> BackwardResource() const override {
+    return {Resource::kTempSpace};
+  }
+
  private:
   BatchNormParam param_;
 };  // class BatchNormProp

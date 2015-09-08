@@ -12,12 +12,12 @@ def CalAcc(out, label):
 # symbol net
 batch_size = 100
 data = mx.symbol.Variable('data')
-conv1= mx.symbol.Convolution(data = data, name='conv1', num_filter=32, kernel=(3,3), stride=(2,2), nstep=100)
+conv1= mx.symbol.Convolution(data = data, name='conv1', num_filter=32, kernel=(3,3), stride=(2,2))
 bn1 = mx.symbol.BatchNorm(data = conv1, name="bn1")
 act1 = mx.symbol.Activation(data = bn1, name='relu1', act_type="relu")
 mp1 = mx.symbol.Pooling(data = act1, name = 'mp1', kernel=(2,2), stride=(2,2), pool_type='max')
 
-conv2= mx.symbol.Convolution(data = mp1, name='conv2', num_filter=32, kernel=(3,3), stride=(2,2), nstep=100)
+conv2= mx.symbol.Convolution(data = mp1, name='conv2', num_filter=32, kernel=(3,3), stride=(2,2))
 bn2 = mx.symbol.BatchNorm(data = conv2, name="bn2")
 act2 = mx.symbol.Activation(data = bn2, name='relu2', act_type="relu")
 mp2 = mx.symbol.Pooling(data = act2, name = 'mp2', kernel=(2,2), stride=(2,2), pool_type='max')
