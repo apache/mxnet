@@ -313,10 +313,10 @@ void NArray::Save(dmlc::Stream *strm) const {
   NArray temp;
   if (ctx.dev_mask != cpu::kDevMask) {
     temp = this->Copy(Context(cpu::kDevMask, 0));
-    temp.Wait();
+    temp.WaitToRead();
     save_data = temp.data();
   } else {
-    this->Wait();
+    this->WaitToRead();
     save_data = this->data();
   }
   // save type flag
@@ -363,6 +363,58 @@ NArray NArray::Copy(Context ctx) const {
   NArray ret(shape(), ctx, true);
   CopyFromTo(*this, &ret);
   return ret;
+}
+
+void NArray::SyncCopyFromCPU(const real_t *data, size_t size) const {
+  this->WaitToWrite();
+  TShape dshape = this->shape();
+  CHECK_EQ(dshape.Size(), size)
+      << "Memory size do not match";
+  Context ctx = this->ctx();
+  TBlob dst = this->data();
+  TBlob src((real_t*)data, dshape, cpu::kDevMask); // NOLINT(*)
+
+  RunContext run_ctx;
+  if (ctx.dev_mask == cpu::kDevMask) {
+    narray::Copy<cpu, cpu>(src, &dst, Context(cpu::kDevMask, 0), ctx, run_ctx);
+  } else {
+#if MXNET_USE_CUDA
+    // use empty stream to do sync copy
+    // TODO(bing, yutian) consider use a Real Stream, so it is not blocking others
+    // Maybe move to engine part
+    mshadow::Stream<gpu> zero_stream;
+    run_ctx.stream = &zero_stream;
+    narray::Copy<cpu, gpu>(src, &dst, Context(cpu::kDevMask, 0), ctx, run_ctx);
+#else
+    LOG(FATAL) << "GPU is not enabled";
+#endif
+  }
+}
+
+void NArray::SyncCopyToCPU(real_t *data, size_t size) const {
+  this->WaitToRead();
+  TShape dshape = this->shape();
+  CHECK_EQ(dshape.Size(), size)
+      << "Memory size do not match";
+  Context ctx = this->ctx();
+  TBlob src = this->data();
+  TBlob dst(data, dshape, cpu::kDevMask); // NOLINT(*)
+
+  RunContext run_ctx;
+  if (ctx.dev_mask == cpu::kDevMask) {
+    narray::Copy<cpu, cpu>(src, &dst, ctx, Context(cpu::kDevMask, 0), run_ctx);
+  } else {
+#if MXNET_USE_CUDA
+    // use empty stream to do sync copy
+    // TODO(bing, yutian) consider use a Real Stream, so it is not blocking others
+    // Maybe move to engine part
+    mshadow::Stream<gpu> zero_stream;
+    run_ctx.stream = &zero_stream;
+    narray::Copy<gpu, cpu>(src, &dst, ctx, Context(cpu::kDevMask, 0), run_ctx);
+#else
+    LOG(FATAL) << "GPU is not enabled";
+#endif
+  }
 }
 
 // register API function

@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
 [![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](https://readthedocs.org/projects/mxnet/?badge=latest)
+[![GitHub Stats](https://img.shields.io/badge/github-stats-ff5500.svg)](http://githubstats.com/dmlc/mxnet)
 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)]()
 
 This is a project that combines lessons and ideas we learnt from [cxxnet](https://github.com/dmlc/cxxnet), [minerva](https://github.com/dmlc/minerva) and [purine2](https://github.com/purine/purine2).
@@ -24,7 +25,7 @@ This is a project that combines lessons and ideas we learnt from [cxxnet](https:
   // c++11 code here
 #endif
 ```
-  - Update the dependencies by 
+  - Update the dependencies by
 ```
 git submodule foreach --recursive git pull origin master
 ```

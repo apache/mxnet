@@ -127,12 +127,47 @@ MXNET_DLL int MXNArrayListLoad(const char* fname,
                                mx_uint *out_name_size,
                                const char*** out_names);
 /*!
- * \brief wait until all the operation with respect NArray
- *  to this NArray is finished, always call this before fetching data out
+ * \brief Perform a synchronize copy from a continugous CPU memory region.
+ *
+ *  This function will call WaitToWrite before the copy is performed.
+ *  This is useful to copy data from existing memory region that are
+ *  not wrapped by NArray(thus dependency not being tracked).
+ *
+ * \param handle the NArray handle
+ * \param data the data source to copy from.
+ * \param size the memory size we want to copy from.
+ */
+MXNET_DLL int MXNArraySyncCopyFromCPU(NArrayHandle handle,
+                                      const mx_float *data,
+                                      size_t size);
+/*!
+ * \brief Perform a synchronize copyto a continugous CPU memory region.
+ *
+ *  This function will call WaitToRead before the copy is performed.
+ *  This is useful to copy data from existing memory region that are
+ *  not wrapped by NArray(thus dependency not being tracked).
+ *
+ * \param handle the NArray handle
+ * \param data the data source to copy into.
+ * \param size the memory size we want to copy into.
+ */
+MXNET_DLL int MXNArraySyncCopyToCPU(NArrayHandle handle,
+                                    mx_float *data,
+                                    size_t size);
+/*!
+ * \brief Wait until all the pending writes with respect NArray are finished.
+ *  Always call this before read data out synchronizely.
  * \param handle the NArray handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayWait(NArrayHandle handle);
+MXNET_DLL int MXNArrayWaitToRead(NArrayHandle handle);
+/*!
+ * \brief Wait until all the pending read/write with respect NArray are finished.
+ *  Always call this before write data into NArray synchronizely.
+ * \param handle the NArray handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNArrayWaitToWrite(NArrayHandle handle);
 /*!
  * \brief wait until all delayed operations in
  *   the system is completed
@@ -262,6 +297,11 @@ MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
  * \param arg_names Name of the arguments.
  * \param arg_type_infos Type informations about the arguments.
  * \param arg_descriptions Description information about the arguments.
+ * \param key_var_num_args The keyword argument for specifying variable number of arguments.
+ *            When this parameter has non-zero length, the function allows variable number
+ *            of positional arguments, and will need the caller to pass it in in
+ *            MXSymbolCreateAtomicSymbol,
+ *            With key = key_var_num_args, and value = number of positional arguments.
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
@@ -270,15 +310,8 @@ MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                           mx_uint *num_args,
                                           const char ***arg_names,
                                           const char ***arg_type_infos,
-                                          const char ***arg_descriptions);
-/*!
- * \brief Get the docstring of AtomicSymbol.
- * \param creator the AtomicSymbolCreator
- * \param out the returned name of the creator
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXSymbolGetAtomicSymbolDoc(AtomicSymbolCreator creator,
-                                         const char **out);
+                                          const char ***arg_descriptions,
+                                          const char **key_var_num_args);
 /*!
  * \brief Create an AtomicSymbol.
  * \param creator the AtomicSymbolCreator

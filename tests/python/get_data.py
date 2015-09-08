@@ -27,3 +27,10 @@ def GetMNIST_ubyte():
         os.system("wget http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz -P data/")
         os.system("gunzip data/t10k-labels-idx1-ubyte.gz")
 
+# download cifar
+def GetCifar10():
+    if not os.path.isdir("data/"):
+        os.system("mkdir data/")
+    if not os.path.exists('data/cifar10.zip'):
+        os.system("wget http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip -P data/")
+        os.system("unzip data/cifar10.zip")

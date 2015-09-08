@@ -12,19 +12,19 @@ def CalAcc(out, label):
 # symbol net
 batch_size = 100
 data = mx.symbol.Variable('data')
-conv1= mx.symbol.Convolution(data = data, name='conv1', nb_filter=32, kernel=(3,3), stride=(2,2), nstep=100)
+conv1= mx.symbol.Convolution(data = data, name='conv1', num_filter=32, kernel=(3,3), stride=(2,2), nstep=100)
 bn1 = mx.symbol.BatchNorm(data = conv1, name="bn1")
 act1 = mx.symbol.Activation(data = bn1, name='relu1', act_type="relu")
 mp1 = mx.symbol.Pooling(data = act1, name = 'mp1', kernel=(2,2), stride=(2,2), pool_type='max')
 
-conv2= mx.symbol.Convolution(data = mp1, name='conv2', nb_filter=32, kernel=(3,3), stride=(2,2), nstep=100)
+conv2= mx.symbol.Convolution(data = mp1, name='conv2', num_filter=32, kernel=(3,3), stride=(2,2), nstep=100)
 bn2 = mx.symbol.BatchNorm(data = conv2, name="bn2")
 act2 = mx.symbol.Activation(data = bn2, name='relu2', act_type="relu")
 mp2 = mx.symbol.Pooling(data = act2, name = 'mp2', kernel=(2,2), stride=(2,2), pool_type='max')
 
 
 fl = mx.symbol.Flatten(data = mp2, name="flatten")
-fc2 = mx.symbol.FullyConnected(data = fl, name='fc2', nb_hidden=10)
+fc2 = mx.symbol.FullyConnected(data = fl, name='fc2', num_hidden=10)
 softmax = mx.symbol.Softmax(data = fc2, name = 'sm')
 args_list = softmax.list_arguments()
 # infer shape
@@ -32,31 +32,30 @@ args_list = softmax.list_arguments()
 
 data_shape = (batch_size, 1, 28, 28)
 arg_shapes, out_shapes, aux_shapes = softmax.infer_shape(data=data_shape)
-arg_narrays = [mx.narray.create(shape) for shape in arg_shapes]
-grad_narrays = [mx.narray.create(shape) for shape in arg_shapes]
-aux_narrays = [mx.narray.create(shape) for shape in aux_shapes]
+arg_narrays = [mx.narray.empty(shape) for shape in arg_shapes]
+grad_narrays = [mx.narray.empty(shape) for shape in arg_shapes]
+aux_narrays = [mx.narray.empty(shape) for shape in aux_shapes]
 
 inputs = dict(zip(args_list, arg_narrays))
 np.random.seed(0)
 # set random weight
 for name, narray in inputs.items():
     if "weight" in name:
-        narray.numpy[:] = np.random.uniform(-0.07, 0.07, narray.numpy.shape)
+        narray[:] = np.random.uniform(-0.07, 0.07, narray.shape)
     if "bias" in name:
-        narray.numpy[:] = 0.0
+        narray[:] = 0.0
     if "gamma" in name:
-        narray.numpy[:] = 1.0
+        narray[:] = 1.0
     if "beta" in name:
-        narray.numpy[:] = 0.0
+        narray[:] = 0.0
 
-req = ['write_to' for i in range(len(arg_narrays))]
 # bind executer
 # TODO(bing): think of a better bind interface
-executor = softmax.bind(mx.Context('cpu'), arg_narrays, grad_narrays, req, aux_narrays)
+executor = softmax.bind(mx.Context('cpu'), arg_narrays, grad_narrays, 'write', aux_narrays)
 # update
 
 out_narray = executor.heads()[0]
-grad_narray = mx.narray.create(out_narray.shape)
+grad_narray = mx.narray.empty(out_narray.shape)
 
 epoch = 1
 momentum = 0.9
@@ -91,14 +90,13 @@ def test_mnist():
         train_nbatch = 0
         val_nbatch = 0
         for data, label in train_dataiter:
-            data = data.numpy
-            label = label.numpy.flatten()
-            inputs["data"].numpy[:] = data
-            inputs["sm_label"].numpy[:] = label
+            label = label.asnumpy().flatten()
+            inputs["data"][:] = data
+            inputs["sm_label"][:] = label
             executor.forward(is_train = True)
-            train_acc += CalAcc(out_narray.numpy, label)
+            train_acc += CalAcc(out_narray.asnumpy(), label)
             train_nbatch += 1
-            grad_narray.numpy[:] = out_narray.numpy
+            grad_narray[:] = out_narray
             executor.backward([grad_narray])
 
             for grad, weight in block:
@@ -106,11 +104,10 @@ def test_mnist():
 
         # evaluate
         for data, label in val_dataiter:
-            data = data.numpy
-            label = label.numpy.flatten()
-            inputs["data"].numpy[:] = data
+            label = label.asnumpy().flatten()
+            inputs["data"][:] = data
             executor.forward(is_train = False)
-            val_acc += CalAcc(out_narray.numpy, label)
+            val_acc += CalAcc(out_narray.asnumpy(), label)
             val_nbatch += 1
         print("Train Acc: ", train_acc / train_nbatch)
         print("Valid Acc: ", val_acc / val_nbatch)

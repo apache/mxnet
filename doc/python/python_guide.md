@@ -64,11 +64,11 @@ cpu_array.copyto(gpu_array)
 # create a new copy of NArray on GPU 0
 gpu_array2 = cpu_array.copyto(mx.Context('gpu', 0))
 
-# do some operations on GPU
-gpu_array = gpu_array + gpu_array2
+# do some operations on GPU, the result will be on same device.
+gpu_array3 = gpu_array2 + 1.0
 
 # copy back to CPU
-gpu_array.copyto(cpu_array)
+gpu_array3.copyto(cpu_array)
 
 # print the result
 print(cpu_array.numpy)
@@ -76,7 +76,20 @@ print(cpu_array.numpy)
 
 In common workflow, it is encouraged to copy the data into a GPU NArray,
 do as much as computation as you can, and copy it back to CPU.
+Besides the NArrays that are explicitly created, the computation will
+generate result NArray that are sit on the same device.
 
+It is important to note that mxnet do not support arthematic inputs
+from two different devices. You need to insert a copyto explicitly
+to do the computation, like showed in the following example.
+```python
+cpu_array = mx.narray.ones((10, 10))
+gpu_array = mx.narray.create((10, 10), mx.Context('gpu', 0))
+gpu_array2 = gpu_array + cpu_array.copyto(gpu_array.context)
+```
+
+We made this choice because the copy between devices creates additional overhead.
+The current API makes the copy cost transparent to the user.
 
 ### Automatically Parallelizing Computation
 So far you have learnt the basics of NArray, hope you like the flavor so far.
@@ -242,17 +255,50 @@ You can also specify it explicitly, like the following code.
 ['data', 'myweight', 'fc1_bias']
 ```
 
+Besides the coarse grained neuralnet operators such as FullyConnected, Convolution.
+MXNet also provides fine graned operations such as elementwise add, multiplications.
+The following example first performs an elementwise add between two symbols, then feed
+them to the FullyConnected operator.
+```
+>>> import mxnet.symbol as sym
+>>> lhs = sym.Variable('data1')
+>>> rhs = sym.Variable('data2')
+>>> net = sym.FullyConnected(data=lhs + rhs,
+                             name='fc1', num_hidden=128)
+>>> net.list_arguments()
+['data1', 'data2', 'fc1_weight', 'fc1_bias']
+```
+
 ### More Complicated Composition
 In the previous example, Symbols are constructed in a forward compositional way.
+Besides doing things in a forward compistion way. You can also treat composed symbols as functions,
+and apply them to existing symbols.
 
-TODO
+```python
+>>> import mxnet.symbol as sym
+>>> data = sym.Variable('data')
+>>> net = sym.FullyConnected(data=data,
+                             name='fc1', num_hidden=128)
+>>> net.list_arguments()
+['data', 'fc1_weight', 'fc1_bias']
+>>> data2 = sym.Variable('data2')
+>>> in_net = sym.FullyConnected(data=data,
+                                name='in', num_hidden=128)
+>>> composed_net = net(data=in_net, name='compose')
+>>> composed_net.list_arguments()
+['data2', 'in_weight', 'in_bias', 'compose_fc1_weight', 'compose_fc1_bias']
+```
+In the above example, net is used a function to apply to an existing symbol ```in_net```, the resulting
+composed_net will replace the original ```data``` by the the in_net instead. This is useful when you
+want to change the input of some neural-net to be other structure.
 
 ### Shape Inference
-Now we have defined the computation graph. In the next section, we are going to bind them to execution devices and
-really run these computations. But before doing so, we need to figure out the shapes of the arguments, specifically,
-the shape of all the weights, bias and outputs.
+Now we have defined the computation graph. A common problem in the computation graph,
+is to figure out shapes of each parameters.
+Usually, we want to know the shape of all the weights, bias and outputs.
 
-You can use ```Symbol.infer_shape``` to do that. Basically, shape inference allows you to shapes of arguments that you know,
+You can use ```Symbol.infer_shape``` to do that. THe shape inference function
+allows you to pass in shapes of arguments that you know,
 and it will try to infer the shapes of all arguments and outputs.
 ```python
 >>> import mxnet.symbol as sym
@@ -272,9 +318,11 @@ The ```infer_shape``` will detect if there is inconsitency in the shapes,
 and raise an Error if some of them are inconsistent.
 
 ### Bind the Symbols
-Symbols are configuration objects that represents a computation graph(a configuration of neuralnet)
-that do not
+Symbols are configuration objects that represents a computation graph (a configuration of neuralnet).
+So far we have introduced how to build up the computation graph (i.e. a configuration).
+The remaining question is, how we can do computation using the defined graph.
 
+TODO.
 
 ### How Efficient is Symbolic API
 In short, they design to be very efficienct in both memory and runtime.

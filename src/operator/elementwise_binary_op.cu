@@ -8,8 +8,8 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateElementwiseBinaryOp<gpu>(ElementwiseBinaryOpType type) {
-  return CreateElementwiseBinaryOp_<gpu>(type);
+Operator* CreateElementWiseBinaryOp<gpu>(ElementWiseBinaryOpType type) {
+  return CreateElementWiseBinaryOp_<gpu>(type);
 }
 }  // namespace op
 }  // namespace mxnet

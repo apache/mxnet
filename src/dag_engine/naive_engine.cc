@@ -7,6 +7,19 @@ namespace engine {
 // The Naive engine interface
 class NaiveEngine : public DAGEngine {
  public:
+  NaiveEngine() {
+    #if MXNET_USE_CUDA
+    stream_ = mshadow::NewStream<gpu>(true, false);
+    ctx_.stream = stream_;
+    #endif
+  }
+
+  ~NaiveEngine() {
+    #if MXNET_USE_CUDA
+    mshadow::DeleteStream(stream_);
+    #endif
+  }
+
   Variable NewVar() override {
     return nullptr;
   }
@@ -30,10 +43,11 @@ class NaiveEngine : public DAGEngine {
             std::vector<Variable> const& use_vars,
             std::vector<Variable> const& mutate_vars) override {
     if (exec_ctx.dev_mask == gpu::kDevMask) {
-      ctx_.stream = &stream_;
 #if MXNET_USE_CUDA
       mshadow::SetDevice<gpu>(exec_ctx.dev_id);
+      ctx_.stream = stream_;
       exec_fun(ctx_);
+      stream_->Wait();
 #else
       LOG(FATAL) << "GPU is not enabled";
 #endif
@@ -52,7 +66,10 @@ class NaiveEngine : public DAGEngine {
     this->Push(delete_fun, exec_ctx, {}, {var});
   }
 
-  void WaitForVar(Variable var) override {
+  void WaitToRead(Variable var) override {
+  }
+
+  void WaitToWrite(Variable var) override {
   }
 
   void WaitForAll() override {
@@ -60,7 +77,9 @@ class NaiveEngine : public DAGEngine {
 
  private:
   RunContext ctx_;
-  mshadow::Stream<gpu> stream_;
+  #if MXNET_USE_CUDA
+  mshadow::Stream<gpu> *stream_;
+  #endif
 };
 
 }  // namespace engine
