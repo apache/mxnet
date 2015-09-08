@@ -1,7 +1,11 @@
 # coding: utf-8
 """ KVStore in mxnet """
-
 from __future__ import absolute_import
+import ctypes
+from .narray import NArray
+from .context import Context
+from .base import _LIB
+from .base import check_call, c_array
 
 def init_devices(contexts):
     """ Init key-value store with a list of device contexts
@@ -11,6 +15,9 @@ def init_devices(contexts):
     contexts : list of Context
        The list of local devices used by this process
     """
+    masks = c_array(ctypes.c_int, [c.device_mask for c in contexts])
+    ids = c_array(ctypes.c_int, [c.device_id for c in contexts])
+    check_call(_LIB.MXKVStoreInitDevices(len(contexts), masks, ids))
 
 def init(kv_list):
     """ Initialize a list of key-value pairs
@@ -18,8 +25,17 @@ def init(kv_list):
     Parameters
     ----------
     kv_list : tuple or list/generator of tuples
-        a key-value tuple or a list of key-value tuples
+        a key-value tuple or a list of key-value tuples, where key is int and
+        key is
     """
+    if isinstance(kv_list, tuple):
+        init([kv_list])
+    else:
+        for kv in kv_list:
+            assert len(kv) == 2
+            assert isinstance(kv[0], int)
+            assert isinstance(kv[1], NArray)
+            check_call(_LIB.MXKVStoreInit(kv[0], kv[1].handle))
 
 def push(kv_list):
     """ Push a value into the store
@@ -27,6 +43,14 @@ def push(kv_list):
     Parameters
     ----------
     """
+    if isinstance(kv_list, tuple):
+        push([kv_list])
+    else:
+        for kv in kv_list:
+            assert len(kv) == 2
+            assert isinstance(kv[0], int)
+            assert isinstance(kv[1], NArray)
+            check_call(_LIB.MXKVStorePush(kv[0], kv[1].handle))
 
 def pull(kv_list):
     """ Pull the value from the store
@@ -38,6 +62,14 @@ def pull(kv_list):
     value : NArray
         The value
     """
+    if isinstance(kv_list, tuple):
+        pull([kv_list])
+    else:
+        for kv in kv_list:
+            assert len(kv) == 2
+            assert isinstance(kv[0], int)
+            assert isinstance(kv[1], NArray)
+            check_call(_LIB.MXKVStorePull(kv[0], kv[1].handle))
 
 def register(updater):
     """ Register a updater into the store

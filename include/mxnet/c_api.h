@@ -707,5 +707,42 @@ MXNET_DLL int MXDataIterGetData(DataIterHandle handle,
  */
 MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
                            NArrayHandle *out);
+/*!
+ * \brief initialize the kvstore
+ * \param num_devs number of devices
+ * \param dev_masks the list of device masks
+ * \param dev_ids the list of device IDs
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreInitDevices(mx_uint num_devs,
+                                   int *dev_masks,
+                                   int *dev_ids);
+/*!
+ * \brief Init (key,value) in kvstore
+ * \param key the int key
+ * \param value the NArray value
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreInit(mx_uint key,
+                            NArrayHandle value);
+
+/*!
+ * \brief Push (key,value) to kvstore
+ * \param key the int key
+ * \param value the NArray value
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStorePush(mx_uint key,
+                            NArrayHandle value);
+
+
+/*!
+ * \brief pull value from kvstore on the given key
+ * \param key the int key
+ * \param value the NArray value
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStorePull(mx_uint key,
+                            NArrayHandle value);
 
 #endif  // MXNET_C_API_H_

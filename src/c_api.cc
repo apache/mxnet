@@ -13,6 +13,7 @@
 #include <mxnet/operator.h>
 #include <mxnet/io.h>
 #include <mxnet/c_api.h>
+#include <mxnet/kvstore.h>
 #include <vector>
 #include <sstream>
 #include <string>
@@ -842,5 +843,34 @@ int MXDataIterGetData(DataIterHandle handle, NArrayHandle *out) {
   API_BEGIN();
   DataBatch db = static_cast<IIterator<DataBatch>* >(handle)->Value();
   *out = new NArray(db.data[0], 0);
+  API_END();
+}
+
+int MXKVStorePush(mx_uint key, NArrayHandle value) {
+  API_BEGIN();
+  KVStore::Get()->Push(key, *static_cast<NArray*>(value));
+  API_END();
+}
+
+int MXKVStoreInit(mx_uint key, NArrayHandle value) {
+  API_BEGIN();
+  KVStore::Get()->Init(key, *static_cast<NArray*>(value));
+  API_END();
+}
+
+
+int MXKVStorePull(mx_uint key, NArrayHandle value) {
+  API_BEGIN();
+  KVStore::Get()->Pull(key, static_cast<NArray*>(value));
+  API_END();
+}
+
+int MXKVStoreInitDevices(mx_uint num_devs, int *dev_masks, int *dev_ids) {
+  API_BEGIN();
+  std::vector<Context> devs;
+  for (mx_uint i = 0; i < num_devs; ++i) {
+    devs.push_back(Context(dev_masks[i], dev_ids[i]));
+  }
+  KVStore::Get()->InitDevices(devs);
   API_END();
 }

@@ -13,8 +13,8 @@ namespace mxnet {
 void KVStore::InitDevices(const std::vector<Context>& devices) {
   char* num_worker = getenv("DMLC_NUM_WORKER");
   if (num_worker == NULL || atoi(num_worker) == 1) {
-    store_ = new KVStoreBase();
     // local model
+    store_ = new KVStoreBase();
   } else {
     LOG(FATAL) << "not implemented yet";
   }
