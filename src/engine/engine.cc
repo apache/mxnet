@@ -14,7 +14,11 @@ Engine* Engine::Get() {
   /*!
    * \brief Change specific engine to use.
    */
+#ifdef MXNET_USE_THREADED_ENGINE
   using EngineImplementation = engine::ThreadedEngine;
+#else  // MXNET_USE_THREADED_ENGINE
+  using EngineImplementation = engine::NaiveEngine;
+#endif  // MXNET_USE_THREADED_ENGINE
 
   static EngineImplementation inst;
   return &inst;

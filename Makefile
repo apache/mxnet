@@ -70,6 +70,10 @@ ifeq ($(USE_CUDNN), 1)
 	LDFLAGS += -lcudnn
 endif
 
+ifeq ($(USE_THREADED_ENGINE), 1)
+	CFLAGS += -DMXNET_USE_THREADED_ENGINE
+endif
+
 ifneq ($(ADD_CFLAGS), NONE)
 	CFLAGS += $(ADD_CFLAGS)
 endif

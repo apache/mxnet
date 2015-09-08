@@ -34,8 +34,8 @@ class NaiveEngine final : public Engine {
   RunContext ctx_;
 #if MXNET_USE_CUDA
   mshadow::Stream<gpu>* stream_;
-#endif
-};  // class NaiveEngine
+#endif  // MXNET_USE_CUDA
+};      // class NaiveEngine
 
 }  // namespace engine
 

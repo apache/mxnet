@@ -55,6 +55,9 @@ PS_THIRD_PATH = NONE
 USE_RABIT_PS = 0
 RABIT_PATH = rabit
 
+# Whether to use threaded engine instead of naive one
+# USE_THREADED_ENGINE =1
+
 # use openmp iterator
 USE_OPENMP_ITER = 1
 # the additional link flags you want to add
