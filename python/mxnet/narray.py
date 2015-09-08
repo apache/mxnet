@@ -349,9 +349,7 @@ def zeros(shape, ctx=None):
     out: Array
         The created NArray.
     """
-    if ctx is None:
-        ctx = Context.default_ctx
-    arr = NArray(handle=_new_alloc_handle(shape, ctx, False))
+    arr = empty(shape, ctx)
     arr[:] = 0.0
     return arr
 
@@ -371,13 +369,9 @@ def ones(shape, ctx=None):
     out: Array
         The created NArray.
     """
-    if ctx is None:
-        ctx = Context.default_ctx
-    arr = NArray(handle=_new_alloc_handle(shape, ctx, False))
+    arr = empty(shape, ctx)
     arr[:] = 1.0
     return arr
-
-
 
 
 def array(source_array, ctx=None):

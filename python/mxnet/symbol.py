@@ -10,7 +10,7 @@ from .base import c_array, c_str, mx_uint, py_str, string_types
 from .base import NArrayHandle, ExecutorHandle, SymbolHandle
 from .base import check_call
 from .context import Context
-from .narray import NArray
+from .narray import NArray, zeros
 from .executor import Executor
 
 
@@ -331,6 +331,46 @@ class Symbol(object):
         else:
             raise TypeError('Only Accept list of NArrays or dict of str->NArray')
         return c_array(NArrayHandle, arg_handles)
+
+    def simple_bind(self, ctx, args, grad_req='write'):
+        """Simply bind current symbol to get an executor
+        Parameters
+        ----------
+        ctx : Context
+            The device context the generated executor to run on.
+
+        args : list of NArray or dict of str->NArray
+            Input arguments to the symbol.
+            - type is dict of str->NArray, then it maps the name of arguments
+              to the corresponding NArray,
+            - Not all the arguments must be provided.
+        Returns
+        -------
+        executor : mxnet.Executor
+            The generated Executor
+        """
+        if not isinstance(args, dict):
+            raise TypeError("args must be dict of str->NArray")
+        input_shapes = dict((arr[0], arr[1].shape) for arr in args.items())
+        arg_shapes, out_shapes, aux_shapes = self.infer_shape(**input_shapes)
+        if arg_shapes == None:
+            raise ValueError("Input node is not complete")
+        # alloc space
+        arg_narrays = []
+        for name, shape in zip(self.list_arguments(), arg_shapes):
+            if name in args:
+                arg_narrays.append(args[name])
+            else:
+                arg_narrays.append(zeros(shape, ctx))
+        # TODO(bing): specail treat input data grad
+        grad_narrays = [zeros(shape, ctx) for shape in arg_shapes]
+        aux_narrays = [zeros(shape, ctx) for shape in aux_shapes]
+        executor = self.bind(ctx, arg_narrays, grad_narrays, grad_req, aux_narrays)
+        executor.arg_narrays = arg_narrays
+        executor.grad_narrays = grad_narrays
+        executor.auxiliary_states = aux_narrays
+
+        return executor
 
     def bind(self, ctx, args, args_grad=None, grad_req='write', aux_states=None):
         """Bind current symbol to get an executor.

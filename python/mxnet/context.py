@@ -52,6 +52,36 @@ class Context(object):
 # initialize the default context in Context
 Context.default_ctx = Context('cpu', 0)
 
+def cpu(device_id=0):
+    """
+    Return CPU context
+
+    Parameters
+    ----------
+    device_id : int (default=0)
+            the device id of the device, needed for GPU
+
+    Returns
+    ---------
+    A cpu context
+    """
+    return Context('cpu', device_id)
+
+def gpu(device_id=0):
+    """
+    Return CPU context
+
+    Parameters
+    ----------
+    device_id : int (default=0)
+            the device id of the device, needed for GPU
+
+    Returns
+    ---------
+    A cpu context
+    """
+    return Context('gpu', device_id)
+
 def current_context():
     """Return the current context.
 

@@ -22,6 +22,34 @@ class Executor(object):
         if not isinstance(handle, ExecutorHandle):
             raise TypeError("Handle type error")
         self.handle = handle
+        self.arg_narrays = []
+        self.grad_narrays = []
+        self.auxiliary_states = []
+
+    def list_arguments(self, with_grad=True):
+        """Return arguments (and grad for arguments)
+
+        Parameters
+        ----------
+        with_grad: bool
+            whether return args with grad
+
+        Returns
+        -------
+            if with_grad = True, return (args, grad) pair list
+            otherwise return args list only
+            Note: args sequence is same to symbol.list_arguments()
+        """
+        if with_grad:
+            return self.arg_narrays, self.grad_narrays
+        else:
+            return self.arg_narrays
+
+    def list_auxiliary_states():
+        """Return auxiliary states of executor
+            Note: auxiliary states is same to symbol.list_auxiliary_states()
+        """
+        return self.auxiliary_states
 
     def forward(self, is_train=True):
         """Do forward.

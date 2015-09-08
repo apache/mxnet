@@ -30,7 +30,7 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   TShape pad;
   uint32_t num_filter;
   uint32_t num_group;
-  uint32_t nstep;
+  uint32_t workspace;
   bool no_bias;
   DMLC_DECLARE_PARAMETER(ConvolutionParam) {
     int shape[] = {1, 1};
@@ -44,8 +44,8 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
       .describe("convolution filter(channel) number");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
       .describe("number of groups partition");
-    DMLC_DECLARE_FIELD(nstep).set_default(2).set_range(1, 10000)
-      .describe("process n images once");
+    DMLC_DECLARE_FIELD(workspace).set_default(128).set_range(1, 10000)
+      .describe("Tmp workspace for convolution (MB)");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
       .describe("Whether to disable bias parameter.");
   }
@@ -80,8 +80,8 @@ class ConvolutionOp : public Operator {
     Tensor<xpu, 4> out = out_data[kOut].get<xpu, 4, real_t>(s);
     this->InitTemp(ctx, data.shape_, out.shape_);
     const index_t nbatch = data.size(0);
-    for (index_t i = 0; i < nbatch; i += param_.nstep) {
-      const index_t step = std::min(param_.nstep, nbatch - i);
+    for (index_t i = 0; i < nbatch; i += nstep_) {
+      const index_t step = std::min(nstep_, nbatch - i);
       temp_col_.Resize(mshadow::Shape2(shape_colunit_[0],
                                        shape_colunit_[1] * step));
       temp_dst_.Resize(mshadow::Shape3(shape_dstunit_[0],
@@ -148,8 +148,8 @@ class ConvolutionOp : public Operator {
     Tensor<xpu, 3> gwmat = in_grad[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
     this->InitTemp(ctx, data.shape_, grad.shape_);
     const index_t nbatch = data.size(0);
-    for (index_t i = 0; i < nbatch; i += param_.nstep) {
-      const index_t step = std::min(param_.nstep, nbatch - i);
+    for (index_t i = 0; i < nbatch; i += nstep_) {
+      const index_t step = std::min(nstep_, nbatch - i);
       temp_col_.Resize(Shape2(shape_colunit_[0],
                                        shape_colunit_[1] * step));
       temp_dst_.Resize(Shape3(shape_dstunit_[0],
@@ -220,16 +220,19 @@ class ConvolutionOp : public Operator {
     shape_dstunit_ = mshadow::Shape3(param_.num_group,
                                      param_.num_filter / param_.num_group,
                                      oshape[2] * oshape[3]);
-    int nop = (ishape[0] + param_.nstep - 1) / param_.nstep;
-    param_.nstep = (ishape[0] + nop - 1) / nop;
+    const uint32_t workspace_size = param_.workspace << 18;
+    nstep_ = std::max(std::min(static_cast<index_t>(workspace_size / shape_colunit_.Size()), 
+                              ishape[0]), 1U);
+    int nop = (ishape[0] + nstep_ - 1) / nstep_;
+    nstep_ = (ishape[0] + nop - 1) / nop;
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     temp_col_.set_stream(s);
     temp_dst_.set_stream(s);
     temp_col_.Resize(mshadow::Shape2(shape_colunit_[0],
-                                     shape_colunit_[1] * param_.nstep));
+                                     shape_colunit_[1] * nstep_));
     temp_dst_.Resize(mshadow::Shape3(shape_dstunit_[0],
                                      shape_dstunit_[1],
-                                     shape_dstunit_[2] * param_.nstep));
+                                     shape_dstunit_[2] * nstep_));
   }
 
   ConvolutionParam param_;
@@ -238,6 +241,7 @@ class ConvolutionOp : public Operator {
   mshadow::TensorContainer<xpu, 3> temp_dst_;
   mshadow::Shape<2> shape_colunit_;
   mshadow::Shape<3> shape_dstunit_;
+  index_t nstep_;
 };  // class ConvolutionOp
 
 template<typename xpu>
@@ -327,6 +331,14 @@ class ConvolutionProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
+
+  std::vector<ResourceRequest> ForwardResource() const override {
+    return {Resource::kTempSpace};
+  }
+
+  std::vector<ResourceRequest> BackwardResource() const override {
+    return {Resource::kTempSpace};
+  }
 
  private:
   ConvolutionParam param_;
