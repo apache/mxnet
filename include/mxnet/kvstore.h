@@ -1,7 +1,7 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file ps.h
- * \brief parameter server interface for mxnet
+ * \file kvstore.h
+ * \brief key-value store interface for mxnet
  */
 #ifndef MXNET_PS_H_
 #define MXNET_PS_H_
@@ -13,6 +13,9 @@
 #endif  // DMLC_USE_CXX11
 
 namespace mxnet {
+
+/*! \brief forward declaration */
+class KVStoreBase;
 
 /**
  * \brief distributed key-value store
@@ -48,23 +51,22 @@ namespace mxnet {
  */
 class KVStore {
  public:
-
   /**
    * \brief get singleton instance
    */
-  static KVStore* Get();
+  static KVStore* Get() { static KVStore store; return &store; }
 
   /**
    * \brief Init with the local devices
    */
-  void Init(const std::vector<Context>& devices);
+  void InitDevices(const std::vector<Context>& devices);
 
   /**
    * \brief  data
    *
-   * insert a key-value pair. One must insert before push and pull
+   * init a key-value pair. One must insert before push and pull
    */
-  void Insert(int key, const NArray& value);
+  void Init(int key, const NArray& value);
 
   /*!
    * \brief push data to the store
@@ -132,7 +134,7 @@ class KVStore {
    * \param batch true for batch, false for online
    * \param updt user-defined updater, default is assign
    */
-  void Register(bool batch = true, const Updater& updt = Updater());
+  void Register(bool batch = true, const Updater& updt = Updater()) { }
 #endif  // DMLC_USE_CXX11
 
   /*! \brief Gets rank of this node in its group, which is in [0, GroupSize) */
@@ -141,6 +143,11 @@ class KVStore {
   /*! \brief Get the number of nodes in this group. */
   int GetGroupSize();
 
+ private:
+  DISALLOW_COPY_AND_ASSIGN(KVStore);
+  KVStore() : store_(NULL) { }
+  ~KVStore();
+  KVStoreBase* store_;
 };
 
 }  // namespace mxnet
