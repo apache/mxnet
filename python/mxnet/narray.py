@@ -333,6 +333,52 @@ def empty(shape, ctx=None):
         ctx = Context.default_ctx
     return NArray(handle=_new_alloc_handle(shape, ctx, False))
 
+def zeros(shape, ctx=None):
+    """Create a new NArray filled with 0, with specified shape.
+
+    Parameters
+    ----------
+    shape : tuple
+        shape of the NArray.
+
+    ctx : Context, optional
+        The context of the NArray, default to current default context.
+
+    Returns
+    -------
+    out: Array
+        The created NArray.
+    """
+    if ctx is None:
+        ctx = Context.default_ctx
+    arr = NArray(handle=_new_alloc_handle(shape, ctx, False))
+    arr[:] = 0.0
+    return arr
+
+def ones(shape, ctx=None):
+    """Create a new NArray filled with 1, with specified shape.
+
+    Parameters
+    ----------
+    shape : tuple
+        shape of the NArray.
+
+    ctx : Context, optional
+        The context of the NArray, default to current default context.
+
+    Returns
+    -------
+    out: Array
+        The created NArray.
+    """
+    if ctx is None:
+        ctx = Context.default_ctx
+    arr = NArray(handle=_new_alloc_handle(shape, ctx, False))
+    arr[:] = 1.0
+    return arr
+
+
+
 
 def array(source_array, ctx=None):
     """Create a new NArray that copies content from source_array.
