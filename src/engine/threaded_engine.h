@@ -154,7 +154,7 @@ class ThreadedEngine final : public Engine {
    *
    * The method to pass to thread pool to parallelize.
    */
-  void ThreadWorker(dmlc::ConcurrentBlockingQueue<OprBlock*>& task_queue);
+  void ThreadWorker(dmlc::ConcurrentBlockingQueue<OprBlock*>* task_queue);
 
  private:
   /*!

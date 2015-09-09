@@ -133,8 +133,8 @@ ThreadedOpr* ThreadedOpr::CastFromBase(Opr* o) {
 
 ThreadedEngine::ThreadedEngine()
     : pending_{0},
-      thread_pool_{[this]() { ThreadWorker(task_queue_); }},
-      io_thread_pool_{[this]() { ThreadWorker(io_task_queue_); }} {}
+      thread_pool_{[this]() { ThreadWorker(&task_queue_); }},
+      io_thread_pool_{[this]() { ThreadWorker(&io_task_queue_); }} {}
 
 ThreadedEngine::~ThreadedEngine() noexcept(false) {
   task_queue_.SignalForKill();
@@ -315,7 +315,7 @@ void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
 }
 
 void ThreadedEngine::ThreadWorker(
-    dmlc::ConcurrentBlockingQueue<OprBlock*>& task_queue) {
+    dmlc::ConcurrentBlockingQueue<OprBlock*>* task_queue) {
   OprBlock* opr_block;
   while (task_queue.Pop(&opr_block)) {
     DoExecute(opr_block);
