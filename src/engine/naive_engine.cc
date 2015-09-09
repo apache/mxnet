@@ -24,7 +24,8 @@ NaiveEngine::~NaiveEngine() {
 
 NaiveEngine::OprHandle NaiveEngine::NewOperator(AsyncFn,
                                                 std::vector<VarHandle> const&,
-                                                std::vector<VarHandle> const&) {
+                                                std::vector<VarHandle> const&,
+                                                FnProperty) {
   LOG(FATAL) << "Not implemented";
   return nullptr;
 }
@@ -35,7 +36,7 @@ void NaiveEngine::Push(OprHandle, Context) { LOG(FATAL) << "Not implemented"; }
 
 void NaiveEngine::Push(Fn exec_fun, Context exec_ctx,
                        std::vector<VarHandle> const&,
-                       std::vector<VarHandle> const&) {
+                       std::vector<VarHandle> const&, FnProperty) {
   if (exec_ctx.dev_mask == gpu::kDevMask) {
 #if MXNET_USE_CUDA
     mshadow::SetDevice<gpu>(exec_ctx.dev_id);
@@ -51,13 +52,13 @@ void NaiveEngine::Push(Fn exec_fun, Context exec_ctx,
 }
 
 void NaiveEngine::PushAsync(AsyncFn, Context, std::vector<VarHandle> const&,
-                            std::vector<VarHandle> const&) {
+                            std::vector<VarHandle> const&, FnProperty) {
   LOG(FATAL) << "Not implemented";
 }
 
 void NaiveEngine::DeleteVariable(Fn delete_fun, Context exec_ctx,
                                  VarHandle var) {
-  this->Push(delete_fun, exec_ctx, {}, {var});
+  this->Push(delete_fun, exec_ctx, {}, {var}, FnProperty::kNormal);
 }
 
 void NaiveEngine::WaitForVar(VarHandle) {}

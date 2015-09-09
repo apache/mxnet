@@ -17,15 +17,18 @@ class NaiveEngine final : public Engine {
   ~NaiveEngine();
   VarHandle NewVariable() override;
   OprHandle NewOperator(AsyncFn fn, std::vector<VarHandle> const& const_vars,
-                        std::vector<VarHandle> const& mutable_vars) override;
+                        std::vector<VarHandle> const& mutable_vars,
+                        FnProperty prop) override;
   void DeleteOperator(OprHandle op) override;
   void Push(OprHandle op, Context exec_ctx) override;
   void Push(Fn exec_fun, Context exec_ctx,
             std::vector<VarHandle> const& const_vars,
-            std::vector<VarHandle> const& mutable_vars) override;
+            std::vector<VarHandle> const& mutable_vars,
+            FnProperty prop) override;
   void PushAsync(AsyncFn exec_fun, Context exec_ctx,
                  std::vector<VarHandle> const& const_vars,
-                 std::vector<VarHandle> const& mutable_vars) override;
+                 std::vector<VarHandle> const& mutable_vars,
+                 FnProperty prop) override;
   void DeleteVariable(Fn delete_fun, Context exec_ctx, VarHandle var) override;
   void WaitForVar(VarHandle var) override;
   void WaitForAll() override;

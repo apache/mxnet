@@ -73,6 +73,7 @@ class ThreadedVar final : public Var,
   template <typename Dispatcher>
   bool CompleteWriteDependency(Dispatcher dispatcher);
   void SetToDelete();
+  bool ready_to_read();
 
   static ThreadedVar* CastFromBase(Var* ptr);
 
@@ -105,6 +106,7 @@ struct ThreadedOpr final : public Opr,
   Engine::AsyncFn fn;
   std::vector<ThreadedVar*> const_vars;
   std::vector<ThreadedVar*> mutable_vars;
+  FnProperty prop;
   bool temporary{false};
 
   static ThreadedOpr* CastFromBase(Opr* ptr);
@@ -125,15 +127,18 @@ class ThreadedEngine final : public Engine {
    */
   ThreadedVar* NewVariable() override;
   ThreadedOpr* NewOperator(AsyncFn fn, std::vector<VarHandle> const& const_vars,
-                           std::vector<VarHandle> const& mutable_vars) override;
+                           std::vector<VarHandle> const& mutable_vars,
+                           FnProperty prop) override;
   void DeleteOperator(OprHandle op) override;
   void Push(OprHandle op, Context exec_ctx) override;
   void Push(Fn exec_fun, Context exec_ctx,
             std::vector<VarHandle> const& const_vars,
-            std::vector<VarHandle> const& mutable_vars) override;
+            std::vector<VarHandle> const& mutable_vars,
+            FnProperty prop) override;
   void PushAsync(AsyncFn exec_fun, Context exec_ctx,
                  std::vector<VarHandle> const& const_vars,
-                 std::vector<VarHandle> const& mutable_vars) override;
+                 std::vector<VarHandle> const& mutable_vars,
+                 FnProperty prop) override;
   void DeleteVariable(Fn delete_fn, Context exec_ctx, VarHandle var) override;
   void WaitForVar(VarHandle var) override;
   void WaitForAll() override;
@@ -181,6 +186,11 @@ class ThreadedEngine final : public Engine {
    * \brief Thread pool.
    */
   ThreadPool<kNumWorkingThreads> thread_pool_;
+  /*!
+   * \brief Execute an operation.
+   * \param opr_block The operator block.
+   */
+  void DoExecute(OprBlock* opr_block);
   /*!
    * \brief Disallow copy construction and assignment.
    */

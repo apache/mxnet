@@ -36,6 +36,11 @@ struct Opr;
 }  // namespace engine
 
 /*!
+ * \brief Function property.
+ */
+enum class FnProperty { kNormal, kIO, kAsync };  // enum class FnProperty
+
+/*!
  * \brief Dynamic dataflow engine that schedules operations.
  */
 class Engine {
@@ -76,11 +81,13 @@ class Engine {
    * \param const_vars The variables that current operation will use but not
    *                   mutate.
    * \param mutable_vars The variables that current operation will mutate.
+   * \param prop Property of the function.
    * \return The new operator allocated.
    */
   virtual OprHandle NewOperator(AsyncFn fn,
                                 std::vector<VarHandle> const& const_vars,
-                                std::vector<VarHandle> const& mutable_vars) = 0;
+                                std::vector<VarHandle> const& mutable_vars,
+                                FnProperty prop = FnProperty::kNormal) = 0;
   /*!
    * \brief Delete the given operator.
    * \param op The operator to delete.
@@ -102,10 +109,12 @@ class Engine {
    * \param const_vars The variables that current operation will use but not
    *                   mutate.
    * \param mutable_vars The variables that current operation will mutate.
+   * \param prop Property of the function.
    */
   virtual void Push(Fn exec_fun, Context exec_ctx,
                     std::vector<VarHandle> const& const_vars,
-                    std::vector<VarHandle> const& mutable_vars) = 0;
+                    std::vector<VarHandle> const& mutable_vars,
+                    FnProperty prop = FnProperty::kNormal) = 0;
   /*!
    * \brief Push an asynchronous operation to the engine.
    * \param exec_fun Execution function, this function takes a parameter
@@ -115,12 +124,14 @@ class Engine {
    * \param const_vars The variables that current operation will use but not
    *                   mutate.
    * \param mutable_vars The variables that current operation will mutate.
+   * \param prop Property of the function.
    */
   virtual void PushAsync(AsyncFn exec_fun, Context exec_ctx,
                          std::vector<VarHandle> const& const_vars,
-                         std::vector<VarHandle> const& mutable_vars) = 0;
+                         std::vector<VarHandle> const& mutable_vars,
+                         FnProperty prop = FnProperty::kNormal) = 0;
   /*!
-   * \brief Schedule the delete of a variable.
+   * \brief Schedule the deletion of a variable.
    *
    * The delete will not happen immediately, but will wait until all the
    * operations depending on var are completed.
