@@ -758,9 +758,7 @@ int MXExecutorBind(SymbolHandle symbol_handle,
     if (arg_grad_ptr[i] == nullptr) {
       arg_grad_vec.push_back(NArray());
       grad_req_vec.push_back(kNullOp);
-      LOG(INFO) << "nop";
     } else {
-      LOG(INFO) << "grad=" << grad_req_type[i];
       arg_grad_vec.push_back(*(arg_grad_ptr[i]));
       grad_req_vec.push_back(static_cast<OpReqType>(grad_req_type[i]));
     }

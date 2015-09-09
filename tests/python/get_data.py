@@ -33,4 +33,6 @@ def GetCifar10():
         os.system("mkdir data/")
     if not os.path.exists('data/cifar10.zip'):
         os.system("wget http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip -P data/")
-        os.system("unzip data/cifar10.zip")
+        os.chdir("./data")
+        os.system("unzip cifar10.zip")
+        os.chidr("..")
