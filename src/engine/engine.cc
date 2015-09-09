@@ -17,7 +17,7 @@ Engine* Engine::Get() {
 #ifdef MXNET_USE_THREADED_ENGINE
   using EngineImplementation = engine::ThreadedEngine;
 #else  // MXNET_USE_THREADED_ENGINE
-  LOG(INFO) << "Using naive engine.";
+#warning "Using naive engine.";
   using EngineImplementation = engine::NaiveEngine;
 #endif  // MXNET_USE_THREADED_ENGINE
 
