@@ -18,8 +18,9 @@ namespace mxnet {
 class KVStoreBase {
  public:
   typedef int Key;
-  KVStoreBase() : inited_(false), engine_(DAGEngine::Get()), aggregate_(true) { }
+  KVStoreBase() : engine_(DAGEngine::Get()) { Clear(); }
   virtual ~KVStoreBase() { }
+
   virtual void InitDevices(const std::vector<Context>& devices) {
     CHECK(!inited_) << "double intializatino";
     num_devs_ = 0;
@@ -27,69 +28,95 @@ class KVStoreBase {
     inited_ = true;
   }
 
-  virtual void Push(Key key, const NArray& value, bool init) {
+  virtual void Push(Key key, const NArray& val, bool init) {
     CHECK(inited_) << "call InitDevices first";
     auto it = local_.find(key);
     if (init) {
       CHECK(it == local_.end()) << "duplicate init of key = " << key;
-      Value val(num_devs_, value.Copy(local_ctx_));
-      local_.insert({key, val}).first;
+      Value lc_v(num_devs_, val.Copy(local_ctx_));
+      local_.insert({key, lc_v}).first;
       return;
     }
+
     CHECK(it != local_.end()) << "key " << key << " has not been inited";
-    auto& local_val = it->second;
-    CHECK_EQ(local_val.arr.shape(), value.shape())
-        << "shape mismatch: " << local_val.arr.shape() << ", " << value.shape();
-    if (aggregate_) {
-      int dix = GetDevIdx(value.ctx());
-      CHECK(!local_val.pending_push[dix])
-          << "duplicate push on key " << key << "from " << value.ctx().Name();
-      local_val.pending_push[dix] = true;
-      local_val.pending_push_arr.push_back(value);
-      if (local_val.pending_push_arr.size() == num_devs_) {
-        // do copy for the clossure
-        std::vector<NArray> read;
-        std::swap(read, local_val.pending_push_arr);
-        std::vector<DAGEngine::Variable> read_val;
-        for (const auto& r : read) read_val.push_back(r.var());
-        NArray write = local_val.arr;
+    auto& lc_v = it->second;
+    CHECK_EQ(lc_v.val.shape(), val.shape())
+        << "shape mismatch: " << lc_v.val.shape() << ", " << val.shape();
 
-        // issue push to engine
-        engine_->Push([this, read, write](RunContext rctx) mutable {
-            for (const auto& r : read) write += r;
-          }, local_ctx_, read_val, {write.var()});
+    if (aggregator_) {
+      int dix = GetDevIdx(val.ctx());
+      CHECK(!lc_v.pending_push[dix])
+          << "duplicate push on key " << key << "from " << val.ctx().Name();
+      lc_v.pending_push[dix] = true;
+      lc_v.num_pending_push ++;
 
-        // issue pull if necessary
-        for (auto& w : local_val.pending_pull_arr) {
-          CopyFromTo(local_val.arr, &w);
-        }
+      if (lc_v.agg_buf.is_none()) {
+        lc_v.agg_buf = NArray(lc_v.val.shape(), local_ctx_);
+      }
+      if (val.ctx().dev_mask == cpu::kDevMask) {
+        lc_v.agg_buf += val;
+      } else {
+        // copy to pinned memory
+        LOG(FATAL) << "TODO";
+      }
+
+      if (lc_v.num_pending_push == num_devs_) {
+        // apply updater
+        if (updater_) updater_(lc_v.agg_buf, &lc_v.val);
 
         // clean
-        local_val.pending_push.flip();
-        local_val.pending_pull_arr.clear();
+        lc_v.agg_buf = 0.0;
+        lc_v.pending_push.flip();
+        lc_v.num_pending_push = 0;
+
+
+        // issue blocked pull
+        for (auto& w : lc_v.pending_pull_val) {
+          CopyFromTo(lc_v.val, &w);
+        }
+        lc_v.pending_pull_val.clear();
       }
     } else {
       LOG(FATAL) << "TODO";
     }
   }
 
-  virtual void Pull(Key key, NArray* value) {
+  virtual void Pull(Key key, NArray* val) {
     CHECK(inited_) << "call InitDevices first";
 
     auto it = local_.find(key);
     CHECK(it != local_.end()) << "key " << key << " has not been inited";
-    auto& local_val = it->second;
-    CHECK_EQ(local_val.arr.shape(), value->shape())
-        << "shape mismatch: " << local_val.arr.shape() << ", " << value->shape();
+    auto& lc_v = it->second;
+    CHECK_EQ(lc_v.val.shape(), val->shape())
+        << "shape mismatch: " << lc_v.val.shape() << ", " << val->shape();
 
-    if (aggregate_) {
-      int dix = GetDevIdx(value->ctx());
-      if (local_val.pending_push[dix]) {
-        local_val.pending_pull_arr.push_back(*value);
+    if (aggregator_) {
+      int dix = GetDevIdx(val->ctx());
+      if (lc_v.pending_push[dix]) {
+        lc_v.pending_pull_val.push_back(*val);
         return;
       }
-      CopyFromTo(local_val.arr, value);
+      CopyFromTo(lc_v.val, val);
+    } else {
+      LOG(FATAL) << "TODO";
     }
+  }
+
+  virtual void Clear() {
+    inited_    = false;
+    aggregator_ = true;
+    num_devs_  = 0;
+    updater_   = KVStore::DefaultUpdater();
+    devs_.clear();
+    local_.clear();
+  }
+
+  virtual void SetUpdater(const KVStore::Updater updt) {
+    updater_ = updt;
+  }
+
+  virtual void SetAggregator(bool aggregator) {
+    aggregator_ = aggregator;
   }
 
   virtual int GetRank() { return 0; }
@@ -99,31 +126,32 @@ class KVStoreBase {
   /// get the continous device index starting from 0
   inline int GetDevIdx(const Context& ctx) {
     auto it = devs_.find(ctx.UID());
-    CHECK(it != devs_.end())
-        << "unknow device " << ctx.Name();
+    CHECK(it != devs_.end()) << "unknow device " << ctx.Name();
     return it->second;
   }
-  bool inited_;
   DAGEngine* engine_;
-  bool aggregate_;
+  bool inited_;
+  bool aggregator_;
+  KVStore::Updater updater_;
 
-  /// map a device into an index
   size_t num_devs_;
+  /// map a device into an index
   std::unordered_map<uint64_t, int> devs_;
 
   /// internal storage of a value
   struct Value {
     Value() {}
     Value(int num_devs, NArray data)
-        : pending_push(num_devs, false), pending_pull(num_devs, false) {
-      arr = data;
+        : pending_push(num_devs, false), num_pending_push(0) {
+      val = data;
     }
-    std::vector<bool> pending_push, pending_pull;
-    std::vector<NArray> pending_push_arr, pending_pull_arr;
-    NArray arr;
+    std::vector<bool> pending_push;
+    std::vector<NArray> pending_push_val, pending_pull_val;
+    size_t num_pending_push;
+    NArray val, agg_buf;
   };
-  Context local_ctx_;
   std::unordered_map<Key, Value> local_;
+  Context local_ctx_;
 };
 
 }  // namespace mxnet

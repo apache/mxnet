@@ -1,7 +1,4 @@
 # pylint: skip-file
-import sys
-sys.path.append('../../python/')
-
 import mxnet as mx
 
 num_devs = 3

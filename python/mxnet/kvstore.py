@@ -5,7 +5,7 @@ import ctypes
 from .narray import NArray
 from .context import Context
 from .base import _LIB
-from .base import check_call, c_array
+from .base import check_call, c_array, NArrayHandle
 
 def init_devices(contexts):
     """ Init key-value store with a list of device contexts
@@ -71,6 +71,17 @@ def pull(kv_list):
             assert isinstance(kv[1], NArray)
             check_call(_LIB.MXKVStorePull(kv[0], kv[1].handle))
 
+def updater_wrapper(updater):
+    def updater_handle(lhs_handle, rhs_handle):
+        updater(NArray(lhs_handle), NArray(rhs_handle))
+    return updater_handle
+
+def void_updater(lhs, rhs):
+    pass
+
+updater_proto = ctypes.CFUNCTYPE(None, NArrayHandle, NArrayHandle)
+updater_func = updater_proto(updater_wrapper(void_updater))
+
 def register(updater):
     """ Register a updater into the store
 
@@ -82,3 +93,6 @@ def register(updater):
     ----------
 
     """
+    global updater_func
+    updater_func = updater_proto(updater)
+    check_call(_LIB.MXKVStoreRegister(updater_func))

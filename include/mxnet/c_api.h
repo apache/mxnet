@@ -718,6 +718,12 @@ MXNET_DLL int MXKVStoreInitDevices(mx_uint num_devs,
                                    int *dev_masks,
                                    int *dev_ids);
 /*!
+ * \brief clear the kvstore
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreClear();
+
+/*!
  * \brief Init (key,value) in kvstore
  * \param key the int key
  * \param value the NArray value
@@ -744,5 +750,13 @@ MXNET_DLL int MXKVStorePush(mx_uint key,
  */
 MXNET_DLL int MXKVStorePull(mx_uint key,
                             NArrayHandle value);
+
+typedef void (MXKVStoreUpdater)(NArrayHandle recv, NArrayHandle local);
+/*!
+ * \brief register an push updater
+ * \param updater udpater function
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreRegister(MXKVStoreUpdater updater);
 
 #endif  // MXNET_C_API_H_

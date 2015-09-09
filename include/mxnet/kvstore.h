@@ -107,6 +107,11 @@ class KVStore {
    */
   void Pull(int key, NArray* value);
 
+  /**
+   * \brief clear all data stored, handles registered, and devices binded
+   */
+  void Clear();
+
 #if DMLC_USE_CXX11
   /**
    * \brief user-defined updater
@@ -114,7 +119,16 @@ class KVStore {
   using Updater = std::function<void(const NArray&, NArray*)>;
 
   /**
-   * \brief register updater
+   * \brief returns the default updater, which is ASSIGN
+   */
+  static Updater DefaultUpdater() {
+    return [](const NArray& a, NArray* b) {
+      CopyFromTo(a, b);
+    };
+  }
+
+  /**
+   * \brief set an updater
    *
    * The server allows user-defined handle to modify the data.  Given a key,
    * assume \a x is the received value and \a y is the value stored on the server
@@ -131,11 +145,23 @@ class KVStore {
    * first computes \f$\sum_{i=0}^n x = x_i\f$, and then applies \a h. It is often
    * used for synchronous optimization
    *
+   * Must be called before \ref Init
    * \param batch true for batch, false for online
    * \param updt user-defined updater, default is assign
    */
-  void Register(bool batch = true, const Updater& updt = Updater()) { }
+  void SetUpdater(const Updater& updt);
 #endif  // DMLC_USE_CXX11
+
+  /**
+   * \brief set aggregator
+   * The aggregator first aggregate all pushed data among all devices before
+   * applying the updater
+   *
+   * The aggregator is enabled in default
+   *
+   * \param aggregator false to disable
+   */
+  void SetAggregator(bool aggregator);
 
   /*! \brief Gets rank of this node in its group, which is in [0, GroupSize) */
   int GetRank();

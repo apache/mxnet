@@ -19,6 +19,7 @@
 #include <string>
 #include <mutex>
 #include <memory>
+#include <functional>
 
 // macro hanlding for threadlocal variables
 #ifdef __GNUC__
@@ -872,5 +873,21 @@ int MXKVStoreInitDevices(mx_uint num_devs, int *dev_masks, int *dev_ids) {
     devs.push_back(Context(dev_masks[i], dev_ids[i]));
   }
   KVStore::Get()->InitDevices(devs);
+  API_END();
+}
+
+int MXKVStoreClear() {
+  API_BEGIN();
+  KVStore::Get()->Clear();
+  API_END();
+}
+
+int MXKVStoreRegister(MXKVStoreUpdater updater) {
+  API_BEGIN();
+  auto updt = [updater](const NArray& recv, NArray* local) {
+    NArray recv_copy = recv;
+    updater(&recv_copy, local);
+  };
+  // KVStore::Get()->Register(updt);
   API_END();
 }

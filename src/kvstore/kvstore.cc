@@ -36,8 +36,22 @@ void KVStore::Pull(int key, NArray* value) {
   store_->Pull(key, value);
 }
 
+void KVStore::Clear() {
+  if (store_) store_->Clear();
+}
+
 int KVStore::GetRank() { return store_->GetRank(); }
 int KVStore::GetGroupSize() { return store_->GetGroupSize(); }
+
+void KVStore::SetUpdater(const Updater& updt) {
+  CHECK(store_ != NULL) << "call InitDevices first";
+  store_->SetUpdater(updt);
+}
+
+void KVStore::SetAggregator(bool aggregator) {
+  CHECK(store_ != NULL) << "call InitDevices first";
+  store_->SetAggregator(aggregator);
+}
 
 KVStore::~KVStore() { delete store_; }
 
