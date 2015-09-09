@@ -28,12 +28,14 @@ class StreamManager {
   StreamManager();
   ~StreamManager();
   RunContext GetRunContext(Context const& ctx);
+  RunContext GetIORunContext(Context const& ctx);
 
  private:
   std::mutex m_;
 #if MXNET_USE_CUDA
   std::array<std::array<mshadow::Stream<gpu>*, kStreams>, kNumGpus>
       gpu_streams_;
+  std::array<mshadow::Stream<gpu>*, kNumGpus> gpu_io_streams_;
   std::array<int, kNumGpus> gpu_cnt_;
 #endif  // MXNET_USE_CUDA
   DISALLOW_COPY_AND_ASSIGN(StreamManager);
@@ -62,7 +64,31 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
         counter = (counter + 1) % kStreams;
       }
       return {gpu_streams_.at(ctx.dev_id).at(use_counter)};
-#else   // MXNET_USE_CUDA
+#else  // MXNET_USE_CUDA
+      LOG(FATAL) << "Please compile with CUDA enabled";
+#endif  // MXNET_USE_CUDA
+    }
+  }
+  return {nullptr};
+}
+
+template <std::size_t kNumGpus, std::size_t kStreams>
+RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
+    Context const& ctx) {
+  switch (ctx.dev_mask) {
+    case cpu::kDevMask:
+      return {nullptr};
+    case gpu::kDevMask: {
+#if MXNET_USE_CUDA
+      CUDA_CALL(cudaSetDevice(ctx.dev_id));
+      {
+        std::lock_guard<std::mutex> lock{m_};
+        if (gpu_io_streams_.at(ctx.dev_id) == nullptr) {
+          gpu_io_streams_.at(ctx.dev_id) = mshadow::NewStream<gpu>(true, false);
+        }
+      }
+      return {gpu_io_streams_.at(ctx.dev_id)};
+#else  // MXNET_USE_CUDA
       LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA
     }
@@ -75,6 +101,9 @@ StreamManager<kNumGpus, kStreams>::StreamManager() {
 #if MXNET_USE_CUDA
   for (std::size_t i = 0; i < kNumGpus; ++i) {
     gpu_cnt_.at(i) = -1;
+  }
+  for (auto&& i : gpu_io_streams_) {
+    i = nullptr;
   }
 #endif  // MXNET_USE_CUDA
 }

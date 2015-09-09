@@ -132,10 +132,13 @@ ThreadedOpr* ThreadedOpr::CastFromBase(Opr* o) {
 }
 
 ThreadedEngine::ThreadedEngine()
-    : pending_{0}, thread_pool_{[this]() { ThreadWorker(); }} {}
+    : pending_{0},
+      thread_pool_{[this]() { ThreadWorker(task_queue_); }},
+      io_thread_pool_{[this]() { ThreadWorker(io_task_queue_); }} {}
 
 ThreadedEngine::~ThreadedEngine() noexcept(false) {
   task_queue_.SignalForKill();
+  io_task_queue_.SignalForKill();
 }
 
 ThreadedVar* ThreadedEngine::NewVariable() {
@@ -224,7 +227,7 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
     if (opr_block->opr->prop == FnProperty::kAsync) {
       DoExecute(opr_block);
     } else {
-      task_queue_.Push(opr_block);
+      DoPushToQueue(opr_block);
     }
   }
 }
@@ -291,14 +294,14 @@ void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
    * Mark complete for read variables.
    */
   for (auto&& i : threaded_opr->const_vars) {
-    i->CompleteReadDependency([this](OprBlock* opr) { task_queue_.Push(opr); });
+    i->CompleteReadDependency([this](OprBlock* opr) { DoPushToQueue(opr); });
   }
   /*!
    * Mark complete for write variables.
    */
   for (auto&& i : threaded_opr->mutable_vars) {
     bool to_delete = i->CompleteWriteDependency(
-        [this](OprBlock* opr) { task_queue_.Push(opr); });
+        [this](OprBlock* opr) { DoPushToQueue(opr); });
     if (to_delete) {
       ThreadedVar::Delete(i);
     }
@@ -311,10 +314,22 @@ void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   }
 }
 
-void ThreadedEngine::ThreadWorker() {
+void ThreadedEngine::ThreadWorker(
+    dmlc::ConcurrentBlockingQueue<OprBlock*>& task_queue) {
   OprBlock* opr_block;
-  while (task_queue_.Pop(&opr_block)) {
+  while (task_queue.Pop(&opr_block)) {
     DoExecute(opr_block);
+  }
+}
+
+void ThreadedEngine::DoPushToQueue(OprBlock* opr_block) {
+  switch (opr_block->opr->prop) {
+    case FnProperty::kIO:
+      io_task_queue_.Push(opr_block);
+      break;
+    default:
+      task_queue_.Push(opr_block);
+      break;
   }
 }
 
@@ -334,7 +349,9 @@ void ThreadedEngine::DoExecute(OprBlock* opr_block) {
     LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA
   }
-  auto&& rctx = streams_.GetRunContext(opr_block->ctx);
+  auto&& rctx = opr_block->opr->prop == FnProperty::kIO
+      ? streams_.GetIORunContext(opr_block->ctx)
+      : streams_.GetRunContext(opr_block->ctx);
   threaded_opr->fn(rctx, callback);
   OprBlock::Delete(opr_block);
 }

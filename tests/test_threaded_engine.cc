@@ -74,9 +74,9 @@ int main() {
         Foo(ctx, 42);
         cb();
       },
-      {}, {var}));
+      {}, {var}, mxnet::FnProperty::kIO));
   engine->Push(oprs.at(0), mxnet::Context{});
-  LOG(INFO) << "Operator pushed, should wait for 2 seconds.";
+  LOG(INFO) << "IO operator pushed, should wait for 2 seconds.";
   engine->WaitForVar(var);
   LOG(INFO) << "OK, here I am.";
   for (auto&& i : oprs) {

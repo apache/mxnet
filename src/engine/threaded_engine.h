@@ -150,10 +150,11 @@ class ThreadedEngine final : public Engine {
   void OnComplete(ThreadedOpr* threaded_opr);
   /*!
    * \brief Worker.
+   * \param task_queue Queue to work on.
    *
    * The method to pass to thread pool to parallelize.
    */
-  void ThreadWorker();
+  void ThreadWorker(dmlc::ConcurrentBlockingQueue<OprBlock*>& task_queue);
 
  private:
   /*!
@@ -179,13 +180,20 @@ class ThreadedEngine final : public Engine {
    */
   StreamManager<kMaxNumGpus, kNumStreamsPerGpu> streams_;
   /*!
-   * \brief Task queue.
+   * \brief Task queues.
    */
   dmlc::ConcurrentBlockingQueue<OprBlock*> task_queue_;
+  dmlc::ConcurrentBlockingQueue<OprBlock*> io_task_queue_;
   /*!
-   * \brief Thread pool.
+   * \brief Thread pools.
    */
   ThreadPool<kNumWorkingThreads> thread_pool_;
+  ThreadPool<1> io_thread_pool_;
+  /*!
+   * \brief Push to corresponding task queue.
+   * \param opr_block The operator block.
+   */
+  void DoPushToQueue(OprBlock* opr_block);
   /*!
    * \brief Execute an operation.
    * \param opr_block The operator block.
