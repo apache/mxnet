@@ -46,6 +46,7 @@ class KVStoreLocal : public KVStore {
 
       if (lc_v.agg_buf.is_none()) {
         lc_v.agg_buf = NArray(lc_v.val.shape(), local_ctx_);
+        lc_v.agg_buf = 0.0;
       }
       if (val.ctx().dev_mask == cpu::kDevMask) {
         lc_v.agg_buf += val;
@@ -62,7 +63,6 @@ class KVStoreLocal : public KVStore {
         lc_v.agg_buf = 0.0;
         lc_v.pending_push.flip();
         lc_v.num_pending_push = 0;
-
 
         // issue blocked pull
         for (auto& w : lc_v.pending_pull_val) {
