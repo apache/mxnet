@@ -35,6 +35,21 @@ struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
         .describe("Whether to disable bias parameter.");
   }
+  inline void Save(dmlc::JSONWriter *writer) const {
+    writer->BeginObject();
+    writer->WriteObjectKeyValue("num_hidden", num_hidden);
+    std::string no_bias_str = no_bias ? "true" : "false";
+    writer->WriteObjectKeyValue("no_bias", no_bias_str);
+    writer->EndObject();
+  }
+  inline void Load(dmlc::JSONReader *reader) {
+    dmlc::JSONObjectReadHelper helper;
+    helper.DeclareField("num_hidden", &num_hidden);
+    std::string no_bias_str;
+    helper.DeclareField("no_bias", &no_bias_str);
+    helper.ReadAllFields(reader);
+    no_bias = no_bias_str == "true";
+  }
 };
 
 /**
@@ -116,7 +131,7 @@ template<typename xpu>
 Operator* CreateOp(FullyConnectedParam param);
 
 #if DMLC_USE_CXX11
-class FullyConnectedProp : public OperatorProperty {
+class FullyConnectedProp : public ParamOperatorProperty<FullyConnectedParam> {
  public:
   std::vector<std::string> ListArguments() const override {
     if (!param_.no_bias) {
@@ -181,9 +196,6 @@ class FullyConnectedProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
-
- private:
-  FullyConnectedParam param_;
 };  // class FullyConnectedSymbol
 #endif
 }  // namespace op

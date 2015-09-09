@@ -28,6 +28,21 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
   DMLC_DECLARE_PARAMETER(ReshapeParam) {
     DMLC_DECLARE_FIELD(target_shape).describe("Target new shape");
   }
+
+  inline void Save(dmlc::JSONWriter *writer) const {
+    writer->BeginObject();
+    std::string str;
+    TShape2String(target_shape, &str);
+    writer->WriteObjectKeyValue("target_shape", str);
+    writer->EndObject();
+  }
+  inline void Load(dmlc::JSONReader *reader) {
+    dmlc::JSONObjectReadHelper helper;
+    std::string target_shape_str;
+    helper.DeclareField("target_shape", &target_shape_str);
+    helper.ReadAllFields(reader);
+    String2TShape(target_shape_str, &target_shape);
+  }
 };
 
 template<typename xpu>
@@ -83,11 +98,11 @@ template<typename xpu>
 Operator* CreateOp();
 
 #if DMLC_USE_CXX11
-class ReshapeProp : public OperatorProperty {
+class ReshapeProp : public ParamOperatorProperty<ReshapeParam> {
  public:
   ReshapeProp() {}
 
-  explicit ReshapeProp(ReshapeParam param) : param_(param) {}
+  explicit ReshapeProp(ReshapeParam param) : ParamOperatorProperty<ReshapeParam>(param) {}
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -140,9 +155,6 @@ class ReshapeProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
-
- private:
-  ReshapeParam param_;
 };  // class ReshapeProp
 
 class FlattenProp : public ReshapeProp {

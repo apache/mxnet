@@ -28,6 +28,17 @@ struct ConcatParam : public dmlc::Parameter<ConcatParam> {
     DMLC_DECLARE_FIELD(num_args).set_range(1,  6)
       .describe("Number of inputs to be concated.");
   }
+
+  inline void Save(dmlc::JSONWriter *writer) const {
+    writer->BeginObject();
+    writer->WriteObjectKeyValue("num_args", num_args);
+    writer->EndObject();
+  }
+  inline void Load(dmlc::JSONReader *reader) {
+    dmlc::JSONObjectReadHelper helper;
+    helper.DeclareField("num_args", &num_args);
+    helper.ReadAllFields(reader);
+  }
 };  // struct ConcatParam
 
 template<typename xpu>
@@ -163,7 +174,7 @@ template<typename xpu>
 Operator *CreateOp(ConcatParam param);
 
 #if DMLC_USE_CXX11
-class ConcatProp : public OperatorProperty {
+class ConcatProp : public ParamOperatorProperty<ConcatParam> {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -223,9 +234,6 @@ class ConcatProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
-
- private:
-  ConcatParam param_;
 };  // class ConcatProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op

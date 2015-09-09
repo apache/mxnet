@@ -32,6 +32,19 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     DMLC_DECLARE_FIELD(momentum).set_default(0.1f)
       .describe("Momentum for moving average");
   }
+
+  inline void Save(dmlc::JSONWriter *writer) const {
+    writer->BeginObject();
+    writer->WriteObjectKeyValue("eps", eps);
+    writer->WriteObjectKeyValue("momentum", momentum);
+    writer->EndObject();
+  }
+  inline void Load(dmlc::JSONReader *reader) {
+    dmlc::JSONObjectReadHelper helper;
+    helper.DeclareField("eps", &eps);
+    helper.DeclareField("momentum", &momentum);
+    helper.ReadAllFields(reader);
+  }
 };
 
 template<typename xpu>
@@ -186,7 +199,7 @@ Operator *CreateOp(BatchNormParam param);
 
 
 #if DMLC_USE_CXX11
-class BatchNormProp : public OperatorProperty {
+class BatchNormProp : public ParamOperatorProperty<BatchNormParam> {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -261,8 +274,9 @@ class BatchNormProp : public OperatorProperty {
 
   Operator* CreateOperator(Context ctx) const;
 
- private:
-  BatchNormParam param_;
+  std::vector<ResourceRequest> BackwardResource() const override {
+    return {Resource::kTempSpace};
+  }
 };  // class BatchNormProp
 
 #endif  // DMLC_USE_CXX11

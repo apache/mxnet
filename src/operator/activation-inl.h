@@ -35,6 +35,17 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
         .add_enum("tanh", kTanh)
         .describe("Activation function to be applied.");
   }
+
+  inline void Save(dmlc::JSONWriter *writer) const {
+    writer->BeginObject();
+    writer->WriteObjectKeyValue("act_type", act_type);
+    writer->EndObject();
+  }
+  inline void Load(dmlc::JSONReader *reader) {
+    dmlc::JSONObjectReadHelper helper;
+    helper.DeclareField("act_type", &act_type);
+    helper.ReadAllFields(reader);
+  }
 };
 
 /**
@@ -84,7 +95,7 @@ template<typename xpu>
 Operator* CreateOp(ActivationParam type);
 
 #if DMLC_USE_CXX11
-class ActivationProp : public OperatorProperty {
+class ActivationProp : public ParamOperatorProperty<ActivationParam> {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -135,12 +146,8 @@ class ActivationProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
-
- private:
-  ActivationParam param_;
 };
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_ACTIVATION_INL_H_
-
