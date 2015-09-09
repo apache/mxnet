@@ -19,6 +19,10 @@ def init_devices(contexts):
     ids = c_array(ctypes.c_int, [c.device_id for c in contexts])
     check_call(_LIB.MXKVStoreInitDevices(len(contexts), masks, ids))
 
+def stop():
+    """ stop kvstore """
+    check_call(_LIB.MXKVStoreStop())
+
 def init(kv_list):
     """ Initialize a list of key-value pairs
 
@@ -71,28 +75,29 @@ def pull(kv_list):
             assert isinstance(kv[1], NArray)
             check_call(_LIB.MXKVStorePull(kv[0], kv[1].handle))
 
-def updater_wrapper(updater):
-    def updater_handle(lhs_handle, rhs_handle):
-        updater(NArray(lhs_handle), NArray(rhs_handle))
-    return updater_handle
 
-def void_updater(lhs, rhs):
-    pass
+# def updater_wrapper(updater):
+#     def updater_handle(lhs_handle, rhs_handle):
+#         updater(NArray(lhs_handle), NArray(rhs_handle))
+#     return updater_handle
 
-updater_proto = ctypes.CFUNCTYPE(None, NArrayHandle, NArrayHandle)
-updater_func = updater_proto(updater_wrapper(void_updater))
+# def void_updater(lhs, rhs):
+#     pass
 
-def register(updater):
-    """ Register a updater into the store
+# updater_proto = ctypes.CFUNCTYPE(None, NArrayHandle, NArrayHandle)
+# updater_func = updater_proto(updater_wrapper(void_updater))
 
-    Example:
-    def Update(grad, weight):
-        weight[:] -= lr * grad  / batch_size
+# def register(updater):
+#     """ Register a updater into the store
 
-    Parameters
-    ----------
+#     Example:
+#     def Update(grad, weight):
+#         weight[:] -= lr * grad  / batch_size
 
-    """
-    global updater_func
-    updater_func = updater_proto(updater)
-    check_call(_LIB.MXKVStoreRegister(updater_func))
+#     Parameters
+#     ----------
+
+#     """
+#     global updater_func
+#     updater_func = updater_proto(updater)
+#     check_call(_LIB.MXKVStoreRegister(updater_func))

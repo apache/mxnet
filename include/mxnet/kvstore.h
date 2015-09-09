@@ -7,15 +7,13 @@
 #define MXNET_PS_H_
 #include "dmlc/io.h"
 #include "narray.h"
+#include "dag_engine.h"
 
 #if DMLC_USE_CXX11
 #include <functional>
 #endif  // DMLC_USE_CXX11
 
 namespace mxnet {
-
-/*! \brief forward declaration */
-class KVStoreBase;
 
 /**
  * \brief distributed key-value store
@@ -59,14 +57,17 @@ class KVStore {
   /**
    * \brief Init with the local devices
    */
-  void InitDevices(const std::vector<Context>& devices);
+  virtual void InitDevices(const std::vector<Context>& devices);
 
   /**
    * \brief  data
    *
    * init a key-value pair. One must insert before push and pull
    */
-  void Init(int key, const NArray& value);
+  virtual void Init(int key, const NArray& value) {
+    CHECK(impl_) << "call InitDevices first";
+    impl_->Init(key, value);
+  }
 
   /*!
    * \brief push data to the store
@@ -86,7 +87,10 @@ class KVStore {
    * \param key the key for pushing
    * \param value the value for pushing
    */
-  void Push(int key, const NArray& value);
+  virtual void Push(int key, const NArray& value) {
+    CHECK(impl_) << "call InitDevices first";
+    impl_->Push(key, value);
+  }
 
   /*!
    * \brief pull data from the server nodes
@@ -105,27 +109,25 @@ class KVStore {
    * \param key the key for pulling
    * \param value data for pulling, should be pre-allocated
    */
-  void Pull(int key, NArray* value);
+  virtual void Pull(int key, NArray* value) {
+    CHECK(impl_) << "call InitDevices first";
+    impl_->Pull(key, value);
+  }
 
   /**
    * \brief clear all data stored, handles registered, and devices binded
    */
-  void Clear();
+  virtual void Stop() {
+    CHECK(impl_) << "call InitDevices first";
+    impl_->Stop();
+    Clear();
+  }
 
 #if DMLC_USE_CXX11
   /**
    * \brief user-defined updater
    */
   using Updater = std::function<void(const NArray&, NArray*)>;
-
-  /**
-   * \brief returns the default updater, which is ASSIGN
-   */
-  static Updater DefaultUpdater() {
-    return [](const NArray& a, NArray* b) {
-      CopyFromTo(a, b);
-    };
-  }
 
   /**
    * \brief set an updater
@@ -149,7 +151,7 @@ class KVStore {
    * \param batch true for batch, false for online
    * \param updt user-defined updater, default is assign
    */
-  void SetUpdater(const Updater& updt);
+  void set_updater(const Updater& updater) { updater_ = updater; }
 #endif  // DMLC_USE_CXX11
 
   /**
@@ -161,19 +163,41 @@ class KVStore {
    *
    * \param aggregator false to disable
    */
-  void SetAggregator(bool aggregator);
+  void set_aggregator(bool aggregator) { aggregator_ = aggregator; }
 
   /*! \brief Gets rank of this node in its group, which is in [0, GroupSize) */
-  int GetRank();
+  int get_rank() { return rank_; }
 
   /*! \brief Get the number of nodes in this group. */
-  int GetGroupSize();
+  int get_group_size() { return group_size_; }
+
+ protected:
+  virtual ~KVStore();
+  KVStore() : engine_(DAGEngine::Get()), impl_(NULL) { Clear(); }
+  DAGEngine* engine_;
+  int rank_;
+  int group_size_;
+  bool aggregator_;
+
+#if DMLC_USE_CXX11
+  /*! \brief returns the default updater, which is ASSIGN */
+  Updater DefaultUpdater() {
+    return [](const NArray& a, NArray* b) { CopyFromTo(a, b); };
+  }
+  Updater updater_;
+#endif  // DMLC_USE_CXX11
 
  private:
   DISALLOW_COPY_AND_ASSIGN(KVStore);
-  KVStore() : store_(NULL) { }
-  ~KVStore();
-  KVStoreBase* store_;
+  void Clear() {
+    delete impl_;
+    impl_ = NULL;
+    updater_ = DefaultUpdater();
+    aggregator_ = true;
+    rank_ = 0;
+    group_size_ = 1;
+  }
+  KVStore* impl_;
 };
 
 }  // namespace mxnet

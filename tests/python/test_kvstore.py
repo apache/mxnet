@@ -13,13 +13,14 @@ a[:] = 1.0
 mx.kvstore.init((3, a))
 
 # push
-B = [mx.narray.empty(s,d) for d in devs]
-for b in B:
-    b[:] = 2.0
-    mx.kvstore.push((3, b))
+# B = [mx.narray.empty(s,d) for d in devs]
+# for b in B:
+#     b[:] = 2.0
+#     mx.kvstore.push((3, b))
 
 # pull
 C = [mx.narray.empty(s,d) for d in devs]
 for c in C:
     mx.kvstore.pull((3, c))
     print c.asnumpy()
+mx.kvstore.stop()

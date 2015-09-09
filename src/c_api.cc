@@ -876,9 +876,9 @@ int MXKVStoreInitDevices(mx_uint num_devs, int *dev_masks, int *dev_ids) {
   API_END();
 }
 
-int MXKVStoreClear() {
+int MXKVStoreStop() {
   API_BEGIN();
-  KVStore::Get()->Clear();
+  KVStore::Get()->Stop();
   API_END();
 }
 

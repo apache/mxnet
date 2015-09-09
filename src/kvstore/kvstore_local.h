@@ -1,43 +1,37 @@
 /**
  * Copyright (c) 2015 by Contributors
- * @file   kvstore_base.h
+ * @file   kvstore_local.h
  * @brief  local implementation
  */
-#ifndef MXNET_KVSTORE_BASE_H_
-#define MXNET_KVSTORE_BASE_H_
+#ifndef MXNET_KVSTORE_LOCAL_H_
+#define MXNET_KVSTORE_LOCAL_H_
 #include <unordered_map>
 #include <bitset>
-#include "mxnet/narray.h"
-#include "mxnet/dag_engine.h"
+#include "mxnet/kvstore.h"
 
 namespace mxnet {
 
 /**
  * \brief store data in local machine
  */
-class KVStoreBase {
+class KVStoreLocal : public KVStore {
  public:
-  typedef int Key;
-  KVStoreBase() : engine_(DAGEngine::Get()) { Clear(); }
-  virtual ~KVStoreBase() { }
+  KVStoreLocal() { Clear(); }
+  virtual ~KVStoreLocal() { Clear(); }
 
   virtual void InitDevices(const std::vector<Context>& devices) {
-    CHECK(!inited_) << "double intializatino";
     num_devs_ = 0;
     for (auto d : devices) devs_[d.UID()] = num_devs_ ++;
-    inited_ = true;
   }
 
-  virtual void Push(Key key, const NArray& val, bool init) {
-    CHECK(inited_) << "call InitDevices first";
-    auto it = local_.find(key);
-    if (init) {
-      CHECK(it == local_.end()) << "duplicate init of key = " << key;
-      Value lc_v(num_devs_, val.Copy(local_ctx_));
-      local_.insert({key, lc_v}).first;
-      return;
-    }
+  virtual void Init(int key, const NArray& val) {
+    CHECK(local_.find(key) == local_.end()) << "duplicate init of key " << key;
+    Value lc_v(num_devs_, val.Copy(local_ctx_));
+    local_.insert({key, lc_v});
+  }
 
+  virtual void Push(int key, const NArray& val) {
+    auto it = local_.find(key);
     CHECK(it != local_.end()) << "key " << key << " has not been inited";
     auto& lc_v = it->second;
     CHECK_EQ(lc_v.val.shape(), val.shape())
@@ -81,9 +75,7 @@ class KVStoreBase {
     }
   }
 
-  virtual void Pull(Key key, NArray* val) {
-    CHECK(inited_) << "call InitDevices first";
-
+  virtual void Pull(int key, NArray* val) {
     auto it = local_.find(key);
     CHECK(it != local_.end()) << "key " << key << " has not been inited";
     auto& lc_v = it->second;
@@ -102,38 +94,21 @@ class KVStoreBase {
     }
   }
 
-  virtual void Clear() {
-    inited_    = false;
-    aggregator_ = true;
-    num_devs_  = 0;
-    updater_   = KVStore::DefaultUpdater();
+  virtual void Stop() { Clear(); }
+
+ protected:
+  void Clear() {
+    num_devs_ = 0;
     devs_.clear();
     local_.clear();
   }
 
-  virtual void SetUpdater(const KVStore::Updater updt) {
-    updater_ = updt;
-  }
-
-  virtual void SetAggregator(bool aggregator) {
-    aggregator_ = aggregator;
-  }
-
-  virtual int GetRank() { return 0; }
-  virtual int GetGroupSize() { return 1; }
-
- protected:
   /// get the continous device index starting from 0
   inline int GetDevIdx(const Context& ctx) {
     auto it = devs_.find(ctx.UID());
     CHECK(it != devs_.end()) << "unknow device " << ctx.Name();
     return it->second;
   }
-  DAGEngine* engine_;
-  bool inited_;
-  bool aggregator_;
-  KVStore::Updater updater_;
-
   size_t num_devs_;
   /// map a device into an index
   std::unordered_map<uint64_t, int> devs_;
@@ -150,9 +125,9 @@ class KVStoreBase {
     size_t num_pending_push;
     NArray val, agg_buf;
   };
-  std::unordered_map<Key, Value> local_;
+  std::unordered_map<int, Value> local_;
   Context local_ctx_;
 };
 
 }  // namespace mxnet
-#endif  // MXNET_KVSTORE_BASE_H_
+#endif  // MXNET_KVSTORE_LOCAL_H_

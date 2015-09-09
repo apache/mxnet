@@ -718,10 +718,10 @@ MXNET_DLL int MXKVStoreInitDevices(mx_uint num_devs,
                                    int *dev_masks,
                                    int *dev_ids);
 /*!
- * \brief clear the kvstore
+ * \brief stop the kvstore
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStoreClear();
+MXNET_DLL int MXKVStoreStop();
 
 /*!
  * \brief Init (key,value) in kvstore
