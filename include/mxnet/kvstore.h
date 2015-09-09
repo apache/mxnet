@@ -3,15 +3,15 @@
  * \file kvstore.h
  * \brief key-value store interface for mxnet
  */
-#ifndef MXNET_PS_H_
-#define MXNET_PS_H_
-#include "dmlc/io.h"
-#include "narray.h"
-#include "dag_engine.h"
-
+#ifndef MXNET_KVSTORE_H_
+#define MXNET_KVSTORE_H_
+#include <dmlc/io.h>
+#include <vector>
 #if DMLC_USE_CXX11
 #include <functional>
 #endif  // DMLC_USE_CXX11
+#include "narray.h"
+#include "dag_engine.h"
 
 namespace mxnet {
 
@@ -188,7 +188,6 @@ class KVStore {
 #endif  // DMLC_USE_CXX11
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(KVStore);
   void Clear() {
     delete impl_;
     impl_ = NULL;
@@ -198,7 +197,8 @@ class KVStore {
     group_size_ = 1;
   }
   KVStore* impl_;
+  DISALLOW_COPY_AND_ASSIGN(KVStore);
 };
 
 }  // namespace mxnet
-#endif  // MXNET_PS_H_
+#endif  // MXNET_KVSTORE_H_

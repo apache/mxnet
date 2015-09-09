@@ -3,10 +3,11 @@
  * @file   kvstore_local.h
  * @brief  local implementation
  */
-#ifndef MXNET_KVSTORE_LOCAL_H_
-#define MXNET_KVSTORE_LOCAL_H_
+#ifndef MXNET_KVSTORE_KVSTORE_LOCAL_H_
+#define MXNET_KVSTORE_KVSTORE_LOCAL_H_
 #include <unordered_map>
 #include <bitset>
+#include <vector>
 #include "mxnet/kvstore.h"
 
 namespace mxnet {
@@ -21,7 +22,7 @@ class KVStoreLocal : public KVStore {
 
   virtual void InitDevices(const std::vector<Context>& devices) {
     num_devs_ = 0;
-    for (auto d : devices) devs_[d.UID()] = num_devs_ ++;
+    for (auto d : devices) devs_[d.UID()] = num_devs_++;
   }
 
   virtual void Init(int key, const NArray& val) {
@@ -42,7 +43,7 @@ class KVStoreLocal : public KVStore {
       CHECK(!lc_v.pending_push[dix])
           << "duplicate push on key " << key << "from " << val.ctx().Name();
       lc_v.pending_push[dix] = true;
-      lc_v.num_pending_push ++;
+      lc_v.num_pending_push++;
 
       if (lc_v.agg_buf.is_none()) {
         lc_v.agg_buf = NArray(lc_v.val.shape(), local_ctx_);
@@ -130,4 +131,4 @@ class KVStoreLocal : public KVStore {
 };
 
 }  // namespace mxnet
-#endif  // MXNET_KVSTORE_LOCAL_H_
+#endif  // MXNET_KVSTORE_KVSTORE_LOCAL_H_

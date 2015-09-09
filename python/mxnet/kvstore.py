@@ -1,9 +1,9 @@
 # coding: utf-8
+# pylint: disable=invalid-name,
 """ KVStore in mxnet """
 from __future__ import absolute_import
 import ctypes
 from .narray import NArray
-from .context import Context
 from .base import _LIB
 from .base import check_call, c_array, NArrayHandle
 
@@ -24,7 +24,7 @@ def _ctype_key_value(keys, vals):
         for k in keys:
             assert(isinstance(k, int))
         if len(keys) == 1:
-            return parse_key_value(keys[0], vals)
+            return _ctype_key_value(keys[0], vals)
         assert(len(keys) == len(vals))
         for v in vals:
             assert(isinstance(v, NArray))
@@ -83,28 +83,28 @@ def pull(keys, values):
     num, ckeys, cvals = _ctype_key_value(keys, values)
     check_call(_LIB.MXKVStorePull(num, ckeys, cvals))
 
-def _updater_wrapper(updater):
-    def updater_handle(lhs_handle, rhs_handle):
-        updater(NArray(lhs_handle), NArray(rhs_handle))
-    return updater_handle
+# def _updater_wrapper(updater):
+#     def updater_handle(lhs_handle, rhs_handle):
+#         updater(NArray(lhs_handle), NArray(rhs_handle))
+#     return updater_handle
 
-def _void_updater(lhs, rhs):
-    pass
+# def _void_updater(lhs, rhs):
+#     pass
 
-_updater_proto = ctypes.CFUNCTYPE(None, NArrayHandle, NArrayHandle)
-_updater_func = _updater_proto(_updater_wrapper(_void_updater))
+# _updater_proto = ctypes.CFUNCTYPE(None, NArrayHandle, NArrayHandle)
+# _updater_func = _updater_proto(_updater_wrapper(_void_updater))
 
-def register(updater):
-    """ Register a updater into the store
+# def register(updater):
+#     """ Register a updater into the store
 
-    Example:
-    def Update(grad, weight):
-        weight[:] -= lr * grad  / batch_size
+#     Example:
+#     def Update(grad, weight):
+#         weight[:] -= lr * grad  / batch_size
 
-    Parameters
-    ----------
+#     Parameters
+#     ----------
 
-    """
-    global _updater_func
-    updater_func = _updater_proto(updater)
-    check_call(_LIB.MXKVStoreRegister(updater_func))
+#     """
+#     global _updater_func
+#     updater_func = _updater_proto(updater)
+#     check_call(_LIB.MXKVStoreRegister(updater_func))
