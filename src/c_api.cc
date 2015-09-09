@@ -13,11 +13,13 @@
 #include <mxnet/operator.h>
 #include <mxnet/io.h>
 #include <mxnet/c_api.h>
+#include <mxnet/kvstore.h>
 #include <vector>
 #include <sstream>
 #include <string>
 #include <mutex>
 #include <memory>
+#include <functional>
 
 // macro hanlding for threadlocal variables
 #ifdef __GNUC__
@@ -840,5 +842,55 @@ int MXDataIterGetData(DataIterHandle handle, NArrayHandle *out) {
   API_BEGIN();
   DataBatch db = static_cast<IIterator<DataBatch>* >(handle)->Value();
   *out = new NArray(db.data[0], 0);
+  API_END();
+}
+
+int MXKVStoreInit(int num, int* keys, NArrayHandle* vals) {
+  API_BEGIN();
+  for (int i = 0; i < num; ++i) {
+    KVStore::Get()->Init(keys[i], *static_cast<NArray*>(vals[i]));
+  }
+  API_END();
+}
+
+int MXKVStorePush(int num, int* keys, NArrayHandle* vals) {
+  API_BEGIN();
+  for (int i = 0; i < num; ++i) {
+    KVStore::Get()->Push(keys[i], *static_cast<NArray*>(vals[i]));
+  }
+  API_END();
+}
+
+int MXKVStorePull(int num, int* keys, NArrayHandle* vals) {
+  API_BEGIN();
+  for (int i = 0; i < num; ++i) {
+    KVStore::Get()->Pull(keys[i], static_cast<NArray*>(vals[i]));
+  }
+  API_END();
+}
+
+int MXKVStoreInitDevices(mx_uint num_devs, int *dev_masks, int *dev_ids) {
+  API_BEGIN();
+  std::vector<Context> devs;
+  for (mx_uint i = 0; i < num_devs; ++i) {
+    devs.push_back(Context(dev_masks[i], dev_ids[i]));
+  }
+  KVStore::Get()->InitDevices(devs);
+  API_END();
+}
+
+int MXKVStoreStop() {
+  API_BEGIN();
+  KVStore::Get()->Stop();
+  API_END();
+}
+
+int MXKVStoreRegister(MXKVStoreUpdater updater) {
+  API_BEGIN();
+  auto updt = [updater](const NArray& recv, NArray* local) {
+    NArray recv_copy = recv;
+    updater(&recv_copy, local);
+  };
+  // KVStore::Get()->Register(updt);
   API_END();
 }

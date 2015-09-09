@@ -5,9 +5,10 @@
  */
 #ifndef MXNET_CONTEXT_H_
 #define MXNET_CONTEXT_H_
-
 #include <dmlc/io.h>
 #include <dmlc/type_traits.h>
+#include <sstream>
+#include <string>
 #include "./base.h"
 
 namespace mxnet {
@@ -60,6 +61,22 @@ struct Context {
     if (strm->Read(&dev_mask, sizeof(int32_t)) != sizeof(int32_t)) return false;
     if (strm->Read(&dev_id, sizeof(int32_t)) != sizeof(int32_t)) return false;
     return true;
+  }
+
+  /**
+   * \brief returns an unique ID
+   */
+  inline uint64_t UID() const {
+    return static_cast<uint64_t>(dev_mask) << 32 | dev_id;
+  }
+
+  /**
+   * \brief returns an unique string name
+   */
+  inline std::string Name() const {
+    std::stringstream ss;
+    ss << (dev_mask == cpu::kDevMask ? "cpu" : "gpu") << ":" << dev_id;
+    return ss.str();
   }
 };
 
