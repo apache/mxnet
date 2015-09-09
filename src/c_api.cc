@@ -845,22 +845,27 @@ int MXDataIterGetData(DataIterHandle handle, NArrayHandle *out) {
   API_END();
 }
 
-int MXKVStorePush(mx_uint key, NArrayHandle value) {
+int MXKVStoreInit(int num, int* keys, NArrayHandle* vals) {
   API_BEGIN();
-  KVStore::Get()->Push(key, *static_cast<NArray*>(value));
+  for (int i = 0; i < num; ++i) {
+    KVStore::Get()->Init(keys[i], *static_cast<NArray*>(vals[i]));
+  }
   API_END();
 }
 
-int MXKVStoreInit(mx_uint key, NArrayHandle value) {
+int MXKVStorePush(int num, int* keys, NArrayHandle* vals) {
   API_BEGIN();
-  KVStore::Get()->Init(key, *static_cast<NArray*>(value));
+  for (int i = 0; i < num; ++i) {
+    KVStore::Get()->Push(keys[i], *static_cast<NArray*>(vals[i]));
+  }
   API_END();
 }
 
-
-int MXKVStorePull(mx_uint key, NArrayHandle value) {
+int MXKVStorePull(int num, int* keys, NArrayHandle* vals) {
   API_BEGIN();
-  KVStore::Get()->Pull(key, static_cast<NArray*>(value));
+  for (int i = 0; i < num; ++i) {
+    KVStore::Get()->Pull(keys[i], static_cast<NArray*>(vals[i]));
+  }
   API_END();
 }
 

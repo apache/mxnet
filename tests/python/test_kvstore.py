@@ -1,26 +1,43 @@
 # pylint: skip-file
 import mxnet as mx
+import numpy as np
 
-num_devs = 3
-devs = [mx.Context('cpu', i) for i in range(num_devs)]
-mx.kvstore.init_devices(devs)
+def check_diff_to_scalar(A, x):
+    """ assert A == x"""
+    assert(np.sum(np.abs((A - x).asnumpy())) == 0)
 
-s = (4,4)
+def test_aggregator():
 
-# init
-a = mx.narray.empty(s,devs[0])
-a[:] = 1.0
-mx.kvstore.init((3, a))
+    num_devs = 2
+    devs = [mx.Context('cpu', i) for i in range(num_devs)]
+    mx.kvstore.init_devices(devs)
 
-# push
-# B = [mx.narray.empty(s,d) for d in devs]
-# for b in B:
-#     b[:] = 2.0
-#     mx.kvstore.push((3, b))
+    shape = (4, 4)
+    keys = (5, 9)
 
-# pull
-C = [mx.narray.empty(s,d) for d in devs]
-for c in C:
-    mx.kvstore.pull((3, c))
-    print c.asnumpy()
-mx.kvstore.stop()
+    # init all key-value pairs
+    mx.kvstore.init(keys, [mx.narray.zeros(shape) for k in keys])
+
+    # first push and then pull on one key
+    vals = [mx.narray.ones(shape, d) for d in devs]
+    mx.kvstore.push(keys[0], vals)
+    out = mx.narray.empty(shape, devs[1])
+    mx.kvstore.pull(keys[0], out)
+
+    check_diff_to_scalar(out, num_devs)
+
+    # interleave push and pull for each device
+    vals = []
+    for d in devs:
+        vals.append([mx.narray.ones(shape, d) for k in keys])
+        mx.kvstore.push(keys, vals[-1])
+        mx.kvstore.pull(keys, vals[-1])
+
+    for v in vals:
+        for d in v:
+            check_diff_to_scalar(d, num_devs)
+
+    mx.kvstore.stop()
+
+if __name__ == '__main__':
+    test_aggregator()

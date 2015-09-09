@@ -725,31 +725,37 @@ MXNET_DLL int MXKVStoreStop();
 
 /*!
  * \brief Init (key,value) in kvstore
- * \param key the int key
- * \param value the NArray value
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStoreInit(mx_uint key,
-                            NArrayHandle value);
+MXNET_DLL int MXKVStoreInit(int num,
+                            int* keys,
+                            NArrayHandle* vals);
 
 /*!
  * \brief Push (key,value) to kvstore
- * \param key the int key
- * \param value the NArray value
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStorePush(mx_uint key,
-                            NArrayHandle value);
+MXNET_DLL int MXKVStorePush(int num,
+                            int* keys,
+                            NArrayHandle* vals);
 
 
 /*!
  * \brief pull value from kvstore on the given key
- * \param key the int key
- * \param value the NArray value
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStorePull(mx_uint key,
-                            NArrayHandle value);
+MXNET_DLL int MXKVStorePull(int num,
+                            int* keys,
+                            NArrayHandle* vals);
 
 typedef void (MXKVStoreUpdater)(NArrayHandle recv, NArrayHandle local);
 /*!
