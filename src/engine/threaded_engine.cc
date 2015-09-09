@@ -317,7 +317,7 @@ void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
 void ThreadedEngine::ThreadWorker(
     dmlc::ConcurrentBlockingQueue<OprBlock*>* task_queue) {
   OprBlock* opr_block;
-  while (task_queue.Pop(&opr_block)) {
+  while (task_queue->Pop(&opr_block)) {
     DoExecute(opr_block);
   }
 }
