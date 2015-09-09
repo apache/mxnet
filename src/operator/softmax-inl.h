@@ -29,6 +29,16 @@ struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
       .describe("Scale the gradient by a float factor");
   };
+  inline void Save(dmlc::JSONWriter *writer) const {
+    writer->BeginObject();
+    writer->WriteObjectKeyValue("grad_scale", grad_scale);
+    writer->EndObject();
+  }
+  inline void Load(dmlc::JSONReader *reader) {
+    dmlc::JSONObjectReadHelper helper;
+    helper.DeclareField("grad_scale", &grad_scale);
+    helper.ReadAllFields(reader);
+  }
 };
 
 template<typename xpu>
@@ -83,7 +93,7 @@ template<typename xpu>
 Operator* CreateOp(SoftmaxParam param);
 
 #if DMLC_USE_CXX11
-class SoftmaxProp : public OperatorProperty {
+class SoftmaxProp : public ParamOperatorProperty<SoftmaxParam> {
  public:
   std::vector<std::string> ListArguments() const override {
     return {"data", "label"};
@@ -138,9 +148,6 @@ class SoftmaxProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
-
- private:
-  SoftmaxParam param_;
 };  // class SoftmaxProp
 #endif  // DMLC_USE_CXX11
 

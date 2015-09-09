@@ -49,6 +49,42 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
       .describe("Whether to disable bias parameter.");
   }
+
+  inline void Save(dmlc::JSONWriter *writer) const {
+    writer->BeginObject();
+    std::string str;
+    TShape2String(kernel, &str);
+    writer->WriteObjectKeyValue("kernel", str);
+    TShape2String(stride, &str);
+    writer->WriteObjectKeyValue("stride", str);
+    TShape2String(pad, &str);
+    writer->WriteObjectKeyValue("pad", str);
+    writer->WriteObjectKeyValue("num_filter", num_filter);
+    writer->WriteObjectKeyValue("num_group", num_group);
+    writer->WriteObjectKeyValue("workspace", workspace);
+    std::string no_bias_str = no_bias ? "true" : "false";
+    writer->WriteObjectKeyValue("no_bias", no_bias_str);
+    writer->EndObject();
+  }
+  inline void Load(dmlc::JSONReader *reader) {
+    dmlc::JSONObjectReadHelper helper;
+    std::string kernel_str;
+    helper.DeclareField("kernel", &kernel_str);
+    std::string stride_str;
+    helper.DeclareField("stride", &stride_str);
+    std::string pad_str;
+    helper.DeclareField("pad", &pad_str);
+    helper.DeclareField("num_filter", &num_filter);
+    helper.DeclareField("num_group", &num_group);
+    helper.DeclareField("workspace", &workspace);
+    std::string no_bias_str;
+    helper.DeclareField("no_bias", &no_bias_str);
+    helper.ReadAllFields(reader);
+    no_bias = no_bias_str == "true";
+    String2TShape(kernel_str, &kernel);
+    String2TShape(stride_str, &stride);
+    String2TShape(pad_str, &pad);
+  }
 };
 
 template<typename xpu>
@@ -221,7 +257,7 @@ class ConvolutionOp : public Operator {
                                      param_.num_filter / param_.num_group,
                                      oshape[2] * oshape[3]);
     const uint32_t workspace_size = param_.workspace << 18;
-    nstep_ = std::max(std::min(static_cast<index_t>(workspace_size / shape_colunit_.Size()), 
+    nstep_ = std::max(std::min(static_cast<index_t>(workspace_size / shape_colunit_.Size()),
                               ishape[0]), 1U);
     int nop = (ishape[0] + nstep_ - 1) / nstep_;
     nstep_ = (ishape[0] + nop - 1) / nop;
@@ -248,7 +284,7 @@ template<typename xpu>
 Operator* CreateOp(ConvolutionParam param);
 
 #if DMLC_USE_CXX11
-class ConvolutionProp : public OperatorProperty {
+class ConvolutionProp : public ParamOperatorProperty<ConvolutionParam> {
  public:
   std::vector<std::string> ListArguments() const override {
     if (!param_.no_bias) {
@@ -339,9 +375,6 @@ class ConvolutionProp : public OperatorProperty {
   std::vector<ResourceRequest> BackwardResource() const override {
     return {Resource::kTempSpace};
   }
-
- private:
-  ConvolutionParam param_;
 };  // class ConvolutionProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op

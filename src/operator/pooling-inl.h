@@ -51,6 +51,33 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
       .set_expect_ndim(2)
       .describe("pad for pooling: (y, x)");
   }
+
+  inline void Save(dmlc::JSONWriter *writer) const {
+    writer->BeginObject();
+    std::string str;
+    TShape2String(kernel, &str);
+    writer->WriteObjectKeyValue("kernel", str);
+    TShape2String(stride, &str);
+    writer->WriteObjectKeyValue("stride", str);
+    TShape2String(pad, &str);
+    writer->WriteObjectKeyValue("pad", str);
+    writer->WriteObjectKeyValue("pool_type", pool_type);
+    writer->EndObject();
+  }
+  inline void Load(dmlc::JSONReader *reader) {
+    dmlc::JSONObjectReadHelper helper;
+    std::string kernel_str;
+    helper.DeclareField("kernel", &kernel_str);
+    std::string stride_str;
+    helper.DeclareField("stride", &stride_str);
+    std::string pad_str;
+    helper.DeclareField("pad", &pad_str);
+    helper.DeclareField("pool_type", &pool_type);
+    helper.ReadAllFields(reader);
+    String2TShape(kernel_str, &kernel);
+    String2TShape(stride_str, &stride);
+    String2TShape(pad_str, &pad);
+  }
 };
 
 template<typename xpu, typename Reducer>
@@ -154,7 +181,7 @@ Operator* CreateOp(PoolingParam param);
 
 
 #if DMLC_USE_CXX11
-class PoolingProp : public OperatorProperty {
+class PoolingProp : public ParamOperatorProperty<PoolingParam> {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -205,9 +232,6 @@ class PoolingProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
-
- private:
-  PoolingParam param_;
 };  // class PoolingProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op

@@ -71,4 +71,3 @@ struct Param {
 }  // namespace mxnet
 
 #endif  // MXNET_OPERATOR_PARAM_H_
-
