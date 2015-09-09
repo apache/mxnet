@@ -214,7 +214,6 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
   opr_block->wait.store(threaded_opr->const_vars.size() +
                         threaded_opr->mutable_vars.size() + 1);
   opr_block->ctx = exec_ctx;
-  opr_block->rctx = RunContext{nullptr};
   ++pending_;
   // Add read dependencies.
   for (auto&& i : threaded_opr->const_vars) {
@@ -311,7 +310,8 @@ void ThreadedEngine::ThreadWorker() {
       LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA
     }
-    threaded_opr->fn(opr_block->rctx, callback);
+    auto&& rctx = streams_.GetRunContext(opr_block->ctx);
+    threaded_opr->fn(rctx, callback);
     OprBlock::Delete(opr_block);
   }
 }

@@ -14,6 +14,7 @@
 #include <mutex>
 #include "engine_impl.h"
 #include "thread_pool.h"
+#include "stream_manager.h"
 #include "../common/object_pool.h"
 
 namespace mxnet {
@@ -37,7 +38,6 @@ struct OprBlock : public common::ObjectPoolAllocatable<OprBlock> {
   std::atomic<std::size_t> wait{0};
   ThreadedOpr* opr{nullptr};
   Context ctx;
-  RunContext rctx;
 };  // struct OprBlock
 
 /*!
@@ -156,6 +156,11 @@ class ThreadedEngine final : public Engine {
    */
   static constexpr std::size_t kNumWorkingThreads = 16;
   /*!
+   * \brief Constants for runtime context.
+   */
+  static constexpr std::size_t kMaxNumGpus = 16;
+  static constexpr std::size_t kNumStreamsPerGpu = 16;
+  /*!
    * \brief Number of pending operations.
    */
   std::atomic<std::size_t> pending_;
@@ -164,6 +169,10 @@ class ThreadedEngine final : public Engine {
    */
   std::mutex finished_m_;
   std::condition_variable finished_cv_;
+  /*!
+   * \brief Streams.
+   */
+  StreamManager<kMaxNumGpus, kNumStreamsPerGpu> streams_;
   /*!
    * \brief Task queue.
    */

@@ -40,7 +40,7 @@ class StreamManager {
 };  // class StreamManager
 
 template <std::size_t kNumGpus, std::size_t kStreams>
-RunContext StreamManager<kNumGpus, kStreams>::GetRuncontext(
+RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
     Context const& ctx) {
   switch (ctx.dev_mask) {
     case cpu::kDevMask:
@@ -51,23 +51,23 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRuncontext(
       CUDA_CALL(cudaSetDevice(ctx.dev_id));
       {
         std::lock_guard<std::mutex> lock{m_};
-        auto&& counter = gpu_cnt_.at(dev_id);
+        auto&& counter = gpu_cnt_.at(ctx.dev_id);
         if (counter == -1) {
           for (auto&& i : gpu_streams_.at(ctx.dev_id)) {
             i = mshadow::NewStream<gpu>(true, false);
           }
+          counter = 0;
         }
-        counter = 0;
+        use_counter = counter;
+        counter = (counter + 1) % kStreams;
       }
-      use_counter = counter;
-      counter = (counter + 1) % kStreams;
-    }
       return {gpu_streams_.at(ctx.dev_id).at(use_counter)};
 #else   // MXNET_USE_CUDA
       LOG(FATAL) << "Please compile with CUDA enabled";
-      return {nullptr};
 #endif  // MXNET_USE_CUDA
+    }
   }
+  return {nullptr};
 }
 
 template <std::size_t kNumGpus, std::size_t kStreams>
@@ -79,8 +79,8 @@ StreamManager<kNumGpus, kStreams>::StreamManager() {
 #endif  // MXNET_USE_CUDA
 }
 
-template <std::size_t>
-StreamManager::~StreamManager() {
+template <std::size_t kNumGpus, std::size_t kStreams>
+StreamManager<kNumGpus, kStreams>::~StreamManager() {
 #if MXNET_USE_CUDA
   for (std::size_t i = 0; i < kNumGpus; ++i) {
     if (gpu_cnt_.at(i) != -1) {
