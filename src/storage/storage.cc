@@ -5,6 +5,7 @@
 #include <mshadow/tensor.h>
 #include <dmlc/logging.h>
 #include <array>
+#include <mutex>
 #include "storage_manager.h"
 #include "naive_storage_manager.h"
 #include "pooled_storage_manager.h"
@@ -40,41 +41,45 @@ struct Storage::Impl {
     }
   }
 
-  // std::unordered_map<
-  //     int, std::unordered_map<int, std::unique_ptr<storage::StorageManager>>>
-  //     storage_managers;
   std::array<std::array<std::unique_ptr<storage::StorageManager>,
                         kMaxNumberOfDeviceIDs>,
              kMaxNumberOfDevices> storage_managers;
+  std::mutex m;
 };  // struct Storage::Impl
 
 Storage::Handle Storage::Alloc(size_t size, Context ctx) {
   Handle hd;
   hd.ctx = ctx;
-  auto&& device = impl_->storage_managers.at(ctx.dev_mask);
-  auto&& device_id_it = device.at(ctx.dev_id);
-  // Allocate device if necessary.
-  if (!device_id_it) {
-    switch (ctx.dev_mask) {
-      case cpu::kDevMask:
-        device_id_it = common::MakeUnique<
-            Storage::Impl::CurrentStorageManager<storage::CPUDeviceStorage>>();
-        break;
-      case gpu::kDevMask:
-        device_id_it = common::MakeUnique<
-            Storage::Impl::CurrentStorageManager<storage::GPUDeviceStorage>>();
-        break;
-      default:
-        LOG(FATAL) << "Unimplemented device";
-    }
-  }
-  Impl::ActivateDevice(ctx);
-  hd.dptr = device_id_it->Alloc(size);
   hd.size = size;
+  {
+    std::lock_guard<std::mutex> lock{impl_->m};
+    auto&& device = impl_->storage_managers.at(ctx.dev_mask);
+    auto&& device_id_it = device.at(ctx.dev_id);
+    // Allocate device if necessary.
+    if (!device_id_it) {
+      switch (ctx.dev_mask) {
+        case cpu::kDevMask:
+          device_id_it =
+              common::MakeUnique<Storage::Impl::CurrentStorageManager<
+                  storage::CPUDeviceStorage>>();
+          break;
+        case gpu::kDevMask:
+          device_id_it =
+              common::MakeUnique<Storage::Impl::CurrentStorageManager<
+                  storage::GPUDeviceStorage>>();
+          break;
+        default:
+          LOG(FATAL) << "Unimplemented device";
+      }
+    }
+    Impl::ActivateDevice(ctx);
+    hd.dptr = device_id_it->Alloc(size);
+  }
   return hd;
 }
 
 void Storage::Free(Storage::Handle handle) {
+  std::lock_guard<std::mutex> lock{impl_->m};
   Impl::ActivateDevice(handle.ctx);
   impl_->storage_managers.at(handle.ctx.dev_mask)
       .at(handle.ctx.dev_id)
@@ -84,6 +89,7 @@ void Storage::Free(Storage::Handle handle) {
 Storage::~Storage() = default;
 
 Storage* Storage::Get() {
+  // This function is thread-safe in C++11
   static Storage inst;
   return &inst;
 }

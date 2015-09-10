@@ -16,7 +16,7 @@
 #include "./context.h"
 #include "./storage.h"
 #include "./context.h"
-#include "./dag_engine.h"
+#include "./engine.h"
 // check c++11
 #if DMLC_USE_CXX11 == 0
 #error "cxx11 was required for narray module"
@@ -79,7 +79,7 @@ class NArray {
    */
   inline void WaitToRead() const {
     if (is_none()) return;
-    DAGEngine::Get()->WaitToRead(ptr_->var);
+    Engine::Get()->WaitForVar(ptr_->var);
   }
   /*!
    * \brief Block until all the pending read/write operations with respect
@@ -87,10 +87,15 @@ class NArray {
    */
   inline void WaitToWrite() const {
     if (is_none()) return;
-    DAGEngine::Get()->WaitToWrite(ptr_->var);
+    /*!
+     * Push an empty mutable function to flush all preceding reads to the
+     * variable.
+     */
+    Engine::Get()->Push([](RunContext) {}, Context{}, {}, {ptr_->var});
+    Engine::Get()->WaitForVar(ptr_->var);
   }
-  /*! \return the associated DAG variable of the narray.*/
-  inline DAGEngine::Variable var() const {
+  /*! \return the associated variable of the narray.*/
+  inline Engine::VarHandle var() const {
     return ptr_->var;
   }
   /*!
@@ -239,8 +244,8 @@ class NArray {
   struct Chunk {
     /*! \brief storage handlefrom storage engine */
     Storage::Handle shandle;
-    /*! \brief variable from DAG engine */
-    DAGEngine::Variable var;
+    /*! \brief variable from engine */
+    Engine::VarHandle var;
     /*!
      * \brief if this is true, this means the data do not come
      * from Storage, and do not need to be freed
@@ -250,13 +255,13 @@ class NArray {
     bool delay_alloc;
     /*! \brief default cosntructor */
     Chunk() : static_data(true), delay_alloc(false) {
-      var  = DAGEngine::Get()->NewVar();
+      var  = Engine::Get()->NewVariable();
     }
     /*! \brief construct from static data */
     Chunk(const TBlob &data, int dev_id)
         : static_data(true),
           delay_alloc(false) {
-      var = DAGEngine::Get()->NewVar();
+      var = Engine::Get()->NewVariable();
       shandle.ctx = Context(data.dev_mask_, dev_id);
       shandle.dptr = data.dptr_;
       shandle.size = data.shape_.Size() * sizeof(real_t);
@@ -264,7 +269,7 @@ class NArray {
     /*! \brief construct a new chunk */
     Chunk(uint64_t size, Context ctx, bool delay_alloc_)
         : static_data(false), delay_alloc(true) {
-      var = DAGEngine::Get()->NewVar();
+      var = Engine::Get()->NewVariable();
       shandle.size = size * sizeof(real_t);
       shandle.ctx = ctx;
       if (!delay_alloc_) this->CheckAndAlloc();
@@ -279,11 +284,11 @@ class NArray {
     /*! \brief destructor */
     ~Chunk() {
       if (static_data) {
-        DAGEngine::Get()->PushDelete([](RunContext s) {}, shandle.ctx, var);
+        Engine::Get()->DeleteVariable([](RunContext s) {}, shandle.ctx, var);
       } else {
         CHECK(!delay_alloc) << "deleted before allocation";
         Storage::Handle h = this->shandle;
-        DAGEngine::Get()->PushDelete([h](RunContext s) {
+        Engine::Get()->DeleteVariable([h](RunContext s) {
             Storage::Get()->Free(h);
           }, shandle.ctx, var);
       }

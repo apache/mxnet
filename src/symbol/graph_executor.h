@@ -91,11 +91,11 @@ class GraphExecutor : public Executor {
   // all the information needed to push the op to engine
   struct OpExecEntry {
     // execution function for
-    DAGEngine::Fn exec_fun;
+    Engine::Fn exec_fun;
     // variables to read from
-    std::vector<DAGEngine::Variable> use_vars;
+    std::vector<Engine::VarHandle> use_vars;
     // variables to mutate
-    std::vector<DAGEngine::Variable> mutate_vars;
+    std::vector<Engine::VarHandle> mutate_vars;
     // constructor
     OpExecEntry() : exec_fun(nullptr) {}
   };

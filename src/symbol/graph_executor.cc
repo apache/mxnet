@@ -450,14 +450,14 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     OpNode& opnode = op_nodes_[nid];
     opnode.op_ctx.is_train = is_train;
     if (opnode.cached_exec.exec_fun != nullptr) {
-      DAGEngine::Get()->Push(
+      Engine::Get()->Push(
           opnode.cached_exec.exec_fun,
           opnode.ctx,
           opnode.cached_exec.use_vars,
           opnode.cached_exec.mutate_vars);
     } else {
       auto exec = GetOpExecEntry(nid);
-      DAGEngine::Get()->Push(
+      Engine::Get()->Push(
           exec.exec_fun,
           opnode.ctx,
           exec.use_vars,
