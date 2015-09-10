@@ -9,7 +9,7 @@
 #include <bitset>
 #include <vector>
 #include "mxnet/kvstore.h"
-#include "mxnet/dag_engine.h"
+#include "mxnet/engine.h"
 
 namespace mxnet {
 
@@ -18,7 +18,7 @@ namespace mxnet {
  */
 class KVStoreLocal : public KVStore {
  public:
-  KVStoreLocal() : engine_(DAGEngine::Get()) { Clear(); }
+  KVStoreLocal() : engine_(Engine::Get()) { Clear(); }
   virtual ~KVStoreLocal() { Clear(); }
 
   virtual void InitDevices(const std::vector<Context>& devices) {
@@ -121,7 +121,7 @@ class KVStoreLocal : public KVStore {
     local_.clear();
   }
 
-  DAGEngine* engine_;
+  Engine* engine_;
   Updater updater_;
 
   bool aggregator_;
