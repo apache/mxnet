@@ -78,6 +78,21 @@ struct Context {
     ss << (dev_mask == cpu::kDevMask ? "cpu" : "gpu") << ":" << dev_id;
     return ss.str();
   }
+
+  /*! \brief the maximal device mask, cpu = 1, gpu = 2 */
+  static const int32_t kMaxDevMask = 2;
+
+  /*!
+   * \brief A dedicate ID for pinned cpu memory.
+   *
+   * Any normal CPU ID should be less than this number.
+   */
+  static const int32_t kPinnedMemoryID = 16;
+
+  /*! \brief Return the context for cpu with pinned memory */
+  static Context PinnedMemory() {
+    return Context(cpu::kDevMask, kPinnedMemoryID);
+  }
 };
 
 /*!
