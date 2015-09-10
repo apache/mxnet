@@ -39,5 +39,30 @@ def test_aggregator():
 
     mx.kvstore.stop()
 
+def updater(recv, local):
+    local += recv
+
+def test_updater():
+    num_devs = 2
+    devs = [mx.Context('cpu', i) for i in range(num_devs)]
+    mx.kvstore.init_devices(devs)
+
+    shape = (4, 4)
+    key = 7
+    mx.kvstore.init(key, mx.narray.zeros(shape))
+    mx.kvstore.set_updater(updater)
+
+    vals = [mx.narray.ones(shape, d) for d in devs]
+    mx.kvstore.push(key, vals)
+    mx.kvstore.push(key, vals)
+    mx.kvstore.push(key, vals)
+
+    mx.kvstore.pull(key, vals)
+    for v in vals:
+        check_diff_to_scalar(v, num_devs*3)
+
+    mx.kvstore.stop()
+
 if __name__ == '__main__':
     test_aggregator()
+    test_updater()

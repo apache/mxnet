@@ -21,6 +21,4 @@ void KVStore::InitDevices(const std::vector<Context>& devices) {
   impl_->InitDevices(devices);
 }
 
-KVStore::~KVStore() { Clear(); }
-
 }  // namespace mxnet

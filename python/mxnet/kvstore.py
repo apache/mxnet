@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=invalid-name,
+# pylint: disable=invalid-name, global-variable-undefined,
 """ KVStore in mxnet """
 from __future__ import absolute_import
 import ctypes
@@ -45,7 +45,7 @@ def init_devices(contexts):
     check_call(_LIB.MXKVStoreInitDevices(len(contexts), masks, ids))
 
 def stop():
-    """ stop kvstore """
+    """ Stop kvstore """
     check_call(_LIB.MXKVStoreStop())
 
 
@@ -54,9 +54,10 @@ def init(keys, values):
 
     Parameters
     ----------
-    kv_list : tuple or list/generator of tuples
-        a key-value tuple or a list of key-value tuples, where key is int and
-        key is
+    keys: int or list of int
+        A single key or a list of keys
+    values: NArray or list of NArray
+        A single value of a list of values
     """
     num, ckeys, cvals = _ctype_key_value(keys, values)
     check_call(_LIB.MXKVStoreInit(num, ckeys, cvals))
@@ -66,6 +67,10 @@ def push(keys, values):
 
     Parameters
     ----------
+    keys: int or list of int
+        A single key or a list of keys
+    values: NArray or list of NArray
+        A single value of a list of values
     """
     num, ckeys, cvals = _ctype_key_value(keys, values)
     check_call(_LIB.MXKVStorePush(num, ckeys, cvals))
@@ -75,36 +80,37 @@ def pull(keys, values):
 
     Parameters
     ----------
-    key : int
-        The key
-    value : NArray
-        The value
+    keys: int or list of int
+        A single key or a list of keys
+    values: NArray or list of NArray
+        A single value of a list of values
     """
     num, ckeys, cvals = _ctype_key_value(keys, values)
     check_call(_LIB.MXKVStorePull(num, ckeys, cvals))
 
-# def _updater_wrapper(updater):
-#     def updater_handle(lhs_handle, rhs_handle):
-#         updater(NArray(lhs_handle), NArray(rhs_handle))
-#     return updater_handle
+def _updater_wrapper(updater):
+    """ a wrapper for the user-defined handle """
+    def updater_handle(lhs_handle, rhs_handle):
+        """ ctypes function """
+        lhs = NArray(NArrayHandle(lhs_handle))
+        rhs = NArray(NArrayHandle(rhs_handle))
+        updater(lhs, rhs)
+    return updater_handle
 
-# def _void_updater(lhs, rhs):
-#     pass
+def set_updater(updater):
+    """ set a updater into the store
 
-# _updater_proto = ctypes.CFUNCTYPE(None, NArrayHandle, NArrayHandle)
-# _updater_func = _updater_proto(_updater_wrapper(_void_updater))
+    Example:
 
-# def register(updater):
-#     """ Register a updater into the store
+    def updater(recv, local):
+        local += recv
+    kvstore.set_updater(updater)
 
-#     Example:
-#     def Update(grad, weight):
-#         weight[:] -= lr * grad  / batch_size
-
-#     Parameters
-#     ----------
-
-#     """
-#     global _updater_func
-#     updater_func = _updater_proto(updater)
-#     check_call(_LIB.MXKVStoreRegister(updater_func))
+    Parameters
+    ----------
+    updater: functon
+    """
+    _updater_proto = ctypes.CFUNCTYPE(None, NArrayHandle, NArrayHandle)
+    global _updater_func
+    _updater_func = _updater_proto(_updater_wrapper(updater))
+    check_call(_LIB.MXKVStoreSetUpdater(_updater_func))

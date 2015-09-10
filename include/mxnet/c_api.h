@@ -763,6 +763,6 @@ typedef void (MXKVStoreUpdater)(NArrayHandle recv, NArrayHandle local);
  * \param updater udpater function
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStoreRegister(MXKVStoreUpdater updater);
+MXNET_DLL int MXKVStoreSetUpdater(MXKVStoreUpdater updater);
 
 #endif  // MXNET_C_API_H_
