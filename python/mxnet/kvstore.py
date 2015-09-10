@@ -1,10 +1,9 @@
 # coding: utf-8
-# pylint: disable=invalid-name,
+# pylint: disable=invalid-name, global-variable-undefined,
 """ KVStore in mxnet """
 from __future__ import absolute_import
 import ctypes
 from .narray import NArray
-from .narray import zeros
 from .base import _LIB
 from .base import check_call, c_array, NArrayHandle
 
@@ -46,7 +45,7 @@ def init_devices(contexts):
     check_call(_LIB.MXKVStoreInitDevices(len(contexts), masks, ids))
 
 def stop():
-    """ stop kvstore """
+    """ Stop kvstore """
     check_call(_LIB.MXKVStoreStop())
 
 
@@ -55,9 +54,10 @@ def init(keys, values):
 
     Parameters
     ----------
-    kv_list : tuple or list/generator of tuples
-        a key-value tuple or a list of key-value tuples, where key is int and
-        key is
+    keys: int or list of int
+        A single key or a list of keys
+    values: NArray or list of NArray
+        A single value of a list of values
     """
     num, ckeys, cvals = _ctype_key_value(keys, values)
     check_call(_LIB.MXKVStoreInit(num, ckeys, cvals))
@@ -67,6 +67,10 @@ def push(keys, values):
 
     Parameters
     ----------
+    keys: int or list of int
+        A single key or a list of keys
+    values: NArray or list of NArray
+        A single value of a list of values
     """
     num, ckeys, cvals = _ctype_key_value(keys, values)
     check_call(_LIB.MXKVStorePush(num, ckeys, cvals))
@@ -76,31 +80,35 @@ def pull(keys, values):
 
     Parameters
     ----------
-    key : int
-        The key
-    value : NArray
-        The value
+    keys: int or list of int
+        A single key or a list of keys
+    values: NArray or list of NArray
+        A single value of a list of values
     """
     num, ckeys, cvals = _ctype_key_value(keys, values)
     check_call(_LIB.MXKVStorePull(num, ckeys, cvals))
 
 def _updater_wrapper(updater):
+    """ a wrapper for the user-defined handle """
     def updater_handle(lhs_handle, rhs_handle):
+        """ ctypes function """
         lhs = NArray(NArrayHandle(lhs_handle))
         rhs = NArray(NArrayHandle(rhs_handle))
         updater(lhs, rhs)
     return updater_handle
 
 def set_updater(updater):
-    """ Register a updater into the store
+    """ set a updater into the store
 
     Example:
-    def Update(grad, weight):
-        weight[:] -= lr * grad  / batch_size
+
+    def updater(recv, local):
+        local += recv
+    kvstore.set_updater(updater)
 
     Parameters
     ----------
-
+    updater: functon
     """
     _updater_proto = ctypes.CFUNCTYPE(None, NArrayHandle, NArrayHandle)
     global _updater_func

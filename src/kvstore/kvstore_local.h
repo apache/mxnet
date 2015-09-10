@@ -110,6 +110,7 @@ class KVStoreLocal : public KVStore {
   virtual int get_rank() const { return 0; }
 
   virtual int get_group_size() const { return 1; }
+
  protected:
   void Clear() {
     updater_ = DefaultUpdater();
