@@ -1,43 +1,113 @@
-// Copyright (c) 2015 by Contributors
+/*!
+ * Copyright (c) 2015 by Contributors
+ */
 #include <unistd.h>
-#include <iostream>
+#include <dmlc/logging.h>
+#include <cstdio>
+#include <thread>
+#include <chrono>
 #include <vector>
 
-#include "mxnet/dag_engine.h"
+#include "mxnet/engine.h"
 
-using namespace std;
-using namespace mxnet;
-
-void Foo(RunContext rctx, int i) {
-  cout << "say: " << i << endl;
-}
+void Foo(mxnet::RunContext, int i) { printf("The fox says %d\n", i); }
 
 int main() {
-  DAGEngine* engine = DAGEngine::Get();
-  Context exec_ctx;
+  auto&& engine = mxnet::Engine::Get();
+  auto&& var = engine->NewVariable();
+  std::vector<mxnet::Engine::OprHandle> oprs;
 
   // Test #1
-  cout << "============= Test #1 ==============" << endl;
-  vector<DAGEngine::Variable> vars;
+  printf("============= Test #1 ==============\n");
   for (int i = 0; i < 10; ++i) {
-    vars.push_back(engine->NewVar());
+    oprs.push_back(engine->NewOperator(
+        [i](mxnet::RunContext ctx, mxnet::Engine::Callback cb) {
+          Foo(ctx, i);
+          std::this_thread::sleep_for(std::chrono::seconds{1});
+          cb();
+        },
+        {var}, {}));
+    engine->Push(oprs.at(i), mxnet::Context{});
   }
+  engine->WaitForAll();
+  printf("Going to push delete\n");
+  // std::this_thread::sleep_for(std::chrono::seconds{1});
+  for (auto&& i : oprs) {
+    engine->DeleteOperator(i);
+  }
+  engine->DeleteVariable([](mxnet::RunContext) {}, mxnet::Context{}, var);
+  engine->WaitForAll();
+
+  printf("============= Test #2 ==============\n");
+  var = engine->NewVariable();
+  oprs.clear();
   for (int i = 0; i < 10; ++i) {
-    engine->Push([i] (RunContext rctx) { Foo(rctx, i); },
-        exec_ctx, vars, {});
+    oprs.push_back(engine->NewOperator(
+        [i](mxnet::RunContext ctx, mxnet::Engine::Callback cb) {
+          Foo(ctx, i);
+          std::this_thread::sleep_for(std::chrono::milliseconds{500});
+          cb();
+        },
+        {}, {var}));
+    engine->Push(oprs.at(i), mxnet::Context{});
   }
-
-  usleep(1000000);
-
-  // Test #2
-  cout << "============= Test #2 ==============" << endl;
-  for (int i = 0; i < 10; ++i) {
-    engine->Push([i] (RunContext rctx) { Foo(rctx, i); },
-        exec_ctx, {}, vars);
+  // std::this_thread::sleep_for(std::chrono::seconds{1});
+  engine->WaitForAll();
+  for (auto&& i : oprs) {
+    engine->DeleteOperator(i);
   }
+  engine->DeleteVariable([](mxnet::RunContext) {}, mxnet::Context{}, var);
 
-  usleep(1000000);
+  printf("============= Test #3 ==============\n");
+  var = engine->NewVariable();
+  oprs.clear();
+  engine->WaitForVar(var);
+  engine->DeleteVariable([](mxnet::RunContext) {}, mxnet::Context{}, var);
+  engine->WaitForAll();
 
-  // Test #3
+  printf("============= Test #4 ==============\n");
+  var = engine->NewVariable();
+  oprs.clear();
+  oprs.push_back(engine->NewOperator(
+      [](mxnet::RunContext ctx, mxnet::Engine::Callback cb) {
+        std::this_thread::sleep_for(std::chrono::seconds{2});
+        Foo(ctx, 42);
+        cb();
+      },
+      {}, {var}, mxnet::FnProperty::kIO));
+  engine->Push(oprs.at(0), mxnet::Context{});
+  LOG(INFO) << "IO operator pushed, should wait for 2 seconds.";
+  engine->WaitForVar(var);
+  LOG(INFO) << "OK, here I am.";
+  for (auto&& i : oprs) {
+    engine->DeleteOperator(i);
+  }
+  engine->DeleteVariable([](mxnet::RunContext) {}, mxnet::Context{}, var);
+  engine->WaitForAll();
+
+  printf("============= Test #5 ==============\n");
+  var = engine->NewVariable();
+  oprs.clear();
+  oprs.push_back(engine->NewOperator(
+      [](mxnet::RunContext ctx, mxnet::Engine::Callback cb) {
+        Foo(ctx, 42);
+        std::this_thread::sleep_for(std::chrono::seconds{2});
+        cb();
+      },
+      {var}, {}));
+  engine->Push(oprs.at(0), mxnet::Context{});
+  LOG(INFO) << "Operator pushed, should not wait.";
+  engine->WaitForVar(var);
+  LOG(INFO) << "OK, here I am.";
+  engine->WaitForAll();
+  LOG(INFO) << "That was 2 seconds.";
+  for (auto&& i : oprs) {
+    engine->DeleteOperator(i);
+  }
+  engine->DeleteVariable([](mxnet::RunContext) {}, mxnet::Context{}, var);
+  engine->WaitForAll();
+  var = nullptr;
+  oprs.clear();
+
   return 0;
 }

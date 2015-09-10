@@ -70,6 +70,10 @@ ifeq ($(USE_CUDNN), 1)
 	LDFLAGS += -lcudnn
 endif
 
+ifeq ($(USE_THREADED_ENGINE), 1)
+	CFLAGS += -DMXNET_USE_THREADED_ENGINE
+endif
+
 ifneq ($(ADD_CFLAGS), NONE)
 	CFLAGS += $(ADD_CFLAGS)
 endif
@@ -80,7 +84,7 @@ endif
 
 .PHONY: clean all test lint doc
 
-BIN = tests/test_simple_engine
+BIN = tests/test_threaded_engine
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
 SRC = $(wildcard src/*.cc src/*/*.cc)
