@@ -9,6 +9,7 @@
 #include <bitset>
 #include <vector>
 #include "mxnet/kvstore.h"
+#include "mxnet/dag_engine.h"
 
 namespace mxnet {
 
@@ -17,7 +18,7 @@ namespace mxnet {
  */
 class KVStoreLocal : public KVStore {
  public:
-  KVStoreLocal() { Clear(); }
+  KVStoreLocal() : engine_(DAGEngine::Get()) { Clear(); }
   virtual ~KVStoreLocal() { Clear(); }
 
   virtual void InitDevices(const std::vector<Context>& devices) {
@@ -58,7 +59,8 @@ class KVStoreLocal : public KVStore {
 
       if (lc_v.num_pending_push == num_devs_) {
         // apply updater
-        if (updater_) updater_(lc_v.agg_buf, &lc_v.val);
+        CHECK(updater_) << "invalid updater";
+        updater_(lc_v.agg_buf, &lc_v.val);
 
         // clean
         lc_v.agg_buf = 0.0;
@@ -97,12 +99,31 @@ class KVStoreLocal : public KVStore {
 
   virtual void Stop() { Clear(); }
 
+  virtual void set_updater(const Updater& updater) {
+    updater_ = updater;
+  }
+
+  virtual void set_aggregator(bool aggregator) {
+    aggregator_ = aggregator;
+  }
+
+  virtual int get_rank() const { return 0; }
+
+  virtual int get_group_size() const { return 1; }
  protected:
   void Clear() {
+    updater_ = DefaultUpdater();
+    aggregator_ = true;
+
     num_devs_ = 0;
     devs_.clear();
     local_.clear();
   }
+
+  DAGEngine* engine_;
+  Updater updater_;
+
+  bool aggregator_;
 
   /// get the continous device index starting from 0
   inline int GetDevIdx(const Context& ctx) {

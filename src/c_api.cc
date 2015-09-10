@@ -885,12 +885,16 @@ int MXKVStoreStop() {
   API_END();
 }
 
-int MXKVStoreRegister(MXKVStoreUpdater updater) {
+int MXKVStoreSetUpdater(MXKVStoreUpdater updater) {
   API_BEGIN();
   auto updt = [updater](const NArray& recv, NArray* local) {
-    NArray recv_copy = recv;
-    updater(&recv_copy, local);
+    NArray* recv_copy = new NArray();
+    *recv_copy = recv;
+    NArray* local_copy = new NArray();
+    *local_copy = *local;
+    updater(recv_copy, local_copy);
   };
-  // KVStore::Get()->Register(updt);
+
+  KVStore::Get()->set_updater(updt);
   API_END();
 }

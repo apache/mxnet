@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import ctypes
 from .narray import NArray
+from .narray import zeros
 from .base import _LIB
 from .base import check_call, c_array, NArrayHandle
 
@@ -83,28 +84,25 @@ def pull(keys, values):
     num, ckeys, cvals = _ctype_key_value(keys, values)
     check_call(_LIB.MXKVStorePull(num, ckeys, cvals))
 
-# def _updater_wrapper(updater):
-#     def updater_handle(lhs_handle, rhs_handle):
-#         updater(NArray(lhs_handle), NArray(rhs_handle))
-#     return updater_handle
+def _updater_wrapper(updater):
+    def updater_handle(lhs_handle, rhs_handle):
+        lhs = NArray(NArrayHandle(lhs_handle))
+        rhs = NArray(NArrayHandle(rhs_handle))
+        updater(lhs, rhs)
+    return updater_handle
 
-# def _void_updater(lhs, rhs):
-#     pass
+def set_updater(updater):
+    """ Register a updater into the store
 
-# _updater_proto = ctypes.CFUNCTYPE(None, NArrayHandle, NArrayHandle)
-# _updater_func = _updater_proto(_updater_wrapper(_void_updater))
+    Example:
+    def Update(grad, weight):
+        weight[:] -= lr * grad  / batch_size
 
-# def register(updater):
-#     """ Register a updater into the store
+    Parameters
+    ----------
 
-#     Example:
-#     def Update(grad, weight):
-#         weight[:] -= lr * grad  / batch_size
-
-#     Parameters
-#     ----------
-
-#     """
-#     global _updater_func
-#     updater_func = _updater_proto(updater)
-#     check_call(_LIB.MXKVStoreRegister(updater_func))
+    """
+    _updater_proto = ctypes.CFUNCTYPE(None, NArrayHandle, NArrayHandle)
+    global _updater_func
+    _updater_func = _updater_proto(_updater_wrapper(updater))
+    check_call(_LIB.MXKVStoreSetUpdater(_updater_func))

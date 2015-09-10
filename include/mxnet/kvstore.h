@@ -11,7 +11,6 @@
 #include <functional>
 #endif  // DMLC_USE_CXX11
 #include "narray.h"
-#include "dag_engine.h"
 
 namespace mxnet {
 
@@ -65,8 +64,7 @@ class KVStore {
    * init a key-value pair. One must insert before push and pull
    */
   virtual void Init(int key, const NArray& value) {
-    CHECK(impl_) << "call InitDevices first";
-    impl_->Init(key, value);
+    get_impl()->Init(key, value);
   }
 
   /*!
@@ -88,8 +86,7 @@ class KVStore {
    * \param value the value for pushing
    */
   virtual void Push(int key, const NArray& value) {
-    CHECK(impl_) << "call InitDevices first";
-    impl_->Push(key, value);
+    get_impl()->Push(key, value);
   }
 
   /*!
@@ -110,24 +107,24 @@ class KVStore {
    * \param value data for pulling, should be pre-allocated
    */
   virtual void Pull(int key, NArray* value) {
-    CHECK(impl_) << "call InitDevices first";
-    impl_->Pull(key, value);
+    get_impl()->Pull(key, value);
   }
 
   /**
    * \brief clear all data stored, handles registered, and devices binded
    */
-  virtual void Stop() {
-    CHECK(impl_) << "call InitDevices first";
-    impl_->Stop();
-    Clear();
-  }
+  virtual void Stop() { get_impl()->Stop(); delete impl_; impl_ = NULL; }
 
 #if DMLC_USE_CXX11
   /**
    * \brief user-defined updater
    */
   using Updater = std::function<void(const NArray&, NArray*)>;
+
+  /*! \brief returns the default updater, which is ASSIGN */
+  Updater DefaultUpdater() {
+    return [](const NArray& a, NArray* b) { CopyFromTo(a, b); };
+  }
 
   /**
    * \brief set an updater
@@ -151,7 +148,10 @@ class KVStore {
    * \param batch true for batch, false for online
    * \param updt user-defined updater, default is assign
    */
-  void set_updater(const Updater& updater) { updater_ = updater; }
+  virtual void set_updater(const Updater& updater) {
+    get_impl()->set_updater(updater);
+  }
+
 #endif  // DMLC_USE_CXX11
 
   /**
@@ -163,38 +163,29 @@ class KVStore {
    *
    * \param aggregator false to disable
    */
-  void set_aggregator(bool aggregator) { aggregator_ = aggregator; }
+  virtual void set_aggregator(bool aggregator) {
+    get_impl()->set_aggregator(aggregator);
+  }
 
   /*! \brief Gets rank of this node in its group, which is in [0, GroupSize) */
-  int get_rank() { return rank_; }
+  virtual int get_rank() const {
+    return get_impl()->get_rank();
+  }
+
 
   /*! \brief Get the number of nodes in this group. */
-  int get_group_size() { return group_size_; }
+  virtual int get_group_size() const {
+    return get_impl()->get_group_size();
+  }
 
  protected:
-  virtual ~KVStore();
-  KVStore() : engine_(DAGEngine::Get()), impl_(NULL) { Clear(); }
-  DAGEngine* engine_;
-  int rank_;
-  int group_size_;
-  bool aggregator_;
-
-#if DMLC_USE_CXX11
-  /*! \brief returns the default updater, which is ASSIGN */
-  Updater DefaultUpdater() {
-    return [](const NArray& a, NArray* b) { CopyFromTo(a, b); };
-  }
-  Updater updater_;
-#endif  // DMLC_USE_CXX11
+  KVStore() : impl_(NULL) { }
+  virtual ~KVStore() { delete impl_; impl_ = NULL; }
 
  private:
-  void Clear() {
-    delete impl_;
-    impl_ = NULL;
-    updater_ = DefaultUpdater();
-    aggregator_ = true;
-    rank_ = 0;
-    group_size_ = 1;
+  inline KVStore* get_impl() const {
+    CHECK(impl_) << "call InitDevices() first";
+    return impl_;
   }
   KVStore* impl_;
   DISALLOW_COPY_AND_ASSIGN(KVStore);
