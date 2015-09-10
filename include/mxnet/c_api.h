@@ -707,5 +707,62 @@ MXNET_DLL int MXDataIterGetData(DataIterHandle handle,
  */
 MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
                            NArrayHandle *out);
+/*!
+ * \brief initialize the kvstore
+ * \param num_devs number of devices
+ * \param dev_masks the list of device masks
+ * \param dev_ids the list of device IDs
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreInitDevices(mx_uint num_devs,
+                                   int *dev_masks,
+                                   int *dev_ids);
+/*!
+ * \brief stop the kvstore
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreStop();
+
+/*!
+ * \brief Init (key,value) in kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreInit(int num,
+                            int* keys,
+                            NArrayHandle* vals);
+
+/*!
+ * \brief Push (key,value) to kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStorePush(int num,
+                            int* keys,
+                            NArrayHandle* vals);
+
+
+/*!
+ * \brief pull value from kvstore on the given key
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStorePull(int num,
+                            int* keys,
+                            NArrayHandle* vals);
+
+typedef void (MXKVStoreUpdater)(NArrayHandle recv, NArrayHandle local);
+/*!
+ * \brief register an push updater
+ * \param updater udpater function
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreSetUpdater(MXKVStoreUpdater updater);
 
 #endif  // MXNET_C_API_H_

@@ -25,12 +25,18 @@ template<typename OP>
 inline void BinaryOp(const NArray &lhs,
                      const NArray &rhs,
                      NArray *out) {
-  CHECK(lhs.ctx() == rhs.ctx()) << "operands context mismatch";
+  // no check if both of them are on cpu
+  if (lhs.ctx().dev_mask != cpu::kDevMask || rhs.ctx().dev_mask != cpu::kDevMask)
+    CHECK(lhs.ctx() == rhs.ctx()) << "operands context mismatch";
   // if out is none, allocate space
   if (out->is_none()) {
     *out = NArray(OP::GetShape(lhs.shape(), rhs.shape()), lhs.ctx(), true);
   } else {
-    CHECK(out->ctx() == lhs.ctx()) << "target context mismatch";
+    // no check if both of them are on cpu
+    if (lhs.ctx().dev_mask != cpu::kDevMask ||
+        out->ctx().dev_mask != cpu::kDevMask) {
+      CHECK(out->ctx() == lhs.ctx()) << "target context mismatch";
+    }
     CHECK(out->shape() == OP::GetShape(lhs.shape(), rhs.shape()))
         << "target shape mismatch";
   }
