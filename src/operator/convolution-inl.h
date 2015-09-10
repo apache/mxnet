@@ -30,7 +30,7 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   TShape pad;
   uint32_t num_filter;
   uint32_t num_group;
-  uint32_t workspace;
+  uint64_t workspace;
   bool no_bias;
   DMLC_DECLARE_PARAMETER(ConvolutionParam) {
     int shape[] = {1, 1};
@@ -78,6 +78,10 @@ class ConvolutionOp : public Operator {
     TShape wmat_shape(ws, ws + 3);
     Tensor<xpu, 3> wmat = in_data[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
     Tensor<xpu, 4> out = out_data[kOut].get<xpu, 4, real_t>(s);
+    #if defined(__CUDACC__)
+    CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
+      << "Must init CuBLAS handle in stream";
+    #endif
     this->InitTemp(ctx, data.shape_, out.shape_);
     const index_t nbatch = data.size(0);
     for (index_t i = 0; i < nbatch; i += nstep_) {
@@ -146,6 +150,10 @@ class ConvolutionOp : public Operator {
     Tensor<xpu, 4> grad = out_grad[kOut].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> gdata = in_grad[kData].get<xpu, 4, real_t>(s);
     Tensor<xpu, 3> gwmat = in_grad[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
+    #if defined(__CUDACC__)
+    CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
+      << "Must init CuBLAS handle in stream";
+    #endif
     this->InitTemp(ctx, data.shape_, grad.shape_);
     const index_t nbatch = data.size(0);
     for (index_t i = 0; i < nbatch; i += nstep_) {
@@ -220,8 +228,8 @@ class ConvolutionOp : public Operator {
     shape_dstunit_ = mshadow::Shape3(param_.num_group,
                                      param_.num_filter / param_.num_group,
                                      oshape[2] * oshape[3]);
-    const uint32_t workspace_size = param_.workspace << 18;
-    nstep_ = std::max(std::min(static_cast<index_t>(workspace_size / shape_colunit_.Size()), 
+    const uint64_t workspace_size = param_.workspace << 20;
+    nstep_ = std::max(std::min(static_cast<index_t>(workspace_size / shape_colunit_.Size()),
                               ishape[0]), 1U);
     int nop = (ishape[0] + nstep_ - 1) / nstep_;
     nstep_ = (ishape[0] + nop - 1) / nop;

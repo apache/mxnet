@@ -63,6 +63,10 @@ class FullyConnectedOp : public Operator {
     // maybe need blas handle from context
     // TODO(bing): judge shape to remove flatten op
     Stream<xpu> *s = ctx.get_stream<xpu>();
+    #if defined(__CUDACC__)
+    CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
+      << "Must init CuBLAS handle in stream";
+    #endif  // __CUDACC__
     Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> wmat = in_data[kWeight].get<xpu, 2, real_t>(s);
     Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
@@ -92,6 +96,10 @@ class FullyConnectedOp : public Operator {
     Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> wmat = in_data[kWeight].get<xpu, 2, real_t>(s);
     Tensor<xpu, 2> grad = out_grad[kOut].FlatTo2D<xpu, real_t>(s);
+    #if defined(__CUDACC__)
+    CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
+      << "Must init CuBLAS handle in stream";
+    #endif
     //  backprop
     CHECK_NE(req[kWeight], kWriteInplace) << "cannot write weight inplace";
     // gradient of weight

@@ -9,9 +9,14 @@ class NaiveEngine : public DAGEngine {
  public:
   NaiveEngine() {
     #if MXNET_USE_CUDA
+    #if MXNET_USE_CUDNN
+    LOG(INFO) << "MXNET USE CUDNN";
+    stream_ = mshadow::NewStream<gpu>(true, true);
+    #else
     stream_ = mshadow::NewStream<gpu>(true, false);
+    #endif // MXNET_USE_CUDNN
     ctx_.stream = stream_;
-    #endif
+    #endif // MXNET_USE_CUDA
   }
 
   ~NaiveEngine() {

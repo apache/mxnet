@@ -70,7 +70,7 @@ def ConvFactory(**kwargs):
     param = copy.copy(kwargs)
     act = param["act_type"]
     del param["act_type"]
-    param["workspace"] = 512
+    param["workspace"] = 256
     param["name"] = "conv%d" % conv_cnt
     conv = mx.symbol.Convolution(**param)
     bn = mx.symbol.BatchNorm(data = conv, name="bn%d" % conv_cnt)
@@ -175,7 +175,7 @@ block = zip(grad_narrays, arg_narrays, momentum_narrays)
 np.random.seed(0)
 # set random weight
 
-for name, narray in zip(loss.list_arguments(), arg_narrays):
+for name, narray in inputs.items():
     if "weight" in name:
         narray[:] = np.random.uniform(-0.1, 0.1, narray.shape)
     if "bias" in name:
@@ -213,7 +213,7 @@ test_dataiter = mx.io.ImageRecordIter(
 tmp_label = mx.narray.zeros(inputs["sm_label"].shape)
 
 def progress(count, total, epoch, toc):
-    bar_len = 60
+    bar_len = 50
     filled_len = int(round(bar_len * count / float(total)))
 
     percents = round(100.0 * count / float(total), 1)
@@ -222,6 +222,7 @@ def progress(count, total, epoch, toc):
     speed = batch_size / float(tic - toc)
     suffix = "Epoch %d, Speed: %.2f pic/sec" % (epoch, speed)
     sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', suffix))
+
 
 def test_cifar():
     acc_train = 0.
@@ -233,8 +234,10 @@ def test_cifar():
         val_acc = 0.0
         train_nbatch = 0
         val_nbatch = 0
-        all_train_bacth = 50000 / float(batch_size)
+        all_train_bacth = round(50000 / float(batch_size) + 1)
         for data, label in train_dataiter:
+            if train_nbatch > 30:
+                break
             toc = time.time()
             label = label.asnumpy().flatten()
             tmp_label[:] = label

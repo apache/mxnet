@@ -30,7 +30,7 @@
  *\brief whether to use cudnn library for convolution
  */
 #ifndef MXNET_USE_CUDNN
-#define MXNET_USE_CUDNN 0
+#define MXNET_USE_CUDNN MSHADOW_USE_CUDNN
 #endif
 
 /*! \brief namespace of mxnet */

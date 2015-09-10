@@ -351,7 +351,7 @@ class Symbol(object):
         """
         if not isinstance(args, dict):
             raise TypeError("args must be dict of str->NArray")
-        input_shapes = dict((arr[0], arr[1].shape) for arr in args.items())
+        input_shapes = dict((name, arr.shape) for name, arr in args.items())
         arg_shapes, out_shapes, aux_shapes = self.infer_shape(**input_shapes)
         if arg_shapes == None:
             raise ValueError("Input node is not complete")
