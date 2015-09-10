@@ -42,8 +42,17 @@ class KVStore {
    */
   virtual void Stop() { get_impl()->Stop(); delete impl_; impl_ = NULL; }
 
+  void Init(const std::vector<int>& keys, const std::vector<NArray>& valuse) {
+  }
+
+  void Push(const std::vector<int>& keys, const std::vector<NArray>& values) {
+  }
+
+  void Pull(const std::vector<int>& keys, const std::vector<NArray*>& values) {
+  }
+
   /**
-   * \brief  Initialize a key-value pair to the store.
+   * \brief Initialize a list of key-value pair to the store.
    *
    * This function should be only called once for any \a key. And it should be
    * called before \ref Push and \ref Pull
@@ -126,11 +135,11 @@ class KVStore {
   /**
    * \brief the prototype of user-defined updater
    */
-  using Updater = std::function<void(const NArray&, NArray*)>;
+  using Updater = std::function<void(int, const NArray&, NArray*)>;
 
   /*! \brief returns the default updater, which is ASSIGN */
   Updater DefaultUpdater() {
-    return [](const NArray& a, NArray* b) { CopyFromTo(a, b); };
+    return [](int key, const NArray& a, NArray* b) { CopyFromTo(a, b); };
   }
 
   /**

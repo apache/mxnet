@@ -39,15 +39,18 @@ class KVStoreLocal : public KVStore {
 
   virtual void Init(int key, const NArray& val) {
     CHECK(local_.find(key) == local_.end()) << "duplicate init of key " << key;
+#if MXNET_USE_CUDA
+    local_.insert({key, val.Copy(pinned_ctx_)});
+#else
     local_.insert({key, val.Copy(local_ctx_)});
+#endif  // MXNET_USE_CUDA
   }
 
   virtual void Push(int key, const std::vector<NArray>& val) {
     auto it = local_.find(key);
     CHECK(it != local_.end()) << "key " << key << " has not been inited";
-
     CHECK(updater_) << "invalid updater";
-    updater_(MergePushValue(key, val), &it->second);
+    updater_(key, MergePushValue(key, val), &it->second);
   }
 
   virtual void Pull(int key, NArray* val) {
@@ -89,13 +92,12 @@ class KVStoreLocal : public KVStore {
     return buf.merged;
   }
 
+ private:
   void Clear() {
     updater_ = DefaultUpdater();
     merge_buf_.clear();
     local_.clear();
   }
-
-  Updater updater_;
 
   /// \brief temperal space for pushing value
   struct MergeBuf {
@@ -105,7 +107,6 @@ class KVStoreLocal : public KVStore {
     NArray merged;
   };
 
- private:
   /// \brief buffer for merging push value
   std::unordered_map<int, MergeBuf> merge_buf_;
 
@@ -114,6 +115,8 @@ class KVStoreLocal : public KVStore {
 
   Context local_ctx_;
   Context pinned_ctx_;
+
+  Updater updater_;
 };
 
 }  // namespace mxnet

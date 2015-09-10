@@ -32,17 +32,9 @@ def _ctype_key_value(keys, vals):
                 c_array(ctypes.c_int, keys),
                 c_array(NArrayHandle, [v.handle for v in vals]))
 
-def init_devices(contexts):
-    """ Init key-value store with a list of device contexts
-
-    Parameters
-    ----------
-    contexts : list of Context
-       The list of local devices used by this process
-    """
-    masks = c_array(ctypes.c_int, [c.device_mask for c in contexts])
-    ids = c_array(ctypes.c_int, [c.device_id for c in contexts])
-    check_call(_LIB.MXKVStoreInitDevices(len(contexts), masks, ids))
+def start():
+    """start kvstore"""
+    check_call(_LIB.MXKVStoreStart())
 
 def stop():
     """ Stop kvstore """
