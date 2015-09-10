@@ -10,7 +10,7 @@
 
 namespace mxnet {
 
-void KVStore::InitDevices(const std::vector<Context>& devices) {
+void KVStore::Start() {
   CHECK(impl_ == NULL) << "double initialization, call Stop() first";
   char* num_worker = getenv("DMLC_NUM_WORKER");
   if (num_worker == NULL || atoi(num_worker) == 1) {
@@ -18,7 +18,7 @@ void KVStore::InitDevices(const std::vector<Context>& devices) {
   } else {
     LOG(FATAL) << "not implemented yet";
   }
-  impl_->InitDevices(devices);
+  impl_->Start();
 }
 
 }  // namespace mxnet

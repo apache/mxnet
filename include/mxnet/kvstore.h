@@ -28,12 +28,19 @@ class KVStore {
   static KVStore* Get() { static KVStore store; return &store; }
 
   /**
-   * \brief Initialize local devices.
+   * \brief Start
    *
    * One should call it before any futher action such as \ref Init, \ref Push
    *  and \ref Pull
    */
-  virtual void InitDevices(const std::vector<Context>& devices);
+  virtual void Start();
+
+  /**
+   * \brief Stop
+   *
+   * clear all key-value pairs stored, updater, and devices binded
+   */
+  virtual void Stop() { get_impl()->Stop(); delete impl_; impl_ = NULL; }
 
   /**
    * \brief  Initialize a key-value pair to the store.
@@ -77,6 +84,7 @@ class KVStore {
    * \param value the (list) value for pushing
    */
   virtual void Push(int key, const std::vector<NArray>& value) {
+    if (value.empty()) return;
     get_impl()->Push(key, value);
   }
 
@@ -113,10 +121,6 @@ class KVStore {
     }
   }
 
-  /**
-   * \brief clear all key-value pairs stored, updater, and devices binded
-   */
-  virtual void Stop() { get_impl()->Stop(); delete impl_; impl_ = NULL; }
 
 #if DMLC_USE_CXX11
   /**
