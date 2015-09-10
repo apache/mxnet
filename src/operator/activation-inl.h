@@ -117,7 +117,11 @@ class ActivationProp : public OperatorProperty {
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data) const override {
+    #if MXNET_USE_CUDNN == 1
+    return {out_grad[kOut], out_data[kOut], in_data[kData]};
+    #else
     return {out_grad[kOut], out_data[kOut]};
+    #endif  // MXNET_USE_CUDNN
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(

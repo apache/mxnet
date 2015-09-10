@@ -6,6 +6,9 @@
 */
 #ifndef MXNET_OPERATOR_CUDNN_CONVOLUTION_INL_H_
 #define MXNET_OPERATOR_CUDNN_CONVOLUTION_INL_H_
+
+#include <algorithm>
+#include <vector>
 #include "./convolution-inl.h"
 
 namespace mxnet {
@@ -265,7 +268,7 @@ class CuDNNConvolutionOp : public Operator {
   // TODO(bing): remove when we have resource manager
   mshadow::TensorContainer<gpu, 1> temp_;
 };
-#endif // __CUDACC__ && CUDNN
+#endif  // __CUDACC__ && CUDNN
 }  // namespace op
 }  // namespace mxnet
 

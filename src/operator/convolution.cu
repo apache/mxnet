@@ -6,8 +6,9 @@
 */
 
 #include "./convolution-inl.h"
+#if MXNET_USE_CUDNN == 1
 #include "./cudnn_convolution-inl.h"
-
+#endif // MXNET_USE_CUDNN
 
 namespace mxnet {
 namespace op {

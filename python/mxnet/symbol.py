@@ -352,7 +352,9 @@ class Symbol(object):
         if not isinstance(args, dict):
             raise TypeError("args must be dict of str->NArray")
         input_shapes = dict((name, arr.shape) for name, arr in args.items())
+        # pylint: disable=unused-variable
         arg_shapes, out_shapes, aux_shapes = self.infer_shape(**input_shapes)
+        # pylint: enable=unused-variable
         if arg_shapes == None:
             raise ValueError("Input node is not complete")
         # alloc space
@@ -363,13 +365,10 @@ class Symbol(object):
             else:
                 arg_narrays.append(zeros(shape, ctx))
         # TODO(bing): specail treat input data grad
+        # TODO(bing): not generate grad case
         grad_narrays = [zeros(shape, ctx) for shape in arg_shapes]
         aux_narrays = [zeros(shape, ctx) for shape in aux_shapes]
         executor = self.bind(ctx, arg_narrays, grad_narrays, grad_req, aux_narrays)
-        executor.arg_narrays = arg_narrays
-        executor.grad_narrays = grad_narrays
-        executor.auxiliary_states = aux_narrays
-
         return executor
 
     def bind(self, ctx, args, args_grad=None, grad_req='write', aux_states=None):
@@ -426,6 +425,7 @@ class Symbol(object):
         User can give up gradient by using a dict in args_grad and only specify
         gradient they interested in.
         """
+        # pylint: disable=too-many-locals
         if not isinstance(ctx, Context):
             raise TypeError("Context type error")
 
@@ -470,7 +470,11 @@ class Symbol(object):
                                        len(aux_states),
                                        aux_args_handle,
                                        ctypes.byref(handle)))
-        return Executor(handle)
+        executor = Executor(handle)
+        executor.arg_narrays = args
+        executor.grad_narrays = args_grad
+        executor.auxiliary_states = aux_states
+        return executor
 
     def grad(self, wrt):
         """Get the autodiff of current symbol.

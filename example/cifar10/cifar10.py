@@ -164,13 +164,14 @@ data_shape = (batch_size, 3, 28, 28)
 in_data = mx.narray.empty(data_shape, mx.gpu())
 executor = loss.simple_bind(mx.gpu(), {"data": in_data})
 out_narray = executor.heads()[0]
-pred = mx.narray.zeros(out_narray.shape)
+pred = mx.narray.zeros(out_narray.shape, mx.cpu())
 
 arg_narrays, grad_narrays = executor.list_arguments()
+inputs = dict(zip(loss.list_arguments(), arg_narrays))
+tmp_label = mx.narray.zeros(inputs["sm_label"].shape)
 momentum_narrays = [mx.narray.zeros(item.shape, mx.gpu()) for item in grad_narrays]
 
-inputs = dict(zip(loss.list_arguments(), arg_narrays))
-block = zip(grad_narrays, arg_narrays, momentum_narrays)
+block = list(zip(grad_narrays, arg_narrays, momentum_narrays))
 
 np.random.seed(0)
 # set random weight
@@ -210,7 +211,6 @@ test_dataiter = mx.io.ImageRecordIter(
         batch_size=batch_size,
         nthread=1)
 
-tmp_label = mx.narray.zeros(inputs["sm_label"].shape)
 
 def progress(count, total, epoch, toc):
     bar_len = 50
@@ -236,8 +236,6 @@ def test_cifar():
         val_nbatch = 0
         all_train_bacth = round(50000 / float(batch_size) + 1)
         for data, label in train_dataiter:
-            if train_nbatch > 30:
-                break
             toc = time.time()
             label = label.asnumpy().flatten()
             tmp_label[:] = label
@@ -247,7 +245,8 @@ def test_cifar():
             pred[:] = out_narray
             train_acc += CalAcc(pred.asnumpy(), label)
             train_nbatch += 1
-            executor.backward([out_narray])
+            #executor.backward([out_narray])
+            executor.backward()
 
             for grad, weight, mom in block:
                 Update(grad, weight, mom)

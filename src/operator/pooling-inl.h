@@ -201,7 +201,11 @@ class PoolingProp : public OperatorProperty {
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
       const std::vector<void*> &in_grad) const override {
+    #if MXNET_USE_CUDNN == 1
+    return {};
+    #else
     return {{in_data[kData], in_grad[kData]}};
+    #endif
   }
 
   Operator* CreateOperator(Context ctx) const;

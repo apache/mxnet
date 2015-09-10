@@ -14,9 +14,9 @@ class NaiveEngine : public DAGEngine {
     stream_ = mshadow::NewStream<gpu>(true, true);
     #else
     stream_ = mshadow::NewStream<gpu>(true, false);
-    #endif // MXNET_USE_CUDNN
+    #endif  // MXNET_USE_CUDNN
     ctx_.stream = stream_;
-    #endif // MXNET_USE_CUDA
+    #endif  // MXNET_USE_CUDA
   }
 
   ~NaiveEngine() {

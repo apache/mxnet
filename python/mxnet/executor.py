@@ -45,7 +45,7 @@ class Executor(object):
         else:
             return self.arg_narrays
 
-    def list_auxiliary_states():
+    def list_auxiliary_states(self):
         """Return auxiliary states of executor
             Note: auxiliary states is same to symbol.list_auxiliary_states()
         """
@@ -62,19 +62,24 @@ class Executor(object):
         """
         check_call(_LIB.MXExecutorForward(self.handle, is_train))
 
-    def backward(self, grads):
+    def backward(self, head_grads=None):
         """Do backward on heads' gradient.
 
         Parameters
         ----------
-        grads: Array of NArray
-            heads' gradient
+        head_grads : NArray or list of NArray, optional
+            Gradient on the heads
         """
-        for obj in grads:
+        if head_grads is None:
+            head_grads = []
+        elif isinstance(head_grads, NArray):
+            head_grads = [head_grads]
+
+        for obj in head_grads:
             if not isinstance(obj, NArray):
                 raise TypeError("inputs must be NArray")
-        narray = c_array(NArrayHandle, [item.handle for item in grads])
-        check_call(_LIB.MXExecutorBackward(self.handle, len(grads), narray))
+        narray = c_array(NArrayHandle, [item.handle for item in head_grads])
+        check_call(_LIB.MXExecutorBackward(self.handle, len(head_grads), narray))
 
     def heads(self):
         """list all heads' output narray

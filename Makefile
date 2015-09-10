@@ -124,7 +124,7 @@ doxygen:
 	doxygen doc/Doxyfile
 
 clean:
-	$(RM) -r build lib/* *~ */*~ */*/*~ */*/*/*~
+	$(RM) -r build lib/*.a lib/*.so *~ */*~ */*/*~ */*/*/*~
 	cd $(DMLC_CORE); make clean; cd -
 
 -include build/*.d
