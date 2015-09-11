@@ -42,94 +42,77 @@ class KVStore {
    */
   virtual void Stop() { get_impl()->Stop(); delete impl_; impl_ = NULL; }
 
-  void Init(const std::vector<int>& keys, const std::vector<NArray>& valuse) {
-  }
-
-  void Push(const std::vector<int>& keys, const std::vector<NArray>& values) {
-  }
-
-  void Pull(const std::vector<int>& keys, const std::vector<NArray*>& values) {
-  }
-
   /**
    * \brief Initialize a list of key-value pair to the store.
    *
-   * This function should be only called once for any \a key. And it should be
-   * called before \ref Push and \ref Pull
+   * One should initalize the key before \ref Push and \ref Pull, and a key
+   * should be only initialized once
+   *
+   * \param keys a list of unique keys
+   * \param values a list of values
    */
-  virtual void Init(int key, const NArray& value) {
-    get_impl()->Init(key, value);
+  virtual void Init(const std::vector<int>& keys,
+                    const std::vector<NArray>& values) {
+    CHECK_EQ(keys.size(), values.size());
+    get_impl()->Init(keys, values);
   }
 
   /*!
-   * \brief push a key-value pair into to the store
+   * \brief push a list of key-value pairs into the store
    *
-   * Push a key-value pair to the store. If \a value has more than one element,
-   * these elements are first aggregated before pushing. `Push(key, value)` is
-   * equal to the following codes:
+   * If a key appears mulitple times in \a keys, then the according values will
+   * be aggregated (summed) before pushing.
+   *
+   * The (aggregated) values are merged into the store one by one
    *
    * \code
-   * auto sum_val = NArray(value[0].shape());
-   * for (auto v : value) sum_val += v;
-   * Push(key, {sum_val});
+   * updater(key, value, &value_in_store);
    * \endcode
    *
-   * The (aggregated) \a value is merged into the store by `updater(value,
-   * &value_in_store)`. The default updater is Assign, one can set a
-   * user-defined updater by \ref set_updater.
+   * One can set a user-defined updater by \ref set_updater. The default updater
+   * is Assign.
    *
    * This function returns after adding a push operator to the engine. Any
-   * following operator requiring writing \a value will be blocked until the
+   * following operator requiring writing value will be blocked until the
    * actual push is finished. One can wait the push is finished by
    *
    * \code
-   * for (auto& v : value) v.WaitToWrite()
+   * for (auto& v : values) v.WaitToWrite()
    * \endcode
    *
-   * One must call Init() on \a key before. And the value Narray should be always
-   * has the same shape as being inited.
+   * One must call Init() on every key before. And the value Narray should be
+   * always has the same shape as being inited.
    *
-   * \param key the key for pushing
-   * \param value the (list) value for pushing
+   * \param keys the list of keys
+   * \param value the list of values
    */
-  virtual void Push(int key, const std::vector<NArray>& value) {
-    if (value.empty()) return;
-    get_impl()->Push(key, value);
+  virtual void Push(const std::vector<int>& keys,
+                    const std::vector<NArray>& values) {
+    CHECK_EQ(keys.size(), values.size());
+    if (keys.empty()) return;
+    get_impl()->Push(keys, values);
   }
 
   /*!
-   * \brief pull value from the store on a given key
-   *
-   * Pull the value associated with the \a key from the store.
+   * \brief pull a list of key-value pairs from the store
    *
    * One must call Init() on \a key before. And \a value should be pre-allocated
    *
    * This function returns after adding a pull operator to the engine. Any
-   * following operator requiring reading \a value will be blocked until the
+   * following operator requiring reading value will be blocked until the
    * actual pull is finished. One can wait the pull is finished by
    *
    * \code
-   * value->WaitToRead()
+   * for (auto& v : values) v.WaitToRead()
    * \endcode
    *
-   * \param key the key for pulling
-   * \param value the buffer for pulled data, it should be pre-allocated
+   * \param keys the list of keys
+   * \param values the list of buffers for the pulled data, they should be preallocated
    */
-  virtual void Pull(int key, NArray* value) {
-    get_impl()->Pull(key, value);
+  virtual void Pull(const std::vector<int>& keys,
+                    const std::vector<NArray*>& values) {
+    get_impl()->Pull(keys, values);
   }
-
-  /*!
-   * \brief pull value from the store on a given key
-   *
-   * the pulled data will be copied to all elements of \a value
-   */
-  void Pull(int key, const std::vector<NArray*>& value) {
-    for (size_t i = 0; i < value.size(); ++i) {
-      Pull(key, value[i]);
-    }
-  }
-
 
 #if DMLC_USE_CXX11
   /**
@@ -184,7 +167,6 @@ class KVStore {
     return get_impl()->get_rank();
   }
 
-
   /*!
    * \brief Get the number of nodes in this group.
    */
@@ -198,7 +180,7 @@ class KVStore {
 
  private:
   inline KVStore* get_impl() const {
-    CHECK(impl_) << "call InitDevices() first";
+    CHECK(impl_) << "call Start() first";
     return impl_;
   }
   KVStore* impl_;

@@ -851,7 +851,7 @@ int MXKVStoreInit(int num, int* keys, NArrayHandle* vals) {
   std::vector<NArray> v_vals(num);
   for (int i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
-    v_vals[i] = std::move(*static_cast<NArray*>(vals[i]));
+    v_vals[i] = *static_cast<NArray*>(vals[i]);
   }
   KVStore::Get()->Init(v_keys, v_vals);
   API_END();
@@ -863,7 +863,7 @@ int MXKVStorePush(int num, int* keys, NArrayHandle* vals) {
   std::vector<NArray> v_vals(num);
   for (int i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
-    v_vals[i] = std::move(*static_cast<NArray*>(vals[i]));
+    v_vals[i] = *static_cast<NArray*>(vals[i]);
   }
   KVStore::Get()->Push(v_keys, v_vals);
   API_END();
