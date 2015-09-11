@@ -78,7 +78,7 @@ def updater(key, recv, local):
     """use updater: +="""
     local += recv
 
-def test_updater(dev):
+def test_updater(dev = 'cpu'):
     """updater"""
 
     init_kvstore()
@@ -116,5 +116,5 @@ if __name__ == '__main__':
     test_single_kv_pair()
     test_list_kv_pair()
     test_aggregator()
-    test_updater('cpu')
+    test_updater()
     # test_updater('gpu')
