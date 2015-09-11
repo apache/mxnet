@@ -35,4 +35,4 @@ def GetCifar10():
         os.system("wget http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip -P data/")
         os.chdir("./data")
         os.system("unzip cifar10.zip")
-        os.chidr("..")
+        os.chdir("..")
