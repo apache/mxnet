@@ -708,15 +708,10 @@ MXNET_DLL int MXDataIterGetData(DataIterHandle handle,
 MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
                            NArrayHandle *out);
 /*!
- * \brief initialize the kvstore
- * \param num_devs number of devices
- * \param dev_masks the list of device masks
- * \param dev_ids the list of device IDs
+ * \brief start the kvstore
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStoreInitDevices(mx_uint num_devs,
-                                   int *dev_masks,
-                                   int *dev_ids);
+MXNET_DLL int MXKVStoreStart();
 /*!
  * \brief stop the kvstore
  * \return 0 when success, -1 when failure happens
@@ -724,7 +719,7 @@ MXNET_DLL int MXKVStoreInitDevices(mx_uint num_devs,
 MXNET_DLL int MXKVStoreStop();
 
 /*!
- * \brief Init (key,value) in kvstore
+ * \brief Init a list of (key,value) pairs in kvstore
  * \param num the number of key-value pairs
  * \param keys the list of keys
  * \param vals the list of values
@@ -735,7 +730,7 @@ MXNET_DLL int MXKVStoreInit(int num,
                             NArrayHandle* vals);
 
 /*!
- * \brief Push (key,value) to kvstore
+ * \brief Push a list of (key,value) pairs to kvstore
  * \param num the number of key-value pairs
  * \param keys the list of keys
  * \param vals the list of values
@@ -747,7 +742,7 @@ MXNET_DLL int MXKVStorePush(int num,
 
 
 /*!
- * \brief pull value from kvstore on the given key
+ * \brief pull a list of (key, value) pairs from the kvstore
  * \param num the number of key-value pairs
  * \param keys the list of keys
  * \param vals the list of values
@@ -757,7 +752,15 @@ MXNET_DLL int MXKVStorePull(int num,
                             int* keys,
                             NArrayHandle* vals);
 
-typedef void (MXKVStoreUpdater)(NArrayHandle recv, NArrayHandle local);
+/*!
+ * \brief user-defined updater for the kvstore
+ * It's this updater's responsibility to delete \a recv and \a local
+ * \param the key
+ * \param recv the pushed value on this key
+ * \param local the value stored on local on this key
+ */
+typedef void (MXKVStoreUpdater)(int key, NArrayHandle recv, NArrayHandle local);
+
 /*!
  * \brief register an push updater
  * \param updater udpater function

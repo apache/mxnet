@@ -28,78 +28,101 @@ class KVStore {
   static KVStore* Get() { static KVStore store; return &store; }
 
   /**
-   * \brief Init with the local devices
+   * \brief Start
+   *
+   * One should call it before any futher action such as \ref Init, \ref Push
+   *  and \ref Pull
    */
-  virtual void InitDevices(const std::vector<Context>& devices);
+  virtual void Start();
 
   /**
-   * \brief  data
+   * \brief Stop
    *
-   * Initialize a key-value pair to the store. For any \a key, this function
-   * should only be called once.
-   */
-  virtual void Init(int key, const NArray& value) {
-    get_impl()->Init(key, value);
-  }
-
-  /*!
-   * \brief push data to the store
-   *
-   * Push the key-value pair (\a key, \a value) to the store.  This
-   * function returns after adding a push operator to the engine. Any following
-   * operator requiring writing \a value will be blocked until the actual push is
-   * finished.
-   *
-   * One can wait the push is finished via `data.WaitToWrite()`
-   *
-   * For each push, an updater is called to merge the value to the one
-   * stored. The default updater is Assign.
-   *
-   * One must call Init() on \a key before. And the \a value should be always
-   * has the same size as being inited.
-   *
-   * \param key the key for pushing
-   * \param value the value for pushing
-   */
-  virtual void Push(int key, const NArray& value) {
-    get_impl()->Push(key, value);
-  }
-
-  /*!
-   * \brief pull data from the store
-   *
-   * Pull the \a value associated with the \a key from the store.  This
-   * function returns after adding a pull operator to the engine. Any following
-   * operator requiring reading \a data will be blocked until the actual pull is
-   * finished.
-   *
-   * One can wait the pull is finished via `data.WaitToRead()`
-   *
-   * Before sending back the value, the store will wait all pushed issued by
-   * this worker on \a key have been applied (updater has been applied). One
-   * must call Init() on \a key before.
-   *
-   * \param key the key for pulling
-   * \param value data for pulling, should be pre-allocated
-   */
-  virtual void Pull(int key, NArray* value) {
-    get_impl()->Pull(key, value);
-  }
-
-  /**
-   * \brief clear all key-value pairs stored, updater, and devices binded
+   * clear all key-value pairs stored, updater, and devices binded
    */
   virtual void Stop() { get_impl()->Stop(); delete impl_; impl_ = NULL; }
+
+  /**
+   * \brief Initialize a list of key-value pair to the store.
+   *
+   * One should initalize the key before \ref Push and \ref Pull, and a key
+   * should be only initialized once
+   *
+   * \param keys a list of unique keys
+   * \param values a list of values
+   */
+  virtual void Init(const std::vector<int>& keys,
+                    const std::vector<NArray>& values) {
+    CHECK_EQ(keys.size(), values.size());
+    get_impl()->Init(keys, values);
+  }
+
+  /*!
+   * \brief push a list of key-value pairs into the store
+   *
+   * If a key appears mulitple times in \a keys, then the according values will
+   * be aggregated (summed) before pushing.
+   *
+   * The (aggregated) values are merged into the store one by one
+   *
+   * \code
+   * updater(key, value, &value_in_store);
+   * \endcode
+   *
+   * One can set a user-defined updater by \ref set_updater. The default updater
+   * is Assign.
+   *
+   * This function returns after adding a push operator to the engine. Any
+   * following operator requiring writing value will be blocked until the
+   * actual push is finished. One can wait the push is finished by
+   *
+   * \code
+   * for (auto& v : values) v.WaitToWrite()
+   * \endcode
+   *
+   * One must call Init() on every key before. And the value Narray should be
+   * always has the same shape as being inited.
+   *
+   * \param keys the list of keys
+   * \param value the list of values
+   */
+  virtual void Push(const std::vector<int>& keys,
+                    const std::vector<NArray>& values) {
+    CHECK_EQ(keys.size(), values.size());
+    if (keys.empty()) return;
+    get_impl()->Push(keys, values);
+  }
+
+  /*!
+   * \brief pull a list of key-value pairs from the store
+   *
+   * One must call Init() on \a key before. And \a value should be pre-allocated
+   *
+   * This function returns after adding a pull operator to the engine. Any
+   * following operator requiring reading value will be blocked until the
+   * actual pull is finished. One can wait the pull is finished by
+   *
+   * \code
+   * for (auto& v : values) v.WaitToRead()
+   * \endcode
+   *
+   * \param keys the list of keys
+   * \param values the list of buffers for the pulled data, they should be preallocated
+   */
+  virtual void Pull(const std::vector<int>& keys,
+                    const std::vector<NArray*>& values) {
+    get_impl()->Pull(keys, values);
+  }
 
 #if DMLC_USE_CXX11
   /**
    * \brief the prototype of user-defined updater
    */
-  using Updater = std::function<void(const NArray&, NArray*)>;
+  using Updater = std::function<void(int, const NArray&, NArray*)>;
 
   /*! \brief returns the default updater, which is ASSIGN */
   Updater DefaultUpdater() {
-    return [](const NArray& a, NArray* b) { CopyFromTo(a, b); };
+    return [](int key, const NArray& a, NArray* b) { CopyFromTo(a, b); };
   }
 
   /**
@@ -129,9 +152,7 @@ class KVStore {
 #endif  // DMLC_USE_CXX11
 
   /**
-   * \brief set aggregator
-   *
-   * The aggregator is enabled in default
+   * \brief set aggregator for distributed kvstore
    *
    * \param aggregator false to disable
    */
@@ -146,7 +167,6 @@ class KVStore {
     return get_impl()->get_rank();
   }
 
-
   /*!
    * \brief Get the number of nodes in this group.
    */
@@ -160,7 +180,7 @@ class KVStore {
 
  private:
   inline KVStore* get_impl() const {
-    CHECK(impl_) << "call InitDevices() first";
+    CHECK(impl_) << "call Start() first";
     return impl_;
   }
   KVStore* impl_;

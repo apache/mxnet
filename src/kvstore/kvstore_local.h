@@ -8,8 +8,9 @@
 #include <unordered_map>
 #include <bitset>
 #include <vector>
+#include <utility>
+#include <algorithm>
 #include "mxnet/kvstore.h"
-#include "mxnet/engine.h"
 
 namespace mxnet {
 
@@ -18,84 +19,13 @@ namespace mxnet {
  */
 class KVStoreLocal : public KVStore {
  public:
-  KVStoreLocal() : engine_(Engine::Get()) { Clear(); }
+  KVStoreLocal() : pinned_ctx_(cpu::kDevMask, Context::kPinnedMemoryID) {
+    Clear();
+  }
+
   virtual ~KVStoreLocal() { Clear(); }
 
-  virtual void InitDevices(const std::vector<Context>& devices) {
-    num_devs_ = 0;
-    for (auto d : devices) devs_[d.UID()] = num_devs_++;
-  }
-
-  virtual void Init(int key, const NArray& val) {
-    CHECK(local_.find(key) == local_.end()) << "duplicate init of key " << key;
-    Value lc_v(num_devs_, val.Copy(local_ctx_));
-    local_.insert({key, lc_v});
-  }
-
-  virtual void Push(int key, const NArray& val) {
-    auto it = local_.find(key);
-    CHECK(it != local_.end()) << "key " << key << " has not been inited";
-    auto& lc_v = it->second;
-    CHECK_EQ(lc_v.val.shape(), val.shape())
-        << "shape mismatch: " << lc_v.val.shape() << ", " << val.shape();
-
-    if (aggregator_) {
-      int dix = GetDevIdx(val.ctx());
-      CHECK(!lc_v.pending_push[dix])
-          << "duplicate push on key " << key << "from " << val.ctx().Name();
-      lc_v.pending_push[dix] = true;
-      lc_v.num_pending_push++;
-
-      if (lc_v.agg_buf.is_none()) {
-        lc_v.agg_buf = NArray(lc_v.val.shape(), local_ctx_);
-        lc_v.agg_buf = 0.0;
-      }
-      if (val.ctx().dev_mask == cpu::kDevMask) {
-        lc_v.agg_buf += val;
-      } else {
-        // copy to pinned memory
-        LOG(FATAL) << "TODO";
-      }
-
-      if (lc_v.num_pending_push == num_devs_) {
-        // apply updater
-        CHECK(updater_) << "invalid updater";
-        updater_(lc_v.agg_buf, &lc_v.val);
-
-        // clean
-        lc_v.agg_buf = 0.0;
-        lc_v.pending_push.flip();
-        lc_v.num_pending_push = 0;
-
-        // issue blocked pull
-        for (auto& w : lc_v.pending_pull_val) {
-          CopyFromTo(lc_v.val, &w);
-        }
-        lc_v.pending_pull_val.clear();
-      }
-    } else {
-      LOG(FATAL) << "TODO";
-    }
-  }
-
-  virtual void Pull(int key, NArray* val) {
-    auto it = local_.find(key);
-    CHECK(it != local_.end()) << "key " << key << " has not been inited";
-    auto& lc_v = it->second;
-    CHECK_EQ(lc_v.val.shape(), val->shape())
-        << "shape mismatch: " << lc_v.val.shape() << ", " << val->shape();
-
-    if (aggregator_) {
-      int dix = GetDevIdx(val->ctx());
-      if (lc_v.pending_push[dix]) {
-        lc_v.pending_pull_val.push_back(*val);
-        return;
-      }
-      CopyFromTo(lc_v.val, val);
-    } else {
-      LOG(FATAL) << "TODO";
-    }
-  }
+  virtual void Start() { }
 
   virtual void Stop() { Clear(); }
 
@@ -103,53 +33,144 @@ class KVStoreLocal : public KVStore {
     updater_ = updater;
   }
 
-  virtual void set_aggregator(bool aggregator) {
-    aggregator_ = aggregator;
-  }
+  virtual void set_aggregator(bool aggregator) { }
 
   virtual int get_rank() const { return 0; }
 
   virtual int get_group_size() const { return 1; }
 
+  virtual void Init(const std::vector<int>& keys,
+                    const std::vector<NArray>& values) {
+    for (size_t i = 0; i < keys.size(); ++i) {
+      CHECK(local_.find(keys[i]) == local_.end())
+          << "duplicate init of key " << keys[i];
+#if MXNET_USE_CUDA
+      local_.insert({keys[i], values[i].Copy(pinned_ctx_)});
+#else
+      local_.insert({keys[i], values[i].Copy(local_ctx_)});
+#endif  // MXNET_USE_CUDA
+    }
+  }
+
+  virtual void Push(const std::vector<int>& keys,
+                    const std::vector<NArray>& values) {
+    std::vector<int> uniq_keys;
+    std::vector<std::vector<NArray> > grouped_vals;
+    GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
+
+    CHECK(updater_) << "invalid updater";
+    for (size_t i = 0; i < uniq_keys.size(); ++i) {
+      int key = uniq_keys[i];
+      auto it = local_.find(key);
+      CHECK(it != local_.end()) << "key " << key << " has not been inited";
+      updater_(key, MergePushValue(key, grouped_vals[i]), &it->second);
+    }
+  }
+
+  virtual void Pull(const std::vector<int>& keys,
+                    const std::vector<NArray*>& values) {
+    std::vector<int> uniq_keys;
+    std::vector<std::vector<NArray*> > grouped_vals;
+    GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
+
+    for (size_t i = 0; i < uniq_keys.size(); ++i) {
+      int key = uniq_keys[i];
+      auto it = local_.find(key);
+      CHECK(it != local_.end()) << "key " << key << " has not been inited";
+      for (NArray* v : grouped_vals[i])
+        CopyFromTo(it->second, v);
+    }
+  }
+
  protected:
+  /**
+   * \brief group values on keys
+   */
+  template <typename V>
+  void GroupKVPairs(const std::vector<int>& keys,
+                    const std::vector<V>& values,
+                    std::vector<int>* uniq_keys,
+                    std::vector<std::vector<V> >* grouped_vals) {
+    CHECK_EQ(keys.size(), values.size());
+    // TODO(mli) check if already sorted as an optimization
+    using Idx = std::pair<int, int>;
+    std::vector<Idx> idx(keys.size());
+    for (size_t i = 0; i < keys.size(); ++i) {
+      idx[i].first = keys[i]; idx[i].second = i;
+    }
+    std::sort(idx.begin(), idx.end(), [](const Idx& a, const Idx& b) {
+        return a.first < b.first;
+      });
+
+    int pre_key = idx[0].first - 1;
+    for (auto i : idx) {
+      if (i.first != pre_key) {
+        uniq_keys->push_back(i.first);
+        grouped_vals->push_back({values[i.second]});
+        pre_key = i.first;;
+      } else {
+        grouped_vals->back().push_back(values[i.second]);
+      }
+    }
+  }
+
+  /**
+   * \brief returns the aggregated push value
+   */
+  NArray MergePushValue(int key, const std::vector<NArray>& val) {
+    CHECK(val.size());
+    auto& buf = merge_buf_[key];
+    if (buf.merged.is_none()) {
+      buf.merged = val[0].Copy(local_ctx_);
+    } else {
+      CopyFromTo(val[0], &buf.merged);
+    }
+
+    for (size_t i = 1; i < val.size(); ++i) {
+      const auto& v = val[i];
+      if (v.ctx().dev_mask == cpu::kDevMask) {
+        buf.merged += v;
+      } else {
+        int id = v.ctx().dev_id;
+        // first copy to the pinned memory
+        if (buf.gpu_buf.size() <= (size_t)id) {
+          buf.gpu_buf.resize(id + 2);
+        }
+        if (buf.gpu_buf[id].is_none()) {
+          buf.gpu_buf[id] = NArray(v.shape(), pinned_ctx_);
+        }
+        CopyFromTo(v, &buf.gpu_buf[id]);
+        buf.merged += buf.gpu_buf[id];
+      }
+    }
+    return buf.merged;
+  }
+
+ private:
   void Clear() {
     updater_ = DefaultUpdater();
-    aggregator_ = true;
-
-    num_devs_ = 0;
-    devs_.clear();
+    merge_buf_.clear();
     local_.clear();
   }
 
-  Engine* engine_;
-  Updater updater_;
-
-  bool aggregator_;
-
-  /// get the continous device index starting from 0
-  inline int GetDevIdx(const Context& ctx) {
-    auto it = devs_.find(ctx.UID());
-    CHECK(it != devs_.end()) << "unknow device " << ctx.Name();
-    return it->second;
-  }
-  size_t num_devs_;
-  /// map a device into an index
-  std::unordered_map<uint64_t, int> devs_;
-
-  /// internal storage of a value
-  struct Value {
-    Value() {}
-    Value(int num_devs, NArray data)
-        : pending_push(num_devs, false), num_pending_push(0) {
-      val = data;
-    }
-    std::vector<bool> pending_push;
-    std::vector<NArray> pending_push_val, pending_pull_val;
-    size_t num_pending_push;
-    NArray val, agg_buf;
+  /// \brief temperal space for pushing value
+  struct MergeBuf {
+    /// \brief the cpu buffer for gpu data
+    std::vector<NArray> gpu_buf;
+    /// \brief merged data in cpu
+    NArray merged;
   };
-  std::unordered_map<int, Value> local_;
+
+  /// \brief buffer for merging push value
+  std::unordered_map<int, MergeBuf> merge_buf_;
+
+  /// \brief local storage
+  std::unordered_map<int, NArray> local_;
+
   Context local_ctx_;
+  Context pinned_ctx_;
+
+  Updater updater_;
 };
 
 }  // namespace mxnet

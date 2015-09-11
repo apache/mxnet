@@ -847,35 +847,43 @@ int MXDataIterGetData(DataIterHandle handle, NArrayHandle *out) {
 
 int MXKVStoreInit(int num, int* keys, NArrayHandle* vals) {
   API_BEGIN();
+  std::vector<int> v_keys(num);
+  std::vector<NArray> v_vals(num);
   for (int i = 0; i < num; ++i) {
-    KVStore::Get()->Init(keys[i], *static_cast<NArray*>(vals[i]));
+    v_keys[i] = keys[i];
+    v_vals[i] = *static_cast<NArray*>(vals[i]);
   }
+  KVStore::Get()->Init(v_keys, v_vals);
   API_END();
 }
 
 int MXKVStorePush(int num, int* keys, NArrayHandle* vals) {
   API_BEGIN();
+  std::vector<int> v_keys(num);
+  std::vector<NArray> v_vals(num);
   for (int i = 0; i < num; ++i) {
-    KVStore::Get()->Push(keys[i], *static_cast<NArray*>(vals[i]));
+    v_keys[i] = keys[i];
+    v_vals[i] = *static_cast<NArray*>(vals[i]);
   }
+  KVStore::Get()->Push(v_keys, v_vals);
   API_END();
 }
 
 int MXKVStorePull(int num, int* keys, NArrayHandle* vals) {
   API_BEGIN();
+  std::vector<int> v_keys(num);
+  std::vector<NArray*> v_vals(num);
   for (int i = 0; i < num; ++i) {
-    KVStore::Get()->Pull(keys[i], static_cast<NArray*>(vals[i]));
+    v_keys[i] = keys[i];
+    v_vals[i] = static_cast<NArray*>(vals[i]);
   }
+  KVStore::Get()->Pull(v_keys, v_vals);
   API_END();
 }
 
-int MXKVStoreInitDevices(mx_uint num_devs, int *dev_masks, int *dev_ids) {
+int MXKVStoreStart() {
   API_BEGIN();
-  std::vector<Context> devs;
-  for (mx_uint i = 0; i < num_devs; ++i) {
-    devs.push_back(Context(dev_masks[i], dev_ids[i]));
-  }
-  KVStore::Get()->InitDevices(devs);
+  KVStore::Get()->Start();
   API_END();
 }
 
@@ -887,12 +895,12 @@ int MXKVStoreStop() {
 
 int MXKVStoreSetUpdater(MXKVStoreUpdater updater) {
   API_BEGIN();
-  auto updt = [updater](const NArray& recv, NArray* local) {
+  auto updt = [updater](int key, const NArray& recv, NArray* local) {
     NArray* recv_copy = new NArray();
     *recv_copy = recv;
     NArray* local_copy = new NArray();
     *local_copy = *local;
-    updater(recv_copy, local_copy);
+    updater(key, recv_copy, local_copy);
   };
 
   KVStore::Get()->set_updater(updt);

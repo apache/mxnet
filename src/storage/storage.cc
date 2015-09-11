@@ -11,6 +11,7 @@
 #include "pooled_storage_manager.h"
 #include "cpu_device_storage.h"
 #include "gpu_device_storage.h"
+#include "pinned_memory_storage.h"
 #include "../common/cuda_utils.h"
 #include "../common/utils.h"
 
@@ -18,8 +19,8 @@ namespace mxnet {
 
 struct Storage::Impl {
   static constexpr size_t kPoolThreshold = 4096 * 1024 * 1024ul;
-  static constexpr size_t kMaxNumberOfDevices = 3;
-  static constexpr size_t kMaxNumberOfDeviceIDs = 16;
+  static constexpr size_t kMaxNumberOfDevices = Context::kMaxDevMask + 1;
+  static constexpr size_t kMaxNumberOfDeviceIDs = Context::kPinnedMemoryID + 1;
 
   template <class DeviceStorage>
   using CurrentStorageManager =
@@ -59,14 +60,19 @@ Storage::Handle Storage::Alloc(size_t size, Context ctx) {
     if (!device_id_it) {
       switch (ctx.dev_mask) {
         case cpu::kDevMask:
-          device_id_it =
-              common::MakeUnique<Storage::Impl::CurrentStorageManager<
-                  storage::CPUDeviceStorage>>();
+          if (ctx.dev_id == Context::kPinnedMemoryID) {
+            device_id_it = common::MakeUnique<
+              Storage::Impl::CurrentStorageManager<
+                storage::PinnedMemoryStorage>>();
+          } else {
+            device_id_it = common::MakeUnique<
+              Storage::Impl::CurrentStorageManager<
+                storage::CPUDeviceStorage>>();
+          }
           break;
         case gpu::kDevMask:
-          device_id_it =
-              common::MakeUnique<Storage::Impl::CurrentStorageManager<
-                  storage::GPUDeviceStorage>>();
+          device_id_it = common::MakeUnique<Storage::Impl::CurrentStorageManager<
+                                              storage::GPUDeviceStorage>>();
           break;
         default:
           LOG(FATAL) << "Unimplemented device";

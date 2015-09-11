@@ -63,21 +63,15 @@ struct Context {
     return true;
   }
 
-  /**
-   * \brief returns an unique ID
-   */
-  inline uint64_t UID() const {
-    return static_cast<uint64_t>(dev_mask) << 32 | dev_id;
-  }
+  /*! \brief the maximal device mask, cpu = 1, gpu = 2 */
+  static const int32_t kMaxDevMask = 2;
 
-  /**
-   * \brief returns an unique string name
+  /*!
+   * \brief A dedicate ID for pinned cpu memory.
+   *
+   * Any normal CPU ID should be less than this number.
    */
-  inline std::string Name() const {
-    std::stringstream ss;
-    ss << (dev_mask == cpu::kDevMask ? "cpu" : "gpu") << ":" << dev_id;
-    return ss.str();
-  }
+  static const int32_t kPinnedMemoryID = 16;
 };
 
 /*!
