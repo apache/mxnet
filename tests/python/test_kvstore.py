@@ -78,7 +78,7 @@ def updater(key, recv, local):
     """use updater: +="""
     local += recv
 
-def test_updater():
+def test_updater(dev):
     """updater"""
 
     init_kvstore()
@@ -86,7 +86,7 @@ def test_updater():
 
     # devices
     num_devs = 4
-    devs = [mx.Context('cpu', i) for i in range(num_devs)]
+    devs = [mx.Context(dev, i) for i in range(num_devs)]
 
     # single
     vals = [mx.narray.ones(shape, d) for d in devs]
@@ -116,4 +116,5 @@ if __name__ == '__main__':
     test_single_kv_pair()
     test_list_kv_pair()
     test_aggregator()
-    test_updater()
+    test_updater('cpu')
+    # test_updater('gpu')

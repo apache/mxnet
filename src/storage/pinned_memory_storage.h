@@ -9,9 +9,6 @@
 #include <dmlc/logging.h>
 #include "mxnet/base.h"
 #include "../common/cuda_utils.h"
-#if MXNET_USE_CUDA
-#include <cuda_runtime.h>
-#endif  // MXNET_USE_CUDA
 
 namespace mxnet {
 namespace storage {
@@ -35,7 +32,7 @@ class PinnedMemoryStorage {
 inline void* PinnedMemoryStorage::Alloc(size_t size) {
   void* ret = nullptr;
 #if MXNET_USE_CUDA
-  CUDA_CALL(cudaHostMalloc(&ret, size));
+  CUDA_CALL(cudaMallocHost(&ret, size));
 #else   // MXNET_USE_CUDA
   LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA
