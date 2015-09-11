@@ -79,6 +79,8 @@ class GraphExecutor : public Executor {
     // reference count on how many times this entry is being used.
     // That is how many operators and heads need this DataEntry
     // this is a temporal variable that is used during initialization.
+    uint32_t temp_ref_count;
+    // real permanent ref count
     uint32_t ref_count;
     // constructor
     DataEntryInfo()
@@ -86,7 +88,7 @@ class GraphExecutor : public Executor {
           inplace_op_id(-1),
           type(kNotInitialized),
           storage_id(GraphStorageAllocator::kBadStorageID),
-          ref_count(0) {}
+          temp_ref_count(0), ref_count(0) {}
   };
   // all the information needed to push the op to engine
   struct OpExecEntry {

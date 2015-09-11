@@ -5,7 +5,7 @@ import copy
 import sys
 sys.path.append("../../tests/python")
 import get_data
-
+import time
 
 """
 CXXNET Result:
@@ -70,8 +70,8 @@ def ConvFactory(**kwargs):
     param = copy.copy(kwargs)
     act = param["act_type"]
     del param["act_type"]
+    param["workspace"] = 256
     param["name"] = "conv%d" % conv_cnt
-    param["nstep"] = 64
     conv = mx.symbol.Convolution(**param)
     bn = mx.symbol.BatchNorm(data = conv, name="bn%d" % conv_cnt)
     relu = mx.symbol.Activation(data = bn, name = "%s%d" % (act, conv_cnt), act_type=act)
@@ -89,13 +89,11 @@ def DownsampleFactory(data, ch_3x3, stride = 2):
     param["num_filter"] = ch_3x3
     param["act_type"] = "relu"
     param["data"] = data
-    param["nstep"] = 100
     param["pad"] = (1, 1)
     conv3x3 = ConvFactory(**param)
     # pool
     del param["num_filter"]
     del param["act_type"]
-    del param["nstep"]
     del param["pad"]
     param["pool_type"] = "max"
     param["name"] = "pool%d" % pool_cnt
@@ -117,7 +115,6 @@ def SimpleFactory(data, ch_1x1, ch_3x3):
     param["stride"] = (1, 1)
     param["act_type"] = "relu"
     param["data"] = data
-    param["nstep"] = 128
     conv1x1 = ConvFactory(**param)
 
     # 3x3
@@ -143,7 +140,7 @@ conv1 = ConvFactory(data=data, kernel=(3,3), pad=(1,1), num_filter=96, act_type=
 in3a = SimpleFactory(conv1, 32, 32)
 in3b = SimpleFactory(in3a, 32, 48)
 in3c = DownsampleFactory(in3b, 80)
-in4a = SimpleFactory(in3c, 112, 38)
+in4a = SimpleFactory(in3c, 112, 48)
 in4b = SimpleFactory(in4a, 96, 64)
 in4c = SimpleFactory(in4b, 80, 80)
 in4d = SimpleFactory(in4c, 48, 96)
@@ -155,22 +152,26 @@ flatten = mx.symbol.Flatten(data=pool, name="flatten1")
 fc = mx.symbol.FullyConnected(data=flatten, num_hidden=10, name="fc1")
 loss = mx.symbol.Softmax(data=fc, name="sm")
 
-args_list = loss.list_arguments()
 
+epoch = 9
+lr = 0.05
+wd = 0.0001
+momentum = 0.9
 
 batch_size = 128
 data_shape = (batch_size, 3, 28, 28)
-arg_shapes, out_shapes, aux_shapes = loss.infer_shape(data=data_shape)
 
-arg_narrays = [mx.narray.zeros(shape, ctx=mx.Context("gpu")) for shape in arg_shapes]
-grad_narrays = [mx.narray.zeros(shape, ctx=mx.Context("gpu")) for shape in arg_shapes]
-mom_narrays = [mx.narray.zeros(shape, ctx=mx.Context("gpu")) for shape in arg_shapes]
-aux_narrays = [mx.narray.zeros(shape, ctx=mx.Context("gpu")) for shape in aux_shapes]
+in_data = mx.narray.empty(data_shape, mx.gpu())
+executor = loss.simple_bind(mx.gpu(), {"data": in_data})
+out_narray = executor.heads()[0]
+pred = mx.narray.zeros(out_narray.shape, mx.cpu())
 
-inputs = dict(zip(args_list, arg_narrays))
+arg_narrays, grad_narrays = executor.list_arguments()
+inputs = dict(zip(loss.list_arguments(), arg_narrays))
+tmp_label = mx.narray.zeros(inputs["sm_label"].shape)
+momentum_narrays = [mx.narray.zeros(item.shape, mx.gpu()) for item in grad_narrays]
 
-name2shape = dict(zip(args_list, arg_shapes))
-pred = mx.narray.zeros(out_shapes[0])
+block = list(zip(grad_narrays, arg_narrays, momentum_narrays))
 
 np.random.seed(0)
 # set random weight
@@ -185,24 +186,10 @@ for name, narray in inputs.items():
     if "beta" in name:
         narray[:] = 0.0
 
-# bind executer
-# TODO(bing): think of a better bind interface
-executor = loss.bind(mx.Context('gpu'), arg_narrays, grad_narrays, 'write', aux_narrays)
-# update
-
-out_narray = executor.heads()[0]
-
-epoch = 9
-lr = 0.05
-wd = 0.0001
-momentum = 0.9
-
 def Update(grad, weight, mom):
     mom[:] *= momentum
     mom[:] += -lr * (grad / batch_size + wd * weight)
     weight[:] += mom
-
-block = list(zip(grad_narrays, arg_narrays, mom_narrays))
 
 #check data
 get_data.GetCifar10()
@@ -224,16 +211,18 @@ test_dataiter = mx.io.ImageRecordIter(
         batch_size=batch_size,
         nthread=1)
 
-tmp_label = mx.narray.zeros(name2shape["sm_label"])
 
-def progress(count, total, suffix=''):
-    bar_len = 80
+def progress(count, total, epoch, toc):
+    bar_len = 50
     filled_len = int(round(bar_len * count / float(total)))
 
     percents = round(100.0 * count / float(total), 1)
     bar = '=' * filled_len + '-' * (bar_len - filled_len)
-
+    tic = time.time()
+    speed = batch_size / float(tic - toc)
+    suffix = "Epoch %d, Speed: %.2f pic/sec" % (epoch, speed)
     sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', suffix))
+
 
 def test_cifar():
     acc_train = 0.
@@ -245,9 +234,9 @@ def test_cifar():
         val_acc = 0.0
         train_nbatch = 0
         val_nbatch = 0
-        all_train_bacth = 50000 / float(batch_size)
+        all_train_bacth = round(50000 / float(batch_size) + 1)
         for data, label in train_dataiter:
-            progress(train_nbatch, all_train_bacth, "Epoch %d" % i)
+            toc = time.time()
             label = label.asnumpy().flatten()
             tmp_label[:] = label
             inputs["data"][:] = data
@@ -256,10 +245,12 @@ def test_cifar():
             pred[:] = out_narray
             train_acc += CalAcc(pred.asnumpy(), label)
             train_nbatch += 1
-            executor.backward([out_narray])
+            #executor.backward([out_narray])
+            executor.backward()
 
             for grad, weight, mom in block:
                 Update(grad, weight, mom)
+            progress(train_nbatch, all_train_bacth, i, toc)
 
         # evaluate
         for data, label in test_dataiter:

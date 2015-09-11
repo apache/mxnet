@@ -22,6 +22,34 @@ class Executor(object):
         if not isinstance(handle, ExecutorHandle):
             raise TypeError("Handle type error")
         self.handle = handle
+        self.arg_narrays = []
+        self.grad_narrays = []
+        self.auxiliary_states = []
+
+    def list_arguments(self, with_grad=True):
+        """Return arguments (and grad for arguments)
+
+        Parameters
+        ----------
+        with_grad: bool
+            whether return args with grad
+
+        Returns
+        -------
+            if with_grad = True, return (args, grad) pair list
+            otherwise return args list only
+            Note: args sequence is same to symbol.list_arguments()
+        """
+        if with_grad:
+            return self.arg_narrays, self.grad_narrays
+        else:
+            return self.arg_narrays
+
+    def list_auxiliary_states(self):
+        """Return auxiliary states of executor
+            Note: auxiliary states is same to symbol.list_auxiliary_states()
+        """
+        return self.auxiliary_states
 
     def forward(self, is_train=True):
         """Do forward.
@@ -34,19 +62,24 @@ class Executor(object):
         """
         check_call(_LIB.MXExecutorForward(self.handle, is_train))
 
-    def backward(self, grads):
+    def backward(self, head_grads=None):
         """Do backward on heads' gradient.
 
         Parameters
         ----------
-        grads: Array of NArray
-            heads' gradient
+        head_grads : NArray or list of NArray, optional
+            Gradient on the heads
         """
-        for obj in grads:
+        if head_grads is None:
+            head_grads = []
+        elif isinstance(head_grads, NArray):
+            head_grads = [head_grads]
+
+        for obj in head_grads:
             if not isinstance(obj, NArray):
                 raise TypeError("inputs must be NArray")
-        narray = c_array(NArrayHandle, [item.handle for item in grads])
-        check_call(_LIB.MXExecutorBackward(self.handle, len(grads), narray))
+        narray = c_array(NArrayHandle, [item.handle for item in head_grads])
+        check_call(_LIB.MXExecutorBackward(self.handle, len(head_grads), narray))
 
     def heads(self):
         """list all heads' output narray

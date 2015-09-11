@@ -66,7 +66,7 @@ ifeq ($(USE_OPENMP_ITER), 1)
 endif
 
 ifeq ($(USE_CUDNN), 1)
-	CFLAGS += -DCXXNET_USE_CUDNN=1
+	CFLAGS += -DMSHADOW_USE_CUDNN=1
 	LDFLAGS += -lcudnn
 endif
 

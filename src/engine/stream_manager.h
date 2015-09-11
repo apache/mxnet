@@ -56,7 +56,11 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
         auto&& counter = gpu_cnt_.at(ctx.dev_id);
         if (counter == -1) {
           for (auto&& i : gpu_streams_.at(ctx.dev_id)) {
+            #if MXNET_USE_CUDNN == 1
+            i = mshadow::NewStream<gpu>(true, true);
+            #else
             i = mshadow::NewStream<gpu>(true, false);
+            #endif  // MXNET_USE_CUDNN
           }
           counter = 0;
         }

@@ -323,6 +323,13 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NArray> &in_args,
 }
 
 void GraphExecutor::InitDataEntryMemory() {
+  // setup the temp ref counter for allocator algorithms
+  for (OpNode &op : op_nodes_) {
+    for (DataEntryInfo &node : op.outputs) {
+      node.temp_ref_count = node.ref_count;
+    }
+  }
+
   // use allocator to allocate memory.
   GraphStorageAllocator allocator(&graph_);
   for (size_t i = 0; i < topo_order_.size(); ++i) {
@@ -337,7 +344,7 @@ void GraphExecutor::InitDataEntryMemory() {
     for (StaticGraph::DataEntry e : graph_.nodes[nid].inputs) {
       DataEntryInfo &info = op_nodes_[e.source_id].outputs[e.index];
       CHECK_NE(info.type, kNotInitialized);
-      CHECK_NE(info.ref_count, 0);
+      CHECK_NE(info.temp_ref_count, 0);
       in_data.push_back(&info);
     }
     std::vector<DataEntryInfo*> out_data(op_nodes_[nid].outputs.size());
@@ -350,7 +357,7 @@ void GraphExecutor::InitDataEntryMemory() {
     for (std::pair<DataEntryInfo*, DataEntryInfo*> kv : inplace) {
       DataEntryInfo* in = kv.first;
       DataEntryInfo* out = kv.second;
-      if (in->ref_count == 1 &&
+      if (in->temp_ref_count == 1 &&
           in->type == kInternalAllocated &&
           out->type == kNotInitialized) {
         // we can only do inplace if we are last user of in
@@ -359,13 +366,13 @@ void GraphExecutor::InitDataEntryMemory() {
         out->op_req = kWriteInplace;
         out->storage_id = in->storage_id;
         // set inplace op id
-        in->ref_count = 0;
+        in->temp_ref_count = 0;
         in->inplace_op_id = static_cast<int>(nid);
       }
     }
     // allocate output,
     for (DataEntryInfo *out : out_data) {
-      if (out->op_req == kNullOp && out->ref_count != 0) {
+      if (out->op_req == kNullOp && out->temp_ref_count != 0) {
         out->op_req = kWriteTo;
       }
       if (out->type == kNotInitialized) {
@@ -376,20 +383,20 @@ void GraphExecutor::InitDataEntryMemory() {
     }
     // then free inputs
     for (DataEntryInfo *in : in_data) {
-      // ref_count == 0 means it is taken by inplace op
-      if (in->ref_count == 0) {
+      // temp_ref_count == 0 means it is taken by inplace op
+      if (in->temp_ref_count == 0) {
         CHECK_EQ(in->inplace_op_id, static_cast<int>(nid));
         continue;
       }
       // if we decrease it to zero, means we are ready to relase
-      --in->ref_count;
-      if (in->ref_count == 0 && in->type == kInternalAllocated) {
+      --in->temp_ref_count;
+      if (in->temp_ref_count == 0 && in->type == kInternalAllocated) {
         allocator.Release(in->storage_id, nid);
       }
     }
-    // check out again, if there is ref_count == 0, release it
+    // check out again, if there is temp_ref_count == 0, release it
     for (DataEntryInfo *out : out_data) {
-      if (out->ref_count == 0 && out->type == kInternalAllocated) {
+      if (out->temp_ref_count == 0 && out->type == kInternalAllocated) {
         allocator.Release(out->storage_id, nid);
       }
     }
@@ -493,13 +500,26 @@ void GraphExecutor::Forward(bool is_train) {
 }
 
 void GraphExecutor::Backward(const std::vector<NArray> &head_grads) {
-  CHECK_EQ(head_grad_nodes_.size(), head_grads.size());
-  for (size_t i = 0; i < head_grad_nodes_.size(); ++i) {
-    uint32_t nid = head_grad_nodes_[i];
-    CHECK(graph_.nodes[nid].is_variable());
-    DataEntryInfo &info = op_nodes_[nid].outputs[0];
-    CHECK_EQ(info.type, kTobeBindByExternal);
-    info.data = head_grads[i];
+  if (head_grads.size() != 0) {
+    // TODO(bing, min): consider pass a map for backward
+    CHECK_EQ(head_grad_nodes_.size(), head_grads.size());
+    for (size_t i = 0; i < head_grad_nodes_.size(); ++i) {
+      uint32_t nid = head_grad_nodes_[i];
+      CHECK(graph_.nodes[nid].is_variable());
+      DataEntryInfo &info = op_nodes_[nid].outputs[0];
+      CHECK_EQ(info.type, kTobeBindByExternal);
+      info.data = head_grads[i];
+    }
+  } else {
+    // check all the head_grad_nodes need to have zero ref_count
+    // loss function do not need out_grad
+    for (size_t i = 0; i < head_grad_nodes_.size(); ++i) {
+      uint32_t nid = head_grad_nodes_[i];
+      DataEntryInfo &info = op_nodes_[nid].outputs[0];
+      CHECK_EQ(info.ref_count, 0)
+          << "Because the last operator is not Loss function, "
+          << "head_gradient is required in calling backward.";
+    }
   }
   RunOps(true, num_forward_nodes_, topo_order_.size());
 }

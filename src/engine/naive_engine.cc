@@ -10,16 +10,21 @@ namespace engine {
 NaiveEngine::VarHandle NaiveEngine::NewVariable() { return nullptr; }
 
 NaiveEngine::NaiveEngine() {
-#if MXNET_USE_CUDA
+  #if MXNET_USE_CUDA
+  #if MXNET_USE_CUDNN == 1
+  LOG(INFO) << "MXNet is using CuDNN for Convolution, Pooling Op";
+  stream_ = mshadow::NewStream<gpu>(true, true);
+  #else
   stream_ = mshadow::NewStream<gpu>(true, false);
+  #endif  // MXNET_USE_CUDNN
   ctx_.stream = stream_;
-#endif
+  #endif  // MXNET_USE_CUDA
 }
 
 NaiveEngine::~NaiveEngine() {
-#if MXNET_USE_CUDA
+  #if MXNET_USE_CUDA
   mshadow::DeleteStream(stream_);
-#endif
+  #endif
 }
 
 NaiveEngine::OprHandle NaiveEngine::NewOperator(AsyncFn,
@@ -66,5 +71,5 @@ void NaiveEngine::WaitForVar(VarHandle) {}
 void NaiveEngine::WaitForAll() {}
 
 }  // namespace engine
-
 }  // namespace mxnet
+

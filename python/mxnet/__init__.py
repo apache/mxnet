@@ -8,7 +8,7 @@ The interface is designed in collaboration by authors of three projects.
 """
 from __future__ import absolute_import
 
-from .context import Context, current_context
+from .context import Context, current_context, cpu, gpu
 from .base import MXNetError
 from . import narray
 from . import symbol
