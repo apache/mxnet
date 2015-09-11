@@ -92,7 +92,7 @@ class KVStoreLocal : public KVStore {
                     std::vector<int>* uniq_keys,
                     std::vector<std::vector<V> >* grouped_vals) {
     CHECK_EQ(keys.size(), values.size());
-
+    // TODO check if already sorted as an optimization
     using Idx = std::pair<int,int>;
     std::vector<Idx> idx(keys.size());
     for (size_t i = 0; i < keys.size(); ++i) {

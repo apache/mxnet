@@ -10,29 +10,27 @@ from .base import _LIB
 from .base import check_call, c_array, NArrayHandle
 
 def _ctype_key_value(keys, vals):
-    """ parse key-value args into ctype"""
+    """parse key-value args into ctype"""
     if isinstance(keys, int):
         if isinstance(vals, NArray):
-            return (1,
-                    c_array(ctypes.c_int, [keys]),
+            return (c_array(ctypes.c_int, [keys]),
                     c_array(NArrayHandle, [vals.handle]))
         else:
             for v in vals:
                 assert(isinstance(v, NArray))
-            return (len(vals),
-                    c_array(ctypes.c_int, [keys] * len(vals)),
+            return (c_array(ctypes.c_int, [keys] * len(vals)),
                     c_array(NArrayHandle, [v.handle for v in vals]))
     else:
+        assert(len(keys) == len(vals))
         for k in keys:
             assert(isinstance(k, int))
-        if len(keys) == 1:
-            return _ctype_key_value(keys[0], vals)
-        assert(len(keys) == len(vals))
-        for v in vals:
-            assert(isinstance(v, NArray))
-        return (len(keys),
-                c_array(ctypes.c_int, keys),
-                c_array(NArrayHandle, [v.handle for v in vals]))
+        c_keys = []
+        c_vals = []
+        for i in range(len(keys)):
+            c_key_i, c_val_i = _ctype_key_value(keys[i], vals[i])
+            c_keys += c_key_i
+            c_vals += c_val_i
+        return (c_array(ctypes.c_int, c_keys), c_array(NArrayHandle, c_vals))
 
 def start():
     """start kvstore"""
@@ -43,7 +41,7 @@ def stop():
     check_call(_LIB.MXKVStoreStop())
 
 
-def init(keys, values):
+def init(key, value):
     """ Initialize a list of key-value pairs
 
     Parameters
@@ -53,60 +51,48 @@ def init(keys, values):
     values: NArray or list of NArray
         A single value of a list of values
     """
-    num, ckeys, cvals = _ctype_key_value(keys, values)
-    check_call(_LIB.MXKVStoreInit(num, ckeys, cvals))
+    ckeys, cvals = _ctype_key_value(key, value)
+    check_call(_LIB.MXKVStoreInit(len(ckeys), ckeys, cvals))
 
-def push(keys, values):
+def push(key, value):
     """ Push a value into the store
 
     Parameters
     ----------
-    keys: int or list of int
-        A single key or a list of keys
-    values: NArray or list of NArray
-        A single value of a list of values
+    key : int or list of int
+        A single key or a list of key
+    value: list of NArray or list of list of NArray
+        A single value of a list of value
     """
-    num, ckeys, cvals = _ctype_key_value(keys, values)
-    check_call(_LIB.MXKVStorePush(num, ckeys, cvals))
+    ckeys, cvals = _ctype_key_value(key, value)
+    check_call(_LIB.MXKVStorePush(len(ckeys), ckeys, cvals))
 
-def pull(keys, output=None, shape=None, ctx=None):
-    """ Pull the value from the store
+def pull(key, out=None):
+    """Pull value from the store
 
     Parameters
     ----------
-    keys: int or list of int
-        A single key or a list of keys
-    output: NArray or list of NArray
-        A single value of a list of values
+    key: int or list of int
+        A single key or a list of key
+    out: NArray or list of NArray
+        A single value of a list of value
     """
-    if output is None:
-        assert(isinstance(keys, int))
-        assert(shape is not None)
-        assert(ctx is not None)
-        output = [empty(shape, c) for c in ctx]
-    else:
-        if shape is not None:
-            warnings.warn('ignore shape', RuntimeWarning)
-        if ctx is not None:
-            warnings.warn('ignore ctx', RuntimeWarning)
-
-    num, ckeys, cvals = _ctype_key_value(keys, output)
-    print num
-
-    return output
-    # print keys, output, shape, ctx
-    # num, ckeys, cvals = _ctype_key_value(keys, values)
-    # check_call(_LIB.MXKVStorePull(num, ckeys, cvals))
+    assert(out is not None)
+    ckeys, cvals = _ctype_key_value(key, out)
+    check_call(_LIB.MXKVStorePull(len(ckeys), ckeys, cvals))
+    return out
 
 
 def _updater_wrapper(updater):
     """ a wrapper for the user-defined handle """
-    def updater_handle(lhs_handle, rhs_handle):
+    def updater_handle(key, lhs_handle, rhs_handle):
         """ ctypes function """
         lhs = NArray(NArrayHandle(lhs_handle))
         rhs = NArray(NArrayHandle(rhs_handle))
-        updater(lhs, rhs)
+        updater(key, lhs, rhs)
     return updater_handle
+
+_updater_func = None
 
 def set_updater(updater):
     """ set a updater into the store
@@ -121,7 +107,8 @@ def set_updater(updater):
     ----------
     updater: functon
     """
-    _updater_proto = ctypes.CFUNCTYPE(None, NArrayHandle, NArrayHandle)
+    _updater_proto = ctypes.CFUNCTYPE(
+        None, ctypes.c_int, NArrayHandle, NArrayHandle)
     global _updater_func
     _updater_func = _updater_proto(_updater_wrapper(updater))
     check_call(_LIB.MXKVStoreSetUpdater(_updater_func))
