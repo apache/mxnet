@@ -3,7 +3,9 @@
 """ KVStore in mxnet """
 from __future__ import absolute_import
 import ctypes
+import warnings
 from .narray import NArray
+from .narray import empty
 from .base import _LIB
 from .base import check_call, c_array, NArrayHandle
 
@@ -67,18 +69,35 @@ def push(keys, values):
     num, ckeys, cvals = _ctype_key_value(keys, values)
     check_call(_LIB.MXKVStorePush(num, ckeys, cvals))
 
-def pull(keys, values):
+def pull(keys, output=None, shape=None, ctx=None):
     """ Pull the value from the store
 
     Parameters
     ----------
     keys: int or list of int
         A single key or a list of keys
-    values: NArray or list of NArray
+    output: NArray or list of NArray
         A single value of a list of values
     """
-    num, ckeys, cvals = _ctype_key_value(keys, values)
-    check_call(_LIB.MXKVStorePull(num, ckeys, cvals))
+    if output is None:
+        assert(isinstance(keys, int))
+        assert(shape is not None)
+        assert(ctx is not None)
+        output = [empty(shape, c) for c in ctx]
+    else:
+        if shape is not None:
+            warnings.warn('ignore shape', RuntimeWarning)
+        if ctx is not None:
+            warnings.warn('ignore ctx', RuntimeWarning)
+
+    num, ckeys, cvals = _ctype_key_value(keys, output)
+    print num
+
+    return output
+    # print keys, output, shape, ctx
+    # num, ckeys, cvals = _ctype_key_value(keys, values)
+    # check_call(_LIB.MXKVStorePull(num, ckeys, cvals))
+
 
 def _updater_wrapper(updater):
     """ a wrapper for the user-defined handle """
