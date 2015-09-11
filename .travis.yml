@@ -10,6 +10,7 @@ env:
     - TASK=build CXX=g++
     - TASK=python CXX=g++
     - TASK=python3 CXX=g++
+    - TASK=python_naive CXX=g++
     - TASK=unittest_gtest CXX=g++
 
 # dependent apt packages

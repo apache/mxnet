@@ -13,11 +13,13 @@
 #include <mxnet/operator.h>
 #include <mxnet/io.h>
 #include <mxnet/c_api.h>
+#include <mxnet/kvstore.h>
 #include <vector>
 #include <sstream>
 #include <string>
 #include <mutex>
 #include <memory>
+#include <functional>
 
 // macro hanlding for threadlocal variables
 #ifdef __GNUC__
@@ -333,7 +335,7 @@ int MXNArrayListLoad(const char* fname,
 
 int MXNArrayWaitAll() {
   API_BEGIN();
-  DAGEngine::Get()->WaitForAll();
+  Engine::Get()->WaitForAll();
   API_END();
 }
 
@@ -840,5 +842,67 @@ int MXDataIterGetData(DataIterHandle handle, NArrayHandle *out) {
   API_BEGIN();
   DataBatch db = static_cast<IIterator<DataBatch>* >(handle)->Value();
   *out = new NArray(db.data[0], 0);
+  API_END();
+}
+
+int MXKVStoreInit(int num, int* keys, NArrayHandle* vals) {
+  API_BEGIN();
+  std::vector<int> v_keys(num);
+  std::vector<NArray> v_vals(num);
+  for (int i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+    v_vals[i] = *static_cast<NArray*>(vals[i]);
+  }
+  KVStore::Get()->Init(v_keys, v_vals);
+  API_END();
+}
+
+int MXKVStorePush(int num, int* keys, NArrayHandle* vals) {
+  API_BEGIN();
+  std::vector<int> v_keys(num);
+  std::vector<NArray> v_vals(num);
+  for (int i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+    v_vals[i] = *static_cast<NArray*>(vals[i]);
+  }
+  KVStore::Get()->Push(v_keys, v_vals);
+  API_END();
+}
+
+int MXKVStorePull(int num, int* keys, NArrayHandle* vals) {
+  API_BEGIN();
+  std::vector<int> v_keys(num);
+  std::vector<NArray*> v_vals(num);
+  for (int i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+    v_vals[i] = static_cast<NArray*>(vals[i]);
+  }
+  KVStore::Get()->Pull(v_keys, v_vals);
+  API_END();
+}
+
+int MXKVStoreStart() {
+  API_BEGIN();
+  KVStore::Get()->Start();
+  API_END();
+}
+
+int MXKVStoreStop() {
+  API_BEGIN();
+  KVStore::Get()->Stop();
+  API_END();
+}
+
+int MXKVStoreSetUpdater(MXKVStoreUpdater updater) {
+  API_BEGIN();
+  auto updt = [updater](int key, const NArray& recv, NArray* local) {
+    NArray* recv_copy = new NArray();
+    *recv_copy = recv;
+    NArray* local_copy = new NArray();
+    *local_copy = *local;
+    updater(key, recv_copy, local_copy);
+  };
+
+  KVStore::Get()->set_updater(updt);
   API_END();
 }

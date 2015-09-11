@@ -25,12 +25,18 @@ template<typename OP>
 inline void BinaryOp(const NArray &lhs,
                      const NArray &rhs,
                      NArray *out) {
-  CHECK(lhs.ctx() == rhs.ctx()) << "operands context mismatch";
+  // no check if both of them are on cpu
+  if (lhs.ctx().dev_mask != cpu::kDevMask || rhs.ctx().dev_mask != cpu::kDevMask)
+    CHECK(lhs.ctx() == rhs.ctx()) << "operands context mismatch";
   // if out is none, allocate space
   if (out->is_none()) {
     *out = NArray(OP::GetShape(lhs.shape(), rhs.shape()), lhs.ctx(), true);
   } else {
-    CHECK(out->ctx() == lhs.ctx()) << "target context mismatch";
+    // no check if both of them are on cpu
+    if (lhs.ctx().dev_mask != cpu::kDevMask ||
+        out->ctx().dev_mask != cpu::kDevMask) {
+      CHECK(out->ctx() == lhs.ctx()) << "target context mismatch";
+    }
     CHECK(out->shape() == OP::GetShape(lhs.shape(), rhs.shape()))
         << "target shape mismatch";
   }
@@ -45,13 +51,13 @@ inline void BinaryOp(const NArray &lhs,
         narray::Eval<cpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
       };
       if (lhs.ptr_->var == ret.ptr_->var && rhs.ptr_->var == ret.ptr_->var) {
-        DAGEngine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
+        Engine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
       } else if (lhs.ptr_->var == ret.ptr_->var) {
-        DAGEngine::Get()->Push(func, lhs.ctx(), {rhs.ptr_->var}, {ret.ptr_->var});
+        Engine::Get()->Push(func, lhs.ctx(), {rhs.ptr_->var}, {ret.ptr_->var});
       } else if (rhs.ptr_->var == ret.ptr_->var) {
-        DAGEngine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var}, {ret.ptr_->var});
+        Engine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var}, {ret.ptr_->var});
       } else {
-        DAGEngine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var, rhs.ptr_->var}, {ret.ptr_->var});
+        Engine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var, rhs.ptr_->var}, {ret.ptr_->var});
       }
       break;
     }
@@ -63,13 +69,13 @@ inline void BinaryOp(const NArray &lhs,
         narray::Eval<gpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
       };
       if (lhs.ptr_->var == ret.ptr_->var && rhs.ptr_->var == ret.ptr_->var) {
-        DAGEngine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
+        Engine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
       } else if (lhs.ptr_->var == ret.ptr_->var) {
-        DAGEngine::Get()->Push(func, lhs.ctx(), {rhs.ptr_->var}, {ret.ptr_->var});
+        Engine::Get()->Push(func, lhs.ctx(), {rhs.ptr_->var}, {ret.ptr_->var});
       } else if (rhs.ptr_->var == ret.ptr_->var) {
-        DAGEngine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var}, {ret.ptr_->var});
+        Engine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var}, {ret.ptr_->var});
       } else {
-        DAGEngine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var, rhs.ptr_->var}, {ret.ptr_->var});
+        Engine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var, rhs.ptr_->var}, {ret.ptr_->var});
       }
       break;
     }
@@ -89,7 +95,7 @@ inline void SetValueOp(const real_t &rhs, NArray *out) {
         TBlob tmp = ret.data();
         narray::Eval<cpu>(rhs, &tmp, ctx);
       };
-      DAGEngine::Get()->Push(func, ret.ctx(), {}, {ret.ptr_->var});
+      Engine::Get()->Push(func, ret.ctx(), {}, {ret.ptr_->var});
       break;
     }
 #if MXNET_USE_CUDA
@@ -99,7 +105,7 @@ inline void SetValueOp(const real_t &rhs, NArray *out) {
         TBlob tmp = ret.data();
         narray::Eval<gpu>(rhs, &tmp, ctx);
       };
-      DAGEngine::Get()->Push(func, ret.ctx(), {}, {ret.ptr_->var});
+      Engine::Get()->Push(func, ret.ctx(), {}, {ret.ptr_->var});
       break;
     }
 #endif
@@ -135,9 +141,9 @@ inline void ScalarOp(const NArray &lhs,
         narray::Eval<cpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
       };
       if (lhs.ptr_->var == ret.ptr_->var) {
-        DAGEngine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
+        Engine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
       } else {
-        DAGEngine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var}, {ret.ptr_->var});
+        Engine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var}, {ret.ptr_->var});
       }
       break;
     }
@@ -149,9 +155,9 @@ inline void ScalarOp(const NArray &lhs,
         narray::Eval<gpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
       };
       if (lhs.ptr_->var == ret.ptr_->var) {
-        DAGEngine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
+        Engine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
       } else {
-        DAGEngine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var}, {ret.ptr_->var});
+        Engine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var}, {ret.ptr_->var});
       }
       break;
     }
@@ -170,7 +176,7 @@ void CopyFromTo(const NArray &from, NArray *to) {
   int a = from.ctx().dev_mask;
   int b = to->ctx().dev_mask;
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
-    DAGEngine::Get()->Push([from, ret](RunContext ctx) {
+    Engine::Get()->Push([from, ret](RunContext ctx) {
         ret.ptr_->CheckAndAlloc();
         TBlob tmp = ret.data();
         narray::Copy<cpu, cpu>(from.data(), &tmp,
@@ -178,7 +184,7 @@ void CopyFromTo(const NArray &from, NArray *to) {
       }, from.ctx(), {from.ptr_->var}, {ret.ptr_->var});
   } else if (a == cpu::kDevMask && b == gpu::kDevMask) {
 #if MXNET_USE_CUDA
-    DAGEngine::Get()->Push([from, ret](RunContext ctx) {
+    Engine::Get()->Push([from, ret](RunContext ctx) {
         ret.ptr_->CheckAndAlloc();
         TBlob tmp = ret.data();
         narray::Copy<cpu, gpu>(from.data(), &tmp,
@@ -189,7 +195,7 @@ void CopyFromTo(const NArray &from, NArray *to) {
 #endif
   } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
 #if MXNET_USE_CUDA
-    DAGEngine::Get()->Push([from, ret](RunContext ctx) {
+    Engine::Get()->Push([from, ret](RunContext ctx) {
         ret.ptr_->CheckAndAlloc();
         TBlob tmp = ret.data();
         narray::Copy<gpu, cpu>(from.data(), &tmp,
@@ -200,7 +206,7 @@ void CopyFromTo(const NArray &from, NArray *to) {
 #endif
   } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
 #if MXNET_USE_CUDA
-    DAGEngine::Get()->Push([from, ret](RunContext ctx) {
+    Engine::Get()->Push([from, ret](RunContext ctx) {
         ret.ptr_->CheckAndAlloc();
         TBlob tmp = ret.data();
         narray::Copy<gpu, gpu>(from.data(), &tmp,

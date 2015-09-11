@@ -5,9 +5,10 @@
  */
 #ifndef MXNET_CONTEXT_H_
 #define MXNET_CONTEXT_H_
-
 #include <dmlc/io.h>
 #include <dmlc/type_traits.h>
+#include <sstream>
+#include <string>
 #include "./base.h"
 
 namespace mxnet {
@@ -61,6 +62,16 @@ struct Context {
     if (strm->Read(&dev_id, sizeof(int32_t)) != sizeof(int32_t)) return false;
     return true;
   }
+
+  /*! \brief the maximal device mask, cpu = 1, gpu = 2 */
+  static const int32_t kMaxDevMask = 2;
+
+  /*!
+   * \brief A dedicate ID for pinned cpu memory.
+   *
+   * Any normal CPU ID should be less than this number.
+   */
+  static const int32_t kPinnedMemoryID = 16;
 };
 
 /*!
