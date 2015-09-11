@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <bitset>
 #include <vector>
+#include <utility>
 #include <algorithm>
 #include "mxnet/kvstore.h"
 
@@ -64,7 +65,6 @@ class KVStoreLocal : public KVStore {
       CHECK(it != local_.end()) << "key " << key << " has not been inited";
       updater_(key, MergePushValue(key, grouped_vals[i]), &it->second);
     }
-
   }
 
   virtual void Pull(const std::vector<int>& keys,
@@ -92,8 +92,8 @@ class KVStoreLocal : public KVStore {
                     std::vector<int>* uniq_keys,
                     std::vector<std::vector<V> >* grouped_vals) {
     CHECK_EQ(keys.size(), values.size());
-    // TODO check if already sorted as an optimization
-    using Idx = std::pair<int,int>;
+    // TODO(mli) check if already sorted as an optimization
+    using Idx = std::pair<int, int>;
     std::vector<Idx> idx(keys.size());
     for (size_t i = 0; i < keys.size(); ++i) {
       idx[i].first = keys[i]; idx[i].second = i;

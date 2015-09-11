@@ -1,11 +1,9 @@
 # coding: utf-8
-# pylint: disable=invalid-name, global-variable-undefined,
+# pylint: disable=invalid-name, global-statement
 """ KVStore in mxnet """
 from __future__ import absolute_import
 import ctypes
-import warnings
 from .narray import NArray
-from .narray import empty
 from .base import _LIB
 from .base import check_call, c_array, NArrayHandle
 
