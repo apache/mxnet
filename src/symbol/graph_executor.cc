@@ -169,7 +169,6 @@ inline std::vector<std::pair<T, T> > GraphExecutor::GetInplaceOption(
 inline GraphExecutor::OpExecEntry
 GraphExecutor::GetOpExecEntry(uint32_t nid) {
   OpNode& op_node = op_nodes_[nid];
-  Operator *op = op_node.op.get();
   std::vector<OpReqType> req;
   std::vector<TBlob> in_data, out_data, aux_states;
   in_data.reserve(graph_.nodes[nid].inputs.size());
@@ -199,12 +198,28 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
     }
   }
 
+  // start setup exec function.
+  Operator* op = op_node.op.get();
   OpContext* op_ctx_ptr = &op_node.op_ctx;
-  exec.exec_fun = [op, op_ctx_ptr, in_data, req, out_data, aux_states] (RunContext ctx) {
+  bool is_gpu = op_node.ctx.dev_mask == gpu::kDevMask;
+  exec.exec_fun = [op, is_gpu, op_ctx_ptr, in_data, req, out_data, aux_states] (RunContext ctx) {
     op_ctx_ptr->run_ctx = ctx;
     op->Forward(*op_ctx_ptr, in_data, req, out_data, aux_states);
+    if (is_gpu) {
+#if MXNET_USE_CUDA
+      // Wait GPU kernel to finish.
+      ctx.get_stream<gpu>()->Wait();
+#else
+      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+#endif
+    }
   };
   return exec;
+}
+
+GraphExecutor::~GraphExecutor() {
+  // need to destruct after all previously issued operations are finished.
+  Engine::Get()->WaitForAll();
 }
 
 void GraphExecutor::InitGraph(Symbol symbol, Context ctx, bool need_backward) {

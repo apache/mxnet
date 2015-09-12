@@ -33,6 +33,9 @@
 #define MXNET_USE_CUDNN MSHADOW_USE_CUDNN
 #endif
 
+/*! \brief Error message for using gpu when MXNET_USE_CUDA==0 */
+#define MXNET_GPU_NOT_ENABLED_ERROR  "GPU is not enabled"
+
 /*! \brief namespace of mxnet */
 namespace mxnet {
 /*! \brief mxnet cpu */
@@ -49,7 +52,6 @@ typedef mshadow::TShape TShape;
 /*! \brief storage container type */
 typedef mshadow::TBlob TBlob;
 }  // namespace mxnet
-
 
 //! \cond Doxygen_Suppress
 namespace dmlc {

@@ -56,7 +56,7 @@ class GraphStorageAllocator {
    */
   NArray Get(StorageID id, TShape shape);
 
- private:
+ protected:
   /*! \brief internal storage entry */
   struct StorageEntry {
     /*! \brief id of the storage */

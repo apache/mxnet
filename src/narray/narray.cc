@@ -5,6 +5,7 @@
  */
 #include <dmlc/logging.h>
 #include <dmlc/registry.h>
+#include <mxnet/base.h>
 #include <mxnet/narray.h>
 #include <mshadow/tensor.h>
 #include "./narray_function.h"
@@ -42,45 +43,34 @@ inline void BinaryOp(const NArray &lhs,
   }
   // important: callback must always capture by value
   NArray ret = *out;
+  // get the const variables
+  std::vector<Engine::VarHandle> const_vars;
+  if (lhs.ptr_->var != ret.ptr_->var) const_vars.push_back(lhs.ptr_->var);
+  if (rhs.ptr_->var != ret.ptr_->var) const_vars.push_back(rhs.ptr_->var);
+
   // redirect everything to mshadow operations
   switch (lhs.ctx().dev_mask) {
     case cpu::kDevMask: {
-      auto func = [lhs, rhs, ret](RunContext ctx) {
-        ret.ptr_->CheckAndAlloc();
-        TBlob tmp = ret.data();
-        narray::Eval<cpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
-      };
-      if (lhs.ptr_->var == ret.ptr_->var && rhs.ptr_->var == ret.ptr_->var) {
-        Engine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
-      } else if (lhs.ptr_->var == ret.ptr_->var) {
-        Engine::Get()->Push(func, lhs.ctx(), {rhs.ptr_->var}, {ret.ptr_->var});
-      } else if (rhs.ptr_->var == ret.ptr_->var) {
-        Engine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var}, {ret.ptr_->var});
-      } else {
-        Engine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var, rhs.ptr_->var}, {ret.ptr_->var});
-      }
+      Engine::Get()->Push([lhs, rhs, ret](RunContext ctx) {
+          ret.ptr_->CheckAndAlloc();
+          TBlob tmp = ret.data();
+          narray::Eval<cpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
+        }, lhs.ctx(), const_vars, {ret.ptr_->var});
       break;
     }
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
-      auto func = [lhs, rhs, ret](RunContext ctx) {
-        ret.ptr_->CheckAndAlloc();
-        TBlob tmp = ret.data();
-        narray::Eval<gpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
-      };
-      if (lhs.ptr_->var == ret.ptr_->var && rhs.ptr_->var == ret.ptr_->var) {
-        Engine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
-      } else if (lhs.ptr_->var == ret.ptr_->var) {
-        Engine::Get()->Push(func, lhs.ctx(), {rhs.ptr_->var}, {ret.ptr_->var});
-      } else if (rhs.ptr_->var == ret.ptr_->var) {
-        Engine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var}, {ret.ptr_->var});
-      } else {
-        Engine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var, rhs.ptr_->var}, {ret.ptr_->var});
-      }
+      Engine::Get()->Push([lhs, rhs, ret](RunContext ctx) {
+          ret.ptr_->CheckAndAlloc();
+          TBlob tmp = ret.data();
+          narray::Eval<gpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
+          // Wait GPU kernel to complete
+          ctx.get_stream<gpu>()->Wait();
+        }, lhs.ctx(), const_vars, {ret.ptr_->var});
       break;
     }
 #endif
-    default: LOG(FATAL) << "GPU is not enabled";
+    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
   }
 }
 
@@ -90,26 +80,26 @@ inline void SetValueOp(const real_t &rhs, NArray *out) {
   NArray ret = *out;
   switch (ret.ctx().dev_mask) {
     case cpu::kDevMask: {
-      auto func = [rhs, ret](RunContext ctx) {
-        ret.ptr_->CheckAndAlloc();
-        TBlob tmp = ret.data();
-        narray::Eval<cpu>(rhs, &tmp, ctx);
-      };
-      Engine::Get()->Push(func, ret.ctx(), {}, {ret.ptr_->var});
+      Engine::Get()->Push([rhs, ret](RunContext ctx) {
+          ret.ptr_->CheckAndAlloc();
+          TBlob tmp = ret.data();
+          narray::Eval<cpu>(rhs, &tmp, ctx);
+        }, ret.ctx(), {}, {ret.ptr_->var});
       break;
     }
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
-      auto func = [rhs, ret](RunContext ctx) {
-        ret.ptr_->CheckAndAlloc();
-        TBlob tmp = ret.data();
-        narray::Eval<gpu>(rhs, &tmp, ctx);
-      };
-      Engine::Get()->Push(func, ret.ctx(), {}, {ret.ptr_->var});
+      Engine::Get()->Push([rhs, ret](RunContext ctx) {
+          ret.ptr_->CheckAndAlloc();
+          TBlob tmp = ret.data();
+          narray::Eval<gpu>(rhs, &tmp, ctx);
+          // Wait GPU kernel to complete
+          ctx.get_stream<gpu>()->Wait();
+        }, ret.ctx(), {}, {ret.ptr_->var});
       break;
     }
 #endif
-    default: LOG(FATAL) << "GPU is not enabled";
+    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
   }
 }
 /*!
@@ -124,45 +114,40 @@ inline void ScalarOp(const NArray &lhs,
                      const real_t &rhs,
                      NArray *out) {
   if (out->is_none()) {
-    *out = NArray(OP::GetShape(lhs.shape(), lhs.shape()), lhs.ctx(), true);
+    *out = NArray(lhs.shape(), lhs.ctx(), true);
   } else {
     CHECK(out->ctx() == lhs.ctx()) << "target context mismatch";
-    CHECK(out->shape() == OP::GetShape(lhs.shape(), lhs.shape()))
-        << "target shape mismatch";
+    CHECK(out->shape() == lhs.shape()) << "target shape mismatch";
   }
   // important: callback must always capture by value
   NArray ret = *out;
+  // get the const variables
+  std::vector<Engine::VarHandle> const_vars;
+  if (lhs.ptr_->var != ret.ptr_->var) const_vars.push_back(lhs.ptr_->var);
+
   // redirect everything to mshadow operations
   switch (lhs.ctx().dev_mask) {
     case cpu::kDevMask: {
-      auto func = [lhs, rhs, ret](RunContext ctx) {
-        ret.ptr_->CheckAndAlloc();
-        TBlob tmp = ret.data();
-        narray::Eval<cpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
-      };
-      if (lhs.ptr_->var == ret.ptr_->var) {
-        Engine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
-      } else {
-        Engine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var}, {ret.ptr_->var});
-      }
+      Engine::Get()->Push([lhs, rhs, ret](RunContext ctx) {
+          ret.ptr_->CheckAndAlloc();
+          TBlob tmp = ret.data();
+          narray::Eval<cpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
+        }, lhs.ctx(), const_vars, {ret.ptr_->var});
       break;
     }
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
-      auto func = [lhs, rhs, ret](RunContext ctx) {
-        ret.ptr_->CheckAndAlloc();
-        TBlob tmp = ret.data();
-        narray::Eval<gpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
-      };
-      if (lhs.ptr_->var == ret.ptr_->var) {
-        Engine::Get()->Push(func, lhs.ctx(), {}, {ret.ptr_->var});
-      } else {
-        Engine::Get()->Push(func, lhs.ctx(), {lhs.ptr_->var}, {ret.ptr_->var});
-      }
+      Engine::Get()->Push([lhs, rhs, ret](RunContext ctx) {
+          ret.ptr_->CheckAndAlloc();
+          TBlob tmp = ret.data();
+          narray::Eval<gpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
+          // Wait GPU kernel to complete
+          ctx.get_stream<gpu>()->Wait();
+        }, lhs.ctx(), const_vars, {ret.ptr_->var});
       break;
     }
 #endif
-    default: LOG(FATAL) << "GPU is not enabled";
+    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
   }
 }
 
@@ -175,48 +160,52 @@ void CopyFromTo(const NArray &from, NArray *to) {
   NArray ret = *to;
   int a = from.ctx().dev_mask;
   int b = to->ctx().dev_mask;
+
+  std::vector<Engine::VarHandle> const_vars;
+  if (from.ptr_->var != ret.ptr_->var) const_vars.push_back(from.ptr_->var);
+
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     Engine::Get()->Push([from, ret](RunContext ctx) {
         ret.ptr_->CheckAndAlloc();
         TBlob tmp = ret.data();
         narray::Copy<cpu, cpu>(from.data(), &tmp,
                                from.ctx(), ret.ctx(), ctx);
-      }, from.ctx(), {from.ptr_->var}, {ret.ptr_->var});
-  } else if (a == cpu::kDevMask && b == gpu::kDevMask) {
-#if MXNET_USE_CUDA
-    Engine::Get()->Push([from, ret](RunContext ctx) {
-        ret.ptr_->CheckAndAlloc();
-        TBlob tmp = ret.data();
-        narray::Copy<cpu, gpu>(from.data(), &tmp,
-                               from.ctx(), ret.ctx(), ctx);
-      }, ret.ctx(), {from.ptr_->var}, {ret.ptr_->var});
-#else
-    LOG(FATAL) << "GPU is not enabled";
-#endif
-  } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
-#if MXNET_USE_CUDA
-    Engine::Get()->Push([from, ret](RunContext ctx) {
-        ret.ptr_->CheckAndAlloc();
-        TBlob tmp = ret.data();
-        narray::Copy<gpu, cpu>(from.data(), &tmp,
-                               from.ctx(), ret.ctx(), ctx);
-      }, from.ctx(), {from.ptr_->var}, {ret.ptr_->var});
-#else
-    LOG(FATAL) << "GPU is not enabled";
-#endif
-  } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
-#if MXNET_USE_CUDA
-    Engine::Get()->Push([from, ret](RunContext ctx) {
-        ret.ptr_->CheckAndAlloc();
-        TBlob tmp = ret.data();
-        narray::Copy<gpu, gpu>(from.data(), &tmp,
-                               from.ctx(), ret.ctx(), ctx);
-      }, from.ctx(), {from.ptr_->var}, {ret.ptr_->var});
-#else
-    LOG(FATAL) << "GPU is not enabled";
-#endif
+      }, from.ctx(), const_vars, {ret.ptr_->var});
   } else {
-    LOG(FATAL) << "unknown device mask";
+#if MXNET_USE_CUDA
+    if (a == cpu::kDevMask && b == gpu::kDevMask) {
+      Engine::Get()->Push([from, ret](RunContext ctx) {
+          ret.ptr_->CheckAndAlloc();
+          TBlob tmp = ret.data();
+          narray::Copy<cpu, gpu>(from.data(), &tmp,
+                                 from.ctx(), ret.ctx(), ctx);
+          // Wait GPU kernel to complete
+          ctx.get_stream<gpu>()->Wait();
+        }, ret.ctx(), const_vars, {ret.ptr_->var});
+    } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
+      Engine::Get()->Push([from, ret](RunContext ctx) {
+          ret.ptr_->CheckAndAlloc();
+          TBlob tmp = ret.data();
+          narray::Copy<gpu, cpu>(from.data(), &tmp,
+                                 from.ctx(), ret.ctx(), ctx);
+          // Wait GPU kernel to complete
+          ctx.get_stream<gpu>()->Wait();
+        }, from.ctx(), const_vars, {ret.ptr_->var});
+    } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
+      Engine::Get()->Push([from, ret](RunContext ctx) {
+          ret.ptr_->CheckAndAlloc();
+          TBlob tmp = ret.data();
+          narray::Copy<gpu, gpu>(from.data(), &tmp,
+                                 from.ctx(), ret.ctx(), ctx);
+          // Wait GPU kernel to complete
+          ctx.get_stream<gpu>()->Wait();
+        }, from.ctx(), const_vars, {ret.ptr_->var});
+    } else {
+      LOG(FATAL) << "unknown device mask";
+    }
+#else
+    LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+#endif
   }
 }
 

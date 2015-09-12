@@ -19,7 +19,12 @@ namespace mxnet {
  */
 class KVStoreLocal : public KVStore {
  public:
-  KVStoreLocal() : pinned_ctx_(cpu::kDevMask, Context::kPinnedMemoryID) {
+  KVStoreLocal() {
+#if MXNET_USE_CUDA
+    pinned_ctx_ = Context(cpu::kDevMask, Context::kPinnedMemoryID);
+#else
+    pinned_ctx_ = Context(cpu::kDevMask, 0);
+#endif
     Clear();
   }
 
@@ -44,11 +49,7 @@ class KVStoreLocal : public KVStore {
     for (size_t i = 0; i < keys.size(); ++i) {
       CHECK(local_.find(keys[i]) == local_.end())
           << "duplicate init of key " << keys[i];
-#if MXNET_USE_CUDA
       local_.insert({keys[i], values[i].Copy(pinned_ctx_)});
-#else
-      local_.insert({keys[i], values[i].Copy(local_ctx_)});
-#endif  // MXNET_USE_CUDA
     }
   }
 
@@ -121,7 +122,7 @@ class KVStoreLocal : public KVStore {
     CHECK(val.size());
     auto& buf = merge_buf_[key];
     if (buf.merged.is_none()) {
-      buf.merged = val[0].Copy(local_ctx_);
+      buf.merged = val[0].Copy(pinned_ctx_);
     } else {
       CopyFromTo(val[0], &buf.merged);
     }
@@ -167,7 +168,6 @@ class KVStoreLocal : public KVStore {
   /// \brief local storage
   std::unordered_map<int, NArray> local_;
 
-  Context local_ctx_;
   Context pinned_ctx_;
 
   Updater updater_;

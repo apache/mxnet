@@ -83,6 +83,15 @@ struct RunContext {
    * \brief the stream of the device, can be NULL or Stream<gpu>* in GPU mode
    */
   void *stream;
+  /*!
+   * \brief get mshadow stream from Context
+   * \return the mshadow stream
+   * \tparam xpu the device type of the stream
+   */
+  template<typename xpu>
+  inline mshadow::Stream<xpu>* get_stream() const {
+    return static_cast<mshadow::Stream<xpu>*>(stream);
+  }
 };
 
 /*!
