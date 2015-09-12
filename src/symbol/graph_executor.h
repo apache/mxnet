@@ -19,7 +19,7 @@ namespace mxnet {
  */
 class GraphExecutor : public Executor {
  public:
-  virtual ~GraphExecutor() {}
+  virtual ~GraphExecutor();
   virtual void Forward(bool is_train);
   virtual void Backward(const std::vector<NArray> &head_grads);
   virtual const std::vector<NArray> &heads() const {

@@ -53,7 +53,7 @@ struct OpContext {
    */
   template<typename xpu>
   inline mshadow::Stream<xpu>* get_stream() const {
-    return static_cast<mshadow::Stream<xpu>*>(run_ctx.stream);
+    return run_ctx.get_stream<xpu>();
   }
 };
 
