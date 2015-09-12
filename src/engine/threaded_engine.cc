@@ -11,7 +11,6 @@
 #include "../common/cuda_utils.h"
 
 namespace mxnet {
-
 namespace engine {
 
 #if ENGINE_DEBUG
@@ -142,8 +141,7 @@ ThreadedEngine::~ThreadedEngine() noexcept(false) {
 }
 
 ThreadedVar* ThreadedEngine::NewVariable() {
-  auto ret = ThreadedVar::New(VersionedVarBlock::New());
-  return ret;
+  return ThreadedVar::New(VersionedVarBlock::New());
 }
 
 ThreadedOpr* ThreadedEngine::NewOperator(
@@ -195,16 +193,18 @@ ThreadedOpr* ThreadedEngine::NewOperator(
 
 void ThreadedEngine::DeleteOperator(OprHandle op) {
   auto&& threaded_opr = ThreadedOpr::CastFromBase(op);
-  std::vector<VarHandle> deps{};
+  std::vector<VarHandle> deps;
   deps.reserve(threaded_opr->const_vars.size() +
                threaded_opr->mutable_vars.size());
-  deps.insert(deps.end(), threaded_opr->const_vars.begin(),
+  deps.insert(deps.end(),
+              threaded_opr->const_vars.begin(),
               threaded_opr->const_vars.end());
-  deps.insert(deps.end(), threaded_opr->mutable_vars.begin(),
+  deps.insert(deps.end(),
+              threaded_opr->mutable_vars.begin(),
               threaded_opr->mutable_vars.end());
-  auto&& func =
-      [threaded_opr](RunContext) { ThreadedOpr::Delete(threaded_opr); };
-  Push(func, Context{}, {}, deps, FnProperty::kAsync);
+  this->PushSync([threaded_opr](RunContext) {
+      ThreadedOpr::Delete(threaded_opr);
+    }, Context(), {}, deps, FnProperty::kAsync);
 }
 
 void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
@@ -232,17 +232,6 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
   }
 }
 
-void ThreadedEngine::Push(Fn exec_fun, Context exec_ctx,
-                          std::vector<VarHandle> const& const_vars,
-                          std::vector<VarHandle> const& mutable_vars,
-                          FnProperty prop) {
-  auto f = [exec_fun](RunContext ctx, Callback on_complete) {
-    exec_fun(ctx);
-    on_complete();
-  };
-  PushAsync(f, exec_ctx, const_vars, mutable_vars, prop);
-}
-
 void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
                                std::vector<VarHandle> const& const_vars,
                                std::vector<VarHandle> const& mutable_vars,
@@ -252,34 +241,29 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
   Push(opr, exec_ctx);
 }
 
-void ThreadedEngine::DeleteVariable(Fn delete_fn, Context exec_ctx,
+void ThreadedEngine::DeleteVariable(SyncFn delete_fn,
+                                    Context exec_ctx,
                                     VarHandle var) {
-  auto&& threaded_var = ThreadedVar::CastFromBase(var);
-  auto&& func = [delete_fn, threaded_var](RunContext ctx) {
-    /*!
-     * Mark variable as orphan, so during `ThreadedEngine::OnComplete` it could
-     * be recycled.
-     */
-    threaded_var->SetToDelete();
-    delete_fn(ctx);
-  };
-  Push(func, exec_ctx, {}, {var}, FnProperty::kAsync);
+  ThreadedVar* threaded_var = ThreadedVar::CastFromBase(var);
+  this->PushSync([delete_fn, threaded_var](RunContext ctx) {
+      // Mark variable as orphan,
+      // so during `ThreadedEngine::OnComplete` it could be recycled.
+      threaded_var->SetToDelete();
+      delete_fn(ctx);
+    }, exec_ctx, {}, {var}, FnProperty::kAsync);
 }
 
 void ThreadedEngine::WaitForVar(VarHandle var) {
-  auto&& threaded_var = ThreadedVar::CastFromBase(var);
-  if (threaded_var->ready_to_read()) {
-    return;
-  }
+  ThreadedVar* threaded_var = ThreadedVar::CastFromBase(var);
+  if (threaded_var->ready_to_read()) return;
   {
     std::unique_lock<std::mutex> lock{finished_m_};
     std::atomic<bool> done{false};
-    auto&& callback = [this, &done](RunContext) {
-      std::unique_lock<std::mutex> lock{finished_m_};
-      done.store(true);
-      finished_cv_.notify_all();
-    };
-    Push(callback, Context{}, {var}, {}, FnProperty::kNormal);
+    this->PushSync([this, &done](RunContext) {
+        std::unique_lock<std::mutex> lock{finished_m_};
+        done.store(true);
+        finished_cv_.notify_all();
+      }, Context{}, {var}, {}, FnProperty::kNormal);
     finished_cv_.wait(lock, [&done]() { return done.load(); });
   }
 }
@@ -289,16 +273,12 @@ void ThreadedEngine::WaitForAll() {
   finished_cv_.wait(lock, [this]() { return pending_.load() == 0; });
 }
 
-void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
-  /*!
-   * Mark complete for read variables.
-   */
+inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
+  // Mark complete for read variables
   for (auto&& i : threaded_opr->const_vars) {
     i->CompleteReadDependency([this](OprBlock* opr) { DoPushToQueue(opr); });
   }
-  /*!
-   * Mark complete for write variables.
-   */
+  // Mark complete for write variables.
   for (auto&& i : threaded_opr->mutable_vars) {
     bool to_delete = i->CompleteWriteDependency(
         [this](OprBlock* opr) { DoPushToQueue(opr); });
@@ -312,6 +292,10 @@ void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
       finished_cv_.notify_all();
     }
   }
+  // delte operator if it is temperory
+  if (threaded_opr->temporary) {
+    ThreadedOpr::Delete(threaded_opr);
+  }
 }
 
 void ThreadedEngine::ThreadWorker(
@@ -324,24 +308,20 @@ void ThreadedEngine::ThreadWorker(
 
 void ThreadedEngine::DoPushToQueue(OprBlock* opr_block) {
   switch (opr_block->opr->prop) {
-    case FnProperty::kIO:
+    case FnProperty::kCopy: {
       io_task_queue_.Push(opr_block);
       break;
-    default:
+    }
+    default: {
       task_queue_.Push(opr_block);
       break;
+    }
   }
 }
 
 void ThreadedEngine::DoExecute(OprBlock* opr_block) {
   assert(opr_block->wait.load() == 0);
-  auto threaded_opr = opr_block->opr;
-  auto callback = [this, threaded_opr]() {
-    OnComplete(threaded_opr);
-    if (threaded_opr->temporary) {
-      ThreadedOpr::Delete(threaded_opr);
-    }
-  };
+  ThreadedOpr* threaded_opr = opr_block->opr;
   if (opr_block->ctx.dev_mask == gpu::kDevMask) {
 #if MXNET_USE_CUDA
     CUDA_CALL(cudaSetDevice(opr_block->ctx.dev_id));
@@ -349,13 +329,17 @@ void ThreadedEngine::DoExecute(OprBlock* opr_block) {
     LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA
   }
-  auto&& rctx = opr_block->opr->prop == FnProperty::kIO
+  auto&& rctx = opr_block->opr->prop == FnProperty::kCopy
       ? streams_.GetIORunContext(opr_block->ctx)
       : streams_.GetRunContext(opr_block->ctx);
+  CallbackOnComplete callback = this->CreateCallback(
+      ThreadedEngine::OnComplete_, threaded_opr);
   threaded_opr->fn(rctx, callback);
   OprBlock::Delete(opr_block);
 }
 
+Engine *CreateThreadedEngine() {
+  return new ThreadedEngine();
+}
 }  // namespace engine
-
 }  // namespace mxnet

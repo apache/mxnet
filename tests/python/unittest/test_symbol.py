@@ -1,5 +1,5 @@
 import mxnet as mx
-import models
+from common import models
 
 def test_symbol_basic():
     mlist = []

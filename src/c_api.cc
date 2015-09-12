@@ -265,7 +265,7 @@ int MXNArrayWaitToWrite(NArrayHandle handle) {
   API_END();
 }
 
-const int kMXAPINArrayListMagic = 0x112;
+const uint64_t kMXAPINArrayListMagic = 0x112;
 
 int MXNArrayListSave(const char* fname,
                      mx_uint num_args,

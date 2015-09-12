@@ -118,7 +118,7 @@ class KVStore {
   /**
    * \brief the prototype of user-defined updater
    */
-  using Updater = std::function<void(int, const NArray&, NArray*)>;
+  typedef std::function<void(int, const NArray&, NArray*)> Updater;
 
   /*! \brief returns the default updater, which is ASSIGN */
   Updater DefaultUpdater() {

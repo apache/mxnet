@@ -12,7 +12,6 @@
 #include "mxnet/base.h"
 
 namespace mxnet {
-
 namespace engine {
 
 /*!

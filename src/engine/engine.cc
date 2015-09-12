@@ -1,28 +1,37 @@
 /*!
  * Copyright (c) 2015 by Contributors
+ * \file engine.cc
+ * \brief Implementation of engine.
  */
-#include "mxnet/engine.h"
-#include "engine_impl.h"
-#include "naive_engine.h"
-#include "threaded_engine.h"
+#include <mxnet/engine.h>
+#include <memory>
+#include <cstdlib>
+#include "./engine_impl.h"
 
 namespace mxnet {
-
-Engine::~Engine() noexcept(false) {}
+namespace engine {
+inline Engine* CreateEngine() {
+  const char *type = getenv("MXNET_ENGINE_TYPE");
+  const bool default_engine = (type == nullptr);
+  if (type == nullptr) type = "ThreadedEngine";
+  std::string stype = type;
+  Engine *ret = nullptr;
+  if (stype == "ThreadedEngine") {
+    ret = CreateThreadedEngine();
+  } else if (stype == "NaiveEngine") {
+    ret =  CreateNaiveEngine();
+  }
+  CHECK_NE(ret, nullptr)
+      << "Cannot find Eine " << type << " in registry";
+  if (!default_engine) {
+    LOG(INFO) << "MXNet start using engine: " << type;
+  }
+  return ret;
+}
+}  // namespace engine
 
 Engine* Engine::Get() {
-  /*!
-   * \brief Change specific engine to use.
-   */
-#ifdef MXNET_USE_THREADED_ENGINE
-  using EngineImplementation = engine::ThreadedEngine;
-#else  // MXNET_USE_THREADED_ENGINE
-#warning "Using naive engine.";
-  using EngineImplementation = engine::NaiveEngine;
-#endif  // MXNET_USE_THREADED_ENGINE
-
-  static EngineImplementation inst;
-  return &inst;
+  static std::unique_ptr<Engine> inst(engine::CreateEngine());
+  return inst.get();
 }
-
 }  // namespace mxnet

@@ -51,7 +51,7 @@ inline void BinaryOp(const NArray &lhs,
   // redirect everything to mshadow operations
   switch (lhs.ctx().dev_mask) {
     case cpu::kDevMask: {
-      Engine::Get()->Push([lhs, rhs, ret](RunContext ctx) {
+      Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
           narray::Eval<cpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
@@ -60,7 +60,7 @@ inline void BinaryOp(const NArray &lhs,
     }
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
-      Engine::Get()->Push([lhs, rhs, ret](RunContext ctx) {
+      Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
           narray::Eval<gpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
@@ -80,7 +80,7 @@ inline void SetValueOp(const real_t &rhs, NArray *out) {
   NArray ret = *out;
   switch (ret.ctx().dev_mask) {
     case cpu::kDevMask: {
-      Engine::Get()->Push([rhs, ret](RunContext ctx) {
+      Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
           narray::Eval<cpu>(rhs, &tmp, ctx);
@@ -89,7 +89,7 @@ inline void SetValueOp(const real_t &rhs, NArray *out) {
     }
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
-      Engine::Get()->Push([rhs, ret](RunContext ctx) {
+      Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
           narray::Eval<gpu>(rhs, &tmp, ctx);
@@ -128,7 +128,7 @@ inline void ScalarOp(const NArray &lhs,
   // redirect everything to mshadow operations
   switch (lhs.ctx().dev_mask) {
     case cpu::kDevMask: {
-      Engine::Get()->Push([lhs, rhs, ret](RunContext ctx) {
+      Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
           narray::Eval<cpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
@@ -137,7 +137,7 @@ inline void ScalarOp(const NArray &lhs,
     }
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
-      Engine::Get()->Push([lhs, rhs, ret](RunContext ctx) {
+      Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
           narray::Eval<gpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
@@ -165,7 +165,7 @@ void CopyFromTo(const NArray &from, NArray *to) {
   if (from.ptr_->var != ret.ptr_->var) const_vars.push_back(from.ptr_->var);
 
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
-    Engine::Get()->Push([from, ret](RunContext ctx) {
+    Engine::Get()->PushSync([from, ret](RunContext ctx) {
         ret.ptr_->CheckAndAlloc();
         TBlob tmp = ret.data();
         narray::Copy<cpu, cpu>(from.data(), &tmp,
@@ -174,7 +174,7 @@ void CopyFromTo(const NArray &from, NArray *to) {
   } else {
 #if MXNET_USE_CUDA
     if (a == cpu::kDevMask && b == gpu::kDevMask) {
-      Engine::Get()->Push([from, ret](RunContext ctx) {
+      Engine::Get()->PushSync([from, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
           narray::Copy<cpu, gpu>(from.data(), &tmp,
@@ -183,7 +183,7 @@ void CopyFromTo(const NArray &from, NArray *to) {
           ctx.get_stream<gpu>()->Wait();
         }, ret.ctx(), const_vars, {ret.ptr_->var});
     } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
-      Engine::Get()->Push([from, ret](RunContext ctx) {
+      Engine::Get()->PushSync([from, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
           narray::Copy<gpu, cpu>(from.data(), &tmp,
@@ -192,7 +192,7 @@ void CopyFromTo(const NArray &from, NArray *to) {
           ctx.get_stream<gpu>()->Wait();
         }, from.ctx(), const_vars, {ret.ptr_->var});
     } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
-      Engine::Get()->Push([from, ret](RunContext ctx) {
+      Engine::Get()->PushSync([from, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
           narray::Copy<gpu, gpu>(from.data(), &tmp,

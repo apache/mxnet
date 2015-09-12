@@ -12,13 +12,12 @@
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
-#include "engine_impl.h"
-#include "thread_pool.h"
-#include "stream_manager.h"
+#include "./engine_impl.h"
+#include "./thread_pool.h"
+#include "./stream_manager.h"
 #include "../common/object_pool.h"
 
 namespace mxnet {
-
 namespace engine {
 
 /*!
@@ -131,23 +130,13 @@ class ThreadedEngine final : public Engine {
                            FnProperty prop) override;
   void DeleteOperator(OprHandle op) override;
   void Push(OprHandle op, Context exec_ctx) override;
-  void Push(Fn exec_fun, Context exec_ctx,
-            std::vector<VarHandle> const& const_vars,
-            std::vector<VarHandle> const& mutable_vars,
-            FnProperty prop) override;
   void PushAsync(AsyncFn exec_fun, Context exec_ctx,
                  std::vector<VarHandle> const& const_vars,
                  std::vector<VarHandle> const& mutable_vars,
                  FnProperty prop) override;
-  void DeleteVariable(Fn delete_fn, Context exec_ctx, VarHandle var) override;
+  void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override;
   void WaitForVar(VarHandle var) override;
   void WaitForAll() override;
-  /*!
-   * \brief Callback on operation completion.
-   *
-   * On operation completion, this will trigger subsequent operations.
-   */
-  void OnComplete(ThreadedOpr* threaded_opr);
   /*!
    * \brief Worker.
    * \param task_queue Queue to work on.
@@ -155,16 +144,24 @@ class ThreadedEngine final : public Engine {
    * The method to pass to thread pool to parallelize.
    */
   void ThreadWorker(dmlc::ConcurrentBlockingQueue<OprBlock*>* task_queue);
+  /*!
+   * \brief Callback on operation completion.
+   *
+   * On operation completion, this will trigger subsequent operations.
+   */
+  inline void OnComplete(ThreadedOpr* threaded_opr);
+  // callback to the threaded engine
+  inline static void OnComplete_(Engine *engine, void *threaded_opr) {
+    static_cast<ThreadedEngine*>(engine)->OnComplete(
+        static_cast<ThreadedOpr*>(threaded_opr));
+  }
 
  private:
-  /*!
-   * \brief Concurrency for thread pool.
-   */
+  /*! \brief Concurrency for thread pool */
   static constexpr std::size_t kNumWorkingThreads = 16;
-  /*!
-   * \brief Constants for runtime context.
-   */
+  /*! \brief Maximum number of GPUs */
   static constexpr std::size_t kMaxNumGpus = 16;
+  /*!\brief number of streams allocated for each GPU */
   static constexpr std::size_t kNumStreamsPerGpu = 16;
   /*!
    * \brief Number of pending operations.
@@ -206,7 +203,5 @@ class ThreadedEngine final : public Engine {
 };  // class ThreadedEngine
 
 }  // namespace engine
-
 }  // namespace mxnet
-
 #endif  // MXNET_ENGINE_THREADED_ENGINE_H_
