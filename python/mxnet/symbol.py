@@ -440,12 +440,12 @@ class Symbol(object):
             args_grad_handle = c_array(NDArrayHandle, [None] * len(args))
         else:
             args_grad_handle = self._get_ndarray_handle('args_grad', args_grad,
-                                                       self.list_arguments(), True)
+                                                        self.list_arguments(), True)
 
         if aux_states is None:
             aux_states = []
         aux_args_handle = self._get_ndarray_handle('aux_states', aux_states,
-                                                  self.list_auxiliary_states(), False)
+                                                   self.list_auxiliary_states(), False)
 
         # setup requirements
         req_map = {'null' : 0, 'write' : 1, 'add' : 3}

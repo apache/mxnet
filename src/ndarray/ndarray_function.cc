@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file ndarray_function_cpu.cc
- * \brief
+ * \brief CPU Implementation of ndarray function.
  */
 
 // this will be invoked by gcc and compile CPU version

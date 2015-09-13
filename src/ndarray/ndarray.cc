@@ -1,14 +1,14 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file narray.cc
- * \brief narry module of mxnet
+ * \file ndarray.cc
+ * \brief ndarry module of mxnet
  */
 #include <dmlc/logging.h>
 #include <dmlc/registry.h>
 #include <mxnet/base.h>
-#include <mxnet/narray.h>
+#include <mxnet/ndarray.h>
 #include <mshadow/tensor.h>
-#include "./narray_function.h"
+#include "./ndarray_function.h"
 
 namespace dmlc {
 DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);

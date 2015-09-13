@@ -160,8 +160,8 @@ class NDArray(object):
             length = ctypes.c_ulong()
             cptr = ctypes.POINTER(ctypes.c_char)()
             check_call(_LIB.MXNDArraySaveRawBytes(self.handle,
-                                                 ctypes.byref(length),
-                                                 ctypes.byref(cptr)))
+                                                  ctypes.byref(length),
+                                                  ctypes.byref(cptr)))
             this['handle'] = ctypes2buffer(cptr, length.value)
         return this
 
@@ -425,10 +425,10 @@ def load(fname):
     handles = ctypes.POINTER(NDArrayHandle)()
     names = ctypes.POINTER(ctypes.c_char_p)()
     check_call(_LIB.MXNDArrayListLoad(c_str(fname),
-                                     ctypes.byref(out_size),
-                                     ctypes.byref(handles),
-                                     ctypes.byref(out_name_size),
-                                     ctypes.byref(names)))
+                                      ctypes.byref(out_size),
+                                      ctypes.byref(handles),
+                                      ctypes.byref(out_name_size),
+                                      ctypes.byref(names)))
     if out_name_size.value == 0:
         return [NDArray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
     else:
@@ -470,9 +470,9 @@ def save(fname, data):
             handles.append(val.handle)
         keys = None
     check_call(_LIB.MXNDArrayListSave(c_str(fname),
-                                     len(handles),
-                                     c_array(NDArrayHandle, handles),
-                                     keys))
+                                      len(handles),
+                                      c_array(NDArrayHandle, handles),
+                                      keys))
 
 
 # pylint: disable=too-many-locals, invalid-name
