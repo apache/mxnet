@@ -332,14 +332,19 @@ class Symbol(object):
             raise TypeError('Only Accept list of NArrays or dict of str->NArray')
         return c_array(NArrayHandle, arg_handles)
 
-    def simple_bind(self, ctx, args, grad_req='write'):
+    def simple_bind(self, ctx, grad_req='write', **kwargs):
         """Simply bind current symbol to get an executor
         Parameters
         ----------
         ctx : Context
             The device context the generated executor to run on.
-
-        args : list of NArray or dict of str->NArray
+        grad_req: string
+            {'write', 'add', 'null'}, or list of str or dict of str->str, optional
+            Specifies how we should update the gradient to the args_grad.
+            - 'write' means everytime gradient is write to specified args_grad NArray.
+            - 'add' means everytime gradient is add to the specified NArray.
+            - 'null' means no action is taken, the gradient may not be calculated.
+        kwargs : dict of str->NArray
             Input arguments to the symbol.
             - type is dict of str->NArray, then it maps the name of arguments
               to the corresponding NArray,
@@ -349,9 +354,7 @@ class Symbol(object):
         executor : mxnet.Executor
             The generated Executor
         """
-        if not isinstance(args, dict):
-            raise TypeError("args must be dict of str->NArray")
-        input_shapes = dict((name, arr.shape) for name, arr in args.items())
+        input_shapes = dict((name, arr.shape) for name, arr in kwargs.items())
         # pylint: disable=unused-variable
         arg_shapes, out_shapes, aux_shapes = self.infer_shape(**input_shapes)
         # pylint: enable=unused-variable
@@ -360,8 +363,8 @@ class Symbol(object):
         # alloc space
         arg_narrays = []
         for name, shape in zip(self.list_arguments(), arg_shapes):
-            if name in args:
-                arg_narrays.append(args[name])
+            if name in kwargs:
+                arg_narrays.append(kwargs[name])
             else:
                 arg_narrays.append(zeros(shape, ctx))
         # TODO(bing): specail treat input data grad
