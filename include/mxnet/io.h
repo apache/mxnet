@@ -68,7 +68,7 @@ struct DataBatch {
   mshadow::index_t num_batch_padd;
  public:
   /*! \brief content of dense data, if this DataBatch is dense */
-  std::vector<TBlob> data;
+  std::vector<NArray> data;
   /*! \brief extra data to be fed to the network */
   std::string extra_data;
  public:
