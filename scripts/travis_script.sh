@@ -29,22 +29,33 @@ fi
 
 if [ ${TASK} == "python" ]; then
     echo "USE_CUDA=0" >> config.mk
-    echo "USE_THREADED_ENGINE=1" >> config.mk
     make all || exit -1
-    nosetests tests/python || exit -1
+    export MXNET_ENGINE_TYPE=ThreadedEngine
+    nosetests tests/python/unittest || exit -1
+    nosetests tests/python/train || exit -1
 fi
 
 if [ ${TASK} == "python3" ]; then
     echo "USE_CUDA=0" >> config.mk
-    echo "USE_THREADED_ENGINE=1" >> config.mk
     make all || exit -1
-    nosetests3 tests/python || exit -1
+    export MXNET_ENGINE_TYPE=ThreadedEngine
+    nosetests tests/python/unittest || exit -1
+    nosetests tests/python/train || exit -1   
 fi
 
 if [ ${TASK} == "python_naive" ]; then
     echo "USE_CUDA=0" >> config.mk
     make all || exit -1
-    nosetests tests/python || exit -1
+    export MXNET_ENGINE_TYPE=NaiveEngine
+    nosetests tests/python/unittest || exit -1
+    nosetests tests/python/train || exit -1   
+fi
+
+if [ ${TASK} == "cpp_unittest" ]; then
+    echo "USE_CUDA=0" >> config.mk
+    make test || exit -1
+    export MXNET_ENGINE_TYPE=ThreadedEngine
+    tests/cpp/unittest || exit -1
 fi
 
 # TODO(yutian): add unittest back

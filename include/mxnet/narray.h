@@ -91,7 +91,7 @@ class NArray {
      * Push an empty mutable function to flush all preceding reads to the
      * variable.
      */
-    Engine::Get()->Push([](RunContext) {}, Context{}, {}, {ptr_->var});
+    Engine::Get()->PushSync([](RunContext) {}, Context{}, {}, {ptr_->var});
     Engine::Get()->WaitForVar(ptr_->var);
   }
   /*! \return the associated variable of the narray.*/

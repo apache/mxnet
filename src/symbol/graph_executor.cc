@@ -202,7 +202,8 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
   Operator* op = op_node.op.get();
   OpContext* op_ctx_ptr = &op_node.op_ctx;
   bool is_gpu = op_node.ctx.dev_mask == gpu::kDevMask;
-  exec.exec_fun = [op, is_gpu, op_ctx_ptr, in_data, req, out_data, aux_states] (RunContext ctx) {
+  exec.exec_fun = [op, is_gpu, op_ctx_ptr, in_data, req, out_data, aux_states]
+      (RunContext ctx, Engine::CallbackOnComplete on_complete) {
     op_ctx_ptr->run_ctx = ctx;
     op->Forward(*op_ctx_ptr, in_data, req, out_data, aux_states);
     if (is_gpu) {
@@ -213,6 +214,7 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
     }
+    on_complete();
   };
   return exec;
 }
@@ -472,18 +474,20 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     OpNode& opnode = op_nodes_[nid];
     opnode.op_ctx.is_train = is_train;
     if (opnode.cached_exec.exec_fun != nullptr) {
-      Engine::Get()->Push(
+      Engine::Get()->PushAsync(
           opnode.cached_exec.exec_fun,
           opnode.ctx,
           opnode.cached_exec.use_vars,
-          opnode.cached_exec.mutate_vars);
+          opnode.cached_exec.mutate_vars,
+          FnProperty::kNormal);
     } else {
       auto exec = GetOpExecEntry(nid);
-      Engine::Get()->Push(
+      Engine::Get()->PushAsync(
           exec.exec_fun,
           opnode.ctx,
           exec.use_vars,
-          exec.mutate_vars);
+          exec.mutate_vars,
+          FnProperty::kNormal);
     }
   }
 }

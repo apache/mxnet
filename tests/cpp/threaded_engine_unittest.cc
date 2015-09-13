@@ -1,18 +1,16 @@
-/*!
- * Copyright (c) 2015 by Contributors
- */
 #include <unistd.h>
 #include <dmlc/logging.h>
 #include <cstdio>
+#include <gtest/gtest.h>
 #include <thread>
 #include <chrono>
 #include <vector>
 
-#include "mxnet/engine.h"
+#include <mxnet/engine.h>
 
 void Foo(mxnet::RunContext, int i) { printf("The fox says %d\n", i); }
 
-int main() {
+TEST(Engine, basics) {
   auto&& engine = mxnet::Engine::Get();
   auto&& var = engine->NewVariable();
   std::vector<mxnet::Engine::OprHandle> oprs;
@@ -21,7 +19,7 @@ int main() {
   printf("============= Test #1 ==============\n");
   for (int i = 0; i < 10; ++i) {
     oprs.push_back(engine->NewOperator(
-        [i](mxnet::RunContext ctx, mxnet::Engine::Callback cb) {
+        [i](mxnet::RunContext ctx, mxnet::Engine::CallbackOnComplete cb) {
           Foo(ctx, i);
           std::this_thread::sleep_for(std::chrono::seconds{1});
           cb();
@@ -43,7 +41,7 @@ int main() {
   oprs.clear();
   for (int i = 0; i < 10; ++i) {
     oprs.push_back(engine->NewOperator(
-        [i](mxnet::RunContext ctx, mxnet::Engine::Callback cb) {
+        [i](mxnet::RunContext ctx, mxnet::Engine::CallbackOnComplete cb) {
           Foo(ctx, i);
           std::this_thread::sleep_for(std::chrono::milliseconds{500});
           cb();
@@ -69,12 +67,12 @@ int main() {
   var = engine->NewVariable();
   oprs.clear();
   oprs.push_back(engine->NewOperator(
-      [](mxnet::RunContext ctx, mxnet::Engine::Callback cb) {
+      [](mxnet::RunContext ctx, mxnet::Engine::CallbackOnComplete cb) {
         std::this_thread::sleep_for(std::chrono::seconds{2});
         Foo(ctx, 42);
         cb();
       },
-      {}, {var}, mxnet::FnProperty::kIO));
+      {}, {var}, mxnet::FnProperty::kCopy));
   engine->Push(oprs.at(0), mxnet::Context{});
   LOG(INFO) << "IO operator pushed, should wait for 2 seconds.";
   engine->WaitForVar(var);
@@ -89,7 +87,7 @@ int main() {
   var = engine->NewVariable();
   oprs.clear();
   oprs.push_back(engine->NewOperator(
-      [](mxnet::RunContext ctx, mxnet::Engine::Callback cb) {
+      [](mxnet::RunContext ctx, mxnet::Engine::CallbackOnComplete cb) {
         Foo(ctx, 42);
         std::this_thread::sleep_for(std::chrono::seconds{2});
         cb();
@@ -108,6 +106,5 @@ int main() {
   engine->WaitForAll();
   var = nullptr;
   oprs.clear();
-
-  return 0;
+  LOG(INFO) << "All pass";
 }

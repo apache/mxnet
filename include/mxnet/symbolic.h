@@ -399,7 +399,7 @@ class Executor {
    *
    * \param head_grads the gradient of head nodes to be backproped.
    */
-  virtual void Backward(const std::vector<NArray> &head_grads = {}) = 0;
+  virtual void Backward(const std::vector<NArray> &head_grads) = 0;
   /*!
    * \brief get array of heads in the executor.
    * \return array of heads in the executor.

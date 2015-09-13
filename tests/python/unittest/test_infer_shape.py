@@ -1,6 +1,6 @@
 # pylint: skip-file
 import mxnet as mx
-import models
+from common import models
 from nose.tools import *
 
 def test_mlp2_infer_shape():

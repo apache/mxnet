@@ -14,13 +14,10 @@
 #include <cublas_v2.h>
 #include <curand.h>
 
+namespace mxnet {
 namespace common {
-
-/*!
- * \brief CUDA utilities.
- */
+/*! \brief common utils for cuda */
 namespace cuda {
-
 /*!
  * \brief Get string representation of cuBLAS errors.
  * \param error The error.
@@ -91,6 +88,7 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
 
 }  // namespace cuda
 }  // namespace common
+}  // namespace mxnet
 
 /*!
  * \brief Check CUDA error.
@@ -153,5 +151,4 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
   }
 
 #endif  // MXNET_USE_CUDNN
-
 #endif  // MXNET_COMMON_CUDA_UTILS_H_

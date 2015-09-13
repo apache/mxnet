@@ -9,8 +9,8 @@
 #include <utility>
 #include <vector>
 
+namespace mxnet {
 namespace common {
-
 /*!
  * \brief Object pool for fast allocation and deallocation.
  */
@@ -172,4 +172,5 @@ void ObjectPoolAllocatable<T>::Delete(T* ptr) {
 }
 
 }  // namespace common
+}  // namespace mxnet
 #endif  // MXNET_COMMON_OBJECT_POOL_H_

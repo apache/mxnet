@@ -84,7 +84,6 @@ endif
 
 .PHONY: clean all test lint doc
 
-BIN = tests/test_threaded_engine
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
 SRC = $(wildcard src/*.cc src/*/*.cc)
@@ -114,12 +113,12 @@ lib/libmxnet.a: $(ALL_DEP)
 lib/libmxnet.so: $(ALL_DEP)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
 
-tests/% : tests/%.cc lib/libmxnet.a
-	$(CXX) -std=c++0x $(CFLAGS) -MM -MT tests/$*.o $< >tests/$*.d
-	$(CXX) $(CFLAGS) -std=c++0x -o $@ $(filter %.cc %.a, $^) $(LDFLAGS)
-
 $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
+
+include tests/cpp/unittest.mk
+
+test: tests/cpp/unittest
 
 lint:
 	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python

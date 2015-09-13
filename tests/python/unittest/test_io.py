@@ -3,8 +3,7 @@ import mxnet as mx
 import numpy as np
 import os, gzip
 import pickle as pickle
-import sys
-import get_data
+from common import get_data
 #from PIL import Image
 
 
