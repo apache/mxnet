@@ -95,5 +95,6 @@ class Executor(object):
         # if user set the content of the head, the backward behavior can be incorrect.
         out_size = mx_uint()
         handles = ctypes.POINTER(NDArrayHandle)()
-        check_call(_LIB.MXExecutorOutputs(self.handle, ctypes.byref(out_size), ctypes.byref(handles)))
+        check_call(_LIB.MXExecutorOutputs(self.handle,
+                                          ctypes.byref(out_size), ctypes.byref(handles)))
         return [NDArray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
