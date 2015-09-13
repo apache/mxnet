@@ -23,9 +23,9 @@ class GraphExecutor::BackwardOpWrapper : public Operator {
   explicit BackwardOpWrapper(const OperatorProperty *prop,
                              std::shared_ptr<Operator> forward_op)
       : op_(forward_op) {
-    out_grad_.resize(prop->NumVisibleReturns());
+    out_grad_.resize(prop->NumVisibleOutputs());
     in_data_.resize(prop->ListArguments().size());
-    out_data_.resize(prop->NumReturns());
+    out_data_.resize(prop->NumOutputs());
 
     std::vector<TBlob*> out_grad_ptr(out_grad_.size());
     for (size_t i = 0; i < out_grad_.size(); ++i) {
@@ -88,7 +88,7 @@ GraphExecutor::GetResource(uint32_t node_id) const {
 inline int GraphExecutor::GetNumOutputs(uint32_t node_id) const {
   const StaticGraph::Node &node = graph_.nodes[node_id];
   if (node.is_forward()) {
-    return node.op->NumReturns();
+    return node.op->NumOutputs();
   } else if (node.is_backward()) {
     return static_cast<int>(
         graph_.nodes[node.backward_source_id].op->ListArguments().size());
@@ -128,9 +128,9 @@ inline std::vector<std::pair<T, T> > GraphExecutor::GetInplaceOption(
     // forward property
     const OperatorProperty *fwd = graph_.nodes[node.backward_source_id].op.get();
 
-    std::vector<int> out_grad_index(fwd->NumVisibleReturns());
+    std::vector<int> out_grad_index(fwd->NumVisibleOutputs());
     std::vector<int> in_data_index(fwd->ListArguments().size());
-    std::vector<int> out_data_index(fwd->NumReturns());
+    std::vector<int> out_data_index(fwd->NumOutputs());
     CHECK_EQ(in_data_index.size(), out_data.size());
     int counter = 0;
     for (size_t i = 0; i < out_grad_index.size(); ++i) {
@@ -251,10 +251,10 @@ void GraphExecutor::InitGraph(Symbol symbol, Context ctx, bool need_backward) {
   }
 }
 
-void GraphExecutor::InitDataEntryInfo(const std::vector<NArray> &in_args,
-                                      const std::vector<NArray> &arg_grad_store,
+void GraphExecutor::InitDataEntryInfo(const std::vector<NDArray> &in_args,
+                                      const std::vector<NDArray> &arg_grad_store,
                                       const std::vector<OpReqType> &grad_req_type,
-                                      const std::vector<NArray> &aux_states) {
+                                      const std::vector<NDArray> &aux_states) {
   CHECK_EQ(arg_grad_store.size(), grad_req_type.size());
   CHECK_EQ(in_args.size(), graph_.arg_nodes.size());
   // bind inputs
@@ -321,18 +321,18 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NArray> &in_args,
     }
   }
   // bind aux args
-  size_t aux_narray_idx = 0;
+  size_t aux_ndarray_idx = 0;
   for (size_t i = 0; i < aux_shapes.size(); ++i) {
     op_nodes_[i].aux_states.resize(aux_shapes[i].size());
     for (size_t j = 0; j < aux_shapes[i].size(); ++j) {
       DataEntryInfo &info = op_nodes_[i].aux_states[j];
       info.shape = aux_shapes[i][j];
       info.type = kBindByExternal;
-      CHECK_GT(aux_states.size(), aux_narray_idx)
-        << "Input auxiliary NArray is less than required";
-      info.data = aux_states[aux_narray_idx++];
+      CHECK_GT(aux_states.size(), aux_ndarray_idx)
+        << "Input auxiliary NDArray is less than required";
+      info.data = aux_states[aux_ndarray_idx++];
       CHECK_EQ(info.data.data().shape_, info.shape)
-        << "Incorrect NArray shape"
+        << "Incorrect NDArray shape"
         << " Input: " << info.data.data().shape_
         << " Desired: " << info.shape;
     }
@@ -420,7 +420,7 @@ void GraphExecutor::InitDataEntryMemory() {
   }
   // one pass complete, allocate real memory
   allocator.InitStorages();
-  // get the real data NArray into the DataEntryInfo
+  // get the real data NDArray into the DataEntryInfo
   for (size_t i = 0; i < topo_order_.size(); ++i) {
     uint32_t nid = topo_order_[i];
     if (!op_nodes_[nid].activated) continue;
@@ -434,7 +434,7 @@ void GraphExecutor::InitDataEntryMemory() {
   for (StaticGraph::DataEntry e : graph_.heads) {
     DataEntryInfo &info = op_nodes_[e.source_id].outputs[e.index];
     CHECK_EQ(info.type, kInternalAllocated);
-    heads_narray_.push_back(info.data);
+    heads_ndarray_.push_back(info.data);
   }
 }
 
@@ -518,7 +518,7 @@ void GraphExecutor::Forward(bool is_train) {
   RunOps(is_train, 0, num_forward_nodes_);
 }
 
-void GraphExecutor::Backward(const std::vector<NArray> &head_grads) {
+void GraphExecutor::Backward(const std::vector<NDArray> &head_grads) {
   if (head_grads.size() != 0) {
     // TODO(bing, min): consider pass a map for backward
     CHECK_EQ(head_grad_nodes_.size(), head_grads.size());
@@ -545,10 +545,10 @@ void GraphExecutor::Backward(const std::vector<NArray> &head_grads) {
 
 Executor *Executor::Bind(Symbol symbol,
                          Context ctx,
-                         const std::vector<NArray> &in_args,
-                         const std::vector<NArray> &arg_grad_store,
+                         const std::vector<NDArray> &in_args,
+                         const std::vector<NDArray> &arg_grad_store,
                          const std::vector<OpReqType> &grad_req_type,
-                         const std::vector<NArray> &aux_states) {
+                         const std::vector<NDArray> &aux_states) {
   GraphExecutor *exec = new GraphExecutor();
   exec->Init(symbol, ctx, in_args, arg_grad_store, grad_req_type, aux_states);
   return exec;

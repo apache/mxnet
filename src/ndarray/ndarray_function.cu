@@ -1,10 +1,10 @@
 // this will be invoked by nvcc and compile GPU version
 #include <dmlc/logging.h>
-#include "./narray_function.h"
-#include "./narray_function-inl.h"
+#include "./ndarray_function.h"
+#include "./ndarray_function-inl.h"
 
 namespace mxnet {
-namespace narray {
+namespace ndarray {
 template<>
 void Copy<cpu, gpu>(const TBlob &from, TBlob *to,
                     Context from_ctx, Context to_ctx,
@@ -44,5 +44,5 @@ void Copy<gpu, gpu>(const TBlob &from, TBlob *to,
                          s->stream_);
   }
 }
-}  // namespace narray
+}  // namespace ndarray
 }  // namespace mxnet

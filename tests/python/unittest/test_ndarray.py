@@ -19,7 +19,7 @@ def check_with_uniform(uf, arg_shapes, dim=None):
     numpy_arg = []
     for s in arg_shapes:
         npy = np.random.uniform(-10, 10, s)
-        narr = mx.narray.array(npy)
+        narr = mx.nd.array(npy)
         narray_arg.append(narr)
         numpy_arg.append(npy)
     out1 = uf(*narray_arg)
@@ -30,7 +30,7 @@ def check_with_uniform(uf, arg_shapes, dim=None):
 
 def random_narray(dim):
     shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
-    data= mx.narray.array(np.random.uniform(-10, 10, shape))
+    data= mx.nd.array(np.random.uniform(-10, 10, shape))
     return data
 
 def test_narray_elementwise():
@@ -45,14 +45,14 @@ def test_narray_elementwise():
             check_with_uniform(lambda x, y: x / y, 2, dim)
 
 def test_narray_copy():
-    c = mx.narray.array(np.random.uniform(-10, 10, (10, 10)))
+    c = mx.nd.array(np.random.uniform(-10, 10, (10, 10)))
     d = c.copyto(mx.Context('cpu', 0))
     assert np.sum(np.abs(c.asnumpy() != d.asnumpy())) == 0.0
 
 
 def test_narray_scalar():
-    c = mx.narray.empty((10,10))
-    d = mx.narray.empty((10,10))
+    c = mx.nd.empty((10,10))
+    d = mx.nd.empty((10,10))
     c[:] = 0.5
     d[:] = 1.0
     d -= c * 2 / 3 * 6.0
@@ -71,7 +71,7 @@ def test_narray_pickle():
     for repeat in range(nrepeat):
         for dim in range(1, maxdim):
             a = random_narray(dim)
-            b = mx.narray.empty(a.shape)
+            b = mx.nd.empty(a.shape)
             a[:] = np.random.uniform(-10, 10, a.shape)
             b[:] = np.random.uniform(-10, 10, a.shape)
             a = a + b
@@ -89,14 +89,14 @@ def test_narray_saveload():
         data = []
         for i in range(10):
             data.append(random_narray(np.random.randint(1, 5)))
-        mx.narray.save(fname, data)
-        data2 = mx.narray.load(fname)
+        mx.nd.save(fname, data)
+        data2 = mx.nd.load(fname)
         assert len(data) == len(data2)
         for x, y in zip(data, data2):
             assert np.sum(x.asnumpy() != y.asnumpy()) == 0
         dmap = {'narray xx %s' % i : x for i, x in enumerate(data)}
-        mx.narray.save(fname, dmap)
-        dmap2 = mx.narray.load(fname)
+        mx.nd.save(fname, dmap)
+        dmap2 = mx.nd.load(fname)
         assert len(dmap2) == len(dmap)
         for k, x in dmap.items():
             y = dmap2[k]

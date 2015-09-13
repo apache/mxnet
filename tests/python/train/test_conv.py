@@ -31,9 +31,9 @@ args_list = softmax.list_arguments()
 
 data_shape = (batch_size, 1, 28, 28)
 arg_shapes, out_shapes, aux_shapes = softmax.infer_shape(data=data_shape)
-arg_narrays = [mx.narray.empty(shape) for shape in arg_shapes]
-grad_narrays = [mx.narray.empty(shape) for shape in arg_shapes]
-aux_narrays = [mx.narray.empty(shape) for shape in aux_shapes]
+arg_narrays = [mx.nd.empty(shape) for shape in arg_shapes]
+grad_narrays = [mx.nd.empty(shape) for shape in arg_shapes]
+aux_narrays = [mx.nd.empty(shape) for shape in aux_shapes]
 
 inputs = dict(zip(args_list, arg_narrays))
 np.random.seed(0)
@@ -53,8 +53,8 @@ for name, narray in inputs.items():
 executor = softmax.bind(mx.Context('cpu'), arg_narrays, grad_narrays, 'write', aux_narrays)
 # update
 
-out_narray = executor.heads()[0]
-grad_narray = mx.narray.empty(out_narray.shape)
+out_narray = executor.outputs[0]
+grad_narray = mx.nd.empty(out_narray.shape)
 
 epoch = 1
 momentum = 0.9

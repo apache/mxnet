@@ -72,7 +72,7 @@ _LIB = _load_lib()
 # type definitions
 mx_uint = ctypes.c_uint
 mx_float = ctypes.c_float
-NArrayHandle = ctypes.c_void_p
+NDArrayHandle = ctypes.c_void_p
 FunctionHandle = ctypes.c_void_p
 SymbolCreatorHandle = ctypes.c_void_p
 SymbolHandle = ctypes.c_void_p
@@ -164,7 +164,7 @@ def ctypes2numpy_shared(cptr, shape):
         pointer to the memory region
 
     shape : tuple
-        shape of target narray
+        shape of target ndarray
 
     Returns
     -------

@@ -1,17 +1,17 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file narray.cc
- * \brief narry module of mxnet
+ * \file ndarray.cc
+ * \brief ndarry module of mxnet
  */
 #include <dmlc/logging.h>
 #include <dmlc/registry.h>
 #include <mxnet/base.h>
-#include <mxnet/narray.h>
+#include <mxnet/ndarray.h>
 #include <mshadow/tensor.h>
-#include "./narray_function.h"
+#include "./ndarray_function.h"
 
 namespace dmlc {
-DMLC_REGISTRY_ENABLE(::mxnet::NArrayFunctionReg);
+DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 }  // namespace dmlc
 
 namespace mxnet {
@@ -19,19 +19,19 @@ namespace mxnet {
  * \brief run a binary operation
  * \param lhs left operand
  * \param rhs right operand
- * \param out the output narray
+ * \param out the output ndarray
  * \param binary_op the real
  */
 template<typename OP>
-inline void BinaryOp(const NArray &lhs,
-                     const NArray &rhs,
-                     NArray *out) {
+inline void BinaryOp(const NDArray &lhs,
+                     const NDArray &rhs,
+                     NDArray *out) {
   // no check if both of them are on cpu
   if (lhs.ctx().dev_mask != cpu::kDevMask || rhs.ctx().dev_mask != cpu::kDevMask)
     CHECK(lhs.ctx() == rhs.ctx()) << "operands context mismatch";
   // if out is none, allocate space
   if (out->is_none()) {
-    *out = NArray(OP::GetShape(lhs.shape(), rhs.shape()), lhs.ctx(), true);
+    *out = NDArray(OP::GetShape(lhs.shape(), rhs.shape()), lhs.ctx(), true);
   } else {
     // no check if both of them are on cpu
     if (lhs.ctx().dev_mask != cpu::kDevMask ||
@@ -42,7 +42,7 @@ inline void BinaryOp(const NArray &lhs,
         << "target shape mismatch";
   }
   // important: callback must always capture by value
-  NArray ret = *out;
+  NDArray ret = *out;
   // get the const variables
   std::vector<Engine::VarHandle> const_vars;
   if (lhs.ptr_->var != ret.ptr_->var) const_vars.push_back(lhs.ptr_->var);
@@ -54,7 +54,7 @@ inline void BinaryOp(const NArray &lhs,
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
-          narray::Eval<cpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
+          ndarray::Eval<cpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
         }, lhs.ctx(), const_vars, {ret.ptr_->var});
       break;
     }
@@ -63,7 +63,7 @@ inline void BinaryOp(const NArray &lhs,
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
-          narray::Eval<gpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
+          ndarray::Eval<gpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, lhs.ctx(), const_vars, {ret.ptr_->var});
@@ -74,16 +74,16 @@ inline void BinaryOp(const NArray &lhs,
   }
 }
 
-inline void SetValueOp(const real_t &rhs, NArray *out) {
+inline void SetValueOp(const real_t &rhs, NDArray *out) {
   CHECK_NE(out->is_none(), true) << "Set value target must not be empty";
   // important: callback must always capture by value
-  NArray ret = *out;
+  NDArray ret = *out;
   switch (ret.ctx().dev_mask) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
-          narray::Eval<cpu>(rhs, &tmp, ctx);
+          ndarray::Eval<cpu>(rhs, &tmp, ctx);
         }, ret.ctx(), {}, {ret.ptr_->var});
       break;
     }
@@ -92,7 +92,7 @@ inline void SetValueOp(const real_t &rhs, NArray *out) {
       Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
-          narray::Eval<gpu>(rhs, &tmp, ctx);
+          ndarray::Eval<gpu>(rhs, &tmp, ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, ret.ctx(), {}, {ret.ptr_->var});
@@ -106,21 +106,21 @@ inline void SetValueOp(const real_t &rhs, NArray *out) {
  * \brief run a binary operation
  * \param lhs left operand
  * \param rhs right operand
- * \param out the output narray
+ * \param out the output ndarray
  * \param binary_op the real
  */
 template<typename OP, bool reverse>
-inline void ScalarOp(const NArray &lhs,
+inline void ScalarOp(const NDArray &lhs,
                      const real_t &rhs,
-                     NArray *out) {
+                     NDArray *out) {
   if (out->is_none()) {
-    *out = NArray(lhs.shape(), lhs.ctx(), true);
+    *out = NDArray(lhs.shape(), lhs.ctx(), true);
   } else {
     CHECK(out->ctx() == lhs.ctx()) << "target context mismatch";
     CHECK(out->shape() == lhs.shape()) << "target shape mismatch";
   }
   // important: callback must always capture by value
-  NArray ret = *out;
+  NDArray ret = *out;
   // get the const variables
   std::vector<Engine::VarHandle> const_vars;
   if (lhs.ptr_->var != ret.ptr_->var) const_vars.push_back(lhs.ptr_->var);
@@ -131,7 +131,7 @@ inline void ScalarOp(const NArray &lhs,
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
-          narray::Eval<cpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
+          ndarray::Eval<cpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
         }, lhs.ctx(), const_vars, {ret.ptr_->var});
       break;
     }
@@ -140,7 +140,7 @@ inline void ScalarOp(const NArray &lhs,
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
-          narray::Eval<gpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
+          ndarray::Eval<gpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, lhs.ctx(), const_vars, {ret.ptr_->var});
@@ -151,13 +151,13 @@ inline void ScalarOp(const NArray &lhs,
   }
 }
 
-void CopyFromTo(const NArray &from, NArray *to) {
+void CopyFromTo(const NDArray &from, NDArray *to) {
   CHECK(from.shape() == to->shape())
       << "operands shape mismatch";
   CHECK(from.shape().ndim() != 0)
       << "source operands have zero dimension shape";
   // important: callback must always capture by value
-  NArray ret = *to;
+  NDArray ret = *to;
   int a = from.ctx().dev_mask;
   int b = to->ctx().dev_mask;
 
@@ -168,7 +168,7 @@ void CopyFromTo(const NArray &from, NArray *to) {
     Engine::Get()->PushSync([from, ret](RunContext ctx) {
         ret.ptr_->CheckAndAlloc();
         TBlob tmp = ret.data();
-        narray::Copy<cpu, cpu>(from.data(), &tmp,
+        ndarray::Copy<cpu, cpu>(from.data(), &tmp,
                                from.ctx(), ret.ctx(), ctx);
       }, from.ctx(), const_vars, {ret.ptr_->var});
   } else {
@@ -177,7 +177,7 @@ void CopyFromTo(const NArray &from, NArray *to) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
-          narray::Copy<cpu, gpu>(from.data(), &tmp,
+          ndarray::Copy<cpu, gpu>(from.data(), &tmp,
                                  from.ctx(), ret.ctx(), ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
@@ -186,7 +186,7 @@ void CopyFromTo(const NArray &from, NArray *to) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
-          narray::Copy<gpu, cpu>(from.data(), &tmp,
+          ndarray::Copy<gpu, cpu>(from.data(), &tmp,
                                  from.ctx(), ret.ctx(), ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
@@ -195,7 +195,7 @@ void CopyFromTo(const NArray &from, NArray *to) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
-          narray::Copy<gpu, gpu>(from.data(), &tmp,
+          ndarray::Copy<gpu, gpu>(from.data(), &tmp,
                                  from.ctx(), ret.ctx(), ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
@@ -210,94 +210,94 @@ void CopyFromTo(const NArray &from, NArray *to) {
 }
 
 template<typename OP>
-inline NArray BinaryOpRet(const NArray &lhs,
-                          const NArray &rhs) {
-  NArray ret;
+inline NDArray BinaryOpRet(const NDArray &lhs,
+                           const NDArray &rhs) {
+  NDArray ret;
   BinaryOp<OP>(lhs, rhs, &ret);
   return ret;
 }
 
 template<typename OP, bool reverse>
-inline NArray ScalarOpRet(const NArray &lhs,
-                          const real_t &rhs) {
-  NArray ret;
+inline NDArray ScalarOpRet(const NDArray &lhs,
+                           const real_t &rhs) {
+  NDArray ret;
   ScalarOp<OP, reverse>(lhs, rhs, &ret);
   return ret;
 }
 
 template<typename OP>
-inline NArray &BinaryOpApply(NArray *dst,
-                             const NArray &src) {
+inline NDArray &BinaryOpApply(NDArray *dst,
+                              const NDArray &src) {
   BinaryOp<OP>(*dst, src, dst);
   return *dst;
 }
 
 template<typename OP>
-inline NArray &ScalarOpApply(NArray *dst,
+inline NDArray &ScalarOpApply(NDArray *dst,
                              const real_t &src) {
   ScalarOp<OP, false>(*dst, src, dst);
   return *dst;
 }
 
 // Binary
-NArray operator+(const NArray &lhs, const NArray &rhs) {
-  return BinaryOpRet<narray::Plus>(lhs, rhs);
+NDArray operator+(const NDArray &lhs, const NDArray &rhs) {
+  return BinaryOpRet<ndarray::Plus>(lhs, rhs);
 }
-NArray operator-(const NArray &lhs, const NArray &rhs) {
-  return BinaryOpRet<narray::Minus>(lhs, rhs);
+NDArray operator-(const NDArray &lhs, const NDArray &rhs) {
+  return BinaryOpRet<ndarray::Minus>(lhs, rhs);
 }
-NArray operator*(const NArray &lhs, const NArray &rhs) {
-  return BinaryOpRet<narray::Mul>(lhs, rhs);
+NDArray operator*(const NDArray &lhs, const NDArray &rhs) {
+  return BinaryOpRet<ndarray::Mul>(lhs, rhs);
 }
-NArray operator/(const NArray &lhs, const NArray &rhs) {
-  return BinaryOpRet<narray::Div>(lhs, rhs);
+NDArray operator/(const NDArray &lhs, const NDArray &rhs) {
+  return BinaryOpRet<ndarray::Div>(lhs, rhs);
 }
 // Scalar
-NArray operator+(const NArray &lhs, const real_t &rhs) {
-  return ScalarOpRet<narray::Plus, false>(lhs, rhs);
+NDArray operator+(const NDArray &lhs, const real_t &rhs) {
+  return ScalarOpRet<ndarray::Plus, false>(lhs, rhs);
 }
-NArray operator-(const NArray &lhs, const real_t &rhs) {
-  return ScalarOpRet<narray::Minus, false>(lhs, rhs);
+NDArray operator-(const NDArray &lhs, const real_t &rhs) {
+  return ScalarOpRet<ndarray::Minus, false>(lhs, rhs);
 }
-NArray operator*(const NArray &lhs, const real_t &rhs) {
-  return ScalarOpRet<narray::Mul, false>(lhs, rhs);
+NDArray operator*(const NDArray &lhs, const real_t &rhs) {
+  return ScalarOpRet<ndarray::Mul, false>(lhs, rhs);
 }
-NArray operator/(const NArray &lhs, const real_t &rhs) {
-  return ScalarOpRet<narray::Div, false>(lhs, rhs);
+NDArray operator/(const NDArray &lhs, const real_t &rhs) {
+  return ScalarOpRet<ndarray::Div, false>(lhs, rhs);
 }
 // Binary
-NArray &NArray::operator=(real_t scalar) {
+NDArray &NDArray::operator=(real_t scalar) {
   SetValueOp(scalar, this);
   return *this;
 }
 
-NArray &NArray::operator+=(const NArray &src) {
-  return BinaryOpApply<narray::Plus>(this, src);
+NDArray &NDArray::operator+=(const NDArray &src) {
+  return BinaryOpApply<ndarray::Plus>(this, src);
 }
-NArray &NArray::operator-=(const NArray &src) {
-  return BinaryOpApply<narray::Minus>(this, src);
+NDArray &NDArray::operator-=(const NDArray &src) {
+  return BinaryOpApply<ndarray::Minus>(this, src);
 }
-NArray &NArray::operator*=(const NArray &src) {
-  return BinaryOpApply<narray::Mul>(this, src);
+NDArray &NDArray::operator*=(const NDArray &src) {
+  return BinaryOpApply<ndarray::Mul>(this, src);
 }
-NArray &NArray::operator/=(const NArray &src) {
-  return BinaryOpApply<narray::Div>(this, src);
+NDArray &NDArray::operator/=(const NDArray &src) {
+  return BinaryOpApply<ndarray::Div>(this, src);
 }
 // Scalar
-NArray &NArray::operator+=(const real_t &src) {
-  return ScalarOpApply<narray::Plus>(this, src);
+NDArray &NDArray::operator+=(const real_t &src) {
+  return ScalarOpApply<ndarray::Plus>(this, src);
 }
-NArray &NArray::operator-=(const real_t &src) {
-  return ScalarOpApply<narray::Minus>(this, src);
+NDArray &NDArray::operator-=(const real_t &src) {
+  return ScalarOpApply<ndarray::Minus>(this, src);
 }
-NArray &NArray::operator*=(const real_t &src) {
-  return ScalarOpApply<narray::Mul>(this, src);
+NDArray &NDArray::operator*=(const real_t &src) {
+  return ScalarOpApply<ndarray::Mul>(this, src);
 }
-NArray &NArray::operator/=(const real_t &src) {
-  return ScalarOpApply<narray::Div>(this, src);
+NDArray &NDArray::operator/=(const real_t &src) {
+  return ScalarOpApply<ndarray::Div>(this, src);
 }
 
-void NArray::Save(dmlc::Stream *strm) const {
+void NDArray::Save(dmlc::Stream *strm) const {
   // save shape
   shape_.Save(strm);
   if (is_none()) return;
@@ -305,7 +305,7 @@ void NArray::Save(dmlc::Stream *strm) const {
   Context ctx = this->ctx();
   ctx.Save(strm);
   TBlob save_data;
-  NArray temp;
+  NDArray temp;
   if (ctx.dev_mask != cpu::kDevMask) {
     temp = this->Copy(Context(cpu::kDevMask, 0));
     temp.WaitToRead();
@@ -317,7 +317,7 @@ void NArray::Save(dmlc::Stream *strm) const {
   // save type flag
   int32_t type_flag = save_data.type_flag_;
   CHECK(type_flag == mshadow::DataType<real_t>::kFlag)
-      << "Only support float NArray so far";
+      << "Only support float NDArray so far";
   strm->Write(&type_flag, sizeof(type_flag));
   CHECK(save_data.CheckContiguous());
   // save data: need to change this after more type mask is supported
@@ -325,12 +325,12 @@ void NArray::Save(dmlc::Stream *strm) const {
   strm->Write(save_data.dptr_, type_size * shape_.Size());
 }
 
-bool NArray::Load(dmlc::Stream *strm) {
+bool NDArray::Load(dmlc::Stream *strm) {
   // load shape
   TShape shape;
   if (!shape.Load(strm)) return false;
   if (shape.ndim() == 0) {
-    *this = NArray(); return true;
+    *this = NDArray(); return true;
   }
   // load context
   Context ctx;
@@ -339,9 +339,9 @@ bool NArray::Load(dmlc::Stream *strm) {
   int32_t type_flag;
   if (strm->Read(&type_flag, sizeof(type_flag)) != sizeof(type_flag)) return false;
   CHECK(type_flag == mshadow::DataType<real_t>::kFlag)
-      << "Only support float NArray so far";
+      << "Only support float NDArray so far";
   // load data into CPUbu
-  NArray temp(shape, Context(cpu::kDevMask, ctx.dev_id));
+  NDArray temp(shape, Context(cpu::kDevMask, ctx.dev_id));
   TBlob load_data = temp.data();
   size_t type_size = sizeof(real_t);
   size_t nread = type_size * shape.Size();
@@ -354,13 +354,13 @@ bool NArray::Load(dmlc::Stream *strm) {
   }
 }
 
-NArray NArray::Copy(Context ctx) const {
-  NArray ret(shape(), ctx, true);
+NDArray NDArray::Copy(Context ctx) const {
+  NDArray ret(shape(), ctx, true);
   CopyFromTo(*this, &ret);
   return ret;
 }
 
-void NArray::SyncCopyFromCPU(const real_t *data, size_t size) const {
+void NDArray::SyncCopyFromCPU(const real_t *data, size_t size) const {
   this->WaitToWrite();
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
@@ -371,7 +371,7 @@ void NArray::SyncCopyFromCPU(const real_t *data, size_t size) const {
 
   RunContext run_ctx;
   if (ctx.dev_mask == cpu::kDevMask) {
-    narray::Copy<cpu, cpu>(src, &dst, Context(cpu::kDevMask, 0), ctx, run_ctx);
+    ndarray::Copy<cpu, cpu>(src, &dst, Context(cpu::kDevMask, 0), ctx, run_ctx);
   } else {
 #if MXNET_USE_CUDA
     // use empty stream to do sync copy
@@ -379,14 +379,14 @@ void NArray::SyncCopyFromCPU(const real_t *data, size_t size) const {
     // Maybe move to engine part
     mshadow::Stream<gpu> zero_stream;
     run_ctx.stream = &zero_stream;
-    narray::Copy<cpu, gpu>(src, &dst, Context(cpu::kDevMask, 0), ctx, run_ctx);
+    ndarray::Copy<cpu, gpu>(src, &dst, Context(cpu::kDevMask, 0), ctx, run_ctx);
 #else
     LOG(FATAL) << "GPU is not enabled";
 #endif
   }
 }
 
-void NArray::SyncCopyToCPU(real_t *data, size_t size) const {
+void NDArray::SyncCopyToCPU(real_t *data, size_t size) const {
   this->WaitToRead();
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
@@ -397,7 +397,7 @@ void NArray::SyncCopyToCPU(real_t *data, size_t size) const {
 
   RunContext run_ctx;
   if (ctx.dev_mask == cpu::kDevMask) {
-    narray::Copy<cpu, cpu>(src, &dst, ctx, Context(cpu::kDevMask, 0), run_ctx);
+    ndarray::Copy<cpu, cpu>(src, &dst, ctx, Context(cpu::kDevMask, 0), run_ctx);
   } else {
 #if MXNET_USE_CUDA
     // use empty stream to do sync copy
@@ -405,7 +405,7 @@ void NArray::SyncCopyToCPU(real_t *data, size_t size) const {
     // Maybe move to engine part
     mshadow::Stream<gpu> zero_stream;
     run_ctx.stream = &zero_stream;
-    narray::Copy<gpu, cpu>(src, &dst, ctx, Context(cpu::kDevMask, 0), run_ctx);
+    ndarray::Copy<gpu, cpu>(src, &dst, ctx, Context(cpu::kDevMask, 0), run_ctx);
 #else
     LOG(FATAL) << "GPU is not enabled";
 #endif
@@ -413,33 +413,33 @@ void NArray::SyncCopyToCPU(real_t *data, size_t size) const {
 }
 
 // register API function
-// those with underscore will be registered at NArray
-MXNET_REGISTER_NARRAY_FUN(_set_value).set_function(SetValueOp);
+// those with underscore will be registered at NDArray
+MXNET_REGISTER_NDARRAY_FUN(_set_value).set_function(SetValueOp);
 
-MXNET_REGISTER_NARRAY_FUN(_plus).set_function(BinaryOp<narray::Plus>);
-MXNET_REGISTER_NARRAY_FUN(_minus).set_function(BinaryOp<narray::Minus>);
-MXNET_REGISTER_NARRAY_FUN(_mul).set_function(BinaryOp<narray::Mul>);
-MXNET_REGISTER_NARRAY_FUN(_div).set_function(BinaryOp<narray::Div>);
+MXNET_REGISTER_NDARRAY_FUN(_plus).set_function(BinaryOp<ndarray::Plus>);
+MXNET_REGISTER_NDARRAY_FUN(_minus).set_function(BinaryOp<ndarray::Minus>);
+MXNET_REGISTER_NDARRAY_FUN(_mul).set_function(BinaryOp<ndarray::Mul>);
+MXNET_REGISTER_NDARRAY_FUN(_div).set_function(BinaryOp<ndarray::Div>);
 
 // register API function
-// those with underscore will be registered at NArray
+// those with underscore will be registered at NDArray
 // scalar
-MXNET_REGISTER_NARRAY_FUN(_plus_scalar).set_function(ScalarOp<narray::Plus, false>);
-MXNET_REGISTER_NARRAY_FUN(_minus_scalar).set_function(ScalarOp<narray::Minus, false>);
-MXNET_REGISTER_NARRAY_FUN(_mul_scalar).set_function(ScalarOp<narray::Mul, false>);
-MXNET_REGISTER_NARRAY_FUN(_div_scalar).set_function(ScalarOp<narray::Div, false>);
+MXNET_REGISTER_NDARRAY_FUN(_plus_scalar).set_function(ScalarOp<ndarray::Plus, false>);
+MXNET_REGISTER_NDARRAY_FUN(_minus_scalar).set_function(ScalarOp<ndarray::Minus, false>);
+MXNET_REGISTER_NDARRAY_FUN(_mul_scalar).set_function(ScalarOp<ndarray::Mul, false>);
+MXNET_REGISTER_NDARRAY_FUN(_div_scalar).set_function(ScalarOp<ndarray::Div, false>);
 
 // register API function
-// those with underscore will be registered at NArray
+// those with underscore will be registered at NDArray
 // scalar
 // reverse scalar
-MXNET_REGISTER_NARRAY_FUN(_rminus_scalar).set_function(ScalarOp<narray::Minus, true>);
-MXNET_REGISTER_NARRAY_FUN(_rdiv_scalar).set_function(ScalarOp<narray::Div, true>);
+MXNET_REGISTER_NDARRAY_FUN(_rminus_scalar).set_function(ScalarOp<ndarray::Minus, true>);
+MXNET_REGISTER_NDARRAY_FUN(_rdiv_scalar).set_function(ScalarOp<ndarray::Div, true>);
 
 // copy function is special
 // that we need to remove kAcceptEmptyMutateTarget from it
-MXNET_REGISTER_NARRAY_FUN(_copyto)
+MXNET_REGISTER_NDARRAY_FUN(_copyto)
 .set_function(CopyFromTo)
-.set_type_mask(kNArrayArgBeforeScalar);
+.set_type_mask(kNDArrayArgBeforeScalar);
 
 }  // namespace mxnet

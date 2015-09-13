@@ -132,7 +132,7 @@ def RandomInit(narray):
     in_num = narray.shape[1]
     out_num = narray.shape[0]
     a = np.sqrt(3.0 / (in_num + out_num))
-    tmp = mx.narray.array(np.random.uniform(-a, a, narray.shape))
+    tmp = mx.nd.array(np.random.uniform(-a, a, narray.shape))
     narray[:] = tmp
 
 data = mx.symbol.Variable(name="data")
@@ -161,15 +161,16 @@ momentum = 0.9
 batch_size = 128
 data_shape = (batch_size, 3, 28, 28)
 
-in_data = mx.narray.empty(data_shape, mx.gpu())
+in_data = mx.nd.empty(data_shape, mx.gpu())
 executor = loss.simple_bind(mx.gpu(), data = in_data)
-out_narray = executor.heads()[0]
-pred = mx.narray.zeros(out_narray.shape, mx.cpu())
+
+out_narray = executor.outputs[0]
+pred = mx.nd.zeros(out_narray.shape, mx.cpu())
 
 arg_narrays, grad_narrays = executor.list_arguments()
 inputs = dict(zip(loss.list_arguments(), arg_narrays))
-tmp_label = mx.narray.zeros(inputs["sm_label"].shape)
-momentum_narrays = [mx.narray.zeros(item.shape, mx.gpu()) for item in grad_narrays]
+tmp_label = mx.nd.zeros(inputs["sm_label"].shape)
+momentum_narrays = [mx.nd.zeros(item.shape, mx.gpu()) for item in grad_narrays]
 
 block = list(zip(grad_narrays, arg_narrays, momentum_narrays))
 

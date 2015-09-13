@@ -43,18 +43,18 @@ param_shapes, out_shapes, aux_shapes  = mlp.infer_shape(data=input_shape)
 np.random.seed(0)
 for idx in sync_indices:
     shape = param_shapes[idx]
-    val = mx.narray.zeros(shape)
+    val = mx.nd.zeros(shape)
     if "weight" in param_names[idx]:
         val[:] = np.random.uniform(-0.07, 0.07, shape)
     mx.kvstore.init(idx, val)
 
 # allocate device's memory
-params = [[mx.narray.zeros(s, d) for s in param_shapes] for d in devs]
-grads = [[mx.narray.zeros(s, d) for s in param_shapes] for d in devs]
+params = [[mx.nd.zeros(s, d) for s in param_shapes] for d in devs]
+grads = [[mx.nd.zeros(s, d) for s in param_shapes] for d in devs]
 
 # create executors for devices
 executors = [mlp.bind(devs[d], params[d], grads[d]) for d in range(num_devs)]
-forward_out = [mx.narray.zeros(e.heads()[0].shape) for e in executors]
+forward_out = [mx.nd.zeros(e.heads()[0].shape) for e in executors]
 
 # data reader
 get_data.GetMNIST_ubyte()

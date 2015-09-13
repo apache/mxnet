@@ -24,16 +24,20 @@ USE_CUDA = 0
 # if you have already add them to enviroment variable, leave it as NONE
 USE_CUDA_PATH = NONE
 
+# whether use CUDNN R3 library
+USE_CUDNN = 0
+
+# add the path to CUDNN libary to link and compile flag
+# if you do not need that, or do not have that, leave it as NONE
+USE_CUDNN_PATH = NONE
+
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
 # imbin iterator
 USE_OPENCV = 1
-USE_OPENCV_DECODER = 1
-# whether use CUDNN R3 library
-USE_CUDNN = 0
-# add the path to CUDNN libary to link and compile flag
-# if you do not need that, or do not have that, leave it as NONE
-USE_CUDNN_PATH = NONE
+
+# use openmp for parallelization
+USE_OPENMP = 1
 
 #
 # choose the version of blas you want to use
@@ -46,20 +50,6 @@ USE_BLAS = blas
 #
 USE_INTEL_PATH = NONE
 
-# whether compile with parameter server
-USE_DIST_PS = 0
-PS_PATH = NONE
-PS_THIRD_PATH = NONE
-
-# whether compile with rabit
-USE_RABIT_PS = 0
-RABIT_PATH = rabit
-
-# Whether to use threaded engine instead of naive one
-# USE_THREADED_ENGINE =1
-
-# use openmp iterator
-USE_OPENMP_ITER = 1
 # the additional link flags you want to add
 ADD_LDFLAGS =
 

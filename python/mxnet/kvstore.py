@@ -3,21 +3,21 @@
 """ KVStore in mxnet """
 from __future__ import absolute_import
 import ctypes
-from .narray import NArray
+from .ndarray import NDArray
 from .base import _LIB
-from .base import check_call, c_array, NArrayHandle
+from .base import check_call, c_array, NDArrayHandle
 
 def _ctype_key_value(keys, vals):
     """parse key-value args into ctype"""
     if isinstance(keys, int):
-        if isinstance(vals, NArray):
+        if isinstance(vals, NDArray):
             return (c_array(ctypes.c_int, [keys]),
-                    c_array(NArrayHandle, [vals.handle]))
+                    c_array(NDArrayHandle, [vals.handle]))
         else:
             for v in vals:
-                assert(isinstance(v, NArray))
+                assert(isinstance(v, NDArray))
             return (c_array(ctypes.c_int, [keys] * len(vals)),
-                    c_array(NArrayHandle, [v.handle for v in vals]))
+                    c_array(NDArrayHandle, [v.handle for v in vals]))
     else:
         assert(len(keys) == len(vals))
         for k in keys:
@@ -28,7 +28,7 @@ def _ctype_key_value(keys, vals):
             c_key_i, c_val_i = _ctype_key_value(keys[i], vals[i])
             c_keys += c_key_i
             c_vals += c_val_i
-        return (c_array(ctypes.c_int, c_keys), c_array(NArrayHandle, c_vals))
+        return (c_array(ctypes.c_int, c_keys), c_array(NDArrayHandle, c_vals))
 
 def start():
     """start kvstore"""
@@ -46,7 +46,7 @@ def init(key, value):
     ----------
     keys: int or list of int
         A single key or a list of keys
-    values: NArray or list of NArray
+    values: NDArray or list of NDArray
         A single value of a list of values
     """
     ckeys, cvals = _ctype_key_value(key, value)
@@ -59,7 +59,7 @@ def push(key, value):
     ----------
     key : int or list of int
         A single key or a list of key
-    value: list of NArray or list of list of NArray
+    value: list of NDArray or list of list of NDArray
         A single value of a list of value
     """
     ckeys, cvals = _ctype_key_value(key, value)
@@ -72,7 +72,7 @@ def pull(key, out=None):
     ----------
     key: int or list of int
         A single key or a list of key
-    out: NArray or list of NArray
+    out: NDArray or list of NDArray
         A single value of a list of value
     """
     assert(out is not None)
@@ -85,8 +85,8 @@ def _updater_wrapper(updater):
     """ a wrapper for the user-defined handle """
     def updater_handle(key, lhs_handle, rhs_handle):
         """ ctypes function """
-        lhs = NArray(NArrayHandle(lhs_handle))
-        rhs = NArray(NArrayHandle(rhs_handle))
+        lhs = NDArray(NDArrayHandle(lhs_handle))
+        rhs = NDArray(NDArrayHandle(rhs_handle))
         updater(key, lhs, rhs)
     return updater_handle
 
@@ -106,7 +106,7 @@ def set_updater(updater):
     updater: functon
     """
     _updater_proto = ctypes.CFUNCTYPE(
-        None, ctypes.c_int, NArrayHandle, NArrayHandle)
+        None, ctypes.c_int, NDArrayHandle, NDArrayHandle)
     global _updater_func
     _updater_func = _updater_proto(_updater_wrapper(updater))
     check_call(_LIB.MXKVStoreSetUpdater(_updater_func))

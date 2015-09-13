@@ -30,28 +30,28 @@ data_shape = (batch_size, 784)
 arg_shapes, out_shapes, aux_shapes = softmax.infer_shape(data=data_shape)
 
 # create GPU NArray for data
-arg_narrays = [mx.narray.zeros(shape, ctx=mx.Context("gpu")) for shape in arg_shapes]
-grad_narrays = [mx.narray.zeros(shape, ctx=mx.Context("gpu")) for shape in arg_shapes]
+arg_narrays = [mx.nd.zeros(shape, ctx=mx.gpu()) for shape in arg_shapes]
+grad_narrays = [mx.nd.zeros(shape, ctx=mx.gpu()) for shape in arg_shapes]
 inputs = dict(zip(args_list, arg_narrays))
 
 # create CPU NArray for result stat
 name2shape = dict(zip(args_list, arg_shapes))
-pred = mx.narray.zeros(out_shapes[0])
+pred = mx.nd.zeros(out_shapes[0])
 
 
 # set random weight
 np.random.seed(0)
 for name, narray in inputs.items():
     if "weight" in name:
-        tmp = mx.narray.array(np.random.uniform(-0.07, 0.07, name2shape[name]))
+        tmp = mx.nd.array(np.random.uniform(-0.07, 0.07, name2shape[name]))
         tmp.copyto(narray)
 
 # bind executer
 # TODO(bing): think of a better bind interface
 executor = softmax.bind(mx.Context('gpu'), arg_narrays, grad_narrays)
 # create gradient NArray
-out_narray = executor.heads()[0]
-grad_narray = mx.narray.zeros(out_narray.shape, ctx=mx.Context("gpu"))
+out_narray = executor.outputs[0]
+grad_narray = mx.nd.zeros(out_narray.shape, ctx=mx.gpu())
 
 
 # update
@@ -77,7 +77,7 @@ val_dataiter = mx.io.MNISTIter(
         label="data/t10k-labels-idx1-ubyte",
         batch_size=batch_size, shuffle=True, flat=True, silent=False)
 
-tmp_label = mx.narray.zeros(name2shape["sm_label"])
+tmp_label = mx.nd.zeros(name2shape["sm_label"])
 
 def test_mlp():
     acc_train = 0.

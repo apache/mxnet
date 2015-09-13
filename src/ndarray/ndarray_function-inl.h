@@ -1,11 +1,11 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file narray_function-inl.h
- * \brief
+ * \file ndarray_function-inl.h
+ * \brief The real implementation of NDArray functions.
  */
-#ifndef MXNET_NARRAY_NARRAY_FUNCTION_INL_H_
-#define MXNET_NARRAY_NARRAY_FUNCTION_INL_H_
-#include "./narray_function.h"
+#ifndef MXNET_NDARRAY_NDARRAY_FUNCTION_INL_H_
+#define MXNET_NDARRAY_NDARRAY_FUNCTION_INL_H_
+#include "./ndarray_function.h"
 // this file will be included twice by CPU and GPU
 // macro to help specialize evaluation function
 #ifndef DECL_BINARY
@@ -17,19 +17,19 @@
 #endif
 
 #ifndef DECL_SCALAR
-#define DECL_SCALAR(XPU, OP, FUN, REVERSE)                                       \
+#define DECL_SCALAR(XPU, OP, FUN, REVERSE)                              \
   template<>                                                            \
   void Eval<XPU, OP, REVERSE>(const TBlob &lhs, const real_t &rhs, TBlob *ret, RunContext ctx) { \
-    FUN<XPU, OP, REVERSE>(lhs, rhs, ret, ctx);                                   \
+    FUN<XPU, OP, REVERSE>(lhs, rhs, ret, ctx);                          \
   }
 #endif
 
 #ifndef DECL_SETVALUE
-#define DECL_SETVALUE(XPU)                                       \
+#define DECL_SETVALUE(XPU)                                              \
   template<>                                                            \
-  void Eval<XPU>(const real_t &rhs, TBlob *ret, RunContext ctx) { \
-    mshadow::Stream<XPU> *s = static_cast<mshadow::Stream<XPU>*>(ctx.stream);    \
-    ret->FlatTo2D<XPU, real_t>(s) = rhs;                          \
+  void Eval<XPU>(const real_t &rhs, TBlob *ret, RunContext ctx) {       \
+    mshadow::Stream<XPU> *s = static_cast<mshadow::Stream<XPU>*>(ctx.stream); \
+    ret->FlatTo2D<XPU, real_t>(s) = rhs;                                \
   }
 #endif
 
@@ -41,7 +41,7 @@
 #endif
 
 namespace mxnet {
-namespace narray {
+namespace ndarray {
 // true implementation
 template<typename xpu, typename OP>
 inline void EvalBinary_(const TBlob &lhs, const TBlob &rhs,
@@ -84,7 +84,7 @@ DECL_SCALAR(DEVICE, Mul, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Div, EvalScalar_, false)
 //
 DECL_SETVALUE(DEVICE)
-}  // namespace narray
+}  // namespace ndarray
 }  // namespace mxnet
 
-#endif  // MXNET_NARRAY_NARRAY_FUNCTION_INL_H_
+#endif  // MXNET_NDARRAY_NDARRAY_FUNCTION_INL_H_

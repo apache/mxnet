@@ -192,7 +192,7 @@ std::vector<std::string> Symbol::ListArguments() const {
   }
 }
 
-std::vector<std::string> Symbol::ListReturns() const {
+std::vector<std::string> Symbol::ListOutputs() const {
   std::vector<std::string> ret;
   for (auto &head : heads_) {
     if (head.source->is_variable()) {
@@ -200,7 +200,7 @@ std::vector<std::string> Symbol::ListReturns() const {
     } else {
       // TODO(bing) rethink about output naming
       auto &hname = head.source->name;
-      std::string rname = head.source->op->ListReturns()[head.index];
+      std::string rname = head.source->op->ListOutputs()[head.index];
       if (hname.length() == 0) {
         ret.push_back(std::move(rname));
       } else {
@@ -233,7 +233,7 @@ std::vector<std::string> Symbol::ListAuxiliaryStates() const {
 }
 
 Symbol Symbol::operator[] (size_t index) const {
-  size_t nreturn = NumReturns();
+  size_t nreturn = NumOutputs();
   CHECK_LT(index, nreturn) << "Symbol only accept nonnegative index";
   if (nreturn == 1) {
     return *this;
@@ -246,12 +246,12 @@ Symbol Symbol::operator[] (size_t index) const {
 
 void Symbol::Compose(const std::vector<Symbol>& args,
                      const std::string& name) {
-  CHECK_EQ(NumReturns(), 1) << "Only composition of value function is supported currently";
+  CHECK_EQ(NumOutputs(), 1) << "Only composition of value function is supported currently";
   CHECK(!heads_[0].source->is_variable()) << "Variable cannot be composed";
   heads_[0].source->name = name;
   for (size_t i = 0; i < args.size(); ++i) {
-    CHECK_EQ(args[i].NumReturns(), 1)
-        << "Argument " << i << " is a tuple with " <<  args[i].NumReturns()
+    CHECK_EQ(args[i].NumOutputs(), 1)
+        << "Argument " << i << " is a tuple with " <<  args[i].NumOutputs()
         << " elements, scalar is required";
   }
   // positional arguments requires all arguments for now.
@@ -305,11 +305,11 @@ void Symbol::Compose(const std::vector<Symbol>& args,
 
 void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
                      const std::string& name) {
-  CHECK_EQ(NumReturns(), 1) << "Only composition of value function is supported currently";
+  CHECK_EQ(NumOutputs(), 1) << "Only composition of value function is supported currently";
   CHECK(!heads_[0].source->is_variable()) << "Variable cannot be composed";
   heads_[0].source->name = name;
   for (const auto& kv : kwargs) {
-    CHECK_EQ(kv.second.NumReturns(), 1)
+    CHECK_EQ(kv.second.NumOutputs(), 1)
         << "Keyword Argument " << kv.first << " is a tuple, scalar is required";
   }
   size_t nmatched = 0;
@@ -483,7 +483,7 @@ bool Symbol::InferShape(const std::unordered_map<std::string, TShape>& known_arg
 Symbol Symbol::Create(OperatorProperty *op)  {
   // use special representation for atomic symbol
   auto node = std::make_shared<Node>(op, "");
-  size_t nret = op->NumVisibleReturns();
+  size_t nret = op->NumVisibleOutputs();
   Symbol s;
   for (uint32_t i = 0; i < nret; ++i) {
     s.heads_.push_back(DataEntry(node, i));

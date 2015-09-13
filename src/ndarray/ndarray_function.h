@@ -1,18 +1,18 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file narray_op.h
- * \brief the real execution functions of narray operations
+ * \file ndarray_op.h
+ * \brief the real execution functions of ndarray operations
  */
-#ifndef MXNET_NARRAY_NARRAY_FUNCTION_H_
-#define MXNET_NARRAY_NARRAY_FUNCTION_H_
+#ifndef MXNET_NDARRAY_NDARRAY_FUNCTION_H_
+#define MXNET_NDARRAY_NDARRAY_FUNCTION_H_
 #include <dmlc/logging.h>
 #include <mshadow/tensor.h>
 #include <mxnet/base.h>
 #include <mxnet/context.h>
 
 namespace mxnet {
-/*! \brief namespace to support all possible NArray operator */
-namespace narray {
+/*! \brief namespace to support all possible Ndarray operator */
+namespace ndarray {
 struct BinaryBase {
   inline static TShape GetShape(const TShape &lshape, const TShape &rshape) {
     CHECK(lshape == rshape) << "operands shape mismatch";
@@ -48,6 +48,6 @@ void Copy(const TBlob &from, TBlob *to,
           Context from_ctx, Context to_ctx,
           RunContext ctx);
 
-}  // namespace narray
+}  // namespace ndarray
 }  // namespace mxnet
-#endif  // MXNET_NARRAY_NARRAY_FUNCTION_H_
+#endif  // MXNET_NDARRAY_NDARRAY_FUNCTION_H_

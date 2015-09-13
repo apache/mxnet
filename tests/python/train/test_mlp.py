@@ -4,7 +4,7 @@ import numpy as np
 import os, gzip
 import pickle as pickle
 from common import get_data
-                
+
 def CalAcc(out, label):
     pred = np.argmax(out, axis=1)
     return np.sum(pred == label) * 1.0 / out.shape[0]
@@ -22,8 +22,8 @@ args_list = softmax.list_arguments()
 # infer shape
 data_shape = (batch_size, 784)
 arg_shapes, out_shapes, aux_shapes = softmax.infer_shape(data=data_shape)
-arg_narrays = [mx.narray.empty(shape) for shape in arg_shapes]
-grad_narrays = [mx.narray.empty(shape) for shape in arg_shapes]
+arg_narrays = [mx.nd.empty(shape) for shape in arg_shapes]
+grad_narrays = [mx.nd.empty(shape) for shape in arg_shapes]
 inputs = dict(zip(args_list, arg_narrays))
 np.random.seed(0)
 # set random weight
@@ -38,8 +38,8 @@ for name, narray in inputs.items():
 executor = softmax.bind(mx.Context('cpu'), arg_narrays, grad_narrays)
 # update
 
-out_narray = executor.heads()[0]
-grad_narray = mx.narray.empty(out_narray.shape)
+out_narray = executor.outputs[0]
+grad_narray = mx.nd.empty(out_narray.shape)
 
 epoch = 9
 lr = 0.1

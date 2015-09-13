@@ -7,10 +7,10 @@ import ctypes
 import sys
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str, string_types
-from .base import NArrayHandle, ExecutorHandle, SymbolHandle
+from .base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from .base import check_call
 from .context import Context
-from .narray import NArray, zeros
+from .ndarray import NDArray, zeros
 from .executor import Executor
 
 
@@ -145,17 +145,17 @@ class Symbol(object):
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
-    def list_returns(self):
-        """List all returns in the symbol.
+    def list_outputs(self):
+        """List all outputs in the symbol.
 
         Returns
         -------
         returns : list of string
-            List of all the returns.
+            List of all the outputs.
         """
         size = ctypes.c_uint()
         sarr = ctypes.POINTER(ctypes.c_char_p)()
-        check_call(_LIB.MXSymbolListReturns(
+        check_call(_LIB.MXSymbolListOutputs(
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
@@ -203,7 +203,7 @@ class Symbol(object):
             The order is in the same order as list_arguments()
         out_shapes : list of tuple or None
             List of shapes of outputs.
-            The order is in the same order as list_returns()
+            The order is in the same order as list_outputs()
         aux_shapes : list of tuple or None
             List of shapes of outputs.
             The order is in the same order as list_auxiliary()
@@ -281,19 +281,19 @@ class Symbol(object):
         return py_str(debug_str.value)
 
     @staticmethod
-    def _get_narray_handle(arg_key, args, arg_names, allow_missing):
-        """Helper function to get narray handles from various inputs.
+    def _get_ndarray_handle(arg_key, args, arg_names, allow_missing):
+        """Helper function to get ndarray handles from various inputs.
 
         Parameters
         ----------
         arg_key : str
             The name of argument, used for error message.
 
-        args : list of NArray or dict of str->NArray
+        args : list of NDArray or dict of str->NDArray
             Input arguments to the symbols.
-            If type is list of NArray, the position is in the same order of arg_names.
-            If type is dict of str->NArray, then it maps the name of arguments
-            to the corresponding NArray,
+            If type is list of NDArray, the position is in the same order of arg_names.
+            If type is dict of str->NDArray, then it maps the name of arguments
+            to the corresponding NDArray,
 
         args_names : list of string
             List of argument names.
@@ -304,8 +304,8 @@ class Symbol(object):
 
         Returns
         -------
-        handles : list of NArrayHandle
-            The positional list of NArrayHandles generated from input.
+        handles : list of NDArrayHandle
+            The positional list of NDArrayHandles generated from input.
         """
         # setup args
         arg_handles = []
@@ -313,15 +313,15 @@ class Symbol(object):
             if len(args) != len(arg_names):
                 raise ValueError('Length of %s do not match number of arguments' % arg_key)
             for narr in args:
-                if not isinstance(narr, NArray):
-                    raise TypeError('Only Accept list of NArrays or dict of str->NArray')
+                if not isinstance(narr, NDArray):
+                    raise TypeError('Only Accept list of NDArrays or dict of str->NDArray')
                 arg_handles.append(narr.handle)
         elif isinstance(args, dict):
             for name in arg_names:
                 if name in arg_names:
                     narr = args[name]
-                    if not isinstance(narr, NArray):
-                        raise TypeError('Only Accept list of NArrays or dict of str->NArray')
+                    if not isinstance(narr, NDArray):
+                        raise TypeError('Only Accept list of NDArrays or dict of str->NDArray')
                     arg_handles.append(narr.handle)
                 else:
                     if allow_missing:
@@ -329,11 +329,16 @@ class Symbol(object):
                     else:
                         raise ValueError('Must specify all the arguments in %s' % arg_key)
         else:
-            raise TypeError('Only Accept list of NArrays or dict of str->NArray')
-        return c_array(NArrayHandle, arg_handles)
+            raise TypeError('Only Accept list of NDArrays or dict of str->NDArray')
+        return c_array(NDArrayHandle, arg_handles)
 
     def simple_bind(self, ctx, grad_req='write', **kwargs):
-        """Simply bind current symbol to get an executor
+        """Simply bind current symbol to get an executor.
+
+        This function will ask user to pass in ndarray of position
+        they like to bind to, and it will automatically allocate the ndarray
+        for arguments and auxiliary states that user did not specify explicitly.
+
         Parameters
         ----------
         ctx : Context
@@ -341,14 +346,11 @@ class Symbol(object):
         grad_req: string
             {'write', 'add', 'null'}, or list of str or dict of str->str, optional
             Specifies how we should update the gradient to the args_grad.
-            - 'write' means everytime gradient is write to specified args_grad NArray.
-            - 'add' means everytime gradient is add to the specified NArray.
+            - 'write' means everytime gradient is write to specified args_grad NDArray.
+            - 'add' means everytime gradient is add to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
-        kwargs : dict of str->NArray
-            Input arguments to the symbol.
-            - type is dict of str->NArray, then it maps the name of arguments
-              to the corresponding NArray,
-            - Not all the arguments must be provided.
+        kwargs : dict of str->NDArray
+
         Returns
         -------
         executor : mxnet.Executor
@@ -361,17 +363,17 @@ class Symbol(object):
         if arg_shapes == None:
             raise ValueError("Input node is not complete")
         # alloc space
-        arg_narrays = []
+        arg_ndarrays = []
         for name, shape in zip(self.list_arguments(), arg_shapes):
             if name in kwargs:
-                arg_narrays.append(kwargs[name])
+                arg_ndarrays.append(kwargs[name])
             else:
-                arg_narrays.append(zeros(shape, ctx))
+                arg_ndarrays.append(zeros(shape, ctx))
         # TODO(bing): specail treat input data grad
         # TODO(bing): not generate grad case
-        grad_narrays = [zeros(shape, ctx) for shape in arg_shapes]
-        aux_narrays = [zeros(shape, ctx) for shape in aux_shapes]
-        executor = self.bind(ctx, arg_narrays, grad_narrays, grad_req, aux_narrays)
+        grad_ndarrays = [zeros(shape, ctx) for shape in arg_shapes]
+        aux_ndarrays = [zeros(shape, ctx) for shape in aux_shapes]
+        executor = self.bind(ctx, arg_ndarrays, grad_ndarrays, grad_req, aux_ndarrays)
         return executor
 
     def bind(self, ctx, args, args_grad=None, grad_req='write', aux_states=None):
@@ -382,35 +384,35 @@ class Symbol(object):
         ctx : Context
             The device context the generated executor to run on.
 
-        args : list of NArray or dict of str->NArray
+        args : list of NDArray or dict of str->NDArray
             Input arguments to the symbol.
-            - If type is list of NArray, the position is in the same order of list_arguments.
-            - If type is dict of str->NArray, then it maps the name of arguments
-              to the corresponding NArray,
+            - If type is list of NDArray, the position is in the same order of list_arguments.
+            - If type is dict of str->NDArray, then it maps the name of arguments
+              to the corresponding NDArray,
             - In either case, all the arguments must be provided.
 
-        args_grad : list of NArray or dict of str->NArray, optional
-            When specified, args_grad provide NArrays to hold
+        args_grad : list of NDArray or dict of str->NDArray, optional
+            When specified, args_grad provide NDArrays to hold
             the result of gradient value in backward.
-            - If type is list of NArray, the position is in the same order of list_arguments.
-            - If type is dict of str->NArray, then it maps the name of arguments
-              to the corresponding NArray.
-            - When the type is dict of str->NArray, users only need to provide the dict
+            - If type is list of NDArray, the position is in the same order of list_arguments.
+            - If type is dict of str->NDArray, then it maps the name of arguments
+              to the corresponding NDArray.
+            - When the type is dict of str->NDArray, users only need to provide the dict
               for needed argument gradient.
               Only the specified argument gradient will be calculated.
 
         grad_req : {'write', 'add', 'null'}, or list of str or dict of str->str, optional
             Specifies how we should update the gradient to the args_grad.
-            - 'write' means everytime gradient is write to specified args_grad NArray.
-            - 'add' means everytime gradient is add to the specified NArray.
+            - 'write' means everytime gradient is write to specified args_grad NDArray.
+            - 'add' means everytime gradient is add to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
 
-        aux_states : list of NArray, or dict of str->NArray, optional
+        aux_states : list of NDArray, or dict of str->NDArray, optional
             Input auxiliary states to the symbol, only need to specify when
             list_auxiliary_states is not empty.
-            - If type is list of NArray, the position is in the same order of list_auxiliary_states
-            - If type is dict of str->NArray, then it maps the name of auxiliary_states
-              to the corresponding NArray,
+            - If type is list of NDArray, the position is in the same order of list_auxiliary_states
+            - If type is dict of str->NDArray, then it maps the name of auxiliary_states
+              to the corresponding NDArray,
             - In either case, all the auxiliary_states need to be provided.
 
         Returns
@@ -432,18 +434,18 @@ class Symbol(object):
         if not isinstance(ctx, Context):
             raise TypeError("Context type error")
 
-        args_handle = self._get_narray_handle('args', args, self.list_arguments(), False)
+        args_handle = self._get_ndarray_handle('args', args, self.list_arguments(), False)
         # setup args gradient
         if args_grad is None:
-            args_grad_handle = c_array(NArrayHandle, [None] * len(args))
+            args_grad_handle = c_array(NDArrayHandle, [None] * len(args))
         else:
-            args_grad_handle = self._get_narray_handle('args_grad', args_grad,
-                                                       self.list_arguments(), True)
+            args_grad_handle = self._get_ndarray_handle('args_grad', args_grad,
+                                                        self.list_arguments(), True)
 
         if aux_states is None:
             aux_states = []
-        aux_args_handle = self._get_narray_handle('aux_states', aux_states,
-                                                  self.list_auxiliary_states(), False)
+        aux_args_handle = self._get_ndarray_handle('aux_states', aux_states,
+                                                   self.list_auxiliary_states(), False)
 
         # setup requirements
         req_map = {'null' : 0, 'write' : 1, 'add' : 3}
@@ -474,8 +476,8 @@ class Symbol(object):
                                        aux_args_handle,
                                        ctypes.byref(handle)))
         executor = Executor(handle)
-        executor.arg_narrays = args
-        executor.grad_narrays = args_grad
+        executor.arg_ndarrays = args
+        executor.grad_ndarrays = args_grad
         executor.auxiliary_states = aux_states
         return executor
 

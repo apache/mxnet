@@ -5,6 +5,7 @@
  */
 #ifndef MXNET_CONTEXT_H_
 #define MXNET_CONTEXT_H_
+
 #include <dmlc/io.h>
 #include <dmlc/type_traits.h>
 #include <sstream>
