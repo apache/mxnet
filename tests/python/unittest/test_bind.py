@@ -40,10 +40,10 @@ def check_bind_with_uniform(uf, gf, dim):
     executor.forward()
     exec3.forward()
     exec4.forward()
-    out2 = executor.heads()[0].asnumpy()
+    out2 = executor.outputs[0].asnumpy()
     out1 = uf(lhs_arr.asnumpy(), rhs_arr.asnumpy())
-    out3 = exec3.heads()[0].asnumpy()
-    out4 = exec4.heads()[0].asnumpy()
+    out3 = exec3.outputs[0].asnumpy()
+    out4 = exec4.outputs[0].asnumpy()
     assert reldiff(out1, out2) < 1e-6
     assert reldiff(out1, out3) < 1e-6
     assert reldiff(out1, out4) < 1e-6

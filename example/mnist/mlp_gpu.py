@@ -30,8 +30,8 @@ data_shape = (batch_size, 784)
 arg_shapes, out_shapes, aux_shapes = softmax.infer_shape(data=data_shape)
 
 # create GPU NArray for data
-arg_narrays = [mx.nd.zeros(shape, ctx=mx.Context("gpu")) for shape in arg_shapes]
-grad_narrays = [mx.nd.zeros(shape, ctx=mx.Context("gpu")) for shape in arg_shapes]
+arg_narrays = [mx.nd.zeros(shape, ctx=mx.gpu()) for shape in arg_shapes]
+grad_narrays = [mx.nd.zeros(shape, ctx=mx.gpu()) for shape in arg_shapes]
 inputs = dict(zip(args_list, arg_narrays))
 
 # create CPU NArray for result stat
@@ -50,8 +50,8 @@ for name, narray in inputs.items():
 # TODO(bing): think of a better bind interface
 executor = softmax.bind(mx.Context('gpu'), arg_narrays, grad_narrays)
 # create gradient NArray
-out_narray = executor.heads()[0]
-grad_narray = mx.nd.zeros(out_narray.shape, ctx=mx.Context("gpu"))
+out_narray = executor.outputs[0]
+grad_narray = mx.nd.zeros(out_narray.shape, ctx=mx.gpu())
 
 
 # update

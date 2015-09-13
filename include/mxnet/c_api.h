@@ -388,7 +388,7 @@ MXNET_DLL int MXSymbolListArguments(SymbolHandle symbol,
  * \param out_str_array pointer to hold the output string array
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSymbolListReturns(SymbolHandle symbol,
+MXNET_DLL int MXSymbolListOutputs(SymbolHandle symbol,
                                   mx_uint *out_size,
                                   const char ***out_str_array);
 /*!
@@ -502,9 +502,9 @@ MXNET_DLL int MXExecutorBackward(ExecutorHandle handle,
  * \param out out put narray handles
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXExecutorHeads(ExecutorHandle handle,
-                              mx_uint *out_size,
-                              NDArrayHandle **out);
+MXNET_DLL int MXExecutorOutputs(ExecutorHandle handle,
+                                mx_uint *out_size,
+                                NDArrayHandle **out);
 
 /*!
  * \brief Generate Executor from symbol

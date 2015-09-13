@@ -556,13 +556,13 @@ int MXSymbolListArguments(SymbolHandle symbol,
   API_END();
 }
 
-int MXSymbolListReturns(SymbolHandle symbol,
+int MXSymbolListOutputs(SymbolHandle symbol,
                         mx_uint *out_size,
                         const char ***out_str_array) {
   Symbol *s = static_cast<Symbol*>(symbol);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
-  ret->ret_vec_str = std::move(s->ListReturns());
+  ret->ret_vec_str = std::move(s->ListOutputs());
   ret->ret_vec_charp.clear();
   for (size_t i = 0; i < ret->ret_vec_str.size(); ++i) {
     ret->ret_vec_charp.push_back(ret->ret_vec_str[i].c_str());
@@ -705,13 +705,13 @@ int MXExecutorBackward(ExecutorHandle handle,
   API_END();
 }
 
-int MXExecutorHeads(ExecutorHandle handle,
-                    mx_uint *out_size,
-                    NDArrayHandle **out) {
+int MXExecutorOutputs(ExecutorHandle handle,
+                      mx_uint *out_size,
+                      NDArrayHandle **out) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
-  std::vector<NDArray> heads = exec->heads();
+  std::vector<NDArray> heads = exec->outputs();
   ret->ret_handles.resize(heads.size());
   for (size_t i = 0; i < heads.size(); ++i) {
     NDArray *ptr = new NDArray();

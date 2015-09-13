@@ -94,8 +94,8 @@ class Operator {
    *
    * \note
    * Convention:
-   *   out_grad.size() == OperatorProperty.NumVisibleReturns()
-   *   out_data.size() == OperatorProperty.NumReturns()
+   *   out_grad.size() == OperatorProperty.NumVisibleOutputs()
+   *   out_data.size() == OperatorProperty.NumOutputs()
    * out_data can contain additional invisible returns that remembers the
    * state carried from the Forward pass. For example mask in the dropout.
    * The gradients are passed from visible returns in this function.
@@ -157,10 +157,10 @@ class OperatorProperty {
     return {"data"};
   }
   /*!
-   * \brief Get name of return values of Operator
-   * \return name of return values.
+   * \brief Get name of output values of Operator
+   * \return name of output values.
    */
-  virtual std::vector<std::string> ListReturns() const {
+  virtual std::vector<std::string> ListOutputs() const {
     return {"output"};
   }
   /*!
@@ -171,23 +171,23 @@ class OperatorProperty {
     return {};
   }
   /*! \return number of real return values of the Operator */
-  virtual int NumReturns() const {
+  virtual int NumOutputs() const {
     return 1;
   }
   /*!
    * \brief get number of visible return values during Symbol creation.
-   *  If NumVisibleReturns() = k, and NumReturns() = n.
+   *  If NumVisibleOutputs() = k, and NumOutputs() = n.
    *  The first k returns will be presented in the resulting symbol.
    *
    *  The rest of the returns can be used for auxiliary states for Backward.
-   *  For example, Dropout will return [data, mask], with NumVisibleReturns() == 1.
+   *  For example, Dropout will return [data, mask], with NumVisibleOutputs() == 1.
    *  So when user call sym = Dropout(input), only data is presented in sym.
    *  But all the returns will be presented in out_data parameter of Backward if requested.
    *
    * \return number of default return values
    */
-  virtual int NumVisibleReturns() const {
-    return NumReturns();
+  virtual int NumVisibleOutputs() const {
+    return NumOutputs();
   }
   /*!
    * \brief infer the shapes of outputs and unknown input arguments

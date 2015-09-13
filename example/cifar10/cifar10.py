@@ -164,7 +164,7 @@ data_shape = (batch_size, 3, 28, 28)
 in_data = mx.nd.empty(data_shape, mx.gpu())
 executor = loss.simple_bind(mx.gpu(), data = in_data)
 
-out_narray = executor.heads()[0]
+out_narray = executor.outputs[0]
 pred = mx.nd.zeros(out_narray.shape, mx.cpu())
 
 arg_narrays, grad_narrays = executor.list_arguments()

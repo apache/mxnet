@@ -6,7 +6,7 @@ def test_symbol_basic():
     mlist.append(models.mlp2())
     for m in mlist:
         m.list_arguments()
-        m.list_returns()
+        m.list_outputs()
 
 
 def test_compose():
@@ -25,4 +25,4 @@ def test_compose():
     composed = net2(fc3_data=net1, name='composed')
     print(composed.debug_str())
     multi_out = mx.symbol.Group([composed, net1])
-    assert len(multi_out.list_returns()) == 2
+    assert len(multi_out.list_outputs()) == 2

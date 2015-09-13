@@ -81,7 +81,8 @@ class Executor(object):
         ndarray = c_array(NDArrayHandle, [item.handle for item in head_grads])
         check_call(_LIB.MXExecutorBackward(self.handle, len(head_grads), ndarray))
 
-    def heads(self):
+    @property
+    def outputs(self):
         """list all heads' output ndarray
 
         Returns
@@ -94,5 +95,5 @@ class Executor(object):
         # if user set the content of the head, the backward behavior can be incorrect.
         out_size = mx_uint()
         handles = ctypes.POINTER(NDArrayHandle)()
-        check_call(_LIB.MXExecutorHeads(self.handle, ctypes.byref(out_size), ctypes.byref(handles)))
+        check_call(_LIB.MXExecutorOutputs(self.handle, ctypes.byref(out_size), ctypes.byref(handles)))
         return [NDArray(NDArrayHandle(handles[i])) for i in range(out_size.value)]

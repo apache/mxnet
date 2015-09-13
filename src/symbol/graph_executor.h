@@ -22,7 +22,7 @@ class GraphExecutor : public Executor {
   virtual ~GraphExecutor();
   virtual void Forward(bool is_train);
   virtual void Backward(const std::vector<NDArray> &head_grads);
-  virtual const std::vector<NDArray> &heads() const {
+  virtual const std::vector<NDArray> &outputs() const {
     return heads_ndarray_;
   }
   // implement Executor::Bind, only call it once.

@@ -133,7 +133,7 @@ bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
   for (size_t i = 0; i < nodes.size(); ++i) {
     int nout = 1;
     if (nodes[i].is_forward()) {
-      nout = nodes[i].op->NumReturns();
+      nout = nodes[i].op->NumOutputs();
     } else if (nodes[i].is_backward()) {
       nout = static_cast<int>(nodes[nodes[i].backward_source_id].inputs.size());
     }
@@ -215,9 +215,9 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
     // get out_grad and out_data entry
     std::vector<DataEntry> out_grad, out_data;
     // nvisible is out_grad.size()
-    int nvisible = nodes[nid].op->NumVisibleReturns();
+    int nvisible = nodes[nid].op->NumVisibleOutputs();
     // ntotal is out_data.size()
-    int ntotal = nodes[nid].op->NumReturns();
+    int ntotal = nodes[nid].op->NumOutputs();
     // check all outpus
     for (int i = 0; i < ntotal; ++i) {
       DataEntry odata(nid, static_cast<uint32_t>(i));

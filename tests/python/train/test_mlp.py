@@ -38,7 +38,7 @@ for name, narray in inputs.items():
 executor = softmax.bind(mx.Context('cpu'), arg_narrays, grad_narrays)
 # update
 
-out_narray = executor.heads()[0]
+out_narray = executor.outputs[0]
 grad_narray = mx.nd.empty(out_narray.shape)
 
 epoch = 9

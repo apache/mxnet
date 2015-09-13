@@ -145,17 +145,17 @@ class Symbol(object):
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
-    def list_returns(self):
-        """List all returns in the symbol.
+    def list_outputs(self):
+        """List all outputs in the symbol.
 
         Returns
         -------
         returns : list of string
-            List of all the returns.
+            List of all the outputs.
         """
         size = ctypes.c_uint()
         sarr = ctypes.POINTER(ctypes.c_char_p)()
-        check_call(_LIB.MXSymbolListReturns(
+        check_call(_LIB.MXSymbolListOutputs(
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
@@ -203,7 +203,7 @@ class Symbol(object):
             The order is in the same order as list_arguments()
         out_shapes : list of tuple or None
             List of shapes of outputs.
-            The order is in the same order as list_returns()
+            The order is in the same order as list_outputs()
         aux_shapes : list of tuple or None
             List of shapes of outputs.
             The order is in the same order as list_auxiliary()

@@ -208,7 +208,7 @@ class Symbol {
    */
   std::vector<std::string> ListArguments() const;
   /*! \return get the descriptions of outputs for this symbol */
-  std::vector<std::string> ListReturns() const;
+  std::vector<std::string> ListOutputs() const;
   /*! \return get the descriptions of auxiliary data for this symbol */
   std::vector<std::string> ListAuxiliaryStates() const;
   /*!
@@ -303,7 +303,7 @@ class Symbol {
    * \brief get number of outputs of this symbol
    * \return number of outputs
    */
-  inline size_t NumReturns() const {
+  inline size_t NumOutputs() const {
     return heads_.size();
   }
   /*!
@@ -401,10 +401,10 @@ class Executor {
    */
   virtual void Backward(const std::vector<NDArray> &head_grads) = 0;
   /*!
-   * \brief get array of heads in the executor.
-   * \return array of heads in the executor.
+   * \brief get array of outputs in the executor.
+   * \return array of outputs in the executor.
    */
-  virtual const std::vector<NDArray> &heads() const = 0;
+  virtual const std::vector<NDArray> &outputs() const = 0;
   /*!
    * \brief Create an operator by bind symbol with context and arguments.
    *  If user do not want to compute the gradients of i-th argument, grad_req_type[i] can be kNullOp.

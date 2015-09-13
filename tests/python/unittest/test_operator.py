@@ -27,9 +27,9 @@ def check_elementwise_sum_with_shape(shape, n):
     exec1 = out.bind(mx.Context('cpu'),
                      args=arr,
                      args_grad=arr_grad)
-    out1 = exec1.heads()[0].asnumpy()
+    out1 = exec1.outputs[0].asnumpy()
     exec1.forward()
-    out1 = exec1.heads()[0].asnumpy()
+    out1 = exec1.outputs[0].asnumpy()
     out = sum(a.asnumpy() for a  in arr)
     assert reldiff(out, out1) < 1e-6
     out_grad = mx.nd.empty(shape)
@@ -70,7 +70,7 @@ def check_concat_with_shape(shapes):
                      args=arr,
                      args_grad=arr_grad)
     exec1.forward()
-    out1 = exec1.heads()[0]
+    out1 = exec1.outputs[0]
     ret = np.concatenate([narray.asnumpy() for narray in arr], axis=1)
     assert same(out1.asnumpy(), ret)
     # backward

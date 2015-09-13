@@ -23,9 +23,9 @@ class GraphExecutor::BackwardOpWrapper : public Operator {
   explicit BackwardOpWrapper(const OperatorProperty *prop,
                              std::shared_ptr<Operator> forward_op)
       : op_(forward_op) {
-    out_grad_.resize(prop->NumVisibleReturns());
+    out_grad_.resize(prop->NumVisibleOutputs());
     in_data_.resize(prop->ListArguments().size());
-    out_data_.resize(prop->NumReturns());
+    out_data_.resize(prop->NumOutputs());
 
     std::vector<TBlob*> out_grad_ptr(out_grad_.size());
     for (size_t i = 0; i < out_grad_.size(); ++i) {
@@ -88,7 +88,7 @@ GraphExecutor::GetResource(uint32_t node_id) const {
 inline int GraphExecutor::GetNumOutputs(uint32_t node_id) const {
   const StaticGraph::Node &node = graph_.nodes[node_id];
   if (node.is_forward()) {
-    return node.op->NumReturns();
+    return node.op->NumOutputs();
   } else if (node.is_backward()) {
     return static_cast<int>(
         graph_.nodes[node.backward_source_id].op->ListArguments().size());
@@ -128,9 +128,9 @@ inline std::vector<std::pair<T, T> > GraphExecutor::GetInplaceOption(
     // forward property
     const OperatorProperty *fwd = graph_.nodes[node.backward_source_id].op.get();
 
-    std::vector<int> out_grad_index(fwd->NumVisibleReturns());
+    std::vector<int> out_grad_index(fwd->NumVisibleOutputs());
     std::vector<int> in_data_index(fwd->ListArguments().size());
-    std::vector<int> out_data_index(fwd->NumReturns());
+    std::vector<int> out_data_index(fwd->NumOutputs());
     CHECK_EQ(in_data_index.size(), out_data.size());
     int counter = 0;
     for (size_t i = 0; i < out_grad_index.size(); ++i) {
