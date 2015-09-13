@@ -57,3 +57,4 @@ __pycache__
 build
 dmlc-core
 mshadow
+data

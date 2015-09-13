@@ -1,10 +1,10 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file narray.h
- * \brief narray interface that dynamically schedules operations
+ * \file ndarray.h
+ * \brief NDArray interface that handles array arithematics.
  */
-#ifndef MXNET_NARRAY_H_
-#define MXNET_NARRAY_H_
+#ifndef MXNET_NDARRAY_H_
+#define MXNET_NDARRAY_H_
 
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
@@ -19,39 +19,39 @@
 #include "./engine.h"
 // check c++11
 #if DMLC_USE_CXX11 == 0
-#error "cxx11 was required for narray module"
+#error "cxx11 was required for ndarray module"
 #endif
 
 namespace mxnet {
 /*!
  * \brief ndarray interface
  */
-class NArray {
+class NDArray {
  public:
   /*! \brief default cosntructor */
-  NArray() {}
+  NDArray() {}
   /*!
-   * \brief constructing a new dynamic NArray
+   * \brief constructing a new dynamic NDArray
    * \param shape the shape of array
-   * \param ctx context of NArray
+   * \param ctx context of NDArray
    * \param delay_alloc whether delay the allocation
    */
-  NArray(const TShape &shape, Context ctx,
-         bool delay_alloc = false)
+  NDArray(const TShape &shape, Context ctx,
+          bool delay_alloc = false)
       : ptr_(std::make_shared<Chunk>(shape.Size(), ctx, delay_alloc)), shape_(shape), offset_(0) {
   }
   /*!
-   * \brief constructing a static NArray that shares data with TBlob
-   *  Use with caution: allocate ONLY ONE NArray for each TBlob,
-   *  make sure the memory region is available through out the life of NArray
+   * \brief constructing a static NDArray that shares data with TBlob
+   *  Use with caution: allocate ONLY ONE NDArray for each TBlob,
+   *  make sure the memory region is available through out the life of NDArray
    * \param data the memory content of static data
    * \param dev_id the device id this tensor sits at
    */
-  NArray(const TBlob &data, int dev_id)
+  NDArray(const TBlob &data, int dev_id)
       : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_), offset_(0) {
   }
   /*!
-   * \return the shape of current NArray
+   * \return the shape of current NDArray
    */
   inline const TShape &shape() const {
     return shape_;
@@ -64,18 +64,18 @@ class NArray {
                                       shape_, ptr_->shandle.ctx.dev_mask);
   }
   /*!
-   * \return the context of NArray, this function is only valid when the NArray is not empty
+   * \return the context of NDArray, this function is only valid when the NDArray is not empty
    */
   inline Context ctx() const {
     return ptr_->shandle.ctx;
   }
-  /*! \return whether this narray is not initialized */
+  /*! \return whether this ndarray is not initialized */
   inline bool is_none() const {
     return ptr_.get() == nullptr;
   }
   /*!
    * \brief Block until all the pending write operations with respect
-   *    to current NArray are finished, and read can be performed.
+   *    to current NDArray are finished, and read can be performed.
    */
   inline void WaitToRead() const {
     if (is_none()) return;
@@ -83,7 +83,7 @@ class NArray {
   }
   /*!
    * \brief Block until all the pending read/write operations with respect
-   *    to current NArray are finished, and write can be performed.
+   *    to current NDArray are finished, and write can be performed.
    */
   inline void WaitToWrite() const {
     if (is_none()) return;
@@ -91,10 +91,10 @@ class NArray {
      * Push an empty mutable function to flush all preceding reads to the
      * variable.
      */
-    Engine::Get()->Push([](RunContext) {}, Context{}, {}, {ptr_->var});
+    Engine::Get()->PushSync([](RunContext) {}, Context{}, {}, {ptr_->var});
     Engine::Get()->WaitForVar(ptr_->var);
   }
-  /*! \return the associated variable of the narray.*/
+  /*! \return the associated variable of the ndarray.*/
   inline Engine::VarHandle var() const {
     return ptr_->var;
   }
@@ -110,84 +110,84 @@ class NArray {
    */
   bool Load(dmlc::Stream *strm);
   /*!
-   * \brief set all the elements in narray to be scalar
+   * \brief set all the elements in ndarray to be scalar
    * \param scalar the scalar to set
    * \return reference of self
    */
-  NArray &operator=(real_t scalar);
+  NDArray &operator=(real_t scalar);
   /*!
    * \brief elementwise add to current space
-   *  this mutate the current NArray
+   *  this mutate the current NDArray
    * \param src the data to add
    * \return reference of self
    */
-  NArray &operator+=(const NArray &src);
+  NDArray &operator+=(const NDArray &src);
   /*!
    * \brief elementwise add to current space
-   *  this mutate the current NArray
+   *  this mutate the current NDArray
    * \param src the data to add
    * \return reference of self
    */
-  NArray &operator+=(const real_t &src);
+  NDArray &operator+=(const real_t &src);
   /*!
-   * \brief elementwise subtract from current narray
-   * this mutate the current NArray
+   * \brief elementwise subtract from current ndarray
+   * this mutate the current NDArray
    * \param src the data to substract
    * \return reference of self
    */
-  NArray &operator-=(const NArray &src);
+  NDArray &operator-=(const NDArray &src);
   /*!
-   * \brief elementwise subtract from current narray
-   * this mutate the current NArray
+   * \brief elementwise subtract from current ndarray
+   * this mutate the current NDArray
    * \param src the data to substract
    * \return reference of self
    */
-  NArray &operator-=(const real_t &src);
+  NDArray &operator-=(const real_t &src);
   /*!
-   * \brief elementwise multiplication to current narray
-   *  this mutate the current NArray
+   * \brief elementwise multiplication to current ndarray
+   *  this mutate the current NDArray
    * \param src the data to substract
    * \return reference of self
    */
-  NArray &operator*=(const NArray &src);
+  NDArray &operator*=(const NDArray &src);
   /*!
-   * \brief elementwise multiplication to current narray
-   *  this mutate the current NArray
+   * \brief elementwise multiplication to current ndarray
+   *  this mutate the current NDArray
    * \param src the data to substract
    * \return reference of self
    */
-  NArray &operator*=(const real_t &src);
+  NDArray &operator*=(const real_t &src);
   /*!
-   * \brief elementwise division from current narray
-   *  this mutate the current NArray
+   * \brief elementwise division from current ndarray
+   *  this mutate the current NDArray
    * \param src the data to substract
    * \return reference of self
    */
-  NArray &operator/=(const NArray &src);
+  NDArray &operator/=(const NDArray &src);
   /*!
-   * \brief elementwise division from current narray
-   *  this mutate the current NArray
+   * \brief elementwise division from current ndarray
+   *  this mutate the current NDArray
    * \param src the data to substract
    * \return reference of self
    */
-  NArray &operator/=(const real_t &src);
+  NDArray &operator/=(const real_t &src);
   /*!
-   * \brief return transpose of current NArray
-   * \return a new transposed NArray
+   * \brief return transpose of current NDArray
+   * \return a new transposed NDArray
    */
-  NArray T() const;
+  NDArray T() const;
   /*!
-   * \brief return a new copy this NArray
-   * \param ctx the new context of this NArray
+   * \brief return a new copy this NDArray
+   * \param ctx the new context of this NDArray
    * \return the new copy
    */
-  NArray Copy(Context ctx) const;
+  NDArray Copy(Context ctx) const;
   /*!
    * \brief Do a synchronize copy from a continugous CPU memory region.
    *
    *  This function will call WaitToWrite before the copy is performed.
    *  This is useful to copy data from existing memory region that are
-   *  not wrapped by NArray(thus dependency not being tracked).
+   *  not wrapped by NDArray(thus dependency not being tracked).
    *
    * \param data the data source to copy from.
    * \param size the memory size we want to copy from.
@@ -198,21 +198,21 @@ class NArray {
    *
    *  This function will call WaitToRead before the copy is performed.
    *  This is useful to copy data from existing memory region that are
-   *  not wrapped by NArray(thus dependency not being tracked).
+   *  not wrapped by NDArray(thus dependency not being tracked).
    *
    * \param data the data source to copyinto.
    * \param size the memory size we want to copy into.
    */
   void SyncCopyToCPU(real_t *data, size_t size) const;
   /*!
-   * \brief Slice a NArray
+   * \brief Slice a NDArray
    * \param begin begin index in first dim
    * \param end end index in first dim
-   * \return sliced NArray
+   * \return sliced NDArray
    */
-  inline NArray Slice(index_t begin, index_t end) const {
-    NArray ret = *this;
-    CHECK(!is_none()) << "NArray is not initialized";
+  inline NDArray Slice(index_t begin, index_t end) const {
+    NDArray ret = *this;
+    CHECK(!is_none()) << "NDArray is not initialized";
     CHECK_GE(shape_[0], end) << "Slice end index out of range";
     size_t length = 1;
     if (shape_.ndim() == 1) {
@@ -227,20 +227,20 @@ class NArray {
     return ret;
   }
   /*!
-   * \brief Get an reshaped NArray
+   * \brief Get an reshaped NDArray
    * \param shape new shape
-   * \return NArray in new shape
+   * \return NDArray in new shape
    */
-  inline NArray Reshape(const TShape &shape) const {
+  inline NDArray Reshape(const TShape &shape) const {
     CHECK_GE(shape_.Size(), shape.Size())
-        << "NArray.Reshape: target shape size is different from current shape";
-    NArray ret = *this;
+        << "NDArray.Reshape: target shape size is different from current shape";
+    NDArray ret = *this;
     ret.shape_ = shape;
     return ret;
   }
 
  private:
-  /*! \brief the real data chunk that backs NArray */
+  /*! \brief the real data chunk that backs NDArray */
   struct Chunk {
     /*! \brief storage handlefrom storage engine */
     Storage::Handle shandle;
@@ -294,120 +294,120 @@ class NArray {
       }
     }
   };
-  /*! \brief internal data of NArray */
+  /*! \brief internal data of NDArray */
   std::shared_ptr<Chunk> ptr_;
-  /*! \brief shape of current NArray */
+  /*! \brief shape of current NDArray */
   TShape shape_;
   /*! \brief offset in chunk */
   size_t offset_;
 
   // add friend to helper functions
-  friend void CopyFromTo(const NArray &from, NArray *to);
+  friend void CopyFromTo(const NDArray &from, NDArray *to);
   template<typename OP>
-  friend void BinaryOp(const NArray &lhs, const NArray &rhs, NArray *out);
+  friend void BinaryOp(const NDArray &lhs, const NDArray &rhs, NDArray *out);
   template<typename OP>
-  friend void UnaryOp(const NArray &lhs, const NArray &rhs, NArray *out);
+  friend void UnaryOp(const NDArray &lhs, const NDArray &rhs, NDArray *out);
   template<typename OP, bool reverse>
-  friend void ScalarOp(const NArray &lhs, const real_t &rhs, NArray *out);
-  friend void SetValueOp(const real_t &rhs, NArray *out);
+  friend void ScalarOp(const NDArray &lhs, const real_t &rhs, NDArray *out);
+  friend void SetValueOp(const real_t &rhs, NDArray *out);
 };
 
 /*!
- * \brief issue an copy operation from one NArray to another
- *  the two narray can sit on different devices
+ * \brief issue an copy operation from one NDArray to another
+ *  the two ndarray can sit on different devices
  *  this operation will be scheduled by the engine
  *
  *  NOTE: this function name explicitly marks the order of from and to
  *     due to different possible convention carried by copy function
- * \param from the narray we want to copy data from
- * \param to the target narray
+ * \param from the ndarray we want to copy data from
+ * \param to the target ndarray
  */
-void CopyFromTo(const NArray &from, NArray *to);
+void CopyFromTo(const NDArray &from, NDArray *to);
 
 /*!
  * \brief elementwise add
  * \param lhs left operand
  * \param rhs right operand
- * \return a new result narray
+ * \return a new result ndarray
  */
-NArray operator+(const NArray &lhs, const NArray &rhs);
+NDArray operator+(const NDArray &lhs, const NDArray &rhs);
 /*!
  * \brief elementwise add
  * \param lhs left operand
  * \param rhs right operand
- * \return a new result narray
+ * \return a new result ndarray
  */
-NArray operator+(const NArray &lhs, const real_t &rhs);
+NDArray operator+(const NDArray &lhs, const real_t &rhs);
 /*!
  * \brief elementwise substraction
  * \param lhs left operand
  * \param rhs right operand
- * \return a new result narray
+ * \return a new result ndarray
  */
-NArray operator-(const NArray &lhs, const NArray &rhs);
+NDArray operator-(const NDArray &lhs, const NDArray &rhs);
 /*!
  * \brief elementwise substraction
  * \param lhs left operand
  * \param rhs right operand
- * \return a new result narray
+ * \return a new result ndarray
  */
-NArray operator-(const NArray &lhs, const real_t &rhs);
+NDArray operator-(const NDArray &lhs, const real_t &rhs);
 /*!
  * \brief elementwise multiplication
  * \param lhs left operand
  * \param rhs right operand
- * \return a new result narray
+ * \return a new result ndarray
  */
-NArray operator*(const NArray &lhs, const NArray &rhs);\
+NDArray operator*(const NDArray &lhs, const NDArray &rhs);\
 /*!
  * \brief elementwise multiplication
  * \param lhs left operand
  * \param rhs right operand
- * \return a new result narray
+ * \return a new result ndarray
  */
-NArray operator*(const NArray &lhs, const real_t &rhs);
+NDArray operator*(const NDArray &lhs, const real_t &rhs);
 /*!
  * \brief elementwise division
  * \param lhs left operand
  * \param rhs right operand
- * \return a new result narray
+ * \return a new result ndarray
  */
-NArray operator/(const NArray &lhs, const NArray &rhs);
+NDArray operator/(const NDArray &lhs, const NDArray &rhs);
 /*!
  * \brief elementwise division
  * \param lhs left operand
  * \param rhs right operand
- * \return a new result narray
+ * \return a new result ndarray
  */
-NArray operator/(const NArray &lhs, const real_t &rhs);
+NDArray operator/(const NDArray &lhs, const real_t &rhs);
 
 //--------------------------------------------------------------
-// The following part are API Registration of NArray functions.
+// The following part are API Registration of NDArray functions.
 //--------------------------------------------------------------
-/*! \brief definition of NArray function */
-typedef std::function<void (NArray **used_vars,
+/*! \brief definition of NDArray function */
+typedef std::function<void (NDArray **used_vars,
                             real_t *scalars,
-                            NArray **mutate_vars)> NArrayAPIFunction;
+                            NDArray **mutate_vars)> NDArrayAPIFunction;
 /*! \brief mask information on how functions can be exposed */
-enum NArrayFunctionTypeMask {
+enum NDArrayFunctionTypeMask {
   /*! \brief all the use_vars should go before scalar */
-  kNArrayArgBeforeScalar = 1,
+  kNDArrayArgBeforeScalar = 1,
   /*! \brief all the scalar should go before use_vars */
-  kScalarArgBeforeNArray = 1 << 1,
+  kScalarArgBeforeNDArray = 1 << 1,
   /*!
    * \brief whether this function allows the handles in the target to
-   *  be empty NArray that are not yet initialized, and will initialize
+   *  be empty NDArray that are not yet initialized, and will initialize
    *  them when the function is invoked.
    *
    *  most function should support this, except copy between different
-   *  devices, which requires the NArray to be pre-initialized with context
+   *  devices, which requires the NDArray to be pre-initialized with context
    */
   kAcceptEmptyMutateTarget = 1 << 2
 };
-/*! \brief Registry entry for NArrayFunction */
-struct NArrayFunctionReg
-    : public dmlc::FunctionRegEntryBase<NArrayFunctionReg,
-                                        NArrayAPIFunction> {
+/*! \brief Registry entry for NDArrayFunction */
+struct NDArrayFunctionReg
+    : public dmlc::FunctionRegEntryBase<NDArrayFunctionReg,
+                                        NDArrayAPIFunction> {
   /*! \brief number of variable used by this function */
   unsigned num_use_vars;
   /*! \brief number of variable mutated by this function */
@@ -419,81 +419,81 @@ struct NArrayFunctionReg
   /*!
    * \brief constructor
    */
-  NArrayFunctionReg()
+  NDArrayFunctionReg()
       : num_use_vars(0),
         num_mutate_vars(0),
         num_scalars(0),
         type_mask(0) {}
   /*!
-   * \brief set the function body to a NArray setvalue function
+   * \brief set the function body to a NDArray setvalue function
    *  this will also auto set the parameters correctly
    * \param fsetvalue function body to set
    * \return ref to the registered entry, used to set properties
    */
-  inline NArrayFunctionReg &set_function(void fsetvalue(const real_t &rhs,
-                                                        NArray *out)) {
-    body = [fsetvalue] (NArray **used_vars,
-                       real_t *s, NArray **mutate_vars) {
+  inline NDArrayFunctionReg &set_function(void fsetvalue(const real_t &rhs,
+                                                        NDArray *out)) {
+    body = [fsetvalue] (NDArray **used_vars,
+                       real_t *s, NDArray **mutate_vars) {
       fsetvalue(s[0], mutate_vars[0]);
     };
     num_mutate_vars = 1; num_scalars = 1;
-    // type_mask = kNArrayArgBeforeScalar;
+    // type_mask = kNDArrayArgBeforeScalar;
     this->add_argument("rhs", "real_t", "Right operand to the function.");
     return *this;
   }
   /*!
-   * \brief set the function body to a binary NArray function
+   * \brief set the function body to a binary NDArray function
    *  this will also auto set the parameters correctly
    * \param fbinary function body to set
    * \return ref to the registered entry, used to set properties
    */
-  inline NArrayFunctionReg &set_function(void fbinary(const NArray &lhs,
-                                                      const NArray &rhs,
-                                                      NArray *out)) {
-    body = [fbinary] (NArray **used_vars,
-                      real_t *s, NArray **mutate_vars) {
+  inline NDArrayFunctionReg &set_function(void fbinary(const NDArray &lhs,
+                                                      const NDArray &rhs,
+                                                      NDArray *out)) {
+    body = [fbinary] (NDArray **used_vars,
+                      real_t *s, NDArray **mutate_vars) {
       fbinary(*used_vars[0], *used_vars[1], mutate_vars[0]);
     };
     num_use_vars = 2; num_mutate_vars = 1;
-    type_mask = kNArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
-    this->add_argument("lhs", "NArray", "Left operand to the function.");
-    this->add_argument("rhs", "NArray", "Right operand to the function.");
+    type_mask = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
+    this->add_argument("lhs", "NDArray", "Left operand to the function.");
+    this->add_argument("rhs", "NDArray", "Right operand to the function.");
     return *this;
   }
   /*!
-   * \brief set the function body to a binary NArray function
+   * \brief set the function body to a binary NDArray function
    *  this will also auto set the parameters correctly
    * \param fscalar function body to set
    * \return ref to the registered entry, used to set properties
    */
-  inline NArrayFunctionReg &set_function(void fscalar(const NArray &lhs,
+  inline NDArrayFunctionReg &set_function(void fscalar(const NDArray &lhs,
                                                       const real_t &rhs,
-                                                      NArray *out)) {
-    body = [fscalar] (NArray **used_vars,
-                       real_t *s, NArray **mutate_vars) {
+                                                      NDArray *out)) {
+    body = [fscalar] (NDArray **used_vars,
+                       real_t *s, NDArray **mutate_vars) {
       fscalar(*used_vars[0], s[0], mutate_vars[0]);
     };
     num_use_vars = 1; num_mutate_vars = 1; num_scalars = 1;
-    type_mask = kNArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
-    this->add_argument("lhs", "NArray", "Left operand to the function.");
+    type_mask = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
+    this->add_argument("lhs", "NDArray", "Left operand to the function.");
     this->add_argument("rhs", "real_t", "Right operand to the function.");
     return *this;
   }
   /*!
-   * \brief set the function body to a unary NArray function
+   * \brief set the function body to a unary NDArray function
    *  this will also auto set the parameters correctly
    * \param funary function body to set
    * \return ref to the registered entry, used to set properties
    */
-  inline NArrayFunctionReg &set_function(void funary(const NArray &src,
-                                                     NArray *out)) {
-    body = [funary] (NArray **used_vars,
-                     real_t *s, NArray **mutate_vars) {
+  inline NDArrayFunctionReg &set_function(void funary(const NDArray &src,
+                                                     NDArray *out)) {
+    body = [funary] (NDArray **used_vars,
+                     real_t *s, NDArray **mutate_vars) {
       funary(*used_vars[0], mutate_vars[0]);
     };
     num_use_vars = 1; num_mutate_vars = 1;
-    type_mask = kNArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
-    this->add_argument("src", "NArray", "Source input to the function.");
+    type_mask = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
+    this->add_argument("src", "NDArray", "Source input to the function.");
     return *this;
   }
   /*!
@@ -501,7 +501,7 @@ struct NArrayFunctionReg
    * \param n number of mutate variablesx
    * \return ref to the registered entry, used to set properties
    */
-  inline NArrayFunctionReg &set_num_use_vars(unsigned n) {
+  inline NDArrayFunctionReg &set_num_use_vars(unsigned n) {
     num_use_vars = n; return *this;
   }
   /*!
@@ -509,7 +509,7 @@ struct NArrayFunctionReg
    * \param n number of mutate variablesx
    * \return ref to the registered entry, used to set properties
    */
-  inline NArrayFunctionReg &set_num_mutate_vars(unsigned n) {
+  inline NDArrayFunctionReg &set_num_mutate_vars(unsigned n) {
     num_mutate_vars = n; return *this;
   }
   /*!
@@ -517,7 +517,7 @@ struct NArrayFunctionReg
    * \param n number of scalar arguments
    * \return ref to the registered entry, used to set properties
    */
-  inline NArrayFunctionReg &set_num_scalars(unsigned n) {
+  inline NDArrayFunctionReg &set_num_scalars(unsigned n) {
     num_scalars = n; return *this;
   }
   /*!
@@ -525,29 +525,29 @@ struct NArrayFunctionReg
    * \param tmask typemask
    * \return ref to the registered entry, used to set properties
    */
-  inline NArrayFunctionReg &set_type_mask(int tmask) {
+  inline NDArrayFunctionReg &set_type_mask(int tmask) {
     type_mask = tmask; return *this;
   }
-};  // NArrayFunctionReg
+};  // NDArrayFunctionReg
 
 /*!
- * \brief Macro to register NArray function
+ * \brief Macro to register NDArray function
  *
  * Example: the following code is example to register a plus
  * \code
  *
- * REGISTER_NARRAY_FUN(Plus)
+ * REGISTER_NDARRAY_FUN(Plus)
  * .set_function(Plus);
  *
  * \endcode
  */
-#define MXNET_REGISTER_NARRAY_FUN(name)                                 \
-  DMLC_REGISTRY_REGISTER(::mxnet::NArrayFunctionReg, NArrayFunctionReg, name)
+#define MXNET_REGISTER_NDARRAY_FUN(name)                                 \
+  DMLC_REGISTRY_REGISTER(::mxnet::NDArrayFunctionReg, NDArrayFunctionReg, name)
 
 }  // namespace mxnet
 
 namespace dmlc {
 /*!\brief traits */
-DMLC_DECLARE_TRAITS(has_saveload, mxnet::NArray, true);
+DMLC_DECLARE_TRAITS(has_saveload, mxnet::NDArray, true);
 }  // namespace dmlc
-#endif  // MXNET_NARRAY_H_
+#endif  // MXNET_NDARRAY_H_

@@ -30,7 +30,21 @@
  *\brief whether to use cudnn library for convolution
  */
 #ifndef MXNET_USE_CUDNN
-#define MXNET_USE_CUDNN 0
+#define MXNET_USE_CUDNN MSHADOW_USE_CUDNN
+#endif
+
+/*! \brief Error message for using gpu when MXNET_USE_CUDA==0 */
+#define MXNET_GPU_NOT_ENABLED_ERROR  "GPU is not enabled"
+
+/*!
+ * \brief define compatible keywords in g++
+ *  Used to support g++-4.6 and g++4.7
+ */
+#if DMLC_USE_CXX11 && defined(__GNUC__) && !defined(__clang_version__)
+#if __GNUC__ == 4 && __GNUC_MINOR__ == 6
+#define override
+#define final
+#endif
 #endif
 
 /*! \brief namespace of mxnet */
@@ -49,7 +63,6 @@ typedef mshadow::TShape TShape;
 /*! \brief storage container type */
 typedef mshadow::TBlob TBlob;
 }  // namespace mxnet
-
 
 //! \cond Doxygen_Suppress
 namespace dmlc {

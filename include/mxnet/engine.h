@@ -1,72 +1,79 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file engine.h
- * \brief Engine that schedules data.
+ * \brief Engine that schedules all the operations according to dependency.
  */
 #ifndef MXNET_ENGINE_H_
 #define MXNET_ENGINE_H_
+
 #include <dmlc/base.h>
-
-#if DMLC_USE_CXX11 == 0
-#error "C++11 was required for engine module."
-#endif
-
+#if DMLC_USE_CXX11
 #include <functional>
+#endif
 #include <vector>
-#include "base.h"
-#include "context.h"
+#include "./base.h"
+#include "./context.h"
 
 namespace mxnet {
-
-/*!
- * \brief Namespace of engine implementation.
- */
+/*! \brief namespace of engine internal types. */
 namespace engine {
-
-/*!
- * \brief Inner representation of variable.
- */
+/*! \brief Internal representation of variable. */
 struct Var;
-
-/*!
- * \brief Inner representation of operator.
- */
+/*! \brief Internal representation of operator.  */
 struct Opr;
-
+/*! \brief Variable pointer type, usually hold by user used to specify dependencies. */
+typedef Var* VarHandle;
+/*! \brief Operator pointer type, usually hold by user.*/
+typedef Opr* OprHandle;
 }  // namespace engine
 
-/*!
- * \brief Function property.
- */
-enum class FnProperty { kNormal, kIO, kAsync };  // enum class FnProperty
+#if DMLC_USE_CXX11
+
+/*! \brief Function property, used to hint what action is pushed to engine. */
+enum class FnProperty {
+  /*! \brief Normal operation */
+  kNormal,
+  /*! \brief Copy operation between CPU and GPU */
+  kCopy,
+  /*! \brief Asynchronous function call */
+  kAsync
+};  // enum class FnProperty
 
 /*!
- * \brief Dynamic dataflow engine that schedules operations.
- */
+ * \brief Dependency engine that schedules operations.
+*/
 class Engine {
  public:
   /*!
-   * \brief Operation to pass to engine.
+   * \brief OnComplete Callback to the engine,
+   *  called by AsyncFn when action completes
    */
-  using Fn = std::function<void(RunContext)>;
-  /*!
-   * \brief Callback function to notify operation complete.
-   */
-  using Callback = std::function<void()>;
-  /*!
-   * \brief Asynchronous operation to pass to engine.
-   */
-  using AsyncFn = std::function<void(RunContext, Callback)>;
-  /*!
-   * \brief Variable of engine, used to specify dependencies defined to be a
-   *        pointer, that points to an internal data structure of the engine
-   *        itself.
-   */
-  using VarHandle = engine::Var*;
-  /*!
-   * \brief Operator of the engine.
-   */
-  using OprHandle = engine::Opr*;
+  class CallbackOnComplete {
+   public:
+    // use implicit copy and assign
+    /*! \brief involve the callback */
+    inline void operator()() const {
+      (*callback_)(engine_, param_);
+    }
+
+   private:
+    /*! \brief engine can see content of callback */
+    friend class ::mxnet::Engine;
+    /*! \brief the real callback */
+    void (*callback_)(Engine *, void *);
+    /*! \brief the engine class passed to callback */
+    Engine* engine_;
+    /*! \brief the parameter set on callback */
+    void* param_;
+  };
+  /*! \brief Synchronous operation to pass to engine. */
+  typedef std::function<void(RunContext)> SyncFn;
+  /*! \brief Asynchronous operation to pass to engine. */
+  typedef std::function<void(RunContext, CallbackOnComplete)> AsyncFn;
+  /*! \brief Variable pointer */
+  typedef engine::VarHandle VarHandle;
+  /*! \brief Operator pointer */
+  typedef engine::OprHandle OprHandle;
   /*!
    * \brief Allocate a new variable, the variable can then
    *        be used to schedule the operation concurrently via dependency
@@ -103,19 +110,6 @@ class Engine {
    */
   virtual void Push(OprHandle op, Context exec_ctx) = 0;
   /*!
-   * \brief Push an synchronous operation to the engine.
-   * \param exec_fun Execution function that executes the operation.
-   * \param exec_ctx Execution context.
-   * \param const_vars The variables that current operation will use but not
-   *                   mutate.
-   * \param mutable_vars The variables that current operation will mutate.
-   * \param prop Property of the function.
-   */
-  virtual void Push(Fn exec_fun, Context exec_ctx,
-                    std::vector<VarHandle> const& const_vars,
-                    std::vector<VarHandle> const& mutable_vars,
-                    FnProperty prop = FnProperty::kNormal) = 0;
-  /*!
    * \brief Push an asynchronous operation to the engine.
    * \param exec_fun Execution function, this function takes a parameter
    *                 on_complete that must be called when the execution
@@ -141,7 +135,8 @@ class Engine {
    * \param exec_ctx Execution context.
    * \param var The variable to be deleted.
    */
-  virtual void DeleteVariable(Fn delete_fun, Context exec_ctx,
+  virtual void DeleteVariable(SyncFn delete_fn,
+                              Context exec_ctx,
                               VarHandle var) = 0;
   /*!
    * \brief Wait for a variable.
@@ -153,16 +148,48 @@ class Engine {
    * \brief Wait until all the activity of engine finishes.
    */
   virtual void WaitForAll() = 0;
-  /*!
-   * \brief Virtual destructor.
-   */
-  virtual ~Engine() noexcept(false);
+  /*!\brief virtual destructor */
+  virtual ~Engine() noexcept(false) {}
   /*!
    * \return Engine singleton.
    */
   static Engine* Get();
+  /*!
+   * \brief Push an synchronous operation to the engine.
+   * \param exec_fn Execution function that executes the operation.
+   * \param exec_ctx Execution context.
+   * \param const_vars The variables that current operation will use but not
+   *                   mutate.
+   * \param mutable_vars The variables that current operation will mutate.
+   * \param prop Property of the function.
+   * \tparam SyncFn the synchronous function to be pushed.
+   */
+  template<typename SyncFn>
+  inline void PushSync(SyncFn exec_fn, Context exec_ctx,
+                       std::vector<VarHandle> const& const_vars,
+                       std::vector<VarHandle> const& mutable_vars,
+                       FnProperty prop = FnProperty::kNormal) {
+    this->PushAsync([exec_fn](RunContext ctx, CallbackOnComplete on_complete) {
+        exec_fn(ctx);
+        on_complete();
+      }, exec_ctx, const_vars, mutable_vars, prop);
+  }
+
+ protected:
+  /*!
+   * \brief factory function to create OnComplete callback.
+   * \param callback th static callback function.
+   * \param param the paramter passed to callback.
+   */
+  inline CallbackOnComplete CreateCallback(
+      void (*callback)(Engine *, void *), void *param) {
+    CallbackOnComplete ret;
+    ret.callback_ = callback;
+    ret.engine_ = this;
+    ret.param_ = param;
+    return ret;
+  }
 };  // class Engine
-
+#endif  // DMLC_USE_CXX11
 }  // namespace mxnet
-
 #endif  // MXNET_ENGINE_H_

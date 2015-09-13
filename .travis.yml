@@ -11,7 +11,7 @@ env:
     - TASK=python CXX=g++
     - TASK=python3 CXX=g++
     - TASK=python_naive CXX=g++
-    - TASK=unittest_gtest CXX=g++
+    - TASK=cpp_unittest CXX=g++
 
 # dependent apt packages
 addons:
@@ -47,6 +47,7 @@ before_install:
 
 install:
   - pip install cpplint pylint --user `whoami`
+  - make -f dmlc-core/scripts/packages.mk gtest
   - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
 
 script:

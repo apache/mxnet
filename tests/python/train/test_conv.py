@@ -2,8 +2,7 @@
 import mxnet as mx
 import numpy as np
 import os, pickle, gzip
-import sys
-import get_data
+from common import get_data
 
 def CalAcc(out, label):
     pred = np.argmax(out, axis=1)
@@ -12,12 +11,12 @@ def CalAcc(out, label):
 # symbol net
 batch_size = 100
 data = mx.symbol.Variable('data')
-conv1= mx.symbol.Convolution(data = data, name='conv1', num_filter=32, kernel=(3,3), stride=(2,2), nstep=100)
+conv1= mx.symbol.Convolution(data = data, name='conv1', num_filter=32, kernel=(3,3), stride=(2,2))
 bn1 = mx.symbol.BatchNorm(data = conv1, name="bn1")
 act1 = mx.symbol.Activation(data = bn1, name='relu1', act_type="relu")
 mp1 = mx.symbol.Pooling(data = act1, name = 'mp1', kernel=(2,2), stride=(2,2), pool_type='max')
 
-conv2= mx.symbol.Convolution(data = mp1, name='conv2', num_filter=32, kernel=(3,3), stride=(2,2), nstep=100)
+conv2= mx.symbol.Convolution(data = mp1, name='conv2', num_filter=32, kernel=(3,3), stride=(2,2))
 bn2 = mx.symbol.BatchNorm(data = conv2, name="bn2")
 act2 = mx.symbol.Activation(data = bn2, name='relu2', act_type="relu")
 mp2 = mx.symbol.Pooling(data = act2, name = 'mp2', kernel=(2,2), stride=(2,2), pool_type='max')
@@ -32,9 +31,9 @@ args_list = softmax.list_arguments()
 
 data_shape = (batch_size, 1, 28, 28)
 arg_shapes, out_shapes, aux_shapes = softmax.infer_shape(data=data_shape)
-arg_narrays = [mx.narray.empty(shape) for shape in arg_shapes]
-grad_narrays = [mx.narray.empty(shape) for shape in arg_shapes]
-aux_narrays = [mx.narray.empty(shape) for shape in aux_shapes]
+arg_narrays = [mx.nd.empty(shape) for shape in arg_shapes]
+grad_narrays = [mx.nd.empty(shape) for shape in arg_shapes]
+aux_narrays = [mx.nd.empty(shape) for shape in aux_shapes]
 
 inputs = dict(zip(args_list, arg_narrays))
 np.random.seed(0)
@@ -54,8 +53,8 @@ for name, narray in inputs.items():
 executor = softmax.bind(mx.Context('cpu'), arg_narrays, grad_narrays, 'write', aux_narrays)
 # update
 
-out_narray = executor.heads()[0]
-grad_narray = mx.narray.empty(out_narray.shape)
+out_narray = executor.outputs[0]
+grad_narray = mx.nd.empty(out_narray.shape)
 
 epoch = 1
 momentum = 0.9

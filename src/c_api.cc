@@ -8,7 +8,7 @@
 #include <dmlc/io.h>
 #include <dmlc/memory_io.h>
 #include <mxnet/base.h>
-#include <mxnet/narray.h>
+#include <mxnet/ndarray.h>
 #include <mxnet/symbolic.h>
 #include <mxnet/operator.h>
 #include <mxnet/io.h>
@@ -181,101 +181,91 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 }
 
 // NOTE: return value is added in API_END
-int MXNArrayCreateNone(NArrayHandle *out) {
+int MXNDArrayCreateNone(NDArrayHandle *out) {
   API_BEGIN();
-  *out = new NArray();
+  *out = new NDArray();
   API_END();
 }
 
-int MXNArrayCreateShareMem(mx_float *data,
-                           mx_uint *shape,
-                           mx_uint ndim,
-                           NArrayHandle *out) {
+int MXNDArrayCreate(const mx_uint *shape,
+                    mx_uint ndim,
+                    int dev_mask,
+                    int dev_id,
+                    int delay_alloc,
+                    NDArrayHandle *out) {
   API_BEGIN();
-  *out = new NArray(TBlob(data, TShape(shape, shape + ndim),
-                          cpu::kDevMask), 0);
-  API_END();
-}
-
-int MXNArrayCreate(const mx_uint *shape,
-                   mx_uint ndim,
-                   int dev_mask,
-                   int dev_id,
-                   int delay_alloc,
-                   NArrayHandle *out) {
-  API_BEGIN();
-  *out = new NArray(TShape(shape, shape + ndim),
+  *out = new NDArray(TShape(shape, shape + ndim),
                     Context(dev_mask, dev_id),
                     delay_alloc != 0);
   API_END();
 }
 
-int MXNArrayLoadFromRawBytes(const void *buf,
-                             mx_ulong size,
-                             NArrayHandle *out) {
-  NArray *ptr = nullptr;
+int MXNDArrayLoadFromRawBytes(const void *buf,
+                              mx_ulong size,
+                              NDArrayHandle *out) {
+  NDArray *ptr = nullptr;
   API_BEGIN();
   dmlc::MemoryFixedSizeStream strm((void*)buf, size); // NOLINT(*)
-  ptr = new NArray();
+  ptr = new NDArray();
   if (!ptr->Load(&strm)) {
-    throw dmlc::Error("Invalid NArray serialization format");
+    throw dmlc::Error("Invalid NDArray serialization format");
   }
   *out = ptr;
   API_END_HANDLE_ERROR(delete ptr);
 }
 
-int MXNArraySaveRawBytes(NArrayHandle handle,
-                         mx_ulong *out_size,
-                         const char **out_buf) {
+int MXNDArraySaveRawBytes(NDArrayHandle handle,
+                          mx_ulong *out_size,
+                          const char **out_buf) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
   ret->ret_str.resize(0);
   dmlc::MemoryStringStream strm(&ret->ret_str);
-  static_cast<NArray*>(handle)->Save(&strm);
+  static_cast<NDArray*>(handle)->Save(&strm);
   *out_size = ret->ret_str.length();
   *out_buf = ret->ret_str.c_str();
   API_END();
 }
 
-int MXNArraySyncCopyFromCPU(NArrayHandle handle,
-                            const mx_float *data,
-                            size_t size) {
+int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
+                             const mx_float *data,
+                             size_t size) {
   API_BEGIN();
-  static_cast<NArray*>(handle)->SyncCopyFromCPU(data, size);
+  static_cast<NDArray*>(handle)->SyncCopyFromCPU(data, size);
   API_END();
 }
 
-int MXNArraySyncCopyToCPU(NArrayHandle handle,
-                          mx_float *data,
-                          size_t size) {
+int MXNDArraySyncCopyToCPU(NDArrayHandle handle,
+                           mx_float *data,
+                           size_t size) {
   API_BEGIN();
-  static_cast<NArray*>(handle)->SyncCopyToCPU(data, size);
+  static_cast<NDArray*>(handle)->SyncCopyToCPU(data, size);
   API_END();
 }
 
-int MXNArrayWaitToRead(NArrayHandle handle) {
+int MXNDArrayWaitToRead(NDArrayHandle handle) {
   API_BEGIN();
-  static_cast<NArray*>(handle)->WaitToRead();
+  static_cast<NDArray*>(handle)->WaitToRead();
   API_END();
 }
 
-int MXNArrayWaitToWrite(NArrayHandle handle) {
+int MXNDArrayWaitToWrite(NDArrayHandle handle) {
   API_BEGIN();
-  static_cast<NArray*>(handle)->WaitToWrite();
+  static_cast<NDArray*>(handle)->WaitToWrite();
   API_END();
 }
 
-const int kMXAPINArrayListMagic = 0x112;
+const uint64_t kMXAPINDArrayListMagic = 0x112;
 
-int MXNArrayListSave(const char* fname,
-                     mx_uint num_args,
-                     NArrayHandle* args,
-                     const char** keys) {
+int MXNDArrayListSave(const char* fname,
+                      mx_uint num_args,
+                      NDArrayHandle* args,
+                      const char** keys) {
   API_BEGIN();
-  std::vector<NArray> data(num_args);
+  std::vector<NDArray> data(num_args);
   std::vector<std::string> names;
   for (mx_uint i = 0; i < num_args; ++i) {
-    data[i] = *static_cast<NArray*>(args[i]);
+    data[i] = *static_cast<NDArray*>(args[i]);
   }
   if (keys != nullptr) {
     names.resize(num_args);
@@ -284,7 +274,7 @@ int MXNArrayListSave(const char* fname,
     }
   }
   std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(fname, "w"));
-  uint64_t header = kMXAPINArrayListMagic, reserved = 0;
+  uint64_t header = kMXAPINDArrayListMagic, reserved = 0;
   fo->Write(&header, sizeof(header));
   fo->Write(&reserved, sizeof(reserved));
   fo->Write(data);
@@ -292,33 +282,33 @@ int MXNArrayListSave(const char* fname,
   API_END();
 }
 
-int MXNArrayListLoad(const char* fname,
-                     mx_uint *out_size,
-                     NArrayHandle** out_arr,
-                     mx_uint *out_name_size,
-                     const char*** out_names) {
+int MXNDArrayListLoad(const char* fname,
+                      mx_uint *out_size,
+                      NDArrayHandle** out_arr,
+                      mx_uint *out_name_size,
+                      const char*** out_names) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   ret->ret_vec_str.clear();
   API_BEGIN();
-  std::vector<NArray> data;
+  std::vector<NDArray> data;
   std::vector<std::string> &names = ret->ret_vec_str;
   std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
   uint64_t header, reserved;
   CHECK(fi->Read(&header))
-      << "Invalid NArray file format";
+      << "Invalid NDArray file format";
   CHECK(fi->Read(&reserved))
-      << "Invalid NArray file format";
-  CHECK(header == kMXAPINArrayListMagic)
-      << "Invalid NArray file format";
+      << "Invalid NDArray file format";
+  CHECK(header == kMXAPINDArrayListMagic)
+      << "Invalid NDArray file format";
   CHECK(fi->Read(&data))
-      << "Invalid NArray file format";
+      << "Invalid NDArray file format";
   CHECK(fi->Read(&names))
-      << "Invalid NArray file format";
+      << "Invalid NDArray file format";
   CHECK(names.size() == 0 || names.size() == data.size())
-      << "Invalid NArray file format";
+      << "Invalid NDArray file format";
   ret->ret_handles.resize(data.size());
   for (size_t i = 0; i < data.size(); ++i) {
-    NArray *ptr = new NArray();
+    NDArray *ptr = new NDArray();
     *ptr = data[i];
     ret->ret_handles[i] = ptr;
   }
@@ -333,23 +323,23 @@ int MXNArrayListLoad(const char* fname,
   API_END();
 }
 
-int MXNArrayWaitAll() {
+int MXNDArrayWaitAll() {
   API_BEGIN();
   Engine::Get()->WaitForAll();
   API_END();
 }
 
-int MXNArrayFree(NArrayHandle handle) {
+int MXNDArrayFree(NDArrayHandle handle) {
   API_BEGIN();
-  delete static_cast<NArray*>(handle);
+  delete static_cast<NDArray*>(handle);
   API_END();
 }
 
-int MXNArrayGetShape(NArrayHandle handle,
-                     mx_uint *out_dim,
-                     const mx_uint **out_pdata) {
+int MXNDArrayGetShape(NDArrayHandle handle,
+                      mx_uint *out_dim,
+                      const mx_uint **out_pdata) {
   API_BEGIN();
-  NArray *arr = static_cast<NArray*>(handle);
+  NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
     const TShape &s = arr->shape();
     *out_dim = s.ndim();
@@ -360,13 +350,13 @@ int MXNArrayGetShape(NArrayHandle handle,
   API_END();
 }
 
-int MXNArrayGetData(NArrayHandle handle,
-                    mx_float **out_pdata) {
+int MXNDArrayGetData(NDArrayHandle handle,
+                     mx_float **out_pdata) {
   API_BEGIN();
-  NArray *arr = static_cast<NArray*>(handle);
+  NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
     CHECK(arr->ctx().dev_mask == cpu::kDevMask)
-        << "MXNArrayGetData can only be called for NArray on CPU";
+        << "MXNDArrayGetData can only be called for NDArray on CPU";
     const TBlob &b = arr->data();
     CHECK(b.CheckContiguous());
     *out_pdata = b.FlatTo2D<cpu, mx_float>().dptr_;
@@ -376,11 +366,11 @@ int MXNArrayGetData(NArrayHandle handle,
   API_END();
 }
 
-int MXNArrayGetContext(NArrayHandle handle,
-                       int *out_dev_mask,
-                       int *out_dev_id) {
+int MXNDArrayGetContext(NDArrayHandle handle,
+                        int *out_dev_mask,
+                        int *out_dev_id) {
   API_BEGIN();
-  NArray *arr = static_cast<NArray*>(handle);
+  NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
     const Context &ctx = arr->ctx();
     *out_dev_mask = ctx.dev_mask;
@@ -395,7 +385,7 @@ int MXNArrayGetContext(NArrayHandle handle,
 int MXListFunctions(mx_uint *out_size,
                     FunctionHandle **out_array) {
   API_BEGIN();
-  auto &vec = dmlc::Registry<NArrayFunctionReg>::List();
+  auto &vec = dmlc::Registry<NDArrayFunctionReg>::List();
   *out_size = static_cast<mx_uint>(vec.size());
   *out_array = (FunctionHandle*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
   API_END();
@@ -404,7 +394,7 @@ int MXListFunctions(mx_uint *out_size,
 int MXGetFunction(const char *name,
                   FunctionHandle *out) {
   API_BEGIN();
-  *out = dmlc::Registry<NArrayFunctionReg>::Find(name);
+  *out = dmlc::Registry<NDArrayFunctionReg>::Find(name);
   API_END();
 }
 
@@ -415,7 +405,7 @@ int MXFuncGetInfo(FunctionHandle fun,
                   const char ***arg_names,
                   const char ***arg_type_infos,
                   const char ***arg_descriptions) {
-  return MXAPIGetFunctionRegInfo(static_cast<const NArrayFunctionReg *>(fun),
+  return MXAPIGetFunctionRegInfo(static_cast<const NDArrayFunctionReg *>(fun),
                                  name, description, num_args,
                                  arg_names, arg_type_infos, arg_descriptions);
 }
@@ -426,7 +416,7 @@ int MXFuncDescribe(FunctionHandle fun,
                    mx_uint *num_mutate_vars,
                    int *type_mask) {
   API_BEGIN();
-  auto *f = static_cast<const NArrayFunctionReg*>(fun);
+  auto *f = static_cast<const NDArrayFunctionReg*>(fun);
   *num_use_vars = f->num_use_vars;
   *num_scalars = f->num_scalars;
   *num_mutate_vars = f->num_mutate_vars;
@@ -435,14 +425,14 @@ int MXFuncDescribe(FunctionHandle fun,
 }
 
 int MXFuncInvoke(FunctionHandle fun,
-                 NArrayHandle *use_vars,
+                 NDArrayHandle *use_vars,
                  mx_float *scalar_args,
-                 NArrayHandle *mutate_vars) {
+                 NDArrayHandle *mutate_vars) {
   API_BEGIN();
-  auto *f = static_cast<const NArrayFunctionReg*>(fun);
-  f->body((NArray**)(use_vars),  //  NOLINT(*)
+  auto *f = static_cast<const NDArrayFunctionReg*>(fun);
+  f->body((NDArray**)(use_vars),  //  NOLINT(*)
           scalar_args,
-          (NArray**)(mutate_vars));  //  NOLINT(*)
+          (NDArray**)(mutate_vars));  //  NOLINT(*)
   API_END();
 }
 
@@ -566,13 +556,13 @@ int MXSymbolListArguments(SymbolHandle symbol,
   API_END();
 }
 
-int MXSymbolListReturns(SymbolHandle symbol,
+int MXSymbolListOutputs(SymbolHandle symbol,
                         mx_uint *out_size,
                         const char ***out_str_array) {
   Symbol *s = static_cast<Symbol*>(symbol);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
-  ret->ret_vec_str = std::move(s->ListReturns());
+  ret->ret_vec_str = std::move(s->ListOutputs());
   ret->ret_vec_charp.clear();
   for (size_t i = 0; i < ret->ret_vec_str.size(); ++i) {
     ret->ret_vec_charp.push_back(ret->ret_vec_str[i].c_str());
@@ -703,28 +693,28 @@ int MXExecutorForward(ExecutorHandle handle, bool is_train) {
 
 int MXExecutorBackward(ExecutorHandle handle,
                        mx_uint len,
-                       NArrayHandle *head_grads) {
+                       NDArrayHandle *head_grads) {
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
-  std::vector<NArray> narrays;
-  NArray **args_ptr = reinterpret_cast<NArray**>(head_grads);
+  std::vector<NDArray> ndarrays;
+  NDArray **args_ptr = reinterpret_cast<NDArray**>(head_grads);
   for (mx_uint i = 0; i < len; ++i) {
-    narrays.push_back(*args_ptr[i]);
+    ndarrays.push_back(*args_ptr[i]);
   }
-  exec->Backward(narrays);
+  exec->Backward(ndarrays);
   API_END();
 }
 
-int MXExecutorHeads(ExecutorHandle handle,
-                    mx_uint *out_size,
-                    NArrayHandle **out) {
+int MXExecutorOutputs(ExecutorHandle handle,
+                      mx_uint *out_size,
+                      NDArrayHandle **out) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
-  std::vector<NArray> heads = exec->heads();
+  std::vector<NDArray> heads = exec->outputs();
   ret->ret_handles.resize(heads.size());
   for (size_t i = 0; i < heads.size(); ++i) {
-    NArray *ptr = new NArray();
+    NDArray *ptr = new NDArray();
     *ptr = heads[i];
     ret->ret_handles[i] = ptr;
   }
@@ -737,26 +727,26 @@ int MXExecutorBind(SymbolHandle symbol_handle,
                    int dev_mask,
                    int dev_id,
                    mx_uint len,
-                   NArrayHandle *in_args,
-                   NArrayHandle *arg_grad_store,
+                   NDArrayHandle *in_args,
+                   NDArrayHandle *arg_grad_store,
                    mx_uint *grad_req_type,
                    mx_uint aux_states_len,
-                   NArrayHandle *aux_states,
+                   NDArrayHandle *aux_states,
                    ExecutorHandle *out) {
   API_BEGIN();
   Symbol *symb = static_cast<Symbol*>(symbol_handle);
   Context ctx = Context(dev_mask, dev_id);
-  NArray **in_args_ptr = reinterpret_cast<NArray**>(in_args);
-  NArray **arg_grad_ptr = reinterpret_cast<NArray**>(arg_grad_store);
-  NArray **aux_states_ptr = reinterpret_cast<NArray**>(aux_states);
-  std::vector<NArray> in_args_vec;
-  std::vector<NArray> arg_grad_vec;
+  NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args);
+  NDArray **arg_grad_ptr = reinterpret_cast<NDArray**>(arg_grad_store);
+  NDArray **aux_states_ptr = reinterpret_cast<NDArray**>(aux_states);
+  std::vector<NDArray> in_args_vec;
+  std::vector<NDArray> arg_grad_vec;
   std::vector<OpReqType> grad_req_vec;
-  std::vector<NArray> aux_states_vec;
+  std::vector<NDArray> aux_states_vec;
   for (mx_uint i = 0; i < len; ++i) {
     in_args_vec.push_back(*(in_args_ptr[i]));
     if (arg_grad_ptr[i] == nullptr) {
-      arg_grad_vec.push_back(NArray());
+      arg_grad_vec.push_back(NDArray());
       grad_req_vec.push_back(kNullOp);
     } else {
       arg_grad_vec.push_back(*(arg_grad_ptr[i]));
@@ -831,51 +821,51 @@ int MXDataIterNext(DataIterHandle handle, int *out) {
   API_END();
 }
 
-int MXDataIterGetLabel(DataIterHandle handle, NArrayHandle *out) {
+int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out) {
   API_BEGIN();
   DataBatch db = static_cast<IIterator<DataBatch>* >(handle)->Value();
-  *out = new NArray(db.data[1], 0);
+  *out = new NDArray(db.data[1], 0);
   API_END();
 }
 
-int MXDataIterGetData(DataIterHandle handle, NArrayHandle *out) {
+int MXDataIterGetData(DataIterHandle handle, NDArrayHandle *out) {
   API_BEGIN();
   DataBatch db = static_cast<IIterator<DataBatch>* >(handle)->Value();
-  *out = new NArray(db.data[0], 0);
+  *out = new NDArray(db.data[0], 0);
   API_END();
 }
 
-int MXKVStoreInit(int num, int* keys, NArrayHandle* vals) {
+int MXKVStoreInit(int num, int* keys, NDArrayHandle* vals) {
   API_BEGIN();
   std::vector<int> v_keys(num);
-  std::vector<NArray> v_vals(num);
+  std::vector<NDArray> v_vals(num);
   for (int i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
-    v_vals[i] = *static_cast<NArray*>(vals[i]);
+    v_vals[i] = *static_cast<NDArray*>(vals[i]);
   }
   KVStore::Get()->Init(v_keys, v_vals);
   API_END();
 }
 
-int MXKVStorePush(int num, int* keys, NArrayHandle* vals) {
+int MXKVStorePush(int num, int* keys, NDArrayHandle* vals) {
   API_BEGIN();
   std::vector<int> v_keys(num);
-  std::vector<NArray> v_vals(num);
+  std::vector<NDArray> v_vals(num);
   for (int i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
-    v_vals[i] = *static_cast<NArray*>(vals[i]);
+    v_vals[i] = *static_cast<NDArray*>(vals[i]);
   }
   KVStore::Get()->Push(v_keys, v_vals);
   API_END();
 }
 
-int MXKVStorePull(int num, int* keys, NArrayHandle* vals) {
+int MXKVStorePull(int num, int* keys, NDArrayHandle* vals) {
   API_BEGIN();
   std::vector<int> v_keys(num);
-  std::vector<NArray*> v_vals(num);
+  std::vector<NDArray*> v_vals(num);
   for (int i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
-    v_vals[i] = static_cast<NArray*>(vals[i]);
+    v_vals[i] = static_cast<NDArray*>(vals[i]);
   }
   KVStore::Get()->Pull(v_keys, v_vals);
   API_END();
@@ -895,10 +885,10 @@ int MXKVStoreStop() {
 
 int MXKVStoreSetUpdater(MXKVStoreUpdater updater) {
   API_BEGIN();
-  auto updt = [updater](int key, const NArray& recv, NArray* local) {
-    NArray* recv_copy = new NArray();
+  auto updt = [updater](int key, const NDArray& recv, NDArray* local) {
+    NDArray* recv_copy = new NDArray();
     *recv_copy = recv;
-    NArray* local_copy = new NArray();
+    NDArray* local_copy = new NDArray();
     *local_copy = *local;
     updater(key, recv_copy, local_copy);
   };

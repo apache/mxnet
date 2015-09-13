@@ -14,6 +14,7 @@ def run_build_mxnet(folder):
         subprocess.call('cd ..; rm -rf mshadow;' +
                         'git clone https://github.com/dmlc/mshadow', shell = True)
         subprocess.call('cd ..; cp make/readthedocs.mk config.mk', shell = True)
+        subprocess.call('cd ..; rm -rf build', shell = True)
         retcode = subprocess.call("cd %s; make" % folder, shell = True)
         if retcode < 0:
             sys.stderr.write("build terminated by signal %s" % (-retcode))

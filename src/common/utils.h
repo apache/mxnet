@@ -13,6 +13,7 @@
 #include <random>
 #endif  // DMLC_USE_CXX11
 
+namespace mxnet {
 namespace common {
 
 #if DMLC_USE_CXX11
@@ -112,5 +113,5 @@ typename helper::UniqueIf<T>::KnownBound MakeUnique(Args&&... args) = delete;
 #endif  // DMLC_USE_CXX11
 
 }  // namespace common
-
+}  // namespace mxnet
 #endif  // MXNET_COMMON_UTILS_H_

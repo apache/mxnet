@@ -54,19 +54,12 @@ else
 	CFLAGS+= -DMXNET_USE_OPENCV=0
 endif
 
-# setup opencv
-ifeq ($(USE_OPENCV_DECODER),1)
-	CFLAGS+= -DMXNET_USE_OPENCV_DECODER=1
-else
-	CFLAGS+= -DMXNET_USE_OPENCV_DECODER=0
-endif
-
-ifeq ($(USE_OPENMP_ITER), 1)
+ifeq ($(USE_OPENMP), 1)
 	CFLAGS += -fopenmp
 endif
 
 ifeq ($(USE_CUDNN), 1)
-	CFLAGS += -DCXXNET_USE_CUDNN=1
+	CFLAGS += -DMSHADOW_USE_CUDNN=1
 	LDFLAGS += -lcudnn
 endif
 
@@ -84,7 +77,6 @@ endif
 
 .PHONY: clean all test lint doc
 
-BIN = tests/test_threaded_engine
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
 SRC = $(wildcard src/*.cc src/*/*.cc)
@@ -114,12 +106,12 @@ lib/libmxnet.a: $(ALL_DEP)
 lib/libmxnet.so: $(ALL_DEP)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
 
-tests/% : tests/%.cc lib/libmxnet.a
-	$(CXX) -std=c++0x $(CFLAGS) -MM -MT tests/$*.o $< >tests/$*.d
-	$(CXX) $(CFLAGS) -std=c++0x -o $@ $(filter %.cc %.a, $^) $(LDFLAGS)
-
 $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
+
+include tests/cpp/unittest.mk
+
+test: tests/cpp/unittest
 
 lint:
 	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python

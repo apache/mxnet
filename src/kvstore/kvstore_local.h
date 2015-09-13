@@ -19,7 +19,12 @@ namespace mxnet {
  */
 class KVStoreLocal : public KVStore {
  public:
-  KVStoreLocal() : pinned_ctx_(cpu::kDevMask, Context::kPinnedMemoryID) {
+  KVStoreLocal() {
+#if MXNET_USE_CUDA
+    pinned_ctx_ = Context(cpu::kDevMask, Context::kPinnedMemoryID);
+#else
+    pinned_ctx_ = Context(cpu::kDevMask, 0);
+#endif
     Clear();
   }
 
@@ -40,22 +45,18 @@ class KVStoreLocal : public KVStore {
   virtual int get_group_size() const { return 1; }
 
   virtual void Init(const std::vector<int>& keys,
-                    const std::vector<NArray>& values) {
+                    const std::vector<NDArray>& values) {
     for (size_t i = 0; i < keys.size(); ++i) {
       CHECK(local_.find(keys[i]) == local_.end())
           << "duplicate init of key " << keys[i];
-#if MXNET_USE_CUDA
       local_.insert({keys[i], values[i].Copy(pinned_ctx_)});
-#else
-      local_.insert({keys[i], values[i].Copy(local_ctx_)});
-#endif  // MXNET_USE_CUDA
     }
   }
 
   virtual void Push(const std::vector<int>& keys,
-                    const std::vector<NArray>& values) {
+                    const std::vector<NDArray>& values) {
     std::vector<int> uniq_keys;
-    std::vector<std::vector<NArray> > grouped_vals;
+    std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
 
     CHECK(updater_) << "invalid updater";
@@ -68,16 +69,16 @@ class KVStoreLocal : public KVStore {
   }
 
   virtual void Pull(const std::vector<int>& keys,
-                    const std::vector<NArray*>& values) {
+                    const std::vector<NDArray*>& values) {
     std::vector<int> uniq_keys;
-    std::vector<std::vector<NArray*> > grouped_vals;
+    std::vector<std::vector<NDArray*> > grouped_vals;
     GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
       auto it = local_.find(key);
       CHECK(it != local_.end()) << "key " << key << " has not been inited";
-      for (NArray* v : grouped_vals[i])
+      for (NDArray* v : grouped_vals[i])
         CopyFromTo(it->second, v);
     }
   }
@@ -117,11 +118,11 @@ class KVStoreLocal : public KVStore {
   /**
    * \brief returns the aggregated push value
    */
-  NArray MergePushValue(int key, const std::vector<NArray>& val) {
+  NDArray MergePushValue(int key, const std::vector<NDArray>& val) {
     CHECK(val.size());
     auto& buf = merge_buf_[key];
     if (buf.merged.is_none()) {
-      buf.merged = val[0].Copy(local_ctx_);
+      buf.merged = val[0].Copy(pinned_ctx_);
     } else {
       CopyFromTo(val[0], &buf.merged);
     }
@@ -137,7 +138,7 @@ class KVStoreLocal : public KVStore {
           buf.gpu_buf.resize(id + 2);
         }
         if (buf.gpu_buf[id].is_none()) {
-          buf.gpu_buf[id] = NArray(v.shape(), pinned_ctx_);
+          buf.gpu_buf[id] = NDArray(v.shape(), pinned_ctx_);
         }
         CopyFromTo(v, &buf.gpu_buf[id]);
         buf.merged += buf.gpu_buf[id];
@@ -156,18 +157,17 @@ class KVStoreLocal : public KVStore {
   /// \brief temperal space for pushing value
   struct MergeBuf {
     /// \brief the cpu buffer for gpu data
-    std::vector<NArray> gpu_buf;
+    std::vector<NDArray> gpu_buf;
     /// \brief merged data in cpu
-    NArray merged;
+    NDArray merged;
   };
 
   /// \brief buffer for merging push value
   std::unordered_map<int, MergeBuf> merge_buf_;
 
   /// \brief local storage
-  std::unordered_map<int, NArray> local_;
+  std::unordered_map<int, NDArray> local_;
 
-  Context local_ctx_;
   Context pinned_ctx_;
 
   Updater updater_;

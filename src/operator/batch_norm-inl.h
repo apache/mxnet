@@ -239,11 +239,11 @@ class BatchNormProp : public OperatorProperty {
     return {{out_grad[kOut], in_grad[kData]}};
   }
 
-  int NumVisibleReturns() const override {
+  int NumVisibleOutputs() const override {
     return 1;
   }
 
-  int NumReturns() const override {
+  int NumOutputs() const override {
     return 4;
   }
 
@@ -251,7 +251,7 @@ class BatchNormProp : public OperatorProperty {
     return {"data", "gamma", "beta"};
   }
 
-  std::vector<std::string> ListReturns() const override {
+  std::vector<std::string> ListOutputs() const override {
     return {"output", "output_no_affine", "mean", "var"};
   }
 
@@ -260,6 +260,10 @@ class BatchNormProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
+
+  std::vector<ResourceRequest> BackwardResource() const override {
+    return {Resource::kTempSpace};
+  }
 
  private:
   BatchNormParam param_;
