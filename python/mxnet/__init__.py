@@ -13,6 +13,7 @@ from .base import MXNetError
 from . import ndarray
 from . import symbol
 from . import kvstore
+from . import updater
 from . import io
 # use mx.nd as short for mx.ndarray
 from . import ndarray as nd
