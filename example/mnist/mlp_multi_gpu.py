@@ -5,6 +5,7 @@ import os, gzip
 import sys
 sys.path.append("../../tests/python")
 import get_data
+import time
 
 # use multiple devices
 num_devs = 4
@@ -12,7 +13,6 @@ devs = [mx.Context('gpu', i) for i in range(num_devs)]
 mx.kvstore.start()
 
 # symbol net
-batch_size = 100
 data = mx.symbol.Variable('data')
 fc1 = mx.symbol.FullyConnected(data = data, name='fc1', num_hidden=128)
 act1 = mx.symbol.Activation(data = fc1, name='relu1', act_type="relu")
@@ -77,6 +77,7 @@ def run_sgd():
 
     num_epochs = 9
     for epoch in range(num_epochs):
+        start = time.time()
         print "Epoch %d" % epoch
         train_count = 0.0
         train_acc = 0.0
@@ -127,8 +128,10 @@ def run_sgd():
                                    label[batch_splits[d]])
                 val_count += 1
 
-        print("Train Acc: ", train_acc / train_count)
-        print("Valid Acc: ", val_acc / val_count)
+        print("Train Acc: %g, Valid Acc: %g, time: %g" % (
+            train_acc / train_count,
+            val_acc / val_count,
+            time.time() - start))
         train_dataiter.reset()
         val_dataiter.reset()
 
