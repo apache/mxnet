@@ -54,7 +54,7 @@ grads = [[mx.nd.zeros(s, d) for s in param_shapes] for d in devs]
 
 # create executors for devices
 executors = [mlp.bind(devs[d], params[d], grads[d]) for d in range(num_devs)]
-forward_out = [mx.nd.zeros(e.heads()[0].shape) for e in executors]
+forward_out = [mx.nd.zeros(e.outputs[0].shape) for e in executors]
 
 # data reader
 get_data.GetMNIST_ubyte()
@@ -97,7 +97,7 @@ def run_sgd():
                 params[d][param_names.index('mlp_label')][:] = label[rows]
 
                 executors[d].forward()
-                executors[d].heads()[0].copyto(forward_out[d])
+                executors[d].outputs[0].copyto(forward_out[d])
                 executors[d].backward([forward_out[d]])
 
             # push gradient
@@ -123,7 +123,7 @@ def run_sgd():
 
             # eval
             for d in range(num_devs):
-                val_acc += cal_acc(executors[d].heads()[0].asnumpy(),
+                val_acc += cal_acc(executors[d].outputs[0].asnumpy(),
                                    label[batch_splits[d]])
                 val_count += 1
 
