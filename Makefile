@@ -54,14 +54,7 @@ else
 	CFLAGS+= -DMXNET_USE_OPENCV=0
 endif
 
-# setup opencv
-ifeq ($(USE_OPENCV_DECODER),1)
-	CFLAGS+= -DMXNET_USE_OPENCV_DECODER=1
-else
-	CFLAGS+= -DMXNET_USE_OPENCV_DECODER=0
-endif
-
-ifeq ($(USE_OPENMP_ITER), 1)
+ifeq ($(USE_OPENMP), 1)
 	CFLAGS += -fopenmp
 endif
 

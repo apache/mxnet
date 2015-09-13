@@ -10,7 +10,7 @@
 #if DMLC_USE_CXX11
 #include <functional>
 #endif  // DMLC_USE_CXX11
-#include "narray.h"
+#include "ndarray.h"
 
 namespace mxnet {
 
@@ -52,7 +52,7 @@ class KVStore {
    * \param values a list of values
    */
   virtual void Init(const std::vector<int>& keys,
-                    const std::vector<NArray>& values) {
+                    const std::vector<NDArray>& values) {
     CHECK_EQ(keys.size(), values.size());
     get_impl()->Init(keys, values);
   }
@@ -80,14 +80,14 @@ class KVStore {
    * for (auto& v : values) v.WaitToWrite()
    * \endcode
    *
-   * One must call Init() on every key before. And the value Narray should be
+   * One must call Init() on every key before. And the value NDArray should be
    * always has the same shape as being inited.
    *
    * \param keys the list of keys
    * \param value the list of values
    */
   virtual void Push(const std::vector<int>& keys,
-                    const std::vector<NArray>& values) {
+                    const std::vector<NDArray>& values) {
     CHECK_EQ(keys.size(), values.size());
     if (keys.empty()) return;
     get_impl()->Push(keys, values);
@@ -110,7 +110,7 @@ class KVStore {
    * \param values the list of buffers for the pulled data, they should be preallocated
    */
   virtual void Pull(const std::vector<int>& keys,
-                    const std::vector<NArray*>& values) {
+                    const std::vector<NDArray*>& values) {
     get_impl()->Pull(keys, values);
   }
 
@@ -118,11 +118,11 @@ class KVStore {
   /**
    * \brief the prototype of user-defined updater
    */
-  typedef std::function<void(int, const NArray&, NArray*)> Updater;
+  typedef std::function<void(int, const NDArray&, NDArray*)> Updater;
 
   /*! \brief returns the default updater, which is ASSIGN */
   Updater DefaultUpdater() {
-    return [](int key, const NArray& a, NArray* b) { CopyFromTo(a, b); };
+    return [](int key, const NDArray& a, NDArray* b) { CopyFromTo(a, b); };
   }
 
   /**

@@ -1,5 +1,5 @@
 # coding: utf-8
-"""NArray interface of mxnet"""
+"""NDArray interface of mxnet"""
 from __future__ import absolute_import
 
 import ctypes
@@ -8,7 +8,7 @@ import sys
 import numpy as np
 from .base import _LIB, string_types, numeric_types
 from .base import c_array, py_str, c_str
-from .base import mx_uint, mx_float, NArrayHandle, FunctionHandle
+from .base import mx_uint, mx_float, NDArrayHandle, FunctionHandle
 from .base import ctypes2buffer
 from .base import check_call
 from .context import Context
@@ -20,10 +20,10 @@ def _new_empty_handle():
 
     Returns
     -------
-    a new empty narray handle
+    a new empty ndarray handle
     """
-    hdl = NArrayHandle()
-    check_call(_LIB.MXNArrayCreateNone(ctypes.byref(hdl)))
+    hdl = NDArrayHandle()
+    check_call(_LIB.MXNDArrayCreateNone(ctypes.byref(hdl)))
     return hdl
 
 def _new_alloc_handle(shape, ctx, delay_alloc):
@@ -33,10 +33,10 @@ def _new_alloc_handle(shape, ctx, delay_alloc):
 
     Returns
     -------
-    a new empty narray handle
+    a new empty ndarray handle
     """
-    hdl = NArrayHandle()
-    check_call(_LIB.MXNArrayCreate(
+    hdl = NDArrayHandle()
+    check_call(_LIB.MXNDArrayCreate(
         c_array(mx_uint, shape),
         len(shape),
         ctx.device_mask,
@@ -45,39 +45,39 @@ def _new_alloc_handle(shape, ctx, delay_alloc):
         ctypes.byref(hdl)))
     return hdl
 
-class NArray(object):
-    """NArray object in mxnet.
+class NDArray(object):
+    """NDArray object in mxnet.
 
-    NArray is basic ndarray/Tensor like data structure in mxnet.
+    NDArray is basic ndarray/Tensor like data structure in mxnet.
     """
     # pylint: disable= no-member
     def __init__(self, handle):
-        """initialize a new NArray
+        """initialize a new NDArray
 
         Parameters
         ----------
-        handle : NArrayHandle
-            NArray handle of C API
+        handle : NDArrayHandle
+            NDArray handle of C API
         """
-        assert isinstance(handle, NArrayHandle)
+        assert isinstance(handle, NDArrayHandle)
         self.handle = handle
 
     def __del__(self):
-        check_call(_LIB.MXNArrayFree(self.handle))
+        check_call(_LIB.MXNDArrayFree(self.handle))
 
     def __add__(self, other):
-        if isinstance(other, NArray):
-            return NArray._plus(self, other)
+        if isinstance(other, NDArray):
+            return NDArray._plus(self, other)
         elif isinstance(other, numeric_types):
-            return NArray._plus_scalar(self, float(other))
+            return NDArray._plus_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __iadd__(self, other):
-        if isinstance(other, NArray):
-            return NArray._plus(self, other, out=self)
+        if isinstance(other, NDArray):
+            return NDArray._plus(self, other, out=self)
         elif isinstance(other, numeric_types):
-            return NArray._plus_scalar(self, float(other), out=self)
+            return NDArray._plus_scalar(self, float(other), out=self)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -85,43 +85,43 @@ class NArray(object):
         return self.__add__(other)
 
     def __sub__(self, other):
-        if isinstance(other, NArray):
-            return NArray._minus(self, other)
+        if isinstance(other, NDArray):
+            return NDArray._minus(self, other)
         elif isinstance(other, numeric_types):
-            return NArray._minus_scalar(self, float(other))
+            return NDArray._minus_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __isub__(self, other):
-        if isinstance(other, NArray):
-            return NArray._minus(self, other, out=self)
+        if isinstance(other, NDArray):
+            return NDArray._minus(self, other, out=self)
         elif isinstance(other, numeric_types):
-            return NArray._minus_scalar(self, float(other), out=self)
+            return NDArray._minus_scalar(self, float(other), out=self)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rsub__(self, other):
         if isinstance(other, numeric_types):
-            return NArray._rminus_scalar(self, float(other))
+            return NDArray._rminus_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __mul__(self, other):
-        if isinstance(other, NArray):
-            return NArray._mul(self, other)
+        if isinstance(other, NDArray):
+            return NDArray._mul(self, other)
         elif isinstance(other, numeric_types):
-            return NArray._mul_scalar(self, float(other))
+            return NDArray._mul_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __neg__(self):
-        return NArray._mul_scalar(self, -1.0, out=self)
+        return NDArray._mul_scalar(self, -1.0, out=self)
 
     def __imul__(self, other):
-        if isinstance(other, NArray):
-            return NArray._mul(self, other, out=self)
+        if isinstance(other, NDArray):
+            return NDArray._mul(self, other, out=self)
         elif isinstance(other, numeric_types):
-            return NArray._mul_scalar(self, float(other), out=self)
+            return NDArray._mul_scalar(self, float(other), out=self)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -129,24 +129,24 @@ class NArray(object):
         return self.__mul__(other)
 
     def __div__(self, other):
-        if isinstance(other, NArray):
-            return NArray._div(self, other)
+        if isinstance(other, NDArray):
+            return NDArray._div(self, other)
         elif isinstance(other, numeric_types):
-            return NArray._div_scalar(self, float(other))
+            return NDArray._div_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rdiv__(self, other):
         if isinstance(other, numeric_types):
-            return NArray._rdiv_scalar(self, float(other))
+            return NDArray._rdiv_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __idiv__(self, other):
-        if isinstance(other, NArray):
-            return NArray._div(self, other, out=self)
+        if isinstance(other, NDArray):
+            return NDArray._div(self, other, out=self)
         elif isinstance(other, numeric_types):
-            return NArray._div_scalar(self, float(other), out=self)
+            return NDArray._div_scalar(self, float(other), out=self)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -159,7 +159,7 @@ class NArray(object):
         if handle is not None:
             length = ctypes.c_ulong()
             cptr = ctypes.POINTER(ctypes.c_char)()
-            check_call(_LIB.MXNArraySaveRawBytes(self.handle,
+            check_call(_LIB.MXNDArraySaveRawBytes(self.handle,
                                                  ctypes.byref(length),
                                                  ctypes.byref(cptr)))
             this['handle'] = ctypes2buffer(cptr, length.value)
@@ -169,31 +169,31 @@ class NArray(object):
         handle = state['handle']
         if handle is not None:
             buf = handle
-            handle = NArrayHandle()
+            handle = NDArrayHandle()
             ptr = (ctypes.c_char * len(buf)).from_buffer(buf)
             length = ctypes.c_ulong(len(buf))
-            check_call(_LIB.MXNArrayLoadFromRawBytes(ptr, length, ctypes.byref(handle)))
+            check_call(_LIB.MXNDArrayLoadFromRawBytes(ptr, length, ctypes.byref(handle)))
             state['handle'] = handle
         self.__dict__.update(state)
 
     def __setitem__(self, in_slice, value):
-        """Set narray value"""
+        """Set ndarray value"""
         if in_slice.step != None:
-            raise Exception("Set NArray should use empty index array[:] = target_array")
-        if isinstance(value, NArray):
+            raise Exception("Set NDArray should use empty index array[:] = target_array")
+        if isinstance(value, NDArray):
             if value.handle is not self.handle:
                 value.copyto(self)
         elif isinstance(value, numeric_types):
-            NArray._set_value(float(value), out=self)
+            NDArray._set_value(float(value), out=self)
         elif isinstance(value, (np.ndarray, np.generic)):
             self._sync_copyfrom(value)
         else:
             raise TypeError('type %s not supported' % str(type(value)))
 
     def __getitem__(self, in_slice):
-        """Get narray"""
+        """Get ndarray"""
         if in_slice.step != None:
-            raise Exception("Set NArray should use empty index array[:] += value")
+            raise Exception("Set NDArray should use empty index array[:] += value")
         return self
 
     def _sync_copyfrom(self, source_array):
@@ -213,57 +213,57 @@ class NArray(object):
         source_array = np.ascontiguousarray(source_array, dtype=np.float32)
 
         if source_array.shape != self.shape:
-            raise ValueError('array shape do not match the shape of NArray')
+            raise ValueError('array shape do not match the shape of NDArray')
 
-        check_call(_LIB.MXNArraySyncCopyFromCPU(
+        check_call(_LIB.MXNDArraySyncCopyFromCPU(
             self.handle,
             source_array.ctypes.data_as(ctypes.POINTER(mx_float)),
             source_array.size))
 
     def wait_to_read(self):
-        """Block until all pending writes operations on current NArray are finished.
+        """Block until all pending writes operations on current NDArray are finished.
 
         This function will return when all the pending writes to the current
-        NArray finishes. There can still be pending read going on when the
+        NDArray finishes. There can still be pending read going on when the
         function returns.
         """
-        check_call(_LIB.MXNArrayWaitToRead(self.handle))
+        check_call(_LIB.MXNDArrayWaitToRead(self.handle))
 
     def wait_to_write(self):
-        """Block until all pending read/write operations on current NArray are finished.
+        """Block until all pending read/write operations on current NDArray are finished.
 
         This function will return when all the pending writes to the current
-        NArray finishes. There can still be pending read going on when the
+        NDArray finishes. There can still be pending read going on when the
         function returns.
         """
-        check_call(_LIB.MXNArrayWaitToWrite(self.handle))
+        check_call(_LIB.MXNDArrayWaitToWrite(self.handle))
 
     @property
     def shape(self):
-        """Get shape of current NArray.
+        """Get shape of current NDArray.
 
         Returns
         -------
-        a tuple representing shape of current narray
+        a tuple representing shape of current ndarray
         """
         ndim = mx_uint()
         pdata = ctypes.POINTER(mx_uint)()
-        check_call(_LIB.MXNArrayGetShape(
+        check_call(_LIB.MXNDArrayGetShape(
             self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
         return tuple(pdata[:ndim.value])
 
     @property
     def context(self):
-        """Get context of current NArray.
+        """Get context of current NDArray.
 
         Returns
         -------
         context : mxnet.Context
-            The context of current NArray.
+            The context of current NDArray.
         """
         dev_mask = ctypes.c_int()
         dev_id = ctypes.c_int()
-        check_call(_LIB.MXNArrayGetContext(
+        check_call(_LIB.MXNDArrayGetContext(
             self.handle, ctypes.byref(dev_mask), ctypes.byref(dev_id)))
         return Context(Context.devmask2type[dev_mask.value], dev_id.value)
 
@@ -276,7 +276,7 @@ class NArray(object):
             A copy of array content.
         """
         data = np.empty(self.shape, dtype=np.float32)
-        check_call(_LIB.MXNArraySyncCopyToCPU(
+        check_call(_LIB.MXNDArraySyncCopyToCPU(
             self.handle,
             data.ctypes.data,
             data.size))
@@ -285,89 +285,89 @@ class NArray(object):
     def copyto(self, other):
         """Copy the content of current array to other.
 
-        When other is NArray, the content is copied over.
-        When other is a Context, a new NArray in the context
+        When other is NDArray, the content is copied over.
+        When other is a Context, a new NDArray in the context
         will be created as target
 
         Parameters
         ----------
-        other : NArray or Context
-            Target Narray or context we want to copy data to.
+        other : NDArray or Context
+            Target NDArray or context we want to copy data to.
 
         Returns
         -------
-        dst : NArray
-            The copy target NArray
+        dst : NDArray
+            The copy target NDArray
         """
-        if isinstance(other, NArray):
+        if isinstance(other, NDArray):
             if other.handle is self.handle:
                 warnings.warn('copy an array to itself, is it intended?',
                               RuntimeWarning)
                 return
-            return NArray._copyto(self, out=other)
+            return NDArray._copyto(self, out=other)
         elif isinstance(other, Context):
-            hret = NArray(_new_alloc_handle(self.shape, other, True))
-            return NArray._copyto(self, out=hret)
+            hret = NDArray(_new_alloc_handle(self.shape, other, True))
+            return NDArray._copyto(self, out=hret)
         else:
             raise TypeError('copyto do not support type ' + type(other))
     # pylint: enable= no-member
 
 
 def empty(shape, ctx=None):
-    """Create an empty uninitialized new NArray, with specified shape.
+    """Create an empty uninitialized new NDArray, with specified shape.
 
     Parameters
     ----------
     shape : tuple
-        shape of the NArray.
+        shape of the NDArray.
 
     ctx : Context, optional
-        The context of the NArray, default to current default context.
+        The context of the NDArray, default to current default context.
 
     Returns
     -------
     out: Array
-        The created NArray.
+        The created NDArray.
     """
     if ctx is None:
         ctx = Context.default_ctx
-    return NArray(handle=_new_alloc_handle(shape, ctx, False))
+    return NDArray(handle=_new_alloc_handle(shape, ctx, False))
 
 def zeros(shape, ctx=None):
-    """Create a new NArray filled with 0, with specified shape.
+    """Create a new NDArray filled with 0, with specified shape.
 
     Parameters
     ----------
     shape : tuple
-        shape of the NArray.
+        shape of the NDArray.
 
     ctx : Context, optional
-        The context of the NArray, default to current default context.
+        The context of the NDArray, default to current default context.
 
     Returns
     -------
     out: Array
-        The created NArray.
+        The created NDArray.
     """
     arr = empty(shape, ctx)
     arr[:] = 0.0
     return arr
 
 def ones(shape, ctx=None):
-    """Create a new NArray filled with 1, with specified shape.
+    """Create a new NDArray filled with 1, with specified shape.
 
     Parameters
     ----------
     shape : tuple
-        shape of the NArray.
+        shape of the NDArray.
 
     ctx : Context, optional
-        The context of the NArray, default to current default context.
+        The context of the NDArray, default to current default context.
 
     Returns
     -------
     out: Array
-        The created NArray.
+        The created NDArray.
     """
     arr = empty(shape, ctx)
     arr[:] = 1.0
@@ -375,20 +375,20 @@ def ones(shape, ctx=None):
 
 
 def array(source_array, ctx=None):
-    """Create a new NArray that copies content from source_array.
+    """Create a new NDArray that copies content from source_array.
 
     Parameters
     ----------
     source_array : array_like
-        Source data to create NArray from.
+        Source data to create NDArray from.
 
     ctx : Context, optional
-        The context of the NArray, default to current default context.
+        The context of the NDArray, default to current default context.
 
     Returns
     -------
     out: Array
-        The created NArray.
+        The created NDArray.
     """
 
     if not isinstance(source_array, np.ndarray):
@@ -402,7 +402,7 @@ def array(source_array, ctx=None):
 
 
 def load(fname):
-    """Load narray from binary file.
+    """Load ndarray from binary file.
 
     You can also use pickle to do the job if you only work on python.
     The advantage of load/save is the file is language agnostic.
@@ -415,30 +415,30 @@ def load(fname):
 
     Returns
     -------
-    out : list of NArray or dict of str to NArray
-        List of NArray or dict of str->NArray, depending on what was saved.
+    out : list of NDArray or dict of str to NDArray
+        List of NDArray or dict of str->NDArray, depending on what was saved.
     """
     if not isinstance(fname, string_types):
         raise TypeError('fname need to be string')
     out_size = mx_uint()
     out_name_size = mx_uint()
-    handles = ctypes.POINTER(NArrayHandle)()
+    handles = ctypes.POINTER(NDArrayHandle)()
     names = ctypes.POINTER(ctypes.c_char_p)()
-    check_call(_LIB.MXNArrayListLoad(c_str(fname),
+    check_call(_LIB.MXNDArrayListLoad(c_str(fname),
                                      ctypes.byref(out_size),
                                      ctypes.byref(handles),
                                      ctypes.byref(out_name_size),
                                      ctypes.byref(names)))
     if out_name_size.value == 0:
-        return [NArray(NArrayHandle(handles[i])) for i in range(out_size.value)]
+        return [NDArray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
     else:
         assert out_name_size.value == out_size.value
         return dict(
-            (py_str(names[i]), NArray(NArrayHandle(handles[i]))) for i in range(out_size.value))
+            (py_str(names[i]), NDArray(NDArrayHandle(handles[i]))) for i in range(out_size.value))
 
 
 def save(fname, data):
-    """Save list of NArray or dict of str->NArray to binary file.
+    """Save list of NDArray or dict of str->NDArray to binary file.
 
     You can also use pickle to do the job if you only work on python.
     The advantage of load/save is the file is language agnostic.
@@ -449,7 +449,7 @@ def save(fname, data):
     fname : str
         The name of the file
 
-    data : list of NArray or dict of str to NArray
+    data : list of NDArray or dict of str to NDArray
         The data to be saved.
     """
     handles = []
@@ -457,30 +457,30 @@ def save(fname, data):
         keys = []
         for key, val in data.items():
             if not isinstance(key, string_types):
-                raise TypeError('save only accept dict str->NArray or list of NArray')
-            if not isinstance(val, NArray):
-                raise TypeError('save only accept dict str->NArray or list of NArray')
+                raise TypeError('save only accept dict str->NDArray or list of NDArray')
+            if not isinstance(val, NDArray):
+                raise TypeError('save only accept dict str->NDArray or list of NDArray')
             keys.append(c_str(key))
             handles.append(val.handle)
         keys = c_array(ctypes.c_char_p, keys)
     else:
         for val in data:
-            if not isinstance(val, NArray):
-                raise TypeError('save only accept dict str->NArray or list of NArray')
+            if not isinstance(val, NDArray):
+                raise TypeError('save only accept dict str->NDArray or list of NDArray')
             handles.append(val.handle)
         keys = None
-    check_call(_LIB.MXNArrayListSave(c_str(fname),
+    check_call(_LIB.MXNDArrayListSave(c_str(fname),
                                      len(handles),
-                                     c_array(NArrayHandle, handles),
+                                     c_array(NDArrayHandle, handles),
                                      keys))
 
 
 # pylint: disable=too-many-locals, invalid-name
-def _make_narray_function(handle):
-    """Create a NArray function from the FunctionHandle."""
-    NARRAY_ARG_BEFORE_SCALAR = 1
+def _make_ndarray_function(handle):
+    """Create a NDArray function from the FunctionHandle."""
+    NDARRAY_ARG_BEFORE_SCALAR = 1
     ACCEPT_EMPTY_MUTATE_TARGET = 1 << 2
-    # Get the property of NArray
+    # Get the property of NDArray
     n_mutate_vars = 0
     n_used_vars = mx_uint()
     n_scalars = mx_uint()
@@ -498,7 +498,7 @@ def _make_narray_function(handle):
     type_mask = type_mask.value
     accept_empty_mutate = (type_mask & ACCEPT_EMPTY_MUTATE_TARGET) != 0
     # infer type of the function
-    if (type_mask & NARRAY_ARG_BEFORE_SCALAR) != 0:
+    if (type_mask & NDARRAY_ARG_BEFORE_SCALAR) != 0:
         use_vars_range = range(0, n_used_vars)
         scalar_range = range(n_used_vars, n_used_vars + n_scalars)
     else:
@@ -532,97 +532,97 @@ def _make_narray_function(handle):
                'Parameters\n' +
                '----------\n' +
                '%s\n' +
-               'out : NArray, optional\n' +
-               '    The output NArray to hold the result.\n\n'+
+               'out : NDArray, optional\n' +
+               '    The output NDArray to hold the result.\n\n'+
                'Returns\n' +
                '-------\n' +
-               'out : NArray\n'+
+               'out : NDArray\n'+
                '    The output of binary function.')
     doc_str = doc_str % (py_str(desc.value), '\n'.join(param_str))
 
     # Definition of internal functions.
-    def binary_narray_function(lhs, rhs, out=None):
+    def binary_ndarray_function(lhs, rhs, out=None):
         """Internal binary function
         """
         if out:
-            if isinstance(out, NArray) == False:
-                raise TypeError('out must be NArray')
+            if isinstance(out, NDArray) == False:
+                raise TypeError('out must be NDArray')
         else:
             if not accept_empty_mutate:
                 raise TypeError('argument out is required to call %s' % func_name)
-            out = NArray(_new_empty_handle())
+            out = NDArray(_new_empty_handle())
         check_call(_LIB.MXFuncInvoke(handle,
-                                     c_array(NArrayHandle, (lhs.handle, rhs.handle)),
+                                     c_array(NDArrayHandle, (lhs.handle, rhs.handle)),
                                      c_array(mx_float, ()),
-                                     c_array(NArrayHandle, (out.handle,))))
+                                     c_array(NDArrayHandle, (out.handle,))))
         return out
 
-    def unary_narray_function(src, out=None):
-        """internal NArray function"""
+    def unary_ndarray_function(src, out=None):
+        """internal NDArray function"""
         if out:
-            if isinstance(out, NArray) == False:
-                raise TypeError('out must be NArray')
+            if isinstance(out, NDArray) == False:
+                raise TypeError('out must be NDArray')
         else:
             if not accept_empty_mutate:
                 raise TypeError('argument out is required to call %s' % func_name)
-            out = NArray(_new_empty_handle())
+            out = NDArray(_new_empty_handle())
         check_call(_LIB.MXFuncInvoke( \
                 handle, \
-                c_array(NArrayHandle, (src.handle)), \
+                c_array(NDArrayHandle, (src.handle)), \
                 c_array(mx_float, ()), \
-                c_array(NArrayHandle, (out.handle,))))
+                c_array(NDArrayHandle, (out.handle,))))
         return out
 
-    def generic_narray_function(*args, **kwargs):
+    def generic_ndarray_function(*args, **kwargs):
         """Invoke this function by passing in parameters
 
         Parameters
         ----------
         *args
-            Positional arguments of input scalars and NArray
-        out : NArray or tuple of NArray, optional
-            Output NArray, used to hold the output result.
+            Positional arguments of input scalars and NDArray
+        out : NDArray or tuple of NDArray, optional
+            Output NDArray, used to hold the output result.
 
         Returns
         -------
-        out : NArray
-            The result NArray(tuple) of result of computation.
+        out : NDArray
+            The result NDArray(tuple) of result of computation.
         """
         if 'out' in kwargs:
             mutate_vars = kwargs['out']
-            if isinstance(mutate_vars, NArray):
+            if isinstance(mutate_vars, NDArray):
                 mutate_vars = (mutate_vars,)
             if len(mutate_vars) != n_mutate_vars:
                 raise TypeError('expect %d out in %s', n_mutate_vars, func_name)
         else:
             if accept_empty_mutate:
                 mutate_vars = tuple(
-                    NArray(_new_empty_handle()) for i in range(n_mutate_vars))
+                    NDArray(_new_empty_handle()) for i in range(n_mutate_vars))
             else:
                 raise TypeError('argument out is required to call %s' % func_name)
         check_call(_LIB.MXFuncInvoke( \
                 handle, \
-                c_array(NArrayHandle, [args[i].handle for i in use_vars_range]), \
+                c_array(NDArrayHandle, [args[i].handle for i in use_vars_range]), \
                 c_array(mx_float, [args[i] for i in scalar_range]), \
-                c_array(NArrayHandle, [v.handle for v in mutate_vars])))
+                c_array(NDArrayHandle, [v.handle for v in mutate_vars])))
         if n_mutate_vars == 1:
             return mutate_vars[0]
         else:
             return mutate_vars
     # End of function declaration
     if n_mutate_vars == 1 and n_used_vars == 2 and n_scalars == 0:
-        ret_function = binary_narray_function
+        ret_function = binary_ndarray_function
     elif n_mutate_vars == 1 and n_used_vars == 2 and n_scalars == 0:
-        ret_function = unary_narray_function
+        ret_function = unary_ndarray_function
     else:
-        ret_function = generic_narray_function
+        ret_function = generic_ndarray_function
     ret_function.__name__ = func_name
     ret_function.__doc__ = doc_str
     return ret_function
 # pylint: enable=too-many-locals, invalid-name
 
-def _init_narray_module():
-    """List and add all the narray functions to current module."""
+def _init_ndarray_module():
+    """List and add all the ndarray functions to current module."""
     plist = ctypes.POINTER(FunctionHandle)()
     size = ctypes.c_uint()
     check_call(_LIB.MXListFunctions(ctypes.byref(size),
@@ -631,12 +631,12 @@ def _init_narray_module():
     module_obj = sys.modules[__name__]
     for i in range(size.value):
         hdl = FunctionHandle(plist[i])
-        function = _make_narray_function(hdl)
-        # if function name starts with underscore, register as static method of NArray
+        function = _make_ndarray_function(hdl)
+        # if function name starts with underscore, register as static method of NDArray
         if function.__name__.startswith('_'):
-            setattr(NArray, function.__name__, staticmethod(function))
+            setattr(NDArray, function.__name__, staticmethod(function))
         else:
             setattr(module_obj, function.__name__, function)
 
-# Initialize the NArray module
-_init_narray_module()
+# Initialize the NDArray module
+_init_ndarray_module()

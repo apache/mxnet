@@ -1,15 +1,15 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file narray_function_cpu.cc
+ * \file ndarray_function_cpu.cc
  * \brief
  */
 
 // this will be invoked by gcc and compile CPU version
-#include "./narray_function.h"
-#include "./narray_function-inl.h"
+#include "./ndarray_function.h"
+#include "./ndarray_function-inl.h"
 
 namespace mxnet {
-namespace narray {
+namespace ndarray {
 template<>
 void Copy<cpu, cpu>(const TBlob &from, TBlob *to,
                     Context from_ctx, Context to_ctx,
@@ -17,5 +17,5 @@ void Copy<cpu, cpu>(const TBlob &from, TBlob *to,
   mshadow::Copy(to->FlatTo2D<cpu, real_t>(),
                 from.FlatTo2D<cpu, real_t>());
 }
-}  // namespace narray
+}  // namespace ndarray
 }  // namespace mxnet

@@ -16,10 +16,10 @@ def check_bind_with_uniform(uf, gf, dim):
     rhs = mx.symbol.Variable('rhs')
     ret = uf(lhs, rhs)
     assert ret.list_arguments() == ['lhs', 'rhs']
-    lhs_arr = mx.narray.array(np.random.uniform(-10, 10, shape))
-    rhs_arr = mx.narray.array(np.random.uniform(-10, 10, shape))
-    lhs_grad = mx.narray.empty(shape)
-    rhs_grad = mx.narray.empty(shape)
+    lhs_arr = mx.nd.array(np.random.uniform(-10, 10, shape))
+    rhs_arr = mx.nd.array(np.random.uniform(-10, 10, shape))
+    lhs_grad = mx.nd.empty(shape)
+    rhs_grad = mx.nd.empty(shape)
 
 
     executor = ret.bind(mx.Context('cpu'),
@@ -48,7 +48,7 @@ def check_bind_with_uniform(uf, gf, dim):
     assert reldiff(out1, out3) < 1e-6
     assert reldiff(out1, out4) < 1e-6
     # test gradient
-    out_grad = mx.narray.array(np.ones(shape))
+    out_grad = mx.nd.array(np.ones(shape))
     lhs_grad2, rhs_grad2 = gf(out_grad.asnumpy(),
                               lhs_arr.asnumpy(),
                               rhs_arr.asnumpy())

@@ -21,17 +21,17 @@ class GraphExecutor : public Executor {
  public:
   virtual ~GraphExecutor();
   virtual void Forward(bool is_train);
-  virtual void Backward(const std::vector<NArray> &head_grads);
-  virtual const std::vector<NArray> &heads() const {
-    return heads_narray_;
+  virtual void Backward(const std::vector<NDArray> &head_grads);
+  virtual const std::vector<NDArray> &heads() const {
+    return heads_ndarray_;
   }
   // implement Executor::Bind, only call it once.
   inline void Init(Symbol symbol,
                    Context ctx,
-                   const std::vector<NArray> &in_args,
-                   const std::vector<NArray> &arg_grad_store,
+                   const std::vector<NDArray> &in_args,
+                   const std::vector<NDArray> &arg_grad_store,
                    const std::vector<OpReqType> &grad_req_type,
-                   const std::vector<NArray> &aux_states) {
+                   const std::vector<NDArray> &aux_states) {
     CHECK_EQ(grad_req_type.size(), arg_grad_store.size());
     bool need_backward = false;
     for (auto req : grad_req_type) {
@@ -52,9 +52,9 @@ class GraphExecutor : public Executor {
   class BackwardOpWrapper;
   // type of data entry
   enum DataEntryType {
-    // memory is binded by external NArray in Bind
+    // memory is binded by external NDArray in Bind
     kBindByExternal,
-    // to be binded by external NArray in Forward and Backward
+    // to be binded by external NDArray in Forward and Backward
     kTobeBindByExternal,
     // internal memory, allocated
     kInternalAllocated,
@@ -64,7 +64,7 @@ class GraphExecutor : public Executor {
   // Additional information about each data entry
   struct DataEntryInfo {
     // the actual data for the entry
-    NArray data;
+    NDArray data;
     // write request to this entry
     OpReqType op_req;
     // the operatio node that will take
@@ -161,11 +161,11 @@ class GraphExecutor : public Executor {
   // initialize the internal graph structure
   void InitGraph(Symbol symbol, Context ctx, bool need_backward);
   // initialize internal DataEntryInfo, reference counting
-  void InitDataEntryInfo(const std::vector<NArray> &in_args,
-                         const std::vector<NArray> &arg_grad_store,
+  void InitDataEntryInfo(const std::vector<NDArray> &in_args,
+                         const std::vector<NDArray> &arg_grad_store,
                          const std::vector<OpReqType> &grad_req_type,
-                         const std::vector<NArray> &aux_states);
-  // initialize internal data entries NArray
+                         const std::vector<NDArray> &aux_states);
+  // initialize internal data entries NDArray
   void InitDataEntryMemory();
   // initialize OpNode data structure
   void InitOpNodes();
@@ -186,8 +186,8 @@ class GraphExecutor : public Executor {
   std::vector<StaticGraph::DataEntry> arg_grads_;
   // operational nodes
   std::vector<OpNode> op_nodes_;
-  // head NArrays
-  std::vector<NArray> heads_narray_;
+  // head NDArrays
+  std::vector<NDArray> heads_ndarray_;
 };  // class GraphExecutor
 }  // namespace mxnet
 #endif  // MXNET_SYMBOL_GRAPH_EXECUTOR_H_

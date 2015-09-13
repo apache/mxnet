@@ -338,7 +338,7 @@ class OperatorProperty {
   }
   /*!
    * \brief Get Backward Input Dependency for generic types of data.
-   *  Normally T can be pointer of Symbol::DataEntry, or NArray.
+   *  Normally T can be pointer of Symbol::DataEntry, or NDArray.
    *  This function will select the result list of T according to DeclareBackwardDependency.
    *
    * \param in_data the input data in forward pass.

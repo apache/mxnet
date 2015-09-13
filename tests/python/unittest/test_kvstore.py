@@ -8,9 +8,9 @@ def init_kvstore():
     """init kvstore """
     mx.kvstore.start()
     # single
-    mx.kvstore.init(3, mx.narray.zeros(shape))
+    mx.kvstore.init(3, mx.nd.zeros(shape))
     # list
-    mx.kvstore.init(keys, [mx.narray.zeros(shape)] * len(keys))
+    mx.kvstore.init(keys, [mx.nd.zeros(shape)] * len(keys))
 
 def stop_kvstore():
     """stop kvstore """
@@ -25,8 +25,8 @@ def test_single_kv_pair():
 
     init_kvstore()
 
-    mx.kvstore.push(3, mx.narray.ones(shape))
-    val = mx.narray.empty(shape)
+    mx.kvstore.push(3, mx.nd.ones(shape))
+    val = mx.nd.empty(shape)
     mx.kvstore.pull(3, out = val)
     check_diff_to_scalar(val, 1)
 
@@ -37,8 +37,8 @@ def test_list_kv_pair():
 
     init_kvstore()
 
-    mx.kvstore.push(keys, [mx.narray.ones(shape)*4] * len(keys))
-    val = [mx.narray.empty(shape)] * len(keys)
+    mx.kvstore.push(keys, [mx.nd.ones(shape)*4] * len(keys))
+    val = [mx.nd.empty(shape)] * len(keys)
     mx.kvstore.pull(keys, out = val)
     for v in val:
         check_diff_to_scalar(v, 4)
@@ -55,7 +55,7 @@ def test_aggregator():
     devs = [mx.Context('cpu', i) for i in range(num_devs)]
 
     # single
-    vals = [mx.narray.ones(shape, d) for d in devs]
+    vals = [mx.nd.ones(shape, d) for d in devs]
 
     mx.kvstore.push(3, vals)
     mx.kvstore.pull(3, out = vals)
@@ -64,7 +64,7 @@ def test_aggregator():
         check_diff_to_scalar(v, num_devs)
 
     # list
-    vals = [[mx.narray.ones(shape, d)*2.0 for d in devs]] * len(keys)
+    vals = [[mx.nd.ones(shape, d)*2.0 for d in devs]] * len(keys)
     mx.kvstore.push(keys, vals)
     mx.kvstore.pull(keys, out = vals)
 
@@ -89,7 +89,7 @@ def test_updater(dev = 'cpu'):
     devs = [mx.Context(dev, i) for i in range(num_devs)]
 
     # single
-    vals = [mx.narray.ones(shape, d) for d in devs]
+    vals = [mx.nd.ones(shape, d) for d in devs]
 
     mx.kvstore.push(3, vals)
     mx.kvstore.pull(3, out = vals)
@@ -98,7 +98,7 @@ def test_updater(dev = 'cpu'):
         check_diff_to_scalar(v, num_devs)
 
     # list
-    vals = [[mx.narray.ones(shape, d) for d in devs]] * len(keys)
+    vals = [[mx.nd.ones(shape, d) for d in devs]] * len(keys)
 
     num_push = 4
     for i in range(num_push):
