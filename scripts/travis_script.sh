@@ -54,8 +54,6 @@ fi
 if [ ${TASK} == "cpp_unittest" ]; then
     echo "USE_CUDA=0" >> config.mk
     make test || exit -1
-    export MXNET_ENGINE_TYPE=NaiveEngine
-    tests/cpp/unittest || exit -1
     export MXNET_ENGINE_TYPE=ThreadedEngine
     tests/cpp/unittest || exit -1
 fi
