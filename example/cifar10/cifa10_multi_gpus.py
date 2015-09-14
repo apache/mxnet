@@ -3,14 +3,14 @@ import numpy as np
 import mxnet as mx
 import copy
 import sys
-sys.path.append("../../tests/python")
+sys.path.append("../../tests/python/common")
 import get_data
 import time
 
 # use multiple devices
 num_devs = 4
-devs = [mx.gpu(i) for i in range(num_devs)]
-mx.kvstore.start()
+devs = [mx.cpu(i) for i in range(num_devs)]
+# mx.kvstore.start()
 
 # define the network
 conv_cnt = 1
@@ -105,12 +105,42 @@ loss = mx.symbol.Softmax(data=fc, name="sm")
 # define model updater
 updater = mx.updater.momentum(
     learning_rate = .05, weight_decay = .0001, momentum = 0.9)
-mx.kvstore.set_updater(updater)
+# mx.kvstore.set_updater(updater)
+
+# infer shape
+batch_size = 128
+batch_size -= (batch_size % num_devs)
+data_shape = (batch_size, 3, 28, 28)
+
+# create executors for devices
+executors = [loss.simple_bind(d, data = mx.nd.empty(data_shape, d)) for d in devs]
+
+# find the params needed to be synchronized between devices
+param_names = loss.list_arguments()
+sync_indices = [index for index, name in enumerate(param_names)
+                if "weight" in name or "bias" in name]
+sync_weights = [[e.list_arguments()[0][i] for e in executors] for i in sync_indices]
+sync_grads = [[e.list_arguments()[1][i] for e in executors] for i in sync_indices]
 
 
-#check data
+# init global shared model
+for idx in sync_indices:
+    shape = sync_weights[0][idx].shape
+    val = mx.nd.zeros(shape)
+    if "weight" in param_names[idx]:
+        val[:] = np.random.uniform(-0.1, 0.1, shape)
+    mx.kvstore.init(idx, val)
+
+# init local variables
+for e in executors:
+    for idx, data in enumerate(e.list_arguments()[0])
+    if "gamma" in param_names[idx]:
+        data = 1.0
+    if "beta" in param_names[idx]:
+        data = 0.0
+
+# data reader
 get_data.GetCifar10()
-
 train_dataiter = mx.io.ImageRecordIter(
         path_imgrec="data/cifar/train.rec",
         mean_img="data/cifar/cifar_mean.bin",
@@ -119,7 +149,7 @@ train_dataiter = mx.io.ImageRecordIter(
         input_shape=(3,28,28),
         batch_size=batch_size,
         nthread=1)
-test_dataiter = mx.io.ImageRecordIter(
+val_dataiter = mx.io.ImageRecordIter(
         path_imgrec="data/cifar/test.rec",
         mean_img="data/cifar/cifar_mean.bin",
         rand_crop=False,
@@ -140,11 +170,19 @@ def progress(count, total, epoch, toc):
     suffix = "Epoch %d, Speed: %.2f pic/sec" % (epoch, speed)
     sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', suffix))
 
+def cal_acc(out, label):
+    pred = np.argmax(out, axis=1)
+    return np.sum(pred == label) * 1.0 / out.shape[0]
 
 def train():
     acc_train = 0.
     acc_val = 0.
+    k = batch_size / num_devs
+    batch_splits = [range(d*k, (d+1)*k) for d in range(num_devs)]
     print("Start training...")
+    data_in = [e.list_arguments()[0][param_names.index('data')] for e in executors]
+    label_in = [e.list_arguments()[0][param_names.index('loss_label')] for e in executors]
+
     for i in range(epoch):
         # train
         train_acc = 0.0
@@ -152,36 +190,53 @@ def train():
         train_nbatch = 0
         val_nbatch = 0
         all_train_bacth = round(50000 / float(batch_size) + 1)
-        for data, label in train_dataiter:
-            toc = time.time()
-            label = label.asnumpy().flatten()
-            tmp_label[:] = label
-            inputs["data"][:] = data
-            inputs["sm_label"][:] = tmp_label
-            executor.forward()
-            pred[:] = out_narray
-            train_acc += CalAcc(pred.asnumpy(), label)
-            train_nbatch += 1
-            #executor.backward([out_narray])
-            executor.backward()
 
-            for grad, weight, mom in block:
-                Update(grad, weight, mom)
-            progress(train_nbatch, all_train_bacth, i, toc)
+        for data, label in train_dataiter:
+            # pull weight
+            mx.kvstore.pull(sync_indices, out = sync_weights)
+
+            # forward and backword
+            data = data.asnumpy()
+            label = label.asnumpy().flatten()
+            for d in range(num_devs):
+                rows = batch_splits[d]
+                data_in[d] = data[rows, :]
+                label_in[d] = label[rows]
+                executors[d].forward()
+                executors[d].backward()
+
+            # push gradient
+            mx.kvstore.push(sync_indices, sync_grads)
+
+            # evaluate
+            for d in range(num_devs):
+                train_acc += cal_acc(executors[d].outputs[0].asnumpy(),
+                                     label[batch_splits[d]])
+                train_count += 1
+
+            progress(train_count, all_train_bacth, i, toc)
 
         # evaluate
         for data, label in test_dataiter:
+            # forward
+            data = data.asnumpy()
             label = label.asnumpy().flatten()
-            inputs["data"][:] = data
-            executor.forward()
-            pred[:] = out_narray
-            val_acc += CalAcc(pred.asnumpy(), label)
-            val_nbatch += 1
-        acc_train = train_acc / train_nbatch
-        acc_val = val_acc / val_nbatch
+            for d in range(num_devs):
+                rows = batch_splits[d]
+                data_in[d] = data[rows,:]
+                executors[d].forward()
+
+            # eval
+            for d in range(num_devs):
+                val_acc += cal_acc(executors[d].outputs[0].asnumpy(),
+                                   label[batch_splits[d]])
+                val_count += 1
+
         sys.stdout.write('\n')
-        print("Train Acc: ", train_acc / train_nbatch)
-        print("Valid Acc: ", val_acc / val_nbatch)
+
+        print("Train Acc: %g, Valid Acc: %g" % (
+            train_acc / train_count,
+            val_acc / val_count))
         train_dataiter.reset()
         test_dataiter.reset()
 
