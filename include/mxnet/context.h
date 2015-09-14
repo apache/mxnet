@@ -108,6 +108,8 @@ struct Resource {
   };
   /*! \brief pointer to the resource */
   void *ptr;
+  /*! \brief engine variable */
+  void *var;
 };
 
 /*!

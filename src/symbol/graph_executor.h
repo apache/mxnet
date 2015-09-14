@@ -90,6 +90,17 @@ class GraphExecutor : public Executor {
           storage_id(GraphStorageAllocator::kBadStorageID),
           temp_ref_count(0), ref_count(0) {}
   };
+  // information of the resource
+  struct ResourceEntry {
+    /*! \brief actual data for the entry if it is a temp space */
+    NArray data;
+    /*! \brief tblob (this is quite ugly) */
+    TBlob tblob;
+    /*! \brief the resource request */
+    ResourceRequest req;
+    // storage id from allocator if it is a temp space
+    GraphStorageAllocator::StorageID storage_id;
+  };
   // all the information needed to push the op to engine
   struct OpExecEntry {
     // execution function for
@@ -111,6 +122,8 @@ class GraphExecutor : public Executor {
     std::vector<DataEntryInfo> outputs;
     // auxiliary data information of op
     std::vector<DataEntryInfo> aux_states;
+    // resource entry
+    std::vector<ResourceEntry> resources;
     // The following parts are constructed in InitOpNodes
     // the real operator
     std::shared_ptr<Operator> op;
