@@ -100,7 +100,7 @@ in5b = SimpleFactory(in5a, 176, 160)
 pool = mx.symbol.Pooling(data=in5b, pool_type="avg", kernel=(7,7), name="pool%d" % pool_cnt)
 flatten = mx.symbol.Flatten(data=pool, name="flatten1")
 fc = mx.symbol.FullyConnected(data=flatten, num_hidden=10, name="fc1")
-loss = mx.symbol.Softmax(data=fc, name="sm")
+loss = mx.symbol.Softmax(data=fc, name="loss")
 
 # define model updater
 updater = mx.updater.momentum(
@@ -113,13 +113,12 @@ batch_size -= (batch_size % num_devs)
 data_shape = (batch_size, 3, 28, 28)
 
 # create executors for devices
+
 d = devs[0]
 loss.simple_bind(d, data = mx.nd.empty(data_shape, d))
 loss.simple_bind(d, data = mx.nd.empty(data_shape, d))
 
-executors = []
-for d in devs:
-    executors.append(loss.simple_bind(d, data = mx.nd.empty(data_shape, d)))
+executors = [loss.simple_bind(d, data = mx.nd.empty(data_shape, d)) for d in devs]
 
 # d = devs[0]
 # ex = loss.simple_bind(d, data = mx.nd.empty(data_shape, d))
@@ -136,8 +135,9 @@ sync_grads = [[e.list_arguments()[1][i] for e in executors] for i in sync_indice
 
 
 # init global shared model
+weights = executors[0].list_arguments()[0]
 for idx in sync_indices:
-    shape = sync_weights[0][idx].shape
+    shape = weights[idx].shape
     val = mx.nd.zeros(shape)
     if "weight" in param_names[idx]:
         val[:] = np.random.uniform(-0.1, 0.1, shape)
@@ -187,6 +187,7 @@ def cal_acc(out, label):
     return np.sum(pred == label) * 1.0 / out.shape[0]
 
 def train():
+    epoch = 10
     acc_train = 0.
     acc_val = 0.
     k = batch_size / num_devs
