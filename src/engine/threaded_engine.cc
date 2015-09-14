@@ -1,5 +1,8 @@
 /*!
  * Copyright (c) 2015 by Contributors
+ * \file threaded_engine.cc
+ * \brief implements base threaded engine.
+ * \author Yutian Li
  */
 #include "threaded_engine.h"
 #include <dmlc/logging.h>
@@ -143,33 +146,33 @@ bool ThreadedVar::ready_to_read() {
   return ready_to_read_;
 }
 
-ThreadedEngine::ThreadedEngine()
-    : pending_{0},
-      thread_pool_{[this]() { ThreadWorker(&task_queue_); }},
-      io_thread_pool_{[this]() { ThreadWorker(&io_task_queue_); }} {}
-
-ThreadedEngine::~ThreadedEngine() noexcept(false) {
-  task_queue_.SignalForKill();
-  io_task_queue_.SignalForKill();
-}
-
+// implementation of threaded engine
 ThreadedVar* ThreadedEngine::NewVariable() {
   return ThreadedVar::New(VersionedVarBlock::New());
 }
 
 ThreadedOpr* ThreadedEngine::NewOperator(
-    ThreadedEngine::AsyncFn fn, std::vector<VarHandle> const& const_vars,
-    std::vector<VarHandle> const& mutable_vars, FnProperty prop) {
+    ThreadedEngine::AsyncFn fn,
+    std::vector<VarHandle> const& const_vars,
+    std::vector<VarHandle> const& mutable_vars,
+    FnProperty prop) {
   auto ret = ThreadedOpr::New();
   ret->fn = fn;
   ret->prop = prop;
   ret->const_vars.resize(const_vars.size());
   ret->mutable_vars.resize(mutable_vars.size());
-  std::transform(const_vars.begin(), const_vars.end(), ret->const_vars.begin(),
-                 ThreadedVar::CastFromBase);
+  std::transform(const_vars.begin(), const_vars.end(),
+                 ret->const_vars.begin(), ThreadedVar::CastFromBase);
   std::transform(mutable_vars.begin(), mutable_vars.end(),
                  ret->mutable_vars.begin(), ThreadedVar::CastFromBase);
-#if ENGINE_DEBUG
+  if (ENGINE_DEBUG != 0) {
+    CheckDuplicate(const_vars, mutable_vars);
+  }
+  return ret;
+}
+
+void ThreadedEngine::CheckDuplicate(std::vector<VarHandle> const& const_vars,
+                                    std::vector<VarHandle> const& mutable_vars) {
   // Check for duplicates.
   auto use = const_vars;
   auto mutate = mutable_vars;
@@ -200,12 +203,10 @@ ThreadedOpr* ThreadedEngine::NewOperator(
           << "duplicate items found between `const_vars` and `mutable_vars`";
     }
   }
-#endif  // ENGINE_DEBUG
-  return ret;
 }
 
 void ThreadedEngine::DeleteOperator(OprHandle op) {
-  auto&& threaded_opr = ThreadedOpr::CastFromBase(op);
+  ThreadedOpr* threaded_opr = ThreadedOpr::CastFromBase(op);
   std::vector<VarHandle> deps;
   deps.reserve(threaded_opr->const_vars.size() +
                threaded_opr->mutable_vars.size());
@@ -221,8 +222,8 @@ void ThreadedEngine::DeleteOperator(OprHandle op) {
 }
 
 void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
-  auto&& threaded_opr = ThreadedOpr::CastFromBase(op);
-  auto&& opr_block = OprBlock::New();
+  ThreadedOpr* threaded_opr = ThreadedOpr::CastFromBase(op);
+  OprBlock* opr_block = OprBlock::New();
   opr_block->opr = threaded_opr;
   opr_block->wait.store(threaded_opr->const_vars.size() +
                         threaded_opr->mutable_vars.size() + 1);
@@ -237,11 +238,7 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
     i->AppendWriteDependency(opr_block);
   }
   if (--opr_block->wait == 0) {
-    if (opr_block->opr->prop == FnProperty::kAsync) {
-      DoExecute(opr_block);
-    } else {
-      DoPushToQueue(opr_block);
-    }
+    this->PushToExecute(opr_block, true);
   }
 }
 
@@ -249,7 +246,7 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
                                std::vector<VarHandle> const& const_vars,
                                std::vector<VarHandle> const& mutable_vars,
                                FnProperty prop) {
-  auto&& opr = NewOperator(fn, const_vars, mutable_vars, prop);
+  ThreadedOpr *opr = NewOperator(fn, const_vars, mutable_vars, prop);
   opr->temporary = true;
   Push(opr, exec_ctx);
 }
@@ -289,12 +286,16 @@ void ThreadedEngine::WaitForAll() {
 inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   // Mark complete for read variables
   for (auto&& i : threaded_opr->const_vars) {
-    i->CompleteReadDependency([this](OprBlock* opr) { DoPushToQueue(opr); });
+    i->CompleteReadDependency([this](OprBlock* opr) {
+        this->PushToExecute(opr, false);
+      });
   }
   // Mark complete for write variables.
   for (auto&& i : threaded_opr->mutable_vars) {
     bool to_delete = i->CompleteWriteDependency(
-        [this](OprBlock* opr) { DoPushToQueue(opr); });
+        [this](OprBlock* opr) {
+          this->PushToExecute(opr, false);
+        });
     if (to_delete) {
       ThreadedVar::Delete(i);
     }
@@ -311,48 +312,11 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   }
 }
 
-void ThreadedEngine::ThreadWorker(
-    dmlc::ConcurrentBlockingQueue<OprBlock*>* task_queue) {
-  OprBlock* opr_block;
-  while (task_queue->Pop(&opr_block)) {
-    DoExecute(opr_block);
-  }
+void ThreadedEngine::OnCompleteStatic(
+    Engine *engine, void *threaded_opr) {
+  static_cast<ThreadedEngine*>(engine)->OnComplete(
+      static_cast<ThreadedOpr*>(threaded_opr));
 }
 
-void ThreadedEngine::DoPushToQueue(OprBlock* opr_block) {
-  switch (opr_block->opr->prop) {
-    case FnProperty::kCopy: {
-      io_task_queue_.Push(opr_block);
-      break;
-    }
-    default: {
-      task_queue_.Push(opr_block);
-      break;
-    }
-  }
-}
-
-void ThreadedEngine::DoExecute(OprBlock* opr_block) {
-  assert(opr_block->wait.load() == 0);
-  ThreadedOpr* threaded_opr = opr_block->opr;
-  if (opr_block->ctx.dev_mask == gpu::kDevMask) {
-#if MXNET_USE_CUDA
-    CUDA_CALL(cudaSetDevice(opr_block->ctx.dev_id));
-#else   // MXNET_USE_CUDA
-    LOG(FATAL) << "Please compile with CUDA enabled";
-#endif  // MXNET_USE_CUDA
-  }
-  auto&& rctx = opr_block->opr->prop == FnProperty::kCopy
-      ? streams_.GetIORunContext(opr_block->ctx)
-      : streams_.GetRunContext(opr_block->ctx);
-  CallbackOnComplete callback = this->CreateCallback(
-      ThreadedEngine::OnComplete_, threaded_opr);
-  threaded_opr->fn(rctx, callback);
-  OprBlock::Delete(opr_block);
-}
-
-Engine *CreateThreadedEngine() {
-  return new ThreadedEngine();
-}
 }  // namespace engine
 }  // namespace mxnet
