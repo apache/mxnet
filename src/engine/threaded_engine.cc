@@ -84,29 +84,35 @@ void ThreadedVar::CompleteReadDependency(Dispatcher dispatcher) {
 template <typename Dispatcher>
 bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
   VersionedVarBlock *old_pending_write, *end_of_dispatch_chain;
-  int num_reads;
   {
     // this is lock scope
     std::lock_guard<std::mutex> lock{m_};
     assert(ready_to_read_ == false);
     // detach pending write
     old_pending_write = pending_write_;
-    pending_write_ = nullptr;
     // search for chains to trigger
     VersionedVarBlock *p = old_pending_write->next;
     assert(num_pending_reads_ == 0);
-    num_reads = 0;
     while (p->next != nullptr && p->write == false) {
+      ++num_pending_reads_;
       p = p->next;
-      ++num_reads;
     }
-    num_pending_reads_ = num_reads;
+    // mark end of dispatch chain
     end_of_dispatch_chain = p;
+
     if (p->next == nullptr) {
       ready_to_read_ = true;
+      pending_write_ = nullptr;
+      assert(p->trigger == nullptr);
+      assert(p->write ==false);
     } else {
       assert(p->write == true);
       pending_write_ = p;
+      if (num_pending_reads_ == 0) {
+        if (--pending_write_->trigger->wait == 0) {
+          dispatcher(pending_write_->trigger);
+        }
+      }
     }
   }
   // this is outside of lock scope
@@ -125,13 +131,8 @@ bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
     }
     auto prev = cur_head;
     cur_head = cur_head->next;
+    assert(cur_head != nullptr);
     VersionedVarBlock::Delete(prev);
-  }
-  // trigger pending write, if any
-  if (pending_write_ != nullptr && num_reads == 0) {
-    if (--pending_write_->trigger->wait == 0) {
-      dispatcher(pending_write_->trigger);
-    }
   }
   return false;
 }
