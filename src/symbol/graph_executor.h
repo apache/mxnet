@@ -93,7 +93,7 @@ class GraphExecutor : public Executor {
   // information of the resource
   struct ResourceEntry {
     /*! \brief actual data for the entry if it is a temp space */
-    NArray data;
+    NDArray data;
     /*! \brief tblob (this is quite ugly) */
     TBlob tblob;
     /*! \brief the resource request */
