@@ -180,6 +180,12 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
   API_END();
 }
 
+int MXEngineWaitAll() {
+  API_BEGIN();
+  Engine::Get()->WaitForAll();
+  API_END();
+}
+
 // NOTE: return value is added in API_END
 int MXNDArrayCreateNone(NDArrayHandle *out) {
   API_BEGIN();
@@ -320,12 +326,6 @@ int MXNDArrayListLoad(const char* fname,
   *out_arr = dmlc::BeginPtr(ret->ret_handles);
   *out_name_size = static_cast<mx_uint>(names.size());
   *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
-  API_END();
-}
-
-int MXNDArrayWaitAll() {
-  API_BEGIN();
-  Engine::Get()->WaitForAll();
   API_END();
 }
 
@@ -817,6 +817,8 @@ int MXDataIterBeforeFirst(DataIterHandle handle) {
 
 int MXDataIterNext(DataIterHandle handle, int *out) {
   API_BEGIN();
+  // TODO(tianjun): remove this after having prefetcher by default.
+  // and call NArray.WaitForWrite instead.
   Engine::Get()->WaitForAll();
   *out = static_cast<IIterator<DataBatch>* >(handle)->Next();
   API_END();
