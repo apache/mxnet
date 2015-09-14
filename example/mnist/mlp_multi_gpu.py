@@ -134,4 +134,3 @@ def run_sgd():
 
 if __name__ == "__main__":
     run_sgd()
-    mx.kvstore.stop()

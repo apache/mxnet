@@ -8,8 +8,8 @@ import get_data
 import time
 
 # use multiple devices
-num_devs = 2
-devs = [mx.cpu(i) for i in range(num_devs)]
+num_devs = 4
+devs = [mx.gpu(i) for i in range(num_devs)]
 mx.kvstore.start()
 
 # define the network
@@ -78,13 +78,6 @@ def SimpleFactory(data, ch_1x1, ch_3x3):
     concat_cnt += 1
     return concat
 
-def RandomInit(narray):
-    in_num = narray.shape[1]
-    out_num = narray.shape[0]
-    a = np.sqrt(3.0 / (in_num + out_num))
-    tmp = mx.nd.array(np.random.uniform(-a, a, narray.shape))
-    narray[:] = tmp
-
 data = mx.symbol.Variable(name="data")
 conv1 = ConvFactory(data=data, kernel=(3,3), pad=(1,1), num_filter=96, act_type="relu")
 in3a = SimpleFactory(conv1, 32, 32)
@@ -105,80 +98,67 @@ loss = mx.symbol.Softmax(data=fc, name="loss")
 # define model updater
 updater = mx.updater.momentum(
     learning_rate = .05, weight_decay = .0001, momentum = 0.9)
-# mx.kvstore.set_updater(updater)
+mx.kvstore.set_updater(updater)
 
 # infer shape
-batch_size = 128
+batch_size = 196
 batch_size -= (batch_size % num_devs)
-data_shape = (batch_size, 3, 28, 28)
+data_shape = (batch_size / num_devs, 3, 28, 28)
 
 # create executors for devices
-
-d = devs[0]
-loss.simple_bind(d, data = mx.nd.empty(data_shape, d))
-loss.simple_bind(d, data = mx.nd.empty(data_shape, d))
-
 executors = [loss.simple_bind(d, data = mx.nd.empty(data_shape, d)) for d in devs]
-
-# d = devs[0]
-# ex = loss.simple_bind(d, data = mx.nd.empty(data_shape, d))
-# print ex
-
-# executors = [loss.simple_bind(d, data = mx.nd.empty(data_shape, d)) for d in devs]
 
 # find the params needed to be synchronized between devices
 param_names = loss.list_arguments()
+sync_prefix = ["weight", "bias", "beta", "gamma"]
 sync_indices = [index for index, name in enumerate(param_names)
-                if "weight" in name or "bias" in name]
+                if any(prefix in name for prefix in sync_prefix)]
+
 sync_weights = [[e.list_arguments()[0][i] for e in executors] for i in sync_indices]
 sync_grads = [[e.list_arguments()[1][i] for e in executors] for i in sync_indices]
 
 
-# init global shared model
+# init model
 weights = executors[0].list_arguments()[0]
 for idx in sync_indices:
     shape = weights[idx].shape
     val = mx.nd.zeros(shape)
     if "weight" in param_names[idx]:
         val[:] = np.random.uniform(-0.1, 0.1, shape)
+    elif "gamma" in param_names[idx]:
+        val[:] = 1.0
     mx.kvstore.init(idx, val)
-
-# init local variables
-for e in executors:
-    for idx, data in enumerate(e.list_arguments()[0]):
-        if "gamma" in param_names[idx]:
-            data = 1.0
-        if "beta" in param_names[idx]:
-            data = 0.0
 
 # data reader
 get_data.GetCifar10()
+
 train_dataiter = mx.io.ImageRecordIter(
-        path_imgrec="data/cifar/train.rec",
-        mean_img="data/cifar/cifar_mean.bin",
-        rand_crop=True,
-        rand_mirror=True,
-        input_shape=(3,28,28),
-        batch_size=batch_size,
-        nthread=1)
+    path_imgrec="data/cifar/train.rec",
+    mean_img="data/cifar/cifar_mean.bin",
+    rand_crop=True,
+    rand_mirror=True,
+    shuffle=True,
+    input_shape=(3,28,28),
+    batch_size=batch_size,
+    nthread=1)
+
 val_dataiter = mx.io.ImageRecordIter(
-        path_imgrec="data/cifar/test.rec",
-        mean_img="data/cifar/cifar_mean.bin",
-        rand_crop=False,
-        rand_mirror=False,
-        input_shape=(3,28,28),
-        batch_size=batch_size,
-        nthread=1)
+    path_imgrec="data/cifar/test.rec",
+    mean_img="data/cifar/cifar_mean.bin",
+    rand_crop=False,
+    rand_mirror=False,
+    input_shape=(3,28,28),
+    batch_size=batch_size,
+    nthread=1)
 
 
-def progress(count, total, epoch, toc):
+def progress(count, total, epoch, tic):
     bar_len = 50
     filled_len = int(round(bar_len * count / float(total)))
-
     percents = round(100.0 * count / float(total), 1)
     bar = '=' * filled_len + '-' * (bar_len - filled_len)
-    tic = time.time()
-    speed = batch_size / float(tic - toc)
+    toc = time.time()
+    speed = batch_size / float(toc - tic)
     suffix = "Epoch %d, Speed: %.2f pic/sec" % (epoch, speed)
     sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', suffix))
 
@@ -187,7 +167,7 @@ def cal_acc(out, label):
     return np.sum(pred == label) * 1.0 / out.shape[0]
 
 def train():
-    epoch = 10
+    epoch = 1
     acc_train = 0.
     acc_val = 0.
     k = batch_size / num_devs
@@ -198,13 +178,15 @@ def train():
 
     for i in range(epoch):
         # train
+        start = time.time()
         train_acc = 0.0
         val_acc = 0.0
-        train_nbatch = 0
-        val_nbatch = 0
-        all_train_bacth = round(50000 / float(batch_size) + 1)
+        train_count = 0
+        val_count = 0
+        all_train_bacth = round(50000 / float(batch_size/num_devs) + 1)
 
         for data, label in train_dataiter:
+            tic = time.time()
             # pull weight
             mx.kvstore.pull(sync_indices, out = sync_weights)
 
@@ -213,10 +195,15 @@ def train():
             label = label.asnumpy().flatten()
             for d in range(num_devs):
                 rows = batch_splits[d]
-                data_in[d] = data[rows, :]
-                label_in[d] = label[rows]
+                data_in[d][:] = data[rows, :]
+                label_in[d][:] = label[rows]
                 executors[d].forward()
                 executors[d].backward()
+
+            # normalize gradient
+            for grads in sync_grads:
+                for g in grads:
+                    g /= batch_size
 
             # push gradient
             mx.kvstore.push(sync_indices, sync_grads)
@@ -227,16 +214,16 @@ def train():
                                      label[batch_splits[d]])
                 train_count += 1
 
-            progress(train_count, all_train_bacth, i, toc)
+            progress(train_count, all_train_bacth, i, tic)
 
         # evaluate
-        for data, label in test_dataiter:
+        for data, label in val_dataiter:
             # forward
             data = data.asnumpy()
             label = label.asnumpy().flatten()
             for d in range(num_devs):
                 rows = batch_splits[d]
-                data_in[d] = data[rows,:]
+                data_in[d][:] = data[rows,:]
                 executors[d].forward()
 
             # eval
@@ -247,12 +234,13 @@ def train():
 
         sys.stdout.write('\n')
 
-        print("Train Acc: %g, Valid Acc: %g" % (
+        print("Train Acc: %g, Valid Acc: %g, Time: %g sec" % (
             train_acc / train_count,
-            val_acc / val_count))
-        train_dataiter.reset()
-        test_dataiter.reset()
+            val_acc / val_count,
+            time.time() - start))
 
-    mx.kvstore.stop()
+        train_dataiter.reset()
+        val_dataiter.reset()
+
 if __name__ == "__main__":
     train()

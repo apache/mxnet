@@ -6,6 +6,7 @@ import ctypes
 from .ndarray import NDArray
 from .base import _LIB
 from .base import check_call, c_array, NDArrayHandle
+import atexit
 
 def _ctype_key_value(keys, vals):
     """parse key-value args into ctype"""
@@ -33,10 +34,6 @@ def _ctype_key_value(keys, vals):
 def start():
     """start kvstore"""
     check_call(_LIB.MXKVStoreStart())
-
-def stop():
-    """ Stop kvstore """
-    check_call(_LIB.MXKVStoreStop())
 
 
 def init(key, value):
@@ -110,3 +107,12 @@ def set_updater(updater):
     global _updater_func
     _updater_func = _updater_proto(_updater_wrapper(updater))
     check_call(_LIB.MXKVStoreSetUpdater(_updater_func))
+
+def stop():
+    """ Stop kvstore """
+    check_call(_LIB.MXKVStoreStop())
+    # need to clear _updater_func before _LIB
+    global _updater_func
+    _updater_func = None
+
+atexit.register(stop)
