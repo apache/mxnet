@@ -1,14 +1,14 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file threaded_engine.h
- * \brief Implementation of threaded engine that tracks the dependency
- *        and pushes actions to execute.
+ * \brief Implements base class of threaded engine
+ *    that tracks the dependency and pushes actions to execute.
+ * \author Yutian Li
  */
 #ifndef MXNET_ENGINE_THREADED_ENGINE_H_
 #define MXNET_ENGINE_THREADED_ENGINE_H_
 
 #include <dmlc/base.h>
-#include <dmlc/concurrency.h>
 #include <dmlc/logging.h>
 #include <vector>
 #include <functional>
@@ -16,8 +16,6 @@
 #include <condition_variable>
 #include <mutex>
 #include "./engine_impl.h"
-#include "./thread_pool.h"
-#include "./stream_manager.h"
 #include "../common/object_pool.h"
 
 namespace mxnet {
@@ -200,18 +198,19 @@ struct ThreadedOpr final : public Opr,
 };  // struct ThreadedOpr
 
 /*!
- * \brief Engine implementation.
+ * \brief Base class of all ThreadedEngine.
+ *  This class implements a thread safe version of engine.
+ *  The engine tracks the dependencies, and will call PushToExecute
+ *  to execute a specific task.
+ *
+ *  Subclass can implement PushToExecute to design specific
+ *  execution policy for the tasks.
  */
 class ThreadedEngine : public Engine {
  public:
-  /*!
-   * \brief Constructor and destructor.
-   */
-  ThreadedEngine();
-  ~ThreadedEngine() noexcept(false);
-  /*!
-   * \brief Overriding methods.
-   */
+  // constructor
+  ThreadedEngine() : pending_(0) {}
+  // implementing all the functions from Engine.
   ThreadedVar* NewVariable() override;
   ThreadedOpr* NewOperator(AsyncFn fn,
                            std::vector<VarHandle> const& const_vars,
@@ -226,13 +225,39 @@ class ThreadedEngine : public Engine {
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override;
   void WaitForVar(VarHandle var) override;
   void WaitForAll() override;
+
+ protected:
   /*!
-   * \brief Worker.
-   * \param task_queue Queue to work on.
+   * \brief Push the opr block to execution queue to be executed.
+   *  This function is implemented by the corresponding subclass
+   *  for specific policy.
    *
-   * The method to pass to thread pool to parallelize.
+   * \param opr_block The operator block.
+   * \param pusher_thread whether the caller is the thread that calls push
    */
-  void ThreadWorker(dmlc::ConcurrentBlockingQueue<OprBlock*>* task_queue);
+  virtual void PushToExecute(OprBlock* opr_block, bool pusher_thread) = 0;
+  /*!
+   * \brief Call this function to actually execute an opr_block
+   *  This function also deletes the opr_block after execution.
+   * \param run_ctx runtime context used to execute the function.
+   * \param opr_block the opr_block to be executed and deleted.
+   */
+  void ExecuteOprBlock(RunContext run_ctx, OprBlock *opr_block) {
+    ThreadedOpr* threaded_opr = opr_block->opr;
+    CallbackOnComplete callback = this->CreateCallback(
+        ThreadedEngine::OnCompleteStatic, threaded_opr);
+    threaded_opr->fn(run_ctx, callback);
+    OprBlock::Delete(opr_block);
+  }
+
+ private:
+  /*!
+   * \brief check if thee is duplication in const_vars and mutable_vars.
+   * \param const_vars the variables to read from.
+   * \param mutable_vars the variables to mutate.
+   */
+  void CheckDuplicate(std::vector<VarHandle> const& const_vars,
+                      std::vector<VarHandle> const& mutable_vars);
   /*!
    * \brief Callback on operation completion.
    *
@@ -240,51 +265,17 @@ class ThreadedEngine : public Engine {
    */
   inline void OnComplete(ThreadedOpr* threaded_opr);
   // callback to the threaded engine
-  inline static void OnComplete_(Engine *engine, void *threaded_opr) {
-    static_cast<ThreadedEngine*>(engine)->OnComplete(
-        static_cast<ThreadedOpr*>(threaded_opr));
-  }
-
- private:
-  /*! \brief Concurrency for thread pool */
-  static constexpr std::size_t kNumWorkingThreads = 16;
-  /*! \brief Maximum number of GPUs */
-  static constexpr std::size_t kMaxNumGpus = 16;
-  /*!\brief number of streams allocated for each GPU */
-  static constexpr std::size_t kNumStreamsPerGpu = 16;
+  static void OnCompleteStatic(Engine *engine, void *threaded_opr);
   /*!
    * \brief Number of pending operations.
    */
   std::atomic<std::size_t> pending_;
   /*!
-   * \brief Notify waits for single or all variables.
+   * \brief Mutex and condition_variable,
+   *  used to Notify waits for single or all variables.
    */
   std::mutex finished_m_;
   std::condition_variable finished_cv_;
-  /*!
-   * \brief Streams.
-   */
-  StreamManager<kMaxNumGpus, kNumStreamsPerGpu> streams_;
-  /*!
-   * \brief Task queues.
-   */
-  dmlc::ConcurrentBlockingQueue<OprBlock*> task_queue_;
-  dmlc::ConcurrentBlockingQueue<OprBlock*> io_task_queue_;
-  /*!
-   * \brief Thread pools.
-   */
-  ThreadPool<kNumWorkingThreads> thread_pool_;
-  ThreadPool<1> io_thread_pool_;
-  /*!
-   * \brief Push to corresponding task queue.
-   * \param opr_block The operator block.
-   */
-  void DoPushToQueue(OprBlock* opr_block);
-  /*!
-   * \brief Execute an operation.
-   * \param opr_block The operator block.
-   */
-  void DoExecute(OprBlock* opr_block);
   /*!
    * \brief Disallow copy construction and assignment.
    */
