@@ -173,10 +173,10 @@ class BatchNormOp : public Operator {
   // TODO(bing): use global memory allocator
   inline void Init(const OpContext &ctx,
                    const mshadow::Shape<4> &dshape) {
-    if (is_init) return;
-    is_init = true;
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     tmp_.set_stream(s);
+    if (is_init) return;
+    is_init = true;
     tmp_.Resize(mshadow::Shape2(3, dshape[1]));
   }
   mshadow::TensorContainer<xpu, 2> tmp_;

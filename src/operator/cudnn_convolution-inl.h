@@ -149,9 +149,9 @@ class CuDNNConvolutionOp : public Operator {
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1);
+    temp_.set_stream(s);
     if (!init_cudnn_) {
       init_cudnn_ = true;
-      temp_.set_stream(s);
       size_t workspace = static_cast<size_t>(param_.workspace);
       size_t back_size = 0;
       size_t back_size_w = 0;
