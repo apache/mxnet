@@ -56,11 +56,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
         auto&& counter = gpu_cnt_.at(ctx.dev_id);
         if (counter == -1) {
           for (auto&& i : gpu_streams_.at(ctx.dev_id)) {
-            #if MXNET_USE_CUDNN == 1
-            i = mshadow::NewStream<gpu>(true, true);
-            #else
-            i = mshadow::NewStream<gpu>(true, false);
-            #endif  // MXNET_USE_CUDNN
+            i = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0);
           }
           counter = 0;
         }
@@ -88,7 +84,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
       {
         std::lock_guard<std::mutex> lock{m_};
         if (gpu_io_streams_.at(ctx.dev_id) == nullptr) {
-          gpu_io_streams_.at(ctx.dev_id) = mshadow::NewStream<gpu>(true, false);
+          gpu_io_streams_.at(ctx.dev_id) = mshadow::NewStream<gpu>(false, false);
         }
       }
       return {gpu_io_streams_.at(ctx.dev_id)};
@@ -126,7 +122,6 @@ StreamManager<kNumGpus, kStreams>::~StreamManager() {
 }
 
 }  // namespace engine
-
 }  // namespace mxnet
 
 #endif  // MXNET_ENGINE_STREAM_MANAGER_H_

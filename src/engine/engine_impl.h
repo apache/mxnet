@@ -13,6 +13,7 @@
 
 namespace mxnet {
 namespace engine {
+
 /*! \brief base class of engine variables, used for type checking */
 struct Var {
 #if ENGINE_DEBUG

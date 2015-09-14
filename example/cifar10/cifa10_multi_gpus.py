@@ -8,9 +8,9 @@ import get_data
 import time
 
 # use multiple devices
-num_devs = 4
+num_devs = 2
 devs = [mx.cpu(i) for i in range(num_devs)]
-# mx.kvstore.start()
+mx.kvstore.start()
 
 # define the network
 conv_cnt = 1
@@ -113,7 +113,19 @@ batch_size -= (batch_size % num_devs)
 data_shape = (batch_size, 3, 28, 28)
 
 # create executors for devices
-executors = [loss.simple_bind(d, data = mx.nd.empty(data_shape, d)) for d in devs]
+d = devs[0]
+loss.simple_bind(d, data = mx.nd.empty(data_shape, d))
+loss.simple_bind(d, data = mx.nd.empty(data_shape, d))
+
+executors = []
+for d in devs:
+    executors.append(loss.simple_bind(d, data = mx.nd.empty(data_shape, d)))
+
+# d = devs[0]
+# ex = loss.simple_bind(d, data = mx.nd.empty(data_shape, d))
+# print ex
+
+# executors = [loss.simple_bind(d, data = mx.nd.empty(data_shape, d)) for d in devs]
 
 # find the params needed to be synchronized between devices
 param_names = loss.list_arguments()
@@ -133,11 +145,11 @@ for idx in sync_indices:
 
 # init local variables
 for e in executors:
-    for idx, data in enumerate(e.list_arguments()[0])
-    if "gamma" in param_names[idx]:
-        data = 1.0
-    if "beta" in param_names[idx]:
-        data = 0.0
+    for idx, data in enumerate(e.list_arguments()[0]):
+        if "gamma" in param_names[idx]:
+            data = 1.0
+        if "beta" in param_names[idx]:
+            data = 0.0
 
 # data reader
 get_data.GetCifar10()
@@ -240,5 +252,6 @@ def train():
         train_dataiter.reset()
         test_dataiter.reset()
 
+    mx.kvstore.stop()
 if __name__ == "__main__":
     train()
