@@ -17,14 +17,14 @@ namespace engine {
 /*!
  * \brief Thread pool.
  */
-template <std::size_t kSize>
 class ThreadPool {
  public:
   /*!
-   * \brief Constructor takes function to run and its arguments.
+   * \brief Constructor takes function to run.
+   * \param size size of the thread pool.
+   * \param func the function to run on the thread pool.
    */
-  template <typename Function, typename... Args>
-  explicit ThreadPool(Function&& func, Args&&... args);
+  explicit ThreadPool(size_t size, std::function<void()> func);
   /*!
    * \brief Destructor.
    */
@@ -34,7 +34,7 @@ class ThreadPool {
   /*!
    * \brief Worker threads.
    */
-  std::array<std::thread, kSize> worker_threads_;
+  std::vector<std::thread> worker_threads_;
   /*!
    * \brief Disallow default construction.
    */
@@ -45,16 +45,14 @@ class ThreadPool {
   DISALLOW_COPY_AND_ASSIGN(ThreadPool);
 };
 
-template <std::size_t kSize>
-template <typename Function, typename... Args>
-ThreadPool<kSize>::ThreadPool(Function&& func, Args&&... args) {
-  for (auto&& i : worker_threads_) {
-    i = std::thread{std::forward<Function>(func), std::forward<Args>(args)...};
+ThreadPool::ThreadPool(size_t size, std::function<void()> func)
+    : worker_threads_(size) {
+  for (auto& i : worker_threads_) {
+    i = std::thread(func);
   }
 }
 
-template <std::size_t kSize>
-ThreadPool<kSize>::~ThreadPool() noexcept(false) {
+ThreadPool::~ThreadPool() noexcept(false) {
   for (auto&& i : worker_threads_) {
     i.join();
   }
@@ -62,5 +60,4 @@ ThreadPool<kSize>::~ThreadPool() noexcept(false) {
 
 }  // namespace engine
 }  // namespace mxnet
-
 #endif  // MXNET_ENGINE_THREAD_POOL_H_

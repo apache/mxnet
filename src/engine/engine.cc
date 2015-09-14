@@ -15,12 +15,16 @@ inline Engine* CreateEngine() {
   const bool default_engine = (type == nullptr);
   if (type == nullptr) type = "ThreadedEngine";
   std::string stype = type;
+
   Engine *ret = nullptr;
-  if (stype == "ThreadedEngine") {
-    ret = CreateThreadedEngine();
-  } else if (stype == "NaiveEngine") {
+  if (stype == "NaiveEngine") {
     ret =  CreateNaiveEngine();
+  } else if (stype == "ThreadedEngine") {
+    ret = CreateThreadedEnginePooled();
+  } else if (stype == "ThreadedEnginePerDevie") {
+    ret = CreateThreadedEnginePerDevice();
   }
+
   CHECK_NE(ret, nullptr)
       << "Cannot find Eine " << type << " in registry";
   if (!default_engine) {

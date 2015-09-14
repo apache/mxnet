@@ -22,9 +22,9 @@ namespace engine {
  */
 class ThreadedEnginePooled : public ThreadedEngine {
  public:
-  ThreadedEnginePooled()
-      : thread_pool_{[this]() { ThreadWorker(&task_queue_); }},
-    io_thread_pool_{[this]() { ThreadWorker(&io_task_queue_); }} {}
+  ThreadedEnginePooled() :
+      thread_pool_(kNumWorkingThreads, [this]() { ThreadWorker(&task_queue_); }),
+      io_thread_pool_(1, [this]() { ThreadWorker(&io_task_queue_); }) {}
 
   ~ThreadedEnginePooled() noexcept(false) {
     task_queue_.SignalForKill();
@@ -59,8 +59,8 @@ class ThreadedEnginePooled : public ThreadedEngine {
   /*!
    * \brief Thread pools.
    */
-  ThreadPool<kNumWorkingThreads>  thread_pool_;
-  ThreadPool<1> io_thread_pool_;
+  ThreadPool thread_pool_;
+  ThreadPool io_thread_pool_;
   /*!
    * \brief Worker.
    * \param task_queue Queue to work on.
@@ -109,7 +109,7 @@ class ThreadedEnginePooled : public ThreadedEngine {
   }
 };
 
-Engine *CreateThreadedEngine() {
+Engine *CreateThreadedEnginePooled() {
   return new ThreadedEnginePooled();
 }
 }  // namespace engine
