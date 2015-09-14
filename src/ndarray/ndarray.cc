@@ -169,7 +169,7 @@ void CopyFromTo(const NDArray &from, NDArray *to) {
         ret.ptr_->CheckAndAlloc();
         TBlob tmp = ret.data();
         ndarray::Copy<cpu, cpu>(from.data(), &tmp,
-                               from.ctx(), ret.ctx(), ctx);
+                                from.ctx(), ret.ctx(), ctx);
       }, from.ctx(), const_vars, {ret.ptr_->var});
   } else {
 #if MXNET_USE_CUDA
@@ -178,28 +178,28 @@ void CopyFromTo(const NDArray &from, NDArray *to) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Copy<cpu, gpu>(from.data(), &tmp,
-                                 from.ctx(), ret.ctx(), ctx);
+                                  from.ctx(), ret.ctx(), ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, ret.ctx(), const_vars, {ret.ptr_->var});
+        }, ret.ctx(), const_vars, {ret.ptr_->var}, FnProperty::kCopyToGPU);
     } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Copy<gpu, cpu>(from.data(), &tmp,
-                                 from.ctx(), ret.ctx(), ctx);
+                                  from.ctx(), ret.ctx(), ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, from.ctx(), const_vars, {ret.ptr_->var});
+        }, from.ctx(), const_vars, {ret.ptr_->var}, FnProperty::kCopyFromGPU);
     } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
           ret.ptr_->CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Copy<gpu, gpu>(from.data(), &tmp,
-                                 from.ctx(), ret.ctx(), ctx);
+                                  from.ctx(), ret.ctx(), ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, from.ctx(), const_vars, {ret.ptr_->var});
+        }, from.ctx(), const_vars, {ret.ptr_->var}, FnProperty::kCopyFromGPU);
     } else {
       LOG(FATAL) << "unknown device mask";
     }

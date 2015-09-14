@@ -86,7 +86,9 @@ class ThreadedEnginePooled : public ThreadedEngine {
       LOG(FATAL) << "Please compile with CUDA enabled";
       #endif  // MXNET_USE_CUDA
     }
-    auto&& rctx = opr_block->opr->prop == FnProperty::kCopy
+    bool is_copy = (opr_block->opr->prop == FnProperty::kCopyFromGPU ||
+                    opr_block->opr->prop == FnProperty::kCopyToGPU);
+    auto&& rctx = is_copy
         ? streams_.GetIORunContext(opr_block->ctx)
         : streams_.GetRunContext(opr_block->ctx);
     this->ExecuteOprBlock(rctx, opr_block);
@@ -97,7 +99,8 @@ class ThreadedEnginePooled : public ThreadedEngine {
    */
   void DoPushToQueue(OprBlock* opr_block) {
     switch (opr_block->opr->prop) {
-      case FnProperty::kCopy: {
+      case FnProperty::kCopyFromGPU:
+      case FnProperty::kCopyToGPU: {
         io_task_queue_.Push(opr_block);
         break;
       }

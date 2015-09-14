@@ -205,9 +205,6 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
     }
   }
 
-  for (const Resource& r : op_node.op_ctx.requested) {
-    exec.mutate_vars.push_back(static_cast<DAGEngine::Variable>(r.var));
-  }
   // start setup exec function.
   for (const Resource& r : op_node.op_ctx.requested) {
     exec.mutate_vars.push_back(static_cast<Engine::VarHandle>(r.var));

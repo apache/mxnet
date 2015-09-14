@@ -11,6 +11,7 @@ env:
     - TASK=python CXX=g++
     - TASK=python3 CXX=g++
     - TASK=python_naive CXX=g++
+    - TASK=python_perdev CXX=g++
     - TASK=cpp_unittest CXX=g++
 
 # dependent apt packages

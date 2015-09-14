@@ -33,8 +33,10 @@ typedef Opr* OprHandle;
 enum class FnProperty {
   /*! \brief Normal operation */
   kNormal,
-  /*! \brief Copy operation between CPU and GPU */
-  kCopy,
+  /*! \brief Copy operation from GPU to other devices */
+  kCopyFromGPU,
+  /*! \brief Copy operation from CPU to other devices */
+  kCopyToGPU,
   /*! \brief Asynchronous function call */
   kAsync
 };  // enum class FnProperty

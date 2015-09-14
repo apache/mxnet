@@ -7,6 +7,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <dmlc/concurrency.h>
+#include <array>
 #include "./threaded_engine.h"
 #include "./thread_pool.h"
 #include "./stream_manager.h"
@@ -92,7 +93,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
    */
   inline ThreadWorkerBlock *GetGPUWorkerBlock(size_t dev_id,
                                               FnProperty prop) {
-    bool is_copy = (prop == FnProperty::kCopy);
+    bool is_copy = (prop == FnProperty::kCopyFromGPU ||
+                    prop == FnProperty::kCopyToGPU);
     CHECK_LT(dev_id, kMaxNumGPUs)
         << "GPU Device index " << dev_id
         << " exceed bound " << kMaxNumGPUs;
@@ -130,7 +132,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
                         dmlc::ConcurrentBlockingQueue<OprBlock*>* task_queue) {
     #if MXNET_USE_CUDA
     // allocate stream
-    mshadow::SetDevice(dev_id);
+    mshadow::SetDevice<gpu>(dev_id);
     RunContext run_ctx;
     mshadow::Stream<gpu> *stream;
     if (is_copy_worker) {

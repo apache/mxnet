@@ -6,7 +6,7 @@
 
 #include <dmlc/base.h>
 #include <cstddef>
-#include <array>
+#include <vector>
 #include <thread>
 #include <utility>
 #include "mxnet/base.h"
@@ -24,11 +24,17 @@ class ThreadPool {
    * \param size size of the thread pool.
    * \param func the function to run on the thread pool.
    */
-  explicit ThreadPool(size_t size, std::function<void()> func);
-  /*!
-   * \brief Destructor.
-   */
-  ~ThreadPool() noexcept(false);
+  explicit ThreadPool(size_t size, std::function<void()> func)
+      : worker_threads_(size) {
+    for (auto& i : worker_threads_) {
+      i = std::thread(func);
+    }
+  }
+  ~ThreadPool() noexcept(false) {
+    for (auto&& i : worker_threads_) {
+      i.join();
+    }
+  }
 
  private:
   /*!
@@ -44,20 +50,6 @@ class ThreadPool {
    */
   DISALLOW_COPY_AND_ASSIGN(ThreadPool);
 };
-
-ThreadPool::ThreadPool(size_t size, std::function<void()> func)
-    : worker_threads_(size) {
-  for (auto& i : worker_threads_) {
-    i = std::thread(func);
-  }
-}
-
-ThreadPool::~ThreadPool() noexcept(false) {
-  for (auto&& i : worker_threads_) {
-    i.join();
-  }
-}
-
 }  // namespace engine
 }  // namespace mxnet
 #endif  // MXNET_ENGINE_THREAD_POOL_H_
