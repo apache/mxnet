@@ -230,18 +230,22 @@ class OperatorProperty {
    * \brief Declare additional resource required in forward pass.
    *  These additional resources will be presented in OpContext.requested
    *  in the same order of the returned Resource.
+   * \param in_shape The input shape to the operator, corresponds to shapes of in_data.
    * \return Additional resource request
    */
-  virtual std::vector<ResourceRequest> ForwardResource() const {
+  virtual std::vector<ResourceRequest> ForwardResource(
+      const std::vector<TShape> &in_shape) const {
     return std::vector<ResourceRequest>();
   }
   /*!
    * \brief Decalre additional resource required in backward pass.
    *  These additional resources will be presented in OpContext.requested
    *  in the same order of the returned Resource.
+   * \param in_shape The input shape to the operator, corresponds to shapes of in_data.
    * \return Additional resource request
    */
-  virtual std::vector<ResourceRequest> BackwardResource() const {
+  virtual std::vector<ResourceRequest> BackwardResource(
+      const std::vector<TShape> &in_shape) const {
     return std::vector<ResourceRequest>();
   }
   /*!

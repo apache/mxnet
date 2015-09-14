@@ -342,14 +342,6 @@ class ConvolutionProp : public OperatorProperty {
 
   Operator* CreateOperator(Context ctx) const;
 
-  std::vector<ResourceRequest> ForwardResource() const override {
-    return {Resource::kTempSpace};
-  }
-
-  std::vector<ResourceRequest> BackwardResource() const override {
-    return {Resource::kTempSpace};
-  }
-
  private:
   ConvolutionParam param_;
 };  // class ConvolutionProp

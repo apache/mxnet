@@ -77,11 +77,18 @@ class GraphExecutor::BackwardOpWrapper : public Operator {
 inline std::vector<ResourceRequest>
 GraphExecutor::GetResource(uint32_t node_id) const {
   const StaticGraph::Node &node = graph_.nodes[node_id];
+  // use input shape
+  std::vector<TShape> in_shapes;
+  for (StaticGraph::DataEntry e : node.inputs) {
+    in_shapes.push_back(op_nodes_[e.source_id].outputs[e.index].shape);
+  }
+
   if (node.is_forward()) {
-    return node.op->ForwardResource();
+    return node.op->ForwardResource(in_shapes);
   } else {
     CHECK(node.is_backward());
-    return graph_.nodes[node.backward_source_id].op->BackwardResource();
+    return graph_.nodes[node.backward_source_id]
+        .op->BackwardResource(in_shapes);
   }
 }
 

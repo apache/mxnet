@@ -126,8 +126,8 @@ struct ResourceRequest {
    * \brief default constructor, allow implicit conversion
    * \param type type of resources
    */
-  ResourceRequest(Resource::Type type) : type(type) {}  // NOLINT(*)
+  ResourceRequest(Resource::Type type)  // NOLINT(*)
+      : type(type), space_size(0) {}
 };
-
 }  // namespace mxnet
 #endif  // MXNET_CONTEXT_H_
