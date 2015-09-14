@@ -5,6 +5,7 @@ import os, gzip
 import sys
 sys.path.append("../../tests/python")
 import get_data
+import time
 
 # use multiple devices
 num_devs = 4
@@ -12,7 +13,6 @@ devs = [mx.Context('gpu', i) for i in range(num_devs)]
 mx.kvstore.start()
 
 # symbol net
-batch_size = 100
 data = mx.symbol.Variable('data')
 fc1 = mx.symbol.FullyConnected(data = data, name='fc1', num_hidden=128)
 act1 = mx.symbol.Activation(data = fc1, name='relu1', act_type="relu")
@@ -54,7 +54,6 @@ grads = [[mx.nd.zeros(s, d) for s in param_shapes] for d in devs]
 
 # create executors for devices
 executors = [mlp.bind(devs[d], params[d], grads[d]) for d in range(num_devs)]
-forward_out = [mx.nd.zeros(e.heads()[0].shape) for e in executors]
 
 # data reader
 get_data.GetMNIST_ubyte()
@@ -77,6 +76,7 @@ def run_sgd():
 
     num_epochs = 9
     for epoch in range(num_epochs):
+        start = time.time()
         print "Epoch %d" % epoch
         train_count = 0.0
         train_acc = 0.0
@@ -97,16 +97,14 @@ def run_sgd():
                 params[d][param_names.index('mlp_label')][:] = label[rows]
 
                 executors[d].forward()
-                executors[d].heads()[0].copyto(forward_out[d])
-                executors[d].backward([forward_out[d]])
-
+                executors[d].backward()
             # push gradient
             for idx in sync_indices:
                 mx.kvstore.push(idx, [g[idx] for g in grads])
 
             # eval
             for d in range(num_devs):
-                train_acc += cal_acc(forward_out[d].asnumpy(),
+                train_acc += cal_acc(executors[d].outputs[0].asnumpy(),
                                      label[batch_splits[d]])
                 train_count += 1
 
@@ -123,15 +121,16 @@ def run_sgd():
 
             # eval
             for d in range(num_devs):
-                val_acc += cal_acc(executors[d].heads()[0].asnumpy(),
+                val_acc += cal_acc(executors[d].outputs[0].asnumpy(),
                                    label[batch_splits[d]])
                 val_count += 1
 
-        print("Train Acc: ", train_acc / train_count)
-        print("Valid Acc: ", val_acc / val_count)
+        print("Train Acc: %g, Valid Acc: %g, time: %g" % (
+            train_acc / train_count,
+            val_acc / val_count,
+            time.time() - start))
         train_dataiter.reset()
         val_dataiter.reset()
 
 if __name__ == "__main__":
     run_sgd()
-    mx.kvstore.stop()
