@@ -167,7 +167,7 @@ def cal_acc(out, label):
     return np.sum(pred == label) * 1.0 / out.shape[0]
 
 def train():
-    epoch = 1
+    epoch = 7
     acc_train = 0.
     acc_val = 0.
     k = batch_size / num_devs
