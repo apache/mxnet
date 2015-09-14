@@ -11,6 +11,7 @@
 #include <string>
 #include <utility>
 #include "./base.h"
+#include "./narray.h"
 
 namespace mxnet {
 /*!

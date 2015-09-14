@@ -4,6 +4,8 @@
  * \brief recordio data
 iterator
  */
+#include <mxnet/io.h>
+#include <mxnet/narray.h>
 #include <dmlc/base.h>
 #include <dmlc/io.h>
 #include <dmlc/omp.h>
@@ -412,11 +414,11 @@ class ImageRecordIter : public IIterator<DataInst> {
 };
 DMLC_REGISTER_PARAMETER(ImageRecParserParam);
 DMLC_REGISTER_PARAMETER(ImageRecordParam);
-MXNET_REGISTER_IO_CHAINED_ITER(ImageRecordIter, ImageRecordIter, BatchAdaptIter)
+MXNET_REGISTER_IO_CHAINED_ITER(ImageRecordIter, ImageRecordIter, PrefetcherIter)
     .describe("Create iterator for dataset packed in recordio.")
     .add_arguments(ImageRecordParam::__FIELDS__())
     .add_arguments(ImageRecParserParam::__FIELDS__())
-    .add_arguments(BatchParam::__FIELDS__())
+    .add_arguments(PrefetcherParam::__FIELDS__())
     .add_arguments(ImageAugmentParam::__FIELDS__());
 }  // namespace io
 }  // namespace mxnet

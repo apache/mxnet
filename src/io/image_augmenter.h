@@ -2,7 +2,6 @@
  *  Copyright (c) 2015 by Contributors
  * \file image_augmenter_opencv.hpp
  * \brief threaded version of page iterator
- * \author Naiyan Wang, Tianqi Chen, Tianjun Xiao
  */
 #ifndef MXNET_IO_IMAGE_AUGMENTER_H_
 #define MXNET_IO_IMAGE_AUGMENTER_H_

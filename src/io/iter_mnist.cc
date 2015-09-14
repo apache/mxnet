@@ -2,10 +2,10 @@
  * Copyright (c) 2015 by Contributors
  * \file iter_mnist.cc
  * \brief register mnist iterator
- * \author Tianjun Xiao
 */
 #include <mxnet/io.h>
 #include <mxnet/base.h>
+#include <mxnet/narray.h>
 #include <dmlc/io.h>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -100,10 +100,10 @@ class MNISTIter: public IIterator<DataBatch> {
       batch_data_.dptr_ = img_[loc_].dptr_;
       batch_label_.dptr_ = &labels_[loc_];
       if (param_.flat)
-          out_.data[0] = TBlob(batch_data_.FlatTo2D());
+          out_.data[0] = NArray(TBlob(batch_data_.FlatTo2D()), 0);
       else
-          out_.data[0] = TBlob(batch_data_);
-      out_.data[1] = TBlob(batch_label_);
+          out_.data[0] = NArray(TBlob(batch_data_), 0);
+      out_.data[1] = NArray(TBlob(batch_label_), 0);
       out_.inst_index = &inst_[loc_];
       loc_ += param_.batch_size;
       return true;

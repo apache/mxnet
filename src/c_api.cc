@@ -812,13 +812,13 @@ int MXDataIterNext(DataIterHandle handle, int *out) {
 int MXDataIterGetLabel(DataIterHandle handle, NArrayHandle *out) {
   API_BEGIN();
   DataBatch db = static_cast<IIterator<DataBatch>* >(handle)->Value();
-  *out = new NArray(db.data[1], 0);
+  *out = &db.data[1];
   API_END();
 }
 
 int MXDataIterGetData(DataIterHandle handle, NArrayHandle *out) {
   API_BEGIN();
   DataBatch db = static_cast<IIterator<DataBatch>* >(handle)->Value();
-  *out = new NArray(db.data[0], 0);
+  *out = &db.data[0];
   API_END();
 }

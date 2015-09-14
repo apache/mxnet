@@ -8,11 +8,14 @@
 
 #include <mxnet/io.h>
 #include <mxnet/base.h>
+#include <mxnet/narray.h>
 #include <dmlc/logging.h>
+#include <dmlc/threadediter.h>
 #include <mshadow/tensor.h>
 #include <utility>
 #include <string>
 #include <vector>
+#include <queue>
 
 namespace mxnet {
 namespace io {
@@ -51,27 +54,30 @@ struct BatchParam : public dmlc::Parameter<BatchParam> {
 };
 
 /*! \brief create a batch iterator from single instance iterator */
-class BatchLoader: public IIterator<DataBatch> {
+class BatchLoader {
  public:
   explicit BatchLoader(IIterator<DataInst> *base): base_(base), num_overflow_(0) {}
   virtual ~BatchLoader(void) {
     delete base_;
-    FreeSpaceDense();
   }
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  inline void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     // init batch param, it could have similar param with
     kwargs_left = param_.InitAllowUnknown(kwargs);
     // init base iterator
     base_->Init(kwargs);
-    data_shape_[1] = param_.input_shape[0];
-    data_shape_[2] = param_.input_shape[1];
-    data_shape_[3] = param_.input_shape[2];
-    data_shape_[0] = param_.batch_size;
-    label_shape_[1] = param_.label_width;
-    label_shape_[0] = param_.batch_size;
+    std::vector<size_t> data_shape_vec;
+    data_shape_vec.push_back(param_.batch_size);
+    data_shape_vec.push_back(param_.input_shape[0]);
+    data_shape_vec.push_back(param_.input_shape[1]);
+    data_shape_vec.push_back(param_.input_shape[2]);
+    data_shape_ = TShape(data_shape_vec.begin(), data_shape_vec.end());
+    std::vector<size_t> label_shape_vec;
+    label_shape_vec.push_back(param_.batch_size);
+    label_shape_vec.push_back(param_.label_width);
+    label_shape_ = TShape(label_shape_vec.begin(), label_shape_vec.end());
   }
-  virtual void BeforeFirst(void) {
+  inline void BeforeFirst(void) {
     if (param_.round_batch == 0 || num_overflow_ == 0) {
       // otherise, we already called before first
       base_->BeforeFirst();
@@ -80,8 +86,8 @@ class BatchLoader: public IIterator<DataBatch> {
     }
     head_ = 1;
   }
-  virtual bool Next(void) {
-    out_.num_batch_padd = 0;
+  inline bool LoadNext(DataBatch* out) {
+    out->num_batch_padd = 0;
 
     // skip read if in head version
     if (param_.test_skipread != 0 && head_ == 0)
@@ -95,13 +101,13 @@ class BatchLoader: public IIterator<DataBatch> {
 
     while (base_->Next()) {
       const DataInst& d = base_->Value();
-      mshadow::Copy(label[top], d.data[1].get<mshadow::cpu, 1, float>());
-      out_.inst_index[top] = d.index;
-      mshadow::Copy(data[top], d.data[0].get<mshadow::cpu, 3, float>());
+      out->inst_index[top] = d.index;
+      mshadow::Copy(out->data[1].data().get<mshadow::cpu, 2, float>()[top],
+              d.data[1].get<mshadow::cpu, 1, float>());
+      mshadow::Copy(out->data[0].data().get<mshadow::cpu, 4, float>()[top],
+              d.data[0].get<mshadow::cpu, 3, float>());
 
       if (++ top >= param_.batch_size) {
-        out_.data[0] = TBlob(data);
-        out_.data[1] = TBlob(label);
         return true;
       }
     }
@@ -112,23 +118,19 @@ class BatchLoader: public IIterator<DataBatch> {
         for (; top < param_.batch_size; ++top, ++num_overflow_) {
           CHECK(base_->Next()) << "number of input must be bigger than batch size";
           const DataInst& d = base_->Value();
-          mshadow::Copy(label[top], d.data[1].get<mshadow::cpu, 1, float>());
-          out_.inst_index[top] = d.index;
-          mshadow::Copy(data[top], d.data[0].get<mshadow::cpu, 3, float>());
+          out->inst_index[top] = d.index;
+          mshadow::Copy(out->data[1].data().get<mshadow::cpu, 2, float>()[top],
+                  d.data[1].get<mshadow::cpu, 1, float>());
+          mshadow::Copy(out->data[0].data().get<mshadow::cpu, 4, float>()[top],
+                  d.data[0].get<mshadow::cpu, 3, float>());
         }
-        out_.num_batch_padd = num_overflow_;
+        out->num_batch_padd = num_overflow_;
       } else {
-        out_.num_batch_padd = param_.batch_size - top;
+        out->num_batch_padd = param_.batch_size - top;
       }
-      out_.data[0] = TBlob(data);
-      out_.data[1] = TBlob(label);
       return true;
     }
     return false;
-  }
-  virtual const DataBatch &Value(void) const {
-    CHECK(head_ == 0) << "must call Next to get value";
-    return out_;
   }
 
  private:
@@ -136,46 +138,22 @@ class BatchLoader: public IIterator<DataBatch> {
   BatchParam param_;
   /*! \brief base iterator */
   IIterator<DataInst> *base_;
-  /*! \brief output data */
-  DataBatch out_;
   /*! \brief on first */
   int head_;
   /*! \brief number of overflow instances that readed in round_batch mode */
   int num_overflow_;
-  /*! \brief label information of the data*/
-  mshadow::Tensor<mshadow::cpu, 2> label;
-  /*! \brief content of dense data, if this DataBatch is dense */
-  mshadow::Tensor<mshadow::cpu, 4> data;
   /*! \brief data shape */
-  mshadow::Shape<4> data_shape_;
-  /*! \brief data shape */
-  mshadow::Shape<2> label_shape_;
-  // Functions that allocate and free tensor space
-  inline void AllocSpaceDense(bool pad = false) {
-    data = mshadow::NewTensor<mshadow::cpu>(data_shape_, 0.0f, pad);
-    mshadow::Shape<2> lshape = mshadow::Shape2(param_.batch_size, param_.label_width);
-    label = mshadow::NewTensor<mshadow::cpu>(lshape, 0.0f, pad);
-    out_.inst_index = new unsigned[param_.batch_size];
-    out_.batch_size = param_.batch_size;
-    out_.data.resize(2);
-  }
-  /*! \brief auxiliary function to free space, if needed, dense only */
-  inline void FreeSpaceDense(void) {
-    if (label.dptr_ != NULL) {
-      delete [] out_.inst_index;
-      mshadow::FreeSpace(&label);
-      mshadow::FreeSpace(&data);
-      label.dptr_ = NULL;
-    }
-  }
-};  // class BatchAdaptIter
-
-    
+  TShape data_shape_;
+  /*! \brief label shape */
+  TShape label_shape_;
+};  // class BatchLoader
     
 // Define prefetcher parameters
 struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   /*! \brief number of prefetched batches */
-  int capacity;
+  size_t capacity;
+    /*! \brief label width */
+  index_t batch_size;
   /*! \brief input shape */
   TShape input_shape;
   /*! \brief label width */
@@ -206,18 +184,27 @@ class PrefetcherIter : public IIterator<DataInst> {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     // init image rec param
     kwargs_left = param_.InitAllowUnknown(kwargs);
-    // use the kwarg to init parser
-    parser_.Init(kwargs);
+    // use the kwarg to init batch loader
+    loader_.Init(kwargs);
+    std::vector<size_t> data_shape_vec;
+    data_shape_vec.push_back(param_.batch_size);
+    data_shape_vec.push_back(param_.input_shape[0]);
+    data_shape_vec.push_back(param_.input_shape[1]);
+    data_shape_vec.push_back(param_.input_shape[2]);
+    data_shape_ = TShape(data_shape_vec.begin(),data_shape_vec.end());
+    std::vector<size_t> label_shape_vec;
+    label_shape_vec.push_back(param_.batch_size);
+    label_shape_vec.push_back(param_.label_width);
+    label_shape_ = TShape(label_shape_vec.begin(), label_shape_vec.end());
     // init thread iter
     iter_.set_max_capacity(param_.capacity);
     iter_.Init([this](DataBatch **dptr) {
         if (*dptr == NULL) {
           *dptr = new DataBatch();
           // init NArrays
-          // TODO: currectly use defalt context
           Context ctx; 
-          *dptr->data.push_back(NArray(TShape(param_.input_shape), ctx, true));
-          *dptr->data.push_back(NArray(TShape(param_.label_shape), ctx, true));
+          (*dptr)->data.push_back(NArray(data_shape_, ctx, true));
+          (*dptr)->data.push_back(NArray(label_shape_, ctx, true));
         }
         return loader_.LoadNext(*dptr);
       },
@@ -240,6 +227,7 @@ class PrefetcherIter : public IIterator<DataInst> {
      DataBatch* next_batch = NULL;
      if (!iter_.Next(&next_batch)) return false;
      out_.data.clear();
+     // copy the batch
      for (size_t i = 0; i < next_batch->data.size(); i++) {
          out_.data.push_back(Copy(next_batch->data[i], next_batch->data[i].ctx()));
      }
@@ -249,6 +237,8 @@ class PrefetcherIter : public IIterator<DataInst> {
      for (size_t i = 0; i < out_.data.size(); i++) {
          next_batch_narrays.push_back(&out.data[i]);
      }
+     ready_narrays_.push_back(next_batch_narrays);
+     return true;
   }
   virtual const DataInst &Value(void) const {
     return out_;
@@ -263,10 +253,15 @@ class PrefetcherIter : public IIterator<DataInst> {
   std::queue<std::vector<NArray*> > ready_narrays_;
   /*! \brief queue to hold the NArrays for check whether writable */
   std::queue<DataBatch*> ready_batches_;
-  // internal parser
+  // internal batch loader
   BatchLoader loader_;
   // backend thread
   dmlc::ThreadedIter<DataBatch> iter_;
+  /*! \brief data shape */
+  TShape data_shape_;
+  /*! \brief label shape */
+  TShape label_shape_;
 };
 }  // namespace io
 }  // namespace mxnet
+#endif  // MXNET_IO_ITER_PREFETCHER_H_
