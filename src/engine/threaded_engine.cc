@@ -96,7 +96,7 @@ bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
     assert(num_pending_reads_ == 0);
     while (end_of_read_chain->next != nullptr &&
            end_of_read_chain->write == false) {
-      ++num_pending_reads;
+      ++num_pending_reads_;
       end_of_read_chain = end_of_read_chain->next;
     }
     // check the states
@@ -106,7 +106,7 @@ bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
     } else {
       assert(end_of_read_chain->write == true);
       pending_write_ = end_of_read_chain;
-      if (num_pending_reads == 0) {
+      if (num_pending_reads_ == 0) {
         trigger_write = true;
       }
     }
