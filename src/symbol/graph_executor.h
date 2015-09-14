@@ -42,9 +42,9 @@ class GraphExecutor : public Executor {
     this->InitDataEntryMemory();
     this->InitOpNodes();
     // TODO(bing): remove me when things are OK
-    LOG(INFO) << "-----Execution memory plan-----\n"
-              << DebugStr() << '\n'
-              << "------------------------------\n";
+    // LOG(INFO) << "-----Execution memory plan-----\n"
+    //           << DebugStr() << '\n'
+    //           << "------------------------------\n";
   }
 
  protected:

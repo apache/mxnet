@@ -40,7 +40,9 @@ class KVStore {
    *
    * clear all key-value pairs stored, updater, and devices binded
    */
-  virtual void Stop() { get_impl()->Stop(); delete impl_; impl_ = NULL; }
+  virtual void Stop() {
+    if (impl_) { impl_->Stop(); delete impl_; impl_ = NULL; }
+  }
 
   /**
    * \brief Initialize a list of key-value pair to the store.
