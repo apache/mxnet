@@ -817,6 +817,7 @@ int MXDataIterBeforeFirst(DataIterHandle handle) {
 
 int MXDataIterNext(DataIterHandle handle, int *out) {
   API_BEGIN();
+  Engine::Get()->WaitForAll();
   *out = static_cast<IIterator<DataBatch>* >(handle)->Next();
   API_END();
 }
