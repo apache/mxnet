@@ -72,7 +72,7 @@ TEST(Engine, basics) {
         Foo(ctx, 42);
         cb();
       },
-      {}, {var}, mxnet::FnProperty::kCopy));
+      {}, {var}, mxnet::FnProperty::kCopyFromGPU));
   engine->Push(oprs.at(0), mxnet::Context{});
   LOG(INFO) << "IO operator pushed, should wait for 2 seconds.";
   engine->WaitForVar(var);
