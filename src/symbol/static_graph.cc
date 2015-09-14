@@ -12,6 +12,11 @@
 
 namespace mxnet {
 std::vector<uint32_t> StaticGraph::TopoSort() const {
+  std::vector<std::pair<uint32_t, uint32_t> > stack;
+  std::unordered_set<uint32_t> visited;
+  std::vector<uint32_t> ret(nodes.size());
+  std::vector<uint32_t> head_node;
+  // out degree
   std::vector<int> out_degree(nodes.size(), 0);
   for (const Node& n : nodes) {
     for (const DataEntry& e : n.inputs) {
@@ -21,28 +26,33 @@ std::vector<uint32_t> StaticGraph::TopoSort() const {
       ++out_degree[n.backward_source_id];
     }
   }
-  std::vector<uint32_t> ret(nodes.size());
-  auto result = ret.rbegin();
-  std::queue<uint32_t> queue;
   for (size_t i = 0; i < nodes.size(); ++i) {
     if (out_degree[i] == 0) {
-      queue.push(static_cast<uint32_t>(i));
+      stack.push_back(std::make_pair(static_cast<uint32_t>(i), 0));
     }
   }
-  while (!queue.empty()) {
-    uint32_t node_id = queue.front();
-    queue.pop();
-    *result = node_id;
-    ++result;
-    const Node& n = nodes[node_id];
-    for (const DataEntry& e : n.inputs) {
-      if (--out_degree[e.source_id] == 0) {
-        queue.push(e.source_id);
+  // heads
+  for (auto &head : head_node) {
+    stack.push_back(std::make_pair(head, 0));
+  }
+  int count = 0;
+  while (!stack.empty()) {
+    std::pair<uint32_t, uint32_t>& back = stack.back();
+    const Node& n = nodes[back.first];
+    if (back.second == n.inputs.size() + (n.is_backward() ? 1 : 0)) {
+      ret[count++] = back.first;
+      visited.insert(back.first);
+      stack.pop_back();
+    } else {
+      uint32_t input;
+      if (back.second == n.inputs.size() && n.is_backward()) {
+        input = n.backward_source_id;
+        back.second++;
+      } else {
+        input = n.inputs[back.second++].source_id;
       }
-    }
-    if (n.is_backward()) {
-      if (--out_degree[n.backward_source_id] == 0) {
-        queue.push(n.backward_source_id);
+      if (visited.count(input) == 0) {
+        stack.push_back(std::make_pair(input, 0));
       }
     }
   }
