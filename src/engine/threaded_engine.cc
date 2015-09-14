@@ -50,9 +50,7 @@ void ThreadedVar::AppendWriteDependency(OprBlock* opr_block) {
   head_->trigger = opr_block;
   head_->write = true;
   if (ready_to_read_) {
-    /*!
-     * Raise `num_pending_reads_` temporarily to avoid premature triggering.
-     */
+    // Raise `num_pending_reads_` temporarily to avoid premature triggering.
     ++num_pending_reads_;
     pending_write_ = head_;
     if (--num_pending_reads_ == 0) {
@@ -65,51 +63,74 @@ void ThreadedVar::AppendWriteDependency(OprBlock* opr_block) {
 
 template <typename Dispatcher>
 void ThreadedVar::CompleteReadDependency(Dispatcher dispatcher) {
-  std::lock_guard<std::mutex> lock{m_};
-  if (--num_pending_reads_ == 0) {
-    if (pending_write_ != nullptr && --pending_write_->trigger->wait == 0) {
-      dispatcher(pending_write_->trigger);
+  bool trigger = false;
+  {
+    // this is lock scope
+    std::lock_guard<std::mutex> lock{m_};
+    if (--num_pending_reads_ == 0) {
+      if (pending_write_ != nullptr && --pending_write_->trigger->wait == 0) {
+        trigger = true;
+      }
     }
+  }
+  if (trigger) {
+    dispatcher(pending_write_->trigger);
   }
 }
 
 template <typename Dispatcher>
 bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
-  std::lock_guard<std::mutex> lock{m_};
-  assert(ready_to_read_ == false);
-  auto cur_head = pending_write_->next;
-  VersionedVarBlock::Delete(pending_write_);
-  pending_write_ = nullptr;
+  VersionedVarBlock *old_pending_write, *end_of_dispatch_chain;
+  int num_reads;
+  {
+    // this is lock scope
+    std::lock_guard<std::mutex> lock{m_};
+    assert(ready_to_read_ == false);
+    // detach pending write
+    old_pending_write = pending_write_;
+    pending_write_ = nullptr;
+    // search for chains to trigger
+    VersionedVarBlock *p = old_pending_write->next;
+    assert(num_pending_reads_ == 0);
+    num_reads = 0;
+    while (p->next != nullptr && p->write == false) {
+      p = p->next;
+      ++num_reads;
+    }
+    num_pending_reads_ = num_reads;
+    end_of_dispatch_chain = p;
+    if (p->next == nullptr) {
+      ready_to_read_ = true;
+    } else {
+      assert(p->write == true);
+      pending_write_ = p;
+    }
+  }
+  // this is outside of lock scope
+  // the linked list is detached from variable
+  VersionedVarBlock *cur_head = old_pending_write->next;
+  VersionedVarBlock::Delete(old_pending_write);
   if (to_delete_) {
     assert(cur_head->next == nullptr);
     VersionedVarBlock::Delete(cur_head);
     return true;
-  } else {
-    while (true) {
-      if (cur_head->write == true) {
-        ++num_pending_reads_;
-        pending_write_ = cur_head;
-        if (--num_pending_reads_ == 0) {
-          if (--cur_head->trigger->wait == 0) {
-            dispatcher(cur_head->trigger);
-          }
-        }
-        break;
-      } else if (cur_head->next == nullptr) {
-        ready_to_read_ = true;
-        break;
-      } else {
-        ++num_pending_reads_;
-        if (--cur_head->trigger->wait == 0) {
-          dispatcher(cur_head->trigger);
-        }
-        auto prev = cur_head;
-        cur_head = cur_head->next;
-        VersionedVarBlock::Delete(prev);
-      }
-    }
-    return false;
   }
+  // dispatch all the events
+  while (cur_head != end_of_dispatch_chain) {
+    if (--cur_head->trigger->wait == 0) {
+      dispatcher(cur_head->trigger);
+    }
+    auto prev = cur_head;
+    cur_head = cur_head->next;
+    VersionedVarBlock::Delete(prev);
+  }
+  // trigger pending write, if any
+  if (pending_write_ != nullptr && num_reads == 0) {
+    if (--pending_write_->trigger->wait == 0) {
+      dispatcher(pending_write_->trigger);
+    }
+  }
+  return false;
 }
 
 void ThreadedVar::SetToDelete() {
@@ -120,14 +141,6 @@ void ThreadedVar::SetToDelete() {
 bool ThreadedVar::ready_to_read() {
   std::lock_guard<std::mutex> lock{m_};
   return ready_to_read_;
-}
-
-ThreadedVar* ThreadedVar::CastFromBase(Var* v) {
-  return v->Cast<ThreadedVar>();
-}
-
-ThreadedOpr* ThreadedOpr::CastFromBase(Opr* o) {
-  return o->Cast<ThreadedOpr>();
 }
 
 ThreadedEngine::ThreadedEngine()
