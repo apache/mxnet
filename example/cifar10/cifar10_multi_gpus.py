@@ -8,8 +8,8 @@ import get_data
 import time
 
 # use multiple devices
-num_devs = 1
-devs = [mx.cpu(i) for i in range(num_devs)]
+num_devs = 4
+devs = [mx.gpu(i) for i in range(num_devs)]
 mx.kvstore.start()
 
 # define the network
