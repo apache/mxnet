@@ -155,6 +155,7 @@ bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
     const DataEntry &e = heads[i];
     (*out_shape)[i] = node_out_shapes[e.source_id][e.index];
   }
+  aux_shape->clear();
   for (size_t i = 0; i < node_aux_shapes.size(); ++i) {
     if (node_aux_shapes[i].size() > 0) {
       for (auto const &shape : node_aux_shapes[i]) {
