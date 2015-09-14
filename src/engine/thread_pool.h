@@ -6,7 +6,7 @@
 
 #include <dmlc/base.h>
 #include <cstddef>
-#include <array>
+#include <vector>
 #include <thread>
 #include <utility>
 #include "mxnet/base.h"
@@ -17,24 +17,30 @@ namespace engine {
 /*!
  * \brief Thread pool.
  */
-template <std::size_t kSize>
 class ThreadPool {
  public:
   /*!
-   * \brief Constructor takes function to run and its arguments.
+   * \brief Constructor takes function to run.
+   * \param size size of the thread pool.
+   * \param func the function to run on the thread pool.
    */
-  template <typename Function, typename... Args>
-  explicit ThreadPool(Function&& func, Args&&... args);
-  /*!
-   * \brief Destructor.
-   */
-  ~ThreadPool() noexcept(false);
+  explicit ThreadPool(size_t size, std::function<void()> func)
+      : worker_threads_(size) {
+    for (auto& i : worker_threads_) {
+      i = std::thread(func);
+    }
+  }
+  ~ThreadPool() noexcept(false) {
+    for (auto&& i : worker_threads_) {
+      i.join();
+    }
+  }
 
  private:
   /*!
    * \brief Worker threads.
    */
-  std::array<std::thread, kSize> worker_threads_;
+  std::vector<std::thread> worker_threads_;
   /*!
    * \brief Disallow default construction.
    */
@@ -44,23 +50,6 @@ class ThreadPool {
    */
   DISALLOW_COPY_AND_ASSIGN(ThreadPool);
 };
-
-template <std::size_t kSize>
-template <typename Function, typename... Args>
-ThreadPool<kSize>::ThreadPool(Function&& func, Args&&... args) {
-  for (auto&& i : worker_threads_) {
-    i = std::thread{std::forward<Function>(func), std::forward<Args>(args)...};
-  }
-}
-
-template <std::size_t kSize>
-ThreadPool<kSize>::~ThreadPool() noexcept(false) {
-  for (auto&& i : worker_threads_) {
-    i.join();
-  }
-}
-
 }  // namespace engine
 }  // namespace mxnet
-
 #endif  // MXNET_ENGINE_THREAD_POOL_H_
