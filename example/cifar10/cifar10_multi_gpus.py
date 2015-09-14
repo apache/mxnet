@@ -8,8 +8,8 @@ import get_data
 import time
 
 # use multiple devices
-num_devs = 4
-devs = [mx.gpu(i) for i in range(num_devs)]
+num_devs = 1
+devs = [mx.cpu(i) for i in range(num_devs)]
 mx.kvstore.start()
 
 # define the network
@@ -96,7 +96,22 @@ fc = mx.symbol.FullyConnected(data=flatten, num_hidden=10, name="fc1")
 loss = mx.symbol.Softmax(data=fc, name="loss")
 
 # define model updater
-updater = mx.updater.momentum(
+
+def momentum(learning_rate=.01, weight_decay=0.0001, momentum=0.9):
+    """Stochastic Gradient Descent (SGD) updates with momentum
+    """
+    momentums = {}
+    def momentum_update(key, grad, weight):
+        # weight += - learning_rate * (grad + weight_decay * weight)
+        if not momentums.has_key(key):
+            momentums[key] = mx.nd.zeros(grad.shape)
+        mom = momentums[key]
+        mom *= momentum
+        mom += - learning_rate * (grad + weight_decay * weight)
+        weight += mom
+    return momentum_update
+
+updater = momentum(
     learning_rate = .05, weight_decay = .0001, momentum = 0.9)
 mx.kvstore.set_updater(updater)
 
