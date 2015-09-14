@@ -1,5 +1,8 @@
 /*!
  * Copyright (c) 2015 by Contributors
+ * \file threaded_engine.cc
+ * \brief implements base threaded engine.
+ * \author Yutian Li
  */
 #include "threaded_engine.h"
 #include <dmlc/logging.h>
@@ -50,9 +53,7 @@ void ThreadedVar::AppendWriteDependency(OprBlock* opr_block) {
   head_->trigger = opr_block;
   head_->write = true;
   if (ready_to_read_) {
-    /*!
-     * Raise `num_pending_reads_` temporarily to avoid premature triggering.
-     */
+    // Raise `num_pending_reads_` temporarily to avoid premature triggering.
     ++num_pending_reads_;
     pending_write_ = head_;
     if (--num_pending_reads_ == 0) {
@@ -65,51 +66,82 @@ void ThreadedVar::AppendWriteDependency(OprBlock* opr_block) {
 
 template <typename Dispatcher>
 void ThreadedVar::CompleteReadDependency(Dispatcher dispatcher) {
-  std::lock_guard<std::mutex> lock{m_};
-  if (--num_pending_reads_ == 0) {
-    if (pending_write_ != nullptr && --pending_write_->trigger->wait == 0) {
-      dispatcher(pending_write_->trigger);
+  bool trigger = false;
+  {
+    // this is lock scope
+    std::lock_guard<std::mutex> lock{m_};
+    if (--num_pending_reads_ == 0) {
+      if (pending_write_ != nullptr && --pending_write_->trigger->wait == 0) {
+        trigger = true;
+      }
     }
+  }
+  if (trigger) {
+    dispatcher(pending_write_->trigger);
   }
 }
 
 template <typename Dispatcher>
 bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
-  std::lock_guard<std::mutex> lock{m_};
-  assert(ready_to_read_ == false);
-  auto cur_head = pending_write_->next;
-  VersionedVarBlock::Delete(pending_write_);
-  pending_write_ = nullptr;
+  VersionedVarBlock *old_pending_write, *end_of_read_chain;
+  bool trigger_write = false;
+  {
+    // this is lock scope
+    std::lock_guard<std::mutex> lock{m_};
+    assert(ready_to_read_ == false);
+    // detach pending write
+    old_pending_write = pending_write_;
+    // search for chains to trigger
+    end_of_read_chain = old_pending_write->next;
+    assert(num_pending_reads_ == 0);
+    while (end_of_read_chain->next != nullptr &&
+           end_of_read_chain->write == false) {
+      ++num_pending_reads_;
+      end_of_read_chain = end_of_read_chain->next;
+    }
+    // check the states
+    if (end_of_read_chain->next == nullptr) {
+      ready_to_read_ = true;
+      pending_write_ = nullptr;
+    } else {
+      assert(end_of_read_chain->write == true);
+      pending_write_ = end_of_read_chain;
+      if (num_pending_reads_ == 0) {
+        trigger_write = true;
+      }
+    }
+  }
+  // This is outside of lock scope
+  // Be very carful, pending_write_ and num_pending_reads_
+  // can change now, do not reply ont the two variables.
+  // The linked list \in [old_pending_write, end_of_read_chain)
+  // is already detached from this Var.
+  // So it is safe to modify these
+  VersionedVarBlock *cur_head = old_pending_write->next;
+  VersionedVarBlock::Delete(old_pending_write);
   if (to_delete_) {
     assert(cur_head->next == nullptr);
     VersionedVarBlock::Delete(cur_head);
     return true;
-  } else {
-    while (true) {
-      if (cur_head->write == true) {
-        ++num_pending_reads_;
-        pending_write_ = cur_head;
-        if (--num_pending_reads_ == 0) {
-          if (--cur_head->trigger->wait == 0) {
-            dispatcher(cur_head->trigger);
-          }
-        }
-        break;
-      } else if (cur_head->next == nullptr) {
-        ready_to_read_ = true;
-        break;
-      } else {
-        ++num_pending_reads_;
-        if (--cur_head->trigger->wait == 0) {
-          dispatcher(cur_head->trigger);
-        }
-        auto prev = cur_head;
-        cur_head = cur_head->next;
-        VersionedVarBlock::Delete(prev);
-      }
-    }
-    return false;
   }
+  // dispatch all the events
+  while (cur_head != end_of_read_chain) {
+    if (--cur_head->trigger->wait == 0) {
+      dispatcher(cur_head->trigger);
+    }
+    auto prev = cur_head;
+    cur_head = cur_head->next;
+    assert(cur_head != nullptr);
+    VersionedVarBlock::Delete(prev);
+  }
+  // Be careful, do not use pending_write_  or num_pending_reads_ here.
+  // As they can change, use end_of_read_chain
+  if (trigger_write) {
+    if (--end_of_read_chain->trigger->wait == 0) {
+      dispatcher(end_of_read_chain->trigger);
+    }
+  }
+  return false;
 }
 
 void ThreadedVar::SetToDelete() {
@@ -122,41 +154,33 @@ bool ThreadedVar::ready_to_read() {
   return ready_to_read_;
 }
 
-ThreadedVar* ThreadedVar::CastFromBase(Var* v) {
-  return v->Cast<ThreadedVar>();
-}
-
-ThreadedOpr* ThreadedOpr::CastFromBase(Opr* o) {
-  return o->Cast<ThreadedOpr>();
-}
-
-ThreadedEngine::ThreadedEngine()
-    : pending_{0},
-      thread_pool_{[this]() { ThreadWorker(&task_queue_); }},
-      io_thread_pool_{[this]() { ThreadWorker(&io_task_queue_); }} {}
-
-ThreadedEngine::~ThreadedEngine() noexcept(false) {
-  task_queue_.SignalForKill();
-  io_task_queue_.SignalForKill();
-}
-
+// implementation of threaded engine
 ThreadedVar* ThreadedEngine::NewVariable() {
   return ThreadedVar::New(VersionedVarBlock::New());
 }
 
 ThreadedOpr* ThreadedEngine::NewOperator(
-    ThreadedEngine::AsyncFn fn, std::vector<VarHandle> const& const_vars,
-    std::vector<VarHandle> const& mutable_vars, FnProperty prop) {
+    ThreadedEngine::AsyncFn fn,
+    std::vector<VarHandle> const& const_vars,
+    std::vector<VarHandle> const& mutable_vars,
+    FnProperty prop) {
   auto ret = ThreadedOpr::New();
   ret->fn = fn;
   ret->prop = prop;
   ret->const_vars.resize(const_vars.size());
   ret->mutable_vars.resize(mutable_vars.size());
-  std::transform(const_vars.begin(), const_vars.end(), ret->const_vars.begin(),
-                 ThreadedVar::CastFromBase);
+  std::transform(const_vars.begin(), const_vars.end(),
+                 ret->const_vars.begin(), ThreadedVar::CastFromBase);
   std::transform(mutable_vars.begin(), mutable_vars.end(),
                  ret->mutable_vars.begin(), ThreadedVar::CastFromBase);
-#if ENGINE_DEBUG
+  if (ENGINE_DEBUG != 0) {
+    CheckDuplicate(const_vars, mutable_vars);
+  }
+  return ret;
+}
+
+void ThreadedEngine::CheckDuplicate(std::vector<VarHandle> const& const_vars,
+                                    std::vector<VarHandle> const& mutable_vars) {
   // Check for duplicates.
   auto use = const_vars;
   auto mutate = mutable_vars;
@@ -187,12 +211,10 @@ ThreadedOpr* ThreadedEngine::NewOperator(
           << "duplicate items found between `const_vars` and `mutable_vars`";
     }
   }
-#endif  // ENGINE_DEBUG
-  return ret;
 }
 
 void ThreadedEngine::DeleteOperator(OprHandle op) {
-  auto&& threaded_opr = ThreadedOpr::CastFromBase(op);
+  ThreadedOpr* threaded_opr = ThreadedOpr::CastFromBase(op);
   std::vector<VarHandle> deps;
   deps.reserve(threaded_opr->const_vars.size() +
                threaded_opr->mutable_vars.size());
@@ -208,8 +230,8 @@ void ThreadedEngine::DeleteOperator(OprHandle op) {
 }
 
 void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
-  auto&& threaded_opr = ThreadedOpr::CastFromBase(op);
-  auto&& opr_block = OprBlock::New();
+  ThreadedOpr* threaded_opr = ThreadedOpr::CastFromBase(op);
+  OprBlock* opr_block = OprBlock::New();
   opr_block->opr = threaded_opr;
   opr_block->wait.store(threaded_opr->const_vars.size() +
                         threaded_opr->mutable_vars.size() + 1);
@@ -224,11 +246,7 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
     i->AppendWriteDependency(opr_block);
   }
   if (--opr_block->wait == 0) {
-    if (opr_block->opr->prop == FnProperty::kAsync) {
-      DoExecute(opr_block);
-    } else {
-      DoPushToQueue(opr_block);
-    }
+    this->PushToExecute(opr_block, true);
   }
 }
 
@@ -236,7 +254,7 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
                                std::vector<VarHandle> const& const_vars,
                                std::vector<VarHandle> const& mutable_vars,
                                FnProperty prop) {
-  auto&& opr = NewOperator(fn, const_vars, mutable_vars, prop);
+  ThreadedOpr *opr = NewOperator(fn, const_vars, mutable_vars, prop);
   opr->temporary = true;
   Push(opr, exec_ctx);
 }
@@ -276,12 +294,16 @@ void ThreadedEngine::WaitForAll() {
 inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   // Mark complete for read variables
   for (auto&& i : threaded_opr->const_vars) {
-    i->CompleteReadDependency([this](OprBlock* opr) { DoPushToQueue(opr); });
+    i->CompleteReadDependency([this](OprBlock* opr) {
+        this->PushToExecute(opr, false);
+      });
   }
   // Mark complete for write variables.
   for (auto&& i : threaded_opr->mutable_vars) {
     bool to_delete = i->CompleteWriteDependency(
-        [this](OprBlock* opr) { DoPushToQueue(opr); });
+        [this](OprBlock* opr) {
+          this->PushToExecute(opr, false);
+        });
     if (to_delete) {
       ThreadedVar::Delete(i);
     }
@@ -298,48 +320,11 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   }
 }
 
-void ThreadedEngine::ThreadWorker(
-    dmlc::ConcurrentBlockingQueue<OprBlock*>* task_queue) {
-  OprBlock* opr_block;
-  while (task_queue->Pop(&opr_block)) {
-    DoExecute(opr_block);
-  }
+void ThreadedEngine::OnCompleteStatic(
+    Engine *engine, void *threaded_opr) {
+  static_cast<ThreadedEngine*>(engine)->OnComplete(
+      static_cast<ThreadedOpr*>(threaded_opr));
 }
 
-void ThreadedEngine::DoPushToQueue(OprBlock* opr_block) {
-  switch (opr_block->opr->prop) {
-    case FnProperty::kCopy: {
-      io_task_queue_.Push(opr_block);
-      break;
-    }
-    default: {
-      task_queue_.Push(opr_block);
-      break;
-    }
-  }
-}
-
-void ThreadedEngine::DoExecute(OprBlock* opr_block) {
-  assert(opr_block->wait.load() == 0);
-  ThreadedOpr* threaded_opr = opr_block->opr;
-  if (opr_block->ctx.dev_mask == gpu::kDevMask) {
-#if MXNET_USE_CUDA
-    CUDA_CALL(cudaSetDevice(opr_block->ctx.dev_id));
-#else   // MXNET_USE_CUDA
-    LOG(FATAL) << "Please compile with CUDA enabled";
-#endif  // MXNET_USE_CUDA
-  }
-  auto&& rctx = opr_block->opr->prop == FnProperty::kCopy
-      ? streams_.GetIORunContext(opr_block->ctx)
-      : streams_.GetRunContext(opr_block->ctx);
-  CallbackOnComplete callback = this->CreateCallback(
-      ThreadedEngine::OnComplete_, threaded_opr);
-  threaded_opr->fn(rctx, callback);
-  OprBlock::Delete(opr_block);
-}
-
-Engine *CreateThreadedEngine() {
-  return new ThreadedEngine();
-}
 }  // namespace engine
 }  // namespace mxnet
