@@ -30,10 +30,10 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
   int act_type;
   DMLC_DECLARE_PARAMETER(ActivationParam) {
     DMLC_DECLARE_FIELD(act_type).set_default(kReLU)
-        .add_enum("relu", kReLU)
-        .add_enum("sigmoid", kSigmoid)
-        .add_enum("tanh", kTanh)
-        .describe("Activation function to be applied.");
+    .add_enum("relu", kReLU)
+    .add_enum("sigmoid", kSigmoid)
+    .add_enum("tanh", kTanh)
+    .describe("Activation function to be applied.");
   }
 };
 
@@ -91,11 +91,11 @@ class ActivationProp : public OperatorProperty {
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape,
-                          std::vector<TShape> *aux_shape) const override {
+                  std::vector<TShape> *out_shape,
+                  std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 1) << "Input:[data]";
-    const TShape &dshape = in_shape->at(0);
+    const TShape &dshape = in_shape->at(kData);
     if (dshape.ndim() == 0) return false;
     out_shape->clear();
     out_shape->push_back(dshape);
@@ -114,27 +114,27 @@ class ActivationProp : public OperatorProperty {
 
   // decalre dependency and inplace optimization options
   std::vector<int> DeclareBackwardDependency(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const override {
-    #if MXNET_USE_CUDNN == 1
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data) const override {
+#if MXNET_USE_CUDNN == 1
     return {out_grad[kOut], out_data[kOut], in_data[kData]};
-    #else
+#else
     return {out_grad[kOut], out_data[kOut]};
-    #endif  // MXNET_USE_CUDNN
+#endif  // MXNET_USE_CUDNN
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data,
-      const std::vector<void*> &in_grad) const override {
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data,
+    const std::vector<void*> &in_grad) const override {
     return {{out_grad[kOut], in_grad[kData]}};
   }
 
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
-      const std::vector<int> &in_data,
-      const std::vector<void*> &out_data) const override {
+    const std::vector<int> &in_data,
+    const std::vector<void*> &out_data) const override {
     return {{in_data[kData], out_data[kOut]}};
   }
 

@@ -138,10 +138,14 @@ class ElementWiseBinaryOp : public Operator {
 template<typename xpu>
 inline Operator* CreateElementWiseBinaryOp_(ElementWiseBinaryOpType type) {
   switch (type) {
-    case kPlus: return new ElementWiseBinaryOp<xpu, mshadow::op::plus>();
-    case kMinus: return new ElementWiseBinaryOp<xpu, mshadow::op::minus>();
-    case kMul: return new ElementWiseBinaryOp<xpu, mshadow::op::mul>();
-    case kDiv: return new ElementWiseBinaryOp<xpu, mshadow::op::div>();
+    case kPlus:
+      return new ElementWiseBinaryOp<xpu, mshadow::op::plus>();
+    case kMinus:
+      return new ElementWiseBinaryOp<xpu, mshadow::op::minus>();
+    case kMul:
+      return new ElementWiseBinaryOp<xpu, mshadow::op::mul>();
+    case kDiv:
+      return new ElementWiseBinaryOp<xpu, mshadow::op::div>();
   }
   LOG(FATAL) << "uknown op type";
   return NULL;
@@ -192,37 +196,41 @@ class ElementWiseBinaryOpProp : public OperatorProperty {
 
   // decalre dependency and inplace optimization options
   std::vector<int> DeclareBackwardDependency(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const override {
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data) const override {
     switch (GetOpType<ForwardOp>()) {
       case kPlus:
-      case kMinus: return {out_grad[kOut]};
+      case kMinus:
+        return {out_grad[kOut]};
       case kMul:
-      case kDiv: return {out_grad[kOut], in_data[kLhs], in_data[kRhs]};
+      case kDiv:
+        return {out_grad[kOut], in_data[kLhs], in_data[kRhs]};
     }
     LOG(FATAL) << "not reached";
     return {};
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data,
-      const std::vector<void*> &in_grad) const override {
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data,
+    const std::vector<void*> &in_grad) const override {
     switch (GetOpType<ForwardOp>()) {
       case kPlus:
-      case kMinus: return {};
+      case kMinus:
+        return {};
       case kMul:
-      case kDiv: return {{out_grad[kOut], in_grad[kLhs]}};
+      case kDiv:
+        return {{out_grad[kOut], in_grad[kLhs]}};
     }
     LOG(FATAL) << "not reached";
     return {};
   }
 
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
-      const std::vector<int> &in_data,
-      const std::vector<void*> &out_data) const override {
+    const std::vector<int> &in_data,
+    const std::vector<void*> &out_data) const override {
     return {{in_data[kLhs], out_data[kOut]}};
   }
 

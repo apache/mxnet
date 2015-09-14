@@ -58,13 +58,13 @@ struct relu_grad {
 /*! \brief Leaky ReLU Operation */
 struct xelu {
   MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
-    return a > 0 ? a : a / b;
+    return a > 0.0f ? a : a * b;
   }
 };
 
 struct xelu_grad {
   MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
-    return a > 0 ? 1 : 1.0f / b;
+    return a > 0.0f ? 1.0f : b;
   }
 };
 

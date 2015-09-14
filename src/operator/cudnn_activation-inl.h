@@ -20,18 +20,18 @@ class CuDNNActivationOp : public Operator {
     init_cudnn_ = false;
     dtype_ = CUDNN_DATA_FLOAT;
     switch (param_.act_type) {
-    case kReLU:
-      mode_ = CUDNN_ACTIVATION_RELU;
-      break;
-    case kSigmoid:
-      mode_ = CUDNN_ACTIVATION_SIGMOID;
-      break;
-    case kTanh:
-      mode_ = CUDNN_ACTIVATION_TANH;
-      break;
-    default:
-      LOG(FATAL) << "Not implmented";
-      break;
+      case kReLU:
+        mode_ = CUDNN_ACTIVATION_RELU;
+        break;
+      case kSigmoid:
+        mode_ = CUDNN_ACTIVATION_SIGMOID;
+        break;
+      case kTanh:
+        mode_ = CUDNN_ACTIVATION_TANH;
+        break;
+      default:
+        LOG(FATAL) << "Not implmented";
+        break;
     }
   }
 

@@ -28,9 +28,9 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   float momentum;
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-10f)
-      .describe("Epsilon to prevent div 0");
+    .describe("Epsilon to prevent div 0");
     DMLC_DECLARE_FIELD(momentum).set_default(0.1f)
-      .describe("Momentum for moving average");
+    .describe("Momentum for moving average");
   }
 };
 
@@ -89,18 +89,19 @@ class BatchNormOp : public Operator {
       Tensor<xpu, 1> var = out_data[kVar].get<xpu, 1, real_t>(s);
       Assign(mean, req[kMean], scale * sumall_except_dim<1>(data));
       Assign(var, req[kVar], scale * sumall_except_dim<1>(
-        F<mshadow_op::square>(data - broadcast<1>(mean, data.shape_))));
+               F<mshadow_op::square>(data - broadcast<1>(mean, data.shape_))));
       Assign(out_no_affine, req[kOutNoAffine], (data - broadcast<1>(mean, data.shape_)) /
-        F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)));
+             F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)));
       Assign(out, req[kOut], out_no_affine * broadcast<1>(slope, out.shape_) +
-        broadcast<1>(bias, out.shape_));
+             broadcast<1>(bias, out.shape_));
       moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
       moving_var = moving_var * param_.momentum + var * (1 - param_.momentum);
     } else {
       Assign(out, req[kOut], broadcast<1>(slope /
-        F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_) * data +
-        broadcast<1>(bias - (slope * moving_mean) /
-          F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
+                                          F<mshadow_op::square_root>(moving_var + param_.eps),
+                                          data.shape_) * data +
+             broadcast<1>(bias - (slope * moving_mean) /
+                          F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
     }
   }
 
@@ -149,9 +150,10 @@ class BatchNormOp : public Operator {
     Tensor<xpu, 1> tmp = tmp_[2];
     // cal
     gvar = sumall_except_dim<1>((grad * broadcast<1>(slope, data.shape_)) *
-                        (data - broadcast<1>(mean, data.shape_)) *
-                        -0.5f *
-                        F<mshadow_op::power>(broadcast<1>(var + param_.eps, data.shape_), -1.5f));
+                                (data - broadcast<1>(mean, data.shape_)) *
+                                -0.5f *
+                                F<mshadow_op::power>(broadcast<1>(var + param_.eps, data.shape_),
+                                                     -1.5f));
     gmean = sumall_except_dim<1>(grad * broadcast<1>(slope, data.shape_));
     gmean *= -1.0f / F<mshadow_op::square_root>(var + param_.eps);
     tmp = scale * sumall_except_dim<1>(-2.0f * (data - broadcast<1>(mean, data.shape_)));
@@ -161,9 +163,10 @@ class BatchNormOp : public Operator {
     Assign(gslope, req[kGamma], sumall_except_dim<1>(grad * out_no_affine));
     Assign(gbias, req[kBeta], sumall_except_dim<1>(grad));
     Assign(grad_in, req[kData], (grad * broadcast<1>(slope, data.shape_)) *
-      broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps), data.shape_) +
-      broadcast<1>(gvar, data.shape_) * scale * 2.0f * (data - broadcast<1>(mean, data.shape_)) +
-      broadcast<1>(gmean, data.shape_) * scale);
+           broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps), data.shape_) +
+           broadcast<1>(gvar, data.shape_) * scale * 2.0f * (data - broadcast<1>(mean,
+                                                                                 data.shape_)) +
+           broadcast<1>(gmean, data.shape_) * scale);
   }
 
  private:
@@ -193,8 +196,8 @@ class BatchNormProp : public OperatorProperty {
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape,
-                          std::vector<TShape> *aux_shape) const override {
+                  std::vector<TShape> *out_shape,
+                  std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 3) << "Input:[data, gamma, beta]";
     const TShape &dshape = in_shape->at(0);
@@ -223,19 +226,20 @@ class BatchNormProp : public OperatorProperty {
   }
 
   std::vector<int> DeclareBackwardDependency(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const override {
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data) const override {
     return {out_grad[kOut],
             out_data[kOut], out_data[kOutNoAffine], out_data[kMean], out_data[kVar],
-            in_data[kData], in_data[kGamma], in_data[kBeta]};
+            in_data[kData], in_data[kGamma], in_data[kBeta]
+           };
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data,
-      const std::vector<void*> &in_grad) const override {
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data,
+    const std::vector<void*> &in_grad) const override {
     return {{out_grad[kOut], in_grad[kData]}};
   }
 
@@ -273,3 +277,4 @@ class BatchNormProp : public OperatorProperty {
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_BATCH_NORM_INL_H_
+

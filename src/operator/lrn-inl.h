@@ -87,7 +87,7 @@ class LocalResponseNormOp : public Operator {
     grad_in += (- 2.0f * param_.beta * salpha) *
                chpool<red::sum>(grad * data *
                                 F<mshadow_op::power>(tmp_norm, -param_.beta - 1.0f),
-                                                     param_.nsize)  * data;
+                                param_.nsize)  * data;
   }
 
  private:
@@ -113,9 +113,9 @@ class LocalResponseNormProp : public OperatorProperty {
     if (dshape.ndim() == 0) return false;
     out_shape->clear();
     out_shape->push_back(dshape);
-    #if MXNET_USE_CUDNN != 1
+#if MXNET_USE_CUDNN != 1
     out_shape->push_back(dshape);
-    #endif
+#endif
     return true;
   }
 
@@ -130,26 +130,26 @@ class LocalResponseNormProp : public OperatorProperty {
   }
 
   std::vector<int> DeclareBackwardDependency(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const override {
-    #if MXNET_USE_CUDNN == 1
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data) const override {
+#if MXNET_USE_CUDNN == 1
     return {out_grad[kOut], in_data[kData], out_data[kOut]};
-    #else
+#else
     return {out_grad[kOut], in_data[kData], out_data[kTmpNorm]};
-    #endif
+#endif
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data,
-      const std::vector<void*> &in_grad) const override {
-    #if MXNET_USE_CUDNN == 1
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data,
+    const std::vector<void*> &in_grad) const override {
+#if MXNET_USE_CUDNN == 1
     return {};
-    #else
+#else
     return {{out_grad[kOut], in_grad[kData]}};
-    #endif
+#endif
   }
 
   int NumVisibleOutputs() const override {
@@ -165,11 +165,11 @@ class LocalResponseNormProp : public OperatorProperty {
   }
 
   std::vector<std::string> ListOutputs() const override {
-    #if MXNET_USE_CUDNN == 1
+#if MXNET_USE_CUDNN == 1
     return {"output"};
-    #else
+#else
     return {"output", "tmp_norm"};
-    #endif
+#endif
   }
 
   Operator* CreateOperator(Context ctx) const;
