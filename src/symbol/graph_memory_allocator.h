@@ -122,7 +122,6 @@ GraphStorageAllocator::Request(Context ctx, TShape shape, uint32_t node_id) {
   for (auto it = mid; it != end; ++it) {
     StorageEntry *e = it->second;
     if (e->ctx != ctx) continue;
-    LOG(INFO) << "match bigger, req=" << size << ", now=" << e->max_size;
     // Use exect matching strategy
     e->max_size = std::max(size, e->max_size);
     // find a exact match, erase from map and return
@@ -134,7 +133,6 @@ GraphStorageAllocator::Request(Context ctx, TShape shape, uint32_t node_id) {
     --it;
     StorageEntry *e = it->second;
     if (e->ctx != ctx) continue;
-    LOG(INFO) << "match smaller, req=" << size << ", now=" << e->max_size;
     // Use exect matching strategy
     e->max_size = std::max(size, e->max_size);
     // find a exact match, erase from map and return
