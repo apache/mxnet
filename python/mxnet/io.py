@@ -81,7 +81,6 @@ class DataIter(object):
         """
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
-        print 'get', hdl
         return NDArray(hdl)
 
 def _make_io_iterator(handle):

@@ -63,7 +63,6 @@ class NDArray(object):
         self.handle = handle
 
     def __del__(self):
-        print 'del', self.handle
         check_call(_LIB.MXNDArrayFree(self.handle))
 
     def __add__(self, other):

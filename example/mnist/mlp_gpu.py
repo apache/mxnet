@@ -90,21 +90,7 @@ def test_mlp():
         train_nbatch = 0
         val_nbatch = 0
         for data, label in train_dataiter:
-            print tmp_label.shape
-            print label.asnumpy().shape
-            print 'xx'
-            tt = label.asnumpy()
-            print 'tt'
-            ss = label.asnumpy()
-            print label.handle
-            print label.asnumpy()[0:5]
-            print 'ccc'
-            label = label.asnumpy()
-            print 'aaaa'
-            exit(1)
             label = label.asnumpy().reshape(tmp_label.shape)
-
-            
             tmp_label[:] = label
             inputs["data"][:] = data
             inputs["sm_label"][:] = tmp_label

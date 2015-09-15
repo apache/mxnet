@@ -331,8 +331,6 @@ int MXNDArrayWaitAll() {
 
 int MXNDArrayFree(NDArrayHandle handle) {
   API_BEGIN();
-  std::cout << handle << std::endl;
-  std::cout << static_cast<NDArray*>(handle)->shape().Size() << std::endl;
   delete static_cast<NDArray*>(handle);
   API_END();
 }
@@ -826,14 +824,14 @@ int MXDataIterNext(DataIterHandle handle, int *out) {
 int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out) {
   API_BEGIN();
   DataBatch db = static_cast<IIterator<DataBatch>* >(handle)->Value();
-  *out = &db.data[1];
+  *out = new NDArray(db.data[1].data(), 0);
   API_END();
 }
 
 int MXDataIterGetData(DataIterHandle handle, NDArrayHandle *out) {
   API_BEGIN();
   DataBatch db = static_cast<IIterator<DataBatch>* >(handle)->Value();
-  *out = &db.data[0];
+  *out = new NDArray(db.data[0].data(), 0);
   API_END();
 }
 
