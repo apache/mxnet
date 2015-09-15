@@ -180,12 +180,6 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
   API_END();
 }
 
-int MXEngineWaitAll() {
-  API_BEGIN();
-  Engine::Get()->WaitForAll();
-  API_END();
-}
-
 // NOTE: return value is added in API_END
 int MXNDArrayCreateNone(NDArrayHandle *out) {
   API_BEGIN();
