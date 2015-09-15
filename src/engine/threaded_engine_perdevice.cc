@@ -42,13 +42,17 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
 
  protected:
   void PushToExecute(OprBlock *opr_block, bool pusher_thread) override {
+    const Context& ctx = opr_block->ctx;
     if (opr_block->opr->prop == FnProperty::kAsync && pusher_thread) {
-      CHECK_EQ(opr_block->ctx.dev_mask, cpu::kDevMask);
+      if (ctx.dev_mask == gpu::kDevMask) {
+        #if MXNET_USE_CUDA
+        mshadow::SetDevice<gpu>(ctx.dev_id);
+        #endif
+      }
       RunContext run_ctx;
       run_ctx.stream = nullptr;
       this->ExecuteOprBlock(run_ctx, opr_block);
     } else {
-      const Context& ctx = opr_block->ctx;
       if (ctx.dev_mask == cpu::kDevMask) {
         cpu_worker_.task_queue.Push(opr_block);
       } else {
