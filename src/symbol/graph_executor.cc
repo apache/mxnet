@@ -4,6 +4,7 @@
  * \brief Executor to execute the Graph.
  */
 #include <dmlc/logging.h>
+#include <mxnet/resource.h>
 #include <mxnet/symbolic.h>
 #include <memory>
 #include "./graph_executor.h"
@@ -385,7 +386,8 @@ void GraphExecutor::InitDataEntryMemory() {
     for (std::pair<DataEntryInfo*, DataEntryInfo*> kv : inplace) {
       DataEntryInfo* in = kv.first;
       DataEntryInfo* out = kv.second;
-      if (in->temp_ref_count == 1 &&
+      if (enable_inplace_allocation_ &&
+          in->temp_ref_count == 1 &&
           in->type == kInternalAllocated &&
           out->type == kNotInitialized) {
         // we can only do inplace if we are last user of in
@@ -412,15 +414,16 @@ void GraphExecutor::InitDataEntryMemory() {
     // resource
     const std::vector<ResourceRequest>& reqs = GetResource(nid);
     op_nodes_[nid].resources.resize(reqs.size());
-    op_nodes_[nid].op_ctx.requested.resize(reqs.size());
     for (uint32_t i = 0; i < reqs.size(); ++i) {
-      op_nodes_[nid].resources[i].req = reqs[i];
+      op_nodes_[nid].resources[i].resource.req = reqs[i];
     }
     // allocate resource
     for (ResourceEntry& entry : op_nodes_[nid].resources) {
-      if (entry.req.type == Resource::kTempSpace) {
+      if (entry.resource.req.type == ResourceRequest::kTempSpace) {
         entry.storage_id =
-            allocator.Request(op_nodes_[nid].ctx, mshadow::Shape1(entry.req.space_size), nid);
+            allocator.Request(op_nodes_[nid].ctx,
+                              mshadow::Shape1(entry.resource.req.space_num_reals),
+                              nid);
       }
     }
     // then free inputs
@@ -444,13 +447,13 @@ void GraphExecutor::InitDataEntryMemory() {
     }
     // release the resource, as soon as the forward is finished we can release it.
     for (ResourceEntry& res : op_nodes_[nid].resources) {
-      if (res.req.type == Resource::kTempSpace) {
+      if (res.resource.req.type == ResourceRequest::kTempSpace) {
         allocator.Release(res.storage_id, nid);
       }
     }
   }
   // one pass complete, allocate real memory
-  allocator.InitStorages();
+  this->total_allocated_reals_ = allocator.InitStorages();
   // get the real data NDArray into the DataEntryInfo
   for (size_t i = 0; i < topo_order_.size(); ++i) {
     uint32_t nid = topo_order_[i];
@@ -461,17 +464,20 @@ void GraphExecutor::InitDataEntryMemory() {
         out.data = allocator.Get(out.storage_id, out.shape);
       }
     }
-    // get the pointer to the tempspace
-    std::vector<Resource>& resources = op_nodes_[nid].op_ctx.requested;
-    for (uint32_t i = 0; i < resources.size(); ++i) {
-      ResourceEntry& entry = op_nodes_[nid].resources[i];
-      if (entry.req.type == Resource::kTempSpace) {
+    // Get the resource of temporal space.
+    for (ResourceEntry& entry : op_nodes_[nid].resources) {
+      if (entry.resource.req.type == ResourceRequest::kTempSpace) {
         entry.data = allocator.Get(entry.storage_id,
-                                   mshadow::Shape1(entry.req.space_size));
+                                   mshadow::Shape1(entry.resource.req.space_num_reals));
+        entry.resource.ptr_ = entry.data.data().dptr_;
+        entry.resource.var = entry.data.var();
+      } else {
+        LOG(FATAL) << "resource type not yet supported";
       }
-      entry.tblob = entry.data.data();
-      resources[i].ptr = &entry.tblob;
-      resources[i].var = static_cast<void*>(entry.data.var());
+      op_nodes_[nid].op_ctx.requested.resize(op_nodes_[nid].resources.size());
+      for (size_t i = 0; i < op_nodes_[nid].resources.size(); ++i) {
+        op_nodes_[nid].op_ctx.requested[i] = op_nodes_[nid].resources[i].resource;
+      }
     }
   }
   for (StaticGraph::DataEntry e : graph_.heads) {
@@ -553,7 +559,19 @@ std::string GraphExecutor::DebugStr() const {
       }
       os << '\n';
     }
+    for (size_t j = 0; j < op_nodes_[nid].resources.size(); ++j) {
+      const ResourceEntry &entry = op_nodes_[nid].resources[j];
+      os << "\tresource[" << j << "]: ";
+      if (entry.resource.req.type == ResourceRequest::kTempSpace) {
+        os << "type=TempSpace, size=" << entry.resource.req.space_num_reals
+           << ", storage_id=" << entry.storage_id;
+      } else if (entry.resource.req.type == ResourceRequest::kRandom) {
+        os << "type=RandomNumber";
+      }
+      os << '\n';
+    }
   }
+  os << "Total " << (total_allocated_reals_ >> 18UL) <<" MB allocated\n";
   return os.str();
 }
 

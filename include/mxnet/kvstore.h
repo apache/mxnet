@@ -10,7 +10,7 @@
 #if DMLC_USE_CXX11
 #include <functional>
 #endif  // DMLC_USE_CXX11
-#include "ndarray.h"
+#include "./ndarray.h"
 
 namespace mxnet {
 

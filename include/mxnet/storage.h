@@ -7,8 +7,7 @@
 #define MXNET_STORAGE_H_
 
 #include <memory>
-#include "base.h"
-#include "context.h"
+#include "./base.h"
 
 namespace mxnet {
 
@@ -64,7 +63,5 @@ class Storage {
   std::unique_ptr<Impl> impl_;
   DISALLOW_COPY_AND_ASSIGN(Storage);
 };  // class Storage
-
 }  // namespace mxnet
-
 #endif  // MXNET_STORAGE_H_
