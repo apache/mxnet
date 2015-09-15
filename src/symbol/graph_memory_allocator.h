@@ -7,7 +7,7 @@
 #define MXNET_SYMBOL_GRAPH_MEMORY_ALLOCATOR_H_
 
 #include <mxnet/symbolic.h>
-#include <mxnet/narray.h>
+#include <mxnet/ndarray.h>
 #include <map>
 #include <vector>
 
@@ -23,8 +23,8 @@ namespace mxnet {
  *      - Each call to Request will get a ResourceID that is used to
  *        identify the memory block assigned to each DataEntryInfo.
  *  (2) Allocating phase: GraphExecutor call InitMemory.
- *      - Then each DataEntry will call Get to get the real NArray.
- *  (3) All the memory will be freed up when reference to all the related NArray ends.
+ *      - Then each DataEntry will call Get to get the real NDArray.
+ *  (3) All the memory will be freed up when reference to all the related NDArray ends.
  */
 class GraphStorageAllocator {
  public:
@@ -37,7 +37,7 @@ class GraphStorageAllocator {
   /*!
    * \brief Request a memory.
    * \param ctx the context of the graph
-   * \param shape shape of the NArray we want
+   * \param shape shape of the NDArray we want
    * \param node_id the node that is requesting the memory, used as hint.
    */
   StorageID Request(Context ctx, TShape shape, uint32_t node_id);
@@ -52,11 +52,11 @@ class GraphStorageAllocator {
   /*!
    * \brief Get the the memory allocated in planning phase.
    * \param id the storage id allocated in planning phase.
-   * \param shape the shape of the NArray requested.
+   * \param shape the shape of the NDArray requested.
    */
-  NArray Get(StorageID id, TShape shape);
+  NDArray Get(StorageID id, TShape shape);
 
- private:
+ protected:
   /*! \brief internal storage entry */
   struct StorageEntry {
     /*! \brief id of the storage */
@@ -65,15 +65,15 @@ class GraphStorageAllocator {
     Context ctx;
     /*! \brief maximum size of the storage that is requested */
     size_t max_size;
-    /*! \brief the actual NArray to hold the data */
-    NArray data;
+    /*! \brief the actual NDArray to hold the data */
+    NDArray data;
     /*! \brief constructor */
     StorageEntry() : max_size(0) {}
   };
   /*!
    * \brief Allocate a StorageID when Request cannot found existing ones.
    * \param ctx the context of the graph
-   * \param shape shape of the NArray we want
+   * \param shape shape of the NDArray we want
    */
   StorageID Alloc(Context ctx, size_t size);
 
@@ -132,11 +132,11 @@ void GraphStorageAllocator::InitStorages() {
   for (size_t i = 0; i < data_.size(); ++i) {
     StorageEntry *e = data_[i].get();
     TShape shape = mshadow::Shape1(e->max_size);
-    e->data = NArray(shape, e->ctx);
+    e->data = NDArray(shape, e->ctx);
   }
 }
 
-NArray GraphStorageAllocator::Get(StorageID id, TShape shape) {
+NDArray GraphStorageAllocator::Get(StorageID id, TShape shape) {
   CHECK_NE(id, kBadStorageID);
   StorageEntry *e = data_[id].get();
   return e->data.Slice(0, shape.Size()).Reshape(shape);

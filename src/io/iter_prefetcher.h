@@ -8,7 +8,7 @@
 
 #include <mxnet/io.h>
 #include <mxnet/base.h>
-#include <mxnet/narray.h>
+#include <mxnet/ndarray.h>
 #include <dmlc/logging.h>
 #include <dmlc/threadediter.h>
 #include <mshadow/tensor.h>
@@ -173,7 +173,7 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
 };
   
 // iterator on image recordio
-class PrefetcherIter : public IIterator<DataInst> {
+class PrefetcherIter : public IIterator<DataBatch> {
  public:
   PrefetcherIter(IIterator<DataInst>* base) : loader_(base){
   }
@@ -201,10 +201,10 @@ class PrefetcherIter : public IIterator<DataInst> {
     iter_.Init([this](DataBatch **dptr) {
         if (*dptr == NULL) {
           *dptr = new DataBatch();
-          // init NArrays
+          // init NDArrays
           Context ctx; 
-          (*dptr)->data.push_back(NArray(data_shape_, ctx, true));
-          (*dptr)->data.push_back(NArray(label_shape_, ctx, true));
+          (*dptr)->data.push_back(NDArray(data_shape_, ctx, true));
+          (*dptr)->data.push_back(NDArray(label_shape_, ctx, true));
         }
         return loader_.LoadNext(*dptr);
       },
@@ -215,43 +215,42 @@ class PrefetcherIter : public IIterator<DataInst> {
   }
   virtual bool Next(void) {
      if (ready_narrays_.size() == param_.capacity) {
-         std::vector<NArray*> old_narrays = ready_narrays_.front();
+         std::vector<NDArray*> old_narrays = ready_narrays_.front();
          for (size_t i = 0; i < old_narrays.size(); i++) {
              old_narrays[i]->WaitToWrite();
          }
          ready_narrays_.pop();
-         DataIter* old_batch = ready_batches_.front();
+         DataBatch* old_batch = ready_batches_.front();
          ready_batches_.pop();
-         iter_->Recycle(&old_batch);
+         iter_.Recycle(&old_batch);
      }
      DataBatch* next_batch = NULL;
      if (!iter_.Next(&next_batch)) return false;
      out_.data.clear();
      // copy the batch
      for (size_t i = 0; i < next_batch->data.size(); i++) {
-         out_.data.push_back(Copy(next_batch->data[i], next_batch->data[i].ctx()));
+         out_.data.push_back(next_batch->data[i].Copy(next_batch->data[i].ctx()));
      }
      // push the narrays and batch into the queue
-     ready_batches_.push_back(next_batch);
-     std::vector<NArray*> next_batch_narrays;
+     ready_batches_.push(next_batch);
+     std::vector<NDArray*> next_batch_narrays;
      for (size_t i = 0; i < out_.data.size(); i++) {
-         next_batch_narrays.push_back(&out.data[i]);
+         next_batch_narrays.push_back(&out_.data[i]);
      }
-     ready_narrays_.push_back(next_batch_narrays);
+     ready_narrays_.push(next_batch_narrays);
      return true;
   }
-  virtual const DataInst &Value(void) const {
+  virtual const DataBatch &Value(void) const {
     return out_;
   }
-
  private:
   /*! \brief prefetcher parameters */
   PrefetcherParam param_;
   /*! \brief output data */
   DataBatch out_;
-  /*! \brief queue to hold the NArrays for check whether writable */
-  std::queue<std::vector<NArray*> > ready_narrays_;
-  /*! \brief queue to hold the NArrays for check whether writable */
+  /*! \brief queue to hold the NDArrays for check whether writable */
+  std::queue<std::vector<NDArray*> > ready_narrays_;
+  /*! \brief queue to hold the NDArrays for check whether writable */
   std::queue<DataBatch*> ready_batches_;
   // internal batch loader
   BatchLoader loader_;

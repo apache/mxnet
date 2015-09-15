@@ -5,9 +5,9 @@ from __future__ import absolute_import
 
 import ctypes
 from .base import _LIB
-from .base import c_array, mx_uint, NArrayHandle, ExecutorHandle
+from .base import c_array, mx_uint, NDArrayHandle, ExecutorHandle
 from .base import check_call
-from .narray import NArray
+from .ndarray import NDArray
 
 class Executor(object):
     """ Executor is the actual executing object of MXNet."""
@@ -22,6 +22,34 @@ class Executor(object):
         if not isinstance(handle, ExecutorHandle):
             raise TypeError("Handle type error")
         self.handle = handle
+        self.arg_ndarrays = []
+        self.grad_ndarrays = []
+        self.auxiliary_states = []
+
+    def list_arguments(self, with_grad=True):
+        """Return arguments (and grad for arguments)
+
+        Parameters
+        ----------
+        with_grad: bool
+            whether return args with grad
+
+        Returns
+        -------
+            if with_grad = True, return (args, grad) pair list
+            otherwise return args list only
+            Note: args sequence is same to symbol.list_arguments()
+        """
+        if with_grad:
+            return self.arg_ndarrays, self.grad_ndarrays
+        else:
+            return self.arg_ndarrays
+
+    def list_auxiliary_states(self):
+        """Return auxiliary states of executor
+            Note: auxiliary states is same to symbol.list_auxiliary_states()
+        """
+        return self.auxiliary_states
 
     def forward(self, is_train=True):
         """Do forward.
@@ -34,32 +62,39 @@ class Executor(object):
         """
         check_call(_LIB.MXExecutorForward(self.handle, is_train))
 
-    def backward(self, grads):
+    def backward(self, head_grads=None):
         """Do backward on heads' gradient.
 
         Parameters
         ----------
-        grads: Array of NArray
-            heads' gradient
+        head_grads : NDArray or list of NDArray, optional
+            Gradient on the heads
         """
-        for obj in grads:
-            if not isinstance(obj, NArray):
-                raise TypeError("inputs must be NArray")
-        narray = c_array(NArrayHandle, [item.handle for item in grads])
-        check_call(_LIB.MXExecutorBackward(self.handle, len(grads), narray))
+        if head_grads is None:
+            head_grads = []
+        elif isinstance(head_grads, NDArray):
+            head_grads = [head_grads]
 
-    def heads(self):
-        """list all heads' output narray
+        for obj in head_grads:
+            if not isinstance(obj, NDArray):
+                raise TypeError("inputs must be NDArray")
+        ndarray = c_array(NDArrayHandle, [item.handle for item in head_grads])
+        check_call(_LIB.MXExecutorBackward(self.handle, len(head_grads), ndarray))
+
+    @property
+    def outputs(self):
+        """list all heads' output ndarray
 
         Returns
         -------
-        A list of narray binded to the heads of executor.
+        A list of ndarray binded to the heads of executor.
         """
         # TODO: think of access, make heads read only.
-        # (consider support read only NArray(NArrayView))
+        # (consider support read only NDArray(NDArrayView))
         # Otherwise some of the internal might depends on out_data
         # if user set the content of the head, the backward behavior can be incorrect.
         out_size = mx_uint()
-        handles = ctypes.POINTER(NArrayHandle)()
-        check_call(_LIB.MXExecutorHeads(self.handle, ctypes.byref(out_size), ctypes.byref(handles)))
-        return [NArray(NArrayHandle(handles[i])) for i in range(out_size.value)]
+        handles = ctypes.POINTER(NDArrayHandle)()
+        check_call(_LIB.MXExecutorOutputs(self.handle,
+                                          ctypes.byref(out_size), ctypes.byref(handles)))
+        return [NDArray(NDArrayHandle(handles[i])) for i in range(out_size.value)]

@@ -1,15 +1,15 @@
 # coding: utf-8
 
-"""NArray interface of mxnet"""
+"""NDArray interface of mxnet"""
 from __future__ import absolute_import
 
 import ctypes
 import sys
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str
-from .base import DataIterHandle, NArrayHandle
+from .base import DataIterHandle, NDArrayHandle
 from .base import check_call
-from .narray import NArray
+from .ndarray import NDArray
 
 class DataIter(object):
     """DataIter object in mxnet. List all the needed functions here. """
@@ -71,17 +71,18 @@ class DataIter(object):
         """get data from batch
 
         """
-        hdl = NArrayHandle()
+        hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetData(self.handle, ctypes.byref(hdl)))
-        return NArray(hdl)
+        return NDArray(hdl)
 
     def getlabel(self):
         """get label from batch
 
         """
-        hdl = NArrayHandle()
+        hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
-        return NArray(hdl)
+        print 'get', hdl
+        return NDArray(hdl)
 
 def _make_io_iterator(handle):
     """Create an io iterator by handle."""

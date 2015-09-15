@@ -1,10 +1,14 @@
 # pylint: skip-file
+
 import mxnet as mx
 import numpy as np
 import os, gzip
 import pickle as pickle
 import sys
+sys.path.append("../../tests/python")
 import get_data
+
+
 
 def CalAcc(out, label):
     pred = np.argmax(out, axis=1)
@@ -20,40 +24,42 @@ act2 = mx.symbol.Activation(data = fc2, name='relu2', act_type="relu")
 fc3 = mx.symbol.FullyConnected(data = act2, name='fc3', num_hidden=10)
 softmax = mx.symbol.Softmax(data = fc3, name = 'sm')
 args_list = softmax.list_arguments()
+
 # infer shape
 data_shape = (batch_size, 784)
 arg_shapes, out_shapes, aux_shapes = softmax.infer_shape(data=data_shape)
 
-arg_narrays = [mx.narray.create(shape, ctx=mx.Context("gpu")) for shape in arg_shapes]
-grad_narrays = [mx.narray.create(shape, ctx=mx.Context("gpu")) for shape in arg_shapes]
-
+# create GPU NArray for data
+arg_narrays = [mx.nd.zeros(shape, ctx=mx.gpu()) for shape in arg_shapes]
+grad_narrays = [mx.nd.zeros(shape, ctx=mx.gpu()) for shape in arg_shapes]
 inputs = dict(zip(args_list, arg_narrays))
 
+# create CPU NArray for result stat
 name2shape = dict(zip(args_list, arg_shapes))
-pred = mx.narray.create(out_shapes[0])
+pred = mx.nd.zeros(out_shapes[0])
 
-np.random.seed(0)
+
 # set random weight
+np.random.seed(0)
 for name, narray in inputs.items():
     if "weight" in name:
-        tmp = mx.narray.create(name2shape[name])
-        tmp.numpy[:] = np.random.uniform(-0.07, 0.07, name2shape[name])
+        tmp = mx.nd.array(np.random.uniform(-0.07, 0.07, name2shape[name]))
         tmp.copyto(narray)
-    if "bias" in name:
-        narray[:] = 0.0
 
 # bind executer
 # TODO(bing): think of a better bind interface
 executor = softmax.bind(mx.Context('gpu'), arg_narrays, grad_narrays)
+# create gradient NArray
+out_narray = executor.outputs[0]
+grad_narray = mx.nd.zeros(out_narray.shape, ctx=mx.gpu())
+
+
 # update
-
-out_narray = executor.heads()[0]
-grad_narray = mx.narray.create(out_narray.shape)
-
 epoch = 9
 lr = 0.1
 wd = 0.0004
 
+# SGD Update rule
 def Update(grad, weight):
     weight[:] -= lr * grad  / batch_size
 
@@ -71,7 +77,7 @@ val_dataiter = mx.io.MNISTIter(
         label="data/t10k-labels-idx1-ubyte",
         batch_size=batch_size, shuffle=True, flat=True, silent=False)
 
-tmp_label = mx.narray.create(name2shape["sm_label"])
+tmp_label = mx.nd.zeros(name2shape["sm_label"])
 
 def test_mlp():
     acc_train = 0.
@@ -84,15 +90,29 @@ def test_mlp():
         train_nbatch = 0
         val_nbatch = 0
         for data, label in train_dataiter:
-            data = data
-            tmp_label.numpy[:] = label.numpy.reshape(tmp_label.shape)
-            data.copyto(inputs["data"])
-            tmp_label.copyto(inputs["sm_label"])
+            print tmp_label.shape
+            print label.asnumpy().shape
+            print 'xx'
+            tt = label.asnumpy()
+            print 'tt'
+            ss = label.asnumpy()
+            print label.handle
+            print label.asnumpy()[0:5]
+            print 'ccc'
+            label = label.asnumpy()
+            print 'aaaa'
+            exit(1)
+            label = label.asnumpy().reshape(tmp_label.shape)
+
+            
+            tmp_label[:] = label
+            inputs["data"][:] = data
+            inputs["sm_label"][:] = tmp_label
             executor.forward()
-            out_narray.copyto(pred)
-            train_acc += CalAcc(pred.numpy, label.numpy.flatten())
+            pred[:] = out_narray
+            train_acc += CalAcc(pred.asnumpy(), label)
             train_nbatch += 1
-            out_narray.copyto(grad_narray)
+            grad_narray[:] = out_narray
             executor.backward([grad_narray])
 
             for grad, weight in block:
@@ -100,12 +120,11 @@ def test_mlp():
 
         # evaluate
         for data, label in val_dataiter:
-            data = data
-            label = label.numpy.flatten()
-            data.copyto(inputs["data"])
+            label = label.asnumpy().flatten()
+            inputs["data"][:] = data
             executor.forward()
-            out_narray.copyto(pred)
-            val_acc += CalAcc(pred.numpy, label)
+            pred[:] = out_narray
+            val_acc += CalAcc(pred.asnumpy(), label)
             val_nbatch += 1
         acc_train = train_acc / train_nbatch
         acc_val = val_acc / val_nbatch

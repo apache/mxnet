@@ -52,3 +52,9 @@ Debug
 .dir-locals.el
 __pycache__
 *.pkl
+
+*.d
+build
+dmlc-core
+mshadow
+data

@@ -8,6 +8,8 @@
 
 #include <dmlc/io.h>
 #include <dmlc/type_traits.h>
+#include <sstream>
+#include <string>
 #include "./base.h"
 
 namespace mxnet {
@@ -61,6 +63,16 @@ struct Context {
     if (strm->Read(&dev_id, sizeof(int32_t)) != sizeof(int32_t)) return false;
     return true;
   }
+
+  /*! \brief the maximal device mask, cpu = 1, gpu = 2 */
+  static const int32_t kMaxDevMask = 2;
+
+  /*!
+   * \brief A dedicate ID for pinned cpu memory.
+   *
+   * Any normal CPU ID should be less than this number.
+   */
+  static const int32_t kPinnedMemoryID = 16;
 };
 
 /*!
@@ -72,6 +84,15 @@ struct RunContext {
    * \brief the stream of the device, can be NULL or Stream<gpu>* in GPU mode
    */
   void *stream;
+  /*!
+   * \brief get mshadow stream from Context
+   * \return the mshadow stream
+   * \tparam xpu the device type of the stream
+   */
+  template<typename xpu>
+  inline mshadow::Stream<xpu>* get_stream() const {
+    return static_cast<mshadow::Stream<xpu>*>(stream);
+  }
 };
 
 /*!

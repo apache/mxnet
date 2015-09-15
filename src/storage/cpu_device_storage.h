@@ -38,12 +38,13 @@ class CPUDeviceStorage {
 };  // class CPUDeviceStorage
 
 inline void* CPUDeviceStorage::Alloc(size_t size) {
-#ifdef __APPLE__
-  return CHECK_NOTNULL(malloc(size));
-#elif _MSC_VER
+#if _MSC_VER
   return CHECK_NOTNULL(_aligned_malloc(size, alignment_));
 #else
-  return CHECK_NOTNULL(memalign(alignment_, size));
+  void* ptr;
+  int ret = posix_memalign(&ptr, alignment_, size);
+  CHECK_EQ(ret, 0) << "Allocation failed";
+  return ptr;
 #endif
 }
 

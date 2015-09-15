@@ -5,13 +5,14 @@
  */
 #ifndef MXNET_IO_H_
 #define MXNET_IO_H_
+
 #include <dmlc/data.h>
 #include <dmlc/registry.h>
 #include <vector>
 #include <string>
 #include <utility>
 #include "./base.h"
-#include "./narray.h"
+#include "./ndarray.h"
 
 namespace mxnet {
 /*!
@@ -24,7 +25,7 @@ class IIterator : public dmlc::DataIter<DType> {
   /*!
    * \brief set the parameters and init iter
    * \param kwargs key-value pairs
-   */ 
+   */
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
   /*! \brief reset the iterator */
   virtual void BeforeFirst(void) = 0;
@@ -34,7 +35,7 @@ class IIterator : public dmlc::DataIter<DType> {
   virtual const DType &Value(void) const = 0;
   /*! \brief constructor */
   virtual ~IIterator(void) {}
-  /*! \brief store the name of each data, it could be used for making NArrays */
+  /*! \brief store the name of each data, it could be used for making NDArrays */
   std::vector<std::string> data_names;
   /*! \brief set data name to each attribute of data */
   inline void SetDataName(const std::string data_name){
@@ -69,7 +70,7 @@ struct DataBatch {
   mshadow::index_t num_batch_padd;
  public:
   /*! \brief content of dense data, if this DataBatch is dense */
-  std::vector<NArray> data;
+  std::vector<NDArray> data;
   /*! \brief extra data to be fed to the network */
   std::string extra_data;
  public:

@@ -5,7 +5,6 @@
 iterator
  */
 #include <mxnet/io.h>
-#include <mxnet/narray.h>
 #include <dmlc/base.h>
 #include <dmlc/io.h>
 #include <dmlc/omp.h>
@@ -19,7 +18,7 @@ iterator
 #include "./inst_vector.h"
 #include "./image_recordio.h"
 #include "./image_augmenter.h"
-#include "./iter_batch.h"
+#include "./iter_prefetcher.h"
 namespace mxnet {
 namespace io {
 /*! \brief data structure to hold labels for images */

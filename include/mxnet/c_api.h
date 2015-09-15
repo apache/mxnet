@@ -26,9 +26,9 @@ typedef float mx_float;
 // all the handles are simply void *
 // will be casted internally to specific pointers types
 // these typedefs are mainly used for readablity reasons
-/*! \brief handle to NArray */
-typedef void *NArrayHandle;
-/*! \brief handle to a mxnet narray function that changes NArray */
+/*! \brief handle to NDArray */
+typedef void *NDArrayHandle;
+/*! \brief handle to a mxnet narray function that changes NDArray */
 typedef const void *FunctionHandle;
 /*! \brief handle to a function that takes param and creates symbol */
 typedef void *AtomicSymbolCreator;
@@ -53,18 +53,18 @@ typedef void *DataIterHandle;
  */
 MXNET_DLL const char *MXGetLastError();
 //-------------------------------------
-// Part 1: NArray creation and deletion
+// Part 1: NDArray creation and deletion
 //-------------------------------------
 /*!
- * \brief create a NArray handle that is not initialized
+ * \brief create a NDArray handle that is not initialized
  *  can be used to pass in as mutate variables
- *  to hold the result of NArray
+ *  to hold the result of NDArray
  * \param out the returning handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayCreateNone(NArrayHandle *out);
+MXNET_DLL int MXNDArrayCreateNone(NDArrayHandle *out);
 /*!
- * \brief create a NArray with specified shape
+ * \brief create a NDArray with specified shape
  * \param shape the pointer to the shape
  * \param ndim the dimension of the shape
  * \param dev_mask device mask, specify device we want to take
@@ -74,43 +74,43 @@ MXNET_DLL int MXNArrayCreateNone(NArrayHandle *out);
  * \param out the returning handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayCreate(const mx_uint *shape,
-                             mx_uint ndim,
-                             int dev_mask,
-                             int dev_id,
-                             int delay_alloc,
-                             NArrayHandle *out);
+MXNET_DLL int MXNDArrayCreate(const mx_uint *shape,
+                              mx_uint ndim,
+                              int dev_mask,
+                              int dev_id,
+                              int delay_alloc,
+                              NDArrayHandle *out);
 /*!
- * \brief create a NArray handle that is loaded from raw bytes.
+ * \brief create a NDArray handle that is loaded from raw bytes.
  * \param buf the head of the raw bytes
  * \param size size of the raw bytes
  * \param out the returning handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayLoadFromRawBytes(const void *buf,
-                                       mx_ulong size,
-                                       NArrayHandle *out);
+MXNET_DLL int MXNDArrayLoadFromRawBytes(const void *buf,
+                                        mx_ulong size,
+                                        NDArrayHandle *out);
 /*!
- * \brief save the NArray into raw bytes.
- * \param handle the NArray handle
+ * \brief save the NDArray into raw bytes.
+ * \param handle the NDArray handle
  * \param out_size size of the raw bytes
  * \param out_buf the head of returning memory bytes.
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArraySaveRawBytes(NArrayHandle handle,
-                                   mx_ulong *out_size,
-                                   const char **out_buf);
+MXNET_DLL int MXNDArraySaveRawBytes(NDArrayHandle handle,
+                                    mx_ulong *out_size,
+                                    const char **out_buf);
 /*!
  * \brief Save list of narray into the file.
  * \param fname name of the file.
  * \param num_args number of arguments to save.
- * \param args the array of NArrayHandles to be saved.
- * \param keys the name of the NArray, optional, can be NULL
+ * \param args the array of NDArrayHandles to be saved.
+ * \param keys the name of the NDArray, optional, can be NULL
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayListSave(const char* fname,
+MXNET_DLL int MXNDArrayListSave(const char* fname,
                                mx_uint num_args,
-                               NArrayHandle* args,
+                               NDArrayHandle* args,
                                const char** keys);
 /*!
  * \brief Load list of narray from the file.
@@ -118,33 +118,68 @@ MXNET_DLL int MXNArrayListSave(const char* fname,
  * \param out_size number of narray loaded.
  * \param out_arr head of the returning narray handles.
  * \param out_name_size size of output name arrray.
- * \param out_names the names of returning NArrays, can be NULL
+ * \param out_names the names of returning NDArrays, can be NULL
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayListLoad(const char* fname,
-                               mx_uint *out_size,
-                               NArrayHandle** out_arr,
-                               mx_uint *out_name_size,
-                               const char*** out_names);
+MXNET_DLL int MXNDArrayListLoad(const char* fname,
+                                mx_uint *out_size,
+                                NDArrayHandle** out_arr,
+                                mx_uint *out_name_size,
+                                const char*** out_names);
 /*!
- * \brief wait until all the operation with respect NArray
- *  to this NArray is finished, always call this before fetching data out
- * \param handle the NArray handle
+ * \brief Perform a synchronize copy from a continugous CPU memory region.
+ *
+ *  This function will call WaitToWrite before the copy is performed.
+ *  This is useful to copy data from existing memory region that are
+ *  not wrapped by NDArray(thus dependency not being tracked).
+ *
+ * \param handle the NDArray handle
+ * \param data the data source to copy from.
+ * \param size the memory size we want to copy from.
+ */
+MXNET_DLL int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
+                                       const mx_float *data,
+                                       size_t size);
+/*!
+ * \brief Perform a synchronize copyto a continugous CPU memory region.
+ *
+ *  This function will call WaitToRead before the copy is performed.
+ *  This is useful to copy data from existing memory region that are
+ *  not wrapped by NDArray(thus dependency not being tracked).
+ *
+ * \param handle the NDArray handle
+ * \param data the data source to copy into.
+ * \param size the memory size we want to copy into.
+ */
+MXNET_DLL int MXNDArraySyncCopyToCPU(NDArrayHandle handle,
+                                    mx_float *data,
+                                    size_t size);
+/*!
+ * \brief Wait until all the pending writes with respect NDArray are finished.
+ *  Always call this before read data out synchronizely.
+ * \param handle the NDArray handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayWait(NArrayHandle handle);
+MXNET_DLL int MXNDArrayWaitToRead(NDArrayHandle handle);
+/*!
+ * \brief Wait until all the pending read/write with respect NDArray are finished.
+ *  Always call this before write data into NDArray synchronizely.
+ * \param handle the NDArray handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayWaitToWrite(NDArrayHandle handle);
 /*!
  * \brief wait until all delayed operations in
  *   the system is completed
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayWaitAll();
+MXNET_DLL int MXNDArrayWaitAll();
 /*!
  * \brief free the narray handle
  * \param handle the handle to be freed
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayFree(NArrayHandle handle);
+MXNET_DLL int MXNDArrayFree(NDArrayHandle handle);
 /*!
  * \brief get the shape of the array
  * \param handle the handle to the narray
@@ -152,30 +187,30 @@ MXNET_DLL int MXNArrayFree(NArrayHandle handle);
  * \param out_pdata pointer holder to get data pointer of the shape
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayGetShape(NArrayHandle handle,
+MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
                                mx_uint *out_dim,
                                const mx_uint **out_pdata);
 /*!
- * \brief get the content of the data in NArray
+ * \brief get the content of the data in NDArray
  * \param handle the handle to the narray
  * \param out_pdata pointer holder to get pointer of data
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayGetData(NArrayHandle handle,
+MXNET_DLL int MXNDArrayGetData(NDArrayHandle handle,
                               mx_float **out_pdata);
 /*!
- * \brief get the context of the NArray
+ * \brief get the context of the NDArray
  * \param handle the handle to the narray
  * \param out_dev_mask the output device mask
  * \param out_dev_id the output device id
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNArrayGetContext(NArrayHandle handle,
+MXNET_DLL int MXNDArrayGetContext(NDArrayHandle handle,
                                  int *out_dev_mask,
                                  int *out_dev_id);
 
 //--------------------------------
-// Part 2: functions on NArray
+// Part 2: functions on NDArray
 //--------------------------------
 /*!
  * \brief list all the available functions handles
@@ -215,9 +250,9 @@ MXNET_DLL int MXFuncGetInfo(FunctionHandle fun,
 /*!
  * \brief get the argument requirements of the function
  * \param fun input function handle
- * \param num_use_vars how many NArrays to be passed in as used_vars
+ * \param num_use_vars how many NDArrays to be passed in as used_vars
  * \param num_scalars scalar variable is needed
- * \param num_mutate_vars how many NArrays to be passed in as mutate_vars
+ * \param num_mutate_vars how many NDArrays to be passed in as mutate_vars
  * \param type_mask the type mask of this function
  * \return 0 when success, -1 when failure happens
  * \sa MXFuncInvoke
@@ -238,9 +273,9 @@ MXNET_DLL int MXFuncDescribe(FunctionHandle fun,
  * \sa MXFuncDescribeArgs
  */
 MXNET_DLL int MXFuncInvoke(FunctionHandle fun,
-                           NArrayHandle *use_vars,
+                           NDArrayHandle *use_vars,
                            mx_float *scalar_args,
-                           NArrayHandle *mutate_vars);
+                           NDArrayHandle *mutate_vars);
 
 //--------------------------------------------
 // Part 3: symbolic configuration generation
@@ -353,7 +388,7 @@ MXNET_DLL int MXSymbolListArguments(SymbolHandle symbol,
  * \param out_str_array pointer to hold the output string array
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSymbolListReturns(SymbolHandle symbol,
+MXNET_DLL int MXSymbolListOutputs(SymbolHandle symbol,
                                   mx_uint *out_size,
                                   const char ***out_str_array);
 /*!
@@ -451,25 +486,25 @@ MXNET_DLL int MXExecutorForward(ExecutorHandle handle, bool is_train);
  *
  * \param handle execute handle
  * \param len lenth
- * \param head_grads NArray handle for heads' gradient
+ * \param head_grads NDArray handle for heads' gradient
  *
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXExecutorBackward(ExecutorHandle handle,
                                  mx_uint len,
-                                 NArrayHandle *head_grads);
+                                 NDArrayHandle *head_grads);
 
 /*!
- * \brief Get executor's head NArray
+ * \brief Get executor's head NDArray
  *
  * \param handle executor handle
  * \param out_size output narray vector size
  * \param out out put narray handles
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXExecutorHeads(ExecutorHandle handle,
-                              mx_uint *out_size,
-                              NArrayHandle **out);
+MXNET_DLL int MXExecutorOutputs(ExecutorHandle handle,
+                                mx_uint *out_size,
+                                NDArrayHandle **out);
 
 /*!
  * \brief Generate Executor from symbol
@@ -490,11 +525,11 @@ MXNET_DLL int MXExecutorBind(SymbolHandle symbol_handle,
                              int dev_mask,
                              int dev_id,
                              mx_uint len,
-                             NArrayHandle *in_args,
-                             NArrayHandle *arg_grad_store,
+                             NDArrayHandle *in_args,
+                             NDArrayHandle *arg_grad_store,
                              mx_uint *grad_req_type,
                              mx_uint aux_states_len,
-                             NArrayHandle *aux_states,
+                             NDArrayHandle *aux_states,
                              ExecutorHandle *out);
 
 //--------------------------------------------
@@ -519,10 +554,10 @@ MXNET_DLL int MXListDataIters(mx_uint *out_size,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDataIterCreateIter(DataIterCreator handle,
-                               int num_param,
-                               const char **keys,
-                               const char **vals,
-                               DataIterHandle *out);
+                                   int num_param,
+                                   const char **keys,
+                                   const char **vals,
+                                   DataIterHandle *out);
 /*!
  * \brief Get the detailed information about data iterator.
  * \param creator the DataIterCreator.
@@ -535,106 +570,12 @@ MXNET_DLL int MXDataIterCreateIter(DataIterCreator handle,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDataIterGetIterInfo(AtomicSymbolCreator creator,
-                                          const char **name,
-                                          const char **description,
-                                          mx_uint *num_args,
-                                          const char ***arg_names,
-                                          const char ***arg_type_infos,
-                                          const char ***arg_descriptions);
-/*!
- * \brief Free the handle to the IO module
- * \param handle the handle pointer to the data iterator
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXDataIterFree(DataIterHandle handle);
-/*!
- * \brief get the name of iterator entry
- * \param iter iterator entry
- * \param out_name the name of the iterator
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXDataIterGetName(DataIterCreator iter,
-                            const char **out_name);
-/*!
- * \brief Init an iterator, init with parameters
- * the array size of passed in arguments
- * \param handle of the iterator creator
- * \param num_param number of parameter
- * \param keys parameter keys
- * \param vals parameter values
- * \param out resulting iterator
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXDataIterCreateIter(DataIterCreator handle,
-                               int num_param,
-                               const char **keys,
-                               const char **vals,
-                               DataIterHandle *out);
-/*!
- * \brief Get the detailed information about data iterator.
- * \param creator the DataIterCreator.
- * \param name The returned name of the creator.
- * \param description The returned description of the symbol.
- * \param num_args Number of arguments.
- * \param arg_names Name of the arguments.
- * \param arg_type_infos Type informations about the arguments.
- * \param arg_descriptions Description information about the arguments.
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXDataIterGetIterInfo(AtomicSymbolCreator creator,
-                                          const char **name,
-                                          const char **description,
-                                          mx_uint *num_args,
-                                          const char ***arg_names,
-                                          const char ***arg_type_infos,
-                                          const char ***arg_descriptions);
-/*!
- * \brief Free the handle to the IO module
- * \param handle the handle pointer to the data iterator
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXDataIterFree(DataIterHandle handle);
-/*!
- * \brief Get the name of iterator entry
- * \param iter iterator entry
- * \param out_name the name of the iterator
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXDataIterGetName(DataIterCreator iter,
-                            const char **out_name);
-/*!
- * \brief Init an iterator, init with parameters
- * the array size of passed in arguments
- * \param handle of the iterator creator
- * \param num_param number of parameter
- * \param keys parameter keys
- * \param vals parameter values
- * \param out resulting iterator
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXDataIterCreateIter(DataIterCreator handle,
-                               int num_param,
-                               const char **keys,
-                               const char **vals,
-                               DataIterHandle *out);
-/*!
- * \brief Get the detailed information about data iterator.
- * \param creator the DataIterCreator.
- * \param name The returned name of the creator.
- * \param description The returned description of the symbol.
- * \param num_args Number of arguments.
- * \param arg_names Name of the arguments.
- * \param arg_type_infos Type informations about the arguments.
- * \param arg_descriptions Description information about the arguments.
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXDataIterGetIterInfo(AtomicSymbolCreator creator,
-                                          const char **name,
-                                          const char **description,
-                                          mx_uint *num_args,
-                                          const char ***arg_names,
-                                          const char ***arg_type_infos,
-                                          const char ***arg_descriptions);
+                                    const char **name,
+                                    const char **description,
+                                    mx_uint *num_args,
+                                    const char ***arg_names,
+                                    const char ***arg_type_infos,
+                                    const char ***arg_descriptions);
 /*!
  * \brief Free the handle to the IO module
  * \param handle the handle pointer to the data iterator
@@ -648,7 +589,7 @@ MXNET_DLL int MXDataIterFree(DataIterHandle handle);
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDataIterNext(DataIterHandle handle,
-                       int *out);
+                             int *out);
 /*!
  * \brief Call iterator.Reset
  * \param handle the handle to iterator
@@ -657,20 +598,83 @@ MXNET_DLL int MXDataIterNext(DataIterHandle handle,
 MXNET_DLL int MXDataIterBeforeFirst(DataIterHandle handle);
 
 /*!
- * \brief Get the handle to the NArray of underlying data
+ * \brief Get the handle to the NDArray of underlying data
  * \param handle the handle pointer to the data iterator
- * \param out handle to underlying data NArray
+ * \param out handle to underlying data NDArray
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDataIterGetData(DataIterHandle handle,
-                          NArrayHandle *out);
+                                NDArrayHandle *out);
 /*!
- * \brief Get the handle to the NArray of underlying label
+ * \brief Get the handle to the NDArray of underlying label
  * \param handle the handle pointer to the data iterator
- * \param out the handle to underlying label NArray
+ * \param out the handle to underlying label NDArray
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
-                           NArrayHandle *out);
+                                 NDArrayHandle *out);
+//--------------------------------------------
+// Part 5: KVStore interface
+//--------------------------------------------
+/*!
+ * \brief start the kvstore
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreStart();
+/*!
+ * \brief stop the kvstore
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreStop();
+
+/*!
+ * \brief Init a list of (key,value) pairs in kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreInit(int num,
+                            int* keys,
+                            NDArrayHandle* vals);
+
+/*!
+ * \brief Push a list of (key,value) pairs to kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStorePush(int num,
+                            int* keys,
+                            NDArrayHandle* vals);
+
+
+/*!
+ * \brief pull a list of (key, value) pairs from the kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStorePull(int num,
+                            int* keys,
+                            NDArrayHandle* vals);
+
+/*!
+ * \brief user-defined updater for the kvstore
+ * It's this updater's responsibility to delete \a recv and \a local
+ * \param the key
+ * \param recv the pushed value on this key
+ * \param local the value stored on local on this key
+ */
+typedef void (MXKVStoreUpdater)(int key, NDArrayHandle recv, NDArrayHandle local);
+
+/*!
+ * \brief register an push updater
+ * \param updater udpater function
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreSetUpdater(MXKVStoreUpdater updater);
 
 #endif  // MXNET_C_API_H_

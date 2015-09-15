@@ -12,12 +12,7 @@ ifndef DMLC_CORE
 	DMLC_CORE = dmlc-core
 endif
 
-
-ifneq ($(USE_OPENMP_ITER), 1)
-	export NO_OPENMP = 1
-endif
-
-ifneq ($(USE_OPENMP_ITER), 1)
+ifneq ($(USE_OPENMP), 1)
 	export NO_OPENMP = 1
 endif
 
@@ -54,20 +49,17 @@ else
 	CFLAGS+= -DMXNET_USE_OPENCV=0
 endif
 
-# setup opencv
-ifeq ($(USE_OPENCV_DECODER),1)
-	CFLAGS+= -DMXNET_USE_OPENCV_DECODER=1
-else
-	CFLAGS+= -DMXNET_USE_OPENCV_DECODER=0
-endif
-
-ifeq ($(USE_OPENMP_ITER), 1)
+ifeq ($(USE_OPENMP), 1)
 	CFLAGS += -fopenmp
 endif
 
 ifeq ($(USE_CUDNN), 1)
-	CFLAGS += -DCXXNET_USE_CUDNN=1
+	CFLAGS += -DMSHADOW_USE_CUDNN=1
 	LDFLAGS += -lcudnn
+endif
+
+ifeq ($(USE_THREADED_ENGINE), 1)
+	CFLAGS += -DMXNET_USE_THREADED_ENGINE
 endif
 
 ifneq ($(ADD_CFLAGS), NONE)
@@ -78,84 +70,43 @@ ifneq ($(ADD_LDFLAGS), NONE)
 	LDFLAGS += $(ADD_LDFLAGS)
 endif
 
-#ENGINE=simple_engine.o dag_engine.o
-ENGINE=naive_engine.o
-BIN = tests/test_simple_engine
-OBJ = narray_function_cpu.o
-OBJCXX11 = narray.o c_api.o operator.o symbol.o storage.o static_graph.o graph_executor.o io.o iter_mnist.o iter_image_recordio.o $(ENGINE)
-CUOBJ = narray_function_gpu.o
-SLIB = lib/libmxnet.so
-ALIB = lib/libmxnet.a
-LIB_DEP = $(DMLC_CORE)/libdmlc.a
-ALL_DEP = $(OBJ) $(OBJCXX11) $(LIB_DEP)
-# common headers, change them will results in rebuild of all files
-COMMON_HEADERS=include/mxnet/*.h src/common/*.h
-
 .PHONY: clean all test lint doc
 
-all: $(ALIB) $(SLIB) $(BIN)
+all: lib/libmxnet.a lib/libmxnet.so $(BIN)
+
+SRC = $(wildcard src/*.cc src/*/*.cc)
+OBJ = $(patsubst src/%.cc, build/%.o, $(SRC))
+CUSRC = $(wildcard src/*/*.cu)
+CUOBJ = $(patsubst src/%.cu, build/%_gpu.o, $(CUSRC))
+
+LIB_DEP = $(DMLC_CORE)/libdmlc.a
+ALL_DEP = $(OBJ) $(LIB_DEP)
+ifeq ($(USE_CUDA), 1)
+	ALL_DEP += $(CUOBJ)
+endif
+
+build/%.o: src/%.cc
+	@mkdir -p $(@D)
+	$(CXX) -std=c++0x $(CFLAGS) -MM -MT build/$*.o $< >build/$*.d
+	$(CXX) -std=c++0x -c $(CFLAGS) -c $< -o $@
+
+build/%_gpu.o: src/%.cu
+	@mkdir -p $(@D)
+	$(CXX) $(CFLAGS) -MM -MT build/$*_gpu.o $< >build/$*_gpu.d
+	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $<
+
+lib/libmxnet.a: $(ALL_DEP)
+	ar crv $@ $(filter %.o, $?)
+
+lib/libmxnet.so: $(ALL_DEP)
+	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
 
 $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
-storage.o: src/storage/storage.cc
-naive_engine.o:  src/dag_engine/naive_engine.cc
-dag_engine.o: src/dag_engine/dag_engine.cc
-simple_engine.o: src/dag_engine/simple_engine.cc
-narray.o: src/narray/narray.cc
-narray_function_cpu.o: src/narray/narray_function.cc src/narray/narray_function-inl.h
-narray_function_gpu.o: src/narray/narray_function.cu src/narray/narray_function-inl.h
-symbol.o: src/symbol/symbol.cc src/symbol/*.h
-graph_executor.o: src/symbol/graph_executor.cc src/symbol/*.h
-static_graph.o : src/symbol/static_graph.cc src/symbol/*.h
-operator.o: src/operator/operator.cc
-c_api.o: src/c_api.cc
-io.o: src/io/io.cc
-iter_mnist.o: src/io/iter_mnist.cc src/io/*.h
-iter_image_recordio.o: src/io/iter_image_recordio.cc src/io/*.h
+include tests/cpp/unittest.mk
 
-# Rules for operators
-OPERATOR_HDR=$(wildcard src/operator/*-inl.h)
-OPERATOR_OBJ=$(patsubst %-inl.h, %_cpu.o, $(OPERATOR_HDR))
-OPERATOR_CUOBJ=$(patsubst %-inl.h, %_gpu.o, $(OPERATOR_HDR))
-
-ALL_DEP += $(OPERATOR_OBJ)
-ifeq ($(USE_CUDA), 1)
-	ALL_DEP += $(OPERATOR_CUOBJ) $(CUOBJ)
-endif
-
-src/operator/%_cpu.o : src/operator/%.cc src/operator/%-inl.h src/operator/mshadow_op.h src/operator/operator_common.h $(COMMON_HEADERS)
-	$(CXX) -std=c++0x -c $(CFLAGS) -o $@  $(filter %.cpp %.c %.cc, $^)
-
-src/operator/%_gpu.o : src/operator/%.cu src/operator/%-inl.h src/operator/operator_common.h src/operator/mshadow_op.h $(COMMON_HEADERS)
-	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $(filter %.cu, $^)
-
-lib/libmxnet.a:  $(ALL_DEP)
-lib/libmxnet.so: $(ALL_DEP)
-
-tests/test_storage: tests/test_storage.cc lib/libmxnet.a
-tests/test_simple_engine: tests/test_simple_engine.cc lib/libmxnet.a
-
-$(BIN) :
-	$(CXX) $(CFLAGS) -std=c++0x -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
-
-$(OBJ) : $(COMMON_HEADERS)
-	$(CXX) -c $(CFLAGS) -o $@ $(filter %.cpp %.c %.cc, $^)
-
-$(OBJCXX11) : $(COMMON_HEADERS)
-	$(CXX) -std=c++0x -c $(CFLAGS) -o $@  $(filter %.cpp %.c %.cc, $^)
-
-$(SLIB) :
-	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
-
-$(ALIB): $(OBJ) $(OBJCXX11)
-	ar cr $@ $+
-
-$(CUOBJ) :$(COMMON_HEADERS)
-	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $(filter %.cu, $^)
-
-$(CUBIN) :
-	$(NVCC) -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" -Xlinker "$(LDFLAGS)" $(filter %.cu %.cpp %.o, $^)
+test: tests/cpp/unittest
 
 lint:
 	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python
@@ -164,5 +115,8 @@ doxygen:
 	doxygen doc/Doxyfile
 
 clean:
-	$(RM) $(ALL_DEP) $(SLIB) $(ALIB) *~ */*~ */*/*~ */*/*/*~
+	$(RM) -r build lib/lib* *~ */*~ */*/*~ */*/*/*~
 	cd $(DMLC_CORE); make clean; cd -
+
+-include build/*.d
+-include build/*/*.d
