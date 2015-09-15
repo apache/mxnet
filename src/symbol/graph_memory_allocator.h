@@ -10,6 +10,7 @@
 #include <mxnet/ndarray.h>
 #include <map>
 #include <vector>
+#include <algorithm>
 
 namespace mxnet {
 /*!
@@ -47,8 +48,11 @@ class GraphStorageAllocator {
    * \param node_id the node id in the graph that is releasing the memory.
    */
   void Release(StorageID id, uint32_t node_id);
-  /*! \brief Initialize all the memories requested */
-  void InitStorages();
+  /*!
+   * \brief Initialize all the memories requested
+   * \return size of memory allocated.
+   */
+  size_t InitStorages();
   /*!
    * \brief Get the the memory allocated in planning phase.
    * \param id the storage id allocated in planning phase.
@@ -81,6 +85,8 @@ class GraphStorageAllocator {
   StaticGraph *graph_;
   /*! \brief all the resources available */
   std::vector<std::unique_ptr<StorageEntry> > data_;
+  /*! \brief scale used for rough match */
+  size_t match_range_;
   /*!
    * \brief free list of storage entries, maps size to free list
    */
@@ -89,7 +95,9 @@ class GraphStorageAllocator {
 
 // put implementation in header files for now
 GraphStorageAllocator::GraphStorageAllocator(StaticGraph *graph)
-    : graph_(graph) {}
+    : graph_(graph) {
+  match_range_ = dmlc::GetEnv("MXNET_EXEC_MATCH_RANGE", 16);
+}
 
 GraphStorageAllocator::StorageID
 GraphStorageAllocator::Alloc(Context ctx, size_t size) {
@@ -104,16 +112,31 @@ GraphStorageAllocator::Alloc(Context ctx, size_t size) {
 
 GraphStorageAllocator::StorageID
 GraphStorageAllocator::Request(Context ctx, TShape shape, uint32_t node_id) {
+  // search memory block in [size / match_range_, size * match_range_)
   size_t size = shape.Size();
-  auto begin = free_.lower_bound(size);
-  auto end = free_.upper_bound(size);
-  // vector of possible candidates
-  for (auto it = begin; it != end; ++it) {
+  auto begin = free_.lower_bound(size / match_range_);
+  auto mid = free_.lower_bound(size);
+  auto end = free_.upper_bound(size * match_range_);
+  // TODO(bing, min) consider better strategy
+  // search for memory blocks larger than requested
+  for (auto it = mid; it != end; ++it) {
     StorageEntry *e = it->second;
     if (e->ctx != ctx) continue;
+    LOG(INFO) << "match bigger, req=" << size << ", now=" << e->max_size;
     // Use exect matching strategy
-    // TODO(bing): think of other strategies, for example, rough match.
-    if (e->max_size != size) continue;
+    e->max_size = std::max(size, e->max_size);
+    // find a exact match, erase from map and return
+    free_.erase(it);
+    return e->id;
+  }
+  // then search for memory blocks smaller than requested space
+  for (auto it = mid; it != begin;) {
+    --it;
+    StorageEntry *e = it->second;
+    if (e->ctx != ctx) continue;
+    LOG(INFO) << "match smaller, req=" << size << ", now=" << e->max_size;
+    // Use exect matching strategy
+    e->max_size = std::max(size, e->max_size);
     // find a exact match, erase from map and return
     free_.erase(it);
     return e->id;
@@ -128,12 +151,15 @@ void GraphStorageAllocator::Release(StorageID id, uint32_t node_id) {
   free_.insert({e->max_size, e});
 }
 
-void GraphStorageAllocator::InitStorages() {
+size_t GraphStorageAllocator::InitStorages() {
+  size_t total = 0;
   for (size_t i = 0; i < data_.size(); ++i) {
     StorageEntry *e = data_[i].get();
     TShape shape = mshadow::Shape1(e->max_size);
     e->data = NDArray(shape, e->ctx);
+    total += e->max_size;
   }
+  return total;
 }
 
 NDArray GraphStorageAllocator::Get(StorageID id, TShape shape) {

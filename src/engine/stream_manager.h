@@ -5,11 +5,10 @@
 #define MXNET_ENGINE_STREAM_MANAGER_H_
 
 #include <dmlc/base.h>
+#include <mxnet/base.h>
 #include <cstddef>
 #include <array>
 #include <mutex>
-#include "mxnet/base.h"
-#include "mxnet/context.h"
 #include "../common/cuda_utils.h"
 
 namespace mxnet {

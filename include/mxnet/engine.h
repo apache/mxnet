@@ -12,7 +12,6 @@
 #endif
 #include <vector>
 #include "./base.h"
-#include "./context.h"
 
 namespace mxnet {
 /*! \brief namespace of engine internal types. */
@@ -28,7 +27,6 @@ typedef Opr* OprHandle;
 }  // namespace engine
 
 #if DMLC_USE_CXX11
-
 /*! \brief Function property, used to hint what action is pushed to engine. */
 enum class FnProperty {
   /*! \brief Normal operation */

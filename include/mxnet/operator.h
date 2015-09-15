@@ -14,7 +14,7 @@
 #include <string>
 #include <utility>
 #include "./base.h"
-#include "./context.h"
+#include "./resource.h"
 
 namespace mxnet {
 /*! \brief operation request type to Forward and Backward */
