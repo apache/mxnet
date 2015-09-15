@@ -61,7 +61,7 @@ def init(key, value):
 
     Examples
     --------
-    # init a single key-value pair
+    >>> # init a single key-value pair
     >>> shape = (2,3)
     >>> mx.kv.init(3, mx.nd.ones(shape)*2)
     >>> a = mx.nd.zeros(shape)
@@ -70,7 +70,7 @@ def init(key, value):
     [[ 2.  2.  2.]
      [ 2.  2.  2.]]
 
-    # init a list of key-value pairs
+    >>> # init a list of key-value pairs
     >>> keys = [5, 7, 9]
     >>> mx.kv.init(keys, [mx.nd.ones(shape)]*len(keys))
     """
@@ -89,14 +89,14 @@ def push(key, value):
 
     Examples
     --------
-    # push a single key-value pair
+    >>> # push a single key-value pair
     >>> mx.kv.push(3, mx.nd.ones(shape)*8)
     >>> mx.kv.pull(3, out = a) # pull out the value
     >>> print a.asnumpy()
     [[ 8.  8.  8.]
      [ 8.  8.  8.]]
 
-    # aggregate the value and the push
+    >>> # aggregate the value and the push
     >>> gpus = [mx.gpu(i) for i in range(4)]
     >>> b = [mx.nd.ones(shape, gpu) for gpu in gpus]
     >>> mx.kv.push(3, b)
@@ -105,16 +105,16 @@ def push(key, value):
     [[ 4.  4.  4.]
      [ 4.  4.  4.]]
 
-    # push a list of keys.
-    # single device
+    >>> # push a list of keys.
+    >>> # single device
     >>> mx.kv.push(keys, [mx.nd.ones(shape)]*len(keys))
     >>> b = [mx.nd.zeros(shape)]*len(keys)
     >>> mx.kv.pull(keys, out = b)
     >>> print b[1].asnumpy()
     [[ 1.  1.  1.]
      [ 1.  1.  1.]]
-    # multiple devices:
 
+    >>> # multiple devices:
     >>> b = [[mx.nd.ones(shape, gpu) for gpu in gpus]] * len(keys)
     >>> mx.kv.push(keys, b)
     >>> mx.kv.pull(keys, out = b)
@@ -137,29 +137,29 @@ def pull(key, out=None):
 
     Examples
     --------
-    # pull a single key-value pair
+    >>> # pull a single key-value pair
     >>> a = mx.nd.zeros(shape)
     >>> mx.kv.pull(3, out = a)
     >>> print a.asnumpy()
     [[ 2.  2.  2.]
      [ 2.  2.  2.]]
 
-    # pull into multiple devices
+    >>> # pull into multiple devices
     >>> b = [mx.nd.ones(shape, gpu) for gpu in gpus]
     >>> mx.kv.pull(3, out = b)
     >>> print b[1].asnumpy()
     [[ 2.  2.  2.]
      [ 2.  2.  2.]]
 
-    # pull a list of key-value pairs.
-    # On single device
+    >>> # pull a list of key-value pairs.
+    >>> # On single device
     >>> keys = [5, 7, 9]
     >>> b = [mx.nd.zeros(shape)]*len(keys)
     >>> mx.kv.pull(keys, out = b)
     >>> print b[1].asnumpy()
     [[ 2.  2.  2.]
      [ 2.  2.  2.]]
-    # On multiple devices
+    >>> # On multiple devices
     >>> b = [[mx.nd.ones(shape, gpu) for gpu in gpus]] * len(keys)
     >>> mx.kv.pull(keys, out = b)
     >>> print b[1][1].asnumpy()

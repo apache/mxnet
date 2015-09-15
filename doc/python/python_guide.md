@@ -8,7 +8,7 @@ applications. There are mainly three concepts:
   offers matrix and tensor computations on both CPU and GPU, with automatic
   parallelization
 
-* [Symbol](#symbolic-and-automatic-differentiation) makes defining a neural
+* [Symbol](#symbol-and-automatic-differentiation) makes defining a neural
   network extremely easy, and provides automatic differentiation.
 
 * [KVStore](#distributed-key-value-store) easy the data synchronization between
@@ -218,145 +218,124 @@ want to write highly parallelized codes, we only need to postpone when we need
 the results.
 
 
-## Symbolic and Automatic Differentiation
+## Symbol and Automatic Differentiation
 
-Now you have seen the power of NArray of MXNet. It seems to be interesting and
-we are ready to build some real deep learning.  Hmm, this seems to be really
-exciting, but wait, do we need to build things from scratch?  It seems that we
-need to re-implement all the layers in deep learning toolkits such as
-[CXXNet](https://github.com/dmlc/cxxnet) in NArray?  Well, you do not have
-to. There is a Symbolic API in MXNet that readily helps you to do all these.
+NDArray is the basic computation unit in MXNet. Besides, MXNet provides a
+symbolic interface, named Symbol, to simplify constructing neural networks. The
+symbol combines both flexibility and efficiency. On one hand, it is similar to
+the network configuration in [Caffe](http://caffe.berkeleyvision.org/) and
+[CXXNet](https://github.com/dmlc/cxxnet), on the other hand, the symbol defines
+the computation graph in [Theano](http://deeplearning.net/software/theano/).
 
-More importantly, the Symbolic API is designed to bring in the advantage of C++
-static layers(operators) to ***maximumly optimizes the performance and memory***
-that is even better than CXXNet. Sounds exciting? Let us get started on this.
+### Basic Composition of Symbols
 
-### Creating Symbols
-
-A common way to create a neural network is to create it via some way of
-configuration file or API.  The following code creates a configuration two layer
-perceptrons.
+The following codes create a two layer perceptrons network:
 
 ```python
-import mxnet.symbol as sym
-data = sym.Variable('data')
-net = sym.FullyConnected(data=data, name='fc1', num_hidden=128)
-net = sym.Activation(data=net, name='relu1', act_type="relu")
-net = sym.FullyConnected(data=net, name='fc2', num_hidden=10)
-net = sym.Softmax(data=net, name = 'sm')
+>>> import mxnet as mx
+>>> net = mx.symbol.Variable('data')
+>>> net = mx.symbol.FullyConnected(data=net, name='fc1', num_hidden=128)
+>>> net = mx.symbol.Activation(data=net, name='relu1', act_type="relu")
+>>> net = mx.symbol.FullyConnected(data=net, name='fc2', num_hidden=64)
+>>> net = mx.symbol.Softmax(data=net, name='out')
+>>> type(net)
+<class 'mxnet.symbol.Symbol'>
 ```
 
-If you are familiar with tools such as cxxnet or caffe, the ```Symbol``` object
-is like configuration files that configures the network structure. If you are
-more familiar with tools like theano, the ```Symbol``` object something that
-defines the computation graph. Basically, it creates a computation graph that
-defines the forward pass of neural network.
+Each symbol takes a (unique) string name. *Variable* often defines the inputs,
+or free variables. Other symbols take a symbol as the input (*data*),
+and may accept other hyper-parameters such as the number of hidden neurons (*num_hidden*)
+or the activation type (*act_type*).
 
-The Configuration API allows you to define the computation graph via
-compositions.  If you have not used symbolic configuration tools like theano
-before, one thing to note is that the ```net``` can also be viewed as function
-that have input arguments.
-
-You can get the list of arguments by calling ```Symbol.list_arguments```.
+The symbol can be simply viewed as a function taking several arguments, whose
+names are automatically generated and can be get by
 
 ```python
 >>> net.list_arguments()
-['data', 'fc1_weight', 'fc1_bias', 'fc2_weight', 'fc2_bias']
+['data', 'fc1_weight', 'fc1_bias', 'fc2_weight', 'fc2_bias', 'out_label']
 ```
 
-In our example, you can find that the arguments contains the parameters in each
-layer, as well as input data.  One thing that worth noticing is that the
-argument names like ```fc1_weight``` are automatically generated because it was
-not specified in creation of fc1.  You can also specify it explicitly, like the
-following code.
+As can be seen, these arguments are the parameters need by each symbol:
+
+- *data* : input data needed by the variable *data*
+- *fc1_weight* and *fc1_bias* : the weight and bias for the first fully connected layer *fc1*
+- *fc2_weight* and *fc2_bias* : the weight and bias for the second fully connected layer *fc2*
+- *out_label* : the label needed by the loss
+
+We can also specify the automatic generated names explicitly:
 
 ```python
->>> import mxnet.symbol as sym
->>> data = sym.Variable('data')
->>> w = sym.Variable('myweight')
->>> net = sym.FullyConnected(data=data, weight=w,
-                             name='fc1', num_hidden=128)
+>>> net = mx.symbol.Variable('data')
+>>> w = mx.symbol.Variable('myweight')
+>>> net = sym.FullyConnected(data=data, weight=w, name='fc1', num_hidden=128)
 >>> net.list_arguments()
 ['data', 'myweight', 'fc1_bias']
 ```
 
-Besides the coarse grained neuralnet operators such as FullyConnected,
-Convolution.  MXNet also provides fine graned operations such as elementwise
-add, multiplications.  The following example first performs an elementwise add
-between two symbols, then feed them to the FullyConnected operator.
+### More Complicated Composition
+
+MXNet provides well-optimized symbols (see
+[src/operator](https://github.com/dmlc/mxnet/tree/master/src/operator)) for
+commonly used layers in deep learning. We can also easily define new operators
+in python.  The following example first performs an elementwise add between two
+symbols, then feed them to the fully connected operator.
 
 ```python
->>> import mxnet.symbol as sym
->>> lhs = sym.Variable('data1')
->>> rhs = sym.Variable('data2')
->>> net = sym.FullyConnected(data=lhs + rhs,
-                             name='fc1', num_hidden=128)
+>>> lhs = mx.symbol.Variable('data1')
+>>> rhs = mx.symbol.Variable('data2')
+>>> net = mx.symbol.FullyConnected(data=lhs + rhs, name='fc1', num_hidden=128)
 >>> net.list_arguments()
 ['data1', 'data2', 'fc1_weight', 'fc1_bias']
 ```
 
-### More Complicated Composition
-
-In the previous example, Symbols are constructed in a forward compositional way.
-Besides doing things in a forward compistion way. You can also treat composed
-symbols as functions, and apply them to existing symbols.
+We can also construct symbol in a more flexible way rather than the single
+forward composition we addressed before.
 
 ```python
->>> import mxnet.symbol as sym
->>> data = sym.Variable('data')
->>> net = sym.FullyConnected(data=data,
-                             name='fc1', num_hidden=128)
->>> net.list_arguments()
-['data', 'fc1_weight', 'fc1_bias']
->>> data2 = sym.Variable('data2')
->>> in_net = sym.FullyConnected(data=data,
-                                name='in', num_hidden=128)
->>> composed_net = net(data=in_net, name='compose')
+>>> net = mx.symbol.Variable('data')
+>>> net = mx.symbol.FullyConnected(data=net, name='fc1', num_hidden=128)
+>>> net2 = mx.symbol.Variable('data2')
+>>> net2 = mx.symbol.FullyConnected(data=net2, name='net2', num_hidden=128)
+>>> composed_net = net(data=net2, name='compose')
 >>> composed_net.list_arguments()
-['data2', 'in_weight', 'in_bias', 'compose_fc1_weight', 'compose_fc1_bias']
+['data2', 'net2_weight', 'net2_bias', 'compose_fc1_weight', 'compose_fc1_bias']
 ```
 
-In the above example, net is used a function to apply to an existing symbol
-```in_net```, the resulting composed_net will replace the original ```data``` by
-the the in_net instead. This is useful when you want to change the input of some
-neural-net to be other structure.
+In the above example, *net* is used a function to apply to an existing symbol
+*net*, the resulting *composed_net* will replace the original argument *data* by
+*net2* instead.
 
-### Shape Inference
+### Argument Shapes Inference
 
-Now we have defined the computation graph. A common problem in the computation
-graph, is to figure out shapes of each parameters.  Usually, we want to know the
-shape of all the weights, bias and outputs.
-
-You can use ```Symbol.infer_shape``` to do that. THe shape inference function
-allows you to pass in shapes of arguments that you know,
-and it will try to infer the shapes of all arguments and outputs.
+Now we have known how to define the symbol. Next we can inference the shapes of
+all the arguments it needed by given the input data shape.
 
 ```python
->>> import mxnet.symbol as sym
->>> data = sym.Variable('data')
->>> net = sym.FullyConnected(data=data, name='fc1',
-                             num_hidden=10)
->>> arg_shape, out_shape = net.infer_shape(data=(100, 100))
+>>> net = mx.symbol.Variable('data')
+>>> net = mx.symbol.FullyConnected(data=ent, name='fc1', num_hidden=10)
+>>> arg_shape, out_shape, aux_shape = net.infer_shape(data=(100, 100))
 >>> dict(zip(net.list_arguments(), arg_shape))
 {'data': (100, 100), 'fc1_weight': (10, 100), 'fc1_bias': (10,)}
 >>> out_shape
 [(100, 10)]
 ```
 
-In common practice, you only need to provide the shape of input data, and it
-will automatically infers the shape of all the parameters.  You can always also
-provide more shape information, such as shape of weights.  The ```infer_shape```
-will detect if there is inconsitency in the shapes, and raise an Error if some
-of them are inconsistent.
+The shape inference can be used as an earlier debugging mechanism to detect
+shape inconsistency.
 
-### Bind the Symbols
+### Bind the Symbols and Run
 
-Symbols are configuration objects that represents a computation graph (a
-configuration of neuralnet).  So far we have introduced how to build up the
-computation graph (i.e. a configuration).  The remaining question is, how we can
-do computation using the defined graph.
+Now we can bind the free variables of the symbol and perform forward and
+backward.
 
-TODO.
+```python
+>>> in_shape = (128, 3, 100, 100) # minibatch_size, #channel, image_width, image_height
+>>> executor = net.simple_bind(mx.gpu(), data = mx.nd.empty(in_shape, mx.gpu())
+>>> # feed data and label..
+>>> executor.forward()
+>>> executor.backward()
+>>> print executor.outputs[0].asnumpy()
+```
 
 ### How Efficient is Symbolic API
 
@@ -371,12 +350,12 @@ utilization.
 The coarse grained operators are equivalent to cxxnet layers, which are
 extremely efficient.  We also provide fine grained operators for more flexible
 composition. Because we are also doing more inplace memory allocation, mxnet can
-be ***more memory efficient*** than cxxnet, and gets to same runtime, with
+be ***more memory efficient*** than cxxnet/caffe, and gets to same runtime, with
 greater flexiblity.
 
 ## Distributed Key-value Store
 
-`KVStore` is a place for data sharing. We can think it as a single object shared
+KVStore is a place for data sharing. We can think it as a single object shared
 across different devices (GPUs and machines), where each device can push data in
 and pull data out.
 
@@ -409,7 +388,7 @@ For any key has been initialized, we can push a new value with the same shape to
 ```
 
 The data for pushing can be on any device. Furthermore, we can push multiple
-values into the same key, where `kvstore` will first sum all these
+values into the same key, where KVStore will first sum all these
 values and then push the aggregated value.
 
 ```python
@@ -422,7 +401,7 @@ values and then push the aggregated value.
  [ 4.  4.  4.]]
 ```
 
-For each push, `kvstore` applies the pushed value into the value stored by a
+For each push, KVStore applies the pushed value into the value stored by a
 `updater`. The default updater is `ASSGIN`, we can replace the default one to
 control how data is merged.
 
@@ -458,7 +437,7 @@ pull the value into several devices by a single call.
 
 ### Handle a list of key-value pairs
 
-All operations introduced so far are about a single key. `KVStore` also provides
+All operations introduced so far are about a single key. KVStore also provides
 the interface for a list of key-value pairs. For single device:
 
 ```python
@@ -493,16 +472,17 @@ update on key: 9
 
 Base on parameter server. The `updater` will runs on the server nodes. MORE...
 
-## How to Choose between APIs
 
-You can mix them all as much as you like. Here are some guidelines
-* Use Symbolic API and coarse grained operator to create established structure.
-* Use fine-grained operator to extend parts of of more flexible symbolic graph.
-* Do some dynamic NArray tricks, which are even more flexible, between the calls of forward and backward of executors.
+<!-- ## How to Choose between APIs -->
 
-We believe that different ways offers you different levels of flexibilty and
-efficiency. Normally you do not need to be flexible in all parts of the
-networks, so we allow you to use the fast optimized parts, and compose it
-flexibly with fine-grained operator or dynamic NArray. We believe such kind of
-mixture allows you to build the deep learning architecture both efficiently and
-flexibly as your choice. To mix is to maximize the peformance and flexiblity.
+<!-- You can mix them all as much as you like. Here are some guidelines -->
+<!-- * Use Symbolic API and coarse grained operator to create established structure. -->
+<!-- * Use fine-grained operator to extend parts of of more flexible symbolic graph. -->
+<!-- * Do some dynamic NArray tricks, which are even more flexible, between the calls of forward and backward of executors. -->
+
+<!-- We believe that different ways offers you different levels of flexibilty and -->
+<!-- efficiency. Normally you do not need to be flexible in all parts of the -->
+<!-- networks, so we allow you to use the fast optimized parts, and compose it -->
+<!-- flexibly with fine-grained operator or dynamic NArray. We believe such kind of -->
+<!-- mixture allows you to build the deep learning architecture both efficiently and -->
+<!-- flexibly as your choice. To mix is to maximize the peformance and flexiblity. -->
