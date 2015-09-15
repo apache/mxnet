@@ -3,14 +3,14 @@ import mxnet as mx
 import numpy as np
 import os, gzip
 import sys
-sys.path.append("../../tests/python")
+sys.path.append("../../tests/python/common")
 import get_data
 import time
 
 # use multiple devices
 num_devs = 4
-devs = [mx.Context('gpu', i) for i in range(num_devs)]
-mx.kvstore.start()
+devs = [mx.Context('cpu', i) for i in range(num_devs)]
+mx.kv.start()
 
 # symbol net
 data = mx.symbol.Variable('data')
@@ -26,7 +26,7 @@ lr = .1
 def updater(key, grad, weight):
     weight -= lr * grad / batch_size
 
-mx.kvstore.set_updater(updater)
+mx.kv.set_updater(updater)
 
 # find the params needed to be synchronized between devices
 param_names = mlp.list_arguments()
@@ -39,14 +39,14 @@ batch_size -= (batch_size % num_devs)
 input_shape = (batch_size / num_devs, 784)
 param_shapes, out_shapes, aux_shapes  = mlp.infer_shape(data=input_shape)
 
-# init param in the kvstore
+# init param in the kv
 np.random.seed(0)
 for idx in sync_indices:
     shape = param_shapes[idx]
     val = mx.nd.zeros(shape)
     if "weight" in param_names[idx]:
         val[:] = np.random.uniform(-0.07, 0.07, shape)
-    mx.kvstore.init(idx, val)
+    mx.kv.init(idx, val)
 
 # allocate device's memory
 params = [[mx.nd.zeros(s, d) for s in param_shapes] for d in devs]
@@ -86,7 +86,7 @@ def run_sgd():
         for data, label in train_dataiter:
             # pull weight
             for idx in sync_indices:
-                mx.kvstore.pull(idx, out = [p[idx] for p in params])
+                mx.kv.pull(idx, out = [p[idx] for p in params])
 
             # forward and backward
             data = data.asnumpy()
@@ -100,7 +100,7 @@ def run_sgd():
                 executors[d].backward()
             # push gradient
             for idx in sync_indices:
-                mx.kvstore.push(idx, [g[idx] for g in grads])
+                mx.kv.push(idx, [g[idx] for g in grads])
 
             # eval
             for d in range(num_devs):

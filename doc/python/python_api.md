@@ -14,10 +14,17 @@
     :members:
 ```
 
-
 ## Executor API
+
 ```eval_rst
 .. automodule:: mxnet.executor
+    :members:
+```
+
+## KVStore API
+
+```eval_rst
+.. automodule:: mxnet.kvstore
     :members:
 ```
 

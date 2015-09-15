@@ -10,7 +10,7 @@ import time
 # use multiple devices
 num_devs = 4
 devs = [mx.gpu(i) for i in range(num_devs)]
-mx.kvstore.start()
+mx.kv.start()
 
 # define the network
 conv_cnt = 1
@@ -113,7 +113,7 @@ def momentum(learning_rate=.01, weight_decay=0.0001, momentum=0.9):
 
 updater = momentum(
     learning_rate = .05, weight_decay = .0001, momentum = 0.9)
-mx.kvstore.set_updater(updater)
+mx.kv.set_updater(updater)
 
 # infer shape
 batch_size = 196
@@ -142,7 +142,7 @@ for idx in sync_indices:
         val[:] = np.random.uniform(-0.1, 0.1, shape)
     elif "gamma" in param_names[idx]:
         val[:] = 1.0
-    mx.kvstore.init(idx, val)
+    mx.kv.init(idx, val)
 
 # data reader
 get_data.GetCifar10()
@@ -203,7 +203,7 @@ def train():
         for data, label in train_dataiter:
             tic = time.time()
             # pull weight
-            mx.kvstore.pull(sync_indices, out = sync_weights)
+            mx.kv.pull(sync_indices, out = sync_weights)
 
             # forward and backword
             data = data.asnumpy()
@@ -221,7 +221,7 @@ def train():
                     g /= batch_size
 
             # push gradient
-            mx.kvstore.push(sync_indices, sync_grads)
+            mx.kv.push(sync_indices, sync_grads)
 
             # evaluate
             for d in range(num_devs):
