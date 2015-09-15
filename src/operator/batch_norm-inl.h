@@ -22,6 +22,7 @@ namespace op {
 enum BatchNormOpInputs {kData, kGamma, kBeta};
 enum BatchNormOpOutputs {kOut, kOutNoAffine, kMean, kVar};
 enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};
+enum BatchNormBackResource {kTempSpace};
 
 struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   float eps;
@@ -37,7 +38,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
 template<typename xpu>
 class BatchNormOp : public Operator {
  public:
-  explicit BatchNormOp(BatchNormParam param) : is_init(false) {
+  explicit BatchNormOp(BatchNormParam param) {
     this->param_ = param;
   }
 
@@ -138,16 +139,19 @@ class BatchNormOp : public Operator {
       out = out_data[kOut].get<xpu, 4, real_t>(s);
       out_no_affine = out_data[kOutNoAffine].get<xpu, 4, real_t>(s);
     }
-    this->Init(ctx, out.shape_);
+
     Tensor<xpu, 1> mean = out_data[kMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> var = out_data[kVar].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> slope = in_data[kGamma].get<xpu, 1, real_t>(s);
     // Tensor<xpu, 1> bias = in_data[kBeta].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> gslope = in_grad[kGamma].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> gbias = in_grad[kBeta].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1> gmean = tmp_[0];
-    Tensor<xpu, 1> gvar = tmp_[1];
-    Tensor<xpu, 1> tmp = tmp_[2];
+    // get requested temp space
+    Tensor<xpu, 2> workspace = ctx.requested[kTempSpace].get_space<xpu>(
+        mshadow::Shape2(3, out.shape_[1]), s);
+    Tensor<xpu, 1> gmean = workspace[0];
+    Tensor<xpu, 1> gvar = workspace[1];
+    Tensor<xpu, 1> tmp = workspace[2];
     // cal
     gvar = sumall_except_dim<1>((grad * broadcast<1>(slope, data.shape_)) *
                                 (data - broadcast<1>(mean, data.shape_)) *
@@ -170,18 +174,7 @@ class BatchNormOp : public Operator {
   }
 
  private:
-  // TODO(bing): use global memory allocator
-  inline void Init(const OpContext &ctx,
-                   const mshadow::Shape<4> &dshape) {
-    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    tmp_.set_stream(s);
-    if (is_init) return;
-    is_init = true;
-    tmp_.Resize(mshadow::Shape2(3, dshape[1]));
-  }
-  mshadow::TensorContainer<xpu, 2> tmp_;
   BatchNormParam param_;
-  bool is_init;
 };  // class BatchNormOp
 
 template<typename xpu>
@@ -241,6 +234,13 @@ class BatchNormProp : public OperatorProperty {
     const std::vector<int> &out_data,
     const std::vector<void*> &in_grad) const override {
     return {{out_grad[kOut], in_grad[kData]}};
+  }
+
+  std::vector<ResourceRequest> BackwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    const TShape &dshape = in_shape[0];
+    size_t nspace = dshape[1] * 3;
+    return {{ResourceRequest::kTempSpace, nspace}};
   }
 
   int NumVisibleOutputs() const override {
