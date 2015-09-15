@@ -1,24 +1,27 @@
-MXNet Python Guide
-==================
+# MXNet Python Guide
 
 This page gives a general overvie of MXNet python package. MXNet contains a
 mixed flavor of elements you might need to bake flexible and efficient
-applications.
+applications. There are mainly three concepts in MXNet:
 
-There are three major components in MXNet:
-
-* Numpy style `NDArray` that offers matrix and tensor computations on both CPU and
+* Numpy style `NDArray` offers matrix and tensor computations on both CPU and
 GPU, with automatic parallelization
 
 * `Symbol` makes defining a neural network extremely easy, and it provides
   automatic differentiation.
 
+* `KVStore` allows data synchronization between multi-GPUs and multi-machine
+  easily
+
+**Table of contents**
+
 ```eval_rst
 .. toctree::
    :maxdepth: 2
 
-   narray
+   ndarray
    symbol
+   kvstore
    io
 ```
 

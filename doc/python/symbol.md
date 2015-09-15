@@ -154,7 +154,7 @@ composition. Because we are also doing more inplace memory allocation, mxnet can
 be ***more memory efficient*** than cxxnet, and gets to same runtime, with
 greater flexiblity.
 
-## Symbolic API Reference
+## Symbol API
 
 ```eval_rst
 .. automodule:: mxnet.symbol
@@ -162,7 +162,7 @@ greater flexiblity.
 ```
 
 
-## Executor API Reference
+## Executor API
 ```eval_rst
 .. automodule:: mxnet.executor
     :members:
