@@ -4,7 +4,7 @@ This page gives a general overview of MXNet's python package. MXNet contains a
 mixed flavor of elements to bake flexible and efficient
 applications. There are mainly three concepts:
 
-* Numpy style [NDArray](#ndarray-numpy-style-tensor-computations-on-cpu-gpu)
+* Numpy style [NDArray](#ndarray-numpy-style-tensor-computations-on-cpus-and-gpus)
   offers matrix and tensor computations on both CPU and GPU, with automatic
   parallelization
 
@@ -14,7 +14,7 @@ applications. There are mainly three concepts:
 * [KVStore](#distributed-key-value-store) easy the data synchronization between
   multi-GPUs and multi-machines.
 
-## NDArray: Numpy style tensor computations on CPU/GPU
+## NDArray: Numpy style tensor computations on CPUs and GPUs
 
 `NDArray` is the basic operation unit in MXNet for matrix and tensor
 computations. It is similar to `numpy.ndarray`, but with two additional
@@ -445,8 +445,8 @@ update on key: 3
 
 ### Pull
 
-Similar to push, we can also pull the value into several devices by a single
-call.
+We already see how to pull a single key-value pair. Similar to push, we can also
+pull the value into several devices by a single call.
 
 ```python
 >>> b = [mx.nd.ones(shape, gpu) for gpu in gpus]
@@ -458,10 +458,8 @@ call.
 
 ### Handle a list of key-value pairs
 
-All operations introduced so far are on a single key. `KVStore` also provides
-list of key-value pair interface.
-
-On single device:
+All operations introduced so far are about a single key. `KVStore` also provides
+the interface for a list of key-value pairs. For single device:
 
 ```python
 >>> keys = [5, 7, 9]
@@ -477,7 +475,7 @@ update on key: 9
  [ 3.  3.  3.]]
 ```
 
-On multi-devices:
+For multi-devices:
 
 ```pythoon
 >>> b = [[mx.nd.ones(shape, gpu) for gpu in gpus]] * len(keys)
@@ -502,7 +500,9 @@ You can mix them all as much as you like. Here are some guidelines
 * Use fine-grained operator to extend parts of of more flexible symbolic graph.
 * Do some dynamic NArray tricks, which are even more flexible, between the calls of forward and backward of executors.
 
-We believe that different ways offers you different levels of flexibilty and efficiency. Normally you do not need to
-be flexible in all parts of the networks, so we allow you to use the fast optimized parts,
-and compose it flexibly with fine-grained operator or dynamic NArray. We believe such kind of mixture allows you to build
-the deep learning architecture both efficiently and flexibly as your choice. To mix is to maximize the peformance and flexiblity.
+We believe that different ways offers you different levels of flexibilty and
+efficiency. Normally you do not need to be flexible in all parts of the
+networks, so we allow you to use the fast optimized parts, and compose it
+flexibly with fine-grained operator or dynamic NArray. We believe such kind of
+mixture allows you to build the deep learning architecture both efficiently and
+flexibly as your choice. To mix is to maximize the peformance and flexiblity.
