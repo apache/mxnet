@@ -136,9 +136,9 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     RunContext run_ctx;
     mshadow::Stream<gpu> *stream;
     if (is_copy_worker) {
-      stream = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0);
-    } else {
       stream = mshadow::NewStream<gpu>(false, false);
+    } else {
+      stream = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0);
     }
     run_ctx.stream = stream;
     // execute task
