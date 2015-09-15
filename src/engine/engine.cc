@@ -34,8 +34,13 @@ inline Engine* CreateEngine() {
 }
 }  // namespace engine
 
+std::shared_ptr<Engine> Engine::_GetSharedRef() {
+  static std::shared_ptr<Engine> sptr(engine::CreateEngine());
+  return sptr;
+}
+
 Engine* Engine::Get() {
-  static std::unique_ptr<Engine> inst(engine::CreateEngine());
-  return inst.get();
+  static Engine *inst = _GetSharedRef().get();
+  return inst;
 }
 }  // namespace mxnet

@@ -4,13 +4,13 @@
  * \brief implements base threaded engine.
  * \author Yutian Li
  */
-#include "threaded_engine.h"
 #include <dmlc/logging.h>
 #include <cassert>
 #include <algorithm>
 #include <condition_variable>
 #include <mutex>
 #include <utility>
+#include "./threaded_engine.h"
 #include "../common/cuda_utils.h"
 
 namespace mxnet {

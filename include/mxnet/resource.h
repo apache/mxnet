@@ -55,13 +55,18 @@ struct Resource {
   void *ptr_;
   /*!
    * \brief Get random number generator.
+   * \param The stream to use in the random number generator.
    * \return the mshadow random number generator requested.
    * \tparam xpu the device type of random number generator.
    */
   template<typename xpu>
-  inline mshadow::Random<xpu>* get_random() const {
+  inline mshadow::Random<xpu>* get_random(
+      mshadow::Stream<xpu> *stream) const {
     CHECK_EQ(req.type, ResourceRequest::kRandom);
-    return static_cast<mshadow::Random<xpu>*>(ptr_);
+    mshadow::Random<xpu> *ret =
+        static_cast<mshadow::Random<xpu>*>(ptr_);
+    ret->set_stream(stream);
+    return ret;
   }
   /*!
    * \brief Get space requested as mshadow Tensor.
@@ -80,6 +85,32 @@ struct Resource {
     return mshadow::Tensor<xpu, ndim, real_t>(
         static_cast<real_t*>(ptr_), shape, shape[ndim - 1], stream);
   }
+};
+
+/*! \brief Global resource manager */
+class ResourceManager {
+ public:
+  /*!
+   * \brief Get resource of requested type.
+   * \param ctx the context of the request.
+   * \param req the resource request.
+   * \return the requested resource.
+   * \note The returned resource's ownership is
+   *       still hold by the manager singleton.
+   *
+   */
+  virtual Resource Request(Context ctx, const ResourceRequest &req);
+  /*!
+   * \brief Seed all the allocated random numbers.
+   * \param seed the seed to the random number generators on all devices.
+   */
+  virtual void SeedRandom(uint32_t seed);
+  /*! \brief virtual destructor */
+  virtual ~ResourceManager() noexcept(false) {}
+  /*!
+   * \return Resource manager singleton.
+   */
+  static ResourceManager *Get();
 };
 }  // namespace mxnet
 #endif  // MXNET_RESOURCE_H_

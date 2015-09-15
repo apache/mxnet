@@ -10,7 +10,7 @@
 #include <array>
 #include "./threaded_engine.h"
 #include "./thread_pool.h"
-#include "./stream_manager.h"
+#include "../common/lazy_alloc_array.h"
 
 namespace mxnet {
 namespace engine {
@@ -38,6 +38,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     // GPU tasks will be created lazily
   }
   ~ThreadedEnginePerDevice() noexcept(false) {
+    // wait until all the tasks are completed.
+    this->WaitForAll();
   }
 
  protected:
@@ -82,48 +84,35 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   int gpu_worker_nthreads_;
   /*! \brief number of concurrent thread each gpu copy worker uses */
   int gpu_copy_nthreads_;
-  // mutex used when creating a ThreadWorkerBlock
-  std::mutex create_mutex_;
   // cpu worker
   ThreadWorkerBlock cpu_worker_;
   // workers doing normal works on GPU
-  std::array<std::unique_ptr<ThreadWorkerBlock>, kMaxNumGPUs> gpu_normal_workers_;
+  common::LazyAllocArray<ThreadWorkerBlock> gpu_normal_workers_;
   // workers doing copy works from/to GPU
-  std::array<std::unique_ptr<ThreadWorkerBlock>, kMaxNumGPUs> gpu_copy_workers_;
+  common::LazyAllocArray<ThreadWorkerBlock> gpu_copy_workers_;
   /*!
    * \brief get GPU Task Worker
    * \param dev_id the device id
    * \param prop The property of the function.
    */
-  inline ThreadWorkerBlock *GetGPUWorkerBlock(size_t dev_id,
+  inline ThreadWorkerBlock *GetGPUWorkerBlock(int dev_id,
                                               FnProperty prop) {
     bool is_copy = (prop == FnProperty::kCopyFromGPU ||
                     prop == FnProperty::kCopyToGPU);
-    CHECK_LT(dev_id, kMaxNumGPUs)
-        << "GPU Device index " << dev_id
-        << " exceed bound " << kMaxNumGPUs;
-    std::array<std::unique_ptr<ThreadWorkerBlock>, kMaxNumGPUs> *workers;
+    auto *arr = &gpu_normal_workers_;
+    int nthread = gpu_worker_nthreads_;
     if (is_copy) {
-      workers = &gpu_copy_workers_;
-    } else {
-      workers = &gpu_normal_workers_;
+      arr = &gpu_copy_workers_;
+      nthread = gpu_copy_nthreads_;
     }
-    ThreadWorkerBlock *block = workers->at(dev_id).get();
-    if (block != nullptr) return block;
-    {
-      // only lock when block is not available.
-      std::lock_guard<std::mutex> lock(create_mutex_);
-      // need to double check, because state can change
-      ThreadWorkerBlock *block = workers->at(dev_id).get();
-      if (block != nullptr) return block;
-      int nthread = is_copy ? gpu_copy_nthreads_ : gpu_worker_nthreads_;
-      workers->at(dev_id).reset(new ThreadWorkerBlock());
-      block = workers->at(dev_id).get();
-      block->pool.reset(new ThreadPool(nthread, [this, dev_id, is_copy, block] () {
-            this->GPUWorker(dev_id, is_copy, &(block->task_queue));
-          }));
-      return block;
-    }
+
+    return arr->Get(dev_id, [this, dev_id, is_copy, nthread]() {
+        auto block = new ThreadWorkerBlock();
+        block->pool.reset(new ThreadPool(nthread, [this, dev_id, is_copy, block] () {
+              this->GPUWorker(dev_id, is_copy, &(block->task_queue));
+            }));
+        return block;
+      });
   }
   /*!
    * \brief GPU worker that performs operations on a certain device.
