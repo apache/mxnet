@@ -323,12 +323,6 @@ int MXNDArrayListLoad(const char* fname,
   API_END();
 }
 
-int MXNDArrayWaitAll() {
-  API_BEGIN();
-  Engine::Get()->WaitForAll();
-  API_END();
-}
-
 int MXNDArrayFree(NDArrayHandle handle) {
   API_BEGIN();
   delete static_cast<NDArray*>(handle);
@@ -817,6 +811,9 @@ int MXDataIterBeforeFirst(DataIterHandle handle) {
 
 int MXDataIterNext(DataIterHandle handle, int *out) {
   API_BEGIN();
+  // TODO(tianjun): remove this after having prefetcher by default.
+  // and call NArray.WaitForWrite instead.
+  Engine::Get()->WaitForAll();
   *out = static_cast<IIterator<DataBatch>* >(handle)->Next();
   API_END();
 }

@@ -65,11 +65,16 @@ inline T* Opr::Cast() {
 #endif
 }
 
+/*! \brief Maximum number of GPUs */
+static constexpr std::size_t kMaxNumGPUs = 16;
+
 // predeclare factory function for each type of engine
 /*! \return NaiveEngine instance */
 Engine *CreateNaiveEngine();
-/*! \return ThreadedEngine instance */
-Engine *CreateThreadedEngine();
+/*! \return ThreadedEnginePooled instance */
+Engine *CreateThreadedEnginePooled();
+/*! \return ThreadedEnginePerDevie instance */
+Engine *CreateThreadedEnginePerDevice();
 }  // namespace engine
 }  // namespace mxnet
 #endif  // MXNET_ENGINE_ENGINE_IMPL_H_

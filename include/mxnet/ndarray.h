@@ -13,10 +13,9 @@
 #include <dmlc/registry.h>
 #include <memory>
 #include "./base.h"
-#include "./context.h"
 #include "./storage.h"
-#include "./context.h"
 #include "./engine.h"
+
 // check c++11
 #if DMLC_USE_CXX11 == 0
 #error "cxx11 was required for ndarray module"

@@ -5,15 +5,13 @@
 #define MXNET_ENGINE_STREAM_MANAGER_H_
 
 #include <dmlc/base.h>
+#include <mxnet/base.h>
 #include <cstddef>
 #include <array>
 #include <mutex>
-#include "mxnet/base.h"
-#include "mxnet/context.h"
 #include "../common/cuda_utils.h"
 
 namespace mxnet {
-
 namespace engine {
 
 /*!
@@ -44,9 +42,9 @@ class StreamManager {
 template <std::size_t kNumGpus, std::size_t kStreams>
 RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
     Context const& ctx) {
+  RunContext ret;
   switch (ctx.dev_mask) {
-    case cpu::kDevMask:
-      return {nullptr};
+    case cpu::kDevMask: ret.stream = nullptr; break;
     case gpu::kDevMask: {
 #if MXNET_USE_CUDA
       std::size_t use_counter;
@@ -63,21 +61,22 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
         use_counter = counter;
         counter = (counter + 1) % kStreams;
       }
-      return {gpu_streams_.at(ctx.dev_id).at(use_counter)};
-#else  // MXNET_USE_CUDA
-      LOG(FATAL) << "Please compile with CUDA enabled";
+      ret.stream = gpu_streams_.at(ctx.dev_id).at(use_counter);
+      break;
+#else
+      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif  // MXNET_USE_CUDA
     }
   }
-  return {nullptr};
+  return ret;
 }
 
 template <std::size_t kNumGpus, std::size_t kStreams>
 RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
     Context const& ctx) {
+  RunContext ret;
   switch (ctx.dev_mask) {
-    case cpu::kDevMask:
-      return {nullptr};
+    case cpu::kDevMask: ret.stream = nullptr; break;
     case gpu::kDevMask: {
 #if MXNET_USE_CUDA
       CUDA_CALL(cudaSetDevice(ctx.dev_id));
@@ -87,13 +86,14 @@ RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
           gpu_io_streams_.at(ctx.dev_id) = mshadow::NewStream<gpu>(false, false);
         }
       }
-      return {gpu_io_streams_.at(ctx.dev_id)};
-#else  // MXNET_USE_CUDA
-      LOG(FATAL) << "Please compile with CUDA enabled";
+      ret.stream = gpu_io_streams_.at(ctx.dev_id);
+      break;
+#else
+      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif  // MXNET_USE_CUDA
     }
   }
-  return {nullptr};
+  return ret;
 }
 
 template <std::size_t kNumGpus, std::size_t kStreams>

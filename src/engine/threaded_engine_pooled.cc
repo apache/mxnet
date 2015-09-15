@@ -22,9 +22,9 @@ namespace engine {
  */
 class ThreadedEnginePooled : public ThreadedEngine {
  public:
-  ThreadedEnginePooled()
-      : thread_pool_{[this]() { ThreadWorker(&task_queue_); }},
-    io_thread_pool_{[this]() { ThreadWorker(&io_task_queue_); }} {}
+  ThreadedEnginePooled() :
+      thread_pool_(kNumWorkingThreads, [this]() { ThreadWorker(&task_queue_); }),
+      io_thread_pool_(1, [this]() { ThreadWorker(&io_task_queue_); }) {}
 
   ~ThreadedEnginePooled() noexcept(false) {
     task_queue_.SignalForKill();
@@ -59,8 +59,8 @@ class ThreadedEnginePooled : public ThreadedEngine {
   /*!
    * \brief Thread pools.
    */
-  ThreadPool<kNumWorkingThreads>  thread_pool_;
-  ThreadPool<1> io_thread_pool_;
+  ThreadPool thread_pool_;
+  ThreadPool io_thread_pool_;
   /*!
    * \brief Worker.
    * \param task_queue Queue to work on.
@@ -86,7 +86,9 @@ class ThreadedEnginePooled : public ThreadedEngine {
       LOG(FATAL) << "Please compile with CUDA enabled";
       #endif  // MXNET_USE_CUDA
     }
-    auto&& rctx = opr_block->opr->prop == FnProperty::kCopy
+    bool is_copy = (opr_block->opr->prop == FnProperty::kCopyFromGPU ||
+                    opr_block->opr->prop == FnProperty::kCopyToGPU);
+    auto&& rctx = is_copy
         ? streams_.GetIORunContext(opr_block->ctx)
         : streams_.GetRunContext(opr_block->ctx);
     this->ExecuteOprBlock(rctx, opr_block);
@@ -97,7 +99,8 @@ class ThreadedEnginePooled : public ThreadedEngine {
    */
   void DoPushToQueue(OprBlock* opr_block) {
     switch (opr_block->opr->prop) {
-      case FnProperty::kCopy: {
+      case FnProperty::kCopyFromGPU:
+      case FnProperty::kCopyToGPU: {
         io_task_queue_.Push(opr_block);
         break;
       }
@@ -109,7 +112,7 @@ class ThreadedEnginePooled : public ThreadedEngine {
   }
 };
 
-Engine *CreateThreadedEngine() {
+Engine *CreateThreadedEnginePooled() {
   return new ThreadedEnginePooled();
 }
 }  // namespace engine

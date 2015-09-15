@@ -12,7 +12,6 @@
 #endif
 #include <vector>
 #include "./base.h"
-#include "./context.h"
 
 namespace mxnet {
 /*! \brief namespace of engine internal types. */
@@ -28,13 +27,14 @@ typedef Opr* OprHandle;
 }  // namespace engine
 
 #if DMLC_USE_CXX11
-
 /*! \brief Function property, used to hint what action is pushed to engine. */
 enum class FnProperty {
   /*! \brief Normal operation */
   kNormal,
-  /*! \brief Copy operation between CPU and GPU */
-  kCopy,
+  /*! \brief Copy operation from GPU to other devices */
+  kCopyFromGPU,
+  /*! \brief Copy operation from CPU to other devices */
+  kCopyToGPU,
   /*! \brief Asynchronous function call */
   kAsync
 };  // enum class FnProperty

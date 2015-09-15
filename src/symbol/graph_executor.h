@@ -32,6 +32,8 @@ class GraphExecutor : public Executor {
                    const std::vector<NDArray> &arg_grad_store,
                    const std::vector<OpReqType> &grad_req_type,
                    const std::vector<NDArray> &aux_states) {
+    enable_inplace_allocation_ = dmlc::GetEnv("MXNET_EXEC_ENABLE_INPLACE", true);
+
     CHECK_EQ(grad_req_type.size(), arg_grad_store.size());
     bool need_backward = false;
     for (auto req : grad_req_type) {
@@ -90,6 +92,15 @@ class GraphExecutor : public Executor {
           storage_id(GraphStorageAllocator::kBadStorageID),
           temp_ref_count(0), ref_count(0) {}
   };
+  // information of the resource
+  struct ResourceEntry {
+    /*! \brief the actual resource */
+    Resource resource;
+    /*! \brief actual data for the entry if it is a temp space */
+    NDArray data;
+    // storage id from allocator if it is a temp space
+    GraphStorageAllocator::StorageID storage_id;
+  };
   // all the information needed to push the op to engine
   struct OpExecEntry {
     // execution function for
@@ -111,6 +122,8 @@ class GraphExecutor : public Executor {
     std::vector<DataEntryInfo> outputs;
     // auxiliary data information of op
     std::vector<DataEntryInfo> aux_states;
+    // resource entry
+    std::vector<ResourceEntry> resources;
     // The following parts are constructed in InitOpNodes
     // the real operator
     std::shared_ptr<Operator> op;
@@ -178,6 +191,10 @@ class GraphExecutor : public Executor {
   // topological order of nodes in computation graph
   // backward nodes always follow forward nodes
   std::vector<uint32_t> topo_order_;
+  // whether to enable inplace space
+  bool enable_inplace_allocation_;
+  // total allocated space in #reals
+  size_t total_allocated_reals_;
   // number of forward nodes in the graph
   size_t num_forward_nodes_;
   // head gradient node in the graph, if there is backward pass
