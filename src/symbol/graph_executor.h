@@ -20,11 +20,12 @@ namespace mxnet {
 class GraphExecutor : public Executor {
  public:
   virtual ~GraphExecutor();
-  virtual void Forward(bool is_train);
-  virtual void Backward(const std::vector<NDArray> &head_grads);
-  virtual const std::vector<NDArray> &outputs() const {
+  void Forward(bool is_train) override;
+  void Backward(const std::vector<NDArray> &head_grads) override;
+  const std::vector<NDArray> &outputs() const override {
     return heads_ndarray_;
   }
+  void Print(std::ostream &os) const override; // NOLINT(*)
   // implement Executor::Bind, only call it once.
   inline void Init(Symbol symbol,
                    Context ctx,
@@ -42,11 +43,8 @@ class GraphExecutor : public Executor {
     this->InitGraph(symbol, ctx, need_backward);
     this->InitDataEntryInfo(in_args, arg_grad_store, grad_req_type, aux_states);
     this->InitDataEntryMemory();
+    this->InitResources();
     this->InitOpNodes();
-    // TODO(bing): remove me when things are OK
-    // LOG(INFO) << "-----Execution memory plan-----\n"
-    //           << DebugStr() << '\n'
-    //           << "------------------------------\n";
   }
 
  protected:
@@ -92,15 +90,6 @@ class GraphExecutor : public Executor {
           storage_id(GraphStorageAllocator::kBadStorageID),
           temp_ref_count(0), ref_count(0) {}
   };
-  // information of the resource
-  struct ResourceEntry {
-    /*! \brief the actual resource */
-    Resource resource;
-    /*! \brief actual data for the entry if it is a temp space */
-    NDArray data;
-    // storage id from allocator if it is a temp space
-    GraphStorageAllocator::StorageID storage_id;
-  };
   // all the information needed to push the op to engine
   struct OpExecEntry {
     // execution function for
@@ -122,8 +111,6 @@ class GraphExecutor : public Executor {
     std::vector<DataEntryInfo> outputs;
     // auxiliary data information of op
     std::vector<DataEntryInfo> aux_states;
-    // resource entry
-    std::vector<ResourceEntry> resources;
     // The following parts are constructed in InitOpNodes
     // the real operator
     std::shared_ptr<Operator> op;
@@ -180,12 +167,12 @@ class GraphExecutor : public Executor {
                          const std::vector<NDArray> &aux_states);
   // initialize internal data entries NDArray
   void InitDataEntryMemory();
+  // initialize the internal resources for each op
+  void InitResources();
   // initialize OpNode data structure
   void InitOpNodes();
   // run ops from topo order start to end
   void RunOps(bool is_train, size_t topo_start, size_t topo_end);
-  // get debug string
-  std::string DebugStr() const;
   // internal computational graph
   StaticGraph graph_;
   // topological order of nodes in computation graph

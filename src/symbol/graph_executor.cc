@@ -411,21 +411,6 @@ void GraphExecutor::InitDataEntryMemory() {
         out->type = kInternalAllocated;
       }
     }
-    // resource
-    const std::vector<ResourceRequest>& reqs = GetResource(nid);
-    op_nodes_[nid].resources.resize(reqs.size());
-    for (uint32_t i = 0; i < reqs.size(); ++i) {
-      op_nodes_[nid].resources[i].resource.req = reqs[i];
-    }
-    // allocate resource
-    for (ResourceEntry& entry : op_nodes_[nid].resources) {
-      if (entry.resource.req.type == ResourceRequest::kTempSpace) {
-        entry.storage_id =
-            allocator.Request(op_nodes_[nid].ctx,
-                              mshadow::Shape1(entry.resource.req.space_num_reals),
-                              nid);
-      }
-    }
     // then free inputs
     for (DataEntryInfo *in : in_data) {
       // temp_ref_count == 0 means it is taken by inplace op
@@ -445,12 +430,6 @@ void GraphExecutor::InitDataEntryMemory() {
         allocator.Release(out->storage_id, nid);
       }
     }
-    // release the resource, as soon as the forward is finished we can release it.
-    for (ResourceEntry& res : op_nodes_[nid].resources) {
-      if (res.resource.req.type == ResourceRequest::kTempSpace) {
-        allocator.Release(res.storage_id, nid);
-      }
-    }
   }
   // one pass complete, allocate real memory
   this->total_allocated_reals_ = allocator.InitStorages();
@@ -464,29 +443,38 @@ void GraphExecutor::InitDataEntryMemory() {
         out.data = allocator.Get(out.storage_id, out.shape);
       }
     }
-    // Get the resource of temporal space.
-    for (ResourceEntry& entry : op_nodes_[nid].resources) {
-      if (entry.resource.req.type == ResourceRequest::kTempSpace) {
-        entry.data = allocator.Get(entry.storage_id,
-                                   mshadow::Shape1(entry.resource.req.space_num_reals));
-        entry.resource.ptr_ = entry.data.data().dptr_;
-        entry.resource.var = entry.data.var();
-      } else if (entry.resource.req.type == ResourceRequest::kRandom) {
-        entry.resource = ResourceManager::Get()->Request(
-            op_nodes_[nid].ctx, entry.resource.req);
-      } else {
-        LOG(FATAL) << "resource type not yet supported";
-      }
-      op_nodes_[nid].op_ctx.requested.resize(op_nodes_[nid].resources.size());
-      for (size_t i = 0; i < op_nodes_[nid].resources.size(); ++i) {
-        op_nodes_[nid].op_ctx.requested[i] = op_nodes_[nid].resources[i].resource;
-      }
-    }
   }
+  // setup heads
   for (StaticGraph::DataEntry e : graph_.heads) {
     DataEntryInfo &info = op_nodes_[e.source_id].outputs[e.index];
     CHECK_EQ(info.type, kInternalAllocated);
     heads_ndarray_.push_back(info.data);
+  }
+}
+
+void GraphExecutor::InitResources() {
+  // Resource allocation
+  for (size_t i = 0; i < topo_order_.size(); ++i) {
+    uint32_t nid = topo_order_[i];
+    if (!op_nodes_[nid].activated) continue;
+    if (graph_.nodes[nid].is_variable()) continue;
+
+    const std::vector<ResourceRequest>& reqs = GetResource(nid);
+    auto& requested = op_nodes_[nid].op_ctx.requested;
+    requested.clear();
+    // Get the resource of temporal space.
+    for (const ResourceRequest& req : reqs) {
+      if (req.type == ResourceRequest::kTempSpace) {
+        // TODO(tqchen, bing) more smarter graph aware temp sapce allocation.
+        requested.push_back(ResourceManager::Get()->Request(
+            op_nodes_[nid].ctx, req));
+      } else if (req.type == ResourceRequest::kRandom) {
+        requested.push_back(ResourceManager::Get()->Request(
+            op_nodes_[nid].ctx, req));
+      } else {
+        LOG(FATAL) << "resource type not yet supported";
+      }
+    }
   }
 }
 
@@ -544,8 +532,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
   }
 }
 
-std::string GraphExecutor::DebugStr() const {
-  std::ostringstream os;
+void GraphExecutor::Print(std::ostream &os) const {
   os << "num_forward_nodes=" << num_forward_nodes_ << '\n';
   for (size_t i = 0; i < topo_order_.size(); ++i) {
     uint32_t nid = topo_order_[i];
@@ -562,20 +549,18 @@ std::string GraphExecutor::DebugStr() const {
       }
       os << '\n';
     }
-    for (size_t j = 0; j < op_nodes_[nid].resources.size(); ++j) {
-      const ResourceEntry &entry = op_nodes_[nid].resources[j];
+    for (size_t j = 0; j < op_nodes_[nid].op_ctx.requested.size(); ++j) {
+      const Resource& resource = op_nodes_[nid].op_ctx.requested[j];
       os << "\tresource[" << j << "]: ";
-      if (entry.resource.req.type == ResourceRequest::kTempSpace) {
-        os << "type=TempSpace, size=" << entry.resource.req.space_num_reals
-           << ", storage_id=" << entry.storage_id;
-      } else if (entry.resource.req.type == ResourceRequest::kRandom) {
+      if (resource.req.type == ResourceRequest::kTempSpace) {
+        os << "type=TempSpace, id=" << resource.id;
+      } else if (resource.req.type == ResourceRequest::kRandom) {
         os << "type=RandomNumber";
       }
       os << '\n';
     }
   }
   os << "Total " << (total_allocated_reals_ >> 18UL) <<" MB allocated\n";
-  return os.str();
 }
 
 void GraphExecutor::Forward(bool is_train) {

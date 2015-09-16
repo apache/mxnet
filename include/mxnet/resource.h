@@ -20,21 +20,19 @@ struct ResourceRequest {
   enum Type {
     /*! \brief mshadow::Random<xpu> object */
     kRandom,
-    /*! \brief Temporal space */
+    /*! \brief A dynamic temp space that can be arbitrary size */
     kTempSpace
   };
   /*! \brief type of resources */
   Type type;
-  /*! \brief size of space requested, in terms of number of reals */
-  size_t space_num_reals;
   /*! \brief default constructor */
   ResourceRequest() {}
   /*!
    * \brief constructor, allow implicit conversion
    * \param type type of resources
    */
-  ResourceRequest(Type type, size_t space_num_reals = 0)  // NOLINT(*)
-      : type(type), space_num_reals(space_num_reals) {}
+  ResourceRequest(Type type)  // NOLINT(*)
+      : type(type) {}
 };
 
 
@@ -48,11 +46,15 @@ struct Resource {
   ResourceRequest req;
   /*! \brief engine variable */
   engine::VarHandle var;
+  /*! \brief identifier of id information, used for debug purpose */
+  int32_t id;
   /*!
    * \brief pointer to the resource, do not use directly,
    *  access using member functions
    */
   void *ptr_;
+  /*! \brief default constructor */
+  Resource() : id(0) {}
   /*!
    * \brief Get random number generator.
    * \param The stream to use in the random number generator.
@@ -70,7 +72,8 @@ struct Resource {
   }
   /*!
    * \brief Get space requested as mshadow Tensor.
-   *  The resulting tensor must fit in space requsted.
+   *  The caller can request arbitrary size.
+   *
    * \param shape the Shape of returning tensor.
    * \param stream the stream of retruning tensor.
    * \return the mshadow tensor requested.
@@ -81,9 +84,11 @@ struct Resource {
   inline mshadow::Tensor<xpu, ndim, real_t> get_space(
       mshadow::Shape<ndim> shape, mshadow::Stream<xpu> *stream) const {
     CHECK_EQ(req.type, ResourceRequest::kTempSpace);
-    CHECK_GE(req.space_num_reals, shape.Size());
+    mshadow::TensorContainer<xpu, 1, real_t> *space =
+        static_cast<mshadow::TensorContainer<xpu, 1, real_t>*>(ptr_);
+    space->Resize(mshadow::Shape1(shape.Size()));
     return mshadow::Tensor<xpu, ndim, real_t>(
-        static_cast<real_t*>(ptr_), shape, shape[ndim - 1], stream);
+        space->dptr_, shape, shape[ndim - 1], stream);
   }
 };
 
@@ -97,7 +102,6 @@ class ResourceManager {
    * \return the requested resource.
    * \note The returned resource's ownership is
    *       still hold by the manager singleton.
-   *
    */
   virtual Resource Request(Context ctx, const ResourceRequest &req) = 0;
   /*!

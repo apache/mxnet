@@ -238,9 +238,7 @@ class BatchNormProp : public OperatorProperty {
 
   std::vector<ResourceRequest> BackwardResource(
       const std::vector<TShape> &in_shape) const override {
-    const TShape &dshape = in_shape[0];
-    size_t nspace = dshape[1] * 3;
-    return {{ResourceRequest::kTempSpace, nspace}};
+    return {ResourceRequest::kTempSpace};
   }
 
   int NumVisibleOutputs() const override {

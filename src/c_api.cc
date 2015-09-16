@@ -684,6 +684,17 @@ int MXSymbolInferShape(SymbolHandle sym,
   API_END();
 }
 
+int MXExecutorPrint(ExecutorHandle handle, const char **out_str) {
+  Executor *exec = static_cast<Executor*>(handle);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  std::ostringstream os;
+  exec->Print(os);
+  ret->ret_str = os.str();
+  *out_str = (ret->ret_str).c_str();
+  API_END();
+}
+
 int MXExecutorForward(ExecutorHandle handle, bool is_train) {
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
