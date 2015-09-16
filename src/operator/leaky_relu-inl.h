@@ -112,7 +112,8 @@ class LeakyReLUOp : public Operator {
     using namespace mshadow::expr;
     size_t expected = param_.act_type == kPReLU ? 2 : 1;
     CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(req.size(), 1);
+    CHECK_EQ(req.size(), expected);
+    CHECK_EQ(in_data.size(), expected);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data, gdata;
     Tensor<xpu, 4> grad;
@@ -216,7 +217,15 @@ class LeakyReLUProp : public OperatorProperty {
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
     const std::vector<int> &in_data,
     const std::vector<void*> &out_data) const override {
-    return {{in_data[kData], out_data[kOut]}};
+    return {};
+  }
+
+  std::vector<std::string> ListArguments() const override {
+    if (param_.act_type == kPReLU) {
+      return {"data", "gamma"};
+    } else {
+      return {"data"};
+    }
   }
 
   Operator* CreateOperator(Context ctx) const;
