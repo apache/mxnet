@@ -22,8 +22,9 @@ namespace mxnet {
 namespace op {
 
 enum LeakyReLUOpInputs {kData, kGamma};
-enum LeakyReLUOpOutputs {kOut};
+enum LeakyReLUOpOutputs {kOut, kMask};
 enum LeakyReLUOpType {kLeakyReLU, kPReLU, kRReLU};
+enum LeakyReLUOpResource {kRandom};
 
 struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
   // use int for enumeration
@@ -68,19 +69,25 @@ class LeakyReLUOp : public Operator {
     using namespace mshadow::expr;
     size_t expected = param_.act_type == kPReLU ? 2 : 1;
     CHECK_EQ(in_data.size(), expected);
-    CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data;
     Tensor<xpu, 4> out;
+    Tensor<xpu, 4> mask;
     Tensor<xpu, 1> weight;
     if (in_data[kData].ndim() == 2) {
       uint32_t ds[] = {in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1};
       TShape dshape(ds, ds + 4);
       data = in_data[kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       out = out_data[kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
+      if (param_.act_type == kRReLU) {
+        mask = out_data[kMask].get_with_shape<xpu, 4, real_t>(dshape, s);
+      }
     } else {
       data = in_data[kData].get<xpu, 4, real_t>(s);
       out = out_data[kOut].get<xpu, 4, real_t>(s);
+      if (param_.act_type == kRReLU) {
+        mask = out_data[kMask].get<xpu, 4, real_t>(s);
+      }
     }
     switch (param_.act_type) {
       case kLeakyReLU: {
@@ -93,7 +100,15 @@ class LeakyReLUOp : public Operator {
         break;
       }
       case kRReLU: {
-        LOG(FATAL) << "Not implmented";
+        if (ctx.is_train) {
+          Random<xpu>* prnd = ctx.requested[kRandom].get_random<xpu>(s);
+          mask = prnd->uniform(mask.shape_);
+          mask = mask * (param_.upper_bound - param_.lower_bound) + param_.lower_bound;
+          Assign(out, req[kOut], F<mshadow_op::xelu>(data, mask));
+        } else {
+          const float slope = (param_.lower_bound + param_.upper_bound) / 2.0f;
+          Assign(out, req[kOut], F<mshadow_op::xelu>(data, slope));
+        }
         break;
       }
       default:
@@ -110,40 +125,56 @@ class LeakyReLUOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    // TODO(bing): double check
     size_t expected = param_.act_type == kPReLU ? 2 : 1;
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(req.size(), expected);
     CHECK_EQ(in_data.size(), expected);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> data, gdata;
+    Tensor<xpu, 4> output;
+    Tensor<xpu, 4> data;
+    Tensor<xpu, 4> gdata;
     Tensor<xpu, 4> grad;
+    Tensor<xpu, 4> mask;
     Tensor<xpu, 1> weight;
     Tensor<xpu, 1> grad_weight;
     if (in_data[kData].ndim() == 2) {
       uint32_t ds[] = {in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1};
       TShape dshape(ds, ds + 4);
-      data = in_data[kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       grad = out_grad[kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
       gdata = in_grad[kData].get_with_shape<xpu, 4, real_t>(dshape, s);
+      output = out_data[kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
+      if (param_.act_type == kRReLU) {
+        mask = out_data[kMask].get_with_shape<xpu, 4, real_t>(dshape, s);
+      }
+      if (param_.act_type == kPReLU) {
+        data = in_data[kData].get_with_shape<xpu, 4, real_t>(dshape, s);
+      }
     } else {
-      data = in_data[kData].get<xpu, 4, real_t>(s);
       grad = out_grad[kOut].get<xpu, 4, real_t>(s);
       gdata = in_grad[kData].get<xpu, 4, real_t>(s);
+      output = out_data[kOut].get<xpu, 4, real_t>(s);
+      if (param_.act_type == kRReLU) {
+        mask = out_data[kMask].get<xpu, 4, real_t>(s);
+      }
+      if (param_.act_type == kPReLU) {
+        data = in_data[kData].get<xpu, 4, real_t>(s);
+      }
     }
     switch (param_.act_type) {
       case kLeakyReLU: {
-        Assign(gdata, req[kData], F<mshadow_op::xelu_grad>(data, param_.slope) * grad);
+        Assign(gdata, req[kData], F<mshadow_op::xelu_grad>(output, param_.slope) * grad);
         break;
       }
       case kPReLU: {
         weight = in_data[kGamma].get<xpu, 1, real_t>(s);
         grad_weight = in_grad[kGamma].get<xpu, 1, real_t>(s);
         grad_weight = sumall_except_dim<1>(F<prelu_grad>(data) * grad);
-        gdata = F<mshadow_op::xelu_grad>(data, broadcast<1>(weight, data.shape_)) * grad;
+        gdata = F<mshadow_op::xelu_grad>(output, broadcast<1>(weight, data.shape_)) * grad;
         break;
       }
       case kRReLU: {
-        LOG(FATAL) << "Not implmented";
+        Assign(gdata, req[kData], F<mshadow_op::xelu_grad>(output, mask) * grad);
         break;
       }
       default:
@@ -181,6 +212,9 @@ class LeakyReLUProp : public OperatorProperty {
     }
     out_shape->clear();
     out_shape->push_back(dshape);
+    if (param_.act_type == kRReLU) {
+      out_shape->push_back(dshape);
+    }
     return true;
   }
 
@@ -200,9 +234,11 @@ class LeakyReLUProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
     if (param_.act_type == kPReLU) {
-      return {out_grad[kOut], in_data[kData], in_data[kGamma]};
+      return {out_grad[kOut], out_data[kOut], in_data[kData], in_data[kGamma]};
+    } else if (param_.act_type == kRReLU) {
+      return {out_grad[kOut], out_data[kMask], out_data[kOut]};
     } else {
-      return {out_grad[kOut], in_data[kData]};
+      return {out_grad[kOut], out_data[kData]};
     }
   }
 
@@ -217,7 +253,11 @@ class LeakyReLUProp : public OperatorProperty {
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
     const std::vector<int> &in_data,
     const std::vector<void*> &out_data) const override {
-    return {};
+    if (param_.act_type == kPReLU) {
+      return {};
+    } else {
+      return {{in_data[kData], out_data[kOut]}};
+    }
   }
 
   std::vector<std::string> ListArguments() const override {
@@ -225,6 +265,35 @@ class LeakyReLUProp : public OperatorProperty {
       return {"data", "gamma"};
     } else {
       return {"data"};
+    }
+  }
+
+  std::vector<std::string> ListOutputs() const override {
+    if (param_.act_type == kRReLU) {
+      return {"output", "mask"};
+    } else {
+      return {"output"};
+    }
+  }
+
+  int NumOutputs() const override {
+    if (param_.act_type == kRReLU) {
+      return 2;
+    } else {
+      return 1;
+    }
+  }
+
+  int NumVisibleOutputs() const override {
+    return 1;
+  }
+
+  virtual std::vector<ResourceRequest> ForwardResource(
+      const std::vector<TShape> &in_shape) const {
+    if (param_.act_type == kRReLU) {
+      return {ResourceRequest::kRandom};
+    } else {
+      return std::vector<ResourceRequest>();
     }
   }
 

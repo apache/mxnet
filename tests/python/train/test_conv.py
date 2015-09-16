@@ -53,7 +53,7 @@ for name, narray in inputs.items():
 
 executor = softmax.bind(mx.cpu(), arg_narrays, grad_narrays, 'write', aux_narrays)
 # update
-print executor.debug_str()
+print(executor.debug_str())
 out_narray = executor.outputs[0]
 grad_narray = mx.nd.empty(out_narray.shape)
 
