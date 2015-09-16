@@ -208,7 +208,7 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
 
   // start setup exec function.
   for (const Resource& r : op_node.op_ctx.requested) {
-    exec.mutate_vars.push_back(static_cast<Engine::VarHandle>(r.var));
+    exec.mutate_vars.push_back(r.var);
   }
 
   Operator* op = op_node.op.get();
@@ -471,6 +471,9 @@ void GraphExecutor::InitDataEntryMemory() {
                                    mshadow::Shape1(entry.resource.req.space_num_reals));
         entry.resource.ptr_ = entry.data.data().dptr_;
         entry.resource.var = entry.data.var();
+      } else if (entry.resource.req.type == ResourceRequest::kRandom) {
+        entry.resource = ResourceManager::Get()->Request(
+            op_nodes_[nid].ctx, entry.resource.req);
       } else {
         LOG(FATAL) << "resource type not yet supported";
       }
