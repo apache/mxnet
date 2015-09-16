@@ -94,8 +94,10 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   int nthread;
   /*! \brief whether to remain silent */
   bool silent;
-  /*! \brief number of distributed worker */
-  int dist_num_worker, dist_worker_rank;
+  /*! \brief virtually split the data into n parts */
+  int num_parts;
+  /*! \brief only read the i-th part */
+  int part_index;
   /*! \brief label-width */
   int label_width;
   /*! \brief input shape */
@@ -112,10 +114,10 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
         .describe("How many labels for an image.");
     DMLC_DECLARE_FIELD(silent).set_default(false)
         .describe("Whether to output parser information.");
-    DMLC_DECLARE_FIELD(dist_num_worker).set_lower_bound(1).set_default(1)
-        .describe("Dist worker number.");
-    DMLC_DECLARE_FIELD(dist_worker_rank).set_default(0)
-        .describe("Dist worker rank.");
+    DMLC_DECLARE_FIELD(num_parts).set_lower_bound(1).set_default(1)
+        .describe("virtually split the data into n parts");
+    DMLC_DECLARE_FIELD(part_index).set_default(0)
+        .describe("only read the i-th part");
     index_t input_shape_default[] = {3, 224, 224};
     DMLC_DECLARE_FIELD(input_shape)
         .set_default(TShape(input_shape_default, input_shape_default + 3))
@@ -173,12 +175,12 @@ class ImageRecordIOParser {
 inline void ImageRecordIOParser::Init(
         const std::vector<std::pair<std::string, std::string> >& kwargs) {
   // initialize parameter
-  std::vector<std::pair<std::string, std::string> > kwargs_left;
   // init image rec param
-  kwargs_left = param_.InitAllowUnknown(kwargs);
+  param_.InitAllowUnknown(kwargs);
   int maxthread, threadget;
   #pragma omp parallel
   {
+    // why ? (muli)
     maxthread = std::max(omp_get_num_procs() / 2 - 1, 1);
   }
   param_.nthread = std::min(maxthread, param_.nthread);
@@ -194,12 +196,6 @@ inline void ImageRecordIOParser::Init(
     prnds_.push_back(new common::RANDOM_ENGINE((i + 1) * kRandMagic));
   }
 
-  // handling for hadoop
-  const char *ps_rank = getenv("PS_RANK");
-  if (ps_rank != NULL) {
-    param_.dist_worker_rank = atoi(ps_rank);
-  }
-
   if (param_.path_imglist.length() != 0) {
     label_map_ = new ImageLabelMap(param_.path_imglist.c_str(),
                                    param_.label_width, param_.silent != 0);
@@ -208,15 +204,10 @@ inline void ImageRecordIOParser::Init(
   }
   CHECK(param_.path_imgrec.length() != 0)
     << "ImageRecordIOIterator: must specify image_rec";
-#if MSHADOW_DIST_PS
-    param_.dist_num_worker = ::ps::RankSize();
-    param_.dist_worker_rank = ::ps::MyRank();
-    LOG(INFO) << "rank " << param_.dist_worker_rank
-              << " in " << param_.dist_num_worker;
-#endif
-  source_ = dmlc::InputSplit::Create
-      (param_.path_imgrec.c_str(), param_.dist_worker_rank,
-       param_.dist_num_worker, "recordio");
+
+  source_ = dmlc::InputSplit::Create(
+      param_.path_imgrec.c_str(), param_.part_index,
+      param_.num_parts, "recordio");
   // use 64 MB chunk when possible
   source_->HintChunkSize(8 << 20UL);
 }
@@ -281,25 +272,22 @@ struct ImageRecordParam: public dmlc::Parameter<ImageRecordParam> {
   }
 };
 
+
 // iterator on image recordio
 class ImageRecordIter : public IIterator<DataInst> {
  public:
-  ImageRecordIter()
-      : data_(NULL) {
-  }
+  ImageRecordIter() : data_(NULL) { }
   virtual ~ImageRecordIter(void) {
     iter_.Destroy();
-    // data can be NULL
     delete data_;
   }
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
-    std::vector<std::pair<std::string, std::string> > kwargs_left;
-    // init image rec param
-    kwargs_left = param_.InitAllowUnknown(kwargs);
+    param_.InitAllowUnknown(kwargs);
     // use the kwarg to init parser
     parser_.Init(kwargs);
-    // init thread iter
+    // prefetch at most 4 minbatches
     iter_.set_max_capacity(4);
+    // init thread iter
     iter_.Init([this](std::vector<InstVector> **dptr) {
         if (*dptr == NULL) {
           *dptr = new std::vector<InstVector>();
@@ -309,7 +297,8 @@ class ImageRecordIter : public IIterator<DataInst> {
       [this]() { parser_.BeforeFirst(); });
     // Check Meanfile
     if (param_.mean_img.length() != 0) {
-      dmlc::Stream *fi = dmlc::Stream::Create(param_.mean_img.c_str(), "r", true);
+      dmlc::Stream *fi =
+          dmlc::Stream::Create(param_.mean_img.c_str(), "r", true);
       if (fi == NULL) {
         this->CreateMeanImg();
       } else {
@@ -317,6 +306,7 @@ class ImageRecordIter : public IIterator<DataInst> {
       }
     }
     inst_ptr_ = 0;
+    shuffle_ = param_.shuffle;
   }
   virtual void BeforeFirst(void) {
     iter_.BeforeFirst();
@@ -410,6 +400,7 @@ class ImageRecordIter : public IIterator<DataInst> {
   // mean image
   mshadow::TensorContainer<cpu, 3> meanimg_;
 };
+
 DMLC_REGISTER_PARAMETER(ImageRecParserParam);
 DMLC_REGISTER_PARAMETER(ImageRecordParam);
 MXNET_REGISTER_IO_CHAINED_ITER(ImageRecordIter, ImageRecordIter, BatchAdaptIter)
