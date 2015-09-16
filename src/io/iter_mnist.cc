@@ -101,14 +101,11 @@ class MNISTIter: public IIterator<DataBatch> {
       batch_data_.dptr_ = img_[loc_].dptr_;
       batch_label_.dptr_ = &labels_[loc_];
       if (param_.flat) {
-          NDArray data_ndarray = NDArray(TBlob(batch_data_.FlatTo2D()), 0);
-          out_.data[0] = data_ndarray.Copy(data_ndarray.ctx());
+          out_.data[0] = NDArray(TBlob(batch_data_.FlatTo2D()), 0);
       } else {
-          NDArray data_ndarray = NDArray(TBlob(batch_data_), 0);
-          out_.data[0] = data_ndarray.Copy(data_ndarray.ctx());
+          out_.data[0] = NDArray(TBlob(batch_data_), 0);
       }
-      NDArray label_ndarray = NDArray(TBlob(batch_label_), 0);
-      out_.data[1] = label_ndarray.Copy(label_ndarray.ctx());
+      out_.data[1] = NDArray(TBlob(batch_label_), 0);
       out_.inst_index = &inst_[loc_];
       loc_ += param_.batch_size;
       return true;

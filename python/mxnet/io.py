@@ -73,7 +73,7 @@ class DataIter(object):
         """
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetData(self.handle, ctypes.byref(hdl)))
-        return NDArray(hdl)
+        return NDArray(hdl, False)
 
     def getlabel(self):
         """get label from batch
@@ -81,7 +81,7 @@ class DataIter(object):
         """
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
-        return NDArray(hdl)
+        return NDArray(hdl, False)
 
 def _make_io_iterator(handle):
     """Create an io iterator by handle."""

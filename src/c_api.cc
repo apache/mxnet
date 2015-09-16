@@ -824,14 +824,18 @@ int MXDataIterNext(DataIterHandle handle, int *out) {
 int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out) {
   API_BEGIN();
   DataBatch db = static_cast<IIterator<DataBatch>* >(handle)->Value();
-  *out = new NDArray(db.data[1].data(), 0);
+  NDArray* pndarray = new NDArray();
+  *pndarray = db.data[1];
+  *out = pndarray;
   API_END();
 }
 
 int MXDataIterGetData(DataIterHandle handle, NDArrayHandle *out) {
   API_BEGIN();
   DataBatch db = static_cast<IIterator<DataBatch>* >(handle)->Value();
-  *out = new NDArray(db.data[0].data(), 0);
+  NDArray* pndarray = new NDArray();
+  *pndarray = db.data[0];
+  *out = pndarray;
   API_END();
 }
 

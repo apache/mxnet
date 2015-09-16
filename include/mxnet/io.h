@@ -11,6 +11,7 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <queue>
 #include "./base.h"
 #include "./ndarray.h"
 
@@ -78,6 +79,12 @@ struct DataBatch {
   DataBatch(void) {
     inst_index = NULL;
     batch_size = 0; num_batch_padd = 0;
+  }
+  /*! \brief destructor */
+  ~DataBatch() {
+    if(inst_index != NULL) {
+        delete inst_index;
+    }
   }
   /*! \brief giving name to the data */
   void Naming(std::vector<std::string> names);

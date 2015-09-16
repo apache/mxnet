@@ -3,8 +3,10 @@ import mxnet as mx
 import numpy as np
 import os, gzip
 import pickle as pickle
+import time
+import sys
 from common import get_data
-#from PIL import Image
+from PIL import Image
 
 
 def test_MNISTIter():
@@ -69,38 +71,34 @@ def test_ImageRecIter():
         nplabel = label.numpy
         for i in range(nplabel.shape[0]):
             labelcount[int(nplabel[i])] += 1
+'''
 
 def test_Cifar10Rec():
     dataiter = mx.io.ImageRecordIter(
-            path_imgrec="data/cifar/test.rec",
-            mean_img="data/cifar/cifar10_mean.bin",
-            rand_crop=True,
-            rand_mirror=True,
+            path_imgrec="data/cifar/train.rec",
+            mean_img="data/cifar/cifar10_mean_1.bin",
+            rand_crop=False,
+            rand_mirror=False,
+            shuffle=False,
             input_shape=(3,28,28),
             batch_size=100,
-            nthread=1)
+            nthread=1,
+            capacity=1)
     labelcount = [0 for i in range(10)] 
     batchcount = 0
+    
     for data, label in dataiter:
-        npdata = data.numpy
-        print npdata[0,:,:,:]
-        imgdata = np.zeros([28, 28, 3], dtype=np.uint8)
-        imgdata[:,:,0] = npdata[0,2,:,:]
-        imgdata[:,:,1] = npdata[0,1,:,:]
-        imgdata[:,:,2] = npdata[0,0,:,:]
-        img = Image.fromarray(imgdata)
-        imgpath = "data/cifar/test.jpg"
-        img.save(imgpath, format='JPEG')
-        exit(0)
+        npdata = data.asnumpy().flatten().sum()
         print "Batch: ", batchcount
         sys.stdout.flush()
         batchcount += 1
-        nplabel = label.numpy
+        nplabel = label.asnumpy()
         for i in range(nplabel.shape[0]):
             labelcount[int(nplabel[i])] += 1
     for i in range(10):
         assert(labelcount[i] == 1000)
-'''
 
 if __name__ == "__main__":
-    test_MNISTIter()
+    CheckEqual()
+    #test_Cifar10Rec()
+

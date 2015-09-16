@@ -106,9 +106,8 @@ class BatchLoader {
               d.data[1].get<mshadow::cpu, 1, float>());
       mshadow::Copy(out->data[0].data().get<mshadow::cpu, 4, float>()[top],
               d.data[0].get<mshadow::cpu, 3, float>());
-
       if (++ top >= param_.batch_size) {
-        return true;
+          return true;
       }
     }
     if (top != 0) {
@@ -152,7 +151,7 @@ class BatchLoader {
 struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   /*! \brief number of prefetched batches */
   size_t capacity;
-    /*! \brief label width */
+  /*! \brief label width */
   index_t batch_size;
   /*! \brief input shape */
   TShape input_shape;
@@ -160,6 +159,8 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   index_t label_width;
   // declare parameters
   DMLC_DECLARE_PARAMETER(PrefetcherParam) {
+    DMLC_DECLARE_FIELD(batch_size)
+        .describe("Batch size.");
     DMLC_DECLARE_FIELD(capacity).set_default(1)
         .describe("Number of prefetched batches");
     index_t input_shape_default[] = {3, 224, 224};
@@ -202,9 +203,10 @@ class PrefetcherIter : public IIterator<DataBatch> {
         if (*dptr == NULL) {
           *dptr = new DataBatch();
           // init NDArrays
-          Context ctx; 
-          (*dptr)->data.push_back(NDArray(data_shape_, ctx, true));
-          (*dptr)->data.push_back(NDArray(label_shape_, ctx, true));
+          (*dptr)->inst_index = new unsigned[param_.batch_size]; 
+          Context ctx;
+          (*dptr)->data.push_back(NDArray(data_shape_, ctx, false));
+          (*dptr)->data.push_back(NDArray(label_shape_, ctx, false));
         }
         return loader_.LoadNext(*dptr);
       },
@@ -214,12 +216,10 @@ class PrefetcherIter : public IIterator<DataBatch> {
     iter_.BeforeFirst();
   }
   virtual bool Next(void) {
-     if (ready_narrays_.size() == param_.capacity) {
-         std::vector<NDArray*> old_narrays = ready_narrays_.front();
-         for (size_t i = 0; i < old_narrays.size(); i++) {
-             old_narrays[i]->WaitToWrite();
+     if (ready_batches_.size() == param_.capacity) {
+         for (size_t i = 0; i < out_.data.size(); i++) {
+             out_.data[i].WaitToWrite();
          }
-         ready_narrays_.pop();
          DataBatch* old_batch = ready_batches_.front();
          ready_batches_.pop();
          iter_.Recycle(&old_batch);
@@ -229,15 +229,10 @@ class PrefetcherIter : public IIterator<DataBatch> {
      out_.data.clear();
      // copy the batch
      for (size_t i = 0; i < next_batch->data.size(); i++) {
-         out_.data.push_back(next_batch->data[i].Copy(next_batch->data[i].ctx()));
+         out_.data.push_back(next_batch->data[i]);
      }
      // push the narrays and batch into the queue
      ready_batches_.push(next_batch);
-     std::vector<NDArray*> next_batch_narrays;
-     for (size_t i = 0; i < out_.data.size(); i++) {
-         next_batch_narrays.push_back(&out_.data[i]);
-     }
-     ready_narrays_.push(next_batch_narrays);
      return true;
   }
   virtual const DataBatch &Value(void) const {
@@ -248,8 +243,6 @@ class PrefetcherIter : public IIterator<DataBatch> {
   PrefetcherParam param_;
   /*! \brief output data */
   DataBatch out_;
-  /*! \brief queue to hold the NDArrays for check whether writable */
-  std::queue<std::vector<NDArray*> > ready_narrays_;
   /*! \brief queue to hold the NDArrays for check whether writable */
   std::queue<DataBatch*> ready_batches_;
   // internal batch loader

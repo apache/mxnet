@@ -300,7 +300,8 @@ class ImageRecordIter : public IIterator<DataInst> {
     // use the kwarg to init parser
     parser_.Init(kwargs);
     // init thread iter
-    iter_.set_max_capacity(4);
+    // TODO: Originally 4
+    iter_.set_max_capacity(1);
     iter_.Init([this](std::vector<InstVector> **dptr) {
         if (*dptr == NULL) {
           *dptr = new std::vector<InstVector>();
@@ -342,7 +343,7 @@ class ImageRecordIter : public IIterator<DataInst> {
           }
         }
         // shuffle instance order if needed
-        if (shuffle_ != 0) {
+        if (param_.shuffle != 0) {
             std::shuffle(inst_order_.begin(), inst_order_.end(), \
                     common::RANDOM_ENGINE(kRandMagic + param_.seed));
         }
@@ -394,8 +395,6 @@ class ImageRecordIter : public IIterator<DataInst> {
   static const int kRandMagic = 111;
   // output instance
   DataInst out_;
-  // whether shuffle data
-  int shuffle_;
   // data ptr
   size_t inst_ptr_;
   // internal instance order
