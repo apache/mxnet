@@ -3,7 +3,7 @@ import numpy as np
 import mxnet as mx
 import copy
 import sys
-sys.path.append("../../tests/python")
+sys.path.append("../../tests/python/common")
 import get_data
 import time
 

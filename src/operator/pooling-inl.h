@@ -32,24 +32,24 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   DMLC_DECLARE_PARAMETER(PoolingParam) {
     // TODO(bing) change to only set lower bound
     DMLC_DECLARE_FIELD(kernel)
-      .set_expect_ndim(2).enforce_nonzero()
-      .describe("pooling kernel size: (y, x)");
+    .set_expect_ndim(2).enforce_nonzero()
+    .describe("pooling kernel size: (y, x)");
 
     DMLC_DECLARE_FIELD(pool_type).set_default(kMaxPooling)
-      .add_enum("max", kMaxPooling)
-      .add_enum("avg", kAvgPooling)
-      .add_enum("sum", kSumPooling)
-      .describe("Pooling type to be applied.");
+    .add_enum("max", kMaxPooling)
+    .add_enum("avg", kAvgPooling)
+    .add_enum("sum", kSumPooling)
+    .describe("Pooling type to be applied.");
 
     int stride_shape[] = {1, 1};
     DMLC_DECLARE_FIELD(stride).set_default(TShape(stride_shape, stride_shape + 2))
-      .set_expect_ndim(2).enforce_nonzero()
-      .describe("stride: for pooling (y, x)");
+    .set_expect_ndim(2).enforce_nonzero()
+    .describe("stride: for pooling (y, x)");
 
     int pad_shape[] = {0, 0};
     DMLC_DECLARE_FIELD(pad).set_default(TShape(pad_shape, pad_shape + 2))
-      .set_expect_ndim(2)
-      .describe("pad for pooling: (y, x)");
+    .set_expect_ndim(2)
+    .describe("pad for pooling: (y, x)");
   }
 };
 
@@ -75,24 +75,24 @@ class PoolingOp : public Operator {
     mshadow::Shape<2> out_shape = Shape2(out.shape_[2], out.shape_[3]);
     // TODO(bing): dual stride in mshadow
     CHECK_EQ(param_.stride[0], param_.stride[1])
-      << "Only same stride is supported now";
+        << "Only same stride is supported now";
     if (param_.pool_type == kMaxPooling || param_.pool_type == kSumPooling) {
       Assign(out,
              req[kOut],
-            pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
-                          out_shape,
-                          param_.kernel[0],
-                          param_.kernel[1],
-                          param_.stride[0]));
+             pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
+                           out_shape,
+                           param_.kernel[0],
+                           param_.kernel[1],
+                           param_.stride[0]));
     } else if (param_.pool_type == kAvgPooling) {
       Assign(out,
              req[kOut],
              (1.0f / (param_.kernel[0] * param_.kernel[1])) * \
              pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
-                          out_shape,
-                          param_.kernel[0],
-                          param_.kernel[1],
-                          param_.stride[0]));
+                           out_shape,
+                           param_.kernel[0],
+                           param_.kernel[1],
+                           param_.stride[0]));
     }
   }
 
@@ -161,12 +161,12 @@ class PoolingProp : public OperatorProperty {
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape,
-                          std::vector<TShape> *aux_shape) const override {
+                  std::vector<TShape> *out_shape,
+                  std::vector<TShape> *aux_shape) const override {
     CHECK_EQ(in_shape->size(), 1);
     const TShape &dshape = (*in_shape)[0];
     CHECK_EQ(dshape.ndim(), 4) << \
-      "Pooling: Input data should be 4D in (batch, channel, y, x)";
+                               "Pooling: Input data should be 4D in (batch, channel, y, x)";
     TShape oshape = dshape;
     if (dshape.ndim() ==  0) return false;
     oshape[2] = std::min(dshape[2] + 2 * param_.pad[0] - param_.kernel[0] + param_.stride[0] - 1,
@@ -190,22 +190,22 @@ class PoolingProp : public OperatorProperty {
   }
 
   std::vector<int> DeclareBackwardDependency(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const override {
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data) const override {
     return {out_grad[kOut], in_data[kData], out_data[kOut]};
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data,
-      const std::vector<void*> &in_grad) const override {
-    #if MXNET_USE_CUDNN == 1
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data,
+    const std::vector<void*> &in_grad) const override {
+#if MXNET_USE_CUDNN == 1
     return {};
-    #else
+#else
     return {{in_data[kData], in_grad[kData]}};
-    #endif
+#endif
   }
 
   Operator* CreateOperator(Context ctx) const;
@@ -218,3 +218,4 @@ class PoolingProp : public OperatorProperty {
 }  // namespace mxnet
 
 #endif  // MXNET_OPERATOR_POOLING_INL_H_
+

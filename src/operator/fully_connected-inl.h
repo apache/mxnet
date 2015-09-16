@@ -31,9 +31,9 @@ struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
     // TODO(bing) change to only set lower bound
     // add support for boolean
     DMLC_DECLARE_FIELD(num_hidden).set_range(1, 100000)
-        .describe("Number of hidden nodes of the output.");
+    .describe("Number of hidden nodes of the output.");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
-        .describe("Whether to disable bias parameter.");
+    .describe("Whether to disable bias parameter.");
   }
 };
 
@@ -63,10 +63,10 @@ class FullyConnectedOp : public Operator {
     // maybe need blas handle from context
     // TODO(bing): judge shape to remove flatten op
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    #if defined(__CUDACC__)
+#if defined(__CUDACC__)
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
-      << "Must init CuBLAS handle in stream";
-    #endif  // __CUDACC__
+        << "Must init CuBLAS handle in stream";
+#endif  // __CUDACC__
     Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> wmat = in_data[kWeight].get<xpu, 2, real_t>(s);
     Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
@@ -96,10 +96,10 @@ class FullyConnectedOp : public Operator {
     Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> wmat = in_data[kWeight].get<xpu, 2, real_t>(s);
     Tensor<xpu, 2> grad = out_grad[kOut].FlatTo2D<xpu, real_t>(s);
-    #if defined(__CUDACC__)
+#if defined(__CUDACC__)
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
-      << "Must init CuBLAS handle in stream";
-    #endif
+        << "Must init CuBLAS handle in stream";
+#endif
     //  backprop
     CHECK_NE(req[kWeight], kWriteInplace) << "cannot write weight inplace";
     // gradient of weight
@@ -139,8 +139,8 @@ class FullyConnectedProp : public OperatorProperty {
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape,
-                          std::vector<TShape> *aux_shape) const override {
+                  std::vector<TShape> *out_shape,
+                  std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     if (!param_.no_bias) {
       CHECK_EQ(in_shape->size(), 3) << "Input:[data, weight, bias]";
@@ -174,17 +174,17 @@ class FullyConnectedProp : public OperatorProperty {
   }
   // decalre dependency and inplace optimization options
   std::vector<int> DeclareBackwardDependency(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const override {
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data) const override {
     return {out_grad[kOut], in_data[kData], in_data[kWeight]};
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data,
-      const std::vector<void*> &in_grad) const override {
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data,
+    const std::vector<void*> &in_grad) const override {
     return {{in_data[kData], in_grad[kData]}};
   }
 

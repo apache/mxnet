@@ -27,7 +27,7 @@ struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
   float grad_scale;
   DMLC_DECLARE_PARAMETER(SoftmaxParam) {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
-      .describe("Scale the gradient by a float factor");
+    .describe("Scale the gradient by a float factor");
   };
 };
 
@@ -94,8 +94,8 @@ class SoftmaxProp : public OperatorProperty {
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape,
-                          std::vector<TShape> *aux_shape) const override {
+                  std::vector<TShape> *out_shape,
+                  std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2) << "Input:[data, label]";
     const TShape &dshape = in_shape->at(0);
@@ -117,23 +117,23 @@ class SoftmaxProp : public OperatorProperty {
   }
 
   std::vector<int> DeclareBackwardDependency(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const override {
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data) const override {
     return {in_data[kLabel], out_data[kOut]};
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data,
-      const std::vector<void*> &in_grad) const override {
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data,
+    const std::vector<void*> &in_grad) const override {
     return {{out_data[kOut], in_grad[kData]}};
   }
 
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
-      const std::vector<int> &in_data,
-      const std::vector<void*> &out_data) const override {
+    const std::vector<int> &in_data,
+    const std::vector<void*> &out_data) const override {
     return {{in_data[kData], out_data[kOut]}};
   }
 

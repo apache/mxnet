@@ -26,7 +26,7 @@ struct ConcatParam : public dmlc::Parameter<ConcatParam> {
   int num_args;
   DMLC_DECLARE_PARAMETER(ConcatParam) {
     DMLC_DECLARE_FIELD(num_args).set_range(1,  6)
-      .describe("Number of inputs to be concated.");
+    .describe("Number of inputs to be concated.");
   }
 };  // struct ConcatParam
 
@@ -178,8 +178,8 @@ class ConcatProp : public OperatorProperty {
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape,
-                          std::vector<TShape> *aux_shape) const override {
+                  std::vector<TShape> *out_shape,
+                  std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
     TShape dshape = in_shape->at(kData0);
@@ -193,10 +193,10 @@ class ConcatProp : public OperatorProperty {
           dshape[1] += tmp[1];
         } else {
           CHECK_EQ(dshape[j], tmp[j])
-            << "Incorrect shape[" << i << "]: "
-            << tmp << ". "
-            << "(first input shape: "
-            << dshape << ")";
+              << "Incorrect shape[" << i << "]: "
+              << tmp << ". "
+              << "(first input shape: "
+              << dshape << ")";
         }
       }
     }
@@ -216,9 +216,9 @@ class ConcatProp : public OperatorProperty {
   }
 
   std::vector<int> DeclareBackwardDependency(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const override {
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data) const override {
     return out_grad;
   }
 

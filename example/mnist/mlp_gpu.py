@@ -5,7 +5,7 @@ import numpy as np
 import os, gzip
 import pickle as pickle
 import sys
-sys.path.append("../../tests/python")
+sys.path.append("../../tests/python/common/")
 import get_data
 
 
@@ -48,7 +48,7 @@ for name, narray in inputs.items():
 
 # bind executer
 # TODO(bing): think of a better bind interface
-executor = softmax.bind(mx.Context('gpu'), arg_narrays, grad_narrays)
+executor = softmax.bind(mx.gpu(), arg_narrays, grad_narrays)
 # create gradient NArray
 out_narray = executor.outputs[0]
 grad_narray = mx.nd.zeros(out_narray.shape, ctx=mx.gpu())

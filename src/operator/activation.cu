@@ -14,18 +14,21 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<gpu>(ActivationParam param) {
-  #if MXNET_USE_CUDNN == 1
+#if MXNET_USE_CUDNN == 1
   return new CuDNNActivationOp(param);
-  #else
+#else
   switch(param.act_type) {
-    case kReLU: return new ActivationOp<gpu, mshadow_op::relu, mshadow_op::relu_grad>();
-    case kSigmoid: return new ActivationOp<gpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad>();
-    case kTanh: return new ActivationOp<gpu, mshadow_op::tanh, mshadow_op::tanh_grad>();
+    case kReLU:
+      return new ActivationOp<gpu, mshadow_op::relu, mshadow_op::relu_grad>();
+    case kSigmoid:
+      return new ActivationOp<gpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad>();
+    case kTanh:
+      return new ActivationOp<gpu, mshadow_op::tanh, mshadow_op::tanh_grad>();
     default:
       LOG(FATAL) << "unknown activation";
       return NULL;
   }
-  #endif  // MXNET_USE_CUDNN
+#endif  // MXNET_USE_CUDNN
 }
 }  // op
 }  // namespace mxnet
