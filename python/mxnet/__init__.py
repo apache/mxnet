@@ -16,5 +16,6 @@ from . import kvstore as kv
 from . import io
 # use mx.nd as short for mx.ndarray
 from . import ndarray as nd
+from . import random
 
 __version__ = "0.1.0"

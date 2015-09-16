@@ -1,11 +1,12 @@
 /*!
  * Copyright (c) 2015 by Contributors
  */
-#include "mxnet/storage.h"
+#include <mxnet/storage.h>
 #include <mshadow/tensor.h>
 #include <dmlc/logging.h>
 #include <array>
 #include <mutex>
+#include <memory>
 #include "storage_manager.h"
 #include "naive_storage_manager.h"
 #include "pooled_storage_manager.h"
@@ -94,10 +95,14 @@ void Storage::Free(Storage::Handle handle) {
 
 Storage::~Storage() = default;
 
+std::shared_ptr<Storage> Storage::_GetSharedRef() {
+  static std::shared_ptr<Storage> inst(new Storage());
+  return inst;
+}
+
 Storage* Storage::Get() {
-  // This function is thread-safe in C++11
-  static Storage inst;
-  return &inst;
+  static Storage *ptr = _GetSharedRef().get();
+  return ptr;
 }
 
 Storage::Storage() : impl_{new Impl{}} {}

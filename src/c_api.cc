@@ -181,6 +181,12 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 }
 
 // NOTE: return value is added in API_END
+int MXRandomSeed(int seed) {
+  API_BEGIN();
+  mxnet::RandomSeed(seed);
+  API_END();
+}
+
 int MXNDArrayCreateNone(NDArrayHandle *out) {
   API_BEGIN();
   *out = new NDArray();

@@ -8,6 +8,7 @@
 
 #include <dmlc/base.h>
 #if DMLC_USE_CXX11
+#include <memory>
 #include <functional>
 #endif
 #include <vector>
@@ -154,6 +155,15 @@ class Engine {
    * \return Engine singleton.
    */
   static Engine* Get();
+  /*!
+   * \brief Get shared pointer reference to engine singleton.
+   *  Most user should not call this function.
+   *  This function is called by another singleton X who requires
+   *  engine to be destructed after X.
+   *
+   * \return A shared pointer to Engine singleton.
+   */
+  static std::shared_ptr<Engine> _GetSharedRef();
   /*!
    * \brief Push an synchronous operation to the engine.
    * \param exec_fn Execution function that executes the operation.

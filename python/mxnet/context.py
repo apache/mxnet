@@ -20,8 +20,12 @@ class Context(object):
         device_id : int (default=0)
             the device id of the device, needed for GPU
         """
-        self.device_mask = Context.devtype2mask[device_type]
-        self.device_id = device_id
+        if isinstance(device_type, Context):
+            self.device_mask = device_type.device_mask
+            self.device_id = device_type.device_id
+        else:
+            self.device_mask = Context.devtype2mask[device_type]
+            self.device_id = device_id
         self._old_ctx = None
 
     @property
