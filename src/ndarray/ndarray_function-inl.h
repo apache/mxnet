@@ -24,16 +24,6 @@
   }
 #endif
 
-#ifndef DECL_SETVALUE
-#define DECL_SETVALUE(XPU)                                              \
-  template<>                                                            \
-  void Eval<XPU>(const real_t &rhs, TBlob *ret, RunContext ctx) {       \
-    mshadow::Stream<XPU> *s = static_cast<mshadow::Stream<XPU>*>(ctx.stream); \
-    ret->FlatTo2D<XPU, real_t>(s) = rhs;                                \
-  }
-#endif
-
-
 #if defined(__CUDACC__)
 #define DEVICE gpu
 #else
@@ -45,9 +35,9 @@ namespace ndarray {
 // true implementation
 template<typename xpu, typename OP>
 inline void EvalBinary_(const TBlob &lhs, const TBlob &rhs,
-                  TBlob *ret, RunContext ctx) {
+                        TBlob *ret, RunContext ctx) {
   using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = static_cast<mshadow::Stream<xpu>*>(ctx.stream);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   ret->FlatTo2D<xpu, real_t>(s)
       = F<typename OP::mshadow_op>(lhs.FlatTo2D<xpu, real_t>(s),
                                    rhs.FlatTo2D<xpu, real_t>(s));
@@ -57,7 +47,7 @@ template<typename xpu, typename OP, bool reverse>
 inline void EvalScalar_(const TBlob &lhs, const real_t &rhs,
                         TBlob *ret, RunContext ctx) {
   using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = static_cast<mshadow::Stream<xpu>*>(ctx.stream);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   if (reverse) {
     ret->FlatTo2D<xpu, real_t>(s)
       = F<typename OP::mshadow_op>(rhs, lhs.FlatTo2D<xpu, real_t>(s));
@@ -67,6 +57,39 @@ inline void EvalScalar_(const TBlob &lhs, const real_t &rhs,
   }
 }
 
+template<>
+void EvalRandom<DEVICE, UniformDistribution>(
+    const real_t &a,
+    const real_t &b,
+    const Resource &resource,
+    TBlob *ret,
+    RunContext ctx) {
+  typedef DEVICE xpu;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  mshadow::Tensor<xpu, 2, real_t> tmp = ret->FlatTo2D<xpu, real_t>(s);
+  mshadow::Random<xpu> *prnd = resource.get_random<xpu>(s);
+  prnd->SampleUniform(&tmp, a, b);
+}
+
+template<>
+void EvalRandom<DEVICE, GaussianDistribution>(
+    const real_t &mu,
+    const real_t &sigma,
+    const Resource &resource,
+    TBlob *ret,
+    RunContext ctx) {
+  typedef DEVICE xpu;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  mshadow::Tensor<xpu, 2, real_t> tmp = ret->FlatTo2D<xpu, real_t>(s);
+  mshadow::Random<xpu> *prnd = resource.get_random<xpu>(s);
+  prnd->SampleGaussian(&tmp, mu, sigma);
+}
+
+template<>
+void Eval<DEVICE>(const real_t &rhs, TBlob *ret, RunContext ctx) {
+  mshadow::Stream<DEVICE> *s = ctx.get_stream<DEVICE>();
+  ret->FlatTo2D<DEVICE, real_t>(s) = rhs;
+}
 
 // declarations
 DECL_BINARY(DEVICE, Plus, EvalBinary_)
@@ -82,8 +105,6 @@ DECL_SCALAR(DEVICE, Plus, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Minus, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Mul, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Div, EvalScalar_, false)
-//
-DECL_SETVALUE(DEVICE)
 }  // namespace ndarray
 }  // namespace mxnet
 

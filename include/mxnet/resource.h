@@ -99,14 +99,14 @@ class ResourceManager {
    *       still hold by the manager singleton.
    *
    */
-  virtual Resource Request(Context ctx, const ResourceRequest &req);
+  virtual Resource Request(Context ctx, const ResourceRequest &req) = 0;
   /*!
    * \brief Seed all the allocated random numbers.
    * \param seed the seed to the random number generators on all devices.
    */
-  virtual void SeedRandom(uint32_t seed);
+  virtual void SeedRandom(uint32_t seed) = 0;
   /*! \brief virtual destructor */
-  virtual ~ResourceManager() noexcept(false) {}
+  virtual ~ResourceManager() {}
   /*!
    * \return Resource manager singleton.
    */

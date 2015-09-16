@@ -92,7 +92,7 @@ inline void LazyAllocArray<TElem>::ForEach(FVisit fvisit) {
   std::lock_guard<std::mutex> lock(create_mutex_);
   for (size_t i = 0; i < head_.size(); ++i) {
     if (head_[i].get() != nullptr) {
-      fviist(i, head_[i].get());
+      fvisit(i, head_[i].get());
     }
   }
   for (size_t i = 0; i < more_.size(); ++i) {
@@ -103,4 +103,4 @@ inline void LazyAllocArray<TElem>::ForEach(FVisit fvisit) {
 }
 }  // namespace common
 }  // namespace mxnet
-#endif  // MXNET_COMMON_LAZY_ARRAY_H_
+#endif  // MXNET_COMMON_LAZY_ALLOC_ARRAY_H_

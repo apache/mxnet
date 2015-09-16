@@ -237,6 +237,13 @@ class NDArray {
     ret.shape_ = shape;
     return ret;
   }
+  /*!
+   * \brief Allocate the space if it is delayed allocated.
+   * This is an internal function used by system that normal user should not use
+   */
+  inline void CheckAndAlloc() const {
+    ptr_->CheckAndAlloc();
+  }
 
  private:
   /*! \brief the real data chunk that backs NDArray */
@@ -299,16 +306,6 @@ class NDArray {
   TShape shape_;
   /*! \brief offset in chunk */
   size_t offset_;
-
-  // add friend to helper functions
-  friend void CopyFromTo(const NDArray &from, NDArray *to);
-  template<typename OP>
-  friend void BinaryOp(const NDArray &lhs, const NDArray &rhs, NDArray *out);
-  template<typename OP>
-  friend void UnaryOp(const NDArray &lhs, const NDArray &rhs, NDArray *out);
-  template<typename OP, bool reverse>
-  friend void ScalarOp(const NDArray &lhs, const real_t &rhs, NDArray *out);
-  friend void SetValueOp(const real_t &rhs, NDArray *out);
 };
 
 /*!
@@ -380,6 +377,27 @@ NDArray operator/(const NDArray &lhs, const NDArray &rhs);
  */
 NDArray operator/(const NDArray &lhs, const real_t &rhs);
 
+/*!
+ * \brief Seed the random number generator.
+ * \param seed the seed to set to global random number generators.
+ */
+void RandomSeed(uint32_t seed);
+/*!
+ * \brief Sample uniform distribution for each elements of out.
+ * \param begin lower bound of distribution.
+ * \param end upper bound of distribution.
+ * \param out output NDArray.
+ */
+void SampleUniform(real_t begin, real_t end, NDArray *out);
+
+/*!
+ * \brief Sample gaussian distribution for each elements of out.
+ * \param mu mean of gaussian distribution.
+ * \param sigma standard deviation of gaussian distribution.
+ * \param out output NDArray.
+ */
+void SampleGaussian(real_t mu, real_t sigma, NDArray *out);
+
 //--------------------------------------------------------------
 // The following part are API Registration of NDArray functions.
 //--------------------------------------------------------------
@@ -430,14 +448,12 @@ struct NDArrayFunctionReg
    * \return ref to the registered entry, used to set properties
    */
   inline NDArrayFunctionReg &set_function(void fsetvalue(const real_t &rhs,
-                                                        NDArray *out)) {
-    body = [fsetvalue] (NDArray **used_vars,
-                       real_t *s, NDArray **mutate_vars) {
+                                                         NDArray *out)) {
+    body = [fsetvalue] (NDArray **used_vars, real_t *s, NDArray **mutate_vars) {
       fsetvalue(s[0], mutate_vars[0]);
     };
     num_mutate_vars = 1; num_scalars = 1;
-    // type_mask = kNDArrayArgBeforeScalar;
-    this->add_argument("rhs", "real_t", "Right operand to the function.");
+    this->add_argument("src", "real_t", "Source input to the function.");
     return *this;
   }
   /*!
@@ -447,8 +463,8 @@ struct NDArrayFunctionReg
    * \return ref to the registered entry, used to set properties
    */
   inline NDArrayFunctionReg &set_function(void fbinary(const NDArray &lhs,
-                                                      const NDArray &rhs,
-                                                      NDArray *out)) {
+                                                       const NDArray &rhs,
+                                                       NDArray *out)) {
     body = [fbinary] (NDArray **used_vars,
                       real_t *s, NDArray **mutate_vars) {
       fbinary(*used_vars[0], *used_vars[1], mutate_vars[0]);
@@ -466,10 +482,10 @@ struct NDArrayFunctionReg
    * \return ref to the registered entry, used to set properties
    */
   inline NDArrayFunctionReg &set_function(void fscalar(const NDArray &lhs,
-                                                      const real_t &rhs,
-                                                      NDArray *out)) {
+                                                       const real_t &rhs,
+                                                       NDArray *out)) {
     body = [fscalar] (NDArray **used_vars,
-                       real_t *s, NDArray **mutate_vars) {
+                      real_t *s, NDArray **mutate_vars) {
       fscalar(*used_vars[0], s[0], mutate_vars[0]);
     };
     num_use_vars = 1; num_mutate_vars = 1; num_scalars = 1;
@@ -485,7 +501,7 @@ struct NDArrayFunctionReg
    * \return ref to the registered entry, used to set properties
    */
   inline NDArrayFunctionReg &set_function(void funary(const NDArray &src,
-                                                     NDArray *out)) {
+                                                      NDArray *out)) {
     body = [funary] (NDArray **used_vars,
                      real_t *s, NDArray **mutate_vars) {
       funary(*used_vars[0], mutate_vars[0]);

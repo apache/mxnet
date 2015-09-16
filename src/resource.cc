@@ -20,7 +20,7 @@ class ResourceManagerImpl : public ResourceManager {
     cpu_rand_ = new ResourceRandom<cpu>(
         Context(cpu::kDevMask, 0), global_seed_);
   }
-  ~ResourceManagerImpl() noexcept(false) {
+  ~ResourceManagerImpl() {
     // need explicit delete, before engine get killed
     delete cpu_rand_;
 #if MXNET_USE_CUDA
@@ -88,7 +88,7 @@ class ResourceManagerImpl : public ResourceManager {
       resource.ptr_ = prnd;
       resource.req = ResourceRequest(ResourceRequest::kRandom);
     }
-    ~ResourceRandom() noexcept(false) {
+    ~ResourceRandom() {
       mshadow::Random<xpu> *r = prnd;
       Engine::Get()->DeleteVariable(
           [r](RunContext rctx){ delete r; }, ctx, resource.var);
@@ -118,4 +118,4 @@ ResourceManager* ResourceManager::Get() {
   static resource::ResourceManagerImpl inst;
   return &inst;
 }
-}  // namespace mxnetf
+}  // namespace mxnet

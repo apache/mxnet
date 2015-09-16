@@ -52,6 +52,16 @@ typedef void *DataIterHandle;
  *  \return error info
  */
 MXNET_DLL const char *MXGetLastError();
+
+//-------------------------------------
+// Part 0: Global State setups
+//-------------------------------------
+/*!
+ * \brief Seed the global random number generators in mxnet.
+ * \param seed the random number seed.
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXRandomSeed(int seed);
 //-------------------------------------
 // Part 1: NDArray creation and deletion
 //-------------------------------------
