@@ -40,6 +40,9 @@ class CuDNNLocalResponseNormOp : public Operator {
     Stream<gpu> *s = ctx.get_stream<gpu>();
     Tensor<gpu, 4> data = in_data[kData].get<gpu, 4, real_t>(s);
     Tensor<gpu, 4> out = out_data[kOut].get<gpu, 4, real_t>(s);
+    if (!init_cudnn_) {
+      this->Init(s, in_data, out_data);
+    }
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
     CHECK_EQ(cudnnLRNCrossChannelForward(s->dnn_handle_,
                                          lrn_desc_,
@@ -105,11 +108,12 @@ class CuDNNLocalResponseNormOp : public Operator {
       double beta = param_.beta;
       double lrn_k = param_.knorm;
       CHECK_EQ(data.shape_, out.shape_);
-      CHECK_EQ(cudnnGetLRNDescriptor(lrn_desc_,
-                                     &lrn_n,
-                                     &alpha,
-                                     &beta,
-                                     &lrn_k), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnCreateLRNDescriptor(&lrn_desc_), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnSetLRNDescriptor(lrn_desc_,
+                                     lrn_n,
+                                     alpha,
+                                     beta,
+                                     lrn_k), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateTensorDescriptor(&shape_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetTensor4dDescriptor(shape_desc_,
                                           CUDNN_TENSOR_NCHW,

@@ -84,10 +84,9 @@ class ConvolutionOp : public Operator {
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
 #endif
-    this->InitTemp(ctx, data.shape_, out.shape_);
     const index_t nbatch = data.size(0);
     Tensor<xpu, 1> workspace = ctx.requested[kTempSpace].get_space<xpu>(
-        Shape1(param_.workspace), s);
+        Shape1(this->InitTemp(data.shape_, out.shape_)), s);
     for (index_t i = 0; i < nbatch; i += nstep_) {
       const index_t step = std::min(nstep_, nbatch - i);
       Tensor<xpu, 2> temp_col = Tensor<xpu, 2>(workspace.dptr_,
@@ -161,10 +160,9 @@ class ConvolutionOp : public Operator {
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
 #endif
-    this->InitTemp(ctx, data.shape_, grad.shape_);
     const index_t nbatch = data.size(0);
     Tensor<xpu, 1> workspace = ctx.requested[kTempSpace].get_space<xpu>(
-              Shape1(param_.workspace), s);
+              Shape1(this->InitTemp(data.shape_, grad.shape_)), s);
     for (index_t i = 0; i < nbatch; i += nstep_) {
       const index_t step = std::min(nstep_, nbatch - i);
       Tensor<xpu, 2> temp_col = Tensor<xpu, 2>(workspace.dptr_,
@@ -229,10 +227,8 @@ class ConvolutionOp : public Operator {
   }
 
  private:
-  // TODO(bing): use global resource allocator
-  inline void InitTemp(const OpContext &ctx,
-                       const mshadow::Shape<4> &ishape,
-                       const mshadow::Shape<4> &oshape) {
+  inline index_t InitTemp(const mshadow::Shape<4> &ishape,
+                          const mshadow::Shape<4> &oshape) {
     const int ksize_y = param_.kernel[0];
     const int ksize_x = param_.kernel[1];
     shape_colunit_ = mshadow::Shape2(ishape[1] * ksize_y * ksize_x,
@@ -240,7 +236,7 @@ class ConvolutionOp : public Operator {
     shape_dstunit_ = mshadow::Shape3(param_.num_group,
                                      param_.num_filter / param_.num_group,
                                      oshape[2] * oshape[3]);
-    const uint64_t workspace_size = param_.workspace * sizeof(real_t);
+    const uint64_t workspace_size = param_.workspace;
     nstep_ = std::max(std::min(static_cast<index_t>(workspace_size / shape_colunit_.Size()),
                                ishape[0]), 1U);
     int nop = (ishape[0] + nstep_ - 1) / nstep_;
@@ -253,6 +249,7 @@ class ConvolutionOp : public Operator {
     CHECK_GE(param_.workspace, scol.Size() + sdst.Size())
       << "\nMinimum workspace size: " << scol.Size() + sdst.Size() << "\n"
       << "Given: " << param_.workspace;
+    return scol.Size() + sdst.Size();
   }
 
   ConvolutionParam param_;

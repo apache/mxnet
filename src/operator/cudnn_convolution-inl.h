@@ -55,8 +55,7 @@ class CuDNNConvolutionOp : public Operator {
       Init(s, in_data, out_data);
     }
     Tensor<gpu, 1> workspace = ctx.requested[kTempSpace].get_space<gpu>(
-      mshadow::Shape1(param_.workspace), s);
-    const size_t workspace_size = param_.workspace * sizeof(real_t);
+      mshadow::Shape1(workspace_), s);
     CHECK_EQ(cudnnConvolutionForward(s->dnn_handle_,
                                      &alpha,
                                      in_desc_,
@@ -66,7 +65,7 @@ class CuDNNConvolutionOp : public Operator {
                                      conv_desc_,
                                      algo_,
                                      workspace.dptr_,
-                                     workspace_size,
+                                     workspace_size_,
                                      &beta,
                                      out_desc_,
                                      out.dptr_), CUDNN_STATUS_SUCCESS);
@@ -107,8 +106,7 @@ class CuDNNConvolutionOp : public Operator {
     Tensor<gpu, 4> data = in_data[kData].get<gpu, 4, real_t>(s);
     Tensor<gpu, 4> gdata = in_grad[kData].get<gpu, 4, real_t>(s);
     Tensor<gpu, 1> workspace = ctx.requested[kTempSpace].get_space<gpu>(
-      mshadow::Shape1(param_.workspace), s);
-    const size_t workspace_size = param_.workspace * sizeof(real_t);
+      mshadow::Shape1(workspace_), s);
     if (!param_.no_bias) {
       Tensor<gpu, 1> gbias = in_grad[kBias].get<gpu, 1, real_t>(s);
       CHECK_EQ(cudnnConvolutionBackwardBias(s->dnn_handle_,
@@ -128,7 +126,7 @@ class CuDNNConvolutionOp : public Operator {
              conv_desc_,
              back_algo_w_,
              workspace.dptr_,
-             workspace_size,
+             workspace_size_,
              &beta,
              filter_desc_,
              gwmat.dptr_), CUDNN_STATUS_SUCCESS);
@@ -141,7 +139,7 @@ class CuDNNConvolutionOp : public Operator {
              conv_desc_,
              back_algo_,
              workspace.dptr_,
-             workspace_size,
+             workspace_size_,
              &beta,
              in_desc_,
              gdata.dptr_), CUDNN_STATUS_SUCCESS);
@@ -253,13 +251,17 @@ class CuDNNConvolutionOp : public Operator {
                algo_,
                &workspace), CUDNN_STATUS_SUCCESS);
       workspace = std::max(workspace, back_size);
-      CHECK_GE(param_.workspace * sizeof(real_t), workspace)
+      CHECK_GE(param_.workspace * sizeof(real_t), workspace + sizeof(real_t))
         << "\nMinimum workspace: " << workspace << "\n"
         << "Given: " << param_.workspace * sizeof(real_t);
+      workspace_ = workspace / sizeof(real_t) + 1;
+      workspace_size_ = workspace_ * sizeof(real_t);
     }
   }
 
   bool init_cudnn_;
+  size_t workspace_;
+  size_t workspace_size_;
   cudnnDataType_t dtype_;
   cudnnTensorDescriptor_t in_desc_;
   cudnnTensorDescriptor_t out_desc_;
