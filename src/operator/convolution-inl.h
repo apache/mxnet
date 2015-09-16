@@ -348,12 +348,12 @@ class ConvolutionProp : public OperatorProperty {
 
   virtual std::vector<ResourceRequest> ForwardResource(
       const std::vector<TShape> &in_shape) const {
-    return {{ResourceRequest::kTempSpace, param_.workspace}};
+    return {ResourceRequest::kTempSpace};
   }
 
   virtual std::vector<ResourceRequest> BackwardResource(
       const std::vector<TShape> &in_shape) const {
-    return {{ResourceRequest::kTempSpace, param_.workspace}};
+    return {ResourceRequest::kTempSpace};
   }
 
   Operator* CreateOperator(Context ctx) const;

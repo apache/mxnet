@@ -5,8 +5,8 @@ from __future__ import absolute_import
 
 import ctypes
 from .base import _LIB
-from .base import c_array, mx_uint, NDArrayHandle, ExecutorHandle
-from .base import check_call
+from .base import mx_uint, NDArrayHandle, ExecutorHandle
+from .base import check_call, c_array, py_str
 from .ndarray import NDArray
 
 class Executor(object):
@@ -80,6 +80,19 @@ class Executor(object):
                 raise TypeError("inputs must be NDArray")
         ndarray = c_array(NDArrayHandle, [item.handle for item in head_grads])
         check_call(_LIB.MXExecutorBackward(self.handle, len(head_grads), ndarray))
+
+    def debug_str(self):
+        """Get a debug string about internal execution plan.
+
+        Returns
+        -------
+        debug_str : string
+            Debug string of the executor.
+        """
+        debug_str = ctypes.c_char_p()
+        check_call(_LIB.MXExecutorPrint(
+            self.handle, ctypes.byref(debug_str)))
+        return py_str(debug_str.value)
 
     @property
     def outputs(self):

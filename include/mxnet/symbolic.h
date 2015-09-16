@@ -401,6 +401,11 @@ class Executor {
    */
   virtual void Backward(const std::vector<NDArray> &head_grads) = 0;
   /*!
+   * \brief print the execution plan info to output stream.
+   * \param os the output stream we like to print to.
+   */
+  virtual void Print(std::ostream &os) const {} // NOLINT(*)
+  /*!
    * \brief get array of outputs in the executor.
    * \return array of outputs in the executor.
    */
