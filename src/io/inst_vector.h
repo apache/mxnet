@@ -72,6 +72,10 @@ class InstVector {
   inline size_t Size(void) const {
     return index_.size();
   }
+  // get index
+  inline unsigned Index(unsigned i) const {
+    return index_[i];
+  }
   // instance
   inline DataInst operator[](size_t i) const {
     DataInst inst;

@@ -194,7 +194,6 @@ inline void ImageRecordIOParser::Init(
     augmenters_[i]->Init(kwargs);
     prnds_.push_back(new common::RANDOM_ENGINE((i + 1) * kRandMagic));
   }
-
   // handling for hadoop
   const char *ps_rank = getenv("PS_RANK");
   if (ps_rank != NULL) {
@@ -227,7 +226,9 @@ ParseNext(std::vector<InstVector> *out_vec) {
   CHECK(source_ != NULL);
   dmlc::InputSplit::Blob chunk;
   if (!source_->NextChunk(&chunk)) return false;
-  out_vec->resize(param_.nthread);
+  // save opencv out
+  std::vector<InstVector> * opencv_out_vec = new std::vector<InstVector>();
+  opencv_out_vec->resize(param_.nthread);
   #pragma omp parallel num_threads(param_.nthread)
   {
     CHECK(omp_get_num_threads() == param_.nthread);
@@ -236,26 +237,59 @@ ParseNext(std::vector<InstVector> *out_vec) {
     ImageRecordIO rec;
     dmlc::InputSplit::Blob blob;
     // image data
-    InstVector &out = (*out_vec)[tid];
-    out.Clear();
+    InstVector &opencv_out = (*opencv_out_vec)[tid];
+    opencv_out.Clear();
     while (reader.NextRecord(&blob)) {
+      // Opencv decode and augments
+      cv::Mat res;
       rec.Load(blob.dptr, blob.size);
-      out.Push(static_cast<unsigned>(rec.image_index()),
+      cv::Mat buf(1, rec.content_size, CV_8U, rec.content);
+      res = cv::imdecode(buf, 1);
+      res = augmenters_[tid]->OpencvProcess(res, prnds_[tid]);
+      opencv_out.Push(static_cast<unsigned>(rec.image_index()),
+               mshadow::Shape3(3, res.rows, res.cols),
+               mshadow::Shape1(param_.label_width));
+      DataInst opencv_inst = opencv_out.Back();
+      mshadow::Tensor<mshadow::cpu, 3> opencv_data = opencv_inst.data[0].get<mshadow::cpu, 3, float>();
+      mshadow::Tensor<mshadow::cpu, 1> opencv_label = opencv_inst.data[1].get<mshadow::cpu, 1, float>();
+      for (int i = 0; i < res.rows; ++i) {
+        for (int j = 0; j < res.cols; ++j) {
+          cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
+          opencv_data[0][i][j] = bgr[2];
+          opencv_data[1][i][j] = bgr[1];
+          opencv_data[2][i][j] = bgr[0];
+        }
+      }
+      if (label_map_ != NULL) {
+        mshadow::Copy(opencv_label, label_map_->Find(rec.image_index()));
+      } else {
+        opencv_label[0] = rec.header.label;
+      }
+      res.release();
+    }
+  }
+  // Tensor Op is not thread safe, so call outside of omp
+  out_vec->resize(param_.nthread);
+  for (size_t i = 0; i < opencv_out_vec->size(); i++) {
+    InstVector &out = (*out_vec)[i];
+    InstVector &opencv_out = (*opencv_out_vec)[i];
+    out.Clear();
+    for (size_t j = 0; j < opencv_out.Size(); j++) {
+      out.Push(opencv_out.Index(j),
                mshadow::Shape3(param_.input_shape[0], param_.input_shape[1], param_.input_shape[2]),
                mshadow::Shape1(param_.label_width));
       DataInst inst = out.Back();
-      // turn datainst into tensor
+      DataInst opencv_inst = opencv_out[j]; 
+      mshadow::Tensor<mshadow::cpu, 3> opencv_data = opencv_inst.data[0].get<mshadow::cpu, 3, float>();
+      mshadow::Tensor<mshadow::cpu, 1> opencv_label = opencv_inst.data[1].get<mshadow::cpu, 1, float>();
       mshadow::Tensor<mshadow::cpu, 3> data = inst.data[0].get<mshadow::cpu, 3, float>();
       mshadow::Tensor<mshadow::cpu, 1> label = inst.data[1].get<mshadow::cpu, 1, float>();
-      augmenters_[tid]->Process(rec.content, rec.content_size, &img_, prnds_[tid]);
+      augmenters_[i]->TensorProcess(&opencv_data, &img_, prnds_[i]);
       mshadow::Copy(data, img_);
-      if (label_map_ != NULL) {
-        mshadow::Copy(label, label_map_->Find(rec.image_index()));
-      } else {
-        label[0] = rec.header.label;
-      }
+      mshadow::Copy(label, opencv_label);
     }
   }
+  delete opencv_out_vec; 
   return true;
 }
 
@@ -300,8 +334,7 @@ class ImageRecordIter : public IIterator<DataInst> {
     // use the kwarg to init parser
     parser_.Init(kwargs);
     // init thread iter
-    // TODO: Originally 4
-    iter_.set_max_capacity(1);
+    iter_.set_max_capacity(4);
     iter_.Init([this](std::vector<InstVector> **dptr) {
         if (*dptr == NULL) {
           *dptr = new std::vector<InstVector>();

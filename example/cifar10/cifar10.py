@@ -203,7 +203,7 @@ train_dataiter = mx.io.ImageRecordIter(
         shuffle=False,
         input_shape=(3,28,28),
         batch_size=batch_size,
-        nthread=1,
+        nthread=4,
         capacity=4)
 test_dataiter = mx.io.ImageRecordIter(
         path_imgrec="data/cifar/test.rec",
@@ -213,7 +213,7 @@ test_dataiter = mx.io.ImageRecordIter(
         shuffle=False,
         input_shape=(3,28,28),
         batch_size=batch_size,
-        nthread=1,
+        nthread=4,
         capacity=4)
 
 

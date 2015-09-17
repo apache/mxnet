@@ -74,8 +74,7 @@ class MNISTIter: public IIterator<DataBatch> {
     } else {
       batch_data_.shape_ = mshadow::Shape4(param_.batch_size, 1, img_.size(1), img_.size(2));
     }
-    out_.inst_index = NULL;
-    out_.data.resize(2);
+    out_.data.clear();
     batch_label_.shape_ = mshadow::Shape2(param_.batch_size, 1);
     batch_label_.stride_ = 1;
     batch_data_.stride_ = batch_data_.size(3);
@@ -98,15 +97,20 @@ class MNISTIter: public IIterator<DataBatch> {
   }
   virtual bool Next(void) {
     if (loc_ + param_.batch_size <= img_.size(0)) {
+      if (out_.data.size() == 2) {
+        for (size_t i = 0; i < out_.data.size(); i++) {
+             out_.data[i].WaitToWrite();
+         }
+      }
       batch_data_.dptr_ = img_[loc_].dptr_;
       batch_label_.dptr_ = &labels_[loc_];
+      out_.data.clear();
       if (param_.flat) {
-          out_.data[0] = NDArray(TBlob(batch_data_.FlatTo2D()), 0);
+          out_.data.push_back(NDArray(TBlob(batch_data_.FlatTo2D()), 0));
       } else {
-          out_.data[0] = NDArray(TBlob(batch_data_), 0);
+          out_.data.push_back(NDArray(TBlob(batch_data_), 0));
       }
-      out_.data[1] = NDArray(TBlob(batch_label_), 0);
-      out_.inst_index = &inst_[loc_];
+      out_.data.push_back(NDArray(TBlob(batch_label_), 0));
       loc_ += param_.batch_size;
       return true;
     } else {

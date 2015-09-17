@@ -216,13 +216,13 @@ class PrefetcherIter : public IIterator<DataBatch> {
     iter_.BeforeFirst();
   }
   virtual bool Next(void) {
-     if (ready_batches_.size() == param_.capacity) {
-         for (size_t i = 0; i < out_.data.size(); i++) {
-             out_.data[i].WaitToWrite();
-         }
+     if (ready_batches_.size() != 0) {
          DataBatch* old_batch = ready_batches_.front();
-         ready_batches_.pop();
+         for (size_t i = 0; i < old_batch->data.size(); i++) {
+             old_batch->data[i].WaitToWrite();
+         }
          iter_.Recycle(&old_batch);
+         ready_batches_.pop();
      }
      DataBatch* next_batch = NULL;
      if (!iter_.Next(&next_batch)) return false;

@@ -121,6 +121,8 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
         .describe("Maximum ratio of contrast variation");
     DMLC_DECLARE_FIELD(max_random_illumination).set_default(0.0f)
         .describe("Maximum value of illumination variation");
+    DMLC_DECLARE_FIELD(silent).set_default(true)
+        .describe("Whether to print augmentor info");
   }
 };
 
@@ -173,6 +175,7 @@ class ImageAugmenter {
    */
   virtual cv::Mat OpencvProcess(const cv::Mat &src,
                           common::RANDOM_ENGINE *prnd) {
+    if (!NeedOpencvProcess()) return src;
     // shear
     float s = NextDouble(prnd) * param_.max_shear_ratio * 2 - param_.max_shear_ratio;
     // rotate
@@ -276,7 +279,8 @@ class ImageAugmenter {
     return tmpres_;
   }
 
-  void TensorProcess(mshadow::TensorContainer<cpu, 3> *p_data,
+  void TensorProcess(mshadow::Tensor<cpu, 3> *p_data,
+                     mshadow::TensorContainer<cpu, 3> *dst_data,
                        common::RANDOM_ENGINE *prnd) {
     // Check Newly Created mean image
     if (meanfile_ready_ == false && param_.mean_img.length() != 0) {
@@ -290,7 +294,7 @@ class ImageAugmenter {
         meanfile_ready_ = true;
       }
     }
-    img_.Resize(mshadow::Shape3((*p_data).shape_[0], param_.input_shape[1], param_.input_shape[2]));
+    img_.Resize(mshadow::Shape3((*p_data).shape_[0], param_.input_shape[1], param_.input_shape[2])); 
     if (param_.input_shape[1] == 1) {
       img_ = (*p_data) * param_.scale;
     } else {
@@ -354,27 +358,7 @@ class ImageAugmenter {
         }
       }
     }
-    (*p_data) = img_;
-  }
-
-  virtual void Process(unsigned char *dptr, size_t sz,
-                       mshadow::TensorContainer<cpu, 3> *p_data,
-                       common::RANDOM_ENGINE *prnd) {
-    cv::Mat buf(1, sz, CV_8U, dptr);
-    cv::Mat res = cv::imdecode(buf, 1);
-    if (NeedOpencvProcess())
-        res = this->OpencvProcess(res, prnd);
-    p_data->Resize(mshadow::Shape3(3, res.rows, res.cols));
-    for (index_t i = 0; i < p_data->size(1); ++i) {
-      for (index_t j = 0; j < p_data->size(2); ++j) {
-        cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
-        (*p_data)[0][i][j] = bgr[2];
-        (*p_data)[1][i][j] = bgr[1];
-        (*p_data)[2][i][j] = bgr[0];
-      }
-    }
-    res.release();
-    this->TensorProcess(p_data, prnd);
+    (*dst_data) = img_;
   }
 
  private:

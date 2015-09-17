@@ -548,7 +548,7 @@ def _make_ndarray_function(handle):
         if out:
             if isinstance(out, NDArray) == False:
                 raise TypeError('out must be NDArray')
-            if out.writable == True:
+            if out.writable == False:
                 raise TypeError('out must be writable')
         else:
             if not accept_empty_mutate:
@@ -565,7 +565,7 @@ def _make_ndarray_function(handle):
         if out:
             if isinstance(out, NDArray) == False:
                 raise TypeError('out must be NDArray')
-            if out.writable == True:
+            if out.writable == False:
                 raise TypeError('out must be writable')
         else:
             if not accept_empty_mutate:
