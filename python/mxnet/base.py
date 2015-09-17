@@ -179,4 +179,3 @@ def ctypes2numpy_shared(cptr, shape):
     dbuffer = (mx_float * size).from_address(ctypes.addressof(cptr.contents))
     return np.frombuffer(dbuffer, dtype=np.float32).reshape(shape)
 
-

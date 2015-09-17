@@ -107,4 +107,8 @@ Storage* Storage::Get() {
 
 Storage::Storage() : impl_{new Impl{}} {}
 
+void Storage::Finalize() {
+  impl_.reset(nullptr);
+}
+
 }  // namespace mxnet

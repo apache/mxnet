@@ -31,8 +31,7 @@ class KVStoreLocal : public KVStore {
   virtual ~KVStoreLocal() { Clear(); }
 
   virtual void Start() { }
-
-  virtual void Stop() { Clear(); }
+  virtual void Finalize() { Clear(); }
 
   virtual void set_updater(const Updater& updater) {
     updater_ = updater;

@@ -36,12 +36,12 @@ class KVStore {
   virtual void Start();
 
   /**
-   * \brief Stop
+   * \brief Finalize the KVStore
    *
    * clear all key-value pairs stored, updater, and devices binded
    */
-  virtual void Stop() {
-    if (impl_) { impl_->Stop(); delete impl_; impl_ = NULL; }
+  virtual void Finalize() {
+    if (impl_) { impl_->Finalize(); delete impl_; impl_ = NULL; }
   }
 
   /**
@@ -178,7 +178,10 @@ class KVStore {
 
  protected:
   KVStore() : impl_(NULL) { }
-  virtual ~KVStore() { delete impl_; impl_ = NULL; }
+
+  virtual ~KVStore() {
+    delete impl_; impl_ = NULL;
+  }
 
  private:
   inline KVStore* get_impl() const {

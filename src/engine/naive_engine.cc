@@ -15,14 +15,20 @@ class NaiveEngine final : public Engine {
   }
   // virtual destructor
   virtual ~NaiveEngine() {
+    Finalize();
+  }
+
+  void Finalize() override {
 #if MXNET_USE_CUDA
     for (size_t i = 0; i < streams_.size(); ++i) {
       if (streams_[i] != nullptr) {
         mshadow::DeleteStream(streams_[i]);
+        streams_[i] = nullptr;
       }
     }
 #endif
   }
+
   // new variables
   VarHandle NewVariable() override {
     return nullptr;
