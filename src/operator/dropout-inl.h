@@ -52,28 +52,15 @@ class DropoutOp : public Operator {
       CHECK_EQ(out_data.size(), 2);
     }
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> data, out, mask;
-    if (in_data[kData].ndim() == 2) {
-      uint32_t ds[] = {in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1};
-      TShape dshape(ds, ds + 4);
-      data = in_data[kData].get_with_shape<xpu, 4, real_t>(dshape, s);
-      out = out_data[kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
-      if (ctx.is_train) {
-        mask = out_data[kMask].get_with_shape<xpu, 4, real_t>(dshape, s);
-      }
-    } else {
-      data = in_data[kData].get<xpu, 4, real_t>(s);
-      out = out_data[kOut].get<xpu, 4, real_t>(s);
-      if (ctx.is_train) {
-        mask = out_data[kMask].get<xpu, 4, real_t>(s);
-      }
-    }
+    Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
     if (ctx.is_train) {
+      Tensor<xpu, 2> mask = out_data[kMask].FlatTo2D<xpu, real_t>(s);
       Random<xpu> *prnd = ctx.requested[kRandom].get_random<xpu>(s);
       mask = F<mshadow_op::threshold>(prnd->uniform(mask.shape_), pkeep_) * (1.0f / pkeep_);
       Assign(out, req[kOut], data * mask);
     } else {
-      Assign(out, req[kOut], data + 0.0f);
+      Assign(out, req[kOut], F<mshadow_op::identity>(data));
     }
   }
 
@@ -89,18 +76,9 @@ class DropoutOp : public Operator {
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(in_grad.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> grad, gdata, mask;
-    if (out_grad[kOut].ndim() == 2) {
-      uint32_t ds[] = {out_grad[kOut].shape_[0], out_grad[kOut].shape_[1], 1, 1};
-      TShape dshape(ds, ds + 4);
-      gdata = in_grad[kData].get_with_shape<xpu, 4, real_t>(dshape, s);
-      grad = out_grad[kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
-      mask = out_data[kMask].get_with_shape<xpu, 4, real_t>(dshape, s);
-    } else {
-      grad = out_grad[kOut].get<xpu, 4, real_t>(s);
-      gdata = in_grad[kData].get<xpu, 4, real_t>(s);
-      mask = out_data[kMask].get<xpu, 4, real_t>(s);
-    }
+    Tensor<xpu, 2> grad = out_grad[kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> mask = out_data[kMask].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> gdata = in_grad[kData].FlatTo2D<xpu, real_t>(s);
     Assign(gdata, req[kData], grad * mask);
   }
 
