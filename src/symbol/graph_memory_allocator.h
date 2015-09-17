@@ -11,6 +11,7 @@
 #include <map>
 #include <vector>
 #include <algorithm>
+#include "./graph_algorithm.h"
 
 namespace mxnet {
 /*!
@@ -34,7 +35,9 @@ class GraphStorageAllocator {
   /*! \brief bad storage id */
   static const StorageID kBadStorageID = -1;
   /*! \brief constructor to the graph memory allocator */
-  explicit GraphStorageAllocator(StaticGraph *graph);
+  explicit GraphStorageAllocator(
+      StaticGraph *graph,
+      const std::vector<uint32_t>& topo_order) noexcept(false);
   /*!
    * \brief Request a memory.
    * \param ctx the context of the graph
@@ -69,10 +72,12 @@ class GraphStorageAllocator {
     Context ctx;
     /*! \brief maximum size of the storage that is requested */
     size_t max_size;
+    /*! \brief node index that released it last time */
+    uint32_t released_by_node;
     /*! \brief the actual NDArray to hold the data */
     NDArray data;
     /*! \brief constructor */
-    StorageEntry() : max_size(0) {}
+    StorageEntry() : max_size(0), released_by_node(0) {}
   };
   /*!
    * \brief Allocate a StorageID when Request cannot found existing ones.
@@ -80,7 +85,11 @@ class GraphStorageAllocator {
    * \param shape shape of the NDArray we want
    */
   StorageID Alloc(Context ctx, size_t size);
-
+  /*!
+   * \brief Initialize the colors of graph nodes.
+   * \param topo_order the topological order in the graph.
+   */
+  void InitColor(const std::vector<uint32_t> &topo_order);
   /*! \brief reference to the computation graph */
   StaticGraph *graph_;
   /*! \brief all the resources available */
@@ -91,12 +100,39 @@ class GraphStorageAllocator {
    * \brief free list of storage entries, maps size to free list
    */
   std::multimap<size_t, StorageEntry*> free_;
+
+  /*!
+   * \brief color of nodes in the graph, used for auxiliary policy making.
+  */
+  std::vector<uint32_t> node_color_;
+  /*! \brief whether use color based match algorithm */
+  uint32_t num_match_color_;
 };
 
 // put implementation in header files for now
-GraphStorageAllocator::GraphStorageAllocator(StaticGraph *graph)
-    : graph_(graph) {
+GraphStorageAllocator::GraphStorageAllocator(
+    StaticGraph *graph,
+    const std::vector<uint32_t>& topo_order) noexcept(false)
+    : graph_(graph) , num_match_color_(0) {
   match_range_ = dmlc::GetEnv("MXNET_EXEC_MATCH_RANGE", 16);
+  // if we set this to 1, this means no color based match.
+  // color based match will cost a bit more memory usually
+  // but also enables more parallelization.
+  num_match_color_ = dmlc::GetEnv("MXNET_EXEC_MATCH_NUM_COLOR", 4);
+  this->InitColor(topo_order);
+}
+
+void GraphStorageAllocator::InitColor(const std::vector<uint32_t>& topo_order) {
+  std::vector<uint32_t> importance(graph_->nodes.size(), 0);
+  for (size_t i = 0; i < topo_order.size(); ++i) {
+    uint32_t nid = topo_order[i];
+    if (graph_->nodes[nid].is_variable()) continue;
+    importance[nid] = 1;
+  }
+  num_match_color_ = graph::ColorNodeGroup(
+      *graph_, topo_order,
+      importance, num_match_color_,
+      &node_color_);
 }
 
 GraphStorageAllocator::StorageID
@@ -114,6 +150,7 @@ GraphStorageAllocator::StorageID
 GraphStorageAllocator::Request(Context ctx, TShape shape, uint32_t node_id) {
   // search memory block in [size / match_range_, size * match_range_)
   size_t size = shape.Size();
+  if (match_range_ == 0) return this->Alloc(ctx, size);
   auto begin = free_.lower_bound(size / match_range_);
   auto mid = free_.lower_bound(size);
   auto end = free_.upper_bound(size * match_range_);
@@ -122,6 +159,7 @@ GraphStorageAllocator::Request(Context ctx, TShape shape, uint32_t node_id) {
   for (auto it = mid; it != end; ++it) {
     StorageEntry *e = it->second;
     if (e->ctx != ctx) continue;
+    if (node_color_[e->released_by_node] != node_color_[node_id]) continue;
     // Use exect matching strategy
     e->max_size = std::max(size, e->max_size);
     // find a exact match, erase from map and return
@@ -133,6 +171,7 @@ GraphStorageAllocator::Request(Context ctx, TShape shape, uint32_t node_id) {
     --it;
     StorageEntry *e = it->second;
     if (e->ctx != ctx) continue;
+    if (node_color_[e->released_by_node] != node_color_[node_id]) continue;
     // Use exect matching strategy
     e->max_size = std::max(size, e->max_size);
     // find a exact match, erase from map and return
@@ -146,6 +185,7 @@ GraphStorageAllocator::Request(Context ctx, TShape shape, uint32_t node_id) {
 void GraphStorageAllocator::Release(StorageID id, uint32_t node_id) {
   CHECK_NE(id, kBadStorageID);
   StorageEntry *e = data_[id].get();
+  e->released_by_node = node_id;
   free_.insert({e->max_size, e});
 }
 
