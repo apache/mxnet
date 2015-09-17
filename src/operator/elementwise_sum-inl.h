@@ -102,6 +102,16 @@ class ElementWiseSumOp : public Operator {
       Assign(igrad, req[i], F<mshadow_op::identity>(ograd));
     }
   }
+  inline void Save(dmlc::JSONWriter *writer) const {
+    writer->BeginObject();
+    writer->WriteObjectKeyValue("size_", size_);
+    writer->EndObject();
+  }
+  inline void Load(dmlc::JSONReader *reader) {
+    dmlc::JSONObjectReadHelper helper;
+    helper.DeclareField("size_", &size_);
+    helper.ReadAllFields(reader);
+  }
 
  private:
   int size_;
@@ -111,7 +121,7 @@ template<typename xpu>
 Operator* CreateOp(ElementWiseSumParam param);
 
 #if DMLC_USE_CXX11
-class ElementWiseSumProp : public OperatorProperty {
+class ElementWiseSumProp : public ParamOperatorProperty<ElementWiseSumParam> {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -180,9 +190,6 @@ class ElementWiseSumProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
-
- private:
-  ElementWiseSumParam param_;
 };  // class ElementWiseSumProp
 
 #endif  // DMLC_USE_CXX11

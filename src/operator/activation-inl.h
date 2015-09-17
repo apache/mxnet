@@ -84,7 +84,7 @@ template<typename xpu>
 Operator* CreateOp(ActivationParam type);
 
 #if DMLC_USE_CXX11
-class ActivationProp : public OperatorProperty {
+class ActivationProp : public ParamOperatorProperty<ActivationParam> {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -139,12 +139,8 @@ class ActivationProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
-
- private:
-  ActivationParam param_;
 };
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_ACTIVATION_INL_H_
-

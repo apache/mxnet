@@ -8,9 +8,12 @@
 #ifndef MXNET_OPERATOR_OPERATOR_COMMON_H_
 #define MXNET_OPERATOR_OPERATOR_COMMON_H_
 
+#include <dmlc/json.h>
 #include <dmlc/logging.h>
 #include <mxnet/operator.h>
 #include <mxnet/base.h>
+#include <istream>
+#include <ostream>
 #include <string>
 
 namespace mxnet {
@@ -93,6 +96,43 @@ struct InferShapeError {
   }
 #endif
 
+#if DMLC_USE_CXX11
+template<class Param>
+class ParamOperatorProperty : public OperatorProperty {
+ public:
+  ParamOperatorProperty() {}
+  explicit ParamOperatorProperty(Param param) : param_(param) {}
+  inline void Save(dmlc::JSONWriter *writer) const {
+    writer->BeginObject();
+    std::string value = param_.PrintJson();
+    writer->WriteObjectKeyValue("param", value);
+    writer->EndObject();
+  }
+  inline void Load(dmlc::JSONReader *reader) {
+    dmlc::JSONObjectReadHelper helper;
+    std::string value;
+    helper.DeclareField("param", &value);
+    helper.ReadAllFields(reader);
+    param_.LoadJson(value);
+  }
+  inline bool operator==(const ParamOperatorProperty<Param>& other) const {
+    return param_ == other.param_;
+  }
+ protected:
+  Param param_;
+};
+
+class NoParamOperatorProperty : public OperatorProperty {
+ public:
+  inline void Save(dmlc::JSONWriter *writer) const {
+  }
+  inline void Load(dmlc::JSONReader *reader) {
+  }
+  inline bool operator==(const NoParamOperatorProperty& other) const {
+    return true;
+  }
+};
+#endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_OPERATOR_COMMON_H_

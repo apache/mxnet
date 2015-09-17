@@ -8,6 +8,8 @@
 #define MXNET_SYMBOLIC_H_
 
 #include <dmlc/base.h>
+#include <dmlc/json.h>
+#include <algorithm>
 #include <vector>
 #include <memory>
 #include <string>
@@ -64,6 +66,11 @@ class StaticGraph {
       if (source_id == other.source_id) return index < other.index;
       return source_id < other.source_id;
     }
+
+    /*! \brief interface for json serialization */
+    void Save(dmlc::JSONWriter *writer) const;
+    /*! \brief interface for json serialization */
+    void Load(dmlc::JSONReader *reader);
   };
   /*!
    * \brief Operation Node in static graphs.
@@ -95,6 +102,23 @@ class StaticGraph {
     int32_t backward_source_id;
     /*! \brief default constructor */
     Node() : backward_source_id(-1) {}
+
+    friend void swap(Node& lhs, Node& rhs) {
+      std::swap(lhs.op, rhs.op);
+      std::swap(lhs.name, rhs.name);
+      std::swap(lhs.inputs, rhs.inputs);
+      std::swap(lhs.backward_source_id, rhs.backward_source_id);
+    }
+    /*! \brief copy constructor in favor of serialization. */
+    Node(const Node& another) : op(another.op.get() ? another.op.get()->Copy() : nullptr),
+                                name(another.name),
+                                inputs(another.inputs),
+                                backward_source_id(another.backward_source_id) {}
+
+    inline Node& operator=(Node another) {
+      swap(*this, another);
+      return *this;
+    }
     /*! \return whether the node is forward op node */
     inline bool is_forward() const {
       return op != nullptr;
@@ -107,6 +131,10 @@ class StaticGraph {
     inline bool is_variable() const {
       return op == nullptr && !is_backward();
     }
+    /*! \brief interface for json serialization */
+    void Save(dmlc::JSONWriter *writer) const;
+    /*! \brief interface for json serialization */
+    void Load(dmlc::JSONReader *reader);
   };
   /*! \brief all nodes in the graph */
   std::vector<Node> nodes;
@@ -114,6 +142,14 @@ class StaticGraph {
   std::vector<uint32_t> arg_nodes;
   /*! \brief heads outputs of the graph */
   std::vector<DataEntry> heads;
+  /*! \brief load static graph from json. TODO: a static creator's better */
+  void Load(const std::string& json);
+  /*! \brief save static graph to json */
+  void Save(std::string* json) const;
+  /*! \brief interface for json serialization */
+  void Save(dmlc::JSONWriter *writer) const;
+  /*! \brief interface for json serialization */
+  void Load(dmlc::JSONReader *reader);
   // funtions to help inference in static graph
   /*!
    * \brief Perform a topological sort on the graph

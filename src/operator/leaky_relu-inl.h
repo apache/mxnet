@@ -190,7 +190,7 @@ template<typename xpu>
 Operator* CreateOp(LeakyReLUParam type);
 
 #if DMLC_USE_CXX11
-class LeakyReLUProp : public OperatorProperty {
+class LeakyReLUProp : public ParamOperatorProperty<LeakyReLUParam> {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -298,9 +298,6 @@ class LeakyReLUProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
-
- private:
-  LeakyReLUParam param_;
 };
 #endif  // DMLC_USE_CXX11
 }  // namespace op
