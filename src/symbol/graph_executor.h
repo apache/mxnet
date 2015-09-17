@@ -182,6 +182,8 @@ class GraphExecutor : public Executor {
   bool enable_inplace_allocation_;
   // total allocated space in #reals
   size_t total_allocated_reals_;
+  // total allocated temp space
+  size_t total_allocated_temp_;
   // number of forward nodes in the graph
   size_t num_forward_nodes_;
   // head gradient node in the graph, if there is backward pass

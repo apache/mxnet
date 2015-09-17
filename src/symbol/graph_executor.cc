@@ -8,6 +8,7 @@
 #include <mxnet/symbolic.h>
 #include <memory>
 #include "./graph_executor.h"
+#include "./graph_algorithm.h"
 
 namespace mxnet {
 /*!
@@ -452,25 +453,62 @@ void GraphExecutor::InitDataEntryMemory() {
   }
 }
 
+// simple unique context index of context
+inline uint32_t UniqueContextIndex(const Context &ctx) {
+  if (ctx.dev_mask == cpu::kDevMask) return 0;
+  return ctx.dev_id + 1;
+}
+
 void GraphExecutor::InitResources() {
+  // prepare for temp space allocation
+  std::vector<uint32_t> req_temp_cnt(topo_order_.size(), 0);
+  for (size_t i = 0; i < topo_order_.size(); ++i) {
+    uint32_t nid = topo_order_[i];
+    if (!op_nodes_[nid].activated) continue;
+    if (graph_.nodes[nid].is_variable()) continue;
+    uint32_t cnt = 0;
+    for (const ResourceRequest& req : GetResource(nid)) {
+      if (req.type == ResourceRequest::kTempSpace) ++cnt;
+    }
+    CHECK_LE(cnt, 1) << "Node can only have one temp space request";
+    req_temp_cnt[nid] = cnt;
+  }
+  uint32_t num_color = 16;
+  std::vector<uint32_t> req_temp_color;
+  // use graph coloring to find node that won't run in parallel
+  num_color = graph::ColorNodeGroup(graph_, topo_order_, req_temp_cnt,
+                                    num_color, &req_temp_color);
+
+  // cached resources temp space
+  std::map<uint32_t, std::map<uint32_t, Resource> > cached_temp;
+  total_allocated_temp_ = 0;
+
   // Resource allocation
   for (size_t i = 0; i < topo_order_.size(); ++i) {
     uint32_t nid = topo_order_[i];
     if (!op_nodes_[nid].activated) continue;
     if (graph_.nodes[nid].is_variable()) continue;
-
     const std::vector<ResourceRequest>& reqs = GetResource(nid);
     auto& requested = op_nodes_[nid].op_ctx.requested;
     requested.clear();
     // Get the resource of temporal space.
     for (const ResourceRequest& req : reqs) {
+      const Context &ctx = op_nodes_[nid].ctx;
       if (req.type == ResourceRequest::kTempSpace) {
-        // TODO(tqchen, bing) more smarter graph aware temp sapce allocation.
-        requested.push_back(ResourceManager::Get()->Request(
-            op_nodes_[nid].ctx, req));
+        uint32_t color = req_temp_color[nid];
+        uint32_t ctx_id = UniqueContextIndex(ctx);
+        // try to reuse graph in same color
+        std::map<uint32_t, Resource> &cmap = cached_temp[ctx_id];
+        if (cmap.count(color) != 0) {
+          requested.push_back(cmap.at(color));
+        } else {
+          Resource r = ResourceManager::Get()->Request(ctx, req);
+          requested.push_back(r);
+          cmap[color] = r;
+          ++total_allocated_temp_;
+        }
       } else if (req.type == ResourceRequest::kRandom) {
-        requested.push_back(ResourceManager::Get()->Request(
-            op_nodes_[nid].ctx, req));
+        requested.push_back(ResourceManager::Get()->Request(ctx, req));
       } else {
         LOG(FATAL) << "resource type not yet supported";
       }
@@ -561,6 +599,7 @@ void GraphExecutor::Print(std::ostream &os) const {
     }
   }
   os << "Total " << (total_allocated_reals_ >> 18UL) <<" MB allocated\n";
+  os << "Total " << total_allocated_temp_ <<" TempSpace resource requested\n";
 }
 
 void GraphExecutor::Forward(bool is_train) {

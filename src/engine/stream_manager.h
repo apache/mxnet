@@ -43,8 +43,9 @@ template <std::size_t kNumGpus, std::size_t kStreams>
 RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
     Context const& ctx) {
   RunContext ret;
+  ret.stream = nullptr;
   switch (ctx.dev_mask) {
-    case cpu::kDevMask: ret.stream = nullptr; break;
+    case cpu::kDevMask: break;
     case gpu::kDevMask: {
 #if MXNET_USE_CUDA
       std::size_t use_counter;
