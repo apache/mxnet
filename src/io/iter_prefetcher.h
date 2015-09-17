@@ -169,10 +169,10 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   index_t label_width;
   // declare parameters
   DMLC_DECLARE_PARAMETER(PrefetcherParam) {
-    DMLC_DECLARE_FIELD(batch_size)
-        .describe("Batch size.");
     DMLC_DECLARE_FIELD(prefetch_capacity).set_default(1)
         .describe("Number of prefetched batches");
+    DMLC_DECLARE_FIELD(batch_size)
+        .describe("Batch size.");
     index_t input_shape_default[] = {3, 224, 224};
     DMLC_DECLARE_FIELD(input_shape)
         .set_default(TShape(input_shape_default, input_shape_default + 3))
@@ -220,8 +220,10 @@ class PrefetcherIter : public IIterator<DataBatch> {
           (*dptr)->data.push_back(NDArray(label_shape_, ctx, false));
         }
         const DataBatch& batch = loader_->Value();
-        CopyFromTo(batch.data[0], &((*dptr)->data[0]));
-        CopyFromTo(batch.data[1], &((*dptr)->data[1]));
+        mshadow::Copy((*dptr)->data[0].data().get<mshadow::cpu, 4, float>(),
+                batch.data[0].data().get<mshadow::cpu, 4, float>());
+        mshadow::Copy((*dptr)->data[1].data().get<mshadow::cpu, 2, float>(),
+                batch.data[1].data().get<mshadow::cpu, 2, float>());
         return load_success;
       },
       [this]() { loader_->BeforeFirst(); });

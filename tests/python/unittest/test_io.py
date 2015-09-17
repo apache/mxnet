@@ -49,12 +49,13 @@ def test_Cifar10Rec():
             input_shape=(3,28,28),
             batch_size=100,
             nthread=4,
-            prefetch_capacity=4)
+            prefetch_capacity=1)
     labelcount = [0 for i in range(10)] 
     batchcount = 0
     for data, label in dataiter:
         npdata = data.asnumpy().flatten().sum()
-        print "Batch: ", batchcount
+        #print label.asnumpy().flatten() 
+        #print "Batch: ", batchcount
         sys.stdout.flush()
         batchcount += 1
         nplabel = label.asnumpy()
@@ -64,7 +65,31 @@ def test_Cifar10Rec():
         print labelcount[i]
         #assert(labelcount[i] == 5000)
 
+def Check():
+    file1 = open('./text_1.txt', 'r')
+    file2 = open('./text_2.txt', 'r')
+    line1 = file1.readline()
+    labelcount = [0 for i in range(10)] 
+    while line1:
+        line2 = file2.readline()
+        if (int)(line1) != (int)(line2):
+            print 'error'
+            print line1, line2
+            break
+        labelcount[(int)(line1)]+=1
+        line1 = file1.readline()
+    for i in range(10):
+        print labelcount[i]
+    
+    file1.close()
+    file2.close()
+
+
+
+
+
 if __name__ == "__main__":
-    test_MNISTIter()
-    #test_Cifar10Rec()
+    #test_MNISTIter()
+    test_Cifar10Rec()
+    #Check()
 

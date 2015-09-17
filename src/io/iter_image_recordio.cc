@@ -122,7 +122,7 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
     index_t input_shape_default[] = {3, 224, 224};
     DMLC_DECLARE_FIELD(input_shape)
         .set_default(TShape(input_shape_default, input_shape_default + 3))
-        .set_expect_ndim(3).enforce_nonzero()
+        .enforce_nonzero()
         .describe("Input shape of the neural net");
   }
 };
