@@ -291,4 +291,91 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
     }
   }
 }
+
+void StaticGraph::DataEntry::Save(dmlc::JSONWriter *writer) const {
+  writer->BeginObject();
+  writer->WriteObjectKeyValue("source_id", source_id);
+  writer->WriteObjectKeyValue("index", index);
+  writer->EndObject();
+}
+
+void StaticGraph::DataEntry::Load(dmlc::JSONReader *reader) {
+  dmlc::JSONObjectReadHelper helper;
+  helper.DeclareField("source_id", &source_id);
+  helper.DeclareField("index", &index);
+  helper.ReadAllFields(reader);
+}
+
+void StaticGraph::Node::Save(dmlc::JSONWriter *writer) const {
+  writer->BeginObject();
+  if (op.get() != nullptr) {
+    writer->WriteObjectKeyValue("op_type", op.get()->TypeString());
+    std::ostringstream os;
+    dmlc::JSONWriter subWriter(&os);
+    subWriter.BeginObject();
+    subWriter.WriteObjectKeyValue("op", *(op.get()));
+    subWriter.EndObject();
+    writer->WriteObjectKeyValue("op", os.str());
+  } else {
+    std::string jsonNull = "null";
+    writer->WriteObjectKeyValue("op_type", jsonNull);
+    writer->WriteObjectKeyValue("op", jsonNull);
+  }
+  writer->WriteObjectKeyValue("name", name);
+  writer->WriteObjectKeyValue("inputs", inputs);
+  writer->WriteObjectKeyValue("backward_source_id", backward_source_id);
+  writer->EndObject();
+}
+
+void StaticGraph::Node::Load(dmlc::JSONReader *reader) {
+  dmlc::JSONObjectReadHelper firstHelper;
+  std::string op_type_str;
+  firstHelper.DeclareField("op_type", &op_type_str);
+  std::string op_str;
+  firstHelper.DeclareField("op", &op_str);
+  firstHelper.DeclareField("name", &name);
+  firstHelper.DeclareField("inputs", &inputs);
+  firstHelper.DeclareField("backward_source_id", &backward_source_id);
+  firstHelper.ReadAllFields(reader);
+  if (op_type_str != "null") {
+    dmlc::JSONObjectReadHelper secondHelper;
+    std::istringstream iss(op_str);
+    dmlc::JSONReader subReader(&iss);
+    op.reset(OperatorProperty::Create(op_type_str.c_str()));
+    secondHelper.DeclareField("op", op.get());
+    secondHelper.ReadAllFields(reader);
+  } else {
+    op.reset(nullptr);
+  }
+}
+
+void StaticGraph::Save(dmlc::JSONWriter *writer) const {
+  writer->BeginObject();
+  writer->WriteObjectKeyValue("nodes", nodes);
+  writer->WriteObjectKeyValue("arg_nodes", arg_nodes);
+  writer->WriteObjectKeyValue("heads", heads);
+  writer->EndObject();
+}
+
+void StaticGraph::Load(dmlc::JSONReader *reader) {
+  dmlc::JSONObjectReadHelper helper;
+  helper.DeclareField("nodes", &nodes);
+  helper.DeclareField("arg_nodes", &arg_nodes);
+  helper.DeclareField("heads", &heads);
+  helper.ReadAllFields(reader);
+}
+
+void StaticGraph::Load(const std::string& json) {
+  std::istringstream is(json);
+  dmlc::JSONReader reader(&is);
+  reader.Read(this);
+}
+
+void StaticGraph::Save(std::string* json) const {
+  std::ostringstream os;
+  dmlc::JSONWriter writer(&os);
+  writer.Write(*this);
+  *json = os.str();
+}
+
 }  // namespace mxnet

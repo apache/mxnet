@@ -124,7 +124,7 @@ template<typename xpu>
 Operator* CreateOp(FullyConnectedParam param);
 
 #if DMLC_USE_CXX11
-class FullyConnectedProp : public OperatorProperty {
+class FullyConnectedProp : public ParamOperatorProperty<FullyConnectedParam> {
  public:
   std::vector<std::string> ListArguments() const override {
     if (!param_.no_bias) {
@@ -189,9 +189,6 @@ class FullyConnectedProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
-
- private:
-  FullyConnectedParam param_;
 };  // class FullyConnectedSymbol
 #endif
 }  // namespace op

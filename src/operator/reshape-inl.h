@@ -83,11 +83,11 @@ template<typename xpu>
 Operator* CreateOp();
 
 #if DMLC_USE_CXX11
-class ReshapeProp : public OperatorProperty {
+class ReshapeProp : public ParamOperatorProperty<ReshapeParam> {
  public:
   ReshapeProp() {}
 
-  explicit ReshapeProp(ReshapeParam param) : param_(param) {}
+  explicit ReshapeProp(ReshapeParam param) : ParamOperatorProperty<ReshapeParam>(param) {}
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -140,9 +140,6 @@ class ReshapeProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
-
- private:
-  ReshapeParam param_;
 };  // class ReshapeProp
 
 class FlattenProp : public ReshapeProp {
