@@ -8,7 +8,6 @@ import sys
 import ctypes
 import platform
 import numpy as np
-import atexit
 
 __all__ = ['MXNetError']
 #----------------------------
@@ -180,10 +179,3 @@ def ctypes2numpy_shared(cptr, shape):
     dbuffer = (mx_float * size).from_address(ctypes.addressof(cptr.contents))
     return np.frombuffer(dbuffer, dtype=np.float32).reshape(shape)
 
-
-def stop_all():
-    """Stop All the components in mxnet."""
-    check_call(_LIB.MXFinalize())
-
-
-atexit.register(stop_all)

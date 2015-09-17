@@ -12,10 +12,6 @@ def init_kv():
     # list
     mx.kv.init(keys, [mx.nd.zeros(shape)] * len(keys))
 
-def stop_kv():
-    """stop kv """
-    mx.kv.stop()
-
 def check_diff_to_scalar(A, x):
     """ assert A == x"""
     assert(np.sum(np.abs((A - x).asnumpy())) == 0)
@@ -30,7 +26,6 @@ def test_single_kv_pair():
     mx.kv.pull(3, out = val)
     check_diff_to_scalar(val, 1)
 
-    stop_kv()
 
 def test_list_kv_pair():
     """list key-value pair push & pull"""
@@ -43,7 +38,6 @@ def test_list_kv_pair():
     for v in val:
         check_diff_to_scalar(v, 4)
 
-    stop_kv()
 
 def test_aggregator():
     """aggregate value on muliple devices"""
@@ -72,7 +66,6 @@ def test_aggregator():
         for v in vv:
             check_diff_to_scalar(v, num_devs * 2.0)
 
-    stop_kv()
 
 def updater(key, recv, local):
     """use updater: +="""
@@ -110,7 +103,6 @@ def test_updater(dev = 'cpu'):
         for v in vv:
             check_diff_to_scalar(v, num_devs * num_push)
 
-    stop_kv()
 
 if __name__ == '__main__':
     test_single_kv_pair()

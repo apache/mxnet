@@ -6,9 +6,8 @@ import ctypes
 from .ndarray import NDArray
 from .base import _LIB
 from .base import check_call, c_array, NDArrayHandle
-import atexit
 
-__all__ = ['start', 'init', 'push', 'pull', 'stop', 'set_updater']
+__all__ = ['start', 'init', 'push', 'pull', 'set_updater']
 
 def _ctype_key_value(keys, vals):
     """
@@ -213,11 +212,9 @@ def set_updater(updater):
     _updater_func = _updater_proto(_updater_wrapper(updater))
     check_call(_LIB.MXKVStoreSetUpdater(_updater_func))
 
-def stop():
-    """ Stop the kvstore """
+def _cleanup():
+    """ cleanup callbacks """
     # need to clear _updater_func before _LIB
     global _updater_func
     _updater_func = None
 
-
-atexit.register(stop)
