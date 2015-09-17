@@ -80,6 +80,18 @@ struct Context {
   Context(int dev_mask, int dev_id)
       : dev_mask(dev_mask), dev_id(dev_id) {}
   /*!
+   * \brief Comparator, used to enable Context as std::map key.
+   * \param b another context to compare
+   * \return compared result
+   */
+  inline bool operator<(const Context &b) const {
+    if (dev_mask == b.dev_mask) {
+      return dev_id < b.dev_id;
+    } else {
+      return dev_mask < b.dev_mask;
+    }
+  }
+  /*!
    * \brief check if current context equals another one
    * \param b another context to compare
    * \return whether dev mask and id are same
