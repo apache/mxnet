@@ -23,19 +23,13 @@ class ResourceManagerImpl : public ResourceManager {
     cpu_temp_space_copy_ = dmlc::GetEnv("MXNET_CPU_TEMP_COPY", 16);
     gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 4);
     engine_ref_ = Engine::_GetSharedRef();
-    cpu_rand_ = new ResourceRandom<cpu>(
-        Context(cpu::kDevMask, 0), global_seed_);
-    cpu_space_ = new ResourceTempSpace<cpu>(
-        Context(cpu::kDevMask, 0), cpu_temp_space_copy_);
+    cpu_rand_.reset(new ResourceRandom<cpu>(
+        Context(cpu::kDevMask, 0), global_seed_));
+    cpu_space_.reset(new ResourceTempSpace<cpu>(
+        Context(cpu::kDevMask, 0), cpu_temp_space_copy_));
   }
   ~ResourceManagerImpl() {
-    // need explicit delete, before engine get killed
-    delete cpu_rand_;
-#if MXNET_USE_CUDA
-    gpu_rand_.Clear();
-#endif
-    // release the reference to engine.
-    engine_ref_ = nullptr;
+    Finalize();
   }
 
   // request resources
@@ -78,6 +72,22 @@ class ResourceManagerImpl : public ResourceManager {
         p->Seed(seed);
       });
 #endif
+  }
+
+ protected:
+  void Finalize() override {
+    // need explicit delete, before engine get killed
+    cpu_rand_.reset(nullptr);
+    cpu_space_.reset(nullptr);
+#if MXNET_USE_CUDA
+    gpu_rand_.Clear();
+    gpu_space_.Clear();
+#endif
+    if (engine_ref_ != nullptr) {
+      engine_ref_->WaitForAll();
+      // release the reference to engine.
+      engine_ref_ = nullptr;
+    }
   }
 
  private:
@@ -169,9 +179,9 @@ class ResourceManagerImpl : public ResourceManager {
   /*! \brief internal seed to the random number generator */
   uint32_t global_seed_;
   /*! \brief CPU random number resources */
-  ResourceRandom<cpu> *cpu_rand_;
+  std::unique_ptr<ResourceRandom<cpu> > cpu_rand_;
   /*! \brief CPU temp space resources */
-  ResourceTempSpace<cpu> *cpu_space_;
+  std::unique_ptr<ResourceTempSpace<cpu> > cpu_space_;
 #if MXNET_USE_CUDA
   /*! \brief random number generator for GPU */
   common::LazyAllocArray<ResourceRandom<gpu> > gpu_rand_;

@@ -24,10 +24,12 @@ template <std::size_t kNumGpus, std::size_t kStreams>
 class StreamManager {
  public:
   StreamManager();
-  ~StreamManager();
+  ~StreamManager() {
+    Finalize();
+  }
   RunContext GetRunContext(Context const& ctx);
   RunContext GetIORunContext(Context const& ctx);
-
+  void Finalize();
  private:
   std::mutex m_;
 #if MXNET_USE_CUDA
@@ -111,13 +113,14 @@ StreamManager<kNumGpus, kStreams>::StreamManager() {
 }
 
 template <std::size_t kNumGpus, std::size_t kStreams>
-StreamManager<kNumGpus, kStreams>::~StreamManager() {
+void StreamManager<kNumGpus, kStreams>::Finalize() {
 #if MXNET_USE_CUDA
   for (std::size_t i = 0; i < kNumGpus; ++i) {
     if (gpu_cnt_.at(i) != -1) {
       for (auto&& j : gpu_streams_.at(i)) {
         mshadow::DeleteStream<gpu>(j);
       }
+      gpu_cnt_.at(i) = -1;
     }
   }
 #endif  // MXNET_USE_CUDA

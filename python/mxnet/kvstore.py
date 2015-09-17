@@ -215,9 +215,9 @@ def set_updater(updater):
 
 def stop():
     """ Stop the kvstore """
-    check_call(_LIB.MXKVStoreStop())
     # need to clear _updater_func before _LIB
     global _updater_func
     _updater_func = None
+
 
 atexit.register(stop)

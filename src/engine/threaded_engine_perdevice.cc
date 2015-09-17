@@ -28,18 +28,17 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     cpu_worker_nthreads_ = dmlc::GetEnv("MXNET_CPU_WORKER_NTHREADS", 2);
     gpu_worker_nthreads_ = dmlc::GetEnv("MXNET_GPU_WORKER_NTHREADS", 2);
     gpu_copy_nthreads_ = dmlc::GetEnv("MXNET_GPU_COPY_NTHREADS", 1);
-
     // create CPU task
-    auto *cpu_queue = &(cpu_worker_.task_queue);
-    cpu_worker_.pool.reset(new ThreadPool(
+    cpu_worker_.reset(new ThreadWorkerBlock());
+    auto *cpu_queue = &(cpu_worker_->task_queue);
+    cpu_worker_->pool.reset(new ThreadPool(
         cpu_worker_nthreads_, [this, cpu_queue] {
           this->CPUWorker(cpu_queue);
         }));
     // GPU tasks will be created lazily
   }
   ~ThreadedEnginePerDevice() noexcept(false) {
-    // wait until all the tasks are completed.
-    this->WaitForAll();
+    Finalize();
   }
 
  protected:
@@ -56,7 +55,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
       this->ExecuteOprBlock(run_ctx, opr_block);
     } else {
       if (ctx.dev_mask == cpu::kDevMask) {
-        cpu_worker_.task_queue.Push(opr_block);
+        cpu_worker_->task_queue.Push(opr_block);
       } else {
         CHECK_EQ(ctx.dev_mask, gpu::kDevMask);
         ThreadWorkerBlock* block = this->GetGPUWorkerBlock(
@@ -64,6 +63,13 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         block->task_queue.Push(opr_block);
       }
     }
+  }
+  // finalize the internal resources
+  void Finalize() override {
+    gpu_normal_workers_.Clear();
+    gpu_copy_workers_.Clear();
+    cpu_worker_.reset(nullptr);
+    ThreadedEngine::Finalize();
   }
 
  private:
@@ -85,7 +91,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   /*! \brief number of concurrent thread each gpu copy worker uses */
   int gpu_copy_nthreads_;
   // cpu worker
-  ThreadWorkerBlock cpu_worker_;
+  std::unique_ptr<ThreadWorkerBlock> cpu_worker_;
   // workers doing normal works on GPU
   common::LazyAllocArray<ThreadWorkerBlock> gpu_normal_workers_;
   // workers doing copy works from/to GPU

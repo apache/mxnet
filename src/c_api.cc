@@ -187,6 +187,12 @@ int MXRandomSeed(int seed) {
   API_END();
 }
 
+int MXFinalize() {
+  API_BEGIN();
+  mxnet::Finalize();
+  API_END();
+}
+
 int MXNDArrayCreateNone(NDArrayHandle *out) {
   API_BEGIN();
   *out = new NDArray();
@@ -888,12 +894,6 @@ int MXKVStorePull(int num, int* keys, NDArrayHandle* vals) {
 int MXKVStoreStart() {
   API_BEGIN();
   KVStore::Get()->Start();
-  API_END();
-}
-
-int MXKVStoreStop() {
-  API_BEGIN();
-  KVStore::Get()->Stop();
   API_END();
 }
 
