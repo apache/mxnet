@@ -157,7 +157,7 @@ Operator* CreateElementWiseBinaryOp(ElementWiseBinaryOpType type);
 
 #if DMLC_USE_CXX11
 template<typename ForwardOp>
-class ElementWiseBinaryOpProp : public OperatorProperty {
+class ElementWiseBinaryOpProp : public NoParamOperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     CHECK_EQ(kwargs.size(), 0)

@@ -98,7 +98,7 @@ template<typename xpu>
 Operator *CreateOp(LRNParam param);
 
 #if DMLC_USE_CXX11
-class LocalResponseNormProp : public OperatorProperty {
+class LocalResponseNormProp : public ParamOperatorProperty<LRNParam> {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -173,9 +173,6 @@ class LocalResponseNormProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
-
- private:
-  LRNParam param_;
 };  // LocalResponseNormProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op

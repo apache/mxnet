@@ -262,7 +262,7 @@ template<typename xpu>
 Operator* CreateOp(ConvolutionParam param);
 
 #if DMLC_USE_CXX11
-class ConvolutionProp : public OperatorProperty {
+class ConvolutionProp : public ParamOperatorProperty<ConvolutionParam> {
  public:
   std::vector<std::string> ListArguments() const override {
     if (!param_.no_bias) {
@@ -358,8 +358,6 @@ class ConvolutionProp : public OperatorProperty {
 
   Operator* CreateOperator(Context ctx) const;
 
- private:
-  ConvolutionParam param_;
 };  // class ConvolutionProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op

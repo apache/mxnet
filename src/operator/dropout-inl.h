@@ -91,7 +91,7 @@ template<typename xpu>
 Operator *CreateOp(DropoutParam param);
 
 #if DMLC_USE_CXX11
-class DropoutProp : public OperatorProperty {
+class DropoutProp : public ParamOperatorProperty<DropoutParam> {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -160,8 +160,6 @@ class DropoutProp : public OperatorProperty {
 
   Operator* CreateOperator(Context ctx) const;
 
- private:
-  DropoutParam param_;
 };  // class DropoutProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op

@@ -154,7 +154,7 @@ Operator* CreateOp(PoolingParam param);
 
 
 #if DMLC_USE_CXX11
-class PoolingProp : public OperatorProperty {
+class PoolingProp : public ParamOperatorProperty<PoolingParam> {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -209,9 +209,6 @@ class PoolingProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
-
- private:
-  PoolingParam param_;
 };  // class PoolingProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op
