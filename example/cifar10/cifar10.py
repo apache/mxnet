@@ -205,7 +205,7 @@ train_dataiter = mx.io.ImageRecordIter(
         input_shape=(3,28,28),
         batch_size=batch_size,
         nthread=4,
-        capacity=4)
+        prefetch_capacity=4)
 test_dataiter = mx.io.ImageRecordIter(
         path_imgrec="data/cifar/test.rec",
         mean_img="data/cifar/cifar_mean.bin",
@@ -215,7 +215,7 @@ test_dataiter = mx.io.ImageRecordIter(
         input_shape=(3,28,28),
         batch_size=batch_size,
         nthread=4,
-        capacity=4)
+        prefetch_capacity=4)
 
 
 def progress(count, total, epoch, toc):

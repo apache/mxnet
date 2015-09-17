@@ -54,10 +54,11 @@ struct BatchParam : public dmlc::Parameter<BatchParam> {
 };
 
 /*! \brief create a batch iterator from single instance iterator */
-class BatchLoader {
+class ImageRecBatchLoader : public IIterator<DataBatch> {
  public:
-  explicit BatchLoader(IIterator<DataInst> *base): base_(base), num_overflow_(0) {}
-  virtual ~BatchLoader(void) {
+  explicit ImageRecBatchLoader(IIterator<DataInst> *base):
+      base_(base), head_(1), num_overflow_(0) {}
+  virtual ~ImageRecBatchLoader(void) {
     delete base_;
   }
   inline void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
@@ -68,14 +69,18 @@ class BatchLoader {
     base_->Init(kwargs);
     std::vector<size_t> data_shape_vec;
     data_shape_vec.push_back(param_.batch_size);
-    data_shape_vec.push_back(param_.input_shape[0]);
-    data_shape_vec.push_back(param_.input_shape[1]);
-    data_shape_vec.push_back(param_.input_shape[2]);
+    for (size_t shape_dim = 0; shape_dim < param_.input_shape.ndim(); shape_dim++)
+        data_shape_vec.push_back(param_.input_shape[shape_dim]);
     data_shape_ = TShape(data_shape_vec.begin(), data_shape_vec.end());
     std::vector<size_t> label_shape_vec;
     label_shape_vec.push_back(param_.batch_size);
     label_shape_vec.push_back(param_.label_width);
     label_shape_ = TShape(label_shape_vec.begin(), label_shape_vec.end());
+    // Init space for out_
+    out_.inst_index = new unsigned[param_.batch_size]; 
+    Context ctx;
+    out_.data.push_back(NDArray(data_shape_, ctx, false));
+    out_.data.push_back(NDArray(label_shape_, ctx, false));
   }
   inline void BeforeFirst(void) {
     if (param_.round_batch == 0 || num_overflow_ == 0) {
@@ -86,8 +91,8 @@ class BatchLoader {
     }
     head_ = 1;
   }
-  inline bool LoadNext(DataBatch* out) {
-    out->num_batch_padd = 0;
+  inline bool Next(void) {
+    out_.num_batch_padd = 0;
 
     // skip read if in head version
     if (param_.test_skipread != 0 && head_ == 0)
@@ -101,10 +106,10 @@ class BatchLoader {
 
     while (base_->Next()) {
       const DataInst& d = base_->Value();
-      out->inst_index[top] = d.index;
-      mshadow::Copy(out->data[1].data().get<mshadow::cpu, 2, float>()[top],
+      out_.inst_index[top] = d.index;
+      mshadow::Copy(out_.data[1].data().get<mshadow::cpu, 2, float>()[top],
               d.data[1].get<mshadow::cpu, 1, float>());
-      mshadow::Copy(out->data[0].data().get<mshadow::cpu, 4, float>()[top],
+      mshadow::Copy(out_.data[0].data().get<mshadow::cpu, 4, float>()[top],
               d.data[0].get<mshadow::cpu, 3, float>());
       if (++ top >= param_.batch_size) {
           return true;
@@ -117,24 +122,29 @@ class BatchLoader {
         for (; top < param_.batch_size; ++top, ++num_overflow_) {
           CHECK(base_->Next()) << "number of input must be bigger than batch size";
           const DataInst& d = base_->Value();
-          out->inst_index[top] = d.index;
-          mshadow::Copy(out->data[1].data().get<mshadow::cpu, 2, float>()[top],
+          out_.inst_index[top] = d.index;
+          mshadow::Copy(out_.data[1].data().get<mshadow::cpu, 2, float>()[top],
                   d.data[1].get<mshadow::cpu, 1, float>());
-          mshadow::Copy(out->data[0].data().get<mshadow::cpu, 4, float>()[top],
+          mshadow::Copy(out_.data[0].data().get<mshadow::cpu, 4, float>()[top],
                   d.data[0].get<mshadow::cpu, 3, float>());
         }
-        out->num_batch_padd = num_overflow_;
+        out_.num_batch_padd = num_overflow_;
       } else {
-        out->num_batch_padd = param_.batch_size - top;
+        out_.num_batch_padd = param_.batch_size - top;
       }
       return true;
     }
     return false;
   }
+  virtual const DataBatch &Value(void) const {
+    return out_;
+  }
 
  private:
   /*! \brief batch parameters */
   BatchParam param_;
+  /*! \brief output data */
+  DataBatch out_;
   /*! \brief base iterator */
   IIterator<DataInst> *base_;
   /*! \brief on first */
@@ -150,7 +160,7 @@ class BatchLoader {
 // Define prefetcher parameters
 struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   /*! \brief number of prefetched batches */
-  size_t capacity;
+  size_t prefetch_capacity;
   /*! \brief label width */
   index_t batch_size;
   /*! \brief input shape */
@@ -161,12 +171,12 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   DMLC_DECLARE_PARAMETER(PrefetcherParam) {
     DMLC_DECLARE_FIELD(batch_size)
         .describe("Batch size.");
-    DMLC_DECLARE_FIELD(capacity).set_default(1)
+    DMLC_DECLARE_FIELD(prefetch_capacity).set_default(1)
         .describe("Number of prefetched batches");
     index_t input_shape_default[] = {3, 224, 224};
     DMLC_DECLARE_FIELD(input_shape)
         .set_default(TShape(input_shape_default, input_shape_default + 3))
-        .set_expect_ndim(3).enforce_nonzero()
+        .enforce_nonzero()
         .describe("Input shape of the neural net");
     DMLC_DECLARE_FIELD(label_width).set_default(1)
         .describe("Label width.");
@@ -176,30 +186,31 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
 // iterator on image recordio
 class PrefetcherIter : public IIterator<DataBatch> {
  public:
-  PrefetcherIter(IIterator<DataInst>* base) : loader_(base){
+  PrefetcherIter(IIterator<DataBatch>* base) : loader_(base){
   }
   virtual ~PrefetcherIter(void) {
     iter_.Destroy();
+    delete loader_;
   }
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     // init image rec param
     kwargs_left = param_.InitAllowUnknown(kwargs);
     // use the kwarg to init batch loader
-    loader_.Init(kwargs);
+    loader_->Init(kwargs);
     std::vector<size_t> data_shape_vec;
     data_shape_vec.push_back(param_.batch_size);
-    data_shape_vec.push_back(param_.input_shape[0]);
-    data_shape_vec.push_back(param_.input_shape[1]);
-    data_shape_vec.push_back(param_.input_shape[2]);
+    for (size_t shape_dim = 0; shape_dim < param_.input_shape.ndim(); shape_dim++)
+        data_shape_vec.push_back(param_.input_shape[shape_dim]);
     data_shape_ = TShape(data_shape_vec.begin(),data_shape_vec.end());
     std::vector<size_t> label_shape_vec;
     label_shape_vec.push_back(param_.batch_size);
     label_shape_vec.push_back(param_.label_width);
     label_shape_ = TShape(label_shape_vec.begin(), label_shape_vec.end());
     // init thread iter
-    iter_.set_max_capacity(param_.capacity);
+    iter_.set_max_capacity(param_.prefetch_capacity);
     iter_.Init([this](DataBatch **dptr) {
+        bool load_success = loader_->Next();
         if (*dptr == NULL) {
           *dptr = new DataBatch();
           // init NDArrays
@@ -208,9 +219,12 @@ class PrefetcherIter : public IIterator<DataBatch> {
           (*dptr)->data.push_back(NDArray(data_shape_, ctx, false));
           (*dptr)->data.push_back(NDArray(label_shape_, ctx, false));
         }
-        return loader_.LoadNext(*dptr);
+        const DataBatch& batch = loader_->Value();
+        CopyFromTo(batch.data[0], &((*dptr)->data[0]));
+        CopyFromTo(batch.data[1], &((*dptr)->data[1]));
+        return load_success;
       },
-      [this]() { loader_.BeforeFirst(); });
+      [this]() { loader_->BeforeFirst(); });
   }
   virtual void BeforeFirst(void) {
     iter_.BeforeFirst();
@@ -246,7 +260,7 @@ class PrefetcherIter : public IIterator<DataBatch> {
   /*! \brief queue to hold the NDArrays for check whether writable */
   std::queue<DataBatch*> ready_batches_;
   // internal batch loader
-  BatchLoader loader_;
+  IIterator<DataBatch>* loader_;
   // backend thread
   dmlc::ThreadedIter<DataBatch> iter_;
   /*! \brief data shape */

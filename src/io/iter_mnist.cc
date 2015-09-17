@@ -13,6 +13,7 @@
 #include <vector>
 #include <utility>
 #include <map>
+#include "./iter_prefetcher.h"
 #include "../common/utils.h"
 
 namespace mxnet {
@@ -63,7 +64,7 @@ class MNISTIter: public IIterator<DataBatch> {
   // intialize iterator loads data in
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     std::map<std::string, std::string> kmap(kwargs.begin(), kwargs.end());
-    param_.Init(kmap);
+    param_.InitAllowUnknown(kmap);
     this->LoadImage();
     this->LoadLabel();
     // set name
@@ -206,8 +207,9 @@ class MNISTIter: public IIterator<DataBatch> {
 };  // class MNISTIter
 
 DMLC_REGISTER_PARAMETER(MNISTParam);
-MXNET_REGISTER_IO_ITER(MNISTIter, MNISTIter)
+MXNET_REGISTER_IO_CHAINED_ITER(MNISTIter, MNISTIter, PrefetcherIter)
     .describe("Create iterator for MNIST hand-written digit number recognition dataset.")
-    .add_arguments(MNISTParam::__FIELDS__());
+    .add_arguments(MNISTParam::__FIELDS__())
+    .add_arguments(PrefetcherParam::__FIELDS__());
 }  // namespace io
 }  // namespace mxnet
