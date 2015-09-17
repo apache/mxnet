@@ -8,6 +8,7 @@
 #define MXNET_OPERATOR_H_
 
 #include <dmlc/base.h>
+#include <dmlc/json.h>
 #include <dmlc/logging.h>
 #include <dmlc/registry.h>
 #include <vector>
@@ -389,6 +390,9 @@ class OperatorProperty {
    * \return a new constructed OperatorProperty
    */
   static OperatorProperty *Create(const char* type_name);
+
+  virtual void Save(dmlc::JSONWriter *writer) const = 0;
+  virtual void Load(dmlc::JSONReader *reader) = 0;
 };
 
 /*! \brief typedef the factory function of operator property */

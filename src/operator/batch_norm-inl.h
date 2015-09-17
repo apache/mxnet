@@ -182,7 +182,7 @@ Operator *CreateOp(BatchNormParam param);
 
 
 #if DMLC_USE_CXX11
-class BatchNormProp : public OperatorProperty {
+class BatchNormProp : public ParamOperatorProperty<BatchNormParam> {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -263,8 +263,6 @@ class BatchNormProp : public OperatorProperty {
 
   Operator* CreateOperator(Context ctx) const;
 
- private:
-  BatchNormParam param_;
 };  // class BatchNormProp
 
 #endif  // DMLC_USE_CXX11

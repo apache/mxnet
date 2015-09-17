@@ -163,7 +163,7 @@ template<typename xpu>
 Operator *CreateOp(ConcatParam param);
 
 #if DMLC_USE_CXX11
-class ConcatProp : public OperatorProperty {
+class ConcatProp : public ParamOperatorProperty<ConcatParam> {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -223,9 +223,6 @@ class ConcatProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
-
- private:
-  ConcatParam param_;
 };  // class ConcatProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op

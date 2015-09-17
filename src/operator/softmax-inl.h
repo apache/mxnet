@@ -83,7 +83,7 @@ template<typename xpu>
 Operator* CreateOp(SoftmaxParam param);
 
 #if DMLC_USE_CXX11
-class SoftmaxProp : public OperatorProperty {
+class SoftmaxProp : public ParamOperatorProperty<SoftmaxParam> {
  public:
   std::vector<std::string> ListArguments() const override {
     return {"data", "label"};
@@ -138,9 +138,6 @@ class SoftmaxProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const;
-
- private:
-  SoftmaxParam param_;
 };  // class SoftmaxProp
 #endif  // DMLC_USE_CXX11
 
