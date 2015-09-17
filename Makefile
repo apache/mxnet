@@ -92,7 +92,7 @@ build/%.o: src/%.cc
 
 build/%_gpu.o: src/%.cu
 	@mkdir -p $(@D)
-	$(CXX) $(CFLAGS) -MM -MT build/$*_gpu.o $< >build/$*_gpu.d
+	$(NVCC) $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" -M build/$*_gpu.o $< >build/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $<
 
 lib/libmxnet.a: $(ALL_DEP)

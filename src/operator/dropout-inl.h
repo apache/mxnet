@@ -1,0 +1,170 @@
+/*!
+ * Copyright (c) 2015 by Contributors
+ * \file dropout-inl.h
+ * \brief
+ * \author Bing Xu
+*/
+
+#ifndef MXNET_OPERATOR_DROPOUT_INL_H_
+#define MXNET_OPERATOR_DROPOUT_INL_H_
+#include <dmlc/logging.h>
+#include <dmlc/parameter.h>
+#include <mxnet/operator.h>
+#include <map>
+#include <vector>
+#include <string>
+#include <utility>
+#include "./operator_common.h"
+#include "./mshadow_op.h"
+
+enum DropoutOpInputs {kData};
+enum DropoutOpOutputs {kOut, kMask};
+enum DropoutOpForwardResource {kRandom};
+
+namespace mxnet {
+namespace op {
+
+struct DropoutParam : public dmlc::Parameter<DropoutParam> {
+  float p;
+  DMLC_DECLARE_PARAMETER(DropoutParam) {
+    DMLC_DECLARE_FIELD(p).set_default(0.5)
+    .set_range(0, 1)
+    .describe("Fraction of the input that gets dropped out at training time");
+  }
+};  // struct DropoutParam
+
+template<typename xpu>
+class DropoutOp : public Operator {
+ public:
+  explicit DropoutOp(DropoutParam param) {
+    this->pkeep_ = 1.0f - param.p;
+  }
+
+  virtual void Forward(const OpContext &ctx,
+                       const std::vector<TBlob> &in_data,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &out_data,
+                       const std::vector<TBlob> &aux_states) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
+    CHECK_EQ(in_data.size(), 1);
+    if (ctx.is_train) {
+      CHECK_EQ(out_data.size(), 2);
+    }
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
+    if (ctx.is_train) {
+      Tensor<xpu, 2> mask = out_data[kMask].FlatTo2D<xpu, real_t>(s);
+      Random<xpu> *prnd = ctx.requested[kRandom].get_random<xpu>(s);
+      mask = F<mshadow_op::threshold>(prnd->uniform(mask.shape_), pkeep_) * (1.0f / pkeep_);
+      Assign(out, req[kOut], data * mask);
+    } else {
+      Assign(out, req[kOut], F<mshadow_op::identity>(data));
+    }
+  }
+
+  virtual void Backward(const OpContext &ctx,
+                        const std::vector<TBlob> &out_grad,
+                        const std::vector<TBlob> &in_data,
+                        const std::vector<TBlob> &out_data,
+                        const std::vector<OpReqType> &req,
+                        const std::vector<TBlob> &in_grad,
+                        const std::vector<TBlob> &aux_states) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
+    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(in_grad.size(), 1);
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Tensor<xpu, 2> grad = out_grad[kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> mask = out_data[kMask].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> gdata = in_grad[kData].FlatTo2D<xpu, real_t>(s);
+    Assign(gdata, req[kData], grad * mask);
+  }
+
+ private:
+  real_t pkeep_;
+};  // class DropoutOp
+
+
+template<typename xpu>
+Operator *CreateOp(DropoutParam param);
+
+#if DMLC_USE_CXX11
+class DropoutProp : public OperatorProperty {
+ public:
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
+    param_.Init(kwargs);
+  }
+
+  bool InferShape(std::vector<TShape> *in_shape,
+                  std::vector<TShape> *out_shape,
+                  std::vector<TShape> *aux_shape) const override {
+    using namespace mshadow;
+    CHECK_EQ(in_shape->size(), 1);
+    const TShape &dshape = in_shape->at(0);
+    if (dshape.ndim() == 0) return false;
+    out_shape->clear();
+    out_shape->push_back(dshape);
+    out_shape->push_back(dshape);
+    return true;
+  }
+
+  OperatorProperty* Copy() const override {
+    auto ptr = new DropoutProp();
+    ptr->param_ = param_;
+    return ptr;
+  }
+
+  std::string TypeString() const override {
+    return "Dropout";
+  }
+
+  std::vector<int> DeclareBackwardDependency(
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data) const override {
+    return {out_grad[kOut], out_data[kMask]};
+  }
+
+  std::vector<std::pair<int, void*> > BackwardInplaceOption(
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data,
+    const std::vector<void*> &in_grad) const override {
+    return {{out_grad[kOut], in_grad[kData]}};
+  }
+
+  std::vector<std::pair<int, void*> > ForwardInplaceOption(
+    const std::vector<int> &in_data,
+    const std::vector<void*> &out_data) const override {
+    return {{in_data[kData], out_data[kOut]}};
+  }
+
+  std::vector<ResourceRequest> ForwardResource(
+    const std::vector<TShape> &in_shape) const override {
+    return {ResourceRequest::kRandom};
+  }
+
+  int NumVisibleOutputs() const override {
+    return 1;
+  }
+
+  int NumOutputs() const override {
+    return 2;
+  }
+
+  std::vector<std::string> ListOutputs() const override {
+    return {"output", "mask"};
+  }
+
+  Operator* CreateOperator(Context ctx) const;
+
+ private:
+  DropoutParam param_;
+};  // class DropoutProp
+#endif  // DMLC_USE_CXX11
+}  // namespace op
+}  // namespace mxnet
+#endif  // MXNET_OPERATOR_DROPOUT_INL_H_
+

@@ -4,9 +4,12 @@
  * \brief Executor to execute the Graph.
  */
 #include <dmlc/logging.h>
+#include <mxnet/resource.h>
 #include <mxnet/symbolic.h>
 #include <memory>
+#include <map>
 #include "./graph_executor.h"
+#include "./graph_algorithm.h"
 
 namespace mxnet {
 /*!
@@ -77,11 +80,18 @@ class GraphExecutor::BackwardOpWrapper : public Operator {
 inline std::vector<ResourceRequest>
 GraphExecutor::GetResource(uint32_t node_id) const {
   const StaticGraph::Node &node = graph_.nodes[node_id];
+  // use input shape
+  std::vector<TShape> in_shapes;
+  for (StaticGraph::DataEntry e : node.inputs) {
+    in_shapes.push_back(op_nodes_[e.source_id].outputs[e.index].shape);
+  }
+
   if (node.is_forward()) {
-    return node.op->ForwardResource();
+    return node.op->ForwardResource(in_shapes);
   } else {
     CHECK(node.is_backward());
-    return graph_.nodes[node.backward_source_id].op->BackwardResource();
+    return graph_.nodes[node.backward_source_id]
+        .op->BackwardResource(in_shapes);
   }
 }
 
@@ -199,6 +209,10 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
   }
 
   // start setup exec function.
+  for (const Resource& r : op_node.op_ctx.requested) {
+    exec.mutate_vars.push_back(r.var);
+  }
+
   Operator* op = op_node.op.get();
   OpContext* op_ctx_ptr = &op_node.op_ctx;
   bool is_gpu = op_node.ctx.dev_mask == gpu::kDevMask;
@@ -348,7 +362,7 @@ void GraphExecutor::InitDataEntryMemory() {
   }
 
   // use allocator to allocate memory.
-  GraphStorageAllocator allocator(&graph_);
+  GraphStorageAllocator allocator(&graph_, topo_order_);
   for (size_t i = 0; i < topo_order_.size(); ++i) {
     uint32_t nid = topo_order_[i];
     if (!op_nodes_[nid].activated) continue;
@@ -374,7 +388,8 @@ void GraphExecutor::InitDataEntryMemory() {
     for (std::pair<DataEntryInfo*, DataEntryInfo*> kv : inplace) {
       DataEntryInfo* in = kv.first;
       DataEntryInfo* out = kv.second;
-      if (in->temp_ref_count == 1 &&
+      if (enable_inplace_allocation_ &&
+          in->temp_ref_count == 1 &&
           in->type == kInternalAllocated &&
           out->type == kNotInitialized) {
         // we can only do inplace if we are last user of in
@@ -419,7 +434,7 @@ void GraphExecutor::InitDataEntryMemory() {
     }
   }
   // one pass complete, allocate real memory
-  allocator.InitStorages();
+  this->total_allocated_reals_ = allocator.InitStorages();
   // get the real data NDArray into the DataEntryInfo
   for (size_t i = 0; i < topo_order_.size(); ++i) {
     uint32_t nid = topo_order_[i];
@@ -431,10 +446,69 @@ void GraphExecutor::InitDataEntryMemory() {
       }
     }
   }
+  // setup heads
   for (StaticGraph::DataEntry e : graph_.heads) {
     DataEntryInfo &info = op_nodes_[e.source_id].outputs[e.index];
     CHECK_EQ(info.type, kInternalAllocated);
     heads_ndarray_.push_back(info.data);
+  }
+}
+
+void GraphExecutor::InitResources() {
+  // maximum amount of color allowed in coloring algorithm
+  const uint32_t kMaxNumColor = 8;
+  // prepare for temp space allocation
+  std::vector<uint32_t> req_temp_cnt(topo_order_.size(), 0);
+  for (size_t i = 0; i < topo_order_.size(); ++i) {
+    uint32_t nid = topo_order_[i];
+    if (!op_nodes_[nid].activated) continue;
+    if (graph_.nodes[nid].is_variable()) continue;
+    uint32_t cnt = 0;
+    for (const ResourceRequest& req : GetResource(nid)) {
+      if (req.type == ResourceRequest::kTempSpace) ++cnt;
+    }
+    CHECK_LE(cnt, 1) << "Node can only have one temp space request";
+    req_temp_cnt[nid] = cnt;
+  }
+  uint32_t num_color = kMaxNumColor;
+  std::vector<uint32_t> req_temp_color;
+  // use graph coloring to find node that won't run in parallel
+  num_color = graph::ColorNodeGroup(graph_, topo_order_, req_temp_cnt,
+                                    num_color, &req_temp_color);
+
+  // cached resources temp space
+  std::map<Context, std::map<uint32_t, Resource> > cached_temp;
+  total_allocated_temp_ = 0;
+
+  // Resource allocation
+  for (size_t i = 0; i < topo_order_.size(); ++i) {
+    uint32_t nid = topo_order_[i];
+    if (!op_nodes_[nid].activated) continue;
+    if (graph_.nodes[nid].is_variable()) continue;
+    const std::vector<ResourceRequest>& reqs = GetResource(nid);
+    auto& requested = op_nodes_[nid].op_ctx.requested;
+    requested.clear();
+    // Get the resource of temporal space.
+    for (const ResourceRequest& req : reqs) {
+      const Context &ctx = op_nodes_[nid].ctx;
+      if (req.type == ResourceRequest::kTempSpace) {
+        uint32_t color = req_temp_color[nid];
+        // try to reuse graph in same color
+        std::map<uint32_t, Resource> &cmap = cached_temp[ctx];
+        if (cmap.count(color) != 0) {
+          requested.push_back(cmap.at(color));
+        } else {
+          Resource r = ResourceManager::Get()->Request(ctx, req);
+          requested.push_back(r);
+          cmap[color] = r;
+          ++total_allocated_temp_;
+        }
+      } else if (req.type == ResourceRequest::kRandom) {
+        requested.push_back(ResourceManager::Get()->Request(ctx, req));
+      } else {
+        LOG(FATAL) << "resource type not yet supported";
+      }
+    }
   }
 }
 
@@ -492,8 +566,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
   }
 }
 
-std::string GraphExecutor::DebugStr() const {
-  std::ostringstream os;
+void GraphExecutor::Print(std::ostream &os) const {
   os << "num_forward_nodes=" << num_forward_nodes_ << '\n';
   for (size_t i = 0; i < topo_order_.size(); ++i) {
     uint32_t nid = topo_order_[i];
@@ -510,8 +583,19 @@ std::string GraphExecutor::DebugStr() const {
       }
       os << '\n';
     }
+    for (size_t j = 0; j < op_nodes_[nid].op_ctx.requested.size(); ++j) {
+      const Resource& resource = op_nodes_[nid].op_ctx.requested[j];
+      os << "\tresource[" << j << "]: ";
+      if (resource.req.type == ResourceRequest::kTempSpace) {
+        os << "type=TempSpace, id=" << resource.id;
+      } else if (resource.req.type == ResourceRequest::kRandom) {
+        os << "type=RandomNumber";
+      }
+      os << '\n';
+    }
   }
-  return os.str();
+  os << "Total " << (total_allocated_reals_ >> 18UL) <<" MB allocated\n";
+  os << "Total " << total_allocated_temp_ <<" TempSpace resource requested\n";
 }
 
 void GraphExecutor::Forward(bool is_train) {

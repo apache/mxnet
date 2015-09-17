@@ -12,9 +12,10 @@ from .context import Context, current_context, cpu, gpu
 from .base import MXNetError
 from . import ndarray
 from . import symbol
-from . import kvstore
+from . import kvstore as kv
 from . import io
 # use mx.nd as short for mx.ndarray
 from . import ndarray as nd
+from . import random
 
 __version__ = "0.1.0"

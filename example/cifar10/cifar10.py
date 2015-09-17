@@ -3,7 +3,7 @@ import numpy as np
 import mxnet as mx
 import copy
 import sys
-sys.path.append("../../tests/python")
+sys.path.append("../../tests/python/common")
 import get_data
 import time
 
@@ -150,7 +150,7 @@ in5b = SimpleFactory(in5a, 176, 160)
 pool = mx.symbol.Pooling(data=in5b, pool_type="avg", kernel=(7,7), name="pool%d" % pool_cnt)
 flatten = mx.symbol.Flatten(data=pool, name="flatten1")
 fc = mx.symbol.FullyConnected(data=flatten, num_hidden=10, name="fc1")
-loss = mx.symbol.Softmax(data=fc, name="sm")
+loss = mx.symbol.Softmax(data=fc, name="loss")
 
 
 epoch = 9
@@ -163,13 +163,14 @@ data_shape = (batch_size, 3, 28, 28)
 
 in_data = mx.nd.empty(data_shape, mx.gpu())
 executor = loss.simple_bind(mx.gpu(), data = in_data)
+print executor.debug_str()
 
 out_narray = executor.outputs[0]
 pred = mx.nd.zeros(out_narray.shape, mx.cpu())
 
 arg_narrays, grad_narrays = executor.list_arguments()
 inputs = dict(zip(loss.list_arguments(), arg_narrays))
-tmp_label = mx.nd.zeros(inputs["sm_label"].shape)
+tmp_label = mx.nd.zeros(inputs["loss_label"].shape)
 momentum_narrays = [mx.nd.zeros(item.shape, mx.gpu()) for item in grad_narrays]
 
 block = list(zip(grad_narrays, arg_narrays, momentum_narrays))
@@ -245,7 +246,7 @@ def test_cifar():
             label = label.asnumpy().flatten()
             tmp_label[:] = label
             inputs["data"][:] = data
-            inputs["sm_label"][:] = tmp_label
+            inputs["loss_label"][:] = tmp_label
             executor.forward()
             pred[:] = out_narray
             train_acc += CalAcc(pred.asnumpy(), label)

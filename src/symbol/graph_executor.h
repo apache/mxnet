@@ -20,11 +20,12 @@ namespace mxnet {
 class GraphExecutor : public Executor {
  public:
   virtual ~GraphExecutor();
-  virtual void Forward(bool is_train);
-  virtual void Backward(const std::vector<NDArray> &head_grads);
-  virtual const std::vector<NDArray> &outputs() const {
+  void Forward(bool is_train) override;
+  void Backward(const std::vector<NDArray> &head_grads) override;
+  const std::vector<NDArray> &outputs() const override {
     return heads_ndarray_;
   }
+  void Print(std::ostream &os) const override; // NOLINT(*)
   // implement Executor::Bind, only call it once.
   inline void Init(Symbol symbol,
                    Context ctx,
@@ -32,6 +33,8 @@ class GraphExecutor : public Executor {
                    const std::vector<NDArray> &arg_grad_store,
                    const std::vector<OpReqType> &grad_req_type,
                    const std::vector<NDArray> &aux_states) {
+    enable_inplace_allocation_ = dmlc::GetEnv("MXNET_EXEC_ENABLE_INPLACE", true);
+
     CHECK_EQ(grad_req_type.size(), arg_grad_store.size());
     bool need_backward = false;
     for (auto req : grad_req_type) {
@@ -40,11 +43,8 @@ class GraphExecutor : public Executor {
     this->InitGraph(symbol, ctx, need_backward);
     this->InitDataEntryInfo(in_args, arg_grad_store, grad_req_type, aux_states);
     this->InitDataEntryMemory();
+    this->InitResources();
     this->InitOpNodes();
-    // TODO(bing): remove me when things are OK
-    LOG(INFO) << "-----Execution memory plan-----\n"
-              << DebugStr() << '\n'
-              << "------------------------------\n";
   }
 
  protected:
@@ -167,17 +167,23 @@ class GraphExecutor : public Executor {
                          const std::vector<NDArray> &aux_states);
   // initialize internal data entries NDArray
   void InitDataEntryMemory();
+  // initialize the internal resources for each op
+  void InitResources();
   // initialize OpNode data structure
   void InitOpNodes();
   // run ops from topo order start to end
   void RunOps(bool is_train, size_t topo_start, size_t topo_end);
-  // get debug string
-  std::string DebugStr() const;
   // internal computational graph
   StaticGraph graph_;
   // topological order of nodes in computation graph
   // backward nodes always follow forward nodes
   std::vector<uint32_t> topo_order_;
+  // whether to enable inplace space
+  bool enable_inplace_allocation_;
+  // total allocated space in #reals
+  size_t total_allocated_reals_;
+  // total allocated temp space
+  size_t total_allocated_temp_;
   // number of forward nodes in the graph
   size_t num_forward_nodes_;
   // head gradient node in the graph, if there is backward pass

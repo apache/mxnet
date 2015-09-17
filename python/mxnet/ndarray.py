@@ -341,8 +341,7 @@ def zeros(shape, ctx=None):
     ----------
     shape : tuple
         shape of the NDArray.
-
-    ctx : Context, optional
+    ctx : Context, optional.
         The context of the NDArray, default to current default context.
 
     Returns
@@ -361,7 +360,6 @@ def ones(shape, ctx=None):
     ----------
     shape : tuple
         shape of the NDArray.
-
     ctx : Context, optional
         The context of the NDArray, default to current default context.
 

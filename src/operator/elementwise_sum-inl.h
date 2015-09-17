@@ -28,7 +28,7 @@ struct ElementWiseSumParam : public dmlc::Parameter<ElementWiseSumParam> {
   int num_args;
   DMLC_DECLARE_PARAMETER(ElementWiseSumParam) {
     DMLC_DECLARE_FIELD(num_args).set_range(1, 100)
-        .describe("Number of inputs to be sumed.");
+    .describe("Number of inputs to be sumed.");
   }
 };
 
@@ -36,7 +36,7 @@ template<typename xpu>
 class ElementWiseSumOp : public Operator {
  public:
   explicit ElementWiseSumOp(ElementWiseSumParam param)
-      : size_(param.num_args) {}
+    : size_(param.num_args) {}
 
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
@@ -125,7 +125,8 @@ class ElementWiseSumProp : public OperatorProperty {
     int sidx = -1;
     for (int i = 0; i < param_.num_args; ++i) {
       if (in_shape->at(i).ndim() != 0) {
-        sidx = i; break;
+        sidx = i;
+        break;
       }
     }
     if (sidx == -1) return false;
@@ -158,23 +159,23 @@ class ElementWiseSumProp : public OperatorProperty {
   }
 
   std::vector<int> DeclareBackwardDependency(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data) const override {
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data) const override {
     return out_grad;
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
-      const std::vector<int> &out_grad,
-      const std::vector<int> &in_data,
-      const std::vector<int> &out_data,
-      const std::vector<void*> &in_grad) const override {
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data,
+    const std::vector<void*> &in_grad) const override {
     return {{out_grad[0], in_grad[0]}};
   }
 
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
-      const std::vector<int> &in_data,
-      const std::vector<void*> &out_data) const override {
+    const std::vector<int> &in_data,
+    const std::vector<void*> &out_data) const override {
     return {{in_data[0], out_data[0]}};
   }
 

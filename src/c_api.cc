@@ -181,6 +181,12 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 }
 
 // NOTE: return value is added in API_END
+int MXRandomSeed(int seed) {
+  API_BEGIN();
+  mxnet::RandomSeed(seed);
+  API_END();
+}
+
 int MXNDArrayCreateNone(NDArrayHandle *out) {
   API_BEGIN();
   *out = new NDArray();
@@ -320,12 +326,6 @@ int MXNDArrayListLoad(const char* fname,
   *out_arr = dmlc::BeginPtr(ret->ret_handles);
   *out_name_size = static_cast<mx_uint>(names.size());
   *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
-  API_END();
-}
-
-int MXNDArrayWaitAll() {
-  API_BEGIN();
-  Engine::Get()->WaitForAll();
   API_END();
 }
 
@@ -684,6 +684,17 @@ int MXSymbolInferShape(SymbolHandle sym,
   API_END();
 }
 
+int MXExecutorPrint(ExecutorHandle handle, const char **out_str) {
+  Executor *exec = static_cast<Executor*>(handle);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  std::ostringstream os;
+  exec->Print(os);
+  ret->ret_str = os.str();
+  *out_str = (ret->ret_str).c_str();
+  API_END();
+}
+
 int MXExecutorForward(ExecutorHandle handle, bool is_train) {
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
@@ -817,6 +828,9 @@ int MXDataIterBeforeFirst(DataIterHandle handle) {
 
 int MXDataIterNext(DataIterHandle handle, int *out) {
   API_BEGIN();
+  // TODO(tianjun): remove this after having prefetcher by default.
+  // and call NArray.WaitForWrite instead.
+  Engine::Get()->WaitForAll();
   *out = static_cast<IIterator<DataBatch>* >(handle)->Next();
   API_END();
 }

@@ -20,19 +20,23 @@ class CuDNNActivationOp : public Operator {
     init_cudnn_ = false;
     dtype_ = CUDNN_DATA_FLOAT;
     switch (param_.act_type) {
-    case kReLU:
-      mode_ = CUDNN_ACTIVATION_RELU;
-      break;
-    case kSigmoid:
-      mode_ = CUDNN_ACTIVATION_SIGMOID;
-      break;
-    case kTanh:
-      mode_ = CUDNN_ACTIVATION_TANH;
-      break;
-    default:
-      LOG(FATAL) << "Not implmented";
-      break;
+      case kReLU:
+        mode_ = CUDNN_ACTIVATION_RELU;
+        break;
+      case kSigmoid:
+        mode_ = CUDNN_ACTIVATION_SIGMOID;
+        break;
+      case kTanh:
+        mode_ = CUDNN_ACTIVATION_TANH;
+        break;
+      default:
+        LOG(FATAL) << "Not implmented";
+        break;
     }
+  }
+
+  ~CuDNNActivationOp() {
+    CHECK_EQ(cudnnDestroyTensorDescriptor(shape_desc_), CUDNN_STATUS_SUCCESS);
   }
 
   virtual void Forward(const OpContext &ctx,
@@ -45,13 +49,30 @@ class CuDNNActivationOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<gpu> *s = ctx.get_stream<gpu>();
-    Tensor<gpu, 4> data = in_data[kData].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> out = out_data[kOut].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4> data;
+    Tensor<gpu, 4> out;
+    if (in_data[kData].ndim() == 2) {
+      uint32_t ds[] = {in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1};
+      TShape dshape(ds, ds + 4);
+      data = in_data[kData].get_with_shape<gpu, 4, real_t>(dshape, s);
+      out = out_data[kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
+    } else {
+      data = in_data[kData].get<gpu, 4, real_t>(s);
+      out = out_data[kOut].get<gpu, 4, real_t>(s);
+    }
     float alpha = 1.0f;
     float beta = 0.0f;
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
     if (!init_cudnn_) {
-      this->Init(s, in_data, out_data);
+      init_cudnn_ = true;
+      CHECK_EQ(cudnnCreateTensorDescriptor(&shape_desc_), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnSetTensor4dDescriptor(shape_desc_,
+                                          CUDNN_TENSOR_NCHW,
+                                          dtype_,
+                                          data.shape_[0],
+                                          data.shape_[1],
+                                          data.shape_[2],
+                                          data.shape_[3]), CUDNN_STATUS_SUCCESS);
     }
     CHECK_EQ(cudnnActivationForward(s->dnn_handle_,
                                     mode_,
@@ -80,10 +101,23 @@ class CuDNNActivationOp : public Operator {
     float alpha = 1.0f;
     float beta = 0.0f;
     Stream<gpu> *s = ctx.get_stream<gpu>();
-    Tensor<gpu, 4> grad = out_grad[kOut].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> data = in_data[kData].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> output_data = out_data[kOut].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> input_grad = in_grad[kData].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4> grad;
+    Tensor<gpu, 4> data;
+    Tensor<gpu, 4> output_data;
+    Tensor<gpu, 4> input_grad;
+    if (in_data[kData].ndim() == 2) {
+      uint32_t ds[] = {in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1};
+      TShape dshape(ds, ds + 4);
+      data = in_data[kData].get_with_shape<gpu, 4, real_t>(dshape, s);
+      grad = out_grad[kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
+      output_data = out_data[kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
+      input_grad = in_grad[kData].get_with_shape<gpu, 4, real_t>(dshape, s);
+    } else {
+      data = in_data[kData].get<gpu, 4, real_t>(s);
+      output_data = out_data[kOut].get<gpu, 4, real_t>(s);
+      grad = out_grad[kOut].get<gpu, 4, real_t>(s);
+      input_grad = in_grad[kData].get<gpu, 4, real_t>(s);
+    }
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
     CHECK_EQ(cudnnActivationBackward(s->dnn_handle_,
                                      mode_,
@@ -100,27 +134,6 @@ class CuDNNActivationOp : public Operator {
   }
 
  private:
-  inline void Init(mshadow::Stream<gpu> *s,
-                   const std::vector<TBlob> &in_data,
-                   const std::vector<TBlob> &out_data) {
-    using namespace mshadow;
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
-    if (!init_cudnn_) {
-      init_cudnn_ = true;
-      Tensor<gpu, 4> data = in_data[kData].get<gpu, 4, real_t>(s);
-      Tensor<gpu, 4> out = out_data[kOut].get<gpu, 4, real_t>(s);
-      CHECK_EQ(data.shape_, out.shape_);
-      CHECK_EQ(cudnnCreateTensorDescriptor(&shape_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensor4dDescriptor(shape_desc_,
-                                          CUDNN_TENSOR_NCHW,
-                                          dtype_,
-                                          data.shape_[0],
-                                          data.shape_[1],
-                                          data.shape_[2],
-                                          data.shape_[3]), CUDNN_STATUS_SUCCESS);
-    }
-  }
   bool init_cudnn_;
   cudnnDataType_t dtype_;
   cudnnActivationMode_t mode_;

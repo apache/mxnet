@@ -17,8 +17,9 @@
 namespace mxnet {
 namespace io {
 /*!
- * \brief tensor vector that can store sequence of tensor
- *  in a memory compact way, tensors do not have to be of same shape
+ * \brief a vector of tensor with various shape
+ *
+ * data are stored in memory continously
  */
 template<int dim, typename DType>
 class TensorVector {
@@ -26,11 +27,11 @@ class TensorVector {
   TensorVector(void) {
     this->Clear();
   }
-  // get i-th tensor
+  /*! \brief get the buffer to the i-th tensor */
   inline mshadow::Tensor<cpu, dim, DType>
   operator[](size_t i) const {
-    CHECK(i + 1 < offset_.size());
-    CHECK(shape_[i].Size() == offset_[i + 1] - offset_[i]);
+    CHECK_LT(i + 1, offset_.size());
+    CHECK_EQ(shape_[i].Size(), offset_[i + 1] - offset_[i]);
     return mshadow::Tensor<cpu, dim, DType>
         ((DType*)dmlc::BeginPtr(content_) + offset_[i], shape_[i]);  // NOLINT(*)
   }
@@ -40,8 +41,7 @@ class TensorVector {
   inline size_t Size(void) const {
     return shape_.size();
   }
-  // push a tensor of certain shape
-  // return the reference of the pushed tensor
+  /*! \brief allocate space given the shape (data are copied) */
   inline void Push(mshadow::Shape<dim> shape) {
     shape_.push_back(shape);
     offset_.push_back(offset_.back() + shape.Size());
@@ -64,11 +64,11 @@ class TensorVector {
 };
 
 /*!
- * \brief instance vector that can holds
- * non-uniform shape data instance in a shape efficient way
+ * \brief a list of (label, example) pairs, examples can have various shape
  */
 class InstVector {
  public:
+  /*! \brief return the number of (label, example) pairs */
   inline size_t Size(void) const {
     return index_.size();
   }
@@ -77,6 +77,7 @@ class InstVector {
     return index_[i];
   }
   // instance
+  /* \brief get the i-th (label, example) pair */
   inline DataInst operator[](size_t i) const {
     DataInst inst;
     inst.index = index_[i];
@@ -84,7 +85,7 @@ class InstVector {
     inst.data.push_back(TBlob(label_[i]));
     return inst;
   }
-  // get back of instance vector
+  /* \brief get the last (label, example) pair */
   inline DataInst Back() const {
     return (*this)[Size() - 1];
   }
@@ -93,6 +94,10 @@ class InstVector {
     data_.Clear();
     label_.Clear();
   }
+  /*
+   * \brief push a (label, example) pair
+   * only reserved the space, while the data is not copied
+   */
   inline void Push(unsigned index,
                    mshadow::Shape<3> dshape,
                    mshadow::Shape<1> lshape) {

@@ -11,7 +11,7 @@
 namespace mxnet {
 namespace op {
 template<>
-  Operator *CreateOp<gpu>() {
+Operator *CreateOp<gpu>() {
   return new ReshapeOp<gpu>();
 }
 

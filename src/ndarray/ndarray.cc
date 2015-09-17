@@ -7,6 +7,7 @@
 #include <dmlc/registry.h>
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
+#include <mxnet/resource.h>
 #include <mshadow/tensor.h>
 #include "./ndarray_function.h"
 
@@ -45,28 +46,28 @@ inline void BinaryOp(const NDArray &lhs,
   NDArray ret = *out;
   // get the const variables
   std::vector<Engine::VarHandle> const_vars;
-  if (lhs.ptr_->var != ret.ptr_->var) const_vars.push_back(lhs.ptr_->var);
-  if (rhs.ptr_->var != ret.ptr_->var) const_vars.push_back(rhs.ptr_->var);
+  if (lhs.var() != ret.var()) const_vars.push_back(lhs.var());
+  if (rhs.var() != ret.var()) const_vars.push_back(rhs.var());
 
   // redirect everything to mshadow operations
   switch (lhs.ctx().dev_mask) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
-          ret.ptr_->CheckAndAlloc();
+          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<cpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
-        }, lhs.ctx(), const_vars, {ret.ptr_->var});
+        }, lhs.ctx(), const_vars, {ret.var()});
       break;
     }
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
-          ret.ptr_->CheckAndAlloc();
+          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<gpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, lhs.ctx(), const_vars, {ret.ptr_->var});
+        }, lhs.ctx(), const_vars, {ret.var()});
       break;
     }
 #endif
@@ -81,21 +82,21 @@ inline void SetValueOp(const real_t &rhs, NDArray *out) {
   switch (ret.ctx().dev_mask) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
-          ret.ptr_->CheckAndAlloc();
+          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<cpu>(rhs, &tmp, ctx);
-        }, ret.ctx(), {}, {ret.ptr_->var});
+        }, ret.ctx(), {}, {ret.var()});
       break;
     }
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
       Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
-          ret.ptr_->CheckAndAlloc();
+          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<gpu>(rhs, &tmp, ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, ret.ctx(), {}, {ret.ptr_->var});
+        }, ret.ctx(), {}, {ret.var()});
       break;
     }
 #endif
@@ -123,27 +124,27 @@ inline void ScalarOp(const NDArray &lhs,
   NDArray ret = *out;
   // get the const variables
   std::vector<Engine::VarHandle> const_vars;
-  if (lhs.ptr_->var != ret.ptr_->var) const_vars.push_back(lhs.ptr_->var);
+  if (lhs.var() != ret.var()) const_vars.push_back(lhs.var());
 
   // redirect everything to mshadow operations
   switch (lhs.ctx().dev_mask) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
-          ret.ptr_->CheckAndAlloc();
+          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<cpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
-        }, lhs.ctx(), const_vars, {ret.ptr_->var});
+        }, lhs.ctx(), const_vars, {ret.var()});
       break;
     }
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
-          ret.ptr_->CheckAndAlloc();
+          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<gpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, lhs.ctx(), const_vars, {ret.ptr_->var});
+        }, lhs.ctx(), const_vars, {ret.var()});
       break;
     }
 #endif
@@ -162,44 +163,44 @@ void CopyFromTo(const NDArray &from, NDArray *to) {
   int b = to->ctx().dev_mask;
 
   std::vector<Engine::VarHandle> const_vars;
-  if (from.ptr_->var != ret.ptr_->var) const_vars.push_back(from.ptr_->var);
+  if (from.var() != ret.var()) const_vars.push_back(from.var());
 
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     Engine::Get()->PushSync([from, ret](RunContext ctx) {
-        ret.ptr_->CheckAndAlloc();
+        ret.CheckAndAlloc();
         TBlob tmp = ret.data();
         ndarray::Copy<cpu, cpu>(from.data(), &tmp,
-                               from.ctx(), ret.ctx(), ctx);
-      }, from.ctx(), const_vars, {ret.ptr_->var});
+                                from.ctx(), ret.ctx(), ctx);
+      }, from.ctx(), const_vars, {ret.var()});
   } else {
 #if MXNET_USE_CUDA
     if (a == cpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
-          ret.ptr_->CheckAndAlloc();
+          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Copy<cpu, gpu>(from.data(), &tmp,
-                                 from.ctx(), ret.ctx(), ctx);
+                                  from.ctx(), ret.ctx(), ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, ret.ctx(), const_vars, {ret.ptr_->var});
+        }, ret.ctx(), const_vars, {ret.var()}, FnProperty::kCopyToGPU);
     } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
-          ret.ptr_->CheckAndAlloc();
+          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Copy<gpu, cpu>(from.data(), &tmp,
-                                 from.ctx(), ret.ctx(), ctx);
+                                  from.ctx(), ret.ctx(), ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, from.ctx(), const_vars, {ret.ptr_->var});
+        }, from.ctx(), const_vars, {ret.var()}, FnProperty::kCopyFromGPU);
     } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
-          ret.ptr_->CheckAndAlloc();
+          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Copy<gpu, gpu>(from.data(), &tmp,
-                                 from.ctx(), ret.ctx(), ctx);
+                                  from.ctx(), ret.ctx(), ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, from.ctx(), const_vars, {ret.ptr_->var});
+        }, from.ctx(), const_vars, {ret.var()}, FnProperty::kCopyFromGPU);
     } else {
       LOG(FATAL) << "unknown device mask";
     }
@@ -207,6 +208,54 @@ void CopyFromTo(const NDArray &from, NDArray *to) {
     LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
   }
+}
+
+
+template<typename Distribution>
+inline void SampleOP(const real_t &a,
+                     const real_t &b,
+                     NDArray *out) {
+  CHECK(!out->is_none());
+  Resource resource = ResourceManager::Get()->Request(
+      out->ctx(), ResourceRequest::kRandom);
+  // important: callback must always capture by value
+  NDArray ret = *out;
+  // redirect everything to mshadow operations
+  switch (out->ctx().dev_mask) {
+    case cpu::kDevMask: {
+      Engine::Get()->PushSync([a, b, resource, ret](RunContext ctx) {
+          ret.CheckAndAlloc();
+          TBlob tmp = ret.data();
+          ndarray::EvalRandom<cpu, Distribution>(a, b, resource, &tmp, ctx);
+        }, out->ctx(), {}, {ret.var(), resource.var});
+      break;
+    }
+#if MXNET_USE_CUDA
+    case gpu::kDevMask: {
+      Engine::Get()->PushSync([a, b, resource, ret](RunContext ctx) {
+          ret.CheckAndAlloc();
+          TBlob tmp = ret.data();
+          ndarray::EvalRandom<gpu, Distribution>(a, b, resource, &tmp, ctx);
+          // Wait GPU kernel to complete
+          ctx.get_stream<gpu>()->Wait();
+        }, out->ctx(), {}, {ret.var(), resource.var});
+      break;
+    }
+#endif
+    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+  }
+}
+
+void SampleUniform(real_t begin, real_t end, NDArray *out) {
+  SampleOP<ndarray::UniformDistribution>(begin, end, out);
+}
+
+void SampleGaussian(real_t mu, real_t sigma, NDArray *out) {
+  SampleOP<ndarray::GaussianDistribution>(mu, sigma, out);
+}
+
+void RandomSeed(uint32_t seed) {
+  ResourceManager::Get()->SeedRandom(seed);
 }
 
 template<typename OP>
@@ -423,16 +472,13 @@ MXNET_REGISTER_NDARRAY_FUN(_div).set_function(BinaryOp<ndarray::Div>);
 
 // register API function
 // those with underscore will be registered at NDArray
-// scalar
 MXNET_REGISTER_NDARRAY_FUN(_plus_scalar).set_function(ScalarOp<ndarray::Plus, false>);
 MXNET_REGISTER_NDARRAY_FUN(_minus_scalar).set_function(ScalarOp<ndarray::Minus, false>);
 MXNET_REGISTER_NDARRAY_FUN(_mul_scalar).set_function(ScalarOp<ndarray::Mul, false>);
 MXNET_REGISTER_NDARRAY_FUN(_div_scalar).set_function(ScalarOp<ndarray::Div, false>);
 
 // register API function
-// those with underscore will be registered at NDArray
-// scalar
-// reverse scalar
+// scalar, reverse scalar
 MXNET_REGISTER_NDARRAY_FUN(_rminus_scalar).set_function(ScalarOp<ndarray::Minus, true>);
 MXNET_REGISTER_NDARRAY_FUN(_rdiv_scalar).set_function(ScalarOp<ndarray::Div, true>);
 
@@ -442,4 +488,18 @@ MXNET_REGISTER_NDARRAY_FUN(_copyto)
 .set_function(CopyFromTo)
 .set_type_mask(kNDArrayArgBeforeScalar);
 
+// register random number generators
+MXNET_REGISTER_NDARRAY_FUN(_random_uniform)
+.set_body([](NDArray **u, real_t *s, NDArray **out) {
+    SampleUniform(s[0], s[1], out[0]);
+  })
+.set_num_scalars(2)
+.set_num_mutate_vars(1);
+
+MXNET_REGISTER_NDARRAY_FUN(_random_gaussian)
+.set_body([](NDArray **u, real_t *s, NDArray **out) {
+    SampleGaussian(s[0], s[1], out[0]);
+  })
+.set_num_scalars(2)
+.set_num_mutate_vars(1);
 }  // namespace mxnet

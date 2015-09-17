@@ -40,7 +40,7 @@ if [ ${TASK} == "python3" ]; then
     make all || exit -1
     export MXNET_ENGINE_TYPE=ThreadedEngine
     nosetests tests/python/unittest || exit -1
-    nosetests tests/python/train || exit -1   
+    nosetests tests/python/train || exit -1
 fi
 
 if [ ${TASK} == "python_naive" ]; then
@@ -48,7 +48,15 @@ if [ ${TASK} == "python_naive" ]; then
     make all || exit -1
     export MXNET_ENGINE_TYPE=NaiveEngine
     nosetests tests/python/unittest || exit -1
-    nosetests tests/python/train || exit -1   
+    nosetests tests/python/train || exit -1
+fi
+
+if [ ${TASK} == "python_perdev" ]; then
+    echo "USE_CUDA=0" >> config.mk
+    make all || exit -1
+    export MXNET_ENGINE_TYPE=ThreadedEnginePerDevice
+    nosetests tests/python/unittest || exit -1
+    nosetests tests/python/train || exit -1
 fi
 
 if [ ${TASK} == "cpp_unittest" ]; then

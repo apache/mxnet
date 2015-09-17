@@ -12,8 +12,8 @@
 #include <dmlc/logging.h>
 #include <vector>
 #include <functional>
-#include <atomic>
 #include <condition_variable>
+#include <atomic>
 #include <mutex>
 #include "./engine_impl.h"
 #include "../common/object_pool.h"

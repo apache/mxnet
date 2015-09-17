@@ -7,8 +7,7 @@
 #define MXNET_STORAGE_H_
 
 #include <memory>
-#include "base.h"
-#include "context.h"
+#include "./base.h"
 
 namespace mxnet {
 
@@ -54,6 +53,15 @@ class Storage {
    * \return Storage singleton.
    */
   static Storage* Get();
+  /*!
+   * \brief Get shared pointer reference to engine singleton.
+   *  Most user should not call this function.
+   *  This function is called by another singleton X who requires
+   *  Storage to be destructed after X.
+   *
+   * \return A shared pointer to Storage singleton.
+   */
+  static std::shared_ptr<Storage> _GetSharedRef();
 
  private:
   /*!
@@ -64,7 +72,5 @@ class Storage {
   std::unique_ptr<Impl> impl_;
   DISALLOW_COPY_AND_ASSIGN(Storage);
 };  // class Storage
-
 }  // namespace mxnet
-
 #endif  // MXNET_STORAGE_H_

@@ -28,11 +28,17 @@ inline void Assign(OType &out, // NOLINT(*)
                    OpReqType req,
                    const Exp &exp) {
   switch (req) {
-    case kNullOp: break;
+    case kNullOp:
+      break;
     case kWriteTo:
-    case kWriteInplace: out = exp; break;
-    case kAddTo: out += exp; break;
-    default: LOG(FATAL) << "not reached";
+    case kWriteInplace:
+      out = exp;
+      break;
+    case kAddTo:
+      out += exp;
+      break;
+    default:
+      LOG(FATAL) << "not reached";
   }
 }
 
@@ -44,7 +50,7 @@ struct InferShapeError {
   int index;
   // constructor
   InferShapeError(std::string msg, int index)
-      : msg(msg), index(index) {}
+    : msg(msg), index(index) {}
 };
 
 /*!

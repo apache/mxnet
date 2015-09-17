@@ -1,349 +1,488 @@
-MXNet Python Guide
-==================
-This page gives a general overvie of MXNet python package.
-MXNet contains a mixed flavor of elements you might need to bake flexible and efficient applications.
-There are two major components in MXNet:
-* Numpy style [NArray API](#getting-started-with-narray) that
-offers matrix and tensor computations on both CPU and GPU, and atomatically parallelize the computation for you;
-* [Symbolic API](#symbolic-api-and-differentiation) that allows you define a computation graph(configure a neural network),
-  and automatically gradient for you.
+# MXNet Python Guide
 
-We aim to cover a taste of each flavor in this page.
-You are welcomed to also take look at the API reference page Listed in below, or direct skip to next section.
+This page gives a general overview of MXNet's python package. MXNet contains a
+mixed flavor of elements to bake flexible and efficient
+applications. There are mainly three concepts:
 
-List of Python Documents
-------------------------
-* [NArray API](narray.md)
-* [Data Loading API](io.md)
-* [Symbolic API](symbol.md)
+* Numpy style [NDArray](#ndarray-numpy-style-tensor-computations-on-cpus-and-gpus)
+  offers matrix and tensor computations on both CPU and GPU, with automatic
+  parallelization
 
-Getting Started with NArray
----------------------------
-The basic operation unit in MXNet is ```NArray```.
-NArray is basically same as ```numpy.ndarray``` in python,
-with two additional features: ***multiple device computation*** and ***automatic parallelism***.
+* [Symbol](#symbol-and-automatic-differentiation) makes defining a neural
+  network extremely easy, and provides automatic differentiation.
 
-### Create NArray and Basics
-You can create ```NArray``` in both GPU and GPU, and get the shape of NArray.
-```python
-import mxnet as mx
+* [KVStore](#distributed-key-value-store) easy the data synchronization between
+  multi-GPUs and multi-machines.
 
-cpu_array = mx.narray.create((10, 10))
-gpu_array = mx.narray.create((10, 10), mx.Context('gpu', 0))
-print(cpu_array.shape)
-```
-If the NArray sits on CPU, we can get a ```numpy.ndarray``` equivalence as follows
-```python
-numpy_array = cpu_array.numpy
-cpu_array.numpy[:] = 10
-print(cpu_array.numpy)
-```
-Of course, NArray itself support basic computations such as elementwise operations.
-The following example adds two narray together, and creates a new ```NArray```.
+## NDArray: Numpy style tensor computations on CPUs and GPUs
+
+`NDArray` is the basic operation unit in MXNet for matrix and tensor
+computations. It is similar to `numpy.ndarray`, but with two additional
+features:
+
+1. **multiple devices**: all operations can be run on various devices including
+CPU and GPU
+2. **automatic parallelization**: all operations are automatically executed in
+   parallel with each other
+
+### Create and Initialization
+
+We can create `NDArray` on either GPU or GPU
 
 ```python
-a = mx.narray.create((10, 10))
-b = mx.narray.create((10, 10))
-a.numpy[:] = 10
-b.numpy[:] = 20
-c = a + b
-print(c.numpy)
+>>> import mxnet as mx
+>>> a = mx.nd.empty((2, 3)) # create a 2-by-3 matrix on cpu
+>>> b = mx.nd.empty((2, 3), mx.gpu()) # create a 2-by-3 matrix on gpu 0
+>>> c = mx.nd.empty((2, 3), mx.gpu(2)) # create a 2-by-3 matrix on gpu 2
+>>> c.shape # get shape
+(2L, 3L)
+>>> c.context # get device info
+Context(device_type=gpu, device_id=2)
 ```
 
-Now we know how to create and manipulate NArrays. If we have some data on CPU,
-how can we make use of GPU and help us to speedup computations? You can use
-the copy function to copy NArray between devices, like the following example.
-```python
-cpu_array = mx.narray.create((10, 10))
-gpu_array = mx.narray.create((10, 10), mx.Context('gpu', 0))
-cpu_array.numpy[:] = 1
-
-# copy to an allocated GPU array
-cpu_array.copyto(gpu_array)
-
-# create a new copy of NArray on GPU 0
-gpu_array2 = cpu_array.copyto(mx.Context('gpu', 0))
-
-# do some operations on GPU, the result will be on same device.
-gpu_array3 = gpu_array2 + 1.0
-
-# copy back to CPU
-gpu_array3.copyto(cpu_array)
-
-# print the result
-print(cpu_array.numpy)
-```
-
-In common workflow, it is encouraged to copy the data into a GPU NArray,
-do as much as computation as you can, and copy it back to CPU.
-Besides the NArrays that are explicitly created, the computation will
-generate result NArray that are sit on the same device.
-
-It is important to note that mxnet do not support arthematic inputs
-from two different devices. You need to insert a copyto explicitly
-to do the computation, like showed in the following example.
-```python
-cpu_array = mx.narray.ones((10, 10))
-gpu_array = mx.narray.create((10, 10), mx.Context('gpu', 0))
-gpu_array2 = gpu_array + cpu_array.copyto(gpu_array.context)
-```
-
-We made this choice because the copy between devices creates additional overhead.
-The current API makes the copy cost transparent to the user.
-
-### Automatically Parallelizing Computation
-So far you have learnt the basics of NArray, hope you like the flavor so far.
-In machine learning scenarios, it is very common that we can have parallel
-computation path, where computation can run concurrently. For example, in the following code,
-```a = a + 1``` and ```b = b + 1``` can run in parallel.
-```python
-a = mx.narray.create((10, 10))
-b = mx.narray.create((10, 10))
-a.numpy[:] = 10
-b.numpy[:] = 20
-a = a + 1
-b = b + 1
-c = a + b
-```
-This might be a toy example, but real usecases exists, for example when we want to parallel run
-neural net computation on four GPUs. Sometimes we can do this by manually creating threads
-and have each of the thread drive the computation.
-
-However, it is really non-trivial task to synchronize between threads.
-Even in the toy example like the above case, we need to wait both operations on a and b to complete
-until we can execute ```c = a + b```.
-
-There are even more subtle cases, for example, in the following case, ```b.copyto(a)``` need to wait
-the ```c  = a + 1``` to finish. Otherwise we might get different result for c.
-```python
-a = mx.narray.create((10, 10))
-b = mx.narray.create((10, 10))
-c = a + 1
-b.copyto(a)
-```
-
-As you can see, it is really hard to write parallel programs, and really hard to reason what can be parallelized.
-So normally people just give up and stay with single threaded programs.
-Luckily, mxnet does the parallelism ***automatically*** and ***correctly*** for you.
-
-So when you write the program, you can write them in normal way,
-and mxnet will try to run the computation as soon as the dependency get resolved in a parallel way.
-One thing that you need to know about though, is that that mxnet's computation is ***asynchronizely issued***.
-So the script will immediately return, but the result may not yet be ready.
-
-To wait the computation to finish, you can call ```wait``` function on the NArray.
-The ```wait``` function is called in ```NArray.numpy```, so the result is always synchronized
-and you do not need to worry about doing anything wrong.
-Due to the same ready, it is adviced to use NArray as much as possible to gain parallelism.
+They can be initialized by various ways:
 
 ```python
-a = mx.narray.create((10, 10))
-a.numpy[:] = 10
-a = a + 1
-a.wait()
+>>> a = mx.nd.zeros((2, 3)) # create a 2-by-3 matrix and filled with 0
+>>> b = mx.nd.ones((2, 3))  # create a 2-by-3 matrix and filled with 1
+>>> b[:] = 2 # assign all elements of b with 2
 ```
-So far the examples are on CPU. Of course same thing works for GPU and multiple GPUs,
-for example the following snippet copies the data into two GPUs, runs the computation
-and copy things back.
+
+We can copy the value from one to anther, even if they sit on different devices
 
 ```python
-a = mx.narray.create((10, 10))
-a.numpy[:] = 10
-a_gpu1 = a.copyto(mx.Context('gpu', 0))
-a_gpu1 = a_gpu1 + 1
-a_gpu2 = a.copyto(mx.Context('gpu', 1))
-a_gpu2 = a_gpu2 + 1
-
-print(a_gpu1.copyto(mx.Context('cpu')).numpy)
-print(a_gpu2.copyto(mx.Context('cpu')).numpy)
+>>> a = mx.nd.ones((2, 3))
+>>> b = mx.nd.zeros((2, 3), mx.gpu())
+>>> a.copyto(b) # copy data from cpu to gpu
 ```
-As usual, mxnet will automatically do all the parallelization for you, to give you maximum efficiency.
 
-### Save Load NArray
-It is important to save your work after some computations.
-We provide two ways to allow you to save and load the NArray objects.
-The first way is the naural pythonic way, using pickle. NArray is pickle compatible,
-which means you can simply pickle the NArray like what you did with numpy.ndarray.
+We can also convert `NDArray` to `numpy.ndarray`
 
-The following code gives example of pickling NArray.
 ```python
-import numpy as np
-import mxnet as mx
-import pickle as pkl
-
-a = mx.narray.create((10, 10))
-a.numpy[:] = 10
-
-data = pkl.dumps(a)
-a2 = pkl.loads(data)
-
-assert np.sum(a2.numpy != a.numpy) == 0
+>>> a = mx.nd.ones((2, 3))
+>>> b = a.asnumpy()
+>>> type(b)
+<type 'numpy.ndarray'>
+>>> print b
+[[ 1.  1.  1.]
+ [ 1.  1.  1.]]
 ```
 
-However, in some scenarios, you may also want to save the results and loads them in in other languages that
-are supported by mxnet. To achieve that, you can use ```narray.save``` and ```narray.load```.
-What is more, you can directly save and load from cloud such as S3, HDFS:) By simply building mxnet with S3 support.
+and verse vice
 
-The following code is an example on how you can save list of narray into S3 storage and load them back.
 ```python
-import numpy as np
-import mxnet as mx
-
-a = mx.narray.create((10, 10))
-a.numpy[:] = 10
-
-# save a list of narray
-data = mx.narray.save('s3://mybucket/mydata.bin', [a])
-a2 = mx.narray.load('s3://mybucket/mydata.bin')
-
-assert np.sum(a2[0].numpy != a.numpy) == 0
-
-# can also save a dict of narray
-data = mx.narray.save('s3://mybucket/mydata.bin', {'data1': a, 'data2': a})
-narray_dict = mx.narray.load('s3://mybucket/mydata.bin')
+>>> a = mx.nd.empty((2, 3))
+>>> a[:] = np.random.uniform(-0.1, 0.1, a.shape)
+>>> print a.asnumpy()
+[[-0.06821112 -0.03704893  0.06688045]
+ [ 0.09947646 -0.07700162  0.07681718]]
 ```
-In this way, you can always store your experiment on the cloud:)
-As usually, we support both flavors for you, and you can choose which one you like to use.
 
+### Basic Operations
 
-Symbolic API and Differentiation
---------------------------------
-Now you have seen the power of NArray of MXNet. It seems to be interesting and we are ready to build some real deep learning.
-Hmm, this seems to be really exciting, but wait, do we need to build things from scratch?
-It seems that we need to re-implement all the layers in deep learning toolkits such as [CXXNet](https://github.com/dmlc/cxxnet) in NArray?
-Well, you do not have to. There is a Symbolic API in MXNet that readily helps you to do all these.
+#### Elemental-wise operations
 
-More importantly, the Symbolic API is designed to bring in the advantage of C++ static layers(operators) to ***maximumly optimizes the performance and memory*** that is even better than CXXNet. Sounds exciting? Let us get started on this.
+In default, `NDArray` performs elemental-wise operations:
 
-### Creating Symbols
-A common way to create a neural network is to create it via some way of configuration file or API.
-The following code creates a configuration two layer perceptrons.
 ```python
-import mxnet.symbol as sym
-
-data = sym.Variable('data')
-net = sym.FullyConnected(data=data, name='fc1', num_hidden=128)
-net = sym.Activation(data=net, name='relu1', act_type="relu")
-net = sym.FullyConnected(data=net, name='fc2', num_hidden=10)
-net = sym.Softmax(data=net, name = 'sm')
+>>> a = mx.nd.ones((2, 3)) * 2
+>>> b = mx.nd.ones((2, 3)) * 4
+>>> print a.asnumpy()
+[[ 4.  4.  4.]
+ [ 4.  4.  4.]]
+>>> c = a + b
+>>> print c.asnumpy()
+[[ 6.  6.  6.]
+ [ 6.  6.  6.]]
+>>> d = a * b
+>>> print d.asnumpy()
+[[ 8.  8.  8.]
+ [ 8.  8.  8.]]
 ```
-If you are familiar with tools such as cxxnet or caffe, the ```Symbol``` object is like configuration files
-that configures the network structure. If you are more familiar with tools like theano, the ```Symbol```
-object something that defines the computation graph. Basically, it creates a computation graph
-that defines the forward pass of neural network.
 
-The Configuration API allows you to define the computation graph via compositions.
-If you have not used symbolic configuration tools like theano before, one thing to
-note is that the ```net``` can also be viewed as function that have input arguments.
+If two `NDArray` sit on different devices, we need explicitly move them into the
+same one. The following example performing computations on GPU 0:
 
-You can get the list of arguments by calling ```Symbol.list_arguments```.
+```python
+>>> a = mx.nd.ones((2, 3)) * 2
+>>> b = mx.nd.ones((2, 3), mx.gpu()) * 3
+>>> c = a.copyto(mx.gpu()) * b
+>>> print c.asnumpy()
+[[ 6.  6.  6.]
+ [ 6.  6.  6.]]
+```
+
+#### Indexing
+
+TODO
+
+#### Linear Algebra
+
+TODO
+
+### Load and Save
+
+There are two ways to save data to (load from) disks easily. The first way uses
+`pickle`.  `NDArray` is pickle compatible, which means you can simply pickle the
+NArray like what you did with `numpy.ndarray`.
+
+```python
+>>> import mxnet as mx
+>>> import pickle as pkl
+
+>>> a = mx.nd.ones((2, 3)) * 2
+>>> data = pkl.dumps(a)
+>>> b = pkl.loads(data)
+>>> print b.asnumpy()
+[[ 2.  2.  2.]
+ [ 2.  2.  2.]]
+```
+
+On the second way, we directly dump a list of `NDArray` into disk in binary format.
+
+```python
+>>> a = mx.nd.ones((2,3))*2
+>>> b = mx.nd.ones((2,3))*3
+>>> mx.nd.save('mydata.bin', [a, b])
+>>> c = mx.nd.load('mydata.bin')
+>>> print c[0].asnumpy()
+[[ 2.  2.  2.]
+ [ 2.  2.  2.]]
+>>> print c[1].asnumpy()
+[[ 3.  3.  3.]
+ [ 3.  3.  3.]]
+```
+
+We can also dump a dict.
+
+```python
+>>> mx.nd.save('mydata.bin', {'a':a, 'b':b})
+>>> c = mx.nd.load('mydata.bin')
+>>> print c['a'].asnumpy()
+[[ 2.  2.  2.]
+ [ 2.  2.  2.]]
+>>> print c['b'].asnumpy()
+[[ 3.  3.  3.]
+ [ 3.  3.  3.]]
+```
+
+In addition, we have setup the distributed filesystem such as S3 and HDFS, we
+can directly save to and load from them. For example:
+
+```python
+>>> mx.nd.save('s3://mybucket/mydata.bin', [a,b])
+>>> mx.nd.save('hdfs///users/myname/mydata.bin', [a,b])
+```
+
+### Parallelization
+
+The operations of `NDArray` are executed by third libraries such as `cblas`,
+`mkl`, and `cuda`. In default, each operation is executed by multi-threads. In
+addition, `NDArray` can execute operations in parallel. It is desirable when we
+use multiple resources such as CPU, GPU cards, and CPU-to-GPU memory bandwidth.
+
+For example, if we write `a += 1` followed by `b += 1`, and `a` is on CPU while
+`b` is on GPU, then want to execute them in parallel to improve the
+efficiency. Furthermore, data copy between CPU and GPU are also expensive, we
+hope to run it parallel with other computations as well.
+
+However, finding the codes can be executed in parallel by eye is hard. In the
+following example, `a+=1` and `c*=3` can be executed in parallel, but `a+=1` and
+`b*=3` should be in sequential.
+
+```python
+a = mx.nd.ones((2,3))
+b = a
+c = a.copyto(mx.cpu())
+a += 1
+b *= 3
+c *= 3
+```
+
+Luckily, MXNet can automatically resolve the dependencies and
+execute operations in parallel with correctness guaranteed. In other words, we
+can write program as by assuming there is only a single thread, while MXNet will
+automatically dispatch it into multi-devices, such as multi GPU cards or multi
+machines.
+
+It is achieved by lazy evaluation. Any operation we write down is issued into a
+internal DAG engine, and then returned. For example, if we run `a += 1`, it
+returns immediately after pushing the plus operator to the engine. This
+asynchronous allows us to push more operators to the engine, so it can determine
+the read and write dependency and find a best way to execute them in
+parallel.
+
+The actual computations are finished if we want to copy the results into some
+other place, such as `print a.asnumpy()` or `mx.nd.save([a])`. Therefore, if we
+want to write highly parallelized codes, we only need to postpone when we need
+the results.
+
+
+## Symbol and Automatic Differentiation
+
+NDArray is the basic computation unit in MXNet. Besides, MXNet provides a
+symbolic interface, named Symbol, to simplify constructing neural networks. The
+symbol combines both flexibility and efficiency. On one hand, it is similar to
+the network configuration in [Caffe](http://caffe.berkeleyvision.org/) and
+[CXXNet](https://github.com/dmlc/cxxnet), on the other hand, the symbol defines
+the computation graph in [Theano](http://deeplearning.net/software/theano/).
+
+### Basic Composition of Symbols
+
+The following codes create a two layer perceptrons network:
+
+```python
+>>> import mxnet as mx
+>>> net = mx.symbol.Variable('data')
+>>> net = mx.symbol.FullyConnected(data=net, name='fc1', num_hidden=128)
+>>> net = mx.symbol.Activation(data=net, name='relu1', act_type="relu")
+>>> net = mx.symbol.FullyConnected(data=net, name='fc2', num_hidden=64)
+>>> net = mx.symbol.Softmax(data=net, name='out')
+>>> type(net)
+<class 'mxnet.symbol.Symbol'>
+```
+
+Each symbol takes a (unique) string name. *Variable* often defines the inputs,
+or free variables. Other symbols take a symbol as the input (*data*),
+and may accept other hyper-parameters such as the number of hidden neurons (*num_hidden*)
+or the activation type (*act_type*).
+
+The symbol can be simply viewed as a function taking several arguments, whose
+names are automatically generated and can be get by
+
 ```python
 >>> net.list_arguments()
-['data', 'fc1_weight', 'fc1_bias', 'fc2_weight', 'fc2_bias']
+['data', 'fc1_weight', 'fc1_bias', 'fc2_weight', 'fc2_bias', 'out_label']
 ```
-In our example, you can find that the arguments contains the parameters in each layer, as well as input data.
-One thing that worth noticing is that the argument names like ```fc1_weight``` are automatically generated because
-it was not specified in creation of fc1.
-You can also specify it explicitly, like the following code.
+
+As can be seen, these arguments are the parameters need by each symbol:
+
+- *data* : input data needed by the variable *data*
+- *fc1_weight* and *fc1_bias* : the weight and bias for the first fully connected layer *fc1*
+- *fc2_weight* and *fc2_bias* : the weight and bias for the second fully connected layer *fc2*
+- *out_label* : the label needed by the loss
+
+We can also specify the automatic generated names explicitly:
+
 ```python
->>> import mxnet.symbol as sym
->>> data = sym.Variable('data')
->>> w = sym.Variable('myweight')
->>> net = sym.FullyConnected(data=data, weight=w,
-                             name='fc1', num_hidden=128)
+>>> net = mx.symbol.Variable('data')
+>>> w = mx.symbol.Variable('myweight')
+>>> net = sym.FullyConnected(data=data, weight=w, name='fc1', num_hidden=128)
 >>> net.list_arguments()
 ['data', 'myweight', 'fc1_bias']
 ```
 
-Besides the coarse grained neuralnet operators such as FullyConnected, Convolution.
-MXNet also provides fine graned operations such as elementwise add, multiplications.
-The following example first performs an elementwise add between two symbols, then feed
-them to the FullyConnected operator.
-```
->>> import mxnet.symbol as sym
->>> lhs = sym.Variable('data1')
->>> rhs = sym.Variable('data2')
->>> net = sym.FullyConnected(data=lhs + rhs,
-                             name='fc1', num_hidden=128)
+### More Complicated Composition
+
+MXNet provides well-optimized symbols (see
+[src/operator](https://github.com/dmlc/mxnet/tree/master/src/operator)) for
+commonly used layers in deep learning. We can also easily define new operators
+in python.  The following example first performs an elementwise add between two
+symbols, then feed them to the fully connected operator.
+
+```python
+>>> lhs = mx.symbol.Variable('data1')
+>>> rhs = mx.symbol.Variable('data2')
+>>> net = mx.symbol.FullyConnected(data=lhs + rhs, name='fc1', num_hidden=128)
 >>> net.list_arguments()
 ['data1', 'data2', 'fc1_weight', 'fc1_bias']
 ```
 
-### More Complicated Composition
-In the previous example, Symbols are constructed in a forward compositional way.
-Besides doing things in a forward compistion way. You can also treat composed symbols as functions,
-and apply them to existing symbols.
+We can also construct symbol in a more flexible way rather than the single
+forward composition we addressed before.
 
 ```python
->>> import mxnet.symbol as sym
->>> data = sym.Variable('data')
->>> net = sym.FullyConnected(data=data,
-                             name='fc1', num_hidden=128)
->>> net.list_arguments()
-['data', 'fc1_weight', 'fc1_bias']
->>> data2 = sym.Variable('data2')
->>> in_net = sym.FullyConnected(data=data,
-                                name='in', num_hidden=128)
->>> composed_net = net(data=in_net, name='compose')
+>>> net = mx.symbol.Variable('data')
+>>> net = mx.symbol.FullyConnected(data=net, name='fc1', num_hidden=128)
+>>> net2 = mx.symbol.Variable('data2')
+>>> net2 = mx.symbol.FullyConnected(data=net2, name='net2', num_hidden=128)
+>>> composed_net = net(data=net2, name='compose')
 >>> composed_net.list_arguments()
-['data2', 'in_weight', 'in_bias', 'compose_fc1_weight', 'compose_fc1_bias']
+['data2', 'net2_weight', 'net2_bias', 'compose_fc1_weight', 'compose_fc1_bias']
 ```
-In the above example, net is used a function to apply to an existing symbol ```in_net```, the resulting
-composed_net will replace the original ```data``` by the the in_net instead. This is useful when you
-want to change the input of some neural-net to be other structure.
 
-### Shape Inference
-Now we have defined the computation graph. A common problem in the computation graph,
-is to figure out shapes of each parameters.
-Usually, we want to know the shape of all the weights, bias and outputs.
+In the above example, *net* is used a function to apply to an existing symbol
+*net*, the resulting *composed_net* will replace the original argument *data* by
+*net2* instead.
 
-You can use ```Symbol.infer_shape``` to do that. THe shape inference function
-allows you to pass in shapes of arguments that you know,
-and it will try to infer the shapes of all arguments and outputs.
+### Argument Shapes Inference
+
+Now we have known how to define the symbol. Next we can inference the shapes of
+all the arguments it needed by given the input data shape.
+
 ```python
->>> import mxnet.symbol as sym
->>> data = sym.Variable('data')
->>> net = sym.FullyConnected(data=data, name='fc1',
-                             num_hidden=10)
->>> arg_shape, out_shape = net.infer_shape(data=(100, 100))
+>>> net = mx.symbol.Variable('data')
+>>> net = mx.symbol.FullyConnected(data=ent, name='fc1', num_hidden=10)
+>>> arg_shape, out_shape, aux_shape = net.infer_shape(data=(100, 100))
 >>> dict(zip(net.list_arguments(), arg_shape))
 {'data': (100, 100), 'fc1_weight': (10, 100), 'fc1_bias': (10,)}
 >>> out_shape
 [(100, 10)]
 ```
-In common practice, you only need to provide the shape of input data, and it
-will automatically infers the shape of all the parameters.
-You can always also provide more shape information, such as shape of weights.
-The ```infer_shape``` will detect if there is inconsitency in the shapes,
-and raise an Error if some of them are inconsistent.
 
-### Bind the Symbols
-Symbols are configuration objects that represents a computation graph (a configuration of neuralnet).
-So far we have introduced how to build up the computation graph (i.e. a configuration).
-The remaining question is, how we can do computation using the defined graph.
+The shape inference can be used as an earlier debugging mechanism to detect
+shape inconsistency.
 
-TODO.
+### Bind the Symbols and Run
+
+Now we can bind the free variables of the symbol and perform forward and
+backward.
+
+```python
+>>> in_shape = (128, 3, 100, 100) # minibatch_size, #channel, image_width, image_height
+>>> executor = net.simple_bind(mx.gpu(), data = mx.nd.empty(in_shape, mx.gpu())
+>>> # feed data and label..
+>>> executor.forward()
+>>> executor.backward()
+>>> print executor.outputs[0].asnumpy()
+```
 
 ### How Efficient is Symbolic API
+
 In short, they design to be very efficienct in both memory and runtime.
 
-The major reason for us to introduce Symbolic API, is to bring the efficient
-C++ operations in powerful toolkits such as cxxnet and caffe together with the flexible
-dynamic NArray operations. All the memory and computation resources are allocated statically during Bind,
-to maximize the runtime performance and memory utilization.
+The major reason for us to introduce Symbolic API, is to bring the efficient C++
+operations in powerful toolkits such as cxxnet and caffe together with the
+flexible dynamic NArray operations. All the memory and computation resources are
+allocated statically during Bind, to maximize the runtime performance and memory
+utilization.
 
-The coarse grained operators are equivalent to cxxnet layers, which are extremely efficient.
-We also provide fine grained operators for more flexible composition. Because we are also doing more inplace
-memory allocation, mxnet can be ***more memory efficient*** than cxxnet, and gets to same runtime, with greater flexiblity.
+The coarse grained operators are equivalent to cxxnet layers, which are
+extremely efficient.  We also provide fine grained operators for more flexible
+composition. Because we are also doing more inplace memory allocation, mxnet can
+be ***more memory efficient*** than cxxnet/caffe, and gets to same runtime, with
+greater flexiblity.
 
-How to Choose between APIs
---------------------------
-You can mix them all as much as you like. Here are some guidelines
-* Use Symbolic API and coarse grained operator to create established structure.
-* Use fine-grained operator to extend parts of of more flexible symbolic graph.
-* Do some dynamic NArray tricks, which are even more flexible, between the calls of forward and backward of executors.
+## Distributed Key-value Store
 
-We believe that different ways offers you different levels of flexibilty and efficiency. Normally you do not need to
-be flexible in all parts of the networks, so we allow you to use the fast optimized parts,
-and compose it flexibly with fine-grained operator or dynamic NArray. We believe such kind of mixture allows you to build
-the deep learning architecture both efficiently and flexibly as your choice. To mix is to maximize the peformance and flexiblity.
+KVStore is a place for data sharing. We can think it as a single object shared
+across different devices (GPUs and machines), where each device can push data in
+and pull data out.
+
+### Initialization
+
+Let's first consider a simple example. It initializes
+a (`int`, `NDAarray`) pair into the store, and then pull the value out.
+
+```python
+>>> mx.kv.start() # start the kvstore
+>>> shape = (2,3)
+>>> mx.kv.init(3, mx.nd.ones(shape)*2)
+>>> a = mx.nd.zeros(shape)
+>>> mx.kv.pull(3, out = a)
+>>> print a.asnumpy()
+[[ 2.  2.  2.]
+ [ 2.  2.  2.]]
+```
+
+### Push, Aggregation, and Updater
+
+For any key has been initialized, we can push a new value with the same shape to the key.
+
+```python
+>>> mx.kv.push(3, mx.nd.ones(shape)*8)
+>>> mx.kv.pull(3, out = a) # pull out the value
+>>> print a.asnumpy()
+[[ 8.  8.  8.]
+ [ 8.  8.  8.]]
+```
+
+The data for pushing can be on any device. Furthermore, we can push multiple
+values into the same key, where KVStore will first sum all these
+values and then push the aggregated value.
+
+```python
+>>> gpus = [mx.gpu(i) for i in range(4)]
+>>> b = [mx.nd.ones(shape, gpu) for gpu in gpus]
+>>> mx.kv.push(3, b)
+>>> mx.kv.pull(3, out = a)
+>>> print a.asnumpy()
+[[ 4.  4.  4.]
+ [ 4.  4.  4.]]
+```
+
+For each push, KVStore applies the pushed value into the value stored by a
+`updater`. The default updater is `ASSGIN`, we can replace the default one to
+control how data is merged.
+
+```python
+>>> def update(key, input, stored):
+>>>     print "update on key: %d" % key
+>>>     stored += input * 2
+>>> mx.kv.set_updater(update)
+>>> mx.kv.pull(3, out=a)
+>>> print a.asnumpy()
+[[ 4.  4.  4.]
+ [ 4.  4.  4.]]
+>>> mx.kv.push(3, mx.nd.ones(shape))
+update on key: 3
+>>> mx.kv.pull(3, out=a)
+>>> print a.asnumpy()
+[[ 6.  6.  6.]
+ [ 6.  6.  6.]]
+```
+
+### Pull
+
+We already see how to pull a single key-value pair. Similar to push, we can also
+pull the value into several devices by a single call.
+
+```python
+>>> b = [mx.nd.ones(shape, gpu) for gpu in gpus]
+>>> mx.kv.pull(3, out = b)
+>>> print b[1].asnumpy()
+[[ 6.  6.  6.]
+ [ 6.  6.  6.]]
+```
+
+### Handle a list of key-value pairs
+
+All operations introduced so far are about a single key. KVStore also provides
+the interface for a list of key-value pairs. For single device:
+
+```python
+>>> keys = [5, 7, 9]
+>>> mx.kv.init(keys, [mx.nd.ones(shape)]*len(keys))
+>>> mx.kv.push(keys, [mx.nd.ones(shape)]*len(keys))
+update on key: 5
+update on key: 7
+update on key: 9
+>>> b = [mx.nd.zeros(shape)]*len(keys)
+>>> mx.kv.pull(keys, out = b)
+>>> print b[1].asnumpy()
+[[ 3.  3.  3.]
+ [ 3.  3.  3.]]
+```
+
+For multi-devices:
+
+```pythoon
+>>> b = [[mx.nd.ones(shape, gpu) for gpu in gpus]] * len(keys)
+>>> mx.kv.push(keys, b)
+update on key: 5
+update on key: 7
+update on key: 9
+>>> mx.kv.pull(keys, out = b)
+>>> print b[1][1].asnumpy()
+[[ 11.  11.  11.]
+ [ 11.  11.  11.]]
+```
+
+### Multiple machines
+
+Base on parameter server. The `updater` will runs on the server nodes. MORE...
+
+
+<!-- ## How to Choose between APIs -->
+
+<!-- You can mix them all as much as you like. Here are some guidelines -->
+<!-- * Use Symbolic API and coarse grained operator to create established structure. -->
+<!-- * Use fine-grained operator to extend parts of of more flexible symbolic graph. -->
+<!-- * Do some dynamic NArray tricks, which are even more flexible, between the calls of forward and backward of executors. -->
+
+<!-- We believe that different ways offers you different levels of flexibilty and -->
+<!-- efficiency. Normally you do not need to be flexible in all parts of the -->
+<!-- networks, so we allow you to use the fast optimized parts, and compose it -->
+<!-- flexibly with fine-grained operator or dynamic NArray. We believe such kind of -->
+<!-- mixture allows you to build the deep learning architecture both efficiently and -->
+<!-- flexibly as your choice. To mix is to maximize the peformance and flexiblity. -->
