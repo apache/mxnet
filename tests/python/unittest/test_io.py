@@ -61,5 +61,5 @@ def test_Cifar10Rec():
         assert(labelcount[i] == 5000)
 
 if __name__ == "__main__":
-    #test_MNISTIter()
-    test_Cifar10Rec()
+    test_MNISTIter()
+    #test_Cifar10Rec()
