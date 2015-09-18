@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file iter_prefetcher.h
- * \brief define a prefetcher using threaditer to keep k batch fetched 
+ * \brief define a prefetcher using threaditer to keep k batch fetched
  */
 #ifndef MXNET_IO_ITER_PREFETCHER_H_
 #define MXNET_IO_ITER_PREFETCHER_H_
@@ -101,7 +101,8 @@ class PrefetcherIter : public IIterator<DataBatch> {
           mshadow::Copy((*dptr)->data[0].get<mshadow::cpu, 2, float>(),
                   batch.data[0].get<mshadow::cpu, 2, float>());
         } else {
-          assert(false);
+          // TODO(tianjun): ?
+          LOG(FATAL) << "fail";
         }
         mshadow::Copy((*dptr)->data[1].get<mshadow::cpu, 2, float>(),
                 batch.data[1].get<mshadow::cpu, 2, float>());
