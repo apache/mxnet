@@ -11,7 +11,7 @@
 namespace mxnet {
 
 void KVStore::Start() {
-  if (impl_ != NULL) Stop();
+  if (impl_ != NULL) Finalize();
   char* num_worker = getenv("DMLC_NUM_WORKER");
   if (num_worker == NULL || atoi(num_worker) == 1) {
     impl_ = new KVStoreLocal();

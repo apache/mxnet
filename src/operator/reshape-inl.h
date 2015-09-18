@@ -87,14 +87,12 @@ class ReshapeProp : public OperatorProperty {
  public:
   ReshapeProp() {}
 
-  explicit ReshapeProp(ReshapeParam param) : param_(param) {}
-
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
   }
 
-  std::string TypeString() const override {
-    return "Reshape";
+  std::map<std::string, std::string> GetParams() const override {
+    return param_.__DICT__();
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
@@ -116,6 +114,10 @@ class ReshapeProp : public OperatorProperty {
     auto ptr = new ReshapeProp();
     ptr->param_ = param_;
     return ptr;
+  }
+
+  std::string TypeString() const override {
+    return "Reshape";
   }
 
   std::vector<int> DeclareBackwardDependency(
@@ -141,13 +143,17 @@ class ReshapeProp : public OperatorProperty {
 
   Operator* CreateOperator(Context ctx) const;
 
- private:
+ protected:
   ReshapeParam param_;
 };  // class ReshapeProp
 
 class FlattenProp : public ReshapeProp {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {}
+
+  std::map<std::string, std::string> GetParams() const override {
+    return {};
+  }
 
   std::string TypeString() const override {
     return "Flatten";

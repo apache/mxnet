@@ -406,11 +406,16 @@ def load(fname):
     You can also use pickle to do the job if you only work on python.
     The advantage of load/save is the file is language agnostic.
     This means the file saved using save can be loaded by other language binding of mxnet.
+    You also get the benefit being able to directly load/save from cloud storage(S3, HDFS)
 
     Parameters
     ----------
     fname : str
-        The name of the file
+        The name of the file.Can be S3 or HDFS address (remember built with S3 support).
+        Example of fname:
+        - s3://my-bucket/path/my-s3-ndarray
+        - hdfs://my-bucket/path/my-hdfs-ndarray
+        - /path-to/my-local-ndarray
 
     Returns
     -------
@@ -423,11 +428,11 @@ def load(fname):
     out_name_size = mx_uint()
     handles = ctypes.POINTER(NDArrayHandle)()
     names = ctypes.POINTER(ctypes.c_char_p)()
-    check_call(_LIB.MXNDArrayListLoad(c_str(fname),
-                                      ctypes.byref(out_size),
-                                      ctypes.byref(handles),
-                                      ctypes.byref(out_name_size),
-                                      ctypes.byref(names)))
+    check_call(_LIB.MXNDArrayLoad(c_str(fname),
+                                  ctypes.byref(out_size),
+                                  ctypes.byref(handles),
+                                  ctypes.byref(out_name_size),
+                                  ctypes.byref(names)))
     if out_name_size.value == 0:
         return [NDArray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
     else:
@@ -442,11 +447,16 @@ def save(fname, data):
     You can also use pickle to do the job if you only work on python.
     The advantage of load/save is the file is language agnostic.
     This means the file saved using save can be loaded by other language binding of mxnet.
+    You also get the benefit being able to directly load/save from cloud storage(S3, HDFS)
 
     Parameters
     ----------
     fname : str
-        The name of the file
+        The name of the file.Can be S3 or HDFS address (remember built with S3 support).
+        Example of fname:
+        - s3://my-bucket/path/my-s3-ndarray
+        - hdfs://my-bucket/path/my-hdfs-ndarray
+        - /path-to/my-local-ndarray
 
     data : list of NDArray or dict of str to NDArray
         The data to be saved.
@@ -468,10 +478,10 @@ def save(fname, data):
                 raise TypeError('save only accept dict str->NDArray or list of NDArray')
             handles.append(val.handle)
         keys = None
-    check_call(_LIB.MXNDArrayListSave(c_str(fname),
-                                      len(handles),
-                                      c_array(NDArrayHandle, handles),
-                                      keys))
+    check_call(_LIB.MXNDArraySave(c_str(fname),
+                                  len(handles),
+                                  c_array(NDArrayHandle, handles),
+                                  keys))
 
 
 # pylint: disable=too-many-locals, invalid-name

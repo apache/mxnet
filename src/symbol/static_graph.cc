@@ -291,4 +291,58 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
     }
   }
 }
+
+void StaticGraph::Node::Save(dmlc::JSONWriter *writer) const {
+  writer->BeginObject();
+  if (op.get() != nullptr) {
+    writer->WriteObjectKeyValue("op", op->TypeString());
+    std::map<std::string, std::string> param = op->GetParams();
+    writer->WriteObjectKeyValue("param", param);
+  } else {
+    std::map<std::string, std::string> empty_param;
+    std::string json_null = "null";
+    writer->WriteObjectKeyValue("op", json_null);
+    writer->WriteObjectKeyValue("param", empty_param);
+  }
+  writer->WriteObjectKeyValue("name", name);
+  writer->WriteObjectKeyValue("inputs", inputs);
+  writer->WriteObjectKeyValue("backward_source_id", backward_source_id);
+  writer->EndObject();
+}
+
+void StaticGraph::Node::Load(dmlc::JSONReader *reader) {
+  dmlc::JSONObjectReadHelper helper;
+  std::string op_type_str;
+  std::map<std::string, std::string> param;
+  helper.DeclareField("op", &op_type_str);
+  helper.DeclareField("param", &param);
+  helper.DeclareField("name", &name);
+  helper.DeclareField("inputs", &inputs);
+  helper.DeclareField("backward_source_id", &backward_source_id);
+  helper.ReadAllFields(reader);
+
+  if (op_type_str != "null") {
+    op.reset(OperatorProperty::Create(op_type_str.c_str()));
+    std::vector<std::pair<std::string, std::string> > vec(param.begin(), param.end());
+    op->Init(vec);
+  } else {
+    op.reset(nullptr);
+  }
+}
+
+void StaticGraph::Save(dmlc::JSONWriter *writer) const {
+  writer->BeginObject();
+  writer->WriteObjectKeyValue("nodes", nodes);
+  writer->WriteObjectKeyValue("arg_nodes", arg_nodes);
+  writer->WriteObjectKeyValue("heads", heads);
+  writer->EndObject();
+}
+
+void StaticGraph::Load(dmlc::JSONReader *reader) {
+  dmlc::JSONObjectReadHelper helper;
+  helper.DeclareField("nodes", &nodes);
+  helper.DeclareField("arg_nodes", &arg_nodes);
+  helper.DeclareField("heads", &heads);
+  helper.ReadAllFields(reader);
+}
 }  // namespace mxnet

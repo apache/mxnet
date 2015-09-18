@@ -11,6 +11,8 @@
 #include <dmlc/io.h>
 #include <dmlc/type_traits.h>
 #include <dmlc/registry.h>
+#include <vector>
+#include <string>
 #include <memory>
 #include "./base.h"
 #include "./storage.h"
@@ -244,6 +246,24 @@ class NDArray {
   inline void CheckAndAlloc() const {
     ptr_->CheckAndAlloc();
   }
+  /*!
+   * \brief Save list of narray into the file.
+   * \param fname name of the file.
+   * \param data the NDArrays to be saved.
+   * \param keys the name of the NDArray, optional, can be zero length.
+   */
+  static void Save(const std::string& fname,
+                   const std::vector<NDArray>& data,
+                   const std::vector<std::string>& names);
+  /*!
+   * \brief Load list of narray into from the file.
+   * \param fname name of the file.
+   * \param data the NDArrays to be loaded
+   * \param keys the name of the NDArray, if saved in the file.
+   */
+  static void Load(const std::string& fname,
+                   std::vector<NDArray>* data,
+                   std::vector<std::string>* keys);
 
  private:
   /*! \brief the real data chunk that backs NDArray */
@@ -397,7 +417,6 @@ void SampleUniform(real_t begin, real_t end, NDArray *out);
  * \param out output NDArray.
  */
 void SampleGaussian(real_t mu, real_t sigma, NDArray *out);
-
 //--------------------------------------------------------------
 // The following part are API Registration of NDArray functions.
 //--------------------------------------------------------------

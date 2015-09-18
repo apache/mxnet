@@ -555,4 +555,32 @@ void Symbol::ToStaticGraph(StaticGraph *out_graph) const {
     out_graph->heads.push_back(e);
   }
 }
+
+void Symbol::FromStaticGraph(const StaticGraph &graph) {
+  std::unordered_map<uint32_t, std::shared_ptr<Node> > nodes;
+  std::vector<uint32_t> topo_order = graph.TopoSort();
+  // copy ver nodes in topo order
+  for (uint32_t nid : topo_order) {
+    auto &gnode = graph.nodes[nid];
+    auto sym_node = std::make_shared<Symbol::Node>();
+    sym_node->name = gnode.name;
+    if (gnode.op.get() != nullptr) {
+      sym_node->op.reset(gnode.op->Copy());
+    }
+    if (gnode.backward_source_id != -1) {
+      sym_node->backward_source_node = nodes.at(gnode.backward_source_id);
+    }
+    for (const StaticGraph::DataEntry& e : gnode.inputs) {
+      Symbol::DataEntry entry(nodes.at(e.source_id), e.index);
+      sym_node->inputs.push_back(std::move(entry));
+    }
+    nodes[nid] = sym_node;
+  }
+  // generate the heads
+  heads_.clear();
+  for (const StaticGraph::DataEntry& e : graph.heads) {
+    Symbol::DataEntry entry(nodes.at(e.source_id), e.index);
+    heads_.push_back(std::move(entry));
+  }
+}
 }  // namespace mxnet

@@ -8,9 +8,12 @@
 #ifndef MXNET_OPERATOR_OPERATOR_COMMON_H_
 #define MXNET_OPERATOR_OPERATOR_COMMON_H_
 
+#include <dmlc/json.h>
 #include <dmlc/logging.h>
 #include <mxnet/operator.h>
 #include <mxnet/base.h>
+#include <istream>
+#include <ostream>
 #include <string>
 
 namespace mxnet {
@@ -92,7 +95,6 @@ struct InferShapeError {
     return nullptr;                                                  \
   }
 #endif
-
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_OPERATOR_COMMON_H_

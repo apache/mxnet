@@ -62,6 +62,11 @@ MXNET_DLL const char *MXGetLastError();
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXRandomSeed(int seed);
+/*!
+ * \brief Finalize and shutdown all related modules of mxnet.
+ *  Call this function at end of program to ensure correct shutdown.
+ */
+MXNET_DLL int MXFinalize();
 //-------------------------------------
 // Part 1: NDArray creation and deletion
 //-------------------------------------
@@ -118,10 +123,10 @@ MXNET_DLL int MXNDArraySaveRawBytes(NDArrayHandle handle,
  * \param keys the name of the NDArray, optional, can be NULL
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNDArrayListSave(const char* fname,
-                               mx_uint num_args,
-                               NDArrayHandle* args,
-                               const char** keys);
+MXNET_DLL int MXNDArraySave(const char* fname,
+                            mx_uint num_args,
+                            NDArrayHandle* args,
+                            const char** keys);
 /*!
  * \brief Load list of narray from the file.
  * \param fname name of the file.
@@ -131,11 +136,11 @@ MXNET_DLL int MXNDArrayListSave(const char* fname,
  * \param out_names the names of returning NDArrays, can be NULL
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNDArrayListLoad(const char* fname,
-                                mx_uint *out_size,
-                                NDArrayHandle** out_arr,
-                                mx_uint *out_name_size,
-                                const char*** out_names);
+MXNET_DLL int MXNDArrayLoad(const char* fname,
+                            mx_uint *out_size,
+                            NDArrayHandle** out_arr,
+                            mx_uint *out_name_size,
+                            const char*** out_names);
 /*!
  * \brief Perform a synchronize copy from a continugous CPU memory region.
  *
@@ -354,13 +359,33 @@ MXNET_DLL int MXSymbolCreateGroup(mx_uint num_symbols,
                                   SymbolHandle *symbols,
                                   SymbolHandle *out);
 /*!
- * \brief Create symbol from config.
- * \param cfg configuration string
- * \param out created symbol handle
+ * \brief Load a symbol from a json file.
+ * \param fname the file name.
+ * \param out the output symbol.
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSymbolCreateFromConfig(const char *cfg,
-                                       SymbolHandle *out);
+MXNET_DLL int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out);
+/*!
+ * \brief Load a symbol from a json string.
+ * \param json the json string.
+ * \param out the output symbol.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolCreateFromJSON(const char *json, SymbolHandle *out);
+/*!
+ * \brief Save a symbol into a json file.
+ * \param sym the input symbol.
+ * \param fname the file name.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolSaveToFile(SymbolHandle symbol, const char *fname);
+/*!
+ * \brief Save a symbol into a json string
+ * \param sym the input symbol.
+ * \param out_json output json string.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolSaveToJSON(SymbolHandle symbol, const char **out_json);
 /*!
  * \brief Free the symbol handle.
  * \param symbol the symbol

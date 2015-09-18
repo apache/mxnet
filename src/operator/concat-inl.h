@@ -169,6 +169,10 @@ class ConcatProp : public OperatorProperty {
     param_.Init(kwargs);
   }
 
+  std::map<std::string, std::string> GetParams() const override {
+    return param_.__DICT__();
+  }
+
   std::vector<std::string> ListArguments() const override {
     std::vector<std::string> ret;
     for (int i = 0; i < param_.num_args; ++i) {
