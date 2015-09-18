@@ -7,6 +7,7 @@
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
 #include <dmlc/concurrency.h>
+#include <cassert>
 #include "./threaded_engine.h"
 #include "./thread_pool.h"
 #include "./stream_manager.h"

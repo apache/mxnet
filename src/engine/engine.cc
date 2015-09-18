@@ -25,8 +25,9 @@ inline Engine* CreateEngine() {
     ret = CreateThreadedEnginePerDevice();
   }
 
-  CHECK_NE(ret, nullptr)
-      << "Cannot find Engine " << type;
+  if (ret ==nullptr) {
+    LOG(FATAL) << "Cannot find Engine " << type;
+  }
   if (!default_engine) {
     LOG(INFO) << "MXNet start using engine: " << type;
   }
