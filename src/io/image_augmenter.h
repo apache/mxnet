@@ -6,7 +6,9 @@
 #ifndef MXNET_IO_IMAGE_AUGMENTER_H_
 #define MXNET_IO_IMAGE_AUGMENTER_H_
 
+#if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
+#endif
 #include <utility>
 #include <string>
 #include <algorithm>
@@ -131,8 +133,10 @@ class ImageAugmenter {
  public:
   // contructor
   ImageAugmenter(void)
-      : tmpres_(false),
-        rotateM_(2, 3, CV_32F) {
+      : tmpres_(false) {
+#if MXNET_USE_OPENCV
+    rotateM_ = cv::Mat(2, 3, CV_32F);
+#endif
   }
   virtual ~ImageAugmenter() {
   }
@@ -165,6 +169,7 @@ class ImageAugmenter {
       }
     }
   }
+#if MXNET_USE_OPENCV
   /*!
    * \brief augment src image, store result into dst
    *   this function is not thread safe, and will only be called by one thread
@@ -278,7 +283,7 @@ class ImageAugmenter {
     }
     return tmpres_;
   }
-
+#endif
   void TensorProcess(mshadow::Tensor<cpu, 3> *p_data,
                      mshadow::TensorContainer<cpu, 3> *dst_data,
                        common::RANDOM_ENGINE *prnd) {
@@ -376,11 +381,13 @@ class ImageAugmenter {
   mshadow::TensorContainer<cpu, 3> meanimg_;
   /*! \brief temp space */
   mshadow::TensorContainer<cpu, 3> img_;
+#if MXNET_USE_OPENCV
   // temporal space
   cv::Mat temp_;
   // rotation param
   cv::Mat rotateM_;
   // whether the mean file is ready
+#endif
   bool meanfile_ready_;
   // parameters
   ImageAugmentParam param_;

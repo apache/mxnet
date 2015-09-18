@@ -217,7 +217,6 @@ test_dataiter = mx.io.ImageRecordIter(
         nthread=4,
         prefetch_capacity=6)
 
-
 def progress(count, total, epoch, toc):
     bar_len = 50
     filled_len = int(round(bar_len * count / float(total)))

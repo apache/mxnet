@@ -20,6 +20,7 @@ iterator
 #include "./image_augmenter.h"
 #include "./iter_prefetcher.h"
 #include "./iter_batchloader.h"
+
 namespace mxnet {
 namespace io {
 /*! \brief data structure to hold labels for images */
@@ -176,6 +177,7 @@ class ImageRecordIOParser {
 
 inline void ImageRecordIOParser::Init(
         const std::vector<std::pair<std::string, std::string> >& kwargs) {
+#if MXNET_USE_OPENCV
   // initialize parameter
   // init image rec param
   param_.InitAllowUnknown(kwargs);
@@ -211,6 +213,9 @@ inline void ImageRecordIOParser::Init(
       param_.num_parts, "recordio");
   // use 64 MB chunk when possible
   source_->HintChunkSize(8 << 20UL);
+#else
+  LOG(FATAL) << "ImageRec need opencv to process";
+#endif
 }
 
 inline bool ImageRecordIOParser::
@@ -232,6 +237,7 @@ ParseNext(std::vector<InstVector> *out_vec) {
     InstVector &opencv_out = (*opencv_out_vec)[tid];
     opencv_out.Clear();
     while (reader.NextRecord(&blob)) {
+#if MXNET_USE_OPENCV
       // Opencv decode and augments
       cv::Mat res;
       rec.Load(blob.dptr, blob.size);
@@ -260,6 +266,9 @@ ParseNext(std::vector<InstVector> *out_vec) {
         opencv_label[0] = rec.header.label;
       }
       res.release();
+#else
+      LOG(FATAL) << "Opencv is needed for image decoding and augmenting.";
+#endif
     }
   }
   // Tensor Op is not thread safe, so call outside of omp

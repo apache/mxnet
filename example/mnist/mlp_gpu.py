@@ -67,7 +67,6 @@ block = list(zip(grad_narrays, arg_narrays))
 
 #check data
 get_data.GetMNIST_ubyte()
-
 train_dataiter = mx.io.MNISTIter(
         image="data/train-images-idx3-ubyte",
         label="data/train-labels-idx1-ubyte",
