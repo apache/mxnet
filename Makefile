@@ -12,12 +12,7 @@ ifndef DMLC_CORE
 	DMLC_CORE = dmlc-core
 endif
 
-
-ifneq ($(USE_OPENMP_ITER), 1)
-	export NO_OPENMP = 1
-endif
-
-ifneq ($(USE_OPENMP_ITER), 1)
+ifneq ($(USE_OPENMP), 1)
 	export NO_OPENMP = 1
 endif
 

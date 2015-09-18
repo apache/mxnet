@@ -11,7 +11,9 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <queue>
 #include "./base.h"
+#include "./ndarray.h"
 
 namespace mxnet {
 /*!
@@ -60,26 +62,15 @@ struct DataInst {
  */
 struct DataBatch {
  public:
-  /*! \brief unique id for instance, can be NULL, sometimes is useful */
-  unsigned *inst_index;
-  /*! \brief number of instance */
-  mshadow::index_t batch_size;
-  /*! \brief number of padding elements in this batch,
-       this is used to indicate the last elements in the batch are only padded up to match the batch, and should be discarded */
-  mshadow::index_t num_batch_padd;
- public:
   /*! \brief content of dense data, if this DataBatch is dense */
-  std::vector<TBlob> data;
+  std::vector<NDArray> data;
   /*! \brief extra data to be fed to the network */
   std::string extra_data;
  public:
   /*! \brief constructor */
-  DataBatch(void) {
-    inst_index = NULL;
-    batch_size = 0; num_batch_padd = 0;
-  }
-  /*! \brief giving name to the data */
-  void Naming(std::vector<std::string> names);
+  DataBatch(void) {}
+  /*! \brief destructor */
+  ~DataBatch() {}
 };  // struct DataBatch
 
 /*! \brief typedef the factory function of data iterator */
@@ -121,10 +112,29 @@ struct DataIteratorReg
  * \endcode
  */
 #define MXNET_REGISTER_IO_CHAINED_ITER(name, ChainedDataIterType, HoldingDataIterType)          \
-  static ::mxnet::IIterator<DataBatch>* __create__ ## ChainedDataIteratorType ## __() { \
+  static ::mxnet::IIterator<DataBatch>* __create__ ## ChainedDataIterType ## __() { \
     return new HoldingDataIterType(new ChainedDataIterType);                                    \
   }                                                                     \
   DMLC_REGISTRY_REGISTER(::mxnet::DataIteratorReg, DataIteratorReg, name) \
-  .set_body(__create__ ## ChainedDataIteratorType ## __)
+  .set_body(__create__ ## ChainedDataIterType ## __)
+/*!
+ * \brief Macro to register three chained Iterators
+ *
+ * \code
+ * // example of registering a imagerec iterator
+ * MXNET_REGISTER_IO_CHAINED_ITERATOR(ImageRecordIter, 
+ * ImageRecordIter, ImageRecBatchLoader, Prefetcher)
+ * .describe("batched image record data iterator");
+ *
+ * \endcode
+ */
+#define MXNET_REGISTER_IO_THREE_CHAINED_ITER(\
+        name, FirstIterType, SecondIterType, ThirdIterType)          \
+  static ::mxnet::IIterator<DataBatch>* __create__ ## ThirdIterType ## __() { \
+    return new FirstIterType(new SecondIterType(new ThirdIterType));             \
+  }                                                                     \
+  DMLC_REGISTRY_REGISTER(::mxnet::DataIteratorReg, DataIteratorReg, name) \
+  .set_body(__create__ ## ThirdIterType ## __)
+
 }  // namespace mxnet
 #endif  // MXNET_IO_H_

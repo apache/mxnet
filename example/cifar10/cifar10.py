@@ -201,18 +201,21 @@ train_dataiter = mx.io.ImageRecordIter(
         mean_img="data/cifar/cifar_mean.bin",
         rand_crop=True,
         rand_mirror=True,
+        shuffle=False,
         input_shape=(3,28,28),
         batch_size=batch_size,
-        nthread=1)
+        nthread=4,
+        prefetch_capacity=6)
 test_dataiter = mx.io.ImageRecordIter(
         path_imgrec="data/cifar/test.rec",
         mean_img="data/cifar/cifar_mean.bin",
         rand_crop=False,
         rand_mirror=False,
+        shuffle=False,
         input_shape=(3,28,28),
         batch_size=batch_size,
-        nthread=1)
-
+        nthread=4,
+        prefetch_capacity=6)
 
 def progress(count, total, epoch, toc):
     bar_len = 50

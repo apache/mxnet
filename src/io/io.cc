@@ -5,7 +5,8 @@
 #include <mxnet/io.h>
 #include <dmlc/registry.h>
 #include "./image_augmenter.h"
-#include "./iter_batch.h"
+#include "./iter_batchloader.h"
+#include "./iter_prefetcher.h"
 
 // Registers
 namespace dmlc {
@@ -16,6 +17,7 @@ namespace mxnet {
 namespace io {
 // Register parameters in header files
 DMLC_REGISTER_PARAMETER(BatchParam);
+DMLC_REGISTER_PARAMETER(PrefetcherParam);
 DMLC_REGISTER_PARAMETER(ImageAugmentParam);
 }  // namespace io
 }  // namespace mxnet

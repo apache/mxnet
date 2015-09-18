@@ -1,19 +1,19 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file iter_batch_proc-inl.hpp
- * \brief definition of preprocessing iterators that takes an iterator and do some preprocessing
- * \author Tianqi Chen, Tianjun Xiao
+ * \file iter_batchloader.h
+ * \brief define a batch adapter to create tblob batch 
  */
-#ifndef MXNET_IO_ITER_BATCH_H_
-#define MXNET_IO_ITER_BATCH_H_
+#ifndef MXNET_IO_ITER_BATCHLOADER_H_
+#define MXNET_IO_ITER_BATCHLOADER_H_
 
 #include <mxnet/io.h>
 #include <mxnet/base.h>
 #include <dmlc/logging.h>
 #include <mshadow/tensor.h>
 #include <utility>
-#include <string>
 #include <vector>
+#include <string>
+#include "./inst_vector.h"
 
 namespace mxnet {
 namespace io {
@@ -52,26 +52,40 @@ struct BatchParam : public dmlc::Parameter<BatchParam> {
 };
 
 /*! \brief create a batch iterator from single instance iterator */
-class BatchAdaptIter: public IIterator<DataBatch> {
+class BatchLoader : public IIterator<TBlobBatch> {
  public:
-  explicit BatchAdaptIter(IIterator<DataInst> *base): base_(base), num_overflow_(0) {}
-  virtual ~BatchAdaptIter(void) {
+  explicit BatchLoader(IIterator<DataInst> *base):
+      base_(base), head_(1), num_overflow_(0) {}
+  virtual ~BatchLoader(void) {
     delete base_;
-    FreeSpaceDense();
+    // Free space for TblobBatch
+    mshadow::FreeSpace(&data_holder_);
+    mshadow::FreeSpace(&label_holder_);
   }
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  inline void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     // init batch param, it could have similar param with
     kwargs_left = param_.InitAllowUnknown(kwargs);
     // init base iterator
     base_->Init(kwargs);
-    data_shape_[1] = param_.input_shape[0];
-    data_shape_[2] = param_.input_shape[1];
-    data_shape_[3] = param_.input_shape[2];
-    data_shape_[0] = param_.batch_size;
-    AllocSpaceDense(false);
+    std::vector<size_t> data_shape_vec;
+    data_shape_vec.push_back(param_.batch_size);
+    for (size_t shape_dim = 0; shape_dim < param_.input_shape.ndim(); shape_dim++)
+        data_shape_vec.push_back(param_.input_shape[shape_dim]);
+    data_shape_ = TShape(data_shape_vec.begin(), data_shape_vec.end());
+    std::vector<size_t> label_shape_vec;
+    label_shape_vec.push_back(param_.batch_size);
+    label_shape_vec.push_back(param_.label_width);
+    label_shape_ = TShape(label_shape_vec.begin(), label_shape_vec.end());
+    // Init space for out_
+    out_.inst_index = new unsigned[param_.batch_size];
+    out_.data.clear();
+    data_holder_ =  mshadow::NewTensor<mshadow::cpu>(data_shape_.get<4>(), 0.0f);
+    label_holder_ =  mshadow::NewTensor<mshadow::cpu>(label_shape_.get<2>(), 0.0f);
+    out_.data.push_back(TBlob(data_holder_));
+    out_.data.push_back(TBlob(label_holder_));
   }
-  virtual void BeforeFirst(void) {
+  inline void BeforeFirst(void) {
     if (param_.round_batch == 0 || num_overflow_ == 0) {
       // otherise, we already called before first
       base_->BeforeFirst();
@@ -80,7 +94,7 @@ class BatchAdaptIter: public IIterator<DataBatch> {
     }
     head_ = 1;
   }
-  virtual bool Next(void) {
+  inline bool Next(void) {
     out_.num_batch_padd = 0;
 
     // skip read if in head version
@@ -95,14 +109,13 @@ class BatchAdaptIter: public IIterator<DataBatch> {
 
     while (base_->Next()) {
       const DataInst& d = base_->Value();
-      mshadow::Copy(label[top], d.data[1].get<mshadow::cpu, 1, float>());
       out_.inst_index[top] = d.index;
-      mshadow::Copy(data[top], d.data[0].get<mshadow::cpu, 3, float>());
-
+      mshadow::Copy(out_.data[1].get<mshadow::cpu, 2, float>()[top],
+              d.data[1].get<mshadow::cpu, 1, float>());
+      mshadow::Copy(out_.data[0].get<mshadow::cpu, 4, float>()[top],
+              d.data[0].get<mshadow::cpu, 3, float>());
       if (++ top >= param_.batch_size) {
-        out_.data[0] = TBlob(data);
-        out_.data[1] = TBlob(label);
-        return true;
+          return true;
       }
     }
     if (top != 0) {
@@ -112,61 +125,44 @@ class BatchAdaptIter: public IIterator<DataBatch> {
         for (; top < param_.batch_size; ++top, ++num_overflow_) {
           CHECK(base_->Next()) << "number of input must be bigger than batch size";
           const DataInst& d = base_->Value();
-          mshadow::Copy(label[top], d.data[1].get<mshadow::cpu, 1, float>());
           out_.inst_index[top] = d.index;
-          mshadow::Copy(data[top], d.data[0].get<mshadow::cpu, 3, float>());
+          mshadow::Copy(out_.data[1].get<mshadow::cpu, 2, float>()[top],
+                  d.data[1].get<mshadow::cpu, 1, float>());
+          mshadow::Copy(out_.data[0].get<mshadow::cpu, 4, float>()[top],
+                  d.data[0].get<mshadow::cpu, 3, float>());
         }
         out_.num_batch_padd = num_overflow_;
       } else {
         out_.num_batch_padd = param_.batch_size - top;
       }
-      out_.data[0] = TBlob(data);
-      out_.data[1] = TBlob(label);
       return true;
     }
     return false;
   }
-  virtual const DataBatch &Value(void) const {
-    CHECK(head_ == 0) << "must call Next to get value";
+  virtual const TBlobBatch &Value(void) const {
     return out_;
   }
 
  private:
   /*! \brief batch parameters */
   BatchParam param_;
+  /*! \brief output data */
+  TBlobBatch out_;
   /*! \brief base iterator */
   IIterator<DataInst> *base_;
-  /*! \brief output data */
-  DataBatch out_;
   /*! \brief on first */
   int head_;
   /*! \brief number of overflow instances that readed in round_batch mode */
   int num_overflow_;
-  /*! \brief label information of the data*/
-  mshadow::Tensor<mshadow::cpu, 2> label;
-  /*! \brief content of dense data, if this DataBatch is dense */
-  mshadow::Tensor<mshadow::cpu, 4> data;
   /*! \brief data shape */
-  mshadow::Shape<4> data_shape_;
-  // Functions that allocate and free tensor space
-  inline void AllocSpaceDense(bool pad = false) {
-    data = mshadow::NewTensor<mshadow::cpu>(data_shape_, 0.0f, pad);
-    mshadow::Shape<2> lshape = mshadow::Shape2(param_.batch_size, param_.label_width);
-    label = mshadow::NewTensor<mshadow::cpu>(lshape, 0.0f, pad);
-    out_.inst_index = new unsigned[param_.batch_size];
-    out_.batch_size = param_.batch_size;
-    out_.data.resize(2);
-  }
-  /*! \brief auxiliary function to free space, if needed, dense only */
-  inline void FreeSpaceDense(void) {
-    if (label.dptr_ != NULL) {
-      delete [] out_.inst_index;
-      mshadow::FreeSpace(&label);
-      mshadow::FreeSpace(&data);
-      label.dptr_ = NULL;
-    }
-  }
-};  // class BatchAdaptIter
+  TShape data_shape_;
+  /*! \brief label shape */
+  TShape label_shape_;
+  /*! \brief tensor to hold data */
+  mshadow::Tensor<mshadow::cpu, 4, real_t> data_holder_;
+  /*! \brief tensor to hold label */
+  mshadow::Tensor<mshadow::cpu, 2, real_t> label_holder_;
+};  // class BatchLoader
 }  // namespace io
 }  // namespace mxnet
-#endif  // MXNET_IO_ITER_BATCH_H_
+#endif  // MXNET_IO_ITER_BATCHLOADER_H_

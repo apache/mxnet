@@ -2,7 +2,6 @@
  * Copyright (c) 2015 by Contributors
  * \file iter_mnist.cc
  * \brief register mnist iterator
- * \author Tianjun Xiao
 */
 #include <mxnet/io.h>
 #include <mxnet/base.h>
@@ -13,6 +12,7 @@
 #include <vector>
 #include <utility>
 #include <map>
+#include "./iter_prefetcher.h"
 #include "../common/utils.h"
 
 namespace mxnet {
@@ -50,7 +50,7 @@ struct MNISTParam : public dmlc::Parameter<MNISTParam> {
   }
 };
 
-class MNISTIter: public IIterator<DataBatch> {
+class MNISTIter: public IIterator<TBlobBatch> {
  public:
   MNISTIter(void) {
     img_.dptr_ = NULL;
@@ -63,18 +63,15 @@ class MNISTIter: public IIterator<DataBatch> {
   // intialize iterator loads data in
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     std::map<std::string, std::string> kmap(kwargs.begin(), kwargs.end());
-    param_.Init(kmap);
+    param_.InitAllowUnknown(kmap);
     this->LoadImage();
     this->LoadLabel();
-    // set name
-    this->SetDataName(std::string("data"));
-    this->SetDataName(std::string("label"));
     if (param_.flat) {
       batch_data_.shape_ = mshadow::Shape4(param_.batch_size, 1, 1, img_.size(1) * img_.size(2));
     } else {
       batch_data_.shape_ = mshadow::Shape4(param_.batch_size, 1, img_.size(1), img_.size(2));
     }
-    out_.inst_index = NULL;
+    out_.data.clear();
     batch_label_.shape_ = mshadow::Shape2(param_.batch_size, 1);
     batch_label_.stride_ = 1;
     batch_data_.stride_ = batch_data_.size(3);
@@ -99,19 +96,20 @@ class MNISTIter: public IIterator<DataBatch> {
     if (loc_ + param_.batch_size <= img_.size(0)) {
       batch_data_.dptr_ = img_[loc_].dptr_;
       batch_label_.dptr_ = &labels_[loc_];
-      if (param_.flat)
-          out_.data[0] = TBlob(batch_data_.FlatTo2D());
-      else
-          out_.data[0] = TBlob(batch_data_);
-      out_.data[1] = TBlob(batch_label_);
-      out_.inst_index = &inst_[loc_];
+      out_.data.clear();
+      if (param_.flat) {
+          out_.data.push_back(TBlob(batch_data_.FlatTo2D()));
+      } else {
+          out_.data.push_back(TBlob(batch_data_));
+      }
+      out_.data.push_back(TBlob(batch_label_));
       loc_ += param_.batch_size;
       return true;
     } else {
       return false;
     }
   }
-  virtual const DataBatch &Value(void) const {
+  virtual const TBlobBatch &Value(void) const {
     return out_;
   }
 
@@ -180,7 +178,7 @@ class MNISTIter: public IIterator<DataBatch> {
   /*! \brief MNIST iter params */
   MNISTParam param_;
   /*! \brief output */
-  DataBatch out_;
+  TBlobBatch out_;
   /*! \brief current location */
   index_t loc_;
   /*! \brief image content */
@@ -200,8 +198,9 @@ class MNISTIter: public IIterator<DataBatch> {
 };  // class MNISTIter
 
 DMLC_REGISTER_PARAMETER(MNISTParam);
-MXNET_REGISTER_IO_ITER(MNISTIter, MNISTIter)
+MXNET_REGISTER_IO_CHAINED_ITER(MNISTIter, MNISTIter, PrefetcherIter)
     .describe("Create iterator for MNIST hand-written digit number recognition dataset.")
-    .add_arguments(MNISTParam::__FIELDS__());
+    .add_arguments(MNISTParam::__FIELDS__())
+    .add_arguments(PrefetcherParam::__FIELDS__());
 }  // namespace io
 }  // namespace mxnet

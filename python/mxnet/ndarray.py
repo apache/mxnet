@@ -51,7 +51,7 @@ class NDArray(object):
     NDArray is basic ndarray/Tensor like data structure in mxnet.
     """
     # pylint: disable= no-member
-    def __init__(self, handle):
+    def __init__(self, handle, writable=True):
         """initialize a new NDArray
 
         Parameters
@@ -61,6 +61,7 @@ class NDArray(object):
         """
         assert isinstance(handle, NDArrayHandle)
         self.handle = handle
+        self.writable = writable
 
     def __del__(self):
         check_call(_LIB.MXNDArrayFree(self.handle))
@@ -555,6 +556,8 @@ def _make_ndarray_function(handle):
         if out:
             if isinstance(out, NDArray) == False:
                 raise TypeError('out must be NDArray')
+            if not out.writable:
+                raise TypeError('out must be writable')
         else:
             if not accept_empty_mutate:
                 raise TypeError('argument out is required to call %s' % func_name)
@@ -570,6 +573,8 @@ def _make_ndarray_function(handle):
         if out:
             if isinstance(out, NDArray) == False:
                 raise TypeError('out must be NDArray')
+            if not out.writable:
+                raise TypeError('out must be writable')
         else:
             if not accept_empty_mutate:
                 raise TypeError('argument out is required to call %s' % func_name)

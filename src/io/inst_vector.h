@@ -13,6 +13,7 @@
 #include <dmlc/base.h>
 #include <mshadow/tensor.h>
 #include <vector>
+#include <string>
 
 namespace mxnet {
 namespace io {
@@ -72,6 +73,11 @@ class InstVector {
   inline size_t Size(void) const {
     return index_.size();
   }
+  // get index
+  inline unsigned Index(unsigned i) const {
+    return index_[i];
+  }
+  // instance
   /* \brief get the i-th (label, example) pair */
   inline DataInst operator[](size_t i) const {
     DataInst inst;
@@ -109,6 +115,35 @@ class InstVector {
   // data
   TensorVector<1, real_t> label_;
 };
+
+/*!
+ * \brief tblob batch
+ *
+ * data are stored in tblob before going into NDArray
+ */
+struct TBlobBatch {
+ public:
+  /*! \brief unique id for instance, can be NULL, sometimes is useful */
+  unsigned *inst_index;
+  /*! \brief number of instance */
+  mshadow::index_t batch_size;
+  /*! \brief number of padding elements in this batch,
+       this is used to indicate the last elements in the batch are only padded up to match the batch, and should be discarded */
+  mshadow::index_t num_batch_padd;
+  /*! \brief content of dense data */
+  std::vector<TBlob> data;
+  /*! \brief extra data to be fed to the network */
+  std::string extra_data;
+  /*! \brief constructor */
+  TBlobBatch(void) {
+    inst_index = NULL;
+    batch_size = 0; num_batch_padd = 0;
+  }
+  /*! \brief destructor */
+  ~TBlobBatch() {
+    delete inst_index;
+  }
+};  // struct TBlobBatch
 }  // namespace io
 }  // namespace mxnet
 #endif  // MXNET_IO_INST_VECTOR_H_

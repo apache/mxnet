@@ -4,6 +4,7 @@
  * \brief recordio data
 iterator
  */
+#include <mxnet/io.h>
 #include <dmlc/base.h>
 #include <dmlc/io.h>
 #include <dmlc/omp.h>
@@ -17,7 +18,9 @@ iterator
 #include "./inst_vector.h"
 #include "./image_recordio.h"
 #include "./image_augmenter.h"
-#include "./iter_batch.h"
+#include "./iter_prefetcher.h"
+#include "./iter_batchloader.h"
+
 namespace mxnet {
 namespace io {
 /*! \brief data structure to hold labels for images */
@@ -121,7 +124,7 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
     index_t input_shape_default[] = {3, 224, 224};
     DMLC_DECLARE_FIELD(input_shape)
         .set_default(TShape(input_shape_default, input_shape_default + 3))
-        .set_expect_ndim(3).enforce_nonzero()
+        .enforce_nonzero()
         .describe("Input shape of the neural net");
   }
 };
@@ -174,6 +177,7 @@ class ImageRecordIOParser {
 
 inline void ImageRecordIOParser::Init(
         const std::vector<std::pair<std::string, std::string> >& kwargs) {
+#if MXNET_USE_OPENCV
   // initialize parameter
   // init image rec param
   param_.InitAllowUnknown(kwargs);
@@ -195,7 +199,6 @@ inline void ImageRecordIOParser::Init(
     augmenters_[i]->Init(kwargs);
     prnds_.push_back(new common::RANDOM_ENGINE((i + 1) * kRandMagic));
   }
-
   if (param_.path_imglist.length() != 0) {
     label_map_ = new ImageLabelMap(param_.path_imglist.c_str(),
                                    param_.label_width, param_.silent != 0);
@@ -210,6 +213,9 @@ inline void ImageRecordIOParser::Init(
       param_.num_parts, "recordio");
   // use 64 MB chunk when possible
   source_->HintChunkSize(8 << 20UL);
+#else
+  LOG(FATAL) << "ImageRec need opencv to process";
+#endif
 }
 
 inline bool ImageRecordIOParser::
@@ -217,7 +223,9 @@ ParseNext(std::vector<InstVector> *out_vec) {
   CHECK(source_ != NULL);
   dmlc::InputSplit::Blob chunk;
   if (!source_->NextChunk(&chunk)) return false;
-  out_vec->resize(param_.nthread);
+  // save opencv out
+  std::vector<InstVector> * opencv_out_vec = new std::vector<InstVector>();
+  opencv_out_vec->resize(param_.nthread);
   #pragma omp parallel num_threads(param_.nthread)
   {
     CHECK(omp_get_num_threads() == param_.nthread);
@@ -226,26 +234,67 @@ ParseNext(std::vector<InstVector> *out_vec) {
     ImageRecordIO rec;
     dmlc::InputSplit::Blob blob;
     // image data
-    InstVector &out = (*out_vec)[tid];
-    out.Clear();
+    InstVector &opencv_out = (*opencv_out_vec)[tid];
+    opencv_out.Clear();
     while (reader.NextRecord(&blob)) {
+#if MXNET_USE_OPENCV
+      // Opencv decode and augments
+      cv::Mat res;
       rec.Load(blob.dptr, blob.size);
-      out.Push(static_cast<unsigned>(rec.image_index()),
+      cv::Mat buf(1, rec.content_size, CV_8U, rec.content);
+      res = cv::imdecode(buf, 1);
+      res = augmenters_[tid]->OpencvProcess(res, prnds_[tid]);
+      opencv_out.Push(static_cast<unsigned>(rec.image_index()),
+               mshadow::Shape3(3, res.rows, res.cols),
+               mshadow::Shape1(param_.label_width));
+      DataInst opencv_inst = opencv_out.Back();
+      mshadow::Tensor<mshadow::cpu, 3> opencv_data =
+          opencv_inst.data[0].get<mshadow::cpu, 3, float>();
+      mshadow::Tensor<mshadow::cpu, 1> opencv_label =
+          opencv_inst.data[1].get<mshadow::cpu, 1, float>();
+      for (int i = 0; i < res.rows; ++i) {
+        for (int j = 0; j < res.cols; ++j) {
+          cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
+          opencv_data[0][i][j] = bgr[2];
+          opencv_data[1][i][j] = bgr[1];
+          opencv_data[2][i][j] = bgr[0];
+        }
+      }
+      if (label_map_ != NULL) {
+        mshadow::Copy(opencv_label, label_map_->Find(rec.image_index()));
+      } else {
+        opencv_label[0] = rec.header.label;
+      }
+      res.release();
+#else
+      LOG(FATAL) << "Opencv is needed for image decoding and augmenting.";
+#endif
+    }
+  }
+  // Tensor Op is not thread safe, so call outside of omp
+  out_vec->resize(param_.nthread);
+  for (size_t i = 0; i < opencv_out_vec->size(); i++) {
+    InstVector &out = (*out_vec)[i];
+    InstVector &opencv_out = (*opencv_out_vec)[i];
+    out.Clear();
+    for (size_t j = 0; j < opencv_out.Size(); j++) {
+      out.Push(opencv_out.Index(j),
                mshadow::Shape3(param_.input_shape[0], param_.input_shape[1], param_.input_shape[2]),
                mshadow::Shape1(param_.label_width));
       DataInst inst = out.Back();
-      // turn datainst into tensor
+      DataInst opencv_inst = opencv_out[j];
+      mshadow::Tensor<mshadow::cpu, 3> opencv_data =
+          opencv_inst.data[0].get<mshadow::cpu, 3, float>();
+      mshadow::Tensor<mshadow::cpu, 1> opencv_label =
+          opencv_inst.data[1].get<mshadow::cpu, 1, float>();
       mshadow::Tensor<mshadow::cpu, 3> data = inst.data[0].get<mshadow::cpu, 3, float>();
       mshadow::Tensor<mshadow::cpu, 1> label = inst.data[1].get<mshadow::cpu, 1, float>();
-      augmenters_[tid]->Process(rec.content, rec.content_size, &img_, prnds_[tid]);
+      augmenters_[i]->TensorProcess(&opencv_data, &img_, prnds_[i]);
       mshadow::Copy(data, img_);
-      if (label_map_ != NULL) {
-        mshadow::Copy(label, label_map_->Find(rec.image_index()));
-      } else {
-        label[0] = rec.header.label;
-      }
+      mshadow::Copy(label, opencv_label);
     }
   }
+  delete opencv_out_vec;
   return true;
 }
 
@@ -306,7 +355,6 @@ class ImageRecordIter : public IIterator<DataInst> {
       }
     }
     inst_ptr_ = 0;
-    shuffle_ = param_.shuffle;
   }
   virtual void BeforeFirst(void) {
     iter_.BeforeFirst();
@@ -331,7 +379,7 @@ class ImageRecordIter : public IIterator<DataInst> {
           }
         }
         // shuffle instance order if needed
-        if (shuffle_ != 0) {
+        if (param_.shuffle != 0) {
             std::shuffle(inst_order_.begin(), inst_order_.end(), \
                     common::RANDOM_ENGINE(kRandMagic + param_.seed));
         }
@@ -383,8 +431,6 @@ class ImageRecordIter : public IIterator<DataInst> {
   static const int kRandMagic = 111;
   // output instance
   DataInst out_;
-  // whether shuffle data
-  int shuffle_;
   // data ptr
   size_t inst_ptr_;
   // internal instance order
@@ -403,11 +449,13 @@ class ImageRecordIter : public IIterator<DataInst> {
 
 DMLC_REGISTER_PARAMETER(ImageRecParserParam);
 DMLC_REGISTER_PARAMETER(ImageRecordParam);
-MXNET_REGISTER_IO_CHAINED_ITER(ImageRecordIter, ImageRecordIter, BatchAdaptIter)
+MXNET_REGISTER_IO_THREE_CHAINED_ITER(ImageRecordIter,
+        PrefetcherIter, BatchLoader, ImageRecordIter)
     .describe("Create iterator for dataset packed in recordio.")
     .add_arguments(ImageRecordParam::__FIELDS__())
+    .add_arguments(ImageAugmentParam::__FIELDS__())
     .add_arguments(ImageRecParserParam::__FIELDS__())
     .add_arguments(BatchParam::__FIELDS__())
-    .add_arguments(ImageAugmentParam::__FIELDS__());
+    .add_arguments(PrefetcherParam::__FIELDS__());
 }  // namespace io
 }  // namespace mxnet
