@@ -6,8 +6,6 @@ import pickle as pickle
 import time
 import sys
 from common import get_data
-from PIL import Image
-
 
 def test_MNISTIter():
     # prepare data

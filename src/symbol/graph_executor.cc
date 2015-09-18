@@ -168,7 +168,8 @@ inline std::vector<std::pair<T, T> > GraphExecutor::GetInplaceOption(
     std::vector<std::pair<T, T> > remap(remap_index.size());
     for (size_t i = 0; i < remap_index.size(); ++i) {
       if (args_array[remap_index[i].first] == nullptr) {
-        LOG(FATAL) << "BackwardInplaceOption uses input that is returned by DeclareBackwardDependency";
+        LOG(FATAL) <<
+            "BackwardInplaceOption uses input that is returned by DeclareBackwardDependency";
       }
       remap[i].first = *args_array[remap_index[i].first];
       remap[i].second = *static_cast<T*>(remap_index[i].second);

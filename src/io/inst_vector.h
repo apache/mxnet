@@ -141,9 +141,7 @@ struct TBlobBatch {
   }
   /*! \brief destructor */
   ~TBlobBatch() {
-    if (inst_index != NULL) {
-        delete inst_index;
-    }
+    delete inst_index;
   }
 };  // struct TBlobBatch
 }  // namespace io
