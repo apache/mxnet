@@ -18,6 +18,9 @@ from . import io
 # use mx.nd as short for mx.ndarray
 from . import ndarray as nd
 from . import random
+from . import optimizer
+from . import model
+from . import initializer
 import atexit
 
 __version__ = "0.1.0"

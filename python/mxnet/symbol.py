@@ -401,26 +401,21 @@ class Symbol(object):
             - 'write' means everytime gradient is write to specified args_grad NDArray.
             - 'add' means everytime gradient is add to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
-        kwargs : dict of str->NDArray
+        kwargs : dict of str->shape
+            Input shape dictionary, name->shape
 
         Returns
         -------
         executor : mxnet.Executor
             The generated Executor
         """
-        input_shapes = dict((name, arr.shape) for name, arr in kwargs.items())
         # pylint: disable=unused-variable
-        arg_shapes, out_shapes, aux_shapes = self.infer_shape(**input_shapes)
+        arg_shapes, out_shapes, aux_shapes = self.infer_shape(**kwargs)
         # pylint: enable=unused-variable
         if arg_shapes == None:
             raise ValueError("Input node is not complete")
         # alloc space
-        arg_ndarrays = []
-        for name, shape in zip(self.list_arguments(), arg_shapes):
-            if name in kwargs:
-                arg_ndarrays.append(kwargs[name])
-            else:
-                arg_ndarrays.append(zeros(shape, ctx))
+        arg_ndarrays = [zeros(shape, ctx) for shape in arg_shapes]
         # TODO(bing): specail treat input data grad
         # TODO(bing): not generate grad case
         grad_ndarrays = [zeros(shape, ctx) for shape in arg_shapes]
