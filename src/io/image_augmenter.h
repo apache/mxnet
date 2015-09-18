@@ -294,7 +294,8 @@ class ImageAugmenter {
         meanfile_ready_ = true;
       }
     }
-    img_.Resize(mshadow::Shape3((*p_data).shape_[0], param_.input_shape[1], param_.input_shape[2])); 
+    img_.Resize(mshadow::Shape3((*p_data).shape_[0],
+                param_.input_shape[1], param_.input_shape[2]));
     if (param_.input_shape[1] == 1) {
       img_ = (*p_data) * param_.scale;
     } else {

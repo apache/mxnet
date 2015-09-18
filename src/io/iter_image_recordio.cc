@@ -19,6 +19,7 @@ iterator
 #include "./image_recordio.h"
 #include "./image_augmenter.h"
 #include "./iter_prefetcher.h"
+#include "./iter_batchloader.h"
 namespace mxnet {
 namespace io {
 /*! \brief data structure to hold labels for images */
@@ -241,8 +242,10 @@ ParseNext(std::vector<InstVector> *out_vec) {
                mshadow::Shape3(3, res.rows, res.cols),
                mshadow::Shape1(param_.label_width));
       DataInst opencv_inst = opencv_out.Back();
-      mshadow::Tensor<mshadow::cpu, 3> opencv_data = opencv_inst.data[0].get<mshadow::cpu, 3, float>();
-      mshadow::Tensor<mshadow::cpu, 1> opencv_label = opencv_inst.data[1].get<mshadow::cpu, 1, float>();
+      mshadow::Tensor<mshadow::cpu, 3> opencv_data =
+          opencv_inst.data[0].get<mshadow::cpu, 3, float>();
+      mshadow::Tensor<mshadow::cpu, 1> opencv_label =
+          opencv_inst.data[1].get<mshadow::cpu, 1, float>();
       for (int i = 0; i < res.rows; ++i) {
         for (int j = 0; j < res.cols; ++j) {
           cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
@@ -270,9 +273,11 @@ ParseNext(std::vector<InstVector> *out_vec) {
                mshadow::Shape3(param_.input_shape[0], param_.input_shape[1], param_.input_shape[2]),
                mshadow::Shape1(param_.label_width));
       DataInst inst = out.Back();
-      DataInst opencv_inst = opencv_out[j]; 
-      mshadow::Tensor<mshadow::cpu, 3> opencv_data = opencv_inst.data[0].get<mshadow::cpu, 3, float>();
-      mshadow::Tensor<mshadow::cpu, 1> opencv_label = opencv_inst.data[1].get<mshadow::cpu, 1, float>();
+      DataInst opencv_inst = opencv_out[j];
+      mshadow::Tensor<mshadow::cpu, 3> opencv_data =
+          opencv_inst.data[0].get<mshadow::cpu, 3, float>();
+      mshadow::Tensor<mshadow::cpu, 1> opencv_label =
+          opencv_inst.data[1].get<mshadow::cpu, 1, float>();
       mshadow::Tensor<mshadow::cpu, 3> data = inst.data[0].get<mshadow::cpu, 3, float>();
       mshadow::Tensor<mshadow::cpu, 1> label = inst.data[1].get<mshadow::cpu, 1, float>();
       augmenters_[i]->TensorProcess(&opencv_data, &img_, prnds_[i]);
@@ -280,7 +285,7 @@ ParseNext(std::vector<InstVector> *out_vec) {
       mshadow::Copy(label, opencv_label);
     }
   }
-  delete opencv_out_vec; 
+  delete opencv_out_vec;
   return true;
 }
 
@@ -436,7 +441,7 @@ class ImageRecordIter : public IIterator<DataInst> {
 DMLC_REGISTER_PARAMETER(ImageRecParserParam);
 DMLC_REGISTER_PARAMETER(ImageRecordParam);
 MXNET_REGISTER_IO_THREE_CHAINED_ITER(ImageRecordIter,
-        PrefetcherIter, ImageRecBatchLoader, ImageRecordIter)
+        PrefetcherIter, BatchLoader, ImageRecordIter)
     .describe("Create iterator for dataset packed in recordio.")
     .add_arguments(ImageRecordParam::__FIELDS__())
     .add_arguments(ImageAugmentParam::__FIELDS__())

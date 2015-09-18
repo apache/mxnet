@@ -5,7 +5,6 @@
 */
 #include <mxnet/io.h>
 #include <mxnet/base.h>
-#include <mxnet/ndarray.h>
 #include <dmlc/io.h>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -51,7 +50,7 @@ struct MNISTParam : public dmlc::Parameter<MNISTParam> {
   }
 };
 
-class MNISTIter: public IIterator<DataBatch> {
+class MNISTIter: public IIterator<TBlobBatch> {
  public:
   MNISTIter(void) {
     img_.dptr_ = NULL;
@@ -67,9 +66,6 @@ class MNISTIter: public IIterator<DataBatch> {
     param_.InitAllowUnknown(kmap);
     this->LoadImage();
     this->LoadLabel();
-    // set name
-    this->SetDataName(std::string("data"));
-    this->SetDataName(std::string("label"));
     if (param_.flat) {
       batch_data_.shape_ = mshadow::Shape4(param_.batch_size, 1, 1, img_.size(1) * img_.size(2));
     } else {
@@ -98,27 +94,22 @@ class MNISTIter: public IIterator<DataBatch> {
   }
   virtual bool Next(void) {
     if (loc_ + param_.batch_size <= img_.size(0)) {
-      if (out_.data.size() == 2) {
-        for (size_t i = 0; i < out_.data.size(); i++) {
-             out_.data[i].WaitToWrite();
-         }
-      }
       batch_data_.dptr_ = img_[loc_].dptr_;
       batch_label_.dptr_ = &labels_[loc_];
       out_.data.clear();
       if (param_.flat) {
-          out_.data.push_back(NDArray(TBlob(batch_data_.FlatTo2D()), 0));
+          out_.data.push_back(TBlob(batch_data_.FlatTo2D()));
       } else {
-          out_.data.push_back(NDArray(TBlob(batch_data_), 0));
+          out_.data.push_back(TBlob(batch_data_));
       }
-      out_.data.push_back(NDArray(TBlob(batch_label_), 0));
+      out_.data.push_back(TBlob(batch_label_));
       loc_ += param_.batch_size;
       return true;
     } else {
       return false;
     }
   }
-  virtual const DataBatch &Value(void) const {
+  virtual const TBlobBatch &Value(void) const {
     return out_;
   }
 
@@ -187,7 +178,7 @@ class MNISTIter: public IIterator<DataBatch> {
   /*! \brief MNIST iter params */
   MNISTParam param_;
   /*! \brief output */
-  DataBatch out_;
+  TBlobBatch out_;
   /*! \brief current location */
   index_t loc_;
   /*! \brief image content */

@@ -62,32 +62,15 @@ struct DataInst {
  */
 struct DataBatch {
  public:
-  /*! \brief unique id for instance, can be NULL, sometimes is useful */
-  unsigned *inst_index;
-  /*! \brief number of instance */
-  mshadow::index_t batch_size;
-  /*! \brief number of padding elements in this batch,
-       this is used to indicate the last elements in the batch are only padded up to match the batch, and should be discarded */
-  mshadow::index_t num_batch_padd;
- public:
   /*! \brief content of dense data, if this DataBatch is dense */
   std::vector<NDArray> data;
   /*! \brief extra data to be fed to the network */
   std::string extra_data;
  public:
   /*! \brief constructor */
-  DataBatch(void) {
-    inst_index = NULL;
-    batch_size = 0; num_batch_padd = 0;
-  }
+  DataBatch(void) {}
   /*! \brief destructor */
-  ~DataBatch() {
-    if(inst_index != NULL) {
-        delete inst_index;
-    }
-  }
-  /*! \brief giving name to the data */
-  void Naming(std::vector<std::string> names);
+  ~DataBatch() {}
 };  // struct DataBatch
 
 /*! \brief typedef the factory function of data iterator */
@@ -145,7 +128,8 @@ struct DataIteratorReg
  *
  * \endcode
  */
-#define MXNET_REGISTER_IO_THREE_CHAINED_ITER(name, FirstIterType, SecondIterType, ThirdIterType)          \
+#define MXNET_REGISTER_IO_THREE_CHAINED_ITER(\
+        name, FirstIterType, SecondIterType, ThirdIterType)          \
   static ::mxnet::IIterator<DataBatch>* __create__ ## ThirdIterType ## __() { \
     return new FirstIterType(new SecondIterType(new ThirdIterType));             \
   }                                                                     \
