@@ -19,12 +19,13 @@ USE_CUDA_PATH = NONE
 # you can disable it, however, you will not able to use
 # imbin iterator
 USE_OPENCV = 0
-USE_OPENCV_DECODER = 0
+
 # whether use CUDNN R3 library
 USE_CUDNN = 0
-# add the path to CUDNN libary to link and compile flag
-# if you do not need that, or do not have that, leave it as NONE
-USE_CUDNN_PATH = NONE
+
+
+# use openmp for parallelization
+USE_OPENMP = 0
 
 #
 # choose the version of blas you want to use
@@ -37,17 +38,7 @@ USE_BLAS = NONE
 #
 USE_INTEL_PATH = NONE
 
-# whether compile with parameter server
-USE_DIST_PS = 0
-PS_PATH = NONE
-PS_THIRD_PATH = NONE
 
-# whether compile with rabit
-USE_RABIT_PS = 0
-RABIT_PATH = rabit
-
-# use openmp iterator
-USE_OPENMP_ITER = 0
 # the additional link flags you want to add
 ADD_LDFLAGS =
 

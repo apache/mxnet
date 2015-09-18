@@ -162,9 +162,7 @@ def run_doxygen(folder):
 
 def generate_doxygen_xml(app):
     """Run the doxygen make commands if we're on the ReadTheDocs server"""
-    read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
-    if read_the_docs_build:
-        run_doxygen('..')
+    run_doxygen('..')
     sys.stderr.write('The Lib path: %s\n' % str(os.listdir('../lib')))
 
 def setup(app):

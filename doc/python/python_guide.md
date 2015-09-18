@@ -112,14 +112,6 @@ same one. The following example performing computations on GPU 0:
  [ 6.  6.  6.]]
 ```
 
-#### Indexing
-
-TODO
-
-#### Linear Algebra
-
-TODO
-
 ### Load and Save
 
 There are two ways to save data to (load from) disks easily. The first way uses
@@ -174,11 +166,8 @@ can directly save to and load from them. For example:
 >>> mx.nd.save('hdfs///users/myname/mydata.bin', [a,b])
 ```
 
-### Parallelization
-
-The operations of `NDArray` are executed by third libraries such as `cblas`,
-`mkl`, and `cuda`. In default, each operation is executed by multi-threads. In
-addition, `NDArray` can execute operations in parallel. It is desirable when we
+### Automatic Parallelization
+`NDArray` can automatically execute operations in parallel. It is desirable when we
 use multiple resources such as CPU, GPU cards, and CPU-to-GPU memory bandwidth.
 
 For example, if we write `a += 1` followed by `b += 1`, and `a` is on CPU while
@@ -206,7 +195,7 @@ automatically dispatch it into multi-devices, such as multi GPU cards or multi
 machines.
 
 It is achieved by lazy evaluation. Any operation we write down is issued into a
-internal DAG engine, and then returned. For example, if we run `a += 1`, it
+internal engine, and then returned. For example, if we run `a += 1`, it
 returns immediately after pushing the plus operator to the engine. This
 asynchronous allows us to push more operators to the engine, so it can determine
 the read and write dependency and find a best way to execute them in
