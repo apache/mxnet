@@ -182,10 +182,14 @@ Operator *CreateOp(BatchNormParam param);
 
 
 #if DMLC_USE_CXX11
-class BatchNormProp : public ParamOperatorProperty<BatchNormParam> {
+class BatchNormProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
+  }
+
+  std::map<std::string, std::string> GetParams() const override {
+    return param_.__DICT__();
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
@@ -263,6 +267,8 @@ class BatchNormProp : public ParamOperatorProperty<BatchNormParam> {
 
   Operator* CreateOperator(Context ctx) const;
 
+ private:
+  BatchNormParam param_;
 };  // class BatchNormProp
 
 #endif  // DMLC_USE_CXX11

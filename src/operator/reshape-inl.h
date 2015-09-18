@@ -83,18 +83,16 @@ template<typename xpu>
 Operator* CreateOp();
 
 #if DMLC_USE_CXX11
-class ReshapeProp : public ParamOperatorProperty<ReshapeParam> {
+class ReshapeProp : public OperatorProperty {
  public:
   ReshapeProp() {}
-
-  explicit ReshapeProp(ReshapeParam param) : ParamOperatorProperty<ReshapeParam>(param) {}
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
   }
 
-  std::string TypeString() const override {
-    return "Reshape";
+  std::map<std::string, std::string> GetParams() const override {
+    return param_.__DICT__();
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
@@ -116,6 +114,10 @@ class ReshapeProp : public ParamOperatorProperty<ReshapeParam> {
     auto ptr = new ReshapeProp();
     ptr->param_ = param_;
     return ptr;
+  }
+
+  std::string TypeString() const override {
+    return "Reshape";
   }
 
   std::vector<int> DeclareBackwardDependency(
@@ -140,11 +142,18 @@ class ReshapeProp : public ParamOperatorProperty<ReshapeParam> {
   }
 
   Operator* CreateOperator(Context ctx) const;
+
+ protected:
+  ReshapeParam param_;
 };  // class ReshapeProp
 
 class FlattenProp : public ReshapeProp {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {}
+
+  std::map<std::string, std::string> GetParams() const override {
+    return {};
+  }
 
   std::string TypeString() const override {
     return "Flatten";

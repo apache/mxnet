@@ -12,6 +12,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/registry.h>
 #include <vector>
+#include <map>
 #include <string>
 #include <utility>
 #include "./base.h"
@@ -151,6 +152,11 @@ class OperatorProperty {
    */
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
   /*!
+   * \brief Get a map representation of internal parameters.
+   *  This can be used by Init to recover the state of OperatorProperty.
+   */
+  virtual std::map<std::string, std::string> GetParams() const = 0;
+  /*!
    * \brief Get input arguments of the Operator.
    * \return vector of arguments.
    */
@@ -222,6 +228,7 @@ class OperatorProperty {
   /*!
    * \brief return the type string of the Operator
    *  subclasses override this function.
+   * \return The type string.
    */
   virtual std::string TypeString() const = 0;
   //--------------------------------------------------------
@@ -390,9 +397,6 @@ class OperatorProperty {
    * \return a new constructed OperatorProperty
    */
   static OperatorProperty *Create(const char* type_name);
-
-  virtual void Save(dmlc::JSONWriter *writer) const = 0;
-  virtual void Load(dmlc::JSONReader *reader) = 0;
 };
 
 /*! \brief typedef the factory function of operator property */
@@ -419,6 +423,19 @@ struct OperatorPropertyReg
     this->key_var_num_args = key;
     return *this;
   }
+  /*!
+   * \brief Check if TypeString of the type matches the registered name
+   */
+  inline OperatorPropertyReg& check_name() {
+    OperatorProperty *p = this->body();
+    std::string type = p->TypeString();
+    delete p;
+    CHECK_EQ(this->name, type)
+        << "Register Name and TypeString mismatch, name=\"" << this->name << "\","
+        << " but TypeString=\"" << type <<"\"";
+    return *this;
+  }
+
   /*! \brief The key num_args name. */
   std::string key_var_num_args;
 };
@@ -438,10 +455,12 @@ struct OperatorPropertyReg
  */
 #define MXNET_REGISTER_OP_PROPERTY(name, OperatorPropertyType)          \
   static ::mxnet::OperatorProperty* __create__ ## OperatorProperty ## name ## __() { \
-    return new OperatorPropertyType;                                    \
+    OperatorProperty* ret = new OperatorPropertyType();                 \
+    return ret;                                                         \
   }                                                                     \
   DMLC_REGISTRY_REGISTER(::mxnet::OperatorPropertyReg, OperatorPropertyReg, name) \
-  .set_body(__create__ ## OperatorProperty ## name ## __)
+  .set_body(__create__ ## OperatorProperty ## name ## __)               \
+  .check_name()
 
 #endif  // DMLC_USE_CXX11
 }  // namespace mxnet

@@ -154,10 +154,14 @@ Operator* CreateOp(PoolingParam param);
 
 
 #if DMLC_USE_CXX11
-class PoolingProp : public ParamOperatorProperty<PoolingParam> {
+class PoolingProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
+  }
+
+  std::map<std::string, std::string> GetParams() const override {
+    return param_.__DICT__();
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
@@ -209,6 +213,9 @@ class PoolingProp : public ParamOperatorProperty<PoolingParam> {
   }
 
   Operator* CreateOperator(Context ctx) const;
+
+ private:
+  PoolingParam param_;
 };  // class PoolingProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op

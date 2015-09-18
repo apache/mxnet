@@ -84,10 +84,14 @@ template<typename xpu>
 Operator* CreateOp(ActivationParam type);
 
 #if DMLC_USE_CXX11
-class ActivationProp : public ParamOperatorProperty<ActivationParam> {
+class ActivationProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
+  }
+
+  std::map<std::string, std::string> GetParams() const override {
+    return param_.__DICT__();
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
@@ -139,6 +143,9 @@ class ActivationProp : public ParamOperatorProperty<ActivationParam> {
   }
 
   Operator* CreateOperator(Context ctx) const;
+
+ private:
+  ActivationParam param_;
 };
 #endif  // DMLC_USE_CXX11
 }  // namespace op

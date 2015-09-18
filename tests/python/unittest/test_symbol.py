@@ -1,5 +1,7 @@
+import os
 import mxnet as mx
 from common import models
+import pickle as pkl
 
 def test_symbol_basic():
     mlist = []
@@ -9,7 +11,7 @@ def test_symbol_basic():
         m.list_outputs()
 
 
-def test_compose():
+def test_symbol_compose():
     data = mx.symbol.Variable('data')
     net1 = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
     net1 = mx.symbol.FullyConnected(data=net1, name='fc2', num_hidden=100)
@@ -26,3 +28,30 @@ def test_compose():
     print(composed.debug_str())
     multi_out = mx.symbol.Group([composed, net1])
     assert len(multi_out.list_outputs()) == 2
+
+
+def test_symbol_pickle():
+    mlist = [models.mlp2(), models.conv()]
+    data = pkl.dumps(mlist)
+    mlist2 = pkl.loads(data)
+    for x, y  in zip(mlist, mlist2):
+        assert x.tojson() == y.tojson()
+
+
+def test_symbol_saveload():
+    sym = models.mlp2()
+    fname = 'tmp_sym.json'
+    sym.save(fname)
+    print sym.tojson()
+    data2 = mx.symbol.load(fname)
+    # save because of order
+    assert sym.tojson() == data2.tojson()
+    os.remove(fname)
+
+
+if __name__ == '__main__':
+    test_symbol_basic()
+    test_symbol_compose()
+    test_symbol_saveload()
+    test_symbol_pickle()
+

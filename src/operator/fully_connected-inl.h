@@ -124,7 +124,7 @@ template<typename xpu>
 Operator* CreateOp(FullyConnectedParam param);
 
 #if DMLC_USE_CXX11
-class FullyConnectedProp : public ParamOperatorProperty<FullyConnectedParam> {
+class FullyConnectedProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     if (!param_.no_bias) {
@@ -136,6 +136,10 @@ class FullyConnectedProp : public ParamOperatorProperty<FullyConnectedParam> {
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
+  }
+
+  std::map<std::string, std::string> GetParams() const override {
+    return param_.__DICT__();
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
@@ -170,8 +174,9 @@ class FullyConnectedProp : public ParamOperatorProperty<FullyConnectedParam> {
   }
 
   std::string TypeString() const override {
-    return "FullyConnecteded";
+    return "FullyConnected";
   }
+
   // decalre dependency and inplace optimization options
   std::vector<int> DeclareBackwardDependency(
     const std::vector<int> &out_grad,
@@ -189,6 +194,9 @@ class FullyConnectedProp : public ParamOperatorProperty<FullyConnectedParam> {
   }
 
   Operator* CreateOperator(Context ctx) const;
+
+ private:
+  FullyConnectedParam param_;
 };  // class FullyConnectedSymbol
 #endif
 }  // namespace op

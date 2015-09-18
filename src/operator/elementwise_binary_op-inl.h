@@ -12,6 +12,7 @@
 #include <utility>
 #include <string>
 #include <vector>
+#include <map>
 #include "./operator_common.h"
 #include "./mshadow_op.h"
 
@@ -157,11 +158,14 @@ Operator* CreateElementWiseBinaryOp(ElementWiseBinaryOpType type);
 
 #if DMLC_USE_CXX11
 template<typename ForwardOp>
-class ElementWiseBinaryOpProp : public NoParamOperatorProperty {
+class ElementWiseBinaryOpProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     CHECK_EQ(kwargs.size(), 0)
         << TypeString() << " do not take any additional keyword arguments besides lhs and rhs";
+  }
+  std::map<std::string, std::string> GetParams() const override {
+    return {};
   }
 
   bool InferShape(std::vector<TShape> *in_shape,

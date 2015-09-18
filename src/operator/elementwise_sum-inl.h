@@ -121,10 +121,13 @@ template<typename xpu>
 Operator* CreateOp(ElementWiseSumParam param);
 
 #if DMLC_USE_CXX11
-class ElementWiseSumProp : public ParamOperatorProperty<ElementWiseSumParam> {
+class ElementWiseSumProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
+  }
+  std::map<std::string, std::string> GetParams() const override {
+    return param_.__DICT__();
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
@@ -190,8 +193,10 @@ class ElementWiseSumProp : public ParamOperatorProperty<ElementWiseSumParam> {
   }
 
   Operator* CreateOperator(Context ctx) const;
-};  // class ElementWiseSumProp
 
+ private:
+  ElementWiseSumParam param_;
+};  // class ElementWiseSumProp
 #endif  // DMLC_USE_CXX11
 
 }  // namespace op

@@ -292,34 +292,17 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
   }
 }
 
-void StaticGraph::DataEntry::Save(dmlc::JSONWriter *writer) const {
-  writer->BeginObject();
-  writer->WriteObjectKeyValue("source_id", source_id);
-  writer->WriteObjectKeyValue("index", index);
-  writer->EndObject();
-}
-
-void StaticGraph::DataEntry::Load(dmlc::JSONReader *reader) {
-  dmlc::JSONObjectReadHelper helper;
-  helper.DeclareField("source_id", &source_id);
-  helper.DeclareField("index", &index);
-  helper.ReadAllFields(reader);
-}
-
 void StaticGraph::Node::Save(dmlc::JSONWriter *writer) const {
   writer->BeginObject();
   if (op.get() != nullptr) {
-    writer->WriteObjectKeyValue("op_type", op.get()->TypeString());
-    std::ostringstream os;
-    dmlc::JSONWriter subWriter(&os);
-    subWriter.BeginObject();
-    subWriter.WriteObjectKeyValue("op", *(op.get()));
-    subWriter.EndObject();
-    writer->WriteObjectKeyValue("op", os.str());
+    writer->WriteObjectKeyValue("op", op->TypeString());
+    std::map<std::string, std::string> param = op->GetParams();
+    writer->WriteObjectKeyValue("param", param);
   } else {
-    std::string jsonNull = "null";
-    writer->WriteObjectKeyValue("op_type", jsonNull);
-    writer->WriteObjectKeyValue("op", jsonNull);
+    std::map<std::string, std::string> empty_param;
+    std::string json_null = "null";
+    writer->WriteObjectKeyValue("op", json_null);
+    writer->WriteObjectKeyValue("param", empty_param);
   }
   writer->WriteObjectKeyValue("name", name);
   writer->WriteObjectKeyValue("inputs", inputs);
@@ -328,22 +311,20 @@ void StaticGraph::Node::Save(dmlc::JSONWriter *writer) const {
 }
 
 void StaticGraph::Node::Load(dmlc::JSONReader *reader) {
-  dmlc::JSONObjectReadHelper firstHelper;
+  dmlc::JSONObjectReadHelper helper;
   std::string op_type_str;
-  firstHelper.DeclareField("op_type", &op_type_str);
-  std::string op_str;
-  firstHelper.DeclareField("op", &op_str);
-  firstHelper.DeclareField("name", &name);
-  firstHelper.DeclareField("inputs", &inputs);
-  firstHelper.DeclareField("backward_source_id", &backward_source_id);
-  firstHelper.ReadAllFields(reader);
+  std::map<std::string, std::string> param;
+  helper.DeclareField("op", &op_type_str);
+  helper.DeclareField("param", &param);
+  helper.DeclareField("name", &name);
+  helper.DeclareField("inputs", &inputs);
+  helper.DeclareField("backward_source_id", &backward_source_id);
+  helper.ReadAllFields(reader);
+
   if (op_type_str != "null") {
-    dmlc::JSONObjectReadHelper secondHelper;
-    std::istringstream iss(op_str);
-    dmlc::JSONReader subReader(&iss);
     op.reset(OperatorProperty::Create(op_type_str.c_str()));
-    secondHelper.DeclareField("op", op.get());
-    secondHelper.ReadAllFields(reader);
+    std::vector<std::pair<std::string, std::string> > vec(param.begin(), param.end());
+    op->Init(vec);
   } else {
     op.reset(nullptr);
   }
@@ -364,18 +345,4 @@ void StaticGraph::Load(dmlc::JSONReader *reader) {
   helper.DeclareField("heads", &heads);
   helper.ReadAllFields(reader);
 }
-
-void StaticGraph::Load(const std::string& json) {
-  std::istringstream is(json);
-  dmlc::JSONReader reader(&is);
-  reader.Read(this);
-}
-
-void StaticGraph::Save(std::string* json) const {
-  std::ostringstream os;
-  dmlc::JSONWriter writer(&os);
-  writer.Write(*this);
-  *json = os.str();
-}
-
 }  // namespace mxnet

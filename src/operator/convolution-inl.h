@@ -57,6 +57,8 @@ class ConvolutionOp : public Operator {
  public:
   explicit ConvolutionOp(ConvolutionParam p) {
     this->param_ = p;
+    // convert MB to words
+    param_.workspace = (param_.workspace << 20) / sizeof(real_t);
   }
 
   virtual void Forward(const OpContext &ctx,
@@ -262,7 +264,7 @@ template<typename xpu>
 Operator* CreateOp(ConvolutionParam param);
 
 #if DMLC_USE_CXX11
-class ConvolutionProp : public ParamOperatorProperty<ConvolutionParam> {
+class ConvolutionProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     if (!param_.no_bias) {
@@ -274,8 +276,10 @@ class ConvolutionProp : public ParamOperatorProperty<ConvolutionParam> {
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
-    // convert MB to words
-    param_.workspace = (param_.workspace << 20) / sizeof(real_t);
+  }
+
+  std::map<std::string, std::string> GetParams() const override {
+    return param_.__DICT__();
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
@@ -358,6 +362,8 @@ class ConvolutionProp : public ParamOperatorProperty<ConvolutionParam> {
 
   Operator* CreateOperator(Context ctx) const;
 
+ private:
+  ConvolutionParam param_;
 };  // class ConvolutionProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op

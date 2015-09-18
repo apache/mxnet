@@ -190,10 +190,14 @@ template<typename xpu>
 Operator* CreateOp(LeakyReLUParam type);
 
 #if DMLC_USE_CXX11
-class LeakyReLUProp : public ParamOperatorProperty<LeakyReLUParam> {
+class LeakyReLUProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
+  }
+
+  std::map<std::string, std::string> GetParams() const override {
+    return param_.__DICT__();
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
@@ -298,6 +302,9 @@ class LeakyReLUProp : public ParamOperatorProperty<LeakyReLUParam> {
   }
 
   Operator* CreateOperator(Context ctx) const;
+
+ private:
+  LeakyReLUParam param_;
 };
 #endif  // DMLC_USE_CXX11
 }  // namespace op

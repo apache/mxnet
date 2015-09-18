@@ -98,10 +98,14 @@ template<typename xpu>
 Operator *CreateOp(LRNParam param);
 
 #if DMLC_USE_CXX11
-class LocalResponseNormProp : public ParamOperatorProperty<LRNParam> {
+class LocalResponseNormProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
+  }
+
+  std::map<std::string, std::string> GetParams() const override {
+    return param_.__DICT__();
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
@@ -173,6 +177,9 @@ class LocalResponseNormProp : public ParamOperatorProperty<LRNParam> {
   }
 
   Operator* CreateOperator(Context ctx) const;
+
+ private:
+  LRNParam param_;
 };  // LocalResponseNormProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op

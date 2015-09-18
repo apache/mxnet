@@ -83,7 +83,7 @@ template<typename xpu>
 Operator* CreateOp(SoftmaxParam param);
 
 #if DMLC_USE_CXX11
-class SoftmaxProp : public ParamOperatorProperty<SoftmaxParam> {
+class SoftmaxProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     return {"data", "label"};
@@ -91,6 +91,10 @@ class SoftmaxProp : public ParamOperatorProperty<SoftmaxParam> {
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
+  }
+
+  std::map<std::string, std::string> GetParams() const override {
+    return param_.__DICT__();
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
@@ -138,6 +142,9 @@ class SoftmaxProp : public ParamOperatorProperty<SoftmaxParam> {
   }
 
   Operator* CreateOperator(Context ctx) const;
+
+ private:
+  SoftmaxParam param_;
 };  // class SoftmaxProp
 #endif  // DMLC_USE_CXX11
 

@@ -3,6 +3,7 @@
  * \file ndarray.cc
  * \brief ndarry module of mxnet
  */
+#include <dmlc/io.h>
 #include <dmlc/logging.h>
 #include <dmlc/registry.h>
 #include <mxnet/base.h>
@@ -401,6 +402,39 @@ bool NDArray::Load(dmlc::Stream *strm) {
   } else {
     *this = temp.Copy(ctx); return true;
   }
+}
+
+
+const uint64_t kMXAPINDArrayListMagic = 0x112;
+
+void NDArray::Save(const std::string& fname,
+                   const std::vector<NDArray>& data,
+                   const std::vector<std::string>& names) {
+  std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(fname.c_str(), "w"));
+  uint64_t header = kMXAPINDArrayListMagic, reserved = 0;
+  fo->Write(&header, sizeof(header));
+  fo->Write(&reserved, sizeof(reserved));
+  fo->Write(data);
+  fo->Write(names);
+}
+
+void NDArray::Load(const std::string& fname,
+                   std::vector<NDArray>* data,
+                   std::vector<std::string>* keys) {
+  std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname.c_str(), "r"));
+  uint64_t header, reserved;
+  CHECK(fi->Read(&header))
+      << "Invalid NDArray file format";
+  CHECK(fi->Read(&reserved))
+      << "Invalid NDArray file format";
+  CHECK(header == kMXAPINDArrayListMagic)
+      << "Invalid NDArray file format";
+  CHECK(fi->Read(data))
+      << "Invalid NDArray file format";
+  CHECK(fi->Read(keys))
+      << "Invalid NDArray file format";
+  CHECK(keys->size() == 0 || keys->size() == data->size())
+      << "Invalid NDArray file format";
 }
 
 NDArray NDArray::Copy(Context ctx) const {
