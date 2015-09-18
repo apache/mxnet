@@ -16,16 +16,14 @@ Contribute to Documents
 * The document is created using sphinx and [recommonmark](http://recommonmark.readthedocs.org/en/latest/)
 * You can build document locally to see the effect.
 
-
 Contribute to Testcases
 -----------------------
 * All the testcases are in [tests](../tests)
 * We use python nose for python test cases and gtest for c++ unittests.
 
-
 Contribute to Examples
--------------------------
-* Usecases and examples will be in [examples](../examples)
+----------------------
+* Usecases and examples will be in [example](../example)
 * We are super excited to hear about your story, if you have blogposts,
   tutorials code solutions using mxnet, please tell us and we will add
   a link in the example pages.
@@ -38,14 +36,8 @@ git remote add upstream https://github.com/dmlc/mxnet
 git fetch upstream
 git rebase upstream/master
 ```
-* If you have multiple small commits that fixes small problems,
+* If you have multiple small commits,
   it might be good to merge them together(use git rebase then squash) into more meaningful groups.
 * Send the pull request!
   - Fix the problems reported by automatic checks
   - If you are contributing a new module, consider add a testcase in [tests](../tests)
-
-
-
-
-
-
