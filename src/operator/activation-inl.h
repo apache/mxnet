@@ -90,6 +90,10 @@ class ActivationProp : public OperatorProperty {
     param_.Init(kwargs);
   }
 
+  std::map<std::string, std::string> GetParams() const override {
+    return param_.__DICT__();
+  }
+
   bool InferShape(std::vector<TShape> *in_shape,
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
@@ -147,4 +151,3 @@ class ActivationProp : public OperatorProperty {
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_ACTIVATION_INL_H_
-

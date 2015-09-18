@@ -18,6 +18,8 @@ class CuDNNConvolutionOp : public Operator {
  public:
   explicit CuDNNConvolutionOp(ConvolutionParam param) {
     this->param_ = param;
+    // convert MB to words
+    param_.workspace = (param_.workspace << 20) / sizeof(real_t);
     init_cudnn_ = false;
     // TODO(xxx): fp16
     dtype_ = CUDNN_DATA_FLOAT;

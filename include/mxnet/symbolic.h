@@ -8,8 +8,11 @@
 #define MXNET_SYMBOLIC_H_
 
 #include <dmlc/base.h>
+#include <dmlc/json.h>
+#include <algorithm>
 #include <vector>
 #include <memory>
+#include <map>
 #include <string>
 #include <utility>
 #include <functional>
@@ -64,6 +67,25 @@ class StaticGraph {
       if (source_id == other.source_id) return index < other.index;
       return source_id < other.source_id;
     }
+    /*!
+     * \brief interface for json serialization.
+     * \param writer the JSON writer to write json into.
+     */
+    inline void Save(dmlc::JSONWriter *writer) const {
+      writer->BeginArray(false);
+      writer->WriteArrayItem(source_id);
+      writer->WriteArrayItem(index);
+      writer->EndArray();
+    }
+    /*!
+     * \brief interface for json serialization.
+     * \param reader the JSON reader to read json from.
+     */
+    inline void Load(dmlc::JSONReader *reader) {
+      std::pair<uint32_t, uint32_t> p;
+      reader->Read(&p);
+      *this = DataEntry(p.first, p.second);
+    }
   };
   /*!
    * \brief Operation Node in static graphs.
@@ -95,6 +117,23 @@ class StaticGraph {
     int32_t backward_source_id;
     /*! \brief default constructor */
     Node() : backward_source_id(-1) {}
+
+    friend void swap(Node& lhs, Node& rhs) {
+      std::swap(lhs.op, rhs.op);
+      std::swap(lhs.name, rhs.name);
+      std::swap(lhs.inputs, rhs.inputs);
+      std::swap(lhs.backward_source_id, rhs.backward_source_id);
+    }
+    /*! \brief copy constructor in favor of serialization. */
+    Node(const Node& another) : op(another.op.get() ? another.op.get()->Copy() : nullptr),
+                                name(another.name),
+                                inputs(another.inputs),
+                                backward_source_id(another.backward_source_id) {}
+
+    inline Node& operator=(Node another) {
+      swap(*this, another);
+      return *this;
+    }
     /*! \return whether the node is forward op node */
     inline bool is_forward() const {
       return op != nullptr;
@@ -107,6 +146,16 @@ class StaticGraph {
     inline bool is_variable() const {
       return op == nullptr && !is_backward();
     }
+    /*!
+     * \brief interface for json serialization.
+     * \param writer the JSON writer write json.
+     */
+    void Save(dmlc::JSONWriter *writer) const;
+    /*!
+     * \brief interface for json serialization.
+     * \param reader the JSON read to read json.
+     */
+    void Load(dmlc::JSONReader *reader);
   };
   /*! \brief all nodes in the graph */
   std::vector<Node> nodes;
@@ -114,6 +163,16 @@ class StaticGraph {
   std::vector<uint32_t> arg_nodes;
   /*! \brief heads outputs of the graph */
   std::vector<DataEntry> heads;
+  /*!
+   * \brief interface for json serialization.
+   * \param writer the JSON writer write json.
+   */
+  void Save(dmlc::JSONWriter *writer) const;
+  /*!
+   * \brief interface for json serialization.
+   * \param reader the JSON read to read json.
+   */
+  void Load(dmlc::JSONReader *reader);
   // funtions to help inference in static graph
   /*!
    * \brief Perform a topological sort on the graph
@@ -247,6 +306,12 @@ class Symbol {
    */
   void ToStaticGraph(StaticGraph *out_graph) const;
   /*!
+   * \brief create equivalence of symbol from static graphs.
+   *  This operation will change the content of current symbol.
+   * \param graph the static graph
+   */
+  void FromStaticGraph(const StaticGraph &graph);
+  /*!
    * \brief Apply the symbol as a function, compose with arguments
    * \param args positional arguments for the symbol
    * \param name name of returned symbol.
@@ -267,7 +332,6 @@ class Symbol {
    * \return the new symbol with gradient graph
    */
   Symbol Grad(const std::vector<std::string>& wrt) const;
-
   /*!
    * \brief infer the shapes of outputs and unknown input arguments
    * \param arg_shapes the shape of input arguments of the operator
@@ -300,6 +364,24 @@ class Symbol {
                   std::vector<TShape> *out_shapes,
                   std::vector<TShape> *aux_shapes) const;
   /*!
+   * \brief interface for json serialization.
+   * \param writer the JSON writer write json.
+   */
+  inline void Save(dmlc::JSONWriter *writer) const {
+    StaticGraph g;
+    this->ToStaticGraph(&g);
+    g.Save(writer);
+  }
+  /*!
+   * \brief interface for json serialization.
+   * \param reader the JSON read to read json.
+   */
+  inline void Load(dmlc::JSONReader *reader) {
+    StaticGraph g;
+    g.Load(reader);
+    this->FromStaticGraph(g);
+  }
+  /*!
    * \brief get number of outputs of this symbol
    * \return number of outputs
    */
@@ -315,12 +397,6 @@ class Symbol {
    * \sa OperatorProperty::Create
    */
   static Symbol Create(OperatorProperty *op);
-  /*!
-   * \brief create equivalence of symbol from static graphs
-   * \param graph the static graph
-   * \return the created symbol
-   */
-  static Symbol Create(const StaticGraph &graph);
   /*!
    * \brief create equivalence of symbol by grouping the symbols together
    * \param symbols list of symbols
@@ -430,4 +506,8 @@ class Executor {
                         const std::vector<NDArray> &aux_states);
 };  // class operator
 }  // namespace mxnet
+
+namespace dmlc {
+DMLC_DECLARE_TRAITS(is_pod, ::mxnet::StaticGraph::DataEntry, true);
+}
 #endif  // MXNET_SYMBOLIC_H_

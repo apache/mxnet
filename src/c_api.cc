@@ -267,12 +267,11 @@ int MXNDArrayWaitToWrite(NDArrayHandle handle) {
   API_END();
 }
 
-const uint64_t kMXAPINDArrayListMagic = 0x112;
 
-int MXNDArrayListSave(const char* fname,
-                      mx_uint num_args,
-                      NDArrayHandle* args,
-                      const char** keys) {
+int MXNDArraySave(const char* fname,
+                  mx_uint num_args,
+                  NDArrayHandle* args,
+                  const char** keys) {
   API_BEGIN();
   std::vector<NDArray> data(num_args);
   std::vector<std::string> names;
@@ -285,39 +284,21 @@ int MXNDArrayListSave(const char* fname,
       names[i] = keys[i];
     }
   }
-  std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(fname, "w"));
-  uint64_t header = kMXAPINDArrayListMagic, reserved = 0;
-  fo->Write(&header, sizeof(header));
-  fo->Write(&reserved, sizeof(reserved));
-  fo->Write(data);
-  fo->Write(names);
+  mxnet::NDArray::Save(fname, data, names);
   API_END();
 }
 
-int MXNDArrayListLoad(const char* fname,
-                      mx_uint *out_size,
-                      NDArrayHandle** out_arr,
-                      mx_uint *out_name_size,
-                      const char*** out_names) {
+int MXNDArrayLoad(const char* fname,
+                  mx_uint *out_size,
+                  NDArrayHandle** out_arr,
+                  mx_uint *out_name_size,
+                  const char*** out_names) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   ret->ret_vec_str.clear();
   API_BEGIN();
   std::vector<NDArray> data;
   std::vector<std::string> &names = ret->ret_vec_str;
-  std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
-  uint64_t header, reserved;
-  CHECK(fi->Read(&header))
-      << "Invalid NDArray file format";
-  CHECK(fi->Read(&reserved))
-      << "Invalid NDArray file format";
-  CHECK(header == kMXAPINDArrayListMagic)
-      << "Invalid NDArray file format";
-  CHECK(fi->Read(&data))
-      << "Invalid NDArray file format";
-  CHECK(fi->Read(&names))
-      << "Invalid NDArray file format";
-  CHECK(names.size() == 0 || names.size() == data.size())
-      << "Invalid NDArray file format";
+  mxnet::NDArray::Load(fname, &data, &names);
   ret->ret_handles.resize(data.size());
   for (size_t i = 0; i < data.size(); ++i) {
     NDArray *ptr = new NDArray();
@@ -519,6 +500,54 @@ int MXSymbolCreateGroup(mx_uint num_symbols,
   *s = Symbol::CreateGroup(syms);
   *out = s;
   API_END_HANDLE_ERROR(delete s);
+}
+
+int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out) {
+  Symbol *s = new Symbol();
+  API_BEGIN();
+  std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
+  dmlc::istream is(fi.get());
+  dmlc::JSONReader reader(&is);
+  s->Load(&reader);
+  // reset file pointer
+  is.set_stream(nullptr);
+  *out = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
+int MXSymbolCreateFromJSON(const char *json, SymbolHandle *out) {
+  Symbol *s = new Symbol();
+  API_BEGIN();
+  std::string buf(json);
+  std::istringstream is(buf);
+  dmlc::JSONReader reader(&is);
+  s->Load(&reader);
+  *out = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
+int MXSymbolSaveToFile(SymbolHandle symbol, const char *fname) {
+  Symbol *s = static_cast<Symbol*>(symbol);
+  API_BEGIN();
+  std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(fname, "w"));
+  dmlc::ostream os(fo.get());
+  dmlc::JSONWriter writer(&os);
+  s->Save(&writer);
+  // reset file pointer, force flush
+  os.set_stream(nullptr);
+  API_END();
+}
+
+int MXSymbolSaveToJSON(SymbolHandle symbol, const char **out_json) {
+  Symbol *s = static_cast<Symbol*>(symbol);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  std::ostringstream os;
+  dmlc::JSONWriter writer(&os);
+  s->Save(&writer);
+  ret->ret_str = os.str();
+  *out_json = ret->ret_str.c_str();
+  API_END();
 }
 
 int MXSymbolFree(SymbolHandle symbol) {

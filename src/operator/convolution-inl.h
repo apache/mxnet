@@ -57,6 +57,8 @@ class ConvolutionOp : public Operator {
  public:
   explicit ConvolutionOp(ConvolutionParam p) {
     this->param_ = p;
+    // convert MB to words
+    param_.workspace = (param_.workspace << 20) / sizeof(real_t);
   }
 
   virtual void Forward(const OpContext &ctx,
@@ -274,8 +276,10 @@ class ConvolutionProp : public OperatorProperty {
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
-    // convert MB to words
-    param_.workspace = (param_.workspace << 20) / sizeof(real_t);
+  }
+
+  std::map<std::string, std::string> GetParams() const override {
+    return param_.__DICT__();
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
