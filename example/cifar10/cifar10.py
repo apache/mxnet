@@ -1,11 +1,16 @@
 # pylint: skip-file
-import numpy as np
-import mxnet as mx
-import copy
-import sys
+import sys, os
+# code to directly use library
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, "../../python/")
 sys.path.append("../../tests/python/common")
+# import library
+import mxnet as mx
 import get_data
 import time
+import numpy as np
+import copy
+
 
 """
 CXXNET Result:
@@ -163,7 +168,7 @@ data_shape = (batch_size, 3, 28, 28)
 
 in_data = mx.nd.empty(data_shape, mx.gpu())
 executor = loss.simple_bind(mx.gpu(), data = in_data)
-print executor.debug_str()
+
 
 out_narray = executor.outputs[0]
 pred = mx.nd.zeros(out_narray.shape, mx.cpu())
@@ -177,7 +182,7 @@ block = list(zip(grad_narrays, arg_narrays, momentum_narrays))
 
 np.random.seed(0)
 # set random weight
-
+x = mx.random.uniform(-1, 1, (10,),mx.gpu())
 for name, narray in inputs.items():
     if "weight" in name:
         narray[:] = np.random.uniform(-0.1, 0.1, narray.shape)

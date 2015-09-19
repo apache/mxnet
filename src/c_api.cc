@@ -187,12 +187,6 @@ int MXRandomSeed(int seed) {
   API_END();
 }
 
-int MXFinalize() {
-  API_BEGIN();
-  mxnet::Finalize();
-  API_END();
-}
-
 int MXNDArrayCreateNone(NDArrayHandle *out) {
   API_BEGIN();
   *out = new NDArray();

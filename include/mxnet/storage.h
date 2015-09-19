@@ -64,14 +64,12 @@ class Storage {
   static std::shared_ptr<Storage> _GetSharedRef();
 
  protected:
-  // friend function
-  friend void ::mxnet::Finalize();
   /*!
    * \brief Idempotent Finalize function.
    * This function will signal engine to release all resources.
    * It is safe to call this function multiple times.
    */
-  void Finalize();
+  virtual void Finalize();
 
  private:
   /*!

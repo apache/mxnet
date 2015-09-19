@@ -115,7 +115,7 @@ class ResourceManagerImpl : public ResourceManager {
     }
     ~ResourceRandom() {
       mshadow::Random<xpu> *r = prnd;
-      Engine::Get()->DeleteVariable(
+      Engine::Get()->DeleteVariable(          
           [r](RunContext rctx){ delete r; }, ctx, resource.var);
     }
     // set seed to a PRNG

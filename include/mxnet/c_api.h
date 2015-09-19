@@ -62,11 +62,6 @@ MXNET_DLL const char *MXGetLastError();
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXRandomSeed(int seed);
-/*!
- * \brief Finalize and shutdown all related modules of mxnet.
- *  Call this function at end of program to ensure correct shutdown.
- */
-MXNET_DLL int MXFinalize();
 //-------------------------------------
 // Part 1: NDArray creation and deletion
 //-------------------------------------

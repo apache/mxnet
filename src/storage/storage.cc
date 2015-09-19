@@ -18,6 +18,7 @@
 
 namespace mxnet {
 
+// consider change storage as a pure abstract class
 struct Storage::Impl {
   static constexpr size_t kPoolThreshold = 4096 * 1024 * 1024ul;
   static constexpr size_t kMaxNumberOfDevices = Context::kMaxDevMask + 1;
@@ -50,6 +51,11 @@ struct Storage::Impl {
 };  // struct Storage::Impl
 
 Storage::Handle Storage::Alloc(size_t size, Context ctx) {
+  // space already recycled, ignore request
+  if (impl_.get() == nullptr) {
+    LOG(FATAL) << "Alloc called after finalize";
+  }
+
   Handle hd;
   hd.ctx = ctx;
   hd.size = size;
@@ -86,6 +92,9 @@ Storage::Handle Storage::Alloc(size_t size, Context ctx) {
 }
 
 void Storage::Free(Storage::Handle handle) {
+  // space already recycled, ignore request
+  if (impl_.get() == nullptr) return;
+
   std::lock_guard<std::mutex> lock{impl_->m};
   Impl::ActivateDevice(handle.ctx);
   impl_->storage_managers.at(handle.ctx.dev_mask)

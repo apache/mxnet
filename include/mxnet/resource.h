@@ -117,8 +117,6 @@ class ResourceManager {
   static ResourceManager *Get();
 
  protected:
-  // friend function
-  friend void ::mxnet::Finalize();
   /*!
    * \brief Idempotent Finalize function.
    * This function will signal resource manager to release all resources.

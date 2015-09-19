@@ -21,8 +21,16 @@ class NaiveEngine final : public Engine {
   void Finalize() override {
 #if MXNET_USE_CUDA
     for (size_t i = 0; i < streams_.size(); ++i) {
-      if (streams_[i] != nullptr) {
-        mshadow::DeleteStream(streams_[i]);
+      if (streams_[i] != nullptr) {        
+        // Catch exception for CUDA driver shutdown
+        try {
+          mshadow::DeleteStream(streams_[i]);
+        } catch (const dmlc::Error &e) {
+          std::string what = e.what();
+          if (what.find("driver shutting down") == std::string::npos) {
+            LOG(ERROR) << "Ignore Error " << what << " during worker finalization";
+          }
+        }
         streams_[i] = nullptr;
       }
     }

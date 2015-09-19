@@ -7,7 +7,6 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <dmlc/concurrency.h>
-#include <array>
 #include "./threaded_engine.h"
 #include "./thread_pool.h"
 #include "../common/lazy_alloc_array.h"
@@ -145,7 +144,15 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     while (task_queue->Pop(&opr_block)) {
       this->ExecuteOprBlock(run_ctx, opr_block);
     }
-    mshadow::DeleteStream<gpu>(stream);
+    // Catch exception for CUDA driver shutdown
+    try {
+      mshadow::DeleteStream<gpu>(stream);
+    } catch (const dmlc::Error &e) {
+      std::string what = e.what();
+      if (what.find("driver shutting down") == std::string::npos) {
+        LOG(ERROR) << "Ignore Error " << what << " during worker finalization";
+      }
+    }
     #endif
   }
   /*!

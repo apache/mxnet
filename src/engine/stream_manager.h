@@ -117,8 +117,16 @@ void StreamManager<kNumGpus, kStreams>::Finalize() {
 #if MXNET_USE_CUDA
   for (std::size_t i = 0; i < kNumGpus; ++i) {
     if (gpu_cnt_.at(i) != -1) {
-      for (auto&& j : gpu_streams_.at(i)) {
-        mshadow::DeleteStream<gpu>(j);
+      for (auto&& j : gpu_streams_.at(i)) {        
+        // Catch exception for CUDA driver shutdown
+        try {
+          mshadow::DeleteStream<gpu>(j);
+        } catch (const dmlc::Error &e) {
+          std::string what = e.what();
+          if (what.find("driver shutting down") == std::string::npos) {
+            LOG(ERROR) << "Ignore Error " << what << " during worker finalization";
+          }
+        }
       }
       gpu_cnt_.at(i) = -1;
     }

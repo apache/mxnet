@@ -27,7 +27,9 @@ class PooledStorageManager final : public StorageManager {
   /*!
    * \brief Default destructor.
    */
-  ~PooledStorageManager() = default;
+  ~PooledStorageManager() {
+    ReleaseAll();
+  }
   void* Alloc(size_t size) override;
   void Free(void* ptr, size_t size) override;
 

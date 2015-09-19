@@ -199,8 +199,7 @@ class Engine {
     ret.param_ = param;
     return ret;
   }
-  // friend function
-  friend void ::mxnet::Finalize();
+
   /*!
    * \brief Idempotent Finalize function.
    * This function will signal engine to release all resources.
