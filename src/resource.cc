@@ -24,9 +24,9 @@ class ResourceManagerImpl : public ResourceManager {
     gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 4);
     engine_ref_ = Engine::_GetSharedRef();
     cpu_rand_.reset(new ResourceRandom<cpu>(
-        Context(cpu::kDevMask, 0), global_seed_));
+        Context::CPU(), global_seed_));
     cpu_space_.reset(new ResourceTempSpace<cpu>(
-        Context(cpu::kDevMask, 0), cpu_temp_space_copy_));
+        Context::CPU(), cpu_temp_space_copy_));
   }
   ~ResourceManagerImpl() {
     // need explicit delete, before engine get killed
@@ -45,14 +45,14 @@ class ResourceManagerImpl : public ResourceManager {
 
   // request resources
   Resource Request(Context ctx, const ResourceRequest &req) override {
-    if (ctx.dev_mask == cpu::kDevMask) {
+    if (ctx.dev_mask() == cpu::kDevMask) {
       switch (req.type) {
         case ResourceRequest::kRandom: return cpu_rand_->resource;
         case ResourceRequest::kTempSpace: return cpu_space_->GetNext();
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
     } else {
-      CHECK_EQ(ctx.dev_mask, gpu::kDevMask);
+      CHECK_EQ(ctx.dev_mask(), gpu::kDevMask);
 #if MSHADOW_USE_CUDA
       switch (req.type) {
         case ResourceRequest::kRandom: {

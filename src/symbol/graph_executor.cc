@@ -216,7 +216,7 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
 
   Operator* op = op_node.op.get();
   OpContext* op_ctx_ptr = &op_node.op_ctx;
-  bool is_gpu = op_node.ctx.dev_mask == gpu::kDevMask;
+  bool is_gpu = op_node.ctx.dev_mask() == gpu::kDevMask;
   exec.exec_fun = [op, is_gpu, op_ctx_ptr, in_data, req, out_data, aux_states]
       (RunContext ctx, Engine::CallbackOnComplete on_complete) {
     op_ctx_ptr->run_ctx = ctx;

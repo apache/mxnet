@@ -36,10 +36,11 @@ def _new_alloc_handle(shape, ctx, delay_alloc):
     a new empty ndarray handle
     """
     hdl = NDArrayHandle()
+    print ctx.device_typeid
     check_call(_LIB.MXNDArrayCreate(
         c_array(mx_uint, shape),
         len(shape),
-        ctx.device_mask,
+        ctx.device_typeid,
         ctx.device_id,
         int(delay_alloc),
         ctypes.byref(hdl)))
@@ -262,11 +263,11 @@ class NDArray(object):
         context : mxnet.Context
             The context of current NDArray.
         """
-        dev_mask = ctypes.c_int()
+        dev_typeid = ctypes.c_int()
         dev_id = ctypes.c_int()
         check_call(_LIB.MXNDArrayGetContext(
-            self.handle, ctypes.byref(dev_mask), ctypes.byref(dev_id)))
-        return Context(Context.devmask2type[dev_mask.value], dev_id.value)
+            self.handle, ctypes.byref(dev_typeid), ctypes.byref(dev_id)))
+        return Context(Context.devtype2str[dev_typeid.value], dev_id.value)
 
     def asnumpy(self):
         """Return a copied numpy array of current array.

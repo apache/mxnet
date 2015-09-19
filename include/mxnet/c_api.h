@@ -77,7 +77,7 @@ MXNET_DLL int MXNDArrayCreateNone(NDArrayHandle *out);
  * \brief create a NDArray with specified shape
  * \param shape the pointer to the shape
  * \param ndim the dimension of the shape
- * \param dev_mask device mask, specify device we want to take
+ * \param dev_type device type, specify device we want to take
  * \param dev_id the device id of the specific device
  * \param delay_alloc whether to delay allocation until
  *    the narray is first mutated
@@ -86,7 +86,7 @@ MXNET_DLL int MXNDArrayCreateNone(NDArrayHandle *out);
  */
 MXNET_DLL int MXNDArrayCreate(const mx_uint *shape,
                               mx_uint ndim,
-                              int dev_mask,
+                              int dev_type,
                               int dev_id,
                               int delay_alloc,
                               NDArrayHandle *out);
@@ -198,8 +198,8 @@ MXNET_DLL int MXNDArrayFree(NDArrayHandle handle);
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
-                               mx_uint *out_dim,
-                               const mx_uint **out_pdata);
+                                mx_uint *out_dim,
+                                const mx_uint **out_pdata);
 /*!
  * \brief get the content of the data in NDArray
  * \param handle the handle to the narray
@@ -207,17 +207,17 @@ MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayGetData(NDArrayHandle handle,
-                              mx_float **out_pdata);
+                               mx_float **out_pdata);
 /*!
  * \brief get the context of the NDArray
  * \param handle the handle to the narray
- * \param out_dev_mask the output device mask
+ * \param out_dev_type the output device type
  * \param out_dev_id the output device id
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayGetContext(NDArrayHandle handle,
-                                 int *out_dev_mask,
-                                 int *out_dev_id);
+                                  int *out_dev_type,
+                                  int *out_dev_id);
 
 //--------------------------------
 // Part 2: functions on NDArray
@@ -547,7 +547,7 @@ MXNET_DLL int MXExecutorOutputs(ExecutorHandle handle,
  * \brief Generate Executor from symbol
  *
  * \param symbol_handle symbol handle
- * \param dev_mask device mask
+ * \param dev_type device type
  * \param dev_id device id
  * \param len length
  * \param in_args in args array
@@ -559,7 +559,7 @@ MXNET_DLL int MXExecutorOutputs(ExecutorHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXExecutorBind(SymbolHandle symbol_handle,
-                             int dev_mask,
+                             int dev_type,
                              int dev_id,
                              mx_uint len,
                              NDArrayHandle *in_args,

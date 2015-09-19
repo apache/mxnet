@@ -226,7 +226,7 @@ void ThreadedEngine::DeleteOperator(OprHandle op) {
               threaded_opr->mutable_vars.end());
   this->PushSync([threaded_opr](RunContext) {
       ThreadedOpr::Delete(threaded_opr);
-    }, Context(), {}, deps, FnProperty::kAsync);
+    }, Context::CPU(), {}, deps, FnProperty::kAsync);
 }
 
 void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
@@ -281,7 +281,7 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
         std::unique_lock<std::mutex> lock{finished_m_};
         done.store(true);
         finished_cv_.notify_all();
-      }, Context{}, {var}, {}, FnProperty::kNormal);
+      }, Context::CPU(), {var}, {}, FnProperty::kNormal);
     finished_cv_.wait(lock, [&done]() { return done.load(); });
   }
 }

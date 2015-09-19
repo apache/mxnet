@@ -29,15 +29,15 @@ inline void BinaryOp(const NDArray &lhs,
                      const NDArray &rhs,
                      NDArray *out) {
   // no check if both of them are on cpu
-  if (lhs.ctx().dev_mask != cpu::kDevMask || rhs.ctx().dev_mask != cpu::kDevMask)
+  if (lhs.ctx().dev_mask() != cpu::kDevMask || rhs.ctx().dev_mask() != cpu::kDevMask)
     CHECK(lhs.ctx() == rhs.ctx()) << "operands context mismatch";
   // if out is none, allocate space
   if (out->is_none()) {
     *out = NDArray(OP::GetShape(lhs.shape(), rhs.shape()), lhs.ctx(), true);
   } else {
     // no check if both of them are on cpu
-    if (lhs.ctx().dev_mask != cpu::kDevMask ||
-        out->ctx().dev_mask != cpu::kDevMask) {
+    if (lhs.ctx().dev_mask() != cpu::kDevMask ||
+        out->ctx().dev_mask() != cpu::kDevMask) {
       CHECK(out->ctx() == lhs.ctx()) << "target context mismatch";
     }
     CHECK(out->shape() == OP::GetShape(lhs.shape(), rhs.shape()))
@@ -51,7 +51,7 @@ inline void BinaryOp(const NDArray &lhs,
   if (rhs.var() != ret.var()) const_vars.push_back(rhs.var());
 
   // redirect everything to mshadow operations
-  switch (lhs.ctx().dev_mask) {
+  switch (lhs.ctx().dev_mask()) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
           ret.CheckAndAlloc();
@@ -80,7 +80,7 @@ inline void SetValueOp(const real_t &rhs, NDArray *out) {
   CHECK_NE(out->is_none(), true) << "Set value target must not be empty";
   // important: callback must always capture by value
   NDArray ret = *out;
-  switch (ret.ctx().dev_mask) {
+  switch (ret.ctx().dev_mask()) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
           ret.CheckAndAlloc();
@@ -128,7 +128,7 @@ inline void ScalarOp(const NDArray &lhs,
   if (lhs.var() != ret.var()) const_vars.push_back(lhs.var());
 
   // redirect everything to mshadow operations
-  switch (lhs.ctx().dev_mask) {
+  switch (lhs.ctx().dev_mask()) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
           ret.CheckAndAlloc();
@@ -160,8 +160,8 @@ void CopyFromTo(const NDArray &from, NDArray *to) {
       << "source operands have zero dimension shape";
   // important: callback must always capture by value
   NDArray ret = *to;
-  int a = from.ctx().dev_mask;
-  int b = to->ctx().dev_mask;
+  int a = from.ctx().dev_mask();
+  int b = to->ctx().dev_mask();
 
   std::vector<Engine::VarHandle> const_vars;
   if (from.var() != ret.var()) const_vars.push_back(from.var());
@@ -222,7 +222,7 @@ inline void SampleOP(const real_t &a,
   // important: callback must always capture by value
   NDArray ret = *out;
   // redirect everything to mshadow operations
-  switch (out->ctx().dev_mask) {
+  switch (out->ctx().dev_mask()) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([a, b, resource, ret](RunContext ctx) {
           ret.CheckAndAlloc();
@@ -356,8 +356,8 @@ void NDArray::Save(dmlc::Stream *strm) const {
   ctx.Save(strm);
   TBlob save_data;
   NDArray temp;
-  if (ctx.dev_mask != cpu::kDevMask) {
-    temp = this->Copy(Context(cpu::kDevMask, 0));
+  if (ctx.dev_mask() != cpu::kDevMask) {
+    temp = this->Copy(Context::CPU());
     temp.WaitToRead();
     save_data = temp.data();
   } else {
@@ -390,14 +390,14 @@ bool NDArray::Load(dmlc::Stream *strm) {
   if (strm->Read(&type_flag, sizeof(type_flag)) != sizeof(type_flag)) return false;
   CHECK(type_flag == mshadow::DataType<real_t>::kFlag)
       << "Only support float NDArray so far";
-  // load data into CPUbu
-  NDArray temp(shape, Context(cpu::kDevMask, ctx.dev_id));
+  // load data into CPU
+  NDArray temp(shape, Context::CPU());
   TBlob load_data = temp.data();
   size_t type_size = sizeof(real_t);
   size_t nread = type_size * shape.Size();
 
   if (strm->Read(load_data.dptr_, nread) != nread) return false;
-  if (ctx.dev_mask == cpu::kDevMask) {
+  if (ctx.dev_mask() == cpu::kDevMask) {
     *this = std::move(temp); return true;
   } else {
     *this = temp.Copy(ctx); return true;
@@ -453,8 +453,8 @@ void NDArray::SyncCopyFromCPU(const real_t *data, size_t size) const {
   TBlob src((real_t*)data, dshape, cpu::kDevMask); // NOLINT(*)
 
   RunContext run_ctx;
-  if (ctx.dev_mask == cpu::kDevMask) {
-    ndarray::Copy<cpu, cpu>(src, &dst, Context(cpu::kDevMask, 0), ctx, run_ctx);
+  if (ctx.dev_mask() == cpu::kDevMask) {
+    ndarray::Copy<cpu, cpu>(src, &dst, Context::CPU(), ctx, run_ctx);
   } else {
 #if MXNET_USE_CUDA
     // use empty stream to do sync copy
@@ -462,7 +462,7 @@ void NDArray::SyncCopyFromCPU(const real_t *data, size_t size) const {
     // Maybe move to engine part
     mshadow::Stream<gpu> zero_stream;
     run_ctx.stream = &zero_stream;
-    ndarray::Copy<cpu, gpu>(src, &dst, Context(cpu::kDevMask, 0), ctx, run_ctx);
+    ndarray::Copy<cpu, gpu>(src, &dst, Context::CPU(), ctx, run_ctx);
 #else
     LOG(FATAL) << "GPU is not enabled";
 #endif
@@ -479,8 +479,8 @@ void NDArray::SyncCopyToCPU(real_t *data, size_t size) const {
   TBlob dst(data, dshape, cpu::kDevMask); // NOLINT(*)
 
   RunContext run_ctx;
-  if (ctx.dev_mask == cpu::kDevMask) {
-    ndarray::Copy<cpu, cpu>(src, &dst, ctx, Context(cpu::kDevMask, 0), run_ctx);
+  if (ctx.dev_mask() == cpu::kDevMask) {
+    ndarray::Copy<cpu, cpu>(src, &dst, ctx, Context::CPU(), run_ctx);
   } else {
 #if MXNET_USE_CUDA
     // use empty stream to do sync copy
@@ -488,7 +488,7 @@ void NDArray::SyncCopyToCPU(real_t *data, size_t size) const {
     // Maybe move to engine part
     mshadow::Stream<gpu> zero_stream;
     run_ctx.stream = &zero_stream;
-    ndarray::Copy<gpu, cpu>(src, &dst, ctx, Context(cpu::kDevMask, 0), run_ctx);
+    ndarray::Copy<gpu, cpu>(src, &dst, ctx, Context::CPU(), run_ctx);
 #else
     LOG(FATAL) << "GPU is not enabled";
 #endif

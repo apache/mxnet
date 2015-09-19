@@ -64,41 +64,41 @@ typedef mshadow::TShape TShape;
 /*! \brief storage container type */
 typedef mshadow::TBlob TBlob;
 
-
 /*! \brief Context information about the execution enviroment */
 struct Context {
-  /*! \brief the device type we run the op can be cpu::kDevMask or gpu::kDevMask */
-  int32_t dev_mask;
+  /*! \brief Type of device */
+  enum DeviceType {
+    kCPU = cpu::kDevMask,
+    kGPU = gpu::kDevMask,
+    kCPUPinned = 3
+  };
+  /*! \brief the device type we run the op on */
+  DeviceType dev_type;
   /*! \brief device id we are going to run it on */
   int32_t dev_id;
-  /*! \brief constructor */
-  Context() : dev_mask(cpu::kDevMask), dev_id(0) {}
+  /*! \brief default constructor */
+  Context() : dev_type(kCPU), dev_id(0) {}
   /*!
-   * \brief constructor of context
-   * \param dev_mask the device mask
-   * \param dev_id the device id
+   * \brief Get corresponding device mask
+   * \return cpu::kDevMask or gpu::kDevMask
    */
-  Context(int dev_mask, int dev_id)
-      : dev_mask(dev_mask), dev_id(dev_id) {}
+  inline int dev_mask() const {
+    if (dev_type == kCPUPinned) return cpu::kDevMask;
+    return dev_type;
+  }
   /*!
    * \brief Comparator, used to enable Context as std::map key.
    * \param b another context to compare
    * \return compared result
    */
-  inline bool operator<(const Context &b) const {
-    if (dev_mask == b.dev_mask) {
-      return dev_id < b.dev_id;
-    } else {
-      return dev_mask < b.dev_mask;
-    }
-  }
+  inline bool operator<(const Context &b) const;
   /*!
    * \brief check if current context equals another one
    * \param b another context to compare
    * \return whether dev mask and id are same
    */
   inline bool operator==(const Context &b) const {
-    return dev_mask == b.dev_mask && dev_id == b.dev_id;
+    return dev_type == b.dev_type && dev_id == b.dev_id;
   }
   /*!
    * \brief check if current context not equals another one
@@ -112,8 +112,8 @@ struct Context {
    * \brief save the content into binary stream
    * \param strm the output stream
    */
-  void Save(dmlc::Stream *strm) const {
-    strm->Write(&dev_mask, sizeof(dev_mask));
+  inline void Save(dmlc::Stream *strm) const {
+    strm->Write(&dev_type, sizeof(dev_type));
     strm->Write(&dev_id, sizeof(dev_id));
   }
   /*!
@@ -121,18 +121,35 @@ struct Context {
    * \param strm the output stream
    * \return whether the load is successful
    */
-  bool Load(dmlc::Stream *strm) {
-    if (strm->Read(&dev_mask, sizeof(int32_t)) != sizeof(int32_t)) return false;
+  inline bool Load(dmlc::Stream *strm) {
+    if (strm->Read(&dev_type, sizeof(dev_type)) != sizeof(dev_type)) return false;
     if (strm->Read(&dev_id, sizeof(int32_t)) != sizeof(int32_t)) return false;
     return true;
   }
-  /*! \brief the maximal device mask, cpu = 1, gpu = 2 */
-  static const int32_t kMaxDevMask = 2;
+  /*! \brief the maximal device type */
+  static const int32_t kMaxDevType = 4;
+  /*! \brief the maximal device index */
+  static const int32_t kMaxDevID = 16;
   /*!
-   * \brief A dedicate ID for pinned cpu memory.
-   *  Any normal CPU ID should be less than this number.
+   * \brief Create a new context.
+   * \param dev_type device type.
+   * \param dev_id device id.
    */
-  static const int32_t kPinnedMemoryID = 16;
+  inline static Context Create(DeviceType dev_type, int32_t dev_id);
+  /*! \return CPU Context */
+  inline static Context CPU();
+  /*!
+   * Create a GPU context.
+   * \param dev_id the device id.
+   * \return GPU Context.
+   */
+  inline static Context GPU(int32_t dev_id);
+  /*!
+   * Create a pinned CPU context.
+   * \param dev_id the device id for corresponding GPU.
+   * \return Pinned CPU context.
+   */
+  inline static Context CPUPinned(int32_t dev_id);
 };
 
 /*!
@@ -157,6 +174,34 @@ struct RunContext {
 }  // namespace mxnet
 
 //! \cond Doxygen_Suppress
+namespace mxnet {
+// implementing Context
+inline bool Context::operator<(const Context &b) const {
+  if (dev_type == b.dev_type) {
+    return dev_id < b.dev_id;
+  } else {
+    return dev_type < b.dev_type;
+  }
+}
+inline Context Context::Create(DeviceType dev_type, int32_t dev_id) {
+  Context ctx;
+  ctx.dev_type = dev_type;
+  ctx.dev_id = dev_id;
+  return ctx;
+}
+inline Context Context::CPU() {
+  return Create(kCPU, 0);
+}
+
+inline Context Context::CPUPinned(int32_t dev_id) {
+  return Create(kCPUPinned, dev_id);
+}
+
+inline Context Context::GPU(int32_t dev_id) {
+  return Create(kGPU, dev_id);
+}
+}  // namespace mxnet
+
 namespace dmlc {
 // Add a few patches to support TShape in dmlc/parameter.
 DMLC_DECLARE_TYPE_NAME(mxnet::TShape, "Shape(tuple)");

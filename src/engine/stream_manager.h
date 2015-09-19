@@ -47,7 +47,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
     Context const& ctx) {
   RunContext ret;
   ret.stream = nullptr;
-  switch (ctx.dev_mask) {
+  switch (ctx.dev_mask()) {
     case cpu::kDevMask: break;
     case gpu::kDevMask: {
 #if MXNET_USE_CUDA
@@ -80,7 +80,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
     Context const& ctx) {
   RunContext ret;
   ret.stream = nullptr;
-  switch (ctx.dev_mask) {
+  switch (ctx.dev_mask()) {
     case cpu::kDevMask: break;
     case gpu::kDevMask: {
 #if MXNET_USE_CUDA

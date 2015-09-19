@@ -21,18 +21,18 @@ namespace mxnet {
 // consider change storage as a pure abstract class
 struct Storage::Impl {
   static constexpr size_t kPoolThreshold = 4096 * 1024 * 1024ul;
-  static constexpr size_t kMaxNumberOfDevices = Context::kMaxDevMask + 1;
-  static constexpr size_t kMaxNumberOfDeviceIDs = Context::kPinnedMemoryID + 1;
+  static constexpr size_t kMaxNumberOfDevices = Context::kMaxDevType + 1;
+  static constexpr size_t kMaxNumberOfDeviceIDs = Context::kMaxDevID + 1;
 
   template <class DeviceStorage>
   using CurrentStorageManager =
       storage::PooledStorageManager<DeviceStorage, kPoolThreshold>;
 
   static void ActivateDevice(Context ctx) {
-    switch (ctx.dev_mask) {
-      case cpu::kDevMask:
-        break;
-      case gpu::kDevMask:
+    switch (ctx.dev_type) {
+      case Context::kCPU: break;
+      case Context::kGPU:
+      case Context::kCPUPinned:
 #if MXNET_USE_CUDA
         CUDA_CALL(cudaSetDevice(ctx.dev_id));
 #else  // MXNET_USE_CUDA
@@ -57,26 +57,28 @@ Storage::Handle Storage::Alloc(size_t size, Context ctx) {
   hd.size = size;
   {
     std::lock_guard<std::mutex> lock{impl_->m};
-    auto&& device = impl_->storage_managers.at(ctx.dev_mask);
+    auto&& device = impl_->storage_managers.at(ctx.dev_type);
     auto&& device_id_it = device.at(ctx.dev_id);
     // Allocate device if necessary.
     if (!device_id_it) {
-      switch (ctx.dev_mask) {
-        case cpu::kDevMask:
-          if (ctx.dev_id == Context::kPinnedMemoryID) {
-            device_id_it = common::MakeUnique<
+      switch (ctx.dev_type) {
+        case Context::kCPU: {
+          device_id_it = common::MakeUnique<
               Storage::Impl::CurrentStorageManager<
-                storage::PinnedMemoryStorage>>();
-          } else {
-            device_id_it = common::MakeUnique<
-              Storage::Impl::CurrentStorageManager<
-                storage::CPUDeviceStorage>>();
-          }
+              storage::CPUDeviceStorage>>();
           break;
-        case gpu::kDevMask:
+        }
+        case Context::kCPUPinned: {
+          device_id_it = common::MakeUnique<
+              Storage::Impl::CurrentStorageManager<
+              storage::PinnedMemoryStorage>>();
+          break;
+        }
+        case Context::kGPU: {
           device_id_it = common::MakeUnique<Storage::Impl::CurrentStorageManager<
-                                              storage::GPUDeviceStorage>>();
+              storage::GPUDeviceStorage>>();
           break;
+        }
         default:
           LOG(FATAL) << "Unimplemented device";
       }
@@ -90,7 +92,7 @@ Storage::Handle Storage::Alloc(size_t size, Context ctx) {
 void Storage::Free(Storage::Handle handle) {
   std::lock_guard<std::mutex> lock{impl_->m};
   Impl::ActivateDevice(handle.ctx);
-  impl_->storage_managers.at(handle.ctx.dev_mask)
+  impl_->storage_managers.at(handle.ctx.dev_type)
       .at(handle.ctx.dev_id)
       ->Free(handle.dptr, handle.size);
 }

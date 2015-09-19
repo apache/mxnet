@@ -6,8 +6,8 @@ class Context(object):
     """Context representing device and device id in mxnet"""
     # static class variable
     default_ctx = None
-    devmask2type = {1: 'cpu', 2: 'gpu'}
-    devtype2mask = {'cpu': 1, 'gpu': 2}
+    devtype2str = {1: 'cpu', 2: 'gpu'}
+    devstr2type = {'cpu': 1, 'gpu': 2}
 
     def __init__(self, device_type, device_id=0):
         """Constructing a context.
@@ -21,10 +21,10 @@ class Context(object):
             the device id of the device, needed for GPU
         """
         if isinstance(device_type, Context):
-            self.device_mask = device_type.device_mask
+            self.device_typeid = device_type.device_typeid
             self.device_id = device_type.device_id
         else:
-            self.device_mask = Context.devtype2mask[device_type]
+            self.device_typeid = Context.devstr2type[device_type]
             self.device_id = device_id
         self._old_ctx = None
 
@@ -36,7 +36,7 @@ class Context(object):
         -------
         device_type : str
         """
-        return Context.devmask2type[self.device_mask]
+        return Context.devtype2str[self.device_typeid]
 
     def __str__(self):
         return 'Context(device_type=%s, device_id=%d)' % (

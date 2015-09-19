@@ -59,7 +59,7 @@ class NaiveEngine final : public Engine {
         NaiveEngine::OnComplete, nullptr);
     this->req_completed_ = false;
 
-    if (exec_ctx.dev_mask == gpu::kDevMask) {
+    if (exec_ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       size_t dev_id = static_cast<size_t>(exec_ctx.dev_id);
       mshadow::SetDevice<gpu>(exec_ctx.dev_id);

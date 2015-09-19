@@ -62,7 +62,7 @@ class NDArray {
    */
   inline TBlob data() const {
     return TBlob(static_cast<real_t*>(ptr_->shandle.dptr) + offset_, \
-                                      shape_, ptr_->shandle.ctx.dev_mask);
+                 shape_, ptr_->shandle.ctx.dev_mask());
   }
   /*!
    * \return the context of NDArray, this function is only valid when the NDArray is not empty
@@ -288,7 +288,12 @@ class NDArray {
         : static_data(true),
           delay_alloc(false) {
       var = Engine::Get()->NewVariable();
-      shandle.ctx = Context(data.dev_mask_, dev_id);
+      if (data.dev_mask_ == cpu::kDevMask) {
+        shandle.ctx = Context::CPU();
+      } else {
+        CHECK_EQ(data.dev_mask_, gpu::kDevMask);
+        shandle.ctx = Context::GPU(dev_id);
+      }
       shandle.dptr = data.dptr_;
       shandle.size = data.shape_.Size() * sizeof(real_t);
     }
