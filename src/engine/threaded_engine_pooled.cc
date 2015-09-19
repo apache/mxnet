@@ -84,7 +84,7 @@ class ThreadedEnginePooled : public ThreadedEngine {
    */
   void DoExecute(OprBlock* opr_block) {
     assert(opr_block->wait.load() == 0);
-    if (opr_block->ctx.dev_mask == gpu::kDevMask) {
+    if (opr_block->ctx.dev_mask() == gpu::kDevMask) {
       #if MXNET_USE_CUDA
       CUDA_CALL(cudaSetDevice(opr_block->ctx.dev_id));
       #else   // MXNET_USE_CUDA

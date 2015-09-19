@@ -20,10 +20,11 @@ namespace mxnet {
 class KVStoreLocal : public KVStore {
  public:
   KVStoreLocal() {
+    // TODO(tianqi, mu) allocate pinned per GPU
 #if MXNET_USE_CUDA
-    pinned_ctx_ = Context(cpu::kDevMask, Context::kPinnedMemoryID);
+    pinned_ctx_ = Context::CPUPinned(0);
 #else
-    pinned_ctx_ = Context(cpu::kDevMask, 0);
+    pinned_ctx_ = Context::CPU();
 #endif
     Clear();
   }
@@ -128,7 +129,7 @@ class KVStoreLocal : public KVStore {
 
     for (size_t i = 1; i < val.size(); ++i) {
       const auto& v = val[i];
-      if (v.ctx().dev_mask == cpu::kDevMask) {
+      if (v.ctx().dev_mask() == cpu::kDevMask) {
         buf.merged += v;
       } else {
         int id = v.ctx().dev_id;

@@ -195,14 +195,15 @@ int MXNDArrayCreateNone(NDArrayHandle *out) {
 
 int MXNDArrayCreate(const mx_uint *shape,
                     mx_uint ndim,
-                    int dev_mask,
+                    int dev_type,
                     int dev_id,
                     int delay_alloc,
                     NDArrayHandle *out) {
   API_BEGIN();
-  *out = new NDArray(TShape(shape, shape + ndim),
-                    Context(dev_mask, dev_id),
-                    delay_alloc != 0);
+  *out = new NDArray(
+      TShape(shape, shape + ndim),
+      Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
+      delay_alloc != 0);
   API_END();
 }
 
@@ -336,7 +337,7 @@ int MXNDArrayGetData(NDArrayHandle handle,
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
-    CHECK(arr->ctx().dev_mask == cpu::kDevMask)
+    CHECK(arr->ctx().dev_mask() == cpu::kDevMask)
         << "MXNDArrayGetData can only be called for NDArray on CPU";
     const TBlob &b = arr->data();
     CHECK(b.CheckContiguous());
@@ -348,16 +349,16 @@ int MXNDArrayGetData(NDArrayHandle handle,
 }
 
 int MXNDArrayGetContext(NDArrayHandle handle,
-                        int *out_dev_mask,
+                        int *out_dev_type,
                         int *out_dev_id) {
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
     const Context &ctx = arr->ctx();
-    *out_dev_mask = ctx.dev_mask;
+    *out_dev_type = ctx.dev_type;
     *out_dev_id = ctx.dev_id;
   } else {
-    *out_dev_mask = 0;
+    *out_dev_type = 0;
     *out_dev_id = 0;
   }
   API_END();
@@ -764,7 +765,7 @@ int MXExecutorOutputs(ExecutorHandle handle,
 }
 
 int MXExecutorBind(SymbolHandle symbol_handle,
-                   int dev_mask,
+                   int dev_type,
                    int dev_id,
                    mx_uint len,
                    NDArrayHandle *in_args,
@@ -775,7 +776,7 @@ int MXExecutorBind(SymbolHandle symbol_handle,
                    ExecutorHandle *out) {
   API_BEGIN();
   Symbol *symb = static_cast<Symbol*>(symbol_handle);
-  Context ctx = Context(dev_mask, dev_id);
+  Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
   NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args);
   NDArray **arg_grad_ptr = reinterpret_cast<NDArray**>(arg_grad_store);
   NDArray **aux_states_ptr = reinterpret_cast<NDArray**>(aux_states);
