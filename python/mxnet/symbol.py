@@ -1,6 +1,10 @@
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, fixme, too-many-arguments
-"""Symbol support of mxnet"""
+"""Symbolic support of mxnet.
+
+Symbolic API of MXNet
+
+"""
 from __future__ import absolute_import
 
 import ctypes
@@ -341,10 +345,10 @@ class Symbol(object):
         arg_key : str
             The name of argument, used for error message.
 
-        args : list of NDArray or dict of str->NDArray
+        args : list of NDArray or dict of str to NDArray
             Input arguments to the symbols.
             If type is list of NDArray, the position is in the same order of arg_names.
-            If type is dict of str->NDArray, then it maps the name of arguments
+            If type is dict of str to NDArray, then it maps the name of arguments
             to the corresponding NDArray,
 
         args_names : list of string
@@ -366,14 +370,14 @@ class Symbol(object):
                 raise ValueError('Length of %s do not match number of arguments' % arg_key)
             for narr in args:
                 if not isinstance(narr, NDArray):
-                    raise TypeError('Only Accept list of NDArrays or dict of str->NDArray')
+                    raise TypeError('Only Accept list of NDArrays or dict of str to NDArray')
                 arg_handles.append(narr.handle)
         elif isinstance(args, dict):
             for name in arg_names:
                 if name in arg_names:
                     narr = args[name]
                     if not isinstance(narr, NDArray):
-                        raise TypeError('Only Accept list of NDArrays or dict of str->NDArray')
+                        raise TypeError('Only Accept list of NDArrays or dict of str to NDArray')
                     arg_handles.append(narr.handle)
                 else:
                     if allow_missing:
@@ -381,7 +385,7 @@ class Symbol(object):
                     else:
                         raise ValueError('Must specify all the arguments in %s' % arg_key)
         else:
-            raise TypeError('Only Accept list of NDArrays or dict of str->NDArray')
+            raise TypeError('Only Accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles)
 
     def simple_bind(self, ctx, grad_req='write', **kwargs):
@@ -396,12 +400,12 @@ class Symbol(object):
         ctx : Context
             The device context the generated executor to run on.
         grad_req: string
-            {'write', 'add', 'null'}, or list of str or dict of str->str, optional
+            {'write', 'add', 'null'}, or list of str or dict of str to str, optional
             Specifies how we should update the gradient to the args_grad.
             - 'write' means everytime gradient is write to specified args_grad NDArray.
             - 'add' means everytime gradient is add to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
-        kwargs : dict of str->NDArray
+        kwargs : dict of str to NDArray
 
         Returns
         -------
@@ -436,34 +440,38 @@ class Symbol(object):
         ctx : Context
             The device context the generated executor to run on.
 
-        args : list of NDArray or dict of str->NDArray
+        args : list of NDArray or dict of str to NDArray
             Input arguments to the symbol.
+
             - If type is list of NDArray, the position is in the same order of list_arguments.
-            - If type is dict of str->NDArray, then it maps the name of arguments
-              to the corresponding NDArray,
+            - If type is dict of str to NDArray, then it maps the name of arguments
+              to the corresponding NDArray.
             - In either case, all the arguments must be provided.
 
-        args_grad : list of NDArray or dict of str->NDArray, optional
+        args_grad : list of NDArray or dict of str to NDArray, optional
             When specified, args_grad provide NDArrays to hold
             the result of gradient value in backward.
+
             - If type is list of NDArray, the position is in the same order of list_arguments.
-            - If type is dict of str->NDArray, then it maps the name of arguments
+            - If type is dict of str to NDArray, then it maps the name of arguments
               to the corresponding NDArray.
-            - When the type is dict of str->NDArray, users only need to provide the dict
+            - When the type is dict of str to NDArray, users only need to provide the dict
               for needed argument gradient.
               Only the specified argument gradient will be calculated.
 
-        grad_req : {'write', 'add', 'null'}, or list of str or dict of str->str, optional
+        grad_req : {'write', 'add', 'null'}, or list of str or dict of str to str, optional
             Specifies how we should update the gradient to the args_grad.
+
             - 'write' means everytime gradient is write to specified args_grad NDArray.
             - 'add' means everytime gradient is add to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
 
-        aux_states : list of NDArray, or dict of str->NDArray, optional
+        aux_states : list of NDArray, or dict of str to NDArray, optional
             Input auxiliary states to the symbol, only need to specify when
             list_auxiliary_states is not empty.
+
             - If type is list of NDArray, the position is in the same order of list_auxiliary_states
-            - If type is dict of str->NDArray, then it maps the name of auxiliary_states
+            - If type is dict of str to NDArray, then it maps the name of auxiliary_states
               to the corresponding NDArray,
             - In either case, all the auxiliary_states need to be provided.
 
@@ -579,7 +587,7 @@ def Variable(name):
 
 
 def Group(symbols):
-    """Create a symbolic variable that groups several symbols together.
+    """Create a symbol that groups symbols together.
 
     Parameters
     ----------
@@ -613,10 +621,11 @@ def load(fname):
     Parameters
     ----------
     fname : str
-        The name of the file
-        - s3://my-bucket/path/my-s3-symbol
-        - hdfs://my-bucket/path/my-hdfs-symbol
-        - /path-to/my-local-symbol
+        The name of the file, examples:
+
+        - `s3://my-bucket/path/my-s3-symbol`
+        - `hdfs://my-bucket/path/my-hdfs-symbol`
+        - `/path-to/my-local-symbol`
 
     Returns
     -------
