@@ -1,3 +1,4 @@
+# pylint: skip-file
 from .ndarray import NDArray, zeros
 
 def get_optimizer(name, batch_size=1, **kwargs):

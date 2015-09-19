@@ -1,3 +1,4 @@
+# pylint: skip-file
 import numpy as np
 from .ndarray import NDArray
 from . import random
