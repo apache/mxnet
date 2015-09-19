@@ -123,7 +123,7 @@ It is possible that one convolution has several implementations and users want t
   }
   ```
 
-* **Inplace Option:** To further save memory allocation cost, the operator could specify it could support inplace operation. This usually happens for element-wise operations when input tensor and output tensor are of the same shape. This could be specified by the following interface:
+* **Inplace Option:** To further save memory allocation cost, inplace update are welcomed. This usually happens for element-wise operations when input tensor and output tensor are of the same shape. This could be specified by the following interface:
   ```c++
   virtual std::vector<std::pair<int, void*>> ElewiseOpProperty::ForwardInplaceOption(
       const std::vector<int> &in_data,
@@ -140,7 +140,7 @@ It is possible that one convolution has several implementations and users want t
   ```
   The above tells the system the `in_data[0]` and `out_data[0]` tensors could share the same memory spaces during `Forward`, and so do `out_grad[0]` and `in_grad[0]` during `Backward`.
   
-  **ATTENTION:** Even with the above specification, it is *not* guaranteed that input and output tensors will share the same space. In fact, this is only a hint for the system for the final decision. However, in either case, such decision is completely transparent to user, so the actual `Forward` and `Backward` implementation does not need to consider that.
+  >**ATTENTION:** Even with the above specification, it is *not* guaranteed that input and output tensors will share the same space. In fact, this is only a hint for the system for the final decision. However, in either case, such decision is completely transparent to user, so the actual `Forward` and `Backward` implementation does not need to consider that.
 
 * **Expose Operator to Python:** Due to the restriction of c++ language, we need user to implement following interfaces:
   ```c++
