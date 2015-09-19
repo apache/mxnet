@@ -1,6 +1,4 @@
-from .ndarray import NDArray
-
-
+from .ndarray import NDArray, zeros
 def get_optimizer(name, **kwargs):
     """Optimizer factory
 
@@ -42,11 +40,14 @@ class SGD(object):
         self.momentum = kwargs["momentum"]
         self.wd = kwargs["weight_decay"]
         self.batch_size = 0
+        self.momentums = {}
 
-    def update(self, weight, grad, mom):
+    def update(self, weight, grad, states):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-        assert(isinstance(mom, NDArray))
+        if states not in self.momentums:
+            self.momentums[states] = zeros(grad.shape, grad.context)
+        mom = self.momentums[states]
         mom[:] *= self.momentum
         mom[:] += -self.lr * (grad / self.batch_size + self.wd * weight)
         weight[:] += mom

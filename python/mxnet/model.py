@@ -5,7 +5,7 @@ import time
 from .io import DataIter
 from .context import Context
 from .ndarray import empty, zeros
-from .initializer import xavier
+from .initializer import Initializer
 from .symbol import Symbol
 Base = object
 try:
@@ -16,7 +16,7 @@ except ImportError:
 
 
 class MXNetModel(object):
-    def __init__(self, ctx, symbol, optimizer, num_round, batch_size, initializer=xavier, **kwargs):
+    def __init__(self, ctx, symbol, optimizer, num_round, batch_size, initializer=Initializer(init_type="xavier"), **kwargs):
         if not isinstance(symbol, Symbol):
             raise TypeError("symbol")
         if num_round <= 0:
@@ -38,8 +38,7 @@ class MXNetModel(object):
         # init
         arg_narrays, grad_narrays = self.executor.list_arguments()
         inputs = dict(zip(self.symbol.list_arguments(), arg_narrays))
-        momentum_narrays = [zeros(item.shape, self.ctx) for item in grad_narrays]
-        arg_blocks = list(zip(arg_narrays, grad_narrays, momentum_narrays))
+        arg_blocks = list(zip(arg_narrays, grad_narrays, self.symbol.list_arguments()))
         # only support 1 output now
         # find label
         label_node_name = ""
@@ -51,15 +50,8 @@ class MXNetModel(object):
                 data_node_name = name
         # single output
         out_ndarray = self.executor.outputs[0]
-        for name, narray in inputs.items():
-            if "weight" in name:
-                self.initializer(narray)
-            if "bias" in name:
-                narray[:] = 0.0
-            if "gamma" in name:
-                narray[:] = 1.0
-            if "beta" in name:
-                narray[:] = 0.0
+        for state, narray in inputs.items():
+            self.initializer(state, narray)
         for i in range(self.num_round):
             print("Epoch %d:" % i)
             #train
@@ -78,8 +70,8 @@ class MXNetModel(object):
                 train_nbatch += 1
                 self.executor.backward()
 
-                for weight, grad, mom in arg_blocks:
-                    self.optimizer.update(weight, grad, mom)
+                for weight, grad, state in arg_blocks:
+                    self.optimizer.update(weight, grad, state)
                 toc = time.time()
             print("Time: %.3f" % (toc - tic))
 
@@ -105,7 +97,7 @@ class MXNetModel(object):
     def draw(self):
         raise NotImplementedError("TODO")
 
-
+"""
 class MXNetClassifier(MXNetModel):
     def __init__(self, ctx, symbol, optimizer, num_round, batch_size, initializer=xavier, **kwargs):
         super(MXNetClassifier, self).__init__(ctx, symbol, optimizer,
@@ -117,4 +109,4 @@ class MXNetClassifier(MXNetModel):
         pass
     def score(self, X, y):
         pass
-
+"""
