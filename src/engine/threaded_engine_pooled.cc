@@ -28,7 +28,12 @@ class ThreadedEnginePooled : public ThreadedEngine {
       io_thread_pool_(1, [this]() { ThreadWorker(&io_task_queue_); }) {}
 
   ~ThreadedEnginePooled() noexcept(false) {
-    Finalize();
+    // wait until all the tasks are completed.
+    // TODO(hotpxl) think if this is the correct thing to do
+    this->WaitForAll();
+    streams_.Finalize();
+    task_queue_.SignalForKill();
+    io_task_queue_.SignalForKill();
   }
 
  protected:
@@ -39,17 +44,6 @@ class ThreadedEnginePooled : public ThreadedEngine {
       DoPushToQueue(opr_block);
     }
   }
-  // finalize the internal resources
-  void Finalize() override {
-    // wait until all the tasks are completed.
-    // TODO(hotpxl) think if this is the correct thing to do
-    this->WaitForAll();
-    streams_.Finalize();
-    task_queue_.SignalForKill();
-    io_task_queue_.SignalForKill();
-    ThreadedEngine::Finalize();
-  }
-
 
  private:
   /*! \brief Concurrency for thread pool */

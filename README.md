@@ -16,26 +16,18 @@ Contents
 
 Features
 --------
-* Lightweight: small but sharp knife
-  - mxnet contains concise implementation of state-of-art deep learning models
-  - The project maintains a minimum dependency that makes it portable and easy to build
-* Scalable and beyond
-  - The package scales to multiple GPUs already with an easy to use kvstore.
-  - The same code can be ported to distributed version when the distributed kvstore is ready.
-* Multi-GPU NDArray/Tensor API with auto parallelization
-  - The package supports a flexible ndarray interface that runs on both CPU and GPU, more importantly
-    automatically parallelize the computation for you.
+* To Mix and Maximize
+  - Mix all flavors of programming models to maximize flexiblity and efficiency.
+* Lightweight and scalable
+  - Minimum build dependency, scales to multi-GPU and ready toward distributed.
+* Auto parallelization
+  - Write numpy-style ndarray GPU programs, which will be automatically parallelized.
 * Language agnostic
-  - The package currently support C++ and python, with a clean C API.
-  - This makes the package being easily portable to other languages and platforms.
+  - With support for python, c++, more to come.
 * Cloud friendly
-  - MXNet is ready to work with cloud storages including S3, HDFS, AZure for data source and model saving.
-  - This means you do can put data on S3 directly using it to train your deep model.
-* Easy extensibility with no requirement on GPU programming
-  - The package can be extended in several scopes, including python, c++.
-  - In all these levels, developers can write numpy style expressions, either via python
-    or [mshadow expression template](https://github.com/dmlc/mshadow).
-  - It brings concise and readable code, with performance matching hand crafted kernels
+  - Directly load/save from S3, HDFS, AZure
+* Easy extensibility
+  - Extending no requirement on GPU programming.
 
 Bug Reporting
 -------------

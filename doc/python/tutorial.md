@@ -1,18 +1,19 @@
-# MXNet Python Guide
+MXNet Python Overview Tutorial
+==============================
 
 This page gives a general overview of MXNet's python package. MXNet contains a
 mixed flavor of elements to bake flexible and efficient
 applications. There are mainly three concepts:
 
-* Numpy style [NDArray](#ndarray-numpy-style-tensor-computations-on-cpus-and-gpus)
+* [NDArray](#ndarray-numpy-style-tensor-computations-on-cpus-and-gpus)
   offers matrix and tensor computations on both CPU and GPU, with automatic
   parallelization
-
 * [Symbol](#symbol-and-automatic-differentiation) makes defining a neural
   network extremely easy, and provides automatic differentiation.
-
 * [KVStore](#distributed-key-value-store) easy the data synchronization between
   multi-GPUs and multi-machines.
+
+You can find more information at [Python Package Overview Page](index.md)
 
 ## NDArray: Numpy style tensor computations on CPUs and GPUs
 

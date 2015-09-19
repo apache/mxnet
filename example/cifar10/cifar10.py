@@ -1,11 +1,16 @@
 # pylint: skip-file
-import numpy as np
-import mxnet as mx
-import copy
-import sys
+import sys, os
+# code to directly use library
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, "../../python/")
 sys.path.append("../../tests/python/common")
+# import library
+import mxnet as mx
 import get_data
 import time
+import numpy as np
+import copy
+
 
 """
 CXXNET Result:

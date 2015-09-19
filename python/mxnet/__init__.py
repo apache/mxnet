@@ -24,15 +24,3 @@ from . import initializer
 import atexit
 
 __version__ = "0.1.0"
-
-def finalize():
-    """Stop all the components in mxnet.
-
-    There is no need to call this function.
-    This function will be automatically called at module exit.
-    """
-    # pylint: disable=protected-access
-    base.check_call(base._LIB.MXFinalize())
-    kv._cleanup()
-
-atexit.register(finalize)

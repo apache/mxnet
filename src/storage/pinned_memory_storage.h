@@ -41,7 +41,11 @@ inline void* PinnedMemoryStorage::Alloc(size_t size) {
 
 inline void PinnedMemoryStorage::Free(void* ptr) {
 #if MXNET_USE_CUDA
-  CUDA_CALL(cudaFreeHost(ptr));
+  cudaError_t err = cudaFreeHost(ptr);
+  // ignore unloading error, as memory has already been recycled
+  if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
+    LOG(FATAL) << "CUDA: " << cudaGetErrorString(err);
+  }
 #else   // MXNET_USE_CUDA
   LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA

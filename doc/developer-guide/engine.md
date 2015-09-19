@@ -1,17 +1,16 @@
 Execution Engine
 ================
-
 MXNet's engine is not only for deep learning or any domain-specific problem. Rather, it is designed to face a general problem: execute a bunch of functions following their dependencies. Execution of any two functions with dependencies should be serialized. Functions with no dependencies *may* be executed in parallel to boost performance.
 
 Interface
-==============
+---------
 The core interface of execution engine is:
 ```c++
 virtual void Push(Fn exec_fun, Context exec_ctx,
-                  std::vector<Variable> const& use_vars,
-                  std::vector<Variable> const& mutate_vars) = 0;
+                  std::vector<VarHandle> const& const_vars,
+                  std::vector<VarHandle> const& mutate_vars) = 0;
 ```
-This API allows users to push a function (`exec_fun`), along with its context information and dependencies to the engine. The `exec_ctx` is the context information in which the `exec_fun` should be executed. `use_vars` denotes the variables that the function would read from while `mutate_vars` are the variables that to be modified. Regardless of the details that would be explained later, the engine guarantees following order:
+This API allows users to push a function (`exec_fun`), along with its context information and dependencies to the engine. The `exec_ctx` is the context information in which the `exec_fun` should be executed. `const_vars` denotes the variables that the function would read from while `mutate_vars` are the variables that to be modified. Regardless of the details that would be explained later, the engine guarantees following order:
 
 >*The execution of any two functions that any one of them modifies at least one common variable would be serialized in their push order.*
 
@@ -42,9 +41,9 @@ Context
 --------
 User could specify the `Context` of the function to be executed within. This usually includes whether the function should be run on CPU or GPU, and if GPU, which GPU to use. `Context` is different from `RunContext`. `Context` contains device type (gpu/cpu) and device id while `RunContext` contains information that could only be decided during runtime like on which stream the function should be executed.
 
-Variable
+VarHandle
 --------
-`Variable` is used to specify the dependencies of functions. The design of MXNet engine is to decouple it with other modules in MXNet. So `Variable` is like an engine-given token for user to represent the external resources the functions may use or modified. It is designed to be light, so create, delete or copy a variable will incur little overhead. Upon pushing functions, users need to specify the variables that will be used (immutable) in `use_vars` vector and the variables to be modified (mutable) in `mutate_vars` vector. The only rule for the engine to resolve the dependencies among functions pushed is:
+`VarHandle` is used to specify the dependencies of functions. The design of MXNet engine is to decouple it with other modules in MXNet. So `VarHandle` is like an engine-given token for user to represent the external resources the functions may use or modified. It is designed to be light, so create, delete or copy a variable will incur little overhead. Upon pushing functions, users need to specify the variables that will be used (immutable) in `const_vars` vector and the variables to be modified (mutable) in `mutate_vars` vector. The only rule for the engine to resolve the dependencies among functions pushed is:
 
 >*The execution of any two functions that any one of them modifies at least one common variable would be serialized in their push order.*
 
@@ -65,15 +64,23 @@ If you want to wait for all `Fn` that involves (use/mutate) a certain variable t
 If you want to wait for all pushed `Fn` to be finished, use `WaitForAll()` API.
 
 Save Object Creation Cost
-----------------------------
+-------------------------
 In some cases, you need to push several functions to the engine but for tons of times. If the computation of these functions are light, the overhead of copying lambdas and creating use/mutate variable lists would become relatively high. We provide an API to create an `OprHandle` beforehand:
 ```c++
 virtual OprHandle NewOperator(AsyncFn fn,
-                              std::vector<Variable> const& use_vars,
-                              std::vector<Variable> const& mutate_vars) = 0;
+                              std::vector<VarHandle> const& const_vars,
+                              std::vector<VarHandle> const& mutate_vars) = 0;
 ```
 So you could keep pushing the `OprHandle` without repeatedly creating them:
 ```c++
 virtual void Push(OprHandle op, Context exec_ctx) = 0;
 ```
 To delete it, simply call `DeleteOperator(OprHandle op)` but please make sure the operator has finished computing.
+
+
+API Reference
+-------------
+```eval_rst
+.. doxygenclass:: mxnet::Engine
+   :members:
+```
