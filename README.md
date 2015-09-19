@@ -21,7 +21,7 @@ Features
 * Lightweight and scalable
   - Minimum build dependency, scales to multi-GPU and ready toward distributed.
 * Auto parallelization
-  - Write serial ndarray GPU programs, and let the engine parallelize it for you.
+  - Write numpy-style ndarray GPU programs, which will be automatically parallelized.
 * Language agnostic
   - With support for python, c++, more to come.
 * Cloud friendly
