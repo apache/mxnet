@@ -245,11 +245,10 @@ class Symbol(object):
         else:
             keys = []
             for k, v in kwargs.items():
-                keys.append(c_str(k))
-                if not isinstance(v, tuple):
-                    raise TypeError('Argument need to be shapes(tuple)')
-                sdata.extend(v)
-                indptr.append(len(sdata))
+                if isinstance(v, tuple):
+                    keys.append(c_str(k))
+                    sdata.extend(v)
+                    indptr.append(len(sdata))
         arg_shape_size = mx_uint()
         arg_shape_ndim = ctypes.POINTER(mx_uint)()
         arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
@@ -405,31 +404,31 @@ class Symbol(object):
             - 'write' means everytime gradient is write to specified args_grad NDArray.
             - 'add' means everytime gradient is add to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
-        kwargs : dict of str to NDArray
+        kwargs : dict of str->shape
+            Input shape dictionary, name->shape
 
         Returns
         -------
         executor : mxnet.Executor
             The generated Executor
         """
-        input_shapes = dict((name, arr.shape) for name, arr in kwargs.items())
         # pylint: disable=unused-variable
-        arg_shapes, out_shapes, aux_shapes = self.infer_shape(**input_shapes)
+        arg_shapes, out_shapes, aux_shapes = self.infer_shape(**kwargs)
         # pylint: enable=unused-variable
         if arg_shapes == None:
             raise ValueError("Input node is not complete")
         # alloc space
-        arg_ndarrays = []
-        for name, shape in zip(self.list_arguments(), arg_shapes):
-            if name in kwargs:
-                arg_ndarrays.append(kwargs[name])
+        arg_ndarrays = [zeros(shape, ctx) for shape in arg_shapes]
+        req = {}
+        for state in self.list_arguments():
+            if "data" in state:
+                req[state] = "null"
             else:
-                arg_ndarrays.append(zeros(shape, ctx))
-        # TODO(bing): specail treat input data grad
+                req[state] = grad_req
         # TODO(bing): not generate grad case
         grad_ndarrays = [zeros(shape, ctx) for shape in arg_shapes]
         aux_ndarrays = [zeros(shape, ctx) for shape in aux_shapes]
-        executor = self.bind(ctx, arg_ndarrays, grad_ndarrays, grad_req, aux_ndarrays)
+        executor = self.bind(ctx, arg_ndarrays, grad_ndarrays, req, aux_ndarrays)
         return executor
 
     def bind(self, ctx, args, args_grad=None, grad_req='write', aux_states=None):
@@ -522,7 +521,7 @@ class Symbol(object):
                     req_array.append(mx_uint(req_map[grad_req[name]]))
                 else:
                     req_array.append(mx_uint(0))
-            req_array = c_array(mx_uint, req_array)
+            reqs_array = c_array(mx_uint, req_array)
 
         handle = ExecutorHandle()
         check_call(_LIB.MXExecutorBind(self.handle,
