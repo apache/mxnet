@@ -291,12 +291,6 @@ void ThreadedEngine::WaitForAll() {
   finished_cv_.wait(lock, [this]() { return pending_.load() == 0; });
 }
 
-void ThreadedEngine::Finalize() {
-  // unlock all threads
-  pending_.store(0);
-  finished_cv_.notify_all();
-}
-
 inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   // Mark complete for read variables
   for (auto&& i : threaded_opr->const_vars) {

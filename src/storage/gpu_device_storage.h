@@ -45,7 +45,12 @@ inline void* GPUDeviceStorage::Alloc(size_t size) {
 
 inline void GPUDeviceStorage::Free(void* ptr) {
 #if MXNET_USE_CUDA
-  CUDA_CALL(cudaFree(ptr));
+  // throw special exception for caller to catch.
+  cudaError_t err = cudaFree(ptr);
+  // ignore unloading error, as memory has already been recycled
+  if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
+    LOG(FATAL) << "CUDA: " << cudaGetErrorString(err);
+  }
 #else   // MXNET_USE_CUDA
   LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA

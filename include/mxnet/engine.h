@@ -199,14 +199,6 @@ class Engine {
     ret.param_ = param;
     return ret;
   }
-  // friend function
-  friend void ::mxnet::Finalize();
-  /*!
-   * \brief Idempotent Finalize function.
-   * This function will signal engine to release all resources.
-   * It is safe to call this function multiple times.
-   */
-  virtual void Finalize() = 0;
 };  // class Engine
 #endif  // DMLC_USE_CXX11
 }  // namespace mxnet

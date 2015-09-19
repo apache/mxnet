@@ -6,6 +6,7 @@ import ctypes
 from .ndarray import NDArray
 from .base import _LIB
 from .base import check_call, c_array, NDArrayHandle
+import atexit
 
 __all__ = ['start', 'init', 'push', 'pull', 'set_updater']
 
@@ -218,3 +219,4 @@ def _cleanup():
     global _updater_func
     _updater_func = None
 
+atexit.register(_cleanup)

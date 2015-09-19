@@ -64,11 +64,6 @@ typedef mshadow::TShape TShape;
 /*! \brief storage container type */
 typedef mshadow::TBlob TBlob;
 
-/*!
- * \brief Finalize and shutdown all related modules of mxnet.
- *  Call this function at end of program to ensure correct shutdown.
- */
-void Finalize();
 
 /*! \brief Context information about the execution enviroment */
 struct Context {

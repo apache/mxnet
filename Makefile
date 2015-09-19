@@ -70,7 +70,7 @@ ifneq ($(ADD_LDFLAGS), NONE)
 	LDFLAGS += $(ADD_LDFLAGS)
 endif
 
-.PHONY: clean all test lint doc
+.PHONY: clean all test lint doc clean_all
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
@@ -116,6 +116,8 @@ doxygen:
 
 clean:
 	$(RM) -r build lib/lib* *~ */*~ */*/*~ */*/*/*~
+
+clean_all: clean
 	cd $(DMLC_CORE); make clean; cd -
 
 -include build/*.d
