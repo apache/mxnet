@@ -173,10 +173,10 @@ test_dataiter = mx.io.ImageRecordIter(
         nthread=1)
 
 def test_cifar():
-    sgd = mx.optimizer.get_optimizer(name="sgd", learning_rate=0.05, momentum=0.9,
-            weight_decay=0.00001)
-    model = mx.model.MXNetModel(ctx=mx.gpu(), symbol=loss, data=(batch_size, 3, 28, 28),
-            optimizer=sgd, num_round = epoch, batch_size = batch_size)
+    model = mx.model.MXNetModel(ctx=mx.gpu(),
+            symbol=loss, data=(batch_size, 3, 28, 28),
+            optimizer="sgd", num_round = epoch, batch_size = batch_size,
+            learning_rate=0.05, momentum=0.9, weight_decay=0.00001)
     model.fit(X=train_dataiter, eval_set=test_dataiter, eval_metric=CalAcc)
 
 

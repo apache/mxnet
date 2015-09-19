@@ -1,11 +1,14 @@
 from .ndarray import NDArray, zeros
-def get_optimizer(name, **kwargs):
+
+def get_optimizer(name, batch_size=1, **kwargs):
     """Optimizer factory
 
     Parameters
     ----------
     name: str
         Name of required optimizer
+    batch_size: int
+        batch size, used to normalize gradient
     kwargs: dict
         Parameters for optimizer
 
@@ -15,34 +18,43 @@ def get_optimizer(name, **kwargs):
 
     """
     if name == "sgd" or name == "SGD":
-        return SGD(**kwargs)
+        return SGD(batch_size=batch_size, **kwargs)
     else:
         raise Exception("Not implemented")
 
-
 class SGD(object):
-    """A very simple SGD optimizer with Nesterov method
+    """A very simple SGD optimizer with Nesterov method"""
+    def __init__(self, learning_rate=0.01, momentum=0.9, weight_decay=0.0001, batch_size=1, **kwargs):
+        """
+        Parameter
+        ----------
+        learning_rate: float
+            learning_rate value
+        momentum: float
+            momentum value
+        weight_decay: float
+            L2 regularization coefficient
+        batch_size: int
+            batch size, used to norm gradient
+        """
 
-    Parameters
-    ----------
-    learning_rate: float
-        learning_rate value
-    momentum: float
-        momentum value
-    weight_decay: float
-        L2 regularization coefficient
-    """
-    def __init__(self, **kwargs):
-        assert("learning_rate" in kwargs)
-        assert("momentum" in kwargs)
-        assert("weight_decay" in kwargs)
-        self.lr = kwargs["learning_rate"]
-        self.momentum = kwargs["momentum"]
-        self.wd = kwargs["weight_decay"]
-        self.batch_size = 0
+        self.lr = learning_rate
+        self.momentum = momentum
+        self.wd = weight_decay
+        self.batch_size = batch_size
         self.momentums = {}
 
-    def update(self, weight, grad, states):
+    def __call__(self, weight, grad, states):
+        """
+        Parameter
+        ---------
+        weight: NDArray
+            weight ndarray
+        grad: NDArray
+            grad ndarray
+        states: str
+            name of weight
+        """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         if states not in self.momentums:

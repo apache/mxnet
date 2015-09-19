@@ -5,8 +5,10 @@ import time
 from .io import DataIter
 from .context import Context
 from .ndarray import empty, zeros
-from .initializer import Initializer
+from .initializer import Xavier
 from .symbol import Symbol
+from .optimizer import get_optimizer
+
 Base = object
 try:
     from sklearn.base import BaseEstimator
@@ -16,15 +18,34 @@ except ImportError:
 
 
 class MXNetModel(object):
-    def __init__(self, ctx, symbol, optimizer, num_round, batch_size, initializer=Initializer(init_type="xavier"), **kwargs):
+    """MXNet model"""
+    def __init__(self, ctx, symbol, num_round, batch_size, optimizer="sgd", initializer=Xavier(), **kwargs):
+        """Constructor
+
+        Parameter
+        ---------
+        ctx: Context or list of Context
+            running context for model, if is a list, run a multiply device
+        symbol: Symbol
+            symbol of the model
+        num_round: int
+            training num round
+        batch_size: int
+            batch size
+        optimizer: str
+            optimizer used to train the model
+        initializer: Initializer
+            initializer used to initialize weight
+        kwargs: dict
+            optimizer arguments and input data shape
+        """
         if not isinstance(symbol, Symbol):
             raise TypeError("symbol")
         if num_round <= 0:
             raise ValueError("num_round must be greater than 0")
         self.ctx = ctx
-        self.optimizer = optimizer
+        self.optimizer = get_optimizer(name=optimizer, batch_size=batch_size, **kwargs)
         self.num_round = num_round
-        self.optimizer.batch_size = batch_size
         self.initializer = initializer
         self.shape_dict = kwargs
         self.symbol = symbol
@@ -34,6 +55,19 @@ class MXNetModel(object):
             raise ValueError("input shape is incomplete")
 
     def fit(self, X, y=None, eval_set=None, eval_metric=None):
+        """fit the model
+
+        Parameter
+        ---------
+        X: DataIter or numpy.ndarray(TODO)
+            training data
+        y: None or numpy.ndarray
+            if X is DataIter no need to set (use None)
+            if X is numpy.ndarray y is required to set
+        eval_set: DataIter or numpy.ndarray pair (TODO)
+            if eval_set is numpy.ndarray pair, it should be (valid_data, valid_label)
+        eval_metric: function
+        """
         self.executor = self.symbol.simple_bind(ctx=self.ctx, **self.shape_dict)
         # init
         arg_narrays, grad_narrays = self.executor.list_arguments()
@@ -50,6 +84,7 @@ class MXNetModel(object):
                 data_node_name = name
         # single output
         out_ndarray = self.executor.outputs[0]
+        pred = zeros(out_ndarray.shape)
         for state, narray in inputs.items():
             self.initializer(state, narray)
         for i in range(self.num_round):
@@ -61,21 +96,22 @@ class MXNetModel(object):
             val_nbatch = 0
             tic = time.time()
             for data, label in X:
-                # todo(xxx): need perf
                 label = label.asnumpy().flatten()
                 inputs[label_node_name][:] = label
                 inputs[data_node_name][:] = data
                 self.executor.forward()
-                train_acc += eval_metric(out_ndarray.asnumpy(), label)
+                pred[:] = out_ndarray
                 train_nbatch += 1
                 self.executor.backward()
 
                 for weight, grad, state in arg_blocks:
-                    self.optimizer.update(weight, grad, state)
+                    self.optimizer(weight, grad, state)
+
+                train_acc += eval_metric(pred.asnumpy(), label)
                 toc = time.time()
             print("Time: %.3f" % (toc - tic))
 
-                # eval
+            # eval
             for data, label in eval_set:
                 label = label.asnumpy().flatten()
                 inputs[data_node_name][:] = data
@@ -88,13 +124,34 @@ class MXNetModel(object):
             X.reset()
             eval_set.reset()
 
-    def save(self):
+    def save(self, path):
+        """save model
+
+        Parameter
+        ---------
+        path: str
+            saving path
+        """
         raise NotImplementedError("TODO")
 
-    def load(self):
+    def load(self, path):
+        """load model
+
+        Parameter
+        ---------
+        path: str
+            saving path
+        """
         raise NotImplementedError("TODO")
 
-    def draw(self):
+    def draw(self, path):
+        """draw model
+
+        Parameter
+        ---------
+        path: str
+            saving path
+        """
         raise NotImplementedError("TODO")
 
 """
