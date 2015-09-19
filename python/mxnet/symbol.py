@@ -525,8 +525,8 @@ class Symbol(object):
 
         handle = ExecutorHandle()
         check_call(_LIB.MXExecutorBind(self.handle,
-                                       mx_uint(ctx.device_mask),
-                                       mx_uint(ctx.device_id),
+                                       ctx.device_typeid,
+                                       ctx.device_id,
                                        len(args),
                                        args_handle,
                                        args_grad_handle,
