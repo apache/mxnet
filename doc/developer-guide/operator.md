@@ -24,9 +24,11 @@ virtual void Forward(const OpContext &ctx,
     std::vector<Resource> requested;
   }
   ```
+  
   , where you could get whether the operator is in train/test phase; which device the operator should be run on (in `run_ctx`) and requested resources (covered in the following sections).
 * `in_data` and `out_data` represent the input and output tensors respectively. All the tensor spaces have been allocated by the system.
 * `req` denotes how the computation results are written into the `out_data`. In other word, `req.size() == out_data.size()` and `req[i]` corresponds to the write type of `out_data[i]`. The `OpReqType` is defined as:
+
   ```c++
   enum OpReqType {
     kNullOp,
