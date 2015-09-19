@@ -70,8 +70,10 @@ It is possible that one convolution has several implementations and users want t
 
 * **Request Resources:** Operation like `cudnnConvolutionForward` need a workspace to help computation. It is would be nice if the system could manage that since the system then could do optimizations like reuse the space and so on. MXNet defines two interfaces to achieve this:
   ```c++
-  virtual std::vector<ResourceRequest> ForwardResource(const std::vector<TShape> &in_shape) const;
-  virtual std::vector<ResourceRequest> BackwardResource(const std::vector<TShape> &in_shape) const;
+  virtual std::vector<ResourceRequest> ForwardResource(
+      const std::vector<TShape> &in_shape) const;
+  virtual std::vector<ResourceRequest> BackwardResource(
+      const std::vector<TShape> &in_shape) const;
   ```
   The `ResourceRequest` structure (in `resource.h`) currently contains only a type flag:
   ```c++
