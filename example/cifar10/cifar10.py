@@ -181,8 +181,8 @@ momentum_narrays = [mx.nd.zeros(item.shape, mx.gpu()) for item in grad_narrays]
 block = list(zip(grad_narrays, arg_narrays, momentum_narrays))
 
 np.random.seed(0)
-# set random weight
-x = mx.random.uniform(-1, 1, (10,),mx.gpu())
+
+
 for name, narray in inputs.items():
     if "weight" in name:
         narray[:] = np.random.uniform(-0.1, 0.1, narray.shape)

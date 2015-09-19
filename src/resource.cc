@@ -29,7 +29,18 @@ class ResourceManagerImpl : public ResourceManager {
         Context(cpu::kDevMask, 0), cpu_temp_space_copy_));
   }
   ~ResourceManagerImpl() {
-    Finalize();
+    // need explicit delete, before engine get killed
+    cpu_rand_.reset(nullptr);
+    cpu_space_.reset(nullptr);
+#if MXNET_USE_CUDA
+    gpu_rand_.Clear();
+    gpu_space_.Clear();
+#endif
+    if (engine_ref_ != nullptr) {
+      engine_ref_->WaitForAll();
+      // release the reference to engine.
+      engine_ref_ = nullptr;
+    }
   }
 
   // request resources
@@ -74,22 +85,6 @@ class ResourceManagerImpl : public ResourceManager {
 #endif
   }
 
- protected:
-  void Finalize() override {
-    // need explicit delete, before engine get killed
-    cpu_rand_.reset(nullptr);
-    cpu_space_.reset(nullptr);
-#if MXNET_USE_CUDA
-    gpu_rand_.Clear();
-    gpu_space_.Clear();
-#endif
-    if (engine_ref_ != nullptr) {
-      engine_ref_->WaitForAll();
-      // release the reference to engine.
-      engine_ref_ = nullptr;
-    }
-  }
-
  private:
   /*! \brief Maximum number of GPUs */
   static constexpr std::size_t kMaxNumGPUs = 16;
@@ -115,7 +110,7 @@ class ResourceManagerImpl : public ResourceManager {
     }
     ~ResourceRandom() {
       mshadow::Random<xpu> *r = prnd;
-      Engine::Get()->DeleteVariable(          
+      Engine::Get()->DeleteVariable(
           [r](RunContext rctx){ delete r; }, ctx, resource.var);
     }
     // set seed to a PRNG

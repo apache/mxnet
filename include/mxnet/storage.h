@@ -63,14 +63,6 @@ class Storage {
    */
   static std::shared_ptr<Storage> _GetSharedRef();
 
- protected:
-  /*!
-   * \brief Idempotent Finalize function.
-   * This function will signal engine to release all resources.
-   * It is safe to call this function multiple times.
-   */
-  virtual void Finalize();
-
  private:
   /*!
    * \brief Hidden constructors.

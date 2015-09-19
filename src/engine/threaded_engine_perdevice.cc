@@ -37,7 +37,9 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     // GPU tasks will be created lazily
   }
   ~ThreadedEnginePerDevice() noexcept(false) {
-    Finalize();
+    gpu_normal_workers_.Clear();
+    gpu_copy_workers_.Clear();
+    cpu_worker_.reset(nullptr);
   }
 
  protected:
@@ -62,13 +64,6 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         block->task_queue.Push(opr_block);
       }
     }
-  }
-  // finalize the internal resources
-  void Finalize() override {
-    gpu_normal_workers_.Clear();
-    gpu_copy_workers_.Clear();
-    cpu_worker_.reset(nullptr);
-    ThreadedEngine::Finalize();
   }
 
  private:

@@ -52,10 +52,6 @@ struct Storage::Impl {
 
 Storage::Handle Storage::Alloc(size_t size, Context ctx) {
   // space already recycled, ignore request
-  if (impl_.get() == nullptr) {
-    LOG(FATAL) << "Alloc called after finalize";
-  }
-
   Handle hd;
   hd.ctx = ctx;
   hd.size = size;
@@ -92,9 +88,6 @@ Storage::Handle Storage::Alloc(size_t size, Context ctx) {
 }
 
 void Storage::Free(Storage::Handle handle) {
-  // space already recycled, ignore request
-  if (impl_.get() == nullptr) return;
-
   std::lock_guard<std::mutex> lock{impl_->m};
   Impl::ActivateDevice(handle.ctx);
   impl_->storage_managers.at(handle.ctx.dev_mask)
@@ -116,8 +109,5 @@ Storage* Storage::Get() {
 
 Storage::Storage() : impl_{new Impl{}} {}
 
-void Storage::Finalize() {
-  impl_.reset(nullptr);
-}
 
 }  // namespace mxnet

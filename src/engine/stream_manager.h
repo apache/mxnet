@@ -8,6 +8,7 @@
 #include <mxnet/base.h>
 #include <cstddef>
 #include <array>
+#include <string>
 #include <mutex>
 #include "../common/cuda_utils.h"
 
@@ -117,7 +118,7 @@ void StreamManager<kNumGpus, kStreams>::Finalize() {
 #if MXNET_USE_CUDA
   for (std::size_t i = 0; i < kNumGpus; ++i) {
     if (gpu_cnt_.at(i) != -1) {
-      for (auto&& j : gpu_streams_.at(i)) {        
+      for (auto&& j : gpu_streams_.at(i)) {
         // Catch exception for CUDA driver shutdown
         try {
           mshadow::DeleteStream<gpu>(j);
