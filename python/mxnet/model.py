@@ -1,11 +1,12 @@
-# pylint: skip-file
+# pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, no-member
+# pylint: disable=too-many-branches, too-many-statements, unused-argument, unused-variable
+"""MXNet model module"""
 import numpy as np
 import time
 from . import io
 from . import nd
 from . import optimizer as opt
 from . import metric
-from .symbol import Symbol
 from .context import Context
 from .initializer import Xavier
 
@@ -20,7 +21,7 @@ except ImportError:
 
 
 def _train(symbol, ctx, input_shape,
-           arg_params, aux_states,
+           arg_params, aux_params,
            begin_round, end_round, optimizer,
            train_data, eval_data=None, eval_metric=None,
            iter_end_callback=None, verbose=True):
@@ -40,7 +41,7 @@ def _train(symbol, ctx, input_shape,
     arg_params : dict of str to NDArray
         Model parameter, dict of name to NDArray of net's weights.
 
-    aux_states : dict of str to NDArray
+    aux_params : dict of str to NDArray
         Model parameter, dict of name to NDArray of net's auxiliary states.
 
     begin_round : int
@@ -81,16 +82,16 @@ def _train(symbol, ctx, input_shape,
     grad_arrays = train_exec.grad_arrays
     aux_arrays = train_exec.aux_arrays
     # copy initialized parameters to executor parameters
-    for key, weight in zip(arg_names, arg_arrays):
+    for key, weight in list(zip(arg_names, arg_arrays)):
         if key in arg_params:
             arg_params[key].copyto(weight)
-    for key, weight in zip(aux_names, aux_arrays):
+    for key, weight in list(zip(aux_names, aux_arrays)):
         if key in aux_params:
             aux_params[key].copyto(weight)
     # setup helper data structures
     label_array = None
     data_array = None
-    for name, arr in zip(symbol.list_arguments(),  arg_arrays):
+    for name, arr in list(zip(symbol.list_arguments(), arg_arrays)):
         if name.endswith('label'):
             assert label_array is None
             label_array = arr
@@ -151,10 +152,10 @@ def _train(symbol, ctx, input_shape,
             for key, weight, gard in arg_blocks:
                 if key in arg_params:
                     weight.copyto(arg_params[key])
-            for key, arr in zip(aux_names, aux_states):
-                arr.copyto(aux_states[key])
+            for key, arr in list(zip(aux_names, aux_arrays)):
+                arr.copyto(aux_params[key])
         if iter_end_callback:
-            iter_end_callback(i, arg_params, aux_states)
+            iter_end_callback(i, arg_params, aux_arrays)
     # end of the function
     return
 
@@ -224,11 +225,11 @@ class FeedForward(BASE_ESTIMATOR):
         arg_shapes, _, aux_shapes = self.symbol.infer_shape(data=self.input_shape)
         if self.arg_params is None:
             arg_names = self.symbol.list_arguments()
-            self.arg_params = {k : nd.zeros(s) for k, s in zip(arg_names, arg_shapes)
+            self.arg_params = {k : nd.zeros(s) for k, s in list(zip(arg_names, arg_shapes))
                                if not is_data_arg(k)}
         if self.aux_states is None:
             aux_names = self.symbol.list_auxiliary_states()
-            self.aux_states = {k : nd.zeros(s) for k, s in zip(aux_names, aux_shapes)}
+            self.aux_states = {k : nd.zeros(s) for k, s in list(zip(aux_names, aux_shapes))}
         for k, v in self.arg_params.items():
             self.initializer(k, v)
         for k, v in self.aux_states.items():
@@ -241,7 +242,7 @@ class FeedForward(BASE_ESTIMATOR):
         # for now only use the first device
         pred_exec = self.symbol.simple_bind(
             self.ctx[0], grad_req='null', data=self.input_shape)
-        for name, value in zip(self.symbol.list_arguments(), pred_exec.arg_arrays):
+        for name, value in list(zip(self.symbol.list_arguments(), pred_exec.arg_arrays)):
             if name not in self.arg_datas:
                 assert name in self.arg_params
                 self.arg_params[name].copyto(value)

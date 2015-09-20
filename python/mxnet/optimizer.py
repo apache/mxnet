@@ -1,4 +1,4 @@
-# pylint: skip-file
+# pylint: disable=fixme, invalid-name
 """Common Optimization algorithms with regularizations."""
 from .ndarray import NDArray, zeros
 

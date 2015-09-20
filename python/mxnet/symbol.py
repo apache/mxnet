@@ -423,7 +423,6 @@ class Symbol(object):
         arg_ndarrays = [zeros(shape, ctx) for shape in arg_shapes]
 
         if grad_req != 'null':
-            req = {}
             grad_ndarrays = {}
             for name, shape in zip(self.list_arguments(), arg_shapes):
                 if not (name.endswith('data') or name.endswith('label')):
