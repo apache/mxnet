@@ -47,8 +47,8 @@ class Accuracy(EvalMetric):
     def update(self, pred, label):
         pred = pred.asnumpy()
         label = label.asnumpy().astype('int32')
-        y = np.argmax(pred, axis=1)
-        self.sum_metric += np.sum(y == label)
+        py = np.argmax(pred, axis=1)
+        self.sum_metric += np.sum(py == label)
         self.num_inst += label.size
 
 

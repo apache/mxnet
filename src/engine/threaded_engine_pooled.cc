@@ -28,9 +28,6 @@ class ThreadedEnginePooled : public ThreadedEngine {
       io_thread_pool_(1, [this]() { ThreadWorker(&io_task_queue_); }) {}
 
   ~ThreadedEnginePooled() noexcept(false) {
-    // wait until all the tasks are completed.
-    // TODO(hotpxl) think if this is the correct thing to do
-    this->WaitForAll();
     streams_.Finalize();
     task_queue_.SignalForKill();
     io_task_queue_.SignalForKill();
