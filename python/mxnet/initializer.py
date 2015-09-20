@@ -1,124 +1,93 @@
 # pylint: skip-file
 import numpy as np
+from .base import string_types
 from .ndarray import NDArray
 from . import random
 
 class Initializer(object):
-    """Base class for Initializer"""
-    def __init__(self, **kwargs):
-        """Constructor
+    """Base class for Initializer."""
+
+    def __call__(self, name, arr):
+        """Override () function to do Initialization
 
         Parameters
         ----------
-        kwargs: dict
-            potential parameters for Initializer implmentation
-        """
-        self.args = kwargs
+        name : str
+            name of corrosponding ndarray
 
-    def init_weight(self):
+        arr : NDArray
+            ndarray to be Initialized
+        """
+        if not isinstance(name, string_types):
+            raise TypeError('name must be string')
+        if not isinstance(arr, NDArray):
+            raise TypeError('arr must be NDArray')
+        if name.endswith('bias'):
+            self._init_bias(name, arr)
+        elif name.endswith('gamma'):
+            self._init_gamma(name, arr)
+        elif name.endswith('beta'):
+            self._init_beta(name, arr)
+        elif name.endswith('weight'):
+            self._init_weight(name, arr)
+        else:
+            self._init_default(name, arr)
+
+    def _init_bias(self, name, arr):
+        arr[:] = 0
+
+    def _init_gamma(self, name, arr):
+        arr[:] = 1.0
+
+    def _init_beta(self, name, arr):
+        arr[:] = 0.0
+
+    def _init_weight(self, name, arr):
         """Abstruct method to Initialize weight"""
         raise NotImplementedError("Must override it")
 
-    def __call__(self, state, arr):
-        """Override () function to do Initialization
+    def _init_default(self, name, _):
+        raise ValueError('Unknown initialization pattern for %s' % name)
 
-        Parameters:
-        ----------
-        state: str
-            name of corrosponding ndarray
-        arr: NDArray
-            ndarray to be Initialized
-        """
-        assert(isinstance(state, str))
-        assert(isinstance(arr, NDArray))
-        if "weight" in state:
-            self.init_weight(arr)
-        if "bias" in state:
-            arr[:] = 0.0
-        if "gamma" in state:
-            arr[:] = 1.0
-        if "beta" in state:
-            arr[:] = 0.0
-
-    def get_fan(self, shape):
-        """Get input/output from shape
-
-        Parameter
-        ---------
-        shape: tuple
-            shape of NDArray
-
-        Returns
-        -------
-        fan_in: int
-            input dim
-        fan_out: int
-            output dim
-        """
-        fan_in = shape[1]
-        fan_out = shape[0]
-        return fan_in, fan_out
 
 class Uniform(Initializer):
-    """Uniform Initializer"""
+    """Initialize the weight with uniform [-scale, scale]
+
+    Parameters
+    ----------
+    scale : float, optional
+        The scale of uniform distribution
+    """
     def __init__(self, scale=0.07):
-        """Constructor
+        self.scale = scale
 
-        Parameter
-        ---------
-        scale: float (default=0.07)
-            unifrom range [-scale, scale]
-        """
-        super().__init__(scale = scale)
+    def _init_weight(self, name, arr):
+        random.uniform(-scale, scale, out=arr)
 
-    def init_weight(self, arr):
-        """Implmentation of abs method
-
-        Parameter
-        --------
-        arr: NDArray
-            NDArray to be Initialized
-        """
-        if isinstance(arr, NDArray):
-            arr[:] = random.uniform(-scale, scale, arr.shape)
-        else:
-            raise TypeError("Input array must be NDArray")
 
 class Normal(Initializer):
-    """Gaussian Initializer"""
-    def __init__(self, sigma=0.01):
-        """Constuctor of Normal Initializer
-        Parameter
-        --------
-        sigma: float (default=0.01)
-            sigma for gaussian distribution
-        """
-        super().__init__(sigma = sigma)
-    def init_weight(self, arr):
-        """Implmentation of abs method
+    """Initialize the weight with normal(0, sigma)
 
-        Parameter
-        --------
-        arr: NDArray
-            NDArray to be Initialized
-        """
-        if isinstance(arr, NDArray):
-            arr[:] = random.normal(0, sigma, arr.shape)
-        else:
-            raise TypeError("Input array must be NDArray")
+    Parameters
+    ----------
+    sigma : float, optional
+        Standard deviation for gaussian distribution.
+    """
+    def __init__(self, sigma=0.01):
+        super().__init__(sigma = sigma)
+
+    def _init_weight(self, name, arr):
+        random.normal(0, sigma, out=arr)
+
 
 class Xavier(Initializer):
-    def init_weight(self, arr):
-        """Implmentation of abs method
+    """Initialize the weight with Xavier initialization scheme."""
 
-        Parameter
-        --------
-        arr: NDArray
-            NDArray to be Initialized
-        """
-        if isinstance(arr, NDArray):
-            fan_in, fan_out = self.get_fan(arr.shape)
-            s = np.sqrt(6. / (fan_in + fan_out))
-            arr[:] = random.uniform(-s, s, arr.shape)
-        else:
-            raise TypeError("Input array must be NDArray")
+    def _init_weight(self, _, arr):
+        # [in, out, height, with] for conv
+        # [in, out] for fullc
+        shape = arr.shape
+        fan_in, fan_out = shape[1], shape[0]
+        s = np.sqrt(6. / (fan_in + fan_out))
+        random.uniform(-s, s, out=arr)
+

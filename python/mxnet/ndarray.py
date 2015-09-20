@@ -311,7 +311,7 @@ class NDArray(object):
             hret = NDArray(_new_alloc_handle(self.shape, other, True))
             return NDArray._copyto(self, out=hret)
         else:
-            raise TypeError('copyto do not support type ' + type(other))
+            raise TypeError('copyto do not support type ' + str(type(other)))
     # pylint: enable= no-member
 
 
