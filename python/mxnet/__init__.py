@@ -22,6 +22,7 @@ from . import optimizer
 from . import model
 from . import initializer
 from . import visualization
-import atexit
+# use viz as short for mx.ndarray
+from . import visualization as viz
 
 __version__ = "0.1.0"

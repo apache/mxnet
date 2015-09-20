@@ -10,7 +10,7 @@ from .base import _LIB, string_types, numeric_types
 from .base import c_array, py_str, c_str
 from .base import mx_uint, mx_float, NDArrayHandle, FunctionHandle
 from .base import ctypes2buffer
-from .base import check_call
+from .base import check_call, ctypes2docstring
 from .context import Context
 
 def _new_empty_handle():
@@ -36,7 +36,6 @@ def _new_alloc_handle(shape, ctx, delay_alloc):
     a new empty ndarray handle
     """
     hdl = NDArrayHandle()
-    print ctx.device_typeid
     check_call(_LIB.MXNDArrayCreate(
         c_array(mx_uint, shape),
         len(shape),
@@ -530,17 +529,8 @@ def _make_ndarray_function(handle):
         ctypes.byref(arg_types),
         ctypes.byref(arg_descs)))
     func_name = py_str(name.value)
-
-    param_str = []
-    for i in range(num_args.value):
-        ret = '%s : %s' % (py_str(arg_names[i]), py_str(arg_types[i]))
-        if len(arg_descs[i]) != 0:
-            ret += '\n    ' + py_str(arg_descs[i])
-        param_str.append(ret)
-
+    param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
     doc_str = ('%s\n\n' +
-               'Parameters\n' +
-               '----------\n' +
                '%s\n' +
                'out : NDArray, optional\n' +
                '    The output NDArray to hold the result.\n\n'+
@@ -548,7 +538,7 @@ def _make_ndarray_function(handle):
                '-------\n' +
                'out : NDArray\n'+
                '    The output of binary function.')
-    doc_str = doc_str % (py_str(desc.value), '\n'.join(param_str))
+    doc_str = doc_str % (py_str(desc.value), param_str)
 
     # Definition of internal functions.
     def binary_ndarray_function(lhs, rhs, out=None):

@@ -115,22 +115,22 @@ class PrefetcherIter : public IIterator<DataBatch> {
   }
   virtual bool Next(void) {
      if (ready_batches_.size() == param_.prefetch_buffer) {
-         TBlobBatch* old_batch = ready_batches_.front();
-         for (size_t i = 0; i < old_batch->data.size(); i++) {
-             NDArray old_ndarray = ready_ndarrays_.front();
-             old_ndarray.WaitToWrite();
-             ready_ndarrays_.pop();
-         }
-         iter_.Recycle(&old_batch);
-         ready_batches_.pop();
+       TBlobBatch* old_batch = ready_batches_.front();
+       for (size_t i = 0; i < old_batch->data.size(); i++) {
+         NDArray old_ndarray = ready_ndarrays_.front();
+         old_ndarray.WaitToWrite();
+         ready_ndarrays_.pop();
+       }
+       iter_.Recycle(&old_batch);
+       ready_batches_.pop();
      }
      TBlobBatch* next_batch = NULL;
      if (!iter_.Next(&next_batch)) return false;
      out_.data.clear();
      // copy the batch
-     for (size_t i = 0; i < next_batch->data.size(); i++) {
-         out_.data.push_back(NDArray(next_batch->data[i], mshadow::cpu::kDevMask));
-         ready_ndarrays_.push(out_.data[i]);
+     for (size_t i = 0; i < next_batch->data.size(); ++i) {
+       out_.data.push_back(NDArray(next_batch->data[i], 0));
+       ready_ndarrays_.push(out_.data[i]);
      }
      // push the narrays and batch into the queue
      ready_batches_.push(next_batch);
