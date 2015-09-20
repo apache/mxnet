@@ -45,6 +45,7 @@ endif
 ifeq ($(USE_OPENCV),1)
 	CFLAGS+= -DMXNET_USE_OPENCV=1
 	LDFLAGS+= `pkg-config --libs opencv`
+	BIN += bin/im2rec
 else
 	CFLAGS+= -DMXNET_USE_OPENCV=0
 endif
@@ -103,6 +104,11 @@ lib/libmxnet.so: $(ALL_DEP)
 
 $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
+
+bin/im2rec: tools/im2rec.cc $(DMLC_CORE)/libdmlc.a 
+
+$(BIN) :
+	$(CXX) $(CFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
 include tests/cpp/unittest.mk
 
