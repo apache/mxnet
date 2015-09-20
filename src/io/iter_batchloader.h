@@ -34,20 +34,20 @@ struct BatchParam : public dmlc::Parameter<BatchParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(BatchParam) {
     DMLC_DECLARE_FIELD(batch_size)
-        .describe("Batch size.");
+        .describe("Batch Param: Batch size.");
     index_t input_shape_default[] = {3, 224, 224};
     DMLC_DECLARE_FIELD(input_shape)
         .set_default(TShape(input_shape_default, input_shape_default + 3))
         .set_expect_ndim(3).enforce_nonzero()
-        .describe("Input shape of the neural net");
+        .describe("Dataset Param: Input shape of the neural net.");
     DMLC_DECLARE_FIELD(label_width).set_default(1)
-        .describe("Label width.");
+        .describe("Dataset Param: Label width.");
     DMLC_DECLARE_FIELD(round_batch).set_default(true)
-        .describe("Use round robin to handle overflow batch.");
+        .describe("Batch Param: Use round robin to handle overflow batch.");
     DMLC_DECLARE_FIELD(test_skipread).set_default(false)
-        .describe("Skip read for testing.");
+        .describe("Batch Param: Skip read for testing.");
     DMLC_DECLARE_FIELD(silent).set_default(false)
-        .describe("Whether to print batch information.");
+        .describe("Batch Param: Whether to print batch information.");
   }
 };
 

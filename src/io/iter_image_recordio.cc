@@ -93,10 +93,6 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   std::string path_imglist;
   /*! \brief path to image recordio */
   std::string path_imgrec;
-  /*! \brief number of threads */
-  int nthread;
-  /*! \brief whether to remain silent */
-  bool silent;
   /*! \brief virtually split the data into n parts */
   int num_parts;
   /*! \brief only read the i-th part */
@@ -105,27 +101,31 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   int label_width;
   /*! \brief input shape */
   TShape input_shape;
+  /*! \brief number of threads */
+  int nthread;
+  /*! \brief whether to remain silent */
+  bool silent;
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageRecParserParam) {
     DMLC_DECLARE_FIELD(path_imglist).set_default("")
-        .describe("Path to image list.");
+        .describe("Dataset Param: Path to image list.");
     DMLC_DECLARE_FIELD(path_imgrec).set_default("./data/imgrec.rec")
-        .describe("Path to image record file.");
-    DMLC_DECLARE_FIELD(nthread).set_lower_bound(1).set_default(4)
-        .describe("Number of thread to do parsing.");
+        .describe("Dataset Param: Path to image record file.");
     DMLC_DECLARE_FIELD(label_width).set_lower_bound(1).set_default(1)
-        .describe("How many labels for an image.");
-    DMLC_DECLARE_FIELD(silent).set_default(false)
-        .describe("Whether to output parser information.");
+        .describe("Dataset Param: How many labels for an image.");
     DMLC_DECLARE_FIELD(num_parts).set_lower_bound(1).set_default(1)
-        .describe("virtually split the data into n parts");
+        .describe("Dataset Param: virtually split the data into n parts");
     DMLC_DECLARE_FIELD(part_index).set_default(0)
-        .describe("only read the i-th part");
+        .describe("Dataset Param: only read the i-th part");
     index_t input_shape_default[] = {3, 224, 224};
     DMLC_DECLARE_FIELD(input_shape)
         .set_default(TShape(input_shape_default, input_shape_default + 3))
         .enforce_nonzero()
-        .describe("Input shape of the neural net");
+        .describe("Dataset Param: Input shape of the neural net");
+    DMLC_DECLARE_FIELD(nthread).set_lower_bound(1).set_default(4)
+        .describe("Backend Param: Number of thread to do parsing.");
+    DMLC_DECLARE_FIELD(silent).set_default(false)
+        .describe("Auxiliary Param: Whether to output parser information.");
   }
 };
 
@@ -311,13 +311,13 @@ struct ImageRecordParam: public dmlc::Parameter<ImageRecordParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageRecordParam) {
     DMLC_DECLARE_FIELD(shuffle).set_default(true)
-        .describe("Whether to shuffle data.");
+        .describe("Augmentation Param: Whether to shuffle data.");
     DMLC_DECLARE_FIELD(seed).set_default(0)
-        .describe("Random Seed.");
+        .describe("Augmentation Param: Random Seed.");
     DMLC_DECLARE_FIELD(mean_img).set_default("./data/mean.bin")
-        .describe("Path to image mean file.");
+        .describe("Augmentation Param: Path to image mean file.");
     DMLC_DECLARE_FIELD(silent).set_default(false)
-        .describe("Whether to output information.");
+        .describe("Auxiliary Param: Whether to output information.");
   }
 };
 
@@ -453,9 +453,9 @@ MXNET_REGISTER_IO_THREE_CHAINED_ITER(ImageRecordIter,
         PrefetcherIter, BatchLoader, ImageRecordIter)
     .describe("Create iterator for dataset packed in recordio.")
     .add_arguments(ImageRecordParam::__FIELDS__())
-    .add_arguments(ImageAugmentParam::__FIELDS__())
     .add_arguments(ImageRecParserParam::__FIELDS__())
     .add_arguments(BatchParam::__FIELDS__())
-    .add_arguments(PrefetcherParam::__FIELDS__());
+    .add_arguments(PrefetcherParam::__FIELDS__())
+    .add_arguments(ImageAugmentParam::__FIELDS__());
 }  // namespace io
 }  // namespace mxnet

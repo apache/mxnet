@@ -33,16 +33,16 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(PrefetcherParam) {
     DMLC_DECLARE_FIELD(prefetch_capacity).set_default(1)
-        .describe("Number of prefetched batches");
+        .describe("Backend Param: Number of prefetched batches.");
     DMLC_DECLARE_FIELD(batch_size)
-        .describe("Batch size.");
+        .describe("Batch Param: Batch size.");
     index_t input_shape_default[] = {3, 224, 224};
     DMLC_DECLARE_FIELD(input_shape)
         .set_default(TShape(input_shape_default, input_shape_default + 3))
         .enforce_nonzero()
-        .describe("Input shape of the neural net");
+        .describe("Dataset Param: Input shape of the neural net.");
     DMLC_DECLARE_FIELD(label_width).set_default(1)
-        .describe("Label width.");
+        .describe("Dataset Param: Label width.");
   }
 };
 
@@ -114,7 +114,7 @@ class PrefetcherIter : public IIterator<DataBatch> {
     iter_.BeforeFirst();
   }
   virtual bool Next(void) {
-     if (ready_batches_.size() != 0) {
+     if (ready_batches_.size() == param_.prefetch_capacity) {
          TBlobBatch* old_batch = ready_batches_.front();
          for (size_t i = 0; i < old_batch->data.size(); i++) {
              NDArray old_ndarray = ready_ndarrays_.front();

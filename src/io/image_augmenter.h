@@ -60,8 +60,6 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
   float mean_g;
   /*! \brief mean value for b channel */
   float mean_b;
-  /*! \brief shape of the image data*/
-  TShape input_shape;
   /*! \brief scale on color space */
   float scale;
   /*! \brief maximum ratio of contrast variation */
@@ -70,61 +68,70 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
   float max_random_illumination;
   /*! \brief whether to print augment info */
   bool silent;
+  /*! \brief shape of the image data*/
+  TShape input_shape;
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageAugmentParam) {
     DMLC_DECLARE_FIELD(rand_crop).set_default(true)
-        .describe("Whether we de random cropping");
+        .describe("Augmentation Param: set 1 for randomly cropping image of size\
+                specified in input_shape. If set to 0, the iterator will only output the center crop.");
     DMLC_DECLARE_FIELD(crop_y_start).set_default(-1)
-        .describe("Where to nonrandom crop on y");
+        .describe("Augmentation Param: Where to nonrandom crop on y.");
     DMLC_DECLARE_FIELD(crop_x_start).set_default(-1)
-        .describe("Where to nonrandom crop on x");
+        .describe("Augmentation Param: Where to nonrandom crop on x.");
     DMLC_DECLARE_FIELD(max_rotate_angle).set_default(0.0f)
-        .describe("Rotate can be [-max_rotate_angle, max_rotate_angle]");
+        .describe("Augmentation Param: denotes the random rotation angle.\
+                In training, the image will be rotated randomly in [-max_rotate_angle, max_rotate_angle].");
     DMLC_DECLARE_FIELD(max_aspect_ratio).set_default(0.0f)
-        .describe("Max aspect ratio");
+        .describe("Augmentation Param: denotes the max ratio of random aspect ratio augmentation.\
+                If it is not 0, the iterator will first random width in [min_crop_size, max_crop_size],\
+                and then random aspect_ratio in [0, max_aspect_ratio]. The height is set to y =\
+                max(min_crop_size, min(max_crop_size, x * (1 + aspect_ratio))). After cropping,\
+                the region is resized to input_shape.");
     DMLC_DECLARE_FIELD(max_shear_ratio).set_default(0.0f)
-        .describe("Shear rotate can be made between [-max_shear_ratio_, max_shear_ratio_]");
+        .describe("Augmentation Param: denotes the max random shearing ratio. In training,\
+                the image will be sheared randomly in [0, max_shear_ratio].");
     DMLC_DECLARE_FIELD(max_crop_size).set_default(-1)
-        .describe("Maximum crop size");
+        .describe("Augmentation Param: Maximum crop size.");
     DMLC_DECLARE_FIELD(min_crop_size).set_default(-1)
-        .describe("Minimum crop size");
+        .describe("Augmentation Param: Minimum crop size.");
     DMLC_DECLARE_FIELD(max_random_scale).set_default(1.0f)
-        .describe("Maxmum scale ratio");
+        .describe("Augmentation Param: Maxmum scale ratio.");
     DMLC_DECLARE_FIELD(min_random_scale).set_default(1.0f)
-        .describe("Minimum scale ratio");
+        .describe("Augmentation Param: Minimum scale ratio.");
     DMLC_DECLARE_FIELD(max_img_size).set_default(1e10f)
-        .describe("Maxmum image size");
+        .describe("Augmentation Param: Maxmum image size after resizing.");
     DMLC_DECLARE_FIELD(min_img_size).set_default(0.0f)
-        .describe("Minimum image size");
+        .describe("Augmentation Param: Minimum image size after resizing.");
     DMLC_DECLARE_FIELD(rotate).set_default(-1.0f)
-        .describe("Rotate angle");
+        .describe("Augmentation Param: Rotate angle.");
     DMLC_DECLARE_FIELD(fill_value).set_default(255)
-        .describe("Filled value while padding");
+        .describe("Augmentation Param: Filled value while padding.");
     DMLC_DECLARE_FIELD(mirror).set_default(false)
-        .describe("Whether to mirror the image");
+        .describe("Augmentation Param: Whether to mirror the image.");
     DMLC_DECLARE_FIELD(rand_mirror).set_default(false)
-        .describe("Whether to mirror the image randomly");
+        .describe("Augmentation Param: Whether to mirror the image randomly.");
     DMLC_DECLARE_FIELD(mean_img).set_default("")
-        .describe("Mean Image to be subtracted");
+        .describe("Augmentation Param: Mean Image to be subtracted.");
     DMLC_DECLARE_FIELD(mean_r).set_default(0.0f)
-        .describe("Mean value on R channel");
+        .describe("Augmentation Param: Mean value on R channel.");
     DMLC_DECLARE_FIELD(mean_g).set_default(0.0f)
-        .describe("Mean value on G channel");
+        .describe("Augmentation: Mean value on G channel.");
     DMLC_DECLARE_FIELD(mean_b).set_default(0.0f)
-        .describe("Mean value on B channel");
+        .describe("Augmentation: Mean value on B channel.");
+    DMLC_DECLARE_FIELD(scale).set_default(1.0f)
+        .describe("Augmentation Param: Scale in color space.");
+    DMLC_DECLARE_FIELD(max_random_contrast).set_default(0.0f)
+        .describe("Augmentation Param: Maximum ratio of contrast variation.");
+    DMLC_DECLARE_FIELD(max_random_illumination).set_default(0.0f)
+        .describe("Augmentation Param: Maximum value of illumination variation.");
+    DMLC_DECLARE_FIELD(silent).set_default(true)
+        .describe("Augmentation Param: Whether to print augmentor info.");
     index_t input_shape_default[] = {3, 224, 224};
     DMLC_DECLARE_FIELD(input_shape)
         .set_default(TShape(input_shape_default, input_shape_default + 3))
         .set_expect_ndim(3).enforce_nonzero()
-        .describe("Input shape of the neural net");
-    DMLC_DECLARE_FIELD(scale).set_default(1.0f)
-        .describe("Scale in color space");
-    DMLC_DECLARE_FIELD(max_random_contrast).set_default(0.0f)
-        .describe("Maximum ratio of contrast variation");
-    DMLC_DECLARE_FIELD(max_random_illumination).set_default(0.0f)
-        .describe("Maximum value of illumination variation");
-    DMLC_DECLARE_FIELD(silent).set_default(true)
-        .describe("Whether to print augmentor info");
+        .describe("Dataset Param: Input shape of the neural net.");
   }
 };
 
