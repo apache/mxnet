@@ -36,7 +36,6 @@ def _new_alloc_handle(shape, ctx, delay_alloc):
     a new empty ndarray handle
     """
     hdl = NDArrayHandle()
-    print ctx.device_typeid
     check_call(_LIB.MXNDArrayCreate(
         c_array(mx_uint, shape),
         len(shape),
