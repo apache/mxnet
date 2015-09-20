@@ -83,12 +83,20 @@ void ThreadedVar::CompleteReadDependency(Dispatcher dispatcher) {
 
 template <typename Dispatcher>
 bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
+  // this is lock scope
   VersionedVarBlock *old_pending_write, *end_of_read_chain;
-  bool trigger_write = false;
+  bool trigger_write = false, to_delete = false;
   {
-    // this is lock scope
     std::lock_guard<std::mutex> lock{m_};
     assert(ready_to_read_ == false);
+    // really delete
+    if (to_delete_) {
+      VersionedVarBlock *head = pending_write_->next;
+      VersionedVarBlock::Delete(pending_write_);
+      assert(head->next == nullptr);
+      VersionedVarBlock::Delete(head);
+      return true;
+    }
     // detach pending write
     old_pending_write = pending_write_;
     // search for chains to trigger
@@ -119,11 +127,6 @@ bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
   // So it is safe to modify these
   VersionedVarBlock *cur_head = old_pending_write->next;
   VersionedVarBlock::Delete(old_pending_write);
-  if (to_delete_) {
-    assert(cur_head->next == nullptr);
-    VersionedVarBlock::Delete(cur_head);
-    return true;
-  }
   // dispatch all the events
   while (cur_head != end_of_read_chain) {
     if (--cur_head->trigger->wait == 0) {

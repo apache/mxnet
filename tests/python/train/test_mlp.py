@@ -46,7 +46,9 @@ def test_mlp():
     model.fit(X=train_dataiter,
               eval_data=val_dataiter,
               iter_end_callback=mx.model.do_checkpoint(prefix))
+    logging.info('Finish fit...')
     prob = model.predict(val_dataiter)
+    logging.info('Finish predict...')
     val_dataiter.reset()
     y = np.concatenate([label.asnumpy() for _, label in val_dataiter]).astype('int')
     py = np.argmax(prob, axis=1)
