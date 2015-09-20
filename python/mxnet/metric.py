@@ -1,6 +1,6 @@
+# pylint: disable=invalid-name
 """Online evaluation metric module."""
 import numpy as np
-from .ndarray import NDArray
 
 class EvalMetric(object):
     """Base class of all evaluation metrics."""
@@ -8,7 +8,7 @@ class EvalMetric(object):
         self.name = name
         self.reset()
 
-    def update(pred, label):
+    def update(self, pred, label):
         """Update the internal evaluation.
 
         Parameters
@@ -40,6 +40,7 @@ class EvalMetric(object):
 
 
 class Accuracy(EvalMetric):
+    """Calculate accuracy"""
     def __init__(self):
         super(Accuracy, self).__init__('accuracy')
 

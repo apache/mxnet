@@ -1,12 +1,45 @@
+# coding: utf-8
+# pylint: disable=invalid-name, protected-access, too-many-locals, fixme
+# pylint: disable=unused-argument, too-many-branches, too-many-statements
+"""Visualization module"""
 from .symbol import Symbol
 import json
 import re
 import copy
 
+
 def _str2tuple(string):
-    return re.findall("\d+", string)
+    """convert shape string to list, internal use only
+
+    Parameters
+    ----------
+    string: str
+        shape string
+
+    Returns
+    -------
+    list of str to represent shape
+    """
+    return re.findall(r"\d+", string)
+
 
 def network2dot(title, symbol, shape=None):
+    """convert symbol to dot object for visualization
+
+    Parameters
+    ----------
+    title: str
+        title of the dot graph
+    symbol: Symbol
+        symbol to be visualized
+    shape: TODO
+        TODO
+
+    Returns
+    ------
+    dot: Diagraph
+        dot object of symbol
+    """
     # todo add shape support
     try:
         from graphviz import Digraph
@@ -16,8 +49,9 @@ def network2dot(title, symbol, shape=None):
         raise TypeError("symbol must be Symbol")
     conf = json.loads(symbol.tojson())
     nodes = conf["nodes"]
-    heads = set(conf["heads"][0]) # TODO(xxx): check careful
-    node_attr = {"shape":"box", "fixedsize":"true", "width":"1.3", "height":"0.8034", "style":"filled"}
+    heads = set(conf["heads"][0])  # TODO(xxx): check careful
+    node_attr = {"shape": "box", "fixedsize": "true",
+                 "width": "1.3", "height": "0.8034", "style": "filled"}
     dot = Digraph(name=title)
     # make nodes
     for i in range(len(nodes)):
@@ -26,21 +60,21 @@ def network2dot(title, symbol, shape=None):
         name = "%s_%d" % (op, i)
         # input data
         if i in heads and op == "null":
-            label=node["name"]
+            label = node["name"]
             attr = copy.deepcopy(node_attr)
             dot.node(name=name, label=label, **attr)
         if op == "null":
             continue
         elif op == "Convolution":
-            label="Convolution\n%sx%s/%s, %s" % (_str2tuple(node["param"]["kernel"])[0],
-                                                 _str2tuple(node["param"]["kernel"])[1],
-                                                 _str2tuple(node["param"]["stride"])[0],
-                                                 node["param"]["num_filter"])
+            label = "Convolution\n%sx%s/%s, %s" % (_str2tuple(node["param"]["kernel"])[0],
+                                                   _str2tuple(node["param"]["kernel"])[1],
+                                                   _str2tuple(node["param"]["stride"])[0],
+                                                   node["param"]["num_filter"])
             attr = copy.deepcopy(node_attr)
             attr["color"] = "royalblue1"
             dot.node(name=name, label=label, **attr)
         elif op == "FullyConnected":
-            label="FullyConnected\n%s" % node["param"]["num_hidden"]
+            label = "FullyConnected\n%s" % node["param"]["num_hidden"]
             attr = copy.deepcopy(node_attr)
             attr["color"] = "royalblue1"
             dot.node(name=name, label=label, **attr)
@@ -97,11 +131,7 @@ def network2dot(title, symbol, shape=None):
                 input_name = "%s_%d" % (input_node["op"], item[0])
                 if input_node["op"] != "null" or item[0] in heads:
                     # add shape into label
-                    attr = {"dir":"back"}
+                    attr = {"dir": "back"}
                     dot.edge(tail_name=name, head_name=input_name, **attr)
 
     return dot
-
-
-
-
