@@ -22,34 +22,10 @@ class Executor(object):
         if not isinstance(handle, ExecutorHandle):
             raise TypeError("Handle type error")
         self.handle = handle
-        self.arg_ndarrays = []
-        self.grad_ndarrays = []
-        self.auxiliary_states = []
-
-    def list_arguments(self, with_grad=True):
-        """Return arguments (and grad for arguments)
-
-        Parameters
-        ----------
-        with_grad: bool
-            whether return args with grad
-
-        Returns
-        -------
-            if with_grad = True, return (args, grad) pair list
-            otherwise return args list only
-            Note: args sequence is same to symbol.list_arguments()
-        """
-        if with_grad:
-            return self.arg_ndarrays, self.grad_ndarrays
-        else:
-            return self.arg_ndarrays
-
-    def list_auxiliary_states(self):
-        """Return auxiliary states of executor
-            Note: auxiliary states is same to symbol.list_auxiliary_states()
-        """
-        return self.auxiliary_states
+        self.arg_arrays = []
+        self.grad_arrays = []
+        self.aux_arrays = []
+        self.outputs = self._get_outputs()
 
     def forward(self, is_train=True):
         """Do forward.
@@ -94,18 +70,13 @@ class Executor(object):
             self.handle, ctypes.byref(debug_str)))
         return py_str(debug_str.value)
 
-    @property
-    def outputs(self):
+    def _get_outputs(self):
         """list all heads' output ndarray
 
         Returns
         -------
         A list of ndarray binded to the heads of executor.
         """
-        # TODO: think of access, make heads read only.
-        # (consider support read only NDArray(NDArrayView))
-        # Otherwise some of the internal might depends on out_data
-        # if user set the content of the head, the backward behavior can be incorrect.
         out_size = mx_uint()
         handles = ctypes.POINTER(NDArrayHandle)()
         check_call(_LIB.MXExecutorOutputs(self.handle,

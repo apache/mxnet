@@ -336,8 +336,8 @@ class Symbol(object):
         return py_str(json_str.value)
 
     @staticmethod
-    def _get_ndarray_handle(arg_key, args, arg_names, allow_missing):
-        """Helper function to get ndarray handles from various inputs.
+    def _get_ndarray_inputs(arg_key, args, arg_names, allow_missing):
+        """Helper function to get ndarray lists handles from various inputs.
 
         Parameters
         ----------
@@ -364,6 +364,7 @@ class Symbol(object):
         """
         # setup args
         arg_handles = []
+        arg_arrays = []
         if isinstance(args, list):
             if len(args) != len(arg_names):
                 raise ValueError('Length of %s do not match number of arguments' % arg_key)
@@ -371,24 +372,27 @@ class Symbol(object):
                 if not isinstance(narr, NDArray):
                     raise TypeError('Only Accept list of NDArrays or dict of str to NDArray')
                 arg_handles.append(narr.handle)
+            arg_arrays = args
         elif isinstance(args, dict):
             for name in arg_names:
-                if name in arg_names:
+                if name in args:
                     narr = args[name]
                     if not isinstance(narr, NDArray):
                         raise TypeError('Only Accept list of NDArrays or dict of str to NDArray')
                     arg_handles.append(narr.handle)
+                    arg_arrays.append(narr)
                 else:
                     if allow_missing:
                         arg_handles.append(None)
+                        arg_arrays.append(None)
                     else:
                         raise ValueError('Must specify all the arguments in %s' % arg_key)
         else:
             raise TypeError('Only Accept list of NDArrays or dict of str to NDArray')
-        return c_array(NDArrayHandle, arg_handles)
+        return c_array(NDArrayHandle, arg_handles), arg_arrays
 
     def simple_bind(self, ctx, grad_req='write', **kwargs):
-        """Simply bind current symbol to get an executor.
+        """Bind current symbol to get an executor, allocate all the ndarrays needed.
 
         This function will ask user to pass in ndarray of position
         they like to bind to, and it will automatically allocate the ndarray
@@ -412,23 +416,22 @@ class Symbol(object):
         executor : mxnet.Executor
             The generated Executor
         """
-        # pylint: disable=unused-variable
-        arg_shapes, out_shapes, aux_shapes = self.infer_shape(**kwargs)
-        # pylint: enable=unused-variable
+        arg_shapes, _, aux_shapes = self.infer_shape(**kwargs)
         if arg_shapes == None:
             raise ValueError("Input node is not complete")
         # alloc space
         arg_ndarrays = [zeros(shape, ctx) for shape in arg_shapes]
-        req = {}
-        for state in self.list_arguments():
-            if "data" in state:
-                req[state] = "null"
-            else:
-                req[state] = grad_req
-        # TODO(bing): not generate grad case
-        grad_ndarrays = [zeros(shape, ctx) for shape in arg_shapes]
+
+        if grad_req != 'null':
+            grad_ndarrays = {}
+            for name, shape in zip(self.list_arguments(), arg_shapes):
+                if not (name.endswith('data') or name.endswith('label')):
+                    grad_ndarrays[name] = zeros(shape, ctx)
+        else:
+            grad_ndarrays = None
+
         aux_ndarrays = [zeros(shape, ctx) for shape in aux_shapes]
-        executor = self.bind(ctx, arg_ndarrays, grad_ndarrays, req, aux_ndarrays)
+        executor = self.bind(ctx, arg_ndarrays, grad_ndarrays, grad_req, aux_ndarrays)
         return executor
 
     def bind(self, ctx, args, args_grad=None, grad_req='write', aux_states=None):
@@ -493,18 +496,18 @@ class Symbol(object):
         if not isinstance(ctx, Context):
             raise TypeError("Context type error")
 
-        args_handle = self._get_ndarray_handle('args', args, self.list_arguments(), False)
+        args_handle, args = self._get_ndarray_inputs('args', args, self.list_arguments(), False)
         # setup args gradient
         if args_grad is None:
             args_grad_handle = c_array(NDArrayHandle, [None] * len(args))
         else:
-            args_grad_handle = self._get_ndarray_handle('args_grad', args_grad,
-                                                        self.list_arguments(), True)
+            args_grad_handle, args_grad = self._get_ndarray_inputs(
+                'args_grad', args_grad, self.list_arguments(), True)
 
         if aux_states is None:
             aux_states = []
-        aux_args_handle = self._get_ndarray_handle('aux_states', aux_states,
-                                                   self.list_auxiliary_states(), False)
+        aux_args_handle, aux_states = self._get_ndarray_inputs(
+            'aux_states', aux_states, self.list_auxiliary_states(), False)
 
         # setup requirements
         req_map = {'null' : 0, 'write' : 1, 'add' : 3}
@@ -535,9 +538,10 @@ class Symbol(object):
                                        aux_args_handle,
                                        ctypes.byref(handle)))
         executor = Executor(handle)
-        executor.arg_ndarrays = args
-        executor.grad_ndarrays = args_grad
-        executor.auxiliary_states = aux_states
+
+        executor.arg_arrays = args
+        executor.grad_arrays = args_grad
+        executor.aux_arrays = aux_states
         return executor
 
     def grad(self, wrt):
