@@ -73,24 +73,17 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageAugmentParam) {
     DMLC_DECLARE_FIELD(rand_crop).set_default(true)
-        .describe("Augmentation Param: set 1 for randomly cropping image of size\
-                specified in input_shape. If set to 0, the iterator will only output the center crop.");
+        .describe("Augmentation Param: Whether to random crop on the image");
     DMLC_DECLARE_FIELD(crop_y_start).set_default(-1)
         .describe("Augmentation Param: Where to nonrandom crop on y.");
     DMLC_DECLARE_FIELD(crop_x_start).set_default(-1)
         .describe("Augmentation Param: Where to nonrandom crop on x.");
     DMLC_DECLARE_FIELD(max_rotate_angle).set_default(0.0f)
-        .describe("Augmentation Param: denotes the random rotation angle.\
-                In training, the image will be rotated randomly in [-max_rotate_angle, max_rotate_angle].");
+        .describe("Augmentation Param: rotated randomly in [-max_rotate_angle, max_rotate_angle].");
     DMLC_DECLARE_FIELD(max_aspect_ratio).set_default(0.0f)
-        .describe("Augmentation Param: denotes the max ratio of random aspect ratio augmentation.\
-                If it is not 0, the iterator will first random width in [min_crop_size, max_crop_size],\
-                and then random aspect_ratio in [0, max_aspect_ratio]. The height is set to y =\
-                max(min_crop_size, min(max_crop_size, x * (1 + aspect_ratio))). After cropping,\
-                the region is resized to input_shape.");
+        .describe("Augmentation Param: denotes the max ratio of random aspect ratio augmentation.");
     DMLC_DECLARE_FIELD(max_shear_ratio).set_default(0.0f)
-        .describe("Augmentation Param: denotes the max random shearing ratio. In training,\
-                the image will be sheared randomly in [0, max_shear_ratio].");
+        .describe("Augmentation Param: denotes the max random shearing ratio.");
     DMLC_DECLARE_FIELD(max_crop_size).set_default(-1)
         .describe("Augmentation Param: Maximum crop size.");
     DMLC_DECLARE_FIELD(min_crop_size).set_default(-1)
