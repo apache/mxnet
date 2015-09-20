@@ -21,6 +21,7 @@ from . import random
 from . import optimizer
 from . import model
 from . import initializer
+from . import visualization
 import atexit
 
 __version__ = "0.1.0"
