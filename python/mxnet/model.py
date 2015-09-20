@@ -79,7 +79,6 @@ def _train(symbol, ctx, input_shape,
     aux_names = symbol.list_auxiliary_states()
     arg_arrays = train_exec.arg_arrays
     grad_arrays = train_exec.grad_arrays
-    print grad_arrays
     aux_arrays = train_exec.aux_arrays
     # copy initialized parameters to executor parameters
     for key, weight in zip(arg_names, arg_arrays):
@@ -211,7 +210,6 @@ class FeedForward(BASE_ESTIMATOR):
             batch_size = input_shape[0]
             optimizer = opt.create(optimizer, rescale_grad=(1.0/batch_size), **kwargs)
         self.optimizer = optimizer
-        print type(self.optimizer)
         self.initializer = initializer
         # model parameters
         self.arg_params = arg_params
