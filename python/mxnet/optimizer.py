@@ -41,25 +41,28 @@ class SGD(Optimizer):
         self.rescale_grad = rescale_grad
         self.momentums = {}
 
-    def update(self, key, weight, grad):
+    def update(self, index, weight, grad):
         """Update the parameters.
 
         Parameters
         ----------
-        key : str
-           The name of the parameter.
-        weight: NDArray
+        index : int
+            An unique integer key used to index the parameters
+
+        weight : NDArray
             weight ndarray
-        grad: NDArray
+
+        grad : NDArray
             grad ndarray
+
         """
         # TODO(bing) implement wd_bias, wd_gamma, wd_beta
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
 
-        if key not in self.momentums:
-            self.momentums[key] = zeros(grad.shape, grad.context)
-        mom = self.momentums[key]
+        if index not in self.momentums:
+            self.momentums[index] = zeros(grad.shape, grad.context)
+        mom = self.momentums[index]
         mom[:] *= self.momentum
         mom[:] += -self.lr * (grad * self.rescale_grad + self.wd * weight)
         weight[:] += mom

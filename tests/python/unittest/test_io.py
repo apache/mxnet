@@ -46,8 +46,8 @@ def test_Cifar10Rec():
             shuffle=False,
             input_shape=(3,28,28),
             batch_size=100,
-            nthread=4,
-            prefetch_capacity=1)
+            preprocess_threads=4,
+            prefetch_buffer=1)
     labelcount = [0 for i in range(10)] 
     batchcount = 0
     for data, label in dataiter:
@@ -61,5 +61,5 @@ def test_Cifar10Rec():
         assert(labelcount[i] == 5000)
 
 if __name__ == "__main__":
-    test_MNISTIter()
-    #test_Cifar10Rec()
+    #test_MNISTIter()
+    test_Cifar10Rec()

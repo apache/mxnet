@@ -12,7 +12,7 @@ import sys
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str, string_types
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle
-from .base import check_call
+from .base import check_call, ctypes2docstring
 from .context import Context
 from .ndarray import NDArray, zeros
 from .executor import Executor
@@ -680,7 +680,6 @@ def _make_atomic_symbol_function(handle):
     arg_types = ctypes.POINTER(ctypes.c_char_p)()
     arg_descs = ctypes.POINTER(ctypes.c_char_p)()
 
-
     check_call(_LIB.MXSymbolGetAtomicSymbolInfo(
         handle, ctypes.byref(name), ctypes.byref(desc),
         ctypes.byref(num_args),
@@ -688,25 +687,14 @@ def _make_atomic_symbol_function(handle):
         ctypes.byref(arg_types),
         ctypes.byref(arg_descs),
         ctypes.byref(key_var_num_args)))
+    param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
     key_var_num_args = py_str(key_var_num_args.value)
     func_name = py_str(name.value)
-    param_str = []
-    for i in range(num_args.value):
-        key = py_str(arg_names[i])
-        if key == key_var_num_args:
-            continue
-        ret = '%s : %s' % (key, py_str(arg_types[i]))
-        if len(arg_descs[i]) != 0:
-            ret += '\n    ' + py_str(arg_descs[i])
-        param_str.append(ret)
 
     desc = py_str(desc.value)
     if key_var_num_args:
-        desc = '\nThis function support variable length of positional input.'
-
+        desc += '\nThis function support variable length of positional input.'
     doc_str = ('%s\n\n' +
-               'Parameters\n' +
-               '----------\n' +
                '%s\n' +
                'name : string, required.\n' +
                '    Name of the resulting symbol.\n\n' +
@@ -714,7 +702,7 @@ def _make_atomic_symbol_function(handle):
                '-------\n' +
                'symbol: Symbol\n'+
                '    The result symbol.')
-    doc_str = doc_str % (desc, '\n'.join(param_str))
+    doc_str = doc_str % (desc, param_str)
 
     def creator(*args, **kwargs):
         """Activation Operator of Neural Net.

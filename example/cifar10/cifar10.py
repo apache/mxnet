@@ -167,7 +167,7 @@ train_dataiter = mx.io.ImageRecordIter(
         rand_mirror=True,
         input_shape=(3,28,28),
         batch_size=batch_size,
-        nthread=1)
+        preprocess_threads=1)
 test_dataiter = mx.io.ImageRecordIter(
         path_imgrec="data/cifar/test.rec",
         mean_img="data/cifar/cifar_mean.bin",
@@ -175,7 +175,7 @@ test_dataiter = mx.io.ImageRecordIter(
         rand_mirror=False,
         input_shape=(3,28,28),
         batch_size=batch_size,
-        nthread=1)
+        preprocess_threads=1)
 
 def test_cifar():
     model = mx.model.MXNetModel(ctx=mx.gpu(),

@@ -179,3 +179,44 @@ def ctypes2numpy_shared(cptr, shape):
     dbuffer = (mx_float * size).from_address(ctypes.addressof(cptr.contents))
     return np.frombuffer(dbuffer, dtype=np.float32).reshape(shape)
 
+
+def ctypes2docstring(num_args, arg_names, arg_types, arg_descs, remove_dup=True):
+    """Convert ctypes returned doc string information into parameters docstring.
+
+    num_args : mx_uint
+        Number of arguments.
+
+    arg_names : ctypes.POINTER(ctypes.c_char_p)
+        Argument names.
+
+    arg_types : ctypes.POINTER(ctypes.c_char_p)
+        Argument type information.
+
+    arg_descs : ctypes.POINTER(ctypes.c_char_p)
+        Argument description information.
+
+    remove_dup : boolean, optional
+        Whether remove duplication or not.
+
+    Returns
+    -------
+    docstr : str
+        Python docstring of parameter sections.
+    """
+    param_keys = set()
+    param_str = []
+    for i in range(num_args.value):
+        key = py_str(arg_names[i])
+        if key in param_keys and remove_dup:
+            continue
+        param_keys.add(key)
+        type_info = py_str(arg_types[i])
+        ret = '%s : %s' % (key, type_info)
+        if len(arg_descs[i]) != 0:
+            ret += '\n    ' + py_str(arg_descs[i])
+        param_str.append(ret)
+    doc_str = ('Parameters\n' +
+               '----------\n' +
+               '%s\n')
+    doc_str = doc_str % ('\n'.join(param_str))
+    return doc_str

@@ -102,7 +102,7 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   /*! \brief input shape */
   TShape input_shape;
   /*! \brief number of threads */
-  int nthread;
+  int preprocess_threads;
   /*! \brief whether to remain silent */
   bool silent;
   // declare parameters
@@ -122,8 +122,8 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
         .set_default(TShape(input_shape_default, input_shape_default + 3))
         .enforce_nonzero()
         .describe("Dataset Param: Input shape of the neural net");
-    DMLC_DECLARE_FIELD(nthread).set_lower_bound(1).set_default(4)
-        .describe("Backend Param: Number of thread to do parsing.");
+    DMLC_DECLARE_FIELD(preprocess_threads).set_lower_bound(1).set_default(4)
+        .describe("Backend Param: Number of thread to do preprocessing.");
     DMLC_DECLARE_FIELD(silent).set_default(false)
         .describe("Auxiliary Param: Whether to output parser information.");
   }
@@ -187,12 +187,12 @@ inline void ImageRecordIOParser::Init(
     // why ? (muli)
     maxthread = std::max(omp_get_num_procs() / 2 - 1, 1);
   }
-  param_.nthread = std::min(maxthread, param_.nthread);
-  #pragma omp parallel num_threads(param_.nthread)
+  param_.preprocess_threads = std::min(maxthread, param_.preprocess_threads);
+  #pragma omp parallel num_threads(param_.preprocess_threads)
   {
     threadget = omp_get_num_threads();
   }
-  param_.nthread = threadget;
+  param_.preprocess_threads = threadget;
   // setup decoders
   for (int i = 0; i < threadget; ++i) {
     augmenters_.push_back(new ImageAugmenter());
@@ -225,12 +225,12 @@ ParseNext(std::vector<InstVector> *out_vec) {
   if (!source_->NextChunk(&chunk)) return false;
   // save opencv out
   std::vector<InstVector> * opencv_out_vec = new std::vector<InstVector>();
-  opencv_out_vec->resize(param_.nthread);
-  #pragma omp parallel num_threads(param_.nthread)
+  opencv_out_vec->resize(param_.preprocess_threads);
+  #pragma omp parallel num_threads(param_.preprocess_threads)
   {
-    CHECK(omp_get_num_threads() == param_.nthread);
+    CHECK(omp_get_num_threads() == param_.preprocess_threads);
     int tid = omp_get_thread_num();
-    dmlc::RecordIOChunkReader reader(chunk, tid, param_.nthread);
+    dmlc::RecordIOChunkReader reader(chunk, tid, param_.preprocess_threads);
     ImageRecordIO rec;
     dmlc::InputSplit::Blob blob;
     // image data
@@ -272,7 +272,7 @@ ParseNext(std::vector<InstVector> *out_vec) {
     }
   }
   // Tensor Op is not thread safe, so call outside of omp
-  out_vec->resize(param_.nthread);
+  out_vec->resize(param_.preprocess_threads);
   for (size_t i = 0; i < opencv_out_vec->size(); i++) {
     InstVector &out = (*out_vec)[i];
     InstVector &opencv_out = (*opencv_out_vec)[i];

@@ -8,7 +8,7 @@ import sys
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str
 from .base import DataIterHandle, NDArrayHandle
-from .base import check_call
+from .base import check_call, ctypes2docstring
 from .ndarray import NDArray
 
 class DataIter(object):
@@ -99,24 +99,17 @@ def _make_io_iterator(handle):
             ctypes.byref(arg_types), \
             ctypes.byref(arg_descs)))
     iter_name = py_str(name.value)
-    param_str = []
-    for i in range(num_args.value):
-        ret = '%s : %s' % (arg_names[i], arg_types[i])
-        if len(arg_descs[i]) != 0:
-            ret += '\n    ' + py_str(arg_descs[i])
-        param_str.append(ret)
+    param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
 
     doc_str = ('%s\n\n' +
-               'Parameters\n' +
-               '----------\n' +
                '%s\n' +
                'name : string, required.\n' +
                '    Name of the resulting data iterator.\n\n' +
                'Returns\n' +
                '-------\n' +
-               'iterator: Iterator\n'+
+               'iterator: DataIter\n'+
                '    The result iterator.')
-    doc_str = doc_str % (desc.value, '\n'.join(param_str))
+    doc_str = doc_str % (desc.value, param_str)
 
     def creator(*args, **kwargs):
         """Create an iterator.
