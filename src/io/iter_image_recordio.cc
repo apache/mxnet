@@ -452,8 +452,8 @@ DMLC_REGISTER_PARAMETER(ImageRecordParam);
 MXNET_REGISTER_IO_THREE_CHAINED_ITER(ImageRecordIter,
         PrefetcherIter, BatchLoader, ImageRecordIter)
     .describe("Create iterator for dataset packed in recordio.")
-    .add_arguments(ImageRecordParam::__FIELDS__())
     .add_arguments(ImageRecParserParam::__FIELDS__())
+    .add_arguments(ImageRecordParam::__FIELDS__())
     .add_arguments(BatchParam::__FIELDS__())
     .add_arguments(PrefetcherParam::__FIELDS__())
     .add_arguments(ImageAugmentParam::__FIELDS__());

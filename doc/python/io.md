@@ -2,10 +2,10 @@ MXNet Python Data Loading API
 =============================
 * [Introduction](#introduction) introduces the main feature of data loader in MXNet.
 * [Create A Data Iterator](#create-a-data-iterator) introduces how to create a data iterator in MXNet python.
-* [Parameters For Data Iterator](*parameters-for-data-iterator) clarifies the different usages for dataiter paramters.
-* [How To Get Data](*how-to-get-data) introduces the data resource and data preparation tools.
+* [Parameters For Data Iterator](#parameters-for-data-iterator) clarifies the different usages for dataiter paramters.
+* [How To Get Data](#how-to-get-data) introduces the data resource and data preparation tools.
 * [Introducing Image RecordIO](*introducing-image-recordio) introduces the benefits brought by using RecordIO as data format.
-* [IO API Reference](*io-api-reference) reference for the IO API and their explanation.
+* [IO API Reference](#io-api-reference) reference for the IO API and their explanation.
 
 Introduction
 ------------
@@ -52,7 +52,7 @@ Generally to create a data iterator, you need to provide three kinds of paramete
 * **Batch Param** gives the information to form a batch.
 * **Augmentation Param** tells which augmentation operations(e.g. crop, mirror) should be taken on an input image.
 * **Backend Param** controls the behavior of backend threads to hide data loading cost.
-* **Auxiliary Params** options to help checking and debugging.
+* **Auxiliary Param** provides options to help checking and debugging.
 
 Detail explanation of the options will be provided in the IO API Reference Section.
 
