@@ -69,7 +69,7 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
   /*! \brief whether to print augment info */
   bool silent;
   /*! \brief shape of the image data*/
-  TShape input_shape;
+  TShape data_shape;
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageAugmentParam) {
     DMLC_DECLARE_FIELD(rand_crop).set_default(true)
@@ -120,9 +120,9 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
         .describe("Augmentation Param: Maximum value of illumination variation.");
     DMLC_DECLARE_FIELD(silent).set_default(true)
         .describe("Augmentation Param: Whether to print augmentor info.");
-    index_t input_shape_default[] = {3, 224, 224};
-    DMLC_DECLARE_FIELD(input_shape)
-        .set_default(TShape(input_shape_default, input_shape_default + 3))
+    index_t data_shape_default[] = {3, 224, 224};
+    DMLC_DECLARE_FIELD(data_shape)
+        .set_default(TShape(data_shape_default, data_shape_default + 3))
         .set_expect_ndim(3).enforce_nonzero()
         .describe("Dataset Param: Input shape of the neural net.");
   }
@@ -234,20 +234,20 @@ class ImageAugmenter {
         y /= 2; x /= 2;
       }
       cv::Rect roi(x, y, rand_crop_size, rand_crop_size);
-      cv::resize(res(roi), res, cv::Size(param_.input_shape[1], param_.input_shape[2]));
+      cv::resize(res(roi), res, cv::Size(param_.data_shape[1], param_.data_shape[2]));
     } else {
-        CHECK(static_cast<mshadow::index_t>(res.cols) >= param_.input_shape[1] \
-                && static_cast<mshadow::index_t>(res.rows) >= param_.input_shape[2])
+        CHECK(static_cast<mshadow::index_t>(res.cols) >= param_.data_shape[1] \
+                && static_cast<mshadow::index_t>(res.rows) >= param_.data_shape[2])
             << "input image size smaller than input shape";
-        mshadow::index_t y = res.rows - param_.input_shape[2];
-        mshadow::index_t x = res.cols - param_.input_shape[1];
+        mshadow::index_t y = res.rows - param_.data_shape[2];
+        mshadow::index_t x = res.cols - param_.data_shape[1];
         if (param_.rand_crop != 0) {
             y = NextUInt32(y + 1, prnd);
             x = NextUInt32(x + 1, prnd);
         } else {
             y /= 2; x /= 2;
         }
-        cv::Rect roi(x, y, param_.input_shape[1], param_.input_shape[2]);
+        cv::Rect roi(x, y, param_.data_shape[1], param_.data_shape[2]);
         res = res(roi);
     }
     return res;
@@ -300,24 +300,24 @@ class ImageAugmenter {
       }
     }
     img_.Resize(mshadow::Shape3((*p_data).shape_[0],
-                param_.input_shape[1], param_.input_shape[2]));
-    if (param_.input_shape[1] == 1) {
+                param_.data_shape[1], param_.data_shape[2]));
+    if (param_.data_shape[1] == 1) {
       img_ = (*p_data) * param_.scale;
     } else {
-      CHECK(p_data->size(1) >= param_.input_shape[1] && p_data->size(2) >= param_.input_shape[2])
+      CHECK(p_data->size(1) >= param_.data_shape[1] && p_data->size(2) >= param_.data_shape[2])
           << "Data size must be bigger than the input size to net.";
-      mshadow::index_t yy = p_data->size(1) - param_.input_shape[1];
-      mshadow::index_t xx = p_data->size(2) - param_.input_shape[2];
+      mshadow::index_t yy = p_data->size(1) - param_.data_shape[1];
+      mshadow::index_t xx = p_data->size(2) - param_.data_shape[2];
       if (param_.rand_crop != 0 && (yy != 0 || xx != 0)) {
         yy = NextUInt32(yy + 1, prnd);
         xx = NextUInt32(xx + 1, prnd);
       } else {
         yy /= 2; xx /= 2;
       }
-      if (p_data->size(1) != param_.input_shape[1] && param_.crop_y_start != -1) {
+      if (p_data->size(1) != param_.data_shape[1] && param_.crop_y_start != -1) {
         yy = param_.crop_y_start;
       }
-      if (p_data->size(2) != param_.input_shape[2] && param_.crop_x_start != -1) {
+      if (p_data->size(2) != param_.data_shape[2] && param_.crop_x_start != -1) {
         xx = param_.crop_x_start;
       }
       float contrast = NextDouble(prnd) * param_.max_random_contrast \

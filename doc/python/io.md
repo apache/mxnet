@@ -40,7 +40,7 @@ The following code gives an example of creating a Cifar data iterator.
 >>>        # Dataset Paramter
 >>>        # Impulsary
 >>>        # indicating the image size after preprocessing
->>>        input_shape=(3,28,28),
+>>>        data_shape=(3,28,28),
 >>>        # Batch Paramter
 >>>        # Impulsary
 >>>        # tells how many images in a batch
@@ -51,7 +51,7 @@ The following code gives an example of creating a Cifar data iterator.
 >>>        mean_img="data/cifar/cifar10_mean.bin",
 >>>        # Augmentation Parameter
 >>>        # Optional
->>>        # randomly crop a patch of the input_shape from the original image
+>>>        # randomly crop a patch of the data_shape from the original image
 >>>        rand_crop=True,
 >>>        # Augmentation Parameter
 >>>        # Optional
