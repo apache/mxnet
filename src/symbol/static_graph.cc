@@ -8,6 +8,7 @@
 #include <vector>
 #include <queue>
 #include <map>
+#include "./static_graph.h"
 #include "../operator/operator_common.h"
 
 namespace mxnet {

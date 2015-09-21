@@ -11,6 +11,7 @@
 #include <map>
 #include <vector>
 #include <algorithm>
+#include "./static_graph.h"
 #include "./graph_algorithm.h"
 
 namespace mxnet {

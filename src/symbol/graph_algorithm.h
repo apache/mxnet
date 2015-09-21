@@ -12,6 +12,7 @@
 #include <dmlc/logging.h>
 #include <mxnet/symbolic.h>
 #include <vector>
+#include "./static_graph.h"
 
 namespace mxnet {
 namespace graph {
