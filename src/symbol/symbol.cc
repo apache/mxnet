@@ -9,6 +9,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <unordered_set>
+#include "./static_graph.h"
 
 namespace mxnet {
 /*!
@@ -479,6 +480,19 @@ bool Symbol::InferShape(const std::unordered_map<std::string, TShape>& known_arg
     KeywordArgumentMismatch("Symbol.InterShape", keys, ListArguments());
   }
   return g.InferShape(arg_shapes, out_shapes, aux_shapes);
+}
+
+
+void Symbol::Save(dmlc::JSONWriter *writer) const {
+  StaticGraph g;
+  this->ToStaticGraph(&g);
+  g.Save(writer);
+}
+
+void Symbol::Load(dmlc::JSONReader *reader) {
+  StaticGraph g;
+  g.Load(reader);
+  this->FromStaticGraph(g);
 }
 
 Symbol Symbol::Create(OperatorProperty *op)  {

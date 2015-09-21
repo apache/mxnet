@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include "./static_graph.h"
 #include "./graph_memory_allocator.h"
 
 namespace mxnet {
@@ -159,7 +160,7 @@ class GraphExecutor : public Executor {
    */
   inline OpExecEntry GetOpExecEntry(uint32_t node_id);
   // initialize the internal graph structure
-  void InitGraph(Symbol symbol, Context ctx, bool need_backward);
+  void InitGraph(const Symbol &symbol, Context ctx, bool need_backward);
   // initialize internal DataEntryInfo, reference counting
   void InitDataEntryInfo(const std::vector<NDArray> &in_args,
                          const std::vector<NDArray> &arg_grad_store,

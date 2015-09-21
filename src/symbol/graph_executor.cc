@@ -239,9 +239,9 @@ GraphExecutor::~GraphExecutor() {
   Engine::Get()->WaitForAll();
 }
 
-void GraphExecutor::InitGraph(Symbol symbol, Context ctx, bool need_backward) {
+void GraphExecutor::InitGraph(const Symbol &symbol, Context ctx, bool need_backward) {
   // initialize all internal data structures
-  symbol.ToStaticGraph(&graph_);
+  graph_.FromSymbol(symbol);
   num_forward_nodes_  = graph_.nodes.size();
   if (need_backward) {
     graph_.MakeBackwardPass(&head_grad_nodes_, &arg_grads_);
