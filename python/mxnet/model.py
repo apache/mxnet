@@ -104,8 +104,8 @@ def _split_input_slice(input_shape, num_split):
     slices = []
     shapes = []
     for k in range(num_split):
-        begin = min(k * step, batch_size)
-        end = min((k+1) * step, batch_size)
+        begin = int(min(k * step, batch_size))
+        end = int(min((k+1) * step, batch_size))
         if begin == end:
             raise ValueError('Too many slices such that some splits are empty')
         slices.append(slice(begin, end))

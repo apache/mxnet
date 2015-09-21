@@ -5,6 +5,7 @@ curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, "../../python/")
 sys.path.append("../../tests/python/common")
 # import library
+import logging
 import mxnet as mx
 import get_data
 import time
@@ -59,10 +60,6 @@ step3: lr = 0.001, bias_lr = 0.002, mom = 0.9
 [39]  train-error:0.00125879  val-error:0.0833
 [40]  train-error:0.000699329 val-error:0.0842
 """
-def CalAcc(out, label):
-    pred = np.argmax(out, axis=1)
-    return np.sum(pred == label) * 1.0 / out.shape[0]
-
 
 np.random.seed(1812)
 
@@ -178,11 +175,14 @@ test_dataiter = mx.io.ImageRecordIter(
         preprocess_threads=1)
 
 def test_cifar():
-    model = mx.model.MXNetModel(ctx=mx.gpu(),
-            symbol=loss, data=(batch_size, 3, 28, 28),
-            optimizer="sgd", num_round = epoch, batch_size = batch_size,
-            learning_rate=0.05, momentum=0.9, weight_decay=0.00001)
-    model.fit(X=train_dataiter, eval_set=test_dataiter, eval_metric=CalAcc)
+    logging.basicConfig(level=logging.DEBUG)
+    console = logging.StreamHandler()
+    console.setLevel(logging.DEBUG)
+    logging.getLogger('').addHandler(console)
+    # get model from symbol
+    model = mx.model.FeedForward(ctx=mx.gpu(), symbol=loss, num_round = epoch,
+                                 learning_rate=0.05, momentum=0.9, wd=0.00001)
+    model.fit(X=train_dataiter, eval_data=test_dataiter)
 
 
 if __name__ == "__main__":
