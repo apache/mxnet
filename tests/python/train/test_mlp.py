@@ -28,12 +28,12 @@ get_data.GetMNIST_ubyte()
 train_dataiter = mx.io.MNISTIter(
         image="data/train-images-idx3-ubyte",
         label="data/train-labels-idx1-ubyte",
-        input_shape=(784,),
+        data_shape=(784,),
         batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
 val_dataiter = mx.io.MNISTIter(
         image="data/t10k-images-idx3-ubyte",
         label="data/t10k-labels-idx1-ubyte",
-        input_shape=(784,),
+        data_shape=(784,),
         batch_size=batch_size, shuffle=True, flat=True, silent=False)
 
 def test_mlp():

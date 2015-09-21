@@ -14,18 +14,18 @@ dataiter = mx.io.ImageRecordIter(
         # Dataset/Augment Paramter
         # Impulsary
         # indicating the image size after preprocessing
-        input_shape=(3,28,28),
+        data_shape=(3,28,28),
         # Batch Paramter
         # Impulsary
         # tells how many images in a batch
-        batch_size=100,       
+        batch_size=100,
         # Augmentation Parameter
         # Optional
         # when offers mean_img, each image will substract the mean value at each pixel
         mean_img="data/cifar/cifar10_mean.bin",
         # Augmentation Parameter
         # Optional
-        # randomly crop a patch of the input_shape from the original image
+        # randomly crop a patch of the data_shape from the original image
         rand_crop=True,
         # Augmentation Parameter
         # Optional
@@ -42,7 +42,7 @@ dataiter = mx.io.ImageRecordIter(
         # Backend Parameter
         # Optional
         # Prefetch buffer size
-        prefetch_buffer=1)
+        prefetch_buffer=4)
 
 batchidx = 0
 for data, label in dataiter:

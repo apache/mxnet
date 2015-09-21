@@ -55,22 +55,13 @@ struct DataInst {
 };  // struct DataInst
 
 /*!
- * \brief a standard batch of data commonly used by iterator
- *      a databatch contains multiple TBlobs. Each Tblobs has
- *      a name stored in a map. There's no different between
- *      data and label, how we use them is to see the DNN implementation.
+ * \brief DataBatch of NDArray, returned by Iterator
  */
 struct DataBatch {
- public:
   /*! \brief content of dense data, if this DataBatch is dense */
   std::vector<NDArray> data;
   /*! \brief extra data to be fed to the network */
   std::string extra_data;
- public:
-  /*! \brief constructor */
-  DataBatch(void) {}
-  /*! \brief destructor */
-  ~DataBatch() {}
 };  // struct DataBatch
 
 /*! \brief typedef the factory function of data iterator */
@@ -122,7 +113,7 @@ struct DataIteratorReg
  *
  * \code
  * // example of registering a imagerec iterator
- * MXNET_REGISTER_IO_CHAINED_ITERATOR(ImageRecordIter, 
+ * MXNET_REGISTER_IO_CHAINED_ITERATOR(ImageRecordIter,
  * ImageRecordIter, ImageRecBatchLoader, Prefetcher)
  * .describe("batched image record data iterator");
  *
