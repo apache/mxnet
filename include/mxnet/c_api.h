@@ -193,6 +193,18 @@ MXNET_DLL int MXNDArrayWaitAll();
  */
 MXNET_DLL int MXNDArrayFree(NDArrayHandle handle);
 /*!
+ * \brief Slice the NDArray along axis 0.
+ * \param handle the handle to the narraya
+ * \param slice_begin The beginning index of slice
+ * \param slice_end The ending index of slice
+ * \param out The NDArrayHandle of sliced NDArray
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
+                             mx_uint slice_begin,
+                             mx_uint slice_end,
+                             NDArrayHandle *out);
+/*!
  * \brief get the shape of the array
  * \param handle the handle to the narray
  * \param out_dim the output dimension

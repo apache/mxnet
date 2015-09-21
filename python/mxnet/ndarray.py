@@ -179,8 +179,12 @@ class NDArray(object):
 
     def __setitem__(self, in_slice, value):
         """Set ndarray value"""
-        if in_slice.step != None:
-            raise Exception("Set NDArray should use empty index array[:] = target_array")
+        if not isinstance(in_slice, slice) or in_slice.step is not None:
+            raise ValueError('NDArray only support continuous slicing on axis 0')
+        if in_slice.start is not None or in_slice.stop is not None:
+            sliced_arr = self._slice(in_slice.start, in_slice.stop)
+            sliced_arr[:] = value
+            return
         if isinstance(value, NDArray):
             if value.handle is not self.handle:
                 value.copyto(self)
@@ -193,9 +197,12 @@ class NDArray(object):
 
     def __getitem__(self, in_slice):
         """Get ndarray"""
-        if in_slice.step != None:
-            raise Exception("Set NDArray should use empty index array[:] += value")
-        return self
+        if not isinstance(in_slice, slice) or in_slice.step is not None:
+            raise ValueError('NDArray only support continuous slicing on axis 0')
+        if in_slice.start is not None or in_slice.stop is not None:
+            return self._slice(in_slice.start, in_slice.stop)
+        else:
+            return self
 
     def _sync_copyfrom(self, source_array):
         """Peform an synchronize copy from the array.
@@ -212,14 +219,29 @@ class NDArray(object):
                 raise TypeError('array must be an array_like data,' +
                                 'type %s is not supported' % str(type(array)))
         source_array = np.ascontiguousarray(source_array, dtype=np.float32)
-
         if source_array.shape != self.shape:
             raise ValueError('array shape do not match the shape of NDArray')
-
         check_call(_LIB.MXNDArraySyncCopyFromCPU(
             self.handle,
             source_array.ctypes.data_as(ctypes.POINTER(mx_float)),
             source_array.size))
+
+    def _slice(self, start, stop):
+        """Return a sliiced NDArray that shares memory with current one.
+
+        Parameters
+        ----------
+        start : int
+            Starting index of slice.
+        stop : int
+            Finishing index of slice.
+        """
+        handle = NDArrayHandle()
+        start = mx_uint(start) if start else mx_uint(0)
+        stop = mx_uint(stop) if stop else mx_uint(self.shape[0])
+        check_call(_LIB.MXNDArraySlice(
+            self.handle, start, stop, ctypes.byref(handle)))
+        return NDArray(handle=handle, writable=self.writable)
 
     def wait_to_read(self):
         """Block until all pending writes operations on current NDArray are finished.
@@ -229,15 +251,6 @@ class NDArray(object):
         function returns.
         """
         check_call(_LIB.MXNDArrayWaitToRead(self.handle))
-
-    def wait_to_write(self):
-        """Block until all pending read/write operations on current NDArray are finished.
-
-        This function will return when all the pending writes to the current
-        NDArray finishes. There can still be pending read going on when the
-        function returns.
-        """
-        check_call(_LIB.MXNDArrayWaitToWrite(self.handle))
 
     @property
     def shape(self):

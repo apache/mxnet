@@ -317,6 +317,18 @@ int MXNDArrayFree(NDArrayHandle handle) {
   API_END();
 }
 
+int MXNDArraySlice(NDArrayHandle handle,
+                   mx_uint slice_begin,
+                   mx_uint slice_end,
+                   NDArrayHandle *out) {
+  NDArray *ptr = new NDArray();
+  API_BEGIN();
+  *ptr = static_cast<NDArray*>(handle)->Slice(
+      slice_begin, slice_end);
+  *out = ptr;
+  API_END_HANDLE_ERROR(delete ptr);
+}
+
 int MXNDArrayGetShape(NDArrayHandle handle,
                       mx_uint *out_dim,
                       const mx_uint **out_pdata) {
