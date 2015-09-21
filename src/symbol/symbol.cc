@@ -246,6 +246,16 @@ Symbol Symbol::operator[] (size_t index) const {
   }
 }
 
+// create a default variable name
+inline std::string DefaultVarName(const std::string &op_name,
+                                  const std::string &arg_name) {
+  if (op_name.length() == 0) {
+    return arg_name;
+  } else {
+    return op_name + '_' + arg_name;
+  }
+}
+
 void Symbol::Compose(const std::vector<Symbol>& args,
                      const std::string& name) {
   CHECK_EQ(NumOutputs(), 1) << "Only composition of value function is supported currently";
@@ -261,12 +271,16 @@ void Symbol::Compose(const std::vector<Symbol>& args,
   if (this->is_atomic()) {
     // atomic symbol do not have place holder for all the arguments
     std::vector<std::string> req_args = heads_[0].source->op->ListArguments();
-    CHECK_EQ(args.size(), req_args.size())
+    CHECK_LE(args.size(), req_args.size())
         << "Incorrect number of arguments, requires " << req_args.size()
         << ", provided " << args.size();
-    heads_[0].source->inputs.resize(args.size());
+    heads_[0].source->inputs.resize(req_args.size());
     for (size_t i = 0; i < args.size(); ++i) {
       heads_[0].source->inputs[i] = args[i].heads_[0];
+    }
+    for (size_t i = args.size(); i < req_args.size(); ++i) {
+      heads_[0].source->inputs[i] = DataEntry(
+          std::make_shared<Node>(nullptr, DefaultVarName(name, req_args[i])), 0);
     }
   } else {
     // find all the place holders
@@ -325,15 +339,8 @@ void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
         heads_[0].source->inputs[i] = iter->second.heads_[0];
         ++nmatched;
       } else {
-        // create a variable node
-        // TODO(bing): think of naming convention
-        if (name.length() == 0) {
-          heads_[0].source->inputs[i] = DataEntry(
-              std::make_shared<Node>(nullptr, req_args[i]), 0);
-        } else {
-          heads_[0].source->inputs[i] = DataEntry(
-              std::make_shared<Node>(nullptr, name + '_' + req_args[i]), 0);
-        }
+        heads_[0].source->inputs[i] = DataEntry(
+            std::make_shared<Node>(nullptr, DefaultVarName(name, req_args[i])), 0);
       }
     }
     // if things goes wrong recover the old state
