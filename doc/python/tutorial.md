@@ -355,11 +355,11 @@ Let's first consider a simple example. It initializes
 a (`int`, `NDAarray`) pair into the store, and then pull the value out.
 
 ```python
->>> mx.kv.start() # start the kvstore
+>>> kv = mx.kv.create('local') # create a local kv store.
 >>> shape = (2,3)
->>> mx.kv.init(3, mx.nd.ones(shape)*2)
+>>> kv.init(3, mx.nd.ones(shape)*2)
 >>> a = mx.nd.zeros(shape)
->>> mx.kv.pull(3, out = a)
+>>> kv.pull(3, out = a)
 >>> print a.asnumpy()
 [[ 2.  2.  2.]
  [ 2.  2.  2.]]
@@ -370,8 +370,8 @@ a (`int`, `NDAarray`) pair into the store, and then pull the value out.
 For any key has been initialized, we can push a new value with the same shape to the key.
 
 ```python
->>> mx.kv.push(3, mx.nd.ones(shape)*8)
->>> mx.kv.pull(3, out = a) # pull out the value
+>>> kv.push(3, mx.nd.ones(shape)*8)
+>>> kv.pull(3, out = a) # pull out the value
 >>> print a.asnumpy()
 [[ 8.  8.  8.]
  [ 8.  8.  8.]]
@@ -384,8 +384,8 @@ values and then push the aggregated value.
 ```python
 >>> gpus = [mx.gpu(i) for i in range(4)]
 >>> b = [mx.nd.ones(shape, gpu) for gpu in gpus]
->>> mx.kv.push(3, b)
->>> mx.kv.pull(3, out = a)
+>>> kv.push(3, b)
+>>> kv.pull(3, out = a)
 >>> print a.asnumpy()
 [[ 4.  4.  4.]
  [ 4.  4.  4.]]
@@ -399,14 +399,14 @@ control how data is merged.
 >>> def update(key, input, stored):
 >>>     print "update on key: %d" % key
 >>>     stored += input * 2
->>> mx.kv.set_updater(update)
->>> mx.kv.pull(3, out=a)
+>>> kv.set_updater(update)
+>>> kv.pull(3, out=a)
 >>> print a.asnumpy()
 [[ 4.  4.  4.]
  [ 4.  4.  4.]]
->>> mx.kv.push(3, mx.nd.ones(shape))
+>>> kv.push(3, mx.nd.ones(shape))
 update on key: 3
->>> mx.kv.pull(3, out=a)
+>>> kv.pull(3, out=a)
 >>> print a.asnumpy()
 [[ 6.  6.  6.]
  [ 6.  6.  6.]]
@@ -419,7 +419,7 @@ pull the value into several devices by a single call.
 
 ```python
 >>> b = [mx.nd.ones(shape, gpu) for gpu in gpus]
->>> mx.kv.pull(3, out = b)
+>>> kv.pull(3, out = b)
 >>> print b[1].asnumpy()
 [[ 6.  6.  6.]
  [ 6.  6.  6.]]
@@ -432,13 +432,13 @@ the interface for a list of key-value pairs. For single device:
 
 ```python
 >>> keys = [5, 7, 9]
->>> mx.kv.init(keys, [mx.nd.ones(shape)]*len(keys))
->>> mx.kv.push(keys, [mx.nd.ones(shape)]*len(keys))
+>>> kv.init(keys, [mx.nd.ones(shape)]*len(keys))
+>>> kv.push(keys, [mx.nd.ones(shape)]*len(keys))
 update on key: 5
 update on key: 7
 update on key: 9
 >>> b = [mx.nd.zeros(shape)]*len(keys)
->>> mx.kv.pull(keys, out = b)
+>>> kv.pull(keys, out = b)
 >>> print b[1].asnumpy()
 [[ 3.  3.  3.]
  [ 3.  3.  3.]]
@@ -446,21 +446,21 @@ update on key: 9
 
 For multi-devices:
 
-```pythoon
+```python
 >>> b = [[mx.nd.ones(shape, gpu) for gpu in gpus]] * len(keys)
->>> mx.kv.push(keys, b)
+>>> kv.push(keys, b)
 update on key: 5
 update on key: 7
 update on key: 9
->>> mx.kv.pull(keys, out = b)
+>>> kv.pull(keys, out = b)
 >>> print b[1][1].asnumpy()
 [[ 11.  11.  11.]
  [ 11.  11.  11.]]
 ```
 
 ### Multiple machines
-
-Base on parameter server. The `updater` will runs on the server nodes. MORE...
+Base on parameter server. The `updater` will runs on the server nodes.
+This section will be updated when the distributed version is ready.
 
 
 <!-- ## How to Choose between APIs -->

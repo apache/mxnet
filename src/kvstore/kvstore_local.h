@@ -20,56 +20,40 @@ namespace mxnet {
 class KVStoreLocal : public KVStore {
  public:
   KVStoreLocal() {
-    // TODO(tianqi, mu) allocate pinned per GPU
-#if MXNET_USE_CUDA
-    pinned_ctx_ = Context::CPUPinned(0);
-#else
-    pinned_ctx_ = Context::CPU();
-#endif
-    Clear();
+    pinned_ctx_ = (MXNET_USE_CUDA != 0) ?
+        Context::CPUPinned(0) : Context::CPU();
+    set_updater(DefaultUpdater());
   }
 
-  virtual ~KVStoreLocal() { Clear(); }
-
-  virtual void Start() { }
-  virtual void Finalize() { Clear(); }
-
-  virtual void set_updater(const Updater& updater) {
+  void set_updater(Updater updater) override {
     updater_ = updater;
   }
 
-  virtual void set_aggregator(bool aggregator) { }
-
-  virtual int get_rank() const { return 0; }
-
-  virtual int get_group_size() const { return 1; }
-
-  virtual void Init(const std::vector<int>& keys,
-                    const std::vector<NDArray>& values) {
+  void Init(const std::vector<int>& keys,
+            const std::vector<NDArray>& values) override {
     for (size_t i = 0; i < keys.size(); ++i) {
       CHECK(local_.find(keys[i]) == local_.end())
           << "duplicate init of key " << keys[i];
-      local_.insert({keys[i], values[i].Copy(pinned_ctx_)});
+      local_[keys[i]] = values[i].Copy(pinned_ctx_);
     }
   }
 
-  virtual void Push(const std::vector<int>& keys,
-                    const std::vector<NDArray>& values) {
+  void Push(const std::vector<int>& keys,
+            const std::vector<NDArray>& values) override {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
-
     CHECK(updater_) << "invalid updater";
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
       auto it = local_.find(key);
       CHECK(it != local_.end()) << "key " << key << " has not been inited";
-      updater_(key, MergePushValue(key, grouped_vals[i]), &it->second);
+      updater_(key, MergePushValue(key, grouped_vals[i]), &(it->second));
     }
   }
 
-  virtual void Pull(const std::vector<int>& keys,
-                    const std::vector<NDArray*>& values) {
+  void Pull(const std::vector<int>& keys,
+            const std::vector<NDArray*>& values) override {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray*> > grouped_vals;
     GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
@@ -78,8 +62,9 @@ class KVStoreLocal : public KVStore {
       int key = uniq_keys[i];
       auto it = local_.find(key);
       CHECK(it != local_.end()) << "key " << key << " has not been inited";
-      for (NDArray* v : grouped_vals[i])
+      for (NDArray* v : grouped_vals[i]) {
         CopyFromTo(it->second, v);
+      }
     }
   }
 
@@ -114,62 +99,56 @@ class KVStoreLocal : public KVStore {
       }
     }
   }
-
-  /**
+  /*!
    * \brief returns the aggregated push value
    */
-  NDArray MergePushValue(int key, const std::vector<NDArray>& val) {
+  const NDArray &MergePushValue(int key, const std::vector<NDArray>& val) {
     CHECK(val.size());
     auto& buf = merge_buf_[key];
+
     if (buf.merged.is_none()) {
-      buf.merged = val[0].Copy(pinned_ctx_);
-    } else {
-      CopyFromTo(val[0], &buf.merged);
+      buf.merged = NDArray(val[0].shape(), pinned_ctx_);
     }
+    CopyFromTo(val[0], &buf.merged);
 
     for (size_t i = 1; i < val.size(); ++i) {
       const auto& v = val[i];
+      Context ctx = v.ctx();
       if (v.ctx().dev_mask() == cpu::kDevMask) {
         buf.merged += v;
       } else {
-        int id = v.ctx().dev_id;
-        // first copy to the pinned memory
-        if (buf.gpu_buf.size() <= (size_t)id) {
-          buf.gpu_buf.resize(id + 2);
-        }
-        if (buf.gpu_buf[id].is_none()) {
-          buf.gpu_buf[id] = NDArray(v.shape(), pinned_ctx_);
-        }
-        CopyFromTo(v, &buf.gpu_buf[id]);
-        buf.merged += buf.gpu_buf[id];
+        CHECK_EQ(ctx.dev_mask(), gpu::kDevMask);
+        NDArray *copy_buf = buf.AllocCopyBuf(ctx.dev_id, val[0].shape());
+        CopyFromTo(val[0], copy_buf);
+        buf.merged += *copy_buf;
       }
     }
     return buf.merged;
   }
 
  private:
-  void Clear() {
-    updater_ = DefaultUpdater();
-    merge_buf_.clear();
-    local_.clear();
-  }
-
-  /// \brief temperal space for pushing value
-  struct MergeBuf {
+  /// \brief temperal space for pushing and pull
+  struct BufferEntry {
     /// \brief the cpu buffer for gpu data
-    std::vector<NDArray> gpu_buf;
+    std::vector<NDArray> copy_buf;
     /// \brief merged data in cpu
     NDArray merged;
+    // allocate copy buffer, if it has not been allocated
+    inline NDArray *AllocCopyBuf(uint32_t dev_id, const TShape& shape) {
+      if (dev_id >= copy_buf.size()) copy_buf.resize(dev_id + 1);
+      if (copy_buf[dev_id].is_none()) {
+        copy_buf[dev_id] = NDArray(shape, Context::CPUPinned(dev_id));
+      }
+      return &copy_buf[dev_id];
+    }
   };
-
   /// \brief buffer for merging push value
-  std::unordered_map<int, MergeBuf> merge_buf_;
-
-  /// \brief local storage
+  std::unordered_map<int, BufferEntry> merge_buf_;
+  /// \brief buffer for storing local values
   std::unordered_map<int, NDArray> local_;
-
+  // pinned context
   Context pinned_ctx_;
-
+  // updater
   Updater updater_;
 };
 

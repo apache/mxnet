@@ -100,7 +100,6 @@ class GraphStorageAllocator {
    * \brief free list of storage entries, maps size to free list
    */
   std::multimap<size_t, StorageEntry*> free_;
-
   /*!
    * \brief color of nodes in the graph, used for auxiliary policy making.
   */

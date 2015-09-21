@@ -42,6 +42,8 @@ typedef void *ExecutorHandle;
 typedef void *DataIterCreator;
 /*! \brief handle to a DataIterator */
 typedef void *DataIterHandle;
+/*! \brief handle to KVStore */
+typedef void *KVStoreHandle;
 /*!
  * \brief return str message of the last error
  *  all function in this file will return 0 when success
@@ -654,50 +656,56 @@ MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
 // Part 5: KVStore interface
 //--------------------------------------------
 /*!
- * \brief start the kvstore
+ * \brief Create a kvstore
+ * \param type the type of KVStore
+ * \param out The output type of KVStore
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStoreStart();
+MXNET_DLL int MXKVStoreCreate(const char *type,
+                              KVStoreHandle *out);
 /*!
- * \brief stop the kvstore
+ * \brief Delete a KVStore handle.
+ * \param handle handle to the kvstore
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStoreStop();
-
+MXNET_DLL int MXKVStoreFree(KVStoreHandle handle);
 /*!
  * \brief Init a list of (key,value) pairs in kvstore
+ * \param handle handle to the kvstore
  * \param num the number of key-value pairs
  * \param keys the list of keys
  * \param vals the list of values
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStoreInit(int num,
+MXNET_DLL int MXKVStoreInit(KVStoreHandle handle,
+                            int num,
                             int* keys,
                             NDArrayHandle* vals);
 
 /*!
  * \brief Push a list of (key,value) pairs to kvstore
+ * \param handle handle to the kvstore
  * \param num the number of key-value pairs
  * \param keys the list of keys
  * \param vals the list of values
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStorePush(int num,
+MXNET_DLL int MXKVStorePush(KVStoreHandle handle,
+                            int num,
                             int* keys,
                             NDArrayHandle* vals);
-
-
 /*!
  * \brief pull a list of (key, value) pairs from the kvstore
+ * \param handle handle to the kvstore
  * \param num the number of key-value pairs
  * \param keys the list of keys
  * \param vals the list of values
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStorePull(int num,
+MXNET_DLL int MXKVStorePull(KVStoreHandle handle,
+                            int num,
                             int* keys,
                             NDArrayHandle* vals);
-
 /*!
  * \brief user-defined updater for the kvstore
  * It's this updater's responsibility to delete \a recv and \a local
@@ -706,12 +714,12 @@ MXNET_DLL int MXKVStorePull(int num,
  * \param local the value stored on local on this key
  */
 typedef void (MXKVStoreUpdater)(int key, NDArrayHandle recv, NDArrayHandle local);
-
 /*!
  * \brief register an push updater
+ * \param handle handle to the KVStore
  * \param updater udpater function
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStoreSetUpdater(MXKVStoreUpdater updater);
+MXNET_DLL int MXKVStoreSetUpdater(KVStoreHandle handle, MXKVStoreUpdater updater);
 
 #endif  // MXNET_C_API_H_
