@@ -60,6 +60,17 @@ def test_Cifar10Rec():
     for i in range(10):
         assert(labelcount[i] == 5000)
 
+def test_NumpyIter():
+    datas = np.ones([1000,100])
+    labels = np.ones([1000, 1])
+    for i in range(1000):
+        datas[i] = i / 100
+        labels[i] = i / 100
+    dataiter = mx.io.NumpyIter(datas, labels, batch_size=100)
+    for data, label in dataiter:
+        print data.asnumpy().flatten()
+
 if __name__ == "__main__":
-    test_MNISTIter()
+    test_NumpyIter()
+    #test_MNISTIter()
     #test_Cifar10Rec()

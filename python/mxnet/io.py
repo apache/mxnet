@@ -5,11 +5,13 @@ from __future__ import absolute_import
 
 import ctypes
 import sys
+import numpy as np
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str
 from .base import DataIterHandle, NDArrayHandle
 from .base import check_call
 from .ndarray import NDArray
+from .ndarray import array
 
 class DataIter(object):
     """DataIter object in mxnet. List all the needed functions here. """
@@ -83,6 +85,84 @@ class DataIter(object):
         check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
         return NDArray(hdl, False)
 
+class NumpyIter(DataIter):
+    """NumpyIter object in mxnet. Taking Numpy Array into dataiter. """
+
+    def __init__(self, *args, **kwargs):
+        """Initialize with handle
+
+        Parameters
+        ----------
+        handle : DataIterHandle
+            the handle to the underlying C++ Data Iterator
+        """
+        self.data = args[0]
+        self.label = args[1]
+        self.batch_size = kwargs.get('batch_size', 100)
+        self.data_pad = kwargs.get('data_pad', 0)
+        self.label_pad = kwargs.get('label_pad', 0)
+        self.loc = 0
+        self.out_data = None
+        self.out_label = None
+
+    def __del__(self):
+        pass
+
+    def reset(self):
+        """set loc to 0
+
+        """
+        self.loc = 0
+
+    def iter_next(self):
+        """iterate to next data with return value
+
+        Returns
+        -------
+        return true if success
+        """
+        if self.loc < self.data.shape[0]:
+            batch_data_shape = []
+            batch_data_shape.append(self.batch_size)
+            for i in range(1,len(self.data.shape)):
+                batch_data_shape.append(self.data.shape[i])
+            self.out_data = np.ones(batch_data_shape, dtype=self.data.dtype) * self.label_pad
+            self.out_label = np.ones([self.batch_size, 1], dtype=self.data.dtype) * self.label_pad
+            actual_size = min(self.data.shape[0] - self.loc, self.batch_size)
+            self.out_data[0:actual_size,::] = self.data[self.loc:self.loc+actual_size,::]
+            self.out_label[0:actual_size,::] = self.label[self.loc:self.loc+actual_size,::]
+            self.loc += actual_size
+            return True
+        else:
+            return False
+
+    def next(self):
+        """get next data batch from iterator
+
+        Returns
+        -------
+        labels and images for the next batch
+        """
+        if self.iter_next():
+            return self.getdata(), self.getlabel()
+        else:
+            raise StopIteration
+
+    # make it work for both python2 and 3
+    __next__ = next
+
+    def getdata(self):
+        """get data from batch
+
+        """
+        return array(self.out_data)
+
+    def getlabel(self):
+        """get label from batch
+
+        """
+        return array(self.out_label)
+
 def _make_io_iterator(handle):
     """Create an io iterator by handle."""
     name = ctypes.c_char_p()
@@ -155,7 +235,6 @@ def _make_io_iterator(handle):
     creator.__name__ = iter_name
     creator.__doc__ = doc_str
     return creator
-
 
 def _init_io_module():
     """List and add all the data iterators to current module."""
