@@ -15,7 +15,7 @@ def test_MNISTIter():
     train_dataiter = mx.io.MNISTIter(
             image="data/train-images-idx3-ubyte",
             label="data/train-labels-idx1-ubyte",
-            input_shape=(784,),
+            data_shape=(784,),
             batch_size=batch_size, shuffle=1, flat=1, silent=0, seed=10)
     # test_loop
     nbatch = 60000 / batch_size
@@ -44,11 +44,11 @@ def test_Cifar10Rec():
             rand_crop=False,
             and_mirror=False,
             shuffle=False,
-            input_shape=(3,28,28),
+            data_shape=(3,28,28),
             batch_size=100,
             preprocess_threads=4,
             prefetch_buffer=1)
-    labelcount = [0 for i in range(10)] 
+    labelcount = [0 for i in range(10)]
     batchcount = 0
     for data, label in dataiter:
         npdata = data.asnumpy().flatten().sum()
