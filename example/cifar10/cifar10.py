@@ -165,7 +165,7 @@ train_dataiter = mx.io.ImageRecordIter(
         mean_img="data/cifar/cifar_mean.bin",
         rand_crop=True,
         rand_mirror=True,
-        input_shape=(3,28,28),
+        data_shape=(3,28,28),
         batch_size=batch_size,
         preprocess_threads=1)
 test_dataiter = mx.io.ImageRecordIter(
@@ -173,7 +173,7 @@ test_dataiter = mx.io.ImageRecordIter(
         mean_img="data/cifar/cifar_mean.bin",
         rand_crop=False,
         rand_mirror=False,
-        input_shape=(3,28,28),
+        data_shape=(3,28,28),
         batch_size=batch_size,
         preprocess_threads=1)
 

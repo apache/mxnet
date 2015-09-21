@@ -120,9 +120,7 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
         .describe("Augmentation Param: Maximum value of illumination variation.");
     DMLC_DECLARE_FIELD(silent).set_default(true)
         .describe("Augmentation Param: Whether to print augmentor info.");
-    index_t data_shape_default[] = {3, 224, 224};
     DMLC_DECLARE_FIELD(data_shape)
-        .set_default(TShape(data_shape_default, data_shape_default + 3))
         .set_expect_ndim(3).enforce_nonzero()
         .describe("Dataset Param: Input shape of the neural net.");
   }
