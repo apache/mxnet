@@ -48,7 +48,14 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     if (opr_block->opr->prop == FnProperty::kAsync && pusher_thread) {
       if (ctx.dev_mask() == gpu::kDevMask) {
         #if MXNET_USE_CUDA
-        mshadow::SetDevice<gpu>(ctx.dev_id);
+        try {
+          mshadow::SetDevice<gpu>(ctx.dev_id);
+        } catch (const dmlc::Error &e) {
+          std::string what = e.what();
+          if (what.find("driver shutting down") == std::string::npos) {
+             LOG(ERROR) << "Ignore Error " << what << " during worker finalization";
+          }
+        }
         #endif
       }
       RunContext run_ctx;
@@ -170,4 +177,3 @@ Engine *CreateThreadedEnginePerDevice() {
 }
 }  // namespace engine
 }  // namespace mxnet
-

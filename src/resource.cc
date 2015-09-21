@@ -111,7 +111,16 @@ class ResourceManagerImpl : public ResourceManager {
     ~ResourceRandom() {
       mshadow::Random<xpu> *r = prnd;
       Engine::Get()->DeleteVariable(
-          [r](RunContext rctx){ delete r; }, ctx, resource.var);
+          [r](RunContext rctx) {
+            try {
+              delete r;
+            } catch (const dmlc::Error &e) {
+              std::string what = e.what();
+              if (what.find("driver shutting down") == std::string::npos) {
+                LOG(ERROR) << "Ignore Error " << what << " resource finalization";
+              }
+            }
+          }, ctx, resource.var);
     }
     // set seed to a PRNG
     inline void Seed(uint32_t global_seed) {
@@ -150,7 +159,16 @@ class ResourceManagerImpl : public ResourceManager {
       for (size_t i = 0; i < space.size(); ++i) {
         mshadow::TensorContainer<xpu, 1, real_t>* r = space[i];
         Engine::Get()->DeleteVariable(
-            [r](RunContext rctx){ delete r; }, ctx, resource[i].var);
+            [r](RunContext rctx){
+              try {
+                r->Release();
+              } catch (const dmlc::Error &e) {
+                std::string what = e.what();
+                if (what.find("driver shutting down") == std::string::npos) {
+                  LOG(ERROR) << "Ignore Error " << what << " resource finalization";
+                }
+              }
+            }, ctx, resource[i].var);
       }
     }
     // get next resource in round roubin matter

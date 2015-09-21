@@ -30,11 +30,18 @@ class Initializer(object):
             self._init_beta(name, arr)
         elif name.endswith('weight'):
             self._init_weight(name, arr)
+        elif name.endswith("moving_mean"):
+            self._init_zero(name, arr)
+        elif name.endswith("moving_var"):
+            self._init_zero(name, arr)
         else:
             self._init_default(name, arr)
 
+    def _init_zero(self, name, arr):
+        arr[:] = 0.0
+
     def _init_bias(self, name, arr):
-        arr[:] = 0
+        arr[:] = 0.0
 
     def _init_gamma(self, name, arr):
         arr[:] = 1.0
