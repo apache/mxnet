@@ -216,14 +216,10 @@ class NDArray {
     CHECK(!is_none()) << "NDArray is not initialized";
     CHECK_GE(shape_[0], end) << "Slice end index out of range";
     size_t length = 1;
-    if (shape_.ndim() == 1) {
-      ret.offset_ = begin;
-    } else {
-      for (index_t i = 1; i < shape_.ndim(); ++i) {
-        length *= shape_[i];
-      }
-      ret.offset_ = begin * length;
+    for (index_t i = 1; i < shape_.ndim(); ++i) {
+      length *= shape_[i];
     }
+    ret.offset_ += begin * length;
     ret.shape_[0] = end - begin;
     return ret;
   }
