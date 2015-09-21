@@ -67,8 +67,19 @@ def test_NumpyIter():
         datas[i] = i / 100
         labels[i] = i / 100
     dataiter = mx.io.NumpyIter(datas, labels, batch_size=100)
+    batchidx = 0
     for data, label in dataiter:
-        print data.asnumpy().flatten()
+        assert(label.asnumpy().flatten().sum() == batchidx * 100)
+        batchidx += 1
+    dataiter.reset()
+    batchidx = 0
+    for i in range(1000):
+        datas[i] = i / 100
+        labels[i] = i / 100
+    dataiter = mx.io.NumpyIter(datas, labels, batch_size=100)
+    for data, label in dataiter:
+        assert(label.asnumpy().flatten().sum() == batchidx * 100)
+        batchidx += 1
 
 if __name__ == "__main__":
     test_NumpyIter()

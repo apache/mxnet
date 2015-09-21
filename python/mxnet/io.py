@@ -96,6 +96,7 @@ class NumpyIter(DataIter):
         handle : DataIterHandle
             the handle to the underlying C++ Data Iterator
         """
+        super(NumpyIter, self).__init__(None)
         self.data = args[0]
         self.label = args[1]
         self.batch_size = kwargs.get('batch_size', 100)
@@ -124,13 +125,13 @@ class NumpyIter(DataIter):
         if self.loc < self.data.shape[0]:
             batch_data_shape = []
             batch_data_shape.append(self.batch_size)
-            for i in range(1,len(self.data.shape)):
+            for i in range(1, len(self.data.shape)):
                 batch_data_shape.append(self.data.shape[i])
             self.out_data = np.ones(batch_data_shape, dtype=self.data.dtype) * self.label_pad
             self.out_label = np.ones([self.batch_size, 1], dtype=self.data.dtype) * self.label_pad
             actual_size = min(self.data.shape[0] - self.loc, self.batch_size)
-            self.out_data[0:actual_size,::] = self.data[self.loc:self.loc+actual_size,::]
-            self.out_label[0:actual_size,::] = self.label[self.loc:self.loc+actual_size,::]
+            self.out_data[0:actual_size, ::] = self.data[self.loc:self.loc+actual_size, ::]
+            self.out_label[0:actual_size, ::] = self.label[self.loc:self.loc+actual_size, ::]
             self.loc += actual_size
             return True
         else:

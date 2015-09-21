@@ -8,6 +8,7 @@
 #include <mxnet/base.h>
 #include <cstddef>
 #include <array>
+#include <string>
 #include <mutex>
 #include "../common/cuda_utils.h"
 
@@ -46,7 +47,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
     Context const& ctx) {
   RunContext ret;
   ret.stream = nullptr;
-  switch (ctx.dev_mask) {
+  switch (ctx.dev_mask()) {
     case cpu::kDevMask: break;
     case gpu::kDevMask: {
 #if MXNET_USE_CUDA
@@ -79,7 +80,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
     Context const& ctx) {
   RunContext ret;
   ret.stream = nullptr;
-  switch (ctx.dev_mask) {
+  switch (ctx.dev_mask()) {
     case cpu::kDevMask: break;
     case gpu::kDevMask: {
 #if MXNET_USE_CUDA
@@ -118,7 +119,15 @@ void StreamManager<kNumGpus, kStreams>::Finalize() {
   for (std::size_t i = 0; i < kNumGpus; ++i) {
     if (gpu_cnt_.at(i) != -1) {
       for (auto&& j : gpu_streams_.at(i)) {
-        mshadow::DeleteStream<gpu>(j);
+        // Catch exception for CUDA driver shutdown
+        try {
+          mshadow::DeleteStream<gpu>(j);
+        } catch (const dmlc::Error &e) {
+          std::string what = e.what();
+          if (what.find("driver shutting down") == std::string::npos) {
+            LOG(ERROR) << "Ignore Error " << what << " during worker finalization";
+          }
+        }
       }
       gpu_cnt_.at(i) = -1;
     }

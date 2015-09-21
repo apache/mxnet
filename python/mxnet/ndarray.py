@@ -10,7 +10,7 @@ from .base import _LIB, string_types, numeric_types
 from .base import c_array, py_str, c_str
 from .base import mx_uint, mx_float, NDArrayHandle, FunctionHandle
 from .base import ctypes2buffer
-from .base import check_call
+from .base import check_call, ctypes2docstring
 from .context import Context
 
 def _new_empty_handle():
@@ -39,7 +39,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc):
     check_call(_LIB.MXNDArrayCreate(
         c_array(mx_uint, shape),
         len(shape),
-        ctx.device_mask,
+        ctx.device_typeid,
         ctx.device_id,
         int(delay_alloc),
         ctypes.byref(hdl)))
@@ -179,8 +179,12 @@ class NDArray(object):
 
     def __setitem__(self, in_slice, value):
         """Set ndarray value"""
-        if in_slice.step != None:
-            raise Exception("Set NDArray should use empty index array[:] = target_array")
+        if not isinstance(in_slice, slice) or in_slice.step is not None:
+            raise ValueError('NDArray only support continuous slicing on axis 0')
+        if in_slice.start is not None or in_slice.stop is not None:
+            sliced_arr = self._slice(in_slice.start, in_slice.stop)
+            sliced_arr[:] = value
+            return
         if isinstance(value, NDArray):
             if value.handle is not self.handle:
                 value.copyto(self)
@@ -193,9 +197,12 @@ class NDArray(object):
 
     def __getitem__(self, in_slice):
         """Get ndarray"""
-        if in_slice.step != None:
-            raise Exception("Set NDArray should use empty index array[:] += value")
-        return self
+        if not isinstance(in_slice, slice) or in_slice.step is not None:
+            raise ValueError('NDArray only support continuous slicing on axis 0')
+        if in_slice.start is not None or in_slice.stop is not None:
+            return self._slice(in_slice.start, in_slice.stop)
+        else:
+            return self
 
     def _sync_copyfrom(self, source_array):
         """Peform an synchronize copy from the array.
@@ -212,14 +219,29 @@ class NDArray(object):
                 raise TypeError('array must be an array_like data,' +
                                 'type %s is not supported' % str(type(array)))
         source_array = np.ascontiguousarray(source_array, dtype=np.float32)
-
         if source_array.shape != self.shape:
             raise ValueError('array shape do not match the shape of NDArray')
-
         check_call(_LIB.MXNDArraySyncCopyFromCPU(
             self.handle,
             source_array.ctypes.data_as(ctypes.POINTER(mx_float)),
             source_array.size))
+
+    def _slice(self, start, stop):
+        """Return a sliiced NDArray that shares memory with current one.
+
+        Parameters
+        ----------
+        start : int
+            Starting index of slice.
+        stop : int
+            Finishing index of slice.
+        """
+        handle = NDArrayHandle()
+        start = mx_uint(start) if start else mx_uint(0)
+        stop = mx_uint(stop) if stop else mx_uint(self.shape[0])
+        check_call(_LIB.MXNDArraySlice(
+            self.handle, start, stop, ctypes.byref(handle)))
+        return NDArray(handle=handle, writable=self.writable)
 
     def wait_to_read(self):
         """Block until all pending writes operations on current NDArray are finished.
@@ -229,15 +251,6 @@ class NDArray(object):
         function returns.
         """
         check_call(_LIB.MXNDArrayWaitToRead(self.handle))
-
-    def wait_to_write(self):
-        """Block until all pending read/write operations on current NDArray are finished.
-
-        This function will return when all the pending writes to the current
-        NDArray finishes. There can still be pending read going on when the
-        function returns.
-        """
-        check_call(_LIB.MXNDArrayWaitToWrite(self.handle))
 
     @property
     def shape(self):
@@ -262,11 +275,11 @@ class NDArray(object):
         context : mxnet.Context
             The context of current NDArray.
         """
-        dev_mask = ctypes.c_int()
+        dev_typeid = ctypes.c_int()
         dev_id = ctypes.c_int()
         check_call(_LIB.MXNDArrayGetContext(
-            self.handle, ctypes.byref(dev_mask), ctypes.byref(dev_id)))
-        return Context(Context.devmask2type[dev_mask.value], dev_id.value)
+            self.handle, ctypes.byref(dev_typeid), ctypes.byref(dev_id)))
+        return Context(Context.devtype2str[dev_typeid.value], dev_id.value)
 
     def asnumpy(self):
         """Return a copied numpy array of current array.
@@ -310,7 +323,7 @@ class NDArray(object):
             hret = NDArray(_new_alloc_handle(self.shape, other, True))
             return NDArray._copyto(self, out=hret)
         else:
-            raise TypeError('copyto do not support type ' + type(other))
+            raise TypeError('copyto do not support type ' + str(type(other)))
     # pylint: enable= no-member
 
 
@@ -529,17 +542,8 @@ def _make_ndarray_function(handle):
         ctypes.byref(arg_types),
         ctypes.byref(arg_descs)))
     func_name = py_str(name.value)
-
-    param_str = []
-    for i in range(num_args.value):
-        ret = '%s : %s' % (py_str(arg_names[i]), py_str(arg_types[i]))
-        if len(arg_descs[i]) != 0:
-            ret += '\n    ' + py_str(arg_descs[i])
-        param_str.append(ret)
-
+    param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
     doc_str = ('%s\n\n' +
-               'Parameters\n' +
-               '----------\n' +
                '%s\n' +
                'out : NDArray, optional\n' +
                '    The output NDArray to hold the result.\n\n'+
@@ -547,7 +551,7 @@ def _make_ndarray_function(handle):
                '-------\n' +
                'out : NDArray\n'+
                '    The output of binary function.')
-    doc_str = doc_str % (py_str(desc.value), '\n'.join(param_str))
+    doc_str = doc_str % (py_str(desc.value), param_str)
 
     # Definition of internal functions.
     def binary_ndarray_function(lhs, rhs, out=None):

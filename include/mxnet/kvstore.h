@@ -13,38 +13,17 @@
 #include "./ndarray.h"
 
 namespace mxnet {
-
-/**
+/*!
  * \brief distributed key-value store
  *
  * A distributed key-value store for data synchronization over multiple
- * devices/machines. It supports aggregator and user-defined updater.
+ * devices/machines. It support user-defined updater.
  */
 class KVStore {
  public:
-  /**
-   * \brief get singleton instance
-   */
-  static KVStore* Get() { static KVStore store; return &store; }
-
-  /**
-   * \brief Start
-   *
-   * One should call it before any futher action such as \ref Init, \ref Push
-   *  and \ref Pull
-   */
-  virtual void Start();
-
-  /**
-   * \brief Finalize the KVStore
-   *
-   * clear all key-value pairs stored, updater, and devices binded
-   */
-  virtual void Finalize() {
-    if (impl_) { impl_->Finalize(); delete impl_; impl_ = NULL; }
-  }
-
-  /**
+  /*! \brief virtual destructor */
+  virtual ~KVStore() {}
+  /*!
    * \brief Initialize a list of key-value pair to the store.
    *
    * One should initalize the key before \ref Push and \ref Pull, and a key
@@ -54,11 +33,7 @@ class KVStore {
    * \param values a list of values
    */
   virtual void Init(const std::vector<int>& keys,
-                    const std::vector<NDArray>& values) {
-    CHECK_EQ(keys.size(), values.size());
-    get_impl()->Init(keys, values);
-  }
-
+                    const std::vector<NDArray>& values) = 0;
   /*!
    * \brief push a list of key-value pairs into the store
    *
@@ -89,12 +64,7 @@ class KVStore {
    * \param value the list of values
    */
   virtual void Push(const std::vector<int>& keys,
-                    const std::vector<NDArray>& values) {
-    CHECK_EQ(keys.size(), values.size());
-    if (keys.empty()) return;
-    get_impl()->Push(keys, values);
-  }
-
+                    const std::vector<NDArray>& values)  = 0;
   /*!
    * \brief pull a list of key-value pairs from the store
    *
@@ -112,22 +82,20 @@ class KVStore {
    * \param values the list of buffers for the pulled data, they should be preallocated
    */
   virtual void Pull(const std::vector<int>& keys,
-                    const std::vector<NDArray*>& values) {
-    get_impl()->Pull(keys, values);
-  }
-
+                    const std::vector<NDArray*>& values) = 0;
 #if DMLC_USE_CXX11
   /**
    * \brief the prototype of user-defined updater
    */
   typedef std::function<void(int, const NDArray&, NDArray*)> Updater;
-
-  /*! \brief returns the default updater, which is ASSIGN */
-  Updater DefaultUpdater() {
+  /*!
+   * \brief returns the default updater, which is ASSIGN
+   * \return The default updater
+   */
+  inline static Updater DefaultUpdater() {
     return [](int key, const NDArray& a, NDArray* b) { CopyFromTo(a, b); };
   }
-
-  /**
+  /*!
    * \brief set an updater
    *
    * Given a key, assume \a x is the received (pushed) value and \a y is the
@@ -140,57 +108,34 @@ class KVStore {
    * workers. Assume \f$ x_i \f$ is received from worker i. Then the server
    * first computes \f$\sum_{i=0}^n x = x_i\f$, and then applies \a h. It is often
    * used for synchronous optimization
-   *
+1   *
    * - no: \a h is called every time when \a x is received from a worker. It
    * is often used for asynchronous optimization.
    *
    * \param batch true for batch, false for online
    * \param updt user-defined updater, default is assign
    */
-  virtual void set_updater(const Updater& updater) {
-    get_impl()->set_updater(updater);
-  }
+  virtual void set_updater(Updater updater) = 0;
 
 #endif  // DMLC_USE_CXX11
-
-  /**
-   * \brief set aggregator for distributed kvstore
-   *
-   * \param aggregator false to disable
-   */
-  virtual void set_aggregator(bool aggregator) {
-    get_impl()->set_aggregator(aggregator);
-  }
-
   /*!
-   * \brief Gets rank of this node in its group, which is in [0, GroupSize).
+   * \return The rank of this node in its group, which is in [0, GroupSize).
    */
   virtual int get_rank() const {
-    return get_impl()->get_rank();
+    return 0;
   }
-
   /*!
-   * \brief Get the number of nodes in this group.
+   * \return The number of nodes in this group.
    */
   virtual int get_group_size() const {
-    return get_impl()->get_group_size();
+    return 1;
   }
-
- protected:
-  KVStore() : impl_(NULL) { }
-
-  virtual ~KVStore() {
-    delete impl_; impl_ = NULL;
-  }
-
- private:
-  inline KVStore* get_impl() const {
-    CHECK(impl_) << "call Start() first";
-    return impl_;
-  }
-  KVStore* impl_;
-  DISALLOW_COPY_AND_ASSIGN(KVStore);
+  /*!
+   * \brief Create a new KVStore.
+   * \param type The type of the kvstore.
+   * \return a new created KVStore.
+   */
+  static KVStore *Create(const char *type = "local");
 };
-
 }  // namespace mxnet
 #endif  // MXNET_KVSTORE_H_

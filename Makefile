@@ -27,12 +27,12 @@ WARNFLAGS= -Wall
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 # CFLAGS for debug
-ifeq ($(DEBUG),0)
-	CFLAGS += -O3
-else
+ifeq ($(DEBUG), 1)
 	CFLAGS += -g -O0
+else
+	CFLAGS += -O3
 endif
-CFLAGS += -I./mshadow/ -I./dmlc-core/include -fPIC -Iinclude $(MSHADOW_CFLAGS) $(DMLC_CFLAGS)
+CFLAGS += -I./mshadow/ -I./dmlc-core/include -fPIC -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 ROOTDIR = $(CURDIR)
@@ -45,6 +45,7 @@ endif
 ifeq ($(USE_OPENCV),1)
 	CFLAGS+= -DMXNET_USE_OPENCV=1
 	LDFLAGS+= `pkg-config --libs opencv`
+	BIN += bin/im2rec
 else
 	CFLAGS+= -DMXNET_USE_OPENCV=0
 endif
@@ -70,7 +71,7 @@ ifneq ($(ADD_LDFLAGS), NONE)
 	LDFLAGS += $(ADD_LDFLAGS)
 endif
 
-.PHONY: clean all test lint doc
+.PHONY: clean all test lint doc clean_all
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
@@ -104,6 +105,11 @@ lib/libmxnet.so: $(ALL_DEP)
 $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
+bin/im2rec: tools/im2rec.cc $(DMLC_CORE)/libdmlc.a 
+
+$(BIN) :
+	$(CXX) $(CFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
+
 include tests/cpp/unittest.mk
 
 test: tests/cpp/unittest
@@ -116,6 +122,8 @@ doxygen:
 
 clean:
 	$(RM) -r build lib/lib* *~ */*~ */*/*~ */*/*/*~
+
+clean_all: clean
 	cd $(DMLC_CORE); make clean; cd -
 
 -include build/*.d

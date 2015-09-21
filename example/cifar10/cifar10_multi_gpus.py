@@ -1,4 +1,4 @@
-# pylint: skip-file
+# Pylint: skip-file
 import numpy as np
 import mxnet as mx
 import copy
@@ -153,20 +153,20 @@ train_dataiter = mx.io.ImageRecordIter(
         rand_crop=True,
         rand_mirror=True,
         shuffle=False,
-        input_shape=(3,28,28),
+        data_shape=(3,28,28),
         batch_size=batch_size,
-        nthread=4,
-        prefetch_capacity=6)
+        preprocess_threads=4,
+        prefetch_buffer=6)
 test_dataiter = mx.io.ImageRecordIter(
         path_imgrec="data/cifar/test.rec",
         mean_img="data/cifar/cifar_mean.bin",
         rand_crop=False,
         rand_mirror=False,
         shuffle=False,
-        input_shape=(3,28,28),
+        data_shape=(3,28,28),
         batch_size=batch_size,
-        nthread=4,
-        prefetch_capacity=6)
+        preprocess_threads=4,
+        prefetch_buffer=6)
 
 def progress(count, total, epoch, tic):
     bar_len = 50

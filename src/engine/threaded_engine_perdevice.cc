@@ -7,7 +7,6 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <dmlc/concurrency.h>
-#include <array>
 #include "./threaded_engine.h"
 #include "./thread_pool.h"
 #include "../common/lazy_alloc_array.h"
@@ -38,38 +37,40 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     // GPU tasks will be created lazily
   }
   ~ThreadedEnginePerDevice() noexcept(false) {
-    Finalize();
+    gpu_normal_workers_.Clear();
+    gpu_copy_workers_.Clear();
+    cpu_worker_.reset(nullptr);
   }
 
  protected:
   void PushToExecute(OprBlock *opr_block, bool pusher_thread) override {
     const Context& ctx = opr_block->ctx;
     if (opr_block->opr->prop == FnProperty::kAsync && pusher_thread) {
-      if (ctx.dev_mask == gpu::kDevMask) {
+      if (ctx.dev_mask() == gpu::kDevMask) {
         #if MXNET_USE_CUDA
-        mshadow::SetDevice<gpu>(ctx.dev_id);
+        try {
+          mshadow::SetDevice<gpu>(ctx.dev_id);
+        } catch (const dmlc::Error &e) {
+          std::string what = e.what();
+          if (what.find("driver shutting down") == std::string::npos) {
+             LOG(ERROR) << "Ignore Error " << what << " during worker finalization";
+          }
+        }
         #endif
       }
       RunContext run_ctx;
       run_ctx.stream = nullptr;
       this->ExecuteOprBlock(run_ctx, opr_block);
     } else {
-      if (ctx.dev_mask == cpu::kDevMask) {
+      if (ctx.dev_mask() == cpu::kDevMask) {
         cpu_worker_->task_queue.Push(opr_block);
       } else {
-        CHECK_EQ(ctx.dev_mask, gpu::kDevMask);
+        CHECK_EQ(ctx.dev_mask(), gpu::kDevMask);
         ThreadWorkerBlock* block = this->GetGPUWorkerBlock(
             ctx.dev_id, opr_block->opr->prop);
         block->task_queue.Push(opr_block);
       }
     }
-  }
-  // finalize the internal resources
-  void Finalize() override {
-    gpu_normal_workers_.Clear();
-    gpu_copy_workers_.Clear();
-    cpu_worker_.reset(nullptr);
-    ThreadedEngine::Finalize();
   }
 
  private:
@@ -145,7 +146,15 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     while (task_queue->Pop(&opr_block)) {
       this->ExecuteOprBlock(run_ctx, opr_block);
     }
-    mshadow::DeleteStream<gpu>(stream);
+    // Catch exception for CUDA driver shutdown
+    try {
+      mshadow::DeleteStream<gpu>(stream);
+    } catch (const dmlc::Error &e) {
+      std::string what = e.what();
+      if (what.find("driver shutting down") == std::string::npos) {
+        LOG(ERROR) << "Ignore Error " << what << " during worker finalization";
+      }
+    }
     #endif
   }
   /*!
@@ -168,4 +177,3 @@ Engine *CreateThreadedEnginePerDevice() {
 }
 }  // namespace engine
 }  // namespace mxnet
-

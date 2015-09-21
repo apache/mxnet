@@ -3,22 +3,17 @@
  * \file kvstore.cc
  * \brief implement kv_store
  */
-#include "mxnet/kvstore.h"
+#include <mxnet/kvstore.h>
 #include <stdlib.h>
-#include "dmlc/logging.h"
-#include "kvstore_local.h"
+#include <dmlc/logging.h>
+#include "./kvstore_local.h"
 
 namespace mxnet {
 
-void KVStore::Start() {
-  if (impl_ != NULL) Finalize();
-  char* num_worker = getenv("DMLC_NUM_WORKER");
-  if (num_worker == NULL || atoi(num_worker) == 1) {
-    impl_ = new KVStoreLocal();
-  } else {
-    LOG(FATAL) << "not implemented yet";
-  }
-  impl_->Start();
+KVStore* KVStore::Create(const char *type_name) {
+  std::string tname = type_name;
+  CHECK_EQ(tname, "local")
+      << "Only support local KVStore currently.";
+  return new KVStoreLocal();
 }
-
 }  // namespace mxnet

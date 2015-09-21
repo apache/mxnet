@@ -9,31 +9,36 @@ def reldiff(a, b):
     reldiff = diff  / norm
     return reldiff
 
+
+def same(a, b):
+    return np.sum(a != b) == 0
+
+
 def check_with_uniform(uf, arg_shapes, dim=None):
     """check function consistency with uniform random numbers"""
     if isinstance(arg_shapes, int):
         assert dim
         shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
         arg_shapes = [shape] * arg_shapes
-    narray_arg = []
+    ndarray_arg = []
     numpy_arg = []
     for s in arg_shapes:
         npy = np.random.uniform(-10, 10, s)
         narr = mx.nd.array(npy)
-        narray_arg.append(narr)
+        ndarray_arg.append(narr)
         numpy_arg.append(npy)
-    out1 = uf(*narray_arg)
+    out1 = uf(*ndarray_arg)
     out2 = uf(*numpy_arg)
     assert out1.shape == out2.shape
     assert reldiff(out1.asnumpy(), out2) < 1e-6
 
 
-def random_narray(dim):
+def random_ndarray(dim):
     shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
-    data= mx.nd.array(np.random.uniform(-10, 10, shape))
+    data = mx.nd.array(np.random.uniform(-10, 10, shape))
     return data
 
-def test_narray_elementwise():
+def test_ndarray_elementwise():
     np.random.seed(0)
     nrepeat = 10
     maxdim = 4
@@ -44,13 +49,13 @@ def test_narray_elementwise():
             check_with_uniform(lambda x, y: x * y, 2, dim)
             check_with_uniform(lambda x, y: x / y, 2, dim)
 
-def test_narray_copy():
+def test_ndarray_copy():
     c = mx.nd.array(np.random.uniform(-10, 10, (10, 10)))
     d = c.copyto(mx.Context('cpu', 0))
     assert np.sum(np.abs(c.asnumpy() != d.asnumpy())) == 0.0
 
 
-def test_narray_scalar():
+def test_ndarray_scalar():
     c = mx.nd.empty((10,10))
     d = mx.nd.empty((10,10))
     c[:] = 0.5
@@ -64,13 +69,13 @@ def test_narray_scalar():
     d = -c + 2
     assert(np.sum(c.asnumpy()) < 1e-5)
 
-def test_narray_pickle():
+def test_ndarray_pickle():
     np.random.seed(0)
     maxdim = 5
     nrepeat = 10
     for repeat in range(nrepeat):
         for dim in range(1, maxdim):
-            a = random_narray(dim)
+            a = random_ndarray(dim)
             b = mx.nd.empty(a.shape)
             a[:] = np.random.uniform(-10, 10, a.shape)
             b[:] = np.random.uniform(-10, 10, a.shape)
@@ -80,7 +85,7 @@ def test_narray_pickle():
             assert np.sum(a.asnumpy() != a2.asnumpy()) == 0
 
 
-def test_narray_saveload():
+def test_ndarray_saveload():
     np.random.seed(0)
     maxdim = 5
     nrepeat = 10
@@ -88,13 +93,13 @@ def test_narray_saveload():
     for repeat in range(nrepeat):
         data = []
         for i in range(10):
-            data.append(random_narray(np.random.randint(1, 5)))
+            data.append(random_ndarray(np.random.randint(1, 5)))
         mx.nd.save(fname, data)
         data2 = mx.nd.load(fname)
         assert len(data) == len(data2)
         for x, y in zip(data, data2):
             assert np.sum(x.asnumpy() != y.asnumpy()) == 0
-        dmap = {'narray xx %s' % i : x for i, x in enumerate(data)}
+        dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
         mx.nd.save(fname, dmap)
         dmap2 = mx.nd.load(fname)
         assert len(dmap2) == len(dmap)
@@ -103,10 +108,22 @@ def test_narray_saveload():
             assert np.sum(x.asnumpy() != y.asnumpy()) == 0
     os.remove(fname)
 
+
+def test_ndarray_slice():
+    shape = (10,)
+    A = mx.nd.array(np.random.uniform(-10, 10, shape))
+    A2 = A.asnumpy()
+    assert same(A[3:8].asnumpy(), A2[3:8])
+    A2[3:8] *= 10;
+    A[3:8] = A2[3:8]
+    assert same(A[3:8].asnumpy(), A2[3:8])
+
+
 if __name__ == '__main__':
-    test_narray_pickle()
-    test_narray_saveload()
-    test_narray_copy()
-    test_narray_elementwise()
-    test_narray_scalar()
+    test_ndarray_slice()
+    test_ndarray_pickle()
+    test_ndarray_saveload()
+    test_ndarray_copy()
+    test_ndarray_elementwise()
+    test_ndarray_scalar()
 

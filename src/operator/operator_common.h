@@ -81,14 +81,14 @@ struct InferShapeError {
 // helper macro to implement bind dispatch
 #if MXNET_USE_CUDA
 #define DO_BIND_DISPATCH(Method, ...)                                \
-    if (ctx.dev_mask == cpu::kDevMask) {                             \
+  if (ctx.dev_mask() == cpu::kDevMask) {                             \
       return Method<cpu>(__VA_ARGS__);                               \
     } else {                                                         \
       return Method<gpu>(__VA_ARGS__);                               \
     }
 #else
 #define DO_BIND_DISPATCH(Method, ...)                                \
-  if (ctx.dev_mask == cpu::kDevMask) {                               \
+  if (ctx.dev_mask() == cpu::kDevMask) {                             \
     return Method<cpu>(__VA_ARGS__);                                 \
   } else {                                                           \
     LOG(FATAL) << "GPU is not enabled";                              \

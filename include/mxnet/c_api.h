@@ -42,6 +42,8 @@ typedef void *ExecutorHandle;
 typedef void *DataIterCreator;
 /*! \brief handle to a DataIterator */
 typedef void *DataIterHandle;
+/*! \brief handle to KVStore */
+typedef void *KVStoreHandle;
 /*!
  * \brief return str message of the last error
  *  all function in this file will return 0 when success
@@ -62,11 +64,6 @@ MXNET_DLL const char *MXGetLastError();
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXRandomSeed(int seed);
-/*!
- * \brief Finalize and shutdown all related modules of mxnet.
- *  Call this function at end of program to ensure correct shutdown.
- */
-MXNET_DLL int MXFinalize();
 //-------------------------------------
 // Part 1: NDArray creation and deletion
 //-------------------------------------
@@ -82,7 +79,7 @@ MXNET_DLL int MXNDArrayCreateNone(NDArrayHandle *out);
  * \brief create a NDArray with specified shape
  * \param shape the pointer to the shape
  * \param ndim the dimension of the shape
- * \param dev_mask device mask, specify device we want to take
+ * \param dev_type device type, specify device we want to take
  * \param dev_id the device id of the specific device
  * \param delay_alloc whether to delay allocation until
  *    the narray is first mutated
@@ -91,7 +88,7 @@ MXNET_DLL int MXNDArrayCreateNone(NDArrayHandle *out);
  */
 MXNET_DLL int MXNDArrayCreate(const mx_uint *shape,
                               mx_uint ndim,
-                              int dev_mask,
+                              int dev_type,
                               int dev_id,
                               int delay_alloc,
                               NDArrayHandle *out);
@@ -196,6 +193,18 @@ MXNET_DLL int MXNDArrayWaitAll();
  */
 MXNET_DLL int MXNDArrayFree(NDArrayHandle handle);
 /*!
+ * \brief Slice the NDArray along axis 0.
+ * \param handle the handle to the narraya
+ * \param slice_begin The beginning index of slice
+ * \param slice_end The ending index of slice
+ * \param out The NDArrayHandle of sliced NDArray
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
+                             mx_uint slice_begin,
+                             mx_uint slice_end,
+                             NDArrayHandle *out);
+/*!
  * \brief get the shape of the array
  * \param handle the handle to the narray
  * \param out_dim the output dimension
@@ -203,8 +212,8 @@ MXNET_DLL int MXNDArrayFree(NDArrayHandle handle);
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
-                               mx_uint *out_dim,
-                               const mx_uint **out_pdata);
+                                mx_uint *out_dim,
+                                const mx_uint **out_pdata);
 /*!
  * \brief get the content of the data in NDArray
  * \param handle the handle to the narray
@@ -212,17 +221,17 @@ MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayGetData(NDArrayHandle handle,
-                              mx_float **out_pdata);
+                               mx_float **out_pdata);
 /*!
  * \brief get the context of the NDArray
  * \param handle the handle to the narray
- * \param out_dev_mask the output device mask
+ * \param out_dev_type the output device type
  * \param out_dev_id the output device id
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayGetContext(NDArrayHandle handle,
-                                 int *out_dev_mask,
-                                 int *out_dev_id);
+                                  int *out_dev_type,
+                                  int *out_dev_id);
 
 //--------------------------------
 // Part 2: functions on NDArray
@@ -552,7 +561,7 @@ MXNET_DLL int MXExecutorOutputs(ExecutorHandle handle,
  * \brief Generate Executor from symbol
  *
  * \param symbol_handle symbol handle
- * \param dev_mask device mask
+ * \param dev_type device type
  * \param dev_id device id
  * \param len length
  * \param in_args in args array
@@ -564,7 +573,7 @@ MXNET_DLL int MXExecutorOutputs(ExecutorHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXExecutorBind(SymbolHandle symbol_handle,
-                             int dev_mask,
+                             int dev_type,
                              int dev_id,
                              mx_uint len,
                              NDArrayHandle *in_args,
@@ -659,50 +668,56 @@ MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
 // Part 5: KVStore interface
 //--------------------------------------------
 /*!
- * \brief start the kvstore
+ * \brief Create a kvstore
+ * \param type the type of KVStore
+ * \param out The output type of KVStore
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStoreStart();
+MXNET_DLL int MXKVStoreCreate(const char *type,
+                              KVStoreHandle *out);
 /*!
- * \brief stop the kvstore
+ * \brief Delete a KVStore handle.
+ * \param handle handle to the kvstore
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStoreStop();
-
+MXNET_DLL int MXKVStoreFree(KVStoreHandle handle);
 /*!
  * \brief Init a list of (key,value) pairs in kvstore
+ * \param handle handle to the kvstore
  * \param num the number of key-value pairs
  * \param keys the list of keys
  * \param vals the list of values
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStoreInit(int num,
+MXNET_DLL int MXKVStoreInit(KVStoreHandle handle,
+                            int num,
                             int* keys,
                             NDArrayHandle* vals);
 
 /*!
  * \brief Push a list of (key,value) pairs to kvstore
+ * \param handle handle to the kvstore
  * \param num the number of key-value pairs
  * \param keys the list of keys
  * \param vals the list of values
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStorePush(int num,
+MXNET_DLL int MXKVStorePush(KVStoreHandle handle,
+                            int num,
                             int* keys,
                             NDArrayHandle* vals);
-
-
 /*!
  * \brief pull a list of (key, value) pairs from the kvstore
+ * \param handle handle to the kvstore
  * \param num the number of key-value pairs
  * \param keys the list of keys
  * \param vals the list of values
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStorePull(int num,
+MXNET_DLL int MXKVStorePull(KVStoreHandle handle,
+                            int num,
                             int* keys,
                             NDArrayHandle* vals);
-
 /*!
  * \brief user-defined updater for the kvstore
  * It's this updater's responsibility to delete \a recv and \a local
@@ -711,12 +726,12 @@ MXNET_DLL int MXKVStorePull(int num,
  * \param local the value stored on local on this key
  */
 typedef void (MXKVStoreUpdater)(int key, NDArrayHandle recv, NDArrayHandle local);
-
 /*!
  * \brief register an push updater
+ * \param handle handle to the KVStore
  * \param updater udpater function
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStoreSetUpdater(MXKVStoreUpdater updater);
+MXNET_DLL int MXKVStoreSetUpdater(KVStoreHandle handle, MXKVStoreUpdater updater);
 
 #endif  // MXNET_C_API_H_

@@ -60,8 +60,6 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
   float mean_g;
   /*! \brief mean value for b channel */
   float mean_b;
-  /*! \brief shape of the image data*/
-  TShape input_shape;
   /*! \brief scale on color space */
   float scale;
   /*! \brief maximum ratio of contrast variation */
@@ -70,61 +68,61 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
   float max_random_illumination;
   /*! \brief whether to print augment info */
   bool silent;
+  /*! \brief shape of the image data*/
+  TShape data_shape;
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageAugmentParam) {
     DMLC_DECLARE_FIELD(rand_crop).set_default(true)
-        .describe("Whether we de random cropping");
+        .describe("Augmentation Param: Whether to random crop on the image");
     DMLC_DECLARE_FIELD(crop_y_start).set_default(-1)
-        .describe("Where to nonrandom crop on y");
+        .describe("Augmentation Param: Where to nonrandom crop on y.");
     DMLC_DECLARE_FIELD(crop_x_start).set_default(-1)
-        .describe("Where to nonrandom crop on x");
+        .describe("Augmentation Param: Where to nonrandom crop on x.");
     DMLC_DECLARE_FIELD(max_rotate_angle).set_default(0.0f)
-        .describe("Rotate can be [-max_rotate_angle, max_rotate_angle]");
+        .describe("Augmentation Param: rotated randomly in [-max_rotate_angle, max_rotate_angle].");
     DMLC_DECLARE_FIELD(max_aspect_ratio).set_default(0.0f)
-        .describe("Max aspect ratio");
+        .describe("Augmentation Param: denotes the max ratio of random aspect ratio augmentation.");
     DMLC_DECLARE_FIELD(max_shear_ratio).set_default(0.0f)
-        .describe("Shear rotate can be made between [-max_shear_ratio_, max_shear_ratio_]");
+        .describe("Augmentation Param: denotes the max random shearing ratio.");
     DMLC_DECLARE_FIELD(max_crop_size).set_default(-1)
-        .describe("Maximum crop size");
+        .describe("Augmentation Param: Maximum crop size.");
     DMLC_DECLARE_FIELD(min_crop_size).set_default(-1)
-        .describe("Minimum crop size");
+        .describe("Augmentation Param: Minimum crop size.");
     DMLC_DECLARE_FIELD(max_random_scale).set_default(1.0f)
-        .describe("Maxmum scale ratio");
+        .describe("Augmentation Param: Maxmum scale ratio.");
     DMLC_DECLARE_FIELD(min_random_scale).set_default(1.0f)
-        .describe("Minimum scale ratio");
+        .describe("Augmentation Param: Minimum scale ratio.");
     DMLC_DECLARE_FIELD(max_img_size).set_default(1e10f)
-        .describe("Maxmum image size");
+        .describe("Augmentation Param: Maxmum image size after resizing.");
     DMLC_DECLARE_FIELD(min_img_size).set_default(0.0f)
-        .describe("Minimum image size");
+        .describe("Augmentation Param: Minimum image size after resizing.");
     DMLC_DECLARE_FIELD(rotate).set_default(-1.0f)
-        .describe("Rotate angle");
+        .describe("Augmentation Param: Rotate angle.");
     DMLC_DECLARE_FIELD(fill_value).set_default(255)
-        .describe("Filled value while padding");
+        .describe("Augmentation Param: Filled value while padding.");
     DMLC_DECLARE_FIELD(mirror).set_default(false)
-        .describe("Whether to mirror the image");
+        .describe("Augmentation Param: Whether to mirror the image.");
     DMLC_DECLARE_FIELD(rand_mirror).set_default(false)
-        .describe("Whether to mirror the image randomly");
+        .describe("Augmentation Param: Whether to mirror the image randomly.");
     DMLC_DECLARE_FIELD(mean_img).set_default("")
-        .describe("Mean Image to be subtracted");
+        .describe("Augmentation Param: Mean Image to be subtracted.");
     DMLC_DECLARE_FIELD(mean_r).set_default(0.0f)
-        .describe("Mean value on R channel");
+        .describe("Augmentation Param: Mean value on R channel.");
     DMLC_DECLARE_FIELD(mean_g).set_default(0.0f)
-        .describe("Mean value on G channel");
+        .describe("Augmentation: Mean value on G channel.");
     DMLC_DECLARE_FIELD(mean_b).set_default(0.0f)
-        .describe("Mean value on B channel");
-    index_t input_shape_default[] = {3, 224, 224};
-    DMLC_DECLARE_FIELD(input_shape)
-        .set_default(TShape(input_shape_default, input_shape_default + 3))
-        .set_expect_ndim(3).enforce_nonzero()
-        .describe("Input shape of the neural net");
+        .describe("Augmentation: Mean value on B channel.");
     DMLC_DECLARE_FIELD(scale).set_default(1.0f)
-        .describe("Scale in color space");
+        .describe("Augmentation Param: Scale in color space.");
     DMLC_DECLARE_FIELD(max_random_contrast).set_default(0.0f)
-        .describe("Maximum ratio of contrast variation");
+        .describe("Augmentation Param: Maximum ratio of contrast variation.");
     DMLC_DECLARE_FIELD(max_random_illumination).set_default(0.0f)
-        .describe("Maximum value of illumination variation");
+        .describe("Augmentation Param: Maximum value of illumination variation.");
     DMLC_DECLARE_FIELD(silent).set_default(true)
-        .describe("Whether to print augmentor info");
+        .describe("Augmentation Param: Whether to print augmentor info.");
+    DMLC_DECLARE_FIELD(data_shape)
+        .set_expect_ndim(3).enforce_nonzero()
+        .describe("Dataset Param: Input shape of the neural net.");
   }
 };
 
@@ -234,20 +232,20 @@ class ImageAugmenter {
         y /= 2; x /= 2;
       }
       cv::Rect roi(x, y, rand_crop_size, rand_crop_size);
-      cv::resize(res(roi), res, cv::Size(param_.input_shape[1], param_.input_shape[2]));
+      cv::resize(res(roi), res, cv::Size(param_.data_shape[1], param_.data_shape[2]));
     } else {
-        CHECK(static_cast<mshadow::index_t>(res.cols) >= param_.input_shape[1] \
-                && static_cast<mshadow::index_t>(res.rows) >= param_.input_shape[2])
+        CHECK(static_cast<mshadow::index_t>(res.cols) >= param_.data_shape[1] \
+                && static_cast<mshadow::index_t>(res.rows) >= param_.data_shape[2])
             << "input image size smaller than input shape";
-        mshadow::index_t y = res.rows - param_.input_shape[2];
-        mshadow::index_t x = res.cols - param_.input_shape[1];
+        mshadow::index_t y = res.rows - param_.data_shape[2];
+        mshadow::index_t x = res.cols - param_.data_shape[1];
         if (param_.rand_crop != 0) {
             y = NextUInt32(y + 1, prnd);
             x = NextUInt32(x + 1, prnd);
         } else {
             y /= 2; x /= 2;
         }
-        cv::Rect roi(x, y, param_.input_shape[1], param_.input_shape[2]);
+        cv::Rect roi(x, y, param_.data_shape[1], param_.data_shape[2]);
         res = res(roi);
     }
     return res;
@@ -300,24 +298,24 @@ class ImageAugmenter {
       }
     }
     img_.Resize(mshadow::Shape3((*p_data).shape_[0],
-                param_.input_shape[1], param_.input_shape[2]));
-    if (param_.input_shape[1] == 1) {
+                param_.data_shape[1], param_.data_shape[2]));
+    if (param_.data_shape[1] == 1) {
       img_ = (*p_data) * param_.scale;
     } else {
-      CHECK(p_data->size(1) >= param_.input_shape[1] && p_data->size(2) >= param_.input_shape[2])
+      CHECK(p_data->size(1) >= param_.data_shape[1] && p_data->size(2) >= param_.data_shape[2])
           << "Data size must be bigger than the input size to net.";
-      mshadow::index_t yy = p_data->size(1) - param_.input_shape[1];
-      mshadow::index_t xx = p_data->size(2) - param_.input_shape[2];
+      mshadow::index_t yy = p_data->size(1) - param_.data_shape[1];
+      mshadow::index_t xx = p_data->size(2) - param_.data_shape[2];
       if (param_.rand_crop != 0 && (yy != 0 || xx != 0)) {
         yy = NextUInt32(yy + 1, prnd);
         xx = NextUInt32(xx + 1, prnd);
       } else {
         yy /= 2; xx /= 2;
       }
-      if (p_data->size(1) != param_.input_shape[1] && param_.crop_y_start != -1) {
+      if (p_data->size(1) != param_.data_shape[1] && param_.crop_y_start != -1) {
         yy = param_.crop_y_start;
       }
-      if (p_data->size(2) != param_.input_shape[2] && param_.crop_x_start != -1) {
+      if (p_data->size(2) != param_.data_shape[2] && param_.crop_x_start != -1) {
         xx = param_.crop_x_start;
       }
       float contrast = NextDouble(prnd) * param_.max_random_contrast \

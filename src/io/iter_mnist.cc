@@ -34,19 +34,19 @@ struct MNISTParam : public dmlc::Parameter<MNISTParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(MNISTParam) {
     DMLC_DECLARE_FIELD(image).set_default("./train-images-idx3-ubyte")
-        .describe("Mnist image path.");
+        .describe("Dataset Param: Mnist image path.");
     DMLC_DECLARE_FIELD(label).set_default("./train-labels-idx1-ubyte")
-        .describe("Mnist label path.");
+        .describe("Dataset Param: Mnist label path.");
     DMLC_DECLARE_FIELD(batch_size).set_lower_bound(1).set_default(128)
-        .describe("Batch Size.");
+        .describe("Batch Param: Batch Size.");
     DMLC_DECLARE_FIELD(shuffle).set_default(true)
-        .describe("Whether to shuffle data.");
+        .describe("Augmentation Param: Whether to shuffle data.");
     DMLC_DECLARE_FIELD(flat).set_default(false)
-        .describe("Whether to flat the data into 1D.");
-    DMLC_DECLARE_FIELD(silent).set_default(false)
-        .describe("Whether to print out data info.");
+        .describe("Augmentation Param: Whether to flat the data into 1D.");
     DMLC_DECLARE_FIELD(seed).set_default(0)
-        .describe("Random Seed.");
+        .describe("Augmentation Param: Random Seed.");
+    DMLC_DECLARE_FIELD(silent).set_default(false)
+        .describe("Auxiliary Param: Whether to print out data info.");
   }
 };
 

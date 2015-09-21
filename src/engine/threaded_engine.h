@@ -249,7 +249,6 @@ class ThreadedEngine : public Engine {
     threaded_opr->fn(run_ctx, callback);
     OprBlock::Delete(opr_block);
   }
-  void Finalize() override;
 
  private:
   /*!

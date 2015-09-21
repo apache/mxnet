@@ -24,24 +24,35 @@ class ResourceManagerImpl : public ResourceManager {
     gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 4);
     engine_ref_ = Engine::_GetSharedRef();
     cpu_rand_.reset(new ResourceRandom<cpu>(
-        Context(cpu::kDevMask, 0), global_seed_));
+        Context::CPU(), global_seed_));
     cpu_space_.reset(new ResourceTempSpace<cpu>(
-        Context(cpu::kDevMask, 0), cpu_temp_space_copy_));
+        Context::CPU(), cpu_temp_space_copy_));
   }
   ~ResourceManagerImpl() {
-    Finalize();
+    // need explicit delete, before engine get killed
+    cpu_rand_.reset(nullptr);
+    cpu_space_.reset(nullptr);
+#if MXNET_USE_CUDA
+    gpu_rand_.Clear();
+    gpu_space_.Clear();
+#endif
+    if (engine_ref_ != nullptr) {
+      engine_ref_->WaitForAll();
+      // release the reference to engine.
+      engine_ref_ = nullptr;
+    }
   }
 
   // request resources
   Resource Request(Context ctx, const ResourceRequest &req) override {
-    if (ctx.dev_mask == cpu::kDevMask) {
+    if (ctx.dev_mask() == cpu::kDevMask) {
       switch (req.type) {
         case ResourceRequest::kRandom: return cpu_rand_->resource;
         case ResourceRequest::kTempSpace: return cpu_space_->GetNext();
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
     } else {
-      CHECK_EQ(ctx.dev_mask, gpu::kDevMask);
+      CHECK_EQ(ctx.dev_mask(), gpu::kDevMask);
 #if MSHADOW_USE_CUDA
       switch (req.type) {
         case ResourceRequest::kRandom: {
@@ -74,22 +85,6 @@ class ResourceManagerImpl : public ResourceManager {
 #endif
   }
 
- protected:
-  void Finalize() override {
-    // need explicit delete, before engine get killed
-    cpu_rand_.reset(nullptr);
-    cpu_space_.reset(nullptr);
-#if MXNET_USE_CUDA
-    gpu_rand_.Clear();
-    gpu_space_.Clear();
-#endif
-    if (engine_ref_ != nullptr) {
-      engine_ref_->WaitForAll();
-      // release the reference to engine.
-      engine_ref_ = nullptr;
-    }
-  }
-
  private:
   /*! \brief Maximum number of GPUs */
   static constexpr std::size_t kMaxNumGPUs = 16;
@@ -116,7 +111,16 @@ class ResourceManagerImpl : public ResourceManager {
     ~ResourceRandom() {
       mshadow::Random<xpu> *r = prnd;
       Engine::Get()->DeleteVariable(
-          [r](RunContext rctx){ delete r; }, ctx, resource.var);
+          [r](RunContext rctx) {
+            try {
+              delete r;
+            } catch (const dmlc::Error &e) {
+              std::string what = e.what();
+              if (what.find("driver shutting down") == std::string::npos) {
+                LOG(ERROR) << "Ignore Error " << what << " resource finalization";
+              }
+            }
+          }, ctx, resource.var);
     }
     // set seed to a PRNG
     inline void Seed(uint32_t global_seed) {
@@ -155,7 +159,16 @@ class ResourceManagerImpl : public ResourceManager {
       for (size_t i = 0; i < space.size(); ++i) {
         mshadow::TensorContainer<xpu, 1, real_t>* r = space[i];
         Engine::Get()->DeleteVariable(
-            [r](RunContext rctx){ delete r; }, ctx, resource[i].var);
+            [r](RunContext rctx){
+              try {
+                r->Release();
+              } catch (const dmlc::Error &e) {
+                std::string what = e.what();
+                if (what.find("driver shutting down") == std::string::npos) {
+                  LOG(ERROR) << "Ignore Error " << what << " resource finalization";
+                }
+              }
+            }, ctx, resource[i].var);
       }
     }
     // get next resource in round roubin matter

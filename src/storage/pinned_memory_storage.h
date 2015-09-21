@@ -32,7 +32,8 @@ class PinnedMemoryStorage {
 inline void* PinnedMemoryStorage::Alloc(size_t size) {
   void* ret = nullptr;
 #if MXNET_USE_CUDA
-  CUDA_CALL(cudaMallocHost(&ret, size));
+  // make the memory available across all devices
+  CUDA_CALL(cudaHostAlloc(&ret, size, cudaHostAllocPortable));
 #else   // MXNET_USE_CUDA
   LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA
@@ -41,7 +42,11 @@ inline void* PinnedMemoryStorage::Alloc(size_t size) {
 
 inline void PinnedMemoryStorage::Free(void* ptr) {
 #if MXNET_USE_CUDA
-  CUDA_CALL(cudaFreeHost(ptr));
+  cudaError_t err = cudaFreeHost(ptr);
+  // ignore unloading error, as memory has already been recycled
+  if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
+    LOG(FATAL) << "CUDA: " << cudaGetErrorString(err);
+  }
 #else   // MXNET_USE_CUDA
   LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA

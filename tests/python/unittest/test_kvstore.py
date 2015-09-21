@@ -6,11 +6,13 @@ shape = (4, 4)
 keys = [5, 7, 11]
 def init_kv():
     """init kv """
-    mx.kv.start()
+    kv = mx.kv.create()
     # single
-    mx.kv.init(3, mx.nd.zeros(shape))
+    kv.init(3, mx.nd.zeros(shape))
     # list
-    mx.kv.init(keys, [mx.nd.zeros(shape)] * len(keys))
+    kv.init(keys, [mx.nd.zeros(shape)] * len(keys))
+    return kv
+
 
 def check_diff_to_scalar(A, x):
     """ assert A == x"""
@@ -19,22 +21,21 @@ def check_diff_to_scalar(A, x):
 def test_single_kv_pair():
     """single key-value pair push & pull"""
 
-    init_kv()
-
-    mx.kv.push(3, mx.nd.ones(shape))
+    kv = init_kv()
+    kv.push(3, mx.nd.ones(shape))
     val = mx.nd.empty(shape)
-    mx.kv.pull(3, out = val)
+    kv.pull(3, out = val)
     check_diff_to_scalar(val, 1)
 
 
 def test_list_kv_pair():
     """list key-value pair push & pull"""
 
-    init_kv()
+    kv = init_kv()
 
-    mx.kv.push(keys, [mx.nd.ones(shape)*4] * len(keys))
+    kv.push(keys, [mx.nd.ones(shape)*4] * len(keys))
     val = [mx.nd.empty(shape)] * len(keys)
-    mx.kv.pull(keys, out = val)
+    kv.pull(keys, out = val)
     for v in val:
         check_diff_to_scalar(v, 4)
 
@@ -42,7 +43,7 @@ def test_list_kv_pair():
 def test_aggregator():
     """aggregate value on muliple devices"""
 
-    init_kv()
+    kv = init_kv()
 
     # devices
     num_devs = 4
@@ -51,16 +52,16 @@ def test_aggregator():
     # single
     vals = [mx.nd.ones(shape, d) for d in devs]
 
-    mx.kv.push(3, vals)
-    mx.kv.pull(3, out = vals)
+    kv.push(3, vals)
+    kv.pull(3, out = vals)
 
     for v in vals:
         check_diff_to_scalar(v, num_devs)
 
     # list
     vals = [[mx.nd.ones(shape, d)*2.0 for d in devs]] * len(keys)
-    mx.kv.push(keys, vals)
-    mx.kv.pull(keys, out = vals)
+    kv.push(keys, vals)
+    kv.pull(keys, out = vals)
 
     for vv in vals:
         for v in vv:
@@ -74,8 +75,8 @@ def updater(key, recv, local):
 def test_updater(dev = 'cpu'):
     """updater"""
 
-    init_kv()
-    mx.kv.set_updater(updater)
+    kv = init_kv()
+    kv.set_updater(updater)
 
     # devices
     num_devs = 4
@@ -84,8 +85,8 @@ def test_updater(dev = 'cpu'):
     # single
     vals = [mx.nd.ones(shape, d) for d in devs]
 
-    mx.kv.push(3, vals)
-    mx.kv.pull(3, out = vals)
+    kv.push(3, vals)
+    kv.pull(3, out = vals)
 
     for v in vals:
         check_diff_to_scalar(v, num_devs)
@@ -95,9 +96,9 @@ def test_updater(dev = 'cpu'):
 
     num_push = 4
     for i in range(num_push):
-        mx.kv.push(keys, vals)
+        kv.push(keys, vals)
 
-    mx.kv.pull(keys, out = vals)
+    kv.pull(keys, out = vals)
 
     for vv in vals:
         for v in vv:
@@ -109,4 +110,4 @@ if __name__ == '__main__':
     test_list_kv_pair()
     test_aggregator()
     test_updater()
-    # test_updater('gpu')
+

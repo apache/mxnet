@@ -11,6 +11,7 @@
 #include <map>
 #include <vector>
 #include <algorithm>
+#include "./static_graph.h"
 #include "./graph_algorithm.h"
 
 namespace mxnet {
@@ -100,7 +101,6 @@ class GraphStorageAllocator {
    * \brief free list of storage entries, maps size to free list
    */
   std::multimap<size_t, StorageEntry*> free_;
-
   /*!
    * \brief color of nodes in the graph, used for auxiliary policy making.
   */
