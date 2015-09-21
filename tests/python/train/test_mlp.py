@@ -18,7 +18,8 @@ softmax = mx.symbol.Softmax(fc3, name = 'sm')
 
 num_round = 4
 prefix = './mlp'
-model = mx.model.FeedForward(softmax, [mx.cpu()] * 2,
+model = mx.model.FeedForward(softmax,
+                             [mx.cpu(i) for i in range(2)],
                              num_round=num_round,
                              learning_rate=0.01, wd=0.0004,
                              momentum=0.9)
