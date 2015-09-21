@@ -15,7 +15,7 @@ def test_MNISTIter():
     train_dataiter = mx.io.MNISTIter(
             image="data/train-images-idx3-ubyte",
             label="data/train-labels-idx1-ubyte",
-            input_shape=(784,),
+            data_shape=(784,),
             batch_size=batch_size, shuffle=1, flat=1, silent=0, seed=10)
     # test_loop
     nbatch = 60000 / batch_size
@@ -44,10 +44,10 @@ def test_Cifar10Rec():
             rand_crop=False,
             and_mirror=False,
             shuffle=False,
-            input_shape=(3,28,28),
+            data_shape=(3,28,28),
             batch_size=100,
-            nthread=4,
-            prefetch_capacity=1)
+            preprocess_threads=4,
+            prefetch_buffer=1)
     labelcount = [0 for i in range(10)] 
     batchcount = 0
     for data, label in dataiter:
@@ -61,7 +61,7 @@ def test_Cifar10Rec():
         assert(labelcount[i] == 5000)
 
 def test_NumpyIter():
-    datas = np.ones([1000,100])
+    datas = np.ones([1000, 2, 2])
     labels = np.ones([1000, 1])
     for i in range(1000):
         datas[i] = i / 100
@@ -69,6 +69,7 @@ def test_NumpyIter():
     dataiter = mx.io.NumpyIter(datas, labels, batch_size=100)
     batchidx = 0
     for data, label in dataiter:
+        print data.asnumpy()
         assert(label.asnumpy().flatten().sum() == batchidx * 100)
         batchidx += 1
     dataiter.reset()
@@ -82,6 +83,6 @@ def test_NumpyIter():
         batchidx += 1
 
 if __name__ == "__main__":
-    test_NumpyIter()
+    #test_NumpyIter()
     #test_MNISTIter()
-    #test_Cifar10Rec()
+    test_Cifar10Rec()
