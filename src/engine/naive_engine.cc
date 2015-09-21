@@ -16,6 +16,7 @@ class NaiveEngine final : public Engine {
   // virtual destructor
   virtual ~NaiveEngine() {
 #if MXNET_USE_CUDA
+    LOG(INFO) << "Engine shutdown";
     for (size_t i = 0; i < streams_.size(); ++i) {
       if (streams_[i] != nullptr) {
         // Catch exception for CUDA driver shutdown
@@ -62,7 +63,14 @@ class NaiveEngine final : public Engine {
     if (exec_ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       size_t dev_id = static_cast<size_t>(exec_ctx.dev_id);
-      mshadow::SetDevice<gpu>(exec_ctx.dev_id);
+      try {
+        mshadow::SetDevice<gpu>(exec_ctx.dev_id);
+      } catch (const dmlc::Error &e) {
+        std::string what = e.what();
+        if (what.find("driver shutting down") == std::string::npos) {
+          LOG(ERROR) << "Ignore Error " << what << " during worker finalization";
+        }
+      }
       if (streams_.size() <= dev_id) {
         streams_.resize(dev_id + 1, nullptr);
       }
@@ -71,7 +79,6 @@ class NaiveEngine final : public Engine {
       }
       ctx_.stream = streams_[dev_id];
       exec_fun(ctx_, callback);
-      streams_[dev_id]->Wait();
 #else
       LOG(FATAL) << "GPU is not enabled";
 #endif

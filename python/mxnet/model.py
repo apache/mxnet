@@ -149,7 +149,7 @@ def _train(symbol, ctx, input_shape,
     data_array, label_array = arg_arrays[data_index], arg_arrays[label_index]
     out_array = train_exec.outputs[0]
     out_cpu_array = nd.zeros(out_array.shape)
-    arg_blocks = zip(arg_arrays, grad_arrays)
+    arg_blocks = list(zip(arg_arrays, grad_arrays))
 
     for i in range(begin_round, end_round):
         # training phase
@@ -184,7 +184,7 @@ def _train(symbol, ctx, input_shape,
             for data, label in eval_data:
                 data.copyto(data_array)
                 # TODO(bing): add is_train=False
-                train_exec.forward()
+                train_exec.forward(is_train=False)
                 out_array.copyto(out_cpu_array)
                 eval_metric.update(out_array, label)
 
@@ -400,6 +400,9 @@ class FeedForward(BASE_ESTIMATOR):
             if not self._is_data_arg(name):
                 assert name in self.arg_params
                 self.arg_params[name].copyto(value)
+        for name, value in list(zip(self.symbol.list_auxiliary_states(), pred_exec.aux_arrays)):
+            assert name in self.aux_params
+            self.aux_params[name].copyto(value)
         data_index, _ = _check_arguments(self.symbol)
         self._pred_exec_input = pred_exec.arg_arrays[data_index]
         self._pred_exec = pred_exec
@@ -423,7 +426,7 @@ class FeedForward(BASE_ESTIMATOR):
         X.reset()
         for data, _ in X:
             data.copyto(self._pred_exec_input)
-            self._pred_exec.forward()
+            self._pred_exec.forward(is_train=False)
             outputs.append(self._pred_exec.outputs[0].asnumpy())
         return np.concatenate(outputs)
 

@@ -109,7 +109,8 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
 #define CUDA_CALL(func)                                            \
   {                                                                \
     cudaError_t e = (func);                                        \
-    CHECK_EQ(e, cudaSuccess) << "CUDA: " << cudaGetErrorString(e); \
+    CHECK(e == cudaSuccess || e == cudaErrorCudartUnloading)       \
+        << "CUDA: " << cudaGetErrorString(e);                      \
   }
 
 /*!

@@ -85,7 +85,7 @@ template <typename Dispatcher>
 bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
   // this is lock scope
   VersionedVarBlock *old_pending_write, *end_of_read_chain;
-  bool trigger_write = false, to_delete = false;
+  bool trigger_write = false;
   {
     std::lock_guard<std::mutex> lock{m_};
     assert(ready_to_read_ == false);

@@ -23,7 +23,7 @@ def _str2tuple(string):
     return re.findall(r"\d+", string)
 
 
-def network2dot(title, symbol, shape=None):
+def plot_network(title, symbol, shape=None):
     """convert symbol to dot object for visualization
 
     Parameters
