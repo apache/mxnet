@@ -1,4 +1,7 @@
-# pylint: skip-file
+# coding: utf-8
+"""Initialization helper for mxnet"""
+from __future__ import absolute_import
+
 import numpy as np
 from .base import string_types
 from .ndarray import NDArray
@@ -36,17 +39,17 @@ class Initializer(object):
             self._init_zero(name, arr)
         else:
             self._init_default(name, arr)
-
-    def _init_zero(self, name, arr):
+    # pylint: disable=no-self-use, missing-docstring
+    def _init_zero(self, _, arr):
         arr[:] = 0.0
 
-    def _init_bias(self, name, arr):
+    def _init_bias(self, _, arr):
         arr[:] = 0.0
 
-    def _init_gamma(self, name, arr):
+    def _init_gamma(self, _, arr):
         arr[:] = 1.0
 
-    def _init_beta(self, name, arr):
+    def _init_beta(self, _, arr):
         arr[:] = 0.0
 
     def _init_weight(self, name, arr):
@@ -55,7 +58,7 @@ class Initializer(object):
 
     def _init_default(self, name, _):
         raise ValueError('Unknown initialization pattern for %s' % name)
-
+    # pylint: enable=no-self-use, missing-docstring
 
 class Uniform(Initializer):
     """Initialize the weight with uniform [-scale, scale]
@@ -68,8 +71,8 @@ class Uniform(Initializer):
     def __init__(self, scale=0.07):
         self.scale = scale
 
-    def _init_weight(self, name, arr):
-        random.uniform(-scale, scale, out=arr)
+    def _init_weight(self, _, arr):
+        random.uniform(-self.scale, self.scale, out=arr)
 
 
 class Normal(Initializer):
@@ -81,10 +84,10 @@ class Normal(Initializer):
         Standard deviation for gaussian distribution.
     """
     def __init__(self, sigma=0.01):
-        super().__init__(sigma = sigma)
+        self.sigma = sigma
 
-    def _init_weight(self, name, arr):
-        random.normal(0, sigma, out=arr)
+    def _init_weight(self, _, arr):
+        random.normal(0, self.sigma, out=arr)
 
 
 class Xavier(Initializer):
@@ -95,6 +98,6 @@ class Xavier(Initializer):
         # [in, out] for fullc
         shape = arr.shape
         fan_in, fan_out = shape[1], shape[0]
-        s = np.sqrt(6. / (fan_in + fan_out))
-        random.uniform(-s, s, out=arr)
+        scale = np.sqrt(6. / (fan_in + fan_out))
+        random.uniform(-scale, scale, out=arr)
 
