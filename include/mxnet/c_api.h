@@ -64,6 +64,14 @@ MXNET_DLL const char *MXGetLastError();
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXRandomSeed(int seed);
+/*!
+ * \brief Notify the engine about a shutdown,
+ *  This can help engine to print less messages into display.
+ *
+ *  User do not have to call this function.
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXNotifyShutdown();
 //-------------------------------------
 // Part 1: NDArray creation and deletion
 //-------------------------------------

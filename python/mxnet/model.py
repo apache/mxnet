@@ -183,7 +183,7 @@ def _train_multi_device(symbol, ctx, input_shape,
         logger = logging
     # preparation
     num_device = len(ctx)
-    logging.info('Start training with %d devices', num_device)
+    logging.info('Start training with %s', str(ctx))
 
     slices, shapes = _split_input_slice(input_shape, num_device)
     train_execs = [symbol.simple_bind(ctx=c, data=s, grad_req='write')

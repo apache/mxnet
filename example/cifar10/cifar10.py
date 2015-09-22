@@ -5,12 +5,12 @@ curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, "../../python/")
 sys.path.append("../../tests/python/common")
 # import library
-import logging
 import mxnet as mx
 import get_data
 import time
 import numpy as np
 import copy
+import logging
 
 conv_cnt = 1
 concat_cnt = 1
@@ -94,13 +94,13 @@ in5b = SimpleFactory(in5a, 176, 160)
 pool = mx.symbol.Pooling(data=in5b, pool_type="avg", kernel=(7,7), name="pool%d" % pool_cnt)
 flatten = mx.symbol.Flatten(data=pool, name="flatten1")
 fc = mx.symbol.FullyConnected(data=flatten, num_hidden=10, name="fc1")
-loss = mx.symbol.Softmax(data=fc, name="loss")
+softmax = mx.symbol.Softmax(data=fc, name="loss")
 
 #########################################################
 
 get_data.GetCifar10()
 batch_size = 128
-epoch = 10
+num_round = 10
 num_gpus = 1
 
 train_dataiter = mx.io.ImageRecordIter(
@@ -122,15 +122,12 @@ test_dataiter = mx.io.ImageRecordIter(
 
 def test_cifar():
     logging.basicConfig(level=logging.DEBUG)
-    #console = logging.StreamHandler()
-    #console.setLevel(logging.DEBUG)
-    #logging.getLogger('').addHandler(console)
     total_batch = 50000 / batch_size + 1
     gpus = [mx.gpu(i) for i in range(num_gpus)]
-    model = mx.model.FeedForward(ctx=gpus, symbol=loss, num_round = epoch,
+    model = mx.model.FeedForward(ctx=gpus, symbol=softmax, num_round = num_round,
                                  learning_rate=0.05, momentum=0.9, wd=0.00001)
     model.fit(X=train_dataiter, eval_data=test_dataiter,
-              epoch_end_callback=mx.helper.Speedometer(batch_size, 100))
+              epoch_end_callback=mx.helper.Speedometer(batch_size))
 
 if __name__ == "__main__":
     test_cifar()

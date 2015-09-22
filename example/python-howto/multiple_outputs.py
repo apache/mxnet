@@ -18,4 +18,3 @@ print group.list_outputs()
 # executor.forward()
 # executor.output[0] will be value of fc1
 # executor.output[1] will be value of softmax
-

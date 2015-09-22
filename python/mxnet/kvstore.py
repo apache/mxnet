@@ -195,11 +195,11 @@ class KVStore(object):
         updater: function
             the updater function
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> def update(key, input, stored):
-        >>>     print "update on key: %d" % key
-        >>>     stored += input * 2
+        ...     print "update on key: %d" % key
+        ...     stored += input * 2
         >>> kv.set_updater(update)
         >>> kv.pull(3, out=a)
         >>> print a.asnumpy()
