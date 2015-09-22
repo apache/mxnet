@@ -71,6 +71,12 @@ ifneq ($(ADD_LDFLAGS), NONE)
 	LDFLAGS += $(ADD_LDFLAGS)
 endif
 
+ifeq ($(@which nvcc), )
+ifneq ($(USE_CUDA_PATH), NONE)
+	NVCC=$(USE_CUDA_PATH)/bin/nvcc
+endif
+endif
+
 .PHONY: clean all test lint doc clean_all
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
@@ -105,7 +111,7 @@ lib/libmxnet.so: $(ALL_DEP)
 $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
-bin/im2rec: tools/im2rec.cc $(DMLC_CORE)/libdmlc.a 
+bin/im2rec: tools/im2rec.cc $(DMLC_CORE)/libdmlc.a
 
 $(BIN) :
 	$(CXX) $(CFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)

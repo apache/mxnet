@@ -9,8 +9,8 @@ How to Get Started
 
 User Guide
 ----------
-* [Python Package Document](python/index.md)
 * [Build and Installation](build.md)
+* [Python Package Document](python/index.md)
 * [Frequently Asked Questions](faq.md)
 
 Developer Guide
