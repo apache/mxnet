@@ -32,7 +32,7 @@ If anything goes well, now we can train a multilayer perceptron on the hand
 digit recognition dataset.
 
 ```bash
-cd ..; python tests/python/train/test_mlp.py
+cd ..; python example/mnist/mlp.py
 ```
 
 Advanced Build
