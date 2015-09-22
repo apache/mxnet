@@ -66,18 +66,18 @@ void ThreadedVar::AppendWriteDependency(OprBlock* opr_block) {
 
 template <typename Dispatcher>
 void ThreadedVar::CompleteReadDependency(Dispatcher dispatcher) {
-  bool trigger = false;
+  OprBlock *trigger = nullptr;
   {
     // this is lock scope
     std::lock_guard<std::mutex> lock{m_};
     if (--num_pending_reads_ == 0) {
       if (pending_write_ != nullptr && --pending_write_->trigger->wait == 0) {
-        trigger = true;
+        trigger = pending_write_->trigger;
       }
     }
   }
-  if (trigger) {
-    dispatcher(pending_write_->trigger);
+  if (trigger != nullptr) {
+    dispatcher(trigger);
   }
 }
 
@@ -85,7 +85,7 @@ template <typename Dispatcher>
 bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
   // this is lock scope
   VersionedVarBlock *old_pending_write, *end_of_read_chain;
-  bool trigger_write = false;
+  OprBlock* trigger_write = nullptr;
   {
     std::lock_guard<std::mutex> lock{m_};
     assert(ready_to_read_ == false);
@@ -114,8 +114,8 @@ bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
     } else {
       assert(end_of_read_chain->write == true);
       pending_write_ = end_of_read_chain;
-      if (num_pending_reads_ == 0) {
-        trigger_write = true;
+      if (num_pending_reads_ == 0 && --end_of_read_chain->trigger->wait == 0) {
+        trigger_write = end_of_read_chain->trigger;
       }
     }
   }
@@ -137,12 +137,8 @@ bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
     assert(cur_head != nullptr);
     VersionedVarBlock::Delete(prev);
   }
-  // Be careful, do not use pending_write_  or num_pending_reads_ here.
-  // As they can change, use end_of_read_chain
-  if (trigger_write) {
-    if (--end_of_read_chain->trigger->wait == 0) {
-      dispatcher(end_of_read_chain->trigger);
-    }
+  if (trigger_write != nullptr) {
+    dispatcher(trigger_write);
   }
   return false;
 }
@@ -277,13 +273,13 @@ void ThreadedEngine::DeleteVariable(SyncFn delete_fn,
 void ThreadedEngine::WaitForVar(VarHandle var) {
   ThreadedVar* threaded_var = ThreadedVar::CastFromBase(var);
   if (threaded_var->ready_to_read()) return;
+  std::atomic<bool> done{false};
+  this->PushSync([this, &done](RunContext) {
+      done.store(true);
+      finished_cv_.notify_all();
+    }, Context::CPU(), {var}, {}, FnProperty::kNormal);
   {
     std::unique_lock<std::mutex> lock{finished_m_};
-    std::atomic<bool> done{false};
-    this->PushSync([this, &done](RunContext) {
-        done.store(true);
-        finished_cv_.notify_all();
-      }, Context::CPU(), {var}, {}, FnProperty::kNormal);
     finished_cv_.wait(lock, [this, &done]() {
         return done.load() || kill_.load();
       });
