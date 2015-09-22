@@ -509,6 +509,25 @@ int MXSymbolCreateGroup(mx_uint num_symbols,
   API_END_HANDLE_ERROR(delete s);
 }
 
+int MXSymbolGetOutput(SymbolHandle symbol,
+                      mx_uint index,
+                      SymbolHandle *out) {
+  Symbol *s = new Symbol();
+  API_BEGIN();
+  *s = (*static_cast<Symbol*>(symbol))[index];
+  *out = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
+int MXSymbolGetInternals(SymbolHandle symbol,
+                         SymbolHandle *out) {
+  Symbol *s = new Symbol();
+  API_BEGIN();
+  *s = static_cast<Symbol*>(symbol)->GetInternals();
+  *out = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
 int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out) {
   Symbol *s = new Symbol();
   API_BEGIN();
