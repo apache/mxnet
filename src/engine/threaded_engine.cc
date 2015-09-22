@@ -281,17 +281,20 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
     std::unique_lock<std::mutex> lock{finished_m_};
     std::atomic<bool> done{false};
     this->PushSync([this, &done](RunContext) {
-        std::unique_lock<std::mutex> lock{finished_m_};
         done.store(true);
         finished_cv_.notify_all();
       }, Context::CPU(), {var}, {}, FnProperty::kNormal);
-    finished_cv_.wait(lock, [&done]() { return done.load(); });
+    finished_cv_.wait(lock, [this, &done]() {
+        return done.load() || kill_.load();
+      });
   }
 }
 
 void ThreadedEngine::WaitForAll() {
   std::unique_lock<std::mutex> lock{finished_m_};
-  finished_cv_.wait(lock, [this]() { return pending_.load() == 0; });
+  finished_cv_.wait(lock, [this]() {
+      return pending_.load() == 0 || kill_.load();
+    });
 }
 
 inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {

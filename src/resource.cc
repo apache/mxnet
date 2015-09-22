@@ -37,7 +37,6 @@ class ResourceManagerImpl : public ResourceManager {
     gpu_space_.Clear();
 #endif
     if (engine_ref_ != nullptr) {
-      engine_ref_->WaitForAll();
       // release the reference to engine.
       engine_ref_ = nullptr;
     }

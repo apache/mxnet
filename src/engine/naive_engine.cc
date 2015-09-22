@@ -64,7 +64,7 @@ class NaiveEngine final : public Engine {
         streams_[dev_id] = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0);
       }
       ctx_.stream = streams_[dev_id];
-      MSHADOW_CATCH_ERROR(exec_fun(ctx_, callback));
+      exec_fun(ctx_, callback);
 #else
       LOG(FATAL) << "GPU is not enabled";
 #endif
