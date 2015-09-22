@@ -246,7 +246,7 @@ class ThreadedEngine : public Engine {
     ThreadedOpr* threaded_opr = opr_block->opr;
     CallbackOnComplete callback = this->CreateCallback(
         ThreadedEngine::OnCompleteStatic, threaded_opr);
-    threaded_opr->fn(run_ctx, callback);
+    MSHADOW_CATCH_ERROR(threaded_opr->fn(run_ctx, callback));
     OprBlock::Delete(opr_block);
   }
 

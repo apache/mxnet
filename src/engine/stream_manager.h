@@ -120,14 +120,7 @@ void StreamManager<kNumGpus, kStreams>::Finalize() {
     if (gpu_cnt_.at(i) != -1) {
       for (auto&& j : gpu_streams_.at(i)) {
         // Catch exception for CUDA driver shutdown
-        try {
-          mshadow::DeleteStream<gpu>(j);
-        } catch (const dmlc::Error &e) {
-          std::string what = e.what();
-          if (what.find("driver shutting down") == std::string::npos) {
-            LOG(ERROR) << "Ignore Error " << what << " during worker finalization";
-          }
-        }
+        MSHADOW_CATCH_ERROR(mshadow::DeleteStream<gpu>(j));
       }
       gpu_cnt_.at(i) = -1;
     }
