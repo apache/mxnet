@@ -542,8 +542,10 @@ class FeedForward(BASE_ESTIMATOR):
         eval_data : DataIter or numpy.ndarray pair
             If eval_set is numpy.ndarray pair, it should be (valid_data, valid_label)
 
-        eval_metric : function
-            Evaluation metric function.
+        eval_metric : metric.EvalMetric or str or callable
+            The evaluation metric, name of evaluation metric.
+            Or a customize evaluation function that returns the statistics
+            based on minibatch.
 
         iter_end_callback : callable(iteration, symbol, arg_params, aux_states)
             A callback that is invoked at end of each iteration.
@@ -556,7 +558,7 @@ class FeedForward(BASE_ESTIMATOR):
         if self.arg_params is None:
             self._init_params(input_shape)
         # setup metric
-        if isinstance(eval_metric, str):
+        if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
         # setup optimizer
         optimizer = self.optimizer
@@ -666,8 +668,10 @@ class FeedForward(BASE_ESTIMATOR):
         eval_data : DataIter or numpy.ndarray pair
             If eval_set is numpy.ndarray pair, it should be (valid_data, valid_label)
 
-        eval_metric : function
-            Evaluation metric function.
+        eval_metric : metric.EvalMetric or str or callable
+            The evaluation metric, name of evaluation metric.
+            Or a customize evaluation function that returns the statistics
+            based on minibatch.
 
         iter_end_callback : callable(iteration, symbol, arg_params, aux_states)
             A callback that is invoked at end of each iteration.

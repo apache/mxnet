@@ -48,14 +48,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     if (opr_block->opr->prop == FnProperty::kAsync && pusher_thread) {
       if (ctx.dev_mask() == gpu::kDevMask) {
         #if MXNET_USE_CUDA
-        try {
-          mshadow::SetDevice<gpu>(ctx.dev_id);
-        } catch (const dmlc::Error &e) {
-          std::string what = e.what();
-          if (what.find("driver shutting down") == std::string::npos) {
-             LOG(ERROR) << "Ignore Error " << what << " during worker finalization";
-          }
-        }
+        MSHADOW_CATCH_ERROR(mshadow::SetDevice<gpu>(ctx.dev_id));
         #endif
       }
       RunContext run_ctx;
@@ -147,14 +140,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
       this->ExecuteOprBlock(run_ctx, opr_block);
     }
     // Catch exception for CUDA driver shutdown
-    try {
-      mshadow::DeleteStream<gpu>(stream);
-    } catch (const dmlc::Error &e) {
-      std::string what = e.what();
-      if (what.find("driver shutting down") == std::string::npos) {
-        LOG(ERROR) << "Ignore Error " << what << " during worker finalization";
-      }
-    }
+    MSHADOW_CATCH_ERROR(mshadow::DeleteStream<gpu>(stream));
     #endif
   }
   /*!
