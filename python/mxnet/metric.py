@@ -1,5 +1,6 @@
 # pylint: disable=invalid-name
 """Online evaluation metric module."""
+from .base import string_types
 import numpy as np
 
 class EvalMetric(object):
@@ -52,15 +53,34 @@ class Accuracy(EvalMetric):
         self.num_inst += label.size
 
 
-def create(name):
+class CustomMetric(EvalMetric):
+    """Calculate accuracy"""
+    def __init__(self, feval):
+        name = feval.__name__
+        if name.find('<') != -1:
+            name = 'custom(%s)' % name
+        super(CustomMetric, self).__init__(name)
+        self._feval = feval
+
+    def update(self, pred, label):
+        self.sum_metric += self._feval(pred, label)
+        self.num_inst += 1
+
+
+def create(metric):
     """Create an evaluation metric.
 
     Parameters
     ----------
-    name : str
-        The name of the metric
+    metric : str or callable
+        The name of the metric, or a function
+        providing statistics given pred, label NDArray.
     """
-    if name == 'acc' or name == 'accuracy':
+    if callable(metric):
+        return CustomMetric(metric)
+    if not isinstance(metric, string_types):
+        raise TypeError('metric should either be callable or str')
+    if metric == 'acc' or metric == 'accuracy':
         return Accuracy()
     else:
-        raise ValueError('Cannot find metric %s' % name)
+        raise ValueError('Cannot find metric %s' % metric)

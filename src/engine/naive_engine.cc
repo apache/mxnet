@@ -20,14 +20,7 @@ class NaiveEngine final : public Engine {
     for (size_t i = 0; i < streams_.size(); ++i) {
       if (streams_[i] != nullptr) {
         // Catch exception for CUDA driver shutdown
-        try {
-          mshadow::DeleteStream(streams_[i]);
-        } catch (const dmlc::Error &e) {
-          std::string what = e.what();
-          if (what.find("driver shutting down") == std::string::npos) {
-            LOG(ERROR) << "Ignore Error " << what << " during worker finalization";
-          }
-        }
+        MSHADOW_CATCH_ERROR(mshadow::DeleteStream(streams_[i]));
         streams_[i] = nullptr;
       }
     }
@@ -63,14 +56,7 @@ class NaiveEngine final : public Engine {
     if (exec_ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       size_t dev_id = static_cast<size_t>(exec_ctx.dev_id);
-      try {
-        mshadow::SetDevice<gpu>(exec_ctx.dev_id);
-      } catch (const dmlc::Error &e) {
-        std::string what = e.what();
-        if (what.find("driver shutting down") == std::string::npos) {
-          LOG(ERROR) << "Ignore Error " << what << " during worker finalization";
-        }
-      }
+      MSHADOW_CATCH_ERROR(mshadow::SetDevice<gpu>(exec_ctx.dev_id));
       if (streams_.size() <= dev_id) {
         streams_.resize(dev_id + 1, nullptr);
       }

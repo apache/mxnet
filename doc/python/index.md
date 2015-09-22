@@ -18,8 +18,8 @@ Code Examples
 
 Python API Documents
 --------------------
+* [High Level Model Training Related API](model.md)
 * [NDArray API](ndarray.md)
 * [Symbolic API](symbol.md)
 * [KVStore API](kvstore.md)
 * [Data Loading API](io.md)
-* [Model API](model.md)

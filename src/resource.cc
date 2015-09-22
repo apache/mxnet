@@ -37,7 +37,6 @@ class ResourceManagerImpl : public ResourceManager {
     gpu_space_.Clear();
 #endif
     if (engine_ref_ != nullptr) {
-      engine_ref_->WaitForAll();
       // release the reference to engine.
       engine_ref_ = nullptr;
     }
@@ -112,14 +111,7 @@ class ResourceManagerImpl : public ResourceManager {
       mshadow::Random<xpu> *r = prnd;
       Engine::Get()->DeleteVariable(
           [r](RunContext rctx) {
-            try {
-              delete r;
-            } catch (const dmlc::Error &e) {
-              std::string what = e.what();
-              if (what.find("driver shutting down") == std::string::npos) {
-                LOG(ERROR) << "Ignore Error " << what << " resource finalization";
-              }
-            }
+            MSHADOW_CATCH_ERROR(delete r);
           }, ctx, resource.var);
     }
     // set seed to a PRNG
@@ -160,14 +152,7 @@ class ResourceManagerImpl : public ResourceManager {
         mshadow::TensorContainer<xpu, 1, real_t>* r = space[i];
         Engine::Get()->DeleteVariable(
             [r](RunContext rctx){
-              try {
-                r->Release();
-              } catch (const dmlc::Error &e) {
-                std::string what = e.what();
-                if (what.find("driver shutting down") == std::string::npos) {
-                  LOG(ERROR) << "Ignore Error " << what << " resource finalization";
-                }
-              }
+              MSHADOW_CATCH_ERROR(r->Release());
             }, ctx, resource[i].var);
       }
     }

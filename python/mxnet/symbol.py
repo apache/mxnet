@@ -153,6 +153,27 @@ class Symbol(object):
         check_call(_LIB.MXSymbolCompose(
             self.handle, name, num_args, keys, args))
 
+    def __getitem__(self, index):
+        if not isinstance(index, int):
+            raise TypeError('Symbol only support integer index to fetch i-th output')
+        handle = SymbolHandle()
+        check_call(_LIB.MXSymbolGetOutput(
+            self.handle, mx_uint(index), ctypes.byref(handle)))
+        return Symbol(handle=handle)
+
+    def get_internals(self):
+        """Get a new grouped symbol whose output contains all the internal outputs of this symbol.
+
+        Returns
+        -------
+        sgroup : Symbol
+            The internal of the symbol.
+        """
+        handle = SymbolHandle()
+        check_call(_LIB.MXSymbolGetInternals(
+            self.handle, ctypes.byref(handle)))
+        return Symbol(handle=handle)
+
     def list_arguments(self):
         """List all the arguments in the symbol.
 

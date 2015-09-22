@@ -208,8 +208,6 @@ struct ThreadedOpr final : public Opr,
  */
 class ThreadedEngine : public Engine {
  public:
-  // constructor
-  ThreadedEngine() : pending_(0) {}
   // implementing all the functions from Engine.
   ThreadedVar* NewVariable() override;
   ThreadedOpr* NewOperator(AsyncFn fn,
@@ -225,6 +223,13 @@ class ThreadedEngine : public Engine {
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override;
   void WaitForVar(VarHandle var) override;
   void WaitForAll() override;
+
+  ThreadedEngine() {}
+  ~ThreadedEngine() {
+    // notify all pending waiters
+    kill_.store(true);
+    finished_cv_.notify_all();
+  }
 
  protected:
   /*!
@@ -269,7 +274,9 @@ class ThreadedEngine : public Engine {
   /*!
    * \brief Number of pending operations.
    */
-  std::atomic<std::size_t> pending_;
+  std::atomic<std::size_t> pending_{0};
+  /*! \brief whether we want to kill the waiters */
+  std::atomic<bool> kill_{false};
   /*!
    * \brief Mutex and condition_variable,
    *  used to Notify waits for single or all variables.

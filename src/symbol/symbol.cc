@@ -46,6 +46,10 @@ struct Symbol::Node {
   inline bool is_variable() const {
     return op == nullptr && !backward_source_node;
   }
+  /*! \return Whether it is backward op */
+  inline bool is_backward() const {
+    return backward_source_node.get() != nullptr;
+  }
 };
 
 /*! \return whwther the symbol is atomic */
@@ -59,22 +63,24 @@ inline void Symbol::DFSVisit(FVisit fvisit) const {
   std::unordered_set<Node*> visited;
   // put the head into the graph
   for (auto &head : heads_) {
-    Node *ptr = head.source.get();
+    Node* ptr = head.source.get();
     if (visited.count(ptr) == 0) {
       stack.push_back(std::make_pair(&head.source, 0));
+      visited.insert(ptr);
     }
   }
   while (!stack.empty()) {
     std::pair<const std::shared_ptr<Node> *, uint32_t>& back = stack.back();
     if (back.second == back.first->get()->inputs.size()) {
       fvisit(*(back.first));
-      visited.insert(back.first->get());
       stack.pop_back();
     } else {
       std::vector<Symbol::DataEntry>& inputs = back.first->get()->inputs;
       Symbol::DataEntry& input = inputs.at(back.second++);
-      if (visited.count(input.source.get()) == 0) {
+      Node* ptr = input.source.get();
+      if (visited.count(ptr) == 0) {
         stack.push_back(std::make_pair(&input.source, 0));
+        visited.insert(ptr);
       }
     }
   }
@@ -200,9 +206,13 @@ std::vector<std::string> Symbol::ListOutputs() const {
     if (head.source->is_variable()) {
       ret.push_back(head.source->name);
     } else {
-      // TODO(bing) rethink about output naming
       auto &hname = head.source->name;
-      std::string rname = head.source->op->ListOutputs()[head.index];
+      std::string rname;
+      if (head.source->is_backward()) {
+        rname = head.source->backward_source_node->op->ListArguments()[head.index];
+      } else {
+        rname = head.source->op->ListOutputs()[head.index];
+      }
       if (hname.length() == 0) {
         ret.push_back(std::move(rname));
       } else {
@@ -244,6 +254,25 @@ Symbol Symbol::operator[] (size_t index) const {
     s.heads_.push_back(heads_[index]);
     return s;
   }
+}
+
+Symbol Symbol::GetInternals() const {
+  Symbol ret;
+  this->DFSVisit([&ret](const std::shared_ptr<Node> &node) {
+      Node* n = node.get();
+      uint32_t nout;
+      if (n->is_variable()) {
+        nout = 1;
+      } else if (n->is_backward()) {
+        nout = static_cast<uint32_t>(n->backward_source_node->inputs.size());
+      } else {
+        nout = n->op->NumVisibleOutputs();
+      }
+      for (uint32_t i = 0; i < nout; ++i) {
+        ret.heads_.push_back(DataEntry(node, i));
+      }
+    });
+  return ret;
 }
 
 // create a default variable name
