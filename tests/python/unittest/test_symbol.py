@@ -39,8 +39,8 @@ def test_symbol_internal():
                               'fc1_weight', 'fc1_bias',
                               'fc2_weight', 'fc2_bias']
     internal =  net1.get_internals()
-    nmap = {x: i for i, x in enumerate(internal.list_outputs())}
-    fc1 = internal[nmap['fc1_output']]
+    print internal.list_outputs()
+    fc1 = internal['fc1_output']
     assert fc1.list_arguments() == oldfc.list_arguments()
 
 
