@@ -2,6 +2,8 @@
 # pylint: disable=invalid-name, protected-access, too-many-locals, fixme
 # pylint: disable=unused-argument, too-many-branches, too-many-statements
 """Visualization module"""
+from __future__ import absolute_import
+
 from .symbol import Symbol
 import json
 import re

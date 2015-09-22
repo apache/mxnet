@@ -1,6 +1,8 @@
 # pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals
 # pylint: disable=too-many-branches, too-many-statements, unused-argument
 """MXNet model module"""
+from __future__ import absolute_import
+
 import numpy as np
 import time
 import logging
@@ -201,11 +203,18 @@ def _train_multi_device(symbol, ctx, input_shape,
                 aux_params[name].copyto(w)
     # ky value store
     kv = kvstore.create() if num_device != 1 else None
+    opt_state_blocks = []
     # If there are multiple devices, initialize the weights.
     for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
-        arg, grad = pair
-        if kv and grad[0] is not None:
-            kv.init(index, arg[0])
+        arg_list, grad_list = pair
+        if kv and grad_list[0] is not None:
+            kv.init(index, arg_list[0])
+            # attach state direct to weight
+            opt_list = [optimizer.create_state(index, w) for w in arg_list]
+            opt_state_blocks.append(opt_list)
+        else:
+            opt_state_blocks.append(None)
+
     # Input and output data structure
     data_index, label_index = _check_arguments(symbol)
     merged_shape = list(train_execs[0].outputs[0].shape)
@@ -244,9 +253,10 @@ def _train_multi_device(symbol, ctx, input_shape,
                     kv.push(index, grad_list)
                     # pull back the sum, to the same locations.
                     kv.pull(index, grad_list)
-                # optimize
-                for w, g in zip(arg_list, grad_list):
-                    optimizer.update(index, w, g)
+                opt_list = opt_state_blocks[index]
+                # optimizea
+                for w, g, state in zip(arg_list, grad_list, opt_list):
+                    optimizer.update(index, w, g, state)
             # evaluate at end, so out_cpu_array can lazy copy
             eval_metric.update(out_cpu_array, label)
 
