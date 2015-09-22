@@ -1,11 +1,7 @@
 # pylint: skip-file
-import sys
-sys.path.insert(0, "../../python/")
-sys.path.append("../../tests/python/common")
+from data import mnist_iterator
 import mxnet as mx
 import logging
-import numpy as np
-import get_data
 
 # define mlp
 
@@ -19,30 +15,14 @@ mlp = mx.symbol.Softmax(data = fc3, name = 'mlp')
 
 # data
 
-batch_size = 100
-
-get_data.GetMNIST_ubyte()
-train_dataiter = mx.io.MNISTIter(
-        image="data/train-images-idx3-ubyte",
-        label="data/train-labels-idx1-ubyte",
-        input_shape=(784,),
-        batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
-val_dataiter = mx.io.MNISTIter(
-        image="data/t10k-images-idx3-ubyte",
-        label="data/t10k-labels-idx1-ubyte",
-        input_shape=(784,),
-        batch_size=batch_size, shuffle=True, flat=True, silent=False)
-
+train, val = mnist_iterator(batch_size=100, input_shape = (784,))
 
 # train
 
 logging.basicConfig(level=logging.DEBUG)
 
-model = mx.model.FeedForward(ctx = mx.cpu(),
-                             symbol = mlp,
-                             num_round = 10,
-                             learning_rate = 0.1,
-                             momentum = 0.9,
-                             wd = 0.00001)
+model = mx.model.FeedForward(
+    ctx = mx.cpu(), symbol = mlp, num_round = 10,
+    learning_rate = 0.1, momentum = 0.9, wd = 0.00001)
 
-model.fit(X=train_dataiter, eval_data=val_dataiter)
+model.fit(X=train, eval_data=val)
