@@ -15,6 +15,7 @@
 #include <condition_variable>
 #include <atomic>
 #include <mutex>
+#include <string>
 #include "./engine_impl.h"
 #include "../common/object_pool.h"
 
@@ -223,6 +224,9 @@ class ThreadedEngine : public Engine {
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override;
   void WaitForVar(VarHandle var) override;
   void WaitForAll() override;
+  void NotifyShutdown() override {
+    shutdown_phase_.store(true);
+  }
 
   ThreadedEngine() {}
   ~ThreadedEngine() {
@@ -251,7 +255,20 @@ class ThreadedEngine : public Engine {
     ThreadedOpr* threaded_opr = opr_block->opr;
     CallbackOnComplete callback = this->CreateCallback(
         ThreadedEngine::OnCompleteStatic, threaded_opr);
-    threaded_opr->fn(run_ctx, callback);
+    if (!shutdown_phase_) {
+      try {
+        threaded_opr->fn(run_ctx, callback);
+      } catch(dmlc::Error &e) {
+        std::string what = e.what();
+        if (what.find("driver shutting down") == std::string::npos &&
+            !shutdown_phase_) {
+          LOG(FATAL) << e.what();
+        }
+      }
+    } else {
+      callback();
+    }
+
     OprBlock::Delete(opr_block);
   }
 
@@ -277,6 +294,8 @@ class ThreadedEngine : public Engine {
   std::atomic<std::size_t> pending_{0};
   /*! \brief whether we want to kill the waiters */
   std::atomic<bool> kill_{false};
+  /*! \brief whether it is during shutdown phase*/
+  std::atomic<bool> shutdown_phase_{false};
   /*!
    * \brief Mutex and condition_variable,
    *  used to Notify waits for single or all variables.

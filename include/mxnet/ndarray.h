@@ -310,10 +310,9 @@ class NDArray {
     }
     /*! \brief destructor */
     ~Chunk() {
-      if (static_data) {
+      if (static_data || delay_alloc) {
         Engine::Get()->DeleteVariable([](RunContext s) {}, shandle.ctx, var);
       } else {
-        CHECK(!delay_alloc) << "deleted before allocation";
         Storage::Handle h = this->shandle;
         Engine::Get()->DeleteVariable([h](RunContext s) {
             Storage::Get()->Free(h);

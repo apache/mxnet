@@ -8,6 +8,7 @@ import sys
 import ctypes
 import platform
 import numpy as np
+import atexit
 
 __all__ = ['MXNetError']
 #----------------------------
@@ -221,3 +222,10 @@ def ctypes2docstring(num_args, arg_names, arg_types, arg_descs, remove_dup=True)
                '%s\n')
     doc_str = doc_str % ('\n'.join(param_str))
     return doc_str
+
+
+def _notify_shutdown():
+    """Notify MXNet about a shutdown."""
+    check_call(_LIB.MXNotifyShutdown())
+
+atexit.register(_notify_shutdown)
