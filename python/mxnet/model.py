@@ -420,15 +420,32 @@ class FeedForward(BASE_ESTIMATOR):
     aux_params : dict of str to NDArray, optional
         Model parameter, dict of name to NDArray of net's auxiliary states.
 
+    allow_extra_params : boolean, optional
+        Whether allow extra parameters that are not needed by symbol
+        to be passed by aux_params and arg_params.
+        If this is True, no error will be thrown when aux_params and arg_params
+        contain extra parameters than needed.
+
     **kwargs : dict
         The additional keyword arguments passed to optimizer.
     """
     def __init__(self, symbol, ctx=None,
                  num_round=None, optimizer='sgd', initializer=Xavier(),
                  arg_params=None, aux_params=None,
+                 allow_extra_params=False,
                  **kwargs):
         # check if symbol contain duplicated names.
         _check_arguments(symbol)
+        # rematch parameters to delete useless ones
+        if allow_extra_params:
+            if arg_params:
+                arg_names = set(symbol.list_arguments())
+                arg_params = {k : v for k, v in arg_params.items()
+                              if k in arg_names}
+            if aux_params:
+                aux_names = set(symbol.list_auxiliary_states())
+                aux_params = {k : v for k, v in aux_params.items()
+                              if k in aux_names}
         # basic configuration
         self.symbol = symbol
         if ctx is None:

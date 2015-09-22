@@ -67,6 +67,15 @@ def test_mlp():
     logging.info('final accuracy = %f', acc1)
     assert(acc1 > 0.95)
 
+    # predict internal featuremaps
+    internals = softmax.get_internals()
+    fc2 = internals['fc2_output']
+    mfeat = mx.model.FeedForward(symbol=fc2,
+                                 arg_params=model.arg_params,
+                                 aux_params=model.aux_params,
+                                 allow_extra_params=True)
+    feat = mfeat.predict(val_dataiter)
+    assert feat.shape == (10000, 64)
     # pickle the model
     smodel = pickle.dumps(model)
     model2 = pickle.loads(smodel)
@@ -79,9 +88,6 @@ def test_mlp():
     assert np.sum(np.abs(prob - prob3)) == 0
 
     # save model explicitly
-
-
-
     model.save(prefix, 128)
     model4 = mx.model.FeedForward.load(prefix, 128)
     prob4 = model4.predict(val_dataiter)

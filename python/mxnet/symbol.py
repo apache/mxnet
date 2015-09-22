@@ -154,6 +154,16 @@ class Symbol(object):
             self.handle, name, num_args, keys, args))
 
     def __getitem__(self, index):
+        if isinstance(index, string_types):
+            idx = None
+            for i, name in enumerate(self.list_outputs()):
+                if name == index:
+                    if idx is not None:
+                        raise ValueError('There are multiple outputs with name \"%s\"' % index)
+                    idx = i
+            if idx is None:
+                raise ValueError('Cannot find output that matches name \"%s\"' % index)
+            index = idx
         if not isinstance(index, int):
             raise TypeError('Symbol only support integer index to fetch i-th output')
         handle = SymbolHandle()
