@@ -101,7 +101,7 @@ loss = mx.symbol.Softmax(data=fc, name="loss")
 get_data.GetCifar10()
 batch_size = 128
 epoch = 3
-num_gpus = 4
+num_gpus = 1
 
 train_dataiter = mx.io.ImageRecordIter(
         path_imgrec="data/cifar/train.rec",
