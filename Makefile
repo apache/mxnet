@@ -71,10 +71,8 @@ ifneq ($(ADD_LDFLAGS), NONE)
 	LDFLAGS += $(ADD_LDFLAGS)
 endif
 
-ifeq ($(@which nvcc), )
 ifneq ($(USE_CUDA_PATH), NONE)
 	NVCC=$(USE_CUDA_PATH)/bin/nvcc
-endif
 endif
 
 .PHONY: clean all test lint doc clean_all
