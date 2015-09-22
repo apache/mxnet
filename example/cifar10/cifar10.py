@@ -157,6 +157,8 @@ loss = mx.symbol.Softmax(data=fc, name="loss")
 get_data.GetCifar10()
 batch_size = 128
 epoch = 3
+num_gpus = 1
+
 train_dataiter = mx.io.ImageRecordIter(
         path_imgrec="data/cifar/train.rec",
         mean_img="data/cifar/cifar_mean.bin",
@@ -180,7 +182,7 @@ def test_cifar():
     console.setLevel(logging.DEBUG)
     logging.getLogger('').addHandler(console)
     # get model from symbol
-    gpus = [mx.gpu(i) for i in range(2)]
+    gpus = [mx.gpu(i) for i in range(num_gpus)]
     model = mx.model.FeedForward(ctx=gpus, symbol=loss, num_round = epoch,
                                  learning_rate=0.05, momentum=0.9, wd=0.00001)
     model.fit(X=train_dataiter, eval_data=test_dataiter)
