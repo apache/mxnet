@@ -529,7 +529,7 @@ class FeedForward(BASE_ESTIMATOR):
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
             iter_end_callback=None, logger=None):
-        """fit the model
+        """Fit the model.
 
         Parameters
         ----------
@@ -629,3 +629,54 @@ class FeedForward(BASE_ESTIMATOR):
         return FeedForward(symbol, ctx=ctx,
                            arg_params=arg_params, aux_params=aux_params)
 
+    @staticmethod
+    def create(symbol, X, y=None, ctx=None,
+               num_round=None, optimizer='sgd', initializer=Xavier(),
+               eval_data=None, eval_metric='acc', iter_end_callback=None,
+               logger=None, **kwargs):
+        """Functional style to create a model.
+
+        This function will be more consistent with functional
+        languages such as R, where mutation is not allowed.
+
+        Parameters
+        ----------
+        symbol : Symbol
+            The symbol configuration of computation network.
+
+        X : DataIter
+            Training data
+
+        y : numpy.ndarray, optional
+            If X is numpy.ndarray y is required to set
+
+        ctx : Context or list of Context, optional
+            The device context of training and prediction.
+            To use multi GPU training, pass in a list of gpu contexts.
+
+        num_round : int, optional
+            Training parameter, number of training rounds(iterations).
+
+        optimizer : str or Optimizer, optional
+            Training parameter, name or optimizer object for training.
+
+        initializier : initializer function, optional
+            Training parameter, the initialization scheme used.
+
+        eval_data : DataIter or numpy.ndarray pair
+            If eval_set is numpy.ndarray pair, it should be (valid_data, valid_label)
+
+        eval_metric : function
+            Evaluation metric function.
+
+        iter_end_callback : callable(iteration, symbol, arg_params, aux_states)
+            A callback that is invoked at end of each iteration.
+            This can be used to checkpoint model each iteration.
+
+        logger : logging logger, optional
+        """
+        model = FeedForward(symbol, ctx=ctx, num_round=num_round,
+                            optimizer=optimizer, initializer=initializer, **kwargs)
+        model.fit(X, y, eval_data=eval_data, eval_metric=eval_metric,
+                  iter_end_callback=iter_end_callback, logger=logger)
+        return model

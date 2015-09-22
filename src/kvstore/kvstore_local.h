@@ -119,7 +119,7 @@ class KVStoreLocal : public KVStore {
       } else {
         CHECK_EQ(ctx.dev_mask(), gpu::kDevMask);
         NDArray *copy_buf = buf.AllocCopyBuf(ctx.dev_id, val[0].shape());
-        CopyFromTo(val[0], copy_buf);
+        CopyFromTo(val[i], copy_buf);
         buf.merged += *copy_buf;
       }
     }
