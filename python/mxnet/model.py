@@ -207,8 +207,9 @@ def _train_multi_device(symbol, ctx, input_shape,
     # If there are multiple devices, initialize the weights.
     for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
         arg_list, grad_list = pair
-        if kv and grad_list[0] is not None:
-            kv.init(index, arg_list[0])
+        if grad_list[0] is not None:
+            if kv:
+                kv.init(index, arg_list[0])
             # attach state direct to weight
             opt_list = [optimizer.create_state(index, w) for w in arg_list]
             opt_state_blocks.append(opt_list)
