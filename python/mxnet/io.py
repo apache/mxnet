@@ -1,5 +1,4 @@
 # coding: utf-8
-
 """NDArray interface of mxnet"""
 from __future__ import absolute_import
 
