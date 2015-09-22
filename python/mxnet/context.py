@@ -3,23 +3,36 @@
 from __future__ import absolute_import
 
 class Context(object):
-    """Context representing device and device id in mxnet"""
+    """Constructing a context.
+
+    Parameters
+    ----------
+    device_type : {'cpu', 'gpu'} or Context.
+        String representing the device type
+
+    device_id : int (default=0)
+        The device id of the device, needed for GPU
+
+    Note
+    ----
+    Context can also be used a way to change default context.
+
+    Examples
+    --------
+    Switch default context example:
+    >>> # array on cpu
+    >>> cpu_array = mx.md.ones((2, 3))
+    >>> # switch default context to GPU(2)
+    >>> with mx.Context(mx.gpu(2)):
+    >>>     gpu_array = mx.md.ones((2, 3))
+    >>> gpu_array.context
+    Context(device_type=gpu, device_id=2)
+    """
     # static class variable
     default_ctx = None
     devtype2str = {1: 'cpu', 2: 'gpu'}
     devstr2type = {'cpu': 1, 'gpu': 2}
-
     def __init__(self, device_type, device_id=0):
-        """Constructing a context.
-
-        Parameters
-        ----------
-        device_type : str (can be 'cpu' or 'gpu')
-            a string representing the device type
-
-        device_id : int (default=0)
-            the device id of the device, needed for GPU
-        """
         if isinstance(device_type, Context):
             self.device_typeid = device_type.device_typeid
             self.device_id = device_type.device_id

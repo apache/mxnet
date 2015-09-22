@@ -12,6 +12,7 @@ from .context import Context, current_context, cpu, gpu
 from .base import MXNetError
 from . import base
 from . import ndarray
+from . import name
 from . import symbol
 from . import kvstore as kv
 from . import io
