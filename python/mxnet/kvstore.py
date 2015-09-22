@@ -2,6 +2,7 @@
 # pylint: disable=invalid-name, global-statement
 """ KVStore in mxnet """
 from __future__ import absolute_import
+
 import ctypes
 from .ndarray import NDArray
 from .base import _LIB

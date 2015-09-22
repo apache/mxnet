@@ -13,6 +13,7 @@ from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str, string_types
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from .base import check_call, ctypes2docstring
+from .name import NameManager
 from .context import Context
 from .ndarray import NDArray, zeros
 from .executor import Executor
@@ -128,6 +129,7 @@ class Symbol(object):
         the resulting symbol
         """
         name = kwargs.pop('name', None)
+
         if name:
             name = c_str(name)
         if len(args) != 0 and len(kwargs) != 0:
@@ -150,6 +152,27 @@ class Symbol(object):
             args = c_array(SymbolHandle, [s.handle for s in args])
         check_call(_LIB.MXSymbolCompose(
             self.handle, name, num_args, keys, args))
+
+    def __getitem__(self, index):
+        if not isinstance(index, int):
+            raise TypeError('Symbol only support integer index to fetch i-th output')
+        handle = SymbolHandle()
+        check_call(_LIB.MXSymbolGetOutput(
+            self.handle, mx_uint(index), ctypes.byref(handle)))
+        return Symbol(handle=handle)
+
+    def get_internals(self):
+        """Get a new grouped symbol whose output contains all the internal outputs of this symbol.
+
+        Returns
+        -------
+        sgroup : Symbol
+            The internal of the symbol.
+        """
+        handle = SymbolHandle()
+        check_call(_LIB.MXSymbolGetInternals(
+            self.handle, ctypes.byref(handle)))
+        return Symbol(handle=handle)
 
     def list_arguments(self):
         """List all the arguments in the symbol.
@@ -752,6 +775,8 @@ def _make_atomic_symbol_function(handle):
                              ' instead of keyword arguments.')
 
         s = Symbol(sym_handle)
+        hint = func_name.lower()
+        name = NameManager.current.get(name, hint)
         s._compose(*args, name=name, **symbol_kwargs)
         return s
 

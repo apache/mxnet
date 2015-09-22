@@ -9,19 +9,22 @@ from common import get_data
 # symbol net
 batch_size = 100
 data = mx.symbol.Variable('data')
-fc1 = mx.symbol.FullyConnected(data = data, name='fc1', num_hidden=128)
-act1 = mx.symbol.Activation(data = fc1, name='relu1', act_type="relu")
-fc2 = mx.symbol.FullyConnected(data = act1, name = 'fc2', num_hidden = 64)
-act2 = mx.symbol.Activation(data = fc2, name='relu2', act_type="relu")
-fc3 = mx.symbol.FullyConnected(data = act2, name='fc3', num_hidden=10)
-softmax = mx.symbol.Softmax(data = fc3, name = 'sm')
+fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
+act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
+fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64)
+act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
+fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=10)
+softmax = mx.symbol.Softmax(fc3, name = 'sm')
+
+def accuracy(pred, label):
+    pred = pred.asnumpy()
+    label = label.asnumpy().astype('int32')
+    py = np.argmax(pred, axis=1)
+    return np.sum(py == label) / float(label.size)
 
 num_round = 4
 prefix = './mlp'
-model = mx.model.FeedForward(softmax, mx.cpu(),
-                             num_round=num_round,
-                             learning_rate=0.01, wd=0.0004,
-                             momentum=0.9)
+
 #check data
 get_data.GetMNIST_ubyte()
 
@@ -43,10 +46,18 @@ def test_mlp():
     console.setLevel(logging.DEBUG)
     logging.getLogger('').addHandler(console)
 
-    model.fit(X=train_dataiter,
-              eval_data=val_dataiter,
-              iter_end_callback=mx.model.do_checkpoint(prefix))
-    logging.info('Finish fit...')
+    model = mx.model.FeedForward.create(
+        softmax,
+        X=train_dataiter,
+        eval_data=val_dataiter,
+        eval_metric=accuracy,
+        iter_end_callback=mx.model.do_checkpoint(prefix),
+        ctx=[mx.cpu(i) for i in range(2)],
+        num_round=num_round,
+        learning_rate=0.01, wd=0.0004,
+        momentum=0.9)
+
+    logging.info('Finish traning...')
     prob = model.predict(val_dataiter)
     logging.info('Finish predict...')
     val_dataiter.reset()
@@ -68,6 +79,9 @@ def test_mlp():
     assert np.sum(np.abs(prob - prob3)) == 0
 
     # save model explicitly
+
+
+
     model.save(prefix, 128)
     model4 = mx.model.FeedForward.load(prefix, 128)
     prob4 = model4.predict(val_dataiter)
