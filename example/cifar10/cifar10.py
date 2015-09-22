@@ -12,57 +12,6 @@ import time
 import numpy as np
 import copy
 
-
-"""
-CXXNET Result:
-step1: wmat_lr = 0.05, bias_lr = 0.1, mom = 0.9
-[1] train-error:0.452865  val-error:0.3614
-[2] train-error:0.280231  val-error:0.2504
-[3] train-error:0.220968  val-error:0.2456
-[4] train-error:0.18746 val-error:0.2145
-[5] train-error:0.165221  val-error:0.1796
-[6] train-error:0.150056  val-error:0.1786
-[7] train-error:0.134571  val-error:0.157
-[8] train-error:0.122582  val-error:0.1429
-[9] train-error:0.113891  val-error:0.1398
-[10]  train-error:0.106458  val-error:0.1469
-[11]  train-error:0.0985054 val-error:0.1447
-[12]  train-error:0.0953684 val-error:0.1494
-[13]  train-error:0.0872962 val-error:0.1311
-[14]  train-error:0.0832401 val-error:0.1544
-[15]  train-error:0.0773857 val-error:0.1268
-[16]  train-error:0.0743087 val-error:0.125
-[17]  train-error:0.0714114 val-error:0.1189
-[18]  train-error:0.066616  val-error:0.1424
-[19]  train-error:0.0651175 val-error:0.1322
-[20]  train-error:0.0616808 val-error:0.111
-step2: lr = 0.01, bias_lr = 0.02, mom = 0.9
-[21]  train-error:0.033368  val-error:0.0907
-[22]  train-error:0.0250959 val-error:0.0876
-[23]  train-error:0.0220388 val-error:0.0867
-[24]  train-error:0.0195812 val-error:0.0848
-[25]  train-error:0.0173833 val-error:0.0872
-[26]  train-error:0.0154052 val-error:0.0878
-[27]  train-error:0.0141264 val-error:0.0863
-[28]  train-error:0.0134071 val-error:0.0865
-[29]  train-error:0.0116688 val-error:0.0878
-[30]  train-error:0.0106298 val-error:0.0873
-step3: lr = 0.001, bias_lr = 0.002, mom = 0.9
-[31]  train-error:-nan  val-error:0.0873
-[31]  train-error:0.0067735 val-error:0.0859
-[32]  train-error:0.0049952 val-error:0.0835
-[33]  train-error:0.00485534  val-error:0.0849
-[34]  train-error:0.00367647  val-error:0.0839
-[35]  train-error:0.0034367 val-error:0.0844
-[36]  train-error:0.00275735  val-error:0.084
-[37]  train-error:0.00221787  val-error:0.083
-[38]  train-error:0.00171835  val-error:0.0838
-[39]  train-error:0.00125879  val-error:0.0833
-[40]  train-error:0.000699329 val-error:0.0842
-"""
-
-np.random.seed(1812)
-
 conv_cnt = 1
 concat_cnt = 1
 pool_cnt = 1
@@ -130,13 +79,6 @@ def SimpleFactory(data, ch_1x1, ch_3x3):
     concat_cnt += 1
     return concat
 
-def RandomInit(narray):
-    in_num = narray.shape[1]
-    out_num = narray.shape[0]
-    a = np.sqrt(3.0 / (in_num + out_num))
-    tmp = mx.nd.array(np.random.uniform(-a, a, narray.shape))
-    narray[:] = tmp
-
 data = mx.symbol.Variable(name="data")
 conv1 = ConvFactory(data=data, kernel=(3,3), pad=(1,1), num_filter=96, act_type="relu")
 in3a = SimpleFactory(conv1, 32, 32)
@@ -153,10 +95,14 @@ pool = mx.symbol.Pooling(data=in5b, pool_type="avg", kernel=(7,7), name="pool%d"
 flatten = mx.symbol.Flatten(data=pool, name="flatten1")
 fc = mx.symbol.FullyConnected(data=flatten, num_hidden=10, name="fc1")
 loss = mx.symbol.Softmax(data=fc, name="loss")
+
 #########################################################
+
 get_data.GetCifar10()
 batch_size = 128
 epoch = 3
+num_gpus = 1
+
 train_dataiter = mx.io.ImageRecordIter(
         path_imgrec="data/cifar/train.rec",
         mean_img="data/cifar/cifar_mean.bin",
@@ -179,8 +125,8 @@ def test_cifar():
     console = logging.StreamHandler()
     console.setLevel(logging.DEBUG)
     logging.getLogger('').addHandler(console)
-    # get model from symbol
-    model = mx.model.FeedForward(ctx=mx.gpu(), symbol=loss, num_round = epoch,
+    gpus = [mx.gpu(i) for i in range(num_gpus)]
+    model = mx.model.FeedForward(ctx=gpus, symbol=loss, num_round = epoch,
                                  learning_rate=0.05, momentum=0.9, wd=0.00001)
     model.fit(X=train_dataiter, eval_data=test_dataiter)
 
