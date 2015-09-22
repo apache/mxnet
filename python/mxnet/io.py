@@ -1,4 +1,5 @@
 # coding: utf-8
+# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments
 
 """NDArray interface of mxnet"""
 from __future__ import absolute_import
@@ -14,20 +15,19 @@ from .ndarray import NDArray
 from .ndarray import array
 
 class DataIter(object):
-    """DataIter object in mxnet. List all the needed functions here. """
+    """DataIter object in mxnet. """
 
-    def __init__(self, handle):
-        """Initialize with handle
+    def __init__(self):
+        """constructor of dataiter
 
-        Parameters
-        ----------
-        handle : DataIterHandle
-            the handle to the underlying C++ Data Iterator
         """
-        self.handle = handle
+        pass
 
     def __del__(self):
-        check_call(_LIB.MXDataIterFree(self.handle))
+        """destructor of dataiter
+
+        """
+        pass
 
     def __iter__(self):
         """make the class iterable
@@ -36,10 +36,10 @@ class DataIter(object):
         return self
 
     def reset(self):
-        """set loc to 0
+        """reset the iter
 
         """
-        check_call(_LIB.MXDataIterBeforeFirst(self.handle))
+        pass
 
     def next(self):
         """get next data batch from iterator
@@ -48,12 +48,7 @@ class DataIter(object):
         -------
         labels and images for the next batch
         """
-        next_res = ctypes.c_int(0)
-        check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
-        if next_res.value:
-            return self.getdata(), self.getlabel()
-        else:
-            raise StopIteration
+        pass
 
     # make it work for both python2 and 3
     __next__ = next
@@ -65,49 +60,68 @@ class DataIter(object):
         -------
         return true if success
         """
-        next_res = ctypes.c_int(0)
-        check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
-        return next_res.value
+        pass
 
     def getdata(self):
         """get data from batch
 
+        Returns
+        -------
+        data ndarray for the next batch
         """
-        hdl = NDArrayHandle()
-        check_call(_LIB.MXDataIterGetData(self.handle, ctypes.byref(hdl)))
-        return NDArray(hdl, False)
+        pass
 
     def getlabel(self):
         """get label from batch
 
+        Returns
+        -------
+        label ndarray for the next batch
         """
-        hdl = NDArrayHandle()
-        check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
-        return NDArray(hdl, False)
+        pass
 
 class NumpyIter(DataIter):
-    """NumpyIter object in mxnet. Taking Numpy Array into dataiter. """
+    """NumpyIter object in mxnet. Taking Numpy Array to get dataiter. """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, data, label, batch_size, shuffle=True, data_pad=0, label_pad=0):
         """Initialize with handle
 
         Parameters
         ----------
-        handle : DataIterHandle
-            the handle to the underlying C++ Data Iterator
+        data : numpy.array
+            Numpy ndarray for data
+        label : numpy.array
+            Numpy ndarray for label
+        batch_size: int
+            Batch Size
+        shuffle: bool
+            Whether to shuffle the data
+        data_pad: float
+            padding value for data
+        label_pad: float
+            padding value for label
         """
-        super(NumpyIter, self).__init__(None)
-        self.data = args[0]
-        self.label = args[1]
-        self.batch_size = kwargs.get('batch_size', 100)
-        self.data_pad = kwargs.get('data_pad', 0)
-        self.label_pad = kwargs.get('label_pad', 0)
+        super(NumpyIter, self).__init__()
+        self.data = data
+        self.label = label
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.data_pad = data_pad
+        self.label_pad = label_pad
+        # shuffle data
+        if self.shuffle:
+            idx = np.arange(self.data.shape[0])
+            np.random.shuffle(idx)
+            new_data = np.zeros(self.data.shape)
+            new_label = np.zeros(self.label.shape)
+            for i in range(self.data.shape[0]):
+                new_data[i] = self.data[idx[i]]
+                new_label[i] = self.label[idx[i]]
+            self.data = new_data
+            self.label = new_label
         self.loc = 0
         self.out_data = None
         self.out_label = None
-
-    def __del__(self):
-        pass
 
     def reset(self):
         """set loc to 0
@@ -116,12 +130,6 @@ class NumpyIter(DataIter):
         self.loc = 0
 
     def iter_next(self):
-        """iterate to next data with return value
-
-        Returns
-        -------
-        return true if success
-        """
         if self.loc < self.data.shape[0]:
             batch_data_shape = []
             batch_data_shape.append(self.batch_size)
@@ -138,31 +146,59 @@ class NumpyIter(DataIter):
             return False
 
     def next(self):
-        """get next data batch from iterator
-
-        Returns
-        -------
-        labels and images for the next batch
-        """
         if self.iter_next():
             return self.getdata(), self.getlabel()
         else:
             raise StopIteration
 
-    # make it work for both python2 and 3
-    __next__ = next
-
     def getdata(self):
-        """get data from batch
-
-        """
         return array(self.out_data)
 
     def getlabel(self):
-        """get label from batch
-
-        """
         return array(self.out_label)
+
+class MXDataIter(DataIter):
+    """DataIter object in mxnet. List all the needed functions here. """
+
+    def __init__(self, handle):
+        """Initialize with handle
+
+        Parameters
+        ----------
+        handle : DataIterHandle
+            the handle to the underlying C++ Data Iterator
+        """
+        super(MXDataIter, self).__init__()
+        self.handle = handle
+
+    def __del__(self):
+        check_call(_LIB.MXDataIterFree(self.handle))
+
+    def reset(self):
+        check_call(_LIB.MXDataIterBeforeFirst(self.handle))
+
+    def next(self):
+        next_res = ctypes.c_int(0)
+        check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
+        if next_res.value:
+            return self.getdata(), self.getlabel()
+        else:
+            raise StopIteration
+
+    def iter_next(self):
+        next_res = ctypes.c_int(0)
+        check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
+        return next_res.value
+
+    def getdata(self):
+        hdl = NDArrayHandle()
+        check_call(_LIB.MXDataIterGetData(self.handle, ctypes.byref(hdl)))
+        return NDArray(hdl, False)
+
+    def getlabel(self):
+        hdl = NDArrayHandle()
+        check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
+        return NDArray(hdl, False)
 
 def _make_io_iterator(handle):
     """Create an io iterator by handle."""
@@ -224,7 +260,7 @@ def _make_io_iterator(handle):
         if len(args):
             raise TypeError('%s can only accept keyword arguments' % iter_name)
 
-        return DataIter(iter_handle)
+        return MXDataIter(iter_handle)
 
     creator.__name__ = iter_name
     creator.__doc__ = doc_str
