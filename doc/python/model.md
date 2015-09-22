@@ -4,12 +4,12 @@ The model API in mxnet as not really an API.
 It is a thin wrapper build on top of [ndarray](ndarray.md) and [symbolic](symbol.md)
 modules to make neural network training easy.
 
-* [Train a Model](#overloaded-operators) introduces operator overloading of symbols
-* [Serialization](#serialization) introduces how to save and load symbols.
-* [Multiple Outputs](#multiple-outputs) introduces how to configure multiple outputs
-* [API Reference](#api-reference) gives reference to all functions.
-* [Symbol Object Document](#mxnet.symbol.Symbol) gives API reference to the Symbol Object.
-
+* [Train a Model](#train-a-model) introduces basic training.
+* [Save the Model](#save-the-model)
+* [Periodically Checkpoint](#periodically-checkpoint)
+* [Initializer API Reference](#initializer-api-reference)
+* [Evaluation Metric API Reference](#initializer-api-reference)
+* [Optimizer API Reference](#optimizer-api-reference)
 
 Train a Model
 -------------
@@ -18,13 +18,13 @@ then call ```model.Feedforward.create``` to create a model for you.
 The following example creates a two layer neural networks.
 
 ```python
-batch_size = 100
+# configure a two layer neuralnetwork
 data = mx.symbol.Variable('data')
 fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
-act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
-fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64)
-softmax = mx.symbol.Softmax(fc2, name = 'sm')
-
+act1 = mx.symbol.Activation(fc1, name='relu1', act_type='relu')
+fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=64)
+softmax = mx.symbol.Softmax(fc2, name='sm')
+# create a model
 model = mx.model.FeedForward.create(
      softmax,
      X=data_set,
@@ -44,10 +44,11 @@ We also provide a save and load function.
 ```python
 # save a model to mymodel-symbol.json and mymodel-0100.params
 prefix = 'mymodel'
-model.save(prefix, 100)
+iteration = 100
+model.save(prefix, iteration)
 
 # load model back
-model_loaded = mx.model.FeedForward.load(prefix, 100)
+model_loaded = mx.model.FeedForward.load(prefix, iteration)
 ```
 The advantage of this save and load function is they are language agnostic,
 and you should be able to save and load directly into cloud storage such as S3 and HDFS.
@@ -55,7 +56,7 @@ and you should be able to save and load directly into cloud storage such as S3 a
 Periodically Checkpoint
 -----------------------
 It is also helpful to periodically checkpoint your model after each iteration.
-To do so, you can simply add a checkpoint callback to the function.
+To do so, you can simply add a checkpoint callback ```do_checkpoint(path)``` to the function.
 The training process will automatically checkpoint to the specified place after
 each iteration.
 
@@ -65,8 +66,7 @@ model = mx.model.FeedForward.create(
      softmax,
      X=data_set,
      iter_end_callback=mx.model.do_checkpoint(prefix),
-     num_round=num_round,
-     learning_rate=0.01)
+     ...)
 ```
 You can load the model checkpoint later using ```Feedforward.load```.
 
@@ -82,6 +82,7 @@ model = mx.model.FeedForward.create(
      ctx=devices,
      ...)
 ```
+The training will be done in a data parallel way on the GPUs you specified.
 
 Initializer API Reference
 -------------------------
