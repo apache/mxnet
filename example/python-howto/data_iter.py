@@ -42,7 +42,11 @@ dataiter = mx.io.ImageRecordIter(
         # Backend Parameter
         # Optional
         # Prefetch buffer size
-        prefetch_buffer=4)
+        prefetch_buffer=4,
+        # Backend Parameter,
+        # Optional
+        # Whether round batch,
+        round_batch=True)
 
 batchidx = 0
 for data, label in dataiter:

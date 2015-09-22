@@ -122,14 +122,15 @@ test_dataiter = mx.io.ImageRecordIter(
 
 def test_cifar():
     logging.basicConfig(level=logging.DEBUG)
-    console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG)
-    logging.getLogger('').addHandler(console)
+    #console = logging.StreamHandler()
+    #console.setLevel(logging.DEBUG)
+    #logging.getLogger('').addHandler(console)
+    total_batch = 50000 / batch_size + 1
     gpus = [mx.gpu(i) for i in range(num_gpus)]
     model = mx.model.FeedForward(ctx=gpus, symbol=loss, num_round = epoch,
                                  learning_rate=0.05, momentum=0.9, wd=0.00001)
-    model.fit(X=train_dataiter, eval_data=test_dataiter)
-
+    model.fit(X=train_dataiter, eval_data=test_dataiter,
+              epoch_end_callback=mx.helper.Speedometer(batch_size, 100))
 
 if __name__ == "__main__":
     test_cifar()

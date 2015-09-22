@@ -121,7 +121,8 @@ def _train_multi_device(symbol, ctx, input_shape,
                         arg_params, aux_params,
                         begin_round, end_round, optimizer,
                         train_data, eval_data=None, eval_metric=None,
-                        iter_end_callback=None, logger=None):
+                        iter_end_callback=None, learning_rate_scheduler=None,
+                        epoch_end_callback=None, logger=None):
     """Internal training function on multiple devices.
 
     This function will also work for single device as well.
@@ -164,6 +165,12 @@ def _train_multi_device(symbol, ctx, input_shape,
     iter_end_callback : callable(iteration, symbol, arg_params, aux_states)
         A callback that is invoked at end of each iteration.
         This can be used to checkpoint model each iteration.
+
+    learning_rate_scheduler: Scheduler
+        A Scheduler to adjust learning rate
+
+    epoch_end_callback: callable(iteration)
+        A callback that is invoked at end of each batch
 
     logger : logging logger
         When not specified, default logger will be used.
@@ -230,6 +237,7 @@ def _train_multi_device(symbol, ctx, input_shape,
         train_data.reset()
         optimizer.begin_round(iteration)
         eval_metric.reset()
+        nbatch = 0
         # Iterate over training data.
         for data, label in train_data:
             # Copy data into the target
@@ -258,6 +266,13 @@ def _train_multi_device(symbol, ctx, input_shape,
                 # optimizea
                 for w, g, state in zip(arg_list, grad_list, opt_list):
                     optimizer.update(index, w, g, state)
+            nbatch += 1
+            # epoch callback (for print purpose)
+            if epoch_end_callback:
+                epoch_end_callback(nbatch)
+            # learning rate sceduler
+            if learning_rate_scheduler:
+                learning_rate_scheduler(optimizer, nbatch, iteration)
             # evaluate at end, so out_cpu_array can lazy copy
             eval_metric.update(out_cpu_array, label)
 
@@ -524,11 +539,16 @@ class FeedForward(BASE_ESTIMATOR):
         for data, _ in X:
             data.copyto(self._pred_exec_input)
             self._pred_exec.forward(is_train=False)
-            outputs.append(self._pred_exec.outputs[0].asnumpy())
+            out_batch = self._pred_exec.outputs[0].asnumpy()
+            padded = X.getpad()
+            real_size = out_batch.shape[0] - padded
+            out_batch = out_batch[0:real_size, :]
+            outputs.append(out_batch)
         return np.concatenate(outputs)
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
-            iter_end_callback=None, logger=None):
+            iter_end_callback=None, learning_rate_scheduler=None,
+            epoch_end_callback=None, logger=None):
         """Fit the model.
 
         Parameters
@@ -550,6 +570,13 @@ class FeedForward(BASE_ESTIMATOR):
         iter_end_callback : callable(iteration, symbol, arg_params, aux_states)
             A callback that is invoked at end of each iteration.
             This can be used to checkpoint model each iteration.
+
+        learning_rate_scheduler: Scheduler
+            A Scheduler to adjust learning rate
+
+        epoch_end_callback: callable(iteration)
+            A callback that is invoked at end of each batch
+            For print purpose
 
         logger : logging logger, optional
             When not specified, default logger will be used.
@@ -573,6 +600,8 @@ class FeedForward(BASE_ESTIMATOR):
                             train_data=X, eval_data=eval_data,
                             eval_metric=eval_metric,
                             iter_end_callback=iter_end_callback,
+                            learning_rate_scheduler=learning_rate_scheduler,
+                            epoch_end_callback=epoch_end_callback,
                             logger=logger)
 
     def save(self, prefix, iteration=None):

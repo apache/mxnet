@@ -137,3 +137,5 @@ def plot_network(symbol, title="plot", shape=None):
                     dot.edge(tail_name=name, head_name=input_name, **attr)
 
     return dot
+
+

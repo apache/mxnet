@@ -66,6 +66,7 @@ class PrefetcherIter : public IIterator<DataBatch> {
         if (*dptr == nullptr) {
           // allocate databatch
           *dptr = new DataBatch();
+          (*dptr)->num_batch_padd = batch.num_batch_padd;
           (*dptr)->data.resize(batch.data.size());
           for (size_t i = 0; i < batch.data.size(); ++i) {
             (*dptr)->data.at(i) = NDArray(batch.data[i].shape_, Context::CPU());
@@ -77,6 +78,7 @@ class PrefetcherIter : public IIterator<DataBatch> {
           CHECK_EQ((*dptr)->data.at(i).shape(), batch.data[i].shape_);
           mshadow::Copy(((*dptr)->data)[i].data().FlatTo2D<cpu, real_t>(),
                         batch.data[i].FlatTo2D<cpu, real_t>());
+          (*dptr)->num_batch_padd = batch.num_batch_padd;
         }
         return true;
       },
