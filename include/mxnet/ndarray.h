@@ -313,10 +313,10 @@ class NDArray {
       if (static_data || delay_alloc) {
         Engine::Get()->DeleteVariable([](RunContext s) {}, shandle.ctx, var);
       } else {
-	Storage::Handle h = this->shandle;
-	Engine::Get()->DeleteVariable([h](RunContext s) {
-	    Storage::Get()->Free(h);
-	  }, shandle.ctx, var);
+        Storage::Handle h = this->shandle;
+        Engine::Get()->DeleteVariable([h](RunContext s) {
+            Storage::Get()->Free(h);
+          }, shandle.ctx, var);
       }
     }
   };

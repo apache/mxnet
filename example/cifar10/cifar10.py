@@ -123,8 +123,19 @@ test_dataiter = mx.io.ImageRecordIter(
 logging.basicConfig(level=logging.DEBUG)
 
 gpus = [mx.gpu(i) for i in range(num_gpus)]
+# Use create functional style to train a model
 model = mx.model.FeedForward.create(
     symbol=softmax, ctx=gpus,
     X=train_dataiter, eval_data=test_dataiter,
     num_round=num_round,
     learning_rate=0.05, momentum=0.9, wd=0.00001)
+
+# Alternatively, you can use sklearn-style two-step API, as follows
+"""
+model = mx.model.FeedForward(
+    symbol=softmax, ctx=gpus,
+    num_round=num_round,
+    learning_rate=0.05, momentum=0.9, wd=0.00001)
+
+model.fit(X=train_dataiter, eval_data=test_dataiter)
+"""

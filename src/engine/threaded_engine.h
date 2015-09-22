@@ -15,6 +15,7 @@
 #include <condition_variable>
 #include <atomic>
 #include <mutex>
+#include <string>
 #include "./engine_impl.h"
 #include "../common/object_pool.h"
 
@@ -256,13 +257,13 @@ class ThreadedEngine : public Engine {
         ThreadedEngine::OnCompleteStatic, threaded_opr);
     if (!shutdown_phase_) {
       try {
-	threaded_opr->fn(run_ctx, callback);
+        threaded_opr->fn(run_ctx, callback);
       } catch(dmlc::Error &e) {
-	std::string what = e.what();
-	if (what.find("driver shutting down") == std::string::npos &&
-	    !shutdown_phase_) {
-	  LOG(FATAL) << e.what();
-	}
+        std::string what = e.what();
+        if (what.find("driver shutting down") == std::string::npos &&
+            !shutdown_phase_) {
+          LOG(FATAL) << e.what();
+        }
       }
     } else {
       callback();

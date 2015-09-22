@@ -103,3 +103,20 @@ NDArray API Reference
 .. automodule:: mxnet.ndarray
     :members:
 ```
+
+NDArray Random API Reference
+----------------------------
+
+```eval_rst
+.. automodule:: mxnet.random
+    :members:
+```
+
+
+Context API Reference
+---------------------
+
+```eval_rst
+.. automodule:: mxnet.context
+    :members:
+```
