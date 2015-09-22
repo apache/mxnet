@@ -30,6 +30,20 @@ def test_symbol_compose():
     assert len(multi_out.list_outputs()) == 2
 
 
+
+def test_symbol_internal():
+    data = mx.symbol.Variable('data')
+    oldfc = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
+    net1 = mx.symbol.FullyConnected(data=oldfc, name='fc2', num_hidden=100)
+    net1.list_arguments() == ['data',
+                              'fc1_weight', 'fc1_bias',
+                              'fc2_weight', 'fc2_bias']
+    internal =  net1.get_internals()
+    nmap = {x: i for i, x in enumerate(internal.list_outputs())}
+    fc1 = internal[nmap['fc1_output']]
+    assert fc1.list_arguments() == oldfc.list_arguments()
+
+
 def test_symbol_pickle():
     mlist = [models.mlp2(), models.conv()]
     data = pkl.dumps(mlist)
@@ -50,6 +64,7 @@ def test_symbol_saveload():
 
 
 if __name__ == '__main__':
+    test_symbol_internal()
     test_symbol_basic()
     test_symbol_compose()
     test_symbol_saveload()
