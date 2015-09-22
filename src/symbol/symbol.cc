@@ -59,22 +59,24 @@ inline void Symbol::DFSVisit(FVisit fvisit) const {
   std::unordered_set<Node*> visited;
   // put the head into the graph
   for (auto &head : heads_) {
-    Node *ptr = head.source.get();
+    Node* ptr = head.source.get();
     if (visited.count(ptr) == 0) {
       stack.push_back(std::make_pair(&head.source, 0));
+      visited.insert(ptr);
     }
   }
   while (!stack.empty()) {
     std::pair<const std::shared_ptr<Node> *, uint32_t>& back = stack.back();
     if (back.second == back.first->get()->inputs.size()) {
       fvisit(*(back.first));
-      visited.insert(back.first->get());
       stack.pop_back();
     } else {
       std::vector<Symbol::DataEntry>& inputs = back.first->get()->inputs;
       Symbol::DataEntry& input = inputs.at(back.second++);
-      if (visited.count(input.source.get()) == 0) {
+      Node* ptr = input.source.get();
+      if (visited.count(ptr) == 0) {
         stack.push_back(std::make_pair(&input.source, 0));
+        visited.insert(ptr);
       }
     }
   }
