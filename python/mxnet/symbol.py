@@ -13,6 +13,7 @@ from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str, string_types
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from .base import check_call, ctypes2docstring
+from .name import NameManager
 from .context import Context
 from .ndarray import NDArray, zeros
 from .executor import Executor
@@ -128,6 +129,7 @@ class Symbol(object):
         the resulting symbol
         """
         name = kwargs.pop('name', None)
+
         if name:
             name = c_str(name)
         if len(args) != 0 and len(kwargs) != 0:
@@ -752,6 +754,8 @@ def _make_atomic_symbol_function(handle):
                              ' instead of keyword arguments.')
 
         s = Symbol(sym_handle)
+        hint = func_name.lower()
+        name = NameManager.current.get(name, hint)
         s._compose(*args, name=name, **symbol_kwargs)
         return s
 
