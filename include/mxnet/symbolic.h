@@ -101,6 +101,12 @@ class Symbol {
    */
   Symbol operator () (const std::unordered_map<std::string, Symbol>& kwargs,
                       const std::string& name) const;
+  /*
+   * \brief Get all the internal nodes of the symbol.
+   * \return symbol A new symbol whose output contains all the outputs of the symbols
+   *  Including input variables and intermediate outputs.
+   */
+  Symbol GetInternals() const;
   /*!
    * \brief get the gradient graph
    * \param wrt with respect to the input
