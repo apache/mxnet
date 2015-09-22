@@ -83,4 +83,4 @@ def create(metric):
     if metric == 'acc' or metric == 'accuracy':
         return Accuracy()
     else:
-        raise ValueError('Cannot find metric %s' % name)
+        raise ValueError('Cannot find metric %s' % metric)
