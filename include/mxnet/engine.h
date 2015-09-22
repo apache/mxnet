@@ -76,6 +76,14 @@ class Engine {
   /*! \brief Operator pointer */
   typedef engine::OprHandle OprHandle;
   /*!
+   * \brief Notify the engine about a shutdown,
+   *  This can help engine to print less messages into display.
+   *
+   *  User do not have to call this function.
+   * \return 0 when success, -1 when failure happens.
+   */
+  virtual void NotifyShutdown() = 0;
+  /*!
    * \brief Allocate a new variable, the variable can then
    *        be used to schedule the operation concurrently via dependency
    *        patterns.

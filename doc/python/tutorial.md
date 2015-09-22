@@ -38,7 +38,7 @@ We can create `NDArray` on either GPU or GPU
 >>> c.shape # get shape
 (2L, 3L)
 >>> c.context # get device info
-Context(device_type=gpu, device_id=2)
+gpu(2)
 ```
 
 They can be initialized by various ways:

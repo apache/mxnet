@@ -72,15 +72,15 @@ The device information is stored in `mxnet.Context` structure. When creating nda
 >>> import mxnet as mx
 >>> cpu_a = mx.nd.zeros((100, 200))
 >>> cpu_a.context
-Context(device_type=cpu, device_id=0)
+cpu(0)
 >>> with mx.Context(mx.gpu(0)):
 >>>   gpu_a = mx.nd.ones((100, 200))
 >>> gpu_a.context
-Context(device_type=gpu, device_id=0)
+gpu(0)
 >>> ctx = mx.Context(mx.gpu(0))
 >>> gpu_b = mx.nd.zeros((100, 200), ctx)
 >>> gpu_b.context
-Context(device_type=gpu, device_id=0)
+gpu(0)
 ```
 
 Currently, we *DO NOT* allow operations among arrays from different contexts. To allow this, use `copyto` member function to copy the content to different devices and continue computation:

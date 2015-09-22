@@ -26,7 +26,7 @@ class Context(object):
     >>> with mx.Context(mx.gpu(2)):
     >>>     gpu_array = mx.md.ones((2, 3))
     >>> gpu_array.context
-    Context(device_type=gpu, device_id=2)
+    gpu(2)
     """
     # static class variable
     default_ctx = None
@@ -52,8 +52,7 @@ class Context(object):
         return Context.devtype2str[self.device_typeid]
 
     def __str__(self):
-        return 'Context(device_type=%s, device_id=%d)' % (
-            self.device_type, self.device_id)
+        return '%s(%d)' % (self.device_type, self.device_id)
 
     def __repr__(self):
         return self.__str__()
