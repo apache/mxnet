@@ -180,7 +180,8 @@ def test_cifar():
     console.setLevel(logging.DEBUG)
     logging.getLogger('').addHandler(console)
     # get model from symbol
-    model = mx.model.FeedForward(ctx=mx.gpu(), symbol=loss, num_round = epoch,
+    gpus = [mx.gpu(i) for i in range(2)]
+    model = mx.model.FeedForward(ctx=gpus, symbol=loss, num_round = epoch,
                                  learning_rate=0.05, momentum=0.9, wd=0.00001)
     model.fit(X=train_dataiter, eval_data=test_dataiter)
 
