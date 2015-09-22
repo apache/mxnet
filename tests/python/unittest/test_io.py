@@ -48,7 +48,7 @@ def test_Cifar10Rec():
             batch_size=100,
             preprocess_threads=4,
             prefetch_buffer=1)
-    labelcount = [0 for i in range(10)]
+    labelcount = [0 for i in range(10)] 
     batchcount = 0
     for data, label in dataiter:
         npdata = data.asnumpy().flatten().sum()
@@ -60,6 +60,31 @@ def test_Cifar10Rec():
     for i in range(10):
         assert(labelcount[i] == 5000)
 
+def test_NumpyIter():
+    datas = np.ones([1000, 2, 2])
+    labels = np.ones([1000, 1])
+    for i in range(1000):
+        datas[i] = i / 100
+        labels[i] = i / 100
+    dataiter = mx.io.NumpyIter(datas, labels, 128, True)
+    batchidx = 0
+    for data, label in dataiter:
+        batchidx += 1
+    assert(batchidx == 8)
+    dataiter.reset()
+    batchidx = 0
+    labelcount = [0 for i in range(10)] 
+    for data, label in dataiter:
+        label = label.asnumpy().flatten()
+        for i in range(label.shape[0]):
+            labelcount[int(label[i])] += 1
+    for i in range(10):
+        if i == 0:
+            assert(labelcount[i] == 124)
+        else:
+            assert(labelcount[i] == 100)
+
 if __name__ == "__main__":
+    test_NumpyIter()
     #test_MNISTIter()
-    test_Cifar10Rec()
+    #test_Cifar10Rec()
