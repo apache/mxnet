@@ -6,13 +6,13 @@
 [![GitHub Stats](https://img.shields.io/badge/github-stats-ff5500.svg)](http://githubstats.com/dmlc/mxnet)
 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)]()
 
-MXNet is a deep learning framework designed for both efficiency and flexilibty. It
+MXNet is a deep learning framework designed for both *efficiency* and *flexibility*. It
 aims for people
 
-- who want to apply deep learning for applications. One can use only several lines of codes
+- Who want to apply deep learning for applications. One can use only several lines of codes
   to create and train a neural network with high efficiency. Check our
-  [examples](examples) for more details.
-- who want to use it for research on deep learning. MXNet provides flexible
+  [examples](example) for more details.
+- Who want to use it for research on deep learning. MXNet provides flexible
   programming interface for rapid prototyping. For example, check our
   [tutorials for Python](http://mxnet.readthedocs.org/en/latest/python/tutorial.html)
 
