@@ -1,15 +1,15 @@
 # Training Neural Networks on MNIST
 
-The [MNIST](http://yann.lecun.com/exdb/mnist/) database of handwritten digits,
-available from this page, has a training set of 60,000 examples, and a test set
-of 10,000 examples. Each example is a 28 × 28 gray image. They are provided by
-Yann LeCun, Corinna Cortes, and Christopher J.C. Burges.
+The [MNIST](http://yann.lecun.com/exdb/mnist/) database of handwritten digits
+has a training set of 60,000 examples, and a test set of 10,000 examples. Each
+example is a 28 × 28 gray image. They are provided by Yann LeCun, Corinna
+Cortes, and Christopher J.C. Burges.
 
 
 ## Neural Networks
 
-- [mlp.py](mlp.py) multilayer perceptron with 3 fully connected layers
-- [lenet.py](lenet.py) LeNet with 2 convolution layers followed by 2 fully
+- [mlp.py]: (mlp.py) multilayer perceptron with 3 fully connected layers
+- [lenet.py]: (lenet.py) LeNet with 2 convolution layers followed by 2 fully
   connected layers
 
 ## Performance
