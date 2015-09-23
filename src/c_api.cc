@@ -895,9 +895,6 @@ int MXDataIterBeforeFirst(DataIterHandle handle) {
 
 int MXDataIterNext(DataIterHandle handle, int *out) {
   API_BEGIN();
-  // TODO(tianjun): remove this after having prefetcher by default.
-  // and call NArray.WaitForWrite instead.
-  Engine::Get()->WaitForAll();
   *out = static_cast<IIterator<DataBatch>* >(handle)->Next();
   API_END();
 }
