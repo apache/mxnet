@@ -82,6 +82,14 @@ class DataIter(object):
         check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
         return NDArray(hdl, False)
 
+    def getpad(self):
+        """get padded sample num in the batch
+
+        """
+        pad = ctypes.c_int(0)
+        check_call(_LIB.MXDataIterGetPadNum(self.handle, ctypes.byref(pad)))
+        return pad.value
+
 def _make_io_iterator(handle):
     """Create an io iterator by handle."""
     name = ctypes.c_char_p()

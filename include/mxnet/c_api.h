@@ -683,6 +683,16 @@ MXNET_DLL int MXDataIterBeforeFirst(DataIterHandle handle);
  */
 MXNET_DLL int MXDataIterGetData(DataIterHandle handle,
                                 NDArrayHandle *out);
+
+/*!
+ * \brief Get the padding number in current data batch
+ * \param handle the handle pointer to the data iterator
+ * \param pad pad number ptr
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterGetPadNum(DataIterHandle handle,
+                                  int *pad);
+
 /*!
  * \brief Get the handle to the NDArray of underlying label
  * \param handle the handle pointer to the data iterator

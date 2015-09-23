@@ -121,7 +121,8 @@ def _train_multi_device(symbol, ctx, input_shape,
                         arg_params, aux_params,
                         begin_round, end_round, optimizer,
                         train_data, eval_data=None, eval_metric=None,
-                        iter_end_callback=None, logger=None):
+                        iter_end_callback=None, epoch_end_callback=None,
+                        logger=None):
     """Internal training function on multiple devices.
 
     This function will also work for single device as well.
@@ -164,6 +165,12 @@ def _train_multi_device(symbol, ctx, input_shape,
     iter_end_callback : callable(iteration, symbol, arg_params, aux_states)
         A callback that is invoked at end of each iteration.
         This can be used to checkpoint model each iteration.
+
+    learning_rate_scheduler: Scheduler
+        A Scheduler to adjust learning rate
+
+    epoch_end_callback: callable(iteration)
+        A callback that is invoked at end of each batch
 
     logger : logging logger
         When not specified, default logger will be used.
@@ -230,6 +237,7 @@ def _train_multi_device(symbol, ctx, input_shape,
         train_data.reset()
         optimizer.begin_round(iteration)
         eval_metric.reset()
+        nbatch = 0
         # Iterate over training data.
         for data, label in train_data:
             # Copy data into the target
@@ -258,6 +266,14 @@ def _train_multi_device(symbol, ctx, input_shape,
                 # optimizea
                 for w, g, state in zip(arg_list, grad_list, opt_list):
                     optimizer.update(index, w, g, state)
+            nbatch += 1
+            # epoch callback (for print purpose)
+            if epoch_end_callback != None:
+                if isinstance(epoch_end_callback, list):
+                    for call in epoch_end_callback:
+                        call(nbatch)
+                else:
+                    epoch_end_callback(nbatch)
             # evaluate at end, so out_cpu_array can lazy copy
             eval_metric.update(out_cpu_array, label)
 
@@ -293,8 +309,12 @@ def _train_multi_device(symbol, ctx, input_shape,
                 if name in aux_params:
                     weight = sum(w.copyto(cpu()) for w in block) / len(block)
                     weight.copyto(aux_params[name])
-        if iter_end_callback:
-            iter_end_callback(iteration, symbol, arg_params, aux_params)
+        if iter_end_callback != None:
+            if isinstance(iter_end_callback, list):
+                for call in iter_end_callback:
+                    call(iteration, symbol, arg_params, aux_params)
+            else:
+                iter_end_callback(iteration, symbol, arg_params, aux_params)
     # end of all iterations
     return
 
@@ -370,25 +390,6 @@ def load_checkpoint(prefix, iteration):
         if tp == 'aux':
             aux_params[name] = v
     return (symbol, arg_params, aux_params)
-
-
-def do_checkpoint(prefix):
-    """Callback to checkpoint the model to prefix every iteration.
-
-    Parameters
-    ----------
-    prefix : str
-        The file prefix to checkpoint to
-
-    Returns
-    -------
-    callback : function
-        The callback function that can be passed as iter_end_callback to fit.
-    """
-    def _callback(iter_no, s, arg, aux):
-        """The checkpoint function."""
-        save_checkpoint(prefix, iter_no + 1, s, arg, aux)
-    return _callback
 
 
 class FeedForward(BASE_ESTIMATOR):
@@ -541,11 +542,15 @@ class FeedForward(BASE_ESTIMATOR):
         for data, _ in X:
             data.copyto(self._pred_exec_input)
             self._pred_exec.forward(is_train=False)
-            outputs.append(self._pred_exec.outputs[0].asnumpy())
+            out_batch = self._pred_exec.outputs[0].asnumpy()
+            padded = X.getpad()
+            real_size = out_batch.shape[0] - padded
+            out_batch = out_batch[0:real_size, :]
+            outputs.append(out_batch)
         return np.concatenate(outputs)
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
-            iter_end_callback=None, logger=None):
+            iter_end_callback=None, epoch_end_callback=None, logger=None):
         """Fit the model.
 
         Parameters
@@ -567,6 +572,13 @@ class FeedForward(BASE_ESTIMATOR):
         iter_end_callback : callable(iteration, symbol, arg_params, aux_states)
             A callback that is invoked at end of each iteration.
             This can be used to checkpoint model each iteration.
+
+        learning_rate_scheduler: Scheduler
+            A Scheduler to adjust learning rate
+
+        epoch_end_callback: callable(iteration)
+            A callback that is invoked at end of each batch
+            For print purpose
 
         logger : logging logger, optional
             When not specified, default logger will be used.
@@ -590,6 +602,7 @@ class FeedForward(BASE_ESTIMATOR):
                             train_data=X, eval_data=eval_data,
                             eval_metric=eval_metric,
                             iter_end_callback=iter_end_callback,
+                            epoch_end_callback=epoch_end_callback,
                             logger=logger)
 
     def save(self, prefix, iteration=None):

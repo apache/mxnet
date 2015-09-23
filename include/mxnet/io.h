@@ -62,6 +62,8 @@ struct DataBatch {
   std::vector<NDArray> data;
   /*! \brief extra data to be fed to the network */
   std::string extra_data;
+  /*! \brief num of example padded to batch */
+  int num_batch_padd;
 };  // struct DataBatch
 
 /*! \brief typedef the factory function of data iterator */

@@ -927,6 +927,13 @@ int MXDataIterGetData(DataIterHandle handle, NDArrayHandle *out) {
   API_END();
 }
 
+int MXDataIterGetPadNum(DataIterHandle handle, int *pad) {
+  API_BEGIN();
+  const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
+  *pad = db.num_batch_padd;
+  API_END();
+}
+
 int MXKVStoreCreate(const char *type,
                     KVStoreHandle *out) {
   API_BEGIN();

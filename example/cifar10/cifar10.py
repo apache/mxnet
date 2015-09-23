@@ -100,7 +100,7 @@ softmax = mx.symbol.Softmax(data=fc, name="loss")
 
 get_data.GetCifar10()
 batch_size = 128
-num_round = 3
+num_round = 10
 num_gpus = 1
 
 train_dataiter = mx.io.ImageRecordIter(
@@ -120,22 +120,15 @@ test_dataiter = mx.io.ImageRecordIter(
         batch_size=batch_size,
         preprocess_threads=1)
 
-logging.basicConfig(level=logging.DEBUG)
+def test_cifar():
+    logging.basicConfig(level=logging.DEBUG)
+    total_batch = 50000 / batch_size + 1
+    gpus = [mx.gpu(i) for i in range(num_gpus)]
+    model = mx.model.FeedForward(ctx=gpus, symbol=softmax, num_round = num_round,
+                                 learning_rate=0.05, momentum=0.9, wd=0.00001,
+                                 lr_scheduler=mx.misc.FactorScheduler(2))
+    model.fit(X=train_dataiter, eval_data=test_dataiter,
+              epoch_end_callback=mx.callback.Speedometer(batch_size))
 
-gpus = [mx.gpu(i) for i in range(num_gpus)]
-# Use create functional style to train a model
-model = mx.model.FeedForward.create(
-    symbol=softmax, ctx=gpus,
-    X=train_dataiter, eval_data=test_dataiter,
-    num_round=num_round,
-    learning_rate=0.05, momentum=0.9, wd=0.00001)
-
-# Alternatively, you can use sklearn-style two-step API, as follows
-"""
-model = mx.model.FeedForward(
-    symbol=softmax, ctx=gpus,
-    num_round=num_round,
-    learning_rate=0.05, momentum=0.9, wd=0.00001)
-
-model.fit(X=train_dataiter, eval_data=test_dataiter)
-"""
+if __name__ == "__main__":
+    test_cifar()
