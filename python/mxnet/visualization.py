@@ -84,10 +84,10 @@ def plot_network(title, symbol, shape=None):
             label = "FullyConnected\n%s" % node["param"]["num_hidden"]
             attr["fillcolor"] = cm[1]
         elif op == "BatchNorm":
-            attr["fillcolor"] = cm[2]
+            attr["fillcolor"] = cm[3]
         elif op == "Activation" or op == "LeakyReLU":
             label = "%s\n%s" % (op, node["param"]["act_type"])
-            attr["fillcolor"] = cm[3]
+            attr["fillcolor"] = cm[2]
         elif op == "Pooling":
             label = "Pooling\n%s, %sx%s/%s" % (node["param"]["pool_type"],
                                                _str2tuple(node["param"]["kernel"])[0],
