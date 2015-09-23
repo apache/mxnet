@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import ctypes
 import sys
 import numpy as np
+import math
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str
 from .base import DataIterHandle, NDArrayHandle
@@ -81,26 +82,24 @@ class DataIter(object):
         pass
 
 class NumpyIter(DataIter):
-    """NumpyIter object in mxnet. Taking Numpy Array to get dataiter. """
+    """NumpyIter object in mxnet. Taking Numpy Array to get dataiter.
 
+    Parameters
+    ----------
+    data : numpy.array
+        Numpy ndarray for data
+    label : numpy.array
+        Numpy ndarray for label
+    batch_size: int
+        Batch Size
+    shuffle: bool
+        Whether to shuffle the data
+    data_pad: float
+        padding value for data
+    label_pad: float
+        padding value for label
+    """
     def __init__(self, data, label, batch_size, shuffle=True, data_pad=0, label_pad=0):
-        """Initialize with handle
-
-        Parameters
-        ----------
-        data : numpy.array
-            Numpy ndarray for data
-        label : numpy.array
-            Numpy ndarray for label
-        batch_size: int
-            Batch Size
-        shuffle: bool
-            Whether to shuffle the data
-        data_pad: float
-            padding value for data
-        label_pad: float
-            padding value for label
-        """
         super(NumpyIter, self).__init__()
         self.data = data
         self.label = label
@@ -119,28 +118,39 @@ class NumpyIter(DataIter):
                 new_label[i] = self.label[idx[i]]
             self.data = new_data
             self.label = new_label
+        # batching
+        self.batch_num = int(math.ceil(float(self.data.shape[0]) / self.batch_size))
+        batch_data_shape = []
+        batch_data_shape.append(self.batch_num)
+        batch_data_shape.append(self.batch_size)
+        for i in range(1, len(self.data.shape)):
+            batch_data_shape.append(self.data.shape[i])
+        batch_label_shape = []
+        batch_label_shape.append(self.batch_num)
+        batch_label_shape.append(self.batch_size)
+        for i in range(1, len(self.label.shape)):
+            batch_label_shape.append(self.label.shape[i])
+        self.batch_data = np.ones(batch_data_shape, dtype=self.data.dtype) * self.data_pad
+        self.batch_label = np.ones(batch_label_shape, dtype=self.label.dtype) * self.label_pad
         self.loc = 0
+        for i in range(self.batch_num):
+            actual_size = min(self.data.shape[0] - self.loc, self.batch_size)
+            self.batch_data[i, 0:actual_size, ::] = self.data[self.loc:self.loc+actual_size, ::]
+            self.batch_label[i, 0:actual_size, ::] = self.label[self.loc:self.loc+actual_size, ::]
+            self.loc += self.batch_size
         self.out_data = None
         self.out_label = None
+        self.current_batch = -1
 
     def reset(self):
-        """set loc to 0
+        """set current batch to 0
 
         """
-        self.loc = 0
+        self.current_batch = -1
 
     def iter_next(self):
-        if self.loc < self.data.shape[0]:
-            batch_data_shape = []
-            batch_data_shape.append(self.batch_size)
-            for i in range(1, len(self.data.shape)):
-                batch_data_shape.append(self.data.shape[i])
-            self.out_data = np.ones(batch_data_shape, dtype=self.data.dtype) * self.label_pad
-            self.out_label = np.ones([self.batch_size, 1], dtype=self.data.dtype) * self.label_pad
-            actual_size = min(self.data.shape[0] - self.loc, self.batch_size)
-            self.out_data[0:actual_size, ::] = self.data[self.loc:self.loc+actual_size, ::]
-            self.out_label[0:actual_size, ::] = self.label[self.loc:self.loc+actual_size, ::]
-            self.loc += actual_size
+        if self.current_batch < self.batch_num - 1:
+            self.current_batch += 1
             return True
         else:
             return False
@@ -152,22 +162,22 @@ class NumpyIter(DataIter):
             raise StopIteration
 
     def getdata(self):
-        return array(self.out_data)
+        assert(self.current_batch >= 0)
+        return array(self.batch_data[self.current_batch])
 
     def getlabel(self):
-        return array(self.out_label)
+        assert(self.current_batch >= 0)
+        return array(self.batch_label[self.current_batch])
 
 class MXDataIter(DataIter):
-    """DataIter object in mxnet. List all the needed functions here. """
+    """DataIter built in MXNet. List all the needed functions here.
 
+    Parameters
+    ----------
+    handle : DataIterHandle
+        the handle to the underlying C++ Data Iterator
+    """
     def __init__(self, handle):
-        """Initialize with handle
-
-        Parameters
-        ----------
-        handle : DataIterHandle
-            the handle to the underlying C++ Data Iterator
-        """
         super(MXDataIter, self).__init__()
         self.handle = handle
 

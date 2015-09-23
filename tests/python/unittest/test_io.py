@@ -48,7 +48,7 @@ def test_Cifar10Rec():
             batch_size=100,
             preprocess_threads=4,
             prefetch_buffer=1)
-    labelcount = [0 for i in range(10)] 
+    labelcount = [0 for i in range(10)]
     batchcount = 0
     for data, label in dataiter:
         npdata = data.asnumpy().flatten().sum()
