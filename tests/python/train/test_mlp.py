@@ -51,7 +51,7 @@ def test_mlp():
         X=train_dataiter,
         eval_data=val_dataiter,
         eval_metric=accuracy,
-        iter_end_callback=mx.model.do_checkpoint(prefix),
+        iter_end_callback=mx.callback.do_checkpoint(prefix),
         ctx=[mx.cpu(i) for i in range(2)],
         num_round=num_round,
         learning_rate=0.01, wd=0.0004,

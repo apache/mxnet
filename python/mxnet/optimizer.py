@@ -1,9 +1,12 @@
-# pylint: disable=fixme, invalid-name, unused-argument
+# pylint: disable=fixme, invalid-name, unused-argument, too-many-arguments
 """Common Optimization algorithms with regularizations."""
 from .ndarray import NDArray, zeros
 
 class Optimizer(object):
     """Base class of all optimizers."""
+    def __init__(self):
+        self.iteration = 0
+
     def begin_round(self, iteration):
         """Function called to notify beginning of iteration.
 
@@ -12,7 +15,7 @@ class Optimizer(object):
         iteration : int
             The iteration number.
         """
-        pass
+        self.iteration = iteration
 
 
 class SGD(Optimizer):
@@ -33,11 +36,15 @@ class SGD(Optimizer):
         rescaling factor of gradient.
     """
     def __init__(self, learning_rate=0.01, momentum=0.0,
-                 wd=0.0001, rescale_grad=1):
+                 wd=0.0001, rescale_grad=1, lr_scheduler=None):
+        super(SGD, self).__init__()
         self.lr = learning_rate
         self.momentum = momentum
         self.wd = wd
         self.rescale_grad = rescale_grad
+        self.lr_scheduler = lr_scheduler
+        if lr_scheduler != None:
+            self.lr_scheduler.base_lr = learning_rate
         self.momentums = {}
 
     def create_state(self, index, weight):
@@ -74,14 +81,19 @@ class SGD(Optimizer):
         # TODO(bing) implement wd_bias, wd_gamma, wd_beta
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+
+        if self.lr_scheduler != None:
+            lr = self.lr_scheduler(self.iteration)
+        else:
+            lr = self.lr
         if state:
             mom = state
             mom[:] *= self.momentum
-            mom[:] += -self.lr * (grad * self.rescale_grad + self.wd * weight)
+            mom[:] += -lr * (grad * self.rescale_grad + self.wd * weight)
             weight[:] += mom
         else:
             assert self.momentum == 0.0
-            weight[:] += -self.lr * (grad * self.rescale_grad + self.wd * weight)
+            weight[:] += -lr * (grad * self.rescale_grad + self.wd * weight)
 
 
 def create(name, rescale_grad=1, **kwargs):

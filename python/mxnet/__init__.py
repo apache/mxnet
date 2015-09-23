@@ -25,7 +25,7 @@ from . import initializer
 from . import visualization
 # use viz as short for mx.ndarray
 from . import visualization as viz
-from . import helper
-from . import scheduler
+from . import callback
+from . import misc
 
 __version__ = "0.1.0"

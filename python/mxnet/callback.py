@@ -1,9 +1,28 @@
-# pylint: disable=logging-not-lazy, blacklisted-name
+# pylint: disable=logging-not-lazy, blacklisted-name, invalid-name
 """model helper for knowing training status"""
 import sys
 import math
 import logging
 import time
+from .model import save_checkpoint
+
+def do_checkpoint(prefix):
+    """Callback to checkpoint the model to prefix every iteration.
+
+    Parameters
+    ----------
+    prefix : str
+        The file prefix to checkpoint to
+
+    Returns
+    -------
+    callback : function
+        The callback function that can be passed as iter_end_callback to fit.
+    """
+    def _callback(iter_no, s, arg, aux):
+        """The checkpoint function."""
+        save_checkpoint(prefix, iter_no + 1, s, arg, aux)
+    return _callback
 
 class Speedometer(object):
     """Calculate training speed in frequent
@@ -68,3 +87,5 @@ class ProgressBar(object):
         percents = math.ceil(100.0 * count / float(self.total))
         bar = '=' * filled_len + '-' * (self.bar_len - filled_len)
         sys.stdout.write('[%s] %s%s\r' % (bar, percents, '%'))
+
+
