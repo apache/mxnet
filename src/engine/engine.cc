@@ -18,7 +18,7 @@ inline Engine* CreateEngine() {
 
   Engine *ret = nullptr;
   if (stype == "NaiveEngine") {
-    ret =  CreateNaiveEngine();
+    ret = CreateNaiveEngine();
   } else if (stype == "ThreadedEngine") {
     ret = CreateThreadedEnginePooled();
   } else if (stype == "ThreadedEnginePerDevice") {
