@@ -31,15 +31,19 @@ ThreadedVar::ThreadedVar(VersionedVarBlock* head) : head_{head} {
 
 void ThreadedVar::AppendReadDependency(OprBlock* opr_block) {
   std::lock_guard<std::mutex> lock{m_};
-  if (ready_to_read_) {
-    assert(pending_write_ == nullptr);
+  if (pending_write_ == nullptr) {
+    // invariant: is_ready_to_read()
+    CHECK_GE(num_pending_reads_, 0);
+    // STATE CHANGE
     ++num_pending_reads_;
-    --opr_block->wait;
+    // decrease wait counter
+    opr_block->decr_wait();
   } else {
     auto&& new_var_block = VersionedVarBlock::New();
     assert(head_->next == nullptr);
     assert(head_->trigger == nullptr);
     assert(head_->write == false);
+    // append things to next.
     head_->next = new_var_block;
     head_->trigger = opr_block;
     head_ = new_var_block;
@@ -47,19 +51,29 @@ void ThreadedVar::AppendReadDependency(OprBlock* opr_block) {
 }
 
 void ThreadedVar::AppendWriteDependency(OprBlock* opr_block) {
-  std::lock_guard<std::mutex> lock{m_};
   auto&& new_var_block = VersionedVarBlock::New();
+  std::lock_guard<std::mutex> lock{m_};
+  // invariant.
+  assert(head_->next == nullptr);
+  assert(head_->trigger == nullptr);
+  assert(head_->write == false);
+  // attach to head.
   head_->next = new_var_block;
   head_->trigger = opr_block;
   head_->write = true;
-  if (ready_to_read_) {
-    // Raise `num_pending_reads_` temporarily to avoid premature triggering.
-    ++num_pending_reads_;
+
+  // check if it is ready to write
+  if (pending_write_ == nullptr) {
+    // invariant: is_ready_to_read()
     pending_write_ = head_;
-    if (--num_pending_reads_ == 0) {
-      --opr_block->wait;
+    CHECK_GE(num_pending_reads_, 0);
+    if (num_pending_reads_ == 0) {
+      // STATE CHANGE
+      opr_block->decr_wait();
+      num_pending_reads_ = kWriteTriggered;
     }
-    ready_to_read_ = false;
+  } else {
+    CHECK_NE(num_pending_reads_, 0);
   }
   head_ = new_var_block;
 }
@@ -70,13 +84,17 @@ void ThreadedVar::CompleteReadDependency(Dispatcher dispatcher) {
   {
     // this is lock scope
     std::lock_guard<std::mutex> lock{m_};
+    CHECK_GT(num_pending_reads_, 0);
+
     if (--num_pending_reads_ == 0) {
-      if (pending_write_ != nullptr && --pending_write_->trigger->wait == 0) {
+      if (pending_write_ != nullptr) {
+        // STATE CHANGE
         trigger = pending_write_->trigger;
+        num_pending_reads_ = kWriteTriggered;
       }
     }
   }
-  if (trigger != nullptr) {
+  if (trigger != nullptr && trigger->decr_wait() == 0) {
     dispatcher(trigger);
   }
 }
@@ -88,12 +106,16 @@ bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
   OprBlock* trigger_write = nullptr;
   {
     std::lock_guard<std::mutex> lock{m_};
-    assert(ready_to_read_ == false);
+    // invariants
+    assert(head_->next == nullptr);
+    assert(pending_write_ != nullptr);
+    CHECK_EQ(num_pending_reads_, kWriteTriggered);
+
     // really delete
     if (to_delete_) {
       VersionedVarBlock *head = pending_write_->next;
       VersionedVarBlock::Delete(pending_write_);
-      assert(head->next == nullptr);
+      assert(head_ == head);
       VersionedVarBlock::Delete(head);
       return true;
     }
@@ -101,20 +123,22 @@ bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
     old_pending_write = pending_write_;
     // search for chains to trigger
     end_of_read_chain = old_pending_write->next;
-    assert(num_pending_reads_ == 0);
-    while (end_of_read_chain->next != nullptr &&
+    // reset to 0 pending reads
+    num_pending_reads_ = 0;
+    while (end_of_read_chain != head_ &&
            end_of_read_chain->write == false) {
       ++num_pending_reads_;
       end_of_read_chain = end_of_read_chain->next;
     }
-    // check the states
-    if (end_of_read_chain->next == nullptr) {
-      ready_to_read_ = true;
+    if (end_of_read_chain == head_) {
       pending_write_ = nullptr;
     } else {
+      // check if there is pending reads, if not trigger write
       assert(end_of_read_chain->write == true);
       pending_write_ = end_of_read_chain;
-      if (num_pending_reads_ == 0 && --end_of_read_chain->trigger->wait == 0) {
+      if (num_pending_reads_ == 0) {
+        // mark write as already actived in this var
+        num_pending_reads_ = kWriteTriggered;
         trigger_write = end_of_read_chain->trigger;
       }
     }
@@ -129,7 +153,7 @@ bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
   VersionedVarBlock::Delete(old_pending_write);
   // dispatch all the events
   while (cur_head != end_of_read_chain) {
-    if (--cur_head->trigger->wait == 0) {
+    if (cur_head->trigger->decr_wait() == 0) {
       dispatcher(cur_head->trigger);
     }
     auto prev = cur_head;
@@ -137,7 +161,7 @@ bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
     assert(cur_head != nullptr);
     VersionedVarBlock::Delete(prev);
   }
-  if (trigger_write != nullptr) {
+  if (trigger_write != nullptr && trigger_write->decr_wait() == 0) {
     dispatcher(trigger_write);
   }
   return false;
@@ -150,7 +174,7 @@ void ThreadedVar::SetToDelete() {
 
 bool ThreadedVar::ready_to_read() {
   std::lock_guard<std::mutex> lock{m_};
-  return ready_to_read_;
+  return this->is_ready_to_read();
 }
 
 // implementation of threaded engine
@@ -232,8 +256,10 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
   ThreadedOpr* threaded_opr = ThreadedOpr::CastFromBase(op);
   OprBlock* opr_block = OprBlock::New();
   opr_block->opr = threaded_opr;
-  opr_block->wait.store(threaded_opr->const_vars.size() +
-                        threaded_opr->mutable_vars.size() + 1);
+
+  opr_block->wait.store(static_cast<int>(
+      threaded_opr->const_vars.size() +
+      threaded_opr->mutable_vars.size() + 1));
   opr_block->ctx = exec_ctx;
   ++pending_;
   // Add read dependencies.
@@ -244,7 +270,7 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
   for (auto&& i : threaded_opr->mutable_vars) {
     i->AppendWriteDependency(opr_block);
   }
-  if (--opr_block->wait == 0) {
+  if (opr_block->decr_wait() == 0) {
     this->PushToExecute(opr_block, true);
   }
 }
@@ -275,7 +301,10 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
   if (threaded_var->ready_to_read()) return;
   std::atomic<bool> done{false};
   this->PushSync([this, &done](RunContext) {
-      done.store(true);
+      {
+        std::unique_lock<std::mutex> lock{finished_m_};
+        done.store(true);
+      }
       finished_cv_.notify_all();
     }, Context::CPU(), {var}, {}, FnProperty::kNormal);
   {
@@ -310,12 +339,17 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
       ThreadedVar::Delete(i);
     }
   }
+  int npending;
   {
     std::unique_lock<std::mutex> lock{finished_m_};
-    if (--pending_ == 0) {
-      finished_cv_.notify_all();
-    }
+    npending = --pending_;
   }
+  CHECK_GE(npending, 0);
+  if (npending == 0) {
+    // no need to grab lock when notify.
+    finished_cv_.notify_all();
+  }
+
   // delte operator if it is temperory
   if (threaded_opr->temporary) {
     ThreadedOpr::Delete(threaded_opr);

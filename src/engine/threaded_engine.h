@@ -43,13 +43,23 @@ struct OprBlock : public common::ObjectPoolAllocatable<OprBlock> {
   /*!
    * \brief wait number of pending tasks this OprBlock is waiting for.
    */
-  std::atomic<std::size_t> wait{0};
+  std::atomic<int> wait{0};
   /*! \brief Pointer to information on performing real operation */
   ThreadedOpr* opr{nullptr};
   /*! \brief The context this operator */
   Context ctx;
   // define possible debug information
   DEFINE_ENGINE_DEBUG_INFO(OprBlock);
+  /*!
+   * \brief call this function to decrease the wait counter.
+   * \return the wait counter after the decreasement.
+   */
+  inline int decr_wait() {
+    // chack invariant, avoid over trigger
+    int ret = --wait;
+    CHECK_GE(ret, 0);
+    return ret;
+  }
 };  // struct OprBlock
 
 /*!
@@ -141,8 +151,11 @@ class ThreadedVar final : public Var,
   // TODO(hotpxl) consider rename head
   /*! \brief inetrnal mutex of the ThreadedVar */
   std::mutex m_;
-  /*! \brief number of pending reads operation in the variable. */
-  std::size_t num_pending_reads_{0};
+  /*!
+   * \brief number of pending reads operation in the variable.
+   *  will be marked as -1 when there is a already triggered pending write.
+   */
+  int num_pending_reads_{0};
   /*!
    * \brief Points to the last VersionedVarBlock in the queue.
    *  head_ always points to a empty VersionedVarBlock.
@@ -159,13 +172,18 @@ class ThreadedVar final : public Var,
    */
   VersionedVarBlock* pending_write_{nullptr};
   /*!
-   * \brief If true, then there are no running or pending write on this variable.
-   */
-  bool ready_to_read_{true};
-  /*!
    * \brief If true, delete after operation completes.
    */
   bool to_delete_{false};
+  /*! \brief special const on num_pending_reads_ to mark write being triggered */
+  static constexpr int kWriteTriggered = -1;
+  /*!
+   * \brief derived invariant of ready to ready, without lock.
+   * \return whether the current variable is ready to read.
+   */
+  inline bool is_ready_to_read() const {
+    return pending_write_ == nullptr;
+  }
 };  // struct ThreadedVar
 
 /*!
@@ -230,8 +248,10 @@ class ThreadedEngine : public Engine {
 
   ThreadedEngine() {}
   ~ThreadedEngine() {
-    // notify all pending waiters
-    kill_.store(true);
+    {
+      std::unique_lock<std::mutex> lock{finished_m_};
+      kill_.store(true);
+    }
     finished_cv_.notify_all();
   }
 
@@ -291,7 +311,7 @@ class ThreadedEngine : public Engine {
   /*!
    * \brief Number of pending operations.
    */
-  std::atomic<std::size_t> pending_{0};
+  std::atomic<int> pending_{0};
   /*! \brief whether we want to kill the waiters */
   std::atomic<bool> kill_{false};
   /*! \brief whether it is during shutdown phase*/

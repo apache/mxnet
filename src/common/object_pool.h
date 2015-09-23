@@ -57,6 +57,7 @@ class ObjectPool {
    * Currently defined to be 4KB.
    */
   constexpr static std::size_t kPageSize = 1 << 12;
+  /*! \brief internal mutex */
   std::mutex m_;
   /*!
    * \brief Head of free list.
@@ -147,6 +148,9 @@ ObjectPool<T>::ObjectPool() {
 template <typename T>
 void ObjectPool<T>::AllocateChunk() {
   static_assert(sizeof(LinkedList) <= kPageSize, "Object too big.");
+  static_assert(sizeof(LinkedList) % alignof(LinkedList) == 0, "ObjectPooll Invariant");
+  static_assert(alignof(LinkedList) % alignof(T) == 0, "ObjectPooll Invariant");
+  static_assert(kPageSize % alignof(LinkedList) == 0, "ObjectPooll Invariant");
   void* new_chunk_ptr;
   int ret = posix_memalign(&new_chunk_ptr, kPageSize, kPageSize);
   CHECK_EQ(ret, 0) << "Allocation failed";
