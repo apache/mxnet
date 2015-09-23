@@ -17,9 +17,10 @@ Cortes, and Christopher J.C. Burges.
 
 Using 100 minibatch size and 20 data passes (not fine tuned.)
 
-Machine: Dual Xeon E5-2680 2.8GHz, Dual GTX 980, Intel MKL, and CUDA 7.0
+Machine: Dual Xeon E5-2680 2.8GHz, Dual GTX 980, Ubuntu 14.0, GCC 4.8. Intel MKL, and CUDA 7.0
 
 | | val accuracy | 2 x E5-2680 | 1 x GTX 980 | 2 x GTX 980 |
 | --- | ---: | ---: | ---: | ---: |
-| `mlp.py` | 97.8% | 40K img/sec | 103K img/sec | 60K img/sec |
-| `lenet.py` | 99% | 368 img/sec | 22.5K img/sec  | 33K img/sec |
+| `mlp.py` MKL + CUDA 7 | 97.8% | 40K img/sec | 103K img/sec | 60K img/sec |
+| `lenet.py` MKL + CUDA 7 | 99% | 368 img/sec | 22.5K img/sec  | 33K img/sec |
+| `lenet.py` MKL + CUDA 7 + CUDNN v3 | - | - | 19K img/sec | 29 K img/sec |
