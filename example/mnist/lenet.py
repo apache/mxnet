@@ -23,9 +23,8 @@ fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=500)
 relu3 = mx.symbol.Activation(data=fc1, act_type="relu")
 # second fullc
 fc2 = mx.symbol.FullyConnected(data=relu3, num_hidden=10)
-relu4 = mx.symbol.Activation(data=fc2, act_type="relu")
 # loss
-lenet = mx.symbol.Softmax(data=relu4)
+lenet = mx.symbol.Softmax(data=fc2)
 
 ## data
 
@@ -35,8 +34,11 @@ train, val = mnist_iterator(batch_size=100, input_shape=(1,28,28))
 
 logging.basicConfig(level=logging.DEBUG)
 
+# dev = [mx.gpu(i) for i in range(2)]
+dev = mx.gpu()
+
 model = mx.model.FeedForward(
-    ctx = mx.gpu(), symbol = lenet, num_round = 10,
+    ctx = dev, symbol = lenet, num_round = 20,
     learning_rate = 0.01, momentum = 0.9, wd = 0.00001)
 
 model.fit(X=train, eval_data=val)
