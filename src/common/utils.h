@@ -11,12 +11,25 @@
 #include <type_traits>
 #include <utility>
 #include <random>
+#include <thread>
 #endif  // DMLC_USE_CXX11
+
+#include <dmlc/logging.h>
 
 namespace mxnet {
 namespace common {
 
 #if DMLC_USE_CXX11
+
+// heuristic to dermine number of threads per GPU
+inline int GetNumThreadPerGPU() {
+  int nthread = std::thread::hardware_concurrency();
+  if (nthread < 8) {
+    return dmlc::GetEnv("MXNET_GPU_WORKER_NTHREADS", 1);
+  } else {
+    return dmlc::GetEnv("MXNET_GPU_WORKER_NTHREADS", 2);
+  }
+}
 
 /*!
  * \brief Random Engine

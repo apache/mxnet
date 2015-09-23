@@ -16,9 +16,9 @@ User Guide
 Developer Guide
 ---------------
 * [Developer Documents](developer-guide/index.md)
+* [Environment Variables for MXNet](env_var.md)
 * [Contributor Guideline](contribute.md)
 * [Doxygen Version of C++ API](https://mxnet.readthedocs.org/en/latest/doxygen)
-
 
 Indices and tables
 ------------------
