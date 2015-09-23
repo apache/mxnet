@@ -3,7 +3,7 @@
 #include <dmlc/logging.h>
 #include <mxnet/storage.h>
 
-TEST(Storage, basics) {
+TEST(Storage, Basic_CPU) {
   constexpr size_t kSize = 1024;
   auto&& storage = mxnet::Storage::Get();
   mxnet::Context context_cpu{};
@@ -16,19 +16,21 @@ TEST(Storage, basics) {
   EXPECT_EQ(handle.ctx, context_cpu);
   EXPECT_EQ(handle.size, kSize);
   EXPECT_EQ(handle.dptr, ptr);
-  LOG(INFO) << "Success on CPU!\n";
+}
 
 #if MXNET_USE_CUDA
+TEST(Storage, Basic_GPU) {
+  constexpr size_t kSize = 1024;
   mxnet::Context context_gpu = mxnet::Context::GPU(0);
-  handle = storage->Alloc(kSize, context_gpu);
+  auto&& storage = mxnet::Storage::Get();
+  auto&& handle = storage->Alloc(kSize, context_gpu);
   assert(handle.ctx == context_gpu);
   assert(handle.size == kSize);
-  ptr = handle.dptr;
+  auto ptr = handle.dptr;
   storage->Free(handle);
   handle = storage->Alloc(kSize, context_gpu);
   EXPECT_EQ(handle.ctx, context_gpu);
   EXPECT_EQ(handle.size, kSize);
   EXPECT_EQ(handle.dptr, ptr);
-  LOG(INFO) << "Success on GPU!\n";
-#endif  // MXNET_USE_CUDA
 }
+#endif  // MXNET_USE_CUDA
