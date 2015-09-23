@@ -13,6 +13,7 @@
 #include <algorithm>
 #include "./static_graph.h"
 #include "./graph_algorithm.h"
+#include "../common/utils.h"
 
 namespace mxnet {
 /*!
@@ -119,6 +120,8 @@ GraphStorageAllocator::GraphStorageAllocator(
   // color based match will cost a bit more memory usually
   // but also enables more parallelization.
   num_match_color_ = dmlc::GetEnv("MXNET_EXEC_MATCH_NUM_COLOR", 4);
+  num_match_color_ = std::min(static_cast<uint32_t>(common::GetNumThreadPerGPU()),
+                              num_match_color_);
   this->InitColor(topo_order);
 }
 

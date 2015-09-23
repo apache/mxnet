@@ -4,12 +4,14 @@
  * \brief ThreadedEngine that uses fix amount of thread for each device.
  */
 #include <dmlc/base.h>
+#include <dmlc/omp.h>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <dmlc/concurrency.h>
 #include "./threaded_engine.h"
 #include "./thread_pool.h"
 #include "../common/lazy_alloc_array.h"
+#include "../common/utils.h"
 
 namespace mxnet {
 namespace engine {
@@ -24,8 +26,8 @@ namespace engine {
 class ThreadedEnginePerDevice : public ThreadedEngine {
  public:
   ThreadedEnginePerDevice() noexcept(false) {
-    cpu_worker_nthreads_ = dmlc::GetEnv("MXNET_CPU_WORKER_NTHREADS", 2);
-    gpu_worker_nthreads_ = dmlc::GetEnv("MXNET_GPU_WORKER_NTHREADS", 2);
+    cpu_worker_nthreads_ = dmlc::GetEnv("MXNET_CPU_WORKER_NTHREADS", 1);
+    gpu_worker_nthreads_ = common::GetNumThreadPerGPU();
     gpu_copy_nthreads_ = dmlc::GetEnv("MXNET_GPU_COPY_NTHREADS", 1);
     // create CPU task
     cpu_worker_.reset(new ThreadWorkerBlock());

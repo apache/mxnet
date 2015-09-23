@@ -9,16 +9,16 @@ How to Get Started
 
 User Guide
 ----------
-* [Python Package Document](python/index.md)
 * [Build and Installation](build.md)
+* [Python Package Document](python/index.md)
 * [Frequently Asked Questions](faq.md)
 
 Developer Guide
 ---------------
 * [Developer Documents](developer-guide/index.md)
+* [Environment Variables for MXNet](env_var.md)
 * [Contributor Guideline](contribute.md)
 * [Doxygen Version of C++ API](https://mxnet.readthedocs.org/en/latest/doxygen)
-
 
 Indices and tables
 ------------------

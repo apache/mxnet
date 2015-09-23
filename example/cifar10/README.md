@@ -1,3 +1,7 @@
+CIFAR 10 Example
+================
+* [cifar10.py](cifar10.py) provides an example to train a network-in-network style model on CIFAR-10
+
 
 Machine: Dual Xeon E5-1650 3.5GHz, 4 GTX 980, Cuda 6.5
 

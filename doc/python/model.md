@@ -31,8 +31,16 @@ model = mx.model.FeedForward.create(
      num_round=num_round,
      learning_rate=0.01)
 ```
-
 You can also use scikit-learn style construct and fit function to create a model.
+```python
+# create a model using sklearn-style two step way
+model = mx.model.FeedForward.create(
+     softmax,
+     num_round=num_round,
+     learning_rate=0.01)
+
+mode.fit(X=data_set)
+```
 For more information, you can refer to [Model API Reference](#model-api-reference).
 
 Save the Model

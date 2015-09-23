@@ -4,6 +4,7 @@
  * \brief Implementation of NaiveEngine
  */
 #include <vector>
+#include <atomic>
 #include "./engine_impl.h"
 
 namespace mxnet {
@@ -64,7 +65,7 @@ class NaiveEngine final : public Engine {
         streams_[dev_id] = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0);
       }
       ctx_.stream = streams_[dev_id];
-      MSHADOW_CATCH_ERROR(exec_fun(ctx_, callback));
+      exec_fun(ctx_, callback);
 #else
       LOG(FATAL) << "GPU is not enabled";
 #endif
@@ -82,6 +83,9 @@ class NaiveEngine final : public Engine {
   }
   void WaitForAll() override {
   }
+  void NotifyShutdown() override {
+    shutdown_phase_.store(true);
+  }
 
  private:
   // callback to oncomplete
@@ -92,6 +96,8 @@ class NaiveEngine final : public Engine {
   RunContext ctx_;
   // whether action is completed
   bool req_completed_;
+  /*! \brief whether it is during shutdown phase*/
+  std::atomic<bool> shutdown_phase_{false};
   // CPU stream
   mshadow::Stream<cpu> cpu_stream_;
   // GPU streams

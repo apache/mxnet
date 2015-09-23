@@ -9,7 +9,10 @@
 #  - type make or make -j n for parallel build
 #----------------------------------------------------
 
+#------------------------
 # choice of compiler
+#------------------------
+
 export CC = gcc
 export CXX = g++
 export NVCC = nvcc
@@ -17,11 +20,22 @@ export NVCC = nvcc
 # whether compile with debug
 DEBUG = 0
 
+# the additional link flags you want to add
+ADD_LDFLAGS =
+
+# the additional compile flags you want to add
+ADD_CFLAGS =
+
+#---------------------------------------------
+# matrix computation libraries for CPU/GPU
+#---------------------------------------------
+
 # whether use CUDA during compile
 USE_CUDA = 0
 
 # add the path to CUDA libary to link and compile flag
 # if you have already add them to enviroment variable, leave it as NONE
+# USE_CUDA_PATH = /usr/local/cuda
 USE_CUDA_PATH = NONE
 
 # whether use CUDNN R3 library
@@ -39,39 +53,32 @@ USE_OPENCV = 1
 # use openmp for parallelization
 USE_OPENMP = 1
 
-#
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
 USE_STATIC_MKL = NONE
 USE_BLAS = blas
-#
-# add path to intel libary, you may need it
-# for MKL, if you did not add the path to enviroment variable
-#
+
+# add path to intel libary, you may need it for MKL, if you did not add the path
+# to enviroment variable
 USE_INTEL_PATH = NONE
 
-# the additional link flags you want to add
-ADD_LDFLAGS =
-
-# the additional compile flags you want to add
-ADD_CFLAGS =
-#
-# If use MKL, choose static link automaticly to fix python wrapper
-#
+# If use MKL, choose static link automaticly to allow python wrapper
 ifeq ($(USE_BLAS), mkl)
 	USE_STATIC_MKL = 1
 endif
 
-#------------------------
-# configuration for DMLC
-#------------------------
-# whether use HDFS support during compile
-# this will allow cxxnet to directly save/load model from hdfs
+#----------------------------
+# distributed filesystems
+#----------------------------
+
+# whether or not allow to read and write HDFS directly. If yes, then hadoop is
+# required
 USE_HDFS = 0
 
-# whether use AWS S3 support during compile
-# this will allow cxxnet to directly save/load model from s3
-USE_S3 = 1
-
-# path to libjvm.so
+# path to libjvm.so. required if USE_HDFS=1
 LIBJVM=$(JAVA_HOME)/jre/lib/amd64/server
+
+# whether or not allow to read and write AWS S3 directly. If yes, then
+# libcurl4-openssl-dev is required, it can be installed on Ubuntu by
+# sudo apt-get install -y libcurl4-openssl-dev
+USE_S3 = 0
