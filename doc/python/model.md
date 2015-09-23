@@ -73,7 +73,7 @@ prefix='models/chkpt'
 model = mx.model.FeedForward.create(
      softmax,
      X=data_set,
-     iter_end_callback=mx.model.do_checkpoint(prefix),
+     iter_end_callback=mx.callback.do_checkpoint(prefix),
      ...)
 ```
 You can load the model checkpoint later using ```Feedforward.load```.

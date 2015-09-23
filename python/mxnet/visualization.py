@@ -34,9 +34,8 @@ def plot_network(symbol, title="plot", shape=None):
         title of the dot graph
     symbol: Symbol
         symbol to be visualized
-    shape: TODO
-        TODO
-
+    shape: dict
+        dict of shapes, str->shape (tuple), given input shapes
     Returns
     ------
     dot: Diagraph
@@ -49,6 +48,14 @@ def plot_network(symbol, title="plot", shape=None):
         raise ImportError("Draw network requires graphviz library")
     if not isinstance(symbol, Symbol):
         raise TypeError("symbol must be Symbol")
+    draw_shape = False
+    if shape != None:
+        draw_shape = True
+        interals = symbol.get_internals()
+        _, out_shapes, __ = interals.infer_shape(**shape)
+        if out_shapes == None:
+            raise ValueError("Input shape is incompete")
+        shape_dict = dict(zip(interals.list_outputs(), out_shapes))
     conf = json.loads(symbol.tojson())
     nodes = conf["nodes"]
     heads = set(conf["heads"][0])  # TODO(xxx): check careful
@@ -63,7 +70,7 @@ def plot_network(symbol, title="plot", shape=None):
     for i in range(len(nodes)):
         node = nodes[i]
         op = node["op"]
-        name = "%s_%d" % (op, i)
+        name = node["name"]
         # input data
         attr = copy.deepcopy(node_attr)
         label = op
@@ -107,17 +114,28 @@ def plot_network(symbol, title="plot", shape=None):
     for i in range(len(nodes)):
         node = nodes[i]
         op = node["op"]
-        name = "%s_%d" % (op, i)
+        name = node["name"]
         if op == "null":
             continue
         else:
             inputs = node["inputs"]
             for item in inputs:
                 input_node = nodes[item[0]]
-                input_name = "%s_%d" % (input_node["op"], item[0])
+                input_name = input_node["name"]
                 if input_node["op"] != "null" or item[0] in heads:
-                    # add shape into label
                     attr = {"dir": "back", 'arrowtail':'open'}
+                    # add shapes
+                    if draw_shape:
+                        if input_node["op"] != "null":
+                            key = input_name + "_output"
+                            shape = shape_dict[key][1:]
+                            label = "x".join([str(x) for x in shape])
+                            attr["label"] = label
+                        else:
+                            key = input_name
+                            shape = shape_dict[key][1:]
+                            label = "x".join([str(x) for x in shape])
+                            attr["label"] = label
                     dot.edge(tail_name=name, head_name=input_name, **attr)
 
     return dot
