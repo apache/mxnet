@@ -116,7 +116,7 @@ $(BIN) :
 
 include tests/cpp/unittest.mk
 
-test: tests/cpp/unittest
+test: $(TEST)
 
 lint:
 	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python

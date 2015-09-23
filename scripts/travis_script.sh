@@ -63,7 +63,9 @@ if [ ${TASK} == "cpp_unittest" ]; then
     echo "USE_CUDA=0" >> config.mk
     make test || exit -1
     export MXNET_ENGINE_TYPE=ThreadedEngine
-    tests/cpp/unittest || exit -1
+    for test in tests/cpp/*_test; do
+        ./$test || exit -1
+    done
 fi
 
 # TODO(yutian): add unittest back

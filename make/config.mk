@@ -43,7 +43,8 @@ USE_CUDNN = 0
 
 # add the path to CUDNN libary to link and compile flag
 # if you do not need that, or do not have that, leave it as NONE
-USE_CUDNN_PATH = NONE
+# (NOTE: not enable at this moment)
+# USE_CUDNN_PATH = NONE
 
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use

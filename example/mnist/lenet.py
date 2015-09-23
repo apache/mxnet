@@ -41,4 +41,5 @@ model = mx.model.FeedForward(
     ctx = dev, symbol = lenet, num_round = 20,
     learning_rate = 0.01, momentum = 0.9, wd = 0.00001)
 
-model.fit(X=train, eval_data=val)
+model.fit(X=train, eval_data=val,
+          epoch_end_callback=mx.callback.Speedometer(100))
