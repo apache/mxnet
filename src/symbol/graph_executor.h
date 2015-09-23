@@ -121,8 +121,15 @@ class GraphExecutor : public Executor {
     // whose inputs, outputs are pre-defined.
     // otherwise cached_exec.exec_fun == nullptr
     OpExecEntry cached_exec;
+    // cached operator handle
+    Engine::OprHandle cached_opr{nullptr};
     // constructor
     OpNode() : activated(false) {}
+    ~OpNode() {
+      if (cached_opr != nullptr) {
+        Engine::Get()->DeleteOperator(cached_opr);
+      }
+    }
   };
   /*!
    * \brief Get input option of a node.

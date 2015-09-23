@@ -9,9 +9,17 @@
 
 namespace mxnet {
 namespace engine {
+
 // implement naive engine
 class NaiveEngine final : public Engine {
  public:
+  struct NaiveOpr : public Opr {
+    AsyncFn fn;
+    std::vector<VarHandle> const_vars;
+    std::vector<VarHandle> mutable_vars;
+    FnProperty prop;
+  };
+
   NaiveEngine() {
   }
   // virtual destructor
@@ -33,17 +41,27 @@ class NaiveEngine final : public Engine {
     return nullptr;
   }
   OprHandle NewOperator(AsyncFn fn,
-                     std::vector<VarHandle> const& const_vars,
-                     std::vector<VarHandle> const& mutable_vars,
-                     FnProperty prop) override {
-    LOG(FATAL) << "Not implemented";
-    return nullptr;
+                        std::vector<VarHandle> const& const_vars,
+                        std::vector<VarHandle> const& mutable_vars,
+                        FnProperty prop) override {
+    NaiveOpr *opr = new NaiveOpr();
+    opr->fn = fn;
+    opr->const_vars = const_vars;
+    opr->mutable_vars = mutable_vars;
+    opr->prop = prop;
+    return opr;
   }
   void DeleteOperator(OprHandle op) override {
-    LOG(FATAL) << "Not implemented";
+    NaiveOpr *opr = op->Cast<NaiveOpr>();
+    delete opr;
   }
   void Push(OprHandle op, Context exec_ctx) override {
-    LOG(FATAL) << "Not implemented";
+    NaiveOpr *opr = op->Cast<NaiveOpr>();
+    this->PushAsync(opr->fn,
+                    exec_ctx,
+                    opr->const_vars,
+                    opr->mutable_vars,
+                    opr->prop);
   }
   void PushAsync(AsyncFn exec_fun,
                  Context exec_ctx,

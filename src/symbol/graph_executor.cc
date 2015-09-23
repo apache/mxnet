@@ -537,6 +537,11 @@ void GraphExecutor::InitOpNodes() {
     }
     if (allow_cache) {
       op_node.cached_exec = GetOpExecEntry(nid);
+      op_node.cached_opr = Engine::Get()->NewOperator(
+          op_node.cached_exec.exec_fun,
+          op_node.cached_exec.use_vars,
+          op_node.cached_exec.mutate_vars,
+          FnProperty::kNormal);
     }
   }
 }
@@ -548,13 +553,8 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     if (graph_.nodes[nid].is_variable()) continue;
     OpNode& opnode = op_nodes_[nid];
     opnode.op_ctx.is_train = is_train;
-    if (opnode.cached_exec.exec_fun != nullptr) {
-      Engine::Get()->PushAsync(
-          opnode.cached_exec.exec_fun,
-          opnode.ctx,
-          opnode.cached_exec.use_vars,
-          opnode.cached_exec.mutate_vars,
-          FnProperty::kNormal);
+    if (opnode.cached_opr != nullptr) {
+      Engine::Get()->Push(opnode.cached_opr, opnode.ctx);
     } else {
       auto exec = GetOpExecEntry(nid);
       Engine::Get()->PushAsync(
