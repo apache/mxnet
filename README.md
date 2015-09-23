@@ -1,4 +1,5 @@
-MXNet
+<img src=https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo-m/mxnet.png
+width=135/> Efficient and Flexible Framework for Deep Learning
 =====
 
 [![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
