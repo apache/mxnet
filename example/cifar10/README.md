@@ -12,6 +12,7 @@ run `cifar.py`:
 | --- | --- | --- | --- |
 | cxxnet | 362 img/sec | 675 img/sec | 1282 img/sec |
 | mxnet | 420 img/sec | 804 img/sec | 1436 img/sec |
+| mxnet + cudnn v3 | 835 img/sec | 1525 img/sec | 2270 img/sec |
 
 sample output
 
