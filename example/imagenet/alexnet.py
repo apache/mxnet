@@ -44,7 +44,8 @@ softmax = mx.symbol.Softmax(data=fc3)
 
 
 ## data
-train, val = ilsvrc12_iterator(batch_size=256, input_shape=(3,224,224))
+batch_size = 256
+train, val = ilsvrc12_iterator(batch_size=batch_size, input_shape=(3,224,224))
 
 ## train
 num_gpus = 2
@@ -58,4 +59,4 @@ model = mx.model.FeedForward(
     wd            = 0.00001)
 logging.basicConfig(level = logging.DEBUG)
 model.fit(X = train, eval_data = val,
-          epoch_end_callback = mx.callback.Speedometer(100))
+          epoch_end_callback = mx.callback.Speedometer(batch_size=batch_size))
