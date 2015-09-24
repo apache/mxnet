@@ -315,6 +315,7 @@ NDArray operator*(const NDArray &lhs, const real_t &rhs) {
 NDArray operator/(const NDArray &lhs, const real_t &rhs) {
   return ScalarOpRet<ndarray::Div, false>(lhs, rhs);
 }
+
 // Binary
 NDArray &NDArray::operator=(real_t scalar) {
   SetValueOp(scalar, this);
@@ -510,7 +511,7 @@ MXNET_REGISTER_NDARRAY_FUN(_plus_scalar).set_function(ScalarOp<ndarray::Plus, fa
 MXNET_REGISTER_NDARRAY_FUN(_minus_scalar).set_function(ScalarOp<ndarray::Minus, false>);
 MXNET_REGISTER_NDARRAY_FUN(_mul_scalar).set_function(ScalarOp<ndarray::Mul, false>);
 MXNET_REGISTER_NDARRAY_FUN(_div_scalar).set_function(ScalarOp<ndarray::Div, false>);
-
+MXNET_REGISTER_NDARRAY_FUN(_clip_scalar).set_function(ScalarOp<ndarray::Clip, false>);
 // register API function
 // scalar, reverse scalar
 MXNET_REGISTER_NDARRAY_FUN(_rminus_scalar).set_function(ScalarOp<ndarray::Minus, true>);

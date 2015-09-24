@@ -100,11 +100,13 @@ DECL_SCALAR(DEVICE, Plus, EvalScalar_, true)
 DECL_SCALAR(DEVICE, Minus, EvalScalar_, true)
 DECL_SCALAR(DEVICE, Mul, EvalScalar_, true)
 DECL_SCALAR(DEVICE, Div, EvalScalar_, true)
+DECL_SCALAR(DEVICE, Clip, EvalScalar_, true)
 // for reverse seq
 DECL_SCALAR(DEVICE, Plus, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Minus, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Mul, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Div, EvalScalar_, false)
+DECL_SCALAR(DEVICE, Clip, EvalScalar_, false)
 }  // namespace ndarray
 }  // namespace mxnet
 

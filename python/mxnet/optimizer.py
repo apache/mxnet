@@ -34,14 +34,19 @@ class SGD(Optimizer):
 
     rescale_grad : float, optional
         rescaling factor of gradient.
+
+    clip_gradient : float, optional
+        clip gradient in range [-clip_gradient, clip_gradient]
     """
     def __init__(self, learning_rate=0.01, momentum=0.0,
-                 wd=0.0001, rescale_grad=1, lr_scheduler=None):
+                 wd=0.0001, rescale_grad=1, clip_gradient=None,
+                 lr_scheduler=None):
         super(SGD, self).__init__()
         self.lr = learning_rate
         self.momentum = momentum
         self.wd = wd
         self.rescale_grad = rescale_grad
+        self.clip_gradient = clip_gradient
         self.lr_scheduler = lr_scheduler
         if lr_scheduler != None:
             self.lr_scheduler.base_lr = learning_rate
@@ -89,7 +94,11 @@ class SGD(Optimizer):
         if state:
             mom = state
             mom[:] *= self.momentum
-            mom[:] += -lr * (grad * self.rescale_grad + self.wd * weight)
+            if self.clip_gradient == None:
+                mom[:] += -lr * (grad * self.rescale_grad + self.wd * weight)
+            else:
+                mom[:] += -lr * (grad.clip(self.clip_gradient) * self.rescale_grad +
+                                 self.wd * weight)
             weight[:] += mom
         else:
             assert self.momentum == 0.0

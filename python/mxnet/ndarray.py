@@ -243,6 +243,16 @@ class NDArray(object):
             self.handle, start, stop, ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
+    def clip(self, value):
+        """Clip NDArray to range [-value, value] and remove NaN
+
+        Parameters
+        ----------
+        value: float
+            cliped range
+        """
+        return NDArray._clip_scalar(self, float(value))
+
     def wait_to_read(self):
         """Block until all pending writes operations on current NDArray are finished.
 
@@ -636,6 +646,9 @@ def _make_ndarray_function(handle):
     ret_function.__name__ = func_name
     ret_function.__doc__ = doc_str
     return ret_function
+
+
+
 # pylint: enable=too-many-locals, invalid-name
 
 def _init_ndarray_module():
