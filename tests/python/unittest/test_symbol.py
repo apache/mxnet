@@ -39,7 +39,6 @@ def test_symbol_internal():
                               'fc1_weight', 'fc1_bias',
                               'fc2_weight', 'fc2_bias']
     internal =  net1.get_internals()
-    print internal.list_outputs()
     fc1 = internal['fc1_output']
     assert fc1.list_arguments() == oldfc.list_arguments()
 
@@ -56,7 +55,6 @@ def test_symbol_saveload():
     sym = models.mlp2()
     fname = 'tmp_sym.json'
     sym.save(fname)
-    print sym.tojson()
     data2 = mx.symbol.load(fname)
     # save because of order
     assert sym.tojson() == data2.tojson()
