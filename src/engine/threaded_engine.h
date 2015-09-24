@@ -48,6 +48,8 @@ struct OprBlock : public common::ObjectPoolAllocatable<OprBlock> {
   ThreadedOpr* opr{nullptr};
   /*! \brief The context this operator */
   Context ctx;
+  /*! \brief priority of the function */
+  int priority;
   // define possible debug information
   DEFINE_ENGINE_DEBUG_INFO(OprBlock);
   /*!
@@ -98,7 +100,7 @@ class ThreadedVar final : public Var,
    *  Otherwise, the opr_block will be added to waiting queue.
    * \param opr_block The operation to be scheduled.
    */
-  void AppendReadDependency(OprBlock* opr_block);
+  inline void AppendReadDependency(OprBlock* opr_block);
   /*!
    * \brief Schedule a write operation on this variable.
    *  If the opr_block can be runed right away,
@@ -106,7 +108,7 @@ class ThreadedVar final : public Var,
    *  Otherwise, the opr_block will be added to waiting queue.
    * \param opr_block The operation to be scheduled.
    */
-  void AppendWriteDependency(OprBlock* opr_block);
+  inline void AppendWriteDependency(OprBlock* opr_block);
   /*!
    * \brief A read operation is completed on this variable.
    *  This function may trigger subsequent waiting operations on this variable.
@@ -116,7 +118,7 @@ class ThreadedVar final : public Var,
    * \tparam Dispatcher the function called to trigger an operation.
    */
   template <typename Dispatcher>
-  void CompleteReadDependency(Dispatcher dispatcher);
+  inline void CompleteReadDependency(Dispatcher dispatcher);
   /*!
    * \brief A write operation is completed on this variable.
    *  This function may trigger subsequent waiting operations on this variable.
@@ -127,11 +129,11 @@ class ThreadedVar final : public Var,
    * \return to_delete, whether this Variable can be deleted after this functin.
    */
   template <typename Dispatcher>
-  bool CompleteWriteDependency(Dispatcher dispatcher);
+  inline bool CompleteWriteDependency(Dispatcher dispatcher);
   /*! \brief Mark this variable to be deleted. */
-  void SetToDelete();
+  inline void SetToDelete();
   /*! \return whether this variable is ready to read. */
-  bool ready_to_read();
+  inline bool ready_to_read();
   /*!
    * \brief Cast a Var pointer to ThreadedVar pointer
    * \param ptr pointer from base.
@@ -234,11 +236,12 @@ class ThreadedEngine : public Engine {
                            std::vector<VarHandle> const& mutable_vars,
                            FnProperty prop) override;
   void DeleteOperator(OprHandle op) override;
-  void Push(OprHandle op, Context exec_ctx) override;
+  void Push(OprHandle op, Context exec_ctx, int priority) override;
   void PushAsync(AsyncFn exec_fun, Context exec_ctx,
                  std::vector<VarHandle> const& const_vars,
                  std::vector<VarHandle> const& mutable_vars,
-                 FnProperty prop) override;
+                 FnProperty prop,
+                 int priority) override;
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override;
   void WaitForVar(VarHandle var) override;
   void WaitForAll() override;

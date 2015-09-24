@@ -258,10 +258,10 @@ def _train_multi_device(symbol, ctx, input_shape,
                     continue
                 # Gradient synchronization
                 if kv:
-                    # push gradient
-                    kv.push(index, grad_list)
+                    # push gradient, priority is negative index
+                    kv.push(index, grad_list, priority=-index)
                     # pull back the sum, to the same locations.
-                    kv.pull(index, grad_list)
+                    kv.pull(index, grad_list, priority=-index)
                 opt_list = opt_state_blocks[index]
                 # optimizea
                 for w, g, state in zip(arg_list, grad_list, opt_list):

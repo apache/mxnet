@@ -337,8 +337,9 @@ class NDArray {
  *     due to different possible convention carried by copy function
  * \param from the ndarray we want to copy data from
  * \param to the target ndarray
+ * \param priority Priority of the action.
  */
-void CopyFromTo(const NDArray &from, NDArray *to);
+void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
 
 /*!
  * \brief elementwise add

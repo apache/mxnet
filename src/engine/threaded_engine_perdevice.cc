@@ -25,23 +25,30 @@ namespace engine {
  */
 class ThreadedEnginePerDevice : public ThreadedEngine {
  public:
+  static auto constexpr kFIFO = dmlc::ConcurrentQueueType::kFIFO;
+  static auto constexpr kPriority = dmlc::ConcurrentQueueType::kPriority;
+  static auto constexpr kCopyQueue = kPriority;
+  static auto constexpr kPriorityQueue = kPriority;
+  static auto constexpr kWorkerQueue = kFIFO;
+
   ThreadedEnginePerDevice() noexcept(false) {
-    cpu_worker_nthreads_ = dmlc::GetEnv("MXNET_CPU_WORKER_NTHREADS", 1);
     gpu_worker_nthreads_ = common::GetNumThreadPerGPU();
     gpu_copy_nthreads_ = dmlc::GetEnv("MXNET_GPU_COPY_NTHREADS", 1);
+    cpu_worker_nthreads_ = dmlc::GetEnv("MXNET_CPU_WORKER_NTHREADS", 1);
     // create CPU task
-    cpu_worker_.reset(new ThreadWorkerBlock());
-    auto *cpu_queue = &(cpu_worker_->task_queue);
-    cpu_worker_->pool.reset(new ThreadPool(
-        cpu_worker_nthreads_, [this, cpu_queue] {
-          this->CPUWorker(cpu_queue);
+    int cpu_priority_nthreads = dmlc::GetEnv("MXNET_CPU_PRIORITY_NTHREADS", 4);
+    cpu_priority_worker_.reset(new ThreadWorkerBlock<kPriorityQueue>());
+    cpu_priority_worker_->pool.reset(new ThreadPool(
+        cpu_priority_nthreads, [this] {
+          this->CPUWorker(cpu_priority_worker_.get());
         }));
     // GPU tasks will be created lazily
   }
   ~ThreadedEnginePerDevice() noexcept(false) {
     gpu_normal_workers_.Clear();
     gpu_copy_workers_.Clear();
-    cpu_worker_.reset(nullptr);
+    cpu_normal_workers_.Clear();
+    cpu_priority_worker_.reset(nullptr);
   }
 
  protected:
@@ -58,21 +65,54 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
       this->ExecuteOprBlock(run_ctx, opr_block);
     } else {
       if (ctx.dev_mask() == cpu::kDevMask) {
-        cpu_worker_->task_queue.Push(opr_block);
+        if (opr_block->opr->prop == FnProperty::kCPUPrioritized) {
+          cpu_priority_worker_->task_queue.Push(opr_block, opr_block->priority);
+        } else {
+          int dev_id = ctx.dev_id;
+          int nthread = cpu_worker_nthreads_;
+          cpu_normal_workers_.Get(dev_id, [this, dev_id, nthread]() {
+              auto blk = new ThreadWorkerBlock<kWorkerQueue>();
+              blk->pool.reset(new ThreadPool(nthread, [this, blk] () {
+                    this->CPUWorker(blk);
+                  }));
+              return blk;
+            })->task_queue.Push(opr_block, opr_block->priority);
+        }
       } else {
         CHECK_EQ(ctx.dev_mask(), gpu::kDevMask);
-        ThreadWorkerBlock* block = this->GetGPUWorkerBlock(
-            ctx.dev_id, opr_block->opr->prop);
-        block->task_queue.Push(opr_block);
+        // GPU execution.
+        FnProperty prop = opr_block->opr->prop;
+        bool is_copy = (prop == FnProperty::kCopyFromGPU ||
+                        prop == FnProperty::kCopyToGPU);
+        int nthread = gpu_worker_nthreads_;
+        int dev_id = ctx.dev_id;
+        if (is_copy) {
+          gpu_copy_workers_.Get(dev_id, [this, dev_id, is_copy, nthread]() {
+              auto blk = new ThreadWorkerBlock<kCopyQueue>();
+              blk->pool.reset(new ThreadPool(nthread, [this, dev_id, is_copy, blk] () {
+                    this->GPUWorker(dev_id, is_copy, blk);
+                  }));
+              return blk;
+            })->task_queue.Push(opr_block, opr_block->priority);
+        } else {
+          gpu_normal_workers_.Get(dev_id, [this, dev_id, is_copy, nthread]() {
+              auto blk = new ThreadWorkerBlock<kWorkerQueue>();
+              blk->pool.reset(new ThreadPool(nthread, [this, dev_id, is_copy, blk] () {
+                    this->GPUWorker(dev_id, is_copy, blk);
+                  }));
+              return blk;
+            })->task_queue.Push(opr_block, opr_block->priority);
+        }
       }
     }
   }
 
  private:
   // working unit for each of the task.
+  template<dmlc::ConcurrentQueueType type>
   struct ThreadWorkerBlock {
     // task queue on this task
-    dmlc::ConcurrentBlockingQueue<OprBlock*>  task_queue;
+    dmlc::ConcurrentBlockingQueue<OprBlock*, type>  task_queue;
     // thread pool that works on this task
     std::unique_ptr<ThreadPool> pool;
     // destructor
@@ -87,44 +127,23 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   /*! \brief number of concurrent thread each gpu copy worker uses */
   int gpu_copy_nthreads_;
   // cpu worker
-  std::unique_ptr<ThreadWorkerBlock> cpu_worker_;
+  common::LazyAllocArray<ThreadWorkerBlock<kWorkerQueue> > cpu_normal_workers_;
+  // cpu priority worker
+  std::unique_ptr<ThreadWorkerBlock<kPriorityQueue> > cpu_priority_worker_;
   // workers doing normal works on GPU
-  common::LazyAllocArray<ThreadWorkerBlock> gpu_normal_workers_;
+  common::LazyAllocArray<ThreadWorkerBlock<kWorkerQueue> > gpu_normal_workers_;
   // workers doing copy works from/to GPU
-  common::LazyAllocArray<ThreadWorkerBlock> gpu_copy_workers_;
-  /*!
-   * \brief get GPU Task Worker
-   * \param dev_id the device id
-   * \param prop The property of the function.
-   */
-  inline ThreadWorkerBlock *GetGPUWorkerBlock(int dev_id,
-                                              FnProperty prop) {
-    bool is_copy = (prop == FnProperty::kCopyFromGPU ||
-                    prop == FnProperty::kCopyToGPU);
-    auto *arr = &gpu_normal_workers_;
-    int nthread = gpu_worker_nthreads_;
-    if (is_copy) {
-      arr = &gpu_copy_workers_;
-      nthread = gpu_copy_nthreads_;
-    }
-
-    return arr->Get(dev_id, [this, dev_id, is_copy, nthread]() {
-        auto block = new ThreadWorkerBlock();
-        block->pool.reset(new ThreadPool(nthread, [this, dev_id, is_copy, block] () {
-              this->GPUWorker(dev_id, is_copy, &(block->task_queue));
-            }));
-        return block;
-      });
-  }
+  common::LazyAllocArray<ThreadWorkerBlock<kCopyQueue> > gpu_copy_workers_;
   /*!
    * \brief GPU worker that performs operations on a certain device.
    * \param dev_id The device id of the worker.
    * \param is_copy_worker whether the worker only do copy job
-   * \param task_queue the device id of the worker.
+   * \param block The task block of the worker.
    */
+  template<dmlc::ConcurrentQueueType type>
   inline void GPUWorker(int dev_id,
                         bool is_copy_worker,
-                        dmlc::ConcurrentBlockingQueue<OprBlock*>* task_queue) {
+                        ThreadWorkerBlock<type> *block) {
     #if MXNET_USE_CUDA
     // allocate stream
     mshadow::SetDevice<gpu>(dev_id);
@@ -138,6 +157,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     run_ctx.stream = stream;
     // execute task
     OprBlock* opr_block;
+    auto* task_queue = &(block->task_queue);
     while (task_queue->Pop(&opr_block)) {
       this->ExecuteOprBlock(run_ctx, opr_block);
     }
@@ -147,9 +167,11 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   }
   /*!
    * \brief CPU worker that performs operations on CPU.
-   * \param task_queue the device id of the worker.
+   * \param block The task block of the worker.
    */
-  inline void CPUWorker(dmlc::ConcurrentBlockingQueue<OprBlock*>* task_queue) {
+  template<dmlc::ConcurrentQueueType type>
+  inline void CPUWorker(ThreadWorkerBlock<type> *block) {
+    auto* task_queue = &(block->task_queue);
     RunContext run_ctx;
     run_ctx.stream = nullptr;
     // execute task

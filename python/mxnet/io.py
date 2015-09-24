@@ -182,14 +182,32 @@ class MXDataIter(DataIter):
     def __init__(self, handle):
         super(MXDataIter, self).__init__()
         self.handle = handle
+        # debug option, used to test the speed with io effect eliminated
+        self._debug_skip_load = False
+        self._debug_at_begin = True
 
     def __del__(self):
         check_call(_LIB.MXDataIterFree(self.handle))
 
+    def debug_skip_load(self):
+        """Set the iterator to simply return always first batch.
+
+        Notes
+        -----
+        This can be used to test the speed of network without taking
+        the loading delay into account.
+        """
+        self._debug_skip_load = True
+        logging.info('Set debug_skip_load to be true, will simply return first batch')
+
     def reset(self):
+        self._debug_at_begin = True
         check_call(_LIB.MXDataIterBeforeFirst(self.handle))
 
     def next(self):
+        if self._debug_skip_load and not self._debug_at_begin:
+            return  self.getdata(), self.getlabel()
+        self._debug_at_begin = False
         next_res = ctypes.c_int(0)
         check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
         if next_res.value:

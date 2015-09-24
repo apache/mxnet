@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name, logging-not-lazy, arguments-differ
+# pylint: disable=invalid-name
 """learning rate scheduler"""
 
 import math
@@ -9,8 +9,15 @@ class LearningRateScheduler(object):
     def __init__(self):
         self.base_lr = 0.01
 
-    def __call__(self):
-        """lr calculation function"""
+    def __call__(self, iteration):
+        """
+        Call to schedule current learning rate
+
+        Parameters
+        ----------
+        iteration: int
+            Current iteration count
+        """
         raise NotImplementedError("must override this")
 
 
@@ -51,8 +58,8 @@ class FactorScheduler(LearningRateScheduler):
         lr = self.base_lr * math.pow(self.factor, int(iteration / self.step))
         if lr != self.old_lr:
             self.old_lr = lr
-            logging.info("At Iteration [%d]: Swith to new learning rate %.5f" \
-                    % (iteration, lr))
+            logging.info("At Iteration [%d]: Swith to new learning rate %.5f",
+                         iteration, lr)
         return lr
 
 

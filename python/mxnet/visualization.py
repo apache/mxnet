@@ -53,7 +53,7 @@ def plot_network(symbol, title="plot", shape=None):
     if shape != None:
         draw_shape = True
         interals = symbol.get_internals()
-        _, out_shapes, __ = interals.infer_shape(**shape)
+        _, out_shapes, _ = interals.infer_shape(**shape)
         if out_shapes == None:
             raise ValueError("Input shape is incompete")
         shape_dict = dict(zip(interals.list_outputs(), out_shapes))

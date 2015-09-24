@@ -55,7 +55,7 @@ class NaiveEngine final : public Engine {
     NaiveOpr *opr = op->Cast<NaiveOpr>();
     delete opr;
   }
-  void Push(OprHandle op, Context exec_ctx) override {
+  void Push(OprHandle op, Context exec_ctx, int priority) override {
     NaiveOpr *opr = op->Cast<NaiveOpr>();
     this->PushAsync(opr->fn,
                     exec_ctx,
@@ -67,7 +67,8 @@ class NaiveEngine final : public Engine {
                  Context exec_ctx,
                  std::vector<VarHandle> const& const_vars,
                  std::vector<VarHandle> const& mutable_vars,
-                 FnProperty prop) override {
+                 FnProperty prop,
+                 int priority = 0) override {
     CallbackOnComplete callback = CreateCallback(
         NaiveEngine::OnComplete, nullptr);
     this->req_completed_ = false;

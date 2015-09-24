@@ -36,6 +36,8 @@ enum class FnProperty {
   kCopyFromGPU,
   /*! \brief Copy operation from CPU to other devices */
   kCopyToGPU,
+  /*! \brief Prioritized sync operation on CPU */
+  kCPUPrioritized,
   /*! \brief Asynchronous function call */
   kAsync
 };  // enum class FnProperty
@@ -116,8 +118,9 @@ class Engine {
    * \brief Push an operator to the engine.
    * \param op The operator to push.
    * \param exec_ctx Execution context.
+   * \param priority Priority of the action, as hint to the engine.
    */
-  virtual void Push(OprHandle op, Context exec_ctx) = 0;
+  virtual void Push(OprHandle op, Context exec_ctx, int priority = 0) = 0;
   /*!
    * \brief Push an asynchronous operation to the engine.
    * \param exec_fun Execution function, this function takes a parameter
@@ -128,11 +131,13 @@ class Engine {
    *                   mutate.
    * \param mutable_vars The variables that current operation will mutate.
    * \param prop Property of the function.
+   * \param priority Priority of the action, as hint to the engine.
    */
   virtual void PushAsync(AsyncFn exec_fun, Context exec_ctx,
                          std::vector<VarHandle> const& const_vars,
                          std::vector<VarHandle> const& mutable_vars,
-                         FnProperty prop = FnProperty::kNormal) = 0;
+                         FnProperty prop = FnProperty::kNormal,
+                         int priority = 0) = 0;
   /*!
    * \brief Schedule the deletion of a variable.
    *
@@ -180,17 +185,19 @@ class Engine {
    *                   mutate.
    * \param mutable_vars The variables that current operation will mutate.
    * \param prop Property of the function.
+   * \param priority Priority of the action, as hint to the engine.
    * \tparam SyncFn the synchronous function to be pushed.
    */
   template<typename SyncFn>
   inline void PushSync(SyncFn exec_fn, Context exec_ctx,
                        std::vector<VarHandle> const& const_vars,
                        std::vector<VarHandle> const& mutable_vars,
-                       FnProperty prop = FnProperty::kNormal) {
+                       FnProperty prop = FnProperty::kNormal,
+                       int priority = 0) {
     this->PushAsync([exec_fn](RunContext ctx, CallbackOnComplete on_complete) {
         exec_fn(ctx);
         on_complete();
-      }, exec_ctx, const_vars, mutable_vars, prop);
+      }, exec_ctx, const_vars, mutable_vars, prop, priority);
   }
 
  protected:
