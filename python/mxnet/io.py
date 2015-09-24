@@ -51,8 +51,8 @@ class DataIter(object):
         """
         pass
 
-    # make it work for both python2 and 3
-    __next__ = next
+    def __next__(self):
+        return self.next()
 
     def iter_next(self):
         """iterate to next data with return value
@@ -80,6 +80,7 @@ class DataIter(object):
         label ndarray for the next batch
         """
         pass
+
 
 class NumpyIter(DataIter):
     """NumpyIter object in mxnet. Taking Numpy Array to get dataiter.
@@ -168,6 +169,7 @@ class NumpyIter(DataIter):
     def getlabel(self):
         assert(self.current_batch >= 0)
         return array(self.batch_label[self.current_batch])
+
 
 class MXDataIter(DataIter):
     """DataIter built in MXNet. List all the needed functions here.
