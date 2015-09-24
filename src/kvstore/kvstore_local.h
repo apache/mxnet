@@ -22,7 +22,10 @@ class KVStoreLocal : public KVStore {
   KVStoreLocal() {
     pinned_ctx_ = (MXNET_USE_CUDA != 0) ?
         Context::CPUPinned(0) : Context::CPU();
-    set_updater(DefaultUpdater());
+    set_updater(nullptr);
+    // the server perameters
+    nthread_reduction_ = dmlc::GetEnv("MXNET_KVSTORE_REDUCTION_NTHREADS", 4);
+    bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 1000 * 1000);
   }
 
   void set_updater(Updater updater) override {
@@ -39,31 +42,46 @@ class KVStoreLocal : public KVStore {
   }
 
   void Push(const std::vector<int>& keys,
-            const std::vector<NDArray>& values) override {
+            const std::vector<NDArray>& values,
+            int priority) override {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
-    CHECK(updater_) << "invalid updater";
+
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
-      auto it = local_.find(key);
-      CHECK(it != local_.end()) << "key " << key << " has not been inited";
-      updater_(key, MergePushValue(key, grouped_vals[i]), &(it->second));
+      const NDArray& merged = MergePushValue(key, grouped_vals[i], priority);
+      if (updater_ != nullptr) {
+        auto it = local_.find(key);
+        CHECK(it != local_.end()) << "key " << key << " has not been inited";
+        updater_(key, merged,  &(it->second));
+      }
     }
   }
 
   void Pull(const std::vector<int>& keys,
-            const std::vector<NDArray*>& values) override {
+            const std::vector<NDArray*>& values,
+            int priority) override {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray*> > grouped_vals;
     GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
-      auto it = local_.find(key);
-      CHECK(it != local_.end()) << "key " << key << " has not been inited";
-      for (NDArray* v : grouped_vals[i]) {
-        CopyFromTo(it->second, v);
+      if (updater_ != nullptr) {
+        auto it = local_.find(key);
+        CHECK(it != local_.end()) << "key " << key << " has not been inited";
+        const NDArray& src = it->second;
+        for (auto* vptr : grouped_vals[i]) {
+          CopyFromTo(src, vptr, priority);
+        }
+      } else {
+        auto it = merge_buf_.find(key);
+        CHECK(it != merge_buf_.end()) << "key " << key << " has not been pushed";
+        auto& src = it->second.merged;
+        for (auto* vptr : grouped_vals[i]) {
+          CopyFromTo(src, vptr, priority);
+        }
       }
     }
   }
@@ -102,46 +120,118 @@ class KVStoreLocal : public KVStore {
   /*!
    * \brief returns the aggregated push value
    */
-  const NDArray &MergePushValue(int key, const std::vector<NDArray>& val) {
+  const NDArray& MergePushValue(int key, const std::vector<NDArray>& val, int priority) {
     CHECK(val.size());
     auto& buf = merge_buf_[key];
+    // copy buffer
+    std::vector<Engine::VarHandle> const_vars(val.size() - 1);
+    std::vector<NDArray> reduce(val.size());
 
     if (buf.merged.is_none()) {
-      buf.merged = NDArray(val[0].shape(), pinned_ctx_);
+      Context ctx = Context::CPUPinned(val[0].ctx().dev_id);
+      if (MXNET_USE_CUDA == 0) ctx = Context::CPU();
+      buf.merged = NDArray(val[0].shape(), ctx);
     }
-    CopyFromTo(val[0], &buf.merged);
+
+    CopyFromTo(val[0], &(buf.merged), priority);
+    reduce[0] = buf.merged;
 
     for (size_t i = 1; i < val.size(); ++i) {
-      const auto& v = val[i];
+      const NDArray& v = val[i];
       Context ctx = v.ctx();
-      if (v.ctx().dev_mask() == cpu::kDevMask) {
-        buf.merged += v;
+      const_vars[i - 1] = v.var();
+      if (ctx.dev_mask() == cpu::kDevMask) {
+        reduce[i] = val[i];
       } else {
-        CHECK_EQ(ctx.dev_mask(), gpu::kDevMask);
-        NDArray *copy_buf = buf.AllocCopyBuf(ctx.dev_id, val[0].shape());
-        CopyFromTo(val[i], copy_buf);
-        buf.merged += *copy_buf;
+        NDArray *copy_buf = buf.AllocCopyBuf(i, ctx.dev_id, val[0].shape());
+        CopyFromTo(val[i], copy_buf, priority);
+        reduce[i] = *copy_buf;
       }
     }
+
+    Engine::Get()->PushSync([reduce, this](RunContext rctx) {
+        ReduceSum(reduce);
+      }, Context::CPU(), const_vars, {reduce[0].var()},
+      FnProperty::kCPUPrioritized, priority);
     return buf.merged;
   }
 
  private:
+  inline static void ReduceSum(const std::vector<real_t*> &dptr,
+                               size_t offset, index_t size) {
+    using namespace mshadow;  // NOLINT(*)
+    Tensor<cpu, 1> in_0(dptr[0] + offset, Shape1(size));
+    switch (dptr.size()) {
+      case 2: {
+        Tensor<cpu, 1> in_1(dptr[1] + offset, Shape1(size));
+        in_0 += in_1;
+        break;
+      }
+      case 3: {
+        Tensor<cpu, 1> in_1(dptr[1] + offset, Shape1(size));
+        Tensor<cpu, 1> in_2(dptr[2] + offset, Shape1(size));
+        in_0 += in_1 + in_2;
+        break;
+      }
+      case 4: {
+        Tensor<cpu, 1> in_1(dptr[1] + offset, Shape1(size));
+        Tensor<cpu, 1> in_2(dptr[2] + offset, Shape1(size));
+        Tensor<cpu, 1> in_3(dptr[3] + offset, Shape1(size));
+        in_0 += in_1 + in_2 + in_3;
+        break;
+      }
+      default: {
+        for (size_t i = 1; i < dptr.size(); ++i) {
+          Tensor<cpu, 1> in_k(dptr[i] + offset, Shape1(size));
+          in_0 += in_k;
+        }
+      }
+    }
+  }
+  // reduce sum into val[0]
+  // this is performance critical
+  inline void ReduceSum(const std::vector<NDArray> &in_data) {
+    const size_t step = 4 << 10;
+    // ge ptr out
+    std::vector<real_t*> dptr(in_data.size());
+    for (size_t i = 0; i < in_data.size(); ++i) {
+      TBlob data = in_data[i].data();
+      CHECK(data.CheckContiguous());
+      dptr[i] = data.FlatTo2D<cpu, real_t>().dptr_;
+    }
+    size_t total = in_data[0].shape().Size();
+    long ntask = (total + 1 - step) / step; // NOLINT(*)
+    if (total < bigarray_bound_ || nthread_reduction_ <= 1) {
+      ReduceSum(dptr, 0, total);
+    } else {
+      #pragma omp parallel for schedule(static) num_threads(nthread_reduction_)
+      for (long j = 0; j < ntask; ++j) { // NOLINT(*)
+        size_t k = static_cast<size_t>(j);
+        size_t begin = std::min(k * step, total);
+        size_t end = std::min((k + 1) * step, total);
+        ReduceSum(dptr, begin, static_cast<index_t>(end - begin));
+      }
+    }
+  }
   /// \brief temperal space for pushing and pull
   struct BufferEntry {
+    // the merged value
+    NDArray merged;
     /// \brief the cpu buffer for gpu data
     std::vector<NDArray> copy_buf;
-    /// \brief merged data in cpu
-    NDArray merged;
     // allocate copy buffer, if it has not been allocated
-    inline NDArray *AllocCopyBuf(uint32_t dev_id, const TShape& shape) {
-      if (dev_id >= copy_buf.size()) copy_buf.resize(dev_id + 1);
-      if (copy_buf[dev_id].is_none()) {
-        copy_buf[dev_id] = NDArray(shape, Context::CPUPinned(dev_id));
+    inline NDArray *AllocCopyBuf(size_t index, uint32_t dev_id, const TShape& shape) {
+      if (index >= copy_buf.size()) copy_buf.resize(index + 1);
+      if (copy_buf[index].is_none()) {
+        copy_buf[index] = NDArray(shape, Context::CPUPinned(dev_id));
       }
-      return &copy_buf[dev_id];
+      return &copy_buf[index];
     }
   };
+  // number of threads to do reduction
+  int nthread_reduction_;
+  // number of threads to do reduction
+  size_t bigarray_bound_;
   /// \brief buffer for merging push value
   std::unordered_map<int, BufferEntry> merge_buf_;
   /// \brief buffer for storing local values

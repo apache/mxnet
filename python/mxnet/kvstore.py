@@ -6,7 +6,7 @@ from __future__ import absolute_import
 import ctypes
 from .ndarray import NDArray
 from .base import _LIB
-from .base import check_call, c_array, c_str, string_types
+from .base import check_call, c_array, c_str, string_types, mx_uint
 from .base import NDArrayHandle, KVStoreHandle
 
 
@@ -92,17 +92,22 @@ class KVStore(object):
         >>> kv.init(keys, [mx.nd.ones(shape)]*len(keys))
         """
         ckeys, cvals = _ctype_key_value(key, value)
-        check_call(_LIB.MXKVStoreInit(self.handle, len(ckeys), ckeys, cvals))
+        check_call(_LIB.MXKVStoreInit(
+            self.handle, mx_uint(len(ckeys)), ckeys, cvals))
 
-    def push(self, key, value):
+    def push(self, key, value, priority=0):
         """ Push a single or a sequence of key-value pairs into the store.
 
         Parameters
         ----------
         key : int or list of int
             Keys
-        value: NDArray or list of NDArray or list of list of NDArray
+        value : NDArray or list of NDArray or list of list of NDArray
             According values
+        priority : int, optional
+            The priority of the push operation.
+            The higher the priority, the faster this action is likely
+            to be executed before other push actions.
 
         Examples
         --------
@@ -140,9 +145,11 @@ class KVStore(object):
         [ 4.  4.  4.]]
         """
         ckeys, cvals = _ctype_key_value(key, value)
-        check_call(_LIB.MXKVStorePush(self.handle, len(ckeys), ckeys, cvals))
+        check_call(_LIB.MXKVStorePush(
+            self.handle, mx_uint(len(ckeys)), ckeys, cvals,
+            ctypes.c_int(priority)))
 
-    def pull(self, key, out=None):
+    def pull(self, key, out=None, priority=0):
         """ Pull a single value or a sequence of values from the store
 
         Parameters
@@ -151,6 +158,10 @@ class KVStore(object):
             Keys
         out: NDArray or list of NDArray or list of list of NDArray
             According values
+        priority : int, optional
+            The priority of the push operation.
+            The higher the priority, the faster this action is likely
+            to be executed before other push actions.
 
         Examples
         --------
@@ -185,7 +196,9 @@ class KVStore(object):
         """
         assert(out is not None)
         ckeys, cvals = _ctype_key_value(key, out)
-        check_call(_LIB.MXKVStorePull(self.handle, len(ckeys), ckeys, cvals))
+        check_call(_LIB.MXKVStorePull(
+            self.handle, mx_uint(len(ckeys)), ckeys, cvals,
+            ctypes.c_int(priority)))
 
     def set_updater(self, updater):
         """Set a push updater into the store.

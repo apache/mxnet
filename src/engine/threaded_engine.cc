@@ -29,7 +29,7 @@ ThreadedVar::ThreadedVar(VersionedVarBlock* head) : head_{head} {
 #endif  // ENGINE_DEBUG
 }
 
-void ThreadedVar::AppendReadDependency(OprBlock* opr_block) {
+inline void ThreadedVar::AppendReadDependency(OprBlock* opr_block) {
   std::lock_guard<std::mutex> lock{m_};
   if (pending_write_ == nullptr) {
     // invariant: is_ready_to_read()
@@ -50,7 +50,7 @@ void ThreadedVar::AppendReadDependency(OprBlock* opr_block) {
   }
 }
 
-void ThreadedVar::AppendWriteDependency(OprBlock* opr_block) {
+inline void ThreadedVar::AppendWriteDependency(OprBlock* opr_block) {
   auto&& new_var_block = VersionedVarBlock::New();
   std::lock_guard<std::mutex> lock{m_};
   // invariant.
@@ -79,7 +79,7 @@ void ThreadedVar::AppendWriteDependency(OprBlock* opr_block) {
 }
 
 template <typename Dispatcher>
-void ThreadedVar::CompleteReadDependency(Dispatcher dispatcher) {
+inline void ThreadedVar::CompleteReadDependency(Dispatcher dispatcher) {
   OprBlock *trigger = nullptr;
   {
     // this is lock scope
@@ -100,7 +100,7 @@ void ThreadedVar::CompleteReadDependency(Dispatcher dispatcher) {
 }
 
 template <typename Dispatcher>
-bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
+inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
   // this is lock scope
   VersionedVarBlock *old_pending_write, *end_of_read_chain;
   OprBlock* trigger_write = nullptr;
@@ -167,12 +167,12 @@ bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
   return false;
 }
 
-void ThreadedVar::SetToDelete() {
+inline void ThreadedVar::SetToDelete() {
   std::lock_guard<std::mutex> lock{m_};
   to_delete_ = true;
 }
 
-bool ThreadedVar::ready_to_read() {
+inline bool ThreadedVar::ready_to_read() {
   std::lock_guard<std::mutex> lock{m_};
   return this->is_ready_to_read();
 }
@@ -252,7 +252,7 @@ void ThreadedEngine::DeleteOperator(OprHandle op) {
     }, Context::CPU(), {}, deps, FnProperty::kAsync);
 }
 
-void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
+void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority) {
   ThreadedOpr* threaded_opr = ThreadedOpr::CastFromBase(op);
   OprBlock* opr_block = OprBlock::New();
   opr_block->opr = threaded_opr;
@@ -261,6 +261,7 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
       threaded_opr->const_vars.size() +
       threaded_opr->mutable_vars.size() + 1));
   opr_block->ctx = exec_ctx;
+  opr_block->priority = priority;
   ++pending_;
   // Add read dependencies.
   for (auto&& i : threaded_opr->const_vars) {
@@ -278,10 +279,10 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx) {
 void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
                                std::vector<VarHandle> const& const_vars,
                                std::vector<VarHandle> const& mutable_vars,
-                               FnProperty prop) {
+                               FnProperty prop, int priority) {
   ThreadedOpr *opr = NewOperator(fn, const_vars, mutable_vars, prop);
   opr->temporary = true;
-  Push(opr, exec_ctx);
+  Push(opr, exec_ctx, priority);
 }
 
 void ThreadedEngine::DeleteVariable(SyncFn delete_fn,

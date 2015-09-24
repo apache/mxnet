@@ -183,6 +183,7 @@ inline void ImageRecordIOParser::Init(
     threadget = omp_get_num_threads();
   }
   param_.preprocess_threads = threadget;
+
   // setup decoders
   for (int i = 0; i < threadget; ++i) {
     augmenters_.push_back(new ImageAugmenter());
@@ -196,8 +197,12 @@ inline void ImageRecordIOParser::Init(
     param_.label_width = 1;
   }
   CHECK(param_.path_imgrec.length() != 0)
-    << "ImageRecordIOIterator: must specify image_rec";
+      << "ImageRecordIOIterator: must specify image_rec";
 
+  if (param_.silent == 0) {
+    LOG(INFO) << "ImageRecordIOParser: " << param_.path_imgrec
+              << ", use " << threadget << " threads for decoding..";
+  }
   // TODO(mu, tianjun) add DMLC env variable to detect parition
   const int part_index = 0;
   const int num_parts = 1;

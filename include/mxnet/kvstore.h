@@ -62,9 +62,11 @@ class KVStore {
    *
    * \param keys the list of keys
    * \param value the list of values
+   * \param priority Priority of the action.
    */
   virtual void Push(const std::vector<int>& keys,
-                    const std::vector<NDArray>& values)  = 0;
+                    const std::vector<NDArray>& values,
+                    int priority = 0)  = 0;
   /*!
    * \brief pull a list of key-value pairs from the store
    *
@@ -80,9 +82,11 @@ class KVStore {
    *
    * \param keys the list of keys
    * \param values the list of buffers for the pulled data, they should be preallocated
+   * \param priority Priority of the action.
    */
   virtual void Pull(const std::vector<int>& keys,
-                    const std::vector<NDArray*>& values) = 0;
+                    const std::vector<NDArray*>& values,
+                    int priority = 0) = 0;
 #if DMLC_USE_CXX11
   /**
    * \brief the prototype of user-defined updater

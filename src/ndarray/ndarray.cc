@@ -153,7 +153,7 @@ inline void ScalarOp(const NDArray &lhs,
   }
 }
 
-void CopyFromTo(const NDArray &from, NDArray *to) {
+void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
   CHECK(from.shape() == to->shape())
       << "operands shape mismatch";
   CHECK(from.shape().ndim() != 0)
@@ -172,7 +172,8 @@ void CopyFromTo(const NDArray &from, NDArray *to) {
         TBlob tmp = ret.data();
         ndarray::Copy<cpu, cpu>(from.data(), &tmp,
                                 from.ctx(), ret.ctx(), ctx);
-      }, from.ctx(), const_vars, {ret.var()});
+      }, from.ctx(), const_vars, {ret.var()},
+      FnProperty::kNormal, priority);
   } else {
 #if MXNET_USE_CUDA
     if (a == cpu::kDevMask && b == gpu::kDevMask) {
@@ -183,7 +184,8 @@ void CopyFromTo(const NDArray &from, NDArray *to) {
                                   from.ctx(), ret.ctx(), ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, ret.ctx(), const_vars, {ret.var()}, FnProperty::kCopyToGPU);
+        }, ret.ctx(), const_vars, {ret.var()},
+        FnProperty::kCopyToGPU, priority);
     } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
           ret.CheckAndAlloc();
@@ -192,7 +194,8 @@ void CopyFromTo(const NDArray &from, NDArray *to) {
                                   from.ctx(), ret.ctx(), ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, from.ctx(), const_vars, {ret.var()}, FnProperty::kCopyFromGPU);
+        }, from.ctx(), const_vars, {ret.var()},
+        FnProperty::kCopyFromGPU, priority);
     } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
           ret.CheckAndAlloc();
@@ -201,7 +204,8 @@ void CopyFromTo(const NDArray &from, NDArray *to) {
                                   from.ctx(), ret.ctx(), ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, from.ctx(), const_vars, {ret.var()}, FnProperty::kCopyFromGPU);
+        }, from.ctx(), const_vars, {ret.var()},
+        FnProperty::kNormal, priority);
     } else {
       LOG(FATAL) << "unknown device mask";
     }
@@ -211,6 +215,9 @@ void CopyFromTo(const NDArray &from, NDArray *to) {
   }
 }
 
+inline void CopyFromToSimple(const NDArray &from, NDArray *to) {
+  CopyFromTo(from, to, 0);
+}
 
 template<typename Distribution>
 inline void SampleOP(const real_t &a,
@@ -520,7 +527,7 @@ MXNET_REGISTER_NDARRAY_FUN(_rdiv_scalar).set_function(ScalarOp<ndarray::Div, tru
 // copy function is special
 // that we need to remove kAcceptEmptyMutateTarget from it
 MXNET_REGISTER_NDARRAY_FUN(_copyto)
-.set_function(CopyFromTo)
+.set_function(CopyFromToSimple)
 .set_type_mask(kNDArrayArgBeforeScalar);
 
 // register random number generators
