@@ -4,7 +4,6 @@ import mxnet as mx
 import logging
 
 ## define lenet
-
 # input
 data = mx.symbol.Variable('data')
 # first conv
@@ -27,19 +26,14 @@ fc2 = mx.symbol.FullyConnected(data=relu3, num_hidden=10)
 lenet = mx.symbol.Softmax(data=fc2)
 
 ## data
-
 train, val = mnist_iterator(batch_size=100, input_shape=(1,28,28))
 
 ## train
-
 logging.basicConfig(level=logging.DEBUG)
-
 # dev = [mx.gpu(i) for i in range(2)]
 dev = mx.gpu()
-
 model = mx.model.FeedForward(
     ctx = dev, symbol = lenet, num_round = 20,
     learning_rate = 0.01, momentum = 0.9, wd = 0.00001)
-
 model.fit(X=train, eval_data=val,
           epoch_end_callback=mx.callback.Speedometer(100))
