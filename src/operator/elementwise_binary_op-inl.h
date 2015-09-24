@@ -165,7 +165,7 @@ class ElementWiseBinaryOpProp : public OperatorProperty {
         << TypeString() << " do not take any additional keyword arguments besides lhs and rhs";
   }
   std::map<std::string, std::string> GetParams() const override {
-    return {};
+    return std::map<std::string, std::string>();
   }
 
   bool InferShape(std::vector<TShape> *in_shape,

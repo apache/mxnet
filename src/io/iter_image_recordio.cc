@@ -406,7 +406,7 @@ class ImageRecordIter : public IIterator<DataInst> {
       elapsed = (uint64_t)(time(NULL) - start);
       if (imcnt % 1000 == 0 && param_.silent == 0) {
         printf("\r                                                               \r");
-        printf("[%8lu] images processed, %ld sec elapsed", imcnt, elapsed);
+        printf("[%8lu] images processed, %ld sec elapsed", imcnt, (long)elapsed);  // NOLINT(*)
         fflush(stdout);
       }
     }

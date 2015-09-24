@@ -152,7 +152,8 @@ class FlattenProp : public ReshapeProp {
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {}
 
   std::map<std::string, std::string> GetParams() const override {
-    return {};
+    // need to use this on osx
+    return std::map<std::string, std::string>();
   }
 
   std::string TypeString() const override {
