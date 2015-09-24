@@ -16,4 +16,4 @@ Machine: Dual Xeon E5-2680 2.8GHz, Dual GTX 980, Ubuntu 14.0, GCC 4.8, MKL, CUDA
 
 | | val accuracy | 1 x GTX 980 | 2 x GTX 980 |
 | --- | ---: | ---: | ---: | ---: |
-| `alexnet.py` | ? | ? |
+| `alexnet.py` | ? | ? | 400 img/sec |
