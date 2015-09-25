@@ -39,7 +39,7 @@ class IIterator : public dmlc::DataIter<DType> {
   /*! \brief store the name of each data, it could be used for making NDArrays */
   std::vector<std::string> data_names;
   /*! \brief set data name to each attribute of data */
-  inline void SetDataName(const std::string data_name){
+  inline void SetDataName(const std::string data_name) {
     data_names.push_back(data_name);
   }
 };  // class IIterator
@@ -67,7 +67,7 @@ struct DataBatch {
 };  // struct DataBatch
 
 /*! \brief typedef the factory function of data iterator */
-typedef IIterator<DataBatch> *(*DataIteratorFactory)();
+typedef std::function<IIterator<DataBatch> *()> DataIteratorFactory;
 /*!
  * \brief Registry entry for DataIterator factory functions.
  */
@@ -83,51 +83,14 @@ struct DataIteratorReg
  *
  * \code
  * // example of registering a mnist iterator
- * REGISTER_IO_ITERATOR(MNIST, MNISTIterator)
- * .describe("Mnist data iterator");
- *
+ * REGISTER_IO_ITE(MNISTIter)
+ * .describe("Mnist data iterator")
+ * .set_body([]() {
+ *     return new PrefetcherIter(new MNISTIter());
+ *   });
  * \endcode
  */
-#define MXNET_REGISTER_IO_ITER(name, DataIteratorType)          \
-  static ::mxnet::IIterator<DataBatch>* __create__ ## DataIteratorType ## __() { \
-    return new DataIteratorType;                                    \
-  }                                                                     \
-  DMLC_REGISTRY_REGISTER(::mxnet::DataIteratorReg, DataIteratorReg, name) \
-  .set_body(__create__ ## DataIteratorType ## __)
-/*!
- * \brief Macro to register chained Iterators
- *
- * \code
- * // example of registering a imagerec iterator
- * MXNET_REGISTER_IO_CHAINED_ITERATOR(ImageRec, ImageRecordIter, BatchIter)
- * .describe("batched image record data iterator");
- *
- * \endcode
- */
-#define MXNET_REGISTER_IO_CHAINED_ITER(name, ChainedDataIterType, HoldingDataIterType)          \
-  static ::mxnet::IIterator<DataBatch>* __create__ ## ChainedDataIterType ## __() { \
-    return new HoldingDataIterType(new ChainedDataIterType);                                    \
-  }                                                                     \
-  DMLC_REGISTRY_REGISTER(::mxnet::DataIteratorReg, DataIteratorReg, name) \
-  .set_body(__create__ ## ChainedDataIterType ## __)
-/*!
- * \brief Macro to register three chained Iterators
- *
- * \code
- * // example of registering a imagerec iterator
- * MXNET_REGISTER_IO_CHAINED_ITERATOR(ImageRecordIter,
- * ImageRecordIter, ImageRecBatchLoader, Prefetcher)
- * .describe("batched image record data iterator");
- *
- * \endcode
- */
-#define MXNET_REGISTER_IO_THREE_CHAINED_ITER(\
-        name, FirstIterType, SecondIterType, ThirdIterType)          \
-  static ::mxnet::IIterator<DataBatch>* __create__ ## ThirdIterType ## __() { \
-    return new FirstIterType(new SecondIterType(new ThirdIterType));             \
-  }                                                                     \
-  DMLC_REGISTRY_REGISTER(::mxnet::DataIteratorReg, DataIteratorReg, name) \
-  .set_body(__create__ ## ThirdIterType ## __)
-
+#define MXNET_REGISTER_IO_ITER(name)                                    \
+  DMLC_REGISTRY_REGISTER(::mxnet::DataIteratorReg, DataIteratorReg, name)
 }  // namespace mxnet
 #endif  // MXNET_IO_H_

@@ -106,6 +106,14 @@ class InstVector {
     data_.Push(dshape);
     label_.Push(lshape);
   }
+  /*! \return the data content */
+  inline const TensorVector<3, real_t>& data() const {
+    return data_;
+  }
+  /*! \return the label content */
+  inline const TensorVector<1, real_t>& label() const {
+    return label_;
+  }
 
  private:
   /*! \brief index of the data */

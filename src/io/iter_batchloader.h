@@ -27,8 +27,6 @@ struct BatchParam : public dmlc::Parameter<BatchParam> {
   index_t label_width;
   /*! \brief use round roubin to handle overflow batch */
   bool round_batch;
-  /*! \brief silent */
-  bool silent;
   // declare parameters
   DMLC_DECLARE_PARAMETER(BatchParam) {
     DMLC_DECLARE_FIELD(batch_size)
@@ -40,8 +38,6 @@ struct BatchParam : public dmlc::Parameter<BatchParam> {
         .describe("Dataset Param: Label width.");
     DMLC_DECLARE_FIELD(round_batch).set_default(true)
         .describe("Batch Param: Use round robin to handle overflow batch.");
-    DMLC_DECLARE_FIELD(silent).set_default(false)
-        .describe("Batch Param: Whether to print batch information.");
   }
 };
 
@@ -75,8 +71,8 @@ class BatchLoader : public IIterator<TBlobBatch> {
     // Init space for out_
     out_.inst_index = new unsigned[param_.batch_size];
     out_.data.clear();
-    data_holder_ =  mshadow::NewTensor<mshadow::cpu>(data_shape_.get<4>(), 0.0f);
-    label_holder_ =  mshadow::NewTensor<mshadow::cpu>(label_shape_.get<2>(), 0.0f);
+    data_holder_ = mshadow::NewTensor<mshadow::cpu>(data_shape_.get<4>(), 0.0f);
+    label_holder_ = mshadow::NewTensor<mshadow::cpu>(label_shape_.get<2>(), 0.0f);
     out_.data.push_back(TBlob(data_holder_));
     out_.data.push_back(TBlob(label_holder_));
   }

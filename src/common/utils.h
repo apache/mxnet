@@ -35,11 +35,6 @@ inline int GetNumThreadPerGPU() {
  * \brief Random Engine
  */
 typedef std::mt19937 RANDOM_ENGINE;
-// Get a double float, prnd is the pointer to a Random Engine
-#define NextDouble(prnd) std::generate_canonical<float, 10>(*prnd)
-// Get a random int in [0, range)
-#define NextUInt32(range, prnd) static_cast<uint32_t> \
-(floor(std::generate_canonical<float, 10>(*prnd) * range))
 
 /*!
  * \brief Helper functions.

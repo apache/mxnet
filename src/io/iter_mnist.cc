@@ -198,9 +198,14 @@ class MNISTIter: public IIterator<TBlobBatch> {
 };  // class MNISTIter
 
 DMLC_REGISTER_PARAMETER(MNISTParam);
-MXNET_REGISTER_IO_CHAINED_ITER(MNISTIter, MNISTIter, PrefetcherIter)
-    .describe("Create iterator for MNIST hand-written digit number recognition dataset.")
-    .add_arguments(MNISTParam::__FIELDS__())
-    .add_arguments(PrefetcherParam::__FIELDS__());
+
+MXNET_REGISTER_IO_ITER(MNISTIter)
+.describe("Create iterator for MNIST hand-written digit number recognition dataset.")
+.add_arguments(MNISTParam::__FIELDS__())
+.add_arguments(PrefetcherParam::__FIELDS__())
+.set_body([]() {
+    return new PrefetcherIter(new MNISTIter());
+  });
+
 }  // namespace io
 }  // namespace mxnet
