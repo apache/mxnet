@@ -280,7 +280,7 @@ struct ImageRecordParam: public dmlc::Parameter<ImageRecordParam> {
   bool verbose;
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageRecordParam) {
-    DMLC_DECLARE_FIELD(shuffle).set_default(true)
+    DMLC_DECLARE_FIELD(shuffle).set_default(false)
         .describe("Augmentation Param: Whether to shuffle data.");
     DMLC_DECLARE_FIELD(seed).set_default(0)
         .describe("Augmentation Param: Random Seed.");
