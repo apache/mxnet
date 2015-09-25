@@ -178,23 +178,23 @@ class ImageNormalizeIter : public IIterator<DataInst> {
       data[1] -= param_.mean_g;
       data[2] -= param_.mean_r;
       if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
-        outimg_ = mirror(data * contrast + illumination);
+        outimg_ = mirror(data * contrast + illumination) * param_.scale;
       } else {
-        outimg_ = data * contrast + illumination;
+        outimg_ = (data * contrast + illumination) * param_.scale;
       }
     } else if (!meanfile_ready_ || param_.mean_img.length() == 0) {
       // do not substract anything
       if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
-        outimg_ = mirror(data);
+        outimg_ = mirror(data) * param_.scale;
       } else {
-        outimg_ = F<mshadow::op::identity>(data);
+        outimg_ = F<mshadow::op::identity>(data) * param_.scale;
       }
     } else {
       CHECK(meanfile_ready_);
       if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
-        outimg_ = mirror((data - meanimg_) * contrast + illumination);
+        outimg_ = mirror((data - meanimg_) * contrast + illumination) * param_.scale;
       } else {
-        outimg_ = (data - meanimg_) * contrast + illumination;
+        outimg_ = ((data - meanimg_) * contrast + illumination) * param_.scale;
       }
     }
   }

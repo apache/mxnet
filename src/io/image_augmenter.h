@@ -130,46 +130,55 @@ class ImageAugmenter {
   virtual cv::Mat Process(const cv::Mat &src,
                           common::RANDOM_ENGINE *prnd) {
     using mshadow::index_t;
-    std::uniform_real_distribution<float> rand_uniform(0, 1);
-    // shear
-    float s = rand_uniform(*prnd) * param_.max_shear_ratio * 2 - param_.max_shear_ratio;
-    // rotate
-    int angle = std::uniform_int_distribution<int>(
-        -param_.max_rotate_angle, param_.max_rotate_angle)(*prnd);
-    if (param_.rotate > 0) angle = param_.rotate;
-    if (rotate_list_.size() > 0) {
-      angle = rotate_list_[std::uniform_int_distribution<int>(0, rotate_list_.size() - 1)(*prnd)];
+    cv::Mat res;
+
+    // normal augmentation by affine transformation.
+    if (param_.max_rotate_angle > 0 || param_.max_shear_ratio > 0.0f
+        || param_.rotate > 0 || rotate_list_.size() > 0) {
+      std::uniform_real_distribution<float> rand_uniform(0, 1);
+      // shear
+      float s = rand_uniform(*prnd) * param_.max_shear_ratio * 2 - param_.max_shear_ratio;
+      // rotate
+      int angle = std::uniform_int_distribution<int>(
+          -param_.max_rotate_angle, param_.max_rotate_angle)(*prnd);
+      if (param_.rotate > 0) angle = param_.rotate;
+      if (rotate_list_.size() > 0) {
+        angle = rotate_list_[std::uniform_int_distribution<int>(0, rotate_list_.size() - 1)(*prnd)];
+      }
+      float a = cos(angle / 180.0 * M_PI);
+      float b = sin(angle / 180.0 * M_PI);
+      // scale
+      float scale = rand_uniform(*prnd) *
+          (param_.max_random_scale - param_.min_random_scale) + param_.min_random_scale;
+      // aspect ratio
+      float ratio = rand_uniform(*prnd) *
+          param_.max_aspect_ratio * 2 - param_.max_aspect_ratio + 1;
+      float hs = 2 * scale / (1 + ratio);
+      float ws = ratio * hs;
+      // new width and height
+      float new_width = std::max(param_.min_img_size,
+                                 std::min(param_.max_img_size, scale * src.cols));
+      float new_height = std::max(param_.min_img_size,
+                                  std::min(param_.max_img_size, scale * src.rows));
+      cv::Mat M(2, 3, CV_32F);
+      M.at<float>(0, 0) = hs * a - s * b * ws;
+      M.at<float>(1, 0) = -b * ws;
+      M.at<float>(0, 1) = hs * b + s * a * ws;
+      M.at<float>(1, 1) = a * ws;
+      float ori_center_width = M.at<float>(0, 0) * src.cols + M.at<float>(0, 1) * src.rows;
+      float ori_center_height = M.at<float>(1, 0) * src.cols + M.at<float>(1, 1) * src.rows;
+      M.at<float>(0, 2) = (new_width - ori_center_width) / 2;
+      M.at<float>(1, 2) = (new_height - ori_center_height) / 2;
+      cv::warpAffine(src, temp_, M, cv::Size(new_width, new_height),
+                     cv::INTER_LINEAR,
+                     cv::BORDER_CONSTANT,
+                     cv::Scalar(param_.fill_value, param_.fill_value, param_.fill_value));
+      res = temp_;
+    } else {
+      res = src;
     }
-    float a = cos(angle / 180.0 * M_PI);
-    float b = sin(angle / 180.0 * M_PI);
-    // scale
-    float scale = rand_uniform(*prnd) * \
-        (param_.max_random_scale - param_.min_random_scale) + param_.min_random_scale;
-    // aspect ratio
-    float ratio = rand_uniform(*prnd) * \
-        param_.max_aspect_ratio * 2 - param_.max_aspect_ratio + 1;
-    float hs = 2 * scale / (1 + ratio);
-    float ws = ratio * hs;
-    // new width and height
-    float new_width = std::max(param_.min_img_size,
-                               std::min(param_.max_img_size, scale * src.cols));
-    float new_height = std::max(param_.min_img_size,
-                                std::min(param_.max_img_size, scale * src.rows));
-    cv::Mat M(2, 3, CV_32F);
-    M.at<float>(0, 0) = hs * a - s * b * ws;
-    M.at<float>(1, 0) = -b * ws;
-    M.at<float>(0, 1) = hs * b + s * a * ws;
-    M.at<float>(1, 1) = a * ws;
-    float ori_center_width = M.at<float>(0, 0) * src.cols + M.at<float>(0, 1) * src.rows;
-    float ori_center_height = M.at<float>(1, 0) * src.cols + M.at<float>(1, 1) * src.rows;
-    M.at<float>(0, 2) = (new_width - ori_center_width) / 2;
-    M.at<float>(1, 2) = (new_height - ori_center_height) / 2;
-    cv::warpAffine(src, temp_, M, cv::Size(new_width, new_height),
-                   cv::INTER_LINEAR,
-                   cv::BORDER_CONSTANT,
-                   cv::Scalar(param_.fill_value, param_.fill_value, param_.fill_value));
-    cv::Mat res = temp_;
-    // crop
+
+    // crop logic
     if (param_.max_crop_size != -1 || param_.min_crop_size != -1) {
       CHECK(res.cols >= param_.max_crop_size && res.rows >= \
               param_.max_crop_size && param_.max_crop_size >= param_.min_crop_size)
