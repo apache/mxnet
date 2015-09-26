@@ -72,6 +72,7 @@ void PooledStorageManager<DeviceStorage, kThreshold>::ReleaseAll() {
       used_memory_ -= i.first;
     }
   }
+  memory_pool_.clear();
 }
 
 }  // namespace storage
