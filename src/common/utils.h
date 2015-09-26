@@ -23,12 +23,8 @@ namespace common {
 
 // heuristic to dermine number of threads per GPU
 inline int GetNumThreadPerGPU() {
-  int nthread = std::thread::hardware_concurrency();
-  if (nthread < 8) {
-    return dmlc::GetEnv("MXNET_GPU_WORKER_NTHREADS", 1);
-  } else {
-    return dmlc::GetEnv("MXNET_GPU_WORKER_NTHREADS", 2);
-  }
+  // This is resource efficient option.
+  return dmlc::GetEnv("MXNET_GPU_WORKER_NTHREADS", 1);
 }
 
 /*!

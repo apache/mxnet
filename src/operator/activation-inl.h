@@ -29,7 +29,7 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
   // use int for enumeration
   int act_type;
   DMLC_DECLARE_PARAMETER(ActivationParam) {
-    DMLC_DECLARE_FIELD(act_type).set_default(kReLU)
+    DMLC_DECLARE_FIELD(act_type)
     .add_enum("relu", kReLU)
     .add_enum("sigmoid", kSigmoid)
     .add_enum("tanh", kTanh)
