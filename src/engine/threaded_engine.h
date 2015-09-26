@@ -249,7 +249,9 @@ class ThreadedEngine : public Engine {
     shutdown_phase_.store(true);
   }
 
-  ThreadedEngine() {}
+  ThreadedEngine() {
+    engine_info_ = dmlc::GetEnv("MXNET_ENGINE_INFO", false);
+  }
   ~ThreadedEngine() {
     {
       std::unique_lock<std::mutex> lock{finished_m_};
@@ -319,6 +321,8 @@ class ThreadedEngine : public Engine {
   std::atomic<bool> kill_{false};
   /*! \brief whether it is during shutdown phase*/
   std::atomic<bool> shutdown_phase_{false};
+  /*!\brief show more information from engine actions */
+  bool engine_info_{false};
   /*!
    * \brief Mutex and condition_variable,
    *  used to Notify waits for single or all variables.
