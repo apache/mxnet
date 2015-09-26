@@ -37,7 +37,5 @@ List of Contributors
 --------------------
 * [Full List of Contributors](https://github.com/dmlc/mxnet/graphs/contributors)
   - To contributors: please add your name to the list when you submit a patch to the project:)
-* [Jiawei Chen](https://github.com/Iroul)
-  - Jiawei is the man behind all the serializations.
 * [Qiang Kou](https://github.com/thirdwing)
   - KK is a R ninja, he will make mxnet available for R users.

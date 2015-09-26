@@ -1,83 +1,41 @@
 # pylint: skip-file
 import sys, os
-# code to directly use library
-curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.insert(0, "../../python/")
-sys.path.append("../../tests/python/common")
-# import library
 import mxnet as mx
+sys.path.append("../../tests/python/common")
 import get_data
-import time
 import numpy as np
-import copy
 import logging
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
-conv_cnt = 1
-concat_cnt = 1
-pool_cnt = 1
+# Basic Conv + BN + ReLU factory
+def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0), act_type="relu"):
+    conv = mx.symbol.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad)
+    bn = mx.symbol.BatchNorm(data=conv)
+    act = mx.symbol.Activation(data = bn, act_type=act_type)
+    return act
 
-def ConvFactory(**kwargs):
-    global conv_cnt
-    param = copy.copy(kwargs)
-    act = param["act_type"]
-    del param["act_type"]
-    param["workspace"] = 256
-    param["name"] = "conv%d" % conv_cnt
-    conv = mx.symbol.Convolution(**param)
-    bn = mx.symbol.BatchNorm(data = conv, name="bn%d" % conv_cnt)
-    relu = mx.symbol.Activation(data = bn, name = "%s%d" % (act, conv_cnt), act_type=act)
-    conv_cnt += 1
-    return relu
-
-
-def DownsampleFactory(data, ch_3x3, stride = 2):
-    global pool_cnt
-    global concat_cnt
-    param = {}
+# A Simple Downsampling Factory
+def DownsampleFactory(data, ch_3x3):
     # conv 3x3
-    param["kernel"] = (3, 3)
-    param["stride"] = (stride, stride)
-    param["num_filter"] = ch_3x3
-    param["act_type"] = "relu"
-    param["data"] = data
-    param["pad"] = (1, 1)
-    conv3x3 = ConvFactory(**param)
+    conv = ConvFactory(data=data, kernel=(3, 3), stride=(2, 2), num_filter=ch_3x3, pad=(1, 1))
     # pool
-    del param["num_filter"]
-    del param["act_type"]
-    del param["pad"]
-    param["pool_type"] = "max"
-    param["name"] = "pool%d" % pool_cnt
-    pool = mx.symbol.Pooling(**param)
-    pool_cnt += 1
+    pool = mx.symbol.Pooling(data=data, kernel=(3, 3), stride=(2, 2), pool_type='max')
     # concat
-    concat = mx.symbol.Concat(*[conv3x3, pool], name="concat%d" % concat_cnt)
-    concat_cnt += 1
+    concat = mx.symbol.Concat(*[conv, pool])
     return concat
 
-
+# A Simple module
 def SimpleFactory(data, ch_1x1, ch_3x3):
-    global concat_cnt
-    param = {}
     # 1x1
-    param["kernel"] = (1, 1)
-    param["num_filter"] = ch_1x1
-    param["pad"] = (0, 0)
-    param["stride"] = (1, 1)
-    param["act_type"] = "relu"
-    param["data"] = data
-    conv1x1 = ConvFactory(**param)
-
+    conv1x1 = ConvFactory(data=data, kernel=(1, 1), pad=(0, 0), num_filter=ch_1x1)
     # 3x3
-    param["kernel"] = (3, 3)
-    param["num_filter"] = ch_3x3
-    param["pad"] = (1, 1)
-    conv3x3 = ConvFactory(**param)
-
+    conv3x3 = ConvFactory(data=data, kernel=(3, 3), pad=(1, 1), num_filter=ch_3x3)
     #concat
-    concat = mx.symbol.Concat(*[conv1x1, conv3x3], name="concat%d" % concat_cnt)
-    concat_cnt += 1
+    concat = mx.symbol.Concat(*[conv1x1, conv3x3])
     return concat
+
+
 
 data = mx.symbol.Variable(name="data")
 conv1 = ConvFactory(data=data, kernel=(3,3), pad=(1,1), num_filter=96, act_type="relu")
@@ -91,7 +49,7 @@ in4d = SimpleFactory(in4c, 48, 96)
 in4e = DownsampleFactory(in4d, 96)
 in5a = SimpleFactory(in4e, 176, 160)
 in5b = SimpleFactory(in5a, 176, 160)
-pool = mx.symbol.Pooling(data=in5b, pool_type="avg", kernel=(7,7), name="pool%d" % pool_cnt)
+pool = mx.symbol.Pooling(data=in5b, pool_type="avg", kernel=(7,7), name="global_pool")
 flatten = mx.symbol.Flatten(data=pool, name="flatten1")
 fc = mx.symbol.FullyConnected(data=flatten, num_hidden=10, name="fc1")
 softmax = mx.symbol.Softmax(data=fc, name="loss")
@@ -122,11 +80,10 @@ test_dataiter = mx.io.ImageRecordIter(
 
 def test_cifar():
     logging.basicConfig(level=logging.DEBUG)
-    total_batch = 50000 / batch_size + 1
     gpus = [mx.gpu(i) for i in range(num_gpus)]
     model = mx.model.FeedForward(ctx=gpus, symbol=softmax, num_round = num_round,
-                                 learning_rate=0.05, momentum=0.9, wd=0.00001,
-                                 lr_scheduler=mx.misc.FactorScheduler(2))
+                                 learning_rate=0.05, momentum=0.9, wd=0.0001)
+
     model.fit(X=train_dataiter, eval_data=test_dataiter,
               epoch_end_callback=mx.callback.Speedometer(batch_size))
 

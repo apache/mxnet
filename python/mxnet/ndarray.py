@@ -243,16 +243,6 @@ class NDArray(object):
             self.handle, start, stop, ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
-    def clip(self, value):
-        """Clip NDArray to range [-value, value] and remove NaN
-
-        Parameters
-        ----------
-        value: float
-            cliped range
-        """
-        return NDArray._clip_scalar(self, float(value))
-
     def wait_to_read(self):
         """Block until all pending writes operations on current NDArray are finished.
 
@@ -336,6 +326,19 @@ class NDArray(object):
             raise TypeError('copyto do not support type ' + str(type(other)))
     # pylint: enable= no-member
 
+
+def clip(arr, value):
+    """Clip NDArray to range [-value, value] and remove NaN
+
+    Parameters
+    ----------
+    value: float
+        cliped range
+    """
+    if not isinstance(arr, NDArray):
+        raise TypeError("arr should be NDArray")
+    return NDArray._clip_scalar(arr, float(value)) # pylint: disable=no-member, protected-access
+    # pylint: enable=no-member, protected-access
 
 def empty(shape, ctx=None):
     """Create an empty uninitialized new NDArray, with specified shape.

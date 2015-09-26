@@ -50,7 +50,7 @@ before_install:
 
 
 install:
-  - pip install cpplint pylint --user `whoami`
+  - pip install cpplint pylint graphviz --user `whoami`
 
 
 script:

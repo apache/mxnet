@@ -3,7 +3,6 @@
 
 [![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
 [![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.readthedocs.org/en/latest/)
-[![GitHub Stats](https://img.shields.io/badge/github-stats-ff5500.svg)](http://githubstats.com/dmlc/mxnet)
 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)]()
 
 MXNet is a deep learning framework designed for both *efficiency* and *flexibility*. It
