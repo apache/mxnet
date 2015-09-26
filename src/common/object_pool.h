@@ -46,10 +46,15 @@ class ObjectPool {
    * \brief Internal structure to hold pointers.
    */
   struct LinkedList {
+#if defined(_MSC_VER)
+    T t;
+    LinkedList* next{nullptr};
+#else
     union {
-      LinkedList* next{nullptr};
       T t;
+      LinkedList* next{nullptr};
     };
+#endif
   };
   /*!
    * \brief Page size of allocation.

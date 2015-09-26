@@ -42,7 +42,8 @@
  *  Used to support g++-4.6 and g++4.7
  */
 #if DMLC_USE_CXX11 && defined(__GNUC__) && !defined(__clang_version__)
-#if __GNUC__ == 4 && __GNUC_MINOR__ == 6
+#if __GNUC__ == 4 && __GNUC_MINOR__ < 8
+#error "Currently we need g++ 4.8 or higher to fully support c++11 features"
 #define override
 #define final
 #endif

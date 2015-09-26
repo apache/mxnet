@@ -302,11 +302,17 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
   if (threaded_var->ready_to_read()) return;
   std::atomic<bool> done{false};
   this->PushSync([this, &done](RunContext) {
+      if (engine_info_) {
+        LOG(INFO) << "Sync is executed";
+      }
       {
         std::unique_lock<std::mutex> lock{finished_m_};
         done.store(true);
       }
       finished_cv_.notify_all();
+      if (engine_info_) {
+        LOG(INFO) << "Sync is notified";
+      }
     }, Context::CPU(), {var}, {}, FnProperty::kNormal);
   {
     std::unique_lock<std::mutex> lock{finished_m_};

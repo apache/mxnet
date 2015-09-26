@@ -81,6 +81,7 @@ if [ ${TASK} == "cpp_unittest" ]; then
     echo "GTEST_PATH="${CACHE_PREFIX} >> config.mk
     make test || exit -1
     export MXNET_ENGINE_TYPE=ThreadedEngine
+    export MXNET_ENGINE_INFO=true
     for test in tests/cpp/*_test; do
         ./$test || exit -1
     done
