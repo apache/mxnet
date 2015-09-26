@@ -39,6 +39,7 @@ class Speedometer(object):
         self.frequent = frequent
         self.init = False
         self.tic = 0
+        self.last_count = 0
 
     def __call__(self, count):
         """
@@ -49,6 +50,9 @@ class Speedometer(object):
         count: int
             current batch count
         """
+        if self.last_count > count:
+            self.init = False
+        self.last_count = count
 
         if self.init:
             if count % self.frequent == 0:
