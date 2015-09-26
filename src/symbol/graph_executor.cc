@@ -471,7 +471,9 @@ void GraphExecutor::InitResources() {
     CHECK_LE(cnt, 1) << "Node can only have one temp space request";
     req_temp_cnt[nid] = cnt;
   }
-  uint32_t num_color = kMaxNumColor;
+  // restrict allocation to maximum number of parallelism per device
+  uint32_t num_color = std::min(static_cast<uint32_t>(common::GetNumThreadPerGPU()),
+                                kMaxNumColor);
   std::vector<uint32_t> req_temp_color;
   // use graph coloring to find node that won't run in parallel
   num_color = graph::ColorNodeGroup(graph_, topo_order_, req_temp_cnt,

@@ -20,7 +20,7 @@ def test_symbol_compose():
                               'fc2_weight', 'fc2_bias']
 
     net2 = mx.symbol.FullyConnected(name='fc3', num_hidden=10)
-    net2 = mx.symbol.Activation(data=net2)
+    net2 = mx.symbol.Activation(data=net2, act_type='relu')
     net2 = mx.symbol.FullyConnected(data=net2, name='fc4', num_hidden=20)
     print(net2.debug_str())
 

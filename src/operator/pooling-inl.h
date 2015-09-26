@@ -35,7 +35,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     .set_expect_ndim(2).enforce_nonzero()
     .describe("pooling kernel size: (y, x)");
 
-    DMLC_DECLARE_FIELD(pool_type).set_default(kMaxPooling)
+    DMLC_DECLARE_FIELD(pool_type)
     .add_enum("max", kMaxPooling)
     .add_enum("avg", kAvgPooling)
     .add_enum("sum", kSumPooling)
