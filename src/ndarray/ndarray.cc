@@ -25,9 +25,9 @@ namespace mxnet {
  * \param binary_op the real
  */
 template<typename OP>
-inline void BinaryOp(const NDArray &lhs,
-                     const NDArray &rhs,
-                     NDArray *out) {
+void BinaryOp(const NDArray &lhs,
+              const NDArray &rhs,
+              NDArray *out) {
   // no check if both of them are on cpu
   if (lhs.ctx().dev_mask() != cpu::kDevMask || rhs.ctx().dev_mask() != cpu::kDevMask)
     CHECK(lhs.ctx() == rhs.ctx()) << "operands context mismatch";
@@ -76,7 +76,7 @@ inline void BinaryOp(const NDArray &lhs,
   }
 }
 
-inline void SetValueOp(const real_t &rhs, NDArray *out) {
+void SetValueOp(const real_t &rhs, NDArray *out) {
   CHECK_NE(out->is_none(), true) << "Set value target must not be empty";
   // important: callback must always capture by value
   NDArray ret = *out;
@@ -112,9 +112,9 @@ inline void SetValueOp(const real_t &rhs, NDArray *out) {
  * \param binary_op the real
  */
 template<typename OP, bool reverse>
-inline void ScalarOp(const NDArray &lhs,
-                     const real_t &rhs,
-                     NDArray *out) {
+void ScalarOp(const NDArray &lhs,
+              const real_t &rhs,
+              NDArray *out) {
   if (out->is_none()) {
     *out = NDArray(lhs.shape(), lhs.ctx(), true);
   } else {
@@ -220,9 +220,9 @@ inline void CopyFromToSimple(const NDArray &from, NDArray *to) {
 }
 
 template<typename Distribution>
-inline void SampleOP(const real_t &a,
-                     const real_t &b,
-                     NDArray *out) {
+void SampleOP(const real_t &a,
+              const real_t &b,
+              NDArray *out) {
   CHECK(!out->is_none());
   Resource resource = ResourceManager::Get()->Request(
       out->ctx(), ResourceRequest::kRandom);
