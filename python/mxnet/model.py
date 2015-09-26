@@ -234,7 +234,6 @@ def _train_multi_device(symbol, ctx, input_shape,
     for iteration in range(begin_round, end_round):
         # Training phase
         tic = time.time()
-        train_data.reset()
         optimizer.begin_round(iteration)
         eval_metric.reset()
         nbatch = 0
@@ -276,7 +275,8 @@ def _train_multi_device(symbol, ctx, input_shape,
                     epoch_end_callback(nbatch)
             # evaluate at end, so out_cpu_array can lazy copy
             eval_metric.update(out_cpu_array, label)
-
+        # reset training data after iteration finish
+        train_data.reset()
         name, value = eval_metric.get()
         logger.info('Iteration[%d] Train-%s=%f', iteration, name, value)
         toc = time.time()
@@ -284,7 +284,6 @@ def _train_multi_device(symbol, ctx, input_shape,
         # evaluation
         if eval_data:
             eval_metric.reset()
-            eval_data.reset()
             for data, label in eval_data:
                 # Copy data into the target
                 for target, islice in zip(arg_blocks[label_index], slices):
@@ -296,6 +295,7 @@ def _train_multi_device(symbol, ctx, input_shape,
                     texec.forward(is_train=False)
                     texec.outputs[0].copyto(out_cpu_array[islice])
                 eval_metric.update(out_cpu_array, label)
+            eval_data.reset()
             name, value = eval_metric.get()
             logger.info('Iteration[%d] Validation-%s=%f', iteration, name, value)
 
@@ -415,6 +415,10 @@ class FeedForward(BASE_ESTIMATOR):
     initializier : initializer function, optional
         Training parameter, the initialization scheme used.
 
+    numpy_batch_size : int, optional
+        The batch size of training data.
+        Only needed when input array is numpy.
+
     arg_params : dict of str to NDArray, optional
         Model parameter, dict of name to NDArray of net's weights.
 
@@ -431,7 +435,9 @@ class FeedForward(BASE_ESTIMATOR):
         The additional keyword arguments passed to optimizer.
     """
     def __init__(self, symbol, ctx=None,
-                 num_round=None, optimizer='sgd', initializer=Xavier(),
+                 num_round=None, optimizer='sgd',
+                 initializer=Xavier(),
+                 numpy_batch_size=128,
                  arg_params=None, aux_params=None,
                  allow_extra_params=False,
                  **kwargs):
@@ -459,6 +465,7 @@ class FeedForward(BASE_ESTIMATOR):
         self.kwargs = kwargs.copy()
         self.optimizer = optimizer
         self.initializer = initializer
+        self.numpy_batch_size = numpy_batch_size
         # model parameters
         self.arg_params = arg_params
         self.aux_params = aux_params
@@ -470,15 +477,6 @@ class FeedForward(BASE_ESTIMATOR):
     def _is_data_arg(name):
         """Check if name is a data argument."""
         return name.endswith('data') or name.endswith('label')
-
-    @staticmethod
-    def _get_input_shape(data):
-        """Get input shape from data iterator."""
-        data.reset()
-        data.next()
-        input_shape = data.getdata().shape
-        data.reset()
-        return input_shape
 
     def _init_params(self, input_shape):
         """Use initializer to initialize the parameters."""
@@ -522,6 +520,21 @@ class FeedForward(BASE_ESTIMATOR):
         self._pred_exec_input = pred_exec.arg_arrays[data_index]
         self._pred_exec = pred_exec
 
+    def _init_iter(self, X, y, is_train):
+        """Initialize the iterator given input."""
+        if isinstance(X, (np.ndarray, nd.NDArray)):
+            if y is None:
+                if is_train:
+                    raise ValueError('y must be specified when X is numpy.ndarray')
+                else:
+                    y = np.zeros(X.shape[0])
+            if not isinstance(y, (np.ndarray, nd.NDArray)):
+                raise TypeError('y must be ndarray when X is numpy.ndarray')
+            return io.NDArrayIter(X, y, self.numpy_batch_size, shuffle=is_train)
+        if not isinstance(X, io.DataIter):
+            raise TypeError('X must be DataIter, NDArray or numpy.ndarray')
+        return X
+
     def predict(self, X):
         """Run the prediction, always only use one device.
 
@@ -534,10 +547,12 @@ class FeedForward(BASE_ESTIMATOR):
         y : numpy.ndarray
             The predicted value of the output.
         """
-        assert isinstance(X, io.DataIter)
-        self._init_predictor(self._get_input_shape(X))
-        outputs = []
+        X = self._init_iter(X, None, is_train=False)
+        X.reset()
+        data, _ = X.next()
+        self._init_predictor(data.shape)
 
+        outputs = []
         X.reset()
         for data, _ in X:
             data.copyto(self._pred_exec_input)
@@ -583,9 +598,16 @@ class FeedForward(BASE_ESTIMATOR):
         logger : logging logger, optional
             When not specified, default logger will be used.
         """
-        input_shape = self._get_input_shape(X)
+        X = self._init_iter(X, y, is_train=True)
+        # Simply ignore the first example to get input_shape
+        # in first training round.
+        if not X.iter_next():
+            X.reset()
+            assert X.iter_next()
+        input_shape = X.getdata().shape
         if self.arg_params is None:
             self._init_params(input_shape)
+
         # setup metric
         if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
