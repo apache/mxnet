@@ -315,17 +315,34 @@ shape inconsistency.
 
 ### Bind the Symbols and Run
 
-Now we can bind the free variables of the symbol and perform forward and
-backward.
+Now we can bind the free variables of the symbol and perform forward and backward.
+The bind function will create a ```Executor``` that can be used to carry out the real computations.
 
 ```python
->>> in_shape = (128, 3, 100, 100) # minibatch_size, #channel, image_width, image_height
->>> executor = net.simple_bind(mx.gpu(), data = mx.nd.empty(in_shape, mx.gpu())
->>> # feed data and label..
->>> executor.forward()
->>> executor.backward()
->>> print executor.outputs[0].asnumpy()
+>>> # define computation graphs
+>>> A = mx.symbol.Variable('A')
+>>> B = mx.symbol.Variable('B')
+>>> C = A * B
+>>> a = mx.nd.ones(3) * 4
+>>> b = mx.nd.ones(3) * 2
+>>> # bind the symbol with real arguments
+>>> c_exec = C.bind(ctx=mx.cpu(), args={'A' : a, 'B': b})
+>>> # do forward pass calclation.
+>>> c_exec.forward()
+>>> c_exec.outputs[0].asnumpy()
+[ 8.  8.  8.]
 ```
+For neural nets, a more commonly used pattern is ```simple_bind```, which will create
+all the arguments arrays for you. Then you can call forward, and backward(if gradient is needed)
+to get the gradient.
+```python
+>>> # define computation graphs
+>>> net = some symbol
+>>> texec = net.simple_bind(data=input_shape)
+>>> texec.forward()
+>>> texec.backward()
+```
+The [model API](../../python/mxnet/model.py) is a thin wrapper around the symbolic executors to support neural net training.
 
 ### How Efficient is Symbolic API
 

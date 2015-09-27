@@ -355,6 +355,8 @@ def empty(shape, ctx=None):
     out: Array
         The created NDArray.
     """
+    if isinstance(shape, int):
+        shape = (shape, )
     if ctx is None:
         ctx = Context.default_ctx
     return NDArray(handle=_new_alloc_handle(shape, ctx, False))

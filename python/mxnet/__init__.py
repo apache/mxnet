@@ -9,6 +9,7 @@ from . import base
 from . import ndarray
 from . import name
 from . import symbol
+# use mx.kv as short for kvstore
 from . import kvstore as kv
 from . import io
 # use mx.nd as short for mx.ndarray
