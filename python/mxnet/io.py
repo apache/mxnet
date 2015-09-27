@@ -154,9 +154,12 @@ class NDArrayIter(DataIter):
         for i in range(self.batch_num):
             actual_size = min(data.shape[0] - loc, batch_size)
             self.batch_data[i, 0:actual_size, ::] = data[loc:loc+actual_size, ::]
-            self.batch_label[i, 0:actual_size, ::] = label[loc:loc+actual_size, ::]
+            self.batch_label[i, 0:actual_size] = label[loc:loc+actual_size]
             loc += batch_size
-        self.num_pad = data.shape[0] % batch_size
+        if data.shape[0] > batch_size:
+            self.num_pad = data.shape[0] % batch_size
+        else:
+            self.num_pad = batch_size - data.shape[0]
         self.out_data = None
         self.out_label = None
         self.current_batch = -1
