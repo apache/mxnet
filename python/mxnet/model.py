@@ -274,7 +274,7 @@ def _train_multi_device(symbol, ctx, input_shape,
                 else:
                     epoch_end_callback(nbatch)
             # evaluate at end, so out_cpu_array can lazy copy
-            eval_metric.update(out_cpu_array, label)
+            eval_metric.update(label, out_cpu_array)
         # reset training data after iteration finish
         train_data.reset()
         name, value = eval_metric.get()
@@ -294,7 +294,7 @@ def _train_multi_device(symbol, ctx, input_shape,
                 for texec, islice in zip(train_execs, slices):
                     texec.forward(is_train=False)
                     texec.outputs[0].copyto(out_cpu_array[islice])
-                eval_metric.update(out_cpu_array, label)
+                eval_metric.update(label, out_cpu_array)
             eval_data.reset()
             name, value = eval_metric.get()
             logger.info('Iteration[%d] Validation-%s=%f', iteration, name, value)

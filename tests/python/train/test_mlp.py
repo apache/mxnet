@@ -16,9 +16,7 @@ act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
 fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=10)
 softmax = mx.symbol.Softmax(fc3, name = 'sm')
 
-def accuracy(pred, label):
-    pred = pred.asnumpy()
-    label = label.asnumpy().astype('int32')
+def accuracy(label, pred):
     py = np.argmax(pred, axis=1)
     return np.sum(py == label) / float(label.size)
 
@@ -50,7 +48,7 @@ def test_mlp():
         softmax,
         X=train_dataiter,
         eval_data=val_dataiter,
-        eval_metric=accuracy,
+        eval_metric=mx.metric.np(accuracy),
         iter_end_callback=mx.callback.do_checkpoint(prefix),
         ctx=[mx.cpu(i) for i in range(2)],
         num_round=num_round,
