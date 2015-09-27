@@ -21,9 +21,8 @@ conda update -q conda
 # Useful for debugging any issues with conda
 conda info -a
 
-if [ ${TASK} == "python-package3" ]; then
+if [ ${TASK} == "package3" ]; then
     conda create -n myenv python=3.4
-    alias python3=python
 else
     conda create -n myenv python=2.7
 fi
