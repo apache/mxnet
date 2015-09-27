@@ -86,6 +86,12 @@ int main(int argc, char *argv[]) {
           << "Invalid ImageList, did you provide the correct label_width?";
     }
     CHECK(std::getline(is, fname));
+    // eliminate invalid chars in the end
+    while (fname.length() != 0 &&
+           (isspace(*fname.rbegin()) || !isprint(*fname.rbegin()))) {
+      fname.resize(fname.length() - 1);
+    }
+    // eliminate invalid chars in beginning.
     const char *p = fname.c_str();
     while (isspace(*p)) ++p;
     path = root + p;
