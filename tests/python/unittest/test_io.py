@@ -85,6 +85,6 @@ def test_NDArrayIter():
             assert(labelcount[i] == 100)
 
 if __name__ == "__main__":
-    test_NumpyIter()
+    #test_NDArrayIter()
     #test_MNISTIter()
-    #test_Cifar10Rec()
+    test_Cifar10Rec()
