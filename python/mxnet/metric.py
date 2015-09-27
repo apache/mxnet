@@ -54,6 +54,22 @@ class Accuracy(EvalMetric):
         self.sum_metric += numpy.sum(pred_label == label)
         self.num_inst += label.size
 
+class LogLoss(EvalMetric):
+    """Calculate logloss"""
+    def __init__(self):
+        self.eps = 1e-15
+        super(LogLoss, self).__init__('logloss')
+
+    def update(self, label, pred):
+        # pylint: disable=invalid-name
+        pred = pred.asnumpy()
+        label = label.asnumpy().astype('int32')
+        for i in range(label.size):
+            p = pred[i][label[i]]
+            assert(numpy.isnan(p) == False)
+            p = max(min(p, 1 - self.eps), self.eps)
+            self.sum_metric += -numpy.log(p)
+        self.num_inst += label.size
 
 class CustomMetric(EvalMetric):
     """Custom evaluation metric that takes a NDArray function.
@@ -112,5 +128,7 @@ def create(metric):
         raise TypeError('metric should either be callable or str')
     if metric == 'acc' or metric == 'accuracy':
         return Accuracy()
+    elif metric == 'logloss':
+        return LogLoss()
     else:
         raise ValueError('Cannot find metric %s' % metric)
