@@ -6,7 +6,7 @@
 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)]()
 
 MXNet is an open source deep learning framework designed for both *efficiency* and *flexibility*.
-It allows you to mix the [flavors]((http://mxnet.readthedocs.org/en/program_model.html) of
+It allows you to mix the [flavors](http://mxnet.readthedocs.org/en/latest/program_model.html) of
 deep learning programs together to maximize the efficiency and your productivity.
 
 What's New
