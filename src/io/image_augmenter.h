@@ -90,8 +90,7 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
 class ImageAugmenter {
  public:
   // contructor
-  ImageAugmenter(void)
-      : tmpres_(false) {
+  ImageAugmenter(void) {
 #if MXNET_USE_OPENCV
     rotateM_ = cv::Mat(2, 3, CV_32F);
 #endif
@@ -211,20 +210,12 @@ class ImageAugmenter {
 #endif
 
  private:
-  // temp input space
-  mshadow::TensorContainer<cpu, 3> tmpres_;
-  // mean image
-  mshadow::TensorContainer<cpu, 3> meanimg_;
-  /*! \brief temp space */
-  mshadow::TensorContainer<cpu, 3> img_;
 #if MXNET_USE_OPENCV
   // temporal space
   cv::Mat temp_;
   // rotation param
   cv::Mat rotateM_;
-  // whether the mean file is ready
 #endif
-  bool meanfile_ready_;
   // parameters
   ImageAugmentParam param_;
   /*! \brief list of possible rotate angle */

@@ -2,6 +2,7 @@
 sudo: false
 # Enabling test on Linux and OS X
 os:
+  - linux
   - osx
 
 # Use Build Matrix to do lint and build seperately
