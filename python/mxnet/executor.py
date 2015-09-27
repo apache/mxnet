@@ -34,9 +34,10 @@ class Executor(object):
         ----------
         is_train: bool
             whether this forward is for evaluation purpose
-            Note: for test only network, please indicate in Bind (TODO)
         """
-        check_call(_LIB.MXExecutorForward(self.handle, is_train))
+        check_call(_LIB.MXExecutorForward(
+            self.handle,
+            ctypes.c_int(int(is_train))))
 
     def backward(self, head_grads=None):
         """Do backward on heads' gradient.
@@ -55,7 +56,10 @@ class Executor(object):
             if not isinstance(obj, NDArray):
                 raise TypeError("inputs must be NDArray")
         ndarray = c_array(NDArrayHandle, [item.handle for item in head_grads])
-        check_call(_LIB.MXExecutorBackward(self.handle, len(head_grads), ndarray))
+        check_call(_LIB.MXExecutorBackward(
+            self.handle,
+            mx_uint(len(head_grads)),
+            ndarray))
 
     def debug_str(self):
         """Get a debug string about internal execution plan.

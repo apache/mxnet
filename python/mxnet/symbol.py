@@ -293,7 +293,8 @@ class Symbol(object):
         aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
         complete = ctypes.c_int()
         check_call(_LIB.MXSymbolInferShape(
-            self.handle, len(indptr) - 1,
+            self.handle,
+            mx_uint(len(indptr) - 1),
             c_array(ctypes.c_char_p, keys),
             c_array(mx_uint, indptr),
             c_array(mx_uint, sdata),
@@ -561,13 +562,13 @@ class Symbol(object):
 
         handle = ExecutorHandle()
         check_call(_LIB.MXExecutorBind(self.handle,
-                                       ctx.device_typeid,
-                                       ctx.device_id,
-                                       len(args),
+                                       ctypes.c_int(ctx.device_typeid),
+                                       ctypes.c_int(ctx.device_id),
+                                       mx_uint(len(args)),
                                        args_handle,
                                        args_grad_handle,
                                        reqs_array,
-                                       len(aux_states),
+                                       mx_uint(len(aux_states)),
                                        aux_args_handle,
                                        ctypes.byref(handle)))
         executor = Executor(handle)
@@ -642,7 +643,8 @@ def Group(symbols):
         ihandles.append(sym.handle)
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateGroup(
-        len(ihandles), c_array(SymbolHandle, ihandles), ctypes.byref(handle)))
+        mx_uint(len(ihandles)),
+        c_array(SymbolHandle, ihandles), ctypes.byref(handle)))
     return Symbol(handle)
 
 
@@ -771,7 +773,8 @@ def _make_atomic_symbol_function(handle):
         param_vals = c_array(ctypes.c_char_p, param_vals)
         sym_handle = SymbolHandle()
         check_call(_LIB.MXSymbolCreateAtomicSymbol(
-            handle, len(param_keys),
+            handle,
+            mx_uint(len(param_keys)),
             param_keys, param_vals,
             ctypes.byref(sym_handle)))
 

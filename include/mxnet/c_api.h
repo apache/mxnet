@@ -19,8 +19,6 @@
 
 /*! \brief manually define unsigned int */
 typedef unsigned int mx_uint;
-/*! \brief manually define unsigned long int */
-typedef unsigned long int mx_ulong;  // NOLINT(*)
 /*! \brief manually define unsigned int */
 typedef float mx_float;
 // all the handles are simply void *
@@ -108,7 +106,7 @@ MXNET_DLL int MXNDArrayCreate(const mx_uint *shape,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayLoadFromRawBytes(const void *buf,
-                                        mx_ulong size,
+                                        size_t size,
                                         NDArrayHandle *out);
 /*!
  * \brief save the NDArray into raw bytes.
@@ -118,7 +116,7 @@ MXNET_DLL int MXNDArrayLoadFromRawBytes(const void *buf,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArraySaveRawBytes(NDArrayHandle handle,
-                                    mx_ulong *out_size,
+                                    size_t *out_size,
                                     const char **out_buf);
 /*!
  * \brief Save list of narray into the file.
@@ -172,8 +170,8 @@ MXNET_DLL int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
  * \param size the memory size we want to copy into.
  */
 MXNET_DLL int MXNDArraySyncCopyToCPU(NDArrayHandle handle,
-                                    mx_float *data,
-                                    size_t size);
+                                     mx_float *data,
+                                     size_t size);
 /*!
  * \brief Wait until all the pending writes with respect NDArray are finished.
  *  Always call this before read data out synchronizely.
@@ -354,7 +352,7 @@ MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
-                                         int num_param,
+                                         mx_uint num_param,
                                          const char **keys,
                                          const char **vals,
                                          SymbolHandle *out);
@@ -558,7 +556,7 @@ MXNET_DLL int MXExecutorPrint(ExecutorHandle symbol, const char **out_str);
  * \param is_train bool value to indicate whether the forward pass is for evaluation
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXExecutorForward(ExecutorHandle handle, bool is_train);
+MXNET_DLL int MXExecutorForward(ExecutorHandle handle, int is_train);
 /*!
  * \brief Excecutor run backward
  *
@@ -632,7 +630,7 @@ MXNET_DLL int MXListDataIters(mx_uint *out_size,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDataIterCreateIter(DataIterCreator handle,
-                                   int num_param,
+                                   mx_uint num_param,
                                    const char **keys,
                                    const char **vals,
                                    DataIterHandle *out);
