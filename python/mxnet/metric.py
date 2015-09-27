@@ -1,7 +1,7 @@
 # pylint: disable=invalid-name
 """Online evaluation metric module."""
 from .base import string_types
-import numpy as np
+import numpy
 
 class EvalMetric(object):
     """Base class of all evaluation metrics."""
@@ -48,8 +48,8 @@ class Accuracy(EvalMetric):
     def update(self, label, pred):
         pred = pred.asnumpy()
         label = label.asnumpy().astype('int32')
-        py = np.argmax(pred, axis=1)
-        self.sum_metric += np.sum(py == label)
+        py = numpy.argmax(pred, axis=1)
+        self.sum_metric += numpy.sum(py == label)
         self.num_inst += label.size
 
 
@@ -89,6 +89,7 @@ def np(numpy_feval, name=None):
         The name of the metric.
     """
     def feval(label, pred):
+        """Internal eval function."""
         return numpy_feval(label.asnumpy(), pred.asnumpy())
     feval.__name__ = numpy_feval.__name__
     return CustomMetric(feval, name)
