@@ -214,7 +214,7 @@ int MXNDArrayCreate(const mx_uint *shape,
 }
 
 int MXNDArrayLoadFromRawBytes(const void *buf,
-                              mx_ulong size,
+                              size_t size,
                               NDArrayHandle *out) {
   NDArray *ptr = nullptr;
   API_BEGIN();
@@ -228,7 +228,7 @@ int MXNDArrayLoadFromRawBytes(const void *buf,
 }
 
 int MXNDArraySaveRawBytes(NDArrayHandle handle,
-                          mx_ulong *out_size,
+                          size_t *out_size,
                           const char **out_buf) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
@@ -472,7 +472,7 @@ int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
 }
 
 int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
-                               int num_param,
+                               mx_uint num_param,
                                const char **keys,
                                const char **vals,
                                SymbolHandle *out) {
@@ -483,7 +483,7 @@ int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
   OperatorPropertyReg *e = static_cast<OperatorPropertyReg *>(creator);
   op = e->body();
   std::vector<std::pair<std::string, std::string> > kwargs;
-  for (int i = 0; i < num_param; ++i) {
+  for (mx_uint i = 0; i < num_param; ++i) {
     kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
   }
   op->Init(kwargs);
@@ -762,10 +762,10 @@ int MXExecutorPrint(ExecutorHandle handle, const char **out_str) {
   API_END();
 }
 
-int MXExecutorForward(ExecutorHandle handle, bool is_train) {
+int MXExecutorForward(ExecutorHandle handle, int is_train) {
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
-  exec->Forward(is_train);
+  exec->Forward(is_train != 0);
   API_END();
 }
 
@@ -851,28 +851,28 @@ int MXListDataIters(mx_uint *out_size,
 }
 
 int MXDataIterGetIterInfo(DataIterCreator creator,
-                                const char **name,
-                                const char **description,
-                                mx_uint *num_args,
-                                const char ***arg_names,
-                                const char ***arg_type_infos,
-                                const char ***arg_descriptions) {
+                          const char **name,
+                          const char **description,
+                          mx_uint *num_args,
+                          const char ***arg_names,
+                          const char ***arg_type_infos,
+                          const char ***arg_descriptions) {
   DataIteratorReg *e = static_cast<DataIteratorReg *>(creator);
   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
                                  arg_names, arg_type_infos, arg_descriptions);
 }
 
 int MXDataIterCreateIter(DataIterCreator creator,
-                               int num_param,
-                               const char **keys,
-                               const char **vals,
-                               DataIterHandle *out) {
+                         mx_uint num_param,
+                         const char **keys,
+                         const char **vals,
+                         DataIterHandle *out) {
   IIterator<DataBatch> *iter = nullptr;
   API_BEGIN();
   DataIteratorReg *e = static_cast<DataIteratorReg *>(creator);
   iter = e->body();
   std::vector<std::pair<std::string, std::string> > kwargs;
-  for (int i = 0; i < num_param; ++i) {
+  for (mx_uint i = 0; i < num_param; ++i) {
     kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
   }
   iter->Init(kwargs);

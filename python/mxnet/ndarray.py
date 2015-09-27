@@ -8,7 +8,7 @@ import sys
 import numpy as np
 from .base import _LIB, string_types, numeric_types
 from .base import c_array, py_str, c_str
-from .base import mx_uint, mx_float, NDArrayHandle, FunctionHandle
+from .base import mx_uint, mx_float, mx_float_p, NDArrayHandle, FunctionHandle
 from .base import ctypes2buffer
 from .base import check_call, ctypes2docstring
 from .context import Context
@@ -38,10 +38,10 @@ def _new_alloc_handle(shape, ctx, delay_alloc):
     hdl = NDArrayHandle()
     check_call(_LIB.MXNDArrayCreate(
         c_array(mx_uint, shape),
-        len(shape),
-        ctx.device_typeid,
-        ctx.device_id,
-        int(delay_alloc),
+        mx_uint(len(shape)),
+        ctypes.c_int(ctx.device_typeid),
+        ctypes.c_int(ctx.device_id),
+        ctypes.c_int(int(delay_alloc)),
         ctypes.byref(hdl)))
     return hdl
 
@@ -92,7 +92,6 @@ class NDArray(object):
             return NDArray._minus_scalar(self, float(other))
         else:
             raise TypeError('type %s not supported' % str(type(other)))
-
     def __isub__(self, other):
         if isinstance(other, NDArray):
             return NDArray._minus(self, other, out=self)
@@ -158,7 +157,7 @@ class NDArray(object):
         this = self.__dict__.copy()
         handle = this['handle']
         if handle is not None:
-            length = ctypes.c_ulong()
+            length = ctypes.c_size_t()
             cptr = ctypes.POINTER(ctypes.c_char)()
             check_call(_LIB.MXNDArraySaveRawBytes(self.handle,
                                                   ctypes.byref(length),
@@ -172,7 +171,7 @@ class NDArray(object):
             buf = handle
             handle = NDArrayHandle()
             ptr = (ctypes.c_char * len(buf)).from_buffer(buf)
-            length = ctypes.c_ulong(len(buf))
+            length = ctypes.c_size_t(len(buf))
             check_call(_LIB.MXNDArrayLoadFromRawBytes(ptr, length, ctypes.byref(handle)))
             state['handle'] = handle
         self.__dict__.update(state)
@@ -223,8 +222,8 @@ class NDArray(object):
             raise ValueError('array shape do not match the shape of NDArray')
         check_call(_LIB.MXNDArraySyncCopyFromCPU(
             self.handle,
-            source_array.ctypes.data_as(ctypes.POINTER(mx_float)),
-            source_array.size))
+            source_array.ctypes.data_as(mx_float_p),
+            ctypes.c_size_t(source_array.size)))
 
     def _slice(self, start, stop):
         """Return a sliiced NDArray that shares memory with current one.
@@ -292,8 +291,8 @@ class NDArray(object):
         data = np.empty(self.shape, dtype=np.float32)
         check_call(_LIB.MXNDArraySyncCopyToCPU(
             self.handle,
-            data.ctypes.data,
-            data.size))
+            data.ctypes.data_as(mx_float_p),
+            ctypes.c_size_t(data.size)))
         return data
 
     def copyto(self, other):
@@ -505,7 +504,7 @@ def save(fname, data):
             handles.append(val.handle)
         keys = None
     check_call(_LIB.MXNDArraySave(c_str(fname),
-                                  len(handles),
+                                  mx_uint(len(handles)),
                                   c_array(NDArrayHandle, handles),
                                   keys))
 

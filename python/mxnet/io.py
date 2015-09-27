@@ -310,7 +310,8 @@ def _make_io_iterator(handle):
         param_vals = c_array(ctypes.c_char_p, param_vals)
         iter_handle = DataIterHandle()
         check_call(_LIB.MXDataIterCreateIter(
-            handle, len(param_keys),
+            handle,
+            mx_uint(len(param_keys)),
             param_keys, param_vals,
             ctypes.byref(iter_handle)))
 
