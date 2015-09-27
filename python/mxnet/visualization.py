@@ -1,7 +1,6 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-locals, fixme
-# pylint: disable=unused-argument, too-many-branches, too-many-statements
-# pylint: disable=unused-variable
+# pylint: disable=invalid-name, too-many-locals, fixme
+# pylint: disable=too-many-branches, too-many-statements
 """Visualization module"""
 from __future__ import absolute_import
 

@@ -1,10 +1,6 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments
-"""Symbolic support of mxnet.
-
-Symbolic API of MXNet
-
-"""
+# pylint: disable=invalid-name, protected-access, too-many-arguments
+"""Symbolic configuration API of mxnet."""
 from __future__ import absolute_import
 
 import ctypes
@@ -571,8 +567,7 @@ class Symbol(object):
                                        mx_uint(len(aux_states)),
                                        aux_args_handle,
                                        ctypes.byref(handle)))
-        executor = Executor(handle)
-
+        executor = Executor(handle, self)
         executor.arg_arrays = args
         executor.grad_arrays = args_grad
         executor.aux_arrays = aux_states

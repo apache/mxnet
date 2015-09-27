@@ -1,5 +1,5 @@
 # coding: utf-8
-""" code for context management """
+"""Context management API of mxnet."""
 from __future__ import absolute_import
 
 class Context(object):
@@ -19,7 +19,6 @@ class Context(object):
 
     Examples
     --------
-    Switch default context example:
     >>> # array on cpu
     >>> cpu_array = mx.md.ones((2, 3))
     >>> # switch default context to GPU(2)
