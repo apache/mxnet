@@ -11,7 +11,7 @@ deep learning programs together to maximize the efficiency and your productivity
 
 What's New
 ----------
-* [Note on Programming Models for Deep Learning](http://mxnet.readthedocs.org/en/program_model.html)
+* [Note on Programming Models for Deep Learning](http://mxnet.readthedocs.org/en/latest/program_model.html)
 
 Contents
 --------
