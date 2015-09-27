@@ -15,6 +15,7 @@ User Guide
 
 Developer Guide
 ---------------
+* [Programming Models for Deep Learning](program_model.md)
 * [Developer Documents](developer-guide/index.md)
 * [Environment Variables for MXNet](env_var.md)
 * [Contributor Guideline](contribute.md)
