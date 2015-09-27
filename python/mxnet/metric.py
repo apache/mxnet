@@ -59,13 +59,15 @@ class LogLoss(EvalMetric):
         super(LogLoss, self).__init__('logloss')
 
     def update(self, label, pred):
+        # pylint: disable=invalid-name
         pred = pred.asnumpy()
         label = label.asnumpy().astype('int32')
         for i in range(label.size):
             p = pred[i][label[i]]
+            assert(numpy.isnan(p) == False)
             p = max(min(p, 1 - self.eps), self.eps)
-            self.sum_metric += -np.log(p)
-            self.num_inst += label.size
+            self.sum_metric += -numpy.log(p)
+        self.num_inst += label.size
 
 class CustomMetric(EvalMetric):
     """Custom evaluation metric that takes a NDArray function.
