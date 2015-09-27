@@ -511,7 +511,8 @@ class FeedForward(BASE_ESTIMATOR):
 
         for name, value in list(zip(self.symbol.list_arguments(), pred_exec.arg_arrays)):
             if not self._is_data_arg(name):
-                assert name in self.arg_params
+                if not name in self.arg_params:
+                    raise ValueError("%s not exist in arg_params" % name)
                 self.arg_params[name].copyto(value)
         for name, value in list(zip(self.symbol.list_auxiliary_states(), pred_exec.aux_arrays)):
             assert name in self.aux_params
