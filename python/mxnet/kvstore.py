@@ -1,6 +1,5 @@
 # coding: utf-8
-# pylint: disable=invalid-name, global-statement
-""" KVStore in mxnet """
+""" Key value store interface of MXNet for parameter synchronization."""
 from __future__ import absolute_import
 
 import ctypes
@@ -19,10 +18,10 @@ def _ctype_key_value(keys, vals):
             return (c_array(ctypes.c_int, [keys]),
                     c_array(NDArrayHandle, [vals.handle]))
         else:
-            for v in vals:
-                assert(isinstance(v, NDArray))
+            for value in vals:
+                assert(isinstance(value, NDArray))
             return (c_array(ctypes.c_int, [keys] * len(vals)),
-                    c_array(NDArrayHandle, [v.handle for v in vals]))
+                    c_array(NDArrayHandle, [value.handle for value in vals]))
     else:
         assert(len(keys) == len(vals))
         for k in keys:
@@ -66,7 +65,7 @@ class KVStore(object):
     def init(self, key, value):
         """ Initialize a single or a sequence of key-value pairs into the store.
 
-        For each key, one must init it before push and pull
+        For each key, one must init it before push and pull.
 
         Parameters
         ----------
@@ -102,8 +101,10 @@ class KVStore(object):
         ----------
         key : int or list of int
             Keys
+
         value : NDArray or list of NDArray or list of list of NDArray
             According values
+
         priority : int, optional
             The priority of the push operation.
             The higher the priority, the faster this action is likely
@@ -150,14 +151,16 @@ class KVStore(object):
             ctypes.c_int(priority)))
 
     def pull(self, key, out=None, priority=0):
-        """ Pull a single value or a sequence of values from the store
+        """ Pull a single value or a sequence of values from the store.
 
         Parameters
         ----------
         key : int or list of int
             Keys
+
         out: NDArray or list of NDArray or list of list of NDArray
             According values
+
         priority : int, optional
             The priority of the push operation.
             The higher the priority, the faster this action is likely

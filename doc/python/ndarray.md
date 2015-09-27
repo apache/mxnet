@@ -8,9 +8,12 @@ Create NDArray
 Like `numpy`, you could create `mxnet.ndarray` like followings:
 ```python
 >>> import mxnet as mx
->>> a = mx.nd.zeros((100, 50))              # all-zero array of dimension 100x50
->>> b = mx.nd.ones((256, 32, 128, 1))       # all-one array of dimension 256x32x128x1
->>> c = mx.nd.array([[1, 2, 3], [4, 5, 6]]) # initialize array with contents
+>>> # all-zero array of dimension 100x50
+>>> a = mx.nd.zeros((100, 50))
+>>> # all-one array of dimension 256x32x128x1
+>>> b = mx.nd.ones((256, 32, 128, 1))
+>>> # initialize array with contents
+>>> c = mx.nd.array([[1, 2, 3], [4, 5, 6]])
 ```
 
 NDArray operations
@@ -24,9 +27,11 @@ We provide some basic ndarray operations like arithmetic and slice operations. M
 >>> a.shape
 (100L, 50L)
 >>> b = mx.nd.ones((100, 50))
+>>> # c and d will be calculated in parallel here!
 >>> c = a + b
->>> d = a - b     # c and d will be calculated in parallel here!
->>> b += d        # inplace operation, b's contents will be modified, but c and d won't be affected.
+>>> d = a - b
+>>> # inplace operation, b's contents will be modified, but c and d won't be affected.
+>>> b += d
 ```
 
 ### Slice operations
@@ -36,8 +41,8 @@ We provide some basic ndarray operations like arithmetic and slice operations. M
 >>> a[0:10] = 1   # first 10 rows will become 1
 ```
 
-Conversion from/to `numpy.ndarray` and I/O
---------------------------------
+Conversion from/to `numpy.ndarray`
+----------------------------------
 MXNet NDArray supports pretty nature way to convert from/to `mxnet.ndarray` to/from `numpy.ndarray`:
 ```python
 >>> import mxnet as mx
@@ -50,13 +55,20 @@ MXNet NDArray supports pretty nature way to convert from/to `mxnet.ndarray` to/f
 array([ 1., 2., 3.], dtype=float32)
 ```
 
-We also provide two convenient functions to help save and load file from I/O:
+Save Load NDArray
+-----------------
+You can always use pickle to save and load NDArrays.
+We also provide functions to help save and load list or dictionary of NDArrays from file systems.
 ```python
 >>> import mxnet as mx
 >>> a = mx.nd.zeros((100, 200))
->>> mx.nd.save("/path/to/array/file", a)
->>> mx.nd.save("s3://path/to/s3/array", a)
->>> mx.nd.save("hdfs://path/to/hdfs/array", a)
+>>> b = mx.nd.zeros((100, 200))
+>>> # save list of NDArrays
+>>> mx.nd.save("/path/to/array/file", [a, b])
+>>> # save dictionary of NDArrays to AWS S3
+>>> mx.nd.save("s3://path/to/s3/array", {'A' : a, 'B' : b})
+>>> # save list of NDArrays to hdfs.
+>>> mx.nd.save("hdfs://path/to/hdfs/array", [a, b])
 >>> from_file = mx.nd.load("/path/to/array/file")
 >>> from_s3 = mx.nd.load("s3://path/to/s3/array")
 >>> from_hdfs = mx.nd.load("hdfs://path/to/hdfs/array")
@@ -65,8 +77,8 @@ The good thing about using the above `save` and `load` interface is that:
 - You could use the format across all `mxnet` language bindings.
 - Already support S3 and HDFS.
 
-Multi-device support
--------------------
+Multi-device Support
+--------------------
 The device information is stored in `mxnet.Context` structure. When creating ndarray in mxnet, user could either use the context argument (default is CPU context) to create arrays on specific device or use the `with` statement as follows:
 ```python
 >>> import mxnet as mx

@@ -1,5 +1,5 @@
 # pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals
-# pylint: disable=too-many-branches, too-many-statements, unused-argument
+# pylint: disable=too-many-branches, too-many-statements
 """MXNet model module"""
 from __future__ import absolute_import
 
@@ -200,14 +200,10 @@ def _train_multi_device(symbol, ctx, input_shape,
     aux_blocks = [
         [x.aux_arrays[index] for x in train_execs]
         for index in range(len(train_execs[0].aux_arrays))]
-    for name, block in zip(arg_names, arg_blocks):
-        if name in arg_params:
-            for w in block:
-                arg_params[name].copyto(w)
-    for name, block in zip(aux_names, aux_blocks):
-        if name in aux_params:
-            for w in block:
-                aux_params[name].copyto(w)
+
+    for texec in train_execs:
+        texec.copy_params_from(arg_params, aux_params)
+
     # ky value store
     kv = kvstore.create() if num_device != 1 else None
     opt_state_blocks = []
@@ -246,7 +242,7 @@ def _train_multi_device(symbol, ctx, input_shape,
                 data[islice].copyto(target)
             # forward backward pass
             for texec, islice in zip(train_execs, slices):
-                texec.forward()
+                texec.forward(is_train=True)
                 texec.outputs[0].copyto(out_cpu_array[islice])
             for texec in train_execs:
                 texec.backward()
