@@ -5,7 +5,7 @@
 [![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.readthedocs.org/en/latest/)
 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)]()
 
-MXNet is an open source deep learning framework designed for both *efficiency* and *flexibility*.
+MXNet is a deep learning framework designed for both *efficiency* and *flexibility*.
 It allows you to mix the [flavors](http://mxnet.readthedocs.org/en/latest/program_model.html) of
 deep learning programs together to maximize the efficiency and your productivity.
 
