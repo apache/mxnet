@@ -56,8 +56,7 @@ class BatchLoader : public IIterator<TBlobBatch> {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     // init batch param, it could have similar param with
     kwargs_left = param_.InitAllowUnknown(kwargs);
-    // init base iterator
-    base_->Init(kwargs);
+    // init object attributes
     std::vector<size_t> data_shape_vec;
     data_shape_vec.push_back(param_.batch_size);
     for (size_t shape_dim = 0; shape_dim < param_.data_shape.ndim(); ++shape_dim) {
@@ -75,6 +74,8 @@ class BatchLoader : public IIterator<TBlobBatch> {
     label_holder_ = mshadow::NewTensor<mshadow::cpu>(label_shape_.get<2>(), 0.0f);
     out_.data.push_back(TBlob(data_holder_));
     out_.data.push_back(TBlob(label_holder_));
+    // init base iterator
+    base_->Init(kwargs);
   }
   inline void BeforeFirst(void) {
     if (param_.round_batch == 0 || num_overflow_ == 0) {
