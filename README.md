@@ -6,7 +6,7 @@
 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)]()
 
 MXNet is a deep learning framework designed for both *efficiency* and *flexibility*.
-It allows you to mix the [flavors](http://mxnet.readthedocs.org/en/latest/program_model.html) of
+It allows you to mix the [flavours](http://mxnet.readthedocs.org/en/latest/program_model.html) of
 deep learning programs together to maximize the efficiency and your productivity.
 
 What's New
@@ -24,7 +24,7 @@ Contents
 Features
 --------
 * To Mix and Maximize
-  - Mix all flavors of programming models to maximize flexiblity and efficiency.
+  - Mix all flavours of programming models to maximize flexibility and efficiency.
 * Lightweight and scalable
   - Minimum build dependency, scales to multi-GPU and ready toward distributed.
 * Auto parallelization

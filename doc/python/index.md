@@ -4,7 +4,7 @@ This page contains links to all the python related documents on python package.
 To install the package package, checkout [Build and Installation Instruction](../build.md).
 There are three types of documents you can find about mxnet.
 
-* [Tutorials](#tutorials) are self contained materials that introduces a certain usecases of mxnet.
+* [Tutorials](#tutorials) are self contained materials that introduces a certain use-cases of mxnet.
 * [Code Examples](../../example) contains example codes.
 * [Python API Documents](#python-api-documents) contains documents about specific module, as well as reference of all API functions.
 

@@ -1,19 +1,19 @@
 Programming Models for Deep Learning
 ====================================
-There are a lot of deep learning libraries, each comes with its own flavor.
-How can each flavor introduced by each library provide advantage or drawbacks in terms of system optimization and user experience?
-This article aims to compare these flavors in terms of programming models, discuss the fundenmental advantage and drawbacks
+There are a lot of deep learning libraries, each comes with its own flavour.
+How can each flavour introduced by each library provide advantage or drawbacks in terms of system optimization and user experience?
+This article aims to compare these flavours in terms of programming models, discuss the fundamental advantage and drawbacks
 introduced by these model, and how we can learn from them.
 
 We will focus on the programming model itself instead of the implementations. So this article is not about benchmarking
-deep learning libaries. Instead, we will divide the libraries into several categories in terms of what user interface they offer,
+deep learning libraries. Instead, we will divide the libraries into several categories in terms of what user interface they offer,
 and discuss how these style of interface will affect performance and flexibility of deep learning programs.
-The dicussion in this article may not be specific to deep learning, but we will keep deep learning applications as our use-cases and goal of optimization.
+The discussion in this article may not be specific to deep learning, but we will keep deep learning applications as our use-cases and goal of optimization.
 
 Symbolic vs Imperative Programs
 -------------------------------
 This is the first section to get started, the first thing we are going to compare is symbolic style programs vs imperative style programs.
-If you are a python or c++ programmer, it is likely you are already familar with imperative programs.
+If you are a python or c++ programmer, it is likely you are already familiar with imperative programs.
 Imperative style programs conduct the computation as we run them. Most code you will write in python is imperative,
 for example, the following numpy snippet.
 ```python
@@ -24,7 +24,7 @@ c = b * a
 d = c + 1
 ```
 When the programs execute to ```c = b * a```, it runs the actual computation. Symbolic programs are bit different.
-The following snippet is an equivalent symbolic style program you can write to achive the same goal of calculating ```d```.
+The following snippet is an equivalent symbolic style program you can write to achieve the same goal of calculating ```d```.
 ```python
 A = Variable('A')
 B = Variable('B')
@@ -38,16 +38,16 @@ The difference in symbolic programs is when ```C = B * A``` is executed, there i
 Instead, these operations generates a computation graph (symbolic graph) that represents the computation it described.
 The following picture gives a computation graph to compute ```D```.
 
-![Comp Graph](img/comp_graph.png)
+![Comp Graph](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/prog_model/comp_graph.png)
 
 Most symbolic style programs will contain, either explicitly or implicitly, a ```compile``` step.
 This converts the computation graph into a function that can be called.
 Then the real computation happens at the last step of the code. The major characteristic of symbolic programs
-is the clear seperation between the computation graph defintion step, and the compile, running step.
+is the clear separation between the computation graph definition step, and the compile, running step.
 
 Examples of imperative style deep learning libraries includes Torch, Chainer, Minerva.
 While the example of symbolic style deep learning libraries include Theano, CGT.
-The libraries that uses configuration files like cxxnet, caffe can also be viewed as symbolic style libaries.
+The libraries that uses configuration files like cxxnet, caffe can also be viewed as symbolic style libraries.
 Where the configuration file content defines the computation graph.
 
 Now you know the two different programming models, let us start to compare them!
@@ -67,16 +67,16 @@ for i in range(d):
 You will find it is actually not easy, because there is a python for-loop that may not readily supported by the symbolic API.
 If you are writing a symbolic programs in python, you are NOT writing in python.
 Instead, you actually write a domain specific language defined by the symbolic API.
-The symbolic APIs are more powerful version of DSL that generates the computation graphs or configuration of neuralnets.
+The symbolic APIs are more powerful version of DSL that generates the computation graphs or configuration of neural nets.
 In that sense, the config-file input libraries are all symbolic.
 
 Because imperative programs are actually more ```native``` than the symbolic ones, it is easier to use native language features
-and inject them into computation flow. Such as printing out the values in the middle of comptuation, and use conditioning and loop in host language.
+and inject them into computation flow. Such as printing out the values in the middle of computation, and use conditioning and loop in host language.
 
 ### Symbolic Programs are More Efficient
 
 As we can see from the discussion in previous section, imperative programs are usually more flexible and native to the host language.
-Why larger portion of deep learning libraries chosed to be symbolic instead? The main reason is efficiency, both in terms of memory and runtime.
+Why larger portion of deep learning libraries chose to be symbolic instead? The main reason is efficiency, both in terms of memory and runtime.
 Let us consider the same toy example used in the beginning of this section.
 
 ```python
@@ -88,7 +88,7 @@ d = c + 1
 ...
 ```
 
-![Comp Graph](img/comp_graph.png)
+![Comp Graph](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/prog_model/comp_graph.png)
 
 Assume each cell in the array cost 8 bytes. How many memory do we need to cost if we are going to execute the above program in python console?
 Let us do some math, we need memory for 4 arrays of size 10, that means we will need ```4 * 10 * 8 = 320``` bytes. On the other hand,
@@ -97,7 +97,7 @@ bytes instead.
 
 Symbolic programs are more ***restricted***. When the user call ```compile``` on D, the user tells the system that only the value of
 ```D``` is needed. The intermediate values of computation, in our case ```C``` is invisible to the user.
-This allows the symbolic programs to safely re-use the memory to do in-place computaion.
+This allows the symbolic programs to safely re-use the memory to do in-place computation.
 
 Imperative programs, on the other hand, need to ***be prepared for all possible futures***. If the above programs is executed in a python console,
 there is a possibility that any of these variables could be used in the future, this prevents the system to share the memory space of these variables.
@@ -110,7 +110,7 @@ Another optimization that symbolic programs can do is operation folding. In the 
 Which is represented in the following graph. This means one GPU kernel will be executed(instead of two) if the computation runs on GPU.
 This is actually what we will do to hand crafted operations in optimized libraries such as cxxnet, caffe. Doing so will improve the computation efficiency.
 
-![Comp Graph Folded](img/comp_graph_folded.png)
+![Comp Graph Folded](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/prog_model/comp_graph_fold.png)
 
 We cannot do that in imperative programs. Because the intermediate value can be reference
 some point in the future. The reason that such optimization is possible in symbolic programs, is that we get the entire computation graph, and a clear
@@ -178,16 +178,16 @@ grad_a, grad_b = f(A=np.ones(10), B=np.ones(10)*2)
 The grad function of D generate a backward computation graph, and return a gradient node ```gA, gB```.
 They corresponds to the red nodes in the following figure.
 
-![Comp Graph Folded](img/comp_grad_graph.png)
+![Comp Graph Folded](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/prog_model/comp_graph_backward.png)
 
 What the imperative program did was actually the same as the symbolic way. It implicitly saves a backward
-computation graph in the grad closure. When we invoked the ```d.grad```, we start from ```g[D]```,
+computation graph in the grad closure. When we invoked the ```d.grad```, we start from ```d(D)```,
 backtrace the graph to compute the gradient and collect the results back.
 
 So we can find that in fact the gradient calculation in both symbolic and imperative programming follows the same
-pattern. What is the difference between the two then? Again recall the "have to prepared for all possibe futures"
+pattern. What is the difference between the two then? Again recall the "have to prepared for all possible futures"
 requirement of imperative programs. If we are making an array library that support automatic differentiation,
-we have to keep the grad closure along with the computaiton. This means all the history variables cannot be
+we have to keep the grad closure along with the computation. This means all the history variables cannot be
 garbage collected because they are referenced by variable ```d ``` via function closure.
 Now, what if when we only want to compute the value of d, but do not want the gradient value?
 
@@ -197,7 +197,7 @@ free the memory of previous results, and share the memory between inputs and out
 
 Imagine now we are not running this toy example, but doing instead a deep neural net with ```n``` layers.
 If we are only running forward pass, but not backward(gradient) pass, we will only need to allocate 2 copies of
-temperal space to store values of intermediate layers, instead of ```n``` copies of them.
+temporal space to store values of intermediate layers, instead of ```n``` copies of them.
 However because the imperative programs need to be prepared for the possible futures of getting gradient,
 the intermediate values have to be stored, which requires ```n``` copies of temporal space.
 
@@ -269,7 +269,7 @@ also falls back to the imperative way to perform the updates, while using the sy
 ### There is no Strict Boundary
 
 We have made the comparison between two programming styles. Some of the arguments made may not be strictly true, and there is no clear boundaries between
-the programing styles. For example, we can make a (JIT)compiler of python to compile imperative python programs, which gives us some of the advantage of global
+the programming styles. For example, we can make a (JIT)compiler of python to compile imperative python programs, which gives us some of the advantage of global
 information hold in the symbolic programs. However, most of the principles holds true in general, and these constraints apply when we are making a deep learning
 libraries.
 
@@ -331,19 +331,19 @@ As we can see we always have a need to write small operations and compose them t
 Libraries like caffe use hand-carfted kernels to build up these bigger blocks. Otheriwse user have to compose up smaller operations from python side.
 
 Actually, there is a third choice, that works pretty well. This is called expression template. Basically, the idea is to use template programming to
-generate genric kernels from expression tree at compile time. You can refer to the [Expression Template Tutorial](https://github.com/dmlc/mshadow/blob/master/guide/exp-template/README.md)
+generate generic kernels from expression tree at compile time. You can refer to the [Expression Template Tutorial](https://github.com/dmlc/mshadow/blob/master/guide/exp-template/README.md)
 for more details. CXXNet is a library that makes extensive use of expression template, this enables much shorter and more readable code, with matched
-peformance with hand crafted kernels.
+performance with hand crafted kernels.
 
 The difference between expression template and python kernel generation is that the expression evaluation is done at compile time of c++, with a existing type,
-so there is no additional runtime overhead. This is also in princpile possible with other statically typed language that support template,
+so there is no additional runtime overhead. This is also in principle possible with other statically typed language that support template,
 however we have only seen this trick in C++ so far.
 
 The expression template libraries creates a middle ground between python operations and hand crafted big kernels. To allow C++ users to craft efficient big
 operations by composing smaller operations together. Which is also a choice worth considering.
 
-Mix The Flavors Together
-------------------------
+Mix The Flavours Together
+-------------------------
 Now we have compared the programming models, now comes the question of which you might want to choose.
 Before we doing so, we should emphasize the the comparison made in this article may not necessary have big impact
 depending on where the problems are.
@@ -351,11 +351,11 @@ depending on where the problems are.
 Remember [Amdahl's law](https://en.wikipedia.org/wiki/Amdahl%27s_law), if you are optimizing non performance critical
 part of your problem, you won't get much of the performance gain.
 
-As we can see usually there is a trade-off between efficiency, flexiblity, engineering complexities.
+As we can see usually there is a trade-off between efficiency, flexibility, engineering complexities.
 And usually different programming styles fits into different parts of the problems.
 For example, imperative programs are more natural for parameter update, and symbolic programs for gradient calculation.
 
-What this article advocate is to ***mix*** the flavors together. Recall Amdahl's law. Sometimes the part we want to be flexible
+What this article advocate is to ***mix*** the flavours together. Recall Amdahl's law. Sometimes the part we want to be flexible
 are not necessarily performance crucial, and it is OK to be a bit sloppy to support more flexible interfaces.
 In machine learning, ensemble of different methods usually work better than a single one.
 
@@ -385,7 +385,7 @@ d = d + 1.0
 The idea is that the symbolic graphs are compiled into a function that can be executed imperatively. Whose internal is a blackbox to the user.
 This is exactly like writing c++ programs and exposing them to python, which we commonly do.
 
-However, using numpy as imperative component might be indesirable, as the parameter memory resides on GPU. A better way might be supporting a GPU compatible imperative library that interacts with symbolic compiled functions, or provide limited amount of updating syntax via update statement in symbolic programs execution.
+However, using numpy as imperative component might be undesirable, as the parameter memory resides on GPU. A better way might be supporting a GPU compatible imperative library that interacts with symbolic compiled functions, or provide limited amount of updating syntax via update statement in symbolic programs execution.
 
 ### Small and Big Operations
 
@@ -395,13 +395,13 @@ components, and use smaller operations to building up the new parts.
 
 Recall Amdahl's law, usually these new components may not be the bottleneck of computation. As the performance critical part is already optimized by
 the bigger operations, it is even OK that we do not optimize these additional small operations at all, or only do a few memory optimization instead
-of operation fusion and directly runnig them.
+of operation fusion and directly running them.
 
-### Choose your Own Flavors
+### Choose your Own Flavours
 
-As we have compare the flavors of deep learning programs. The goal of this article is to list these choices and compare their tradeoffs.
-There may not be a universal solution for all. But you can always choose your flavor, or combines the flavors you like to create
-more interesting and intellegient deep learning libraries.
+As we have compare the flavours of deep learning programs. The goal of this article is to list these choices and compare their trade-offs.
+There may not be a universal solution for all. But you can always choose your flavour, or combines the flavours you like to create
+more interesting and intelligent deep learning libraries.
 
 Contribution to this Note
 -------------------------
