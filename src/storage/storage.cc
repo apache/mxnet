@@ -5,21 +5,25 @@
 #include <mshadow/tensor.h>
 #include <dmlc/logging.h>
 #include <array>
-#include <mutex>
-#include <memory>
-#include "storage_manager.h"
-#include "naive_storage_manager.h"
-#include "pooled_storage_manager.h"
-#include "cpu_device_storage.h"
-#include "gpu_device_storage.h"
-#include "pinned_memory_storage.h"
+#include "./storage_manager.h"
+#include "./naive_storage_manager.h"
+#include "./pooled_storage_manager.h"
+#include "./cpu_device_storage.h"
+#include "./gpu_device_storage.h"
+#include "./pinned_memory_storage.h"
 #include "../common/cuda_utils.h"
-#include "../common/utils.h"
+#include "../common/lazy_alloc_array.h"
 
 namespace mxnet {
 
 // consider change storage as a pure abstract class
-struct Storage::Impl {
+class StorageImpl : public Storage {
+ public:
+  Handle Alloc(size_t size, Context ctx) override;
+  void Free(Handle handle) override;
+  virtual ~StorageImpl() = default;
+
+ private:
   static constexpr size_t kPoolThreshold = 4096 * 1024 * 1024ul;
   static constexpr size_t kMaxNumberOfDevices = Context::kMaxDevType + 1;
   static constexpr size_t kMaxNumberOfDeviceIDs = Context::kMaxDevID + 1;
@@ -43,64 +47,56 @@ struct Storage::Impl {
         LOG(FATAL) << "Unimplemented device";
     }
   }
-
-  std::array<std::array<std::unique_ptr<storage::StorageManager>,
-                        kMaxNumberOfDeviceIDs>,
-             kMaxNumberOfDevices> storage_managers;
-  std::mutex m;
+  // internal storage managers
+  std::array<common::LazyAllocArray<storage::StorageManager>,
+             kMaxNumberOfDevices> storage_managers_;
 };  // struct Storage::Impl
 
-Storage::Handle Storage::Alloc(size_t size, Context ctx) {
+Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
   // space already recycled, ignore request
   Handle hd;
   hd.ctx = ctx;
   hd.size = size;
-  {
-    std::lock_guard<std::mutex> lock{impl_->m};
-    auto&& device = impl_->storage_managers.at(ctx.dev_type);
-    auto&& device_id_it = device.at(ctx.dev_id);
-    // Allocate device if necessary.
-    if (!device_id_it) {
-      switch (ctx.dev_type) {
-        case Context::kCPU: {
-          device_id_it = common::MakeUnique<
-              Storage::Impl::CurrentStorageManager<
-              storage::CPUDeviceStorage>>();
-          break;
+  auto&& device = storage_managers_.at(ctx.dev_type);
+  storage::StorageManager *manager = device.Get(
+      ctx.dev_id, [ctx]() {
+        storage::StorageManager *ptr = nullptr;
+        switch (ctx.dev_type) {
+          case Context::kCPU: {
+            ptr = new CurrentStorageManager<storage::CPUDeviceStorage>();
+            break;
+          }
+          case Context::kCPUPinned: {
+            ptr = new CurrentStorageManager<storage::PinnedMemoryStorage>();
+            break;
+          }
+          case Context::kGPU: {
+            ptr = new CurrentStorageManager<storage::GPUDeviceStorage>();
+            break;
+          }
+          default: LOG(FATAL) <<  "Unimplemented device";
         }
-        case Context::kCPUPinned: {
-          device_id_it = common::MakeUnique<
-              Storage::Impl::CurrentStorageManager<
-              storage::PinnedMemoryStorage>>();
-          break;
-        }
-        case Context::kGPU: {
-          device_id_it = common::MakeUnique<Storage::Impl::CurrentStorageManager<
-              storage::GPUDeviceStorage>>();
-          break;
-        }
-        default:
-          LOG(FATAL) << "Unimplemented device";
-      }
-    }
-    Impl::ActivateDevice(ctx);
-    hd.dptr = device_id_it->Alloc(size);
-  }
+        return ptr;
+      });
+  this->ActivateDevice(ctx);
+  hd.dptr = manager->Alloc(size);
   return hd;
 }
 
-void Storage::Free(Storage::Handle handle) {
-  std::lock_guard<std::mutex> lock{impl_->m};
-  Impl::ActivateDevice(handle.ctx);
-  impl_->storage_managers.at(handle.ctx.dev_type)
-      .at(handle.ctx.dev_id)
-      ->Free(handle.dptr, handle.size);
+void StorageImpl::Free(Storage::Handle handle) {
+  const Context &ctx = handle.ctx;
+  auto&& device = storage_managers_.at(ctx.dev_type);
+  storage::StorageManager *maneger = device.Get(
+      ctx.dev_id, []() {
+        LOG(FATAL) <<  "Cannot Free space to a device you have not allocated";
+        return nullptr;
+      });
+  this->ActivateDevice(ctx);
+  maneger->Free(handle.dptr, handle.size);
 }
 
-Storage::~Storage() = default;
-
 std::shared_ptr<Storage> Storage::_GetSharedRef() {
-  static std::shared_ptr<Storage> inst(new Storage());
+  static std::shared_ptr<Storage> inst(new StorageImpl());
   return inst;
 }
 
@@ -108,8 +104,4 @@ Storage* Storage::Get() {
   static Storage *ptr = _GetSharedRef().get();
   return ptr;
 }
-
-Storage::Storage() : impl_{new Impl{}} {}
-
-
 }  // namespace mxnet

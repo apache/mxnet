@@ -39,16 +39,16 @@ class Storage {
    * \param ctx Context information about the device and ID.
    * \return Handle struct.
    */
-  Handle Alloc(size_t size, Context ctx);
+  virtual Handle Alloc(size_t size, Context ctx) = 0;
   /*!
    * \brief Free storage.
    * \param handle Handle struect.
    */
-  void Free(Handle handle);
+  virtual void Free(Handle handle) = 0;
   /*!
    * \brief Destructor.
    */
-  ~Storage();
+  virtual ~Storage() {}
   /*!
    * \return Storage singleton.
    */
@@ -62,15 +62,6 @@ class Storage {
    * \return A shared pointer to Storage singleton.
    */
   static std::shared_ptr<Storage> _GetSharedRef();
-
- private:
-  /*!
-   * \brief Hidden constructors.
-   */
-  Storage();
-  struct Impl;
-  std::unique_ptr<Impl> impl_;
-  DISALLOW_COPY_AND_ASSIGN(Storage);
 };  // class Storage
 }  // namespace mxnet
 #endif  // MXNET_STORAGE_H_
