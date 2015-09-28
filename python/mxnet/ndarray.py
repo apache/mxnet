@@ -1,5 +1,5 @@
 # coding: utf-8
-"""NDArray interface of mxnet"""
+"""NDArray API of mxnet."""
 from __future__ import absolute_import
 
 import ctypes
@@ -355,6 +355,8 @@ def empty(shape, ctx=None):
     out: Array
         The created NDArray.
     """
+    if isinstance(shape, int):
+        shape = (shape, )
     if ctx is None:
         ctx = Context.default_ctx
     return NDArray(handle=_new_alloc_handle(shape, ctx, False))
@@ -438,9 +440,10 @@ def load(fname):
     fname : str
         The name of the file.Can be S3 or HDFS address (remember built with S3 support).
         Example of fname:
-        - s3://my-bucket/path/my-s3-ndarray
-        - hdfs://my-bucket/path/my-hdfs-ndarray
-        - /path-to/my-local-ndarray
+
+        - `s3://my-bucket/path/my-s3-ndarray`
+        - `hdfs://my-bucket/path/my-hdfs-ndarray`
+        - `/path-to/my-local-ndarray`
 
     Returns
     -------
@@ -479,9 +482,10 @@ def save(fname, data):
     fname : str
         The name of the file.Can be S3 or HDFS address (remember built with S3 support).
         Example of fname:
-        - s3://my-bucket/path/my-s3-ndarray
-        - hdfs://my-bucket/path/my-hdfs-ndarray
-        - /path-to/my-local-ndarray
+
+        - `s3://my-bucket/path/my-s3-ndarray`
+        - `hdfs://my-bucket/path/my-hdfs-ndarray`
+        - `/path-to/my-local-ndarray`
 
     data : list of NDArray or dict of str to NDArray
         The data to be saved.

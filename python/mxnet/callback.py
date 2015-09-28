@@ -1,5 +1,7 @@
-# pylint: disable=logging-not-lazy, blacklisted-name, invalid-name
-"""model helper for knowing training status"""
+# coding: utf-8
+"""Callback functions that can be used to track various status during iteration."""
+from __future__ import absolute_import
+
 import sys
 import math
 import logging
@@ -19,10 +21,11 @@ def do_checkpoint(prefix):
     callback : function
         The callback function that can be passed as iter_end_callback to fit.
     """
-    def _callback(iter_no, s, arg, aux):
+    def _callback(iter_no, sym, arg, aux):
         """The checkpoint function."""
-        save_checkpoint(prefix, iter_no + 1, s, arg, aux)
+        save_checkpoint(prefix, iter_no + 1, sym, arg, aux)
     return _callback
+
 
 class Speedometer(object):
     """Calculate training speed in frequent
@@ -57,11 +60,12 @@ class Speedometer(object):
         if self.init:
             if count % self.frequent == 0:
                 speed = self.frequent * self.batch_size / (time.time() - self.tic)
-                logging.info("Batch [%d]\tSpeed: %.2f samples/sec" % (count, speed))
+                logging.info("Batch [%d]\tSpeed: %.2f samples/sec", count, speed)
                 self.tic = time.time()
         else:
             self.init = True
             self.tic = time.time()
+
 
 class ProgressBar(object):
     """Show a progress bar
@@ -89,7 +93,7 @@ class ProgressBar(object):
 
         filled_len = int(round(self.bar_len * count / float(self.total)))
         percents = math.ceil(100.0 * count / float(self.total))
-        bar = '=' * filled_len + '-' * (self.bar_len - filled_len)
-        sys.stdout.write('[%s] %s%s\r' % (bar, percents, '%'))
+        prog_bar = '=' * filled_len + '-' * (self.bar_len - filled_len)
+        sys.stdout.write('[%s] %s%s\r' % (prog_bar, percents, '%'))
 
 

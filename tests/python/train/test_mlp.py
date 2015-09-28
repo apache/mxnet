@@ -53,7 +53,8 @@ def test_mlp():
         ctx=[mx.cpu(i) for i in range(2)],
         num_round=num_round,
         learning_rate=0.01, wd=0.0004,
-        momentum=0.9)
+        momentum=0.9,
+        update_on_kvstore=True)
 
     logging.info('Finish traning...')
     prob = model.predict(val_dataiter)

@@ -1,5 +1,5 @@
 # pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals
-# pylint: disable=too-many-branches, too-many-statements, unused-argument
+# pylint: disable=too-many-branches, too-many-statements
 """MXNet model module"""
 from __future__ import absolute_import
 
@@ -122,6 +122,7 @@ def _train_multi_device(symbol, ctx, input_shape,
                         begin_round, end_round, optimizer,
                         train_data, eval_data=None, eval_metric=None,
                         iter_end_callback=None, epoch_end_callback=None,
+                        update_on_kvstore=False,
                         logger=None):
     """Internal training function on multiple devices.
 
@@ -172,12 +173,18 @@ def _train_multi_device(symbol, ctx, input_shape,
     epoch_end_callback: callable(iteration)
         A callback that is invoked at end of each batch
 
+    update_on_kvstore: boolean, optional
+        Whether to perform parameter update on kvstore instead of training device.
+
     logger : logging logger
         When not specified, default logger will be used.
 
     Notes
     -----
-    This function will inplace update the NDArrays in arg_parans and aux_states.
+    - This function will inplace update the NDArrays in arg_parans and aux_states.
+    - Turning update_on_kvstore on and off can affect speed of multi-gpu training.
+    - update_on_kvstore=True works well for inception type nets that contains many small weights.
+    - update_on_kvstore=False works better for Alexnet style net with bulk weights.
     """
     if logger is None:
         logger = logging
@@ -200,16 +207,14 @@ def _train_multi_device(symbol, ctx, input_shape,
     aux_blocks = [
         [x.aux_arrays[index] for x in train_execs]
         for index in range(len(train_execs[0].aux_arrays))]
-    for name, block in zip(arg_names, arg_blocks):
-        if name in arg_params:
-            for w in block:
-                arg_params[name].copyto(w)
-    for name, block in zip(aux_names, aux_blocks):
-        if name in aux_params:
-            for w in block:
-                aux_params[name].copyto(w)
+
+    for texec in train_execs:
+        texec.copy_params_from(arg_params, aux_params)
     # ky value store
     kv = kvstore.create() if num_device != 1 else None
+    if kv is None:
+        update_on_kvstore = False
+
     opt_state_blocks = []
     # If there are multiple devices, initialize the weights.
     for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
@@ -218,10 +223,19 @@ def _train_multi_device(symbol, ctx, input_shape,
             if kv:
                 kv.init(index, arg_list[0])
             # attach state direct to weight
-            opt_list = [optimizer.create_state(index, w) for w in arg_list]
-            opt_state_blocks.append(opt_list)
+            if update_on_kvstore:
+                opt_state_blocks.append(nd.zeros(arg_list[0].shape, cpu()))
+            else:
+                opt_list = [optimizer.create_state(index, w) for w in arg_list]
+                opt_state_blocks.append(opt_list)
         else:
             opt_state_blocks.append(None)
+
+    def kv_updater(index, grad, weight):
+        """Internal updater on KVstore, used when update_on_kvstore=True."""
+        optimizer.update(index, weight, grad, opt_state_blocks[index])
+    if update_on_kvstore:
+        kv.set_updater(kv_updater)
 
     # Input and output data structure
     data_index, label_index = _check_arguments(symbol)
@@ -246,7 +260,7 @@ def _train_multi_device(symbol, ctx, input_shape,
                 data[islice].copyto(target)
             # forward backward pass
             for texec, islice in zip(train_execs, slices):
-                texec.forward()
+                texec.forward(is_train=True)
                 texec.outputs[0].copyto(out_cpu_array[islice])
             for texec in train_execs:
                 texec.backward()
@@ -259,12 +273,17 @@ def _train_multi_device(symbol, ctx, input_shape,
                 if kv:
                     # push gradient, priority is negative index
                     kv.push(index, grad_list, priority=-index)
-                    # pull back the sum, to the same locations.
-                    kv.pull(index, grad_list, priority=-index)
-                opt_list = opt_state_blocks[index]
-                # optimizea
-                for w, g, state in zip(arg_list, grad_list, opt_list):
-                    optimizer.update(index, w, g, state)
+                    if update_on_kvstore:
+                        # pull back the weights
+                        kv.pull(index, arg_list, priority=-index)
+                    else:
+                        # pull back the sum gradients, to the same locations.
+                        kv.pull(index, grad_list, priority=-index)
+                if not update_on_kvstore:
+                    opt_list = opt_state_blocks[index]
+                    # optimizea
+                    for w, g, state in zip(arg_list, grad_list, opt_list):
+                        optimizer.update(index, w, g, state)
             nbatch += 1
             # epoch callback (for print purpose)
             if epoch_end_callback != None:
@@ -566,7 +585,8 @@ class FeedForward(BASE_ESTIMATOR):
         return np.concatenate(outputs)
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
-            iter_end_callback=None, epoch_end_callback=None, logger=None):
+            iter_end_callback=None, epoch_end_callback=None,
+            update_on_kvstore=False, logger=None):
         """Fit the model.
 
         Parameters
@@ -595,6 +615,9 @@ class FeedForward(BASE_ESTIMATOR):
         epoch_end_callback: callable(iteration)
             A callback that is invoked at end of each batch
             For print purpose
+
+        update_on_kvstore: boolean, optional
+            Whether to perform parameter update on kvstore instead of training device.
 
         logger : logging logger, optional
             When not specified, default logger will be used.
@@ -626,7 +649,7 @@ class FeedForward(BASE_ESTIMATOR):
                             eval_metric=eval_metric,
                             iter_end_callback=iter_end_callback,
                             epoch_end_callback=epoch_end_callback,
-                            logger=logger)
+                            update_on_kvstore=update_on_kvstore, logger=logger)
 
     def save(self, prefix, iteration=None):
         """Checkpoint the model checkpoint into file.
@@ -688,7 +711,7 @@ class FeedForward(BASE_ESTIMATOR):
     def create(symbol, X, y=None, ctx=None,
                num_round=None, optimizer='sgd', initializer=Xavier(),
                eval_data=None, eval_metric='acc', iter_end_callback=None,
-               logger=None, **kwargs):
+               update_on_kvstore=False, logger=None, **kwargs):
         """Functional style to create a model.
 
         This function will be more consistent with functional
@@ -730,10 +753,14 @@ class FeedForward(BASE_ESTIMATOR):
             A callback that is invoked at end of each iteration.
             This can be used to checkpoint model each iteration.
 
+        update_on_kvstore: boolean, optional
+            Whether to perform parameter update on kvstore instead of training device.
+
         logger : logging logger, optional
         """
         model = FeedForward(symbol, ctx=ctx, num_round=num_round,
                             optimizer=optimizer, initializer=initializer, **kwargs)
         model.fit(X, y, eval_data=eval_data, eval_metric=eval_metric,
-                  iter_end_callback=iter_end_callback, logger=logger)
+                  iter_end_callback=iter_end_callback,
+                  update_on_kvstore=update_on_kvstore, logger=logger)
         return model

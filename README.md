@@ -5,19 +5,18 @@
 [![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.readthedocs.org/en/latest/)
 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)]()
 
-MXNet is a deep learning framework designed for both *efficiency* and *flexibility*. It
-aims for people
+MXNet is a deep learning framework designed for both *efficiency* and *flexibility*.
+It allows you to mix the [flavors](http://mxnet.readthedocs.org/en/latest/program_model.html) of
+deep learning programs together to maximize the efficiency and your productivity.
 
-- Who want to apply deep learning for applications. One can use only several lines of codes
-  to create and train a neural network with high efficiency. Check our
-  [examples](example) for more details.
-- Who want to use it for research on deep learning. MXNet provides flexible
-  programming interface for rapid prototyping. For example, check our
-  [tutorials for Python](http://mxnet.readthedocs.org/en/latest/python/tutorial.html)
+What's New
+----------
+* [Note on Programming Models for Deep Learning](http://mxnet.readthedocs.org/en/latest/program_model.html)
 
 Contents
 --------
 * [Documentation](http://mxnet.readthedocs.org/en/latest/)
+* [Code Examples](example)
 * [Build Instruction](doc/build.md)
 * [Features](#features)
 * [License](#license)
