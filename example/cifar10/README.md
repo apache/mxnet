@@ -11,8 +11,8 @@ run `cifar.py`:
 | | 1 GPU | 2 GPUs | 4 GPUs |
 | --- | --- | --- | --- |
 | cxxnet | 362 img/sec | 675 img/sec | 1282 img/sec |
-| mxnet | 420 img/sec | 804 img/sec | 1436 img/sec |
-| mxnet + cudnn v3 | 835 img/sec | 1525 img/sec | 2270 img/sec |
+| mxnet | 467 img/sec | 923 img/sec | 1820 img/sec |
+| mxnet + cudnn v3 | 842 img/sec | 1640 img/sec | 2943 img/sec |
 
 sample output
 
