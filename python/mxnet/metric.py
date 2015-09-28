@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, pointless-string-statement
 """Online evaluation metric module."""
 from .base import string_types
 import numpy
@@ -52,8 +52,9 @@ class Accuracy(EvalMetric):
         self.sum_metric += numpy.sum(py == label)
         self.num_inst += label.size
 
+"""
 class LogLoss(EvalMetric):
-    """Calculate logloss"""
+    # remove because it because it is too slow
     def __init__(self):
         self.eps = 1e-15
         super(LogLoss, self).__init__('logloss')
@@ -68,6 +69,7 @@ class LogLoss(EvalMetric):
             p = max(min(p, 1 - self.eps), self.eps)
             self.sum_metric += -numpy.log(p)
         self.num_inst += label.size
+"""
 
 class CustomMetric(EvalMetric):
     """Custom evaluation metric that takes a NDArray function.
@@ -126,7 +128,5 @@ def create(metric):
         raise TypeError('metric should either be callable or str')
     if metric == 'acc' or metric == 'accuracy':
         return Accuracy()
-    elif metric == 'logloss':
-        return LogLoss()
     else:
         raise ValueError('Cannot find metric %s' % metric)
