@@ -54,26 +54,6 @@ class Accuracy(EvalMetric):
         self.sum_metric += numpy.sum(pred_label == label)
         self.num_inst += label.size
 
-# pylint: disable=pointless-string-statement
-"""
-class LogLoss(EvalMetric):
-    # remove because it because it is too slow
-    def __init__(self):
-        self.eps = 1e-15
-        super(LogLoss, self).__init__('logloss')
-
-    def update(self, label, pred):
-        # pylint: disable=invalid-name
-        pred = pred.asnumpy()
-        label = label.asnumpy().astype('int32')
-        for i in range(label.size):
-            p = pred[i][label[i]]
-            assert(numpy.isnan(p) == False)
-            p = max(min(p, 1 - self.eps), self.eps)
-            self.sum_metric += -numpy.log(p)
-        self.num_inst += label.size
-"""
-# pylint: enable=pointless-string-statement
 
 class CustomMetric(EvalMetric):
     """Custom evaluation metric that takes a NDArray function.

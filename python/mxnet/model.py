@@ -122,7 +122,7 @@ def _train_multi_device(symbol, ctx, input_shape,
                         begin_round, end_round, optimizer,
                         train_data, eval_data=None, eval_metric=None,
                         iter_end_callback=None, epoch_end_callback=None,
-                        update_on_kvstore=False,
+                        update_on_kvstore=None,
                         logger=None):
     """Internal training function on multiple devices.
 
@@ -183,8 +183,9 @@ def _train_multi_device(symbol, ctx, input_shape,
     -----
     - This function will inplace update the NDArrays in arg_parans and aux_states.
     - Turning update_on_kvstore on and off can affect speed of multi-gpu training.
-    - update_on_kvstore=True works well for inception type nets that contains many small weights.
-    - update_on_kvstore=False works better for Alexnet style net with bulk weights.
+      - It is auto selected by default.
+      - update_on_kvstore=True works well for inception type nets that contains many small weights.
+      - update_on_kvstore=False works better for Alexnet style net with bulk weights.
     """
     if logger is None:
         logger = logging
@@ -210,10 +211,17 @@ def _train_multi_device(symbol, ctx, input_shape,
 
     for texec in train_execs:
         texec.copy_params_from(arg_params, aux_params)
+
     # ky value store
     kv = kvstore.create() if num_device != 1 else None
     if kv is None:
         update_on_kvstore = False
+    else:
+        # auto decide update_on_kvstore
+        if update_on_kvstore is None:
+            max_size = max(np.prod(param.shape) for param in arg_params.values())
+            update_on_kvstore = max_size < 1024 * 1024 * 16
+            logging.info('Auto-select update_on_kvstore=%s', str(update_on_kvstore))
 
     opt_state_blocks = []
     # If there are multiple devices, initialize the weights.
@@ -586,7 +594,7 @@ class FeedForward(BASE_ESTIMATOR):
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
             iter_end_callback=None, epoch_end_callback=None,
-            update_on_kvstore=False, logger=None):
+            update_on_kvstore=None, logger=None):
         """Fit the model.
 
         Parameters
@@ -618,6 +626,7 @@ class FeedForward(BASE_ESTIMATOR):
 
         update_on_kvstore: boolean, optional
             Whether to perform parameter update on kvstore instead of training device.
+            By default, the trainer will automatically decide the policy.
 
         logger : logging logger, optional
             When not specified, default logger will be used.
@@ -711,7 +720,7 @@ class FeedForward(BASE_ESTIMATOR):
     def create(symbol, X, y=None, ctx=None,
                num_round=None, optimizer='sgd', initializer=Xavier(),
                eval_data=None, eval_metric='acc', iter_end_callback=None,
-               update_on_kvstore=False, logger=None, **kwargs):
+               update_on_kvstore=None, logger=None, **kwargs):
         """Functional style to create a model.
 
         This function will be more consistent with functional
@@ -755,6 +764,7 @@ class FeedForward(BASE_ESTIMATOR):
 
         update_on_kvstore: boolean, optional
             Whether to perform parameter update on kvstore instead of training device.
+            By default, the trainer will automatically decide the policy.
 
         logger : logging logger, optional
         """
