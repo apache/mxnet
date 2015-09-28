@@ -181,7 +181,7 @@ They corresponds to the red nodes in the following figure.
 ![Comp Graph Folded](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/prog_model/comp_graph_backward.png)
 
 What the imperative program did was actually the same as the symbolic way. It implicitly saves a backward
-computation graph in the grad closure. When we invoked the ```d.grad```, we start from ```g[D]```,
+computation graph in the grad closure. When we invoked the ```d.grad```, we start from ```d(D)```,
 backtrace the graph to compute the gradient and collect the results back.
 
 So we can find that in fact the gradient calculation in both symbolic and imperative programming follows the same
@@ -197,7 +197,7 @@ free the memory of previous results, and share the memory between inputs and out
 
 Imagine now we are not running this toy example, but doing instead a deep neural net with ```n``` layers.
 If we are only running forward pass, but not backward(gradient) pass, we will only need to allocate 2 copies of
-temperal space to store values of intermediate layers, instead of ```n``` copies of them.
+temporal space to store values of intermediate layers, instead of ```n``` copies of them.
 However because the imperative programs need to be prepared for the possible futures of getting gradient,
 the intermediate values have to be stored, which requires ```n``` copies of temporal space.
 
