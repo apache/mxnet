@@ -8,6 +8,8 @@ from .base import MXNetError
 from . import base
 from . import ndarray
 from . import name
+# use mx.sym as short for symbol
+from . import symbol as sym
 from . import symbol
 # use mx.kv as short for kvstore
 from . import kvstore as kv
