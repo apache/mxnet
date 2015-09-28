@@ -315,8 +315,7 @@ There are two types of optimization that can be done on the computation graph
 - Operator fusion, to detect subgraph pattern such as the sigmoid and fuse them into a bigger operation kernel.
 The memory allocation optimization was actually not restricted to small operations graphs, but can also be applied to bigger operations graph as well.
 
-However these optimization may not be essential for bigger operation libraries like cxxnet, caffe. As you never find the compilation step in them.
-Actually there is a ```compilation step```, that basically translate the layers into a fixed forward, backprop execution plan, by running each operation one by one.
+However these optimization may not be essential for bigger operation libraries like cxxnet, caffe. As you never find the compilation step in them. Actually there is a (dumb) ```compilation step``` in these libraries, that basically translate the layers into a fixed forward, backprop execution plan, by running each operation one by one.
 
 For computation graphs with smaller operations, these optimizations are crucial for performance. Because the operations are small, there are many subgraph patterns
 that can be matched. Also because the final generated operations may not be able to enumerated, an explicit recompilation of the kernels is required, as opposed to
@@ -386,9 +385,7 @@ d = d + 1.0
 The idea is that the symbolic graphs are compiled into a function that can be executed imperatively. Whose internal is a blackbox to the user.
 This is exactly like writing c++ programs and exposing them to python, which we commonly do.
 
-However, using numpy as imperative component might be indesirable, as the parameter memory resides on GPU. A better way might be supporting
-a GPU compatible imperative library that interacts with symbolic compiled functions, or provide limited amount of updating syntax via
-update statement in symbolic programs execution.
+However, using numpy as imperative component might be indesirable, as the parameter memory resides on GPU. A better way might be supporting a GPU compatible imperative library that interacts with symbolic compiled functions, or provide limited amount of updating syntax via update statement in symbolic programs execution.
 
 ### Small and Big Operations
 
@@ -408,5 +405,5 @@ more interesting and intellegient deep learning libraries.
 
 Contribution to this Note
 -------------------------
-This note is part of our will to not only open-source system design notes for deep learning libraries.
+This note is part of our effort to open-source system design notes for deep learning libraries.
 You are more welcomed to contribute to this Note, by submitting a pull request.
