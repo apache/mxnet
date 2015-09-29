@@ -94,10 +94,8 @@ class Xavier(Initializer):
     """Initialize the weight with Xavier initialization scheme."""
 
     def _init_weight(self, _, arr):
-        # [in, out, height, with] for conv
-        # [in, out] for fullc
         shape = arr.shape
-        fan_in, fan_out = shape[1], shape[0]
-        scale = np.sqrt(6. / (fan_in + fan_out))
+        fan_in, fan_out = np.prod(shape[1:]), shape[0]
+        scale = np.sqrt(3. / (fan_in + fan_out))
         random.uniform(-scale, scale, out=arr)
 
