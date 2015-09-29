@@ -1,5 +1,5 @@
-Symbolic Construction and Execution in Pictures
-===============================================
+Symbolic Configuration and Execution in Pictures
+================================================
 This is a self-contained tutorial that explains the Symbolic construction and execution in pictures.
 You are recommend to read this together with [Symbolic API](symbol.md).
 
