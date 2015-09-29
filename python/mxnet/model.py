@@ -13,7 +13,7 @@ from . import optimizer as opt
 from . import metric
 from . import kvstore
 from .context import Context, cpu
-from .initializer import Xavier
+from .initializer import Uniform
 
 
 BASE_ESTIMATOR = object
@@ -302,6 +302,9 @@ def _train_multi_device(symbol, ctx, input_shape,
                     epoch_end_callback(nbatch)
             # evaluate at end, so out_cpu_array can lazy copy
             eval_metric.update(label, out_cpu_array)
+            if nbatch % 20 == 0:
+                name, value = eval_metric.get()
+                logger.info('Batch[%d] Train-%s=%f', nbatch, name, value)
         # reset training data after iteration finish
         train_data.reset()
         name, value = eval_metric.get()
@@ -463,7 +466,7 @@ class FeedForward(BASE_ESTIMATOR):
     """
     def __init__(self, symbol, ctx=None,
                  num_round=None, optimizer='sgd',
-                 initializer=Xavier(),
+                 initializer=Uniform(0.01),
                  numpy_batch_size=128,
                  arg_params=None, aux_params=None,
                  allow_extra_params=False,
@@ -718,7 +721,7 @@ class FeedForward(BASE_ESTIMATOR):
 
     @staticmethod
     def create(symbol, X, y=None, ctx=None,
-               num_round=None, optimizer='sgd', initializer=Xavier(),
+               num_round=None, optimizer='sgd', initializer=Uniform(0.01),
                eval_data=None, eval_metric='acc', iter_end_callback=None,
                update_on_kvstore=None, logger=None, **kwargs):
         """Functional style to create a model.
