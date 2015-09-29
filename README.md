@@ -16,7 +16,7 @@ What's New
 
 Contents
 --------
-* [Documentation](http://mxnet.readthedocs.org/en/latest/)
+* [Documentation and Tutorials](http://mxnet.readthedocs.org/en/latest/)
 * [Open Source Design Notes](http://mxnet.readthedocs.org/en/latest/#open-source-design-notes)
 * [Code Examples](example)
 * [Build Instruction](doc/build.md)

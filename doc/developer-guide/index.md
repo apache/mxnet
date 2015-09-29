@@ -9,16 +9,15 @@ Overview of the Design
 ----------------------
 ![System Overview](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/system/overview.png)
 
-The diagram below shows major modules of mxnet, and how do they interact with each other.
-Below are descriptions of each module.
+The above shows major modules of mxnet, and how do they interact with each other. The modules are
 - Runtime Dependency Engine: Schedules and executes the operations according to their read/write dependency.
 - Storage Allocator: Efficiently allocate and recycles memory blocks for GPU and CPU.
 - Resource Manager: Manage global resources such as random number generator, temporal space.
 - NDArray: Dynamic asynchronize n-dimensional arrays, provide flexible imperative programs for MXNet.
-- Symbolic Execution: Static symbolic graph executor, provide efficient neural net and symbolic graph execution and optimization.
+- Symbolic Execution: Static symbolic graph executor, provide efficient symbolic graph execution and optimization.
 - Operator: Operators that defines static forward and gradient calculation(backprop).
 - Symbol Construction: Symbolic construction, provide a way to construct computation graph(net configuration)
-- KVStore: key-value store interface for easy parameter synchronizations.
+- KVStore: Key-value store interface for easy parameter synchronizations.
 - Data Loading(IO): Efficient distributed data loading and augmentation.
 
 How to Read the Code
@@ -32,7 +31,7 @@ How to Read the Code
 Most modules are mostly self-contained, with interface dependency on engine.
 So you are free to pick the one you are interested in, and read that part.
 
-### Analogy to CXXNet/Caffe
+### Analogy to CXXNet
 - The Symbolic Execution can be viewed as neural net execution(forward, backprop) with more optimizations.
 - The Operator can be viewed as Layers, but need to pass in weights and bias.
 	- It also contains more(optional) interface to further optimize memory usage.
@@ -48,12 +47,13 @@ So you are free to pick the one you are interested in, and read that part.
 Documents of Each Module
 ------------------------
 * [Runtime Dependency Engine](engine.md)
-* [Operator](operator.md)
+* [Operators](operator.md)
 
 
 Open Source Design Notes
 ------------------------
-* [Programming Models for Deep Learning](../program_model.md) compares various programming models, which motivates the current design.
+* [Programming Models for Deep Learning](../program_model.md)
+	- Compares various programming models, which motivates the current design.
 
 
 List of Other Resources

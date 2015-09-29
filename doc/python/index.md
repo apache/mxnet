@@ -11,6 +11,8 @@ There are three types of documents you can find about mxnet.
 Tutorials
 ---------
 * [Python Overview Tutorial](tutorial.md)
+* [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md)
+
 
 Python API Documents
 --------------------
