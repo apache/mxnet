@@ -21,7 +21,7 @@ Machine: Dual Xeon E5-2680 2.8GHz, GTX 980, Ubuntu 14.0, GCC 4.8, MKL, CUDA
 
 * AlexNet
 
-|                  | 1 x GTX 980 | 2 x GTX 980  | 3 x GTX 980  |
+|                  | 1 x GTX 980 | 2 x GTX 980  | 4 x GTX 980  |
 | ---------------- | ----------- | ------------ | ------------ |
 | ```alexnet.py``` | 527 img/sec | 1030 img/sec | 1413 img/sec |
 | cxxnet           | 256 img/sec | 492 img/sec  | 914 img/sec  |
@@ -31,7 +31,7 @@ For AlexNet, single model + single center test top-5 accuracy will be around 81%
 
 * Inception-BN
 
-|                    | 1 x GTX 980           | 2 x GTX 980            | 3 x GTX 980             |
+|                    | 1 x GTX 980           | 2 x GTX 980            | 4 x GTX 980             |
 | ------------------ | --------------------- | ---------------------- | ----------------------- |
 | ```inception.py``` | 97 img/sec (batch 32) | 178 img/sec (batch 64) | 357 img/sec (batch 128) |
 | cxxnet             | 57 img/sec (batch 16) | 112 img/sec (batch 32) | 224 img/sec (batch 64)  |
