@@ -28,4 +28,4 @@ from . import visualization as viz
 from . import callback
 from . import misc
 
-__version__ = "0.1.0"
+__version__ = base.__version__

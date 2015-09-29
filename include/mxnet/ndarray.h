@@ -467,10 +467,10 @@ struct NDArrayFunctionReg
    * \param fsetvalue function body to set
    * \return ref to the registered entry, used to set properties
    */
-  inline NDArrayFunctionReg &set_function(void fsetvalue(const real_t &rhs,
-                                                         NDArray *out)) {
+  inline NDArrayFunctionReg &set_function(void (*fsetvalue)(const real_t &rhs,
+                                                            NDArray *out)) {
     body = [fsetvalue] (NDArray **used_vars, real_t *s, NDArray **mutate_vars) {
-      fsetvalue(s[0], mutate_vars[0]);
+      (*fsetvalue)(s[0], mutate_vars[0]);
     };
     num_mutate_vars = 1; num_scalars = 1;
     this->add_argument("src", "real_t", "Source input to the function.");
@@ -482,12 +482,12 @@ struct NDArrayFunctionReg
    * \param fbinary function body to set
    * \return ref to the registered entry, used to set properties
    */
-  inline NDArrayFunctionReg &set_function(void fbinary(const NDArray &lhs,
-                                                       const NDArray &rhs,
-                                                       NDArray *out)) {
+  inline NDArrayFunctionReg &set_function(void (*fbinary)(const NDArray &lhs,
+                                                          const NDArray &rhs,
+                                                          NDArray *out)) {
     body = [fbinary] (NDArray **used_vars,
                       real_t *s, NDArray **mutate_vars) {
-      fbinary(*used_vars[0], *used_vars[1], mutate_vars[0]);
+      (*fbinary)(*used_vars[0], *used_vars[1], mutate_vars[0]);
     };
     num_use_vars = 2; num_mutate_vars = 1;
     type_mask = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
@@ -501,12 +501,12 @@ struct NDArrayFunctionReg
    * \param fscalar function body to set
    * \return ref to the registered entry, used to set properties
    */
-  inline NDArrayFunctionReg &set_function(void fscalar(const NDArray &lhs,
-                                                       const real_t &rhs,
-                                                       NDArray *out)) {
+  inline NDArrayFunctionReg &set_function(void (*fscalar)(const NDArray &lhs,
+                                                          const real_t &rhs,
+                                                          NDArray *out)) {
     body = [fscalar] (NDArray **used_vars,
                       real_t *s, NDArray **mutate_vars) {
-      fscalar(*used_vars[0], s[0], mutate_vars[0]);
+      (*fscalar)(*used_vars[0], s[0], mutate_vars[0]);
     };
     num_use_vars = 1; num_mutate_vars = 1; num_scalars = 1;
     type_mask = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
@@ -520,11 +520,11 @@ struct NDArrayFunctionReg
    * \param funary function body to set
    * \return ref to the registered entry, used to set properties
    */
-  inline NDArrayFunctionReg &set_function(void funary(const NDArray &src,
-                                                      NDArray *out)) {
+  inline NDArrayFunctionReg &set_function(void (*funary)(const NDArray &src,
+                                                         NDArray *out)) {
     body = [funary] (NDArray **used_vars,
                      real_t *s, NDArray **mutate_vars) {
-      funary(*used_vars[0], mutate_vars[0]);
+      (*funary)(*used_vars[0], mutate_vars[0]);
     };
     num_use_vars = 1; num_mutate_vars = 1;
     type_mask = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;

@@ -3,12 +3,11 @@
 """ ctypes library of mxnet and helper functions """
 from __future__ import absolute_import
 
-import os
 import sys
 import ctypes
-import platform
 import numpy as np
 import atexit
+from . import libinfo
 
 __all__ = ['MXNetError']
 #----------------------------
@@ -30,43 +29,16 @@ class MXNetError(Exception):
     """Error that will be throwed by all mxnet functions"""
     pass
 
-
-def find_lib_path():
-    """Find MXNet dynamic library files.
-
-    Returns
-    -------
-    lib_path : list(string)
-        List of all found path to the libraries
-    """
-    curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-    api_path = os.path.join(curr_path, '../../lib/')
-    dll_path = [curr_path, api_path]
-    if os.name == 'nt':
-        if platform.architecture()[0] == '64bit':
-            dll_path.append(os.path.join(api_path, '../windows/x64/Release/'))
-        else:
-            dll_path.append(os.path.join(api_path, '../windows/Release/'))
-    if os.name == 'nt':
-        dll_path = [os.path.join(p, 'mxnet.dll') for p in dll_path]
-    else:
-        dll_path = [os.path.join(p, 'libmxnet.so') for p in dll_path]
-    lib_path = [p for p in dll_path if os.path.exists(p) and os.path.isfile(p)]
-    if len(lib_path) == 0:
-        raise MXNetError('Cannot find find the files.\n' +
-                         'List of candidates:\n' + str('\n'.join(dll_path)))
-    return lib_path
-
-
 def _load_lib():
     """Load libary by searching possible path."""
-    lib_path = find_lib_path()
+    lib_path = libinfo.find_lib_path()
     lib = ctypes.cdll.LoadLibrary(lib_path[0])
     # DMatrix functions
     lib.MXGetLastError.restype = ctypes.c_char_p
     return lib
 
-
+# version number
+__version__ = libinfo.__version__
 # library instance of mxnet
 _LIB = _load_lib()
 
