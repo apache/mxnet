@@ -69,6 +69,4 @@ bin
 *.deps
 *.cache
 *.exp
-*.lib
-*.dll
 mxnet.egg-info/
