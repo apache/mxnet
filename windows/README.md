@@ -16,7 +16,10 @@ Build
 
 2. Switch the compile mode to Release and x64.
 
-3. If you have MKL, please modify the path
+3. If you have MKL, please modify the include/library configs and set three preprocess macro to:
+  - MSHADOW_USE_CBLAS=0
+  - MSHADOW_USE_MKL=1
+  - USE_STATIC_MKL=1
 
 4. Modify the cuda device compute capability defined in the settings (`mxnet properties` -> `CUDA C/C++` -> `Device` -> `Code Generation`) to your GPU's compute capability (such as compute_30,sm_30). You can look up for your GPU's compute capability in https://en.wikipedia.org/wiki/CUDA . Some general GPUs' compute capabilities are listed below.
 
