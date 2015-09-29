@@ -51,3 +51,8 @@ Everyone is more than welcome to contribute. It is a way to make the project bet
 License
 -------
 © Contributors, 2015. Licensed under an [Apache-2.0](https://github.com/dmlc/mxnet/blob/master/LICENSE) license.
+
+
+History
+-------
+MXNet is initiated and designed in collaboration by authors from [cxxnet](https://github.com/dmlc/cxxnet), [minerva](https://github.com/dmlc/minerva) and [purine2](https://github.com/purine/purine2). The project reflects what we have learnt from the past projects. It combines important flavour of the existing projects, being efficient, flexible and memory efficient.
