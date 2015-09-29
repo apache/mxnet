@@ -10,7 +10,7 @@ graph that describes the need of computation. The following picture is how we co
 
 ![Symbol Compose](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/symbol/compose_basic.png)
 
-- The [mxnet.symbol.Variable](symbol.md#mxnet.symbol.Variable) function creates argument nodes that represents inputs to the computation.
+- The ```mxnet.symbol.Variable``` function creates argument nodes that represents inputs to the computation.
 - The Symbol is overloaded with basic element-wise arithmetic operations. 
 
 Configure Neural Nets
@@ -42,7 +42,7 @@ You can call ```Executor.Forward``` to get the output results, given the binded 
 
 Bind Multiple Outputs
 ---------------------
-You can use [mx.symbol.Group](symbol.md#mxnet.symbol.Group) to group symbols together then bind them to 
+You can use ```mx.symbol.Group``` to group symbols together then bind them to 
 get outputs of both.
 
 ![MultiOut](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/symbol/executor_multi_out.png)
@@ -61,7 +61,7 @@ will give you the corresponding gradients.
 Simple Bind Interface for Neural Nets
 -------------------------------------
 Sometimes it is tedious to pass the argument NDArrays to the bind function. Especially when you are binding a big
-graph like neural nets. [Symbol.simple_bind](symbol.md#mxnet.symbol.Symbol.simple_bind) provides a way to simplify
+graph like neural nets. ```Symbol.simple_bind``` provides a way to simplify
 the procedure. You only need to specify input data shapes, and the function will allocate the arguments, and bind
 the Executor for you.
 
