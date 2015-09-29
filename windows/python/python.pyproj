@@ -1,0 +1,106 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{1fc98fc2-84c9-4253-85b5-7bcc90d8f2e4}</ProjectGuid>
+    <ProjectHome>..\..\</ProjectHome>
+    <StartupFile>tests\python\test_tutorial.py</StartupFile>
+    <SearchPath />
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId>{9a7a9026-48c1-4688-9d5d-e5699d47d074}</InterpreterId>
+    <InterpreterVersion>2.7</InterpreterVersion>
+    <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+    <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="dmlc-core\doc\conf.py" />
+    <Compile Include="dmlc-core\doc\sphinx_util.py" />
+    <Compile Include="dmlc-core\scripts\lint.py" />
+    <Compile Include="dmlc-core\tracker\dmlc_local.py" />
+    <Compile Include="dmlc-core\tracker\dmlc_mpi.py" />
+    <Compile Include="dmlc-core\tracker\dmlc_sge.py" />
+    <Compile Include="dmlc-core\tracker\dmlc_yarn.py" />
+    <Compile Include="dmlc-core\tracker\tracker.py" />
+    <Compile Include="dmlc-core\yarn\run_hdfs_prog.py" />
+    <Compile Include="doc\conf.py" />
+    <Compile Include="doc\sphinx_util.py" />
+    <Compile Include="example\cifar10\cifar10.py" />
+    <Compile Include="example\imagenet\alexnet.py" />
+    <Compile Include="example\imagenet\data.py" />
+    <Compile Include="example\mnist\data.py" />
+    <Compile Include="example\mnist\lenet.py" />
+    <Compile Include="example\mnist\mlp.py" />
+    <Compile Include="example\python-howto\data_iter.py" />
+    <Compile Include="example\python-howto\multiple_outputs.py" />
+    <Compile Include="python\mxnet\base.py" />
+    <Compile Include="python\mxnet\callback.py" />
+    <Compile Include="python\mxnet\context.py" />
+    <Compile Include="python\mxnet\executor.py" />
+    <Compile Include="python\mxnet\initializer.py" />
+    <Compile Include="python\mxnet\io.py" />
+    <Compile Include="python\mxnet\kvstore.py" />
+    <Compile Include="python\mxnet\libinfo.py" />
+    <Compile Include="python\mxnet\metric.py" />
+    <Compile Include="python\mxnet\misc.py" />
+    <Compile Include="python\mxnet\model.py" />
+    <Compile Include="python\mxnet\name.py" />
+    <Compile Include="python\mxnet\ndarray.py" />
+    <Compile Include="python\mxnet\optimizer.py" />
+    <Compile Include="python\mxnet\random.py" />
+    <Compile Include="python\mxnet\symbol.py" />
+    <Compile Include="python\mxnet\visualization.py" />
+    <Compile Include="python\mxnet\__init__.py" />
+    <Compile Include="python\setup.py" />
+    <Compile Include="tests\python\common\get_data.py" />
+    <Compile Include="tests\python\common\models.py" />
+    <Compile Include="tests\python\test_tutorial.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="tests\python\train\common.py" />
+    <Compile Include="tests\python\train\test_conv.py" />
+    <Compile Include="tests\python\train\test_mlp.py" />
+    <Compile Include="tests\python\unittest\common.py" />
+    <Compile Include="tests\python\unittest\test_bind.py" />
+    <Compile Include="tests\python\unittest\test_infer_shape.py" />
+    <Compile Include="tests\python\unittest\test_io.py" />
+    <Compile Include="tests\python\unittest\test_kvstore.py" />
+    <Compile Include="tests\python\unittest\test_ndarray.py" />
+    <Compile Include="tests\python\unittest\test_operator.py" />
+    <Compile Include="tests\python\unittest\test_random.py" />
+    <Compile Include="tests\python\unittest\test_symbol.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="dmlc-core\" />
+    <Folder Include="dmlc-core\doc" />
+    <Folder Include="dmlc-core\scripts" />
+    <Folder Include="dmlc-core\tracker" />
+    <Folder Include="dmlc-core\yarn" />
+    <Folder Include="doc" />
+    <Folder Include="example\" />
+    <Folder Include="example\cifar10" />
+    <Folder Include="example\imagenet" />
+    <Folder Include="example\mnist" />
+    <Folder Include="example\python-howto" />
+    <Folder Include="python" />
+    <Folder Include="python\mxnet" />
+    <Folder Include="tests\" />
+    <Folder Include="tests\python\" />
+    <Folder Include="tests\python\common" />
+    <Folder Include="tests\python\train" />
+    <Folder Include="tests\python\unittest" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="{9a7a9026-48c1-4688-9d5d-e5699d47d074}\2.7" />
+  </ItemGroup>
+  <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />
+</Project>

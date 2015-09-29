@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 import os
 import platform
+solution_configuration = "Release"
 
 def find_lib_path():
     """Find MXNet dynamic library files.
@@ -17,9 +18,9 @@ def find_lib_path():
     dll_path = [curr_path, api_path]
     if os.name == 'nt':
         if platform.architecture()[0] == '64bit':
-            dll_path.append(os.path.join(api_path, '../../windows/x64/Release/'))
+            dll_path.append(os.path.join(curr_path, '../../windows/x64', solution_configuration))
         else:
-            dll_path.append(os.path.join(api_path, '../../windows/Release/'))
+            dll_path.append(os.path.join(curr_path, '../../windows', solution_configuration))
     if os.name == 'nt':
         dll_path = [os.path.join(p, 'mxnet.dll') for p in dll_path]
     else:

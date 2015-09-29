@@ -61,3 +61,14 @@ mshadow
 data
 recommonmark
 bin
+
+# msvc
+*.pdb
+*.sdf
+*.opensdf
+*.deps
+*.cache
+*.exp
+*.lib
+*.dll
+mxnet.egg-info/
