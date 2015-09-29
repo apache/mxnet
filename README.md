@@ -9,13 +9,15 @@ MXNet is a deep learning framework designed for both *efficiency* and *flexibili
 It allows you to mix the [flavours](http://mxnet.readthedocs.org/en/latest/program_model.html) of
 deep learning programs together to maximize the efficiency and your productivity.
 
+
 What's New
 ----------
 * [Note on Programming Models for Deep Learning](http://mxnet.readthedocs.org/en/latest/program_model.html)
 
 Contents
 --------
-* [Documentation](http://mxnet.readthedocs.org/en/latest/)
+* [Documentation and Tutorials](http://mxnet.readthedocs.org/en/latest/)
+* [Open Source Design Notes](http://mxnet.readthedocs.org/en/latest/#open-source-design-notes)
 * [Code Examples](example)
 * [Build Instruction](doc/build.md)
 * [Features](#features)
@@ -25,8 +27,8 @@ Features
 --------
 * To Mix and Maximize
   - Mix all flavours of programming models to maximize flexibility and efficiency.
-* Lightweight and scalable
-  - Minimum build dependency, scales to multi-GPU and ready toward distributed.
+* Lightweight, scalable and memory efficient.
+  - Minimum build dependency, scales to multi-GPUs with very low memory usage.
 * Auto parallelization
   - Write numpy-style ndarray GPU programs, which will be automatically parallelized.
 * Language agnostic

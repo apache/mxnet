@@ -7,6 +7,9 @@ MXNet Python Symbolic API
 * [Symbol Object Document](#mxnet.symbol.Symbol) gives API reference to the Symbol Object
 * [Execution API Reference](#execution-api-reference) tell us on what executor can do.
 
+You are also highly encouraged to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md)
+with this document.
+
 How to Compose Symbols
 ----------------------
 The symbolic API provides a way for you to configure the computation graphs.

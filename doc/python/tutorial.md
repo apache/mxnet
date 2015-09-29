@@ -344,6 +344,9 @@ to get the gradient.
 ```
 The [model API](../../python/mxnet/model.py) is a thin wrapper around the symbolic executors to support neural net training.
 
+You are also highly encouraged to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md),
+which provides a detailed explanation of concepts in pictures.
+
 ### How Efficient is Symbolic API
 
 In short, they design to be very efficienct in both memory and runtime.
@@ -357,7 +360,7 @@ utilization.
 The coarse grained operators are equivalent to cxxnet layers, which are
 extremely efficient.  We also provide fine grained operators for more flexible
 composition. Because we are also doing more inplace memory allocation, mxnet can
-be ***more memory efficient*** than cxxnet/caffe, and gets to same runtime, with
+be ***more memory efficient*** than cxxnet, and gets to same runtime, with
 greater flexiblity.
 
 ## Distributed Key-value Store

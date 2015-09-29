@@ -13,13 +13,26 @@ User Guide
 * [Python Package Document](python/index.md)
 * [Frequently Asked Questions](faq.md)
 
+
 Developer Guide
 ---------------
-* [Programming Models for Deep Learning](program_model.md)
 * [Developer Documents](developer-guide/index.md)
 * [Environment Variables for MXNet](env_var.md)
 * [Contributor Guideline](contribute.md)
 * [Doxygen Version of C++ API](https://mxnet.readthedocs.org/en/latest/doxygen)
+
+
+Open Source Design Notes
+------------------------
+This section contains the design document and notes we made for mxnet system design and deep learning 
+libraries in general. We believe that open sourcing the system design note, its motivations and choices
+can benefit general audience, for those who uses deep learning and who builds deep learning systems.
+
+This section will be updated with self-contained design notes on various aspect of deep learning systems,
+in terms of abstraction, optimization and trade-offs.
+
+* [Programming Models for Deep Learning](program_model.md)
+
 
 Indices and tables
 ------------------
