@@ -24,6 +24,8 @@ The committers are the granted write access to the project.
   - Naiyan is the creator of static symbolic graph module of mxnet.
 * [Mingjie Wang](https://github.com/jermainewang)
   - Mingjie is the initiator, and contributes the design of the dependency engine.
+* [Chuntao Hong](https://github.com/hjk41)
+  - Chuntao is the initiator and provides the initial design of engine.
 
 ### Become a Comitter
 MXNet is a opensource project and we are actively looking for new comitters
