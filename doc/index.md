@@ -1,6 +1,7 @@
 MXNet Documentation
 ===================
-This is document for mxnet, an efficient and flexible distributed framework for deep learning.
+[MXNet](https://github.com/dmlc/mxnet) is a deep learning framework designed for both *efficiency* and *flexibility*.
+It allows you to mix the flavours of deep learning programs together to maximize the efficiency and your productivity.
 
 How to Get Started
 ------------------
