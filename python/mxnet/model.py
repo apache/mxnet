@@ -302,9 +302,6 @@ def _train_multi_device(symbol, ctx, input_shape,
                     epoch_end_callback(nbatch)
             # evaluate at end, so out_cpu_array can lazy copy
             eval_metric.update(label, out_cpu_array)
-            if nbatch % 20 == 0:
-                name, value = eval_metric.get()
-                logger.info('Batch[%d] Train-%s=%f', nbatch, name, value)
         # reset training data after iteration finish
         train_data.reset()
         name, value = eval_metric.get()
