@@ -39,7 +39,9 @@ class CPUDeviceStorage {
 
 inline void* CPUDeviceStorage::Alloc(size_t size) {
 #if _MSC_VER
-  return CHECK_NOTNULL(_aligned_malloc(size, alignment_));
+  void* ptr;
+  ptr = _aligned_malloc(size, alignment_);
+  return CHECK_NOTNULL(ptr);
 #else
   void* ptr;
   int ret = posix_memalign(&ptr, alignment_, size);
@@ -48,7 +50,13 @@ inline void* CPUDeviceStorage::Alloc(size_t size) {
 #endif
 }
 
-inline void CPUDeviceStorage::Free(void* ptr) { free(ptr); }
+inline void CPUDeviceStorage::Free(void* ptr) {
+#if _MSC_VER
+  _aligned_free(ptr);
+#else
+  free(ptr);
+#endif
+}
 
 }  // namespace storage
 }  // namespace mxnet

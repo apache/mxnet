@@ -41,3 +41,5 @@ List of Contributors
   - To contributors: please add your name to the list when you submit a patch to the project:)
 * [Qiang Kou](https://github.com/thirdwing)
   - KK is a R ninja, he will make mxnet available for R users.
+* [Feng Wang](https://github.com/happynear)
+  - Feng makes mxnet compatible with Windows Visual Studio.
