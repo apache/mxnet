@@ -55,7 +55,7 @@ Now you know the two different programming models, let us start to compare them!
 ### Imperative Programs are More Flexible
 
 This is a general statement that may not apply strictly, but indeed imperative programs are usually more flexible than symbolic programs.
-If you are writing an imperative style programs in python, you are writing in python. However, if you are writing an symbolic program,
+If you are writing an imperative style programs in python, you are writing in python. However, if you are writing a symbolic program,
 it is different. Consider the following imperative program, think how you can translate this into a symbolic program.
 ```python
 a = 2
