@@ -9,7 +9,7 @@ Committers are people who have made substantial contribution to the project and 
 The committers are the granted write access to the project.
 
 * [Bing Xu](https://github.com/antinucleon)
-  - Bing is the major contributor of operators and ndarray modules of mxnet.
+  - Bing is the initiator and major contributor of operators and ndarray modules of mxnet.
 * [Tianjun Xiao](https://github.com/sneakerkg)
   - Tianqjun is the master behind the fast data loading and preprocessing.
 * [Yutian Li](https://github.com/hotpxl)
