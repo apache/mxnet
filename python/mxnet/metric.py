@@ -1,7 +1,7 @@
 # pylint: disable=invalid-name
 """Online evaluation metric module."""
 from .base import string_types
-import numpy as np
+import numpy
 
 class EvalMetric(object):
     """Base class of all evaluation metrics."""
@@ -9,16 +9,16 @@ class EvalMetric(object):
         self.name = name
         self.reset()
 
-    def update(self, pred, label):
+    def update(self, label, pred):
         """Update the internal evaluation.
 
         Parameters
         ----------
-        pred : NDArray
-            Predicted value.
-
         label : NDArray
             The label of the data.
+
+        pred : NDArray
+            Predicted value.
         """
         raise NotImplementedError()
 
@@ -45,26 +45,54 @@ class Accuracy(EvalMetric):
     def __init__(self):
         super(Accuracy, self).__init__('accuracy')
 
-    def update(self, pred, label):
+    def update(self, label, pred):
         pred = pred.asnumpy()
         label = label.asnumpy().astype('int32')
-        py = np.argmax(pred, axis=1)
-        self.sum_metric += np.sum(py == label)
+        py = numpy.argmax(pred, axis=1)
+        self.sum_metric += numpy.sum(py == label)
         self.num_inst += label.size
 
 
 class CustomMetric(EvalMetric):
-    """Calculate accuracy"""
-    def __init__(self, feval):
-        name = feval.__name__
-        if name.find('<') != -1:
-            name = 'custom(%s)' % name
+    """Custom evaluation metric that takes a NDArray function.
+
+    Parameters
+    ----------
+    feval : callable(label, pred)
+        Customized evaluation function.
+
+    name : str, optional
+        The name of the metric
+    """
+    def __init__(self, feval, name=None):
+        if name is None:
+            name = feval.__name__
+            if name.find('<') != -1:
+                name = 'custom(%s)' % name
         super(CustomMetric, self).__init__(name)
         self._feval = feval
 
-    def update(self, pred, label):
-        self.sum_metric += self._feval(pred, label)
+    def update(self, label, pred):
+        self.sum_metric += self._feval(label, pred)
         self.num_inst += 1
+
+
+def np(numpy_feval, name=None):
+    """Create a customized metric from numpy function.
+
+    Parameters
+    ----------
+    numpy_feval : callable(label, pred)
+        Customized evaluation function.
+
+    name : str, optional
+        The name of the metric.
+    """
+    def feval(label, pred):
+        """Internal eval function."""
+        return numpy_feval(label.asnumpy(), pred.asnumpy())
+    feval.__name__ = numpy_feval.__name__
+    return CustomMetric(feval, name)
 
 
 def create(metric):
