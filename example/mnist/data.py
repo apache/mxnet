@@ -1,8 +1,10 @@
 # pylint: skip-file
 """ data iterator for mnist """
 import sys
-sys.path.insert(0, "../../python/")
-sys.path.append("../../tests/python/common")
+import os
+# code to automatically download dataset
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
 import get_data
 import mxnet as mx
 

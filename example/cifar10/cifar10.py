@@ -1,10 +1,13 @@
 # pylint: skip-file
 import sys, os
-import mxnet as mx
-sys.path.append("../../tests/python/common")
+# code to automatically download dataset
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
 import get_data
+import mxnet as mx
 import numpy as np
 import logging
+
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
