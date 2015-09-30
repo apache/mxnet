@@ -2,7 +2,7 @@
 =====
 
 [![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
-[![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.readthedocs.org/en/latest/) 
+[![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.readthedocs.org/en/latest/)
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
 
 MXNet is a deep learning framework designed for both *efficiency* and *flexibility*.
@@ -13,6 +13,7 @@ deep learning programs together to maximize the efficiency and your productivity
 What's New
 ----------
 * [Note on Programming Models for Deep Learning](http://mxnet.readthedocs.org/en/latest/program_model.html)
+* [Pretrained Inception BatchNorm Network](example/notebooks/predict-with-pretrained-model.ipynb)
 
 Contents
 --------
