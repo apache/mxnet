@@ -261,8 +261,8 @@ copy ..\windows\3rdparty\bin\*.dll $(SolutionDir)$(Platform)\$(Configuration)\ /
 cd ../../python/mxnet/
 (findstr /n .* libinfo.py) &gt; temp.txt
 (For /f "delims=: tokens=1*" %%a in (temp.txt) do (
-	echo.%%b| Find /i "solution_configuration = 'Release'" &gt;nul
-	If !errorLevel!==0 (echo solution_configuration = 'Debug') Else (echo.%%b)
+	echo.%%b| Find /i "        vs_configuration = 'Release'" &gt;nul
+	If !errorLevel!==0 (echo         vs_configuration = 'Debug') Else (echo.%%b)
 ))&gt;libinfo.py
 del temp.txt</Command>
     </PreBuildEvent>
@@ -324,8 +324,8 @@ copy ..\windows\3rdparty\bin\*.dll $(SolutionDir)$(Platform)\$(Configuration)\ /
 cd ../../python/mxnet/
 (findstr /n .* libinfo.py) &gt; temp.txt
 (For /f "delims=: tokens=1*" %%a in (temp.txt) do (
-	echo.%%b| Find /i "solution_configuration = 'Debug'" &gt;nul
-	If !errorLevel!==0 (echo solution_configuration = 'Release') Else (echo.%%b)
+	echo.%%b| Find /i "        vs_configuration = 'Debug'" &gt;nul
+	If !errorLevel!==0 (echo         vs_configuration = 'Release') Else (echo.%%b)
 ))&gt;libinfo.py
 del temp.txt</Command>
     </PreBuildEvent>

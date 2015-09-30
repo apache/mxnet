@@ -50,11 +50,11 @@ inline void* CPUDeviceStorage::Alloc(size_t size) {
 #endif
 }
 
-inline void CPUDeviceStorage::Free(void* ptr) { 
+inline void CPUDeviceStorage::Free(void* ptr) {
 #if _MSC_VER
   _aligned_free(ptr);
 #else
-  free(ptr); 
+  free(ptr);
 #endif
 }
 

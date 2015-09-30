@@ -157,10 +157,10 @@ void ObjectPool<T>::AllocateChunk() {
   static_assert(alignof(LinkedList) % alignof(T) == 0, "ObjectPooll Invariant");
   static_assert(kPageSize % alignof(LinkedList) == 0, "ObjectPooll Invariant");
   void* new_chunk_ptr;
-#ifdef _MSC_VER 
+#ifdef _MSC_VER
   new_chunk_ptr = _aligned_malloc(kPageSize, kPageSize);
   CHECK_NE(new_chunk_ptr, NULL) << "Allocation failed";
-#else 
+#else
   int ret = posix_memalign(&new_chunk_ptr, kPageSize, kPageSize);
   CHECK_EQ(ret, 0) << "Allocation failed";
 #endif
