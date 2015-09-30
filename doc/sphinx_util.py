@@ -6,7 +6,8 @@ import docutils
 import subprocess
 
 
-READTHEDOCS_BUILD = (os.environ.get('READTHEDOCS', None) == 'True')
+#READTHEDOCS_BUILD = (os.environ.get('READTHEDOCS', None) == 'True')
+READTHEDOCS_BUILD = True
 
 def run_build_mxnet(folder):
     """Run the doxygen make command in the designated folder."""
