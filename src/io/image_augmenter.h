@@ -114,6 +114,9 @@ class ImageAugmenter {
     }
   }
 #if MXNET_USE_OPENCV
+#ifdef _MSC_VER
+#define M_PI CV_PI
+#endif
   /*!
    * \brief augment src image, store result into dst
    *   this function is not thread safe, and will only be called by one thread

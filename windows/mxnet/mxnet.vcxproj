@@ -1,0 +1,337 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\mxnet\base.h" />
+    <ClInclude Include="..\..\include\mxnet\c_api.h" />
+    <ClInclude Include="..\..\include\mxnet\engine.h" />
+    <ClInclude Include="..\..\include\mxnet\io.h" />
+    <ClInclude Include="..\..\include\mxnet\kvstore.h" />
+    <ClInclude Include="..\..\include\mxnet\ndarray.h" />
+    <ClInclude Include="..\..\include\mxnet\operator.h" />
+    <ClInclude Include="..\..\include\mxnet\resource.h" />
+    <ClInclude Include="..\..\include\mxnet\storage.h" />
+    <ClInclude Include="..\..\include\mxnet\symbolic.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\base.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\cuda\reduce.cuh" />
+    <ClInclude Include="..\..\mshadow\mshadow\cuda\tensor_gpu-inl.cuh" />
+    <ClInclude Include="..\..\mshadow\mshadow\dot_engine-inl.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\expression.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\expr_engine-inl.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\expr_scalar-inl.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\extension.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\extension\broadcast.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\extension\channel_pool.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\extension\channel_unpool.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\extension\concat.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\extension\crop.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\extension\mirror.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\extension\pack_col2patch.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\extension\pad.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\extension\reduceto1d.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\extension\reshape.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\extension\spatial_pool.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\extension\spatial_unpool.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\extension\swapaxis.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\extension\unpack_patch2col.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\io.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\logging.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\random.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\sse-inl.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\stream_gpu-inl.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\tensor.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\tensor_blob.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\tensor_container.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\tensor_cpu-inl.h" />
+    <ClInclude Include="..\..\mshadow\mshadow\tensor_gpu-inl.h" />
+    <ClInclude Include="..\..\src\common\cuda_utils.h" />
+    <ClInclude Include="..\..\src\common\lazy_alloc_array.h" />
+    <ClInclude Include="..\..\src\common\object_pool.h" />
+    <ClInclude Include="..\..\src\common\utils.h" />
+    <ClInclude Include="..\..\src\engine\engine_impl.h" />
+    <ClInclude Include="..\..\src\engine\stream_manager.h" />
+    <ClInclude Include="..\..\src\engine\threaded_engine.h" />
+    <ClInclude Include="..\..\src\engine\thread_pool.h" />
+    <ClInclude Include="..\..\src\io\image_augmenter.h" />
+    <ClInclude Include="..\..\src\io\image_recordio.h" />
+    <ClInclude Include="..\..\src\io\inst_vector.h" />
+    <ClInclude Include="..\..\src\io\iter_batchloader.h" />
+    <ClInclude Include="..\..\src\io\iter_prefetcher.h" />
+    <ClInclude Include="..\..\src\kvstore\kvstore_local.h" />
+    <ClInclude Include="..\..\src\ndarray\ndarray_function-inl.h" />
+    <ClInclude Include="..\..\src\ndarray\ndarray_function.h" />
+    <ClInclude Include="..\..\src\operator\activation-inl.h" />
+    <ClInclude Include="..\..\src\operator\batch_norm-inl.h" />
+    <ClInclude Include="..\..\src\operator\concat-inl.h" />
+    <ClInclude Include="..\..\src\operator\convolution-inl.h" />
+    <ClInclude Include="..\..\src\operator\cudnn_activation-inl.h" />
+    <ClInclude Include="..\..\src\operator\cudnn_convolution-inl.h" />
+    <ClInclude Include="..\..\src\operator\cudnn_lrn-inl.h" />
+    <ClInclude Include="..\..\src\operator\cudnn_pooling-inl.h" />
+    <ClInclude Include="..\..\src\operator\dropout-inl.h" />
+    <ClInclude Include="..\..\src\operator\elementwise_binary_op-inl.h" />
+    <ClInclude Include="..\..\src\operator\elementwise_sum-inl.h" />
+    <ClInclude Include="..\..\src\operator\fully_connected-inl.h" />
+    <ClInclude Include="..\..\src\operator\leaky_relu-inl.h" />
+    <ClInclude Include="..\..\src\operator\lrn-inl.h" />
+    <ClInclude Include="..\..\src\operator\mshadow_op.h" />
+    <ClInclude Include="..\..\src\operator\operator_common.h" />
+    <ClInclude Include="..\..\src\operator\param.h" />
+    <ClInclude Include="..\..\src\operator\pooling-inl.h" />
+    <ClInclude Include="..\..\src\operator\reshape-inl.h" />
+    <ClInclude Include="..\..\src\operator\softmax-inl.h" />
+    <ClInclude Include="..\..\src\storage\cpu_device_storage.h" />
+    <ClInclude Include="..\..\src\storage\gpu_device_storage.h" />
+    <ClInclude Include="..\..\src\storage\naive_storage_manager.h" />
+    <ClInclude Include="..\..\src\storage\pinned_memory_storage.h" />
+    <ClInclude Include="..\..\src\storage\pooled_storage_manager.h" />
+    <ClInclude Include="..\..\src\storage\storage_manager.h" />
+    <ClInclude Include="..\..\src\symbol\graph_algorithm.h" />
+    <ClInclude Include="..\..\src\symbol\graph_executor.h" />
+    <ClInclude Include="..\..\src\symbol\graph_memory_allocator.h" />
+    <ClInclude Include="..\..\src\symbol\static_graph.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\c_api.cc" />
+    <ClCompile Include="..\..\src\engine\engine.cc" />
+    <ClCompile Include="..\..\src\engine\naive_engine.cc" />
+    <ClCompile Include="..\..\src\engine\threaded_engine.cc" />
+    <ClCompile Include="..\..\src\engine\threaded_engine_perdevice.cc" />
+    <ClCompile Include="..\..\src\engine\threaded_engine_pooled.cc" />
+    <ClCompile Include="..\..\src\io\io.cc" />
+    <ClCompile Include="..\..\src\io\iter_image_recordio.cc" />
+    <ClCompile Include="..\..\src\io\iter_mnist.cc" />
+    <ClCompile Include="..\..\src\kvstore\kvstore.cc" />
+    <ClCompile Include="..\..\src\ndarray\ndarray.cc" />
+    <ClCompile Include="..\..\src\ndarray\ndarray_function.cc" />
+    <ClCompile Include="..\..\src\operator\activation.cc" />
+    <ClCompile Include="..\..\src\operator\batch_norm.cc" />
+    <ClCompile Include="..\..\src\operator\concat.cc" />
+    <ClCompile Include="..\..\src\operator\convolution.cc" />
+    <ClCompile Include="..\..\src\operator\dropout.cc" />
+    <ClCompile Include="..\..\src\operator\elementwise_binary_op.cc" />
+    <ClCompile Include="..\..\src\operator\elementwise_sum.cc" />
+    <ClCompile Include="..\..\src\operator\fully_connected.cc" />
+    <ClCompile Include="..\..\src\operator\leaky_relu.cc" />
+    <ClCompile Include="..\..\src\operator\lrn.cc" />
+    <ClCompile Include="..\..\src\operator\operator.cc" />
+    <ClCompile Include="..\..\src\operator\pooling.cc" />
+    <ClCompile Include="..\..\src\operator\reshape.cc" />
+    <ClCompile Include="..\..\src\operator\softmax.cc" />
+    <ClCompile Include="..\..\src\resource.cc" />
+    <ClCompile Include="..\..\src\storage\storage.cc" />
+    <ClCompile Include="..\..\src\symbol\graph_executor.cc" />
+    <ClCompile Include="..\..\src\symbol\static_graph.cc" />
+    <ClCompile Include="..\..\src\symbol\symbol.cc" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="..\..\src\ndarray\ndarray_function.cu" />
+    <CudaCompile Include="..\..\src\operator\activation.cu" />
+    <CudaCompile Include="..\..\src\operator\batch_norm.cu" />
+    <CudaCompile Include="..\..\src\operator\concat.cu" />
+    <CudaCompile Include="..\..\src\operator\convolution.cu" />
+    <CudaCompile Include="..\..\src\operator\dropout.cu" />
+    <CudaCompile Include="..\..\src\operator\elementwise_binary_op.cu" />
+    <CudaCompile Include="..\..\src\operator\elementwise_sum.cu" />
+    <CudaCompile Include="..\..\src\operator\fully_connected.cu" />
+    <CudaCompile Include="..\..\src\operator\leaky_relu.cu" />
+    <CudaCompile Include="..\..\src\operator\lrn.cu" />
+    <CudaCompile Include="..\..\src\operator\pooling.cu" />
+    <CudaCompile Include="..\..\src\operator\reshape.cu" />
+    <CudaCompile Include="..\..\src\operator\softmax.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\dmlc-core\windows\dmlc\dmlc.vcxproj">
+      <Project>{6e6dda36-69ba-4555-ba88-10166b11f2d2}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{15D3B5AC-7EF8-422E-BB67-69F06BA394C3}</ProjectGuid>
+    <RootNamespace>mxnet</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.0.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
+copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_CONSOLE;MSHADOW_FORCE_STREAM;MXNET_USE_OPENCV;MSHADOW_USE_CUDNN;MXNET_USE_THREADED_ENGINE;MSHADOW_USE_CBLAS=1;MSHADOW_USE_MKL=0;USE_STATIC_MKL=0;DMLC_USE_CXX11;MSHADOW_IN_CXX11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../windows/3rdparty/include;../../dmlc-core/include;../../mshadow;../../include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>libopenblas.dll.a;opencv_world300.lib;cudnn.lib;cudart.lib;curand.lib;cublas.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../../windows/3rdparty/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>cd ../../python
+python setup.py install
+if not exist "$(SolutionDir)$(Platform)\$(Configuration)\opencv_world300.dll" (
+echo Copy dll files...
+copy ..\windows\3rdparty\bin\*.dll $(SolutionDir)$(Platform)\$(Configuration)\ /y
+)</Command>
+    </PostBuildEvent>
+    <CudaCompile>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+    </CudaCompile>
+    <PreBuildEvent>
+      <Command>@echo off&amp;SetLocal EnableDelayedExpansion
+cd ../../python/mxnet/
+(findstr /n .* libinfo.py) &gt; temp.txt
+(For /f "delims=: tokens=1*" %%a in (temp.txt) do (
+	echo.%%b| Find /i "        vs_configuration = 'Release'" &gt;nul
+	If !errorLevel!==0 (echo         vs_configuration = 'Debug') Else (echo.%%b)
+))&gt;libinfo.py
+del temp.txt</Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
+copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;WIN64;NDEBUG;_CONSOLE;MSHADOW_FORCE_STREAM;MXNET_USE_OPENCV;MSHADOW_USE_CUDNN;MXNET_USE_THREADED_ENGINE;MSHADOW_USE_CBLAS=1;MSHADOW_USE_MKL=0;USE_STATIC_MKL=0;DMLC_USE_CXX11;MSHADOW_IN_CXX11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../windows/3rdparty/include;../../dmlc-core/include;../../mshadow;../../include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>libopenblas.dll.a;opencv_world300.lib;cudnn.lib;cudart.lib;curand.lib;cublas.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../../windows/3rdparty/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>cd ../../python
+python setup.py install
+if not exist "$(SolutionDir)$(Platform)\$(Configuration)\opencv_world300.dll" (
+echo Copy dll files...
+copy ..\windows\3rdparty\bin\*.dll $(SolutionDir)$(Platform)\$(Configuration)\ /y
+)</Command>
+    </PostBuildEvent>
+    <CudaCompile>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <CodeGeneration>compute_30,sm_30;</CodeGeneration>
+      <FastMath>true</FastMath>
+      <AdditionalCompilerOptions>
+      </AdditionalCompilerOptions>
+    </CudaCompile>
+    <PreBuildEvent>
+      <Command>@echo off&amp;SetLocal EnableDelayedExpansion
+cd ../../python/mxnet/
+(findstr /n .* libinfo.py) &gt; temp.txt
+(For /f "delims=: tokens=1*" %%a in (temp.txt) do (
+	echo.%%b| Find /i "        vs_configuration = 'Debug'" &gt;nul
+	If !errorLevel!==0 (echo         vs_configuration = 'Release') Else (echo.%%b)
+))&gt;libinfo.py
+del temp.txt</Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.0.targets" />
+  </ImportGroup>
+</Project>

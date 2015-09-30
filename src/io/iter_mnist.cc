@@ -171,7 +171,11 @@ class MNISTIter: public IIterator<TBlobBatch> {
     unsigned char buf[4];
     CHECK(fi->Read(buf, sizeof(buf)) == sizeof(buf))
         << "invalid mnist format";
+#ifdef _MSC_VER
+    return (buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3]);
+#else
     return reinterpret_cast<int>(buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3]);
+#endif
   }
 
  private:
