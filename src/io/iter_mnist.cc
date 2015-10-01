@@ -52,9 +52,8 @@ struct MNISTParam : public dmlc::Parameter<MNISTParam> {
 
 class MNISTIter: public IIterator<TBlobBatch> {
  public:
-  MNISTIter(void) {
+  MNISTIter(void) : loc_(0), inst_offset_(0) {
     img_.dptr_ = NULL;
-    inst_offset_ = 0;
     out_.data.resize(2);
   }
   virtual ~MNISTIter(void) {
