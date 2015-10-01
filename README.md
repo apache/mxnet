@@ -14,6 +14,7 @@ What's New
 ----------
 * [Note on Programming Models for Deep Learning](http://mxnet.readthedocs.org/en/latest/program_model.html)
 * [Pretrained Inception BatchNorm Network](example/notebooks/predict-with-pretrained-model.ipynb)
+* [Working with Numpy](example/mnist/mlp_numpy.py)
 
 Contents
 --------
