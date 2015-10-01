@@ -29,8 +29,9 @@ void BinaryOp(const NDArray &lhs,
               const NDArray &rhs,
               NDArray *out) {
   // no check if both of them are on cpu
-  if (lhs.ctx().dev_mask() != cpu::kDevMask || rhs.ctx().dev_mask() != cpu::kDevMask)
+  if (lhs.ctx().dev_mask() != cpu::kDevMask || rhs.ctx().dev_mask() != cpu::kDevMask) {
     CHECK(lhs.ctx() == rhs.ctx()) << "operands context mismatch";
+  }
   // if out is none, allocate space
   if (out->is_none()) {
     *out = NDArray(OP::GetShape(lhs.shape(), rhs.shape()), lhs.ctx(), true);
@@ -205,13 +206,68 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, from.ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, priority);
+        FnProperty::kCopyFromGPU, priority);
     } else {
       LOG(FATAL) << "unknown device mask";
     }
 #else
     LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
+  }
+}
+
+void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priority) {
+  std::vector<Engine::VarHandle> const_vars;
+  const_vars.reserve(source.size());
+  for (size_t i = 0; i < source.size(); ++i) {
+    if (source[i].var() != out->var()) {
+      const_vars.push_back(source[i].var());
+    }
+    CHECK_EQ(source[i].shape() , out->shape())
+        << "operands shape mismatch";
+    if (out->ctx().dev_mask() == cpu::kDevMask) {
+      CHECK_EQ(source[i].ctx().dev_mask(),  cpu::kDevMask)
+          << "operands context mismatch";
+    } else {
+      CHECK(source[i].ctx() == out->ctx())
+          << "operands context mismatch";
+    }
+  }
+  // important: callback must always capture by value
+  NDArray ret = *out;
+
+  switch (out->ctx().dev_mask()) {
+    case cpu::kDevMask: {
+      Engine::Get()->PushSync([source, ret](RunContext ctx) {
+          std::vector<TBlob> source_tblob(source.size());
+          for (size_t i = 0; i < source.size(); ++i) {
+            source_tblob[i] = source[i].data();
+          }
+          ret.CheckAndAlloc();
+          TBlob tmp = ret.data();
+          ndarray::ElementwiseSum<cpu>(source_tblob, &tmp, ctx);
+        }, out->ctx(), const_vars, {ret.var()},
+        FnProperty::kNormal, priority);
+      break;
+    }
+#if MXNET_USE_CUDA
+    case gpu::kDevMask: {
+      Engine::Get()->PushSync([source, ret](RunContext ctx) {
+          std::vector<TBlob> source_tblob(source.size());
+          for (size_t i = 0; i < source.size(); ++i) {
+            source_tblob[i] = source[i].data();
+          }
+          ret.CheckAndAlloc();
+          TBlob tmp = ret.data();
+          ndarray::ElementwiseSum<gpu>(source_tblob, &tmp, ctx);
+          // Wait GPU kernel to complete
+          ctx.get_stream<gpu>()->Wait();
+        }, out->ctx(), const_vars, {ret.var()},
+        FnProperty::kNormal, priority);
+      break;
+    }
+#endif
+    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
   }
 }
 

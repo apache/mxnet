@@ -5,10 +5,12 @@
  */
 #ifndef MXNET_NDARRAY_NDARRAY_FUNCTION_H_
 #define MXNET_NDARRAY_NDARRAY_FUNCTION_H_
+
 #include <dmlc/logging.h>
 #include <mshadow/tensor.h>
 #include <mxnet/base.h>
 #include <mxnet/resource.h>
+#include <vector>
 
 namespace mxnet {
 /*! \brief namespace to support all possible Ndarray operator */
@@ -73,6 +75,11 @@ template<typename DeviceFrom, typename DeviceTo>
 void Copy(const TBlob &from, TBlob *to,
           Context from_ctx, Context to_ctx,
           RunContext ctx);
+
+template<typename Device>
+void ElementwiseSum(const std::vector<TBlob> source,
+                    TBlob *out,
+                    RunContext ctx);
 
 }  // namespace ndarray
 }  // namespace mxnet

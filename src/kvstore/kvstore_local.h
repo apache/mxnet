@@ -5,15 +5,17 @@
  */
 #ifndef MXNET_KVSTORE_KVSTORE_LOCAL_H_
 #define MXNET_KVSTORE_KVSTORE_LOCAL_H_
+
+#include <mxnet/kvstore.h>
 #include <unordered_map>
 #include <bitset>
 #include <vector>
 #include <utility>
 #include <algorithm>
-#include "mxnet/kvstore.h"
+
 
 namespace mxnet {
-
+namespace kvstore {
 /**
  * \brief store data in local machine
  */
@@ -87,6 +89,23 @@ class KVStoreLocal : public KVStore {
   }
 
  protected:
+  /// \brief temperal space for pushing and pull
+  struct BufferEntry {
+    // Context of merged
+    Context ctx;
+    // the merged value
+    NDArray merged;
+    /// \brief the cpu buffer for gpu data
+    std::vector<NDArray> copy_buf;
+    // allocate copy buffer, if it has not been allocated
+    inline NDArray *AllocCopyBuf(size_t index, Context ctx, const TShape& shape) {
+      if (index >= copy_buf.size()) copy_buf.resize(index + 1);
+      if (copy_buf[index].is_none()) {
+        copy_buf[index] = NDArray(shape, ctx);
+      }
+      return &copy_buf[index];
+    }
+  };
   /**
    * \brief group values on keys
    */
@@ -120,17 +139,17 @@ class KVStoreLocal : public KVStore {
   /*!
    * \brief returns the aggregated push value
    */
-  const NDArray& MergePushValue(int key, const std::vector<NDArray>& val, int priority) {
-    CHECK(val.size());
+  virtual const NDArray& MergePushValue(
+      int key, const std::vector<NDArray>& val, int priority) {
     auto& buf = merge_buf_[key];
     // copy buffer
     std::vector<Engine::VarHandle> const_vars(val.size() - 1);
     std::vector<NDArray> reduce(val.size());
 
     if (buf.merged.is_none()) {
-      Context ctx = Context::CPUPinned(val[0].ctx().dev_id);
-      if (MXNET_USE_CUDA == 0) ctx = Context::CPU();
-      buf.merged = NDArray(val[0].shape(), ctx);
+      buf.ctx = Context::CPUPinned(val[0].ctx().dev_id);
+      if (MXNET_USE_CUDA == 0) buf.ctx = Context::CPU();
+      buf.merged = NDArray(val[0].shape(), buf.ctx);
     }
 
     CopyFromTo(val[0], &(buf.merged), priority);
@@ -142,7 +161,8 @@ class KVStoreLocal : public KVStore {
       if (ctx.dev_mask() == cpu::kDevMask) {
         reduce[i] = val[i];
       } else {
-        NDArray *copy_buf = buf.AllocCopyBuf(i, ctx.dev_id, val[0].shape());
+        NDArray *copy_buf = buf.AllocCopyBuf(
+            i, Context::CPUPinned(ctx.dev_id), val[0].shape());
         CopyFromTo(val[i], copy_buf, priority);
         reduce[i] = *copy_buf;
       }
@@ -150,15 +170,24 @@ class KVStoreLocal : public KVStore {
     }
 
     Engine::Get()->PushSync([reduce, this](RunContext rctx) {
-        ReduceSum(reduce);
+        ReduceSumCPU(reduce);
       }, Context::CPU(), const_vars, {reduce[0].var()},
       FnProperty::kCPUPrioritized, priority);
     return buf.merged;
   }
 
+  /// \brief buffer for merging push value
+  std::unordered_map<int, BufferEntry> merge_buf_;
+  /// \brief buffer for storing local values
+  std::unordered_map<int, NDArray> local_;
+  // pinned context
+  Context pinned_ctx_;
+  // updater
+  Updater updater_;
+
  private:
-  inline static void ReduceSum(const std::vector<real_t*> &dptr,
-                               size_t offset, index_t size) {
+  inline static void ReduceSumCPU(const std::vector<real_t*> &dptr,
+                                  size_t offset, index_t size) {
     using namespace mshadow;  // NOLINT(*)
     Tensor<cpu, 1> in_0(dptr[0] + offset, Shape1(size));
     switch (dptr.size()) {
@@ -190,7 +219,7 @@ class KVStoreLocal : public KVStore {
   }
   // reduce sum into val[0]
   // this is performance critical
-  inline void ReduceSum(const std::vector<NDArray> &in_data) {
+  inline void ReduceSumCPU(const std::vector<NDArray> &in_data) {
     const size_t step = 4 << 10;
     // ge ptr out
     std::vector<real_t*> dptr(in_data.size());
@@ -202,45 +231,22 @@ class KVStoreLocal : public KVStore {
     size_t total = in_data[0].shape().Size();
     long ntask = (total + 1 - step) / step; // NOLINT(*)
     if (total < bigarray_bound_ || nthread_reduction_ <= 1) {
-      ReduceSum(dptr, 0, total);
+      ReduceSumCPU(dptr, 0, total);
     } else {
       #pragma omp parallel for schedule(static) num_threads(nthread_reduction_)
       for (long j = 0; j < ntask; ++j) { // NOLINT(*)
         size_t k = static_cast<size_t>(j);
         size_t begin = std::min(k * step, total);
         size_t end = std::min((k + 1) * step, total);
-        ReduceSum(dptr, begin, static_cast<index_t>(end - begin));
+        ReduceSumCPU(dptr, begin, static_cast<index_t>(end - begin));
       }
     }
   }
-  /// \brief temperal space for pushing and pull
-  struct BufferEntry {
-    // the merged value
-    NDArray merged;
-    /// \brief the cpu buffer for gpu data
-    std::vector<NDArray> copy_buf;
-    // allocate copy buffer, if it has not been allocated
-    inline NDArray *AllocCopyBuf(size_t index, uint32_t dev_id, const TShape& shape) {
-      if (index >= copy_buf.size()) copy_buf.resize(index + 1);
-      if (copy_buf[index].is_none()) {
-        copy_buf[index] = NDArray(shape, Context::CPUPinned(dev_id));
-      }
-      return &copy_buf[index];
-    }
-  };
   // number of threads to do reduction
   int nthread_reduction_;
   // number of threads to do reduction
   size_t bigarray_bound_;
-  /// \brief buffer for merging push value
-  std::unordered_map<int, BufferEntry> merge_buf_;
-  /// \brief buffer for storing local values
-  std::unordered_map<int, NDArray> local_;
-  // pinned context
-  Context pinned_ctx_;
-  // updater
-  Updater updater_;
 };
-
+}  // namespace kvstore
 }  // namespace mxnet
 #endif  // MXNET_KVSTORE_KVSTORE_LOCAL_H_

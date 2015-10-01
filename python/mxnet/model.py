@@ -14,7 +14,7 @@ from . import metric
 from . import kvstore
 from .context import Context, cpu
 from .initializer import Uniform
-
+from collections import namedtuple
 
 BASE_ESTIMATOR = object
 
@@ -23,6 +23,12 @@ try:
     BASE_ESTIMATOR = BaseEstimator
 except ImportError:
     SKLEARN_INSTALLED = False
+
+# Parameter to pass to epoch_end_callback
+EpochEndParam = namedtuple('EpochEndParams',
+                           ['iteration',
+                            'nbatch',
+                            'eval_metric'])
 
 
 def _check_arguments(symbol):
@@ -122,7 +128,7 @@ def _train_multi_device(symbol, ctx, input_shape,
                         begin_round, end_round, optimizer,
                         train_data, eval_data=None, eval_metric=None,
                         iter_end_callback=None, epoch_end_callback=None,
-                        update_on_kvstore=None,
+                        update_on_kvstore=None, kvstore_type='local',
                         logger=None):
     """Internal training function on multiple devices.
 
@@ -167,14 +173,15 @@ def _train_multi_device(symbol, ctx, input_shape,
         A callback that is invoked at end of each iteration.
         This can be used to checkpoint model each iteration.
 
-    learning_rate_scheduler: Scheduler
-        A Scheduler to adjust learning rate
+    epoch_end_callback : callable(EpochEndParams)
+        A callback that is invoked at end of each batch.
+        This can be used to measure speed, get result from evaluation metric. etc.
 
-    epoch_end_callback: callable(iteration)
-        A callback that is invoked at end of each batch
-
-    update_on_kvstore: boolean, optional
+    update_on_kvstore : boolean, optional
         Whether to perform parameter update on kvstore instead of training device.
+
+    kvstore_type : {'local', 'device'}, optional
+        Type of kvstore used for synchronization.
 
     logger : logging logger
         When not specified, default logger will be used.
@@ -213,8 +220,8 @@ def _train_multi_device(symbol, ctx, input_shape,
         texec.copy_params_from(arg_params, aux_params)
 
     # ky value store
-    kv = kvstore.create() if num_device != 1 else None
-    if kv is None:
+    kv = kvstore.create(kvstore_type) if num_device != 1 else None
+    if kv is None or kvstore_type == 'device':
         update_on_kvstore = False
     else:
         # auto decide update_on_kvstore
@@ -295,13 +302,17 @@ def _train_multi_device(symbol, ctx, input_shape,
             nbatch += 1
             # epoch callback (for print purpose)
             if epoch_end_callback != None:
+                epoch_end_params = EpochEndParam(iteration=iteration,
+                                                 nbatch=nbatch,
+                                                 eval_metric=eval_metric)
                 if isinstance(epoch_end_callback, list):
                     for call in epoch_end_callback:
-                        call(nbatch)
+                        call(epoch_end_params)
                 else:
-                    epoch_end_callback(nbatch)
+                    epoch_end_callback(epoch_end_params)
             # evaluate at end, so out_cpu_array can lazy copy
             eval_metric.update(label, out_cpu_array)
+
         # reset training data after iteration finish
         train_data.reset()
         name, value = eval_metric.get()
@@ -594,7 +605,8 @@ class FeedForward(BASE_ESTIMATOR):
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
             iter_end_callback=None, epoch_end_callback=None,
-            update_on_kvstore=None, logger=None):
+            update_on_kvstore=None, kvstore_type='local',
+            logger=None):
         """Fit the model.
 
         Parameters
@@ -617,9 +629,6 @@ class FeedForward(BASE_ESTIMATOR):
             A callback that is invoked at end of each iteration.
             This can be used to checkpoint model each iteration.
 
-        learning_rate_scheduler: Scheduler
-            A Scheduler to adjust learning rate
-
         epoch_end_callback: callable(iteration)
             A callback that is invoked at end of each batch
             For print purpose
@@ -627,6 +636,9 @@ class FeedForward(BASE_ESTIMATOR):
         update_on_kvstore: boolean, optional
             Whether to perform parameter update on kvstore instead of training device.
             By default, the trainer will automatically decide the policy.
+
+        kvstore_type : {'local', 'device'}, optional
+            Type of kvstore used for synchronization, usually no need to set.
 
         logger : logging logger, optional
             When not specified, default logger will be used.
@@ -658,7 +670,9 @@ class FeedForward(BASE_ESTIMATOR):
                             eval_metric=eval_metric,
                             iter_end_callback=iter_end_callback,
                             epoch_end_callback=epoch_end_callback,
-                            update_on_kvstore=update_on_kvstore, logger=logger)
+                            update_on_kvstore=update_on_kvstore,
+                            kvstore_type=kvstore_type,
+                            logger=logger)
 
     def save(self, prefix, iteration=None):
         """Checkpoint the model checkpoint into file.
@@ -720,7 +734,8 @@ class FeedForward(BASE_ESTIMATOR):
     def create(symbol, X, y=None, ctx=None,
                num_round=None, optimizer='sgd', initializer=Uniform(0.01),
                eval_data=None, eval_metric='acc', iter_end_callback=None,
-               update_on_kvstore=None, logger=None, **kwargs):
+               update_on_kvstore=None, kvstore_type='local',
+               logger=None, **kwargs):
         """Functional style to create a model.
 
         This function will be more consistent with functional
@@ -766,11 +781,16 @@ class FeedForward(BASE_ESTIMATOR):
             Whether to perform parameter update on kvstore instead of training device.
             By default, the trainer will automatically decide the policy.
 
+        kvstore_type : {'local', 'device'}, optional
+            Type of kvstore used for synchronization, usually no need to set.
+
         logger : logging logger, optional
         """
         model = FeedForward(symbol, ctx=ctx, num_round=num_round,
                             optimizer=optimizer, initializer=initializer, **kwargs)
         model.fit(X, y, eval_data=eval_data, eval_metric=eval_metric,
                   iter_end_callback=iter_end_callback,
-                  update_on_kvstore=update_on_kvstore, logger=logger)
+                  update_on_kvstore=update_on_kvstore,
+                  kvstore_type=kvstore_type,
+                  logger=logger)
         return model
