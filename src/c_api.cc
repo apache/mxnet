@@ -876,7 +876,6 @@ int MXDataIterCreateIter(DataIterCreator creator,
     kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
   }
   iter->Init(kwargs);
-  iter->BeforeFirst();
   *out = iter;
   API_END_HANDLE_ERROR(delete iter);
 }

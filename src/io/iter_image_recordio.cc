@@ -1,8 +1,7 @@
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file iter_image_recordio-inl.hpp
- * \brief recordio data
-iterator
+ * \brief recordio data iterator
  */
 #include <mxnet/io.h>
 #include <dmlc/base.h>

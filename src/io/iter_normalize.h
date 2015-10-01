@@ -209,7 +209,7 @@ class ImageNormalizeIter : public IIterator<DataInst> {
     CHECK(this->Next_()) << "input iterator failed.";
     meanimg_.Resize(outimg_.shape_);
     mshadow::Copy(meanimg_, outimg_);
-    while (this->Next()) {
+    while (this->Next_()) {
       meanimg_ += outimg_;
       imcnt += 1;
       double elapsed = dmlc::GetTime() - start;
