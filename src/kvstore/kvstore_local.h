@@ -139,7 +139,6 @@ class KVStoreLocal : public KVStore {
     for (size_t i = 1; i < val.size(); ++i) {
       const NDArray& v = val[i];
       Context ctx = v.ctx();
-      const_vars[i - 1] = v.var();
       if (ctx.dev_mask() == cpu::kDevMask) {
         reduce[i] = val[i];
       } else {
@@ -147,6 +146,7 @@ class KVStoreLocal : public KVStore {
         CopyFromTo(val[i], copy_buf, priority);
         reduce[i] = *copy_buf;
       }
+      const_vars[i - 1] = reduce[i].var();
     }
 
     Engine::Get()->PushSync([reduce, this](RunContext rctx) {
