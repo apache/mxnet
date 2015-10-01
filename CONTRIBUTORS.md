@@ -43,3 +43,4 @@ List of Contributors
   - KK is a R ninja, he will make mxnet available for R users.
 * [Feng Wang](https://github.com/happynear)
   - Feng makes mxnet compatible with Windows Visual Studio.
+* [Li Dong](https://github.com/donglixp)
