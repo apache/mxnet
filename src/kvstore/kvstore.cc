@@ -7,13 +7,19 @@
 #include <stdlib.h>
 #include <dmlc/logging.h>
 #include "./kvstore_local.h"
+#include "./kvstore_device.h"
 
 namespace mxnet {
 
 KVStore* KVStore::Create(const char *type_name) {
   std::string tname = type_name;
-  CHECK_EQ(tname, "local")
-      << "Only support local KVStore currently.";
-  return new KVStoreLocal();
+  if (tname == "local") {
+    return new kvstore::KVStoreLocal();
+  } else if (tname == "device") {
+    return new kvstore::KVStoreDevice();
+  } else {
+      LOG(FATAL) << "Unknown KVStore type \"" << type_name << "\"";
+    return nullptr;
+  }
 }
 }  // namespace mxnet

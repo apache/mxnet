@@ -27,6 +27,28 @@ def do_checkpoint(prefix):
     return _callback
 
 
+def log_train_metric(period):
+    """Callback to log the training evaluation result every period.
+
+    Parameters
+    ----------
+    period : int
+        The number of batch to log the training evaluation metric.
+
+    Returns
+    -------
+    callback : function
+        The callback function that can be passed as iter_epoch_callback to fit.
+    """
+    def _callback(param):
+        """The checkpoint function."""
+        if param.nbatch % period == 0:
+            name, value = param.eval_metric.get()
+            logging.info('Iter[%d] Batch[%d] Train-%s=%f',
+                         param.iteration, param.nbatch, name, value)
+    return _callback
+
+
 class Speedometer(object):
     """Calculate training speed in frequent
 
@@ -44,15 +66,9 @@ class Speedometer(object):
         self.tic = 0
         self.last_count = 0
 
-    def __call__(self, count):
-        """
-        Show speed
-
-        Parameters
-        ----------
-        count: int
-            current batch count
-        """
+    def __call__(self, param):
+        """Callback to Show speed."""
+        count = param.nbatch
         if self.last_count > count:
             self.init = False
         self.last_count = count
@@ -60,7 +76,8 @@ class Speedometer(object):
         if self.init:
             if count % self.frequent == 0:
                 speed = self.frequent * self.batch_size / (time.time() - self.tic)
-                logging.info("Batch [%d]\tSpeed: %.2f samples/sec", count, speed)
+                logging.info("Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
+                             param.iteration, count, speed)
                 self.tic = time.time()
         else:
             self.init = True
@@ -68,7 +85,7 @@ class Speedometer(object):
 
 
 class ProgressBar(object):
-    """Show a progress bar
+    """Show a progress bar.
 
     Parameters
     ----------
@@ -81,19 +98,10 @@ class ProgressBar(object):
         self.bar_len = length
         self.total = total
 
-    def __call__(self, count):
-        """
-        Update progress bar
-
-        Parameters
-        ----------
-        count: int
-            current batch count
-        """
-
+    def __call__(self, param):
+        """Callback to Show progress bar."""
+        count = param.nbatch
         filled_len = int(round(self.bar_len * count / float(self.total)))
         percents = math.ceil(100.0 * count / float(self.total))
         prog_bar = '=' * filled_len + '-' * (self.bar_len - filled_len)
         sys.stdout.write('[%s] %s%s\r' % (prog_bar, percents, '%'))
-
-

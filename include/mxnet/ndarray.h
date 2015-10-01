@@ -333,13 +333,21 @@ class NDArray {
  *  the two ndarray can sit on different devices
  *  this operation will be scheduled by the engine
  *
- *  NOTE: this function name explicitly marks the order of from and to
- *     due to different possible convention carried by copy function
  * \param from the ndarray we want to copy data from
  * \param to the target ndarray
  * \param priority Priority of the action.
+ * \note The function name explicitly marks the order of from and to
+ *     due to different possible convention carried by copy function.
  */
 void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
+
+/*!
+ * \brief Perform elementwise sum over each data from source, store result into out.
+ * \param source the ndarray we want to sum
+ * \param to the target ndarray
+ * \param priority Priority of the action.
+ */
+void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priority = 0);
 
 /*!
  * \brief elementwise add

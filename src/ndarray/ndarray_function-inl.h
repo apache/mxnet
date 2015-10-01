@@ -5,6 +5,8 @@
  */
 #ifndef MXNET_NDARRAY_NDARRAY_FUNCTION_INL_H_
 #define MXNET_NDARRAY_NDARRAY_FUNCTION_INL_H_
+
+#include <vector>
 #include "./ndarray_function.h"
 // this file will be included twice by CPU and GPU
 // macro to help specialize evaluation function
@@ -89,6 +91,49 @@ template<>
 void Eval<DEVICE>(const real_t &rhs, TBlob *ret, RunContext ctx) {
   mshadow::Stream<DEVICE> *s = ctx.get_stream<DEVICE>();
   ret->FlatTo2D<DEVICE, real_t>(s) = rhs;
+}
+
+template<>
+void ElementwiseSum<DEVICE>(const std::vector<TBlob> source,
+                            TBlob *dst,
+                            RunContext ctx) {
+  typedef DEVICE xpu;
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Tensor<xpu, 2> out = dst->FlatTo2D<xpu, real_t>(s);
+
+  switch (source.size()) {
+    case 2: {
+      Tensor<xpu, 2> in_0 = source[0].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> in_1 = source[1].FlatTo2D<xpu, real_t>(s);
+      out = in_0 + in_1;
+      break;
+    }
+    case 3: {
+      Tensor<xpu, 2> in_0 = source[0].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> in_1 = source[1].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> in_2 = source[2].FlatTo2D<xpu, real_t>(s);
+      out = in_0 + in_1 + in_2;
+      break;
+    }
+    case 4: {
+      Tensor<xpu, 2> in_0 = source[0].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> in_1 = source[1].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> in_2 = source[2].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> in_3 = source[3].FlatTo2D<xpu, real_t>(s);
+      out = in_0 + in_1 + in_2 + in_3;
+      break;
+    }
+    default: {
+      Tensor<xpu, 2> in_0 = source[0].FlatTo2D<xpu, real_t>(s);
+      out = F<op::identity>(in_0);
+      for (size_t i = 1; i < source.size(); ++i) {
+        out += source[i].FlatTo2D<xpu, real_t>(s);
+      }
+      break;
+    }
+  }
 }
 
 // declarations
