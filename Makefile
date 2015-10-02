@@ -42,9 +42,9 @@ ifndef LINT_LANG
 endif
 
 # setup opencv
-ifeq ($(USE_OPENCV),1)
-	CFLAGS+= -DMXNET_USE_OPENCV=1
-	LDFLAGS+= `pkg-config --libs opencv`
+ifeq ($(USE_OPENCV), 1)
+	CFLAGS += -DMXNET_USE_OPENCV=1 `pkg-config --cflags opencv`
+	LDFLAGS += `pkg-config --libs opencv`
 	BIN += bin/im2rec
 else
 	CFLAGS+= -DMXNET_USE_OPENCV=0
