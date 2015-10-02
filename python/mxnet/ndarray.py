@@ -601,7 +601,7 @@ def _make_ndarray_function(handle):
             out = NDArray(_new_empty_handle())
         check_call(_LIB.MXFuncInvoke( \
                 handle, \
-                c_array(NDArrayHandle, (src.handle)), \
+                c_array(NDArrayHandle, (src.handle,)), \
                 c_array(mx_float, ()), \
                 c_array(NDArrayHandle, (out.handle,))))
         return out
