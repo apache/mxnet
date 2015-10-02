@@ -1,5 +1,7 @@
 module MXNet
 
-# package code goes here
+include("init.jl")
+include("context.jl")
+include("ndarray.jl")
 
 end # module
