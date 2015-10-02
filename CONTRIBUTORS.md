@@ -44,3 +44,4 @@ List of Contributors
 * [Feng Wang](https://github.com/happynear)
   - Feng makes mxnet compatible with Windows Visual Studio.
 * [Li Dong](https://github.com/donglixp)
+* [Piji Li](https://github.com/lipiji)
