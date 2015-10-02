@@ -645,7 +645,7 @@ def _make_ndarray_function(handle):
     # End of function declaration
     if n_mutate_vars == 1 and n_used_vars == 2 and n_scalars == 0:
         ret_function = binary_ndarray_function
-    elif n_mutate_vars == 1 and n_used_vars == 2 and n_scalars == 0:
+    elif n_mutate_vars == 1 and n_used_vars == 1 and n_scalars == 0:
         ret_function = unary_ndarray_function
     else:
         ret_function = generic_ndarray_function
