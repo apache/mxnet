@@ -63,10 +63,10 @@ module _lib
 # this module is used to hold functions automatically imported
 # from libmxnet
 end
-function _register_function(lib::Module, name::Symbol, func::Function)
-  eval(lib, quote
-    $name = $func
-  end)
+function _invoke_mxfunction(func_handle::MX_handle, use_vars, scalars, mut_vars)
+  @mxcall(:MXFuncInvoke,
+          (MX_handle, Ptr{MX_handle}, Ptr{MX_float}, Ptr{MX_handle}),
+          func_handle, use_vars, scalars, mut_vars)
 end
 
 @enum(LIBMX_FUNC_TYPE_MASK,
@@ -126,29 +126,45 @@ function _import_ndarray_functions()
     end
 
     if n_mutate_vars == 1 && n_used_vars == 2 && n_scalars == 0
-      println("defining $func_name")
+      println("defining binary $func_name")
       # binary ndarray function
-      function binary_ndarray_function(lhs::NDArray, rhs::NDArray, out::NDArray)
+      binary_func = (lhs::NDArray, rhs::NDArray, out::NDArray) -> begin
         @assert(out.writable)
         use_vars = MX_handle[lhs.handle, rhs.handle]
         scalars  = MX_float[]
         mut_vars = MX_handle[out.handle]
-        @mxcall(:MXFuncInvoke,
-                (MX_handle, Ptr{MX_handle}, Ptr{MX_float}, Ptr{MX_handle}),
-                func_handle, use_vars, scalars, mut_vars)
+        _invoke_mxfunction(use_vars, scalars, mut_vars)
         return out
       end
-      if accept_empty_mutate
-        function binary_ndarray_function(lhs::NDArray, rhs::NDArray)
-          out = NDArray(_ndarray_alloc())
-          binary_ndarray_function(lhs, rhs, out)
-        end
-      end
+      eval(_lib, :(function $func_name(lhs, rhs, out) $binary_func(lhs, rhs, out) end))
 
-      # add methods to the module
-      eval(_lib, quote
-        $func_name = $binary_ndarray_function
-      end)
+      if accept_empty_mutate
+        binary_func_2 = (lhs::NDArray, rhs::NDArray) -> begin
+          out = NDArray(_ndarray_alloc())
+          binary_func(lhs, rhs, out)
+        end
+        eval(_lib, :(function $func_name(lhs, rhs) $binary_func_2(lhs, rhs) end))
+      end
+    elseif n_mutate_vars == 1 && n_used_vars == 1 && n_scalars == 0
+      println("defining unary $func_name")
+      # unary ndarray function
+      unary_func = (src::NDArray, out::NDArray) -> begin
+        @assert(out.writable)
+        use_vars = MX_handle[src.handle]
+        scalars  = MX_float[]
+        mut_vars = MX_handle[out.handle]
+        _invoke_mxfunction(use_vars, scalars, mut_vars)
+        return out
+      end
+      eval(_lib, :(function $func_name(src, out) $unary_func(src, out) end))
+
+      if accept_empty_mutate
+        unary_func_2 = (src::NDArray) -> begin
+          out = NDArray(_ndarray_alloc())
+          unary_func(src, out)
+        end
+        eval(_lib, :(function $func_name(src) $unary_func_2(src) end))
+      end
     end
   end
 end
