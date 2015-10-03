@@ -59,10 +59,6 @@ end
 ################################################################################
 # NDArray functions dynamically exported from libmx
 ################################################################################
-module _lib
-# this module is used to hold functions automatically imported
-# from libmxnet
-end
 function _invoke_mxfunction(func_handle::MX_handle, use_vars, scalars, mut_vars)
   @mxcall(:MXFuncInvoke,
           (MX_handle, Ptr{MX_handle}, Ptr{MX_float}, Ptr{MX_handle}),
@@ -98,7 +94,14 @@ function _import_ndarray_functions()
     @mxcall(:MXFuncGetInfo,
             (MX_handle, Ref{char_p}, Ref{char_p}, Ref{MX_uint}, Ref{char_pp}, Ref{char_pp}, Ref{char_pp}),
             func_handle, ref_name, ref_desc, ref_narg, ref_arg_names, ref_arg_types, ref_arg_descs)
-    func_name = symbol(bytestring(ref_name[]))
+
+    # We attach the symbol ℵ (\aleph) to those functions to indicate that they are
+    # dynamically imported from libmxnet
+    #
+    # A first attempt was to collect all those functions in a submodule _lib. But working
+    # with submodules in Julia is really painful, especially when macros (@mxcall) are
+    # involved in a function that is to be dynamically generated via eval.
+    func_name = symbol("ℵ" * bytestring(ref_name[]))
 
     #----------------------------------------
     # get function specification
@@ -128,42 +131,44 @@ function _import_ndarray_functions()
     if n_mutate_vars == 1 && n_used_vars == 2 && n_scalars == 0
       println("defining binary $func_name")
       # binary ndarray function
-      binary_func = (lhs::NDArray, rhs::NDArray, out::NDArray) -> begin
-        @assert(out.writable)
-        use_vars = MX_handle[lhs.handle, rhs.handle]
-        scalars  = MX_float[]
-        mut_vars = MX_handle[out.handle]
-        _invoke_mxfunction(use_vars, scalars, mut_vars)
-        return out
-      end
-      eval(_lib, :(function $func_name(lhs, rhs, out) $binary_func(lhs, rhs, out) end))
+      eval(mx, quote
+        function $func_name(lhs::NDArray, rhs::NDArray, out::NDArray)
+          @assert(out.writable)
+          use_vars = MX_handle[lhs.handle, rhs.handle]
+          scalars  = MX_float[]
+          mut_vars = MX_handle[out.handle]
+          _invoke_mxfunction($func_handle, use_vars, scalars, mut_vars)
+          return out
+        end
+      end)
 
       if accept_empty_mutate
-        binary_func_2 = (lhs::NDArray, rhs::NDArray) -> begin
-          out = NDArray(_ndarray_alloc())
-          binary_func(lhs, rhs, out)
-        end
-        eval(_lib, :(function $func_name(lhs, rhs) $binary_func_2(lhs, rhs) end))
+        eval(mx, quote
+          function $func_name(lhs::NDArray, rhs::NDArray)
+            $func_name(lhs, rhs, NDArray(_ndarray_alloc()))
+          end
+        end)
       end
     elseif n_mutate_vars == 1 && n_used_vars == 1 && n_scalars == 0
       println("defining unary $func_name")
       # unary ndarray function
-      unary_func = (src::NDArray, out::NDArray) -> begin
-        @assert(out.writable)
-        use_vars = MX_handle[src.handle]
-        scalars  = MX_float[]
-        mut_vars = MX_handle[out.handle]
-        _invoke_mxfunction(use_vars, scalars, mut_vars)
-        return out
-      end
-      eval(_lib, :(function $func_name(src, out) $unary_func(src, out) end))
+      eval(mx, quote
+        function $func_name(src::NDArray, out::NDArray)
+          @assert(out.writable)
+          use_vars = MX_handle[src.handle]
+          scalars  = MX_float[]
+          mut_vars = MX_handle[out.handle]
+          _invoke_mxfunction($func_handle, use_vars, scalars, mut_vars)
+          return out
+        end
+      end)
 
       if accept_empty_mutate
-        unary_func_2 = (src::NDArray) -> begin
-          out = NDArray(_ndarray_alloc())
-          unary_func(src, out)
-        end
-        eval(_lib, :(function $func_name(src) $unary_func_2(src) end))
+        eval(mx, quote
+          function $func_name(src::NDArray)
+            $func_name(NDArray(_ndarray_alloc()))
+          end
+        end)
       end
     end
   end
