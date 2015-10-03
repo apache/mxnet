@@ -82,7 +82,7 @@ include $(PS_PATH)/make/ps.mk
 ifeq ($(USE_DIST_KVSTORE), 1)
 	CFLAGS += -DMXNET_USE_DIST_KVSTORE -I$(PS_PATH)/src
 	LIB_DEP += $(PS_PATH)/build/libps.a
-	LDFLAGS += $(PS_LDFLAGS)
+	LDFLAGS += $(PS_LDFLAGS_SO)
 endif
 
 .PHONY: clean all test lint doc clean_all
@@ -100,12 +100,12 @@ ifeq ($(USE_CUDA), 1)
 	ALL_DEP += $(CUOBJ)
 endif
 
-build/%.o: src/%.cc
+build/%.o: src/%.cc $(LIB_DEP)
 	@mkdir -p $(@D)
 	$(CXX) -std=c++0x $(CFLAGS) -MM -MT build/$*.o $< >build/$*.d
 	$(CXX) -std=c++0x -c $(CFLAGS) -c $< -o $@
 
-build/%_gpu.o: src/%.cu
+build/%_gpu.o: src/%.cu $(LIB_DEP)
 	@mkdir -p $(@D)
 	$(NVCC) $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" -M build/$*_gpu.o $< >build/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $<

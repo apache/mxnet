@@ -134,6 +134,30 @@ class KVStore {
   virtual int get_group_size() const {
     return 1;
   }
+
+  /**
+   * \return whether or not this process is a server node
+   */
+  static bool is_server_node() {
+    char* role_str = getenv("DMLC_ROLE");
+    return (role_str != NULL) && (!strcmp(role_str, "server"));
+  }
+
+  /**
+   * \return whether or not this process is a worker node
+   */
+  static bool is_worker_node() {
+    char* role_str = getenv("DMLC_ROLE");
+    return (role_str != NULL) && (!strcmp(role_str, "worker"));
+  }
+
+  /**
+   * \return whether or not is in distributed computing
+   */
+  virtual bool is_distributed() const {
+    return false;
+  }
+
   /*!
    * \brief Create a new KVStore.
    * \param type The type of the kvstore.

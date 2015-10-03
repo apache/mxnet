@@ -13,7 +13,6 @@
 #include <utility>
 #include <algorithm>
 
-
 namespace mxnet {
 namespace kvstore {
 /**
