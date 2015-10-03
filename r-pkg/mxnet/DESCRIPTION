@@ -1,0 +1,11 @@
+Package: mxnet
+Type: Package
+Title: MXNet
+Version: 1.0
+Date: 2015-10-02
+Author: Your Name
+Maintainer: Your Name <your@email.com>
+Description: MXNet is a deep learning framework designed for both efficiency and flexibility. It allows you to mix the flavours of deep learning programs together to maximize the efficiency and your productivity.
+License: Apache-2.0
+Imports: Rcpp (>= 0.12.1)
+LinkingTo: Rcpp
