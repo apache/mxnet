@@ -1,5 +1,5 @@
 export NDArray
-export delete
+export empty
 
 # create a NDArray handle of specific shape
 function _ndarray_alloc{N}(shape :: NTuple{N, Int}, ctx :: Context, delay_alloc :: Bool)
@@ -19,7 +19,9 @@ function _ndarray_alloc()
   return MX_NDArrayHandle(h_ref[])
 end
 
-
+################################################################################
+# NDArray Type
+################################################################################
 type NDArray
   handle   :: MX_NDArrayHandle
   writable :: Bool
@@ -29,6 +31,9 @@ type NDArray
   end
 end
 
+################################################################################
+# NDArray functions exported to the users
+################################################################################
 function empty{N}(shape :: NTuple{N, Int}, ctx :: Context = DEFAULT_CONTEXT)
   NDArray(_ndarray_alloc(shape, ctx, false))
 end
@@ -36,6 +41,24 @@ function empty(shape :: Int...)
   empty(shape)
 end
 
+function Base.size(arr :: NDArray)
+  ref_ndim  = Ref{MX_uint}(0)
+  ref_shape = Ref{Ptr{MX_uint}}(0)
+  @mxcall(:MXNDArrayGetShape, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_uint}}),
+          arr.handle, ref_ndim, ref_shape)
+  tuple(map(Int, pointer_to_array(ref_shape[], ref_ndim[]))...)
+end
+
+function to_array(arr :: NDArray)
+  out = Array(MX_float, size(arr))
+  @mxcall(:MXNDArraySyncCopyToCPU, (MX_handle, Ptr{MX_float}, Csize_t),
+          arr.handle, pointer(out), length(out))
+  return out
+end
+
+################################################################################
+# NDArray functions dynamically exported from libmx
+################################################################################
 module _lib
 # this module is used to hold functions automatically imported
 # from libmxnet

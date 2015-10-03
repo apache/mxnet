@@ -81,9 +81,12 @@ macro mx_define_handle_t(name, destructor)
       end
     end)
 
-    function Base.convert(::Type{MX_handle}, obj::$name)
+    function Base.unsafe_convert(::Type{MX_handle}, obj::$name)
       obj.value
     end
+    Base.convert(t::Type{MX_handle}, obj::$name) = Base.unsafe_convert(t, obj)
+    Base.cconvert(t::Type{MX_handle}, obj::$name) = Base.unsafe_convert(t, obj)
+
     function Base.isnull(obj::$name) obj.value == C_NULL end
   end
 end
