@@ -19,17 +19,17 @@ type NDArray
 
     # TODO: there is currently no good way of automatically managing external resources
     # using finalizers is said to slow down the GC significantly
-    finalizer(obj, delete)
+    #finalizer(obj, delete)
     obj
   end
 end
 
-function delete(obj :: NDArray)
-  if !isnull(obj.handle)
-    @mxcall(:MXNDArrayFree, (Ptr{Void},), obj.handle)
-    reset(obj.handle)
-  end
-end
+#function delete(obj :: NDArray)
+#  if !isnull(obj.handle)
+#    @mxcall(:MXNDArrayFree, (Ptr{Void},), obj.handle)
+#    reset(obj.handle)
+#  end
+#end
 
 function empty{N}(shape :: NTuple{N, Int}, ctx :: Context = DEFAULT_CONTEXT)
   NDArray(_ndarray_alloc(shape, ctx, false))

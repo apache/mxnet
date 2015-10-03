@@ -11,24 +11,6 @@ end
 typealias MX_uint Cuint
 typealias MX_float Cfloat
 
-macro mx_define_handle_t(name)
-  name = esc(name)
-  quote
-    type $name
-      value :: Ptr{Void}
-    end
-    $name() = $name(C_NULL)
-    function Base.cconvert(::Type{Ptr{Void}}, obj::$name)
-      obj.value
-    end
-    function Base.isnull(obj::$name) obj.value == C_NULL end
-    function Base.reset(obj::$name) obj.value = C_NULL end
-  end
-end
-
-@mx_define_handle_t(MX_NDArrayHandle)
-@mx_define_handle_t(MX_FunctionHandle)
-
 ################################################################################
 # Initialization and library API entrance
 ################################################################################
@@ -62,4 +44,45 @@ macro mxcall(fv, argtypes, args...)
     end
   end
 end
+
+################################################################################
+# Handle types
+################################################################################
+macro mx_define_handle_t(name, destructor)
+  name = esc(name)
+  quote
+    type $name
+      value :: Ptr{Void}
+
+      function $name(value = C_NULL)
+        hdr = new(value)
+
+        $(if destructor != :nop
+          :(finalizer(hdr, delete!))
+        end)
+
+        return hdr
+      end
+    end
+
+    $(if finalizer != :nop
+      quote
+        function delete!(h :: $name)
+          if h.value != C_NULL
+            @mxcall($(Meta.quot(destructor)), (Ptr{Void},), h.value)
+            h.value = C_NULL
+          end
+        end
+      end
+    end)
+
+    function Base.cconvert(::Type{Ptr{Void}}, obj::$name)
+      obj.value
+    end
+    function Base.isnull(obj::$name) obj.value == C_NULL end
+  end
+end
+
+@mx_define_handle_t(MX_NDArrayHandle, MXNDArrayFree)
+@mx_define_handle_t(MX_FunctionHandle, nop)
 
