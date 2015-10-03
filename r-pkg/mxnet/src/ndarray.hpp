@@ -1,4 +1,7 @@
 
+#ifndef Rcpp_ndarray_hpp
+#define Rcpp_ndarray_hpp
+
 #include <Rcpp.h>
 #include "mxnet.h"
 
@@ -11,6 +14,4 @@ class NDArray {
         bool writable;
 };
 
-NDArray make_ndarray_function(NDArrayHandle handle);
-
-NDArray binary_ndarray_function(NDArray lhs, NDArray rhs, NDArray out);
+#endif

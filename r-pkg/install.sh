@@ -8,4 +8,4 @@ mkdir -p ./mxnet/inst/include
 
 cp ../include/mxnet/c_api.h ./mxnet/inst/include/mxnet.h
 
-R CMD INSTALL mxnet
+#R CMD INSTALL mxnet
