@@ -31,6 +31,12 @@ type NDArray
   end
 end
 
+function Base.unsafe_convert(::Type{MX_handle}, obj::NDArray)
+  Base.unsafe_convert(MX_handle, obj.handle)
+end
+Base.convert(t::Type{MX_handle}, obj::NDArray) = Base.unsafe_convert(t, obj)
+Base.cconvert(t::Type{MX_handle}, obj::NDArray) = Base.unsafe_convert(t, obj)
+
 ################################################################################
 # NDArray functions exported to the users
 ################################################################################
@@ -45,14 +51,14 @@ function Base.size(arr :: NDArray)
   ref_ndim  = Ref{MX_uint}(0)
   ref_shape = Ref{Ptr{MX_uint}}(0)
   @mxcall(:MXNDArrayGetShape, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_uint}}),
-          arr.handle, ref_ndim, ref_shape)
+          arr, ref_ndim, ref_shape)
   tuple(map(Int, pointer_to_array(ref_shape[], ref_ndim[]))...)
 end
 
 function to_array(arr :: NDArray)
   out = Array(MX_float, size(arr))
   @mxcall(:MXNDArraySyncCopyToCPU, (MX_handle, Ptr{MX_float}, Csize_t),
-          arr.handle, pointer(out), length(out))
+          arr, pointer(out), length(out))
   return out
 end
 
@@ -131,19 +137,19 @@ function _import_ndarray_functions()
     if n_mutate_vars == 1 && n_used_vars == 2 && n_scalars == 0
       println("defining binary $func_name")
       # binary ndarray function
-      eval(mx, quote
+      eval(quote
         function $func_name(lhs::NDArray, rhs::NDArray, out::NDArray)
           @assert(out.writable)
-          use_vars = MX_handle[lhs.handle, rhs.handle]
+          use_vars = MX_handle[lhs, rhs]
           scalars  = MX_float[]
-          mut_vars = MX_handle[out.handle]
+          mut_vars = MX_handle[out]
           _invoke_mxfunction($func_handle, use_vars, scalars, mut_vars)
           return out
         end
       end)
 
       if accept_empty_mutate
-        eval(mx, quote
+        eval(quote
           function $func_name(lhs::NDArray, rhs::NDArray)
             $func_name(lhs, rhs, NDArray(_ndarray_alloc()))
           end
@@ -152,23 +158,56 @@ function _import_ndarray_functions()
     elseif n_mutate_vars == 1 && n_used_vars == 1 && n_scalars == 0
       println("defining unary $func_name")
       # unary ndarray function
-      eval(mx, quote
+      eval(quote
         function $func_name(src::NDArray, out::NDArray)
           @assert(out.writable)
-          use_vars = MX_handle[src.handle]
+          use_vars = MX_handle[src]
           scalars  = MX_float[]
-          mut_vars = MX_handle[out.handle]
+          mut_vars = MX_handle[out]
           _invoke_mxfunction($func_handle, use_vars, scalars, mut_vars)
           return out
         end
       end)
 
       if accept_empty_mutate
-        eval(mx, quote
+        eval(quote
           function $func_name(src::NDArray)
             $func_name(NDArray(_ndarray_alloc()))
           end
         end)
+      end
+    else
+      println("defining generic $func_name")
+      # general ndarray function
+      args = vcat([Expr(:(::), symbol("in$i"), NDArray) for i=1:n_used_vars],
+                  [Expr(:(::), symbol("sca$i"), AbstractFloat) for i=1:n_scalars],
+                  [Expr(:(::), symbol("out$i"), NDArray) for i=1:n_mutate_vars])
+      _use_vars = Expr(:ref, :MX_handle, [symbol("in$i") for i=1:n_used_vars]...)
+      _scalars  = Expr(:ref, :MX_float, [symbol("sca$i") for i=1:n_scalars]...)
+      _mut_vars = Expr(:ref, :MX_handle, [symbol("out$i") for i=1:n_mutate_vars]...)
+      stmt_call = Expr(:call, :_invoke_mxfunction, func_handle, _use_vars, _scalars, _mut_vars)
+      if n_mutate_vars == 1
+        stmt_ret = :(return out1)
+      else
+        stmt_ret = Expr(:return, Expr(:tuple, [symbol("out$i") for i=1:n_mutate_vars]...))
+      end
+
+      func_body = Expr(:block, stmt_call, stmt_ret)
+      func_head = Expr(:call, func_name, args...)
+
+      func_def  = Expr(:function, func_head, func_body)
+      eval(func_def)
+
+      if accept_empty_mutate
+        args0      = args[1:n_used_vars+n_scalars]
+        func_head0 = Expr(:call, func_name, args0...)
+        _mut_vars0 = [:(NDArray(_ndarray_alloc())) for i=1:n_mutate_vars]
+        stmt_call0 = Expr(:call, func_name, args0..., _mut_vars0...)
+        func_body0 = Expr(:block, stmt_call0)
+        func_head0 = Expr(:call, func_name, args0...)
+
+        func_def0  = Expr(:function, func_head0, func_body0)
+        eval(func_def0)
       end
     end
   end
