@@ -87,6 +87,26 @@ class KVStore {
   virtual void Pull(const std::vector<int>& keys,
                     const std::vector<NDArray*>& values,
                     int priority = 0) = 0;
+
+  /*!
+   * \brief global barrier among all worker machines
+   *
+   * For example, assume there are n machines, we want to let machine 0 first
+   * init the values, and then pull the inited value to all machines. Before
+   * pulling, we can place a barrier to guarantee that the initialization is
+   * finished.
+   *
+   * \code
+   * // this codes run on n machines in parallel
+   * if (get_rank() == 0) {
+   *   Init(keys, values);
+   * }
+   * Barrier();
+   * Pull(keys, values);
+   * \endcode
+   */
+  virtual void Barrier() { }
+
 #if DMLC_USE_CXX11
   /**
    * \brief the prototype of user-defined updater
