@@ -10,6 +10,10 @@ end
 ################################################################################
 typealias MX_uint Cuint
 typealias MX_float Cfloat
+typealias MX_handle Ptr{Void}
+
+typealias char_p Ptr{UInt8}
+typealias char_pp Ptr{char_p}
 
 ################################################################################
 # Initialization and library API entrance
@@ -17,6 +21,7 @@ typealias MX_float Cfloat
 const MXNET_LIB = Libdl.find_library(["libmxnet.so"], ["/Users/chiyuan/work/mxnet/mxnet/lib"])
 
 function __init__()
+  _import_ndarray_functions()
   atexit() do
     # notify libmxnet we are shutting down
     ccall( ("MXNotifyShutdown", MXNET_LIB), Cint, () )
@@ -24,7 +29,7 @@ function __init__()
 end
 
 function mx_get_last_error()
-  msg = ccall( ("MXGetLastError", MXNET_LIB), Ptr{UInt8}, () )
+  msg = ccall( ("MXGetLastError", MXNET_LIB), char_p, () )
   if msg == C_NULL
     throw(MXError("Failed to get last error message"))
   end
@@ -52,7 +57,7 @@ macro mx_define_handle_t(name, destructor)
   name = esc(name)
   quote
     type $name
-      value :: Ptr{Void}
+      value :: MX_handle
 
       function $name(value = C_NULL)
         hdr = new(value)
@@ -69,14 +74,14 @@ macro mx_define_handle_t(name, destructor)
       quote
         function delete!(h :: $name)
           if h.value != C_NULL
-            @mxcall($(Meta.quot(destructor)), (Ptr{Void},), h.value)
+            @mxcall($(Meta.quot(destructor)), (MX_handle,), h.value)
             h.value = C_NULL
           end
         end
       end
     end)
 
-    function Base.cconvert(::Type{Ptr{Void}}, obj::$name)
+    function Base.convert(::Type{MX_handle}, obj::$name)
       obj.value
     end
     function Base.isnull(obj::$name) obj.value == C_NULL end
