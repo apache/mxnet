@@ -1,17 +1,24 @@
-#-----------------------------------------------------
-#  cxxnet: the configuration compile script
+#-------------------------------------------------------------------------------
+#  Template configuration for compiling mxnet
 #
-#  This is the default configuration setup for cxxnet
-#  If you want to change configuration, do the following steps:
+#  If you want to change the configuration, please use the following
+#  steps. Assume you are on the root directory of mxnet. First copy the this
+#  file so that any local changes will be ignored by git
 #
-#  - copy this file to the root folder
-#  - modify the configuration you want
-#  - type make or make -j n for parallel build
-#----------------------------------------------------
+#  $ cp make/config.mk .
+#
+#  Next modify the according entries, and then compile by
+#
+#  $ make
+#
+#  or build in parallel with 8 threads
+#
+#  $ make -j8
+#-------------------------------------------------------------------------------
 
-#------------------------
+#---------------------
 # choice of compiler
-#------------------------
+#--------------------
 
 export CC = gcc
 export CXX = g++
@@ -41,11 +48,6 @@ USE_CUDA_PATH = NONE
 # whether use CUDNN R3 library
 USE_CUDNN = 0
 
-# add the path to CUDNN libary to link and compile flag
-# if you do not need that, or do not have that, leave it as NONE
-# (NOTE: not enable at this moment)
-# USE_CUDNN_PATH = NONE
-
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
 # imbin iterator
@@ -69,8 +71,11 @@ ifeq ($(USE_BLAS), mkl)
 endif
 
 #----------------------------
-# distributed filesystems
+# distributed computing
 #----------------------------
+
+# whether or not to enable mullti-machine supporting
+USE_DIST_KVSTORE = 1
 
 # whether or not allow to read and write HDFS directly. If yes, then hadoop is
 # required

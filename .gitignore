@@ -61,3 +61,5 @@ mshadow
 data
 recommonmark
 bin
+ps-lite
+deps

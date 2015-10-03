@@ -75,6 +75,16 @@ ifneq ($(USE_CUDA_PATH), NONE)
 	NVCC=$(USE_CUDA_PATH)/bin/nvcc
 endif
 
+# ps-lite
+PS_PATH=./ps-lite
+DEPS_PATH=$(shell pwd)/deps
+include $(PS_PATH)/make/ps.mk
+ifeq ($(USE_DIST_KVSTORE), 1)
+	CFLAGS += -DMXNET_USE_DIST_KVSTORE -I$(PS_PATH)/src
+	LIB_DEP += $(PS_PATH)/build/libps.a
+	LDFLAGS += $(PS_LDFLAGS)
+endif
+
 .PHONY: clean all test lint doc clean_all
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
@@ -84,7 +94,7 @@ OBJ = $(patsubst src/%.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*.cu)
 CUOBJ = $(patsubst src/%.cu, build/%_gpu.o, $(CUSRC))
 
-LIB_DEP = $(DMLC_CORE)/libdmlc.a
+LIB_DEP += $(DMLC_CORE)/libdmlc.a
 ALL_DEP = $(OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
 	ALL_DEP += $(CUOBJ)
@@ -105,6 +115,11 @@ lib/libmxnet.a: $(ALL_DEP)
 
 lib/libmxnet.so: $(ALL_DEP)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
+
+# ps-lite
+$(PS_PATH)/build/libps.a:
+	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) deps
+	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) ps
 
 $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
