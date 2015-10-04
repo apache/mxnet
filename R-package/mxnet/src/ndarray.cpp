@@ -22,11 +22,9 @@ RCPP_MODULE(mod_ndarray) {
     int ret = MXListFunctions(&out_size, &out_array);
 
     for (mx_uint i = 0; i < out_size; i++) {
-        MxFunction fun(out_array[i]);    
-        _rcpp_module_mod_ndarray.Add(fun.get_name(), &fun);
+        MxFunction * fun = new MxFunction(out_array[i]);
+        _rcpp_module_mod_ndarray.Add(fun->get_name(), fun);
     }
 
 }
-
-
 
