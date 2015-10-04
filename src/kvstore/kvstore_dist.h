@@ -10,17 +10,19 @@
 #include "./mxnet_node.h"
 #include "mxnet/engine.h"
 #include "ps.h"
+#include "base/range.h"
 
 namespace mxnet {
 namespace kvstore {
 
 class KVStoreDist : public KVStoreLocal {
  public:
-  KVStoreDist() {
-    engine_ = Engine::Get();
+  KVStoreDist()
+      : engine_(Engine::Get()), node_(NULL), store_(NULL), cache_(NULL) {
     if (IsServerNode()) {
       node_ = new MXNetServer();
-      store_ = new ps::OnlineServer<real_t, ServerVal, ServerHandle>();
+      ServerHandle handle(this);
+      store_ = new ps::OnlineServer<real_t, ServerVal, ServerHandle>(handle);
     } else {
       node_ = new ps::App();
       cache_ = new ps::KVCache<ps::Key, real_t>(ps::NextID());
@@ -28,7 +30,9 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   virtual ~KVStoreDist() {
-
+    delete node_;
+    delete store_;
+    delete cache_;
   }
 
   void Init(const std::vector<int>& keys,
@@ -62,10 +66,10 @@ class KVStoreDist : public KVStoreLocal {
         EncodeKey(key, size, &keys, &vals_size);
 
         // do push
+        // TODO(mli) add filters to reduce the bandwidth
         real_t* data = static_cast<real_t*>(merged.data().dptr_);
         ps::SArray<real_t> vals(data, size, ps::EmptyDel<real_t>());
         ps::SyncOpts opts;
-        // TODO(mli) add filters to reduce the bandwidth
         opts.callback = [cb]() { cb(); };
         last_push_[key] = CHECK_NOTNULL(cache_)->Push(
             opts.GetTask(), keys, vals, vals_size, opts.callback);
@@ -96,13 +100,13 @@ class KVStoreDist : public KVStoreLocal {
         EncodeKey(key, size, &keys, &vals_size);
 
         // do pull
+        // TODO(mli) add filters to reduce the bandwidth
         ps::SyncOpts opts;
         auto it = last_push_.find(key);
         if (it != last_push_.end()) {
           // make sure pull happens after the previous push on this key
           opts.deps.push_back(it->second);
         }
-        // TODO(mli) add filters to reduce the bandwidth
         opts.callback = [cb, vals, priority]() {
           for (size_t i = 1; i < vals.size(); ++i) {
             CopyFromTo(*vals[0], vals[i], priority);
@@ -122,16 +126,15 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void set_updater(Updater updater) override {
-    // TODO
-  }
   void Barrier() override {
     // TODO
   }
 
   void SendCommandToServers(int head, const char* body) override {
     CHECK_GE(head, 0) << "negative head is preserved for system usage";
-    ps::Task task; task.set_cmd(head); task.set_msg(body);
+    ps::Task task;
+    task.set_cmd(head);
+    task.set_msg(body);
     node_->Wait(node_->Submit(task, ps::kServerGroup));
   }
 
@@ -149,20 +152,47 @@ class KVStoreDist : public KVStoreLocal {
 
  private:
   /**
-   * \brief convert to a key in ps
+   * \brief convert to keys in ps
    */
   inline void EncodeKey(int key, size_t size,
                         ps::SArray<ps::Key>* keys,
                         ps::SArray<int>* vals_size) {
-    // TODO
+    int num_servers = ps::NodeInfo::NumServers();
+    CHECK_GT(num_servers, 0);
+
+    // generate the key partition so we can control which server the data goes to
+    if (server_key_partition_.empty()) {
+      CHECK_EQ(sizeof(ps::Key), 8) << "Do not use USE_KEY32=1 to compile ps-lite";
+      auto all = ps::Range<ps::Key>::All();
+      for (int i = 0; i < num_servers; ++i) {
+        ps::Key key = all.EvenDivide(num_servers, i).begin();
+        server_key_partition_.push_back(((key >> kIndexBits)+1) << kIndexBits);
+      }
+    }
+
+    // a simple heuristic for load balance
+    keys->clear();
+    vals_size->clear();
+    if (size < bigarray_bound_) {
+      // send it to a single random picked server
+      int server = (key * 9973) % num_servers;
+      keys->push_back(server_key_partition_[server] | key);
+      vals_size->push_back(size);
+    } else {
+      // divide it to all servers
+      auto all = ps::Range<size_t>(0, size);
+      for (int i = 0; i < num_servers; ++i) {
+        keys->push_back(server_key_partition_[i] | key);
+        vals_size->push_back(all.EvenDivide(num_servers, i).size());
+      }
+    }
   }
 
   /**
    * \brief convert from a key in ps
    */
   inline int DecodeKey(ps::Key key) {
-    // TODO
-    return 0;
+    return static_cast<int>((key << kIndexBits) >> kIndexBits);
   }
 
   /**
@@ -178,9 +208,12 @@ class KVStoreDist : public KVStoreLocal {
   /**
    * \brief server handle
    */
-  struct ServerHandle {
-    ServerHandle();
-    ~ServerHandle();
+  class ServerHandle {
+   public:
+    ServerHandle(KVStoreDist* kvstore) {
+      kvstore_ = kvstore;
+    }
+    ~ServerHandle() { }
 
     inline void Start(bool push, int timestamp, int cmd, void* msg) { }
     inline void Finish() { }
@@ -189,14 +222,44 @@ class KVStoreDist : public KVStoreLocal {
 
     inline void Push(
         ps::Key recv_key, ps::Blob<const real_t> recv_val, ServerVal& my_val) {
-      // TODO
+      // construct NDArray without data copy
+      size_t ds[] = {recv_val.size};
+      TShape dshape(ds, ds + 2);
+      TBlob recv_blob((real_t*)recv_val.data, dshape, cpu::kDevMask);
+      NDArray recv_array(recv_blob, 0);
+
+      if (my_val.Empty()) {
+        // initialization
+        my_val.array = NDArray(dshape, Context());
+        CopyFromTo(recv_array, &my_val.array);
+      } else {
+        // call updater
+        int key = kvstore_->DecodeKey(recv_key);
+        kvstore_->updater_(key, recv_array, &my_val.array);
+      }
     }
 
     inline void Pull(
         ps::Key recv_key, const ServerVal& my_val, ps::Blob<real_t>& send_val) {
-      // TODO
+      send_val.data = static_cast<real_t*>(my_val.array.data().dptr_);
+      send_val.size = my_val.array.shape()[0];
     }
+
+   private:
+    KVStoreDist* kvstore_;
   };
+
+  Engine* engine_;
+
+  /**
+   * \brief a ps-lite node (worker/server)
+   */
+  ps::App* node_;
+
+  /**
+   * \brief kv store at server node
+   */
+  ps::OnlineServer<real_t, ServerVal, ServerHandle>* store_;
 
   /**
    * \brief for worker to push and pull data
@@ -205,18 +268,19 @@ class KVStoreDist : public KVStoreLocal {
   ps::KVCache<ps::Key, real_t>* cache_;
 
   /**
-   * \brief kv store at server node
-   */
-ps::OnlineServer<real_t, ServerVal, ServerHandle>* store_;
-
-  ps::App* node_;
-
-  Engine* engine_;
-
-  /**
    * \brief the timestamps for the last push
    */
   std::unordered_map<int, int> last_push_;
+
+  /**
+   * \brief key partition of server nodes in ps
+   */
+  std::vector<ps::Key> server_key_partition_;
+
+  /**
+   * \brief number of bits used to encode the key in mxnet
+   */
+  static const int kIndexBits = 32;
 };
 
 }  // namespace kvstore
