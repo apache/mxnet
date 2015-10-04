@@ -6,8 +6,8 @@ type Context
 
   old_ctx     :: Nullable{Context}
 end
-Context(dev_type :: CONTEXT_TYPE, dev_id = 0) =
-    Context(dev_type, dev_id, Nullable{Context}())
+Context(dev_type :: Union{CONTEXT_TYPE, Integer}, dev_id :: Integer = 0) =
+    Context(convert(CONTEXT_TYPE, dev_type), convert(Cint, dev_id), Nullable{Context}())
 
 
 # global default context

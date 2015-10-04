@@ -40,6 +40,14 @@ Base.cconvert(t::Type{MX_handle}, obj::NDArray) = Base.unsafe_convert(t, obj)
 ################################################################################
 # NDArray functions exported to the users
 ################################################################################
+function context(arr :: NDArray)
+  ref_typeid = Ref{Cint}(0)
+  ref_devid  = Ref{Cint}(0)
+  @mxcall(:MXNDArrayGetContext, (MX_handle, Ref{Cint}, Ref{Cint}),
+          arr, ref_typeid, ref_devid)
+  return Context(ref_typeid[], ref_devid[])
+end
+
 function empty{N}(shape :: NTuple{N, Int}, ctx :: Context = DEFAULT_CONTEXT)
   NDArray(_ndarray_alloc(shape, ctx, false))
 end
@@ -96,7 +104,7 @@ function Base.copy!(dst :: NDArray, src :: NDArray)
     return
   end
 
-  ℵ_copy_to(src, dst)
+  ℵ_copyto(src, dst)
   return dst
 end
 
@@ -133,6 +141,53 @@ end
 function Base.copy{T<:Real}(arr :: Array{T}, ctx :: Context)
   dst = NDArray(_ndarray_alloc(size(arr), ctx, true))
   Base.copy!(dst, arr)
+end
+
+
+#------------------------------------------------------------
+# Basic arithmetics
+#------------------------------------------------------------
+"""
+Julia does not support re-definiton of += operator (like __iadd__ in python),
+When one write a += b, it gets translated to a = a+b. a+b will allocate new
+memory for the results, and the newly allocated NDArray object is then assigned
+back to a, while the original contents in a is discarded. This is very inefficient
+when we want to do inplace update.
+
+This macro is a simple utility to implement this behavior. Write
+
+  @mx.inplace a += b
+
+will translate into
+
+  mx.add!(a, b)
+
+which will do inplace adding of the contents of b into a.
+"""
+macro inplace(stmt)
+  if stmt.head == :+=
+    Expr(:call, :add!, esc(stmt.args[1]), esc(stmt.args[2]))
+  else
+    error("unsupported inplace translation for $stmt")
+  end
+end
+
+function add!(dst :: NDArray, args :: Union{Real, NDArray}...)
+  for arg in args
+    if isa(arg, Real)
+      ℵ_plus_scalar(dst, arg, dst)
+    else
+      ℵ_plus(dst, arg, dst)
+    end
+  end
+  return dst
+end
+
+# We fix the first arg to be NDArray to avoid ambiguity
+import Base.+
+function +(arg0 :: NDArray, args :: Union{Real, NDArray}...)
+  ret = copy(arg0, context(arg0))
+  add!(ret, args...)
 end
 
 
