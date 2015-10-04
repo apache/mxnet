@@ -7,6 +7,7 @@
 #define MXNET_KVSTORE_KVSTORE_DIST_H_
 
 #include "./kvstore_local.h"
+#include "./mxnet_node.h"
 #include "mxnet/engine.h"
 #include "ps.h"
 
@@ -17,7 +18,12 @@ class KVStoreDist : public KVStoreLocal {
  public:
   KVStoreDist() {
     engine_ = Engine::Get();
-    cache_ = CHECK_NOTNULL((new ps::KVCache<ps::Key, real_t>(ps::NextID())));
+    if (IsServerNode()) {
+      node_ = CHECK_NOTNULL((new MXNetServer()));
+    } else {
+      node_ = CHECK_NOTNULL((new ps::App()));
+      cache_ = CHECK_NOTNULL((new ps::KVCache<ps::Key, real_t>(ps::NextID())));
+    }
   }
 
   virtual ~KVStoreDist() {
@@ -60,8 +66,8 @@ class KVStoreDist : public KVStoreLocal {
         ps::SyncOpts opts;
         // TODO(mli) add filters to reduce the bandwidth
         opts.callback = [cb]() { cb(); };
-        last_push_[key] =
-          cache_->Push(opts.GetTask(), keys, vals, vals_size, opts.callback);
+        last_push_[key] = CHECK_NOTNULL(cache_)->Push(
+            opts.GetTask(), keys, vals, vals_size, opts.callback);
       };
       engine_->PushAsync(push_to_servers, pinned_ctx_, {merged.var()}, {},
                         FnProperty::kNormal, priority);
@@ -103,7 +109,8 @@ class KVStoreDist : public KVStoreLocal {
           cb();
         };
         real_t* data = static_cast<real_t*>(vals[0]->data().dptr_);
-        cache_->Pull(opts.GetTask(), keys, vals_size, opts.callback, data);
+        CHECK_NOTNULL(cache_)->Pull(
+            opts.GetTask(), keys, vals_size, opts.callback, data);
       };
 
       std::vector<Engine::VarHandle> mut_vars;
@@ -114,19 +121,29 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
+  void set_updater(Updater updater) override {
+    // TODO
+  }
   void Barrier() override {
-
+    // TODO
   }
 
-  int get_group_size() const override {
-    return ps::NodeInfo::RankSize();
-  }
-  int get_rank() const override {
-    return ps::NodeInfo::MyRank();
+  void SendCommandToServers(int head, const char* body) override {
+    CHECK_GE(head, 0) << "negative head is preserved for system usage";
+    ps::Task task; task.set_cmd(head); task.set_msg(body);
+    node_->Wait(node_->Submit(task, ps::kServerGroup));
   }
 
-  bool IsDistributed() const override {
-    return true;
+  int get_group_size() const override { return ps::NodeInfo::RankSize(); }
+
+  int get_rank() const override { return ps::NodeInfo::MyRank(); }
+
+  bool IsDistributed() const override { return true; }
+
+  void RunServer(const Controller& controller) override {
+    CHECK(IsServerNode());
+    static_cast<MXNetServer*>(node_)->set_controller(controller);
+    node_->Run();
   }
 
  private:
@@ -151,6 +168,10 @@ class KVStoreDist : public KVStoreLocal {
    * use KVCache rather than KVWorker for more advanced push and pull
    */
   ps::KVCache<ps::Key, real_t>* cache_;
+
+  void* store_;
+
+  ps::App* node_;
 
   Engine* engine_;
 

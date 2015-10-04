@@ -201,10 +201,11 @@ class KVStore {
    *
    * This function returns after the command has been executed in all server nodes
    *
-   * \param head the head of the command
+   * \param head the head of the command, must >= 0 (negative are preserved for
+   * system usage)
    * \param body the body of the command
    */
-  virtual void PushCommandToServer(int head, const char* body) { }
+  virtual void SendCommandToServers(int head, const char* body) { }
 
   /**
    * \brief the prototype of a server controller
