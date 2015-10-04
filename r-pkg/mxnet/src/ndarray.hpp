@@ -7,9 +7,11 @@
 
 class NDArray {
     public:
+        NDArray(NDArrayHandle handle, bool writable = true): handle(handle), writable(writable){}
+        NDArray(const NDArray& n):handle(n.handle), writable(n.writable){}
         void load(const std::string & filename);
         void save(const std::string & filename);
-    private:
+
         NDArrayHandle handle;
         bool writable;
 };
