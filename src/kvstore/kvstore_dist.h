@@ -19,10 +19,11 @@ class KVStoreDist : public KVStoreLocal {
   KVStoreDist() {
     engine_ = Engine::Get();
     if (IsServerNode()) {
-      node_ = CHECK_NOTNULL((new MXNetServer()));
+      node_ = new MXNetServer();
+      store_ = new ps::OnlineServer<real_t, ServerVal, ServerHandle>();
     } else {
-      node_ = CHECK_NOTNULL((new ps::App()));
-      cache_ = CHECK_NOTNULL((new ps::KVCache<ps::Key, real_t>(ps::NextID())));
+      node_ = new ps::App();
+      cache_ = new ps::KVCache<ps::Key, real_t>(ps::NextID());
     }
   }
 
@@ -153,23 +154,60 @@ class KVStoreDist : public KVStoreLocal {
   inline void EncodeKey(int key, size_t size,
                         ps::SArray<ps::Key>* keys,
                         ps::SArray<int>* vals_size) {
-
+    // TODO
   }
 
   /**
    * \brief convert from a key in ps
    */
   inline int DecodeKey(ps::Key key) {
+    // TODO
     return 0;
   }
 
   /**
-   * \brief for push and pull
+   * \brief value type stored at server
+   */
+  struct ServerVal {
+    NDArray array;
+    inline void Load(dmlc::Stream *fi) { array.Load(fi); }
+    inline void Save(dmlc::Stream *fo) const { array.Save(fo); }
+    inline bool Empty() const { return array.is_none(); }
+  };
+
+  /**
+   * \brief server handle
+   */
+  struct ServerHandle {
+    ServerHandle();
+    ~ServerHandle();
+
+    inline void Start(bool push, int timestamp, int cmd, void* msg) { }
+    inline void Finish() { }
+    inline void Load(dmlc::Stream *fi) { }
+    inline void Save(dmlc::Stream *fo) const { }
+
+    inline void Push(
+        ps::Key recv_key, ps::Blob<const real_t> recv_val, ServerVal& my_val) {
+      // TODO
+    }
+
+    inline void Pull(
+        ps::Key recv_key, const ServerVal& my_val, ps::Blob<real_t>& send_val) {
+      // TODO
+    }
+  };
+
+  /**
+   * \brief for worker to push and pull data
    * use KVCache rather than KVWorker for more advanced push and pull
    */
   ps::KVCache<ps::Key, real_t>* cache_;
 
-  void* store_;
+  /**
+   * \brief kv store at server node
+   */
+ps::OnlineServer<real_t, ServerVal, ServerHandle>* store_;
 
   ps::App* node_;
 
