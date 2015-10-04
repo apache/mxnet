@@ -39,21 +39,39 @@ struct Div : public BinaryBase {
   typedef mshadow::op::div mshadow_op;
 };
 
-struct Clip : public BinaryBase {
+struct ClipMin : public BinaryBase {
   struct mshadow_op {
     MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
-      if (isnan(a)) return 0.0f;
-      if (a < -b) return -b;
-      if (a > b) return b;
-      return a;
+      if (a < b) {
+        return b;
+      } else {
+        return a;
+      }
     }
   };
 };
+
+struct ClipMax : public BinaryBase {
+  struct mshadow_op {
+    MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
+      if (a > b) {
+        return b;
+      } else {
+        return a;
+      }
+    }
+  };
+};
+
+
 // type holder for random number generators
 struct UniformDistribution {};
 
 struct GaussianDistribution {};
 
+template<typename Device>
+void EvalClip(const TBlob &src, const real_t &a_min, const real_t &a_max,
+              TBlob *ret, RunContext ctx);
 
 template<typename Device, typename OP>
 void Eval(const TBlob &lhs, const TBlob &rhs, TBlob *ret, RunContext ctx);

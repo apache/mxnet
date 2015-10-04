@@ -105,6 +105,7 @@ void SetValueOp(const real_t &rhs, NDArray *out) {
     default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
   }
 }
+
 /*!
  * \brief run a binary operation
  * \param lhs left operand
@@ -267,6 +268,41 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
       break;
     }
 #endif
+    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+  }
+}
+
+void ClipOp(const NDArray &src,
+            const real_t &a_min, const real_t &a_max,
+            NDArray *out) {
+  if (out->is_none()) {
+    *out = NDArray(src.shape(), src.ctx(), true);
+  } else {
+    CHECK(out->ctx() == src.ctx()) << "target context mismatch";
+    CHECK(out->shape() == src.shape()) << "target shape mismatch";
+  }
+  NDArray ret = *out;
+  std::vector<Engine::VarHandle> const_vars;
+  if (src.var() != ret.var()) const_vars.push_back(src.var());
+  switch (src.ctx().dev_mask()) {
+    case cpu::kDevMask: {
+      Engine::Get()->PushSync([src, a_min, a_max, ret](RunContext ctx) {
+          ret.CheckAndAlloc();
+          TBlob tmp = ret.data();
+          ndarray::EvalClip<cpu>(src.data(), a_min, a_max, &tmp, ctx);
+        }, src.ctx(), const_vars, {ret.var()});
+      break;
+    }
+    #if MXNET_USE_CUDA
+    case gpu::kDevMask: {
+      Engine::Get()->PushSync([src, a_min, a_max, ret](RunContext ctx) {
+          ret.CheckAndAlloc();
+          TBlob tmp = ret.data();
+          ndarray::EvalClip<gpu>(src.data(), a_min, a_max, &tmp, ctx);
+        }, src.ctx(), const_vars, {ret.var()});
+      break;
+    }
+    #endif
     default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
   }
 }
@@ -574,7 +610,6 @@ MXNET_REGISTER_NDARRAY_FUN(_plus_scalar).set_function(ScalarOp<ndarray::Plus, fa
 MXNET_REGISTER_NDARRAY_FUN(_minus_scalar).set_function(ScalarOp<ndarray::Minus, false>);
 MXNET_REGISTER_NDARRAY_FUN(_mul_scalar).set_function(ScalarOp<ndarray::Mul, false>);
 MXNET_REGISTER_NDARRAY_FUN(_div_scalar).set_function(ScalarOp<ndarray::Div, false>);
-MXNET_REGISTER_NDARRAY_FUN(_clip_scalar).set_function(ScalarOp<ndarray::Clip, false>);
 // register API function
 // scalar, reverse scalar
 MXNET_REGISTER_NDARRAY_FUN(_rminus_scalar).set_function(ScalarOp<ndarray::Minus, true>);
@@ -600,4 +635,17 @@ MXNET_REGISTER_NDARRAY_FUN(_random_gaussian)
   })
 .set_num_scalars(2)
 .set_num_mutate_vars(1);
+
+MXNET_REGISTER_NDARRAY_FUN(clip)
+.set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
+.set_body([](NDArray **u, real_t *s, NDArray **out) {
+    ClipOp(*u[0], s[0], s[1], out[0]);
+  })
+.set_num_use_vars(1)
+.set_num_scalars(2)
+.set_num_mutate_vars(1)
+.describe("Clip ndarray elements to range (a_min, a_max)")
+.add_argument("src", "NDArray", "Source input")
+.add_argument("a_min", "real_t", "Minimum value")
+.add_argument("a_max", "real_t", "Maximum value");
 }  // namespace mxnet

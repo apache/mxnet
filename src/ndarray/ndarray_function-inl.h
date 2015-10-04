@@ -59,6 +59,19 @@ inline void EvalScalar_(const TBlob &lhs, const real_t &rhs,
   }
 }
 
+
+template<>
+void EvalClip<DEVICE>(const TBlob &src, const real_t &a_min, const real_t &a_max,
+                      TBlob *ret, RunContext ctx) {
+  typedef DEVICE xpu;
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  ret->FlatTo2D<xpu, real_t>(s)
+    = F<ClipMax::mshadow_op>(
+        F<ClipMin::mshadow_op>(src.FlatTo2D<xpu, real_t>(s), a_min),
+        a_max);
+}
+
 template<>
 void EvalRandom<DEVICE, UniformDistribution>(
     const real_t &a,
@@ -145,13 +158,11 @@ DECL_SCALAR(DEVICE, Plus, EvalScalar_, true)
 DECL_SCALAR(DEVICE, Minus, EvalScalar_, true)
 DECL_SCALAR(DEVICE, Mul, EvalScalar_, true)
 DECL_SCALAR(DEVICE, Div, EvalScalar_, true)
-DECL_SCALAR(DEVICE, Clip, EvalScalar_, true)
 // for reverse seq
 DECL_SCALAR(DEVICE, Plus, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Minus, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Mul, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Div, EvalScalar_, false)
-DECL_SCALAR(DEVICE, Clip, EvalScalar_, false)
 }  // namespace ndarray
 }  // namespace mxnet
 

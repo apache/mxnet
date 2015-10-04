@@ -118,6 +118,14 @@ def test_ndarray_slice():
     A[3:8] = A2[3:8]
     assert same(A[3:8].asnumpy(), A2[3:8])
 
+def test_clip():
+    shape = (10,)
+    A = mx.random.uniform(-10, 10, shape)
+    B = mx.nd.clip(A, -2, 2)
+    B1 = B.asnumpy()
+    for i in range(shape[0]):
+        assert B1[i] >= -2
+        assert B1[i] <= 2
 
 if __name__ == '__main__':
     test_ndarray_slice()
@@ -126,4 +134,4 @@ if __name__ == '__main__':
     test_ndarray_copy()
     test_ndarray_elementwise()
     test_ndarray_scalar()
-
+    test_clip()
