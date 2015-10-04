@@ -47,6 +47,9 @@ function empty(shape :: Int...)
   empty(shape)
 end
 
+#------------------------------------------------------------
+# Interface functions similar to Julia Arrays
+#------------------------------------------------------------
 function Base.size(arr :: NDArray)
   ref_ndim  = Ref{MX_uint}(0)
   ref_shape = Ref{Ptr{MX_uint}}(0)
@@ -54,13 +57,84 @@ function Base.size(arr :: NDArray)
           arr, ref_ndim, ref_shape)
   tuple(map(Int, pointer_to_array(ref_shape[], ref_ndim[]))...)
 end
-
-function to_array(arr :: NDArray)
-  out = Array(MX_float, size(arr))
-  @mxcall(:MXNDArraySyncCopyToCPU, (MX_handle, Ptr{MX_float}, Csize_t),
-          arr, pointer(out), length(out))
-  return out
+function Base.size(arr :: NDArray, dim :: Int)
+  size(arr)[dim]
 end
+function Base.length(arr :: NDArray)
+  prod(size(arr))
+end
+function Base.ndims(arr :: NDArray)
+  length(size(arr))
+end
+function Base.eltype(arr :: NDArray)
+  MX_float
+end
+
+"Create zero-ed NDArray of specific shape"
+function zeros{N}(shape :: NTuple{N, Int}, ctx :: Context = DEFAULT_CONTEXT)
+  arr = empty(shape, ctx)
+  arr[:] = 0
+  return arr
+end
+function zeros(shape :: Int...)
+  zeros(shape)
+end
+
+"Assign all elements of an NDArray to a scalar"
+function Base.setindex!(arr :: NDArray, val :: Real, ::Colon)
+  ℵ_set_value(val, arr)
+  return arr
+end
+
+#------------------------------------------------------------
+# Copying functions
+#------------------------------------------------------------
+"Copy data between NDArrays"
+function Base.copy!(dst :: NDArray, src :: NDArray)
+  if dst.handle == src.handle
+    warn("Copying an NDArray to itself")
+    return
+  end
+
+  ℵ_copy_to(src, dst)
+  return dst
+end
+
+"Copy data from NDArray to Julia Array"
+function Base.copy!(dst :: Array{MX_float}, src :: NDArray)
+  @assert size(dst) == size(src)
+  @mxcall(:MXNDArraySyncCopyToCPU, (MX_handle, Ptr{MX_float}, Csize_t),
+          src, pointer(dst), length(dst))
+  return dst
+end
+
+"Copy data from Julia Array to NDArray"
+function Base.copy!{T<:Real}(dst :: NDArray, src :: Array{T})
+  @assert size(dst) == size(src)
+  src = convert(Array{MX_float}, src) # this might involve copying
+  @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{MX_float}, Csize_t),
+          dst.handle, pointer(src), length(src))
+  return dst
+end
+
+"Create copy: NDArray -> Julia Array"
+function Base.copy(arr :: NDArray)
+  j_arr = Array(MX_float, size(arr))
+  Base.copy!(j_arr, arr)
+end
+
+"Create copy: NDArray -> NDArray in a given context"
+function Base.copy(arr :: NDArray, ctx :: Context)
+  dst = NDArray(_ndarray_alloc(size(arr), ctx, true))
+  Base.copy!(dst, arr)
+end
+
+"Create copy: Julia Array -> NDArray in a given context"
+function Base.copy{T<:Real}(arr :: Array{T}, ctx :: Context)
+  dst = NDArray(_ndarray_alloc(size(arr), ctx, true))
+  Base.copy!(dst, arr)
+end
+
 
 ################################################################################
 # NDArray functions dynamically exported from libmx
@@ -132,10 +206,10 @@ function _import_ndarray_functions()
     # general ndarray function
     if arg_before_scalar
       args = vcat([Expr(:(::), symbol("in$i"), NDArray) for i=1:n_used_vars],
-                  [Expr(:(::), symbol("sca$i"), AbstractFloat) for i=1:n_scalars],
+                  [Expr(:(::), symbol("sca$i"), Real) for i=1:n_scalars],
                   [Expr(:(::), symbol("out$i"), NDArray) for i=1:n_mutate_vars])
     else
-      args = vcat([Expr(:(::), symbol("sca$i"), AbstractFloat) for i=1:n_scalars],
+      args = vcat([Expr(:(::), symbol("sca$i"), Real) for i=1:n_scalars],
                   [Expr(:(::), symbol("in$i"), NDArray) for i=1:n_used_vars],
                   [Expr(:(::), symbol("out$i"), NDArray) for i=1:n_mutate_vars])
     end
