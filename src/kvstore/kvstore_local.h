@@ -177,13 +177,12 @@ class KVStoreLocal : public KVStore {
 
   /// \brief buffer for merging push value
   std::unordered_map<int, BufferEntry> merge_buf_;
-  /// \brief buffer for storing local values
-  std::unordered_map<int, NDArray> local_;
   // pinned context
   Context pinned_ctx_;
   // updater
   Updater updater_;
-
+  // the lower bound of a big array
+  size_t bigarray_bound_;
  private:
   inline static void ReduceSumCPU(const std::vector<real_t*> &dptr,
                                   size_t offset, index_t size) {
@@ -241,10 +240,12 @@ class KVStoreLocal : public KVStore {
       }
     }
   }
+
+  /// \brief buffer for storing local values
+  std::unordered_map<int, NDArray> local_;
+
   // number of threads to do reduction
   int nthread_reduction_;
-  // number of threads to do reduction
-  size_t bigarray_bound_;
 };
 }  // namespace kvstore
 }  // namespace mxnet

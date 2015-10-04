@@ -23,11 +23,14 @@ class KVStore {
  public:
   /*! \brief virtual destructor */
   virtual ~KVStore() {}
+
   /*!
    * \brief Initialize a list of key-value pair to the store.
    *
    * One should initalize the key before \ref Push and \ref Pull, and a key
    * should be only initialized once
+   *
+   * It returns after data initialized successfully
    *
    * \param keys a list of unique keys
    * \param values a list of values
@@ -88,26 +91,7 @@ class KVStore {
                     const std::vector<NDArray*>& values,
                     int priority = 0) = 0;
 
-  /*!
-   * \brief global barrier among all worker machines
-   *
-   * For example, assume there are n machines, we want to let machine 0 first
-   * init the values, and then pull the inited value to all machines. Before
-   * pulling, we can place a barrier to guarantee that the initialization is
-   * finished.
-   *
-   * \code
-   * // this codes run on n machines in parallel
-   * if (get_rank() == 0) {
-   *   Init(keys, values);
-   * }
-   * Barrier();
-   * Pull(keys, values);
-   * \endcode
-   */
-  virtual void Barrier() { }
 
-#if DMLC_USE_CXX11
   /**
    * \brief the prototype of user-defined updater
    */
@@ -119,6 +103,7 @@ class KVStore {
   inline static Updater DefaultUpdater() {
     return [](int key, const NDArray& a, NDArray* b) { CopyFromTo(a, b); };
   }
+
   /*!
    * \brief set an updater
    *
@@ -141,24 +126,28 @@ class KVStore {
    */
   virtual void set_updater(Updater updater) = 0;
 
-#endif  // DMLC_USE_CXX11
   /*!
-   * \return The rank of this node in its group, which is in [0, GroupSize).
+   * \brief Create a new KVStore.
+   * \param type The type of the kvstore.
+   * \return a new created KVStore.
    */
-  virtual int get_rank() const {
-    return 0;
-  }
-  /*!
-   * \return The number of nodes in this group.
+  static KVStore *Create(const char *type = "local");
+
+  /******************************************************
+   * the following are used for multi-machines
+   ******************************************************/
+
+  /**
+   * \return whether or not is in distributed computing
    */
-  virtual int get_group_size() const {
-    return 1;
+  virtual bool IsDistributed() const {
+    return false;
   }
 
   /**
    * \return whether or not this process is a server node
    */
-  static bool is_server_node() {
+  static bool IsServerNode() {
     char* role_str = getenv("DMLC_ROLE");
     return (role_str != NULL) && (!strcmp(role_str, "server"));
   }
@@ -166,24 +155,84 @@ class KVStore {
   /**
    * \return whether or not this process is a worker node
    */
-  static bool is_worker_node() {
+  static bool IsWorkerNode() {
     char* role_str = getenv("DMLC_ROLE");
     return (role_str != NULL) && (!strcmp(role_str, "worker"));
   }
 
-  /**
-   * \return whether or not is in distributed computing
+  /*!
+   * \return The rank of this node in its group, which is in [0, GroupSize).
    */
-  virtual bool is_distributed() const {
-    return false;
+  virtual int get_rank() const {
+    return 0;
   }
 
   /*!
-   * \brief Create a new KVStore.
-   * \param type The type of the kvstore.
-   * \return a new created KVStore.
+   * \return The number of nodes in this group.
    */
-  static KVStore *Create(const char *type = "local");
+  virtual int get_group_size() const {
+    return 1;
+  }
+
+  /*!
+   * \brief global barrier among all worker machines
+   *
+   * For example, assume there are n machines, we want to let machine 0 first
+   * init the values, and then pull the inited value to all machines. Before
+   * pulling, we can place a barrier to guarantee that the initialization is
+   * finished.
+   *
+   * \code
+   * // this codes run on n machines in parallel
+   * if (get_rank() == 0) {
+   *   Init(keys, values);
+   * }
+   * Barrier();
+   * Pull(keys, values);
+   * \endcode
+   */
+  virtual void Barrier() { }
+
+  /**
+   * \brief send a command to all server nodes
+   *
+   * Send a command to all server nodes, which will make each server node run
+   * \a controller
+   *
+   * This function returns after the command has been executed in all server nodes
+   *
+   * \param head the head of the command
+   * \param body the body of the command
+   */
+  virtual void PushCommandToServer(int head, const char* body) { }
+
+  /**
+   * \brief the prototype of a server controller
+   */
+  typedef std::function<void(int, const char*)> Controller;
+
+  /*!
+   * \brief return an empty controller
+   */
+  inline static Controller EmptyController() {
+    return [](int head, const char* body) { };
+  }
+
+  /**
+   * \brief Run as server
+   *
+   * The behavior of a server:
+   * \code
+   * while(receive(x)) {
+   *   if (IsCommand(x)) controller(x)
+   *   else if (IsKeyValue(x)) updater(x)
+   * }
+   * \endcode
+   *
+   * \param controller controller which process
+   */
+  virtual void RunServer(const Controller& controller = EmptyController()) { }
+
 };
 }  // namespace mxnet
 #endif  // MXNET_KVSTORE_H_

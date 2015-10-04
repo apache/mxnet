@@ -24,6 +24,15 @@ class KVStoreDist : public KVStoreLocal {
 
   }
 
+  void Init(const std::vector<int>& keys,
+            const std::vector<NDArray>& values) override {
+    Push(keys, values, 0);
+    // wait until the push is finished
+    for (int key : keys) {
+      merge_buf_[key].merged.WaitToWrite();
+    }
+  }
+
   void Push(const std::vector<int>& keys,
             const std::vector<NDArray>& values,
             int priority) override {
@@ -105,6 +114,10 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
+  void Barrier() override {
+
+  }
+
   int get_group_size() const override {
     return ps::NodeInfo::RankSize();
   }
@@ -112,7 +125,7 @@ class KVStoreDist : public KVStoreLocal {
     return ps::NodeInfo::MyRank();
   }
 
-  bool is_distributed() const override {
+  bool IsDistributed() const override {
     return true;
   }
 
