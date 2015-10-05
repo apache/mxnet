@@ -34,7 +34,7 @@ However, it is quite hard to code the sequence manually, as the last operation
 ```D = A * C```, need to wait both the operation to complete before it starts running.
 We can represent the computation as following dependency graph.
 
-![Dep Simple](https://github.com/dmlc/dmlc.github.io/blob/master/img/mxnet/engine/dep_simple.png)
+![Dep Simple](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_simple.png)
 
 In this specific case, the graph is also called data-flow graph, as it represents the dependency
 in terms of data and computation.
@@ -55,7 +55,7 @@ learning libraries when things go parallel.
 ### Data Flow Dependency
 The central thing that almost every dependency engine will have to solve, is the dataflow dependency problem.
 
-![Dep Simple](https://github.com/dmlc/dmlc.github.io/blob/master/img/mxnet/engine/dep_simple.png)
+![Dep Simple](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_simple.png)
 
 Data Flow dependency describes how the outcome of one computation can be used in other computations.
 As we have elaborated this in last section, we will only put the same figure here. Libraries that have
@@ -67,7 +67,7 @@ This is simple in the serial case. Because we can simply recycle the memory afte
 go out of scope. However, things becomes a bit harder in parallel case. Consider the following
 example
 
-![Dep Del](https://github.com/dmlc/dmlc.github.io/blob/master/img/mxnet/engine/dep_del.png)
+![Dep Del](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_del.png)
 
 In the above example, because both computation needs to use values from A. We cannot perform
 the memory recycling before these computation completes. So a correct engine
@@ -79,7 +79,7 @@ is executed after both ```B = A + 1``` and ```C = A + 2``` completes.
 Random number generators are commonly used in machine learning. However, they also bring
 interesting challenges for dependency engine. Consider the following example
 
-![Dep Rand](https://github.com/dmlc/dmlc.github.io/blob/master/img/mxnet/engine/dep_rand.png)
+![Dep Rand](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_rand.png)
 
 Here we are generating random numbers in a sequence. While it seems that the two random number
 generations can be parallelized. This is usually not the case. Because usually a pseudorandom
@@ -216,7 +216,7 @@ Any the execution function can be any function closures user like to execute. So
 to what operation and resources we want to schedule.
 
 The following figure gives a complete push sequence of the programs we mentioned in previous sections.
-![Push Seq](https://github.com/dmlc/dmlc.github.io/blob/master/img/mxnet/engine/push_seq.png)
+![Push Seq](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/push_seq.png)
 
 ### Port Existing Codes to the Dependency Engine
 Because the generic interface do not take control of things like memory allocation and what operation to execute.
@@ -239,11 +239,11 @@ The general idea is as follows
 The following figure gives a visual example of the scheduling algorithm, which might give you a better sense
 of what is going on in the engine.
 
-![Dep Tracking](https://github.com/dmlc/dmlc.github.io/blob/master/img/mxnet/engine/engine_queue_step.png)
+![Dep Tracking](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/engine_queue_step.png)
 
 The following figure gives another example that involves random number generations.
 
-![Dep Rand](https://github.com/dmlc/dmlc.github.io/blob/master/img/mxnet/engine/engine_queue_rand.png)
+![Dep Rand](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/engine_queue_rand.png)
 
 As we can see, the algorithm is mainly about update pending queues of operations and doing the right
 state transition when operation completed. More care should be taken to make sure the state transition
