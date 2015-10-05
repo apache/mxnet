@@ -765,6 +765,7 @@ MXNET_DLL int MXKVStorePull(KVStoreHandle handle,
  * \param local the value stored on local on this key
  */
 typedef void (MXKVStoreUpdater)(int key, NDArrayHandle recv, NDArrayHandle local);
+
 /*!
  * \brief register an push updater
  * \param handle handle to the KVStore
@@ -772,5 +773,14 @@ typedef void (MXKVStoreUpdater)(int key, NDArrayHandle recv, NDArrayHandle local
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreSetUpdater(KVStoreHandle handle, MXKVStoreUpdater updater);
+
+
+MXNET_DLL int MXKVStoreGetRank(KVStoreHandle handle, int *rank);
+
+MXNET_DLL int MXKVStoreGetGroupSize(KVStoreHandle handle, int *size);
+
+MXNET_DLL int MXKVStoreIsWorkerNode(KVStoreHandle handle, int *ret);
+
+MXNET_DLL int MXKVStoreBarrier(KVStoreHandle handle);
 
 #endif  // MXNET_C_API_H_

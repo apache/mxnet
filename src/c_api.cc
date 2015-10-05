@@ -999,3 +999,28 @@ int MXKVStoreSetUpdater(KVStoreHandle handle, MXKVStoreUpdater updater) {
   static_cast<KVStore*>(handle)->set_updater(updt);
   API_END();
 }
+
+int MXKVStoreGetRank(KVStoreHandle handle, int *rank) {
+  API_BEGIN();
+  *rank = static_cast<KVStore*>(handle)->get_rank();
+  API_END();
+}
+
+int MXKVStoreGetGroupSize(KVStoreHandle handle, int *size) {
+  API_BEGIN();
+  *size = static_cast<KVStore*>(handle)->get_group_size();
+  API_END();
+}
+
+int MXKVStoreBarrier(KVStoreHandle handle) {
+  API_BEGIN();
+  static_cast<KVStore*>(handle)->Barrier();
+  API_END();
+}
+
+
+int MXKVStoreIsWorkerNode(KVStoreHandle handle, int *ret) {
+  API_BEGIN();
+  *ret = static_cast<KVStore*>(handle)->IsWorkerNode();
+  API_END();
+}

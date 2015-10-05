@@ -145,6 +145,14 @@ class KVStore {
   }
 
   /**
+   * \return whether or not this process is a worker node
+   */
+  static bool IsWorkerNode() {
+    char* role_str = getenv("DMLC_ROLE");
+    return (role_str == NULL) || (!strcmp(role_str, "worker"));
+  }
+
+  /**
    * \return whether or not this process is a server node
    */
   static bool IsServerNode() {
@@ -152,13 +160,6 @@ class KVStore {
     return (role_str != NULL) && (!strcmp(role_str, "server"));
   }
 
-  /**
-   * \return whether or not this process is a worker node
-   */
-  static bool IsWorkerNode() {
-    char* role_str = getenv("DMLC_ROLE");
-    return (role_str != NULL) && (!strcmp(role_str, "worker"));
-  }
 
   /**
    * \return whether or not this process is a scheduler node

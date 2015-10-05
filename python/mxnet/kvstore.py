@@ -7,6 +7,8 @@ from .ndarray import NDArray
 from .base import _LIB
 from .base import check_call, c_array, c_str, string_types, mx_uint
 from .base import NDArrayHandle, KVStoreHandle
+from .kvstore_server import KVStoreServer
+import sys
 
 
 def _ctype_key_value(keys, vals):
@@ -233,6 +235,33 @@ class KVStore(object):
         self._updater_func = _updater_proto(_updater_wrapper(updater))
         check_call(_LIB.MXKVStoreSetUpdater(self.handle, self._updater_func))
 
+    def get_rank(self):
+        """Get the rank of this worker node
+
+        Returns
+        -------
+        rank :int
+            The rank of this node, which is in [0, get_group_size())
+        """
+        rank = ctypes.c_int()
+        check_call(_LIB.MXKVStoreGetRank(self.handle, ctypes.byref(rank)))
+        return rank.value
+
+    def get_group_size(self):
+        """Get the number of worker ndoes
+
+        Returns
+        -------
+        size :int
+            The number of worker nodes
+        """
+        size = ctypes.c_int()
+        check_call(_LIB.MXKVStoreGetGroupSize(self.handle, ctypes.byref(size)))
+        return size.value
+
+    def barrier(self):
+        """Global barrier among all worker nodes"""
+        check_call(_LIB.MXKVStoreBarrier(self.handle))
 
 def create(name='local'):
     """Create a new KVStore.
@@ -242,7 +271,7 @@ def create(name='local'):
     name : {'local'}
         The type of KVStore
         - local: KVStore that works on devices with single process.
-
+        - dist: distributed KVStore supporting multiple machines
     Returns
     -------
     kv : KVStore
@@ -254,3 +283,14 @@ def create(name='local'):
     check_call(_LIB.MXKVStoreCreate(c_str(name),
                                     ctypes.byref(handle)))
     return KVStore(handle)
+
+def _init_kvstore_module():
+    """Start server/scheduler"""
+    is_worker = ctypes.c_int()
+    check_call(_LIB.MXKVStoreIsWorkerNode(self.handle, ctypes.byref(is_worker)))
+    if is_worker.value == 0:
+        server = KVStoreServer(self.handle)
+        server.Run()
+        sys.exit()
+
+_init_kvstore_module()
