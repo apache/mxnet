@@ -54,7 +54,9 @@ Open Source Design Notes
 ------------------------
 * [Programming Models for Deep Learning](../program_model.md)
 	- Compares various programming models, which motivates the current design.
-
+* [Dependency Engine for Multi-Device Deep Learning](note_engine.md)
+	- Introduces the dependency tracking and scheduling component for general deep learning,
+	  this motivates the design of Engine module.
 
 List of Other Resources
 -----------------------
