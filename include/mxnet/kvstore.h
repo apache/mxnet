@@ -164,7 +164,7 @@ class KVStore {
   /**
    * \return whether or not this process is a scheduler node
    */
-  static bool IsScheduleNode() {
+  static bool IsSchedulerNode() {
     char* role_str = getenv("DMLC_ROLE");
     return (role_str != NULL) && (!strcmp(role_str, "scheduler"));
   }
@@ -229,7 +229,7 @@ class KVStore {
   }
 
   /**
-   * \brief Run as server
+   * \brief Run as server (or scheduler)
    *
    * The behavior of a server:
    * \code

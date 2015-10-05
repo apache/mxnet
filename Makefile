@@ -82,7 +82,7 @@ include $(PS_PATH)/make/ps.mk
 ifeq ($(USE_DIST_KVSTORE), 1)
 	CFLAGS += -DMXNET_USE_DIST_KVSTORE -I$(PS_PATH)/src
 	LIB_DEP += $(PS_PATH)/build/libps.a
-	LDFLAGS += $(PS_LDFLAGS_SO)
+	LDFLAGS += -Wl,-rpath,$(DEPS_PATH)/lib $(PS_LDFLAGS_SO)
 endif
 
 .PHONY: clean all test lint doc clean_all

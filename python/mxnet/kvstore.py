@@ -287,9 +287,13 @@ def create(name='local'):
 def _init_kvstore_module():
     """Start server/scheduler"""
     is_worker = ctypes.c_int()
-    check_call(_LIB.MXKVStoreIsWorkerNode(self.handle, ctypes.byref(is_worker)))
+    check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
     if is_worker.value == 0:
-        server = KVStoreServer(self.handle)
+        name = 'dist'
+        handle = KVStoreHandle()
+        check_call(_LIB.MXKVStoreCreate(c_str(name),
+                                        ctypes.byref(handle)))
+        server = KVStoreServer(handle)
         server.Run()
         sys.exit()
 

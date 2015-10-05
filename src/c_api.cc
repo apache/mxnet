@@ -1019,8 +1019,20 @@ int MXKVStoreBarrier(KVStoreHandle handle) {
 }
 
 
-int MXKVStoreIsWorkerNode(KVStoreHandle handle, int *ret) {
+int MXKVStoreIsWorkerNode(int *ret) {
   API_BEGIN();
-  *ret = static_cast<KVStore*>(handle)->IsWorkerNode();
+  *ret = KVStore::IsWorkerNode();
+  API_END();
+}
+
+int MXKVStoreIsServerNode(int *ret) {
+  API_BEGIN();
+  *ret = KVStore::IsServerNode();
+  API_END();
+}
+
+int MXKVStoreIsSchedulerNode(int *ret) {
+  API_BEGIN();
+  *ret = KVStore::IsSchedulerNode();
   API_END();
 }

@@ -779,7 +779,9 @@ MXNET_DLL int MXKVStoreGetRank(KVStoreHandle handle, int *rank);
 
 MXNET_DLL int MXKVStoreGetGroupSize(KVStoreHandle handle, int *size);
 
-MXNET_DLL int MXKVStoreIsWorkerNode(KVStoreHandle handle, int *ret);
+MXNET_DLL int MXKVStoreIsWorkerNode(int *ret);
+MXNET_DLL int MXKVStoreIsServerNode(int *ret);
+MXNET_DLL int MXKVStoreIsSchedulerNode(int *ret);
 
 MXNET_DLL int MXKVStoreBarrier(KVStoreHandle handle);
 

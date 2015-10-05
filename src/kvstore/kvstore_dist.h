@@ -28,9 +28,6 @@ class KVStoreDist : public KVStoreLocal {
     } else if (IsWorkerNode()) {
       cache_ = new ps::KVCache<ps::Key, real_t>(ps::NextID());
       StartPS();
-    } else {
-      // scheduler
-      StartPS(); ps::StopSystem();
     }
   }
 
@@ -159,10 +156,12 @@ class KVStoreDist : public KVStoreLocal {
   bool IsDistributed() const override { return true; }
 
   void RunServer(const Controller& controller) override {
-    CHECK(IsServerNode());
+    CHECK(!IsWorkerNode());
     StartPS();
-    auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
-    static_cast<MXNetServer*>(node)->set_controller(controller);
+    if (IsServerNode()) {
+      auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
+      static_cast<MXNetServer*>(node)->set_controller(controller);
+    }
     ps::StopSystem();
   }
 
