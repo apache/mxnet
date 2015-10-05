@@ -294,7 +294,7 @@ def _init_kvstore_module():
         check_call(_LIB.MXKVStoreCreate(c_str(name),
                                         ctypes.byref(handle)))
         server = KVStoreServer(handle)
-        server.Run()
+        server.run()
         sys.exit()
 
 _init_kvstore_module()

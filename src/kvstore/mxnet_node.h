@@ -45,10 +45,8 @@ class MXNetServer : public ps::App {
   }
 
   void ProcessRequest(ps::Message* request) override {
-    int head = request->task.cmd();
-    const char* body = request->task.msg().c_str();
     CHECK(controller_);
-    controller_(head, body);
+    controller_(request->task.cmd(), request->task.msg());
   }
 
  private:

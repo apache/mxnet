@@ -1,4 +1,6 @@
+#!/usr/bin/env python
 # pylint: skip-file
+
 import mxnet as mx
 import numpy as np
 

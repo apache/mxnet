@@ -175,8 +175,9 @@ class KVStoreDist : public KVStoreLocal {
     int argc = 1;
     char** argv = new char*[1];
     char name[] = "mxnet";
-    argv[0] = new char[strlen(name)];
+    argv[0] = new char[strlen(name)+1];
     memcpy(argv[0], name, strlen(name));
+    argv[0][strlen(name)] = '\0';
     ps::StartSystem(&argc, &argv);
   }
 

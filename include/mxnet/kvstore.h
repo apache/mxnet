@@ -219,13 +219,13 @@ class KVStore {
   /**
    * \brief the prototype of a server controller
    */
-  typedef std::function<void(int, const char*)> Controller;
+  typedef std::function<void(int, const std::string&)> Controller;
 
   /*!
    * \brief return an empty controller
    */
   inline static Controller EmptyController() {
-    return [](int head, const char* body) { };
+    return [](int head, const std::string& body) { };
   }
 
   /**
