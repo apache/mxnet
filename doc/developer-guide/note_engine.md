@@ -1,5 +1,5 @@
-Dependency Engine for Multi-Device Deep Learning
-================================================
+Make Multi-Device Deep Learning Easy with Dependency Engine
+===========================================================
 One always important theme of deep learning libraries is to run faster and scale to larger
 dataset. In order to do so, a natural direction is always go beyond using one device(GPU),
 and make uses of more computation resources.
