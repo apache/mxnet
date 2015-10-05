@@ -33,7 +33,7 @@ This section will be updated with self-contained design notes on various aspect 
 in terms of abstraction, optimization and trade-offs.
 
 * [Programming Models for Deep Learning](program_model.md)
-
+* [Dependency Engine for Multi-Device Deep Learning](developer-guide/note_engine.md)
 
 Indices and tables
 ------------------
