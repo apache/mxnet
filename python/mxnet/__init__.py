@@ -16,6 +16,8 @@ from . import kvstore as kv
 from . import io
 # use mx.nd as short for mx.ndarray
 from . import ndarray as nd
+# use mx.rnd as short for mx.random
+from . import random as rnd
 from . import random
 from . import optimizer
 from . import model

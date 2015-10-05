@@ -45,6 +45,16 @@ inline void EvalBinary_(const TBlob &lhs, const TBlob &rhs,
                                    rhs.FlatTo2D<xpu, real_t>(s));
 }
 
+template<typename xpu, typename OP>
+inline void EvalDot_(const TBlob &lhs, const TBlob &rhs,
+                        TBlob *ret, RunContext ctx) {
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  ret->FlatTo2D<xpu, real_t>(s)
+    = dot(lhs.FlatTo2D<xpu, real_t>(s),
+          rhs.FlatTo2D<xpu, real_t>(s));
+}
+
 template<typename xpu, typename OP, bool reverse>
 inline void EvalScalar_(const TBlob &lhs, const real_t &rhs,
                         TBlob *ret, RunContext ctx) {
@@ -150,6 +160,7 @@ void ElementwiseSum<DEVICE>(const std::vector<TBlob> source,
 }
 
 // declarations
+DECL_BINARY(DEVICE, Dot, EvalDot_)
 DECL_BINARY(DEVICE, Plus, EvalBinary_)
 DECL_BINARY(DEVICE, Minus, EvalBinary_)
 DECL_BINARY(DEVICE, Mul, EvalBinary_)

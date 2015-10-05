@@ -63,6 +63,14 @@ struct ClipMax : public BinaryBase {
   };
 };
 
+struct Dot {
+  inline static TShape GetShape(const TShape &lshape, const TShape &rshape) {
+    CHECK(lshape.ndim() == 2 && rshape.ndim() == 2) << "dot only support 2D Array";
+    CHECK_EQ(lshape[1], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
+    size_t target_shape[] = {lshape[0], rshape[1]};
+    return TShape(target_shape, target_shape + 2);
+  }
+};
 
 // type holder for random number generators
 struct UniformDistribution {};

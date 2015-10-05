@@ -127,6 +127,15 @@ def test_clip():
         assert B1[i] >= -2
         assert B1[i] <= 2
 
+def test_dot():
+    a = np.random.uniform(-3, 3, (3, 4))
+    b = np.random.uniform(-3, 3, (4, 5))
+    c = np.dot(a, b)
+    A = mx.nd.array(a)
+    B = mx.nd.array(b)
+    C = mx.nd.dot(A, B)
+    assert reldiff(c, C.asnumpy()) < 1e-5
+
 if __name__ == '__main__':
     test_ndarray_slice()
     test_ndarray_pickle()
@@ -135,3 +144,4 @@ if __name__ == '__main__':
     test_ndarray_elementwise()
     test_ndarray_scalar()
     test_clip()
+    test_dot()
