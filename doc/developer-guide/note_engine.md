@@ -130,7 +130,7 @@ a simple SGD update, and copies the updated weight back to each GPU.
 This is a common data parallel program written in a serial manner.
 The following dependency graph shows how it can be parallelized:
 
-![Dep Net](https://github.com/dmlc/dmlc.github.io/blob/master/img/mxnet/engine/dep_net.png)
+![Dep Net](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_net.png)
 
 Few important notes:
 - The copy of gradient to CPU, can happen as soon as we get gradient of that layer.
