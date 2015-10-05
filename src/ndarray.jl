@@ -142,7 +142,7 @@ end
 
 "Create copy: Julia Array -> NDArray in a given context"
 function copy{T<:Real}(arr :: Array{T}, ctx :: Context)
-  dst = NDArray(_ndarray_alloc(size(arr), ctx, false))
+  dst = empty(size(arr), ctx)
   copy!(dst, arr)
 end
 
