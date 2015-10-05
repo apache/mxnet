@@ -31,12 +31,13 @@ struct KVStoreCommand {
   }
 };
 
+#define APP_ID 10
 /**
  * \brief a server node on ps
  */
 class MXNetServer : public ps::App {
  public:
-  MXNetServer() { }
+  MXNetServer() : App(APP_ID) { }
   virtual ~MXNetServer() { }
 
   void set_controller(const KVStore::Controller& ctrl) {
@@ -59,7 +60,7 @@ class MXNetServer : public ps::App {
  */
 class MXNetWorker : public ps::App {
  public:
-  MXNetWorker() { }
+  MXNetWorker() : App(APP_ID) { }
   virtual ~MXNetWorker() { }
 
 };
@@ -69,7 +70,7 @@ class MXNetWorker : public ps::App {
  */
 class MXNetScheduler : public ps::App {
  public:
-  MXNetScheduler() { }
+  MXNetScheduler() : App(APP_ID) { }
   virtual ~MXNetScheduler() { }
 
   void ProcessRequest(ps::Message* request) override {

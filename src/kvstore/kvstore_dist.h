@@ -19,23 +19,22 @@ class KVStoreDist : public KVStoreLocal {
  public:
   KVStoreDist()
       : engine_(Engine::Get()),
-        node_(NULL),
         store_(NULL),
         cache_(NULL),
         barrier_count_(0) {
     if (IsServerNode()) {
-      node_ = new MXNetServer();
       ServerHandle handle(this);
       store_ = new ps::OnlineServer<real_t, ServerVal, ServerHandle>(handle);
-    } else {
-      node_ = new ps::App();
+    } else if (IsWorkerNode()) {
       cache_ = new ps::KVCache<ps::Key, real_t>(ps::NextID());
+      StartPS();
+    } else {
+      // scheduler
+      StartPS(); ps::StopSystem();
     }
-    if (IsWorkerNode()) StartPS();
   }
 
   virtual ~KVStoreDist() {
-    delete node_;
     delete store_;
     delete cache_;
 
@@ -140,7 +139,8 @@ class KVStoreDist : public KVStoreLocal {
     cmd.set_barrier(barrier_count_++);
     ps::Task task;
     task.set_cmd(cmd.cmd);
-    node_->Wait(node_->Submit(task, ps::NodeInfo::SchedulerID()));
+    auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
+    node->Wait(node->Submit(task, ps::NodeInfo::SchedulerID()));
   }
 
   void SendCommandToServers(int head, const char* body) override {
@@ -148,7 +148,8 @@ class KVStoreDist : public KVStoreLocal {
     ps::Task task;
     task.set_cmd(head);
     task.set_msg(body);
-    node_->Wait(node_->Submit(task, ps::kServerGroup));
+    auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
+    node->Wait(node->Submit(task, ps::kServerGroup));
   }
 
   int get_group_size() const override { return ps::NodeInfo::RankSize(); }
@@ -159,9 +160,10 @@ class KVStoreDist : public KVStoreLocal {
 
   void RunServer(const Controller& controller) override {
     CHECK(IsServerNode());
-    static_cast<MXNetServer*>(node_)->set_controller(controller);
-
-    node_->Run();
+    StartPS();
+    auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
+    static_cast<MXNetServer*>(node)->set_controller(controller);
+    ps::StopSystem();
   }
 
  private:
@@ -173,7 +175,9 @@ class KVStoreDist : public KVStoreLocal {
     // hack argc argv
     int argc = 1;
     char** argv = new char*[1];
-    argv[0] = "mxnet";
+    char name[] = "mxnet";
+    argv[0] = new char[strlen(name)];
+    memcpy(argv[0], name, strlen(name));
     ps::StartSystem(&argc, &argv);
   }
 
@@ -276,11 +280,6 @@ class KVStoreDist : public KVStoreLocal {
   };
 
   Engine* engine_;
-
-  /**
-   * \brief a ps-lite node (worker/server)
-   */
-  ps::App* node_;
 
   /**
    * \brief kv store at server node
