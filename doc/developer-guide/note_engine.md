@@ -13,6 +13,7 @@ the runtime dependency scheduling problem in deep learning. We will introduce th
 scheduling problem, how it can help making multi-device deep learning easier and faster, and
 discuss possible design for a generic dependency engine that is not library and operation specific.
 
+Most design detail of this article is inspires the dependency engine of mxnet, with the dependency tracking algorithm majorly contributed by [Yutian Li](https://github.com/hotpxl) and [Mingjie Wang](https://github.com/jermainewang).
 
 Dependency Scheduling Problem
 -----------------------------
