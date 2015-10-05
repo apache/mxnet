@@ -58,23 +58,24 @@ end
 #------------------------------------------------------------
 # Interface functions similar to Julia Arrays
 #------------------------------------------------------------
-function Base.size(arr :: NDArray)
+import Base: size, length, ndims, eltype
+function size(arr :: NDArray)
   ref_ndim  = Ref{MX_uint}(0)
   ref_shape = Ref{Ptr{MX_uint}}(0)
   @mxcall(:MXNDArrayGetShape, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_uint}}),
           arr, ref_ndim, ref_shape)
   tuple(map(Int, pointer_to_array(ref_shape[], ref_ndim[]))...)
 end
-function Base.size(arr :: NDArray, dim :: Int)
+function size(arr :: NDArray, dim :: Int)
   size(arr)[dim]
 end
-function Base.length(arr :: NDArray)
+function length(arr :: NDArray)
   prod(size(arr))
 end
-function Base.ndims(arr :: NDArray)
+function ndims(arr :: NDArray)
   length(size(arr))
 end
-function Base.eltype(arr :: NDArray)
+function eltype(arr :: NDArray)
   MX_float
 end
 
@@ -88,28 +89,30 @@ function zeros(shape :: Int...)
   zeros(shape)
 end
 
+import Base: setindex!
 "Assign all elements of an NDArray to a scalar"
-function Base.setindex!(arr :: NDArray, val :: Real, ::Colon)
-  ℵ_set_value(val, arr)
+function setindex!(arr :: NDArray, val :: Real, ::Colon)
+  _set_value(val, arr)
   return arr
 end
 
 #------------------------------------------------------------
 # Copying functions
 #------------------------------------------------------------
+import Base: copy!, copy
 "Copy data between NDArrays"
-function Base.copy!(dst :: NDArray, src :: NDArray)
+function copy!(dst :: NDArray, src :: NDArray)
   if dst.handle == src.handle
     warn("Copying an NDArray to itself")
     return
   end
 
-  ℵ_copyto(src, dst)
+  _copyto(src, dst)
   return dst
 end
 
 "Copy data from NDArray to Julia Array"
-function Base.copy!(dst :: Array{MX_float}, src :: NDArray)
+function copy!(dst :: Array{MX_float}, src :: NDArray)
   @assert size(dst) == size(src)
   @mxcall(:MXNDArraySyncCopyToCPU, (MX_handle, Ptr{MX_float}, Csize_t),
           src, pointer(dst), length(dst))
@@ -117,7 +120,7 @@ function Base.copy!(dst :: Array{MX_float}, src :: NDArray)
 end
 
 "Copy data from Julia Array to NDArray"
-function Base.copy!{T<:Real}(dst :: NDArray, src :: Array{T})
+function copy!{T<:Real}(dst :: NDArray, src :: Array{T})
   @assert size(dst) == size(src)
   src = convert(Array{MX_float}, src) # this might involve copying
   @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{MX_float}, Csize_t),
@@ -126,21 +129,21 @@ function Base.copy!{T<:Real}(dst :: NDArray, src :: Array{T})
 end
 
 "Create copy: NDArray -> Julia Array"
-function Base.copy(arr :: NDArray)
+function copy(arr :: NDArray)
   j_arr = Array(MX_float, size(arr))
-  Base.copy!(j_arr, arr)
+  copy!(j_arr, arr)
 end
 
 "Create copy: NDArray -> NDArray in a given context"
-function Base.copy(arr :: NDArray, ctx :: Context)
+function copy(arr :: NDArray, ctx :: Context)
   dst = NDArray(_ndarray_alloc(size(arr), ctx, true))
-  Base.copy!(dst, arr)
+  copy!(dst, arr)
 end
 
 "Create copy: Julia Array -> NDArray in a given context"
-function Base.copy{T<:Real}(arr :: Array{T}, ctx :: Context)
-  dst = NDArray(_ndarray_alloc(size(arr), ctx, true))
-  Base.copy!(dst, arr)
+function copy{T<:Real}(arr :: Array{T}, ctx :: Context)
+  dst = NDArray(_ndarray_alloc(size(arr), ctx, false))
+  copy!(dst, arr)
 end
 
 
@@ -175,9 +178,9 @@ end
 function add!(dst :: NDArray, args :: Union{Real, NDArray}...)
   for arg in args
     if isa(arg, Real)
-      ℵ_plus_scalar(dst, arg, dst)
+      _plus_scalar(dst, arg, dst)
     else
-      ℵ_plus(dst, arg, dst)
+      _plus(dst, arg, dst)
     end
   end
   return dst
@@ -230,13 +233,7 @@ function _import_ndarray_functions()
             (MX_handle, Ref{char_p}, Ref{char_p}, Ref{MX_uint}, Ref{char_pp}, Ref{char_pp}, Ref{char_pp}),
             func_handle, ref_name, ref_desc, ref_narg, ref_arg_names, ref_arg_types, ref_arg_descs)
 
-    # We attach the symbol ℵ (\aleph) to those functions to indicate that they are
-    # dynamically imported from libmxnet
-    #
-    # A first attempt was to collect all those functions in a submodule _lib. But working
-    # with submodules in Julia is really painful, especially when macros (@mxcall) are
-    # involved in a function that is to be dynamically generated via eval.
-    func_name = symbol("ℵ" * bytestring(ref_name[]))
+    func_name = symbol(bytestring(ref_name[]))
 
     #----------------------------------------
     # get function specification
@@ -257,7 +254,6 @@ function _import_ndarray_functions()
     accept_empty_mutate = (type_mask & convert(Cint,ACCEPT_EMPTY_MUTATE_TARGET)) != 0
     arg_before_scalar   = (type_mask & convert(Cint,NDARRAY_ARG_BEFORE_SCALAR)) != 0
 
-    println("defining generic $func_name")
     # general ndarray function
     if arg_before_scalar
       args = vcat([Expr(:(::), symbol("in$i"), NDArray) for i=1:n_used_vars],
