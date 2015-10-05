@@ -160,6 +160,14 @@ class KVStore {
     return (role_str != NULL) && (!strcmp(role_str, "worker"));
   }
 
+  /**
+   * \return whether or not this process is a scheduler node
+   */
+  static bool IsScheduleNode() {
+    char* role_str = getenv("DMLC_ROLE");
+    return (role_str != NULL) && (!strcmp(role_str, "scheduler"));
+  }
+
   /*!
    * \return The rank of this node in its group, which is in [0, GroupSize).
    */

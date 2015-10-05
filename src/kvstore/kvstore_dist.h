@@ -18,7 +18,11 @@ namespace kvstore {
 class KVStoreDist : public KVStoreLocal {
  public:
   KVStoreDist()
-      : engine_(Engine::Get()), node_(NULL), store_(NULL), cache_(NULL) {
+      : engine_(Engine::Get()),
+        node_(NULL),
+        store_(NULL),
+        cache_(NULL),
+        barrier_count_(0) {
     if (IsServerNode()) {
       node_ = new MXNetServer();
       ServerHandle handle(this);
@@ -27,12 +31,17 @@ class KVStoreDist : public KVStoreLocal {
       node_ = new ps::App();
       cache_ = new ps::KVCache<ps::Key, real_t>(ps::NextID());
     }
+    if (IsWorkerNode()) StartPS();
   }
 
   virtual ~KVStoreDist() {
     delete node_;
     delete store_;
     delete cache_;
+
+    if (IsWorkerNode()) {
+      ps::StopSystem();
+    }
   }
 
   void Init(const std::vector<int>& keys,
@@ -115,7 +124,7 @@ class KVStoreDist : public KVStoreLocal {
         };
         real_t* data = static_cast<real_t*>(vals[0]->data().dptr_);
         CHECK_NOTNULL(cache_)->Pull(
-            opts.GetTask(), keys, vals_size, opts.callback, data);
+            opts.GetTask(), keys, opts.callback, data, size, vals_size.data());
       };
 
       std::vector<Engine::VarHandle> mut_vars;
@@ -127,7 +136,11 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   void Barrier() override {
-    // TODO
+    KVStoreCommand cmd;
+    cmd.set_barrier(barrier_count_++);
+    ps::Task task;
+    task.set_cmd(cmd.cmd);
+    node_->Wait(node_->Submit(task, ps::NodeInfo::SchedulerID()));
   }
 
   void SendCommandToServers(int head, const char* body) override {
@@ -147,10 +160,23 @@ class KVStoreDist : public KVStoreLocal {
   void RunServer(const Controller& controller) override {
     CHECK(IsServerNode());
     static_cast<MXNetServer*>(node_)->set_controller(controller);
+
     node_->Run();
   }
 
  private:
+
+  /**
+   * \brief start the network threads in ps-lite
+   */
+  void StartPS() {
+    // hack argc argv
+    int argc = 1;
+    char** argv = new char*[1];
+    argv[0] = "mxnet";
+    ps::StartSystem(&argc, &argv);
+  }
+
   /**
    * \brief convert to keys in ps
    */
@@ -263,7 +289,7 @@ class KVStoreDist : public KVStoreLocal {
 
   /**
    * \brief for worker to push and pull data
-   * use KVCache rather than KVWorker for more advanced push and pull
+   * use KVCache rather than KVWorker for the c-style pull
    */
   ps::KVCache<ps::Key, real_t>* cache_;
 
@@ -281,6 +307,11 @@ class KVStoreDist : public KVStoreLocal {
    * \brief number of bits used to encode the key in mxnet
    */
   static const int kIndexBits = 32;
+
+  /**
+   * \brief the count for barrier
+   */
+  int barrier_count_;
 };
 
 }  // namespace kvstore

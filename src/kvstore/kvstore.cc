@@ -10,7 +10,8 @@
 #include "./kvstore_device.h"
 #if MXNET_USE_DIST_KVSTORE
 #include "./kvstore_dist.h"
-#endif
+#include "./mxnet_node.h"
+#endif  // MXNET_USE_DIST_KVSTORE
 
 namespace mxnet {
 
@@ -33,3 +34,25 @@ KVStore* KVStore::Create(const char *type_name) {
 }
 
 }  // namespace mxnet
+
+#if MXNET_USE_DIST_KVSTORE
+
+namespace ps {
+
+App* App::Create(int argc, char *argv[]) {
+  NodeInfo n;
+  if (n.IsWorker()) {
+    return new ::mxnet::kvstore::MXNetWorker();
+  } else if (n.IsServer()) {
+    return new ::mxnet::kvstore::MXNetServer();
+  } else if (n.IsScheduler()) {
+    return new ::mxnet::kvstore::MXNetScheduler();
+  } else {
+    LOG(FATAL) << "unknown node";
+  }
+  return NULL;
+}
+
+}  // namespace ps
+
+#endif  // MXNET_USE_DIST_KVSTORE
