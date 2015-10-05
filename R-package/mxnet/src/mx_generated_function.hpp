@@ -13,6 +13,7 @@ class MxFunction : public CppFunction {
             CppFunction(docstring) {
             int ret = MXFuncGetInfo(handle, &name, &desc, &num_args, 
                                     &arg_names, &arg_types, &arg_descs);    
+            // remove the '_'
             if (name[0] == '_')
                 name++;
         }
