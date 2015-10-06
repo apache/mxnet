@@ -33,6 +33,43 @@ namespace R {
       RLOG_FATAL << MXGetLastError();                              \
     }                                                              \
   }
-}  // namespace Rcpp
+
+#if DMLC_USE_CXX11 == 0
+#define nullptr NULL
+#endif
+
+/*! \brief Context of device enviroment */
+struct Context {
+  /*! \brief The device ID of the context */
+  int dev_type;
+  /*! \brief The device ID of the context */
+  int dev_id;
+  /*! \brief The R object type of the context */
+  typedef Rcpp::List RObjectType;
+  /*! \brief default constructor  */
+  Context() {}
+  /*!
+   * \brief Constructor
+   * \param src source R representation.
+   */
+  explicit Context(const Rcpp::RObject& src) {
+    Rcpp::List list(src);
+    Context ctx;
+    ctx.dev_type = list["device_typeid"];
+    ctx.dev_id = list["device_id"];
+  }
+  /*! \return R object representation of the context */
+  inline Rcpp::List RObject() const {
+    const char *dev_name = "cpu";
+    if (dev_type == kGPU) dev_name = "gpu";
+    return Rcpp::List::create(
+        Rcpp::Named("device") = dev_name,
+        Rcpp::Named("device_id") = dev_id,
+        Rcpp::Named("device_typeid") = dev_type);
+  }
+  static const int kGPU = 2;
+  static const int kCPU = 1;
+};
+}  // namespace R
 }  // namespace mxnet
 #endif  // MXNET_RCPP_BASE_H_

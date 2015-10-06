@@ -5,7 +5,8 @@
 namespace mxnet {
 namespace R {  // NOLINT(*)
 
-void NDArray::Save(SEXP sxptr, const std::string& filename) {
+void NDArray::Save(const Rcpp::RObject &sxptr,
+                   const std::string& filename) {
   // TODO(KK) add constant instead of integer
   if (TYPEOF(sxptr) == 19) {
     Rcpp::List data_lst(sxptr);
@@ -16,21 +17,20 @@ void NDArray::Save(SEXP sxptr, const std::string& filename) {
 
     for (int i = 0 ; i < data_lst.size(); ++i) {
       keys[i] = lst_names[i].c_str();
-      SEXP arr = data_lst[i];
-      handles[i] = Rcpp::XPtr<NDArray>(arr)->handle_;
+      handles[i] = NDArray::XPtr(data_lst[i])->handle_;
     }
     MX_CALL(MXNDArraySave(filename.c_str(), num_args,
                           dmlc::BeginPtr(handles),
                           dmlc::BeginPtr(keys)));
   } else if (TYPEOF(sxptr) == 22) {
-    Rcpp::XPtr<NDArray> ptr(sxptr);
-    MX_CALL(MXNDArraySave(filename.c_str(), 1, &(ptr->handle_), NULL));
+    MX_CALL(MXNDArraySave(filename.c_str(), 1,
+                          &(NDArray::XPtr(sxptr)->handle_), nullptr));
   } else {
     RLOG_FATAL << "only NDArray or list of NDArray" << std::endl;
   }
 }
 
-SEXP NDArray::Load(const std::string& filename) {
+Rcpp::List NDArray::Load(const std::string& filename) {
   mx_uint out_size;
   NDArrayHandle* out_arr;
   mx_uint out_name_size;
@@ -50,6 +50,21 @@ SEXP NDArray::Load(const std::string& filename) {
     out.attr("names") = lst_names;
   }
   return out;
+}
+
+NDArray::RObjectType NDArray::Empty(
+    const Rcpp::Dimension& rshape,
+    const Context::RObjectType& rctx) {
+  std::vector<mx_uint> shape(rshape.size());
+  for (size_t i = 0; i < rshape.size(); ++i){
+    shape[i] = static_cast<mx_uint>(rshape[i]);
+  }
+  Context ctx(rctx);
+  NDArrayHandle handle;
+  MX_CALL(MXNDArrayCreate(dmlc::BeginPtr(shape),
+                          static_cast<mx_uint>(shape.size()),
+                          ctx.dev_type, ctx.dev_id, false, &handle));
+  return NDArray::RObject(handle);
 }
 
 NDArrayFunction::NDArrayFunction(FunctionHandle handle)
@@ -116,7 +131,7 @@ SEXP NDArrayFunction::operator() (SEXP* args) {
     scalars[i] = (REAL)(args[begin_scalars_ + i])[0];
   }
   for (mx_uint i = 0; i < num_use_vars_; ++i) {
-    use_vars[i] = Rcpp::XPtr<NDArray>(args[begin_use_vars_ + i])->handle_;
+    use_vars[i] = NDArray::XPtr(args[begin_use_vars_ + i])->handle_;
   }
   MX_CALL(MXFuncInvoke(handle_,
                        dmlc::BeginPtr(use_vars),
@@ -135,7 +150,7 @@ void NDArray::InitRcppModule() {
 
 void NDArrayFunction::InitRcppModule() {
   Rcpp::Module* scope = ::getCurrentScope();
-  RCHECK(scope != NULL)
+  RCHECK(scope != nullptr)
       << "Init Module need to be called inside scope";
   mx_uint out_size;
   FunctionHandle *arr;
