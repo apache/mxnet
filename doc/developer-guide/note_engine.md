@@ -216,6 +216,25 @@ The above figure shows how we can push operation ```B = A + 1``` to dependency e
 Any the execution function can be any function closures user like to execute. So this interface is generic
 to what operation and resources we want to schedule.
 
+As a light touch on how the engine internals works with the tags, we could consider the following code snippet.
+
+    B = A + 1
+    C = A + 2
+    A = C * 2
+    D = A + 3
+    
+The first line reads variable `A` and mutates variable `B`. The second line reads variable `A` and mutates variable `C`. And so on.
+
+The engine is going to maintain a queue for each variable, as the following animation shows for each of the four lines. Green blocks represents a read action, while a red one represents a mutation.
+
+![Dependency Queue](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_queue.gif)
+
+Upon building this queue, the engine sees that the first two green blocks at the front of A's queue, could actually be run in parallel, because they are both read actions and won't conflict with each other. The following graph illustrates this point.
+
+![Dependency Parallelism](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_parallel.png)
+
+The cool thing about all this scheduling is, it is not confined to numerical calculations. Since everything scheduled is only a tag, the engine could schedule everything!
+
 The following figure gives a complete push sequence of the programs we mentioned in previous sections.
 ![Push Seq](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/push_seq.png)
 
