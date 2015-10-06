@@ -7,15 +7,20 @@
 #define MXNET_RCPP_BASE_H_
 
 #include <Rcpp.h>
+#include <dmlc/base.h>
 #include <mxnet/c_api.h>
-// to be removed
-#include <dmlc/logging.h>
 
 namespace mxnet {
 namespace R {
 
 // change to Rcpp::cerr later, for compatiblity of older version for now
-#define RLOG_FATAL LOG(FATAL)
+#define RLOG_FATAL ::Rcpp::Rcerr
+
+// checking macro for R side
+#define RCHECK(x)                                           \
+  if (!(x))                                                 \
+    RLOG_FATAL << "Check "                                  \
+        "failed: " #x << ' '
 
 /*!
  * \brief protected MXNet C API call, report R error if happens.

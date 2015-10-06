@@ -20,13 +20,17 @@ class NDArray {
   /*! \brief default constructor */
   NDArray() {}
   /*!
-   * \brief construct NDArray from handle
+   * \brief create a R object that correspond to the NDArray
    * \param handle the NDArrayHandle needed for output.
    * \param writable Whether the NDArray is writable or not.
    */
-  explicit NDArray(NDArrayHandle handle,
-                   bool writable = true)
-      : handle_(handle), writable_(writable) {}
+  static SEXP RObject(NDArrayHandle handle, bool writable = true) {
+    NDArray *nd = new NDArray();
+    nd->handle_ = handle;
+    nd->writable_ = writable;
+    // will call destructor after finalize
+    return Rcpp::XPtr<NDArray>(nd, true);
+  }
   /*!
    * \brief Load a list of ndarray from the file.
    * \param filename the name of the file.
@@ -41,6 +45,12 @@ class NDArray {
   static void Save(SEXP data, const std::string& filename);
   /*! \brief static function to initialize the Rcpp functions */
   static void InitRcppModule();
+
+  /*! \brief destructor */
+  ~NDArray() {
+    // free the handle
+    MX_CALL(MXNDArrayFree(handle_));
+  }
 
  private:
   // declare friend class
