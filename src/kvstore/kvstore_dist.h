@@ -74,7 +74,6 @@ class KVStoreDist : public KVStoreLocal {
         EncodeKey(key, size, &keys, &vals_size);
 
         // do push
-        // TODO(mli) add filters to reduce the bandwidth
         real_t* data = static_cast<real_t*>(merged.data().dptr_);
         ps::SArray<real_t> vals(data, size, ps::EmptyDel<real_t>());
         ps::SyncOpts opts;
@@ -107,37 +106,31 @@ class KVStoreDist : public KVStoreLocal {
       int key = uniq_keys[i];
       const auto& vals = grouped_vals[i];
 
-      // first pull to pull_buf_, and copy to others
-      auto pull_from_servers = [this, key, vals, priority](
-          RunContext rctx, Engine::CallbackOnComplete cb) {
+      // first pull to pull_buf_
+      auto& buf = pull_buf_[key];
+      if (buf.is_none()) {
+        buf = NDArray(vals[0]->shape(), pinned_ctx_);
+      }
+      real_t* data = static_cast<real_t*>(buf.data().dptr_);
+      size_t size = buf.shape().Size();
 
+      auto pull_from_servers = [this, key, data, size](
+          RunContext rctx, Engine::CallbackOnComplete cb) {
         // convert to ps keys
-        size_t size = vals[0]->shape().Size();
         ps::SArray<ps::Key> keys;
         ps::SArray<int> vals_size;
         EncodeKey(key, size, &keys, &vals_size);
 
-        // pull
-        // TODO(mli) add filters to reduce the bandwidth
-        auto& buf = pull_buf_[key];
-        if (buf.is_none()) {
-          buf = NDArray(vals[0]->shape(), pinned_ctx_);
-        }
-        buf.WaitToWrite();
-        real_t* data = static_cast<real_t*>(buf.data().dptr_);
-
+        // pull opts
         ps::SyncOpts opts;
         auto it = last_push_.find(key);
         if (it != last_push_.end()) {
           // make sure pull happens after the previous push on this key
           opts.deps.push_back(it->second);
         }
-        opts.callback = [cb, vals, data, size, priority]() {
-          for (size_t i = 1; i < vals.size(); ++i) {
-            vals[0]->SyncCopyFromCPU(data, size);
-          }
-          cb();
-        };
+        opts.callback = [cb]() { cb(); };
+
+        // issue pull
         CHECK_NOTNULL(cache_)->Pull(
             opts.GetTask(),
             keys,
@@ -147,15 +140,17 @@ class KVStoreDist : public KVStoreLocal {
             vals_size.data());
       };
 
-      std::vector<Engine::VarHandle> mut_vars;
-      mut_vars.reserve(vals.size());
-      for (auto& v : vals) mut_vars.push_back(v->var());
       CHECK_NOTNULL(Engine::Get())->PushAsync(
           pull_from_servers,
           pinned_ctx_,
           {},
-          mut_vars,
+          {buf.var()},
           FnProperty::kNormal, priority);
+
+      // copy data from pull_buf to vals
+      for (auto v : vals) {
+        CopyFromTo(buf, v);
+      }
     }
   }
 
