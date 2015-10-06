@@ -19,7 +19,7 @@ class KVStoreServer(object):
         self.handle = handle
 
     def __del__(self):
-        yield
+        check_call(_LIB.MXKVStoreFree(self.handle))
 
     def controller(self):
         """return the controller"""

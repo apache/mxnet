@@ -18,8 +18,7 @@ namespace kvstore {
 class KVStoreDist : public KVStoreLocal {
  public:
   KVStoreDist()
-      : engine_(Engine::Get()),
-        store_(NULL),
+      : store_(NULL),
         cache_(NULL),
         barrier_count_(0) {
     if (IsServerNode()) {
@@ -32,6 +31,8 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   virtual ~KVStoreDist() {
+    LOG(ERROR) << "xxxxxxx";
+    Engine::Get()->WaitForAll();
     delete store_;
     delete cache_;
 
@@ -45,6 +46,7 @@ class KVStoreDist : public KVStoreLocal {
     Push(keys, values, 0);
     // wait until the push is finished
     for (int key : keys) {
+      CHECK(merge_buf_.find(key) != merge_buf_.end());
       merge_buf_[key].merged.WaitToWrite();
     }
   }
@@ -58,6 +60,7 @@ class KVStoreDist : public KVStoreLocal {
     GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
+      // merge over devcies
       int key = uniq_keys[i];
       const NDArray& merged = MergePushValue(key, grouped_vals[i], priority);
 
@@ -76,11 +79,20 @@ class KVStoreDist : public KVStoreLocal {
         ps::SArray<real_t> vals(data, size, ps::EmptyDel<real_t>());
         ps::SyncOpts opts;
         opts.callback = [cb]() { cb(); };
+
         last_push_[key] = CHECK_NOTNULL(cache_)->Push(
-            opts.GetTask(), keys, vals, vals_size, opts.callback);
+            opts.GetTask(),
+            keys,
+            vals,
+            vals_size,
+            opts.callback);
       };
-      engine_->PushAsync(push_to_servers, pinned_ctx_, {merged.var()}, {},
-                        FnProperty::kNormal, priority);
+      CHECK_NOTNULL(Engine::Get())->PushAsync(
+          push_to_servers,
+          pinned_ctx_,
+          {merged.var()},
+          {},
+          FnProperty::kNormal, priority);
     }
   }
 
@@ -95,39 +107,55 @@ class KVStoreDist : public KVStoreLocal {
       int key = uniq_keys[i];
       const auto& vals = grouped_vals[i];
 
-      // first pull to vals[0], and copy to others
+      // first pull to pull_buf_, and copy to others
       auto pull_from_servers = [this, key, vals, priority](
           RunContext rctx, Engine::CallbackOnComplete cb) {
+
         // convert to ps keys
         size_t size = vals[0]->shape().Size();
         ps::SArray<ps::Key> keys;
         ps::SArray<int> vals_size;
         EncodeKey(key, size, &keys, &vals_size);
 
-        // do pull
+        // pull
         // TODO(mli) add filters to reduce the bandwidth
+        auto& buf = pull_buf_[key];
+        if (buf.is_none()) {
+          buf = NDArray(vals[0]->shape(), pinned_ctx_);
+        }
+        buf.WaitToWrite();
+        real_t* data = static_cast<real_t*>(buf.data().dptr_);
+
         ps::SyncOpts opts;
         auto it = last_push_.find(key);
         if (it != last_push_.end()) {
           // make sure pull happens after the previous push on this key
           opts.deps.push_back(it->second);
         }
-        opts.callback = [cb, vals, priority]() {
+        opts.callback = [cb, vals, data, size, priority]() {
           for (size_t i = 1; i < vals.size(); ++i) {
-            CopyFromTo(*vals[0], vals[i], priority);
+            vals[0]->SyncCopyFromCPU(data, size);
           }
           cb();
         };
-        real_t* data = static_cast<real_t*>(vals[0]->data().dptr_);
         CHECK_NOTNULL(cache_)->Pull(
-            opts.GetTask(), keys, opts.callback, data, size, vals_size.data());
+            opts.GetTask(),
+            keys,
+            opts.callback,
+            data,
+            size,
+            vals_size.data());
       };
 
       std::vector<Engine::VarHandle> mut_vars;
       mut_vars.reserve(vals.size());
       for (auto& v : vals) mut_vars.push_back(v->var());
-      engine_->PushAsync(pull_from_servers, pinned_ctx_, {}, mut_vars,
-                         FnProperty::kNormal, priority);
+      CHECK_NOTNULL(Engine::Get())->PushAsync(
+          pull_from_servers,
+          pinned_ctx_,
+          {},
+          mut_vars,
+          FnProperty::kNormal, priority);
     }
   }
 
@@ -254,23 +282,33 @@ class KVStoreDist : public KVStoreLocal {
         ps::Key recv_key, ps::Blob<const real_t> recv_val, ServerVal& my_val) {
       // construct NDArray without data copy
       size_t ds[] = {recv_val.size};
-      TShape dshape(ds, ds + 2);
+      TShape dshape(ds, ds + 1);
       TBlob recv_blob((real_t*)recv_val.data, dshape, cpu::kDevMask);
       NDArray recv_array(recv_blob, 0);
 
       if (my_val.Empty()) {
         // initialization
         my_val.array = NDArray(dshape, Context());
+        // my_val.array.SyncCopyFromCPU(recv_val.data, recv_val.size);
         CopyFromTo(recv_array, &my_val.array);
       } else {
         // call updater
         int key = kvstore_->DecodeKey(recv_key);
-        kvstore_->updater_(key, recv_array, &my_val.array);
+        if (kvstore_->updater_) {
+          kvstore_->updater_(key, recv_array, &my_val.array);
+        } else {
+          CopyFromTo(recv_array, &my_val.array);
+        }
       }
     }
 
     inline void Pull(
         ps::Key recv_key, const ServerVal& my_val, ps::Blob<real_t>& send_val) {
+      LOG(ERROR) << recv_key;
+      CHECK(!my_val.array.is_none())
+          << kvstore_->DecodeKey(recv_key) << " is not inited";
+
+      my_val.array.WaitToRead();
       send_val.data = static_cast<real_t*>(my_val.array.data().dptr_);
       send_val.size = my_val.array.shape()[0];
     }
@@ -278,8 +316,6 @@ class KVStoreDist : public KVStoreLocal {
    private:
     KVStoreDist* kvstore_;
   };
-
-  Engine* engine_;
 
   /**
    * \brief kv store at server node
@@ -297,6 +333,13 @@ class KVStoreDist : public KVStoreLocal {
    */
   std::unordered_map<int, int> last_push_;
 
+  /**
+   * \brief buffer for pulling data.
+   *
+   * The reason that we don't reuse the merge_buf_ is to ensure that we can call
+   * pull even when the previous push on this key is not finished
+   */
+  std::unordered_map<int, NDArray> pull_buf_;
   /**
    * \brief key partition of server nodes in ps
    */
