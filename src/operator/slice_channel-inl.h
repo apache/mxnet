@@ -78,7 +78,7 @@ class SliceChannelOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), size_);
+    CHECK_EQ(out_grad.size(), static_cast<size_t>(size_));
     CHECK_EQ(in_grad.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     std::vector<Tensor<xpu, 4> > grad_out(size_);
