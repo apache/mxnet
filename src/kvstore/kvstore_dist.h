@@ -321,18 +321,18 @@ class KVStoreDist : public KVStoreLocal {
       if (my_val.Empty()) {
         // initialization
         my_val.array = NDArray(dshape, Context());
-        // my_val.array.SyncCopyFromCPU(recv_val.data, recv_val.size);
         CopyFromTo(recv_array, &my_val.array);
-        // LOG(ERROR) << "init";
       } else {
         // call updater
         int key = kvstore_->DecodeKey(recv_key);
         if (kvstore_->updater_) {
           kvstore_->updater_(key, recv_array, &my_val.array);
         } else {
-          CopyFromTo(recv_array, &my_val.array);
+          my_val.array += recv_array;
         }
       }
+      // place waitoread here rather than the beginning of pull.
+      my_val.array.WaitToRead();
     }
 
     inline void Pull(
@@ -340,10 +340,8 @@ class KVStoreDist : public KVStoreLocal {
       CHECK(!my_val.Empty())
           << kvstore_->DecodeKey(recv_key) << " is not inited";
 
-      my_val.array.WaitToRead();
       send_val.data = static_cast<real_t*>(my_val.array.data().dptr_);
       send_val.size = my_val.array.shape()[0];
-      LOG(ERROR) << send_val.data[0] << " " << send_val.data[send_val.size-1];
     }
 
    private:
