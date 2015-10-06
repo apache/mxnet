@@ -27,16 +27,6 @@ class KVStoreDist : public KVStoreLocal {
     } else if (IsWorkerNode()) {
       cache_ = new ps::KVCache<ps::Key, real_t>(ps::NextID());
       StartPS();
-
-      // init key parititon
-      int num_servers = ps::NodeInfo::NumServers();
-      CHECK_GT(num_servers, 0);
-      CHECK_EQ(sizeof(ps::Key), 8) << "Do not use USE_KEY32=1 to compile ps-lite";
-      auto all = ps::Range<ps::Key>::All();
-      for (int i = 0; i < num_servers; ++i) {
-        ps::Key key = all.EvenDivide(num_servers, i).begin();
-        server_key_partition_.push_back(((key >> kIndexBits)+1) << kIndexBits);
-      }
     }
   }
 
@@ -80,9 +70,7 @@ class KVStoreDist : public KVStoreLocal {
           [this, key, merged](RunContext rctx, Engine::CallbackOnComplete cb) {
         // convert to ps keys
         size_t size = merged.shape().Size();
-        ps::SArray<ps::Key> keys;
-        ps::SArray<int> vals_size;
-        EncodeKey(key, size, &keys, &vals_size);
+        PSKV& pskv = EncodeKey(key, size);
 
         // do push
         real_t* data = static_cast<real_t*>(merged.data().dptr_);
@@ -91,9 +79,9 @@ class KVStoreDist : public KVStoreLocal {
         opts.callback = [cb]() { cb(); };
         CHECK_NOTNULL(cache_)->Push(
             opts.GetTask(),
-            keys,
+            pskv.keys,
             vals,
-            vals_size,
+            pskv.vals_size,
             opts.callback);
       };
       Engine::Get()->PushAsync(
@@ -128,23 +116,20 @@ class KVStoreDist : public KVStoreLocal {
       auto pull_from_servers = [this, key, data, size](
           RunContext rctx, Engine::CallbackOnComplete cb) {
         // convert to ps keys
-        ps::SArray<ps::Key> keys;
-        ps::SArray<int> vals_size;
-        EncodeKey(key, size, &keys, &vals_size);
+        PSKV& pskv = EncodeKey(key, size);
 
         // pull opts
         ps::SyncOpts opts;
-        // TODO(mli) coredump if let ps-lite run the cb()
         opts.callback = [cb]() { cb(); };
 
         // issue pull
         CHECK_NOTNULL(cache_)->Pull(
             opts.GetTask(),
-            keys,
+            pskv.keys,
             opts.callback,
             data,
             size,
-            vals_size.data());
+            pskv.vals_size.data());
       };
 
       CHECK_NOTNULL(Engine::Get())->PushAsync(
@@ -212,28 +197,70 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   /**
+   * \brief struct for ps keys and vals_size
+   */
+  struct PSKV {
+    ps::SArray<ps::Key> keys;  // n keys
+    ps::SArray<int> vals_size;  // the length of the i-th value
+    int size;
+  };
+
+  /**
+   * \brief cache all key partitions
+   */
+  std::unordered_map<int, PSKV> ps_kv_;
+
+  /**
+   * \brief serizelize EncodeKey
+   */
+  std::mutex mu_;
+
+  /**
+   * \brief key partition of server nodes in ps
+   */
+  std::vector<ps::Key> server_key_partition_;
+
+  /**
    * \brief convert to keys in ps
    */
-  inline void EncodeKey(int key, size_t size,
-                        ps::SArray<ps::Key>* keys,
-                        ps::SArray<int>* vals_size) {
-    // a simple heuristic for load balance
-    int num_servers = static_cast<int>(server_key_partition_.size());
-    keys->clear();
-    vals_size->clear();
-    if (size < bigarray_bound_) {
-      // send it to a single random picked server
-      int server = (key * 9973) % num_servers;
-      keys->push_back(server_key_partition_[server] | key);
-      vals_size->push_back(size);
-    } else {
-      // divide it to all servers
-      auto all = ps::Range<size_t>(0, size);
+  inline PSKV& EncodeKey(int key, size_t size) {
+    CHECK_EQ(sizeof(ps::Key), 8) << "Do not use USE_KEY32=1 to compile ps-lite";
+    int num_servers = ps::NodeInfo::NumServers();
+    CHECK_GT(num_servers, 0);
+
+    mu_.lock();
+    // init key parititon
+    if (server_key_partition_.empty()) {
+      auto all = ps::Range<ps::Key>::All();
       for (int i = 0; i < num_servers; ++i) {
-        keys->push_back(server_key_partition_[i] | key);
-        vals_size->push_back(all.EvenDivide(num_servers, i).size());
+        ps::Key key = all.EvenDivide(num_servers, i).begin();
+        server_key_partition_.push_back(((key >> kIndexBits)+1) << kIndexBits);
       }
     }
+
+    PSKV& pskv = ps_kv_[key];
+    mu_.unlock();
+
+    if (!pskv.keys.empty()) {
+      CHECK_EQ(pskv.size, size) << "The value size cannot be changed";
+    } else {
+      // a simple heuristic for load balance
+      if (size < bigarray_bound_) {
+        // send it to a single random picked server
+        int server = (key * 9973) % num_servers;
+        pskv.keys.push_back(server_key_partition_[server] | key);
+        pskv.vals_size.push_back(size);
+      } else {
+        // divide it to all servers
+        auto all = ps::Range<size_t>(0, size);
+        for (int i = 0; i < num_servers; ++i) {
+          pskv.keys.push_back(server_key_partition_[i] | key);
+          pskv.vals_size.push_back(all.EvenDivide(num_servers, i).size());
+        }
+      }
+      pskv.size = size;
+    }
+    return pskv;
   }
 
   /**
@@ -299,7 +326,6 @@ class KVStoreDist : public KVStoreLocal {
       my_val.array.WaitToRead();
       send_val.data = static_cast<real_t*>(my_val.array.data().dptr_);
       send_val.size = my_val.array.shape()[0];
-      LOG(ERROR) << send_val.data[0] << " " << send_val.data[0];
     }
 
    private:
@@ -317,39 +343,6 @@ class KVStoreDist : public KVStoreLocal {
    */
   ps::KVCache<ps::Key, real_t>* cache_;
 
-  // /**
-  //  * \brief store push info
-  //  */
-  // struct PushInfo {
-  //   int ts;  // timestamp
-  //   Engine::VarHandle var;  // the according var in engine
-  //   PushInfo() {
-  //     ts = -1;
-  //     var = Engine::Get()->NewVariable();
-  //   }
-  //   ~PushInfo() {
-  //     Engine::Get()->DeleteVariable([](RunContext s) {}, Context(), var);
-  //   }
-  // };
-
-  // /**
-  //  * \brief the timestamps and var for the last push
-  //  */
-  // std::unordered_map<int, PushInfo> last_push_;
-
-  // /**
-  //  * \brief buffer for pulling data.
-  //  *
-  //  * The reason that we don't reuse the merge_buf_ is to ensure that we can call
-  //  * pull even when the previous push on this key is not finished
-  //  */
-  // std::unordered_map<int, NDArray> pull_buf_;
-
-  /**
-   * \brief key partition of server nodes in ps
-   */
-  std::vector<ps::Key> server_key_partition_;
-
   /**
    * \brief number of bits used to encode the key in mxnet
    */
@@ -360,10 +353,6 @@ class KVStoreDist : public KVStoreLocal {
    */
   int barrier_count_;
 
-  /**
-   * \brief serizelize push and pull
-   */
-  // std::mutex mu_;
 };
 
 }  // namespace kvstore
