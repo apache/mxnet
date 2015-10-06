@@ -27,12 +27,22 @@ class KVStoreDist : public KVStoreLocal {
     } else if (IsWorkerNode()) {
       cache_ = new ps::KVCache<ps::Key, real_t>(ps::NextID());
       StartPS();
+
+      // init key parititon
+      int num_servers = ps::NodeInfo::NumServers();
+      CHECK_GT(num_servers, 0);
+      CHECK_EQ(sizeof(ps::Key), 8) << "Do not use USE_KEY32=1 to compile ps-lite";
+      auto all = ps::Range<ps::Key>::All();
+      for (int i = 0; i < num_servers; ++i) {
+        ps::Key key = all.EvenDivide(num_servers, i).begin();
+        server_key_partition_.push_back(((key >> kIndexBits)+1) << kIndexBits);
+      }
     }
   }
 
   virtual ~KVStoreDist() {
-    LOG(ERROR) << "xxxx";
     Engine::Get()->WaitForAll();
+    // need to explicit clear the NDArray before Engine is deleted
     if (store_) store_->server()->Clear();
     delete store_;
     delete cache_;
@@ -79,15 +89,14 @@ class KVStoreDist : public KVStoreLocal {
         ps::SArray<real_t> vals(data, size, ps::EmptyDel<real_t>());
         ps::SyncOpts opts;
         opts.callback = [cb]() { cb(); };
-
-        last_push_[key] = CHECK_NOTNULL(cache_)->Push(
+        CHECK_NOTNULL(cache_)->Push(
             opts.GetTask(),
             keys,
             vals,
             vals_size,
             opts.callback);
       };
-      CHECK_NOTNULL(Engine::Get())->PushAsync(
+      Engine::Get()->PushAsync(
           push_to_servers,
           pinned_ctx_,
           {merged.var()},
@@ -107,8 +116,9 @@ class KVStoreDist : public KVStoreLocal {
       int key = uniq_keys[i];
       const auto& vals = grouped_vals[i];
 
-      // first pull to pull_buf_
-      auto& buf = pull_buf_[key];
+      // first pull to a buffer. we reuse the merge buf so that all pushes and
+      // pulls on the same key on the local machine are always sequentials
+      auto& buf = merge_buf_[key].merged;
       if (buf.is_none()) {
         buf = NDArray(vals[0]->shape(), pinned_ctx_);
       }
@@ -124,11 +134,7 @@ class KVStoreDist : public KVStoreLocal {
 
         // pull opts
         ps::SyncOpts opts;
-        auto it = last_push_.find(key);
-        if (it != last_push_.end()) {
-          // make sure pull happens after the previous push on this key
-          opts.deps.push_back(it->second);
-        }
+        // TODO(mli) coredump if let ps-lite run the cb()
         opts.callback = [cb]() { cb(); };
 
         // issue pull
@@ -148,7 +154,7 @@ class KVStoreDist : public KVStoreLocal {
           {buf.var()},
           FnProperty::kNormal, priority);
 
-      // copy data from pull_buf to vals
+      // copy data from buffer to vals
       for (auto v : vals) {
         CopyFromTo(buf, v);
       }
@@ -211,20 +217,8 @@ class KVStoreDist : public KVStoreLocal {
   inline void EncodeKey(int key, size_t size,
                         ps::SArray<ps::Key>* keys,
                         ps::SArray<int>* vals_size) {
-    int num_servers = ps::NodeInfo::NumServers();
-    CHECK_GT(num_servers, 0);
-
-    // generate the key partition so we can control which server the data goes to
-    if (server_key_partition_.empty()) {
-      CHECK_EQ(sizeof(ps::Key), 8) << "Do not use USE_KEY32=1 to compile ps-lite";
-      auto all = ps::Range<ps::Key>::All();
-      for (int i = 0; i < num_servers; ++i) {
-        ps::Key key = all.EvenDivide(num_servers, i).begin();
-        server_key_partition_.push_back(((key >> kIndexBits)+1) << kIndexBits);
-      }
-    }
-
     // a simple heuristic for load balance
+    int num_servers = static_cast<int>(server_key_partition_.size());
     keys->clear();
     vals_size->clear();
     if (size < bigarray_bound_) {
@@ -305,6 +299,7 @@ class KVStoreDist : public KVStoreLocal {
       my_val.array.WaitToRead();
       send_val.data = static_cast<real_t*>(my_val.array.data().dptr_);
       send_val.size = my_val.array.shape()[0];
+      LOG(ERROR) << send_val.data[0] << " " << send_val.data[0];
     }
 
    private:
@@ -322,18 +317,34 @@ class KVStoreDist : public KVStoreLocal {
    */
   ps::KVCache<ps::Key, real_t>* cache_;
 
-  /**
-   * \brief the timestamps for the last push
-   */
-  std::unordered_map<int, int> last_push_;
+  // /**
+  //  * \brief store push info
+  //  */
+  // struct PushInfo {
+  //   int ts;  // timestamp
+  //   Engine::VarHandle var;  // the according var in engine
+  //   PushInfo() {
+  //     ts = -1;
+  //     var = Engine::Get()->NewVariable();
+  //   }
+  //   ~PushInfo() {
+  //     Engine::Get()->DeleteVariable([](RunContext s) {}, Context(), var);
+  //   }
+  // };
 
-  /**
-   * \brief buffer for pulling data.
-   *
-   * The reason that we don't reuse the merge_buf_ is to ensure that we can call
-   * pull even when the previous push on this key is not finished
-   */
-  std::unordered_map<int, NDArray> pull_buf_;
+  // /**
+  //  * \brief the timestamps and var for the last push
+  //  */
+  // std::unordered_map<int, PushInfo> last_push_;
+
+  // /**
+  //  * \brief buffer for pulling data.
+  //  *
+  //  * The reason that we don't reuse the merge_buf_ is to ensure that we can call
+  //  * pull even when the previous push on this key is not finished
+  //  */
+  // std::unordered_map<int, NDArray> pull_buf_;
+
   /**
    * \brief key partition of server nodes in ps
    */
@@ -348,6 +359,11 @@ class KVStoreDist : public KVStoreLocal {
    * \brief the count for barrier
    */
   int barrier_count_;
+
+  /**
+   * \brief serizelize push and pull
+   */
+  // std::mutex mu_;
 };
 
 }  // namespace kvstore
