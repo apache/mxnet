@@ -115,7 +115,7 @@ class NDArray(object):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __neg__(self):
-        return NDArray._mul_scalar(self, -1.0, out=self)
+        return NDArray._mul_scalar(self, -1.0)
 
     def __imul__(self, other):
         if isinstance(other, NDArray):

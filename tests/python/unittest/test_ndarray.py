@@ -49,6 +49,18 @@ def test_ndarray_elementwise():
             check_with_uniform(lambda x, y: x * y, 2, dim)
             check_with_uniform(lambda x, y: x / y, 2, dim)
 
+def test_ndarray_negate():
+    npy = np.random.uniform(-10, 10, (2,3,4))
+    arr = mx.nd.array(npy)
+    assert reldiff(npy, arr.asnumpy()) < 1e-6
+    assert reldiff(-npy, (-arr).asnumpy()) < 1e-6
+
+    # a final check to make sure the negation (-) is not implemented
+    # as inplace operation, so the contents of arr does not change after
+    # we compute (-arr)
+    assert reldiff(npy, arr.asnumpy()) < 1e-6
+
+
 def test_ndarray_copy():
     c = mx.nd.array(np.random.uniform(-10, 10, (10, 10)))
     d = c.copyto(mx.Context('cpu', 0))
@@ -67,7 +79,7 @@ def test_ndarray_scalar():
     c[:] = 2
     assert(np.sum(c.asnumpy()) - 200 < 1e-5)
     d = -c + 2
-    assert(np.sum(c.asnumpy()) < 1e-5)
+    assert(np.sum(d.asnumpy()) < 1e-5)
 
 def test_ndarray_pickle():
     np.random.seed(0)
@@ -142,6 +154,7 @@ if __name__ == '__main__':
     test_ndarray_saveload()
     test_ndarray_copy()
     test_ndarray_elementwise()
+    test_ndarray_negate()
     test_ndarray_scalar()
     test_clip()
     test_dot()

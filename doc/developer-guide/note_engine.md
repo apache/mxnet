@@ -1,5 +1,5 @@
-Dependency Engine for Multi-Device Deep Learning
-================================================
+Dependency Engine for Deep Learning
+===================================
 One always important theme of deep learning libraries is to run faster and scale to larger
 dataset. In order to do so, a natural direction is always go beyond using one device(GPU),
 and make uses of more computation resources.
@@ -13,6 +13,7 @@ the runtime dependency scheduling problem in deep learning. We will introduce th
 scheduling problem, how it can help making multi-device deep learning easier and faster, and
 discuss possible design for a generic dependency engine that is not library and operation specific.
 
+Most design detail of this article is inspires the dependency engine of mxnet, with the dependency tracking algorithm majorly contributed by [Yutian Li](https://github.com/hotpxl) and [Mingjie Wang](https://github.com/jermainewang).
 
 Dependency Scheduling Problem
 -----------------------------
@@ -214,6 +215,25 @@ The above figure shows how we can push operation ```B = A + 1``` to dependency e
 ```A.data``` are the real allocated space. We should note that engine is ***only aware of variable tags***.
 Any the execution function can be any function closures user like to execute. So this interface is generic
 to what operation and resources we want to schedule.
+
+As a light touch on how the engine internals works with the tags, we could consider the following code snippet.
+
+    B = A + 1
+    C = A + 2
+    A = C * 2
+    D = A + 3
+    
+The first line reads variable `A` and mutates variable `B`. The second line reads variable `A` and mutates variable `C`. And so on.
+
+The engine is going to maintain a queue for each variable, as the following animation shows for each of the four lines. Green blocks represents a read action, while a red one represents a mutation.
+
+![Dependency Queue](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_queue.gif)
+
+Upon building this queue, the engine sees that the first two green blocks at the front of A's queue, could actually be run in parallel, because they are both read actions and won't conflict with each other. The following graph illustrates this point.
+
+![Dependency Parallelism](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_parallel.png)
+
+The cool thing about all this scheduling is, it is not confined to numerical calculations. Since everything scheduled is only a tag, the engine could schedule everything!
 
 The following figure gives a complete push sequence of the programs we mentioned in previous sections.
 ![Push Seq](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/push_seq.png)
