@@ -1067,3 +1067,11 @@ int MXKVStoreRunServer(KVStoreHandle handle,
   static_cast<KVStore*>(handle)->RunServer(ctrl);
   API_END();
 }
+
+int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
+                                   int head,
+                                   const char* body) {
+  API_BEGIN();
+  static_cast<KVStore*>(handle)->SendCommandToServers(head, std::string(body));
+  API_END();
+}

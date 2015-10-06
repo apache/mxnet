@@ -7,9 +7,6 @@ from .ndarray import NDArray
 from .base import _LIB
 from .base import check_call, c_array, c_str, string_types, mx_uint
 from .base import NDArrayHandle, KVStoreHandle
-from .kvstore_server import KVStoreServer
-import sys
-
 
 def _ctype_key_value(keys, vals):
     """
@@ -275,6 +272,10 @@ class KVStore(object):
     def wait_all(self):
         check_call(_LIB.MXKVStoreWaitAll(self.handle))
 
+    def send_command_to_servers(self, head, body):
+        check_call(_LIB.MXKVStoreSendCommmandToServers(
+            self.handle, mx_uint(head), c_str(body)))
+
 def create(name='local'):
     """Create a new KVStore.
 
@@ -295,18 +296,3 @@ def create(name='local'):
     check_call(_LIB.MXKVStoreCreate(c_str(name),
                                     ctypes.byref(handle)))
     return KVStore(handle)
-
-def _init_kvstore_module():
-    """Start server/scheduler"""
-    is_worker = ctypes.c_int()
-    check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
-    if is_worker.value == 0:
-        name = 'dist'
-        handle = KVStoreHandle()
-        check_call(_LIB.MXKVStoreCreate(c_str(name),
-                                        ctypes.byref(handle)))
-        server = KVStoreServer(handle)
-        server.run()
-        sys.exit()
-
-_init_kvstore_module()

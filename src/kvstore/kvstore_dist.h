@@ -171,7 +171,7 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void SendCommandToServers(int head, const char* body) override {
+  void SendCommandToServers(int head, const std::string& body) override {
     CHECK_GE(head, 0) << "negative head is preserved for system usage";
     ps::Task task;
     task.set_cmd(head);

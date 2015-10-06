@@ -225,7 +225,7 @@ class KVStore {
    * system usage)
    * \param body the body of the command
    */
-  virtual void SendCommandToServers(int head, const char* body) { }
+  virtual void SendCommandToServers(int head, const std::string& body) { }
 
   /**
    * \brief the prototype of a server controller

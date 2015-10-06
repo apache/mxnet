@@ -13,6 +13,7 @@ from . import symbol as sym
 from . import symbol
 # use mx.kv as short for kvstore
 from . import kvstore as kv
+from . import kvstore_server
 from . import io
 # use mx.nd as short for mx.ndarray
 from . import ndarray as nd

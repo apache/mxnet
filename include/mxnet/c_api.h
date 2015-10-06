@@ -803,4 +803,8 @@ typedef void (MXKVStoreServerController)(int head,
 MXNET_DLL int MXKVStoreRunServer(KVStoreHandle handle,
                                  MXKVStoreServerController controller);
 
+MXNET_DLL int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
+                                             int head,
+                                             const char* body);
+
 #endif  // MXNET_C_API_H_

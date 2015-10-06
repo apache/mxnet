@@ -45,6 +45,10 @@ class MXNetServer : public ps::App {
   }
 
   void ProcessRequest(ps::Message* request) override {
+    // wait for one second if controller_ is not inited
+    for (int i = 0; i < 100; ++i) {
+      if (!controller_) usleep(10000);
+    }
     CHECK(controller_);
     controller_(request->task.cmd(), request->task.msg());
   }

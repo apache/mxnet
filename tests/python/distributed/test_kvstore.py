@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # pylint: skip-file
 #
-#
-#
+# run on local machine
+# $ ln -s ../../../dmlc-core/tracker/dmlc_local.py .
+# $ ./dmlc_local.py -n 4 -s 4 ./test_kvstore.py
 
 import mxnet as mx
 import numpy as np
@@ -12,32 +13,35 @@ def check_diff_to_scalar(A, x):
     """ assert A == x"""
     assert(np.sum(np.abs((A - x).asnumpy())) == 0), A.asnumpy()
 
+# init
 kv = mx.kv.create('dist')
-
 my_rank = kv.get_rank()
 nworker = kv.get_group_size()
 
 shape = (2, 2)
-keys = [3]
+keys = [3, 4, 5]
 
 if my_rank == 0:
     kv.init(keys, [mx.nd.ones(shape)] * len(keys))
-
 kv.barrier()
+# print 'init worker %d' % my_rank
 
-val = mx.nd.zeros(shape)
+def test_sync_push_pull():
+    val = mx.nd.zeros(shape)
+    nrepeat = 3
+    for i in range(nrepeat):
+        kv.push(3, mx.nd.ones(shape)*(my_rank+1))
+        kv.wait(3)
+        kv.barrier()
 
-# synchronzied push & pull
-nrepeat = 3
-for i in range(nrepeat):
-    kv.push(3, mx.nd.ones(shape)*(my_rank+1))
-kv.wait(3)
-kv.barrier()
+    kv.pull(3, out = val)
+    num = (nworker + 1 ) * nworker / 2 * nrepeat + 1
+    check_diff_to_scalar(val, num)
 
-kv.pull(3, out = val)
+kv.send_command_to_servers(1, 'hhh')
 
-num = (nworker + 1 ) * nworker / 2 * nrepeat + 1
-check_diff_to_scalar(val, num)
+if __name__ == "__main__":
+    test_sync_push_pull()
 
 # kv.pull(3, out = val)
 # print val.asnumpy()
