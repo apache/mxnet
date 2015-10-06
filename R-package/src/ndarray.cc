@@ -1,5 +1,4 @@
 #include <Rcpp.h>
-#include <dmlc/base.h>
 #include "./base.h"
 #include "./ndarray.h"
 
@@ -41,7 +40,7 @@ SEXP NDArray::Load(const std::string& filename) {
                         &out_name_size, &out_names));
   Rcpp::List out(out_size);
   for (mx_uint i = 0; i < out_size; ++i) {
-    out[i] = Rcpp::XPtr<NDArray>(new NDArray(out_arr[i]));
+    out[i] = NDArray::RObject(out_arr[i]);
   }
   if (out_name_size != 0) {
     std::vector<std::string> lst_names(out_size);
@@ -105,9 +104,8 @@ NDArrayFunction::NDArrayFunction(FunctionHandle handle)
 
 SEXP NDArrayFunction::operator() (SEXP* args) {
   BEGIN_RCPP;
-  if (!accept_empty_out_) {
-    RLOG_FATAL << "not yet support mutate target";
-  }
+  RCHECK(accept_empty_out_)
+      << "not yet support mutate target";
   NDArrayHandle ohandle;
   MX_CALL(MXNDArrayCreateNone(&ohandle));
   std::vector<mx_float> scalars(num_scalars_);
@@ -124,7 +122,7 @@ SEXP NDArrayFunction::operator() (SEXP* args) {
                        dmlc::BeginPtr(use_vars),
                        dmlc::BeginPtr(scalars),
                        &ohandle));
-  return Rcpp::XPtr<NDArray>(new NDArray(ohandle));
+  return NDArray::RObject(ohandle);
   END_RCPP;
 }
 
@@ -137,9 +135,8 @@ void NDArray::InitRcppModule() {
 
 void NDArrayFunction::InitRcppModule() {
   Rcpp::Module* scope = ::getCurrentScope();
-  if (scope == NULL) {
-    RLOG_FATAL << "Init Module need to be called inside scope";
-  }
+  RCHECK(scope != NULL)
+      << "Init Module need to be called inside scope";
   mx_uint out_size;
   FunctionHandle *arr;
   MX_CALL(MXListFunctions(&out_size, &arr));
