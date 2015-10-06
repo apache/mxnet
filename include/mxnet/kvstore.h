@@ -91,7 +91,6 @@ class KVStore {
                     const std::vector<NDArray*>& values,
                     int priority = 0) = 0;
 
-
   /**
    * \brief the prototype of user-defined updater
    */
@@ -182,6 +181,18 @@ class KVStore {
   virtual int get_group_size() const {
     return 1;
   }
+
+  /**
+   * \brief wait until any push and pull on each key have been finished
+   *
+   * \param keys a list of keys
+   */
+  virtual void Wait(const std::vector<int>& keys) { }
+
+  /**
+   * \brief wait until all push and pull have been finished
+   */
+  virtual void WaitAll() { }
 
   /*!
    * \brief global barrier among all worker machines

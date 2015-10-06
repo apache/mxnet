@@ -263,6 +263,18 @@ class KVStore(object):
         """Global barrier among all worker nodes"""
         check_call(_LIB.MXKVStoreBarrier(self.handle))
 
+    def wait(self, key):
+        if isinstance(key, int):
+            ckeys = c_array(ctypes.c_int, [key])
+        else:
+            for k in key:
+                assert(isinstance(k, int))
+            ckeys = c_array(ctypes.c_int, key)
+        check_call(_LIB.MXKVStoreWait(self.handle, mx_uint(len(ckeys)), ckeys))
+
+    def wait_all(self):
+        check_call(_LIB.MXKVStoreWaitAll(self.handle))
+
 def create(name='local'):
     """Create a new KVStore.
 

@@ -944,7 +944,8 @@ int MXKVStoreFree(KVStoreHandle handle) {
 }
 
 int MXKVStoreInit(KVStoreHandle handle,
-                  mx_uint num, int* keys,
+                  mx_uint num,
+                  int* keys,
                   NDArrayHandle* vals) {
   API_BEGIN();
   std::vector<int> v_keys(num);
@@ -958,7 +959,8 @@ int MXKVStoreInit(KVStoreHandle handle,
 }
 
 int MXKVStorePush(KVStoreHandle handle,
-                  mx_uint num, int* keys,
+                  mx_uint num,
+                  int* keys,
                   NDArrayHandle* vals,
                   int priority) {
   API_BEGIN();
@@ -973,7 +975,8 @@ int MXKVStorePush(KVStoreHandle handle,
 }
 
 int MXKVStorePull(KVStoreHandle handle,
-                  mx_uint num, int* keys,
+                  mx_uint num,
+                  int* keys,
                   NDArrayHandle* vals,
                   int priority) {
   API_BEGIN();
@@ -984,6 +987,24 @@ int MXKVStorePull(KVStoreHandle handle,
     v_vals[i] = static_cast<NDArray*>(vals[i]);
   }
   static_cast<KVStore*>(handle)->Pull(v_keys, v_vals, priority);
+  API_END();
+}
+
+int MXKVStoreWait(KVStoreHandle handle,
+                  mx_uint num,
+                  int* keys) {
+  API_BEGIN();
+  std::vector<int> v_keys(num);
+  for (mx_uint i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+  }
+  static_cast<KVStore*>(handle)->Wait(v_keys);
+  API_END();
+}
+
+int MXKVStoreWaitAll(KVStoreHandle handle) {
+  API_BEGIN();
+  static_cast<KVStore*>(handle)->WaitAll();
   API_END();
 }
 

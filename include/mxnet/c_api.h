@@ -790,6 +790,13 @@ MXNET_DLL int MXKVStoreIsSchedulerNode(int *ret);
 
 MXNET_DLL int MXKVStoreBarrier(KVStoreHandle handle);
 
+
+MXNET_DLL int MXKVStoreWait(KVStoreHandle handle,
+                            mx_uint num,
+                            int* keys);
+
+MXNET_DLL int MXKVStoreWaitAll(KVStoreHandle handle);
+
 typedef void (MXKVStoreServerController)(int head,
                                          const char* body);
 

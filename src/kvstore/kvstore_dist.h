@@ -46,10 +46,7 @@ class KVStoreDist : public KVStoreLocal {
             const std::vector<NDArray>& values) override {
     Push(keys, values, 0);
     // wait until the push is finished
-    for (int key : keys) {
-      CHECK(merge_buf_.find(key) != merge_buf_.end());
-      merge_buf_[key].merged.WaitToWrite();
-    }
+    Wait(keys);
   }
 
   void Push(const std::vector<int>& keys,
@@ -153,6 +150,25 @@ class KVStoreDist : public KVStoreLocal {
     task.set_cmd(cmd.cmd);
     auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
     node->Wait(node->Submit(task, ps::NodeInfo::SchedulerID()));
+  }
+
+  void Wait(const std::vector<int>& keys) override {
+    for (int key : keys) {
+      auto it = merge_buf_.find(key);
+      CHECK(it != merge_buf_.end())
+          << "there is no push/pull on key " << key << " before";
+      CHECK(!it->second.merged.is_none())
+          << "there is no push/pull on key " << key << " before";
+      it->second.merged.WaitToWrite();
+    }
+  }
+
+  void WaitAll() override {
+    for (auto& buf : merge_buf_) {
+      if (!buf.second.merged.is_none()) {
+        buf.second.merged.WaitToWrite();
+      }
+    }
   }
 
   void SendCommandToServers(int head, const char* body) override {
@@ -307,6 +323,7 @@ class KVStoreDist : public KVStoreLocal {
         my_val.array = NDArray(dshape, Context());
         // my_val.array.SyncCopyFromCPU(recv_val.data, recv_val.size);
         CopyFromTo(recv_array, &my_val.array);
+        // LOG(ERROR) << "init";
       } else {
         // call updater
         int key = kvstore_->DecodeKey(recv_key);
@@ -326,6 +343,7 @@ class KVStoreDist : public KVStoreLocal {
       my_val.array.WaitToRead();
       send_val.data = static_cast<real_t*>(my_val.array.data().dptr_);
       send_val.size = my_val.array.shape()[0];
+      LOG(ERROR) << send_val.data[0] << " " << send_val.data[send_val.size-1];
     }
 
    private:
