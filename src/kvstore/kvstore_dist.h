@@ -31,8 +31,9 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   virtual ~KVStoreDist() {
-    LOG(ERROR) << "xxxxxxx";
+    LOG(ERROR) << "xxxx";
     Engine::Get()->WaitForAll();
+    if (store_) store_->server()->Clear();
     delete store_;
     delete cache_;
 
@@ -266,7 +267,6 @@ class KVStoreDist : public KVStoreLocal {
     ServerHandle(KVStoreDist* kvstore) {
       kvstore_ = kvstore;
     }
-    ~ServerHandle() { }
 
     inline void Start(bool push, int timestamp, int cmd, void* msg) { }
     inline void Finish() { }
@@ -299,8 +299,7 @@ class KVStoreDist : public KVStoreLocal {
 
     inline void Pull(
         ps::Key recv_key, const ServerVal& my_val, ps::Blob<real_t>& send_val) {
-      LOG(ERROR) << recv_key;
-      CHECK(!my_val.array.is_none())
+      CHECK(!my_val.Empty())
           << kvstore_->DecodeKey(recv_key) << " is not inited";
 
       my_val.array.WaitToRead();

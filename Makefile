@@ -144,6 +144,7 @@ clean:
 
 clean_all: clean
 	cd $(DMLC_CORE); make clean; cd -
+	cd $(PS_PATH); make clean; cd -
 
 -include build/*.d
 -include build/*/*.d
