@@ -22,7 +22,7 @@ class NDArrayFunction;
 class NDArray {
  public:
   /*! \brief The type of NDArray in R's side */
-  typedef Rcpp::List RObjectType;
+  typedef Rcpp::RObject RObjectType;
   /*! \return convert the NDArray to R's Array */
   Rcpp::NumericVector AsNumericVector() const;
   /*! \return The shape of the array */
@@ -49,7 +49,7 @@ class NDArray {
    * \param obj The R NDArray object
    * \return The external pointer to the object
    */
-  inline static Rcpp::XPtr<NDArray> XPtr(const Rcpp::RObject& obj);
+  inline static NDArray* XPtr(const Rcpp::RObject& obj);
   /*!
    * \brief Load a list of ndarray from the file.
    * \param filename the name of the file.
@@ -170,6 +170,8 @@ class NDArrayFunction : public ::Rcpp::CppFunction {
 }  // namespace mxnet
 
 
+RCPP_EXPOSED_CLASS_NODECL(::mxnet::R::NDArray);
+
 namespace mxnet {
 namespace R {
 // implementatins of inline functions
@@ -187,22 +189,21 @@ inline Rcpp::Dimension NDArray::shape() const {
 inline NDArray::RObjectType NDArray::RObject(
     NDArrayHandle handle,
     bool writable) {
-  Rcpp::List ret = Rcpp::List::create(
-      Rcpp::Named("ptr") = Rcpp::XPtr<NDArray>(new NDArray(handle, writable)));
-  ret.attr("class") = "mx.NDArray";
-  return ret;
+  NDArray* p = new NDArray(handle, writable);
+  // TODO(KK) can we avoid use internal::make_new_object?
+  // The Wrap function requires NDArray object instead of ptr,
+  // Which will trigger destructor
+  return Rcpp::internal::make_new_object(p);
 }
 
 inline NDArray::RObjectType NDArray::Move(const Rcpp::RObject& src) {
-  Rcpp::XPtr<NDArray> old = NDArray::XPtr(src);
+  NDArray* old = NDArray::XPtr(src);
   old->moved_ = true;
   return NDArray::RObject(old->handle_, old->writable_);
 }
 
-inline Rcpp::XPtr<NDArray> NDArray::XPtr(const Rcpp::RObject& obj) {
-  Rcpp::List ret(obj);
-  Rcpp::RObject xptr = ret[0];
-  Rcpp::XPtr<NDArray> ptr(xptr);
+inline NDArray* NDArray::XPtr(const Rcpp::RObject& obj) {
+  NDArray* ptr = Rcpp::as<NDArray*>(obj);
   RCHECK(!ptr->moved_)
       << "Passed in a moved NDArray as parameters."
       << " Moved parameters should no longer be used";
