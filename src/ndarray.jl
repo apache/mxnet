@@ -1,5 +1,4 @@
 export NDArray
-export empty
 
 # create a NDArray handle of specific shape
 function _ndarray_alloc{N}(shape :: NTuple{N, Int}, ctx :: Context, delay_alloc :: Bool)
@@ -255,7 +254,7 @@ function ./(arg0 :: NDArray, arg :: Union{Real, NDArray})
 end
 
 ################################################################################
-# NDArray functions dynamically exported from libmx
+# NDArray functions dynamically imported from libmxnet
 ################################################################################
 function _invoke_mxfunction(func_handle::MX_handle, use_vars, scalars, mut_vars)
   @mxcall(:MXFuncInvoke,
