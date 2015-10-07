@@ -9,7 +9,7 @@ if [ ! -f config.mk ]; then
 
     if [ ${TRAVIS_OS_NAME} == "linux" ]; then
       sed -i 's/export CC = gcc/export CC = gcc-4.8/g' config.mk
-      sed -i 's/export CXX = g++/export CXX = g++4.8/g' config.mk
+      sed -i 's/export CXX = g++/export CXX = g++-4.8/g' config.mk
       echo "=============================="
       gcc --version
       gcc-4.8 --version
