@@ -267,6 +267,25 @@ end
   ACCEPT_EMPTY_MUTATE_TARGET = (1 << 2)
 )
 
+"""
+Import dynamic functions for NDArrays. The arguments to the functions are typically ordered
+as
+
+  func_name(arg_in1, arg_in2, ..., scalar1, scalar2, ..., arg_out1, arg_out2, ...)
+
+unless NDARRAY_ARG_BEFORE_SCALAR is not set. In this case, the scalars are put before the input arguments:
+
+  func_name(scalar1, scalar2, ..., arg_in1, arg_in2, ..., arg_out1, arg_out2, ...)
+
+If ACCEPT_EMPTY_MUTATE_TARGET is set. An overloaded function without the output arguments will also be defined:
+
+  func_name(arg_in1, arg_in2, ..., scalar1, scalar2, ...)
+
+Upon calling, the output arguments will be automatically initialized with empty NDArrays.
+
+Those functions always return the output arguments. If there is only one output (the typical situation), that
+object (NDArray) is returned. Otherwise, a tuple containing all the outputs will be returned.
+"""
 function _import_ndarray_functions()
   n_ref = Ref{MX_uint}(0)
   h_ref = Ref{Ptr{MX_handle}}(0)
@@ -351,6 +370,9 @@ function _import_ndarray_functions()
       func_def0  = Expr(:function, func_head0, func_body0)
       eval(func_def0)
     end
+
+    # TODO: add doc string
+    # eval(:(@doc($doc_str, $func_name)))
   end
 end
 
