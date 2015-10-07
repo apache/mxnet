@@ -163,21 +163,21 @@ This macro is a simple utility to implement this behavior. Write
 
 will translate into
 
-  mx.add!(a, b)
+  mx.add_to!(a, b)
 
 which will do inplace adding of the contents of b into a.
 """
 macro inplace(stmt)
   if stmt.head == :+= || stmt.head == :.+=
-    Expr(:call, :add!, esc(stmt.args[1]), esc(stmt.args[2]))
+    Expr(:call, :add_to!, esc(stmt.args[1]), esc(stmt.args[2]))
   elseif stmt.head == :-= || stmt.head == :.-=
-    Expr(:call, :sub!, esc(stmt.args[1]), esc(stmt.args[2]))
+    Expr(:call, :sub_from!, esc(stmt.args[1]), esc(stmt.args[2]))
   else
     error("unsupported inplace translation for $stmt")
   end
 end
 
-function add!(dst :: NDArray, args :: Union{Real, NDArray}...)
+function add_to!(dst :: NDArray, args :: Union{Real, NDArray}...)
   for arg in args
     if isa(arg, Real)
       _plus_scalar(dst, arg, dst)
@@ -192,13 +192,13 @@ end
 import Base: +, .+
 function +(arg0 :: NDArray, args :: Union{Real, NDArray}...)
   ret = copy(arg0, context(arg0))
-  add!(ret, args...)
+  add_to!(ret, args...)
 end
 function .+(arg0 :: NDArray, args :: Union{Real, NDArray}...)
   +(arg0, args...)
 end
 
-function sub!(dst :: NDArray, arg :: Union{Real, NDArray})
+function sub_from!(dst :: NDArray, arg :: Union{Real, NDArray})
   if isa(arg, Real)
     _minus_scalar(dst, arg, dst)
   else
@@ -208,7 +208,7 @@ end
 import Base: -, .-
 function -(arg0 :: NDArray, arg1 :: Union{Real, NDArray})
   ret = copy(arg0, context(arg0))
-  sub!(ret, arg1)
+  sub_from!(ret, arg1)
 end
 function .-(arg0 :: NDArray, arg1 :: Union{Real, NDArray})
   -(arg0, arg1)
