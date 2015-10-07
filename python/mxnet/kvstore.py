@@ -8,6 +8,7 @@ from .ndarray import NDArray
 from .base import _LIB
 from .base import check_call, c_array, c_str, string_types, mx_uint
 from .base import NDArrayHandle, KVStoreHandle
+from . import optimizer as opt
 
 def _ctype_key_value(keys, vals):
     """
@@ -228,21 +229,10 @@ class KVStore(object):
         [[ 6.  6.  6.]
         [ 6.  6.  6.]]
         """
-        is_distributed = ctypes.c_int()
-        check_call(_LIB.MXKVStoreIsDistributed(
-            self.handle, ctypes.byref(is_distributed)))
-
-        is_worker = ctypes.c_int()
-        check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
-
-        if is_distributed.value and is_worker.value:
-            # send the object to server
-            self.send_command_to_servers(0, pickle.dumps(updater))
-        else:
-            _updater_proto = ctypes.CFUNCTYPE(
-                None, ctypes.c_int, NDArrayHandle, NDArrayHandle)
-            self._updater_func = _updater_proto(_updater_wrapper(updater))
-            check_call(_LIB.MXKVStoreSetUpdater(self.handle, self._updater_func))
+        _updater_proto = ctypes.CFUNCTYPE(
+            None, ctypes.c_int, NDArrayHandle, NDArrayHandle)
+        self._updater_func = _updater_proto(_updater_wrapper(updater))
+        check_call(_LIB.MXKVStoreSetUpdater(self.handle, self._updater_func))
 
     def get_rank(self):
         """Get the rank of this worker node
@@ -288,6 +278,33 @@ class KVStore(object):
     def send_command_to_servers(self, head, body):
         check_call(_LIB.MXKVStoreSendCommmandToServers(
             self.handle, mx_uint(head), c_str(body)))
+
+    def set_optimizer(self, optimizer):
+        is_distributed = ctypes.c_int()
+        check_call(_LIB.MXKVStoreIsDistributed(
+            self.handle, ctypes.byref(is_distributed)))
+
+        is_worker = ctypes.c_int()
+        check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
+
+        if is_distributed.value and is_worker.value:
+            # send the optimizer to server
+            try:
+                optim_str = pickle.dumps(optimizer)
+            except pickle.PickleError as e:
+                print "pickle error({0}): {1}".format(e.errno, e.strerror)
+                raise
+            self.send_command_to_servers(0, optim_str)
+        else:
+            if isinstance(optimizer, str):
+                try:
+                    optimizer = pickle.loads(optimizer)
+                except pickle.PickleError as e:
+                    print "pickle error({0}): {1}".format(e.errno, e.strerror)
+                    raise
+            self.set_updater(opt.optimizer_clossure(optimizer))
+
+
 
 def create(name='local'):
     """Create a new KVStore.

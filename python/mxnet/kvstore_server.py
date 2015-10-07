@@ -2,7 +2,6 @@
 """ a server node for the key value store """
 from __future__ import absolute_import
 import ctypes
-import pickle
 import sys
 from .base import _LIB, check_call, c_array, c_str, string_types, mx_uint
 from .base import NDArrayHandle, KVStoreHandle
@@ -24,15 +23,7 @@ class KVStoreServer(object):
         """return the controller"""
         def server_controller(head, body):
             if head == 0:
-                # setup updater
-                try:
-                    yield
-                    # updater = pickle.loads(body)
-                    # print type(updater)
-                except pickle.PickleError as e:
-                    print "pickle error({0}): {1}".format(e.errno, e.strerror)
-                    raise
-                # self.kvstore.set_updater(updater)
+                self.kvstore.set_optimizer(body)
             else:
                 print "server %d, unknown command (%d, %s)" % (
                     self.kvstore.get_rank(), head, body)

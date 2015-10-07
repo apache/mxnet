@@ -23,6 +23,7 @@ kv = mx.kv.create('dist')
 my_rank = kv.get_rank()
 nworker = kv.get_group_size()
 
+rate = 2
 shape = (2, 2)
 keys = [3, 4, 5]
 
@@ -30,7 +31,8 @@ if my_rank == 0:
     # init key, value on servers
     kv.init(keys, [mx.nd.ones(shape)] * len(keys))
     # init updater on servers
-    kv.set_updater(updater)
+    opt = mx.optimizer.create('test', rate)
+    kv.set_optimizer(opt)
 
 kv.barrier()
 # print 'init worker %d' % my_rank
