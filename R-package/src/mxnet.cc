@@ -7,7 +7,6 @@
 #include "./base.h"
 #include "./ndarray.h"
 
-
 RCPP_MODULE(mxnet) {
   using namespace Rcpp;
   using namespace mxnet::R;
