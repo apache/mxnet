@@ -1,4 +1,5 @@
 # Documentation: http://docs.travis-ci.com/user/languages/julia/
+sudo: false
 language: julia
 os:
   - linux
@@ -25,7 +26,7 @@ addons:
       - clang
 
 before_install:
-  - export TRAVIS=tests/travis
+  - export TRAVIS=test/travis
   - source $TRAVIS/setup_env.sh
   - source $TRAVIS/build_mxnet.sh
 
