@@ -1,4 +1,3 @@
 exportPattern("^[[:alpha:]]+")
 import(Rcpp)
 import(methods)
-export(`+.Rcpp_MXNDArray`)

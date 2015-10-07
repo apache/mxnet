@@ -15,6 +15,7 @@ is.MXNDArray <- function(x)
 #' NDArray
 #'
 #' Additional NDArray related operations
+init.ndarray.methods <- function() {
   setMethod("+", signature(e1 = "Rcpp_MXNDArray", e2 = "numeric"), function(e1, e2) {
     mx.nd.internal.plus.scalar(e1, e2)
   })
@@ -54,4 +55,4 @@ is.MXNDArray <- function(x)
   setMethod("as.array", signature(x = "Rcpp_MXNDArray"), function(x) {
     x$as.array()
   })
-
+}
