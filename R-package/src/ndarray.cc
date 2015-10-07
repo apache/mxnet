@@ -1,11 +1,148 @@
+/*!
+ *  Copyright (c) 2015 by Contributors
+ * \file ndarray.cc
+ * \brief Rcpp NDArray of MXNet.
+ */
 #include <Rcpp.h>
 #include "./base.h"
 #include "./ndarray.h"
 
 namespace mxnet {
-namespace R {  // NOLINT(*)
+namespace R {
 
-void NDArray::Save(SEXP sxptr, const std::string& filename) {
+template<typename InputIter>
+inline void ConvertLayout(InputIter it,
+                          const mx_uint *ishape,
+                          const size_t *ostride,
+                          int dim,
+                          size_t size,
+                          mx_float *out_data) {
+  for (size_t i = 0; i < size; ++i, ++it) {
+    size_t offset = 0;
+    size_t counter = i;
+    for (int k = dim - 1; k >= 0; --k) {
+      size_t idx = counter % ishape[k];
+      offset += idx * ostride[k];
+      counter /= ishape[k];
+    }
+    out_data[offset] = *it;
+  }
+}
+
+template<typename OutputIter>
+inline void ConvertLayout(const mx_float *in_data,
+                          const mx_uint *ishape,
+                          const size_t *ostride,
+                          int dim,
+                          size_t size,
+                          OutputIter it) {
+  for (size_t i = 0; i < size; ++i, ++it) {
+    size_t offset = 0;
+    size_t counter = i;
+    for (int k = dim - 1; k >= 0; --k) {
+      size_t idx = counter % ishape[k];
+      offset += idx * ostride[k];
+      counter /= ishape[k];
+    }
+    RCHECK(offset < size)
+        << "offset=" << offset;
+    *it = in_data[offset];
+  }
+}
+
+inline std::vector<size_t> GetReverseStride(const std::vector<mx_uint>& ishape) {
+  std::vector<size_t> stride(ishape.size());
+  size_t prod = 1;
+  int ndim = static_cast<int>(ishape.size());
+  for (int k = ndim - 1; k >= 0; --k) {
+    stride[k] = prod;
+    prod *= ishape[k];
+  }
+  std::reverse(stride.begin(), stride.end());
+  return stride;
+}
+
+template<typename InputIter>
+inline void ColToRowMajor(InputIter begin,
+                          const std::vector<mx_uint>& ishape,
+                          size_t size,
+                          mx_float *out_data) {
+  int ndim = static_cast<int>(ishape.size());
+  std::vector<size_t> out_stride = GetReverseStride(ishape);
+  // manual unroll special constants
+  const mx_uint *shape = dmlc::BeginPtr(ishape);
+  const size_t *stride = dmlc::BeginPtr(out_stride);
+  switch (ndim) {
+    case 1: {
+      ConvertLayout(begin, shape, stride, 1, size, out_data);
+      break;
+    }
+    case 2: {
+      ConvertLayout(begin, shape, stride, 3, size, out_data);
+      break;
+    }
+    case 3: {
+      ConvertLayout(begin, shape, stride, 3, size, out_data);
+      break;
+    }
+    default: {
+      ConvertLayout(begin, shape, stride, ndim, size, out_data);
+      break;
+    }
+  }
+}
+
+template<typename OutputIter>
+inline void RowToColMajor(const mx_float *in_data,
+                          const std::vector<mx_uint>& ishape,
+                          size_t size,
+                          OutputIter begin) {
+  int ndim = static_cast<int>(ishape.size());
+  std::vector<size_t> out_stride = GetReverseStride(ishape);
+  // manual unroll special constants
+  const mx_uint *shape = dmlc::BeginPtr(ishape);
+  const size_t *stride = dmlc::BeginPtr(out_stride);
+  switch (ndim) {
+    case 1: {
+      ConvertLayout(in_data, shape, stride, 1, size, begin);
+      break;
+    }
+    case 2: {
+      ConvertLayout(in_data, shape, stride, 2, size, begin);
+      break;
+    }
+    case 3: {
+      ConvertLayout(in_data, shape, stride, 3, size, begin);
+      break;
+    }
+    default: {
+      ConvertLayout(in_data, shape, stride, ndim, size, begin);
+      break;
+    }
+  }
+}
+
+inline std::vector<mx_uint> Dim2Vec(const Rcpp::Dimension &rshape) {
+  std::vector<mx_uint> shape(rshape.size());
+  for (size_t i = 0; i < rshape.size(); ++i) {
+    shape[i] = rshape[i];
+  }
+  return shape;
+}
+
+// implementation of NDArray functions
+Rcpp::NumericVector NDArray::AsNumericVector() const {
+  Rcpp::Dimension rshape = this->shape();
+  std::vector<mx_float> temp(rshape.prod());
+  MX_CALL(MXNDArraySyncCopyToCPU(
+      handle_, dmlc::BeginPtr(temp), temp.size()));
+  Rcpp::NumericVector ret(rshape);
+  RowToColMajor(dmlc::BeginPtr(temp), Dim2Vec(rshape), temp.size(), ret.begin());
+  return ret;
+}
+
+void NDArray::Save(const Rcpp::RObject &sxptr,
+                   const std::string& filename) {
   // TODO(KK) add constant instead of integer
   if (TYPEOF(sxptr) == 19) {
     Rcpp::List data_lst(sxptr);
@@ -16,21 +153,20 @@ void NDArray::Save(SEXP sxptr, const std::string& filename) {
 
     for (int i = 0 ; i < data_lst.size(); ++i) {
       keys[i] = lst_names[i].c_str();
-      SEXP arr = data_lst[i];
-      handles[i] = Rcpp::XPtr<NDArray>(arr)->handle_;
+      handles[i] = NDArray::XPtr(data_lst[i])->handle_;
     }
     MX_CALL(MXNDArraySave(filename.c_str(), num_args,
                           dmlc::BeginPtr(handles),
                           dmlc::BeginPtr(keys)));
   } else if (TYPEOF(sxptr) == 22) {
-    Rcpp::XPtr<NDArray> ptr(sxptr);
-    MX_CALL(MXNDArraySave(filename.c_str(), 1, &(ptr->handle_), NULL));
+    MX_CALL(MXNDArraySave(filename.c_str(), 1,
+                          &(NDArray::XPtr(sxptr)->handle_), nullptr));
   } else {
     RLOG_FATAL << "only NDArray or list of NDArray" << std::endl;
   }
 }
 
-SEXP NDArray::Load(const std::string& filename) {
+Rcpp::List NDArray::Load(const std::string& filename) {
   mx_uint out_size;
   NDArrayHandle* out_arr;
   mx_uint out_name_size;
@@ -52,6 +188,44 @@ SEXP NDArray::Load(const std::string& filename) {
   return out;
 }
 
+NDArray::RObjectType NDArray::Empty(
+    const Rcpp::Dimension& rshape,
+    const Context::RObjectType& rctx) {
+  std::vector<mx_uint> shape = Dim2Vec(rshape);
+  Context ctx(rctx);
+  NDArrayHandle handle;
+  MX_CALL(MXNDArrayCreate(dmlc::BeginPtr(shape),
+                          static_cast<mx_uint>(shape.size()),
+                          ctx.dev_type, ctx.dev_id, false, &handle));
+  return NDArray::RObject(handle);
+}
+
+NDArray::RObjectType NDArray::Array(
+    const Rcpp::RObject& src,
+    const Context::RObjectType& ctx) {
+  Rcpp::NumericVector rdata(src);
+  Rcpp::RObject dim = rdata.attr("dim");
+  Rcpp::Dimension rshape(dim);
+  RObjectType ret = NDArray::Empty(rshape, ctx);
+  std::vector<mx_float> temp(rdata.size());
+  ColToRowMajor(rdata.begin(), Dim2Vec(rshape),
+                temp.size(), dmlc::BeginPtr(temp));
+  MX_CALL(MXNDArraySyncCopyFromCPU(
+      NDArray::XPtr(ret)->handle_,
+      dmlc::BeginPtr(temp), temp.size()));
+  return ret;
+}
+
+// register normal function.
+void NDArray::InitRcppModule() {
+  using namespace Rcpp;  // NOLINT(*)
+  class_<NDArray>("MXNDArray");
+  function("mx.nd.load", &NDArray::Load);
+  function("mx.nd.save", &NDArray::Save);
+  function("mx.nd.array", &NDArray::Array);
+  function("mx.nd.internal.as.array", &NDArray::AsRArray);
+}
+
 NDArrayFunction::NDArrayFunction(FunctionHandle handle)
     : handle_(handle) {
   // initialize the docstring
@@ -64,8 +238,14 @@ NDArrayFunction::NDArrayFunction(FunctionHandle handle)
     const char **arg_descriptions;
     MX_CALL(MXFuncGetInfo(handle, &name, &description, &num_args,
                           &arg_names, &arg_type_infos, &arg_descriptions));
-    // set function name
-    name_ = name;
+    if (name[0] == '_') {
+      name_ = std::string("mx.nd.internal.") + (name + 1);
+    } else {
+      name_ = std::string("mx.nd.") + name;
+    }
+    for (size_t i = 0; i < name_.length(); ++i) {
+      if (name_[i] == '_') name_[i] = '.';
+    }
     // dostring: generate python style for now, change to R style later
     std::ostringstream os;
     os << description << "\n\n"
@@ -116,7 +296,7 @@ SEXP NDArrayFunction::operator() (SEXP* args) {
     scalars[i] = (REAL)(args[begin_scalars_ + i])[0];
   }
   for (mx_uint i = 0; i < num_use_vars_; ++i) {
-    use_vars[i] = Rcpp::XPtr<NDArray>(args[begin_use_vars_ + i])->handle_;
+    use_vars[i] = NDArray::XPtr(args[begin_use_vars_ + i])->handle_;
   }
   MX_CALL(MXFuncInvoke(handle_,
                        dmlc::BeginPtr(use_vars),
@@ -126,16 +306,10 @@ SEXP NDArrayFunction::operator() (SEXP* args) {
   END_RCPP;
 }
 
-// register normal function.
-void NDArray::InitRcppModule() {
-  using namespace Rcpp;  // NOLINT(*)
-  function("mx.nd.load", &NDArray::Load);
-  function("mx.nd.save", &NDArray::Save);
-}
 
 void NDArrayFunction::InitRcppModule() {
   Rcpp::Module* scope = ::getCurrentScope();
-  RCHECK(scope != NULL)
+  RCHECK(scope != nullptr)
       << "Init Module need to be called inside scope";
   mx_uint out_size;
   FunctionHandle *arr;
@@ -145,5 +319,5 @@ void NDArrayFunction::InitRcppModule() {
     scope->Add(f->get_name(), f);
   }
 }
-}  // namespace Rcpp
+}  // namespace R
 }  // namespace mxnet

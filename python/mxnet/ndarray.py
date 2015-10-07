@@ -115,7 +115,7 @@ class NDArray(object):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __neg__(self):
-        return NDArray._mul_scalar(self, -1.0, out=self)
+        return NDArray._mul_scalar(self, -1.0)
 
     def __imul__(self, other):
         if isinstance(other, NDArray):
@@ -324,20 +324,6 @@ class NDArray(object):
         else:
             raise TypeError('copyto do not support type ' + str(type(other)))
     # pylint: enable= no-member
-
-
-def clip(arr, value):
-    """Clip NDArray to range [-value, value] and remove NaN
-
-    Parameters
-    ----------
-    value: float
-        cliped range
-    """
-    if not isinstance(arr, NDArray):
-        raise TypeError("arr should be NDArray")
-    return NDArray._clip_scalar(arr, float(value)) # pylint: disable=no-member, protected-access
-    # pylint: enable=no-member, protected-access
 
 def empty(shape, ctx=None):
     """Create an empty uninitialized new NDArray, with specified shape.

@@ -45,6 +45,16 @@ inline void EvalBinary_(const TBlob &lhs, const TBlob &rhs,
                                    rhs.FlatTo2D<xpu, real_t>(s));
 }
 
+template<typename xpu, typename OP>
+inline void EvalDot_(const TBlob &lhs, const TBlob &rhs,
+                        TBlob *ret, RunContext ctx) {
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  ret->FlatTo2D<xpu, real_t>(s)
+    = dot(lhs.FlatTo2D<xpu, real_t>(s),
+          rhs.FlatTo2D<xpu, real_t>(s));
+}
+
 template<typename xpu, typename OP, bool reverse>
 inline void EvalScalar_(const TBlob &lhs, const real_t &rhs,
                         TBlob *ret, RunContext ctx) {
@@ -57,6 +67,19 @@ inline void EvalScalar_(const TBlob &lhs, const real_t &rhs,
     ret->FlatTo2D<xpu, real_t>(s)
       = F<typename OP::mshadow_op>(lhs.FlatTo2D<xpu, real_t>(s), rhs);
   }
+}
+
+
+template<>
+void EvalClip<DEVICE>(const TBlob &src, const real_t &a_min, const real_t &a_max,
+                      TBlob *ret, RunContext ctx) {
+  typedef DEVICE xpu;
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  ret->FlatTo2D<xpu, real_t>(s)
+    = F<ClipMax::mshadow_op>(
+        F<ClipMin::mshadow_op>(src.FlatTo2D<xpu, real_t>(s), a_min),
+        a_max);
 }
 
 template<>
@@ -137,6 +160,7 @@ void ElementwiseSum<DEVICE>(const std::vector<TBlob> source,
 }
 
 // declarations
+DECL_BINARY(DEVICE, Dot, EvalDot_)
 DECL_BINARY(DEVICE, Plus, EvalBinary_)
 DECL_BINARY(DEVICE, Minus, EvalBinary_)
 DECL_BINARY(DEVICE, Mul, EvalBinary_)
@@ -145,13 +169,11 @@ DECL_SCALAR(DEVICE, Plus, EvalScalar_, true)
 DECL_SCALAR(DEVICE, Minus, EvalScalar_, true)
 DECL_SCALAR(DEVICE, Mul, EvalScalar_, true)
 DECL_SCALAR(DEVICE, Div, EvalScalar_, true)
-DECL_SCALAR(DEVICE, Clip, EvalScalar_, true)
 // for reverse seq
 DECL_SCALAR(DEVICE, Plus, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Minus, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Mul, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Div, EvalScalar_, false)
-DECL_SCALAR(DEVICE, Clip, EvalScalar_, false)
 }  // namespace ndarray
 }  // namespace mxnet
 
