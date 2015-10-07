@@ -143,8 +143,7 @@ Rcpp::NumericVector NDArray::AsNumericVector() const {
 
 void NDArray::Save(const Rcpp::RObject &sxptr,
                    const std::string& filename) {
-  // TODO(KK) add constant instead of integer
-  if (TYPEOF(sxptr) == 19) {
+  if (TYPEOF(sxptr) == VECSXP) {
     Rcpp::List data_lst(sxptr);
     std::vector<std::string> lst_names = data_lst.names();
     size_t num_args = data_lst.size();
@@ -158,7 +157,7 @@ void NDArray::Save(const Rcpp::RObject &sxptr,
     MX_CALL(MXNDArraySave(filename.c_str(), num_args,
                           dmlc::BeginPtr(handles),
                           dmlc::BeginPtr(keys)));
-  } else if (TYPEOF(sxptr) == 22) {
+  } else if (TYPEOF(sxptr) == EXTPTRSXP) {
     MX_CALL(MXNDArraySave(filename.c_str(), 1,
                           &(NDArray::XPtr(sxptr)->handle_), nullptr));
   } else {
