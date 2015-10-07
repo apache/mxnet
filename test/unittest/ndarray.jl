@@ -128,12 +128,36 @@ function test_mul()
   # test inplace .*= operation
   a0 = a1               # keep a reference to a1
   @mx.inplace a1 .*= a2 # perform inplace .*=
+  @test a0 == a1        # make sure they are still the same object
   @test reldiff(copy(a0), copy(a1)) < 1e-6
   @test reldiff(copy(a1), t1.*t2) < 1e-6
 
   # test scalar
   scalar = rand()
   @test reldiff(t3 * scalar, copy(a3 .* scalar)) < 1e-6
+end
+
+function test_div()
+  dims   = rand_dims()
+  t1, a1 = rand_tensors(dims)
+  t2, a2 = rand_tensors(dims)
+
+  info("NDArray::div::dims = $dims")
+  t2             .+= 2  # avoid numerical instability
+  @mx.inplace a2 .+= 2
+
+  @test reldiff(t1 ./ t2, copy(a1 ./ a2)) < 1e-6
+
+  # test inplace -= operation
+  a0 = a1                # keep a reference to a2
+  @mx.inplace a1 ./= a2  # perform inplace ./=
+  @test a0 == a1         # make sure they are still the same object
+  @test reldiff(copy(a0), copy(a1)) < 1e-6
+  @test reldiff(copy(a1), t1 ./ t2) < 1e-6
+
+  # test scalar
+  scalar = rand() + 2
+  @test reldiff(t2./scalar, copy(a2./scalar)) < 1e-6
 end
 
 
@@ -145,5 +169,6 @@ test_assign()
 test_plus()
 test_minus()
 test_mul()
+test_div()
 
 end
