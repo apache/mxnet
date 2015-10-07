@@ -39,17 +39,18 @@ kv.barrier()
 
 def test_sync_push_pull():
     val = mx.nd.zeros(shape)
-    nrepeat = 3
+    nrepeat = 2
     for i in range(nrepeat):
         kv.push(3, mx.nd.ones(shape)*(my_rank+1))
         kv.wait(3)
         kv.barrier()
 
     kv.pull(3, out = val)
-    num = (nworker + 1 ) * nworker / 2 * nrepeat + 1
+    num = (nworker + 1 ) * nworker * rate / 2 * nrepeat + 1
+    # print val.asnumpy()
     check_diff_to_scalar(val, num)
 
-kv.send_command_to_servers(1, 'hhh')
+# kv.send_command_to_servers(1, 'hhh')
 
 if __name__ == "__main__":
     test_sync_push_pull()

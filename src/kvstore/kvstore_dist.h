@@ -38,6 +38,13 @@ class KVStoreDist : public KVStoreLocal {
     delete cache_;
 
     if (IsWorkerNode()) {
+      if (get_rank() == 0) {
+        // stop the executor at servers
+        ps::Task task;
+        task.set_cmd(-1);
+        auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
+        node->Wait(node->Submit(task, ps::kServerGroup));
+      }
       ps::StopSystem();
     }
   }
@@ -191,7 +198,6 @@ class KVStoreDist : public KVStoreLocal {
     StartPS();
     if (IsServerNode()) {
       auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
-      controller(0, "");
       auto server = static_cast<MXNetServer*>(node);
       server->set_executor(&exec_);
       server->set_controller(controller);
@@ -330,7 +336,10 @@ class KVStoreDist : public KVStoreLocal {
         // call updater
         int key = kvstore_->DecodeKey(recv_key);
         if (kvstore_->updater_) {
-          kvstore_->updater_(key, recv_array, &my_val.array);
+          // kvstore_->updater_(key, recv_array, &my_val.array);
+          kvstore_->exec_.Exec([this, key, &recv_array, &my_val](){
+              kvstore_->updater_(key, recv_array, &my_val.array);
+            });
         } else {
           my_val.array += recv_array;
         }

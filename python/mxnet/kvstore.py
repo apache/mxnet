@@ -4,7 +4,7 @@ from __future__ import absolute_import
 
 import ctypes
 import pickle
-from .ndarray import NDArray
+from .ndarray import NDArray, zeros
 from .base import _LIB
 from .base import check_call, c_array, c_str, string_types, mx_uint
 from .base import NDArrayHandle, KVStoreHandle

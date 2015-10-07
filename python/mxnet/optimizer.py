@@ -163,5 +163,5 @@ def optimizer_clossure(optimizer):
     def updater(index, grad, weight):
         if index not in states:
             states[index] = optimizer.create_state(index, weight)
-        optimizer.update(index, grad, weight, states[index])
+        optimizer.update(index, weight, grad, states[index])
     return updater

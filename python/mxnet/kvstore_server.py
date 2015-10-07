@@ -30,6 +30,7 @@ class KVStoreServer(object):
         return server_controller
 
     def run(self):
+
         _ctrl_proto = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.c_char_p)
         check_call(_LIB.MXKVStoreRunServer(self.handle, _ctrl_proto(self.controller())))
 
