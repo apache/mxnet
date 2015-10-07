@@ -1,0 +1,13 @@
+Package: mxnet
+Type: Package
+Title: MXNet
+Version: 0.5
+Date: 2015-10-02
+Author: Qiang Kou
+Maintainer: Your <your@email.com>
+Description: MXNet is a deep learning framework designed for both efficiency and flexibility. It allows you to mix the flavours of deep learning programs together to maximize the efficiency and your productivity.
+License: Apache-2.0
+URL: https://github.com/dmlc/mxnet
+BugReports: https://github.com/dmlc/mxnet/issues
+Imports: Rcpp (>= 0.11.1)
+LinkingTo: Rcpp
