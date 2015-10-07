@@ -76,3 +76,12 @@ target_link_libraries(mxnet ${mshadow_LINKER_LIBS})
 target_link_libraries(mxnet dmlccore)
 
 
+# ---[ Linter target
+if(MSVC)
+  find_package(PythonInterp 2)
+  set(PYTHON2_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python 2.x executable")
+  find_package(PythonInterp 3)
+  set(PYTHON3_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python 3.x executable")
+endif()
+set(LINT_DIRS include src scripts python)
+add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON2_EXECUTABLE=${PYTHON2_EXECUTABLE} -DPYTHON3_EXECUTABLE=${PYTHON3_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -P ${PROJECT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
