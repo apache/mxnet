@@ -16,4 +16,4 @@ mxlib:
 	cp $(PKGROOT)/lib/libmxnet.so ../inst/libs/libmxnet.so
 
 PKG_CPPFLAGS = -I$(PKGROOT)/include -I$(PKGROOT)/dmlc-core/include
-PKG_LIBS = $(LINKMXNET) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
+PKG_LIBS =  $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)

@@ -77,14 +77,6 @@ class NDArray {
    */
   static RObjectType Array(const Rcpp::RObject& src,
                            const Context::RObjectType& ctx);
-  /*!
-   * \brief Convert the NDArray to R's Array
-   * \param src the source MX.NDArray
-   * \return the converted array
-   */
-  inline static Rcpp::NumericVector AsRArray(const RObjectType& src) {
-    return XPtr(src)->AsNumericVector();
-  }
   /*! \brief static function to initialize the Rcpp functions */
   static void InitRcppModule();
   /*! \brief destructor */
@@ -137,6 +129,10 @@ class NDArrayFunction : public ::Rcpp::CppFunction {
     return name_.c_str();
   }
 
+  virtual SEXP get_formals() {
+    return formals_;
+  }
+
   virtual DL_FUNC get_function_ptr() {
     return (DL_FUNC)NULL; // NOLINT(*)
   }
@@ -159,12 +155,16 @@ class NDArrayFunction : public ::Rcpp::CppFunction {
   mx_uint begin_scalars_;
   // number of scalars
   mx_uint num_scalars_;
+  // begining of mutate variables
+  mx_uint begin_mutate_vars_;
   // number of mutate variables
   mx_uint num_mutate_vars_;
   // number of arguments
   mx_uint num_args_;
   // whether it accept empty output
   bool accept_empty_out_;
+  // ther formals of arguments
+  Rcpp::List formals_;
 };
 }  // namespace R
 }  // namespace mxnet
@@ -206,7 +206,7 @@ inline NDArray* NDArray::XPtr(const Rcpp::RObject& obj) {
   NDArray* ptr = Rcpp::as<NDArray*>(obj);
   RCHECK(!ptr->moved_)
       << "Passed in a moved NDArray as parameters."
-      << " Moved parameters should no longer be used";
+      << " Moved parameters should no longer be used\n";
   return ptr;
 }
 }  // namespace R
