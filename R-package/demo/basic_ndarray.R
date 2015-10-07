@@ -1,10 +1,13 @@
 require(mxnet)
 require(methods)
-x = as.array(c(1,2,3))
 
+
+x = as.array(c(1,2,3))
 mat = mx.nd.array(x, mx.cpu(0))
-mat = mx.nd.internal.plus(mat, mat)
+mat = mat + 1.0
+mat = mat + mat
+
 xx = mx.nd.internal.as.array(mat)
-print(class(mat))
+
 print(xx)
 

@@ -219,6 +219,7 @@ NDArray::RObjectType NDArray::Array(
 // register normal function.
 void NDArray::InitRcppModule() {
   using namespace Rcpp;  // NOLINT(*)
+  class_<NDArray>("MXNDArray");
   function("mx.nd.load", &NDArray::Load);
   function("mx.nd.save", &NDArray::Save);
   function("mx.nd.array", &NDArray::Array);
