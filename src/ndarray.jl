@@ -95,6 +95,12 @@ function setindex!(arr :: NDArray, val :: Real, ::Colon)
   _set_value(val, arr)
   return arr
 end
+function setindex!{T<:Real}(arr :: NDArray, val :: Array{T}, ::Colon)
+  copy!(arr, val)
+end
+function setindex!(arr :: NDArray, val :: NDArray, ::Colon)
+  copy!(arr, val)
+end
 
 #------------------------------------------------------------
 # Copying functions

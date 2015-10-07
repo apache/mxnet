@@ -8,7 +8,7 @@ using Base.Test
 function reldiff(a, b)
   diff = sum(abs(a - b))
   norm = sum(abs(a))
-  return diff / norm
+  return diff / (norm + 1e-10)
 end
 
 function rand_dims()
@@ -35,6 +35,30 @@ function test_copy()
   array2  = copy(array, mx.DEFAULT_CONTEXT)
   tensor2 = copy(array2)
   @test reldiff(tensor, tensor2) < 1e-6
+end
+
+function test_assign()
+  dims    = rand_dims()
+  tensor  = rand(mx.MX_float, dims)
+
+  info("NDArray::assign::dims = $dims")
+
+  # Julia Array -> NDArray assignment
+  array   = mx.empty(size(tensor))
+  array[:]= tensor
+  @test reldiff(tensor, copy(array)) < 1e-6
+
+  array2  = mx.zeros(size(tensor))
+  @test reldiff(zeros(size(tensor)), copy(array2)) < 1e-6
+
+  # scalar -> NDArray assignment
+  scalar    = rand()
+  array2[:] = scalar
+  @test reldiff(zeros(size(tensor))+scalar, copy(array2)) < 1e-6
+
+  # NDArray -> NDArray assignment
+  array[:]  = array2
+  @test reldiff(zeros(size(tensor))+scalar, copy(array)) < 1e-6
 end
 
 function test_plus()
@@ -96,6 +120,7 @@ end
 # Run tests
 ################################################################################
 test_copy()
+test_assign()
 test_plus()
 test_minus()
 
