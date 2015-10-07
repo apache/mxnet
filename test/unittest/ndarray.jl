@@ -115,6 +115,27 @@ function test_minus()
   @test reldiff(t2 - scalar, copy(a2 - scalar)) < 1e-6
 end
 
+function test_mul()
+  dims   = rand_dims()
+  t1, a1 = rand_tensors(dims)
+  t2, a2 = rand_tensors(dims)
+  t3, a3 = rand_tensors(dims)
+
+  info("NDArray::mul::dims = $dims")
+
+  @test reldiff(t1.*t2, copy(a1.*a2)) < 1e-6
+
+  # test inplace .*= operation
+  a0 = a1               # keep a reference to a1
+  @mx.inplace a1 .*= a2 # perform inplace .*=
+  @test reldiff(copy(a0), copy(a1)) < 1e-6
+  @test reldiff(copy(a1), t1.*t2) < 1e-6
+
+  # test scalar
+  scalar = rand()
+  @test reldiff(t3 * scalar, copy(a3 .* scalar)) < 1e-6
+end
+
 
 ################################################################################
 # Run tests
@@ -123,5 +144,6 @@ test_copy()
 test_assign()
 test_plus()
 test_minus()
+test_mul()
 
 end

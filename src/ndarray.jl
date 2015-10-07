@@ -178,6 +178,10 @@ macro inplace(stmt)
     Expr(:call, :add_to!, esc(stmt.args[1]), esc(stmt.args[2]))
   elseif stmt.head == :-= || stmt.head == :.-=
     Expr(:call, :sub_from!, esc(stmt.args[1]), esc(stmt.args[2]))
+  elseif stmt.head == :.*=
+    Expr(:call, :mul_to!, esc(stmt.args[1]), esc(stmt.args[2]))
+  elseif stmt.head == :./=
+    Expr(:call, :div_from!, esc(stmt.args[1]), esc(stmt.args[2]))
   else
     error("unsupported inplace translation for $stmt")
   end
@@ -221,6 +225,33 @@ function .-(arg0 :: NDArray, arg1 :: Union{Real, NDArray})
 end
 function -(arg0 :: NDArray)
   _mul_scalar(arg0, -1.0)
+end
+
+function mul_to!(dst :: NDArray, arg :: Union{Real, NDArray})
+  if isa(arg, Real)
+    _mul_scalar(dst, arg, dst)
+  else
+    _mul(dst, arg, dst)
+  end
+  return dst
+end
+import Base: .*, *
+function .*(arg0 :: NDArray, arg :: Union{Real, NDArray})
+  ret = copy(arg0, context(arg0))
+  mul_to!(ret, arg)
+end
+
+function div_from!(dst :: NDArray, arg :: Union{Real, NDArray})
+  if isa(arg, Real)
+    _div_scalar(dst, arg, dst)
+  else
+    _div(dst, arg, dst)
+  end
+end
+import Base: ./
+function ./(arg0 :: NDArray, arg :: Union{Real, NDArray})
+  ret = copy(arg0, context(arg0))
+  div_from!(ret, arg)
 end
 
 ################################################################################
