@@ -25,3 +25,4 @@ fi
 make -j4 || exit 1
 
 export MXNET_HOME=$PWD
+cd ..
