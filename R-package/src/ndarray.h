@@ -170,7 +170,7 @@ class NDArrayFunction : public ::Rcpp::CppFunction {
 }  // namespace mxnet
 
 
-RCPP_EXPOSED_CLASS_NODECL(::mxnet::R::NDArray);
+RCPP_EXPOSED_CLASS_NODECL(::mxnet::R::NDArray)
 
 namespace mxnet {
 namespace R {
