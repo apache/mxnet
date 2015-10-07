@@ -788,6 +788,9 @@ MXNET_DLL int MXKVStoreIsWorkerNode(int *ret);
 MXNET_DLL int MXKVStoreIsServerNode(int *ret);
 MXNET_DLL int MXKVStoreIsSchedulerNode(int *ret);
 
+MXNET_DLL int MXKVStoreIsDistributed(KVStoreHandle handle,
+                                     int *ret);
+
 MXNET_DLL int MXKVStoreBarrier(KVStoreHandle handle);
 
 

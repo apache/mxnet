@@ -1058,6 +1058,12 @@ int MXKVStoreIsSchedulerNode(int *ret) {
   API_END();
 }
 
+int MXKVStoreIsDistributed(KVStoreHandle handle, int *ret) {
+  API_BEGIN();
+  *ret = static_cast<KVStore*>(handle)->IsDistributed();
+  API_END();
+}
+
 int MXKVStoreRunServer(KVStoreHandle handle,
                        MXKVStoreServerController controller) {
   API_BEGIN();

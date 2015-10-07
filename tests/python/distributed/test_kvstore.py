@@ -5,6 +5,10 @@
 # $ ln -s ../../../dmlc-core/tracker/dmlc_local.py .
 # $ ./dmlc_local.py -n 4 -s 4 ./test_kvstore.py
 
+def updater(key, recved, stored):
+    print "key: %d" & key
+    stored += recved * 2
+
 import mxnet as mx
 import numpy as np
 import time
@@ -12,6 +16,7 @@ import time
 def check_diff_to_scalar(A, x):
     """ assert A == x"""
     assert(np.sum(np.abs((A - x).asnumpy())) == 0), A.asnumpy()
+
 
 # init
 kv = mx.kv.create('dist')
@@ -22,7 +27,11 @@ shape = (2, 2)
 keys = [3, 4, 5]
 
 if my_rank == 0:
+    # init key, value on servers
     kv.init(keys, [mx.nd.ones(shape)] * len(keys))
+    # init updater on servers
+    kv.set_updater(updater)
+
 kv.barrier()
 # print 'init worker %d' % my_rank
 

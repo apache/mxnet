@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 
 import ctypes
+import pickle
 from .ndarray import NDArray
 from .base import _LIB
 from .base import check_call, c_array, c_str, string_types, mx_uint
@@ -227,10 +228,21 @@ class KVStore(object):
         [[ 6.  6.  6.]
         [ 6.  6.  6.]]
         """
-        _updater_proto = ctypes.CFUNCTYPE(
-            None, ctypes.c_int, NDArrayHandle, NDArrayHandle)
-        self._updater_func = _updater_proto(_updater_wrapper(updater))
-        check_call(_LIB.MXKVStoreSetUpdater(self.handle, self._updater_func))
+        is_distributed = ctypes.c_int()
+        check_call(_LIB.MXKVStoreIsDistributed(
+            self.handle, ctypes.byref(is_distributed)))
+
+        is_worker = ctypes.c_int()
+        check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
+
+        if is_distributed.value and is_worker.value:
+            # send the object to server
+            self.send_command_to_servers(0, pickle.dumps(updater))
+        else:
+            _updater_proto = ctypes.CFUNCTYPE(
+                None, ctypes.c_int, NDArrayHandle, NDArrayHandle)
+            self._updater_func = _updater_proto(_updater_wrapper(updater))
+            check_call(_LIB.MXKVStoreSetUpdater(self.handle, self._updater_func))
 
     def get_rank(self):
         """Get the rank of this worker node
@@ -255,6 +267,7 @@ class KVStore(object):
         size = ctypes.c_int()
         check_call(_LIB.MXKVStoreGetGroupSize(self.handle, ctypes.byref(size)))
         return size.value
+
 
     def barrier(self):
         """Global barrier among all worker nodes"""
