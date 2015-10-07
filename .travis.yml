@@ -23,7 +23,6 @@ addons:
       - libopencv-dev
       - gcc-4.8
       - g++-4.8
-      - clang
 
 before_install:
   - export TRAVIS=test/travis
@@ -32,7 +31,6 @@ before_install:
 
 notifications:
   email: false
-# uncomment the following lines to override the default test script
-#script:
-#  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-#  - julia -e 'Pkg.clone(pwd()); Pkg.build("MXNet"); Pkg.test("MXNet"; coverage=true)'
+
+script:
+  - source $TRAVIS/run_test.sh

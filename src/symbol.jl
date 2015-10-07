@@ -14,6 +14,7 @@ function variable(name :: Union{Base.Symbol, AbstractString})
   Symbol(MX_SymbolHandle(hdr_ref[]))
 end
 
+
 ################################################################################
-# Atomic Symbol functions dynamically exported from libmxnet
+# Atomic Symbol functions dynamically imported from libmxnet
 ################################################################################
