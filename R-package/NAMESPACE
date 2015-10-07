@@ -1,0 +1,3 @@
+useDynLib(mxnet)
+exportPattern("^[[:alpha:]]+")
+import(Rcpp)

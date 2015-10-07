@@ -1,0 +1,24 @@
+# _*_ mode: makefile; _*_
+PKGROOT=../../
+
+# This file is only used for compilation from github
+# It will be replaced by more formal Rpackage structure
+# Where PKGROOT moved to root directory
+
+.PHONY: all mxlib
+all: $(SHLIB)
+
+$(SHLIB): mxlib
+mxlib:
+	cd $(PKGROOT); make CXX="$(CXX)"; cd -
+	cp $(PKGROOT)/lib/libmxnet.so libmxnet.so
+	mkdir -p ../inst
+	mkdir -p ../inst/libs
+	cp $(PKGROOT)/lib/libmxnet.so ../inst/libs/libmxnet.so
+
+# Need to add libmxnet.so to LD_LIBRARY_PATH
+# TODO: make it install together with mxnet.so
+LINKMXNET = -L../inst/libs -lmxnet
+
+PKG_CPPFLAGS = -I$(PKGROOT)/include -I$(PKGROOT)/dmlc-core/include
+PKG_LIBS = $(LINKMXNET) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)

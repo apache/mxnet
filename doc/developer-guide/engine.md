@@ -1,14 +1,16 @@
 Execution Engine
 ================
-MXNet's engine is not only for deep learning or any domain-specific problem. Rather, it is designed to face a general problem: execute a bunch of functions following their dependencies. Execution of any two functions with dependencies should be serialized. Functions with no dependencies *may* be executed in parallel to boost performance.
+MXNet's engine is not only for deep learning or any domain-specific problem. Rather, it is designed to face a general problem: execute a bunch of functions following their dependencies. Execution of any two functions with dependencies should be serialized.
+Functions with no dependencies *may* be executed in parallel to boost performance.
+See also [Note on Dependency Engine](note_engine.md) for general discussions on the topic.
 
 Interface
 ---------
 The core interface of execution engine is:
 ```c++
-virtual void Push(Fn exec_fun, Context exec_ctx,
-                  std::vector<VarHandle> const& const_vars,
-                  std::vector<VarHandle> const& mutate_vars) = 0;
+virtual void PushSync(Fn exec_fun, Context exec_ctx,
+                      std::vector<VarHandle> const& const_vars,
+                      std::vector<VarHandle> const& mutate_vars) = 0;
 ```
 This API allows users to push a function (`exec_fun`), along with its context information and dependencies to the engine. The `exec_ctx` is the context information in which the `exec_fun` should be executed. `const_vars` denotes the variables that the function would read from while `mutate_vars` are the variables that to be modified. Regardless of the details that would be explained later, the engine guarantees following order:
 

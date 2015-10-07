@@ -75,7 +75,7 @@ ifneq ($(USE_CUDA_PATH), NONE)
 	NVCC=$(USE_CUDA_PATH)/bin/nvcc
 endif
 
-.PHONY: clean all test lint doc clean_all
+.PHONY: clean all test lint doc clean_all rcpplint
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
@@ -118,8 +118,11 @@ include tests/cpp/unittest.mk
 
 test: $(TEST)
 
-lint:
+lint: rcpplint
 	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python
+
+rcpplint:
+	python dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
 
 doxygen:
 	doxygen doc/Doxyfile

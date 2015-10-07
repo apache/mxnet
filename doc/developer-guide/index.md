@@ -25,7 +25,7 @@ How to Read the Code
 - All the module interface are listed in [include](../../include), these interfaces are heavily documented.
 - You read the [Doxygen Version](https://mxnet.readthedocs.org/en/latest/doxygen) of the document.
 - Each module will only depend on other module by the header files in [include](../../include).
-- The implementation of module is in [src](../../src) folder. 
+- The implementation of module is in [src](../../src) folder.
 - Each source code only sees the file within its folder, [src/common](../../src/common) and [include](../../include).
 
 Most modules are mostly self-contained, with interface dependency on engine.
@@ -54,7 +54,9 @@ Open Source Design Notes
 ------------------------
 * [Programming Models for Deep Learning](../program_model.md)
 	- Compares various programming models, which motivates the current design.
-
+* [Dependency Engine for Deep Learning](note_engine.md)
+	- Introduces the dependency tracking and scheduling component for general deep learning,
+	  this motivates the design of Engine module.
 
 List of Other Resources
 -----------------------
