@@ -2,10 +2,33 @@
 language: julia
 os:
   - linux
-  - osx
+  #- osx
 julia:
   #- release
   - nightly
+
+# dependent apt packages
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - doxygen
+      - wget
+      - git
+      - libcurl4-openssl-dev
+      - unzip
+      - libatlas-dev
+      - libopencv-dev
+      - gcc-4.8
+      - g++-4.8
+      - clang
+
+before_install:
+  - export TRAVIS=tests/travis
+  - source $TRAVIS/setup_env.sh
+  - source $TRAVIS/build_mxnet.sh
+
 notifications:
   email: false
 # uncomment the following lines to override the default test script
