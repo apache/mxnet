@@ -10,11 +10,16 @@ mat = mat - 5
 mat = 10 / mat
 mat = 7*mat
 mat = 1 - mat + (2 * mat)/(mat + 0.5)
-mat$as.array()
+as.array(mat)
+
+x = as.array(matrix(1:4, 2, 2))
+mat = mx.nd.array(x, mx.cpu(0))
+mat = (mat * 3 + 5) / 10
+as.array(mat)
 
 oldmat = mat
 mat = mx.nd.internal.plus.scalar(mat, 1, out=mat)
-xx = mat$as.array()
+xx = as.array(mat)
 
 # This will result in an error,  becase mat has been moved
 oldmat + 1

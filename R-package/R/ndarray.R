@@ -39,5 +39,8 @@ init.ndarray.methods <- function() {
   setMethod("/", signature(e1 = "numeric", e2 = "Rcpp_MXNDArray"), function(e1, e2) {
     mx.nd.internal.rdiv.scalar(e2, e1)
   })
+  setMethod("as.array", signature(x = "Rcpp_MXNDArray"), function(x) {
+    x$as.array()
+  })
 }
 
