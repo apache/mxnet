@@ -191,7 +191,11 @@ class KVStoreDist : public KVStoreLocal {
     StartPS();
     if (IsServerNode()) {
       auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
-      static_cast<MXNetServer*>(node)->set_controller(controller);
+      controller(0, "");
+      auto server = static_cast<MXNetServer*>(node);
+      server->set_executor(&exec_);
+      server->set_controller(controller);
+      exec_.Start();
     }
     ps::StopSystem();
   }
@@ -353,6 +357,7 @@ class KVStoreDist : public KVStoreLocal {
    */
   ps::OnlineServer<real_t, ServerVal, ServerHandle>* store_;
 
+  Executor exec_;
   /**
    * \brief for worker to push and pull data
    * use KVCache rather than KVWorker for the c-style pull

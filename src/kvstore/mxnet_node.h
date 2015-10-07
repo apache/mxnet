@@ -5,6 +5,7 @@
  */
 #ifndef MXNET_KVSTORE_MXNET_NODE_H_
 #define MXNET_KVSTORE_MXNET_NODE_H_
+#include <functional>
 #include "ps.h"
 #include "mxnet/kvstore.h"
 
@@ -29,6 +30,71 @@ struct KVStoreCommand {
     }
     return false;
   }
+
+};
+
+/**
+ * \brief executor runs a function using it's own thread
+ */
+class Executor {
+ public:
+
+  /**
+   * \brief start the executor
+   */
+  void Start() {
+    std::unique_lock<std::mutex> lk(mu_);
+    while (true) {
+      cond_.wait(lk, [this]{return !queue_.empty();});
+      Block blk = std::move(queue_.front());
+      queue_.pop();
+      lk.unlock();
+
+      if (blk.f) {
+        blk.f(); blk.p.set_value();
+      } else {
+        blk.p.set_value(); break;
+      }
+
+      lk.lock();
+    }
+  }
+
+  /**
+   * \brief function
+   */
+  typedef std::function<void()> Func;
+
+  /**
+   * \brief exec a function. threadsafe
+   */
+  void Exec(const Func& func) {
+    Block blk(func);
+    auto fut = blk.p.get_future();
+    {
+      std::lock_guard<std::mutex> lk(mu_);
+      queue_.push(std::move(blk));
+      cond_.notify_one();
+    }
+    fut.wait();
+  }
+
+  /**
+   * \brief stop, threadsafe
+   */
+  void Stop() {
+    Exec(Func());
+  }
+
+ private:
+  struct Block {
+    Block(const Func& func) : f(func) { }
+    Func f;
+    std::promise<void> p;
+  };
+  std::queue<Block> queue_;
+  std::mutex mu_;
+  std::condition_variable cond_;
 };
 
 #define APP_ID 10
@@ -40,6 +106,10 @@ class MXNetServer : public ps::App {
   MXNetServer() : App(APP_ID) { }
   virtual ~MXNetServer() { }
 
+  void set_executor(Executor* exec) {
+    executor_ = exec;
+  }
+
   void set_controller(const KVStore::Controller& ctrl) {
     controller_ = ctrl;
   }
@@ -50,11 +120,19 @@ class MXNetServer : public ps::App {
       if (!controller_) usleep(10000);
     }
     CHECK(controller_);
-    controller_(request->task.cmd(), request->task.msg());
+
+    if (request->task.cmd() == -1) {
+      executor_->Stop();
+    } else {
+      executor_->Exec([request, this]() {
+          controller_(request->task.cmd(), request->task.msg());
+        });
+    }
   }
 
  private:
   KVStore::Controller controller_;
+  Executor* executor_;
 };
 
 /**
