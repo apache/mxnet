@@ -16,7 +16,7 @@ init.ndarray.methods <- function() {
     mx.nd.internal.minus.scalar(e1, e2)
   })
   setMethod("-", signature(e1 = "Rcpp_MXNDArray", e2 = "Rcpp_MXNDArray"), function(e1, e2) {
-    mx.nd.internal.minus(e1,e2)
+    mx.nd.internal.minus(e1, e2)
   })
   setMethod("-", signature(e1 = "numeric", e2 = "Rcpp_MXNDArray"), function(e1, e2) {
     mx.nd.internal.rminus.scalar(e2, e1)
