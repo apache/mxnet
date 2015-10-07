@@ -218,11 +218,11 @@ NDArray::RObjectType NDArray::Array(
 // register normal function.
 void NDArray::InitRcppModule() {
   using namespace Rcpp;  // NOLINT(*)
-  class_<NDArray>("MXNDArray");
+  class_<NDArray>("MXNDArray")
+      .method("as.array", &NDArray::AsNumericVector);
   function("mx.nd.load", &NDArray::Load);
   function("mx.nd.save", &NDArray::Save);
   function("mx.nd.array", &NDArray::Array);
-  function("mx.nd.internal.as.array", &NDArray::AsRArray);
 }
 
 NDArrayFunction::NDArrayFunction(FunctionHandle handle)
@@ -266,6 +266,7 @@ NDArrayFunction::NDArrayFunction(FunctionHandle handle)
     const int kNDArrayArgBeforeScalar = 1;
     const int kAcceptEmptyMutateTarget = 1 << 2;
     int type_mask;
+
     MX_CALL(MXFuncDescribe(
         handle, &num_use_vars_, &num_scalars_,
         &num_mutate_vars_, &type_mask));
@@ -276,32 +277,89 @@ NDArrayFunction::NDArrayFunction(FunctionHandle handle)
       begin_scalars_ = num_scalars_;
       begin_scalars_ = 0;
     }
-    num_args_ = num_use_vars_ + num_scalars_;
-    accept_empty_out_ = ((type_mask & kAcceptEmptyMutateTarget) != 0);
+    begin_mutate_vars_ = num_use_vars_ + num_scalars_;
+    num_args_ = num_use_vars_ + num_scalars_ + num_mutate_vars_;
+    accept_empty_out_ = ((type_mask & kAcceptEmptyMutateTarget) != 0) && num_mutate_vars_ == 1;
+  }
+
+  // construct formals
+  {
+    Rcpp::List arg_values(num_args_);
+    std::vector<std::string> arg_names(num_args_);
+    for (mx_uint i = 0; i < num_use_vars_; ++i) {
+      std::ostringstream os;
+      os << "X" << (i + 1);
+      arg_names[begin_use_vars_ + i] = os.str();
+      // TODO(KK) this should really be not specified
+      arg_values[begin_use_vars_ + i] = R_NilValue;
+    }
+    for (mx_uint i = 0; i < num_scalars_; ++i) {
+      std::ostringstream os;
+      os << "s" << (i + 1);
+      arg_names[begin_scalars_ + i] = os.str();
+      // TODO(KK) this should really be not specified
+      arg_values[begin_scalars_ + i] = R_NilValue;
+    }
+    if (accept_empty_out_) {
+      arg_names[begin_mutate_vars_] = "out";
+      // this is really optional
+      arg_values[begin_mutate_vars_] = R_NilValue;
+    } else {
+      for (mx_uint i = 0; i < num_mutate_vars_; ++i) {
+        std::ostringstream os;
+        os << "out" << (i + 1);
+        arg_names[begin_mutate_vars_ + i] = os.str();
+        // TODO(KK) this should really be not specified, not optional
+        arg_values[begin_mutate_vars_ + i] = R_NilValue;
+      }
+    }
+    formals_ = arg_values;
+    formals_.attr("names") = arg_names;
   }
 }
 
 SEXP NDArrayFunction::operator() (SEXP* args) {
   BEGIN_RCPP;
-  RCHECK(accept_empty_out_)
-      << "not yet support mutate target";
-  NDArrayHandle ohandle;
-  MX_CALL(MXNDArrayCreateNone(&ohandle));
+
   std::vector<mx_float> scalars(num_scalars_);
   std::vector<NDArrayHandle> use_vars(num_use_vars_);
 
   for (mx_uint i = 0; i < num_scalars_; ++i) {
-    // better to use Rcpp cast?
+    // TODO(KK) better to use Rcpp cast?
     scalars[i] = (REAL)(args[begin_scalars_ + i])[0];
   }
   for (mx_uint i = 0; i < num_use_vars_; ++i) {
     use_vars[i] = NDArray::XPtr(args[begin_use_vars_ + i])->handle_;
   }
+
+  std::vector<NDArrayHandle> mutate_vars(num_mutate_vars_);
+  Rcpp::List out(num_mutate_vars_);
+  for (mx_uint i = 0; i < num_mutate_vars_; ++i) {
+    // TODO(KK) Rcpp way of checking null?
+    if (args[begin_mutate_vars_ + i] == R_NilValue) {
+      if (accept_empty_out_) {
+        NDArrayHandle ohandle;
+        MX_CALL(MXNDArrayCreateNone(&ohandle));
+        out[i] = NDArray::RObject(ohandle);
+      } else {
+        RLOG_FATAL << "Parameter out need to be specified";
+      }
+    } else {
+      // move the old parameters, these are no longer valid
+      out[i] = NDArray::Move(args[begin_mutate_vars_ + i]);
+    }
+    mutate_vars[i] = NDArray::XPtr(out[i])->handle_;
+  }
+
   MX_CALL(MXFuncInvoke(handle_,
                        dmlc::BeginPtr(use_vars),
                        dmlc::BeginPtr(scalars),
-                       &ohandle));
-  return NDArray::RObject(ohandle);
+                       dmlc::BeginPtr(mutate_vars)));
+  if (num_mutate_vars_ == 1) {
+    return out[0];
+  } else {
+    return out;
+  }
   END_RCPP;
 }
 
