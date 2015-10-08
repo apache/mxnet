@@ -4,7 +4,7 @@ from __future__ import absolute_import
 
 import ctypes
 import pickle
-from .ndarray import NDArray, zeros
+from .ndarray import NDArray
 from .base import _LIB
 from .base import check_call, c_array, c_str, string_types, mx_uint
 from .base import NDArrayHandle, KVStoreHandle
@@ -351,6 +351,7 @@ class KVStore(object):
         is_worker = ctypes.c_int()
         check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
 
+        # pylint: disable=invalid-name
         if is_distributed.value and is_worker.value:
             # send the optimizer to server
             try:

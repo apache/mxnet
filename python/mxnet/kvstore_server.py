@@ -3,8 +3,7 @@
 from __future__ import absolute_import
 import ctypes
 import sys
-from .base import _LIB, check_call, c_array, c_str, string_types, mx_uint
-from .base import NDArrayHandle, KVStoreHandle
+from .base import _LIB, check_call
 from .kvstore import create
 
 class KVStoreServer(object):
@@ -22,6 +21,7 @@ class KVStoreServer(object):
     def controller(self):
         """return the server controller"""
         def server_controller(head, body):
+            """server controler"""
             if head == 0:
                 self.kvstore.set_optimizer(body)
             else:

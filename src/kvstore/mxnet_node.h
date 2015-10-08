@@ -5,7 +5,12 @@
  */
 #ifndef MXNET_KVSTORE_MXNET_NODE_H_
 #define MXNET_KVSTORE_MXNET_NODE_H_
+#include <queue>
+#include <mutex>
+#include <condition_variable>
+#include <memory>
 #include <functional>
+#include <vector>
 #include "ps.h"
 #include "mxnet/kvstore.h"
 
@@ -17,7 +22,7 @@ namespace kvstore {
  */
 struct KVStoreCommand {
   KVStoreCommand() : cmd(0) { }
-  KVStoreCommand(int cmd_) : cmd(cmd_) { }
+  explicit KVStoreCommand(int cmd_) : cmd(cmd_) { }
   int cmd;
   void set_barrier(int count) {
     cmd = - count - 10;
@@ -30,7 +35,6 @@ struct KVStoreCommand {
     }
     return false;
   }
-
 };
 
 /**
@@ -38,7 +42,6 @@ struct KVStoreCommand {
  */
 class Executor {
  public:
-
   /**
    * \brief start the executor
    */
@@ -88,7 +91,7 @@ class Executor {
 
  private:
   struct Block {
-    Block(const Func& func) : f(func) { }
+    explicit Block(const Func& func) : f(func) { }
     Func f;
     std::promise<void> p;
   };
@@ -124,6 +127,7 @@ class MXNetServer : public ps::App {
     if (request->task.cmd() == -1) {
       executor_->Stop();
     } else {
+      // let the main thread to execute updater_, which is necessary for python
       executor_->Exec([request, this]() {
           controller_(request->task.cmd(), request->task.msg());
         });
@@ -142,7 +146,6 @@ class MXNetWorker : public ps::App {
  public:
   MXNetWorker() : App(APP_ID) { }
   virtual ~MXNetWorker() { }
-
 };
 
 /**
@@ -195,4 +198,4 @@ class MXNetScheduler : public ps::App {
 }  // namespace kvstore
 }  // namespace mxnet
 
-#endif /* MXNET_KVSTORE_MXNET_NODE_H_ */
+#endif  // MXNET_KVSTORE_MXNET_NODE_H_

@@ -27,7 +27,7 @@ KVStore* KVStore::Create(const char *type_name) {
 #else
     LOG(FATAL) << "compile with USE_DIST_KVSTORE=1";
     return nullptr;
-#endif // MXNET_USE_DIST_KVSTORE
+#endif  // MXNET_USE_DIST_KVSTORE
   }
   LOG(FATAL) << "Unknown KVStore type \"" << type_name << "\"";
   return nullptr;

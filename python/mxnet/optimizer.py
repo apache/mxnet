@@ -106,11 +106,13 @@ class SGD(Optimizer):
             weight[:] += -lr * (grad * self.rescale_grad + self.wd * weight)
 
 
-class Test(Optimizer):
+class Test(object):
     """For test use"""
     def __init__(self, rescale_grad=1):
         self.rescale_grad = rescale_grad
 
+
+    # pylint: disable=no-self-use
     def create_state(self, index, weight):
         """Create a state to duplicate weight"""
         return zeros(weight.shape, weight.context)
@@ -162,6 +164,7 @@ def optimizer_clossure(optimizer):
     """
     states = dict()
     def updater(index, grad, weight):
+        """updater for kvstore"""
         if index not in states:
             states[index] = optimizer.create_state(index, weight)
         optimizer.update(index, weight, grad, states[index])

@@ -176,6 +176,7 @@ class KVStoreLocal : public KVStore {
   Context pinned_ctx_;
   // the lower bound of a big array
   size_t bigarray_bound_;
+
  private:
   inline static void ReduceSumCPU(const std::vector<real_t*> &dptr,
                                   size_t offset, index_t size) {

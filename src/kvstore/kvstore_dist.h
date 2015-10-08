@@ -5,7 +5,8 @@
  */
 #ifndef MXNET_KVSTORE_KVSTORE_DIST_H_
 #define MXNET_KVSTORE_KVSTORE_DIST_H_
-
+#include <string>
+#include <vector>
 #include "./kvstore_local.h"
 #include "./mxnet_node.h"
 #include "mxnet/engine.h"
@@ -207,7 +208,6 @@ class KVStoreDist : public KVStoreLocal {
   }
 
  private:
-
   /**
    * \brief start the network threads in ps-lite
    */
@@ -311,7 +311,7 @@ class KVStoreDist : public KVStoreLocal {
    */
   class ServerHandle {
    public:
-    ServerHandle(KVStoreDist* kvstore) {
+    explicit ServerHandle(KVStoreDist* kvstore) {
       kvstore_ = kvstore;
     }
 
@@ -320,12 +320,13 @@ class KVStoreDist : public KVStoreLocal {
     inline void Load(dmlc::Stream *fi) { }
     inline void Save(dmlc::Stream *fo) const { }
 
-    inline void Push(
-        ps::Key recv_key, ps::Blob<const real_t> recv_val, ServerVal& my_val) {
+    inline void Push(ps::Key recv_key,
+                     ps::Blob<const real_t> recv_val,
+                     ServerVal& my_val) { // NOLINT(*)
       // construct NDArray without data copy
       size_t ds[] = {recv_val.size};
       TShape dshape(ds, ds + 1);
-      TBlob recv_blob((real_t*)recv_val.data, dshape, cpu::kDevMask);
+      TBlob recv_blob((real_t*)recv_val.data, dshape, cpu::kDevMask);  // NOLINT(*)
       NDArray recv_array(recv_blob, 0);
 
       if (my_val.Empty()) {
@@ -337,6 +338,7 @@ class KVStoreDist : public KVStoreLocal {
         int key = kvstore_->DecodeKey(recv_key);
         if (kvstore_->updater_) {
           // kvstore_->updater_(key, recv_array, &my_val.array);
+          // let the main thread to execute updater_, which is necessary for python
           kvstore_->exec_.Exec([this, key, &recv_array, &my_val](){
               kvstore_->updater_(key, recv_array, &my_val.array);
             });
@@ -348,8 +350,9 @@ class KVStoreDist : public KVStoreLocal {
       my_val.array.WaitToRead();
     }
 
-    inline void Pull(
-        ps::Key recv_key, const ServerVal& my_val, ps::Blob<real_t>& send_val) {
+    inline void Pull(ps::Key recv_key,
+                     const ServerVal& my_val,
+                     ps::Blob<real_t>& send_val) {  // NOLINT(*)
       CHECK(!my_val.Empty())
           << kvstore_->DecodeKey(recv_key) << " is not inited";
 
@@ -366,7 +369,11 @@ class KVStoreDist : public KVStoreLocal {
    */
   ps::OnlineServer<real_t, ServerVal, ServerHandle>* store_;
 
+  /**
+   * \brief let the main thread execute python codes
+   */
   Executor exec_;
+
   /**
    * \brief for worker to push and pull data
    * use KVCache rather than KVWorker for the c-style pull
@@ -382,11 +389,10 @@ class KVStoreDist : public KVStoreLocal {
    * \brief the count for barrier
    */
   int barrier_count_;
-
 };
 
 }  // namespace kvstore
 }  // namespace mxnet
 
 
-#endif /* MXNET_KVSTORE_KVSTORE_DIST_H_ */
+#endif  // MXNET_KVSTORE_KVSTORE_DIST_H_

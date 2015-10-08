@@ -7,6 +7,7 @@
 #define MXNET_KVSTORE_H_
 #include <dmlc/io.h>
 #include <vector>
+#include <string>
 #include <functional>
 #include "./ndarray.h"
 
