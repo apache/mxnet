@@ -63,3 +63,7 @@ mshadow
 data
 recommonmark
 bin
+
+# R
+*.Rcheck
+*.rds
