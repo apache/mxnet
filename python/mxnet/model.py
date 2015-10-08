@@ -250,7 +250,7 @@ def _train_multi_device(symbol, ctx, input_shape,
         """Internal updater on KVstore, used when update_on_kvstore=True."""
         optimizer.update(index, weight, grad, opt_state_blocks[index])
     if update_on_kvstore:
-        kv.set_updater(kv_updater)
+        kv._set_updater(kv_updater)
 
     # Input and output data structure
     data_index, label_index = _check_arguments(symbol)
