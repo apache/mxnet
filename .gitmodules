@@ -5,5 +5,5 @@
 	path = dmlc-core
 	url = https://github.com/dmlc/dmlc-core.git
 [submodule "ps-lite"]
-    path = ps-lite
-    url = https://github.com/dmlc/ps-lite
+	path = ps-lite
+	url = https://github.com/dmlc/ps-lite
