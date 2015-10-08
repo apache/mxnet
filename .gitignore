@@ -58,10 +58,7 @@ __pycache__
 *.json
 *.d
 build
-dmlc-core
-mshadow
 data
 recommonmark
 bin
-ps-lite
 deps
