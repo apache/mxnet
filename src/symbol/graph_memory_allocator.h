@@ -119,9 +119,7 @@ GraphStorageAllocator::GraphStorageAllocator(
   // if we set this to 1, this means no color based match.
   // color based match will cost a bit more memory usually
   // but also enables more parallelization.
-  num_match_color_ = dmlc::GetEnv("MXNET_EXEC_MATCH_NUM_COLOR", 4);
-  num_match_color_ = std::min(static_cast<uint32_t>(common::GetNumThreadPerGPU()),
-                              num_match_color_);
+  num_match_color_ = static_cast<uint32_t>(common::GetExecNumMatchColor());
   this->InitColor(topo_order);
 }
 

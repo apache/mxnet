@@ -702,7 +702,7 @@ class FeedForward(BASE_ESTIMATOR):
         save_checkpoint(prefix, iteration, self.symbol, self.arg_params, self.aux_params)
 
     @staticmethod
-    def load(prefix, iteration, ctx=None):
+    def load(prefix, iteration, ctx=None, **kwargs):
         """Load model checkpoint from file.
 
         Parameters
@@ -715,6 +715,8 @@ class FeedForward(BASE_ESTIMATOR):
 
         ctx : Context or list of Context, optional
             The device context of training and prediction.
+        kwargs : dict
+            other parameters for model, including num_round, optimizer and numpy_batch_size
 
         Returns
         -------
@@ -728,7 +730,8 @@ class FeedForward(BASE_ESTIMATOR):
         """
         symbol, arg_params, aux_params = load_checkpoint(prefix, iteration)
         return FeedForward(symbol, ctx=ctx,
-                           arg_params=arg_params, aux_params=aux_params)
+                           arg_params=arg_params, aux_params=aux_params,
+                           **kwargs)
 
     @staticmethod
     def create(symbol, X, y=None, ctx=None,

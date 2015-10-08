@@ -16,6 +16,10 @@ Usually you do not need to change these settings, but they are listed here for r
 * MXNET_EXEC_MATCH_RANGE (default=10)
   - The rough matching scale in symbolic execution memory allocator.
   - Set this to 0 if we do not want to enable memory sharing between graph nodes(for debug purpose).
+* MXNET_EXEC_NUM_TEMP (default=4)
+  - Maximum number of temp workspace we can allocate to each device.
+  - Set this to small number can save GPU memory.
+  - It will also likely to decrease level of parallelism, which is usually OK.
 * MXNET_ENGINE_TYPE (default=ThreadedEnginePerDevice)
   - The type of underlying execution engine of MXNet.
   - List of choices
@@ -27,3 +31,15 @@ Usually you do not need to change these settings, but they are listed here for r
 * MXNET_KVSTORE_BIGARRAY_BOUND (default=1e6)
 	- The minimum size of "big array".
 	- When the array size is bigger than this threshold, MXNET_KVSTORE_REDUCTION_NTHREADS threads will be used for reduction.
+
+Settings for Minimum Memory Usage
+---------------------------------
+- Make sure ```min(MXNET_EXEC_NUM_TEMP, MXNET_GPU_WORKER_NTHREADS) = 1```
+  - The default setting satisfies this.
+
+Settings for More GPU Parallelism
+---------------------------------
+- Set ```MXNET_GPU_WORKER_NTHREADS``` to larger number (e.g. 2)
+  - You may want to set ```MXNET_EXEC_NUM_TEMP``` to reduce memory usage.
+- This may not speedup things as GPU can already be fully occupied with serialized jobs.
+
