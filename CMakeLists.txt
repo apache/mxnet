@@ -5,26 +5,31 @@ project(mxnet C CXX)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
 include(cmake/Utils.cmake)
+mxnet_option(USE_OPENCV  "Build with OpenCV support" ON)
+mxnet_option(USE_OPENMP  "Build with Openmp support" ON)
+mxnet_option(USE_CUDNN   "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
+mxnet_option(USE_CUDA    "Build with CUDA support"   ON)
+
 include(mshadow/cmake/mshadow.cmake)
 include(mshadow/cmake/Utils.cmake)
 include(mshadow/cmake/Cuda.cmake)
-
-mxnet_option(USE_OPENCV "Build with OpenCV support" ON)
-mxnet_option(USE_OPENMP "Build with Openmp support" ON)
-mxnet_option(USE_CUDNN "Build with cudnn support" ON)
 
 include_directories("include")
 include_directories("mshadow")
 include_directories("dmlc-core/include")
 
-add_subdirectory("dmlc-core")
-
-
-add_definitions(-DDMLC_USE_CXX11)
-add_definitions(-D_SCL_SECURE_NO_WARNINGS)
-add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-add_definitions(-DMXNET_EXPORTS)
-
+if(MSVC)
+  add_definitions(-DDMLC_USE_CXX11)
+  add_definitions(-D_SCL_SECURE_NO_WARNINGS)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+  add_definitions(-DMXNET_EXPORTS)
+else(MSVC)
+  include(CheckCXXCompilerFlag)
+  check_cxx_compiler_flag("-std=c++11"   SUPPORT_CXX11)
+  check_cxx_compiler_flag("-msse2"       SUPPORT_MSSE2)
+  set(CMAKE_C_FLAGS "-O3 -Wall -msse2 -Wno-unknown-pragmas -fPIC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS}")
+endif(MSVC)
 
 if(USE_OPENCV)
   find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
@@ -58,9 +63,10 @@ if(USE_CUDNN)
   endif()
 endif()
 
+add_subdirectory("dmlc-core")
+
 mxnet_source_group("Source"   GLOB_RECURSE "src/*.cc")
 mxnet_source_group("Source\\Cuda" GLOB_RECURSE "src/*.cu")
-
 
 FILE(GLOB_RECURSE SOURCE "src/*.cc")
 FILE(GLOB_RECURSE cuda "src/*.cu")
@@ -71,10 +77,15 @@ if(USE_CUDA)
   list(APPEND SOURCE ${cuda_objs} ${cuda})
 endif()
 
+# Only add c++11 flags and definitions after cuda compiling
+add_definitions(-DDMLC_USE_CXX11)
+add_definitions(-DMSHADOW_IN_CXX11)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c++0x")  
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")  
+
 add_library(mxnet SHARED ${SOURCE}) 
 target_link_libraries(mxnet ${mshadow_LINKER_LIBS})
 target_link_libraries(mxnet dmlccore)
-
 
 # ---[ Linter target
 if(MSVC)
