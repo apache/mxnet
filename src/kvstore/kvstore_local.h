@@ -23,14 +23,9 @@ class KVStoreLocal : public KVStore {
   KVStoreLocal() {
     pinned_ctx_ = (MXNET_USE_CUDA != 0) ?
         Context::CPUPinned(0) : Context::CPU();
-    set_updater(nullptr);
     // the server perameters
     nthread_reduction_ = dmlc::GetEnv("MXNET_KVSTORE_REDUCTION_NTHREADS", 4);
     bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 1000 * 1000);
-  }
-
-  void set_updater(Updater updater) override {
-    updater_ = updater;
   }
 
   void Init(const std::vector<int>& keys,
@@ -179,8 +174,6 @@ class KVStoreLocal : public KVStore {
   std::unordered_map<int, BufferEntry> merge_buf_;
   // pinned context
   Context pinned_ctx_;
-  // updater
-  Updater updater_;
   // the lower bound of a big array
   size_t bigarray_bound_;
  private:

@@ -8,9 +8,9 @@ from .base import NDArrayHandle, KVStoreHandle
 from .kvstore import create
 
 class KVStoreServer(object):
-    """A key-value store server"""
+    """The key-value store server"""
     def __init__(self, kvstore):
-        """Initialize a new KVStore.
+        """Initialize a new KVStoreServer.
 
         Parameters
         ----------
@@ -20,7 +20,7 @@ class KVStoreServer(object):
         self.handle = kvstore.handle
 
     def controller(self):
-        """return the controller"""
+        """return the server controller"""
         def server_controller(head, body):
             if head == 0:
                 self.kvstore.set_optimizer(body)
@@ -30,7 +30,13 @@ class KVStoreServer(object):
         return server_controller
 
     def run(self):
+        """run the server, whose behavior is like
 
+
+        >>> while receive(x):
+        >>>     if is_command x: controller(x)
+        >>>     else if is_key_value x: updater(x)
+        """
         _ctrl_proto = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.c_char_p)
         check_call(_LIB.MXKVStoreRunServer(self.handle, _ctrl_proto(self.controller())))
 

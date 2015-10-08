@@ -68,6 +68,8 @@ class KVStore(object):
 
         For each key, one must init it before push and pull.
 
+        This function returns after data have been initialized successfully
+
         Parameters
         ----------
         key : int or sequence of int
@@ -97,6 +99,9 @@ class KVStore(object):
 
     def push(self, key, value, priority=0):
         """ Push a single or a sequence of key-value pairs into the store.
+
+        This function returns after adding a push operator to the engine. One
+        can use Wait or WaitAll to make sure it is finished.
 
         Parameters
         ----------
@@ -154,6 +159,9 @@ class KVStore(object):
     def pull(self, key, out=None, priority=0):
         """ Pull a single value or a sequence of values from the store.
 
+        This function returns after adding a push operator to the engine. One
+        can use Wait or WaitAll to make sure it is finished.
+
         Parameters
         ----------
         key : int or list of int
@@ -207,9 +215,12 @@ class KVStore(object):
     def set_updater(self, updater):
         """Set a push updater into the store.
 
+        This function only changes the local store. Use set_optimizer for
+        multi-machines.
+
         Parameters
         ----------
-        updater: function
+        updater : function
             the updater function
 
         Examples
@@ -239,7 +250,7 @@ class KVStore(object):
 
         Returns
         -------
-        rank :int
+        rank : int
             The rank of this node, which is in [0, get_group_size())
         """
         rank = ctypes.c_int()
@@ -260,10 +271,35 @@ class KVStore(object):
 
 
     def barrier(self):
-        """Global barrier among all worker nodes"""
+        """Global barrier among all worker nodes
+
+        For example, assume there are n machines, we want to let machine 0 first
+        init the values, and then pull the inited value to all machines. Before
+        pulling, we can place a barrier to guarantee that the initialization is
+        finished.
+
+        The following codes run on n machines in parallel
+
+        >>> if kv.get_rank() == 0:
+        ...     kv.init(keys, values);
+        ... kv.barrier()
+        ... kv.pull(keys, out = values);
+
+        But note that, this functions only blocks the main thread of workers
+        until all of them are reached this point. It doesn't guarantee that all
+        operations issued before are actually finished, such as \ref Push and
+        \ref Pull. In that case, we need to call \ref Wait or \ref WaitAll
+        """
         check_call(_LIB.MXKVStoreBarrier(self.handle))
 
     def wait(self, key):
+        """Wait until all pushes and pulls issued on each key have been finished
+
+        Parameters
+        ----------
+        key : int or list of int
+            Keys
+        """
         if isinstance(key, int):
             ckeys = c_array(ctypes.c_int, [key])
         else:
@@ -273,13 +309,41 @@ class KVStore(object):
         check_call(_LIB.MXKVStoreWait(self.handle, mx_uint(len(ckeys)), ckeys))
 
     def wait_all(self):
+        """Wait until all pushes and pulls issued before have been finished
+        """
         check_call(_LIB.MXKVStoreWaitAll(self.handle))
 
     def send_command_to_servers(self, head, body):
+        """Send a command to all server nodes
+
+        Send a command to all server nodes, which will make each server node run
+        KVStoreServer.controller
+
+        This function returns after the command has been executed in all server
+        nodes
+
+        Parameters
+        ----------
+        head : int
+            the head of the command
+        body : str
+            the body of the command
+        """
         check_call(_LIB.MXKVStoreSendCommmandToServers(
             self.handle, mx_uint(head), c_str(body)))
 
     def set_optimizer(self, optimizer):
+        """Register an optimizer to the store
+
+        If there are multiple machines, this process (should be a worker node)
+        will pack this optimizer and send it to all servers. It returns after
+        this action is done.
+
+        Parameters
+        ----------
+        optimizer : Optimizer
+            the optimizer
+        """
         is_distributed = ctypes.c_int()
         check_call(_LIB.MXKVStoreIsDistributed(
             self.handle, ctypes.byref(is_distributed)))
@@ -313,8 +377,8 @@ def create(name='local'):
     ----------
     name : {'local'}
         The type of KVStore
-        - local: KVStore that works on devices with single process.
-        - dist: distributed KVStore supporting multiple machines
+        - local works for multiple devices on a single machine (single process)
+        - dist works for multi-machines (multiple processes)
     Returns
     -------
     kv : KVStore
