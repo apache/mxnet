@@ -157,7 +157,7 @@ void NDArray::Save(const Rcpp::RObject &sxptr,
     MX_CALL(MXNDArraySave(filename.c_str(), num_args,
                           dmlc::BeginPtr(handles),
                           dmlc::BeginPtr(keys)));
-  } else if (TYPEOF(sxptr) == EXTPTRSXP) {
+  } else if (TYPEOF(sxptr) == EXTPTRSXP) { // TODO this line is wrong??
     MX_CALL(MXNDArraySave(filename.c_str(), 1,
                           &(NDArray::XPtr(sxptr)->handle_), nullptr));
   } else {
@@ -220,8 +220,9 @@ void NDArray::InitRcppModule() {
   using namespace Rcpp;  // NOLINT(*)
   class_<NDArray>("MXNDArray")
       .method("as.array", &NDArray::AsNumericVector);
-  function("mx.nd.load", &NDArray::Load);
-  function("mx.nd.save", &NDArray::Save);
+  // don't call load/save directly, let R provides the completed file path first
+  function("mx.nd.internal.load", &NDArray::Load);
+  function("mx.nd.internal.save", &NDArray::Save);
   function("mx.nd.array", &NDArray::Array);
 }
 
