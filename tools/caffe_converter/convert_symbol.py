@@ -16,19 +16,19 @@ def readProtoFile(filepath, parser_object):
     return parser_object
 
 def proto2script(proto_file):
-    # parser = argparse.ArgumentParser(description='Caffe prototxt to mxnet config converter.\
-    #         Note that only basic functions are implemented. You are welcomed to contribute to this file.')
-    # parser.add_argument('caffe_proto_file', help='The prototxt file in Caffe format')
-    # args = parser.parse_args()
     proto = readProtoSolverFile(proto_file)
     connection = dict()
     symbols = dict()
     top = dict()
-    mapping = {'data' : 'data'}
-    need_flatten = {'data' : False}
     flatten_count = 0
     symbol_string = ""
     layer = proto.layer
+
+    # We assume the first bottom blob of first layer is the output from data layer
+    input_name = layer[0].bottom[0]
+    output_name = ""
+    mapping = {input_name : 'data'}
+    need_flatten = {input_name : False}
     for i in range(len(layer)):
         type_string = ''
         param_string = ''
@@ -77,6 +77,9 @@ def proto2script(proto_file):
             need_flatten[name] = need_flatten[mapping[proto.layer[i].bottom[0]]]
         if layer[i].type == 'Softmax':
             type_string = 'mx.symbol.Softmax'
+
+            # We only support single output network for now.
+            output_name = name
         if layer[i].type == 'Flatten':
             type_string = 'mx.symbol.Flatten'
             need_flatten[name] = False
@@ -108,12 +111,13 @@ def proto2script(proto_file):
                     (name, type_string, name, ','.join([mapping[x] for x in bottom]), param_string)
         for j in range(len(layer[i].top)):
             mapping[layer[i].top[j]] = name
-    return symbol_string
+    return symbol_string, output_name
 
 def proto2symbol(proto_file):
-    sym = proto2script(proto_file)
+    sym, output_name = proto2script(proto_file)
     sym = "import mxnet as mx\n" \
             + "data = mx.symbol.Variable(name='data')\n" \
             + sym
     exec(sym)
-    return prob
+    exec("ret = " + output_name)
+    return ret

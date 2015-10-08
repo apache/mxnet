@@ -28,7 +28,7 @@ def main():
                 wmat = layer.blobs[0].data
                 bias = layer.blobs[1].data
                 if first_conv:
-                    print 'Swapping BGR of caffe into RGB in cxxnet'
+                    print 'Swapping BGR of caffe into RGB in mxnet'
                     wmat[:, [0, 2], :, :] = wmat[:, [2, 0], :, :]
 
                 assert(wmat.flags['C_CONTIGUOUS'] is True)
