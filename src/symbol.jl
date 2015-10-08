@@ -6,13 +6,96 @@ export Symbol
 type Symbol
   handle :: MX_SymbolHandle
 end
+function Base.unsafe_convert(::Type{MX_handle}, obj::Symbol)
+  Base.unsafe_convert(MX_handle, obj.handle)
+end
+Base.convert(t::Type{MX_handle}, obj::Symbol) = Base.unsafe_convert(t, obj)
+Base.cconvert(t::Type{MX_handle}, obj::Symbol) = Base.unsafe_convert(t, obj)
+
+function Base.deepcopy(self :: Symbol)
+  ref_hdr = Ref{MX_handle}(0)
+  @mxcall(:MXSymbolCopy, (MX_handle, Ref{MX_handle}), self, ref_hdr)
+  return Symbol(MX_SymbolHandle(ref_hdr[]))
+end
+function Base.copy(self :: Symbol)
+  Base.deepcopy(self)
+end
+
+function Base.call(self :: Symbol, args :: Symbol...)
+  s = deepcopy(self)
+  _compose!(s, args...)
+end
+function Base.call(self :: Symbol; kwargs...)
+  s = deepcopy(self)
+  _compose!(s; kwargs...)
+end
+
+macro _list_symbol_info(self, func_name)
+  quote
+    ref_sz    = Ref{MX_uint}(0)
+    ref_names = Ref{char_pp}(0)
+    @mxcall($func_name, (MX_handle, Ref{MX_uint}, Ref{char_pp}),
+            $self, ref_sz, ref_names)
+    narg = ref_sz[]
+    names = pointer_to_array(ref_names[], narg)
+    names = [symbol(bytestring(x)) for x in names]
+    return names
+  end
+end
+function list_arguments(self :: Symbol)
+  @_list_symbol_info(self, :MXSymbolListArguments)
+end
+function list_outputs(self :: Symbol)
+  @_list_symbol_info(self, :MXSymbolListOutputs)
+end
+"""List all auxiliary states in the symbool.
+
+Auxiliary states are special states of symbols that do not corresponds to an argument,
+and do not have gradient. But still be useful for the specific operations.
+A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
+Most operators do not have Auxiliary states.
+"""
+function list_auxiliary_states(self :: Symbol)
+  @_list_symbol_info(self, :MXSymbolListAuxiliaryStates)
+end
 
 function variable(name :: Union{Base.Symbol, AbstractString})
-  hdr_ref = Ref{MX_handle}
+  hdr_ref = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCreateVariable, (char_p, Ref{MX_handle}), name, hdr_ref)
   Symbol(MX_SymbolHandle(hdr_ref[]))
 end
 
+"Compose symbol on inputs"
+function _compose!(sym :: Symbol; kwargs...)
+  name     = char_p(0)
+  arg_keys = AbstractString[]
+  arg_vals = MX_handle[]
+
+  for (k,v) in kwargs
+    if k == :name
+      name = string(v)
+    else
+      @assert(isa(v, Symbol), "Compose expect `Symbol` as arguments")
+      push!(arg_keys, string(k))
+      push!(arg_vals, v)
+    end
+  end
+
+  @mxcall(:MXSymbolCompose,
+          (MX_handle, char_p, MX_uint, Ptr{char_p}, Ptr{MX_handle}),
+          sym, name, length(arg_keys), arg_keys, arg_vals)
+  return sym
+end
+function _compose!(sym :: Symbol, args::Symbol...)
+  name     = char_p(0)
+  arg_keys = Ptr{char_p}(0)
+  arg_vals = MX_handle[args...]
+
+  @mxcall(:MXSymbolCompose,
+          (MX_handle, char_p, MX_uint, Ptr{char_p}, Ptr{MX_handle}),
+          sym, name, length(arg_keys), arg_keys, arg_vals)
+  return sym
+end
 
 ################################################################################
 # Atomic Symbol functions dynamically imported from libmxnet
@@ -33,7 +116,6 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
 
   func_name = symbol(bytestring(ref_name[]))
   kv_nargs  = symbol(bytestring(ref_kv_nargs[]))
-  info("defining $func_name, kv_nargs = ($kv_nargs)")
 
   # function $func_name(args...; kwargs...)
   func_head = Expr(:call, func_name, Expr(:parameters, Expr(:..., :kwargs)), Expr(:..., :args))
@@ -49,10 +131,14 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
     param_vals = AbstractString[]
     symbol_kws = Dict{Base.Symbol, Symbol}()
 
-    if $kv_nargs != symbol("") && !in($kv_nargs, param_keys)
-      push!(param_keys, string($kv_nargs))
-      push!(param_vals, string(length(args)))
-    end
+    $(if kv_nargs != symbol("")
+      quote
+        if !in("$kv_narg", param_keys)
+          push!(param_keys, string("$kv_nargs"))
+          push!(param_vals, string(length(args)))
+        end
+      end
+    end)
 
     for (k,v) in kwargs
       if k == :name; continue; end
@@ -67,21 +153,27 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
     if length(args) != 0 && length(symbol_kws) != 0
       @assert(false, "$func_name only accepts Symbols either as positional or keyword arguments, not both.")
     end
-    if $kv_nargs != symbol("") && length(symbol_kws)
-      @assert(false, "$func_name takes variable number of Symbol arguments, please pass input Symbols " *
-                     "via positional arguments, instead of keyword arguments.")
-    end
+    $(if kv_nargs != symbol("")
+      quote
+        if length(symbol_kws) > 0
+          @assert(false, "$func_name takes variable number of Symbol arguments, please pass input Symbols " *
+                         "via positional arguments, instead of keyword arguments.")
+        end
+      end
+    end)
 
     # create the symbol
     ref_sym_hdr = Ref{MX_handle}()
     @mxcall(:MXSymbolCreateAtomicSymbol,
-            (MX_handle, MX_unit, Ptr{char_p}, Ptr{char_p}, Ref{MX_handle}),
-            hdr, length(param_keys), param_keys, param_vals, ref_sym_hdr)
+            (MX_handle, MX_uint, Ptr{char_p}, Ptr{char_p}, Ref{MX_handle}),
+            $hdr, length(param_keys), param_keys, param_vals, ref_sym_hdr)
     sym_hdr = ref_sym_hdr[]
 
     sym = Symbol(MX_SymbolHandle(sym_hdr))
     hint = lowercase(string($func_name))
     name = get!(DEFAULT_NAME_MANAGER, name, hint)
+
+    _compose!(sym; name=name, symbol_kws...)
 
     return sym
   end
