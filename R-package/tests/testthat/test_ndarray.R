@@ -20,7 +20,7 @@ test_that("element-wise calculation for vector", {
 })
 
 test_that("element-wise calculation for matrix", {  
-  x = matrix(1:4,2,2)
+  x = matrix(1:4, 2, 2)
   mat = mx.nd.array(as.array(x), mx.cpu(0))
 #  expect_equal(x, as.array(mat))
 #  expect_equal(x+1, as.array(mat+1))
