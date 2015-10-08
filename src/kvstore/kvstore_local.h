@@ -13,7 +13,6 @@
 #include <utility>
 #include <algorithm>
 
-
 namespace mxnet {
 namespace kvstore {
 /**
@@ -24,14 +23,9 @@ class KVStoreLocal : public KVStore {
   KVStoreLocal() {
     pinned_ctx_ = (MXNET_USE_CUDA != 0) ?
         Context::CPUPinned(0) : Context::CPU();
-    set_updater(nullptr);
     // the server perameters
     nthread_reduction_ = dmlc::GetEnv("MXNET_KVSTORE_REDUCTION_NTHREADS", 4);
     bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 1000 * 1000);
-  }
-
-  void set_updater(Updater updater) override {
-    updater_ = updater;
   }
 
   void Init(const std::vector<int>& keys,
@@ -178,12 +172,10 @@ class KVStoreLocal : public KVStore {
 
   /// \brief buffer for merging push value
   std::unordered_map<int, BufferEntry> merge_buf_;
-  /// \brief buffer for storing local values
-  std::unordered_map<int, NDArray> local_;
   // pinned context
   Context pinned_ctx_;
-  // updater
-  Updater updater_;
+  // the lower bound of a big array
+  size_t bigarray_bound_;
 
  private:
   inline static void ReduceSumCPU(const std::vector<real_t*> &dptr,
@@ -242,10 +234,12 @@ class KVStoreLocal : public KVStore {
       }
     }
   }
+
+  /// \brief buffer for storing local values
+  std::unordered_map<int, NDArray> local_;
+
   // number of threads to do reduction
   int nthread_reduction_;
-  // number of threads to do reduction
-  size_t bigarray_bound_;
 };
 }  // namespace kvstore
 }  // namespace mxnet
