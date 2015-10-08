@@ -46,6 +46,8 @@ Debug
 *.swp
 *.swo
 *.swn
+.ycm_extra_conf.py
+.ycm_extra_conf.pyc
 
 # Emacs
 .clang_complete
@@ -56,8 +58,11 @@ __pycache__
 *.json
 *.d
 build
-dmlc-core
-mshadow
 data
 recommonmark
 bin
+deps
+
+# R
+*.Rcheck
+*.rds
