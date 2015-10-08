@@ -8,10 +8,8 @@
 
 #include <Rcpp.h>
 #include <mxnet/c_api.h>
-#include <dmlc/logging.h>
 #include <string>
 #include <algorithm>
-
 
 namespace mxnet {
 namespace R {

@@ -1,5 +1,6 @@
 require(mxnet)
 
+
 x = as.array(c(1,2,3))
 mat = mx.nd.array(x, mx.cpu(0))
 mat = mat + 1.0

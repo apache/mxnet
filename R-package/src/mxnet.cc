@@ -6,11 +6,13 @@
 #include <Rcpp.h>
 #include "./base.h"
 #include "./ndarray.h"
+#include "./symbol.h"
 
 RCPP_MODULE(mxnet) {
-  using namespace Rcpp;
   using namespace mxnet::R;
   Context::InitRcppModule();
   NDArray::InitRcppModule();
   NDArrayFunction::InitRcppModule();
+  Symbol::InitRcppModule();
+  SymbolFunction::InitRcppModule();
 }
