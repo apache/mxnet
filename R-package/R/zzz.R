@@ -4,6 +4,7 @@
   library.dynam("mxnet", pkgname, libname)
   loadModule("mxnet", TRUE)
   init.ndarray.methods()
+  init.symbol.methods()
 }
 
 .onUnload <- function(libpath) {

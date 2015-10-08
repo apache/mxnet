@@ -457,13 +457,12 @@ MXNET_DLL int MXSymbolGetInternals(SymbolHandle symbol,
  * \brief Get index-th outputs of the symbol.
  * \param symbol The symbol
  * \param index the Index of the output.
- * \param out The output symbol whose outputs are all the internals.
+ * \param out The output symbol whose outputs are the index-th symbol.
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolGetOutput(SymbolHandle symbol,
                                 mx_uint index,
                                 SymbolHandle *out);
-
 /*!
  * \brief List auxiliary states in the symbol.
  * \param symbol the symbol

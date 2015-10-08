@@ -122,14 +122,6 @@ inline void RowToColMajor(const mx_float *in_data,
   }
 }
 
-inline std::vector<mx_uint> Dim2Vec(const Rcpp::Dimension &rshape) {
-  std::vector<mx_uint> shape(rshape.size());
-  for (size_t i = 0; i < rshape.size(); ++i) {
-    shape[i] = rshape[i];
-  }
-  return shape;
-}
-
 // implementation of NDArray functions
 Rcpp::NumericVector NDArray::AsNumericVector() const {
   Rcpp::Dimension rshape = this->shape();
@@ -220,7 +212,8 @@ NDArray::RObjectType NDArray::Array(
 void NDArray::InitRcppModule() {
   using namespace Rcpp;  // NOLINT(*)
   class_<NDArray>("MXNDArray")
-      .method("as.array", &NDArray::AsNumericVector);
+      .method("as.array", &NDArray::AsNumericVector)
+      .method("dim", &NDArray::shape);  // TODO(KK) maybe better to expose as read only property?
   // don't call load/save directly, let R provides the completed file path first
   function("mx.nd.internal.load", &NDArray::Load);
   function("mx.nd.internal.save", &NDArray::Save);
@@ -251,16 +244,12 @@ NDArrayFunction::NDArrayFunction(FunctionHandle handle)
     std::ostringstream os;
     os << description << "\n\n"
        << "Parameters\n"
-       << "----------\n";
-    for (mx_uint i = 0; i < num_args; ++i) {
-      os << "    " << arg_names[i] << " : "  << arg_type_infos[i] << "\n"
-         << "        " << arg_descriptions[i] << "\n";
-    }
-    os << "Returns\n"
+       << "----------\n"
+       << MakeDocString(num_args, arg_names, arg_type_infos, arg_descriptions)
+       << "Returns\n"
        << "-------\n"
        << "out : NDArray\n"
        << "    The output result of the function";
-    // set the dostring
     this->docstring = os.str();
   }
   // initialize the function information

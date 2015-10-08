@@ -241,18 +241,51 @@ inline bool IsSimpleArg(SEXP args) {
 }
 
 /*!
+ * \brief Convert dot . style seperator into underscore _
+ *  So num_hidden -> num.hidden
+ *  This allows R user to use the dot style seperators.
+ * \param src the source key
+ * \retunr a converted key
+ */
+inline std::string FormatParamKey(std::string src) {
+  for (size_t i = 0; i < src.size(); ++i) {
+    if (src[i] == '.') src[i] = '_';
+  }
+  return src;
+}
+
+/*! \return wher list has names */
+inline bool HasName(const Rcpp::List& src) {
+  SEXP obj = src.names();
+  return obj != R_NilValue;
+}
+
+/*!
  * \brief Get names from list, return vector of empty strings if names do not present
  * \param src the source list
  * \retunr vector of string of same length as src.
  */
 inline std::vector<std::string> SafeGetListNames(const Rcpp::List& src) {
-  Rcpp::RObject obj = src.names();
-  if (obj == R_NilValue) {
+  if (!HasName(src)) {
     return std::vector<std::string>(src.size(), std::string());
   } else {
     return src.names();
   }
 }
+
+/*!
+ * \brief convert Rcpp's Dimension to shape vector
+ * \param rshape The dimension in R
+ * \return A vector representation in R.
+ */
+inline std::vector<mx_uint> Dim2Vec(const Rcpp::Dimension &rshape) {
+  std::vector<mx_uint> shape(rshape.size());
+  for (size_t i = 0; i < rshape.size(); ++i) {
+    shape[i] = rshape[i];
+  }
+  return shape;
+}
+
 }  // namespace R
 }  // namespace mxnet
 #endif  // MXNET_RCPP_BASE_H_

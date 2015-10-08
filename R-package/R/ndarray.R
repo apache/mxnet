@@ -1,3 +1,5 @@
+#' NDArray Interface of MXNet
+#'
 mx.nd.load <- function(filename) {
   filename <- path.expand(filename)
   mx.nd.internal.load(filename)
@@ -8,13 +10,10 @@ mx.nd.save <- function(ndarray, filename) {
   mx.nd.internal.save(ndarray, filename)
 }
 
-is.MXNDArray <- function(x)
+is.MXNDArray <- function(x) {
   inherits(x, "Rcpp_MXNDArray")
+}
 
-
-#' NDArray
-#'
-#' Additional NDArray related operations
 init.ndarray.methods <- function() {
   setMethod("+", signature(e1 = "Rcpp_MXNDArray", e2 = "numeric"), function(e1, e2) {
     mx.nd.internal.plus.scalar(e1, e2)

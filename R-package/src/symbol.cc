@@ -75,15 +75,119 @@ void Symbol::Compose(const Rcpp::List& kwargs, const std::string &name) {
   std::vector<const char*> c_keys = CKeys(keys);
   // string parameter values
   std::vector<SymbolHandle> handles(kwargs.size());
-  RLOG_INFO << "Compose=here\n";
   for (size_t i = 0; i < kwargs.size(); ++i) {
     handles[i] = Symbol::XPtr(kwargs[i])->handle_;
   }
-  RLOG_INFO << "Compose=aaz\n";
   MX_CALL(MXSymbolCompose(
       handle_, name.c_str(),
       static_cast<mx_uint>(handles.size()),
       dmlc::BeginPtr(c_keys), dmlc::BeginPtr(handles)));
+}
+
+std::vector<std::string> Symbol::ListArguments() const {
+  mx_uint size;
+  const char **ret;
+  MX_CALL(MXSymbolListArguments(handle_, &size, &ret));
+  return std::vector<std::string>(ret, ret + size);
+}
+
+std::vector<std::string> Symbol::ListAuxiliaryStates() const {
+  mx_uint size;
+  const char **ret;
+  MX_CALL(MXSymbolListAuxiliaryStates(handle_, &size, &ret));
+  return std::vector<std::string>(ret, ret + size);
+}
+
+std::vector<std::string> Symbol::ListOuputs() const {
+  mx_uint size;
+  const char **ret;
+  MX_CALL(MXSymbolListOutputs(handle_, &size, &ret));
+  return std::vector<std::string>(ret, ret + size);
+}
+
+void Symbol::Save(const std::string& fname) const {
+  MX_CALL(MXSymbolSaveToFile(handle_, fname.c_str()));
+}
+
+std::string Symbol::AsJSON() const {
+  const char *json;
+  MX_CALL(MXSymbolSaveToJSON(handle_, &json));
+  return json;
+}
+
+Symbol::RObjectType Symbol::GetInternals() const {
+  SymbolHandle out;
+  MX_CALL(MXSymbolGetInternals(handle_, &out));
+  return Symbol::RObject(out);
+}
+
+Symbol::RObjectType Symbol::GetOutput(mx_uint index) const {
+  SymbolHandle out;
+  MX_CALL(MXSymbolGetOutput(handle_, index, &out));
+  return Symbol::RObject(out);
+}
+
+// helper function to convert shape into Rcpp vector
+inline Rcpp::List BuildShapeData(mx_uint shape_size,
+                                 const mx_uint *shape_ndim,
+                                 const mx_uint **shape_data,
+                                 const std::vector<std::string> &names) {
+  Rcpp::List ret(shape_size);
+  for (mx_uint i = 0; i < shape_size; ++i) {
+    ret[i] = Rcpp::IntegerVector(shape_data[i], shape_data[i] + shape_ndim[i]);
+  }
+  ret.names() = names;
+  return ret;
+}
+
+SEXP Symbol::InferShape(const Rcpp::List& kwargs) const {
+  RCHECK(HasName(kwargs))
+      << "Need to pass parameters in key=value style.\n";
+  std::vector<std::string> keys = kwargs.names();
+  std::vector<mx_uint> arg_ind_ptr(1, 0);
+  std::vector<mx_uint> arg_shape_data;
+
+  for (size_t i = 0; i < kwargs.size(); ++i) {
+    RCHECK(keys[i].length() != 0)
+      << "Need to pass parameters in key=value style.\n";
+    // TODO(KK) check if kwargs is dimension.
+    // Rcpp::is<Dimension> do not pass compile
+    std::vector<mx_uint> dim = Dim2Vec(kwargs[i]);
+    arg_shape_data.insert(arg_shape_data.end(), dim.begin(), dim.end());
+    arg_ind_ptr.push_back(static_cast<mx_uint>(arg_shape_data.size()));
+  }
+  std::vector<const char*> c_keys = CKeys(keys);
+
+  mx_uint in_shape_size;
+  const mx_uint *in_shape_ndim;
+  const mx_uint **in_shape_data;
+  mx_uint out_shape_size;
+  const mx_uint *out_shape_ndim;
+  const mx_uint **out_shape_data;
+  mx_uint aux_shape_size;
+  const mx_uint *aux_shape_ndim;
+  const mx_uint **aux_shape_data;
+  int complete;
+
+  MX_CALL(MXSymbolInferShape(
+      handle_, static_cast<mx_uint>(kwargs.size()), dmlc::BeginPtr(c_keys),
+      dmlc::BeginPtr(arg_ind_ptr), dmlc::BeginPtr(arg_shape_data),
+      &in_shape_size, &in_shape_ndim, &in_shape_data,
+      &out_shape_size, &out_shape_ndim, &out_shape_data,
+      &aux_shape_size, &aux_shape_ndim, &aux_shape_data,
+      &complete));
+
+  if (complete != 0) {
+    return Rcpp::List::create(
+        Rcpp::Named("arg_shapes") = BuildShapeData(
+            in_shape_size, in_shape_ndim, in_shape_data, ListArguments()),
+        Rcpp::Named("out_shapes") = BuildShapeData(
+            out_shape_size, out_shape_ndim, out_shape_data, ListOuputs()),
+        Rcpp::Named("aux_shapes") = BuildShapeData(
+            aux_shape_size, aux_shape_ndim, aux_shape_data, ListAuxiliaryStates()));
+  } else {
+    return R_NilValue;
+  }
 }
 
 Symbol::RObjectType Symbol::Variable(const std::string& name) {
@@ -92,7 +196,25 @@ Symbol::RObjectType Symbol::Variable(const std::string& name) {
   return Symbol::RObject(out);
 }
 
-Symbol::RObjectType Symbol::Group(const Rcpp::List& kwargs) {
+Symbol::RObjectType Symbol::Load(const std::string& filename) {
+  SymbolHandle out;
+  MX_CALL(MXSymbolCreateFromFile(filename.c_str(), &out));
+  return Symbol::RObject(out);
+}
+
+Symbol::RObjectType Symbol::LoadJSON(const std::string& json) {
+  SymbolHandle out;
+  MX_CALL(MXSymbolCreateFromJSON(json.c_str(), &out));
+  return Symbol::RObject(out);
+}
+
+Symbol::RObjectType Symbol::Group(const Rcpp::List& symbols) {
+  // allow pass in single list
+  Rcpp::List kwargs = symbols;
+  if (symbols.size() == 1 && Rcpp::is<Rcpp::List>(symbols[0])) {
+    kwargs = symbols[0];
+  }
+
   std::vector<SymbolHandle> handles(kwargs.size());
   for (size_t i = 0; i < kwargs.size(); ++i) {
     RCHECK(Rcpp::is<Symbol>(kwargs[i]))
@@ -125,11 +247,10 @@ SymbolFunction::SymbolFunction(AtomicSymbolCreator handle)
   name_hint_ = name;
   std::transform(name_hint_.begin(), name_hint_.end(),
                  name_hint_.begin(), ::tolower);
-
   if (name[0] == '_') {
-    name_ = std::string("mx.symbol.fun.internal.") + (name + 1);
+    name_ = std::string("mx.varg.symbol.internal.") + (name + 1);
   } else {
-    name_ = std::string("mx.symbol.fun.") + name;
+    name_ = std::string("mx.varg.symbol.") + name;
   }
   std::ostringstream os;
   os << description << "\n\n"
@@ -167,10 +288,11 @@ SEXP SymbolFunction::operator() (SEXP* args) {
     } else {
       RCHECK(keys[i].length() != 0)
           << "Non Symbol parameters is only accepted via key=value style.";
-      str_keys.push_back(keys[i]);
+      str_keys.push_back(FormatParamKey(keys[i]));
       str_vals.push_back(AsPyString(kwargs[i]));
     }
   }
+
   SymbolHandle shandle;
   std::vector<const char*> c_str_keys = CKeys(str_keys);
   std::vector<const char*> c_str_vals = CKeys(str_vals);
@@ -195,12 +317,37 @@ void Symbol::InitRcppModule() {
       .method("debug.str", &Symbol::DebugStr,
               "Return the debug string of internals of symbol")
       .method("apply", &Symbol::Apply,
-              "Return a new Symbol by applying current symbols into input");
+              "Return a new Symbol by applying current symbols into input")
+      .method("as.json", &Symbol::AsJSON,
+              "Return a json string representation of symbol")
+      .method("save", &Symbol::Save,
+              "Save symbol to file")
+      .method("arguments", &Symbol::ListArguments,
+              "List the arguments names of the symbol")
+      .method("outputs", &Symbol::ListOuputs,
+              "List the outputs names of the symbol")
+      .method("auxiliary.states", &Symbol::ListAuxiliaryStates,
+              "List the auxiliary state names of the symbol")
+      .method("get.internals", &Symbol::GetInternals,
+              "Get a symbol that contains all the internals")
+      .method("get.output", &Symbol::GetOutput,
+              "Get index-th output symbol of current one")
+      .method("infer.shape", &Symbol::InferShape,
+              "Inference the shape information given unknown ones");
+
   function("mx.symbol.Variable",
            &Symbol::Variable,
            List::create(_["name"]),
            "Create a symbolic variable with specified name.");
-  function("mx.symbol.fun.Group",
+  function("mx.symbol.load",
+           &Symbol::Load,
+           List::create(_["file.name"]),
+           "Load a symbol from file.");
+  function("mx.symbol.load.json",
+           &Symbol::LoadJSON,
+           List::create(_["json.str"]),
+           "Load a symbol from json string.");
+  function("mx.varg.symbol.Group",
            &Symbol::Group,
            List::create(_["slist"]),
            "Create a symbol that groups symbols together.");

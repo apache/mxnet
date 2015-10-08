@@ -10,6 +10,7 @@
 #include <mxnet/c_api.h>
 #include <string>
 #include <algorithm>
+#include <vector>
 
 namespace mxnet {
 namespace R {
@@ -34,6 +35,38 @@ class Symbol {
    * \return the debug string.
    */
   std::string DebugStr() const;
+  /*! \return the arguments in the symbol */
+  std::vector<std::string> ListArguments() const;
+  /*! \return the auxiliary states symbol */
+  std::vector<std::string> ListAuxiliaryStates() const;
+  /*! \return the outputs in the symbol */
+  std::vector<std::string> ListOuputs() const;
+
+  /*!
+   * \brief Save the symbol to file
+   * \param fname the file name we need to save to
+   */
+  void Save(const std::string& fname) const;
+  /*!
+   * \brief save the symbol to json string
+   * \return a JSON string representation of symbol.
+   */
+  std::string AsJSON() const;
+  /*!
+   * \brief Get a new grouped symbol whose output contains all the
+   *     internal outputs of this symbol.
+   * \return The internal of the symbol.
+   */
+  RObjectType GetInternals() const;
+  /*!
+   * \brief Get index-th outputs of the symbol.
+   * \param symbol The symbol
+   * \param index the Index of the output.
+   * \param out The output symbol whose outputs are the index-th symbol.
+   */
+  RObjectType GetOutput(mx_uint index) const;
+  /*! \brief Infer the shapes of arguments, outputs, and auxiliary states */
+  SEXP InferShape(const Rcpp::List& kwargs) const;
   //
   //' @title
   //' mx.symbol.Variable
@@ -44,6 +77,26 @@ class Symbol {
   //’ @return The created variable symbol.
   //
   static RObjectType Variable(const std::string& name);
+  //
+  //' @title
+  //' mx.symbol.load
+  //'
+  //’ Load a symbol variable from filename.
+  //’
+  //’ @param filename string, the path to the symbol file.
+  //’ @return The loaded corresponding symbol.
+  //
+  static RObjectType Load(const std::string& filename);
+  //
+  //' @title
+  //' mx.symbol.load.json
+  //'
+  //’ Load a symbol variable from json string
+  //’
+  //’ @param json string, json string of symbol.
+  //’ @return The loaded corresponding symbol.
+  //
+  static RObjectType LoadJSON(const std::string& json);
   //
   //' @title
   //' Create a symbol that groups symbols together.
