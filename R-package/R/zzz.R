@@ -1,4 +1,3 @@
-require(methods)
 
 .onLoad <- function(libname, pkgname) {
   library.dynam("libmxnet", pkgname, libname, local=FALSE)
