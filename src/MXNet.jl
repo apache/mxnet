@@ -7,7 +7,9 @@ module mx
 
 include("init.jl")
 include("context.jl")
+
 include("ndarray.jl")
+include("name.jl")
 include("symbol.jl")
 
 end # mx
