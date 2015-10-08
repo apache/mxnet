@@ -146,7 +146,7 @@ class SliceChannelProp : public OperatorProperty {
       << dshape[1] << " / " << param_.num_outputs;
     dshape[1] /= param_.num_outputs;
     out_shape->clear();
-    for (int i = 1; i < param_.num_outputs; ++i) {
+    for (int i = 0; i < param_.num_outputs; ++i) {
       out_shape->push_back(dshape);
     }
     return true;

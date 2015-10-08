@@ -37,6 +37,8 @@ def test_MNISTIter():
     assert(sum(label_0 - label_1) == 0)
 
 def test_Cifar10Rec():
+    # skip-this test for saving time
+    return
     get_data.GetCifar10()
     dataiter = mx.io.ImageRecordIter(
             path_imgrec="data/cifar/train.rec",
@@ -85,6 +87,6 @@ def test_NDArrayIter():
             assert(labelcount[i] == 100)
 
 if __name__ == "__main__":
-    #test_NDArrayIter()
-    #test_MNISTIter()
+    test_NDArrayIter()
+    test_MNISTIter()
     test_Cifar10Rec()
