@@ -78,7 +78,7 @@ inline void ColToRowMajor(InputIter begin,
       break;
     }
     case 2: {
-      ConvertLayout(begin, shape, stride, 3, size, out_data);
+      ConvertLayout(begin, shape, stride, 2, size, out_data);
       break;
     }
     case 3: {
