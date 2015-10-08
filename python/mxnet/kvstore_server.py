@@ -30,8 +30,8 @@ class KVStoreServer(object):
                     raise
                 self.kvstore.set_optimizer(optimizer)
             else:
-                print "server %d, unknown command (%d, %s)" % (
-                    self.kvstore.get_rank(), cmd_id, cmd_body)
+                print ("server %d, unknown command (%d, %s)" % (
+                    self.kvstore.get_rank(), cmd_id, cmd_body))
         return server_controller
 
     def run(self):

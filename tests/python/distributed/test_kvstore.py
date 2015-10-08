@@ -5,10 +5,6 @@
 # $ ln -s ../../../dmlc-core/tracker/dmlc_local.py .
 # $ ./dmlc_local.py -n 4 -s 4 ./test_kvstore.py
 
-def updater(key, recved, stored):
-    print "key: %d" & key
-    stored += recved * 2
-
 import mxnet as mx
 import numpy as np
 import time
