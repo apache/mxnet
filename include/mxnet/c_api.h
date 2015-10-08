@@ -888,12 +888,12 @@ MXNET_DLL int MXKVStoreRunServer(KVStoreHandle handle,
  * \return Send a command to all server nodes
  *
  * \param handle handle to the KVStore
- * \param head the head of the command
- * \param body the body of the command
+ * \param cmd_id the head of the command
+ * \param cmd_body the body of the command
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
-                                             int head,
-                                             const char* body);
+                                             int cmd_id,
+                                             const char* cmd_body);
 
 #endif  // MXNET_C_API_H_

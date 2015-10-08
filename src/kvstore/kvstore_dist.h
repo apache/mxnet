@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 #include "./kvstore_local.h"
-#include "./mxnet_node.h"
+#include "./mxnet_ps_node.h"
 #include "mxnet/engine.h"
 #include "ps.h"
 #include "base/range.h"
@@ -41,10 +41,7 @@ class KVStoreDist : public KVStoreLocal {
     if (IsWorkerNode()) {
       if (get_rank() == 0) {
         // stop the executor at servers
-        ps::Task task;
-        task.set_cmd(-1);
-        auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
-        node->Wait(node->Submit(task, ps::kServerGroup));
+        SendCommandToServers(CommandID::kStop, "");
       }
       ps::StopSystem();
     }
@@ -152,10 +149,8 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   void Barrier() override {
-    KVStoreCommand cmd;
-    cmd.set_barrier(barrier_count_++);
     ps::Task task;
-    task.set_cmd(cmd.cmd);
+    task.set_cmd(CommandID::SetBarrier(barrier_count_++));
     auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
     node->Wait(node->Submit(task, ps::NodeInfo::SchedulerID()));
   }
@@ -179,11 +174,11 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void SendCommandToServers(int head, const std::string& body) override {
-    CHECK_GE(head, 0) << "negative head is preserved for system usage";
+  void SendCommandToServers(int cmd_id,
+                            const std::string& cmd_body) override {
     ps::Task task;
-    task.set_cmd(head);
-    task.set_msg(body);
+    task.set_cmd(cmd_id);
+    task.set_msg(cmd_body);
     auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
     node->Wait(node->Submit(task, ps::kServerGroup));
   }
@@ -315,7 +310,7 @@ class KVStoreDist : public KVStoreLocal {
       kvstore_ = kvstore;
     }
 
-    inline void Start(bool push, int timestamp, int cmd, void* msg) { }
+    inline void Start(bool push, int timestamp, int cmd_id, void* msg) { }
     inline void Finish() { }
     inline void Load(dmlc::Stream *fi) { }
     inline void Save(dmlc::Stream *fo) const { }

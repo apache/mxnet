@@ -147,7 +147,7 @@ class KVStore {
    */
   static bool IsWorkerNode() {
     char* role_str = getenv("DMLC_ROLE");
-    return (role_str == NULL) || (!strcmp(role_str, "worker"));
+    return (role_str == nullptr) || (!strcmp(role_str, "worker"));
   }
 
   /**
@@ -157,7 +157,7 @@ class KVStore {
    */
   static bool IsServerNode() {
     char* role_str = getenv("DMLC_ROLE");
-    return (role_str != NULL) && (!strcmp(role_str, "server"));
+    return (role_str != nullptr) && (!strcmp(role_str, "server"));
   }
 
 
@@ -168,7 +168,7 @@ class KVStore {
    */
   static bool IsSchedulerNode() {
     char* role_str = getenv("DMLC_ROLE");
-    return (role_str != NULL) && (!strcmp(role_str, "scheduler"));
+    return (role_str != nullptr) && (!strcmp(role_str, "scheduler"));
   }
 
   /*!
@@ -239,10 +239,10 @@ class KVStore {
    *
    * This function returns after the command has been executed in all server nodes
    *
-   * \param head the head of the command
-   * \param body the body of the command
+   * \param cmd_id the head of the command
+   * \param cmd_body the body of the command
    */
-  virtual void SendCommandToServers(int head, const std::string& body) { }
+  virtual void SendCommandToServers(int cmd_id, const std::string& cmd_body) { }
 
   /**
    * \brief the prototype of a server controller

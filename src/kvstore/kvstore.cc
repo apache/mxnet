@@ -10,7 +10,7 @@
 #include "./kvstore_device.h"
 #if MXNET_USE_DIST_KVSTORE
 #include "./kvstore_dist.h"
-#include "./mxnet_node.h"
+#include "./mxnet_ps_node.h"
 #endif  // MXNET_USE_DIST_KVSTORE
 
 namespace mxnet {

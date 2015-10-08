@@ -249,6 +249,8 @@ def _train_multi_device(symbol, ctx, input_shape,
     def kv_updater(index, grad, weight):
         """Internal updater on KVstore, used when update_on_kvstore=True."""
         optimizer.update(index, weight, grad, opt_state_blocks[index])
+
+    # pylint: disable=protected-access
     if update_on_kvstore:
         kv._set_updater(kv_updater)
 
