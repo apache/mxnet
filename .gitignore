@@ -62,3 +62,7 @@ data
 recommonmark
 bin
 deps
+
+# R
+*.Rcheck
+*.rds
