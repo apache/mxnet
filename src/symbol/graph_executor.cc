@@ -456,8 +456,6 @@ void GraphExecutor::InitDataEntryMemory() {
 }
 
 void GraphExecutor::InitResources() {
-  // maximum amount of color allowed in coloring algorithm
-  const uint32_t kMaxNumColor = 8;
   // prepare for temp space allocation
   std::vector<uint32_t> req_temp_cnt(topo_order_.size(), 0);
   for (size_t i = 0; i < topo_order_.size(); ++i) {
@@ -471,9 +469,8 @@ void GraphExecutor::InitResources() {
     CHECK_LE(cnt, 1) << "Node can only have one temp space request";
     req_temp_cnt[nid] = cnt;
   }
-  // restrict allocation to maximum number of parallelism per device
-  uint32_t num_color = std::min(static_cast<uint32_t>(common::GetNumThreadPerGPU()),
-                                kMaxNumColor);
+
+  uint32_t num_color = static_cast<uint32_t>(common::GetExecNumMatchColor());
   std::vector<uint32_t> req_temp_color;
   // use graph coloring to find node that won't run in parallel
   num_color = graph::ColorNodeGroup(graph_, topo_order_, req_temp_cnt,

@@ -342,21 +342,13 @@ class ConvolutionProp : public OperatorProperty {
     return {out_grad[kOut], in_data[kData], in_data[kWeight]};
   }
 
-  std::vector<std::pair<int, void*> > BackwardInplaceOption(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data,
-    const std::vector<void*> &in_grad) const override {
-    return {{in_data[kData], in_grad[kData]}};
-  }
-
-  virtual std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const {
+  std::vector<ResourceRequest> ForwardResource(
+      const std::vector<TShape> &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
-  virtual std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const {
+  std::vector<ResourceRequest> BackwardResource(
+      const std::vector<TShape> &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 

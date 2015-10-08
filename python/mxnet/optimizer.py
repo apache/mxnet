@@ -1,4 +1,4 @@
-# pylint: disable=fixme, invalid-name, unused-argument, too-many-arguments
+# pylint: disable=fixme, invalid-name, unused-argument, too-many-arguments, no-name-in-module
 """Common Optimization algorithms with regularizations."""
 from .ndarray import NDArray, zeros, clip
 
@@ -97,7 +97,8 @@ class SGD(Optimizer):
             if self.clip_gradient == None:
                 mom[:] += -lr * (grad * self.rescale_grad + self.wd * weight)
             else:
-                mom[:] += -lr * (clip(grad * self.rescale_grad, self.clip_gradient) +
+                mom[:] += -lr * (clip(grad * self.rescale_grad, -self.clip_gradient,
+                                      self.clip_gradient) +
                                  self.wd * weight)
             weight[:] += mom
         else:

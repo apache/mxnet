@@ -15,6 +15,7 @@
 #include <vector>
 #include <utility>
 #include "./operator_common.h"
+#include "./channel_op_common.h"
 
 namespace mxnet {
 namespace op {
@@ -66,32 +67,7 @@ class ConcatOp : public Operator {
       }
       out = out_data[kOut].get<xpu, 4, real_t>(s);
     }
-    switch (size_) {
-      case 2:
-        Assign(out, req[kOut],
-               concat<1>(data[kData0], data[kData1]));
-        break;
-      case 3:
-        Assign(out, req[kOut],
-               concat<1>(data[kData0],
-                         concat<1>(data[kData1], data[kData2])));
-        break;
-      case 4:
-        Assign(out, req[kOut],
-               concat<1>(data[kData0],
-                         concat<1>(data[kData1],
-                                   concat<1>(data[kData2], data[kData3]))));
-        break;
-      case 5:
-        Assign(out, req[kOut],
-               concat<1>(data[kData0],
-                         concat<1>(data[kData1],
-                                   concat<1>(data[kData2],
-                                             concat<1>(data[kData3], data[kData4])))));
-        break;
-      default:
-        LOG(FATAL) << "Incorrect concat size_: " << size_;
-    }
+    Concatenate(data, &out);
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -127,32 +103,7 @@ class ConcatOp : public Operator {
       }
       grad = out_grad[kOut].get<xpu, 4, real_t>(s);
     }
-    switch (size_) {
-      case 2: {
-        concat<1>(grad_in[kData0], grad_in[kData1]) = grad;
-        break;
-      }
-      case 3: {
-        concat<1>(grad_in[kData0],
-                  concat<1>(grad_in[kData1], grad_in[kData2])) = grad;
-        break;
-      }
-      case 4: {
-        concat<1>(grad_in[kData0],
-                  concat<1>(grad_in[kData1],
-                            concat<1>(grad_in[kData2], grad_in[kData3]))) = grad;
-        break;
-      }
-      case 5: {
-        concat<1>(grad_in[kData0],
-                  concat<1>(grad_in[kData1],
-                            concat<1>(grad_in[kData2],
-                                      concat<1>(grad_in[kData3], grad_in[kData4])))) = grad;
-        break;
-      }
-      default:
-        LOG(FATAL) << "Incorrect concat size_: " << size_;
-    }
+    Split(grad, &grad_in);
   }
 
  private:
