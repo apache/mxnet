@@ -10,4 +10,5 @@ License: Apache-2.0
 URL: https://github.com/dmlc/mxnet
 BugReports: https://github.com/dmlc/mxnet/issues
 Imports: Rcpp (>= 0.11.1)
+Suggests: testthat
 LinkingTo: Rcpp
