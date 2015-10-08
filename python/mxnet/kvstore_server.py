@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 import ctypes
 import sys
+import pickle
 from .base import _LIB, check_call
 from .kvstore import create
 
@@ -18,15 +19,19 @@ class KVStoreServer(object):
         self.kvstore = kvstore
         self.handle = kvstore.handle
 
-    def controller(self):
+    def _controller(self):
         """return the server controller"""
-        def server_controller(head, body):
+        def server_controller(cmd_id, cmd_body):
             """server controler"""
-            if head == 0:
-                self.kvstore.set_optimizer(body)
+            if cmd_id == 0:
+                try:
+                    optimizer = pickle.loads(cmd_body)
+                except:
+                    raise
+                self.kvstore.set_optimizer(optimizer)
             else:
                 print "server %d, unknown command (%d, %s)" % (
-                    self.kvstore.get_rank(), head, body)
+                    self.kvstore.get_rank(), cmd_id, cmd_body)
         return server_controller
 
     def run(self):
@@ -34,11 +39,11 @@ class KVStoreServer(object):
 
 
         >>> while receive(x):
-        >>>     if is_command x: controller(x)
-        >>>     else if is_key_value x: updater(x)
+        ...     if is_command x: controller(x)
+        ...     else if is_key_value x: updater(x)
         """
         _ctrl_proto = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.c_char_p)
-        check_call(_LIB.MXKVStoreRunServer(self.handle, _ctrl_proto(self.controller())))
+        check_call(_LIB.MXKVStoreRunServer(self.handle, _ctrl_proto(self._controller())))
 
 
 def _init_kvstore_server_module():

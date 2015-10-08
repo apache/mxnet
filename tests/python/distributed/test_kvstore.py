@@ -23,21 +23,16 @@ rate = 2
 shape = (2, 2)
 big_shape = (1200, 1200)        # big than BIGARRAY_BOUND
 
-# init
+
 kv = mx.kv.create('dist')
+# init kv
+kv.init(keys, [mx.nd.ones(shape)] * len(keys))
+kv.init(99, mx.nd.ones(big_shape))
+# init updater on servers
+kv.set_optimizer(mx.optimizer.create('test', rate))
+
 my_rank = kv.get_rank()
-nworker = kv.get_group_size()
-
-if my_rank == 0:
-    # init key, value on servers
-    kv.init(keys, [mx.nd.ones(shape)] * len(keys))
-    kv.init(99, mx.nd.ones(big_shape))
-    # init updater on servers
-    opt = mx.optimizer.create('test', rate)
-    kv.set_optimizer(opt)
-
-kv.barrier()
-# print 'init worker %d' % my_rank
+nworker = kv.get_num_workers()
 
 def test_sync_push_pull():
     nrepeat = 2
@@ -45,7 +40,7 @@ def test_sync_push_pull():
         kv.push(3, mx.nd.ones(shape)*(my_rank+1))
         kv.push(99, mx.nd.ones(big_shape)*(my_rank+1))
 
-    kv.wait([3, 99])
+    kv._wait([3, 99])
     num = (nworker + 1 ) * nworker * rate / 2 * nrepeat + 1
     val = mx.nd.zeros(shape)
     kv.pull(3, out = val)
@@ -55,8 +50,6 @@ def test_sync_push_pull():
     kv.pull(99, out = val2)
     check_diff_to_scalar(val2, num)
     # print val.asnumpy()
-
-# kv.send_command_to_servers(1, 'helo')
 
 # TODO async test, slice,
 if __name__ == "__main__":
