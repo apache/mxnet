@@ -157,7 +157,8 @@ void NDArray::Save(const Rcpp::RObject &sxptr,
     MX_CALL(MXNDArraySave(filename.c_str(), num_args,
                           dmlc::BeginPtr(handles),
                           dmlc::BeginPtr(keys)));
-  } else if (TYPEOF(sxptr) == EXTPTRSXP) { // TODO this line is wrong??
+  } else if (TYPEOF(sxptr) == EXTPTRSXP) {
+    // TODO(KK) this line is wrong??
     MX_CALL(MXNDArraySave(filename.c_str(), 1,
                           &(NDArray::XPtr(sxptr)->handle_), nullptr));
   } else {
