@@ -1,5 +1,7 @@
 #!/bin/bash
 
+python --version
+
 echo ${TASK}
 echo ${TRAVIS_OS_NAME}
 echo ${CXX}
