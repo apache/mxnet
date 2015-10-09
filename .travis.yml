@@ -51,7 +51,6 @@ addons:
 
 
 before_install:
-  - export NVCC_PREFIX=${HOME}
   - export TRAVIS=dmlc-core/scripts/travis
   - export PYTHONPATH=${PYTHONPATH}:${PWD}/python
   - source ${TRAVIS}/travis_setup_env.sh

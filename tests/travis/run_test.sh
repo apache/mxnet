@@ -19,13 +19,26 @@ fi
 
 if [ ${TASK} == "doc" ]; then
     make doc 2>log.txt
-    if [ $? -ne 0 ]; exit $?; fi
     (cat log.txt|grep warning) && exit -1
+    exit 0
+fi
+
+# more setups
+
+# prereqs for things that need make
+cp make/config.mk config.mk
+
+if [ ${TASK} == "build" ]; then
+    if [ ${TRAVIS_OS_NAME} == "linux" ]; then
+        echo "USE_CUDA=1" >> config.mk
+        export NVCC_PREFIX=${HOME}
+        ./dmlc-core/scripts/setup_nvcc.sh $NVCC_PREFIX
+    fi
+    make all
+    exit $?
 fi
 
 exit 0
-# prereqs for things that need make
-cp make/config.mk config.mk
 
 export NOSE3=nosetests3
 export PYTHON3=python3
@@ -43,16 +56,6 @@ else
     export CXX="g++-4.8"
 fi
 
-echo "USE_S3=0" >> config.mk
-
-if [ ${TASK} == "build" ]; then
-    if [ ${TRAVIS_OS_NAME} != "osx" ]; then
-        echo "USE_CUDA=1" >> config.mk
-        echo "USE_THREADED_ENGINE=1" >> config.mk
-        ./dmlc-core/scripts/setup_nvcc.sh $NVCC_PREFIX
-        make all || exit -1
-    fi
-fi
 
 if [ ${TASK} == "python" ]; then
     echo "USE_CUDA=0" >> config.mk
