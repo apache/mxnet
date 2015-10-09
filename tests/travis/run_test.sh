@@ -59,18 +59,23 @@ fi
 
 if [ ${TASK} == "python_test" ]; then
     make all || exit -1
+    # use cached dir for storing data
     rm -rf tests/python/data
     mkdir -p ${CACHE_PREFIX}/data
     ln -s ${CACHE_PREFIX}/data tests/python/data
+
     python --version
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
         alias nosetests='python -m nose'
     fi
+    python python/setup.py develop --user
     nosetests tests/python/unittest || exit -1
     nosetests tests/python/train || exit -1
 
     if [ ${TRAVIS_OS_NAME} == "linux" ]; then
         python3 --version
+        rm -rf python/mxnet/mxnet.egg-info
+        python3 python/setup.py develop --user
         nosetests3 tests/python/unittest || exit -1
         nosetests3 tests/python/train || exit -1
     fi
