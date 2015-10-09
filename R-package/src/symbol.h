@@ -20,10 +20,8 @@ class SymbolFunction;
 // TODO(KK): switch exposed function into roxygen style
 
 /*! \brief The Rcpp Symbol class of MXNet */
-class Symbol {
+class Symbol : public MXNetClassBase<Symbol, SymbolHandle, MXSymbolFree> {
  public:
-  /*! \brief The type of Symbol in R's side */
-  typedef Rcpp::RObject RObjectType;
   /*!
    * \brief Apply the symbol as function on kwargs
    * \param kwargs keyword arguments to the data
@@ -111,9 +109,13 @@ class Symbol {
  private:
   // friend with SymbolFunction
   friend class SymbolFunction;
-  // internal constructor
-  explicit Symbol(SymbolHandle handle)
-      : handle_(handle) {}
+  friend class MXNetClassBase<Symbol, SymbolHandle, MXSymbolFree>;
+  // enable trivial copy constructors etc.
+  Symbol() {}
+  // constructor
+  explicit Symbol(SymbolHandle handle) {
+    this->handle_ = handle;
+  }
   /*!
    * \brief Return a clone of Symbol
    * \param obj The source to be cloned from
@@ -126,25 +128,6 @@ class Symbol {
    * \param name name of the symbol.
    */
   void Compose(const Rcpp::List& kwargs, const std::string &name);
-  /*!
-   * \brief R side finalizer, will free the handle.
-   * \param sym the symbol object
-   */
-  static void Finalizer(Symbol *sym);
-  /*!
-   * \brief create a R object that correspond to the Symbol.
-   * \param handle the SymbolHandle needed for output.
-   */
-  inline static RObjectType RObject(SymbolHandle handle);
-  /*!
-   * \brief return extenral pointer representation of Symbol from its R object
-   * \param obj The R NDArray object
-   * \return The external pointer to the object
-   */
-  inline static Symbol* XPtr(const Rcpp::RObject& obj);
-
-  /*! \brief handle to the symbol */
-  SymbolHandle handle_;
 };
 
 /*! \brief The Symbol functions to be invoked */

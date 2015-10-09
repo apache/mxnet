@@ -212,6 +212,7 @@ NDArray::RObjectType NDArray::Array(
 void NDArray::InitRcppModule() {
   using namespace Rcpp;  // NOLINT(*)
   class_<NDArray>("MXNDArray")
+      .finalizer(&NDArray::Finalizer)
       .method("as.array", &NDArray::AsNumericVector)
       .method("dim", &NDArray::shape);  // TODO(KK) maybe better to expose as read only property?
   // don't call load/save directly, let R provides the completed file path first

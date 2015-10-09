@@ -18,25 +18,10 @@ NameManager* NameManager::Get() {
   return &inst;
 }
 
-inline Symbol::RObjectType Symbol::RObject(SymbolHandle handle) {
-  Symbol* p = new Symbol(handle);
-  // TODO(KK) can we avoid use internal::make_new_object?
-  return Rcpp::internal::make_new_object(p);
-}
-
 inline Symbol::RObjectType Symbol::Clone() const {
   SymbolHandle ohandle;
   MX_CALL(MXSymbolCopy(handle_, &ohandle));
   return Symbol::RObject(ohandle);
-}
-
-inline Symbol* Symbol::XPtr(const Rcpp::RObject& obj) {
-  Symbol* ptr = Rcpp::as<Symbol*>(obj);
-  return ptr;
-}
-
-void Symbol::Finalizer(Symbol *sym) {
-  MX_CALL(MXSymbolFree(sym->handle_));
 }
 
 Symbol::RObjectType Symbol::Apply(const Rcpp::List& kwargs) const {

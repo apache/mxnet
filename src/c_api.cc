@@ -762,6 +762,12 @@ int MXExecutorPrint(ExecutorHandle handle, const char **out_str) {
   API_END();
 }
 
+int MXExecutorFree(ExecutorHandle handle) {
+  API_BEGIN();
+  delete static_cast<Executor*>(handle);
+  API_END();
+}
+
 int MXExecutorForward(ExecutorHandle handle, int is_train) {
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
