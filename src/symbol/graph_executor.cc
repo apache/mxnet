@@ -235,8 +235,8 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
 }
 
 GraphExecutor::~GraphExecutor() {
-  // need to destruct after all previously issued operations are finished.
-  Engine::Get()->WaitForAll();
+  // TODO(Yutian): Check WaitForAll Halt
+  // Engine::Get()->WaitForAll();
 }
 
 void GraphExecutor::InitGraph(const Symbol &symbol, Context ctx, bool need_backward) {

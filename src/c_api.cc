@@ -764,7 +764,8 @@ int MXExecutorPrint(ExecutorHandle handle, const char **out_str) {
 
 int MXExecutorFree(ExecutorHandle handle) {
   API_BEGIN();
-  delete static_cast<Executor*>(handle);
+  // TODO(yutian): eanble this, for bugfix
+  //delete static_cast<Executor*>(handle);
   API_END();
 }
 
