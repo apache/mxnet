@@ -68,14 +68,14 @@ if [ ${TASK} == "python_test" ]; then
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
         alias nosetests='python -m nose'
     fi
-    python python/setup.py develop --user
+    cd python && python setup.py develop --user && cd .. || exit -1
     nosetests tests/python/unittest || exit -1
     nosetests tests/python/train || exit -1
 
     if [ ${TRAVIS_OS_NAME} == "linux" ]; then
         python3 --version
-        rm -rf python/mxnet/mxnet.egg-info
-        python3 python/setup.py develop --user
+        rm -rf python/mxnet.egg-info
+        cd python && python3 setup.py develop --user && cd .. || exit -1
         nosetests3 tests/python/unittest || exit -1
         nosetests3 tests/python/train || exit -1
     fi

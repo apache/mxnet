@@ -111,9 +111,11 @@ build/%_gpu.o: src/%.cu $(LIB_DEP)
 	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $<
 
 lib/libmxnet.a: $(ALL_DEP)
+	@mkdir -p $(@D)
 	ar crv $@ $(filter %.o, $?)
 
 lib/libmxnet.so: $(ALL_DEP)
+	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
 
 # ps-lite
@@ -127,6 +129,7 @@ $(DMLC_CORE)/libdmlc.a:
 bin/im2rec: tools/im2rec.cc $(DMLC_CORE)/libdmlc.a
 
 $(BIN) :
+	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
 include tests/cpp/unittest.mk
@@ -145,7 +148,7 @@ doxygen:
 	doxygen doc/Doxyfile
 
 clean:
-	$(RM) -r build lib/lib* *~ */*~ */*/*~ */*/*/*~
+	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 
 clean_all: clean
 	cd $(DMLC_CORE); make clean; cd -

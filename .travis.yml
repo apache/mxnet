@@ -56,7 +56,7 @@ before_install:
 
 install:
   - if [ ${TRAVIS_OS_NAME} == "osx" ]; then tests/travis/setup_osx.sh; fi
-  - if [ ${TASK} == "lint" ]; then pip install cpplint pylint --user `whoami`; fi
+  - if [ ${TASK} == "lint" ]; then pip install cpplint pylint graphviz --user `whoami`; fi
 
 script:
   - tests/travis/run_test.sh
