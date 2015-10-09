@@ -9,6 +9,16 @@ mx.nd.save <- function(ndarray, filename) {
   mx.nd.internal.save(ndarray, filename)
 }
 
+mx.nd.zeros <- function(shape, ctx) {
+  ret <- mx.nd.internal.empty(shape, ctx)
+  return (mx.nd.internal.set.value(0.0, out=ret))
+}
+
+mx.nd.ones <- function(shape, ctx) {
+  ret <- mx.nd.internal.empty(shape, ctx)
+  return (mx.nd.internal.set.value(1.0, out=ret))
+}
+
 is.MXNDArray <- function(x) {
   inherits(x, "Rcpp_MXNDArray")
 }

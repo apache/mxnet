@@ -191,6 +191,26 @@ NDArray::RObjectType NDArray::Empty(
   return NDArray::RObject(handle);
 }
 
+NDArray::RObjectType NDArray::Clone() const {
+  std::vector<mx_uint> shape = Dim2Vec(this->shape());
+  NDArrayHandle handle;
+  MX_CALL(MXNDArrayCreate(dmlc::BeginPtr(shape),
+                          static_cast<mx_uint>(shape.size()),
+                          ctx_.dev_type, ctx_.dev_id, true, &handle));
+  RObjectType ret = NDArray::RObject(handle);
+  CopyFromTo(*this, NDArray::XPtr(ret));
+  return ret;
+}
+
+void NDArray::CopyFromTo(const NDArray& from, NDArray* to) {
+  static FunctionHandle copy_handle = NDArrayFunction::FindHandle("_copyto");
+  NDArrayHandle from_handle = from.handle_;
+  NDArrayHandle to_handle = to->handle_;
+  RCHECK(from_handle != to_handle)
+      << "Attempt to copy NDArray to itself";
+  MX_CALL(MXFuncInvoke(copy_handle, &from_handle, nullptr, &to_handle));
+}
+
 NDArray::RObjectType NDArray::Array(
     const Rcpp::RObject& src,
     const Context::RObjectType& ctx) {
@@ -217,6 +237,7 @@ void NDArray::InitRcppModule() {
   // don't call load/save directly, let R provides the completed file path first
   function("mx.nd.internal.load", &NDArray::Load);
   function("mx.nd.internal.save", &NDArray::Save);
+  function("mx.nd.internal.empty", &NDArray::Empty);
   function("mx.nd.array", &NDArray::Array);
 }
 
@@ -346,6 +367,25 @@ SEXP NDArrayFunction::operator() (SEXP* args) {
   END_RCPP;
 }
 
+FunctionHandle NDArrayFunction::FindHandle(const std::string& hname) {
+  mx_uint out_size;
+  FunctionHandle *arr;
+  MX_CALL(MXListFunctions(&out_size, &arr));
+  for (int i = 0; i < out_size; ++i) {
+    FunctionHandle handle = arr[i];
+    const char *name;
+    const char *description;
+    mx_uint num_args;
+    const char **arg_names;
+    const char **arg_type_infos;
+    const char **arg_descriptions;
+    MX_CALL(MXFuncGetInfo(handle, &name, &description, &num_args,
+                          &arg_names, &arg_type_infos, &arg_descriptions));
+    if (name == hname) return handle;
+  }
+  RLOG_FATAL << "FindHandle: cannot find function " << hname;
+  return nullptr;
+}
 
 void NDArrayFunction::InitRcppModule() {
   Rcpp::Module* scope = ::getCurrentScope();
