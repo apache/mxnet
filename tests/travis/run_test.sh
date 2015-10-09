@@ -54,14 +54,14 @@ if [ ${TASK} == "python_test" ]; then
 
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
         python -m nose tests/python/unittest || exit -1
-        python -m nose tests/python/train || exit -1
+        # python -m nose tests/python/train || exit -1
         python3 -m nose tests/python/unittest || exit -1
-        # python3 -m nose tests/python/train || exit -1
+        python3 -m nose tests/python/train || exit -1
     else
         nosetests tests/python/unittest || exit -1
-        nosetests tests/python/train || exit -1
+        # nosetests tests/python/train || exit -1
         nosetests3 tests/python/unittest || exit -1
-        # nosetests3 tests/python/train || exit -1
+        nosetests3 tests/python/train || exit -1
     fi
     exit 0
 fi
