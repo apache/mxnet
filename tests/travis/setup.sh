@@ -15,7 +15,3 @@ fi
 if [ ${TASK} == "lint" ]; then
     pip install cpplint pylint --user `whoami`
 fi
-
-if [ ${TASK} == "doc" ]; then
-    pip install graphviz --user `whoami`
-fi
