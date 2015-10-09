@@ -17,8 +17,6 @@ namespace R {
 // forward declare symbol functiono
 class SymbolFunction;
 
-// TODO(KK): switch exposed function into roxygen style
-
 /*! \brief The Rcpp Symbol class of MXNet */
 class Symbol : public MXNetClassBase<Symbol, SymbolHandle, MXSymbolFree> {
  public:
@@ -65,43 +63,33 @@ class Symbol : public MXNetClassBase<Symbol, SymbolHandle, MXSymbolFree> {
   RObjectType GetOutput(mx_uint index) const;
   /*! \brief Infer the shapes of arguments, outputs, and auxiliary states */
   SEXP InferShape(const Rcpp::List& kwargs) const;
-  //
-  //' @title
-  //' mx.symbol.Variable
-  //'
-  //’ Create a symbolic variable with specified name.
-  //’
-  //’ @param name string, Name of the variable.
-  //’ @return The created variable symbol.
-  //
+  /*!
+   *  \brief Create a symbolic variable with specified name.
+   *
+   *  \param name string, Name of the variable.
+   *  \return The created variable symbol.
+   */
   static RObjectType Variable(const std::string& name);
-  //
-  //' @title
-  //' mx.symbol.load
-  //'
-  //’ Load a symbol variable from filename.
-  //’
-  //’ @param filename string, the path to the symbol file.
-  //’ @return The loaded corresponding symbol.
-  //
+  /*!
+   *  \brief Load a symbol variable from filename.
+   * 
+   *  \param filename string, the path to the symbol file.
+   *  \return The loaded corresponding symbol.
+   */
   static RObjectType Load(const std::string& filename);
-  //
-  //' @title
-  //' mx.symbol.load.json
-  //'
-  //’ Load a symbol variable from json string
-  //’
-  //’ @param json string, json string of symbol.
-  //’ @return The loaded corresponding symbol.
-  //
+  /*! 
+   *  \brief Load a symbol variable from json string
+   * 
+   *  \param json string, json string of symbol.
+   *  \return The loaded corresponding symbol.
+   */
   static RObjectType LoadJSON(const std::string& json);
-  //
-  //' @title
-  //' Create a symbol that groups symbols together.
-  //’
-  //’ @param ... List of symbols to be grouped.
-  //’ @return The created grouped symbol.
-  //
+  /*!
+   *  \brief Create a symbol that groups symbols together.
+   *
+   *  \param ... List of symbols to be grouped.
+   *  \return The created grouped symbol.
+   */
   static RObjectType Group(const Rcpp::List& symbols);
   /*! \brief static function to initialize the Rcpp functions */
   static void InitRcppModule();

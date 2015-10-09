@@ -1,5 +1,4 @@
-#' NDArray Interface of MXNet
-#'
+
 mx.nd.load <- function(filename) {
   filename <- path.expand(filename)
   mx.nd.internal.load(filename)

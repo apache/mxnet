@@ -149,12 +149,11 @@ void NDArray::Save(const Rcpp::RObject &sxptr,
     MX_CALL(MXNDArraySave(filename.c_str(), num_args,
                           dmlc::BeginPtr(handles),
                           dmlc::BeginPtr(keys)));
-  } else if (TYPEOF(sxptr) == EXTPTRSXP) {
-    // TODO(KK) this line is wrong??
+  } else if (Rcpp::is<NDArray>(sxptr)) {
     MX_CALL(MXNDArraySave(filename.c_str(), 1,
                           &(NDArray::XPtr(sxptr)->handle_), nullptr));
   } else {
-    RLOG_FATAL << "only NDArray or list of NDArray" << std::endl;
+    RLOG_FATAL << "only accept NDArray or list of NDArray" << std::endl;
   }
 }
 
@@ -214,7 +213,7 @@ void NDArray::InitRcppModule() {
   class_<NDArray>("MXNDArray")
       .finalizer(&NDArray::Finalizer)
       .method("as.array", &NDArray::AsNumericVector)
-      .method("dim", &NDArray::shape);  // TODO(KK) maybe better to expose as read only property?
+      .const_method("dim", &NDArray::shape);
   // don't call load/save directly, let R provides the completed file path first
   function("mx.nd.internal.load", &NDArray::Load);
   function("mx.nd.internal.save", &NDArray::Save);
@@ -282,15 +281,11 @@ NDArrayFunction::NDArrayFunction(FunctionHandle handle)
       std::ostringstream os;
       os << "X" << (i + 1);
       arg_names[begin_use_vars_ + i] = os.str();
-      // TODO(KK) this should really be not specified
-      arg_values[begin_use_vars_ + i] = R_NilValue;
     }
     for (mx_uint i = 0; i < num_scalars_; ++i) {
       std::ostringstream os;
       os << "s" << (i + 1);
       arg_names[begin_scalars_ + i] = os.str();
-      // TODO(KK) this should really be not specified
-      arg_values[begin_scalars_ + i] = R_NilValue;
     }
     if (accept_empty_out_) {
       arg_names[begin_mutate_vars_] = "out";
@@ -301,8 +296,6 @@ NDArrayFunction::NDArrayFunction(FunctionHandle handle)
         std::ostringstream os;
         os << "out" << (i + 1);
         arg_names[begin_mutate_vars_ + i] = os.str();
-        // TODO(KK) this should really be not specified, not optional
-        arg_values[begin_mutate_vars_ + i] = R_NilValue;
       }
     }
     formals_ = arg_values;
@@ -317,8 +310,7 @@ SEXP NDArrayFunction::operator() (SEXP* args) {
   std::vector<NDArrayHandle> use_vars(num_use_vars_);
 
   for (mx_uint i = 0; i < num_scalars_; ++i) {
-    // TODO(KK) better to use Rcpp cast?
-    scalars[i] = (REAL)(args[begin_scalars_ + i])[0];
+    scalars[i] = Rcpp::as<mx_float>(args[begin_scalars_ + i]);
   }
   for (mx_uint i = 0; i < num_use_vars_; ++i) {
     use_vars[i] = NDArray::XPtr(args[begin_use_vars_ + i])->handle_;
@@ -327,7 +319,6 @@ SEXP NDArrayFunction::operator() (SEXP* args) {
   std::vector<NDArrayHandle> mutate_vars(num_mutate_vars_);
   Rcpp::List out(num_mutate_vars_);
   for (mx_uint i = 0; i < num_mutate_vars_; ++i) {
-    // TODO(KK) Rcpp way of checking null?
     if (args[begin_mutate_vars_ + i] == R_NilValue) {
       if (accept_empty_out_) {
         NDArrayHandle ohandle;
@@ -370,3 +361,17 @@ void NDArrayFunction::InitRcppModule() {
 }
 }  // namespace R
 }  // namespace mxnet
+
+namespace Rcpp {
+  template<>
+  bool is<mxnet::R::NDArray>(SEXP x) {
+    Environment env(x);
+    if (TYPEOF(env.get(".cppclass")) == NILSXP) {
+      return false;
+    } else {
+      XPtr<class_Base> xp(env.get(".cppclass"));
+      typedef typename Rcpp::traits::un_pointer<mxnet::R::NDArray>::type CLASS;
+      return xp->has_typeinfo_name(typeid(CLASS).name());
+    }
+  }
+}  // namespace Rcpp

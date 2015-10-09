@@ -265,7 +265,8 @@ SEXP SymbolFunction::operator() (SEXP* args) {
   // classify keys
   for (size_t i = 0; i < kwargs.size(); ++i) {
     if (keys[i] == "name") {
-      name = keys[i]; continue;
+      name = Rcpp::as<std::string>(kwargs[i]);
+      continue;
     }
     if (!IsSimpleArg(kwargs[i])) {
       sym_keys.push_back(keys[i]);
@@ -352,3 +353,17 @@ void SymbolFunction::InitRcppModule() {
 }
 }  // namespace R
 }  // namespace mxnet
+
+namespace Rcpp {
+  template<>
+  bool is<mxnet::R::Symbol>(SEXP x) {
+  Environment env(x);
+  if (TYPEOF(env.get(".cppclass")) == NILSXP) {
+    return false;
+  } else {
+    XPtr<class_Base> xp(env.get(".cppclass"));
+    typedef typename Rcpp::traits::un_pointer<mxnet::R::Symbol>::type CLASS;
+    return xp->has_typeinfo_name(typeid(CLASS).name());
+  }
+}
+}  // namespace Rcpp
