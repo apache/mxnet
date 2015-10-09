@@ -60,21 +60,26 @@ if [ ${TASK} == "python_test" ]; then
     mkdir -p ${CACHE_PREFIX}/data
     ln -s ${CACHE_PREFIX}/data tests/python/data
 
-    python --version
-    cd python && python setup.py develop --user && cd .. || exit -1
+    # python --version
+    # cd python && python setup.py develop --user && cd .. || exit -1
 
-    if [ ${TRAVIS_OS_NAME} == "osx" ]; then
-        python -m nose tests/python/unittest || exit -1
-        python -m nose tests/python/train || exit -1
-    else
-        nosetests tests/python/unittest || exit -1
-        nosetests tests/python/train || exit -1
+    python -m nose tests/python/unittest || exit -1
+    python -m nose tests/python/train || exit -1
 
-        # TODO(mli) python3 error
-        # python3 --version
-        # rm -rf python/mxnet.egg-info
-        # cd python && python3 setup.py develop --user && cd .. || exit -1
-        # nosetests3 tests/python/unittest || exit -1
-        # nosetests3 tests/python/train || exit -1
-    fi
+    python3 -m nose tests/python/unittest || exit -1
+    python3 -m nose tests/python/train || exit -1
+
+    # if [ ${TRAVIS_OS_NAME} == "osx" ]; then
+    # else
+
+    #     nosetests tests/python/unittest || exit -1
+    #     nosetests tests/python/train || exit -1
+
+    #     # TODO(mli) python3 error
+    #     # python3 --version
+    #     # rm -rf python/mxnet.egg-info
+    #     # cd python && python3 setup.py develop --user && cd .. || exit -1
+    #     # nosetests3 tests/python/unittest || exit -1
+    #     # nosetests3 tests/python/train || exit -1
+    # fi
 fi

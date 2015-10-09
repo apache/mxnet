@@ -56,8 +56,7 @@ before_install:
   - export PYTHONPATH=${PYTHONPATH}:${PWD}/python
 
 install:
-  - if [ ${TRAVIS_OS_NAME} == "osx" ]; then tests/travis/setup_osx.sh; fi
-  - if [ ${TASK} == "lint" ]; then pip install cpplint pylint graphviz --user `whoami`; fi
+  - source tests/travis/setup.sh
 
 script:
   - tests/travis/run_test.sh

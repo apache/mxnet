@@ -5,6 +5,7 @@ brew tap homebrew/science
 brew info opencv
 # brew install graphviz
 brew install opencv
+brew install python3
 
 # TODO(mli) TASK are not correct...
 # if [ ${TASK} == "python-package3" ]; then
@@ -30,4 +31,4 @@ brew install opencv
 # source activate myenv
 # conda install numpy scipy matplotlib nose
 
-python -m pip install nose numpy --user `whoami`
+# python -m pip install nose numpy --user `whoami`
