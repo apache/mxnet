@@ -1,3 +1,5 @@
+__precompile__()
+
 module MXNet
 
 # we put everything in the namespace mx, because there are a lot of
