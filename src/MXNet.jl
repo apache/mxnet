@@ -13,6 +13,7 @@ include("context.jl")
 include("ndarray.jl")
 include("name.jl")
 include("symbol.jl")
+include("executor.jl")
 
 end # mx
 

@@ -96,4 +96,5 @@ end
 @mx_define_handle_t(MX_NDArrayHandle, MXNDArrayFree)
 @mx_define_handle_t(MX_FunctionHandle, nop)
 @mx_define_handle_t(MX_SymbolHandle, MXSymbolFree)
+@mx_define_handle_t(MX_ExecutorHandle, MXExecutorFree)
 
