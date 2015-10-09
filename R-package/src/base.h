@@ -258,7 +258,6 @@ inline std::string MakeDocString(mx_uint num_args,
  */
 inline std::string AsPyString(const SEXP val) {
   using namespace Rcpp;  // NOLINT(*)
-  // TODO(KK) , better string handling.
   std::ostringstream os;
   if (is<IntegerVector>(val)) {
     IntegerVector vec(val);
@@ -295,12 +294,12 @@ inline std::string AsPyString(const SEXP val) {
  * That is not module object and can be converted to string
  */
 inline bool IsSimpleArg(SEXP args) {
-  // TODO(KK) maybe more improvements, support bool?
   switch (TYPEOF(args)) {
     case REALSXP:
     case VECSXP:
     case INTSXP:
     case CPLXSXP:
+    case LGLSXP:
     case STRSXP: return true;
     default: return false;
   }
@@ -352,6 +351,16 @@ inline std::vector<mx_uint> Dim2Vec(const Rcpp::Dimension &rshape) {
   return shape;
 }
 
+class NDArray;
+class Symbol;
 }  // namespace R
 }  // namespace mxnet
+
+namespace Rcpp {
+  template<>
+  bool is<mxnet::R::NDArray>(SEXP x);
+  template<>
+  bool is<mxnet::R::Symbol>(SEXP x);
+}  // namespace Rcpp
+
 #endif  // MXNET_RCPP_BASE_H_
