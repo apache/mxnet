@@ -153,7 +153,7 @@ void NDArray::Save(const Rcpp::RObject &sxptr,
     MX_CALL(MXNDArraySave(filename.c_str(), 1,
                           &(NDArray::XPtr(sxptr)->handle_), nullptr));
   } else {
-    RLOG_FATAL << "only accept NDArray or list of NDArray" << std::endl;
+    RLOG_FATAL << "Only accept NDArray or list of NDArray";
   }
 }
 
@@ -361,17 +361,3 @@ void NDArrayFunction::InitRcppModule() {
 }
 }  // namespace R
 }  // namespace mxnet
-
-namespace Rcpp {
-  template<>
-  bool is<mxnet::R::NDArray>(SEXP x) {
-    Environment env(x);
-    if (TYPEOF(env.get(".cppclass")) == NILSXP) {
-      return false;
-    } else {
-      XPtr<class_Base> xp(env.get(".cppclass"));
-      typedef typename Rcpp::traits::un_pointer<mxnet::R::NDArray>::type CLASS;
-      return xp->has_typeinfo_name(typeid(CLASS).name());
-    }
-  }
-}  // namespace Rcpp
