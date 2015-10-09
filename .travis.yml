@@ -1,5 +1,6 @@
 # disable sudo to use container based build
 sudo: false
+
 # Enabling test on Linux and OS X
 os:
   - linux
@@ -7,16 +8,19 @@ os:
 
 # Use Build Matrix to do lint and build seperately
 env:
+  global:
+    - CXX=g++-4.8
   matrix:
-    - TASK=lint LINT_LANG=cpp
-    - TASK=lint LINT_LANG=python
+    - TASK=lint
     - TASK=doc
-    - TASK=build CXX=g++
-    - TASK=python CXX=g++
-    - TASK=python3 CXX=g++
-    - TASK=python_naive CXX=g++
-    - TASK=python_perdev CXX=g++
-    - TASK=cpp_unittest CXX=g++
+    - TASK=build
+    - TASK=python_test
+    - TASK=cpp_test
+
+matrix:
+  exclude:
+    - os: osx
+      env: TASK=lint
 
 # dependent apt packages
 addons:
@@ -33,7 +37,6 @@ addons:
       - libopencv-dev
       - gcc-4.8
       - g++-4.8
-      - clang
       - python-numpy
       - python-nose
       - python3-numpy
@@ -43,20 +46,17 @@ addons:
 
 before_install:
   - export NVCC_PREFIX=${HOME}
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
-  - scripts/build_dmlc.sh
   - export TRAVIS=dmlc-core/scripts/travis
   - export PYTHONPATH=${PYTHONPATH}:${PWD}/python
   - source ${TRAVIS}/travis_setup_env.sh
-
+  - git submodule init
+  - git submodule update
 
 install:
   - pip install cpplint pylint graphviz --user `whoami`
 
-
 script:
   - scripts/travis_script.sh
-
 
 before_cache:
   - ${TRAVIS}/travis_before_cache.sh

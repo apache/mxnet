@@ -1,5 +1,11 @@
 #!/bin/bash
 
+echo ${TASK}
+echo ${TRAVIS_OS_NAME}
+echo ${CXX}
+
+exit 0
+
 # main script of travis
 if [ ${TASK} == "lint" ]; then
     if [ ${TRAVIS_OS_NAME} != "osx" ]; then
@@ -93,4 +99,3 @@ if [ ${TASK} == "cpp_unittest" ]; then
         ./$test || exit -1
     done
 fi
-
