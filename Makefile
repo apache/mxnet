@@ -139,6 +139,8 @@ lint: rcpplint
 rcpplint:
 	python dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
 
+doc: doxygen
+
 doxygen:
 	doxygen doc/Doxyfile
 

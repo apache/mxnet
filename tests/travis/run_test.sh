@@ -11,22 +11,19 @@ echo ${TASK}
 echo ${TRAVIS_OS_NAME}
 echo ${CXX}
 
-exit 0
-
 if [ ${TASK} == "lint" ]; then
-    pip install cpplint pylint graphviz --user `whoami`
+    pip install cpplint pylint --user `whoami`
     make lint
     exit $?
 fi
 
 if [ ${TASK} == "doc" ]; then
-    if [ ${TRAVIS_OS_NAME} != "osx" ]; then
-        make doc 2>log.txt
-        (cat log.txt|grep warning) && exit -1
-    fi
-    exit 0
+    make doc 2>log.txt
+    if [ $? -ne 0 ]; exit $?; fi
+    (cat log.txt|grep warning) && exit -1
 fi
 
+exit 0
 # prereqs for things that need make
 cp make/config.mk config.mk
 
