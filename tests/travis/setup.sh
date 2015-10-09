@@ -12,7 +12,7 @@ if [ ${TASK} == "lint" ]; then
     pip install cpplint pylint graphviz --user `whoami`
 fi
 
-if [ ${TASK} == "python_test"]; then
+if [ ${TASK} == "python_test" ]; then
     python -m pip install nose numpy --user `whoami`
     python3 -m pip install nose numpy --user `whoami`
 fi
