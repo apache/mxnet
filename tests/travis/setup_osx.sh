@@ -30,4 +30,4 @@ brew install opencv
 # source activate myenv
 # conda install numpy scipy matplotlib nose
 
-python -m pip install nose numpy
+python -m pip install nose numpy --user `whoami`
