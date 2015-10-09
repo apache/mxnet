@@ -56,7 +56,19 @@ function test_infer_shape()
   @test arg_shape_dict == Dict{Symbol,Tuple}(:fc2_bias => (10,),:fc2_weight => (10,1000),
                                              :fc1_bias => (1000,), :fc1_weight => (1000,100),
                                              :data => data_shape)
+  @test length(out_shapes) == 1
+  @test out_shapes[1] == (100, 10)
 end
+
+function test_infer_shape_error()
+  info("Symbol::infer_shape::error")
+
+  model = mlp2()
+  weight_shape = (1, 100)
+  data_shape   = (100, 100)
+  @test_throws mx.MXError mx.infer_shape(model, data=data_shape, fc1_weight=weight_shape)
+end
+
 
 ################################################################################
 # Run tests
@@ -65,5 +77,6 @@ test_basic()
 test_internal()
 test_compose()
 test_infer_shape()
+test_infer_shape_error()
 
 end
