@@ -10,7 +10,6 @@
 
 #include <Rcpp.h>
 #include <dmlc/base.h>
-#include <dmlc/logging.h>
 #include <mxnet/c_api.h>
 #include <string>
 #include <sstream>
@@ -79,37 +78,42 @@ class RLogFatal {
   }
 
 /*!
- * \brief Base class of MXNet Module object.
+ * \brief Base Movable class of MXNet Module object.
  *  This class will define several common functions.
  * \tparam Class The class name of subclass
  * \tparam HandleType The type of handle the object have.
  * \tparam finalizer The free function used to delete the handle.
  */
-template<typename Class,
-         typename HandleType,
-         int finalizer(void*)>
-class MXNetClassBase {
+template<typename Class>
+class MXNetMovable {
  public:
   /*! \brief The type of Class in R's side */
   typedef Rcpp::RObject RObjectType;
+  /*!
+   * \brief Get a pointer representation of obj.
+   * \param obj The R object.
+   * \return The pointer of the object.
+   * \throw Rcpp::exception if the object is moved.
+   */
+  inline static Class* XPtr(const Rcpp::RObject& obj) {
+    Class* ptr = Rcpp::as<Class*>(obj);
+    bool has_been_moved = static_cast<MXNetMovable<Class>*>(ptr)->moved_;
+    RCHECK(!has_been_moved)
+        << "Passed in a moved " << Class::TypeName() << " as parameter."
+        << " Moved parameters should no longer be used";
+    return ptr;
+  }
 
  protected:
   /*! \brief default constructor */
-  MXNetClassBase() : moved_(false) {}
-  /*!
-   * \brief create a R object that correspond to the Class
-   * \param handle the Handle needed for output.
-   */
-  inline static Rcpp::RObject RObject(HandleType handle) {
-    return Rcpp::internal::make_new_object(new Class(handle));
-  }
+  MXNetMovable() : moved_(false) {}
   /*!
    * \brief the finalizer for Rcpp
    * \param self the pointer to the class.
    */
   inline static void Finalizer(Class* self) {
-    if (!self->moved_) {
-      MX_CALL(finalizer(self->handle_));
+    if (!static_cast<MXNetMovable<Class>*>(self)->moved_) {
+      self->DoFinalize();
     }
   }
   /*!
@@ -120,24 +124,11 @@ class MXNetClassBase {
   inline static RObjectType Move(const Rcpp::RObject& src) {
     Class* old = Class::XPtr(src);
     Class* moved = old->CreateMoveObject();
-    old->moved_ = true;
+    static_cast<MXNetMovable<Class>*>(old)->moved_ = true;
     return Rcpp::internal::make_new_object(moved);
   }
-  /*!
-   * \brief Get a pointer representation of obj.
-   * \param obj The R object.
-   * \return The pointer of the object.
-   * \throw Rcpp::exception if the object is moved.
-   */
-  inline static Class* XPtr(const Rcpp::RObject& obj) {
-    Class* ptr = Rcpp::as<Class*>(obj);
-    RCHECK(!ptr->moved_)
-        << "Passed in a moved " << Class::TypeName() << " as parameter."
-        << " Moved parameters should no longer be used";
-    return ptr;
-  }
-  /*! \brief The internal handle to the object */
-  HandleType handle_;
+
+ private:
   /*! \brief Whether the object has been moved */
   bool moved_;
 };
@@ -361,6 +352,7 @@ inline std::vector<mx_uint> Dim2Vec(const Rcpp::Dimension &rshape) {
 
 class NDArray;
 class Symbol;
+class Executor;
 }  // namespace R
 }  // namespace mxnet
 
@@ -386,5 +378,7 @@ namespace Rcpp {
   inline bool is<mxnet::R::NDArray>(SEXP x);
   template<>
   inline bool is<mxnet::R::Symbol>(SEXP x);
+  template<>
+  inline bool is<mxnet::R::Executor>(SEXP x);
 }  // namespace Rcpp
 #endif  // MXNET_RCPP_BASE_H_

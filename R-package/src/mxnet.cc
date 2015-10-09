@@ -7,6 +7,7 @@
 #include "./base.h"
 #include "./ndarray.h"
 #include "./symbol.h"
+#include "./executor.h"
 
 RCPP_MODULE(mxnet) {
   using namespace mxnet::R;
@@ -15,4 +16,5 @@ RCPP_MODULE(mxnet) {
   NDArrayFunction::InitRcppModule();
   Symbol::InitRcppModule();
   SymbolFunction::InitRcppModule();
+  Executor::InitRcppModule();
 }

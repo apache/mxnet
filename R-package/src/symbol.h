@@ -18,7 +18,7 @@ namespace R {
 class SymbolFunction;
 
 /*! \brief The Rcpp Symbol class of MXNet */
-class Symbol : public MXNetClassBase<Symbol, SymbolHandle, MXSymbolFree> {
+class Symbol : public MXNetMovable<Symbol> {
  public:
   /*! \return typename from R side. */
   inline static const char* TypeName() {
@@ -101,12 +101,19 @@ class Symbol : public MXNetClassBase<Symbol, SymbolHandle, MXSymbolFree> {
  private:
   // friend with SymbolFunction
   friend class SymbolFunction;
-  friend class MXNetClassBase<Symbol, SymbolHandle, MXSymbolFree>;
+  friend class Executor;
+  friend class MXNetMovable<Symbol>;
   // enable trivial copy constructors etc.
   Symbol() {}
   // constructor
-  explicit Symbol(SymbolHandle handle) {
-    this->handle_ = handle;
+  explicit Symbol(SymbolHandle handle)
+      : handle_(handle) {}
+  /*!
+   * \brief create a R object that correspond to the Class
+   * \param handle the Handle needed for output.
+   */
+  inline static Rcpp::RObject RObject(SymbolHandle handle) {
+    return Rcpp::internal::make_new_object(new Symbol(handle));
   }
   // Create a new Object that is moved from current one
   inline Symbol* CreateMoveObject() {
@@ -114,8 +121,13 @@ class Symbol : public MXNetClassBase<Symbol, SymbolHandle, MXSymbolFree> {
     *moved = *this;
     return moved;
   }
+  // finalizer that invoked on non-movable object
+  inline void DoFinalize() {
+    MX_CALL(MXSymbolFree(handle_));
+  }
   /*!
    * \brief Return a clone of Symbol
+   * Do not expose to R side
    * \param obj The source to be cloned from
    * \return a Cloned Symbol
    */
@@ -126,6 +138,9 @@ class Symbol : public MXNetClassBase<Symbol, SymbolHandle, MXSymbolFree> {
    * \param name name of the symbol.
    */
   void Compose(const Rcpp::List& kwargs, const std::string &name);
+
+  /*! \brief internal executor handle */
+  SymbolHandle handle_;
 };
 
 /*! \brief The Symbol functions to be invoked */
