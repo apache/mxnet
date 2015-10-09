@@ -1,6 +1,11 @@
 #!/bin/bash
 
+if [ ${CXX} == "g++" ]; then
+    export CXX=g++-4.8
+fi
+
 python --version
+${CXX} --version
 
 echo ${TASK}
 echo ${TRAVIS_OS_NAME}
@@ -8,12 +13,10 @@ echo ${CXX}
 
 exit 0
 
-# main script of travis
 if [ ${TASK} == "lint" ]; then
-    if [ ${TRAVIS_OS_NAME} != "osx" ]; then
-        make lint || exit -1
-    fi
-    exit 0
+    pip install cpplint pylint graphviz --user `whoami`
+    make lint
+    exit $?
 fi
 
 if [ ${TASK} == "doc" ]; then
