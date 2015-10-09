@@ -82,6 +82,70 @@ function group(symbols :: Symbol...)
   Symbol(MX_SymbolHandle(ref_hdr[]))
 end
 
+macro _infer_shape(self, keys, indptr, sdata)
+  quote
+    ref_arg_shape_size = Ref{MX_uint}(0)
+    ref_arg_shape_ndim = Ref{Ptr{MX_uint}}(0)
+    ref_arg_shape_data = Ref{Ptr{Ptr{MX_uint}}}(0)
+    ref_out_shape_size = Ref{MX_uint}(0)
+    ref_out_shape_ndim = Ref{Ptr{MX_uint}}(0)
+    ref_out_shape_data = Ref{Ptr{Ptr{MX_uint}}}(0)
+    ref_aux_shape_size = Ref{MX_uint}(0)
+    ref_aux_shape_ndim = Ref{Ptr{MX_uint}}(0)
+    ref_aux_shape_data = Ref{Ptr{Ptr{MX_uint}}}(0)
+    ref_complete       = Ref{Cint}(0)
+    @mxcall(:MXSymbolInferShape,
+            (MX_handle, MX_uint, char_pp, Ptr{MX_uint}, Ptr{MX_uint},
+             Ref{MX_uint}, Ref{Ptr{MX_uint}}, Ref{Ptr{Ptr{MX_uint}}},
+             Ref{MX_uint}, Ref{Ptr{MX_uint}}, Ref{Ptr{Ptr{MX_uint}}},
+             Ref{MX_uint}, Ref{Ptr{MX_uint}}, Ref{Ptr{Ptr{MX_uint}}},
+             Ref{Cint}),
+            self, length(indptr)-1, keys, indptr, sdata,
+            ref_arg_shape_size, ref_arg_shape_ndim, ref_arg_shape_data,
+            ref_out_shape_size, ref_out_shape_ndim, ref_out_shape_data,
+            ref_aux_shape_size, ref_aux_shape_ndim, ref_aux_shape_data,
+            ref_complete)
+    if ref_complete[] == 0
+      return (nothing, nothing, nothing)
+    else
+      function build_shapes(shape_size::MX_uint, shape_ndim::Ptr{MX_uint}, shape_data::Ptr{Ptr{MX_uint}})
+        shape_ndim = pointer_to_array(shape_ndim, shape_size)
+        shape_data = pointer_to_array(shape_data, shape_size)
+        map(1:shape_size) do i
+          my_shape = pointer_to_array(shape_data[i], shape_ndim[i])
+          tuple(Int[my_shape...]...)
+        end
+      end
+      return (
+        build_shapes(ref_arg_shape_size[], ref_arg_shape_ndim[], ref_arg_shape_data[]),
+        build_shapes(ref_out_shape_size[], ref_out_shape_ndim[], ref_out_shape_data[]),
+        build_shapes(ref_aux_shape_size[], ref_aux_shape_ndim[], ref_aux_shape_data[])
+      )
+    end
+  end
+end
+function infer_shape(self :: Symbol; kwargs...)
+  sdata  = MX_uint[]
+  indptr = MX_uint[0]
+  for (k,v) in kwargs
+    append!(sdata, [v...])
+    push!(indptr, length(sdata))
+  end
+  keys = AbstractString[string(x[1]) for x in kwargs]
+  @_infer_shape(self, keys, indptr, sdata)
+end
+function infer_shape(self :: Symbol, args :: Union{Tuple, Void}...)
+  sdata  = MX_uint[]
+  indptr = MX_uint[0]
+  for arg in args
+    if isa(arg, Void); continue; end
+    append!(sdata, [arg...])
+    push!(indptr, length(sdata))
+  end
+  keys = Ptr{char_p}(0)
+  @_infer_shape(self, keys, indptr, sdata)
+end
+
 function Base.getindex(self :: Symbol, idx :: Union{Base.Symbol, AbstractString})
   idx   = symbol(idx)
   i_idx = find(idx .== list_outputs(self))

@@ -46,11 +46,24 @@ function test_compose()
   @test mx.list_outputs(multi_out) == [:composed_output, :fc2_output]
 end
 
+function test_infer_shape()
+  info("Symbol::infer_shape::mlp2")
+
+  model = mlp2()
+  data_shape = (100, 100)
+  arg_shapes, out_shapes, aux_shapes = mx.infer_shape(model, data=data_shape)
+  arg_shape_dict = Dict{Symbol,Tuple}(zip(mx.list_arguments(model), arg_shapes))
+  @test arg_shape_dict == Dict{Symbol,Tuple}(:fc2_bias => (10,),:fc2_weight => (10,1000),
+                                             :fc1_bias => (1000,), :fc1_weight => (1000,100),
+                                             :data => data_shape)
+end
+
 ################################################################################
 # Run tests
 ################################################################################
 test_basic()
 test_internal()
 test_compose()
+test_infer_shape()
 
 end
