@@ -56,6 +56,25 @@ if [ ${TASK} == "cpp_test" ]; then
     exit 0
 fi
 
+if [ ${TASK} == "python_test" ]; then
+    make all || exit -1
+    rm -rf tests/python/data
+    mkdir -p ${CACHE_PREFIX}/data
+    ln -s ${CACHE_PREFIX}/data tests/python/data
+    python --version
+    if [ ${TRAVIS_OS_NAME} == "osx" ]; then
+        alias nosetests='python -m nose'
+    fi
+    nosetests tests/python/unittest || exit -1
+    nosetests tests/python/train || exit -1
+
+    if [ ${TRAVIS_OS_NAME} == "linux" ]; then
+        python3 --version
+        nosetests3 tests/python/unittest || exit -1
+        nosetests3 tests/python/train || exit -1
+    fi
+fi
+
 exit 0
 
 export NOSE3=nosetests3
