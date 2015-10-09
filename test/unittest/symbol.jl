@@ -30,10 +30,27 @@ function test_internal()
   @test mx.list_arguments(fc1) == mx.list_arguments(oldfc)
 end
 
+function test_compose()
+  info("Symbol::compose")
+
+  data = mx.variable(:data)
+  net1 = mx.FullyConnected(data=data, name=:fc1, num_hidden=10)
+  net1 = mx.FullyConnected(data=net1, name=:fc2, num_hidden=100)
+
+  net2 = mx.FullyConnected(name=:fc3, num_hidden=10)
+  net2 = mx.Activation(data=net2, act_type=:relu)
+  net2 = mx.FullyConnected(data=net2, name=:fc4, num_hidden=20)
+
+  composed  = net2(fc3_data=net1, name=:composed)
+  multi_out = mx.group(composed, net1)
+  @test mx.list_outputs(multi_out) == [:composed_output, :fc2_output]
+end
+
 ################################################################################
 # Run tests
 ################################################################################
 test_basic()
 test_internal()
+test_compose()
 
 end
