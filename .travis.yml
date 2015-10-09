@@ -51,18 +51,15 @@ addons:
 
 
 before_install:
-  - export TRAVIS=dmlc-core/scripts/travis
-  - export PYTHONPATH=${PYTHONPATH}:${PWD}/python
-  - source ${TRAVIS}/travis_setup_env.sh
+  - export NVCC_PREFIX=${HOME}
+  - source dmlc-core/scripts/travis/travis_setup_env.sh
 
 install:
-  - echo 0
+  - if [ ${TRAVIS_OS_NAME} == "osx" ]; then tests/travis/setup_osx.sh; fi
+  - if [ ${TASK} == "lint" ]; then pip install cpplint pylint --user `whoami`; fi
 
 script:
   - tests/travis/run_test.sh
-
-before_cache:
-  - ${TRAVIS}/travis_before_cache.sh
 
 cache:
   directories:
@@ -74,4 +71,4 @@ notifications:
   email:
     on_success: change
     on_failure: always
-  slack: dmlc:NmroCzntCiWOuxUZpii40USd
+#  slack: dmlc:NmroCzntCiWOuxUZpii40USd

@@ -1,5 +1,6 @@
 #!/bin/bash
 
+  # - export PYTHONPATH=${PYTHONPATH}:${PWD}/python
 python --version
 ${CXX} --version
 
@@ -8,7 +9,6 @@ echo ${TRAVIS_OS_NAME}
 echo ${CXX}
 
 if [ ${TASK} == "lint" ]; then
-    pip install cpplint pylint --user `whoami`
     make lint
     exit $?
 fi
@@ -39,7 +39,6 @@ fi
 if [ ${TASK} == "build" ]; then
     if [ ${TRAVIS_OS_NAME} == "linux" ]; then
         echo "USE_CUDA=1" >> config.mk
-        export NVCC_PREFIX=${HOME}
         ./dmlc-core/scripts/setup_nvcc.sh $NVCC_PREFIX
     fi
     make all
