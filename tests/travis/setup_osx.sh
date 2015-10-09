@@ -6,6 +6,7 @@ brew info opencv
 brew install graphviz
 brew install opencv
 
+# TODO(mli) TASK are not correct...
 if [ ${TASK} == "python-package3" ]; then
     wget -O conda.sh https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
 else
