@@ -61,81 +61,20 @@ if [ ${TASK} == "python_test" ]; then
     ln -s ${CACHE_PREFIX}/data tests/python/data
 
     python --version
-    if [ ${TRAVIS_OS_NAME} == "osx" ]; then
-        alias nosetests='python -m nose'
-    fi
     cd python && python setup.py develop --user && cd .. || exit -1
-    nosetests tests/python/unittest || exit -1
-    nosetests tests/python/train || exit -1
 
-    # TODO(mli) python3 error
-    # if [ ${TRAVIS_OS_NAME} == "linux" ]; then
-    #     python3 --version
-    #     rm -rf python/mxnet.egg-info
-    #     cd python && python3 setup.py develop --user && cd .. || exit -1
-    #     nosetests3 tests/python/unittest || exit -1
-    #     nosetests3 tests/python/train || exit -1
-    # fi
-fi
+    if [ ${TRAVIS_OS_NAME} == "osx" ]; then
+        python -m nose tests/python/unittest || exit -1
+        python -m nose tests/python/train || exit -1
+    else
+        nosetests tests/python/unittest || exit -1
+        nosetests tests/python/train || exit -1
 
-exit 0
-
-export NOSE3=nosetests3
-export PYTHON3=python3
-if [ ${TRAVIS_OS_NAME} == "osx" ]; then
-    source scripts/travis_osx_install.sh
-    alias nosetests='python -m nose'
-    export NOSE3='python -m nose'
-    export PYTHON3=python
-else
-    echo "USE_CUDNN=0" >> config.mk
-    echo "CXX=g++-4.8" >> config.mk
-    export CXX="g++-4.8"
-
-if [ ${TASK} == "python" ]; then
-    echo "USE_CUDA=0" >> config.mk
-    make all || exit -1
-    python --version
-    export MXNET_ENGINE_TYPE=ThreadedEngine
-    nosetests tests/python/unittest || exit -1
-    nosetests tests/python/train || exit -1
-fi
-
-if [ ${TASK} == "python3" ]; then
-    echo "USE_CUDA=0" >> config.mk
-    make all || exit -1
-    export MXNET_ENGINE_TYPE=ThreadedEngine
-    ${PYTHON3} --version
-    ${NOSE3} tests/python/unittest || exit -1
-    ${NOSE3} tests/python/train || exit -1
-fi
-
-if [ ${TASK} == "python_naive" ]; then
-    echo "USE_CUDA=0" >> config.mk
-    make all || exit -1
-    export MXNET_ENGINE_TYPE=NaiveEngine
-    python --version
-    nosetests tests/python/unittest || exit -1
-    nosetests tests/python/train || exit -1
-fi
-
-if [ ${TASK} == "python_perdev" ]; then
-    echo "USE_CUDA=0" >> config.mk
-    make all || exit -1
-    export MXNET_ENGINE_TYPE=ThreadedEnginePerDevice
-    python --version
-    nosetests tests/python/unittest || exit -1
-    nosetests tests/python/train || exit -1
-fi
-
-if [ ${TASK} == "cpp_unittest" ]; then
-    make -f dmlc-core/scripts/packages.mk gtest
-    echo "USE_CUDA=0" >> config.mk
-    echo "GTEST_PATH="${CACHE_PREFIX} >> config.mk
-    make test || exit -1
-    export MXNET_ENGINE_TYPE=ThreadedEngine
-    export MXNET_ENGINE_INFO=true
-    for test in tests/cpp/*_test; do
-        ./$test || exit -1
-    done
+        # TODO(mli) python3 error
+        # python3 --version
+        # rm -rf python/mxnet.egg-info
+        # cd python && python3 setup.py develop --user && cd .. || exit -1
+        # nosetests3 tests/python/unittest || exit -1
+        # nosetests3 tests/python/train || exit -1
+    fi
 fi
