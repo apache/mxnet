@@ -125,9 +125,12 @@ class GraphExecutor : public Executor {
     Engine::OprHandle cached_opr{nullptr};
     // constructor
     OpNode() : activated(false) {}
-    ~OpNode() {
+    // Manual option for delete operator
+    // need to do this before delete NDArrays
+    inline void DeleteOperator() {
       if (cached_opr != nullptr) {
         Engine::Get()->DeleteOperator(cached_opr);
+        cached_opr = nullptr;
       }
     }
   };
