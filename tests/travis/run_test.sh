@@ -1,9 +1,5 @@
 #!/bin/bash
 
-if [ ${CXX} == "g++" ]; then
-    export CXX=g++-4.8
-fi
-
 python --version
 ${CXX} --version
 
@@ -18,7 +14,7 @@ if [ ${TASK} == "lint" ]; then
 fi
 
 if [ ${TASK} == "doc" ]; then
-    make doc 2>log.txt
+    make doc | tee 2>log.txt
     (cat log.txt|grep warning) && exit -1
     exit 0
 fi
@@ -27,6 +23,18 @@ fi
 
 # prereqs for things that need make
 cp make/config.mk config.mk
+
+if [ ${CXX} == "g++" ]; then
+    export CXX=g++-4.8
+fi
+echo "CXX=${CXX}" >>config.mk
+
+if [ ${TRAVIS_OS_NAME} == "osx" ]; then
+    echo "USE_BLAS=apple" >> config.mk
+    echo "USE_OPENMP=0" >> config.mk
+else
+    echo "USE_BLAS=blas" >> config.mk
+fi
 
 if [ ${TASK} == "build" ]; then
     if [ ${TRAVIS_OS_NAME} == "linux" ]; then
@@ -38,19 +46,27 @@ if [ ${TASK} == "build" ]; then
     exit $?
 fi
 
+if [ ${TASK} == "cpp_test" ]; then
+    make -f dmlc-core/scripts/packages.mk gtest
+    echo "GTEST_PATH="${CACHE_PREFIX} >> config.mk
+    make test || exit -1
+    export MXNET_ENGINE_INFO=true
+    for test in tests/cpp/*_test; do
+        ./$test || exit -1
+    done
+    exit 0
+fi
+
 exit 0
 
 export NOSE3=nosetests3
 export PYTHON3=python3
 if [ ${TRAVIS_OS_NAME} == "osx" ]; then
     source scripts/travis_osx_install.sh
-    echo "USE_BLAS=apple" >> config.mk
-    echo "USE_OPENMP=0" >> config.mk
     alias nosetests='python -m nose'
     export NOSE3='python -m nose'
     export PYTHON3=python
 else
-    echo "USE_BLAS=blas" >> config.mk
     echo "USE_CUDNN=0" >> config.mk
     echo "CXX=g++-4.8" >> config.mk
     export CXX="g++-4.8"
