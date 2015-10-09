@@ -24,17 +24,18 @@ fi
 # prereqs for things that need make
 cp make/config.mk config.mk
 
-if [ ${CXX} == "g++" ]; then
-    export CXX=g++-4.8
-fi
-echo "CXX=${CXX}" >>config.mk
 
 if [ ${TRAVIS_OS_NAME} == "osx" ]; then
     echo "USE_BLAS=apple" >> config.mk
     echo "USE_OPENMP=0" >> config.mk
 else
+    # use g++-4.8 for linux
+    if [ ${CXX} == "g++" ]; then
+        export CXX=g++-4.8
+    fi
     echo "USE_BLAS=blas" >> config.mk
 fi
+echo "CXX=${CXX}" >>config.mk
 
 if [ ${TASK} == "build" ]; then
     if [ ${TRAVIS_OS_NAME} == "linux" ]; then
