@@ -393,14 +393,14 @@ MXNET_DLL int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out);
 MXNET_DLL int MXSymbolCreateFromJSON(const char *json, SymbolHandle *out);
 /*!
  * \brief Save a symbol into a json file.
- * \param sym the input symbol.
+ * \param symbol the input symbol.
  * \param fname the file name.
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolSaveToFile(SymbolHandle symbol, const char *fname);
 /*!
  * \brief Save a symbol into a json string
- * \param sym the input symbol.
+ * \param symbol the input symbol.
  * \param out_json output json string.
  * \return 0 when success, -1 when failure happens
  */
@@ -765,7 +765,7 @@ MXNET_DLL int MXKVStorePull(KVStoreHandle handle,
                             mx_uint num,
                             int* keys,
                             NDArrayHandle* vals,
-                            int Priority);
+                            int priority);
 /*!
  * \brief user-defined updater for the kvstore
  * It's this updater's responsibility to delete \a recv and \a local
@@ -799,7 +799,7 @@ MXNET_DLL int MXKVStoreSetUpdater(KVStoreHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreGetRank(KVStoreHandle handle,
-                               int *rank);
+                               int *ret);
 
 /**
  * \brief return The number of nodes in this group, which is
@@ -811,7 +811,7 @@ MXNET_DLL int MXKVStoreGetRank(KVStoreHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreGetGroupSize(KVStoreHandle handle,
-                                    int *size);
+                                    int *ret);
 
 /**
  * \brief return whether or not this process is a worker node.
@@ -887,7 +887,7 @@ typedef void (MXKVStoreServerController)(int head,
  * \return Run as server (or scheduler)
  *
  * \param handle handle to the KVStore
- * \param controler the user-defined server controller
+ * \param controller the user-defined server controller
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreRunServer(KVStoreHandle handle,

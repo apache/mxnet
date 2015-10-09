@@ -29,7 +29,7 @@ class LazyAllocArray {
   inline TElem* Get(int index, FCreate creator);
   /*!
    * \brief for each not null element of the array, call fvisit
-   * \param fviist a function of (size_t, TElem*)
+   * \param fvisit a function of (size_t, TElem*)
    */
   template<typename FVisit>
   inline void ForEach(FVisit fvisit);
