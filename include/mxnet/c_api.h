@@ -546,12 +546,18 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
 // Part 4: Executor interface
 //--------------------------------------------
 /*!
+ * \brief Delete the executor
+ * \param handle the executor.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXExecutorFree(ExecutorHandle handle);
+/*!
  * \brief Print the content of execution plan, used for debug.
  * \param handle the executor.
  * \param out_str pointer to hold the output string of the printing.
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXExecutorPrint(ExecutorHandle symbol, const char **out_str);
+MXNET_DLL int MXExecutorPrint(ExecutorHandle handle, const char **out_str);
 /*!
  * \brief Executor forward method
  *

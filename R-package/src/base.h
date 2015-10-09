@@ -78,6 +78,72 @@ class RLogFatal {
     }                                                              \
   }
 
+/*!
+ * \brief Base class of MXNet Module object.
+ *  This class will define several common functions.
+ * \tparam Class The class name of subclass
+ * \tparam HandleType The type of handle the object have.
+ * \tparam finalizer The free function used to delete the handle.
+ */
+template<typename Class,
+         typename HandleType,
+         int finalizer(void*)>
+class MXNetClassBase {
+ public:
+  /*! \brief The type of Class in R's side */
+  typedef Rcpp::RObject RObjectType;
+
+ protected:
+  /*! \brief default constructor */
+  MXNetClassBase() : moved_(false) {}
+  /*!
+   * \brief create a R object that correspond to the Class
+   * \param handle the Handle needed for output.
+   */
+  inline static Rcpp::RObject RObject(HandleType handle) {
+    return Rcpp::internal::make_new_object(new Class(handle));
+  }
+  /*!
+   * \brief the finalizer for Rcpp
+   * \param self the pointer to the class.
+   */
+  inline static void Finalizer(Class* self) {
+    if (!self->moved_) {
+      MX_CALL(finalizer(self->handle_));
+    }
+  }
+  /*!
+   * \brief Move a existing R Class object to a new one.
+   * \param src The source R Object.
+   * \return A new R object containing moved information as old one.
+   */
+  inline static RObjectType Move(const Rcpp::RObject& src) {
+    Class* old = Class::XPtr(src);
+    Class* moved = new Class();
+    // the subclass must implement operator=correctly
+    *moved = *old;
+    old->moved_ = true;
+    return Rcpp::internal::make_new_object(moved);
+  }
+  /*!
+   * \brief Get a pointer representation of obj.
+   * \param obj The R object.
+   * \return The pointer of the object.
+   * \throw Rcpp::exception if the object is moved.
+   */
+  inline static Class* XPtr(const Rcpp::RObject& obj) {
+    Class* ptr = Rcpp::as<Class*>(obj);
+    RCHECK(!ptr->moved_)
+        << "Passed in a moved Object as parameters."
+        << " Moved parameters should no longer be used\n";
+    return ptr;
+  }
+  /*! \brief The internal handle to the object */
+  HandleType handle_;
+  /*! \brief Whether the object has been moved */
+  bool moved_;
+};
+
 /*! \brief Context of device enviroment */
 struct Context {
   /*! \brief The device ID of the context */
