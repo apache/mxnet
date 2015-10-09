@@ -20,6 +20,10 @@ class SymbolFunction;
 /*! \brief The Rcpp Symbol class of MXNet */
 class Symbol : public MXNetClassBase<Symbol, SymbolHandle, MXSymbolFree> {
  public:
+  /*! \return typename from R side. */
+  inline static const char* TypeName() {
+    return "MXSymbol";
+  }
   /*!
    * \brief Apply the symbol as function on kwargs
    * \param kwargs keyword arguments to the data
@@ -72,14 +76,14 @@ class Symbol : public MXNetClassBase<Symbol, SymbolHandle, MXSymbolFree> {
   static RObjectType Variable(const std::string& name);
   /*!
    *  \brief Load a symbol variable from filename.
-   * 
+   *
    *  \param filename string, the path to the symbol file.
    *  \return The loaded corresponding symbol.
    */
   static RObjectType Load(const std::string& filename);
-  /*! 
+  /*!
    *  \brief Load a symbol variable from json string
-   * 
+   *
    *  \param json string, json string of symbol.
    *  \return The loaded corresponding symbol.
    */
@@ -103,6 +107,12 @@ class Symbol : public MXNetClassBase<Symbol, SymbolHandle, MXSymbolFree> {
   // constructor
   explicit Symbol(SymbolHandle handle) {
     this->handle_ = handle;
+  }
+  // Create a new Object that is moved from current one
+  inline Symbol* CreateMoveObject() {
+    Symbol* moved = new Symbol();
+    *moved = *this;
+    return moved;
   }
   /*!
    * \brief Return a clone of Symbol
@@ -166,4 +176,10 @@ class SymbolFunction : public ::Rcpp::CppFunction {
 
 RCPP_EXPOSED_CLASS_NODECL(::mxnet::R::Symbol);
 
+namespace Rcpp {
+  template<>
+  inline bool is<mxnet::R::Symbol>(SEXP x) {
+    return internal::is__module__object_fix<mxnet::R::Symbol>(x);
+  }
+}
 #endif  // MXNET_RCPP_SYMBOL_H_

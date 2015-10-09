@@ -268,14 +268,14 @@ SEXP SymbolFunction::operator() (SEXP* args) {
       name = Rcpp::as<std::string>(kwargs[i]);
       continue;
     }
-    if (!IsSimpleArg(kwargs[i])) {
+    if (Rcpp::is<Symbol>(kwargs[i])) {
       sym_keys.push_back(keys[i]);
       sym_vals.push_back(kwargs[i]);
     } else {
       RCHECK(keys[i].length() != 0)
           << "Non Symbol parameters is only accepted via key=value style.";
       str_keys.push_back(FormatParamKey(keys[i]));
-      str_vals.push_back(AsPyString(kwargs[i]));
+      str_vals.push_back(toPyString(keys[i], kwargs[i]));
     }
   }
 
@@ -353,17 +353,3 @@ void SymbolFunction::InitRcppModule() {
 }
 }  // namespace R
 }  // namespace mxnet
-
-namespace Rcpp {
-  template<>
-  bool is<mxnet::R::Symbol>(SEXP x) {
-  Environment env(x);
-  if (TYPEOF(env.get(".cppclass")) == NILSXP) {
-    return false;
-  } else {
-    XPtr<class_Base> xp(env.get(".cppclass"));
-    typedef typename Rcpp::traits::un_pointer<mxnet::R::Symbol>::type CLASS;
-    return xp->has_typeinfo_name(typeid(CLASS).name());
-  }
-}
-}  // namespace Rcpp

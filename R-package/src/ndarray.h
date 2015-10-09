@@ -19,6 +19,10 @@ class NDArrayFunction;
 /*! \brief The Rcpp NDArray class of MXNet */
 class NDArray : public MXNetClassBase<NDArray, NDArrayHandle, MXNDArrayFree> {
  public:
+  /*! \return typename from R side. */
+  inline static const char* TypeName() {
+    return "MXNDArray";
+  }
   /*! \return convert the NDArray to R's Array */
   Rcpp::NumericVector AsNumericVector() const;
   /*! \return The shape of the array */
@@ -68,6 +72,12 @@ class NDArray : public MXNetClassBase<NDArray, NDArrayHandle, MXNDArrayFree> {
     MX_CALL(MXNDArrayGetContext(handle,
                                 &ctx_.dev_type,
                                 &ctx_.dev_id));
+  }
+  // Create a new Object that is moved from current one
+  inline NDArray* CreateMoveObject() {
+    NDArray* moved = new NDArray();
+    *moved = *this;
+    return moved;
   }
   // declare friend class
   friend class NDArrayFunction;
@@ -158,4 +168,11 @@ inline Rcpp::Dimension NDArray::shape() const {
 }
 }  // namespace R
 }  // namespace mxnet
+
+namespace Rcpp {
+  template<>
+  inline bool is<mxnet::R::NDArray>(SEXP x) {
+    return internal::is__module__object_fix<mxnet::R::NDArray>(x);
+  }
+}
 #endif  // MXNET_RCPP_NDARRAY_H_

@@ -19,6 +19,10 @@ class Symbol;
 /*! \brief The Rcpp Symbol class of MXNet */
 class Executor : public MXNetClassBase<Executor, ExecutorHandle, MXExecutorFree> {
  public:
+  /*! \return typename from R side. */
+  inline static const char* TypeName() {
+    return "MXExecutor";
+  }
   /*! \brief The type of Symbol in R's side */
   typedef Rcpp::RObject RObjectType;
   /*! \brief static function to initialize the Rcpp functions */
