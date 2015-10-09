@@ -59,10 +59,31 @@ function list_auxiliary_states(self :: Symbol)
   @_list_symbol_info(self, :MXSymbolListAuxiliaryStates)
 end
 
+"Get a new grouped symbol whose output contains all the internal outputs of this symbol."
+function get_internals(self :: Symbol)
+  ref_hdr = Ref{MX_handle}(0)
+  @mxcall(:MXSymbolGetInternals, (MX_handle, Ref{MX_handle}), self, ref_hdr)
+  return Symbol(MX_SymbolHandle(ref_hdr[]))
+end
+
 function variable(name :: Union{Base.Symbol, AbstractString})
   hdr_ref = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCreateVariable, (char_p, Ref{MX_handle}), name, hdr_ref)
   Symbol(MX_SymbolHandle(hdr_ref[]))
+end
+
+function Base.getindex(self :: Symbol, idx :: Union{Base.Symbol, AbstractString})
+  idx   = symbol(idx)
+  i_idx = find(idx .== list_outputs(self))
+  @assert(length(i_idx) > 0, "Cannot find output with name '$idx'")
+  @assert(length(i_idx) < 2, "Found duplicated output with name '$idx'")
+  Base.getindex(self, i_idx[1])
+end
+function Base.getindex(self :: Symbol, idx :: Int)
+  ref_hdr = Ref{MX_handle}(0)
+  # note Julia is 1-based, while MXNet is 0-based
+  @mxcall(:MXSymbolGetOutput, (MX_handle, MX_uint, Ref{MX_handle}), self, idx-1, ref_hdr)
+  return Symbol(MX_SymbolHandle(ref_hdr[]))
 end
 
 "Compose symbol on inputs"
