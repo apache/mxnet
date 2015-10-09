@@ -1,13 +1,5 @@
 #!/bin/bash
 
-  # - export PYTHONPATH=${PYTHONPATH}:${PWD}/python
-python --version
-${CXX} --version
-
-echo ${TASK}
-echo ${TRAVIS_OS_NAME}
-echo ${CXX}
-
 if [ ${TASK} == "lint" ]; then
     make lint
     exit $?
@@ -56,12 +48,9 @@ fi
 if [ ${TASK} == "python_test" ]; then
     make all || exit -1
     # use cached dir for storing data
-    rm -rf tests/python/data
+    rm -rf ${PWD}/data
     mkdir -p ${CACHE_PREFIX}/data
-    ln -s ${CACHE_PREFIX}/data tests/python/data
-
-    # python --version
-    # cd python && python setup.py develop --user && cd .. || exit -1
+    ln -s ${CACHE_PREFIX}/data ${PWD}/data
 
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
         python -m nose tests/python/unittest || exit -1
@@ -74,14 +63,4 @@ if [ ${TASK} == "python_test" ]; then
         nosetests3 tests/python/unittest || exit -1
         # nosetests3 tests/python/train || exit -1
     fi
-
-    # if [ ${TRAVIS_OS_NAME} == "osx" ]; then
-    # else
-
-
-    #     # TODO(mli) python3 error
-    #     # python3 --version
-    #     # rm -rf python/mxnet.egg-info
-    #     # cd python && python3 setup.py develop --user && cd .. || exit -1
-    # fi
 fi
