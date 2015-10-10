@@ -81,9 +81,11 @@ class NDArray : public MXNetMovable<NDArray> {
   /*!
    * \brief create a R object that correspond to the Class
    * \param handle the Handle needed for output.
+   * \param writable Whether the array is writable.
    */
-  inline static Rcpp::RObject RObject(NDArrayHandle handle) {
-    return Rcpp::internal::make_new_object(new NDArray(handle));
+  inline static Rcpp::RObject RObject(NDArrayHandle handle,
+                                      bool writable = true) {
+    return Rcpp::internal::make_new_object(new NDArray(handle, writable));
   }
 
  private:
@@ -94,9 +96,8 @@ class NDArray : public MXNetMovable<NDArray> {
   // enable trivial operator= etc.
   NDArray() {}
   // constructor
-  explicit NDArray(NDArrayHandle handle)
-      : writable_(true) {
-    this->handle_ = handle;
+  explicit NDArray(NDArrayHandle handle, bool writable)
+      : handle_(handle), writable_(writable) {
     MX_CALL(MXNDArrayGetContext(handle,
                                 &ctx_.dev_type,
                                 &ctx_.dev_id));

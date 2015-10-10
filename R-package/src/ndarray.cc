@@ -45,7 +45,7 @@ inline void ConvertLayout(const mx_float *in_data,
       counter /= ishape[k];
     }
     RCHECK(offset < size)
-        << "offset=" << offset;
+        << "offset=" << offset << ", size=" << size;
     *it = in_data[offset];
   }
 }
@@ -54,11 +54,10 @@ inline std::vector<size_t> GetReverseStride(const std::vector<mx_uint>& ishape) 
   std::vector<size_t> stride(ishape.size());
   size_t prod = 1;
   int ndim = static_cast<int>(ishape.size());
-  for (int k = ndim - 1; k >= 0; --k) {
+  for (int k = 0; k < ndim; ++k) {
     stride[k] = prod;
     prod *= ishape[k];
   }
-  std::reverse(stride.begin(), stride.end());
   return stride;
 }
 
@@ -227,20 +226,6 @@ NDArray::RObjectType NDArray::Array(
   return ret;
 }
 
-// register normal function.
-void NDArray::InitRcppModule() {
-  using namespace Rcpp;  // NOLINT(*)
-  class_<NDArray>("MXNDArray")
-      .finalizer(&NDArray::Finalizer)
-      .method("as.array", &NDArray::AsNumericVector)
-      .const_method("dim", &NDArray::shape);
-  // don't call load/save directly, let R provides the completed file path first
-  function("mx.nd.internal.load", &NDArray::Load);
-  function("mx.nd.internal.save", &NDArray::Save);
-  function("mx.nd.internal.empty", &NDArray::Empty);
-  function("mx.nd.array", &NDArray::Array);
-}
-
 NDArrayFunction::NDArrayFunction(FunctionHandle handle)
     : handle_(handle) {
   // initialize the docstring
@@ -350,6 +335,8 @@ SEXP NDArrayFunction::operator() (SEXP* args) {
       }
     } else {
       // move the old parameters, these are no longer valid
+      RCHECK(NDArray::XPtr(args[begin_mutate_vars_ + i])->writable_)
+          << "Passing a read only NDArray to mutate function";
       out[i] = NDArray::Move(args[begin_mutate_vars_ + i]);
     }
     mutate_vars[i] = NDArray::XPtr(out[i])->handle_;
@@ -385,6 +372,19 @@ FunctionHandle NDArrayFunction::FindHandle(const std::string& hname) {
   }
   RLOG_FATAL << "FindHandle: cannot find function " << hname;
   return nullptr;
+}
+
+// initialize the Rcpp module functions.
+void NDArray::InitRcppModule() {
+  using namespace Rcpp;  // NOLINT(*)
+  class_<NDArray>("MXNDArray")
+      .finalizer(&NDArray::Finalizer)
+      .method("as.array", &NDArray::AsNumericVector)
+      .const_method("dim", &NDArray::shape);
+  function("mx.nd.internal.load", &NDArray::Load);
+  function("mx.nd.internal.save", &NDArray::Save);
+  function("mx.nd.internal.empty", &NDArray::Empty);
+  function("mx.nd.array", &NDArray::Array);
 }
 
 void NDArrayFunction::InitRcppModule() {

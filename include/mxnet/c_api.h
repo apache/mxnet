@@ -654,7 +654,7 @@ MXNET_DLL int MXDataIterCreateIter(DataIterCreator handle,
  * \param arg_descriptions Description information about the arguments.
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXDataIterGetIterInfo(AtomicSymbolCreator creator,
+MXNET_DLL int MXDataIterGetIterInfo(DataIterCreator creator,
                                     const char **name,
                                     const char **description,
                                     mx_uint *num_args,
