@@ -5,6 +5,7 @@
   loadModule("mxnet", TRUE)
   init.ndarray.methods()
   init.symbol.methods()
+  init.context.default()
 }
 
 .onUnload <- function(libpath) {
