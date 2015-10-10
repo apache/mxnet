@@ -18,8 +18,10 @@ def find_lib_path():
     if os.name == 'nt':
         vs_configuration = 'Release'
         if platform.architecture()[0] == '64bit':
+            dll_path.append(os.path.join(curr_path, '../../build', vs_configuration))
             dll_path.append(os.path.join(curr_path, '../../windows/x64', vs_configuration))
         else:
+            dll_path.append(os.path.join(curr_path, '../../build', vs_configuration))
             dll_path.append(os.path.join(curr_path, '../../windows', vs_configuration))
     if os.name == 'nt':
         dll_path = [os.path.join(p, 'mxnet.dll') for p in dll_path]

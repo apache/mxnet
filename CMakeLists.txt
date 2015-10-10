@@ -20,6 +20,7 @@ include_directories("dmlc-core/include")
 
 if(MSVC)
   add_definitions(-DDMLC_USE_CXX11)
+  add_definitions(-DMSHADOW_IN_CXX11)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-DMXNET_EXPORTS)
@@ -32,6 +33,9 @@ else(MSVC)
 endif(MSVC)
 
 if(USE_OPENCV)
+  if(MSVC)
+    set(OpenCV_STATIC OFF)
+  endif()
   find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
   if(NOT OpenCV_FOUND) # if not OpenCV 3.x, then imgcodecs are not found
     find_package(OpenCV REQUIRED COMPONENTS core highgui imgproc)
@@ -77,11 +81,13 @@ if(USE_CUDA)
   list(APPEND SOURCE ${cuda_objs} ${cuda})
 endif()
 
-# Only add c++11 flags and definitions after cuda compiling
-add_definitions(-DDMLC_USE_CXX11)
-add_definitions(-DMSHADOW_IN_CXX11)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c++0x")  
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")  
+if(NOT MSVC)
+  # Only add c++11 flags and definitions after cuda compiling
+  add_definitions(-DDMLC_USE_CXX11)
+  add_definitions(-DMSHADOW_IN_CXX11)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c++0x")  
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")  
+endif()
 
 add_library(mxnet SHARED ${SOURCE}) 
 target_link_libraries(mxnet ${mshadow_LINKER_LIBS})
