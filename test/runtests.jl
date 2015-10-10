@@ -6,4 +6,5 @@ include("unittest/common.jl")
 include("unittest/ndarray.jl")
 include("unittest/name.jl")
 include("unittest/symbol.jl")
+include("unittest/bind.jl")
 

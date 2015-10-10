@@ -160,6 +160,40 @@ function Base.getindex(self :: Symbol, idx :: Int)
   return Symbol(MX_SymbolHandle(ref_hdr[]))
 end
 
+import Base: +, .+
+function +(self :: Symbol, args :: Symbol...)
+  ret = self
+  for arg in args
+    ret = _Plus(ret, arg)
+  end
+  ret
+end
+function .+(self :: Symbol, args :: Symbol...)
+  +(self, args...)
+end
+
+import Base: -, .-
+function -(self :: Symbol, arg :: Symbol)
+  _Minus(self, arg)
+end
+function .-(self :: Symbol, arg :: Symbol)
+  -(self, arg)
+end
+
+import Base: .*
+function .*(self :: Symbol, args :: Symbol...)
+  ret = self
+  for arg in args
+    ret = _Mul(ret, arg)
+  end
+  ret
+end
+
+import Base: ./
+function ./(self :: Symbol, arg :: Symbol)
+  _Div(self, arg)
+end
+
 "Compose symbol on inputs"
 function _compose!(sym :: Symbol; kwargs...)
   name     = char_p(0)
@@ -182,14 +216,23 @@ function _compose!(sym :: Symbol; kwargs...)
   return sym
 end
 function _compose!(sym :: Symbol, args::Symbol...)
-  name     = char_p(0)
+  _compose!(sym, char_p(0), args...)
+end
+function _compose!(sym :: Symbol, name :: Union{Base.Symbol, char_p}, args::Symbol...)
+  if isa(name, Base.Symbol); name = string(name); end
   arg_keys = Ptr{char_p}(0)
   arg_vals = MX_handle[args...]
 
   @mxcall(:MXSymbolCompose,
           (MX_handle, char_p, MX_uint, Ptr{char_p}, Ptr{MX_handle}),
-          sym, name, length(arg_keys), arg_keys, arg_vals)
+          sym, name, length(arg_vals), arg_keys, arg_vals)
   return sym
+end
+
+function to_json(self :: Symbol)
+  ref_json = Ref{char_p}(0)
+  @mxcall(:MXSymbolSaveToJSON, (MX_handle, Ref{char_p}), self, ref_json)
+  return bytestring(ref_json[])
 end
 
 ################################################################################
@@ -268,7 +311,11 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
     hint = lowercase(string($func_name))
     name = get!(DEFAULT_NAME_MANAGER, name, hint)
 
-    _compose!(sym; name=name, symbol_kws...)
+    if length(args) != 0
+      _compose!(sym, name, args...)
+    else
+      _compose!(sym; name=name, symbol_kws...)
+    end
 
     return sym
   end

@@ -2,18 +2,11 @@ module TestNDArray
 using MXNet
 using Base.Test
 
+using ..Main: rand_dims, reldiff
+
 ################################################################################
 # Test Implementations
 ################################################################################
-function reldiff(a, b)
-  diff = sum(abs(a - b))
-  norm = sum(abs(a))
-  return diff / (norm + 1e-10)
-end
-
-function rand_dims()
-  tuple(rand(1:10, rand(1:6))...)
-end
 function rand_tensors{N}(dims::NTuple{N, Int})
   tensor = rand(mx.MX_float, dims)
   array  = copy(tensor, mx.DEFAULT_CONTEXT)

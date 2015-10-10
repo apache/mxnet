@@ -30,6 +30,10 @@ type NDArray
   end
 end
 
+function NDArray{T<:Real}(data :: Array{T})
+  copy(data, mx.DEFAULT_CONTEXT)
+end
+
 function Base.unsafe_convert(::Type{MX_handle}, obj::NDArray)
   Base.unsafe_convert(MX_handle, obj.handle)
 end
