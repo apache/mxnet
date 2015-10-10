@@ -80,6 +80,11 @@ class RLogFatal {
       throw Rcpp::exception(MXGetLastError());                     \
     }                                                              \
   }
+/*!
+ * \brief set seed to the random number generator
+ * \param seed the seed to set.
+ */
+void SetSeed(int seed);
 
 /*!
  * \brief Base Movable class of MXNet Module object.

@@ -9,14 +9,17 @@ mx.nd.save <- function(ndarray, filename) {
   mx.nd.internal.save(ndarray, filename)
 }
 
-mx.nd.zeros <- function(shape, ctx = NULL) {
+mx.nd.internal.empty <- function(shape, ctx=NULL) {
   if (is.null(ctx)) ctx <- mx.ctx.default()
+  return (mx.nd.internal.empty.array(shape, ctx))
+}
+
+mx.nd.zeros <- function(shape, ctx=NULL) {
   ret <- mx.nd.internal.empty(shape, ctx)
   return (mx.nd.internal.set.value(0.0, out=ret))
 }
 
-mx.nd.ones <- function(shape, ctx = NULL) {
-  if (is.null(ctx)) ctx <- mx.ctx.default()
+mx.nd.ones <- function(shape, ctx=NULL) {
   ret <- mx.nd.internal.empty(shape, ctx)
   return (mx.nd.internal.set.value(1.0, out=ret))
 }
@@ -30,7 +33,7 @@ mx.nd.ones <- function(shape, ctx = NULL) {
 #' @param ctx, optional The context device of the array. mx.ctx.default() will be used in default.
 #'
 #' @export
-mx.nd.array <- function(src.array, ctx = NULL) {
+mx.nd.array <- function(src.array, ctx=NULL) {
   if (is.null(ctx)) ctx <- mx.ctx.default()
   return (mx.nd.internal.array(src.array, ctx))
 }
@@ -80,6 +83,15 @@ init.ndarray.methods <- function() {
   })
   setMethod("as.array", signature(x = "Rcpp_MXNDArray"), function(x) {
     x$as.array()
+  })
+  setMethod("as.matrix", signature(x = "Rcpp_MXNDArray"), function(x) {
+    if (length(dim(x)) != 2) {
+      stop("The input argument is not two dimensional matrix.")
+    }
+    as.matrix(x$as.array())
+  })
+  setMethod("print", signature(x = "Rcpp_MXNDArray"), function(x) {
+    print(x$as.array())
   })
   setMethod("dim", signature(x = "Rcpp_MXNDArray"), function(x) {
     x$dim()
