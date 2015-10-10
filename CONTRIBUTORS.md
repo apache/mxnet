@@ -46,3 +46,4 @@ List of Contributors
 * [Li Dong](https://github.com/donglixp)
 * [Piji Li](https://github.com/lipiji)
 * [Hu Shiwen](https://github.com/yajiedesign)
+* [Boyuan Deng](https://github.com/bryandeng)
