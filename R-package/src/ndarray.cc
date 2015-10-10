@@ -402,9 +402,7 @@ void NDArray::InitRcppModule() {
   function("mx.nd.internal.load", &NDArray::Load);
   function("mx.nd.internal.save", &NDArray::Save);
   function("mx.nd.internal.empty", &NDArray::Empty);
-  function("mx.nd.array", &NDArray::Array,
-           List::create(_["src"], _["ctx"]),
-           "Create a new mx.ndarray that copies the content from src on ctx.");
+  function("mx.nd.internal.array", &NDArray::Array);
 }
 
 void NDArrayFunction::InitRcppModule() {
