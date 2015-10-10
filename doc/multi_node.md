@@ -21,11 +21,11 @@ A device could be a GPU card, CPU, or other computational units.
   convergence.
 
 
-| kvstore type | update on kvstore | multiple? | #ex per dev | #ex per update | max delay | update place |
+| kvstore type | update on kvstore | multi devices | multi workers | #ex per device | #ex per update | max delay | update place |
 | :--- | :--- | ---:| ---:| ---:| ---:| ---:|
-| none | no | no | *b* | *b* | *0* | dev<sub>0</sub> on worker<sub>0</sub> |
-| local | yes | devs| *b/k* | *b* | *0* | cpu on worker<sub>0</sub> |
-| local | no | devs  | *b/k* | *b* | *0* | devs on worker<sub>0</sub> |
-| device | no | devs | *b/k* |*b* | *0* | devs on worker<sub>0</sub> |
-| dist | yes | devs + workers | yes | *b/k* |*b* | *n* | servers |
-| dist | no | devs + workers | *b/k* | *b × n* | *0* | cpus on workers |
+| none | no | no | no | *b* | *b* | *0* | dev<sub>0</sub> on worker<sub>0</sub> |
+| local | yes | yes | no | *b / k* | *b* | *0* | cpu on worker<sub>0</sub> |
+| local | no | yes | no  | *b/k* | *b* | *0* | devs on worker<sub>0</sub> |
+| device | no | yes | no | *b/k* |*b* | *0* | devs on worker<sub>0</sub> |
+| dist | yes | yes | no | yes | *b/k* |*b* | *n* | servers |
+| dist | no | yes | no | *b/k* | *b × n* | *0* | cpus on workers |
