@@ -10,7 +10,6 @@
 
 #include <Rcpp.h>
 #include <dmlc/base.h>
-#include <dmlc/logging.h>
 #include <mxnet/c_api.h>
 #include <string>
 #include <sstream>
@@ -32,6 +31,10 @@ namespace R {
  */
 class RLogFatal {
  public:
+  RLogFatal(const char* file, int line) {
+    log_stream_ << file << ":"
+                << line << ": ";
+  }
   inline std::ostringstream &stream() {
     return log_stream_;
   }
@@ -40,7 +43,7 @@ class RLogFatal {
   noexcept(false)
 #endif
   {
-    std::string msg = log_stream_.str();
+    std::string msg = log_stream_.str() + '\n';
     throw Rcpp::exception(msg.c_str());
   }
 
@@ -52,7 +55,7 @@ class RLogFatal {
  * \brief LOG FATAL to report error to R console
  *  Need to append newline to it.
  */
-#define RLOG_FATAL ::mxnet::R::RLogFatal().stream()
+#define RLOG_FATAL ::mxnet::R::RLogFatal(__FILE__, __LINE__).stream()
 
 /*! \brief LOG INFO to report message to R console, need to append newline */
 #define RLOG_INFO ::Rcpp::Rcout
@@ -64,7 +67,7 @@ class RLogFatal {
  * \endcode
  */
 #define RCHECK(x)                                           \
-  if (!(x)) RLOG_FATAL << "Check failed: " #x << ' ' /* NOLINT(*) */
+  if (!(x)) RLOG_FATAL << "RCheck failed: " #x << ' ' /* NOLINT(*) */
 
 /*!
  * \brief protected MXNet C API call, report R error if happens.
@@ -79,52 +82,17 @@ class RLogFatal {
   }
 
 /*!
- * \brief Base class of MXNet Module object.
+ * \brief Base Movable class of MXNet Module object.
  *  This class will define several common functions.
  * \tparam Class The class name of subclass
  * \tparam HandleType The type of handle the object have.
  * \tparam finalizer The free function used to delete the handle.
  */
-template<typename Class,
-         typename HandleType,
-         int finalizer(void*)>
-class MXNetClassBase {
+template<typename Class>
+class MXNetMovable {
  public:
   /*! \brief The type of Class in R's side */
   typedef Rcpp::RObject RObjectType;
-
- protected:
-  /*! \brief default constructor */
-  MXNetClassBase() : moved_(false) {}
-  /*!
-   * \brief create a R object that correspond to the Class
-   * \param handle the Handle needed for output.
-   */
-  inline static Rcpp::RObject RObject(HandleType handle) {
-    return Rcpp::internal::make_new_object(new Class(handle));
-  }
-  /*!
-   * \brief the finalizer for Rcpp
-   * \param self the pointer to the class.
-   */
-  inline static void Finalizer(Class* self) {
-    if (!self->moved_) {
-      MX_CALL(finalizer(self->handle_));
-    }
-  }
-  /*!
-   * \brief Move a existing R Class object to a new one.
-   * \param src The source R Object.
-   * \return A new R object containing moved information as old one.
-   */
-  inline static RObjectType Move(const Rcpp::RObject& src) {
-    Class* old = Class::XPtr(src);
-    Class* moved = new Class();
-    // the subclass must implement operator=correctly
-    *moved = *old;
-    old->moved_ = true;
-    return Rcpp::internal::make_new_object(moved);
-  }
   /*!
    * \brief Get a pointer representation of obj.
    * \param obj The R object.
@@ -133,13 +101,38 @@ class MXNetClassBase {
    */
   inline static Class* XPtr(const Rcpp::RObject& obj) {
     Class* ptr = Rcpp::as<Class*>(obj);
-    RCHECK(!ptr->moved_)
-        << "Passed in a moved Object as parameters."
-        << " Moved parameters should no longer be used\n";
+    bool has_been_moved = static_cast<MXNetMovable<Class>*>(ptr)->moved_;
+    RCHECK(!has_been_moved)
+        << "Passed in a moved " << Class::TypeName() << " as parameter."
+        << " Moved parameters should no longer be used";
     return ptr;
   }
-  /*! \brief The internal handle to the object */
-  HandleType handle_;
+
+ protected:
+  /*! \brief default constructor */
+  MXNetMovable() : moved_(false) {}
+  /*!
+   * \brief the finalizer for Rcpp
+   * \param self the pointer to the class.
+   */
+  inline static void Finalizer(Class* self) {
+    if (!static_cast<MXNetMovable<Class>*>(self)->moved_) {
+      self->DoFinalize();
+    }
+  }
+  /*!
+   * \brief Default implement to Move a existing R Class object to a new one.
+   * \param src The source R Object.
+   * \return A new R object containing moved information as old one.
+   */
+  inline static RObjectType Move(const Rcpp::RObject& src) {
+    Class* old = Class::XPtr(src);
+    Class* moved = old->CreateMoveObject();
+    static_cast<MXNetMovable<Class>*>(old)->moved_ = true;
+    return Rcpp::internal::make_new_object(moved);
+  }
+
+ private:
   /*! \brief Whether the object has been moved */
   bool moved_;
 };
@@ -253,15 +246,43 @@ inline std::string MakeDocString(mx_uint num_args,
 }
 
 /*!
- * \brief Create a API compatile string presentation of value
- * \return A c++ string representation
+ *\return whether the expression is simple arguments
+ * That is not module object and can be converted to string
  */
-inline std::string AsPyString(const SEXP val) {
-  using namespace Rcpp;  // NOLINT(*)
-  // TODO(KK) , better string handling.
+inline const char* TypeName(SEXP args) {
+  switch (TYPEOF(args)) {
+    case REALSXP: return "numeric";
+    case VECSXP: return "list";
+    case INTSXP: return "integer";
+    case CPLXSXP: return "complex";
+    case LGLSXP: return "logical";
+    case STRSXP: return "string";
+    default: return "object type";
+  }
+}
+
+/*!
+ * \brief A simple function to convert value of known type to string.
+ * \param val the value
+ * \return the corresponding string
+ */
+template<typename T>
+inline std::string toString(SEXP val) {
   std::ostringstream os;
-  if (is<IntegerVector>(val)) {
-    IntegerVector vec(val);
+  os << Rcpp::as<T>(val);
+  return os.str();
+}
+
+/*!
+ * \brief Create a API compatile string presentation of value
+ * \param key The key name of the parameter
+ * \param val The value of the parameter
+ * \return A python string representation of val
+ */
+inline std::string toPyString(const std::string &key, const SEXP val) {
+  std::ostringstream os;
+  if (Rcpp::is<Rcpp::IntegerVector>(val)) {
+    Rcpp::IntegerVector vec(val);
     std::ostringstream os;
     os << "(";
     for (size_t i = 0; i < vec.size(); ++i) {
@@ -274,36 +295,17 @@ inline std::string AsPyString(const SEXP val) {
     return os.str();
   }
   switch (TYPEOF(val)) {
-    case STRSXP: return as<std::string>(val);
-    case INTSXP: {
-      os << as<int>(val);
-      return os.str();
-    }
-    case REALSXP: {
-      os << as<double>(val);
-      return os.str();
-    }
+    case STRSXP: return Rcpp::as<std::string>(val);
+    case INTSXP: return toString<int>(val);
+    case REALSXP: return toString<double>(val);
+    case LGLSXP: return toString<bool>(val);
     default: {
-      RLOG_FATAL << "Unsupported parameter type\n";
+      RLOG_FATAL << "Unsupported parameter type " << TypeName(val)
+                 << " for argument " << key
+                 << ", expect integer, logical, or string.";
     }
   }
   return os.str();
-}
-
-/*!
- *\return whether the expression is simple arguments
- * That is not module object and can be converted to string
- */
-inline bool IsSimpleArg(SEXP args) {
-  // TODO(KK) maybe more improvements, support bool?
-  switch (TYPEOF(args)) {
-    case REALSXP:
-    case VECSXP:
-    case INTSXP:
-    case CPLXSXP:
-    case STRSXP: return true;
-    default: return false;
-  }
 }
 
 /*!
@@ -352,6 +354,35 @@ inline std::vector<mx_uint> Dim2Vec(const Rcpp::Dimension &rshape) {
   return shape;
 }
 
+class NDArray;
+class Symbol;
+class Executor;
 }  // namespace R
 }  // namespace mxnet
+
+// This is Rcpp namespace, contains patches to Rcpp
+// The following section follows style of Rcpp
+namespace Rcpp {
+  namespace internal {  // NOLINT(*)
+    inline bool is_module_object_internal_fix(SEXP obj, const char* clazz) {
+      Environment env(obj);
+      SEXP sexp = env.get(".cppclass");
+      if (TYPEOF(sexp) != EXTPTRSXP) return false;
+      XPtr<class_Base> xp(sexp);
+      return xp->has_typeinfo_name(clazz);
+    }
+    template <typename T> bool is__module__object_fix(SEXP x) {
+      typedef typename Rcpp::traits::un_pointer<T>::type CLASS;
+      if (!is__simple<S4>(x)) return false;
+      return is_module_object_internal_fix(x, typeid(CLASS).name());
+    }
+  }  // namespace internal  NOLINT(*)
+
+  template<>
+  inline bool is<mxnet::R::NDArray>(SEXP x);
+  template<>
+  inline bool is<mxnet::R::Symbol>(SEXP x);
+  template<>
+  inline bool is<mxnet::R::Executor>(SEXP x);
+}  // namespace Rcpp
 #endif  // MXNET_RCPP_BASE_H_

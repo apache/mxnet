@@ -57,7 +57,7 @@ struct Resource {
   Resource() : id(0) {}
   /*!
    * \brief Get random number generator.
-   * \param The stream to use in the random number generator.
+   * \param stream The stream to use in the random number generator.
    * \return the mshadow random number generator requested.
    * \tparam xpu the device type of random number generator.
    */

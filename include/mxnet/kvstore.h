@@ -78,7 +78,7 @@ class KVStore {
    * always has the same shape as being inited.
    *
    * \param keys the list of keys
-   * \param value the list of values
+   * \param values the list of values
    * \param priority Priority of the action.
    */
   virtual void Push(const std::vector<int>& keys,
@@ -123,7 +123,7 @@ class KVStore {
    * value stored on the store node. The store updates \a y by `h(x, &y)`. The
    * default \a h is ASSIGN, namely `*y = x`.
    *
-   * \param updt user-defined updater, default is assign
+   * \param updater user-defined updater, default is assign
    */
   void set_updater(Updater updater) {
     updater_ = updater;

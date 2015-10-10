@@ -17,16 +17,33 @@ namespace R {
 class NDArrayFunction;
 
 /*! \brief The Rcpp NDArray class of MXNet */
-class NDArray : public MXNetClassBase<NDArray, NDArrayHandle, MXNDArrayFree> {
+class NDArray : public MXNetMovable<NDArray> {
  public:
+  /*! \return typename from R side. */
+  inline static const char* TypeName() {
+    return "MXNDArray";
+  }
   /*! \return convert the NDArray to R's Array */
   Rcpp::NumericVector AsNumericVector() const;
+  /*!
+   * \brief Return a clone of NDArray.
+   *  Do not expose this to R side.
+   * \return a new cloned NDArray.
+   */
+  RObjectType Clone() const;
   /*! \return The shape of the array */
   inline Rcpp::Dimension shape() const;
   /*! \return the context of the NDArray */
   inline const Context &ctx() const {
     return ctx_;
   }
+  /*!
+   * \brief internal function to copy NDArray from to to
+   *  Do not expose this to R side.
+   * \param from The source NDArray.
+   * \param to The target NDArray.
+   */
+  static void CopyFromTo(const NDArray& from, NDArray *to);
   /*!
    * \brief Load a list of ndarray from the file.
    * \param filename the name of the file.
@@ -57,26 +74,50 @@ class NDArray : public MXNetClassBase<NDArray, NDArrayHandle, MXNDArrayFree> {
   /*! \brief static function to initialize the Rcpp functions */
   static void InitRcppModule();
 
+  /*! \return the handle of NDArray */
+  NDArrayHandle handle() const {
+    return handle_;
+  }
+  /*!
+   * \brief create a R object that correspond to the Class
+   * \param handle the Handle needed for output.
+   * \param writable Whether the array is writable.
+   */
+  inline static Rcpp::RObject RObject(NDArrayHandle handle,
+                                      bool writable = true) {
+    return Rcpp::internal::make_new_object(new NDArray(handle, writable));
+  }
+
  private:
-  friend MXNetClassBase<NDArray, NDArrayHandle, MXNDArrayFree>;
+  // declare friend class
+  friend class NDArrayFunction;
+  friend class Executor;
+  friend class MXNetMovable<NDArray>;
   // enable trivial operator= etc.
   NDArray() {}
   // constructor
-  explicit NDArray(NDArrayHandle handle)
-      : writable_(true) {
-    this->handle_ = handle;
+  explicit NDArray(NDArrayHandle handle, bool writable)
+      : handle_(handle), writable_(writable) {
     MX_CALL(MXNDArrayGetContext(handle,
                                 &ctx_.dev_type,
                                 &ctx_.dev_id));
   }
-  // declare friend class
-  friend class NDArrayFunction;
+  // finalizer that invoked on non-movable object
+  inline void DoFinalize() {
+    MX_CALL(MXNDArrayFree(handle_));
+  }
+  // Create a new Object that is moved from current one
+  inline NDArray* CreateMoveObject() {
+    NDArray* moved = new NDArray();
+    *moved = *this;
+    return moved;
+  }
   /*! \brief The context of the NDArray */
   Context ctx_;
   /*! \brief Whether the NDArray is writable */
   bool writable_;
-  /*! \brief Whether this object has been moved to another object */
-  bool moved_;
+  /*! \brief The internal handle to the object */
+  NDArrayHandle handle_;
 };
 
 /*! \brief The NDArray functions to be invoked */
@@ -109,6 +150,9 @@ class NDArrayFunction : public ::Rcpp::CppFunction {
   }
   /*! \brief static function to initialize the Rcpp functions */
   static void InitRcppModule();
+
+  // internal helper function to search function handle
+  static FunctionHandle FindHandle(const std::string& hname);
 
  private:
   // make constructor private
@@ -158,4 +202,11 @@ inline Rcpp::Dimension NDArray::shape() const {
 }
 }  // namespace R
 }  // namespace mxnet
+
+namespace Rcpp {
+  template<>
+  inline bool is<mxnet::R::NDArray>(SEXP x) {
+    return internal::is__module__object_fix<mxnet::R::NDArray>(x);
+  }
+}
 #endif  // MXNET_RCPP_NDARRAY_H_

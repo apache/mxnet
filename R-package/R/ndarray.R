@@ -1,5 +1,4 @@
-#' NDArray Interface of MXNet
-#'
+
 mx.nd.load <- function(filename) {
   filename <- path.expand(filename)
   mx.nd.internal.load(filename)
@@ -8,6 +7,16 @@ mx.nd.load <- function(filename) {
 mx.nd.save <- function(ndarray, filename) {
   filename <- path.expand(filename)
   mx.nd.internal.save(ndarray, filename)
+}
+
+mx.nd.zeros <- function(shape, ctx) {
+  ret <- mx.nd.internal.empty(shape, ctx)
+  return (mx.nd.internal.set.value(0.0, out=ret))
+}
+
+mx.nd.ones <- function(shape, ctx) {
+  ret <- mx.nd.internal.empty(shape, ctx)
+  return (mx.nd.internal.set.value(1.0, out=ret))
 }
 
 is.MXNDArray <- function(x) {
@@ -53,5 +62,8 @@ init.ndarray.methods <- function() {
   })
   setMethod("as.array", signature(x = "Rcpp_MXNDArray"), function(x) {
     x$as.array()
+  })
+  setMethod("dim", signature(x = "Rcpp_MXNDArray"), function(x) {
+    x$dim()
   })
 }

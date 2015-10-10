@@ -242,6 +242,8 @@ SymbolFunction::SymbolFunction(AtomicSymbolCreator handle)
      << "Parameters\n"
      << "----------\n"
      << MakeDocString(num_args, arg_names, arg_type_infos, arg_descriptions)
+     << "name : string, optional.\n"
+     << "    Name of the resulting symbol.\n\n"
      << "Returns\n"
      << "-------\n"
      << "out : Symbol\n"
@@ -265,16 +267,17 @@ SEXP SymbolFunction::operator() (SEXP* args) {
   // classify keys
   for (size_t i = 0; i < kwargs.size(); ++i) {
     if (keys[i] == "name") {
-      name = keys[i]; continue;
+      name = Rcpp::as<std::string>(kwargs[i]);
+      continue;
     }
-    if (!IsSimpleArg(kwargs[i])) {
+    if (Rcpp::is<Symbol>(kwargs[i])) {
       sym_keys.push_back(keys[i]);
       sym_vals.push_back(kwargs[i]);
     } else {
       RCHECK(keys[i].length() != 0)
           << "Non Symbol parameters is only accepted via key=value style.";
       str_keys.push_back(FormatParamKey(keys[i]));
-      str_vals.push_back(AsPyString(kwargs[i]));
+      str_vals.push_back(toPyString(keys[i], kwargs[i]));
     }
   }
 
