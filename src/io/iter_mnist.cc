@@ -133,7 +133,6 @@ class MNISTIter: public IIterator<TBlobBatch> {
   }
 
   inline void LoadImage(void) {
-    // dmlc::Stream *stdimg = dmlc::Stream::Create(param_.image.c_str(), "r");
     dmlc::SeekStream* stdimg
         = dmlc::SeekStream::CreateForRead(param_.image.c_str());
     ReadInt(stdimg);
@@ -167,7 +166,6 @@ class MNISTIter: public IIterator<TBlobBatch> {
     delete stdimg;
   }
   inline void LoadLabel(void) {
-    // dmlc::Stream *stdlabel = dmlc::Stream::Create(param_.label.c_str(), "r");
 
     dmlc::SeekStream* stdlabel
         = dmlc::SeekStream::CreateForRead(param_.label.c_str());

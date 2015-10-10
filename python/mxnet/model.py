@@ -130,7 +130,7 @@ def _train_multi_device(symbol, ctx, input_shape,
                         train_data, eval_data=None, eval_metric=None,
                         iter_end_callback=None, epoch_end_callback=None,
                         update_on_kvstore=None, kvstore_type='local',
-                        logger=None):
+                        kv=None, logger=None):
     """Internal training function on multiple devices.
 
     This function will also work for single device as well.
@@ -184,6 +184,9 @@ def _train_multi_device(symbol, ctx, input_shape,
     kvstore_type : {'local', 'device', 'dist'}, optional
         Type of kvstore used for synchronization.
 
+    kv : kvstore, optional
+        An instance of kvstore. It overwrite both kvstore_type and update_on_kvstore
+
     logger : logging logger
         When not specified, default logger will be used.
 
@@ -221,7 +224,9 @@ def _train_multi_device(symbol, ctx, input_shape,
         texec.copy_params_from(arg_params, aux_params)
 
     # ky value store
-    if kvstore_type == 'dist':
+    if kv is not None:
+        update_on_kvstore = True
+    elif kvstore_type == 'dist':
         kv = kvstore.create(kvstore_type)
         update_on_kvstore = True
     elif num_device != 1:
@@ -609,7 +614,7 @@ class FeedForward(BASE_ESTIMATOR):
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
             iter_end_callback=None, epoch_end_callback=None,
             update_on_kvstore=None, kvstore_type='local',
-            logger=None):
+            kvstore=None, logger=None):
         """Fit the model.
 
         Parameters
@@ -643,6 +648,9 @@ class FeedForward(BASE_ESTIMATOR):
         kvstore_type : {'local', 'device'}, optional
             Type of kvstore used for synchronization, usually no need to set.
 
+        kvstore : kvstore, optional
+            An instance of kvstore. It overwrite both kvstore_type and update_on_kvstore
+
         logger : logging logger, optional
             When not specified, default logger will be used.
         """
@@ -675,6 +683,7 @@ class FeedForward(BASE_ESTIMATOR):
                             epoch_end_callback=epoch_end_callback,
                             update_on_kvstore=update_on_kvstore,
                             kvstore_type=kvstore_type,
+                            kv=kvstore,
                             logger=logger)
 
     def save(self, prefix, iteration=None):
@@ -740,7 +749,7 @@ class FeedForward(BASE_ESTIMATOR):
     def create(symbol, X, y=None, ctx=None,
                num_round=None, optimizer='sgd', initializer=Uniform(0.01),
                eval_data=None, eval_metric='acc', iter_end_callback=None,
-               update_on_kvstore=None, kvstore_type='local',
+               update_on_kvstore=None, kvstore_type='local', kvstore=None,
                logger=None, **kwargs):
         """Functional style to create a model.
 
@@ -790,6 +799,9 @@ class FeedForward(BASE_ESTIMATOR):
         kvstore_type : {'local', 'device'}, optional
             Type of kvstore used for synchronization, usually no need to set.
 
+        kvstore : kvstore, optional
+            An instance of kvstore. It overwrite both kvstore_type and update_on_kvstore
+
         logger : logging logger, optional
         """
         model = FeedForward(symbol, ctx=ctx, num_round=num_round,
@@ -797,6 +809,6 @@ class FeedForward(BASE_ESTIMATOR):
         model.fit(X, y, eval_data=eval_data, eval_metric=eval_metric,
                   iter_end_callback=iter_end_callback,
                   update_on_kvstore=update_on_kvstore,
-                  kvstore_type=kvstore_type,
+                  kvstore_type=kvstore_type, kvstore=kvstore,
                   logger=logger)
         return model

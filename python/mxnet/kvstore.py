@@ -169,6 +169,9 @@ class KVStore(object):
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
             ctypes.c_int(priority)))
 
+        # self._wait(key)
+        # self._barrier()
+
     def pull(self, key, out=None, priority=0):
         """ Pull a single value or a sequence of values from the store.
 

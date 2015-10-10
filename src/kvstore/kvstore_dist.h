@@ -10,6 +10,7 @@
 #include "./kvstore_local.h"
 #include "./mxnet_ps_node.h"
 #include "mxnet/engine.h"
+// #include "dmlc/parameter.h"
 #include "ps.h"
 #include "base/range.h"
 
@@ -43,6 +44,7 @@ class KVStoreDist : public KVStoreLocal {
         // stop the executor at servers
         SendCommandToServers(CommandID::kStop, "");
       }
+      Barrier();
       ps::StopSystem();
     }
   }
