@@ -9,7 +9,6 @@
 
 namespace mxnet {
 namespace R {
-
 template<typename InputIter>
 inline void ConvertLayout(InputIter it,
                           const mx_uint *ishape,
@@ -401,7 +400,7 @@ void NDArray::InitRcppModule() {
       .const_method("dim", &NDArray::shape);
   function("mx.nd.internal.load", &NDArray::Load);
   function("mx.nd.internal.save", &NDArray::Save);
-  function("mx.nd.internal.empty", &NDArray::Empty);
+  function("mx.nd.internal.empty.array", &NDArray::Empty);
   function("mx.nd.internal.array", &NDArray::Array);
 }
 
