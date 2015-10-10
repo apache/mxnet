@@ -357,6 +357,7 @@ inline std::vector<mx_uint> Dim2Vec(const Rcpp::Dimension &rshape) {
 class NDArray;
 class Symbol;
 class Executor;
+class KVStore;
 }  // namespace R
 }  // namespace mxnet
 

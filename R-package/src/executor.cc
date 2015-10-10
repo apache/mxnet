@@ -77,14 +77,9 @@ Executor::RObjectType Executor::Backward(const RObjectType &exec,
       << "Expect exec to be " << Executor::TypeName();
   RCHECK(Executor::XPtr(exec)->grad_arrays_ != nullptr)
       << "This executor has not been binded with req.grad";
-
   Executor::RObjectType ret = Executor::Move(exec);
-  std::vector<NDArrayHandle> grad_handles(output_grads.size());
-  for (size_t i = 0; i < output_grads.size(); ++i) {
-    RCHECK(Rcpp::is<NDArray>(exec))
-        << "Expect out_grads be list of " << NDArray::TypeName();
-    grad_handles[i] = NDArray::XPtr(output_grads[i])->handle();
-  }
+  std::vector<NDArrayHandle> grad_handles
+      = NDArray::GetHandles(output_grads, "output_grads", false);
   MX_CALL(MXExecutorBackward(Executor::XPtr(ret)->handle_,
                              static_cast<mx_uint>(grad_handles.size()),
                              dmlc::BeginPtr(grad_handles)));

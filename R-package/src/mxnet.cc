@@ -9,6 +9,7 @@
 #include "./symbol.h"
 #include "./executor.h"
 #include "./io.h"
+#include "./kvstore.h"
 
 RCPP_MODULE(mxnet) {
   using namespace mxnet::R;
@@ -20,4 +21,5 @@ RCPP_MODULE(mxnet) {
   Executor::InitRcppModule();
   DataIter::InitRcppModule();
   DataIterCreateFunction::InitRcppModule();
+  KVStore::InitRcppModule();
 }

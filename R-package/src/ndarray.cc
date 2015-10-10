@@ -190,6 +190,24 @@ NDArray::RObjectType NDArray::Empty(
   return NDArray::RObject(handle);
 }
 
+std::vector<NDArrayHandle> NDArray::GetHandles(const Rcpp::List& array_list,
+                                               const std::string& list_name,
+                                               bool allow_null) {
+  std::vector<NDArrayHandle> ret(array_list.size());
+  for (size_t i = 0; i < ret.size(); ++i) {
+    if (array_list[i] == R_NilValue) {
+      RCHECK(allow_null)
+          << "Expect " << list_name << " to be list of non-NULL " << NDArray::TypeName();
+      ret[i] = nullptr;
+    } else {
+      RCHECK(Rcpp::is<NDArray>(array_list[i]))
+          << "Expect " << list_name << " to  be list of " << NDArray::TypeName();
+      ret[i] = NDArray::XPtr(array_list[i])->handle_;
+    }
+  }
+  return ret;
+}
+
 NDArray::RObjectType NDArray::Clone() const {
   std::vector<mx_uint> shape = Dim2Vec(this->shape());
   NDArrayHandle handle;
@@ -384,7 +402,9 @@ void NDArray::InitRcppModule() {
   function("mx.nd.internal.load", &NDArray::Load);
   function("mx.nd.internal.save", &NDArray::Save);
   function("mx.nd.internal.empty", &NDArray::Empty);
-  function("mx.nd.array", &NDArray::Array);
+  function("mx.nd.array", &NDArray::Array,
+           List::create(_["src"], _["ctx"]),
+           "Create a new mx.ndarray that copies the content from src on ctx.");
 }
 
 void NDArrayFunction::InitRcppModule() {
