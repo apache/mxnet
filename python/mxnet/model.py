@@ -15,6 +15,7 @@ from . import kvstore
 from .context import Context, cpu
 from .initializer import Uniform
 from collections import namedtuple
+from .optimizer import get_updater
 
 BASE_ESTIMATOR = object
 
@@ -180,7 +181,7 @@ def _train_multi_device(symbol, ctx, input_shape,
     update_on_kvstore : boolean, optional
         Whether to perform parameter update on kvstore instead of training device.
 
-    kvstore_type : {'local', 'device'}, optional
+    kvstore_type : {'local', 'device', 'dist'}, optional
         Type of kvstore used for synchronization.
 
     logger : logging logger
@@ -220,39 +221,41 @@ def _train_multi_device(symbol, ctx, input_shape,
         texec.copy_params_from(arg_params, aux_params)
 
     # ky value store
-    kv = kvstore.create(kvstore_type) if num_device != 1 else None
-    if kv is None or kvstore_type == 'device':
-        update_on_kvstore = False
-    else:
+    if kvstore_type == 'dist':
+        kv = kvstore.create(kvstore_type)
+        update_on_kvstore = True
+    elif num_device != 1:
+        kv = kvstore.create(kvstore_type)
         # auto decide update_on_kvstore
         if update_on_kvstore is None:
             max_size = max(np.prod(param.shape) for param in arg_params.values())
             update_on_kvstore = max_size < 1024 * 1024 * 16
             logging.info('Auto-select update_on_kvstore=%s', str(update_on_kvstore))
+    else:
+        # don't use kvstore for single machine and single device
+        update_on_kvstore = False
+        kv = None
 
-    opt_state_blocks = []
-    # If there are multiple devices, initialize the weights.
-    for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
-        arg_list, grad_list = pair
-        if grad_list[0] is not None:
-            if kv:
+    # init optimizer before give it to kv or get_updater
+    optimizer.begin_round(begin_round)
+
+    if not update_on_kvstore:
+        updater = get_updater(optimizer)
+
+    if kv:
+        # init optimizer
+        if update_on_kvstore:
+            kv.set_optimizer(optimizer)
+
+        # init kv
+        for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
+            arg_list, grad_list = pair
+            if grad_list[0] is not None:
                 kv.init(index, arg_list[0])
-            # attach state direct to weight
-            if update_on_kvstore:
-                opt_state_blocks.append(nd.zeros(arg_list[0].shape, cpu()))
-            else:
-                opt_list = [optimizer.create_state(index, w) for w in arg_list]
-                opt_state_blocks.append(opt_list)
-        else:
-            opt_state_blocks.append(None)
 
-    def kv_updater(index, grad, weight):
-        """Internal updater on KVstore, used when update_on_kvstore=True."""
-        optimizer.update(index, weight, grad, opt_state_blocks[index])
-
-    # pylint: disable=protected-access
-    if update_on_kvstore:
-        kv._set_updater(kv_updater)
+                # pull the weight back
+                if update_on_kvstore:
+                    kv.pull(index, arg_list, priority=-index)
 
     # Input and output data structure
     data_index, label_index = _check_arguments(symbol)
@@ -265,7 +268,6 @@ def _train_multi_device(symbol, ctx, input_shape,
     for iteration in range(begin_round, end_round):
         # Training phase
         tic = time.time()
-        optimizer.begin_round(iteration)
         eval_metric.reset()
         nbatch = 0
         # Iterate over training data.
@@ -297,10 +299,9 @@ def _train_multi_device(symbol, ctx, input_shape,
                         # pull back the sum gradients, to the same locations.
                         kv.pull(index, grad_list, priority=-index)
                 if not update_on_kvstore:
-                    opt_list = opt_state_blocks[index]
-                    # optimizea
-                    for w, g, state in zip(arg_list, grad_list, opt_list):
-                        optimizer.update(index, w, g, state)
+                    for w, g in zip(arg_list, grad_list):
+                        updater(index, g, w)
+
             nbatch += 1
             # epoch callback (for print purpose)
             if epoch_end_callback != None:

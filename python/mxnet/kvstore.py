@@ -261,7 +261,7 @@ class KVStore(object):
                 raise
             self._send_command_to_servers(0, optim_str)
         else:
-            self._set_updater(opt.optimizer_clossure(optimizer))
+            self._set_updater(opt.get_updater(optimizer))
 
     def get_rank(self):
         """Get the rank of this worker node
