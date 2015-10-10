@@ -10,6 +10,7 @@
 #include <mxnet/c_api.h>
 #include <string>
 #include <algorithm>
+#include <vector>
 
 namespace mxnet {
 namespace R {
@@ -71,6 +72,15 @@ class NDArray : public MXNetMovable<NDArray> {
    */
   static RObjectType Array(const Rcpp::RObject& src,
                            const Context::RObjectType& ctx);
+  /*!
+   * \brief Extract NDArrayHandles from List.
+   * \param array_list The NDArray list.
+   * \param list_name The name of the list, used for error message.
+   * \param allow_null If set to True, allow null in the list.
+   */
+  static std::vector<NDArrayHandle> GetHandles(const Rcpp::List& array_list,
+                                               const std::string& list_name,
+                                               bool allow_null = false);
   /*! \brief static function to initialize the Rcpp functions */
   static void InitRcppModule();
 
@@ -91,6 +101,7 @@ class NDArray : public MXNetMovable<NDArray> {
  private:
   // declare friend class
   friend class NDArrayFunction;
+  friend class KVStore;
   friend class Executor;
   friend class MXNetMovable<NDArray>;
   // enable trivial operator= etc.

@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file ndarray.cc
- * \brief Rcpp NDArray of MXNet.
+ * \file io.cc
+ * \brief Rcpp IO module of mxnet.
  */
 #include <Rcpp.h>
 #include "./base.h"

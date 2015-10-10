@@ -951,7 +951,7 @@ int MXKVStoreFree(KVStoreHandle handle) {
 
 int MXKVStoreInit(KVStoreHandle handle,
                   mx_uint num,
-                  int* keys,
+                  const int* keys,
                   NDArrayHandle* vals) {
   API_BEGIN();
   std::vector<int> v_keys(num);
@@ -966,7 +966,7 @@ int MXKVStoreInit(KVStoreHandle handle,
 
 int MXKVStorePush(KVStoreHandle handle,
                   mx_uint num,
-                  int* keys,
+                  const int* keys,
                   NDArrayHandle* vals,
                   int priority) {
   API_BEGIN();
@@ -982,7 +982,7 @@ int MXKVStorePush(KVStoreHandle handle,
 
 int MXKVStorePull(KVStoreHandle handle,
                   mx_uint num,
-                  int* keys,
+                  const int* keys,
                   NDArrayHandle* vals,
                   int priority) {
   API_BEGIN();

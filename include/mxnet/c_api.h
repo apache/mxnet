@@ -735,7 +735,7 @@ MXNET_DLL int MXKVStoreFree(KVStoreHandle handle);
  */
 MXNET_DLL int MXKVStoreInit(KVStoreHandle handle,
                             mx_uint num,
-                            int* keys,
+                            const int* keys,
                             NDArrayHandle* vals);
 
 /*!
@@ -749,7 +749,7 @@ MXNET_DLL int MXKVStoreInit(KVStoreHandle handle,
  */
 MXNET_DLL int MXKVStorePush(KVStoreHandle handle,
                             mx_uint num,
-                            int* keys,
+                            const int* keys,
                             NDArrayHandle* vals,
                             int priority);
 /*!
@@ -763,7 +763,7 @@ MXNET_DLL int MXKVStorePush(KVStoreHandle handle,
  */
 MXNET_DLL int MXKVStorePull(KVStoreHandle handle,
                             mx_uint num,
-                            int* keys,
+                            const int* keys,
                             NDArrayHandle* vals,
                             int priority);
 /*!
