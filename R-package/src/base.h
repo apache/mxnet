@@ -31,6 +31,10 @@ namespace R {
  */
 class RLogFatal {
  public:
+  RLogFatal(const char* file, int line) {
+    log_stream_ << file << ":"
+                << line << ": ";
+  }
   inline std::ostringstream &stream() {
     return log_stream_;
   }
@@ -51,7 +55,7 @@ class RLogFatal {
  * \brief LOG FATAL to report error to R console
  *  Need to append newline to it.
  */
-#define RLOG_FATAL ::mxnet::R::RLogFatal().stream()
+#define RLOG_FATAL ::mxnet::R::RLogFatal(__FILE__, __LINE__).stream()
 
 /*! \brief LOG INFO to report message to R console, need to append newline */
 #define RLOG_INFO ::Rcpp::Rcout
@@ -63,7 +67,7 @@ class RLogFatal {
  * \endcode
  */
 #define RCHECK(x)                                           \
-  if (!(x)) RLOG_FATAL << "Check failed: " #x << ' ' /* NOLINT(*) */
+  if (!(x)) RLOG_FATAL << "RCheck failed: " #x << ' ' /* NOLINT(*) */
 
 /*!
  * \brief protected MXNet C API call, report R error if happens.

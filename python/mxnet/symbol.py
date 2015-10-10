@@ -726,7 +726,7 @@ def _make_atomic_symbol_function(handle):
         desc += '\nThis function support variable length of positional input.'
     doc_str = ('%s\n\n' +
                '%s\n' +
-               'name : string, required.\n' +
+               'name : string, optional.\n' +
                '    Name of the resulting symbol.\n\n' +
                'Returns\n' +
                '-------\n' +

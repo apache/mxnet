@@ -63,4 +63,7 @@ init.ndarray.methods <- function() {
   setMethod("as.array", signature(x = "Rcpp_MXNDArray"), function(x) {
     x$as.array()
   })
+  setMethod("dim", signature(x = "Rcpp_MXNDArray"), function(x) {
+    x$dim()
+  })
 }

@@ -242,6 +242,8 @@ SymbolFunction::SymbolFunction(AtomicSymbolCreator handle)
      << "Parameters\n"
      << "----------\n"
      << MakeDocString(num_args, arg_names, arg_type_infos, arg_descriptions)
+     << "name : string, optional.\n"
+     << "    Name of the resulting symbol.\n\n"
      << "Returns\n"
      << "-------\n"
      << "out : Symbol\n"

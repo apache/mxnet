@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file executor.h
- * \brief Rcpp Symbolic execution interface of MXNet
+ * \brief Rcpp Symbolic Execution interface of MXNet
  */
 #ifndef MXNET_RCPP_EXECUTOR_H_
 #define MXNET_RCPP_EXECUTOR_H_
@@ -14,9 +14,6 @@
 
 namespace mxnet {
 namespace R {
-// forward declare symbol
-class Symbol;
-
 /*! \brief The Rcpp Symbol class of MXNet */
 class Executor : public MXNetMovable<Executor> {
  public:
