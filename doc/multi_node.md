@@ -22,7 +22,7 @@ A device could be a GPU card, CPU, or other computational units.
 
 
 | kvstore type | update on kvstore | multi devices | multi workers | #ex per device | #ex per update | max delay | update place |
-| :--- | :--- | ---:| ---:| ---:| ---:| ---:|
+| :--- | :--- | ---:| ---:| ---:| ---:| ---:| ---:|
 | none | no | no | no | *b* | *b* | *0* | dev<sub>0</sub> on worker<sub>0</sub> |
 | local | yes | yes | no | *b / k* | *b* | *0* | cpu on worker<sub>0</sub> |
 | local | no | yes | no  | *b/k* | *b* | *0* | devs on worker<sub>0</sub> |
