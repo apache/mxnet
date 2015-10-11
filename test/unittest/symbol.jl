@@ -61,7 +61,7 @@ function test_infer_shape()
 end
 
 function test_infer_shape_error()
-  info("Symbol::infer_shape::error")
+  info("Symbol::infer_shape::throws")
 
   model = mlp2()
   weight_shape = (1, 100)

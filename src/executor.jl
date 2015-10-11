@@ -52,7 +52,7 @@ function _get_ndarray_inputs(arg_key::AbstractString, args::Dict{Base.Symbol,NDA
   return (args_hdr, args_vec)
 end
 
-@enum GRAD_REQ GRAD_NULL=0 GRAD_WRITE=1 GRAD_ADD=3
+@enum GRAD_REQ GRAD_NOP=0 GRAD_WRITE=1 GRAD_ADD=3
 function bind(self :: Symbol, ctx :: Context, args :: Union{Vector{NDArray},Dict{Base.Symbol,NDArray}};
               args_grad  :: Union{Void,Vector{NDArray},Dict{Base.Symbol,NDArray}} = nothing,
               aux_states :: Union{Void,Vector{NDArray},Dict{Base.Symbol,NDArray}} = nothing,
@@ -77,7 +77,7 @@ function bind(self :: Symbol, ctx :: Context, args :: Union{Vector{NDArray},Dict
     @assert(length(grad_req) == length(args))
     reqs = MX_uint[grad_req...]
   elseif isa(grad_req, Dict{Base.Symbol, GRAD_REQ})
-    reqs = MX_uint[get(grad_req, name, GRAD_NULL) for name in arg_names]
+    reqs = MX_uint[get(grad_req, name, GRAD_NOP) for name in arg_names]
   end
 
   ref_hdr = Ref{MX_handle}(0)
@@ -89,6 +89,27 @@ function bind(self :: Symbol, ctx :: Context, args :: Union{Vector{NDArray},Dict
   args_grad = convert(Vector{Union{Void,NDArray}}, args_grad)
   executor = Executor(MX_ExecutorHandle(ref_hdr[]), self,
                       args, args_grad, aux_states)
+end
+
+function simple_bind(self :: Symbol, ctx :: Context; grad_req :: GRAD_REQ=GRAD_WRITE, kwargs...)
+  arg_shapes, grad_shapes, aux_shapes = infer_shape(self; kwargs...)
+  @assert(!isa(arg_shapes, Void), "Information not enough to perform complete shape inference")
+
+  arg_arrays = NDArray[zeros(shape, ctx) for shape in arg_shapes]
+  if grad_req == GRAD_NOP
+    grad_arrays = nothing
+  else
+    grad_arrays = Dict{Base.Symbol, NDArray}
+    for (name, shape) in zip(list_arguments(self), grad_shapes)
+      # TODO: use a better way to identify data
+      if !(endswith(string(name), "data") || endswith(string(name), "label"))
+        grad_arrays[name] = zeros(shape, ctx)
+      end
+    end
+  end
+
+  aux_arrays = [zeros(shape, ctx) for shape in aux_shapes]
+  return bind(self, ctx, arg_ndarrays, grad_arrays, grad_req, aux_arrays)
 end
 
 
