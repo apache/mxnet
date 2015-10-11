@@ -8,7 +8,10 @@ init.context.default <- function() {
 #'
 #' Set/Get default context for array creation.
 #'
+#' @rdname mx.ctx
+#' 
 #' @param new, optional takes \code{mx.cpu()} or \code{mx.gpu(id)}, new default ctx.
+#'
 #' @export
 mx.ctx.default <- function(new = NULL) {
   if (!is.null(new)) {
@@ -17,6 +20,13 @@ mx.ctx.default <- function(new = NULL) {
   return (mx.ctx.internal.default.value)
 }
 
+# TODO need examples
+
+#' @rdname mx.ctx
+#' 
+#' @return Logical indicator 
+#' 
+#' @export
 is.mx.context <- function(x) {
   class(x) == "MXContext"
 }

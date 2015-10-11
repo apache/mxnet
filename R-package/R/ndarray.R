@@ -2,6 +2,13 @@
 #' 
 #' @param filename the filename (including the path)
 #' 
+#' @examples 
+#' mat = mx.nd.array(1:3)
+#' mx.nd.save(mat, 'temp.mat') 
+#' mat2 = mx.nd.load('temp.mat')
+#' as.array(mat)
+#' as.array(mat2)
+#' 
 #' @export
 mx.nd.load <- function(filename) {
   filename <- path.expand(filename)
@@ -12,6 +19,13 @@ mx.nd.load <- function(filename) {
 #' 
 #' @param ndarray the \code{mx.nd.array} object
 #' @param filename the filename (including the path)
+#' 
+#' @examples 
+#' mat = mx.nd.array(1:3)
+#' mx.nd.save(mat, 'temp.mat') 
+#' mat2 = mx.nd.load('temp.mat')
+#' as.array(mat)
+#' as.array(mat2)
 #' 
 #' @export
 mx.nd.save <- function(ndarray, filename) {
@@ -29,6 +43,14 @@ mx.nd.internal.empty <- function(shape, ctx=NULL) {
 #' @param shape the dimension of the \code{mx.nd.array}
 #' @param ctx optional The context device of the array. mx.ctx.default() will be used in default.
 #' 
+#' @examples 
+#' mat = mx.nd.zeros(10)
+#' as.array(mat)
+#' mat2 = mx.nd.zeros(c(5,5))
+#' as.array(mat)
+#' mat3 = mx.nd.zeroes(c(3,3,3))
+#' as.array(mat3)
+#' 
 #' @export
 mx.nd.zeros <- function(shape, ctx=NULL) {
   ret <- mx.nd.internal.empty(shape, ctx)
@@ -39,7 +61,15 @@ mx.nd.zeros <- function(shape, ctx=NULL) {
 #' 
 #' @param shape the dimension of the \code{mx.nd.array}
 #' @param ctx optional The context device of the array. mx.ctx.default() will be used in default.
-#' 
+#'
+#' @examples 
+#' mat = mx.nd.ones(10)
+#' as.array(mat)
+#' mat2 = mx.nd.ones(c(5,5))
+#' as.array(mat)
+#' mat3 = mx.nd.ones(c(3,3,3))
+#' as.array(mat3)
+#'  
 #' @export
 mx.nd.ones <- function(shape, ctx=NULL) {
   ret <- mx.nd.internal.empty(shape, ctx)
@@ -86,6 +116,12 @@ is.MXNDArray <- function(x) {
 #' @rdname mx.nd.array
 #' 
 #' @return Logical indicator
+#' 
+#' @examples 
+#' mat = mx.nd.array(1:10)
+#' is.mx.nd.array(mat) 
+#' mat2 = 1:10
+#' is.mx.nd.array(mat2)
 #' 
 #' @export
 is.mx.nd.array <- function(src.array) {
