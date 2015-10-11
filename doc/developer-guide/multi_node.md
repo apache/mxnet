@@ -1,10 +1,33 @@
 # Multi-devices and multi-machines
 
-## Architecture
+## Introduction
 
-A device could be a GPU card, CPU, or other computational units.
+MXNet uses a two-level *parameter server* for data synchronization.
 
 <img src=https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/multi-node/ps_arch.png width=400/>
+
+- On the first layer, data are synchronized over multiple devices within a
+  single worker machine. A device could be a GPU card, CPU, or other computational
+  units. We often use sequential consistency model, also known as BSP, on this
+  level.
+
+- On the second layer, data are synchronize over multiple workers via server
+  machines. We can either use a sequential consistency model for guaranteed
+  convergence or an (partial)-asynchronous model for better system performance.
+
+## KVStore
+
+MXNet implemented the two-level parameter server in class *KVStore*. We
+currently provide the following types:
+
+| kvstore type | multi-devices | multi-workers | #ex per device | #ex per update | max delay |
+| :--- | --- | --- | --- | --- | --- |
+| `none` |  no | no | *b* | *b* | *0* |
+| `local` | yes | no | *b / k* | *b* | *0* |
+| `dist_sync` | yes | yes | *b / k* | *b × n* | *0* |
+| `dist_async` | yes | yes |  *b / k* | *b* | inf |
+
+where
 
 - **n** : the number of workers (often mean machines)
 - **k** : the number of devices used on a worker (could vary for different workers)
@@ -20,15 +43,6 @@ A device could be a GPU card, CPU, or other computational units.
   larger delay often improves the performance, but may slows down the
   convergence.
 
-
-| kvstore type | multi-devices | multi-workers | #ex per device | #ex per update | max delay |
-| :--- | --- | --- | --- | --- | --- |
-| `none` |  no | no | *b* | *b* | *0* |
-| `local` | yes | no | *b / k* | *b* | *0* |
-| `dist_sync` | yes | yes | *b / k* | *b × n* | *0* |
-| `dist_async` | yes | yes |  *b / k* | *b* | inf |
-
-
 ## Multiple devices on a single machine
 
 KV store `local` synchronizes data over multiple devices on a single machine.
@@ -41,22 +55,13 @@ When using `local`, the system will automatically chooses one of the following
 three types. Their differences are on where to average
 the gradients over all devices, and where to update the weight.
 
-
-They produce
-(almost) the same results, but may vary on speed.
-
-share the
-same semantic
-
-They are semantically identical, but their speemay have different
-speeds
-We can further fine tune the system performance by specifying :
-
 | kvstore type | average gradient | perform update |
 | :--- | :--- | --- |
 | `local_update_cpu` | CPU | CPU |
 | `local_allreduce_cpu` | CPU | all devices |
 | `local_allreduce_device` | a device | all devices |
+
+They produce (almost) the same results, but may vary on speed.
 
 - `local_update_cpu`, gradients are first copied to main memory, next averaged on CPU,
   and then update the weight on CPU. It is suitable when the average size of
@@ -88,5 +93,6 @@ situation. But they are different on both semantic and performance.
   between all workers, and therefore may harm the system performance.
 
 - `dist_async`: the gradient is sent to the servers, and the weight is updated
-  there. The weights a worker has may be stale.
-  (TODO) make the max delay be settable?
+  there. The weights a worker has may be stale. This loose data consistency
+  model reduces the machine synchronization cost and therefore could improve the
+  system performance. But it may harm the convergence speed.
