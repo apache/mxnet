@@ -29,12 +29,19 @@ mx.nd.ones <- function(shape, ctx=NULL) {
 #'
 #' Create a new \code{mx.ndarray} that copies the content from src on ctx.
 #'
-#' @param src.array, Source array data.
+#' @param src.array, Source array data of class \code{array}, \code{vector} or \code{matrix}.
 #' @param ctx, optional The context device of the array. mx.ctx.default() will be used in default.
 #'
 #' @export
 mx.nd.array <- function(src.array, ctx=NULL) {
   if (is.null(ctx)) ctx <- mx.ctx.default()
+  if (!is.array(src.array)) {
+    if (!is.vector(src.array) && !is.matrix(src.array)) {
+      stop("mx.nd.array takes an object of class array, vector or matrix only.")
+    } else {
+      src.array <- as.array(src.array)
+    }
+  }
   return (mx.nd.internal.array(src.array, ctx))
 }
 
