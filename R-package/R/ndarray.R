@@ -1,9 +1,19 @@
-
+#' Load an mx.nd.array object on disk
+#' 
+#' @param filename the filename (including the path)
+#' 
+#' @export
 mx.nd.load <- function(filename) {
   filename <- path.expand(filename)
   mx.nd.internal.load(filename)
 }
 
+#' Save an mx.nd.array object
+#' 
+#' @param ndarray the \code{mx.nd.array} object
+#' @param filename the filename (including the path)
+#' 
+#' @export
 mx.nd.save <- function(ndarray, filename) {
   filename <- path.expand(filename)
   mx.nd.internal.save(ndarray, filename)
@@ -14,11 +24,23 @@ mx.nd.internal.empty <- function(shape, ctx=NULL) {
   return (mx.nd.internal.empty.array(shape, ctx))
 }
 
+#' Generate an mx.nd.array object with zeros
+#' 
+#' @param shape the dimension of the \code{mx.nd.array}
+#' @param ctx optional The context device of the array. mx.ctx.default() will be used in default.
+#' 
+#' @export
 mx.nd.zeros <- function(shape, ctx=NULL) {
   ret <- mx.nd.internal.empty(shape, ctx)
   return (mx.nd.internal.set.value(0.0, out=ret))
 }
 
+#' Generate an mx.nd.array object with ones
+#' 
+#' @param shape the dimension of the \code{mx.nd.array}
+#' @param ctx optional The context device of the array. mx.ctx.default() will be used in default.
+#' 
+#' @export
 mx.nd.ones <- function(shape, ctx=NULL) {
   ret <- mx.nd.internal.empty(shape, ctx)
   return (mx.nd.internal.set.value(1.0, out=ret))
@@ -29,9 +51,19 @@ mx.nd.ones <- function(shape, ctx=NULL) {
 #'
 #' Create a new \code{mx.ndarray} that copies the content from src on ctx.
 #'
-#' @param src.array, Source array data of class \code{array}, \code{vector} or \code{matrix}.
-#' @param ctx, optional The context device of the array. mx.ctx.default() will be used in default.
+#' @param src.array Source array data of class \code{array}, \code{vector} or \code{matrix}.
+#' @param ctx optional The context device of the array. mx.ctx.default() will be used in default.
 #'
+#'
+#' @rdname mx.nd.array
+#' 
+#' @return An Rcpp object
+#' 
+#' @examples
+#' mat = mx.nd.array(x)
+#' mat = 1 - mat + (2 * mat)/(mat + 0.5)
+#' as.array(mat)
+#' 
 #' @export
 mx.nd.array <- function(src.array, ctx=NULL) {
   if (is.null(ctx)) ctx <- mx.ctx.default()
@@ -39,6 +71,8 @@ mx.nd.array <- function(src.array, ctx=NULL) {
     if (!is.vector(src.array) && !is.matrix(src.array)) {
       stop("mx.nd.array takes an object of class array, vector or matrix only.")
     } else {
+#       if (is.integer(src.array) && !is.matrix(src.array)) 
+#         src.array = as.numeric(src.array)
       src.array <- as.array(src.array)
     }
   }
@@ -49,7 +83,14 @@ is.MXNDArray <- function(x) {
   inherits(x, "Rcpp_MXNDArray")
 }
 
-is.mx.ndarray <- is.MXNDArray
+#' @rdname mx.nd.array
+#' 
+#' @return Logical indicator
+#' 
+#' @export
+is.mx.nd.array <- function(src.array) {
+  is.MXNDArray(src.array)
+}
 
 init.ndarray.methods <- function() {
   setMethod("+", signature(e1 = "Rcpp_MXNDArray", e2 = "numeric"), function(e1, e2) {
