@@ -45,5 +45,5 @@ test_that("ndarray ones, zeros, save and load", {
   mx.nd.save(mat, 'temp.mat')
   mat2 = mx.nd.load('temp.mat')
   expect_true(is.mx.nd.array(mat2))
-#  expect_equal(as.array(mat), as.array(mat2))
+# expect_equal(as.array(mat), as.array(mat2))
 })
