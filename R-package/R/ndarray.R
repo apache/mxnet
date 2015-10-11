@@ -35,6 +35,7 @@ mx.nd.save <- function(ndarray, filename) {
 
 mx.nd.internal.empty <- function(shape, ctx=NULL) {
   if (is.null(ctx)) ctx <- mx.ctx.default()
+  if (!is.mx.context(ctx)) stop("wrong mx.context object, please specify with mx.cpu() or mx.gpu()")
   return (mx.nd.internal.empty.array(shape, ctx))
 }
 
