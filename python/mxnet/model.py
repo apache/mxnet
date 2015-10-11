@@ -123,6 +123,50 @@ def _split_input_slice(input_shape, num_split):
         shapes.append(tuple(s))
     return (slices, shapes)
 
+def _create_kvstore(kvstore, num_device, arg_params):
+    """Create kvstore
+
+    This function select and create a proper kvstore if given the kvstore type
+
+    Parameters
+    ----------
+
+    kvstore : KVStore or str
+        The kvstore
+
+    num_device : int
+        The number of devices
+
+    arg_params : dict of str to NDArray
+        Model parameter, dict of name to NDArray of net's weights.
+    """
+
+    if isinstance(kvstore, kvs.KVStore):
+        kv = kvstore
+    elif isinstance(kvstore, str):
+        # create kvstore using the string type
+        if num_device is 1 and 'dist' not in kvstore:
+            # no need to use kv for single device and single machine
+            kv = None
+        else:
+            if kvstore is 'local':
+                # automatically select a proper local
+                max_size = max(np.prod(param.shape) for param in arg_params.values())
+                if max_size < 1024 * 1024 * 16:
+                    kvstore = 'local_update_cpu'
+                else:
+                    kvstore = 'local_allreduce_cpu'
+                logging.info('Auto-select kvstore type = %s', kvstore)
+            kv = kvs.create(kvstore)
+    else:
+        raise TypeError('kvstore must be either KVStore or str')
+
+    # detect whether or not update weight on kvstore
+    update_on_kvstore = True
+    if not kv or 'local_allreduce' in kv.type:
+        update_on_kvstore = False
+
+    return (kv, update_on_kvstore)
 
 def _train_multi_device(symbol, ctx, input_shape,
                         arg_params, aux_params,
@@ -220,30 +264,7 @@ def _train_multi_device(symbol, ctx, input_shape,
         texec.copy_params_from(arg_params, aux_params)
 
     # create kvstore
-    if isinstance(kvstore, kvs.KVStore):
-        kv = kvstore
-    elif isinstance(kvstore, str):
-        # create kvstore using the string type
-        if num_device is 1 and 'dist' not in kvstore:
-            # no need to use kv for single device and single machine
-            kv = None
-        else:
-            if kvstore is 'local':
-                # automatically select a proper local
-                max_size = max(np.prod(param.shape) for param in arg_params.values())
-                if max_size < 1024 * 1024 * 16:
-                    kvstore = 'local_update_cpu'
-                else:
-                    kvstore = 'local_allreduce_cpu'
-                logging.info('Auto-select kvstore type = %s', kvstore)
-            kv = kvs.create(kvstore)
-    else:
-        raise TypeError('kvstore must be either KVStore or str')
-
-    # detect whether or not update weight on kvstore
-    update_on_kvstore = True
-    if not kv or 'local_allreduce' in kv.get_type():
-        update_on_kvstore = False
+    (kv, update_on_kvstore) = _create_kvstore(kvstore, num_device, arg_params)
 
     # init optimizer before give it to kv or get_updater
     optimizer.begin_round(begin_round)
@@ -309,6 +330,9 @@ def _train_multi_device(symbol, ctx, input_shape,
                         kv.pull(index, grad_list, priority=-index)
                 if not update_on_kvstore:
                     for k, p in enumerate(zip(arg_list, grad_list)):
+                        # faked an index here, to make optimizer create diff
+                        # state for the same index but on diff devs, TODO(mli)
+                        # use a better solution latter
                         w, g = p
                         updater(index*num_device+k, g, w)
 

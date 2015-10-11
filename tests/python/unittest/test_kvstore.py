@@ -107,7 +107,7 @@ def test_updater(dev = 'cpu'):
 def test_get_type():
     kvtype = 'local_allreduce_cpu'
     kv = mx.kv.create(kvtype)
-    assert kv.get_type() == kvtype
+    assert kv.type == kvtype
 
 if __name__ == '__main__':
     test_get_type()

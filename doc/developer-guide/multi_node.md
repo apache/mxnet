@@ -18,20 +18,16 @@ MXNet uses a two-level *parameter server* for data synchronization.
 ## KVStore
 
 MXNet implemented the two-level parameter server in class *KVStore*. We
-currently provide the following types:
+currently provide the following three types. Given the batch size *b*:
 
-| kvstore type | multi-devices | multi-workers | #ex per device | #ex per update | max delay |
+| kvstore type | #devices | #workers | #ex per device | #ex per update | max delay |
 | :--- | --- | --- | --- | --- | --- |
-| `none` |  no | no | *b* | *b* | *0* |
-| `local` | yes | no | *b / k* | *b* | *0* |
-| `dist_sync` | yes | yes | *b / k* | *b × n* | *0* |
-| `dist_async` | yes | yes |  *b / k* | *b* | inf |
+| `local` | *k* | 1 | *b / k* | *b* | *0* |
+| `dist_sync` | *k* | *n* | *b / k* | *b × n* | *0* |
+| `dist_async` | *k* | *n* |  *b / k* | *b* | inf |
 
-where
-
-- **n** : the number of workers (often mean machines)
-- **k** : the number of devices used on a worker (could vary for different workers)
-- **b** : the batch size set by users
+where the number of devices *k* used on a worker could vary for different
+workers. And
 
 - **number examples per update** : for each update, the number of examples used to
   calculate the averaged gradients. Often the larger, the slower the convergence.

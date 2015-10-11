@@ -39,7 +39,7 @@ class KVStore {
   /**
    * \brief return the type
    */
-  inline std::string type() { return type_; }
+  inline const std::string& type() { return type_; }
 
   /*!
    * \brief Initialize a list of key-value pair to the store.
