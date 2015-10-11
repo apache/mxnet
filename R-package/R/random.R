@@ -2,6 +2,7 @@
 
 #' Set the seed used by mxnet device-specific random number generators.
 #'
+#' @details
 #' We have a specific reason why \code{mx.set.seed} is introduced,
 #' instead of simply use \code{set.seed}.
 #'
@@ -12,7 +13,16 @@
 #' So we introduced \code{mx.set.seed} for mxnet specific device random numbers.
 #'
 #' @param seed the seed value to the device random number generators.
-#'
+#' 
+#' @examples
+#' 
+#' mx.set.seed(0)
+#' as.array(mx.runif(2))
+#' # 0.5488135 0.5928446
+#' mx.set.seed(0)
+#' as.array(mx.rnorm(2))
+#' # 2.212206 1.163079
+#' 
 #' @export
 mx.set.seed <- function(seed) {
   mx.internal.set.seed(seed)
@@ -25,6 +35,15 @@ mx.set.seed <- function(seed) {
 #' @param max numeric, The upper bound of distribution.
 #' @param ctx, optional The context device of the array. mx.ctx.default() will be used in default.
 #'
+#' @examples
+#' 
+#' mx.set.seed(0)
+#' as.array(mx.runif(2))
+#' # 0.5488135 0.5928446
+#' mx.set.seed(0)
+#' as.array(mx.rnorm(2))
+#' # 2.212206 1.163079
+#' 
 #' @export
 mx.runif <- function(shape, min=0, max=1, ctx=NULL) {
   if (!is.numeric(min)) stop("mx.rnorm only accept numeric min")
@@ -40,6 +59,15 @@ mx.runif <- function(shape, min=0, max=1, ctx=NULL) {
 #' @param sd numeric, The standard deviations.
 #' @param ctx, optional The context device of the array. mx.ctx.default() will be used in default.
 #'
+#' @examples
+#' 
+#' mx.set.seed(0)
+#' as.array(mx.runif(2))
+#' # 0.5488135 0.5928446
+#' mx.set.seed(0)
+#' as.array(mx.rnorm(2))
+#' # 2.212206 1.163079
+#' 
 #' @export
 mx.rnorm <- function(shape, mean=0, sd=1, ctx=NULL) {
   if (!is.numeric(mean)) stop("mx.rnorm only accept numeric mean")

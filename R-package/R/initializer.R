@@ -1,10 +1,11 @@
-# TODO(tong, KK) better R alternatives?
 mx.util.str.endswith <- function(name, suffix) {
-  slen <- nchar(suffix)
-  nlen <- nchar(name)
-  if (slen > nlen) return (FALSE)
-  nsuf <- substr(name, nlen - slen + 1, nlen)
-  return (nsuf == suffix)
+#  slen <- nchar(suffix)
+#  nlen <- nchar(name)
+#  if (slen > nlen) return (FALSE)
+#  nsuf <- substr(name, nlen - slen + 1, nlen)
+#  return (nsuf == suffix)
+  ptrn = paste0(suffix, "\\b")
+  return(grepl(ptrn, name))
 }
 
 #' Internal default value initialization scheme.
@@ -20,7 +21,9 @@ mx.init.internal.default <- function(name, shape, ctx) {
 }
 
 #' Create a initializer that initialize the weight with uniform [-scale, scale]
+#'
 #' @param scale The scale of uniform distribution
+#'
 #' @export
 mx.init.uniform <- function(scale) {
   function(name, shape, ctx) {
@@ -32,7 +35,9 @@ mx.init.uniform <- function(scale) {
 }
 
 #' Create a initializer that initialize the weight with normal(0, sd)
+#'
 #' @param scale The scale of uniform distribution
+#' 
 #' @export
 mx.init.normal <- function(sd) {
   function(name, shape, ctx) {
