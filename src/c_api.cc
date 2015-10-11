@@ -762,6 +762,12 @@ int MXExecutorPrint(ExecutorHandle handle, const char **out_str) {
   API_END();
 }
 
+int MXExecutorFree(ExecutorHandle handle) {
+  API_BEGIN();
+  delete static_cast<Executor*>(handle);
+  API_END();
+}
+
 int MXExecutorForward(ExecutorHandle handle, int is_train) {
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
@@ -944,7 +950,8 @@ int MXKVStoreFree(KVStoreHandle handle) {
 }
 
 int MXKVStoreInit(KVStoreHandle handle,
-                  mx_uint num, int* keys,
+                  mx_uint num,
+                  const int* keys,
                   NDArrayHandle* vals) {
   API_BEGIN();
   std::vector<int> v_keys(num);
@@ -958,7 +965,8 @@ int MXKVStoreInit(KVStoreHandle handle,
 }
 
 int MXKVStorePush(KVStoreHandle handle,
-                  mx_uint num, int* keys,
+                  mx_uint num,
+                  const int* keys,
                   NDArrayHandle* vals,
                   int priority) {
   API_BEGIN();
@@ -973,7 +981,8 @@ int MXKVStorePush(KVStoreHandle handle,
 }
 
 int MXKVStorePull(KVStoreHandle handle,
-                  mx_uint num, int* keys,
+                  mx_uint num,
+                  const int* keys,
                   NDArrayHandle* vals,
                   int priority) {
   API_BEGIN();
@@ -987,6 +996,24 @@ int MXKVStorePull(KVStoreHandle handle,
   API_END();
 }
 
+int MXKVStoreWait(KVStoreHandle handle,
+                  mx_uint num,
+                  int* keys) {
+  API_BEGIN();
+  std::vector<int> v_keys(num);
+  for (mx_uint i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+  }
+  static_cast<KVStore*>(handle)->Wait(v_keys);
+  API_END();
+}
+
+int MXKVStoreWaitAll(KVStoreHandle handle) {
+  API_BEGIN();
+  static_cast<KVStore*>(handle)->WaitAll();
+  API_END();
+}
+
 int MXKVStoreSetUpdater(KVStoreHandle handle, MXKVStoreUpdater updater) {
   API_BEGIN();
   auto updt = [updater](int key, const NDArray& recv, NDArray* local) {
@@ -997,5 +1024,67 @@ int MXKVStoreSetUpdater(KVStoreHandle handle, MXKVStoreUpdater updater) {
     updater(key, recv_copy, local_copy);
   };
   static_cast<KVStore*>(handle)->set_updater(updt);
+  API_END();
+}
+
+int MXKVStoreGetRank(KVStoreHandle handle, int *rank) {
+  API_BEGIN();
+  *rank = static_cast<KVStore*>(handle)->get_rank();
+  API_END();
+}
+
+int MXKVStoreGetGroupSize(KVStoreHandle handle, int *size) {
+  API_BEGIN();
+  *size = static_cast<KVStore*>(handle)->get_group_size();
+  API_END();
+}
+
+int MXKVStoreBarrier(KVStoreHandle handle) {
+  API_BEGIN();
+  static_cast<KVStore*>(handle)->Barrier();
+  API_END();
+}
+
+
+int MXKVStoreIsWorkerNode(int *ret) {
+  API_BEGIN();
+  *ret = KVStore::IsWorkerNode();
+  API_END();
+}
+
+int MXKVStoreIsServerNode(int *ret) {
+  API_BEGIN();
+  *ret = KVStore::IsServerNode();
+  API_END();
+}
+
+int MXKVStoreIsSchedulerNode(int *ret) {
+  API_BEGIN();
+  *ret = KVStore::IsSchedulerNode();
+  API_END();
+}
+
+int MXKVStoreIsDistributed(KVStoreHandle handle, int *ret) {
+  API_BEGIN();
+  *ret = static_cast<KVStore*>(handle)->IsDistributed();
+  API_END();
+}
+
+int MXKVStoreRunServer(KVStoreHandle handle,
+                       MXKVStoreServerController controller) {
+  API_BEGIN();
+  auto ctrl = [controller](int head, const std::string& body) {
+    controller(head, body.c_str());
+  };
+  static_cast<KVStore*>(handle)->RunServer(ctrl);
+  API_END();
+}
+
+int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
+                                   int cmd_id,
+                                   const char* cmd_body) {
+  API_BEGIN();
+  static_cast<KVStore*>(handle)->SendCommandToServers(
+      cmd_id, std::string(cmd_body));
   API_END();
 }

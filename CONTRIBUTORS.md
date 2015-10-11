@@ -45,3 +45,5 @@ List of Contributors
   - Feng makes mxnet compatible with Windows Visual Studio.
 * [Li Dong](https://github.com/donglixp)
 * [Piji Li](https://github.com/lipiji)
+* [Hu Shiwen](https://github.com/yajiedesign)
+* [Boyuan Deng](https://github.com/bryandeng)

@@ -76,7 +76,7 @@ def test_updater(dev = 'cpu'):
     """updater"""
 
     kv = init_kv()
-    kv.set_updater(updater)
+    kv._set_updater(updater)
 
     # devices
     num_devs = 4
@@ -110,4 +110,3 @@ if __name__ == '__main__':
     test_list_kv_pair()
     test_aggregator()
     test_updater()
-

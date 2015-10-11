@@ -54,7 +54,7 @@ struct Symbol::Node {
 
 /*! \return whwther the symbol is atomic */
 inline bool Symbol::is_atomic() const {
-  return heads_.size() == 1 && heads_[0].source->is_atomic();
+  return heads_[0].source->is_atomic();
 }
 // implementation of template functions
 template<typename FVisit>
@@ -287,7 +287,7 @@ inline std::string DefaultVarName(const std::string &op_name,
 
 void Symbol::Compose(const std::vector<Symbol>& args,
                      const std::string& name) {
-  CHECK_EQ(NumOutputs(), 1) << "Only composition of value function is supported currently";
+  // CHECK_EQ(NumOutputs(), 1) << "Only composition of value function is supported currently";
   CHECK(!heads_[0].source->is_variable()) << "Variable cannot be composed";
   heads_[0].source->name = name;
   for (size_t i = 0; i < args.size(); ++i) {
@@ -350,7 +350,7 @@ void Symbol::Compose(const std::vector<Symbol>& args,
 
 void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
                      const std::string& name) {
-  CHECK_EQ(NumOutputs(), 1) << "Only composition of value function is supported currently";
+  // CHECK_EQ(NumOutputs(), 1) << "Only composition of value function is supported currently";
   CHECK(!heads_[0].source->is_variable()) << "Variable cannot be composed";
   heads_[0].source->name = name;
   for (const auto& kv : kwargs) {

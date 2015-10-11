@@ -35,6 +35,9 @@ class Executor(object):
         self._grad_dict = None
         self._aux_dict = None
 
+    def __del__(self):
+        check_call(_LIB.MXExecutorFree(self.handle))
+
     @staticmethod
     def _get_dict(names, ndarrays):
         """Get the dictionary given name and ndarray pairs."""

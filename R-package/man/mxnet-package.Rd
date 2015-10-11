@@ -3,31 +3,20 @@
 \alias{mxnet}
 \docType{package}
 \title{
-  A short title line describing what the package does
+ MXNet is a deep learning framework designed for both efficiency and flexibility. 
 }
 \description{
-  A more detailed description of what the package does. A length
-  of about one to five lines is recommended.
+  MXNet is a deep learning framework designed for both efficiency and flexibility. It allows you to mix the flavours of deep learning programs together to maximize the efficiency and your productivity.
 }
 \details{
   This section should provide a more detailed overview of how to use the
   package, including the most important functions.
 }
 \author{
-Your Name, email optional.
+Tianqi Chen, Qiang Kou
 
-Maintainer: Your Name <your@email.com>
-}
-\references{
-  This optional section can contain literature or other references for
-  background information.
+Maintainer: Qiang Kou <qkou@umail.iu.edu>
 }
 % Optionally other standard keywords, one per line,
 % from the file KEYWORDS in the R documentation.
 \keyword{ package }
-\seealso{
-  Optional links to other man pages
-}
-\examples{
-  # Optional simple examples of the most important functions
-}

@@ -2,7 +2,7 @@ require(mxnet)
 
 
 x = as.array(c(1,2,3))
-mat = mx.nd.array(x, mx.cpu(0))
+mat = mx.nd.array(x)
 mat = mat + 1.0
 mat = mat + mat
 mat = mat - 5
@@ -12,13 +12,18 @@ mat = 1 - mat + (2 * mat)/(mat + 0.5)
 as.array(mat)
 
 x = as.array(matrix(1:4, 2, 2))
-mat = mx.nd.array(x, mx.cpu(0))
+
+mx.ctx.default(mx.cpu(1))
+print(mx.ctx.default())
+print(is.mx.context(mx.cpu()))
+mat = mx.nd.array(x)
 mat = (mat * 3 + 5) / 10
 as.array(mat)
 
 oldmat = mat
 mat = mx.nd.internal.plus.scalar(mat, 1, out=mat)
 xx = as.array(mat)
+
 
 # This will result in an error,  becase mat has been moved
 oldmat + 1

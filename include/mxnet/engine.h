@@ -144,7 +144,7 @@ class Engine {
    * The delete will not happen immediately, but will wait until all the
    * operations depending on var are completed.
    *
-   * \param delete_fun A function that will be called after the variable is
+   * \param delete_fn A function that will be called after the variable is
    *                   deleted.
    * \param exec_ctx Execution context.
    * \param var The variable to be deleted.

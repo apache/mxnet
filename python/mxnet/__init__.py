@@ -11,8 +11,6 @@ from . import name
 # use mx.sym as short for symbol
 from . import symbol as sym
 from . import symbol
-# use mx.kv as short for kvstore
-from . import kvstore as kv
 from . import io
 # use mx.nd as short for mx.ndarray
 from . import ndarray as nd
@@ -29,5 +27,8 @@ from . import visualization
 from . import visualization as viz
 from . import callback
 from . import misc
+# use mx.kv as short for kvstore
+from . import kvstore as kv
+from . import kvstore_server
 
 __version__ = base.__version__

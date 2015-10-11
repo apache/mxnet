@@ -22,8 +22,7 @@ DMLC_REGISTER_PARAMETER(SliceChannelParam);
 
 MXNET_REGISTER_OP_PROPERTY(SliceChannel, SliceChannelProp)
 .describe("Slice channel into many outputs with equally divided channel")
-.add_arguments(SliceChannelParam::__FIELDS__())
-.set_key_var_num_args("num_outputs");
+.add_arguments(SliceChannelParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

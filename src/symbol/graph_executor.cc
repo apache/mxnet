@@ -235,8 +235,10 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
 }
 
 GraphExecutor::~GraphExecutor() {
-  // need to destruct after all previously issued operations are finished.
-  Engine::Get()->WaitForAll();
+  // need to delete the operators before delete the NDArray they referenced.
+  for (OpNode& node : op_nodes_) {
+    node.DeleteOperator();
+  }
 }
 
 void GraphExecutor::InitGraph(const Symbol &symbol, Context ctx, bool need_backward) {

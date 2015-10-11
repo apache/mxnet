@@ -1,20 +1,13 @@
 require(mxnet)
 
-# TODO(KK) all the functions under mx.symbol.fun should be re-exposed
-# by taking ... and redirect to list
+data = mx.symbol.Variable('data')
+net1 = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
+net1 = mx.symbol.FullyConnected(data=net1, name='fc2', num_hidden=100)
 
-data = mx.symbol.Variable("data")
-d2 = mx.symbol.Variable("d2")
-cat(data$debug.str())
+all.equal(arguments(net1), c('data', 'fc1_weight', 'fc1_bias', 'fc2_weight', 'fc2_bias'))
 
-group = mx.symbol.fun.Group(list(data, d2))
-cat(group$debug.str())
-xx = mx.symbol.fun.internal.Plus(list(data, data))
-cat(xx$debug.str())
+net2 = mx.symbol.FullyConnected(name='fc3', num_hidden=10)
+net2 = mx.symbol.Activation(data=net2, act_type='relu')
+net2 = mx.symbol.FullyConnected(data=net2, name='fc4', num_hidden=20)
 
-net1 = mx.symbol.fun.FullyConnected(list(data=data, name="fc1", num_hidden=10))
-cat(net1$debug.str())
-net1 = mx.symbol.fun.FullyConnected(list(data=net1, num_hidden=100))
-cat(net1$debug.str())
-
-
+composed = mx.apply(net2, fc3_data=net1, name='composed')

@@ -12,7 +12,11 @@
 
 /*! \brief MXNET_DLL prefix for windows" */
 #ifdef _MSC_VER
+#ifdef MXNET_EXPORTS
 #define MXNET_DLL MXNET_EXTERN_C __declspec(dllexport)
+#else
+#define MXNET_DLL MXNET_EXTERN_C __declspec(dllimport)
+#endif
 #else
 #define MXNET_DLL MXNET_EXTERN_C
 #endif
@@ -389,14 +393,14 @@ MXNET_DLL int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out);
 MXNET_DLL int MXSymbolCreateFromJSON(const char *json, SymbolHandle *out);
 /*!
  * \brief Save a symbol into a json file.
- * \param sym the input symbol.
+ * \param symbol the input symbol.
  * \param fname the file name.
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolSaveToFile(SymbolHandle symbol, const char *fname);
 /*!
  * \brief Save a symbol into a json string
- * \param sym the input symbol.
+ * \param symbol the input symbol.
  * \param out_json output json string.
  * \return 0 when success, -1 when failure happens
  */
@@ -453,13 +457,12 @@ MXNET_DLL int MXSymbolGetInternals(SymbolHandle symbol,
  * \brief Get index-th outputs of the symbol.
  * \param symbol The symbol
  * \param index the Index of the output.
- * \param out The output symbol whose outputs are all the internals.
+ * \param out The output symbol whose outputs are the index-th symbol.
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolGetOutput(SymbolHandle symbol,
                                 mx_uint index,
                                 SymbolHandle *out);
-
 /*!
  * \brief List auxiliary states in the symbol.
  * \param symbol the symbol
@@ -543,12 +546,18 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
 // Part 4: Executor interface
 //--------------------------------------------
 /*!
+ * \brief Delete the executor
+ * \param handle the executor.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXExecutorFree(ExecutorHandle handle);
+/*!
  * \brief Print the content of execution plan, used for debug.
  * \param handle the executor.
  * \param out_str pointer to hold the output string of the printing.
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXExecutorPrint(ExecutorHandle symbol, const char **out_str);
+MXNET_DLL int MXExecutorPrint(ExecutorHandle handle, const char **out_str);
 /*!
  * \brief Executor forward method
  *
@@ -645,7 +654,7 @@ MXNET_DLL int MXDataIterCreateIter(DataIterCreator handle,
  * \param arg_descriptions Description information about the arguments.
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXDataIterGetIterInfo(AtomicSymbolCreator creator,
+MXNET_DLL int MXDataIterGetIterInfo(DataIterCreator creator,
                                     const char **name,
                                     const char **description,
                                     mx_uint *num_args,
@@ -700,7 +709,7 @@ MXNET_DLL int MXDataIterGetPadNum(DataIterHandle handle,
 MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
                                  NDArrayHandle *out);
 //--------------------------------------------
-// Part 5: KVStore interface
+// Part 5: basic KVStore interface
 //--------------------------------------------
 /*!
  * \brief Create a kvstore
@@ -726,7 +735,7 @@ MXNET_DLL int MXKVStoreFree(KVStoreHandle handle);
  */
 MXNET_DLL int MXKVStoreInit(KVStoreHandle handle,
                             mx_uint num,
-                            int* keys,
+                            const int* keys,
                             NDArrayHandle* vals);
 
 /*!
@@ -740,7 +749,7 @@ MXNET_DLL int MXKVStoreInit(KVStoreHandle handle,
  */
 MXNET_DLL int MXKVStorePush(KVStoreHandle handle,
                             mx_uint num,
-                            int* keys,
+                            const int* keys,
                             NDArrayHandle* vals,
                             int priority);
 /*!
@@ -754,9 +763,9 @@ MXNET_DLL int MXKVStorePush(KVStoreHandle handle,
  */
 MXNET_DLL int MXKVStorePull(KVStoreHandle handle,
                             mx_uint num,
-                            int* keys,
+                            const int* keys,
                             NDArrayHandle* vals,
-                            int Priority);
+                            int priority);
 /*!
  * \brief user-defined updater for the kvstore
  * It's this updater's responsibility to delete \a recv and \a local
@@ -764,13 +773,136 @@ MXNET_DLL int MXKVStorePull(KVStoreHandle handle,
  * \param recv the pushed value on this key
  * \param local the value stored on local on this key
  */
-typedef void (MXKVStoreUpdater)(int key, NDArrayHandle recv, NDArrayHandle local);
+typedef void (MXKVStoreUpdater)(int key,
+                                NDArrayHandle recv,
+                                NDArrayHandle local);
+
 /*!
  * \brief register an push updater
  * \param handle handle to the KVStore
  * \param updater udpater function
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStoreSetUpdater(KVStoreHandle handle, MXKVStoreUpdater updater);
+MXNET_DLL int MXKVStoreSetUpdater(KVStoreHandle handle,
+                                  MXKVStoreUpdater updater);
+
+
+//--------------------------------------------
+// Part 6: advanced KVStore for multi-machines
+//--------------------------------------------
+
+/**
+ * \brief return The rank of this node in its group, which is in [0, GroupSize).
+ *
+ * \param handle handle to the KVStore
+ * \param ret the node rank
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreGetRank(KVStoreHandle handle,
+                               int *ret);
+
+/**
+ * \brief return The number of nodes in this group, which is
+ * - number of workers if if `IsWorkerNode() == true`,
+ * - number of servers if if `IsServerNode() == true`,
+ * - 1 if `IsSchedulerNode() == true`,
+ * \param handle handle to the KVStore
+ * \param ret the group size
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreGetGroupSize(KVStoreHandle handle,
+                                    int *ret);
+
+/**
+ * \brief return whether or not this process is a worker node.
+ * \param ret 1 for yes, 0 for no
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreIsWorkerNode(int *ret);
+
+
+/**
+ * \brief return whether or not this process is a server node.
+ * \param ret 1 for yes, 0 for no
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreIsServerNode(int *ret);
+
+
+/**
+ * \brief return whether or not this process is a scheduler node.
+ * \param ret 1 for yes, 0 for no
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreIsSchedulerNode(int *ret);
+
+/**
+ * \brief return whether or not is in distributed computing
+ * \param handle handle to the KVStore
+ * \param ret 1 for yes, 0 for no
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreIsDistributed(KVStoreHandle handle,
+                                     int *ret);
+
+/**
+ * \brief global barrier among all worker machines
+ *
+ * \param handle handle to the KVStore
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreBarrier(KVStoreHandle handle);
+
+
+/**
+ * \brief Wait until all pushes and pulls issued on each key have been
+ * finished
+ *
+ * \param handle handle to the KVStore
+ * \param num number of keys
+ * \param keys a list of keys
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreWait(KVStoreHandle handle,
+                            mx_uint num,
+                            int* keys);
+
+/**
+ * \brief wait until all pushes and pulls issued before have been finished
+ *
+ * \param handle handle to the KVStore
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreWaitAll(KVStoreHandle handle);
+
+/**
+ * \brief the prototype of a server controller
+ * \param head the head of the command
+ * \param body the body of the command
+ */
+typedef void (MXKVStoreServerController)(int head,
+                                         const char* body);
+
+/**
+ * \return Run as server (or scheduler)
+ *
+ * \param handle handle to the KVStore
+ * \param controller the user-defined server controller
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreRunServer(KVStoreHandle handle,
+                                 MXKVStoreServerController controller);
+
+/**
+ * \return Send a command to all server nodes
+ *
+ * \param handle handle to the KVStore
+ * \param cmd_id the head of the command
+ * \param cmd_body the body of the command
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
+                                             int cmd_id,
+                                             const char* cmd_body);
 
 #endif  // MXNET_C_API_H_
