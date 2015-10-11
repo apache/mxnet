@@ -6,7 +6,7 @@ import ctypes
 import pickle
 from .ndarray import NDArray
 from .base import _LIB
-from .base import check_call, c_array, c_str, string_types, mx_uint
+from .base import check_call, c_array, c_str, string_types, mx_uint, py_str
 from .base import NDArrayHandle, KVStoreHandle
 from . import optimizer as opt
 
@@ -68,7 +68,7 @@ class KVStore(object):
 
         For each key, one must init it before push and pull.
 
-        Only worker 0's (get_rank() == 0) data are used.
+        Only worker 0's (rank == 0) data are used.
 
         This function returns after data have been initialized successfully
 
@@ -95,7 +95,7 @@ class KVStore(object):
         >>> keys = [5, 7, 9]
         >>> kv.init(keys, [mx.nd.ones(shape)]*len(keys))
         """
-        if (self.get_rank() == 0):
+        if (self.rank == 0):
             ckeys, cvals = _ctype_key_value(key, value)
             check_call(_LIB.MXKVStoreInit(
                 self.handle, mx_uint(len(ckeys)), ckeys, cvals))
@@ -168,6 +168,9 @@ class KVStore(object):
         check_call(_LIB.MXKVStorePush(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
             ctypes.c_int(priority)))
+
+        # self._wait(key)
+        # self._barrier()
 
     def pull(self, key, out=None, priority=0):
         """ Pull a single value or a sequence of values from the store.
@@ -261,9 +264,23 @@ class KVStore(object):
                 raise
             self._send_command_to_servers(0, optim_str)
         else:
-            self._set_updater(opt.optimizer_clossure(optimizer))
+            self._set_updater(opt.get_updater(optimizer))
 
-    def get_rank(self):
+    @property
+    def type(self):
+        """Get the type of this kvstore
+
+        Returns
+        -------
+        type : str
+            the string type
+        """
+        kv_type = ctypes.c_char_p()
+        check_call(_LIB.MXKVStoreGetType(self.handle, ctypes.byref(kv_type)))
+        return py_str(kv_type.value)
+
+    @property
+    def rank(self):
         """Get the rank of this worker node
 
         Returns
@@ -275,7 +292,8 @@ class KVStore(object):
         check_call(_LIB.MXKVStoreGetRank(self.handle, ctypes.byref(rank)))
         return rank.value
 
-    def get_num_workers(self):
+    @property
+    def num_workers(self):
         """Get the number of worker ndoes
 
         Returns
@@ -329,17 +347,17 @@ class KVStore(object):
         pulling, we can place a barrier to guarantee that the initialization is
         finished.
 
-        The following codes run on n machines in parallel
-
-        >>> if kv.get_rank() == 0:
-        ...     kv.init(keys, values);
-        ... kv.barrier()
-        ... kv.pull(keys, out = values);
-
         But note that, this functions only blocks the main thread of workers
         until all of them are reached this point. It doesn't guarantee that all
         operations issued before are actually finished, such as \ref Push and
         \ref Pull. In that case, we need to call \ref Wait or \ref WaitAll
+
+        The following codes implement a BSP model
+
+        >>> kv.push(keys, values)
+        ... kv._wait(keys)
+        ... kv._barrier()
+        ... kv.pull(keys, out = values);
         """
         check_call(_LIB.MXKVStoreBarrier(self.handle))
 

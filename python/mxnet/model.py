@@ -11,10 +11,11 @@ from . import nd
 from . import symbol as sym
 from . import optimizer as opt
 from . import metric
-from . import kvstore
+from . import kvstore as kvs
 from .context import Context, cpu
 from .initializer import Uniform
 from collections import namedtuple
+from .optimizer import get_updater
 
 BASE_ESTIMATOR = object
 
@@ -122,14 +123,57 @@ def _split_input_slice(input_shape, num_split):
         shapes.append(tuple(s))
     return (slices, shapes)
 
+def _create_kvstore(kvstore, num_device, arg_params):
+    """Create kvstore
+
+    This function select and create a proper kvstore if given the kvstore type
+
+    Parameters
+    ----------
+
+    kvstore : KVStore or str
+        The kvstore
+
+    num_device : int
+        The number of devices
+
+    arg_params : dict of str to NDArray
+        Model parameter, dict of name to NDArray of net's weights.
+    """
+
+    if isinstance(kvstore, kvs.KVStore):
+        kv = kvstore
+    elif isinstance(kvstore, str):
+        # create kvstore using the string type
+        if num_device is 1 and 'dist' not in kvstore:
+            # no need to use kv for single device and single machine
+            kv = None
+        else:
+            if kvstore is 'local':
+                # automatically select a proper local
+                max_size = max(np.prod(param.shape) for param in arg_params.values())
+                if max_size < 1024 * 1024 * 16:
+                    kvstore = 'local_update_cpu'
+                else:
+                    kvstore = 'local_allreduce_cpu'
+                logging.info('Auto-select kvstore type = %s', kvstore)
+            kv = kvs.create(kvstore)
+    else:
+        raise TypeError('kvstore must be either KVStore or str')
+
+    # detect whether or not update weight on kvstore
+    update_on_kvstore = True
+    if not kv or 'local_allreduce' in kv.type:
+        update_on_kvstore = False
+
+    return (kv, update_on_kvstore)
 
 def _train_multi_device(symbol, ctx, input_shape,
                         arg_params, aux_params,
                         begin_round, end_round, optimizer,
                         train_data, eval_data=None, eval_metric=None,
                         iter_end_callback=None, epoch_end_callback=None,
-                        update_on_kvstore=None, kvstore_type='local',
-                        logger=None):
+                        kvstore='local', logger=None):
     """Internal training function on multiple devices.
 
     This function will also work for single device as well.
@@ -177,11 +221,15 @@ def _train_multi_device(symbol, ctx, input_shape,
         A callback that is invoked at end of each batch.
         This can be used to measure speed, get result from evaluation metric. etc.
 
-    update_on_kvstore : boolean, optional
-        Whether to perform parameter update on kvstore instead of training device.
+    kvstore: KVStore or str, optional
+        The KVStore or a string kvstore type:
+        'local' : multi-devices on a single machine, will automatically
+           choose one from 'local_update_cpu', 'local_allreduce_cpu', and
+          'local_allreduce_device'
+       'dist_sync' : multi-machines with BSP
+       'dist_async' : multi-machines with partical asynchronous
 
-    kvstore_type : {'local', 'device'}, optional
-        Type of kvstore used for synchronization.
+       In default uses 'local', often no need to change for single machiine.
 
     logger : logging logger
         When not specified, default logger will be used.
@@ -189,10 +237,6 @@ def _train_multi_device(symbol, ctx, input_shape,
     Notes
     -----
     - This function will inplace update the NDArrays in arg_parans and aux_states.
-    - Turning update_on_kvstore on and off can affect speed of multi-gpu training.
-      - It is auto selected by default.
-      - update_on_kvstore=True works well for inception type nets that contains many small weights.
-      - update_on_kvstore=False works better for Alexnet style net with bulk weights.
     """
     if logger is None:
         logger = logging
@@ -219,40 +263,29 @@ def _train_multi_device(symbol, ctx, input_shape,
     for texec in train_execs:
         texec.copy_params_from(arg_params, aux_params)
 
-    # ky value store
-    kv = kvstore.create(kvstore_type) if num_device != 1 else None
-    if kv is None or kvstore_type == 'device':
-        update_on_kvstore = False
-    else:
-        # auto decide update_on_kvstore
-        if update_on_kvstore is None:
-            max_size = max(np.prod(param.shape) for param in arg_params.values())
-            update_on_kvstore = max_size < 1024 * 1024 * 16
-            logging.info('Auto-select update_on_kvstore=%s', str(update_on_kvstore))
+    # create kvstore
+    (kv, update_on_kvstore) = _create_kvstore(kvstore, num_device, arg_params)
 
-    opt_state_blocks = []
-    # If there are multiple devices, initialize the weights.
-    for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
-        arg_list, grad_list = pair
-        if grad_list[0] is not None:
-            if kv:
+    # init optimizer before give it to kv or get_updater
+    optimizer.begin_round(begin_round)
+
+    if not update_on_kvstore:
+        updater = get_updater(optimizer)
+
+    if kv:
+        # init optimizer
+        if update_on_kvstore:
+            kv.set_optimizer(optimizer)
+
+        # init kv
+        for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
+            arg_list, grad_list = pair
+            if grad_list[0] is not None:
                 kv.init(index, arg_list[0])
-            # attach state direct to weight
-            if update_on_kvstore:
-                opt_state_blocks.append(nd.zeros(arg_list[0].shape, cpu()))
-            else:
-                opt_list = [optimizer.create_state(index, w) for w in arg_list]
-                opt_state_blocks.append(opt_list)
-        else:
-            opt_state_blocks.append(None)
 
-    def kv_updater(index, grad, weight):
-        """Internal updater on KVstore, used when update_on_kvstore=True."""
-        optimizer.update(index, weight, grad, opt_state_blocks[index])
-
-    # pylint: disable=protected-access
-    if update_on_kvstore:
-        kv._set_updater(kv_updater)
+                # pull the weight back
+                if update_on_kvstore:
+                    kv.pull(index, arg_list, priority=-index)
 
     # Input and output data structure
     data_index, label_index = _check_arguments(symbol)
@@ -265,7 +298,6 @@ def _train_multi_device(symbol, ctx, input_shape,
     for iteration in range(begin_round, end_round):
         # Training phase
         tic = time.time()
-        optimizer.begin_round(iteration)
         eval_metric.reset()
         nbatch = 0
         # Iterate over training data.
@@ -297,10 +329,13 @@ def _train_multi_device(symbol, ctx, input_shape,
                         # pull back the sum gradients, to the same locations.
                         kv.pull(index, grad_list, priority=-index)
                 if not update_on_kvstore:
-                    opt_list = opt_state_blocks[index]
-                    # optimizea
-                    for w, g, state in zip(arg_list, grad_list, opt_list):
-                        optimizer.update(index, w, g, state)
+                    for k, p in enumerate(zip(arg_list, grad_list)):
+                        # faked an index here, to make optimizer create diff
+                        # state for the same index but on diff devs, TODO(mli)
+                        # use a better solution latter
+                        w, g = p
+                        updater(index*num_device+k, g, w)
+
             nbatch += 1
             # epoch callback (for print purpose)
             if epoch_end_callback != None:
@@ -607,8 +642,7 @@ class FeedForward(BASE_ESTIMATOR):
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
             iter_end_callback=None, epoch_end_callback=None,
-            update_on_kvstore=None, kvstore_type='local',
-            logger=None):
+            kvstore='local', logger=None):
         """Fit the model.
 
         Parameters
@@ -635,15 +669,19 @@ class FeedForward(BASE_ESTIMATOR):
             A callback that is invoked at end of each batch
             For print purpose
 
-        update_on_kvstore: boolean, optional
-            Whether to perform parameter update on kvstore instead of training device.
-            By default, the trainer will automatically decide the policy.
+        kvstore: KVStore or str, optional
+           The KVStore or a string kvstore type:
+           'local' : multi-devices on a single machine, will automatically
+               choose one from 'local_update_cpu', 'local_allreduce_cpu', and
+              'local_allreduce_device'
+           'dist_sync' : multi-machines with BSP
+           'dist_async' : multi-machines with partical asynchronous
 
-        kvstore_type : {'local', 'device'}, optional
-            Type of kvstore used for synchronization, usually no need to set.
+           In default uses 'local', often no need to change for single machiine.
 
         logger : logging logger, optional
             When not specified, default logger will be used.
+
         """
         X = self._init_iter(X, y, is_train=True)
         # Simply ignore the first example to get input_shape
@@ -672,8 +710,7 @@ class FeedForward(BASE_ESTIMATOR):
                             eval_metric=eval_metric,
                             iter_end_callback=iter_end_callback,
                             epoch_end_callback=epoch_end_callback,
-                            update_on_kvstore=update_on_kvstore,
-                            kvstore_type=kvstore_type,
+                            kvstore=kvstore,
                             logger=logger)
 
     def save(self, prefix, iteration=None):
@@ -739,8 +776,7 @@ class FeedForward(BASE_ESTIMATOR):
     def create(symbol, X, y=None, ctx=None,
                num_round=None, optimizer='sgd', initializer=Uniform(0.01),
                eval_data=None, eval_metric='acc', iter_end_callback=None,
-               update_on_kvstore=None, kvstore_type='local',
-               logger=None, **kwargs):
+               kvstore='local', logger=None, **kwargs):
         """Functional style to create a model.
 
         This function will be more consistent with functional
@@ -782,20 +818,20 @@ class FeedForward(BASE_ESTIMATOR):
             A callback that is invoked at end of each iteration.
             This can be used to checkpoint model each iteration.
 
-        update_on_kvstore: boolean, optional
-            Whether to perform parameter update on kvstore instead of training device.
-            By default, the trainer will automatically decide the policy.
+        kvstore: KVStore or str, optional
+           The KVStore or a string kvstore type:
+           'local' : multi-devices on a single machine, will automatically
+               choose one from 'local_update_cpu', 'local_allreduce_cpu', and
+              'local_allreduce_device'
+           'dist_sync' : multi-machines with BSP
+           'dist_async' : multi-machines with partical asynchronous
 
-        kvstore_type : {'local', 'device'}, optional
-            Type of kvstore used for synchronization, usually no need to set.
-
-        logger : logging logger, optional
+           In default uses 'local', often no need to change for single machiine.
         """
         model = FeedForward(symbol, ctx=ctx, num_round=num_round,
                             optimizer=optimizer, initializer=initializer, **kwargs)
         model.fit(X, y, eval_data=eval_data, eval_metric=eval_metric,
                   iter_end_callback=iter_end_callback,
-                  update_on_kvstore=update_on_kvstore,
-                  kvstore_type=kvstore_type,
+                  kvstore=kvstore,
                   logger=logger)
         return model

@@ -25,12 +25,21 @@ class KVStore {
 
   /*!
    * \brief Factory function to create a new KVStore.
-   * \param type The type of the kvstore, can be "local" or "dist"
-   * - local works for multiple devices on a single machine (single process)
-   * - dist works for multi-machines (multiple processes)
+   * \param type The type of the kvstore,
+   *   'local' : multi-devices on a single machine. can be also
+   *      'local_update_cpu', 'local_allreduce_cpu'
+   *   'device' or 'local_allreduce_device' : same to local but use gpus for kv
+   *       allreduce
+   *   'dist_sync' : multi-machines with BSP
+   *   'dist_async' : multi-machines with partical asynchronous
    * \return a new created KVStore.
    */
   static KVStore *Create(const char *type = "local");
+
+  /**
+   * \brief return the type
+   */
+  inline const std::string& type() { return type_; }
 
   /*!
    * \brief Initialize a list of key-value pair to the store.
@@ -269,6 +278,11 @@ class KVStore {
    * \brief the user-defined  updater
    */
   Updater updater_;
+
+  /**
+   * \brief the kvstore type
+   */
+  std::string type_;
 };
 
 }  // namespace mxnet

@@ -148,8 +148,7 @@ def create(name, rescale_grad=1, **kwargs):
     else:
         raise ValueError('Cannot find optimizer %s' % name)
 
-
-def optimizer_clossure(optimizer):
+def get_updater(optimizer):
     """Return a clossure of the updater needed for kvstore
 
     Parameters

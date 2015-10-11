@@ -31,6 +31,10 @@ struct MNISTParam : public dmlc::Parameter<MNISTParam> {
   bool flat;
   /*! \brief random seed */
   int seed;
+  /*! \brief partition the data into multiple parts */
+  int num_parts;
+  /*! \brief the index of the part will read*/
+  int part_index;
   // declare parameters
   DMLC_DECLARE_PARAMETER(MNISTParam) {
     DMLC_DECLARE_FIELD(image).set_default("./train-images-idx3-ubyte")
@@ -47,6 +51,10 @@ struct MNISTParam : public dmlc::Parameter<MNISTParam> {
         .describe("Augmentation Param: Random Seed.");
     DMLC_DECLARE_FIELD(silent).set_default(false)
         .describe("Auxiliary Param: Whether to print out data info.");
+    DMLC_DECLARE_FIELD(num_parts).set_default(1)
+        .describe("partition the data into multiple parts");
+    DMLC_DECLARE_FIELD(part_index).set_default(0)
+        .describe("the index of the part will read");
   }
 };
 
@@ -113,12 +121,31 @@ class MNISTIter: public IIterator<TBlobBatch> {
   }
 
  private:
+  inline void GetPart(int count, int* start, int *end) {
+    CHECK_GE(param_.part_index, 0);
+    CHECK_GT(param_.num_parts, 0);
+    CHECK_GT(param_.num_parts, param_.part_index);
+
+    *start = static_cast<int>(
+        static_cast<double>(count) / param_.num_parts * param_.part_index);
+    *end = static_cast<int>(
+        static_cast<double>(count) / param_.num_parts * (param_.part_index+1));
+  }
+
   inline void LoadImage(void) {
-    dmlc::Stream *stdimg = dmlc::Stream::Create(param_.image.c_str(), "r");
+    dmlc::SeekStream* stdimg
+        = dmlc::SeekStream::CreateForRead(param_.image.c_str());
     ReadInt(stdimg);
     int image_count = ReadInt(stdimg);
     int image_rows  = ReadInt(stdimg);
     int image_cols  = ReadInt(stdimg);
+
+    int start, end;
+    GetPart(image_count, &start, &end);
+    image_count = end - start;
+    if (start > 0) {
+      stdimg->Seek(stdimg->Tell() + start * image_rows * image_cols);
+    }
 
     img_.shape_ = mshadow::Shape3(image_count, image_rows, image_cols);
     img_.stride_ = img_.size(2);
@@ -139,9 +166,18 @@ class MNISTIter: public IIterator<TBlobBatch> {
     delete stdimg;
   }
   inline void LoadLabel(void) {
-    dmlc::Stream *stdlabel = dmlc::Stream::Create(param_.label.c_str(), "r");
+    dmlc::SeekStream* stdlabel
+        = dmlc::SeekStream::CreateForRead(param_.label.c_str());
     ReadInt(stdlabel);
     int labels_count = ReadInt(stdlabel);
+
+    int start, end;
+    GetPart(labels_count, &start, &end);
+    labels_count = end - start;
+    if (start > 0) {
+      stdlabel->Seek(stdlabel->Tell() + start);
+    }
+
     labels_.resize(labels_count);
     for (int i = 0; i < labels_count; ++i) {
       unsigned char ch;
