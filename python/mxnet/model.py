@@ -193,10 +193,6 @@ def _train_multi_device(symbol, ctx, input_shape,
     Notes
     -----
     - This function will inplace update the NDArrays in arg_parans and aux_states.
-    - Turning update_on_kvstore on and off can affect speed of multi-gpu training.
-      - It is auto selected by default.
-      - update_on_kvstore=True works well for inception type nets that contains many small weights.
-      - update_on_kvstore=False works better for Alexnet style net with bulk weights.
     """
     if logger is None:
         logger = logging
@@ -224,7 +220,7 @@ def _train_multi_device(symbol, ctx, input_shape,
         texec.copy_params_from(arg_params, aux_params)
 
     # create kvstore
-    if isinstance(kvstore, KVStore):
+    if isinstance(kvstore, kvs.KVStore):
         kv = kvstore
     elif isinstance(kvstore, str):
         # create kvstore using the string type
@@ -755,8 +751,7 @@ class FeedForward(BASE_ESTIMATOR):
     def create(symbol, X, y=None, ctx=None,
                num_round=None, optimizer='sgd', initializer=Uniform(0.01),
                eval_data=None, eval_metric='acc', iter_end_callback=None,
-               update_on_kvstore=None, kvstore_type='local', kvstore=None,
-               logger=None, **kwargs):
+               kvstore='local', logger=None, **kwargs):
         """Functional style to create a model.
 
         This function will be more consistent with functional

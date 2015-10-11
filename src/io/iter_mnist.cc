@@ -166,7 +166,6 @@ class MNISTIter: public IIterator<TBlobBatch> {
     delete stdimg;
   }
   inline void LoadLabel(void) {
-
     dmlc::SeekStream* stdlabel
         = dmlc::SeekStream::CreateForRead(param_.label.c_str());
     ReadInt(stdlabel);

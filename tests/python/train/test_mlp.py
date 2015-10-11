@@ -40,9 +40,6 @@ val_dataiter = mx.io.MNISTIter(
 def test_mlp():
     # print logging by default
     logging.basicConfig(level=logging.DEBUG)
-    console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG)
-    logging.getLogger('').addHandler(console)
 
     model = mx.model.FeedForward.create(
         softmax,
@@ -53,8 +50,7 @@ def test_mlp():
         ctx=[mx.cpu(i) for i in range(2)],
         num_round=num_round,
         learning_rate=0.1, wd=0.0004,
-        momentum=0.9,
-        update_on_kvstore=True)
+        momentum=0.9)
 
     logging.info('Finish traning...')
     prob = model.predict(val_dataiter)
