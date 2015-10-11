@@ -241,9 +241,9 @@ def _train_multi_device(symbol, ctx, input_shape,
         raise TypeError('kvstore must be either KVStore or str')
 
     # detect whether or not update weight on kvstore
-    update_on_kvstore = False
-    if kv and 'local_allreduce' in kv.get_type():
-        update_on_kvstore = True
+    update_on_kvstore = True
+    if not kv or 'local_allreduce' in kv.get_type():
+        update_on_kvstore = False
 
     # init optimizer before give it to kv or get_updater
     optimizer.begin_round(begin_round)
@@ -308,8 +308,9 @@ def _train_multi_device(symbol, ctx, input_shape,
                         # pull back the sum gradients, to the same locations.
                         kv.pull(index, grad_list, priority=-index)
                 if not update_on_kvstore:
-                    for w, g in zip(arg_list, grad_list):
-                        updater(index, g, w)
+                    for k, p in enumerate(zip(arg_list, grad_list)):
+                        w, g = p
+                        updater(index*num_device+k, g, w)
 
             nbatch += 1
             # epoch callback (for print purpose)
