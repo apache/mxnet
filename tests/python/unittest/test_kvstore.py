@@ -104,8 +104,13 @@ def test_updater(dev = 'cpu'):
         for v in vv:
             check_diff_to_scalar(v, num_devs * num_push)
 
+def test_get_type():
+    kvtype = 'local_allreduce_cpu'
+    kv = mx.kv.create(kvtype)
+    assert kv.get_type() == kvtype
 
 if __name__ == '__main__':
+    test_get_type()
     test_single_kv_pair()
     test_list_kv_pair()
     test_aggregator()

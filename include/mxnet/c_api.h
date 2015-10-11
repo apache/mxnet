@@ -787,6 +787,14 @@ MXNET_DLL int MXKVStoreSetUpdater(KVStoreHandle handle,
                                   MXKVStoreUpdater updater);
 
 
+/*!
+ * \brief get the type of the kvstore
+ * \param handle handle to the KVStore
+ * \param type a string type
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreGetType(KVStoreHandle handle,
+                               const char** type);
 //--------------------------------------------
 // Part 6: advanced KVStore for multi-machines
 //--------------------------------------------

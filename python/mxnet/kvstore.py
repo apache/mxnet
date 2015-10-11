@@ -63,6 +63,19 @@ class KVStore(object):
     def __del__(self):
         check_call(_LIB.MXKVStoreFree(self.handle))
 
+    def get_type(self):
+        """Get the type of this kvstore
+
+        Returns
+        -------
+        type : str
+            the string type
+        """
+        kv_type = ctypes.c_char_p()
+        check_call(_LIB.MXKVStoreGetType(self.handle, ctypes.byref(kv_type)))
+        return kv_type.value
+
+
     def init(self, key, value):
         """ Initialize a single or a sequence of key-value pairs into the store.
 
