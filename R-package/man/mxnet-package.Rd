@@ -13,7 +13,7 @@
   package, including the most important functions.
 }
 \author{
-Tianqi Chen, Qiang Kou
+Tianqi Chen, Qiang Kou, Tong He
 
 Maintainer: Qiang Kou <qkou@umail.iu.edu>
 }
