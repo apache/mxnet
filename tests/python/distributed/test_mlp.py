@@ -1,10 +1,15 @@
+#!/usr/bin/env python
 # pylint: skip-file
+
 import mxnet as mx
 import numpy as np
 import os, sys
 import pickle as pickle
 import logging
-from common import get_data
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.append(os.path.join(curr_path, '../common/'))
+import models
+import get_data
 
 # symbol net
 batch_size = 100
@@ -23,13 +28,16 @@ def accuracy(label, pred):
 num_round = 4
 prefix = './mlp'
 
+kv = mx.kvstore.create('dist')
+batch_size /= kv.get_num_workers()
+
 #check data
 get_data.GetMNIST_ubyte()
 
 train_dataiter = mx.io.MNISTIter(
         image="data/train-images-idx3-ubyte",
         label="data/train-labels-idx1-ubyte",
-        data_shape=(784,),
+        data_shape=(784,), num_parts=kv.get_num_workers(), part_index=kv.get_rank(),
         batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
 val_dataiter = mx.io.MNISTIter(
         image="data/t10k-images-idx3-ubyte",
@@ -38,7 +46,6 @@ val_dataiter = mx.io.MNISTIter(
         batch_size=batch_size, shuffle=True, flat=True, silent=False)
 
 def test_mlp():
-    # print logging by default
     logging.basicConfig(level=logging.DEBUG)
 
     model = mx.model.FeedForward.create(
@@ -46,53 +53,21 @@ def test_mlp():
         X=train_dataiter,
         eval_data=val_dataiter,
         eval_metric=mx.metric.np(accuracy),
-        iter_end_callback=mx.callback.do_checkpoint(prefix),
-        ctx=[mx.cpu(i) for i in range(2)],
+        ctx=[mx.cpu(i) for i in range(1)],
         num_round=num_round,
-        learning_rate=0.1, wd=0.0004,
-        momentum=0.9)
-
+        learning_rate=0.05, wd=0.0004,
+        momentum=0.9,
+        kvstore=kv,
+        )
     logging.info('Finish traning...')
     prob = model.predict(val_dataiter)
     logging.info('Finish predict...')
     val_dataiter.reset()
     y = np.concatenate([label.asnumpy() for _, label in val_dataiter]).astype('int')
     py = np.argmax(prob, axis=1)
-    acc1 = float(np.sum(py == y)) / len(y)
-    logging.info('final accuracy = %f', acc1)
-    assert(acc1 > 0.95)
-
-    # predict internal featuremaps
-    internals = softmax.get_internals()
-    fc2 = internals['fc2_output']
-    mfeat = mx.model.FeedForward(symbol=fc2,
-                                 arg_params=model.arg_params,
-                                 aux_params=model.aux_params,
-                                 allow_extra_params=True)
-    feat = mfeat.predict(val_dataiter)
-    assert feat.shape == (10000, 64)
-    # pickle the model
-    smodel = pickle.dumps(model)
-    model2 = pickle.loads(smodel)
-    prob2 = model2.predict(val_dataiter)
-    assert np.sum(np.abs(prob - prob2)) == 0
-
-    # load model from checkpoint
-    model3 = mx.model.FeedForward.load(prefix, num_round)
-    prob3 = model3.predict(val_dataiter)
-    assert np.sum(np.abs(prob - prob3)) == 0
-
-    # save model explicitly
-    model.save(prefix, 128)
-    model4 = mx.model.FeedForward.load(prefix, 128)
-    prob4 = model4.predict(val_dataiter)
-    assert np.sum(np.abs(prob - prob4)) == 0
-
-    for i in range(num_round):
-        os.remove('%s-%04d.params' % (prefix, i + 1))
-    os.remove('%s-symbol.json' % prefix)
-    os.remove('%s-0128.params' % prefix)
-
+    acc = float(np.sum(py == y)) / len(y)
+    logging.info('final accuracy = %f', acc)
+    assert(acc > 0.93)
 
 if __name__ == "__main__":
     test_mlp()

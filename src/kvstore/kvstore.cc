@@ -17,20 +17,35 @@ namespace mxnet {
 
 KVStore* KVStore::Create(const char *type_name) {
   std::string tname = type_name;
-  if (tname == "local") {
-    return new kvstore::KVStoreLocal();
-  } else if (tname == "device") {
-    return new kvstore::KVStoreDevice();
-  } else if (tname == "dist") {
+  std::transform(tname.begin(), tname.end(), tname.begin(), ::tolower);
+  KVStore* kv = nullptr;
+  if (tname == "local" ||
+      tname == "local_update_cpu" ||
+      tname == "local_allreduce_cpu") {
+    kv =  new kvstore::KVStoreLocal();
+  } else if (tname == "device" ||
+             tname == "local_allreduce_device") {
+    tname = "local_allreduce_device";
+    kv = new kvstore::KVStoreDevice();
+  } else if (tname == "dist_async") {
 #if MXNET_USE_DIST_KVSTORE
-    return new kvstore::KVStoreDist();
+    kv = new kvstore::KVStoreDist();
 #else
-    LOG(FATAL) << "compile with USE_DIST_KVSTORE=1";
+    LOG(FATAL) << "compile with USE_DIST_KVSTORE=1 to use " << tname;
     return nullptr;
 #endif  // MXNET_USE_DIST_KVSTORE
+  } else if (tname == "dist_sync") {
+#if MXNET_USE_DIST_KVSTORE
+    kv = new kvstore::KVStoreDist();
+#else
+    LOG(FATAL) << "compile with USE_DIST_KVSTORE=1 to use " << tname;
+    return nullptr;
+#endif  // MXNET_USE_DIST_KVSTORE
+  } else {
+    LOG(FATAL) << "Unknown KVStore type \"" << tname << "\"";
   }
-  LOG(FATAL) << "Unknown KVStore type \"" << type_name << "\"";
-  return nullptr;
+  kv->type_ = tname;
+  return kv;
 }
 
 }  // namespace mxnet

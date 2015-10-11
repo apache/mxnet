@@ -1088,3 +1088,10 @@ int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
       cmd_id, std::string(cmd_body));
   API_END();
 }
+
+int MXKVStoreGetType(KVStoreHandle handle,
+                     const char** type) {
+  API_BEGIN();
+  *CHECK_NOTNULL(type) = static_cast<KVStore*>(handle)->type().c_str();
+  API_END();
+}
