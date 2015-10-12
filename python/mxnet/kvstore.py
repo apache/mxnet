@@ -95,20 +95,16 @@ class KVStore(object):
         >>> keys = [5, 7, 9]
         >>> kv.init(keys, [mx.nd.ones(shape)]*len(keys))
         """
-        if (self.rank == 0):
-            ckeys, cvals = _ctype_key_value(key, value)
-            check_call(_LIB.MXKVStoreInit(
-                self.handle, mx_uint(len(ckeys)), ckeys, cvals))
-        # sync all workers
-        self._barrier()
+        ckeys, cvals = _ctype_key_value(key, value)
+        check_call(_LIB.MXKVStoreInit(
+            self.handle, mx_uint(len(ckeys)), ckeys, cvals))
 
     def push(self, key, value, priority=0):
         """ Push a single or a sequence of key-value pairs into the store.
 
         Data consistency:
 
-        1. this function returns after adding an operator to the engine. One
-        can use _wait or _wait_all to make sure it is finished.
+        1. this function returns after adding an operator to the engine.
 
         2. push is always called after all previous push and pull on the same
         key are finished
@@ -168,9 +164,6 @@ class KVStore(object):
         check_call(_LIB.MXKVStorePush(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
             ctypes.c_int(priority)))
-
-        # self._wait(key)
-        # self._barrier()
 
     def pull(self, key, out=None, priority=0):
         """ Pull a single value or a sequence of values from the store.
@@ -247,15 +240,11 @@ class KVStore(object):
         optimizer : Optimizer
             the optimizer
         """
-        is_distributed = ctypes.c_int()
-        check_call(_LIB.MXKVStoreIsDistributed(
-            self.handle, ctypes.byref(is_distributed)))
-
         is_worker = ctypes.c_int()
         check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
 
         # pylint: disable=invalid-name
-        if is_distributed.value and is_worker.value:
+        if self.type == 'dist_async' and is_worker.value:
             # send the optimizer to server
             try:
                 # use ASCII protocol 0, might be slower, but not a big ideal
@@ -346,41 +335,8 @@ class KVStore(object):
         init the values, and then pull the inited value to all machines. Before
         pulling, we can place a barrier to guarantee that the initialization is
         finished.
-
-        But note that, this functions only blocks the main thread of workers
-        until all of them are reached this point. It doesn't guarantee that all
-        operations issued before are actually finished, such as \ref Push and
-        \ref Pull. In that case, we need to call \ref Wait or \ref WaitAll
-
-        The following codes implement a BSP model
-
-        >>> kv.push(keys, values)
-        ... kv._wait(keys)
-        ... kv._barrier()
-        ... kv.pull(keys, out = values);
         """
         check_call(_LIB.MXKVStoreBarrier(self.handle))
-
-    def _wait(self, key):
-        """Wait until all pushes and pulls issued on each key have been finished
-
-        Parameters
-        ----------
-        key : int or list of int
-            Keys
-        """
-        if isinstance(key, int):
-            ckeys = c_array(ctypes.c_int, [key])
-        else:
-            for k in key:
-                assert(isinstance(k, int))
-            ckeys = c_array(ctypes.c_int, key)
-        check_call(_LIB.MXKVStoreWait(self.handle, mx_uint(len(ckeys)), ckeys))
-
-    def _wait_all(self):
-        """Wait until all pushes and pulls issued before have been finished
-        """
-        check_call(_LIB.MXKVStoreWaitAll(self.handle))
 
     def _send_command_to_servers(self, head, body):
         """Send a command to all server nodes
