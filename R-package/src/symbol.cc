@@ -164,11 +164,11 @@ SEXP Symbol::InferShape(const Rcpp::List& kwargs) const {
 
   if (complete != 0) {
     return Rcpp::List::create(
-        Rcpp::Named("arg_shapes") = BuildShapeData(
+        Rcpp::Named("arg.shapes") = BuildShapeData(
             in_shape_size, in_shape_ndim, in_shape_data, ListArguments()),
-        Rcpp::Named("out_shapes") = BuildShapeData(
+        Rcpp::Named("out.shapes") = BuildShapeData(
             out_shape_size, out_shape_ndim, out_shape_data, ListOuputs()),
-        Rcpp::Named("aux_shapes") = BuildShapeData(
+        Rcpp::Named("aux.shapes") = BuildShapeData(
             aux_shape_size, aux_shape_ndim, aux_shape_data, ListAuxiliaryStates()));
   } else {
     return R_NilValue;
