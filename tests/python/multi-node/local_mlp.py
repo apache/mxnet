@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 # pylint: skip-file
 import mxnet as mx
-import numpy as np
 import os, sys
 import logging
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../common/'))
-import models
-from data import mnist
+from common import mnist, accuracy
 
 # symbol net
 batch_size = 100
@@ -28,31 +26,26 @@ def test_mlp(devs, kv_type):
                          input_shape = (784,))
     # train
     model  = mx.model.FeedForward.create(
-        softmax,
-        X             = train,
+        symbol        = softmax,
         ctx           = devs,
+        X             = train,
         num_round     = 2,
         learning_rate = 0.1,
         wd            = 0.0004,
         momentum      = 0.9,
         kvstore       = kv_type)
 
-    # predict
-    prob = model.predict(val)
-    py = np.argmax(prob, axis=1)
-    val.reset()
-    y = np.concatenate([label.asnumpy() for _, label in val]).astype('int')
-    acc = float(np.sum(py == y)) / len(y)
-    logging.info('Eval-accuracy = %f', acc)
-    return acc
+    return accuracy(model, val)
 
 if __name__ == "__main__":
     base = test_mlp(mx.cpu(), 'none')
+    print base
     assert base > 0.95
 
-    # cpus = [mx.cpu(i) for i in range(2)]
-    # acc =  test_mlp(cpus, 'local_update_cpu')
-    # assert abs(base - acc) < 1e-4
+    cpus = [mx.cpu(i) for i in range(2)]
+    acc =  test_mlp(cpus, 'local_update_cpu')
+    print acc
+    assert abs(base - acc) < 1e-4
 
     # acc =  test_mlp(cpus, 'local_allreduce_cpu')
     # assert abs(base - acc) < 1e-4
