@@ -1,19 +1,18 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file flatten.cc
+ * \file block_grad.cc
  * \brief
  * \author Bing Xu
 */
-
-#include "./reshape-inl.h"
-
+#include "./block_grad-inl.h"
 
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<gpu>(ReshapeParam param) {
-  return new ReshapeOp<gpu>(param);
+Operator *CreateOp<gpu>() {
+  return new BlockGradientOp<gpu>();
 }
 
 }  // namespace op
 }  // namespace mxnet
+
