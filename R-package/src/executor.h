@@ -22,6 +22,18 @@ class Executor : public MXNetMovable<Executor> {
     return "MXExecutor";
   }
   /*!
+   * \return Get reference of the arg arrays of executor.
+   */
+  const Rcpp::List& arg_arrays() const {
+    return *arg_arrays_;
+  }
+  /*!
+   * \return Get reference of gradient arrays of executor.
+   */
+  const Rcpp::List& grad_arrays() const {
+    return *grad_arrays_;
+  }
+  /*!
    * \return Get the arg arrays of executor.
    */
   Rcpp::List GetArgArrays() const {
@@ -31,8 +43,6 @@ class Executor : public MXNetMovable<Executor> {
    * \return Get the grad arrays of executor.
    */
   Rcpp::List GetGradArrays() const {
-    RCHECK(grad_arrays_ != nullptr)
-        << "This executor has not been binded with req.grad";
     return CloneArray(*grad_arrays_);
   }
   /*!
@@ -48,17 +58,29 @@ class Executor : public MXNetMovable<Executor> {
     return CloneArray(*out_arrays_);
   }
   /*!
-   * \brief Set the arg_arrays of executor.
+   * \brief Update the arg_arrays of executor, based on name-matching.
    * \param exec The executor R object, this object will be MOVED.
+   * \param array The array to update
+   * \param match_name whether to use name to match the input, instead of index.
+   * \param skip_null Whether null is allowed, when there is NULL in the array, simply ignore.
    * \return a result executor, moved from exec.
    */
-  static RObjectType SetArgArray(const RObjectType& exec, const Rcpp::List& array);
+  static RObjectType UpdateArgArray(const RObjectType& exec,
+                                    const Rcpp::List& array,
+                                    bool match_name,
+                                    bool allow_null);
   /*!
-   * \brief Set the aux_arrays of executor.
+   * \brief Update the aux_arrays of executor, based on name-matching.
    * \param exec The executor R object, this object will be MOVED.
+   * \param array The array to update
+   * \param match_name whether to use name to match the input, instead of index.
+   * \param skip_null Whether null is allowed, when there is NULL in the array, simply ignore.
    * \return a result executor, moved from exec.
    */
-  static RObjectType SetAuxArray(const RObjectType& exec, const Rcpp::List& array);
+  static RObjectType UpdateAuxArray(const RObjectType& exec,
+                                    const Rcpp::List& array,
+                                    bool match_name,
+                                    bool allow_null);
   /*!
    * \brief Peform a forward operation on exec, this will set the out_arrays.
    * \param exec The executor R object, this object will be MOVED.
@@ -132,10 +154,15 @@ class Executor : public MXNetMovable<Executor> {
   static Rcpp::List CloneArray(const Rcpp::List& src);
   /*!
    * \brief Copy arrays from to to
+   * \param array_name The name of the array, used for error message.
    * \param from source list to copy from.
    * \param to target list to copy to.
+   * \param match_name whether to use name to match the input, instead of index.
+   * \param skip_null Whether null is allowed, when there is NULL in the array, simply ignore.
    */
-  static void CopyArray(const Rcpp::List& from, Rcpp::List *to);
+  static void UpdateArray(const char* array_name,
+                          const Rcpp::List& from, Rcpp::List *to,
+                          bool match_name, bool skip_null);
   /*! \brief output arrays of Executor */
   Rcpp::List *out_arrays_;
   /*! \brief argument arrays of Executor */

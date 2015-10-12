@@ -4,7 +4,6 @@ init.context.default <- function() {
 }
 
 # TODO(KK, tong) check if roxygen style is correct.
-
 #'
 #' Set/Get default context for array creation.
 #'
