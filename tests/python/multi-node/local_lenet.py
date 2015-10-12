@@ -39,8 +39,8 @@ def test_lenet(devs, kv_type):
         kvstore       = kv_type,
         symbol        = lenet,
         X             = train,
-        num_round     = 10,
-        learning_rate = 0.02,
+        num_round     = 3,
+        learning_rate = 0.1,
         momentum      = 0.9,
         wd            = 0.00001)
 
@@ -55,8 +55,8 @@ if __name__ == "__main__":
     acc3 = test_lenet(gpus, 'local_allreduce_cpu')
     acc4 = test_lenet(gpus, 'local_allreduce_device')
 
-    # assert base > 0.95
-    assert base > 0.5
+    assert base > 0.95
+    # assert base > 0.5
     assert abs(base - acc1) < 1e-3
     assert abs(base - acc2) < 1e-3
     assert abs(base - acc3) < 1e-3

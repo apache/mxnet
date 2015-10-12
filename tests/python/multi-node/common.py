@@ -23,7 +23,7 @@ def mnist(batch_size, input_shape, num_parts=1, part_index=0):
         batch_size = batch_size,
         num_parts  = num_parts,
         part_index = part_index,
-        shuffle    = True,
+        shuffle    = False,
         flat       = flat,
         silent     = False)
     val = mx.io.MNISTIter(

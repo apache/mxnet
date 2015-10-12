@@ -1,5 +1,7 @@
 # Test multi-devices and multi-machines
 
+must disable `CUDNN`
 
-local _\* for multi-devices and single machine.
-dist_\* for multi-machines
+`local_*` for multi-devices and single machine.
+
+`dist_*` for multi-machines
