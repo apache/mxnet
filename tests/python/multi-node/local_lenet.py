@@ -1,6 +1,7 @@
+#!/usr/bin/env python
 # pylint: skip-file
 import mxnet as mx
-from common import mnist, accuracy
+from common import mnist, accuracy, cifar10
 import logging
 
 ## define lenet
@@ -30,24 +31,33 @@ def test_lenet(devs, kv_type):
     mx.random.seed(0)
     logging.basicConfig(level=logging.DEBUG)
 
+    # (train, val) = cifar10(batch_size = 128, input_shape=(3,28,28))
     (train, val) = mnist(batch_size = 100, input_shape=(1,28,28))
 
     model = mx.model.FeedForward.create(
         ctx           = devs,
+        kvstore       = kv_type,
         symbol        = lenet,
         X             = train,
-        num_round     = 5,
-        learning_rate = 0.05,
+        num_round     = 10,
+        learning_rate = 0.02,
         momentum      = 0.9,
         wd            = 0.00001)
 
     return accuracy(model, val)
 
 if __name__ == "__main__":
+    gpus = [mx.gpu(i) for i in range(2)]
 
     base = test_lenet(mx.gpu(), 'none')
-    print base
+    acc1 = test_lenet(mx.gpu(), 'none')
+    acc2 = test_lenet(gpus, 'local_update_cpu')
+    acc3 = test_lenet(gpus, 'local_allreduce_cpu')
+    acc4 = test_lenet(gpus, 'local_allreduce_device')
 
-    cpus = [mx.gpu(i) for i in range(2)]
-    acc =  test_mlp(cpus, 'local_update_cpu')
-    print acc
+    # assert base > 0.95
+    assert base > 0.5
+    assert abs(base - acc1) < 1e-3
+    assert abs(base - acc2) < 1e-3
+    assert abs(base - acc3) < 1e-3
+    assert abs(base - acc4) < 1e-3
