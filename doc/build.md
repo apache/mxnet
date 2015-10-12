@@ -62,7 +62,7 @@ Build in Visual Studio 2013
 
 Firstly, we should make your Visual Studio 2013 support more C++11 features.
 
- - Download and install [Visual C++ Compiler Nov 2013 CTP](http://www.microsoft.com/en-us/download/details.aspx?id=41151). If you cannot install it, you can also download the zip archive from [OneDrive](http://1drv.ms/1RApcXr) or [BaiduYun](http://pan.baidu.com/s/1dVnJo)(MD5: 48E4C89E367331283BF6B1E2DDB262C8). 
+ - Download and install [Visual C++ Compiler Nov 2013 CTP](http://www.microsoft.com/en-us/download/details.aspx?id=41151). 
  - Copy all files in `C:\Program Files (x86)\Microsoft Visual C++ Compiler Nov 2013 CTP` (or the folder where you extracted the zip archive) to `C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC` and overwrite all existed files. Don't forget to backup the original files before copying.
 
 Secondly, fetch the third-party libraries, including [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download), [CuDNN](https://developer.nvidia.com/cudnn) and [OpenBlas](http://sourceforge.net/projects/openblas/files/v0.2.14/)(ignore this if you have MKL).
