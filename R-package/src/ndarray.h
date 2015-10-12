@@ -11,6 +11,7 @@
 #include <string>
 #include <algorithm>
 #include <vector>
+#include "./base.h"
 
 namespace mxnet {
 namespace R {
@@ -34,9 +35,11 @@ class NDArray : public MXNetMovable<NDArray> {
   RObjectType Clone() const;
   /*! \return The shape of the array */
   inline Rcpp::Dimension shape() const;
+  /*! \return The number of elements in the array */
+  inline size_t size() const;
   /*! \return the context of the NDArray */
-  inline const Context &ctx() const {
-    return ctx_;
+  inline const Context::RObjectType ctx() const {
+    return ctx_.RObject();
   }
   /*!
    * \brief internal function to copy NDArray from to to
@@ -210,6 +213,16 @@ inline Rcpp::Dimension NDArray::shape() const {
   std::copy(pshape, pshape + ndim, vec.begin());
   SEXP sexp = vec;
   return sexp;
+}
+
+// implementatins of inline functions
+inline size_t NDArray::size() const {
+  Rcpp::Dimension dim = this->shape();
+  size_t sz = 1;
+  for (size_t i =0; i < dim.size(); ++i) {
+    sz *= dim[i];
+  }
+  return sz;
 }
 }  // namespace R
 }  // namespace mxnet
