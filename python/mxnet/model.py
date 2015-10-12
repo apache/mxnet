@@ -294,24 +294,6 @@ def _train_multi_device(symbol, ctx, input_shape,
     merged_shape = tuple(merged_shape)
     out_cpu_array = nd.zeros(merged_shape, cpu())
 
-    grad_update_order = []
-    for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
-        arg_list, grad_list = pair
-        if grad_list[0] is not None:
-            grad_size = 1
-            for d in grad_list[0].shape:
-                grad_size *= d
-            grad_update_order.append((grad_size, index, pair))
-    def cmp_grad(a, b):
-        size_a, _, _ = a
-        size_b, _, _ = b
-        if size_a < size_b:
-            return 1
-        elif size_a > size_b:
-            return -1
-        return 0
-    grad_update_order.sort(cmp_grad)
-
     # Now start training
     for iteration in range(begin_round, end_round):
         # Training phase
@@ -332,7 +314,7 @@ def _train_multi_device(symbol, ctx, input_shape,
             for texec in train_execs:
                 texec.backward()
             # update the parameters
-            for _, index, pair in grad_update_order:
+            for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
                 arg_list, grad_list = pair
                 if grad_list[0] is None:
                     continue
