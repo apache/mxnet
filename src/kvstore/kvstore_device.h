@@ -71,7 +71,7 @@ class KVStoreDevice : public KVStoreLocal {
     auto& buf = merge_buf_[key];
     std::vector<NDArray> reduce(val.size());
     CHECK(!buf.merged.is_none());
-    CopyFromTo(val[0], &(buf.merged), priority);
+        CopyFromTo(val[0], &(buf.merged), priority);
     reduce[0] = buf.merged;
 
     for (size_t i = 1; i < val.size(); ++i) {
