@@ -11,6 +11,8 @@ include("init.jl")
 include("context.jl")
 
 include("ndarray.jl")
+include("random.jl")
+
 include("name.jl")
 include("symbol.jl")
 include("executor.jl")
