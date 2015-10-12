@@ -22,28 +22,55 @@ namespace kvstore {
  */
 class KVStoreDevice : public KVStoreLocal {
  protected:
+  using KeyShape = std::pair<int, TShape>;
+  void Init(const std::vector<int>& keys,
+            const std::vector<NDArray>& values) override {
+    KVStoreLocal::Init(keys, values);
+
+    for (size_t i = 0; i < keys.size(); ++i) {
+      sorted_key_shape_.push_back(std::make_pair(keys[i], values[i].shape()));
+    }
+    std::sort(sorted_key_shape_.begin(), sorted_key_shape_.end(), [](
+              const KeyShape& a, const KeyShape& b) {
+        return a.second.Size() > b.second.Size();
+      });
+  }
+
   const NDArray& MergePushValue(
       int key, const std::vector<NDArray>& val, int priority) override {
     if (updater_ != nullptr) {
       // fall back to CPU based update if updater presents
       return KVStoreLocal::MergePushValue(key, val, priority);
     }
+
+    if (merge_buf_.empty()) {
+      CHECK(!val.empty());
+      std::unordered_map<int, std::pair<Context, size_t>> ctx_info;
+      for (size_t i = 0; i < val.size(); ++i) {
+        int32_t dev_id = val[i].ctx().dev_id;
+        ctx_info[dev_id] = std::make_pair(val[i].ctx(), 0);
+      }
+      for (size_t i = 0; i < sorted_key_shape_.size(); ++i) {
+        int k = sorted_key_shape_[i].first;
+        TShape s = sorted_key_shape_[i].second;
+        auto& tm_buf = merge_buf_[k];
+        size_t min_size = size_t(-1);
+        for (auto it = ctx_info.begin(); it != ctx_info.end(); ++it) {
+          size_t tm_size = it->second.second;
+          if (tm_size <= min_size) {
+            tm_buf.ctx = it->second.first;
+            min_size = tm_size;
+          }
+        }
+
+        tm_buf.merged = NDArray(s, tm_buf.ctx);
+        ctx_info[tm_buf.ctx.dev_id].second += s.Size();
+      }
+    }
+
     auto& buf = merge_buf_[key];
     std::vector<NDArray> reduce(val.size());
-    if (buf.merged.is_none()) {
-	  size_t min_size = size_t(-1);	
-	  buf.ctx = val[0].ctx();
-	  for (size_t i = 0; i < val.size(); ++i) {
-		  int32_t device_id = val[i].ctx().dev_id;
-		  if (total_device_buf_[device_id] < min_size) {
-			  min_size = total_device_buf_[device_id];
-			  buf.ctx = val[i].ctx();
-		  }
-	  }
-
-      buf.merged = NDArray(val[0].shape(), buf.ctx);
-	  total_device_buf_[buf.ctx.dev_id] += val[0].shape().Size();
-    }
+    CHECK(!buf.merged.is_none());
     CopyFromTo(val[0], &(buf.merged), priority);
     reduce[0] = buf.merged;
 
@@ -58,8 +85,7 @@ class KVStoreDevice : public KVStoreLocal {
   }
 
  private:
-  std::unordered_map<int, size_t> total_device_buf_;
-  common::RANDOM_ENGINE rnd_{0};
+  std::vector<KeyShape> sorted_key_shape_;
 };
 }  // namespace kvstore
 }  // namespace mxnet
