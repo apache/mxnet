@@ -11,7 +11,6 @@ import mxnet as mx
 import get_data
 import numpy as np
 import logging
-import time
 
 def mnist(batch_size, input_shape, num_parts=1, part_index=0):
     """return mnist iters"""
@@ -24,7 +23,7 @@ def mnist(batch_size, input_shape, num_parts=1, part_index=0):
         batch_size = batch_size,
         num_parts  = num_parts,
         part_index = part_index,
-        shuffle    = False,
+        shuffle    = True,
         flat       = flat,
         silent     = False)
     val = mx.io.MNISTIter(
@@ -37,15 +36,43 @@ def mnist(batch_size, input_shape, num_parts=1, part_index=0):
         silent     = False)
     return (train, val)
 
+def cifar10(batch_size, input_shape, num_parts=1, part_index=0):
+    """return cifar10 iterator"""
+    get_data.GetCifar10()
+
+    train = mx.io.ImageRecordIter(
+        path_imgrec = "data/cifar/train.rec",
+        mean_img    = "data/cifar/cifar_mean.bin",
+        data_shape  = input_shape,
+        batch_size  = batch_size,
+        rand_crop   = False,
+        rand_mirror = False,
+        shuffle     = False,
+        round_batch = False,
+        num_parts   = num_parts,
+        part_index  = part_index)
+    val = mx.io.ImageRecordIter(
+        path_imgrec = "data/cifar/test.rec",
+        mean_img    = "data/cifar/cifar_mean.bin",
+        rand_crop   = False,
+        rand_mirror = False,
+        shuffle     = False,
+        round_batch = False,
+        data_shape  = (3,28,28),
+        batch_size  = batch_size)
+    return (train, val)
 
 def accuracy(model, data):
+    """evaluate acc"""
+    # predict
+    data.reset()
     prob = model.predict(data)
     py = np.argmax(prob, axis=1)
+    # get label
     data.reset()
     y = np.concatenate([label.asnumpy() for _, label in data]).astype('int')
+    y = y[0:len(py)]
     acc = float(np.sum(py == y)) / len(y)
     logging.info('Accuracy = %f', acc)
 
-    # give engine time to deconstruct, due to bug...
-    time.sleep(1)
     return acc

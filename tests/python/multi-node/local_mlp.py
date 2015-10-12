@@ -8,7 +8,6 @@ sys.path.append(os.path.join(curr_path, '../common/'))
 from common import mnist, accuracy
 
 # symbol net
-batch_size = 100
 data = mx.symbol.Variable('data')
 fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
 act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
@@ -22,8 +21,9 @@ def test_mlp(devs, kv_type):
     mx.random.seed(0)
     logging.basicConfig(level=logging.DEBUG)
 
-    (train, val) = mnist(batch_size = 100,
+    (train, val) = mnist(batch_size = 102,
                          input_shape = (784,))
+
     # train
     model  = mx.model.FeedForward.create(
         symbol        = softmax,
@@ -43,9 +43,10 @@ if __name__ == "__main__":
     assert base > 0.95
 
     cpus = [mx.cpu(i) for i in range(2)]
-    acc =  test_mlp(cpus, 'local_update_cpu')
-    print acc
-    assert abs(base - acc) < 1e-4
+    acc1 =  test_mlp(cpus, 'local_update_cpu')
+    acc2 =  test_mlp(cpus, 'local_allreduce_cpu')
+    acc3 =  test_mlp(cpus, 'local_allreduce_device')
 
-    # acc =  test_mlp(cpus, 'local_allreduce_cpu')
-    # assert abs(base - acc) < 1e-4
+    assert abs(base - acc1) < 1e-3
+    assert abs(base - acc2) < 1e-3
+    assert abs(base - acc3) < 1e-3
