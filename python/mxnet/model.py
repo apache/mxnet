@@ -699,7 +699,7 @@ class FeedForward(BASE_ESTIMATOR):
         # init optmizer
         if isinstance(self.optimizer, str):
             batch_size = input_shape[0]
-            if kvstore and kvstore.type is 'dist_sync':
+            if kvstore and kvstore.type == 'dist_sync':
                 batch_size *= kvstore.num_workers
 
         optimizer = opt.create(self.optimizer,
