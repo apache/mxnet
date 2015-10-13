@@ -25,12 +25,10 @@ struct CommandID {
    * \brief commmand id for stoping
    */
   static const int kStop = -1;
-
   /**
    * \brief command id to set the server to the sync mode
    */
   static const int kSyncMode = -2;
-
   /**
    * \brief returns the commmand id given a barrier count
    */
@@ -47,6 +45,127 @@ struct CommandID {
     }
     return false;
   }
+
+  /**
+   * \brief number of bits used to encode the key in mxnet
+   */
+  static const int kIndexBits = 32;
+};
+
+/**
+ * \brief a simple aggregator over time.
+ */
+class Aggregator {
+ public:
+  /**
+   * \param num number of nodes for aggregation
+   */
+  Aggregator(int num, ps::Customer* obj) {
+    num_ = num;
+    obj_ = obj;
+  }
+
+  using Message = std::shared_ptr<ps::Message>;
+
+  bool Has(int time) {
+    return msgs_.find(time) != msgs_.end();
+  }
+
+  void Add(int time, const Message& msg) {
+    msgs_[time].push_back(msg);
+    msg->replied = true;
+  }
+
+  size_t Size() {
+    return msgs_.size();
+  }
+
+  size_t Count(int time) {
+    return msgs_[time].size();
+  }
+
+  bool Done(int time) {
+    return Count(time) == (size_t)num_;
+  }
+
+  void Remove(int time) {
+    for (auto& m : msgs_[time]) {
+      CHECK_NOTNULL(obj_)->Reply(m.get());
+    }
+    msgs_.erase(time);
+  }
+
+ private:
+  std::unordered_map<int, std::vector<Message>> msgs_;
+  int num_;
+  ps::Customer* obj_;
+};
+
+/** \brief to match worker/server's app id */
+#define PS_KV_ID 9
+
+/** \brief to match worker/server's app id */
+#define PS_APP_ID 10
+
+/**
+ * \brief a server node on ps
+ */
+class MXNetServer : public ps::App {
+ public:
+  MXNetServer() : App(PS_APP_ID) { }
+  virtual ~MXNetServer() { }
+
+  void set_controller(const KVStore::Controller& ctrl) {
+    controller_ = ctrl;
+  }
+
+  void ProcessRequest(ps::Message* request) override {
+    // wait for one second if controller_ is not inited
+    for (int i = 0; i < 100; ++i) {
+      if (!controller_) usleep(10000);
+    }
+    CHECK(controller_);
+    controller_(request->task.cmd(), request->task.msg());
+  }
+
+ private:
+  KVStore::Controller controller_;
+};
+
+/**
+ * \brief a worker node on ps
+ */
+class MXNetWorker : public ps::App {
+ public:
+  MXNetWorker() : App(PS_APP_ID) { }
+  virtual ~MXNetWorker() { }
+};
+
+/**
+ * \brief a scheduler node on ps
+ */
+class MXNetScheduler : public ps::App {
+ public:
+  MXNetScheduler()
+      : App(PS_APP_ID),
+        barrier_(ps::NodeInfo::NumWorkers(), this) {
+  }
+  virtual ~MXNetScheduler() { }
+
+  void ProcessRequest(ps::Message* request) override {
+    int count;
+    if (CommandID::GetBarrier(request->task.cmd(), &count)) {
+      barrier_.Add(count, LastRequest());
+      CHECK_EQ(barrier_.Size(), 1);
+
+      if (barrier_.Done(count)) {
+        barrier_.Remove(count);
+      }
+    }
+  }
+
+ private:
+  Aggregator barrier_;
 };
 
 /**
@@ -113,107 +232,6 @@ class Executor {
 };
 
 
-/** \brief to match worker/server's app id */
-#define PS_KV_ID 9
-
-/** \brief to match worker/server's app id */
-#define PS_APP_ID 10
-
-/**
- * \brief a server node on ps
- */
-class MXNetServer : public ps::App {
- public:
-  MXNetServer() : App(PS_APP_ID) { }
-  virtual ~MXNetServer() { }
-
-  void set_executor(Executor* exec) {
-    executor_ = exec;
-  }
-
-  void set_controller(const KVStore::Controller& ctrl) {
-    controller_ = ctrl;
-  }
-
-  void ProcessRequest(ps::Message* request) override {
-    // wait for one second if controller_ is not inited
-    for (int i = 0; i < 100; ++i) {
-      if (!controller_) usleep(10000);
-    }
-    CHECK(controller_);
-
-    int cmd = request->task.cmd();
-    if (cmd == CommandID::kStop) {
-      executor_->Stop();
-    } else if (cmd == CommandID::kSyncMode) {
-
-    } else {
-      // let the main thread to execute updater_, which is necessary for python
-      executor_->Exec([cmd, request, this]() {
-          controller_(cmd, request->task.msg());
-        });
-    }
-  }
-
- private:
-  KVStore::Controller controller_;
-  Executor* executor_;
-};
-
-/**
- * \brief a worker node on ps
- */
-class MXNetWorker : public ps::App {
- public:
-  MXNetWorker() : App(PS_APP_ID) { }
-  virtual ~MXNetWorker() { }
-};
-
-/**
- * \brief a scheduler node on ps
- */
-class MXNetScheduler : public ps::App {
- public:
-  MXNetScheduler() : App(PS_APP_ID) { }
-  virtual ~MXNetScheduler() { }
-
-  void ProcessRequest(ps::Message* request) override {
-    int count;
-    if (CommandID::GetBarrier(request->task.cmd(), &count)) {
-      if (barrier_.msgs.empty()) {
-        barrier_.barrier_count = count;
-      } else {
-        CHECK_EQ(barrier_.barrier_count, count);
-      }
-      barrier_.msgs.push_back(*request);
-      // disable automatical reply so the worker node will be sleeped on node->Wait()
-      request->replied = true;
-
-      if (++barrier_.num_nodes == ps::NodeInfo::NumWorkers()) {
-        for (auto& m : barrier_.msgs) {
-          Reply(&m);
-        }
-        barrier_.clear();
-      }
-    }
-  }
-
- private:
-  // a simple barrier. probably move to ps-lite later
-  struct Barrier {
-    Barrier() { clear(); }
-    void clear() {
-      barrier_count = -1;
-      num_nodes = 0;
-      msgs.clear();
-    }
-    int num_nodes;
-    int barrier_count;
-    std::vector<ps::Message> msgs;
-  };
-
-  Barrier barrier_;
-};
 
 
 /**
@@ -221,206 +239,191 @@ class MXNetScheduler : public ps::App {
  */
 class KVStoreDistServer {
  public:
+  explicit KVStoreDistServer(const KVStore::Controller& user_ctrl)
+      // set updater
+      : store_(ServerHandle(this), 1, 1, PS_KV_ID) {
 
-  explicit KVStoreDistServer(const KVStore::Controller& ctrl) {
-
+    // set controller
+    sync_mode_ = false;
+    auto controller
+        = [user_ctrl, this](int cmd_id, const std::string& cmd_body) {
+      if (cmd_id == CommandID::kStop) {
+        exec_.Stop();
+      } else if (cmd_id == CommandID::kSyncMode) {
+        sync_mode_ = true;
+      } else {
+        // let the main thread to execute ctrl, which is necessary for python
+        exec_.Exec([user_ctrl, cmd_id, cmd_body]() {
+            user_ctrl(cmd_id, cmd_body);
+        });
+      }
+    };
+    auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
+    static_cast<MXNetServer*>(node)->set_controller(controller);
   }
 
   void set_updater(const KVStore::Updater& updater)  {
+    updater_ = updater;
   }
 
   void Run() {
-
+    exec_.Start();
   }
  private:
+
+  /**
+   * \brief value type stored at server
+   */
+  struct ServerVal {
+    NDArray array;
+    inline void Load(dmlc::Stream *fi) { array.Load(fi); }
+    inline void Save(dmlc::Stream *fo) const { array.Save(fo); }
+    inline bool Empty() const { return array.is_none(); }
+  };
+
+
+  /**
+   * \brief server handle
+   */
+  class ServerHandle {
+   public:
+    explicit ServerHandle(KVStoreDistServer* kvstore)
+        : kvstore_(kvstore),
+          ps_obj_(nullptr),
+          aggregator_(nullptr) {
+    }
+
+    ~ServerHandle() {
+      delete aggregator_;
+    }
+
+    /**
+     * \brief it is called before any push and pull.
+     *
+     * we manage the data consistency among workers here.
+     */
+    inline void Start(bool push, int timestamp, int cmd_id, void* msg) {
+      curr_timestamp_ = timestamp;
+      if (aggregator_ == nullptr) {
+        ps_obj_ = CHECK_NOTNULL(kvstore_)->store_.server();
+        aggregator_ = new Aggregator(
+            ps::NodeInfo::NumWorkers(), ps_obj_);
+      }
+      if (kvstore_->sync_mode_) {
+        // use the shared pointer version of the message to prevent it being
+        // deleted by the system
+        auto msg = ps_obj_->LastRequest();
+        // should only has a single key
+        CHECK_EQ(msg->key.size(), sizeof(int));
+        // add to aggregator
+        aggregator_->Add(timestamp, msg);
+      }
+    }
+
+    inline void Finish() { }
+    inline void Load(dmlc::Stream *fi) { }
+    inline void Save(dmlc::Stream *fo) const { }
+
+    inline void Push(ps::Key recv_key,
+                     ps::Blob<const real_t> recv_val,
+                     ServerVal& my_val) {  // NOLINT(*)
+      // construct NDArray without data copy
+      size_t ds[] = {recv_val.size};
+      TShape dshape(ds, ds + 1);
+      TBlob recv_blob((real_t*)recv_val.data,  // NOLINT(*)
+                      dshape, cpu::kDevMask);
+      NDArray recv_array(recv_blob, 0);
+      int key = DecodeKey(recv_key);
+
+      if (my_val.Empty()) {
+        // initialization
+        my_val.array = NDArray(dshape, Context());
+        CopyFromTo(recv_array, &my_val.array);
+        // no aggregation
+        aggregator_->Remove(curr_timestamp_);
+        return;
+      } else {
+        if (kvstore_->sync_mode_) {
+          // first aggregate all recved data into merge
+          auto& merge = merge_buf_[key];
+          if (aggregator_->Count(curr_timestamp_) == 1) {
+            if (merge.is_none()) {
+              merge = NDArray(dshape, Context());
+            }
+            merge = 0;
+          }
+          merge += recv_array;
+
+          // update if aggregation is done
+          if (aggregator_->Done(curr_timestamp_)) {
+            // let the main thread to execute updater_, which is necessary for
+            // python
+            kvstore_->exec_.Exec([this, key, &merge, &my_val](){
+                kvstore_->updater_(key, merge, &my_val.array);
+              });
+            aggregator_->Remove(curr_timestamp_);
+          }
+        } else {
+          // runs eventual consistency model. so update immediately
+
+          // let the main thread to execute updater_, which is necessary for
+          // python
+          kvstore_->exec_.Exec([this, key, &recv_array, &my_val](){
+              kvstore_->updater_(key, recv_array, &my_val.array);
+            });
+        }
+      }
+      // place waittoread here rather than the beginning of pull.
+      my_val.array.WaitToRead();
+    }
+
+    inline void Pull(ps::Key recv_key,
+                     const ServerVal& my_val,
+                     ps::Blob<real_t>& send_val) {  // NOLINT(*)
+      CHECK(!my_val.Empty())
+          << DecodeKey(recv_key) << " is not inited";
+
+      send_val.data = static_cast<real_t*>(my_val.array.data().dptr_);
+      send_val.size = my_val.array.shape()[0];
+    }
+   private:
+    /**
+     * \brief convert from a key in ps
+     */
+    inline int DecodeKey(ps::Key key) {
+      return static_cast<int>(
+          (key << CommandID::kIndexBits) >> CommandID::kIndexBits);
+    }
+    /**
+     * \brief for BSP model
+     */
+    std::unordered_map<int, NDArray> merge_buf_;
+    /**
+     * \brief the current timestamp
+     */
+    int curr_timestamp_;
+
+    KVStoreDistServer* kvstore_;
+
+    ps::Customer* ps_obj_;
+    Aggregator* aggregator_;
+  };
+
+
   /**
    * \brief let the main thread execute python codes
    */
   Executor exec_;
+
+  bool sync_mode_;
+
+  KVStore::Updater updater_;
+
+  ps::OnlineServer<real_t, ServerVal, ServerHandle> store_;
 };
-
-
-
-  // /**
-  //  * \brief convert from a key in ps
-  //  */
-  // inline int DecodeKey(ps::Key key) {
-  //   return static_cast<int>((key << kIndexBits) >> kIndexBits);
-  // }
-
-  // /**
-  //  * \brief value type stored at server
-  //  */
-  // struct ServerVal {
-  //   NDArray array;
-  //   inline void Load(dmlc::Stream *fi) { array.Load(fi); }
-  //   inline void Save(dmlc::Stream *fo) const { array.Save(fo); }
-  //   inline bool Empty() const { return array.is_none(); }
-  // };
-
-  // /**
-  //  * \brief server handle
-  //  */
-  // class ServerHandle {
-  //  public:
-  //   explicit ServerHandle(KVStoreDist* kvstore) {
-  //     kvstore_ = kvstore;
-  //     ps_ = CHECK_NOTNULL(CHECK_NOTNULL(kvstore_->store_)->server());
-  //     curr_timestamp_ = -1;
-  //   }
-
-  //   /**
-  //    * \brief it is called before any push and pull.
-  //    *
-  //    * we manage the data consistency among workers here.
-  //    */
-  //   inline void Start(bool push, int timestamp, int cmd_id, void* msg) {
-  //     curr_timestamp_ = timestamp;
-  //     if (!kvstore_->updater_) {
-  //       // BSP
-
-  //       // use the shared pointer version of the message to prevent it being
-  //       // deleted by the system
-  //       auto msg = ps_->LastRequest();
-  //       // should only has a single key
-  //       CHECK_EQ(msg->key.size(), sizeof(int));
-
-  //       pending_push_[curr_timestamp_].push_back(msg);
-  //       // prevent system to reply this request, so we can hang the worker for a
-  //       // while
-  //       msg->replied = true;
-  //     }
-  //   }
-
-  //   inline void Finish() { }
-  //   inline void Load(dmlc::Stream *fi) { }
-  //   inline void Save(dmlc::Stream *fo) const { }
-
-  //   inline void Push(ps::Key recv_key,
-  //                    ps::Blob<const real_t> recv_val,
-  //                    ServerVal& my_val) {  // NOLINT(*)
-  //     // construct NDArray without data copy
-  //     size_t ds[] = {recv_val.size};
-  //     TShape dshape(ds, ds + 1);
-  //     TBlob recv_blob((real_t*)recv_val.data,  // NOLINT(*)
-  //                     dshape, cpu::kDevMask);
-  //     NDArray recv_array(recv_blob, 0);
-  //     bool reply = false;
-  //     bool reduce = !kvstore_->updater_;
-
-  //     if (my_val.Empty()) {
-  //       // initialization
-  //       my_val.array = NDArray(dshape, Context());
-  //       CopyFromTo(recv_array, &my_val.array);
-  //       if (reduce) reply = true;
-  //     } else {
-  //       if (reduce) {
-  //         // runs eventual consistency model. so update immediately
-
-  //         // let the main thread to execute updater_, which is necessary for
-  //         // python
-  //         int key = kvstore_->DecodeKey(recv_key);
-  //         kvstore_->exec_.Exec([this, key, &recv_array, &my_val](){
-  //             kvstore_->updater_(key, recv_array, &my_val.array);
-  //           });
-  //       } else {
-  //         // just aggregate data from workers
-  //         int num_recv = pending_push_[curr_timestamp_].size();
-  //         CHECK_NE(num_recv, 0);
-
-  //         if (num_recv == 1) {
-  //           my_val.array = 0;
-  //         }
-
-  //         my_val.array += recv_array;
-
-  //         if (num_recv == ps::NodeInfo::NumWorkers()) {
-  //           reply = true;
-  //         }
-  //       }
-  //     }
-
-  //     if (reply) {
-  //       for (auto& m : pending_push_[curr_timestamp_]) {
-  //         ps_->Reply(m.get());
-  //       }
-  //       pending_push_.erase(curr_timestamp_);
-  //     }
-  //     // place waittoread here rather than the beginning of pull.
-  //     my_val.array.WaitToRead();
-  //   }
-
-  //   inline void Pull(ps::Key recv_key,
-  //                    const ServerVal& my_val,
-  //                    ps::Blob<real_t>& send_val) {  // NOLINT(*)
-  //     CHECK(!my_val.Empty())
-  //         << kvstore_->DecodeKey(recv_key) << " is not inited";
-
-  //     send_val.data = static_cast<real_t*>(my_val.array.data().dptr_);
-  //     send_val.size = my_val.array.shape()[0];
-  //   }
-
-  //  private:
-
-  //   KVStoreDist* kvstore_;
-
-  //   ps::Customer* ps_;
-  //   /**
-  //    * \brief for BSP model
-  //    */
-  //   std::unordered_map<int, std::vector<
-  //                             std::shared_ptr<ps::Message>>> pending_push_;
-  //   /**
-  //    * \brief the current timestamp
-  //    */
-  //   int curr_timestamp_;
-  // };
-
-  // /**
-  //  * \brief kv store at server node
-  //  */
-  // ps::OnlineServer<real_t, ServerVal, ServerHandle>* store_;
-
-
-
-
-
-    // if (IsServerNode()) {
-    //   ServerHandle handle(this);
-    //   store_ = new ps::OnlineServer<real_t, ServerVal, ServerHandle>(handle);
-    // } else
-
-
-
-    // if (store_) store_->server()->Clear();
-    // delete store_;
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 }  // namespace kvstore
 }  // namespace mxnet
 
 #endif  // MXNET_KVSTORE_MXNET_PS_NODE_H_
-
-    // need to explicit clear the NDArray before Engine is deleted
-
-      // server_ = new KVStoreDistServer(controller);
-      // FIXME
-      // auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
-      // auto server = static_cast<MXNetServer*>(node);
-      // server->set_executor(&exec_);
-      // server->set_controller(controller);
-      // exec_.Start();
-    // }

@@ -162,7 +162,7 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  virtual void set_updater(Updater updater) {
+  void set_updater(const Updater& updater) override {
     if (IsServerNode()) {
       CHECK_NOTNULL(server_)->set_updater(updater_);
     } else {
@@ -202,7 +202,6 @@ class KVStoreDist : public KVStoreLocal {
   }
 
  private:
-
   /**
    * \brief Wait until all pushes and pulls issued on each key have been
    * finished
@@ -281,7 +280,8 @@ class KVStoreDist : public KVStoreLocal {
       auto all = ps::Range<ps::Key>::All();
       for (int i = 0; i < num_servers; ++i) {
         ps::Key key = all.EvenDivide(num_servers, i).begin();
-        server_key_partition_.push_back(((key >> kIndexBits)+1) << kIndexBits);
+        server_key_partition_.push_back(
+            ((key >> CommandID::kIndexBits)+1) << CommandID::kIndexBits);
       }
     }
 
@@ -322,10 +322,6 @@ class KVStoreDist : public KVStoreLocal {
   ps::KVCache<ps::Key, real_t>* cache_;
 
 
-  /**
-   * \brief number of bits used to encode the key in mxnet
-   */
-  static const int kIndexBits = 32;
 
   /**
    * \brief the count for barrier
