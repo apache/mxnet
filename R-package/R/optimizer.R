@@ -1,5 +1,6 @@
 # Create an SGD optimizer with respective parameters.
 # Perform SGD with momentum update
+#' @export
 mx.opt.sgd <- function(learning.rate,
                        momentum=0,
                        wd=0,
@@ -27,6 +28,14 @@ mx.opt.sgd <- function(learning.rate,
     return(list(weight=weight, state=state))
   }
   return(list(create.state=create.state, update=update))
+}
+
+# create an optimizer by name and parameters
+mx.opt.create <- function(name, ...) {
+  if (name == "sgd") {
+    return(mx.opt.sgd(...))
+  }
+  stop(paste("Unknown optimizer ", name))
 }
 
 # Get an updater closure that can take list of weight and gradient

@@ -310,11 +310,11 @@ void Symbol::InitRcppModule() {
               "Return a json string representation of symbol")
       .method("save", &Symbol::Save,
               "Save symbol to file")
-      .method("arguments", &Symbol::ListArguments,
+      .property("arguments", &Symbol::ListArguments,
               "List the arguments names of the symbol")
-      .method("outputs", &Symbol::ListOuputs,
+      .property("outputs", &Symbol::ListOuputs,
               "List the outputs names of the symbol")
-      .method("auxiliary.states", &Symbol::ListAuxiliaryStates,
+      .property("auxiliary.states", &Symbol::ListAuxiliaryStates,
               "List the auxiliary state names of the symbol")
       .method("get.internals", &Symbol::GetInternals,
               "Get a symbol that contains all the internals")
