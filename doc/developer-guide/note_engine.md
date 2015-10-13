@@ -28,11 +28,11 @@ and ```C = A + 2``` in any order, or in parallel.
 A = 2
 B = A + 1
 C = A + 2
-D = A * C
+D = B * C
 ```
 
 However, it is quite hard to code the sequence manually, as the last operation
-```D = A * C```, need to wait both the operation to complete before it starts running.
+```D = B * C```, need to wait both the operation to complete before it starts running.
 We can represent the computation as following dependency graph.
 
 ![Dep Simple](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_simple.png)
@@ -42,7 +42,7 @@ in terms of data and computation.
 
 A dependency engine is a library that can take some sequence of operations, and schedule them
 correctly according to the dependency pattern, and potentially in parallel. So in the toy example,
-a dependency library could run ```B = A + 1``` and ```C = A + 2``` in parallel, and run ```D = A * C```
+a dependency library could run ```B = A + 1``` and ```C = A + 2``` in parallel, and run ```D = B * C```
 after both operation completes.
 
 Problems in Dependency Scheduling
