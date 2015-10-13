@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-
+# pylint: skip-file
 import mxnet as mx
-import logging
 import common
+import logging
 
 mx.random.seed(0)
 logging.basicConfig(level=logging.DEBUG)
@@ -10,18 +10,17 @@ logging.basicConfig(level=logging.DEBUG)
 kv = mx.kvstore.create('dist_sync')
 
 # feed each machine the whole data
-(train, val) = common.mnist(batch_size = 100,
-                            input_shape = (784,))
+(train, val) = common.cifar10(batch_size = 128, input_shape=(3,28,28))
 
-# train
-model  = mx.model.FeedForward.create(
-    symbol        = common.mlp(),
-    ctx           = mx.cpu(),
+model = mx.model.FeedForward.create(
+    ctx           = mx.gpu(kv.rank),
+    kvstore       = kv,
+    symbol        = common.inception(),
     X             = train,
     num_round     = 4,
     learning_rate = 0.1,
-    wd            = 0.0004,
     momentum      = 0.9,
-    kvstore       = kv)
+    wd            = 0.00001,
+    initializer   = mx.init.Uniform(0.07))
 
 common.accuracy(model, val)
