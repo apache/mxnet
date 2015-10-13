@@ -48,3 +48,5 @@ List of Contributors
 * [Hu Shiwen](https://github.com/yajiedesign)
 * [Boyuan Deng](https://github.com/bryandeng)
 * [Tong He](https://github.com/hetong007)
+* [Junran He](https://github.com/junranhe)
+  - Junran makes device kvstore allocation strategy smarter
