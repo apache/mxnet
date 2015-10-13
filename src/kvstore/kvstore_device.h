@@ -11,7 +11,7 @@
 #include <vector>
 #include <utility>
 #include <algorithm>
-#include <random>
+#include <limits>
 #include "./kvstore_local.h"
 #include "../common/utils.h"
 
@@ -30,10 +30,36 @@ class KVStoreDevice : public KVStoreLocal {
     for (size_t i = 0; i < keys.size(); ++i) {
       sorted_key_shape_.push_back(std::make_pair(keys[i], values[i].shape()));
     }
+  }
+
+  void InitMergeBuffers(const std::vector<NDArray>& val) {
     std::sort(sorted_key_shape_.begin(), sorted_key_shape_.end(), [](
               const KeyShape& a, const KeyShape& b) {
-        return a.second.Size() > b.second.Size();
-      });
+      return a.second.Size() > b.second.Size();
+    });
+
+    CHECK(!val.empty());
+    std::unordered_map<int, std::pair<Context, size_t>> ctx_info;
+    for (size_t i = 0; i < val.size(); ++i) {
+      int32_t dev_id = val[i].ctx().dev_id;
+      ctx_info[dev_id] = std::make_pair(val[i].ctx(), 0);
+    }
+    for (size_t i = 0; i < sorted_key_shape_.size(); ++i) {
+      int k = sorted_key_shape_[i].first;
+      TShape s = sorted_key_shape_[i].second;
+      auto& tm_buf = merge_buf_[k];
+      size_t min_size = std::numeric_limits<size_t>::max();
+      for (auto it = ctx_info.begin(); it != ctx_info.end(); ++it) {
+        size_t tm_size = it->second.second;
+        if (tm_size <= min_size) {
+          tm_buf.ctx = it->second.first;
+          min_size = tm_size;
+        }
+      }
+
+      tm_buf.merged = NDArray(s, tm_buf.ctx);
+      ctx_info[tm_buf.ctx.dev_id].second += s.Size();
+    }
   }
 
   const NDArray& MergePushValue(
@@ -44,28 +70,7 @@ class KVStoreDevice : public KVStoreLocal {
     }
 
     if (merge_buf_.empty()) {
-      CHECK(!val.empty());
-      std::unordered_map<int, std::pair<Context, size_t>> ctx_info;
-      for (size_t i = 0; i < val.size(); ++i) {
-        int32_t dev_id = val[i].ctx().dev_id;
-        ctx_info[dev_id] = std::make_pair(val[i].ctx(), 0);
-      }
-      for (size_t i = 0; i < sorted_key_shape_.size(); ++i) {
-        int k = sorted_key_shape_[i].first;
-        TShape s = sorted_key_shape_[i].second;
-        auto& tm_buf = merge_buf_[k];
-        size_t min_size = size_t(-1);
-        for (auto it = ctx_info.begin(); it != ctx_info.end(); ++it) {
-          size_t tm_size = it->second.second;
-          if (tm_size <= min_size) {
-            tm_buf.ctx = it->second.first;
-            min_size = tm_size;
-          }
-        }
-
-        tm_buf.merged = NDArray(s, tm_buf.ctx);
-        ctx_info[tm_buf.ctx.dev_id].second += s.Size();
-      }
+      InitMergeBuffers(val);
     }
 
     auto& buf = merge_buf_[key];
