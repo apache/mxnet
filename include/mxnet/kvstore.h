@@ -26,12 +26,11 @@ class KVStore {
   /*!
    * \brief Factory function to create a new KVStore.
    * \param type The type of the kvstore,
-   *   'local' : multi-devices on a single machine. can be also
-   *      'local_update_cpu', 'local_allreduce_cpu'
-   *   'device' or 'local_allreduce_device' : same to local but use gpus for kv
+   *   - 'local' or 'local_update_cpu' or 'local_allreduce_cpu'
+   *       multi-devices on a single machine. can be also
+   *   - 'device' or 'local_allreduce_device' : same to local but use gpus for kv
    *       allreduce
-   *   'dist_sync' : multi-machines with BSP
-   *   'dist_async' : multi-machines with partical asynchronous
+   *   - 'dist_*' : multi-machines
    * \return a new created KVStore.
    */
   static KVStore *Create(const char *type = "local");
@@ -44,10 +43,15 @@ class KVStore {
   /*!
    * \brief Initialize a list of key-value pair to the store.
    *
-   * One should initalize the key before \ref Push and \ref Pull, and a key
+   * One must initalize the key before \ref Push and \ref Pull, and a key
    * should be only initialized once
    *
-   * It returns after data have been initialized successfully
+   * It returns after data have been initialized successfully.
+   *
+   * For multiple workers, all workers must call \ref Init. But only worker 0
+   * (get_rank() == 0)'s values are used for initialization. So others' values
+   * can be empty (but not keys). This function blocks until all workers are
+   * finished. That means, any worker can push and pull on the keys now.
    *
    * \param keys a list of unique keys
    * \param values a list of values
@@ -134,20 +138,14 @@ class KVStore {
    *
    * \param updater user-defined updater, default is assign
    */
-  void set_updater(Updater updater) {
+  virtual void set_updater(const Updater& updater) {
+    CHECK(updater) << "invalid updater";
     updater_ = updater;
   }
 
   /******************************************************
    * the following are used for multi-machines.
    ******************************************************/
-
-  /**
-   * \return whether or not is in distributed computing
-   */
-  virtual bool IsDistributed() const {
-    return false;
-  }
 
   /**
    * \return whether or not this process is a worker node.
@@ -203,35 +201,8 @@ class KVStore {
     return 1;
   }
 
-  /**
-   * \brief Wait until all pushes and pulls issued on each key have been
-   * finished
-   *
-   * \param keys a list of keys
-   */
-  virtual void Wait(const std::vector<int>& keys) { }
-
-  /**
-   * \brief Wait until all pushes and pulls issued before have been finished
-   */
-  virtual void WaitAll() { }
-
   /*!
    * \brief global barrier among all worker machines
-   *
-   * For example, assume there are n machines, we want to let machine 0 first
-   * init the values, and then pull the inited value to all machines. Before
-   * pulling, we can place a barrier to guarantee that the initialization is
-   * finished.
-   *
-   * \code
-   * // this codes run on n machines in parallel
-   * if (get_rank() == 0) {
-   *   Init(keys, values);
-   * }
-   * Barrier();
-   * Pull(keys, values);
-   * \endcode
    *
    * But note that, this functions only blocks the main thread of workers until
    * all of them are reached this point. It doesn't guarantee that all
