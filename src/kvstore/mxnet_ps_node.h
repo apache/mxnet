@@ -6,6 +6,7 @@
 #ifndef MXNET_KVSTORE_MXNET_PS_NODE_H_
 #define MXNET_KVSTORE_MXNET_PS_NODE_H_
 #include <queue>
+#include <string>
 #include <mutex>
 #include <condition_variable>
 #include <memory>
@@ -231,9 +232,6 @@ class Executor {
   std::condition_variable cond_;
 };
 
-
-
-
 /**
  * \brief distributed kvstore for servers
  */
@@ -242,7 +240,6 @@ class KVStoreDistServer {
   explicit KVStoreDistServer(const KVStore::Controller& user_ctrl)
       // set updater
       : store_(ServerHandle(this), 1, 1, PS_KV_ID) {
-
     // set controller
     sync_mode_ = false;
     auto controller
@@ -271,8 +268,8 @@ class KVStoreDistServer {
   void Run() {
     exec_.Start();
   }
- private:
 
+ private:
   /**
    * \brief value type stored at server
    */
@@ -373,6 +370,7 @@ class KVStoreDistServer {
       send_val.data = static_cast<real_t*>(my_val.array.data().dptr_);
       send_val.size = my_val.array.shape()[0];
     }
+
    private:
     /**
      * \brief convert from a key in ps
