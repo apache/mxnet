@@ -244,7 +244,7 @@ class KVStore(object):
         check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
 
         # pylint: disable=invalid-name
-        if self.type == 'dist_async' and is_worker.value:
+        if 'dist' in self.type and is_worker.value:
             # send the optimizer to server
             try:
                 # use ASCII protocol 0, might be slower, but not a big ideal

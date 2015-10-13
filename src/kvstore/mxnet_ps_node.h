@@ -254,6 +254,7 @@ class KVStoreDistServer {
       } else {
         // let the main thread to execute ctrl, which is necessary for python
         exec_.Exec([user_ctrl, cmd_id, cmd_body]() {
+            CHECK(user_ctrl);
             user_ctrl(cmd_id, cmd_body);
         });
       }
@@ -263,6 +264,7 @@ class KVStoreDistServer {
   }
 
   void set_updater(const KVStore::Updater& updater)  {
+    CHECK(updater);
     updater_ = updater;
   }
 
@@ -297,29 +299,7 @@ class KVStoreDistServer {
       delete aggregator_;
     }
 
-    /**
-     * \brief it is called before any push and pull.
-     *
-     * we manage the data consistency among workers here.
-     */
-    inline void Start(bool push, int timestamp, int cmd_id, void* msg) {
-      curr_timestamp_ = timestamp;
-      if (aggregator_ == nullptr) {
-        ps_obj_ = CHECK_NOTNULL(kvstore_)->store_.server();
-        aggregator_ = new Aggregator(
-            ps::NodeInfo::NumWorkers(), ps_obj_);
-      }
-      if (kvstore_->sync_mode_) {
-        // use the shared pointer version of the message to prevent it being
-        // deleted by the system
-        auto msg = ps_obj_->LastRequest();
-        // should only has a single key
-        CHECK_EQ(msg->key.size(), sizeof(int));
-        // add to aggregator
-        aggregator_->Add(timestamp, msg);
-      }
-    }
-
+    inline void Start(bool push, int timestamp, int cmd_id, void* msg) { }
     inline void Finish() { }
     inline void Load(dmlc::Stream *fi) { }
     inline void Save(dmlc::Stream *fo) const { }
@@ -339,29 +319,35 @@ class KVStoreDistServer {
         // initialization
         my_val.array = NDArray(dshape, Context());
         CopyFromTo(recv_array, &my_val.array);
-        // no aggregation
-        aggregator_->Remove(curr_timestamp_);
-        return;
       } else {
         if (kvstore_->sync_mode_) {
+          // create aggregator
+          if (aggregator_ == nullptr) {
+            ps_obj_ = CHECK_NOTNULL(kvstore_)->store_.server();
+            aggregator_ = new Aggregator(
+                ps::NodeInfo::NumWorkers(), ps_obj_);
+          }
+
           // first aggregate all recved data into merge
           auto& merge = merge_buf_[key];
-          if (aggregator_->Count(curr_timestamp_) == 1) {
+          if (!aggregator_->Has(key)) {
             if (merge.is_none()) {
               merge = NDArray(dshape, Context());
             }
             merge = 0;
           }
           merge += recv_array;
-
           // update if aggregation is done
-          if (aggregator_->Done(curr_timestamp_)) {
+          aggregator_->Add(key, ps_obj_->LastRequest());
+          if (aggregator_->Done(key)) {
             // let the main thread to execute updater_, which is necessary for
             // python
+            merge.WaitToRead();
             kvstore_->exec_.Exec([this, key, &merge, &my_val](){
+                CHECK(kvstore_->updater_);
                 kvstore_->updater_(key, merge, &my_val.array);
               });
-            aggregator_->Remove(curr_timestamp_);
+            aggregator_->Remove(key);
           }
         } else {
           // runs eventual consistency model. so update immediately
@@ -369,6 +355,7 @@ class KVStoreDistServer {
           // let the main thread to execute updater_, which is necessary for
           // python
           kvstore_->exec_.Exec([this, key, &recv_array, &my_val](){
+              CHECK(kvstore_->updater_);
               kvstore_->updater_(key, recv_array, &my_val.array);
             });
         }
@@ -401,7 +388,7 @@ class KVStoreDistServer {
     /**
      * \brief the current timestamp
      */
-    int curr_timestamp_;
+    // int curr_timestamp_;
 
     KVStoreDistServer* kvstore_;
 

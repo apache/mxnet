@@ -41,7 +41,6 @@ class KVStoreDist : public KVStoreLocal {
 
   virtual ~KVStoreDist() {
     Engine::Get()->WaitForAll();
-    delete server_;
     delete cache_;
 
     if (IsWorkerNode()) {
@@ -56,14 +55,15 @@ class KVStoreDist : public KVStoreLocal {
 
   void Init(const std::vector<int>& keys,
             const std::vector<NDArray>& values) override {
+    CheckUnique(keys);
     if (get_rank() == 0) {
       Push(keys, values, 0);
       // wait until the push is finished
       Wait(keys);
     } else {
-      CheckUnique(keys);
-      // simply increase the clock. it's necessary for BSP
-      cache_->executor()->IncrClock(keys.size());
+      // do nothing
+      // // simply increase the clock. it's necessary for BSP
+      // cache_->executor()->IncrClock(keys.size());
     }
     Barrier();
   }
@@ -163,8 +163,9 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   void set_updater(const Updater& updater) override {
+    CHECK(updater) << "invalid updater";
     if (IsServerNode()) {
-      CHECK_NOTNULL(server_)->set_updater(updater_);
+      CHECK_NOTNULL(server_)->set_updater(updater);
     } else {
       updater_ = updater;
     }
@@ -197,6 +198,8 @@ class KVStoreDist : public KVStoreLocal {
     if (IsServerNode()) {
       server_ = new KVStoreDistServer(controller);
       server_->Run();
+      delete server_;
+      server_ = nullptr;
     }
     ps::StopSystem();
   }
