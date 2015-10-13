@@ -266,7 +266,14 @@ def _train_multi_device(symbol, ctx, input_shape,
     # create kvstore
     (kv, update_on_kvstore) = _create_kvstore(kvstore, num_device, arg_params)
 
-    # init optimizer before give it to kv or get_updater
+    # init optmizer
+    if isinstance(optimizer, str):
+        batch_size = input_shape[0]
+        if kv and kv.type is 'dist_sync':
+            batch_size *= kv.num_workers
+        optimizer = opt.create(optimizer,
+                               rescale_grad=(1.0/batch_size),
+                               **(self.kwargs))
     optimizer.begin_round(begin_round)
 
     if not update_on_kvstore:
@@ -696,16 +703,12 @@ class FeedForward(BASE_ESTIMATOR):
         # setup metric
         if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
-        # setup optimizer
-        optimizer = self.optimizer
-        if isinstance(optimizer, str):
-            batch_size = input_shape[0]
-            optimizer = opt.create(optimizer, rescale_grad=(1.0/batch_size), **(self.kwargs))
+
         # do training
         _train_multi_device(self.symbol, self.ctx, input_shape,
                             self.arg_params, self.aux_params,
                             begin_round=0, end_round=self.num_round,
-                            optimizer=optimizer,
+                            optimizer=self.optimizer,
                             train_data=X, eval_data=eval_data,
                             eval_metric=eval_metric,
                             iter_end_callback=iter_end_callback,
