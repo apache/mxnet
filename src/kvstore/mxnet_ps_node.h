@@ -260,6 +260,11 @@ class KVStoreDistServer {
     static_cast<MXNetServer*>(node)->set_controller(controller);
   }
 
+  // ~KVStoreDistServer() {
+  //   // clear all ndarrays before Engine is shutting down.
+  //   store_.server()->Clear();
+  // }
+
   void set_updater(const KVStore::Updater& updater)  {
     CHECK(updater);
     updater_ = updater;
@@ -274,12 +279,11 @@ class KVStoreDistServer {
    * \brief value type stored at server
    */
   struct ServerVal {
-    NDArray array;
-    inline void Load(dmlc::Stream *fi) { array.Load(fi); }
-    inline void Save(dmlc::Stream *fo) const { array.Save(fo); }
-    inline bool Empty() const { return array.is_none(); }
+    std::vector<real_t> data;
+    inline void Load(dmlc::Stream *fi) { fi->Read(&data); }
+    inline void Save(dmlc::Stream *fo) const { fo->Write(data); }
+    inline bool Empty() const { return data.empty(); }
   };
-
 
   /**
    * \brief server handle
@@ -296,6 +300,16 @@ class KVStoreDistServer {
       delete aggregator_;
     }
 
+    /**
+     * \brief get a cpu ndarray from a c-array without data copy
+     */
+    inline NDArray GetNDArray(real_t* data, size_t size) {
+      size_t ds[] = {size};
+      TShape dshape(ds, ds + 1);
+      TBlob data_blob(data, dshape, cpu::kDevMask);
+      return NDArray(data_blob, 0);
+    }
+
     inline void Start(bool push, int timestamp, int cmd_id, void* msg) { }
     inline void Finish() { }
     inline void Load(dmlc::Stream *fi) { }
@@ -304,61 +318,64 @@ class KVStoreDistServer {
     inline void Push(ps::Key recv_key,
                      ps::Blob<const real_t> recv_val,
                      ServerVal& my_val) {  // NOLINT(*)
-      // construct NDArray without data copy
-      size_t ds[] = {recv_val.size};
-      TShape dshape(ds, ds + 1);
-      TBlob recv_blob((real_t*)recv_val.data,  // NOLINT(*)
-                      dshape, cpu::kDevMask);
-      NDArray recv_array(recv_blob, 0);
-      int key = DecodeKey(recv_key);
-
+      // initialization
       if (my_val.Empty()) {
-        // initialization
-        my_val.array = NDArray(dshape, Context());
-        CopyFromTo(recv_array, &my_val.array);
-      } else {
-        if (kvstore_->sync_mode_) {
-          // create aggregator
-          if (aggregator_ == nullptr) {
-            ps_obj_ = CHECK_NOTNULL(kvstore_)->store_.server();
-            aggregator_ = new Aggregator(
-                ps::NodeInfo::NumWorkers(), ps_obj_);
-          }
+        my_val.data.resize(recv_val.size);
+        memcpy(my_val.data.data(), recv_val.data,
+               recv_val.size * sizeof(real_t));
+        return;
+      }
 
-          // first aggregate all recved data into merge
-          auto& merge = merge_buf_[key];
-          if (!aggregator_->Has(key)) {
-            if (merge.is_none()) {
-              merge = NDArray(dshape, Context());
-            }
-            merge = 0;
-          }
-          merge += recv_array;
-          // update if aggregation is done
-          aggregator_->Add(key, ps_obj_->LastRequest());
-          if (aggregator_->Done(key)) {
-            // let the main thread to execute updater_, which is necessary for
-            // python
-            merge.WaitToRead();
-            kvstore_->exec_.Exec([this, key, &merge, &my_val](){
-                CHECK(kvstore_->updater_);
-                kvstore_->updater_(key, merge, &my_val.array);
-              });
-            aggregator_->Remove(key);
-          }
-        } else {
-          // runs eventual consistency model. so update immediately
+      int key = DecodeKey(recv_key);
+      NDArray recv_array = GetNDArray((real_t*)recv_val.data,  // NOLINT(*)
+                                      recv_val.size);
+      NDArray my_array = GetNDArray(my_val.data.data(), my_val.data.size());
 
+      if (kvstore_->sync_mode_) {
+        // create aggregator
+        if (aggregator_ == nullptr) {
+          ps_obj_ = CHECK_NOTNULL(kvstore_)->store_.server();
+          aggregator_ = new Aggregator(
+              ps::NodeInfo::NumWorkers(), ps_obj_);
+        }
+
+        // init merge buf
+        std::vector<real_t>& buf = merge_buf_[key];
+        if (!aggregator_->Has(key)) {
+          if (buf.empty()) {
+            buf.resize(recv_val.size);
+          }
+          memset(buf.data(), 0, buf.size() * sizeof(real_t));
+        }
+
+        // add recved data into merge
+        NDArray merge = GetNDArray(buf.data(), buf.size());
+        merge += recv_array;
+
+        // update if aggregation is done
+        aggregator_->Add(key, ps_obj_->LastRequest());
+        if (aggregator_->Done(key)) {
           // let the main thread to execute updater_, which is necessary for
           // python
-          kvstore_->exec_.Exec([this, key, &recv_array, &my_val](){
+          merge.WaitToRead();
+          kvstore_->exec_.Exec([this, key, &merge, &my_array](){
               CHECK(kvstore_->updater_);
-              kvstore_->updater_(key, recv_array, &my_val.array);
+              kvstore_->updater_(key, merge, &my_array);
             });
+          aggregator_->Remove(key);
         }
+      } else {
+        // runs eventual consistency model. so update immediately
+
+        // let the main thread to execute updater_, which is necessary for
+        // python
+        kvstore_->exec_.Exec([this, key, &recv_array, &my_array](){
+            CHECK(kvstore_->updater_);
+            kvstore_->updater_(key, recv_array, &my_array);
+          });
       }
       // place waittoread here rather than the beginning of pull.
-      my_val.array.WaitToRead();
+      my_array.WaitToRead();
     }
 
     inline void Pull(ps::Key recv_key,
@@ -367,8 +384,8 @@ class KVStoreDistServer {
       CHECK(!my_val.Empty())
           << DecodeKey(recv_key) << " is not inited";
 
-      send_val.data = static_cast<real_t*>(my_val.array.data().dptr_);
-      send_val.size = my_val.array.shape()[0];
+      send_val.data = (real_t*) my_val.data.data();  // NOLINT(*)
+      send_val.size = my_val.data.size();
     }
 
    private:
@@ -382,7 +399,7 @@ class KVStoreDistServer {
     /**
      * \brief for BSP model
      */
-    std::unordered_map<int, NDArray> merge_buf_;
+    std::unordered_map<int, std::vector<real_t>> merge_buf_;
     /**
      * \brief the current timestamp
      */
