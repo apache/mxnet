@@ -45,7 +45,7 @@ immutable NormalInitializer <: AbstractInitializer
   μ :: AbstractFloat
   σ :: AbstractFloat
 end
-NormalInitializer(; μ=0, σ=0.01) = NormalInitializer(μ, σ)
+NormalInitializer(; mu=0, sigma=0.01) = NormalInitializer(mu, sigma)
 
 function _init_weight(self :: NormalInitializer, name :: Symbol, array :: NDArray)
   randn!(self.μ, self.σ, array)
