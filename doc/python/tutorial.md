@@ -302,7 +302,7 @@ all the arguments it needed by given the input data shape.
 
 ```python
 >>> net = mx.symbol.Variable('data')
->>> net = mx.symbol.FullyConnected(data=ent, name='fc1', num_hidden=10)
+>>> net = mx.symbol.FullyConnected(data=net, name='fc1', num_hidden=10)
 >>> arg_shape, out_shape, aux_shape = net.infer_shape(data=(100, 100))
 >>> dict(zip(net.list_arguments(), arg_shape))
 {'data': (100, 100), 'fc1_weight': (10, 100), 'fc1_bias': (10,)}
