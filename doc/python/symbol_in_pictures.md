@@ -46,6 +46,7 @@ You can use ```mx.symbol.Group``` to group symbols together then bind them to
 get outputs of both.
 
 ![MultiOut](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/symbol/executor_multi_out.png)
+The figure seems get two typos.
 
 But always remember, only bind what you need, so system can do more optimizations for you.
 
