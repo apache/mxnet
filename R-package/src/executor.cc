@@ -58,6 +58,7 @@ void Executor::UpdateArray(const char* array_name,
       }
     }
   } else {
+    if (from.size() == 0) return;
     RCHECK(HasName(from))
         << "match.name is set to TRUE, the input list must have names in all elements";
     std::vector<std::string> names = from.names();
@@ -241,6 +242,7 @@ void Executor::InitRcppModule() {
       .finalizer(&Executor::Finalizer)
       .property("ref.arg.arrays", &Executor::arg_arrays)
       .property("ref.grad.arrays", &Executor::grad_arrays)
+      .property("ref.outputs", &Executor::out_arrays)
       .property("arg.arrays", &Executor::GetArgArrays)
       .property("grad.arrays", &Executor::GetGradArrays)
       .property("aux.arrays", &Executor::GetAuxArrays)

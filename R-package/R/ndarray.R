@@ -77,14 +77,17 @@ mx.nd.ones <- function(shape, ctx=NULL) {
   return (mx.nd.internal.set.value(1.0, out=ret))
 }
 
+#' Generate an mx.nd.array object on ctx, with data copied from src
+#'
+#' @param src The source mx.nd.array object.
+#' @param ctx The target context.
+#'
+#' @export
 mx.nd.copyto <- function(src, ctx) {
   ret <- mx.nd.internal.empty(dim(src), ctx)
   return (mx.nd.internal.copyto(src, out=ret))
 }
 
-# TODO(tong) improve this, add doc
-
-#'
 #' Create a new \code{mx.ndarray} that copies the content from src on ctx.
 #'
 #' @param src.array Source array data of class \code{array}, \code{vector} or \code{matrix}.

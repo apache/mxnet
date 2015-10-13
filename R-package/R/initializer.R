@@ -1,13 +1,3 @@
-mx.util.str.endswith <- function(name, suffix) {
-#  slen <- nchar(suffix)
-#  nlen <- nchar(name)
-#  if (slen > nlen) return (FALSE)
-#  nsuf <- substr(name, nlen - slen + 1, nlen)
-#  return (nsuf == suffix)
-  ptrn = paste0(suffix, "\\b")
-  return(grepl(ptrn, name))
-}
-
 #' Internal default value initialization scheme.
 #' @param name the name of the variable.
 #' @param shape the shape of the array to be generated.
@@ -38,7 +28,7 @@ mx.init.uniform <- function(scale) {
 #' Create a initializer that initialize the weight with normal(0, sd)
 #'
 #' @param scale The scale of uniform distribution
-#' 
+#'
 #' @export
 mx.init.normal <- function(sd) {
   function(name, shape, ctx, allow.unknown=FALSE) {
@@ -49,12 +39,18 @@ mx.init.normal <- function(sd) {
   }
 }
 
-
 # Create initialization of argument  like arg.array
-mx.init.create <- function(initializer, arg.array, allow.unknown=TRUE) {
-  names = names(arg.array)
-  sapply(1 : length(names), function(i) {
-    initializer(names[[i]], dim(arg.array[[i]]),
-                arg.array[[i]]$ctx, allow.unknown=allow.unknown)
-  }, simplify = FALSE, USE.NAMES = TRUE)
+mx.init.create <- function(initializer, shape.array, ctx, skip.unknown=TRUE) {
+  if (length(shape.array) == 0) return(list())
+  names = names(shape.array)
+  ret <- lapply(1 : length(names), function(i) {
+    initializer(names[[i]], shape.array[[i]], ctx, allow.unknown=skip.unknown)
+  })
+  names(ret) <- names
+  if (skip.unknown) {
+    ret <- mx.util.filter.null(ret)
+  }
+  return(ret)
 }
+
+

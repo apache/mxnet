@@ -34,6 +34,12 @@ class Executor : public MXNetMovable<Executor> {
     return *grad_arrays_;
   }
   /*!
+   * \return Get reference of gradient arrays of executor.
+   */
+  const Rcpp::List& out_arrays() const {
+    return *out_arrays_;
+  }
+  /*!
    * \return Get the arg arrays of executor.
    */
   Rcpp::List GetArgArrays() const {

@@ -33,6 +33,11 @@ class NDArray : public MXNetMovable<NDArray> {
    * \return a new cloned NDArray.
    */
   RObjectType Clone() const;
+  /*!
+   * \brief Return a slice of NDArray.
+   * \return a sliced NDArray.
+   */
+  RObjectType Slice(mx_uint begin, mx_uint end) const;
   /*! \return The shape of the array */
   inline Rcpp::Dimension shape() const;
   /*! \return The number of elements in the array */

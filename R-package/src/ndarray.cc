@@ -218,6 +218,12 @@ NDArray::RObjectType NDArray::Clone() const {
   return ret;
 }
 
+NDArray::RObjectType NDArray::Slice(mx_uint begin, mx_uint end) const {
+  NDArrayHandle out;
+  MX_CALL(MXNDArraySlice(handle_, begin, end, &out));
+  return NDArray::RObject(out);
+}
+
 void NDArray::CopyFromTo(const NDArray& from, NDArray* to) {
   static FunctionHandle copy_handle = NDArrayFunction::FindHandle("_copyto");
   NDArrayHandle from_handle = from.handle_;
@@ -402,7 +408,9 @@ void NDArray::InitRcppModule() {
       .const_method("length", &NDArray::size,
                     "The length(size) of the NDArray")
       .property("ctx", &NDArray::ctx,
-                "The context of the NDArray");
+                "The context of the NDArray")
+      .const_method("slice", &NDArray::Slice,
+                    "Get a slice on the first dimension of NDArray");
   function("mx.nd.internal.load", &NDArray::Load);
   function("mx.nd.internal.save", &NDArray::Save);
   function("mx.nd.internal.empty.array", &NDArray::Empty);
