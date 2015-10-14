@@ -54,6 +54,13 @@ function test_assign()
   @test reldiff(zeros(size(tensor))+scalar, copy(array)) < 1e-6
 end
 
+function test_slice()
+  array = mx.zeros((2,4))
+  array[2:3] = ones(2,2)
+  @test copy(array) == [0 1 1 0; 0 1 1 0]
+  @test copy(sub(array, 2:3)) == [1 1; 1 1]
+end
+
 function test_plus()
   dims   = rand_dims()
   t1, a1 = rand_tensors(dims)
@@ -159,6 +166,7 @@ end
 ################################################################################
 test_copy()
 test_assign()
+test_slice()
 test_plus()
 test_minus()
 test_mul()

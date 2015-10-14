@@ -23,6 +23,7 @@ const MXNET_LIB = Libdl.find_library(["libmxnet.so"], ["$(get(ENV,"MXNET_HOME","
 function __init__()
   _import_ndarray_functions()
   _import_atomic_symbol_creators()
+  _import_io_iterators()
 
   atexit() do
     # notify libmxnet we are shutting down
@@ -97,4 +98,4 @@ end
 @mx_define_handle_t(MX_FunctionHandle, nop)
 @mx_define_handle_t(MX_SymbolHandle, MXSymbolFree)
 @mx_define_handle_t(MX_ExecutorHandle, MXExecutorFree)
-
+@mx_define_handle_t(MX_DataIterHandle, MXDataIterFree)

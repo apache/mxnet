@@ -17,6 +17,8 @@ include("name.jl")
 include("symbol.jl")
 include("executor.jl")
 
+include("io.jl")
+
 end # mx
 
 end # module MXNet

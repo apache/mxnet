@@ -3,7 +3,7 @@ export NDArray
 # create a NDArray handle of specific shape
 function _ndarray_alloc{N}(shape :: NTuple{N, Int}, ctx :: Context, delay_alloc :: Bool)
   h_ref  = Ref{MX_handle}(0)
-  shape  = MX_uint[shape...]
+  shape  = flipdim(MX_uint[shape...],1)
   @mxcall(:MXNDArrayCreate, (Ptr{MX_uint}, MX_uint, Cint, Cint, Cint, Ref{MX_handle}),
       shape, length(shape), ctx.device_type, ctx.device_id, delay_alloc, h_ref)
   handle = MX_NDArrayHandle(h_ref[])
@@ -21,6 +21,16 @@ end
 ################################################################################
 # NDArray Type
 ################################################################################
+"""Wrapper of the `NDArray` type in `libmxnet`. This is the basic building block
+    of tensor-based computation.
+
+    **Note** since C/C++ use row-major ordering for arrays while Julia follows a
+    column-major ordering. To keep things consistent, we keep the underlying data
+    in their original layout, but use *language-native* convention when we talk
+    about shapes. For example, a mini-batch of 100 MNIST images is a tensor of
+    C/C++/Python shape (100,1,28,28), while in Julia, the same piece of memory
+    have shape (28,28,1,100).
+"""
 type NDArray
   handle   :: MX_NDArrayHandle
   writable :: Bool
@@ -62,12 +72,16 @@ end
 # Interface functions similar to Julia Arrays
 #------------------------------------------------------------
 import Base: size, length, ndims, eltype
+"""Get the shape of an `NDArray`. Note the shape is converted to Julia convention.
+    So the same piece of memory, in Julia (column-major), with shape (K, M, N), will be of the
+    shape (N, M, K) in the Python (row-major) binding.
+"""
 function size(arr :: NDArray)
   ref_ndim  = Ref{MX_uint}(0)
   ref_shape = Ref{Ptr{MX_uint}}(0)
   @mxcall(:MXNDArrayGetShape, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_uint}}),
           arr, ref_ndim, ref_shape)
-  tuple(map(Int, pointer_to_array(ref_shape[], ref_ndim[]))...)
+  tuple(map(Int, flipdim(pointer_to_array(ref_shape[], ref_ndim[]),1))...)
 end
 function size(arr :: NDArray, dim :: Int)
   size(arr)[dim]
@@ -92,6 +106,23 @@ function zeros(shape :: Int...)
   zeros(shape)
 end
 
+import Base: sub
+function sub(arr :: NDArray, ::Colon)
+  arr
+end
+function sub(arr :: NDArray, slice::UnitRange{Int})
+  dim1 = size(arr)[end]
+  @assert(1 <= slice.start <= slice.stop <= dim1)
+
+  hdr_ref = Ref{MX_handle}(0)
+  # note Julia is 1-based, inclusive-inclusive indexing, while C++ is
+  # 0-based, inclusive-exclusive indexing. So 1:3 in Julia should
+  # translates into 0:3 in C++.
+  @mxcall(:MXNDArraySlice, (MX_handle, MX_uint, MX_uint, Ref{MX_handle}),
+          arr, slice.start-1, slice.stop, hdr_ref)
+  return NDArray(MX_NDArrayHandle(hdr_ref[]), arr.writable)
+end
+
 import Base: setindex!
 "Assign all elements of an NDArray to a scalar"
 function setindex!(arr :: NDArray, val :: Real, ::Colon)
@@ -103,6 +134,9 @@ function setindex!{T<:Real}(arr :: NDArray, val :: Array{T}, ::Colon)
 end
 function setindex!(arr :: NDArray, val :: NDArray, ::Colon)
   copy!(arr, val)
+end
+function setindex!{T<:Real}(arr :: NDArray, val :: Union{T,Array{T},NDArray}, slice::UnitRange{Int})
+  copy!(sub(arr, slice), val)
 end
 
 #------------------------------------------------------------
