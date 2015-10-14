@@ -98,7 +98,6 @@ mx.model.train <- function(symbol, ctx, input.shape,
   updaters <- lapply(1:ndevice, function(i) {
     mx.opt.get.updater(optimizer, train.execs[[i]]$ref.arg.arrays)
   })
-
   for (iteration in begin.round:end.round) {
     nbatch <- 0
     train.metric <- metric$init()
@@ -107,8 +106,8 @@ mx.model.train <- function(symbol, ctx, input.shape,
       dlist <- train.data$value()
       slices <- lapply(1:ndevice, function(i) {
         s <- sliceinfo[[i]]
-        ret <- list(data=dlist$data$slice(s$begin, s$end),
-                    label=dlist$label$slice(s$begin, s$end))
+        ret <- list(data=mx.nd.slice(dlist$data, s$begin, s$end),
+                    label=mx.nd.slice(dlist$label, s$begin, s$end))
         return(ret)
       })
       # copy data to executor

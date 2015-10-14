@@ -58,7 +58,7 @@ class Executor : public MXNetMovable<Executor> {
     return CloneArray(*aux_arrays_);
   }
   /*!
-   * \return Get the output arrays of executor.
+   * \return Get the outputx arrays of executor.
    */
   Rcpp::List GetOuputArrays() const {
     return CloneArray(*out_arrays_);

@@ -11,7 +11,7 @@ mx.opt.sgd <- function(learning.rate,
     if (momentum == 0) {
       return(NULL)
     } else {
-      ret <- (mx.nd.zeros(dim(weight), weight$ctx))
+      ret <- (mx.nd.zeros(dim(weight), ctx(weight)))
       return(ret)
     }
   }

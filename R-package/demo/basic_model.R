@@ -7,7 +7,7 @@ fc1 <- mx.symbol.FullyConnected(data, name="fc1", num_hidden=128)
 act1 <- mx.symbol.Activation(fc1, name="relu1", act_type="relu")
 fc2 <- mx.symbol.FullyConnected(act1, name = "fc2", num_hidden = 64)
 act2 <- mx.symbol.Activation(fc2, name="relu2", act_type="relu")
-fc3 <- mx.symbol.FullyConnected(data, name="fc3", num_hidden=10)
+fc3 <- mx.symbol.FullyConnected(act2, name="fc3", num_hidden=10)
 softmax <- mx.symbol.Softmax(fc3, name = "sm")
 
 dtrain = mx.varg.io.MNISTIter(list(
@@ -24,6 +24,6 @@ mx.set.seed(0)
 
 # create the model
 model <- mx.model.FeedForward.create(softmax, X=dtrain, learning.rate=0.1, momentum=0.9,
-                                     initializer=mx.init.uniform(0.0),
+                                     initializer=mx.init.uniform(0.07),
                                      epoch.end.callback=mx.callback.log.train.metric(100))
 
