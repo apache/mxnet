@@ -34,39 +34,37 @@ mx.model.check.arguments <- function(symbol) {
   return(c(data, label))
 }
 
-# Get the model parameters out given the executors
-mx.model.get.mean <- function(param.list, need.params) {
-  reduce.sum <- function(x) Reduce("+", x)
-  ndevice <- length(param.list)
-  n <- length(param.list[[1]])
-  names <- names(param.list[[1]])
-  # Get the mean list
-  ret <- lapply(1:n, function(i) {
-    if (need.params[[i]]) {
-      mean <- reduce.sum(lapply(param.list, function(lst) {
-        mx.nd.copyto(lst[[i]], mx.cpu())
-      })) / ndevice
-    } else{
-      mean <- NULL
-    }
-    return(mean)
-  })
-  names(ret) <- names
-  return(mx.util.filter.null(ret))
-}
-
 # Extract model from executors
 mx.model.extract.model <- function(symbol, train.execs) {
-  arg.blocks <- lapply(train.execs, function(x) {
-    x$arg.arrays
+  reduce.sum <- function(x) Reduce("+", x)
+  # Get the parameters
+  ndevice <- length(train.execs)
+  narg <- length(train.execs[[1]]$ref.arg.arrays)
+  arg.params <- lapply(1:narg, function(k) {
+    if (is.null(train.execs[[1]]$ref.grad.arrays[[k]])) {
+      result <- NULL
+    } else {
+      result <- reduce.sum(lapply(train.execs, function(texec) {
+        mx.nd.copyto(texec$ref.arg.arrays[[k]], mx.cpu())
+      })) / ndevice
+    }
+    return(result)
   })
-  arg.params <- mx.model.get.mean(arg.blocks,
-                                  lapply(train.execs[[1]]$grad.arrays, is.null))
-  aux.blocks <- lapply(train.execs, function(x) {
-    x$aux.arrays
-  })
-  aux.params <- mx.model.get.mean(aux.blocks,
-                                  as.logical(rep(1, each=length(aux.blocks[[1]]))))
+  names(arg.params) <- names(train.execs[[1]]$ref.arg.arrays)
+  arg.params <- mx.util.filter.null(arg.params)
+  # Get the auxiliary
+  naux <- length(train.execs[[1]]$ref.aux.arrays)
+  if (naux != 0) {
+    aux.params <- lapply(1:naux, function(k) {
+      reduce.sum(lapply(train.execs, function(texec) {
+        mx.nd.copyto(texec$ref.aux.arrays[[k]], mx.cpu())
+      })) / ndevice
+    })
+    names(aux.params) <- names(train.execs[[1]]$ref.aux.arrays)
+  } else {
+    aux.params <- list()
+  }
+  # Get the model
   model <- list(symbol=symbol, arg.params=arg.params, aux.params=aux.params)
   class(model) <- "mx.model"
   return(model)
@@ -87,17 +85,17 @@ mx.model.train <- function(symbol, ctx, input.shape,
     mx.simple.bind(symbol, ctx=ctx[[i]], data=sliceinfo[[i]]$shape, grad.req=TRUE)
   })
   # set the parameters into executors
-  train.execs <- lapply(train.execs, function(texec) {
-    texec <- mx.exec.update.arg.arrays(texec, arg.params, match.name=TRUE)
-    texec <- mx.exec.update.aux.arrays(texec, aux.params, match.name=TRUE)
-    return(texec)
-  })
+  for (texec in train.execs) {
+    mx.exec.update.arg.arrays(texec, arg.params, match.name=TRUE)
+    mx.exec.update.aux.arrays(texec, aux.params, match.name=TRUE)
+  }
   # Get the input names
   input.names <- mx.model.check.arguments(symbol)
   # create the updaters
   updaters <- lapply(1:ndevice, function(i) {
     mx.opt.get.updater(optimizer, train.execs[[i]]$ref.arg.arrays)
   })
+
   for (iteration in begin.round:end.round) {
     nbatch <- 0
     train.metric <- metric$init()
@@ -111,41 +109,40 @@ mx.model.train <- function(symbol, ctx, input.shape,
         return(ret)
       })
       # copy data to executor
-      train.execs <- lapply(1:ndevice, function(i) {
+      for (i in 1:ndevice) {
         s <- slices[[i]]
         names(s) <- input.names
         mx.exec.update.arg.arrays(train.execs[[i]], s, match.name=TRUE)
-      })
-      # forward
-      train.execs <- lapply(train.execs, function(texec) {
+      }
+      for (texec in train.execs) {
         mx.exec.forward(texec, is.train=TRUE)
-      })
+      }
       # copy outputs to CPU
       out.preds <- lapply(train.execs, function(texec) {
         mx.nd.copyto(texec$ref.outputs[[1]], mx.cpu())
       })
       # backward pass
-      train.execs <- lapply(train.execs, function(texec) {
+      for (texec in train.execs) {
         mx.exec.backward(texec)
-      })
+      }
       # get gradient from each device.
       grad.blocks <- lapply(train.execs, function(texec) {
         texec$grad.arrays
       })
+
       # update parameters
       arg.blocks <- lapply(1:ndevice, function(i) {
         updaters[[i]](train.execs[[i]]$ref.arg.arrays, grad.blocks[[i]])
       })
       # reset the parameters of executors
-      train.execs <- lapply(1:ndevice, function(i) {
+      for (i in 1:ndevice) {
         mx.exec.update.arg.arrays(train.execs[[i]], arg.blocks[[i]], skip.null=TRUE)
-      })
+      }
       # Update the evaluation metrics
       for (i in 1 : ndevice) {
         train.metric <- metric$update(slices[[i]]$label, out.preds[[i]], train.metric)
       }
       nbatch <- nbatch + 1
-
       if (!is.null(epoch.end.callback)) {
         epoch.end.callback(iteration, nbatch, environment())
       }
@@ -153,10 +150,9 @@ mx.model.train <- function(symbol, ctx, input.shape,
     # reset training data
     train.data$reset()
     result <- metric$get(train.metric)
-    cat(paste("Train-", result$name, "=", result$value))
+    cat(paste0("Train-", result$name, "=", result$value, "\n"))
     # get the model out
     model <- mx.model.extract.model(symbol, train.execs)
-
     if (!is.null(iter.end.callback)) {
       iter.end.callback(iteration, environment())
     }

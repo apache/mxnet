@@ -14,26 +14,16 @@
 namespace mxnet {
 namespace R {
 
-Executor::RObjectType Executor::UpdateArgArray(const Executor::RObjectType &exec,
-                                               const Rcpp::List& array,
-                                               bool match_name,
-                                               bool skip_null) {
-  RCHECK(Rcpp::is<Executor>(exec))
-      << "Expected exec to be "<< Executor::TypeName();
-  Executor::RObjectType ret = Executor::Move(exec);
-  UpdateArray("arg.arrays", array, Executor::XPtr(ret)->arg_arrays_, match_name, skip_null);
-  return ret;
+void Executor::UpdateArgArray(const Rcpp::List& array,
+                              bool match_name,
+                              bool skip_null) {
+  UpdateArray("arg.arrays", array, arg_arrays_, match_name, skip_null);
 }
 
-Executor::RObjectType Executor::UpdateAuxArray(const Executor::RObjectType &exec,
-                                               const Rcpp::List& array,
-                                               bool match_name,
-                                               bool skip_null) {
-  RCHECK(Rcpp::is<Executor>(exec))
-      << "Expected exec to be "<< Executor::TypeName();
-  Executor::RObjectType ret = Executor::Move(exec);
-  UpdateArray("aux.arrays", array, Executor::XPtr(ret)->aux_arrays_, match_name, skip_null);
-  return ret;
+void Executor::UpdateAuxArray(const Rcpp::List& array,
+                              bool match_name,
+                              bool skip_null) {
+  UpdateArray("aux.arrays", array, aux_arrays_, match_name, skip_null);
 }
 
 void Executor::UpdateArray(const char* array_name,
@@ -100,32 +90,20 @@ Rcpp::List Executor::CloneArray(const Rcpp::List& src) {
   return ret;
 }
 
-Executor::RObjectType Executor::Forward(const RObjectType &exec,
-                                        bool is_train,
-                                        const Rcpp::List& kwargs) {
-  // TODO(tqchen, KK) support kwargs to copy in additional data
-  RCHECK(Rcpp::is<Executor>(exec))
-      << "Expect exec to be " << Executor::TypeName();
-  Executor::RObjectType ret = Executor::Move(exec);
-  MX_CALL(MXExecutorForward(Executor::XPtr(ret)->handle_, is_train));
-  return ret;
+void Executor::Forward(bool is_train,
+                       const Rcpp::List& kwargs) {
+  MX_CALL(MXExecutorForward(handle_, is_train));
 }
 
-Executor::RObjectType Executor::Backward(const RObjectType &exec,
-                                         const Rcpp::List &output_grads) {
-  RCHECK(Rcpp::is<Executor>(exec))
-      << "Expect exec to be " << Executor::TypeName();
-  RCHECK(Executor::XPtr(exec)->grad_arrays_ != nullptr)
+void Executor::Backward(const Rcpp::List &output_grads) {
+  RCHECK(grad_arrays_ != nullptr)
       << "This executor has not been binded with req.grad";
-  Executor::RObjectType ret = Executor::Move(exec);
   std::vector<NDArrayHandle> grad_handles
       = NDArray::GetHandles(output_grads, "output_grads", false);
-  MX_CALL(MXExecutorBackward(Executor::XPtr(ret)->handle_,
+  MX_CALL(MXExecutorBackward(handle_,
                              static_cast<mx_uint>(grad_handles.size()),
                              dmlc::BeginPtr(grad_handles)));
-  return ret;
 }
-
 
 inline Rcpp::List* CreateArrayList(const Rcpp::List& source_array,
                                    const std::string& key,
@@ -243,40 +221,26 @@ void Executor::InitRcppModule() {
   using namespace Rcpp;  // NOLINT(*)
   class_<Executor>("MXExecutor")
       .finalizer(&Executor::Finalizer)
+      .method("update.aux.arrays",
+              &Executor::UpdateAuxArray,
+              "Update auxilary states array of executor, this will mutate the executor")
+      .method("update.arg.arrays",
+              &Executor::UpdateArgArray,
+              "Update arguments array of executor, this will mutate the executor")
+      .method("forward",
+              &Executor::Forward,
+              "Peform a forward operation on exec, this will set the outputs.")
+      .method("backward",
+              &Executor::Backward,
+              "Peform a backward operation on exec, this will set the gradients requested.")
       .property("ref.arg.arrays", &Executor::arg_arrays)
       .property("ref.grad.arrays", &Executor::grad_arrays)
+      .property("ref.aux.arrays", &Executor::aux_arrays)
       .property("ref.outputs", &Executor::out_arrays)
       .property("arg.arrays", &Executor::GetArgArrays)
       .property("grad.arrays", &Executor::GetGradArrays)
       .property("aux.arrays", &Executor::GetAuxArrays)
       .property("outputs", &Executor::GetOuputArrays);
-
-  // As we aim for updated = mx.exec.set.arguments(old, arg_array)
-  // And old is moved and shouldno longer be used.
-  // The reason why setter/getter is not used,
-  // is because setter did not implement copy-on-write, so this can be un-natural to R-user
-  // We use a update function to do
-  // new_object = update(old_object, param) instead
-
-  function("mx.exec.update.arg.arrays",
-           &Executor::UpdateArgArray,
-           List::create(_["exec"], _["array"],
-                        _["match.name"] = false, _["skip.null"] = false),
-           "Update arguments array of executor, this will move the original executor");
-  function("mx.exec.update.aux.arrays",
-           &Executor::UpdateAuxArray,
-           List::create(_["exec"], _["array"],
-                        _["match.name"] = false, _["skip.null"] = false),
-           "Update auxilary states array of executor, this will move the original executor");
-
-  function("mx.exec.forward",
-           &Executor::Forward,
-           List::create(_["exec"], _["is.train"] = false, _["kwargs"] = Rcpp::List()),
-           "Peform a forward operation on exec, this will set the outputs.");
-  function("mx.exec.backward",
-           &Executor::Backward,
-           List::create(_["exec"], _["output.grads"] = Rcpp::List()),
-           "Peform a backward operation on exec, this will set the gradients requested.");
   function("mx.symbol.bind",
            &Executor::Bind,
            List::create(_["symbol"], _["ctx"],
