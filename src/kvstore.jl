@@ -18,10 +18,10 @@ Base.cconvert(t::Type{MX_handle}, obj::KVStore) = Base.unsafe_convert(t, obj)
 
 function _flatten_kvlist(keys :: Vector{Int}, vals :: Vector{Vector{NDArray}})
   @assert length(keys) == length(vals)
-  Keys_flt = Int[]
+  keys_flt = Int[]
   vals_flt = NDArray[]
   for (k,v) in zip(keys, vals)
-    append!(keys_flt, ones(Int, length(v))*k)
+    append!(keys_flt, Base.ones(Int, length(v))*k)
     append!(vals_flt, v)
   end
   return (keys_flt, vals_flt)
@@ -31,7 +31,7 @@ function init!(self :: KVStore, key :: Int, val :: NDArray)
   init!(self, [key], [val])
 end
 function init!(self :: KVStore, key :: Int, vals :: Vector{NDArray})
-  init!(self, ones(Int, length(vals))*key, vals)
+  init!(self, Base.ones(Int, length(vals))*key, vals)
 end
 function init!(self :: KVStore, keys :: Vector{Int}, vals :: Vector{Vector{NDArray}})
   init!(self, _flatten_kvlist(keys, vals)...)
@@ -49,7 +49,7 @@ function push!(self :: KVStore, key :: Int, val :: NDArray; priority :: Int = 0)
   push!(self, [key], [val]; priority = priority)
 end
 function push!(self :: KVStore, key :: Int, vals :: Vector{NDArray}; priority :: Int = 0)
-  push!(self, ones(Int, length(vals))*key, vals; priority = priority)
+  push!(self, Base.ones(Int, length(vals))*key, vals; priority = priority)
 end
 function push!(self :: KVStore, keys :: Vector{Int}, vals :: Vector{Vector{NDArray}}; priority::Int=0)
   push!(self, _flatten_kvlist(keys, vals)...; priority = priority)
@@ -66,7 +66,7 @@ function pull!(self :: KVStore, key :: Int, out :: NDArray; priority :: Int = 0)
   pull!(self, [key], [out])
 end
 function pull!(self :: KVStore, key :: Int, outs :: Vector{NDArray}; priority :: Int = 0)
-  pull!(self, ones(Int, length(outs))*key, outs; priority = priority)
+  pull!(self, Base.ones(Int, length(outs))*key, outs; priority = priority)
 end
 function pull!(self :: KVStore, keys :: Vector{Int}, outs :: Vector{Vector{NDArray}}; priority::Int=0)
   pull!(self, _flatten_kvlist(keys, outs)...; priority = priority)

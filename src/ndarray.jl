@@ -299,6 +299,12 @@ function .*(arg0 :: NDArray, arg :: Union{Real, NDArray})
   ret = copy(arg0, context(arg0))
   mul_to!(ret, arg)
 end
+# unlike *, we only allow type Real in arguments, because array-array * operator
+# means matrix multiplication in Julia
+function *(arg0 :: NDArray, arg :: Real)
+  ret = copy(arg0, context(arg0))
+  mul_to!(ret, arg)
+end
 
 function div_from!(dst :: NDArray, arg :: Union{Real, NDArray})
   @assert dst.writable
