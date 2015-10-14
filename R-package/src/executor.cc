@@ -47,7 +47,8 @@ void Executor::UpdateArray(const char* array_name,
     for (size_t i = 0; i < from.size(); ++i) {
       if (to->at(i) != R_NilValue) {
         if (from[i] != R_NilValue) {
-          NDArray::CopyFromTo(*NDArray::XPtr(from[i]), NDArray::XPtr(to->at(i)));
+          NDArray dst = NDArray::FromRObject(to->at(i));
+          NDArray::CopyFromTo(NDArray::FromRObject(from[i]), &dst);
         } else {
           RCHECK(skip_null)
               << "Position " << i << " expected to be not NULL";
@@ -70,7 +71,8 @@ void Executor::UpdateArray(const char* array_name,
       int index = to->findName(names[i]);
       if (to->at(index) != R_NilValue) {
         if (from[i] != R_NilValue) {
-          NDArray::CopyFromTo(*NDArray::XPtr(from[i]), NDArray::XPtr(to->at(index)));
+          NDArray dst = NDArray::FromRObject(to->at(index));
+          NDArray::CopyFromTo(NDArray::FromRObject(from[i]), &dst);
         } else {
           RCHECK(skip_null)
               << "Element " << names[i] << " expected to be not NULL";
@@ -90,7 +92,7 @@ Rcpp::List Executor::CloneArray(const Rcpp::List& src) {
     if (src[i] != R_NilValue) {
       RCHECK(Rcpp::is<NDArray>(src[i]))
           << "Expected exec to be "<< Executor::TypeName();
-      ret[i] = NDArray::XPtr(src[i])->Clone();
+      ret[i] = NDArray::FromRObject(src[i]).Clone().RObject();
     } else {
       ret[i] = R_NilValue;
     }
@@ -137,10 +139,11 @@ inline Rcpp::List* CreateArrayList(const Rcpp::List& source_array,
     for (size_t i = 0; i < source_array.size(); ++i) {
       RCHECK(Rcpp::is<NDArray>(source_array[i]))
           << "Expect input " << key << " to be list of " << NDArray::TypeName();
-      ret->at(i) = NDArray::Empty(NDArray::XPtr(source_array[i])->shape(), ctx);
-      handles->at(i) = NDArray::XPtr(ret->at(i))->handle();
-      NDArray::CopyFromTo(*NDArray::XPtr(source_array[i]),
-                          NDArray::XPtr(ret->at(i)));
+      NDArray src = NDArray::FromRObject(source_array[i]);
+      ret->at(i) = NDArray::Empty(src.shape(), ctx);
+      NDArray dst = NDArray::FromRObject(ret->at(i));
+      handles->at(i) = dst->handle;
+      NDArray::CopyFromTo(src, &dst);
     }
   } catch(const Rcpp::exception& ex) {
     delete ret;
@@ -165,8 +168,8 @@ inline Rcpp::List* CreateGradList(const Rcpp::List& source_array,
       RCHECK(Rcpp::is<bool>(grad_reqs[i]))
           << "Expect input grad_reqs to be list of booleans";
       if (Rcpp::as<bool>(grad_reqs[i])) {
-        ret->at(i) = NDArray::Empty(NDArray::XPtr(source_array[i])->shape(), ctx);
-        handles->at(i) = NDArray::XPtr(ret->at(i))->handle();
+        ret->at(i) = NDArray::Empty(NDArray::FromRObject(source_array[i]).shape(), ctx);
+        handles->at(i) = NDArray::FromRObject(ret->at(i))->handle;
         grad_req_type->at(i) = 1;
       }
     }
@@ -184,7 +187,7 @@ inline Rcpp::List* CreateOutList(mx_uint out_size,
   try {
     ret->names() = names;
     for (size_t i = 0; i < out_size; ++i) {
-      ret->at(i) = NDArray::RObject(out_arr[i]);
+      ret->at(i) = NDArray::RObject(out_arr[i], false);
     }
   } catch(const Rcpp::exception& ex) {
     delete ret;

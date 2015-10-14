@@ -2,7 +2,6 @@
   library.dynam("libmxnet", pkgname, libname, local=FALSE)
   library.dynam("mxnet", pkgname, libname)
   loadModule("mxnet", TRUE)
-  init.ndarray.methods()
   init.symbol.methods()
   init.context.default()
 }

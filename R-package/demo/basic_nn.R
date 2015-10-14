@@ -32,16 +32,18 @@ ctx <- mx.cpu()
 input.shape <- c(batch.size, 784)
 symbol <- softmax
 init <- mx.init.uniform(0.07)
-opt <- mx.opt.sgd(learning.rate=0.1, momentum=0.9, rescale.grad=1.0/batch.size)
+opt <- mx.opt.sgd(learning.rate=0.05, momentum=0.9, rescale.grad=1.0/batch.size)
 
 # Training procedure
 texec <- mx.simple.bind(symbol, ctx=ctx, data=input.shape, grad.req=TRUE)
-arg.arrays <- mx.init.create(init, texec$arg.arrays)
-updater <- mx.opt.get.updater(opt, arg.arrays)
-
-texec <- mx.exec.update.arg.arrays(texec, arg.arrays, skip.null=TRUE)
+shapes <- lapply(texec$ref.arg.arrays, dim)
+names(shapes) <- names(texec$arg.arrays)
+arg.arrays <- mx.init.create(init, shapes, ctx)
+texec <- mx.exec.update.arg.arrays(texec, arg.arrays, match.name=TRUE)
+updater <- mx.opt.get.updater(opt, texec$ref.arg.arrays)
 
 nround <- 10
+tic <- proc.time()
 
 for (iteration in 1 : nround) {
   nbatch <- 0
@@ -58,10 +60,14 @@ for (iteration in 1 : nround) {
     out.pred <- mx.nd.copyto(texec$outputs[[1]], mx.cpu())
     # backward pass
     texec <- mx.exec.backward(texec)
-    arg.arrays <- updater(texec$ref.arg.arrays, texec$ref.grad.arrays)
+    arg.arrays <- updater(texec$arg.arrays, texec$ref.grad.arrays)
     texec <- mx.exec.update.arg.arrays(texec, arg.arrays, skip.null=TRUE)
     nbatch <- nbatch + 1
     train.acc <- train.acc + accuracy(label, out.pred)
+    if (nbatch %% 100 == 0) {
+      print(paste("Train-acc=", train.acc / nbatch))
+      print(proc.time() - tic)
+    }
   }
   dtrain$reset()
   print(paste("Train-acc=", train.acc / nbatch))

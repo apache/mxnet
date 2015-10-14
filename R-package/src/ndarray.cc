@@ -120,39 +120,78 @@ inline void RowToColMajor(const mx_float *in_data,
   }
 }
 
-// implementation of NDArray functions
+Rcpp::Dimension NDArray::shape() const {
+  mx_uint ndim;
+  const mx_uint *pshape;
+  MX_CALL(MXNDArrayGetShape(
+      ptr_->handle, &ndim, &pshape));
+  Rcpp::IntegerVector dat(pshape, pshape + ndim);
+  SEXP ret = dat;
+  return ret;
+}
+
+NDArray NDArray::Clone() const {
+  std::vector<mx_uint> shape = Dim2Vec(this->shape());
+  Context ctx = this->ctx();
+  NDArrayHandle handle;
+  MX_CALL(MXNDArrayCreate(dmlc::BeginPtr(shape),
+                          static_cast<mx_uint>(shape.size()),
+                          ctx.dev_type, ctx.dev_id, true, &handle));
+  NDArray ret(handle, true);
+  CopyFromTo(*this, &ret);
+  return ret;
+}
+
+Context NDArray::ctx() const {
+  Context ctx;
+  MX_CALL(MXNDArrayGetContext(ptr_->handle, &ctx.dev_type, &ctx.dev_id));
+  return ctx;
+}
+
+size_t NDArray::Size() const {
+  Rcpp::Dimension dim = this->shape();
+  size_t sz = 1;
+  for (size_t i = 0; i < dim.size(); ++i) {
+    sz *= dim[i];
+  }
+  return sz;
+}
+
+NDArray NDArray::Slice(mx_uint begin, mx_uint end) const {
+  NDArrayHandle out;
+  MX_CALL(MXNDArraySlice(ptr_->handle, begin, end, &out));
+  return NDArray(out, ptr_->writable);
+}
+
 Rcpp::NumericVector NDArray::AsNumericVector() const {
   Rcpp::Dimension rshape = this->shape();
   std::vector<mx_float> temp(rshape.prod());
   MX_CALL(MXNDArraySyncCopyToCPU(
-      handle_, dmlc::BeginPtr(temp), temp.size()));
+      ptr_->handle, dmlc::BeginPtr(temp), temp.size()));
   Rcpp::NumericVector ret(rshape);
-  RowToColMajor(dmlc::BeginPtr(temp), Dim2Vec(rshape), temp.size(), ret.begin());
+  RowToColMajor(dmlc::BeginPtr(temp), Dim2Vec(rshape),
+                temp.size(), ret.begin());
   return ret;
 }
 
-void NDArray::Save(const Rcpp::RObject &sxptr,
+void NDArray::Save(const Rcpp::List& data_lst,
                    const std::string& filename) {
-  if (TYPEOF(sxptr) == VECSXP) {
-    Rcpp::List data_lst(sxptr);
-    std::vector<std::string> lst_names = data_lst.names();
-    size_t num_args = data_lst.size();
-    std::vector<NDArrayHandle> handles(num_args);
-    std::vector<const char*> keys(num_args);
-
-    for (int i = 0 ; i < data_lst.size(); ++i) {
-      keys[i] = lst_names[i].c_str();
-      handles[i] = NDArray::XPtr(data_lst[i])->handle_;
-    }
-    MX_CALL(MXNDArraySave(filename.c_str(), num_args,
-                          dmlc::BeginPtr(handles),
-                          dmlc::BeginPtr(keys)));
-  } else if (Rcpp::is<NDArray>(sxptr)) {
-    MX_CALL(MXNDArraySave(filename.c_str(), 1,
-                          &(NDArray::XPtr(sxptr)->handle_), nullptr));
-  } else {
-    RLOG_FATAL << "Only accept NDArray or list of NDArray";
+  std::vector<std::string> lst_names;
+  if (HasName(data_lst)) {
+    lst_names = data_lst.names();
   }
+  size_t num_args = data_lst.size();
+  std::vector<NDArrayHandle> handles(num_args);
+  std::vector<const char*> keys(num_args);
+
+  for (int i = 0 ; i < data_lst.size(); ++i) {
+    keys[i] = lst_names[i].c_str();
+    SEXP obj = data_lst[i];
+    handles[i] = NDArray(obj)->handle;
+  }
+  MX_CALL(MXNDArraySave(filename.c_str(), num_args,
+                        dmlc::BeginPtr(handles),
+                        dmlc::BeginPtr(keys)));
 }
 
 Rcpp::List NDArray::Load(const std::string& filename) {
@@ -165,7 +204,7 @@ Rcpp::List NDArray::Load(const std::string& filename) {
                         &out_name_size, &out_names));
   Rcpp::List out(out_size);
   for (mx_uint i = 0; i < out_size; ++i) {
-    out[i] = NDArray::RObject(out_arr[i]);
+    out[i] = NDArray::RObject(out_arr[i], true);
   }
   if (out_name_size != 0) {
     std::vector<std::string> lst_names(out_size);
@@ -186,7 +225,7 @@ NDArray::RObjectType NDArray::Empty(
   MX_CALL(MXNDArrayCreate(dmlc::BeginPtr(shape),
                           static_cast<mx_uint>(shape.size()),
                           ctx.dev_type, ctx.dev_id, false, &handle));
-  return NDArray::RObject(handle);
+  return NDArray::RObject(handle, true);
 }
 
 std::vector<NDArrayHandle> NDArray::GetHandles(const Rcpp::List& array_list,
@@ -199,35 +238,23 @@ std::vector<NDArrayHandle> NDArray::GetHandles(const Rcpp::List& array_list,
           << "Expect " << list_name << " to be list of non-NULL " << NDArray::TypeName();
       ret[i] = nullptr;
     } else {
-      RCHECK(Rcpp::is<NDArray>(array_list[i]))
+      RCHECK(TYPEOF(array_list[i]) == EXTPTRSXP)
           << "Expect " << list_name << " to  be list of " << NDArray::TypeName();
-      ret[i] = NDArray::XPtr(array_list[i])->handle_;
+      Rcpp::RObject obj = array_list[i];
+      Rcpp::XPtr<NDBlob> ptr(obj);
+      SEXP attr = ptr.attr("class");
+      RCHECK(attr != R_NilValue && Rcpp::as<std::string>(attr) == "MXNDArray")
+          << "Expect " << list_name << " to  be list of " << NDArray::TypeName();
+      ret[i] = ptr->handle;
     }
   }
   return ret;
 }
 
-NDArray::RObjectType NDArray::Clone() const {
-  std::vector<mx_uint> shape = Dim2Vec(this->shape());
-  NDArrayHandle handle;
-  MX_CALL(MXNDArrayCreate(dmlc::BeginPtr(shape),
-                          static_cast<mx_uint>(shape.size()),
-                          ctx_.dev_type, ctx_.dev_id, true, &handle));
-  RObjectType ret = NDArray::RObject(handle);
-  CopyFromTo(*this, NDArray::XPtr(ret));
-  return ret;
-}
-
-NDArray::RObjectType NDArray::Slice(mx_uint begin, mx_uint end) const {
-  NDArrayHandle out;
-  MX_CALL(MXNDArraySlice(handle_, begin, end, &out));
-  return NDArray::RObject(out);
-}
-
 void NDArray::CopyFromTo(const NDArray& from, NDArray* to) {
   static FunctionHandle copy_handle = NDArrayFunction::FindHandle("_copyto");
-  NDArrayHandle from_handle = from.handle_;
-  NDArrayHandle to_handle = to->handle_;
+  NDArrayHandle from_handle = from->handle;
+  NDArrayHandle to_handle = (*to)->handle;
   RCHECK(from_handle != to_handle)
       << "Attempt to copy NDArray to itself";
   MX_CALL(MXFuncInvoke(copy_handle, &from_handle, nullptr, &to_handle));
@@ -244,7 +271,7 @@ NDArray::RObjectType NDArray::Array(
   ColToRowMajor(rdata.begin(), Dim2Vec(rshape),
                 temp.size(), dmlc::BeginPtr(temp));
   MX_CALL(MXNDArraySyncCopyFromCPU(
-      NDArray::XPtr(ret)->handle_,
+      NDArray(ret)->handle,
       dmlc::BeginPtr(temp), temp.size()));
   return ret;
 }
@@ -342,27 +369,29 @@ SEXP NDArrayFunction::operator() (SEXP* args) {
     scalars[i] = Rcpp::as<mx_float>(args[begin_scalars_ + i]);
   }
   for (mx_uint i = 0; i < num_use_vars_; ++i) {
-    use_vars[i] = NDArray::XPtr(args[begin_use_vars_ + i])->handle_;
+    use_vars[i] = NDArray(args[begin_use_vars_ + i])->handle;
   }
 
   std::vector<NDArrayHandle> mutate_vars(num_mutate_vars_);
-  Rcpp::List out(num_mutate_vars_);
+  std::vector<NDArray> out;
+  out.reserve(num_mutate_vars_);
+
   for (mx_uint i = 0; i < num_mutate_vars_; ++i) {
     if (args[begin_mutate_vars_ + i] == R_NilValue) {
       if (accept_empty_out_) {
         NDArrayHandle ohandle;
         MX_CALL(MXNDArrayCreateNone(&ohandle));
-        out[i] = NDArray::RObject(ohandle);
+        mutate_vars[i] = ohandle;
+        out.push_back(NDArray(ohandle, true));
       } else {
         RLOG_FATAL << "Parameter out need to be specified";
       }
     } else {
       // move the old parameters, these are no longer valid
-      RCHECK(NDArray::XPtr(args[begin_mutate_vars_ + i])->writable_)
-          << "Passing a read only NDArray to mutate function";
-      out[i] = NDArray::Move(args[begin_mutate_vars_ + i]);
+      NDArray nd(args[begin_mutate_vars_ + i]);
+      mutate_vars[i] = nd->handle;
+      out.push_back(nd.Move());
     }
-    mutate_vars[i] = NDArray::XPtr(out[i])->handle_;
   }
 
   MX_CALL(MXFuncInvoke(handle_,
@@ -370,9 +399,13 @@ SEXP NDArrayFunction::operator() (SEXP* args) {
                        dmlc::BeginPtr(scalars),
                        dmlc::BeginPtr(mutate_vars)));
   if (num_mutate_vars_ == 1) {
-    return out[0];
+    return out[0].RObject();
   } else {
-    return out;
+    Rcpp::List olist(out.size());
+    for (size_t i = 0; i < out.size(); ++i) {
+      olist[i] = out[i].RObject();
+    }
+    return olist;
   }
   END_RCPP;
 }
@@ -397,24 +430,151 @@ FunctionHandle NDArrayFunction::FindHandle(const std::string& hname) {
   return nullptr;
 }
 
+
+// internal namespace of functions inside
+namespace ndarray {
+/*!
+ * \brief internal function to parse NDArray arguments
+ * \param sexp The soure value
+ * \param handle the output handle, if it is NDArray type.
+ * \param value the output value, if it is numeric type.
+ * \return whether it is NDArray type
+*/
+inline bool ParseNDArrayArg(SEXP sexp, NDArrayHandle *handle, float *value) {
+  switch (TYPEOF(sexp)) {
+    case REALSXP: {
+      *value = static_cast<float>(Rcpp::as<double>(sexp));
+      return false;
+    }
+    case INTSXP: {
+      *value = static_cast<float>(Rcpp::as<int>(sexp));
+      return false;
+    }
+    case EXTPTRSXP: {
+      // TODO(KK)  is it correct
+      Rcpp::XPtr<NDBlob> ptr(sexp);
+      SEXP attr = ptr.attr("class");
+      RCHECK(attr != R_NilValue && Rcpp::as<std::string>(attr) == "MXNDArray")
+          << "MXNDArray binary operations only support NDArray and numeric values";
+      RCHECK(!ptr->moved)
+          << "Passing in an NDArray that has been moved";
+      *handle = ptr->handle;
+      return true;
+    }
+    default: {
+      RLOG_FATAL << "MXNDArray binary operations only support "
+                 << "NDArray and numeric values as operands";
+    }
+  }
+  return true;
+}
+
+// dispatch the binary ops of MXNDArray
+NDArray::RObjectType DispatchOps(SEXP op, SEXP lhs, SEXP rhs) {
+  // function handles
+  static FunctionHandle plus = NDArrayFunction::FindHandle("_plus");
+  static FunctionHandle plus_scalar = NDArrayFunction::FindHandle("_plus_scalar");
+  static FunctionHandle minus = NDArrayFunction::FindHandle("_minus");
+  static FunctionHandle minus_scalar = NDArrayFunction::FindHandle("_minus_scalar");
+  static FunctionHandle rminus_scalar = NDArrayFunction::FindHandle("_rminus_scalar");
+  static FunctionHandle mul = NDArrayFunction::FindHandle("_mul");
+  static FunctionHandle mul_scalar = NDArrayFunction::FindHandle("_mul_scalar");
+  static FunctionHandle div = NDArrayFunction::FindHandle("_div");
+  static FunctionHandle div_scalar = NDArrayFunction::FindHandle("_div_scalar");
+  static FunctionHandle rdiv_scalar = NDArrayFunction::FindHandle("_rdiv_scalar");
+  // parse the arguments
+  float values[2];
+  NDArrayHandle handles[2], out;
+  bool lhs_nd = ParseNDArrayArg(lhs, &handles[0], &values[0]);
+  bool rhs_nd = ParseNDArrayArg(rhs, &handles[1], &values[1]);
+  RCHECK(lhs_nd || rhs_nd);
+  // create output and dispatch.
+  MX_CALL(MXNDArrayCreateNone(&out));
+  std::string sop = Rcpp::as<std::string>(op);
+  switch (sop[0]) {
+    case '+': {
+      if (lhs_nd && rhs_nd) {
+        MX_CALL(MXFuncInvoke(plus, handles, nullptr, &out));
+      } else if (lhs_nd && !rhs_nd) {
+        MX_CALL(MXFuncInvoke(plus_scalar, &handles[0], &values[1], &out));
+      } else if (!lhs_nd && rhs_nd) {
+        MX_CALL(MXFuncInvoke(plus_scalar, &handles[1], &values[0], &out));
+      }
+      break;
+    }
+    case '-': {
+      if (lhs_nd && rhs_nd) {
+        MX_CALL(MXFuncInvoke(minus, handles, nullptr, &out));
+      } else if (lhs_nd && !rhs_nd) {
+        MX_CALL(MXFuncInvoke(minus_scalar, &handles[0], &values[1], &out));
+      } else if (!lhs_nd && rhs_nd) {
+        MX_CALL(MXFuncInvoke(rminus_scalar, &handles[1], &values[0], &out));
+      }
+      break;
+    }
+    case '*': {
+      if (lhs_nd && rhs_nd) {
+        MX_CALL(MXFuncInvoke(mul, handles, nullptr, &out));
+      } else if (lhs_nd && !rhs_nd) {
+        MX_CALL(MXFuncInvoke(mul_scalar, &handles[0], &values[1], &out));
+      } else if (!lhs_nd && rhs_nd) {
+        MX_CALL(MXFuncInvoke(mul_scalar, &handles[1], &values[0], &out));
+      }
+      break;
+    }
+    case '/': {
+      if (lhs_nd && rhs_nd) {
+        MX_CALL(MXFuncInvoke(div, handles, nullptr, &out));
+      } else if (lhs_nd && !rhs_nd) {
+        MX_CALL(MXFuncInvoke(div_scalar, &handles[0], &values[1], &out));
+      } else if (!lhs_nd && rhs_nd) {
+        MX_CALL(MXFuncInvoke(rdiv_scalar, &handles[1], &values[0], &out));
+      }
+      break;
+    }
+    default: {
+      RLOG_FATAL << "Operator " << sop << "not supported for MXNDArray";
+    }
+  }
+  return NDArray::RObject(out, true);
+}
+
+Rcpp::Dimension shape(const NDArray::RObjectType& src) {
+  return NDArray(src).shape();
+}
+
+Context::RObjectType ctx(const NDArray::RObjectType& src) {
+  return NDArray(src).ctx().RObject();
+}
+
+size_t Size(const NDArray::RObjectType& src) {
+  return NDArray(src).Size();
+}
+
+Rcpp::NumericVector AsNumericVector(const NDArray::RObjectType& src) {
+  return NDArray(src).AsNumericVector();
+}
+
+NDArray::RObjectType Slice(const NDArray::RObjectType& src,
+                           mx_uint begin, mx_uint end) {
+  return NDArray(src).Slice(begin, end).RObject();
+}
+}  // namespace ndarray
+
 // initialize the Rcpp module functions.
 void NDArray::InitRcppModule() {
   using namespace Rcpp;  // NOLINT(*)
-  class_<NDArray>("MXNDArray")
-      .finalizer(&NDArray::Finalizer)
-      .method("as.array", &NDArray::AsNumericVector)
-      .const_method("dim", &NDArray::shape,
-                    "The dimension(shape) of the NDArray")
-      .const_method("length", &NDArray::size,
-                    "The length(size) of the NDArray")
-      .property("ctx", &NDArray::ctx,
-                "The context of the NDArray")
-      .const_method("slice", &NDArray::Slice,
-                    "Get a slice on the first dimension of NDArray");
+  function("mx.nd.slice", &ndarray::Slice);
   function("mx.nd.internal.load", &NDArray::Load);
   function("mx.nd.internal.save", &NDArray::Save);
-  function("mx.nd.internal.empty.array", &NDArray::Empty);
   function("mx.nd.internal.array", &NDArray::Array);
+  function("mx.nd.internal.empty.array", &NDArray::Empty);
+  function("mx.nd.internal.dispatch.Ops", &ndarray::DispatchOps);
+  // exposing members
+  function("mx.nd.internal.dim", &ndarray::shape);
+  function("mx.nd.internal.ctx", &ndarray::ctx);
+  function("mx.nd.internal.length", &ndarray::Size);
+  function("mx.nd.internal.as.array", &ndarray::AsNumericVector);
 }
 
 void NDArrayFunction::InitRcppModule() {

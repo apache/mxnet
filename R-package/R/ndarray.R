@@ -119,7 +119,7 @@ mx.nd.array <- function(src.array, ctx=NULL) {
 }
 
 is.MXNDArray <- function(x) {
-  inherits(x, "Rcpp_MXNDArray")
+  class(x) == "MXNDArray"
 }
 
 #' @rdname mx.nd.array
@@ -137,59 +137,34 @@ is.mx.nd.array <- function(src.array) {
   is.MXNDArray(src.array)
 }
 
-init.ndarray.methods <- function() {
-  setMethod("+", signature(e1 = "Rcpp_MXNDArray", e2 = "numeric"), function(e1, e2) {
-    mx.nd.internal.plus.scalar(e1, e2)
-  })
-  setMethod("+", signature(e1 = "Rcpp_MXNDArray", e2 = "Rcpp_MXNDArray"), function(e1, e2) {
-    mx.nd.internal.plus(e1, e2)
-  })
-  setMethod("+", signature(e1 = "numeric", e2 = "Rcpp_MXNDArray"), function(e1, e2) {
-    mx.nd.internal.plus.scalar(e2, e1)
-  })
-  setMethod("-", signature(e1 = "Rcpp_MXNDArray", e2 = "numeric"), function(e1, e2) {
-    mx.nd.internal.minus.scalar(e1, e2)
-  })
-  setMethod("-", signature(e1 = "Rcpp_MXNDArray", e2 = "Rcpp_MXNDArray"), function(e1, e2) {
-    mx.nd.internal.minus(e1, e2)
-  })
-  setMethod("-", signature(e1 = "numeric", e2 = "Rcpp_MXNDArray"), function(e1, e2) {
-    mx.nd.internal.rminus.scalar(e2, e1)
-  })
-  setMethod("*", signature(e1 = "Rcpp_MXNDArray", e2 = "numeric"), function(e1, e2) {
-    mx.nd.internal.mul.scalar(e1, e2)
-  })
-  setMethod("*", signature(e1 = "Rcpp_MXNDArray", e2 = "Rcpp_MXNDArray"), function(e1, e2) {
-    mx.nd.internal.mul(e1, e2)
-  })
-  setMethod("*", signature(e1 = "numeric", e2 = "Rcpp_MXNDArray"), function(e1, e2) {
-    mx.nd.internal.mul.scalar(e2, e1)
-  })
-  setMethod("/", signature(e1 = "Rcpp_MXNDArray", e2 = "numeric"), function(e1, e2) {
-    mx.nd.internal.div.scalar(e1, e2)
-  })
-  setMethod("/", signature(e1 = "Rcpp_MXNDArray", e2 = "Rcpp_MXNDArray"), function(e1, e2) {
-    mx.nd.internal.div(e1, e2)
-  })
-  setMethod("/", signature(e1 = "numeric", e2 = "Rcpp_MXNDArray"), function(e1, e2) {
-    mx.nd.internal.rdiv.scalar(e2, e1)
-  })
-  setMethod("as.array", signature(x = "Rcpp_MXNDArray"), function(x) {
-    x$as.array()
-  })
-  setMethod("as.matrix", signature(x = "Rcpp_MXNDArray"), function(x) {
-    if (length(dim(x)) != 2) {
-      stop("The input argument is not two dimensional matrix.")
-    }
-    as.matrix(x$as.array())
-  })
-  setMethod("print", signature(x = "Rcpp_MXNDArray"), function(x) {
-    print(x$as.array())
-  })
-  setMethod("dim", signature(x = "Rcpp_MXNDArray"), function(x) {
-    x$dim()
-  })
-  setMethod("length", signature(x = "Rcpp_MXNDArray"), function(x) {
-    x$length()
-  })
+Ops.MXNDArray <- function(e1, e2) {
+  mx.nd.internal.dispatch.Ops(.Generic, e1, e2)
+}
+
+dim.MXNDArray <- function(x) {
+  mx.nd.internal.dim(x)
+}
+
+length.MXNDArray <- function(x) {
+  mx.nd.internal.length(x)
+}
+
+as.array.MXNDArray <- function(x) {
+  mx.nd.internal.as.array(x)
+}
+
+as.matrix.MXNDArray <- function(x) {
+  if (length(dim(x)) != 2) {
+    stop("The input argument is not two dimensional matrix.")
+  }
+  as.matrix(as.array(x))
+}
+
+print.MXNDArray <- function(x) {
+  print(as.array(x))
+}
+
+# TODO(KK) are we able to use generics for S3
+ctx <-function(x) {
+  mx.nd.internal.ctx(x)
 }
