@@ -142,8 +142,8 @@ end
 function setindex!(arr :: NDArray, val :: NDArray, ::Colon)
   copy!(arr, val)
 end
-function setindex!{T<:Real}(arr :: NDArray, val :: Union{T,Array{T},NDArray}, slice::UnitRange{Int})
-  copy!(sub(arr, slice), val)
+function setindex!{T<:Real}(arr :: NDArray, val :: Union{T,Array{T},NDArray}, idx::UnitRange{Int})
+  copy!(slice(arr, idx), val)
 end
 
 #------------------------------------------------------------

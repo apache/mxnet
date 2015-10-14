@@ -68,6 +68,17 @@ typealias SlicedNDArray Vector{Tuple{UnitRange{Int},NDArray}}
     some the data we provie is not needed.
 
     The `SlicedNDArray` is used in data parallelization to run different sub-batch on different devices.
+
+    The following function should also be implemented to handle the case when the mini-batch size does not
+    divide the size of the whole dataset. So in the last mini-batch, the actual data copied might be fewer
+    than the mini-batch size. This is usually not an issue during the training as the remaining space may
+    contain the data and label copied during the previous mini-batch are still valid data. However, during
+    testing, especially when doing feature extraction, we need to be precise about the number of samples
+    processed.
+
+      get_pad(batch :: AbstractDataBatch)
+
+    Return the number of *dummy samples* in this mini-batch.
 """
 abstract AbstractDataBatch
 
@@ -109,13 +120,16 @@ function MXDataProvider(handle     :: MX_DataIterHandle;
   # init iterator, load the first batch and get shapes
   _reset_data_iter(handle)
   @assert(_iter_next(handle), "Failed to load the first batch in MXDataProvider")
-  provides = [(data_name, size(_get_data(handle)))]
+  provides = Tuple{Base.Symbol, Tuple}[(data_name, size(_get_data(handle)))]
   if !isa(label_name, Void)
     push!(provides, (label_name::Base.Symbol, size(_get_label(handle))))
   end
+  _reset_data_iter(handle)
 
   MXDataProvider(handle, provides)
 end
+
+provides(provider::MXDataProvider) = provider.provides
 
 type MXDataProviderState <: AbstractDataProviderState
   has_next :: Bool
@@ -136,7 +150,7 @@ function Base.done(provider :: MXDataProvider, state :: MXDataProviderState)
   return !state.has_next
 end
 function Base.next(provider :: MXDataProvider, state :: MXDataProviderState)
-  return (MXDataBatch(provider.handle), state)
+  return (MXDataBatch(provider), state)
 end
 
 function load_data!(batch :: MXDataBatch, targets :: Dict{Base.Symbol, SlicedNDArray})
@@ -157,6 +171,12 @@ function load_data!(batch :: MXDataBatch, targets :: Dict{Base.Symbol, SlicedNDA
   end
 end
 
+function get_pad(batch :: MXDataBatch)
+  ref_pad = Ref{Cint}(0)
+  @mxcall(:MXDataIterGetPadNum, (MX_handle, Ref{Cint}), batch.provider.handle, ref_pad)
+  return Int(ref_pad[])
+end
+
 
 function _define_data_iter_creator(hdr :: MX_handle)
   ref_name      = Ref{char_p}(0)
@@ -171,12 +191,11 @@ function _define_data_iter_creator(hdr :: MX_handle)
           hdr, ref_name, ref_desc, ref_narg, ref_arg_names, ref_arg_types, ref_arg_descs)
 
   iter_name = symbol(bytestring(ref_name[]))
-  println("defining iterator $iter_name")
   defun = quote
     function $iter_name(; kwargs...)
       arg_keys = AbstractString[string(k) for (k,v) in kwargs]
       arg_vals = AbstractString[string(v) for (k,v) in kwargs]
-      ref_hdr  = Ref{MX_handle}
+      ref_hdr  = Ref{MX_handle}(0)
 
       @mxcall(:MXDataIterCreateIter, (MX_handle, MX_uint, char_pp, char_pp, Ref{MX_handle}),
               $hdr, length(arg_keys), arg_keys, arg_vals, ref_hdr)
@@ -186,6 +205,12 @@ function _define_data_iter_creator(hdr :: MX_handle)
   end
   eval(defun)
   # TODO: add docstring
+
+  # add an alias XXXProvider => XXXIter
+  if endswith(string(iter_name), "Iter")
+    alias_name = symbol(string(iter_name)[1:end-4] * "Provider")
+    eval(:($alias_name = $iter_name))
+  end
 end
 
 function _import_io_iterators()

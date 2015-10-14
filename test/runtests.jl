@@ -1,12 +1,16 @@
 using MXNet
 using Base.Test
 
-include("unittest/common.jl")
+# run test in the whole directory, latest modified files
+# are run first, this makes waiting time shorter when writing
+# or modifying unit-tests
+function test_dir(dir)
+  jl_files = sort(filter(x -> ismatch(r".*\.jl$", x), readdir(dir)), by = fn -> stat(joinpath(dir,fn)).mtime)
+  map(reverse(jl_files)) do file
+    include("$dir/$file")
+  end
+end
 
-include("unittest/ndarray.jl")
-include("unittest/random.jl")
-
-include("unittest/name.jl")
-include("unittest/symbol.jl")
-include("unittest/bind.jl")
+include("common.jl")
+test_dir("unittest")
 
