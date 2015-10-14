@@ -35,3 +35,15 @@ test_that("element-wise calculation for matrix", {
   expect_equal(x-x, as.array(mat-mat))
   expect_equal(as.array(1-mat), as.array(1-mat))
 })
+
+test_that("ndarray ones, zeros, save and load", {
+  expect_equal(rep(0, 10), as.array(mx.nd.zeros(10)))
+  expect_equal(matrix(0, 10, 5), as.array(mx.nd.zeros(c(10, 5))))
+  expect_equal(rep(1, 10), as.array(mx.nd.ones(10)))
+  expect_equal(matrix(1, 10, 5), as.array(mx.nd.ones(c(10, 5))))
+  mat = mx.nd.array(1:20)
+  mx.nd.save(mat, 'temp.mat')
+  mat2 = mx.nd.load('temp.mat')
+  expect_true(is.mx.nd.array(mat2[[1]]))
+  expect_equal(as.array(mat), as.array(mat2[[1]]))
+})

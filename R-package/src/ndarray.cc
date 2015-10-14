@@ -19,7 +19,7 @@ inline void ConvertLayout(InputIter it,
   for (size_t i = 0; i < size; ++i, ++it) {
     size_t offset = 0;
     size_t counter = i;
-    for (int k = dim - 1; k >= 0; --k) {
+    for (int k = 0; k < dim; ++k) {
       size_t idx = counter % ishape[k];
       offset += idx * ostride[k];
       counter /= ishape[k];
@@ -38,7 +38,7 @@ inline void ConvertLayout(const mx_float *in_data,
   for (size_t i = 0; i < size; ++i, ++it) {
     size_t offset = 0;
     size_t counter = i;
-    for (int k = dim - 1; k >= 0; --k) {
+    for (int k = 0; k < dim; ++k) {
       size_t idx = counter % ishape[k];
       offset += idx * ostride[k];
       counter /= ishape[k];
@@ -53,7 +53,7 @@ inline std::vector<size_t> GetReverseStride(const std::vector<mx_uint>& ishape) 
   std::vector<size_t> stride(ishape.size());
   size_t prod = 1;
   int ndim = static_cast<int>(ishape.size());
-  for (int k = 0; k < ndim; ++k) {
+  for (int k = ndim - 1; k >= 0 ; --k) {
     stride[k] = prod;
     prod *= ishape[k];
   }
@@ -216,6 +216,12 @@ NDArray::RObjectType NDArray::Clone() const {
   RObjectType ret = NDArray::RObject(handle);
   CopyFromTo(*this, NDArray::XPtr(ret));
   return ret;
+}
+
+NDArray::RObjectType NDArray::Slice(mx_uint begin, mx_uint end) const {
+  NDArrayHandle out;
+  MX_CALL(MXNDArraySlice(handle_, begin, end, &out));
+  return NDArray::RObject(out);
 }
 
 void NDArray::CopyFromTo(const NDArray& from, NDArray* to) {
@@ -397,7 +403,14 @@ void NDArray::InitRcppModule() {
   class_<NDArray>("MXNDArray")
       .finalizer(&NDArray::Finalizer)
       .method("as.array", &NDArray::AsNumericVector)
-      .const_method("dim", &NDArray::shape);
+      .const_method("dim", &NDArray::shape,
+                    "The dimension(shape) of the NDArray")
+      .const_method("length", &NDArray::size,
+                    "The length(size) of the NDArray")
+      .property("ctx", &NDArray::ctx,
+                "The context of the NDArray")
+      .const_method("slice", &NDArray::Slice,
+                    "Get a slice on the first dimension of NDArray");
   function("mx.nd.internal.load", &NDArray::Load);
   function("mx.nd.internal.save", &NDArray::Save);
   function("mx.nd.internal.empty.array", &NDArray::Empty);
