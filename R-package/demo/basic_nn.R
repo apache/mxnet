@@ -39,9 +39,9 @@ texec <- mx.simple.bind(symbol, ctx=ctx, data=input.shape, grad.req=TRUE)
 shapes <- lapply(texec$ref.arg.arrays, dim)
 names(shapes) <- names(texec$arg.arrays)
 arg.arrays <- mx.init.create(init, shapes, ctx)
-texec <- mx.exec.update.arg.arrays(texec, arg.arrays, match.name=TRUE)
-updater <- mx.opt.get.updater(opt, texec$ref.arg.arrays)
+mx.exec.update.arg.arrays(texec, arg.arrays, match.name=TRUE)
 
+updater <- mx.opt.get.updater(opt, texec$ref.arg.arrays)
 nround <- 10
 tic <- proc.time()
 
@@ -53,15 +53,15 @@ for (iteration in 1 : nround) {
     label <- batch$label
     names(batch) <- c("data", "sm_label")
     # copy data arguments to executor
-    texec <- mx.exec.update.arg.arrays(texec, batch, match.name=TRUE)
+    mx.exec.update.arg.arrays(texec, batch, match.name=TRUE)
     # forward pass
-    texec <- mx.exec.forward(texec, is.train=TRUE)
+    mx.exec.forward(texec, is.train=TRUE)
     # copy prediction out
     out.pred <- mx.nd.copyto(texec$outputs[[1]], mx.cpu())
     # backward pass
-    texec <- mx.exec.backward(texec)
+    mx.exec.backward(texec)
     arg.arrays <- updater(texec$arg.arrays, texec$ref.grad.arrays)
-    texec <- mx.exec.update.arg.arrays(texec, arg.arrays, skip.null=TRUE)
+    mx.exec.update.arg.arrays(texec, arg.arrays, skip.null=TRUE)
     nbatch <- nbatch + 1
     train.acc <- train.acc + accuracy(label, out.pred)
     if (nbatch %% 100 == 0) {

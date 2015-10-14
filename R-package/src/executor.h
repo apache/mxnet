@@ -28,6 +28,12 @@ class Executor : public MXNetMovable<Executor> {
     return *arg_arrays_;
   }
   /*!
+   * \return Get reference of the aux arrays of executor.
+   */
+  const Rcpp::List& aux_arrays() const {
+    return *aux_arrays_;
+  }
+  /*!
    * \return Get reference of gradient arrays of executor.
    */
   const Rcpp::List& grad_arrays() const {
@@ -65,45 +71,38 @@ class Executor : public MXNetMovable<Executor> {
   }
   /*!
    * \brief Update the arg_arrays of executor, based on name-matching.
-   * \param exec The executor R object, this object will be MOVED.
    * \param array The array to update
    * \param match_name whether to use name to match the input, instead of index.
    * \param skip_null Whether null is allowed, when there is NULL in the array, simply ignore.
    * \return a result executor, moved from exec.
    */
-  static RObjectType UpdateArgArray(const RObjectType& exec,
-                                    const Rcpp::List& array,
-                                    bool match_name,
-                                    bool allow_null);
+  void UpdateArgArray(const Rcpp::List& array,
+                      bool match_name,
+                      bool allow_null);
   /*!
    * \brief Update the aux_arrays of executor, based on name-matching.
-   * \param exec The executor R object, this object will be MOVED.
    * \param array The array to update
    * \param match_name whether to use name to match the input, instead of index.
    * \param skip_null Whether null is allowed, when there is NULL in the array, simply ignore.
    * \return a result executor, moved from exec.
    */
-  static RObjectType UpdateAuxArray(const RObjectType& exec,
-                                    const Rcpp::List& array,
-                                    bool match_name,
-                                    bool allow_null);
+  void UpdateAuxArray(const Rcpp::List& array,
+                      bool match_name,
+                      bool allow_null);
   /*!
    * \brief Peform a forward operation on exec, this will set the out_arrays.
-   * \param exec The executor R object, this object will be MOVED.
    * \param is_train whether it is training phase.
    * \param kwargs additional parameters.
    * \return a result executor, moved from exec.
    */
-  static RObjectType Forward(const RObjectType& exec,
-                             bool is_train,
-                             const Rcpp::List& kwargs);
+  void Forward(bool is_train,
+               const Rcpp::List& kwargs);
   /*!
    * \brief Peform a backward operation on exec, this will set the grad_arrays.
-   * \param exec The executor R object, this object will be MOVED.
    * \param output_grads the gradient on outputs, to be propagated back.
    * \return a result executor, moved from exec.
    */
-  static RObjectType Backward(const RObjectType& exec, const Rcpp::List& output_grads);
+  void Backward(const Rcpp::List& output_grads);
   /*!
    * \brief Create a new R Executor by bind on symbol
    * \param symbol The R symbol to bind.
