@@ -126,6 +126,7 @@ end
 import Base: setindex!
 "Assign all elements of an NDArray to a scalar"
 function setindex!(arr :: NDArray, val :: Real, ::Colon)
+  @assert(arr.writable)
   _set_value(val, arr)
   return arr
 end
@@ -145,6 +146,7 @@ end
 import Base: copy!, copy
 "Copy data between NDArrays"
 function copy!(dst :: NDArray, src :: NDArray)
+  @assert(dst.writable)
   if dst.handle == src.handle
     warn("Copying an NDArray to itself")
     return
@@ -164,6 +166,7 @@ end
 
 "Copy data from Julia Array to NDArray"
 function copy!{T<:Real}(dst :: NDArray, src :: Array{T})
+  @assert dst.writable
   @assert size(dst) == size(src)
   src = convert(Array{MX_float}, src) # this might involve copying
   @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{MX_float}, Csize_t),
@@ -225,6 +228,7 @@ macro inplace(stmt)
 end
 
 function add_to!(dst :: NDArray, args :: Union{Real, NDArray}...)
+  @assert dst.writable
   for arg in args
     if isa(arg, Real)
       _plus_scalar(dst, arg, dst)
@@ -246,6 +250,7 @@ function .+(arg0 :: NDArray, args :: Union{Real, NDArray}...)
 end
 
 function sub_from!(dst :: NDArray, arg :: Union{Real, NDArray})
+  @assert dst.writable
   if isa(arg, Real)
     _minus_scalar(dst, arg, dst)
   else
@@ -265,6 +270,7 @@ function -(arg0 :: NDArray)
 end
 
 function mul_to!(dst :: NDArray, arg :: Union{Real, NDArray})
+  @assert dst.writable
   if isa(arg, Real)
     _mul_scalar(dst, arg, dst)
   else
@@ -279,6 +285,7 @@ function .*(arg0 :: NDArray, arg :: Union{Real, NDArray})
 end
 
 function div_from!(dst :: NDArray, arg :: Union{Real, NDArray})
+  @assert dst.writable
   if isa(arg, Real)
     _div_scalar(dst, arg, dst)
   else
