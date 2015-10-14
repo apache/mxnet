@@ -86,7 +86,6 @@ class SGD(Optimizer):
         # TODO(bing) implement wd_bias, wd_gamma, wd_beta
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-
         if self.lr_scheduler != None:
             lr = self.lr_scheduler(self.iteration)
         else:

@@ -76,3 +76,83 @@ def accuracy(model, data):
     logging.info('Accuracy = %f', acc)
 
     return acc
+
+def mlp():
+    """return symbol for mlp"""
+    data = mx.symbol.Variable('data')
+    fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
+    act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
+    fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64)
+    act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
+    fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=10)
+    softmax = mx.symbol.Softmax(fc3, name = 'sm')
+    return softmax
+
+def lenet():
+    """return the symbol for lenect"""
+    data = mx.symbol.Variable('data')
+    # first conv
+    conv1 = mx.symbol.Convolution(data=data, kernel=(5,5), num_filter=20)
+    tanh1 = mx.symbol.Activation(data=conv1, act_type="tanh")
+    pool1 = mx.symbol.Pooling(data=tanh1, pool_type="max",
+                              kernel=(2,2), stride=(2,2))
+    # second conv
+    conv2 = mx.symbol.Convolution(data=pool1, kernel=(5,5), num_filter=50)
+    tanh2 = mx.symbol.Activation(data=conv2, act_type="tanh")
+    pool2 = mx.symbol.Pooling(data=tanh2, pool_type="max",
+                              kernel=(2,2), stride=(2,2))
+    # first fullc
+    flatten = mx.symbol.Flatten(data=pool2)
+    fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=500)
+    tanh3 = mx.symbol.Activation(data=fc1, act_type="tanh")
+    # second fullc
+    fc2 = mx.symbol.FullyConnected(data=tanh3, num_hidden=10)
+    # loss
+    lenet = mx.symbol.Softmax(data=fc2)
+    return lenet
+
+# Basic Conv + BN + ReLU factory
+def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0), act_type="relu"):
+    conv = mx.symbol.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad)
+    bn = mx.symbol.BatchNorm(data=conv)
+    act = mx.symbol.Activation(data = bn, act_type=act_type)
+    return act
+
+# A Simple Downsampling Factory
+def DownsampleFactory(data, ch_3x3):
+    # conv 3x3
+    conv = ConvFactory(data=data, kernel=(3, 3), stride=(2, 2), num_filter=ch_3x3, pad=(1, 1))
+    # pool
+    pool = mx.symbol.Pooling(data=data, kernel=(3, 3), stride=(2, 2), pool_type='max')
+    # concat
+    concat = mx.symbol.Concat(*[conv, pool])
+    return concat
+
+# A Simple module
+def SimpleFactory(data, ch_1x1, ch_3x3):
+    # 1x1
+    conv1x1 = ConvFactory(data=data, kernel=(1, 1), pad=(0, 0), num_filter=ch_1x1)
+    # 3x3
+    conv3x3 = ConvFactory(data=data, kernel=(3, 3), pad=(1, 1), num_filter=ch_3x3)
+    #concat
+    concat = mx.symbol.Concat(*[conv1x1, conv3x3])
+    return concat
+
+def inception():
+    data = mx.symbol.Variable(name="data")
+    conv1 = ConvFactory(data=data, kernel=(3,3), pad=(1,1), num_filter=96, act_type="relu")
+    in3a = SimpleFactory(conv1, 32, 32)
+    in3b = SimpleFactory(in3a, 32, 48)
+    in3c = DownsampleFactory(in3b, 80)
+    in4a = SimpleFactory(in3c, 112, 48)
+    in4b = SimpleFactory(in4a, 96, 64)
+    in4c = SimpleFactory(in4b, 80, 80)
+    in4d = SimpleFactory(in4c, 48, 96)
+    in4e = DownsampleFactory(in4d, 96)
+    in5a = SimpleFactory(in4e, 176, 160)
+    in5b = SimpleFactory(in5a, 176, 160)
+    pool = mx.symbol.Pooling(data=in5b, pool_type="avg", kernel=(7,7), name="global_pool")
+    flatten = mx.symbol.Flatten(data=pool, name="flatten1")
+    fc = mx.symbol.FullyConnected(data=flatten, num_hidden=10, name="fc1")
+    softmax = mx.symbol.Softmax(data=fc, name="loss")
+    return softmax

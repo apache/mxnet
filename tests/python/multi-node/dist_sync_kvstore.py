@@ -47,8 +47,6 @@ def test_sync_push_pull():
     kv.pull(99, out = val2)
     check_diff_to_scalar(val2, num)
 
-    print 'done'
-
 # TODO data slice,
 if __name__ == "__main__":
     test_sync_push_pull()
