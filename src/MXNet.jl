@@ -18,6 +18,7 @@ include("symbol.jl")
 include("executor.jl")
 
 include("io.jl")
+include("kvstore.jl")
 
 include("util.jl")
 

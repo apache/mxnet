@@ -106,6 +106,16 @@ function zeros(shape :: Int...)
   zeros(shape)
 end
 
+"Create NDArray and initialize with 1"
+function ones{N}(shape :: NTuple{N, Int}, ctx :: Context = DEFAULT_CONTEXT)
+  arr = empty(shape, ctx)
+  arr[:] = 1
+  return arr
+end
+function ones(shape :: Int...)
+  ones(shape)
+end
+
 import Base: slice
 """`slice` create a view into a sub-slice of an `NDArray`. Note only slicing at the slowest
     changing dimension is supported. In Julia's column-major perspective, this is the last
