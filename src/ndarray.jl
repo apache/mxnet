@@ -106,11 +106,17 @@ function zeros(shape :: Int...)
   zeros(shape)
 end
 
-import Base: sub
-function sub(arr :: NDArray, ::Colon)
+import Base: slice
+"""`slice` create a view into a sub-slice of an `NDArray`. Note only slicing at the slowest
+    changing dimension is supported. In Julia's column-major perspective, this is the last
+    dimension. For example, given an `NDArray` of shape (2,3,4), `sub(array, 2:3)` will create
+    a `NDArray` of shape (2,3,2), sharing the data with the original array. This operation is
+    used in data parallelization to split mini-batch into sub-batches for different devices.
+"""
+function slice(arr :: NDArray, ::Colon)
   arr
 end
-function sub(arr :: NDArray, slice::UnitRange{Int})
+function slice(arr :: NDArray, slice::UnitRange{Int})
   dim1 = size(arr)[end]
   @assert(1 <= slice.start <= slice.stop <= dim1)
 
