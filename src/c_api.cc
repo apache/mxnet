@@ -996,14 +996,16 @@ int MXKVStorePull(KVStoreHandle handle,
   API_END();
 }
 
-int MXKVStoreSetUpdater(KVStoreHandle handle, MXKVStoreUpdater updater) {
+int MXKVStoreSetUpdater(KVStoreHandle handle,
+                        MXKVStoreUpdater updater,
+                        void* updater_handle) {
   API_BEGIN();
-  auto updt = [updater](int key, const NDArray& recv, NDArray* local) {
+  auto updt = [updater, updater_handle](int key, const NDArray& recv, NDArray* local) {
     NDArray* recv_copy = new NDArray();
     *recv_copy = recv;
     NDArray* local_copy = new NDArray();
     *local_copy = *local;
-    updater(key, recv_copy, local_copy);
+    updater(key, recv_copy, local_copy, updater_handle);
   };
   static_cast<KVStore*>(handle)->set_updater(updt);
   API_END();

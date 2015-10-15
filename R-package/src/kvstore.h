@@ -10,11 +10,11 @@
 #include <mxnet/c_api.h>
 #include <string>
 #include <vector>
+#include <map>
 #include "./base.h"
 
 namespace mxnet {
 namespace R {
-
 /*!
  * \brief MXNet's Parameter store interface.
  */
@@ -59,6 +59,8 @@ class KVStore {
   bool update_on_kvstore() const;
   /*! \brief Setup optimizer */
   void SetOptimizer(const Rcpp::List& optimizer);
+  // update function
+  void Update(int index, const NDArray& grad, NDArray *weight);
   /*!
    * \brief create a KVStore
    * \return the created KVStore
@@ -69,16 +71,22 @@ class KVStore {
 
  private:
   explicit KVStore(KVStoreHandle handle)
-      : handle_(handle) {}
+      : handle_(handle), optimizer_set_(false) {}
   static void Finalizer(KVStore *kv) {
     MX_CALL(MXKVStoreFree(kv->handle_));
   }
+  // the internal callback to kvstore.
+  NDArray CreateState(int index, const NDArray& weight) const;
+  /*! \brief internal KVStore handle */
+  KVStoreHandle handle_;
+  /*! \brief Whether optimizer is setted*/
+  bool optimizer_set_;
+  /*! \brief The internal state */
+  std::map<int, NDArray> states_;
   /*! \brief Function to create state */
   Rcpp::RObject fcreate_state_;
   /*! \brief Function to perform update */
   Rcpp::RObject fupdate_;
-  /*! \brief internal KVStore handle */
-  KVStoreHandle handle_;
 };
 
 }  // namespace R

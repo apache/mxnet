@@ -93,6 +93,11 @@ bool KVStore::update_on_kvstore() const {
   return type != "local_allreduce_cpu" && type != "local_allreduce_device";
 }
 
+extern "C" void KVUpdaterCallback(int key, NDArrayHandle recv, NDArrayHandle local, void* handle) {
+  NDArray weight(local, true), grad(recv, true);
+  static_cast<KVStore*>(handle)->Update(key, grad, &weight);
+}
+
 void KVStore::SetOptimizer(const Rcpp::List& optimizer) {
   std::vector<std::string> names = optimizer.names();
   RCHECK(names.size() == 2 &&
@@ -101,7 +106,42 @@ void KVStore::SetOptimizer(const Rcpp::List& optimizer) {
       << "Invalid optimizer";
   fcreate_state_ = optimizer[0];
   fupdate_ = optimizer[1];
+  optimizer_set_ = true;
+  MX_CALL(MXKVStoreSetUpdater(handle_,
+                              KVUpdaterCallback,
+                              this));
 }
+
+NDArray KVStore::CreateState(int index, const NDArray& weight) const {
+  RCHECK(optimizer_set_)
+      << "Need to call set.optimizer for KVStore " << type();
+  // TODO(KK) review this
+  // Use R Internal API here
+  Rcpp::Shield<SEXP> call(Rf_lang3(fcreate_state_, Rcpp::wrap(index), weight.RObject()));
+  return NDArray(Rcpp_eval(call));
+}
+
+void KVStore::Update(int index, const NDArray& grad, NDArray *weight) {
+  RCHECK(optimizer_set_)
+      << "Need to call set.optimizer for KVStore " << type();
+  std::map<int, NDArray>::iterator it = states_.find(index);
+  if (it == states_.end()) {
+    NDArray nd = this->CreateState(index, *weight);
+    states_.insert(std::make_pair(index, nd));
+    it = states_.find(index);
+  }
+  NDArray& state = it->second;
+  // TODO(KK) review this
+  // Use R Internal API here
+  Rcpp::Shield<SEXP> call(Rf_lang5(fupdate_, Rcpp::wrap(index),
+                                   weight->RObject(), grad.RObject(),
+                                   state.RObject()));
+  Rcpp::List rlist(Rcpp_eval(call));
+  // update the state, and eight
+  state = rlist["state"];
+  NDArray::CopyFromTo(NDArray::FromRObject(rlist["weight"]), weight);
+}
+
 
 Rcpp::RObject KVStore::Create(const char *type) {
   KVStoreHandle handle;

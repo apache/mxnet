@@ -38,7 +38,7 @@ def _ctype_key_value(keys, vals):
 
 def _updater_wrapper(updater):
     """ a wrapper for the user-defined handle """
-    def updater_handle(key, lhs_handle, rhs_handle):
+    def updater_handle(key, lhs_handle, rhs_handle, _):
         """ ctypes function """
         lhs = NDArray(NDArrayHandle(lhs_handle))
         rhs = NDArray(NDArrayHandle(rhs_handle))
@@ -323,9 +323,9 @@ class KVStore(object):
         [ 6.  6.  6.]]
         """
         _updater_proto = ctypes.CFUNCTYPE(
-            None, ctypes.c_int, NDArrayHandle, NDArrayHandle)
+            None, ctypes.c_int, NDArrayHandle, NDArrayHandle, ctypes.c_void_p)
         self._updater_func = _updater_proto(_updater_wrapper(updater))
-        check_call(_LIB.MXKVStoreSetUpdater(self.handle, self._updater_func))
+        check_call(_LIB.MXKVStoreSetUpdater(self.handle, self._updater_func, None))
 
 
     def _barrier(self):

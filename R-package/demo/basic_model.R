@@ -21,7 +21,7 @@ dtrain = mx.varg.io.MNISTIter(list(
   seed=10))
 
 mx.set.seed(0)
-devices = lapply(1:1, function(i) {
+devices = lapply(1:2, function(i) {
   mx.cpu(i)
 })
 # create the model

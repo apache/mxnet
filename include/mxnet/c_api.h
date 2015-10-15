@@ -772,21 +772,22 @@ MXNET_DLL int MXKVStorePull(KVStoreHandle handle,
  * \param the key
  * \param recv the pushed value on this key
  * \param local the value stored on local on this key
+ * \param handle The additional handle to the updater
  */
 typedef void (MXKVStoreUpdater)(int key,
                                 NDArrayHandle recv,
-                                NDArrayHandle local);
-
+                                NDArrayHandle local,
+                                void *handle);
 /*!
  * \brief register an push updater
  * \param handle handle to the KVStore
  * \param updater udpater function
+ * \param updater_handle The additional handle used to invoke the updater
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreSetUpdater(KVStoreHandle handle,
-                                  MXKVStoreUpdater updater);
-
-
+                                  MXKVStoreUpdater updater,
+                                  void *updater_handle);
 /*!
  * \brief get the type of the kvstore
  * \param handle handle to the KVStore

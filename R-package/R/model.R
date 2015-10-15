@@ -79,7 +79,7 @@ mx.model.create.kvstore <- function(kvstore, arg.params, ndevice) {
   if (ndevice == 1) return (NULL)
   if (kvstore == "local") {
     max.size <- max(as.integer(lapply(arg.params, length)))
-    if (max.size > 1024 * 1024 * 16) {
+    if (max.size < 1024 * 1024 * 16) {
       kvstore <- 'local_update_cpu'
     } else {
       kvstore <- 'local_allreduce_cpu'

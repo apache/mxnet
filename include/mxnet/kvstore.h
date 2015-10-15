@@ -128,7 +128,6 @@ class KVStore {
    * \brief the prototype of user-defined updater
    */
   typedef std::function<void(int, const NDArray&, NDArray*)> Updater;
-
   /*!
    * \brief set an updater
    *
