@@ -7,6 +7,7 @@
 }
 
 .onUnload <- function(libpath) {
+  print("Start unload")
   mx.internal.notify.shutdown()
   unloadModule("mxnet")
   library.dynam.unload("mxnet", libpath)

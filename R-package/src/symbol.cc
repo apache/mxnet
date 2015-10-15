@@ -135,8 +135,6 @@ SEXP Symbol::InferShape(const Rcpp::List& kwargs) const {
   for (size_t i = 0; i < kwargs.size(); ++i) {
     RCHECK(keys[i].length() != 0)
       << "Need to pass parameters in key=value style.\n";
-    // TODO(KK) check if kwargs is dimension.
-    // Rcpp::is<Dimension> do not pass compile
     std::vector<mx_uint> dim = Dim2Vec(kwargs[i]);
     arg_shape_data.insert(arg_shape_data.end(), dim.begin(), dim.end());
     arg_ind_ptr.push_back(static_cast<mx_uint>(arg_shape_data.size()));
@@ -270,7 +268,7 @@ SEXP SymbolFunction::operator() (SEXP* args) {
       name = Rcpp::as<std::string>(kwargs[i]);
       continue;
     }
-    if (Rcpp::is<Symbol>(kwargs[i])) {
+    if (!isSimple(kwargs[i]) && Rcpp::is<Symbol>(kwargs[i])) {
       sym_keys.push_back(keys[i]);
       sym_vals.push_back(kwargs[i]);
     } else {

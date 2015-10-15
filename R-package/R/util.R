@@ -5,9 +5,14 @@ mx.util.str.endswith <- function(name, suffix) {
   if (slen > nlen) return (FALSE)
   nsuf <- substr(name, nlen - slen + 1, nlen)
   return (nsuf == suffix)
-  # The follow code was not working when suffix is longer than name
-  #ptrn = paste0(suffix, "\\b")
-  #return(grepl(ptrn, name))
+}
+
+mx.util.str.startswith <- function(name, prefix) {
+  slen <- nchar(prefix)
+  nlen <- nchar(name)
+  if (slen > nlen) return (FALSE)
+  npre <- substr(name, 1, slen)
+  return (npre == prefix)
 }
 
 # filter out null, keep the names
