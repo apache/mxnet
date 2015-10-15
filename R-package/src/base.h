@@ -279,21 +279,37 @@ inline std::string toString(SEXP val) {
 }
 
 /*!
+ * \brief Check whether the value is simple parameter
+ * \param val The value to check.
+ */
+inline bool isSimple(SEXP val) {
+  switch (TYPEOF(val)) {
+    case STRSXP:
+    case INTSXP:
+    case REALSXP:
+    case LGLSXP: return true;
+    default: return false;
+  }
+}
+
+/*!
  * \brief Create a API compatile string presentation of value
  * \param key The key name of the parameter
  * \param val The value of the parameter
  * \return A python string representation of val
  */
-inline std::string toPyString(const std::string &key, const SEXP val) {
+inline std::string toPyString(const std::string &key, SEXP val) {
   std::ostringstream os;
-  if (Rcpp::is<Rcpp::IntegerVector>(val)) {
+  int len = Rf_length(val);
+  if (len != 1) {
+    RCHECK(TYPEOF(val) == INTSXP || TYPEOF(val) == REALSXP)
+        << "Only accept integer vectors or simple types";
     Rcpp::IntegerVector vec(val);
-    std::ostringstream os;
     os << "(";
     for (size_t i = 0; i < vec.size(); ++i) {
       int value = vec[i];
-      os << value;
       if (i != 0) os << ", ";
+      os << value;
     }
     if (vec.size() == 1) os << ",";
     os << ")";

@@ -34,6 +34,7 @@ mx.model.check.arguments <- function(symbol) {
   return(c(data, label))
 }
 
+
 # Extract model from executors
 mx.model.extract.model <- function(symbol, train.execs) {
   reduce.sum <- function(x) Reduce("+", x)
@@ -66,8 +67,7 @@ mx.model.extract.model <- function(symbol, train.execs) {
   }
   # Get the model
   model <- list(symbol=symbol, arg.params=arg.params, aux.params=aux.params)
-  class(model) <- "mx.model"
-  return(model)
+  return(structure(model, class="MXFeedForwardModel"))
 }
 
 # decide what type of kvstore to use
@@ -111,11 +111,13 @@ mx.model.train <- function(symbol, ctx, input.shape,
     mx.exec.update.aux.arrays(texec, aux.params, match.name=TRUE)
   }
   # KVStore related stuffs
-  params.index <- as.integer(mx.util.filter.null(lapply(1:length(train.execs[[1]]$ref.grad.arrays), function(k) {
-    if (!is.null(train.execs[[1]]$ref.grad.arrays[[k]])) k else NULL
-  })))
+  params.index <-
+    as.integer(mx.util.filter.null(
+      lapply(1:length(train.execs[[1]]$ref.grad.arrays), function(k) {
+        if (!is.null(train.execs[[1]]$ref.grad.arrays[[k]])) k else NULL
+      })))
   update.on.kvstore <- FALSE
-  if (!is.null(kvstore) && kvstore$update.on.kvstore ) {
+  if (!is.null(kvstore) && kvstore$update.on.kvstore) {
     update.on.kvstore <- TRUE
     kvstore$set.optimizer(optimizer)
   } else {
@@ -195,11 +197,43 @@ mx.model.train <- function(symbol, ctx, input.shape,
     # reset training data
     train.data$reset()
     result <- metric$get(train.metric)
-    cat(paste0("Train-", result$name, "=", result$value, "\n"))
+    cat(paste0("[", iteration, "] Train-", result$name, "=", result$value, "\n"))
+
+    if (!is.null(eval.data)) {
+      eval.metric <- metric$init()
+      while (eval.data$iter.next()) {
+        dlist <- eval.data$value()
+        slices <- lapply(1:ndevice, function(i) {
+          s <- sliceinfo[[i]]
+          ret <- list(data=mx.nd.slice(dlist$data, s$begin, s$end),
+                    label=mx.nd.slice(dlist$label, s$begin, s$end))
+          return(ret)
+        })
+        for (i in 1:ndevice) {
+          s <- slices[[i]]
+          names(s) <- input.names
+          mx.exec.update.arg.arrays(train.execs[[i]], s, match.name=TRUE)
+        }
+        for (texec in train.execs) {
+          mx.exec.forward(texec, is.train=FALSE)
+        }
+        out.preds <- lapply(train.execs, function(texec) {
+          mx.nd.copyto(texec$ref.outputs[[1]], mx.cpu())
+        })
+        for (i in 1 : ndevice) {
+          eval.metric <- metric$update(slices[[i]]$label, out.preds[[i]], eval.metric)
+        }
+      }
+      eval.data$reset()
+      result <- metric$get(eval.metric)
+      cat(paste0("[", iteration, "] Validation-", result$name, "=", result$value, "\n"))
+    } else {
+      eval.metric <- NULL
+    }
     # get the model out
     model <- mx.model.extract.model(symbol, train.execs)
     if (!is.null(iter.end.callback)) {
-      iter.end.callback(iteration, environment())
+      iter.end.callback(iteration, 0, environment())
     }
   }
   return(model)
@@ -216,22 +250,26 @@ mx.model.init.params <- function(symbol, input.shape, initializer, ctx) {
 }
 
 # Initialize the data iter
-mx.model.init.iter <- function(X, y, is.train) {
-  if (!is.MXDataIter(X)) {
-    stop("Only accept MXDataIter for now")
+mx.model.init.iter <- function(X, y, batch.size, is.train) {
+  if (is.MXDataIter(X)) return(X)
+  if (is.null(y)) {
+    if (is.train) stop("Need to provide parameter y for training with R arrays.")
+    shape <- dim(X)
+    y <- c(1:shape[[1]]) * 0
   }
-  return(X)
+  return(mx.io.ArrayIter(X, y, batch.size=batch.size, shuffle=is.train))
 }
 
 mx.model.FeedForward.create <-
 function(symbol, X, y=NULL, ctx=NULL,
          num.round=10, optimizer="sgd",
          initializer=mx.init.uniform(0.01),
-         eval.metric=mx.metric.accuracy,
+         eval.data=NULL, eval.metric=mx.metric.accuracy,
          iter.end.callback=NULL, epoch.end.callback=NULL,
+         array.batch.size=128,
          kvstore="local",
          ...) {
-  X <- mx.model.init.iter(X, y)
+  X <- mx.model.init.iter(X, y, batch.size=array.batch.size, is.train=TRUE)
   if (!X$iter.next()) {
     x$reset()
     if (!X$iter.next()) stop("Empty input")
@@ -252,7 +290,7 @@ function(symbol, X, y=NULL, ctx=NULL,
   model <- mx.model.train(symbol, ctx, input.shape,
                           params$arg.params, params$aux.params,
                           1, num.round, optimizer=optimizer,
-                          train.data=X, eval.data=NULL,
+                          train.data=X, eval.data=eval.data,
                           metric=eval.metric,
                           iter.end.callback=iter.end.callback,
                           epoch.end.callback=epoch.end.callback,
@@ -260,3 +298,88 @@ function(symbol, X, y=NULL, ctx=NULL,
   return (model)
 }
 
+#' Predict the outputs given a model and dataset.
+#'
+#' @param model The MXNet Model.
+#' @param X The dataset to predict.
+#' @param ctx mx.cpu() or mx.gpu(i) The device used to generate the prediction.
+#' @param array.batch.size The batch size used in batching. Only used when X is R's array.
+#' @export
+predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128) {
+  if (is.null(ctx)) ctx <- mx.ctx.default()
+  X <- mx.model.init.iter(X, NULL, batch.size=array.batch.size, is.train=FALSE)
+  X$reset()
+  if (!X$iter.next()) stop("Cannot predict on empty iterator")
+  dlist = X$value()
+  pexec <- mx.simple.bind(model$symbol, ctx=ctx, data=dim(dlist$data), grad.req=FALSE)
+  mx.exec.update.arg.arrays(pexec, model$arg.params, match.name=TRUE)
+  mx.exec.update.aux.arrays(pexec, model$aux.params, match.name=TRUE)
+  packer <- mx.nd.arraypacker.create()
+  X$reset()
+  while (X$iter.next()) {
+    dlist = X$value()
+    mx.exec.update.arg.arrays(pexec, list(data=dlist$data), match.name=TRUE)
+    mx.exec.forward(pexec, is.train=FALSE)
+    out.pred <- mx.nd.copyto(pexec$ref.outputs[[1]], mx.cpu())
+    padded <- X$num.pad()
+    oshape <- dim(out.pred)
+    packer$push(mx.nd.slice(out.pred, 0, oshape[[1]] - padded))
+  }
+  return(packer$get())
+}
+
+#' Load model checkpoint from file.
+#'
+#' @prefix string prefix of the model name
+#' @iteration integer Iteration number of model we would like to load.
+#' @export
+mx.model.load <- function(prefix, iteration) {
+  symbol <- mx.symbol.load(paste0(prefix, "-symbol.json"))
+  save.dict <- mx.nd.load(sprintf("%s-%04d.params", prefix, iteration))
+  names <- names(save.dict)
+  arg.index <- as.integer(mx.util.filter.null(lapply(1:length(names), function(i) {
+    if (mx.util.str.startswith(names[[i]], "arg:")) i else NULL
+  })))
+  aux.index <- as.integer(mx.util.filter.null(lapply(1:length(names), function(i) {
+    if (mx.util.str.startswith(names[[i]], "aux:")) i else NULL
+  })))
+
+  if (length(arg.index) != 0) {
+    arg.params <- save.dict[arg.index]
+    names(arg.params) <- as.character(lapply(names[arg.index], function(nm) {
+      substr(nm, 5, nchar(nm))
+    }))
+  } else {
+    arg.params <- list()
+  }
+  if (length(aux.index) != 0) {
+    aux.params <- save.dict[aux.index]
+    names(aux.params) <- as.character(lapply(names[aux.index], function(nm) {
+      substr(nm, 5, nchar(nm))
+    }))
+  } else {
+    aux.params <- list()
+  }
+  model <- list(symbol=symbol, arg.params=arg.params, aux.params=aux.params)
+  return(structure(model, class="MXFeedForwardModel"))
+}
+
+#' Save model checkpoint into file.
+#'
+#' @model The feedforward model to be saved.
+#' @prefix string prefix of the model name
+#' @iteration integer Iteration number of model we would like to load.
+#' @export
+mx.model.save <- function(model, prefix, iteration) {
+  arg.params <- model$arg.params
+  aux.params <- model$aux.params
+  names(arg.params) <- as.character(lapply(names(arg.params), function(nm) {
+    paste0("arg:", nm)
+  }))
+  names(aux.params) <- as.character(lapply(names(aux.params), function(nm) {
+    paste0("aux:", nm)
+  }))
+  save.dict <- append(arg.params, aux.params)
+  mx.symbol.save(model$symbol, paste0(prefix, "-symbol.json"))
+  mx.nd.save(save.dict, sprintf("%s-%04d.params", prefix, iteration))
+}

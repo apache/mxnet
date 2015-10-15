@@ -9,7 +9,9 @@
 #include <Rcpp.h>
 #include <mxnet/c_api.h>
 #include <string>
+#include <vector>
 #include "./base.h"
+#include "./ndarray.h"
 
 namespace mxnet {
 namespace R {
@@ -111,17 +113,31 @@ class ArrayDataIter : public DataIter {
                 const Rcpp::NumericVector& label,
                 int batch_size,
                 bool shuffle);
-  // implement the interface
-  virtual void Reset() {}
-  virtual bool Next() {
-    return false;
+  virtual void Reset() {
+    counter_ = 0;
   }
-  virtual int NumPad() const {
-    return 0;
-  }
-  virtual Rcpp::List Value() const {
-    return Rcpp::List();
-  }
+  virtual bool Next();
+  virtual int NumPad() const;
+  virtual Rcpp::List Value() const;
+  static ArrayDataIter* Create(const Rcpp::NumericVector& data,
+                               const Rcpp::NumericVector& label,
+                               size_t batch_size,
+                               bool shuffle);
+
+ private:
+  // create internal representation
+  static void Convert(const Rcpp::NumericVector &src,
+                      const std::vector<size_t> &order,
+                      size_t batch_size,
+                      std::vector<NDArray> *out);
+  /*! \brief The counter */
+  size_t counter_;
+  /*! \brief number of pad instances*/
+  size_t num_pad_;
+  /*! \brief The data list of each batch */
+  std::vector<NDArray> data_;
+  /*! \brief The data list of each batch */
+  std::vector<NDArray> label_;
 };
 
 /*! \brief The DataIterCreate functions to be invoked */

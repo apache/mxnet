@@ -1,3 +1,5 @@
+# This is an example of training using R's array
+
 require(mxnet)
 
 # Network configuration
@@ -15,7 +17,6 @@ dtrain = mx.varg.io.MNISTIter(list(
   label="data/train-labels-idx1-ubyte",
   data.shape=c(784),
   batch.size=batch.size,
-  shuffle=TRUE,
   flat=TRUE,
   silent=0,
   seed=10))
@@ -28,35 +29,16 @@ dtest = mx.varg.io.MNISTIter(list(
   shuffle=FALSE,
   flat=TRUE,
   silent=0))
+# X is R's array, we load from mxnet's native iter structure, but you don't have to
+X = mx.io.extract(dtrain, "data")
+y = mx.io.extract(dtrain, "label")
 
-mx.set.seed(0)
 devices = lapply(1:2, function(i) {
   mx.cpu(i)
 })
 # create the model
-model <- mx.model.FeedForward.create(softmax, X=dtrain, eval.data=dtest,
+model <- mx.model.FeedForward.create(softmax, X=X, y=y,
                                      ctx=devices, num.round=1,
                                      learning.rate=0.1, momentum=0.9,
                                      initializer=mx.init.uniform(0.07),
-                                     iter.end.callback=mx.callback.save.checkpoint("chkpt"),
                                      epoch.end.callback=mx.callback.log.train.metric(100))
-
-# load model from checkpoint
-model <- mx.model.load("chkpt", 1)
-# do prediction
-pred <- predict(model, dtest)
-label <- mx.io.extract(dtest, "label")
-dataX <- mx.io.extract(dtest, "data")
-# Predict with R's array
-pred2 <- predict(model, X=dataX)
-
-
-
-accuracy <- function(label, pred) {
-  ypred = max.col(as.array(pred))
-  return(sum((as.array(label) + 1) == ypred) / length(label))
-}
-
-print(paste0("Finish prediction... accuracy=", accuracy(label, pred)))
-print(paste0("Finish prediction... accuracy2=", accuracy(label, pred2)))
-

@@ -120,6 +120,49 @@ inline void RowToColMajor(const mx_float *in_data,
   }
 }
 
+void ConvertToRowMajor(const Rcpp::NumericVector& rdata, std::vector<mx_float>* out) {
+  Rcpp::RObject dim = rdata.attr("dim");
+  Rcpp::Dimension rshape(dim);
+  out->resize(rdata.size());
+  ColToRowMajor(rdata.begin(), Dim2Vec(rshape),
+                out->size(), dmlc::BeginPtr(*out));
+}
+
+void NDArrayPacker::Push(const NDArray::RObjectType& nd) {
+  NDArray arr(nd);
+  Rcpp::Dimension rshape = arr.shape();
+  if (shape_.size() == 0) {
+    shape_.resize(rshape.size());
+    for (size_t i = 0; i < shape_.size(); ++i) {
+      shape_[i] = rshape[i];
+    }
+  } else {
+    for (size_t i = 1; i < shape_.size(); ++i) {
+      RCHECK(shape_[i] == rshape[i])
+          << "The dimension besides 0 need to be consistent for arrays pushed";
+    }
+    shape_[0] += rshape[0];
+  }
+  size_t begin = data_.size(), size = rshape.prod();
+  data_.resize(begin + size);
+  MX_CALL(MXNDArraySyncCopyToCPU(
+      arr->handle, dmlc::BeginPtr(data_) + begin, size));
+}
+
+Rcpp::NumericVector NDArrayPacker::Get() const {
+  Rcpp::IntegerVector sp(shape_.begin(), shape_.end());
+  SEXP sexp = sp;
+  Rcpp::Dimension dim(sexp);
+  Rcpp::NumericVector ret(dim);
+  RowToColMajor(dmlc::BeginPtr(data_), shape_,
+                data_.size(), ret.begin());
+  return ret;
+}
+
+NDArrayPacker* NDArrayPacker::Create() {
+  return new NDArrayPacker();
+}
+
 Rcpp::Dimension NDArray::shape() const {
   mx_uint ndim;
   const mx_uint *pshape;
@@ -266,10 +309,10 @@ NDArray::RObjectType NDArray::Array(
   Rcpp::NumericVector rdata(src);
   Rcpp::RObject dim = rdata.attr("dim");
   Rcpp::Dimension rshape(dim);
-  RObjectType ret = NDArray::Empty(rshape, ctx);
   std::vector<mx_float> temp(rdata.size());
   ColToRowMajor(rdata.begin(), Dim2Vec(rshape),
                 temp.size(), dmlc::BeginPtr(temp));
+  RObjectType ret = NDArray::Empty(rshape, ctx);
   MX_CALL(MXNDArraySyncCopyFromCPU(
       NDArray(ret)->handle,
       dmlc::BeginPtr(temp), temp.size()));
@@ -575,6 +618,11 @@ void NDArray::InitRcppModule() {
   function("mx.nd.internal.ctx", &ndarray::ctx);
   function("mx.nd.internal.length", &ndarray::Size);
   function("mx.nd.internal.as.array", &ndarray::AsNumericVector);
+
+  class_<NDArrayPacker>("NDArrayPacker")
+      .method("push", &NDArrayPacker::Push)
+      .method("get", &NDArrayPacker::Get);
+  function("mx.nd.arraypacker.create", &NDArrayPacker::Create);
 }
 
 void NDArrayFunction::InitRcppModule() {

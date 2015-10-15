@@ -266,8 +266,44 @@ class NDArrayFunction : public ::Rcpp::CppFunction {
   // ther formals of arguments
   Rcpp::List formals_;
 };
+
+/*!
+ * \brief Convert the src into row major layout into out
+ * \param src The source vector
+ * \param out The output memory.
+ */
+void ConvertToRowMajor(const Rcpp::NumericVector& src, std::vector<mx_float>* out);
+
+/*!
+ * \brief An array packer that packs NDArray array together on dimension 0.
+ */
+class NDArrayPacker {
+ public:
+  // constructor
+  NDArrayPacker() {}
+  /*!
+   * \brief Push the array to the packer
+   * \param nd The array to push the data into.
+   */
+  void Push(const NDArray::RObjectType& nd);
+  /*!
+   * \brief Get the R array out from packed data.
+   * \return The packed data.
+   */
+  Rcpp::NumericVector Get() const;
+  /*! \return constructor */
+  static NDArrayPacker* Create();
+
+ private:
+  /*! \brief The internal data */
+  std::vector<mx_float> data_;
+  /*! \brief The shape of data */
+  std::vector<mx_uint> shape_;
+};
 }  // namespace R
 }  // namespace mxnet
+
+RCPP_EXPOSED_CLASS_NODECL(::mxnet::R::NDArrayPacker);
 
 namespace Rcpp {
   template<>
