@@ -38,66 +38,6 @@ mx.symbol.infer.shape <- function(symbol, ...) {
   symbol$infer.shape(list(...))
 }
 
-mx.symbol.Activation <- function(...) {
-  mx.varg.symbol.Activation(list(...))
-}
-
-mx.symbol.FullyConnected <- function(...) {
-  mx.varg.symbol.FullyConnected(list(...))
-}
-
-mx.symbol.LRN <- function(...) {
-  mx.varg.symbol.LRN(list(...))
-}
-
-mx.symbol.BatchNorm <- function(...) {
-  mx.varg.symbol.BatchNorm(list(...))
-}
-
-mx.symbol.Group <- function(...) {
-  mx.varg.symbol.Group(list(...))
-}
-
-mx.symbol.Pooling <- function(...) {
-  mx.varg.symbol.Pooling(list(...))
-}
-
-mx.symbol.Concat <- function(...){
-  mx.varg.symbol.Concat(list(...))
-}
-
-mx.symbol.Reshape <- function(...) {
-  mx.varg.symbol.Reshape(list(...))
-}
-
-mx.symbol.Convolution <- function(...) {
-  mx.varg.symbol.Convolution(list(...))
-}
-
-mx.symbol.SliceChannel <- function(...) {
-  mx.varg.symbol.SliceChannel(list(...))
-}
-
-mx.symbol.Dropout <- function(...) {
-  mx.varg.symbol.Dropout(list(...))
-}
-
-mx.symbol.Softmax <- function(...) {
-  mx.varg.symbol.Softmax(list(...))
-}
-
-mx.symbol.ElementWiseSum <- function(...) {
-  mx.varg.symbol.ElementWiseSum(list(...))
-}
-
-mx.symbol.Flatten <- function(...) {
-  mx.varg.symbol.Flatten(list(...))
-}
-
-mx.symbol.LeakyReLU <- function(...) {
-  mx.varg.symbol.LeakyReLU(list(...))
-}
-
 is.MXSymbol <- function(x) {
   inherits(x, "Rcpp_MXSymbol")
 }
@@ -113,7 +53,6 @@ is.MXSymbol <- function(x) {
 #' is.mx.nd.array(mat2)
 #'
 #' @export
-
 is.mx.symbol <- function(x) {
   is.MXSymbol(x)
 }
