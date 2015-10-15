@@ -4,6 +4,8 @@
  * \brief Rcpp NDArray of MXNet.
  */
 #include <Rcpp.h>
+#include <string>
+#include <vector>
 #include "./base.h"
 #include "./kvstore.h"
 #include "./ndarray.h"
@@ -51,12 +53,11 @@ void KVStore::Push(const std::vector<int>& keys,
   }
 }
 
-Rcpp::List KVStore::Pull(const std::vector<int>& keys,
-                         const Rcpp::List& out_lists,
-                         const std::vector<int>& priority) {
+void KVStore::Pull(const std::vector<int>& keys,
+                   const Rcpp::List& out_lists,
+                   const std::vector<int>& priority) {
   RCHECK(keys.size() == priority.size() || priority.size() == 0)
       << "The length of keys should be same as length of priority";
-  Rcpp::List moved_list(out_lists.size());
   std::vector<std::vector<NDArrayHandle> > vec(out_lists.size());
   for (size_t i = 0; i < out_lists.size(); ++i) {
     RCHECK(Rcpp::is<Rcpp::List>(out_lists[i]))
@@ -65,11 +66,6 @@ Rcpp::List KVStore::Pull(const std::vector<int>& keys,
     RCHECK(src.size() == keys.size())
         << "Expect length of keys to be same as each out_lists";
     vec[i] = NDArray::GetHandles(src, "out_list");
-    Rcpp::List moved(src.size());
-    for (size_t j = 0; j < src.size(); ++j) {
-      moved[j] = NDArray::Move(src[j]);
-    }
-    moved_list[i] = moved;
   }
   // do pull
   std::vector<int> group_keys(vec.size());
@@ -84,7 +80,27 @@ Rcpp::List KVStore::Pull(const std::vector<int>& keys,
                           dmlc::BeginPtr(vals),
                           priority.size() == 0 ? 0 : priority[i]));
   }
-  return moved_list;
+}
+
+std::string KVStore::type() const {
+  const char* stype;
+  MX_CALL(MXKVStoreGetType(handle_, &stype));
+  return std::string(stype);
+}
+
+bool KVStore::update_on_kvstore() const {
+  std::string type = this->type();
+  return type != "local_allreduce_cpu" && type != "local_allreduce_device";
+}
+
+void KVStore::SetOptimizer(const Rcpp::List& optimizer) {
+  std::vector<std::string> names = optimizer.names();
+  RCHECK(names.size() == 2 &&
+         names[0] == "create.state" &&
+         names[1] == "update")
+      << "Invalid optimizer";
+  fcreate_state_ = optimizer[0];
+  fupdate_ = optimizer[1];
 }
 
 Rcpp::RObject KVStore::Create(const char *type) {
@@ -99,7 +115,10 @@ void KVStore::InitRcppModule() {
       .finalizer(&KVStore::Finalizer)
       .method("init", &KVStore::Init)
       .method("push", &KVStore::Push)
-      .method("pull", &KVStore::Pull);
+      .method("pull", &KVStore::Pull)
+      .method("set.optimizer", &KVStore::SetOptimizer)
+      .property("type", &KVStore::type)
+      .property("update.on.kvstore", &KVStore::update_on_kvstore);
 
   function("mx.kv.create", &KVStore::Create,
            List::create(_["type"] = "local"),

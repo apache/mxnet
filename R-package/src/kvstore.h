@@ -43,16 +43,22 @@ class KVStore {
             const std::vector<int>& priority);
   /*!
    * \brief Pull the data back.
+   *  This operation will MUTATE the content of out_lists.
    *
    * \param keys List of keys, corresponds to key of each location.
    * \param out_lists List of Rcpp::List
-   *    The list of NDArrays to hold the result, this will be moved.
    * \param priority The priority of each key.
    * \return The result list of pull.
    */
-  Rcpp::List Pull(const std::vector<int>& keys,
-                  const Rcpp::List& out_lists,
-                  const std::vector<int>& priority);
+  void Pull(const std::vector<int>& keys,
+            const Rcpp::List& out_lists,
+            const std::vector<int>& priority);
+  /*! \return The type of KVStore */
+  std::string type() const;
+  /*! \brief Whether to perform update on KVStore */
+  bool update_on_kvstore() const;
+  /*! \brief Setup optimizer */
+  void SetOptimizer(const Rcpp::List& optimizer);
   /*!
    * \brief create a KVStore
    * \return the created KVStore
@@ -67,6 +73,10 @@ class KVStore {
   static void Finalizer(KVStore *kv) {
     MX_CALL(MXKVStoreFree(kv->handle_));
   }
+  /*! \brief Function to create state */
+  Rcpp::RObject fcreate_state_;
+  /*! \brief Function to perform update */
+  Rcpp::RObject fupdate_;
   /*! \brief internal KVStore handle */
   KVStoreHandle handle_;
 };

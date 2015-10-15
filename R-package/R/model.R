@@ -70,6 +70,25 @@ mx.model.extract.model <- function(symbol, train.execs) {
   return(model)
 }
 
+# decide what type of kvstore to use
+mx.model.create.kvstore <- function(kvstore, arg.params, ndevice) {
+  if (is.MXKVStore(kvstore)) return (kvstore)
+  if (!is.character(kvstore)) {
+    stop("kvstore msut be either MXKVStore or a string")
+  }
+  if (ndevice == 1) return (NULL)
+  if (kvstore == "local") {
+    max.size <- max(as.integer(lapply(arg.params, length)))
+    if (max.size > 1024 * 1024 * 16) {
+      kvstore <- 'local_update_cpu'
+    } else {
+      kvstore <- 'local_allreduce_cpu'
+    }
+    cat(paste0("Auto-select kvstore type = ", kvstore, "\n"))
+  }
+  return(mx.kv.create(kvstore))
+}
+
 # Internal function to do multiple device training.
 mx.model.train <- function(symbol, ctx, input.shape,
                            arg.params, aux.params,
@@ -77,10 +96,12 @@ mx.model.train <- function(symbol, ctx, input.shape,
                            train.data, eval.data,
                            metric,
                            iter.end.callback,
-                           epoch.end.callback) {
+                           epoch.end.callback,
+                           kvstore) {
   ndevice <- length(ctx)
-  sliceinfo <- mx.model.slice.shape(input.shape, ndevice)
+  cat(paste0("Start training with ", ndevice, " devices\n"))
   # create the executors
+  sliceinfo <- mx.model.slice.shape(input.shape, ndevice)
   train.execs <- lapply(1:ndevice, function(i) {
     mx.simple.bind(symbol, ctx=ctx[[i]], data=sliceinfo[[i]]$shape, grad.req=TRUE)
   })
@@ -89,12 +110,24 @@ mx.model.train <- function(symbol, ctx, input.shape,
     mx.exec.update.arg.arrays(texec, arg.params, match.name=TRUE)
     mx.exec.update.aux.arrays(texec, aux.params, match.name=TRUE)
   }
+  # KVStore related stuffs
+  params.index <- as.integer(mx.util.filter.null(lapply(1:length(train.execs[[1]]$ref.grad.arrays), function(k) {
+    if (!is.null(train.execs[[1]]$ref.grad.arrays[[k]])) k else NULL
+  })))
+  update.on.kvstore <- FALSE
+  if (!is.null(kvstore) && kvstore$update.on.kvstore ) {
+    update.on.kvstore <- TRUE
+    kvstore$set.optimizer(optimizer)
+  } else {
+    updaters <- lapply(1:ndevice, function(i) {
+      mx.opt.get.updater(optimizer, train.execs[[i]]$ref.arg.arrays)
+    })
+  }
+  if (!is.null(kvstore)) {
+    kvstore$init(params.index, train.execs[[1]]$ref.arg.arrays[params.index])
+  }
   # Get the input names
   input.names <- mx.model.check.arguments(symbol)
-  # create the updaters
-  updaters <- lapply(1:ndevice, function(i) {
-    mx.opt.get.updater(optimizer, train.execs[[i]]$ref.arg.arrays)
-  })
 
   for (iteration in begin.round:end.round) {
     nbatch <- 0
@@ -125,18 +158,30 @@ mx.model.train <- function(symbol, ctx, input.shape,
       for (texec in train.execs) {
         mx.exec.backward(texec)
       }
-      # get gradient from each device.
-      grad.blocks <- lapply(train.execs, function(texec) {
-        texec$grad.arrays
-      })
-
-      # update parameters
-      arg.blocks <- lapply(1:ndevice, function(i) {
-        updaters[[i]](train.execs[[i]]$ref.arg.arrays, grad.blocks[[i]])
-      })
-      # reset the parameters of executors
-      for (i in 1:ndevice) {
-        mx.exec.update.arg.arrays(train.execs[[i]], arg.blocks[[i]], skip.null=TRUE)
+      if (!is.null(kvstore)) {
+        # push the gradient
+        kvstore$push(params.index, lapply(train.execs, function(texec) {
+          texec$ref.grad.arrays[params.index]
+        }), -params.index)
+      }
+      if (update.on.kvstore) {
+        # pull back weight
+        kvstore$pull(params.index, lapply(train.execs, function(texec) {
+          texec$ref.arg.arrays[params.index]
+        }), -params.index)
+      } else {
+        # pull back gradient sums
+        if (!is.null(kvstore)) {
+          kvstore$pull(params.index, lapply(train.execs, function(texec) {
+            texec$ref.grad.arrays[params.index]
+          }), -params.index)
+        }
+        arg.blocks <- lapply(1:ndevice, function(i) {
+          updaters[[i]](train.execs[[i]]$ref.arg.arrays, train.execs[[i]]$ref.grad.arrays)
+        })
+        for (i in 1:ndevice) {
+          mx.exec.update.arg.arrays(train.execs[[i]], arg.blocks[[i]], skip.null=TRUE)
+        }
       }
       # Update the evaluation metrics
       for (i in 1 : ndevice) {
@@ -184,6 +229,7 @@ function(symbol, X, y=NULL, ctx=NULL,
          initializer=mx.init.uniform(0.01),
          eval.metric=mx.metric.accuracy,
          iter.end.callback=NULL, epoch.end.callback=NULL,
+         kvstore="local",
          ...) {
   X <- mx.model.init.iter(X, y)
   if (!X$iter.next()) {
@@ -201,13 +247,16 @@ function(symbol, X, y=NULL, ctx=NULL,
     batchsize = input.shape[[1]]
     optimizer <- mx.opt.create(optimizer, rescale.grad=(1/batchsize), ...)
   }
+
+  kvstore <- mx.model.create.kvstore(kvstore, params$arg.params, length(ctx))
   model <- mx.model.train(symbol, ctx, input.shape,
                           params$arg.params, params$aux.params,
                           1, num.round, optimizer=optimizer,
                           train.data=X, eval.data=NULL,
                           metric=eval.metric,
                           iter.end.callback=iter.end.callback,
-                          epoch.end.callback=epoch.end.callback)
+                          epoch.end.callback=epoch.end.callback,
+                          kvstore=kvstore)
   return (model)
 }
 

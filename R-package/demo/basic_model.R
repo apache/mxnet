@@ -21,9 +21,13 @@ dtrain = mx.varg.io.MNISTIter(list(
   seed=10))
 
 mx.set.seed(0)
-
+devices = lapply(1:1, function(i) {
+  mx.cpu(i)
+})
 # create the model
-model <- mx.model.FeedForward.create(softmax, X=dtrain, learning.rate=0.1, momentum=0.9,
+model <- mx.model.FeedForward.create(softmax, X=dtrain,
+                                     ctx=devices,
+                                     learning.rate=0.1, momentum=0.9,
                                      initializer=mx.init.uniform(0.07),
                                      epoch.end.callback=mx.callback.log.train.metric(100))
 
