@@ -171,9 +171,10 @@ def _create_kvstore(kvstore, num_device, arg_params):
 def _train_multi_device(symbol, ctx, input_shape,
                         arg_params, aux_params,
                         begin_round, end_round, optimizer,
+                        kvstore, update_on_kvstore,
                         train_data, eval_data=None, eval_metric=None,
                         iter_end_callback=None, epoch_end_callback=None,
-                        kvstore='local', logger=None):
+                        logger=None):
     """Internal training function on multiple devices.
 
     This function will also work for single device as well.
@@ -221,15 +222,11 @@ def _train_multi_device(symbol, ctx, input_shape,
         A callback that is invoked at end of each batch.
         This can be used to measure speed, get result from evaluation metric. etc.
 
-    kvstore: KVStore or str, optional
-        The KVStore or a string kvstore type:
-        'local' : multi-devices on a single machine, will automatically
-           choose one from 'local_update_cpu', 'local_allreduce_cpu', and
-          'local_allreduce_device'
-       'dist_sync' : multi-machines with BSP
-       'dist_async' : multi-machines with partical asynchronous
+    kvstore : KVStore
+        The KVStore
 
-       In default uses 'local', often no need to change for single machiine.
+    update_on_kvstore : bool
+        whether or not perform weight updating on kvstore
 
     logger : logging logger
         When not specified, default logger will be used.
@@ -263,29 +260,27 @@ def _train_multi_device(symbol, ctx, input_shape,
     for texec in train_execs:
         texec.copy_params_from(arg_params, aux_params)
 
-    # create kvstore
-    (kv, update_on_kvstore) = _create_kvstore(kvstore, num_device, arg_params)
-
-    # init optimizer before give it to kv or get_updater
+    # init optmizer
     optimizer.begin_round(begin_round)
 
     if not update_on_kvstore:
         updater = get_updater(optimizer)
 
-    if kv:
+    # init kvstore
+    if kvstore:
         # init optimizer
         if update_on_kvstore:
-            kv.set_optimizer(optimizer)
+            kvstore.set_optimizer(optimizer)
 
         # init kv
         for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
             arg_list, grad_list = pair
             if grad_list[0] is not None:
-                kv.init(index, arg_list[0])
+                kvstore.init(index, arg_list[0])
 
                 # pull the weight back
                 if update_on_kvstore:
-                    kv.pull(index, arg_list, priority=-index)
+                    kvstore.pull(index, arg_list, priority=-index)
 
     # Input and output data structure
     data_index, label_index = _check_arguments(symbol)
@@ -319,15 +314,15 @@ def _train_multi_device(symbol, ctx, input_shape,
                 if grad_list[0] is None:
                     continue
                 # Gradient synchronization
-                if kv:
+                if kvstore:
                     # push gradient, priority is negative index
-                    kv.push(index, grad_list, priority=-index)
+                    kvstore.push(index, grad_list, priority=-index)
                     if update_on_kvstore:
                         # pull back the weights
-                        kv.pull(index, arg_list, priority=-index)
+                        kvstore.pull(index, arg_list, priority=-index)
                     else:
                         # pull back the sum gradients, to the same locations.
-                        kv.pull(index, grad_list, priority=-index)
+                        kvstore.pull(index, grad_list, priority=-index)
                 if not update_on_kvstore:
                     for k, p in enumerate(zip(arg_list, grad_list)):
                         # faked an index here, to make optimizer create diff
@@ -696,11 +691,20 @@ class FeedForward(BASE_ESTIMATOR):
         # setup metric
         if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
-        # setup optimizer
-        optimizer = self.optimizer
-        if isinstance(optimizer, str):
+
+        # create kvstore
+        (kvstore, update_on_kvstore) = _create_kvstore(
+            kvstore, len(self.ctx), self.arg_params)
+
+        # init optmizer
+        if isinstance(self.optimizer, str):
             batch_size = input_shape[0]
-            optimizer = opt.create(optimizer, rescale_grad=(1.0/batch_size), **(self.kwargs))
+            if kvstore and kvstore.type == 'dist_sync':
+                batch_size *= kvstore.num_workers
+
+        optimizer = opt.create(self.optimizer,
+                               rescale_grad=(1.0/batch_size),
+                               **(self.kwargs))
         # do training
         _train_multi_device(self.symbol, self.ctx, input_shape,
                             self.arg_params, self.aux_params,
@@ -710,7 +714,7 @@ class FeedForward(BASE_ESTIMATOR):
                             eval_metric=eval_metric,
                             iter_end_callback=iter_end_callback,
                             epoch_end_callback=epoch_end_callback,
-                            kvstore=kvstore,
+                            kvstore=kvstore, update_on_kvstore=update_on_kvstore,
                             logger=logger)
 
     def save(self, prefix, iteration=None):

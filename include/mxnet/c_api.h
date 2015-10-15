@@ -772,21 +772,22 @@ MXNET_DLL int MXKVStorePull(KVStoreHandle handle,
  * \param the key
  * \param recv the pushed value on this key
  * \param local the value stored on local on this key
+ * \param handle The additional handle to the updater
  */
 typedef void (MXKVStoreUpdater)(int key,
                                 NDArrayHandle recv,
-                                NDArrayHandle local);
-
+                                NDArrayHandle local,
+                                void *handle);
 /*!
  * \brief register an push updater
  * \param handle handle to the KVStore
  * \param updater udpater function
+ * \param updater_handle The additional handle used to invoke the updater
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreSetUpdater(KVStoreHandle handle,
-                                  MXKVStoreUpdater updater);
-
-
+                                  MXKVStoreUpdater updater,
+                                  void *updater_handle);
 /*!
  * \brief get the type of the kvstore
  * \param handle handle to the KVStore
@@ -845,43 +846,12 @@ MXNET_DLL int MXKVStoreIsServerNode(int *ret);
 MXNET_DLL int MXKVStoreIsSchedulerNode(int *ret);
 
 /**
- * \brief return whether or not is in distributed computing
- * \param handle handle to the KVStore
- * \param ret 1 for yes, 0 for no
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXKVStoreIsDistributed(KVStoreHandle handle,
-                                     int *ret);
-
-/**
  * \brief global barrier among all worker machines
  *
  * \param handle handle to the KVStore
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreBarrier(KVStoreHandle handle);
-
-
-/**
- * \brief Wait until all pushes and pulls issued on each key have been
- * finished
- *
- * \param handle handle to the KVStore
- * \param num number of keys
- * \param keys a list of keys
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXKVStoreWait(KVStoreHandle handle,
-                            mx_uint num,
-                            int* keys);
-
-/**
- * \brief wait until all pushes and pulls issued before have been finished
- *
- * \param handle handle to the KVStore
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXKVStoreWaitAll(KVStoreHandle handle);
 
 /**
  * \brief the prototype of a server controller

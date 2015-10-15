@@ -164,11 +164,11 @@ SEXP Symbol::InferShape(const Rcpp::List& kwargs) const {
 
   if (complete != 0) {
     return Rcpp::List::create(
-        Rcpp::Named("arg_shapes") = BuildShapeData(
+        Rcpp::Named("arg.shapes") = BuildShapeData(
             in_shape_size, in_shape_ndim, in_shape_data, ListArguments()),
-        Rcpp::Named("out_shapes") = BuildShapeData(
+        Rcpp::Named("out.shapes") = BuildShapeData(
             out_shape_size, out_shape_ndim, out_shape_data, ListOuputs()),
-        Rcpp::Named("aux_shapes") = BuildShapeData(
+        Rcpp::Named("aux.shapes") = BuildShapeData(
             aux_shape_size, aux_shape_ndim, aux_shape_data, ListAuxiliaryStates()));
   } else {
     return R_NilValue;
@@ -310,11 +310,11 @@ void Symbol::InitRcppModule() {
               "Return a json string representation of symbol")
       .method("save", &Symbol::Save,
               "Save symbol to file")
-      .method("arguments", &Symbol::ListArguments,
+      .property("arguments", &Symbol::ListArguments,
               "List the arguments names of the symbol")
-      .method("outputs", &Symbol::ListOuputs,
+      .property("outputs", &Symbol::ListOuputs,
               "List the outputs names of the symbol")
-      .method("auxiliary.states", &Symbol::ListAuxiliaryStates,
+      .property("auxiliary.states", &Symbol::ListAuxiliaryStates,
               "List the auxiliary state names of the symbol")
       .method("get.internals", &Symbol::GetInternals,
               "Get a symbol that contains all the internals")

@@ -1,13 +1,13 @@
 #' Save an mx.symbol object
-#' 
+#'
 #' @param symbol the \code{mx.symbol} object
 #' @param filename the filename (including the path)
-#' 
-#' @examples 
+#'
+#' @examples
 #' data = mx.symbol.Variable('data')
 #' mx.symbol.save(data, 'temp.symbol')
 #' data2 = mx.symbol.load('temp.symbol')
-#' 
+#'
 #' @export
 mx.symbol.save <-function(symbol, filename) {
   filename <- path.expand(filename)
@@ -15,18 +15,27 @@ mx.symbol.save <-function(symbol, filename) {
 }
 
 #' Load an mx.symbol object
-#' 
+#'
 #' @param filename the filename (including the path)
-#' 
-#' @examples 
+#'
+#' @examples
 #' data = mx.symbol.Variable('data')
 #' mx.symbol.save(data, 'temp.symbol')
 #' data2 = mx.symbol.load('temp.symbol')
-#' 
+#'
 #' @export
 mx.symbol.load <-function(filename) {
   filename <- path.expand(filename)
   mx.symbol.load(filename)
+}
+
+#' Inference the shape of arguments, outputs, and auxiliary states.
+#'
+#' @param symbol The \code{mx.symbol} object
+#'
+#' @export
+mx.symbol.infer.shape <- function(symbol, ...) {
+  symbol$infer.shape(list(...))
 }
 
 mx.symbol.Activation <- function(...) {
@@ -34,7 +43,7 @@ mx.symbol.Activation <- function(...) {
 }
 
 mx.symbol.FullyConnected <- function(...) {
-  mx.varg.symbol.FullyConnected(list(...))  
+  mx.varg.symbol.FullyConnected(list(...))
 }
 
 mx.symbol.LRN <- function(...) {
@@ -94,15 +103,15 @@ is.MXSymbol <- function(x) {
 }
 
 #' Judge if an object is mx.symbol
-#' 
+#'
 #' @return Logical indicator
-#' 
-#' @examples 
+#'
+#' @examples
 #' mat = mx.nd.array(1:10)
-#' is.mx.nd.array(mat) 
+#' is.mx.nd.array(mat)
 #' mat2 = 1:10
 #' is.mx.nd.array(mat2)
-#' 
+#'
 #' @export
 
 is.mx.symbol <- function(x) {
@@ -112,19 +121,17 @@ is.mx.symbol <- function(x) {
 arguments <- function(x) {
   if (!is.MXSymbol(x))
     stop("only for MXSymbol type")
-  x$arguments()
+  x$arguments
 }
 
 mx.apply <- function(x, ...) {
-  if (!is.MXSymbol(x))
-    stop("only for MXSymbol type")
+  if (!is.MXSymbol(x)) stop("only for MXSymbol type")
   x$apply(list(...))
 }
 
-outputs <- function(x, ...) {
-  if (!is.MXSymbol(x))
-    stop("only for MXSymbol type")
-  x$outputs()
+outputs <- function(x) {
+  if (!is.MXSymbol(x)) stop("only for MXSymbol type")
+  x$outputs
 }
 
 init.symbol.methods <- function() {
@@ -136,11 +143,11 @@ init.symbol.methods <- function() {
   setMethod("-", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
     mx.varg.symbol.internal.Minus(list(e1, e2))
   })
-  
+
   setMethod("*", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
     mx.varg.symbol.internal.Mul(list(e1, e2))
   })
-  
+
   setMethod("/", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
     mx.varg.symbol.internal.Div(list(e1, e2))
   })

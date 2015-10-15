@@ -14,33 +14,63 @@
 namespace mxnet {
 namespace R {
 
-Executor::RObjectType Executor::SetArgArray(const Executor::RObjectType &exec,
-                                            const Rcpp::List& array) {
-  RCHECK(Rcpp::is<Executor>(exec))
-      << "Expected exec to be "<< Executor::TypeName();
-  Executor::RObjectType ret = Executor::Move(exec);
-  CopyArray(array, Executor::XPtr(ret)->arg_arrays_);
-  return ret;
+void Executor::UpdateArgArray(const Rcpp::List& array,
+                              bool match_name,
+                              bool skip_null) {
+  UpdateArray("arg.arrays", array, arg_arrays_, match_name, skip_null);
 }
 
-Executor::RObjectType Executor::SetAuxArray(const Executor::RObjectType &exec,
-                                            const Rcpp::List& array) {
-  RCHECK(Rcpp::is<Executor>(exec))
-      << "Expected exec to be "<< Executor::TypeName();
-    Executor::RObjectType ret = Executor::Move(exec);
-  CopyArray(array, Executor::XPtr(ret)->aux_arrays_);
-  return ret;
+void Executor::UpdateAuxArray(const Rcpp::List& array,
+                              bool match_name,
+                              bool skip_null) {
+  UpdateArray("aux.arrays", array, aux_arrays_, match_name, skip_null);
 }
 
-void Executor::CopyArray(const Rcpp::List &from, Rcpp::List *to) {
-  RCHECK(from.size() == to->size())
-      << "Set list must be of same length as target";
-  for (size_t i = 0; i < from.size(); ++i) {
-    if (to->at(i) != R_NilValue) {
-      NDArray::CopyFromTo(*NDArray::XPtr(from[i]), NDArray::XPtr(to->at(i)));
-    } else {
-      RCHECK(from[i] == R_NilValue)
-          << "Position " << i << " expected to be NULL";
+void Executor::UpdateArray(const char* array_name,
+                           const Rcpp::List& from,
+                           Rcpp::List* to,
+                           bool match_name,
+                           bool skip_null) {
+  if (!match_name) {
+    RCHECK(from.size() == to->size())
+        << "Update array list must contain names";
+    for (size_t i = 0; i < from.size(); ++i) {
+      if (to->at(i) != R_NilValue) {
+        if (from[i] != R_NilValue) {
+          NDArray dst = NDArray::FromRObject(to->at(i));
+          NDArray::CopyFromTo(NDArray::FromRObject(from[i]), &dst);
+        } else {
+          RCHECK(skip_null)
+              << "Position " << i << " expected to be not NULL";
+        }
+      } else {
+        RCHECK(from[i] == R_NilValue)
+            << "Position " << i << " expected to be NULL";
+      }
+    }
+  } else {
+    if (from.size() == 0) return;
+    RCHECK(HasName(from))
+        << "match.name is set to TRUE, the input list must have names in all elements";
+    std::vector<std::string> names = from.names();
+    for (size_t i = 0; i < names.size(); ++i) {
+      RCHECK(names[i].length() != 0)
+          << "match.name is set to TRUE, the input list must have names in all elements";
+      RCHECK(to->containsElementNamed(names[i].c_str()))
+          << "cannot find key " << names[i] << " in the array " << array_name;
+      int index = to->findName(names[i]);
+      if (to->at(index) != R_NilValue) {
+        if (from[i] != R_NilValue) {
+          NDArray dst = NDArray::FromRObject(to->at(index));
+          NDArray::CopyFromTo(NDArray::FromRObject(from[i]), &dst);
+        } else {
+          RCHECK(skip_null)
+              << "Element " << names[i] << " expected to be not NULL";
+        }
+      } else {
+        RCHECK(from[i] == R_NilValue)
+            << "Element " << names[i] << " expected to be NULL";
+      }
     }
   }
 }
@@ -52,7 +82,7 @@ Rcpp::List Executor::CloneArray(const Rcpp::List& src) {
     if (src[i] != R_NilValue) {
       RCHECK(Rcpp::is<NDArray>(src[i]))
           << "Expected exec to be "<< Executor::TypeName();
-      ret[i] = NDArray::XPtr(src[i])->Clone();
+      ret[i] = NDArray::FromRObject(src[i]).Clone().RObject();
     } else {
       ret[i] = R_NilValue;
     }
@@ -60,32 +90,20 @@ Rcpp::List Executor::CloneArray(const Rcpp::List& src) {
   return ret;
 }
 
-Executor::RObjectType Executor::Forward(const RObjectType &exec,
-                                        bool is_train,
-                                        const Rcpp::List& kwargs) {
-  // TODO(tqchen, KK) support kwargs to copy in additional data
-  RCHECK(Rcpp::is<Executor>(exec))
-      << "Expect exec to be " << Executor::TypeName();
-  Executor::RObjectType ret = Executor::Move(exec);
-  MX_CALL(MXExecutorForward(Executor::XPtr(ret)->handle_, is_train));
-  return ret;
+void Executor::Forward(bool is_train,
+                       const Rcpp::List& kwargs) {
+  MX_CALL(MXExecutorForward(handle_, is_train));
 }
 
-Executor::RObjectType Executor::Backward(const RObjectType &exec,
-                                         const Rcpp::List &output_grads) {
-  RCHECK(Rcpp::is<Executor>(exec))
-      << "Expect exec to be " << Executor::TypeName();
-  RCHECK(Executor::XPtr(exec)->grad_arrays_ != nullptr)
+void Executor::Backward(const Rcpp::List &output_grads) {
+  RCHECK(grad_arrays_ != nullptr)
       << "This executor has not been binded with req.grad";
-  Executor::RObjectType ret = Executor::Move(exec);
   std::vector<NDArrayHandle> grad_handles
       = NDArray::GetHandles(output_grads, "output_grads", false);
-  MX_CALL(MXExecutorBackward(Executor::XPtr(ret)->handle_,
+  MX_CALL(MXExecutorBackward(handle_,
                              static_cast<mx_uint>(grad_handles.size()),
                              dmlc::BeginPtr(grad_handles)));
-  return ret;
 }
-
 
 inline Rcpp::List* CreateArrayList(const Rcpp::List& source_array,
                                    const std::string& key,
@@ -99,10 +117,11 @@ inline Rcpp::List* CreateArrayList(const Rcpp::List& source_array,
     for (size_t i = 0; i < source_array.size(); ++i) {
       RCHECK(Rcpp::is<NDArray>(source_array[i]))
           << "Expect input " << key << " to be list of " << NDArray::TypeName();
-      ret->at(i) = NDArray::Empty(NDArray::XPtr(source_array[i])->shape(), ctx);
-      handles->at(i) = NDArray::XPtr(ret->at(i))->handle();
-      NDArray::CopyFromTo(*NDArray::XPtr(source_array[i]),
-                          NDArray::XPtr(ret->at(i)));
+      NDArray src = NDArray::FromRObject(source_array[i]);
+      ret->at(i) = NDArray::Empty(src.shape(), ctx);
+      NDArray dst = NDArray::FromRObject(ret->at(i));
+      handles->at(i) = dst->handle;
+      NDArray::CopyFromTo(src, &dst);
     }
   } catch(const Rcpp::exception& ex) {
     delete ret;
@@ -127,8 +146,8 @@ inline Rcpp::List* CreateGradList(const Rcpp::List& source_array,
       RCHECK(Rcpp::is<bool>(grad_reqs[i]))
           << "Expect input grad_reqs to be list of booleans";
       if (Rcpp::as<bool>(grad_reqs[i])) {
-        ret->at(i) = NDArray::Empty(NDArray::XPtr(source_array[i])->shape(), ctx);
-        handles->at(i) = NDArray::XPtr(ret->at(i))->handle();
+        ret->at(i) = NDArray::Empty(NDArray::FromRObject(source_array[i]).shape(), ctx);
+        handles->at(i) = NDArray::FromRObject(ret->at(i))->handle;
         grad_req_type->at(i) = 1;
       }
     }
@@ -146,7 +165,7 @@ inline Rcpp::List* CreateOutList(mx_uint out_size,
   try {
     ret->names() = names;
     for (size_t i = 0; i < out_size; ++i) {
-      ret->at(i) = NDArray::RObject(out_arr[i]);
+      ret->at(i) = NDArray::RObject(out_arr[i], false);
     }
   } catch(const Rcpp::exception& ex) {
     delete ret;
@@ -200,36 +219,28 @@ Executor::RObjectType Executor::Bind(const Symbol::RObjectType& symbol,
 }
 void Executor::InitRcppModule() {
   using namespace Rcpp;  // NOLINT(*)
-  // TODO(kk) maybe change to read only property?
   class_<Executor>("MXExecutor")
       .finalizer(&Executor::Finalizer)
-      .const_method("arg.arrays", &Executor::GetArgArrays)
-      .const_method("grad.arrays", &Executor::GetGradArrays)
-      .const_method("aux.arrays", &Executor::GetAuxArrays)
-      .const_method("outputs", &Executor::GetOuputArrays);
-  // TODO(KK) the name set.xx maybe need debating(maybe change to update?)
-  // As we aim for updated = mx.exec.set.arguments(old, arg_array)
-  // And old is moved and shouldno longer be used.
-  // The reason why setter/getter is not used,
-  // is because setter did not implement copy-on-write, so this can be un-natural to R-user
-  // We use a update function to do
-  // new_object = update(old_object, param) instead
-  function("mx.exec.set.arg.arrays",
-           &Executor::SetArgArray,
-           List::create(_["exec"], _["array"]),
-           "Set arguments array of executor, this will move the original executor");
-  function("mx.exec.set.aux.arrays",
-           &Executor::SetAuxArray,
-           List::create(_["exec"], _["array"]),
-           "Set auxilary states array of executor, this will move the original executor");
-  function("mx.exec.forward",
-           &Executor::Forward,
-           List::create(_["exec"], _["is.train"] = false, _["kwargs"] = Rcpp::List()),
-           "Peform a forward operation on exec, this will set the outputs.");
-  function("mx.exec.backward",
-           &Executor::Backward,
-           List::create(_["exec"], _["output.grads"] = Rcpp::List()),
-           "Peform a backward operation on exec, this will set the gradients requested.");
+      .method("update.aux.arrays",
+              &Executor::UpdateAuxArray,
+              "Update auxilary states array of executor, this will mutate the executor")
+      .method("update.arg.arrays",
+              &Executor::UpdateArgArray,
+              "Update arguments array of executor, this will mutate the executor")
+      .method("forward",
+              &Executor::Forward,
+              "Peform a forward operation on exec, this will set the outputs.")
+      .method("backward",
+              &Executor::Backward,
+              "Peform a backward operation on exec, this will set the gradients requested.")
+      .property("ref.arg.arrays", &Executor::arg_arrays)
+      .property("ref.grad.arrays", &Executor::grad_arrays)
+      .property("ref.aux.arrays", &Executor::aux_arrays)
+      .property("ref.outputs", &Executor::out_arrays)
+      .property("arg.arrays", &Executor::GetArgArrays)
+      .property("grad.arrays", &Executor::GetGradArrays)
+      .property("aux.arrays", &Executor::GetAuxArrays)
+      .property("outputs", &Executor::GetOuputArrays);
   function("mx.symbol.bind",
            &Executor::Bind,
            List::create(_["symbol"], _["ctx"],

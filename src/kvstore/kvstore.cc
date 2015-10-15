@@ -27,16 +27,17 @@ KVStore* KVStore::Create(const char *type_name) {
              tname == "local_allreduce_device") {
     tname = "local_allreduce_device";
     kv = new kvstore::KVStoreDevice();
-  } else if (tname == "dist_async") {
+  } else if (tname == "dist_async" ||
+             tname == "dist_sync" ||
+             tname == "dist") {
 #if MXNET_USE_DIST_KVSTORE
     kv = new kvstore::KVStoreDist();
-#else
-    LOG(FATAL) << "compile with USE_DIST_KVSTORE=1 to use " << tname;
-    return nullptr;
-#endif  // MXNET_USE_DIST_KVSTORE
-  } else if (tname == "dist_sync") {
-#if MXNET_USE_DIST_KVSTORE
-    kv = new kvstore::KVStoreDist();
+    if (tname == "dist_sync" &&
+        kv->IsWorkerNode() &&
+        kv->get_rank() == 0) {
+      // configure the server to be the sync mode
+      kv->SendCommandToServers(kvstore::CommandID::kSyncMode, "");
+    }
 #else
     LOG(FATAL) << "compile with USE_DIST_KVSTORE=1 to use " << tname;
     return nullptr;

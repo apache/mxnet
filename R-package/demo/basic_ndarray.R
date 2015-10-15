@@ -3,6 +3,8 @@ require(mxnet)
 
 x = 1:3
 mat = mx.nd.array(x)
+
+
 mat = mat + 1.0
 mat = mat + mat
 mat = mat - 5
