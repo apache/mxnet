@@ -20,6 +20,8 @@ include("executor.jl")
 include("io.jl")
 include("kvstore.jl")
 
+include("metric.jl")
+
 include("util.jl")
 
 end # mx
