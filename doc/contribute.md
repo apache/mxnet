@@ -8,11 +8,14 @@ Guidelines
 ----------
 * [Submit Pull Request](#submit-pull-request)
 * [Git Workflow Howtos](#git-workflow-howtos)
+  - [How to resolve conflict with master](#how-to-resolve-conflict-with-master)
+  - [How to combine multiple commits into one](#how-to-combine-multiple-commits-into-one)
+  - [What is the consequence of force push](#what-is-the-consequence-of-force-push)
 * [Document](#document)
 * [Testcases](#testcases)
 * [Examples](#cexamples)
 * [Core Library](#core-library)
-* [Python Package](#r-package)
+* [Python Package](#python-package)
 * [R Package](#r-package)
 
 Submit Pull Request
@@ -54,8 +57,8 @@ git rebase --continue
 git push --force
 ```
 
-### How to merge multiple commits
-Sometimes we want to merge multiple commits, especially when later commits are only fixes to previous ones,
+### How to combine multiple commits into one
+Sometimes we want to combine multiple commits, especially when later commits are only fixes to previous ones,
 to create a PR with set of meaningful commits. You can do it by following steps.
 - Before doing so, configure the default editor of git if you haven't done so before.
 ```bash
@@ -72,7 +75,7 @@ git rebase -i HEAD~3
 git push --force
 ```
 
-### What is the consequence of force push.
+### What is the consequence of force push
 The previous two tips requires force push, this is because we altered the path of the commits.
 It is fine to force push to your own fork, as long as the commits changed are only yours.
 
