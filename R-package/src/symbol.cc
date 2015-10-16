@@ -241,7 +241,7 @@ SymbolFunction::SymbolFunction(AtomicSymbolCreator handle)
      << MakeDocString(num_args, arg_names, arg_type_infos, arg_descriptions)
      << "@param name  string, optional\n"
      << "    Name of the resulting symbol.\n"
-     << "@return out The result symbol\n"
+     << "@return out The result mx.symbol\n\n"
      << "@export\n";
   this->docstring = os.str();
 }

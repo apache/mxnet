@@ -1,6 +1,6 @@
-# Create an SGD optimizer with respective parameters.
-# Perform SGD with momentum update
-#' @export
+#' Create an SGD optimizer with respective parameters.
+#' Perform SGD with momentum update
+#'
 mx.opt.sgd <- function(learning.rate,
                        momentum=0,
                        wd=0,
@@ -30,7 +30,12 @@ mx.opt.sgd <- function(learning.rate,
   return(list(create.state=create.state, update=update))
 }
 
-# create an optimizer by name and parameters
+#' Create an optimizer by name and parameters
+#'
+#' @param name The name of the optimizer
+#' @param ... Additional arguments
+#'
+#' @export
 mx.opt.create <- function(name, ...) {
   if (name == "sgd") {
     return(mx.opt.sgd(...))
@@ -38,9 +43,13 @@ mx.opt.create <- function(name, ...) {
   stop(paste("Unknown optimizer ", name))
 }
 
-# Get an updater closure that can take list of weight and gradient
-# and return updated list of weight.
-# The closure contains an internal state to track the optimization procedure.
+#' Get an updater closure that can take list of weight and gradient
+#' and return updated list of weight.
+#'
+#' @param optimizer The optimizer
+#' @param weights The weights to be optimized
+#'
+#' @export
 mx.opt.get.updater <- function(optimizer, weights) {
   n <- length(weights)
   # This is the list to keep track of internal states of optimzer

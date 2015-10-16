@@ -292,7 +292,7 @@ class NDArrayPacker {
    */
   Rcpp::NumericVector Get() const;
   /*! \return constructor */
-  static NDArrayPacker* Create();
+  static Rcpp::RObject CreateNDArrayPacker();
 
  private:
   /*! \brief The internal data */

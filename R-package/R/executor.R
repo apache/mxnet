@@ -1,5 +1,6 @@
-# Simple bind the symbol to executor,
-# with information from input shapes.
+#' Simple bind the symbol to executor,
+#' with information from input shapes.
+#'
 #' @export
 mx.simple.bind <- function(symbol, ctx, grad.req=FALSE, ...) {
   if (!is.MXSymbol(symbol)) stop("symbol need to be MXSymbol")
@@ -43,6 +44,7 @@ mx.exec.update.aux.arrays <- function(exec, arg.arrays, match.name=FALSE, skip.n
 
 #' Peform an forward on the executors
 #' This function will MUTATE the state of exec
+#'
 #' @export
 mx.exec.forward <- function(exec, is.train=TRUE) {
   exec$forward(is.train, list())
@@ -50,6 +52,7 @@ mx.exec.forward <- function(exec, is.train=TRUE) {
 
 #' Peform an backward on the executors
 #' This function will MUTATE the state of exec
+#'
 #' @export
 mx.exec.backward <- function(exec, ...) {
   exec$backward(list(...))

@@ -20,11 +20,11 @@ mx.util.filter.null <- function(lst) {
   lst[!sapply(lst, is.null)]
 }
 
+#' Internal function to generate mxnet_generated.R
+#' Users do not need to call this function.
+#' @param path The path to the root of the package.
+#'
 #' @export
 mxnet.export <- function(path) {
-  if (!mx.util.str.endswith(path, "R") &&
-      !mx.util.str.ends.with(path, "R/")) {
-    stop("Exported folder need to be R")
-  }
   mxnet.internal.export(path.expand(path))
 }

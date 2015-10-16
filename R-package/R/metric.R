@@ -16,7 +16,8 @@ mx.metric.custom <-function(name, feval) {
   return(ret)
 }
 
-# accuracy metric
+#' Accuracy metric
+#'
 #' @export
 mx.metric.accuracy <- mx.metric.custom("accuracy", function(label, pred) {
   ypred = max.col(as.array(pred), tie="first")
