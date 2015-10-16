@@ -19,3 +19,12 @@ mx.util.str.startswith <- function(name, prefix) {
 mx.util.filter.null <- function(lst) {
   lst[!sapply(lst, is.null)]
 }
+
+#' @export
+mxnet.export <- function(path) {
+  if (!mx.util.str.endswith(path, "R") &&
+      !mx.util.str.ends.with(path, "R/")) {
+    stop("Exported folder need to be R")
+  }
+  mxnet.internal.export(path.expand(path))
+}

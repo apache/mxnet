@@ -260,6 +260,35 @@ mx.model.init.iter <- function(X, y, batch.size, is.train) {
   return(mx.io.ArrayIter(X, y, batch.size=batch.size, shuffle=is.train))
 }
 
+#' Create a MXNet Feedforward neural net model with the specified training.
+#'
+#' @param symbol The symbolic configuration of the neural network.
+#' @param X mx.io.DataIter or R array/matrix
+#'     The training data.
+#' @param y R array, optional label of the data
+#'     This is only used when X is R array.
+#' @param ctx mx.context or list of mx.context, optional
+#'     The devices used to perform training.
+#' @param num.round integer (default=10)
+#'     The number of iterations over training data to train the model.
+#' @param optimizer string, default="sgd"
+#'     The optimization method.
+#' @param initializer, initializer object. default=mx.init.uniform(0.01)
+#'     The initialization scheme for parameters.
+#' @param eval.data mx.io.DataIter or list(data=R.array, label=R.array), optional
+#'     The validation set used for validation evaluation during the progress
+#' @param eval.metric function, optional
+#'     The evaluation function on the results.
+#' @param iter.end.callback function, optional
+#'     The callback when iteration ends.
+#' @param epoch.end.callback function, optional
+#'     The callback when one mini-batch iteration ends.
+#' @param array.batch.size integer (default=128)
+#'     The batch size used for R array training.
+#' @param kvstore string (default="local")
+#'     The parameter synchronization scheme in multiple devices.
+#' @return model A trained mxnet model.
+#' @export
 mx.model.FeedForward.create <-
 function(symbol, X, y=NULL, ctx=NULL,
          num.round=10, optimizer="sgd",
@@ -330,8 +359,8 @@ predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128)
 
 #' Load model checkpoint from file.
 #'
-#' @prefix string prefix of the model name
-#' @iteration integer Iteration number of model we would like to load.
+#' @param prefix string prefix of the model name
+#' @param iteration integer Iteration number of model we would like to load.
 #' @export
 mx.model.load <- function(prefix, iteration) {
   symbol <- mx.symbol.load(paste0(prefix, "-symbol.json"))
@@ -366,9 +395,9 @@ mx.model.load <- function(prefix, iteration) {
 
 #' Save model checkpoint into file.
 #'
-#' @model The feedforward model to be saved.
-#' @prefix string prefix of the model name
-#' @iteration integer Iteration number of model we would like to load.
+#' @param model The feedforward model to be saved.
+#' @param prefix string prefix of the model name
+#' @param iteration integer Iteration number of model we would like to load.
 #' @export
 mx.model.save <- function(model, prefix, iteration) {
   arg.params <- model$arg.params

@@ -1,4 +1,6 @@
 .onLoad <- function(libname, pkgname) {
+  require(methods)
+
   library.dynam("libmxnet", pkgname, libname, local=FALSE)
   library.dynam("mxnet", pkgname, libname)
   loadModule("mxnet", TRUE)

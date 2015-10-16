@@ -85,7 +85,7 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += -Wl,-rpath,$(DEPS_PATH)/lib $(PS_LDFLAGS_SO)
 endif
 
-.PHONY: clean all test lint doc clean_all rcpplint
+.PHONY: clean all test lint doc clean_all rcpplint rcppexport roxygen
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
@@ -139,13 +139,20 @@ test: $(TEST)
 lint: rcpplint
 	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python
 
-rcpplint:
-	python dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
-
 doc: doxygen
 
 doxygen:
 	doxygen doc/Doxyfile
+
+# R related shortcuts
+rcpplint:
+	python dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
+
+rcppexport:
+	Rscript -e "require(mxnet); mxnet::mxnet.export(\"R-package/R\")"
+
+roxygen:
+	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
 
 clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~

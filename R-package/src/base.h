@@ -198,10 +198,10 @@ struct Context {
   inline static void InitRcppModule() {
     using namespace Rcpp;  // NOLINT(*);
     function("mx.cpu", &CPU,
-             List::create(_["device_id"] = 0),
+             List::create(_["dev.id"] = 0),
              "Create a CPU context.");
     function("mx.gpu", &GPU,
-             List::create(_["device_id"]),
+             List::create(_["dev.id"] = 0),
              "Create a GPU context with specific device_id.");
   }
   /*! \brief the device type id for CPU */
@@ -222,32 +222,6 @@ inline std::vector<const char*> CKeys(const std::vector<std::string> &keys) {
     c_keys[i] = keys[i].c_str();
   }
   return c_keys;
-}
-
-/*!
- * \brief Get human readable function information
- * \param name the name of function.
- * \parma num_args number of arguments.
- * \parma arg_names name of arguments
- * \parma arg_type_infos type information of arguments.
- * \param arg_descriptions descriptions of arguments.
- * \param remove_dup Whether to remove duplications
- */
-inline std::string MakeDocString(mx_uint num_args,
-                                 const char **arg_names,
-                                 const char **arg_type_infos,
-                                 const char **arg_descriptions,
-                                 bool remove_dup = true) {
-  std::set<std::string> visited;
-  std::ostringstream os;
-  for (mx_uint i = 0; i < num_args; ++i) {
-    std::string arg = arg_names[i];
-    if (visited.count(arg) != 0 && remove_dup) continue;
-    visited.insert(arg);
-    os << "    " << arg_names[i] << " : "  << arg_type_infos[i] << "\n"
-       << "        " << arg_descriptions[i] << "\n";
-  }
-  return os.str();
 }
 
 /*!
