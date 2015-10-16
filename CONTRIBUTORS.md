@@ -50,3 +50,4 @@ List of Contributors
 * [Tong He](https://github.com/hetong007)
 * [Junran He](https://github.com/junranhe)
   - Junran makes device kvstore allocation strategy smarter
+* [Shuzhe Wu](https://github.com/II-Matto)
