@@ -5,6 +5,7 @@
  */
 #include <Rcpp.h>
 #include "./base.h"
+#include "./export.h"
 #include "./ndarray.h"
 
 namespace mxnet {
@@ -225,13 +226,12 @@ void NDArray::Save(const Rcpp::List& data_lst,
   }
   size_t num_args = data_lst.size();
   std::vector<NDArrayHandle> handles(num_args);
-  std::vector<const char*> keys(num_args);
 
   for (int i = 0 ; i < data_lst.size(); ++i) {
-    keys[i] = lst_names[i].c_str();
     SEXP obj = data_lst[i];
     handles[i] = NDArray(obj)->handle;
   }
+  std::vector<const char*> keys = CKeys(lst_names);
   MX_CALL(MXNDArraySave(filename.c_str(), num_args,
                         dmlc::BeginPtr(handles),
                         dmlc::BeginPtr(keys)));
@@ -342,13 +342,9 @@ NDArrayFunction::NDArrayFunction(FunctionHandle handle)
     // dostring: generate python style for now, change to R style later
     std::ostringstream os;
     os << description << "\n\n"
-       << "Parameters\n"
-       << "----------\n"
        << MakeDocString(num_args, arg_names, arg_type_infos, arg_descriptions)
-       << "Returns\n"
-       << "-------\n"
-       << "out : NDArray\n"
-       << "    The output result of the function";
+       << "@return out The result ndarray\n"
+       << "@export\n";
     this->docstring = os.str();
   }
   // initialize the function information

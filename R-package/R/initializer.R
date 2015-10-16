@@ -52,10 +52,3 @@ mx.init.create <- function(initializer, shape.array, ctx, skip.unknown=TRUE) {
   }
   return(ret)
 }
-
-mxnet_generate <- function(filename) {
-  filename <- path.expand(filename)
-  .Call("mxnet_generate", filename, PACKAGE="mxnet")
-}
-
-

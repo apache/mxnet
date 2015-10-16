@@ -7,6 +7,7 @@
 #include <cstring>
 #include "./base.h"
 #include "./io.h"
+#include "./export.h"
 #include "./ndarray.h"
 
 namespace mxnet {
@@ -144,13 +145,9 @@ DataIterCreateFunction::DataIterCreateFunction
   }
   std::ostringstream os;
   os << description << "\n\n"
-     << "Parameters\n"
-     << "----------\n"
      << MakeDocString(num_args, arg_names, arg_type_infos, arg_descriptions)
-     << "Returns\n"
-     << "-------\n"
-     << "out : data iter\n"
-     << "    The resulting data iter.";
+     << "@return iter The result DataIter\n"
+     << "@export\n";
   this->docstring = os.str();
 }
 

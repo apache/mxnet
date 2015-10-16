@@ -110,8 +110,6 @@ mx.nd.array <- function(src.array, ctx=NULL) {
     if (!is.vector(src.array) && !is.matrix(src.array)) {
       stop("mx.nd.array takes an object of class array, vector or matrix only.")
     } else {
-#       if (is.integer(src.array) && !is.matrix(src.array))
-#         src.array = as.numeric(src.array)
       src.array <- as.array(src.array)
     }
   }
@@ -137,22 +135,38 @@ is.mx.nd.array <- function(src.array) {
   is.MXNDArray(src.array)
 }
 
+#' Binary operator overloading of mx.nd.array
+#' @param e1 The first operand
+#' @param e1 The second operand
+#' @export
 Ops.MXNDArray <- function(e1, e2) {
   mx.nd.internal.dispatch.Ops(.Generic, e1, e2)
 }
 
+#' Dimension operator overload of mx.nd.array
+#' @param x The mx.nd.array
+#' @export
 dim.MXNDArray <- function(x) {
   mx.nd.internal.dim(x)
 }
 
+#' Length operator overload of mx.nd.array
+#' @param x The mx.nd.array
+#' @export
 length.MXNDArray <- function(x) {
   mx.nd.internal.length(x)
 }
 
+#' as.array operator overload of mx.nd.array
+#' @param x The mx.nd.array
+#' @export
 as.array.MXNDArray <- function(x) {
   mx.nd.internal.as.array(x)
 }
 
+#' as.matrix operator overload of mx.nd.array
+#' @param x The mx.nd.array
+#' @export
 as.matrix.MXNDArray <- function(x) {
   if (length(dim(x)) != 2) {
     stop("The input argument is not two dimensional matrix.")
@@ -160,11 +174,18 @@ as.matrix.MXNDArray <- function(x) {
   as.matrix(as.array(x))
 }
 
+#' print operator overload of mx.nd.array
+#' @param x The mx.nd.array
+#' @export
 print.MXNDArray <- function(x) {
   print(as.array(x))
 }
 
-# TODO(KK) are we able to use generics for S3
+# TODO(KK) use generics?
+
+#' Get the context of mx.nd.array
+#' @param x The mx.nd.array
+#' @export
 ctx <-function(x) {
   mx.nd.internal.ctx(x)
 }

@@ -9,6 +9,7 @@
 #include "./base.h"
 #include "./symbol.h"
 #include "./name.h"
+#include "./export.h"
 
 namespace mxnet {
 namespace R {
@@ -237,15 +238,11 @@ SymbolFunction::SymbolFunction(AtomicSymbolCreator handle)
   }
   std::ostringstream os;
   os << description << "\n\n"
-     << "Parameters\n"
-     << "----------\n"
      << MakeDocString(num_args, arg_names, arg_type_infos, arg_descriptions)
-     << "name : string, optional.\n"
-     << "    Name of the resulting symbol.\n\n"
-     << "Returns\n"
-     << "-------\n"
-     << "out : Symbol\n"
-     << "    The resulting Symbol";
+     << "@param name  string, optional\n"
+     << "    Name of the resulting symbol.\n"
+     << "@return out The result symbol\n"
+     << "@export\n";
   this->docstring = os.str();
 }
 
@@ -333,7 +330,7 @@ void Symbol::InitRcppModule() {
            &Symbol::LoadJSON,
            List::create(_["json.str"]),
            "Load a symbol from json string.");
-  function("mx.varg.symbol.Group",
+  function("mx.varg.symbol.internal.Group",
            &Symbol::Group,
            List::create(_["slist"]),
            "Create a symbol that groups symbols together.");
