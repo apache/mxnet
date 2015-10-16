@@ -34,7 +34,6 @@ devices = lapply(1:2, function(i) {
   mx.cpu(i)
 })
 
-
 # create the model
 model <- mx.model.FeedForward.create(softmax, X=dtrain, eval.data=dtest,
                                      ctx=devices, num.round=1,
@@ -42,8 +41,8 @@ model <- mx.model.FeedForward.create(softmax, X=dtrain, eval.data=dtest,
                                      initializer=mx.init.uniform(0.07),
                                      iter.end.callback=mx.callback.save.checkpoint("chkpt"),
                                      epoch.end.callback=mx.callback.log.train.metric(100))
-# load model from checkpoint
-model <- mx.model.load("chkpt", 1)
+
+
 # do prediction
 pred <- predict(model, dtest)
 label <- mx.io.extract(dtest, "label")

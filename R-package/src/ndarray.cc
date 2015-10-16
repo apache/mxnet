@@ -152,16 +152,17 @@ void NDArrayPacker::Push(const NDArray::RObjectType& nd) {
 
 Rcpp::NumericVector NDArrayPacker::Get() const {
   Rcpp::IntegerVector sp(shape_.begin(), shape_.end());
-  SEXP sexp = sp;
+  Rcpp::RObject sexp = sp;
   Rcpp::Dimension dim(sexp);
   Rcpp::NumericVector ret(dim);
+  RCHECK(ret.size() == data_.size());
   RowToColMajor(dmlc::BeginPtr(data_), shape_,
                 data_.size(), ret.begin());
   return ret;
 }
 
-NDArrayPacker* NDArrayPacker::Create() {
-  return new NDArrayPacker();
+Rcpp::RObject NDArrayPacker::CreateNDArrayPacker() {
+  return Rcpp::internal::make_new_object(new NDArrayPacker());
 }
 
 Rcpp::Dimension NDArray::shape() const {
@@ -170,8 +171,8 @@ Rcpp::Dimension NDArray::shape() const {
   MX_CALL(MXNDArrayGetShape(
       ptr_->handle, &ndim, &pshape));
   Rcpp::IntegerVector dat(pshape, pshape + ndim);
-  SEXP ret = dat;
-  return ret;
+  Rcpp::RObject ret = dat;
+  return Rcpp::Dimension(ret);
 }
 
 NDArray NDArray::Clone() const {
@@ -228,7 +229,7 @@ void NDArray::Save(const Rcpp::List& data_lst,
   std::vector<NDArrayHandle> handles(num_args);
 
   for (int i = 0 ; i < data_lst.size(); ++i) {
-    SEXP obj = data_lst[i];
+    Rcpp::RObject obj = data_lst[i];
     handles[i] = NDArray(obj)->handle;
   }
   std::vector<const char*> keys = CKeys(lst_names);
@@ -254,7 +255,7 @@ Rcpp::List NDArray::Load(const std::string& filename) {
     for (mx_uint i = 0; i < out_size; ++i) {
       lst_names[i] = out_names[i];
     }
-    out.attr("names") = lst_names;
+    out.names() = lst_names;
   }
   return out;
 }
@@ -285,7 +286,7 @@ std::vector<NDArrayHandle> NDArray::GetHandles(const Rcpp::List& array_list,
           << "Expect " << list_name << " to  be list of " << NDArray::TypeName();
       Rcpp::RObject obj = array_list[i];
       Rcpp::XPtr<NDBlob> ptr(obj);
-      SEXP attr = ptr.attr("class");
+      Rcpp::RObject attr = ptr.attr("class");
       RCHECK(attr != R_NilValue && Rcpp::as<std::string>(attr) == "MXNDArray")
           << "Expect " << list_name << " to  be list of " << NDArray::TypeName();
       ret[i] = ptr->handle;
@@ -343,7 +344,7 @@ NDArrayFunction::NDArrayFunction(FunctionHandle handle)
     std::ostringstream os;
     os << description << "\n\n"
        << MakeDocString(num_args, arg_names, arg_type_infos, arg_descriptions)
-       << "@return out The result ndarray\n"
+       << "@return out The result mx.ndarray\n\n"
        << "@export\n";
     this->docstring = os.str();
   }
@@ -490,9 +491,8 @@ inline bool ParseNDArrayArg(SEXP sexp, NDArrayHandle *handle, float *value) {
       return false;
     }
     case EXTPTRSXP: {
-      // TODO(KK)  is it correct
       Rcpp::XPtr<NDBlob> ptr(sexp);
-      SEXP attr = ptr.attr("class");
+      Rcpp::RObject attr = ptr.attr("class");
       RCHECK(attr != R_NilValue && Rcpp::as<std::string>(attr) == "MXNDArray")
           << "MXNDArray binary operations only support NDArray and numeric values";
       RCHECK(!ptr->moved)
@@ -618,7 +618,7 @@ void NDArray::InitRcppModule() {
   class_<NDArrayPacker>("NDArrayPacker")
       .method("push", &NDArrayPacker::Push)
       .method("get", &NDArrayPacker::Get);
-  function("mx.nd.arraypacker.create", &NDArrayPacker::Create);
+  function("mx.nd.arraypacker", &NDArrayPacker::CreateNDArrayPacker);
 }
 
 void NDArrayFunction::InitRcppModule() {

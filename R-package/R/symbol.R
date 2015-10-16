@@ -4,6 +4,7 @@
 #'     The name of the result symbol.
 #' @return The result symbol
 #' @name mx.symbol.Variable
+#'
 #' @export
 NULL
 
@@ -12,6 +13,7 @@ NULL
 #' @param kwarg
 #'     Variable length of symbols or list of symbol.
 #' @return The result symbol
+#'
 #' @export
 mx.symbol.Group <- function(...) {
   mx.varg.symbo.internal.Group(list(...))
@@ -65,19 +67,13 @@ is.MXSymbol <- function(x) {
 #'
 #' @return Logical indicator
 #'
-#' @examples
-#' mat = mx.nd.array(1:10)
-#' is.mx.nd.array(mat)
-#' mat2 = 1:10
-#' is.mx.nd.array(mat2)
-#'
 #' @export
-is.mx.symbol <- function(x) {
-  is.MXSymbol(x)
-}
+is.mx.symbol <- is.MXSymbol
+
 
 #' Get the arguments of symbol.
 #' @param x The input symbol
+#'
 #' @export
 arguments <- function(x) {
   if (!is.MXSymbol(x))
@@ -88,6 +84,7 @@ arguments <- function(x) {
 #' Apply symbol to the inputs.
 #' @param x The symbol to be applied
 #' @param kwargs The keyword arguments to the symbol
+#'
 #' @export
 mx.apply <- function(x, ...) {
   if (!is.MXSymbol(x)) stop("only for MXSymbol type")
@@ -96,6 +93,7 @@ mx.apply <- function(x, ...) {
 
 #' Get the outputs of a symbol.
 #' @param x The input symbol
+#'
 #' @export
 outputs <- function(x) {
   if (!is.MXSymbol(x)) stop("only for MXSymbol type")
@@ -104,19 +102,15 @@ outputs <- function(x) {
 
 init.symbol.methods <- function() {
   # Think of what is the best naming
-  #' @export
   setMethod("+", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
     mx.varg.symbol.internal.Plus(list(e1, e2))
   })
-  #' @export
   setMethod("-", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
     mx.varg.symbol.internal.Minus(list(e1, e2))
   })
-  #' @export
   setMethod("*", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
     mx.varg.symbol.internal.Mul(list(e1, e2))
   })
-  #' @export
   setMethod("/", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
     mx.varg.symbol.internal.Div(list(e1, e2))
   })

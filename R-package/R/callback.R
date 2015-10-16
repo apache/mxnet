@@ -1,4 +1,4 @@
-# Log training metric each period
+#' Log training metric each period
 #' @export
 mx.callback.log.train.metric <- function(period) {
   function(iteration, nbatch, env) {
@@ -10,7 +10,10 @@ mx.callback.log.train.metric <- function(period) {
 }
 
 
-#
+#' Save checkpoint to files each period iteration.
+#'
+#' @param prefix The prefix of the model checkpoint.
+#'
 #' @export
 mx.callback.save.checkpoint <- function(prefix, period=1) {
   function(iteration, nbatch, env) {

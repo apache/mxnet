@@ -228,7 +228,7 @@ inline std::vector<const char*> CKeys(const std::vector<std::string> &keys) {
  *\return whether the expression is simple arguments
  * That is not module object and can be converted to string
  */
-inline const char* TypeName(SEXP args) {
+inline const char* TypeName(const Rcpp::RObject& args) {
   switch (TYPEOF(args)) {
     case REALSXP: return "numeric";
     case VECSXP: return "list";
@@ -246,7 +246,7 @@ inline const char* TypeName(SEXP args) {
  * \return the corresponding string
  */
 template<typename T>
-inline std::string toString(SEXP val) {
+inline std::string toString(const Rcpp::RObject& val) {
   std::ostringstream os;
   os << Rcpp::as<T>(val);
   return os.str();
@@ -256,7 +256,7 @@ inline std::string toString(SEXP val) {
  * \brief Check whether the value is simple parameter
  * \param val The value to check.
  */
-inline bool isSimple(SEXP val) {
+inline bool isSimple(const Rcpp::RObject& val) {
   switch (TYPEOF(val)) {
     case STRSXP:
     case INTSXP:
@@ -272,7 +272,7 @@ inline bool isSimple(SEXP val) {
  * \param val The value of the parameter
  * \return A python string representation of val
  */
-inline std::string toPyString(const std::string &key, SEXP val) {
+inline std::string toPyString(const std::string &key, const Rcpp::RObject& val) {
   std::ostringstream os;
   int len = Rf_length(val);
   if (len != 1) {
@@ -319,7 +319,7 @@ inline std::string FormatParamKey(std::string src) {
 
 /*! \return wher list has names */
 inline bool HasName(const Rcpp::List& src) {
-  SEXP obj = src.names();
+  Rcpp::RObject obj = src.names();
   return obj != R_NilValue;
 }
 

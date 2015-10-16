@@ -257,7 +257,7 @@ mx.model.init.iter <- function(X, y, batch.size, is.train) {
     shape <- dim(X)
     y <- c(1:shape[[1]]) * 0
   }
-  return(mx.io.ArrayIter(X, y, batch.size=batch.size, shuffle=is.train))
+  return(mx.io.arrayiter(X, y, batch.size=batch.size, shuffle=is.train))
 }
 
 #' Create a MXNet Feedforward neural net model with the specified training.
@@ -288,6 +288,7 @@ mx.model.init.iter <- function(X, y, batch.size, is.train) {
 #' @param kvstore string (default="local")
 #'     The parameter synchronization scheme in multiple devices.
 #' @return model A trained mxnet model.
+#'
 #' @export
 mx.model.FeedForward.create <-
 function(symbol, X, y=NULL, ctx=NULL,
@@ -333,6 +334,7 @@ function(symbol, X, y=NULL, ctx=NULL,
 #' @param X The dataset to predict.
 #' @param ctx mx.cpu() or mx.gpu(i) The device used to generate the prediction.
 #' @param array.batch.size The batch size used in batching. Only used when X is R's array.
+#'
 #' @export
 predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128) {
   if (is.null(ctx)) ctx <- mx.ctx.default()
@@ -343,7 +345,7 @@ predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128)
   pexec <- mx.simple.bind(model$symbol, ctx=ctx, data=dim(dlist$data), grad.req=FALSE)
   mx.exec.update.arg.arrays(pexec, model$arg.params, match.name=TRUE)
   mx.exec.update.aux.arrays(pexec, model$aux.params, match.name=TRUE)
-  packer <- mx.nd.arraypacker.create()
+  packer <- mx.nd.arraypacker()
   X$reset()
   while (X$iter.next()) {
     dlist = X$value()
@@ -354,6 +356,7 @@ predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128)
     oshape <- dim(out.pred)
     packer$push(mx.nd.slice(out.pred, 0, oshape[[1]] - padded))
   }
+  X$reset()
   return(packer$get())
 }
 
@@ -361,6 +364,7 @@ predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128)
 #'
 #' @param prefix string prefix of the model name
 #' @param iteration integer Iteration number of model we would like to load.
+#'
 #' @export
 mx.model.load <- function(prefix, iteration) {
   symbol <- mx.symbol.load(paste0(prefix, "-symbol.json"))
@@ -398,6 +402,7 @@ mx.model.load <- function(prefix, iteration) {
 #' @param model The feedforward model to be saved.
 #' @param prefix string prefix of the model name
 #' @param iteration integer Iteration number of model we would like to load.
+#'
 #' @export
 mx.model.save <- function(model, prefix, iteration) {
   arg.params <- model$arg.params

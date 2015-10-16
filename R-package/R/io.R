@@ -3,10 +3,18 @@ is.MXDataIter <- function(x) {
   inherits(x, "Rcpp_MXArrayDataIter")
 }
 
+#' Judge if an object is mx.dataiter
+#'
+#' @return Logical indicator
+#'
+#' @export
+is.mx.dataiter <- is.MXDataIter
+
 #' Extract a certain field from DataIter.
+#'
 #' @export
 mx.io.extract <- function(iter, field) {
-  packer <- mx.nd.arraypacker.create()
+  packer <- mx.nd.arraypacker()
   iter$reset()
   while (iter$iter.next()) {
     dlist <- iter$value()
@@ -15,9 +23,11 @@ mx.io.extract <- function(iter, field) {
     oshape <- dim(data)
     packer$push(mx.nd.slice(data, 0, oshape[[1]] - padded))
   }
+  iter$reset()
   return(packer$get())
 }
 
+#
 #' Create MXDataIter compatible iterator from R's array
 #'
 #' @param data The data array.
@@ -26,11 +36,11 @@ mx.io.extract <- function(iter, field) {
 #' @param shuffle Whether shuffle the data
 #'
 #' @export
-mx.io.ArrayIter <- function(data, label=NULL,
+mx.io.arrayiter <- function(data, label=NULL,
                             batch.size=128,
                             shuffle=FALSE) {
-  mx.io.internal.ArrayIter.create(as.array(data),
-                                  as.array(label),
-                                  batch.size,
-                                  shuffle)
+  mx.io.internal.arrayiter(as.array(data),
+                           as.array(label),
+                           batch.size,
+                           shuffle)
 }

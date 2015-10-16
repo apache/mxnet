@@ -149,7 +149,7 @@ rcpplint:
 	python dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
 
 rcppexport:
-	Rscript -e "require(mxnet); mxnet::mxnet.export(\"R-package/R\")"
+	Rscript -e "require(mxnet); mxnet::mxnet.export(\"R-package\")"
 
 roxygen:
 	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
