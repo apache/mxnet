@@ -501,6 +501,9 @@ class FeedForward(BASE_ESTIMATOR):
         If this is True, no error will be thrown when aux_params and arg_params
         contain extra parameters than needed.
 
+    begin_round : int,optional
+        The begining training iteration.
+
     **kwargs : dict
         The additional keyword arguments passed to optimizer.
     """
