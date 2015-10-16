@@ -997,18 +997,20 @@ int MXKVStorePull(KVStoreHandle handle,
 }
 
 int MXKVStoreSetUpdater(KVStoreHandle handle,
-                        MXKVStoreUpdater updater,
-                        void* updater_handle) {
-  API_BEGIN();
-  auto updt = [updater, updater_handle](int key, const NDArray& recv, NDArray* local) {
-    NDArray* recv_copy = new NDArray();
-    *recv_copy = recv;
-    NDArray* local_copy = new NDArray();
-    *local_copy = *local;
-    updater(key, recv_copy, local_copy, updater_handle);
-  };
-  static_cast<KVStore*>(handle)->set_updater(updt);
-  API_END();
+						MXKVStoreUpdater updater,
+						void* updater_handle) {
+	API_BEGIN();
+	MXKVStoreUpdater * updater_temp = updater;
+	void* updater_handle_temp = updater_handle;
+	std::function<void(int, const NDArray&, NDArray*)> updt = [updater_temp, updater_handle_temp](int key, const NDArray& recv, NDArray* local) {
+		NDArray* recv_copy = new NDArray();
+		*recv_copy = recv;
+		NDArray* local_copy = new NDArray();
+		*local_copy = *local;
+		updater_temp(key, recv_copy, local_copy, updater_handle_temp);
+	};
+	static_cast<KVStore*>(handle)->set_updater(updt);
+	API_END();
 }
 
 int MXKVStoreGetRank(KVStoreHandle handle, int *rank) {
