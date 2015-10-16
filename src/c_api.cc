@@ -997,8 +997,8 @@ int MXKVStorePull(KVStoreHandle handle,
 }
 
 int MXKVStoreSetUpdater(KVStoreHandle handle,
-						MXKVStoreUpdater updater,
-						void* updater_handle) {
+                        MXKVStoreUpdater updater,
+                        void* updater_handle) {
 	API_BEGIN();
 	MXKVStoreUpdater * updater_temp = updater;
 	void* updater_handle_temp = updater_handle;
