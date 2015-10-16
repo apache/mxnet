@@ -113,7 +113,7 @@ macro _infer_shape(self, keys, indptr, sdata)
         shape_data = pointer_to_array(shape_data, shape_size)
         map(1:shape_size) do i
           my_shape = pointer_to_array(shape_data[i], shape_ndim[i])
-          tuple(Int[my_shape...]...)
+          tuple(flipdim(Int[my_shape...],1)...)
         end
       end
       return (
@@ -128,7 +128,7 @@ function infer_shape(self :: Symbol; kwargs...)
   sdata  = MX_uint[]
   indptr = MX_uint[0]
   for (k,v) in kwargs
-    append!(sdata, [v...])
+    append!(sdata, flipdim([v...],1))
     push!(indptr, length(sdata))
   end
   keys = AbstractString[string(x[1]) for x in kwargs]
@@ -139,7 +139,7 @@ function infer_shape(self :: Symbol, args :: Union{Tuple, Void}...)
   indptr = MX_uint[0]
   for arg in args
     if isa(arg, Void); continue; end
-    append!(sdata, [arg...])
+    append!(sdata, flipdim([arg...],1))
     push!(indptr, length(sdata))
   end
   keys = Ptr{char_p}(0)

@@ -53,18 +53,18 @@ function test_infer_shape()
   data_shape = (100, 100)
   arg_shapes, out_shapes, aux_shapes = mx.infer_shape(model, data=data_shape)
   arg_shape_dict = Dict{Symbol,Tuple}(zip(mx.list_arguments(model), arg_shapes))
-  @test arg_shape_dict == Dict{Symbol,Tuple}(:fc2_bias => (10,),:fc2_weight => (10,1000),
-                                             :fc1_bias => (1000,), :fc1_weight => (1000,100),
+  @test arg_shape_dict == Dict{Symbol,Tuple}(:fc2_bias => (10,),:fc2_weight => (1000,10),
+                                             :fc1_bias => (1000,), :fc1_weight => (100, 1000),
                                              :data => data_shape)
   @test length(out_shapes) == 1
-  @test out_shapes[1] == (100, 10)
+  @test out_shapes[1] == (10, 100)
 end
 
 function test_infer_shape_error()
   info("Symbol::infer_shape::throws")
 
   model = mlp2()
-  weight_shape = (1, 100)
+  weight_shape = (100, 1)
   data_shape   = (100, 100)
   @test_throws mx.MXError mx.infer_shape(model, data=data_shape, fc1_weight=weight_shape)
 end
