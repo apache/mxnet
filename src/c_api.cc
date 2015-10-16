@@ -1002,7 +1002,8 @@ int MXKVStoreSetUpdater(KVStoreHandle handle,
   API_BEGIN();
   MXKVStoreUpdater * updater_temp = updater;
   void* updater_handle_temp = updater_handle;
-  std::function<void(int, const NDArray&, NDArray*)> updt = [updater_temp, updater_handle_temp](int key, const NDArray& recv, NDArray* local) {
+  std::function<void(int, const NDArray&, NDArray*)> updt
+  = [updater_temp, updater_handle_temp](int key, const NDArray& recv, NDArray* local) {
     NDArray* recv_copy = new NDArray();
     *recv_copy = recv;
     NDArray* local_copy = new NDArray();
