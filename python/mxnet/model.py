@@ -510,6 +510,7 @@ class FeedForward(BASE_ESTIMATOR):
                  numpy_batch_size=128,
                  arg_params=None, aux_params=None,
                  allow_extra_params=False,
+                 begin_round=0,
                  **kwargs):
         # check if symbol contain duplicated names.
         _check_arguments(symbol)
@@ -542,6 +543,7 @@ class FeedForward(BASE_ESTIMATOR):
         # internal helper state
         self._pred_exec = None
         self._pred_exec_input = None
+        self.begin_round = begin_round
 
     @staticmethod
     def _is_data_arg(name):
@@ -708,7 +710,7 @@ class FeedForward(BASE_ESTIMATOR):
         # do training
         _train_multi_device(self.symbol, self.ctx, input_shape,
                             self.arg_params, self.aux_params,
-                            begin_round=0, end_round=self.num_round,
+                            begin_round=self.begin_round, end_round=self.num_round,
                             optimizer=optimizer,
                             train_data=X, eval_data=eval_data,
                             eval_metric=eval_metric,
@@ -774,6 +776,7 @@ class FeedForward(BASE_ESTIMATOR):
         symbol, arg_params, aux_params = load_checkpoint(prefix, iteration)
         return FeedForward(symbol, ctx=ctx,
                            arg_params=arg_params, aux_params=aux_params,
+                           begin_round=iteration
                            **kwargs)
 
     @staticmethod
