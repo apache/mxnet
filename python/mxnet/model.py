@@ -776,7 +776,7 @@ class FeedForward(BASE_ESTIMATOR):
         symbol, arg_params, aux_params = load_checkpoint(prefix, iteration)
         return FeedForward(symbol, ctx=ctx,
                            arg_params=arg_params, aux_params=aux_params,
-                           begin_round=iteration
+                           begin_round=iteration,
                            **kwargs)
 
     @staticmethod
