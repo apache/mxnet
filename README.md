@@ -22,9 +22,9 @@ Contents
 * [Documentation and Tutorials](http://mxnet.readthedocs.org/en/latest/)
 * [Open Source Design Notes](http://mxnet.readthedocs.org/en/latest/#open-source-design-notes)
 * [Code Examples](example)
-* [Installation](doc/build.md)
+* [Installation](http://mxnet.readthedocs.org/en/latest/build.html)
 * [Features](#features)
-* [Contribute to MXNet](doc/contribute.md)
+* [Contribute to MXNet](http://mxnet.readthedocs.org/en/latest/contribute.html)
 * [License](#license)
 
 Features
