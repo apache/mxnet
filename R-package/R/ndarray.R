@@ -95,6 +95,10 @@ mx.nd.copyto <- function(src, ctx) {
 #'
 #' @return An \code{mx.ndarray}
 #'
+#' @rdname mx.nd.array
+#' 
+#' @return An Rcpp_MXNDArray object
+#' 
 #' @examples
 #' mat = mx.nd.array(x)
 #' mat = 1 - mat + (2 * mat)/(mat + 0.5)
