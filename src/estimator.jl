@@ -23,7 +23,7 @@ end
 function _split_inputs(batch_size :: Int, n_split :: Int)
   @assert(batch_size >= n_split)
   per_split = floor(Int, batch_size / n_split)
-  counts    = zeros(Int, n_split)+per_split
+  counts    = Base.zeros(Int, n_split)+per_split
   extra     = batch_size - sum(counts)
   counts[1:extra] += 1
 
@@ -41,7 +41,7 @@ function FeedForward(arch :: Symbol; context :: Union{Context, Vector{Context}, 
   FeedForward(arch, context)
 end
 
-function _init_params(self :: FeedForward, data :: AbstractDataProvider)
+function _init_params(self :: FeedForward, data :: AbstractDataProvider, initializer)
   # all arg names, including data, label, and parameters
   arg_names    = list_arguments(self.arch)
 
@@ -64,10 +64,10 @@ function _init_params(self :: FeedForward, data :: AbstractDataProvider)
 
   # initialize the contents of the parameters
   for (k,v) in self.arg_params
-    self.initializer(k, v)
+    initializer(k, v)
   end
   for (k,v) in self.aux_params
-    self.initializer(k, v)
+    initializer(k, v)
   end
 
   return (param_names, aux_names)
@@ -98,6 +98,7 @@ function _create_kvstore(kv_type :: Base.Symbol, num_device :: Int, arg_params :
 end
 
 function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: AbstractDataProvider;
+             initializer :: AbstractInitializer = UniformInitializer(0.01),
              epoch_stop :: Int = 10, epoch_start :: Int = 1,
              eval_data :: Union{Void, AbstractDataProvider} = nothing,
              eval_metric :: AbstractEvalMetric = Accuracy(),
@@ -111,7 +112,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
   # initialize parameters
   info("Initializing parameters...")
-  param_names, aux_names = _init_params(self, param_names, aux_names)
+  param_names, aux_names = _init_params(self, data, initializer)
 
   # setup kvstore
   if isa(kvstore, Base.Symbol)

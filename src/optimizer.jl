@@ -31,7 +31,7 @@ type SGD <: AbstractOptimizer
                mom_scheduler::AbstractMomentumScheduler=NullMomentumScheduler(),
                weight_decay::Float64=0.0001,
                grad_scale::Float64=1.0,
-               clip_grad::Float64=0.0)
+               grad_clip::Float64=0.0)
     new(0, lr_scheduler, mom_scheduler, weight_decay, grad_scale, grad_clip, 1.0)
   end
 end

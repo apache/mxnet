@@ -20,6 +20,7 @@ include("executor.jl")
 
 include("metric.jl")
 include("optimizer.jl")
+include("initializer.jl")
 
 include("io.jl")
 include("kvstore.jl")
