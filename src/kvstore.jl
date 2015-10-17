@@ -1,15 +1,18 @@
 type KVStore
   handle    :: MX_KVStoreHandle
   updater_c :: Ptr{Void}
+  updater   :: Function
+
+  KVStore(hdr :: MX_KVStoreHandle) = new(hdr, Ptr{Void}(0))
 end
 
 function KVStore(kv_type::Base.Symbol = :local)
-  @assert(kv_type ∈ [:local]) # TODO: update with allowed types
+  #@assert(kv_type ∈ [:local]) # TODO: update with allowed types
 
   ref_hdr = Ref{MX_handle}(0)
   kv_type = string(kv_type)
   @mxcall(:MXKVStoreCreate, (char_p, Ref{MX_handle}), kv_type, ref_hdr)
-  return KVStore(MX_KVStoreHandle(ref_hdr[]), Ptr{Void}(0))
+  return KVStore(MX_KVStoreHandle(ref_hdr[]))
 end
 function Base.unsafe_convert(::Type{MX_handle}, obj::KVStore)
   Base.unsafe_convert(MX_handle, obj.handle)
@@ -100,14 +103,21 @@ function get_rank(self :: KVStore)
 end
 
 
+# TODO: Currently Julia does not support closure in c-callbacks, so we are making use of the
+# extra handle parameter of the API to pass the updater object around. Fix this when someday
+# full closure cfunction is supported in Julia.
+function _kvstore_update_wrapper(index::Cint, nd_recv::MX_handle, nd_local::MX_handle, updater::Ptr{Void})
+  x = unsafe_pointer_to_objref(updater)
+  updater_func = unsafe_pointer_to_objref(updater) :: Function
+  updater_func(Int(index), NDArray(MX_NDArrayHandle(nd_recv)), NDArray(MX_NDArrayHandle(nd_local)))
+  return nothing
+end
 function set_updater(self :: KVStore, updater :: Function)
-  function updater_wrapper(index :: Cint, nd_recv :: MX_handle, nd_local :: MX_handle, ::Ptr{Void})
-    updater(index, NDArray(MX_NDArrayHandle(nd_recv)), NDArray(MX_NDArrayHandle(nd_local)))
-  end
-  self.wrapper_c = cfunction(updater_wrapper, Void, (Cint, MX_handle, MX_handle, Ptr{Void}))
+  self.updater = updater # keep a reference to the julia object so that updater_c is kept valid
+  self.updater_c = cfunction(_kvstore_update_wrapper, Void, (Cint, MX_handle, MX_handle, Ptr{Void}))
 
-  @mxcall(:MXKVStoreSetUpdater, (MX_handle, Ptr{Void}, Ptr{Void}),
-          self, self.wrapper_c, Ptr{Void}(0))
+  @mxcall(:MXKVStoreSetUpdater, (MX_handle, Ptr{Void}, Any),
+          self, self.updater_c, updater)
 end
 
 function set_optimizer(self :: KVStore, optimizer :: AbstractOptimizer)

@@ -75,7 +75,7 @@ function _create_kvstore(kv_type :: Base.Symbol, num_device :: Int, arg_params :
     if kv_type == :local
       max_size = maximum([prod(size(param)) for (k,param) in arg_params])
       if max_size < 1024 * 1024 * 16
-        kv_type = :loca_update_cpu
+        kv_type = :local_update_cpu
       else
         kv_type = :local_allreduce_cpu
       end

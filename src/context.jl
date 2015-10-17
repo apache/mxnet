@@ -1,4 +1,4 @@
-@enum CONTEXT_TYPE CPU=1 GPU=2
+@enum CONTEXT_TYPE CPU=1 GPU=2 CPU_PINNED=3
 
 type Context
   device_type :: CONTEXT_TYPE
