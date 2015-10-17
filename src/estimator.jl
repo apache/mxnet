@@ -120,6 +120,8 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
     data_shapes = [k => tuple(v[1:end-1]...,length(slices[i])) for (k,v) in provide_data(data)]
     label_shapes = [k => tuple(v[1:end-1]...,length(slices[i])) for (k,v) in provide_label(data)]
     train_execs[i] = simple_bind(self.arch, self.ctx[i]; grad_req=GRAD_WRITE, data_shapes..., label_shapes...)
+
+    copy_params_from(train_execs[i], self.arg_params, self.aux_params)
   end
 
   # set up input data structures
@@ -229,7 +231,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
     for (name, value) in get(eval_metric)
       info(format("{1:>15s} = {2:.4f}", name, value))
     end
-    info(format("{1:>15s} = {2:.2f} seconds", "time", (time_stop-time_start)/1e9))
+    info(format("{1:>15s} = {2:.4f} seconds", "time", time_stop-time_start))
 
     # evaluation on validation set
     if !isa(eval_data, Void)

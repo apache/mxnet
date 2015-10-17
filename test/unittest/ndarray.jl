@@ -160,6 +160,21 @@ function test_div()
   @test reldiff(t2./scalar, copy(a2./scalar)) < 1e-6
 end
 
+function test_gd()
+  dims   = rand_dims()
+  tw, aw = rand_tensors(dims)
+  tg, ag = rand_tensors(dims)
+
+  info("NDArray::gd::dims = $dims")
+
+  lr = rand()
+  wd = rand()
+
+  @mx.inplace aw += -lr * (ag + wd * aw)
+  tw += -lr * (tg + wd * tw)
+  @test reldiff(copy(aw), tw) < 1e-6
+end
+
 
 ################################################################################
 # Run tests
@@ -171,5 +186,6 @@ test_plus()
 test_minus()
 test_mul()
 test_div()
+test_gd()
 
 end
