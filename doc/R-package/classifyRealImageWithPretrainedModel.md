@@ -12,14 +12,52 @@ This model gives the recent state-of-art prediction accuracy on image net datase
 Pacakge Loading
 ---------------
 To get started, we load the mxnet package by require mxnet.
-```{r}
+
+```r
 require(mxnet)
+```
+
+```
+## Loading required package: mxnet
+## Loading required package: methods
 ```
 
 In this example, we also need the imager package to load and preprocess the images in R.
 
-```{r}
+
+```r
 require(imager)
+```
+
+```
+## Loading required package: imager
+## Loading required package: plyr
+## Loading required package: magrittr
+## Loading required package: stringr
+## Loading required package: png
+## Loading required package: jpeg
+## 
+## Attaching package: 'imager'
+## 
+## The following object is masked from 'package:magrittr':
+## 
+##     add
+## 
+## The following object is masked from 'package:plyr':
+## 
+##     liply
+## 
+## The following objects are masked from 'package:stats':
+## 
+##     convolve, spectrum
+## 
+## The following object is masked from 'package:graphics':
+## 
+##     frame
+## 
+## The following object is masked from 'package:base':
+## 
+##     save.image
 ```
 
 Load the Pretrained Model
@@ -27,13 +65,15 @@ Load the Pretrained Model
 Make sure you unzip the pre-trained model in current folder. And we can use the model
 loading function to load the model into R.
 
-```{r}
+
+```r
 model = mx.model.load("Inception/Inception_BN", iteration=39)
 ```
 
 We also need to load in the mean image, which is used for preprocessing using ```mx.nd.load```.
 
-```{r}
+
+```r
 mean.img = as.array(mx.nd.load("Inception/mean_224.nd")[["mean_img"]])
 ```
 
@@ -44,10 +84,13 @@ from imager package. But you can always change it to other images.
 
 Load and plot the image:
 
-```{r}
+
+```r
 im <- load.image(system.file("extdata/parrots.png", package="imager"))
 plot(im)
 ```
+
+![plot of chunk unnamed-chunk-5](../doc-image/mxnet/knitr/classifyRealImageWithPretrainedModel-unnamed-chunk-5-1.png) 
 
 Before feeding the image to the deep net, we need to do some preprocessing
 to make the image fit the input requirement of deepnet. The preprocessing
@@ -56,7 +99,8 @@ Because mxnet is deeply integerated with R, we can do all the processing in R fu
 
 The preprocessing function:
 
-```{r}
+
+```r
 preproc.image <-function(im, mean.image) {
   # crop the image
   shape <- dim(im)
@@ -83,7 +127,8 @@ preproc.image <-function(im, mean.image) {
 
 We use the defined preprocessing function to get the normalized image.
 
-```{r}
+
+```r
 normed <- preproc.image(im, mean.img)
 ```
 
@@ -92,31 +137,47 @@ Classify the Image
 Now we are ready to classify the image! We can use the predict function
 to get the probability over classes.
 
-```{r}
+
+```r
 prob <- predict(model, X=normed)
 dim(prob)
+```
+
+```
+## [1]    1 1000
 ```
 
 As you can see ```prob``` is a 1 times 1000 array, which gives the probability
 over the 1000 image classes of the input.
 
 We can use the ```max.col``` to get the class index.
-```{r}
+
+```r
 max.idx <- max.col(prob)
 max.idx
+```
+
+```
+## [1] 89
 ```
 
 The index do not make too much sense. So let us see what it really corresponds to.
 We can read the names of the classes from the following file.
 
-```{r}
+
+```r
 synsets <- readLines("Inception/synset.txt")
 ```
 
 And let us see what it really is
 
-```{r}
+
+```r
 print(paste0("Predicted Top-class: ", synsets[[max.idx]]))
+```
+
+```
+## [1] "Predicted Top-class: n01818515 macaw"
 ```
 
 Actually I do not know what does the word mean when I saw it.

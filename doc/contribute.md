@@ -13,7 +13,7 @@ Guidelines
   - [What is the consequence of force push](#what-is-the-consequence-of-force-push)
 * [Document](#document)
 * [Testcases](#testcases)
-* [Examples](#cexamples)
+* [Examples](#examples)
 * [Core Library](#core-library)
 * [Python Package](#python-package)
 * [R Package](#r-package)
@@ -129,9 +129,32 @@ make rcppexport
 ```
 - This only need to be done periodically when there is update on dynamic functions.
 
-### Document
+### API Document
 - The document is generated using roxygen2
 - You can type the following command to remake the documents at root folder.
 ```bash
 make roxygen
 ```
+
+### Rmarkdown Vignettes
+Rmarkdown vignettes are placed in [root/R-package/vignettes](../R-package/vignettes)
+These Rmarkdown files are not compiled. We host the compiled version on [root/doc/R-package](R-package)
+
+The following steps are followed to add a new Rmarkdown vignettes:
+- Add the original rmarkdown to [R-package/vignettes](../R-package/vignettes)
+- Modify ```doc/R-package/Makefile``` to add the markdown files to be build
+- Clone the [dmlc/doc-image](https://github.com/dmlc/doc-image) repo to folder ```doc```
+- Now type the following command on ```doc/R-package```
+```bash
+make the-markdown-tomake.md
+```
+- This will generate the markdown, as well as the figures into ```doc/dmlc-image/mxnet/knitr```
+- Add the generated markdown to the doc, modify the ```doc/R-package/index.md``` to point to the doc.
+- Add the generated figure to the ```dmlc/dmlc-image``` repo.
+  - If you already cloned the repo to doc, this means a ```git add```
+- Create PR for both the markdown  and ```dmlc-image```
+- You can also build the document locally by typing the followig command at ```doc folder```
+```bash
+make html
+```
+The reason we do this is to avoid exploded repo size due to generated images sizes.
