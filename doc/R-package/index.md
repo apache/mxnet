@@ -16,7 +16,7 @@ Installation
 - First build ```../lib/libmxnet.so``` by following [Build Instruction](../doc/build.md)
 - Type ```R CMD INSTALL R-package``` in the root folder.
 
-
 Contributor Guide
 -----------------
-* [R Contributor Guide](../contribute.md#r-package) gives various guidelines on how to contribute code, tutorial, rmarkdown examples to mxnet.
+* [Contributor Guide](http://mxnet.readthedocs.org/en/latest/contribute.html#r-package) R package section gives various guidelines on how to contribute code, tutorial, rmarkdown examples to mxnet.
+

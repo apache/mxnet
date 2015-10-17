@@ -26,16 +26,18 @@ if not os.path.exists('../recommonmark'):
 else:
     subprocess.call('cd ../recommonmark/; git pull', shell=True)
 
-if not os.path.exists('doc-image'):
-    subprocess.call('rm -rf doc-image;' +
-                    'git clone https://github.com/dmlc/doc-image', shell = True)
+if not os.path.exists('web-data'):
+    subprocess.call('rm -rf web-data;' +
+                    'git clone https://github.com/dmlc/web-data', shell = True)
 else:
-    subprocess.call('cd doc-image; git pull', shell=True)
+    subprocess.call('cd web-data; git pull', shell=True)
 
 
 run_build_mxnet("..")
 sys.path.insert(0, os.path.abspath('../recommonmark/'))
 
+
+sys.stderr.write('READTHEDOCS=%s\n' % (READTHEDOCS_BUILD))
 
 from recommonmark import parser, transform
 
