@@ -9,6 +9,12 @@ real world image. The network architecture is decribed in [1].
 The pre-trained Inception-BatchNorm network is able to be downloaded from [this link](http://webdocs.cs.ualberta.ca/~bx3/data/Inception.zip)
 This model gives the recent state-of-art prediction accuracy on image net dataset.
 
+Preface
+-------
+This tutorial is written in Rmarkdown.
+- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.org/en/latest/R-package/classifyRealImageWithPretrainedModel.html)
+- You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/classifyRealImageWithPretrainedModel.Rmd)
+
 Pacakge Loading
 ---------------
 To get started, we load the mxnet package by require mxnet.
