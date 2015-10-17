@@ -100,9 +100,11 @@ function simple_bind(self :: Symbol, ctx :: Context; grad_req :: GRAD_REQ=GRAD_W
     grad_arrays = nothing
   else
     grad_arrays = Dict{Base.Symbol, NDArray}
+    provided_data_names = keys(kwargs)
     for (name, shape) in zip(list_arguments(self), grad_shapes)
       # TODO: use a better way to identify data
-      if !(endswith(string(name), "data") || endswith(string(name), "label"))
+      #if !(endswith(string(name), "data") || endswith(string(name), "label"))
+      if !in(name, provided_data_names)
         grad_arrays[name] = zeros(shape, ctx)
       end
     end
@@ -132,4 +134,27 @@ end
 function backward(self :: Executor, out_grads :: Vector{NDArray})
   out_grads = MX_handle[out_grads...]
   @mxcall(:MXExecutorBackward, (MX_handle, MX_uint, Ptr{MX_handle}), self, length(out_grads), out_grads)
+end
+
+
+function copy_params_from(self::Executor, arg_params::Dict{Base.Symbol,NDArray},
+                          aux_params::Union{Void,Dict{Base.Symbol,NDArray}}=nothing;
+                          allow_extra_params::Bool=false)
+  for (name, array) in arg_params
+    if haskey(self.arg_dict, name)
+      copy!(self.arg_dict[name], array)
+    else
+      @assert(allow_extra_params, "Extra params $name not in the arguments")
+    end
+  end
+
+  if !isa(aux_params, Void)
+    for (name, array) in aux_params
+      if haskey(self.aux_dict, name)
+        copy!(self.aux_dict[name], array)
+      else
+        @assert(allow_extra_params, "Extra auxiliary state $name not recognized")
+      end
+    end
+  end
 end

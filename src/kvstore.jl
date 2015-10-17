@@ -1,5 +1,6 @@
 type KVStore
-  handle :: MX_KVStoreHandle
+  handle    :: MX_KVStoreHandle
+  updater_c :: Ptr{Void}
 end
 
 function KVStore(kv_type::Base.Symbol = :local)
@@ -8,7 +9,7 @@ function KVStore(kv_type::Base.Symbol = :local)
   ref_hdr = Ref{MX_handle}(0)
   kv_type = string(kv_type)
   @mxcall(:MXKVStoreCreate, (char_p, Ref{MX_handle}), kv_type, ref_hdr)
-  return KVStore(MX_KVStoreHandle(ref_hdr[]))
+  return KVStore(MX_KVStoreHandle(ref_hdr[]), Ptr{Void}(0))
 end
 function Base.unsafe_convert(::Type{MX_handle}, obj::KVStore)
   Base.unsafe_convert(MX_handle, obj.handle)
@@ -77,4 +78,46 @@ function pull!(self :: KVStore, keys :: Vector{Int}, outs :: Vector{NDArray}; pr
   outs = MX_handle[outs...]
   @mxcall(:MXKVStorePull, (MX_handle, MX_uint, Ptr{Cint}, Ptr{MX_handle}, Cint),
           self, length(keys), keys, outs, priority)
+end
+
+
+function get_type(self :: KVStore)
+  type_ref = Ref{char_p}(0)
+  @mxcall(:MXKVStoreGetType, (MX_handle, Ref{char_p}), self, type_ref)
+  return symbol(bytestring(type_ref[]))
+end
+
+function get_num_workers(self :: KVStore)
+  ref_size = Ref{Cint}(0)
+  @mxcall(:MXKVStoreGetGroupSize, (MX_handle, Ref{Cint}), self, ref_size)
+  return Int(ref_size[])
+end
+
+function get_rank(self :: KVStore)
+  ref_rank = Ref{Cint}(0)
+  @mxcall(:MXKVStoreGetRank, (MX_handle, Ref{Cint}), self, ref_rank)
+  return Int(ref_rank[])
+end
+
+
+function set_updater(self :: KVStore, updater :: Function)
+  function updater_wrapper(index :: Cint, nd_recv :: MX_handle, nd_local :: MX_handle, ::Ptr{Void})
+    updater(index, NDArray(MX_NDArrayHandle(nd_recv)), NDArray(MX_NDArrayHandle(nd_local)))
+  end
+  self.wrapper_c = cfunction(updater_wrapper, Void, (Cint, MX_handle, MX_handle, Ptr{Void}))
+
+  @mxcall(:MXKVStoreSetUpdater, (MX_handle, Ptr{Void}, Ptr{Void}),
+          self, self.wrapper_c, Ptr{Void}(0))
+end
+
+function set_optimizer(self :: KVStore, optimizer :: AbstractOptimizer)
+  ref_is_worker = Ref{Cint}(0)
+  @mxcall(:MXKVStoreIsWorkerNode, (Ref{Cint},), ref_is_worker)
+  is_worker = ref_is_worker[]
+
+  if ismatch(r"dist", string(get_type(self))) && is_worker
+    # TODO
+  else
+    set_updater(self, get_updater(optimizer))
+  end
 end

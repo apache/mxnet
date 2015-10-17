@@ -111,10 +111,11 @@ macro _infer_shape(self, keys, indptr, sdata)
       function build_shapes(shape_size::MX_uint, shape_ndim::Ptr{MX_uint}, shape_data::Ptr{Ptr{MX_uint}})
         shape_ndim = pointer_to_array(shape_ndim, shape_size)
         shape_data = pointer_to_array(shape_data, shape_size)
-        map(1:shape_size) do i
+        shapes = map(1:shape_size) do i
           my_shape = pointer_to_array(shape_data[i], shape_ndim[i])
           tuple(flipdim(Int[my_shape...],1)...)
         end
+        convert(Vector{Tuple}, shapes)
       end
       return (
         build_shapes(ref_arg_shape_size[], ref_arg_shape_ndim[], ref_arg_shape_data[]),

@@ -10,22 +10,23 @@ function test_mnist()
   mnist_provider = mx.MNISTProvider(image=filenames[:train_data],
                                     label=filenames[:train_label],
                                     batch_size=batch_size, silent=true, shuffle=false)
-  spec = mx.provides(mnist_provider)
-  spec = Dict(spec)
-  @test haskey(spec, :data)
-  @test haskey(spec, :softmax_label)
-  @test spec[:data] == (28,28,1,batch_size)
-  @test spec[:softmax_label] == (batch_size,)
+  data_spec = mx.provide_data(mnist_provider)
+  label_spec = mx.provide_label(mnist_provider)
+  @test data_spec == [(:data, (28,28,1,batch_size))]
+  @test label_spec == [(:softmax_label, (batch_size,))]
 
   n_batch = 0
   for batch in mnist_provider
     if n_batch == 0
       data_array  = mx.empty(28,28,1,batch_size)
       label_array = mx.empty(batch_size)
-      targets = Dict(:data => [(1:batch_size, data_array)],
-                     :softmax_label => [(1:batch_size, label_array)])
+      # have to use "for i=1:1" to get over the legacy "feature" of using
+      # [ ] to do concatenation in Julia
+      data_targets = [[(1:batch_size, data_array)] for i = 1:1]
+      label_targets = [[(1:batch_size, label_array)] for i = 1:1]
 
-      mx.load_data!(batch, targets)
+      mx.load_data!(batch, data_targets)
+      mx.load_label!(batch, label_targets)
 
       true_labels = [5,0,4,1,9,2,1,3,1,4] # the first 10 labels in MNIST train
       got_labels  = Int[copy(label_array)...]

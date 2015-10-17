@@ -7,7 +7,7 @@ type Accuracy <: AbstractEvalMetric
   Accuracy() = new(0.0, 0)
 end
 
-function update!(metric :: Accuracy, label :: NDArray, pred :: NDArray)
+function _update_single_output(metric :: Accuracy, labels :: NDArray, pred :: NDArray)
   label = copy(label)
   pred  = copy(pred)
 
@@ -19,9 +19,16 @@ function update!(metric :: Accuracy, label :: NDArray, pred :: NDArray)
   end
 end
 
+function update!(metric :: Accuracy, labels :: Vector{NDArray}, preds :: Vector{NDArray})
+  @assert length(labels) == length(preds)
+  for i = 1:length(labels)
+    _update_single_output(labels[i], preds[i])
+  end
+end
+
 import Base: get
 function get(metric :: Accuracy)
-  metric.acc_sum / metric.n_sample
+  return [(:accuracy, metric.acc_sum / metric.n_sample)]
 end
 
 function reset!(metric :: Accuracy)

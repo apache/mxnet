@@ -2,10 +2,16 @@
 
     A data provider provides interface to iterate over a dataset. It should implement the following functions:
 
-      provides(provider :: AbstractDataProvider) => Vector{Tuple{Base.Symbol, Tuple}}
+      provide_data(provider :: AbstractDataProvider) => Vector{Tuple{Base.Symbol, Tuple}}
+      provide_label(provider :: AbstractDataProvider) => Vector{Tuple{Base.Symbol, Tuple}}
 
     Returns a list of name-shape pairs, indicating the name and shape of the each data stream. For example,
-    `[(:data, (100,1,28,28)), (:softmax_label, (100,1))]`.
+    `[(:data, (100,1,28,28))]` or `[(:softmax_label, (100,1))]`. It should also implement the following convenient
+    function
+
+      get_batch_size(provider :: AbstractDataProvider) => Int
+
+    which returns the batch size used in this data provider.
 
     A data provider should implement the standard Julia iteration interface, including `Base.start`,
     `Base.next`, `Base.done` and `Base.eltype`. It could safely assume that the interface functions will
@@ -58,14 +64,14 @@ typealias SlicedNDArray Vector{Tuple{UnitRange{Int},NDArray}}
 
 """Root type for data batch
 
-    A data batch must implement the following interface function to actually provide the data. The interface
-    is designed to make it easy to generate data on the fly.
+    A data batch must implement the following interface function to actually provide the data and label.
 
-      load_data!(batch :: AbstractDataBatch, targets :: Dict{Base.Symbol, SlicedNDArray})
+      load_data!(batch :: AbstractDataBatch, targets :: Vector{SlicedNDArray})
+      load_label!(batch :: AbstractDataBatch, targets :: Vector{SlicedNDArray})
 
-    Load data into targets. The target is a dictionary mapping name to actual `SlicedNDArray` the data should be
-    copied into. Note `targets` might not contain names of all the data we could *provide*, simply because
-    some the data we provie is not needed.
+    Load data and label into targets. The target is a list of `SlicedNDArray` the data/label should be
+    copied into. The order in the list is guaranteed to be the same as returned by `provide_data` and
+    `provide_label`.
 
     The `SlicedNDArray` is used in data parallelization to run different sub-batch on different devices.
 
@@ -90,8 +96,10 @@ abstract AbstractDataBatch
 """Wrapper of built-in `libmxnet` data iterators.
 """
 type MXDataProvider <: AbstractDataProvider
-  handle   :: MX_DataIterHandle
-  provides :: Vector{Tuple{Base.Symbol, Tuple}}
+  handle     :: MX_DataIterHandle
+  data_shape :: Vector{Tuple{Base.Symbol, Tuple}}
+  label_shape:: Vector{Tuple{Base.Symbol, Tuple}}
+  batch_size :: Int
 end
 
 function _reset_data_iter(handle :: MX_DataIterHandle)
@@ -120,16 +128,20 @@ function MXDataProvider(handle     :: MX_DataIterHandle;
   # init iterator, load the first batch and get shapes
   _reset_data_iter(handle)
   @assert(_iter_next(handle), "Failed to load the first batch in MXDataProvider")
-  provides = Tuple{Base.Symbol, Tuple}[(data_name, size(_get_data(handle)))]
+  data_shape = Tuple{Base.Symbol, Tuple}[(data_name, size(_get_data(handle)))]
   if !isa(label_name, Void)
-    push!(provides, (label_name::Base.Symbol, size(_get_label(handle))))
+    label_shape = Tuple{Base.Symbol, Tuple}[(label_name::Base.Symbol, size(_get_label(handle)))]
+  else
+    label_shape = Tuple{Base.Symbol, Tuple}[]
   end
   _reset_data_iter(handle)
 
-  MXDataProvider(handle, provides)
+  MXDataProvider(handle, data_shape, label_shape, data_shape[1][2][end])
 end
 
-provides(provider::MXDataProvider) = provider.provides
+provide_data(provider::MXDataProvider) = provider.data_shape
+provide_label(provider::MXDataProvider) = provider.label_shape
+get_batch_size(provider::MXDataProvider) = provider.batch_size
 
 type MXDataProviderState <: AbstractDataProviderState
   has_next :: Bool
@@ -153,22 +165,19 @@ function Base.next(provider :: MXDataProvider, state :: MXDataProviderState)
   return (MXDataBatch(provider), state)
 end
 
-function load_data!(batch :: MXDataBatch, targets :: Dict{Base.Symbol, SlicedNDArray})
-  for (k,v) in targets
-    if k == batch.provider.provides[1][1]
-      # data
-      src = _get_data(batch.provider.handle)
-    elseif k == batch.provider.provides[2][1]
-      # label
-      src = _get_label(batch.provider.handle)
-    else
-      @assert(false, "Unknown data $k, we only provide $(batch.provider.provides)")
-    end
-
-    for (idx, target) in v
-      copy!(target, slice(src, idx))
-    end
+function _load_general!(batch :: MXDataBatch, loader :: Function, targets :: Vector{SlicedNDArray})
+  @assert length(targets) == 1
+  src = loader(batch.provider.handle)
+  for (idx, target) in targets[1]
+    copy!(target, slice(src, idx))
   end
+end
+
+function load_data!(batch :: MXDataBatch, targets :: Vector{SlicedNDArray})
+  _load_general!(batch, _get_data, targets)
+end
+function load_label!(batch :: MXDataBatch, targets :: Vector{SlicedNDArray})
+  _load_general!(batch, _get_label, targets)
 end
 
 function get_pad(batch :: MXDataBatch)

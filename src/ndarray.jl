@@ -305,6 +305,9 @@ function *(arg0 :: NDArray, arg :: Real)
   ret = copy(arg0, context(arg0))
   mul_to!(ret, arg)
 end
+function *(arg0 :: Real, arg :: NDArray)
+  *(arg, arg0)
+end
 
 function div_from!(dst :: NDArray, arg :: Union{Real, NDArray})
   @assert dst.writable

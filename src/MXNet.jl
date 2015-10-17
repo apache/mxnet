@@ -6,6 +6,7 @@ module MXNet
 # functions with the same names as built-in utilities like "zeros", etc.
 export mx
 module mx
+using Formatting
 
 include("init.jl")
 include("context.jl")
@@ -17,10 +18,13 @@ include("name.jl")
 include("symbol.jl")
 include("executor.jl")
 
+include("metric.jl")
+include("optimizer.jl")
+
 include("io.jl")
 include("kvstore.jl")
 
-include("metric.jl")
+include("estimator.jl")
 
 include("util.jl")
 
