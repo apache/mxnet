@@ -12,6 +12,7 @@ User Guide
 ----------
 * [Build and Installation](build.md)
 * [Python Package Document](python/index.md)
+* [R Package Document](R-package/index.md)
 * [Frequently Asked Questions](faq.md)
 
 
