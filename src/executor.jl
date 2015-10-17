@@ -92,7 +92,7 @@ function bind(self :: Symbol, ctx :: Context, args :: Union{Vector{NDArray},Dict
 end
 
 function simple_bind(self :: Symbol, ctx :: Context; grad_req :: GRAD_REQ=GRAD_WRITE, kwargs...)
-  arg_shapes, grad_shapes, aux_shapes = infer_shape(self; kwargs...)
+  arg_shapes, out_shapes, aux_shapes = infer_shape(self; kwargs...)
   @assert(!isa(arg_shapes, Void), "Information not enough to perform complete shape inference")
 
   arg_arrays = NDArray[zeros(shape, ctx) for shape in arg_shapes]
@@ -102,7 +102,7 @@ function simple_bind(self :: Symbol, ctx :: Context; grad_req :: GRAD_REQ=GRAD_W
   else
     provided_data_names = [x[1] for x in kwargs]
     grad_arrays = Dict{Base.Symbol,NDArray}()
-    for (name, shape) in zip(arg_names, grad_shapes)
+    for (name, shape) in zip(arg_names, arg_shapes)
       # if not in provided data, should be parameters
       if !in(name, provided_data_names)
         grad_arrays[name] = zeros(shape, ctx)

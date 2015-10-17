@@ -7,7 +7,7 @@ type Accuracy <: AbstractEvalMetric
   Accuracy() = new(0.0, 0)
 end
 
-function _update_single_output(metric :: Accuracy, labels :: NDArray, pred :: NDArray)
+function _update_single_output(metric :: Accuracy, label :: NDArray, pred :: NDArray)
   label = copy(label)
   pred  = copy(pred)
 
@@ -22,7 +22,7 @@ end
 function update!(metric :: Accuracy, labels :: Vector{NDArray}, preds :: Vector{NDArray})
   @assert length(labels) == length(preds)
   for i = 1:length(labels)
-    _update_single_output(labels[i], preds[i])
+    _update_single_output(metric, labels[i], preds[i])
   end
 end
 

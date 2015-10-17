@@ -54,7 +54,7 @@ function update(self :: SGD, index :: Int, weight :: NDArray, grad :: NDArray, s
     mom = state :: NDArray
     coef = get_momentum(self.mom_scheduler, self.iter)
     @inplace mom .*= coef
-    if self.clip_gradient > 0
+    if self.grad_clip > 0
       # TODO:
     else
       @inplace mom += -lr * (grad_scale * grad + self.weight_decay * weight)

@@ -40,6 +40,10 @@ type NDArray
   end
 end
 
+function Base.show(io :: IO, arr :: NDArray)
+  print(io, "mx.NDArray$(size(arr))")
+end
+
 function NDArray{T<:Real}(data :: Array{T})
   copy(data, mx.DEFAULT_CONTEXT)
 end

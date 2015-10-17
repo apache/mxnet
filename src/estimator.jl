@@ -11,11 +11,6 @@ type FeedForward <: AbstractEstimator
   FeedForward(arch :: Symbol, ctx :: Vector{Context}) = new(arch, ctx)
 end
 
-function _check_arguments(symbol :: Symbol)
-  arg_names = list_arguments(symbol)
-  @assert(length(unique(arg_names)) == length(arg_names), "Duplicated names in arguments $arg_names")
-end
-
 """Get a split of `batch_size` into `n_split` pieces for data parallelization. Returns a vector
     of length `n_split`, with each entry a `UnitRange{Int}` indicating the slice index for that
     piece.
@@ -53,7 +48,7 @@ function _init_params(self :: FeedForward, data :: AbstractDataProvider, initial
   param_names = setdiff(arg_names, data_names ∪ label_names)
   aux_names   = list_auxiliary_states(self.arch)
 
-  arg_shapes, grad_shapes, aux_shapes = infer_shape(self.arch; data_shapes...)
+  arg_shapes, out_shapes, aux_shapes = infer_shape(self.arch; data_shapes...)
   if !isdefined(self, :arg_params)
     param_name_shapes = filter(x -> in(x[1],param_names), zip(arg_names, arg_shapes))
     self.arg_params = Dict([name => empty(shape) for (name,shape) in param_name_shapes])
@@ -70,7 +65,7 @@ function _init_params(self :: FeedForward, data :: AbstractDataProvider, initial
     initializer(k, v)
   end
 
-  return (param_names, aux_names)
+  return (arg_names, param_names, aux_names)
 end
 
 function _create_kvstore(kv_type :: Base.Symbol, num_device :: Int, arg_params :: Dict{Base.Symbol,NDArray})
@@ -112,7 +107,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
   # initialize parameters
   info("Initializing parameters...")
-  param_names, aux_names = _init_params(self, data, initializer)
+  arg_names, param_names, aux_names = _init_params(self, data, initializer)
 
   # setup kvstore
   if isa(kvstore, Base.Symbol)
@@ -128,21 +123,23 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   end
 
   # set up input data structures
-  data_names  = [x[1] for x in provide_data(data)]
-  label_names = [x[1] for x in provide_label(data)]
+  data_names   = [x[1] for x in provide_data(data)]
+  label_names  = [x[1] for x in provide_label(data)]
 
-  data_arrays = Vector{NDArray}[[(slices[i], exec.arg_dict[name]) for (i,exec) in enumerate(train_execs)]
-                                for name in data_names]
-  label_arrays = Vector{NDArray}[[(slices[i], exec.arg_dict[name]) for (i,exec) in enumerate(train_execs)]
-                                 for name in label_names]
+  data_arrays  = [SlicedNDArray[(slices[i], exec.arg_dict[name]) for (i,exec) in enumerate(train_execs)]
+                  for name in data_names]
+  label_arrays = [SlicedNDArray[(slices[i], exec.arg_dict[name]) for (i,exec) in enumerate(train_execs)]
+                  for name in label_names]
 
-  param_arrays = Vector{NDArray}[[exec.arg_arrays[i] for exec in train_execs] for i = 1:length(param_names)]
-  grad_arrays  = Vector{NDArray}[[exec.grad_arrays[i] for exec in train_execs] for i = 1:length(param_names)]
+  param_idx    = filter(i -> in(arg_names[i], param_names), 1:length(arg_names))
+
+  param_arrays = [NDArray[exec.arg_arrays[i] for exec in train_execs] for i in param_idx]
+  grad_arrays  = [NDArray[exec.grad_arrays[i] for exec in train_execs] for i in param_idx]
 
   optimizer.inv_batch_size = 1.0/batch_size
 
   if !update_on_kvstore
-    updater = get_updater(self.optimizer)
+    updater = get_updater(optimizer)
   end
 
   if !isa(kvstore, Void)
@@ -150,6 +147,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
       set_optimizer(kvstore, optimizer)
     end
 
+    info("Initializing KVStore...")
     # init kv with gradients
     for idx = 1:length(param_arrays)
       param_on_devs = param_arrays[idx]
@@ -167,7 +165,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   cpu_dev = Context(CPU)
   cpu_output_arrays = [empty(shape, cpu_dev) for shape in output_shapes]
   cpu_label_arrays  = [empty(shape, cpu_dev) for (name,shape) in provide_label(data)]
-  cpu_label_arrays_full_slice = [(1:batch_size, x) for x in label_arrays]
+  cpu_label_arrays_full_slice = [SlicedNDArray[(1:batch_size, x)] for x in cpu_label_arrays]
 
   # now start training...
   for i_epoch = epoch_start:epoch_stop
@@ -226,12 +224,12 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
     end # end of one epoch
 
     time_stop = time()
-    info("== Epoch {1:0>3d} ==========", i_epoch)
+    info(format("== Epoch {1:0>3d} ==========", i_epoch))
     info("## Training summary")
     for (name, value) in get(eval_metric)
-      info("{1>15s} = {2:.4f}", name, value)
+      info(format("{1:>15s} = {2:.4f}", name, value))
     end
-    info("{1>15s} = {2:.2f} seconds", "time", (time_stop-time_start)/1e9)
+    info(format("{1:>15s} = {2:.2f} seconds", "time", (time_stop-time_start)/1e9))
 
     # evaluation on validation set
     if !isa(eval_data, Void)
@@ -259,7 +257,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
       info("## Validation summary")
       for (name, value) in get(eval_metric)
-        info("{1>15s} = {2:.4f}", name, value)
+        info(format("{1:>15s} = {2:.4f}", name, value))
       end
     end
   end # end of all epochs

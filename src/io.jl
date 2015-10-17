@@ -57,21 +57,22 @@ abstract AbstractDataProvider
 """Root type for states of data provider"""
 abstract AbstractDataProviderState
 
-"""A list of (slice, NDArray) pairs. Usually each NDArray resides on a different device, and each
+"""A tuple of (slice, NDArray). Usually each NDArray resides on a different device, and each
     slice describe which part of a larger piece of data should goto that device.
 """
-typealias SlicedNDArray Vector{Tuple{UnitRange{Int},NDArray}}
+typealias SlicedNDArray Tuple{UnitRange{Int},NDArray}
 
 """Root type for data batch
 
     A data batch must implement the following interface function to actually provide the data and label.
 
-      load_data!(batch :: AbstractDataBatch, targets :: Vector{SlicedNDArray})
-      load_label!(batch :: AbstractDataBatch, targets :: Vector{SlicedNDArray})
+      load_data!(batch :: AbstractDataBatch, targets :: Vector{Vector{SlicedNDArray}})
+      load_label!(batch :: AbstractDataBatch, targets :: Vector{Vector{SlicedNDArray}})
 
-    Load data and label into targets. The target is a list of `SlicedNDArray` the data/label should be
+    Load data and label into targets. The targets is a list of target that the data/label should be
     copied into. The order in the list is guaranteed to be the same as returned by `provide_data` and
-    `provide_label`.
+    `provide_label`. Each entry in the list is again a list of `SlicedNDArray`, corresponding the
+    memory buffer for each device.
 
     The `SlicedNDArray` is used in data parallelization to run different sub-batch on different devices.
 
@@ -165,7 +166,7 @@ function Base.next(provider :: MXDataProvider, state :: MXDataProviderState)
   return (MXDataBatch(provider), state)
 end
 
-function _load_general!(batch :: MXDataBatch, loader :: Function, targets :: Vector{SlicedNDArray})
+function _load_general!(batch :: MXDataBatch, loader :: Function, targets :: Vector{Vector{SlicedNDArray}})
   @assert length(targets) == 1
   src = loader(batch.provider.handle)
   for (idx, target) in targets[1]
@@ -173,10 +174,10 @@ function _load_general!(batch :: MXDataBatch, loader :: Function, targets :: Vec
   end
 end
 
-function load_data!(batch :: MXDataBatch, targets :: Vector{SlicedNDArray})
+function load_data!(batch :: MXDataBatch, targets :: Vector{Vector{SlicedNDArray}})
   _load_general!(batch, _get_data, targets)
 end
-function load_label!(batch :: MXDataBatch, targets :: Vector{SlicedNDArray})
+function load_label!(batch :: MXDataBatch, targets :: Vector{Vector{SlicedNDArray}})
   _load_general!(batch, _get_label, targets)
 end
 
