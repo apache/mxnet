@@ -257,6 +257,7 @@ mx.model.init.iter <- function(X, y, batch.size, is.train) {
     shape <- dim(X)
     y <- c(1:shape[[1]]) * 0
   }
+  batch.size <- min(length(y), batch.size)
   return(mx.io.arrayiter(X, y, batch.size=batch.size, shuffle=is.train))
 }
 
