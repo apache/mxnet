@@ -137,23 +137,23 @@ make roxygen
 ```
 
 ### Rmarkdown Vignettes
-Rmarkdown vignettes are placed in [root/R-package/vignettes](../R-package/vignettes)
-These Rmarkdown files are not compiled. We host the compiled version on [root/doc/R-package](R-package)
+Rmarkdown vignettes are placed in [R-package/vignettes](../R-package/vignettes)
+These Rmarkdown files are not compiled. We host the compiled version on [doc/R-package](R-package)
 
 The following steps are followed to add a new Rmarkdown vignettes:
-- Add the original rmarkdown to [R-package/vignettes](../R-package/vignettes)
+- Add the original rmarkdown to ```R-package/vignettes```
 - Modify ```doc/R-package/Makefile``` to add the markdown files to be build
-- Clone the [dmlc/doc-image](https://github.com/dmlc/doc-image) repo to folder ```doc```
+- Clone the [dmlc/web-data](https://github.com/dmlc/web-data) repo to folder ```doc```
 - Now type the following command on ```doc/R-package```
 ```bash
-make the-markdown-tomake.md
+make the-markdown-to-make.md
 ```
-- This will generate the markdown, as well as the figures into ```doc/dmlc-image/mxnet/knitr```
-- Add the generated markdown to the doc, modify the ```doc/R-package/index.md``` to point to the doc.
-- Add the generated figure to the ```dmlc/dmlc-image``` repo.
+- This will generate the markdown, as well as the figures into ```doc/web-data/mxnet/knitr```
+- Modify the ```doc/R-package/index.md``` to point to the generated markdown.
+- Add the generated figure to the ```dmlc/web-data``` repo.
   - If you already cloned the repo to doc, this means a ```git add```
-- Create PR for both the markdown  and ```dmlc-image```
-- You can also build the document locally by typing the followig command at ```doc folder```
+- Create PR for both the markdown  and ```dmlc/web-data```
+- You can also build the document locally by typing the followig command at ```doc```
 ```bash
 make html
 ```
