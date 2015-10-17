@@ -96,14 +96,14 @@ function simple_bind(self :: Symbol, ctx :: Context; grad_req :: GRAD_REQ=GRAD_W
   @assert(!isa(arg_shapes, Void), "Information not enough to perform complete shape inference")
 
   arg_arrays = NDArray[zeros(shape, ctx) for shape in arg_shapes]
+  arg_names  = list_arguments(self)
   if grad_req == GRAD_NOP
     grad_arrays = nothing
   else
-    grad_arrays = Dict{Base.Symbol, NDArray}
-    provided_data_names = keys(kwargs)
-    for (name, shape) in zip(list_arguments(self), grad_shapes)
-      # TODO: use a better way to identify data
-      #if !(endswith(string(name), "data") || endswith(string(name), "label"))
+    provided_data_names = [x[1] for x in kwargs]
+    grad_arrays = Dict{Base.Symbol,NDArray}()
+    for (name, shape) in zip(arg_names, grad_shapes)
+      # if not in provided data, should be parameters
       if !in(name, provided_data_names)
         grad_arrays[name] = zeros(shape, ctx)
       end
@@ -111,7 +111,7 @@ function simple_bind(self :: Symbol, ctx :: Context; grad_req :: GRAD_REQ=GRAD_W
   end
 
   aux_arrays = [zeros(shape, ctx) for shape in aux_shapes]
-  return bind(self, ctx, arg_ndarrays, grad_arrays, grad_req, aux_arrays)
+  return bind(self, ctx, arg_arrays, args_grad=grad_arrays, grad_req=grad_req, aux_states=aux_arrays)
 end
 
 

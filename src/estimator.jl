@@ -123,7 +123,8 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   train_execs = Array(Executor, num_dev)
   for i = 1:num_dev
     data_shapes = [k => tuple(v[1:end-1]...,length(slices[i])) for (k,v) in provide_data(data)]
-    train_execs[i] = simple_bind(self.arch, self.ctx[i]; grad_req=GRAD_WRITE, data_shapes...)
+    label_shapes = [k => tuple(v[1:end-1]...,length(slices[i])) for (k,v) in provide_label(data)]
+    train_execs[i] = simple_bind(self.arch, self.ctx[i]; grad_req=GRAD_WRITE, data_shapes..., label_shapes...)
   end
 
   # set up input data structures
