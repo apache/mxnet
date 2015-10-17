@@ -14,12 +14,8 @@ filenames = mx.get_mnist_ubyte()
 
 # data provider
 batch_size = 100
-train_provider = mx.MNISTProvider(image=filenames[:train_data],
-                                  label=filenames[:train_label],
-                                  batch_size=batch_size, shuffle=true, flat=true)
-eval_provider = mx.MNISTProvider(image=filenames[:test_data],
-                                 label=filenames[:test_label],
-                                 batch_size=batch_size, shuffle=false, flat=true)
+include("mnist-data.jl")
+train_provider, eval_provider = get_mnist_providers(batch_size)
 
 # setup estimator
 estimator = mx.FeedForward(mlp, context=mx.Context(mx.CPU))
