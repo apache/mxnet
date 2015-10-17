@@ -21,6 +21,7 @@ class DataIterCreateFunction;
 /*! \brief Base iterator interface */
 class DataIter {
  public:
+  virtual ~DataIter() {}
   /*! \return typename from R side. */
   inline static const char* TypeName() {
     return "DataIter";
@@ -49,7 +50,7 @@ class DataIter {
 /*!
  * \brief MXNet's internal data iterator.
  */
-class MXDataIter : public DataIter, MXNetMovable<MXDataIter> {
+class MXDataIter : public DataIter {
  public:
   /*! \return typename from R side. */
   inline static const char* TypeName() {
@@ -64,7 +65,6 @@ class MXDataIter : public DataIter, MXNetMovable<MXDataIter> {
  private:
   friend class DataIter;
   friend class DataIterCreateFunction;
-  friend class MXNetMovable<MXDataIter>;
   // constructor
   MXDataIter() {}
   explicit MXDataIter(DataIterHandle handle)
@@ -76,15 +76,9 @@ class MXDataIter : public DataIter, MXNetMovable<MXDataIter> {
   inline static Rcpp::RObject RObject(DataIterHandle handle) {
     return Rcpp::internal::make_new_object(new MXDataIter(handle));
   }
-  // Create a new Object that is moved from current one
-  inline MXDataIter* CreateMoveObject() {
-    MXDataIter* moved = new MXDataIter();
-    *moved = *this;
-    return moved;
-  }
   // finalizer that invoked on non-movable object
-  inline void DoFinalize() {
-    MX_CALL(MXDataIterFree(handle_));
+  static void Finalizer(MXDataIter *iter) {
+    MX_CALL(MXDataIterFree(iter->handle_));
   }
   /*! \brief internal data iter handle */
   DataIterHandle handle_;
@@ -119,17 +113,23 @@ class ArrayDataIter : public DataIter {
   virtual bool Next();
   virtual int NumPad() const;
   virtual Rcpp::List Value() const;
-  static ArrayDataIter* Create(const Rcpp::NumericVector& data,
-                               const Rcpp::NumericVector& label,
-                               size_t batch_size,
-                               bool shuffle);
+  static Rcpp::RObject Create(const Rcpp::NumericVector& data,
+                              const Rcpp::NumericVector& label,
+                              size_t batch_size,
+                              bool shuffle);
 
  private:
+  friend class DataIter;
   // create internal representation
   static void Convert(const Rcpp::NumericVector &src,
                       const std::vector<size_t> &order,
                       size_t batch_size,
                       std::vector<NDArray> *out);
+  // finalizer that invoked on non-movable object
+  static void Finalizer(ArrayDataIter *iter) {
+    iter->data_.clear();
+    iter->label_.clear();
+  }
   /*! \brief The counter */
   size_t counter_;
   /*! \brief number of pad instances*/

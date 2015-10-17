@@ -553,6 +553,7 @@ void NDArray::SyncCopyFromCPU(const real_t *data, size_t size) const {
   TBlob src((real_t*)data, dshape, cpu::kDevMask); // NOLINT(*)
 
   RunContext run_ctx;
+  run_ctx.stream = nullptr;
   if (ctx.dev_mask() == cpu::kDevMask) {
     ndarray::Copy<cpu, cpu>(src, &dst, Context::CPU(), ctx, run_ctx);
   } else {
@@ -579,6 +580,7 @@ void NDArray::SyncCopyToCPU(real_t *data, size_t size) const {
   TBlob dst(data, dshape, cpu::kDevMask); // NOLINT(*)
 
   RunContext run_ctx;
+  run_ctx.stream = nullptr;
   if (ctx.dev_mask() == cpu::kDevMask) {
     ndarray::Copy<cpu, cpu>(src, &dst, ctx, Context::CPU(), run_ctx);
   } else {

@@ -116,11 +116,11 @@ int ArrayDataIter::NumPad() const {
   }
 }
 
-ArrayDataIter* ArrayDataIter::Create(const Rcpp::NumericVector& data,
-                                     const Rcpp::NumericVector& label,
-                                     size_t batch_size,
-                                     bool shuffle) {
-  return new ArrayDataIter(data, label, batch_size, shuffle);
+Rcpp::RObject ArrayDataIter::Create(const Rcpp::NumericVector& data,
+                                    const Rcpp::NumericVector& label,
+                                    size_t batch_size,
+                                    bool shuffle) {
+  return Rcpp::internal::make_new_object(new ArrayDataIter(data, label, batch_size, shuffle));
 }
 
 DataIterCreateFunction::DataIterCreateFunction
@@ -146,7 +146,7 @@ DataIterCreateFunction::DataIterCreateFunction
   std::ostringstream os;
   os << description << "\n\n"
      << MakeDocString(num_args, arg_names, arg_type_infos, arg_descriptions)
-     << "@return iter The result DataIter\n"
+     << "@return iter The result mx.dataiter\n\n"
      << "@export\n";
   this->docstring = os.str();
 }
@@ -187,10 +187,12 @@ void DataIter::InitRcppModule() {
   class_<MXDataIter>("MXNativeDataIter")
       .derives<DataIter>("MXDataIter")
       .finalizer(&MXDataIter::Finalizer);
-  class_<ArrayDataIter>("MXArrayDataIter")
-      .derives<DataIter>("MXDataIter");
 
-  function("mx.io.internal.ArrayIter.create", &ArrayDataIter::Create);
+  class_<ArrayDataIter>("MXArrayDataIter")
+      .derives<DataIter>("MXDataIter")
+      .finalizer(&ArrayDataIter::Finalizer);
+
+  function("mx.io.internal.arrayiter", &ArrayDataIter::Create);
 }
 
 void DataIterCreateFunction::InitRcppModule() {

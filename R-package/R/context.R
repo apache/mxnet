@@ -7,6 +7,7 @@ init.context.default <- function() {
 #'
 #' @param new, optional takes \code{mx.cpu()} or \code{mx.gpu(id)}, new default ctx.
 #' @return The default context.
+#'
 #' @export
 mx.ctx.default <- function(new = NULL) {
   if (!is.null(new)) {
@@ -18,6 +19,7 @@ mx.ctx.default <- function(new = NULL) {
 #' Check if the type is mxnet context.
 #'
 #' @return Logical indicator
+#'
 #' @export
 is.mx.context <- function(x) {
   class(x) == "MXContext"
@@ -30,6 +32,7 @@ is.mx.context <- function(x) {
 #'     The device ID, this is meaningless for CPU, included for interface compatiblity.
 #' @return The CPU context.
 #' @name mx.cpu
+#'
 #' @export
 NULL
 
@@ -39,5 +42,6 @@ NULL
 #'     The GPU device ID, starts from 0.
 #' @return The GPU context.
 #' @name mx.gpu
+#'
 #' @export
 NULL

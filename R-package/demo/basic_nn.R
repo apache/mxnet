@@ -12,7 +12,7 @@ act2 <- mx.symbol.Activation(fc2, name="relu2", act_type="relu")
 fc3 <- mx.symbol.FullyConnected(act2, name="fc3", num_hidden=10)
 softmax <- mx.symbol.Softmax(fc3, name = "sm")
 
-dtrain = mx.varg.io.MNISTIter(list(
+dtrain = mx.io.MNISTIter(
   image="data/train-images-idx3-ubyte",
   label="data/train-labels-idx1-ubyte",
   data.shape=c(784),
@@ -20,7 +20,7 @@ dtrain = mx.varg.io.MNISTIter(list(
   shuffle=TRUE,
   flat=TRUE,
   silent=0,
-  seed=10))
+  seed=10)
 
 accuracy <- function(label, pred) {
   ypred = max.col(as.array(pred))
@@ -32,7 +32,7 @@ ctx <- mx.cpu()
 input.shape <- c(batch.size, 784)
 symbol <- softmax
 init <- mx.init.uniform(0.07)
-opt <- mx.opt.sgd(learning.rate=0.05, momentum=0.9, rescale.grad=1.0/batch.size)
+opt <- mx.opt.create("sgd", learning.rate=0.05, momentum=0.9, rescale.grad=1.0/batch.size)
 
 # Training procedure
 texec <- mx.simple.bind(symbol, ctx=ctx, data=input.shape, grad.req=TRUE)

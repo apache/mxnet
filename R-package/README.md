@@ -1,36 +1,20 @@
 MXNet R-Package
 ===============
-This is an on-going effort to support mxnet in R, stay tuned.
+The MXNet R packages brings flexible and efficient GPU computing and deep learning to R.
 
-Bleeding edge Installation
+- It enables you to write seamless tensor/matrix computation with multiple GPUs in R.
+- It also enables you construct and customize the state-of-art deep learning models in R,
+  and apply them to tasks such as image classification and data science challenges.
+
+Installation
+------------
 - First build ```../lib/libmxnet.so``` by following [Build Instruction](../doc/build.md)
 - Type ```R CMD INSTALL R-package``` in the root folder.
 
+Examples
+--------
+- [Classify Real World Image with MXNet R Package](vignettes/classifyRealImageWithPretrainedModel.Rmd)
+
 Contributor Guide for R
 -----------------------
-### Code Style
-- Most C++ of R package heavily relies on [Rcpp](https://github.com/RcppCore/Rcpp).
-- We follow Google's C++ Style guide on C++ code.
-  - This is mainly to be consistent with the rest of the project.
-  - Another reason is we will be able to check style automatically with a linter.
-- You can check the style of the code by typing the following command at root folder.
-```bash
-make rcpplint
-```
-- When needed, you can disable the linter warning of certain line with ```// NOLINT(*)``` comments.
-
-### Auto Generated API
-- Many mxnet API are exposed from Rcpp side in a dynamic way.
-- The [mx_generated.R](R/mx_generated.R) is auto generated API and documents for these functions.
-- You can remake the file by typing the following command at root folder
-```bash
-make rcppexport
-```
-- This only need to be done periodically when there is update on dynamic functions.
-
-### Document
-- The document is generated using roxygen2
-- You can type the following command to remake the documents at root folder.
-```bash
-make roxygen
-```
+Checkout [Contributor Guideline](../doc/contribute.md#r-package)

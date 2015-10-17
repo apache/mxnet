@@ -22,13 +22,5 @@ mat = mx.nd.array(x)
 mat = (mat * 3 + 5) / 10
 as.array(mat)
 
-oldmat = mat
-mat = mx.nd.internal.plus.scalar(mat, 1, out=mat)
-xx = as.array(mat)
 
-
-# This will result in an error,  becase mat has been moved
-oldmat + 1
-
-print(xx)
 

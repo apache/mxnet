@@ -1,6 +1,20 @@
-.onLoad <- function(libname, pkgname) {
-  require(methods)
+#' MXNet: Flexible and Efficient GPU computing and Deep Learning.
+#'
+#' MXNet is a flexible and efficient GPU computing and deep learning framework.
+#'
+#' It enables you to write seamless tensor/matrix computation with multiple GPUs in R.
+#'
+#' It also enables you construct and customize the state-of-art deep learning models in R,
+#' and apply them to tasks such as image classification and data science challenges.
+#'
+#' @docType package
+#' @name mxnet
+#' @import methods Rcpp
+NULL
 
+.onLoad <- function(libname, pkgname) {
+  # Require methods for older versions of R
+  require(methods)
   library.dynam("libmxnet", pkgname, libname, local=FALSE)
   library.dynam("mxnet", pkgname, libname)
   loadModule("mxnet", TRUE)
