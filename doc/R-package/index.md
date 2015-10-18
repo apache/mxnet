@@ -11,12 +11,7 @@ Sounds exciting? This page contains links to all the related documents on R pack
 
 Get Started
 -----------
-There are several information to get you started
-* [Installation Guide](../build.md) contains instructions to install mxnet.
-* [Tutorials](#tutorials) contains various examples how how mxnet can be applied to different cool tasks :)
-* [Contributor Guide](http://mxnet.readthedocs.org/en/latest/contribute.html#r-package)
-  - The R package section gives various guidelines on how to contribute code, tutorial, rmarkdown examples to mxnet.
-  - Your contribution is always welcomed!
+Checkout the [Installation Guide](../build.md) contains instructions to install mxnet, and [Tutorials](#tutorials) for examples on how to use mxnet for various tasks. 
 
 Tutorials
 ---------
@@ -25,3 +20,10 @@ Tutorials
 * [Handwritten Digits Classification Competition](mnistCompetition.md)
 * [Tutorial on NDArray and Symbol](ndarrayAndSymbolTutorial.md)
 
+Resources
+---------
+There are several information to get you started
+* [Installation Guide](../build.md) contains instructions to install mxnet.
+* [Contributor Guide](http://mxnet.readthedocs.org/en/latest/contribute.html#r-package)
+  - The R package section gives various guidelines on how to contribute code, tutorial, rmarkdown examples to mxnet.
+  - Your contribution is always welcomed!
