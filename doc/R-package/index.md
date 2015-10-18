@@ -1,6 +1,5 @@
-MXNet R Packge: Deep Learning for R
-===================================
-
+MXNet R Package
+===============
 You have find MXNet R Package! The MXNet R packages brings flexible and efficient GPU
 computing and state-of-art deep learning to R.
 
@@ -21,6 +20,7 @@ There are several information to get you started
 
 Tutorials
 ---------
+* [Neural Network with MXNet in Five Minutes](fiveMinutesNeuralNetwork.md)
 * [Classify Realworld Images with Pretrained Model](classifyRealImageWithPretrainedModel.md)
 * [Handwritten Digits Classification Competition](mnistCompetition.md)
 * [Tutorial on NDArray and Symbol](ndarrayAndSymbolTutorial.md)

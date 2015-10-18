@@ -133,7 +133,9 @@ mx.model.train <- function(symbol, ctx, input.shape,
 
   for (iteration in begin.round:end.round) {
     nbatch <- 0
-    train.metric <- metric$init()
+    if (!is.null(metric)) {
+      train.metric <- metric$init()
+    }
     while (train.data$iter.next()) {
       # Get input data slice
       dlist <- train.data$value()
@@ -186,8 +188,10 @@ mx.model.train <- function(symbol, ctx, input.shape,
         }
       }
       # Update the evaluation metrics
-      for (i in 1 : ndevice) {
-        train.metric <- metric$update(slices[[i]]$label, out.preds[[i]], train.metric)
+      if (!is.null(metric)) {
+        for (i in 1 : ndevice) {
+          train.metric <- metric$update(slices[[i]]$label, out.preds[[i]], train.metric)
+        }
       }
       nbatch <- nbatch + 1
       if (!is.null(epoch.end.callback)) {
@@ -196,11 +200,14 @@ mx.model.train <- function(symbol, ctx, input.shape,
     }
     # reset training data
     train.data$reset()
-    result <- metric$get(train.metric)
-    cat(paste0("[", iteration, "] Train-", result$name, "=", result$value, "\n"))
-
+    if (!is.null(metric)) {
+      result <- metric$get(train.metric)
+      cat(paste0("[", iteration, "] Train-", result$name, "=", result$value, "\n"))
+    }
     if (!is.null(eval.data)) {
-      eval.metric <- metric$init()
+      if (!is.null(metric)) {
+        eval.metric <- metric$init()
+      }
       while (eval.data$iter.next()) {
         dlist <- eval.data$value()
         slices <- lapply(1:ndevice, function(i) {
@@ -220,13 +227,17 @@ mx.model.train <- function(symbol, ctx, input.shape,
         out.preds <- lapply(train.execs, function(texec) {
           mx.nd.copyto(texec$ref.outputs[[1]], mx.cpu())
         })
-        for (i in 1 : ndevice) {
-          eval.metric <- metric$update(slices[[i]]$label, out.preds[[i]], eval.metric)
+        if (!is.null(metric)) {
+          for (i in 1 : ndevice) {
+            eval.metric <- metric$update(slices[[i]]$label, out.preds[[i]], eval.metric)
+          }
         }
       }
       eval.data$reset()
-      result <- metric$get(eval.metric)
-      cat(paste0("[", iteration, "] Validation-", result$name, "=", result$value, "\n"))
+      if (!is.null(metric)) {
+        result <- metric$get(eval.metric)
+        cat(paste0("[", iteration, "] Validation-", result$name, "=", result$value, "\n"))
+      }
     } else {
       eval.metric <- NULL
     }

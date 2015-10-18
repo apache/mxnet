@@ -5,6 +5,12 @@ This is the first tutorial for new users of the R package `mxnet`. You will lear
 
 We will show you how to do classification and regression tasks respectively. The data we use comes from the package `mlbench`.
 
+Preface
+-------
+This tutorial is written in Rmarkdown.
+- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.org/en/latest/R-package/fiveMinutesNeuralNetwork.html)
+- You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/fiveMinutesNeuralNetwork.Rmd)
+
 ## Classification
 
 First of all, let us load in the data and preprocess it:
@@ -30,19 +36,17 @@ The next step is to define the structure of the neural network.
 data <- mx.symbol.Variable("data")
 # A fully connected hidden layer 
 # data: input source
-# name: fc1
 # num_hidden: number of neurons in this hidden layer
-fc1 <- mx.symbol.FullyConnected(data, name="fc1", num_hidden=20)
+fc1 <- mx.symbol.FullyConnected(data, num_hidden=20)
 
 # An activation function
 # fc1: input source
-# name: relu1
 # act_type: type for the activation function
-act1 <- mx.symbol.Activation(fc1, name="tanh1", act_type="tanh")
-fc2 <- mx.symbol.FullyConnected(act1, name="fc2", num_hidden=2)
+act1 <- mx.symbol.Activation(fc1, act_type="tanh")
+fc2 <- mx.symbol.FullyConnected(act1, num_hidden=2)
 
 # Softmax function for the output layer
-softmax <- mx.symbol.Softmax(fc2, name="sm")
+softmax <- mx.symbol.Softmax(fc2)
 ```
 
 According to the comments in the code, you can see the meaning of each function and its arguments. They can be easily modified according to your need.
@@ -87,26 +91,18 @@ test.x = data.matrix(BostonHousing[-train.ind, -14])
 test.y = BostonHousing[-train.ind, 14]
 ```
 
-We can configure a similar network as what we have done above. The only difference is in the output activation:
+We can configure another network as what we have done above. The main difference is in the output activation:
 
 ```{r}
 # Define the input data
 data <- mx.symbol.Variable("data")
 # A fully connected hidden layer 
 # data: input source
-# name: fc1
 # num_hidden: number of neurons in this hidden layer
-fc1 <- mx.symbol.FullyConnected(data, name="fc1", num_hidden=20)
-
-# An activation function
-# fc1: input source
-# name: relu1
-# act_type: type for the activation function
-act1 <- mx.symbol.Activation(fc1, name="tanh1", act_type="tanh")
-fc2 <- mx.symbol.FullyConnected(act1, name="fc2", num_hidden=1)
+fc1 <- mx.symbol.FullyConnected(data, num_hidden=1)
 
 # Softmax function for the output layer
-lro <- mx.symbol.LinearRegressionOutput(fc2, name="lro")
+lro <- mx.symbol.LinearRegressionOutput(fc1)
 ```
 
 What we changed is mainly the last function, this enables the new network to optimize for squared loss. We can now train on this simple data set.
@@ -114,8 +110,8 @@ What we changed is mainly the last function, this enables the new network to opt
 ```{r}
 mx.set.seed(0)
 model <- mx.model.FeedForward.create(lro, X=train.x, y=train.y,
-                                     ctx=device.cpu, num.round=5, array.batch.size=10,
-                                     learning.rate=0.1, momentum=0.9, eval.metric=mx.metric.rmse,
+                                     ctx=device.cpu, num.round=50, array.batch.size=20,
+                                     learning.rate=2e-6, momentum=0.9, eval.metric=mx.metric.rmse,
                                      epoch.end.callback=mx.callback.log.train.metric(100))
 ```
 
@@ -140,8 +136,8 @@ This is an example for mean absolute error. We can simply plug it in the trainin
 ```{r}
 mx.set.seed(0)
 model <- mx.model.FeedForward.create(lro, X=train.x, y=train.y,
-                                     ctx=device.cpu, num.round=5, array.batch.size=10,
-                                     learning.rate=0.1, momentum=0.9, eval.metric=demo.metric.mae,
+                                     ctx=device.cpu, num.round=50, array.batch.size=20,
+                                     learning.rate=2e-6, momentum=0.9, eval.metric=demo.metric.mae,
                                      epoch.end.callback=mx.callback.log.train.metric(100))
 ```
 
