@@ -1,11 +1,11 @@
 # This is the makefile for compiling Rmarkdown files into the md file with results.
 PKGROOT=../../R-package
 
-# ADD The Markdown to be built here
+# ADD The Markdown to be built here, with suffix md
 classifyRealImageWithPretrainedModel.md:
-mnistCompetition.Rmd:
-ndarrayAndSymbolTutorial.Rmd:
-fiveMinutesNeuralNetwork.Rmd:
+mnistCompetition.md:
+ndarrayAndSymbolTutorial.md:
+fiveMinutesNeuralNetwork.md:
 
 # General Rules for build rmarkdowns, need knitr
 %.md: $(PKGROOT)/vignettes/%.Rmd

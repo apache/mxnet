@@ -1,5 +1,6 @@
-MXNet R Package
-===============
+MXNet R Packge: Deep Learning for R
+===================================
+
 You have find MXNet R Package! The MXNet R packages brings flexible and efficient GPU
 computing and state-of-art deep learning to R.
 
