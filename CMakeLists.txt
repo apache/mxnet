@@ -95,7 +95,7 @@ target_link_libraries(mxnet ${mshadow_LINKER_LIBS})
 target_link_libraries(mxnet dmlccore)
 target_link_libraries(mxnet pslite)
 target_link_libraries(mxnet ${pslite_LINKER_LIBS})
-
+set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
 
 # ---[ Linter target
 if(MSVC)
