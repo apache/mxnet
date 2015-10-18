@@ -61,6 +61,9 @@ class MXDataIter : public DataIter {
   virtual bool Next();
   virtual int NumPad() const;
   virtual Rcpp::List Value() const;
+  virtual ~MXDataIter() {
+    MX_CALL(MXDataIterFree(handle_));
+  }
 
  private:
   friend class DataIter;
@@ -75,10 +78,6 @@ class MXDataIter : public DataIter {
    */
   inline static Rcpp::RObject RObject(DataIterHandle handle) {
     return Rcpp::internal::make_new_object(new MXDataIter(handle));
-  }
-  // finalizer that invoked on non-movable object
-  static void Finalizer(MXDataIter *iter) {
-    MX_CALL(MXDataIterFree(iter->handle_));
   }
   /*! \brief internal data iter handle */
   DataIterHandle handle_;
@@ -100,11 +99,14 @@ class ArrayDataIter : public DataIter {
    * \brief Construct a ArrayDataIter from data and label.
    * \param data The data array.
    * \param label The label array.
+   * \param unif_rnds Uniform [0,1] random number of same length as label.
+   *        Only needed when shuffle=TRUE
    * \param batch_size The size of the batch.
    * \param shuffle Whether shuffle the data.
    */
   ArrayDataIter(const Rcpp::NumericVector& data,
                 const Rcpp::NumericVector& label,
+                const Rcpp::NumericVector& unif_rnds,
                 int batch_size,
                 bool shuffle);
   virtual void Reset() {
@@ -115,6 +117,7 @@ class ArrayDataIter : public DataIter {
   virtual Rcpp::List Value() const;
   static Rcpp::RObject Create(const Rcpp::NumericVector& data,
                               const Rcpp::NumericVector& label,
+                              const Rcpp::NumericVector& unif_rnds,
                               size_t batch_size,
                               bool shuffle);
 
@@ -125,11 +128,6 @@ class ArrayDataIter : public DataIter {
                       const std::vector<size_t> &order,
                       size_t batch_size,
                       std::vector<NDArray> *out);
-  // finalizer that invoked on non-movable object
-  static void Finalizer(ArrayDataIter *iter) {
-    iter->data_.clear();
-    iter->label_.clear();
-  }
   /*! \brief The counter */
   size_t counter_;
   /*! \brief number of pad instances*/

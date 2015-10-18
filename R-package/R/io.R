@@ -36,11 +36,17 @@ mx.io.extract <- function(iter, field) {
 #' @param shuffle Whether shuffle the data
 #'
 #' @export
-mx.io.arrayiter <- function(data, label=NULL,
+mx.io.arrayiter <- function(data, label,
                             batch.size=128,
                             shuffle=FALSE) {
+  if (shuffle) {
+    unif.rnds <- as.array(mx.runif(c(length(label)), ctx=mx.cpu()));
+  } else {
+    unif.rnds <- mx.array(0)
+  }
   mx.io.internal.arrayiter(as.array(data),
                            as.array(label),
+                           unif.rnds,
                            batch.size,
                            shuffle)
 }

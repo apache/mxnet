@@ -220,7 +220,6 @@ Executor::RObjectType Executor::Bind(const Symbol::RObjectType& symbol,
 void Executor::InitRcppModule() {
   using namespace Rcpp;  // NOLINT(*)
   class_<Executor>("MXExecutor")
-      .finalizer(&Executor::Finalizer)
       .method("update.aux.arrays",
               &Executor::UpdateAuxArray,
               "Update auxilary states array of executor, this will mutate the executor")

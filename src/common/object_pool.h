@@ -41,6 +41,12 @@ class ObjectPool {
    */
   static ObjectPool* Get();
 
+  /*!
+   * \brief Get a shared ptr of the singleton instance of pool.
+   * \return Shared pointer to the Object Pool.
+   */
+  static std::shared_ptr<ObjectPool> _GetSharedRef();
+
  private:
   /*!
    * \brief Internal structure to hold pointers.
@@ -141,8 +147,13 @@ void ObjectPool<T>::Delete(T* ptr) {
 
 template <typename T>
 ObjectPool<T>* ObjectPool<T>::Get() {
-  static ObjectPool<T> inst;
-  return &inst;
+  return _GetSharedRef().get();
+}
+
+template <typename T>
+std::shared_ptr<ObjectPool<T> > ObjectPool<T>::_GetSharedRef() {
+  static std::shared_ptr<ObjectPool<T> > inst_ptr(new ObjectPool<T>());
+  return inst_ptr;
 }
 
 template <typename T>

@@ -152,7 +152,6 @@ Rcpp::RObject KVStore::Create(const char *type) {
 void KVStore::InitRcppModule() {
   using namespace Rcpp;  // NOLINT(*)
   class_<KVStore>("MXKVStore")
-      .finalizer(&KVStore::Finalizer)
       .method("init", &KVStore::Init)
       .method("push", &KVStore::Push)
       .method("pull", &KVStore::Pull)

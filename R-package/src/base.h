@@ -23,7 +23,9 @@ namespace R {
 
 /*! \brief macro to be compatible with non c++11 env */
 #if DMLC_USE_CXX11 == 0
+#ifndef nullptr
 #define nullptr NULL
+#endif
 #endif
 
 /*!
@@ -90,8 +92,6 @@ void SetSeed(int seed);
  * \brief Base Movable class of MXNet Module object.
  *  This class will define several common functions.
  * \tparam Class The class name of subclass
- * \tparam HandleType The type of handle the object have.
- * \tparam finalizer The free function used to delete the handle.
  */
 template<typename Class>
 class MXNetMovable {
@@ -117,15 +117,6 @@ class MXNetMovable {
   /*! \brief default constructor */
   MXNetMovable() : moved_(false) {}
   /*!
-   * \brief the finalizer for Rcpp
-   * \param self the pointer to the class.
-   */
-  inline static void Finalizer(Class* self) {
-    if (!static_cast<MXNetMovable<Class>*>(self)->moved_) {
-      self->DoFinalize();
-    }
-  }
-  /*!
    * \brief Default implement to Move a existing R Class object to a new one.
    * \param src The source R Object.
    * \return A new R object containing moved information as old one.
@@ -137,7 +128,6 @@ class MXNetMovable {
     return Rcpp::internal::make_new_object(moved);
   }
 
- private:
   /*! \brief Whether the object has been moved */
   bool moved_;
 };
