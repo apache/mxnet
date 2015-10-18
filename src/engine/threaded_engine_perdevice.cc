@@ -45,6 +45,9 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     // GPU tasks will be created lazily
   }
   ~ThreadedEnginePerDevice() noexcept(false) {
+    printf("~ThreadedEnginePerDevice()\n");
+    fflush(stdout);
+
     gpu_normal_workers_.Clear();
     gpu_copy_workers_.Clear();
     cpu_normal_workers_.Clear();
