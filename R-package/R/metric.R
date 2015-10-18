@@ -1,10 +1,12 @@
-# create a customized metric based on feval(label, pred)
+#' Helper function to create a customized metric
+#' 
+#' @export
 mx.metric.custom <-function(name, feval) {
   init <- function() {
     c(0, 0)
   }
   update <- function(label, pred, state) {
-    m <- feval(label, pred)
+    m <- feval(as.array(label), as.array(pred))
     state <- c(state[[1]] + 1, state[[2]] + m)
     return(state)
   }
@@ -20,6 +22,14 @@ mx.metric.custom <-function(name, feval) {
 #'
 #' @export
 mx.metric.accuracy <- mx.metric.custom("accuracy", function(label, pred) {
-  ypred = max.col(as.array(pred), tie="first")
-  return(sum((as.array(label) + 1) == ypred) / length(label))
+  ypred = max.col(pred, tie="first")
+  return(sum((label + 1) == ypred) / length(label))
+})
+
+#' RMSE metric
+#' 
+#' @export
+mx.metric.rmse <- mx.metric.custom("rmse", function(label, pred) {
+  res <- sqrt(mean((label-pred)^2))
+  return(res)
 })
