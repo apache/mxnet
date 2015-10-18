@@ -1,5 +1,5 @@
-MXNet R-Package
-===============
+MXNetR: Deep learning for R
+===========================
 
 You have find MXNet R Package! The MXNet R packages brings flexible and efficient GPU
 computing and state-of-art deep learning to R.
@@ -15,9 +15,11 @@ Resources
 * [MXNet R Package Document](http://mxnet.readthedocs.org/en/latest/R-package/index.html)
   - Check this out for detailed documents, examples, installation guides.
 
-
 Installation
 ------------
 Follow [Installation Guide](http://mxnet.readthedocs.org/en/latest/build.html)
 
+License
+-------
+MXNet R-package is licensed under [BSD](https://github.com/dmlc/mxnet/blob/master/R-Package/LICENSE) license.
 
