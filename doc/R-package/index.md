@@ -10,6 +10,8 @@ The MXNet R packages brings flexible and efficient GPU computing and deep learni
 Tutorials
 ---------
 * [Classify Realworld Images with Pretrained Model](classifyRealImageWithPretrainedModel.md)
+* [Handwritten Digits Classification Competition](mnistCompetition.md)
+* [Tutorial on NDArray and Symbol](ndarrayAndSymbolTutorial.md)
 
 Installation
 ------------

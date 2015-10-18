@@ -3,6 +3,8 @@ PKGROOT=../../R-package
 
 # ADD The Markdown to be built here
 classifyRealImageWithPretrainedModel.md:
+mnistCompetition.Rmd:
+ndarrayAndSymbolTutorial.Rmd:
 
 # General Rules for build rmarkdowns, need knitr
 %.md: $(PKGROOT)/vignettes/%.Rmd
