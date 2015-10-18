@@ -324,6 +324,37 @@ mx.symbol.LeakyReLU <- function(...) {
   mx.varg.symbol.LeakyReLU(list(...))
 }
 
+#' Use linear regression for final output, this is used on final output of a net.
+#' 
+#' @param data  Symbol
+#'     Input data to function.
+#' @param label  Symbol
+#'     Input label to function.
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.LinearRegressionOutput <- function(...) {
+  mx.varg.symbol.LinearRegressionOutput(list(...))
+}
+
+#' Use Logistic regression for final output, this is used on final output of a net.
+#' Logistic regression is suitable for binary classification or probability prediction tasks.
+#' 
+#' @param data  Symbol
+#'     Input data to function.
+#' @param label  Symbol
+#'     Input label to function.
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.LogisticRegressionOutput <- function(...) {
+  mx.varg.symbol.LogisticRegressionOutput(list(...))
+}
+
 #' Perform spatial pooling on inputs.
 #' 
 #' @param data  Symbol

@@ -13,6 +13,8 @@ mx.nd.array(src.array, ctx = NULL)
 }
 \value{
 An \code{mx.ndarray}
+
+An Rcpp_MXNDArray object
 }
 \description{
 Create a new \code{mx.ndarray} that copies the content from src on ctx.
