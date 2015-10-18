@@ -5,6 +5,7 @@ PKGROOT=../../R-package
 classifyRealImageWithPretrainedModel.md:
 mnistCompetition.Rmd:
 ndarrayAndSymbolTutorial.Rmd:
+fiveMinutesNeuralNetwork.Rmd:
 
 # General Rules for build rmarkdowns, need knitr
 %.md: $(PKGROOT)/vignettes/%.Rmd

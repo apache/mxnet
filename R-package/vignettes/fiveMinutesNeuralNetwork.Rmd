@@ -11,6 +11,8 @@ First of all, let us load in the data and preprocess it:
 
 ```{r}
 require(mlbench)
+require(mxnet)
+
 data(Sonar, package="mlbench")
 
 Sonar[,61] = as.numeric(Sonar[,61])-1
@@ -45,6 +47,14 @@ softmax <- mx.symbol.Softmax(fc2, name="sm")
 
 According to the comments in the code, you can see the meaning of each function and its arguments. They can be easily modified according to your need.
 
+Before we start to train the model, we can specify where to run our program:
+
+```{r}
+device.cpu = mx.cpu()
+```
+
+Here we choose to run it on CPU.
+
 After the network configuration, we can start the training process:
 
 ```{r}
@@ -71,9 +81,9 @@ Again, let us preprocess the data first.
 data(BostonHousing, package="mlbench")
 
 train.ind = seq(1, 506, 3)
-train.x = BostonHousing[train.ind, -14]
+train.x = data.matrix(BostonHousing[train.ind, -14])
 train.y = BostonHousing[train.ind, 14]
-test.x = BostonHousing[-train.ind, -14]
+test.x = data.matrix(BostonHousing[-train.ind, -14])
 test.y = BostonHousing[-train.ind, 14]
 ```
 
