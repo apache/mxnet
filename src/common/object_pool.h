@@ -147,8 +147,6 @@ void ObjectPool<T>::Delete(T* ptr) {
 
 template <typename T>
 ObjectPool<T>* ObjectPool<T>::Get() {
-  //static ObjectPool<T> inst;
-  //return &inst;
   return _GetSharedRef().get();
 }
 
