@@ -30,9 +30,8 @@ Let's create `NDArray` on either GPU or CPU
 ```{r}
 require(mxnet)
 a <- mx.nd.zeros(c(2, 3)) # create a 2-by-3 matrix on cpu
-b <- mx.nd.zeros(c(2, 3), mx.gpu()) # create a 2-by-3 matrix on gpu 0
-c <- mx.nd.zeros(c(2, 3), mx.gpu(2)) # create a 2-by-3 matrix on gpu 0
-c$dim()
+b <- mx.nd.zeros(c(2, 3), mx.cpu()) # create a 2-by-3 matrix on gpu 0
+c <- mx.nd.zeros(c(2, 3), mx.gpu(1)) # create a 2-by-3 matrix on gpu 0
 ```
 
 We can also initialize an `NDArray` object in various ways:
@@ -72,7 +71,7 @@ as.array(d)
 If two `NDArray`s sit on different divices, we need to explicitly move them 
 into the same one. For instance:
 
-```{r}
+```{r, eval=FALSE}
 a <- mx.nd.ones(c(2, 3)) * 2
 b <- mx.nd.ones(c(2, 3), mx.gpu()) / 8
 c <- mx.nd.copyto(a, mx.gpu()) * b

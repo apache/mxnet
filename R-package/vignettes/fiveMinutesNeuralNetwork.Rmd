@@ -1,0 +1,121 @@
+Neural Network with MXNet in Five Minutes
+=============================================
+
+This is the first tutorial for new users of the R package `mxnet`. You will learn to construct a neural network to do regression in 5 minutes. 
+
+We will show you how to do classification and regression tasks respectively. The data we use comes from the package `mlbench`.
+
+## Classification
+
+First of all, let us load in the data and preprocess it:
+
+```{r}
+require(mlbench)
+data(Sonar, package="mlbench")
+
+Sonar[,61] = as.numeric(Sonar[,61])-1
+train.ind = c(1:50, 100:150)
+train.x = data.matrix(Sonar[train.ind, 1:60])
+train.y = Sonar[train.ind, 61]
+test.x = data.matrix(Sonar[-train.ind, 1:60])
+test.y = Sonar[-train.ind, 61]
+```
+
+The next step is to define the structure of the neural network.
+
+```{r}
+# Define the input data
+data <- mx.symbol.Variable("data")
+# A fully connected hidden layer 
+# data: input source
+# name: fc1
+# num_hidden: number of neurons in this hidden layer
+fc1 <- mx.symbol.FullyConnected(data, name="fc1", num_hidden=20)
+
+# An activation function
+# fc1: input source
+# name: relu1
+# act_type: type for the activation function
+act1 <- mx.symbol.Activation(fc1, name="tanh1", act_type="tanh")
+fc2 <- mx.symbol.FullyConnected(act1, name="fc2", num_hidden=2)
+
+# Softmax function for the output layer
+softmax <- mx.symbol.Softmax(fc2, name="sm")
+```
+
+According to the comments in the code, you can see the meaning of each function and its arguments. They can be easily modified according to your need.
+
+After the network configuration, we can start the training process:
+
+```{r}
+mx.set.seed(0)
+model <- mx.model.FeedForward.create(softmax, X=train.x, y=train.y,
+                                     ctx=device.cpu, num.round=20, array.batch.size=10,
+                                     learning.rate=0.1, momentum=0.9,
+                                     epoch.end.callback=mx.callback.log.train.metric(100))
+```
+
+Note that `mx.set.seed` is the correct function to control the random process in `mxnet`. You can see the accuracy in each round during training. It is also easy to make prediction and evaluate
+
+```{r}
+preds = predict(model, test.x)
+pred.label = max.col(preds)-1
+table(pred.label, test.y)
+```
+
+## Regression
+
+Again, let us preprocess the data first.
+
+```{r}
+data(BostonHousing, package="mlbench")
+
+train.ind = seq(1, 506, 3)
+train.x = BostonHousing[train.ind, -14]
+train.y = BostonHousing[train.ind, 14]
+test.x = BostonHousing[-train.ind, -14]
+test.y = BostonHousing[-train.ind, 14]
+```
+
+We can configure a similar network as what we have done above. The only difference is in the output activation:
+
+```{r}
+# Define the input data
+data <- mx.symbol.Variable("data")
+# A fully connected hidden layer 
+# data: input source
+# name: fc1
+# num_hidden: number of neurons in this hidden layer
+fc1 <- mx.symbol.FullyConnected(data, name="fc1", num_hidden=20)
+
+# An activation function
+# fc1: input source
+# name: relu1
+# act_type: type for the activation function
+act1 <- mx.symbol.Activation(fc1, name="tanh1", act_type="tanh")
+fc2 <- mx.symbol.FullyConnected(act1, name="fc2", num_hidden=2)
+
+# Softmax function for the output layer
+lro <- mx.symbol.LinearRegressionOutput(fc2, name="lro")
+```
+
+What we changed is mainly the last function, this enables the new network to optimize for squared loss. We can now train on this simple data set.
+
+```{r}
+mx.set.seed(0)
+model <- mx.model.FeedForward.create(softmax, X=train.x, y=train.y,
+                                     ctx=device.cpu, num.round=20, array.batch.size=10,
+                                     learning.rate=0.1, momentum=0.9,
+                                     epoch.end.callback=mx.callback.log.train.metric(100))
+```
+
+It is also easy to make prediction and evaluate
+
+```{r}
+preds = predict(model, test.x)
+sqrt(mean((pred.label-test.y)^2))
+```
+
+Congratulations! Now you have learnt the basic for using `mxnet`.
+
+
