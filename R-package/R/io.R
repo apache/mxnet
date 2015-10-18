@@ -42,7 +42,7 @@ mx.io.arrayiter <- function(data, label,
   if (shuffle) {
     unif.rnds <- as.array(mx.runif(c(length(label)), ctx=mx.cpu()));
   } else {
-    unif.rnds <- mx.array(0)
+    unif.rnds <- as.array(0)
   }
   mx.io.internal.arrayiter(as.array(data),
                            as.array(label),

@@ -90,7 +90,7 @@ im <- load.image(system.file("extdata/parrots.png", package="imager"))
 plot(im)
 ```
 
-![plot of chunk unnamed-chunk-5](../doc-image/mxnet/knitr/classifyRealImageWithPretrainedModel-unnamed-chunk-5-1.png) 
+![plot of chunk unnamed-chunk-5](../web-data/mxnet/knitr/classifyRealImageWithPretrainedModel-unnamed-chunk-5-1.png) 
 
 Before feeding the image to the deep net, we need to do some preprocessing
 to make the image fit the input requirement of deepnet. The preprocessing

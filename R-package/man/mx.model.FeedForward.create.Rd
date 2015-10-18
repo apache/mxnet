@@ -6,9 +6,9 @@
 \usage{
 mx.model.FeedForward.create(symbol, X, y = NULL, ctx = NULL,
   num.round = 10, optimizer = "sgd", initializer = mx.init.uniform(0.01),
-  eval.data = NULL, eval.metric = mx.metric.accuracy,
-  iter.end.callback = NULL, epoch.end.callback = NULL,
-  array.batch.size = 128, kvstore = "local", ...)
+  eval.data = NULL, eval.metric = NULL, iter.end.callback = NULL,
+  epoch.end.callback = NULL, array.batch.size = 128, kvstore = "local",
+  ...)
 }
 \arguments{
 \item{symbol}{The symbolic configuration of the neural network.}

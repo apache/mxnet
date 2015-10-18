@@ -295,7 +295,7 @@ mx.model.FeedForward.create <-
 function(symbol, X, y=NULL, ctx=NULL,
          num.round=10, optimizer="sgd",
          initializer=mx.init.uniform(0.01),
-         eval.data=NULL, eval.metric=mx.metric.accuracy,
+         eval.data=NULL, eval.metric=NULL,
          iter.end.callback=NULL, epoch.end.callback=NULL,
          array.batch.size=128,
          kvstore="local",

@@ -1,9 +1,5 @@
----
-title: "Handwritten Digits Classification Competition"
-author: "Tong He"
-date: "October 17, 2015"
-output: html_document
----
+Handwritten Digits Classification Competition
+======================================================
 
 [MNIST](http://yann.lecun.com/exdb/mnist/) is a handwritten digits image data set created by Yann LeCun. Every digit is represented by a 28x28 image. It has become a standard data set to test classifiers on simple image input. Neural network is no doubt a strong model for image classification tasks. There's a [long-term hosted competition](https://www.kaggle.com/c/digit-recognizer) on Kaggle using this data set. We will present the basic usage of `mxnet` to compete in this challenge.
 
@@ -15,6 +11,7 @@ Then we can read them in R and convert to matrices.
 
 
 ```r
+require(mxnet)
 train <- read.csv('data/train.csv', header=TRUE)
 test <- read.csv('data/test.csv', header=TRUE)
 train <- data.matrix(train)
@@ -46,58 +43,12 @@ Now we have the data. The next step is to configure the structure of our network
 
 ```r
 data <- mx.symbol.Variable("data")
-```
-
-```
-## Error in eval(expr, envir, enclos): could not find function "mx.symbol.Variable"
-```
-
-```r
 fc1 <- mx.symbol.FullyConnected(data, name="fc1", num_hidden=128)
-```
-
-```
-## Error in eval(expr, envir, enclos): could not find function "mx.symbol.FullyConnected"
-```
-
-```r
 act1 <- mx.symbol.Activation(fc1, name="relu1", act_type="relu")
-```
-
-```
-## Error in eval(expr, envir, enclos): could not find function "mx.symbol.Activation"
-```
-
-```r
-fc2 <- mx.symbol.FullyConnected(act1, name = "fc2", num_hidden = 64)
-```
-
-```
-## Error in eval(expr, envir, enclos): could not find function "mx.symbol.FullyConnected"
-```
-
-```r
+fc2 <- mx.symbol.FullyConnected(act1, name="fc2", num_hidden=64)
 act2 <- mx.symbol.Activation(fc2, name="relu2", act_type="relu")
-```
-
-```
-## Error in eval(expr, envir, enclos): could not find function "mx.symbol.Activation"
-```
-
-```r
 fc3 <- mx.symbol.FullyConnected(act2, name="fc3", num_hidden=10)
-```
-
-```
-## Error in eval(expr, envir, enclos): could not find function "mx.symbol.FullyConnected"
-```
-
-```r
-softmax <- mx.symbol.Softmax(fc3, name = "sm")
-```
-
-```
-## Error in eval(expr, envir, enclos): could not find function "mx.symbol.Softmax"
+softmax <- mx.symbol.Softmax(fc3, name="sm")
 ```
 
 1. In `mxnet`, we use its own data type `symbol` to configure the network. `data <- mx.symbol.Variable("data")` use `data` to represent the input data, i.e. the input layer.
@@ -119,24 +70,16 @@ devices <- lapply(1:2, function(i) {
 })
 ```
 
-```
-## Error in FUN(1:2[[1L]], ...): could not find function "mx.cpu"
-```
-
-Here we assign two threads of our CPU to `mxnet`. After all these preparation, you can run the following command to train the neural network!
+Here we assign two threads of our CPU to `mxnet`. After all these preparation, you can run the following command to train the neural network! Note that `mx.set.seed` is the correct function to control the random process in `mxnet`.
 
 
 ```r
-set.seed(0)
+mx.set.seed(0)
 model <- mx.model.FeedForward.create(softmax, X=train.x, y=train.y,
                                      ctx=devices, num.round=10, array.batch.size=100,
-                                     learning.rate=0.07, momentum=0.9,
+                                     learning.rate=0.07, momentum=0.9,  eval.metric=mx.metric.accuracy,
                                      initializer=mx.init.uniform(0.07),
                                      epoch.end.callback=mx.callback.log.train.metric(100))
-```
-
-```
-## Error in eval(expr, envir, enclos): could not find function "mx.model.FeedForward.create"
 ```
 
 ## Prediction and Submission
@@ -146,18 +89,7 @@ To make prediction, we can simply write
 
 ```r
 preds <- predict(model, test)
-```
-
-```
-## Error in predict(model, test): object 'model' not found
-```
-
-```r
 dim(preds)
-```
-
-```
-## Error in eval(expr, envir, enclos): object 'preds' not found
 ```
 
 It is a matrix with 28000 rows and 10 cols, containing the desired classification probabilities from the output layer. To extract the maximum label for each row, we can use the `max.col` in R:
@@ -165,18 +97,7 @@ It is a matrix with 28000 rows and 10 cols, containing the desired classificatio
 
 ```r
 pred.label <- max.col(preds) - 1
-```
-
-```
-## Error in as.matrix(m): object 'preds' not found
-```
-
-```r
 table(pred.label)
-```
-
-```
-## Error in table(pred.label): object 'pred.label' not found
 ```
 
 With a little extra effort in the csv format, we can have our submission to the competition!
@@ -184,26 +105,93 @@ With a little extra effort in the csv format, we can have our submission to the 
 
 ```r
 submission <- data.frame(ImageId=1:nrow(test), Label=pred.label)
-```
-
-```
-## Error in nrow(test): object 'test' not found
-```
-
-```r
 write.csv(submission, file='submission.csv', row.names=FALSE, quote=FALSE)
 ```
 
+## LeNet
+
+Next we are going to introduce a new network structure: [LeNet](http://yann.lecun.com/exdb/lenet/). It is proposed by Yann LeCun to recognize handwritten digits. Now we are going to demonstrate how to construct and train an LeNet in `mxnet`.
+
+First we construct the network:
+
+
+```r
+# input
+data <- mx.symbol.Variable('data')
+# first conv
+conv1 <- mx.symbol.Convolution(data=data, kernel=c(5,5), num_filter=20)
+tanh1 <- mx.symbol.Activation(data=conv1, act_type="tanh")
+pool1 <- mx.symbol.Pooling(data=tanh1, pool_type="max",
+                          kernel=c(2,2), stride=c(2,2))
+# second conv
+conv2 <- mx.symbol.Convolution(data=pool1, kernel=c(5,5), num_filter=50)
+tanh2 <- mx.symbol.Activation(data=conv2, act_type="tanh")
+pool2 <- mx.symbol.Pooling(data=tanh2, pool_type="max",
+                          kernel=c(2,2), stride=c(2,2))
+# first fullc
+flatten <- mx.symbol.Flatten(data=pool2)
+fc1 <- mx.symbol.FullyConnected(data=flatten, num_hidden=500)
+tanh3 <- mx.symbol.Activation(data=fc1, act_type="tanh")
+# second fullc
+fc2 <- mx.symbol.FullyConnected(data=tanh3, num_hidden=10)
+# loss
+lenet <- mx.symbol.Softmax(data=fc2)
 ```
-## Error in is.data.frame(x): object 'submission' not found
+
+Then let us reshape the matrices into arrays:
+
+
+```r
+train.array <- t(train.x)
+dim(train.array) <- c(1,28,28,nrow(train.x))
+train.array <- aperm(train.array, c(4,1,2,3))
+test.array <- t(test)
+dim(test.array) <- c(1,28,28,nrow(test))
+test.array <- aperm(test.array, c(4,1,2,3))
 ```
 
+Next we are going to compare the training speed on different devices, so the definition of the devices goes first:
 
 
+```r
+device.cpu <- mx.cpu()
+device.gpu <- lapply(1:4, function(i) {
+  mx.gpu(i)
+})
+```
+
+Training on CPU:
 
 
+```r
+mx.set.seed(0)
+model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
+                                     ctx=device.cpu, num.round=5, array.batch.size=100,
+                                     learning.rate=0.05, momentum=0.9, wd=0.00001,
+                                     eval.metric=mx.metric.accuracy,
+                                     epoch.end.callback=mx.callback.log.train.metric(100))
+```
+
+Training on GPU:
 
 
+```r
+mx.set.seed(0)
+model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
+                                     ctx=device.gpu, num.round=5, array.batch.size=100,
+                                     learning.rate=0.05, momentum=0.9, wd=0.00001,
+                                     eval.metric=mx.metric.accuracy,
+                                     epoch.end.callback=mx.callback.log.train.metric(100))
+```
+
+Finally we can submit the result to Kaggle again to see the improvement of our ranking!
 
 
+```r
+preds <- predict(model, test.array)
+pred.label <- max.col(preds) - 1
+submission <- data.frame(ImageId=1:nrow(test), Label=pred.label)
+write.csv(submission, file='submission.csv', row.names=FALSE, quote=FALSE)
+```
 
+![](../web-data/mxnet/knitr/mnistCompetition-kaggle-submission.png)
