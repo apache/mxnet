@@ -113,8 +113,6 @@ struct ObjectPoolAllocatable {
 
 template <typename T>
 ObjectPool<T>::~ObjectPool() {
-  printf("~ObjectPool() this = %p\n", this);
-  fflush(stdout);
   // TODO(hotpxl): mind destruction order
   // for (auto i : allocated_) {
   //   free(i);

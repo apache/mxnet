@@ -29,9 +29,6 @@ class ResourceManagerImpl : public ResourceManager {
         Context::CPU(), cpu_temp_space_copy_));
   }
   ~ResourceManagerImpl() {
-    printf("~ResourceManagerImpl()\n");
-    fflush(stdout);
-
     // need explicit delete, before engine get killed
     cpu_rand_.reset(nullptr);
     cpu_space_.reset(nullptr);
