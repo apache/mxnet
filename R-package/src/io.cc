@@ -12,10 +12,6 @@
 
 namespace mxnet {
 namespace R {
-// Rcpp random wrapper
-inline size_t RcppRandWrapper(const size_t n) {
-  return floor(unif_rand() * n);
-}
 
 void MXDataIter::Reset() {
   MX_CALL(MXDataIterBeforeFirst(handle_));
@@ -44,14 +40,22 @@ Rcpp::List MXDataIter::Value() const {
 
 ArrayDataIter::ArrayDataIter(const Rcpp::NumericVector& data,
                              const Rcpp::NumericVector& label,
+                             const Rcpp::NumericVector& unif_rnds,
                              int batch_size,
                              bool shuffle) : counter_(0) {
   std::vector<size_t> order(label.size());
   for (size_t i = 0; i < order.size(); ++i) {
     order[i] = i;
   }
+
   if (shuffle) {
-    std::random_shuffle(order.begin(), order.end(), RcppRandWrapper);
+    RCHECK(unif_rnds.size() == label.size());
+    for (size_t i = order.size() - 1; i != 0; --i) {
+      size_t idx = static_cast<size_t>(unif_rnds[i] * (i + 1));
+      if (idx < i) {
+        std::swap(order[i], order[idx]);
+      }
+    }
   }
   ArrayDataIter::Convert(data, order, batch_size, &data_);
   ArrayDataIter::Convert(label, order, batch_size, &label_);
@@ -118,9 +122,11 @@ int ArrayDataIter::NumPad() const {
 
 Rcpp::RObject ArrayDataIter::Create(const Rcpp::NumericVector& data,
                                     const Rcpp::NumericVector& label,
+                                    const Rcpp::NumericVector& unif_rnds,
                                     size_t batch_size,
                                     bool shuffle) {
-  return Rcpp::internal::make_new_object(new ArrayDataIter(data, label, batch_size, shuffle));
+  return Rcpp::internal::make_new_object(
+      new ArrayDataIter(data, label, unif_rnds, batch_size, shuffle));
 }
 
 DataIterCreateFunction::DataIterCreateFunction
@@ -185,12 +191,10 @@ void DataIter::InitRcppModule() {
       .method("num.pad", &DataIter::NumPad);
 
   class_<MXDataIter>("MXNativeDataIter")
-      .derives<DataIter>("MXDataIter")
-      .finalizer(&MXDataIter::Finalizer);
+      .derives<DataIter>("MXDataIter");
 
   class_<ArrayDataIter>("MXArrayDataIter")
-      .derives<DataIter>("MXDataIter")
-      .finalizer(&ArrayDataIter::Finalizer);
+      .derives<DataIter>("MXDataIter");
 
   function("mx.io.internal.arrayiter", &ArrayDataIter::Create);
 }

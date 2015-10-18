@@ -296,7 +296,6 @@ SEXP SymbolFunction::operator() (SEXP* args) {
 void Symbol::InitRcppModule() {
   using namespace Rcpp;  // NOLINT(*)
   class_<Symbol>("MXSymbol")
-      .finalizer(&Symbol::Finalizer)
       .method("debug.str", &Symbol::DebugStr,
               "Return the debug string of internals of symbol")
       .method("apply", &Symbol::Apply,
