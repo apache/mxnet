@@ -21,3 +21,20 @@ function get_mnist_ubyte()
   end
   return filenames
 end
+
+function get_cifar10()
+  data_dir    = get_data_dir()
+  cifar10_dir = joinpath(data_dir, "cifar10")
+  mkpath(cifar10_dir)
+  filenames = Dict(:train => "train.rec", :test => "test.rec")
+  filenames = [k => joinpath(cifar10_dir, v) for (k,v) in filenames]
+  if !all(isfile, values(filenames))
+    cd(cifar10_dir) do
+      run(`wget http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip`)
+      run(`unzip -u cifar10.zip`)
+    end
+  end
+
+  filenames[:mean] = joinpath(cifar10_dir, "cifar_mean.bin")
+  return filenames
+end

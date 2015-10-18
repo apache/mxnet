@@ -285,7 +285,7 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
         symbol_kws[k] = v
       else
         push!(param_keys, string(k))
-        push!(param_vals, string(v))
+        push!(param_vals, dump_mx_param(v))
       end
     end
 

@@ -101,3 +101,33 @@ end
 @mx_define_handle_t(MX_DataIterHandle, MXDataIterFree)
 @mx_define_handle_t(MX_KVStoreHandle, MXKVStoreFree)
 
+################################################################################
+# MXNet Params
+#
+# MXNet API use string to pass some common parameters like the configurations
+# when defining layers. Typically, it is enough to use string(obj) to get a
+# recognizable representation for libmxnet. However, there is currently a
+# caveat:
+#
+# Because Julia use column-major ordering for tensors. In order to properly
+# interact with Julia Arrays, the shape will look "reversed" from the Julia
+# side. For example, a typical MNIST mini-batch tensor is of shape (28,28,1,100)
+# from Julia side, while the shape information for the same piece of memory
+# should be interpreted as (100,1,28,28) from C/C++/Python side.
+#
+# Therefore, when passing parameters to libmxnet, we should reverse the shape
+# parameter. For example, when the user specify a non-square kernel size for
+# a convolution or pooling layer. Unfortunately, those operators are automatically
+# imported, and information about the type of each parameter is somehow limited.
+# One hacky way is to match the type description for the string "Shape(tuple)"
+# when importing operators. But currently we simply decided to reverse **all**
+# NTuple{N, Int} passed to libmxnet.
+#
+# TODO: find a better solution in case this cause issues in the future.
+################################################################################
+function dump_mx_param(val :: Any)
+  string(val)
+end
+function dump_mx_param{N,T<:Integer}(shape :: NTuple{N, T})
+  string(tuple(flipdim([shape...],1)...))
+end

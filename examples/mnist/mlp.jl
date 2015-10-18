@@ -9,9 +9,6 @@ act2 = mx.Activation(data = fc2, name=:relu2, act_type=:relu)
 fc3  = mx.FullyConnected(data = act2, name=:fc3, num_hidden=10)
 mlp  = mx.Softmax(data = fc3, name=:softmax)
 
-# download MNIST into Pkg.dir("MXNet")/data/mnist if not exist
-filenames = mx.get_mnist_ubyte()
-
 # data provider
 batch_size = 100
 include("mnist-data.jl")
