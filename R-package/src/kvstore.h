@@ -68,13 +68,14 @@ class KVStore {
   static Rcpp::RObject Create(const char *type);
   /*! \brief initialize the R cpp Module */
   static void InitRcppModule();
+  // destructor
+  ~KVStore() {
+    MX_CALL(MXKVStoreFree(handle_));
+  }
 
  private:
   explicit KVStore(KVStoreHandle handle)
       : handle_(handle), optimizer_set_(false) {}
-  static void Finalizer(KVStore *kv) {
-    MX_CALL(MXKVStoreFree(kv->handle_));
-  }
   // the internal callback to kvstore.
   NDArray CreateState(int index, const NDArray& weight) const;
   /*! \brief internal KVStore handle */

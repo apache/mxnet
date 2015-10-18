@@ -91,6 +91,7 @@ class NDArray  {
   // operator overloading
   inline NDArray& operator=(const NDArray& other) {
     ptr_ = other.ptr_;
+    return *this;
   }
   inline NDBlob* operator->() {
     return ptr_.get();

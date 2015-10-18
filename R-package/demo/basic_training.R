@@ -12,23 +12,23 @@ act2 <- mx.symbol.Activation(fc2, name="relu2", act_type="relu")
 fc3 <- mx.symbol.FullyConnected(act2, name="fc3", num_hidden=10)
 softmax <- mx.symbol.Softmax(fc3, name = "sm")
 
-dtrain = mx.varg.io.MNISTIter(list(
+dtrain = mx.io.MNISTIter(
   image="data/train-images-idx3-ubyte",
   label="data/train-labels-idx1-ubyte",
   data.shape=c(784),
   batch.size=batch.size,
   flat=TRUE,
   silent=0,
-  seed=10))
+  seed=10)
 
-dtest = mx.varg.io.MNISTIter(list(
+dtest = mx.io.MNISTIter(
   image="data/t10k-images-idx3-ubyte",
   label="data/t10k-labels-idx1-ubyte",
   data.shape=c(784),
   batch.size=batch.size,
   shuffle=FALSE,
   flat=TRUE,
-  silent=0))
+  silent=0)
 # X is R's array, we load from mxnet's native iter structure, but you don't have to
 X = mx.io.extract(dtrain, "data")
 y = mx.io.extract(dtrain, "label")
