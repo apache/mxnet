@@ -256,7 +256,6 @@ class ThreadedEngine : public Engine {
     objpool_blk_ref_    = common::ObjectPool<OprBlock>::_GetSharedRef();
     objpool_varblk_ref_ = common::ObjectPool<VersionedVarBlock>::_GetSharedRef();
     objpool_var_ref_    = common::ObjectPool<ThreadedVar>::_GetSharedRef();
-
   }
   ~ThreadedEngine() {
     {
