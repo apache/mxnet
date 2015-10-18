@@ -1,7 +1,11 @@
 Handwritten Digits Classification Competition
 ======================================================
 
-[MNIST](http://yann.lecun.com/exdb/mnist/) is a handwritten digits image data set created by Yann LeCun. Every digit is represented by a 28x28 image. It has become a standard data set to test classifiers on simple image input. Neural network is no doubt a strong model for image classification tasks. There's a [long-term hosted competition](https://www.kaggle.com/c/digit-recognizer) on Kaggle using this data set. We will present the basic usage of `mxnet` to compete in this challenge.
+[MNIST](http://yann.lecun.com/exdb/mnist/) is a handwritten digits image data set created by Yann LeCun. Every digit is represented by a 28x28 image. It has become a standard data set to test classifiers on simple image input. Neural network is no doubt a strong model for image classification tasks. There's a [long-term hosted competition](https://www.kaggle.com/c/digit-recognizer) on Kaggle using this data set. We will present the basic usage of [mxnet](https://github.com/dmlc/mxnet/tree/master/R-package) to compete in this challenge.
+
+This tutorial is written in Rmarkdown. You can download the source [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/mnistCompetition.Rmd) and view a
+hosted version of tutorial [here](http://mxnet.readthedocs.org/en/latest/R-package/mnistCompetition.html).
+
 
 ## Data Loading
 
@@ -12,6 +16,14 @@ Then we can read them in R and convert to matrices.
 
 ```r
 require(mxnet)
+```
+
+```
+## Loading required package: mxnet
+## Loading required package: methods
+```
+
+```r
 train <- read.csv('data/train.csv', header=TRUE)
 test <- read.csv('data/test.csv', header=TRUE)
 train <- data.matrix(train)
@@ -34,6 +46,12 @@ In the label part, we see the number of each digit is fairly even:
 
 ```r
 table(train.y)
+```
+
+```
+## train.y
+##    0    1    2    3    4    5    6    7    8    9 
+## 4132 4684 4177 4351 4072 3795 4137 4401 4063 4188
 ```
 
 ## Network Configuration
@@ -65,12 +83,10 @@ We are almost ready for the training process. Before we start the computation, l
 
 
 ```r
-devices <- lapply(1:2, function(i) {
-  mx.cpu(i)
-})
+devices <- mx.cpu()
 ```
 
-Here we assign two threads of our CPU to `mxnet`. After all these preparation, you can run the following command to train the neural network! Note that `mx.set.seed` is the correct function to control the random process in `mxnet`.
+Here we assign CPU to `mxnet`. After all these preparation, you can run the following command to train the neural network! Note that `mx.set.seed` is the correct function to control the random process in `mxnet`.
 
 
 ```r
@@ -80,6 +96,60 @@ model <- mx.model.FeedForward.create(softmax, X=train.x, y=train.y,
                                      learning.rate=0.07, momentum=0.9,  eval.metric=mx.metric.accuracy,
                                      initializer=mx.init.uniform(0.07),
                                      epoch.end.callback=mx.callback.log.train.metric(100))
+```
+
+```
+## Start training with 1 devices
+## Batch [100] Train-accuracy=0.6563
+## Batch [200] Train-accuracy=0.777999999999999
+## Batch [300] Train-accuracy=0.827466666666665
+## Batch [400] Train-accuracy=0.855499999999999
+## [1] Train-accuracy=0.859832935560859
+## Batch [100] Train-accuracy=0.9529
+## Batch [200] Train-accuracy=0.953049999999999
+## Batch [300] Train-accuracy=0.955866666666666
+## Batch [400] Train-accuracy=0.957525000000001
+## [2] Train-accuracy=0.958309523809525
+## Batch [100] Train-accuracy=0.968
+## Batch [200] Train-accuracy=0.9677
+## Batch [300] Train-accuracy=0.9696
+## Batch [400] Train-accuracy=0.970650000000002
+## [3] Train-accuracy=0.970809523809526
+## Batch [100] Train-accuracy=0.973
+## Batch [200] Train-accuracy=0.974249999999999
+## Batch [300] Train-accuracy=0.976
+## Batch [400] Train-accuracy=0.977100000000003
+## [4] Train-accuracy=0.977452380952384
+## Batch [100] Train-accuracy=0.9834
+## Batch [200] Train-accuracy=0.981949999999999
+## Batch [300] Train-accuracy=0.981900000000001
+## Batch [400] Train-accuracy=0.982600000000003
+## [5] Train-accuracy=0.983000000000003
+## Batch [100] Train-accuracy=0.983399999999999
+## Batch [200] Train-accuracy=0.98405
+## Batch [300] Train-accuracy=0.985000000000001
+## Batch [400] Train-accuracy=0.985725000000003
+## [6] Train-accuracy=0.985952380952384
+## Batch [100] Train-accuracy=0.988999999999999
+## Batch [200] Train-accuracy=0.9876
+## Batch [300] Train-accuracy=0.988100000000001
+## Batch [400] Train-accuracy=0.988750000000003
+## [7] Train-accuracy=0.988880952380955
+## Batch [100] Train-accuracy=0.991999999999999
+## Batch [200] Train-accuracy=0.9912
+## Batch [300] Train-accuracy=0.990066666666668
+## Batch [400] Train-accuracy=0.990275000000003
+## [8] Train-accuracy=0.990452380952384
+## Batch [100] Train-accuracy=0.9937
+## Batch [200] Train-accuracy=0.99235
+## Batch [300] Train-accuracy=0.991966666666668
+## Batch [400] Train-accuracy=0.991425000000003
+## [9] Train-accuracy=0.991500000000003
+## Batch [100] Train-accuracy=0.9942
+## Batch [200] Train-accuracy=0.99245
+## Batch [300] Train-accuracy=0.992433333333334
+## Batch [400] Train-accuracy=0.992275000000002
+## [10] Train-accuracy=0.992380952380955
 ```
 
 ## Prediction and Submission
@@ -92,12 +162,22 @@ preds <- predict(model, test)
 dim(preds)
 ```
 
+```
+## [1] 28000    10
+```
+
 It is a matrix with 28000 rows and 10 cols, containing the desired classification probabilities from the output layer. To extract the maximum label for each row, we can use the `max.col` in R:
 
 
 ```r
 pred.label <- max.col(preds) - 1
 table(pred.label)
+```
+
+```
+## pred.label
+##    0    1    2    3    4    5    6    7    8    9 
+## 2818 3195 2744 2767 2683 2596 2798 2790 2784 2825
 ```
 
 With a little extra effort in the csv format, we can have our submission to the competition!
@@ -154,22 +234,45 @@ Next we are going to compare the training speed on different devices, so the def
 
 
 ```r
+n.gpu <- 1 
 device.cpu <- mx.cpu()
-device.gpu <- lapply(1:4, function(i) {
+device.gpu <- lapply(0:(n.gpu-1), function(i) {
   mx.gpu(i)
 })
 ```
 
-Training on CPU:
+As you can see, we can pass a list of devices, to ask mxnet to train on multiple GPUs (you can do similar thing for cpu,
+but since internal computation of cpu is already multi-threaded, there is less gain than using GPUs).
+
+We start by training on CPU first. Because it takes a bit time to do so, we will only run it for one iteration.
 
 
 ```r
 mx.set.seed(0)
+tic <- proc.time()
 model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
-                                     ctx=device.cpu, num.round=5, array.batch.size=100,
+                                     ctx=device.cpu, num.round=1, array.batch.size=100,
                                      learning.rate=0.05, momentum=0.9, wd=0.00001,
                                      eval.metric=mx.metric.accuracy,
                                      epoch.end.callback=mx.callback.log.train.metric(100))
+```
+
+```
+## Start training with 1 devices
+## Batch [100] Train-accuracy=0.1054
+## Batch [200] Train-accuracy=0.1237
+## Batch [300] Train-accuracy=0.352766666666667
+## Batch [400] Train-accuracy=0.498824999999999
+## [1] Train-accuracy=0.519546539379474
+```
+
+```r
+print(proc.time() - tic) 
+```
+
+```
+##    user  system elapsed 
+## 132.340 203.621  84.825
 ```
 
 Training on GPU:
@@ -177,6 +280,7 @@ Training on GPU:
 
 ```r
 mx.set.seed(0)
+tic <- proc.time()
 model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
                                      ctx=device.gpu, num.round=5, array.batch.size=100,
                                      learning.rate=0.05, momentum=0.9, wd=0.00001,
@@ -184,6 +288,45 @@ model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
                                      epoch.end.callback=mx.callback.log.train.metric(100))
 ```
 
+```
+## Start training with 1 devices
+## Batch [100] Train-accuracy=0.1055
+## Batch [200] Train-accuracy=0.1197
+## Batch [300] Train-accuracy=0.346266666666667
+## Batch [400] Train-accuracy=0.4925
+## [1] Train-accuracy=0.513699284009546
+## Batch [100] Train-accuracy=0.9577
+## Batch [200] Train-accuracy=0.961849999999999
+## Batch [300] Train-accuracy=0.966
+## Batch [400] Train-accuracy=0.968750000000003
+## [2] Train-accuracy=0.969404761904765
+## Batch [100] Train-accuracy=0.977399999999999
+## Batch [200] Train-accuracy=0.97815
+## Batch [300] Train-accuracy=0.980033333333335
+## Batch [400] Train-accuracy=0.981400000000003
+## [3] Train-accuracy=0.981761904761908
+## Batch [100] Train-accuracy=0.985799999999999
+## Batch [200] Train-accuracy=0.98575
+## Batch [300] Train-accuracy=0.986666666666668
+## Batch [400] Train-accuracy=0.987550000000003
+## [4] Train-accuracy=0.987880952380955
+## Batch [100] Train-accuracy=0.9918
+## Batch [200] Train-accuracy=0.9908
+## Batch [300] Train-accuracy=0.991566666666668
+## Batch [400] Train-accuracy=0.992175000000002
+## [5] Train-accuracy=0.992380952380955
+```
+
+```r
+print(proc.time() - tic) 
+```
+
+```
+##    user  system elapsed 
+##  10.176   1.608   7.743
+```
+
+As you can see by using GPU, we can get a much faster speedup in training!
 Finally we can submit the result to Kaggle again to see the improvement of our ranking!
 
 
