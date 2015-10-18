@@ -1,22 +1,20 @@
 MXNet R Tutorial on NDArray and Symbol
-============================
+======================================
 
-This vignette gives a general overview of MXNet's R package.  MXNet contains a
+This vignette gives a general overview of MXNet"s R package.  MXNet contains a
 mixed flavor of elements to bake flexible and efficient
-applications. There are mainly three concepts:
+applications. There are two major concepts introduced in this tutorial.
 
 * [NDArray](#ndarray-numpy-style-tensor-computations-on-cpus-and-gpus)
   offers matrix and tensor computations on both CPU and GPU, with automatic
   parallelization
 * [Symbol](#symbol-and-automatic-differentiation) makes defining a neural
   network extremely easy, and provides automatic differentiation.
-* [KVStore](#distributed-key-value-store) easy the data synchronization between
-  multi-GPUs and multi-machines.
 
 ## NDArray: Vectorized tensor computations on CPUs and GPUs
 
 `NDArray` is the basic vectorized operation unit in MXNet for matrix and tensor computations. 
-Users can perform usual calculations as on R's array, but with two additional features:
+Users can perform usual calculations as on R"s array, but with two additional features:
 
 1.  **multiple devices**: all operations can be run on various devices including
 CPU and GPU
@@ -25,7 +23,7 @@ CPU and GPU
 
 ### Create and Initialization
 
-Let's create `NDArray` on either GPU or CPU
+Let"s create `NDArray` on either GPU or CPU
 
 
 ```r
@@ -39,30 +37,12 @@ require(mxnet)
 
 ```r
 a <- mx.nd.zeros(c(2, 3)) # create a 2-by-3 matrix on cpu
-b <- mx.nd.zeros(c(2, 3), mx.gpu()) # create a 2-by-3 matrix on gpu 0
+b <- mx.nd.zeros(c(2, 3), mx.cpu()) # create a 2-by-3 matrix on cpu
+# c <- mx.nd.zeros(c(2, 3), mx.gpu(0)) # create a 2-by-3 matrix on gpu 0, if you have CUA enabled.
 ```
 
-```
-## Error in eval(expr, envir, enclos): [15:41:37] src/storage/storage.cc:43: Please compile with CUDA enabled
-```
-
-```r
-c <- mx.nd.zeros(c(2, 3), mx.gpu(2)) # create a 2-by-3 matrix on gpu 0
-```
-
-```
-## Error in eval(expr, envir, enclos): [15:41:37] src/storage/storage.cc:43: Please compile with CUDA enabled
-```
-
-```r
-c$dim()
-```
-
-```
-## Error in c$dim: object of type 'builtin' is not subsettable
-```
-
-We can also initialize an `NDArray` object in various ways:
+As a side note, normally for CUDA enabled devices, the device id of GPU starts from 0.
+So that is why we passed in 0 to GPU id. We can also initialize an `NDArray` object in various ways:
 
 
 ```r
@@ -102,15 +82,15 @@ You can perform elemental-wise operations on `NDArray` objects:
 
 
 ```r
-a <- mx.nd.ones(c(2, 3)) * 2
+a <- mx.nd.ones(c(2, 4)) * 2
 b <- mx.nd.ones(c(2, 4)) / 8
 as.array(a)
 ```
 
 ```
-##      [,1] [,2] [,3]
-## [1,]    2    2    2
-## [2,]    2    2    2
+##      [,1] [,2] [,3] [,4]
+## [1,]    2    2    2    2
+## [2,]    2    2    2    2
 ```
 
 ```r
@@ -125,34 +105,24 @@ as.array(b)
 
 ```r
 c <- a + b
-```
-
-```
-## Error in eval(expr, envir, enclos): [15:41:37] src/ndarray/./ndarray_function.h:20: Check failed: lshape == rshape operands shape mismatch
-```
-
-```r
 as.array(c)
 ```
 
 ```
-## [1] 1 2 3 4 5
+##       [,1]  [,2]  [,3]  [,4]
+## [1,] 2.125 2.125 2.125 2.125
+## [2,] 2.125 2.125 2.125 2.125
 ```
 
 ```r
 d <- c / a - 5
-```
-
-```
-## Error in eval(expr, envir, enclos): [15:41:37] src/ndarray/./ndarray_function.h:20: Check failed: lshape == rshape operands shape mismatch
-```
-
-```r
 as.array(d)
 ```
 
 ```
-## Error in as.array(d): object 'd' not found
+##         [,1]    [,2]    [,3]    [,4]
+## [1,] -3.9375 -3.9375 -3.9375 -3.9375
+## [2,] -3.9375 -3.9375 -3.9375 -3.9375
 ```
 
 If two `NDArray`s sit on different divices, we need to explicitly move them 
@@ -162,59 +132,32 @@ into the same one. For instance:
 ```r
 a <- mx.nd.ones(c(2, 3)) * 2
 b <- mx.nd.ones(c(2, 3), mx.gpu()) / 8
-```
-
-```
-## Error in eval(expr, envir, enclos): [15:41:37] src/storage/storage.cc:43: Please compile with CUDA enabled
-```
-
-```r
 c <- mx.nd.copyto(a, mx.gpu()) * b
-```
-
-```
-## Error in eval(expr, envir, enclos): [15:41:37] src/storage/storage.cc:43: Please compile with CUDA enabled
-```
-
-```r
 as.array(c)
-```
-
-```
-## [1] 1 2 3 4 5
 ```
 
 #### Load and Save
 
-You can save an `NDArray` object to your disk with `mx.nd.save`:
+You can save a list of `NDArray` object to your disk with `mx.nd.save`:
 
 
 ```r
 a <- mx.nd.ones(c(2, 3))
-mx.nd.save(a, 'temp.ndarray')
-```
-
-```
-## Error in eval(expr, envir, enclos): could not convert using R function : as.list
+mx.nd.save(list(a), "temp.ndarray")
 ```
 
 You can also load it back easily:
 
 
 ```r
-a <- mx.nd.load('temp.ndarray')
-```
-
-```
-## Error in eval(expr, envir, enclos): [15:41:37] src/io/local_filesys.cc:149: Check failed: allow_null  LocalFileSystem: fail to open "temp.ndarray"
-```
-
-```r
+a <- mx.nd.load("temp.ndarray")
 as.array(a[[1]])
 ```
 
 ```
-## Error in a[[1]]: object of type 'externalptr' is not subsettable
+##      [,1] [,2] [,3]
+## [1,]    1    1    1
+## [2,]    1    1    1
 ```
 
 In case you want to save data to the distributed file system such as S3 and HDFS, 
@@ -222,8 +165,8 @@ we can directly save to and load from them. For example:
 
 
 ```r
-mx.nd.save(a, 's3://mybucket/mydata.bin')
-mx.nd.save(a, 'hdfs///users/myname/mydata.bin')
+mx.nd.save(list(a), "s3://mybucket/mydata.bin")
+mx.nd.save(list(a), "hdfs///users/myname/mydata.bin")
 ```
 
 ### Automatic Parallelization
@@ -264,7 +207,7 @@ the read and write dependency and find a best way to execute them in
 parallel.
 
 The actual computations are finished if we want to copy the results into some
-other place, such as `as.array(a)` or `mx.nd.save(a, 'temp.dat')`. Therefore, if we
+other place, such as `as.array(a)` or `mx.nd.save(a, "temp.dat")`. Therefore, if we
 want to write highly parallelized codes, we only need to postpone when we need
 the results.
 
@@ -279,11 +222,11 @@ The following codes create a two layer perceptrons network:
 
 ```r
 require(mxnet)
-net <- mx.symbol.Variable('data')
-net <- mx.symbol.FullyConnected(data=net, name='fc1', num_hidden=128)
-net <- mx.symbol.Activation(data=net, name='relu1', act_type="relu")
-net <- mx.symbol.FullyConnected(data=net, name='fc2', num_hidden=64)
-net <- mx.symbol.Softmax(data=net, name='out')
+net <- mx.symbol.Variable("data")
+net <- mx.symbol.FullyConnected(data=net, name="fc1", num_hidden=128)
+net <- mx.symbol.Activation(data=net, name="relu1", act_type="relu")
+net <- mx.symbol.FullyConnected(data=net, name="fc2", num_hidden=64)
+net <- mx.symbol.Softmax(data=net, name="out")
 class(net)
 ```
 
@@ -322,36 +265,28 @@ We can also specify the automatic generated names explicitly:
 
 
 ```r
-net <- mx.symbol.Variable('data')
-w <- mx.symbol.Variable('myweight')
-net <- sym.FullyConnected(data=data, weight=w, name='fc1', num_hidden=128)
-```
-
-```
-## Error in eval(expr, envir, enclos): could not find function "sym.FullyConnected"
-```
-
-```r
+data <- mx.symbol.Variable("data")
+w <- mx.symbol.Variable("myweight")
+net <- mx.symbol.FullyConnected(data=data, weight=w, name="fc1", num_hidden=128)
 arguments(net)
 ```
 
 ```
-## [1] "data"
+## [1] "data"     "myweight" "fc1_bias"
 ```
 
 ### More Complicated Composition
 
-MXNet provides well-optimized symbols (see
-[src/operator](https://github.com/dmlc/mxnet/tree/master/src/operator)) for
+MXNet provides well-optimized symbols for
 commonly used layers in deep learning. We can also easily define new operators
 in python.  The following example first performs an elementwise add between two
 symbols, then feed them to the fully connected operator.
 
 
 ```r
-lhs <- mx.symbol.Variable('data1')
-rhs <- mx.symbol.Variable('data2')
-net <- mx.symbol.FullyConnected(data=lhs + rhs, name='fc1', num_hidden=128)
+lhs <- mx.symbol.Variable("data1")
+rhs <- mx.symbol.Variable("data2")
+net <- mx.symbol.FullyConnected(data=lhs + rhs, name="fc1", num_hidden=128)
 arguments(net)
 ```
 
@@ -364,66 +299,27 @@ forward composition we addressed before.
 
 
 ```r
-net <- mx.symbol.Variable('data')
-net <- mx.symbol.FullyConnected(data=net, name='fc1', num_hidden=128)
-net2 <- mx.symbol.Variable('data2')
-net2 <- mx.symbol.FullyConnected(data=net2, name='net2', num_hidden=128)
-composed_net <- net(data=net2, name='compose')
+net <- mx.symbol.Variable("data")
+net <- mx.symbol.FullyConnected(data=net, name="fc1", num_hidden=128)
+net2 <- mx.symbol.Variable("data2")
+net2 <- mx.symbol.FullyConnected(data=net2, name="net2", num_hidden=128)
+composed.net <- mx.apply(net, data=net2, name="compose")
+arguments(composed.net)
 ```
 
 ```
-## Error in eval(expr, envir, enclos): could not find function "net"
-```
-
-```r
-arguments(composed_net)
-```
-
-```
-## Error in inherits(x, "Rcpp_MXSymbol"): object 'composed_net' not found
+## [1] "data2"       "net2_weight" "net2_bias"   "fc1_weight"  "fc1_bias"
 ```
 
 In the above example, *net* is used a function to apply to an existing symbol
-*net*, the resulting *composed_net* will replace the original argument *data* by
+*net*, the resulting *composed.net* will replace the original argument *data* by
 *net2* instead.
 
-### Argument Shapes Inference
-
-Now we have known how to define the symbol. Next we can inference the shapes of
-all the arguments it needed by given the input data shape.
-
-
-```r
-net <- mx.symbol.Variable('data')
-net <- mx.symbol.FullyConnected(data=net, name='fc1', num_hidden=10)
-```
-
-The shape inference can be used as an earlier debugging mechanism to detect
-shape inconsistency.
-
-### Bind the Symbols and Run
-
-Now we can bind the free variables of the symbol and perform forward and backward.
-The bind function will create an ```Executor``` that can be used to carry out the real computations.
-
-For neural nets, a more commonly used pattern is ```simple_bind```, which will create
-all the arguments arrays for you. Then you can call forward, and backward(if gradient is needed)
-to get the gradient.
-
-
-```r
-A <- mx.symbol.Variable('A')
-B <- mx.symbol.Variable('B')
-C <- A * B
-
-texec <- mx.simple.bind(C)
-texec.forward()
-texec.backward()
-```
+### Training a Neural Net.
 
 The [model API](../../R-package/R/model.R) is a thin wrapper around the symbolic executors to support neural net training.
 
-You are also highly encouraged to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md),
+You are also highly encouraged to read [Symbolic Configuration and Execution in Pictures for python package](../python/symbol_in_pictures.md),
 which provides a detailed explanation of concepts in pictures.
 
 ### How Efficient is Symbolic API
@@ -441,14 +337,3 @@ extremely efficient.  We also provide fine grained operators for more flexible
 composition. Because we are also doing more inplace memory allocation, mxnet can
 be ***more memory efficient*** than cxxnet, and gets to same runtime, with
 greater flexiblity.
-
-
-
-
-
-
-
-
-
-
-
