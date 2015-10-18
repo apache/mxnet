@@ -4,7 +4,7 @@
 \alias{mx.io.arrayiter}
 \title{Create MXDataIter compatible iterator from R's array}
 \usage{
-mx.io.arrayiter(data, label = NULL, batch.size = 128, shuffle = FALSE)
+mx.io.arrayiter(data, label, batch.size = 128, shuffle = FALSE)
 }
 \arguments{
 \item{data}{The data array.}
