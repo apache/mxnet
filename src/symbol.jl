@@ -253,8 +253,9 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
            Ref{char_pp}, Ref{char_p}),
           hdr, ref_name, ref_desc, ref_nargs, ref_arg_names, ref_arg_types, ref_arg_descs, ref_kv_nargs)
 
-  func_name = symbol(bytestring(ref_name[]))
-  kv_nargs  = symbol(bytestring(ref_kv_nargs[]))
+  func_name  = symbol(bytestring(ref_name[]))
+  kv_nargs_s = bytestring(ref_kv_nargs[])
+  kv_nargs   = symbol(kv_nargs_s)
 
   # function $func_name(args...; kwargs...)
   func_head = Expr(:call, func_name, Expr(:parameters, Expr(:..., :kwargs)), Expr(:..., :args))
@@ -272,8 +273,8 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
 
     $(if kv_nargs != symbol("")
       quote
-        if !in("$kv_narg", param_keys)
-          push!(param_keys, string("$kv_nargs"))
+        if !in($kv_nargs_s, param_keys)
+          push!(param_keys, $kv_nargs_s)
           push!(param_vals, string(length(args)))
         end
       end

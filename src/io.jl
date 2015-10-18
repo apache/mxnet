@@ -204,7 +204,7 @@ function _define_data_iter_creator(hdr :: MX_handle)
   defun = quote
     function $iter_name(; kwargs...)
       arg_keys = AbstractString[string(k) for (k,v) in kwargs]
-      arg_vals = AbstractString[string(v) for (k,v) in kwargs]
+      arg_vals = AbstractString[dump_mx_param(v) for (k,v) in kwargs]
       ref_hdr  = Ref{MX_handle}(0)
 
       @mxcall(:MXDataIterCreateIter, (MX_handle, MX_uint, char_pp, char_pp, Ref{MX_handle}),

@@ -56,10 +56,10 @@ softmax = mx.Softmax(data=fc, name=:loss)
 
 #--------------------------------------------------------------------------------
 # Prepare data
-filenames = get_cifar10()
+filenames = mx.get_cifar10()
 batch_size = 128
 num_epoch  = 10
-num_gpus   = 1
+num_gpus   = 8
 
 train_provider = mx.ImageRecordProvider(label_name=:loss_label,
         path_imgrec=filenames[:train], mean_img=filenames[:mean],
@@ -73,7 +73,7 @@ test_provider = mx.ImageRecordProvider(label_name=:loss_label,
 
 #--------------------------------------------------------------------------------
 # Training model
-gpus = [mx.Context(GPU, i) for i = 0:num_gpus-1]
+gpus = [mx.Context(mx.GPU, i) for i = 0:num_gpus-1]
 estimator = mx.FeedForward(softmax, context=gpus)
 
 # optimizer
@@ -82,5 +82,5 @@ optimizer = mx.SGD(lr_scheduler=mx.FixedLearningRateScheduler(0.05),
                    weight_decay=0.0001)
 
 # fit parameters
-mx.fit(estimator, optimizer, train_provider, epoch_stop=num_epoch, eval_data=eval_provider,
+mx.fit(estimator, optimizer, train_provider, epoch_stop=num_epoch, eval_data=test_provider,
        initializer=mx.UniformInitializer(0.07))

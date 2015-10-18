@@ -10,7 +10,7 @@ Context(dev_type :: Union{CONTEXT_TYPE, Integer}, dev_id :: Integer = 0) =
     Context(convert(CONTEXT_TYPE, dev_type), convert(Cint, dev_id), Nullable{Context}())
 
 function Base.show(io :: IO, ctx :: Context)
-  print(io, "$(ctx.device_type)$(ctx.device_id))")
+  print(io, "$(ctx.device_type)$(ctx.device_id)")
 end
 
 

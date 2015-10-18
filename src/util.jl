@@ -26,7 +26,7 @@ function get_cifar10()
   data_dir    = get_data_dir()
   cifar10_dir = joinpath(data_dir, "cifar10")
   mkpath(cifar10_dir)
-  filenames = Dict(:train => "train.rec", :test => "test.rec")
+  filenames = Dict(:train => "cifar/train.rec", :test => "cifar/test.rec")
   filenames = [k => joinpath(cifar10_dir, v) for (k,v) in filenames]
   if !all(isfile, values(filenames))
     cd(cifar10_dir) do
@@ -35,6 +35,6 @@ function get_cifar10()
     end
   end
 
-  filenames[:mean] = joinpath(cifar10_dir, "cifar_mean.bin")
+  filenames[:mean] = joinpath(cifar10_dir, "cifar/cifar_mean.bin")
   return filenames
 end
