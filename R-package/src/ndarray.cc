@@ -586,7 +586,7 @@ Context::RObjectType ctx(const NDArray::RObjectType& src) {
   return NDArray(src).ctx().RObject();
 }
 
-size_t Size(const NDArray::RObjectType& src) {
+unsigned long Size(const NDArray::RObjectType& src) {  // NOLINT(*)
   return NDArray(src).Size();
 }
 

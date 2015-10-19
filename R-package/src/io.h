@@ -118,7 +118,7 @@ class ArrayDataIter : public DataIter {
   static Rcpp::RObject Create(const Rcpp::NumericVector& data,
                               const Rcpp::NumericVector& label,
                               const Rcpp::NumericVector& unif_rnds,
-                              size_t batch_size,
+                              int batch_size,
                               bool shuffle);
 
  private:

@@ -123,7 +123,7 @@ int ArrayDataIter::NumPad() const {
 Rcpp::RObject ArrayDataIter::Create(const Rcpp::NumericVector& data,
                                     const Rcpp::NumericVector& label,
                                     const Rcpp::NumericVector& unif_rnds,
-                                    size_t batch_size,
+                                    int batch_size,
                                     bool shuffle) {
   return Rcpp::internal::make_new_object(
       new ArrayDataIter(data, label, unif_rnds, batch_size, shuffle));
