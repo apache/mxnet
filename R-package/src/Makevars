@@ -11,14 +11,9 @@ all: $(SHLIB)
 $(SHLIB): mxlib
 mxlib:
 	cd $(PKGROOT); make CXX="$(CXX)"; cd -
-	cp $(PKGROOT)/lib/libmxnet.so libmxnet.so
 	mkdir -p ../inst
 	mkdir -p ../inst/libs
 	cp $(PKGROOT)/lib/libmxnet.so ../inst/libs/libmxnet.so
 
-# Need to add libmxnet.so to LD_LIBRARY_PATH
-# TODO: make it install together with mxnet.so
-LINKMXNET = -L../inst/libs -lmxnet
-
 PKG_CPPFLAGS = -I$(PKGROOT)/include -I$(PKGROOT)/dmlc-core/include
-PKG_LIBS = $(LINKMXNET) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
+PKG_LIBS =  $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)

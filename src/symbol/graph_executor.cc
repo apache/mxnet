@@ -181,28 +181,28 @@ inline GraphExecutor::OpExecEntry
 GraphExecutor::GetOpExecEntry(uint32_t nid) {
   OpNode& op_node = op_nodes_[nid];
   std::vector<OpReqType> req;
-  std::vector<TBlob> in_data, out_data, aux_states;
-  in_data.reserve(graph_.nodes[nid].inputs.size());
-  out_data.reserve(op_node.outputs.size());
+  std::vector<NDArray> in_array, out_array, aux_array;
+  in_array.reserve(graph_.nodes[nid].inputs.size());
+  out_array.reserve(op_node.outputs.size());
   req.reserve(op_node.outputs.size());
-  aux_states.reserve(op_node.aux_states.size());
+  aux_array.reserve(op_node.aux_states.size());
 
   OpExecEntry exec;
   // output
   for (const DataEntryInfo& out : op_node.outputs) {
-    out_data.push_back(out.data.data());
+    out_array.push_back(out.data);
     exec.mutate_vars.push_back(out.data.var());
     req.push_back(out.op_req);
   }
   // aux
   for (const DataEntryInfo& aux : op_node.aux_states) {
-    aux_states.push_back(aux.data.data());
+    aux_array.push_back(aux.data);
     exec.mutate_vars.push_back(aux.data.var());
   }
   // input
   for (StaticGraph::DataEntry e : graph_.nodes[nid].inputs) {
     const DataEntryInfo &info = op_nodes_[e.source_id].outputs[e.index];
-    in_data.push_back(info.data.data());
+    in_array.push_back(info.data);
     // skip inplace since they already appear in mutate vars
     if (info.inplace_op_id != static_cast<int>(nid)) {
       exec.use_vars.push_back(info.data.var());
@@ -217,10 +217,22 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
   Operator* op = op_node.op.get();
   OpContext* op_ctx_ptr = &op_node.op_ctx;
   bool is_gpu = op_node.ctx.dev_mask() == gpu::kDevMask;
-  exec.exec_fun = [op, is_gpu, op_ctx_ptr, in_data, req, out_data, aux_states]
+  exec.exec_fun = [op, is_gpu, op_ctx_ptr, in_array, req, out_array, aux_array]
       (RunContext ctx, Engine::CallbackOnComplete on_complete) {
+    std::vector<TBlob> in_data(in_array.size());
+    std::vector<TBlob> out_data(out_array.size());
+    std::vector<TBlob> aux_data(aux_array.size());
+    std::transform(in_array.begin(), in_array.end(), in_data.begin(), [](const NDArray& nd) {
+      return nd.data();
+      });
+    std::transform(out_array.begin(), out_array.end(), out_data.begin(), [](const NDArray& nd) {
+        return nd.data();
+      });
+    std::transform(aux_array.begin(), aux_array.end(), aux_data.begin(), [](const NDArray& nd) {
+        return nd.data();
+      });
     op_ctx_ptr->run_ctx = ctx;
-    op->Forward(*op_ctx_ptr, in_data, req, out_data, aux_states);
+    op->Forward(*op_ctx_ptr, in_data, req, out_data, aux_data);
     if (is_gpu) {
 #if MXNET_USE_CUDA
       // Wait GPU kernel to finish.
@@ -235,8 +247,10 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
 }
 
 GraphExecutor::~GraphExecutor() {
-  // need to destruct after all previously issued operations are finished.
-  Engine::Get()->WaitForAll();
+  // need to delete the operators before delete the NDArray they referenced.
+  for (OpNode& node : op_nodes_) {
+    node.DeleteOperator();
+  }
 }
 
 void GraphExecutor::InitGraph(const Symbol &symbol, Context ctx, bool need_backward) {

@@ -49,6 +49,46 @@ def test_elementwise_sum():
             shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
             check_elementwise_sum_with_shape(shape, np.random.randint(1, 8))
 
+def check_slice_channel(dim):
+    if dim == 2:
+        a = np.ones((2, 2)) * 1.
+        b = np.ones((2, 2)) * 2.
+        c = np.ones((2, 2)) * 3.
+        d = np.ones((2, 2)) * 4.
+        e = np.hstack((a, b, c, d))
+    elif dim == 4:
+        a = np.ones((2, 2, 2, 2)) * 1.
+        b = np.ones((2, 2, 2, 2)) * 2.
+        c = np.ones((2, 2, 2, 2)) * 3.
+        d = np.ones((2, 2, 2, 2)) * 4.
+        e = np.hstack((a, b, c, d))
+    e_nd = mx.nd.empty(e.shape)
+    e_nd[:] = e
+    data = mx.sym.Variable('data')
+    op = mx.sym.SliceChannel(data=data, num_outputs=4)
+    arg_shape, output_shape, aux_shape = op.infer_shape(data=e_nd.shape)
+    grad_nd = [mx.nd.empty(shape) for shape in arg_shape]
+
+    exe = op.bind(mx.cpu(), args=[e_nd], args_grad=grad_nd)
+    assert len(exe.outputs) == 4
+    o1_nd = exe.outputs[0]
+    o2_nd = exe.outputs[1]
+    o3_nd = exe.outputs[2]
+    o4_nd = exe.outputs[3]
+    # test forward
+    exe.forward()
+    assert reldiff(o1_nd.asnumpy(), a) < 1e-5
+    assert reldiff(o2_nd.asnumpy(), b) < 1e-5
+    assert reldiff(o3_nd.asnumpy(), c) < 1e-5
+    assert reldiff(o4_nd.asnumpy(), d) < 1e-5
+    # test backward
+    o1_nd += 4.
+    o2_nd += 3.
+    o3_nd += 2.
+    o4_nd += 1.
+    exe.backward([o1_nd, o2_nd, o3_nd, o4_nd])
+    assert reldiff(grad_nd[0].asnumpy(), np.hstack((a+4,b+3, c+2, d+1))) < 1e-5
+
 def check_concat_with_shape(shapes):
     n = len(shapes)
     # forward
@@ -99,7 +139,40 @@ def test_concat():
             shapes.append((batch, ch[i], h, w))
         check_concat_with_shape(shapes)
 
+def test_slice_channel():
+    check_slice_channel(2)
+    check_slice_channel(4)
+
+def check_regression(symbol, forward, backward):
+    data = mx.symbol.Variable('data')
+    label = mx.symbol.Variable('label')
+    out = symbol(data, label)
+    shape = (3, 1)
+    arr_data = mx.random.uniform(-1, 1, shape)
+    arr_label = mx.random.uniform(0, 1, shape[0])
+    arr_grad = mx.nd.empty(shape)
+    exec1 = out.bind(mx.cpu(),
+                     args=[arr_data, arr_label],
+                     args_grad={"data" : arr_grad})
+    exec1.forward()
+    out1 = exec1.outputs[0].asnumpy()
+    npout = forward(arr_data.asnumpy())
+    assert reldiff(npout, out1) < 1e-6
+
+    exec1.backward()
+    npout = backward(npout,  arr_label.asnumpy().reshape(npout.shape))
+    assert reldiff(npout, arr_grad.asnumpy()) < 1e-6
+
+def test_regression():
+    check_regression(mx.symbol.LogisticRegressionOutput,
+                     lambda x: 1.0 / (1.0 + np.exp(-x)),
+                     lambda x, y : x - y)
+    check_regression(mx.symbol.LinearRegressionOutput,
+                     lambda x: x,
+                     lambda x, y : x - y)
 
 if __name__ == '__main__':
     test_elementwise_sum()
     test_concat()
+    test_slice_channel()
+    test_regression()

@@ -86,7 +86,6 @@ class SGD(Optimizer):
         # TODO(bing) implement wd_bias, wd_gamma, wd_beta
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-
         if self.lr_scheduler != None:
             lr = self.lr_scheduler(self.iteration)
         else:
@@ -106,6 +105,22 @@ class SGD(Optimizer):
             weight[:] += -lr * (grad * self.rescale_grad + self.wd * weight)
 
 
+class Test(object):
+    """For test use"""
+    def __init__(self, rescale_grad=1):
+        self.rescale_grad = rescale_grad
+
+
+    # pylint: disable=no-self-use
+    def create_state(self, index, weight):
+        """Create a state to duplicate weight"""
+        return zeros(weight.shape, weight.context)
+
+    def update(self, index, weight, grad, state):
+        """performs w += rescale_grad * grad"""
+        weight[:] += grad * self.rescale_grad
+        state[:] = weight
+
 def create(name, rescale_grad=1, **kwargs):
     """Create an optimizer with specified name.
 
@@ -122,10 +137,33 @@ def create(name, rescale_grad=1, **kwargs):
 
     Returns
     -------
-    opt : optimizer
+    opt : Optimizer
         The result optimizer.
     """
     if name == 'sgd' or name == 'SGD':
         return SGD(rescale_grad=rescale_grad, **kwargs)
+    if name == 'test':
+        return Test(rescale_grad=rescale_grad)
     else:
         raise ValueError('Cannot find optimizer %s' % name)
+
+def get_updater(optimizer):
+    """Return a clossure of the updater needed for kvstore
+
+    Parameters
+    ----------
+    optimizer: Optimizer
+         The optimizer
+
+    Returns
+    -------
+    updater: function
+         The clossure of the updater
+    """
+    states = dict()
+    def updater(index, grad, weight):
+        """updater for kvstore"""
+        if index not in states:
+            states[index] = optimizer.create_state(index, weight)
+        optimizer.update(index, weight, grad, states[index])
+    return updater

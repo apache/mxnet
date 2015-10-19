@@ -76,7 +76,7 @@ def test_updater(dev = 'cpu'):
     """updater"""
 
     kv = init_kv()
-    kv.set_updater(updater)
+    kv._set_updater(updater)
 
     # devices
     num_devs = 4
@@ -104,10 +104,14 @@ def test_updater(dev = 'cpu'):
         for v in vv:
             check_diff_to_scalar(v, num_devs * num_push)
 
+def test_get_type():
+    kvtype = 'local_allreduce_cpu'
+    kv = mx.kv.create(kvtype)
+    assert kv.type == kvtype
 
 if __name__ == '__main__':
+    test_get_type()
     test_single_kv_pair()
     test_list_kv_pair()
     test_aggregator()
     test_updater()
-

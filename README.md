@@ -12,9 +12,7 @@ deep learning programs together to maximize the efficiency and your productivity
 
 What's New
 ----------
-* [Note on Programming Models for Deep Learning](http://mxnet.readthedocs.org/en/latest/program_model.html)
-* [Pretrained Inception BatchNorm Network](example/notebooks/predict-with-pretrained-model.ipynb)
-* [Working with Numpy](example/mnist/mlp_numpy.py)
+* [MXNet R Package brings Deep learning for R!](https://github.com/dmlc/mxnet/tree/master/R-package)
 * [Note on Dependency Engine for Deep Learning](http://mxnet.readthedocs.org/en/latest/developer-guide/note_engine.html)
 
 Contents
@@ -22,8 +20,9 @@ Contents
 * [Documentation and Tutorials](http://mxnet.readthedocs.org/en/latest/)
 * [Open Source Design Notes](http://mxnet.readthedocs.org/en/latest/#open-source-design-notes)
 * [Code Examples](example)
-* [Build Instruction](doc/build.md)
+* [Installation](http://mxnet.readthedocs.org/en/latest/build.html)
 * [Features](#features)
+* [Contribute to MXNet](http://mxnet.readthedocs.org/en/latest/contribute.html)
 * [License](#license)
 
 Features
@@ -44,12 +43,6 @@ Features
 Bug Reporting
 -------------
 * For reporting bugs please use the [mxnet/issues](https://github.com/dmlc/mxnet/issues) page.
-
-Contributing to MXNet
----------------------
-MXNet has been developed and used by a group of active community members.
-Everyone is more than welcome to contribute. It is a way to make the project better and more accessible to more users.
-* Please add your name to [CONTRIBUTORS.md](CONTRIBUTORS.md) after your patch has been merged.
 
 License
 -------

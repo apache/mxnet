@@ -58,8 +58,11 @@ __pycache__
 *.json
 *.d
 build
-dmlc-core
-mshadow
 data
 recommonmark
 bin
+deps
+
+# R
+*.Rcheck
+*.rds

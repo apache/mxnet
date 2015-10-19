@@ -3,11 +3,12 @@
 from __future__ import absolute_import
 
 import ctypes
+import pickle
 from .ndarray import NDArray
 from .base import _LIB
-from .base import check_call, c_array, c_str, string_types, mx_uint
+from .base import check_call, c_array, c_str, string_types, mx_uint, py_str
 from .base import NDArrayHandle, KVStoreHandle
-
+from . import optimizer as opt
 
 def _ctype_key_value(keys, vals):
     """
@@ -37,7 +38,7 @@ def _ctype_key_value(keys, vals):
 
 def _updater_wrapper(updater):
     """ a wrapper for the user-defined handle """
-    def updater_handle(key, lhs_handle, rhs_handle):
+    def updater_handle(key, lhs_handle, rhs_handle, _):
         """ ctypes function """
         lhs = NDArray(NDArrayHandle(lhs_handle))
         rhs = NDArray(NDArrayHandle(rhs_handle))
@@ -66,6 +67,10 @@ class KVStore(object):
         """ Initialize a single or a sequence of key-value pairs into the store.
 
         For each key, one must init it before push and pull.
+
+        Only worker 0's (rank == 0) data are used.
+
+        This function returns after data have been initialized successfully
 
         Parameters
         ----------
@@ -96,6 +101,16 @@ class KVStore(object):
 
     def push(self, key, value, priority=0):
         """ Push a single or a sequence of key-value pairs into the store.
+
+        Data consistency:
+
+        1. this function returns after adding an operator to the engine.
+
+        2. push is always called after all previous push and pull on the same
+        key are finished
+
+        3. there is no synchronization between workers. One can use _barrier()
+        to sync all workers
 
         Parameters
         ----------
@@ -153,6 +168,16 @@ class KVStore(object):
     def pull(self, key, out=None, priority=0):
         """ Pull a single value or a sequence of values from the store.
 
+        Data consistency:
+
+        1. this function returns after adding an operator to the engine. But any
+        further read on out will be blocked until it is finished.
+
+        2. pull is always called after all previous push and pull on the same
+        key are finished
+
+        3. It pulls the newest value from the store.
+
         Parameters
         ----------
         key : int or list of int
@@ -203,12 +228,81 @@ class KVStore(object):
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
             ctypes.c_int(priority)))
 
-    def set_updater(self, updater):
-        """Set a push updater into the store.
+    def set_optimizer(self, optimizer):
+        """Register an optimizer to the store
+
+        If there are multiple machines, this process (should be a worker node)
+        will pack this optimizer and send it to all servers. It returns after
+        this action is done.
 
         Parameters
         ----------
-        updater: function
+        optimizer : Optimizer
+            the optimizer
+        """
+        is_worker = ctypes.c_int()
+        check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
+
+        # pylint: disable=invalid-name
+        if 'dist' in self.type and is_worker.value:
+            # send the optimizer to server
+            try:
+                # use ASCII protocol 0, might be slower, but not a big ideal
+                optim_str = pickle.dumps(optimizer, 0)
+            except:
+                raise
+            self._send_command_to_servers(0, optim_str)
+        else:
+            self._set_updater(opt.get_updater(optimizer))
+
+    @property
+    def type(self):
+        """Get the type of this kvstore
+
+        Returns
+        -------
+        type : str
+            the string type
+        """
+        kv_type = ctypes.c_char_p()
+        check_call(_LIB.MXKVStoreGetType(self.handle, ctypes.byref(kv_type)))
+        return py_str(kv_type.value)
+
+    @property
+    def rank(self):
+        """Get the rank of this worker node
+
+        Returns
+        -------
+        rank : int
+            The rank of this node, which is in [0, get_num_workers())
+        """
+        rank = ctypes.c_int()
+        check_call(_LIB.MXKVStoreGetRank(self.handle, ctypes.byref(rank)))
+        return rank.value
+
+    @property
+    def num_workers(self):
+        """Get the number of worker ndoes
+
+        Returns
+        -------
+        size :int
+            The number of worker nodes
+        """
+        size = ctypes.c_int()
+        check_call(_LIB.MXKVStoreGetGroupSize(self.handle, ctypes.byref(size)))
+        return size.value
+
+    def _set_updater(self, updater):
+        """Set a push updater into the store.
+
+        This function only changes the local store. Use set_optimizer for
+        multi-machines.
+
+        Parameters
+        ----------
+        updater : function
             the updater function
 
         Examples
@@ -229,10 +323,39 @@ class KVStore(object):
         [ 6.  6.  6.]]
         """
         _updater_proto = ctypes.CFUNCTYPE(
-            None, ctypes.c_int, NDArrayHandle, NDArrayHandle)
+            None, ctypes.c_int, NDArrayHandle, NDArrayHandle, ctypes.c_void_p)
         self._updater_func = _updater_proto(_updater_wrapper(updater))
-        check_call(_LIB.MXKVStoreSetUpdater(self.handle, self._updater_func))
+        check_call(_LIB.MXKVStoreSetUpdater(self.handle, self._updater_func, None))
 
+
+    def _barrier(self):
+        """Global barrier among all worker nodes
+
+        For example, assume there are n machines, we want to let machine 0 first
+        init the values, and then pull the inited value to all machines. Before
+        pulling, we can place a barrier to guarantee that the initialization is
+        finished.
+        """
+        check_call(_LIB.MXKVStoreBarrier(self.handle))
+
+    def _send_command_to_servers(self, head, body):
+        """Send a command to all server nodes
+
+        Send a command to all server nodes, which will make each server node run
+        KVStoreServer.controller
+
+        This function returns after the command has been executed in all server
+        nodes
+
+        Parameters
+        ----------
+        head : int
+            the head of the command
+        body : str
+            the body of the command
+        """
+        check_call(_LIB.MXKVStoreSendCommmandToServers(
+            self.handle, mx_uint(head), c_str(body)))
 
 def create(name='local'):
     """Create a new KVStore.
@@ -241,8 +364,8 @@ def create(name='local'):
     ----------
     name : {'local'}
         The type of KVStore
-        - local: KVStore that works on devices with single process.
-
+        - local works for multiple devices on a single machine (single process)
+        - dist works for multi-machines (multiple processes)
     Returns
     -------
     kv : KVStore

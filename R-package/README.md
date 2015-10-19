@@ -1,24 +1,26 @@
-MXNet R-Package
-===============
-This is an on-going effort to support mxnet in R, stay tuned.
+<img src=https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo-m/mxnetR.png width=155/> Deep Learning for R
+==========================
+[![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
+[![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.readthedocs.org/en/latest/R-package/index.html)
 
-Bleeding edge Installation
-- First build ```../lib/libmxnet.so``` by following [Build Instruction](doc/build.md)
-- Set the path to ```lib/libmxnet.so``` in ```LD_LIBRARY_PATH```, you can do it by modify ```~/.bashrc```
-```bash
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/path/to/lib/libmxnet.so
-```
-- Type ```R CMD INSTALL R-package``` in the root folder.
+You have found MXNet R Package! The MXNet R packages brings flexible and efficient GPU
+computing and state-of-art deep learning to R.
 
+- It enables you to write seamless tensor/matrix computation with multiple GPUs in R.
+- It also enables you to construct and customize the state-of-art deep learning models in R,
+  and apply them to tasks such as image classification and data science challenges.
 
-Contributing Style Guide
-------------------------
-- Most C++ of R package heavily relies on [Rcpp](https://github.com/RcppCore/Rcpp).
-- We follow Google's C++ Style guide on C++ code.
-  - This is mainly to be consistent with the rest of the project.
-  - Another reason is we will be able to check style automatically with a linter.
-- You can check the style of the code by typing the following command at root folder.
-```bash
-make rcpplint
-```
-- When needed, you can disable the linter warning of certain line with ```// NOLINT(*)``` comments.
+Sounds exciting? This page contains links to all the related documents on R package.
+
+Resources
+---------
+* [MXNet R Package Document](http://mxnet.readthedocs.org/en/latest/R-package/index.html)
+  - Check this out for detailed documents, examples, installation guides.
+
+Installation
+------------
+Follow [Installation Guide](http://mxnet.readthedocs.org/en/latest/build.html)
+
+License
+-------
+MXNet R-package is licensed under [BSD](https://github.com/dmlc/mxnet/blob/master/R-Package/LICENSE) license.

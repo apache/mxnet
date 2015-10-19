@@ -101,6 +101,11 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   int preprocess_threads;
   /*! \brief whether to remain silent */
   bool verbose;
+  /*! \brief partition the data into multiple parts */
+  int num_parts;
+  /*! \brief the index of the part will read*/
+  int part_index;
+
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageRecParserParam) {
     DMLC_DECLARE_FIELD(path_imglist).set_default("")
@@ -116,6 +121,10 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
         .describe("Backend Param: Number of thread to do preprocessing.");
     DMLC_DECLARE_FIELD(verbose).set_default(true)
         .describe("Auxiliary Param: Whether to output parser information.");
+    DMLC_DECLARE_FIELD(num_parts).set_default(1)
+        .describe("partition the data into multiple parts");
+    DMLC_DECLARE_FIELD(part_index).set_default(0)
+        .describe("the index of the part will read");
   }
 };
 
@@ -203,12 +212,9 @@ inline void ImageRecordIOParser::Init(
     LOG(INFO) << "ImageRecordIOParser: " << param_.path_imgrec
               << ", use " << threadget << " threads for decoding..";
   }
-  // TODO(mu, tianjun) add DMLC env variable to detect parition
-  const int part_index = 0;
-  const int num_parts = 1;
   source_ = dmlc::InputSplit::Create(
-      param_.path_imgrec.c_str(), part_index,
-      num_parts, "recordio");
+      param_.path_imgrec.c_str(), param_.part_index,
+      param_.num_parts, "recordio");
   // use 64 MB chunk when possible
   source_->HintChunkSize(8 << 20UL);
 #else

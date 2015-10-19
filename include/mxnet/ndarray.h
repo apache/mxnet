@@ -246,7 +246,7 @@ class NDArray {
    * \brief Save list of narray into the file.
    * \param fname name of the file.
    * \param data the NDArrays to be saved.
-   * \param keys the name of the NDArray, optional, can be zero length.
+   * \param names the name of the NDArray, optional, can be zero length.
    */
   static void Save(const std::string& fname,
                    const std::vector<NDArray>& data,
@@ -344,7 +344,7 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
 /*!
  * \brief Perform elementwise sum over each data from source, store result into out.
  * \param source the ndarray we want to sum
- * \param to the target ndarray
+ * \param out the target ndarray
  * \param priority Priority of the action.
  */
 void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priority = 0);
