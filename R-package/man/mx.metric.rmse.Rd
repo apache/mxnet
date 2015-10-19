@@ -3,7 +3,7 @@
 \docType{data}
 \name{mx.metric.rmse}
 \alias{mx.metric.rmse}
-\title{RMSE metric}
+\title{RMSE (Root Mean Squared Error) metric for regression}
 \format{\preformatted{List of 3
  $ init  :function ()  
  $ update:function (label, pred, state)  
@@ -14,7 +14,7 @@
 mx.metric.rmse
 }
 \description{
-RMSE metric
+RMSE (Root Mean Squared Error) metric for regression
 }
 \keyword{datasets}
 
