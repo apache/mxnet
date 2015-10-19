@@ -53,3 +53,4 @@ List of Contributors
   - Junran makes device kvstore allocation strategy smarter
 * [Shuzhe Wu](https://github.com/II-Matto)
 * [Xiaodong](https://github.com/XD-DENG)
+* [Nan Xiao](https://github.com/road2stat)
