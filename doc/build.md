@@ -124,7 +124,7 @@ To install the R package. First finish the [Build MXNet Library](#build-mxnet-li
 Then use the following command to install mxnet at root folder
 
 ```bash
-R CMD INSTALL R-Package
+R CMD INSTALL R-package
 ```
 
 Hopefully, we will now have mxnet on R!
