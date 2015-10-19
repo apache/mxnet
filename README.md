@@ -34,7 +34,7 @@ Features
 * Auto parallelization
   - Write numpy-style ndarray GPU programs, which will be automatically parallelized.
 * Language agnostic
-  - With support for python, c++, more to come.
+  - With support for python, c++, R, more to come.
 * Cloud friendly
   - Directly load/save from S3, HDFS, AZure
 * Easy extensibility
