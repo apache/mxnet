@@ -1,5 +1,3 @@
-export NDArray
-
 # create a NDArray handle of specific shape
 function _ndarray_alloc{N}(shape :: NTuple{N, Int}, ctx :: Context, delay_alloc :: Bool)
   h_ref  = Ref{MX_handle}(0)

@@ -1,5 +1,3 @@
-export MXError
-
 "Exception thrown when an error occurred calling MXNet API."
 immutable MXError <: Exception
   msg :: AbstractString
