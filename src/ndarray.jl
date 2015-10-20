@@ -43,7 +43,7 @@ function Base.show(io :: IO, arr :: NDArray)
 end
 
 function NDArray{T<:Real}(data :: Array{T})
-  copy(data, mx.DEFAULT_CONTEXT)
+  copy(data, cpu())
 end
 
 function Base.unsafe_convert(::Type{MX_handle}, obj::NDArray)
@@ -63,7 +63,10 @@ function context(arr :: NDArray)
   return Context(ref_typeid[], ref_devid[])
 end
 
-function empty{N}(shape :: NTuple{N, Int}, ctx :: Context = DEFAULT_CONTEXT)
+function empty{N}(shape :: NTuple{N, Int})
+  empty(shape, cpu())
+end
+function empty{N}(shape :: NTuple{N, Int}, ctx :: Context)
   NDArray(_ndarray_alloc(shape, ctx, false))
 end
 function empty(shape :: Int...)
@@ -99,7 +102,10 @@ function eltype(arr :: NDArray)
 end
 
 "Create zero-ed NDArray of specific shape"
-function zeros{N}(shape :: NTuple{N, Int}, ctx :: Context = DEFAULT_CONTEXT)
+function zeros{N}(shape :: NTuple{N, Int})
+  zeros(shape, cpu())
+end
+function zeros{N}(shape :: NTuple{N, Int}, ctx :: Context)
   arr = empty(shape, ctx)
   arr[:] = 0
   return arr
@@ -109,7 +115,10 @@ function zeros(shape :: Int...)
 end
 
 "Create NDArray and initialize with 1"
-function ones{N}(shape :: NTuple{N, Int}, ctx :: Context = DEFAULT_CONTEXT)
+function ones{N}(shape :: NTuple{N, Int})
+  ones(shape, cpu())
+end
+function ones{N}(shape :: NTuple{N, Int}, ctx :: Context)
   arr = empty(shape, ctx)
   arr[:] = 1
   return arr

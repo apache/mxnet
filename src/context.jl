@@ -1,18 +1,19 @@
 @enum CONTEXT_TYPE CPU=1 GPU=2 CPU_PINNED=3
 
-type Context
+immutable Context
   device_type :: CONTEXT_TYPE
-  device_id   :: Cint
-
-  old_ctx     :: Nullable{Context}
+  device_id   :: Int
 end
-Context(dev_type :: Union{CONTEXT_TYPE, Integer}, dev_id :: Integer = 0) =
-    Context(convert(CONTEXT_TYPE, dev_type), convert(Cint, dev_id), Nullable{Context}())
+Context(dev_type :: Union{CONTEXT_TYPE, Int}, dev_id :: Int = 0) =
+    Context(convert(CONTEXT_TYPE, dev_type), dev_id)
 
 function Base.show(io :: IO, ctx :: Context)
   print(io, "$(ctx.device_type)$(ctx.device_id)")
 end
 
-
-# global default context
-DEFAULT_CONTEXT = Context(CPU)
+function cpu(dev_id::Int=0)
+  return Context(CPU, dev_id)
+end
+function gpu(dev_id::Int=0)
+  return Context(GPU, dev_id)
+end

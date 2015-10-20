@@ -9,7 +9,7 @@ using ..Main: rand_dims, reldiff
 ################################################################################
 function rand_tensors{N}(dims::NTuple{N, Int})
   tensor = rand(mx.MX_float, dims)
-  array  = copy(tensor, mx.DEFAULT_CONTEXT)
+  array  = copy(tensor, mx.cpu())
   return (tensor, array)
 end
 
@@ -20,12 +20,12 @@ function test_copy()
   info("NDArray::copy::dims = $dims")
 
   # copy to NDArray and back
-  array   = copy(tensor, mx.DEFAULT_CONTEXT)
+  array   = copy(tensor, mx.cpu())
   tensor2 = copy(array)
   @test reldiff(tensor, tensor2) < 1e-6
 
   # copy between NDArray
-  array2  = copy(array, mx.DEFAULT_CONTEXT)
+  array2  = copy(array, mx.cpu())
   tensor2 = copy(array2)
   @test reldiff(tensor, tensor2) < 1e-6
 end
