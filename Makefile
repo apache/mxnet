@@ -80,7 +80,7 @@ PS_PATH=./ps-lite
 DEPS_PATH=$(shell pwd)/deps
 include $(PS_PATH)/make/ps.mk
 ifeq ($(USE_DIST_KVSTORE), 1)
-	CFLAGS += -DMXNET_USE_DIST_KVSTORE -I$(PS_PATH)/include
+	CFLAGS += -DMXNET_USE_DIST_KVSTORE -I$(PS_PATH)/include -I$(DEPS_PATH)/include
 	LIB_DEP += $(PS_PATH)/build/libps.a
 	LDFLAGS += -Wl,-rpath,$(DEPS_PATH)/lib $(PS_LDFLAGS_SO)
 endif
@@ -120,7 +120,7 @@ lib/libmxnet.so: $(ALL_DEP)
 
 # ps-lite
 $(PS_PATH)/build/libps.a:
-	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) deps
+	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) protobuf zmq
 	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) ps
 
 $(DMLC_CORE)/libdmlc.a:
