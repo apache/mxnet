@@ -12,10 +12,6 @@ if [ ! -f config.mk ]; then
 
   if [ ${TRAVIS_OS_NAME} == "osx" ]; then
     cp make/osx.mk config.mk
-    ## add built-in blas header file to path
-    #sed -i -s 's%ADD_CFLAGS =%ADD_CFLAGS = -I/System/Library/Frameworks/Accelerate.framework/Versions/Current/Frameworks/vecLib.framework/Versions/Current/Headers/%' config.mk
-    ## disable openmp
-    #sed -i -s 's%USE_OPENMP = 1%USE_OPENMP = 0%g' config.mk
   fi
 fi
 
