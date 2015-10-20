@@ -188,13 +188,7 @@ class KVStore {
   }
 
   /*!
-   * \return The number of nodes in this group.
-   *
-   * Always returns 1 when type == "local". Otherwise, returns
-   *
-   * - number of workers if if `IsWorkerNode() == true`,
-   * - number of servers if if `IsServerNode() == true`,
-   * - 1 if `IsSchedulerNode() == true`,
+   * \return The number of worker nodes
    */
   virtual int get_group_size() const {
     return 1;

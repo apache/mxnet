@@ -145,6 +145,10 @@ class KVStoreDistServer {
 
     int key = DecodeKey(req_data.keys[0]);
     auto& stored = store_[key];
+
+    // there are several WaitToRead here, this is because \a recved's memory
+    // could be deallocated when this function returns. so we need to make sure
+    // the operators with \a NDArray are actually finished
     if (req_meta.push) {
       size_t ds[] = {(size_t)req_data.lens[0]};
       TShape dshape(ds, ds + 1);
@@ -154,6 +158,9 @@ class KVStoreDistServer {
       if (stored.is_none()) {
         // initialization
         stored = NDArray(dshape, Context());
+        CopyFromTo(recved, &stored, 0);
+        server->Response(req_meta);
+        stored.WaitToRead();
       } else if (sync_mode_) {
         // synced push
         auto& merged = merge_buf_[key];
@@ -166,12 +173,12 @@ class KVStoreDistServer {
         } else {
           merged.array += recved;
         }
+
         merged.request.push_back(req_meta);
 
         if (merged.request.size() == (size_t)ps::NumWorkers()) {
           // let the main thread to execute updater_, which is necessary for
           // python
-          merged.array.WaitToRead();
           exec_.Exec([this, key, &merged, &stored](){
               CHECK(updater_);
               updater_(key, merged.array, &stored);
@@ -180,6 +187,9 @@ class KVStoreDistServer {
             server->Response(req);
           }
           merged.request.clear();
+          stored.WaitToRead();
+        } else {
+          merged.array.WaitToRead();
         }
       } else {
         // async push
@@ -187,15 +197,18 @@ class KVStoreDistServer {
             CHECK(updater_);
             updater_(key, recved, &stored);
           });
+        server->Response(req_meta);
+        stored.WaitToRead();
       }
-      stored.WaitToRead();
     } else {
       // pull
       ps::KVPairs<real_t> response;
+      CHECK(!stored.is_none()) << "init " << key << " first";
+      int len = stored.shape()[0];
       response.keys = req_data.keys;
-      response.lens = req_data.lens;
-      response.vals.CopyFrom(static_cast<const float*>(stored.data().dptr_),
-                             stored.shape()[0]);
+      response.lens = {len};
+      response.vals.CopyFrom(static_cast<const float*>(stored.data().dptr_), len);
+      server->Response(req_meta, response);
     }
   }
 
