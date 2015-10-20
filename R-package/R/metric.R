@@ -22,8 +22,8 @@ mx.metric.custom <- function(name, feval) {
 #'
 #' @export
 mx.metric.accuracy <- mx.metric.custom("accuracy", function(label, pred) {
-  ypred = max.col(pred, tie="first")
-  return(sum((label + 1) == ypred) / length(label))
+  ypred = max.col(t(as.array(pred)), tie="first")
+  return(sum((as.array(label) + 1) == ypred) / length(label))
 })
 
 #' RMSE (Root Mean Squared Error) metric for regression

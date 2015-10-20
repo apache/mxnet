@@ -1,12 +1,13 @@
 # slice the shape on the highest dimension
 mx.model.slice.shape <- function(shape, nsplit) {
-  batchsize <- shape[[1]]
+  ndim <- length(shape)
+  batchsize <- shape[[ndim]]
   step <- as.integer((batchsize + nsplit - 1) / nsplit)
   lapply(0:(nsplit - 1), function(k) {
     begin = min(k * step, batchsize)
     end = min((k + 1) * step, batchsize)
     s <- shape
-    s[[1]] = end - begin
+    s[[ndim]] = end - begin
     return(list(begin=begin, end=end, shape=s))
   })
 }
@@ -266,7 +267,8 @@ mx.model.init.iter <- function(X, y, batch.size, is.train) {
   if (is.null(y)) {
     if (is.train) stop("Need to provide parameter y for training with R arrays.")
     shape <- dim(X)
-    y <- c(1:shape[[1]]) * 0
+    ndim <- length(shape)
+    y <- c(1:shape[[ndim]]) * 0
   }
   batch.size <- min(length(y), batch.size)
   return(mx.io.arrayiter(X, y, batch.size=batch.size, shuffle=is.train))
@@ -324,7 +326,8 @@ function(symbol, X, y=NULL, ctx=NULL,
   }
   if (!is.list(ctx)) stop("ctx must be mx.context or list of mx.context")
   if (is.character(optimizer)) {
-    batchsize = input.shape[[1]]
+    ndim <- length(input.shape)
+    batchsize = input.shape[[ndim]]
     optimizer <- mx.opt.create(optimizer, rescale.grad=(1/batchsize), ...)
   }
 
@@ -366,7 +369,8 @@ predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128)
     out.pred <- mx.nd.copyto(pexec$ref.outputs[[1]], mx.cpu())
     padded <- X$num.pad()
     oshape <- dim(out.pred)
-    packer$push(mx.nd.slice(out.pred, 0, oshape[[1]] - padded))
+    ndim <- length(oshape)
+    packer$push(mx.nd.slice(out.pred, 0, oshape[[ndim]] - padded))
   }
   X$reset()
   return(packer$get())

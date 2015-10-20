@@ -121,30 +121,25 @@ inline void RowToColMajor(const mx_float *in_data,
   }
 }
 
-void ConvertToRowMajor(const Rcpp::NumericVector& rdata, std::vector<mx_float>* out) {
-  Rcpp::RObject dim = rdata.attr("dim");
-  Rcpp::Dimension rshape(dim);
-  out->resize(rdata.size());
-  ColToRowMajor(rdata.begin(), Dim2Vec(rshape),
-                out->size(), dmlc::BeginPtr(*out));
-}
-
 void NDArrayPacker::Push(const NDArray::RObjectType& nd) {
   NDArray arr(nd);
-  Rcpp::Dimension rshape = arr.shape();
+  Rcpp::Dimension rshape = arr.dim();
   if (shape_.size() == 0) {
     shape_.resize(rshape.size());
     for (size_t i = 0; i < shape_.size(); ++i) {
       shape_[i] = rshape[i];
     }
   } else {
-    for (size_t i = 1; i < shape_.size(); ++i) {
+    RCHECK(shape_.size() == rshape.size())
+        << "The number of dimension need to be matched";
+    for (size_t i = 0; i < shape_.size() - 1; ++i) {
       RCHECK(shape_[i] == rshape[i])
-          << "The dimension besides 0 need to be consistent for arrays pushed";
+          << "The dimension besides last need to be consistent for arrays pushed";
     }
-    shape_[0] += rshape[0];
+    shape_.back() += rshape[shape_.size() - 1];
   }
-  size_t begin = data_.size(), size = rshape.prod();
+  size_t begin = data_.size();
+  size_t size = rshape.prod();
   data_.resize(begin + size);
   MX_CALL(MXNDArraySyncCopyToCPU(
       arr->handle, dmlc::BeginPtr(data_) + begin, size));
@@ -156,8 +151,7 @@ Rcpp::NumericVector NDArrayPacker::Get() const {
   Rcpp::Dimension dim(sexp);
   Rcpp::NumericVector ret(dim);
   RCHECK(ret.size() == data_.size());
-  RowToColMajor(dmlc::BeginPtr(data_), shape_,
-                data_.size(), ret.begin());
+  std::copy(data_.begin(), data_.end(), ret.begin());
   return ret;
 }
 
@@ -165,18 +159,19 @@ Rcpp::RObject NDArrayPacker::CreateNDArrayPacker() {
   return Rcpp::internal::make_new_object(new NDArrayPacker());
 }
 
-Rcpp::Dimension NDArray::shape() const {
+Rcpp::Dimension NDArray::dim() const {
   mx_uint ndim;
   const mx_uint *pshape;
   MX_CALL(MXNDArrayGetShape(
       ptr_->handle, &ndim, &pshape));
   Rcpp::IntegerVector dat(pshape, pshape + ndim);
+  std::reverse(dat.begin(), dat.end());
   Rcpp::RObject ret = dat;
   return Rcpp::Dimension(ret);
 }
 
 NDArray NDArray::Clone() const {
-  std::vector<mx_uint> shape = Dim2Vec(this->shape());
+  std::vector<mx_uint> shape = Dim2InternalShape(this->dim());
   Context ctx = this->ctx();
   NDArrayHandle handle;
   MX_CALL(MXNDArrayCreate(dmlc::BeginPtr(shape),
@@ -194,7 +189,7 @@ Context NDArray::ctx() const {
 }
 
 size_t NDArray::Size() const {
-  Rcpp::Dimension dim = this->shape();
+  Rcpp::Dimension dim = this->dim();
   size_t sz = 1;
   for (size_t i = 0; i < dim.size(); ++i) {
     sz *= dim[i];
@@ -209,13 +204,12 @@ NDArray NDArray::Slice(mx_uint begin, mx_uint end) const {
 }
 
 Rcpp::NumericVector NDArray::AsNumericVector() const {
-  Rcpp::Dimension rshape = this->shape();
+  Rcpp::Dimension rshape = this->dim();
   std::vector<mx_float> temp(rshape.prod());
   MX_CALL(MXNDArraySyncCopyToCPU(
       ptr_->handle, dmlc::BeginPtr(temp), temp.size()));
   Rcpp::NumericVector ret(rshape);
-  RowToColMajor(dmlc::BeginPtr(temp), Dim2Vec(rshape),
-                temp.size(), ret.begin());
+  std::copy(temp.begin(), temp.end(), ret.begin());
   return ret;
 }
 
@@ -263,7 +257,7 @@ Rcpp::List NDArray::Load(const std::string& filename) {
 NDArray::RObjectType NDArray::Empty(
     const Rcpp::Dimension& rshape,
     const Context::RObjectType& rctx) {
-  std::vector<mx_uint> shape = Dim2Vec(rshape);
+  std::vector<mx_uint> shape = Dim2InternalShape(rshape);
   Context ctx(rctx);
   NDArrayHandle handle;
   MX_CALL(MXNDArrayCreate(dmlc::BeginPtr(shape),
@@ -310,13 +304,12 @@ NDArray::RObjectType NDArray::Array(
   Rcpp::NumericVector rdata(src);
   Rcpp::RObject dim = rdata.attr("dim");
   Rcpp::Dimension rshape(dim);
-  std::vector<mx_float> temp(rdata.size());
-  ColToRowMajor(rdata.begin(), Dim2Vec(rshape),
-                temp.size(), dmlc::BeginPtr(temp));
   RObjectType ret = NDArray::Empty(rshape, ctx);
+  std::vector<mx_float> temp(rdata.size());
+  std::copy(rdata.begin(), rdata.end(), temp.begin());
   MX_CALL(MXNDArraySyncCopyFromCPU(
       NDArray(ret)->handle,
-      dmlc::BeginPtr(temp), temp.size()));
+      dmlc::BeginPtr(temp), rdata.size()));
   return ret;
 }
 
@@ -578,8 +571,8 @@ NDArray::RObjectType DispatchOps(SEXP op, SEXP lhs, SEXP rhs) {
   return NDArray::RObject(out, true);
 }
 
-Rcpp::Dimension shape(const NDArray::RObjectType& src) {
-  return NDArray(src).shape();
+Rcpp::Dimension dim(const NDArray::RObjectType& src) {
+  return NDArray(src).dim();
 }
 
 Context::RObjectType ctx(const NDArray::RObjectType& src) {
@@ -596,7 +589,12 @@ Rcpp::NumericVector AsNumericVector(const NDArray::RObjectType& src) {
 
 NDArray::RObjectType Slice(const NDArray::RObjectType& src,
                            mx_uint begin, mx_uint end) {
-  return NDArray(src).Slice(begin, end).RObject();
+  NDArray nd(src);
+  Rcpp::Dimension dim = nd.dim();
+  size_t ndim = dim.size();
+  RCHECK(dim[ndim - 1] >= end)
+      << "end=" << end << ", max-dim=" << dim[ndim - 1];
+  return nd.Slice(begin, end).RObject();
 }
 }  // namespace ndarray
 
@@ -610,7 +608,7 @@ void NDArray::InitRcppModule() {
   function("mx.nd.internal.empty.array", &NDArray::Empty);
   function("mx.nd.internal.dispatch.Ops", &ndarray::DispatchOps);
   // exposing members
-  function("mx.nd.internal.dim", &ndarray::shape);
+  function("mx.nd.internal.dim", &ndarray::dim);
   function("mx.nd.internal.ctx", &ndarray::ctx);
   function("mx.nd.internal.length", &ndarray::Size);
   function("mx.nd.internal.as.array", &ndarray::AsNumericVector);
