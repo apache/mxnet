@@ -38,14 +38,11 @@ data(Sonar, package="mlbench")
 
 Sonar[,61] = as.numeric(Sonar[,61])-1
 train.ind = c(1:50, 100:150)
-train.x = t(data.matrix(Sonar[train.ind, 1:60]))
+train.x = data.matrix(Sonar[train.ind, 1:60])
 train.y = Sonar[train.ind, 61]
-test.x = t(data.matrix(Sonar[-train.ind, 1:60]))
+test.x = data.matrix(Sonar[-train.ind, 1:60])
 test.y = Sonar[-train.ind, 61]
 ```
-
-MXNet accepts a column major input convention as in R.
-So we need to transpose the data matrix to nfeature x nexample before feed into the network.
 
 The next step is to define the structure of the neural network.
 
@@ -91,6 +88,7 @@ model <- mx.model.FeedForward.create(softmax, X=train.x, y=train.y,
 ```
 
 ```
+## Auto detect layout of input matrix, use rowmajor..
 ## Start training with 1 devices
 ## [1] Train-accuracy=0.5
 ## [2] Train-accuracy=0.514285714285714
@@ -114,11 +112,18 @@ model <- mx.model.FeedForward.create(softmax, X=train.x, y=train.y,
 ## [20] Train-accuracy=0.857142857142857
 ```
 
-Note that `mx.set.seed` is the correct function to control the random process in `mxnet`. You can see the accuracy in each round during training. It is also easy to make prediction and evaluate
+Note that `mx.set.seed` is the correct function to control the random process in `mxnet`. You can see the accuracy in each round during training. It is also easy to make prediction and evaluate.
 
 
 ```r
 preds = predict(model, test.x)
+```
+
+```
+## Auto detect layout of input matrix, use rowmajor..
+```
+
+```r
 pred.label = max.col(t(preds))-1
 table(pred.label, test.y)
 ```
@@ -130,6 +135,8 @@ table(pred.label, test.y)
 ##          1 36 33
 ```
 
+Note for multi-class prediction, mxnet outputs nclass x nexamples, each each row corresponding to probability of that class.
+
 ## Regression
 
 Again, let us preprocess the data first.
@@ -139,9 +146,9 @@ Again, let us preprocess the data first.
 data(BostonHousing, package="mlbench")
 
 train.ind = seq(1, 506, 3)
-train.x = t(data.matrix(BostonHousing[train.ind, -14]))
+train.x = data.matrix(BostonHousing[train.ind, -14])
 train.y = BostonHousing[train.ind, 14]
-test.x = t(data.matrix(BostonHousing[-train.ind, -14]))
+test.x = data.matrix(BostonHousing[-train.ind, -14])
 test.y = BostonHousing[-train.ind, 14]
 ```
 
@@ -172,6 +179,7 @@ model <- mx.model.FeedForward.create(lro, X=train.x, y=train.y,
 ```
 
 ```
+## Auto detect layout of input matrix, use rowmajor..
 ## Start training with 1 devices
 ## [1] Train-rmse=16.0632825223292
 ## [2] Train-rmse=12.2792375527391
@@ -230,6 +238,13 @@ It is also easy to make prediction and evaluate
 
 ```r
 preds = predict(model, test.x)
+```
+
+```
+## Auto detect layout of input matrix, use rowmajor..
+```
+
+```r
 sqrt(mean((preds-test.y)^2))
 ```
 
@@ -259,6 +274,7 @@ model <- mx.model.FeedForward.create(lro, X=train.x, y=train.y,
 ```
 
 ```
+## Auto detect layout of input matrix, use rowmajor..
 ## Start training with 1 devices
 ## [1] Train-mae=13.1889538090676
 ## [2] Train-mae=9.81431958410475
