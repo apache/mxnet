@@ -101,9 +101,9 @@ class NDArray  {
   }
   /*!
    * \param src The source array.
-   * \return The shape of the array
+   * \return The dimension of the array
    */
-  Rcpp::Dimension shape() const;
+  Rcpp::Dimension dim() const;
   /*!
    * \brief Return a clone of NDArray.
    *  Do not expose this to R side.
@@ -269,14 +269,8 @@ class NDArrayFunction : public ::Rcpp::CppFunction {
 };
 
 /*!
- * \brief Convert the src into row major layout into out
- * \param src The source vector
- * \param out The output memory.
- */
-void ConvertToRowMajor(const Rcpp::NumericVector& src, std::vector<mx_float>* out);
-
-/*!
- * \brief An array packer that packs NDArray array together on dimension 0.
+ * \brief An array packer that packs NDArray array together on
+ *   slowest changing dimension.
  */
 class NDArrayPacker {
  public:
