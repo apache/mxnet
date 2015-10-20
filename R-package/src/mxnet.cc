@@ -4,12 +4,14 @@
  * \brief The registry of all module functions and objects
  */
 #include <Rcpp.h>
+#include <fstream>
 #include "./base.h"
 #include "./ndarray.h"
 #include "./symbol.h"
 #include "./executor.h"
 #include "./io.h"
 #include "./kvstore.h"
+#include "./export.h"
 
 namespace mxnet {
 namespace R {
@@ -43,5 +45,5 @@ RCPP_MODULE(mxnet) {
   DataIter::InitRcppModule();
   DataIterCreateFunction::InitRcppModule();
   KVStore::InitRcppModule();
+  Exporter::InitRcppModule();
 }
-

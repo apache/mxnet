@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 2.8.7)
+cmake_minimum_required(VERSION 2.8.7)
 
 project(mxnet C CXX)
 
@@ -47,13 +47,13 @@ if(USE_OPENCV)
 endif()
 
 if(USE_OPENMP)
- FIND_PACKAGE( OpenMP REQUIRED)  
- if(OPENMP_FOUND)  
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")  
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")  
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")  
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")  
- endif()  
+ FIND_PACKAGE( OpenMP REQUIRED)
+ if(OPENMP_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+ endif()
 endif()
 
 # cudnn detection
@@ -86,16 +86,16 @@ if(NOT MSVC)
   # Only add c++11 flags and definitions after cuda compiling
   add_definitions(-DDMLC_USE_CXX11)
   add_definitions(-DMSHADOW_IN_CXX11)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c++0x")  
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")  
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c++0x")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 endif()
 
-add_library(mxnet SHARED ${SOURCE}) 
+add_library(mxnet SHARED ${SOURCE})
 target_link_libraries(mxnet ${mshadow_LINKER_LIBS})
 target_link_libraries(mxnet dmlccore)
 target_link_libraries(mxnet pslite)
 target_link_libraries(mxnet ${pslite_LINKER_LIBS})
-
+set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
 
 # ---[ Linter target
 if(MSVC)
@@ -105,4 +105,4 @@ if(MSVC)
   set(PYTHON3_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python 3.x executable")
 endif()
 set(LINT_DIRS include src scripts python)
-add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON2_EXECUTABLE=${PYTHON2_EXECUTABLE} -DPYTHON3_EXECUTABLE=${PYTHON3_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -P ${PROJECT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
+add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON2_EXECUTABLE=${PYTHON2_EXECUTABLE} -DPYTHON3_EXECUTABLE=${PYTHON3_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mxnet -P ${PROJECT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)

@@ -91,6 +91,7 @@ class NDArray  {
   // operator overloading
   inline NDArray& operator=(const NDArray& other) {
     ptr_ = other.ptr_;
+    return *this;
   }
   inline NDBlob* operator->() {
     return ptr_.get();
@@ -100,9 +101,9 @@ class NDArray  {
   }
   /*!
    * \param src The source array.
-   * \return The shape of the array
+   * \return The dimension of the array
    */
-  Rcpp::Dimension shape() const;
+  Rcpp::Dimension dim() const;
   /*!
    * \brief Return a clone of NDArray.
    *  Do not expose this to R side.
@@ -266,8 +267,38 @@ class NDArrayFunction : public ::Rcpp::CppFunction {
   // ther formals of arguments
   Rcpp::List formals_;
 };
+
+/*!
+ * \brief An array packer that packs NDArray array together on
+ *   slowest changing dimension.
+ */
+class NDArrayPacker {
+ public:
+  // constructor
+  NDArrayPacker() {}
+  /*!
+   * \brief Push the array to the packer
+   * \param nd The array to push the data into.
+   */
+  void Push(const NDArray::RObjectType& nd);
+  /*!
+   * \brief Get the R array out from packed data.
+   * \return The packed data.
+   */
+  Rcpp::NumericVector Get() const;
+  /*! \return constructor */
+  static Rcpp::RObject CreateNDArrayPacker();
+
+ private:
+  /*! \brief The internal data */
+  std::vector<mx_float> data_;
+  /*! \brief The shape of data */
+  std::vector<mx_uint> shape_;
+};
 }  // namespace R
 }  // namespace mxnet
+
+RCPP_EXPOSED_CLASS_NODECL(::mxnet::R::NDArrayPacker);
 
 namespace Rcpp {
   template<>

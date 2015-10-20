@@ -9,6 +9,7 @@
 #include "./base.h"
 #include "./symbol.h"
 #include "./name.h"
+#include "./export.h"
 
 namespace mxnet {
 namespace R {
@@ -119,7 +120,9 @@ inline Rcpp::List BuildShapeData(mx_uint shape_size,
                                  const std::vector<std::string> &names) {
   Rcpp::List ret(shape_size);
   for (mx_uint i = 0; i < shape_size; ++i) {
-    ret[i] = Rcpp::IntegerVector(shape_data[i], shape_data[i] + shape_ndim[i]);
+    Rcpp::IntegerVector dim(shape_data[i], shape_data[i] + shape_ndim[i]);
+    std::reverse(dim.begin(), dim.end());
+    ret[i] = dim;
   }
   ret.names() = names;
   return ret;
@@ -135,9 +138,7 @@ SEXP Symbol::InferShape(const Rcpp::List& kwargs) const {
   for (size_t i = 0; i < kwargs.size(); ++i) {
     RCHECK(keys[i].length() != 0)
       << "Need to pass parameters in key=value style.\n";
-    // TODO(KK) check if kwargs is dimension.
-    // Rcpp::is<Dimension> do not pass compile
-    std::vector<mx_uint> dim = Dim2Vec(kwargs[i]);
+    std::vector<mx_uint> dim = Dim2InternalShape(kwargs[i]);
     arg_shape_data.insert(arg_shape_data.end(), dim.begin(), dim.end());
     arg_ind_ptr.push_back(static_cast<mx_uint>(arg_shape_data.size()));
   }
@@ -239,15 +240,11 @@ SymbolFunction::SymbolFunction(AtomicSymbolCreator handle)
   }
   std::ostringstream os;
   os << description << "\n\n"
-     << "Parameters\n"
-     << "----------\n"
      << MakeDocString(num_args, arg_names, arg_type_infos, arg_descriptions)
-     << "name : string, optional.\n"
-     << "    Name of the resulting symbol.\n\n"
-     << "Returns\n"
-     << "-------\n"
-     << "out : Symbol\n"
-     << "    The resulting Symbol";
+     << "@param name  string, optional\n"
+     << "    Name of the resulting symbol.\n"
+     << "@return out The result mx.symbol\n\n"
+     << "@export\n";
   this->docstring = os.str();
 }
 
@@ -270,7 +267,7 @@ SEXP SymbolFunction::operator() (SEXP* args) {
       name = Rcpp::as<std::string>(kwargs[i]);
       continue;
     }
-    if (Rcpp::is<Symbol>(kwargs[i])) {
+    if (!isSimple(kwargs[i]) && Rcpp::is<Symbol>(kwargs[i])) {
       sym_keys.push_back(keys[i]);
       sym_vals.push_back(kwargs[i]);
     } else {
@@ -301,7 +298,6 @@ SEXP SymbolFunction::operator() (SEXP* args) {
 void Symbol::InitRcppModule() {
   using namespace Rcpp;  // NOLINT(*)
   class_<Symbol>("MXSymbol")
-      .finalizer(&Symbol::Finalizer)
       .method("debug.str", &Symbol::DebugStr,
               "Return the debug string of internals of symbol")
       .method("apply", &Symbol::Apply,
@@ -335,7 +331,7 @@ void Symbol::InitRcppModule() {
            &Symbol::LoadJSON,
            List::create(_["json.str"]),
            "Load a symbol from json string.");
-  function("mx.varg.symbol.Group",
+  function("mx.varg.symbol.internal.Group",
            &Symbol::Group,
            List::create(_["slist"]),
            "Create a symbol that groups symbols together.");

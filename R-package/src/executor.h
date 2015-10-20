@@ -120,23 +120,26 @@ class Executor : public MXNetMovable<Executor> {
   static void InitRcppModule();
   // destructor
   ~Executor() {
-    // delete can handle nullptr safely
     delete out_arrays_;
     delete arg_arrays_;
     delete grad_arrays_;
     delete aux_arrays_;
+
+    if (!this->moved_) {
+      MX_CALL(MXExecutorFree(handle_));
+    }
   }
 
  private:
   // friend with symbol
   friend class Symbol;
-  friend class MXNetMovable<Executor>;
   // internal constructor, enable trivial operator=
   Executor()
       : out_arrays_(nullptr),
         arg_arrays_(nullptr),
         grad_arrays_(nullptr),
         aux_arrays_(nullptr) {}
+
   /*! \return a new Object that is moved from current one */
   inline Executor* CreateMoveObject() {
     Executor *moved = new Executor();
@@ -146,10 +149,6 @@ class Executor : public MXNetMovable<Executor> {
     grad_arrays_ = nullptr;
     aux_arrays_ = nullptr;
     return moved;
-  }
-  // finalizer that invoked on non-movable object
-  inline void DoFinalize() {
-    MX_CALL(MXExecutorFree(handle_));
   }
   /*!
    * \brief Clone src into a new space.

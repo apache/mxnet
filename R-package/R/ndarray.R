@@ -58,9 +58,9 @@ mx.nd.zeros <- function(shape, ctx=NULL) {
   return (mx.nd.internal.set.value(0.0, out=ret))
 }
 
-#' Generate an mx.nd.array object with ones
+#' Generate an mx.ndarray object with ones
 #'
-#' @param shape the dimension of the \code{mx.nd.array}
+#' @param shape the dimension of the \code{mx.ndarray}
 #' @param ctx optional The context device of the array. mx.ctx.default() will be used in default.
 #'
 #' @examples
@@ -77,9 +77,9 @@ mx.nd.ones <- function(shape, ctx=NULL) {
   return (mx.nd.internal.set.value(1.0, out=ret))
 }
 
-#' Generate an mx.nd.array object on ctx, with data copied from src
+#' Generate an mx.ndarray object on ctx, with data copied from src
 #'
-#' @param src The source mx.nd.array object.
+#' @param src The source mx.ndarray object.
 #' @param ctx The target context.
 #'
 #' @export
@@ -93,11 +93,12 @@ mx.nd.copyto <- function(src, ctx) {
 #' @param src.array Source array data of class \code{array}, \code{vector} or \code{matrix}.
 #' @param ctx optional The context device of the array. mx.ctx.default() will be used in default.
 #'
+#' @return An \code{mx.ndarray}
 #'
 #' @rdname mx.nd.array
-#'
-#' @return An Rcpp object
-#'
+#' 
+#' @return An Rcpp_MXNDArray object
+#' 
 #' @examples
 #' mat = mx.nd.array(x)
 #' mat = 1 - mat + (2 * mat)/(mat + 0.5)
@@ -110,61 +111,82 @@ mx.nd.array <- function(src.array, ctx=NULL) {
     if (!is.vector(src.array) && !is.matrix(src.array)) {
       stop("mx.nd.array takes an object of class array, vector or matrix only.")
     } else {
-#       if (is.integer(src.array) && !is.matrix(src.array))
-#         src.array = as.numeric(src.array)
       src.array <- as.array(src.array)
     }
   }
   return (mx.nd.internal.array(src.array, ctx))
 }
 
-is.MXNDArray <- function(x) {
-  class(x) == "MXNDArray"
+is.MXNDArray <- function(nd) {
+  class(nd) == "MXNDArray"
 }
 
-#' @rdname mx.nd.array
+#' Check if src.array is mx.ndarray
 #'
 #' @return Logical indicator
 #'
 #' @examples
 #' mat = mx.nd.array(1:10)
-#' is.mx.nd.array(mat)
+#' is.mx.ndarray(mat)
 #' mat2 = 1:10
-#' is.mx.nd.array(mat2)
+#' is.mx.ndarray(mat2)
 #'
 #' @export
-is.mx.nd.array <- function(src.array) {
+is.mx.ndarray <- function(src.array) {
   is.MXNDArray(src.array)
 }
 
+#' Binary operator overloading of mx.ndarray
+#' @param e1 The first operand
+#' @param e1 The second operand
+#' @export
 Ops.MXNDArray <- function(e1, e2) {
   mx.nd.internal.dispatch.Ops(.Generic, e1, e2)
 }
 
-dim.MXNDArray <- function(x) {
-  mx.nd.internal.dim(x)
+#' Dimension operator overload of mx.ndarray
+#' @param nd The mx.ndarray
+#' @export
+dim.MXNDArray <- function(nd) {
+  mx.nd.internal.dim(nd)
 }
 
-length.MXNDArray <- function(x) {
-  mx.nd.internal.length(x)
+#' Length operator overload of mx.ndarray
+#' @param nd The mx.ndarray
+#' @export
+length.MXNDArray <- function(nd) {
+  mx.nd.internal.length(nd)
 }
 
-as.array.MXNDArray <- function(x) {
-  mx.nd.internal.as.array(x)
+#' as.array operator overload of mx.ndarray
+#' @param nd The mx.ndarray
+#' @export
+as.array.MXNDArray <- function(nd) {
+  mx.nd.internal.as.array(nd)
 }
 
-as.matrix.MXNDArray <- function(x) {
-  if (length(dim(x)) != 2) {
+#' as.matrix operator overload of mx.ndarray
+#' @param nd The mx.ndarray
+#' @export
+as.matrix.MXNDArray <- function(nd) {
+  if (length(dim(nd)) != 2) {
     stop("The input argument is not two dimensional matrix.")
   }
   as.matrix(as.array(x))
 }
 
-print.MXNDArray <- function(x) {
-  print(as.array(x))
+#' print operator overload of mx.ndarray
+#' @param nd The mx.ndarray
+#' @export
+print.MXNDArray <- function(nd) {
+  print(as.array(nd))
 }
 
-# TODO(KK) are we able to use generics for S3
-ctx <-function(x) {
-  mx.nd.internal.ctx(x)
+# TODO(KK) use generics?
+
+#' Get the context of mx.ndarray
+#' @param nd The mx.ndarray
+#' @export
+ctx <-function(nd) {
+  mx.nd.internal.ctx(nd)
 }

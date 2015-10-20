@@ -80,12 +80,12 @@ PS_PATH=./ps-lite
 DEPS_PATH=$(shell pwd)/deps
 include $(PS_PATH)/make/ps.mk
 ifeq ($(USE_DIST_KVSTORE), 1)
-	CFLAGS += -DMXNET_USE_DIST_KVSTORE -I$(PS_PATH)/src
+	CFLAGS += -DMXNET_USE_DIST_KVSTORE -I$(PS_PATH)/include
 	LIB_DEP += $(PS_PATH)/build/libps.a
 	LDFLAGS += -Wl,-rpath,$(DEPS_PATH)/lib $(PS_LDFLAGS_SO)
 endif
 
-.PHONY: clean all test lint doc clean_all rcpplint
+.PHONY: clean all test lint doc clean_all rcpplint rcppexport roxygen
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
@@ -100,12 +100,12 @@ ifeq ($(USE_CUDA), 1)
 	ALL_DEP += $(CUOBJ)
 endif
 
-build/%.o: src/%.cc $(LIB_DEP)
+build/%.o: src/%.cc
 	@mkdir -p $(@D)
 	$(CXX) -std=c++0x $(CFLAGS) -MM -MT build/$*.o $< >build/$*.d
 	$(CXX) -std=c++0x -c $(CFLAGS) -c $< -o $@
 
-build/%_gpu.o: src/%.cu $(LIB_DEP)
+build/%_gpu.o: src/%.cu
 	@mkdir -p $(@D)
 	$(NVCC) $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" -M build/$*_gpu.o $< >build/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $<
@@ -139,13 +139,20 @@ test: $(TEST)
 lint: rcpplint
 	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python
 
-rcpplint:
-	python dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
-
 doc: doxygen
 
 doxygen:
 	doxygen doc/Doxyfile
+
+# R related shortcuts
+rcpplint:
+	python dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
+
+rcppexport:
+	Rscript -e "require(mxnet); mxnet::mxnet.export(\"R-package\")"
+
+roxygen:
+	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
 
 clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~

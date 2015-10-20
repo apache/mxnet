@@ -1,6 +1,8 @@
 #' Internal default value initialization scheme.
+#'
 #' @param name the name of the variable.
 #' @param shape the shape of the array to be generated.
+#'
 mx.init.internal.default <- function(name, shape, ctx, allow.unknown=FALSE) {
   if (mx.util.str.endswith(name, "bias")) return (mx.nd.zeros(shape, ctx))
   if (mx.util.str.endswith(name, "gamma")) return (mx.nd.ones(shape, ctx))
@@ -27,7 +29,7 @@ mx.init.uniform <- function(scale) {
 
 #' Create a initializer that initialize the weight with normal(0, sd)
 #'
-#' @param scale The scale of uniform distribution
+#' @param sd The standard deviation of normal distribution
 #'
 #' @export
 mx.init.normal <- function(sd) {
@@ -39,7 +41,13 @@ mx.init.normal <- function(sd) {
   }
 }
 
-# Create initialization of argument  like arg.array
+#' Create initialization of argument  like arg.array
+#'
+#' @param initializer The initializer.
+#' @param shape.array named-list The shape of the weights
+#' @param ctx mx.context The context of the weights
+#' @param skip.unknown Whether skip the unknown weight types
+#' @export
 mx.init.create <- function(initializer, shape.array, ctx, skip.unknown=TRUE) {
   if (length(shape.array) == 0) return(list())
   names = names(shape.array)
@@ -52,5 +60,3 @@ mx.init.create <- function(initializer, shape.array, ctx, skip.unknown=TRUE) {
   }
   return(ret)
 }
-
-

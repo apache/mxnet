@@ -118,7 +118,7 @@ inline Rcpp::List* CreateArrayList(const Rcpp::List& source_array,
       RCHECK(Rcpp::is<NDArray>(source_array[i]))
           << "Expect input " << key << " to be list of " << NDArray::TypeName();
       NDArray src = NDArray::FromRObject(source_array[i]);
-      ret->at(i) = NDArray::Empty(src.shape(), ctx);
+      ret->at(i) = NDArray::Empty(src.dim(), ctx);
       NDArray dst = NDArray::FromRObject(ret->at(i));
       handles->at(i) = dst->handle;
       NDArray::CopyFromTo(src, &dst);
@@ -146,7 +146,7 @@ inline Rcpp::List* CreateGradList(const Rcpp::List& source_array,
       RCHECK(Rcpp::is<bool>(grad_reqs[i]))
           << "Expect input grad_reqs to be list of booleans";
       if (Rcpp::as<bool>(grad_reqs[i])) {
-        ret->at(i) = NDArray::Empty(NDArray::FromRObject(source_array[i]).shape(), ctx);
+        ret->at(i) = NDArray::Empty(NDArray::FromRObject(source_array[i]).dim(), ctx);
         handles->at(i) = NDArray::FromRObject(ret->at(i))->handle;
         grad_req_type->at(i) = 1;
       }
@@ -220,7 +220,6 @@ Executor::RObjectType Executor::Bind(const Symbol::RObjectType& symbol,
 void Executor::InitRcppModule() {
   using namespace Rcpp;  // NOLINT(*)
   class_<Executor>("MXExecutor")
-      .finalizer(&Executor::Finalizer)
       .method("update.aux.arrays",
               &Executor::UpdateAuxArray,
               "Update auxilary states array of executor, this will mutate the executor")

@@ -11,11 +11,11 @@
 #endif
 
 /*! \brief MXNET_DLL prefix for windows" */
-#ifdef _MSC_VER
+#ifdef _WIN32
 #ifdef MXNET_EXPORTS
-#define MXNET_DLL MXNET_EXTERN_C __declspec(dllexport)
+#define MXNET_DLL MXNET_EXTERN_C __cdecl __declspec(dllexport)
 #else
-#define MXNET_DLL MXNET_EXTERN_C __declspec(dllimport)
+#define MXNET_DLL MXNET_EXTERN_C __cdecl __declspec(dllimport)
 #endif
 #else
 #define MXNET_DLL MXNET_EXTERN_C

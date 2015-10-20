@@ -18,8 +18,10 @@ namespace R {
 class SymbolFunction;
 
 /*! \brief The Rcpp Symbol class of MXNet */
-class Symbol : public MXNetMovable<Symbol> {
+class Symbol {
  public:
+  // typedef RObjectType
+  typedef Rcpp::RObject RObjectType;
   /*! \return typename from R side. */
   inline static const char* TypeName() {
     return "MXSymbol";
@@ -97,12 +99,19 @@ class Symbol : public MXNetMovable<Symbol> {
   static RObjectType Group(const Rcpp::List& symbols);
   /*! \brief static function to initialize the Rcpp functions */
   static void InitRcppModule();
+  // destructor
+  ~Symbol() {
+    MX_CALL(MXSymbolFree(handle_));
+  }
+  // get external pointer of Symbol
+  inline static Symbol* XPtr(const Rcpp::RObject& obj) {
+    return Rcpp::as<Symbol*>(obj);
+  }
 
  private:
   // friend with SymbolFunction
   friend class SymbolFunction;
   friend class Executor;
-  friend class MXNetMovable<Symbol>;
   // enable trivial copy constructors etc.
   Symbol() {}
   // constructor
@@ -114,16 +123,6 @@ class Symbol : public MXNetMovable<Symbol> {
    */
   inline static Rcpp::RObject RObject(SymbolHandle handle) {
     return Rcpp::internal::make_new_object(new Symbol(handle));
-  }
-  // Create a new Object that is moved from current one
-  inline Symbol* CreateMoveObject() {
-    Symbol* moved = new Symbol();
-    *moved = *this;
-    return moved;
-  }
-  // finalizer that invoked on non-movable object
-  inline void DoFinalize() {
-    MX_CALL(MXSymbolFree(handle_));
   }
   /*!
    * \brief Return a clone of Symbol

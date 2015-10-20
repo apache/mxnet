@@ -10,6 +10,6 @@ least two gpus) and 2 servers.
 
 
 ```
-ln -s ../../../dmlc-core/tracker/dmlc_local.py
+ln -s ../../../dmlc-core/tracker/dmlc_local.py .
 ./dmlc_local.py -n 2 -s 2 ./dist_sync_mlp.py
 ```

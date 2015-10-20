@@ -40,13 +40,17 @@ List of Contributors
 * [Full List of Contributors](https://github.com/dmlc/mxnet/graphs/contributors)
   - To contributors: please add your name to the list when you submit a patch to the project:)
 * [Qiang Kou](https://github.com/thirdwing)
-  - KK is a R ninja, he will make mxnet available for R users.
+  - KK is a R ninja, he makes mxnet available for R users.
+* [Tong He](https://github.com/hetong007)
+  - Tong is the major maintainer of MXNetR, he designs the mxnet interface and wrote many of the tutorials on R.
 * [Feng Wang](https://github.com/happynear)
   - Feng makes mxnet compatible with Windows Visual Studio.
 * [Li Dong](https://github.com/donglixp)
 * [Piji Li](https://github.com/lipiji)
 * [Hu Shiwen](https://github.com/yajiedesign)
 * [Boyuan Deng](https://github.com/bryandeng)
-* [Tong He](https://github.com/hetong007)
 * [Junran He](https://github.com/junranhe)
   - Junran makes device kvstore allocation strategy smarter
+* [Shuzhe Wu](https://github.com/II-Matto)
+* [Xiaodong](https://github.com/XD-DENG)
+* [Nan Xiao](https://github.com/road2stat)

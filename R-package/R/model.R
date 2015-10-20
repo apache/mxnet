@@ -1,12 +1,13 @@
 # slice the shape on the highest dimension
 mx.model.slice.shape <- function(shape, nsplit) {
-  batchsize <- shape[[1]]
+  ndim <- length(shape)
+  batchsize <- shape[[ndim]]
   step <- as.integer((batchsize + nsplit - 1) / nsplit)
   lapply(0:(nsplit - 1), function(k) {
     begin = min(k * step, batchsize)
     end = min((k + 1) * step, batchsize)
     s <- shape
-    s[[1]] = end - begin
+    s[[ndim]] = end - begin
     return(list(begin=begin, end=end, shape=s))
   })
 }
@@ -33,6 +34,7 @@ mx.model.check.arguments <- function(symbol) {
   }
   return(c(data, label))
 }
+
 
 # Extract model from executors
 mx.model.extract.model <- function(symbol, train.execs) {
@@ -66,8 +68,7 @@ mx.model.extract.model <- function(symbol, train.execs) {
   }
   # Get the model
   model <- list(symbol=symbol, arg.params=arg.params, aux.params=aux.params)
-  class(model) <- "mx.model"
-  return(model)
+  return(structure(model, class="MXFeedForwardModel"))
 }
 
 # decide what type of kvstore to use
@@ -111,11 +112,13 @@ mx.model.train <- function(symbol, ctx, input.shape,
     mx.exec.update.aux.arrays(texec, aux.params, match.name=TRUE)
   }
   # KVStore related stuffs
-  params.index <- as.integer(mx.util.filter.null(lapply(1:length(train.execs[[1]]$ref.grad.arrays), function(k) {
-    if (!is.null(train.execs[[1]]$ref.grad.arrays[[k]])) k else NULL
-  })))
+  params.index <-
+    as.integer(mx.util.filter.null(
+      lapply(1:length(train.execs[[1]]$ref.grad.arrays), function(k) {
+        if (!is.null(train.execs[[1]]$ref.grad.arrays[[k]])) k else NULL
+      })))
   update.on.kvstore <- FALSE
-  if (!is.null(kvstore) && kvstore$update.on.kvstore ) {
+  if (!is.null(kvstore) && kvstore$update.on.kvstore) {
     update.on.kvstore <- TRUE
     kvstore$set.optimizer(optimizer)
   } else {
@@ -131,7 +134,9 @@ mx.model.train <- function(symbol, ctx, input.shape,
 
   for (iteration in begin.round:end.round) {
     nbatch <- 0
-    train.metric <- metric$init()
+    if (!is.null(metric)) {
+      train.metric <- metric$init()
+    }
     while (train.data$iter.next()) {
       # Get input data slice
       dlist <- train.data$value()
@@ -184,8 +189,10 @@ mx.model.train <- function(symbol, ctx, input.shape,
         }
       }
       # Update the evaluation metrics
-      for (i in 1 : ndevice) {
-        train.metric <- metric$update(slices[[i]]$label, out.preds[[i]], train.metric)
+      if (!is.null(metric)) {
+        for (i in 1 : ndevice) {
+          train.metric <- metric$update(slices[[i]]$label, out.preds[[i]], train.metric)
+        }
       }
       nbatch <- nbatch + 1
       if (!is.null(epoch.end.callback)) {
@@ -194,12 +201,51 @@ mx.model.train <- function(symbol, ctx, input.shape,
     }
     # reset training data
     train.data$reset()
-    result <- metric$get(train.metric)
-    cat(paste0("Train-", result$name, "=", result$value, "\n"))
+    if (!is.null(metric)) {
+      result <- metric$get(train.metric)
+      cat(paste0("[", iteration, "] Train-", result$name, "=", result$value, "\n"))
+    }
+    if (!is.null(eval.data)) {
+      if (!is.null(metric)) {
+        eval.metric <- metric$init()
+      }
+      while (eval.data$iter.next()) {
+        dlist <- eval.data$value()
+        slices <- lapply(1:ndevice, function(i) {
+          s <- sliceinfo[[i]]
+          ret <- list(data=mx.nd.slice(dlist$data, s$begin, s$end),
+                    label=mx.nd.slice(dlist$label, s$begin, s$end))
+          return(ret)
+        })
+        for (i in 1:ndevice) {
+          s <- slices[[i]]
+          names(s) <- input.names
+          mx.exec.update.arg.arrays(train.execs[[i]], s, match.name=TRUE)
+        }
+        for (texec in train.execs) {
+          mx.exec.forward(texec, is.train=FALSE)
+        }
+        out.preds <- lapply(train.execs, function(texec) {
+          mx.nd.copyto(texec$ref.outputs[[1]], mx.cpu())
+        })
+        if (!is.null(metric)) {
+          for (i in 1 : ndevice) {
+            eval.metric <- metric$update(slices[[i]]$label, out.preds[[i]], eval.metric)
+          }
+        }
+      }
+      eval.data$reset()
+      if (!is.null(metric)) {
+        result <- metric$get(eval.metric)
+        cat(paste0("[", iteration, "] Validation-", result$name, "=", result$value, "\n"))
+      }
+    } else {
+      eval.metric <- NULL
+    }
     # get the model out
     model <- mx.model.extract.model(symbol, train.execs)
     if (!is.null(iter.end.callback)) {
-      iter.end.callback(iteration, environment())
+      iter.end.callback(iteration, 0, environment())
     }
   }
   return(model)
@@ -216,22 +262,134 @@ mx.model.init.params <- function(symbol, input.shape, initializer, ctx) {
 }
 
 # Initialize the data iter
-mx.model.init.iter <- function(X, y, is.train) {
-  if (!is.MXDataIter(X)) {
-    stop("Only accept MXDataIter for now")
+mx.model.init.iter <- function(X, y, batch.size, is.train) {
+  if (is.MXDataIter(X)) return(X)
+  if (is.null(y)) {
+    if (is.train) stop("Need to provide parameter y for training with R arrays.")
+    shape <- dim(X)
+    ndim <- length(shape)
+    y <- c(1:shape[[ndim]]) * 0
   }
-  return(X)
+  batch.size <- min(length(y), batch.size)
+  return(mx.io.arrayiter(X, y, batch.size=batch.size, shuffle=is.train))
 }
 
+# select layout by matching shape, report error if nothing matches up.
+mx.model.select.layout.train <- function(X, y) {
+  if (is.null(y)) stop("Need to provide y for training")
+  y <- as.array(y)
+  dimX <- dim(X)
+  dimy <- dim(y)
+  if (length(dimX) != 2) return("colmajor")
+  rowmajor <- 0
+  colmajor <- 0
+  if (dimX[[1]] == dimy[[1]]) rowmajor <- 1
+  if (dimX[[length(dimX)]] == dimy[[length(dimy)]]) colmajor <- 1
+  if (rowmajor + colmajor != 1) {
+    stop("Cannot auto select array.layout, please specify this parameter")
+  }
+  if (rowmajor == 1) {
+    cat("Auto detect layout of input matrix, use rowmajor..\n")
+    return("rowmajor")
+  } else{
+    cat("Auto detect layout input matrix, use colmajor..\n")
+    return("colmajor")
+  }
+}
+
+# select layout by matching shape, report error if nothing matches up.
+mx.model.select.layout.predict <- function(X, model) {
+  dimX <- dim(X)
+  if (length(dimX) != 2) return("colmajor")
+  rowmajor <- 1
+  colmajor <- 1
+  # try row major
+  ret <- mx.symbol.infer.shape(model$symbol, data=c(dimX[[2]], 1))
+  if (!is.null(ret)) {
+    names = names(model$arg.params)
+    for (i in 1:length(names)) {
+      if (any(ret$arg.shapes[[names[i]]] != dim(model$arg.params[[i]]))) {
+        rowmajor <- 0
+      }
+    }
+  }
+  # try col major
+  ret <- mx.symbol.infer.shape(model$symbol, data=c(dimX[[1]], 1))
+  if (!is.null(ret)) {
+    names = names(model$arg.params)
+    for (i in 1:length(names)) {
+      if (any(ret$arg.shapes[[names[i]]] != dim(model$arg.params[[i]]))) {
+        colmajor <- 0
+      }
+    }
+  }
+  if (rowmajor + colmajor != 1) {
+    stop("Cannot auto select array.layout, please specify this parameter")
+  }
+  if (rowmajor == 1) {
+    cat("Auto detect layout of input matrix, use rowmajor..\n")
+    return("rowmajor")
+  } else{
+    cat("Auto detect layout input matrix, use colmajor..\n")
+    return("colmajor")
+  }
+}
+
+
+#' Create a MXNet Feedforward neural net model with the specified training.
+#'
+#' @param symbol The symbolic configuration of the neural network.
+#' @param X mx.io.DataIter or R array/matrix
+#'     The training data.
+#' @param y R array, optional label of the data
+#'     This is only used when X is R array.
+#' @param ctx mx.context or list of mx.context, optional
+#'     The devices used to perform training.
+#' @param num.round integer (default=10)
+#'     The number of iterations over training data to train the model.
+#' @param optimizer string, default="sgd"
+#'     The optimization method.
+#' @param initializer, initializer object. default=mx.init.uniform(0.01)
+#'     The initialization scheme for parameters.
+#' @param eval.data mx.io.DataIter or list(data=R.array, label=R.array), optional
+#'     The validation set used for validation evaluation during the progress
+#' @param eval.metric function, optional
+#'     The evaluation function on the results.
+#' @param iter.end.callback function, optional
+#'     The callback when iteration ends.
+#' @param epoch.end.callback function, optional
+#'     The callback when one mini-batch iteration ends.
+#' @param array.batch.size integer (default=128)
+#'     The batch size used for R array training.
+#' @param array.layout can be "auto", "colmajor", "rowmajor", (detault=auto)
+#'     The layout of array. "rowmajor" is only supported for two dimensional array.
+#'     For matrix, "rowmajor" means dim(X) = c(nexample, nfeatures),
+#'     "colmajor" means dim(X) = c(nfeatures, nexample)
+#'     "auto" will auto detect the layout by match the feature size,
+#'      and will report error when X is a square matrix to ask user to explicitly specify layout.
+#' @param kvstore string (default="local")
+#'     The parameter synchronization scheme in multiple devices.
+#' @return model A trained mxnet model.
+#'
+#' @export
 mx.model.FeedForward.create <-
 function(symbol, X, y=NULL, ctx=NULL,
          num.round=10, optimizer="sgd",
          initializer=mx.init.uniform(0.01),
-         eval.metric=mx.metric.accuracy,
+         eval.data=NULL, eval.metric=NULL,
          iter.end.callback=NULL, epoch.end.callback=NULL,
+         array.batch.size=128, array.layout="auto",
          kvstore="local",
          ...) {
-  X <- mx.model.init.iter(X, y)
+  if (is.array(X) || is.matrix(X)) {
+    if (array.layout == "auto") {
+      array.layout <- mx.model.select.layout.train(X, y)
+    }
+    if (array.layout == "rowmajor") {
+      X <- t(X)
+    }
+  }
+  X <- mx.model.init.iter(X, y, batch.size=array.batch.size, is.train=TRUE)
   if (!X$iter.next()) {
     x$reset()
     if (!X$iter.next()) stop("Empty input")
@@ -244,7 +402,8 @@ function(symbol, X, y=NULL, ctx=NULL,
   }
   if (!is.list(ctx)) stop("ctx must be mx.context or list of mx.context")
   if (is.character(optimizer)) {
-    batchsize = input.shape[[1]]
+    ndim <- length(input.shape)
+    batchsize = input.shape[[ndim]]
     optimizer <- mx.opt.create(optimizer, rescale.grad=(1/batchsize), ...)
   }
 
@@ -252,7 +411,7 @@ function(symbol, X, y=NULL, ctx=NULL,
   model <- mx.model.train(symbol, ctx, input.shape,
                           params$arg.params, params$aux.params,
                           1, num.round, optimizer=optimizer,
-                          train.data=X, eval.data=NULL,
+                          train.data=X, eval.data=eval.data,
                           metric=eval.metric,
                           iter.end.callback=iter.end.callback,
                           epoch.end.callback=epoch.end.callback,
@@ -260,3 +419,107 @@ function(symbol, X, y=NULL, ctx=NULL,
   return (model)
 }
 
+#' Predict the outputs given a model and dataset.
+#'
+#' @param model The MXNet Model.
+#' @param X The dataset to predict.
+#' @param ctx mx.cpu() or mx.gpu(i) The device used to generate the prediction.
+#' @param array.batch.size The batch size used in batching. Only used when X is R's array.
+#' @param array.layout can be "auto", "colmajor", "rowmajor", (detault=auto)
+#'     The layout of array. "rowmajor" is only supported for two dimensional array.
+#'     For matrix, "rowmajor" means dim(X) = c(nexample, nfeatures),
+#'     "colmajor" means dim(X) = c(nfeatures, nexample)
+#'     "auto" will auto detect the layout by match the feature size,
+#'      and will report error when X is a square matrix to ask user to explicitly specify layout.
+#'
+#' @export
+predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128, array.layout="auto") {
+  if (is.null(ctx)) ctx <- mx.ctx.default()
+  if (is.array(X) || is.matrix(X)) {
+    if (array.layout == "auto") {
+      array.layout <- mx.model.select.layout.predict(X, model)
+    }
+    if (array.layout == "rowmajor") {
+      X <- t(X)
+    }
+  }
+  X <- mx.model.init.iter(X, NULL, batch.size=array.batch.size, is.train=FALSE)
+  X$reset()
+  if (!X$iter.next()) stop("Cannot predict on empty iterator")
+  dlist = X$value()
+  pexec <- mx.simple.bind(model$symbol, ctx=ctx, data=dim(dlist$data), grad.req=FALSE)
+  mx.exec.update.arg.arrays(pexec, model$arg.params, match.name=TRUE)
+  mx.exec.update.aux.arrays(pexec, model$aux.params, match.name=TRUE)
+  packer <- mx.nd.arraypacker()
+  X$reset()
+  while (X$iter.next()) {
+    dlist = X$value()
+    mx.exec.update.arg.arrays(pexec, list(data=dlist$data), match.name=TRUE)
+    mx.exec.forward(pexec, is.train=FALSE)
+    out.pred <- mx.nd.copyto(pexec$ref.outputs[[1]], mx.cpu())
+    padded <- X$num.pad()
+    oshape <- dim(out.pred)
+    ndim <- length(oshape)
+    packer$push(mx.nd.slice(out.pred, 0, oshape[[ndim]] - padded))
+  }
+  X$reset()
+  return(packer$get())
+}
+
+#' Load model checkpoint from file.
+#'
+#' @param prefix string prefix of the model name
+#' @param iteration integer Iteration number of model we would like to load.
+#'
+#' @export
+mx.model.load <- function(prefix, iteration) {
+  symbol <- mx.symbol.load(paste0(prefix, "-symbol.json"))
+  save.dict <- mx.nd.load(sprintf("%s-%04d.params", prefix, iteration))
+  names <- names(save.dict)
+  arg.index <- as.integer(mx.util.filter.null(lapply(1:length(names), function(i) {
+    if (mx.util.str.startswith(names[[i]], "arg:")) i else NULL
+  })))
+  aux.index <- as.integer(mx.util.filter.null(lapply(1:length(names), function(i) {
+    if (mx.util.str.startswith(names[[i]], "aux:")) i else NULL
+  })))
+
+  if (length(arg.index) != 0) {
+    arg.params <- save.dict[arg.index]
+    names(arg.params) <- as.character(lapply(names[arg.index], function(nm) {
+      substr(nm, 5, nchar(nm))
+    }))
+  } else {
+    arg.params <- list()
+  }
+  if (length(aux.index) != 0) {
+    aux.params <- save.dict[aux.index]
+    names(aux.params) <- as.character(lapply(names[aux.index], function(nm) {
+      substr(nm, 5, nchar(nm))
+    }))
+  } else {
+    aux.params <- list()
+  }
+  model <- list(symbol=symbol, arg.params=arg.params, aux.params=aux.params)
+  return(structure(model, class="MXFeedForwardModel"))
+}
+
+#' Save model checkpoint into file.
+#'
+#' @param model The feedforward model to be saved.
+#' @param prefix string prefix of the model name
+#' @param iteration integer Iteration number of model we would like to load.
+#'
+#' @export
+mx.model.save <- function(model, prefix, iteration) {
+  arg.params <- model$arg.params
+  aux.params <- model$aux.params
+  names(arg.params) <- as.character(lapply(names(arg.params), function(nm) {
+    paste0("arg:", nm)
+  }))
+  names(aux.params) <- as.character(lapply(names(aux.params), function(nm) {
+    paste0("aux:", nm)
+  }))
+  save.dict <- append(arg.params, aux.params)
+  mx.symbol.save(model$symbol, paste0(prefix, "-symbol.json"))
+  mx.nd.save(save.dict, sprintf("%s-%04d.params", prefix, iteration))
+}

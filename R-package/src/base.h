@@ -23,7 +23,9 @@ namespace R {
 
 /*! \brief macro to be compatible with non c++11 env */
 #if DMLC_USE_CXX11 == 0
+#ifndef nullptr
 #define nullptr NULL
+#endif
 #endif
 
 /*!
@@ -90,8 +92,6 @@ void SetSeed(int seed);
  * \brief Base Movable class of MXNet Module object.
  *  This class will define several common functions.
  * \tparam Class The class name of subclass
- * \tparam HandleType The type of handle the object have.
- * \tparam finalizer The free function used to delete the handle.
  */
 template<typename Class>
 class MXNetMovable {
@@ -117,15 +117,6 @@ class MXNetMovable {
   /*! \brief default constructor */
   MXNetMovable() : moved_(false) {}
   /*!
-   * \brief the finalizer for Rcpp
-   * \param self the pointer to the class.
-   */
-  inline static void Finalizer(Class* self) {
-    if (!static_cast<MXNetMovable<Class>*>(self)->moved_) {
-      self->DoFinalize();
-    }
-  }
-  /*!
    * \brief Default implement to Move a existing R Class object to a new one.
    * \param src The source R Object.
    * \return A new R object containing moved information as old one.
@@ -137,7 +128,6 @@ class MXNetMovable {
     return Rcpp::internal::make_new_object(moved);
   }
 
- private:
   /*! \brief Whether the object has been moved */
   bool moved_;
 };
@@ -198,10 +188,10 @@ struct Context {
   inline static void InitRcppModule() {
     using namespace Rcpp;  // NOLINT(*);
     function("mx.cpu", &CPU,
-             List::create(_["device_id"] = 0),
+             List::create(_["dev.id"] = 0),
              "Create a CPU context.");
     function("mx.gpu", &GPU,
-             List::create(_["device_id"]),
+             List::create(_["dev.id"] = 0),
              "Create a GPU context with specific device_id.");
   }
   /*! \brief the device type id for CPU */
@@ -225,36 +215,10 @@ inline std::vector<const char*> CKeys(const std::vector<std::string> &keys) {
 }
 
 /*!
- * \brief Get human readable function information
- * \param name the name of function.
- * \parma num_args number of arguments.
- * \parma arg_names name of arguments
- * \parma arg_type_infos type information of arguments.
- * \param arg_descriptions descriptions of arguments.
- * \param remove_dup Whether to remove duplications
- */
-inline std::string MakeDocString(mx_uint num_args,
-                                 const char **arg_names,
-                                 const char **arg_type_infos,
-                                 const char **arg_descriptions,
-                                 bool remove_dup = true) {
-  std::set<std::string> visited;
-  std::ostringstream os;
-  for (mx_uint i = 0; i < num_args; ++i) {
-    std::string arg = arg_names[i];
-    if (visited.count(arg) != 0 && remove_dup) continue;
-    visited.insert(arg);
-    os << "    " << arg_names[i] << " : "  << arg_type_infos[i] << "\n"
-       << "        " << arg_descriptions[i] << "\n";
-  }
-  return os.str();
-}
-
-/*!
  *\return whether the expression is simple arguments
  * That is not module object and can be converted to string
  */
-inline const char* TypeName(SEXP args) {
+inline const char* TypeName(const Rcpp::RObject& args) {
   switch (TYPEOF(args)) {
     case REALSXP: return "numeric";
     case VECSXP: return "list";
@@ -272,10 +236,24 @@ inline const char* TypeName(SEXP args) {
  * \return the corresponding string
  */
 template<typename T>
-inline std::string toString(SEXP val) {
+inline std::string toString(const Rcpp::RObject& val) {
   std::ostringstream os;
   os << Rcpp::as<T>(val);
   return os.str();
+}
+
+/*!
+ * \brief Check whether the value is simple parameter
+ * \param val The value to check.
+ */
+inline bool isSimple(const Rcpp::RObject& val) {
+  switch (TYPEOF(val)) {
+    case STRSXP:
+    case INTSXP:
+    case REALSXP:
+    case LGLSXP: return true;
+    default: return false;
+  }
 }
 
 /*!
@@ -284,16 +262,19 @@ inline std::string toString(SEXP val) {
  * \param val The value of the parameter
  * \return A python string representation of val
  */
-inline std::string toPyString(const std::string &key, const SEXP val) {
+inline std::string toPyString(const std::string &key, const Rcpp::RObject& val) {
   std::ostringstream os;
-  if (Rcpp::is<Rcpp::IntegerVector>(val)) {
+  int len = Rf_length(val);
+  if (len != 1) {
+    RCHECK(TYPEOF(val) == INTSXP || TYPEOF(val) == REALSXP)
+        << "Only accept integer vectors or simple types";
+    // Do shape convesion back to reversed shape.
     Rcpp::IntegerVector vec(val);
-    std::ostringstream os;
     os << "(";
     for (size_t i = 0; i < vec.size(); ++i) {
-      int value = vec[i];
-      os << value;
+      int value = vec[vec.size() - i - 1];
       if (i != 0) os << ", ";
+      os << value;
     }
     if (vec.size() == 1) os << ",";
     os << ")";
@@ -329,7 +310,7 @@ inline std::string FormatParamKey(std::string src) {
 
 /*! \return wher list has names */
 inline bool HasName(const Rcpp::List& src) {
-  SEXP obj = src.names();
+  Rcpp::RObject obj = src.names();
   return obj != R_NilValue;
 }
 
@@ -347,14 +328,15 @@ inline std::vector<std::string> SafeGetListNames(const Rcpp::List& src) {
 }
 
 /*!
- * \brief convert Rcpp's Dimension to shape vector
+ * \brief convert Rcpp's Dimension to internal shape vector
+ * This will reverse the shape layout internally
  * \param rshape The dimension in R
- * \return A vector representation in R.
+ * \return A internal vector representation of shapes in mxnet.
  */
-inline std::vector<mx_uint> Dim2Vec(const Rcpp::Dimension &rshape) {
+inline std::vector<mx_uint> Dim2InternalShape(const Rcpp::Dimension &rshape) {
   std::vector<mx_uint> shape(rshape.size());
   for (size_t i = 0; i < rshape.size(); ++i) {
-    shape[i] = rshape[i];
+    shape[rshape.size() - i - 1] = rshape[i];
   }
   return shape;
 }

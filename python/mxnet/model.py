@@ -501,6 +501,9 @@ class FeedForward(BASE_ESTIMATOR):
         If this is True, no error will be thrown when aux_params and arg_params
         contain extra parameters than needed.
 
+    begin_round : int,optional
+        The begining training iteration.
+
     **kwargs : dict
         The additional keyword arguments passed to optimizer.
     """
@@ -510,6 +513,7 @@ class FeedForward(BASE_ESTIMATOR):
                  numpy_batch_size=128,
                  arg_params=None, aux_params=None,
                  allow_extra_params=False,
+                 begin_round=0,
                  **kwargs):
         # check if symbol contain duplicated names.
         _check_arguments(symbol)
@@ -542,6 +546,7 @@ class FeedForward(BASE_ESTIMATOR):
         # internal helper state
         self._pred_exec = None
         self._pred_exec_input = None
+        self.begin_round = begin_round
 
     @staticmethod
     def _is_data_arg(name):
@@ -601,10 +606,38 @@ class FeedForward(BASE_ESTIMATOR):
                     y = np.zeros(X.shape[0])
             if not isinstance(y, (np.ndarray, nd.NDArray)):
                 raise TypeError('y must be ndarray when X is numpy.ndarray')
+            if X.shape[0] != y.shape[0]:
+                raise ValueError("The numbers of data points and labels not equal")
+            if X.ndim != 2:
+                raise ValueError("Data must be 2D")
+            if y.ndim == 2 and y.shape[1] == 1:
+                y = y.flatten()
+            if y.ndim != 1:
+                raise ValueError("Label must be 1D or 2D (with 2nd dimension being 1)")
             return io.NDArrayIter(X, y, self.numpy_batch_size, shuffle=is_train)
         if not isinstance(X, io.DataIter):
             raise TypeError('X must be DataIter, NDArray or numpy.ndarray')
         return X
+
+    def _init_eval_iter(self, eval_data):
+        """Initialize the iterator given eval_data."""
+        if eval_data is None:
+            return eval_data
+        if isinstance(eval_data, (tuple, list)) and len(eval_data) == 2:
+            if eval_data[0] is not None:
+                if eval_data[1] is None and isinstance(eval_data[0], io.DataIter):
+                    return eval_data[0]
+                input_data = (np.array(eval_data[0]) if isinstance(eval_data[0], list)
+                              else eval_data[0])
+                input_label = (np.array(eval_data[1]) if isinstance(eval_data[1], list)
+                               else eval_data[1])
+                return self._init_iter(input_data, input_label, is_train=True)
+            else:
+                raise ValueError("Eval data is NONE")
+        if not isinstance(eval_data, io.DataIter):
+            raise TypeError('Eval data must be DataIter, or ' \
+                            'NDArray/numpy.ndarray/list pair (i.e. tuple/list of length 2)')
+        return eval_data
 
     def predict(self, X):
         """Run the prediction, always only use one device.
@@ -642,14 +675,18 @@ class FeedForward(BASE_ESTIMATOR):
 
         Parameters
         ----------
-        X : DataIter
-            Training data
+        X : DataIter, or numpy.ndarray/NDArray
+            Training data.
 
-        y : numpy.ndarray, optional
-            If X is numpy.ndarray y is required to set
+        y : numpy.ndarray/NDArray, optional
+            Training set label.
+            If X is numpy.ndarray/NDArray, y is required to be set.
+            While y can be 1D or 2D (with 2nd dimension as 1), its 1st dimension must be
+                the same as X, i.e. the number of data points and labels should be equal.
 
-        eval_data : DataIter or numpy.ndarray pair
-            If eval_set is numpy.ndarray pair, it should be (valid_data, valid_label)
+        eval_data : DataIter or numpy.ndarray/list/NDArray pair
+            If eval_data is numpy.ndarray/list/NDArray pair,
+                it should be (valid_data, valid_label).
 
         eval_metric : metric.EvalMetric or str or callable
             The evaluation metric, name of evaluation metric.
@@ -679,6 +716,7 @@ class FeedForward(BASE_ESTIMATOR):
 
         """
         X = self._init_iter(X, y, is_train=True)
+        eval_data = self._init_eval_iter(eval_data)
         # Simply ignore the first example to get input_shape
         # in first training round.
         if not X.iter_next():
@@ -708,7 +746,7 @@ class FeedForward(BASE_ESTIMATOR):
         # do training
         _train_multi_device(self.symbol, self.ctx, input_shape,
                             self.arg_params, self.aux_params,
-                            begin_round=0, end_round=self.num_round,
+                            begin_round=self.begin_round, end_round=self.num_round,
                             optimizer=optimizer,
                             train_data=X, eval_data=eval_data,
                             eval_metric=eval_metric,
@@ -774,6 +812,7 @@ class FeedForward(BASE_ESTIMATOR):
         symbol, arg_params, aux_params = load_checkpoint(prefix, iteration)
         return FeedForward(symbol, ctx=ctx,
                            arg_params=arg_params, aux_params=aux_params,
+                           begin_round=iteration,
                            **kwargs)
 
     @staticmethod
