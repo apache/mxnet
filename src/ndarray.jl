@@ -20,14 +20,14 @@ end
 # NDArray Type
 ################################################################################
 """Wrapper of the `NDArray` type in `libmxnet`. This is the basic building block
-    of tensor-based computation.
+of tensor-based computation.
 
-    **Note** since C/C++ use row-major ordering for arrays while Julia follows a
-    column-major ordering. To keep things consistent, we keep the underlying data
-    in their original layout, but use *language-native* convention when we talk
-    about shapes. For example, a mini-batch of 100 MNIST images is a tensor of
-    C/C++/Python shape (100,1,28,28), while in Julia, the same piece of memory
-    have shape (28,28,1,100).
+**Note** since C/C++ use row-major ordering for arrays while Julia follows a
+column-major ordering. To keep things consistent, we keep the underlying data
+in their original layout, but use *language-native* convention when we talk
+about shapes. For example, a mini-batch of 100 MNIST images is a tensor of
+C/C++/Python shape (100,1,28,28), while in Julia, the same piece of memory
+have shape (28,28,1,100).
 """
 type NDArray
   handle   :: MX_NDArrayHandle
@@ -129,10 +129,10 @@ end
 
 import Base: slice
 """`slice` create a view into a sub-slice of an `NDArray`. Note only slicing at the slowest
-    changing dimension is supported. In Julia's column-major perspective, this is the last
-    dimension. For example, given an `NDArray` of shape (2,3,4), `sub(array, 2:3)` will create
-    a `NDArray` of shape (2,3,2), sharing the data with the original array. This operation is
-    used in data parallelization to split mini-batch into sub-batches for different devices.
+changing dimension is supported. In Julia's column-major perspective, this is the last
+dimension. For example, given an `NDArray` of shape (2,3,4), `sub(array, 2:3)` will create
+a `NDArray` of shape (2,3,2), sharing the data with the original array. This operation is
+used in data parallelization to split mini-batch into sub-batches for different devices.
 """
 function slice(arr :: NDArray, ::Colon)
   arr
@@ -224,19 +224,23 @@ end
 # Basic arithmetics
 #------------------------------------------------------------
 """
-Julia does not support re-definiton of += operator (like __iadd__ in python),
-When one write a += b, it gets translated to a = a+b. a+b will allocate new
-memory for the results, and the newly allocated NDArray object is then assigned
+Julia does not support re-definiton of `+=` operator (like `__iadd__` in python),
+When one write `a += b`, it gets translated to `a = a+b`. `a+b` will allocate new
+memory for the results, and the newly allocated `NDArray` object is then assigned
 back to a, while the original contents in a is discarded. This is very inefficient
 when we want to do inplace update.
 
 This macro is a simple utility to implement this behavior. Write
 
-  @mx.inplace a += b
+```julia
+@mx.inplace a += b
+```
 
 will translate into
 
-  mx.add_to!(a, b)
+```julia
+mx.add_to!(a, b)
+```
 
 which will do inplace adding of the contents of b into a.
 """
