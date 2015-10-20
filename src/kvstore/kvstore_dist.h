@@ -8,11 +8,9 @@
 #include <string>
 #include <vector>
 #include "./kvstore_local.h"
-#include "./mxnet_ps_node.h"
 #include "mxnet/engine.h"
-// #include "dmlc/parameter.h"
-#include "ps.h"
-#include "base/range.h"
+#include "ps/ps.h"
+#include "./kvstore_dist_server.h"
 
 namespace mxnet {
 namespace kvstore {
@@ -29,27 +27,22 @@ namespace kvstore {
  */
 class KVStoreDist : public KVStoreLocal {
  public:
-  KVStoreDist()
-      : server_(NULL),
-        cache_(NULL),
-        barrier_count_(0) {
+  KVStoreDist() : ps_worker_(nullptr), server_(nullptr) {
     if (IsWorkerNode()) {
-      cache_ = new ps::KVCache<ps::Key, real_t>(PS_KV_ID);
-      StartPS();
+      ps_worker_ = new ps::KVWorker<real_t>(0);
+      ps::Start("mxnet\0");
     }
   }
 
   virtual ~KVStoreDist() {
     Engine::Get()->WaitForAll();
-    delete cache_;
-
     if (IsWorkerNode()) {
       if (get_rank() == 0) {
         // stop the executor at servers
-        SendCommandToServers(CommandID::kStop, "");
+        SendCommandToServers(kStopServer, "");
       }
-      Barrier();
-      ps::StopSystem();
+      ps::Finalize();
+      delete ps_worker_;
     }
   }
 
@@ -62,8 +55,6 @@ class KVStoreDist : public KVStoreLocal {
       Wait(keys);
     } else {
       // do nothing
-      // // simply increase the clock. it's necessary for BSP
-      // cache_->executor()->IncrClock(keys.size());
     }
     Barrier();
   }
@@ -90,15 +81,9 @@ class KVStoreDist : public KVStoreLocal {
 
         // do push
         real_t* data = static_cast<real_t*>(merged.data().dptr_);
-        ps::SArray<real_t> vals(data, size, ps::EmptyDel<real_t>());
-        ps::SyncOpts opts;
-        opts.callback = [cb]() { cb(); };
-        CHECK_NOTNULL(cache_)->Push(
-            opts.GetTask(),
-            pskv.keys,
-            vals,
-            pskv.vals_size,
-            opts.callback);
+        ps::SArray<real_t> vals(data, size, false);  // false means no delete
+        CHECK_NOTNULL(ps_worker_)->ZPush(
+            pskv.keys, vals, pskv.lens, 0, [cb]() { cb(); });
       };
       Engine::Get()->PushAsync(
           push_to_servers,
@@ -134,18 +119,10 @@ class KVStoreDist : public KVStoreLocal {
         // convert to ps keys
         PSKV& pskv = EncodeKey(key, size);
 
-        // pull opts
-        ps::SyncOpts opts;
-        opts.callback = [cb]() { cb(); };
-
         // issue pull
-        CHECK_NOTNULL(cache_)->Pull(
-            opts.GetTask(),
-            pskv.keys,
-            opts.callback,
-            data,
-            size,
-            pskv.vals_size.data());
+        ps::SArray<real_t> vals(data, size, false);  // false means no delete
+        CHECK_NOTNULL(ps_worker_)->ZPull(
+            pskv.keys, &vals, &pskv.lens, 0, [cb](){ cb(); });
       };
 
       CHECK_NOTNULL(Engine::Get())->PushAsync(
@@ -172,36 +149,30 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   void Barrier() override {
-    ps::Task task;
-    task.set_cmd(CommandID::SetBarrier(barrier_count_++));
-    auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
-    node->Wait(node->Submit(task, ps::NodeInfo::SchedulerID()));
+    ps::Postoffice::Get()->Barrier(ps::kWorkerGroup);
   }
 
 
   void SendCommandToServers(int cmd_id,
                             const std::string& cmd_body) override {
-    ps::Task task;
-    task.set_cmd(cmd_id);
-    task.set_msg(cmd_body);
-    auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
-    node->Wait(node->Submit(task, ps::kServerGroup));
+    CHECK_NOTNULL(ps_worker_);
+    ps_worker_->Wait(ps_worker_->Request(cmd_id, cmd_body, ps::kServerGroup));
   }
 
-  int get_group_size() const override { return ps::NodeInfo::RankSize(); }
+  int get_group_size() const override { return ps::NumWorkers(); }
 
-  int get_rank() const override { return ps::NodeInfo::MyRank(); }
+  int get_rank() const override { return ps::MyRank(); }
 
   void RunServer(const Controller& controller) override {
     CHECK(!IsWorkerNode());
-    StartPS();
     if (IsServerNode()) {
-      server_ = new KVStoreDistServer(controller);
-      server_->Run();
-      delete server_;
-      server_ = nullptr;
+      server_ = new KVStoreDistServer();
+      server_->set_controller(controller);
     }
-    ps::StopSystem();
+    ps::Start("mxnet_server\0");
+    if (server_) server_->Run();
+    ps::Finalize();
+    delete server_; server_ = nullptr;
   }
 
  private:
@@ -232,25 +203,11 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   /**
-   * \brief start the network threads in ps-lite
-   */
-  void StartPS() {
-    // hack argc argv
-    int argc = 1;
-    char** argv = new char*[1];
-    char name[] = "mxnet";
-    argv[0] = new char[strlen(name)+1];
-    memcpy(argv[0], name, strlen(name));
-    argv[0][strlen(name)] = '\0';
-    ps::StartSystem(&argc, &argv);
-  }
-
-  /**
-   * \brief struct for ps keys and vals_size
+   * \brief struct for ps keys and lens
    */
   struct PSKV {
     ps::SArray<ps::Key> keys;  // n keys
-    ps::SArray<int> vals_size;  // the length of the i-th value
+    ps::SArray<int> lens;  // the length of the i-th value
     int size;
   };
 
@@ -265,71 +222,57 @@ class KVStoreDist : public KVStoreLocal {
   std::mutex mu_;
 
   /**
-   * \brief key partition of server nodes in ps
-   */
-  std::vector<ps::Key> server_key_partition_;
-
-  /**
    * \brief convert to keys in ps
    */
   inline PSKV& EncodeKey(int key, size_t size) {
-    CHECK_EQ(sizeof(ps::Key), 8) << "Do not use USE_KEY32=1 to compile ps-lite";
-    int num_servers = ps::NodeInfo::NumServers();
-    CHECK_GT(num_servers, 0);
-
     mu_.lock();
-    // init key parititon
-    if (server_key_partition_.empty()) {
-      auto all = ps::Range<ps::Key>::All();
-      for (int i = 0; i < num_servers; ++i) {
-        ps::Key key = all.EvenDivide(num_servers, i).begin();
-        server_key_partition_.push_back(
-            ((key >> CommandID::kIndexBits)+1) << CommandID::kIndexBits);
-      }
-    }
-
     PSKV& pskv = ps_kv_[key];
     mu_.unlock();
 
     if (!pskv.keys.empty()) {
       CHECK_EQ(pskv.size, size) << "The value size cannot be changed";
     } else {
+      auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
+      int num_servers = krs.size();
+      CHECK_GT(num_servers, 0);
+
       // a simple heuristic for load balance
       if (size < bigarray_bound_) {
         // send it to a single random picked server
         int server = (key * 9973) % num_servers;
-        pskv.keys.push_back(server_key_partition_[server] | key);
-        pskv.vals_size.push_back(size);
+        ps::Key ps_key = krs[server].begin() + key;
+        CHECK_LT(ps_key, krs[server].end());
+        pskv.keys.push_back(ps_key);
+        pskv.lens.push_back(size);
+        pskv.size = size;
       } else {
-        // divide it to all servers
-        auto all = ps::Range<size_t>(0, size);
+        // parition it to all servers
+        pskv.size = 0;
         for (int i = 0; i < num_servers; ++i) {
-          pskv.keys.push_back(server_key_partition_[i] | key);
-          pskv.vals_size.push_back(all.EvenDivide(num_servers, i).size());
+          size_t part_size =
+              static_cast<size_t>(static_cast<double>(size)/num_servers*(i+1)) -
+              static_cast<size_t>(static_cast<double>(size)/num_servers*i);
+          ps::Key ps_key = krs[i].begin() + key;
+          CHECK_LT(ps_key, krs[i].end());
+          pskv.keys.push_back(ps_key);
+          pskv.lens.push_back(part_size);
+          pskv.size += part_size;
         }
+        CHECK_EQ(pskv.size, size);
       }
-      pskv.size = size;
     }
     return pskv;
   }
 
   /**
-   * \brief a server node
+   * \brief for worker to push and pull data
+   */
+  ps::KVWorker<real_t>* ps_worker_;
+
+  /**
+   * \brief the server handle
    */
   KVStoreDistServer* server_;
-
-  /**
-   * \brief for worker to push and pull data
-   * use KVCache rather than KVWorker for the c-style pull
-   */
-  ps::KVCache<ps::Key, real_t>* cache_;
-
-
-
-  /**
-   * \brief the count for barrier
-   */
-  int barrier_count_;
 };
 
 }  // namespace kvstore
