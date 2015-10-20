@@ -146,7 +146,7 @@ class KVStoreDistServer {
     int key = DecodeKey(req_data.keys[0]);
     auto& stored = store_[key];
 
-    // there are several WaitToRead here, this is because \a recved's memory
+    // there used several WaitToRead, this is because \a recved's memory
     // could be deallocated when this function returns. so we need to make sure
     // the operators with \a NDArray are actually finished
     if (req_meta.push) {

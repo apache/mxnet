@@ -73,16 +73,17 @@ class KVStoreDist : public KVStoreLocal {
       const NDArray& merged = MergePushValue(key, grouped_vals[i], priority);
 
       // push to servers
-auto push_to_servers =
+      auto push_to_servers =
           [this, key, merged](RunContext rctx, Engine::CallbackOnComplete cb) {
-// convert to ps keys
+         // convert to ps keys
         size_t size = merged.shape().Size();
         PSKV& pskv = EncodeKey(key, size);
 
         // do push
         real_t* data = static_cast<real_t*>(merged.data().dptr_);
-        ps::SArray<real_t> vals(data, size, false);  // false means no delete
-CHECK_NOTNULL(ps_worker_)->ZPush(
+        // false means no delete
+        ps::SArray<real_t> vals(data, size, false);
+        CHECK_NOTNULL(ps_worker_)->ZPush(
         pskv.keys, vals, pskv.lens, 0, [cb]() { cb(); });
       };
       Engine::Get()->PushAsync(
@@ -122,7 +123,7 @@ CHECK_NOTNULL(ps_worker_)->ZPush(
         // issue pull, false means no delete
         auto vals = new ps::SArray<real_t>(data, size, false);
         CHECK_NOTNULL(ps_worker_)->ZPull(
-            pskv.keys, vals, &pskv.lens, 0, [vals, cb](){ delete vals; cb(); });
+        pskv.keys, vals, &pskv.lens, 0, [vals, cb](){ delete vals; cb(); });
       };
 
       CHECK_NOTNULL(Engine::Get())->PushAsync(
