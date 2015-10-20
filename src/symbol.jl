@@ -195,7 +195,6 @@ function ./(self :: Symbol, arg :: Symbol)
   _Div(self, arg)
 end
 
-"Compose symbol on inputs"
 function _compose!(sym :: Symbol; kwargs...)
   name     = char_p(0)
   arg_keys = AbstractString[]

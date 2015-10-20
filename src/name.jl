@@ -4,11 +4,9 @@ typealias NameCounter Dict{Base.Symbol, Int}
 
 import Base: get!
 
-"""Default implementation for generating a name for a symbol.
-
-When a name is specified by the user, it will be used. Otherwise, a name
-is automatically generated based on the hint string.
-"""
+# Default implementation for generating a name for a symbol.
+# When a name is specified by the user, it will be used. Otherwise, a name
+# is automatically generated based on the hint string.
 function _default_get_name!(counter :: NameCounter, name :: NameType, hint :: NameType)
   if isa(name, Base.Symbol) || !isempty(name)
     return symbol(name)

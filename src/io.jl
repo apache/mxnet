@@ -1,56 +1,72 @@
 """Root type for data provider
 
-    A data provider provides interface to iterate over a dataset. It should implement the following functions:
+A data provider provides interface to iterate over a dataset. It should implement the following functions:
 
-      provide_data(provider :: AbstractDataProvider) => Vector{Tuple{Base.Symbol, Tuple}}
-      provide_label(provider :: AbstractDataProvider) => Vector{Tuple{Base.Symbol, Tuple}}
+```julia
+provide_data(provider :: AbstractDataProvider) => Vector{Tuple{Base.Symbol, Tuple}}
+provide_label(provider :: AbstractDataProvider) => Vector{Tuple{Base.Symbol, Tuple}}
+```
 
-    Returns a list of name-shape pairs, indicating the name and shape of the each data stream. For example,
-    `[(:data, (100,1,28,28))]` or `[(:softmax_label, (100,1))]`. It should also implement the following convenient
-    function
+Returns a list of name-shape pairs, indicating the name and shape of the each data stream. For example,
+`[(:data, (100,1,28,28))]` or `[(:softmax_label, (100,1))]`. It should also implement the following convenient
+function
 
-      get_batch_size(provider :: AbstractDataProvider) => Int
+```julia
+get_batch_size(provider :: AbstractDataProvider) => Int
+```
 
-    which returns the batch size used in this data provider.
+which returns the batch size used in this data provider.
 
-    A data provider should implement the standard Julia iteration interface, including `Base.start`,
-    `Base.next`, `Base.done` and `Base.eltype`. It could safely assume that the interface functions will
-    always be called like
+A data provider should implement the standard Julia iteration interface, including `Base.start`,
+`Base.next`, `Base.done` and `Base.eltype`. It could safely assume that the interface functions will
+always be called like
 
-      for batch in provider
-        # ...
-        load_data!(batch, targets)
-      end
+```julia
+for batch in provider
+  # ...
+  load_data!(batch, targets)
+end
+```
 
-    which translates into
+which translates into
 
-      state = Base.start(provider)
-      while !done(provider, state)
-        (batch, state) = next(provider, state)
-        # ...
-        load_data!(batch, targets)
-      end
+```julia
+state = Base.start(provider)
+while !done(provider, state)
+  (batch, state) = next(provider, state)
+  # ...
+  load_data!(batch, targets)
+end
+```
 
-    In other words, it could safely assume that `Base.next` is always called after `Base.done`. And neither
-    of those function will be called twice consequtively. The detailed interfaces are list below:
+In other words, it could safely assume that `Base.next` is always called after `Base.done`. And neither
+of those function will be called twice consequtively. The detailed interfaces are list below:
 
-      Base.start(provider :: AbstractDataProvider) => AbstractDataProviderState
+```julia
+Base.start(provider :: AbstractDataProvider) => AbstractDataProviderState
+```
 
-    Initialize or reset the data iteration.
+Initialize or reset the data iteration.
 
-      Base.next(provider :: AbstractDataProvider, state :: AbstractDataProviderState)
-          => (AbstractDataBatch, AbstractDataProviderState)
+```julia
+Base.next(provider :: AbstractDataProvider, state :: AbstractDataProviderState)
+    => (AbstractDataBatch, AbstractDataProviderState)
+```
 
-    Return one batch of data. Actual data can be retrieved from the batch by interface functions described
-    in the document of type `AbstractDataBatch`.
+Return one batch of data. Actual data can be retrieved from the batch by interface functions described
+in the document of type `AbstractDataBatch`.
 
-      Base.done(provider :: AbstractDataProvider, state :: AbstractDataProviderState) => Bool
+```julia
+Base.done(provider :: AbstractDataProvider, state :: AbstractDataProviderState) => Bool
+```
 
-    Return `false` if there is more batch to get.
+Return `false` if there is more batch to get.
 
-      Base.eltype(::Type{MyDataProvider}) => MyDataProviderState
+```julia
+Base.eltype(::Type{MyDataProvider}) => MyDataProviderState
+```
 
-    Return the type of the data provider state.
+Return the type of the data provider state.
 """
 abstract AbstractDataProvider
 
@@ -64,28 +80,32 @@ typealias SlicedNDArray Tuple{UnitRange{Int},NDArray}
 
 """Root type for data batch
 
-    A data batch must implement the following interface function to actually provide the data and label.
+A data batch must implement the following interface function to actually provide the data and label.
 
-      load_data!(batch :: AbstractDataBatch, targets :: Vector{Vector{SlicedNDArray}})
-      load_label!(batch :: AbstractDataBatch, targets :: Vector{Vector{SlicedNDArray}})
+```julia
+load_data!(batch :: AbstractDataBatch, targets :: Vector{Vector{SlicedNDArray}})
+load_label!(batch :: AbstractDataBatch, targets :: Vector{Vector{SlicedNDArray}})
+```
 
-    Load data and label into targets. The targets is a list of target that the data/label should be
-    copied into. The order in the list is guaranteed to be the same as returned by `provide_data` and
-    `provide_label`. Each entry in the list is again a list of `SlicedNDArray`, corresponding the
-    memory buffer for each device.
+Load data and label into targets. The targets is a list of target that the data/label should be
+copied into. The order in the list is guaranteed to be the same as returned by `provide_data` and
+`provide_label`. Each entry in the list is again a list of `SlicedNDArray`, corresponding the
+memory buffer for each device.
 
-    The `SlicedNDArray` is used in data parallelization to run different sub-batch on different devices.
+The `SlicedNDArray` is used in data parallelization to run different sub-batch on different devices.
 
-    The following function should also be implemented to handle the case when the mini-batch size does not
-    divide the size of the whole dataset. So in the last mini-batch, the actual data copied might be fewer
-    than the mini-batch size. This is usually not an issue during the training as the remaining space may
-    contain the data and label copied during the previous mini-batch are still valid data. However, during
-    testing, especially when doing feature extraction, we need to be precise about the number of samples
-    processed.
+The following function should also be implemented to handle the case when the mini-batch size does not
+divide the size of the whole dataset. So in the last mini-batch, the actual data copied might be fewer
+than the mini-batch size. This is usually not an issue during the training as the remaining space may
+contain the data and label copied during the previous mini-batch are still valid data. However, during
+testing, especially when doing feature extraction, we need to be precise about the number of samples
+processed.
 
-      get_pad(batch :: AbstractDataBatch)
+```julia
+get_pad(batch :: AbstractDataBatch)
+```
 
-    Return the number of *dummy samples* in this mini-batch.
+Return the number of *dummy samples* in this mini-batch.
 """
 abstract AbstractDataBatch
 

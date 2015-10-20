@@ -11,6 +11,12 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+API Documentation
+-----------------
+
+.. toctree::
+   :maxdepth: 1
+
    api/MXNet
 
 

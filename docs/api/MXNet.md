@@ -4,51 +4,35 @@
 
 ---
 
-<a id="method___compose.1" class="lexicon_definition"></a>
-#### _compose!(sym::MXNet.mx.Symbol)
-Compose symbol on inputs
-
-*source:*
-[MXNet/src/symbol.jl:199](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/symbol.jl#L199)
-
----
-
-<a id="method___default_get_name.1" class="lexicon_definition"></a>
-#### _default_get_name!(counter::Dict{Symbol, Int64},  name::Union{AbstractString, Symbol},  hint::Union{AbstractString, Symbol})
-Default implementation for generating a name for a symbol.
-
-When a name is specified by the user, it will be used. Otherwise, a name
-is automatically generated based on the hint string.
-
-
-*source:*
-[MXNet/src/name.jl:12](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/name.jl#L12)
-
----
-
 <a id="method___import_ndarray_functions.1" class="lexicon_definition"></a>
 #### _import_ndarray_functions()
 Import dynamic functions for NDArrays. The arguments to the functions are typically ordered
 as
 
-  func_name(arg_in1, arg_in2, ..., scalar1, scalar2, ..., arg_out1, arg_out2, ...)
+```julia
+func_name(arg_in1, arg_in2, ..., scalar1, scalar2, ..., arg_out1, arg_out2, ...)
+```
 
 unless NDARRAY_ARG_BEFORE_SCALAR is not set. In this case, the scalars are put before the input arguments:
 
-  func_name(scalar1, scalar2, ..., arg_in1, arg_in2, ..., arg_out1, arg_out2, ...)
+```julia
+func_name(scalar1, scalar2, ..., arg_in1, arg_in2, ..., arg_out1, arg_out2, ...)
+```
 
-If ACCEPT_EMPTY_MUTATE_TARGET is set. An overloaded function without the output arguments will also be defined:
+If `ACCEPT_EMPTY_MUTATE_TARGET` is set. An overloaded function without the output arguments will also be defined:
 
-  func_name(arg_in1, arg_in2, ..., scalar1, scalar2, ...)
+```julia
+func_name(arg_in1, arg_in2, ..., scalar1, scalar2, ...)
+```
 
 Upon calling, the output arguments will be automatically initialized with empty NDArrays.
 
 Those functions always return the output arguments. If there is only one output (the typical situation), that
-object (NDArray) is returned. Otherwise, a tuple containing all the outputs will be returned.
+object (`NDArray`) is returned. Otherwise, a tuple containing all the outputs will be returned.
 
 
 *source:*
-[MXNet/src/ndarray.jl:361](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/ndarray.jl#L361)
+[MXNet/src/ndarray.jl:367](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/ndarray.jl#L367)
 
 ---
 
@@ -60,7 +44,7 @@ Get a split of `batch_size` into `n_split` pieces for data parallelization. Retu
 
 
 *source:*
-[MXNet/src/estimator.jl:18](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/estimator.jl#L18)
+[MXNet/src/estimator.jl:18](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/estimator.jl#L18)
 
 ---
 
@@ -69,7 +53,7 @@ Get a split of `batch_size` into `n_split` pieces for data parallelization. Retu
 Copy data from NDArray to Julia Array
 
 *source:*
-[MXNet/src/ndarray.jl:178](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/ndarray.jl#L178)
+[MXNet/src/ndarray.jl:178](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/ndarray.jl#L178)
 
 ---
 
@@ -78,7 +62,7 @@ Copy data from NDArray to Julia Array
 Copy data between NDArrays
 
 *source:*
-[MXNet/src/ndarray.jl:166](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/ndarray.jl#L166)
+[MXNet/src/ndarray.jl:166](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/ndarray.jl#L166)
 
 ---
 
@@ -87,7 +71,7 @@ Copy data between NDArrays
 Copy data from Julia Array to NDArray
 
 *source:*
-[MXNet/src/ndarray.jl:186](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/ndarray.jl#L186)
+[MXNet/src/ndarray.jl:186](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/ndarray.jl#L186)
 
 ---
 
@@ -96,7 +80,7 @@ Copy data from Julia Array to NDArray
 Create copy: NDArray -> Julia Array
 
 *source:*
-[MXNet/src/ndarray.jl:196](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/ndarray.jl#L196)
+[MXNet/src/ndarray.jl:196](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/ndarray.jl#L196)
 
 ---
 
@@ -105,7 +89,7 @@ Create copy: NDArray -> Julia Array
 Create copy: NDArray -> NDArray in a given context
 
 *source:*
-[MXNet/src/ndarray.jl:202](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/ndarray.jl#L202)
+[MXNet/src/ndarray.jl:202](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/ndarray.jl#L202)
 
 ---
 
@@ -114,7 +98,7 @@ Create copy: NDArray -> NDArray in a given context
 Create copy: Julia Array -> NDArray in a given context
 
 *source:*
-[MXNet/src/ndarray.jl:208](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/ndarray.jl#L208)
+[MXNet/src/ndarray.jl:208](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/ndarray.jl#L208)
 
 ---
 
@@ -123,7 +107,7 @@ Create copy: Julia Array -> NDArray in a given context
 Get a new grouped symbol whose output contains all the internal outputs of this symbol.
 
 *source:*
-[MXNet/src/symbol.jl:63](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/symbol.jl#L63)
+[MXNet/src/symbol.jl:63](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/symbol.jl#L63)
 
 ---
 
@@ -132,7 +116,7 @@ Get a new grouped symbol whose output contains all the internal outputs of this 
 Create a symbol that groups symbols together
 
 *source:*
-[MXNet/src/symbol.jl:77](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/symbol.jl#L77)
+[MXNet/src/symbol.jl:77](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/symbol.jl#L77)
 
 ---
 
@@ -147,7 +131,7 @@ Most operators do not have Auxiliary states.
 
 
 *source:*
-[MXNet/src/symbol.jl:58](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/symbol.jl#L58)
+[MXNet/src/symbol.jl:58](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/symbol.jl#L58)
 
 ---
 
@@ -156,7 +140,7 @@ Most operators do not have Auxiliary states.
 Create NDArray and initialize with 1
 
 *source:*
-[MXNet/src/ndarray.jl:112](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/ndarray.jl#L112)
+[MXNet/src/ndarray.jl:112](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/ndarray.jl#L112)
 
 ---
 
@@ -165,7 +149,7 @@ Create NDArray and initialize with 1
 Create NDArray and initialize with 1
 
 *source:*
-[MXNet/src/ndarray.jl:112](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/ndarray.jl#L112)
+[MXNet/src/ndarray.jl:112](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/ndarray.jl#L112)
 
 ---
 
@@ -174,7 +158,7 @@ Create NDArray and initialize with 1
 Assign all elements of an NDArray to a scalar
 
 *source:*
-[MXNet/src/ndarray.jl:146](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/ndarray.jl#L146)
+[MXNet/src/ndarray.jl:146](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/ndarray.jl#L146)
 
 ---
 
@@ -186,7 +170,7 @@ Get the shape of an `NDArray`. Note the shape is converted to Julia convention.
 
 
 *source:*
-[MXNet/src/ndarray.jl:81](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/ndarray.jl#L81)
+[MXNet/src/ndarray.jl:81](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/ndarray.jl#L81)
 
 ---
 
@@ -200,7 +184,7 @@ Get the shape of an `NDArray`. Note the shape is converted to Julia convention.
 
 
 *source:*
-[MXNet/src/ndarray.jl:128](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/ndarray.jl#L128)
+[MXNet/src/ndarray.jl:128](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/ndarray.jl#L128)
 
 ---
 
@@ -209,7 +193,7 @@ Get the shape of an `NDArray`. Note the shape is converted to Julia convention.
 Create a symbolic variable with the given name
 
 *source:*
-[MXNet/src/symbol.jl:70](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/symbol.jl#L70)
+[MXNet/src/symbol.jl:70](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/symbol.jl#L70)
 
 ---
 
@@ -218,7 +202,7 @@ Create a symbolic variable with the given name
 Create zero-ed NDArray of specific shape
 
 *source:*
-[MXNet/src/ndarray.jl:102](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/ndarray.jl#L102)
+[MXNet/src/ndarray.jl:102](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/ndarray.jl#L102)
 
 ---
 
@@ -227,7 +211,7 @@ Create zero-ed NDArray of specific shape
 Create zero-ed NDArray of specific shape
 
 *source:*
-[MXNet/src/ndarray.jl:102](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/ndarray.jl#L102)
+[MXNet/src/ndarray.jl:102](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/ndarray.jl#L102)
 
 ---
 
@@ -235,32 +219,36 @@ Create zero-ed NDArray of specific shape
 #### MXNet.mx.AbstractDataBatch
 Root type for data batch
 
-    A data batch must implement the following interface function to actually provide the data and label.
+A data batch must implement the following interface function to actually provide the data and label.
 
-      load_data!(batch :: AbstractDataBatch, targets :: Vector{Vector{SlicedNDArray}})
-      load_label!(batch :: AbstractDataBatch, targets :: Vector{Vector{SlicedNDArray}})
+```julia
+load_data!(batch :: AbstractDataBatch, targets :: Vector{Vector{SlicedNDArray}})
+load_label!(batch :: AbstractDataBatch, targets :: Vector{Vector{SlicedNDArray}})
+```
 
-    Load data and label into targets. The targets is a list of target that the data/label should be
-    copied into. The order in the list is guaranteed to be the same as returned by `provide_data` and
-    `provide_label`. Each entry in the list is again a list of `SlicedNDArray`, corresponding the
-    memory buffer for each device.
+Load data and label into targets. The targets is a list of target that the data/label should be
+copied into. The order in the list is guaranteed to be the same as returned by `provide_data` and
+`provide_label`. Each entry in the list is again a list of `SlicedNDArray`, corresponding the
+memory buffer for each device.
 
-    The `SlicedNDArray` is used in data parallelization to run different sub-batch on different devices.
+The `SlicedNDArray` is used in data parallelization to run different sub-batch on different devices.
 
-    The following function should also be implemented to handle the case when the mini-batch size does not
-    divide the size of the whole dataset. So in the last mini-batch, the actual data copied might be fewer
-    than the mini-batch size. This is usually not an issue during the training as the remaining space may
-    contain the data and label copied during the previous mini-batch are still valid data. However, during
-    testing, especially when doing feature extraction, we need to be precise about the number of samples
-    processed.
+The following function should also be implemented to handle the case when the mini-batch size does not
+divide the size of the whole dataset. So in the last mini-batch, the actual data copied might be fewer
+than the mini-batch size. This is usually not an issue during the training as the remaining space may
+contain the data and label copied during the previous mini-batch are still valid data. However, during
+testing, especially when doing feature extraction, we need to be precise about the number of samples
+processed.
 
-      get_pad(batch :: AbstractDataBatch)
+```julia
+get_pad(batch :: AbstractDataBatch)
+```
 
-    Return the number of *dummy samples* in this mini-batch.
+Return the number of *dummy samples* in this mini-batch.
 
 
 *source:*
-[MXNet/src/io.jl:90](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/io.jl#L90)
+[MXNet/src/io.jl:110](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/io.jl#L110)
 
 ---
 
@@ -268,61 +256,77 @@ Root type for data batch
 #### MXNet.mx.AbstractDataProvider
 Root type for data provider
 
-    A data provider provides interface to iterate over a dataset. It should implement the following functions:
+A data provider provides interface to iterate over a dataset. It should implement the following functions:
 
-      provide_data(provider :: AbstractDataProvider) => Vector{Tuple{Base.Symbol, Tuple}}
-      provide_label(provider :: AbstractDataProvider) => Vector{Tuple{Base.Symbol, Tuple}}
+```julia
+provide_data(provider :: AbstractDataProvider) => Vector{Tuple{Base.Symbol, Tuple}}
+provide_label(provider :: AbstractDataProvider) => Vector{Tuple{Base.Symbol, Tuple}}
+```
 
-    Returns a list of name-shape pairs, indicating the name and shape of the each data stream. For example,
-    `[(:data, (100,1,28,28))]` or `[(:softmax_label, (100,1))]`. It should also implement the following convenient
-    function
+Returns a list of name-shape pairs, indicating the name and shape of the each data stream. For example,
+`[(:data, (100,1,28,28))]` or `[(:softmax_label, (100,1))]`. It should also implement the following convenient
+function
 
-      get_batch_size(provider :: AbstractDataProvider) => Int
+```julia
+get_batch_size(provider :: AbstractDataProvider) => Int
+```
 
-    which returns the batch size used in this data provider.
+which returns the batch size used in this data provider.
 
-    A data provider should implement the standard Julia iteration interface, including `Base.start`,
-    `Base.next`, `Base.done` and `Base.eltype`. It could safely assume that the interface functions will
-    always be called like
+A data provider should implement the standard Julia iteration interface, including `Base.start`,
+`Base.next`, `Base.done` and `Base.eltype`. It could safely assume that the interface functions will
+always be called like
 
-      for batch in provider
-        # ...
-        load_data!(batch, targets)
-      end
+```julia
+for batch in provider
+  # ...
+  load_data!(batch, targets)
+end
+```
 
-    which translates into
+which translates into
 
-      state = Base.start(provider)
-      while !done(provider, state)
-        (batch, state) = next(provider, state)
-        # ...
-        load_data!(batch, targets)
-      end
+```julia
+state = Base.start(provider)
+while !done(provider, state)
+  (batch, state) = next(provider, state)
+  # ...
+  load_data!(batch, targets)
+end
+```
 
-    In other words, it could safely assume that `Base.next` is always called after `Base.done`. And neither
-    of those function will be called twice consequtively. The detailed interfaces are list below:
+In other words, it could safely assume that `Base.next` is always called after `Base.done`. And neither
+of those function will be called twice consequtively. The detailed interfaces are list below:
 
-      Base.start(provider :: AbstractDataProvider) => AbstractDataProviderState
+```julia
+Base.start(provider :: AbstractDataProvider) => AbstractDataProviderState
+```
 
-    Initialize or reset the data iteration.
+Initialize or reset the data iteration.
 
-      Base.next(provider :: AbstractDataProvider, state :: AbstractDataProviderState)
-          => (AbstractDataBatch, AbstractDataProviderState)
+```julia
+Base.next(provider :: AbstractDataProvider, state :: AbstractDataProviderState)
+    => (AbstractDataBatch, AbstractDataProviderState)
+```
 
-    Return one batch of data. Actual data can be retrieved from the batch by interface functions described
-    in the document of type `AbstractDataBatch`.
+Return one batch of data. Actual data can be retrieved from the batch by interface functions described
+in the document of type `AbstractDataBatch`.
 
-      Base.done(provider :: AbstractDataProvider, state :: AbstractDataProviderState) => Bool
+```julia
+Base.done(provider :: AbstractDataProvider, state :: AbstractDataProviderState) => Bool
+```
 
-    Return `false` if there is more batch to get.
+Return `false` if there is more batch to get.
 
-      Base.eltype(::Type{MyDataProvider}) => MyDataProviderState
+```julia
+Base.eltype(::Type{MyDataProvider}) => MyDataProviderState
+```
 
-    Return the type of the data provider state.
+Return the type of the data provider state.
 
 
 *source:*
-[MXNet/src/io.jl:55](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/io.jl#L55)
+[MXNet/src/io.jl:71](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/io.jl#L71)
 
 ---
 
@@ -331,7 +335,7 @@ Root type for data provider
 Root type for states of data provider
 
 *source:*
-[MXNet/src/io.jl:58](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/io.jl#L58)
+[MXNet/src/io.jl:74](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/io.jl#L74)
 
 ---
 
@@ -341,7 +345,7 @@ Wrapper of built-in `libmxnet` data iterators.
 
 
 *source:*
-[MXNet/src/io.jl:99](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/io.jl#L99)
+[MXNet/src/io.jl:119](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/io.jl#L119)
 
 ---
 
@@ -350,7 +354,7 @@ Wrapper of built-in `libmxnet` data iterators.
 Exception thrown when an error occurred calling MXNet API.
 
 *source:*
-[MXNet/src/init.jl:2](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/init.jl#L2)
+[MXNet/src/init.jl:2](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/init.jl#L2)
 
 ---
 
@@ -368,7 +372,7 @@ Wrapper of the `NDArray` type in `libmxnet`. This is the basic building block
 
 
 *source:*
-[MXNet/src/ndarray.jl:32](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/ndarray.jl#L32)
+[MXNet/src/ndarray.jl:32](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/ndarray.jl#L32)
 
 ---
 
@@ -379,7 +383,7 @@ A tuple of (slice, NDArray). Usually each NDArray resides on a different device,
 
 
 *source:*
-[MXNet/src/io.jl:63](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/io.jl#L63)
+[MXNet/src/io.jl:79](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/io.jl#L79)
 
 ---
 
@@ -403,7 +407,7 @@ which will do inplace adding of the contents of b into a.
 
 
 *source:*
-[MXNet/src/ndarray.jl:234](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/ndarray.jl#L234)
+[MXNet/src/ndarray.jl:234](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/ndarray.jl#L234)
 
 ---
 
@@ -412,5 +416,5 @@ which will do inplace adding of the contents of b into a.
 Utility macro to call MXNet API functions
 
 *source:*
-[MXNet/src/init.jl:41](https://github.com/dmlc/MXNet.jl/tree/aa18e9880436a496c020e8600268bba4e60efdc7/src/init.jl#L41)
+[MXNet/src/init.jl:41](https://github.com/dmlc/MXNet.jl/tree/34a1c89bf2b65351914e00ccd12a033df724a721/src/init.jl#L41)
 
