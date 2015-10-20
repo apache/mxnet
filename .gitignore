@@ -2,3 +2,4 @@
 *.jl.*.cov
 *.jl.mem
 data
+docs/_build
