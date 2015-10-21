@@ -4,6 +4,8 @@ repo_url: https://github.com/dmlc/MXNet.jl
 theme: readthedocs
 pages:
   - Home: index.md
+  - User Guide:
+    - 'Installation Guide' : 'user-guide/install.md'
   - API Documentation:
     - 'ndarray': 'api/ndarray.md'
     - 'symbol': 'api/symbol.md'
