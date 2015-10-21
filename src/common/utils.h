@@ -25,14 +25,14 @@ namespace common {
 // heuristic to dermine number of threads per GPU
 inline int GetNumThreadPerGPU() {
   // This is resource efficient option.
-  return dmlc::GetEnv("MXNET_GPU_WORKER_NTHREADS", 1);
+  return dmlc::GetEnv("MXNET_GPU_WORKER_NTHREADS", 2);
 }
 
 // heuristic to get number of matching colors.
 // this decides how much parallelism we can get in each GPU.
 inline int GetExecNumMatchColor() {
   // This is resource efficient option.
-  int num_match_color = dmlc::GetEnv("MXNET_EXEC_NUM_TEMP", 4);
+  int num_match_color = dmlc::GetEnv("MXNET_EXEC_NUM_TEMP", 1);
   return std::min(num_match_color, GetNumThreadPerGPU());
 }
 

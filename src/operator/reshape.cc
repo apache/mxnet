@@ -11,12 +11,12 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<cpu>() {
-  return new ReshapeOp<cpu>();
+Operator *CreateOp<cpu>(ReshapeParam param) {
+  return new ReshapeOp<cpu>(param);
 }
 
 Operator* ReshapeProp::CreateOperator(Context ctx) const {
-  DO_BIND_DISPATCH(CreateOp);
+  DO_BIND_DISPATCH(CreateOp, param_);
 }
 
 DMLC_REGISTER_PARAMETER(ReshapeParam);
