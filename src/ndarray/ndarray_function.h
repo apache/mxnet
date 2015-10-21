@@ -88,6 +88,15 @@ struct Dot {
   }
 };
 
+
+struct OneHotEncode {
+  inline static TShape GetShape(const TShape &index, const TShape &proptype) {
+    CHECK(index.ndim() == 1 && proptype.ndim() == 2) << "OneHotEncode only support 1d index.";
+    CHECK_EQ(index[0], proptype[0]) << "OneHotEncode shape inconsistent";
+    return proptype;
+  }
+};
+
 struct MatChooseRowElem {
   inline static TShape GetShape(const TShape &lshape, const TShape &rshape) {
     CHECK(lshape.ndim() == 2 && rshape.ndim() == 1)

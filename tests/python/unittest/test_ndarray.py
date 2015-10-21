@@ -79,6 +79,19 @@ def test_ndarray_choose():
                     mx.nd.choose_element(arr, mx.nd.array(indices)).asnumpy())
 
 
+def test_ndarray_choose():
+    shape = (100, 20)
+    npy = np.arange(np.prod(shape)).reshape(shape)
+    arr = mx.nd.array(npy)
+    nrepeat = 3
+    for repeat in range(nrepeat):
+        indices = np.random.randint(shape[1], size=shape[0])
+        npy[:] = 0.0
+        npy[np.arange(shape[0]), indices] = 1.0
+        mx.nd.onehot_encode(mx.nd.array(indices), out=arr)
+        assert same(npy, arr.asnumpy())
+
+
 def test_ndarray_copy():
     c = mx.nd.array(np.random.uniform(-10, 10, (10, 10)))
     d = c.copyto(mx.Context('cpu', 0))
