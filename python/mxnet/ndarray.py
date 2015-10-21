@@ -335,6 +335,28 @@ class NDArray(object):
             raise TypeError('copyto do not support type ' + str(type(other)))
     # pylint: enable= no-member
 
+
+def onehot_encode(indices, out):
+    """One hot encoding indices into matrix out.
+
+    Parameters
+    ----------
+    indices: NDArray
+        An NDArray containing indices of the categorical features.
+
+    out: NDArray
+        The result holder of the encoding.
+
+    Returns
+    -------
+    out: Array
+        Same as out.
+    """
+    # pylint: disable= no-member, protected-access
+    return NDArray._onehot_encode(indices, out, out=out)
+    # pylint: enable= no-member, protected-access
+
+
 def empty(shape, ctx=None):
     """Create an empty uninitialized new NDArray, with specified shape.
 
