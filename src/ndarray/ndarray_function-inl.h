@@ -73,6 +73,16 @@ inline void EvalDot_(const TBlob &lhs, const TBlob &rhs,
 }
 
 template<typename xpu, typename OP>
+inline void EvalOneHot_(const TBlob &index, const TBlob &rhs,
+                        TBlob *ret, RunContext ctx) {
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  ret->get<xpu, 2, real_t>(s)
+      = one_hot_encode(index.get<xpu, 1, real_t>(s),
+                       rhs.shape_[1]);
+}
+
+template<typename xpu, typename OP>
 inline void EvalMatChooseRowElem_(const TBlob &lhs, const TBlob &rhs,
                                   TBlob *ret, RunContext ctx) {
   using namespace mshadow::expr;
@@ -191,6 +201,7 @@ DECL_UNARY(DEVICE, Square, EvalUnary_)
 DECL_UNARY(DEVICE, SquareRoot, EvalUnary_)
 DECL_BINARY(DEVICE, MatChooseRowElem, EvalMatChooseRowElem_)
 DECL_BINARY(DEVICE, Dot, EvalDot_)
+DECL_BINARY(DEVICE, OneHotEncode, EvalOneHot_)
 DECL_BINARY(DEVICE, Plus, EvalBinary_)
 DECL_BINARY(DEVICE, Minus, EvalBinary_)
 DECL_BINARY(DEVICE, Mul, EvalBinary_)
