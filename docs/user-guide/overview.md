@@ -130,6 +130,19 @@ copy(c_exec.outputs[1])  # copy turns NDArray into Julia Array
 #  8.0
 #  8.0
 ```
-**TODO** Provide pointers to further details.
+For neural networks, it is easier to use `simple_bind`. By providing the shape for input arguments, it will perform a shape inference for the rest of the arguments and create the `NDArray`s automatically. In practice, the binding and executing steps are hidden under the `Estimator` interface.
+
+**TODO** Provide pointers to estimator tutorial and further details about binding and symbolic API.
 
 # Low Level Interface
+
+## NDArrays
+
+`NDArray`s are basic building blocks of the actual computations in MXNet. It is like a Julia `Array` object, with some important differences listed here:
+
+* The actual data could live on different `Context` (e.g. GPUs). For some contexts, iterating into the elements one by one is very slow, thus indexing into `NDArray` is not supported in general. The easiest way to inspect the contents of an `NDArray` is to use the `copy` function to copy the contents as a Julia `Array`.
+* Operations on `NDArray`s (including basic arithmetics and neural network related operators) are executed in parallel with automatic dependency tracking to ensure correctness.
+
+While most of the computation is hidden in libmxnet by operators corresponding to various neural network layers. Getting familiar with the `NDArray` API is useful for implementing `Optimizer`s or customized operators in Julia directly.
+
+## Distributed Key-value Store
