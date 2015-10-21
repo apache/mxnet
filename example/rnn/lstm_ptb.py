@@ -10,7 +10,7 @@ PennTreeBank Language Model
 We would like to thanks Wojciech Zaremba for his Torch LSTM code
 
 The data file can be found at:
-https://github.com/wojzaremba/lstm/tree/master/data
+https://github.com/dmlc/web-data/tree/master/mxnet/ptb
 """
 
 def load_data(path, dic=None):
@@ -36,7 +36,8 @@ def load_data(path, dic=None):
 
 def drop_tail(X, seq_len):
     shape = X.shape
-    return X[0 : shape[0]/seq_len *seq_len, :]
+    nstep = int(shape[0] / seq_len)
+    return X[0:(nstep * seq_len), :]
 
 
 def replicate_data(x, batch_size):

@@ -64,7 +64,7 @@ class BlockGradientProp : public OperatorProperty {
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {}
 
   std::map<std::string, std::string> GetParams() const override {
-    return std::map<std:;string, std::string>();
+    return std::map<std::string, std::string>();
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
