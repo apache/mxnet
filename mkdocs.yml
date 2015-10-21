@@ -6,6 +6,7 @@ pages:
   - Home: index.md
   - User Guide:
     - 'Installation Guide' : 'user-guide/install.md'
+    - 'Overview' : 'user-guide/overview.md'
   - API Documentation:
     - 'ndarray': 'api/ndarray.md'
     - 'symbol': 'api/symbol.md'
