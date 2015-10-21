@@ -111,4 +111,25 @@ end
 # fc1_output => (10,64)
 ```
 
+## Binding and Executing
+
+In order to execute the computation graph specified a composed symbol, we will *bind* the free variables to concrete values, specified as `mx.NDArray`s. This will create an `mx.Executor` on a given `mx.Context`. A context describes the computation devices (CPUs, GPUs, etc.) and an executor will carry out the computation (forward/backward) specified in the corresponding symbolic composition.
+```julia
+A = mx.variable(:A)
+B = mx.variable(:B)
+C = A .* B
+a = mx.ones(3) * 4
+b = mx.ones(3) * 2
+c_exec = mx.bind(C, context=mx.cpu(), args=Dict(:A => a, :B => b))
+
+mx.forward(c_exec)
+copy(c_exec.outputs[1])  # copy turns NDArray into Julia Array
+# =>
+# 3-element Array{Float32,1}:
+#  8.0
+#  8.0
+#  8.0
+```
+**TODO** Provide pointers to further details.
+
 # Low Level Interface
