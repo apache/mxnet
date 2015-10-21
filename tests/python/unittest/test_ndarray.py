@@ -14,7 +14,7 @@ def same(a, b):
     return np.sum(a != b) == 0
 
 
-def check_with_uniform(uf, arg_shapes, dim=None):
+def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10):
     """check function consistency with uniform random numbers"""
     if isinstance(arg_shapes, int):
         assert dim
@@ -23,13 +23,17 @@ def check_with_uniform(uf, arg_shapes, dim=None):
     ndarray_arg = []
     numpy_arg = []
     for s in arg_shapes:
-        npy = np.random.uniform(-10, 10, s)
+        npy = np.random.uniform(rmin, 10, s)
         narr = mx.nd.array(npy)
         ndarray_arg.append(narr)
         numpy_arg.append(npy)
     out1 = uf(*ndarray_arg)
-    out2 = uf(*numpy_arg)
+    if npuf is None:
+        out2 = uf(*numpy_arg)
+    else:
+        out2 = npuf(*numpy_arg)
     assert out1.shape == out2.shape
+    dif = reldiff(out1.asnumpy(), out2)
     assert reldiff(out1.asnumpy(), out2) < 1e-6
 
 
@@ -48,6 +52,9 @@ def test_ndarray_elementwise():
             check_with_uniform(lambda x, y: x - y, 2, dim)
             check_with_uniform(lambda x, y: x * y, 2, dim)
             check_with_uniform(lambda x, y: x / y, 2, dim)
+            check_with_uniform(mx.nd.sqrt, 2, dim, np.sqrt, rmin=0)
+            check_with_uniform(mx.nd.square, 2, dim, np.square, rmin=0)
+
 
 def test_ndarray_negate():
     npy = np.random.uniform(-10, 10, (2,3,4))
@@ -59,6 +66,17 @@ def test_ndarray_negate():
     # as inplace operation, so the contents of arr does not change after
     # we compute (-arr)
     assert reldiff(npy, arr.asnumpy()) < 1e-6
+
+
+def test_ndarray_choose():
+    shape = (100, 20)
+    npy = np.arange(np.prod(shape)).reshape(shape)
+    arr = mx.nd.array(npy)
+    nrepeat = 3
+    for repeat in range(nrepeat):
+        indices = np.random.randint(shape[1], size=shape[0])
+        assert same(npy[np.arange(shape[0]), indices],
+                    mx.nd.choose_element(arr, mx.nd.array(indices)).asnumpy())
 
 
 def test_ndarray_copy():
@@ -158,3 +176,4 @@ if __name__ == '__main__':
     test_ndarray_scalar()
     test_clip()
     test_dot()
+    test_ndarray_choose()
