@@ -1,3 +1,6 @@
+################################################################################
+# Dataset related utilities
+################################################################################
 function get_data_dir()
   data_dir = joinpath(Pkg.dir("MXNet"), "data")
   mkpath(data_dir)
@@ -37,4 +40,30 @@ function get_cifar10()
 
   filenames[:mean] = joinpath(cifar10_dir, "cifar/cifar_mean.bin")
   return filenames
+end
+
+
+################################################################################
+# Internal Utilities
+################################################################################
+function _format_docstring(narg::Int, arg_names::Ref{char_pp}, arg_types::Ref{char_pp}, arg_descs::Ref{char_pp}, remove_dup::Bool=true)
+  param_keys = Set{AbstractString}()
+
+  arg_names  = pointer_to_array(arg_names[], narg)
+  arg_types  = pointer_to_array(arg_types[], narg)
+  arg_descs  = pointer_to_array(arg_descs[], narg)
+  docstrings = AbstractString[]
+
+  for i = 1:narg
+    arg_name = bytestring(arg_names[i])
+    if arg_name ∈ param_keys && remove_dup
+      continue
+    end
+    push!(param_keys, arg_name)
+
+    arg_type = bytestring(arg_types[i])
+    arg_desc = bytestring(arg_descs[i])
+    push!(docstrings, "* `$arg_name`: $arg_type\n\n  $arg_desc\n\n")
+  end
+  return "**Parameters**\n\n$(join(docstrings, "\n"))"
 end

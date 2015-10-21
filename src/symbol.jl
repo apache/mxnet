@@ -256,6 +256,14 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
   kv_nargs_s = bytestring(ref_kv_nargs[])
   kv_nargs   = symbol(kv_nargs_s)
 
+  f_desc = bytestring(ref_desc[]) * "\n\n"
+  if !isempty(kv_nargs_s)
+    f_desc *= "This function support variable length positional `Symbol` inputs.\n\n"
+  end
+  f_desc *= _format_docstring(Int(ref_nargs[]), ref_arg_names, ref_arg_types, ref_arg_descs)
+  f_desc *= "* `name`: Julia Symbol (e.g. `:my_symbol`), optional.\n\n  The name of the symbol.\n\n"
+  f_desc *= "**Returns**\n\n`symbol`: `mx.Symbol`\n\n  The constructed symbol."
+
   # function $func_name(args...; kwargs...)
   func_head = Expr(:call, func_name, Expr(:parameters, Expr(:..., :kwargs)), Expr(:..., :args))
   func_body = quote
@@ -324,8 +332,8 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
   func_def = Expr(:function, func_head, Expr(:block, func_body))
   eval(func_def)
 
-  # TODO: add doc string
-  # eval(:(@doc($doc_str, $func_name)))
+  # add doc string
+  eval(:(@doc($f_desc, $func_name)))
 end
 
 function _import_atomic_symbol_creators()

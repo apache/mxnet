@@ -32,7 +32,7 @@ object (`NDArray`) is returned. Otherwise, a tuple containing all the outputs wi
 
 
 *source:*
-[MXNet/src/ndarray.jl:380](https://github.com/dmlc/MXNet.jl/tree/d13ddc6542bdb00e26b87e721a9b0e79a22bbd66/src/ndarray.jl#L380)
+[MXNet/src/ndarray.jl:380](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/ndarray.jl#L380)
 
 ---
 
@@ -41,7 +41,7 @@ object (`NDArray`) is returned. Otherwise, a tuple containing all the outputs wi
 Copy data from NDArray to Julia Array
 
 *source:*
-[MXNet/src/ndarray.jl:187](https://github.com/dmlc/MXNet.jl/tree/d13ddc6542bdb00e26b87e721a9b0e79a22bbd66/src/ndarray.jl#L187)
+[MXNet/src/ndarray.jl:187](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/ndarray.jl#L187)
 
 ---
 
@@ -50,7 +50,7 @@ Copy data from NDArray to Julia Array
 Copy data between NDArrays
 
 *source:*
-[MXNet/src/ndarray.jl:175](https://github.com/dmlc/MXNet.jl/tree/d13ddc6542bdb00e26b87e721a9b0e79a22bbd66/src/ndarray.jl#L175)
+[MXNet/src/ndarray.jl:175](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/ndarray.jl#L175)
 
 ---
 
@@ -59,7 +59,7 @@ Copy data between NDArrays
 Copy data from Julia Array to NDArray
 
 *source:*
-[MXNet/src/ndarray.jl:195](https://github.com/dmlc/MXNet.jl/tree/d13ddc6542bdb00e26b87e721a9b0e79a22bbd66/src/ndarray.jl#L195)
+[MXNet/src/ndarray.jl:195](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/ndarray.jl#L195)
 
 ---
 
@@ -68,7 +68,7 @@ Copy data from Julia Array to NDArray
 Create copy: NDArray -> Julia Array
 
 *source:*
-[MXNet/src/ndarray.jl:205](https://github.com/dmlc/MXNet.jl/tree/d13ddc6542bdb00e26b87e721a9b0e79a22bbd66/src/ndarray.jl#L205)
+[MXNet/src/ndarray.jl:205](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/ndarray.jl#L205)
 
 ---
 
@@ -77,7 +77,7 @@ Create copy: NDArray -> Julia Array
 Create copy: NDArray -> NDArray in a given context
 
 *source:*
-[MXNet/src/ndarray.jl:211](https://github.com/dmlc/MXNet.jl/tree/d13ddc6542bdb00e26b87e721a9b0e79a22bbd66/src/ndarray.jl#L211)
+[MXNet/src/ndarray.jl:211](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/ndarray.jl#L211)
 
 ---
 
@@ -86,7 +86,7 @@ Create copy: NDArray -> NDArray in a given context
 Create copy: Julia Array -> NDArray in a given context
 
 *source:*
-[MXNet/src/ndarray.jl:217](https://github.com/dmlc/MXNet.jl/tree/d13ddc6542bdb00e26b87e721a9b0e79a22bbd66/src/ndarray.jl#L217)
+[MXNet/src/ndarray.jl:217](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/ndarray.jl#L217)
 
 ---
 
@@ -95,7 +95,7 @@ Create copy: Julia Array -> NDArray in a given context
 Create NDArray and initialize with 1
 
 *source:*
-[MXNet/src/ndarray.jl:118](https://github.com/dmlc/MXNet.jl/tree/d13ddc6542bdb00e26b87e721a9b0e79a22bbd66/src/ndarray.jl#L118)
+[MXNet/src/ndarray.jl:118](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/ndarray.jl#L118)
 
 ---
 
@@ -104,7 +104,7 @@ Create NDArray and initialize with 1
 Assign all elements of an NDArray to a scalar
 
 *source:*
-[MXNet/src/ndarray.jl:155](https://github.com/dmlc/MXNet.jl/tree/d13ddc6542bdb00e26b87e721a9b0e79a22bbd66/src/ndarray.jl#L155)
+[MXNet/src/ndarray.jl:155](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/ndarray.jl#L155)
 
 ---
 
@@ -116,7 +116,7 @@ Get the shape of an `NDArray`. Note the shape is converted to Julia convention.
 
 
 *source:*
-[MXNet/src/ndarray.jl:84](https://github.com/dmlc/MXNet.jl/tree/d13ddc6542bdb00e26b87e721a9b0e79a22bbd66/src/ndarray.jl#L84)
+[MXNet/src/ndarray.jl:84](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/ndarray.jl#L84)
 
 ---
 
@@ -130,7 +130,7 @@ used in data parallelization to split mini-batch into sub-batches for different 
 
 
 *source:*
-[MXNet/src/ndarray.jl:137](https://github.com/dmlc/MXNet.jl/tree/d13ddc6542bdb00e26b87e721a9b0e79a22bbd66/src/ndarray.jl#L137)
+[MXNet/src/ndarray.jl:137](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/ndarray.jl#L137)
 
 ---
 
@@ -139,7 +139,7 @@ used in data parallelization to split mini-batch into sub-batches for different 
 Create zero-ed NDArray of specific shape
 
 *source:*
-[MXNet/src/ndarray.jl:105](https://github.com/dmlc/MXNet.jl/tree/d13ddc6542bdb00e26b87e721a9b0e79a22bbd66/src/ndarray.jl#L105)
+[MXNet/src/ndarray.jl:105](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/ndarray.jl#L105)
 
 ---
 
@@ -157,7 +157,7 @@ have shape (28,28,1,100).
 
 
 *source:*
-[MXNet/src/ndarray.jl:32](https://github.com/dmlc/MXNet.jl/tree/d13ddc6542bdb00e26b87e721a9b0e79a22bbd66/src/ndarray.jl#L32)
+[MXNet/src/ndarray.jl:32](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/ndarray.jl#L32)
 
 ---
 
@@ -185,5 +185,5 @@ which will do inplace adding of the contents of b into a.
 
 
 *source:*
-[MXNet/src/ndarray.jl:247](https://github.com/dmlc/MXNet.jl/tree/d13ddc6542bdb00e26b87e721a9b0e79a22bbd66/src/ndarray.jl#L247)
+[MXNet/src/ndarray.jl:247](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/ndarray.jl#L247)
 
