@@ -58,9 +58,10 @@ def cifar10(batch_size, input_shape, num_parts=1, part_index=0):
         rand_mirror = False,
         shuffle     = False,
         round_batch = False,
-        data_shape  = (3,28,28),
+        data_shape  = input_shape,
         batch_size  = batch_size)
     return (train, val)
+
 
 def accuracy(model, data):
     """evaluate acc"""
