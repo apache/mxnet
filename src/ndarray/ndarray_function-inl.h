@@ -18,14 +18,6 @@
   }
 #endif
 
-#ifndef DECL_UNARY
-#define DECL_UNARY(XPU, OP, FUN)                                        \
-  template<>                                                            \
-  void Eval<XPU, OP>(const TBlob &src, TBlob *ret, RunContext ctx) {    \
-    FUN<XPU, OP>(src, ret, ctx);                                        \
-  }
-#endif
-
 #ifndef DECL_SCALAR
 #define DECL_SCALAR(XPU, OP, FUN, REVERSE)                              \
   template<>                                                            \
@@ -51,15 +43,6 @@ inline void EvalBinary_(const TBlob &lhs, const TBlob &rhs,
   ret->FlatTo2D<xpu, real_t>(s)
       = F<typename OP::mshadow_op>(lhs.FlatTo2D<xpu, real_t>(s),
                                    rhs.FlatTo2D<xpu, real_t>(s));
-}
-
-template<typename xpu, typename OP>
-inline void EvalUnary_(const TBlob &src,
-                       TBlob *ret, RunContext ctx) {
-  using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  ret->FlatTo2D<xpu, real_t>(s)
-      = F<typename OP::mshadow_op>(src.FlatTo2D<xpu, real_t>(s));
 }
 
 template<typename xpu, typename OP>
@@ -197,8 +180,6 @@ void ElementwiseSum<DEVICE>(const std::vector<TBlob> source,
 }
 
 // declarations
-DECL_UNARY(DEVICE, Square, EvalUnary_)
-DECL_UNARY(DEVICE, SquareRoot, EvalUnary_)
 DECL_BINARY(DEVICE, MatChooseRowElem, EvalMatChooseRowElem_)
 DECL_BINARY(DEVICE, Dot, EvalDot_)
 DECL_BINARY(DEVICE, OneHotEncode, EvalOneHot_)
