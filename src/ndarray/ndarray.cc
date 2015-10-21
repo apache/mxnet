@@ -155,6 +155,53 @@ void ScalarOp(const NDArray &lhs,
   }
 }
 
+/*!
+ * \brief run a unary operation.
+ * \param src source operand
+ * \param out the output ndarray
+ * \param unary_op the real
+ */
+template<typename OP>
+void UnaryOp(const NDArray &src,
+             NDArray *out) {
+  if (out->is_none()) {
+    *out = NDArray(OP::GetShape(src.shape()), src.ctx(), true);
+  } else {
+    CHECK(out->ctx() == src.ctx()) << "target context mismatch";
+    CHECK(out->shape() == OP::GetShape(src.shape())) << "target shape mismatch";
+  }
+  // important: callback must always capture by value
+  NDArray ret = *out;
+  // get the const variables
+  std::vector<Engine::VarHandle> const_vars;
+  if (src.var() != ret.var()) const_vars.push_back(src.var());
+
+  // redirect everything to mshadow operations
+  switch (src.ctx().dev_mask()) {
+    case cpu::kDevMask: {
+      Engine::Get()->PushSync([src, ret](RunContext ctx) {
+          ret.CheckAndAlloc();
+          TBlob tmp = ret.data();
+          ndarray::Eval<cpu, OP>(src.data(), &tmp, ctx);
+        }, src.ctx(), const_vars, {ret.var()});
+      break;
+    }
+#if MXNET_USE_CUDA
+    case gpu::kDevMask: {
+      Engine::Get()->PushSync([src, ret](RunContext ctx) {
+          ret.CheckAndAlloc();
+          TBlob tmp = ret.data();
+          ndarray::Eval<gpu, OP>(src.data(), &tmp, ctx);
+          // Wait GPU kernel to complete
+          ctx.get_stream<gpu>()->Wait();
+        }, src.ctx(), const_vars, {ret.var()});
+      break;
+    }
+#endif
+    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+  }
+}
+
 void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
   CHECK(from.shape() == to->shape())
       << "operands shape mismatch";
@@ -601,6 +648,13 @@ void NDArray::SyncCopyToCPU(real_t *data, size_t size) const {
 // those with underscore will be registered at NDArray
 MXNET_REGISTER_NDARRAY_FUN(_set_value).set_function(SetValueOp);
 
+
+MXNET_REGISTER_NDARRAY_FUN(square).set_function(UnaryOp<ndarray::Square>)
+.describe("Take square of the src");
+
+MXNET_REGISTER_NDARRAY_FUN(sqrt).set_function(UnaryOp<ndarray::SquareRoot>)
+.describe("Take square root of the src");
+
 MXNET_REGISTER_NDARRAY_FUN(_plus).set_function(BinaryOp<ndarray::Plus>);
 MXNET_REGISTER_NDARRAY_FUN(_minus).set_function(BinaryOp<ndarray::Minus>);
 MXNET_REGISTER_NDARRAY_FUN(_mul).set_function(BinaryOp<ndarray::Mul>);
@@ -608,6 +662,12 @@ MXNET_REGISTER_NDARRAY_FUN(_div).set_function(BinaryOp<ndarray::Div>);
 
 MXNET_REGISTER_NDARRAY_FUN(dot).set_function(BinaryOp<ndarray::Dot>)
 .describe("Calcuate 2D matrix multiplication");
+
+MXNET_REGISTER_NDARRAY_FUN(choose_element)
+.set_function(BinaryOp<ndarray::MatChooseRowElem>)
+.describe("Choose one element from each line(row for python, column for R/Julia)"
+          " in lhs according to index indicated by rhs");
+
 // register API function
 // those with underscore will be registered at NDArray
 MXNET_REGISTER_NDARRAY_FUN(_plus_scalar).set_function(ScalarOp<ndarray::Plus, false>);
