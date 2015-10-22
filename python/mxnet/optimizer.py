@@ -9,11 +9,18 @@ class Optimizer(object):
         of Optimizer."""
         __optimizers__ = {}
 
-        def __new__(meta, name, bases, attrs):
-            cls = type.__new__(meta, name, bases, attrs)
-            #Allow overriding of existing optimizer.
+        def __new__(mcs, name, bases, attrs):
+            cls = type.__new__(mcs, name, bases, attrs)
+            #Allow overriding of existing optimizer, but give a warning.
             #Always keep the last one.
-            meta.__optimizers__[cls.__name__.lower()] = cls
+            cls_name = cls.__name__.lower()
+            if cls_name in mcs.__optimizers__:
+                print 'WARNING: New optimizer %s.%s is overriding ' \
+                      'existing optimizer %s.%s'%(
+                          cls.__module__, cls.__name__,
+                          mcs.__optimizers__[cls_name].__module__,
+                          mcs.__optimizers__[cls_name].__name__)
+            mcs.__optimizers__[cls_name] = cls
             return cls
 
     def __init__(self, rescale_grad=1):
@@ -160,8 +167,8 @@ def create(name, rescale_grad=1, **kwargs):
     """
     if name in Optimizer.__optimizers__:
         return Optimizer.__optimizers__[name.lower()](
-                        rescale_grad=rescale_grad,
-                        **kwargs)
+            rescale_grad=rescale_grad,
+            **kwargs)
     else:
         raise ValueError('Cannot find optimizer %s' % name)
 
