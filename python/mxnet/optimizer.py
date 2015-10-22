@@ -7,7 +7,7 @@ class Optimizer(object):
     opt_registry = {}
 
     @staticmethod
-    def Register(klass):
+    def register(klass):
         """Register optimizers to the optimizer factory"""
         assert(isinstance(klass, type))
         name = klass.__name__.lower()
@@ -21,7 +21,7 @@ class Optimizer(object):
         return klass
 
     @staticmethod
-    def CreateOptimizer(name, rescale_grad=1, **kwargs):
+    def create_optimizer(name, rescale_grad=1, **kwargs):
         """Create an optimizer with specified name.
 
         Parameters
@@ -70,7 +70,7 @@ class Optimizer(object):
         """Update the parameters. override in implementations"""
 
 #convenience wrapper for Optimizer.Register
-register = Optimizer.Register
+register = Optimizer.register
 
 @register
 class SGD(Optimizer):
@@ -175,7 +175,7 @@ class Test(Optimizer):
         state[:] = weight
 
 #backward compatibility wrapper for Optimizer.CreateOptimizer
-create = Optimizer.CreateOptimizer
+create = Optimizer.create_optimizer
 
 def get_updater(optimizer):
     """Return a clossure of the updater needed for kvstore
