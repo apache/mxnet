@@ -173,7 +173,7 @@ class FlattenProp : public ReshapeProp {
     for (uint32_t i = 1; i < dshape.ndim(); ++i) {
       target_dim *= dshape[i];
     }
-    out_shape->push_back(mshadow::Shape4(dshape[0], 1, 1, target_dim));
+    out_shape->push_back(mshadow::Shape2(dshape[0], target_dim));
     return true;
   }
 
