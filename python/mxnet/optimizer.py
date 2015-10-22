@@ -15,11 +15,11 @@ class Optimizer(object):
             #Always keep the last one.
             cls_name = cls.__name__.lower()
             if cls_name in mcs.__optimizers__:
-                print 'WARNING: New optimizer %s.%s is overriding ' \
+                print('WARNING: New optimizer %s.%s is overriding ' \
                       'existing optimizer %s.%s'%(
                           cls.__module__, cls.__name__,
                           mcs.__optimizers__[cls_name].__module__,
-                          mcs.__optimizers__[cls_name].__name__)
+                          mcs.__optimizers__[cls_name].__name__))
             mcs.__optimizers__[cls_name] = cls
             return cls
 
@@ -165,7 +165,7 @@ def create(name, rescale_grad=1, **kwargs):
     opt : Optimizer
         The result optimizer.
     """
-    if name in Optimizer.__optimizers__:
+    if name.lower() in Optimizer.__optimizers__:
         return Optimizer.__optimizers__[name.lower()](
             rescale_grad=rescale_grad,
             **kwargs)
