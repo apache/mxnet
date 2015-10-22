@@ -4,8 +4,21 @@ from .ndarray import NDArray, zeros, clip
 
 class Optimizer(object):
     """Base class of all optimizers."""
+    class __metaclass__(type):
+        """Meta class for tracking all subclasses(implementations)
+        of Optimizer."""
+        __optimizers__ = {}
+
+        def __new__(meta, name, bases, attrs):
+            cls = type.__new__(meta, name, bases, attrs)
+            #Allow overriding of existing optimizer.
+            #Always keep the last one.
+            meta.__optimizers__[cls.__name__] = cls
+            return cls
+
     def __init__(self, rescale_grad=1):
         self.iteration = 0
+        self.rescale_grad = rescale_grad
 
     def begin_round(self, iteration):
         """Function called to notify beginning of iteration.
@@ -52,7 +65,6 @@ class SGD(Optimizer):
         self.lr = learning_rate
         self.momentum = momentum
         self.wd = wd
-        self.rescale_grad = rescale_grad
         self.clip_gradient = clip_gradient
         self.lr_scheduler = lr_scheduler
         if lr_scheduler != None:
@@ -112,12 +124,11 @@ class SGD(Optimizer):
             weight[:] += -lr * (grad * self.rescale_grad + self.wd * weight)
 
 
-class Test(object):
+class Test(Optimizer):
     """For test use"""
     def __init__(self, rescale_grad=1):
-        self.rescale_grad = rescale_grad
-
-
+        super(Test, self).__init__(rescale_grad)
+        
     # pylint: disable=no-self-use
     def create_state(self, index, weight):
         """Create a state to duplicate weight"""
@@ -147,10 +158,16 @@ def create(name, rescale_grad=1, **kwargs):
     opt : Optimizer
         The result optimizer.
     """
+    #TODO(eric): kept for backward compatibility.
+    #            remove after all downstream functions move to 
+    #            new naming standard.
     if name == 'sgd' or name == 'SGD':
         return SGD(rescale_grad=rescale_grad, **kwargs)
     if name == 'test':
         return Test(rescale_grad=rescale_grad)
+
+    if name in Optimizer.__optimizers__:
+        return Optimizer.__optimizers__[name](rescale_grad=rescale_grad, **kwargs)
     else:
         raise ValueError('Cannot find optimizer %s' % name)
 
