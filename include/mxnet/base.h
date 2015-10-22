@@ -59,7 +59,7 @@
 #define MXNET_API __declspec(dllimport)
 #endif
 #else
-#define MXAPI
+#define MXNET_API
 #endif
 
 /*! \brief namespace of mxnet */
