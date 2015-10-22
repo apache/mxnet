@@ -26,6 +26,16 @@ where the last 10 units correspond to the 10 output classes (digits 0,...,9). We
 ```julia
 mlp  = mx.Softmax(data = fc3, name=:softmax)
 ```
+As we can see, the MLP is just a chain of layers. For this case, we can also use the `mx.chain` macro. The same architecture above can be defined as
+```julia
+mlp = @mx.chain mx.Variable(:data)             =>
+  mx.FullyConnected(name=:fc1, num_hidden=128) =>
+  mx.Activation(name=:relu1, act_type=:relu)   =>
+  mx.FullyConnected(name=:fc2, num_hidden=64)  =>
+  mx.Activation(name=:relu2, act_type=:relu)   =>
+  mx.FullyConnected(name=:fc3, num_hidden=10)  =>
+  mx.Softmax(name=:softmax)
+```
 
 After defining the architecture, we are ready to load the MNIST data. MXNet.jl provide built-in data providers for the MNIST dataset, which could automatically download the dataset into `Pkg.dir("MXNet")/data/mnist` if necessary. We wrap the code to construct the data provider into `mnist-data.jl` so that it could be shared by both the MLP example and the LeNet ConvNets example.
 ```julia
@@ -43,9 +53,7 @@ You can use a `mx.gpu()` or if a list of devices (e.g. `[mx.gpu(0), mx.gpu(1)]`)
 
 The last thing we need to specify is the optimization algorithm (a.k.a. *optimizer*) to use. We use the basic SGD with a fixed learning rate 0.1 and momentum 0.9:
 ```julia
-optimizer = mx.SGD(lr_scheduler=mx.FixedLearningRateScheduler(0.1),
-                   mom_scheduler=mx.FixedMomentumScheduler(0.9),
-                   weight_decay=0.00001)
+optimizer = mx.SGD(lr=0.1, momentum=0.9, weight_decay=0.00001)
 ```
 Now we can do the training. Here the `epoch_stop` parameter specifies that we want to train for 20 epochs. We also supply a `eval_data` to monitor validation accuracy on the validation set.
 ```julia

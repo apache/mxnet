@@ -36,13 +36,10 @@ train_provider, eval_provider = get_mnist_providers(batch_size; flat=false)
 
 #--------------------------------------------------------------------------------
 # fit model
-dev = mx.Context(mx.GPU)
-estimator = mx.FeedForward(lenet, context=dev)
+estimator = mx.FeedForward(lenet, context=mx.gpu())
 
 # optimizer
-optimizer = mx.SGD(lr_scheduler=mx.FixedLearningRateScheduler(0.05),
-                   mom_scheduler=mx.FixedMomentumScheduler(0.9),
-                   weight_decay=0.00001)
+optimizer = mx.SGD(lr=0.05, momentum=0.9, weight_decay=0.00001)
 
 # fit parameters
 mx.fit(estimator, optimizer, train_provider, epoch_stop=20, eval_data=eval_provider)
