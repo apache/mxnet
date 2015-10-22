@@ -257,7 +257,7 @@ We can also specify the automatic generated names explicitly:
 ```python
 >>> net = mx.symbol.Variable('data')
 >>> w = mx.symbol.Variable('myweight')
->>> net = sym.FullyConnected(data=data, weight=w, name='fc1', num_hidden=128)
+>>> net = sym.FullyConnected(data=net, weight=w, name='fc1', num_hidden=128)
 >>> net.list_arguments()
 ['data', 'myweight', 'fc1_bias']
 ```

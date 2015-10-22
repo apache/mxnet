@@ -12,6 +12,7 @@ deep learning programs together to maximize the efficiency and your productivity
 
 What's New
 ----------
+* [LSTM Example by using symbolic API](https://github.com/dmlc/mxnet/tree/master/example/rnn)
 * [MXNet R Package brings Deep learning for R!](https://github.com/dmlc/mxnet/tree/master/R-package)
 * [Note on Dependency Engine for Deep Learning](http://mxnet.readthedocs.org/en/latest/developer-guide/note_engine.html)
 

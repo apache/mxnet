@@ -24,12 +24,6 @@ struct BinaryBase {
   }
 };
 
-struct UnaryBase {
-  inline static TShape GetShape(const TShape &shape) {
-    return shape;
-  }
-};
-
 // operators
 struct Plus : public BinaryBase {
   typedef mshadow::op::plus mshadow_op;
@@ -45,14 +39,6 @@ struct Mul : public BinaryBase {
 
 struct Div : public BinaryBase {
   typedef mshadow::op::div mshadow_op;
-};
-
-struct Square : public UnaryBase {
-  typedef op::mshadow_op::square mshadow_op;
-};
-
-struct SquareRoot : public UnaryBase {
-  typedef op::mshadow_op::square_root mshadow_op;
 };
 
 struct ClipMin : public BinaryBase {

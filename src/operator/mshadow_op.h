@@ -80,7 +80,6 @@ struct tanh_grad {
   }
 };
 
-
 struct square {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return a * a;
@@ -107,6 +106,7 @@ struct square_root {
     return sqrt(a);
   }
 };
+
 }  // namespace mshadow_op
 }  // namespace op
 }  // namespace mxnet
