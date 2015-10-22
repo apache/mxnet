@@ -45,7 +45,7 @@ enum class FnProperty {
 /*!
  * \brief Dependency engine that schedules operations.
 */
-class Engine {
+class MXNET_API Engine {
  public:
   /*!
    * \brief OnComplete Callback to the engine,

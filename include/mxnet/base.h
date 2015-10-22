@@ -49,6 +49,19 @@
 #endif
 #endif
 
+/*!
+* \brief define dllexport for Visual Studio
+*/
+#ifdef _MSC_VER
+#ifdef MXNET_EXPORTS
+#define MXNET_API __declspec(dllexport)
+#else
+#define MXNET_API __declspec(dllimport)
+#endif
+#else
+#define MXNET_API
+#endif
+
 /*! \brief namespace of mxnet */
 namespace mxnet {
 /*! \brief mxnet cpu */
