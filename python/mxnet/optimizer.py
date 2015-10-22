@@ -13,7 +13,7 @@ class Optimizer(object):
             cls = type.__new__(meta, name, bases, attrs)
             #Allow overriding of existing optimizer.
             #Always keep the last one.
-            meta.__optimizers__[cls.__name__] = cls
+            meta.__optimizers__[cls.__name__.lower()] = cls
             return cls
 
     def __init__(self, rescale_grad=1):
@@ -128,7 +128,7 @@ class Test(Optimizer):
     """For test use"""
     def __init__(self, rescale_grad=1):
         super(Test, self).__init__(rescale_grad)
-        
+
     # pylint: disable=no-self-use
     def create_state(self, index, weight):
         """Create a state to duplicate weight"""
@@ -158,16 +158,10 @@ def create(name, rescale_grad=1, **kwargs):
     opt : Optimizer
         The result optimizer.
     """
-    #TODO(eric): kept for backward compatibility.
-    #            remove after all downstream functions move to 
-    #            new naming standard.
-    if name == 'sgd' or name == 'SGD':
-        return SGD(rescale_grad=rescale_grad, **kwargs)
-    if name == 'test':
-        return Test(rescale_grad=rescale_grad)
-
     if name in Optimizer.__optimizers__:
-        return Optimizer.__optimizers__[name](rescale_grad=rescale_grad, **kwargs)
+        return Optimizer.__optimizers__[name.lower()](
+                        rescale_grad=rescale_grad,
+                        **kwargs)
     else:
         raise ValueError('Cannot find optimizer %s' % name)
 
