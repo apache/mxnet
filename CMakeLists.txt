@@ -33,9 +33,6 @@ else(MSVC)
 endif(MSVC)
 
 if(USE_OPENCV)
-  if(MSVC)
-    set(OpenCV_STATIC OFF)
-  endif()
   find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
   if(NOT OpenCV_FOUND) # if not OpenCV 3.x, then imgcodecs are not found
     find_package(OpenCV REQUIRED COMPONENTS core highgui imgproc)
@@ -68,7 +65,9 @@ if(USE_CUDNN)
 endif()
 
 add_subdirectory("dmlc-core")
-add_subdirectory("ps-lite")
+if(NOT MSVC)
+  add_subdirectory("ps-lite")
+endif()
 
 mxnet_source_group("Source"   GLOB_RECURSE "src/*.cc")
 mxnet_source_group("Source\\Cuda" GLOB_RECURSE "src/*.cu")
@@ -93,8 +92,10 @@ endif()
 add_library(mxnet SHARED ${SOURCE})
 target_link_libraries(mxnet ${mshadow_LINKER_LIBS})
 target_link_libraries(mxnet dmlccore)
-target_link_libraries(mxnet pslite)
-target_link_libraries(mxnet ${pslite_LINKER_LIBS})
+if(NOT MSVC)
+  target_link_libraries(mxnet pslite)
+  target_link_libraries(mxnet ${pslite_LINKER_LIBS})
+endif()
 set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
 
 # ---[ Linter target
