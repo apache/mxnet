@@ -1,27 +1,39 @@
 # pylint: disable=fixme, invalid-name, unused-argument, too-many-arguments, no-name-in-module
 """Common Optimization algorithms with regularizations."""
 from .ndarray import NDArray, zeros, clip
+from six import with_metaclass
 
-class Optimizer(object):
+class MetaOptimizer(type):
+    """Meta class for tracking all subclasses(implementations)
+    of Optimizer."""
+    __optimizers__ = {}
+
+    def __new__(mcs, name, bases, attrs):
+        cls = type.__new__(mcs, name, bases, attrs)
+        #Allow overriding of existing optimizer, but give a warning.
+        #Always keep the last one.
+        cls_name = cls.__name__.lower()
+        if cls_name in mcs.__optimizers__:
+            print('WARNING: New optimizer %s.%s is overriding ' \
+                  'existing optimizer %s.%s'%(
+                      cls.__module__, cls.__name__,
+                      mcs.__optimizers__[cls_name].__module__,
+                      mcs.__optimizers__[cls_name].__name__))
+        mcs.__optimizers__[cls_name] = cls
+        return cls
+
+
+class Optimizer(with_metaclass(MetaOptimizer, object)):
     """Base class of all optimizers."""
-    class __metaclass__(type):
-        """Meta class for tracking all subclasses(implementations)
-        of Optimizer."""
-        __optimizers__ = {}
 
-        def __new__(mcs, name, bases, attrs):
-            cls = type.__new__(mcs, name, bases, attrs)
-            #Allow overriding of existing optimizer, but give a warning.
-            #Always keep the last one.
-            cls_name = cls.__name__.lower()
-            if cls_name in mcs.__optimizers__:
-                print('WARNING: New optimizer %s.%s is overriding ' \
-                      'existing optimizer %s.%s'%(
-                          cls.__module__, cls.__name__,
-                          mcs.__optimizers__[cls_name].__module__,
-                          mcs.__optimizers__[cls_name].__name__))
-            mcs.__optimizers__[cls_name] = cls
-            return cls
+    @staticmethod
+    def CreateOptimizer(name, rescale_grad=1, **kwargs):
+        if name.lower() in Optimizer.__optimizers__:
+            return Optimizer.__optimizers__[name.lower()](
+                rescale_grad=rescale_grad,
+                **kwargs)
+        else:
+            raise ValueError('Cannot find optimizer %s' % name)
 
     def __init__(self, rescale_grad=1):
         self.iteration = 0
@@ -165,12 +177,8 @@ def create(name, rescale_grad=1, **kwargs):
     opt : Optimizer
         The result optimizer.
     """
-    if name.lower() in Optimizer.__optimizers__:
-        return Optimizer.__optimizers__[name.lower()](
-            rescale_grad=rescale_grad,
-            **kwargs)
-    else:
-        raise ValueError('Cannot find optimizer %s' % name)
+    return Optimizer.CreateOptimizer(name, 
+        rescale_grad=rescale_grad, **kwargs)
 
 def get_updater(optimizer):
     """Return a clossure of the updater needed for kvstore
