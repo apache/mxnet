@@ -7,9 +7,12 @@ if you have ideas to improve this page, please send a pull request!
 
 Contents
 --------
-- [Build MXNet Library](#build-mxnet-library)
-  - Introduces how to build the mxnet core library for all packages.
-  - Supported platforms: linux, windows, osx
+- [Building MXNet Library](#build-mxnet-library)
+  - [Prerequisites](#prerequisites)
+  - [Building on Linux](#building-on-linux)
+  - [Building on OSX](#building-on-osx)
+  - [Building on Windows](#building-on-windows)
+  - [Installing pre-built packages on Windows](#installing-pre-built-packages-on-windows)
 - [Advanced Build Configurations](#advanced-build-configuration)
   - Introduces how to build mxnet with advanced features such as HDFS/S3 support, CUDNN
 - [Python Package Installation](#python-package-installation)
@@ -17,10 +20,13 @@ Contents
 
 Build MXNet Library
 -------------------
+
+### Prerequisites
+
 MXNet have a general runtime library that can be used by various packages such as python, R and Julia.
 This section gives details about how to build the mxnet library.
 - On Linux/OSX the target library will be ```libmxnet.so```
-- On Windows the target libary is ```mxnet.dll```
+- On Windows the target libary is ```libmxnet.dll```
 
 Things to do before get started:
 
@@ -36,7 +42,7 @@ The system dependency requirement for mxnet libraries are
 - BLAS library.
 - opencv (optional if you do not need image augmentation, you can switch it off in config.mk)
 
-### Linux
+### Building on Linux
 
 On Ubuntu >= 13.10, one can install the dependencies by
 
@@ -51,7 +57,7 @@ make -j4
 ```
 Then proceed to package installation instructions for python or R in this page.
 
-### OSX
+### Buillding on OSX
 On OSX, we can install the dependencies by
 
 ```bash
@@ -73,7 +79,7 @@ make -j4
 
 Then proceed to package installation instructions for python or R in this page.
 
-### Windows
+### Building on Windows
 
 Firstly, we should make your Visual Studio 2013 support more C++11 features.
 
@@ -87,6 +93,14 @@ Secondly, fetch the third-party libraries, including [OpenCV](http://sourceforge
 Finally, use CMake to create a Visual Studio solution in `./build/`. During configuration, you may need to set the path of each third-party library, until no error is reported. Open the solution and compile, you will get a `mxnet.dll` in `./build/Release` or `./build/Debug`.
 
 Then proceed to package installation instructions for python or R in this page.
+
+### Installing pre-built packages on Windows
+
+Mxnet also provides pre-built packages on Windows. The pre-built package includes pre-build MxNet library, the dependent thrid-party libraries, a sample C++ solution in Visual Studio and the Python install script.
+
+You can download the packages from the [Releases tab](https://github.com/dmlc/mxnet/releases) of MxNet. There are two variants provided: one with GPU support (using CUDA and CUDNN v3) and one without GPU support. You can choose one that fits your hardward configuration.
+
+After download, unpack the package into a folder, say D:\MxNet, then install the package by double clicking the setupenv.cmd inside the folder. It will setup environmental variables needed by MxNet. After that, you should be able to usee the provided VS solution to build C++ programs, or to [install Python package](#python-package-installation).
 
 Advanced Build Configurations
 -----------------------------
