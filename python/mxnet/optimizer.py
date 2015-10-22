@@ -86,7 +86,6 @@ class SGD(Optimizer):
         # TODO(bing) implement wd_bias, wd_gamma, wd_beta
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-
         if self.lr_scheduler != None:
             lr = self.lr_scheduler(self.iteration)
         else:
@@ -148,8 +147,7 @@ def create(name, rescale_grad=1, **kwargs):
     else:
         raise ValueError('Cannot find optimizer %s' % name)
 
-
-def optimizer_clossure(optimizer):
+def get_updater(optimizer):
     """Return a clossure of the updater needed for kvstore
 
     Parameters

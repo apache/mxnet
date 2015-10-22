@@ -8,55 +8,60 @@
 #include <string>
 #include <vector>
 #include "./kvstore_local.h"
-#include "./mxnet_ps_node.h"
 #include "mxnet/engine.h"
-#include "ps.h"
-#include "base/range.h"
+#include "ps/ps.h"
+#include "./kvstore_dist_server.h"
 
 namespace mxnet {
 namespace kvstore {
 
+/**
+ * \brief distributed kvstore
+ *
+ * for a worker node, it always guarantees that all push and pull issued from
+ * this worker on the same key are serialized. namely push(3) and then pull(3),
+ * then the data pulled is always containing the modification from the push(3).
+ *
+ * it's the server node's job to control the data consistency among all
+ * workers. see details on \ref ServerHandle::Start
+ */
 class KVStoreDist : public KVStoreLocal {
  public:
-  KVStoreDist()
-      : store_(NULL),
-        cache_(NULL),
-        barrier_count_(0) {
-    if (IsServerNode()) {
-      ServerHandle handle(this);
-      store_ = new ps::OnlineServer<real_t, ServerVal, ServerHandle>(handle);
-    } else if (IsWorkerNode()) {
-      cache_ = new ps::KVCache<ps::Key, real_t>(ps::NextID());
-      StartPS();
+  KVStoreDist() : ps_worker_(nullptr), server_(nullptr) {
+    if (IsWorkerNode()) {
+      ps_worker_ = new ps::KVWorker<real_t>(0);
+      ps::Start("mxnet\0");
     }
   }
 
   virtual ~KVStoreDist() {
     Engine::Get()->WaitForAll();
-    // need to explicit clear the NDArray before Engine is deleted
-    if (store_) store_->server()->Clear();
-    delete store_;
-    delete cache_;
-
     if (IsWorkerNode()) {
       if (get_rank() == 0) {
         // stop the executor at servers
-        SendCommandToServers(CommandID::kStop, "");
+        SendCommandToServers(kStopServer, "");
       }
-      ps::StopSystem();
+      ps::Finalize();
+      delete ps_worker_;
     }
   }
 
   void Init(const std::vector<int>& keys,
             const std::vector<NDArray>& values) override {
-    Push(keys, values, 0);
-    // wait until the push is finished
-    Wait(keys);
+    CheckUnique(keys);
+    if (get_rank() == 0) {
+      Push(keys, values, 0);
+      // wait until the push is finished
+      Wait(keys);
+    } else {
+      // do nothing
+    }
+    Barrier();
   }
 
   void Push(const std::vector<int>& keys,
             const std::vector<NDArray>& values,
-            int priority) override {
+              int priority) override {
     // first aggregate the values over keys
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
@@ -70,21 +75,16 @@ class KVStoreDist : public KVStoreLocal {
       // push to servers
       auto push_to_servers =
           [this, key, merged](RunContext rctx, Engine::CallbackOnComplete cb) {
-        // convert to ps keys
+         // convert to ps keys
         size_t size = merged.shape().Size();
         PSKV& pskv = EncodeKey(key, size);
 
         // do push
         real_t* data = static_cast<real_t*>(merged.data().dptr_);
-        ps::SArray<real_t> vals(data, size, ps::EmptyDel<real_t>());
-        ps::SyncOpts opts;
-        opts.callback = [cb]() { cb(); };
-        CHECK_NOTNULL(cache_)->Push(
-            opts.GetTask(),
-            pskv.keys,
-            vals,
-            pskv.vals_size,
-            opts.callback);
+        // false means no delete
+        ps::SArray<real_t> vals(data, size, false);
+        CHECK_NOTNULL(ps_worker_)->ZPush(
+        pskv.keys, vals, pskv.lens, 0, [cb]() { cb(); });
       };
       Engine::Get()->PushAsync(
           push_to_servers,
@@ -120,18 +120,10 @@ class KVStoreDist : public KVStoreLocal {
         // convert to ps keys
         PSKV& pskv = EncodeKey(key, size);
 
-        // pull opts
-        ps::SyncOpts opts;
-        opts.callback = [cb]() { cb(); };
-
-        // issue pull
-        CHECK_NOTNULL(cache_)->Pull(
-            opts.GetTask(),
-            pskv.keys,
-            opts.callback,
-            data,
-            size,
-            pskv.vals_size.data());
+        // issue pull, false means no delete
+        auto vals = new ps::SArray<real_t>(data, size, false);
+        CHECK_NOTNULL(ps_worker_)->ZPull(
+        pskv.keys, vals, &pskv.lens, 0, [vals, cb](){ delete vals; cb(); });
       };
 
       CHECK_NOTNULL(Engine::Get())->PushAsync(
@@ -148,14 +140,51 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void Barrier() override {
-    ps::Task task;
-    task.set_cmd(CommandID::SetBarrier(barrier_count_++));
-    auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
-    node->Wait(node->Submit(task, ps::NodeInfo::SchedulerID()));
+  void set_updater(const Updater& updater) override {
+    CHECK(updater) << "invalid updater";
+    if (IsServerNode()) {
+      CHECK_NOTNULL(server_)->set_updater(updater);
+    } else {
+      updater_ = updater;
+    }
   }
 
-  void Wait(const std::vector<int>& keys) override {
+  void Barrier() override {
+    ps::Postoffice::Get()->Barrier(ps::kWorkerGroup);
+  }
+
+
+  void SendCommandToServers(int cmd_id,
+                            const std::string& cmd_body) override {
+    CHECK_NOTNULL(ps_worker_);
+    ps_worker_->Wait(ps_worker_->Request(cmd_id, cmd_body, ps::kServerGroup));
+  }
+
+  int get_group_size() const override { return ps::NumWorkers(); }
+
+  int get_rank() const override { return ps::MyRank(); }
+
+  void RunServer(const Controller& controller) override {
+    CHECK(!IsWorkerNode());
+    if (IsServerNode()) {
+      server_ = new KVStoreDistServer();
+      server_->set_controller(controller);
+    }
+
+    ps::Start("mxnet_server\0");
+    if (server_) server_->Run();
+    ps::Finalize();
+    delete server_; server_ = nullptr;
+  }
+
+ private:
+  /**
+   * \brief Wait until all pushes and pulls issued on each key have been
+   * finished
+   *
+   * \param keys a list of keys
+   */
+  void Wait(const std::vector<int>& keys) {
     for (int key : keys) {
       auto it = merge_buf_.find(key);
       CHECK(it != merge_buf_.end())
@@ -166,63 +195,21 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void WaitAll() override {
-    for (auto& buf : merge_buf_) {
-      if (!buf.second.merged.is_none()) {
-        buf.second.merged.WaitToWrite();
-      }
-    }
-  }
-
-  void SendCommandToServers(int cmd_id,
-                            const std::string& cmd_body) override {
-    ps::Task task;
-    task.set_cmd(cmd_id);
-    task.set_msg(cmd_body);
-    auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
-    node->Wait(node->Submit(task, ps::kServerGroup));
-  }
-
-  int get_group_size() const override { return ps::NodeInfo::RankSize(); }
-
-  int get_rank() const override { return ps::NodeInfo::MyRank(); }
-
-  bool IsDistributed() const override { return true; }
-
-  void RunServer(const Controller& controller) override {
-    CHECK(!IsWorkerNode());
-    StartPS();
-    if (IsServerNode()) {
-      auto node = CHECK_NOTNULL(ps::NodeInfo::MyApp());
-      auto server = static_cast<MXNetServer*>(node);
-      server->set_executor(&exec_);
-      server->set_controller(controller);
-      exec_.Start();
-    }
-    ps::StopSystem();
-  }
-
- private:
   /**
-   * \brief start the network threads in ps-lite
+   * \brief check if the keys are all unique
    */
-  void StartPS() {
-    // hack argc argv
-    int argc = 1;
-    char** argv = new char*[1];
-    char name[] = "mxnet";
-    argv[0] = new char[strlen(name)+1];
-    memcpy(argv[0], name, strlen(name));
-    argv[0][strlen(name)] = '\0';
-    ps::StartSystem(&argc, &argv);
+  void CheckUnique(const std::vector<int>& keys) {
+    auto keys_copy = keys;
+    auto last = std::unique(keys_copy.begin(), keys_copy.end());
+    CHECK_EQ(std::distance(keys_copy.begin(), last), keys.size());
   }
 
   /**
-   * \brief struct for ps keys and vals_size
+   * \brief struct for ps keys and lens
    */
   struct PSKV {
     ps::SArray<ps::Key> keys;  // n keys
-    ps::SArray<int> vals_size;  // the length of the i-th value
+    ps::SArray<int> lens;  // the length of the i-th value
     int size;
   };
 
@@ -237,153 +224,57 @@ class KVStoreDist : public KVStoreLocal {
   std::mutex mu_;
 
   /**
-   * \brief key partition of server nodes in ps
-   */
-  std::vector<ps::Key> server_key_partition_;
-
-  /**
    * \brief convert to keys in ps
    */
   inline PSKV& EncodeKey(int key, size_t size) {
-    CHECK_EQ(sizeof(ps::Key), 8) << "Do not use USE_KEY32=1 to compile ps-lite";
-    int num_servers = ps::NodeInfo::NumServers();
-    CHECK_GT(num_servers, 0);
-
     mu_.lock();
-    // init key parititon
-    if (server_key_partition_.empty()) {
-      auto all = ps::Range<ps::Key>::All();
-      for (int i = 0; i < num_servers; ++i) {
-        ps::Key key = all.EvenDivide(num_servers, i).begin();
-        server_key_partition_.push_back(((key >> kIndexBits)+1) << kIndexBits);
-      }
-    }
-
     PSKV& pskv = ps_kv_[key];
     mu_.unlock();
 
     if (!pskv.keys.empty()) {
       CHECK_EQ(pskv.size, size) << "The value size cannot be changed";
     } else {
+      auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
+      int num_servers = krs.size();
+      CHECK_GT(num_servers, 0);
+
       // a simple heuristic for load balance
       if (size < bigarray_bound_) {
         // send it to a single random picked server
         int server = (key * 9973) % num_servers;
-        pskv.keys.push_back(server_key_partition_[server] | key);
-        pskv.vals_size.push_back(size);
+        ps::Key ps_key = krs[server].begin() + key;
+        CHECK_LT(ps_key, krs[server].end());
+        pskv.keys.push_back(ps_key);
+        pskv.lens.push_back(size);
+        pskv.size = size;
       } else {
-        // divide it to all servers
-        auto all = ps::Range<size_t>(0, size);
+        // parition it to all servers
+        pskv.size = 0;
         for (int i = 0; i < num_servers; ++i) {
-          pskv.keys.push_back(server_key_partition_[i] | key);
-          pskv.vals_size.push_back(all.EvenDivide(num_servers, i).size());
+          size_t part_size =
+              static_cast<size_t>(static_cast<double>(size)/num_servers*(i+1)) -
+              static_cast<size_t>(static_cast<double>(size)/num_servers*i);
+          ps::Key ps_key = krs[i].begin() + key;
+          CHECK_LT(ps_key, krs[i].end());
+          pskv.keys.push_back(ps_key);
+          pskv.lens.push_back(part_size);
+          pskv.size += part_size;
         }
+        CHECK_EQ(pskv.size, size);
       }
-      pskv.size = size;
     }
     return pskv;
   }
 
   /**
-   * \brief convert from a key in ps
-   */
-  inline int DecodeKey(ps::Key key) {
-    return static_cast<int>((key << kIndexBits) >> kIndexBits);
-  }
-
-  /**
-   * \brief value type stored at server
-   */
-  struct ServerVal {
-    NDArray array;
-    inline void Load(dmlc::Stream *fi) { array.Load(fi); }
-    inline void Save(dmlc::Stream *fo) const { array.Save(fo); }
-    inline bool Empty() const { return array.is_none(); }
-  };
-
-  /**
-   * \brief server handle
-   */
-  class ServerHandle {
-   public:
-    explicit ServerHandle(KVStoreDist* kvstore) {
-      kvstore_ = kvstore;
-    }
-
-    inline void Start(bool push, int timestamp, int cmd_id, void* msg) { }
-    inline void Finish() { }
-    inline void Load(dmlc::Stream *fi) { }
-    inline void Save(dmlc::Stream *fo) const { }
-
-    inline void Push(ps::Key recv_key,
-                     ps::Blob<const real_t> recv_val,
-                     ServerVal& my_val) { // NOLINT(*)
-      // construct NDArray without data copy
-      size_t ds[] = {recv_val.size};
-      TShape dshape(ds, ds + 1);
-      TBlob recv_blob((real_t*)recv_val.data, dshape, cpu::kDevMask);  // NOLINT(*)
-      NDArray recv_array(recv_blob, 0);
-
-      if (my_val.Empty()) {
-        // initialization
-        my_val.array = NDArray(dshape, Context());
-        CopyFromTo(recv_array, &my_val.array);
-      } else {
-        // call updater
-        int key = kvstore_->DecodeKey(recv_key);
-        if (kvstore_->updater_) {
-          // kvstore_->updater_(key, recv_array, &my_val.array);
-          // let the main thread to execute updater_, which is necessary for python
-          kvstore_->exec_.Exec([this, key, &recv_array, &my_val](){
-              kvstore_->updater_(key, recv_array, &my_val.array);
-            });
-        } else {
-          my_val.array += recv_array;
-        }
-      }
-      // place waitoread here rather than the beginning of pull.
-      my_val.array.WaitToRead();
-    }
-
-    inline void Pull(ps::Key recv_key,
-                     const ServerVal& my_val,
-                     ps::Blob<real_t>& send_val) {  // NOLINT(*)
-      CHECK(!my_val.Empty())
-          << kvstore_->DecodeKey(recv_key) << " is not inited";
-
-      send_val.data = static_cast<real_t*>(my_val.array.data().dptr_);
-      send_val.size = my_val.array.shape()[0];
-    }
-
-   private:
-    KVStoreDist* kvstore_;
-  };
-
-  /**
-   * \brief kv store at server node
-   */
-  ps::OnlineServer<real_t, ServerVal, ServerHandle>* store_;
-
-  /**
-   * \brief let the main thread execute python codes
-   */
-  Executor exec_;
-
-  /**
    * \brief for worker to push and pull data
-   * use KVCache rather than KVWorker for the c-style pull
    */
-  ps::KVCache<ps::Key, real_t>* cache_;
+  ps::KVWorker<real_t>* ps_worker_;
 
   /**
-   * \brief number of bits used to encode the key in mxnet
+   * \brief the server handle
    */
-  static const int kIndexBits = 32;
-
-  /**
-   * \brief the count for barrier
-   */
-  int barrier_count_;
+  KVStoreDistServer* server_;
 };
 
 }  // namespace kvstore

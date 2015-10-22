@@ -400,7 +400,7 @@ class OperatorProperty {
 };
 
 /*! \brief typedef the factory function of operator property */
-typedef OperatorProperty *(*OperatorPropertyFactory)();
+typedef std::function<OperatorProperty *()> OperatorPropertyFactory;
 /*!
  * \brief Registry entry for OperatorProperty factory functions.
  */
@@ -454,12 +454,8 @@ struct OperatorPropertyReg
  * \endcode
  */
 #define MXNET_REGISTER_OP_PROPERTY(name, OperatorPropertyType)          \
-  static ::mxnet::OperatorProperty* __create__ ## OperatorProperty ## name ## __() { \
-    OperatorProperty* ret = new OperatorPropertyType();                 \
-    return ret;                                                         \
-  }                                                                     \
   DMLC_REGISTRY_REGISTER(::mxnet::OperatorPropertyReg, OperatorPropertyReg, name) \
-  .set_body(__create__ ## OperatorProperty ## name ## __)               \
+  .set_body([]() { return new OperatorPropertyType(); })                \
   .check_name()
 
 #endif  // DMLC_USE_CXX11

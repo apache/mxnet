@@ -251,6 +251,11 @@ class ThreadedEngine : public Engine {
 
   ThreadedEngine() {
     engine_info_ = dmlc::GetEnv("MXNET_ENGINE_INFO", false);
+
+    objpool_opr_ref_    = common::ObjectPool<ThreadedOpr>::_GetSharedRef();
+    objpool_blk_ref_    = common::ObjectPool<OprBlock>::_GetSharedRef();
+    objpool_varblk_ref_ = common::ObjectPool<VersionedVarBlock>::_GetSharedRef();
+    objpool_var_ref_    = common::ObjectPool<ThreadedVar>::_GetSharedRef();
   }
   ~ThreadedEngine() {
     {
@@ -329,6 +334,15 @@ class ThreadedEngine : public Engine {
    */
   std::mutex finished_m_;
   std::condition_variable finished_cv_;
+
+  /*!
+   * \brief Holding a shared_ptr to the object pool to prevent it from being destructed too early
+   * See also #309 (https://github.com/dmlc/mxnet/issues/309)
+   */
+  std::shared_ptr<common::ObjectPool<ThreadedOpr> >       objpool_opr_ref_;
+  std::shared_ptr<common::ObjectPool<OprBlock> >          objpool_blk_ref_;
+  std::shared_ptr<common::ObjectPool<VersionedVarBlock> > objpool_varblk_ref_;
+  std::shared_ptr<common::ObjectPool<ThreadedVar> >       objpool_var_ref_;
   /*!
    * \brief Disallow copy construction and assignment.
    */

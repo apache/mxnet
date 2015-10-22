@@ -951,7 +951,7 @@ int MXKVStoreFree(KVStoreHandle handle) {
 
 int MXKVStoreInit(KVStoreHandle handle,
                   mx_uint num,
-                  int* keys,
+                  const int* keys,
                   NDArrayHandle* vals) {
   API_BEGIN();
   std::vector<int> v_keys(num);
@@ -966,7 +966,7 @@ int MXKVStoreInit(KVStoreHandle handle,
 
 int MXKVStorePush(KVStoreHandle handle,
                   mx_uint num,
-                  int* keys,
+                  const int* keys,
                   NDArrayHandle* vals,
                   int priority) {
   API_BEGIN();
@@ -982,7 +982,7 @@ int MXKVStorePush(KVStoreHandle handle,
 
 int MXKVStorePull(KVStoreHandle handle,
                   mx_uint num,
-                  int* keys,
+                  const int* keys,
                   NDArrayHandle* vals,
                   int priority) {
   API_BEGIN();
@@ -996,32 +996,19 @@ int MXKVStorePull(KVStoreHandle handle,
   API_END();
 }
 
-int MXKVStoreWait(KVStoreHandle handle,
-                  mx_uint num,
-                  int* keys) {
+int MXKVStoreSetUpdater(KVStoreHandle handle,
+                        MXKVStoreUpdater updater,
+                        void* updater_handle) {
   API_BEGIN();
-  std::vector<int> v_keys(num);
-  for (mx_uint i = 0; i < num; ++i) {
-    v_keys[i] = keys[i];
-  }
-  static_cast<KVStore*>(handle)->Wait(v_keys);
-  API_END();
-}
-
-int MXKVStoreWaitAll(KVStoreHandle handle) {
-  API_BEGIN();
-  static_cast<KVStore*>(handle)->WaitAll();
-  API_END();
-}
-
-int MXKVStoreSetUpdater(KVStoreHandle handle, MXKVStoreUpdater updater) {
-  API_BEGIN();
-  auto updt = [updater](int key, const NDArray& recv, NDArray* local) {
+  MXKVStoreUpdater * updater_temp = updater;
+  void* updater_handle_temp = updater_handle;
+  std::function<void(int, const NDArray&, NDArray*)> updt
+  = [updater_temp, updater_handle_temp](int key, const NDArray& recv, NDArray* local) {
     NDArray* recv_copy = new NDArray();
     *recv_copy = recv;
     NDArray* local_copy = new NDArray();
     *local_copy = *local;
-    updater(key, recv_copy, local_copy);
+    updater_temp(key, recv_copy, local_copy, updater_handle_temp);
   };
   static_cast<KVStore*>(handle)->set_updater(updt);
   API_END();
@@ -1064,12 +1051,6 @@ int MXKVStoreIsSchedulerNode(int *ret) {
   API_END();
 }
 
-int MXKVStoreIsDistributed(KVStoreHandle handle, int *ret) {
-  API_BEGIN();
-  *ret = static_cast<KVStore*>(handle)->IsDistributed();
-  API_END();
-}
-
 int MXKVStoreRunServer(KVStoreHandle handle,
                        MXKVStoreServerController controller) {
   API_BEGIN();
@@ -1086,5 +1067,12 @@ int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
   API_BEGIN();
   static_cast<KVStore*>(handle)->SendCommandToServers(
       cmd_id, std::string(cmd_body));
+  API_END();
+}
+
+int MXKVStoreGetType(KVStoreHandle handle,
+                     const char** type) {
+  API_BEGIN();
+  *CHECK_NOTNULL(type) = static_cast<KVStore*>(handle)->type().c_str();
   API_END();
 }

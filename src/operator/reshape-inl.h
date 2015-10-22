@@ -33,6 +33,8 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
 template<typename xpu>
 class ReshapeOp : public Operator {
  public:
+  explicit ReshapeOp(ReshapeParam param) {}  // Do nothing, just make a special factory
+
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
@@ -80,7 +82,7 @@ class ReshapeOp : public Operator {
 };  // class ReshapeOp
 
 template<typename xpu>
-Operator* CreateOp();
+Operator* CreateOp(ReshapeParam);
 
 #if DMLC_USE_CXX11
 class ReshapeProp : public OperatorProperty {

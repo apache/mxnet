@@ -9,7 +9,9 @@
 #include <Rcpp.h>
 #include <mxnet/c_api.h>
 #include <string>
+#include <vector>
 #include "./base.h"
+#include "./ndarray.h"
 
 namespace mxnet {
 namespace R {
@@ -19,6 +21,7 @@ class DataIterCreateFunction;
 /*! \brief Base iterator interface */
 class DataIter {
  public:
+  virtual ~DataIter() {}
   /*! \return typename from R side. */
   inline static const char* TypeName() {
     return "DataIter";
@@ -47,7 +50,7 @@ class DataIter {
 /*!
  * \brief MXNet's internal data iterator.
  */
-class MXDataIter : public DataIter, MXNetMovable<MXDataIter> {
+class MXDataIter : public DataIter {
  public:
   /*! \return typename from R side. */
   inline static const char* TypeName() {
@@ -58,11 +61,13 @@ class MXDataIter : public DataIter, MXNetMovable<MXDataIter> {
   virtual bool Next();
   virtual int NumPad() const;
   virtual Rcpp::List Value() const;
+  virtual ~MXDataIter() {
+    MX_CALL(MXDataIterFree(handle_));
+  }
 
  private:
   friend class DataIter;
   friend class DataIterCreateFunction;
-  friend class MXNetMovable<MXDataIter>;
   // constructor
   MXDataIter() {}
   explicit MXDataIter(DataIterHandle handle)
@@ -73,16 +78,6 @@ class MXDataIter : public DataIter, MXNetMovable<MXDataIter> {
    */
   inline static Rcpp::RObject RObject(DataIterHandle handle) {
     return Rcpp::internal::make_new_object(new MXDataIter(handle));
-  }
-  // Create a new Object that is moved from current one
-  inline MXDataIter* CreateMoveObject() {
-    MXDataIter* moved = new MXDataIter();
-    *moved = *this;
-    return moved;
-  }
-  // finalizer that invoked on non-movable object
-  inline void DoFinalize() {
-    MX_CALL(MXDataIterFree(handle_));
   }
   /*! \brief internal data iter handle */
   DataIterHandle handle_;
@@ -104,24 +99,43 @@ class ArrayDataIter : public DataIter {
    * \brief Construct a ArrayDataIter from data and label.
    * \param data The data array.
    * \param label The label array.
+   * \param unif_rnds Uniform [0,1] random number of same length as label.
+   *        Only needed when shuffle=TRUE
    * \param batch_size The size of the batch.
    * \param shuffle Whether shuffle the data.
    */
   ArrayDataIter(const Rcpp::NumericVector& data,
                 const Rcpp::NumericVector& label,
+                const Rcpp::NumericVector& unif_rnds,
                 int batch_size,
                 bool shuffle);
-  // implement the interface
-  virtual void Reset() {}
-  virtual bool Next() {
-    return false;
+  virtual void Reset() {
+    counter_ = 0;
   }
-  virtual int NumPad() const {
-    return 0;
-  }
-  virtual Rcpp::List Value() const {
-    return Rcpp::List();
-  }
+  virtual bool Next();
+  virtual int NumPad() const;
+  virtual Rcpp::List Value() const;
+  static Rcpp::RObject Create(const Rcpp::NumericVector& data,
+                              const Rcpp::NumericVector& label,
+                              const Rcpp::NumericVector& unif_rnds,
+                              int batch_size,
+                              bool shuffle);
+
+ private:
+  friend class DataIter;
+  // create internal representation
+  static void Convert(const Rcpp::NumericVector &src,
+                      const std::vector<size_t> &order,
+                      size_t batch_size,
+                      std::vector<NDArray> *out);
+  /*! \brief The counter */
+  size_t counter_;
+  /*! \brief number of pad instances*/
+  size_t num_pad_;
+  /*! \brief The data list of each batch */
+  std::vector<NDArray> data_;
+  /*! \brief The data list of each batch */
+  std::vector<NDArray> label_;
 };
 
 /*! \brief The DataIterCreate functions to be invoked */
