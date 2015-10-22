@@ -238,11 +238,13 @@ end
 
 println(compare([inplace_op, normal_op], 100))
 ```
-The comparison on my laptop shows that
+The comparison on my laptop shows that `normal_op` while allocating a lot of temp `NDArray`s in the loop (the performance gets worse when increasing `N_REP`), is only about twice slower than the pre-allocated one.
 
 | Row | Function     | Average   | Relative | Replications |
 |-----|--------------|-----------|----------|--------------|
 | 1   | "inplace_op" | 0.0074854 | 1.0      | 100          |
 | 2   | "normal_op"  | 0.0174202 | 2.32723  | 100          |
+
+So it will typically not be a problem unless you are at the bottleneck of the computation (e.g. implementing some neural network layers in Julia).
 
 ## Distributed Key-value Store
