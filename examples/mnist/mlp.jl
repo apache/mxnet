@@ -15,7 +15,7 @@ include("mnist-data.jl")
 train_provider, eval_provider = get_mnist_providers(batch_size)
 
 # setup estimator
-estimator = mx.FeedForward(mlp, context=mx.Context(mx.CPU))
+estimator = mx.FeedForward(mlp, context=mx.cpu())
 
 # optimizer
 optimizer = mx.SGD(lr_scheduler=mx.FixedLearningRateScheduler(0.1),
