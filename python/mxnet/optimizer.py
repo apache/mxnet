@@ -7,18 +7,18 @@ class Optimizer(object):
     opt_registry = {}
 
     @staticmethod
-    def Register(cls):
+    def Register(klass):
         """Register optimizers to the optimizer factory"""
-        assert(isinstance(cls, type))
-        name = cls.__name__.lower()
+        assert(isinstance(klass, type))
+        name = klass.__name__.lower()
         if name in Optimizer.opt_registry:
             print('WARNING: New optimizer %s.%s is overriding ' \
                   'existing optimizer %s.%s'%(
-                      cls.__module__, cls.__name__,
+                      klass.__module__, klass.__name__,
                       Optimizer.opt_registry[name].__module__,
                       Optimizer.opt_registry[name].__name__))
-        Optimizer.opt_registry[name] = cls
-        return cls
+        Optimizer.opt_registry[name] = klass
+        return klass
 
     @staticmethod
     def CreateOptimizer(name, rescale_grad=1, **kwargs):
