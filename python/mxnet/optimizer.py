@@ -4,8 +4,53 @@ from .ndarray import NDArray, zeros, clip
 
 class Optimizer(object):
     """Base class of all optimizers."""
-    def __init__(self):
+    opt_registry = {}
+
+    @staticmethod
+    def register(klass):
+        """Register optimizers to the optimizer factory"""
+        assert(isinstance(klass, type))
+        name = klass.__name__.lower()
+        if name in Optimizer.opt_registry:
+            print('WARNING: New optimizer %s.%s is overriding ' \
+                  'existing optimizer %s.%s'%(
+                      klass.__module__, klass.__name__,
+                      Optimizer.opt_registry[name].__module__,
+                      Optimizer.opt_registry[name].__name__))
+        Optimizer.opt_registry[name] = klass
+        return klass
+
+    @staticmethod
+    def create_optimizer(name, rescale_grad=1, **kwargs):
+        """Create an optimizer with specified name.
+
+        Parameters
+        ----------
+        name: str
+            Name of required optimizer. Should be the name
+            of a subclass of Optimizer. Case insensitive.
+
+        rescale_grad : float
+            Rescaling factor on gradient.
+
+        kwargs: dict
+            Parameters for optimizer
+
+        Returns
+        -------
+        opt : Optimizer
+            The result optimizer.
+        """
+        if name.lower() in Optimizer.opt_registry:
+            return Optimizer.opt_registry[name.lower()](
+                rescale_grad=rescale_grad,
+                **kwargs)
+        else:
+            raise ValueError('Cannot find optimizer %s' % name)
+
+    def __init__(self, rescale_grad=1):
         self.iteration = 0
+        self.rescale_grad = rescale_grad
 
     def begin_round(self, iteration):
         """Function called to notify beginning of iteration.
@@ -17,7 +62,17 @@ class Optimizer(object):
         """
         self.iteration = iteration
 
+    def create_state(self, index, weight):
+        """Create additional optimizer state such as momentum.
+        override in implementations."""
 
+    def update(self, index, weight, grad, state):
+        """Update the parameters. override in implementations"""
+
+#convenience wrapper for Optimizer.Register
+register = Optimizer.register
+
+@register
 class SGD(Optimizer):
     """A very simple SGD optimizer with momentum and weight regularization.
 
@@ -41,11 +96,10 @@ class SGD(Optimizer):
     def __init__(self, learning_rate=0.01, momentum=0.0,
                  wd=0.0001, rescale_grad=1, clip_gradient=None,
                  lr_scheduler=None):
-        super(SGD, self).__init__()
+        super(SGD, self).__init__(rescale_grad)
         self.lr = learning_rate
         self.momentum = momentum
         self.wd = wd
-        self.rescale_grad = rescale_grad
         self.clip_gradient = clip_gradient
         self.lr_scheduler = lr_scheduler
         if lr_scheduler != None:
@@ -104,12 +158,11 @@ class SGD(Optimizer):
             assert self.momentum == 0.0
             weight[:] += -lr * (grad * self.rescale_grad + self.wd * weight)
 
-
-class Test(object):
+@register
+class Test(Optimizer):
     """For test use"""
     def __init__(self, rescale_grad=1):
-        self.rescale_grad = rescale_grad
-
+        super(Test, self).__init__(rescale_grad)
 
     # pylint: disable=no-self-use
     def create_state(self, index, weight):
@@ -121,31 +174,8 @@ class Test(object):
         weight[:] += grad * self.rescale_grad
         state[:] = weight
 
-def create(name, rescale_grad=1, **kwargs):
-    """Create an optimizer with specified name.
-
-    Parameters
-    ----------
-    name: str
-        Name of required optimizer
-
-    rescale_grad : float
-        Rescaling factor on gradient.
-
-    kwargs: dict
-        Parameters for optimizer
-
-    Returns
-    -------
-    opt : Optimizer
-        The result optimizer.
-    """
-    if name == 'sgd' or name == 'SGD':
-        return SGD(rescale_grad=rescale_grad, **kwargs)
-    if name == 'test':
-        return Test(rescale_grad=rescale_grad)
-    else:
-        raise ValueError('Cannot find optimizer %s' % name)
+#backward compatibility wrapper for Optimizer.CreateOptimizer
+create = Optimizer.create_optimizer
 
 def get_updater(optimizer):
     """Return a clossure of the updater needed for kvstore
