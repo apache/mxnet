@@ -14,7 +14,7 @@ namespace mxnet {
 /*!
  * \brief Storage manager across multiple devices.
  */
-  class MXAPI Storage {
+class MXNET_API Storage {
  public:
   /*!
    * \brief Storage handle.
