@@ -1,30 +1,24 @@
 # pylint: disable=fixme, invalid-name, unused-argument, too-many-arguments, no-name-in-module
 """Common Optimization algorithms with regularizations."""
 from .ndarray import NDArray, zeros, clip
-from six import with_metaclass
 
-class MetaOptimizer(type):
-    """Meta class for tracking all subclasses(implementations)
-    of Optimizer."""
-    __optimizers__ = {}
+class Optimizer(object):
+    """Base class of all optimizers."""
+    opt_registry = {}
 
-    def __new__(mcs, name, bases, attrs):
-        cls = type.__new__(mcs, name, bases, attrs)
-        #Allow overriding of existing optimizer, but give a warning.
-        #Always keep the last one.
-        cls_name = cls.__name__.lower()
-        if cls_name in mcs.__optimizers__:
+    @staticmethod
+    def Register(cls):
+        """Register optimizers to the optimizer factory"""
+        assert(isinstance(cls, type))
+        name = cls.__name__.lower()
+        if name in Optimizer.opt_registry:
             print('WARNING: New optimizer %s.%s is overriding ' \
                   'existing optimizer %s.%s'%(
                       cls.__module__, cls.__name__,
-                      mcs.__optimizers__[cls_name].__module__,
-                      mcs.__optimizers__[cls_name].__name__))
-        mcs.__optimizers__[cls_name] = cls
+                      Optimizer.opt_registry[name].__module__,
+                      Optimizer.opt_registry[name].__name__))
+        Optimizer.opt_registry[name] = cls
         return cls
-
-
-class Optimizer(with_metaclass(MetaOptimizer, object)):
-    """Base class of all optimizers."""
 
     @staticmethod
     def CreateOptimizer(name, rescale_grad=1, **kwargs):
@@ -47,8 +41,8 @@ class Optimizer(with_metaclass(MetaOptimizer, object)):
         opt : Optimizer
             The result optimizer.
         """
-        if name.lower() in Optimizer.__optimizers__:
-            return Optimizer.__optimizers__[name.lower()](
+        if name.lower() in Optimizer.opt_registry:
+            return Optimizer.opt_registry[name.lower()](
                 rescale_grad=rescale_grad,
                 **kwargs)
         else:
@@ -75,7 +69,10 @@ class Optimizer(with_metaclass(MetaOptimizer, object)):
     def update(self, index, weight, grad, state):
         """Update the parameters. override in implementations"""
 
+#convenience wrapper for Optimizer.Register
+register = Optimizer.Register
 
+@register
 class SGD(Optimizer):
     """A very simple SGD optimizer with momentum and weight regularization.
 
@@ -161,7 +158,7 @@ class SGD(Optimizer):
             assert self.momentum == 0.0
             weight[:] += -lr * (grad * self.rescale_grad + self.wd * weight)
 
-
+@register
 class Test(Optimizer):
     """For test use"""
     def __init__(self, rescale_grad=1):
@@ -177,29 +174,8 @@ class Test(Optimizer):
         weight[:] += grad * self.rescale_grad
         state[:] = weight
 
-def create(name, rescale_grad=1, **kwargs):
-    """Create an optimizer with specified name.
-
-    Parameters
-    ----------
-    name: str
-        Name of required optimizer. Should be the name
-        of a subclass of Optimizer. Case insensitive.
-
-    rescale_grad : float
-        Rescaling factor on gradient.
-
-    kwargs: dict
-        Parameters for optimizer
-
-    Returns
-    -------
-    opt : Optimizer
-        The result optimizer.
-    """
-    return Optimizer.CreateOptimizer(name,
-                                     rescale_grad=rescale_grad,
-                                     **kwargs)
+#backward compatibility wrapper for Optimizer.CreateOptimizer
+create = Optimizer.CreateOptimizer
 
 def get_updater(optimizer):
     """Return a clossure of the updater needed for kvstore
