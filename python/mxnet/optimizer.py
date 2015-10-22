@@ -4,7 +4,7 @@ from .ndarray import NDArray, zeros, clip
 
 class Optimizer(object):
     """Base class of all optimizers."""
-    def __init__(self):
+    def __init__(self, rescale_grad=1):
         self.iteration = 0
 
     def begin_round(self, iteration):
@@ -16,6 +16,13 @@ class Optimizer(object):
             The iteration number.
         """
         self.iteration = iteration
+
+    def create_state(self, index, weight):
+        """Create additional optimizer state such as momentum.
+        override in implementations."""
+
+    def update(self, index, weight, grad, state):
+        """Update the parameters. override in implementations"""
 
 
 class SGD(Optimizer):
@@ -41,7 +48,7 @@ class SGD(Optimizer):
     def __init__(self, learning_rate=0.01, momentum=0.0,
                  wd=0.0001, rescale_grad=1, clip_gradient=None,
                  lr_scheduler=None):
-        super(SGD, self).__init__()
+        super(SGD, self).__init__(rescale_grad)
         self.lr = learning_rate
         self.momentum = momentum
         self.wd = wd
