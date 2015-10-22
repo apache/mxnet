@@ -28,6 +28,25 @@ class Optimizer(with_metaclass(MetaOptimizer, object)):
 
     @staticmethod
     def CreateOptimizer(name, rescale_grad=1, **kwargs):
+        """Create an optimizer with specified name.
+
+        Parameters
+        ----------
+        name: str
+            Name of required optimizer. Should be the name
+            of a subclass of Optimizer. Case insensitive.
+
+        rescale_grad : float
+            Rescaling factor on gradient.
+
+        kwargs: dict
+            Parameters for optimizer
+
+        Returns
+        -------
+        opt : Optimizer
+            The result optimizer.
+        """
         if name.lower() in Optimizer.__optimizers__:
             return Optimizer.__optimizers__[name.lower()](
                 rescale_grad=rescale_grad,
@@ -164,7 +183,8 @@ def create(name, rescale_grad=1, **kwargs):
     Parameters
     ----------
     name: str
-        Name of required optimizer
+        Name of required optimizer. Should be the name
+        of a subclass of Optimizer. Case insensitive.
 
     rescale_grad : float
         Rescaling factor on gradient.
@@ -177,8 +197,9 @@ def create(name, rescale_grad=1, **kwargs):
     opt : Optimizer
         The result optimizer.
     """
-    return Optimizer.CreateOptimizer(name, 
-        rescale_grad=rescale_grad, **kwargs)
+    return Optimizer.CreateOptimizer(name,
+                                     rescale_grad=rescale_grad,
+                                     **kwargs)
 
 def get_updater(optimizer):
     """Return a clossure of the updater needed for kvstore
