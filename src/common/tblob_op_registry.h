@@ -11,44 +11,90 @@
 
 #include <dmlc/registry.h>
 #include <mxnet/base.h>
+#include <mxnet/operator.h>
 #include <map>
 #include <string>
 #include <vector>
 
+#if DMLC_USE_CXX11
+#include <functional>
+#endif
+
 namespace mxnet {
 namespace common {
+/*! \brief namespace of arguments */
+namespace arg {
+/*! \brief super class of all gradient function argument */
+struct GradFunctionArgument {
+  /*! \brief The real data */
+  TBlob data;
+};
+/*! \brief First input to the function */
+struct Input0 : GradFunctionArgument {};
+/*! \brief Second input to the function */
+struct Input1 : GradFunctionArgument {};
 
-/*! \brief pre-declare generic TBlob function*/
-struct GenericTBlobOp;
+/*! \brief Ouput value of the function to the function */
+struct OutValue : GradFunctionArgument {};
+/*! \brief Gradient of output value */
+struct OutGrad : GradFunctionArgument {};
+}  // namespace arg
 
 /*! \brief registry for function entry */
 class TBlobOpRegEntry {
  public:
-  /*! \brief unary tblob function */
   typedef void (*UnaryFunction)(const TBlob &src,
-                                TBlob *ret,
+                                TBlob* ret,
+                                OpReqType req,
                                 RunContext ctx);
+  typedef TShape (*UnaryShapeInfer)(const TShape &src);
+  typedef void (*UnaryGradType1)(const arg::OutGrad& out_grad,
+                                 const arg::OutValue& out_value,
+                                 TBlob* in_grad,
+                                 OpReqType req,
+                                 RunContext ctx);
+  typedef void (*UnaryGradType2)(const arg::OutGrad& out_grad,
+                                 const arg::Input0& in_data0,
+                                 TBlob* in_grad,
+                                 OpReqType req,
+                                 RunContext ctx);
   /*! \brief declare self type */
   typedef TBlobOpRegEntry TSelf;
   /*! \brief name of the entry */
   std::string name;
   /*!
-   * \brief set function of the function to be funary
+   * \brief set shape inference function, by default use same shape.
    * \param dev_mask The device mask of the function can act on.
    * \param funary The unary function that peforms the operation.
    */
-  virtual TSelf& set_function(int dev_mask, UnaryFunction funary) = 0;
+  virtual TSelf& set_shape_infer(UnaryShapeInfer fshapeinfer) = 0;
+  /*!
+   * \brief set function of the function to be funary
+   * \param dev_mask The device mask of the function can act on.
+   * \param funary The unary function that peforms the operation.
+   * \param inplace_in_out Whether do inplace optimization on in and out.
+   */
+  virtual TSelf& set_function(int dev_mask,
+                              UnaryFunction funary,
+                              bool inplace_in_out) = 0;
+  /*!
+   * \brief set gradient of the function of this function.
+   * \param dev_mask The device mask of the function can act on.
+   * \param fgrad The gradient function to be set.
+   * \param inplace_out_in_grad whether out_grad and in_grad can share memory.
+   */
+  virtual TSelf& set_gradient(int dev_mask,
+                              UnaryGradType1 fgrad,
+                              bool inplace_out_in_grad) = 0;
+  virtual TSelf& set_gradient(int dev_mask,
+                              UnaryGradType2 fgrad,
+                              bool inplace_out_in_grad) = 0;
   /*!
    * \brief Describe the function.
    * \param description The description of the function.
    * \return reference to self.
    */
   virtual TSelf& describe(const std::string &description) = 0;
-  /*!
-   * \brief get the internal function representation
-   * \return the internal function representation.
-   */
-  virtual GenericTBlobOp *GetOp() const = 0;
   /*! \brief destructor */
   virtual ~TBlobOpRegEntry() {}
 };
@@ -80,22 +126,10 @@ class TBlobOpRegistry {
   std::map<std::string, TBlobOpRegEntry*> fmap_;
 };
 
-#if DMLC_USE_CXX11
-struct GenericTBlobOp {
-  /*! \brief function type of the function */
-  typedef std::function<void (const std::vector<TBlob> &in,
-                              TBlob *out,
-                              RunContext ctx)> OpType;
-  /*! \brief the real operator */
-  OpType op;
-};
-#endif
-
 #define MXNET_REGISTER_TBLOB_FUN(Name, DEV)                             \
   static ::mxnet::common::TBlobOpRegEntry &                             \
   __make_ ## TBlobOpRegEntry ## _ ## Name ## __ ## DEV ##__ =           \
       ::mxnet::common::TBlobOpRegistry::Get()->__REGISTER_OR_FIND__(#Name)
-
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_TBLOB_OP_REGISTRY_H_
