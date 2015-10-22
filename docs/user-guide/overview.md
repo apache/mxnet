@@ -20,13 +20,13 @@ The way we build deep learning models in MXNet.jl is to use the powerful symboli
 
 The basic type is `mx.Symbol`. The following is a trivial example of composing two symbols with the `+` operation.
 ```julia
-A = mx.variable(:A)
-B = mx.variable(:B)
+A = mx.Variable(:A)
+B = mx.Variable(:B)
 C = A + B
 ```
 We get a new *symbol* by composing existing *symbols* by some *operations*. A hierarchical architecture of a deep neural network could be realized by recursive composition. For example, the following code snippet shows a simple 2-layer MLP construction, using a hidden layer of 128 units and a ReLU activation function.
 ```julia
-net = mx.variable(:data)
+net = mx.Variable(:data)
 net = mx.FullyConnected(data=net, name=:fc1, num_hidden=128)
 net = mx.Activation(data=net, name=:relu1, act_type=:relu)
 net = mx.FullyConnected(data=net, name=:fc2, num_hidden=64)
@@ -53,8 +53,8 @@ julia> mx.list_arguments(net)
 ```
 Note the names of the arguments are generated according to the provided name for each layer. We can also specify those names explicitly:
 ```julia
-net = mx.variable(:data)
-w   = mx.variable(:myweight)
+net = mx.Variable(:data)
+w   = mx.Variable(:myweight)
 net = mx.FullyConnected(data=data, weight=w, name=:fc1, num_hidden=128)
 mx.list_arguments(net)
 # =>
@@ -63,11 +63,11 @@ mx.list_arguments(net)
 #  :myweight
 #  :fc1_bias
 ```
-The simple fact is that a `variable` is just a placeholder `mx.Symbol`. In composition, we can use arbitrary symbols for arguments. For example:
+The simple fact is that a `Variable` is just a placeholder `mx.Symbol`. In composition, we can use arbitrary symbols for arguments. For example:
 ```julia
-net  = mx.variable(:data)
+net  = mx.Variable(:data)
 net  = mx.FullyConnected(data=net, name=:fc1, num_hidden=128)
-net2 = mx.variable(:data2)
+net2 = mx.Variable(:data2)
 net2 = mx.FullyConnected(data=net2, name=:net2, num_hidden=128)
 mx.list_arguments(net2)
 # =>
@@ -91,7 +91,7 @@ Note we use a composed symbol, `net` as the argument `data2` for `net2` to get a
 
 Given enough information, the shapes of all arguments in a composed symbol could be inferred automatically. For example, given the input shape, and some hyper-parameters like `num_hidden`, the shapes for the weights and bias in a neural network could be inferred.
 ```julia
-net = mx.variable(:data)
+net = mx.Variable(:data)
 net = mx.FullyConnected(data=net, name=:fc1, num_hidden=10)
 arg_shapes, out_shapes, aux_shapes = mx.infer_shape(net, data=(10, 64))
 ```
@@ -115,8 +115,8 @@ end
 
 In order to execute the computation graph specified a composed symbol, we will *bind* the free variables to concrete values, specified as `mx.NDArray`s. This will create an `mx.Executor` on a given `mx.Context`. A context describes the computation devices (CPUs, GPUs, etc.) and an executor will carry out the computation (forward/backward) specified in the corresponding symbolic composition.
 ```julia
-A = mx.variable(:A)
-B = mx.variable(:B)
+A = mx.Variable(:A)
+B = mx.Variable(:B)
 C = A .* B
 a = mx.ones(3) * 4
 b = mx.ones(3) * 2
@@ -198,7 +198,7 @@ As we can see, it translate the `+=` operator to an explicit `add_to!` function 
 ```julia
 @inplace weight += -lr * (grad_scale * grad + self.weight_decay * weight)
 ```
-Note there is no much magic in `mx.inplace`: it only does a shallow translation. In the SGD update rule example above, the computation like scaling the gradient by `grad_scale` and adding the weight decay all create temporary `NDArray` objects. However, libmxnet has a customized memory allocator designed specifically to handle this kind of situations. So typically creating temp intermediate arrays is not a problem. The following snippet does a simple benchmark on allocating temp `NDArray`s vs. pre-allocating:
+Note there is no much magic in `mx.inplace`: it only does a shallow translation. In the SGD update rule example above, the computation like scaling the gradient by `grad_scale` and adding the weight decay all create temporary `NDArray` objects. To mitigate this issue, libmxnet has a customized memory allocator designed specifically to handle this kind of situations. The following snippet does a simple benchmark on allocating temp `NDArray`s vs. pre-allocating:
 ```julia
 using Benchmark
 using MXNet
@@ -245,6 +245,20 @@ The comparison on my laptop shows that `normal_op` while allocating a lot of tem
 | 1   | "inplace_op" | 0.0074854 | 1.0      | 100          |
 | 2   | "normal_op"  | 0.0174202 | 2.32723  | 100          |
 
-So it will typically not be a problem unless you are at the bottleneck of the computation (e.g. implementing some neural network layers in Julia).
+So it will usually not be a big problem unless you are at the bottleneck of the computation.
 
 ## Distributed Key-value Store
+
+The type `KVStore` and related methods are used for data sharing across different devices or machines. It provides a simple and efficient integer-`NDArray` key-value storage system that each device can pull or push.
+
+The following example shows how to create a `local` `KVStore`, initialize a value and then pull it back.
+```julia
+kv    = mx.KVStore(:local)
+shape = (2,3)
+key   = 3
+
+mx.init!(kv, key, mx.ones(shape)*2)
+a = mx.empty(shape)
+mx.pull!(kv, key, a) # pull value into a
+println(copy(a))
+```
