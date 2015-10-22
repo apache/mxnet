@@ -167,6 +167,17 @@ function setindex!{T<:Real}(arr :: NDArray, val :: Union{T,Array{T},NDArray}, id
   copy!(slice(arr, idx), val)
 end
 
+import Base: getindex
+"""Shortcut for `slice`. **NOTE** the behavior for Julia's built-in index slicing is to create a
+copy of the sub-array, while here we simply call `slice`, which shares the underlying memory.
+"""
+function getindex(arr :: NDArray, ::Colon)
+  return arr
+end
+function getindex(arr :: NDArray, idx::UnitRange{Int})
+  slice(arr, idx)
+end
+
 #------------------------------------------------------------
 # Copying functions
 #------------------------------------------------------------

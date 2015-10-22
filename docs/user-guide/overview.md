@@ -142,7 +142,107 @@ For neural networks, it is easier to use `simple_bind`. By providing the shape f
 
 * The actual data could live on different `Context` (e.g. GPUs). For some contexts, iterating into the elements one by one is very slow, thus indexing into `NDArray` is not supported in general. The easiest way to inspect the contents of an `NDArray` is to use the `copy` function to copy the contents as a Julia `Array`.
 * Operations on `NDArray`s (including basic arithmetics and neural network related operators) are executed in parallel with automatic dependency tracking to ensure correctness.
+* There is no generics in `NDArray`, the `eltype` is always `mx.MX_float`. Because for applications in machine learning, single precision floating point numbers are typical a best choice balancing between precision, speed and portability. Also since libmxnet is designed to support multiple languages as front-ends, it is much simpler to implement with a fixed data type.
 
 While most of the computation is hidden in libmxnet by operators corresponding to various neural network layers. Getting familiar with the `NDArray` API is useful for implementing `Optimizer`s or customized operators in Julia directly.
+
+The followings are common ways to create `NDArray` objects:
+
+* `mx.empty(shape[, context])`: create on uninitialized array of a given shape on a specific device. For example, `mx.empty(2,3)`, `mx.((2,3), mx.gpu(2))`.
+* `mx.zeros(shape[, context])` and `mx.ones(shape[, context])`: similar to the Julia's built-in `zeros` and `ones`.
+* `mx.copy(jl_arr, context)`: copy the contents of a Julia `Array` to a specific device.
+
+Most of the convenient functions like `size`, `length`, `ndims`, `eltype` on array objects should work out-of-the-box. Although indexing is not supported, it is possible to take *slices*:
+```julia
+a = mx.ones(2,3)
+b = mx.slice(a, 1:2)
+b[:] = 2
+println(copy(a))
+# =>
+# Float32[2.0 2.0 1.0
+#         2.0 2.0 1.0]
+```
+A slice is a sub-region sharing the same memory with the original `NDArray` object. A slice is always a contiguous piece of memory, so only slicing on the *last* dimension is supported. The example above also shows a way to set the contents of an `NDArray`.
+```julia
+a = mx.empty(2,3)
+a[:] = 0.5              # set all elements to a scalar
+a[:] = rand(size(a))    # set contents with a Julia Array
+copy!(a, rand(size(a))) # set value by copying a Julia Array
+b = mx.empty(size(a))
+b[:] = a                # copying and assignment between NDArrays
+```
+Note due to the intrinsic <del>limitation</del> design of the Julia language, a normal assignment
+```julia
+a = b
+```
+does **not** mean copying the contents of `b` to `a`. Instead, it just make the variable `a` pointing to a new object, which is `b`. Similarly, inplace arithmetics does not work as expected:
+```julia
+a = mx.ones(2)
+r = a           # keep a reference to a
+b = mx.ones(2)
+a += b          # translates to a = a + b
+println(copy(a))
+# => Float32[2.0f0,2.0f0]
+println(copy(r))
+# => Float32[1.0f0,1.0f0]
+```
+As we can see, `a` has expected value, but instead of inplace updating, a new `NDArray` is created and `a` is set to point to this new object. If we look at `r`, which still reference to the old `a`, its content has not changed. There is currently no way in Julia to overload the operators like `+=` to get customized behavior.
+
+Instead, you will need to write `a[:] = a+b`, or if you want *real* inplace `+=` operation, MXNet.jl provides a simple macro `@mx.inplace`:
+```julia
+@mx.inplace a += b
+macroexpand(:(@mx.inplace a += b))
+# => :(MXNet.mx.add_to!(a,b))
+```
+As we can see, it translate the `+=` operator to an explicit `add_to!` function call, which invokes into libmxnet to add the contents of `b` into `a` directly. For example, the following is the update rule in the SGD `Optimizer` (both `grad` and `weight` are `NDArray` objects):
+```julia
+@inplace weight += -lr * (grad_scale * grad + self.weight_decay * weight)
+```
+Note there is no much magic in `mx.inplace`: it only does a shallow translation. In the SGD update rule example above, the computation like scaling the gradient by `grad_scale` and adding the weight decay all create temporary `NDArray` objects. However, libmxnet has a customized memory allocator designed specifically to handle this kind of situations. So typically creating temp intermediate arrays is not a problem. The following snippet does a simple benchmark on allocating temp `NDArray`s vs. pre-allocating:
+```julia
+using Benchmark
+using MXNet
+
+N_REP = 1000
+SHAPE = (128, 64)
+CTX   = mx.cpu()
+LR    = 0.1
+
+function inplace_op()
+  weight = mx.zeros(SHAPE, CTX)
+  grad   = mx.ones(SHAPE, CTX)
+
+  # pre-allocate temp objects
+  grad_lr = mx.empty(SHAPE, CTX)
+
+  for i = 1:N_REP
+    copy!(grad_lr, grad)
+    @mx.inplace grad_lr .*= LR
+    @mx.inplace weight -= grad_lr
+  end
+  return weight
+end
+
+function normal_op()
+  weight = mx.zeros(SHAPE, CTX)
+  grad   = mx.ones(SHAPE, CTX)
+
+  for i = 1:N_REP
+    weight[:] -= LR * grad
+  end
+  return weight
+end
+
+# make sure the results are the same
+@assert(maximum(abs(copy(normal_op() - inplace_op()))) < 1e-6)
+
+println(compare([inplace_op, normal_op], 100))
+```
+The comparison on my laptop shows that
+
+| Row | Function     | Average   | Relative | Replications |
+|-----|--------------|-----------|----------|--------------|
+| 1   | "inplace_op" | 0.0074854 | 1.0      | 100          |
+| 2   | "normal_op"  | 0.0174202 | 2.32723  | 100          |
 
 ## Distributed Key-value Store
