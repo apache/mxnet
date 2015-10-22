@@ -1,13 +1,26 @@
 using MXNet
 
+#--------------------------------------------------------------------------------
 # define MLP
-data = mx.Variable(:data)
-fc1  = mx.FullyConnected(data = data, name=:fc1, num_hidden=128)
-act1 = mx.Activation(data = fc1, name=:relu1, act_type=:relu)
-fc2  = mx.FullyConnected(data = act1, name=:fc2, num_hidden=64)
-act2 = mx.Activation(data = fc2, name=:relu2, act_type=:relu)
-fc3  = mx.FullyConnected(data = act2, name=:fc3, num_hidden=10)
-mlp  = mx.Softmax(data = fc3, name=:softmax)
+# the following two ways are equivalent
+
+#-- Option 1: explicit composition
+# data = mx.Variable(:data)
+# fc1  = mx.FullyConnected(data = data, name=:fc1, num_hidden=128)
+# act1 = mx.Activation(data = fc1, name=:relu1, act_type=:relu)
+# fc2  = mx.FullyConnected(data = act1, name=:fc2, num_hidden=64)
+# act2 = mx.Activation(data = fc2, name=:relu2, act_type=:relu)
+# fc3  = mx.FullyConnected(data = act2, name=:fc3, num_hidden=10)
+# mlp  = mx.Softmax(data = fc3, name=:softmax)
+
+#-- Option 2: using the mx.chain macro
+mlp = @mx.chain mx.Variable(:data)             =>
+  mx.FullyConnected(name=:fc1, num_hidden=128) =>
+  mx.Activation(name=:relu1, act_type=:relu)   =>
+  mx.FullyConnected(name=:fc2, num_hidden=64)  =>
+  mx.Activation(name=:relu2, act_type=:relu)   =>
+  mx.FullyConnected(name=:fc3, num_hidden=10)  =>
+  mx.Softmax(name=:softmax)
 
 # data provider
 batch_size = 100
