@@ -10,6 +10,7 @@ Contents
 - [Building MXNet Library](#build-mxnet-library)
   - [Prerequisites](#prerequisites)
   - [Building on Linux](#building-on-linux)
+  - [Building on OSX](#building-on-osx)
   - [Building on Windows](#building-on-windows)
   - [Installing pre-built packages on Windows](#installing-pre-built-packages-on-windows)
 - [Advanced Build Configurations](#advanced-build-configuration)
@@ -25,7 +26,7 @@ Build MXNet Library
 MXNet have a general runtime library that can be used by various packages such as python, R and Julia.
 This section gives details about how to build the mxnet library.
 - On Linux/OSX the target library will be ```libmxnet.so```
-- On Windows the target libary is ```mxnet.dll```
+- On Windows the target libary is ```libmxnet.dll```
 
 Things to do before get started:
 
@@ -56,7 +57,7 @@ make -j4
 ```
 Then proceed to package installation instructions for python or R in this page.
 
-### OSX
+### Buillding on OSX
 On OSX, we can install the dependencies by
 
 ```bash
