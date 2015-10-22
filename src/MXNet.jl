@@ -8,7 +8,7 @@ export mx
 module mx
 using Formatting
 
-include("init.jl")
+include("base.jl")
 include("context.jl")
 
 include("ndarray.jl")

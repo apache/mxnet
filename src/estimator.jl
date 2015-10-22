@@ -138,7 +138,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   param_arrays = [NDArray[exec.arg_arrays[i] for exec in train_execs] for i in param_idx]
   grad_arrays  = [NDArray[exec.grad_arrays[i] for exec in train_execs] for i in param_idx]
 
-  optimizer.inv_batch_size = 1.0/batch_size
+  optimizer.batch_size = batch_size
 
   if !update_on_kvstore
     updater = get_updater(optimizer)
