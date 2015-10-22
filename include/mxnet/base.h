@@ -54,9 +54,9 @@
 */
 #ifdef _MSC_VER
 #ifdef MXNET_EXPORTS
-#define MXAPI __declspec(dllexport)
+#define MXNET_API __declspec(dllexport)
 #else
-#define MXAPI __declspec(dllimport)
+#define MXNET_API __declspec(dllimport)
 #endif
 #else
 #define MXAPI
