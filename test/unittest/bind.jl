@@ -11,8 +11,8 @@ function test_arithmetic(uf, gf)
   shape = rand_dims()
   info("Bind::arithmetic::$uf::dims = $shape")
 
-  lhs = mx.variable(:lhs)
-  rhs = mx.variable(:rhs)
+  lhs = mx.Variable(:lhs)
+  rhs = mx.Variable(:rhs)
   ret = uf(lhs, rhs)
   @test mx.list_arguments(ret) == [:lhs, :rhs]
 

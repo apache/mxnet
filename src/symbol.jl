@@ -67,14 +67,14 @@ function get_internals(self :: Symbol)
 end
 
 "Create a symbolic variable with the given name"
-function variable(name :: Union{Base.Symbol, AbstractString})
+function Variable(name :: Union{Base.Symbol, AbstractString})
   hdr_ref = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCreateVariable, (char_p, Ref{MX_handle}), name, hdr_ref)
   Symbol(MX_SymbolHandle(hdr_ref[]))
 end
 
 "Create a symbol that groups symbols together"
-function group(symbols :: Symbol...)
+function Group(symbols :: Symbol...)
   handles = MX_handle[symbols...]
   ref_hdr = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCreateGroup, (MX_uint, Ptr{MX_handle}, Ref{MX_handle}),

@@ -4,7 +4,7 @@ using MXNet
 # define lenet
 
 # input
-data = mx.variable(:data)
+data = mx.Variable(:data)
 
 # first conv
 conv1 = mx.Convolution(data=data, kernel=(5,5), num_filter=20)

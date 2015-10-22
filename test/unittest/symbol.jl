@@ -19,7 +19,7 @@ end
 function test_internal()
   info("Symbol::internal")
 
-  data  = mx.variable(:data)
+  data  = mx.Variable(:data)
   oldfc = mx.FullyConnected(data=data, name=:fc1, num_hidden=10)
   net1  = mx.FullyConnected(data=oldfc, name=:fc2, num_hidden=100)
 
@@ -33,7 +33,7 @@ end
 function test_compose()
   info("Symbol::compose")
 
-  data = mx.variable(:data)
+  data = mx.Variable(:data)
   net1 = mx.FullyConnected(data=data, name=:fc1, num_hidden=10)
   net1 = mx.FullyConnected(data=net1, name=:fc2, num_hidden=100)
 
@@ -42,7 +42,7 @@ function test_compose()
   net2 = mx.FullyConnected(data=net2, name=:fc4, num_hidden=20)
 
   composed  = net2(fc3_data=net1, name=:composed)
-  multi_out = mx.group(composed, net1)
+  multi_out = mx.Group(composed, net1)
   @test mx.list_outputs(multi_out) == [:composed_output, :fc2_output]
 end
 

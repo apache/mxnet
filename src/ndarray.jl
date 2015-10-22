@@ -325,6 +325,9 @@ function .*(arg0 :: NDArray, arg :: Union{Real, NDArray})
   ret = copy(arg0, context(arg0))
   mul_to!(ret, arg)
 end
+function .*(arg0 :: Real, arg :: NDArray)
+  .*(arg, arg0)
+end
 # unlike *, we only allow type Real in arguments, because array-array * operator
 # means matrix multiplication in Julia
 function *(arg0 :: NDArray, arg :: Real)

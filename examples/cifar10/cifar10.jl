@@ -36,7 +36,7 @@ end
 
 #--------------------------------------------------------------------------------
 # Actual architecture
-data    = mx.variable(:data)
+data    = mx.Variable(:data)
 conv1   = conv_factory(data, 96, (3,3); pad=(1,1), act_type=:relu)
 in3a    = simple_factory(conv1, 32, 32)
 in3b    = simple_factory(in3a, 32, 48)

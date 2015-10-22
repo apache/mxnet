@@ -1,7 +1,7 @@
 using MXNet
 
 # define MLP
-data = mx.variable(:data)
+data = mx.Variable(:data)
 fc1  = mx.FullyConnected(data = data, name=:fc1, num_hidden=128)
 act1 = mx.Activation(data = fc1, name=:relu1, act_type=:relu)
 fc2  = mx.FullyConnected(data = act1, name=:fc2, num_hidden=64)

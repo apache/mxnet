@@ -12,7 +12,7 @@ function rand_dims(max_ndim=6)
 end
 
 function mlp2()
-  data = mx.variable(:data)
+  data = mx.Variable(:data)
   out = mx.FullyConnected(data=data, name=:fc1, num_hidden=1000)
   out = mx.Activation(data=out, act_type=:relu)
   out = mx.FullyConnected(data=out, name=:fc2, num_hidden=10)
