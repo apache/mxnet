@@ -35,7 +35,7 @@ However, it is quite hard to code the sequence manually, as the last operation,
 ```D = B * C```, needs to wait for both the above operations to complete before it starts running.
 We can represent the computation as the following dependency graph.
 
-![Dep Simple](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_simple.png)
+![Dep Simple](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/dep_simple.png)
 
 In this specific case, the graph is also called data-flow graph, as it represents the dependency
 in terms of data and computation.
@@ -56,7 +56,7 @@ learning libraries when things go parallel.
 ### Data Flow Dependency
 The central thing that almost every dependency engine will have to solve, is the dataflow dependency problem.
 
-![Dep Simple](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_simple.png)
+![Dep Simple](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/dep_simple.png)
 
 Data Flow dependency describes how the outcome of one computation can be used in other computations.
 As we have elaborated this in last section, we will only put the same figure here. Libraries that have
@@ -68,7 +68,7 @@ This is simple in the serial case. Because we can simply recycle the memory afte
 go out of scope. However, things becomes a bit harder in parallel case. Consider the following
 example
 
-![Dep Del](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_del.png)
+![Dep Del](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/dep_del.png)
 
 In the above example, because both computation needs to use values from A. We cannot perform
 the memory recycling before these computation completes. So a correct engine
@@ -80,7 +80,7 @@ is executed after both ```B = A + 1``` and ```C = A + 2``` completes.
 Random number generators are commonly used in machine learning. However, they also bring
 interesting challenges for dependency engine. Consider the following example
 
-![Dep Rand](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_rand.png)
+![Dep Rand](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/dep_rand.png)
 
 Here we are generating random numbers in a sequence. While it seems that the two random number
 generations can be parallelized. This is usually not the case. Because usually a pseudorandom
@@ -131,7 +131,7 @@ a simple SGD update, and copies the updated weight back to each GPU.
 This is a common data parallel program written in a serial manner.
 The following dependency graph shows how it can be parallelized:
 
-![Dep Net](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_net.png)
+![Dep Net](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/dep_net.png)
 
 Few important notes:
 - The copy of gradient to CPU, can happen as soon as we get gradient of that layer.
@@ -202,14 +202,14 @@ Because we cannot assume the object we are scheduling on. What we can do instead
 ```virtual tag``` that is associated with each object to represent what we need to schedule.
 So at the beginning, user can allocate the variable tag, and attach it to each of object that we want to schedule.
 
-![Dep Net](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/tag_var.png)
+![Dep Net](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/tag_var.png)
 
 After having the variable tags, user call ```push``` to tell the engine about the function we want to execute.
 In addition, user need to specify the dependencies of the operation by ```read_vars``` and ```write_vars```.
 - ```read_vars``` are variable tags of objects which the operation will "read from", without changing its internal state.
 - ```mutate_vars``` are variable tags of objects which the operation will mutate their internal states.
 
-![Push Op](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/push_var.png)
+![Push Op](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/push_var.png)
 
 The above figure shows how we can push operation ```B = A + 1``` to dependency engine. Here ```B.data```,
 ```A.data``` are the real allocated space. We should note that engine is ***only aware of variable tags***.
@@ -227,16 +227,16 @@ The first line reads variable `A` and mutates variable `B`. The second line read
 
 The engine is going to maintain a queue for each variable, as the following animation shows for each of the four lines. Green blocks represents a read action, while a red one represents a mutation.
 
-![Dependency Queue](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_queue.gif)
+![Dependency Queue](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/dep_queue.gif)
 
 Upon building this queue, the engine sees that the first two green blocks at the front of A's queue, could actually be run in parallel, because they are both read actions and won't conflict with each other. The following graph illustrates this point.
 
-![Dependency Parallelism](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/dep_parallel.png)
+![Dependency Parallelism](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/dep_parallel.png)
 
 The cool thing about all this scheduling is, it is not confined to numerical calculations. Since everything scheduled is only a tag, the engine could schedule everything!
 
 The following figure gives a complete push sequence of the programs we mentioned in previous sections.
-![Push Seq](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/push_seq.png)
+![Push Seq](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/push_seq.png)
 
 ### Port Existing Codes to the Dependency Engine
 Because the generic interface do not take control of things like memory allocation and what operation to execute.
@@ -259,11 +259,11 @@ The general idea is as follows
 The following figure gives a visual example of the scheduling algorithm, which might give you a better sense
 of what is going on in the engine.
 
-![Dep Tracking](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/engine_queue_step.png)
+![Dep Tracking](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/engine_queue_step.png)
 
 The following figure gives another example that involves random number generations.
 
-![Dep Rand](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/engine/engine_queue_rand.png)
+![Dep Rand](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/engine_queue_rand.png)
 
 As we can see, the algorithm is mainly about update pending queues of operations and doing the right
 state transition when operation completed. More care should be taken to make sure the state transition
