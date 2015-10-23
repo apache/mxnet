@@ -75,8 +75,7 @@ class LeakyReLUOp : public Operator {
     Tensor<xpu, 4> mask;
     Tensor<xpu, 1> weight;
     if (in_data[kData].ndim() == 2) {
-      uint32_t ds[] = {in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1};
-      TShape dshape(ds, ds + 4);
+      Shape<4> dshape = Shape4(in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1);
       data = in_data[kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       out = out_data[kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
       if (param_.act_type == kRReLU) {
@@ -139,8 +138,7 @@ class LeakyReLUOp : public Operator {
     Tensor<xpu, 1> weight;
     Tensor<xpu, 1> grad_weight;
     if (in_data[kData].ndim() == 2) {
-      uint32_t ds[] = {in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1};
-      TShape dshape(ds, ds + 4);
+      Shape<4> dshape = Shape4(in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1);
       grad = out_grad[kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
       gdata = in_grad[kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       output = out_data[kOut].get_with_shape<xpu, 4, real_t>(dshape, s);

@@ -72,14 +72,12 @@ class ConvolutionOp : public Operator {
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1);
-    // TODO(bing): check the BLAS Handle, be careful
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
-    uint32_t ws[] = {param_.num_group,
-                     param_.num_filter / param_.num_group,
-                     data.shape_[1] / param_.num_group * param_.kernel[0] * param_.kernel[1]
-                    };
-    TShape wmat_shape(ws, ws + 3);
+    Shape<3> wmat_shape =
+        Shape3(param_.num_group,
+               param_.num_filter / param_.num_group,
+               data.shape_[1] / param_.num_group * param_.kernel[0] * param_.kernel[1]);
     Tensor<xpu, 3> wmat = in_data[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
     Tensor<xpu, 4> out = out_data[kOut].get<xpu, 4, real_t>(s);
 #if defined(__CUDACC__)
@@ -149,11 +147,10 @@ class ConvolutionOp : public Operator {
     // get data
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
-    uint32_t ws[] = {param_.num_group,
-                     param_.num_filter / param_.num_group,
-                     data.shape_[1] / param_.num_group * param_.kernel[0] * param_.kernel[1]
-                    };
-    TShape wmat_shape(ws, ws + 3);
+    Shape<3> wmat_shape =
+        Shape3(param_.num_group,
+               param_.num_filter / param_.num_group,
+               data.shape_[1] / param_.num_group * param_.kernel[0] * param_.kernel[1]);
     Tensor<xpu, 3> wmat = in_data[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
     Tensor<xpu, 4> grad = out_grad[kOut].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> gdata = in_grad[kData].get<xpu, 4, real_t>(s);

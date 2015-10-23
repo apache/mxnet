@@ -51,12 +51,10 @@ class SliceChannelOp : public Operator {
     std::vector<Tensor<xpu, 4> > outputs(size_);
     Tensor<xpu, 4> data;
     if (in_data[kData].ndim() == 2) {
-      uint32_t ds[] = {in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1};
-      TShape dshape(ds, ds + 4);
+      Shape<4> dshape = Shape4(in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1);
       data = in_data[kData].get_with_shape<xpu, 4, real_t>(dshape, s);
-      uint32_t dim = data.shape_[1] / size_;
-      ds[1] = dim;
-      TShape slice_shape(ds, ds + 4);
+      Shape<4> slice_shape = dshape;
+      slice_shape[1] = dshape[1] / size_;
       for (int i = 0; i < size_; ++i) {
         outputs[i] = out_data[i].get_with_shape<xpu, 4, real_t>(slice_shape, s);
       }
@@ -84,13 +82,12 @@ class SliceChannelOp : public Operator {
     std::vector<Tensor<xpu, 4> > grad_out(size_);
     Tensor<xpu, 4> grad;
     if (out_grad[kOut0].ndim() == 2) {
-      uint32_t ds[] = {out_grad[kOut0].shape_[0], out_grad[kOut0].shape_[1], 1, 1};
-      TShape slice_shape(ds, ds + 4);
+      Shape<4> slice_shape = Shape4(out_grad[kOut0].shape_[0], out_grad[kOut0].shape_[1], 1, 1);
       for (int i = 0; i < size_; ++i) {
         grad_out[i] = out_grad[i].get_with_shape<xpu, 4, real_t>(slice_shape, s);
       }
-      ds[1] *= size_;
-      TShape dshape(ds, ds + 4);
+      Shape<4> dshape = slice_shape;
+      dshape[1] *= size_;
       grad = in_grad[kData].get_with_shape<xpu, 4, real_t>(dshape, s);
     } else {
       for (int i = 0; i < size_; ++i) {
