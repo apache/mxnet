@@ -16,7 +16,9 @@ typealias char_pp Ptr{char_p}
 ################################################################################
 # Initialization and library API entrance
 ################################################################################
-const MXNET_LIB = Libdl.find_library(["libmxnet.so","libmxnet.dll"], ["$(get(ENV,"MXNET_HOME",""))/lib"])
+const MXNET_LIB = Libdl.find_library(["libmxnet.so","libmxnet.dll"],
+                                     [joinpath("$(get(ENV,"MXNET_HOME",""))","lib"),
+                                      joinpath(Pkg.dir("MXNet"),"deps/usr/lib")])
 
 function __init__()
   _import_ndarray_functions()

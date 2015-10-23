@@ -2,4 +2,6 @@
 *.jl.*.cov
 *.jl.mem
 data
-docs/_build
+deps/src
+deps/usr
+deps/deps.jl

@@ -29,38 +29,23 @@ using BinDeps
 @BinDeps.setup
 
 #--------------------------------------------------------------------------------
-# Install dependencies, opencv and blas
-opencv_core = library_dependency("opencv_core", aliases=["libopencv_core"])
-
+# Install dependencies, blas
 @linux_only begin
-  provides(AptGet, "libopencv-dev", opencv_core)
-  provides(Pacman, "opencv", opencv_core)
-  provides(Yum, "opencv", opencv_core)
-
   blas = library_dependency("blas", aliases=["libblas","libblas.so.3"])
   provides(AptGet, "libblas-dev", blas)
   provides(Pacman, "blas", blas)
   provides(Yum, "blas-devel", blas)
-end
 
-@osx_only begin
-  using Homebrew
-  provides(Homebrew.HB, "opencv", opencv_core, os = :Darwin)
-
-  # OSX has built-in BLAS we could use
-end
-
-@BinDeps.install Dict(:opencv_core => :opencv_core)
-@linux_only begin
   @BinDeps.install Dict(:blas => :blas)
 end
 
 #--------------------------------------------------------------------------------
 # Build libmxnet
-mxnet = library_dependency("mxnet", aliases=["libmxnet"])
+mxnet = library_dependency("mxnet", aliases=["libmxnet.so"])
 
 prefix = joinpath(BinDeps.depsdir(mxnet), "usr")
-srcdir = joinpath(BinDeps.depsdir(mxnet),"src", "libmxnet")
+srcdir = joinpath(BinDeps.depsdir(mxnet),"src")
+mxdir  = joinpath(srcdir, "mxnet")
 libdir = joinpath(prefix, "lib")
 provides(BuildProcess,
   (@build_steps begin
@@ -68,11 +53,13 @@ provides(BuildProcess,
     CreateDirectory(libdir)
     @build_steps begin
       ChangeDirectory(srcdir)
+      `rm -rf mxnet`
       `git clone --recursive https://github.com/dmlc/mxnet`
       FileRule(joinpath(libdir, "libmxnet.so"), @build_steps begin
-        ChangeDirectory("mxnet")
+        ChangeDirectory("$mxdir")
+        `cp make/config.mk config.mk`
         @osx_only `cp make/osx.mk config.mk`
-        @osx_only `echo hahahahahahahaha=================`
+        `sed -i -s 's/USE_OPENCV = 1/USE_OPENCV = 0/' config.mk`
         `make`
         `cp lib/libmxnet.so $libdir`
       end)
