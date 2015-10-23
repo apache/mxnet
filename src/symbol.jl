@@ -358,10 +358,10 @@ macro chain(layers)
   last_layer = nothing
   function _chain_layer(layer, last_layer)
     if isa(last_layer, Void)
-      layer
+      esc(layer)
     else
       @assert(isa(layer, Expr) && layer.head == :call, "Do not know how to chain up $layer")
-      return Expr(:call, layer.args[1], last_layer, layer.args[2:end]...)
+      return Expr(:call, esc(layer.args[1]), last_layer, map(esc, layer.args[2:end])...)
     end
   end
   while true
