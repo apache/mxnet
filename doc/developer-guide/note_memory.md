@@ -3,7 +3,7 @@ Squeeze the Memory Consumption of Deep Learning
 One important theme about deep learning is to train deeper and larger nets.
 While the hardware has been upgraded rapidly in recent years, the huge deepnet monsters are
 always hungry about the GPU RAMS. Being able to use less memory for the same net also means we can
-user larger batch size, and usually higher GPU utilization rate.
+use larger batch size, and usually higher GPU utilization rate.
 
 This article discusses how memory allocation optimization can be done for deep neural nets, and provide
 some of candidate solutions to the problems. The solutions discussed in this article is by no means complete,
