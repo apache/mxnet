@@ -3,16 +3,12 @@ MXNet Documentation
 [MXNet](https://github.com/dmlc/mxnet) is a deep learning framework designed for both *efficiency* and *flexibility*.
 It allows you to mix the flavours of deep learning programs together to maximize the efficiency and your productivity.
 
-How to Get Started
-------------------
-* Check out [Python Getting started Guide](python/tutorial.md)
-* The [example](../example) folder contains example usecases of mxnet.
-
 User Guide
 ----------
 * [Build and Installation](build.md)
 * [Python Package Document](python/index.md)
 * [R Package Document](R-package/index.md)
+* [MXNet.jl Julia Package](https://github.com/dmlc/MXNet.jl)
 * [Frequently Asked Questions](faq.md)
 
 
