@@ -25,6 +25,6 @@ Notes
 -----
 - You can change the symbol in the [inception_memcost.py](inception_memcost.py) to the net you interested in.
 - You will need to install mxnet or type make on the root folder before use the script.
-- The estimation is only on space cost of intermediate node and weights.
-  - The cost of temporal workspace is not estimated.
+- The estimation is only on space cost of intermediate node.
+  - The cost of temporal workspace is not estimated, so you will likely need more memory when running real nets.
 - The estimation does real allocation on CPU, the plan is the same on GPU.
