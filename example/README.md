@@ -14,7 +14,8 @@ Contents
 --------
 * [mnist](mnist) gives examples on training mnist.
 * [cifar10](cifar10) gives examples on CIFAR10 dataset.
-
+* [adversary](adversary) Find adversary sample by using fast sign method
+* [rnn](rnn) LSTM example
 
 Python Howto
 ------------
