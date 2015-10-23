@@ -4,8 +4,12 @@
 [![Documentation Status](https://readthedocs.org/projects/mxnetjl/badge/?version=latest)](http://mxnetjl.readthedocs.org/en/latest/?badge=latest)
 [![License](http://dmlc.github.io/img/apache2.svg)](LICENSE.md)
 
+MXNet.jl is the [dmlc/mxnet](https://github.com/dmlc/mxnet) [Julia](http://julialang.org/) package. MXNet.jl brings flexible and efficient GPU computing and state-of-art deep learning to Julia. Some highlight of features include:
 
-Julia wrapper of [MXNet](https://github.com/dmlc/mxnet).
+* Efficient tensor/matrix computation across multiple devices, including multiple CPUs, GPUs and distributed server nodes.
+* Flexible symbolic manipulation to composite and construct state-of-the-art deep learning models.
+
+Here is an exmple of how training a simple 3-layer MLP on MNIST looks like:
 
 ```julia
 using MXNet
@@ -31,3 +35,5 @@ optimizer = mx.SGD(lr=0.1, momentum=0.9, weight_decay=0.00001)
 # fit parameters
 mx.fit(estimator, optimizer, train_provider, epoch_stop=20, eval_data=eval_provider)
 ```
+
+For more details, please refer to the [document](http://mxnetjl.readthedocs.org/) and [examples](examples).
