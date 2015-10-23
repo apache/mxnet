@@ -213,8 +213,9 @@ The strategy discussed here is by no means the only solution, we can expect more
 How much can We Save
 --------------------
 Thanks for reading till this part! We have discussed the techniques and algorithms we can use to squeeze the memory usage of deep learning.
-Now comes the question on how much we can really save by using these techniques. The answer is we can roughly reduce the memory consumption
-by half using these techniques.
+Now comes the question on how much we can really save by using these techniques.
+
+The answer is we can roughly reduce the memory consumption ***by half*** using these techniques. This is on the coarse grained operation graphs that are already optimized with big operations. More memory reduction could be seen if we are optimizing a fine-grained computation network used by symbolic libraries such as Theano.
 
 Most of the ideas in this article inspires the design of mxnet.
 We provide an [Memory Cost Estimation Script](https://github.com/dmlc/mxnet/tree/master/example/memcost),
