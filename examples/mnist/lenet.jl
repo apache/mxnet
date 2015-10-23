@@ -7,22 +7,22 @@ using MXNet
 data = mx.Variable(:data)
 
 # first conv
-conv1 = mx.Convolution(data=data, kernel=(5,5), num_filter=20)
-tanh1 = mx.Activation(data=conv1, act_type=:tanh)
-pool1 = mx.Pooling(data=tanh1, pool_type=:max, kernel=(2,2), stride=(2,2))
+conv1 = @mx.chain mx.Convolution(data=data, kernel=(5,5), num_filter=20)  =>
+                  mx.Activation(act_type=:tanh) =>
+                  mx.Pooling(pool_type=:max, kernel=(2,2), stride=(2,2))
 
 # second conv
-conv2 = mx.Convolution(data=pool1, kernel=(5,5), num_filter=50)
-tanh2 = mx.Activation(data=conv2, act_type=:tanh)
-pool2 = mx.Pooling(data=tanh2, pool_type=:max, kernel=(2,2), stride=(2,2))
+conv2 = @mx.chain mx.Convolution(data=conv1, kernel=(5,5), num_filter=50) =>
+                  mx.Activation(act_type=:tanh) =>
+                  mx.Pooling(pool_type=:max, kernel=(2,2), stride=(2,2))
 
 # first fully-connected
-flat  = mx.Flatten(data=pool2)
-fc1   = mx.FullyConnected(data=flat, num_hidden=500)
-tanh3 = mx.Activation(data=fc1, act_type=:tanh)
+fc1   = @mx.chain mx.Flatten(data=conv2) =>
+                  mx.FullyConnected(num_hidden=500) =>
+                  mx.Activation(act_type=:tanh)
 
 # second fully-connected
-fc2   = mx.FullyConnected(data=tanh3, num_hidden=10)
+fc2   = mx.FullyConnected(data=fc1, num_hidden=10)
 
 # softmax loss
 lenet = mx.Softmax(data=fc2, name=:softmax)
