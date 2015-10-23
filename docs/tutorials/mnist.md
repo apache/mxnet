@@ -78,3 +78,73 @@ INFO:            time = 0.9287 seconds
 INFO: ## Validation summary
 INFO:       :accuracy = 0.9775
 ```
+
+# Convolutional Neural Networks
+
+In the second example, we show a slightly more complicated architecture that involves convolution and pooling. This architecture for the MNIST is usually called the *LeNet*. The first part of the architecture is listed below:
+```julia
+# input
+data = mx.Variable(:data)
+
+# first conv
+conv1 = @mx.chain mx.Convolution(data=data, kernel=(5,5), num_filter=20)  =>
+                  mx.Activation(act_type=:tanh) =>
+                  mx.Pooling(pool_type=:max, kernel=(2,2), stride=(2,2))
+
+# second conv
+conv2 = @mx.chain mx.Convolution(data=conv1, kernel=(5,5), num_filter=50) =>
+                  mx.Activation(act_type=:tanh) =>
+                  mx.Pooling(pool_type=:max, kernel=(2,2), stride=(2,2))
+```
+We basically defined two convolution modules. Each convolution module is actually a chain of `Convolution`, `tanh` activation and then max `Pooling` operations.
+
+Each sample in the MNIST dataset is a 28x28 single-channel grayscale image. In the tensor format used by `NDArray`, a batch of 100 samples is a tensor of shape `(28,28,1,100)`. The convolution and pooling operates in the spatial axis, so `kernel=(5,5)` indicate a square region of 5-width and 5-height.
+The rest of the architecture follows as:
+```julia
+# first fully-connected
+fc1   = @mx.chain mx.Flatten(data=conv2) =>
+                  mx.FullyConnected(num_hidden=500) =>
+                  mx.Activation(act_type=:tanh)
+
+# second fully-connected
+fc2   = mx.FullyConnected(data=fc1, num_hidden=10)
+
+# softmax loss
+lenet = mx.Softmax(data=fc2, name=:softmax)
+```
+Note a fully-connected operator expects the input to be a matrix. However, the results from spatial convolution and pooling are 4D tensors. So we explicitly used a `Flatten` operator to flat the tensor, before connecting it to the `FullyConnected` operator.
+
+The rest of the network is the same as the previous MLP example. As before, we can now load the MNIST dataset:
+```julia
+batch_size = 100
+include("mnist-data.jl")
+train_provider, eval_provider = get_mnist_providers(batch_size; flat=false)
+```
+Note we specified `flat=false` to tell the data provider to provide 4D tensors instead of 2D matrices because the convolution operators needs correct spatial shape information. We then construct a feedforward model on GPU, and train it.
+```julia
+#--------------------------------------------------------------------------------
+# fit model
+estimator = mx.FeedForward(lenet, context=mx.gpu())
+
+# optimizer
+optimizer = mx.SGD(lr=0.05, momentum=0.9, weight_decay=0.00001)
+
+# fit parameters
+mx.fit(estimator, optimizer, train_provider, epoch_stop=20, eval_data=eval_provider)
+```
+And here is a sample of running outputs:
+```
+INFO: == Epoch 001 ==========
+INFO: ## Training summary
+INFO:       :accuracy = 0.6750
+INFO:            time = 4.9814 seconds
+INFO: ## Validation summary
+INFO:       :accuracy = 0.9712
+...
+INFO: == Epoch 020 ==========
+INFO: ## Training summary
+INFO:       :accuracy = 1.0000
+INFO:            time = 4.0086 seconds
+INFO: ## Validation summary
+INFO:       :accuracy = 0.9915
+```
