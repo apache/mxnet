@@ -6,15 +6,11 @@ import logging
 
 mx.random.seed(0)
 logging.basicConfig(level=logging.DEBUG)
-
 kv = mx.kvstore.create('dist_async')
-
 (train, val) = common.cifar10(num_parts = kv.num_workers,
                               part_index = kv.rank,
                               batch_size = 128,
                               input_shape=(3,28,28))
-
-# assume each worker has two gpus
 devs = [mx.gpu(i) for i in range(2)]
 model = mx.model.FeedForward.create(
     ctx           = devs,
