@@ -137,7 +137,7 @@ include tests/cpp/unittest.mk
 test: $(TEST)
 
 lint: rcpplint
-	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python
+	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python predict/python
 
 doc: doxygen
 

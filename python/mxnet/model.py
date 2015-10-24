@@ -608,8 +608,6 @@ class FeedForward(BASE_ESTIMATOR):
                 raise TypeError('y must be ndarray when X is numpy.ndarray')
             if X.shape[0] != y.shape[0]:
                 raise ValueError("The numbers of data points and labels not equal")
-            if X.ndim != 2:
-                raise ValueError("Data must be 2D")
             if y.ndim == 2 and y.shape[1] == 1:
                 y = y.flatten()
             if y.ndim != 1:
