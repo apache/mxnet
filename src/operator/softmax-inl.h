@@ -25,9 +25,14 @@ enum SoftmaxOpOutputs {kOut};
 
 struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
   float grad_scale;
+  bool multi_output;
   DMLC_DECLARE_PARAMETER(SoftmaxParam) {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
     .describe("Scale the gradient by a float factor");
+    DMLC_DECLARE_FIELD(multi_output).set_default(false)
+    .describe("If set to true, for a (n,k,x_1,..,x_n) dimensional"
+      "input tensor, softmax will generate n*x_1*...*x_n output, each"
+      "has k classes");
   };
 };
 
@@ -46,9 +51,18 @@ class SoftmaxOp : public Operator {
     CHECK_EQ(in_data.size(), 2) << "Softmax Input: [data, label]";
     CHECK_EQ(out_data.size(), 1) << "Softmax Output: [output]";
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
-    Softmax(out, data);
+    if (param_.multi_output) {
+      int n = in_data[kData].size(0);
+      int k = in_data[kData].size(1);
+      Shape<3> s3 = Shape3(n, k, static_cast<int>(in_data[kData].Size()/n/k));
+      Tensor<xpu, 3> data = in_data[kData].get_with_shape<xpu, 3, real_t>(s3, s);
+      Tensor<xpu, 3> out = out_data[kOut].get_with_shape<xpu, 3, real_t>(s3, s);
+      Softmax(out, data);
+    } else {
+      Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
+      Softmax(out, data);
+    }
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -65,12 +79,25 @@ class SoftmaxOp : public Operator {
     CHECK_GE(in_grad.size(), 1);
     CHECK_GE(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 1> label = in_data[kLabel].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> grad = in_grad[kData].FlatTo2D<xpu, real_t>(s);
-    SoftmaxGrad(grad, out, label);
-    if (param_.grad_scale < 1.0) {
-      grad *= param_.grad_scale;
+    if (param_.multi_output) {
+      int n = out_data[kOut].size(0);
+      int k = out_data[kOut].size(1);
+      Shape<3> s3 = Shape3(n, k, static_cast<int>(out_data[kOut].Size()/n/k));
+      Tensor<xpu, 2> label = in_data[kLabel].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 3> out = out_data[kOut].get_with_shape<xpu, 3, real_t>(s3, s);
+      Tensor<xpu, 3> grad = in_grad[kData].get_with_shape<xpu, 3, real_t>(s3, s);
+      SoftmaxGrad(grad, out, label);
+      if (param_.grad_scale < 1.0) {
+        grad *= param_.grad_scale;
+      }
+    } else {
+      Tensor<xpu, 1> label = in_data[kLabel].get<xpu, 1, real_t>(s);
+      Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> grad = in_grad[kData].FlatTo2D<xpu, real_t>(s);
+      SoftmaxGrad(grad, out, label);
+      if (param_.grad_scale < 1.0) {
+        grad *= param_.grad_scale;
+      }
     }
   }
 
