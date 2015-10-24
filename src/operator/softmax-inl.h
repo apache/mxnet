@@ -131,7 +131,11 @@ class SoftmaxProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 2) << "Input:[data, label]";
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
-    SHAPE_ASSIGN_CHECK(*in_shape, kLabel, Shape1(dshape[0]));
+    if (param_.multi_output) {
+      SHAPE_ASSIGN_CHECK(*in_shape, kLabel, Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]));
+    } else {
+      SHAPE_ASSIGN_CHECK(*in_shape, kLabel, Shape1(dshape[0]));
+    }
     out_shape->clear();
     out_shape->push_back(dshape);
     return true;
