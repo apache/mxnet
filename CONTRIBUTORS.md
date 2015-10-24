@@ -54,3 +54,4 @@ List of Contributors
 * [Shuzhe Wu](https://github.com/II-Matto)
 * [Xiaodong](https://github.com/XD-DENG)
 * [Nan Xiao](https://github.com/road2stat)
+* [Junyuan Xie](https://github.com/piiswrong)
