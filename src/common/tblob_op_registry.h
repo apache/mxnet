@@ -64,8 +64,7 @@ class TBlobOpRegEntry {
   std::string name;
   /*!
    * \brief set shape inference function, by default use same shape.
-   * \param dev_mask The device mask of the function can act on.
-   * \param funary The unary function that peforms the operation.
+   * \param fshapeinfer The unary function that peforms the operation.
    */
   virtual TSelf& set_shape_infer(UnaryShapeInfer fshapeinfer) = 0;
   /*!
