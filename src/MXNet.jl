@@ -25,6 +25,7 @@ include("initializer.jl")
 include("io.jl")
 include("kvstore.jl")
 
+include("callback.jl")
 include("estimator.jl")
 
 include("util.jl")
