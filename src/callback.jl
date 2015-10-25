@@ -20,7 +20,7 @@ type IterationCallback <: AbstractIterationCallback
   callback  :: Function
 end
 
-function every_n_iter(callback :: Function, n :: Int, call_on_0 :: Bool = false)
+function every_n_iter(callback :: Function, n :: Int; call_on_0 :: Bool = false)
   IterationCallback(n, call_on_0, callback)
 end
 function Base.call(cb :: IterationCallback, param :: CallbackParams)
@@ -33,9 +33,9 @@ function Base.call(cb :: IterationCallback, param :: CallbackParams)
   end
 end
 
-function speedometer(frequency::Int=50)
+function speedometer(;frequency::Int=50)
   cl_tic = 0
-  every_n_iter(frequency, true) do param :: CallbackParams
+  every_n_iter(frequency, call_on_0=true) do param :: CallbackParams
     if param.curr_iter == 0
       # reset counter
       cl_tic = time()
@@ -54,15 +54,22 @@ type EpochCallback <: AbstractEpochCallback
   callback  :: Function
 end
 
-function every_n_epoch(callback :: Function, n :: Int, call_on_0 :: Bool = false)
+function every_n_epoch(callback :: Function, n :: Int; call_on_0 :: Bool = false)
   EpochCallback(n, call_on_0, callback)
 end
-function Base.call(cb :: EpochCallback, param :: CallbackParams)
+function Base.call(cb :: EpochCallback, estimator :: Any, param :: CallbackParams)
   if param.curr_epoch == 0
     if cb.call_on_0
-      cb.callback(param)
+      cb.callback(estimator, param)
     end
   elseif param.curr_epoch % cb.frequency == 0
-    cb.callback(param)
+    cb.callback(estimator, param)
+  end
+end
+
+function do_checkpoint(prefix::AbstractString; frequency::Int=1, save_epoch_0=false)
+  mkpath(dirname(prefix))
+  every_n_epoch(frequency, call_on_0=save_epoch_0) do estimator, param
+    save_checkpoint(estimator, prefix, param)
   end
 end

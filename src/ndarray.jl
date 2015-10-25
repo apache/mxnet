@@ -346,10 +346,13 @@ function div_from!(dst :: NDArray, arg :: Union{Real, NDArray})
     _div(dst, arg, dst)
   end
 end
-import Base: ./
+import Base: ./, /
 function ./(arg0 :: NDArray, arg :: Union{Real, NDArray})
   ret = copy(arg0, context(arg0))
   div_from!(ret, arg)
+end
+function /(arg0 :: NDArray, arg :: Real)
+  ./(arg0, arg)
 end
 
 #------------------------------------------------------------
