@@ -1,4 +1,4 @@
-# Training Deep Net on 14 Million Images on A Single Machine
+# Training Deep Net on 14 Million Images by Using A Single Machine
 
 This note describes how to train a neural network on Full ImageNet Dataset [1] with 14,197,087 images in 21,841 classes. **We achieved a state-of-art model by using 4 GeForce GTX 980 cards on a single machine in 8.5 days.**
 
