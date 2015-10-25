@@ -181,7 +181,7 @@ end
 #------------------------------------------------------------
 # Copying functions
 #------------------------------------------------------------
-import Base: copy!, copy
+import Base: copy!, copy, convert
 "Copy data between NDArrays"
 function copy!(dst :: NDArray, src :: NDArray)
   @assert(dst.writable)
@@ -228,6 +228,11 @@ end
 function copy{T<:Real}(arr :: Array{T}, ctx :: Context)
   dst = empty(size(arr), ctx)
   copy!(dst, arr)
+end
+
+"Convert copy: NDArray -> Julia Array"
+function convert{T<:Real}(t::Type{Array{T}}, arr :: NDArray)
+  convert(t, copy(arr))
 end
 
 

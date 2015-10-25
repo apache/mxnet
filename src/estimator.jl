@@ -7,6 +7,8 @@ type FeedForward <: AbstractEstimator
   arg_params  :: Dict{Base.Symbol, NDArray}
   aux_params  :: Dict{Base.Symbol, NDArray}
 
+  pred_exec   :: Executor
+
   # leave the rest fields undefined
   FeedForward(arch :: Symbol, ctx :: Vector{Context}) = new(arch, ctx)
 end
@@ -114,6 +116,9 @@ function _invoke_callbacks(self::FeedForward, callbacks::Vector{AbstractCallback
   end
 end
 
+function train(self :: FeedForward, optimizer :: AbstractOptimizer, data :: AbstractDataProvider; kwargs...)
+  fit(self, optimizer, data; kwargs...)
+end
 function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: AbstractDataProvider; kwargs...)
   opts = TrainingOptions(; kwargs...)
 

@@ -2,6 +2,8 @@ module TestIO
 using MXNet
 using Base.Test
 
+using ..Main: rand_dims, reldiff
+
 function test_mnist()
   info("IO::MNIST")
   filenames = mx.get_mnist_ubyte()
@@ -39,6 +41,37 @@ function test_mnist()
   @test n_batch == 60000 / batch_size
 end
 
+function test_arrays_impl(data::Vector, label::Vector, provider::mx.ArrayDataProvider)
+  data = convert(Vector{Array{Float64}}, data)
+  label = convert(Vector{Array{Float64}}, label)
+
+  sample_count = size(data[1])[end]
+  batch_size   = mx.get_batch_size(provider)
+  idx_all = 1:batch_size:sample_count
+
+  info("IO::Array::#data=$(length(data)),#label=$(length(label)),batch_size=$batch_size")
+  for (idx, batch) in zip(idx_all, provider)
+    data_batch = [x[[Colon() for i=1:ndims(x)-1]..., idx:min(idx+batch_size,sample_count)] for x in data]
+    data_get   = [mx.empty(size(x)[1:end-1]..., batch_size) for x in data]
+    mx.load_data!(batch, [[(1:batch_size, x)] for x in data_get])
+
+    for (d_real, d_get) in zip(data_batch, data_batch)
+      @test reldiff(d_real, copy(d_get)[[1:n for n in size(d_real)]...]) < 1e-6
+      @test mx.get_pad(batch) == batch_size - size(d_get)[end]
+    end
+  end
+end
+
+function test_arrays()
+  sample_count = 15
+  batch_size   = 4
+  dims_data    = [rand_dims()..., sample_count]
+  data = rand(dims_data...)
+  provider = mx.ArrayDataProvider(data, batch_size=batch_size)
+  test_arrays_impl(Array[data], [], provider)
+end
+
+test_arrays()
 test_mnist()
 
 end

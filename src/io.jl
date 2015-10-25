@@ -32,8 +32,8 @@ which translates into
 
 ```julia
 state = Base.start(provider)
-while !done(provider, state)
-  (batch, state) = next(provider, state)
+while !Base.done(provider, state)
+  (batch, state) = Base.next(provider, state)
   # ...
   load_data!(batch, targets)
 end
@@ -108,6 +108,123 @@ get_pad(batch :: AbstractDataBatch)
 Return the number of *dummy samples* in this mini-batch.
 """
 abstract AbstractDataBatch
+
+
+################################################################################
+# ArrayDataProvider
+################################################################################
+"A convenient tool to iterate `NDArray` or Julia `Array`"
+type ArrayDataProvider <: AbstractDataProvider
+  data_arrays :: Vector{Array{MX_float}}
+  data_names  :: Vector{Base.Symbol}
+  label_arrays:: Vector{Array{MX_float}}
+  label_names :: Vector{Base.Symbol}
+  batch_size  :: Int
+  sample_count:: Int
+  shuffle     :: Bool
+end
+
+function ArrayDataProvider{T<:Real}(data::Union{NDArray,Array{T}}; batch_size::Int=1, shuffle::Bool=false)
+  ArrayDataProvider(:data => data, batch_size=batch_size, shuffle=shuffle)
+end
+function ArrayDataProvider(data::Pair; batch_size=1, shuffle::Bool=false)
+  ArrayDataProvider(Pair[data], Pair[], batch_size=batch_size, shuffle=shuffle)
+end
+function ArrayDataProvider{T<:Real}(data::Union{NDArray,Array{T}}, label::Union{NDArray,Array{T}};
+                           batch_size::Int=1, shuffle::Bool=false)
+  ArrayDataProvider(:data => data, :softmax_label => label, batch_size=batch_size, shuffle=shuffle)
+end
+function ArrayDataProvider(data::Pair, label::Pair; batch_size=1, shuffle::Bool=false)
+  ArrayDataProvider([data], [label], batch_size=batch_size, shuffle=shuffle)
+end
+function ArrayDataProvider(data::Vector{Pair}, label::Vector{Pair}; batch_size::Int=1, shuffle::Bool=false)
+
+  data_names  = Base.Symbol[x[1] for x in data]
+  data_arrays = Array{MX_float}[x[2] for x in data]
+
+  label_names = Base.Symbol[x[1] for x in label]
+  label_arrays= Array{MX_float}[x[2] for x in label]
+
+  @assert length(data) > 0
+  sample_count = size(data_arrays[1])[end]
+  for i = 1:length(data_names)
+    @assert(size(data_arrays[i])[end] == sample_count,
+            "Number of samples in  $(data_names[i]) is mismatch with $(data_names[1])")
+  end
+  for i = 1:length(label_names)
+    @assert(size(label_arrays[i])[end] == sample_count,
+            "Number of samples in  $(label_names[i]) is mismatch with $(label_names[1])")
+  end
+
+  ArrayDataProvider(data_arrays, data_names, label_arrays, label_names, batch_size, sample_count, shuffle)
+end
+
+function provide_data(provider::ArrayDataProvider)
+  return collect(zip(provider.data_names, map(size, provider.data_arrays)))
+end
+function provide_label(provider::ArrayDataProvider)
+  return collect(zip(provider.label_names, map(size, provider.label_arrays)))
+end
+get_batch_size(provider::ArrayDataProvider) = provider.batch_size
+
+immutable ArrayDataProviderState <: AbstractDataProviderState
+  curr_idx :: Int
+end
+
+function Base.eltype(provider :: ArrayDataProvider)
+  ArrayDataProviderState
+end
+
+function _shuffle_array(arr::Array, idx::Vector{Int})
+  shape  = size(arr)
+  colons = [Colon() for c = 1:length(shape)-1]
+  getindex(arr, colons..., idx)
+end
+function Base.start(provider :: ArrayDataProvider)
+  if provider.shuffle
+    # re-shuffle all data
+    idx_perm = randperm(provider.sample_count)
+    provider.data_arrays = map(x->_shuffle_array(x,idx_perm), provider.data_arrays)
+    provider.label_arrays = map(x->_shuffle_array(x,idx_perm), provider.label_arrays)
+  end
+
+  return ArrayDataProviderState(1)
+end
+
+function Base.done(provider::ArrayDataProvider, state :: ArrayDataProviderState)
+  return state.curr_idx > provider.sample_count
+end
+
+immutable ArrayDataBatch <: AbstractDataBatch
+  provider :: ArrayDataProvider
+  idx      :: UnitRange{Int}
+end
+function Base.next(provider :: ArrayDataProvider, state :: ArrayDataProviderState)
+  idx = state.curr_idx:min(state.curr_idx+provider.batch_size, provider.sample_count)
+  return (ArrayDataBatch(provider, idx), ArrayDataProviderState(idx.stop+1))
+end
+
+function get_pad(batch :: ArrayDataBatch)
+  return batch.provider.batch_size - length(batch.idx)
+end
+
+function _load_general!(batch :: ArrayDataBatch, sources :: Vector{Array{MX_float}},
+                        targets :: Vector{Vector{SlicedNDArray}})
+  @assert length(sources) == length(targets)
+  for (src, tgt) in zip(sources, targets)
+    src_colons = [Colon() for i = 1:ndims(src)-1]
+    for (slice_idx, dst) in tgt
+      copy!(dst, getindex(src, src_colons..., batch.idx[slice_idx]))
+    end
+  end
+end
+function load_data!(batch :: ArrayDataBatch, targets :: Vector{Vector{SlicedNDArray}})
+  _load_general!(batch, batch.provider.data_arrays, targets)
+end
+function load_label!(batch :: ArrayDataBatch, targets :: Vector{Vector{SlicedNDArray}})
+  _load_general!(batch, batch.provider.label_arrays, targets)
+end
+
 
 
 ################################################################################
