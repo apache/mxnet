@@ -352,6 +352,65 @@ function ./(arg0 :: NDArray, arg :: Union{Real, NDArray})
   div_from!(ret, arg)
 end
 
+#------------------------------------------------------------
+# IO
+#------------------------------------------------------------
+"""Load NDArrays from binary file.
+
+**Parameters**:
+
+* `filename`: the path of the file to load. It could be S3 or HDFS address
+  if the `libmxnet` is built with the corresponding component enabled. Examples
+
+  * `s3://my-bucket/path/my-s3-ndarray`
+  * `hdfs://my-bucket/path/my-hdfs-ndarray`
+  * `/path-to/my-local-ndarray`
+
+**Returns**:
+
+  Either `Dict{Base.Symbol, NDArray}` or `Vector{NDArray}`.
+"""
+function load_ndarrays(filename::AbstractString)
+  out_size      = Ref{MX_uint}(0)
+  out_hdrs      = Ref{Ptr{MX_handle}}(0)
+  out_name_size = Ref{MX_uint}(0)
+  out_names     = Ref{char_pp}(0)
+  @mxcall(:MXNDArrayLoad, (char_p, Ref{MX_uint}, Ref{Ptr{MX_handle}}, Ref{MX_uint}, Ref{char_pp}),
+          filename, out_size, out_hdrs, out_name_size, out_names)
+  out_name_size = out_name_size[]
+  out_size      = out_size[]
+  if out_name_size == 0
+    return [NDArray(MX_NDArrayHandle(hdr)) for hdr in pointer_to_array(out_hdrs[], out_size)]
+  else
+    @assert out_size == out_name_size
+    return Dict([(symbol(bytestring(k)), NDArray(MX_NDArrayHandle(hdr))) for (k,hdr) in
+                 zip(pointer_to_array(out_names[], out_size), pointer_to_array(out_hdrs[], out_size))])
+  end
+end
+
+"""Save NDarrays to binary file.
+
+**Parameters**:
+
+* `filename`: path to the binary file to write to.
+* `data`: an `NDArray`, or a `Vector{NDArray}` or a `Dict{Base.Symbol, NDArray}`.
+"""
+function save_ndarrays(filename::AbstractString, data::NDArray)
+  save_ndarrays(filename, [data])
+end
+function save_ndarrays(filename::AbstractString, data::Vector{NDArray})
+  @mxcall(:MXNDArraySave, (char_p, MX_uint, Ptr{MX_handle}, char_pp),
+          filename, length(data), MX_handle[data...], char_pp(0))
+end
+function save_ndarrays(filename::AbstractString, data::Dict{Base.Symbol,NDArray})
+  names  = [k for k in keys(data)]
+  arrays = MX_handle[data[k] for k in names]
+  names  = AbstractString[string(k) for k in names]
+
+  @mxcall(:MXNDArraySave, (char_p, MX_uint, Ptr{MX_handle}, char_pp),
+          filename, length(names), arrays, names)
+end
+
 ################################################################################
 # NDArray functions dynamically imported from libmxnet
 ################################################################################

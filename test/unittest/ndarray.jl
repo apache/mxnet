@@ -176,6 +176,46 @@ function test_gd()
 end
 
 
+function test_saveload()
+  n_arrays = 5
+  info("NDArray::saveload::n_arrays = $n_arrays")
+  fname = tempname()
+
+  # save and load a single array
+  dims   = rand_dims()
+  j_array, nd_array = rand_tensors(dims)
+  mx.save_ndarrays(fname, nd_array)
+  data = mx.load_ndarrays(fname)
+  @test isa(data, Vector{mx.NDArray})
+  @test length(data) == 1
+  @test reldiff(copy(data[1]), j_array) < 1e-6
+
+  # save and load N arrays of different shape
+  arrays = [rand_tensors(rand_dims()) for i = 1:n_arrays]
+  nd_arrays = [x[2] for x in arrays]
+  mx.save_ndarrays(fname, nd_arrays)
+  data = mx.load_ndarrays(fname)
+  @test isa(data, Vector{mx.NDArray})
+  @test length(data) == n_arrays
+  for i = 1:n_arrays
+    @test reldiff(copy(data[i]), arrays[i][1]) < 1e-6
+  end
+
+  # save and load dictionary of ndarrays
+  names = [symbol("array$i") for i = 1:n_arrays]
+  dict = Dict([n => v for (n,v) in zip(names, nd_arrays)])
+  mx.save_ndarrays(fname, dict)
+  data = mx.load_ndarrays(fname)
+  @test isa(data, Dict{Symbol, mx.NDArray})
+  @test length(data) == n_arrays
+  for i = 1:n_arrays
+    @test reldiff(copy(data[names[i]]), arrays[i][1]) < 1e-6
+  end
+
+  rm(fname)
+end
+
+
 ################################################################################
 # Run tests
 ################################################################################
@@ -187,5 +227,6 @@ test_minus()
 test_mul()
 test_div()
 test_gd()
+test_saveload()
 
 end
