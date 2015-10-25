@@ -69,6 +69,18 @@ function test_infer_shape_error()
   @test_throws mx.MXError mx.infer_shape(model, data=data_shape, fc1_weight=weight_shape)
 end
 
+function test_saveload()
+  info("Symbol::saveload::mlp2")
+
+  model = mlp2()
+  fname = tempname()
+  mx.save(fname, model)
+  model2 = mx.load(fname, mx.Symbol)
+  @test mx.to_json(model) == mx.to_json(model2)
+
+  rm(fname)
+end
+
 
 ################################################################################
 # Run tests
@@ -78,5 +90,6 @@ test_internal()
 test_compose()
 test_infer_shape()
 test_infer_shape_error()
+test_saveload()
 
 end
