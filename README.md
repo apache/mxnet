@@ -12,6 +12,7 @@ deep learning programs together to maximize the efficiency and your productivity
 
 What's New
 ----------
+* [Training Deep Net on 14 Million Images on A Single Machine](https://mxnet-bing.readthedocs.org/en/latest/tutorial/imagenet_full.html)
 * [MXNet.jl Julia binding initial release](https://github.com/dmlc/MXNet.jl)
 * [Design Note: Squeeze the Memory Consumption of Deep Learning](http://mxnet.readthedocs.org/en/latest/developer-guide/note_memory.html)
 * [LSTM Example by using symbolic API](https://github.com/dmlc/mxnet/tree/master/example/rnn)
@@ -23,6 +24,7 @@ Contents
 * [Documentation and Tutorials](http://mxnet.readthedocs.org/en/latest/)
 * [Open Source Design Notes](http://mxnet.readthedocs.org/en/latest/#open-source-design-notes)
 * [Code Examples](example)
+* [Pretrained Models](https://github.com/dmlc/mxnet-model-gallery)
 * [Installation](http://mxnet.readthedocs.org/en/latest/build.html)
 * [Features](#features)
 * [Contribute to MXNet](http://mxnet.readthedocs.org/en/latest/contribute.html)
