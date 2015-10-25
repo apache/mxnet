@@ -370,7 +370,7 @@ end
 
   Either `Dict{Base.Symbol, NDArray}` or `Vector{NDArray}`.
 """
-function load_ndarrays(filename::AbstractString)
+function load(filename::AbstractString, ::Type{NDArray})
   out_size      = Ref{MX_uint}(0)
   out_hdrs      = Ref{Ptr{MX_handle}}(0)
   out_name_size = Ref{MX_uint}(0)
@@ -395,14 +395,14 @@ end
 * `filename`: path to the binary file to write to.
 * `data`: an `NDArray`, or a `Vector{NDArray}` or a `Dict{Base.Symbol, NDArray}`.
 """
-function save_ndarrays(filename::AbstractString, data::NDArray)
-  save_ndarrays(filename, [data])
+function save(filename::AbstractString, data::NDArray)
+  save(filename, [data])
 end
-function save_ndarrays(filename::AbstractString, data::Vector{NDArray})
+function save(filename::AbstractString, data::Vector{NDArray})
   @mxcall(:MXNDArraySave, (char_p, MX_uint, Ptr{MX_handle}, char_pp),
           filename, length(data), MX_handle[data...], char_pp(0))
 end
-function save_ndarrays(filename::AbstractString, data::Dict{Base.Symbol,NDArray})
+function save(filename::AbstractString, data::Dict{Base.Symbol,NDArray})
   names  = [k for k in keys(data)]
   arrays = MX_handle[data[k] for k in names]
   names  = AbstractString[string(k) for k in names]
@@ -424,6 +424,10 @@ end
   NDARRAY_ARG_BEFORE_SCALAR = 1,
   ACCEPT_EMPTY_MUTATE_TARGET = (1 << 2)
 )
+
+# Import corresponding math functions from base so the automatically defined libmxnet
+# functions can overload them
+import Base: sqrt
 
 """
 Import dynamic functions for NDArrays. The arguments to the functions are typically ordered

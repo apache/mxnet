@@ -184,8 +184,8 @@ function test_saveload()
   # save and load a single array
   dims   = rand_dims()
   j_array, nd_array = rand_tensors(dims)
-  mx.save_ndarrays(fname, nd_array)
-  data = mx.load_ndarrays(fname)
+  mx.save(fname, nd_array)
+  data = mx.load(fname, mx.NDArray)
   @test isa(data, Vector{mx.NDArray})
   @test length(data) == 1
   @test reldiff(copy(data[1]), j_array) < 1e-6
@@ -193,8 +193,8 @@ function test_saveload()
   # save and load N arrays of different shape
   arrays = [rand_tensors(rand_dims()) for i = 1:n_arrays]
   nd_arrays = [x[2] for x in arrays]
-  mx.save_ndarrays(fname, nd_arrays)
-  data = mx.load_ndarrays(fname)
+  mx.save(fname, nd_arrays)
+  data = mx.load(fname, mx.NDArray)
   @test isa(data, Vector{mx.NDArray})
   @test length(data) == n_arrays
   for i = 1:n_arrays
@@ -204,8 +204,8 @@ function test_saveload()
   # save and load dictionary of ndarrays
   names = [symbol("array$i") for i = 1:n_arrays]
   dict = Dict([n => v for (n,v) in zip(names, nd_arrays)])
-  mx.save_ndarrays(fname, dict)
-  data = mx.load_ndarrays(fname)
+  mx.save(fname, dict)
+  data = mx.load(fname, mx.NDArray)
   @test isa(data, Dict{Symbol, mx.NDArray})
   @test length(data) == n_arrays
   for i = 1:n_arrays
@@ -230,6 +230,15 @@ function test_clip()
   @test all(clip_down .<= copy(clipped) .<= clip_up)
 end
 
+function test_sqrt()
+  dims = rand_dims()
+  info("NDArray::sqrt::dims = $dims")
+
+  j_array, nd_array = rand_tensors(dims)
+  sqrt_ed = sqrt(nd_array)
+  @test reldiff(copy(sqrt_ed), sqrt(j_array)) < 1e-6
+end
+
 
 ################################################################################
 # Run tests
@@ -244,5 +253,6 @@ test_div()
 test_gd()
 test_saveload()
 test_clip()
+test_sqrt()
 
 end

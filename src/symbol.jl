@@ -229,10 +229,28 @@ function _compose!(sym :: Symbol, name :: Union{Base.Symbol, char_p}, args::Symb
   return sym
 end
 
+"""Save Symbol into a JSON string"""
 function to_json(self :: Symbol)
   ref_json = Ref{char_p}(0)
   @mxcall(:MXSymbolSaveToJSON, (MX_handle, Ref{char_p}), self, ref_json)
   return bytestring(ref_json[])
+end
+
+"""Load Symbol from a JSON string representation."""
+function from_json(repr :: AbstractString, ::Type{Symbol})
+  ref_hdr = Ref{MX_handle}(0)
+  @mxcall(:MXSymbolCreateFromJSON, (char_p, Ref{MX_handle}), repr, ref_hdr)
+  return Symbol(MX_SymbolHandle(ref_hdr[]))
+end
+
+"""Load Symbol from a JSON file."""
+function load(filename :: AbstractString, ::Type{Symbol})
+  ref_hdr = Ref{MX_handle}(0)
+  @mxcall(:MXSymbolCreateFromFile, (char_p, Ref{MX_handle}), filename, ref_hdr)
+  return Symbol(MX_SymbolHandle(ref_hdr[]))
+end
+function save(filename :: AbstractString, sym :: Symbol)
+  @mxcall(:MXSymbolSaveToFile, (MX_handle, char_p), sym, filename)
 end
 
 ################################################################################
