@@ -144,19 +144,19 @@ class SGD(Optimizer):
             lr = self.lr_scheduler(self.iteration)
         else:
             lr = self.lr
+
+        grad = grad * self.rescale_grad
+        if self.clip_gradient != None:
+            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+
         if state:
             mom = state
             mom[:] *= self.momentum
-            if self.clip_gradient == None:
-                mom[:] += -lr * (grad * self.rescale_grad + self.wd * weight)
-            else:
-                mom[:] += -lr * (clip(grad * self.rescale_grad, -self.clip_gradient,
-                                      self.clip_gradient) +
-                                 self.wd * weight)
+            mom[:] += -lr * (grad + self.wd * weight)
             weight[:] += mom
         else:
             assert self.momentum == 0.0
-            weight[:] += -lr * (grad * self.rescale_grad + self.wd * weight)
+            weight[:] += -lr * (grad + self.wd * weight)
 
 @register
 class Test(Optimizer):
