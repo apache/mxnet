@@ -55,9 +55,9 @@ The last thing we need to specify is the optimization algorithm (a.k.a. *optimiz
 ```julia
 optimizer = mx.SGD(lr=0.1, momentum=0.9, weight_decay=0.00001)
 ```
-Now we can do the training. Here the `epoch_stop` parameter specifies that we want to train for 20 epochs. We also supply a `eval_data` to monitor validation accuracy on the validation set.
+Now we can do the training. Here the `n_epoch` parameter specifies that we want to train for 20 epochs. We also supply a `eval_data` to monitor validation accuracy on the validation set.
 ```julia
-mx.fit(estimator, optimizer, train_provider, epoch_stop=20, eval_data=eval_provider)
+mx.fit(estimator, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)
 ```
 Here is a sample output
 ```
@@ -130,7 +130,7 @@ estimator = mx.FeedForward(lenet, context=mx.gpu())
 optimizer = mx.SGD(lr=0.05, momentum=0.9, weight_decay=0.00001)
 
 # fit parameters
-mx.fit(estimator, optimizer, train_provider, epoch_stop=20, eval_data=eval_provider)
+mx.fit(estimator, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)
 ```
 And here is a sample of running outputs:
 ```

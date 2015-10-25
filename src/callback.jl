@@ -14,7 +14,7 @@ type CallbackParams
 end
 CallbackParams(batch_size::Int) = CallbackParams(batch_size, 0, 0)
 
-type IterationCallback
+type IterationCallback <: AbstractIterationCallback
   frequency :: Int
   call_on_0 :: Bool
   callback  :: Function
@@ -44,5 +44,25 @@ function speedometer(frequency::Int=50)
       info("Speed: {1:>6.2} samples/sec", speed)
       cl_tic = time()
     end
+  end
+end
+
+
+type EpochCallback <: AbstractEpochCallback
+  frequency :: Int
+  call_on_0 :: Bool
+  callback  :: Function
+end
+
+function every_n_epoch(callback :: Function, n :: Int, call_on_0 :: Bool = false)
+  EpochCallback(n, call_on_0, callback)
+end
+function Base.call(cb :: EpochCallback, param :: CallbackParams)
+  if param.curr_epoch == 0
+    if cb.call_on_0
+      cb.callback(param)
+    end
+  elseif param.curr_epoch % cb.frequency == 0
+    cb.callback(param)
   end
 end

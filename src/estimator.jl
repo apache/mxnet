@@ -92,12 +92,25 @@ function _create_kvstore(kv_type :: Base.Symbol, num_device :: Int, arg_params :
   return (kv, update_on_kvstore)
 end
 
-function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: AbstractDataProvider;
-             initializer :: AbstractInitializer = UniformInitializer(0.01),
-             epoch_stop :: Int = 10, epoch_start :: Int = 1,
-             eval_data :: Union{Void, AbstractDataProvider} = nothing,
-             eval_metric :: AbstractEvalMetric = Accuracy(),
-             kvstore :: Union{Base.Symbol, KVStore} = :local)
+@defstruct TrainingOptions Any (
+  initializer :: AbstractInitializer = UniformInitializer(0.01),
+  n_epoch     :: Int = 10,
+  eval_data   :: Union{Void, AbstractDataProvider} = nothing,
+  eval_metric :: AbstractEvalMetric = Accuracy(),
+  kvstore     :: Union{Base.Symbol, KVStore} = :local,
+  callbacks   :: Vector{AbstractCallback} = AbstractCallback[],
+)
+
+function _invoke_callbacks(callbacks::Vector{AbstractCallback}, param::CallbackParams, type_filter::Type)
+  map(callbacks) do cb
+    if isa(cb, type_filter)
+      cb(param)
+    end
+  end
+end
+
+function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: AbstractDataProvider; kwargs...)
+  opts = TrainingOptions(; kwargs...)
 
   info("Start training on $(self.ctx)")
 
@@ -107,9 +120,10 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
   # initialize parameters
   info("Initializing parameters...")
-  arg_names, param_names, aux_names = _init_params(self, data, initializer)
+  arg_names, param_names, aux_names = _init_params(self, data, opts.initializer)
 
   # setup kvstore
+  kvstore = opts.kvstore
   if isa(kvstore, Base.Symbol)
     info("Creating KVStore...")
     kvstore, update_on_kvstore = _create_kvstore(kvstore, length(self.ctx), self.arg_params)
@@ -139,6 +153,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   grad_arrays  = [NDArray[exec.grad_arrays[i] for exec in train_execs] for i in param_idx]
 
   optimizer.batch_size = batch_size
+  cb_param = CallbackParams(batch_size)
 
   if !update_on_kvstore
     updater = get_updater(optimizer)
@@ -169,11 +184,19 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   cpu_label_arrays  = [empty(shape, cpu_dev) for (name,shape) in provide_label(data)]
   cpu_label_arrays_full_slice = [SlicedNDArray[(1:batch_size, x)] for x in cpu_label_arrays]
 
+  # invoke callbacks on epoch 0
+  _invoke_callbacks(opts.callbacks, cb_param, AbstractEpochCallback)
+
   # now start training...
-  for i_epoch = epoch_start:epoch_stop
+  for i_epoch = 1:opts.n_epoch
     time_start = time()
-    reset!(eval_metric)
-    n_batch = 0
+    reset!(opts.eval_metric)
+
+    cb_param.curr_epoch = i_epoch
+    cb_param.curr_iter = 0
+
+    # invoke callbacks on iteration 0
+    _invoke_callbacks(opts.callbacks, cb_param, AbstractIterationCallback)
 
     for batch in data
       load_data!(batch, data_arrays)
@@ -218,30 +241,32 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
         end
       end
 
-      n_batch += 1
+      # invoke callbacks after finishing each iteration
+      _invoke_callbacks(opts.callbacks, cb_param, AbstractIterationCallback)
+      cb_param.curr_iter += 1
 
       # update evaluation metric on training set
       load_label!(batch, cpu_label_arrays_full_slice)
-      update!(eval_metric, cpu_label_arrays, cpu_output_arrays)
+      update!(opts.eval_metric, cpu_label_arrays, cpu_output_arrays)
     end # end of one epoch
 
     time_stop = time()
     info(format("== Epoch {1:0>3d} ==========", i_epoch))
     info("## Training summary")
-    for (name, value) in get(eval_metric)
+    for (name, value) in get(opts.eval_metric)
       info(format("{1:>15s} = {2:.4f}", name, value))
     end
     info(format("{1:>15s} = {2:.4f} seconds", "time", time_stop-time_start))
 
     # evaluation on validation set
-    if !isa(eval_data, Void)
+    if !isa(opts.eval_data, Void)
       # because we are re-using the memory allocated for the training network,
       # the batch_size of the validation dataset must be the same as the training
       # batch_size
-      @assert(get_batch_size(eval_data) == batch_size)
+      @assert(get_batch_size(opts.eval_data) == batch_size)
 
-      reset!(eval_metric)
-      for batch in eval_data
+      reset!(opts.eval_metric)
+      for batch in opts.eval_data
         load_data!(batch, data_arrays)
 
         # forward and backward
@@ -254,11 +279,11 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
           end
         end
         load_label!(batch, cpu_label_arrays_full_slice)
-        update!(eval_metric, cpu_label_arrays, cpu_output_arrays)
+        update!(opts.eval_metric, cpu_label_arrays, cpu_output_arrays)
       end
 
       info("## Validation summary")
-      for (name, value) in get(eval_metric)
+      for (name, value) in get(opts.eval_metric)
         info(format("{1:>15s} = {2:.4f}", name, value))
       end
     end

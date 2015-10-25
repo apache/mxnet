@@ -82,5 +82,5 @@ optimizer = mx.SGD(lr_scheduler=mx.FixedLearningRateScheduler(0.05),
                    weight_decay=0.0001)
 
 # fit parameters
-mx.fit(estimator, optimizer, train_provider, epoch_stop=num_epoch, eval_data=test_provider,
+mx.fit(estimator, optimizer, train_provider, n_epoch=num_epoch, eval_data=test_provider,
        initializer=mx.UniformInitializer(0.07))

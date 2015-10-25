@@ -42,4 +42,4 @@ estimator = mx.FeedForward(lenet, context=mx.gpu())
 optimizer = mx.SGD(lr=0.05, momentum=0.9, weight_decay=0.00001)
 
 # fit parameters
-mx.fit(estimator, optimizer, train_provider, epoch_stop=20, eval_data=eval_provider)
+mx.fit(estimator, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)
