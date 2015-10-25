@@ -10,7 +10,7 @@ User Guide
 * [R Package Document](R-package/index.md)
 * [MXNet.jl Julia Package](https://github.com/dmlc/MXNet.jl)
 * [Frequently Asked Questions](faq.md)
-
+* [Pretrained Model Gallery](pretrained.md)
 
 Developer Guide
 ---------------
@@ -32,6 +32,11 @@ in terms of abstraction, optimization and trade-offs.
 * [Programming Models for Deep Learning](program_model.md)
 * [Dependency Engine for Deep Learning](developer-guide/note_engine.md)
 * [Squeeze the Memory Consumption of Deep Learning](developer-guide/note_memory.md)
+
+Tutorial
+--------
+* [Training Deep Net on 14 Million Images on A Single Machine](tutorial/imagenet_full.md)
+
 
 Indices and tables
 ------------------
