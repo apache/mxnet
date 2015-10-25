@@ -2,10 +2,10 @@
 abstract AbstractCallback
 
 "Abstract type of callbacks to be called every mini-batch"
-abstract AbstractIterationCallback
+abstract AbstractIterationCallback <: AbstractCallback
 
 "Abstract type of callbacks to be called every epoch"
-abstract AbstractEpochCallback
+abstract AbstractEpochCallback <: AbstractCallback
 
 type CallbackParams
   batch_size :: Int
@@ -35,13 +35,13 @@ end
 
 function speedometer(frequency::Int=50)
   cl_tic = 0
-  every_n_iter(frequency, true) do params :: CallbackParams
+  every_n_iter(frequency, true) do param :: CallbackParams
     if param.curr_iter == 0
       # reset counter
       cl_tic = time()
     else
-      speed = frequency * params.batch_size / (time() - cl_tic)
-      info("Speed: {1:>6.2} samples/sec", speed)
+      speed = frequency * param.batch_size / (time() - cl_tic)
+      info(format("Speed: {1:>6.2f} samples/sec", speed))
       cl_tic = time()
     end
   end
