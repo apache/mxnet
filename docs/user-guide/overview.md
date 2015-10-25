@@ -261,4 +261,7 @@ mx.init!(kv, key, mx.ones(shape)*2)
 a = mx.empty(shape)
 mx.pull!(kv, key, a) # pull value into a
 println(copy(a))
+# =>
+# Float32[2.0 2.0 2.0
+#        2.0 2.0 2.0]
 ```
