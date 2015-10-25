@@ -4,21 +4,30 @@
 
 ---
 
+<a id="method__group.1" class="lexicon_definition"></a>
+#### Group(symbols::MXNet.mx.Symbol...)
+Create a symbol that groups symbols together
+
+*source:*
+[MXNet/src/symbol.jl:77](https://github.com/dmlc/MXNet.jl/tree/d738fba18ebf731bf4f7306d81056fc63357810a/src/symbol.jl#L77)
+
+---
+
+<a id="method__variable.1" class="lexicon_definition"></a>
+#### Variable(name::Union{AbstractString, Symbol})
+Create a symbolic variable with the given name
+
+*source:*
+[MXNet/src/symbol.jl:70](https://github.com/dmlc/MXNet.jl/tree/d738fba18ebf731bf4f7306d81056fc63357810a/src/symbol.jl#L70)
+
+---
+
 <a id="method__get_internals.1" class="lexicon_definition"></a>
 #### get_internals(self::MXNet.mx.Symbol)
 Get a new grouped symbol whose output contains all the internal outputs of this symbol.
 
 *source:*
-[MXNet/src/symbol.jl:63](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/symbol.jl#L63)
-
----
-
-<a id="method__group.1" class="lexicon_definition"></a>
-#### group(symbols::MXNet.mx.Symbol...)
-Create a symbol that groups symbols together
-
-*source:*
-[MXNet/src/symbol.jl:77](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/symbol.jl#L77)
+[MXNet/src/symbol.jl:63](https://github.com/dmlc/MXNet.jl/tree/d738fba18ebf731bf4f7306d81056fc63357810a/src/symbol.jl#L63)
 
 ---
 
@@ -33,14 +42,5 @@ Most operators do not have Auxiliary states.
 
 
 *source:*
-[MXNet/src/symbol.jl:58](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/symbol.jl#L58)
-
----
-
-<a id="method__variable.1" class="lexicon_definition"></a>
-#### variable(name::Union{AbstractString, Symbol})
-Create a symbolic variable with the given name
-
-*source:*
-[MXNet/src/symbol.jl:70](https://github.com/dmlc/MXNet.jl/tree/92237212c594440455567ec4d39caec909ddd11e/src/symbol.jl#L70)
+[MXNet/src/symbol.jl:58](https://github.com/dmlc/MXNet.jl/tree/d738fba18ebf731bf4f7306d81056fc63357810a/src/symbol.jl#L58)
 

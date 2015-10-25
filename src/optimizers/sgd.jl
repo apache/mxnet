@@ -41,17 +41,18 @@ function update(self :: SGD, index :: Int, weight :: NDArray, grad :: NDArray, s
   lr = get_learning_rate(self.opts.lr_scheduler, self.iter)
   grad_scale = self.opts.grad_scale / self.batch_size
 
+  grad = grad_scale * grad
+  if self.opts.grad_clip > 0
+    grad = clip(grad, -self.opts.grad_clip, self.opts.grad_clip)
+  end
+
   if isa(state, Void)
-    @inplace weight += -lr * (grad_scale * grad + self.opts.weight_decay * weight)
+    @inplace weight += -lr * (grad + self.opts.weight_decay * weight)
   else
     mom = state :: NDArray
     coef = get_momentum(self.opts.mom_scheduler, self.iter)
-    @inplace mom .*= coef
-    if self.opts.grad_clip > 0
-      # TODO:
-    else
-      @inplace mom += -lr * (grad_scale * grad + self.opts.weight_decay * weight)
-    end
-    @inplace weight += mom
+    @inplace mom    .*= coef
+    @inplace mom    .+= -lr * (grad + self.opts.weight_decay * weight)
+    @inplace weight .+= mom
   end
 end

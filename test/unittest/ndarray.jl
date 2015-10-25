@@ -215,6 +215,21 @@ function test_saveload()
   rm(fname)
 end
 
+function test_clip()
+  dims = rand_dims()
+  info("NDArray::clip::dims = $dims")
+
+  j_array, nd_array = rand_tensors(dims)
+  clip_up   = maximum(abs(j_array)) / 2
+  clip_down = 0
+  clipped   = mx.clip(nd_array, clip_down, clip_up)
+
+  # make sure the original array is not modified
+  @test reldiff(copy(nd_array), j_array) < 1e-6
+
+  @test all(clip_down .<= copy(clipped) .<= clip_up)
+end
+
 
 ################################################################################
 # Run tests
@@ -228,5 +243,6 @@ test_mul()
 test_div()
 test_gd()
 test_saveload()
+test_clip()
 
 end
