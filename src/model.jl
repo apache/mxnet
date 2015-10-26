@@ -134,6 +134,10 @@ function _setup_predictor(self :: FeedForward, overwrite :: Bool=false; data_sha
     if !isdefined(self, :arg_params) || !isdefined(self, :aux_params)
       @assert(false, "Model weights not defined, please init or train the model, or load from file")
     end
+
+    # the predictor use only the first device
+    self.pred_exec = simple_bind(self.arch, self.ctx[1]; grad_req=GRAD_NOP, data_shapes...)
+    copy_params_from(self.pred_exec, self.arg_params, self.aux_params)
   else
     # make sure the new setup is compatible with the existing one
     for (d_name, d_shape) in data_shapes
@@ -143,7 +147,33 @@ function _setup_predictor(self :: FeedForward, overwrite :: Bool=false; data_sha
   end
 end
 
-function predict(self :: FeedForward, data :: AbstractDataProvider)
+function predict(self :: FeedForward, data :: AbstractDataProvider; overwrite::Bool=false)
+  data_shapes = provide_data(data)
+  data_names  = [x[1] for x in data_shapes]
+  _setup_predictor(self, overwrite; data_shapes...)
+
+  batch_size  = get_batch_size(data)
+  data_arrays =  [SlicedNDArray[(1:batch_size, self.pred_exec.arg_dict[name])] for name in data_names]
+  output_list = [Array{MX_float}[] for i=1:length(self.pred_exec.outputs)]
+  for batch in data
+    load_data!(batch, data_arrays)
+    forward(self.pred_exec, is_train=false)
+    for (o_list, o_nd) in zip(output_list, self.pred_exec.outputs)
+      push!(o_list, copy(slice(o_nd, 1:batch_size-get_pad(batch))))
+    end
+  end
+
+  if isempty(output_list)
+    # maybe model does not have outputs
+    return Array{MX_float}[]
+  end
+  if isempty(output_list[1])
+    # model has outputs, but maybe data provider is empty
+    return output_list
+  end
+  # concatenate along mini-batches
+  output_arrays = [cat(ndims(x[1]), x...) for x in output_list]
+  return output_arrays
 end
 
 function train(self :: FeedForward, optimizer :: AbstractOptimizer, data :: AbstractDataProvider; kwargs...)

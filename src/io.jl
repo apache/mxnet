@@ -106,9 +106,26 @@ get_pad(batch :: AbstractDataBatch)
 ```
 
 Return the number of *dummy samples* in this mini-batch.
+
+The Batch type should have a field named `provider` pointing to the underlying provider. Helper functions
+`get_data` and `get_label` (mainly for debug purpose) will be able to use this.
 """
 abstract AbstractDataBatch
 
+function _get_data_or_label(batch::AbstractDataBatch, provide_func::Function, loader::Function)
+  data_shapes = provide_func(batch.provider)
+  data_arrays = [mx.empty(x[2]) for x in data_shapes]
+  batch_size  = get_batch_size(batch.provider)
+  data_arrays_fake_slice = [SlicedNDArray[(1:batch_size, x)] for x in data_arrays]
+  loader(batch, data_arrays_fake_slice)
+  return data_arrays
+end
+function get_data(batch :: AbstractDataBatch)
+  _get_data_or_label(batch, provide_data, load_data!)
+end
+function get_label(batch :: AbstractDataBatch)
+  _get_data_or_label(batch, provide_label, load_label!)
+end
 
 ################################################################################
 # ArrayDataProvider

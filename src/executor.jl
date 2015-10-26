@@ -108,7 +108,7 @@ function simple_bind(self :: Symbol, ctx :: Context; grad_req :: GRAD_REQ=GRAD_W
   arg_arrays = NDArray[zeros(shape, ctx) for shape in arg_shapes]
   arg_names  = list_arguments(self)
   if grad_req == GRAD_NOP
-    grad_arrays = nothing
+    grad_arrays = Dict{Base.Symbol,NDArray}()
   else
     provided_data_names = [x[1] for x in kwargs]
     grad_arrays = Dict{Base.Symbol,NDArray}()
