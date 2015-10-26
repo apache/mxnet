@@ -7,7 +7,7 @@ type FeedForward <: AbstractModel
   arg_params  :: Dict{Base.Symbol, NDArray}
   aux_params  :: Dict{Base.Symbol, NDArray}
 
-  pred_exec   :: Executor
+  pred_exec   :: Union{Executor, Void}
 
   # leave the rest fields undefined
   FeedForward(arch :: Symbol, ctx :: Vector{Context}) = new(arch, ctx)
@@ -38,19 +38,28 @@ function FeedForward(arch :: Symbol; context :: Union{Context, Vector{Context}, 
   FeedForward(arch, context)
 end
 
-function _init_params(self :: FeedForward, data :: AbstractDataProvider, initializer)
+"""Initialize the weights in the model.
+
+This method will be called automatically when training a model. So there is usually no
+need to call this method unless one needs to inspect a model with only randomly initialized
+weights.
+
+**Parameters**
+
+* `self`: the model to be initialized
+* `initializer`: an `AbstractInitializer`
+* `input_shapes`: the shape of all data and label inputs to this model, given as keyword arguments.
+"""
+function init_model(self :: FeedForward, initializer :: AbstractInitializer; input_shapes...)
   # all arg names, including data, label, and parameters
   arg_names    = list_arguments(self.arch)
 
-  data_shapes  = provide_data(data)
-  label_shapes = provide_label(data)
-  data_names   = [x[1] for x in data_shapes]
-  label_names  = [x[1] for x in label_shapes]
+  input_names  = [x[1] for x in input_shapes]
 
-  param_names = setdiff(arg_names, data_names ∪ label_names)
+  param_names = setdiff(arg_names, input_names)
   aux_names   = list_auxiliary_states(self.arch)
 
-  arg_shapes, out_shapes, aux_shapes = infer_shape(self.arch; data_shapes...)
+  arg_shapes, out_shapes, aux_shapes = infer_shape(self.arch; input_shapes...)
   if !isdefined(self, :arg_params)
     param_name_shapes = filter(x -> in(x[1],param_names), zip(arg_names, arg_shapes))
     self.arg_params = Dict([name => empty(shape) for (name,shape) in param_name_shapes])
@@ -68,6 +77,10 @@ function _init_params(self :: FeedForward, data :: AbstractDataProvider, initial
   end
 
   return (arg_names, param_names, aux_names)
+end
+
+function _init_model(self :: FeedForward, data :: AbstractDataProvider, initializer :: AbstractInitializer)
+  init_model(self, initializer; [provide_data(data)..., provide_label(data)...]...)
 end
 
 function _create_kvstore(kv_type :: Base.Symbol, num_device :: Int, arg_params :: Dict{Base.Symbol,NDArray})
@@ -116,6 +129,23 @@ function _invoke_callbacks(self::FeedForward, callbacks::Vector{AbstractCallback
   end
 end
 
+function _setup_predictor(self :: FeedForward, overwrite :: Bool=false; data_shapes...)
+  if !isdefined(self, :pred_exec) || isa(self.pred_exec, Void) || overwrite
+    if !isdefined(self, :arg_params) || !isdefined(self, :aux_params)
+      @assert(false, "Model weights not defined, please init or train the model, or load from file")
+    end
+  else
+    # make sure the new setup is compatible with the existing one
+    for (d_name, d_shape) in data_shapes
+      @assert(d_shape == size(self.pred_exec.arg_dict[d_name]),
+              "Shape of $d_name mismatch with existing predictor, use overwrite=true overwrite existing predictor")
+    end
+  end
+end
+
+function predict(self :: FeedForward, data :: AbstractDataProvider)
+end
+
 function train(self :: FeedForward, optimizer :: AbstractOptimizer, data :: AbstractDataProvider; kwargs...)
   fit(self, optimizer, data; kwargs...)
 end
@@ -130,7 +160,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
   # initialize parameters
   info("Initializing parameters...")
-  arg_names, param_names, aux_names = _init_params(self, data, opts.initializer)
+  arg_names, param_names, aux_names = _init_model(self, data, opts.initializer)
 
   # setup kvstore
   kvstore = opts.kvstore
@@ -299,7 +329,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
       end
     end
 
-    if i_epoch == opts.n_epoch || any(map(x->isa(x, AbstractEpochCallback), opts.callbacks))
+    if i_epoch == opts.n_epoch || any(x->isa(x, AbstractEpochCallback), opts.callbacks)
       # copy data back to cpu
       for (name, weights) in zip(param_names, param_arrays)
         # average parameters across devices
