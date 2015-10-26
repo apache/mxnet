@@ -2,6 +2,7 @@
 *.jl.*.cov
 *.jl.mem
 *.pyc
+.ipynb_checkpoints
 data
 deps/src
 deps/usr
