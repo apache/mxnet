@@ -69,6 +69,11 @@ function test_arrays()
   data = rand(dims_data...)
   provider = mx.ArrayDataProvider(data, batch_size=batch_size)
   test_arrays_impl(Array[data], [], provider)
+
+  dims_label   = [rand_dims()..., sample_count]
+  label = rand(dims_label...)
+  provider = mx.ArrayDataProvider(data, label, batch_size=batch_size)
+  test_arrays_impl(Array[data], Array[label], provider)
 end
 
 test_arrays()

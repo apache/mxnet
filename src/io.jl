@@ -124,26 +124,50 @@ type ArrayDataProvider <: AbstractDataProvider
   shuffle     :: Bool
 end
 
-function ArrayDataProvider{T<:Real}(data::Union{NDArray,Array{T}}; batch_size::Int=1, shuffle::Bool=false)
-  ArrayDataProvider(:data => data, batch_size=batch_size, shuffle=shuffle)
-end
-function ArrayDataProvider(data::Pair; batch_size=1, shuffle::Bool=false)
-  ArrayDataProvider(Pair[data], Pair[], batch_size=batch_size, shuffle=shuffle)
-end
-function ArrayDataProvider{T<:Real}(data::Union{NDArray,Array{T}}, label::Union{NDArray,Array{T}};
-                           batch_size::Int=1, shuffle::Bool=false)
-  ArrayDataProvider(:data => data, :softmax_label => label, batch_size=batch_size, shuffle=shuffle)
-end
-function ArrayDataProvider(data::Pair, label::Pair; batch_size=1, shuffle::Bool=false)
-  ArrayDataProvider([data], [label], batch_size=batch_size, shuffle=shuffle)
-end
-function ArrayDataProvider(data::Vector{Pair}, label::Vector{Pair}; batch_size::Int=1, shuffle::Bool=false)
 
-  data_names  = Base.Symbol[x[1] for x in data]
-  data_arrays = Array{MX_float}[x[2] for x in data]
+# Julia's type system is sometimes very frustrating. You cannot specify a function
+# with argument Vector{Pair} to expect to be matched when calling with the parameter
+# [:foo => zeros(2,3), :bar => zeros(3)] because the type inference gives very specific
+# results, about the parametric type in the Pair{T1,T2} type, thus does not match the
+# generic Pair type. In general, Int <: Number but Vector{Int} <: Vector{Number} is not
+# true. So let us just use Any here...
+function ArrayDataProvider(data::Any; batch_size::Int=1, shuffle::Bool=false)
+  ArrayDataProvider(data, [], batch_size=batch_size, shuffle=shuffle)
+end
+function ArrayDataProvider(data::Any, label::Any; batch_size::Int=1, shuffle::Bool=false)
+  if isa(data, Union{NDArray, Array})
+    data_names  = [:data]
+    data_arrays = Array{MX_float}[data]
+  elseif isa(data, Pair)
+    @assert isa(data.first, Base.Symbol) && isa(data.second, Union{NDArray, Array})
+    data_names  = [data.first]
+    data_arrays = Array{MX_float}[data.second]
+  elseif isa(data, Vector)
+    map(data) do d
+      @assert isa(d, Pair) && isa(d.first, Base.Symbol) && isa(d.second, Union{NDArray, Array})
+    end
+    data_names  = Base.Symbol[d.first for d in data]
+    data_arrays = Array{MX_float}[d.second for d in data]
+  else
+    error("Invalid data argument type")
+  end
 
-  label_names = Base.Symbol[x[1] for x in label]
-  label_arrays= Array{MX_float}[x[2] for x in label]
+  if isa(label, Union{NDArray, Array})
+    label_names  = [:softmax_label]
+    label_arrays = Array{MX_float}[data]
+  elseif isa(label, Pair)
+    @assert isa(label.first, Base.Symbol) && isa(label.second, Union{NDArray, Array})
+    label_names  = [label.first]
+    label_arrays = Array{MX_float}[label.second]
+  elseif isa(label, Vector)
+    map(label) do d
+      @assert isa(d, Pair) && isa(d.first, Base.Symbol) && isa(d.second, Union{NDArray, Array})
+    end
+    label_names  = Base.Symbol[d.first for d in label]
+    label_arrays = Array{MX_float}[d.second for d in label]
+  else
+    error("Invalid label argument type")
+  end
 
   @assert length(data) > 0
   sample_count = size(data_arrays[1])[end]
