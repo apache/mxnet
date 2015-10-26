@@ -135,14 +135,14 @@ function ArrayDataProvider(data::Any; batch_size::Int=1, shuffle::Bool=false)
   ArrayDataProvider(data, [], batch_size=batch_size, shuffle=shuffle)
 end
 function ArrayDataProvider(data::Any, label::Any; batch_size::Int=1, shuffle::Bool=false)
-  if isa(data, Union{NDArray, Array})
+  if isa(data, Union{NDArray, Array}) && eltype(data) <: Real
     data_names  = [:data]
     data_arrays = Array{MX_float}[data]
   elseif isa(data, Pair)
     @assert isa(data.first, Base.Symbol) && isa(data.second, Union{NDArray, Array})
     data_names  = [data.first]
     data_arrays = Array{MX_float}[data.second]
-  elseif isa(data, Vector)
+  elseif isa(data, Vector) || isa(data, Tuple)
     map(data) do d
       @assert isa(d, Pair) && isa(d.first, Base.Symbol) && isa(d.second, Union{NDArray, Array})
     end
@@ -152,14 +152,14 @@ function ArrayDataProvider(data::Any, label::Any; batch_size::Int=1, shuffle::Bo
     error("Invalid data argument type")
   end
 
-  if isa(label, Union{NDArray, Array})
+  if isa(label, Union{NDArray, Array}) && eltype(label) <: Real
     label_names  = [:softmax_label]
-    label_arrays = Array{MX_float}[data]
+    label_arrays = Array{MX_float}[label]
   elseif isa(label, Pair)
     @assert isa(label.first, Base.Symbol) && isa(label.second, Union{NDArray, Array})
     label_names  = [label.first]
     label_arrays = Array{MX_float}[label.second]
-  elseif isa(label, Vector)
+  elseif isa(label, Vector) || isa(label, Tuple)
     map(label) do d
       @assert isa(d, Pair) && isa(d.first, Base.Symbol) && isa(d.second, Union{NDArray, Array})
     end
@@ -169,7 +169,7 @@ function ArrayDataProvider(data::Any, label::Any; batch_size::Int=1, shuffle::Bo
     error("Invalid label argument type")
   end
 
-  @assert length(data) > 0
+  @assert length(data_arrays) > 0
   sample_count = size(data_arrays[1])[end]
   for i = 1:length(data_names)
     @assert(size(data_arrays[i])[end] == sample_count,
@@ -177,7 +177,7 @@ function ArrayDataProvider(data::Any, label::Any; batch_size::Int=1, shuffle::Bo
   end
   for i = 1:length(label_names)
     @assert(size(label_arrays[i])[end] == sample_count,
-            "Number of samples in  $(label_names[i]) is mismatch with $(label_names[1])")
+            "Number of samples in  $(label_names[i]) is mismatch with $(data_names[1])")
   end
 
   ArrayDataProvider(data_arrays, data_names, label_arrays, label_names, batch_size, sample_count, shuffle)

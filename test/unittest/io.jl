@@ -66,14 +66,22 @@ function test_arrays()
   sample_count = 15
   batch_size   = 4
   dims_data    = [rand_dims()..., sample_count]
-  data = rand(dims_data...)
-  provider = mx.ArrayDataProvider(data, batch_size=batch_size)
+  data         = rand(dims_data...)
+  provider     = mx.ArrayDataProvider(data, batch_size=batch_size)
   test_arrays_impl(Array[data], [], provider)
 
   dims_label   = [rand_dims()..., sample_count]
-  label = rand(dims_label...)
-  provider = mx.ArrayDataProvider(data, label, batch_size=batch_size)
+  label        = rand(dims_label...)
+  provider     = mx.ArrayDataProvider(data, label, batch_size=batch_size)
   test_arrays_impl(Array[data], Array[label], provider)
+
+  provider     = mx.ArrayDataProvider(:data=>data, :my_label=>label, batch_size=batch_size)
+  test_arrays_impl(Array[data], Array[label], provider)
+
+  dims_data2   = [rand_dims()..., sample_count]
+  data2        = rand(dims_data2...)
+  provider     = mx.ArrayDataProvider((:data=>data, :data2=>data2), label, batch_size=batch_size)
+  test_arrays_impl(Array[data,data2], Array[label], provider)
 end
 
 test_arrays()
