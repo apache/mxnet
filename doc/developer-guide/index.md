@@ -57,7 +57,9 @@ Open Source Design Notes
 * [Dependency Engine for Deep Learning](note_engine.md)
 	- Introduces the dependency tracking and scheduling component for general deep learning,
 	  this motivates the design of Engine module.
-
+* [Squeeze the Memory Consumption of Deep Learning](note_memory.md)
+	- Introduces how we can reduce memory consumption of deep nets
+	  
 List of Other Resources
 -----------------------
 * [Doxygen Version of C++ API](https://mxnet.readthedocs.org/en/latest/doxygen) gives a comprehensive document of C++ API.

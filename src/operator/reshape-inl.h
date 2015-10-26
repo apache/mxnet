@@ -23,6 +23,7 @@ namespace op {
 enum ReshapeOpInputs {kData};
 enum ReshapeOpOutputs {kOut};
 
+
 struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
   TShape target_shape;
   DMLC_DECLARE_PARAMETER(ReshapeParam) {
@@ -33,7 +34,7 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
 template<typename xpu>
 class ReshapeOp : public Operator {
  public:
-  explicit ReshapeOp(ReshapeParam param) {}  // Do nothing, just make a special factory
+  explicit ReshapeOp(ReshapeParam param) {}  // Do nothing
 
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
@@ -47,9 +48,8 @@ class ReshapeOp : public Operator {
     CHECK_EQ(out_data.size(), 1);
     if (req[kOut] == kNullOp) return;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    // TODO(bing): potentail bug here for non-4D input
-    Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> out = out_data[kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
     CHECK_EQ(data.CheckContiguous(), true);
     CHECK_EQ(out.CheckContiguous(), true);
     if (data.dptr_ == out.dptr_) return;
@@ -71,8 +71,8 @@ class ReshapeOp : public Operator {
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(in_grad.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> grad_out = out_grad[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> grad_in = in_grad[kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 2> grad_in = in_grad[kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> grad_out = out_grad[kData].FlatTo2D<xpu, real_t>(s);
     CHECK_EQ(grad_out.CheckContiguous(), true);
     CHECK_EQ(grad_in.CheckContiguous(), true);
     if (grad_out.dptr_ == grad_in.dptr_) return;
@@ -173,7 +173,7 @@ class FlattenProp : public ReshapeProp {
     for (uint32_t i = 1; i < dshape.ndim(); ++i) {
       target_dim *= dshape[i];
     }
-    out_shape->push_back(mshadow::Shape4(dshape[0], 1, 1, target_dim));
+    out_shape->push_back(mshadow::Shape2(dshape[0], target_dim));
     return true;
   }
 

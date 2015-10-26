@@ -52,8 +52,7 @@ class CuDNNActivationOp : public Operator {
     Tensor<gpu, 4> data;
     Tensor<gpu, 4> out;
     if (in_data[kData].ndim() == 2) {
-      uint32_t ds[] = {in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1};
-      TShape dshape(ds, ds + 4);
+      Shape<4> dshape = Shape4(in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1);
       data = in_data[kData].get_with_shape<gpu, 4, real_t>(dshape, s);
       out = out_data[kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
     } else {
@@ -106,8 +105,7 @@ class CuDNNActivationOp : public Operator {
     Tensor<gpu, 4> output_data;
     Tensor<gpu, 4> input_grad;
     if (in_data[kData].ndim() == 2) {
-      uint32_t ds[] = {in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1};
-      TShape dshape(ds, ds + 4);
+      Shape<4> dshape = Shape4(in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1);
       data = in_data[kData].get_with_shape<gpu, 4, real_t>(dshape, s);
       grad = out_grad[kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
       output_data = out_data[kOut].get_with_shape<gpu, 4, real_t>(dshape, s);

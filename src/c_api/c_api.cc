@@ -20,26 +20,13 @@
 #include <mutex>
 #include <memory>
 #include <functional>
-
-// macro hanlding for threadlocal variables
-#ifdef __GNUC__
-  #define MX_TREAD_LOCAL __thread
-#elif __STDC_VERSION__ >= 201112L
-  #define  MX_TREAD_LOCAL _Thread_local
-#elif defined(_MSC_VER)
-  #define MX_TREAD_LOCAL __declspec(thread)
-#endif
-
-#ifndef MX_TREAD_LOCAL
-#message("Warning: Threadlocal is not enabled");
-#endif
+#include "./c_api_error.h"
+#include "../common/thread_local.h"
 
 using namespace mxnet;
 
 /*! \brief entry to to easily hold returning information */
 struct MXAPIThreadLocalEntry {
-  /*! \brief holds last error message */
-  std::string last_error;
   /*! \brief result holder for returning string */
   std::string ret_str;
   /*! \brief result holder for returning strings */
@@ -68,84 +55,8 @@ struct MXAPIThreadLocalEntry {
   }
 };
 
-/*!
- * \brief A threadlocal store to store threadlocal variables.
- *  Will return a thread local singleton of type T
- * \tparam T the type we like to store
- */
-class MXAPIThreadLocalStore {
- public:
-  /*! \brief store return entry */
-  typedef MXAPIThreadLocalEntry T;
-  /*! \return get a thread local singleton */
-  static T* Get() {
-    static MX_TREAD_LOCAL T* ptr = nullptr;
-    if (ptr == nullptr) {
-      ptr = new T();
-      Singleton()->RegisterDelete(ptr);
-    }
-    return ptr;
-  }
-
- private:
-  /*! \brief constructor */
-  MXAPIThreadLocalStore() {}
-  /*! \brief destructor */
-  ~MXAPIThreadLocalStore() {
-    for (size_t i = 0; i < data_.size(); ++i) {
-      delete data_[i];
-    }
-  }
-  /*! \return singleton of the store */
-  static MXAPIThreadLocalStore *Singleton() {
-    static MXAPIThreadLocalStore inst;
-    return &inst;
-  }
-  /*!
-   * \brief register str for internal deletion
-   * \param str the string pointer
-   */
-  void RegisterDelete(T *str) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    data_.push_back(str);
-    lock.unlock();
-  }
-  /*! \brief internal mutex */
-  std::mutex mutex_;
-  /*!\brief internal data */
-  std::vector<T*> data_;
-};
-
-// NOTE: all functions return 0 upon success
-// consider add try/catch block for user error
-// handling in the future
-
-/*! \brief  macro to guard beginning and end section of all functions */
-#define API_BEGIN() try {
-/*! \brief every function starts with API_BEGIN();
-     and finishes with API_END() or API_END_HANDLE_ERROR */
-#define API_END() } catch(dmlc::Error &_except_) { return MXHandleException(_except_); } return 0;
-/*!
- * \brief every function starts with API_BEGIN();
- *   and finishes with API_END() or API_END_HANDLE_ERROR
- *   The finally clause contains procedure to cleanup states when an error happens.
- */
-#define API_END_HANDLE_ERROR(Finalize) } catch(dmlc::Error &_except_) { Finalize; return MXHandleException(_except_); } return 0; // NOLINT(*)
-
-/*! \brief return str message of the last error */
-const char *MXGetLastError() {
-  return MXAPIThreadLocalStore::Get()->last_error.c_str();
-}
-
-/*!
- * \brief handle exception throwed out
- * \param e the exception
- * \return the return value of API after exception is handled
- */
-int MXHandleException(const dmlc::Error &e) {
-  MXAPIThreadLocalStore::Get()->last_error = e.what();
-  return -1;
-}
+// define the threadlocal store.
+typedef mxnet::common::ThreadLocalStore<MXAPIThreadLocalEntry> MXAPIThreadLocalStore;
 
 // Internal function to get the information
 // from function registry
