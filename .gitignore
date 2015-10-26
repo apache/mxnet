@@ -1,6 +1,7 @@
 *.jl.cov
 *.jl.*.cov
 *.jl.mem
+*.pyc
 data
 deps/src
 deps/usr
