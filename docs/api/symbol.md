@@ -9,7 +9,7 @@
 Create a symbol that groups symbols together
 
 *source:*
-[MXNet/src/symbol.jl:77](https://github.com/dmlc/MXNet.jl/tree/d738fba18ebf731bf4f7306d81056fc63357810a/src/symbol.jl#L77)
+[MXNet/src/symbol.jl:77](https://github.com/dmlc/MXNet.jl/tree/7fa151104fb51d7134da60a5084dfa0d240515f0/src/symbol.jl#L77)
 
 ---
 
@@ -18,7 +18,16 @@ Create a symbol that groups symbols together
 Create a symbolic variable with the given name
 
 *source:*
-[MXNet/src/symbol.jl:70](https://github.com/dmlc/MXNet.jl/tree/d738fba18ebf731bf4f7306d81056fc63357810a/src/symbol.jl#L70)
+[MXNet/src/symbol.jl:70](https://github.com/dmlc/MXNet.jl/tree/7fa151104fb51d7134da60a5084dfa0d240515f0/src/symbol.jl#L70)
+
+---
+
+<a id="method__from_json.1" class="lexicon_definition"></a>
+#### from_json(repr::AbstractString,  ::Type{MXNet.mx.Symbol})
+Load Symbol from a JSON string representation.
+
+*source:*
+[MXNet/src/symbol.jl:240](https://github.com/dmlc/MXNet.jl/tree/7fa151104fb51d7134da60a5084dfa0d240515f0/src/symbol.jl#L240)
 
 ---
 
@@ -27,7 +36,7 @@ Create a symbolic variable with the given name
 Get a new grouped symbol whose output contains all the internal outputs of this symbol.
 
 *source:*
-[MXNet/src/symbol.jl:63](https://github.com/dmlc/MXNet.jl/tree/d738fba18ebf731bf4f7306d81056fc63357810a/src/symbol.jl#L63)
+[MXNet/src/symbol.jl:63](https://github.com/dmlc/MXNet.jl/tree/7fa151104fb51d7134da60a5084dfa0d240515f0/src/symbol.jl#L63)
 
 ---
 
@@ -42,5 +51,23 @@ Most operators do not have Auxiliary states.
 
 
 *source:*
-[MXNet/src/symbol.jl:58](https://github.com/dmlc/MXNet.jl/tree/d738fba18ebf731bf4f7306d81056fc63357810a/src/symbol.jl#L58)
+[MXNet/src/symbol.jl:58](https://github.com/dmlc/MXNet.jl/tree/7fa151104fb51d7134da60a5084dfa0d240515f0/src/symbol.jl#L58)
+
+---
+
+<a id="method__load.1" class="lexicon_definition"></a>
+#### load(filename::AbstractString,  ::Type{MXNet.mx.Symbol})
+Load Symbol from a JSON file.
+
+*source:*
+[MXNet/src/symbol.jl:247](https://github.com/dmlc/MXNet.jl/tree/7fa151104fb51d7134da60a5084dfa0d240515f0/src/symbol.jl#L247)
+
+---
+
+<a id="method__to_json.1" class="lexicon_definition"></a>
+#### to_json(self::MXNet.mx.Symbol)
+Save Symbol into a JSON string
+
+*source:*
+[MXNet/src/symbol.jl:233](https://github.com/dmlc/MXNet.jl/tree/7fa151104fb51d7134da60a5084dfa0d240515f0/src/symbol.jl#L233)
 

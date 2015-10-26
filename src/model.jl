@@ -48,9 +48,10 @@ weights.
 
 * `self`: the model to be initialized
 * `initializer`: an `AbstractInitializer`
+* `overwrite`: keyword argument, force initialization even when weights already exists
 * `input_shapes`: the shape of all data and label inputs to this model, given as keyword arguments.
 """
-function init_model(self :: FeedForward, initializer :: AbstractInitializer; input_shapes...)
+function init_model(self :: FeedForward, initializer :: AbstractInitializer; overwrite::Bool=false, input_shapes...)
   # all arg names, including data, label, and parameters
   arg_names    = list_arguments(self.arch)
 
@@ -59,28 +60,37 @@ function init_model(self :: FeedForward, initializer :: AbstractInitializer; inp
   param_names = setdiff(arg_names, input_names)
   aux_names   = list_auxiliary_states(self.arch)
 
+  arg_defined = true
+  aux_defined = true
+
   arg_shapes, out_shapes, aux_shapes = infer_shape(self.arch; input_shapes...)
   if !isdefined(self, :arg_params)
     param_name_shapes = filter(x -> in(x[1],param_names), zip(arg_names, arg_shapes))
     self.arg_params = Dict([name => empty(shape) for (name,shape) in param_name_shapes])
+    arg_defined = false
   end
   if !isdefined(self, :aux_params)
     self.aux_params = Dict([name => empty(shape) for (name,shape) in zip(aux_names,aux_shapes)])
+    aux_defined = false
   end
 
   # initialize the contents of the parameters
-  for (k,v) in self.arg_params
-    initializer(k, v)
+  if !arg_defined || overwrite
+    for (k,v) in self.arg_params
+      initializer(k, v)
+    end
   end
-  for (k,v) in self.aux_params
-    initializer(k, v)
+  if !aux_defined || overwrite
+    for (k,v) in self.aux_params
+      initializer(k, v)
+    end
   end
 
   return (arg_names, param_names, aux_names)
 end
 
-function _init_model(self :: FeedForward, data :: AbstractDataProvider, initializer :: AbstractInitializer)
-  init_model(self, initializer; [provide_data(data)..., provide_label(data)...]...)
+function _init_model(self :: FeedForward, data :: AbstractDataProvider, initializer :: AbstractInitializer, overwrite :: Bool)
+  init_model(self, initializer; overwrite=overwrite, [provide_data(data)..., provide_label(data)...]...)
 end
 
 function _create_kvstore(kv_type :: Base.Symbol, num_device :: Int, arg_params :: Dict{Base.Symbol,NDArray})
@@ -113,6 +123,7 @@ end
   eval_data   :: Union{Void, AbstractDataProvider} = nothing,
   eval_metric :: AbstractEvalMetric = Accuracy(),
   kvstore     :: Union{Base.Symbol, KVStore} = :local,
+  force_init  :: Bool = false,
   callbacks   :: Vector{AbstractCallback} = AbstractCallback[],
 )
 
@@ -190,7 +201,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
   # initialize parameters
   info("Initializing parameters...")
-  arg_names, param_names, aux_names = _init_model(self, data, opts.initializer)
+  arg_names, param_names, aux_names = _init_model(self, data, opts.initializer, opts.force_init)
 
   # setup kvstore
   kvstore = opts.kvstore
@@ -386,5 +397,45 @@ function save_checkpoint(sym :: Symbol, arg_params :: Dict{Base.Symbol, NDArray}
   save_filename = format("{1}-{2:04d}.params", prefix, epoch)
   save(save_filename, save_dict)
   info("Saved checkpoint to '$save_filename'")
+end
+
+function load_checkpoint(prefix :: AbstractString, epoch :: Int)
+  arch       = load("$prefix-symbol.json", Symbol)
+  saved_dict = load(format("{1}-{2:04d}.params", prefix, epoch), NDArray)
+  arg_params = Dict{Base.Symbol, NDArray}()
+  aux_params = Dict{Base.Symbol, NDArray}()
+  for (k,v) in saved_dict
+    tp, name = split(string(k), ':')
+    name = symbol(name)
+    if tp == "arg"
+      arg_params[name] = v
+    else
+      aux_params[name] = v
+    end
+  end
+
+  return (arch, arg_params, aux_params)
+end
+
+function load_checkpoint(prefix :: AbstractString, epoch :: Int, ::Type{FeedForward})
+  arch, arg_params, aux_params = load_checkpoint(prefix, epoch)
+  model = FeedForward(arch)
+  model.arg_params = arg_params
+  model.aux_params = aux_params
+  return model
+end
+
+function load_checkpoint(self :: FeedForward, prefix :: AbstractString, epoch :: Int; overwrite :: Bool = true)
+  if isdefined(self, :arg_params) && isdefined(self, :aux_params) && !overwrite
+    info("model weights already exists, skip loading... (call with overwrite=true if needed)")
+    return self
+  end
+
+  arch, arg_params, aux_params = load_checkpoint(prefix, epoch)
+  # TODO: is there better way to compare two symbols
+  @assert(to_json(self.arch) == to_json(arch), "Cannot load from a checkpoint with different network architecture")
+  self.arg_params = arg_params
+  self.aux_params = aux_params
+  return self
 end
 
