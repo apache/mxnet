@@ -130,9 +130,9 @@ copy(c_exec.outputs[1])  # copy turns NDArray into Julia Array
 #  8.0
 #  8.0
 ```
-For neural networks, it is easier to use `simple_bind`. By providing the shape for input arguments, it will perform a shape inference for the rest of the arguments and create the `NDArray`s automatically. In practice, the binding and executing steps are hidden under the `Estimator` interface.
+For neural networks, it is easier to use `simple_bind`. By providing the shape for input arguments, it will perform a shape inference for the rest of the arguments and create the `NDArray`s automatically. In practice, the binding and executing steps are hidden under the `Model` interface.
 
-**TODO** Provide pointers to estimator tutorial and further details about binding and symbolic API.
+**TODO** Provide pointers to model tutorial and further details about binding and symbolic API.
 
 # Low Level Interface
 

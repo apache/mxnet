@@ -1,6 +1,6 @@
-abstract AbstractEstimator
+abstract AbstractModel
 
-type FeedForward <: AbstractEstimator
+type FeedForward <: AbstractModel
   arch        :: Symbol
   ctx         :: Vector{Context}
 
@@ -107,7 +107,7 @@ function _invoke_callbacks(self::FeedForward, callbacks::Vector{AbstractCallback
   map(callbacks) do cb
     if isa(cb, type_filter)
       if type_filter == AbstractEpochCallback
-        # epoch callback have extra access to the estimator object
+        # epoch callback have extra access to the model object
         cb(self, param)
       else
         cb(param)

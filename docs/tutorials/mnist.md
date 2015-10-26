@@ -45,9 +45,9 @@ train_provider, eval_provider = get_mnist_providers(batch_size)
 ```
 If you need to write your own data providers for customized data format, please refer to **TODO**: pointer to data provider API.
 
-Given the architecture and data, we can instantiate an *estimator* to do the actual training. `mx.FeedForward` is the built-in estimator that is suitable for most feed-forward architectures. When constructing the estimator, we also specify the *context* on which the computation should be carried out. Because this is a really tiny MLP, we will just run on a single CPU device.
+Given the architecture and data, we can instantiate an *model* to do the actual training. `mx.FeedForward` is the built-in model that is suitable for most feed-forward architectures. When constructing the model, we also specify the *context* on which the computation should be carried out. Because this is a really tiny MLP, we will just run on a single CPU device.
 ```julia
-estimator = mx.FeedForward(mlp, context=mx.cpu())
+model = mx.FeedForward(mlp, context=mx.cpu())
 ```
 You can use a `mx.gpu()` or if a list of devices (e.g. `[mx.gpu(0), mx.gpu(1)]`) is provided, data-parallelization will be used automatically. But for this tiny example, using a GPU device might not help.
 
@@ -57,7 +57,7 @@ optimizer = mx.SGD(lr=0.1, momentum=0.9, weight_decay=0.00001)
 ```
 Now we can do the training. Here the `n_epoch` parameter specifies that we want to train for 20 epochs. We also supply a `eval_data` to monitor validation accuracy on the validation set.
 ```julia
-mx.fit(estimator, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)
+mx.fit(model, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)
 ```
 Here is a sample output
 ```
@@ -124,13 +124,13 @@ Note we specified `flat=false` to tell the data provider to provide 4D tensors i
 ```julia
 #--------------------------------------------------------------------------------
 # fit model
-estimator = mx.FeedForward(lenet, context=mx.gpu())
+model = mx.FeedForward(lenet, context=mx.gpu())
 
 # optimizer
 optimizer = mx.SGD(lr=0.05, momentum=0.9, weight_decay=0.00001)
 
 # fit parameters
-mx.fit(estimator, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)
+mx.fit(model, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)
 ```
 And here is a sample of running outputs:
 ```

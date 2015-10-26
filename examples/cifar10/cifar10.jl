@@ -74,7 +74,7 @@ test_provider = mx.ImageRecordProvider(label_name=:loss_label,
 #--------------------------------------------------------------------------------
 # Training model
 gpus = [mx.Context(mx.GPU, i) for i = 0:num_gpus-1]
-estimator = mx.FeedForward(softmax, context=gpus)
+model = mx.FeedForward(softmax, context=gpus)
 
 # optimizer
 optimizer = mx.SGD(lr_scheduler=mx.FixedLearningRateScheduler(0.05),
@@ -82,5 +82,5 @@ optimizer = mx.SGD(lr_scheduler=mx.FixedLearningRateScheduler(0.05),
                    weight_decay=0.0001)
 
 # fit parameters
-mx.fit(estimator, optimizer, train_provider, n_epoch=num_epoch, eval_data=test_provider,
+mx.fit(model, optimizer, train_provider, n_epoch=num_epoch, eval_data=test_provider,
        initializer=mx.UniformInitializer(0.07), callbacks=[mx.speedometer()])

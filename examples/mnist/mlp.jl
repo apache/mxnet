@@ -27,11 +27,11 @@ batch_size = 100
 include("mnist-data.jl")
 train_provider, eval_provider = get_mnist_providers(batch_size)
 
-# setup estimator
-estimator = mx.FeedForward(mlp, context=mx.cpu())
+# setup model
+model = mx.FeedForward(mlp, context=mx.cpu())
 
 # optimizer
 optimizer = mx.SGD(lr=0.1, momentum=0.9, weight_decay=0.00001)
 
 # fit parameters
-mx.fit(estimator, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)
+mx.fit(model, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)

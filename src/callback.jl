@@ -57,19 +57,19 @@ end
 function every_n_epoch(callback :: Function, n :: Int; call_on_0 :: Bool = false)
   EpochCallback(n, call_on_0, callback)
 end
-function Base.call(cb :: EpochCallback, estimator :: Any, param :: CallbackParams)
+function Base.call(cb :: EpochCallback, model :: Any, param :: CallbackParams)
   if param.curr_epoch == 0
     if cb.call_on_0
-      cb.callback(estimator, param)
+      cb.callback(model, param)
     end
   elseif param.curr_epoch % cb.frequency == 0
-    cb.callback(estimator, param)
+    cb.callback(model, param)
   end
 end
 
 function do_checkpoint(prefix::AbstractString; frequency::Int=1, save_epoch_0=false)
   mkpath(dirname(prefix))
-  every_n_epoch(frequency, call_on_0=save_epoch_0) do estimator, param
-    save_checkpoint(estimator, prefix, param)
+  every_n_epoch(frequency, call_on_0=save_epoch_0) do model, param
+    save_checkpoint(model, prefix, param)
   end
 end
