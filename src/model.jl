@@ -158,7 +158,10 @@ function _setup_predictor(self :: FeedForward, overwrite :: Bool=false; data_sha
   end
 end
 
-function predict(self :: FeedForward, data :: AbstractDataProvider; overwrite::Bool=false)
+function predict(callback :: Function, self :: FeedForward, data :: AbstractDataProvider; overwrite :: Bool = false)
+  predict(self, data; overwrite = overwrite, callback=callback)
+end
+function predict(self :: FeedForward, data :: AbstractDataProvider; overwrite::Bool=false, callback::Union{Function,Void}=nothing)
   data_shapes = provide_data(data)
   data_names  = [x[1] for x in data_shapes]
   _setup_predictor(self, overwrite; data_shapes...)
@@ -169,21 +172,36 @@ function predict(self :: FeedForward, data :: AbstractDataProvider; overwrite::B
   for batch in data
     load_data!(batch, data_arrays)
     forward(self.pred_exec, is_train=false)
-    for (o_list, o_nd) in zip(output_list, self.pred_exec.outputs)
-      push!(o_list, copy(slice(o_nd, 1:batch_size-get_pad(batch))))
+    if isa(callback, Void)
+      # no callback, accumulate the data and return at the end
+      for (o_list, o_nd) in zip(output_list, self.pred_exec.outputs)
+        push!(o_list, copy(slice(o_nd, 1:batch_size-get_pad(batch))))
+      end
+    else
+      callback(self.pred_exec.outputs)
     end
+  end
+
+  if !isa(callback, Void)
+    # callback exists, do not accumulate data
+    return nothing
   end
 
   if isempty(output_list)
     # maybe model does not have outputs
-    return Array{MX_float}[]
+    return nothing
   end
   if isempty(output_list[1])
-    # model has outputs, but maybe data provider is empty
-    return output_list
+    # maybe no output because data is empty
+    return length(output_list) == 1 ? output_list[1] : output_list
   end
+
   # concatenate along mini-batches
   output_arrays = [cat(ndims(x[1]), x...) for x in output_list]
+  if length(output_arrays) == 1
+    # only 1 output, return it directly, instead of a list
+    output_arrays = output_arrays[1]
+  end
   return output_arrays
 end
 

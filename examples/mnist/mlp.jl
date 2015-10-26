@@ -38,8 +38,7 @@ mx.fit(model, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)
 
 #--------------------------------------------------------------------------------
 # Optional, demonstration of the predict API
-outputs = mx.predict(model, eval_provider)
-probs   = outputs[1]
+probs = mx.predict(model, eval_provider)
 
 # collect all labels from eval data
 labels = Array[]
