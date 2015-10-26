@@ -65,9 +65,8 @@ if(USE_CUDNN)
 endif()
 
 add_subdirectory("dmlc-core")
-if(NOT MSVC)
-  add_subdirectory("ps-lite")
-endif()
+add_subdirectory("ps-lite")
+
 
 mxnet_source_group("Source"   GLOB_RECURSE "src/*.cc")
 mxnet_source_group("Source\\Cuda" GLOB_RECURSE "src/*.cu")
