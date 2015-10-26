@@ -19,6 +19,12 @@ typealias char_pp Ptr{char_p}
 const MXNET_LIB = Libdl.find_library(["libmxnet.so","libmxnet.dll"],
                                      [joinpath("$(get(ENV,"MXNET_HOME",""))","lib"),
                                       joinpath(Pkg.dir("MXNet"),"deps/usr/lib")])
+if isempty(MXNET_LIB)
+  # touch this file, so that after the user properly build libmxnet, the precompiled
+  # MXNet.ji will be re-compiled to get MXNET_LIB properly.
+  touch(@__FILE__)
+  error("Cannot find or load libmxnet.so. Please see the document on how to build it.")
+end
 
 function __init__()
   _import_ndarray_functions()
