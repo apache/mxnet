@@ -15,6 +15,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <functional>
 
 #if DMLC_USE_CXX11
 #include <functional>
