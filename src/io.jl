@@ -115,13 +115,15 @@ abstract AbstractDataBatch
 ################################################################################
 "A convenient tool to iterate `NDArray` or Julia `Array`"
 type ArrayDataProvider <: AbstractDataProvider
-  data_arrays :: Vector{Array{MX_float}}
-  data_names  :: Vector{Base.Symbol}
-  label_arrays:: Vector{Array{MX_float}}
-  label_names :: Vector{Base.Symbol}
-  batch_size  :: Int
-  sample_count:: Int
-  shuffle     :: Bool
+  data_arrays   :: Vector{Array{MX_float}}
+  data_names    :: Vector{Base.Symbol}
+  label_arrays  :: Vector{Array{MX_float}}
+  label_names   :: Vector{Base.Symbol}
+  batch_size    :: Int
+  sample_count  :: Int
+  shuffle       :: Bool
+  data_padding  :: MX_float
+  label_padding :: MX_float
 end
 
 
@@ -131,10 +133,10 @@ end
 # results, about the parametric type in the Pair{T1,T2} type, thus does not match the
 # generic Pair type. In general, Int <: Number but Vector{Int} <: Vector{Number} is not
 # true. So let us just use Any here...
-function ArrayDataProvider(data::Any; batch_size::Int=1, shuffle::Bool=false)
-  ArrayDataProvider(data, [], batch_size=batch_size, shuffle=shuffle)
+function ArrayDataProvider(data::Any; batch_size::Int=1, shuffle::Bool=false, data_padding::Real=0, label_padding::Real=0)
+  ArrayDataProvider(data, [], batch_size=batch_size, shuffle=shuffle, data_padding=data_padding, label_padding=label_padding)
 end
-function ArrayDataProvider(data::Any, label::Any; batch_size::Int=1, shuffle::Bool=false)
+function ArrayDataProvider(data::Any, label::Any; batch_size::Int=1, shuffle::Bool=false, data_padding::Real=0, label_padding::Real=0)
   if isa(data, Union{NDArray, Array}) && eltype(data) <: Real
     data_names  = [:data]
     data_arrays = Array{MX_float}[data]
@@ -180,7 +182,8 @@ function ArrayDataProvider(data::Any, label::Any; batch_size::Int=1, shuffle::Bo
             "Number of samples in  $(label_names[i]) is mismatch with $(data_names[1])")
   end
 
-  ArrayDataProvider(data_arrays, data_names, label_arrays, label_names, batch_size, sample_count, shuffle)
+  ArrayDataProvider(data_arrays, data_names, label_arrays, label_names, batch_size,
+                    sample_count, shuffle, data_padding, label_padding)
 end
 
 function provide_data(provider::ArrayDataProvider)
@@ -224,7 +227,7 @@ immutable ArrayDataBatch <: AbstractDataBatch
   idx      :: UnitRange{Int}
 end
 function Base.next(provider :: ArrayDataProvider, state :: ArrayDataProviderState)
-  idx = state.curr_idx:min(state.curr_idx+provider.batch_size, provider.sample_count)
+  idx = state.curr_idx:min(state.curr_idx+provider.batch_size-1, provider.sample_count)
   return (ArrayDataBatch(provider, idx), ArrayDataProviderState(idx.stop+1))
 end
 
@@ -233,20 +236,29 @@ function get_pad(batch :: ArrayDataBatch)
 end
 
 function _load_general!(batch :: ArrayDataBatch, sources :: Vector{Array{MX_float}},
-                        targets :: Vector{Vector{SlicedNDArray}})
+                        targets :: Vector{Vector{SlicedNDArray}}, pad_val::Real)
   @assert length(sources) == length(targets)
   for (src, tgt) in zip(sources, targets)
     src_colons = [Colon() for i = 1:ndims(src)-1]
     for (slice_idx, dst) in tgt
-      copy!(dst, getindex(src, src_colons..., batch.idx[slice_idx]))
+      if slice_idx.start > length(batch.idx)
+        dst[:] = pad_val
+      else
+        slice_idx0 = slice_idx.start:min(slice_idx.stop, length(batch.idx))
+        copy!(dst[1:length(slice_idx0)], getindex(src, src_colons..., batch.idx[slice_idx0]))
+        if length(slice_idx0) < length(slice_idx)
+          # need padding
+          dst[length(slice_idx0)+1:length(slice_idx)] = pad_val
+        end
+      end
     end
   end
 end
 function load_data!(batch :: ArrayDataBatch, targets :: Vector{Vector{SlicedNDArray}})
-  _load_general!(batch, batch.provider.data_arrays, targets)
+  _load_general!(batch, batch.provider.data_arrays, targets, batch.provider.data_padding)
 end
 function load_label!(batch :: ArrayDataBatch, targets :: Vector{Vector{SlicedNDArray}})
-  _load_general!(batch, batch.provider.label_arrays, targets)
+  _load_general!(batch, batch.provider.label_arrays, targets, batch.provider.label_padding)
 end
 
 

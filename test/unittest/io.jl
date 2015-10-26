@@ -51,13 +51,13 @@ function test_arrays_impl(data::Vector, label::Vector, provider::mx.ArrayDataPro
 
   info("IO::Array::#data=$(length(data)),#label=$(length(label)),batch_size=$batch_size")
   for (idx, batch) in zip(idx_all, provider)
-    data_batch = [x[[Colon() for i=1:ndims(x)-1]..., idx:min(idx+batch_size,sample_count)] for x in data]
+    data_batch = [x[[Colon() for i=1:ndims(x)-1]..., idx:min(idx+batch_size-1,sample_count)] for x in data]
     data_get   = [mx.empty(size(x)[1:end-1]..., batch_size) for x in data]
     mx.load_data!(batch, [[(1:batch_size, x)] for x in data_get])
 
-    for (d_real, d_get) in zip(data_batch, data_batch)
+    for (d_real, d_get) in zip(data_batch, data_get)
       @test reldiff(d_real, copy(d_get)[[1:n for n in size(d_real)]...]) < 1e-6
-      @test mx.get_pad(batch) == batch_size - size(d_get)[end]
+      @test mx.get_pad(batch) == batch_size - size(d_real)[end]
     end
   end
 end
@@ -84,6 +84,33 @@ function test_arrays()
   test_arrays_impl(Array[data,data2], Array[label], provider)
 end
 
+function test_arrays_shuffle()
+  info("IO::Array::shuffle")
+
+  sample_count = 15
+  batch_size   = 4
+  data         = rand(1, sample_count)
+  label        = collect(1:sample_count)
+  provider     = mx.ArrayDataProvider(data, :index => label, batch_size=batch_size, shuffle=true)
+
+  idx_all      = 1:batch_size:sample_count
+  data_got     = similar(data)
+  label_got    = similar(label)
+  for (idx, batch) in zip(idx_all, provider)
+    data_batch  = [(1:batch_size, mx.empty(1,batch_size))]
+    label_batch = [(1:batch_size, mx.empty(batch_size))]
+    mx.load_data!(batch, typeof(data_batch)[data_batch])
+    mx.load_label!(batch, typeof(label_batch)[label_batch])
+    data_got[idx:min(idx+batch_size-1,sample_count)] = copy(data_batch[1][2])[1:batch_size-mx.get_pad(batch)]
+    label_got[idx:min(idx+batch_size-1,sample_count)] = copy(label_batch[1][2])[1:batch_size-mx.get_pad(batch)]
+  end
+
+  @test label_got != label
+  @test sort(label_got) == label
+  @test reldiff(data_got, data[:,Int[label_got...]]) < 1e-6
+end
+
+test_arrays_shuffle()
 test_arrays()
 test_mnist()
 

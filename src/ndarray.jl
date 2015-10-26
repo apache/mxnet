@@ -140,6 +140,9 @@ end
 function slice(arr :: NDArray, slice::UnitRange{Int})
   dim1 = size(arr)[end]
   @assert(1 <= slice.start <= slice.stop <= dim1)
+  if slice.start == 1 && slice.stop == dim1
+    return arr
+  end
 
   hdr_ref = Ref{MX_handle}(0)
   # note Julia is 1-based, inclusive-inclusive indexing, while C++ is
@@ -164,7 +167,7 @@ function setindex!(arr :: NDArray, val :: NDArray, ::Colon)
   copy!(arr, val)
 end
 function setindex!{T<:Real}(arr :: NDArray, val :: Union{T,Array{T},NDArray}, idx::UnitRange{Int})
-  copy!(slice(arr, idx), val)
+  setindex!(slice(arr, idx), val, Colon())
 end
 
 import Base: getindex
