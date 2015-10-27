@@ -111,7 +111,7 @@ MXNET_REGISTER_TBLOB_FUN(sqrt, XPU)
 // exp
 MXNET_REGISTER_TBLOB_FUN(exp, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::exp>, true)
-.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::exp_grad>, true)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseOut_<XPU, op::mshadow_op::identity>, true)
 .describe("Take exp of the src");
 
 // log

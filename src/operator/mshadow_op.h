@@ -100,7 +100,7 @@ struct log {
 
 struct log_grad {
   MSHADOW_XINLINE static real_t Map(real_t a) {
-    return logf(a);
+    return 1.0f/a;
   }
 };
 
