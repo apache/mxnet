@@ -97,3 +97,240 @@ Interface functions similar to Julia Arrays
 
 
 
+
+.. function:: slice(arr :: NDArray, start:stop)
+
+   Create a view into a sub-slice of an :class:`NDArray`. Note only slicing at the slowest
+   changing dimension is supported. In Julia's column-major perspective, this is the last
+   dimension. For example, given an :class:`NDArray` of shape (2,3,4), ``slice(array, 2:3)`` will create
+   a :class:`NDArray` of shape (2,3,2), sharing the data with the original array. This operation is
+   used in data parallelization to split mini-batch into sub-batches for different devices.
+
+
+
+
+.. function:: setindex!(arr :: NDArray, val, idx)
+
+   Assign values to an :class:`NDArray`. Elementwise assignment is not implemented, only the following
+   scenarios are supported
+
+   - ``arr[:] = val``: whole array assignment, ``val`` could be a scalar or an array (Julia ``Array``
+     or :class:`NDArray`) of the same shape.
+   - ``arr[start:stop] = val``: assignment to a *slice*, ``val`` could be a scalar or an array of
+     the same shape to the slice. See also :func:`slice`.
+
+
+
+
+.. function:: getindex(arr :: NDArray, idx)
+
+   Shortcut for :func:`slice`. A typical use is to write
+
+   .. code-block:: julia
+
+      arr[:] += 5
+
+   which translates into
+
+   .. code-block:: julia
+
+      arr[:] = arr[:] + 5
+
+   which furthur translates into
+
+   .. code-block:: julia
+
+      setindex!(getindex(arr, Colon()), 5, Colon())
+
+   .. note::
+
+      The behavior is quite different from indexing into Julia's ``Array``. For example, ``arr[2:5]``
+      create a **copy** of the sub-array for Julia ``Array``, while for :class:`NDArray`, this is
+      a *slice* that shares the memory.
+
+
+
+
+Copying functions
+-----------------
+
+
+
+
+.. function::
+   copy!(dst :: Union{NDArray, Array}, src :: Union{NDArray, Array})
+
+   Copy contents of ``src`` into ``dst``.
+
+
+
+
+.. function::
+   copy(arr :: NDArray)
+   copy(arr :: NDArray, ctx :: Context)
+   copy(arr :: Array, ctx :: Context)
+
+   Create a copy of an array. When no :class:`Context` is given, create a Julia ``Array``.
+   Otherwise, create an :class:`NDArray` on the specified context.
+
+
+
+
+.. function:: convert(::Type{Array{T}}, arr :: NDArray)
+
+   Convert an :class:`NDArray` into a Julia ``Array`` of specific type.
+
+
+
+
+Basic arithmetics
+-----------------
+
+
+
+
+.. function:: @inplace
+
+   Julia does not support re-definiton of ``+=`` operator (like ``__iadd__`` in python),
+   When one write ``a += b``, it gets translated to ``a = a+b``. ``a+b`` will allocate new
+   memory for the results, and the newly allocated :class:`NDArray` object is then assigned
+   back to a, while the original contents in a is discarded. This is very inefficient
+   when we want to do inplace update.
+
+   This macro is a simple utility to implement this behavior. Write
+
+   .. code-block:: julia
+
+      @mx.inplace a += b
+
+   will translate into
+
+   .. code-block:: julia
+
+      mx.add_to!(a, b)
+
+   which will do inplace adding of the contents of ``b`` into ``a``.
+
+
+
+
+.. function:: add_to!(dst :: NDArray, args :: Union{Real, NDArray}...)
+
+   Add a bunch of arguments into ``dst``. Inplace updating.
+
+
+
+
+.. function::
+   +(args...)
+   .+(args...)
+
+   Summation. Multiple arguments of either scalar or :class:`NDArray` could be
+   added together. Note at least the first or second argument needs to be an :class:`NDArray` to
+   avoid ambiguity of built-in summation.
+
+
+
+
+.. function:: sub_from!(dst :: NDArray, args :: Union{Real, NDArray}...)
+
+   Subtract a bunch of arguments from ``dst``. Inplace updating.
+
+
+
+
+.. function::
+   -(arg0, arg1)
+   -(arg0)
+   .-(arg0, arg1)
+
+   Subtraction ``arg0 - arg1``, of scalar types or :class:`NDArray`. Or create
+   the negative of ``arg0``.
+
+
+
+
+.. function:: mul_to!(dst :: NDArray, arg :: Union{Real, NDArray})
+
+   Elementwise multiplication into ``dst`` of either a scalar or an :class:`NDArray` of the same shape.
+   Inplace updating.
+
+
+
+
+.. function::
+   .*(arg0, arg1)
+
+   Elementwise multiplication of ``arg0`` and ``arg``, could be either scalar or :class:`NDArray`.
+
+
+
+
+.. function::
+   *(arg0, arg1)
+
+   Currently only multiplication a scalar with an :class:`NDArray` is implemented. Matrix multiplication
+   is to be added soon.
+
+
+
+
+.. function:: div_from!(dst :: NDArray, arg :: Union{Real, NDArray})
+
+   Elementwise divide a scalar or an :class:`NDArray` of the same shape from ``dst``. Inplace updating.
+
+
+
+
+.. function:: ./(arg0 :: NDArray, arg :: Union{Real, NDArray})
+
+   Elementwise dividing an :class:`NDArray` by a scalar or another :class:`NDArray` of the same shape.
+
+
+
+
+.. function:: /(arg0 :: NDArray, arg :: Real)
+
+   Divide an :class:`NDArray` by a scalar. Matrix division (solving linear systems) is not implemented yet.
+
+
+
+
+IO
+--
+
+
+
+
+.. function:: load(filename, ::Type{NDArray})
+
+   Load NDArrays from binary file.
+
+   :param AbstractString filename: the path of the file to load. It could be S3 or HDFS address.
+   :return: Either ``Dict{Base.Symbol, NDArray}`` or ``Vector{NDArray}``.
+
+   If the ``libmxnet`` is built with the corresponding component enabled. Examples
+
+   * ``s3://my-bucket/path/my-s3-ndarray``
+   * ``hdfs://my-bucket/path/my-hdfs-ndarray``
+   * ``/path-to/my-local-ndarray``
+
+
+
+
+.. function:: save(filename :: AbstractString, data)
+
+   Save NDarrays to binary file. Filename could be S3 or HDFS address, if ``libmxnet`` is built
+   with corresponding support.
+
+   :param filename: path to the binary file to write to.
+   :param data: an :class:`NDArray`, or a ``Vector{NDArray}`` or a ``Dict{Base.Symbol, NDArray}``.
+
+
+
+
+libmxnet APIs
+-------------
+
+
+
