@@ -1,3 +1,15 @@
+# v.0.03 (2015.10.27)
+
+* Model prediction API.
+* Model checkpoint loading and saving.
+* IJulia Notebook example of using pre-trained imagenet model as classifier.
+* Symbol saving and loading.
+* NDArray saving and loading.
+* Optimizer gradient clipping.
+* Model training callback APIs, default checkpoint and speedometer callbacks.
+* Julia Array / NDArray data iterator.
+* Sphinx documentation system and documents for dynamically imported libmxnet APIs.
+
 # v0.0.2 (2015.10.23)
 
 * Fix a bug in build script that causes Julia REPL to exit.
