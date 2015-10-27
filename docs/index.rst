@@ -11,6 +11,8 @@ include:
 - Efficient tensor/matrix computation across multiple devices, including multiple CPUs, GPUs and distributed server nodes.
 - Flexible symbolic manipulation to composite and construct state-of-the-art deep learning models.
 
+For more details, see documentation below. Please also checkout the `examples
+<https://github.com/dmlc/MXNet.jl/tree/master/examples>`_ directory.
 
 .. toctree::
    :maxdepth: 2
@@ -24,6 +26,12 @@ include:
 
    user-guide/install
    user-guide/overview
+
+.. toctree::
+   :maxdepth: 1
+   :caption: API Documentation
+
+   api/ndarray
 
 Indices and tables
 ==================

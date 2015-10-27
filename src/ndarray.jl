@@ -1,3 +1,8 @@
+#=doc
+NDArray
+=======
+=#
+
 # create a NDArray handle of specific shape
 function _ndarray_alloc{N}(shape :: NTuple{N, Int}, ctx :: Context, delay_alloc :: Bool)
   h_ref  = Ref{MX_handle}(0)
@@ -19,16 +24,23 @@ end
 ################################################################################
 # NDArray Type
 ################################################################################
-"""Wrapper of the `NDArray` type in `libmxnet`. This is the basic building block
-of tensor-based computation.
+#=doc
+.. class:: NDArray
 
-**Note** since C/C++ use row-major ordering for arrays while Julia follows a
-column-major ordering. To keep things consistent, we keep the underlying data
-in their original layout, but use *language-native* convention when we talk
-about shapes. For example, a mini-batch of 100 MNIST images is a tensor of
-C/C++/Python shape (100,1,28,28), while in Julia, the same piece of memory
-have shape (28,28,1,100).
-"""
+   Wrapper of the ``NDArray`` type in ``libmxnet``. This is the basic building block
+   of tensor-based computation.
+
+   .. _ndarray-shape-note:
+
+   .. note::
+
+      since C/C++ use row-major ordering for arrays while Julia follows a
+      column-major ordering. To keep things consistent, we keep the underlying data
+      in their original layout, but use *language-native* convention when we talk
+      about shapes. For example, a mini-batch of 100 MNIST images is a tensor of
+      C/C++/Python shape (100,1,28,28), while in Julia, the same piece of memory
+      have shape (28,28,1,100).
+=#
 type NDArray
   handle   :: MX_NDArrayHandle
   writable :: Bool
@@ -55,6 +67,11 @@ Base.cconvert(t::Type{MX_handle}, obj::NDArray) = Base.unsafe_convert(t, obj)
 ################################################################################
 # NDArray functions exported to the users
 ################################################################################
+#=doc
+.. function:: context(arr :: NDArray)
+
+   Get the context that this :class:`NDArray` lives on.
+=#
 function context(arr :: NDArray)
   ref_typeid = Ref{Cint}(0)
   ref_devid  = Ref{Cint}(0)
@@ -63,6 +80,14 @@ function context(arr :: NDArray)
   return Context(ref_typeid[], ref_devid[])
 end
 
+#=doc
+.. function::
+   empty(shape :: Tuple, ctx :: Context)
+   empty(shape :: Tuple)
+   empty(dim1, dim2, ...)
+
+   Allocate memory for an uninitialized :class:`NDArray` with specific shape.
+=#
 function empty{N}(shape :: NTuple{N, Int})
   empty(shape, cpu())
 end
@@ -73,35 +98,19 @@ function empty(shape :: Int...)
   empty(shape)
 end
 
-#------------------------------------------------------------
-# Interface functions similar to Julia Arrays
-#------------------------------------------------------------
-import Base: size, length, ndims, eltype
-"""Get the shape of an `NDArray`. Note the shape is converted to Julia convention.
-    So the same piece of memory, in Julia (column-major), with shape (K, M, N), will be of the
-    shape (N, M, K) in the Python (row-major) binding.
-"""
-function size(arr :: NDArray)
-  ref_ndim  = Ref{MX_uint}(0)
-  ref_shape = Ref{Ptr{MX_uint}}(0)
-  @mxcall(:MXNDArrayGetShape, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_uint}}),
-          arr, ref_ndim, ref_shape)
-  tuple(map(Int, flipdim(pointer_to_array(ref_shape[], ref_ndim[]),1))...)
-end
-function size(arr :: NDArray, dim :: Int)
-  size(arr)[dim]
-end
-function length(arr :: NDArray)
-  prod(size(arr))
-end
-function ndims(arr :: NDArray)
-  length(size(arr))
-end
-function eltype(arr :: NDArray)
-  MX_float
-end
+#=doc
+Interface functions similar to Julia Arrays
+-------------------------------------------
+=#
 
-"Create zero-ed NDArray of specific shape"
+#=doc
+.. function::
+   zeros(shape :: Tuple, ctx :: Context)
+   zeros(shape :: Tuple)
+   zeros(dim1, dim2, ...)
+
+   Create zero-ed :class:`NDArray` with specific shape.
+=#
 function zeros{N}(shape :: NTuple{N, Int})
   zeros(shape, cpu())
 end
@@ -114,7 +123,14 @@ function zeros(shape :: Int...)
   zeros(shape)
 end
 
-"Create NDArray and initialize with 1"
+#=doc
+.. function::
+   ones(shape :: Tuple, ctx :: Context)
+   ones(shape :: Tuple)
+   ones(dim1, dim2, ...)
+
+   Create an :class:`NDArray` with specific shape and initialize with 1.
+=#
 function ones{N}(shape :: NTuple{N, Int})
   ones(shape, cpu())
 end
@@ -126,6 +142,55 @@ end
 function ones(shape :: Int...)
   ones(shape)
 end
+
+import Base: size, length, ndims, eltype
+
+#=doc
+.. function::
+   size(arr :: NDArray)
+   size(arr :: NDArray, dim :: Int)
+
+   Get the shape of an :class:`NDArray`. The shape is in Julia's column-major convention. See
+   also the :ref:`notes on NDArray shapes <ndarray-shape-note>`.
+=#
+function size(arr :: NDArray)
+  ref_ndim  = Ref{MX_uint}(0)
+  ref_shape = Ref{Ptr{MX_uint}}(0)
+  @mxcall(:MXNDArrayGetShape, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_uint}}),
+          arr, ref_ndim, ref_shape)
+  tuple(map(Int, flipdim(pointer_to_array(ref_shape[], ref_ndim[]),1))...)
+end
+function size(arr :: NDArray, dim :: Int)
+  size(arr)[dim]
+end
+
+#=doc
+.. function:: length(arr :: NDArray)
+
+   Get the number of elements in an :class:`NDArray`.
+=#
+function length(arr :: NDArray)
+  prod(size(arr))
+end
+
+#=doc
+.. function:: ndims(arr :: NDArray)
+
+   Get the number of dimensions of an :class:`NDArray`. Is equivalent to ``length(size(arr))``.
+=#
+function ndims(arr :: NDArray)
+  length(size(arr))
+end
+
+#=doc
+.. function:: eltype(arr :: NDArray)
+
+   Get the element type of an :class:`NDArray`. Currently the element type is always ``mx.MX_float``.
+=#
+function eltype(arr :: NDArray)
+  MX_float
+end
+
 
 import Base: slice
 """`slice` create a view into a sub-slice of an `NDArray`. Note only slicing at the slowest

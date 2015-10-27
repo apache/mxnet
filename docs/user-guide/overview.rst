@@ -31,22 +31,22 @@ Low Level Interface
 NDArrays
 ~~~~~~~~
 
-``NDArray`` is the basic building blocks of the actual computations in MXNet. It
+:class:`NDArray` is the basic building blocks of the actual computations in MXNet. It
 is like a Julia ``Array`` object, with some important differences listed here:
 
 * The actual data could live on different ``Context`` (e.g. GPUs). For some
   contexts, iterating into the elements one by one is very slow, thus indexing
-  into ``NDArray`` is not supported in general. The easiest way to inspect the
-  contents of an ``NDArray`` is to use the ``copy`` function to copy the
+  into :class:`NDArray` is not supported in general. The easiest way to inspect the
+  contents of an :class:`NDArray` is to use the ``copy`` function to copy the
   contents as a Julia ``Array``.
-* Operations on ``NDArray`` (including basic arithmetics and neural network related operators) are executed in parallel with automatic dependency tracking to ensure correctness.
-* There is no generics in ``NDArray``, the ``eltype`` is always ``mx.MX_float``. Because for applications in machine learning, single precision floating point numbers are typical a best choice balancing between precision, speed and portability. Also since libmxnet is designed to support multiple languages as front-ends, it is much simpler to implement with a fixed data type.
+* Operations on :class:`NDArray` (including basic arithmetics and neural network related operators) are executed in parallel with automatic dependency tracking to ensure correctness.
+* There is no generics in :class:`NDArray`, the ``eltype`` is always ``mx.MX_float``. Because for applications in machine learning, single precision floating point numbers are typical a best choice balancing between precision, speed and portability. Also since libmxnet is designed to support multiple languages as front-ends, it is much simpler to implement with a fixed data type.
 
 While most of the computation is hidden in libmxnet by operators corresponding
-to various neural network layers. Getting familiar with the ``NDArray`` API is
+to various neural network layers. Getting familiar with the :class:`NDArray` API is
 useful for implementing ``Optimizer`` or customized operators in Julia directly.
 
-The followings are common ways to create ``NDArray`` objects:
+The followings are common ways to create :class:`NDArray` objects:
 
 * ``mx.empty(shape[, context])``: create on uninitialized array of a given shape
   on a specific device. For example, ``mx.empty(2,3)`, `mx.((2,3), mx.gpu(2))``.
@@ -66,10 +66,10 @@ Most of the convenient functions like ``size``, ``length``, ``ndims``, ``eltype`
    # Float32[2.0 2.0 1.0
    #         2.0 2.0 1.0]
 
-A slice is a sub-region sharing the same memory with the original ``NDArray``
+A slice is a sub-region sharing the same memory with the original :class:`NDArray`
 object. A slice is always a contiguous piece of memory, so only slicing on the
 *last* dimension is supported. The example above also shows a way to set the
-contents of an ``NDArray``.
+contents of an :class:`NDArray`.
 
 .. code-block:: julia
 
@@ -101,7 +101,7 @@ the variable ``a`` pointing to a new object, which is ``b``. Similarly, inplace 
    # => Float32[1.0f0,1.0f0]
 
 As we can see, ``a`` has expected value, but instead of inplace updating, a new
-``NDArray`` is created and ``a`` is set to point to this new object. If we look
+:class:`NDArray` is created and ``a`` is set to point to this new object. If we look
 at ``r``, which still reference to the old ``a``, its content has not changed.
 There is currently no way in Julia to overload the operators like ``+=`` to get customized behavior.
 
@@ -117,7 +117,7 @@ Instead, you will need to write ``a[:] = a+b``, or if you want *real* inplace
 As we can see, it translate the ``+=`` operator to an explicit ``add_to!``
 function call, which invokes into libmxnet to add the contents of ``b`` into
 ``a`` directly. For example, the following is the update rule in the SGD
-``Optimizer`` (both ``grad`` and ``weight`` are ``NDArray`` objects):
+``Optimizer`` (both ``grad`` and ``weight`` are :class:`NDArray` objects):
 
 .. code-block:: julia
 
@@ -126,9 +126,9 @@ function call, which invokes into libmxnet to add the contents of ``b`` into
 Note there is no much magic in ``mx.inplace``: it only does a shallow
 translation. In the SGD update rule example above, the computation like scaling
 the gradient by ``grad_scale`` and adding the weight decay all create temporary
-``NDArray`` objects. To mitigate this issue, libmxnet has a customized memory
+:class:`NDArray` objects. To mitigate this issue, libmxnet has a customized memory
 allocator designed specifically to handle this kind of situations. The following
-snippet does a simple benchmark on allocating temp ``NDArray`` vs. pre-allocating:
+snippet does a simple benchmark on allocating temp :class:`NDArray` vs. pre-allocating:
 
 .. code-block:: julia
 
@@ -171,7 +171,7 @@ snippet does a simple benchmark on allocating temp ``NDArray`` vs. pre-allocatin
    println(compare([inplace_op, normal_op], 100))
 
 The comparison on my laptop shows that ``normal_op`` while allocating a lot of
-temp ``NDArray`` in the loop (the performance gets worse when increasing
+temp :class:`NDArray` in the loop (the performance gets worse when increasing
 ``N_REP``), is only about twice slower than the pre-allocated one.
 
 +-----+--------------+-----------+----------+--------------+
@@ -189,7 +189,7 @@ Distributed Key-value Store
 
 The type ``KVStore`` and related methods are used for data sharing across
 different devices or machines. It provides a simple and efficient
-integer - ``NDArray`` key-value storage system that each device can pull or push.
+integer - :class:`NDArray` key-value storage system that each device can pull or push.
 
 The following example shows how to create a local ``KVStore``, initialize a value and then pull it back.
 
@@ -364,7 +364,7 @@ will create an ``mx.Executor`` on a given ``mx.Context``. A context describes th
 
 For neural networks, it is easier to use ``simple_bind``. By providing the shape
 for input arguments, it will perform a shape inference for the rest of the
-arguments and create the ``NDArray`` automatically. In practice, the binding and
+arguments and create the :class:`NDArray` automatically. In practice, the binding and
 executing steps are hidden under the ``Model`` interface.
 
 **TODO** Provide pointers to model tutorial and further details about binding and symbolic API.
