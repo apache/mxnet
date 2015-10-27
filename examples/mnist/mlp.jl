@@ -43,7 +43,7 @@ probs = mx.predict(model, eval_provider)
 # collect all labels from eval data
 labels = Array[]
 for batch in eval_provider
-  push!(labels, copy(mx.get_label(batch)[1]))
+  push!(labels, copy(mx.get_label(batch)))
 end
 labels = cat(1, labels...)
 

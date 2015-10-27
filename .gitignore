@@ -7,3 +7,4 @@ data
 deps/src
 deps/usr
 deps/deps.jl
+docs/_build

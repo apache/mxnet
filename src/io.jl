@@ -118,7 +118,12 @@ function _get_data_or_label(batch::AbstractDataBatch, provide_func::Function, lo
   batch_size  = get_batch_size(batch.provider)
   data_arrays_fake_slice = [SlicedNDArray[(1:batch_size, x)] for x in data_arrays]
   loader(batch, data_arrays_fake_slice)
-  return data_arrays
+
+  if length(data_arrays) == 1
+    return data_arrays[1]
+  else
+    return data_arrays
+  end
 end
 function get_data(batch :: AbstractDataBatch)
   _get_data_or_label(batch, provide_data, load_data!)

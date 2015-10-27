@@ -178,7 +178,11 @@ function predict(self :: FeedForward, data :: AbstractDataProvider; overwrite::B
         push!(o_list, copy(slice(o_nd, 1:batch_size-get_pad(batch))))
       end
     else
-      callback(self.pred_exec.outputs)
+      outputs = self.pred_exec.outputs
+      if length(outputs) == 1
+        outputs = outputs[1]
+      end
+      callback(outputs)
     end
   end
 
