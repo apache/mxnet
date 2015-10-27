@@ -33,8 +33,9 @@ def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10):
     else:
         out2 = npuf(*numpy_arg)
     assert out1.shape == out2.shape
-    dif = reldiff(out1.asnumpy(), out2)
-    assert reldiff(out1.asnumpy(), out2) < 1e-6
+    if isinstance(out1, mx.nd.NDArray):
+        out1 = out1.asnumpy()
+    assert reldiff(out1, out2) < 1e-6
 
 
 def random_ndarray(dim):
@@ -54,7 +55,7 @@ def test_ndarray_elementwise():
             check_with_uniform(lambda x, y: x / y, 2, dim)
             check_with_uniform(mx.nd.sqrt, 2, dim, np.sqrt, rmin=0)
             check_with_uniform(mx.nd.square, 2, dim, np.square, rmin=0)
-
+            check_with_uniform(lambda x: mx.nd.norm(x).asscalar(), 1, dim, np.linalg.norm)
 
 def test_ndarray_negate():
     npy = np.random.uniform(-10, 10, (2,3,4))
