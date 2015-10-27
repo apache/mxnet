@@ -11,7 +11,7 @@ import math
 import logging
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str
-from .base import DataIterHandle, NDArrayHandle
+from .base import DataIterHandle, NDArrayHandle, RecordIOHandle
 from .base import check_call, ctypes2docstring
 from .ndarray import NDArray
 from .ndarray import array
@@ -257,6 +257,46 @@ class MXDataIter(DataIter):
         pad = ctypes.c_int(0)
         check_call(_LIB.MXDataIterGetPadNum(self.handle, ctypes.byref(pad)))
         return pad.value
+
+class MXRecordIO(object):
+    """Python interface for read/write RecordIO data formmat"""
+    def __init__(self, uri, flag):
+        uri = ctypes.c_char_p(uri)
+        self.handle = RecordIOHandle()
+        if flag == "w":
+            check_call(_LIB.MXRecordIOWriterCreate(uri, ctypes.byref(self.handle)))
+            self.writable = True
+        elif flag == "r":
+            check_call(_LIB.MXRecordIOReaderCreate(uri, ctypes.byref(self.handle)))
+            self.writable = False
+        else:
+            raise ValueError("Invalid flag %s"%flag)
+
+    def __del__(self):
+        if self.writable:
+            check_call(_LIB.MXRecordIOWriterFree(self.handle))
+        else:
+            check_call(_LIB.MXRecordIOReaderFree(self.handle))
+
+    def write(self, buf):
+        """Write a string buffer as a record"""
+        assert self.writable
+        check_call(_LIB.MXRecordIOWriterWriteRecord(self.handle,
+                                                    ctypes.c_char_p(buf),
+                                                    ctypes.c_size_t(len(buf))))
+
+    def read(self):
+        """Read a record as string"""
+        assert not self.writable
+        buf = ctypes.c_char_p()
+        size = ctypes.c_size_t()
+        check_call(_LIB.MXRecordIOReaderReadRecord(self.handle,
+                                                   ctypes.byref(buf),
+                                                   ctypes.byref(size)))
+        buf = ctypes.cast(buf, ctypes.POINTER(ctypes.c_char*size.value))
+        return buf.contents.raw
+
+
 
 
 def _make_io_iterator(handle):

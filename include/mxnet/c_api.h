@@ -46,6 +46,8 @@ typedef void *DataIterCreator;
 typedef void *DataIterHandle;
 /*! \brief handle to KVStore */
 typedef void *KVStoreHandle;
+/*! \brief handle to RecordIO */
+typedef void *RecordIOHandle;
 /*!
  * \brief return str message of the last error
  *  all function in this file will return 0 when success
@@ -883,4 +885,53 @@ MXNET_DLL int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
                                              int cmd_id,
                                              const char* cmd_body);
 
+/**
+ * \brief Create a RecordIO writer object
+ * \param uri path to file
+ * \param out handle pointer to the created object
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOWriterCreate(const char *uri, RecordIOHandle *out);
+
+/**
+ * \brief Delete a RecordIO writer object
+ * \param handle handle to RecordIO object
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOWriterFree(RecordIOHandle handle);
+
+/**
+ * \brief Write a record to a RecordIO object
+ * \param handle handle to RecordIO object
+ * \param buf buffer to write
+ * \param size size of buffer
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOWriterWriteRecord(RecordIOHandle *handle,
+                                          const char *buf, size_t size);
+
+/**
+ * \brief Create a RecordIO reader object
+ * \param uri path to file
+ * \param out handle pointer to the created object
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOReaderCreate(const char *uri, RecordIOHandle *out);
+
+/**
+ * \brief Delete a RecordIO reader object
+ * \param handle handle to RecordIO object
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOReaderFree(RecordIOHandle *handle);
+
+/**
+ * \brief Write a record to a RecordIO object
+ * \param handle handle to RecordIO object
+ * \param buf pointer to return buffer
+ * \param size point to size of buffer
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
+                                        char const **buf, size_t *size);
 #endif  // MXNET_C_API_H_
