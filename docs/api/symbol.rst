@@ -1,4 +1,10 @@
 
+Symbol
+======
+
+
+
+
 .. class:: Symbol
 
    Symbol is the basic building block of the symbolic graph in MXNet.jl.

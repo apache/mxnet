@@ -1,4 +1,7 @@
-export Symbol
+#=doc
+Symbol
+======
+=#
 
 #=doc
 .. class:: Symbol
