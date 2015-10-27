@@ -334,3 +334,282 @@ libmxnet APIs
 
 
 
+
+The libxmnet APIs are automatically imported from ``libmxnet.so``. The functions listed
+here operate on :class:`NDArray` objects. The arguments to the functions are typically ordered
+as
+
+.. code-block:: julia
+
+   func_name(arg_in1, arg_in2, ..., scalar1, scalar2, ..., arg_out1, arg_out2, ...)
+
+unless ``NDARRAY_ARG_BEFORE_SCALAR`` is not set. In this case, the scalars are put before the input arguments:
+
+.. code-block:: julia
+
+   func_name(scalar1, scalar2, ..., arg_in1, arg_in2, ..., arg_out1, arg_out2, ...)
+
+
+If ``ACCEPT_EMPTY_MUTATE_TARGET`` is set. An overloaded function without the output arguments will also be defined:
+
+.. code-block:: julia
+
+   func_name(arg_in1, arg_in2, ..., scalar1, scalar2, ...)
+
+Upon calling, the output arguments will be automatically initialized with empty NDArrays.
+
+Those functions always return the output arguments. If there is only one output (the typical situation), that
+object (:class:`NDArray`) is returned. Otherwise, a tuple containing all the outputs will be returned.
+
+Public APIs
+^^^^^^^^^^^
+.. function:: choose_element(...)
+
+   Choose one element from each line(row for python, column for R/Julia) in lhs according to index indicated by rhs
+   
+   :param NDArray lhs: Left operand to the function.
+   
+   
+   :param NDArray rhs: Right operand to the function.
+   
+
+
+
+
+.. function:: clip(...)
+
+   Clip ndarray elements to range (a_min, a_max)
+   
+   :param NDArray src: Source input
+   
+   
+   :param real_t a_min: Minimum value
+   
+   
+   :param real_t a_max: Maximum value
+   
+
+
+
+
+.. function:: dot(...)
+
+   Calcuate 2D matrix multiplication
+   
+   :param NDArray lhs: Left operand to the function.
+   
+   
+   :param NDArray rhs: Right operand to the function.
+   
+
+
+
+
+.. function:: sqrt(...)
+
+   Take square root of the src
+   
+   :param NDArray src: Source input to the function
+   
+
+
+
+
+.. function:: square(...)
+
+   Take square of the src
+   
+   :param NDArray src: Source input to the function
+   
+
+
+
+Internal APIs
+^^^^^^^^^^^^^
+
+.. note::
+
+   Document and signatures for internal API functions might be incomplete.
+
+.. function:: _copyto(...)
+
+   
+   
+   :param NDArray src: Source input to the function.
+   
+
+
+
+
+.. function:: _div(...)
+
+   
+   
+   :param NDArray lhs: Left operand to the function.
+   
+   
+   :param NDArray rhs: Right operand to the function.
+   
+
+
+
+
+.. function:: _div_scalar(...)
+
+   
+   
+   :param NDArray lhs: Left operand to the function.
+   
+   
+   :param real_t rhs: Right operand to the function.
+   
+
+
+
+
+.. function:: _minus(...)
+
+   
+   
+   :param NDArray lhs: Left operand to the function.
+   
+   
+   :param NDArray rhs: Right operand to the function.
+   
+
+
+
+
+.. function:: _minus_scalar(...)
+
+   
+   
+   :param NDArray lhs: Left operand to the function.
+   
+   
+   :param real_t rhs: Right operand to the function.
+   
+
+
+
+
+.. function:: _mul(...)
+
+   
+   
+   :param NDArray lhs: Left operand to the function.
+   
+   
+   :param NDArray rhs: Right operand to the function.
+   
+
+
+
+
+.. function:: _mul_scalar(...)
+
+   
+   
+   :param NDArray lhs: Left operand to the function.
+   
+   
+   :param real_t rhs: Right operand to the function.
+   
+
+
+
+
+.. function:: _onehot_encode(...)
+
+   
+   
+   :param NDArray lhs: Left operand to the function.
+   
+   
+   :param NDArray rhs: Right operand to the function.
+   
+
+
+
+
+.. function:: _plus(...)
+
+   
+   
+   :param NDArray lhs: Left operand to the function.
+   
+   
+   :param NDArray rhs: Right operand to the function.
+   
+
+
+
+
+.. function:: _plus_scalar(...)
+
+   
+   
+   :param NDArray lhs: Left operand to the function.
+   
+   
+   :param real_t rhs: Right operand to the function.
+   
+
+
+
+
+.. function:: _random_gaussian(...)
+
+   
+   
+
+
+
+
+.. function:: _random_uniform(...)
+
+   
+   
+
+
+
+
+.. function:: _rdiv_scalar(...)
+
+   
+   
+   :param NDArray lhs: Left operand to the function.
+   
+   
+   :param real_t rhs: Right operand to the function.
+   
+
+
+
+
+.. function:: _rminus_scalar(...)
+
+   
+   
+   :param NDArray lhs: Left operand to the function.
+   
+   
+   :param real_t rhs: Right operand to the function.
+   
+
+
+
+
+.. function:: _set_value(...)
+
+   
+   
+   :param real_t src: Source input to the function.
+   
+
+
+
+
+
+
+

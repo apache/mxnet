@@ -656,38 +656,46 @@ end
 # functions can overload them
 import Base: sqrt
 
-"""
-Import dynamic functions for NDArrays. The arguments to the functions are typically ordered
+#=doc
+The libxmnet APIs are automatically imported from ``libmxnet.so``. The functions listed
+here operate on :class:`NDArray` objects. The arguments to the functions are typically ordered
 as
 
-```julia
-func_name(arg_in1, arg_in2, ..., scalar1, scalar2, ..., arg_out1, arg_out2, ...)
-```
+.. code-block:: julia
 
-unless NDARRAY_ARG_BEFORE_SCALAR is not set. In this case, the scalars are put before the input arguments:
+   func_name(arg_in1, arg_in2, ..., scalar1, scalar2, ..., arg_out1, arg_out2, ...)
 
-```julia
-func_name(scalar1, scalar2, ..., arg_in1, arg_in2, ..., arg_out1, arg_out2, ...)
-```
+unless ``NDARRAY_ARG_BEFORE_SCALAR`` is not set. In this case, the scalars are put before the input arguments:
 
-If `ACCEPT_EMPTY_MUTATE_TARGET` is set. An overloaded function without the output arguments will also be defined:
+.. code-block:: julia
 
-```julia
-func_name(arg_in1, arg_in2, ..., scalar1, scalar2, ...)
-```
+   func_name(scalar1, scalar2, ..., arg_in1, arg_in2, ..., arg_out1, arg_out2, ...)
+
+
+If ``ACCEPT_EMPTY_MUTATE_TARGET`` is set. An overloaded function without the output arguments will also be defined:
+
+.. code-block:: julia
+
+   func_name(arg_in1, arg_in2, ..., scalar1, scalar2, ...)
 
 Upon calling, the output arguments will be automatically initialized with empty NDArrays.
 
 Those functions always return the output arguments. If there is only one output (the typical situation), that
-object (`NDArray`) is returned. Otherwise, a tuple containing all the outputs will be returned.
-"""
-function _import_ndarray_functions()
+object (:class:`NDArray`) is returned. Otherwise, a tuple containing all the outputs will be returned.
+
+**autogen:EMBED:ndarray:EMBED:autogen**
+=#
+function _import_ndarray_functions(;gen_docs=false)
   n_ref = Ref{MX_uint}(0)
   h_ref = Ref{Ptr{MX_handle}}(0)
   @mxcall(:MXListFunctions, (Ref{MX_uint}, Ref{Ptr{MX_handle}}), n_ref, h_ref)
 
   n_funcs = n_ref[]
   h_funcs = pointer_to_array(h_ref[], n_funcs)
+
+  if gen_docs
+    docs = Dict{Base.Symbol, AbstractString}()
+  end
 
   for i = 1:n_funcs
     func_handle = h_funcs[i]
@@ -708,66 +716,74 @@ function _import_ndarray_functions()
 
     func_name = symbol(bytestring(ref_name[]))
 
-    #----------------------------------------
-    # get function specification
-    ref_n_use_vars = Ref{MX_uint}(0)
-    ref_n_scalars  = Ref{MX_uint}(0)
-    ref_n_mut_vars = Ref{MX_uint}(0)
-    ref_type_mask  = Ref{Cint}(0)
-    @mxcall(:MXFuncDescribe,
-            (MX_handle, Ref{MX_uint}, Ref{MX_uint}, Ref{MX_uint}, Ref{Cint}),
-            func_handle, ref_n_use_vars, ref_n_scalars, ref_n_mut_vars, ref_type_mask)
-
-    #----------------------------------------
-    # prepare function definition
-    n_used_vars   = ref_n_use_vars[]
-    n_scalars     = ref_n_scalars[]
-    n_mutate_vars = ref_n_mut_vars[]
-    type_mask     = ref_type_mask[]
-    accept_empty_mutate = (type_mask & convert(Cint,ACCEPT_EMPTY_MUTATE_TARGET)) != 0
-    arg_before_scalar   = (type_mask & convert(Cint,NDARRAY_ARG_BEFORE_SCALAR)) != 0
-
-    # general ndarray function
-    if arg_before_scalar
-      args = vcat([Expr(:(::), symbol("in$i"), NDArray) for i=1:n_used_vars],
-                  [Expr(:(::), symbol("sca$i"), Real) for i=1:n_scalars],
-                  [Expr(:(::), symbol("out$i"), NDArray) for i=1:n_mutate_vars])
+    if gen_docs
+      # generate document only
+      f_desc = bytestring(ref_desc[]) * "\n\n"
+      f_desc *= _format_docstring(Int(ref_narg[]), ref_arg_names, ref_arg_types, ref_arg_descs)
+      docs[func_name] = f_desc
     else
-      args = vcat([Expr(:(::), symbol("sca$i"), Real) for i=1:n_scalars],
-                  [Expr(:(::), symbol("in$i"), NDArray) for i=1:n_used_vars],
-                  [Expr(:(::), symbol("out$i"), NDArray) for i=1:n_mutate_vars])
+      #----------------------------------------
+      # get function specification
+      ref_n_use_vars = Ref{MX_uint}(0)
+      ref_n_scalars  = Ref{MX_uint}(0)
+      ref_n_mut_vars = Ref{MX_uint}(0)
+      ref_type_mask  = Ref{Cint}(0)
+      @mxcall(:MXFuncDescribe,
+              (MX_handle, Ref{MX_uint}, Ref{MX_uint}, Ref{MX_uint}, Ref{Cint}),
+              func_handle, ref_n_use_vars, ref_n_scalars, ref_n_mut_vars, ref_type_mask)
+
+      #----------------------------------------
+      # prepare function definition
+      n_used_vars   = ref_n_use_vars[]
+      n_scalars     = ref_n_scalars[]
+      n_mutate_vars = ref_n_mut_vars[]
+      type_mask     = ref_type_mask[]
+      accept_empty_mutate = (type_mask & convert(Cint,ACCEPT_EMPTY_MUTATE_TARGET)) != 0
+      arg_before_scalar   = (type_mask & convert(Cint,NDARRAY_ARG_BEFORE_SCALAR)) != 0
+
+      # general ndarray function
+      if arg_before_scalar
+        args = vcat([Expr(:(::), symbol("in$i"), NDArray) for i=1:n_used_vars],
+                    [Expr(:(::), symbol("sca$i"), Real) for i=1:n_scalars],
+                    [Expr(:(::), symbol("out$i"), NDArray) for i=1:n_mutate_vars])
+      else
+        args = vcat([Expr(:(::), symbol("sca$i"), Real) for i=1:n_scalars],
+                    [Expr(:(::), symbol("in$i"), NDArray) for i=1:n_used_vars],
+                    [Expr(:(::), symbol("out$i"), NDArray) for i=1:n_mutate_vars])
+      end
+
+      _use_vars = Expr(:ref, :MX_handle, [symbol("in$i") for i=1:n_used_vars]...)
+      _scalars  = Expr(:ref, :MX_float, [symbol("sca$i") for i=1:n_scalars]...)
+      _mut_vars = Expr(:ref, :MX_handle, [symbol("out$i") for i=1:n_mutate_vars]...)
+      stmt_call = Expr(:call, :_invoke_mxfunction, func_handle, _use_vars, _scalars, _mut_vars)
+      if n_mutate_vars == 1
+        stmt_ret = :(return out1)
+      else
+        stmt_ret = Expr(:return, Expr(:tuple, [symbol("out$i") for i=1:n_mutate_vars]...))
+      end
+
+      func_body = Expr(:block, stmt_call, stmt_ret)
+      func_head = Expr(:call, func_name, args...)
+
+      func_def  = Expr(:function, func_head, func_body)
+      eval(func_def)
+
+      if accept_empty_mutate
+        args0      = args[1:n_used_vars+n_scalars]
+        func_head0 = Expr(:call, func_name, args0...)
+        _mut_vars0 = [:(NDArray(_ndarray_alloc())) for i=1:n_mutate_vars]
+        stmt_call0 = Expr(:call, func_name, args0..., _mut_vars0...)
+        func_body0 = Expr(:block, stmt_call0)
+        func_head0 = Expr(:call, func_name, args0...)
+
+        func_def0  = Expr(:function, func_head0, func_body0)
+        eval(func_def0)
+      end
     end
+  end
 
-    _use_vars = Expr(:ref, :MX_handle, [symbol("in$i") for i=1:n_used_vars]...)
-    _scalars  = Expr(:ref, :MX_float, [symbol("sca$i") for i=1:n_scalars]...)
-    _mut_vars = Expr(:ref, :MX_handle, [symbol("out$i") for i=1:n_mutate_vars]...)
-    stmt_call = Expr(:call, :_invoke_mxfunction, func_handle, _use_vars, _scalars, _mut_vars)
-    if n_mutate_vars == 1
-      stmt_ret = :(return out1)
-    else
-      stmt_ret = Expr(:return, Expr(:tuple, [symbol("out$i") for i=1:n_mutate_vars]...))
-    end
-
-    func_body = Expr(:block, stmt_call, stmt_ret)
-    func_head = Expr(:call, func_name, args...)
-
-    func_def  = Expr(:function, func_head, func_body)
-    eval(func_def)
-
-    if accept_empty_mutate
-      args0      = args[1:n_used_vars+n_scalars]
-      func_head0 = Expr(:call, func_name, args0...)
-      _mut_vars0 = [:(NDArray(_ndarray_alloc())) for i=1:n_mutate_vars]
-      stmt_call0 = Expr(:call, func_name, args0..., _mut_vars0...)
-      func_body0 = Expr(:block, stmt_call0)
-      func_head0 = Expr(:call, func_name, args0...)
-
-      func_def0  = Expr(:function, func_head0, func_body0)
-      eval(func_def0)
-    end
-
-    # TODO: add doc string
-    # eval(:(@doc($doc_str, $func_name)))
+  if gen_docs
+    return docs
   end
 end
 
