@@ -107,6 +107,18 @@ MXNET_REGISTER_TBLOB_FUN(sqrt, XPU)
 .set_gradient(XPU::kDevMask, UnaryBackwardUseOut_<XPU, square_root_grad>, true)
 .describe("Take square root of the src");
 
+// exp
+MXNET_REGISTER_TBLOB_FUN(exp, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::exp>, true)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseOut_<XPU, op::mshadow_op::exp_grad>, true)
+.describe("Take exp of the src");
+
+//log
+MXNET_REGISTER_TBLOB_FUN(log, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::log>, true)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseOut_<XPU, op::mshadow_op::log_grad>, true)
+.describe("Take log of the src");
+
 // L2 norm
 MXNET_REGISTER_TBLOB_FUN(norm, XPU)
 .set_function(XPU::kDevMask, L2Norm<XPU>, false, false)
