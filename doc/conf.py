@@ -42,6 +42,7 @@ github_doc_root = 'https://github.com/dmlc/mxnet/tree/master/doc/'
 MarkdownParser.github_doc_root = github_doc_root
 source_parsers = {
     '.md': MarkdownParser,
+    '.Rmd': MarkdownParser,
 }
 os.environ['MXNET_BUILD_DOC'] = '1'
 # Version information.
@@ -71,7 +72,7 @@ templates_path = ['_templates']
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 # source_suffix = ['.rst', '.md']
-source_suffix = ['.rst', '.md']
+source_suffix = ['.rst', '.md', '.Rmd']
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'

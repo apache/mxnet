@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 2.8.7)
+cmake_minimum_required(VERSION 2.8.7)
 
 project(mxnet C CXX)
 
@@ -33,9 +33,6 @@ else(MSVC)
 endif(MSVC)
 
 if(USE_OPENCV)
-  if(MSVC)
-    set(OpenCV_STATIC OFF)
-  endif()
   find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
   if(NOT OpenCV_FOUND) # if not OpenCV 3.x, then imgcodecs are not found
     find_package(OpenCV REQUIRED COMPONENTS core highgui imgproc)
@@ -47,13 +44,13 @@ if(USE_OPENCV)
 endif()
 
 if(USE_OPENMP)
- FIND_PACKAGE( OpenMP REQUIRED)  
- if(OPENMP_FOUND)  
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")  
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")  
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")  
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")  
- endif()  
+ FIND_PACKAGE( OpenMP REQUIRED)
+ if(OPENMP_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+ endif()
 endif()
 
 # cudnn detection
@@ -68,12 +65,25 @@ if(USE_CUDNN)
 endif()
 
 add_subdirectory("dmlc-core")
+if(NOT MSVC)
+  add_subdirectory("ps-lite")
+endif()
 
 mxnet_source_group("Source"   GLOB_RECURSE "src/*.cc")
 mxnet_source_group("Source\\Cuda" GLOB_RECURSE "src/*.cu")
 
 FILE(GLOB_RECURSE SOURCE "src/*.cc")
 FILE(GLOB_RECURSE cuda "src/*.cu")
+
+if(MSVC)
+  foreach(flag_var
+        CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+        CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+    if(${flag_var} MATCHES "/MD")
+      string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+    endif(${flag_var} MATCHES "/MD")
+  endforeach(flag_var)
+endif()
 
 if(USE_CUDA)
   # define preprocessor macro so that we will not include the generated forcelink header
@@ -85,13 +95,18 @@ if(NOT MSVC)
   # Only add c++11 flags and definitions after cuda compiling
   add_definitions(-DDMLC_USE_CXX11)
   add_definitions(-DMSHADOW_IN_CXX11)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c++0x")  
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")  
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c++0x")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 endif()
 
-add_library(mxnet SHARED ${SOURCE}) 
+add_library(mxnet SHARED ${SOURCE})
 target_link_libraries(mxnet ${mshadow_LINKER_LIBS})
 target_link_libraries(mxnet dmlccore)
+if(NOT MSVC)
+  target_link_libraries(mxnet pslite)
+  target_link_libraries(mxnet ${pslite_LINKER_LIBS})
+endif()
+set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
 
 # ---[ Linter target
 if(MSVC)
@@ -101,4 +116,4 @@ if(MSVC)
   set(PYTHON3_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python 3.x executable")
 endif()
 set(LINT_DIRS include src scripts python)
-add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON2_EXECUTABLE=${PYTHON2_EXECUTABLE} -DPYTHON3_EXECUTABLE=${PYTHON3_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -P ${PROJECT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
+add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON2_EXECUTABLE=${PYTHON2_EXECUTABLE} -DPYTHON3_EXECUTABLE=${PYTHON3_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mxnet -P ${PROJECT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)

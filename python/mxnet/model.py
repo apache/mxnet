@@ -171,9 +171,10 @@ def _create_kvstore(kvstore, num_device, arg_params):
 def _train_multi_device(symbol, ctx, input_shape,
                         arg_params, aux_params,
                         begin_round, end_round, optimizer,
+                        kvstore, update_on_kvstore,
                         train_data, eval_data=None, eval_metric=None,
                         iter_end_callback=None, epoch_end_callback=None,
-                        kvstore='local', logger=None):
+                        logger=None):
     """Internal training function on multiple devices.
 
     This function will also work for single device as well.
@@ -221,15 +222,11 @@ def _train_multi_device(symbol, ctx, input_shape,
         A callback that is invoked at end of each batch.
         This can be used to measure speed, get result from evaluation metric. etc.
 
-    kvstore: KVStore or str, optional
-        The KVStore or a string kvstore type:
-        'local' : multi-devices on a single machine, will automatically
-           choose one from 'local_update_cpu', 'local_allreduce_cpu', and
-          'local_allreduce_device'
-       'dist_sync' : multi-machines with BSP
-       'dist_async' : multi-machines with partical asynchronous
+    kvstore : KVStore
+        The KVStore
 
-       In default uses 'local', often no need to change for single machiine.
+    update_on_kvstore : bool
+        whether or not perform weight updating on kvstore
 
     logger : logging logger
         When not specified, default logger will be used.
@@ -263,29 +260,27 @@ def _train_multi_device(symbol, ctx, input_shape,
     for texec in train_execs:
         texec.copy_params_from(arg_params, aux_params)
 
-    # create kvstore
-    (kv, update_on_kvstore) = _create_kvstore(kvstore, num_device, arg_params)
-
-    # init optimizer before give it to kv or get_updater
+    # init optmizer
     optimizer.begin_round(begin_round)
 
     if not update_on_kvstore:
         updater = get_updater(optimizer)
 
-    if kv:
+    # init kvstore
+    if kvstore:
         # init optimizer
         if update_on_kvstore:
-            kv.set_optimizer(optimizer)
+            kvstore.set_optimizer(optimizer)
 
         # init kv
         for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
             arg_list, grad_list = pair
             if grad_list[0] is not None:
-                kv.init(index, arg_list[0])
+                kvstore.init(index, arg_list[0])
 
                 # pull the weight back
                 if update_on_kvstore:
-                    kv.pull(index, arg_list, priority=-index)
+                    kvstore.pull(index, arg_list, priority=-index)
 
     # Input and output data structure
     data_index, label_index = _check_arguments(symbol)
@@ -319,15 +314,15 @@ def _train_multi_device(symbol, ctx, input_shape,
                 if grad_list[0] is None:
                     continue
                 # Gradient synchronization
-                if kv:
+                if kvstore:
                     # push gradient, priority is negative index
-                    kv.push(index, grad_list, priority=-index)
+                    kvstore.push(index, grad_list, priority=-index)
                     if update_on_kvstore:
                         # pull back the weights
-                        kv.pull(index, arg_list, priority=-index)
+                        kvstore.pull(index, arg_list, priority=-index)
                     else:
                         # pull back the sum gradients, to the same locations.
-                        kv.pull(index, grad_list, priority=-index)
+                        kvstore.pull(index, grad_list, priority=-index)
                 if not update_on_kvstore:
                     for k, p in enumerate(zip(arg_list, grad_list)):
                         # faked an index here, to make optimizer create diff
@@ -506,6 +501,9 @@ class FeedForward(BASE_ESTIMATOR):
         If this is True, no error will be thrown when aux_params and arg_params
         contain extra parameters than needed.
 
+    begin_round : int,optional
+        The begining training iteration.
+
     **kwargs : dict
         The additional keyword arguments passed to optimizer.
     """
@@ -515,6 +513,7 @@ class FeedForward(BASE_ESTIMATOR):
                  numpy_batch_size=128,
                  arg_params=None, aux_params=None,
                  allow_extra_params=False,
+                 begin_round=0,
                  **kwargs):
         # check if symbol contain duplicated names.
         _check_arguments(symbol)
@@ -547,6 +546,7 @@ class FeedForward(BASE_ESTIMATOR):
         # internal helper state
         self._pred_exec = None
         self._pred_exec_input = None
+        self.begin_round = begin_round
 
     @staticmethod
     def _is_data_arg(name):
@@ -606,10 +606,36 @@ class FeedForward(BASE_ESTIMATOR):
                     y = np.zeros(X.shape[0])
             if not isinstance(y, (np.ndarray, nd.NDArray)):
                 raise TypeError('y must be ndarray when X is numpy.ndarray')
+            if X.shape[0] != y.shape[0]:
+                raise ValueError("The numbers of data points and labels not equal")
+            if y.ndim == 2 and y.shape[1] == 1:
+                y = y.flatten()
+            if y.ndim != 1:
+                raise ValueError("Label must be 1D or 2D (with 2nd dimension being 1)")
             return io.NDArrayIter(X, y, self.numpy_batch_size, shuffle=is_train)
         if not isinstance(X, io.DataIter):
             raise TypeError('X must be DataIter, NDArray or numpy.ndarray')
         return X
+
+    def _init_eval_iter(self, eval_data):
+        """Initialize the iterator given eval_data."""
+        if eval_data is None:
+            return eval_data
+        if isinstance(eval_data, (tuple, list)) and len(eval_data) == 2:
+            if eval_data[0] is not None:
+                if eval_data[1] is None and isinstance(eval_data[0], io.DataIter):
+                    return eval_data[0]
+                input_data = (np.array(eval_data[0]) if isinstance(eval_data[0], list)
+                              else eval_data[0])
+                input_label = (np.array(eval_data[1]) if isinstance(eval_data[1], list)
+                               else eval_data[1])
+                return self._init_iter(input_data, input_label, is_train=True)
+            else:
+                raise ValueError("Eval data is NONE")
+        if not isinstance(eval_data, io.DataIter):
+            raise TypeError('Eval data must be DataIter, or ' \
+                            'NDArray/numpy.ndarray/list pair (i.e. tuple/list of length 2)')
+        return eval_data
 
     def predict(self, X):
         """Run the prediction, always only use one device.
@@ -647,14 +673,18 @@ class FeedForward(BASE_ESTIMATOR):
 
         Parameters
         ----------
-        X : DataIter
-            Training data
+        X : DataIter, or numpy.ndarray/NDArray
+            Training data.
 
-        y : numpy.ndarray, optional
-            If X is numpy.ndarray y is required to set
+        y : numpy.ndarray/NDArray, optional
+            Training set label.
+            If X is numpy.ndarray/NDArray, y is required to be set.
+            While y can be 1D or 2D (with 2nd dimension as 1), its 1st dimension must be
+                the same as X, i.e. the number of data points and labels should be equal.
 
-        eval_data : DataIter or numpy.ndarray pair
-            If eval_set is numpy.ndarray pair, it should be (valid_data, valid_label)
+        eval_data : DataIter or numpy.ndarray/list/NDArray pair
+            If eval_data is numpy.ndarray/list/NDArray pair,
+                it should be (valid_data, valid_label).
 
         eval_metric : metric.EvalMetric or str or callable
             The evaluation metric, name of evaluation metric.
@@ -684,6 +714,7 @@ class FeedForward(BASE_ESTIMATOR):
 
         """
         X = self._init_iter(X, y, is_train=True)
+        eval_data = self._init_eval_iter(eval_data)
         # Simply ignore the first example to get input_shape
         # in first training round.
         if not X.iter_next():
@@ -696,21 +727,30 @@ class FeedForward(BASE_ESTIMATOR):
         # setup metric
         if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
-        # setup optimizer
-        optimizer = self.optimizer
-        if isinstance(optimizer, str):
+
+        # create kvstore
+        (kvstore, update_on_kvstore) = _create_kvstore(
+            kvstore, len(self.ctx), self.arg_params)
+
+        # init optmizer
+        if isinstance(self.optimizer, str):
             batch_size = input_shape[0]
-            optimizer = opt.create(optimizer, rescale_grad=(1.0/batch_size), **(self.kwargs))
+            if kvstore and kvstore.type == 'dist_sync':
+                batch_size *= kvstore.num_workers
+
+        optimizer = opt.create(self.optimizer,
+                               rescale_grad=(1.0/batch_size),
+                               **(self.kwargs))
         # do training
         _train_multi_device(self.symbol, self.ctx, input_shape,
                             self.arg_params, self.aux_params,
-                            begin_round=0, end_round=self.num_round,
+                            begin_round=self.begin_round, end_round=self.num_round,
                             optimizer=optimizer,
                             train_data=X, eval_data=eval_data,
                             eval_metric=eval_metric,
                             iter_end_callback=iter_end_callback,
                             epoch_end_callback=epoch_end_callback,
-                            kvstore=kvstore,
+                            kvstore=kvstore, update_on_kvstore=update_on_kvstore,
                             logger=logger)
 
     def save(self, prefix, iteration=None):
@@ -770,6 +810,7 @@ class FeedForward(BASE_ESTIMATOR):
         symbol, arg_params, aux_params = load_checkpoint(prefix, iteration)
         return FeedForward(symbol, ctx=ctx,
                            arg_params=arg_params, aux_params=aux_params,
+                           begin_round=iteration,
                            **kwargs)
 
     @staticmethod

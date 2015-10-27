@@ -66,8 +66,7 @@ class BatchNormOp : public Operator {
     Tensor<xpu, 4> data;
     Tensor<xpu, 4> out, out_no_affine;
     if (in_data[kData].ndim() == 2) {
-      uint32_t ds[] = {in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1};
-      TShape dshape(ds, ds + 4);
+      Shape<4> dshape = Shape4(in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1);
       data = in_data[kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       out = out_data[kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
       if (ctx.is_train) {
@@ -125,8 +124,7 @@ class BatchNormOp : public Operator {
     const real_t scale = static_cast<real_t>(out_data[kOut].shape_[1]) /
                          static_cast<real_t>(out_data[kOut].shape_.Size());
     if (in_data[kData].ndim() == 2) {
-      uint32_t ds[] = {out_data[kOut].shape_[0], out_data[kOut].shape_[1], 1, 1};
-      TShape dshape(ds, ds + 4);
+      Shape<4> dshape = Shape4(out_data[kOut].shape_[0], out_data[kOut].shape_[1], 1, 1);
       data = in_data[kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       grad = out_grad[kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
       grad_in = in_grad[kData].get_with_shape<xpu, 4, real_t>(dshape, s);

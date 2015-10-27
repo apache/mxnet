@@ -553,6 +553,7 @@ void NDArray::SyncCopyFromCPU(const real_t *data, size_t size) const {
   TBlob src((real_t*)data, dshape, cpu::kDevMask); // NOLINT(*)
 
   RunContext run_ctx;
+  run_ctx.stream = nullptr;
   if (ctx.dev_mask() == cpu::kDevMask) {
     ndarray::Copy<cpu, cpu>(src, &dst, Context::CPU(), ctx, run_ctx);
   } else {
@@ -579,6 +580,7 @@ void NDArray::SyncCopyToCPU(real_t *data, size_t size) const {
   TBlob dst(data, dshape, cpu::kDevMask); // NOLINT(*)
 
   RunContext run_ctx;
+  run_ctx.stream = nullptr;
   if (ctx.dev_mask() == cpu::kDevMask) {
     ndarray::Copy<cpu, cpu>(src, &dst, ctx, Context::CPU(), run_ctx);
   } else {
@@ -599,6 +601,7 @@ void NDArray::SyncCopyToCPU(real_t *data, size_t size) const {
 // those with underscore will be registered at NDArray
 MXNET_REGISTER_NDARRAY_FUN(_set_value).set_function(SetValueOp);
 
+
 MXNET_REGISTER_NDARRAY_FUN(_plus).set_function(BinaryOp<ndarray::Plus>);
 MXNET_REGISTER_NDARRAY_FUN(_minus).set_function(BinaryOp<ndarray::Minus>);
 MXNET_REGISTER_NDARRAY_FUN(_mul).set_function(BinaryOp<ndarray::Mul>);
@@ -606,6 +609,14 @@ MXNET_REGISTER_NDARRAY_FUN(_div).set_function(BinaryOp<ndarray::Div>);
 
 MXNET_REGISTER_NDARRAY_FUN(dot).set_function(BinaryOp<ndarray::Dot>)
 .describe("Calcuate 2D matrix multiplication");
+
+MXNET_REGISTER_NDARRAY_FUN(_onehot_encode).set_function(BinaryOp<ndarray::OneHotEncode>);
+
+MXNET_REGISTER_NDARRAY_FUN(choose_element)
+.set_function(BinaryOp<ndarray::MatChooseRowElem>)
+.describe("Choose one element from each line(row for python, column for R/Julia)"
+          " in lhs according to index indicated by rhs");
+
 // register API function
 // those with underscore will be registered at NDArray
 MXNET_REGISTER_NDARRAY_FUN(_plus_scalar).set_function(ScalarOp<ndarray::Plus, false>);

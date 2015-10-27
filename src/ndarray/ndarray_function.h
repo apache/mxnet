@@ -11,6 +11,7 @@
 #include <mxnet/base.h>
 #include <mxnet/resource.h>
 #include <vector>
+#include "../operator/mshadow_op.h"
 
 namespace mxnet {
 /*! \brief namespace to support all possible Ndarray operator */
@@ -22,6 +23,7 @@ struct BinaryBase {
     return lshape;
   }
 };
+
 // operators
 struct Plus : public BinaryBase {
   typedef mshadow::op::plus mshadow_op;
@@ -72,6 +74,24 @@ struct Dot {
   }
 };
 
+
+struct OneHotEncode {
+  inline static TShape GetShape(const TShape &index, const TShape &proptype) {
+    CHECK(index.ndim() == 1 && proptype.ndim() == 2) << "OneHotEncode only support 1d index.";
+    CHECK_EQ(index[0], proptype[0]) << "OneHotEncode shape inconsistent";
+    return proptype;
+  }
+};
+
+struct MatChooseRowElem {
+  inline static TShape GetShape(const TShape &lshape, const TShape &rshape) {
+    CHECK(lshape.ndim() == 2 && rshape.ndim() == 1)
+        << "choose_row_element only support 2D Matrix and 1D index";
+    CHECK_EQ(lshape[0], rshape[0]) << "choose_row_element index and matrix shape mismatch";
+    return rshape;
+  }
+};
+
 // type holder for random number generators
 struct UniformDistribution {};
 
@@ -83,6 +103,9 @@ void EvalClip(const TBlob &src, const real_t &a_min, const real_t &a_max,
 
 template<typename Device, typename OP>
 void Eval(const TBlob &lhs, const TBlob &rhs, TBlob *ret, RunContext ctx);
+
+template<typename Device, typename OP>
+void Eval(const TBlob &src, TBlob *ret, RunContext ctx);
 
 template<typename Device, typename OP, bool reverse>
 void Eval(const TBlob &lhs, const real_t &rhs, TBlob *ret, RunContext ctx);

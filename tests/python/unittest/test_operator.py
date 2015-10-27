@@ -143,7 +143,69 @@ def test_slice_channel():
     check_slice_channel(2)
     check_slice_channel(4)
 
+def check_regression(symbol, forward, backward):
+    data = mx.symbol.Variable('data')
+    label = mx.symbol.Variable('label')
+    out = symbol(data, label)
+    shape = (3, 1)
+    arr_data = mx.random.uniform(-1, 1, shape)
+    arr_label = mx.random.uniform(0, 1, shape[0])
+    arr_grad = mx.nd.empty(shape)
+    exec1 = out.bind(mx.cpu(),
+                     args=[arr_data, arr_label],
+                     args_grad={"data" : arr_grad})
+    exec1.forward()
+    out1 = exec1.outputs[0].asnumpy()
+    npout = forward(arr_data.asnumpy())
+    assert reldiff(npout, out1) < 1e-6
+
+    exec1.backward()
+    npout = backward(npout,  arr_label.asnumpy().reshape(npout.shape))
+    assert reldiff(npout, arr_grad.asnumpy()) < 1e-6
+
+def test_regression():
+    check_regression(mx.symbol.LogisticRegressionOutput,
+                     lambda x: 1.0 / (1.0 + np.exp(-x)),
+                     lambda x, y : x - y)
+    check_regression(mx.symbol.LinearRegressionOutput,
+                     lambda x: x,
+                     lambda x, y : x - y)
+
+def check_softmax_with_shape(shape, xpu):
+    X = mx.symbol.Variable('X')
+    L = mx.symbol.Variable('L')
+    Y = mx.symbol.Softmax(data=X, label=L)
+    x = mx.random.uniform(-1, 1, shape, ctx = xpu)
+    l = mx.nd.empty((shape[0],), ctx = xpu)
+    l[:] = np.random.randint(0, shape[0]-1, (shape[0],))
+    grad = mx.nd.empty(shape, ctx = xpu)
+
+    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
+    print('foward')
+    exec1.forward()
+    print(exec1.outputs[0].asnumpy())
+    exec1.backward()
+    print(grad.asnumpy())
+
+def check_multi_softmax_with_shape(shape, xpu):
+    X = mx.symbol.Variable('X')
+    L = mx.symbol.Variable('L')
+    Y = mx.symbol.Softmax(data=X, label=L, multi_output=True)
+    x = mx.random.uniform(-1, 1, shape, ctx = xpu)
+    l = mx.nd.empty((shape[0], shape[2]), ctx = xpu)
+    l[:] = np.random.randint(0, shape[1]-1, (shape[0], shape[2]))
+    grad = mx.nd.empty(shape, ctx = xpu)
+
+    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
+    exec1.forward()
+    print(exec1.outputs[0].asnumpy())
+    exec1.backward()
+    print(grad.asnumpy())
+
 if __name__ == '__main__':
     test_elementwise_sum()
     test_concat()
     test_slice_channel()
+    test_regression()
+    #check_softmax_with_shape((3,4), mx.cpu())
+    #check_multi_softmax_with_shape((3,4,5), mx.cpu())

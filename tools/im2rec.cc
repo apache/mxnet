@@ -28,13 +28,15 @@ int main(int argc, char *argv[]) {
            "\tresize=newsize resize the shorter edge of image to the newsize, original images will be packed by default\n"\
            "\tlabel_width=WIDTH[default=1] specify the label_width in the list, by default set to 1\n"\
            "\tnsplit=NSPLIT[default=1] used for part generation, logically split the image.list to NSPLIT parts by position\n"\
-           "\tpart=PART[default=0] used for part generation, pack the images from the specific part in image.list\n");
+           "\tpart=PART[default=0] used for part generation, pack the images from the specific part in image.list\n"
+           "\tcenter_crop=CENTER_CROP[default=0] specify whether to crop the center image to make it rectangular.\n");
     return 0;
   }
   int label_width = 1;
   int new_size = -1;
   int nsplit = 1;
   int partid = 0;
+  int center_crop = 0;
   for (int i = 4; i < argc; ++i) {
     char key[128], val[128];
     if (sscanf(argv[i], "%[^=]=%s", key, val) == 2) {
@@ -42,12 +44,16 @@ int main(int argc, char *argv[]) {
       if (!strcmp(key, "label_width")) label_width = atoi(val);
       if (!strcmp(key, "nsplit")) nsplit = atoi(val);
       if (!strcmp(key, "part")) partid = atoi(val);
+      if (!strcmp(key, "center_crop")) center_crop = atoi(val);
     }
   }
   if (new_size > 0) {
     LOG(INFO) << "New Image Size: Short Edge " << new_size;
   } else {
     LOG(INFO) << "Keep origin image size";
+  }
+  if (center_crop) {
+    LOG(INFO) << "Center cropping to rectangular";
   }
   
   using namespace dmlc;
@@ -111,6 +117,15 @@ int main(int argc, char *argv[]) {
     if (new_size > 0) {
       cv::Mat img = cv::imdecode(decode_buf, CV_LOAD_IMAGE_COLOR);
       CHECK(img.data != NULL) << "OpenCV decode fail:" << path;
+      if (center_crop) {
+        if (img.rows > img.cols) {
+          int margin = (img.rows - img.cols)/2;
+          img = img(cv::Range(margin, margin+img.cols), cv::Range(0, img.cols));
+        } else {
+          int margin = (img.cols - img.rows)/2;
+          img = img(cv::Range(0, img.rows), cv::Range(margin, margin + img.rows));
+        }
+      }
       cv::Mat res;
       if (img.rows > img.cols) {
         cv::resize(img, res, cv::Size(new_size, img.rows * new_size / img.cols),

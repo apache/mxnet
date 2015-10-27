@@ -24,12 +24,12 @@ def find_lib_path():
             dll_path.append(os.path.join(curr_path, '../../build', vs_configuration))
             dll_path.append(os.path.join(curr_path, '../../windows', vs_configuration))
     if os.name == 'nt':
-        dll_path = [os.path.join(p, 'mxnet.dll') for p in dll_path]
+        dll_path = [os.path.join(p, 'libmxnet.dll') for p in dll_path]
     else:
         dll_path = [os.path.join(p, 'libmxnet.so') for p in dll_path]
     lib_path = [p for p in dll_path if os.path.exists(p) and os.path.isfile(p)]
     if len(lib_path) == 0:
-        raise RuntimeError('Cannot find find the files.\n' +
+        raise RuntimeError('Cannot find the files.\n' +
                            'List of candidates:\n' + str('\n'.join(dll_path)))
     return lib_path
 

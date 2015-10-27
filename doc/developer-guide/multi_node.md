@@ -4,7 +4,7 @@
 
 MXNet uses a two-level *parameter server* for data synchronization.
 
-<img src=https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/multi-node/ps_arch.png width=400/>
+<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/multi-node/ps_arch.png width=400/>
 
 - On the first layer, data are synchronized over multiple devices within a
   single worker machine. A device could be a GPU card, CPU, or other computational

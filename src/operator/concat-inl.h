@@ -53,13 +53,11 @@ class ConcatOp : public Operator {
     if (in_data[kData0].ndim() == 2) {
       uint32_t dim = 0;
       for (int i = 0; i < size_; ++i) {
-        uint32_t ds[] = {in_data[i].shape_[0], in_data[i].shape_[1], 1, 1};
-        TShape dshape(ds, ds + 4);
+        Shape<4> dshape = Shape4(in_data[i].shape_[0], in_data[i].shape_[1], 1, 1);
         data[i] = in_data[i].get_with_shape<xpu, 4, real_t>(dshape, s);
         dim += in_data[i].shape_[1];
       }
-      uint32_t ds_out[] = {in_data[kData0].shape_[0], dim, 1, 1};
-      TShape dshape_out(ds_out, ds_out + 4);
+      Shape<4> dshape_out = Shape4(in_data[kData0].shape_[0], dim, 1, 1);
       out = out_data[kOut].get_with_shape<xpu, 4, real_t>(dshape_out, s);
     } else {
       for (int i = 0; i < size_; ++i) {
@@ -87,14 +85,12 @@ class ConcatOp : public Operator {
     if (out_grad[kOut].ndim() == 2) {
       uint32_t dim = 0;
       for (int i = 0; i < size_; ++i) {
-        uint32_t ds[] = {in_grad[i].shape_[0], in_grad[i].shape_[1], 1, 1};
-        TShape dshape(ds, ds + 4);
+        Shape<4> dshape = Shape4(in_grad[i].shape_[0], in_grad[i].shape_[1], 1, 1);
         grad_in[i] = in_grad[i].get_with_shape<xpu, 4, real_t>(dshape, s);
         dim += in_grad[i].shape_[1];
         CHECK_EQ(req[i], kWriteTo);
       }
-      uint32_t ds_out[] = {in_grad[kData0].shape_[0], dim, 1, 1};
-      TShape dshape_out(ds_out, ds_out + 4);
+      Shape<4> dshape_out = Shape4(in_grad[kData0].shape_[0], dim, 1, 1);
       grad = out_grad[kOut].get_with_shape<xpu, 4, real_t>(dshape_out, s);
     } else {
       for (int i = 0; i < size_; ++i) {
