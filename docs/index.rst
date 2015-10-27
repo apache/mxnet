@@ -32,6 +32,8 @@ For more details, see documentation below. Please also checkout the `examples
    :caption: API Documentation
 
    api/model
+   api/callback
+   api/initializer
    api/ndarray
    api/symbol
 

@@ -1,6 +1,6 @@
 #=doc
-NDArray
-=======
+NDArray API
+===========
 =#
 
 # create a NDArray handle of specific shape

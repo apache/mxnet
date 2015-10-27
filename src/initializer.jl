@@ -1,3 +1,13 @@
+#=doc
+Built-in Initializers
+=====================
+=#
+
+#=doc
+.. class:: AbstractInitializer
+
+   The abstract base class for all initializers.
+=#
 abstract AbstractInitializer
 
 function call(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
@@ -32,6 +42,11 @@ function _init_zero(self :: AbstractInitializer, name :: Base.Symbol, array :: N
   array[:] = 0
 end
 
+#=doc
+.. class:: UniformInitializer
+
+   Initialize weights according to a uniform distribution within the provided scale.
+=#
 immutable UniformInitializer <: AbstractInitializer
   scale :: AbstractFloat
 end
@@ -41,6 +56,11 @@ function _init_weight(self :: UniformInitializer, name :: Base.Symbol, array :: 
   rand!(-self.scale, self.scale, array)
 end
 
+#=doc
+.. class:: NormalInitializer
+
+   Initialize weights according to a univariate Gaussian distribution.
+=#
 immutable NormalInitializer <: AbstractInitializer
   μ :: AbstractFloat
   σ :: AbstractFloat

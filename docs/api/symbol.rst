@@ -1,6 +1,6 @@
 
-Symbol
-======
+Symbolic API
+============
 
 
 

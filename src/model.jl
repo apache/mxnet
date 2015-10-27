@@ -1,6 +1,6 @@
 #=doc
-Model
-=====
+Built-in Models and Interface
+=============================
 
 The model API provides convenient high-level interface to do training and predicting on
 a network described using the symbolic API.
@@ -294,7 +294,22 @@ end
    :param AbstractOptimizer optimizer: the optimization algorithm to use.
    :param AbstractDataProvider data: the training data provider.
    :param Int n_epoch: default 10, the number of full data-passes to run.
-   :param AbstractOptimizer:
+   :param AbstractDataProvider eval_data: keyword argument, default ``nothing``. The data provider for
+          the validation set.
+   :param AbstractEvalMetric eval_metric: keyword argument, default ``Accuracy()``. The metric used
+          to evaluate the training performance. If ``eval_data`` is provided, the same metric is also
+          calculated on the validation set.
+   :param kvstore: keyword argument, default ``:local``. The key-value store used to synchronize gradients
+          and parameters when multiple devices are used for training.
+   :type kvstore: :class:`KVStore` or ``Base.Symbol``
+   :param AbstractInitializer initializer: keyword argument, default ``UniformInitializer(0.01)``.
+   :param Bool force_init: keyword argument, default false. By default, the random initialization using the
+          provided ``initializer`` will be skipped if the model weights already exists, maybe from a previous
+          call to :func:`train` or an explicit call to :func:`init_model` or :func:`load_checkpoint`. When
+          this option is set, it will always do random initialization at the begining of training.
+   :param callbacks: keyword argument, default ``[]``. Callbacks to be invoked at each epoch or mini-batch,
+          see :class:`AbstractCallback`.
+   :type callbacks: ``Vector{AbstractCallback}``
 =#
 function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: AbstractDataProvider; kwargs...)
   opts = TrainingOptions(; kwargs...)

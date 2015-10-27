@@ -1,6 +1,6 @@
 #=doc
-Symbol
-======
+Symbolic API
+============
 =#
 
 #=doc

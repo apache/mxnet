@@ -1,10 +1,27 @@
-"Abstract type of callback functions used in training"
+#=doc
+Callbacks in training
+=====================
+=#
+
+#=doc
+.. class:: AbstractCallback
+
+   Abstract type of callback functions used in training.
+=#
 abstract AbstractCallback
 
-"Abstract type of callbacks to be called every mini-batch"
+#=doc
+.. class:: AbstractIterationCallback
+
+   Abstract type of callbacks to be called every mini-batch.
+=#
 abstract AbstractIterationCallback <: AbstractCallback
 
-"Abstract type of callbacks to be called every epoch"
+#=doc
+.. class:: AbstractEpochCallback
+
+   Abstract type of callbacks to be called every epoch.
+=#
 abstract AbstractEpochCallback <: AbstractCallback
 
 type CallbackParams
