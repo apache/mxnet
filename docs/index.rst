@@ -32,6 +32,7 @@ For more details, see documentation below. Please also checkout the `examples
    :caption: API Documentation
 
    api/ndarray
+   api/symbol
 
 Indices and tables
 ==================

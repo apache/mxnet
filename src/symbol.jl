@@ -253,10 +253,16 @@ function save(filename :: AbstractString, sym :: Symbol)
   @mxcall(:MXSymbolSaveToFile, (MX_handle, char_p), sym, filename)
 end
 
+#=doc
+libmxnet APIs
+-------------
+
+**autogen:EMBED:symbol:EMBED:autogen**
+=#
 ################################################################################
 # Atomic Symbol functions dynamically imported from libmxnet
 ################################################################################
-function _define_atomic_symbol_creator(hdr :: MX_handle)
+function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
   ref_name      = Ref{char_p}(0)
   ref_desc      = Ref{char_p}(0)
   ref_kv_nargs  = Ref{char_p}(0)
@@ -274,13 +280,16 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
   kv_nargs_s = bytestring(ref_kv_nargs[])
   kv_nargs   = symbol(kv_nargs_s)
 
-  f_desc = bytestring(ref_desc[]) * "\n\n"
-  if !isempty(kv_nargs_s)
-    f_desc *= "This function support variable length positional `Symbol` inputs.\n\n"
+  if gen_docs
+    f_desc = bytestring(ref_desc[]) * "\n\n"
+    if !isempty(kv_nargs_s)
+      f_desc *= "This function support variable length positional :class:`Symbol` inputs.\n\n"
+    end
+    f_desc *= _format_docstring(Int(ref_nargs[]), ref_arg_names, ref_arg_types, ref_arg_descs)
+    f_desc *= ":param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.\n\n"
+    f_desc *= ":return: The constructed :class:`Symbol`.\n\n"
+    return (func_name, f_desc)
   end
-  f_desc *= _format_docstring(Int(ref_nargs[]), ref_arg_names, ref_arg_types, ref_arg_descs)
-  f_desc *= "* `name`: Julia Symbol (e.g. `:my_symbol`), optional.\n\n  The name of the symbol.\n\n"
-  f_desc *= "**Returns**\n\n`symbol`: `mx.Symbol`\n\n  The constructed symbol."
 
   # function $func_name(args...; kwargs...)
   func_head = Expr(:call, func_name, Expr(:parameters, Expr(:..., :kwargs)), Expr(:..., :args))
@@ -349,12 +358,9 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
 
   func_def = Expr(:function, func_head, Expr(:block, func_body))
   eval(func_def)
-
-  # add doc string
-  eval(:(@doc($f_desc, $func_name)))
 end
 
-function _import_atomic_symbol_creators()
+function _import_atomic_symbol_creators(;gen_docs=false)
   n_ref = Ref{MX_uint}(0)
   h_ref = Ref{Ptr{MX_handle}}(0)
   @mxcall(:MXSymbolListAtomicSymbolCreators, (Ref{MX_uint}, Ref{Ptr{MX_handle}}), n_ref, h_ref)
@@ -362,9 +368,20 @@ function _import_atomic_symbol_creators()
   n_creators = n_ref[]
   h_creators = pointer_to_array(h_ref[], n_creators)
 
+  if gen_docs
+    docs = Dict{Base.Symbol, AbstractString}()
+  end
+
   for i = 1:n_creators
     creator_hdr = h_creators[i]
-    _define_atomic_symbol_creator(creator_hdr)
+    ret = _define_atomic_symbol_creator(creator_hdr, gen_docs=gen_docs)
+    if gen_docs
+      docs[ret[1]] = ret[2]
+    end
+  end
+
+  if gen_docs
+    return docs
   end
 end
 

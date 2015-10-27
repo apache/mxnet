@@ -4,8 +4,10 @@ using MXNet
 const SRC_DIR = joinpath(Pkg.dir("MXNet"), "src")
 const API_DIR = joinpath(Pkg.dir("MXNet"), "docs", "api")
 
+#################################################################################
+# Document Builders
+#################################################################################
 function extract_doc(output_filename::AbstractString, input_filenames::AbstractString...)
-
   mkpath(API_DIR)
   open(joinpath(API_DIR, output_filename), "w") do io
     for in_fn in input_filenames
@@ -62,5 +64,11 @@ function embed_mxnet_api(output_filename::AbstractString, key::AbstractString, g
   end
 end
 
+#################################################################################
+# Build Documents
+#################################################################################
 extract_doc("ndarray.rst", "ndarray.jl")
 embed_mxnet_api("ndarray.rst", "ndarray", mx._import_ndarray_functions)
+
+extract_doc("symbol.rst", "symbol.jl")
+embed_mxnet_api("symbol.rst", "symbol", mx._import_atomic_symbol_creators)
