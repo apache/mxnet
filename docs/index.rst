@@ -31,6 +31,7 @@ For more details, see documentation below. Please also checkout the `examples
    :maxdepth: 1
    :caption: API Documentation
 
+   api/model
    api/ndarray
    api/symbol
 

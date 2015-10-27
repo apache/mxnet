@@ -27,12 +27,14 @@ Public APIs
 
    Apply activation function to input.
    
-   :param data: ``Symbol``. Input data to activation function.
+   :param data: Input data to activation function.
+   :type data: Symbol
    
    
-   :param act_type: ``{'relu', 'sigmoid', 'tanh'}, required``. Activation function to be applied.
+   :param act_type: Activation function to be applied.
+   :type act_type: {'relu', 'sigmoid', 'tanh'}, required
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -44,15 +46,18 @@ Public APIs
 
    Apply batch normalization to input.
    
-   :param data: ``Symbol``. Input data to batch normalization
+   :param data: Input data to batch normalization
+   :type data: Symbol
    
    
-   :param eps: ``float, optional, default=1e-10``. Epsilon to prevent div 0
+   :param eps: Epsilon to prevent div 0
+   :type eps: float, optional, default=1e-10
    
    
-   :param momentum: ``float, optional, default=0.1``. Momentum for moving average
+   :param momentum: Momentum for moving average
+   :type momentum: float, optional, default=0.1
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -64,9 +69,10 @@ Public APIs
 
    Get output from a symbol and pass 0 gradient back
    
-   :param data: ``Symbol``. Input data.
+   :param data: Input data.
+   :type data: Symbol
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -80,9 +86,10 @@ Public APIs
    
    This function support variable length positional :class:`Symbol` inputs.
    
-   :param num_args: ``int, required``. Number of inputs to be concated.
+   :param num_args: Number of inputs to be concated.
+   :type num_args: int, required
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -94,36 +101,46 @@ Public APIs
 
    Apply convolution to input then add a bias.
    
-   :param data: ``Symbol``. Input data to the ConvolutionOp.
+   :param data: Input data to the ConvolutionOp.
+   :type data: Symbol
    
    
-   :param weight: ``Symbol``. Weight matrix.
+   :param weight: Weight matrix.
+   :type weight: Symbol
    
    
-   :param bias: ``Symbol``. Bias parameter.
+   :param bias: Bias parameter.
+   :type bias: Symbol
    
    
-   :param kernel: ``Shape(tuple), required``. convolution kernel size: (y, x)
+   :param kernel: convolution kernel size: (y, x)
+   :type kernel: Shape(tuple), required
    
    
-   :param stride: ``Shape(tuple), optional, default=(1, 1)``. convolution stride: (y, x)
+   :param stride: convolution stride: (y, x)
+   :type stride: Shape(tuple), optional, default=(1, 1)
    
    
-   :param pad: ``Shape(tuple), optional, default=(0, 0)``. pad for convolution: (y, x)
+   :param pad: pad for convolution: (y, x)
+   :type pad: Shape(tuple), optional, default=(0, 0)
    
    
-   :param num_filter: ``int (non-negative), required``. convolution filter(channel) number
+   :param num_filter: convolution filter(channel) number
+   :type num_filter: int (non-negative), required
    
    
-   :param num_group: ``int (non-negative), optional, default=1``. number of groups partition
+   :param num_group: number of groups partition
+   :type num_group: int (non-negative), optional, default=1
    
    
-   :param workspace: ``long (non-negative), optional, default=512``. Tmp workspace for convolution (MB)
+   :param workspace: Tmp workspace for convolution (MB)
+   :type workspace: long (non-negative), optional, default=512
    
    
-   :param no_bias: ``boolean, optional, default=False``. Whether to disable bias parameter.
+   :param no_bias: Whether to disable bias parameter.
+   :type no_bias: boolean, optional, default=False
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -135,12 +152,14 @@ Public APIs
 
    Apply dropout to input
    
-   :param data: ``Symbol``. Input data to dropout.
+   :param data: Input data to dropout.
+   :type data: Symbol
    
    
-   :param p: ``float, optional, default=0.5``. Fraction of the input that gets dropped out at training time
+   :param p: Fraction of the input that gets dropped out at training time
+   :type p: float, optional, default=0.5
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -154,9 +173,10 @@ Public APIs
    
    This function support variable length positional :class:`Symbol` inputs.
    
-   :param num_args: ``int, required``. Number of inputs to be sumed.
+   :param num_args: Number of inputs to be sumed.
+   :type num_args: int, required
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -168,9 +188,10 @@ Public APIs
 
    Flatten input
    
-   :param data: ``Symbol``. Input data to  flatten.
+   :param data: Input data to  flatten.
+   :type data: Symbol
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -182,21 +203,26 @@ Public APIs
 
    Apply matrix multiplication to input then add a bias.
    
-   :param data: ``Symbol``. Input data to the FullyConnectedOp.
+   :param data: Input data to the FullyConnectedOp.
+   :type data: Symbol
    
    
-   :param weight: ``Symbol``. Weight matrix.
+   :param weight: Weight matrix.
+   :type weight: Symbol
    
    
-   :param bias: ``Symbol``. Bias parameter.
+   :param bias: Bias parameter.
+   :type bias: Symbol
    
    
-   :param num_hidden: ``int, required``. Number of hidden nodes of the output.
+   :param num_hidden: Number of hidden nodes of the output.
+   :type num_hidden: int, required
    
    
-   :param no_bias: ``boolean, optional, default=False``. Whether to disable bias parameter.
+   :param no_bias: Whether to disable bias parameter.
+   :type no_bias: boolean, optional, default=False
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -208,21 +234,26 @@ Public APIs
 
    Apply convolution to input then add a bias.
    
-   :param data: ``Symbol``. Input data to the ConvolutionOp.
+   :param data: Input data to the ConvolutionOp.
+   :type data: Symbol
    
    
-   :param alpha: ``float, optional, default=0.0001``. value of the alpha variance scaling parameter in the normalization formula
+   :param alpha: value of the alpha variance scaling parameter in the normalization formula
+   :type alpha: float, optional, default=0.0001
    
    
-   :param beta: ``float, optional, default=0.75``. value of the beta power parameter in the normalization formula
+   :param beta: value of the beta power parameter in the normalization formula
+   :type beta: float, optional, default=0.75
    
    
-   :param knorm: ``float, optional, default=2``. value of the k parameter in normalization formula
+   :param knorm: value of the k parameter in normalization formula
+   :type knorm: float, optional, default=2
    
    
-   :param nsize: ``int (non-negative), required``. normalization window width in elements.
+   :param nsize: normalization window width in elements.
+   :type nsize: int (non-negative), required
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -234,21 +265,26 @@ Public APIs
 
    Apply activation function to input.
    
-   :param data: ``Symbol``. Input data to activation function.
+   :param data: Input data to activation function.
+   :type data: Symbol
    
    
-   :param act_type: ``{'leaky', 'prelu', 'rrelu'},optional, default='leaky'``. Activation function to be applied.
+   :param act_type: Activation function to be applied.
+   :type act_type: {'leaky', 'prelu', 'rrelu'},optional, default='leaky'
    
    
-   :param slope: ``float, optional, default=0.25``. Init slope for the activation. (For leaky only)
+   :param slope: Init slope for the activation. (For leaky only)
+   :type slope: float, optional, default=0.25
    
    
-   :param lower_bound: ``float, optional, default=0.125``. Lower bound of random slope. (For rrelu only)
+   :param lower_bound: Lower bound of random slope. (For rrelu only)
+   :type lower_bound: float, optional, default=0.125
    
    
-   :param upper_bound: ``float, optional, default=0.334``. Upper bound of random slope. (For rrelu only)
+   :param upper_bound: Upper bound of random slope. (For rrelu only)
+   :type upper_bound: float, optional, default=0.334
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -260,12 +296,14 @@ Public APIs
 
    Use linear regression for final output, this is used on final output of a net.
    
-   :param data: ``Symbol``. Input data to function.
+   :param data: Input data to function.
+   :type data: Symbol
    
    
-   :param label: ``Symbol``. Input label to function.
+   :param label: Input label to function.
+   :type label: Symbol
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -278,12 +316,14 @@ Public APIs
    Use Logistic regression for final output, this is used on final output of a net.
    Logistic regression is suitable for binary classification or probability prediction tasks.
    
-   :param data: ``Symbol``. Input data to function.
+   :param data: Input data to function.
+   :type data: Symbol
    
    
-   :param label: ``Symbol``. Input label to function.
+   :param label: Input label to function.
+   :type label: Symbol
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -295,21 +335,26 @@ Public APIs
 
    Perform spatial pooling on inputs.
    
-   :param data: ``Symbol``. Input data to the pooling operator.
+   :param data: Input data to the pooling operator.
+   :type data: Symbol
    
    
-   :param kernel: ``Shape(tuple), required``. pooling kernel size: (y, x)
+   :param kernel: pooling kernel size: (y, x)
+   :type kernel: Shape(tuple), required
    
    
-   :param pool_type: ``{'avg', 'max', 'sum'}, required``. Pooling type to be applied.
+   :param pool_type: Pooling type to be applied.
+   :type pool_type: {'avg', 'max', 'sum'}, required
    
    
-   :param stride: ``Shape(tuple), optional, default=(1, 1)``. stride: for pooling (y, x)
+   :param stride: stride: for pooling (y, x)
+   :type stride: Shape(tuple), optional, default=(1, 1)
    
    
-   :param pad: ``Shape(tuple), optional, default=(0, 0)``. pad for pooling: (y, x)
+   :param pad: pad for pooling: (y, x)
+   :type pad: Shape(tuple), optional, default=(0, 0)
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -321,12 +366,14 @@ Public APIs
 
    Reshape input to target shape
    
-   :param data: ``Symbol``. Input data to  reshape.
+   :param data: Input data to  reshape.
+   :type data: Symbol
    
    
-   :param target_shape: ``Shape(tuple), required``. Target new shape
+   :param target_shape: Target new shape
+   :type target_shape: Shape(tuple), required
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -338,9 +385,10 @@ Public APIs
 
    Slice channel into many outputs with equally divided channel
    
-   :param num_outputs: ``int, required``. Number of outputs to be sliced.
+   :param num_outputs: Number of outputs to be sliced.
+   :type num_outputs: int, required
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -352,15 +400,18 @@ Public APIs
 
    Perform a softmax transformation on input.
    
-   :param data: ``Symbol``. Input data to softmax.
+   :param data: Input data to softmax.
+   :type data: Symbol
    
    
-   :param grad_scale: ``float, optional, default=1``. Scale the gradient by a float factor
+   :param grad_scale: Scale the gradient by a float factor
+   :type grad_scale: float, optional, default=1
    
    
-   :param multi_output: ``boolean, optional, default=False``. If set to true, for a (n,k,x_1,..,x_n) dimensionalinput tensor, softmax will generate n*x_1*...*x_n output, eachhas k classes
+   :param multi_output: If set to true, for a (n,k,x_1,..,x_n) dimensionalinput tensor, softmax will generate n*x_1*...*x_n output, eachhas k classes
+   :type multi_output: boolean, optional, default=False
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -372,9 +423,10 @@ Public APIs
 
    Take square root of the src
    
-   :param src: ``Symbol``. Source symbolic input to the function
+   :param src: Source symbolic input to the function
+   :type src: Symbol
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -386,9 +438,10 @@ Public APIs
 
    Take square of the src
    
-   :param src: ``Symbol``. Source symbolic input to the function
+   :param src: Source symbolic input to the function
+   :type src: Symbol
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -406,7 +459,7 @@ Internal APIs
 
    Perform an elementwise div.
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -418,7 +471,7 @@ Internal APIs
 
    Perform an elementwise minus.
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -430,7 +483,7 @@ Internal APIs
 
    Perform an elementwise mul.
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    
@@ -442,7 +495,7 @@ Internal APIs
 
    Perform an elementwise plus.
    
-   :param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
    :return: The constructed :class:`Symbol`.
    

@@ -72,3 +72,5 @@ embed_mxnet_api("ndarray.rst", "ndarray", mx._import_ndarray_functions)
 
 extract_doc("symbol.rst", "symbol.jl")
 embed_mxnet_api("symbol.rst", "symbol", mx._import_atomic_symbol_creators)
+
+extract_doc("model.rst", "model.jl")

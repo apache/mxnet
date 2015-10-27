@@ -615,8 +615,9 @@ end
    Save NDarrays to binary file. Filename could be S3 or HDFS address, if ``libmxnet`` is built
    with corresponding support.
 
-   :param filename: path to the binary file to write to.
-   :param data: an :class:`NDArray`, or a ``Vector{NDArray}`` or a ``Dict{Base.Symbol, NDArray}``.
+   :param AbstractString filename: path to the binary file to write to.
+   :param data: data to save to file.
+   :type data: :class:`NDArray`, or a ``Vector{NDArray}`` or a ``Dict{Base.Symbol, NDArray}``.
 =#
 function save(filename::AbstractString, data::NDArray)
   save(filename, [data])
