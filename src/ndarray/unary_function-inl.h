@@ -65,8 +65,9 @@ void UnaryBackwardUseOut_(const arg::OutGrad& out_grad,
 }
 
 // return a shape of scalar
-TShape ScalarShape(const TShape& ishape) {
-  return mshadow::Shape1(1);
+inline TShape ScalarShape(const TShape& ishape) {
+  mshadow::index_t shape[] = {1};
+  return TShape(shape, shape + 1);
 }
 
 template<typename xpu>
