@@ -107,13 +107,13 @@ a network described using the symbolic API.
    :param Int n_epoch: default 10, the number of full data-passes to run.
    :param AbstractDataProvider eval_data: keyword argument, default ``nothing``. The data provider for
           the validation set.
-   :param AbstractEvalMetric eval_metric: keyword argument, default :class:`Accuracy`. The metric used
+   :param AbstractEvalMetric eval_metric: keyword argument, default ``Accuracy()``. The metric used
           to evaluate the training performance. If ``eval_data`` is provided, the same metric is also
           calculated on the validation set.
    :param kvstore: keyword argument, default ``:local``. The key-value store used to synchronize gradients
           and parameters when multiple devices are used for training.
    :type kvstore: :class:`KVStore` or ``Base.Symbol``
-   :param AbstractInitializer initializer: keyword argument, default :class:`UniformInitializer(0.01)`.
+   :param AbstractInitializer initializer: keyword argument, default ``UniformInitializer(0.01)``.
    :param Bool force_init: keyword argument, default false. By default, the random initialization using the
           provided ``initializer`` will be skipped if the model weights already exists, maybe from a previous
           call to :func:`train` or an explicit call to :func:`init_model` or :func:`load_checkpoint`. When
