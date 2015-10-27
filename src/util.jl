@@ -64,7 +64,7 @@ function _format_docstring(narg::Int, arg_names::Ref{char_pp}, arg_types::Ref{ch
 
     arg_type = bytestring(arg_types[i])
     arg_desc = bytestring(arg_descs[i])
-    push!(docstrings, ":param $arg_type $arg_name: $arg_desc\n\n")
+    push!(docstrings, ":param $arg_name: ``$arg_type``. $arg_desc\n\n")
   end
   return join(docstrings, "\n")
 end

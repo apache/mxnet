@@ -367,10 +367,10 @@ Public APIs
 
    Choose one element from each line(row for python, column for R/Julia) in lhs according to index indicated by rhs
    
-   :param NDArray lhs: Left operand to the function.
+   :param lhs: ``NDArray``. Left operand to the function.
    
    
-   :param NDArray rhs: Right operand to the function.
+   :param rhs: ``NDArray``. Right operand to the function.
    
 
 
@@ -380,13 +380,13 @@ Public APIs
 
    Clip ndarray elements to range (a_min, a_max)
    
-   :param NDArray src: Source input
+   :param src: ``NDArray``. Source input
    
    
-   :param real_t a_min: Minimum value
+   :param a_min: ``real_t``. Minimum value
    
    
-   :param real_t a_max: Maximum value
+   :param a_max: ``real_t``. Maximum value
    
 
 
@@ -396,10 +396,10 @@ Public APIs
 
    Calcuate 2D matrix multiplication
    
-   :param NDArray lhs: Left operand to the function.
+   :param lhs: ``NDArray``. Left operand to the function.
    
    
-   :param NDArray rhs: Right operand to the function.
+   :param rhs: ``NDArray``. Right operand to the function.
    
 
 
@@ -409,7 +409,7 @@ Public APIs
 
    Take square root of the src
    
-   :param NDArray src: Source input to the function
+   :param src: ``NDArray``. Source input to the function
    
 
 
@@ -419,7 +419,7 @@ Public APIs
 
    Take square of the src
    
-   :param NDArray src: Source input to the function
+   :param src: ``NDArray``. Source input to the function
    
 
 
@@ -435,7 +435,7 @@ Internal APIs
 
    
    
-   :param NDArray src: Source input to the function.
+   :param src: ``NDArray``. Source input to the function.
    
 
 
@@ -445,10 +445,10 @@ Internal APIs
 
    
    
-   :param NDArray lhs: Left operand to the function.
+   :param lhs: ``NDArray``. Left operand to the function.
    
    
-   :param NDArray rhs: Right operand to the function.
+   :param rhs: ``NDArray``. Right operand to the function.
    
 
 
@@ -458,10 +458,10 @@ Internal APIs
 
    
    
-   :param NDArray lhs: Left operand to the function.
+   :param lhs: ``NDArray``. Left operand to the function.
    
    
-   :param real_t rhs: Right operand to the function.
+   :param rhs: ``real_t``. Right operand to the function.
    
 
 
@@ -471,10 +471,10 @@ Internal APIs
 
    
    
-   :param NDArray lhs: Left operand to the function.
+   :param lhs: ``NDArray``. Left operand to the function.
    
    
-   :param NDArray rhs: Right operand to the function.
+   :param rhs: ``NDArray``. Right operand to the function.
    
 
 
@@ -484,10 +484,10 @@ Internal APIs
 
    
    
-   :param NDArray lhs: Left operand to the function.
+   :param lhs: ``NDArray``. Left operand to the function.
    
    
-   :param real_t rhs: Right operand to the function.
+   :param rhs: ``real_t``. Right operand to the function.
    
 
 
@@ -497,10 +497,10 @@ Internal APIs
 
    
    
-   :param NDArray lhs: Left operand to the function.
+   :param lhs: ``NDArray``. Left operand to the function.
    
    
-   :param NDArray rhs: Right operand to the function.
+   :param rhs: ``NDArray``. Right operand to the function.
    
 
 
@@ -510,10 +510,10 @@ Internal APIs
 
    
    
-   :param NDArray lhs: Left operand to the function.
+   :param lhs: ``NDArray``. Left operand to the function.
    
    
-   :param real_t rhs: Right operand to the function.
+   :param rhs: ``real_t``. Right operand to the function.
    
 
 
@@ -523,10 +523,10 @@ Internal APIs
 
    
    
-   :param NDArray lhs: Left operand to the function.
+   :param lhs: ``NDArray``. Left operand to the function.
    
    
-   :param NDArray rhs: Right operand to the function.
+   :param rhs: ``NDArray``. Right operand to the function.
    
 
 
@@ -536,10 +536,10 @@ Internal APIs
 
    
    
-   :param NDArray lhs: Left operand to the function.
+   :param lhs: ``NDArray``. Left operand to the function.
    
    
-   :param NDArray rhs: Right operand to the function.
+   :param rhs: ``NDArray``. Right operand to the function.
    
 
 
@@ -549,10 +549,10 @@ Internal APIs
 
    
    
-   :param NDArray lhs: Left operand to the function.
+   :param lhs: ``NDArray``. Left operand to the function.
    
    
-   :param real_t rhs: Right operand to the function.
+   :param rhs: ``real_t``. Right operand to the function.
    
 
 
@@ -578,10 +578,10 @@ Internal APIs
 
    
    
-   :param NDArray lhs: Left operand to the function.
+   :param lhs: ``NDArray``. Left operand to the function.
    
    
-   :param real_t rhs: Right operand to the function.
+   :param rhs: ``real_t``. Right operand to the function.
    
 
 
@@ -591,10 +591,10 @@ Internal APIs
 
    
    
-   :param NDArray lhs: Left operand to the function.
+   :param lhs: ``NDArray``. Left operand to the function.
    
    
-   :param real_t rhs: Right operand to the function.
+   :param rhs: ``real_t``. Right operand to the function.
    
 
 
@@ -604,7 +604,7 @@ Internal APIs
 
    
    
-   :param real_t src: Source input to the function.
+   :param src: ``real_t``. Source input to the function.
    
 
 

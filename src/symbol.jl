@@ -1,8 +1,16 @@
 export Symbol
 
-################################################################################
-# Symbol Type
-################################################################################
+#=doc
+.. class:: Symbol
+
+   Symbol is the basic building block of the symbolic graph in MXNet.jl.
+
+   .. note::
+
+      Throughout this documentation, ``Symbol`` always refer to this :class:`Symbol` type.
+      When we refer to the Julia's build-in symbol type (e.g. ``typeof(:foo)``), we always
+      say ``Base.Symbol``.
+=#
 type Symbol
   handle :: MX_SymbolHandle
 end
@@ -286,7 +294,7 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
       f_desc *= "This function support variable length positional :class:`Symbol` inputs.\n\n"
     end
     f_desc *= _format_docstring(Int(ref_nargs[]), ref_arg_names, ref_arg_types, ref_arg_descs)
-    f_desc *= ":param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.\n\n"
+    f_desc *= ":param name: ``Base.Symbol``. The name of the symbol. (e.g. `:my_symbol`), optional.\n\n"
     f_desc *= ":return: The constructed :class:`Symbol`.\n\n"
     return (func_name, f_desc)
   end
