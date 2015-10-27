@@ -102,6 +102,7 @@ struct square_root_grad {
     return 0.5f / a;
   }
 };
+
 MXNET_REGISTER_TBLOB_FUN(sqrt, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::square_root>, true)
 .set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, square_root_grad>, true)
@@ -113,7 +114,7 @@ MXNET_REGISTER_TBLOB_FUN(exp, XPU)
 .set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::exp_grad>, true)
 .describe("Take exp of the src");
 
-//log
+// log
 MXNET_REGISTER_TBLOB_FUN(log, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::log>, true)
 .set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::log_grad>, true)
