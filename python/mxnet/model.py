@@ -25,9 +25,9 @@ try:
 except ImportError:
     SKLEARN_INSTALLED = False
 
-# Parameter to pass to epoch_end_callback
-EpochEndParam = namedtuple('EpochEndParams',
-                           ['iteration',
+# Parameter to pass to batch_end_callback
+BatchEndParam = namedtuple('BatchEndParams',
+                           ['epoch',
                             'nbatch',
                             'eval_metric'])
 
@@ -170,10 +170,10 @@ def _create_kvstore(kvstore, num_device, arg_params):
 
 def _train_multi_device(symbol, ctx, input_shape,
                         arg_params, aux_params,
-                        begin_round, end_round, optimizer,
+                        begin_epoch, end_epoch, optimizer,
                         kvstore, update_on_kvstore,
                         train_data, eval_data=None, eval_metric=None,
-                        iter_end_callback=None, epoch_end_callback=None,
+                        epoch_end_callback=None, batch_end_callback=None,
                         logger=None):
     """Internal training function on multiple devices.
 
@@ -196,11 +196,11 @@ def _train_multi_device(symbol, ctx, input_shape,
     aux_params : dict of str to NDArray
         Model parameter, dict of name to NDArray of net's auxiliary states.
 
-    begin_round : int
-        The begining training iteration.
+    begin_epoch : int
+        The begining training epoch.
 
-    end_round : int
-        The end training iteration.
+    end_epoch : int
+        The end training epoch.
 
     optimizer : Optimizer
         The optimization algorithm
@@ -214,11 +214,11 @@ def _train_multi_device(symbol, ctx, input_shape,
     eval_metric : EvalMetric
         A evaluation function.
 
-    iter_end_callback : callable(iteration, symbol, arg_params, aux_states)
-        A callback that is invoked at end of each iteration.
-        This can be used to checkpoint model each iteration.
+    epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
+        A callback that is invoked at end of each epoch.
+        This can be used to checkpoint model each epoch.
 
-    epoch_end_callback : callable(EpochEndParams)
+    batch_end_callback : callable(BatchEndParams)
         A callback that is invoked at end of each batch.
         This can be used to measure speed, get result from evaluation metric. etc.
 
@@ -261,7 +261,7 @@ def _train_multi_device(symbol, ctx, input_shape,
         texec.copy_params_from(arg_params, aux_params)
 
     # init optmizer
-    optimizer.begin_round(begin_round)
+    optimizer.begin_epoch(begin_epoch)
 
     if not update_on_kvstore:
         updater = get_updater(optimizer)
@@ -290,7 +290,7 @@ def _train_multi_device(symbol, ctx, input_shape,
     out_cpu_array = nd.zeros(merged_shape, cpu())
 
     # Now start training
-    for iteration in range(begin_round, end_round):
+    for epoch in range(begin_epoch, end_epoch):
         # Training phase
         tic = time.time()
         eval_metric.reset()
@@ -332,25 +332,25 @@ def _train_multi_device(symbol, ctx, input_shape,
                         updater(index*num_device+k, g, w)
 
             nbatch += 1
-            # epoch callback (for print purpose)
-            if epoch_end_callback != None:
-                epoch_end_params = EpochEndParam(iteration=iteration,
+            # batch callback (for print purpose)
+            if batch_end_callback != None:
+                batch_end_params = BatchEndParam(epoch=epoch,
                                                  nbatch=nbatch,
                                                  eval_metric=eval_metric)
-                if isinstance(epoch_end_callback, list):
-                    for call in epoch_end_callback:
-                        call(epoch_end_params)
+                if isinstance(batch_end_callback, list):
+                    for call in batch_end_callback:
+                        call(batch_end_params)
                 else:
-                    epoch_end_callback(epoch_end_params)
+                    batch_end_callback(batch_end_params)
             # evaluate at end, so out_cpu_array can lazy copy
             eval_metric.update(label, out_cpu_array)
 
-        # reset training data after iteration finish
+        # reset training data after epoch finish
         train_data.reset()
         name, value = eval_metric.get()
-        logger.info('Iteration[%d] Train-%s=%f', iteration, name, value)
+        logger.info('Epoch[%d] Train-%s=%f', epoch, name, value)
         toc = time.time()
-        logger.info('Iteration[%d] Time cost=%.3f', iteration, (toc - tic))
+        logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc - tic))
         # evaluation
         if eval_data:
             eval_metric.reset()
@@ -367,9 +367,9 @@ def _train_multi_device(symbol, ctx, input_shape,
                 eval_metric.update(label, out_cpu_array)
             eval_data.reset()
             name, value = eval_metric.get()
-            logger.info('Iteration[%d] Validation-%s=%f', iteration, name, value)
+            logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
 
-        if iter_end_callback or iteration + 1 == end_round:
+        if epoch_end_callback or epoch + 1 == end_epoch:
             # copy data back to cpu
             for name, block in zip(arg_names, arg_blocks):
                 if name in arg_params:
@@ -379,17 +379,17 @@ def _train_multi_device(symbol, ctx, input_shape,
                 if name in aux_params:
                     weight = sum(w.copyto(cpu()) for w in block) / len(block)
                     weight.copyto(aux_params[name])
-        if iter_end_callback != None:
-            if isinstance(iter_end_callback, list):
-                for call in iter_end_callback:
-                    call(iteration, symbol, arg_params, aux_params)
+        if epoch_end_callback != None:
+            if isinstance(epoch_end_callback, list):
+                for call in epoch_end_callback:
+                    call(epoch, symbol, arg_params, aux_params)
             else:
-                iter_end_callback(iteration, symbol, arg_params, aux_params)
-    # end of all iterations
+                epoch_end_callback(epoch, symbol, arg_params, aux_params)
+    # end of all epochs
     return
 
 
-def save_checkpoint(prefix, iteration, symbol, arg_params, aux_params):
+def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):
     """Checkpoint the model data into file.
 
     Parameters
@@ -397,8 +397,8 @@ def save_checkpoint(prefix, iteration, symbol, arg_params, aux_params):
     prefix : str
         Prefix of model name.
 
-    iteration : int
-        The iteration number of the model.
+    epoch : int
+        The epoch number of the model.
 
     symbol : Symbol
         The input symbol
@@ -412,17 +412,17 @@ def save_checkpoint(prefix, iteration, symbol, arg_params, aux_params):
     Notes
     -----
     - ``prefix-symbol.json`` will be saved for symbol.
-    - ``prefix-iteration.params`` will be saved for parameters.
+    - ``prefix-epoch.params`` will be saved for parameters.
     """
     symbol.save('%s-symbol.json' % prefix)
     save_dict = {('arg:%s' % k) : v for k, v in arg_params.items()}
     save_dict.update({('aux:%s' % k) : v for k, v in aux_params.items()})
-    param_name = '%s-%04d.params' % (prefix, iteration)
+    param_name = '%s-%04d.params' % (prefix, epoch)
     nd.save(param_name, save_dict)
     logging.info('Saved checkpoint to \"%s\"', param_name)
 
 
-def load_checkpoint(prefix, iteration):
+def load_checkpoint(prefix, epoch):
     """Load model checkpoint from file.
 
     Parameters
@@ -430,8 +430,8 @@ def load_checkpoint(prefix, iteration):
     prefix : str
         Prefix of model name.
 
-    iteration : int
-        Iteration number of model we would like to load.
+    epoch : int
+        Epoch number of model we would like to load.
 
     Returns
     -------
@@ -447,10 +447,10 @@ def load_checkpoint(prefix, iteration):
     Notes
     -----
     - ``prefix-symbol.json`` will be saved for symbol.
-    - ``prefix-iteration.params`` will be saved for parameters.
+    - ``prefix-epoch.params`` will be saved for parameters.
     """
     symbol = sym.load('%s-symbol.json' % prefix)
-    save_dict = nd.load('%s-%04d.params' % (prefix, iteration))
+    save_dict = nd.load('%s-%04d.params' % (prefix, epoch))
     arg_params = {}
     aux_params = {}
     for k, v in save_dict.items():
@@ -476,8 +476,8 @@ class FeedForward(BASE_ESTIMATOR):
         The device context of training and prediction.
         To use multi GPU training, pass in a list of gpu contexts.
 
-    num_round : int, optional
-        Training parameter, number of training rounds(iterations).
+    num_epoch : int, optional
+        Training parameter, number of training epochs(epochs).
 
     optimizer : str or Optimizer, optional
         Training parameter, name or optimizer object for training.
@@ -501,19 +501,19 @@ class FeedForward(BASE_ESTIMATOR):
         If this is True, no error will be thrown when aux_params and arg_params
         contain extra parameters than needed.
 
-    begin_round : int,optional
-        The begining training iteration.
+    begin_epoch : int,optional
+        The begining training epoch.
 
     **kwargs : dict
         The additional keyword arguments passed to optimizer.
     """
     def __init__(self, symbol, ctx=None,
-                 num_round=None, optimizer='sgd',
+                 num_epoch=None, optimizer='sgd',
                  initializer=Uniform(0.01),
                  numpy_batch_size=128,
                  arg_params=None, aux_params=None,
                  allow_extra_params=False,
-                 begin_round=0,
+                 begin_epoch=0,
                  **kwargs):
         # check if symbol contain duplicated names.
         _check_arguments(symbol)
@@ -535,7 +535,7 @@ class FeedForward(BASE_ESTIMATOR):
             ctx = [ctx]
         self.ctx = ctx
         # training parameters
-        self.num_round = num_round
+        self.num_epoch = num_epoch
         self.kwargs = kwargs.copy()
         self.optimizer = optimizer
         self.initializer = initializer
@@ -546,7 +546,7 @@ class FeedForward(BASE_ESTIMATOR):
         # internal helper state
         self._pred_exec = None
         self._pred_exec_input = None
-        self.begin_round = begin_round
+        self.begin_epoch = begin_epoch
 
     @staticmethod
     def _is_data_arg(name):
@@ -667,7 +667,7 @@ class FeedForward(BASE_ESTIMATOR):
         return np.concatenate(outputs)
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
-            iter_end_callback=None, epoch_end_callback=None,
+            epoch_end_callback=None, batch_end_callback=None,
             kvstore='local', logger=None):
         """Fit the model.
 
@@ -691,11 +691,11 @@ class FeedForward(BASE_ESTIMATOR):
             Or a customize evaluation function that returns the statistics
             based on minibatch.
 
-        iter_end_callback : callable(iteration, symbol, arg_params, aux_states)
-            A callback that is invoked at end of each iteration.
-            This can be used to checkpoint model each iteration.
+        epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
+            A callback that is invoked at end of each epoch.
+            This can be used to checkpoint model each epoch.
 
-        epoch_end_callback: callable(iteration)
+        batch_end_callback: callable(epoch)
             A callback that is invoked at end of each batch
             For print purpose
 
@@ -716,7 +716,7 @@ class FeedForward(BASE_ESTIMATOR):
         X = self._init_iter(X, y, is_train=True)
         eval_data = self._init_eval_iter(eval_data)
         # Simply ignore the first example to get input_shape
-        # in first training round.
+        # in first training epoch.
         if not X.iter_next():
             X.reset()
             assert X.iter_next()
@@ -744,16 +744,16 @@ class FeedForward(BASE_ESTIMATOR):
         # do training
         _train_multi_device(self.symbol, self.ctx, input_shape,
                             self.arg_params, self.aux_params,
-                            begin_round=self.begin_round, end_round=self.num_round,
+                            begin_epoch=self.begin_epoch, end_epoch=self.num_epoch,
                             optimizer=optimizer,
                             train_data=X, eval_data=eval_data,
                             eval_metric=eval_metric,
-                            iter_end_callback=iter_end_callback,
                             epoch_end_callback=epoch_end_callback,
+                            batch_end_callback=batch_end_callback,
                             kvstore=kvstore, update_on_kvstore=update_on_kvstore,
                             logger=logger)
 
-    def save(self, prefix, iteration=None):
+    def save(self, prefix, epoch=None):
         """Checkpoint the model checkpoint into file.
 
         You can also use pickle to do the job if you only work on python.
@@ -773,15 +773,15 @@ class FeedForward(BASE_ESTIMATOR):
         Notes
         -----
         - ``prefix-symbol.json`` will be saved for symbol.
-        - ``prefix-iteration.params`` will be saved for parameters.
+        - ``prefix-epoch.params`` will be saved for parameters.
         """
-        if iteration is None:
-            iteration = self.num_round
-        assert iteration is not None
-        save_checkpoint(prefix, iteration, self.symbol, self.arg_params, self.aux_params)
+        if epoch is None:
+            epoch = self.num_epoch
+        assert epoch is not None
+        save_checkpoint(prefix, epoch, self.symbol, self.arg_params, self.aux_params)
 
     @staticmethod
-    def load(prefix, iteration, ctx=None, **kwargs):
+    def load(prefix, epoch, ctx=None, **kwargs):
         """Load model checkpoint from file.
 
         Parameters
@@ -789,13 +789,13 @@ class FeedForward(BASE_ESTIMATOR):
         prefix : str
             Prefix of model name.
 
-        iteration : int
-            Iteration number of model we would like to load.
+        epoch : int
+            epoch number of model we would like to load.
 
         ctx : Context or list of Context, optional
             The device context of training and prediction.
         kwargs : dict
-            other parameters for model, including num_round, optimizer and numpy_batch_size
+            other parameters for model, including num_epoch, optimizer and numpy_batch_size
 
         Returns
         -------
@@ -805,18 +805,18 @@ class FeedForward(BASE_ESTIMATOR):
         Notes
         -----
         - ``prefix-symbol.json`` will be saved for symbol.
-        - ``prefix-iteration.params`` will be saved for parameters.
+        - ``prefix-epoch.params`` will be saved for parameters.
         """
-        symbol, arg_params, aux_params = load_checkpoint(prefix, iteration)
+        symbol, arg_params, aux_params = load_checkpoint(prefix, epoch)
         return FeedForward(symbol, ctx=ctx,
                            arg_params=arg_params, aux_params=aux_params,
-                           begin_round=iteration,
+                           begin_epoch=epoch,
                            **kwargs)
 
     @staticmethod
     def create(symbol, X, y=None, ctx=None,
-               num_round=None, optimizer='sgd', initializer=Uniform(0.01),
-               eval_data=None, eval_metric='acc', iter_end_callback=None,
+               num_epoch=None, optimizer='sgd', initializer=Uniform(0.01),
+               eval_data=None, eval_metric='acc', epoch_end_callback=None,
                kvstore='local', logger=None, **kwargs):
         """Functional style to create a model.
 
@@ -838,8 +838,8 @@ class FeedForward(BASE_ESTIMATOR):
             The device context of training and prediction.
             To use multi GPU training, pass in a list of gpu contexts.
 
-        num_round : int, optional
-            Training parameter, number of training rounds(iterations).
+        num_epoch : int, optional
+            Training parameter, number of training epochs(epochs).
 
         optimizer : str or Optimizer, optional
             Training parameter, name or optimizer object for training.
@@ -855,9 +855,9 @@ class FeedForward(BASE_ESTIMATOR):
             Or a customize evaluation function that returns the statistics
             based on minibatch.
 
-        iter_end_callback : callable(iteration, symbol, arg_params, aux_states)
-            A callback that is invoked at end of each iteration.
-            This can be used to checkpoint model each iteration.
+        epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
+            A callback that is invoked at end of each epoch.
+            This can be used to checkpoint model each epoch.
 
         kvstore: KVStore or str, optional
            The KVStore or a string kvstore type:
@@ -869,10 +869,10 @@ class FeedForward(BASE_ESTIMATOR):
 
            In default uses 'local', often no need to change for single machiine.
         """
-        model = FeedForward(symbol, ctx=ctx, num_round=num_round,
+        model = FeedForward(symbol, ctx=ctx, num_epoch=num_epoch,
                             optimizer=optimizer, initializer=initializer, **kwargs)
         model.fit(X, y, eval_data=eval_data, eval_metric=eval_metric,
-                  iter_end_callback=iter_end_callback,
+                  epoch_end_callback=epoch_end_callback,
                   kvstore=kvstore,
                   logger=logger)
         return model

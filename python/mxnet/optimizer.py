@@ -49,18 +49,18 @@ class Optimizer(object):
             raise ValueError('Cannot find optimizer %s' % name)
 
     def __init__(self, rescale_grad=1):
-        self.iteration = 0
+        self.epoch = 0
         self.rescale_grad = rescale_grad
 
-    def begin_round(self, iteration):
-        """Function called to notify beginning of iteration.
+    def begin_epoch(self, epoch):
+        """Function called to notify beginning of epoch.
 
         Parameters
         ----------
-        iteration : int
-            The iteration number.
+        epoch : int
+            The epoch number.
         """
-        self.iteration = iteration
+        self.epoch = epoch
 
     def create_state(self, index, weight):
         """Create additional optimizer state such as momentum.
@@ -141,7 +141,7 @@ class SGD(Optimizer):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         if self.lr_scheduler != None:
-            lr = self.lr_scheduler(self.iteration)
+            lr = self.lr_scheduler(self.epoch)
         else:
             lr = self.lr
 

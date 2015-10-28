@@ -95,4 +95,4 @@ model = mx.model.FeedForward(ctx=gpus, symbol=softmax, num_round=num_round,
 
 model.fit(X=train, eval_data=val,
           eval_metric="acc",
-          epoch_end_callback=mx.callback.Speedometer(batch_size))
+          batch_end_callback=mx.callback.Speedometer(batch_size))
