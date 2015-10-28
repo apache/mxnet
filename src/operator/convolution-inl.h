@@ -100,15 +100,15 @@ class ConvolutionOp : public Operator {
         temp_col = unpack_patch2col(data.Slice(i, i + step),
                                     param_.kernel[0],
                                     param_.kernel[1],
-                                    param_.stride[0]);
-        // TODO(bing): make mshadow support dual stride
+                                    param_.stride[0],
+                                    param_.stride[1]);
       } else {
         temp_col = unpack_patch2col(pad(data.Slice(i, i + step),
                                         param_.pad[0], param_.pad[1]),
                                     param_.kernel[0],
                                     param_.kernel[1],
-                                    param_.stride[0]);
-        // TODO(bing): make mshadow support dual stride
+                                    param_.stride[0],
+                                    param_.stride[1]);
       }
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
@@ -173,17 +173,17 @@ class ConvolutionOp : public Operator {
                                                       shape_dstunit_[2] * step), s);
       temp_dst = reshape(swapaxis<1, 0>(grad.Slice(i, i + step)), temp_dst.shape_);
       if (param_.pad[0] == 0 && param_.pad[1] == 0) {
-        // TODO(bing): dual stride
         temp_col = unpack_patch2col(data.Slice(i, i + step),
                                      param_.kernel[0],
                                      param_.kernel[1],
-                                     param_.stride[0]);
+                                     param_.stride[0],
+                                     param_.stride[1]);
       } else {
-        // TODO(bing): dual stride
         temp_col = unpack_patch2col(pad(data.Slice(i, i + step), param_.pad[0], param_.pad[1]),
                                      param_.kernel[0],
                                      param_.kernel[1],
-                                     param_.stride[0]);
+                                     param_.stride[0],
+                                     param_.stride[1]);
       }
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
@@ -302,10 +302,6 @@ class ConvolutionProp : public OperatorProperty {
     out_shape->push_back(dshape);
     const index_t ksize_y = static_cast<index_t>(param_.kernel[0]);
     const index_t ksize_x = static_cast<index_t>(param_.kernel[1]);
-    const index_t kstride = static_cast<index_t>(param_.stride[0]);
-    // TODO(bing) : support dual stride
-    CHECK_EQ(param_.stride[0], param_.stride[1])
-        << "Only support same stride now";
     CHECK_EQ(dshape[1] % param_.num_group, 0) \
         << "input num_filter must divide group size";
     CHECK_EQ(param_.num_filter % param_.num_group, 0) \
@@ -317,8 +313,8 @@ class ConvolutionProp : public OperatorProperty {
     CHECK(ksize_x <= dshape[3] && ksize_y <= dshape[2])
         << "kernel size exceed input";
     (*out_shape)[kOut][1] = param_.num_filter;
-    (*out_shape)[kOut][2] = (dshape[2] + 2 * param_.pad[0] - ksize_y) / kstride + 1;
-    (*out_shape)[kOut][3] = (dshape[3] + 2 * param_.pad[1] - ksize_x) / kstride + 1;
+    (*out_shape)[kOut][2] = (dshape[2] + 2 * param_.pad[0] - ksize_y) / param_.stride[0] + 1;
+    (*out_shape)[kOut][3] = (dshape[3] + 2 * param_.pad[1] - ksize_x) / param_.stride[1] + 1;
     return true;
   }
 
