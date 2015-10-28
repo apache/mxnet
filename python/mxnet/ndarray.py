@@ -305,6 +305,20 @@ class NDArray(object):
             ctypes.c_size_t(data.size)))
         return data
 
+    def asscalar(self):
+        """Return a CPU scalar(float) of current ndarray.
+
+        This ndarray must have shape (1,)
+
+        Returns
+        -------
+        scalar : np.float
+            The scalar representation of the ndarray.
+        """
+        if self.shape != (1,):
+            raise ValueError("The current array is not a scalar")
+        return self.asnumpy()[0]
+
     def copyto(self, other):
         """Copy the content of current array to other.
 
