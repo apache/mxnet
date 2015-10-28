@@ -23,11 +23,22 @@ end
 Base.convert(t::Type{MX_handle}, obj::Symbol) = Base.unsafe_convert(t, obj)
 Base.cconvert(t::Type{MX_handle}, obj::Symbol) = Base.unsafe_convert(t, obj)
 
+#=doc
+.. function:: deepcopy(self :: Symbol)
+
+   Make a deep copy of a symbol.
+=#
 function Base.deepcopy(self :: Symbol)
   ref_hdr = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCopy, (MX_handle, Ref{MX_handle}), self, ref_hdr)
   return Symbol(MX_SymbolHandle(ref_hdr[]))
 end
+
+#=doc
+.. function:: copy(self :: Symbol)
+
+   Make a copy of a symbol. The same as making a deep copy.
+=#
 function Base.copy(self :: Symbol)
   Base.deepcopy(self)
 end
