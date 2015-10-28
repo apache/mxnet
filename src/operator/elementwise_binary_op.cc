@@ -8,7 +8,7 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateElementWiseBinaryOp<cpu>(ElementWiseBinaryOpType type) {
+Operator* CreateElementWiseBinaryOp<cpu>(elembinary::ElementWiseBinaryOpType type) {
   return CreateElementWiseBinaryOp_<cpu>(type);
 }
 

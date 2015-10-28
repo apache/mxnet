@@ -10,11 +10,11 @@ namespace mxnet {
 namespace op {
 
 template<>
-Operator *CreateRegressionOutputOp<gpu>(RegressionOutputType type) {
+Operator *CreateRegressionOutputOp<gpu>(reg_enum::RegressionOutputType type) {
   switch (type) {
-    case kLinear:
+    case reg_enum::kLinear:
       return new RegressionOutputOp<gpu, mshadow::op::identity, mshadow::op::minus>();
-    case kLogistic:
+    case reg_enum::kLogistic:
       return new RegressionOutputOp<gpu, mshadow_op::sigmoid, mshadow::op::minus>();
     default:
       LOG(FATAL) << "unknown activation type " << type;
