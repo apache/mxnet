@@ -39,9 +39,9 @@ class Executor {
       lk.unlock();
 
       if (blk.f) {
-        blk.f(); blk.p.set_value();
+        blk.f(); blk.p->set_value();
       } else {
-        blk.p.set_value(); break;
+		  blk.p->set_value(); break;
       }
       lk.lock();
     }
@@ -57,7 +57,7 @@ class Executor {
    */
   void Exec(const Func& func) {
     Block blk(func);
-    auto fut = blk.p.get_future();
+	auto fut = blk.p->get_future();
     {
       std::lock_guard<std::mutex> lk(mu_);
       queue_.push(std::move(blk));
@@ -75,9 +75,9 @@ class Executor {
 
  private:
   struct Block {
-    explicit Block(const Func& func) : f(func) { }
+  explicit Block(const Func& func) : f(func), p(std::make_shared<std::promise<void>>()) { }
     Func f;
-    std::promise<void> p;
+    std::shared_ptr<std::promise<void>> p;
   };
   std::queue<Block> queue_;
   std::mutex mu_;
