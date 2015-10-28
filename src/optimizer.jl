@@ -30,3 +30,4 @@ end
 
 
 include("optimizers/sgd.jl")
+include("optimizers/adam.jl")
