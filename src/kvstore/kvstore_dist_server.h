@@ -41,7 +41,7 @@ class Executor {
       if (blk.f) {
         blk.f(); blk.p->set_value();
       } else {
-		  blk.p->set_value(); break;
+        blk.p->set_value(); break;
       }
       lk.lock();
     }
@@ -57,7 +57,7 @@ class Executor {
    */
   void Exec(const Func& func) {
     Block blk(func);
-	auto fut = blk.p->get_future();
+    auto fut = blk.p->get_future();
     {
       std::lock_guard<std::mutex> lk(mu_);
       queue_.push(std::move(blk));
