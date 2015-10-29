@@ -69,11 +69,11 @@ class Predictor(object):
 
     Parameters
     ----------
-    symbol_file : str
+    symbol_json_str : str
         Path to the symbol file.
 
-    param_file : str
-        Path to the parameter file.
+    param_raw_bytes : str, bytes
+        The raw parameter bytes.
 
     input_shapes : dict of str to tuple
         The shape of input data
@@ -84,7 +84,8 @@ class Predictor(object):
     dev_id : int, optional
         The device id of the predictor.
     """
-    def __init__(self, symbol_file, param_file, input_shapes,
+    def __init__(self, symbol_file,
+                 param_raw_bytes, input_shapes,
                  dev_type="cpu", dev_id=0):
         dev_type = devstr2type[dev_type]
         indptr = [0]
@@ -97,8 +98,11 @@ class Predictor(object):
             sdata.extend(v)
             indptr.append(len(sdata))
         handle = PredictorHandle()
+        param_raw_bytes = bytearray(param_raw_bytes)
+        ptr = (ctypes.c_char * len(param_raw_bytes)).from_buffer(param_raw_bytes)
         _check_call(_LIB.MXPredCreate(
-            c_str(symbol_file), c_str(param_file),
+            c_str(symbol_file),
+            ptr, len(param_raw_bytes),
             ctypes.c_int(dev_type), ctypes.c_int(dev_id),
             mx_uint(len(indptr) - 1),
             c_array(ctypes.c_char_p, keys),
@@ -162,13 +166,13 @@ class Predictor(object):
         return data
 
 
-def load_ndarray_file(nd_file):
+def load_ndarray_file(nd_bytes):
     """Load ndarray file and return as list of numpy array.
 
     Parameters
     ----------
-    nd_file : str
-        The name to the ndarray file.
+    nd_bytes : str or bytes
+        The internal ndarray bytes
 
     Returns
     -------
@@ -177,8 +181,11 @@ def load_ndarray_file(nd_file):
     """
     handle = NDListHandle()
     olen = mx_uint()
+    nd_bytes = bytearray(nd_bytes)
+    ptr = (ctypes.c_char * len(nd_bytes)).from_buffer(nd_bytes)
     _check_call(_LIB.MXNDListCreate(
-        c_str(nd_file), ctypes.byref(handle), ctypes.byref(olen)))
+        ptr, len(nd_bytes),
+        ctypes.byref(handle), ctypes.byref(olen)))
     keys = []
     arrs = []
 
@@ -193,6 +200,7 @@ def load_ndarray_file(nd_file):
         shape = tuple(pdata[:ndim.value])
         dbuffer = (mx_float * np.prod(shape)).from_address(ctypes.addressof(cptr.contents))
         ret = np.frombuffer(dbuffer, dtype=np.float32).reshape(shape)
+        ret = np.array(ret, dtype=np.float32)
         keys.append(py_str(key.value))
         arrs.append(ret)
     _check_call(_LIB.MXNDListFree(handle))

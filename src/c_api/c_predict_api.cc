@@ -3,10 +3,13 @@
  * \file c_predict_api.cc
  * \brief C predict API of mxnet
  */
+#include <dmlc/base.h>
+#include <dmlc/memory_io.h>
 #include <mxnet/c_predict_api.h>
 #include <mxnet/symbolic.h>
 #include <mxnet/ndarray.h>
 #include <memory>
+
 #include "./c_api_error.h"
 
 using namespace mxnet;
@@ -32,8 +35,9 @@ struct MXAPINDList {
   std::vector<mx_float> data;
 };
 
-int MXPredCreate(const char* symbol_file,
-                 const char* param_file,
+int MXPredCreate(const char* symbol_json_str,
+                 const char* param_bytes,
+                 size_t param_size,
                  int dev_type, int dev_id,
                  mx_uint num_input_nodes,
                  const char** input_keys,
@@ -45,18 +49,18 @@ int MXPredCreate(const char* symbol_file,
   Symbol sym;
   // load in the symbol.
   {
-    std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(symbol_file, "r"));
-    dmlc::istream is(fi.get());
+    std::string json = symbol_json_str;
+    std::istringstream is(json);
     dmlc::JSONReader reader(&is);
     sym.Load(&reader);
-    is.set_stream(nullptr);
   }
   // load the parameters
   std::unordered_map<std::string, NDArray> arg_params, aux_params;
   {
     std::vector<NDArray> data;
     std::vector<std::string> names;
-    NDArray::Load(param_file, &data, &names);
+    dmlc::MemoryFixedSizeStream fi((void*)param_bytes, param_size);  // NOLINT(*)
+    NDArray::Load(&fi, &data, &names);
     CHECK_EQ(names.size(), data.size())
         << "Invalid param file format";
     for (size_t i = 0; i < names.size(); ++i) {
@@ -178,13 +182,15 @@ int MXPredFree(PredictorHandle handle) {
   API_END();
 }
 
-int MXNDListCreate(const char* nd_file,
+int MXNDListCreate(const char* nd_file_bytes,
+                   size_t nd_file_size,
                    NDListHandle *out,
                    mx_uint* out_length) {
   MXAPINDList* ret = new MXAPINDList();
   API_BEGIN();
   std::vector<NDArray> arrays;
-  NDArray::Load(nd_file,
+  dmlc::MemoryFixedSizeStream fi((void*)nd_file_bytes, nd_file_size);  // NOLINT(*)
+  NDArray::Load(&fi,
                 &(arrays),
                 &(ret->keys));
   if (ret->keys.size() == 0) {

@@ -507,10 +507,9 @@ bool NDArray::Load(dmlc::Stream *strm) {
 
 const uint64_t kMXAPINDArrayListMagic = 0x112;
 
-void NDArray::Save(const std::string& fname,
+void NDArray::Save(dmlc::Stream* fo,
                    const std::vector<NDArray>& data,
                    const std::vector<std::string>& names) {
-  std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(fname.c_str(), "w"));
   uint64_t header = kMXAPINDArrayListMagic, reserved = 0;
   fo->Write(&header, sizeof(header));
   fo->Write(&reserved, sizeof(reserved));
@@ -518,10 +517,9 @@ void NDArray::Save(const std::string& fname,
   fo->Write(names);
 }
 
-void NDArray::Load(const std::string& fname,
+void NDArray::Load(dmlc::Stream* fi,
                    std::vector<NDArray>* data,
                    std::vector<std::string>* keys) {
-  std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname.c_str(), "r"));
   uint64_t header, reserved;
   CHECK(fi->Read(&header))
       << "Invalid NDArray file format";

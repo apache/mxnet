@@ -196,7 +196,10 @@ int MXNDArraySave(const char* fname,
       names[i] = keys[i];
     }
   }
-  mxnet::NDArray::Save(fname, data, names);
+  {
+    std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(fname, "w"));
+    mxnet::NDArray::Save(fo.get(), data, names);
+  }
   API_END();
 }
 
@@ -210,7 +213,10 @@ int MXNDArrayLoad(const char* fname,
   API_BEGIN();
   std::vector<NDArray> data;
   std::vector<std::string> &names = ret->ret_vec_str;
-  mxnet::NDArray::Load(fname, &data, &names);
+  {
+    std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
+    mxnet::NDArray::Load(fi.get(), &data, &names);
+  }
   ret->ret_handles.resize(data.size());
   for (size_t i = 0; i < data.size(); ++i) {
     NDArray *ptr = new NDArray();
