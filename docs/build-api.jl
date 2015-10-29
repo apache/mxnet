@@ -78,3 +78,5 @@ extract_doc("callback.rst", "callback.jl")
 extract_doc("model.rst", "model.jl")
 
 extract_doc("optimizer.rst", "optimizer.jl")
+
+extract_doc("io.rst", "io.jl")

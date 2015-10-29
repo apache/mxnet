@@ -32,11 +32,12 @@ For more details, see documentation below. Please also checkout the `examples
    :caption: API Documentation
 
    api/model
-   api/callback
    api/initializer
+   api/optimizer
+   api/callback
+   api/io
    api/ndarray
    api/symbol
-   api/optimizer
 
 Indices and tables
 ==================
