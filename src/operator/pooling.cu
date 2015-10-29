@@ -18,11 +18,11 @@ Operator *CreateOp<gpu>(PoolingParam param) {
   return new CuDNNPoolingOp(param);
 #else
   switch (param.pool_type) {
-    case kMaxPooling:
+    case pool_enum::kMaxPooling:
       return new PoolingOp<gpu, mshadow::red::maximum>(param);
-    case kAvgPooling:
+    case pool_enum::kAvgPooling:
       return new PoolingOp<gpu, mshadow::red::sum>(param);
-    case kSumPooling:
+    case pool_enum::kSumPooling:
       return new PoolingOp<gpu, mshadow::red::sum>(param);
     default:
       LOG(FATAL) << "unknown activation type";

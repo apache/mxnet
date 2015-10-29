@@ -188,13 +188,7 @@ class KVStore {
   }
 
   /*!
-   * \return The number of nodes in this group.
-   *
-   * Always returns 1 when type == "local". Otherwise, returns
-   *
-   * - number of workers if if `IsWorkerNode() == true`,
-   * - number of servers if if `IsServerNode() == true`,
-   * - 1 if `IsSchedulerNode() == true`,
+   * \return The number of worker nodes
    */
   virtual int get_group_size() const {
     return 1;
@@ -205,8 +199,7 @@ class KVStore {
    *
    * But note that, this functions only blocks the main thread of workers until
    * all of them are reached this point. It doesn't guarantee that all
-   * operations issued before are actually finished, such as \ref Push and \ref
-   * Pull. In that case, we need to call \ref Wait or \ref WaitAll
+   * operations issued before are actually finished, such as \ref Push and \ref Pull.
    */
   virtual void Barrier() { }
 

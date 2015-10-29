@@ -47,12 +47,32 @@ inline void EvalBinary_(const TBlob &lhs, const TBlob &rhs,
 
 template<typename xpu, typename OP>
 inline void EvalDot_(const TBlob &lhs, const TBlob &rhs,
-                        TBlob *ret, RunContext ctx) {
+                     TBlob *ret, RunContext ctx) {
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   ret->FlatTo2D<xpu, real_t>(s)
     = dot(lhs.FlatTo2D<xpu, real_t>(s),
           rhs.FlatTo2D<xpu, real_t>(s));
+}
+
+template<typename xpu, typename OP>
+inline void EvalOneHot_(const TBlob &index, const TBlob &rhs,
+                        TBlob *ret, RunContext ctx) {
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  ret->get<xpu, 2, real_t>(s)
+      = one_hot_encode(index.get<xpu, 1, real_t>(s),
+                       rhs.shape_[1]);
+}
+
+template<typename xpu, typename OP>
+inline void EvalMatChooseRowElem_(const TBlob &lhs, const TBlob &rhs,
+                                  TBlob *ret, RunContext ctx) {
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  ret->get<xpu, 1, real_t>(s)
+      = mat_choose_row_element(lhs.get<xpu, 2, real_t>(s),
+                               rhs.get<xpu, 1, real_t>(s));
 }
 
 template<typename xpu, typename OP, bool reverse>
@@ -150,7 +170,7 @@ void ElementwiseSum<DEVICE>(const std::vector<TBlob> source,
     }
     default: {
       Tensor<xpu, 2> in_0 = source[0].FlatTo2D<xpu, real_t>(s);
-      out = F<op::identity>(in_0);
+      out = F<mshadow::op::identity>(in_0);
       for (size_t i = 1; i < source.size(); ++i) {
         out += source[i].FlatTo2D<xpu, real_t>(s);
       }
@@ -160,7 +180,9 @@ void ElementwiseSum<DEVICE>(const std::vector<TBlob> source,
 }
 
 // declarations
+DECL_BINARY(DEVICE, MatChooseRowElem, EvalMatChooseRowElem_)
 DECL_BINARY(DEVICE, Dot, EvalDot_)
+DECL_BINARY(DEVICE, OneHotEncode, EvalOneHot_)
 DECL_BINARY(DEVICE, Plus, EvalBinary_)
 DECL_BINARY(DEVICE, Minus, EvalBinary_)
 DECL_BINARY(DEVICE, Mul, EvalBinary_)

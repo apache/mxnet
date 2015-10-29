@@ -59,4 +59,4 @@ model = mx.model.FeedForward(
     wd            = 0.00001)
 logging.basicConfig(level = logging.DEBUG)
 model.fit(X = train, eval_data = val,
-          epoch_end_callback = mx.callback.Speedometer(batch_size=batch_size))
+          batch_end_callback = mx.callback.Speedometer(batch_size=batch_size))

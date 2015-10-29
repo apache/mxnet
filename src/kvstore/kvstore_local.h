@@ -64,7 +64,8 @@ class KVStoreLocal : public KVStore {
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
-      if (updater_ != nullptr) {
+      auto it = merge_buf_.find(key);
+      if (updater_ != nullptr || it == merge_buf_.end()) {
         auto it = local_.find(key);
         CHECK(it != local_.end()) << "key " << key << " has not been inited";
         const NDArray& src = it->second;
@@ -72,8 +73,6 @@ class KVStoreLocal : public KVStore {
           CopyFromTo(src, vptr, priority);
         }
       } else {
-        auto it = merge_buf_.find(key);
-        CHECK(it != merge_buf_.end()) << "key " << key << " has not been pushed";
         auto& src = it->second.merged;
         for (auto* vptr : grouped_vals[i]) {
           CopyFromTo(src, vptr, priority);

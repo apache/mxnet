@@ -305,6 +305,20 @@ class NDArray(object):
             ctypes.c_size_t(data.size)))
         return data
 
+    def asscalar(self):
+        """Return a CPU scalar(float) of current ndarray.
+
+        This ndarray must have shape (1,)
+
+        Returns
+        -------
+        scalar : np.float
+            The scalar representation of the ndarray.
+        """
+        if self.shape != (1,):
+            raise ValueError("The current array is not a scalar")
+        return self.asnumpy()[0]
+
     def copyto(self, other):
         """Copy the content of current array to other.
 
@@ -334,6 +348,28 @@ class NDArray(object):
         else:
             raise TypeError('copyto do not support type ' + str(type(other)))
     # pylint: enable= no-member
+
+
+def onehot_encode(indices, out):
+    """One hot encoding indices into matrix out.
+
+    Parameters
+    ----------
+    indices: NDArray
+        An NDArray containing indices of the categorical features.
+
+    out: NDArray
+        The result holder of the encoding.
+
+    Returns
+    -------
+    out: Array
+        Same as out.
+    """
+    # pylint: disable= no-member, protected-access
+    return NDArray._onehot_encode(indices, out, out=out)
+    # pylint: enable= no-member, protected-access
+
 
 def empty(shape, ctx=None):
     """Create an empty uninitialized new NDArray, with specified shape.

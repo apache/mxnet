@@ -18,8 +18,11 @@
 
 namespace mxnet {
 namespace op {
+
+namespace lrn_enum {
 enum LRNInputs {kData};
 enum LRNOutputs {kOut, kTmpNorm};
+}  // namespace lrn_enum
 
 struct LRNParam : public dmlc::Parameter<LRNParam> {
   float alpha;
@@ -58,11 +61,11 @@ class LocalResponseNormOp : public Operator {
     CHECK_EQ(param_.nsize % 2, 1) << "LRN only supports odd values for local_size";
     const real_t salpha = param_.alpha / param_.nsize;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> out = out_data[kOut].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> tmp_norm = out_data[kTmpNorm].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> data = in_data[lrn_enum::kData].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> out = out_data[lrn_enum::kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> tmp_norm = out_data[lrn_enum::kTmpNorm].get<xpu, 4, real_t>(s);
     tmp_norm = chpool<red::sum>(F<mshadow_op::square>(data) , param_.nsize) * salpha + param_.knorm;
-    Assign(out, req[kOut], data *  F<mshadow_op::power>(tmp_norm, -param_.beta));
+    Assign(out, req[lrn_enum::kOut], data *  F<mshadow_op::power>(tmp_norm, -param_.beta));
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -79,10 +82,10 @@ class LocalResponseNormOp : public Operator {
     CHECK_EQ(out_data.size(), 2);
     const real_t salpha = param_.alpha / param_.nsize;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> grad = out_grad[kOut].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> tmp_norm = out_data[kTmpNorm].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> grad_in = in_grad[kData].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> grad = out_grad[lrn_enum::kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> tmp_norm = out_data[lrn_enum::kTmpNorm].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> data = in_data[lrn_enum::kData].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> grad_in = in_grad[lrn_enum::kData].get<xpu, 4, real_t>(s);
     grad_in = grad * F<mshadow_op::power>(tmp_norm, -param_.beta);
     grad_in += (- 2.0f * param_.beta * salpha) *
                chpool<red::sum>(grad * data *
@@ -138,9 +141,9 @@ class LocalResponseNormProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
 #if MXNET_USE_CUDNN == 1
-    return {out_grad[kOut], in_data[kData], out_data[kOut]};
+    return {out_grad[lrn_enum::kOut], in_data[lrn_enum::kData], out_data[lrn_enum::kOut]};
 #else
-    return {out_grad[kOut], in_data[kData], out_data[kTmpNorm]};
+    return {out_grad[lrn_enum::kOut], in_data[lrn_enum::kData], out_data[lrn_enum::kTmpNorm]};
 #endif
   }
 
@@ -152,7 +155,7 @@ class LocalResponseNormProp : public OperatorProperty {
 #if MXNET_USE_CUDNN == 1
     return {};
 #else
-    return {{out_grad[kOut], in_grad[kData]}};
+    return {{out_grad[lrn_enum::kOut], in_grad[lrn_enum::kData]}};
 #endif
   }
 

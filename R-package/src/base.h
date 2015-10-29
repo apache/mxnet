@@ -268,10 +268,11 @@ inline std::string toPyString(const std::string &key, const Rcpp::RObject& val) 
   if (len != 1) {
     RCHECK(TYPEOF(val) == INTSXP || TYPEOF(val) == REALSXP)
         << "Only accept integer vectors or simple types";
+    // Do shape convesion back to reversed shape.
     Rcpp::IntegerVector vec(val);
     os << "(";
     for (size_t i = 0; i < vec.size(); ++i) {
-      int value = vec[i];
+      int value = vec[vec.size() - i - 1];
       if (i != 0) os << ", ";
       os << value;
     }
@@ -327,14 +328,15 @@ inline std::vector<std::string> SafeGetListNames(const Rcpp::List& src) {
 }
 
 /*!
- * \brief convert Rcpp's Dimension to shape vector
+ * \brief convert Rcpp's Dimension to internal shape vector
+ * This will reverse the shape layout internally
  * \param rshape The dimension in R
- * \return A vector representation in R.
+ * \return A internal vector representation of shapes in mxnet.
  */
-inline std::vector<mx_uint> Dim2Vec(const Rcpp::Dimension &rshape) {
+inline std::vector<mx_uint> Dim2InternalShape(const Rcpp::Dimension &rshape) {
   std::vector<mx_uint> shape(rshape.size());
   for (size_t i = 0; i < rshape.size(); ++i) {
-    shape[i] = rshape[i];
+    shape[rshape.size() - i - 1] = rshape[i];
   }
   return shape;
 }

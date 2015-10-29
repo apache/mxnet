@@ -1,12 +1,13 @@
 # slice the shape on the highest dimension
 mx.model.slice.shape <- function(shape, nsplit) {
-  batchsize <- shape[[1]]
+  ndim <- length(shape)
+  batchsize <- shape[[ndim]]
   step <- as.integer((batchsize + nsplit - 1) / nsplit)
   lapply(0:(nsplit - 1), function(k) {
     begin = min(k * step, batchsize)
     end = min((k + 1) * step, batchsize)
     s <- shape
-    s[[1]] = end - begin
+    s[[ndim]] = end - begin
     return(list(begin=begin, end=end, shape=s))
   })
 }
@@ -266,11 +267,74 @@ mx.model.init.iter <- function(X, y, batch.size, is.train) {
   if (is.null(y)) {
     if (is.train) stop("Need to provide parameter y for training with R arrays.")
     shape <- dim(X)
-    y <- c(1:shape[[1]]) * 0
+    ndim <- length(shape)
+    y <- c(1:shape[[ndim]]) * 0
   }
   batch.size <- min(length(y), batch.size)
   return(mx.io.arrayiter(X, y, batch.size=batch.size, shuffle=is.train))
 }
+
+# select layout by matching shape, report error if nothing matches up.
+mx.model.select.layout.train <- function(X, y) {
+  if (is.null(y)) stop("Need to provide y for training")
+  y <- as.array(y)
+  dimX <- dim(X)
+  dimy <- dim(y)
+  if (length(dimX) != 2) return("colmajor")
+  rowmajor <- 0
+  colmajor <- 0
+  if (dimX[[1]] == dimy[[1]]) rowmajor <- 1
+  if (dimX[[length(dimX)]] == dimy[[length(dimy)]]) colmajor <- 1
+  if (rowmajor + colmajor != 1) {
+    stop("Cannot auto select array.layout, please specify this parameter")
+  }
+  if (rowmajor == 1) {
+    cat("Auto detect layout of input matrix, use rowmajor..\n")
+    return("rowmajor")
+  } else{
+    cat("Auto detect layout input matrix, use colmajor..\n")
+    return("colmajor")
+  }
+}
+
+# select layout by matching shape, report error if nothing matches up.
+mx.model.select.layout.predict <- function(X, model) {
+  dimX <- dim(X)
+  if (length(dimX) != 2) return("colmajor")
+  rowmajor <- 1
+  colmajor <- 1
+  # try row major
+  ret <- mx.symbol.infer.shape(model$symbol, data=c(dimX[[2]], 1))
+  if (!is.null(ret)) {
+    names = names(model$arg.params)
+    for (i in 1:length(names)) {
+      if (any(ret$arg.shapes[[names[i]]] != dim(model$arg.params[[i]]))) {
+        rowmajor <- 0
+      }
+    }
+  }
+  # try col major
+  ret <- mx.symbol.infer.shape(model$symbol, data=c(dimX[[1]], 1))
+  if (!is.null(ret)) {
+    names = names(model$arg.params)
+    for (i in 1:length(names)) {
+      if (any(ret$arg.shapes[[names[i]]] != dim(model$arg.params[[i]]))) {
+        colmajor <- 0
+      }
+    }
+  }
+  if (rowmajor + colmajor != 1) {
+    stop("Cannot auto select array.layout, please specify this parameter")
+  }
+  if (rowmajor == 1) {
+    cat("Auto detect layout of input matrix, use rowmajor..\n")
+    return("rowmajor")
+  } else{
+    cat("Auto detect layout input matrix, use colmajor..\n")
+    return("colmajor")
+  }
+}
+
 
 #' Create a MXNet Feedforward neural net model with the specified training.
 #'
@@ -297,6 +361,12 @@ mx.model.init.iter <- function(X, y, batch.size, is.train) {
 #'     The callback when one mini-batch iteration ends.
 #' @param array.batch.size integer (default=128)
 #'     The batch size used for R array training.
+#' @param array.layout can be "auto", "colmajor", "rowmajor", (detault=auto)
+#'     The layout of array. "rowmajor" is only supported for two dimensional array.
+#'     For matrix, "rowmajor" means dim(X) = c(nexample, nfeatures),
+#'     "colmajor" means dim(X) = c(nfeatures, nexample)
+#'     "auto" will auto detect the layout by match the feature size,
+#'      and will report error when X is a square matrix to ask user to explicitly specify layout.
 #' @param kvstore string (default="local")
 #'     The parameter synchronization scheme in multiple devices.
 #' @return model A trained mxnet model.
@@ -308,9 +378,17 @@ function(symbol, X, y=NULL, ctx=NULL,
          initializer=mx.init.uniform(0.01),
          eval.data=NULL, eval.metric=NULL,
          iter.end.callback=NULL, epoch.end.callback=NULL,
-         array.batch.size=128,
+         array.batch.size=128, array.layout="auto",
          kvstore="local",
          ...) {
+  if (is.array(X) || is.matrix(X)) {
+    if (array.layout == "auto") {
+      array.layout <- mx.model.select.layout.train(X, y)
+    }
+    if (array.layout == "rowmajor") {
+      X <- t(X)
+    }
+  }
   X <- mx.model.init.iter(X, y, batch.size=array.batch.size, is.train=TRUE)
   if (!X$iter.next()) {
     x$reset()
@@ -324,7 +402,8 @@ function(symbol, X, y=NULL, ctx=NULL,
   }
   if (!is.list(ctx)) stop("ctx must be mx.context or list of mx.context")
   if (is.character(optimizer)) {
-    batchsize = input.shape[[1]]
+    ndim <- length(input.shape)
+    batchsize = input.shape[[ndim]]
     optimizer <- mx.opt.create(optimizer, rescale.grad=(1/batchsize), ...)
   }
 
@@ -346,10 +425,24 @@ function(symbol, X, y=NULL, ctx=NULL,
 #' @param X The dataset to predict.
 #' @param ctx mx.cpu() or mx.gpu(i) The device used to generate the prediction.
 #' @param array.batch.size The batch size used in batching. Only used when X is R's array.
+#' @param array.layout can be "auto", "colmajor", "rowmajor", (detault=auto)
+#'     The layout of array. "rowmajor" is only supported for two dimensional array.
+#'     For matrix, "rowmajor" means dim(X) = c(nexample, nfeatures),
+#'     "colmajor" means dim(X) = c(nfeatures, nexample)
+#'     "auto" will auto detect the layout by match the feature size,
+#'      and will report error when X is a square matrix to ask user to explicitly specify layout.
 #'
 #' @export
-predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128) {
+predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128, array.layout="auto") {
   if (is.null(ctx)) ctx <- mx.ctx.default()
+  if (is.array(X) || is.matrix(X)) {
+    if (array.layout == "auto") {
+      array.layout <- mx.model.select.layout.predict(X, model)
+    }
+    if (array.layout == "rowmajor") {
+      X <- t(X)
+    }
+  }
   X <- mx.model.init.iter(X, NULL, batch.size=array.batch.size, is.train=FALSE)
   X$reset()
   if (!X$iter.next()) stop("Cannot predict on empty iterator")
@@ -366,7 +459,8 @@ predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128)
     out.pred <- mx.nd.copyto(pexec$ref.outputs[[1]], mx.cpu())
     padded <- X$num.pad()
     oshape <- dim(out.pred)
-    packer$push(mx.nd.slice(out.pred, 0, oshape[[1]] - padded))
+    ndim <- length(oshape)
+    packer$push(mx.nd.slice(out.pred, 0, oshape[[ndim]] - padded))
   }
   X$reset()
   return(packer$get())

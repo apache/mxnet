@@ -243,21 +243,21 @@ class NDArray {
     ptr_->CheckAndAlloc();
   }
   /*!
-   * \brief Save list of narray into the file.
-   * \param fname name of the file.
+   * \brief Save list of narray into the Stream.x
+   * \param fo The stream of output.
    * \param data the NDArrays to be saved.
    * \param names the name of the NDArray, optional, can be zero length.
    */
-  static void Save(const std::string& fname,
+  static void Save(dmlc::Stream* fo,
                    const std::vector<NDArray>& data,
                    const std::vector<std::string>& names);
   /*!
-   * \brief Load list of narray into from the file.
-   * \param fname name of the file.
+   * \brief Load list of narray into from the stream.
+   * \param fi The stream of the input file.
    * \param data the NDArrays to be loaded
    * \param keys the name of the NDArray, if saved in the file.
    */
-  static void Load(const std::string& fname,
+  static void Load(dmlc::Stream* fi,
                    std::vector<NDArray>* data,
                    std::vector<std::string>* keys);
 

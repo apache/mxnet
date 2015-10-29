@@ -21,7 +21,8 @@ mx.io.extract <- function(iter, field) {
     padded <- iter$num.pad()
     data <- dlist[[field]]
     oshape <- dim(data)
-    packer$push(mx.nd.slice(data, 0, oshape[[1]] - padded))
+    ndim <- length(oshape)
+    packer$push(mx.nd.slice(data, 0, oshape[[ndim]] - padded))
   }
   iter$reset()
   return(packer$get())

@@ -156,10 +156,9 @@ class NDArrayIter(DataIter):
             self.batch_data[i, 0:actual_size, ::] = data[loc:loc+actual_size, ::]
             self.batch_label[i, 0:actual_size] = label[loc:loc+actual_size]
             loc += batch_size
-        if data.shape[0] > batch_size:
-            self.num_pad = data.shape[0] % batch_size
-        else:
-            self.num_pad = batch_size - data.shape[0]
+        self.num_pad = batch_size - data.shape[0] % batch_size
+        if data.shape[0] % batch_size == 0:
+            self.num_pad = 0
         self.out_data = None
         self.out_label = None
         self.current_batch = -1
@@ -258,7 +257,6 @@ class MXDataIter(DataIter):
         pad = ctypes.c_int(0)
         check_call(_LIB.MXDataIterGetPadNum(self.handle, ctypes.byref(pad)))
         return pad.value
-
 
 def _make_io_iterator(handle):
     """Create an io iterator by handle."""

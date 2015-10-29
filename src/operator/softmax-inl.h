@@ -20,14 +20,21 @@
 namespace mxnet {
 namespace op {
 
+namespace softmax_enum {
 enum SoftmaxOpInputs {kData, kLabel};
 enum SoftmaxOpOutputs {kOut};
+}  // namespace softmax_enum
 
 struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
   float grad_scale;
+  bool multi_output;
   DMLC_DECLARE_PARAMETER(SoftmaxParam) {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
     .describe("Scale the gradient by a float factor");
+    DMLC_DECLARE_FIELD(multi_output).set_default(false)
+    .describe("If set to true, for a (n,k,x_1,..,x_n) dimensional"
+      "input tensor, softmax will generate n*x_1*...*x_n output, each"
+      "has k classes");
   };
 };
 
@@ -46,9 +53,18 @@ class SoftmaxOp : public Operator {
     CHECK_EQ(in_data.size(), 2) << "Softmax Input: [data, label]";
     CHECK_EQ(out_data.size(), 1) << "Softmax Output: [output]";
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
-    Softmax(out, data);
+    if (param_.multi_output) {
+      int n = in_data[softmax_enum::kData].size(0);
+      int k = in_data[softmax_enum::kData].size(1);
+      Shape<3> s3 = Shape3(n, k, static_cast<int>(in_data[softmax_enum::kData].Size()/n/k));
+      Tensor<xpu, 3> data = in_data[softmax_enum::kData].get_with_shape<xpu, 3, real_t>(s3, s);
+      Tensor<xpu, 3> out = out_data[softmax_enum::kOut].get_with_shape<xpu, 3, real_t>(s3, s);
+      Softmax(out, data);
+    } else {
+      Tensor<xpu, 2> data = in_data[softmax_enum::kData].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> out = out_data[softmax_enum::kOut].FlatTo2D<xpu, real_t>(s);
+      Softmax(out, data);
+    }
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -65,12 +81,25 @@ class SoftmaxOp : public Operator {
     CHECK_GE(in_grad.size(), 1);
     CHECK_GE(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 1> label = in_data[kLabel].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> grad = in_grad[kData].FlatTo2D<xpu, real_t>(s);
-    SoftmaxGrad(grad, out, label);
-    if (param_.grad_scale < 1.0) {
-      grad *= param_.grad_scale;
+    if (param_.multi_output) {
+      int n = out_data[softmax_enum::kOut].size(0);
+      int k = out_data[softmax_enum::kOut].size(1);
+      Shape<3> s3 = Shape3(n, k, static_cast<int>(out_data[softmax_enum::kOut].Size()/n/k));
+      Tensor<xpu, 2> label = in_data[softmax_enum::kLabel].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 3> out = out_data[softmax_enum::kOut].get_with_shape<xpu, 3, real_t>(s3, s);
+      Tensor<xpu, 3> grad = in_grad[softmax_enum::kData].get_with_shape<xpu, 3, real_t>(s3, s);
+      SoftmaxGrad(grad, out, label);
+      if (param_.grad_scale < 1.0) {
+        grad *= param_.grad_scale;
+      }
+    } else {
+      Tensor<xpu, 1> label = in_data[softmax_enum::kLabel].get<xpu, 1, real_t>(s);
+      Tensor<xpu, 2> out = out_data[softmax_enum::kOut].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> grad = in_grad[softmax_enum::kData].FlatTo2D<xpu, real_t>(s);
+      SoftmaxGrad(grad, out, label);
+      if (param_.grad_scale < 1.0) {
+        grad *= param_.grad_scale;
+      }
     }
   }
 
@@ -104,7 +133,12 @@ class SoftmaxProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 2) << "Input:[data, label]";
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
-    SHAPE_ASSIGN_CHECK(*in_shape, kLabel, Shape1(dshape[0]));
+    if (param_.multi_output) {
+      SHAPE_ASSIGN_CHECK(*in_shape, softmax_enum::kLabel,
+                         Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]));
+    } else {
+      SHAPE_ASSIGN_CHECK(*in_shape, softmax_enum::kLabel, Shape1(dshape[0]));
+    }
     out_shape->clear();
     out_shape->push_back(dshape);
     return true;
@@ -124,7 +158,7 @@ class SoftmaxProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    return {in_data[kLabel], out_data[kOut]};
+    return {in_data[softmax_enum::kLabel], out_data[softmax_enum::kOut]};
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
@@ -132,13 +166,13 @@ class SoftmaxProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data,
     const std::vector<void*> &in_grad) const override {
-    return {{out_data[kOut], in_grad[kData]}};
+    return {{out_data[softmax_enum::kOut], in_grad[softmax_enum::kData]}};
   }
 
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
     const std::vector<int> &in_data,
     const std::vector<void*> &out_data) const override {
-    return {{in_data[kData], out_data[kOut]}};
+    return {{in_data[softmax_enum::kData], out_data[softmax_enum::kOut]}};
   }
 
   Operator* CreateOperator(Context ctx) const;

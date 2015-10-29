@@ -42,7 +42,6 @@ model <- mx.model.FeedForward.create(softmax, X=dtrain, eval.data=dtest,
                                      iter.end.callback=mx.callback.save.checkpoint("chkpt"),
                                      epoch.end.callback=mx.callback.log.train.metric(100))
 
-
 # do prediction
 pred <- predict(model, dtest)
 label <- mx.io.extract(dtest, "label")
@@ -51,11 +50,10 @@ dataX <- mx.io.extract(dtest, "data")
 pred2 <- predict(model, X=dataX)
 
 accuracy <- function(label, pred) {
-  ypred = max.col(as.array(pred))
+  ypred = max.col(t(as.array(pred)))
   return(sum((as.array(label) + 1) == ypred) / length(label))
 }
 
 print(paste0("Finish prediction... accuracy=", accuracy(label, pred)))
 print(paste0("Finish prediction... accuracy2=", accuracy(label, pred2)))
-
 

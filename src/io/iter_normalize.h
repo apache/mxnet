@@ -100,7 +100,10 @@ class ImageNormalizeIter : public IIterator<DataInst> {
         // use python compatible ndarray store format
         std::vector<NDArray> data;
         std::vector<std::string> keys;
-        NDArray::Load(param_.mean_img, &data, &keys);
+        {
+          std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(param_.mean_img.c_str(), "r"));
+          NDArray::Load(fi.get(), &data, &keys);
+        }
         CHECK_EQ(data.size(), 1)
             << "Invalid mean image file format";
         data[0].WaitToRead();
@@ -220,9 +223,12 @@ class ImageNormalizeIter : public IIterator<DataInst> {
     meanimg_ *= (1.0f / imcnt);
     // save as mxnet python compatible format.
     TBlob tmp = meanimg_;
-    NDArray::Save(param_.mean_img,
-                  {NDArray(tmp, 0)},
-                  {"mean_img"});
+    {
+      std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(param_.mean_img.c_str(), "w"));
+      NDArray::Save(fo.get(),
+                    {NDArray(tmp, 0)},
+                    {"mean_img"});
+    }
     if (param_.verbose) {
       LOG(INFO) << "Save mean image to " << param_.mean_img << "..";
     }

@@ -3,7 +3,7 @@
 \docType{data}
 \name{mx.metric.accuracy}
 \alias{mx.metric.accuracy}
-\title{Accuracy metric}
+\title{Accuracy metric for classification}
 \format{\preformatted{List of 3
  $ init  :function ()  
  $ update:function (label, pred, state)  
@@ -14,7 +14,7 @@
 mx.metric.accuracy
 }
 \description{
-Accuracy metric
+Accuracy metric for classification
 }
 \keyword{datasets}
 
