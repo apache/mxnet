@@ -78,7 +78,7 @@ void L2Norm(const TBlob &src,
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   mshadow::Tensor<xpu, 1> out = ret->get<xpu, 1, real_t>(s);
   mshadow::Tensor<xpu, 1> in =
-      src.get_with_shape<xpu, 1, real_t>(mshadow::Shape1(src.shape_.Size()));
+      src.get_with_shape<xpu, 1, real_t>(mshadow::Shape1(src.shape_.Size()), s);
   mshadow::VectorDot(out, in, in);
   out = mshadow::expr::F<mxnet::op::mshadow_op::square_root>(out);
 }
