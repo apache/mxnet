@@ -18,6 +18,20 @@ Symbolic API
 
 
 
+.. function:: deepcopy(self :: Symbol)
+
+   Make a deep copy of a symbol.
+
+
+
+
+.. function:: copy(self :: Symbol)
+
+   Make a copy of a symbol. The same as making a deep copy.
+
+
+
+
 libmxnet APIs
 -------------
 

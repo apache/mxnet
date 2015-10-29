@@ -12,7 +12,7 @@ Callbacks in training
 
 
 
-.. class:: AbstractIterationCallback
+.. class:: AbstractBatchCallback
 
    Abstract type of callbacks to be called every mini-batch.
 
@@ -26,19 +26,19 @@ Callbacks in training
 
 
 
-.. function:: every_n_iter(callback :: Function, n :: Int; call_on_0 = false)
+.. function:: every_n_batch(callback :: Function, n :: Int; call_on_0 = false)
 
    A convenient function to construct a callback that runs every ``n`` mini-batches.
 
    :param Int call_on_0: keyword argument, default false. Unless set, the callback
-          will **not** be run on iteration 0.
+          will **not** be run on batch 0.
 
    For example, the :func:`speedometer` callback is defined as
 
    .. code-block:: julia
 
-      every_n_iter(frequency, call_on_0=true) do param :: CallbackParams
-        if param.curr_iter == 0
+      every_n_iter(frequency, call_on_0=true) do state :: OptimizationState
+        if state.curr_batch == 0
           # reset timer
         else
           # compute and print speed
@@ -52,7 +52,7 @@ Callbacks in training
 
 .. function:: speedometer(; frequency=50)
 
-   Create an :class:`AbstractIterationCallback` that measure the training speed
+   Create an :class:`AbstractBatchCallback` that measure the training speed
    (number of samples processed per second) every k mini-batches.
 
    :param Int frequency: keyword argument, default 50. The frequency (number of

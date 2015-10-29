@@ -263,14 +263,15 @@ end
   callbacks   :: Vector{AbstractCallback} = AbstractCallback[],
 )
 
-function _invoke_callbacks(self::FeedForward, callbacks::Vector{AbstractCallback}, param::CallbackParams, type_filter::Type)
+function _invoke_callbacks(self::FeedForward, callbacks::Vector{AbstractCallback},
+                           state::OptimizationState, type_filter::Type)
   map(callbacks) do cb
     if isa(cb, type_filter)
       if type_filter == AbstractEpochCallback
         # epoch callback have extra access to the model object
-        cb(self, param)
+        cb(self, state)
       else
-        cb(param)
+        cb(state)
       end
     end
   end
@@ -355,8 +356,8 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   grad_arrays  = [NDArray[exec.grad_arrays[i] for exec in train_execs] for i in param_idx]
   aux_arrays   = [NDArray[exec.aux_arrays[i] for exec in train_execs] for i = 1:length(aux_names)]
 
-  optimizer.batch_size = batch_size
-  cb_param = CallbackParams(batch_size)
+  op_state = OptimizationState(batch_size)
+  optimizer.state = op_state
 
   if !update_on_kvstore
     updater = get_updater(optimizer)
@@ -388,18 +389,18 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   cpu_label_arrays_full_slice = [SlicedNDArray[(1:batch_size, x)] for x in cpu_label_arrays]
 
   # invoke callbacks on epoch 0
-  _invoke_callbacks(self, opts.callbacks, cb_param, AbstractEpochCallback)
+  _invoke_callbacks(self, opts.callbacks, op_state, AbstractEpochCallback)
 
   # now start training...
   for i_epoch = 1:opts.n_epoch
     time_start = time()
     reset!(opts.eval_metric)
 
-    cb_param.curr_epoch = i_epoch
-    cb_param.curr_iter = 0
+    op_state.curr_epoch = i_epoch
+    op_state.curr_batch = 0
 
     # invoke callbacks on iteration 0
-    _invoke_callbacks(self, opts.callbacks, cb_param, AbstractIterationCallback)
+    _invoke_callbacks(self, opts.callbacks, op_state, AbstractBatchCallback)
 
     for batch in data
       load_data!(batch, data_arrays)
@@ -416,6 +417,10 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
         backward(texec)
       end
+
+      op_state.curr_iter  += 1
+      op_state.curr_batch += 1
+      optimizer.state = op_state
 
       # update parameters
       for idx = 1:length(param_names)
@@ -445,8 +450,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
       end
 
       # invoke callbacks after finishing each iteration
-      _invoke_callbacks(self, opts.callbacks, cb_param, AbstractIterationCallback)
-      cb_param.curr_iter += 1
+      _invoke_callbacks(self, opts.callbacks, op_state, AbstractBatchCallback)
 
       # update evaluation metric on training set
       load_label!(batch, cpu_label_arrays_full_slice)
@@ -503,12 +507,12 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
         copy!(self.aux_params[name], aux_avg)
       end
     end
-    _invoke_callbacks(self, opts.callbacks, cb_param, AbstractEpochCallback)
+    _invoke_callbacks(self, opts.callbacks, op_state, AbstractEpochCallback)
   end # end of all epochs
 end
 
-function save_checkpoint(self :: FeedForward, prefix :: AbstractString, param :: CallbackParams)
-  save_checkpoint(self.arch, self.arg_params, self.aux_params, prefix, param.curr_epoch)
+function save_checkpoint(self :: FeedForward, prefix :: AbstractString, state :: OptimizationState)
+  save_checkpoint(self.arch, self.arg_params, self.aux_params, prefix, state.curr_epoch)
 end
 function save_checkpoint(sym :: Symbol, arg_params :: Dict{Base.Symbol, NDArray},
                          aux_params :: Dict{Base.Symbol, NDArray}, prefix :: AbstractString, epoch :: Int)

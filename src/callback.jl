@@ -11,11 +11,11 @@ Callbacks in training
 abstract AbstractCallback
 
 #=doc
-.. class:: AbstractIterationCallback
+.. class:: AbstractBatchCallback
 
    Abstract type of callbacks to be called every mini-batch.
 =#
-abstract AbstractIterationCallback <: AbstractCallback
+abstract AbstractBatchCallback <: AbstractCallback
 
 #=doc
 .. class:: AbstractEpochCallback
@@ -24,33 +24,26 @@ abstract AbstractIterationCallback <: AbstractCallback
 =#
 abstract AbstractEpochCallback <: AbstractCallback
 
-type CallbackParams
-  batch_size :: Int
-  curr_epoch :: Int
-  curr_iter  :: Int
-end
-CallbackParams(batch_size::Int) = CallbackParams(batch_size, 0, 0)
-
-type IterationCallback <: AbstractIterationCallback
+type BatchCallback <: AbstractBatchCallback
   frequency :: Int
   call_on_0 :: Bool
   callback  :: Function
 end
 
 #=doc
-.. function:: every_n_iter(callback :: Function, n :: Int; call_on_0 = false)
+.. function:: every_n_batch(callback :: Function, n :: Int; call_on_0 = false)
 
    A convenient function to construct a callback that runs every ``n`` mini-batches.
 
    :param Int call_on_0: keyword argument, default false. Unless set, the callback
-          will **not** be run on iteration 0.
+          will **not** be run on batch 0.
 
    For example, the :func:`speedometer` callback is defined as
 
    .. code-block:: julia
 
-      every_n_iter(frequency, call_on_0=true) do param :: CallbackParams
-        if param.curr_iter == 0
+      every_n_iter(frequency, call_on_0=true) do state :: OptimizationState
+        if state.curr_batch == 0
           # reset timer
         else
           # compute and print speed
@@ -59,23 +52,23 @@ end
 
    :seealso: :func:`every_n_epoch`, :func:`speedometer`.
 =#
-function every_n_iter(callback :: Function, n :: Int; call_on_0 :: Bool = false)
-  IterationCallback(n, call_on_0, callback)
+function every_n_batch(callback :: Function, n :: Int; call_on_0 :: Bool = false)
+  BatchCallback(n, call_on_0, callback)
 end
-function Base.call(cb :: IterationCallback, param :: CallbackParams)
-  if param.curr_iter == 0
+function Base.call(cb :: BatchCallback, state :: OptimizationState)
+  if state.curr_batch == 0
     if cb.call_on_0
-      cb.callback(param)
+      cb.callback(state)
     end
-  elseif param.curr_iter % cb.frequency == 0
-    cb.callback(param)
+  elseif state.curr_batch % cb.frequency == 0
+    cb.callback(state)
   end
 end
 
 #=doc
 .. function:: speedometer(; frequency=50)
 
-   Create an :class:`AbstractIterationCallback` that measure the training speed
+   Create an :class:`AbstractBatchCallback` that measure the training speed
    (number of samples processed per second) every k mini-batches.
 
    :param Int frequency: keyword argument, default 50. The frequency (number of
@@ -83,12 +76,12 @@ end
 =#
 function speedometer(;frequency::Int=50)
   cl_tic = 0
-  every_n_iter(frequency, call_on_0=true) do param :: CallbackParams
-    if param.curr_iter == 0
+  every_n_batch(frequency, call_on_0=true) do state :: OptimizationState
+    if state.curr_batch == 0
       # reset timer
       cl_tic = time()
     else
-      speed = frequency * param.batch_size / (time() - cl_tic)
+      speed = frequency * state.batch_size / (time() - cl_tic)
       info(format("Speed: {1:>6.2f} samples/sec", speed))
       cl_tic = time()
     end
@@ -117,13 +110,13 @@ end
 function every_n_epoch(callback :: Function, n :: Int; call_on_0 :: Bool = false)
   EpochCallback(n, call_on_0, callback)
 end
-function Base.call(cb :: EpochCallback, model :: Any, param :: CallbackParams)
-  if param.curr_epoch == 0
+function Base.call(cb :: EpochCallback, model :: Any, state :: OptimizationState)
+  if state.curr_epoch == 0
     if cb.call_on_0
-      cb.callback(model, param)
+      cb.callback(model, state)
     end
-  elseif param.curr_epoch % cb.frequency == 0
-    cb.callback(model, param)
+  elseif state.curr_epoch % cb.frequency == 0
+    cb.callback(model, state)
   end
 end
 
@@ -143,7 +136,7 @@ end
 =#
 function do_checkpoint(prefix::AbstractString; frequency::Int=1, save_epoch_0=false)
   mkpath(dirname(prefix))
-  every_n_epoch(frequency, call_on_0=save_epoch_0) do model, param
-    save_checkpoint(model, prefix, param)
+  every_n_epoch(frequency, call_on_0=save_epoch_0) do model, state
+    save_checkpoint(model, prefix, state)
   end
 end

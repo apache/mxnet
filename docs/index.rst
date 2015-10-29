@@ -36,6 +36,7 @@ For more details, see documentation below. Please also checkout the `examples
    api/initializer
    api/ndarray
    api/symbol
+   api/optimizer
 
 Indices and tables
 ==================
