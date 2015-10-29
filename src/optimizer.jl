@@ -184,19 +184,23 @@ abstract AbstractOptimizerOptions
 .. function:: normalized_gradient(opts, state, grad)
 
    :param AbstractOptimizerOptions opts: options for the optimizer, should contain the field
-          ``grad_scale`` and ``grad_clip``.
+          ``grad_scale``, ``grad_clip`` and ``weight_decay``.
    :param OptimizationState state: the current optimization state.
-   :param NDArray grad: the original gradient.
+   :param NDArray weight: the trainable weights.
+   :param NDArray grad: the original gradient of the weights.
 
    Get the properly normalized gradient (re-scaled and clipped if necessary).
 =#
-function normalized_gradient(opts::AbstractOptimizerOptions, state::OptimizationState, grad::NDArray)
+function normalized_gradient(opts::AbstractOptimizerOptions, state::OptimizationState,
+                             weight::NDArray, grad::NDArray)
   grad_scale = opts.grad_scale / state.batch_size
 
   grad = grad_scale * grad
   if opts.grad_clip > 0
     grad = clip(grad, -opts.grad_clip, opts.grad_clip)
   end
+  @inplace grad += opts.weight_decay * weight
+
   return grad
 end
 
