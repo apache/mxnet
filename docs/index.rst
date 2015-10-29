@@ -31,6 +31,7 @@ For more details, see documentation below. Please also checkout the `examples
    :maxdepth: 1
    :caption: API Documentation
 
+   api/context
    api/model
    api/initializer
    api/optimizer
@@ -38,6 +39,7 @@ For more details, see documentation below. Please also checkout the `examples
    api/io
    api/ndarray
    api/symbol
+   api/executor
 
 Indices and tables
 ==================

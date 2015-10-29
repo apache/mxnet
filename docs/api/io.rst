@@ -1,6 +1,8 @@
 
 Data Providers
 ==============
+Interface
+---------
 
 Data providers are wrappers that load external data, be it images, text, or general tensors,
 and split it into mini-batches so that the model can consume the data in a uniformed way.
@@ -196,6 +198,12 @@ and split it into mini-batches so that the model can consume the data in a unifo
 
 
 
+Built-in data providers
+-----------------------
+
+
+
+
 .. class:: ArrayDataProvider
 
    A convenient tool to iterate :class:`NDArray` or Julia ``Array``.
@@ -227,6 +235,12 @@ and split it into mini-batches so that the model can consume the data in a unifo
 
 
 
+libmxnet data providers
+-----------------------
+
+
+
+
 .. class:: MXDataProvider
 
    A data provider that wrap built-in data iterators from libmxnet. See below for
@@ -234,9 +248,6 @@ and split it into mini-batches so that the model can consume the data in a unifo
 
 
 
-
-Built-in data providers in libmxnet
------------------------------------
 
 .. function:: ImageRecordIter(...)
 

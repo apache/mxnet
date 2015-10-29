@@ -1,6 +1,6 @@
 
-Built-in Models and Interface
-=============================
+Models
+======
 
 The model API provides convenient high-level interface to do training and predicting on
 a network described using the symbolic API.

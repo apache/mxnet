@@ -1,6 +1,8 @@
 #=doc
 Data Providers
 ==============
+Interface
+---------
 
 Data providers are wrappers that load external data, be it images, text, or general tensors,
 and split it into mini-batches so that the model can consume the data in a uniformed way.
@@ -238,6 +240,10 @@ function get(provider :: AbstractDataProvider, batch :: AbstractDataBatch, name 
   error("$name is not provided by this data provider")
 end
 
+#=doc
+Built-in data providers
+-----------------------
+=#
 
 ################################################################################
 #=doc
@@ -430,6 +436,11 @@ function get_label(provider :: ArrayDataProvider, batch :: ArrayDataBatch)
 end
 
 
+#=doc
+libmxnet data providers
+-----------------------
+=#
+
 ################################################################################
 #=doc
 .. class:: MXDataProvider
@@ -518,9 +529,6 @@ function count_samples(provider :: MXDataProvider, batch :: MXDataBatch)
 end
 
 #=doc
-Built-in data providers in libmxnet
------------------------------------
-
 **autogen:EMBED:io:EMBED:autogen**
 =#
 function _define_data_iter_creator(hdr :: MX_handle; gen_docs::Bool=false)
