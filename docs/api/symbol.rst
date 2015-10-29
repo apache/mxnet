@@ -48,9 +48,9 @@ Public APIs
    :param act_type: Activation function to be applied.
    :type act_type: {'relu', 'sigmoid', 'tanh'}, required
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -71,9 +71,9 @@ Public APIs
    :param momentum: Momentum for moving average
    :type momentum: float, optional, default=0.1
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -86,9 +86,9 @@ Public APIs
    :param data: Input data.
    :type data: Symbol
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -103,9 +103,9 @@ Public APIs
    :param num_args: Number of inputs to be concated.
    :type num_args: int, required
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -154,9 +154,9 @@ Public APIs
    :param no_bias: Whether to disable bias parameter.
    :type no_bias: boolean, optional, default=False
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -173,9 +173,9 @@ Public APIs
    :param p: Fraction of the input that gets dropped out at training time
    :type p: float, optional, default=0.5
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -190,9 +190,9 @@ Public APIs
    :param num_args: Number of inputs to be sumed.
    :type num_args: int, required
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -205,9 +205,9 @@ Public APIs
    :param data: Input data to  flatten.
    :type data: Symbol
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -236,9 +236,9 @@ Public APIs
    :param no_bias: Whether to disable bias parameter.
    :type no_bias: boolean, optional, default=False
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -267,9 +267,9 @@ Public APIs
    :param nsize: normalization window width in elements.
    :type nsize: int (non-negative), required
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -298,9 +298,9 @@ Public APIs
    :param upper_bound: Upper bound of random slope. (For rrelu only)
    :type upper_bound: float, optional, default=0.334
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -317,9 +317,9 @@ Public APIs
    :param label: Input label to function.
    :type label: Symbol
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -337,9 +337,9 @@ Public APIs
    :param label: Input label to function.
    :type label: Symbol
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -368,9 +368,9 @@ Public APIs
    :param pad: pad for pooling: (y, x)
    :type pad: Shape(tuple), optional, default=(0, 0)
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -387,9 +387,9 @@ Public APIs
    :param target_shape: Target new shape
    :type target_shape: Shape(tuple), required
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -402,9 +402,9 @@ Public APIs
    :param num_outputs: Number of outputs to be sliced.
    :type num_outputs: int, required
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -425,9 +425,9 @@ Public APIs
    :param multi_output: If set to true, for a (n,k,x_1,..,x_n) dimensionalinput tensor, softmax will generate n*x_1*...*x_n output, eachhas k classes
    :type multi_output: boolean, optional, default=False
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -440,9 +440,9 @@ Public APIs
    :param src: Source symbolic input to the function
    :type src: Symbol
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -455,9 +455,9 @@ Public APIs
    :param src: Source symbolic input to the function
    :type src: Symbol
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -473,9 +473,9 @@ Internal APIs
 
    Perform an elementwise div.
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -485,9 +485,9 @@ Internal APIs
 
    Perform an elementwise minus.
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -497,9 +497,9 @@ Internal APIs
 
    Perform an elementwise mul.
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 
@@ -509,9 +509,9 @@ Internal APIs
 
    Perform an elementwise plus.
    
-   :param Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
-   :return: The constructed :class:`Symbol`.
+   :return: the constructed :class:`Symbol`.
    
 
 

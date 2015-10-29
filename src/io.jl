@@ -103,17 +103,12 @@ abstract AbstractDataProvider
 =#
 abstract AbstractDataProviderState
 
-"""A tuple of (slice, NDArray). Usually each NDArray resides on a different device, and each
-    slice describe which part of a larger piece of data should goto that device.
-"""
-typealias SlicedNDArray Tuple{UnitRange{Int},NDArray}
-
 #=doc
 .. class:: AbstractDataBatch
 
    Base type for a data mini-batch. It should implement the following interfaces:
 
-   .. function:: count_samples(batch) -> Int
+   .. function:: count_samples(provider, batch) -> Int
 
       :param AbstractDataBatch batch: the data batch object.
       :return: the number of samples in this batch. This number should be greater than 0, but
@@ -125,15 +120,37 @@ typealias SlicedNDArray Tuple{UnitRange{Int},NDArray}
       :param AbstractDataProvider provider: the data provider.
       :param AbstractDataBatch batch: the data batch object.
       :return: a vector of data in this batch, should be in the same order as declared in
-               :func:`provide_data() <AbstractDataProvider.provide_data>`. The last dimension
-               of each :class:`NDArray` should match the value returned by :func:`count_samples`.
+               :func:`provide_data() <AbstractDataProvider.provide_data>`.
+
+               The last dimension of each :class:`NDArray` should always match the batch_size, even when
+               :func:`count_samples` returns a value less than the batch size. In this case,
+               the data provider is free to pad the remaining contents with any value.
 
    .. function:: get_label(provider, batch) -> Vector{NDArray}
 
       :param AbstractDataProvider provider: the data provider.
       :param AbstractDataBatch batch: the data batch object.
       :return: a vector of labels in this batch. Similar to :func:`get_data`.
+
+
+   The following function will be automatically defined. They are primarily useful for debugging
+   and testing.
+
+   .. function:: get(provider, batch, name) -> NDArray
+
+      :param AbstractDataProvider provider: the data provider.
+      :param AbstractDataBatch batch: the data batch object.
+      :param Base.Symbol name: the name of the data to get, should be one of the names
+             provided in either :func:`provide_data() <AbstractDataProvider.provide_data>`
+             or :func:`provide_label() <AbstractDataprovider.provide_label>`.
+      :return: the corresponding data array corresponding to that name.
 =#
+abstract AbstractDataBatch
+
+"""A tuple of (slice, NDArray). Usually each NDArray resides on a different device, and each
+    slice describe which part of a larger piece of data should goto that device.
+"""
+typealias SlicedNDArray Tuple{UnitRange{Int},NDArray}
 
 """Root type for data batch
 
@@ -167,7 +184,6 @@ Return the number of *dummy samples* in this mini-batch.
 The Batch type should have a field named `provider` pointing to the underlying provider. Helper functions
 `get_data` and `get_label` (mainly for debug purpose) will be able to use this.
 """
-abstract AbstractDataBatch
 
 function _get_data_or_label(batch::AbstractDataBatch, provide_func::Function, loader::Function)
   data_shapes = provide_func(batch.provider)
@@ -343,11 +359,11 @@ end
 
 
 ################################################################################
-# MXDataProvider
-################################################################################
+#=doc
+.. class:: MXDataProvider
 
-"""Wrapper of built-in `libmxnet` data iterators.
-"""
+   A data provider that wrap built-in data iterators from libmxnet.
+=#
 type MXDataProvider <: AbstractDataProvider
   handle     :: MX_DataIterHandle
   data_shape :: Vector{Tuple{Base.Symbol, Tuple}}
@@ -375,7 +391,7 @@ function _get_label(handle :: MX_DataIterHandle)
 end
 
 function MXDataProvider(handle     :: MX_DataIterHandle;
-                        data_name  :: Union{Base.Symbol,Void}=:data,
+                        data_name  :: Base.Symbol=:data,
                         label_name :: Union{Base.Symbol,Void}=:softmax_label,
                         kwargs...) # for convenience, we ignore the rest keyword arguments
   # init iterator, load the first batch and get shapes
@@ -387,7 +403,6 @@ function MXDataProvider(handle     :: MX_DataIterHandle;
   else
     label_shape = Tuple{Base.Symbol, Tuple}[]
   end
-  _reset_data_iter(handle)
 
   MXDataProvider(handle, data_shape, label_shape, data_shape[1][2][end])
 end
@@ -399,8 +414,7 @@ get_batch_size(provider::MXDataProvider) = provider.batch_size
 type MXDataProviderState <: AbstractDataProviderState
   has_next :: Bool
 end
-type MXDataBatch <: AbstractDataBatch
-  provider :: MXDataProvider
+immutable MXDataBatch <: AbstractDataBatch
 end
 
 function Base.eltype(provider :: MXDataProvider)
@@ -418,29 +432,25 @@ function Base.next(provider :: MXDataProvider, state :: MXDataProviderState)
   return (MXDataBatch(provider), state)
 end
 
-function _load_general!(batch :: MXDataBatch, loader :: Function, targets :: Vector{Vector{SlicedNDArray}})
-  @assert length(targets) == 1
-  src = loader(batch.provider.handle)
-  for (idx, target) in targets[1]
-    copy!(target, slice(src, idx))
-  end
+function get_data(provider :: MXDataProvider, batch :: MXDataBatch)
+  return NDArray[_get_data(provider.handle)]
 end
-
-function load_data!(batch :: MXDataBatch, targets :: Vector{Vector{SlicedNDArray}})
-  _load_general!(batch, _get_data, targets)
+function get_label(provider :: MXDataProvider, batch :: MXDataBatch)
+  return NDArray[_get_label(provider.handle)]
 end
-function load_label!(batch :: MXDataBatch, targets :: Vector{Vector{SlicedNDArray}})
-  _load_general!(batch, _get_label, targets)
-end
-
-function get_pad(batch :: MXDataBatch)
+function count_samples(provider :: MXDataProvider, batch :: MXDataBatch)
   ref_pad = Ref{Cint}(0)
   @mxcall(:MXDataIterGetPadNum, (MX_handle, Ref{Cint}), batch.provider.handle, ref_pad)
-  return Int(ref_pad[])
+  return provider.batch_size - Int(ref_pad[])
 end
 
+#=doc
+Built-in data providers in libmxnet
+-----------------------------------
 
-function _define_data_iter_creator(hdr :: MX_handle)
+**autogen:EMBED:io:EMBED:autogen**
+=#
+function _define_data_iter_creator(hdr :: MX_handle; gen_docs::Bool=false)
   ref_name      = Ref{char_p}(0)
   ref_desc      = Ref{char_p}(0)
   ref_narg      = Ref{MX_uint}(0)
@@ -453,6 +463,22 @@ function _define_data_iter_creator(hdr :: MX_handle)
           hdr, ref_name, ref_desc, ref_narg, ref_arg_names, ref_arg_types, ref_arg_descs)
 
   iter_name = symbol(bytestring(ref_name[]))
+
+  if gen_docs
+    if endswith(string(iter_name), "Iter")
+      f_desc = "Can also be called with the alias ``$(string(iter_name)[1:end-4] * "Provider")``.\n"
+    else
+      f_desc = ""
+    end
+    f_desc *= bytestring(ref_desc[]) * "\n\n"
+    f_desc *= ":param Base.Symbol data_name: keyword argument, default ``:data``. The name of the data.\n"
+    f_desc *= ":param Base.Symbol label_name: keyword argument, default ``:softmax_label``. " *
+              "The name of the label. Could be ``nothing`` if no label is presented in this dataset.\n\n"
+    f_desc *= _format_docstring(Int(ref_narg[]), ref_arg_names, ref_arg_types, ref_arg_descs)
+    f_desc *= ":return: the constructed :class:`MXDataProvider`."
+    return (iter_name, f_desc)
+  end
+
   defun = quote
     function $iter_name(; kwargs...)
       arg_keys = AbstractString[string(k) for (k,v) in kwargs]
@@ -466,7 +492,6 @@ function _define_data_iter_creator(hdr :: MX_handle)
     end
   end
   eval(defun)
-  # TODO: add docstring
 
   # add an alias XXXProvider => XXXIter
   if endswith(string(iter_name), "Iter")
@@ -475,7 +500,7 @@ function _define_data_iter_creator(hdr :: MX_handle)
   end
 end
 
-function _import_io_iterators()
+function _import_io_iterators(;gen_docs::Bool=false)
   n_ref = Ref{MX_uint}(0)
   h_ref = Ref{Ptr{MX_handle}}(0)
   @mxcall(:MXListDataIters, (Ref{MX_uint}, Ref{Ptr{MX_handle}}), n_ref, h_ref)
@@ -483,8 +508,19 @@ function _import_io_iterators()
   n_creators = n_ref[]
   h_creators = pointer_to_array(h_ref[], n_creators)
 
+  if gen_docs
+    docs = Dict{Base.Symbol, AbstractString}()
+  end
+
   for i = 1:n_creators
     creator_hdr = h_creators[i]
-    _define_data_iter_creator(creator_hdr)
+    ret = _define_data_iter_creator(creator_hdr; gen_docs=gen_docs)
+    if gen_docs
+      docs[ret[1]] = ret[2]
+    end
+  end
+
+  if gen_docs
+    return docs
   end
 end

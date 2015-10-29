@@ -43,21 +43,28 @@ function embed_mxnet_api(output_filename::AbstractString, key::AbstractString, g
     names_pub, names_pri = sort_api_names(keys(docs))
     docs_pub = join(map(gen_doc, names_pub), "\n\n")
     docs_pri = join(map(gen_doc, names_pri), "\n\n")
-    docstrings = """
-    Public APIs
-    ^^^^^^^^^^^
-    """ * docs_pub
+    if isempty(names_pri)
+      docstrings = ""
+    else
+      docstrings = """
+      Public APIs
+      ^^^^^^^^^^^
+      """
+    end
+    docstrings *= docs_pub
 
-    docstrings *= """
+    if !isempty(names_pri)
+      docstrings *= """
 
-    Internal APIs
-    ^^^^^^^^^^^^^
+      Internal APIs
+      ^^^^^^^^^^^^^
 
-    .. note::
+      .. note::
 
-       Document and signatures for internal API functions might be incomplete.
+         Document and signatures for internal API functions might be incomplete.
 
-    """ * docs_pri
+      """ * docs_pri
+    end
 
     key = mx.format(mx.DOC_EMBED_ANCHOR, key)
     println(io, replace(contents, key, docstrings))
@@ -80,3 +87,4 @@ extract_doc("model.rst", "model.jl")
 extract_doc("optimizer.rst", "optimizer.jl")
 
 extract_doc("io.rst", "io.jl")
+embed_mxnet_api("io.rst", "io", mx._import_io_iterators)
