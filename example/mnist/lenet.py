@@ -33,7 +33,7 @@ logging.basicConfig(level=logging.DEBUG)
 # dev = [mx.gpu(i) for i in range(2)]
 dev = mx.gpu()
 model = mx.model.FeedForward(
-    ctx = dev, symbol = lenet, num_round = 20,
+    ctx = dev, symbol = lenet, num_epoch = 20,
     learning_rate = 0.05, momentum = 0.9, wd = 0.00001)
 model.fit(X=train, eval_data=val,
-          epoch_end_callback=mx.callback.Speedometer(100))
+          batch_end_callback=mx.callback.Speedometer(100))
