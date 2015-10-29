@@ -95,6 +95,22 @@ and split it into mini-batches so that the model can consume the data in a unifo
    With those assumptions, it will be relatively easy to adapt any existing iterator. See the implementation
    of the built-in :class:`MXDataProvider` for example.
 
+   .. caution::
+
+      Please do not use the one data provider simultaneously in two different places, either in parallel,
+      or in a nested loop. For example, the behavior for the following code is undefined
+
+      .. code-block:: julia
+
+         for batch in data
+           # updating the parameters
+
+           # now let's test the performance on the training set
+           for b2 in data
+             # ...
+           end
+         end
+
 
 
 
@@ -153,8 +169,8 @@ and split it into mini-batches so that the model can consume the data in a unifo
       :type targets: Vector{Vector{SlicedNDArray}}
 
       The targets is a list of the same length as number of data provided by this provider.
-      Each element in the list is a ``Vector{SlicedNDArray}``. This vector described a
-      spliting of this data batch into different slices, each slice is specified by
+      Each element in the list is a list of :class:`SlicedNDArray`. This list described a
+      spliting scheme of this data batch into different slices, each slice is specified by
       a slice-ndarray pair, where *slice* specify the range of samples in the mini-batch
       that should be loaded into the corresponding *ndarray*.
 
@@ -175,7 +191,14 @@ and split it into mini-batches so that the model can consume the data in a unifo
 
 .. class:: SlicedNDArray
 
-   A alias type of ``Pair{UnitRange{Int},NDArray}``.
+   A alias type of ``Tuple{UnitRange{Int},NDArray}``.
+
+
+
+
+.. class:: ArrayDataProvider
+
+   A convenient tool to iterate :class:`NDArray` or Julia ``Array``.
 
 
 

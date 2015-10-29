@@ -93,6 +93,22 @@ and split it into mini-batches so that the model can consume the data in a unifo
 
    With those assumptions, it will be relatively easy to adapt any existing iterator. See the implementation
    of the built-in :class:`MXDataProvider` for example.
+
+   .. caution::
+
+      Please do not use the one data provider simultaneously in two different places, either in parallel,
+      or in a nested loop. For example, the behavior for the following code is undefined
+
+      .. code-block:: julia
+
+         for batch in data
+           # updating the parameters
+
+           # now let's test the performance on the training set
+           for b2 in data
+             # ...
+           end
+         end
 =#
 abstract AbstractDataProvider
 
@@ -196,6 +212,21 @@ function load_label!(provider :: AbstractDataProvider, batch :: AbstractDataBatc
   _load_general!(provider, batch, targets, get_label)
 end
 
+import Base.get
+function get(provider :: AbstractDataProvider, batch :: AbstractDataBatch, name :: Base.Symbol)
+  for (idx, (k, s)) in enumerate(provide_data(provider))
+    if name == k
+      return get_data(provider, batch)[idx]
+    end
+  end
+  for (idx, (k, s)) in enumerate(provide_label(provider))
+    if name == k
+      return get_label(provider, batch)[idx]
+    end
+  end
+  error("$name is not provided by this data provider")
+end
+
 """Root type for data batch
 
 A data batch must implement the following interface function to actually provide the data and label.
@@ -250,9 +281,11 @@ The Batch type should have a field named `provider` pointing to the underlying p
 #end
 
 ################################################################################
-# ArrayDataProvider
-################################################################################
-"A convenient tool to iterate `NDArray` or Julia `Array`"
+#=doc
+.. class:: ArrayDataProvider
+
+   A convenient tool to iterate :class:`NDArray` or Julia ``Array``.
+=#
 type ArrayDataProvider <: AbstractDataProvider
   data_arrays   :: Vector{Array{MX_float}}
   data_names    :: Vector{Base.Symbol}
@@ -263,8 +296,10 @@ type ArrayDataProvider <: AbstractDataProvider
   shuffle       :: Bool
   data_padding  :: MX_float
   label_padding :: MX_float
-end
 
+  data_batch    :: Vector{NDArray}
+  label_batch   :: Vector{NDArray}
+end
 
 # Julia's type system is sometimes very frustrating. You cannot specify a function
 # with argument Vector{Pair} to expect to be matched when calling with the parameter
@@ -272,40 +307,43 @@ end
 # results, about the parametric type in the Pair{T1,T2} type, thus does not match the
 # generic Pair type. In general, Int <: Number but Vector{Int} <: Vector{Number} is not
 # true. So let us just use Any here...
-function ArrayDataProvider(data::Any; batch_size::Int=1, shuffle::Bool=false, data_padding::Real=0, label_padding::Real=0)
+function ArrayDataProvider(data::Any; batch_size::Int=0, shuffle::Bool=false, data_padding::Real=0, label_padding::Real=0)
   ArrayDataProvider(data, [], batch_size=batch_size, shuffle=shuffle, data_padding=data_padding, label_padding=label_padding)
 end
-function ArrayDataProvider(data::Any, label::Any; batch_size::Int=1, shuffle::Bool=false, data_padding::Real=0, label_padding::Real=0)
+function ArrayDataProvider(data::Any, label::Any; batch_size::Int=0, shuffle::Bool=false, data_padding::Real=0, label_padding::Real=0)
+  asarr{T}(arr :: Array{T}) = convert(Array{MX_float}, arr)
+  asarr(arr :: NDArray) = copy(arr)
+
   if isa(data, Union{NDArray, Array}) && eltype(data) <: Real
     data_names  = [:data]
-    data_arrays = Array{MX_float}[data]
+    data_arrays = Array{MX_float}[asarr(data)]
   elseif isa(data, Pair)
     @assert isa(data.first, Base.Symbol) && isa(data.second, Union{NDArray, Array})
     data_names  = [data.first]
-    data_arrays = Array{MX_float}[data.second]
+    data_arrays = Array{MX_float}[asarr(data.second)]
   elseif isa(data, Vector) || isa(data, Tuple)
     map(data) do d
       @assert isa(d, Pair) && isa(d.first, Base.Symbol) && isa(d.second, Union{NDArray, Array})
     end
     data_names  = Base.Symbol[d.first for d in data]
-    data_arrays = Array{MX_float}[d.second for d in data]
+    data_arrays = Array{MX_float}[asarr(d.second) for d in data]
   else
     error("Invalid data argument type")
   end
 
   if isa(label, Union{NDArray, Array}) && eltype(label) <: Real
     label_names  = [:softmax_label]
-    label_arrays = Array{MX_float}[label]
+    label_arrays = Array{MX_float}[asarr(label)]
   elseif isa(label, Pair)
     @assert isa(label.first, Base.Symbol) && isa(label.second, Union{NDArray, Array})
     label_names  = [label.first]
-    label_arrays = Array{MX_float}[label.second]
+    label_arrays = Array{MX_float}[asarr(label.second)]
   elseif isa(label, Vector) || isa(label, Tuple)
     map(label) do d
       @assert isa(d, Pair) && isa(d.first, Base.Symbol) && isa(d.second, Union{NDArray, Array})
     end
     label_names  = Base.Symbol[d.first for d in label]
-    label_arrays = Array{MX_float}[d.second for d in label]
+    label_arrays = Array{MX_float}[asarr(d.second) for d in label]
   else
     error("Invalid label argument type")
   end
@@ -321,8 +359,31 @@ function ArrayDataProvider(data::Any, label::Any; batch_size::Int=1, shuffle::Bo
             "Number of samples in  $(label_names[i]) is mismatch with $(data_names[1])")
   end
 
+  if batch_size == 0
+    batch_size = sample_count
+  end
+  @assert 0 < batch_size <= sample_count
+
+  function gen_batch_nds(arrs :: Vector{Array{MX_float}}, bsize :: Int)
+    map(arrs) do arr
+      shape = size(arr)
+      empty(shape[1:end-1]..., bsize)
+    end
+  end
+
+  data_batch  = gen_batch_nds(data_arrays, batch_size)
+  label_batch = gen_batch_nds(label_arrays, batch_size)
+
+  # reshape data and labels into 2D tensors, so that it is easier to work with them
+  data_arrays = map(data_arrays) do arr
+    reshape(arr, prod(size(arr)[1:end-1]), size(arr)[end])
+  end
+  label_arrays = map(label_arrays) do arr
+    reshape(arr, prod(size(arr)[1:end-1]), size(arr)[end])
+  end
+
   ArrayDataProvider(data_arrays, data_names, label_arrays, label_names, batch_size,
-                    sample_count, shuffle, data_padding, label_padding)
+                    sample_count, shuffle, data_padding, label_padding, data_batch, label_batch)
 end
 
 function provide_data(provider::ArrayDataProvider)
@@ -341,17 +402,12 @@ function Base.eltype(provider :: ArrayDataProvider)
   ArrayDataProviderState
 end
 
-function _shuffle_array(arr::Array, idx::Vector{Int})
-  shape  = size(arr)
-  colons = [Colon() for c = 1:length(shape)-1]
-  getindex(arr, colons..., idx)
-end
 function Base.start(provider :: ArrayDataProvider)
   if provider.shuffle
     # re-shuffle all data
     idx_perm = randperm(provider.sample_count)
-    provider.data_arrays = map(x->_shuffle_array(x,idx_perm), provider.data_arrays)
-    provider.label_arrays = map(x->_shuffle_array(x,idx_perm), provider.label_arrays)
+    provider.data_arrays = map(x->x[:,idx_perm], provider.data_arrays)
+    provider.label_arrays = map(x->x[:,idx_perm], provider.label_arrays)
   end
 
   return ArrayDataProviderState(1)
@@ -362,43 +418,61 @@ function Base.done(provider::ArrayDataProvider, state :: ArrayDataProviderState)
 end
 
 immutable ArrayDataBatch <: AbstractDataBatch
-  provider :: ArrayDataProvider
-  idx      :: UnitRange{Int}
+  idx :: UnitRange{Int}
 end
 function Base.next(provider :: ArrayDataProvider, state :: ArrayDataProviderState)
   idx = state.curr_idx:min(state.curr_idx+provider.batch_size-1, provider.sample_count)
-  return (ArrayDataBatch(provider, idx), ArrayDataProviderState(idx.stop+1))
+  return (ArrayDataBatch(idx), ArrayDataProviderState(idx.stop+1))
 end
 
-function get_pad(batch :: ArrayDataBatch)
-  return batch.provider.batch_size - length(batch.idx)
+function count_samples(provider :: ArrayDataProvider, batch :: ArrayDataBatch)
+  return length(batch.idx)
 end
 
-function _load_general!(batch :: ArrayDataBatch, sources :: Vector{Array{MX_float}},
-                        targets :: Vector{Vector{SlicedNDArray}}, pad_val::Real)
-  @assert length(sources) == length(targets)
-  for (src, tgt) in zip(sources, targets)
-    src_colons = [Colon() for i = 1:ndims(src)-1]
-    for (slice_idx, dst) in tgt
-      if slice_idx.start > length(batch.idx)
-        dst[:] = pad_val
-      else
-        slice_idx0 = slice_idx.start:min(slice_idx.stop, length(batch.idx))
-        copy!(dst[1:length(slice_idx0)], getindex(src, src_colons..., batch.idx[slice_idx0]))
-        if length(slice_idx0) < length(slice_idx)
-          # need padding
-          dst[length(slice_idx0)+1:length(slice_idx)] = pad_val
-        end
-      end
+function get_data(provider :: ArrayDataProvider, batch :: ArrayDataBatch)
+  for (src, dst) in zip(provider.data_arrays, provider.data_batch)
+    copy_ignore_shape!(dst[1:length(batch.idx)], src[:, batch.idx])
+    if length(batch.idx) < provider.batch_size
+      dst[length(batch.idx)+1:provider.batch_size] = provider.data_padding
     end
   end
+  return provider.data_batch
 end
-function load_data!(batch :: ArrayDataBatch, targets :: Vector{Vector{SlicedNDArray}})
-  _load_general!(batch, batch.provider.data_arrays, targets, batch.provider.data_padding)
+function get_label(provider :: ArrayDataProvider, batch :: ArrayDataBatch)
+  for (src, dst) in zip(provider.label_arrays, provider.label_batch)
+    copy_ignore_shape!(dst[1:length(batch.idx)], src[:, batch.idx])
+    if length(batch.idx) < provider.batch_size
+      dst[length(batch.idx)+1:provider.batch_size] = provider.label_padding
+    end
+  end
+  return provider.label_batch
 end
-function load_label!(batch :: ArrayDataBatch, targets :: Vector{Vector{SlicedNDArray}})
-  _load_general!(batch, batch.provider.label_arrays, targets, batch.provider.label_padding)
-end
+
+#function _load_general!(batch :: ArrayDataBatch, sources :: Vector{Array{MX_float}},
+#                        targets :: Vector{Vector{SlicedNDArray}}, pad_val::Real)
+#  @assert length(sources) == length(targets)
+#  for (src, tgt) in zip(sources, targets)
+#    src_colons = [Colon() for i = 1:ndims(src)-1]
+#    for (slice_idx, dst) in tgt
+#      if slice_idx.start > length(batch.idx)
+#        dst[:] = pad_val
+#      else
+#        slice_idx0 = slice_idx.start:min(slice_idx.stop, length(batch.idx))
+#        copy!(dst[1:length(slice_idx0)], getindex(src, src_colons..., batch.idx[slice_idx0]))
+#        if length(slice_idx0) < length(slice_idx)
+#          # need padding
+#          dst[length(slice_idx0)+1:length(slice_idx)] = pad_val
+#        end
+#      end
+#    end
+#  end
+#end
+#function load_data!(batch :: ArrayDataBatch, targets :: Vector{Vector{SlicedNDArray}})
+#  _load_general!(batch, batch.provider.data_arrays, targets, batch.provider.data_padding)
+#end
+#function load_label!(batch :: ArrayDataBatch, targets :: Vector{Vector{SlicedNDArray}})
+#  _load_general!(batch, batch.provider.label_arrays, targets, batch.provider.label_padding)
+#end
 
 
 

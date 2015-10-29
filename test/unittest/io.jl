@@ -27,8 +27,8 @@ function test_mnist()
       data_targets = [[(1:batch_size, data_array)] for i = 1:1]
       label_targets = [[(1:batch_size, label_array)] for i = 1:1]
 
-      mx.load_data!(batch, data_targets)
-      mx.load_label!(batch, label_targets)
+      mx.load_data!(mnist_provider, batch, data_targets)
+      mx.load_label!(mnist_provider, batch, label_targets)
 
       true_labels = [5,0,4,1,9,2,1,3,1,4] # the first 10 labels in MNIST train
       got_labels  = Int[copy(label_array)...]
@@ -53,11 +53,11 @@ function test_arrays_impl(data::Vector, label::Vector, provider::mx.ArrayDataPro
   for (idx, batch) in zip(idx_all, provider)
     data_batch = [x[[Colon() for i=1:ndims(x)-1]..., idx:min(idx+batch_size-1,sample_count)] for x in data]
     data_get   = [mx.empty(size(x)[1:end-1]..., batch_size) for x in data]
-    mx.load_data!(batch, [[(1:batch_size, x)] for x in data_get])
+    mx.load_data!(provider, batch, [[(1:batch_size, x)] for x in data_get])
 
     for (d_real, d_get) in zip(data_batch, data_get)
       @test reldiff(d_real, copy(d_get)[[1:n for n in size(d_real)]...]) < 1e-6
-      @test mx.get_pad(batch) == batch_size - size(d_real)[end]
+      @test mx.count_samples(provider, batch) == size(d_real)[end]
     end
   end
 end
@@ -97,12 +97,11 @@ function test_arrays_shuffle()
   data_got     = similar(data)
   label_got    = similar(label)
   for (idx, batch) in zip(idx_all, provider)
-    data_batch  = [(1:batch_size, mx.empty(1,batch_size))]
-    label_batch = [(1:batch_size, mx.empty(batch_size))]
-    mx.load_data!(batch, typeof(data_batch)[data_batch])
-    mx.load_label!(batch, typeof(label_batch)[label_batch])
-    data_got[idx:min(idx+batch_size-1,sample_count)] = copy(data_batch[1][2])[1:batch_size-mx.get_pad(batch)]
-    label_got[idx:min(idx+batch_size-1,sample_count)] = copy(label_batch[1][2])[1:batch_size-mx.get_pad(batch)]
+    data_batch  = mx.get(provider, batch, :data)
+    label_batch = mx.get(provider, batch, :index)
+    ns_batch = mx.count_samples(provider, batch)
+    data_got[idx:idx+ns_batch-1] = copy(data_batch)[1:ns_batch]
+    label_got[idx:idx+ns_batch-1] = copy(label_batch)[1:ns_batch]
   end
 
   @test label_got != label

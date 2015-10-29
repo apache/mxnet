@@ -328,6 +328,16 @@ function copy!{T<:Real}(dst :: NDArray, src :: Array{T})
   return dst
 end
 
+function copy_ignore_shape!{T<:Real}(dst :: NDArray, src :: Array{T})
+  @assert dst.writable
+  @assert length(dst) == length(src)
+  src = convert(Array{MX_float}, src) # this might involve copying
+  @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{MX_float}, Csize_t),
+          dst.handle, pointer(src), length(src))
+  return dst
+end
+
+
 #=doc
 .. function::
    copy(arr :: NDArray)
