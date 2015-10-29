@@ -1,6 +1,7 @@
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, fixme, too-many-arguments
 
+"""Python interface for DLMC RecrodIO data format"""
 from __future__ import absolute_import
 
 import ctypes

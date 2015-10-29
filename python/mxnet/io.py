@@ -11,7 +11,7 @@ import math
 import logging
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str
-from .base import DataIterHandle, NDArrayHandle, RecordIOHandle
+from .base import DataIterHandle, NDArrayHandle
 from .base import check_call, ctypes2docstring
 from .ndarray import NDArray
 from .ndarray import array
