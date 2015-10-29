@@ -96,8 +96,8 @@ mx.model.train <- function(symbol, ctx, input.shape,
                            begin.round, end.round, optimizer,
                            train.data, eval.data,
                            metric,
-                           iter.end.callback,
                            epoch.end.callback,
+                           batch.end.callback,
                            kvstore) {
   ndevice <- length(ctx)
   cat(paste0("Start training with ", ndevice, " devices\n"))
@@ -195,8 +195,8 @@ mx.model.train <- function(symbol, ctx, input.shape,
         }
       }
       nbatch <- nbatch + 1
-      if (!is.null(epoch.end.callback)) {
-        epoch.end.callback(iteration, nbatch, environment())
+      if (!is.null(batch.end.callback)) {
+        batch.end.callback(iteration, nbatch, environment())
       }
     }
     # reset training data
@@ -244,8 +244,8 @@ mx.model.train <- function(symbol, ctx, input.shape,
     }
     # get the model out
     model <- mx.model.extract.model(symbol, train.execs)
-    if (!is.null(iter.end.callback)) {
-      iter.end.callback(iteration, 0, environment())
+    if (!is.null(epoch.end.callback)) {
+      epoch.end.callback(iteration, 0, environment())
     }
   }
   return(model)
@@ -355,9 +355,9 @@ mx.model.select.layout.predict <- function(X, model) {
 #'     The validation set used for validation evaluation during the progress
 #' @param eval.metric function, optional
 #'     The evaluation function on the results.
-#' @param iter.end.callback function, optional
-#'     The callback when iteration ends.
 #' @param epoch.end.callback function, optional
+#'     The callback when iteration ends.
+#' @param batch.end.callback function, optional
 #'     The callback when one mini-batch iteration ends.
 #' @param array.batch.size integer (default=128)
 #'     The batch size used for R array training.
@@ -377,7 +377,7 @@ function(symbol, X, y=NULL, ctx=NULL,
          num.round=10, optimizer="sgd",
          initializer=mx.init.uniform(0.01),
          eval.data=NULL, eval.metric=NULL,
-         iter.end.callback=NULL, epoch.end.callback=NULL,
+         epoch.end.callback=NULL, batch.end.callback=NULL,
          array.batch.size=128, array.layout="auto",
          kvstore="local",
          ...) {
@@ -413,8 +413,8 @@ function(symbol, X, y=NULL, ctx=NULL,
                           1, num.round, optimizer=optimizer,
                           train.data=X, eval.data=eval.data,
                           metric=eval.metric,
-                          iter.end.callback=iter.end.callback,
                           epoch.end.callback=epoch.end.callback,
+                          batch.end.callback=batch.end.callback,
                           kvstore=kvstore)
   return (model)
 }

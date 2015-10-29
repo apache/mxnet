@@ -5,7 +5,7 @@
 \title{Predict the outputs given a model and dataset.}
 \usage{
 \method{predict}{MXFeedForwardModel}(model, X, ctx = NULL,
-  array.batch.size = 128)
+  array.batch.size = 128, array.layout = "auto")
 }
 \arguments{
 \item{model}{The MXNet Model.}
@@ -15,6 +15,13 @@
 \item{ctx}{mx.cpu() or mx.gpu(i) The device used to generate the prediction.}
 
 \item{array.batch.size}{The batch size used in batching. Only used when X is R's array.}
+
+\item{array.layout}{can be "auto", "colmajor", "rowmajor", (detault=auto)
+    The layout of array. "rowmajor" is only supported for two dimensional array.
+    For matrix, "rowmajor" means dim(X) = c(nexample, nfeatures),
+    "colmajor" means dim(X) = c(nfeatures, nexample)
+    "auto" will auto detect the layout by match the feature size,
+     and will report error when X is a square matrix to ask user to explicitly specify layout.}
 }
 \description{
 Predict the outputs given a model and dataset.
