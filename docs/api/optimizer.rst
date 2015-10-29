@@ -2,6 +2,9 @@
 Optimizers
 ==========
 
+Common interfaces
+-----------------
+
 
 
 
@@ -99,6 +102,31 @@ Optimizers
 
    A utility function to create an updater function, that uses its closure to
    store all the states needed for each weights.
+
+
+
+
+Built-in optimizers
+-------------------
+
+
+
+
+.. class:: AbstractOptimizerOptions
+
+   Base class for all optimizer options.
+
+
+
+
+.. function:: normalized_gradient(opts, state, grad)
+
+   :param AbstractOptimizerOptions opts: options for the optimizer, should contain the field
+          ``grad_scale`` and ``grad_clip``.
+   :param OptimizationState state: the current optimization state.
+   :param NDArray grad: the original gradient.
+
+   Get the properly normalized gradient (re-scaled and clipped if necessary).
 
 
 

@@ -1,4 +1,4 @@
-@defstruct SGDOptions Any (
+@defstruct SGDOptions AbstractOptimizerOptions (
   (lr                :: Real = 0.01, lr > 0),
   (momentum          :: Real = 0.0, momentum >= 0),
   (weight_decay      :: Real = 0.0001, weight_decay >= 0),
@@ -32,14 +32,10 @@ end
 
 function update(self :: SGD, index :: Int, weight :: NDArray, grad :: NDArray, state :: Union{Void, NDArray})
   lr = get_learning_rate(self.opts.lr_scheduler, self.state)
-  grad_scale = self.opts.grad_scale / self.state.batch_size
-
-  grad = grad_scale * grad
-  if self.opts.grad_clip > 0
-    grad = clip(grad, -self.opts.grad_clip, self.opts.grad_clip)
-  end
+  grad = normalized_gradient(self.opts, self.state, grad)
 
   if isa(state, Void)
+    # vanilla SGD, without momentum
     @inplace weight += -lr * (grad + self.opts.weight_decay * weight)
   else
     mom = state :: NDArray

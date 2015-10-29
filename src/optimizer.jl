@@ -1,6 +1,9 @@
 #=doc
 Optimizers
 ==========
+
+Common interfaces
+-----------------
 =#
 
 
@@ -162,6 +165,39 @@ function get_updater(optimizer :: AbstractOptimizer)
     update(optimizer, index, weight, grad, states[index])
   end
   return updater
+end
+
+################################################################################
+#=doc
+Built-in optimizers
+-------------------
+=#
+
+#=doc
+.. class:: AbstractOptimizerOptions
+
+   Base class for all optimizer options.
+=#
+abstract AbstractOptimizerOptions
+
+#=doc
+.. function:: normalized_gradient(opts, state, grad)
+
+   :param AbstractOptimizerOptions opts: options for the optimizer, should contain the field
+          ``grad_scale`` and ``grad_clip``.
+   :param OptimizationState state: the current optimization state.
+   :param NDArray grad: the original gradient.
+
+   Get the properly normalized gradient (re-scaled and clipped if necessary).
+=#
+function normalized_gradient(opts::AbstractOptimizerOptions, state::OptimizationState, grad::NDArray)
+  grad_scale = opts.grad_scale / state.batch_size
+
+  grad = grad_scale * grad
+  if opts.grad_clip > 0
+    grad = clip(grad, -opts.grad_clip, opts.grad_clip)
+  end
+  return grad
 end
 
 include("optimizers/sgd.jl")
