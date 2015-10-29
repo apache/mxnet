@@ -203,9 +203,34 @@ and split it into mini-batches so that the model can consume the data in a unifo
 
 
 
+.. function:: ArrayDataProvider(data[, label]; batch_size, shuffle, data_padding, label_padding)
+
+   Construct a data provider from :class:`NDArray` or Julia Arrays.
+
+   :param data: the data, could be
+
+          - a :class:`NDArray`, or a Julia Array. This is equivalent to ``:data => data``.
+          - a name-data pair, like ``:mydata => array``, where ``:mydata`` is the name of the data
+            and ``array`` is an :class:`NDArray` or a Julia Array.
+          - a list of name-data pairs.
+
+   :param label: the same as the ``data`` parameter. When this argument is omitted, the constructed
+          provider will provide no labels.
+   :param Int batch_size: the batch size, default is 0, which means treating the whole array as a
+          single mini-batch.
+   :param Bool shuffle: turn on if the data should be shuffled at every epoch.
+   :param Real data_padding: when the mini-batch goes beyond the dataset boundary, there might
+          be less samples to include than a mini-batch. This value specify a scalar to pad the
+          contents of all the missing data points.
+   :param Real label_padding: the same as ``data_padding``, except for the labels.
+
+
+
+
 .. class:: MXDataProvider
 
-   A data provider that wrap built-in data iterators from libmxnet.
+   A data provider that wrap built-in data iterators from libmxnet. See below for
+   a list of built-in data iterators.
 
 
 

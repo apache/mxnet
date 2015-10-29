@@ -227,58 +227,6 @@ function get(provider :: AbstractDataProvider, batch :: AbstractDataBatch, name 
   error("$name is not provided by this data provider")
 end
 
-"""Root type for data batch
-
-A data batch must implement the following interface function to actually provide the data and label.
-
-```julia
-load_data!(batch :: AbstractDataBatch, targets :: Vector{Vector{SlicedNDArray}})
-load_label!(batch :: AbstractDataBatch, targets :: Vector{Vector{SlicedNDArray}})
-```
-
-Load data and label into targets. The targets is a list of target that the data/label should be
-copied into. The order in the list is guaranteed to be the same as returned by `provide_data` and
-`provide_label`. Each entry in the list is again a list of `SlicedNDArray`, corresponding the
-memory buffer for each device.
-
-The `SlicedNDArray` is used in data parallelization to run different sub-batch on different devices.
-
-The following function should also be implemented to handle the case when the mini-batch size does not
-divide the size of the whole dataset. So in the last mini-batch, the actual data copied might be fewer
-than the mini-batch size. This is usually not an issue during the training as the remaining space may
-contain the data and label copied during the previous mini-batch are still valid data. However, during
-testing, especially when doing feature extraction, we need to be precise about the number of samples
-processed.
-
-```julia
-get_pad(batch :: AbstractDataBatch)
-```
-
-Return the number of *dummy samples* in this mini-batch.
-
-The Batch type should have a field named `provider` pointing to the underlying provider. Helper functions
-`get_data` and `get_label` (mainly for debug purpose) will be able to use this.
-"""
-
-#function _get_data_or_label(batch::AbstractDataBatch, provide_func::Function, loader::Function)
-#  data_shapes = provide_func(batch.provider)
-#  data_arrays = [mx.empty(x[2]) for x in data_shapes]
-#  batch_size  = get_batch_size(batch.provider)
-#  data_arrays_fake_slice = [SlicedNDArray[(1:batch_size, x)] for x in data_arrays]
-#  loader(batch, data_arrays_fake_slice)
-#
-#  if length(data_arrays) == 1
-#    return data_arrays[1]
-#  else
-#    return data_arrays
-#  end
-#end
-#function get_data(batch :: AbstractDataBatch)
-#  _get_data_or_label(batch, provide_data, load_data!)
-#end
-#function get_label(batch :: AbstractDataBatch)
-#  _get_data_or_label(batch, provide_label, load_label!)
-#end
 
 ################################################################################
 #=doc
@@ -301,6 +249,28 @@ type ArrayDataProvider <: AbstractDataProvider
   label_batch   :: Vector{NDArray}
 end
 
+#=doc
+.. function:: ArrayDataProvider(data[, label]; batch_size, shuffle, data_padding, label_padding)
+
+   Construct a data provider from :class:`NDArray` or Julia Arrays.
+
+   :param data: the data, could be
+
+          - a :class:`NDArray`, or a Julia Array. This is equivalent to ``:data => data``.
+          - a name-data pair, like ``:mydata => array``, where ``:mydata`` is the name of the data
+            and ``array`` is an :class:`NDArray` or a Julia Array.
+          - a list of name-data pairs.
+
+   :param label: the same as the ``data`` parameter. When this argument is omitted, the constructed
+          provider will provide no labels.
+   :param Int batch_size: the batch size, default is 0, which means treating the whole array as a
+          single mini-batch.
+   :param Bool shuffle: turn on if the data should be shuffled at every epoch.
+   :param Real data_padding: when the mini-batch goes beyond the dataset boundary, there might
+          be less samples to include than a mini-batch. This value specify a scalar to pad the
+          contents of all the missing data points.
+   :param Real label_padding: the same as ``data_padding``, except for the labels.
+=#
 # Julia's type system is sometimes very frustrating. You cannot specify a function
 # with argument Vector{Pair} to expect to be matched when calling with the parameter
 # [:foo => zeros(2,3), :bar => zeros(3)] because the type inference gives very specific
@@ -448,39 +418,13 @@ function get_label(provider :: ArrayDataProvider, batch :: ArrayDataBatch)
   return provider.label_batch
 end
 
-#function _load_general!(batch :: ArrayDataBatch, sources :: Vector{Array{MX_float}},
-#                        targets :: Vector{Vector{SlicedNDArray}}, pad_val::Real)
-#  @assert length(sources) == length(targets)
-#  for (src, tgt) in zip(sources, targets)
-#    src_colons = [Colon() for i = 1:ndims(src)-1]
-#    for (slice_idx, dst) in tgt
-#      if slice_idx.start > length(batch.idx)
-#        dst[:] = pad_val
-#      else
-#        slice_idx0 = slice_idx.start:min(slice_idx.stop, length(batch.idx))
-#        copy!(dst[1:length(slice_idx0)], getindex(src, src_colons..., batch.idx[slice_idx0]))
-#        if length(slice_idx0) < length(slice_idx)
-#          # need padding
-#          dst[length(slice_idx0)+1:length(slice_idx)] = pad_val
-#        end
-#      end
-#    end
-#  end
-#end
-#function load_data!(batch :: ArrayDataBatch, targets :: Vector{Vector{SlicedNDArray}})
-#  _load_general!(batch, batch.provider.data_arrays, targets, batch.provider.data_padding)
-#end
-#function load_label!(batch :: ArrayDataBatch, targets :: Vector{Vector{SlicedNDArray}})
-#  _load_general!(batch, batch.provider.label_arrays, targets, batch.provider.label_padding)
-#end
-
-
 
 ################################################################################
 #=doc
 .. class:: MXDataProvider
 
-   A data provider that wrap built-in data iterators from libmxnet.
+   A data provider that wrap built-in data iterators from libmxnet. See below for
+   a list of built-in data iterators.
 =#
 type MXDataProvider <: AbstractDataProvider
   handle     :: MX_DataIterHandle
@@ -558,7 +502,7 @@ function get_label(provider :: MXDataProvider, batch :: MXDataBatch)
 end
 function count_samples(provider :: MXDataProvider, batch :: MXDataBatch)
   ref_pad = Ref{Cint}(0)
-  @mxcall(:MXDataIterGetPadNum, (MX_handle, Ref{Cint}), batch.provider.handle, ref_pad)
+  @mxcall(:MXDataIterGetPadNum, (MX_handle, Ref{Cint}), provider.handle, ref_pad)
   return provider.batch_size - Int(ref_pad[])
 end
 
