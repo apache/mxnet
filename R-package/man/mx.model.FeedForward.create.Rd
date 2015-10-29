@@ -6,9 +6,9 @@
 \usage{
 mx.model.FeedForward.create(symbol, X, y = NULL, ctx = NULL,
   num.round = 10, optimizer = "sgd", initializer = mx.init.uniform(0.01),
-  eval.data = NULL, eval.metric = NULL, iter.end.callback = NULL,
-  epoch.end.callback = NULL, array.batch.size = 128, kvstore = "local",
-  ...)
+  eval.data = NULL, eval.metric = NULL, epoch.end.callback = NULL,
+  batch.end.callback = NULL, array.batch.size = 128,
+  array.layout = "auto", kvstore = "local", ...)
 }
 \arguments{
 \item{symbol}{The symbolic configuration of the neural network.}
@@ -37,14 +37,21 @@ The validation set used for validation evaluation during the progress}
 \item{eval.metric}{function, optional
 The evaluation function on the results.}
 
-\item{iter.end.callback}{function, optional
+\item{epoch.end.callback}{function, optional
 The callback when iteration ends.}
 
-\item{epoch.end.callback}{function, optional
+\item{batch.end.callback}{function, optional
 The callback when one mini-batch iteration ends.}
 
 \item{array.batch.size}{integer (default=128)
 The batch size used for R array training.}
+
+\item{array.layout}{can be "auto", "colmajor", "rowmajor", (detault=auto)
+The layout of array. "rowmajor" is only supported for two dimensional array.
+For matrix, "rowmajor" means dim(X) = c(nexample, nfeatures),
+"colmajor" means dim(X) = c(nfeatures, nexample)
+"auto" will auto detect the layout by match the feature size,
+ and will report error when X is a square matrix to ask user to explicitly specify layout.}
 
 \item{kvstore}{string (default="local")
 The parameter synchronization scheme in multiple devices.}
