@@ -1,7 +1,7 @@
 import sys, os
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.append("../../predict/python/")
-sys.path.append("../../python/")
+sys.path.append("../../../predict/python/")
+sys.path.append("../../../python/")
 
 from mxnet_predict import Predictor, load_ndarray_file
 import mxnet as mx
@@ -14,8 +14,10 @@ prefix = "Inception/Inception_BN"
 num_round = 39
 symbol_file = "%s-symbol.json" % prefix
 param_file = "%s-0039.params" % prefix
-predictor = Predictor(symbol_file, param_file, {'data':(1, 3, 224, 224)})
-mean_img = load_ndarray_file("Inception/mean_224.nd")["mean_img"]
+predictor = Predictor(open(symbol_file).read(),
+                      open(param_file).read(),
+                      {'data':(1, 3, 224, 224)})
+mean_img = load_ndarray_file(open("Inception/mean_224.nd").read())["mean_img"]
 
 synset = [l.strip() for l in open('Inception/synset.txt').readlines()]
 

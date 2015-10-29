@@ -37,8 +37,9 @@ typedef void *NDListHandle;
 MXNET_DLL const char* MXGetLastError();
 /*!
  * \brief create a predictor
- * \param symbol_file The path to the symbol file.
- * \param param_file the path to the parameter file.
+ * \param symbol_json_str The JSON string of the symbol.
+ * \param param_bytes The in-memory raw bytes of parameter ndarray file.
+ * \param param_size The size of parameter ndarray file.
  * \param dev_type The device type, 1: cpu, 2:gpu
  * \param dev_id The device id of the predictor.
  * \param num_input_nodes Number of input nodes to the net,
@@ -53,8 +54,9 @@ MXNET_DLL const char* MXGetLastError();
  * \param out The created predictor handle.
  * \return 0 when success, -1 when failure.
  */
-MXNET_DLL int MXPredCreate(const char* symbol_file,
-                           const char* param_file,
+MXNET_DLL int MXPredCreate(const char* symbol_json_str,
+                           const char* param_bytes,
+                           size_t param_size,
                            int dev_type, int dev_id,
                            mx_uint num_input_nodes,
                            const char** input_keys,
@@ -114,12 +116,14 @@ MXNET_DLL int MXPredFree(PredictorHandle handle);
 /*!
  * \brief Create a NDArray List by loading from ndarray file.
  *     This can be used to load mean image file.
- * \param nd_file The path to the ndarray file to load.
+ * \param nd_file_bytes The byte contents of nd file to be loaded.
+ * \param nd_file_size The size of the nd file to be loaded.
  * \param out The out put NDListHandle
  * \param out_length Length of the list.
  * \return 0 when success, -1 when failure.
  */
-MXNET_DLL int MXNDListCreate(const char* nd_file,
+MXNET_DLL int MXNDListCreate(const char* nd_file_bytes,
+                             size_t nd_file_size,
                              NDListHandle *out,
                              mx_uint* out_length);
 /*!

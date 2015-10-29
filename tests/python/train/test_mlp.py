@@ -20,7 +20,7 @@ def accuracy(label, pred):
     py = np.argmax(pred, axis=1)
     return np.sum(py == label) / float(label.size)
 
-num_round = 4
+num_epoch = 4
 prefix = './mlp'
 
 #check data
@@ -46,9 +46,9 @@ def test_mlp():
         X=train_dataiter,
         eval_data=val_dataiter,
         eval_metric=mx.metric.np(accuracy),
-        iter_end_callback=mx.callback.do_checkpoint(prefix),
+        epoch_end_callback=mx.callback.do_checkpoint(prefix),
         ctx=[mx.cpu(i) for i in range(2)],
-        num_round=num_round,
+        num_epoch=num_epoch,
         learning_rate=0.1, wd=0.0004,
         momentum=0.9)
 
@@ -78,7 +78,7 @@ def test_mlp():
     assert np.sum(np.abs(prob - prob2)) == 0
 
     # load model from checkpoint
-    model3 = mx.model.FeedForward.load(prefix, num_round)
+    model3 = mx.model.FeedForward.load(prefix, num_epoch)
     prob3 = model3.predict(val_dataiter)
     assert np.sum(np.abs(prob - prob3)) == 0
 
@@ -88,7 +88,7 @@ def test_mlp():
     prob4 = model4.predict(val_dataiter)
     assert np.sum(np.abs(prob - prob4)) == 0
 
-    for i in range(num_round):
+    for i in range(num_epoch):
         os.remove('%s-%04d.params' % (prefix, i + 1))
     os.remove('%s-symbol.json' % prefix)
     os.remove('%s-0128.params' % prefix)

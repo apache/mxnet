@@ -17,6 +17,7 @@ Contents
   - Introduces how to build mxnet with advanced features such as HDFS/S3 support, CUDNN
 - [Python Package Installation](#python-package-installation)
 - [R Package Installation](#r-package-installation)
+- [Docker Images](#docker-images)
 
 Build MXNet Library
 -------------------
@@ -146,3 +147,18 @@ Hopefully, we will now have mxnet on R!
 ## Note on Library Build
 We isolate the library build with Rcpp end to maximize the portability
   - MSVC is needed on windows to build the mxnet library, because of CUDA compatiblity issue of toolchains.
+
+Docker Images
+-------------
+Builds of MXNet are available as [Docker](https://www.docker.com/whatisdocker) images:
+[MXNet Docker (CPU)](https://hub.docker.com/r/kaixhin/mxnet/) or [MXNet Docker (CUDA)](https://hub.docker.com/r/kaixhin/cuda-mxnet/).
+These are updated on a weekly basis with the latest builds of MXNet. Examples of running bash in a Docker container
+are as follows:
+
+```bash
+sudo docker run -it kaixhin/mxnet
+sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia0 kaixhin/cuda-mxnet:7.0
+```
+
+For a guide to Docker, see the [official docs](https://docs.docker.com/userguide/). For more details on how to use the
+MXNet Docker images, including requirements for CUDA support, consult the [source project](https://github.com/Kaixhin/dockerfiles).

@@ -20,8 +20,10 @@
 namespace mxnet {
 namespace op {
 
+namespace concat_enum {
 enum ConcatOpInputs {kData0, kData1, kData2, kData3, kData4};
 enum ConcatOpOutputs {kOut};
+}  // namespace concat_enum
 
 struct ConcatParam : public dmlc::Parameter<ConcatParam> {
   int num_args;
@@ -46,24 +48,24 @@ class ConcatOp : public Operator {
     using namespace mshadow::expr;
     CHECK_EQ(static_cast<int>(in_data.size()), size_);
     CHECK_EQ(out_data.size(), 1);
-    CHECK_EQ(req[kOut], kWriteTo);
+    CHECK_EQ(req[concat_enum::kOut], kWriteTo);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     std::vector<Tensor<xpu, 4> > data(size_);
     Tensor<xpu, 4> out;
-    if (in_data[kData0].ndim() == 2) {
+    if (in_data[concat_enum::kData0].ndim() == 2) {
       uint32_t dim = 0;
       for (int i = 0; i < size_; ++i) {
         Shape<4> dshape = Shape4(in_data[i].shape_[0], in_data[i].shape_[1], 1, 1);
         data[i] = in_data[i].get_with_shape<xpu, 4, real_t>(dshape, s);
         dim += in_data[i].shape_[1];
       }
-      Shape<4> dshape_out = Shape4(in_data[kData0].shape_[0], dim, 1, 1);
-      out = out_data[kOut].get_with_shape<xpu, 4, real_t>(dshape_out, s);
+      Shape<4> dshape_out = Shape4(in_data[concat_enum::kData0].shape_[0], dim, 1, 1);
+      out = out_data[concat_enum::kOut].get_with_shape<xpu, 4, real_t>(dshape_out, s);
     } else {
       for (int i = 0; i < size_; ++i) {
         data[i] = in_data[i].get<xpu, 4, real_t>(s);
       }
-      out = out_data[kOut].get<xpu, 4, real_t>(s);
+      out = out_data[concat_enum::kOut].get<xpu, 4, real_t>(s);
     }
     Concatenate(data, &out);
   }
@@ -82,7 +84,7 @@ class ConcatOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     std::vector<Tensor<xpu, 4> > grad_in(size_);
     Tensor<xpu, 4> grad;
-    if (out_grad[kOut].ndim() == 2) {
+    if (out_grad[concat_enum::kOut].ndim() == 2) {
       uint32_t dim = 0;
       for (int i = 0; i < size_; ++i) {
         Shape<4> dshape = Shape4(in_grad[i].shape_[0], in_grad[i].shape_[1], 1, 1);
@@ -90,14 +92,14 @@ class ConcatOp : public Operator {
         dim += in_grad[i].shape_[1];
         CHECK_EQ(req[i], kWriteTo);
       }
-      Shape<4> dshape_out = Shape4(in_grad[kData0].shape_[0], dim, 1, 1);
-      grad = out_grad[kOut].get_with_shape<xpu, 4, real_t>(dshape_out, s);
+      Shape<4> dshape_out = Shape4(in_grad[concat_enum::kData0].shape_[0], dim, 1, 1);
+      grad = out_grad[concat_enum::kOut].get_with_shape<xpu, 4, real_t>(dshape_out, s);
     } else {
       for (int i = 0; i < size_; ++i) {
         grad_in[i] = in_grad[i].get<xpu, 4, real_t>(s);
         CHECK_EQ(req[i], kWriteTo);
       }
-      grad = out_grad[kOut].get<xpu, 4, real_t>(s);
+      grad = out_grad[concat_enum::kOut].get<xpu, 4, real_t>(s);
     }
     Split(grad, &grad_in);
   }
@@ -133,7 +135,7 @@ class ConcatProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
-    TShape dshape = in_shape->at(kData0);
+    TShape dshape = in_shape->at(concat_enum::kData0);
     if (dshape.ndim() == 0) return false;
     CHECK_GT(dshape.ndim(), 1);
     for (int i = 1; i < param_.num_args; ++i) {

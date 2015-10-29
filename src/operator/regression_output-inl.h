@@ -16,9 +16,12 @@
 
 namespace mxnet {
 namespace op {
+
+namespace reg_enum {
 enum RegressionOutputOpInputs {kData, kLabel};
 enum RegressionOutputOutputs {kOut};
 enum RegressionOutputType {kLinear, kLogistic};
+}  // reg_enum
 
 // Special Operator to output regression value in forward
 // And get gradient in calculation.
@@ -35,9 +38,9 @@ class RegressionOutputOp : public Operator {
     CHECK_EQ(in_data.size(), 2) << "RegressionOutputOp Input: [data, label]";
     CHECK_EQ(out_data.size(), 1) << "RegressionOutputOp Output: [output]";
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
-    Assign(out, req[kOut], F<ForwardOp>(data));
+    Tensor<xpu, 2> data = in_data[reg_enum::kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> out = out_data[reg_enum::kOut].FlatTo2D<xpu, real_t>(s);
+    Assign(out, req[reg_enum::kOut], F<ForwardOp>(data));
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -54,19 +57,19 @@ class RegressionOutputOp : public Operator {
     CHECK_GE(in_grad.size(), 1);
     CHECK_GE(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 1> label = in_data[kLabel].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> grad = in_grad[kData].FlatTo2D<xpu, real_t>(s);
-    Assign(grad, req[kData], F<BackwardOp>(out, reshape(label, grad.shape_)));
+    Tensor<xpu, 1> label = in_data[reg_enum::kLabel].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 2> out = out_data[reg_enum::kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> grad = in_grad[reg_enum::kData].FlatTo2D<xpu, real_t>(s);
+    Assign(grad, req[reg_enum::kData], F<BackwardOp>(out, reshape(label, grad.shape_)));
   }
 };
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateRegressionOutputOp(RegressionOutputType type);
+Operator* CreateRegressionOutputOp(reg_enum::RegressionOutputType type);
 
 #if DMLC_USE_CXX11
-template<RegressionOutputType type>
+template<reg_enum::RegressionOutputType type>
 class RegressionOutputProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
@@ -100,8 +103,8 @@ class RegressionOutputProp : public OperatorProperty {
 
   std::string TypeString() const override {
     switch (type) {
-      case kLinear: return "LinearRegressionOutput";
-      case kLogistic: return "LogisticRegressionOutput";
+      case reg_enum::kLinear: return "LinearRegressionOutput";
+      case reg_enum::kLogistic: return "LogisticRegressionOutput";
       default: LOG(FATAL) << "unknown type"; return "";
     }
   }
@@ -110,7 +113,7 @@ class RegressionOutputProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    return {in_data[kLabel], out_data[kOut]};
+    return {in_data[reg_enum::kLabel], out_data[reg_enum::kOut]};
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
@@ -118,13 +121,13 @@ class RegressionOutputProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data,
     const std::vector<void*> &in_grad) const override {
-    return {{out_data[kOut], in_grad[kData]}};
+    return {{out_data[reg_enum::kOut], in_grad[reg_enum::kData]}};
   }
 
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
     const std::vector<int> &in_data,
     const std::vector<void*> &out_data) const override {
-    return {{in_data[kData], out_data[kOut]}};
+    return {{in_data[reg_enum::kData], out_data[reg_enum::kOut]}};
   }
 
   Operator* CreateOperator(Context ctx) const;
