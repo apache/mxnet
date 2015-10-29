@@ -133,8 +133,7 @@ abstract AbstractDataProviderState
       :return: a vector of labels in this batch. Similar to :func:`get_data`.
 
 
-   The following function will be automatically defined. They are primarily useful for debugging
-   and testing.
+   The following utility functions will be automatically defined.
 
    .. function:: get(provider, batch, name) -> NDArray
 
@@ -144,13 +143,58 @@ abstract AbstractDataProviderState
              provided in either :func:`provide_data() <AbstractDataProvider.provide_data>`
              or :func:`provide_label() <AbstractDataprovider.provide_label>`.
       :return: the corresponding data array corresponding to that name.
+
+   .. function:: load_data!(provider, batch, targets)
+
+      :param AbstractDataProvider provider: the data provider.
+      :param AbstractDataBatch batch: the data batch object.
+      :param targets: the targets to load data into.
+      :type targets: Vector{Vector{SlicedNDArray}}
+
+      The targets is a list of the same length as number of data provided by this provider.
+      Each element in the list is a list of :class:`SlicedNDArray`. This list described a
+      spliting scheme of this data batch into different slices, each slice is specified by
+      a slice-ndarray pair, where *slice* specify the range of samples in the mini-batch
+      that should be loaded into the corresponding *ndarray*.
+
+      This utility function is used in data parallelization, where a mini-batch is splited
+      and computed on several different devices.
+
+   .. function:: load_label!(provider, batch, targets)
+
+      :param AbstractDataProvider provider: the data provider.
+      :param AbstractDataBatch batch: the data batch object.
+      :param targets: the targets to load label into.
+      :type targets: Vector{Vector{SlicedNDArray}}
+
+      The same as :func:`load_data!`, except that this is for loading labels.
 =#
 abstract AbstractDataBatch
 
-"""A tuple of (slice, NDArray). Usually each NDArray resides on a different device, and each
-    slice describe which part of a larger piece of data should goto that device.
-"""
+#=doc
+.. class:: SlicedNDArray
+
+   A alias type of ``Tuple{UnitRange{Int},NDArray}``.
+=#
 typealias SlicedNDArray Tuple{UnitRange{Int},NDArray}
+
+function _load_general!(provider :: AbstractDataProvider, batch :: AbstractDataBatch,
+                        targets :: Vector{Vector{SlicedNDArray}}, loader::Function)
+  data = loader(provider, batch)
+  for (d_src, d_targets) in zip(data, targets)
+    for (slice_idx, d_dst) in d_targets
+      copy!(d_dst, slice(d_src, slice_idx))
+    end
+  end
+end
+function load_data!(provider :: AbstractDataProvider, batch :: AbstractDataBatch,
+                    targets :: Vector{Vector{SlicedNDArray}})
+  _load_general!(provider, batch, targets, get_data)
+end
+function load_label!(provider :: AbstractDataProvider, batch :: AbstractDataBatch,
+                     targets :: Vector{Vector{SlicedNDArray}})
+  _load_general!(provider, batch, targets, get_label)
+end
 
 """Root type for data batch
 
@@ -185,25 +229,25 @@ The Batch type should have a field named `provider` pointing to the underlying p
 `get_data` and `get_label` (mainly for debug purpose) will be able to use this.
 """
 
-function _get_data_or_label(batch::AbstractDataBatch, provide_func::Function, loader::Function)
-  data_shapes = provide_func(batch.provider)
-  data_arrays = [mx.empty(x[2]) for x in data_shapes]
-  batch_size  = get_batch_size(batch.provider)
-  data_arrays_fake_slice = [SlicedNDArray[(1:batch_size, x)] for x in data_arrays]
-  loader(batch, data_arrays_fake_slice)
-
-  if length(data_arrays) == 1
-    return data_arrays[1]
-  else
-    return data_arrays
-  end
-end
-function get_data(batch :: AbstractDataBatch)
-  _get_data_or_label(batch, provide_data, load_data!)
-end
-function get_label(batch :: AbstractDataBatch)
-  _get_data_or_label(batch, provide_label, load_label!)
-end
+#function _get_data_or_label(batch::AbstractDataBatch, provide_func::Function, loader::Function)
+#  data_shapes = provide_func(batch.provider)
+#  data_arrays = [mx.empty(x[2]) for x in data_shapes]
+#  batch_size  = get_batch_size(batch.provider)
+#  data_arrays_fake_slice = [SlicedNDArray[(1:batch_size, x)] for x in data_arrays]
+#  loader(batch, data_arrays_fake_slice)
+#
+#  if length(data_arrays) == 1
+#    return data_arrays[1]
+#  else
+#    return data_arrays
+#  end
+#end
+#function get_data(batch :: AbstractDataBatch)
+#  _get_data_or_label(batch, provide_data, load_data!)
+#end
+#function get_label(batch :: AbstractDataBatch)
+#  _get_data_or_label(batch, provide_label, load_label!)
+#end
 
 ################################################################################
 # ArrayDataProvider
@@ -429,7 +473,7 @@ function Base.done(provider :: MXDataProvider, state :: MXDataProviderState)
   return !state.has_next
 end
 function Base.next(provider :: MXDataProvider, state :: MXDataProviderState)
-  return (MXDataBatch(provider), state)
+  return (MXDataBatch(), state)
 end
 
 function get_data(provider :: MXDataProvider, batch :: MXDataBatch)

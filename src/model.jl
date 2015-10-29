@@ -186,12 +186,12 @@ function predict(self :: FeedForward, data :: AbstractDataProvider; overwrite::B
   data_arrays =  [SlicedNDArray[(1:batch_size, self.pred_exec.arg_dict[name])] for name in data_names]
   output_list = [Array{MX_float}[] for i=1:length(self.pred_exec.outputs)]
   for batch in data
-    load_data!(batch, data_arrays)
+    load_data!(data, batch, data_arrays)
     forward(self.pred_exec, is_train=false)
     if isa(callback, Void)
       # no callback, accumulate the data and return at the end
       for (o_list, o_nd) in zip(output_list, self.pred_exec.outputs)
-        push!(o_list, copy(slice(o_nd, 1:batch_size-get_pad(batch))))
+        push!(o_list, copy(slice(o_nd, 1:count_samples(data, batch))))
       end
     else
       outputs = self.pred_exec.outputs
@@ -403,8 +403,8 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
     _invoke_callbacks(self, opts.callbacks, op_state, AbstractBatchCallback)
 
     for batch in data
-      load_data!(batch, data_arrays)
-      load_label!(batch, label_arrays)
+      load_data!(data, batch, data_arrays)
+      load_label!(data, batch, label_arrays)
 
       # forward and backward
       for (texec, islice) in zip(train_execs, slices)
@@ -453,7 +453,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
       _invoke_callbacks(self, opts.callbacks, op_state, AbstractBatchCallback)
 
       # update evaluation metric on training set
-      load_label!(batch, cpu_label_arrays_full_slice)
+      load_label!(data, batch, cpu_label_arrays_full_slice)
       update!(opts.eval_metric, cpu_label_arrays, cpu_output_arrays)
     end # end of one epoch
 
@@ -474,7 +474,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
       reset!(opts.eval_metric)
       for batch in opts.eval_data
-        load_data!(batch, data_arrays)
+        load_data!(opts.eval_data, batch, data_arrays)
 
         # forward and backward
         for (texec, islice) in zip(train_execs, slices)
@@ -485,7 +485,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
             copy!(slice(cpu_out, islice), dev_out)
           end
         end
-        load_label!(batch, cpu_label_arrays_full_slice)
+        load_label!(opts.eval_data, batch, cpu_label_arrays_full_slice)
         update!(opts.eval_metric, cpu_label_arrays, cpu_output_arrays)
       end
 

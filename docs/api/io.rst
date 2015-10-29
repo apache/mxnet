@@ -134,8 +134,7 @@ and split it into mini-batches so that the model can consume the data in a unifo
       :return: a vector of labels in this batch. Similar to :func:`get_data`.
 
 
-   The following function will be automatically defined. They are primarily useful for debugging
-   and testing.
+   The following utility functions will be automatically defined.
 
    .. function:: get(provider, batch, name) -> NDArray
 
@@ -145,6 +144,38 @@ and split it into mini-batches so that the model can consume the data in a unifo
              provided in either :func:`provide_data() <AbstractDataProvider.provide_data>`
              or :func:`provide_label() <AbstractDataprovider.provide_label>`.
       :return: the corresponding data array corresponding to that name.
+
+   .. function:: load_data!(provider, batch, targets)
+
+      :param AbstractDataProvider provider: the data provider.
+      :param AbstractDataBatch batch: the data batch object.
+      :param targets: the targets to load data into.
+      :type targets: Vector{Vector{SlicedNDArray}}
+
+      The targets is a list of the same length as number of data provided by this provider.
+      Each element in the list is a ``Vector{SlicedNDArray}``. This vector described a
+      spliting of this data batch into different slices, each slice is specified by
+      a slice-ndarray pair, where *slice* specify the range of samples in the mini-batch
+      that should be loaded into the corresponding *ndarray*.
+
+      This utility function is used in data parallelization, where a mini-batch is splited
+      and computed on several different devices.
+
+   .. function:: load_label!(provider, batch, targets)
+
+      :param AbstractDataProvider provider: the data provider.
+      :param AbstractDataBatch batch: the data batch object.
+      :param targets: the targets to load label into.
+      :type targets: Vector{Vector{SlicedNDArray}}
+
+      The same as :func:`load_data!`, except that this is for loading labels.
+
+
+
+
+.. class:: SlicedNDArray
+
+   A alias type of ``Pair{UnitRange{Int},NDArray}``.
 
 
 
