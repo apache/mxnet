@@ -89,6 +89,24 @@ type Fixed <: AbstractLearningRateScheduler
 end
 get_learning_rate(self :: Fixed, state :: OptimizationState) = self.learning_rate
 
+#=doc
+.. class:: LearningRate.Exp
+
+   $$\eta_t = \eta_0\gamma^t$$. Here $$t$$ is the epoch count, or the iteration
+   count if ``decay_on_iteration`` is set to true.
+=#
+type Exp <: AbstractLearningRateScheduler
+  learning_rate :: Float64
+  gamma         :: Float64
+  on_iteration  :: Bool
+end
+function Exp(base_lr::Real; gamma::Real=0.9, decay_on_iteration::Bool=false)
+  @assert(0 < gamma < 1)
+  Exp(Float64(base_lr), Float64(gamma), decay_on_iteration)
+end
+get_learning_rate(self :: Exp, state :: OptimizationState) =
+    self.learning_rate * self.gamma ^ (self.on_iteration ? state.curr_iter : state.curr_epoch)
+
 end # module LearningRate
 ################################################################################
 function get_lr_scheduler(scheduler :: Any, lr :: Real)
