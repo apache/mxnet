@@ -258,7 +258,6 @@ class MXDataIter(DataIter):
         check_call(_LIB.MXDataIterGetPadNum(self.handle, ctypes.byref(pad)))
         return pad.value
 
-
 def _make_io_iterator(handle):
     """Create an io iterator by handle."""
     name = ctypes.c_char_p()

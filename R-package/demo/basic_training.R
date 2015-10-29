@@ -41,4 +41,4 @@ model <- mx.model.FeedForward.create(softmax, X=X, y=y,
                                      ctx=devices, num.round=1,
                                      learning.rate=0.1, momentum=0.9,
                                      initializer=mx.init.uniform(0.07),
-                                     epoch.end.callback=mx.callback.log.train.metric(100))
+                                     batch.end.callback=mx.callback.log.train.metric(100))
