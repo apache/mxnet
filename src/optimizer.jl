@@ -92,7 +92,7 @@ get_learning_rate(self :: Fixed, state :: OptimizationState) = self.learning_rat
 #=doc
 .. class:: LearningRate.Exp
 
-   $$\eta_t = \eta_0\gamma^t$$. Here $$t$$ is the epoch count, or the iteration
+   :math:`\eta_t = \eta_0\gamma^t`. Here :math:`t` is the epoch count, or the iteration
    count if ``decay_on_iteration`` is set to true.
 =#
 type Exp <: AbstractLearningRateScheduler

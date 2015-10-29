@@ -72,6 +72,14 @@ Common interfaces
 
 
 
+.. class:: LearningRate.Exp
+
+   :math:`\eta_t = \eta_0\gamma^t`. Here :math:`t` is the epoch count, or the iteration
+   count if ``decay_on_iteration`` is set to true.
+
+
+
+
 .. function:: get_momentum(scheduler, state)
 
    :param AbstractMomentumScheduler scheduler: the momentum scheduler.
@@ -122,9 +130,10 @@ Built-in optimizers
 .. function:: normalized_gradient(opts, state, grad)
 
    :param AbstractOptimizerOptions opts: options for the optimizer, should contain the field
-          ``grad_scale`` and ``grad_clip``.
+          ``grad_scale``, ``grad_clip`` and ``weight_decay``.
    :param OptimizationState state: the current optimization state.
-   :param NDArray grad: the original gradient.
+   :param NDArray weight: the trainable weights.
+   :param NDArray grad: the original gradient of the weights.
 
    Get the properly normalized gradient (re-scaled and clipped if necessary).
 
