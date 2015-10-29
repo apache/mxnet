@@ -212,6 +212,17 @@ function load_label!(provider :: AbstractDataProvider, batch :: AbstractDataBatc
   _load_general!(provider, batch, targets, get_label)
 end
 
+function load_data!(provider :: AbstractDataProvider, batch :: AbstractDataBatch, targets :: Vector{NDArray})
+  for (src, dst) in zip(get_data(provider, batch), targets)
+    copy!(dst, src)
+  end
+end
+function load_label!(provider :: AbstractDataProvider, batch :: AbstractDataBatch, targets :: Vector{NDArray})
+  for (src, dst) in zip(get_label(provider, batch), targets)
+    copy!(dst, src)
+  end
+end
+
 import Base.get
 function get(provider :: AbstractDataProvider, batch :: AbstractDataBatch, name :: Base.Symbol)
   for (idx, (k, s)) in enumerate(provide_data(provider))

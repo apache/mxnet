@@ -183,7 +183,7 @@ function predict(self :: FeedForward, data :: AbstractDataProvider; overwrite::B
   _setup_predictor(self, overwrite; data_shapes...)
 
   batch_size  = get_batch_size(data)
-  data_arrays =  [SlicedNDArray[(1:batch_size, self.pred_exec.arg_dict[name])] for name in data_names]
+  data_arrays =  [self.pred_exec.arg_dict[name] for name in data_names]
   output_list = [Array{MX_float}[] for i=1:length(self.pred_exec.outputs)]
   for batch in data
     load_data!(data, batch, data_arrays)
@@ -386,7 +386,6 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   cpu_dev = Context(CPU)
   cpu_output_arrays = [empty(shape, cpu_dev) for shape in output_shapes]
   cpu_label_arrays  = [empty(shape, cpu_dev) for (name,shape) in provide_label(data)]
-  cpu_label_arrays_full_slice = [SlicedNDArray[(1:batch_size, x)] for x in cpu_label_arrays]
 
   # invoke callbacks on epoch 0
   _invoke_callbacks(self, opts.callbacks, op_state, AbstractEpochCallback)
@@ -453,7 +452,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
       _invoke_callbacks(self, opts.callbacks, op_state, AbstractBatchCallback)
 
       # update evaluation metric on training set
-      load_label!(data, batch, cpu_label_arrays_full_slice)
+      load_label!(data, batch, cpu_label_arrays)
       update!(opts.eval_metric, cpu_label_arrays, cpu_output_arrays)
     end # end of one epoch
 
@@ -485,7 +484,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
             copy!(slice(cpu_out, islice), dev_out)
           end
         end
-        load_label!(opts.eval_data, batch, cpu_label_arrays_full_slice)
+        load_label!(opts.eval_data, batch, cpu_label_arrays)
         update!(opts.eval_metric, cpu_label_arrays, cpu_output_arrays)
       end
 
