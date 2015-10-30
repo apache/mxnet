@@ -105,7 +105,6 @@ def c_array(ctype, values):
     """
     return (ctype * len(values))(*values)
 
-
 def ctypes2buffer(cptr, length):
     """Convert ctypes pointer to buffer type.
 
@@ -197,6 +196,23 @@ def ctypes2docstring(num_args, arg_names, arg_types, arg_descs, remove_dup=True)
     doc_str = doc_str % ('\n'.join(param_str))
     return doc_str
 
+def ctypes2array(ctype, ptr, length):
+    """Convert ctypes returned pointer to python array.
+
+    type : ctype
+        Type of array elements
+    ptr : ctype_pointer
+        address of array
+    length : int
+        length of array
+
+    Returns
+    -------
+    array : list
+        Python array
+    """
+
+    return ctypes.cast(ptr, ctypes.POINTER(ctype*length)).contents
 
 def _notify_shutdown():
     """Notify MXNet about a shutdown."""

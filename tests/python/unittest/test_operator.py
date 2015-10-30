@@ -202,10 +202,25 @@ def check_multi_softmax_with_shape(shape, xpu):
     exec1.backward()
     print(grad.asnumpy())
 
+def test_python_op():
+    X = mx.symbol.Variable('X')
+    op = mx.operator.PythonOp(False)
+    s = op.get_symbol([X])
+
+    x = mx.ndarray.ones((10))*10
+    dx = mx.ndarray.zeros((10))
+    dy = mx.ndarray.ones((10))
+    exec1 = s.bind(mx.cpu(), args=[x], args_grad = {'X': dx})
+    exec1.forward()
+    assert reldiff(x.asnumpy(), exec1.outputs[0].asnumpy()) < 1e-5
+    exec1.backward()
+    assert reldiff(dy.asnumpy(), dx.asnumpy()) < 1e-5
+
 if __name__ == '__main__':
     test_elementwise_sum()
     test_concat()
     test_slice_channel()
     test_regression()
+    test_python_op()
     #check_softmax_with_shape((3,4), mx.cpu())
     #check_multi_softmax_with_shape((3,4,5), mx.cpu())
