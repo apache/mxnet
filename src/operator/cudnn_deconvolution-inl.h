@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file cudnn_convolution-inl.h
+ * \file cudnn_deconvolution-inl.h
  * \brief
  * \author Wei Wu
 */
