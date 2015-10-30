@@ -51,7 +51,7 @@ def main():
                     first_conv = False
 
     model = mx.model.FeedForward(ctx=mx.cpu(), symbol=prob,
-            arg_params=arg_params, aux_params={}, num_round=1,
+            arg_params=arg_params, aux_params={}, num_epoch=1,
             learning_rate=0.05, momentum=0.9, wd=0.0001)
 
     model.save(args.save_model_name)
