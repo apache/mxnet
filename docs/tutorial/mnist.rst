@@ -71,7 +71,8 @@ the code to construct the data provider into ``mnist-data.jl`` so that it could 
    include("mnist-data.jl")
    train_provider, eval_provider = get_mnist_providers(batch_size)
 
-If you need to write your own data providers for customized data format, please refer to **TODO**: pointer to data provider API.
+If you need to write your own data providers for customized data format, please
+refer to :class:`AbstractDataProvider`.
 
 Given the architecture and data, we can instantiate an *model* to do the actual
 training. ``mx.FeedForward`` is the built-in model that is suitable for most feed-forward architectures. When constructing the model, we also specify the *context* on which the computation should be carried out. Because this is a really tiny MLP, we will just run on a single CPU device.
@@ -249,4 +250,4 @@ Alternatively, when the dataset is huge, one can provide a callback to
 ``mx.predict``, then the callback function will be invoked with the outputs of
 each mini-batch. The callback could, for example, write the data to disk for
 future inspection. In this case, no value is returned from ``mx.predict``. See
-also **TODO** provide link to prediction API.
+also :func:`predict`.
