@@ -316,8 +316,10 @@ class DeconvolutionProp : public OperatorProperty {
     CHECK(ksize_x <= dshape[3] && ksize_y <= dshape[2])
         << "kernel size exceed input";
     (*out_shape)[deconv::kOut][1] = param_.num_filter;
-    (*out_shape)[deconv::kOut][2] = param_.stride[0] * (dshape[2] - 1) + ksize_y - 2 * param_.pad[0];
-    (*out_shape)[deconv::kOut][3] = param_.stride[1] * (dshape[3] - 1) + ksize_x - 2 * param_.pad[1];
+    (*out_shape)[deconv::kOut][2] = param_.stride[0] * (dshape[2] - 1) +
+        ksize_y - 2 * param_.pad[0];
+    (*out_shape)[deconv::kOut][3] = param_.stride[1] * (dshape[3] - 1) +
+        ksize_x - 2 * param_.pad[1];
     return true;
   }
 
