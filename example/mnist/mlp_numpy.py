@@ -39,7 +39,7 @@ val_iter = mx.io.NDArrayIter(data=val_data, label=val_label, batch_size=batch_si
 logging.basicConfig(level=logging.DEBUG)
 
 model = mx.model.FeedForward(
-    ctx = mx.cpu(), symbol = mlp, num_round = 20,
+    ctx = mx.cpu(), symbol = mlp, num_epoch = 20,
     learning_rate = 0.1, momentum = 0.9, wd = 0.00001)
 
 # train by using Numpy ndarray direcly

@@ -29,7 +29,8 @@ int main(int argc, char *argv[]) {
            "\tlabel_width=WIDTH[default=1] specify the label_width in the list, by default set to 1\n"\
            "\tnsplit=NSPLIT[default=1] used for part generation, logically split the image.list to NSPLIT parts by position\n"\
            "\tpart=PART[default=0] used for part generation, pack the images from the specific part in image.list\n"
-           "\tcenter_crop=CENTER_CROP[default=0] specify whether to crop the center image to make it rectangular.\n");
+           "\tcenter_crop=CENTER_CROP[default=0] specify whether to crop the center image to make it rectangular.\n"
+           "\tquality=QUALITY[default=80] JPEG quality for encoding, 1-100.\n");
     return 0;
   }
   int label_width = 1;
@@ -37,6 +38,7 @@ int main(int argc, char *argv[]) {
   int nsplit = 1;
   int partid = 0;
   int center_crop = 0;
+  int quality = 80;
   for (int i = 4; i < argc; ++i) {
     char key[128], val[128];
     if (sscanf(argv[i], "%[^=]=%s", key, val) == 2) {
@@ -45,6 +47,7 @@ int main(int argc, char *argv[]) {
       if (!strcmp(key, "nsplit")) nsplit = atoi(val);
       if (!strcmp(key, "part")) partid = atoi(val);
       if (!strcmp(key, "center_crop")) center_crop = atoi(val);
+      if (!strcmp(key, "quality")) quality = atoi(val);
     }
   }
   if (new_size > 0) {
@@ -79,7 +82,8 @@ int main(int argc, char *argv[]) {
   std::vector<unsigned char> encode_buf;
   std::vector<int> encode_params;
   encode_params.push_back(CV_IMWRITE_JPEG_QUALITY);
-  encode_params.push_back(80);
+  encode_params.push_back(quality);
+  LOG(INFO) << "JPEG encoding quality: " << quality;
   dmlc::InputSplit::Blob line;
 
   while (flist->NextRecord(&line)) {
