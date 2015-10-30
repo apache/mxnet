@@ -17,6 +17,7 @@ inline Engine* CreateEngine() {
   std::string stype = type;
 
   Engine *ret = nullptr;
+  #if MXNET_PREDICT_ONLY == 0
   if (stype == "NaiveEngine") {
     ret = CreateNaiveEngine();
   } else if (stype == "ThreadedEngine") {
@@ -24,6 +25,9 @@ inline Engine* CreateEngine() {
   } else if (stype == "ThreadedEnginePerDevice") {
     ret = CreateThreadedEnginePerDevice();
   }
+  #else
+  ret = CreateNaiveEngine();
+  #endif
 
   if (ret ==nullptr) {
     LOG(FATAL) << "Cannot find Engine " << type;
