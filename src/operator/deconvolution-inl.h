@@ -21,9 +21,11 @@
 namespace mxnet {
 namespace op {
 
-enum DeconvolutionOpInputs {kData, kWeight, kBias};
-enum DeconvolutionOpOutputs {kOut};
-enum DeconvolutionOpResource {kTempSpace};
+namespace deconv {
+  enum DeconvolutionOpInputs {kData, kWeight, kBias};
+  enum DeconvolutionOpOutputs {kOut};
+  enum DeconvolutionOpResource {kTempSpace};
+}
 
 struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   TShape kernel;
@@ -68,24 +70,24 @@ class DeconvolutionOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(req[kOut], kWriteTo);
+    CHECK_EQ(req[deconv::kOut], kWriteTo);
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> out = out_data[kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> data = in_data[deconv::kData].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> out = out_data[deconv::kOut].get<xpu, 4, real_t>(s);
     Shape<3> wmat_shape =
         Shape3(param_.num_group,
                data.shape_[1] / param_.num_group,
                param_.num_filter / param_.num_group * param_.kernel[0] * param_.kernel[1]);
-    Tensor<xpu, 3> wmat = in_data[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
+    Tensor<xpu, 3> wmat = in_data[deconv::kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
 #if defined(__CUDACC__)
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
 #endif
     const index_t nbatch = data.size(0);
-    Tensor<xpu, 1> workspace = ctx.requested[kTempSpace].get_space<xpu>(
+    Tensor<xpu, 1> workspace = ctx.requested[deconv::kTempSpace].get_space<xpu>(
         Shape1(this->InitTemp(out.shape_, data.shape_)), s);
     for (index_t i = 0; i < nbatch; i += nstep_) {
       const index_t step = std::min(nstep_, nbatch - i);
@@ -137,7 +139,7 @@ class DeconvolutionOp : public Operator {
     }
     if (!param_.no_bias) {
       // add bias, broadcast bias to dim 1: channel
-      Tensor<xpu, 1> bias = in_data[kBias].get<xpu, 1, real_t>(s);
+      Tensor<xpu, 1> bias = in_data[deconv::kBias].get<xpu, 1, real_t>(s);
       out += broadcast<1>(bias, out.shape_);
     }
   }
@@ -156,24 +158,24 @@ class DeconvolutionOp : public Operator {
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     CHECK_EQ(req.size(), expected);
-    CHECK_EQ(in_data[kWeight].CheckContiguous(), true);
+    CHECK_EQ(in_data[deconv::kWeight].CheckContiguous(), true);
     // get data
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> grad = out_grad[kOut].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> gdata = in_grad[kData].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> data = in_data[deconv::kData].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> grad = out_grad[deconv::kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> gdata = in_grad[deconv::kData].get<xpu, 4, real_t>(s);
     Shape<3> wmat_shape =
         Shape3(param_.num_group,
                data.shape_[1] / param_.num_group,
                param_.num_filter / param_.num_group * param_.kernel[0] * param_.kernel[1]);
-    Tensor<xpu, 3> wmat = in_data[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
-    Tensor<xpu, 3> gwmat = in_grad[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
+    Tensor<xpu, 3> wmat = in_data[deconv::kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
+    Tensor<xpu, 3> gwmat = in_grad[deconv::kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
 #if defined(__CUDACC__)
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
 #endif
     const index_t nbatch = data.size(0);
-    Tensor<xpu, 1> workspace = ctx.requested[kTempSpace].get_space<xpu>(
+    Tensor<xpu, 1> workspace = ctx.requested[deconv::kTempSpace].get_space<xpu>(
               Shape1(this->InitTemp(grad.shape_, data.shape_)), s);
     for (index_t i = 0; i < nbatch; i += nstep_) {
       const index_t step = std::min(nstep_, nbatch - i);
@@ -203,12 +205,12 @@ class DeconvolutionOp : public Operator {
         Tensor<xpu, 2> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
         if (i == 0) {
           Tensor<xpu, 2> tmp_gwmat = gwmat[gid];
-          Assign(tmp_gwmat, req[kWeight], dot(temp_dst[gid], tmpc.T()));
+          Assign(tmp_gwmat, req[deconv::kWeight], dot(temp_dst[gid], tmpc.T()));
         } else {
           gwmat[gid] += dot(temp_dst[gid], tmpc.T());
         }
       }
-      if (req[kData] == kWriteTo || req[kData] == kWriteInplace) {
+      if (req[deconv::kData] == kWriteTo || req[deconv::kData] == kWriteInplace) {
         for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
           Tensor<xpu, 2> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
           temp_dst[gid] = dot(wmat[gid], tmpc);
@@ -221,8 +223,8 @@ class DeconvolutionOp : public Operator {
       }
     }
     if (!param_.no_bias) {
-      Tensor<xpu, 1> gbias = in_grad[kBias].get<xpu, 1, real_t>(s);
-      Assign(gbias, req[kBias], sumall_except_dim<1>(grad));
+      Tensor<xpu, 1> gbias = in_grad[deconv::kBias].get<xpu, 1, real_t>(s);
+      Assign(gbias, req[deconv::kBias], sumall_except_dim<1>(grad));
     }
   }
 
@@ -289,15 +291,15 @@ class DeconvolutionProp : public OperatorProperty {
     } else {
       CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
     }
-    const TShape &dshape = (*in_shape)[kData];
+    const TShape &dshape = (*in_shape)[deconv::kData];
     if (dshape.ndim() ==  0) return false;
     CHECK_EQ(dshape.ndim(), 4) \
         << "Input data should be 4D in batch-num_filter-y-x";
     SHAPE_ASSIGN_CHECK(*in_shape,
-                       kWeight,
+                       deconv::kWeight,
                        Shape4(dshape[1], param_.num_filter, param_.kernel[0], param_.kernel[1]));
     if (!param_.no_bias) {
-      SHAPE_ASSIGN_CHECK(*in_shape, kBias, Shape1(param_.num_filter));
+      SHAPE_ASSIGN_CHECK(*in_shape, deconv::kBias, Shape1(param_.num_filter));
     }
     out_shape->clear();
     out_shape->push_back(dshape);
@@ -313,9 +315,9 @@ class DeconvolutionProp : public OperatorProperty {
         << "incorrect stride size: " << param_.stride;
     CHECK(ksize_x <= dshape[3] && ksize_y <= dshape[2])
         << "kernel size exceed input";
-    (*out_shape)[kOut][1] = param_.num_filter;
-    (*out_shape)[kOut][2] = param_.stride[0] * (dshape[2] - 1) + ksize_y - 2 * param_.pad[0];
-    (*out_shape)[kOut][3] = param_.stride[1] * (dshape[3] - 1) + ksize_x - 2 * param_.pad[1];
+    (*out_shape)[deconv::kOut][1] = param_.num_filter;
+    (*out_shape)[deconv::kOut][2] = param_.stride[0] * (dshape[2] - 1) + ksize_y - 2 * param_.pad[0];
+    (*out_shape)[deconv::kOut][3] = param_.stride[1] * (dshape[3] - 1) + ksize_x - 2 * param_.pad[1];
     return true;
   }
 
@@ -333,7 +335,7 @@ class DeconvolutionProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    return {out_grad[kOut], in_data[kData], in_data[kWeight]};
+    return {out_grad[deconv::kOut], in_data[deconv::kData], in_data[deconv::kWeight]};
   }
 
   std::vector<ResourceRequest> ForwardResource(
