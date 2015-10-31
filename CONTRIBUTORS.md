@@ -55,3 +55,4 @@ List of Contributors
 * [Xiaodong](https://github.com/XD-DENG)
 * [Nan Xiao](https://github.com/road2stat)
 * [Junyuan Xie](https://github.com/piiswrong)
+* [Wei Wu](https://github.com/tornadomeet)
