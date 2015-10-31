@@ -17,8 +17,13 @@ class NumpyOp(object):
     def __init__(self):
         self.info_ = None
 
+    def __call__(self, *args, **kwargs):
+        self.get_symbol(*args, **kwargs)
+
     def get_symbol(self, *args, **kwargs):
-        """Create a symbol from numpy operator.
+        """Create a symbol from numpy operator. 
+        This Should only be called once per instance if operator contains
+        internal states.
 
         Parameters
         ----------
