@@ -45,7 +45,6 @@ List of Contributors
 --------------------
 * [Full List of Contributors](https://github.com/dmlc/mxnet/graphs/contributors)
   - To contributors: please add your name to the list when you submit a patch to the project:)
-
 * [Feng Wang](https://github.com/happynear)
   - Feng makes mxnet compatible with Windows Visual Studio.
 * [Li Dong](https://github.com/donglixp)
