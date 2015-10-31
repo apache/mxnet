@@ -182,7 +182,11 @@ class PythonOpProp : public OperatorProperty {
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
-    param_.pinfo = reinterpret_cast<PythonOpInfo*>(param_.info);
+    for (auto iter = kwargs.begin(); iter != kwargs.end(); ++iter) {
+      if (iter->first == "info") {
+        sscanf(iter->second.c_str(), "%p", &param_.pinfo);
+      }
+    }
     param_.num_inputs_ = ListArguments().size();
     param_.num_outputs_ = ListOutputs().size();
   }
