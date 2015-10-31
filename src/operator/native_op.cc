@@ -21,8 +21,7 @@ DMLC_REGISTER_PARAMETER(NativeOpParam);
 
 MXNET_REGISTER_OP_PROPERTY(_Native, NativeOpProp)
 .describe("Stub for implementing an operator implemented in native frontend language.")
-.add_arguments(NativeOpParam::__FIELDS__())
-.set_key_var_num_args("num_args");
+.add_arguments(NativeOpParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

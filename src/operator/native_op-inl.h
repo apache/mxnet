@@ -24,7 +24,6 @@ namespace op {
 struct NativeOpParam : public dmlc::Parameter<NativeOpParam> {
   void *info;
   bool need_top_grad;
-  int num_args;
 
   NativeOpInfo *pinfo;
   int num_inputs_, num_outputs_;
@@ -33,8 +32,6 @@ struct NativeOpParam : public dmlc::Parameter<NativeOpParam> {
     DMLC_DECLARE_FIELD(need_top_grad).set_default(true)
     .describe("Whether this layer needs out grad for backward. "
       "Should be false for loss layers.");
-    DMLC_DECLARE_FIELD(num_args).set_range(1, 100)
-    .describe("Number of inputs to be passed to python layer.");
   }
 };
 

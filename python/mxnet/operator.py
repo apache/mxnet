@@ -18,7 +18,7 @@ class NumpyOp(object):
         self.info_ = None
 
     def __call__(self, *args, **kwargs):
-        self.get_symbol(*args, **kwargs)
+        return self.get_symbol(*args, **kwargs)
 
     def get_symbol(self, *args, **kwargs):
         """Create a symbol from numpy operator. 
@@ -148,7 +148,7 @@ class NumpyOp(object):
             list of output shapes calculated from in_shape,
             in the same order as declared in list_arguments.
         """
-        return in_shape, in_shape
+        return in_shape, [in_shape[0]]
 
     def list_outputs(self):
         """list_outputs interface. override to create new operators
@@ -158,7 +158,7 @@ class NumpyOp(object):
         outputs : list
             list of output blob names.
         """
-        return ['y']
+        return ['output']
 
     def list_arguments(self):
         """list_arguments interface. override to create new operators
@@ -169,7 +169,7 @@ class NumpyOp(object):
             list of argument shapes in the same order as
             declared in list_arguments.
         """
-        return ['x']
+        return ['data']
 
     def need_top_grad(self):
         """Whether this operator needs out_grad for backward.
