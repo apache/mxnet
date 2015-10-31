@@ -1,31 +1,24 @@
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-arguments, no-self-use
-"""Python interface for operators."""
+"""numpy interface for operators."""
 from __future__ import absolute_import
 
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer, c_void_p, cast, c_int, c_char, c_char_p
 from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared
 from . import symbol
 
-class PythonOp(object):
-    """Base class for python operators. Python operators allow parts
-    of computation in symbolic graph to be writen in python. This feature
+class NumpyOp(object):
+    """Base class for numpy operators. numpy operators allow parts
+    of computation in symbolic graph to be writen in numpy. This feature
     is intended for quickly hacking out a solution for non performance
     critical parts. Please consider write a c++ implementation if it becomes
     a bottleneck.
-
-    Parameters
-    ----------
-    need_top_grad : bool
-        Whether this operator needs out_grad for backward.
-        Should be set to False for loss layers.
     """
-    def __init__(self, need_top_grad=True):
+    def __init__(self):
         self.info_ = None
-        self.need_top_grad_ = need_top_grad
 
-    def get_symbol(self, args):
-        """Create a symbol from python operator.
+    def get_symbol(self, *args, **kwargs):
+        """Create a symbol from numpy operator.
 
         Parameters
         ----------
@@ -40,8 +33,8 @@ class PythonOp(object):
                                 POINTER(POINTER(mx_uint)), POINTER(c_int))
         infer_functype = CFUNCTYPE(None, c_int, POINTER(c_int), POINTER(POINTER(mx_uint)))
         list_functype = CFUNCTYPE(None, POINTER(POINTER(POINTER(c_char))))
-        class PythonOpInfo(Structure):
-            """Structure that holds Callback information. Passed to PythonOpProp"""
+        class NumpyOpInfo(Structure):
+            """Structure that holds Callback information. Passed to NumpyOpProp"""
             _fields_ = [
                 ('forward', fb_functype),
                 ('backward', fb_functype),
@@ -51,7 +44,7 @@ class PythonOp(object):
                 ]
         def forward_entry(num_tensor, tensor_ptrs, tensor_dims,
                           tensor_shapes, tensor_tags):
-            """C Callback for PythonOp::Forward"""
+            """C Callback for NumpyOp::Forward"""
             tensors = [[] for i in range(4)]
             for i in range(num_tensor):
                 shape = [tensor_shapes[i][j] for j in range(tensor_dims[i])]
@@ -61,7 +54,7 @@ class PythonOp(object):
 
         def backward_entry(num_tensor, tensor_ptrs, tensor_dims,
                            tensor_shapes, tensor_tags):
-            """C Callback for PythonOp::Backward"""
+            """C Callback for NumpyOp::Backward"""
             tensors = [[] for i in range(4)]
             for i in range(num_tensor):
                 shape = [tensor_shapes[i][j] for j in range(tensor_dims[i])]
@@ -72,7 +65,7 @@ class PythonOp(object):
 
         def infer_shape_entry(num_tensor, tensor_dims,
                               tensor_shapes):
-            """C Callback for PythonOpProp::InferShape"""
+            """C Callback for NumpyOpProp::InferShape"""
             n_in = len(self.list_arguments())
             n_out = len(self.list_outputs())
             assert num_tensor == n_in + n_out
@@ -87,28 +80,28 @@ class PythonOp(object):
                 tensor_dims[i] = len(rshape[i])
 
         def list_outputs_entry(out):
-            """C Callback for PythonOpProp::ListOutputs"""
+            """C Callback for NumpyOpProp::ListOutputs"""
             ret = self.list_outputs()
             ret = [c_str(i) for i in ret] + [c_char_p(0)]
             ret = c_array(c_char_p, ret)
             out[0] = cast(ret, POINTER(POINTER(c_char)))
 
         def list_arguments_entry(out):
-            """C Callback for PythonOpProp::ListArguments"""
+            """C Callback for NumpyOpProp::ListArguments"""
             ret = self.list_arguments()
             ret = [c_str(i) for i in ret] + [c_char_p(0)]
             ret = c_array(c_char_p, ret)
             out[0] = cast(ret, POINTER(POINTER(c_char)))
 
 
-        self.info_ = PythonOpInfo(fb_functype(forward_entry),
+        self.info_ = NumpyOpInfo(fb_functype(forward_entry),
                                   fb_functype(backward_entry),
                                   infer_functype(infer_shape_entry),
                                   list_functype(list_outputs_entry),
                                   list_functype(list_arguments_entry))
         cb_ptr = hex(cast(pointer(self.info_), c_void_p).value)
         # pylint: disable=E1101
-        return symbol.Python(*args, info=cb_ptr, need_top_grad=self.need_top_grad_)
+        return symbol.Symbol._Native(*args, info=cb_ptr, need_top_grad=self.need_top_grad(), **kwargs)
 
     def forward(self, in_data, out_data):
         """forward interface. override to create new operators
@@ -173,3 +166,13 @@ class PythonOp(object):
         """
         return ['x']
 
+    def need_top_grad(self):
+        """Whether this operator needs out_grad for backward.
+
+        Returns
+        -------
+        need_top_grad : bool
+            Whether this operator needs out_grad for backward.
+            Should be set to False for loss layers.
+        """
+        return True

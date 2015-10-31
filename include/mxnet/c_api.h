@@ -50,7 +50,7 @@ typedef void *KVStoreHandle;
 typedef void *RecordIOHandle;
 
 MXNET_EXTERN_C {
-struct PythonOpInfo {
+struct NativeOpInfo {
   void (*forward)(int, float**, int*, unsigned**, int*);
   void (*backward)(int, float**, int*, unsigned**, int*);
   void (*infer_shape)(int, int*, unsigned**);

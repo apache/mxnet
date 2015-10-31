@@ -1,12 +1,12 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file python_op-inl.h
+ * \file native_op-inl.h
  * \brief
  * \author Junyuan Xie
 */
 
-#ifndef MXNET_OPERATOR_PYTHON_OP_INL_H_
-#define MXNET_OPERATOR_PYTHON_OP_INL_H_
+#ifndef MXNET_OPERATOR_NATIVE_OP_INL_H_
+#define MXNET_OPERATOR_NATIVE_OP_INL_H_
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
@@ -21,14 +21,14 @@
 namespace mxnet {
 namespace op {
 
-struct PythonOpParam : public dmlc::Parameter<PythonOpParam> {
+struct NativeOpParam : public dmlc::Parameter<NativeOpParam> {
   void *info;
   bool need_top_grad;
   int num_args;
 
-  PythonOpInfo *pinfo;
+  NativeOpInfo *pinfo;
   int num_inputs_, num_outputs_;
-  DMLC_DECLARE_PARAMETER(PythonOpParam) {
+  DMLC_DECLARE_PARAMETER(NativeOpParam) {
     DMLC_DECLARE_FIELD(info);
     DMLC_DECLARE_FIELD(need_top_grad).set_default(true)
     .describe("Whether this layer needs out grad for backward. "
@@ -39,9 +39,9 @@ struct PythonOpParam : public dmlc::Parameter<PythonOpParam> {
 };
 
 template<typename xpu>
-class PythonOp : public Operator {
+class NativeOp : public Operator {
  public:
-  explicit PythonOp(PythonOpParam p) {
+  explicit NativeOp(NativeOpParam p) {
     this->param_ = p;
   }
 
@@ -61,7 +61,7 @@ class PythonOp : public Operator {
     s->Wait();
     param_.pinfo->forward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(), tags.data());
     for (int i = 0; i < out_data.size(); ++i) {
-      CHECK_NE(req[i], kAddTo) << "PythonOp doesn't support AddTo for output";
+      CHECK_NE(req[i], kAddTo) << "NativeOp doesn't support AddTo for output";
       if (req[i] != kNullOp) {
         std::stringstream ss;
         ss << std::string("out_data") << i;
@@ -94,7 +94,7 @@ class PythonOp : public Operator {
     s->Wait();
     param_.pinfo->backward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(), tags.data());
     for (int i = 0; i < in_grad.size(); ++i) {
-      CHECK_NE(req[i], kAddTo) << "PythonOp doesn't support AddTo for output";
+      CHECK_NE(req[i], kAddTo) << "NativeOp doesn't support AddTo for output";
       if (req[i] != kNullOp) {
         std::stringstream ss;
         ss << std::string("in_grad") << i;
@@ -106,7 +106,7 @@ class PythonOp : public Operator {
   }
 
  private:
-  PythonOpParam param_;
+  NativeOpParam param_;
   std::vector<real_t*> ptrs;
   std::vector<int> ndims;
   std::vector<unsigned*> shapes;
@@ -148,13 +148,13 @@ class PythonOp : public Operator {
       tags.push_back(tag);
     }
   }
-};  // PythonOp
+};  // NativeOp
 
 template<typename xpu>
-Operator* CreateOp(PythonOpParam param);
+Operator* CreateOp(NativeOpParam param);
 
 #if DMLC_USE_CXX11
-class PythonOpProp : public OperatorProperty {
+class NativeOpProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     char ** args = NULL;
@@ -218,13 +218,13 @@ class PythonOpProp : public OperatorProperty {
   }
 
   OperatorProperty* Copy() const override {
-    PythonOpProp *prop_sym = new PythonOpProp();
+    NativeOpProp *prop_sym = new NativeOpProp();
     prop_sym->param_ = this->param_;
     return prop_sym;
   }
 
   std::string TypeString() const override {
-    return "Python";
+    return "_Native";
   }
 
   std::vector<int> DeclareBackwardDependency(
@@ -251,9 +251,9 @@ class PythonOpProp : public OperatorProperty {
   Operator* CreateOperator(Context ctx) const;
 
  private:
-  PythonOpParam param_;
+  NativeOpParam param_;
 };  // class PythonProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_PYTHON_OP_INL_H_
+#endif  // MXNET_OPERATOR_NATIVE_OP_INL_H_
