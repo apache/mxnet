@@ -48,6 +48,16 @@ typedef void *DataIterHandle;
 typedef void *KVStoreHandle;
 /*! \brief handle to RecordIO */
 typedef void *RecordIOHandle;
+
+MXNET_EXTERN_C {
+struct NativeOpInfo {
+  void (*forward)(int, float**, int*, unsigned**, int*);
+  void (*backward)(int, float**, int*, unsigned**, int*);
+  void (*infer_shape)(int, int*, unsigned**);
+  void (*list_outputs)(char***);
+  void (*list_arguments)(char***);
+};
+}
 /*!
  * \brief return str message of the last error
  *  all function in this file will return 0 when success
