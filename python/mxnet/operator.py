@@ -21,7 +21,7 @@ class NumpyOp(object):
         return self.get_symbol(*args, **kwargs)
 
     def get_symbol(self, *args, **kwargs):
-        """Create a symbol from numpy operator. 
+        """Create a symbol from numpy operator.
         This Should only be called once per instance if operator contains
         internal states.
 
@@ -100,13 +100,16 @@ class NumpyOp(object):
 
 
         self.info_ = NumpyOpInfo(fb_functype(forward_entry),
-                                  fb_functype(backward_entry),
-                                  infer_functype(infer_shape_entry),
-                                  list_functype(list_outputs_entry),
-                                  list_functype(list_arguments_entry))
+                                 fb_functype(backward_entry),
+                                 infer_functype(infer_shape_entry),
+                                 list_functype(list_outputs_entry),
+                                 list_functype(list_arguments_entry))
         cb_ptr = hex(cast(pointer(self.info_), c_void_p).value)
         # pylint: disable=E1101
-        return symbol.Symbol._Native(*args, info=cb_ptr, need_top_grad=self.need_top_grad(), **kwargs)
+        return symbol.Symbol._Native(*args,
+                                     info=cb_ptr,
+                                     need_top_grad=self.need_top_grad(),
+                                     **kwargs)
 
     def forward(self, in_data, out_data):
         """forward interface. override to create new operators
