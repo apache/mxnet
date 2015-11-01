@@ -1,10 +1,10 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file softmax.cc
+ * \file softmax_output.cc
  * \brief
  * \author Bing Xu
 */
-#include "./softmax-inl.h"
+#include "./softmax_output-inl.h"
 
 namespace mxnet {
 namespace op {
