@@ -183,9 +183,13 @@ class SoftmaxOutputProp : public OperatorProperty {
 
 class DeprecatedSoftmaxProp : public SoftmaxOutputProp {
  public:
-  std::string TypeString() const override {
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     LOG(INFO) << "Softmax symbol is renamed to SoftmaxOutput. "
       << "This API will be deprecated in Dec, 2015";
+    SoftmaxOutputProp::param_.Init(kwargs);
+  }
+
+  std::string TypeString() const override {
     return "Softmax";
   }
 };
