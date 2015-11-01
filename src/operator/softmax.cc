@@ -9,20 +9,25 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<cpu>(SoftmaxParam param) {
-  return new SoftmaxOp<cpu>(param);
+Operator *CreateOp<cpu>(SoftmaxOutputParam param) {
+  return new SoftmaxOutputOp<cpu>(param);
 }
 
-Operator *SoftmaxProp::CreateOperator(Context ctx) const {
+Operator *SoftmaxOutputProp::CreateOperator(Context ctx) const {
   DO_BIND_DISPATCH(CreateOp, param_);
 }
 
-DMLC_REGISTER_PARAMETER(SoftmaxParam);
+DMLC_REGISTER_PARAMETER(SoftmaxOutputParam);
 
-MXNET_REGISTER_OP_PROPERTY(Softmax, SoftmaxProp)
-.describe("Perform a softmax transformation on input.")
+MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
+.describe("Perform a softmax transformation on input, backprop with logloss.")
 .add_argument("data", "Symbol", "Input data to softmax.")
-.add_arguments(SoftmaxParam::__FIELDS__());
+.add_arguments(SoftmaxOutputParam::__FIELDS__());
+
+MXNET_REGISTER_OP_PROPERTY(Softmax, DeprecatedSoftmaxProp)
+.describe("DEPRECATED: Perform a softmax transformation on input. Please use SoftmaxOutput")
+.add_argument("data", "Symbol", "Input data to softmax.")
+.add_arguments(SoftmaxOutputParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

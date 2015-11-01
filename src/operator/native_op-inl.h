@@ -57,7 +57,7 @@ class NativeOp : public Operator {
     SyncVec(out_data, "out_data", s, 1);
     s->Wait();
     param_.pinfo->forward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(), tags.data());
-    for (int i = 0; i < out_data.size(); ++i) {
+    for (index_t i = 0; i < out_data.size(); ++i) {
       CHECK_NE(req[i], kAddTo) << "NativeOp doesn't support AddTo for output";
       if (req[i] != kNullOp) {
         std::stringstream ss;
@@ -90,7 +90,7 @@ class NativeOp : public Operator {
     }
     s->Wait();
     param_.pinfo->backward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(), tags.data());
-    for (int i = 0; i < in_grad.size(); ++i) {
+    for (index_t i = 0; i < in_grad.size(); ++i) {
       CHECK_NE(req[i], kAddTo) << "NativeOp doesn't support AddTo for output";
       if (req[i] != kNullOp) {
         std::stringstream ss;
@@ -135,7 +135,7 @@ class NativeOp : public Operator {
                        const std::string &prefix,
                        mshadow::Stream<xpu> *stream,
                        int tag) {
-    for (int i = 0; i < vec.size(); ++i) {
+    for (size_t i = 0; i < vec.size(); ++i) {
       std::stringstream name;
       name << prefix << i;
       SyncBuffer(vec[i], name.str(), stream);

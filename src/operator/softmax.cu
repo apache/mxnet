@@ -10,8 +10,8 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<gpu>(SoftmaxParam param) {
-  return new SoftmaxOp<gpu>(param);
+Operator *CreateOp<gpu>(SoftmaxOutputParam param) {
+  return new SoftmaxOutputOp<gpu>(param);
 }
 
 }  // namespace op

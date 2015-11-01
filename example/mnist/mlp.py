@@ -11,7 +11,7 @@ act1 = mx.symbol.Activation(data = fc1, name='relu1', act_type="relu")
 fc2 = mx.symbol.FullyConnected(data = act1, name = 'fc2', num_hidden = 64)
 act2 = mx.symbol.Activation(data = fc2, name='relu2', act_type="relu")
 fc3 = mx.symbol.FullyConnected(data = act2, name='fc3', num_hidden=10)
-mlp = mx.symbol.Softmax(data = fc3, name = 'mlp')
+mlp = mx.symbol.SoftmaxOutput(data = fc3, name = 'mlp')
 
 # data
 
