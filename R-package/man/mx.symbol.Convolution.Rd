@@ -29,7 +29,7 @@ pad for convolution: (y, x)}
 convolution filter(channel) number}
 
 \item{num.group}{int (non-negative), optional, default=1
-number of groups partition}
+Number of groups partition. This option is not supported by CuDNN, you can use SliceChannel to num_group,apply convolution and concat instead to achieve the same need.}
 
 \item{workspace}{long (non-negative), optional, default=512
 Tmp workspace for convolution (MB)}

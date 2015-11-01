@@ -610,10 +610,11 @@ MXNET_REGISTER_NDARRAY_FUN(dot).set_function(BinaryOp<ndarray::Dot>)
 
 MXNET_REGISTER_NDARRAY_FUN(_onehot_encode).set_function(BinaryOp<ndarray::OneHotEncode>);
 
-MXNET_REGISTER_NDARRAY_FUN(choose_element)
+MXNET_REGISTER_NDARRAY_FUN(choose_element_0index)
 .set_function(BinaryOp<ndarray::MatChooseRowElem>)
 .describe("Choose one element from each line(row for python, column for R/Julia)"
-          " in lhs according to index indicated by rhs");
+          " in lhs according to index indicated by rhs."
+          " This function assume rhs uses 0-based index.");
 
 // register API function
 // those with underscore will be registered at NDArray

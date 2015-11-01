@@ -2,15 +2,15 @@
 % Please edit documentation in R/mxnet_generated.R
 \name{mx.nd.sqrt}
 \alias{mx.nd.sqrt}
-\title{Take square root of the src}
+\title{Take sqrt of the src}
 \arguments{
 \item{src}{NDArray
-Source input to the function.}
+Source input to the function}
 }
 \value{
 out The result mx.ndarray
 }
 \description{
-Take square root of the src
+Take sqrt of the src
 }
 

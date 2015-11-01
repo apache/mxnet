@@ -13,6 +13,9 @@ Input data to softmax.}
 \item{grad.scale}{float, optional, default=1
 Scale the gradient by a float factor}
 
+\item{multi.output}{boolean, optional, default=False
+If set to true, for a (n,k,x_1,..,x_n) dimensionalinput tensor, softmax will generate n*x_1*...*x_n output, eachhas k classes}
+
 \item{name}{string, optional
 Name of the resulting symbol.}
 }
