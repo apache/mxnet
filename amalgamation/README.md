@@ -20,4 +20,4 @@ The only dependency is a BLAS library.
 
 Acknowledgement
 ---------------
-This module is created by [J Deng](https://github.com/jdeng).
+This module is created by [Jack Deng](https://github.com/jdeng).
