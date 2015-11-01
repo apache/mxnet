@@ -73,7 +73,7 @@ def inception(nhidden, grad_scale):
     # linear classifier
     flatten = mx.symbol.Flatten(data=avg, name='flatten')
     fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=nhidden, name='fc1')
-    softmax = mx.symbol.Softmax(data=fc1, name='softmax')
+    softmax = mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
     return softmax
 
 softmax = inception(1000, 1.0)

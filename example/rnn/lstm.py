@@ -83,7 +83,7 @@ def lstm_unroll(num_lstm_layer, seq_len,
                                    bias=cls_bias,
                                    num_hidden=num_label,
                                    name="t%d_cls" % seqidx)
-        sm = mx.sym.Softmax(data=fc, label=label, name="t%d_sm" % seqidx)
+        sm = mx.sym.SoftmaxOutput(data=fc, label=label, name="t%d_sm" % seqidx)
         out_prob.append(sm)
 
     for i in range(num_lstm_layer):
