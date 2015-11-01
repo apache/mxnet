@@ -60,3 +60,5 @@ List of Contributors
 * [Nan Xiao](https://github.com/road2stat)
 * [Junyuan Xie](https://github.com/piiswrong)
 * [Wei Wu](https://github.com/tornadomeet)
+* [Michaël Benesty](https://github.com/pommedeterresautee)
+  -Michaël contributes the R visualization module of mxnet
