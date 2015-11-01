@@ -47,6 +47,8 @@ List of Contributors
   - To contributors: please add your name to the list when you submit a patch to the project:)
 * [Feng Wang](https://github.com/happynear)
   - Feng makes mxnet compatible with Windows Visual Studio.
+* [J Deng](https://github.com/jdeng)
+  - Jack created the amalgamation script for mxnet.
 * [Li Dong](https://github.com/donglixp)
 * [Piji Li](https://github.com/lipiji)
 * [Hu Shiwen](https://github.com/yajiedesign)

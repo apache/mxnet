@@ -595,6 +595,7 @@ void NDArray::SyncCopyToCPU(real_t *data, size_t size) const {
   }
 }
 
+#if MXNET_PREDICT_ONLY == 0
 // register API function
 // those with underscore will be registered at NDArray
 MXNET_REGISTER_NDARRAY_FUN(_set_value).set_function(SetValueOp);
@@ -660,4 +661,5 @@ MXNET_REGISTER_NDARRAY_FUN(clip)
 .add_argument("src", "NDArray", "Source input")
 .add_argument("a_min", "real_t", "Minimum value")
 .add_argument("a_max", "real_t", "Maximum value");
+#endif
 }  // namespace mxnet
