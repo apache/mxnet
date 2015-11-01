@@ -51,7 +51,7 @@ table(train.y)
 
 ```
 ## train.y
-##    0    1    2    3    4    5    6    7    8    9 
+##    0    1    2    3    4    5    6    7    8    9
 ## 4132 4684 4177 4351 4072 3795 4137 4401 4063 4188
 ```
 
@@ -67,7 +67,7 @@ act1 <- mx.symbol.Activation(fc1, name="relu1", act_type="relu")
 fc2 <- mx.symbol.FullyConnected(act1, name="fc2", num_hidden=64)
 act2 <- mx.symbol.Activation(fc2, name="relu2", act_type="relu")
 fc3 <- mx.symbol.FullyConnected(act2, name="fc3", num_hidden=10)
-softmax <- mx.symbol.Softmax(fc3, name="sm")
+softmax <- mx.symbol.SoftmaxOutput(fc3, name="sm")
 ```
 
 1. In `mxnet`, we use its own data type `symbol` to configure the network. `data <- mx.symbol.Variable("data")` use `data` to represent the input data, i.e. the input layer.
@@ -177,7 +177,7 @@ table(pred.label)
 
 ```
 ## pred.label
-##    0    1    2    3    4    5    6    7    8    9 
+##    0    1    2    3    4    5    6    7    8    9
 ## 2818 3195 2744 2767 2683 2596 2798 2790 2784 2825
 ```
 
@@ -216,7 +216,7 @@ tanh3 <- mx.symbol.Activation(data=fc1, act_type="tanh")
 # second fullc
 fc2 <- mx.symbol.FullyConnected(data=tanh3, num_hidden=10)
 # loss
-lenet <- mx.symbol.Softmax(data=fc2)
+lenet <- mx.symbol.SoftmaxOutput(data=fc2)
 ```
 
 Then let us reshape the matrices into arrays:
@@ -233,7 +233,7 @@ Next we are going to compare the training speed on different devices, so the def
 
 
 ```r
-n.gpu <- 1 
+n.gpu <- 1
 device.cpu <- mx.cpu()
 device.gpu <- lapply(0:(n.gpu-1), function(i) {
   mx.gpu(i)
@@ -266,11 +266,11 @@ model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
 ```
 
 ```r
-print(proc.time() - tic) 
+print(proc.time() - tic)
 ```
 
 ```
-##    user  system elapsed 
+##    user  system elapsed
 ## 130.030 204.976  83.821
 ```
 
@@ -317,11 +317,11 @@ model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
 ```
 
 ```r
-print(proc.time() - tic) 
+print(proc.time() - tic)
 ```
 
 ```
-##    user  system elapsed 
+##    user  system elapsed
 ##   9.288   1.680   6.889
 ```
 
