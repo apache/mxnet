@@ -24,7 +24,7 @@ mp2 = mx.symbol.Pooling(data = act2, name = 'mp2', kernel=(2,2), stride=(2,2), p
 
 fl = mx.symbol.Flatten(data = mp2, name="flatten")
 fc2 = mx.symbol.FullyConnected(data = fl, name='fc2', num_hidden=10)
-softmax = mx.symbol.Softmax(data = fc2, name = 'sm')
+softmax = mx.symbol.SoftmaxOutput(data = fc2, name = 'sm')
 
 num_epoch = 1
 model = mx.model.FeedForward(softmax, mx.cpu(),

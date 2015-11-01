@@ -46,7 +46,9 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
     .describe("convolution filter(channel) number");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
-    .describe("number of groups partition");
+    .describe("Number of groups partition. "
+              "This option is not supported by CuDNN, you can use SliceChannel to num_group,"
+              "apply convolution and concat instead to achieve the same need.");
     DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(128, 4096)
     .describe("Tmp workspace for convolution (MB)");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)

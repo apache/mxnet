@@ -5,7 +5,7 @@
 \title{Take square of the src}
 \arguments{
 \item{src}{NDArray
-Source input to the function.}
+Source input to the function}
 }
 \value{
 out The result mx.ndarray

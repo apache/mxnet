@@ -1,17 +1,17 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file softmax.cu
+ * \file softmax_output.cu
  * \brief
  * \author Bing Xu
 */
 
-#include "./softmax-inl.h"
+#include "./softmax_output-inl.h"
 
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<gpu>(SoftmaxParam param) {
-  return new SoftmaxOp<gpu>(param);
+Operator *CreateOp<gpu>(SoftmaxOutputParam param) {
+  return new SoftmaxOutputOp<gpu>(param);
 }
 
 }  // namespace op

@@ -71,10 +71,12 @@ static constexpr std::size_t kMaxNumGPUs = 16;
 // predeclare factory function for each type of engine
 /*! \return NaiveEngine instance */
 Engine *CreateNaiveEngine();
+#if MXNET_PREDICT_ONLY == 0
 /*! \return ThreadedEnginePooled instance */
 Engine *CreateThreadedEnginePooled();
 /*! \return ThreadedEnginePerDevie instance */
 Engine *CreateThreadedEnginePerDevice();
+#endif
 }  // namespace engine
 }  // namespace mxnet
 #endif  // MXNET_ENGINE_ENGINE_IMPL_H_
