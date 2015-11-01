@@ -68,7 +68,7 @@ You can use [mxnet.symbol.Group](#mxnet.symbol.Group) function to group the symb
 >>> fc1 = mx.symbol.FullyConnected(data=net, name='fc1', num_hidden=128)
 >>> net = mx.symbol.Activation(data=fc1, name='relu1', act_type="relu")
 >>> net = mx.symbol.FullyConnected(data=net, name='fc2', num_hidden=64)
->>> out = mx.symbol.Softmax(data=net, name='softmax')
+>>> out = mx.symbol.SoftmaxOutput(data=net, name='softmax')
 >>> group = mx.symbol.Group([fc1, out])
 >>> group.list_outputs()
 ['fc1_output', 'softmax_output']
@@ -102,7 +102,7 @@ Before you get started, you can check the list of functions in the following tab
    mxnet.symbol.LeakyReLU
    mxnet.symbol.Pooling
    mxnet.symbol.Reshape
-   mxnet.symbol.Softmax
+   mxnet.symbol.SoftmaxOutput
 ```
 
 ```eval_rst
