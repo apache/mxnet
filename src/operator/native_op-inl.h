@@ -245,7 +245,7 @@ class NativeOpProp : public OperatorProperty {
     return {};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  private:
   NativeOpParam param_;

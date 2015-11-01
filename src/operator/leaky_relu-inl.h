@@ -297,8 +297,8 @@ class LeakyReLUProp : public OperatorProperty {
     return 1;
   }
 
-  virtual std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const {
+  std::vector<ResourceRequest> ForwardResource(
+      const std::vector<TShape> &in_shape) const override {
     if (param_.act_type == leakyrelu::kRReLU) {
       return {ResourceRequest::kRandom};
     } else {
@@ -306,7 +306,7 @@ class LeakyReLUProp : public OperatorProperty {
     }
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  private:
   LeakyReLUParam param_;

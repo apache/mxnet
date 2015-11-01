@@ -18,7 +18,7 @@ if len(sys.argv) < 4:
 minimum = int(sys.argv[4]) if len(sys.argv) > 4 else 0
 
 if minimum:
-    blacklist += ['packet/sse-inl.h']
+    blacklist += ['packet/sse-inl.h', 'emmintrin.h']
 
 def get_sources(def_file):
     sources = []
@@ -106,7 +106,7 @@ print >>f, '''
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#if !defined(__ANDROID__) && (!defined(MSHADOW_USE_SSE) || MSHADOW_USE_SSE)
+#if !defined(__ANDROID__) && (!defined(MSHADOW_USE_SSE) || MSHADOW_USE_SSE == 1)
 #include <emmintrin.h>
 #endif
 

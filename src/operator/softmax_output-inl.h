@@ -175,7 +175,7 @@ class SoftmaxOutputProp : public OperatorProperty {
     return {{in_data[softmaxout_enum::kData], out_data[softmaxout_enum::kOut]}};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  protected:
   SoftmaxOutputParam param_;

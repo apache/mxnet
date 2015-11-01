@@ -179,7 +179,7 @@ class LocalResponseNormProp : public OperatorProperty {
 #endif
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  private:
   LRNParam param_;

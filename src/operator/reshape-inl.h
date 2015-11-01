@@ -144,7 +144,7 @@ class ReshapeProp : public OperatorProperty {
     return {{out_grad[reshape_enum::kOut], in_grad[reshape_enum::kData]}};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  protected:
   ReshapeParam param_;

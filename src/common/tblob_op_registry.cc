@@ -252,7 +252,7 @@ class TBlobUnaryOpProp : public OperatorProperty {
     }
   }
 
-  Operator* CreateOperator(Context ctx) const {
+  Operator* CreateOperator(Context ctx) const override {
     size_t dev_mask = ctx.dev_mask();
     TBlobUnaryOperator *op = new TBlobUnaryOperator();
     CHECK(dev_mask < source->funary_.size() && source->funary_[dev_mask] != nullptr);
