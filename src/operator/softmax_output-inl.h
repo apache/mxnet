@@ -1,11 +1,11 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file softmax-inl.h
+ * \file softmax_output-inl.h
  * \brief
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_SOFTMAX_INL_H_
-#define MXNET_OPERATOR_SOFTMAX_INL_H_
+#ifndef MXNET_OPERATOR_SOFTMAX_OUTPUT_INL_H_
+#define MXNET_OPERATOR_SOFTMAX_OUTPUT_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -193,4 +193,4 @@ class DeprecatedSoftmaxProp : public SoftmaxOutputProp {
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_SOFTMAX_INL_H_
+#endif  // MXNET_OPERATOR_SOFTMAX_OUTPUT_INL_H_
