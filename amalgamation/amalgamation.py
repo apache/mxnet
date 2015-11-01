@@ -2,14 +2,23 @@ import sys
 import os.path, re, StringIO
 
 blacklist = [
-    'Windows.h', 'cublas_v2.h', 'cuda/tensor_gpu-inl.cuh', 'cuda_runtime.h', 'cudnn.h', 'cudnn_lrn-inl.h', 'curand.h',
-    'glog/logging.h', 'io/azure_filesys.h', 'io/hdfs_filesys.h', 'io/s3_filesys.h', 'kvstore_dist.h', 'mach/clock.h', 'mach/mach.h',
-    'malloc.h', 'mkl.h', 'mkl_cblas.h', 'mkl_vsl.h', 'mkl_vsl_functions.h', 'nvml.h', 'opencv2/opencv.hpp', 'sys/stat.h', 'sys/types.h', 'emmintrin.h'
+    'Windows.h', 'cublas_v2.h', 'cuda/tensor_gpu-inl.cuh',
+    'cuda_runtime.h', 'cudnn.h', 'cudnn_lrn-inl.h', 'curand.h',
+    'glog/logging.h', 'io/azure_filesys.h', 'io/hdfs_filesys.h', 'io/s3_filesys.h',
+    'kvstore_dist.h', 'mach/clock.h', 'mach/mach.h',
+    'malloc.h', 'mkl.h', 'mkl_cblas.h', 'mkl_vsl.h', 'mkl_vsl_functions.h',
+    'nvml.h', 'opencv2/opencv.hpp', 'sys/stat.h', 'sys/types.h'
     ]
 
-if len(sys.argv) != 4:
-    print("Usage: <source.d> <source.cc> <output>")
+if len(sys.argv) < 4:
+    print("Usage: <source.d> <source.cc> <output> [minumum=0]\n"
+          "Minimum means no blas, no sse, no dependency, may run twice slower.")
+    exit(0)
 
+minimum = int(sys.argv[4]) if len(sys.argv) > 4 else 0
+
+if minimum:
+    blacklist += ['packet/sse-inl.h']
 
 def get_sources(def_file):
     sources = []
@@ -81,6 +90,12 @@ def expand(x, pending):
 expand(sys.argv[2], [])
 
 f = open(sys.argv[3], 'wb')
+
+if minimum != 0:
+    print >>f, "#define MSHADOW_STAND_ALONE 1"
+    print >>f, "#define MSHADOW_USE_SSE 0"
+    print >>f, "#define MSHADOW_USE_CBLAS 0"
+
 print >>f, '''
 #if defined(__MACH__)
 #include <mach/clock.h>
@@ -91,7 +106,7 @@ print >>f, '''
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#if !defined(__ANDROID__)
+#if !defined(__ANDROID__) && (!defined(MSHADOW_USE_SSE) || MSHADOW_USE_SSE)
 #include <emmintrin.h>
 #endif
 
@@ -105,5 +120,6 @@ print >>f, ''
 print >>f, out.getvalue()
 
 for x in sources:
-    if x not in history: print 'Not processed:', x
+    if x not in history and not x.endswith('.o'):
+        print 'Not processed:', x
 
