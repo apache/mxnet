@@ -7,10 +7,13 @@
 #' @importFrom data.table data.table
 #' @importFrom data.table as.data.table
 #' @importFrom data.table :=
+#' @importFrom data.table setkey
 #' @importFrom jsonlite fromJSON
-#' @importFrom diagrammeR create_nodes
-#' @importFrom diagrammeR create_graph
-#' @importFrom diagrammeR combine_edges
+#' @importFrom DiagrammeR create_nodes
+#' @importFrom DiagrammeR create_graph
+#' @importFrom DiagrammeR create_edges
+#' @importFrom DiagrammeR combine_edges
+#' @importFrom DiagrammeR render_graph
 #' 
 #' @param model a \code{string} representing the path to a file containing the \code{JSon} of a model dump or the actual model dump.
 #' @param graph.title a \code{string} displayed on top of the viz.
