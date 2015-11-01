@@ -28,7 +28,7 @@ enum ConcatOpOutputs {kOut};
 struct ConcatParam : public dmlc::Parameter<ConcatParam> {
   int num_args;
   DMLC_DECLARE_PARAMETER(ConcatParam) {
-    DMLC_DECLARE_FIELD(num_args).set_range(1,  6)
+    DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs to be concated.");
   }
 };  // struct ConcatParam

@@ -14,41 +14,46 @@
 namespace mxnet {
 namespace op {
 
-using mshadow::expr::concat;
-
-
 template<typename xpu, int dim>
 inline void Concatenate(const std::vector<mshadow::Tensor<xpu, dim> > &input,
                         mshadow::Tensor<xpu, dim> *output) {
+  using mshadow::expr::concat;
+  using mshadow::expr::slice;
   mshadow::Tensor<xpu, dim> out = *output;
   size_t size = input.size();
   switch (size) {
-    case 2:
+    case 2: {
       out = concat<1>(input[0], input[1]);
       break;
-    case 3:
+    }
+    case 3: {
       out = concat<1>(input[0],
                       concat<1>(input[1], input[2]));
       break;
-    case 4:
+    }
+    case 4: {
       out = concat<1>(input[0],
                       concat<1>(input[1],
                                 concat<1>(input[2], input[3])));
       break;
-    case 5:
-      out = concat<1>(input[0],
-                      concat<1>(input[1],
-                                concat<1>(input[2],
-                                          concat<1>(input[3], input[4]))));
+    }
+    default: {
+      index_t begin = 0;
+      for (index_t i = 0; i < size; ++i) {
+        index_t end = begin + input[i].size(1);
+        slice<1>(out, begin, end) = input[i];
+        begin = end;
+      }
       break;
-    default:
-      LOG(FATAL) << "Incorrect concat size: " << size;
+    }
   }
 }
 
 template<typename xpu, int dim>
 void Split(const mshadow::Tensor<xpu, dim> &input,
            std::vector<mshadow::Tensor<xpu, dim> > *output) {
+  using mshadow::expr::concat;
+  using mshadow::expr::slice;
   std::vector<mshadow::Tensor<xpu, dim> > out = *output;
   size_t size = out.size();
   switch (size) {
@@ -67,15 +72,15 @@ void Split(const mshadow::Tensor<xpu, dim> &input,
                           concat<1>(out[2], out[3]))) = input;
       break;
     }
-    case 5: {
-      concat<1>(out[0],
-                concat<1>(out[1],
-                          concat<1>(out[2],
-                                    concat<1>(out[3], out[4])))) = input;
+    default: {
+      index_t begin = 0;
+      for (index_t i = 0; i < size; ++i) {
+        index_t end = begin + out[i].size(1);
+        out[i] = slice<1>(input, begin, end);
+        begin = end;
+      }
       break;
     }
-    default:
-      LOG(FATAL) << "Incorrect concat size: " << size;
   }
 }
 }  // namespace op
