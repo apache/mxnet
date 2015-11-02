@@ -20,6 +20,6 @@ Imports:
     magrittr,
     stringr
 Suggests:
-    testthat
+    testthat, mlbench
 LinkingTo: Rcpp
 RoxygenNote: 5.0.0
