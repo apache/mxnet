@@ -4,7 +4,7 @@
 #' @param label the training label.
 #' @param hidden_node a vector containing number of hidden nodes on each hidden layer as well as the output layer.
 #' @param out_node the number of nodes on the output layer.
-#' @param dropout a vector containing the dropout ratio from the input layer to the last hidden layer.
+#' @param dropout a number in [0,1) containing the dropout ratio from the last hidden layer to the output layer.
 #' @param activation either a single string or a vector containing the names of the activation functions.
 #' @param out_activation a single string containing the name of the output activation function.
 #' @param device whether train on cpu (default) or gpu.
@@ -32,21 +32,14 @@ mx.mlp <- function(data, label, hidden_node = 1, out_node, dropout = NULL,
   
   m <- length(hidden_node)
   if (!is.null(dropout)) {
-    if (length(dropout) == 1) {
-      dropout <- rep(dropout, m+1)
-    } else {
-      if (length(dropout) != m+1) {
-        stop(paste("Length of dropout should be",m+1))
-      }
+    if (length(dropout) != 1) {
+      stop("only accept dropout ratio of length 1.")
     }
-    dropout = pmin(dropout, 1-1e-7)
+    dropout = max(0,min(dropout, 1-1e-7))
   }
   
   # symbol construction
   act <- mx.symbol.Variable("data")
-  if (!is.null(dropout)) {
-    act <- mx.symbol.Dropout(act, p = dropout[1])
-  }
   if (length(activation) == 1) {
     activation <- rep(activation, m)
   } else {
@@ -57,15 +50,15 @@ mx.mlp <- function(data, label, hidden_node = 1, out_node, dropout = NULL,
   for (i in 1:m) {
     fc <- mx.symbol.FullyConnected(act, num_hidden=hidden_node[i])
     act <- mx.symbol.Activation(fc, act_type=activation[i])
-    if (!is.null(dropout)) {
-      act <- mx.symbol.Dropout(act, p = dropout[i+1])
+    if (i == m && !is.null(dropout)) {
+      act <- mx.symbol.Dropout(act, p = dropout)
     }
   }
   fc <- mx.symbol.FullyConnected(act, num_hidden=out_node)
   if (out_activation == "rmse") {
     out <- mx.symbol.LinearRegressionOutput(fc)
   } else if (out_activation == "softmax") {
-    out <- mx.symbol.Softmax(fc)
+    out <- mx.symbol.SoftmaxOutput(fc)
   } else if (out_activation == "logistic") {
     out <- mx.symbol.LogisticRegressionOutput(fc)
   } else {

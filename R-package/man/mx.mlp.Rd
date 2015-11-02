@@ -17,7 +17,7 @@ mx.mlp(data, label, hidden_node = 1, out_node, dropout = NULL,
 
 \item{out_node}{the number of nodes on the output layer.}
 
-\item{dropout}{a vector containing the dropout ratio from the input layer to the last hidden layer.}
+\item{dropout}{a number in [0,1) containing the dropout ratio from the last hidden layer to the output layer.}
 
 \item{activation}{either a single string or a vector containing the names of the activation functions.}
 
