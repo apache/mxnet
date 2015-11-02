@@ -129,8 +129,6 @@ class NDArrayIter(DataIter):
     def _init(self, data_list,
               batch_size=1,
               shuffle=False,
-              data_pad_value=0,
-              label_pad_value=0,
               last_batch_handle='pad'):
         """Actual constructor"""
         # pylint: disable=W0201
@@ -162,6 +160,7 @@ class NDArrayIter(DataIter):
         self.last_batch_handle = last_batch_handle
 
     def hard_reset(self):
+        """Igore roll over data and set to start"""
         self.cursor = -self.batch_size
 
     def reset(self):
@@ -200,7 +199,7 @@ class NDArrayIter(DataIter):
     def getpad(self):
         if self.last_batch_handle == 'pad' and \
            self.cursor + self.batch_size > self.num_data:
-            return self.num_pad
+            return self.cursor + self.batch_size - self.num_data
         else:
             return 0
 
