@@ -54,13 +54,11 @@ if [ ${TASK} == "r_test" ]; then
 
     set -e
     export _R_CHECK_TIMINGS_=0
-    export R_BUILD_ARGS="--no-build-vignettes --no-manual"
-    export R_CHECK_ARGS="--no-vignettes --no-manual"
 
     wget https://cran.rstudio.com/bin/macosx/R-latest.pkg  -O /tmp/R-latest.pkg
     sudo installer -pkg "/tmp/R-latest.pkg" -target /
     Rscript -e "install.packages(c('Rcpp', 'testthat', 'DiagrammeR', 'data.table', 'jsonlite', 'magrittr', 'stringr'), repo = 'https://cran.rstudio.com')" 
-    R CMD check R-package
+    R CMD check --no-examples --no-vignettes --no-manual R-package
     exit 0
 fi
 
