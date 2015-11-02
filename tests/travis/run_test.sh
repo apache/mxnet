@@ -45,6 +45,30 @@ if [ ${TASK} == "cpp_test" ]; then
     exit 0
 fi
 
+if [ ${TASK} == "r_test" ]; then
+    make all || exit -1
+    # use cached dir for storing data
+    rm -rf ${PWD}/data
+    mkdir -p ${CACHE_PREFIX}/data
+    ln -s ${CACHE_PREFIX}/data ${PWD}/data
+
+    set -e
+    export _R_CHECK_TIMINGS_=0
+    export R_BUILD_ARGS="--no-build-vignettes --no-manual"
+    export R_CHECK_ARGS="--no-vignettes --no-manual"
+    
+    curl -OL http://raw.github.com/craigcitro/r-travis/master/scripts/travis-tool.sh
+    chmod 755 ./travis-tool.sh
+    ./travis-tool.sh bootstrap
+    ./travis-tool.sh install_aptget r-cran-testthat r-cran-Rcpp r-cran-DiagrammeR r-cran-data.table
+    
+    R CMD INSTALL R-package
+    cd ./R-package
+    ../travis-tool.sh install_deps
+    ../travis-tool.sh run_tests
+    exit 0
+fi
+
 if [ ${TASK} == "python_test" ]; then
     make all || exit -1
     # use cached dir for storing data

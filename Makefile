@@ -158,6 +158,15 @@ rcppexport:
 roxygen:
 	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
 
+Rbuild:
+	make Rpack
+	R CMD build mxnet
+	rm -rf mxnet
+
+Rcheck:
+	make Rbuild
+	R CMD check --as-cran mxnet*.tar.gz
+
 clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 
