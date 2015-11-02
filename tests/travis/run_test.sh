@@ -60,7 +60,7 @@ if [ ${TASK} == "r_test" ]; then
     curl -OL http://raw.github.com/craigcitro/r-travis/master/scripts/travis-tool.sh
     chmod 755 ./travis-tool.sh
     ./travis-tool.sh bootstrap
-    ./travis-tool.sh install_aptget r-cran-testthat r-cran-Rcpp r-cran-DiagrammeR r-cran-data.table
+    ./travis-tool.sh install_aptget r-cran-testthat r-cran-Rcpp r-cran-DiagrammeR r-cran-data.table r-cran-jsonlite r-cran-magrittr r-cran-stringr
     
     R CMD INSTALL R-package
     cd ./R-package
