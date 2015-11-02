@@ -268,6 +268,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                     for name in label_names]
 
     param_idx = [i for i in range(len(arg_names)) if arg_names[i] in param_names]
+    param_names = [arg_names[i] for i in param_idx]
     param_arrays = [[e.arg_arrays[i] for e in train_execs] for i in param_idx]
     grad_arrays  = [[e.grad_arrays[i] for e in train_execs] for i in param_idx]
     aux_arrays   = [[e.aux_arrays[i] for e in train_execs] for i in range(len(aux_names))]
