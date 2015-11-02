@@ -31,6 +31,15 @@ BatchEndParam = namedtuple('BatchEndParams',
                             'nbatch',
                             'eval_metric'])
 
+def _load_general(data, targets):
+    for d_src, d_targets in zip(data, targets):
+        for slice_idx, d_dst in d_targets:
+            d_src[slice_idx].copyto(d_dst)
+def _load_data(batch, targets):
+    _load_general(batch.data, targets)
+def _load_label(batch, targets):
+    _load_general(batch.label, targets)
+
 
 def _check_arguments(symbol):
     """Check the argument names of symbol.
@@ -84,7 +93,7 @@ def _check_arguments(symbol):
     return (data_index, label_index)
 
 
-def _split_input_slice(input_shape, num_split):
+def _split_input_slice(batch_size, num_split):
     """Get input slice from the input shape.
 
     Parameters
@@ -108,20 +117,15 @@ def _split_input_slice(input_shape, num_split):
     ValueError
         If there are two many splits such that some slice can be empty.
     """
-    batch_size = input_shape[0]
     step = (batch_size + num_split - 1) / num_split
     slices = []
-    shapes = []
     for k in range(num_split):
         begin = int(min(k * step, batch_size))
         end = int(min((k+1) * step, batch_size))
         if begin == end:
             raise ValueError('Too many slices such that some splits are empty')
         slices.append(slice(begin, end))
-        s = list(input_shape)
-        s[0] = end - begin
-        shapes.append(tuple(s))
-    return (slices, shapes)
+    return slices
 
 def _create_kvstore(kvstore, num_device, arg_params):
     """Create kvstore
@@ -168,7 +172,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
 
     return (kv, update_on_kvstore)
 
-def _train_multi_device(symbol, ctx, input_shape,
+def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         arg_params, aux_params,
                         begin_epoch, end_epoch, optimizer,
                         kvstore, update_on_kvstore,
@@ -241,21 +245,42 @@ def _train_multi_device(symbol, ctx, input_shape,
     num_device = len(ctx)
     logging.info('Start training with %s', str(ctx))
 
-    slices, shapes = _split_input_slice(input_shape, num_device)
-    train_execs = [symbol.simple_bind(ctx=c, data=s, grad_req='write')
-                   for c, s in zip(ctx, shapes)]
-    arg_names = symbol.list_arguments()
-    aux_names = symbol.list_auxiliary_states()
+    slices = _split_input_slice(train_data.batch_size, num_device)
+    train_execs = []
+    for i in range(len(ctx)):
+        data_shapes = {k: [len(slices[i])] + v[1:] for k,v in data.provide_data}
+        train_exec  = symbol.simple_bind(ctx=ctx[i], grad_req='write', *data_shapes)
+        train_execs.append(train_exec)
+
+    # train_execs = [symbol.simple_bind(ctx=c, data=s, grad_req='write')
+    #                for c, s in zip(ctx, shapes)]
+    # arg_names = symbol.list_arguments()
+    # aux_names = symbol.list_auxiliary_states()
+
     # data structure
-    arg_blocks = [
-        [x.arg_arrays[index] for x in train_execs]
-        for index in range(len(train_execs[0].arg_arrays))]
-    grad_blocks = [
-        [x.grad_arrays[index] for x in train_execs]
-        for index in range(len(train_execs[0].grad_arrays))]
-    aux_blocks = [
-        [x.aux_arrays[index] for x in train_execs]
-        for index in range(len(train_execs[0].aux_arrays))]
+    data_names  = [x[0] for x in train_data.provide_data]
+    label_names = [x[0] for x in train_data.provide_label]
+
+    data_arrays = [[(slices[i],e.arg_dict[name]) for i,e in enumerate(train_execs)]
+                   for name in data_names]
+    label_arrays = [[(slices[i],e.arg_dict[name]) for i,e in enumerate(train_execs)]
+                    for name in label_names]
+
+    param_idx = [i for i in range(arg_names) if arg_names[i] in param_names]
+    param_arrays = [[e.arg_arrays[i] for e in train_execs] for i in param_idx]
+    grad_arrays  = [[e.grad_arrays[i] for e in train_execs] for i in param_idx]
+    aux_arrays   = [[e.aux_arrays[i] for e in train_execs] for i in range(len(aux_names))]
+
+    # # data structure
+    # arg_blocks = [
+    #     [x.arg_arrays[index] for x in train_execs]
+    #     for index in range(len(train_execs[0].arg_arrays))]
+    # grad_blocks = [
+    #     [x.grad_arrays[index] for x in train_execs]
+    #     for index in range(len(train_execs[0].grad_arrays))]
+    # aux_blocks = [
+    #     [x.aux_arrays[index] for x in train_execs]
+    #     for index in range(len(train_execs[0].aux_arrays))]
 
     for texec in train_execs:
         texec.copy_params_from(arg_params, aux_params)
@@ -289,6 +314,9 @@ def _train_multi_device(symbol, ctx, input_shape,
     merged_shape = tuple(merged_shape)
     out_cpu_array = nd.zeros(merged_shape, cpu())
 
+    output_shapes = [tuple([batch_size]+x.shape[1:]) for x in train_execs[0].outputs]
+    cpu_output_arrays = [nd.zeros(s) for s in output_shapes]
+
     # Now start training
     for epoch in range(begin_epoch, end_epoch):
         # Training phase
@@ -296,18 +324,27 @@ def _train_multi_device(symbol, ctx, input_shape,
         eval_metric.reset()
         nbatch = 0
         # Iterate over training data.
-        for data, label in train_data:
-            # Copy data into the target
-            for target, islice in zip(arg_blocks[label_index], slices):
-                label[islice].copyto(target)
-            for target, islice in zip(arg_blocks[data_index], slices):
-                data[islice].copyto(target)
+        #for data, label in train_data:
+        train_data.reset()
+        for data_batch in train_data:
+            _load_data(data_batch, data_arrays)
+            _load_label(data_batch, label_arrays)
+
+            # # Copy data into the target
+            # for target, islice in zip(arg_blocks[label_index], slices):
+            #     label[islice].copyto(target)
+            # for target, islice in zip(arg_blocks[data_index], slices):
+            #     data[islice].copyto(target)
+
             # forward backward pass
             for texec, islice in zip(train_execs, slices):
                 texec.forward(is_train=True)
-                texec.outputs[0].copyto(out_cpu_array[islice])
+                for cpu_out, dev_out in zip(cpu_output_arrays, texec.outputs):
+                    dev_output.copyto(cpu_out[islice])
+                #texec.outputs[0].copyto(out_cpu_array[islice])
             for texec in train_execs:
                 texec.backward()
+
             # update the parameters
             for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
                 arg_list, grad_list = pair
@@ -342,11 +379,10 @@ def _train_multi_device(symbol, ctx, input_shape,
                         call(batch_end_params)
                 else:
                     batch_end_callback(batch_end_params)
-            # evaluate at end, so out_cpu_array can lazy copy
-            eval_metric.update(label, out_cpu_array)
 
-        # reset training data after epoch finish
-        train_data.reset()
+            # evaluate at end, so out_cpu_array can lazy copy
+            eval_metric.update(data_batch.label, cpu_output_arrays)
+
         name, value = eval_metric.get()
         logger.info('Epoch[%d] Train-%s=%f', epoch, name, value)
         toc = time.time()
@@ -354,31 +390,43 @@ def _train_multi_device(symbol, ctx, input_shape,
         # evaluation
         if eval_data:
             eval_metric.reset()
-            for data, label in eval_data:
-                # Copy data into the target
-                for target, islice in zip(arg_blocks[label_index], slices):
-                    label[islice].copyto(target)
-                for target, islice in zip(arg_blocks[data_index], slices):
-                    data[islice].copyto(target)
+            eval_data.reset()
+            for eval_batch in eval_data:
+                _load_data(eval_batch, data_arrays)
+                _load_label(eval_batch, label_arrays)
+                # # Copy data into the target
+                # for target, islice in zip(arg_blocks[label_index], slices):
+                #     label[islice].copyto(target)
+                # for target, islice in zip(arg_blocks[data_index], slices):
+                #     data[islice].copyto(target)
+
                 # forward pass
                 for texec, islice in zip(train_execs, slices):
                     texec.forward(is_train=False)
-                    texec.outputs[0].copyto(out_cpu_array[islice])
-                eval_metric.update(label, out_cpu_array)
-            eval_data.reset()
+                    for cpu_out, dev_out in zip(cpu_output_arrays, texec.outputs):
+                        dev_output.copyto(cpu_out[islice])
+                    #texec.outputs[0].copyto(out_cpu_array[islice])
+                eval_metric.update(eval_batch.label, cpu_output_arrays)
             name, value = eval_metric.get()
             logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
 
         if epoch_end_callback or epoch + 1 == end_epoch:
             # copy data back to cpu
-            for name, block in zip(arg_names, arg_blocks):
-                if name in arg_params:
-                    weight = sum(w.copyto(cpu()) for w in block) / len(block)
-                    weight.copyto(arg_params[name])
-            for name, block in zip(aux_names, aux_blocks):
-                if name in aux_params:
-                    weight = sum(w.copyto(cpu()) for w in block) / len(block)
-                    weight.copyto(aux_params[name])
+            for name, block in zip(param_names, param_arrays):
+                weight = sum(w.copyto(cpu()) for w in block) / len(block)
+                weight.copyto(arg_params[name])
+            for name, block in zip(aux_names, aux_arrays):
+                weight = sum(w.copyto(cpu()) for w in block) / len(block)
+                weight.copyto(aux_params[name])
+
+            # for name, block in zip(arg_names, arg_blocks):
+            #     if name in arg_params:
+            #         weight = sum(w.copyto(cpu()) for w in block) / len(block)
+            #         weight.copyto(arg_params[name])
+            # for name, block in zip(aux_names, aux_blocks):
+            #     if name in aux_params:
+            #         weight = sum(w.copyto(cpu()) for w in block) / len(block)
+            #         weight.copyto(aux_params[name])
         if epoch_end_callback != None:
             if isinstance(epoch_end_callback, list):
                 for call in epoch_end_callback:
@@ -553,7 +601,38 @@ class FeedForward(BASE_ESTIMATOR):
         """Check if name is a data argument."""
         return name.endswith('data') or name.endswith('label')
 
-    def _init_params(self, input_shape):
+    def _init_params(self, input_shapes, overwrite=False):
+        arg_shapes, _, aux_shapes = self.symbol.infer_shape(**input_shapes)
+
+        arg_names   = self.symbol.list_arguments()
+        input_names = [x[1] for x in input_shapes]
+        param_names = list(set(arg_names) - set(input_names))
+        aux_names   = self.symbol.list_auxiliary_states()
+
+        arg_defined = True
+        aux_defined = True
+
+        if self.arg_params is None:
+            arg_defined = False
+            param_name_shapes = [x for x in zip(arg_names, arg_shapes) if x[0] in param_names]
+            self.arg_params = {k : nd.zeros(s) for k, s in param_name_shapes}
+
+        if self.aux_params is None:
+            aux_defined = False
+            self.aux_params = {k : nd.zeros(s) for k, s in zip(aux_names, aux_shapes)}
+
+        if (not arg_defined) or overwrite:
+            for k, v in self.arg_params.iteritems():
+                self.initializer(k, v)
+
+        if (not aux_defined) or overwrite:
+            for k, v in self.aux_params.iteritems():
+                self.initializer(k, v)
+
+        return (arg_names, param_names, aux_names)
+
+
+    def _init_params_old(self, input_shape):
         """Use initializer to initialize the parameters."""
         arg_shapes, _, aux_shapes = self.symbol.infer_shape(data=input_shape)
         if self.arg_params is None:
@@ -671,7 +750,105 @@ class FeedForward(BASE_ESTIMATOR):
             outputs.append(out_batch)
         return np.concatenate(outputs)
 
-    def fit(self, X, y=None, eval_data=None, eval_metric='acc',
+    def fit(self, data, eval_data=None, eval_metric='acc',
+            epoch_end_callback=None, batch_end_callback=None,
+            kvstore='local', logger=None):
+        """Fit the model.
+
+        Parameters
+        ----------
+        X : DataIter, or numpy.ndarray/NDArray
+            Training data.
+
+        y : numpy.ndarray/NDArray, optional
+            Training set label.
+            If X is numpy.ndarray/NDArray, y is required to be set.
+            While y can be 1D or 2D (with 2nd dimension as 1), its 1st dimension must be
+                the same as X, i.e. the number of data points and labels should be equal.
+
+        eval_data : DataIter or numpy.ndarray/list/NDArray pair
+            If eval_data is numpy.ndarray/list/NDArray pair,
+                it should be (valid_data, valid_label).
+
+        eval_metric : metric.EvalMetric or str or callable
+            The evaluation metric, name of evaluation metric.
+            Or a customize evaluation function that returns the statistics
+            based on minibatch.
+
+        epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
+            A callback that is invoked at end of each epoch.
+            This can be used to checkpoint model each epoch.
+
+        batch_end_callback: callable(epoch)
+            A callback that is invoked at end of each batch
+            For print purpose
+
+        kvstore: KVStore or str, optional
+           The KVStore or a string kvstore type:
+           'local' : multi-devices on a single machine, will automatically
+               choose one from 'local_update_cpu', 'local_allreduce_cpu', and
+              'local_allreduce_device'
+           'dist_sync' : multi-machines with BSP
+           'dist_async' : multi-machines with partical asynchronous
+
+           In default uses 'local', often no need to change for single machiine.
+
+        logger : logging logger, optional
+            When not specified, default logger will be used.
+
+        """
+
+        if not isinstance(data, DataIter):
+            raise TypeError('Training data must be a DataIter')
+        if (not eval_data is None) and not isinstance(eval_data, DataIter):
+            raise TypeError('Eval data, if presented, must be a DataIter')
+
+
+        arg_names, param_names, aux_names = \
+                self._init_params(dict(data.provide_data+data.provide_label))
+
+        # X = self._init_iter(X, y, is_train=True)
+        # eval_data = self._init_eval_iter(eval_data)
+        # # Simply ignore the first example to get input_shape
+        # # in first training epoch.
+        # if not X.iter_next():
+        #     X.reset()
+        #     assert X.iter_next()
+        # input_shape = X.getdata().shape
+        # if self.arg_params is None:
+        #     self._init_params(input_shape)
+
+        # setup metric
+        if not isinstance(eval_metric, metric.EvalMetric):
+            eval_metric = metric.create(eval_metric)
+
+        # create kvstore
+        (kvstore, update_on_kvstore) = _create_kvstore(
+            kvstore, len(self.ctx), self.arg_params)
+
+        # init optmizer
+        if isinstance(self.optimizer, str):
+            batch_size = input_shape[0]
+            if kvstore and kvstore.type == 'dist_sync':
+                batch_size *= kvstore.num_workers
+
+        optimizer = opt.create(self.optimizer,
+                               rescale_grad=(1.0/batch_size),
+                               **(self.kwargs))
+        # do training
+        _train_multi_device(self.symbol, self.ctx, arg_names, param_names, aux_names,
+                            self.arg_params, self.aux_params,
+                            begin_epoch=self.begin_epoch, end_epoch=self.num_epoch,
+                            optimizer=optimizer,
+                            train_data=data, eval_data=eval_data,
+                            eval_metric=eval_metric,
+                            epoch_end_callback=epoch_end_callback,
+                            batch_end_callback=batch_end_callback,
+                            kvstore=kvstore, update_on_kvstore=update_on_kvstore,
+                            logger=logger)
+
+
+    def fit_old(self, X, y=None, eval_data=None, eval_metric='acc',
             epoch_end_callback=None, batch_end_callback=None,
             kvstore='local', logger=None):
         """Fit the model.
