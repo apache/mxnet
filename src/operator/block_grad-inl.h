@@ -102,7 +102,7 @@ class BlockGradientProp : public OperatorProperty {
     return {{in_data[blockgrad::kData], out_data[blockgrad::kOut]}};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 };  // class BlockGradientProperty
 
 #endif  // DMLC_USE_CXX11

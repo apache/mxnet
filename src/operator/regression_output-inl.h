@@ -130,7 +130,7 @@ class RegressionOutputProp : public OperatorProperty {
     return {{in_data[reg_enum::kData], out_data[reg_enum::kOut]}};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 };
 #endif  // DMLC_USE_CXX11
 }  // namespace op

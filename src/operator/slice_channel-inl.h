@@ -170,7 +170,7 @@ class SliceChannelProp : public OperatorProperty {
     return out_grad;
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  private:
   SliceChannelParam param_;
