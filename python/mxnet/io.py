@@ -3,6 +3,7 @@
 
 """NDArray interface of mxnet"""
 from __future__ import absolute_import
+from collections import namedtuple
 
 import ctypes
 import sys
@@ -214,7 +215,7 @@ class MXDataIter(DataIter):
     handle : DataIterHandle
         the handle to the underlying C++ Data Iterator
     """
-    def __init__(self, handle, data_name='data', label_name='softmax_label'):
+    def __init__(self, handle, data_name='data', label_name='softmax_label', **kwargs):
         super(MXDataIter, self).__init__()
         self.handle = handle
         # debug option, used to test the speed with io effect eliminated
@@ -223,8 +224,10 @@ class MXDataIter(DataIter):
 
         # load the first batch to get shape information
         self.reset()
-        data = self.getdata()
-        label = self.getlabel()
+        batch = self.next()
+        data = batch.data[0]
+        label = batch.label[0]
+        self.reset()
 
         # properties
         self.provide_data = [(data_name, data.shape)]

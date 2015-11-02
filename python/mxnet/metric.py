@@ -47,12 +47,16 @@ class Accuracy(EvalMetric):
     def __init__(self):
         super(Accuracy, self).__init__('accuracy')
 
-    def update(self, label, pred):
+    def update_single(self, label, pred):
         pred = pred.asnumpy()
         label = label.asnumpy().astype('int32')
         pred_label = numpy.argmax(pred, axis=1)
         self.sum_metric += numpy.sum(pred_label == label)
         self.num_inst += label.size
+
+    def update(self, label, pred):
+        for i in range(len(label)):
+            self.update_single(label[i], pred[i])
 
 
 class CustomMetric(EvalMetric):

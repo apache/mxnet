@@ -248,8 +248,9 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     slices = _split_input_slice(train_data.batch_size, num_device)
     train_execs = []
     for i in range(len(ctx)):
-        data_shapes = {k: [len(slices[i])] + v[1:] for k,v in data.provide_data}
-        train_exec  = symbol.simple_bind(ctx=ctx[i], grad_req='write', *data_shapes)
+        data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
+                       for k,v in train_data.provide_data}
+        train_exec  = symbol.simple_bind(ctx[i], 'write', **data_shapes)
         train_execs.append(train_exec)
 
     # train_execs = [symbol.simple_bind(ctx=c, data=s, grad_req='write')
@@ -266,7 +267,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     label_arrays = [[(slices[i],e.arg_dict[name]) for i,e in enumerate(train_execs)]
                     for name in label_names]
 
-    param_idx = [i for i in range(arg_names) if arg_names[i] in param_names]
+    param_idx = [i for i in range(len(arg_names)) if arg_names[i] in param_names]
     param_arrays = [[e.arg_arrays[i] for e in train_execs] for i in param_idx]
     grad_arrays  = [[e.grad_arrays[i] for e in train_execs] for i in param_idx]
     aux_arrays   = [[e.aux_arrays[i] for e in train_execs] for i in range(len(aux_names))]
@@ -308,13 +309,15 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                     kvstore.pull(index, arg_list, priority=-index)
 
     # Input and output data structure
-    data_index, label_index = _check_arguments(symbol)
-    merged_shape = list(train_execs[0].outputs[0].shape)
-    merged_shape[0] = input_shape[0]
-    merged_shape = tuple(merged_shape)
-    out_cpu_array = nd.zeros(merged_shape, cpu())
+    #data_index, label_index = _check_arguments(symbol)
+    #merged_shape = list(train_execs[0].outputs[0].shape)
+    #merged_shape[0] = input_shapes[0]
+    #merged_shape = tuple(merged_shape)
+    #out_cpu_array = nd.zeros(merged_shape, cpu())
 
-    output_shapes = [tuple([batch_size]+x.shape[1:]) for x in train_execs[0].outputs]
+    batch_size = train_data.batch_size
+
+    output_shapes = [tuple([batch_size]+list(x.shape[1:])) for x in train_execs[0].outputs]
     cpu_output_arrays = [nd.zeros(s) for s in output_shapes]
 
     # Now start training
@@ -340,13 +343,14 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
             for texec, islice in zip(train_execs, slices):
                 texec.forward(is_train=True)
                 for cpu_out, dev_out in zip(cpu_output_arrays, texec.outputs):
-                    dev_output.copyto(cpu_out[islice])
+                    dev_out.copyto(cpu_out[islice])
                 #texec.outputs[0].copyto(out_cpu_array[islice])
             for texec in train_execs:
                 texec.backward()
 
             # update the parameters
-            for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
+            #for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
+            for index, pair in enumerate(zip(param_arrays, grad_arrays)):
                 arg_list, grad_list = pair
                 if grad_list[0] is None:
                     continue
@@ -404,7 +408,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 for texec, islice in zip(train_execs, slices):
                     texec.forward(is_train=False)
                     for cpu_out, dev_out in zip(cpu_output_arrays, texec.outputs):
-                        dev_output.copyto(cpu_out[islice])
+                        dev_out.copyto(cpu_out[islice])
                     #texec.outputs[0].copyto(out_cpu_array[islice])
                 eval_metric.update(eval_batch.label, cpu_output_arrays)
             name, value = eval_metric.get()
@@ -605,7 +609,7 @@ class FeedForward(BASE_ESTIMATOR):
         arg_shapes, _, aux_shapes = self.symbol.infer_shape(**input_shapes)
 
         arg_names   = self.symbol.list_arguments()
-        input_names = [x[1] for x in input_shapes]
+        input_names = input_shapes.keys()
         param_names = list(set(arg_names) - set(input_names))
         aux_names   = self.symbol.list_auxiliary_states()
 
@@ -798,9 +802,9 @@ class FeedForward(BASE_ESTIMATOR):
 
         """
 
-        if not isinstance(data, DataIter):
+        if not isinstance(data, io.DataIter):
             raise TypeError('Training data must be a DataIter')
-        if (not eval_data is None) and not isinstance(eval_data, DataIter):
+        if (not eval_data is None) and not isinstance(eval_data, io.DataIter):
             raise TypeError('Eval data, if presented, must be a DataIter')
 
 
@@ -828,7 +832,7 @@ class FeedForward(BASE_ESTIMATOR):
 
         # init optmizer
         if isinstance(self.optimizer, str):
-            batch_size = input_shape[0]
+            batch_size = data.batch_size
             if kvstore and kvstore.type == 'dist_sync':
                 batch_size *= kvstore.num_workers
 
