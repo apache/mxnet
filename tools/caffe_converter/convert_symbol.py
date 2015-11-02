@@ -41,7 +41,7 @@ def proto2script(proto_file):
         name = layer[i].name.replace('/', '_')
         if layer[i].type == 'Convolution' or layer[i].type == 4:
             type_string = 'mx.symbol.Convolution'
-            param = layer[i].convolution_param 
+            param = layer[i].convolution_param
             pad = 0 if len(param.pad) == 0 else param.pad[0]
             stride = 1 if len(param.stride) == 0 else param.stride[0]
             param_string = "num_filter=%d, pad=(%d,%d), kernel=(%d,%d), stride=(%d,%d), no_bias=%s" %\
@@ -67,7 +67,7 @@ def proto2script(proto_file):
             need_flatten[name] = need_flatten[mapping[layer[i].bottom[0]]]
         if layer[i].type == 'LRN' or layer[i].type == 15:
             type_string = 'mx.symbol.LRN'
-            param = layer[i].lrn_param  
+            param = layer[i].lrn_param
             param_string = "alpha=%f, beta=%f, knorm=%f, nsize=%d" %\
                 (param.alpha, param.beta, param.k, param.local_size)
             need_flatten[name] = True
@@ -82,7 +82,7 @@ def proto2script(proto_file):
             param_string = "p=%f" % param.dropout_ratio
             need_flatten[name] = need_flatten[mapping[layer[i].bottom[0]]]
         if layer[i].type == 'Softmax' or layer[i].type == 20:
-            type_string = 'mx.symbol.Softmax'
+            type_string = 'mx.symbol.SoftmaxOutput'
 
             # We only support single output network for now.
             output_name = name
@@ -96,7 +96,7 @@ def proto2script(proto_file):
             need_flatten[name] = True
         if type_string == '':
             raise Exception('Unknown Layer %s!' % layer[i].type)
-        
+
         if type_string != 'split':
             bottom = layer[i].bottom
             if param_string != "":

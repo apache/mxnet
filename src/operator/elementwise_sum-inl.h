@@ -194,7 +194,7 @@ class ElementWiseSumProp : public OperatorProperty {
     return {{in_data[0], out_data[0]}};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  private:
   ElementWiseSumParam param_;

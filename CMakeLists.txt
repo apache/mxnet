@@ -9,6 +9,9 @@ mxnet_option(USE_OPENCV  "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP  "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN   "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_CUDA    "Build with CUDA support"   ON)
+mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support"   OFF)
+
+
 
 include(mshadow/cmake/mshadow.cmake)
 include(mshadow/cmake/Utils.cmake)
@@ -65,8 +68,8 @@ if(USE_CUDNN)
 endif()
 
 add_subdirectory("dmlc-core")
-if(NOT MSVC)
-  add_subdirectory("ps-lite")
+if(USE_DIST_KVSTORE)
+	add_subdirectory("ps-lite")
 endif()
 
 mxnet_source_group("Source"   GLOB_RECURSE "src/*.cc")
@@ -91,6 +94,7 @@ if(USE_CUDA)
   list(APPEND SOURCE ${cuda_objs} ${cuda})
 endif()
 
+
 if(NOT MSVC)
   # Only add c++11 flags and definitions after cuda compiling
   add_definitions(-DDMLC_USE_CXX11)
@@ -102,11 +106,17 @@ endif()
 add_library(mxnet SHARED ${SOURCE})
 target_link_libraries(mxnet ${mshadow_LINKER_LIBS})
 target_link_libraries(mxnet dmlccore)
-if(NOT MSVC)
-  target_link_libraries(mxnet pslite)
-  target_link_libraries(mxnet ${pslite_LINKER_LIBS})
-endif()
+
+
+
 set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
+
+if(USE_DIST_KVSTORE)
+	add_definitions(-DMXNET_USE_DIST_KVSTORE)
+	target_link_libraries(mxnet pslite)
+	target_link_libraries(mxnet ${pslite_LINKER_LIBS})
+	include_directories(SYSTEM ${pslite_INCLUDE_DIR})
+endif()
 
 # ---[ Linter target
 if(MSVC)

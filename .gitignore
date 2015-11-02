@@ -66,3 +66,5 @@ deps
 # R
 *.Rcheck
 *.rds
+*.Rproj
+.Rproj.user

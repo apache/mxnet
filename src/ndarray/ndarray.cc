@@ -595,6 +595,7 @@ void NDArray::SyncCopyToCPU(real_t *data, size_t size) const {
   }
 }
 
+#if MXNET_PREDICT_ONLY == 0
 // register API function
 // those with underscore will be registered at NDArray
 MXNET_REGISTER_NDARRAY_FUN(_set_value).set_function(SetValueOp);
@@ -610,10 +611,11 @@ MXNET_REGISTER_NDARRAY_FUN(dot).set_function(BinaryOp<ndarray::Dot>)
 
 MXNET_REGISTER_NDARRAY_FUN(_onehot_encode).set_function(BinaryOp<ndarray::OneHotEncode>);
 
-MXNET_REGISTER_NDARRAY_FUN(choose_element)
+MXNET_REGISTER_NDARRAY_FUN(choose_element_0index)
 .set_function(BinaryOp<ndarray::MatChooseRowElem>)
 .describe("Choose one element from each line(row for python, column for R/Julia)"
-          " in lhs according to index indicated by rhs");
+          " in lhs according to index indicated by rhs."
+          " This function assume rhs uses 0-based index.");
 
 // register API function
 // those with underscore will be registered at NDArray
@@ -659,4 +661,5 @@ MXNET_REGISTER_NDARRAY_FUN(clip)
 .add_argument("src", "NDArray", "Source input")
 .add_argument("a_min", "real_t", "Minimum value")
 .add_argument("a_max", "real_t", "Maximum value");
+#endif
 }  // namespace mxnet

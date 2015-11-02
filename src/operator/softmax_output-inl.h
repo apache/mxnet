@@ -1,11 +1,11 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file softmax-inl.h
+ * \file softmax_output-inl.h
  * \brief
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_SOFTMAX_INL_H_
-#define MXNET_OPERATOR_SOFTMAX_INL_H_
+#ifndef MXNET_OPERATOR_SOFTMAX_OUTPUT_INL_H_
+#define MXNET_OPERATOR_SOFTMAX_OUTPUT_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -20,15 +20,15 @@
 namespace mxnet {
 namespace op {
 
-namespace softmax_enum {
-enum SoftmaxOpInputs {kData, kLabel};
-enum SoftmaxOpOutputs {kOut};
-}  // namespace softmax_enum
+namespace softmaxout_enum {
+enum SoftmaxOutputOpInputs {kData, kLabel};
+enum SoftmaxOutputOpOutputs {kOut};
+}  // namespace softmaxout_enum
 
-struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
+struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
   float grad_scale;
   bool multi_output;
-  DMLC_DECLARE_PARAMETER(SoftmaxParam) {
+  DMLC_DECLARE_PARAMETER(SoftmaxOutputParam) {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
     .describe("Scale the gradient by a float factor");
     DMLC_DECLARE_FIELD(multi_output).set_default(false)
@@ -39,9 +39,9 @@ struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
 };
 
 template<typename xpu>
-class SoftmaxOp : public Operator {
+class SoftmaxOutputOp : public Operator {
  public:
-  explicit SoftmaxOp(SoftmaxParam param) : param_(param) {}
+  explicit SoftmaxOutputOp(SoftmaxOutputParam param) : param_(param) {}
 
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
@@ -50,19 +50,19 @@ class SoftmaxOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 2) << "Softmax Input: [data, label]";
-    CHECK_EQ(out_data.size(), 1) << "Softmax Output: [output]";
+    CHECK_EQ(in_data.size(), 2) << "SoftmaxOutput Input: [data, label]";
+    CHECK_EQ(out_data.size(), 1) << "SoftmaxOutput Output: [output]";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     if (param_.multi_output) {
-      int n = in_data[softmax_enum::kData].size(0);
-      int k = in_data[softmax_enum::kData].size(1);
-      Shape<3> s3 = Shape3(n, k, static_cast<int>(in_data[softmax_enum::kData].Size()/n/k));
-      Tensor<xpu, 3> data = in_data[softmax_enum::kData].get_with_shape<xpu, 3, real_t>(s3, s);
-      Tensor<xpu, 3> out = out_data[softmax_enum::kOut].get_with_shape<xpu, 3, real_t>(s3, s);
+      int n = in_data[softmaxout_enum::kData].size(0);
+      int k = in_data[softmaxout_enum::kData].size(1);
+      Shape<3> s3 = Shape3(n, k, static_cast<int>(in_data[softmaxout_enum::kData].Size()/n/k));
+      Tensor<xpu, 3> data = in_data[softmaxout_enum::kData].get_with_shape<xpu, 3, real_t>(s3, s);
+      Tensor<xpu, 3> out = out_data[softmaxout_enum::kOut].get_with_shape<xpu, 3, real_t>(s3, s);
       Softmax(out, data);
     } else {
-      Tensor<xpu, 2> data = in_data[softmax_enum::kData].FlatTo2D<xpu, real_t>(s);
-      Tensor<xpu, 2> out = out_data[softmax_enum::kOut].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> data = in_data[softmaxout_enum::kData].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> out = out_data[softmaxout_enum::kOut].FlatTo2D<xpu, real_t>(s);
       Softmax(out, data);
     }
   }
@@ -82,20 +82,20 @@ class SoftmaxOp : public Operator {
     CHECK_GE(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     if (param_.multi_output) {
-      int n = out_data[softmax_enum::kOut].size(0);
-      int k = out_data[softmax_enum::kOut].size(1);
-      Shape<3> s3 = Shape3(n, k, static_cast<int>(out_data[softmax_enum::kOut].Size()/n/k));
-      Tensor<xpu, 2> label = in_data[softmax_enum::kLabel].FlatTo2D<xpu, real_t>(s);
-      Tensor<xpu, 3> out = out_data[softmax_enum::kOut].get_with_shape<xpu, 3, real_t>(s3, s);
-      Tensor<xpu, 3> grad = in_grad[softmax_enum::kData].get_with_shape<xpu, 3, real_t>(s3, s);
+      int n = out_data[softmaxout_enum::kOut].size(0);
+      int k = out_data[softmaxout_enum::kOut].size(1);
+      Shape<3> s3 = Shape3(n, k, static_cast<int>(out_data[softmaxout_enum::kOut].Size()/n/k));
+      Tensor<xpu, 2> label = in_data[softmaxout_enum::kLabel].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 3> out = out_data[softmaxout_enum::kOut].get_with_shape<xpu, 3, real_t>(s3, s);
+      Tensor<xpu, 3> grad = in_grad[softmaxout_enum::kData].get_with_shape<xpu, 3, real_t>(s3, s);
       SoftmaxGrad(grad, out, label);
       if (param_.grad_scale < 1.0) {
         grad *= param_.grad_scale;
       }
     } else {
-      Tensor<xpu, 1> label = in_data[softmax_enum::kLabel].get<xpu, 1, real_t>(s);
-      Tensor<xpu, 2> out = out_data[softmax_enum::kOut].FlatTo2D<xpu, real_t>(s);
-      Tensor<xpu, 2> grad = in_grad[softmax_enum::kData].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 1> label = in_data[softmaxout_enum::kLabel].get<xpu, 1, real_t>(s);
+      Tensor<xpu, 2> out = out_data[softmaxout_enum::kOut].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> grad = in_grad[softmaxout_enum::kData].FlatTo2D<xpu, real_t>(s);
       SoftmaxGrad(grad, out, label);
       if (param_.grad_scale < 1.0) {
         grad *= param_.grad_scale;
@@ -104,15 +104,15 @@ class SoftmaxOp : public Operator {
   }
 
  private:
-  SoftmaxParam param_;
-};  // class SoftmaxOp
+  SoftmaxOutputParam param_;
+};  // class SoftmaxOutputOp
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(SoftmaxParam param);
+Operator* CreateOp(SoftmaxOutputParam param);
 
 #if DMLC_USE_CXX11
-class SoftmaxProp : public OperatorProperty {
+class SoftmaxOutputProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     return {"data", "label"};
@@ -134,10 +134,10 @@ class SoftmaxProp : public OperatorProperty {
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
     if (param_.multi_output) {
-      SHAPE_ASSIGN_CHECK(*in_shape, softmax_enum::kLabel,
+      SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel,
                          Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]));
     } else {
-      SHAPE_ASSIGN_CHECK(*in_shape, softmax_enum::kLabel, Shape1(dshape[0]));
+      SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel, Shape1(dshape[0]));
     }
     out_shape->clear();
     out_shape->push_back(dshape);
@@ -145,20 +145,20 @@ class SoftmaxProp : public OperatorProperty {
   }
 
   OperatorProperty* Copy() const override {
-    auto ptr = new SoftmaxProp();
+    auto ptr = new SoftmaxOutputProp();
     ptr->param_ = param_;
     return ptr;
   }
 
   std::string TypeString() const override {
-    return "Softmax";
+    return "SoftmaxOutput";
   }
 
   std::vector<int> DeclareBackwardDependency(
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    return {in_data[softmax_enum::kLabel], out_data[softmax_enum::kOut]};
+    return {in_data[softmaxout_enum::kLabel], out_data[softmaxout_enum::kOut]};
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
@@ -166,22 +166,35 @@ class SoftmaxProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data,
     const std::vector<void*> &in_grad) const override {
-    return {{out_data[softmax_enum::kOut], in_grad[softmax_enum::kData]}};
+    return {{out_data[softmaxout_enum::kOut], in_grad[softmaxout_enum::kData]}};
   }
 
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
     const std::vector<int> &in_data,
     const std::vector<void*> &out_data) const override {
-    return {{in_data[softmax_enum::kData], out_data[softmax_enum::kOut]}};
+    return {{in_data[softmaxout_enum::kData], out_data[softmaxout_enum::kOut]}};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
- private:
-  SoftmaxParam param_;
-};  // class SoftmaxProp
+ protected:
+  SoftmaxOutputParam param_;
+};  // class SoftmaxOutputProp
+
+class DeprecatedSoftmaxProp : public SoftmaxOutputProp {
+ public:
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
+    LOG(INFO) << "Softmax symbol is renamed to SoftmaxOutput. "
+      << "This API will be deprecated in Dec, 2015";
+    SoftmaxOutputProp::param_.Init(kwargs);
+  }
+
+  std::string TypeString() const override {
+    return "Softmax";
+  }
+};
 #endif  // DMLC_USE_CXX11
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_SOFTMAX_INL_H_
+#endif  // MXNET_OPERATOR_SOFTMAX_OUTPUT_INL_H_
