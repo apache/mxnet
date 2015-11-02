@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments
+# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, W0221, W0201
 
 """NDArray interface of mxnet"""
 from __future__ import absolute_import
@@ -7,7 +7,6 @@ from __future__ import absolute_import
 import ctypes
 import sys
 import numpy as np
-import math
 import logging
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str
@@ -55,8 +54,13 @@ class DataIter(object):
         """
         pass
 
-    def getdata(self):
+    def getdata(self, index=0):
         """Get data of current batch.
+
+        Parameters
+        ----------
+        index : int
+            The index of data source to retrieve.
 
         Returns
         -------
@@ -73,7 +77,7 @@ class DataIter(object):
         label : NDArray
             The label of current batch.
         """
-        pass
+        return self.getdata(-1)
 
     def getpad(self):
         """Get the number of padding examples in current batch.
@@ -91,11 +95,8 @@ class NDArrayIter(DataIter):
 
     Parameters
     ----------
-    data : NDArray or numpy.ndarray
-        NDArray for data
-
-    label : NDArray or numpy.ndarray
-        NDArray for label
+    data_list or data, label: a list of, or two separate NDArray or numpy.ndarray
+        list of NDArray for data. The last one is treated as label.
 
     batch_size: int
         Batch Size
@@ -109,86 +110,93 @@ class NDArrayIter(DataIter):
     label_pad_value: float, optionl
         Padding value for label
 
+    last_batch_handle: 'pad', 'discard' or 'roll_over'
+        How to handle the last batch
+
     Note
     ----
-    This iterator will pad the last batch if
-    the size of data does not match batch_size.
+    This iterator will pad, discard or roll over the last batch if
+    the size of data does not match batch_size. Roll over is intended
+    for training and can cause problems if used for prediction.
     """
-    def __init__(self, data, label,
-                 batch_size,
-                 shuffle=False,
-                 data_pad_value=0,
-                 label_pad_value=0):
+    def __init__(self, *args, **kwargs):
         super(NDArrayIter, self).__init__()
-        if isinstance(data, NDArray):
-            data = data.asnumpy()
-        if isinstance(label, NDArray):
-            label = label.asnumpy()
+        if isinstance(args[0], list) or isinstance(args[0], tuple):
+            self._init(*args, **kwargs)
+        else:
+            self._init((args[0], args[1]), *args[2:], **kwargs)
+
+    def _init(self, data_list,
+              batch_size=1,
+              shuffle=False,
+              data_pad_value=0,
+              label_pad_value=0,
+              last_batch_handle='pad'):
+        """Actual constructor"""
+        # pylint: disable=W0201
+        self.num_source = len(data_list)
+        assert self.num_source > 0, "Need at least one data source."
+        data_list = list(data_list)
+        for i in range(self.num_source):
+            if isinstance(data_list[i], NDArray):
+                data_list[i] = data_list[i].asnumpy()
         # shuffle data
         if shuffle:
-            idx = np.arange(data.shape[0])
+            idx = np.arange(data_list[0].shape[0])
             np.random.shuffle(idx)
-            new_data = np.zeros(data.shape)
-            new_label = np.zeros(label.shape)
-            for i in range(data.shape[0]):
-                new_data[i] = data[idx[i]]
-                new_label[i] = label[idx[i]]
-            data = new_data
-            label = new_label
+            for i in range(self.num_source):
+                assert data_list[i].shape[0] == len(idx)
+                data_list[i] = data_list[i][idx]
 
         # batching
-        self.batch_num = int(math.ceil(float(data.shape[0]) / batch_size))
-        batch_data_shape = []
-        batch_data_shape.append(self.batch_num)
-        batch_data_shape.append(batch_size)
-        for i in range(1, len(data.shape)):
-            batch_data_shape.append(data.shape[i])
-        batch_label_shape = []
-        batch_label_shape.append(self.batch_num)
-        batch_label_shape.append(batch_size)
-        for i in range(1, len(label.shape)):
-            batch_label_shape.append(label.shape[i])
-        self.batch_data = np.ones(batch_data_shape, dtype='float32') * data_pad_value
-        self.batch_label = np.ones(batch_label_shape, dtype='float32') * label_pad_value
-        loc = 0
-        for i in range(self.batch_num):
-            actual_size = min(data.shape[0] - loc, batch_size)
-            self.batch_data[i, 0:actual_size, ::] = data[loc:loc+actual_size, ::]
-            self.batch_label[i, 0:actual_size] = label[loc:loc+actual_size]
-            loc += batch_size
-        self.num_pad = batch_size - data.shape[0] % batch_size
-        if data.shape[0] % batch_size == 0:
-            self.num_pad = 0
-        self.out_data = None
-        self.out_label = None
-        self.current_batch = -1
+        if last_batch_handle == 'discard':
+            new_n = data_list[0].shape[0] - data_list[0].shape[0] % batch_size
+            for i in range(self.num_source):
+                data_list[i] = data_list[i][:new_n]
+        self.num_data = data_list[0].shape[0]
+        assert self.num_data > batch_size, \
+            "batch_size need to be smaller than data size when not padding."
+        self.cursor = -batch_size
+        self.data_list = data_list
+        self.batch_size = batch_size
+        self.last_batch_handle = last_batch_handle
 
     def reset(self):
-        self.current_batch = -1
+        if self.last_batch_handle == 'roll_over' and self.cursor > self.num_data:
+            self.cursor = -self.batch_size + (self.cursor%self.num_data)%self.batch_size
+        else:
+            self.cursor = -self.batch_size
 
     def iter_next(self):
-        if self.current_batch < self.batch_num - 1:
-            self.current_batch += 1
+        self.cursor += self.batch_size
+        if self.cursor < self.num_data:
             return True
         else:
             return False
 
     def next(self):
         if self.iter_next():
-            return self.getdata(), self.getlabel()
+            return (self.getdata(i) for i in range(self.num_source))
         else:
             raise StopIteration
 
-    def getdata(self):
-        assert(self.current_batch >= 0)
-        return array(self.batch_data[self.current_batch])
+    def getdata(self, index=0):
+        assert(index < self.num_source)
+        assert(self.cursor < self.num_data), "DataIter needs reset."
+        if self.cursor + self.batch_size <= self.num_data:
+            return array(self.data_list[index][self.cursor:self.cursor+self.batch_size])
+        else:
+            pad = self.batch_size - self.num_data + self.cursor
+            return array(np.concatenate((self.data_list[index][self.cursor:],
+                                         self.data_list[index][:pad]),
+                                        axis=0))
 
     def getlabel(self):
-        assert(self.current_batch >= 0)
-        return array(self.batch_label[self.current_batch])
+        return self.getdata(-1)
 
     def getpad(self):
-        if self.current_batch == self.batch_num - 1:
+        if self.last_batch_handle == 'pad' and \
+           self.cursor + self.batch_size > self.num_data:
             return self.num_pad
         else:
             return 0
