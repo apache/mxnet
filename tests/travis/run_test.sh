@@ -57,7 +57,10 @@ if [ ${TASK} == "r_test" ]; then
 
     wget https://cran.rstudio.com/bin/macosx/R-latest.pkg  -O /tmp/R-latest.pkg
     sudo installer -pkg "/tmp/R-latest.pkg" -target /
-    Rscript -e "install.packages(c('Rcpp', 'testthat', 'DiagrammeR', 'data.table', 'jsonlite', 'magrittr', 'stringr'), repo = 'https://cran.rstudio.com')" 
+    Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')" 
+    cd R-package
+    Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
+    cd ..
     R CMD check --no-examples --no-vignettes --no-manual R-package
     exit 0
 fi
