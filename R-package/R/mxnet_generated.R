@@ -295,6 +295,37 @@ mx.symbol.Convolution <- function(...) {
   mx.varg.symbol.Convolution(list(...))
 }
 
+#' Apply deconvolution to input then add a bias.
+#' 
+#' @param data  Symbol
+#'     Input data to the DeconvolutionOp.
+#' @param weight  Symbol
+#'     Weight matrix.
+#' @param bias  Symbol
+#'     Bias parameter.
+#' @param kernel  Shape(tuple), required
+#'     deconvolution kernel size: (y, x)
+#' @param stride  Shape(tuple), optional, default=(1, 1)
+#'     deconvolution stride: (y, x)
+#' @param pad  Shape(tuple), optional, default=(0, 0)
+#'     pad for deconvolution: (y, x)
+#' @param num.filter  int (non-negative), required
+#'     deconvolution filter(channel) number
+#' @param num.group  int (non-negative), optional, default=1
+#'     number of groups partition
+#' @param workspace  long (non-negative), optional, default=512
+#'     Tmp workspace for deconvolution (MB)
+#' @param no.bias  boolean, optional, default=True
+#'     Whether to disable bias parameter.
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.Deconvolution <- function(...) {
+  mx.varg.symbol.Deconvolution(list(...))
+}
+
 #' Apply dropout to input
 #' 
 #' @param data  Symbol
@@ -479,7 +510,7 @@ mx.symbol.SliceChannel <- function(...) {
   mx.varg.symbol.SliceChannel(list(...))
 }
 
-#' Perform a softmax transformation on input.
+#' DEPRECATED: Perform a softmax transformation on input. Please use SoftmaxOutput
 #' 
 #' @param data  Symbol
 #'     Input data to softmax.
@@ -494,6 +525,23 @@ mx.symbol.SliceChannel <- function(...) {
 #' @export
 mx.symbol.Softmax <- function(...) {
   mx.varg.symbol.Softmax(list(...))
+}
+
+#' Perform a softmax transformation on input, backprop with logloss.
+#' 
+#' @param data  Symbol
+#'     Input data to softmax.
+#' @param grad.scale  float, optional, default=1
+#'     Scale the gradient by a float factor
+#' @param multi.output  boolean, optional, default=False
+#'     If set to true, for a (n,k,x_1,..,x_n) dimensionalinput tensor, softmax will generate n*x_1*...*x_n output, eachhas k classes
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.SoftmaxOutput <- function(...) {
+  mx.varg.symbol.SoftmaxOutput(list(...))
 }
 
 #' Take exp of the src
