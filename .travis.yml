@@ -5,7 +5,7 @@ os:
   - linux
   - osx
 julia:
-  #- release
+  - 0.4
   - nightly
 
 # dependent apt packages
