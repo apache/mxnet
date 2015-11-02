@@ -17,7 +17,7 @@ env:
   - TASK=cpp_test
   # run tests/python
   - TASK=python_test
-  #- TASK=r_test
+  - TASK=r_test
 
   # TODO, R test, distributed test, clang, more g++ versions
 
