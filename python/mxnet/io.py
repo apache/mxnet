@@ -161,6 +161,9 @@ class NDArrayIter(DataIter):
         self.batch_size = batch_size
         self.last_batch_handle = last_batch_handle
 
+    def hard_reset(self):
+        self.cursor = -self.batch_size
+
     def reset(self):
         if self.last_batch_handle == 'roll_over' and self.cursor > self.num_data:
             self.cursor = -self.batch_size + (self.cursor%self.num_data)%self.batch_size
