@@ -51,7 +51,7 @@ in5b    = simple_factory(in5a, 176, 160)
 pool    = mx.Pooling(data=in5b, pool_type=:avg, kernel=(7,7), name=:global_pool)
 flatten = mx.Flatten(data=pool, name=:flatten1)
 fc      = mx.FullyConnected(data=flatten, num_hidden=10, name=:fc1)
-softmax = mx.Softmax(data=fc, name=:loss)
+softmax = mx.SoftmaxOutput(data=fc, name=:loss)
 
 
 #--------------------------------------------------------------------------------

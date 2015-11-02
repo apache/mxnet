@@ -25,7 +25,7 @@ fc1   = @mx.chain mx.Flatten(data=conv2) =>
 fc2   = mx.FullyConnected(data=fc1, num_hidden=10)
 
 # softmax loss
-lenet = mx.Softmax(data=fc2, name=:softmax)
+lenet = mx.SoftmaxOutput(data=fc2, name=:softmax)
 
 
 #--------------------------------------------------------------------------------
