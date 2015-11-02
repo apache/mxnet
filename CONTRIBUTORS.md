@@ -60,5 +60,7 @@ List of Contributors
 * [Nan Xiao](https://github.com/road2stat)
 * [Junyuan Xie](https://github.com/piiswrong)
 * [Wei Wu](https://github.com/tornadomeet)
+* [Yuan Tang](https://github.com/terrytangyuan)
+  - Yuan set up the R Travis environment to make development safer.
 * [Michaël Benesty](https://github.com/pommedeterresautee)
   -Michaël contributes the R visualization module of mxnet
