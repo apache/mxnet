@@ -34,3 +34,6 @@ notifications:
 
 script:
   - source $TRAVIS/run_test.sh
+
+after_success:
+  - source $TRAVIS/run_coverage.sh
