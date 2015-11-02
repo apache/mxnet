@@ -204,6 +204,8 @@ class NDArrayIter(DataIter):
             return 0
 
 
+MXDataBatch = namedtuple('MXDataBatch', ['data', 'label', 'pad'])
+
 class MXDataIter(DataIter):
     """DataIter built in MXNet. List all the needed functions here.
 
@@ -212,12 +214,23 @@ class MXDataIter(DataIter):
     handle : DataIterHandle
         the handle to the underlying C++ Data Iterator
     """
-    def __init__(self, handle):
+    def __init__(self, handle, data_name='data', label_name='softmax_label'):
         super(MXDataIter, self).__init__()
         self.handle = handle
         # debug option, used to test the speed with io effect eliminated
         self._debug_skip_load = False
-        self._debug_at_begin = True
+
+
+        # load the first batch to get shape information
+        self.reset()
+        data = self.getdata()
+        label = self.getlabel()
+
+        # properties
+        self.provide_data = [(data_name, data.shape)]
+        self.provide_label = [(label_name, label.shape)]
+        self.batch_size = data.shape[0]
+
 
     def __del__(self):
         check_call(_LIB.MXDataIterFree(self.handle))
@@ -239,19 +252,24 @@ class MXDataIter(DataIter):
 
     def next(self):
         if self._debug_skip_load and not self._debug_at_begin:
-            return  self.getdata(), self.getlabel()
+            return  MXDataBatch(data=[self.getdata()],
+                                label=[self.getlabel()],
+                                pad=self.getpad())
+
         self._debug_at_begin = False
         next_res = ctypes.c_int(0)
         check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
         if next_res.value:
-            return self.getdata(), self.getlabel()
+            return MXDataBatch(data=[self.getdata()],
+                               label=[self.getlabel()],
+                               pad=self.getpad())
         else:
             raise StopIteration
 
-    def iter_next(self):
-        next_res = ctypes.c_int(0)
-        check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
-        return next_res.value
+    #def iter_next(self):
+    #    next_res = ctypes.c_int(0)
+    #    check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
+    #    return next_res.value
 
     def getdata(self):
         hdl = NDArrayHandle()
@@ -329,7 +347,7 @@ def _make_io_iterator(handle):
         if len(args):
             raise TypeError('%s can only accept keyword arguments' % iter_name)
 
-        return MXDataIter(iter_handle)
+        return MXDataIter(iter_handle, **kwargs)
 
     creator.__name__ = iter_name
     creator.__doc__ = doc_str
