@@ -364,9 +364,9 @@ object (:class:`NDArray`) is returned. Otherwise, a tuple containing all the out
 
 Public APIs
 ^^^^^^^^^^^
-.. function:: choose_element(...)
+.. function:: choose_element_0index(...)
 
-   Choose one element from each line(row for python, column for R/Julia) in lhs according to index indicated by rhs
+   Choose one element from each line(row for python, column for R/Julia) in lhs according to index indicated by rhs. This function assume rhs uses 0-based index.
    
    :param lhs: Left operand to the function.
    :type lhs: NDArray
@@ -413,9 +413,42 @@ Public APIs
 
 
 
+.. function:: exp(...)
+
+   Take exp of the src
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
+
+.. function:: log(...)
+
+   Take log of the src
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
+
+.. function:: norm(...)
+
+   Take L2 norm of the src.The result will be ndarray of shape (1,) on the same device.
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
+
 .. function:: sqrt(...)
 
-   Take square root of the src
+   Take sqrt of the src
    
    :param src: Source input to the function
    :type src: NDArray

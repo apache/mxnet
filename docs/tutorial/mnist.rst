@@ -41,11 +41,11 @@ Note each composition we take the previous symbol as the `data` argument, formin
    Input --> 128 units (ReLU) --> 64 units (ReLU) --> 10 units
 
 where the last 10 units correspond to the 10 output classes (digits 0,...,9). We
-then add a final ``Softmax`` operation to turn the 10-dimensional prediction to proper probability values for the 10 classes:
+then add a final :class:`SoftmaxOutput` operation to turn the 10-dimensional prediction to proper probability values for the 10 classes:
 
 .. code-block:: julia
 
-   mlp  = mx.Softmax(data = fc3, name=:softmax)
+   mlp  = mx.SoftmaxOutput(data = fc3, name=:softmax)
 
 As we can see, the MLP is just a chain of layers. For this case, we can also use
 the ``mx.chain`` macro. The same architecture above can be defined as
@@ -58,7 +58,7 @@ the ``mx.chain`` macro. The same architecture above can be defined as
      mx.FullyConnected(name=:fc2, num_hidden=64)  =>
      mx.Activation(name=:relu2, act_type=:relu)   =>
      mx.FullyConnected(name=:fc3, num_hidden=10)  =>
-     mx.Softmax(name=:softmax)
+     mx.SoftmaxOutput(name=:softmax)
 
 After defining the architecture, we are ready to load the MNIST data. MXNet.jl
 provide built-in data providers for the MNIST dataset, which could automatically

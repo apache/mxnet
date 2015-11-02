@@ -143,7 +143,7 @@ Public APIs
    :type num_filter: int (non-negative), required
    
    
-   :param num_group: number of groups partition
+   :param num_group: Number of groups partition. This option is not supported by CuDNN, you can use SliceChannel to num_group,apply convolution and concat instead to achieve the same need.
    :type num_group: int (non-negative), optional, default=1
    
    
@@ -153,6 +153,57 @@ Public APIs
    
    :param no_bias: Whether to disable bias parameter.
    :type no_bias: boolean, optional, default=False
+   
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   
+   :return: the constructed :class:`Symbol`.
+   
+
+
+
+
+.. function:: Deconvolution(...)
+
+   Apply deconvolution to input then add a bias.
+   
+   :param data: Input data to the DeconvolutionOp.
+   :type data: Symbol
+   
+   
+   :param weight: Weight matrix.
+   :type weight: Symbol
+   
+   
+   :param bias: Bias parameter.
+   :type bias: Symbol
+   
+   
+   :param kernel: deconvolution kernel size: (y, x)
+   :type kernel: Shape(tuple), required
+   
+   
+   :param stride: deconvolution stride: (y, x)
+   :type stride: Shape(tuple), optional, default=(1, 1)
+   
+   
+   :param pad: pad for deconvolution: (y, x)
+   :type pad: Shape(tuple), optional, default=(0, 0)
+   
+   
+   :param num_filter: deconvolution filter(channel) number
+   :type num_filter: int (non-negative), required
+   
+   
+   :param num_group: number of groups partition
+   :type num_group: int (non-negative), optional, default=1
+   
+   
+   :param workspace: Tmp workspace for deconvolution (MB)
+   :type workspace: long (non-negative), optional, default=512
+   
+   
+   :param no_bias: Whether to disable bias parameter.
+   :type no_bias: boolean, optional, default=True
    
    :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    
@@ -412,7 +463,7 @@ Public APIs
 
 .. function:: Softmax(...)
 
-   Perform a softmax transformation on input.
+   DEPRECATED: Perform a softmax transformation on input. Please use SoftmaxOutput
    
    :param data: Input data to softmax.
    :type data: Symbol
@@ -433,9 +484,62 @@ Public APIs
 
 
 
+.. function:: SoftmaxOutput(...)
+
+   Perform a softmax transformation on input, backprop with logloss.
+   
+   :param data: Input data to softmax.
+   :type data: Symbol
+   
+   
+   :param grad_scale: Scale the gradient by a float factor
+   :type grad_scale: float, optional, default=1
+   
+   
+   :param multi_output: If set to true, for a (n,k,x_1,..,x_n) dimensionalinput tensor, softmax will generate n*x_1*...*x_n output, eachhas k classes
+   :type multi_output: boolean, optional, default=False
+   
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   
+   :return: the constructed :class:`Symbol`.
+   
+
+
+
+
+.. function:: exp(...)
+
+   Take exp of the src
+   
+   :param src: Source symbolic input to the function
+   :type src: Symbol
+   
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   
+   :return: the constructed :class:`Symbol`.
+   
+
+
+
+
+.. function:: log(...)
+
+   Take log of the src
+   
+   :param src: Source symbolic input to the function
+   :type src: Symbol
+   
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   
+   :return: the constructed :class:`Symbol`.
+   
+
+
+
+
 .. function:: sqrt(...)
 
-   Take square root of the src
+   Take sqrt of the src
    
    :param src: Source symbolic input to the function
    :type src: Symbol
@@ -496,6 +600,25 @@ Internal APIs
 .. function:: _Mul(...)
 
    Perform an elementwise mul.
+   
+   :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
+   
+   :return: the constructed :class:`Symbol`.
+   
+
+
+
+
+.. function:: _Native(...)
+
+   Stub for implementing an operator implemented in native frontend language.
+   
+   :param info: 
+   :type info: , required
+   
+   
+   :param need_top_grad: Whether this layer needs out grad for backward. Should be false for loss layers.
+   :type need_top_grad: boolean, optional, default=True
    
    :param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.
    

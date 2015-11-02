@@ -20,7 +20,7 @@ mlp = @mx.chain mx.Variable(:data)             =>
   mx.FullyConnected(name=:fc2, num_hidden=64)  =>
   mx.Activation(name=:relu2, act_type=:relu)   =>
   mx.FullyConnected(name=:fc3, num_hidden=10)  =>
-  mx.Softmax(name=:softmax)
+  mx.SoftmaxOutput(name=:softmax)
 
 # data provider
 batch_size = 100
