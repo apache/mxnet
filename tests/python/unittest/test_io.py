@@ -68,16 +68,17 @@ def test_NDArrayIter():
     for i in range(1000):
         datas[i] = i / 100
         labels[i] = i / 100
-    dataiter = mx.io.NDArrayIter(datas, labels, 128, True)
+    dataiter = mx.io.NDArrayIter(datas, labels, 128, True, last_batch_handle='pad')
     batchidx = 0
     for data, label in dataiter:
         batchidx += 1
     assert(batchidx == 8)
-    dataiter.reset()
+    dataiter = mx.io.NDArrayIter(datas, labels, 128, False, last_batch_handle='pad')
     batchidx = 0
     labelcount = [0 for i in range(10)]
     for data, label in dataiter:
         label = label.asnumpy().flatten()
+        assert((data.asnumpy()[:,0,0] == label).all())
         for i in range(label.shape[0]):
             labelcount[int(label[i])] += 1
     for i in range(10):

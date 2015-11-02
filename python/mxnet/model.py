@@ -612,7 +612,12 @@ class FeedForward(BASE_ESTIMATOR):
                 y = y.flatten()
             if y.ndim != 1:
                 raise ValueError("Label must be 1D or 2D (with 2nd dimension being 1)")
-            return io.NDArrayIter(X, y, self.numpy_batch_size, shuffle=is_train)
+            if is_train:
+                return io.NDArrayIter(X, y, self.numpy_batch_size,
+                                      shuffle=is_train, last_batch_handle='roll_over')
+            else:
+                return io.NDArrayIter(X, y, self.numpy_batch_size,
+                                      shuffle=is_train)
         if not isinstance(X, io.DataIter):
             raise TypeError('X must be DataIter, NDArray or numpy.ndarray')
         return X
