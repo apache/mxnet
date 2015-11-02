@@ -56,16 +56,11 @@ if [ ${TASK} == "r_test" ]; then
     export _R_CHECK_TIMINGS_=0
     export R_BUILD_ARGS="--no-build-vignettes --no-manual"
     export R_CHECK_ARGS="--no-vignettes --no-manual"
-    
-    curl -OL http://raw.github.com/craigcitro/r-travis/master/scripts/travis-tool.sh
-    chmod 755 ./travis-tool.sh
-    ./travis-tool.sh bootstrap
-    ./travis-tool.sh install_aptget r-cran-testthat r-cran-Rcpp r-cran-DiagrammeR r-cran-data.table r-cran-jsonlite r-cran-magrittr r-cran-stringr
-    
-    R CMD INSTALL R-package
-    cd ./R-package
-    ../travis-tool.sh install_deps
-    ../travis-tool.sh run_tests
+
+    wget https://cran.rstudio.com/bin/macosx/R-latest.pkg  -O /tmp/R-latest.pkg
+    sudo installer -pkg "/tmp/R-latest.pkg" -target /
+    Rscript -e "install.packages(c('Rcpp', 'testthat', 'DiagrammeR', 'data.table', 'jsonlite', 'magrittr', 'stringr'), repo = 'https://cran.rstudio.com')" 
+    R CMD check R-package
     exit 0
 fi
 
