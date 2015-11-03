@@ -1,3 +1,7 @@
+#=doc
+SVMLight / LibSVM is a popular data format for sparse features. Some preprocessed
+datasets in this format could be found at http://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/
+=#
 using MXNet
 using SVMLightLoader
 
