@@ -14,9 +14,8 @@ function _update_single_output(metric :: Accuracy, label :: NDArray, pred :: NDA
   n_sample = size(pred)[end]
   metric.n_sample += n_sample
   for i = 1:n_sample
-    klass = indmax(sub(pred,:,i))
+    klass = indmax(pred[:,i])
     metric.acc_sum += (klass-1) == label[i]
-    #println("$(sub(pred,:,i)) $(klass-1) <=> $(label[i])")
   end
 end
 
