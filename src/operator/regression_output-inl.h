@@ -57,10 +57,10 @@ class RegressionOutputOp : public Operator {
     CHECK_GE(in_grad.size(), 1);
     CHECK_GE(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 1> label = in_data[reg_enum::kLabel].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 2> label = in_data[reg_enum::kLabel].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> out = out_data[reg_enum::kOut].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> grad = in_grad[reg_enum::kData].FlatTo2D<xpu, real_t>(s);
-    Assign(grad, req[reg_enum::kData], F<BackwardOp>(out, reshape(label, grad.shape_)));
+    Assign(grad, req[reg_enum::kData], F<BackwardOp>(out, label));
   }
 };
 
@@ -90,8 +90,7 @@ class RegressionOutputProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 2) << "Input:[data, label]";
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
-    CHECK_EQ(dshape[1], 1) << TypeString() << " requires input's num_hidden=1.";
-    SHAPE_ASSIGN_CHECK(*in_shape, 1, Shape1(dshape[0]));
+    SHAPE_ASSIGN_CHECK(*in_shape, 1, dshape);
     out_shape->clear();
     out_shape->push_back(dshape);
     return true;
