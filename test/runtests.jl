@@ -15,6 +15,6 @@ include("common.jl")
 test_dir("unittest")
 
 # run the basic MNIST mlp example
-if haskey(ENV, "TRAVIS") && ENV["TRAVIS"] == "true"
+if haskey(ENV, "CONTINUOUS_INTEGRATION")
   include(joinpath(Pkg.dir("MXNet"), "examples", "mnist", "mlp.jl"))
 end
