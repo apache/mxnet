@@ -2,8 +2,8 @@
 # features of MXNet.jl in this example in order to detect regression errors.
 
 module MNISTTest
-
 using MXNet
+using Base.Test
 
 function get_mnist_mlp()
   mlp = @mx.chain mx.Variable(:data)             =>
