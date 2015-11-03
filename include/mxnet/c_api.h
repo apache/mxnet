@@ -708,7 +708,15 @@ MXNET_DLL int MXDataIterBeforeFirst(DataIterHandle handle);
  */
 MXNET_DLL int MXDataIterGetData(DataIterHandle handle,
                                 NDArrayHandle *out);
-
+/*!
+ * \brief Get the image index by array
+ * \param handle the handle pointer to the data iterator
+ * \param index array size
+ * \return image index array
+ */
+MXNET_DLL int MXDataIterGetIndex(DataIterHandle handle,
+		                         mx_uint index_size,  
+		                         uint64_t *out_index);
 /*!
  * \brief Get the padding number in current data batch
  * \param handle the handle pointer to the data iterator
