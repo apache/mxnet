@@ -70,6 +70,7 @@ class PrefetcherIter : public IIterator<DataBatch> {
           (*dptr)->index.resize(batch.batch_size);
           for (size_t i = 0; i < batch.data.size(); ++i) {
             (*dptr)->data.at(i) = NDArray(batch.data[i].shape_, Context::CPU());
+			(*dptr)->index.at(i) = batch.inst_index[i];
           }
         }
         CHECK(batch.data.size() == (*dptr)->data.size());
