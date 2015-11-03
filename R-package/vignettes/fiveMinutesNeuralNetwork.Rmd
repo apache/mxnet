@@ -47,7 +47,7 @@ The following code piece is showing a possible usage of `mx.mlp`:
 mx.set.seed(0)
 model <- mx.mlp(train.x, train.y, hidden_node=10, out_node=2, out_activation="softmax",
                 num.round=20, array.batch.size=15, learning.rate=0.07, momentum=0.9, 
-                eval.metric=mx.metric.accuracy,epoch.end.callback=mx.callback.log.train.metric(100))
+                eval.metric=mx.metric.accuracy)
 ```
 
 Note that `mx.set.seed` is the correct function to control the random process in `mxnet`. You can see the accuracy in each round during training. It is also easy to make prediction and evaluate.
@@ -96,8 +96,7 @@ next we can make prediction with this structure and other parameters with `mx.mo
 mx.set.seed(0)
 model <- mx.model.FeedForward.create(lro, X=train.x, y=train.y,
                                      ctx=mx.cpu(), num.round=50, array.batch.size=20,
-                                     learning.rate=2e-6, momentum=0.9, eval.metric=mx.metric.rmse,
-                                     epoch.end.callback=mx.callback.log.train.metric(100))
+                                     learning.rate=2e-6, momentum=0.9, eval.metric=mx.metric.rmse)
 ```
 
 It is also easy to make prediction and evaluate
@@ -122,8 +121,7 @@ This is an example for mean absolute error. We can simply plug it in the trainin
 mx.set.seed(0)
 model <- mx.model.FeedForward.create(lro, X=train.x, y=train.y,
                                      ctx=mx.cpu(), num.round=50, array.batch.size=20,
-                                     learning.rate=2e-6, momentum=0.9, eval.metric=demo.metric.mae,
-                                     epoch.end.callback=mx.callback.log.train.metric(100))
+                                     learning.rate=2e-6, momentum=0.9, eval.metric=demo.metric.mae)
 ```
 
 Congratulations! Now you have learnt the basic for using `mxnet`. Please check the other tutorials for advanced features.
