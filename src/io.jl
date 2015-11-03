@@ -42,7 +42,7 @@ and split it into mini-batches so that the model can consume the data in a unifo
 
    .. code-block:: julia
 
-      for batch in provider
+      for batch in eachbatch(provider)
         data = get_data(provider, batch)
       end
 
@@ -50,12 +50,15 @@ and split it into mini-batches so that the model can consume the data in a unifo
 
    .. code-block:: julia
 
-      state = Base.start(provider)
+      state = Base.start(eachbatch(provider))
       while !Base.done(provider, state)
         (batch, state) = Base.next(provider, state)
         data = get_data(provider, batch)
       end
 
+   By default, :func:`eachbatch` simply returns the provider itself, so the iterator interface
+   is implemented on the provider type itself. But the extra layer of abstraction allows us to
+   implement a data provider easily via a Julia ``Task`` coroutine.
    The detailed interface function is listed below:
 
    .. function:: Base.eltype(provider) -> AbstractDataBatch
@@ -190,6 +193,21 @@ abstract AbstractDataProviderState
 abstract AbstractDataBatch
 
 #=doc
+.. class:: DataBatch
+
+   A basic subclass of :class:`AbstractDataBatch`, that implement the interface by
+   accessing member fields.
+=#
+type DataBatch <: AbstractDataBatch
+  data  :: Vector{NDArray}
+  label :: Vector{NDArray}
+  count :: Int
+end
+count_samples(batch :: DataBatch) = batch.count
+get_data(batch :: DataBatch) = batch.data
+get_label(batch :: DataBatch) = batch.label
+
+#=doc
 .. class:: SlicedNDArray
 
    A alias type of ``Tuple{UnitRange{Int},NDArray}``.
@@ -239,6 +257,8 @@ function get(provider :: AbstractDataProvider, batch :: AbstractDataBatch, name 
   end
   error("$name is not provided by this data provider")
 end
+
+eachbatch(provider :: AbstractDataProvider) = provider
 
 #=doc
 Built-in data providers
