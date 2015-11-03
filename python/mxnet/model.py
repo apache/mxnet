@@ -51,46 +51,26 @@ def _check_arguments(symbol):
     ----------
     symbol : Symbol
         The network configuration
-
-    Returns
-    -------
-    data_index : int
-        Index position of data.
-    label_index : int
-        Index position of label
     """
-    arg_names = symbol.list_arguments()
-    data_index, label_index = None, None
     arg_set = set()
-    for index, name in enumerate(arg_names):
-        if name.endswith('label'):
-            if label_index is not None:
-                raise ValueError('Two arguments with suffix \"label\", ' +
-                                 'only accept one label in config for now, '+
-                                 'arguments are %s' % str(arg_names))
-            label_index = index
-        if name.endswith('data'):
-            if data_index is not None:
-                raise ValueError('Two arguments with suffix \"label\", ' +
-                                 'only accept one input data in config for now, ' +
-                                 'arguments are %s' % str(arg_names))
-            data_index = index
+    arg_names = symbol.list_arguments()
+    for name in arg_names:
         if name in arg_set:
             raise ValueError(('Find duplicated argument name \"%s\", ' +
                               'please make the weight name non-duplicated(using name arguments), ' +
                               'arguments are %s') % (name, str(arg_names)))
         arg_set.add(name)
 
+    aux_set = set()
     aux_names = symbol.list_auxiliary_states()
     for name in aux_names:
-        if name in arg_set:
+        if name in aux_set:
             raise ValueError(
                 ('Find duplicated auxiliary param name \"%s\", ' +
                  'please make the weight name non-duplicated(using name arguments), ' +
                  'arguments are %s, auxiliary params are %s'
                 ) % (name, str(arg_names), str(aux_names)))
-
-    return (data_index, label_index)
+        aux_set.add(name)
 
 
 def _split_input_slice(batch_size, num_split):
@@ -245,6 +225,9 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     num_device = len(ctx)
     logging.info('Start training with %s', str(ctx))
 
+    # make sure the architecture is valid
+    _check_arguments(symbol)
+
     slices = _split_input_slice(train_data.batch_size, num_device)
     train_execs = []
     for i in range(len(ctx)):
@@ -252,11 +235,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                        for k,v in train_data.provide_data}
         train_exec  = symbol.simple_bind(ctx[i], 'write', **data_shapes)
         train_execs.append(train_exec)
-
-    # train_execs = [symbol.simple_bind(ctx=c, data=s, grad_req='write')
-    #                for c, s in zip(ctx, shapes)]
-    # arg_names = symbol.list_arguments()
-    # aux_names = symbol.list_auxiliary_states()
 
     # data structure
     data_names  = [x[0] for x in train_data.provide_data]
@@ -272,17 +250,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     param_arrays = [[e.arg_arrays[i] for e in train_execs] for i in param_idx]
     grad_arrays  = [[e.grad_arrays[i] for e in train_execs] for i in param_idx]
     aux_arrays   = [[e.aux_arrays[i] for e in train_execs] for i in range(len(aux_names))]
-
-    # # data structure
-    # arg_blocks = [
-    #     [x.arg_arrays[index] for x in train_execs]
-    #     for index in range(len(train_execs[0].arg_arrays))]
-    # grad_blocks = [
-    #     [x.grad_arrays[index] for x in train_execs]
-    #     for index in range(len(train_execs[0].grad_arrays))]
-    # aux_blocks = [
-    #     [x.aux_arrays[index] for x in train_execs]
-    #     for index in range(len(train_execs[0].aux_arrays))]
 
     for texec in train_execs:
         texec.copy_params_from(arg_params, aux_params)
@@ -300,21 +267,12 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
             kvstore.set_optimizer(optimizer)
 
         # init kv
-        for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
-            arg_list, grad_list = pair
-            if grad_list[0] is not None:
-                kvstore.init(index, arg_list[0])
+        for idx in range(len(param_arrays)):
+            param_on_devs = param_arrays[idx]
+            kvstore.init(idx, arg_params[param_names[idx]])
 
-                # pull the weight back
-                if update_on_kvstore:
-                    kvstore.pull(index, arg_list, priority=-index)
-
-    # Input and output data structure
-    #data_index, label_index = _check_arguments(symbol)
-    #merged_shape = list(train_execs[0].outputs[0].shape)
-    #merged_shape[0] = input_shapes[0]
-    #merged_shape = tuple(merged_shape)
-    #out_cpu_array = nd.zeros(merged_shape, cpu())
+            if update_on_kvstore:
+                kvstore.pull(idx, param_on_devs, priority=-idx)
 
     batch_size = train_data.batch_size
 
@@ -328,17 +286,10 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         eval_metric.reset()
         nbatch = 0
         # Iterate over training data.
-        #for data, label in train_data:
         train_data.reset()
         for data_batch in train_data:
             _load_data(data_batch, data_arrays)
             _load_label(data_batch, label_arrays)
-
-            # # Copy data into the target
-            # for target, islice in zip(arg_blocks[label_index], slices):
-            #     label[islice].copyto(target)
-            # for target, islice in zip(arg_blocks[data_index], slices):
-            #     data[islice].copyto(target)
 
             # forward backward pass
             for texec, islice in zip(train_execs, slices):
@@ -350,7 +301,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 texec.backward()
 
             # update the parameters
-            #for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
             for index, pair in enumerate(zip(param_arrays, grad_arrays)):
                 arg_list, grad_list = pair
                 if grad_list[0] is None:
@@ -399,18 +349,12 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
             for eval_batch in eval_data:
                 _load_data(eval_batch, data_arrays)
                 _load_label(eval_batch, label_arrays)
-                # # Copy data into the target
-                # for target, islice in zip(arg_blocks[label_index], slices):
-                #     label[islice].copyto(target)
-                # for target, islice in zip(arg_blocks[data_index], slices):
-                #     data[islice].copyto(target)
 
                 # forward pass
                 for texec, islice in zip(train_execs, slices):
                     texec.forward(is_train=False)
                     for cpu_out, dev_out in zip(cpu_output_arrays, texec.outputs):
                         dev_out.copyto(cpu_out[islice])
-                    #texec.outputs[0].copyto(out_cpu_array[islice])
                 eval_metric.update(eval_batch.label, cpu_output_arrays)
             name, value = eval_metric.get()
             logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
@@ -424,14 +368,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 weight = sum(w.copyto(cpu()) for w in block) / len(block)
                 weight.copyto(aux_params[name])
 
-            # for name, block in zip(arg_names, arg_blocks):
-            #     if name in arg_params:
-            #         weight = sum(w.copyto(cpu()) for w in block) / len(block)
-            #         weight.copyto(arg_params[name])
-            # for name, block in zip(aux_names, aux_blocks):
-            #     if name in aux_params:
-            #         weight = sum(w.copyto(cpu()) for w in block) / len(block)
-            #         weight.copyto(aux_params[name])
         if epoch_end_callback != None:
             if isinstance(epoch_end_callback, list):
                 for call in epoch_end_callback:
