@@ -16,6 +16,15 @@ function init_kv()
   return kv
 end
 
+function test_kv_basic()
+  info("KVStore::basic")
+
+  kv = init_kv()
+  @test mx.get_type(kv) == :local
+  @test mx.get_rank(kv) == 0
+  @test mx.get_num_workers(kv) == 1
+end
+
 function test_single_kv_pair()
   info("KVStore::single")
 
@@ -53,6 +62,7 @@ function test_aggregator()
   end
 end
 
+test_kv_basic()
 test_single_kv_pair()
 test_aggregator()
 

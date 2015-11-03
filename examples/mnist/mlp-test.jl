@@ -1,8 +1,9 @@
 # This file is primarily to be included from runtest.jl. We tried to cover various
 # features of MXNet.jl in this example in order to detect regression errors.
 
-using MXNet
+module MNISTTest
 
+using MXNet
 
 function get_mnist_mlp()
   mlp = @mx.chain mx.Variable(:data)             =>
@@ -73,3 +74,5 @@ function test_mnist_mlp()
 end
 
 test_mnist_mlp()
+
+end # module MNISTTest
