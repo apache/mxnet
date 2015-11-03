@@ -34,7 +34,8 @@ model = mx.FeedForward(mlp, context=mx.cpu())
 optimizer = mx.SGD(lr=0.1, momentum=0.9, weight_decay=0.00001)
 
 # fit parameters
-mx.fit(model, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)
+mx.fit(model, optimizer, train_provider, eval_data=eval_provider,
+       n_epoch = isdefined(:n_epoch) ? n_epoch : 20)
 
 #--------------------------------------------------------------------------------
 # Optional, demonstration of the predict API
