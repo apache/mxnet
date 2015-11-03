@@ -81,8 +81,8 @@ def _split_input_slice(batch_size, num_split):
 
     Parameters
     ----------
-    input_shape : tuple
-        The input shape of the net.
+    batch_size : int
+        The number of samples in a mini-batch.
 
     num_split : int
         The number of split we want to have.
@@ -91,9 +91,6 @@ def _split_input_slice(batch_size, num_split):
     -------
     slices : list of slice
         The split slices to get a specific slice.
-
-    shapes : list of tuples
-        The shape of each split slice.
 
     Raises
     ------
@@ -173,6 +170,15 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
 
     ctx : list of Context
         The training devices.
+
+    arg_names: list of str
+        Name of all arguments of the network.
+
+    param_names: list of str
+        Name of all trainable parameters of the network.
+
+    aux_names: list of str
+        Name of all auxiliary states of the network.
 
     input_shape : tuple
         Shape of input data batch.
@@ -537,7 +543,6 @@ class FeedForward(BASE_ESTIMATOR):
         self.aux_params = aux_params
         # internal helper state
         self._pred_exec = None
-        self._pred_exec_input = None
         self.begin_epoch = begin_epoch
 
     @staticmethod
@@ -608,17 +613,7 @@ class FeedForward(BASE_ESTIMATOR):
             self.ctx[0], grad_req='null', **dict(input_shapes))
         pred_exec.copy_params_from(self.arg_params, self.aux_params)
 
-        #for name, value in list(zip(self.symbol.list_arguments(), pred_exec.arg_arrays)):
-        #    if not self._is_data_arg(name):
-        #        if not name in self.arg_params:
-        #            raise ValueError("%s not exist in arg_params" % name)
-        #        self.arg_params[name].copyto(value)
-        #for name, value in list(zip(self.symbol.list_auxiliary_states(), pred_exec.aux_arrays)):
-        #    assert name in self.aux_params
-        #    self.aux_params[name].copyto(value)
-        #data_index, _ =
         _check_arguments(self.symbol)
-        #self._pred_exec_input = pred_exec.arg_arrays[data_index]
         self._pred_exec = pred_exec
 
     def _init_iter(self, X, y, is_train):
@@ -703,7 +698,7 @@ class FeedForward(BASE_ESTIMATOR):
         else:
             return outputs
 
-    def fit(self, data, eval_data=None, eval_metric='acc',
+    def fit(self, X, y=None, eval_data=None, eval_metric='acc',
             epoch_end_callback=None, batch_end_callback=None,
             kvstore='local', logger=None):
         """Fit the model.
@@ -750,6 +745,15 @@ class FeedForward(BASE_ESTIMATOR):
             When not specified, default logger will be used.
 
         """
+
+        if isinstance(X, io.DataIter):
+            data = X
+        else:
+            assert(y is not None), "Label required for training"
+            assert(isinstance(X, (np.ndarray, nd.NDArray)))
+            assert(isinstance(y, (np.ndarray, nd.NDArray)))
+            # TODO: use existing _init_iter
+            data = io.NDArrayIter(X, y, batch_size=self.numpy_batch_size)
 
         if not isinstance(data, io.DataIter):
             raise TypeError('Training data must be a DataIter')

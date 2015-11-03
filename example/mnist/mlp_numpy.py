@@ -43,8 +43,8 @@ model = mx.model.FeedForward(
     learning_rate = 0.1, momentum = 0.9, wd = 0.00001)
 
 # train by using Numpy ndarray direcly
-#model.fit(data=train_data, y=train_label)
+model.fit(X=train_data, y=train_label)
 
 # train by using Numpy Iterator
-model.fit(data=train_iter, eval_data=val_iter)
+#model.fit(train_iter, eval_data=val_iter)
 

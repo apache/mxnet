@@ -204,7 +204,6 @@ class NDArrayIter(DataIter):
     def next(self):
         if self.iter_next():
             return DataBatch(data=self.getdata(),label=self.getlabel(),pad=self.getpad())
-            #(self.getdata(i) for i in range(self.num_source))
         else:
             raise StopIteration
 
@@ -294,10 +293,10 @@ class MXDataIter(DataIter):
         else:
             raise StopIteration
 
-    #def iter_next(self):
-    #    next_res = ctypes.c_int(0)
-    #    check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
-    #    return next_res.value
+    def iter_next(self):
+        next_res = ctypes.c_int(0)
+        check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
+        return next_res.value
 
     def getdata(self):
         hdl = NDArrayHandle()
