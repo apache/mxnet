@@ -16,6 +16,5 @@ test_dir("unittest")
 
 # run the basic MNIST mlp example
 if haskey(ENV, "CONTINUOUS_INTEGRATION")
-  n_epoch = 1
-  include(joinpath(Pkg.dir("MXNet"), "examples", "mnist", "mlp.jl"))
+  include(joinpath(Pkg.dir("MXNet"), "examples", "mnist", "mlp-test.jl"))
 end
