@@ -33,8 +33,11 @@ BatchEndParam = namedtuple('BatchEndParams',
 
 def _load_general(data, targets):
     for d_src, d_targets in zip(data, targets):
-        for slice_idx, d_dst in d_targets:
-            d_src[slice_idx].copyto(d_dst)
+        if isinstance(d_targets, nd.NDArray):
+            d_src.copyto(d_targets)
+        else:
+            for slice_idx, d_dst in d_targets:
+                d_src[slice_idx].copyto(d_dst)
 def _load_data(batch, targets):
     _load_general(batch.data, targets)
 def _load_label(batch, targets):
@@ -596,24 +599,26 @@ class FeedForward(BASE_ESTIMATOR):
     def __setstate__(self, state):
         self.__dict__.update(state)
 
-    def _init_predictor(self, input_shape):
+    def _init_predictor(self, input_shapes):
         """Initialize the predictor module for running prediction."""
         if self._pred_exec is not None:
             return
         # for now only use the first device
         pred_exec = self.symbol.simple_bind(
-            self.ctx[0], grad_req='null', data=input_shape)
+            self.ctx[0], grad_req='null', **dict(input_shapes))
+        pred_exec.copy_params_from(self.arg_params, self.aux_params)
 
-        for name, value in list(zip(self.symbol.list_arguments(), pred_exec.arg_arrays)):
-            if not self._is_data_arg(name):
-                if not name in self.arg_params:
-                    raise ValueError("%s not exist in arg_params" % name)
-                self.arg_params[name].copyto(value)
-        for name, value in list(zip(self.symbol.list_auxiliary_states(), pred_exec.aux_arrays)):
-            assert name in self.aux_params
-            self.aux_params[name].copyto(value)
-        data_index, _ = _check_arguments(self.symbol)
-        self._pred_exec_input = pred_exec.arg_arrays[data_index]
+        #for name, value in list(zip(self.symbol.list_arguments(), pred_exec.arg_arrays)):
+        #    if not self._is_data_arg(name):
+        #        if not name in self.arg_params:
+        #            raise ValueError("%s not exist in arg_params" % name)
+        #        self.arg_params[name].copyto(value)
+        #for name, value in list(zip(self.symbol.list_auxiliary_states(), pred_exec.aux_arrays)):
+        #    assert name in self.aux_params
+        #    self.aux_params[name].copyto(value)
+        #data_index, _ =
+        _check_arguments(self.symbol)
+        #self._pred_exec_input = pred_exec.arg_arrays[data_index]
         self._pred_exec = pred_exec
 
     def _init_iter(self, X, y, is_train):
@@ -667,29 +672,36 @@ class FeedForward(BASE_ESTIMATOR):
 
         Parameters
         ----------
-        X : mxnet.DataIter or numpy.ndarray
+        X : mxnet.DataIter
 
         Returns
         -------
-        y : numpy.ndarray
+        y : numpy.ndarray or a list of numpy.ndarray if the network has multiple outputs.
             The predicted value of the output.
         """
-        X = self._init_iter(X, None, is_train=False)
         X.reset()
-        data, _ = X.next()
-        self._init_predictor(data.shape)
+        data_shapes = X.provide_data
+        data_names  = [x[0] for x in data_shapes]
+        self._init_predictor(data_shapes)
+        batch_size = X.batch_size
+        data_arrays = [self._pred_exec.arg_dict[name] for name in data_names]
+        output_list = [[] for i in range(len(self._pred_exec.outputs))]
 
-        outputs = []
-        X.reset()
-        for data, _ in X:
-            data.copyto(self._pred_exec_input)
+        for batch in X:
+            _load_data(batch, data_arrays)
             self._pred_exec.forward(is_train=False)
-            out_batch = self._pred_exec.outputs[0].asnumpy()
-            padded = X.getpad()
-            real_size = out_batch.shape[0] - padded
-            out_batch = out_batch[0:real_size, :]
-            outputs.append(out_batch)
-        return np.concatenate(outputs)
+            padded = batch.pad
+            real_size = batch_size - padded
+
+            for o_list, o_nd in zip(output_list, self._pred_exec.outputs):
+                o_list.append(o_nd[0:real_size].asnumpy())
+
+        outputs = [np.concatenate(x) for x in output_list]
+
+        if len(outputs) == 1:
+            return outputs[0]
+        else:
+            return outputs
 
     def fit(self, data, eval_data=None, eval_metric='acc',
             epoch_end_callback=None, batch_end_callback=None,
@@ -747,17 +759,6 @@ class FeedForward(BASE_ESTIMATOR):
 
         arg_names, param_names, aux_names = \
                 self._init_params(dict(data.provide_data+data.provide_label))
-
-        # X = self._init_iter(X, y, is_train=True)
-        # eval_data = self._init_eval_iter(eval_data)
-        # # Simply ignore the first example to get input_shape
-        # # in first training epoch.
-        # if not X.iter_next():
-        #     X.reset()
-        #     assert X.iter_next()
-        # input_shape = X.getdata().shape
-        # if self.arg_params is None:
-        #     self._init_params(input_shape)
 
         # setup metric
         if not isinstance(eval_metric, metric.EvalMetric):

@@ -22,7 +22,9 @@ train, val = mnist_iterator(batch_size=100, input_shape = (784,))
 logging.basicConfig(level=logging.DEBUG)
 
 model = mx.model.FeedForward(
-    ctx = mx.cpu(), symbol = mlp, num_epoch = 20,
+    ctx = mx.cpu(), symbol = mlp, num_epoch = 2,
     learning_rate = 0.1, momentum = 0.9, wd = 0.00001)
 
 model.fit(data=train, eval_data=val)
+
+probs = model.predict(val)
