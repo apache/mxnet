@@ -372,12 +372,13 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
     # init kv with gradients
     for idx = 1:length(param_arrays)
       param_on_devs = param_arrays[idx]
-      grad_on_devs  = grad_arrays[idx]
 
       init!(kvstore, idx, self.arg_params[param_names[idx]])
 
-      # pull weights back
-      pull!(kvstore, idx, param_on_devs, priority=-idx)
+      if update_on_kvstore
+        # pull weights back
+        pull!(kvstore, idx, param_on_devs, priority=-idx)
+      end
     end
   end
 
