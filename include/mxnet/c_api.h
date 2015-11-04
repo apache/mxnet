@@ -379,6 +379,11 @@ MXNET_DLL int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolCreateVariable(const char *name, SymbolHandle *out);
+
+MXNET_DLL int MXSymbolGetSubGroup(SymbolHandle symbol,
+                                  mx_uint num_idx,
+                                  mx_uint *idx,
+                                  SymbolHandle *out);
 /*!
  * \brief Create a Symbol by grouping list of symbols together
  * \param num_symbols number of symbols to be grouped

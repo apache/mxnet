@@ -180,6 +180,15 @@ class Symbol(object):
             self.handle, ctypes.byref(handle)))
         return Symbol(handle=handle)
 
+    def get_subgroup(self, idx):
+        handle = SymbolHandle()
+        num_idx = mx_uint(len(idx))
+        idx = (mx_uint*len(idx))(*idx)
+        idx = ctypes.cast(idx, ctypes.POINTER(mx_uint))
+        check_call(_LIB.MXSymbolGetSubGroup(
+            self.handle, num_idx, idx, ctypes.byref(handle)))
+        return Symbol(handle=handle)
+
     def list_arguments(self):
         """List all the arguments in the symbol.
 

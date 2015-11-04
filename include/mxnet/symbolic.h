@@ -161,6 +161,8 @@ class Symbol {
   inline size_t NumOutputs() const {
     return heads_.size();
   }
+
+  Symbol GetSubGroup(const std::vector<uint32_t> idx);
   /*!
    * \brief create Symbol by wrapping OperatorProperty
    * This function takes the ownership of op
