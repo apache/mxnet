@@ -57,10 +57,13 @@ class RegressionOutputOp : public Operator {
     CHECK_GE(in_grad.size(), 1);
     CHECK_GE(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 1> label = in_data[reg_enum::kLabel].get<xpu, 1, real_t>(s);
+    real_t num_output =
+      in_data[reg_enum::kLabel].Size()/in_data[reg_enum::kLabel].shape_[0];
     Tensor<xpu, 2> out = out_data[reg_enum::kOut].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> grad = in_grad[reg_enum::kData].FlatTo2D<xpu, real_t>(s);
-    Assign(grad, req[reg_enum::kData], F<BackwardOp>(out, reshape(label, grad.shape_)));
+    Tensor<xpu, 2> label = in_data[reg_enum::kLabel]
+      .get_with_shape<xpu, 2, real_t>(out.shape_, s);
+    Assign(grad, req[reg_enum::kData], F<BackwardOp>(out, label)/num_output);
   }
 };
 
@@ -90,8 +93,15 @@ class RegressionOutputProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 2) << "Input:[data, label]";
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
-    CHECK_EQ(dshape[1], 1) << TypeString() << " requires input's num_hidden=1.";
-    SHAPE_ASSIGN_CHECK(*in_shape, 1, Shape1(dshape[0]));
+    auto &lshape = (*in_shape)[1];
+    if (lshape.ndim() == 0) {
+      lshape = dshape;
+    } else if (lshape[0] != dshape[0] || lshape.Size() != dshape.Size()) {
+      std::ostringstream os;
+      os << "Shape inconsistent, Provided " <<  '='<< lshape << ','
+         << " inferred shape=" << dshape;
+      throw ::mxnet::op::InferShapeError(os.str(), 1);
+    }
     out_shape->clear();
     out_shape->push_back(dshape);
     return true;
