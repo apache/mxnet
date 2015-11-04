@@ -68,3 +68,4 @@ deps
 *.rds
 *.Rproj
 .Rproj.user
+R-package/inst/*
