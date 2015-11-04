@@ -575,11 +575,11 @@ class FeedForward(BASE_ESTIMATOR):
             self.aux_params = {k : nd.zeros(s) for k, s in zip(aux_names, aux_shapes)}
 
         if (not arg_defined) or overwrite:
-            for k, v in self.arg_params.iteritems():
+            for k, v in self.arg_params.items():
                 self.initializer(k, v)
 
         if (not aux_defined) or overwrite:
-            for k, v in self.aux_params.iteritems():
+            for k, v in self.aux_params.items():
                 self.initializer(k, v)
 
         return (arg_names, param_names, aux_names)
