@@ -640,8 +640,7 @@ class FeedForward(BASE_ESTIMATOR):
                 return io.NDArrayIter(X, y, self.numpy_batch_size,
                                       shuffle=is_train, last_batch_handle='roll_over')
             else:
-                return io.NDArrayIter(X, y, self.numpy_batch_size,
-                                      shuffle=is_train)
+                return io.NDArrayIter(X, y, self.numpy_batch_size, shuffle=False)
         if not isinstance(X, io.DataIter):
             raise TypeError('X must be DataIter, NDArray or numpy.ndarray')
         return X
@@ -678,6 +677,8 @@ class FeedForward(BASE_ESTIMATOR):
         y : numpy.ndarray or a list of numpy.ndarray if the network has multiple outputs.
             The predicted value of the output.
         """
+        X = self._init_iter(X, None, is_train=False)
+
         X.reset()
         data_shapes = X.provide_data
         data_names = [x[0] for x in data_shapes]
@@ -749,19 +750,22 @@ class FeedForward(BASE_ESTIMATOR):
 
         """
 
-        if isinstance(X, io.DataIter):
-            data = X
-        else:
-            assert(y is not None), "Label required for training"
-            assert(isinstance(X, (np.ndarray, nd.NDArray)))
-            assert(isinstance(y, (np.ndarray, nd.NDArray)))
-            # TODO: use existing _init_iter
-            data = io.NDArrayIter(X, y, batch_size=self.numpy_batch_size)
+        data = self._init_iter(X, y, is_train=True)
+        eval_data = self._init_eval_iter(eval_data)
 
-        if not isinstance(data, io.DataIter):
-            raise TypeError('Training data must be a DataIter')
-        if (not eval_data is None) and not isinstance(eval_data, io.DataIter):
-            raise TypeError('Eval data, if presented, must be a DataIter')
+        #if isinstance(X, io.DataIter):
+        #    data = X
+        #else:
+        #    assert(y is not None), "Label required for training"
+        #    assert(isinstance(X, (np.ndarray, nd.NDArray)))
+        #    assert(isinstance(y, (np.ndarray, nd.NDArray)))
+        #    # TODO: use existing _init_iter
+        #    data = io.NDArrayIter(X, y, batch_size=self.numpy_batch_size)
+
+        #if not isinstance(data, io.DataIter):
+        #    raise TypeError('Training data must be a DataIter')
+        #if (not eval_data is None) and not isinstance(eval_data, io.DataIter):
+        #    raise TypeError('Eval data, if presented, must be a DataIter')
 
 
         arg_names, param_names, aux_names = \

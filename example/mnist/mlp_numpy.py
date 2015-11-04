@@ -48,3 +48,5 @@ model.fit(X=train_data, y=train_label)
 # train by using Numpy Iterator
 #model.fit(train_iter, eval_data=val_iter)
 
+probs = model.predict(val_data)
+print(probs.shape)
