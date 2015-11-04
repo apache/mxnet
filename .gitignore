@@ -69,3 +69,4 @@ deps
 *.Rproj
 .Rproj.user
 R-package/inst/*
+*.tar.gz

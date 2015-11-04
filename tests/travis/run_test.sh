@@ -61,7 +61,8 @@ if [ ${TASK} == "r_test" ]; then
     cd R-package
     Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
     cd ..
-    R CMD check --no-examples --no-vignettes --no-manual R-package
+    make rpkg
+    R CMD check --no-examples --no-vignettes --no-manual mxnet_*.tar.gz
     exit 0
 fi
 
