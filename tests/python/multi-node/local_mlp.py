@@ -1,8 +1,7 @@
 #!/usr/bin/env python
-
+import common
 import mxnet as mx
 import logging
-import common
 
 def test_mlp(devs, kv_type):
     # guarantee the same weight init for each run

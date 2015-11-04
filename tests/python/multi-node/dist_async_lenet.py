@@ -1,7 +1,7 @@
 #!/usr/bin/env python
+import common
 import mxnet as mx
 import logging
-import common
 
 mx.random.seed(0)
 logging.basicConfig(level=logging.DEBUG)

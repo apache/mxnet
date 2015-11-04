@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # pylint: skip-file
-import mxnet as mx
 import common
+import mxnet as mx
 import logging
 
 mx.random.seed(0)

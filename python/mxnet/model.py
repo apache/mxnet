@@ -362,13 +362,13 @@ def _train_multi_device(symbol, ctx, input_shape,
                 train_data.reset()
 
             # this epoch is done
-            if epoch_size is not None and nbatch == epoch_size:
+            if epoch_size is None or nbatch == epoch_size:
                 break
 
-       name, value = eval_metric.get()
-       logger.info('Epoch[%d] Train-%s=%f', epoch, name, value)
-       toc = time.time()
-       logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc - tic))
+        name, value = eval_metric.get()
+        logger.info('Epoch[%d] Train-%s=%f', epoch, name, value)
+        toc = time.time()
+        logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc - tic))
 
         # evaluation
         if eval_data:
