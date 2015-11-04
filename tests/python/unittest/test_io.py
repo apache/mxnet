@@ -83,8 +83,6 @@ def test_NDArrayIter():
             labelcount[int(label[i])] += 1
 
     for i in range(10):
-        print(labelcount[i])
-        continue
         if i == 0:
             assert(labelcount[i] == 124)
         else:

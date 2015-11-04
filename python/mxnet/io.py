@@ -3,7 +3,7 @@
 
 """NDArray interface of mxnet"""
 from __future__ import absolute_import
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 
 import ctypes
 import sys
@@ -105,9 +105,9 @@ def _init_data(data, allow_empty, default_name):
         if not allow_empty:
             assert(len(data) > 0)
         if len(data) == 1:
-            data = {default_name: data[0]}
+            data = OrderedDict([(default_name, data[0])])
         else:
-            data = {'_%d_%s' % (i, default_name) : d for i, d in enumerate(data)}
+            data = OrderedDict([('_%d_%s' % (i, default_name), d) for i, d in enumerate(data)])
     if not isinstance(data, dict):
         raise TypeError("Input must be NDArray, numpy.ndarray, " + \
                 "a list of them or dict with them as values")
@@ -118,6 +118,7 @@ def _init_data(data, allow_empty, default_name):
         if not isinstance(v, np.ndarray):
             raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
                     "should be NDArray or numpy.ndarray")
+
     return data.items()
 
 class NDArrayIter(DataIter):
@@ -150,31 +151,29 @@ class NDArrayIter(DataIter):
     for training and can cause problems if used for prediction.
     """
     def __init__(self, data, label=None, batch_size=1, shuffle=False, last_batch_handle='pad'):
-        # pylint: disable=W0201, E1101
-        # disable E1101 b/c lint says numpy has no copyto function, maybe due to different version?
+        # pylint: disable=W0201
 
         super(NDArrayIter, self).__init__()
 
         self.data = _init_data(data, allow_empty=False, default_name='data')
         self.label = _init_data(label, allow_empty=True, default_name='softmax_label')
 
-        self.data_list = [x[1] for x in self.data] + [x[1] for x in self.label]
-        self.num_source = len(self.data_list)
-
         # shuffle data
         if shuffle:
-            idx = np.arange(self.data_list[0].shape[0])
+            idx = np.arange(self.data[0][1].shape[0])
             np.random.shuffle(idx)
-            for i in range(self.num_source):
-                assert self.data_list[i].shape[0] == len(idx)
-                np.copyto(self.data_list[i], self.data_list[i][idx])
+            self.data = [(k, v[idx]) for k, v in self.data]
+            self.label = [(k, v[idx]) for k, v in self.label]
+
+        self.data_list = [x[1] for x in self.data] + [x[1] for x in self.label]
+        self.num_source = len(self.data_list)
 
         # batching
         if last_batch_handle == 'discard':
             new_n = self.data_list[0].shape[0] - self.data_list[0].shape[0] % batch_size
-            for k, _ in self.data.iteritems():
+            for k, _ in self.data:
                 self.data[k] = self.data[k][:new_n]
-            for k, _ in self.label.iteritems():
+            for k, _ in self.label:
                 self.label[k] = self.label[k][:new_n]
         self.num_data = self.data_list[0].shape[0]
         assert self.num_data > batch_size, \
