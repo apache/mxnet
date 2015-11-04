@@ -170,8 +170,8 @@ def _create_kvstore(kvstore, num_device, arg_params):
 
 def _train_multi_device(symbol, ctx, input_shape,
                         arg_params, aux_params,
-                        begin_epoch, end_epoch, optimizer,
-                        kvstore, update_on_kvstore,
+                        begin_epoch, end_epoch, epoch_size,
+                        optimizer, kvstore, update_on_kvstore,
                         train_data, eval_data=None, eval_metric=None,
                         epoch_end_callback=None, batch_end_callback=None,
                         logger=None):
@@ -201,6 +201,10 @@ def _train_multi_device(symbol, ctx, input_shape,
 
     end_epoch : int
         The end training epoch.
+
+    epoch_size : int, optional
+        Number of batches in a epoch. In default, it is set to
+        ceil(num_train_examples / batch_size)
 
     optimizer : Optimizer
         The optimization algorithm
@@ -296,61 +300,76 @@ def _train_multi_device(symbol, ctx, input_shape,
         eval_metric.reset()
         nbatch = 0
         # Iterate over training data.
-        for data, label in train_data:
-            # Copy data into the target
-            for target, islice in zip(arg_blocks[label_index], slices):
-                label[islice].copyto(target)
-            for target, islice in zip(arg_blocks[data_index], slices):
-                data[islice].copyto(target)
-            # forward backward pass
-            for texec, islice in zip(train_execs, slices):
-                texec.forward(is_train=True)
-                texec.outputs[0].copyto(out_cpu_array[islice])
-            for texec in train_execs:
-                texec.backward()
-            # update the parameters
-            for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
-                arg_list, grad_list = pair
-                if grad_list[0] is None:
-                    continue
-                # Gradient synchronization
-                if kvstore:
-                    # push gradient, priority is negative index
-                    kvstore.push(index, grad_list, priority=-index)
-                    if update_on_kvstore:
-                        # pull back the weights
-                        kvstore.pull(index, arg_list, priority=-index)
+        while True:
+            for data, label in train_data:
+                # Copy data into the target
+                for target, islice in zip(arg_blocks[label_index], slices):
+                    label[islice].copyto(target)
+                for target, islice in zip(arg_blocks[data_index], slices):
+                    data[islice].copyto(target)
+                # forward backward pass
+                for texec, islice in zip(train_execs, slices):
+                    texec.forward(is_train=True)
+                    texec.outputs[0].copyto(out_cpu_array[islice])
+                for texec in train_execs:
+                    texec.backward()
+                # update the parameters
+                for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
+                    arg_list, grad_list = pair
+                    if grad_list[0] is None:
+                        continue
+                    # Gradient synchronization
+                    if kvstore:
+                        # push gradient, priority is negative index
+                        kvstore.push(index, grad_list, priority=-index)
+                        if update_on_kvstore:
+                            # pull back the weights
+                            kvstore.pull(index, arg_list, priority=-index)
+                        else:
+                            # pull back the sum gradients, to the same locations.
+                            kvstore.pull(index, grad_list, priority=-index)
+                    if not update_on_kvstore:
+                        for k, p in enumerate(zip(arg_list, grad_list)):
+                            # faked an index here, to make optimizer create diff
+                            # state for the same index but on diff devs, TODO(mli)
+                            # use a better solution latter
+                            w, g = p
+                            updater(index*num_device+k, g, w)
+
+                nbatch += 1
+                # batch callback (for print purpose)
+                if batch_end_callback != None:
+                    batch_end_params = BatchEndParam(epoch=epoch,
+                                                     nbatch=nbatch,
+                                                     eval_metric=eval_metric)
+                    if isinstance(batch_end_callback, list):
+                        for call in batch_end_callback:
+                            call(batch_end_params)
                     else:
-                        # pull back the sum gradients, to the same locations.
-                        kvstore.pull(index, grad_list, priority=-index)
-                if not update_on_kvstore:
-                    for k, p in enumerate(zip(arg_list, grad_list)):
-                        # faked an index here, to make optimizer create diff
-                        # state for the same index but on diff devs, TODO(mli)
-                        # use a better solution latter
-                        w, g = p
-                        updater(index*num_device+k, g, w)
+                        batch_end_callback(batch_end_params)
+                # evaluate at end, so out_cpu_array can lazy copy
+                eval_metric.update(label, out_cpu_array)
 
-            nbatch += 1
-            # batch callback (for print purpose)
-            if batch_end_callback != None:
-                batch_end_params = BatchEndParam(epoch=epoch,
-                                                 nbatch=nbatch,
-                                                 eval_metric=eval_metric)
-                if isinstance(batch_end_callback, list):
-                    for call in batch_end_callback:
-                        call(batch_end_params)
-                else:
-                    batch_end_callback(batch_end_params)
-            # evaluate at end, so out_cpu_array can lazy copy
-            eval_metric.update(label, out_cpu_array)
+                # this epoch is done
+                if epoch_size is not None and nbatch == epoch_size:
+                    break
 
-        # reset training data after epoch finish
-        train_data.reset()
-        name, value = eval_metric.get()
-        logger.info('Epoch[%d] Train-%s=%f', epoch, name, value)
-        toc = time.time()
-        logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc - tic))
+            # reset the training data if reach the end of train_data, we only
+            # need to deal with the following two situations:
+            # 1. epoch_size is None:
+            # 2. epoch_size is not None but nbatch != epoch_size:
+            if epoch_size is None or nbatch != epoch_size:
+                train_data.reset()
+
+            # this epoch is done
+            if epoch_size is not None and nbatch == epoch_size:
+                break
+
+       name, value = eval_metric.get()
+       logger.info('Epoch[%d] Train-%s=%f', epoch, name, value)
+       toc = time.time()
+       logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc - tic))
+
         # evaluation
         if eval_data:
             eval_metric.reset()
@@ -479,6 +498,10 @@ class FeedForward(BASE_ESTIMATOR):
     num_epoch : int, optional
         Training parameter, number of training epochs(epochs).
 
+    epoch_size : int, optional
+        Number of batches in a epoch. In default, it is set to
+        ceil(num_train_examples / batch_size)
+
     optimizer : str or Optimizer, optional
         Training parameter, name or optimizer object for training.
 
@@ -508,7 +531,7 @@ class FeedForward(BASE_ESTIMATOR):
         The additional keyword arguments passed to optimizer.
     """
     def __init__(self, symbol, ctx=None,
-                 num_epoch=None, optimizer='sgd',
+                 num_epoch=None, epoch_size=None, optimizer='sgd',
                  initializer=Uniform(0.01),
                  numpy_batch_size=128,
                  arg_params=None, aux_params=None,
@@ -536,6 +559,7 @@ class FeedForward(BASE_ESTIMATOR):
         self.ctx = ctx
         # training parameters
         self.num_epoch = num_epoch
+        self.epoch_size = epoch_size
         self.kwargs = kwargs.copy()
         self.optimizer = optimizer
         self.initializer = initializer
@@ -736,6 +760,8 @@ class FeedForward(BASE_ESTIMATOR):
         # create kvstore
         (kvstore, update_on_kvstore) = _create_kvstore(
             kvstore, len(self.ctx), self.arg_params)
+        if kvstore and kvstore.type == 'dist_sync' and self.epoch_size is None:
+            raise ValueError('must set epoch_size for kvstore with type dist_sync')
 
         # init optmizer
         if isinstance(self.optimizer, str):
@@ -751,7 +777,9 @@ class FeedForward(BASE_ESTIMATOR):
         # do training
         _train_multi_device(self.symbol, self.ctx, input_shape,
                             self.arg_params, self.aux_params,
-                            begin_epoch=self.begin_epoch, end_epoch=self.num_epoch,
+                            begin_epoch=self.begin_epoch,
+                            end_epoch=self.num_epoch,
+                            epoch_size=self.epoch_size,
                             optimizer=optimizer,
                             train_data=X, eval_data=eval_data,
                             eval_metric=eval_metric,
@@ -822,7 +850,8 @@ class FeedForward(BASE_ESTIMATOR):
 
     @staticmethod
     def create(symbol, X, y=None, ctx=None,
-               num_epoch=None, optimizer='sgd', initializer=Uniform(0.01),
+               num_epoch=None, epoch_size=None,
+               optimizer='sgd', initializer=Uniform(0.01),
                eval_data=None, eval_metric='acc', epoch_end_callback=None,
                kvstore='local', logger=None, **kwargs):
         """Functional style to create a model.
@@ -847,6 +876,10 @@ class FeedForward(BASE_ESTIMATOR):
 
         num_epoch : int, optional
             Training parameter, number of training epochs(epochs).
+
+        epoch_size : int, optional
+            Number of batches in a epoch. In default, it is set to
+            ceil(num_train_examples / batch_size)
 
         optimizer : str or Optimizer, optional
             Training parameter, name or optimizer object for training.
@@ -876,8 +909,10 @@ class FeedForward(BASE_ESTIMATOR):
 
            In default uses 'local', often no need to change for single machiine.
         """
-        model = FeedForward(symbol, ctx=ctx, num_epoch=num_epoch,
-                            optimizer=optimizer, initializer=initializer, **kwargs)
+        model = FeedForward(symbol, ctx=ctx,
+                            num_epoch=num_epoch, epoch_size=epoch_size,
+                            optimizer=optimizer, initializer=initializer,
+                            **kwargs)
         model.fit(X, y, eval_data=eval_data, eval_metric=eval_metric,
                   epoch_end_callback=epoch_end_callback,
                   kvstore=kvstore,
