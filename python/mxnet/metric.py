@@ -55,7 +55,7 @@ class Accuracy(EvalMetric):
             pred_label = numpy.argmax(pred, axis=1)
             self.sum_metric += numpy.sum(pred_label == label)
             num_inst = label.size
-        self.num_inst += label.size
+        self.num_inst += num_inst
 
 
 class CustomMetric(EvalMetric):
