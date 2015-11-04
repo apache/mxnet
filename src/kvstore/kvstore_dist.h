@@ -201,7 +201,8 @@ class KVStoreDist : public KVStoreLocal {
   void CheckUnique(const std::vector<int>& keys) {
     auto keys_copy = keys;
     auto last = std::unique(keys_copy.begin(), keys_copy.end());
-    CHECK_EQ((size_t)std::distance(keys_copy.begin(), last), (size_t)keys.size());
+    CHECK_EQ(static_cast<size_t>(std::distance(keys_copy.begin(), last)),
+             static_cast<size_t>(keys.size()));
   }
 
   /**
@@ -232,7 +233,7 @@ class KVStoreDist : public KVStoreLocal {
     mu_.unlock();
 
     if (!pskv.keys.empty()) {
-      CHECK_EQ((size_t)pskv.size, size) << "The value size cannot be changed";
+      CHECK_EQ(static_cast<size_t>(pskv.size), size) << "The value size cannot be changed";
     } else {
       auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
       int num_servers = krs.size();
@@ -260,7 +261,7 @@ class KVStoreDist : public KVStoreLocal {
           pskv.lens.push_back(part_size);
           pskv.size += part_size;
         }
-        CHECK_EQ((size_t)pskv.size, size);
+        CHECK_EQ(static_cast<size_t>(pskv.size), size);
       }
     }
     return pskv;
