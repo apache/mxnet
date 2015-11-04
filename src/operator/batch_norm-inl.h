@@ -273,7 +273,7 @@ class BatchNormProp : public OperatorProperty {
     return {"moving_mean", "moving_var"};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  private:
   BatchNormParam param_;

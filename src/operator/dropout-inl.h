@@ -164,7 +164,7 @@ class DropoutProp : public OperatorProperty {
     return {"output", "mask"};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  private:
   DropoutParam param_;

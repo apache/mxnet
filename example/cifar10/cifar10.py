@@ -55,7 +55,7 @@ in5b = SimpleFactory(in5a, 176, 160)
 pool = mx.symbol.Pooling(data=in5b, pool_type="avg", kernel=(7,7), name="global_pool")
 flatten = mx.symbol.Flatten(data=pool, name="flatten1")
 fc = mx.symbol.FullyConnected(data=flatten, num_hidden=10, name="fc1")
-softmax = mx.symbol.Softmax(data=fc, name="loss")
+softmax = mx.symbol.SoftmaxOutput(data=fc, name="loss")
 
 #########################################################
 

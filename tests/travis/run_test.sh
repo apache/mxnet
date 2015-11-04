@@ -45,6 +45,26 @@ if [ ${TASK} == "cpp_test" ]; then
     exit 0
 fi
 
+if [ ${TASK} == "r_test" ]; then
+    make all || exit -1
+    # use cached dir for storing data
+    rm -rf ${PWD}/data
+    mkdir -p ${CACHE_PREFIX}/data
+    ln -s ${CACHE_PREFIX}/data ${PWD}/data
+
+    set -e
+    export _R_CHECK_TIMINGS_=0
+
+    wget https://cran.rstudio.com/bin/macosx/R-latest.pkg  -O /tmp/R-latest.pkg
+    sudo installer -pkg "/tmp/R-latest.pkg" -target /
+    Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')" 
+    cd R-package
+    Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
+    cd ..
+    R CMD check --no-examples --no-vignettes --no-manual R-package
+    exit 0
+fi
+
 if [ ${TASK} == "python_test" ]; then
     make all || exit -1
     # use cached dir for storing data

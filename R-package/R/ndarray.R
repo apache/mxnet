@@ -12,7 +12,12 @@
 #' @export
 mx.nd.load <- function(filename) {
   filename <- path.expand(filename)
-  mx.nd.internal.load(filename)
+  ndarray <- mx.nd.internal.load(filename)
+  if (length(ndarray) == 1) {
+    return(ndarray[[1]])
+  } else {
+    return(ndarray)
+  }
 }
 
 #' Save an mx.nd.array object
@@ -30,7 +35,11 @@ mx.nd.load <- function(filename) {
 #' @export
 mx.nd.save <- function(ndarray, filename) {
   filename <- path.expand(filename)
-  mx.nd.internal.save(ndarray, filename)
+  if (!is.list(ndarray)) {
+    mx.nd.internal.save(list(ndarray), filename)
+  } else {
+    mx.nd.internal.save(ndarray, filename)
+  }
 }
 
 mx.nd.internal.empty <- function(shape, ctx=NULL) {
