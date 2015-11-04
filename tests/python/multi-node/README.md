@@ -31,10 +31,10 @@
 
 | name | hardware | software |
 | --- | --- | --- |
-| gtx980_cluster | dual Xeon E5-2680 v2, dual GTX 980, 1G ethernet | GCC 4.8, CUDA 7.5, CUDNN v3 |
+| GTX980-cluster | dual Xeon E5-2680 v2, dual GTX 980, 1G ethernet | GCC 4.8, CUDA 7.5, CUDNN v3 |
 
 
-## Inception on ILSVRC12 and gtx980_cluster
+## Inception on ILSVRC12 using GTX980-cluster
 
 It uses [dist_imagenet_inception.py](dist_imagenet_inception.py)
 
@@ -51,3 +51,37 @@ It uses [dist_imagenet_inception.py](dist_imagenet_inception.py)
 | ---  | --- | --- | --- |
 | 10 | 0.596858 | 0.568018 | 22800 |
 | 20 | 0.634014 | 0.588112 | 22820 |
+
+full log [log/ilsvrc12/incept_1](log/ilsvrc12/incept_1)
+
+### 5 machines with 10 GTX 980, BSP
+
+| param | value |
+| --- | --- |
+| batch size | 96 |
+| learning rate | 0.05 |
+| momentum      | 0.9 |
+| wd            | 0.00001 |
+
+| epoch | train accuracy | valid accuracy | time |
+| ---  | --- | --- | --- |
+| 10 | 0.647994 | 0.602307 | 3042 |
+| 19 | 0.719019 | 0.631338 | 3042 |
+
+full log [log/ilsvrc12/incept_2](log/ilsvrc12/incept_2)
+
+### 5 machines with 10 GTX 980, Async
+
+| param | value |
+| --- | --- |
+| batch size | 96 |
+| learning rate | 0.1 |
+| momentum      | 0.9 |
+| wd            | 0.00001 |
+
+| epoch | train accuracy | valid accuracy | time |
+| ---  | --- | --- | --- |
+| 10 | 0.602544 | 0.565539 | 2730 |
+| 20 | 0.669050 | 0.589471 | 1838 |
+
+full log [log/ilsvrc12/incept_3](log/ilsvrc12/incept_3)

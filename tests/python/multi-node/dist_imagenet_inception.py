@@ -1,20 +1,28 @@
 #!/usr/bin/env python
+import imagenet
+import sys
+sys.path.insert(0, "../../../python/")
 import mxnet as mx
 import logging
-import imagenet
 
 logging.basicConfig(level=logging.DEBUG)
 
-kv = mx.kvstore.create('dist_sync')
+# for single gpu
+# kv = mx.kvstore.create('local')
+# batch_size = 48
+# devs = mx.gpu(0)
 
+# dist_async - async sgd
+# dist_sync - BSP sgd
+kv = mx.kvstore.create('dist_async')
+# assume each worker has two gpus
+devs = [mx.gpu(i) for i in range(2)]
 batch_size = 96
+
 (train, val) = imagenet.ilsvrc12(num_parts = kv.num_workers,
                                 part_index = kv.rank,
                                 batch_size = batch_size,
                                 input_shape = (3, 224, 224))
-
-# assume each worker has two gpus
-devs = [mx.gpu(i) for i in range(2)]
 
 model = mx.model.FeedForward(
     ctx           = devs,
@@ -27,4 +35,4 @@ model = mx.model.FeedForward(
 model.fit(X        = train,
           eval_data     = val,
           kvstore       = kv,
-          epoch_end_callback = mx.callback.Speedometer(batch_size, 5))
+          batch_end_callback = mx.callback.Speedometer(batch_size, 10))

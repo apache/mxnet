@@ -1,91 +1,8 @@
-# some logs
-
-## Datasets and machines
-
-| name | class | image size | training | testing |
-| ---- | ----: | ---------: | -------: | ------: |
-| ILSVRC12 | 1,000 | 227 × 227 × 3 | 1,281,167 | 50,000 |
-
-| name | hardware | software |
-| gtx980_cluster | dual Xeon E5-2680 v2, dual GTX 980, 1G ethernet | GCC 4.8 CUDA 7.5, CUDNN v3  |
-
-## Inception on ILSVRC12 and gtx980_cluster
-
-### single card
-
-| param | value |
-| --- | --- |
-| batch_size | 96 |
-|  learning_rate | 0.05 |
-|   momentum      | 0.9 |
-|   wd            | 0.00001 |
-
-```
-INFO:root:Epoch[0] Train-accuracy=0.134698
-INFO:root:Epoch[0] Time cost=22732.306
-INFO:root:Epoch[0] Validation-accuracy=0.268174
-INFO:root:Epoch[1] Train-accuracy=0.359886
-INFO:root:Epoch[1] Time cost=22766.984
-INFO:root:Epoch[1] Validation-accuracy=0.416967
-INFO:root:Epoch[2] Train-accuracy=0.452865
-INFO:root:Epoch[2] Time cost=22762.504
-INFO:root:Epoch[2] Validation-accuracy=0.464811
-INFO:root:Epoch[3] Train-accuracy=0.502235
-INFO:root:Epoch[3] Time cost=22773.588
-INFO:root:Epoch[3] Validation-accuracy=0.504119
-INFO:root:Epoch[4] Train-accuracy=0.532555
-INFO:root:Epoch[4] Time cost=22783.146
-INFO:root:Epoch[4] Validation-accuracy=0.526332
-INFO:root:Epoch[5] Train-accuracy=0.553075
-INFO:root:Epoch[5] Time cost=22774.705
-INFO:root:Epoch[5] Validation-accuracy=0.545166
-INFO:root:Epoch[6] Train-accuracy=0.568371
-INFO:root:Epoch[6] Time cost=22765.131
-INFO:root:Epoch[6] Validation-accuracy=0.550484
-INFO:root:Epoch[7] Train-accuracy=0.580320
-INFO:root:Epoch[7] Time cost=22731.887
-INFO:root:Epoch[7] Validation-accuracy=0.555822
-INFO:root:Epoch[8] Train-accuracy=0.589644
-INFO:root:Epoch[8] Time cost=22790.674
-INFO:root:Epoch[8] Validation-accuracy=0.562220
-INFO:root:Epoch[9] Train-accuracy=0.596858
-INFO:root:Epoch[9] Time cost=22800.291
-INFO:root:Epoch[9] Validation-accuracy=0.568018
-INFO:root:Epoch[10] Train-accuracy=0.603809
-INFO:root:Epoch[10] Time cost=22778.590
-INFO:root:Epoch[10] Validation-accuracy=0.570437
-INFO:root:Epoch[11] Train-accuracy=0.609236
-INFO:root:Epoch[11] Time cost=22767.748
-INFO:root:Epoch[11] Validation-accuracy=0.569478
-INFO:root:Epoch[12] Train-accuracy=0.613639
-INFO:root:Epoch[12] Time cost=22732.088
-INFO:root:Epoch[12] Validation-accuracy=0.585893
-INFO:root:Epoch[13] Train-accuracy=0.617683
-INFO:root:Epoch[13] Time cost=22775.397
-INFO:root:Epoch[13] Validation-accuracy=0.581594
-INFO:root:Epoch[14] Train-accuracy=0.621247
-INFO:root:Epoch[14] Time cost=22854.365
-INFO:root:Epoch[14] Validation-accuracy=0.578255
-INFO:root:Epoch[15] Train-accuracy=0.624151
-INFO:root:Epoch[15] Time cost=22820.781
-INFO:root:Epoch[15] Validation-accuracy=0.590291
-INFO:root:Epoch[16] Train-accuracy=0.627465
-INFO:root:Epoch[16] Time cost=22805.485
-INFO:root:Epoch[16] Validation-accuracy=0.582714
-INFO:root:Epoch[17] Train-accuracy=0.629502
-INFO:root:Epoch[17] Time cost=22777.332
-INFO:root:Epoch[17] Validation-accuracy=0.585952
-INFO:root:Epoch[18] Train-accuracy=0.632101
-INFO:root:Epoch[18] Time cost=22780.038
-INFO:root:Epoch[18] Validation-accuracy=0.589451
-INFO:root:Epoch[19] Train-accuracy=0.634014
-INFO:root:Epoch[19] Time cost=22820.753
-INFO:root:Epoch[19] Validation-accuracy=0.588112
-```
-
-### 5 mcahines, 10 cards
-
-```
+INFO:root:Start training with [gpu(0), gpu(1)]
+INFO:root:Start training with [gpu(0), gpu(1)]
+INFO:root:Start training with [gpu(0), gpu(1)]
+INFO:root:Start training with [gpu(0), gpu(1)]
+INFO:root:Start training with [gpu(0), gpu(1)]
 INFO:root:Epoch[0] Train-accuracy=0.137139
 INFO:root:Epoch[0] Time cost=2764.513
 INFO:root:Epoch[0] Train-accuracy=0.136081
@@ -341,4 +258,33 @@ INFO:root:Epoch[16] Validation-accuracy=0.627379
 INFO:root:Epoch[16] Train-accuracy=0.707081
 INFO:root:Epoch[16] Time cost=3053.264
 INFO:root:Epoch[16] Validation-accuracy=0.628859
-```
+INFO:root:Epoch[17] Train-accuracy=0.710353
+INFO:root:Epoch[17] Time cost=3034.632
+INFO:root:Epoch[17] Validation-accuracy=0.629319
+INFO:root:Epoch[17] Train-accuracy=0.710774
+INFO:root:Epoch[17] Time cost=3035.493
+INFO:root:Epoch[17] Validation-accuracy=0.631138
+INFO:root:Epoch[17] Train-accuracy=0.711703
+INFO:root:Epoch[17] Time cost=3037.793
+INFO:root:Epoch[17] Validation-accuracy=0.631258
+INFO:root:Epoch[17] Train-accuracy=0.714226
+INFO:root:Epoch[17] Time cost=3039.515
+INFO:root:Epoch[17] Validation-accuracy=0.626739
+INFO:root:Epoch[17] Train-accuracy=0.712787
+INFO:root:Epoch[17] Time cost=3047.277
+INFO:root:Epoch[17] Validation-accuracy=0.625180
+INFO:root:Epoch[18] Train-accuracy=0.716107
+INFO:root:Epoch[18] Time cost=3037.897
+INFO:root:Epoch[18] Validation-accuracy=0.631058
+INFO:root:Epoch[18] Train-accuracy=0.715875
+INFO:root:Epoch[18] Time cost=3037.640
+INFO:root:Epoch[18] Validation-accuracy=0.633297
+INFO:root:Epoch[18] Train-accuracy=0.717372
+INFO:root:Epoch[18] Time cost=3042.669
+INFO:root:Epoch[18] Validation-accuracy=0.631338
+INFO:root:Epoch[18] Train-accuracy=0.719019
+INFO:root:Epoch[18] Time cost=3042.926
+INFO:root:Epoch[18] Validation-accuracy=0.631378
+INFO:root:Epoch[18] Train-accuracy=0.718723
+INFO:root:Epoch[18] Time cost=3050.300
+INFO:root:Epoch[18] Validation-accuracy=0.630958
