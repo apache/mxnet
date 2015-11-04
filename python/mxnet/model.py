@@ -753,21 +753,6 @@ class FeedForward(BASE_ESTIMATOR):
         data = self._init_iter(X, y, is_train=True)
         eval_data = self._init_eval_iter(eval_data)
 
-        #if isinstance(X, io.DataIter):
-        #    data = X
-        #else:
-        #    assert(y is not None), "Label required for training"
-        #    assert(isinstance(X, (np.ndarray, nd.NDArray)))
-        #    assert(isinstance(y, (np.ndarray, nd.NDArray)))
-        #    # TODO: use existing _init_iter
-        #    data = io.NDArrayIter(X, y, batch_size=self.numpy_batch_size)
-
-        #if not isinstance(data, io.DataIter):
-        #    raise TypeError('Training data must be a DataIter')
-        #if (not eval_data is None) and not isinstance(eval_data, io.DataIter):
-        #    raise TypeError('Eval data, if presented, must be a DataIter')
-
-
         arg_names, param_names, aux_names = \
                 self._init_params(dict(data.provide_data+data.provide_label))
 
@@ -800,93 +785,6 @@ class FeedForward(BASE_ESTIMATOR):
                             kvstore=kvstore, update_on_kvstore=update_on_kvstore,
                             logger=logger)
 
-
-    # def fit_old(self, X, y=None, eval_data=None, eval_metric='acc',
-    #             epoch_end_callback=None, batch_end_callback=None,
-    #             kvstore='local', logger=None):
-    #     """Fit the model.
-
-    #     Parameters
-    #     ----------
-    #     X : DataIter, or numpy.ndarray/NDArray
-    #         Training data.
-
-    #     y : numpy.ndarray/NDArray, optional
-    #         Training set label.
-    #         If X is numpy.ndarray/NDArray, y is required to be set.
-    #         While y can be 1D or 2D (with 2nd dimension as 1), its 1st dimension must be
-    #             the same as X, i.e. the number of data points and labels should be equal.
-
-    #     eval_data : DataIter or numpy.ndarray/list/NDArray pair
-    #         If eval_data is numpy.ndarray/list/NDArray pair,
-    #             it should be (valid_data, valid_label).
-
-    #     eval_metric : metric.EvalMetric or str or callable
-    #         The evaluation metric, name of evaluation metric.
-    #         Or a customize evaluation function that returns the statistics
-    #         based on minibatch.
-
-    #     epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
-    #         A callback that is invoked at end of each epoch.
-    #         This can be used to checkpoint model each epoch.
-
-    #     batch_end_callback: callable(epoch)
-    #         A callback that is invoked at end of each batch
-    #         For print purpose
-
-    #     kvstore: KVStore or str, optional
-    #        The KVStore or a string kvstore type:
-    #        'local' : multi-devices on a single machine, will automatically
-    #            choose one from 'local_update_cpu', 'local_allreduce_cpu', and
-    #           'local_allreduce_device'
-    #        'dist_sync' : multi-machines with BSP
-    #        'dist_async' : multi-machines with partical asynchronous
-
-    #        In default uses 'local', often no need to change for single machiine.
-
-    #     logger : logging logger, optional
-    #         When not specified, default logger will be used.
-
-    #     """
-    #     X = self._init_iter(X, y, is_train=True)
-    #     eval_data = self._init_eval_iter(eval_data)
-    #     # Simply ignore the first example to get input_shape
-    #     # in first training epoch.
-    #     if not X.iter_next():
-    #         X.reset()
-    #         assert X.iter_next()
-    #     input_shape = X.getdata().shape
-    #     if self.arg_params is None:
-    #         self._init_params(input_shape)
-
-    #     # setup metric
-    #     if not isinstance(eval_metric, metric.EvalMetric):
-    #         eval_metric = metric.create(eval_metric)
-
-    #     # create kvstore
-    #     (kvstore, update_on_kvstore) = _create_kvstore(
-    #         kvstore, len(self.ctx), self.arg_params)
-
-    #     # init optmizer
-    #     if isinstance(self.optimizer, str):
-    #         batch_size = input_shape[0]
-    #         if kvstore and kvstore.type == 'dist_sync':
-    #             batch_size *= kvstore.num_workers
-
-    #     optimizer = opt.create(self.optimizer,
-    #                            rescale_grad=(1.0/batch_size),
-    #                            **(self.kwargs))
-    #     # do training
-    #     _train_multi_device(self.symbol, self.ctx, input_shape,
-    #                         self.arg_params, self.aux_params,
-    #                         begin_epoch=self.begin_epoch, end_epoch=self.num_epoch,
-    #                         optimizer=optimizer,
-    #                         train_data=X, eval_data=eval_data,
-    #                         eval_metric=eval_metric,
-    #                         epoch_end_callback=epoch_end_callback,
-    #                         batch_end_callback=batch_end_callback,
-    #                         kvstore=kvstore, update_on_kvstore=update_on_kvstore,
-    #                         logger=logger)
 
     def save(self, prefix, epoch=None):
         """Checkpoint the model checkpoint into file.
