@@ -111,10 +111,10 @@ def _init_data(data, allow_empty, default_name):
     if not isinstance(data, dict):
         raise TypeError("Input must be NDArray, numpy.ndarray, " + \
                 "a list of them or dict with them as values")
-    for k, v in data.iteritems():
+    for k, v in data.items():
         if isinstance(v, NDArray):
             data[k] = v.asnumpy()
-    for k, v in data.iteritems():
+    for k, v in data.items():
         if not isinstance(v, np.ndarray):
             raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
                     "should be NDArray or numpy.ndarray")
