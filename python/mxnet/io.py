@@ -150,7 +150,8 @@ class NDArrayIter(DataIter):
     for training and can cause problems if used for prediction.
     """
     def __init__(self, data, label=None, batch_size=1, shuffle=False, last_batch_handle='pad'):
-        # pylint: disable=W0201
+        # pylint: disable=W0201, E1101
+        # disable E1101 b/c lint says numpy has no copyto function, maybe due to different version?
 
         super(NDArrayIter, self).__init__()
 
