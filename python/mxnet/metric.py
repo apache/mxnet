@@ -48,6 +48,7 @@ class Accuracy(EvalMetric):
         super(Accuracy, self).__init__('accuracy')
 
     def update_single(self, label, pred):
+        """evaluate accuracy for a single label-pred batch"""
         pred = pred.asnumpy()
         label = label.asnumpy().astype('int32')
         pred_label = numpy.argmax(pred, axis=1)

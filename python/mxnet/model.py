@@ -1,4 +1,4 @@
-# pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals
+# pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, too-many-lines
 # pylint: disable=too-many-branches, too-many-statements
 """MXNet model module"""
 from __future__ import absolute_import
@@ -32,6 +32,7 @@ BatchEndParam = namedtuple('BatchEndParams',
                             'eval_metric'])
 
 def _load_general(data, targets):
+    """Load a list of arrays into a list of arrays specified by slices"""
     for d_src, d_targets in zip(data, targets):
         if isinstance(d_targets, nd.NDArray):
             d_src.copyto(d_targets)
@@ -39,8 +40,10 @@ def _load_general(data, targets):
             for slice_idx, d_dst in d_targets:
                 d_src[slice_idx].copyto(d_dst)
 def _load_data(batch, targets):
+    """Load data into sliced arrays"""
     _load_general(batch.data, targets)
 def _load_label(batch, targets):
+    """Load label into sliced arrays"""
     _load_general(batch.label, targets)
 
 
@@ -241,24 +244,24 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     train_execs = []
     for i in range(len(ctx)):
         data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
-                       for k,v in train_data.provide_data}
-        train_exec  = symbol.simple_bind(ctx[i], 'write', **data_shapes)
+                       for k, v in train_data.provide_data}
+        train_exec = symbol.simple_bind(ctx[i], 'write', **data_shapes)
         train_execs.append(train_exec)
 
     # data structure
-    data_names  = [x[0] for x in train_data.provide_data]
+    data_names = [x[0] for x in train_data.provide_data]
     label_names = [x[0] for x in train_data.provide_label]
 
-    data_arrays = [[(slices[i],e.arg_dict[name]) for i,e in enumerate(train_execs)]
+    data_arrays = [[(slices[i], e.arg_dict[name]) for i, e in enumerate(train_execs)]
                    for name in data_names]
-    label_arrays = [[(slices[i],e.arg_dict[name]) for i,e in enumerate(train_execs)]
+    label_arrays = [[(slices[i], e.arg_dict[name]) for i, e in enumerate(train_execs)]
                     for name in label_names]
 
     param_idx = [i for i in range(len(arg_names)) if arg_names[i] in param_names]
     param_names = [arg_names[i] for i in param_idx]
     param_arrays = [[e.arg_arrays[i] for e in train_execs] for i in param_idx]
-    grad_arrays  = [[e.grad_arrays[i] for e in train_execs] for i in param_idx]
-    aux_arrays   = [[e.aux_arrays[i] for e in train_execs] for i in range(len(aux_names))]
+    grad_arrays = [[e.grad_arrays[i] for e in train_execs] for i in param_idx]
+    aux_arrays = [[e.aux_arrays[i] for e in train_execs] for i in range(len(aux_names))]
 
     for texec in train_execs:
         texec.copy_params_from(arg_params, aux_params)
@@ -499,7 +502,7 @@ class FeedForward(BASE_ESTIMATOR):
         If this is True, no error will be thrown when aux_params and arg_params
         contain extra parameters than needed.
 
-    begin_epoch : int,optional
+    begin_epoch : int, optional
         The begining training epoch.
 
     **kwargs : dict
@@ -551,12 +554,13 @@ class FeedForward(BASE_ESTIMATOR):
         return name.endswith('data') or name.endswith('label')
 
     def _init_params(self, input_shapes, overwrite=False):
+        """Initialize weight parameters and auxiliary states"""
         arg_shapes, _, aux_shapes = self.symbol.infer_shape(**input_shapes)
 
-        arg_names   = self.symbol.list_arguments()
+        arg_names = self.symbol.list_arguments()
         input_names = input_shapes.keys()
         param_names = list(set(arg_names) - set(input_names))
-        aux_names   = self.symbol.list_auxiliary_states()
+        aux_names = self.symbol.list_auxiliary_states()
 
         arg_defined = True
         aux_defined = True
@@ -676,11 +680,11 @@ class FeedForward(BASE_ESTIMATOR):
         """
         X.reset()
         data_shapes = X.provide_data
-        data_names  = [x[0] for x in data_shapes]
+        data_names = [x[0] for x in data_shapes]
         self._init_predictor(data_shapes)
         batch_size = X.batch_size
         data_arrays = [self._pred_exec.arg_dict[name] for name in data_names]
-        output_list = [[] for i in range(len(self._pred_exec.outputs))]
+        output_list = [[] for _ in range(len(self._pred_exec.outputs))]
 
         for batch in X:
             _load_data(batch, data_arrays)
@@ -699,8 +703,7 @@ class FeedForward(BASE_ESTIMATOR):
             return outputs
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
-            epoch_end_callback=None, batch_end_callback=None,
-            kvstore='local', logger=None):
+            epoch_end_callback=None, batch_end_callback=None, kvstore='local', logger=None):
         """Fit the model.
 
         Parameters
@@ -794,92 +797,92 @@ class FeedForward(BASE_ESTIMATOR):
                             logger=logger)
 
 
-    def fit_old(self, X, y=None, eval_data=None, eval_metric='acc',
-            epoch_end_callback=None, batch_end_callback=None,
-            kvstore='local', logger=None):
-        """Fit the model.
+    # def fit_old(self, X, y=None, eval_data=None, eval_metric='acc',
+    #             epoch_end_callback=None, batch_end_callback=None,
+    #             kvstore='local', logger=None):
+    #     """Fit the model.
 
-        Parameters
-        ----------
-        X : DataIter, or numpy.ndarray/NDArray
-            Training data.
+    #     Parameters
+    #     ----------
+    #     X : DataIter, or numpy.ndarray/NDArray
+    #         Training data.
 
-        y : numpy.ndarray/NDArray, optional
-            Training set label.
-            If X is numpy.ndarray/NDArray, y is required to be set.
-            While y can be 1D or 2D (with 2nd dimension as 1), its 1st dimension must be
-                the same as X, i.e. the number of data points and labels should be equal.
+    #     y : numpy.ndarray/NDArray, optional
+    #         Training set label.
+    #         If X is numpy.ndarray/NDArray, y is required to be set.
+    #         While y can be 1D or 2D (with 2nd dimension as 1), its 1st dimension must be
+    #             the same as X, i.e. the number of data points and labels should be equal.
 
-        eval_data : DataIter or numpy.ndarray/list/NDArray pair
-            If eval_data is numpy.ndarray/list/NDArray pair,
-                it should be (valid_data, valid_label).
+    #     eval_data : DataIter or numpy.ndarray/list/NDArray pair
+    #         If eval_data is numpy.ndarray/list/NDArray pair,
+    #             it should be (valid_data, valid_label).
 
-        eval_metric : metric.EvalMetric or str or callable
-            The evaluation metric, name of evaluation metric.
-            Or a customize evaluation function that returns the statistics
-            based on minibatch.
+    #     eval_metric : metric.EvalMetric or str or callable
+    #         The evaluation metric, name of evaluation metric.
+    #         Or a customize evaluation function that returns the statistics
+    #         based on minibatch.
 
-        epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
-            A callback that is invoked at end of each epoch.
-            This can be used to checkpoint model each epoch.
+    #     epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
+    #         A callback that is invoked at end of each epoch.
+    #         This can be used to checkpoint model each epoch.
 
-        batch_end_callback: callable(epoch)
-            A callback that is invoked at end of each batch
-            For print purpose
+    #     batch_end_callback: callable(epoch)
+    #         A callback that is invoked at end of each batch
+    #         For print purpose
 
-        kvstore: KVStore or str, optional
-           The KVStore or a string kvstore type:
-           'local' : multi-devices on a single machine, will automatically
-               choose one from 'local_update_cpu', 'local_allreduce_cpu', and
-              'local_allreduce_device'
-           'dist_sync' : multi-machines with BSP
-           'dist_async' : multi-machines with partical asynchronous
+    #     kvstore: KVStore or str, optional
+    #        The KVStore or a string kvstore type:
+    #        'local' : multi-devices on a single machine, will automatically
+    #            choose one from 'local_update_cpu', 'local_allreduce_cpu', and
+    #           'local_allreduce_device'
+    #        'dist_sync' : multi-machines with BSP
+    #        'dist_async' : multi-machines with partical asynchronous
 
-           In default uses 'local', often no need to change for single machiine.
+    #        In default uses 'local', often no need to change for single machiine.
 
-        logger : logging logger, optional
-            When not specified, default logger will be used.
+    #     logger : logging logger, optional
+    #         When not specified, default logger will be used.
 
-        """
-        X = self._init_iter(X, y, is_train=True)
-        eval_data = self._init_eval_iter(eval_data)
-        # Simply ignore the first example to get input_shape
-        # in first training epoch.
-        if not X.iter_next():
-            X.reset()
-            assert X.iter_next()
-        input_shape = X.getdata().shape
-        if self.arg_params is None:
-            self._init_params(input_shape)
+    #     """
+    #     X = self._init_iter(X, y, is_train=True)
+    #     eval_data = self._init_eval_iter(eval_data)
+    #     # Simply ignore the first example to get input_shape
+    #     # in first training epoch.
+    #     if not X.iter_next():
+    #         X.reset()
+    #         assert X.iter_next()
+    #     input_shape = X.getdata().shape
+    #     if self.arg_params is None:
+    #         self._init_params(input_shape)
 
-        # setup metric
-        if not isinstance(eval_metric, metric.EvalMetric):
-            eval_metric = metric.create(eval_metric)
+    #     # setup metric
+    #     if not isinstance(eval_metric, metric.EvalMetric):
+    #         eval_metric = metric.create(eval_metric)
 
-        # create kvstore
-        (kvstore, update_on_kvstore) = _create_kvstore(
-            kvstore, len(self.ctx), self.arg_params)
+    #     # create kvstore
+    #     (kvstore, update_on_kvstore) = _create_kvstore(
+    #         kvstore, len(self.ctx), self.arg_params)
 
-        # init optmizer
-        if isinstance(self.optimizer, str):
-            batch_size = input_shape[0]
-            if kvstore and kvstore.type == 'dist_sync':
-                batch_size *= kvstore.num_workers
+    #     # init optmizer
+    #     if isinstance(self.optimizer, str):
+    #         batch_size = input_shape[0]
+    #         if kvstore and kvstore.type == 'dist_sync':
+    #             batch_size *= kvstore.num_workers
 
-        optimizer = opt.create(self.optimizer,
-                               rescale_grad=(1.0/batch_size),
-                               **(self.kwargs))
-        # do training
-        _train_multi_device(self.symbol, self.ctx, input_shape,
-                            self.arg_params, self.aux_params,
-                            begin_epoch=self.begin_epoch, end_epoch=self.num_epoch,
-                            optimizer=optimizer,
-                            train_data=X, eval_data=eval_data,
-                            eval_metric=eval_metric,
-                            epoch_end_callback=epoch_end_callback,
-                            batch_end_callback=batch_end_callback,
-                            kvstore=kvstore, update_on_kvstore=update_on_kvstore,
-                            logger=logger)
+    #     optimizer = opt.create(self.optimizer,
+    #                            rescale_grad=(1.0/batch_size),
+    #                            **(self.kwargs))
+    #     # do training
+    #     _train_multi_device(self.symbol, self.ctx, input_shape,
+    #                         self.arg_params, self.aux_params,
+    #                         begin_epoch=self.begin_epoch, end_epoch=self.num_epoch,
+    #                         optimizer=optimizer,
+    #                         train_data=X, eval_data=eval_data,
+    #                         eval_metric=eval_metric,
+    #                         epoch_end_callback=epoch_end_callback,
+    #                         batch_end_callback=batch_end_callback,
+    #                         kvstore=kvstore, update_on_kvstore=update_on_kvstore,
+    #                         logger=logger)
 
     def save(self, prefix, epoch=None):
         """Checkpoint the model checkpoint into file.
