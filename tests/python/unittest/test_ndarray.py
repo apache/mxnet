@@ -77,7 +77,7 @@ def test_ndarray_choose():
     for repeat in range(nrepeat):
         indices = np.random.randint(shape[1], size=shape[0])
         assert same(npy[np.arange(shape[0]), indices],
-                    mx.nd.choose_element(arr, mx.nd.array(indices)).asnumpy())
+                    mx.nd.choose_element_0index(arr, mx.nd.array(indices)).asnumpy())
 
 
 def test_ndarray_choose():

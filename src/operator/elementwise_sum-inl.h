@@ -29,7 +29,7 @@ enum ElementWiseSumOpOutputs {kOut};
 struct ElementWiseSumParam : public dmlc::Parameter<ElementWiseSumParam> {
   int num_args;
   DMLC_DECLARE_PARAMETER(ElementWiseSumParam) {
-    DMLC_DECLARE_FIELD(num_args).set_range(1, 100)
+    DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs to be sumed.");
   }
 };
@@ -194,7 +194,7 @@ class ElementWiseSumProp : public OperatorProperty {
     return {{in_data[0], out_data[0]}};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  private:
   ElementWiseSumParam param_;

@@ -128,7 +128,6 @@ class LeakyReLUOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    // TODO(bing): double check
     size_t expected = param_.act_type == leakyrelu::kPReLU ? 2 : 1;
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(req.size(), expected);
@@ -141,9 +140,9 @@ class LeakyReLUOp : public Operator {
     Tensor<xpu, 4> mask;
     Tensor<xpu, 1> weight;
     Tensor<xpu, 1> grad_weight;
-    if (in_data[leakyrelu::kData].ndim() == 2) {
-      Shape<4> dshape = Shape4(in_data[leakyrelu::kData].shape_[0],
-                               in_data[leakyrelu::kData].shape_[1], 1, 1);
+    if (out_grad[leakyrelu::kOut].ndim() == 2) {
+      Shape<4> dshape = Shape4(out_grad[leakyrelu::kOut].shape_[0],
+                               out_grad[leakyrelu::kOut].shape_[1], 1, 1);
       grad = out_grad[leakyrelu::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
       gdata = in_grad[leakyrelu::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       output = out_data[leakyrelu::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
@@ -298,8 +297,8 @@ class LeakyReLUProp : public OperatorProperty {
     return 1;
   }
 
-  virtual std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const {
+  std::vector<ResourceRequest> ForwardResource(
+      const std::vector<TShape> &in_shape) const override {
     if (param_.act_type == leakyrelu::kRReLU) {
       return {ResourceRequest::kRandom};
     } else {
@@ -307,7 +306,7 @@ class LeakyReLUProp : public OperatorProperty {
     }
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  private:
   LeakyReLUParam param_;

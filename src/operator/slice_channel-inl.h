@@ -29,7 +29,7 @@ enum SliceChannelOpOutputs {kOut0, kOut1, kOut2, kOut3, kOut4};
 struct SliceChannelParam : public dmlc::Parameter<SliceChannelParam> {
   int num_outputs;
   DMLC_DECLARE_PARAMETER(SliceChannelParam) {
-    DMLC_DECLARE_FIELD(num_outputs).set_range(1,  6)
+    DMLC_DECLARE_FIELD(num_outputs).set_lower_bound(1)
     .describe("Number of outputs to be sliced.");
   }
 };  // struct SliceChannelParam
@@ -170,7 +170,7 @@ class SliceChannelProp : public OperatorProperty {
     return out_grad;
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  private:
   SliceChannelParam param_;

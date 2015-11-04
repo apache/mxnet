@@ -195,7 +195,7 @@ class FullyConnectedProp : public OperatorProperty {
     return {{in_data[fullc::kData], in_grad[fullc::kData]}};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  private:
   FullyConnectedParam param_;

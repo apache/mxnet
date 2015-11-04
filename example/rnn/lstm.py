@@ -83,7 +83,7 @@ def lstm_unroll(num_lstm_layer, seq_len,
                                    bias=cls_bias,
                                    num_hidden=num_label,
                                    name="t%d_cls" % seqidx)
-        sm = mx.sym.Softmax(data=fc, label=label, name="t%d_sm" % seqidx)
+        sm = mx.sym.SoftmaxOutput(data=fc, label=label, name="t%d_sm" % seqidx)
         out_prob.append(sm)
 
     for i in range(num_lstm_layer):
@@ -216,7 +216,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
             set_rnn_inputs(m, X_train_batch, begin=begin)
             m.rnn_exec.forward(is_train=True)
             # probability of each label class, used to evaluate nll
-            seq_label_probs = [mx.nd.choose_element(out, label).copyto(mx.cpu())
+            seq_label_probs = [mx.nd.choose_element_0index(out, label).copyto(mx.cpu())
                                for out, label in zip(m.seq_outputs, m.seq_labels)]
             m.rnn_exec.backward()
             # transfer the states
@@ -251,7 +251,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
             set_rnn_inputs(m, X_val_batch, begin=begin)
             m.rnn_exec.forward(is_train=False)
             # probability of each label class, used to evaluate nll
-            seq_label_probs = [mx.nd.choose_element(out, label).copyto(mx.cpu())
+            seq_label_probs = [mx.nd.choose_element_0index(out, label).copyto(mx.cpu())
                                for out, label in zip(m.seq_outputs, m.seq_labels)]
             # transfer the states
             for init, last in zip(m.init_states, m.last_states):
