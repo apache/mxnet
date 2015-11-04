@@ -119,7 +119,7 @@ def _init_data(data, allow_empty, default_name):
             raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
                     "should be NDArray or numpy.ndarray")
 
-    return data.items()
+    return list(data.items())
 
 class NDArrayIter(DataIter):
     """NDArrayIter object in mxnet. Taking NDArray or numpy array to get dataiter.
