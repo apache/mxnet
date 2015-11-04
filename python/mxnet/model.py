@@ -769,10 +769,12 @@ class FeedForward(BASE_ESTIMATOR):
             batch_size = data.batch_size
             if kvstore and kvstore.type == 'dist_sync':
                 batch_size *= kvstore.num_workers
+            optimizer = opt.create(self.optimizer,
+                                   rescale_grad=(1.0/batch_size),
+                                   **(self.kwargs))
+        elif isinstance(self.optimizer, opt.Optimizer):
+            optimizer = self.optimizer
 
-        optimizer = opt.create(self.optimizer,
-                               rescale_grad=(1.0/batch_size),
-                               **(self.kwargs))
         # do training
         _train_multi_device(self.symbol, self.ctx, arg_names, param_names, aux_names,
                             self.arg_params, self.aux_params,
