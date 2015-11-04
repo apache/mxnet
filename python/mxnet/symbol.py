@@ -181,6 +181,18 @@ class Symbol(object):
         return Symbol(handle=handle)
 
     def get_subgroup(self, idx):
+        """Get a new grouped symbol by selecting a subset of the current symbol's output.
+
+        Parameters
+        ----------
+        idx : list of int
+            The index (as in list_outputs()) of the selected output
+
+        Returns
+        -------
+        ssubgroup : symbol
+            The selected subgroup
+        """
         handle = SymbolHandle()
         num_idx = mx_uint(len(idx))
         idx = (mx_uint*len(idx))(*idx)
