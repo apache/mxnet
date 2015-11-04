@@ -584,22 +584,6 @@ class FeedForward(BASE_ESTIMATOR):
 
         return (arg_names, param_names, aux_names)
 
-
-    def _init_params_old(self, input_shape):
-        """Use initializer to initialize the parameters."""
-        arg_shapes, _, aux_shapes = self.symbol.infer_shape(data=input_shape)
-        if self.arg_params is None:
-            arg_names = self.symbol.list_arguments()
-            self.arg_params = {k : nd.zeros(s) for k, s in list(zip(arg_names, arg_shapes))
-                               if not self._is_data_arg(k)}
-        if self.aux_params is None:
-            aux_names = self.symbol.list_auxiliary_states()
-            self.aux_params = {k : nd.zeros(s) for k, s in list(zip(aux_names, aux_shapes))}
-        for k, v in self.arg_params.items():
-            self.initializer(k, v)
-        for k, v in self.aux_params.items():
-            self.initializer(k, v)
-
     def __getstate__(self):
         this = self.__dict__.copy()
         this['_pred_exec'] = None
