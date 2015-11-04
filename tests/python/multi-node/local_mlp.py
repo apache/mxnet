@@ -17,7 +17,7 @@ def test_mlp(devs, kv_type):
         symbol        = common.mlp(),
         ctx           = devs,
         X             = train,
-        num_round     = 4,
+        num_epoch     = 4,
         learning_rate = 0.1,
         wd            = 0.0004,
         momentum      = 0.9,

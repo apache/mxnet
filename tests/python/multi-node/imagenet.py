@@ -1,6 +1,6 @@
 import sys
 sys.path.insert(0, "../common/")
-sys.path.insert(0, "../../python/")
+sys.path.insert(0, "../../../python/")
 import mxnet as mx
 import get_data
 import numpy as np
