@@ -4,15 +4,14 @@ import mxnet as mx
 import logging
 import math
 
-# dist_async or dist_sync
-# kv_type = 'dist_async'
-kv_type = 'local'
+# local, dist_async or dist_sync
+kv_type = 'dist_sync'
 # data dir
 data_dir = "data/cifar"
 # batch size
 batch_size = 256
 # number of gpus used in a worker
-num_gpus = 1
+num_gpus = 2
 # learning rate
 learning_rate = 0.1
 
@@ -32,10 +31,9 @@ kv = mx.kvstore.create(kv_type)
 logging.basicConfig(level=logging.DEBUG)
 
 model = mx.model.FeedForward(
-    # ctx           = [mx.gpu(i) for i in range(num_gpus)],
-    ctx = mx.gpu(1),
+    ctx           = [mx.gpu(i) for i in range(num_gpus)],
     symbol        = cifar10.inception(),
-    num_epoch     = 20,
+    num_epoch     = 40,
     epoch_size    = math.ceil(60000/batch_size/kv.num_workers),
     learning_rate = learning_rate,
     momentum      = 0.9,

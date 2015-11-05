@@ -28,15 +28,6 @@ Based on [train_cifar10.py](train_cifar10.py)
 
 ### Single GTX 980
 
-- `batch_size = 256`, `learning_rate = .05`
-
-| epoch | train accuracy | valid accuracy | time |
-| ---  | --- | --- | --- |
-| 10 | 0.898321 | 0.857572 | 70 |
-| 20 | 0.947282 | 0.874499 | 70 |
-
-full log [log/cifar10/incept_1](log/cifar10/incept_1)
-
 - `batch_size = 256`, `learning_rate = .1`
 
 | epoch | train accuracy | valid accuracy | time |
@@ -46,7 +37,57 @@ full log [log/cifar10/incept_1](log/cifar10/incept_1)
 
 full log [log/cifar10/incept_2](log/cifar10/incept_2)
 
+- `batch_size = 128`, `learning_rate = .1`
+
+| epoch | train accuracy | valid accuracy | time |
+| ---  | --- | --- | --- |
+| 10 | 0.904931 | 0.867488 | 82.5 |
+| 20 | 0.954310 | 0.889022 | 83 |
+| 40 | 0.982739 | 0.899940 | 83 |
+
+full log [log/cifar10/incept_3](log/cifar10/incept_3)
+
 ### 5 machines with 10 GTX 980, BSP
+
+- `batch_size = 512`, `learning_rate = .1`
+
+| epoch | train accuracy | valid accuracy | time |
+| ---  | --- | --- | --- |
+| 10 | 0.836277 | 0.807324 | 7 |
+| 20 | 0.905146 | 0.831106 | 7 |
+| 40 | 0.951681 | 0.863672 | 7 |
+
+full log [log/cifar10/incept_5](log/cifar10/incept_5)
+
+- `batch_size = 512`, `learning_rate = .4`
+
+| epoch | train accuracy | valid accuracy | time |
+| ---  | --- | --- | --- |
+| 10 | 0.808084 | 0.768555 | 7 |
+| 20 | 0.904637 | 0.847039 | 7 |
+| 40 | 0.963910 | 0.870117 | 7 |
+
+full log [log/cifar10/incept_6](log/cifar10/incept_6)
+
+- `batch_size = 256`, `learning_rate = .1`
+
+| epoch | train accuracy | valid accuracy | time |
+| ---  | --- | --- | --- |
+| 10 | 0.865999 | 0.830128 | 11 |
+| 20 | 0.925526 | 0.860677 | 11.5 |
+| 40 | 0.971382 | 0.873097 | 11 |
+
+full log [log/cifar10/incept_7](log/cifar10/incept_7)
+
+- `batch_size = 256`, `learning_rate = .4`
+
+| epoch | train accuracy | valid accuracy | time |
+| ---  | --- | --- | --- |
+| 10 | 0.870924 | 0.841546 | 10.7 |
+| 20 | 0.938094 | 0.873498 | 10.7 |
+| 40 | 0.975968 | 0.888321 | 10.7 |
+
+full log [log/cifar10/incept_4](log/cifar10/incept_4)
 
 ### 5 machines with 10 GTX 980, Async
 
@@ -56,10 +97,7 @@ Based on [train_imagenet.py](train_imagenet.py)
 
 ### Single GTX 980
 
-| param | value |
-| --- | --- |
-| batch size | 48 |
-| learning rate | 0.05 |
+- `batch_size = 48`, `learning_rate = 0.05`
 
 | epoch | train accuracy | valid accuracy | time |
 | ---  | --- | --- | --- |
@@ -70,10 +108,7 @@ full log [log/ilsvrc12/incept_1](log/ilsvrc12/incept_1)
 
 ### 5 machines with 10 GTX 980, BSP
 
-| param | value |
-| --- | --- |
-| batch size | 96 |
-| learning rate | 0.05 |
+- `batch_size = 96`, `learning_rate = 0.05`
 
 | epoch | train accuracy | valid accuracy | time |
 | ---  | --- | --- | --- |
@@ -84,10 +119,15 @@ full log [log/ilsvrc12/incept_2](log/ilsvrc12/incept_2)
 
 ### 5 machines with 10 GTX 980, Async
 
-| param | value |
-| --- | --- |
-| batch size | 96 |
-| learning rate | 0.1 |
+- `batch_size = 96`, `learning_rate = 0.05`
+
+| epoch | train accuracy | valid accuracy | time |
+| ---  | --- | --- | --- |
+| 10 | 0.615270 | 0.579635 | 2604 |
+
+full log [log/ilsvrc12/incept_4](log/ilsvrc12/incept_4)
+
+- `batch_size = 96`, `learning_rate = 0.1`
 
 | epoch | train accuracy | valid accuracy | time |
 | ---  | --- | --- | --- |
