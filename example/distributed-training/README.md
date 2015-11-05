@@ -2,7 +2,6 @@
 
 ## How to use
 
-
 - runs on multiple machines with machine names in `hosts`
 
 ```
@@ -27,6 +26,30 @@
 
 Based on [train_cifar10.py](train_cifar10.py)
 
+### Single GTX 980
+
+- `batch_size = 256`, `learning_rate = .05`
+
+| epoch | train accuracy | valid accuracy | time |
+| ---  | --- | --- | --- |
+| 10 | 0.898321 | 0.857572 | 70 |
+| 20 | 0.947282 | 0.874499 | 70 |
+
+full log [log/cifar10/incept_1](log/cifar10/incept_1)
+
+- `batch_size = 256`, `learning_rate = .1`
+
+| epoch | train accuracy | valid accuracy | time |
+| ---  | --- | --- | --- |
+| 10 | 0.904931 | 0.867488 | 70 |
+| 20 | 0.953142 | 0.873598 | 70 |
+
+full log [log/cifar10/incept_2](log/cifar10/incept_2)
+
+### 5 machines with 10 GTX 980, BSP
+
+### 5 machines with 10 GTX 980, Async
+
 ## Inception on ILSVRC12 using GTX980-cluster
 
 Based on [train_imagenet.py](train_imagenet.py)
@@ -37,8 +60,6 @@ Based on [train_imagenet.py](train_imagenet.py)
 | --- | --- |
 | batch size | 48 |
 | learning rate | 0.05 |
-| momentum      | 0.9 |
-| wd            | 0.00001 |
 
 | epoch | train accuracy | valid accuracy | time |
 | ---  | --- | --- | --- |
@@ -53,8 +74,6 @@ full log [log/ilsvrc12/incept_1](log/ilsvrc12/incept_1)
 | --- | --- |
 | batch size | 96 |
 | learning rate | 0.05 |
-| momentum      | 0.9 |
-| wd            | 0.00001 |
 
 | epoch | train accuracy | valid accuracy | time |
 | ---  | --- | --- | --- |
@@ -69,8 +88,6 @@ full log [log/ilsvrc12/incept_2](log/ilsvrc12/incept_2)
 | --- | --- |
 | batch size | 96 |
 | learning rate | 0.1 |
-| momentum      | 0.9 |
-| wd            | 0.00001 |
 
 | epoch | train accuracy | valid accuracy | time |
 | ---  | --- | --- | --- |

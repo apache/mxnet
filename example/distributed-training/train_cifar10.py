@@ -5,15 +5,16 @@ import logging
 import math
 
 # dist_async or dist_sync
-kv_type = 'dist_async'
+# kv_type = 'dist_async'
+kv_type = 'local'
 # data dir
 data_dir = "data/cifar"
 # batch size
-batch_size = 128
+batch_size = 256
 # number of gpus used in a worker
 num_gpus = 1
 # learning rate
-learning_rate = 0.05
+learning_rate = 0.1
 
 if data_dir == "data/cifar":
     import sys
@@ -24,17 +25,17 @@ if data_dir == "data/cifar":
 kv = mx.kvstore.create(kv_type)
 
 (train, val) = cifar10.data(data_dir = data_dir,
-                            # num_parts = kv.num_workers,
-                            num_parts = kv.num_workers if kv.rank != 0 else 1,
+                            num_parts = kv.num_workers,
                             part_index = kv.rank,
                             batch_size = batch_size)
 
 logging.basicConfig(level=logging.DEBUG)
 
 model = mx.model.FeedForward(
-    ctx           = [mx.gpu(i) for i in range(num_gpus)],
+    # ctx           = [mx.gpu(i) for i in range(num_gpus)],
+    ctx = mx.gpu(1),
     symbol        = cifar10.inception(),
-    num_epoch     = 1,
+    num_epoch     = 20,
     epoch_size    = math.ceil(60000/batch_size/kv.num_workers),
     learning_rate = learning_rate,
     momentum      = 0.9,
