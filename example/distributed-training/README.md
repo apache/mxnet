@@ -10,17 +10,22 @@
 
 # Results
 
-## Datasets and machines
+Experimental results. The full training logs are available at [log/](log/). The
+results tables are generated from [tools/parse_log.py](../../tools/parse_log.py).
 
-| name | class | image size | training | testing |
-| ---- | ----: | ---------: | -------: | ------: |
-| CIFAR10 | 10 | 28 × 28 × 3 | 60,000  | 10,000 |
-| ILSVRC12 | 1,000 | 227 × 227 × 3 | 1,281,167 | 50,000 |
+## Machines
 
 | name | hardware | software |
 | --- | --- | --- |
 | GTX980-cluster | dual Xeon E5-2680 v2, dual GTX 980, 1G Ethernet | GCC 4.8, CUDA 7.5, CUDNN v3 |
 | EC2-g2.8-cluster | Xeon E5-2670, dual GRID K520, 10G Ethernet | GCC 4.8, CUDA 7.5, CUDNN v3 |
+
+## Datasets
+
+| name | class | image size | training | testing |
+| ---- | ----: | ---------: | -------: | ------: |
+| CIFAR10 | 10 | 28 × 28 × 3 | 60,000  | 10,000 |
+| ILSVRC12 | 1,000 | 227 × 227 × 3 | 1,281,167 | 50,000 |
 
 ## Incepption on CIFAR10 using GTX980-cluster
 
