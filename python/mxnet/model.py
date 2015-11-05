@@ -351,18 +351,18 @@ def _train_multi_device(symbol, ctx, input_shape,
                 eval_metric.update(label, out_cpu_array)
 
                 # this epoch is done
-                if epoch_size is not None and nbatch == epoch_size:
+                if epoch_size is not None and nbatch >= epoch_size:
                     break
 
             # reset the training data if reach the end of train_data, we only
             # need to deal with the following two situations:
             # 1. epoch_size is None:
             # 2. epoch_size is not None but nbatch != epoch_size:
-            if epoch_size is None or nbatch != epoch_size:
+            if epoch_size is None or nbatch < epoch_size:
                 train_data.reset()
 
             # this epoch is done
-            if epoch_size is None or nbatch == epoch_size:
+            if epoch_size is None or nbatch >= epoch_size:
                 break
 
         name, value = eval_metric.get()

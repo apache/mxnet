@@ -2,7 +2,6 @@
 import imagenet
 import mxnet as mx
 import logging
-import math
 
 # data directory
 data_dir = "../../../ilsvrc12/"
@@ -29,7 +28,7 @@ model = mx.model.FeedForward(
     ctx           = [mx.gpu(i) for i in range(num_gpus)],
     symbol        = imagenet.inception(1000),
     num_epoch     = 20,
-    epoch_size    = math.ceil(1281167/batch_size/kv.num_workers),
+    epoch_size    = 1281167 / batch_size / kv.num_workers,
     learning_rate = learning_rate,
     momentum      = 0.9,
     wd            = 0.00001)

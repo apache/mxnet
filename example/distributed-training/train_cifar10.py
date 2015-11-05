@@ -2,7 +2,6 @@
 import cifar10
 import mxnet as mx
 import logging
-import math
 
 # local, dist_async or dist_sync
 kv_type = 'dist_sync'
@@ -34,7 +33,7 @@ model = mx.model.FeedForward(
     ctx           = [mx.gpu(i) for i in range(num_gpus)],
     symbol        = cifar10.inception(),
     num_epoch     = 40,
-    epoch_size    = math.ceil(60000/batch_size/kv.num_workers),
+    epoch_size    = 60000 / batch_size / kv.num_workers,
     learning_rate = learning_rate,
     momentum      = 0.9,
     wd            = 0.00001,
