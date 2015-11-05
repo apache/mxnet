@@ -56,7 +56,8 @@ class NativeOp : public Operator {
     SyncVec(in_data, "in_data", s, 0);
     SyncVec(out_data, "out_data", s, 1);
     s->Wait();
-    param_.pinfo->forward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(), tags.data());
+    param_.pinfo->forward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(),
+        tags.data(), param_.pinfo->p_forward);
     for (index_t i = 0; i < out_data.size(); ++i) {
       CHECK_NE(req[i], kAddTo) << "NativeOp doesn't support AddTo for output";
       if (req[i] != kNullOp) {
@@ -89,7 +90,8 @@ class NativeOp : public Operator {
       SyncVec(out_grad, "out_grad", s, 3);
     }
     s->Wait();
-    param_.pinfo->backward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(), tags.data());
+    param_.pinfo->backward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(),
+        tags.data(), param_.pinfo->p_backward);
     for (index_t i = 0; i < in_grad.size(); ++i) {
       CHECK_NE(req[i], kAddTo) << "NativeOp doesn't support AddTo for output";
       if (req[i] != kNullOp) {
@@ -155,7 +157,7 @@ class NativeOpProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     char ** args = NULL;
-    param_.pinfo->list_arguments(&args);
+    param_.pinfo->list_arguments(&args, param_.pinfo->p_list_arguments);
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
       ret.push_back(args[i]);
@@ -165,7 +167,7 @@ class NativeOpProp : public OperatorProperty {
 
   std::vector<std::string> ListOutputs() const override {
     char ** args = NULL;
-    param_.pinfo->list_outputs(&args);
+    param_.pinfo->list_outputs(&args, param_.pinfo->p_list_outputs);
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
       ret.push_back(args[i]);
@@ -204,7 +206,8 @@ class NativeOpProp : public OperatorProperty {
     }
     shapes.resize(param_.num_inputs_+param_.num_outputs_);
     ndims.resize(param_.num_inputs_+param_.num_outputs_);
-    param_.pinfo->infer_shape(shapes.size(), ndims.data(), shapes.data());
+    param_.pinfo->infer_shape(shapes.size(), ndims.data(), shapes.data(),
+          param_.pinfo->p_infer_shape);
     for (unsigned i = 0; i < in_shape->size(); ++i) {
       (*in_shape)[i] = TShape(shapes[i], shapes[i]+ndims[i]);
     }
