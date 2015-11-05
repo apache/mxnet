@@ -45,7 +45,12 @@ class NumpyOp(object):
                 ('backward', fb_functype),
                 ('infer_shape', infer_functype),
                 ('list_outputs', list_functype),
-                ('list_arguments', list_functype)
+                ('list_arguments', list_functype),
+                ('p_forward', c_void_p),
+                ('p_backward', c_void_p),
+                ('p_infer_shape', c_void_p),
+                ('p_list_outputs', c_void_p),
+                ('p_list_arguments', c_void_p),
                 ]
         def forward_entry(num_tensor, tensor_ptrs, tensor_dims,
                           tensor_shapes, tensor_tags):
@@ -103,7 +108,8 @@ class NumpyOp(object):
                                  fb_functype(backward_entry),
                                  infer_functype(infer_shape_entry),
                                  list_functype(list_outputs_entry),
-                                 list_functype(list_arguments_entry))
+                                 list_functype(list_arguments_entry),
+                                 None, None, None, None, None)
         cb_ptr = hex(cast(pointer(self.info_), c_void_p).value)
         # pylint: disable=E1101
         return symbol.Symbol._Native(*args,
