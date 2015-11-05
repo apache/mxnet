@@ -2,7 +2,7 @@ import sys
 sys.path.insert(0, "../../python/")
 import mxnet as mx
 
-def ilsvrc12(data_dir, batch_size, input_shape, num_parts=1, part_index=0):
+def ilsvrc12(data_dir, batch_size, num_parts=1, part_index=0):
     """return ilsvrc12 iterator
     """
     input_shape = (3, 224, 224)
@@ -89,5 +89,5 @@ def inception(nhidden):
     # linear classifier
     flatten = mx.symbol.Flatten(data=avg, name='flatten')
     fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=nhidden, name='fc1')
-    softmax = mx.symbol.SotfmaxOutput(data=fc1, name='softmax')
+    softmax = mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
     return softmax

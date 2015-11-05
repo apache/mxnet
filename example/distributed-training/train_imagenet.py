@@ -2,17 +2,18 @@
 import imagenet
 import mxnet as mx
 import logging
+import math
 
 # data directory
 data_dir = "../../../ilsvrc12/"
 # local, dist_async or dist_sync
-kv_type = 'dist_async'
+kv_type = 'dist_sync'
 # batch size
 batch_size = 96
 # number of gpus used in a worker
 num_gpus = 2
 # learning rate
-learning_rate = 0.05
+learning_rate = 0.1
 
 kv = mx.kvstore.create(kv_type)
 
