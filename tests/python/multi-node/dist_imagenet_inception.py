@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 import imagenet
-import sys
-sys.path.insert(0, "../../../python/")
 import mxnet as mx
 import logging
 
