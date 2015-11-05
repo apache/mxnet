@@ -1,15 +1,11 @@
 import sys
-sys.path.insert(0, "../common/")
-sys.path.insert(0, "../../../python/")
+sys.path.insert(0, "../../python/")
 import mxnet as mx
-import get_data
-import numpy as np
-import logging
 
-def ilsvrc12(batch_size, input_shape, num_parts=1, part_index=0):
+def ilsvrc12(data_dir, batch_size, num_parts=1, part_index=0):
     """return ilsvrc12 iterator
     """
-    data_dir = "../../../../ilsvrc12/"
+    input_shape = (3, 224, 224)
     train = mx.io.ImageRecordIter(
         path_imgrec = data_dir + "train.rec",
         mean_img    = data_dir + "mean.bin",
@@ -17,8 +13,6 @@ def ilsvrc12(batch_size, input_shape, num_parts=1, part_index=0):
         batch_size  = batch_size,
         rand_crop   = True,
         rand_mirror = True,
-        shuffle     = True,
-        round_batch = True,
         num_parts   = num_parts,
         part_index  = part_index)
     val = mx.io.ImageRecordIter(
@@ -26,8 +20,6 @@ def ilsvrc12(batch_size, input_shape, num_parts=1, part_index=0):
         mean_img    = data_dir + "mean.bin",
         rand_crop   = False,
         rand_mirror = False,
-        shuffle     = False,
-        round_batch = False,
         data_shape  = input_shape,
         batch_size  = batch_size)
     return (train, val)
@@ -97,5 +89,5 @@ def inception(nhidden):
     # linear classifier
     flatten = mx.symbol.Flatten(data=avg, name='flatten')
     fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=nhidden, name='fc1')
-    softmax = mx.symbol.SotfmaxOutput(data=fc1, name='softmax')
+    softmax = mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
     return softmax

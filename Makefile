@@ -158,6 +158,15 @@ rcppexport:
 roxygen:
 	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
 
+rpkg:	roxygen
+	mkdir -p R-package/inst
+	mkdir -p R-package/inst/libs
+	cp -rf lib/libmxnet.so R-package/inst/libs
+	mkdir -p R-package/inst/include
+	cp -rf include/* R-package/inst/include
+	cp -rf dmlc-core/include/* R-package/inst/include/
+	R CMD build R-package
+
 clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 

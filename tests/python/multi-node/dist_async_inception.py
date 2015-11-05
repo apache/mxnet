@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # pylint: skip-file
-import mxnet as mx
 import common
+import mxnet as mx
 import logging
 
 mx.random.seed(0)
@@ -18,7 +18,7 @@ model = mx.model.FeedForward.create(
     symbol        = common.inception(),
     X             = train,
     eval_data     = val,
-    num_round     = 20,
+    num_epoch     = 20,
     learning_rate = 0.05,
     momentum      = 0.9,
     wd            = 0.00001,
