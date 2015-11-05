@@ -55,7 +55,7 @@ num_round = 25
 learning_rate= 1
 wd=0.
 momentum=0.0
-
+max_grad_norm = 5.0
 update_period = 1
 
 
@@ -83,6 +83,7 @@ model = lstm.setup_rnn_model(mx.gpu(),
 lstm.train_lstm(model, X_train_batch, X_val_batch,
                 num_round=num_round,
                 half_life=2,
+                max_grad_norm = max_grad_norm,
                 update_period=update_period,
                 learning_rate=learning_rate,
                 wd=wd,

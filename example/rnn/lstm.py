@@ -5,7 +5,7 @@ import mxnet as mx
 import numpy as np
 from collections import namedtuple
 import time
-
+import math
 LSTMState = namedtuple("LSTMState", ["c", "h"])
 LSTMParam = namedtuple("LSTMParam", ["i2h_weight", "i2h_bias",
                                      "h2h_weight", "h2h_bias"])
@@ -190,7 +190,7 @@ def calc_nll(seq_label_probs, X, begin):
 
 def train_lstm(model, X_train_batch, X_val_batch,
                num_round, update_period,
-               optimizer='sgd', half_life=2, **kwargs):
+               optimizer='sgd', half_life=2,max_grad_norm = 5.0, **kwargs):
     print("Training swith train.shape=%s" % str(X_train_batch.shape))
     print("Training swith val.shape=%s" % str(X_val_batch.shape))
     m = model
@@ -201,7 +201,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
     
     opt = mx.optimizer.create(optimizer,                              
                               **kwargs)
-    max_grad_norm = 5.0
+    
     updater = mx.optimizer.get_updater(opt)
     epoch_counter = 0
     log_period = max(1000 / seq_len, 1)
@@ -231,9 +231,13 @@ def train_lstm(model, X_train_batch, X_val_batch,
             epoch_counter += 1
             if epoch_counter % update_period == 0:
                 # updare parameters
+                norm = 0.
                 for idx, weight, grad, name in m.param_blocks:
                     grad /= batch_size
-                    norm = mx.nd.norm(grad).asscalar()                        
+                    l2_norm = mx.nd.norm(grad).asscalar()
+                    norm += l2_norm*l2_norm
+                norm = math.sqrt(norm)
+                for idx, weight, grad, name in m.param_blocks:
                     if norm > max_grad_norm:
                         grad *= (max_grad_norm / norm)                    
                     updater(idx, grad, weight)
