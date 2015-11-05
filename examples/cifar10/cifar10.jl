@@ -77,9 +77,7 @@ gpus = [mx.Context(mx.GPU, i) for i = 0:num_gpus-1]
 model = mx.FeedForward(softmax, context=gpus)
 
 # optimizer
-optimizer = mx.SGD(lr_scheduler=mx.FixedLearningRateScheduler(0.05),
-                   mom_scheduler=mx.FixedMomentumScheduler(0.9),
-                   weight_decay=0.0001)
+optimizer = mx.SGD(lr=0.05, momentum=0.9, weight_decay=0.0001)
 
 # fit parameters
 mx.fit(model, optimizer, train_provider, n_epoch=num_epoch, eval_data=test_provider,
