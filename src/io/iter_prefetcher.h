@@ -62,16 +62,15 @@ class PrefetcherIter : public IIterator<DataBatch> {
     iter_.Init([this](DataBatch **dptr) {
         if (!loader_->Next()) return false;
         const TBlobBatch& batch = loader_->Value();
-
+        
         if (*dptr == nullptr) {
           // allocate databatch
           *dptr = new DataBatch();
           (*dptr)->num_batch_padd = batch.num_batch_padd;
           (*dptr)->data.resize(batch.data.size());
-		  (*dptr)->index.resize(batch.data.size());
+		  (*dptr)->index.resize(batch.batch_size);
           for (size_t i = 0; i < batch.data.size(); ++i) {
             (*dptr)->data.at(i) = NDArray(batch.data[i].shape_, Context::CPU());
-			(*dptr)->index.at(i) = batch.inst_index[i];
           }
         }
         CHECK(batch.data.size() == (*dptr)->data.size());
@@ -82,6 +81,13 @@ class PrefetcherIter : public IIterator<DataBatch> {
                         batch.data[i].FlatTo2D<cpu, real_t>());
           (*dptr)->num_batch_padd = batch.num_batch_padd;
         }
+        for (size_t i = 0; i < batch.batch_size; ++i) {
+          (*dptr)->index[i] = batch.inst_index[i];
+//          printf("(%d,%d)", int((*dptr)->index[i]), 
+//                            int((*dptr)->data[1].data().FlatTo2D<cpu, real_t>()[i][0]));
+        }
+
+//printf("\n-------------------\n");	
         return true;
       },
       [this]() { loader_->BeforeFirst(); });

@@ -301,7 +301,7 @@ def _train_multi_device(symbol, ctx, input_shape,
         nbatch = 0
         # Iterate over training data.
         while True:
-            for data, label in train_data:
+            for data, label, index in train_data:
                 # Copy data into the target
                 for target, islice in zip(arg_blocks[label_index], slices):
                     label[islice].copyto(target)
