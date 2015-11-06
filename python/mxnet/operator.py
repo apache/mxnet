@@ -7,15 +7,17 @@ from ctypes import CFUNCTYPE, POINTER, Structure, pointer, c_void_p, cast, c_int
 from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared
 from . import symbol
 
-class NumpyOp(object):
-    """Base class for numpy operators. numpy operators allow parts
-    of computation in symbolic graph to be writen in numpy. This feature
-    is intended for quickly hacking out a solution for non performance
-    critical parts. Please consider write a c++ implementation if it becomes
-    a bottleneck.
+class PythonOp(object):
+    """Base class for operators implemented in python
+
+    Parameters
+    ----------
+    need_top_grad : bool
+        the default need_top_grad() function returns this value
     """
-    def __init__(self):
+    def __init__(self, need_top_grad=True):
         self.info_ = None
+        self.need_top_grad_ = need_top_grad
 
     def __call__(self, *args, **kwargs):
         return self.get_symbol(*args, **kwargs)
@@ -34,6 +36,93 @@ class NumpyOp(object):
         -------
         sym : mxnet.symbol.Symbol
         """
+        raise NotImplementedError("Must override this")
+
+    def forward(self, in_data, out_data):
+        """forward interface. override to create new operators
+
+        Parameters
+        ----------
+        in_data, out_data: list
+            input and output for forward. See document for
+            corresponding arguments of Operator::Forward
+        """
+        out_data[0][:] = in_data[0]
+
+    def backward(self, out_grad, in_data, out_data, in_grad):
+        """backward interface. override to create new operators
+
+        Parameters
+        ----------
+        out_grad, in_data, out_data, in_grad : list
+            input and output for backward. See document for
+            corresponding arguments of Operator::Backward
+        """
+        # pylint: disable=W0613
+        in_grad[0][:] = 1.0
+
+    def infer_shape(self, in_shape):
+        """infer_shape interface. override to create new operators
+
+        Parameters
+        ----------
+        in_shape : list
+            list of argument shapes in the same order as
+            declared in list_arguments.
+
+        Returns
+        -------
+        in_shape : list
+            list of argument shapes. Can be modified from in_shape.
+        out_shape : list
+            list of output shapes calculated from in_shape,
+            in the same order as declared in list_arguments.
+        """
+        return in_shape, [in_shape[0]]
+
+    def list_outputs(self):
+        """list_outputs interface. override to create new operators
+
+        Returns
+        -------
+        outputs : list
+            list of output blob names.
+        """
+        return ['output']
+
+    def list_arguments(self):
+        """list_arguments interface. override to create new operators
+
+        Returns
+        -------
+        in_shape : list
+            list of argument shapes in the same order as
+            declared in list_arguments.
+        """
+        return ['data']
+
+    def need_top_grad(self):
+        """Whether this operator needs out_grad for backward.
+
+        Returns
+        -------
+        need_top_grad : bool
+            Whether this operator needs out_grad for backward.
+            Should be set to False for loss layers.
+        """
+        return self.need_top_grad_
+
+class NumpyOp(PythonOp):
+    """Base class for numpy operators. numpy operators allow parts
+    of computation in symbolic graph to be writen in numpy. This feature
+    is intended for quickly hacking out a solution for non performance
+    critical parts. Please consider write a c++ implementation if it becomes
+    a bottleneck.
+    """
+    def __init__(self, need_top_grad=True):
+        super(NumpyOp, self).__init__(need_top_grad)
+
+    def get_symbol(self, *args, **kwargs):
         fb_functype = CFUNCTYPE(None, c_int, POINTER(POINTER(mx_float)), POINTER(c_int),
                                 POINTER(POINTER(mx_uint)), POINTER(c_int))
         infer_functype = CFUNCTYPE(None, c_int, POINTER(c_int), POINTER(POINTER(mx_uint)))
@@ -117,76 +206,10 @@ class NumpyOp(object):
                                      need_top_grad=self.need_top_grad(),
                                      **kwargs)
 
-    def forward(self, in_data, out_data):
-        """forward interface. override to create new operators
-
-        Parameters
-        ----------
-        in_data, out_data: list
-            input and output for forward. See document for
-            corresponding arguments of Operator::Forward
-        """
-        out_data[0][:] = in_data[0]
-
-    def backward(self, out_grad, in_data, out_data, in_grad):
-        """backward interface. override to create new operators
-
-        Parameters
-        ----------
-        out_grad, in_data, out_data, in_grad : list
-            input and output for backward. See document for
-            corresponding arguments of Operator::Backward
-        """
-        # pylint: disable=W0613
-        in_grad[0][:] = 1.0
-
-    def infer_shape(self, in_shape):
-        """infer_shape interface. override to create new operators
-
-        Parameters
-        ----------
-        in_shape : list
-            list of argument shapes in the same order as
-            declared in list_arguments.
-
-        Returns
-        -------
-        in_shape : list
-            list of argument shapes. Can be modified from in_shape.
-        out_shape : list
-            list of output shapes calculated from in_shape,
-            in the same order as declared in list_arguments.
-        """
-        return in_shape, [in_shape[0]]
-
-    def list_outputs(self):
-        """list_outputs interface. override to create new operators
-
-        Returns
-        -------
-        outputs : list
-            list of output blob names.
-        """
-        return ['output']
-
-    def list_arguments(self):
-        """list_arguments interface. override to create new operators
-
-        Returns
-        -------
-        in_shape : list
-            list of argument shapes in the same order as
-            declared in list_arguments.
-        """
-        return ['data']
-
-    def need_top_grad(self):
-        """Whether this operator needs out_grad for backward.
-
-        Returns
-        -------
-        need_top_grad : bool
-            Whether this operator needs out_grad for backward.
-            Should be set to False for loss layers.
-        """
-        return True
+    
+class NDArrayOp(PythonOp):
+    """Base class for numpy operators. Similar to NumpyOp but more efficient
+    if you don't need every input/output data blob.
+    """
+    def __init__(self):
+        super(NDArrayOp, self).__init__()
