@@ -27,6 +27,8 @@ enum SwapAxisOpInputs {kData};
 enum SwapAxisOpOutputs {kOut};
 };
 
+using namespace mshadow;
+using namespace mshadow::expr;
 
 struct SwapAxisParam : public dmlc::Parameter<SwapAxisParam> {
   // use int for enumeration
@@ -53,80 +55,84 @@ class SwapAxisOp : public Operator {
 #endif
   	this->param_ = p;
   }
+  
+  
+  void Reshape2Five(Shape<5> &inter_shape, TShape &shape, uint32_t dim1, uint32_t dim2)
+  {
+    int ndim_in = shape.ndim();
+    int si;
+    for (si = 0; si < 5; si++)
+    {
+      inter_shape[si] = 1;
+    }
+    //dim_0
+    for (si = 0; si < dim1; si++)
+    {
+      inter_shape[0] *= shape[si];
+    }
+    //dim_1
+    inter_shape[1] = shape[dim1];
+    //dim_2
+    for (si = dim1+1; si < dim2; si++)
+    {
+      inter_shape[2] *= shape[si];
+    }
+    //dim_3
+    inter_shape[3] = shape[dim2];
+    //dim_4
+    for (si = dim2+1; si < ndim_in; si++)
+    {
+      inter_shape[4] *= shape[si];
+    }
+  }
+  
+  void __swapaxis(Stream<xpu> *s, const std::vector<TBlob> &in_data, const std::vector<TBlob> &out_data)
+  {
+    uint32_t dim1 = param_.dim1;
+    uint32_t dim2 = param_.dim2;
+    
+    TBlob data_in = in_data[SwapAxis::kData];
+    TBlob data_out = out_data[SwapAxis::kData];
+    
+    TShape shape_in = data_in.shape_;
+    TShape shape_out = data_out.shape_;
+    
+    Shape<5> inter_shape;
+    
+    Reshape2Five(inter_shape, shape_in, dim1, dim2);
+    
+    Tensor<xpu, 5> inter_data_in = data_in.get_with_shape<xpu, 5, real_t>(inter_shape, s);
+    
+    int dwTmp = 0;
+    
+    Shape<5> inter_shape2 = inter_shape;
+    inter_shape2[1] = inter_shape[3];
+    inter_shape2[3] = inter_shape[1];
+    
+    Tensor<xpu, 5> inter_data_out = data_out.get_with_shape<xpu, 5, real_t>(inter_shape2, s);
+    
+    TShape shape_tmp = shape_in;
+    dwTmp = shape_tmp[dim1];
+    shape_tmp[dim1] = shape_tmp[dim2];
+    shape_tmp[dim2] = dwTmp;
+    
+    CHECK(shape_out == shape_tmp);
+    
+    inter_data_out = swapaxis<3, 1>(inter_data_in);
+  }
 
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
+    
 #if SWAPAXIS_DBG
     printf("hello swapaxis Forward!\n");
 #endif
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
-    uint32_t dim1 = param_.dim1;
-    uint32_t dim2 = param_.dim2;
-    
-    TBlob data_in = in_data[SwapAxis::kData];
-    TBlob data_out = out_data[SwapAxis::kData];
-#if 0 //free dimension
-    int ndim_in = data_in.ndim();
-
-    int aDims_in = new int[ndim_in];
-    int aDims5[5];
-    int si;
-    for (si = 0; si < ndim_in; si++)
-    {
-      aDims_in[si] = data_in.size(si);
-    }
-    for (si = 0; si < 5; si++)
-    {
-      aDims5[si] = 1;
-    }
-    //dim_0
-    for (si = 0; si < dim1; si++)
-    {
-      aDims5[0] *= aDims_in[si];
-    }
-    //dim_1
-    aDims5[1] = aDims_in[dim1];
-    //dim_2
-    for (si = dim1+1; si < dim2; si++)
-    {
-      aDims5[2] *= aDims_in[si];
-    }
-    //dim_3
-    aDims5[3] = aDims_in[dim2];
-    //dim_4
-    for (si = dim2+1; si < ndim_in; si++)
-    {
-      aDims5[4] *= aDims_in[si];
-    }
-    
-    Shape<5> inter_shape = Shape5(aDims5[0], aDims5[1], aDims5[2], aDims5[3], aDims5[4]);
-#else //fix 4 dimension
-    Shape<4> shape_in = data_in.shape_.get<4>();
-    Shape<5> inter_shape = Shape5(shape_in.ProdShape(0, dim1), shape_in[dim1], 
-                                 shape_in.ProdShape(dim1+1, dim2), shape_in[dim2],
-                                 shape_in.ProdShape(dim2+1, 4));
-#endif    
-    Tensor<xpu, 5> inter_data_in = data_in.get_with_shape<xpu, 5, real_t>(inter_shape, s);
-//    Tensor<xpu, 5> inter_data = swapaxis<3, 1>(inter_data_in);
-//    swapaxis<3, 1>(inter_data_in);
-    
-    Tensor<xpu, 4> out = data_out.get<xpu, 4, real_t>(s);
-    Shape<4> shape_out = data_out.shape_.get<4>();
-    int dwTmp = 0;
-    Shape<4> shape_in_tmp = shape_in;
-    dwTmp = shape_in_tmp[dim1];
-    shape_in_tmp[dim1] = shape_in_tmp[dim2];
-    shape_in_tmp[dim2] = dwTmp;
-    
-    assert(shape_out == shape_in_tmp);
-    
-    out = reshape(swapaxis<3, 1>(inter_data_in), shape_out);
+    __swapaxis(s, in_data, out_data);
     
 #if 0
     delete []aDims_in;
@@ -140,7 +146,12 @@ class SwapAxisOp : public Operator {
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &in_grad,
                        const std::vector<TBlob> &aux_args) {
-  	
+#if SWAPAXIS_DBG
+    printf("hello swapaxis Backward!\n");
+#endif
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+  	__swapaxis(s, in_data, out_data);
+  	__swapaxis(s, out_grad, in_data);
   }
   
   SwapAxisParam param_;
