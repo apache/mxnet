@@ -6,13 +6,13 @@ import logging
 # data directory
 data_dir = "../../../ilsvrc12/"
 # local, dist_async or dist_sync
-kv_type = 'dist_sync'
+kv_type = 'dist_async'
 # batch size
 batch_size = 96
 # number of gpus used in a worker
 num_gpus = 2
 # learning rate
-learning_rate = 0.1
+learning_rate = 0.05
 
 kv = mx.kvstore.create(kv_type)
 
