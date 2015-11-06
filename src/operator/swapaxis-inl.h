@@ -150,8 +150,8 @@ class SwapAxisOp : public Operator {
     printf("hello swapaxis Backward!\n");
 #endif
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    __swapaxis(s, in_data, out_data);
-    __swapaxis(s, out_grad, in_data);
+//    __swapaxis(s, in_data, out_data);
+    __swapaxis(s, out_grad, in_grad);
   }
   
   SwapAxisParam param_;
