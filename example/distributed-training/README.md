@@ -119,16 +119,15 @@ Based on [train_imagenet.py](train_imagenet.py)
 full log [log/ilsvrc12/incept_1](log/ilsvrc12/incept_1)
 
 
-- `batch_size = 48`, `learning_rate = 0.05`
+- `batch_size = 48`, `learning_rate = 0.1`
 
 | epoch | train accuracy | valid accuracy | time |
 | --- | --- | --- | --- |
 | 5 | 0.517945 | 0.509897 | 16026.8 |
 | 10 | 0.579599 | 0.548764 | 16291.1 |
+| 15 | 0.604185 | 0.570897 | 16405.0 |
 
 full log [log/ilsvrc12/incept_6](log/ilsvrc12/incept_6)
-
-running
 
 ### 5 machines with 10 GTX 980, BSP
 
