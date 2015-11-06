@@ -152,8 +152,8 @@ class NDArrayIter(DataIter):
             for i in range(self.num_source):
                 data_list[i] = data_list[i][:new_n]
         self.num_data = data_list[0].shape[0]
-        assert self.num_data > batch_size, \
-            "batch_size need to be smaller than data size when not padding."
+        assert self.num_data >= batch_size, \
+            "batch_size needs to be smaller than data size when not padding."
         self.cursor = -batch_size
         self.data_list = data_list
         self.batch_size = batch_size
