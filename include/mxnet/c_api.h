@@ -725,7 +725,7 @@ MXNET_DLL int MXDataIterGetBatchsize(DataIterHandle handle,
  * \brief Get current batch size of iter
  */
 MXNET_DLL int MXDataIterGetBatchsize(DataIterHandle handle,
-		                         mx_uint* batch_size);
+                                     mx_uint* batch_size);
 
 /*!
  * \brief Get the padding number in current data batch

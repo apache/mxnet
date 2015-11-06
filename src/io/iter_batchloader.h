@@ -103,7 +103,7 @@ class BatchLoader : public IIterator<TBlobBatch> {
               d.data[1].get<mshadow::cpu, 1, float>());
       mshadow::Copy(out_.data[0].get<mshadow::cpu, 4, float>()[top],
               d.data[0].get<mshadow::cpu, 3, float>());
-	        if (++ top >= param_.batch_size) {
+      if (++ top >= param_.batch_size) {
         return true;
       }
     }
