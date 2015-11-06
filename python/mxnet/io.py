@@ -74,6 +74,24 @@ class DataIter(object):
         """
         return self.getdata(-1)
 
+    def getindex(self):
+        """
+        Retures
+        -------
+        index : numpy.array
+            The index of current batch
+        """
+        pass
+
+    def getbatchsize(self):
+        """
+        Retures
+        -------
+        batch_size: int
+            The size of current batch
+        """
+        pass
+
     def getpad(self):
         """Get the number of padding examples in current batch.
         Returns
