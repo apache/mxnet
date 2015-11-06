@@ -17,6 +17,8 @@
 #include <utility>
 #include "./operator_common.h"
 
+#define SWAPAXIS_DBG 1
+
 namespace mxnet {
 namespace op {
 
@@ -32,10 +34,10 @@ struct SwapAxisParam : public dmlc::Parameter<SwapAxisParam> {
   DMLC_DECLARE_PARAMETER(SwapAxisParam) {
     DMLC_DECLARE_FIELD(dim1)
     .set_default(0)
-    .describe("the first axis to be input.");
+    .describe("the first axis to be swapped.");
     DMLC_DECLARE_FIELD(dim2)
     .set_default(0)
-    .describe("the second axis to be input.");
+    .describe("the second axis to be swapped.");
   }
 };
 
@@ -45,6 +47,10 @@ template<typename xpu>
 class SwapAxisOp : public Operator {
  public:
   explicit SwapAxisOp(SwapAxisParam p) {
+    CHECK_LT(p.dim1, p.dim2) << "dim1 must be lower than dim2.";
+#if SWAPAXIS_DBG
+    printf("hello swapaxis SwapAxisOp:dim1:%d, dim2:%d!\n", p.dim1, p.dim2);
+#endif
   	this->param_ = p;
   }
 
@@ -55,8 +61,11 @@ class SwapAxisOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
+#if SWAPAXIS_DBG
+    printf("hello swapaxis Forward!\n");
+#endif
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    
+
     uint32_t dim1 = param_.dim1;
     uint32_t dim2 = param_.dim2;
     
@@ -106,6 +115,7 @@ class SwapAxisOp : public Operator {
     Tensor<xpu, 5> inter_data_in = data_in.get_with_shape<xpu, 5, real_t>(inter_shape, s);
 //    Tensor<xpu, 5> inter_data = swapaxis<3, 1>(inter_data_in);
 //    swapaxis<3, 1>(inter_data_in);
+    
     Tensor<xpu, 4> out = data_out.get<xpu, 4, real_t>(s);
     Shape<4> shape_out = data_out.shape_.get<4>();
     int dwTmp = 0;
@@ -159,6 +169,38 @@ class SwapAxisProp : public OperatorProperty {
   bool InferShape(std::vector<TShape> *in_shape,
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
+    int input_num = in_shape->size();
+    if (input_num == 0)
+    {
+      std::cout << "Have no input data.\n";
+      return false;
+    }
+    TShape &shape0 = (*in_shape)[SwapAxis::kData];
+#if SWAPAXIS_DBG
+    printf("in_shape_num:%d\n", input_num);
+    printf("in_shape_0, dim:%d, size:%d\n", (int)shape0.ndim(), (int)shape0.Size());
+#endif
+    if (shape0.ndim() !=  4)
+    {
+      std::cout << "Input data should be 4D.\n";
+      return false;
+    }
+    out_shape->clear();
+    out_shape->push_back(shape0);
+    TShape &shape1 = (*out_shape)[SwapAxis::kOut];
+#if 1
+    int tmp = 0;
+    tmp = shape1[param_.dim1];
+    shape1[param_.dim1] = shape1[param_.dim2];
+    shape1[param_.dim2] = tmp;
+#endif
+#if SWAPAXIS_DBG
+    for (int i = 0; i < 4; i++)
+    {
+      printf("%d[%d], ", shape1[i], shape0[i]);
+    }
+    printf("\n");
+#endif
     return true;
   }
 
