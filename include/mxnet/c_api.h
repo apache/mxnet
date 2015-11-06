@@ -715,12 +715,12 @@ MXNET_DLL int MXDataIterGetData(DataIterHandle handle,
  * \return image index array
  */
 MXNET_DLL int MXDataIterGetIndex(DataIterHandle handle,
-		                         uint64_t *out_index);
+                                 uint64_t *out_index);
 /*!
  * \brief Get current batch size of iter
  */
 MXNET_DLL int MXDataIterGetBatchsize(DataIterHandle handle,
-		                         mx_uint* batch_size);
+                                     mx_uint* batch_size);
 
 /*!
  * \brief Get the padding number in current data batch
