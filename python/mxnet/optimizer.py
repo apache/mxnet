@@ -66,7 +66,7 @@ class Optimizer(object):
         """Create additional optimizer state such as momentum.
         override in implementations."""
 
-    def update(self, index, weight, grad, state):
+    def update(self, index, weight, grad, state, lr_mult=1.0):
         """Update the parameters. override in implementations"""
 
 #convenience wrapper for Optimizer.Register
@@ -120,7 +120,7 @@ class SGD(Optimizer):
         else:
             return zeros(weight.shape, weight.context)
 
-    def update(self, index, weight, grad, state):
+    def update(self, index, weight, grad, state, lr_mult=1.0):
         """Update the parameters.
 
         Parameters
@@ -144,6 +144,7 @@ class SGD(Optimizer):
             lr = self.lr_scheduler(self.epoch)
         else:
             lr = self.lr
+        lr *= lr_mult
 
         grad = grad * self.rescale_grad
         if self.clip_gradient != None:
@@ -169,7 +170,7 @@ class Test(Optimizer):
         """Create a state to duplicate weight"""
         return zeros(weight.shape, weight.context)
 
-    def update(self, index, weight, grad, state):
+    def update(self, index, weight, grad, state, lr_mult=1.0):
         """performs w += rescale_grad * grad"""
         weight[:] += grad * self.rescale_grad
         state[:] = weight
@@ -191,9 +192,9 @@ def get_updater(optimizer):
          The clossure of the updater
     """
     states = dict()
-    def updater(index, grad, weight):
+    def updater(index, grad, weight, lr_mult=1.0):
         """updater for kvstore"""
         if index not in states:
             states[index] = optimizer.create_state(index, weight)
-        optimizer.update(index, weight, grad, states[index])
+        optimizer.update(index, weight, grad, states[index], lr_mult=1.0)
     return updater
