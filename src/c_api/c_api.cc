@@ -837,7 +837,8 @@ int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out) {
   *out = pndarray;
   API_END();
 }
-int MXDataIterGetIndex(DataIterHandle handle,mx_uint index_size,  uint64_t *out_index) {
+
+int MXDataIterGetIndex(DataIterHandle handle, uint64_t *out_index) {
   API_BEGIN();
   const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
   for (size_t i = 0; i < db.index.size(); ++i) {

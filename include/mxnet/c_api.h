@@ -722,6 +722,12 @@ MXNET_DLL int MXDataIterGetIndex(DataIterHandle handle,
 MXNET_DLL int MXDataIterGetBatchsize(DataIterHandle handle,
                                      mx_uint* batch_size);
 /*!
+ * \brief Get current batch size of iter
+ */
+MXNET_DLL int MXDataIterGetBatchsize(DataIterHandle handle,
+		                         mx_uint* batch_size);
+
+/*!
  * \brief Get the padding number in current data batch
  * \param handle the handle pointer to the data iterator
  * \param pad pad number ptr

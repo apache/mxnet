@@ -295,7 +295,6 @@ class MXDataIter(DataIter):
             batch = self.first_batch
             self.first_batch = None
             return batch
-
         self._debug_at_begin = False
         next_res = ctypes.c_int(0)
         check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
