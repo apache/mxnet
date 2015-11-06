@@ -303,6 +303,17 @@ class MXDataIter(DataIter):
         check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
         return NDArray(hdl, False)
 
+    def getindex(self):
+        batch_size = self.getbatchsize()
+        index = np.zeros((batch_size), dtype=np.uint64)
+        check_call(_LIB.MXDataIterGetIndex(self.handle, index.ctypes.data))
+        return index
+
+    def getbatchsize(self):
+        batch_size = ctypes.c_uint32(0)
+        check_call(_LIB.MXDataIterGetBatchsize(self.handle, ctypes.byref(batch_size)))
+        return batch_size.value
+
     def getpad(self):
         pad = ctypes.c_int(0)
         check_call(_LIB.MXDataIterGetPadNum(self.handle, ctypes.byref(pad)))
