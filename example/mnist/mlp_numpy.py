@@ -32,8 +32,8 @@ val_data[:] /= 256.0
 
 batch_size = 100
 # or you can use numpy iterator, which make using model easier
-train_iter = mx.io.NDArrayIter(data=train_data, label=train_label, batch_size=batch_size, shuffle=True)
-val_iter = mx.io.NDArrayIter(data=val_data, label=val_label, batch_size=batch_size)
+train_iter = mx.io.NDArrayIter(train_data, train_label, batch_size=batch_size, shuffle=True)
+val_iter = mx.io.NDArrayIter(val_data, val_label, batch_size=batch_size)
 
 
 logging.basicConfig(level=logging.DEBUG)

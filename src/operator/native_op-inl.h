@@ -212,7 +212,7 @@ class NativeOpProp : public OperatorProperty {
       SHAPE_ASSIGN_CHECK(*in_shape, i, TShape(shapes[i], shapes[i]+ndims[i]));
     }
     out_shape->clear();
-    for (unsigned i = param_.num_inputs_; i < param_.num_inputs_ + out_shape->size(); ++i) {
+    for (unsigned i = param_.num_inputs_; i < shapes.size(); ++i) {
       out_shape->push_back(TShape(shapes[i], shapes[i]+ndims[i]));
     }
     return true;

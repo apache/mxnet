@@ -205,11 +205,3 @@ class NumpyOp(PythonOp):
                                      info=cb_ptr,
                                      need_top_grad=self.need_top_grad(),
                                      **kwargs)
-
-    
-class NDArrayOp(PythonOp):
-    """Base class for numpy operators. Similar to NumpyOp but more efficient
-    if you don't need every input/output data blob.
-    """
-    def __init__(self):
-        super(NDArrayOp, self).__init__()
