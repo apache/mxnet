@@ -47,15 +47,15 @@ def replicate_data(x, batch_size):
     return data
 
 batch_size = 20
-seq_len = 20
+seq_len = 35
 num_hidden = 200
 num_embed = 200
 num_lstm_layer = 2
-num_round = 20
+num_round = 25
 learning_rate= 1
-wd=0.00001
+wd=0.
 momentum=0.0
-clip_gradient=1
+max_grad_norm = 5.0
 update_period = 1
 
 
@@ -78,14 +78,14 @@ model = lstm.setup_rnn_model(mx.gpu(),
                              num_label=vocab,
                              batch_size=batch_size,
                              input_size=vocab,
-                             initializer=mx.initializer.Uniform(0.1))
+                             initializer=mx.initializer.Uniform(0.1),dropout=0.5)
 
 lstm.train_lstm(model, X_train_batch, X_val_batch,
                 num_round=num_round,
                 half_life=2,
+                max_grad_norm = max_grad_norm,
                 update_period=update_period,
                 learning_rate=learning_rate,
                 wd=wd,
-                momentum=momentum,
-                clip_gradient=clip_gradient)
+                momentum=momentum)
 
