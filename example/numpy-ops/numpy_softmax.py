@@ -42,7 +42,7 @@ act2 = mx.symbol.Activation(data = fc2, name='relu2', act_type="relu")
 fc3 = mx.symbol.FullyConnected(data = act2, name='fc3', num_hidden=10)
 #mlp = mx.symbol.Softmax(data = fc3, name = 'mlp')
 mysoftmax = NumpySoftmax()
-mlp = mysoftmax(data=fc3, name = 'mlp')
+mlp = mysoftmax(data=fc3, name = 'softmax')
 
 # data
 
