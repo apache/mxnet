@@ -19,7 +19,6 @@ cd $dest_dir; dest_dir=`pwd`; cd $cur_dir
 if [ "$lang" == "python" ] ; then
     echo "packing python from [$mxnet_dir] to [$dest_dir]"
 
-
     if [ ! -f $mxnet_dir/lib/libmxnet.so ]; then
         echo "didn't find libmxnet.so, run make first"
         exit
@@ -29,14 +28,7 @@ if [ "$lang" == "python" ] ; then
     cp -r $mxnet_dir/python/mxnet $dest_dir
     cp $mxnet_dir/lib/libmxnet.so $dest_dir/mxnet
 
-    if [ -d $mxnet_dir/deps/lib ]; then
-        mkdir -p $dest_dir/lib
-        cp $mxnet_dir/deps/lib/libprotobuf.so.8 $dest_dir/lib
-        cp $mxnet_dir/deps/lib/libzmq.so.5 $dest_dir/lib
-    fi
-    echo "done. then you can set the following environment"
-    echo "export LD_LIBRARY_PATH=${dest_dir}/lib:\$LD_LIBRARY_PATH"
-    echo "export PYTHONPATH=${dest_dir}:\$PYTHONPATH"
+    echo "done. "
 else
     echo "unsupported language: $lang"
 fi
