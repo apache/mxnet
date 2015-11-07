@@ -9,8 +9,9 @@ User Guide
 * [Python Package Document](python/index.md)
 * [R Package Document](R-package/index.md)
 * [MXNet.jl Julia Package](https://github.com/dmlc/MXNet.jl)
-* [Frequently Asked Questions](faq.md)
 * [Pretrained Model Gallery](pretrained.md)
+* [Distributed Training](distributed_training.md)
+* [Frequently Asked Questions](faq.md)
 
 Developer Guide
 ---------------
