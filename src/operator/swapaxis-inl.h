@@ -17,8 +17,6 @@
 #include <utility>
 #include "./operator_common.h"
 
-#define SWAPAXIS_DBG 0
-
 namespace mxnet {
 namespace op {
 
@@ -43,51 +41,39 @@ struct SwapAxisParam : public dmlc::Parameter<SwapAxisParam> {
   }
 };
 
-//a1 higher dimension to be swapped, assert a1 > a2
-//a2 lower dimension to be swapped
+
 template<typename xpu>
 class SwapAxisOp : public Operator {
  public:
   explicit SwapAxisOp(SwapAxisParam p) {
-    CHECK_LT(p.dim1, p.dim2) << "dim1 must be lower than dim2.";
-#if SWAPAXIS_DBG
-    printf("hello swapaxis SwapAxisOp:dim1:%d, dim2:%d!\n", p.dim1, p.dim2);
-#endif
+    CHECK_NE(p.dim1, p.dim2) << "dim1 can not be equal dim2.";
+    if (p.dim1 > p.dim2) {
+      std::swap(p.dim1, p.dim2);
+    }
   	this->param_ = p;
   }
   
-  
-  void Reshape2Five(Shape<5> &inter_shape, TShape &shape, uint32_t dim1, uint32_t dim2)
-  {
+  void Reshape2Five(Shape<5> &inter_shape, const TShape &shape, const uint32_t &dim1, const uint32_t &dim2) {
     int ndim_in = shape.ndim();
-    int si;
-    for (si = 0; si < 5; si++)
-    {
-      inter_shape[si] = 1;
-    }
+    const index_t *shdata = shape.data();
     //dim_0
-    for (si = 0; si < dim1; si++)
-    {
-      inter_shape[0] *= shape[si];
-    }
+    inter_shape[0] = std::accumulate(shdata, shdata + dim1, 1, std::multiplies<int>());
+    
     //dim_1
-    inter_shape[1] = shape[dim1];
+    inter_shape[1] = shdata[dim1];
+    
     //dim_2
-    for (si = dim1+1; si < dim2; si++)
-    {
-      inter_shape[2] *= shape[si];
-    }
+    inter_shape[2] = std::accumulate(shdata + dim1 + 1, shdata + dim2, 1, std::multiplies<int>());
+    
     //dim_3
-    inter_shape[3] = shape[dim2];
+    inter_shape[3] = shdata[dim2];
+    
     //dim_4
-    for (si = dim2+1; si < ndim_in; si++)
-    {
-      inter_shape[4] *= shape[si];
-    }
+    inter_shape[4] = std::accumulate(shdata + dim2 + 1, shdata + ndim_in, 1, std::multiplies<int>());
+    
   }
   
-  void __swapaxis(Stream<xpu> *s, const std::vector<TBlob> &in_data, const std::vector<TBlob> &out_data)
-  {
+  void __swapaxis(Stream<xpu> *s, const std::vector<TBlob> &in_data, const std::vector<TBlob> &out_data) {
     uint32_t dim1 = param_.dim1;
     uint32_t dim2 = param_.dim2;
     
@@ -106,8 +92,7 @@ class SwapAxisOp : public Operator {
     int dwTmp = 0;
     
     Shape<5> inter_shape2 = inter_shape;
-    inter_shape2[1] = inter_shape[3];
-    inter_shape2[3] = inter_shape[1];
+    std::swap(inter_shape2[1], inter_shape2[3]);
     
     Tensor<xpu, 5> inter_data_out = data_out.get_with_shape<xpu, 5, real_t>(inter_shape2, s);
     
@@ -126,17 +111,10 @@ class SwapAxisOp : public Operator {
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
-    
-#if SWAPAXIS_DBG
-    printf("hello swapaxis Forward!\n");
-#endif
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     __swapaxis(s, in_data, out_data);
     
-#if 0
-    delete []aDims_in;
-#endif
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -146,11 +124,7 @@ class SwapAxisOp : public Operator {
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &in_grad,
                        const std::vector<TBlob> &aux_args) {
-#if SWAPAXIS_DBG
-    printf("hello swapaxis Backward!\n");
-#endif
     Stream<xpu> *s = ctx.get_stream<xpu>();
-//    __swapaxis(s, in_data, out_data);
     __swapaxis(s, out_grad, in_grad);
   }
   
@@ -187,31 +161,12 @@ class SwapAxisProp : public OperatorProperty {
       return false;
     }
     TShape &shape0 = (*in_shape)[SwapAxis::kData];
-#if SWAPAXIS_DBG
-    printf("in_shape_num:%d\n", input_num);
-    printf("in_shape_0, dim:%d, size:%d\n", (int)shape0.ndim(), (int)shape0.Size());
-#endif
-    if (shape0.ndim() !=  4)
-    {
-      std::cout << "Input data should be 4D.\n";
-      return false;
-    }
     out_shape->clear();
     out_shape->push_back(shape0);
     TShape &shape1 = (*out_shape)[SwapAxis::kOut];
-#if 1
-    int tmp = 0;
-    tmp = shape1[param_.dim1];
-    shape1[param_.dim1] = shape1[param_.dim2];
-    shape1[param_.dim2] = tmp;
-#endif
-#if SWAPAXIS_DBG
-    for (int i = 0; i < 4; i++)
-    {
-      printf("%d[%d], ", shape1[i], shape0[i]);
-    }
-    printf("\n");
-#endif
+
+    std::swap(shape1[param_.dim1], shape1[param_.dim2]);
+
     return true;
   }
 
@@ -224,12 +179,14 @@ class SwapAxisProp : public OperatorProperty {
   std::string TypeString() const override {
     return "SwapAxis";
   }
-/*
+
   std::vector<int> DeclareBackwardDependency(
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override;
-
+    const std::vector<int> &out_data) const override {
+    return {out_grad[SwapAxis::kOut]};
+  };
+/*
   std::vector<ResourceRequest> ForwardResource(
       const std::vector<TShape> &in_shape) const override;
 

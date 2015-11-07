@@ -16,9 +16,6 @@ Operator* CreateOp<cpu>(SwapAxisParam param) {
 }
 
 Operator* SwapAxisProp::CreateOperator(Context ctx) const {
-#if SWAPAXIS_DBG
-  printf("hello swapaxis CreateOperator!\n");
-#endif
   DO_BIND_DISPATCH(CreateOp, param_);
 }
 
