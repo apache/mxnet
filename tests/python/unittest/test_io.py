@@ -20,7 +20,7 @@ def test_MNISTIter():
     # test_loop
     nbatch = 60000 / batch_size
     batch_count = 0
-    for data, label in train_dataiter:
+    for batch in train_dataiter:
         batch_count += 1
     assert(nbatch == batch_count)
     # test_reset
@@ -52,11 +52,11 @@ def test_Cifar10Rec():
             prefetch_buffer=1)
     labelcount = [0 for i in range(10)]
     batchcount = 0
-    for data, label in dataiter:
-        npdata = data.asnumpy().flatten().sum()
+    for batch in dataiter:
+        npdata = batch.data[0].asnumpy().flatten().sum()
         sys.stdout.flush()
         batchcount += 1
-        nplabel = label.asnumpy()
+        nplabel = batch.label[0].asnumpy()
         for i in range(nplabel.shape[0]):
             labelcount[int(nplabel[i])] += 1
     for i in range(10):
@@ -70,17 +70,18 @@ def test_NDArrayIter():
         labels[i] = i / 100
     dataiter = mx.io.NDArrayIter(datas, labels, 128, True, last_batch_handle='pad')
     batchidx = 0
-    for data, label in dataiter:
+    for batch in dataiter:
         batchidx += 1
     assert(batchidx == 8)
     dataiter = mx.io.NDArrayIter(datas, labels, 128, False, last_batch_handle='pad')
     batchidx = 0
     labelcount = [0 for i in range(10)]
-    for data, label in dataiter:
-        label = label.asnumpy().flatten()
-        assert((data.asnumpy()[:,0,0] == label).all())
+    for batch in dataiter:
+        label = batch.label[0].asnumpy().flatten()
+        assert((batch.data[0].asnumpy()[:,0,0] == label).all())
         for i in range(label.shape[0]):
             labelcount[int(label[i])] += 1
+
     for i in range(10):
         if i == 0:
             assert(labelcount[i] == 124)
