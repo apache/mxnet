@@ -31,12 +31,10 @@ class DataIter(object):
 
     def next(self):
         """Get next data batch from iterator
-
         Returns
         -------
         data : NDArray
             The data of next batch.
-
         label : NDArray
             The label of next batch.
         """
@@ -47,7 +45,6 @@ class DataIter(object):
 
     def iter_next(self):
         """Iterate to next batch.
-
         Returns
         -------
         has_next : boolean
@@ -57,12 +54,10 @@ class DataIter(object):
 
     def getdata(self, index=0):
         """Get data of current batch.
-
         Parameters
         ----------
         index : int
             The index of data source to retrieve.
-
         Returns
         -------
         data : NDArray
@@ -72,7 +67,6 @@ class DataIter(object):
 
     def getlabel(self):
         """Get label of current batch.
-
         Returns
         -------
         label : NDArray
@@ -82,7 +76,6 @@ class DataIter(object):
 
     def getpad(self):
         """Get the number of padding examples in current batch.
-
         Returns
         -------
         pad : int
@@ -123,27 +116,20 @@ def _init_data(data, allow_empty, default_name):
 
 class NDArrayIter(DataIter):
     """NDArrayIter object in mxnet. Taking NDArray or numpy array to get dataiter.
-
     Parameters
     ----------
     data_list or data, label: a list of, or two separate NDArray or numpy.ndarray
         list of NDArray for data. The last one is treated as label.
-
     batch_size: int
         Batch Size
-
     shuffle: bool
         Whether to shuffle the data
-
     data_pad_value: float, optional
         Padding value for data
-
     label_pad_value: float, optionl
         Padding value for label
-
     last_batch_handle: 'pad', 'discard' or 'roll_over'
         How to handle the last batch
-
     Note
     ----
     This iterator will pad, discard or roll over the last batch if
@@ -175,9 +161,9 @@ class NDArrayIter(DataIter):
                 self.data[k] = self.data[k][:new_n]
             for k, _ in self.label:
                 self.label[k] = self.label[k][:new_n]
-        self.num_data = data_list[0].shape[0]
-        assert self.num_data >= batch_size, \
-            "batch_size needs to be smaller than data size when not padding."
+        self.num_data = self.data_list[0].shape[0]
+        assert self.num_data > batch_size, \
+            "batch_size need to be smaller than data size when not padding."
         self.cursor = -batch_size
         self.batch_size = batch_size
         self.last_batch_handle = last_batch_handle
@@ -242,7 +228,6 @@ class NDArrayIter(DataIter):
 
 class MXDataIter(DataIter):
     """DataIter built in MXNet. List all the needed functions here.
-
     Parameters
     ----------
     handle : DataIterHandle
@@ -256,11 +241,10 @@ class MXDataIter(DataIter):
 
 
         # load the first batch to get shape information
-        self.reset()
-        batch = self.next()
-        data = batch.data[0]
-        label = batch.label[0]
-        self.reset()
+        self.first_batch = None
+        self.first_batch = self.next()
+        data = self.first_batch.data[0]
+        label = self.first_batch.label[0]
 
         # properties
         self.provide_data = [(data_name, data.shape)]
@@ -273,7 +257,6 @@ class MXDataIter(DataIter):
 
     def debug_skip_load(self):
         """Set the iterator to simply return always first batch.
-
         Notes
         -----
         This can be used to test the speed of network without taking
@@ -284,11 +267,16 @@ class MXDataIter(DataIter):
 
     def reset(self):
         self._debug_at_begin = True
+        self.first_batch = None
         check_call(_LIB.MXDataIterBeforeFirst(self.handle))
 
     def next(self):
         if self._debug_skip_load and not self._debug_at_begin:
             return  DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad())
+        if self.first_batch is not None:
+            batch = self.first_batch
+            self.first_batch = None
+            return batch
 
         self._debug_at_begin = False
         next_res = ctypes.c_int(0)
@@ -299,6 +287,8 @@ class MXDataIter(DataIter):
             raise StopIteration
 
     def iter_next(self):
+        if self.first_batch is not None:
+            return True
         next_res = ctypes.c_int(0)
         check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
         return next_res.value
@@ -349,12 +339,10 @@ def _make_io_iterator(handle):
     def creator(*args, **kwargs):
         """Create an iterator.
         The parameters listed below can be passed in as keyword arguments.
-
         Parameters
         ----------
         name : string, required.
             Name of the resulting data iterator.
-
         Returns
         -------
         dataiter: Dataiter
