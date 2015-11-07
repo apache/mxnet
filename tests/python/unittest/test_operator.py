@@ -49,6 +49,35 @@ def test_elementwise_sum():
             shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
             check_elementwise_sum_with_shape(shape, np.random.randint(1, 8))
 
+def check_slice_channel(dim, num):
+    ins = []
+    if dim == 2:
+        shape = (2,2)
+    else:
+        shape = (2, 2, 2 ,3)
+    ins = [np.ones(shape) * i for i in range(num)]
+    e = np.hstack(ins)
+
+    e_nd = mx.nd.empty(e.shape)
+    e_nd[:] = e
+    data = mx.sym.Variable('data')
+    op = mx.sym.SliceChannel(data=data, num_outputs=num)
+    arg_shape, output_shape, aux_shape = op.infer_shape(data=e_nd.shape)
+    grad_nd = [mx.nd.empty(shape) for shape in arg_shape]
+
+    exe = op.bind(mx.cpu(), args=[e_nd], args_grad=grad_nd)
+    assert len(exe.outputs) == num
+    o_nd = [exe.outputs[i] for i in range(num)]
+    # test forward
+    exe.forward()
+    for i in range(num):
+        assert reldiff(o_nd[i].asnumpy(), ins[i]) < 1e-5
+    # test backward
+    for i in range(num):
+        o_nd[i] += i
+    exe.backward(o_nd)
+    assert reldiff(grad_nd[0].asnumpy(), np.hstack([ins[i] + i for i in range(num)])) < 1e-5
+
 def check_concat_with_shape(shapes):
     n = len(shapes)
     # forward
@@ -99,7 +128,89 @@ def test_concat():
             shapes.append((batch, ch[i], h, w))
         check_concat_with_shape(shapes)
 
+def test_slice_channel():
+    check_slice_channel(2, 4)
+    check_slice_channel(4, 4)
+    check_slice_channel(2, 16)
+
+def check_regression(symbol, forward, backward):
+    data = mx.symbol.Variable('data')
+    label = mx.symbol.Variable('label')
+    out = symbol(data, label)
+    shape = (3, 1)
+    arr_data = mx.random.uniform(-1, 1, shape)
+    arr_label = mx.random.uniform(0, 1, shape[0])
+    arr_grad = mx.nd.empty(shape)
+    exec1 = out.bind(mx.cpu(),
+                     args=[arr_data, arr_label],
+                     args_grad={"data" : arr_grad})
+    exec1.forward()
+    out1 = exec1.outputs[0].asnumpy()
+    npout = forward(arr_data.asnumpy())
+    assert reldiff(npout, out1) < 1e-6
+
+    exec1.backward()
+    npout = backward(npout,  arr_label.asnumpy().reshape(npout.shape))
+    assert reldiff(npout, arr_grad.asnumpy()) < 1e-6
+
+def test_regression():
+    check_regression(mx.symbol.LogisticRegressionOutput,
+                     lambda x: 1.0 / (1.0 + np.exp(-x)),
+                     lambda x, y : x - y)
+    check_regression(mx.symbol.LinearRegressionOutput,
+                     lambda x: x,
+                     lambda x, y : x - y)
+
+def check_softmax_with_shape(shape, xpu):
+    X = mx.symbol.Variable('X')
+    L = mx.symbol.Variable('L')
+    Y = mx.symbol.Softmax(data=X, label=L)
+    x = mx.random.uniform(-1, 1, shape, ctx = xpu)
+    l = mx.nd.empty((shape[0],), ctx = xpu)
+    l[:] = np.random.randint(0, shape[0]-1, (shape[0],))
+    grad = mx.nd.empty(shape, ctx = xpu)
+
+    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
+    print('foward')
+    exec1.forward()
+    print(exec1.outputs[0].asnumpy())
+    exec1.backward()
+    print(grad.asnumpy())
+
+def check_multi_softmax_with_shape(shape, xpu):
+    X = mx.symbol.Variable('X')
+    L = mx.symbol.Variable('L')
+    Y = mx.symbol.Softmax(data=X, label=L, multi_output=True)
+    x = mx.random.uniform(-1, 1, shape, ctx = xpu)
+    l = mx.nd.empty((shape[0], shape[2]), ctx = xpu)
+    l[:] = np.random.randint(0, shape[1]-1, (shape[0], shape[2]))
+    grad = mx.nd.empty(shape, ctx = xpu)
+
+    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
+    exec1.forward()
+    print(exec1.outputs[0].asnumpy())
+    exec1.backward()
+    print(grad.asnumpy())
+
+def test_python_op():
+    X = mx.symbol.Variable('X')
+    op = mx.operator.NumpyOp()
+    s = op.get_symbol(X, name='numpy_op')
+
+    x = mx.ndarray.ones((10))*10
+    dx = mx.ndarray.zeros((10))
+    dy = mx.ndarray.ones((10))
+    exec1 = s.bind(mx.cpu(), args=[x], args_grad = {'X': dx})
+    exec1.forward()
+    assert reldiff(x.asnumpy(), exec1.outputs[0].asnumpy()) < 1e-5
+    exec1.backward(dy)
+    assert reldiff(dy.asnumpy(), dx.asnumpy()) < 1e-5
 
 if __name__ == '__main__':
     test_elementwise_sum()
     test_concat()
+    test_slice_channel()
+    test_regression()
+    test_python_op()
+    #check_softmax_with_shape((3,4), mx.cpu())
+    #check_multi_softmax_with_shape((3,4,5), mx.cpu())

@@ -11,11 +11,13 @@ from . import name
 # use mx.sym as short for symbol
 from . import symbol as sym
 from . import symbol
-# use mx.kv as short for kvstore
-from . import kvstore as kv
 from . import io
+from . import recordio
+from . import operator
 # use mx.nd as short for mx.ndarray
 from . import ndarray as nd
+# use mx.rnd as short for mx.random
+from . import random as rnd
 from . import random
 from . import optimizer
 from . import model
@@ -27,5 +29,8 @@ from . import visualization
 from . import visualization as viz
 from . import callback
 from . import misc
+# use mx.kv as short for kvstore
+from . import kvstore as kv
+from . import kvstore_server
 
 __version__ = base.__version__

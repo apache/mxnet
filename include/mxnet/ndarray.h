@@ -243,21 +243,21 @@ class NDArray {
     ptr_->CheckAndAlloc();
   }
   /*!
-   * \brief Save list of narray into the file.
-   * \param fname name of the file.
+   * \brief Save list of narray into the Stream.x
+   * \param fo The stream of output.
    * \param data the NDArrays to be saved.
-   * \param keys the name of the NDArray, optional, can be zero length.
+   * \param names the name of the NDArray, optional, can be zero length.
    */
-  static void Save(const std::string& fname,
+  static void Save(dmlc::Stream* fo,
                    const std::vector<NDArray>& data,
                    const std::vector<std::string>& names);
   /*!
-   * \brief Load list of narray into from the file.
-   * \param fname name of the file.
+   * \brief Load list of narray into from the stream.
+   * \param fi The stream of the input file.
    * \param data the NDArrays to be loaded
    * \param keys the name of the NDArray, if saved in the file.
    */
-  static void Load(const std::string& fname,
+  static void Load(dmlc::Stream* fi,
                    std::vector<NDArray>* data,
                    std::vector<std::string>* keys);
 
@@ -333,13 +333,21 @@ class NDArray {
  *  the two ndarray can sit on different devices
  *  this operation will be scheduled by the engine
  *
- *  NOTE: this function name explicitly marks the order of from and to
- *     due to different possible convention carried by copy function
  * \param from the ndarray we want to copy data from
  * \param to the target ndarray
  * \param priority Priority of the action.
+ * \note The function name explicitly marks the order of from and to
+ *     due to different possible convention carried by copy function.
  */
 void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
+
+/*!
+ * \brief Perform elementwise sum over each data from source, store result into out.
+ * \param source the ndarray we want to sum
+ * \param out the target ndarray
+ * \param priority Priority of the action.
+ */
+void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priority = 0);
 
 /*!
  * \brief elementwise add

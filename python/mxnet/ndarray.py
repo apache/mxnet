@@ -75,6 +75,8 @@ class NDArray(object):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __iadd__(self, other):
+        if not self.writable:
+            raise ValueError('trying to add to a readonly NDArray')
         if isinstance(other, NDArray):
             return NDArray._plus(self, other, out=self)
         elif isinstance(other, numeric_types):
@@ -93,6 +95,8 @@ class NDArray(object):
         else:
             raise TypeError('type %s not supported' % str(type(other)))
     def __isub__(self, other):
+        if not self.writable:
+            raise ValueError('trying to subtract from a readonly NDArray')
         if isinstance(other, NDArray):
             return NDArray._minus(self, other, out=self)
         elif isinstance(other, numeric_types):
@@ -115,9 +119,11 @@ class NDArray(object):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __neg__(self):
-        return NDArray._mul_scalar(self, -1.0, out=self)
+        return NDArray._mul_scalar(self, -1.0)
 
     def __imul__(self, other):
+        if not self.writable:
+            raise ValueError('trying to multiply to a readonly NDArray')
         if isinstance(other, NDArray):
             return NDArray._mul(self, other, out=self)
         elif isinstance(other, numeric_types):
@@ -143,6 +149,8 @@ class NDArray(object):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __idiv__(self, other):
+        if not self.writable:
+            raise ValueError('trying to divide from a readonly NDArray')
         if isinstance(other, NDArray):
             return NDArray._div(self, other, out=self)
         elif isinstance(other, numeric_types):
@@ -178,6 +186,8 @@ class NDArray(object):
 
     def __setitem__(self, in_slice, value):
         """Set ndarray value"""
+        if not self.writable:
+            raise ValueError('trying to assign to a readonly NDArray')
         if not isinstance(in_slice, slice) or in_slice.step is not None:
             raise ValueError('NDArray only support continuous slicing on axis 0')
         if in_slice.start is not None or in_slice.stop is not None:
@@ -295,6 +305,20 @@ class NDArray(object):
             ctypes.c_size_t(data.size)))
         return data
 
+    def asscalar(self):
+        """Return a CPU scalar(float) of current ndarray.
+
+        This ndarray must have shape (1,)
+
+        Returns
+        -------
+        scalar : np.float
+            The scalar representation of the ndarray.
+        """
+        if self.shape != (1,):
+            raise ValueError("The current array is not a scalar")
+        return self.asnumpy()[0]
+
     def copyto(self, other):
         """Copy the content of current array to other.
 
@@ -326,18 +350,26 @@ class NDArray(object):
     # pylint: enable= no-member
 
 
-def clip(arr, value):
-    """Clip NDArray to range [-value, value] and remove NaN
+def onehot_encode(indices, out):
+    """One hot encoding indices into matrix out.
 
     Parameters
     ----------
-    value: float
-        cliped range
+    indices: NDArray
+        An NDArray containing indices of the categorical features.
+
+    out: NDArray
+        The result holder of the encoding.
+
+    Returns
+    -------
+    out: Array
+        Same as out.
     """
-    if not isinstance(arr, NDArray):
-        raise TypeError("arr should be NDArray")
-    return NDArray._clip_scalar(arr, float(value)) # pylint: disable=no-member, protected-access
-    # pylint: enable=no-member, protected-access
+    # pylint: disable= no-member, protected-access
+    return NDArray._onehot_encode(indices, out, out=out)
+    # pylint: enable= no-member, protected-access
+
 
 def empty(shape, ctx=None):
     """Create an empty uninitialized new NDArray, with specified shape.
@@ -601,7 +633,7 @@ def _make_ndarray_function(handle):
             out = NDArray(_new_empty_handle())
         check_call(_LIB.MXFuncInvoke( \
                 handle, \
-                c_array(NDArrayHandle, (src.handle)), \
+                c_array(NDArrayHandle, (src.handle,)), \
                 c_array(mx_float, ()), \
                 c_array(NDArrayHandle, (out.handle,))))
         return out
@@ -645,7 +677,7 @@ def _make_ndarray_function(handle):
     # End of function declaration
     if n_mutate_vars == 1 and n_used_vars == 2 and n_scalars == 0:
         ret_function = binary_ndarray_function
-    elif n_mutate_vars == 1 and n_used_vars == 2 and n_scalars == 0:
+    elif n_mutate_vars == 1 and n_used_vars == 1 and n_scalars == 0:
         ret_function = unary_ndarray_function
     else:
         ret_function = generic_ndarray_function

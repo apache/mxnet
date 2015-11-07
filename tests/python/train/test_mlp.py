@@ -14,13 +14,13 @@ act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
 fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64)
 act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
 fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=10)
-softmax = mx.symbol.Softmax(fc3, name = 'sm')
+softmax = mx.symbol.SoftmaxOutput(fc3, name = 'sm')
 
 def accuracy(label, pred):
     py = np.argmax(pred, axis=1)
     return np.sum(py == label) / float(label.size)
 
-num_round = 4
+num_epoch = 4
 prefix = './mlp'
 
 #check data
@@ -40,21 +40,17 @@ val_dataiter = mx.io.MNISTIter(
 def test_mlp():
     # print logging by default
     logging.basicConfig(level=logging.DEBUG)
-    console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG)
-    logging.getLogger('').addHandler(console)
 
     model = mx.model.FeedForward.create(
         softmax,
         X=train_dataiter,
         eval_data=val_dataiter,
         eval_metric=mx.metric.np(accuracy),
-        iter_end_callback=mx.callback.do_checkpoint(prefix),
+        epoch_end_callback=mx.callback.do_checkpoint(prefix),
         ctx=[mx.cpu(i) for i in range(2)],
-        num_round=num_round,
+        num_epoch=num_epoch,
         learning_rate=0.1, wd=0.0004,
-        momentum=0.9,
-        update_on_kvstore=True)
+        momentum=0.9)
 
     logging.info('Finish traning...')
     prob = model.predict(val_dataiter)
@@ -82,7 +78,7 @@ def test_mlp():
     assert np.sum(np.abs(prob - prob2)) == 0
 
     # load model from checkpoint
-    model3 = mx.model.FeedForward.load(prefix, num_round)
+    model3 = mx.model.FeedForward.load(prefix, num_epoch)
     prob3 = model3.predict(val_dataiter)
     assert np.sum(np.abs(prob - prob3)) == 0
 
@@ -92,7 +88,7 @@ def test_mlp():
     prob4 = model4.predict(val_dataiter)
     assert np.sum(np.abs(prob - prob4)) == 0
 
-    for i in range(num_round):
+    for i in range(num_epoch):
         os.remove('%s-%04d.params' % (prefix, i + 1))
     os.remove('%s-symbol.json' % prefix)
     os.remove('%s-0128.params' % prefix)

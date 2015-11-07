@@ -1,0 +1,13 @@
+# _*_ mode: makefile; _*_
+PKGROOT=../../
+
+# This file is only used for compilation from github
+# It will be replaced by more formal Rpackage structure
+# Where PKGROOT moved to root directory
+
+.PHONY: all mxnet
+all: $(SHLIB)
+
+
+PKG_CPPFLAGS = -I$(PKGROOT)/include -I$(PKGROOT)/dmlc-core/include
+PKG_LIBS = -L../inst/libs/x64/ -llibmxnet

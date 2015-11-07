@@ -11,10 +11,11 @@ from . import nd
 from . import symbol as sym
 from . import optimizer as opt
 from . import metric
-from . import kvstore
+from . import kvstore as kvs
 from .context import Context, cpu
 from .initializer import Uniform
-
+from collections import namedtuple
+from .optimizer import get_updater
 
 BASE_ESTIMATOR = object
 
@@ -23,6 +24,12 @@ try:
     BASE_ESTIMATOR = BaseEstimator
 except ImportError:
     SKLEARN_INSTALLED = False
+
+# Parameter to pass to batch_end_callback
+BatchEndParam = namedtuple('BatchEndParams',
+                           ['epoch',
+                            'nbatch',
+                            'eval_metric'])
 
 
 def _check_arguments(symbol):
@@ -116,13 +123,57 @@ def _split_input_slice(input_shape, num_split):
         shapes.append(tuple(s))
     return (slices, shapes)
 
+def _create_kvstore(kvstore, num_device, arg_params):
+    """Create kvstore
+
+    This function select and create a proper kvstore if given the kvstore type
+
+    Parameters
+    ----------
+
+    kvstore : KVStore or str
+        The kvstore
+
+    num_device : int
+        The number of devices
+
+    arg_params : dict of str to NDArray
+        Model parameter, dict of name to NDArray of net's weights.
+    """
+
+    if isinstance(kvstore, kvs.KVStore):
+        kv = kvstore
+    elif isinstance(kvstore, str):
+        # create kvstore using the string type
+        if num_device is 1 and 'dist' not in kvstore:
+            # no need to use kv for single device and single machine
+            kv = None
+        else:
+            if kvstore is 'local':
+                # automatically select a proper local
+                max_size = max(np.prod(param.shape) for param in arg_params.values())
+                if max_size < 1024 * 1024 * 16:
+                    kvstore = 'local_update_cpu'
+                else:
+                    kvstore = 'local_allreduce_cpu'
+                logging.info('Auto-select kvstore type = %s', kvstore)
+            kv = kvs.create(kvstore)
+    else:
+        raise TypeError('kvstore must be either KVStore or str')
+
+    # detect whether or not update weight on kvstore
+    update_on_kvstore = True
+    if not kv or 'local_allreduce' in kv.type:
+        update_on_kvstore = False
+
+    return (kv, update_on_kvstore)
 
 def _train_multi_device(symbol, ctx, input_shape,
                         arg_params, aux_params,
-                        begin_round, end_round, optimizer,
+                        begin_epoch, end_epoch, epoch_size,
+                        optimizer, kvstore, update_on_kvstore,
                         train_data, eval_data=None, eval_metric=None,
-                        iter_end_callback=None, epoch_end_callback=None,
-                        update_on_kvstore=None,
+                        epoch_end_callback=None, batch_end_callback=None,
                         logger=None):
     """Internal training function on multiple devices.
 
@@ -145,11 +196,15 @@ def _train_multi_device(symbol, ctx, input_shape,
     aux_params : dict of str to NDArray
         Model parameter, dict of name to NDArray of net's auxiliary states.
 
-    begin_round : int
-        The begining training iteration.
+    begin_epoch : int
+        The begining training epoch.
 
-    end_round : int
-        The end training iteration.
+    end_epoch : int
+        The end training epoch.
+
+    epoch_size : int, optional
+        Number of batches in a epoch. In default, it is set to
+        ceil(num_train_examples / batch_size)
 
     optimizer : Optimizer
         The optimization algorithm
@@ -163,18 +218,19 @@ def _train_multi_device(symbol, ctx, input_shape,
     eval_metric : EvalMetric
         A evaluation function.
 
-    iter_end_callback : callable(iteration, symbol, arg_params, aux_states)
-        A callback that is invoked at end of each iteration.
-        This can be used to checkpoint model each iteration.
+    epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
+        A callback that is invoked at end of each epoch.
+        This can be used to checkpoint model each epoch.
 
-    learning_rate_scheduler: Scheduler
-        A Scheduler to adjust learning rate
+    batch_end_callback : callable(BatchEndParams)
+        A callback that is invoked at end of each batch.
+        This can be used to measure speed, get result from evaluation metric. etc.
 
-    epoch_end_callback: callable(iteration)
-        A callback that is invoked at end of each batch
+    kvstore : KVStore
+        The KVStore
 
-    update_on_kvstore: boolean, optional
-        Whether to perform parameter update on kvstore instead of training device.
+    update_on_kvstore : bool
+        whether or not perform weight updating on kvstore
 
     logger : logging logger
         When not specified, default logger will be used.
@@ -182,10 +238,6 @@ def _train_multi_device(symbol, ctx, input_shape,
     Notes
     -----
     - This function will inplace update the NDArrays in arg_parans and aux_states.
-    - Turning update_on_kvstore on and off can affect speed of multi-gpu training.
-      - It is auto selected by default.
-      - update_on_kvstore=True works well for inception type nets that contains many small weights.
-      - update_on_kvstore=False works better for Alexnet style net with bulk weights.
     """
     if logger is None:
         logger = logging
@@ -212,38 +264,27 @@ def _train_multi_device(symbol, ctx, input_shape,
     for texec in train_execs:
         texec.copy_params_from(arg_params, aux_params)
 
-    # ky value store
-    kv = kvstore.create() if num_device != 1 else None
-    if kv is None:
-        update_on_kvstore = False
-    else:
-        # auto decide update_on_kvstore
-        if update_on_kvstore is None:
-            max_size = max(np.prod(param.shape) for param in arg_params.values())
-            update_on_kvstore = max_size < 1024 * 1024 * 16
-            logging.info('Auto-select update_on_kvstore=%s', str(update_on_kvstore))
+    # init optmizer
+    optimizer.begin_epoch(begin_epoch)
 
-    opt_state_blocks = []
-    # If there are multiple devices, initialize the weights.
-    for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
-        arg_list, grad_list = pair
-        if grad_list[0] is not None:
-            if kv:
-                kv.init(index, arg_list[0])
-            # attach state direct to weight
-            if update_on_kvstore:
-                opt_state_blocks.append(nd.zeros(arg_list[0].shape, cpu()))
-            else:
-                opt_list = [optimizer.create_state(index, w) for w in arg_list]
-                opt_state_blocks.append(opt_list)
-        else:
-            opt_state_blocks.append(None)
+    if not update_on_kvstore:
+        updater = get_updater(optimizer)
 
-    def kv_updater(index, grad, weight):
-        """Internal updater on KVstore, used when update_on_kvstore=True."""
-        optimizer.update(index, weight, grad, opt_state_blocks[index])
-    if update_on_kvstore:
-        kv.set_updater(kv_updater)
+    # init kvstore
+    if kvstore:
+        # init optimizer
+        if update_on_kvstore:
+            kvstore.set_optimizer(optimizer)
+
+        # init kv
+        for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
+            arg_list, grad_list = pair
+            if grad_list[0] is not None:
+                kvstore.init(index, arg_list[0])
+
+                # pull the weight back
+                if update_on_kvstore:
+                    kvstore.pull(index, arg_list, priority=-index)
 
     # Input and output data structure
     data_index, label_index = _check_arguments(symbol)
@@ -253,61 +294,82 @@ def _train_multi_device(symbol, ctx, input_shape,
     out_cpu_array = nd.zeros(merged_shape, cpu())
 
     # Now start training
-    for iteration in range(begin_round, end_round):
+    for epoch in range(begin_epoch, end_epoch):
         # Training phase
         tic = time.time()
-        optimizer.begin_round(iteration)
         eval_metric.reset()
         nbatch = 0
         # Iterate over training data.
-        for data, label in train_data:
-            # Copy data into the target
-            for target, islice in zip(arg_blocks[label_index], slices):
-                label[islice].copyto(target)
-            for target, islice in zip(arg_blocks[data_index], slices):
-                data[islice].copyto(target)
-            # forward backward pass
-            for texec, islice in zip(train_execs, slices):
-                texec.forward(is_train=True)
-                texec.outputs[0].copyto(out_cpu_array[islice])
-            for texec in train_execs:
-                texec.backward()
-            # update the parameters
-            for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
-                arg_list, grad_list = pair
-                if grad_list[0] is None:
-                    continue
-                # Gradient synchronization
-                if kv:
-                    # push gradient, priority is negative index
-                    kv.push(index, grad_list, priority=-index)
-                    if update_on_kvstore:
-                        # pull back the weights
-                        kv.pull(index, arg_list, priority=-index)
+        while True:
+            for data, label in train_data:
+                # Copy data into the target
+                for target, islice in zip(arg_blocks[label_index], slices):
+                    label[islice].copyto(target)
+                for target, islice in zip(arg_blocks[data_index], slices):
+                    data[islice].copyto(target)
+                # forward backward pass
+                for texec, islice in zip(train_execs, slices):
+                    texec.forward(is_train=True)
+                    texec.outputs[0].copyto(out_cpu_array[islice])
+                for texec in train_execs:
+                    texec.backward()
+                # update the parameters
+                for index, pair in enumerate(zip(arg_blocks, grad_blocks)):
+                    arg_list, grad_list = pair
+                    if grad_list[0] is None:
+                        continue
+                    # Gradient synchronization
+                    if kvstore:
+                        # push gradient, priority is negative index
+                        kvstore.push(index, grad_list, priority=-index)
+                        if update_on_kvstore:
+                            # pull back the weights
+                            kvstore.pull(index, arg_list, priority=-index)
+                        else:
+                            # pull back the sum gradients, to the same locations.
+                            kvstore.pull(index, grad_list, priority=-index)
+                    if not update_on_kvstore:
+                        for k, p in enumerate(zip(arg_list, grad_list)):
+                            # faked an index here, to make optimizer create diff
+                            # state for the same index but on diff devs, TODO(mli)
+                            # use a better solution latter
+                            w, g = p
+                            updater(index*num_device+k, g, w)
+
+                nbatch += 1
+                # batch callback (for print purpose)
+                if batch_end_callback != None:
+                    batch_end_params = BatchEndParam(epoch=epoch,
+                                                     nbatch=nbatch,
+                                                     eval_metric=eval_metric)
+                    if isinstance(batch_end_callback, list):
+                        for call in batch_end_callback:
+                            call(batch_end_params)
                     else:
-                        # pull back the sum gradients, to the same locations.
-                        kv.pull(index, grad_list, priority=-index)
-                if not update_on_kvstore:
-                    opt_list = opt_state_blocks[index]
-                    # optimizea
-                    for w, g, state in zip(arg_list, grad_list, opt_list):
-                        optimizer.update(index, w, g, state)
-            nbatch += 1
-            # epoch callback (for print purpose)
-            if epoch_end_callback != None:
-                if isinstance(epoch_end_callback, list):
-                    for call in epoch_end_callback:
-                        call(nbatch)
-                else:
-                    epoch_end_callback(nbatch)
-            # evaluate at end, so out_cpu_array can lazy copy
-            eval_metric.update(label, out_cpu_array)
-        # reset training data after iteration finish
-        train_data.reset()
+                        batch_end_callback(batch_end_params)
+                # evaluate at end, so out_cpu_array can lazy copy
+                eval_metric.update(label, out_cpu_array)
+
+                # this epoch is done
+                if epoch_size is not None and nbatch == epoch_size:
+                    break
+
+            # reset the training data if reach the end of train_data, we only
+            # need to deal with the following two situations:
+            # 1. epoch_size is None:
+            # 2. epoch_size is not None but nbatch != epoch_size:
+            if epoch_size is None or nbatch != epoch_size:
+                train_data.reset()
+
+            # this epoch is done
+            if epoch_size is None or nbatch == epoch_size:
+                break
+
         name, value = eval_metric.get()
-        logger.info('Iteration[%d] Train-%s=%f', iteration, name, value)
+        logger.info('Epoch[%d] Train-%s=%f', epoch, name, value)
         toc = time.time()
-        logger.info('Iteration[%d] Time cost=%.3f', iteration, (toc - tic))
+        logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc - tic))
+
         # evaluation
         if eval_data:
             eval_metric.reset()
@@ -324,9 +386,9 @@ def _train_multi_device(symbol, ctx, input_shape,
                 eval_metric.update(label, out_cpu_array)
             eval_data.reset()
             name, value = eval_metric.get()
-            logger.info('Iteration[%d] Validation-%s=%f', iteration, name, value)
+            logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
 
-        if iter_end_callback or iteration + 1 == end_round:
+        if epoch_end_callback or epoch + 1 == end_epoch:
             # copy data back to cpu
             for name, block in zip(arg_names, arg_blocks):
                 if name in arg_params:
@@ -336,17 +398,17 @@ def _train_multi_device(symbol, ctx, input_shape,
                 if name in aux_params:
                     weight = sum(w.copyto(cpu()) for w in block) / len(block)
                     weight.copyto(aux_params[name])
-        if iter_end_callback != None:
-            if isinstance(iter_end_callback, list):
-                for call in iter_end_callback:
-                    call(iteration, symbol, arg_params, aux_params)
+        if epoch_end_callback != None:
+            if isinstance(epoch_end_callback, list):
+                for call in epoch_end_callback:
+                    call(epoch, symbol, arg_params, aux_params)
             else:
-                iter_end_callback(iteration, symbol, arg_params, aux_params)
-    # end of all iterations
+                epoch_end_callback(epoch, symbol, arg_params, aux_params)
+    # end of all epochs
     return
 
 
-def save_checkpoint(prefix, iteration, symbol, arg_params, aux_params):
+def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):
     """Checkpoint the model data into file.
 
     Parameters
@@ -354,8 +416,8 @@ def save_checkpoint(prefix, iteration, symbol, arg_params, aux_params):
     prefix : str
         Prefix of model name.
 
-    iteration : int
-        The iteration number of the model.
+    epoch : int
+        The epoch number of the model.
 
     symbol : Symbol
         The input symbol
@@ -369,17 +431,17 @@ def save_checkpoint(prefix, iteration, symbol, arg_params, aux_params):
     Notes
     -----
     - ``prefix-symbol.json`` will be saved for symbol.
-    - ``prefix-iteration.params`` will be saved for parameters.
+    - ``prefix-epoch.params`` will be saved for parameters.
     """
     symbol.save('%s-symbol.json' % prefix)
     save_dict = {('arg:%s' % k) : v for k, v in arg_params.items()}
     save_dict.update({('aux:%s' % k) : v for k, v in aux_params.items()})
-    param_name = '%s-%04d.params' % (prefix, iteration)
+    param_name = '%s-%04d.params' % (prefix, epoch)
     nd.save(param_name, save_dict)
     logging.info('Saved checkpoint to \"%s\"', param_name)
 
 
-def load_checkpoint(prefix, iteration):
+def load_checkpoint(prefix, epoch):
     """Load model checkpoint from file.
 
     Parameters
@@ -387,8 +449,8 @@ def load_checkpoint(prefix, iteration):
     prefix : str
         Prefix of model name.
 
-    iteration : int
-        Iteration number of model we would like to load.
+    epoch : int
+        Epoch number of model we would like to load.
 
     Returns
     -------
@@ -404,10 +466,10 @@ def load_checkpoint(prefix, iteration):
     Notes
     -----
     - ``prefix-symbol.json`` will be saved for symbol.
-    - ``prefix-iteration.params`` will be saved for parameters.
+    - ``prefix-epoch.params`` will be saved for parameters.
     """
     symbol = sym.load('%s-symbol.json' % prefix)
-    save_dict = nd.load('%s-%04d.params' % (prefix, iteration))
+    save_dict = nd.load('%s-%04d.params' % (prefix, epoch))
     arg_params = {}
     aux_params = {}
     for k, v in save_dict.items():
@@ -433,8 +495,12 @@ class FeedForward(BASE_ESTIMATOR):
         The device context of training and prediction.
         To use multi GPU training, pass in a list of gpu contexts.
 
-    num_round : int, optional
-        Training parameter, number of training rounds(iterations).
+    num_epoch : int, optional
+        Training parameter, number of training epochs(epochs).
+
+    epoch_size : int, optional
+        Number of batches in a epoch. In default, it is set to
+        ceil(num_train_examples / batch_size)
 
     optimizer : str or Optimizer, optional
         Training parameter, name or optimizer object for training.
@@ -458,15 +524,19 @@ class FeedForward(BASE_ESTIMATOR):
         If this is True, no error will be thrown when aux_params and arg_params
         contain extra parameters than needed.
 
+    begin_epoch : int,optional
+        The begining training epoch.
+
     **kwargs : dict
         The additional keyword arguments passed to optimizer.
     """
     def __init__(self, symbol, ctx=None,
-                 num_round=None, optimizer='sgd',
+                 num_epoch=None, epoch_size=None, optimizer='sgd',
                  initializer=Uniform(0.01),
                  numpy_batch_size=128,
                  arg_params=None, aux_params=None,
                  allow_extra_params=False,
+                 begin_epoch=0,
                  **kwargs):
         # check if symbol contain duplicated names.
         _check_arguments(symbol)
@@ -488,7 +558,8 @@ class FeedForward(BASE_ESTIMATOR):
             ctx = [ctx]
         self.ctx = ctx
         # training parameters
-        self.num_round = num_round
+        self.num_epoch = num_epoch
+        self.epoch_size = epoch_size
         self.kwargs = kwargs.copy()
         self.optimizer = optimizer
         self.initializer = initializer
@@ -499,6 +570,7 @@ class FeedForward(BASE_ESTIMATOR):
         # internal helper state
         self._pred_exec = None
         self._pred_exec_input = None
+        self.begin_epoch = begin_epoch
 
     @staticmethod
     def _is_data_arg(name):
@@ -558,10 +630,41 @@ class FeedForward(BASE_ESTIMATOR):
                     y = np.zeros(X.shape[0])
             if not isinstance(y, (np.ndarray, nd.NDArray)):
                 raise TypeError('y must be ndarray when X is numpy.ndarray')
-            return io.NDArrayIter(X, y, self.numpy_batch_size, shuffle=is_train)
+            if X.shape[0] != y.shape[0]:
+                raise ValueError("The numbers of data points and labels not equal")
+            if y.ndim == 2 and y.shape[1] == 1:
+                y = y.flatten()
+            if y.ndim != 1:
+                raise ValueError("Label must be 1D or 2D (with 2nd dimension being 1)")
+            if is_train:
+                return io.NDArrayIter(X, y, self.numpy_batch_size,
+                                      shuffle=is_train, last_batch_handle='roll_over')
+            else:
+                return io.NDArrayIter(X, y, self.numpy_batch_size,
+                                      shuffle=is_train)
         if not isinstance(X, io.DataIter):
             raise TypeError('X must be DataIter, NDArray or numpy.ndarray')
         return X
+
+    def _init_eval_iter(self, eval_data):
+        """Initialize the iterator given eval_data."""
+        if eval_data is None:
+            return eval_data
+        if isinstance(eval_data, (tuple, list)) and len(eval_data) == 2:
+            if eval_data[0] is not None:
+                if eval_data[1] is None and isinstance(eval_data[0], io.DataIter):
+                    return eval_data[0]
+                input_data = (np.array(eval_data[0]) if isinstance(eval_data[0], list)
+                              else eval_data[0])
+                input_label = (np.array(eval_data[1]) if isinstance(eval_data[1], list)
+                               else eval_data[1])
+                return self._init_iter(input_data, input_label, is_train=True)
+            else:
+                raise ValueError("Eval data is NONE")
+        if not isinstance(eval_data, io.DataIter):
+            raise TypeError('Eval data must be DataIter, or ' \
+                            'NDArray/numpy.ndarray/list pair (i.e. tuple/list of length 2)')
+        return eval_data
 
     def predict(self, X):
         """Run the prediction, always only use one device.
@@ -593,47 +696,56 @@ class FeedForward(BASE_ESTIMATOR):
         return np.concatenate(outputs)
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
-            iter_end_callback=None, epoch_end_callback=None,
-            update_on_kvstore=None, logger=None):
+            epoch_end_callback=None, batch_end_callback=None,
+            kvstore='local', logger=None):
         """Fit the model.
 
         Parameters
         ----------
-        X : DataIter
-            Training data
+        X : DataIter, or numpy.ndarray/NDArray
+            Training data.
 
-        y : numpy.ndarray, optional
-            If X is numpy.ndarray y is required to set
+        y : numpy.ndarray/NDArray, optional
+            Training set label.
+            If X is numpy.ndarray/NDArray, y is required to be set.
+            While y can be 1D or 2D (with 2nd dimension as 1), its 1st dimension must be
+                the same as X, i.e. the number of data points and labels should be equal.
 
-        eval_data : DataIter or numpy.ndarray pair
-            If eval_set is numpy.ndarray pair, it should be (valid_data, valid_label)
+        eval_data : DataIter or numpy.ndarray/list/NDArray pair
+            If eval_data is numpy.ndarray/list/NDArray pair,
+                it should be (valid_data, valid_label).
 
         eval_metric : metric.EvalMetric or str or callable
             The evaluation metric, name of evaluation metric.
             Or a customize evaluation function that returns the statistics
             based on minibatch.
 
-        iter_end_callback : callable(iteration, symbol, arg_params, aux_states)
-            A callback that is invoked at end of each iteration.
-            This can be used to checkpoint model each iteration.
+        epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
+            A callback that is invoked at end of each epoch.
+            This can be used to checkpoint model each epoch.
 
-        learning_rate_scheduler: Scheduler
-            A Scheduler to adjust learning rate
-
-        epoch_end_callback: callable(iteration)
+        batch_end_callback: callable(epoch)
             A callback that is invoked at end of each batch
             For print purpose
 
-        update_on_kvstore: boolean, optional
-            Whether to perform parameter update on kvstore instead of training device.
-            By default, the trainer will automatically decide the policy.
+        kvstore: KVStore or str, optional
+           The KVStore or a string kvstore type:
+           'local' : multi-devices on a single machine, will automatically
+               choose one from 'local_update_cpu', 'local_allreduce_cpu', and
+              'local_allreduce_device'
+           'dist_sync' : multi-machines with BSP
+           'dist_async' : multi-machines with partical asynchronous
+
+           In default uses 'local', often no need to change for single machiine.
 
         logger : logging logger, optional
             When not specified, default logger will be used.
+
         """
         X = self._init_iter(X, y, is_train=True)
+        eval_data = self._init_eval_iter(eval_data)
         # Simply ignore the first example to get input_shape
-        # in first training round.
+        # in first training epoch.
         if not X.iter_next():
             X.reset()
             assert X.iter_next()
@@ -644,23 +756,39 @@ class FeedForward(BASE_ESTIMATOR):
         # setup metric
         if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
-        # setup optimizer
-        optimizer = self.optimizer
-        if isinstance(optimizer, str):
+
+        # create kvstore
+        (kvstore, update_on_kvstore) = _create_kvstore(
+            kvstore, len(self.ctx), self.arg_params)
+        if kvstore and kvstore.type == 'dist_sync' and self.epoch_size is None:
+            raise ValueError('must set epoch_size for kvstore with type dist_sync')
+
+        # init optmizer
+        if isinstance(self.optimizer, str):
             batch_size = input_shape[0]
-            optimizer = opt.create(optimizer, rescale_grad=(1.0/batch_size), **(self.kwargs))
+            if kvstore and kvstore.type == 'dist_sync':
+                batch_size *= kvstore.num_workers
+            optimizer = opt.create(self.optimizer,
+                                   rescale_grad=(1.0/batch_size),
+                                   **(self.kwargs))
+        elif isinstance(self.optimizer, opt.Optimizer):
+            optimizer = self.optimizer
+
         # do training
         _train_multi_device(self.symbol, self.ctx, input_shape,
                             self.arg_params, self.aux_params,
-                            begin_round=0, end_round=self.num_round,
+                            begin_epoch=self.begin_epoch,
+                            end_epoch=self.num_epoch,
+                            epoch_size=self.epoch_size,
                             optimizer=optimizer,
                             train_data=X, eval_data=eval_data,
                             eval_metric=eval_metric,
-                            iter_end_callback=iter_end_callback,
                             epoch_end_callback=epoch_end_callback,
-                            update_on_kvstore=update_on_kvstore, logger=logger)
+                            batch_end_callback=batch_end_callback,
+                            kvstore=kvstore, update_on_kvstore=update_on_kvstore,
+                            logger=logger)
 
-    def save(self, prefix, iteration=None):
+    def save(self, prefix, epoch=None):
         """Checkpoint the model checkpoint into file.
 
         You can also use pickle to do the job if you only work on python.
@@ -680,15 +808,15 @@ class FeedForward(BASE_ESTIMATOR):
         Notes
         -----
         - ``prefix-symbol.json`` will be saved for symbol.
-        - ``prefix-iteration.params`` will be saved for parameters.
+        - ``prefix-epoch.params`` will be saved for parameters.
         """
-        if iteration is None:
-            iteration = self.num_round
-        assert iteration is not None
-        save_checkpoint(prefix, iteration, self.symbol, self.arg_params, self.aux_params)
+        if epoch is None:
+            epoch = self.num_epoch
+        assert epoch is not None
+        save_checkpoint(prefix, epoch, self.symbol, self.arg_params, self.aux_params)
 
     @staticmethod
-    def load(prefix, iteration, ctx=None):
+    def load(prefix, epoch, ctx=None, **kwargs):
         """Load model checkpoint from file.
 
         Parameters
@@ -696,11 +824,13 @@ class FeedForward(BASE_ESTIMATOR):
         prefix : str
             Prefix of model name.
 
-        iteration : int
-            Iteration number of model we would like to load.
+        epoch : int
+            epoch number of model we would like to load.
 
         ctx : Context or list of Context, optional
             The device context of training and prediction.
+        kwargs : dict
+            other parameters for model, including num_epoch, optimizer and numpy_batch_size
 
         Returns
         -------
@@ -710,17 +840,20 @@ class FeedForward(BASE_ESTIMATOR):
         Notes
         -----
         - ``prefix-symbol.json`` will be saved for symbol.
-        - ``prefix-iteration.params`` will be saved for parameters.
+        - ``prefix-epoch.params`` will be saved for parameters.
         """
-        symbol, arg_params, aux_params = load_checkpoint(prefix, iteration)
+        symbol, arg_params, aux_params = load_checkpoint(prefix, epoch)
         return FeedForward(symbol, ctx=ctx,
-                           arg_params=arg_params, aux_params=aux_params)
+                           arg_params=arg_params, aux_params=aux_params,
+                           begin_epoch=epoch,
+                           **kwargs)
 
     @staticmethod
     def create(symbol, X, y=None, ctx=None,
-               num_round=None, optimizer='sgd', initializer=Uniform(0.01),
-               eval_data=None, eval_metric='acc', iter_end_callback=None,
-               update_on_kvstore=None, logger=None, **kwargs):
+               num_epoch=None, epoch_size=None,
+               optimizer='sgd', initializer=Uniform(0.01),
+               eval_data=None, eval_metric='acc', epoch_end_callback=None,
+               kvstore='local', logger=None, **kwargs):
         """Functional style to create a model.
 
         This function will be more consistent with functional
@@ -741,8 +874,12 @@ class FeedForward(BASE_ESTIMATOR):
             The device context of training and prediction.
             To use multi GPU training, pass in a list of gpu contexts.
 
-        num_round : int, optional
-            Training parameter, number of training rounds(iterations).
+        num_epoch : int, optional
+            Training parameter, number of training epochs(epochs).
+
+        epoch_size : int, optional
+            Number of batches in a epoch. In default, it is set to
+            ceil(num_train_examples / batch_size)
 
         optimizer : str or Optimizer, optional
             Training parameter, name or optimizer object for training.
@@ -758,19 +895,26 @@ class FeedForward(BASE_ESTIMATOR):
             Or a customize evaluation function that returns the statistics
             based on minibatch.
 
-        iter_end_callback : callable(iteration, symbol, arg_params, aux_states)
-            A callback that is invoked at end of each iteration.
-            This can be used to checkpoint model each iteration.
+        epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
+            A callback that is invoked at end of each epoch.
+            This can be used to checkpoint model each epoch.
 
-        update_on_kvstore: boolean, optional
-            Whether to perform parameter update on kvstore instead of training device.
-            By default, the trainer will automatically decide the policy.
+        kvstore: KVStore or str, optional
+           The KVStore or a string kvstore type:
+           'local' : multi-devices on a single machine, will automatically
+               choose one from 'local_update_cpu', 'local_allreduce_cpu', and
+              'local_allreduce_device'
+           'dist_sync' : multi-machines with BSP
+           'dist_async' : multi-machines with partical asynchronous
 
-        logger : logging logger, optional
+           In default uses 'local', often no need to change for single machiine.
         """
-        model = FeedForward(symbol, ctx=ctx, num_round=num_round,
-                            optimizer=optimizer, initializer=initializer, **kwargs)
+        model = FeedForward(symbol, ctx=ctx,
+                            num_epoch=num_epoch, epoch_size=epoch_size,
+                            optimizer=optimizer, initializer=initializer,
+                            **kwargs)
         model.fit(X, y, eval_data=eval_data, eval_metric=eval_metric,
-                  iter_end_callback=iter_end_callback,
-                  update_on_kvstore=update_on_kvstore, logger=logger)
+                  epoch_end_callback=epoch_end_callback,
+                  kvstore=kvstore,
+                  logger=logger)
         return model

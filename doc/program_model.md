@@ -38,7 +38,7 @@ The difference in symbolic programs is when ```C = B * A``` is executed, there i
 Instead, these operations generates a computation graph (symbolic graph) that represents the computation it described.
 The following picture gives a computation graph to compute ```D```.
 
-![Comp Graph](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/prog_model/comp_graph.png)
+![Comp Graph](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/prog_model/comp_graph.png)
 
 Most symbolic style programs will contain, either explicitly or implicitly, a ```compile``` step.
 This converts the computation graph into a function that can be called.
@@ -55,7 +55,7 @@ Now you know the two different programming models, let us start to compare them!
 ### Imperative Programs are More Flexible
 
 This is a general statement that may not apply strictly, but indeed imperative programs are usually more flexible than symbolic programs.
-If you are writing an imperative style programs in python, you are writing in python. However, if you are writing an symbolic program,
+If you are writing an imperative style programs in python, you are writing in python. However, if you are writing a symbolic program,
 it is different. Consider the following imperative program, think how you can translate this into a symbolic program.
 ```python
 a = 2
@@ -88,7 +88,7 @@ d = c + 1
 ...
 ```
 
-![Comp Graph](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/prog_model/comp_graph.png)
+![Comp Graph](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/prog_model/comp_graph.png)
 
 Assume each cell in the array cost 8 bytes. How many memory do we need to cost if we are going to execute the above program in python console?
 Let us do some math, we need memory for 4 arrays of size 10, that means we will need ```4 * 10 * 8 = 320``` bytes. On the other hand,
@@ -110,7 +110,7 @@ Another optimization that symbolic programs can do is operation folding. In the 
 Which is represented in the following graph. This means one GPU kernel will be executed(instead of two) if the computation runs on GPU.
 This is actually what we will do to hand crafted operations in optimized libraries such as cxxnet, caffe. Doing so will improve the computation efficiency.
 
-![Comp Graph Folded](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/prog_model/comp_graph_fold.png)
+![Comp Graph Folded](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/prog_model/comp_graph_fold.png)
 
 We cannot do that in imperative programs. Because the intermediate value can be reference
 some point in the future. The reason that such optimization is possible in symbolic programs, is that we get the entire computation graph, and a clear
@@ -178,7 +178,7 @@ grad_a, grad_b = f(A=np.ones(10), B=np.ones(10)*2)
 The grad function of D generate a backward computation graph, and return a gradient node ```gA, gB```.
 They corresponds to the red nodes in the following figure.
 
-![Comp Graph Folded](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/prog_model/comp_graph_backward.png)
+![Comp Graph Folded](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/prog_model/comp_graph_backward.png)
 
 What the imperative program did was actually the same as the symbolic way. It implicitly saves a backward
 computation graph in the grad closure. When we invoked the ```d.grad```, we start from ```d(D)```,
@@ -405,5 +405,5 @@ more interesting and intelligent deep learning libraries.
 
 Contribution to this Note
 -------------------------
-This note is part of our effort to open-source system design notes for deep learning libraries.
-You are more welcomed to contribute to this Note, by submitting a pull request.
+This note is part of our effort to [open-source system design notes](http://mxnet.readthedocs.org/en/latest/#open-source-design-notes)
+for deep learning libraries. You are more welcomed to contribute to this Note, by submitting a pull request.

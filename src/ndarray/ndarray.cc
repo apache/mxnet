@@ -29,8 +29,9 @@ void BinaryOp(const NDArray &lhs,
               const NDArray &rhs,
               NDArray *out) {
   // no check if both of them are on cpu
-  if (lhs.ctx().dev_mask() != cpu::kDevMask || rhs.ctx().dev_mask() != cpu::kDevMask)
+  if (lhs.ctx().dev_mask() != cpu::kDevMask || rhs.ctx().dev_mask() != cpu::kDevMask) {
     CHECK(lhs.ctx() == rhs.ctx()) << "operands context mismatch";
+  }
   // if out is none, allocate space
   if (out->is_none()) {
     *out = NDArray(OP::GetShape(lhs.shape(), rhs.shape()), lhs.ctx(), true);
@@ -104,6 +105,7 @@ void SetValueOp(const real_t &rhs, NDArray *out) {
     default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
   }
 }
+
 /*!
  * \brief run a binary operation
  * \param lhs left operand
@@ -205,13 +207,103 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, from.ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, priority);
+        FnProperty::kCopyFromGPU, priority);
     } else {
       LOG(FATAL) << "unknown device mask";
     }
 #else
     LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
+  }
+}
+
+void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priority) {
+  std::vector<Engine::VarHandle> const_vars;
+  const_vars.reserve(source.size());
+  for (size_t i = 0; i < source.size(); ++i) {
+    if (source[i].var() != out->var()) {
+      const_vars.push_back(source[i].var());
+    }
+    CHECK_EQ(source[i].shape() , out->shape())
+        << "operands shape mismatch";
+    if (out->ctx().dev_mask() == cpu::kDevMask) {
+      CHECK_EQ(source[i].ctx().dev_mask(),  cpu::kDevMask)
+          << "operands context mismatch";
+    } else {
+      CHECK(source[i].ctx() == out->ctx())
+          << "operands context mismatch";
+    }
+  }
+  // important: callback must always capture by value
+  NDArray ret = *out;
+
+  switch (out->ctx().dev_mask()) {
+    case cpu::kDevMask: {
+      Engine::Get()->PushSync([source, ret](RunContext ctx) {
+          std::vector<TBlob> source_tblob(source.size());
+          for (size_t i = 0; i < source.size(); ++i) {
+            source_tblob[i] = source[i].data();
+          }
+          ret.CheckAndAlloc();
+          TBlob tmp = ret.data();
+          ndarray::ElementwiseSum<cpu>(source_tblob, &tmp, ctx);
+        }, out->ctx(), const_vars, {ret.var()},
+        FnProperty::kNormal, priority);
+      break;
+    }
+#if MXNET_USE_CUDA
+    case gpu::kDevMask: {
+      Engine::Get()->PushSync([source, ret](RunContext ctx) {
+          std::vector<TBlob> source_tblob(source.size());
+          for (size_t i = 0; i < source.size(); ++i) {
+            source_tblob[i] = source[i].data();
+          }
+          ret.CheckAndAlloc();
+          TBlob tmp = ret.data();
+          ndarray::ElementwiseSum<gpu>(source_tblob, &tmp, ctx);
+          // Wait GPU kernel to complete
+          ctx.get_stream<gpu>()->Wait();
+        }, out->ctx(), const_vars, {ret.var()},
+        FnProperty::kNormal, priority);
+      break;
+    }
+#endif
+    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+  }
+}
+
+void ClipOp(const NDArray &src,
+            const real_t &a_min, const real_t &a_max,
+            NDArray *out) {
+  if (out->is_none()) {
+    *out = NDArray(src.shape(), src.ctx(), true);
+  } else {
+    CHECK(out->ctx() == src.ctx()) << "target context mismatch";
+    CHECK(out->shape() == src.shape()) << "target shape mismatch";
+  }
+  NDArray ret = *out;
+  std::vector<Engine::VarHandle> const_vars;
+  if (src.var() != ret.var()) const_vars.push_back(src.var());
+  switch (src.ctx().dev_mask()) {
+    case cpu::kDevMask: {
+      Engine::Get()->PushSync([src, a_min, a_max, ret](RunContext ctx) {
+          ret.CheckAndAlloc();
+          TBlob tmp = ret.data();
+          ndarray::EvalClip<cpu>(src.data(), a_min, a_max, &tmp, ctx);
+        }, src.ctx(), const_vars, {ret.var()});
+      break;
+    }
+    #if MXNET_USE_CUDA
+    case gpu::kDevMask: {
+      Engine::Get()->PushSync([src, a_min, a_max, ret](RunContext ctx) {
+          ret.CheckAndAlloc();
+          TBlob tmp = ret.data();
+          ndarray::EvalClip<gpu>(src.data(), a_min, a_max, &tmp, ctx);
+        }, src.ctx(), const_vars, {ret.var()});
+      break;
+    }
+    #endif
+    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
   }
 }
 
@@ -415,10 +507,9 @@ bool NDArray::Load(dmlc::Stream *strm) {
 
 const uint64_t kMXAPINDArrayListMagic = 0x112;
 
-void NDArray::Save(const std::string& fname,
+void NDArray::Save(dmlc::Stream* fo,
                    const std::vector<NDArray>& data,
                    const std::vector<std::string>& names) {
-  std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(fname.c_str(), "w"));
   uint64_t header = kMXAPINDArrayListMagic, reserved = 0;
   fo->Write(&header, sizeof(header));
   fo->Write(&reserved, sizeof(reserved));
@@ -426,10 +517,9 @@ void NDArray::Save(const std::string& fname,
   fo->Write(names);
 }
 
-void NDArray::Load(const std::string& fname,
+void NDArray::Load(dmlc::Stream* fi,
                    std::vector<NDArray>* data,
                    std::vector<std::string>* keys) {
-  std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname.c_str(), "r"));
   uint64_t header, reserved;
   CHECK(fi->Read(&header))
       << "Invalid NDArray file format";
@@ -461,6 +551,7 @@ void NDArray::SyncCopyFromCPU(const real_t *data, size_t size) const {
   TBlob src((real_t*)data, dshape, cpu::kDevMask); // NOLINT(*)
 
   RunContext run_ctx;
+  run_ctx.stream = nullptr;
   if (ctx.dev_mask() == cpu::kDevMask) {
     ndarray::Copy<cpu, cpu>(src, &dst, Context::CPU(), ctx, run_ctx);
   } else {
@@ -487,6 +578,7 @@ void NDArray::SyncCopyToCPU(real_t *data, size_t size) const {
   TBlob dst(data, dshape, cpu::kDevMask); // NOLINT(*)
 
   RunContext run_ctx;
+  run_ctx.stream = nullptr;
   if (ctx.dev_mask() == cpu::kDevMask) {
     ndarray::Copy<cpu, cpu>(src, &dst, ctx, Context::CPU(), run_ctx);
   } else {
@@ -503,14 +595,27 @@ void NDArray::SyncCopyToCPU(real_t *data, size_t size) const {
   }
 }
 
+#if MXNET_PREDICT_ONLY == 0
 // register API function
 // those with underscore will be registered at NDArray
 MXNET_REGISTER_NDARRAY_FUN(_set_value).set_function(SetValueOp);
+
 
 MXNET_REGISTER_NDARRAY_FUN(_plus).set_function(BinaryOp<ndarray::Plus>);
 MXNET_REGISTER_NDARRAY_FUN(_minus).set_function(BinaryOp<ndarray::Minus>);
 MXNET_REGISTER_NDARRAY_FUN(_mul).set_function(BinaryOp<ndarray::Mul>);
 MXNET_REGISTER_NDARRAY_FUN(_div).set_function(BinaryOp<ndarray::Div>);
+
+MXNET_REGISTER_NDARRAY_FUN(dot).set_function(BinaryOp<ndarray::Dot>)
+.describe("Calcuate 2D matrix multiplication");
+
+MXNET_REGISTER_NDARRAY_FUN(_onehot_encode).set_function(BinaryOp<ndarray::OneHotEncode>);
+
+MXNET_REGISTER_NDARRAY_FUN(choose_element_0index)
+.set_function(BinaryOp<ndarray::MatChooseRowElem>)
+.describe("Choose one element from each line(row for python, column for R/Julia)"
+          " in lhs according to index indicated by rhs."
+          " This function assume rhs uses 0-based index.");
 
 // register API function
 // those with underscore will be registered at NDArray
@@ -518,7 +623,6 @@ MXNET_REGISTER_NDARRAY_FUN(_plus_scalar).set_function(ScalarOp<ndarray::Plus, fa
 MXNET_REGISTER_NDARRAY_FUN(_minus_scalar).set_function(ScalarOp<ndarray::Minus, false>);
 MXNET_REGISTER_NDARRAY_FUN(_mul_scalar).set_function(ScalarOp<ndarray::Mul, false>);
 MXNET_REGISTER_NDARRAY_FUN(_div_scalar).set_function(ScalarOp<ndarray::Div, false>);
-MXNET_REGISTER_NDARRAY_FUN(_clip_scalar).set_function(ScalarOp<ndarray::Clip, false>);
 // register API function
 // scalar, reverse scalar
 MXNET_REGISTER_NDARRAY_FUN(_rminus_scalar).set_function(ScalarOp<ndarray::Minus, true>);
@@ -544,4 +648,18 @@ MXNET_REGISTER_NDARRAY_FUN(_random_gaussian)
   })
 .set_num_scalars(2)
 .set_num_mutate_vars(1);
+
+MXNET_REGISTER_NDARRAY_FUN(clip)
+.set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
+.set_body([](NDArray **u, real_t *s, NDArray **out) {
+    ClipOp(*u[0], s[0], s[1], out[0]);
+  })
+.set_num_use_vars(1)
+.set_num_scalars(2)
+.set_num_mutate_vars(1)
+.describe("Clip ndarray elements to range (a_min, a_max)")
+.add_argument("src", "NDArray", "Source input")
+.add_argument("a_min", "real_t", "Minimum value")
+.add_argument("a_max", "real_t", "Maximum value");
+#endif
 }  // namespace mxnet

@@ -80,10 +80,33 @@ struct tanh_grad {
   }
 };
 
+struct exp {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return expf(a);
+  }
+};
+
+struct log {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return logf(a);
+  }
+};
+
+struct log_grad {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return 1.0f / a;
+  }
+};
 
 struct square {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return a * a;
+  }
+};
+
+struct square_grad {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return 2.0f * a;
   }
 };
 
@@ -107,6 +130,13 @@ struct square_root {
     return sqrt(a);
   }
 };
+
+struct square_root_grad {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return 0.5f / a;
+  }
+};
+
 }  // namespace mshadow_op
 }  // namespace op
 }  // namespace mxnet

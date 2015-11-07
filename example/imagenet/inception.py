@@ -73,7 +73,7 @@ def inception(nhidden, grad_scale):
     # linear classifier
     flatten = mx.symbol.Flatten(data=avg, name='flatten')
     fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=nhidden, name='fc1')
-    softmax = mx.symbol.Softmax(data=fc1, name='softmax')
+    softmax = mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
     return softmax
 
 softmax = inception(1000, 1.0)
@@ -95,4 +95,4 @@ model = mx.model.FeedForward(ctx=gpus, symbol=softmax, num_round=num_round,
 
 model.fit(X=train, eval_data=val,
           eval_metric="acc",
-          epoch_end_callback=mx.callback.Speedometer(batch_size))
+          batch_end_callback=mx.callback.Speedometer(batch_size))

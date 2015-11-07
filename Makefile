@@ -34,7 +34,11 @@ else
 endif
 CFLAGS += -I./mshadow/ -I./dmlc-core/include -fPIC -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
-NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+ifeq ($(DEBUG), 1)
+	NVCCFLAGS = -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+else
+	NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+endif
 ROOTDIR = $(CURDIR)
 
 ifndef LINT_LANG
@@ -42,9 +46,9 @@ ifndef LINT_LANG
 endif
 
 # setup opencv
-ifeq ($(USE_OPENCV),1)
-	CFLAGS+= -DMXNET_USE_OPENCV=1
-	LDFLAGS+= `pkg-config --libs opencv`
+ifeq ($(USE_OPENCV), 1)
+	CFLAGS += -DMXNET_USE_OPENCV=1 `pkg-config --cflags opencv`
+	LDFLAGS += `pkg-config --libs opencv`
 	BIN += bin/im2rec
 else
 	CFLAGS+= -DMXNET_USE_OPENCV=0
@@ -75,7 +79,17 @@ ifneq ($(USE_CUDA_PATH), NONE)
 	NVCC=$(USE_CUDA_PATH)/bin/nvcc
 endif
 
-.PHONY: clean all test lint doc clean_all
+# ps-lite
+PS_PATH=./ps-lite
+DEPS_PATH=$(shell pwd)/deps
+include $(PS_PATH)/make/ps.mk
+ifeq ($(USE_DIST_KVSTORE), 1)
+	CFLAGS += -DMXNET_USE_DIST_KVSTORE -I$(PS_PATH)/include -I$(DEPS_PATH)/include
+	LIB_DEP += $(PS_PATH)/build/libps.a
+	LDFLAGS += -Wl,-rpath,$(DEPS_PATH)/lib $(PS_LDFLAGS_SO)
+endif
+
+.PHONY: clean all test lint doc clean_all rcpplint rcppexport roxygen
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
@@ -84,7 +98,7 @@ OBJ = $(patsubst src/%.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*.cu)
 CUOBJ = $(patsubst src/%.cu, build/%_gpu.o, $(CUSRC))
 
-LIB_DEP = $(DMLC_CORE)/libdmlc.a
+LIB_DEP += $(DMLC_CORE)/libdmlc.a
 ALL_DEP = $(OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
 	ALL_DEP += $(CUOBJ)
@@ -101,10 +115,17 @@ build/%_gpu.o: src/%.cu
 	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $<
 
 lib/libmxnet.a: $(ALL_DEP)
+	@mkdir -p $(@D)
 	ar crv $@ $(filter %.o, $?)
 
 lib/libmxnet.so: $(ALL_DEP)
+	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
+
+# ps-lite
+$(PS_PATH)/build/libps.a:
+	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) protobuf zmq
+	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) ps
 
 $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
@@ -112,23 +133,46 @@ $(DMLC_CORE)/libdmlc.a:
 bin/im2rec: tools/im2rec.cc $(DMLC_CORE)/libdmlc.a
 
 $(BIN) :
+	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
 include tests/cpp/unittest.mk
 
 test: $(TEST)
 
-lint:
-	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python
+lint: rcpplint
+	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python predict/python
+
+doc: doxygen
 
 doxygen:
 	doxygen doc/Doxyfile
 
+# R related shortcuts
+rcpplint:
+	python dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
+
+rcppexport:
+	Rscript -e "require(mxnet); mxnet::mxnet.export(\"R-package\")"
+
+roxygen:
+	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
+
+rpkg:	roxygen
+	mkdir -p R-package/inst
+	mkdir -p R-package/inst/libs
+	cp -rf lib/libmxnet.so R-package/inst/libs
+	mkdir -p R-package/inst/include
+	cp -rf include/* R-package/inst/include
+	cp -rf dmlc-core/include/* R-package/inst/include/
+	R CMD build R-package
+
 clean:
-	$(RM) -r build lib/lib* *~ */*~ */*/*~ */*/*/*~
+	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 
 clean_all: clean
 	cd $(DMLC_CORE); make clean; cd -
+	cd $(PS_PATH); make clean; cd -
 
 -include build/*.d
 -include build/*/*.d

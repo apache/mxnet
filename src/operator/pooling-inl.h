@@ -20,9 +20,12 @@
 
 namespace mxnet {
 namespace op {
+
+namespace pool_enum {
 enum PoolingOpInputs {kData};
 enum PoolingOpOutputs {kOut};
 enum PoolingOpType {kMaxPooling, kAvgPooling, kSumPooling};
+}  // namespace pool_enum
 
 struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   TShape kernel;
@@ -36,9 +39,9 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     .describe("pooling kernel size: (y, x)");
 
     DMLC_DECLARE_FIELD(pool_type)
-    .add_enum("max", kMaxPooling)
-    .add_enum("avg", kAvgPooling)
-    .add_enum("sum", kSumPooling)
+    .add_enum("max", pool_enum::kMaxPooling)
+    .add_enum("avg", pool_enum::kAvgPooling)
+    .add_enum("sum", pool_enum::kSumPooling)
     .describe("Pooling type to be applied.");
 
     int stride_shape[] = {1, 1};
@@ -70,23 +73,23 @@ class PoolingOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> out = out_data[kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> data = in_data[pool_enum::kData].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> out = out_data[pool_enum::kOut].get<xpu, 4, real_t>(s);
     mshadow::Shape<2> out_shape = Shape2(out.shape_[2], out.shape_[3]);
     // TODO(bing): dual stride in mshadow
     CHECK_EQ(param_.stride[0], param_.stride[1])
         << "Only same stride is supported now";
-    if (param_.pool_type == kMaxPooling || param_.pool_type == kSumPooling) {
+    if (param_.pool_type == pool_enum::kMaxPooling || param_.pool_type == pool_enum::kSumPooling) {
       Assign(out,
-             req[kOut],
+             req[pool_enum::kOut],
              pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                            out_shape,
                            param_.kernel[0],
                            param_.kernel[1],
                            param_.stride[0]));
-    } else if (param_.pool_type == kAvgPooling) {
+    } else if (param_.pool_type == pool_enum::kAvgPooling) {
       Assign(out,
-             req[kOut],
+             req[pool_enum::kOut],
              (1.0f / (param_.kernel[0] * param_.kernel[1])) * \
              pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                            out_shape,
@@ -112,15 +115,15 @@ class PoolingOp : public Operator {
     CHECK_EQ(in_grad.size(), 1);
     // TODO(bing): remove pad (0,0)
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> grad = out_grad[kOut].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> output_data = out_data[kOut].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> input_grad = in_grad[kData].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> grad = out_grad[pool_enum::kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> data = in_data[pool_enum::kData].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> output_data = out_data[pool_enum::kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> input_grad = in_grad[pool_enum::kData].get<xpu, 4, real_t>(s);
 
     mshadow::Shape<2> in_shape = Shape2(data.shape_[2], data.shape_[3]);
 
-    if (param_.pool_type == kMaxPooling || param_.pool_type == kSumPooling) {
-      Assign(input_grad, req[kData],
+    if (param_.pool_type == pool_enum::kMaxPooling || param_.pool_type == pool_enum::kSumPooling) {
+      Assign(input_grad, req[pool_enum::kData],
              crop(unpool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                                   pad(output_data, 0, 0),
                                   pad(grad, 0, 0),
@@ -130,8 +133,8 @@ class PoolingOp : public Operator {
                   in_shape,
                   param_.pad[0],
                   param_.pad[1]));
-    } else if (param_.pool_type == kAvgPooling) {
-      Assign(input_grad, req[kData],
+    } else if (param_.pool_type == pool_enum::kAvgPooling) {
+      Assign(input_grad, req[pool_enum::kData],
              (1.0f / param_.kernel[0] / param_.kernel[1]) *\
              crop(unpool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                                   pad(output_data, 0, 0),
@@ -197,7 +200,7 @@ class PoolingProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    return {out_grad[kOut], in_data[kData], out_data[kOut]};
+    return {out_grad[pool_enum::kOut], in_data[pool_enum::kData], out_data[pool_enum::kOut]};
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
@@ -208,11 +211,11 @@ class PoolingProp : public OperatorProperty {
 #if MXNET_USE_CUDNN == 1
     return {};
 #else
-    return {{in_data[kData], in_grad[kData]}};
+    return {{in_data[pool_enum::kData], in_grad[pool_enum::kData]}};
 #endif
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  private:
   PoolingParam param_;

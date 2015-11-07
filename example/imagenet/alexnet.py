@@ -40,7 +40,7 @@ relu7 = mx.symbol.Activation(data=fc2, act_type="relu")
 dropout2 = mx.symbol.Dropout(data=relu7, p=0.5)
 # stage 6
 fc3 = mx.symbol.FullyConnected(data=dropout2, num_hidden=1000)
-softmax = mx.symbol.Softmax(data=fc3)
+softmax = mx.symbol.SoftmaxOutput(data=fc3)
 
 
 ## data
@@ -59,4 +59,4 @@ model = mx.model.FeedForward(
     wd            = 0.00001)
 logging.basicConfig(level = logging.DEBUG)
 model.fit(X = train, eval_data = val,
-          epoch_end_callback = mx.callback.Speedometer(batch_size=batch_size))
+          batch_end_callback = mx.callback.Speedometer(batch_size=batch_size))

@@ -5,10 +5,13 @@
  */
 #ifndef MXNET_NDARRAY_NDARRAY_FUNCTION_H_
 #define MXNET_NDARRAY_NDARRAY_FUNCTION_H_
+
 #include <dmlc/logging.h>
 #include <mshadow/tensor.h>
 #include <mxnet/base.h>
 #include <mxnet/resource.h>
+#include <vector>
+#include "../operator/mshadow_op.h"
 
 namespace mxnet {
 /*! \brief namespace to support all possible Ndarray operator */
@@ -20,6 +23,7 @@ struct BinaryBase {
     return lshape;
   }
 };
+
 // operators
 struct Plus : public BinaryBase {
   typedef mshadow::op::plus mshadow_op;
@@ -37,24 +41,71 @@ struct Div : public BinaryBase {
   typedef mshadow::op::div mshadow_op;
 };
 
-struct Clip : public BinaryBase {
+struct ClipMin : public BinaryBase {
   struct mshadow_op {
     MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
-      if (isnan(a)) return 0.0f;
-      if (a < -b) return -b;
-      if (a > b) return b;
-      return a;
+      if (a < b) {
+        return b;
+      } else {
+        return a;
+      }
     }
   };
 };
+
+struct ClipMax : public BinaryBase {
+  struct mshadow_op {
+    MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
+      if (a > b) {
+        return b;
+      } else {
+        return a;
+      }
+    }
+  };
+};
+
+struct Dot {
+  inline static TShape GetShape(const TShape &lshape, const TShape &rshape) {
+    CHECK(lshape.ndim() == 2 && rshape.ndim() == 2) << "dot only support 2D Array";
+    CHECK_EQ(lshape[1], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
+    size_t target_shape[] = {lshape[0], rshape[1]};
+    return TShape(target_shape, target_shape + 2);
+  }
+};
+
+
+struct OneHotEncode {
+  inline static TShape GetShape(const TShape &index, const TShape &proptype) {
+    CHECK(index.ndim() == 1 && proptype.ndim() == 2) << "OneHotEncode only support 1d index.";
+    CHECK_EQ(index[0], proptype[0]) << "OneHotEncode shape inconsistent";
+    return proptype;
+  }
+};
+
+struct MatChooseRowElem {
+  inline static TShape GetShape(const TShape &lshape, const TShape &rshape) {
+    CHECK(lshape.ndim() == 2 && rshape.ndim() == 1)
+        << "choose_row_element only support 2D Matrix and 1D index";
+    CHECK_EQ(lshape[0], rshape[0]) << "choose_row_element index and matrix shape mismatch";
+    return rshape;
+  }
+};
+
 // type holder for random number generators
 struct UniformDistribution {};
 
 struct GaussianDistribution {};
 
+template<typename Device>
+void EvalClip(const TBlob &src, const real_t &a_min, const real_t &a_max,
+              TBlob *ret, RunContext ctx);
 
 template<typename Device, typename OP>
 void Eval(const TBlob &lhs, const TBlob &rhs, TBlob *ret, RunContext ctx);
+
+template<typename Device, typename OP>
+void Eval(const TBlob &src, TBlob *ret, RunContext ctx);
 
 template<typename Device, typename OP, bool reverse>
 void Eval(const TBlob &lhs, const real_t &rhs, TBlob *ret, RunContext ctx);
@@ -73,6 +124,11 @@ template<typename DeviceFrom, typename DeviceTo>
 void Copy(const TBlob &from, TBlob *to,
           Context from_ctx, Context to_ctx,
           RunContext ctx);
+
+template<typename Device>
+void ElementwiseSum(const std::vector<TBlob> source,
+                    TBlob *out,
+                    RunContext ctx);
 
 }  // namespace ndarray
 }  // namespace mxnet
