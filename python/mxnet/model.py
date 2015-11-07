@@ -270,71 +270,72 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         nbatch = 0
         # Iterate over training data.
         train_data.reset()
-        for data_batch in train_data:
-            _load_data(data_batch, data_arrays)
-            _load_label(data_batch, label_arrays)
+        while True:
+            for data_batch in train_data:
+                _load_data(data_batch, data_arrays)
+                _load_label(data_batch, label_arrays)
 
-            # forward backward pass
-            for texec, islice in zip(train_execs, slices):
-                texec.forward(is_train=True)
-                for cpu_out, dev_out in zip(cpu_output_arrays, texec.outputs):
-                    dev_out.copyto(cpu_out[islice])
-                #texec.outputs[0].copyto(out_cpu_array[islice])
-            for texec in train_execs:
-                texec.backward()
+                # forward backward pass
+                for texec, islice in zip(train_execs, slices):
+                    texec.forward(is_train=True)
+                    for cpu_out, dev_out in zip(cpu_output_arrays, texec.outputs):
+                        dev_out.copyto(cpu_out[islice])
+                    #texec.outputs[0].copyto(out_cpu_array[islice])
+                for texec in train_execs:
+                    texec.backward()
 
-            # update the parameters
-            for index, pair in enumerate(zip(param_arrays, grad_arrays)):
-                arg_list, grad_list = pair
-                if grad_list[0] is None:
-                    continue
-                # Gradient synchronization
-                if kvstore:
-                    # push gradient, priority is negative index
-                    kvstore.push(index, grad_list, priority=-index)
-                    if update_on_kvstore:
-                        # pull back the weights
-                        kvstore.pull(index, arg_list, priority=-index)
+                # update the parameters
+                for index, pair in enumerate(zip(param_arrays, grad_arrays)):
+                    arg_list, grad_list = pair
+                    if grad_list[0] is None:
+                        continue
+                    # Gradient synchronization
+                    if kvstore:
+                        # push gradient, priority is negative index
+                        kvstore.push(index, grad_list, priority=-index)
+                        if update_on_kvstore:
+                            # pull back the weights
+                            kvstore.pull(index, arg_list, priority=-index)
+                        else:
+                            # pull back the sum gradients, to the same locations.
+                            kvstore.pull(index, grad_list, priority=-index)
+                    if not update_on_kvstore:
+                        for k, p in enumerate(zip(arg_list, grad_list)):
+                            # faked an index here, to make optimizer create diff
+                            # state for the same index but on diff devs, TODO(mli)
+                            # use a better solution latter
+                            w, g = p
+                            updater(index*num_device+k, g, w)
+
+                nbatch += 1
+                # batch callback (for print purpose)
+                if batch_end_callback != None:
+                    batch_end_params = BatchEndParam(epoch=epoch,
+                                                     nbatch=nbatch,
+                                                     eval_metric=eval_metric)
+                    if isinstance(batch_end_callback, list):
+                        for call in batch_end_callback:
+                            call(batch_end_params)
                     else:
-                        # pull back the sum gradients, to the same locations.
-                        kvstore.pull(index, grad_list, priority=-index)
-                if not update_on_kvstore:
-                    for k, p in enumerate(zip(arg_list, grad_list)):
-                        # faked an index here, to make optimizer create diff
-                        # state for the same index but on diff devs, TODO(mli)
-                        # use a better solution latter
-                        w, g = p
-                        updater(index*num_device+k, g, w)
+                        batch_end_callback(batch_end_params)
 
-            nbatch += 1
-            # batch callback (for print purpose)
-            if batch_end_callback != None:
-                batch_end_params = BatchEndParam(epoch=epoch,
-                                                 nbatch=nbatch,
-                                                 eval_metric=eval_metric)
-                if isinstance(batch_end_callback, list):
-                    for call in batch_end_callback:
-                        call(batch_end_params)
-                else:
-                    batch_end_callback(batch_end_params)
+                # evaluate at end, so out_cpu_array can lazy copy
+                eval_metric.update(data_batch.label, cpu_output_arrays)
 
-            # evaluate at end, so out_cpu_array can lazy copy
-            eval_metric.update(data_batch.label, cpu_output_arrays)
+                # this epoch is done
+                if epoch_size is not None and nbatch == epoch_size:
+                    break
+
+            # reset the training data if reach the end of train_data, we only
+            # need to deal with the following two situations:
+            # 1. epoch_size is None:
+            # 2. epoch_size is not None but nbatch != epoch_size:
+            if epoch_size is None or nbatch != epoch_size:
+                train_data.reset()
 
             # this epoch is done
-            if epoch_size is not None and nbatch == epoch_size:
+            if epoch_size is None or nbatch == epoch_size:
                 break
-
-        # reset the training data if reach the end of train_data, we only
-        # need to deal with the following two situations:
-        # 1. epoch_size is None:
-        # 2. epoch_size is not None but nbatch != epoch_size:
-        if epoch_size is None or nbatch != epoch_size:
-            train_data.reset()
-
-        # this epoch is done
-        if epoch_size is None or nbatch == epoch_size:
-            break
 
         name, value = eval_metric.get()
         logger.info('Epoch[%d] Train-%s=%f', epoch, name, value)
