@@ -129,7 +129,7 @@ $(PS_PATH)/build/libps.a:
 $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
-bin/im2rec: tools/im2rec.cc $(DMLC_CORE)/libdmlc.a
+bin/im2rec: tools/im2rec.cc $(ALL_DEP)
 
 $(BIN) :
 	@mkdir -p $(@D)
