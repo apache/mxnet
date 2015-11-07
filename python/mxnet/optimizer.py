@@ -51,6 +51,7 @@ class Optimizer(object):
     def __init__(self, rescale_grad=1):
         self.epoch = 0
         self.rescale_grad = rescale_grad
+        self.lr_mult = {}
 
     def begin_epoch(self, epoch):
         """Function called to notify beginning of epoch.
@@ -66,8 +67,18 @@ class Optimizer(object):
         """Create additional optimizer state such as momentum.
         override in implementations."""
 
-    def update(self, index, weight, grad, state, lr_mult=1.0):
+    def update(self, index, weight, grad, state):
         """Update the parameters. override in implementations"""
+
+    def set_lr_mult(self, args_lrmult):
+        """Set individual learning rate multiplers for parameters
+
+        Parameters
+        ----------
+        args_lrmult : dict of index to float
+            set the lr multipler for index to float
+        """
+        self.lr_mult = args_lrmult.copy()
 
 #convenience wrapper for Optimizer.Register
 register = Optimizer.register
@@ -120,7 +131,7 @@ class SGD(Optimizer):
         else:
             return zeros(weight.shape, weight.context)
 
-    def update(self, index, weight, grad, state, lr_mult=1.0):
+    def update(self, index, weight, grad, state):
         """Update the parameters.
 
         Parameters
@@ -144,7 +155,7 @@ class SGD(Optimizer):
             lr = self.lr_scheduler(self.epoch)
         else:
             lr = self.lr
-        lr *= lr_mult
+        lr *= self.lr_mult.get(index, default=1.0)
 
         grad = grad * self.rescale_grad
         if self.clip_gradient != None:
@@ -170,7 +181,7 @@ class Test(Optimizer):
         """Create a state to duplicate weight"""
         return zeros(weight.shape, weight.context)
 
-    def update(self, index, weight, grad, state, lr_mult=1.0):
+    def update(self, index, weight, grad, state):
         """performs w += rescale_grad * grad"""
         weight[:] += grad * self.rescale_grad
         state[:] = weight
@@ -192,9 +203,9 @@ def get_updater(optimizer):
          The clossure of the updater
     """
     states = dict()
-    def updater(index, grad, weight, lr_mult=1.0):
+    def updater(index, grad, weight):
         """updater for kvstore"""
         if index not in states:
             states[index] = optimizer.create_state(index, weight)
-        optimizer.update(index, weight, grad, states[index], lr_mult=1.0)
+        optimizer.update(index, weight, grad, states[index])
     return updater

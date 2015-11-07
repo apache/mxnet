@@ -53,14 +53,12 @@ class Solver(object):
         self.iter_start_callback = callback
 
     def solve(self, xpu, sym, args, args_grad, input_names,
-              data_iter, begin_epoch, end_epoch, debug = False, args_lrmult=None):
-        if args_lrmult is None:
-            args_lrmult = {}
-
+              data_iter, begin_epoch, end_epoch, debug = False, args_lrmult={}):
         data_iter.reset()
         input_dict = {key: mx.nd.empty(arr.shape, ctx=xpu) for key, arr in zip(input_names, data_iter.next())}
         batch_size = input_dict.values()[0].shape[0]
         self.optimizer.rescale_grad = 1.0/batch_size
+        self.optimizer.set_lr_mult(args_lrmult)
         args = dict(args, **input_dict)
 
         output_names = sym.list_outputs()
@@ -108,7 +106,7 @@ class Solver(object):
             exe.backward()
             self.optimizer.begin_epoch(i)
             for key, arr in update_dict.items():
-                self.updater(key, arr, args[key], args_lrmult.get(key, 1.0))
+                self.updater(key, arr, args[key])
 
             exe.outputs[0].wait_to_read()
             if self.metric is not None:
