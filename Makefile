@@ -125,6 +125,7 @@ lib/libmxnet.so: $(ALL_DEP)
 # ps-lite
 $(PS_PATH)/build/libps.a:
 	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) ps
+	ln -s $(PS_PATH)/tracker .
 
 $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
