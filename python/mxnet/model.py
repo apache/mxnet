@@ -146,7 +146,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
 
 def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         arg_params, aux_params,
-                        begin_epoch, end_epoch, optimizer,
+                        begin_epoch, end_epoch, epoch_size, optimizer,
                         kvstore, update_on_kvstore,
                         train_data, eval_data=None, eval_metric=None,
                         epoch_end_callback=None, batch_end_callback=None,
@@ -175,6 +175,9 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         The begining training epoch.
     end_epoch : int
         The end training epoch.
+    epoch_size : int, optional
+        Number of batches in a epoch. In default, it is set to
+        ceil(num_train_examples / batch_size)
     optimizer : Optimizer
         The optimization algorithm
     train_data : DataIter
@@ -318,6 +321,21 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
             # evaluate at end, so out_cpu_array can lazy copy
             eval_metric.update(data_batch.label, cpu_output_arrays)
 
+            # this epoch is done
+            if epoch_size is not None and nbatch == epoch_size:
+                break
+
+        # reset the training data if reach the end of train_data, we only
+        # need to deal with the following two situations:
+        # 1. epoch_size is None:
+        # 2. epoch_size is not None but nbatch != epoch_size:
+        if epoch_size is None or nbatch != epoch_size:
+            train_data.reset()
+
+        # this epoch is done
+        if epoch_size is None or nbatch == epoch_size:
+            break
+
         name, value = eval_metric.get()
         logger.info('Epoch[%d] Train-%s=%f', epoch, name, value)
         toc = time.time()
@@ -431,6 +449,9 @@ class FeedForward(BASE_ESTIMATOR):
         To use multi GPU training, pass in a list of gpu contexts.
     num_epoch : int, optional
         Training parameter, number of training epochs(epochs).
+    epoch_size : int, optional
+        Number of batches in a epoch. In default, it is set to
+        ceil(num_train_examples / batch_size)
     optimizer : str or Optimizer, optional
         Training parameter, name or optimizer object for training.
     initializier : initializer function, optional
@@ -453,7 +474,7 @@ class FeedForward(BASE_ESTIMATOR):
         The additional keyword arguments passed to optimizer.
     """
     def __init__(self, symbol, ctx=None,
-                 num_epoch=None, optimizer='sgd',
+                 num_epoch=None, epoch_size=None, optimizer='sgd',
                  initializer=Uniform(0.01),
                  numpy_batch_size=128,
                  arg_params=None, aux_params=None,
@@ -481,6 +502,7 @@ class FeedForward(BASE_ESTIMATOR):
         self.ctx = ctx
         # training parameters
         self.num_epoch = num_epoch
+        self.epoch_size = epoch_size
         self.kwargs = kwargs.copy()
         self.optimizer = optimizer
         self.initializer = initializer
@@ -695,6 +717,7 @@ class FeedForward(BASE_ESTIMATOR):
         _train_multi_device(self.symbol, self.ctx, arg_names, param_names, aux_names,
                             self.arg_params, self.aux_params,
                             begin_epoch=self.begin_epoch, end_epoch=self.num_epoch,
+                            epoch_size=self.epoch_size,
                             optimizer=optimizer,
                             train_data=data, eval_data=eval_data,
                             eval_metric=eval_metric,
@@ -757,7 +780,7 @@ class FeedForward(BASE_ESTIMATOR):
 
     @staticmethod
     def create(symbol, X, y=None, ctx=None,
-               num_epoch=None, optimizer='sgd', initializer=Uniform(0.01),
+               num_epoch=None, epoch_size=None, optimizer='sgd', initializer=Uniform(0.01),
                eval_data=None, eval_metric='acc', epoch_end_callback=None,
                kvstore='local', logger=None, **kwargs):
         """Functional style to create a model.
@@ -776,6 +799,9 @@ class FeedForward(BASE_ESTIMATOR):
             To use multi GPU training, pass in a list of gpu contexts.
         num_epoch : int, optional
             Training parameter, number of training epochs(epochs).
+        epoch_size : int, optional
+            Number of batches in a epoch. In default, it is set to
+            ceil(num_train_examples / batch_size)
         optimizer : str or Optimizer, optional
             Training parameter, name or optimizer object for training.
         initializier : initializer function, optional
@@ -798,7 +824,7 @@ class FeedForward(BASE_ESTIMATOR):
            'dist_async' : multi-machines with partical asynchronous
            In default uses 'local', often no need to change for single machiine.
         """
-        model = FeedForward(symbol, ctx=ctx, num_epoch=num_epoch,
+        model = FeedForward(symbol, ctx=ctx, num_epoch=num_epoch, epoch_size=epoch_size,
                             optimizer=optimizer, initializer=initializer, **kwargs)
         model.fit(X, y, eval_data=eval_data, eval_metric=eval_metric,
                   epoch_end_callback=epoch_end_callback,
