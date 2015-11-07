@@ -373,6 +373,9 @@ def _train_multi_device(symbol, ctx, input_shape,
         # evaluation
         if eval_data:
             eval_metric.reset()
+            # reset the eval_data earlier to fix the potential bug that the file
+            # pointer is not initilized properly
+            eval_data.reset()
             for data, label in eval_data:
                 # Copy data into the target
                 for target, islice in zip(arg_blocks[label_index], slices):
@@ -384,7 +387,6 @@ def _train_multi_device(symbol, ctx, input_shape,
                     texec.forward(is_train=False)
                     texec.outputs[0].copyto(out_cpu_array[islice])
                 eval_metric.update(label, out_cpu_array)
-            eval_data.reset()
             name, value = eval_metric.get()
             logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
 
@@ -405,6 +407,9 @@ def _train_multi_device(symbol, ctx, input_shape,
             else:
                 epoch_end_callback(epoch, symbol, arg_params, aux_params)
     # end of all epochs
+    train_data.reset()
+    if eval_data:
+        eval_data.reset()
     return
 
 
