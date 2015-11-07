@@ -3,17 +3,26 @@ import imagenet
 import mxnet as mx
 import logging
 
-# data directory
-data_dir = "../../../ilsvrc12/"
-# local, dist_async or dist_sync
+## in local machine:
+# data_dir = "../../../ilsvrc12/"
+## in amazon s3:
+data_dir = "s3://dmlc/ilsvrc12/"
+## in hdfs:
+# data_dir = hdfs:///dmlc/ilsvrc12/
+
+## non-distributed version (single machine)
+# kv_type = 'local'
+## distributed version, can be dist_async or dist_sync
 kv_type = 'dist_async'
-# batch size
-batch_size = 96
-# number of gpus used in a worker
-num_gpus = 2
-# learning rate
+
+## batch size for one gpu
+batch_size_per_gpu = 40
+## number of gpus used in a worker
+num_gpus = 1
+## learning rate
 learning_rate = 0.05
 
+batch_size = batch_size_per_gpu * num_gpus
 kv = mx.kvstore.create(kv_type)
 
 (train, val) = imagenet.ilsvrc12(

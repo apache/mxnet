@@ -3,15 +3,21 @@ import cifar10
 import mxnet as mx
 import logging
 
-# local, dist_async or dist_sync
-kv_type = 'dist_sync'
-# data dir
+## in local machine:
 data_dir = "data/cifar"
-# batch size
+## in amazon s3:
+# data_dir = "s3://dmlc/cifar10/"
+## in hdfs:
+# data_dir = hdfs:///dmlc/cifar10/
+
+## can be local, dist_async or dist_sync
+kv_type = 'dist_sync'
+
+## batch size
 batch_size = 256
-# number of gpus used in a worker
-num_gpus = 2
-# learning rate
+## number of gpus used in a worker
+num_gpus = 1
+## learning rate
 learning_rate = 0.1
 
 if data_dir == "data/cifar":
