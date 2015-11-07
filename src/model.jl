@@ -185,7 +185,7 @@ function predict(self :: FeedForward, data :: AbstractDataProvider; overwrite::B
   batch_size  = get_batch_size(data)
   data_arrays =  [self.pred_exec.arg_dict[name] for name in data_names]
   output_list = [Array{MX_float}[] for i=1:length(self.pred_exec.outputs)]
-  for batch in data
+  for batch in eachbatch(data)
     load_data!(data, batch, data_arrays)
     forward(self.pred_exec, is_train=false)
     if isa(callback, Void)
@@ -402,7 +402,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
     # invoke callbacks on iteration 0
     _invoke_callbacks(self, opts.callbacks, op_state, AbstractBatchCallback)
 
-    for batch in data
+    for batch in eachbatch(data)
       load_data!(data, batch, data_arrays)
       load_label!(data, batch, label_arrays)
 
@@ -473,7 +473,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
       @assert(get_batch_size(opts.eval_data) == batch_size)
 
       reset!(opts.eval_metric)
-      for batch in opts.eval_data
+      for batch in eachbatch(opts.eval_data)
         load_data!(opts.eval_data, batch, data_arrays)
 
         # forward and backward
