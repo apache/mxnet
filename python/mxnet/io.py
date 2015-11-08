@@ -3,6 +3,7 @@
 
 """NDArray interface of mxnet"""
 from __future__ import absolute_import
+from collections import namedtuple, OrderedDict
 
 import ctypes
 import sys
@@ -30,12 +31,10 @@ class DataIter(object):
 
     def next(self):
         """Get next data batch from iterator
-
         Returns
         -------
         data : NDArray
             The data of next batch.
-
         label : NDArray
             The label of next batch.
         """
@@ -46,7 +45,6 @@ class DataIter(object):
 
     def iter_next(self):
         """Iterate to next batch.
-
         Returns
         -------
         has_next : boolean
@@ -56,12 +54,10 @@ class DataIter(object):
 
     def getdata(self, index=0):
         """Get data of current batch.
-
         Parameters
         ----------
         index : int
             The index of data source to retrieve.
-
         Returns
         -------
         data : NDArray
@@ -71,7 +67,6 @@ class DataIter(object):
 
     def getlabel(self):
         """Get label of current batch.
-
         Returns
         -------
         label : NDArray
@@ -81,7 +76,6 @@ class DataIter(object):
 
     def getpad(self):
         """Get the number of padding examples in current batch.
-
         Returns
         -------
         pad : int
@@ -90,74 +84,100 @@ class DataIter(object):
         pass
 
 
+DataBatch = namedtuple('DataBatch', ['data', 'label', 'pad'])
+
+def _init_data(data, allow_empty, default_name):
+    """Convert data into canonical form."""
+    assert (data is not None) or allow_empty
+    if data is None:
+        data = []
+
+    if isinstance(data, (np.ndarray, NDArray)):
+        data = [data]
+    if isinstance(data, list):
+        if not allow_empty:
+            assert(len(data) > 0)
+        if len(data) == 1:
+            data = OrderedDict([(default_name, data[0])])
+        else:
+            data = OrderedDict([('_%d_%s' % (i, default_name), d) for i, d in enumerate(data)])
+    if not isinstance(data, dict):
+        raise TypeError("Input must be NDArray, numpy.ndarray, " + \
+                "a list of them or dict with them as values")
+    for k, v in data.items():
+        if isinstance(v, NDArray):
+            data[k] = v.asnumpy()
+    for k, v in data.items():
+        if not isinstance(v, np.ndarray):
+            raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
+                    "should be NDArray or numpy.ndarray")
+
+    return list(data.items())
+
 class NDArrayIter(DataIter):
     """NDArrayIter object in mxnet. Taking NDArray or numpy array to get dataiter.
-
     Parameters
     ----------
     data_list or data, label: a list of, or two separate NDArray or numpy.ndarray
         list of NDArray for data. The last one is treated as label.
-
     batch_size: int
         Batch Size
-
     shuffle: bool
         Whether to shuffle the data
-
     data_pad_value: float, optional
         Padding value for data
-
     label_pad_value: float, optionl
         Padding value for label
-
     last_batch_handle: 'pad', 'discard' or 'roll_over'
         How to handle the last batch
-
     Note
     ----
     This iterator will pad, discard or roll over the last batch if
     the size of data does not match batch_size. Roll over is intended
     for training and can cause problems if used for prediction.
     """
-    def __init__(self, *args, **kwargs):
-        super(NDArrayIter, self).__init__()
-        if isinstance(args[0], list) or isinstance(args[0], tuple):
-            self._init(*args, **kwargs)
-        else:
-            self._init((args[0], args[1]), *args[2:], **kwargs)
-
-    def _init(self, data_list,
-              batch_size=1,
-              shuffle=False,
-              last_batch_handle='pad'):
-        """Actual constructor"""
+    def __init__(self, data, label=None, batch_size=1, shuffle=False, last_batch_handle='pad'):
         # pylint: disable=W0201
-        self.num_source = len(data_list)
-        assert self.num_source > 0, "Need at least one data source."
-        data_list = list(data_list)
-        for i in range(self.num_source):
-            if isinstance(data_list[i], NDArray):
-                data_list[i] = data_list[i].asnumpy()
+
+        super(NDArrayIter, self).__init__()
+
+        self.data = _init_data(data, allow_empty=False, default_name='data')
+        self.label = _init_data(label, allow_empty=True, default_name='softmax_label')
+
         # shuffle data
         if shuffle:
-            idx = np.arange(data_list[0].shape[0])
+            idx = np.arange(self.data[0][1].shape[0])
             np.random.shuffle(idx)
-            for i in range(self.num_source):
-                assert data_list[i].shape[0] == len(idx)
-                data_list[i] = data_list[i][idx]
+            self.data = [(k, v[idx]) for k, v in self.data]
+            self.label = [(k, v[idx]) for k, v in self.label]
+
+        self.data_list = [x[1] for x in self.data] + [x[1] for x in self.label]
+        self.num_source = len(self.data_list)
 
         # batching
         if last_batch_handle == 'discard':
-            new_n = data_list[0].shape[0] - data_list[0].shape[0] % batch_size
-            for i in range(self.num_source):
-                data_list[i] = data_list[i][:new_n]
-        self.num_data = data_list[0].shape[0]
-        assert self.num_data >= batch_size, \
-            "batch_size needs to be smaller than data size when not padding."
+            new_n = self.data_list[0].shape[0] - self.data_list[0].shape[0] % batch_size
+            for k, _ in self.data:
+                self.data[k] = self.data[k][:new_n]
+            for k, _ in self.label:
+                self.label[k] = self.label[k][:new_n]
+        self.num_data = self.data_list[0].shape[0]
+        assert self.num_data > batch_size, \
+            "batch_size need to be smaller than data size when not padding."
         self.cursor = -batch_size
-        self.data_list = data_list
         self.batch_size = batch_size
         self.last_batch_handle = last_batch_handle
+
+    @property
+    def provide_data(self):
+        """The name and shape of data provided by this iterator"""
+        return [(k, tuple([self.batch_size] + list(v.shape[1:]))) for k, v in self.data]
+
+    @property
+    def provide_label(self):
+        """The name and shape of label provided by this iterator"""
+        return [(k, tuple([self.batch_size] + list(v.shape[1:]))) for k, v in self.label]
+
 
     def hard_reset(self):
         """Igore roll over data and set to start"""
@@ -178,23 +198,25 @@ class NDArrayIter(DataIter):
 
     def next(self):
         if self.iter_next():
-            return (self.getdata(i) for i in range(self.num_source))
+            return DataBatch(data=self.getdata(), label=self.getlabel(), pad=self.getpad())
         else:
             raise StopIteration
 
-    def getdata(self, index=0):
-        assert(index < self.num_source)
+    def _getdata(self, data_source):
+        """Load data from underlying arrays, internal use only"""
         assert(self.cursor < self.num_data), "DataIter needs reset."
         if self.cursor + self.batch_size <= self.num_data:
-            return array(self.data_list[index][self.cursor:self.cursor+self.batch_size])
+            return [array(x[1][self.cursor:self.cursor+self.batch_size]) for x in data_source]
         else:
             pad = self.batch_size - self.num_data + self.cursor
-            return array(np.concatenate((self.data_list[index][self.cursor:],
-                                         self.data_list[index][:pad]),
-                                        axis=0))
+            return [array(np.concatenate((x[1][self.cursor:], x[1][:pad]),
+                                         axis=0)) for x in data_source]
+
+    def getdata(self):
+        return self._getdata(self.data)
 
     def getlabel(self):
-        return self.getdata(-1)
+        return self._getdata(self.label)
 
     def getpad(self):
         if self.last_batch_handle == 'pad' and \
@@ -206,25 +228,35 @@ class NDArrayIter(DataIter):
 
 class MXDataIter(DataIter):
     """DataIter built in MXNet. List all the needed functions here.
-
     Parameters
     ----------
     handle : DataIterHandle
         the handle to the underlying C++ Data Iterator
     """
-    def __init__(self, handle):
+    def __init__(self, handle, data_name='data', label_name='softmax_label', **_):
         super(MXDataIter, self).__init__()
         self.handle = handle
         # debug option, used to test the speed with io effect eliminated
         self._debug_skip_load = False
-        self._debug_at_begin = True
+
+
+        # load the first batch to get shape information
+        self.first_batch = None
+        self.first_batch = self.next()
+        data = self.first_batch.data[0]
+        label = self.first_batch.label[0]
+
+        # properties
+        self.provide_data = [(data_name, data.shape)]
+        self.provide_label = [(label_name, label.shape)]
+        self.batch_size = data.shape[0]
+
 
     def __del__(self):
         check_call(_LIB.MXDataIterFree(self.handle))
 
     def debug_skip_load(self):
         """Set the iterator to simply return always first batch.
-
         Notes
         -----
         This can be used to test the speed of network without taking
@@ -235,20 +267,28 @@ class MXDataIter(DataIter):
 
     def reset(self):
         self._debug_at_begin = True
+        self.first_batch = None
         check_call(_LIB.MXDataIterBeforeFirst(self.handle))
 
     def next(self):
         if self._debug_skip_load and not self._debug_at_begin:
-            return  self.getdata(), self.getlabel()
+            return  DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad())
+        if self.first_batch is not None:
+            batch = self.first_batch
+            self.first_batch = None
+            return batch
+
         self._debug_at_begin = False
         next_res = ctypes.c_int(0)
         check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
         if next_res.value:
-            return self.getdata(), self.getlabel()
+            return DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad())
         else:
             raise StopIteration
 
     def iter_next(self):
+        if self.first_batch is not None:
+            return True
         next_res = ctypes.c_int(0)
         check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
         return next_res.value
@@ -299,12 +339,10 @@ def _make_io_iterator(handle):
     def creator(*args, **kwargs):
         """Create an iterator.
         The parameters listed below can be passed in as keyword arguments.
-
         Parameters
         ----------
         name : string, required.
             Name of the resulting data iterator.
-
         Returns
         -------
         dataiter: Dataiter
@@ -329,7 +367,7 @@ def _make_io_iterator(handle):
         if len(args):
             raise TypeError('%s can only accept keyword arguments' % iter_name)
 
-        return MXDataIter(iter_handle)
+        return MXDataIter(iter_handle, **kwargs)
 
     creator.__name__ = iter_name
     creator.__doc__ = doc_str

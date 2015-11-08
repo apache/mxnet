@@ -84,7 +84,7 @@ def mlp():
     fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64)
     act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
     fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=10)
-    softmax = mx.symbol.SoftmaxOutput(fc3, name = 'sm')
+    softmax = mx.symbol.SoftmaxOutput(fc3, name = 'softmax')
     return softmax
 
 def lenet():
@@ -107,7 +107,7 @@ def lenet():
     # second fullc
     fc2 = mx.symbol.FullyConnected(data=tanh3, num_hidden=10)
     # loss
-    lenet = mx.symbol.SoftmaxOutput(data=fc2)
+    lenet = mx.symbol.SoftmaxOutput(data=fc2, name='softmax')
     return lenet
 
 # Basic Conv + BN + ReLU factory
@@ -153,5 +153,5 @@ def inception():
     pool = mx.symbol.Pooling(data=in5b, pool_type="avg", kernel=(7,7), name="global_pool")
     flatten = mx.symbol.Flatten(data=pool, name="flatten1")
     fc = mx.symbol.FullyConnected(data=flatten, num_hidden=10, name="fc1")
-    softmax = mx.symbol.SoftmaxOutput(data=fc, name="loss")
+    softmax = mx.symbol.SoftmaxOutput(data=fc, name="softmax")
     return softmax
