@@ -6,7 +6,7 @@ We try to do our best to provide high speed operators for most common use cases.
 
 * Implement an operator in native language (NumpyOp in Python). This is quick to develop but may cause performance issues as it involves copying data and moving it to front-end. We recommend taking this approach first and moving to C++/Cuda if it becomes a bottleneck.
 
-* Implement an operator in C++ (and Cuda if necessary). This can be difficult if you are not familiar with MXNet or Cuda, but it will give you the best performance. We recommend this approach for performance critical operators.
+* Implement an operator in C++ and mshadow (and Cuda if necessary). This can be difficult if you are not familiar with MXNet, mashadow or Cuda, but it will give you the best performance. We recommend this approach for performance critical operators.
 
 ## Implement Operators in Python
 Implementing an operator in Python is similar to creating one in C++ but simpler. Let's create a softmax operator for example. We start by subclassing `mxnet.operator.NumpyOp` and then override a few methods.
