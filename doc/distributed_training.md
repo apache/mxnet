@@ -1,6 +1,6 @@
 # Distributed Training
 
-In this tutorial we give step-by-step examples on how to develop distributed
+In this tutorial we explain how to develop distributed
 training programs in MXNet and how to run it on cluster. We will use the MXNet python
 binding for the former, and an AWS GPU cluster for the later.
 
@@ -114,54 +114,3 @@ Finally we brief discuss how `kvstore` is implemented. It is based on the
   gradients from all workers and then performances updating. While if using
   `dist_async`, the server updates the weight immediately after gradients from
   any one worker are received.
-
-
-## Setup an EC2 GPU Cluster from Stratch
-
-### Upload data to S3
-
-Besides, one needs to set the environment variables `AWS_ACCESS_KEY_ID` and
-`AWS_SECRET_ACCESS_KEY` properly. For example, add the following two lines in
-~/.bashrc (replace the strings with your [AWS credentials](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html)):
-
-```
-export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
-export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
-```
-
-```bash
-wget http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip
-unzip cifar10.zip
-s3cmd put cifar/* s3://dmlc/cifar10/
-```
-
-### Install depended packages
-
-CUDA, ...
-
-```
-sudo apt-get update
-sudo apt-get install -y build-essential git libcurl4-openssl-dev libatlas-base-dev libopencv-dev
-```
-
-
-[ami-12fd8178](https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#LaunchInstanceWizard:ami=ami-12fd8178)
-
-### Setup the root node
-
-```bash
-git clone --recursive https://github.com/dmlc/mxnet
-cd mxnet; cp make/config.mk .
-echo "USE_CUDA=1" >>config.mk
-echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
-echo "USE_DIST_KVSTORE = 1" >>config.mk
-echo "USE_S3=1" >>config.mk
-make -j8
-```
-
-
-###
-
-```bash
-sudo ln /dev/null /dev/raw1394
-```
