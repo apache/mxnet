@@ -11,8 +11,8 @@ function test_dir(dir)
   end
 end
 
-include("common.jl")
-test_dir("unittest")
+include(joinpath(dirname(@__FILE__), "common.jl"))
+test_dir(joinpath(dirname(@__FILE__), "unittest"))
 
 # run the basic MNIST mlp example
 if haskey(ENV, "CONTINUOUS_INTEGRATION")

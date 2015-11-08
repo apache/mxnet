@@ -473,6 +473,11 @@ type MXDataProvider <: AbstractDataProvider
   data_shape :: Vector{Tuple{Base.Symbol, Tuple}}
   label_shape:: Vector{Tuple{Base.Symbol, Tuple}}
   batch_size :: Int
+
+  # those two a auxiliary variables to help avoid calling reset
+  # but still pre-fetch first batch to get shape information
+  first_epoch:: Bool
+  first_batch:: Bool
 end
 
 function _reset_data_iter(handle :: MX_DataIterHandle)
@@ -499,7 +504,6 @@ function MXDataProvider(handle     :: MX_DataIterHandle;
                         label_name :: Union{Base.Symbol,Void}=:softmax_label,
                         kwargs...) # for convenience, we ignore the rest keyword arguments
   # init iterator, load the first batch and get shapes
-  _reset_data_iter(handle)
   @assert(_iter_next(handle), "Failed to load the first batch in MXDataProvider")
   data_shape = Tuple{Base.Symbol, Tuple}[(data_name, size(_get_data(handle)))]
   if !isa(label_name, Void)
@@ -508,7 +512,7 @@ function MXDataProvider(handle     :: MX_DataIterHandle;
     label_shape = Tuple{Base.Symbol, Tuple}[]
   end
 
-  MXDataProvider(handle, data_shape, label_shape, data_shape[1][2][end])
+  MXDataProvider(handle, data_shape, label_shape, data_shape[1][2][end], true, true)
 end
 
 provide_data(provider::MXDataProvider) = provider.data_shape
@@ -525,11 +529,21 @@ function Base.eltype(provider :: MXDataProvider)
   MXDataBatch
 end
 function Base.start(provider :: MXDataProvider)
-  _reset_data_iter(provider.handle)
+  if !provider.first_epoch
+    _reset_data_iter(provider.handle)
+  else
+    provider.first_epoch = false
+  end
+
   return MXDataProviderState(true)
 end
 function Base.done(provider :: MXDataProvider, state :: MXDataProviderState)
-  state.has_next = _iter_next(provider.handle)
+  if provider.first_batch
+    state.has_next = true
+    provider.first_batch = false
+  else
+    state.has_next = _iter_next(provider.handle)
+  end
   return !state.has_next
 end
 function Base.next(provider :: MXDataProvider, state :: MXDataProviderState)
