@@ -51,7 +51,7 @@ class Optimizer(object):
     def __init__(self, rescale_grad=1):
         self.epoch = 0
         self.rescale_grad = rescale_grad
-        self.lr_mult = {}
+        self.lr_scale = {}
 
     def begin_epoch(self, epoch):
         """Function called to notify beginning of epoch.
@@ -70,15 +70,15 @@ class Optimizer(object):
     def update(self, index, weight, grad, state):
         """Update the parameters. override in implementations"""
 
-    def set_lr_mult(self, args_lrmult):
-        """Set individual learning rate multiplers for parameters
+    def set_lr_scale(self, args_lrscale):
+        """Set individual learning rate scale for parameters
 
         Parameters
         ----------
-        args_lrmult : dict of index to float
+        args_lrscale : dict of index to float
             set the lr multipler for index to float
         """
-        self.lr_mult = args_lrmult.copy()
+        self.lr_scale = args_lrscale.copy()
 
 #convenience wrapper for Optimizer.Register
 register = Optimizer.register
@@ -155,7 +155,7 @@ class SGD(Optimizer):
             lr = self.lr_scheduler(self.epoch)
         else:
             lr = self.lr
-        lr *= self.lr_mult.get(index, default=1.0)
+        lr *= self.lr_scale.get(index, 1.0)
 
         grad = grad * self.rescale_grad
         if self.clip_gradient != None:
