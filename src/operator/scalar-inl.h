@@ -2,10 +2,10 @@
  * Copyright (c) 2015 by Contributors
  * \file Scalar-inl.h
  * \brief Scalar operator
- * \author Bing Xu
+ * \author yajiedesign(ShiWen Hu)
 */
-#ifndef MXNET_OPERATOR_Scalar_INL_H_
-#define MXNET_OPERATOR_Scalar_INL_H_
+#ifndef MXNET_OPERATOR_SCALAR_INL_H_
+#define MXNET_OPERATOR_SCALAR_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -42,7 +42,7 @@ struct ScalarParam : public dmlc::Parameter<ScalarParam> {
  */
 template<typename xpu>
 class ScalarOp : public Operator {
-public:
+ public:
     explicit ScalarOp(ScalarParam param)
         : value_(param.value) {}
   virtual void Forward(const OpContext &ctx,
@@ -52,10 +52,8 @@ public:
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    //CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    //Tensor<xpu, 2> data = in_data[Scalar::kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> out = out_data[Scalar::kOut].FlatTo2D<xpu, real_t>(s);
     out = value_;
   }
@@ -67,17 +65,8 @@ public:
                         const std::vector<OpReqType> &req,
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_args) {
-    //using namespace mshadow;
-    //using namespace mshadow::expr;
-    //CHECK_EQ(out_grad.size(), 1);
-    //CHECK(in_data.size() == 1 && in_grad.size() == 1);
-    //CHECK_EQ(req.size(), 1);
-    //Stream<xpu> *s = ctx.get_stream<xpu>();
-    //Tensor<xpu, 2> m_out_grad = out_grad[Scalar::kOut].FlatTo2D<xpu, real_t>(s);
-    //Tensor<xpu, 2> m_out_data = out_data[Scalar::kOut].FlatTo2D<xpu, real_t>(s);
-    //Tensor<xpu, 2> m_in_grad = in_grad[Scalar::kData].FlatTo2D<xpu, real_t>(s);
-    //Assign(m_in_grad, req[Scalar::kData], F<BackwardOp>(m_out_data) * m_out_grad);
   }
+
  private:
      int value_;
 };  // class ScalarOp
@@ -89,9 +78,6 @@ Operator* CreateOp(ScalarParam type);
 #if DMLC_USE_CXX11
 class ScalarProp : public OperatorProperty {
  public:
-  //std::vector<std::string> ListArguments() const override {
-  //  return{ "value" };
-  //}
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
   }
@@ -156,4 +142,4 @@ class ScalarProp : public OperatorProperty {
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_Scalar_INL_H_
+#endif  // MXNET_OPERATOR_SCALAR_INL_H_
