@@ -43,10 +43,10 @@ USE_CUDA = 0
 # add the path to CUDA libary to link and compile flag
 # if you have already add them to enviroment variable, leave it as NONE
 # USE_CUDA_PATH = /usr/local/cuda
-USE_CUDA_PATH = /usr/local/cuda
+USE_CUDA_PATH = NONE
 
 # whether use CUDNN R3 library
-USE_CUDNN = 1
+USE_CUDNN = 0
 
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
@@ -59,7 +59,7 @@ USE_OPENMP = 1
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
 USE_STATIC_MKL = NONE
-USE_BLAS = blas
+USE_BLAS = atlas
 
 # add path to intel libary, you may need it for MKL, if you did not add the path
 # to enviroment variable

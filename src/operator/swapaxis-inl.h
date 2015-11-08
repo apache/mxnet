@@ -47,62 +47,61 @@ class SwapAxisOp : public Operator {
  public:
   explicit SwapAxisOp(SwapAxisParam p) {
     CHECK_NE(p.dim1, p.dim2) << "dim1 can not be equal dim2.";
-    if (p.dim1 > p.dim2) {
-      std::swap(p.dim1, p.dim2);
+    this->param_ = p;
+  }
+
+  void Reshape2Five(Shape<5> *inter_shape, const TShape &shape, uint32_t dim1, uint32_t dim2) {
+    index_t ndim_in = shape.ndim();
+    int si;
+
+    if (dim1 > dim2) {
+      std::swap(dim1, dim2);
     }
-  	this->param_ = p;
+
+    for (si = 0; si < 5; si++) {
+      (*inter_shape)[si] = 1;
+    }
+    // dim_0
+    for (si = 0; si < dim1; si++) {
+      (*inter_shape)[0] *= shape[si];
+    }
+    // dim_1
+    (*inter_shape)[1] = shape[dim1];
+    // dim_2
+    for (si = dim1 + 1; si < dim2; si++) {
+      (*inter_shape)[2] *= shape[si];
+    }
+    // dim_3
+    (*inter_shape)[3] = shape[dim2];
+    // dim_4
+    for (si = dim2 + 1; si < ndim_in; si++) {
+      (*inter_shape)[4] *= shape[si];
+    }
   }
-  
-  void Reshape2Five(Shape<5> &inter_shape, const TShape &shape, const uint32_t &dim1, const uint32_t &dim2) {
-    int ndim_in = shape.ndim();
-    const index_t *shdata = shape.data();
-    //dim_0
-    inter_shape[0] = std::accumulate(shdata, shdata + dim1, 1, std::multiplies<int>());
-    
-    //dim_1
-    inter_shape[1] = shdata[dim1];
-    
-    //dim_2
-    inter_shape[2] = std::accumulate(shdata + dim1 + 1, shdata + dim2, 1, std::multiplies<int>());
-    
-    //dim_3
-    inter_shape[3] = shdata[dim2];
-    
-    //dim_4
-    inter_shape[4] = std::accumulate(shdata + dim2 + 1, shdata + ndim_in, 1, std::multiplies<int>());
-    
-  }
-  
-  void __swapaxis(Stream<xpu> *s, const std::vector<TBlob> &in_data, const std::vector<TBlob> &out_data) {
+
+  void __swapaxis(Stream<xpu> *s,
+                  const std::vector<TBlob> &in_data,
+                  const std::vector<TBlob> &out_data) {
     uint32_t dim1 = param_.dim1;
     uint32_t dim2 = param_.dim2;
-    
+
     TBlob data_in = in_data[SwapAxis::kData];
     TBlob data_out = out_data[SwapAxis::kData];
-    
+
     TShape shape_in = data_in.shape_;
     TShape shape_out = data_out.shape_;
-    
+
     Shape<5> inter_shape;
-    
-    Reshape2Five(inter_shape, shape_in, dim1, dim2);
-    
+
+    Reshape2Five(&inter_shape, shape_in, dim1, dim2);
+
     Tensor<xpu, 5> inter_data_in = data_in.get_with_shape<xpu, 5, real_t>(inter_shape, s);
-    
-    int dwTmp = 0;
-    
+
     Shape<5> inter_shape2 = inter_shape;
     std::swap(inter_shape2[1], inter_shape2[3]);
-    
+
     Tensor<xpu, 5> inter_data_out = data_out.get_with_shape<xpu, 5, real_t>(inter_shape2, s);
-    
-    TShape shape_tmp = shape_in;
-    dwTmp = shape_tmp[dim1];
-    shape_tmp[dim1] = shape_tmp[dim2];
-    shape_tmp[dim2] = dwTmp;
-    
-    CHECK(shape_out == shape_tmp);
-    
+
     inter_data_out = swapaxis<3, 1>(inter_data_in);
   }
 
@@ -114,7 +113,6 @@ class SwapAxisOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     __swapaxis(s, in_data, out_data);
-    
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -127,7 +125,7 @@ class SwapAxisOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     __swapaxis(s, out_grad, in_grad);
   }
-  
+
   SwapAxisParam param_;
 };
 
@@ -155,8 +153,7 @@ class SwapAxisProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     int input_num = in_shape->size();
-    if (input_num == 0)
-    {
+    if (input_num == 0) {
       std::cout << "Have no input data.\n";
       return false;
     }
@@ -201,9 +198,9 @@ class SwapAxisProp : public OperatorProperty {
 #endif  // DMLC_USE_CXX11
 
 
-}
-}
+}  // namespace op
+}  // namespace mxnet
 
-#endif
+#endif  // MXNET_OPERATOR_SWAPAXIS_INL_H_
 
 

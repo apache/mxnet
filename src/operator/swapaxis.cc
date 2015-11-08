@@ -26,7 +26,5 @@ MXNET_REGISTER_OP_PROPERTY(SwapAxis, SwapAxisProp)
 .add_argument("data", "Symbol", "Input data to the SwapAxisOp.")
 .add_arguments(SwapAxisParam::__FIELDS__())
 .describe("Apply swapaxis to input.");
-
-
-}
-}
+}  // namespace op
+}  // namespace mxnet
