@@ -38,7 +38,7 @@ For more details, see documentation below. Please also checkout the `examples
    api/callback
    api/io
    api/ndarray
-   api/symbol
+   api/symbolic-node
    api/executor
 
 Indices and tables

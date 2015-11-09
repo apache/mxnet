@@ -26,7 +26,7 @@ a network described using the symbolic API.
 
 
 
-.. function:: FeedForward(arch :: Symbol, ctx)
+.. function:: FeedForward(arch :: SymbolicNode, ctx)
 
    :param arch: the architecture of the network constructed using the symbolic API.
    :param ctx: the devices on which this model should do computation. It could be a single :class:`Context`

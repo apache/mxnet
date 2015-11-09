@@ -279,7 +279,7 @@ end
 libmxnet APIs
 -------------
 
-**autogen:EMBED:SymbolicNode:EMBED:autogen**
+**autogen:EMBED:symbolic-node:EMBED:autogen**
 =#
 ################################################################################
 # Atomic SymbolicNode functions dynamically imported from libmxnet
