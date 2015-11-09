@@ -3,10 +3,10 @@
 In this documents we give a step-by-step tutorial on how to setup Amazon AWS for
 MXNet. In particular, we will address:
 
-- [Use Amazon S3 to host data]()
-- [Setup EC2 GPU instance with all dependencies installed]()
-- [Build and Run MXNet on a single machine with multiple GPU cards]()
-- [Setup an EC2 GPU cluster for distributed training]()
+- [Use Amazon S3 to host data](use-amazon-s3-to-host-data)
+- [Setup EC2 GPU instance with all dependencies installed](setup-an-ec2-gpu-instance)
+- [Build and Run MXNet on a single machine](build-and-run-mxnet-on-a-gpu-instance)
+- [Setup an EC2 GPU cluster for distributed training](setup-an-ec2-gpu-cluster)
 
 ## Use Amazon S3 to host data
 
@@ -28,9 +28,8 @@ There are several ways to upload local data to S3. One simple way is using
 [s3cmd](http://s3tools.org/s3cmd). For example:
 
 ```bash
-wget http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip
-unzip cifar10.zip
-s3cmd put cifar/* s3://dmlc/cifar10/
+wget http://webdocs.cs.ualberta.ca/~bx3/data/mnist.zip
+unzip mnist.zip && s3cmd put t*-ubyte s3://dmlc/mnist/
 ```
 
 ## Setup an EC2 GPU Instance
@@ -52,7 +51,7 @@ The reset can be installed by the package manager. For example, on Ubuntu:
 
 ```
 sudo apt-get update
-sudo apt-get install -y build-essential git libcurl4-openssl-dev libatlas-base-dev libopencv-dev
+sudo apt-get install -y build-essential git libcurl4-openssl-dev libatlas-base-dev libopencv-dev python-numpy
 ```
 
 We provide a public Amazon Machine Images, [ami-12fd8178](https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#LaunchInstanceWizard:ami=ami-12fd8178), with the above packages installed.
@@ -75,46 +74,74 @@ echo "USE_S3=1" >>config.mk
 make -j8
 ```
 
-Test if every goes well:
+Test if every goes well, we train a convolution neural network on MNIST using GPU:
 
 ```bash
-TODO
+python tests/python/gpu/test_conv.py
 ```
 
-Test S3
-```bash
-TODO
-```
-
-Note: if get error xxx, use
+If the MNISt data is placed on `s3://dmlc/mnist`, we can let the program read
+the S3 data directly:
 
 ```bash
-sudo ln /dev/null /dev/raw1394
+sed -i.bak "s!data_dir = 'data'!data_dir = 's3://dmlc/mnist'!" tests/python/gpu/test_conv.py
 ```
 
-
+Note: We can use `sudo ln /dev/null /dev/raw1394` to fix the opencv error `libdc1394 error: Failed to initialize libdc1394`.
 
 ## Setup an EC2 GPU Cluster
 
+A cluster consists of multiple machines. We can use the machine with MXNet
+installed as the root machine for submitting jobs, and then launch several
+slaves machine to run the jobs. For example, launch multiple instances using a
+AMI, e.g.
+[ami-12fd8178](https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#LaunchInstanceWizard:ami=ami-12fd8178),
+with dependencies installed. There are two suggestions:
 
-Configure Security Group
+1. Make all slaves' ports are accessible (same for the root) by setting **type: All TCP**,
+   **Source: Anywhere** in **Configure Security Group**
 
-type: All TCP, Source Anywhere
+2. Use the same `pem` as the root machine to access all slaves machines. And
+   then cpy the `pem` file into root machine's `~/.ssh/id_rsa`, it all slaves
+   machines are ssh-able from the root.
 
+Now we run the previous CNN on multiple machines. Assume we are on a working
+directory of the root machine, such as `~/train`, and MXNet is built as `~/mxnet`.
 
-cp ~/mxnet/example/distributed-training/*cifar* .
+1. First pack the mxnet python library into this working directory for easy
+  synchronization:
 
+  ```bash
+  ~/mxnet/tools/pack.sh python .
+  ```
 
+  And then copy the training program:
+
+  ```bash
+  cp ~/mxnet/example/distributed-training/*mnist* .
+  ```
+
+2. Prepare a host file with all slaves's private IPs. An examples is
+
+  ```bash
+  cat hosts
+  172.30.0.172
+  172.30.0.171
+  ```
+
+3. Assume there are 10 slaves, then train the CNN using 10 workers and 10 servers:
+
+  ```bash
+  ~/mxnet/tracker/dmlc_ssh.sh -n 10 -s 10 -H hosts python train_mnist.py
+  ```
+
+Note: Sometimes the jobs lingers at the slave machines even we pressed `Ctrl-c`
+at the root node. We can kill them by
+
+```bash
 cat hosts | xargs -I{} ssh -o StrictHostKeyChecking=no {} 'uname -a; pgrep python | xargs kill -9'
+```
 
-single machine
-
-INFO:root:Iter[0] Batch [10]	Speed: 101.93 samples/sec
-INFO:root:Iter[0] Batch [20]	Speed: 83.47 samples/sec
-INFO:root:Iter[0] Batch [30]	Speed: 83.53 samples/sec
-INFO:root:Iter[0] Batch [40]	Speed: 83.63 samples/sec
-INFO:root:Iter[0] Batch [50]	Speed: 83.86 samples/sec
-INFO:root:Iter[0] Batch [60]	Speed: 83.39 samples/sec
-INFO:root:Iter[0] Batch [70]	Speed: 83.50 samples/sec
-INFO:root:Iter[0] Batch [80]	Speed: 83.43 samples/sec
-INFO:root:Iter[0] Batch [90]	Speed: 83.46 samples/sec
+Note: The above example is quite fast to train and therefore not a good
+benchmark for distributed training. We may consider other examples such as
+[imagenet using inception network](example/distributed-training/train_imagenet.py).

@@ -4,6 +4,11 @@ import mxnet as mx
 
 def data(data_dir, batch_size, num_parts=1, part_index=0):
     """return cifar10 iterator"""
+    if data_dir == "data/cifar":
+        sys.path.insert(0, "../../tests/python/common")
+        import get_data
+        get_data.GetCifar10()
+
     input_shape = (3,28,28)
     train = mx.io.ImageRecordIter(
         path_imgrec = data_dir + "/train.rec",

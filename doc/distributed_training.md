@@ -5,10 +5,25 @@ training programs in MXNet and how to run it on cluster. We will use the MXNet p
 binding for the former, and an AWS GPU cluster for the later.
 
 
-## Contents
+## Background
 
+Finally we brief discuss how `kvstore` is implemented. It is based on the
+[parameter server](https://github.com/dmlc/ps-lite) architecture, which shows below:
 
-## How to Write a Distributed Program
+<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/multi-node/ps_arch.png width=400/>
+
+- Each worker first reads a data batch, next pull the weights from the
+  servers, and then compute the gradients and push them to the servers. Workers
+  serveral technologies,  such as pre-fetching, multi-threads, and filers, to
+  reduce the I/O overhead.
+
+- A server maintains a part of the model, and updates the model using the
+  received gradients. If using `dist_sync`, a server first aggregates the
+  gradients from all workers and then performances updating. While if using
+  `dist_async`, the server updates the weight immediately after gradients from
+  any one worker are received.
+
+## How to Write a Distributed Program on MXNet
 
 Writing a distributed training program in MXNet is straightforward. It provides
 a key-value store named `kvstore` for synchronizing data across different
@@ -97,20 +112,7 @@ between workers. But `dist_sync` guarantees the convergence, namely it is equal
 to a single machine version with proper batch size. The convergence speed of
 `dist_async`, on the other hand, is still an interesting research topic.
 
-### Implementation
+## Launch Jobs on a Cluster
 
-Finally we brief discuss how `kvstore` is implemented. It is based on the
-[parameter server](https://github.com/dmlc/ps-lite) architecture, which shows below:
-
-<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/multi-node/ps_arch.png width=400/>
-
-- Each worker first reads a data batch, next pull the weights from the
-  servers, and then compute the gradients and push them to the servers. Workers
-  serveral technologies,  such as pre-fetching, multi-threads, and filers, to
-  reduce the I/O overhead.
-
-- A server maintains a part of the model, and updates the model using the
-  received gradients. If using `dist_sync`, a server first aggregates the
-  gradients from all workers and then performances updating. While if using
-  `dist_async`, the server updates the weight immediately after gradients from
-  any one worker are received.
+MXNet provides several ways to launch jobs on a cluster with multiple machines,
+including
