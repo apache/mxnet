@@ -52,8 +52,7 @@ function test_arrays_impl(data::Vector, label::Vector, provider::mx.ArrayDataPro
   info("IO::Array::#data=$(length(data)),#label=$(length(label)),batch_size=$batch_size")
   for (idx, batch) in zip(idx_all, provider)
     data_batch = [x[[Colon() for i=1:ndims(x)-1]..., idx:min(idx+batch_size-1,sample_count)] for x in data]
-    data_get   = [mx.empty(size(x)[1:end-1]..., batch_size) for x in data]
-    mx.load_data!(provider, batch, [[(1:batch_size, x)] for x in data_get])
+    data_get   = mx.get_data(provider, batch)
 
     for (d_real, d_get) in zip(data_batch, data_get)
       @test reldiff(d_real, copy(d_get)[[1:n for n in size(d_real)]...]) < 1e-6
