@@ -1,36 +1,35 @@
 # Distributed Training
 
 In this tutorial we explain how to develop distributed
-training programs in MXNet and how to run it on cluster. We will use the MXNet python
-binding for the former, and an AWS GPU cluster for the later.
+training programs in MXNet and how to run them on multiple machines.
 
 
 ## Background
 
-Finally we brief discuss how `kvstore` is implemented. It is based on the
-[parameter server](https://github.com/dmlc/ps-lite) architecture, which shows below:
+In distributed training, multiple machines work together to finish one training
+job. MXNet uses the [parameter server](https://github.com/dmlc/ps-lite), which
+is a distributed framework optimized for machine learning jobs. In this
+framework, there are multiple worker nodes and server nodes. The architecture is shown below:
 
 <img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/multi-node/ps_arch.png width=400/>
 
-- Each worker first reads a data batch, next pull the weights from the
-  servers, and then compute the gradients and push them to the servers. Workers
-  serveral technologies,  such as pre-fetching, multi-threads, and filers, to
+- In each iteration, a worker first reads a data batch, next **pull** the weights from the
+  servers, and then compute the gradients and **push** them to the servers. Workers
+  use several technologies, such as pre-fetching, multi-threads, and data filters, to
   reduce the I/O overhead.
 
-- A server maintains a part of the model, and updates the model using the
-  received gradients. If using `dist_sync`, a server first aggregates the
-  gradients from all workers and then performances updating. While if using
-  `dist_async`, the server updates the weight immediately after gradients from
-  any one worker are received.
+- A server maintains a part of the model, and **updates** the model using the
+  received gradients. It supports multiple data consistency models, with will be
+  explained later.
 
 ## How to Write a Distributed Program on MXNet
 
 Writing a distributed training program in MXNet is straightforward. It provides
-a key-value store named `kvstore` for synchronizing data across different
-devices and machines.
+a key-value store named `kvstore` to hide the complexity of the parameter
+server. It provides two functions `push` and `pull`, and allows to set an
+`updater` for the servers.
 
-Assume we already have a single machine program, named `train.py`, which reads data from an image
-record iterator, and train a model using a symbolic network:
+Things are even simpler if our program has the following structure:
 
 ```python
 data  = mx.io.ImageRecordIter(...)
@@ -38,8 +37,9 @@ net   = mx.symbol.SoftmaxOutput(...)
 model = mx.model.FeedForward.create(symbol = net, X = data, ...)
 ```
 
-Extending it into a distributed training program is quite easy. We first create
-a `kvstore` and then pass it into the function `create`. The following program
+It reads data from an image record iterator, and train a model using a symbolic
+network.  To extend it into a distributed training program, we first create a
+`kvstore` and then pass it into the function `create`. The following program
 modifies the above one from stochastic gradient descent (SGD) into distributed
 asynchronous SGD:
 
@@ -112,7 +112,23 @@ between workers. But `dist_sync` guarantees the convergence, namely it is equal
 to a single machine version with proper batch size. The convergence speed of
 `dist_async`, on the other hand, is still an interesting research topic.
 
+
+If using `dist_sync`, a server first aggregates the
+gradients from all workers and then performances updating. While if using
+`dist_async`, the server updates the weight immediately after gradients from
+any one worker are received.
+
 ## Launch Jobs on a Cluster
 
 MXNet provides several ways to launch jobs on a cluster with multiple machines,
-including
+including by resource managers such as `Yarn` or simply via `ssh`. [This tutorial](aws.md)
+gives a step-by-step example on how to setup and run jobs on a GPU cluster at
+Amazon AWS.
+
+## More Readings
+
+- [Distributed training examples with results](https://github.com/dmlc/mxnet/tree/master/example/distributed-training)
+
+- Research papers for the parameter server: from the algorithm aspect
+  [NIPS'14](http://www.cs.cmu.edu/~muli/file/parameter_server_nips14.pdf), from
+  the system aspect [OSDI'14](http://www.cs.cmu.edu/~muli/file/parameter_server_osdi14.pdf)

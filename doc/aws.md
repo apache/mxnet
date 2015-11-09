@@ -142,6 +142,6 @@ at the root node. We can kill them by
 cat hosts | xargs -I{} ssh -o StrictHostKeyChecking=no {} 'uname -a; pgrep python | xargs kill -9'
 ```
 
-Note: The above example is quite fast to train and therefore not a good
-benchmark for distributed training. We may consider other examples such as
+Note: The above example is quite simple to train and therefore is not a good
+benchmark for the distributed training. We may consider other examples such as
 [imagenet using inception network](example/distributed-training/train_imagenet.py).
