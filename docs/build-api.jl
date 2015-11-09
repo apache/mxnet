@@ -92,3 +92,5 @@ extract_doc("optimizer.rst", "optimizer.jl")
 
 extract_doc("io.rst", "io.jl")
 embed_mxnet_api("io.rst", "io", mx._import_io_iterators)
+
+extract_doc("nn-factory.rst", "nn-factory.jl")

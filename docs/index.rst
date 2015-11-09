@@ -39,6 +39,7 @@ For more details, see documentation below. Please also checkout the `examples
    api/io
    api/ndarray
    api/symbolic-node
+   api/nn-factory
    api/executor
 
 Indices and tables
