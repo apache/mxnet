@@ -12,6 +12,7 @@ deep learning programs together to maximize the efficiency and your productivity
 
 What's New
 ----------
+* [Distributed Training](https://mxnet-bing.readthedocs.org/en/latest/distributed_training.html)
 * [Minimum MXNet Library in One File](amalgamation)
 * [Training Deep Net on 14 Million Images on A Single Machine](https://mxnet-bing.readthedocs.org/en/latest/tutorial/imagenet_full.html)
 * [MXNet.jl Julia binding initial release](https://github.com/dmlc/MXNet.jl)
