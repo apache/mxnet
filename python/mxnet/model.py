@@ -271,6 +271,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         # Iterate over training data.
         train_data.reset()
         while True:
+            do_reset = True
             for data_batch in train_data:
                 _load_data(data_batch, data_arrays)
                 _load_label(data_batch, label_arrays)
@@ -322,15 +323,12 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 # evaluate at end, so out_cpu_array can lazy copy
                 eval_metric.update(data_batch.label, cpu_output_arrays)
 
-                # this epoch is done
+                # this epoch is done possibly earlier
                 if epoch_size is not None and nbatch >= epoch_size:
+                    do_reset = False
                     break
 
-            # reset the training data if reach the end of train_data, we only
-            # need to deal with the following two situations:
-            # 1. epoch_size is None:
-            # 2. epoch_size is not None but nbatch != epoch_size:
-            if epoch_size is None or nbatch < epoch_size:
+            if do_reset == True:
                 train_data.reset()
 
             # this epoch is done
@@ -374,9 +372,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
             else:
                 epoch_end_callback(epoch, symbol, arg_params, aux_params)
     # end of all epochs
-    train_data.reset()
-    if eval_data:
-        eval_data.reset()
     return
 
 
