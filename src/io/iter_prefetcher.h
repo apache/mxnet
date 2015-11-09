@@ -83,7 +83,7 @@ class PrefetcherIter : public IIterator<DataBatch> {
 		std::copy(batch.inst_index, 
                   batch.inst_index + batch.batch_size, 
                   (*dptr)->index.begin());
-        return true;
+       return true;
       },
       [this]() { loader_->BeforeFirst(); });
   }

@@ -290,8 +290,6 @@ class MXDataIter(DataIter):
         next_res = ctypes.c_int(0)
         check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
         if next_res.value:
-            print 'label', self.getlabel().asnumpy()
-            print 'index', self.getindex()
             return DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad(), index=self.getindex())
         else:
             raise StopIteration

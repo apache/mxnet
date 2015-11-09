@@ -59,8 +59,8 @@ ifeq ($(USE_OPENMP), 1)
 endif
 
 ifeq ($(USE_CUDNN), 1)
-	CFLAGS += -DMSHADOW_USE_CUDNN=1
-	LDFLAGS += -lcudnn
+	CFLAGS += -DMSHADOW_USE_CUDNN=1 -I$(USE_CUDNN_PATH)
+	LDFLAGS += -lcudnn -L$(USE_CUDNN_PATH)
 endif
 
 ifeq ($(USE_THREADED_ENGINE), 1)
@@ -157,15 +157,6 @@ rcppexport:
 
 roxygen:
 	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
-
-rpkg:	roxygen
-	mkdir -p R-package/inst
-	mkdir -p R-package/inst/libs
-	cp -rf lib/libmxnet.so R-package/inst/libs
-	mkdir -p R-package/inst/include
-	cp -rf include/* R-package/inst/include
-	cp -rf dmlc-core/include/* R-package/inst/include/
-	R CMD build R-package
 
 clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
