@@ -9,7 +9,8 @@ common neural networks.
 #=doc
 .. function:: MLP(input, spec)
 
-   Construct a multi-layer perceptron.
+   Construct a multi-layer perceptron. A MLP is a multi-layer neural network with
+   fully connected layers.
 
    :param SymbolicNode input: the input to the mlp.
    :param spec: the mlp specification, a list of hidden dimensions. For example,
@@ -20,9 +21,12 @@ common neural networks.
    :param Base.Symbol hidden_activation: keyword argument, default ``:relu``, indicating
           the default activation for hidden layers. The specification here could be overwritten
           by layer-wise specification in the ``spec`` argument. Also activation is not
-          applied to the last, i.e. the prediction layer.
+          applied to the last, i.e. the prediction layer. See :func:`Activation` for a
+          list of supported activation types.
    :param prefix: keyword argument, default ``gensym()``, used as the prefix to
           name the constructed layers.
+
+   :return: the constructed MLP.
 =#
 function MLP(input, spec; hidden_activation::Base.Symbol=:relu, prefix=gensym())
   spec = convert(Vector{Union{Int,Tuple}}, spec)

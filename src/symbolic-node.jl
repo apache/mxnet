@@ -7,12 +7,6 @@ Symbolic API
 .. class:: SymbolicNode
 
    SymbolicNode is the basic building block of the symbolic graph in MXNet.jl.
-
-   .. note::
-
-      Throughout this documentation, ``SymbolicNode`` always refer to this :class:`SymbolicNode` type.
-      When we refer to the Julia's build-in SymbolicNode type (e.g. ``typeof(:foo)``), we always
-      say ``Base.Symbol``.
 =#
 type SymbolicNode
   handle :: MX_SymbolHandle
