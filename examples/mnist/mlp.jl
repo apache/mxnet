@@ -14,12 +14,17 @@ using MXNet
 # mlp  = mx.SoftmaxOutput(data = fc3, name=:softmax)
 
 #-- Option 2: using the mx.chain macro
-mlp = @mx.chain mx.Variable(:data)             =>
-  mx.FullyConnected(name=:fc1, num_hidden=128) =>
-  mx.Activation(name=:relu1, act_type=:relu)   =>
-  mx.FullyConnected(name=:fc2, num_hidden=64)  =>
-  mx.Activation(name=:relu2, act_type=:relu)   =>
-  mx.FullyConnected(name=:fc3, num_hidden=10)  =>
+# mlp = @mx.chain mx.Variable(:data)             =>
+#   mx.FullyConnected(name=:fc1, num_hidden=128) =>
+#   mx.Activation(name=:relu1, act_type=:relu)   =>
+#   mx.FullyConnected(name=:fc2, num_hidden=64)  =>
+#   mx.Activation(name=:relu2, act_type=:relu)   =>
+#   mx.FullyConnected(name=:fc3, num_hidden=10)  =>
+#   mx.SoftmaxOutput(name=:softmax)
+
+#-- Option 3: using nn-factory
+mlp = @mx.chain mx.Variable(:data) =>
+  mx.MLP([128, 64, 10])            =>
   mx.SoftmaxOutput(name=:softmax)
 
 # data provider

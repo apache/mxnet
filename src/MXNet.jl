@@ -30,6 +30,8 @@ include("model.jl")
 
 include("util.jl")
 
+include("nn-factory.jl")
+
 end # mx
 
 end # module MXNet
