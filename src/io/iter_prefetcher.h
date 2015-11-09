@@ -68,7 +68,7 @@ class PrefetcherIter : public IIterator<DataBatch> {
           *dptr = new DataBatch();
           (*dptr)->num_batch_padd = batch.num_batch_padd;
           (*dptr)->data.resize(batch.data.size());
-          (*dptr)->index.resize(batch.batch_size);
+          (*dptr)->index.resize(batch.batch_size());
           for (size_t i = 0; i < batch.data.size(); ++i) {
             (*dptr)->data.at(i) = NDArray(batch.data[i].shape_, Context::CPU());
           }
