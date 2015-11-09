@@ -80,9 +80,9 @@ class PrefetcherIter : public IIterator<DataBatch> {
                         batch.data[i].FlatTo2D<cpu, real_t>());
           (*dptr)->num_batch_padd = batch.num_batch_padd;
         }
-        for (size_t i = 0; i < batch.batch_size; ++i) {
-          (*dptr)->index[i] = batch.inst_index[i];
-        }
+		std::copy(batch.inst_index, 
+                  batch.inst_index + batch.batch_size, 
+                  (*dptr)->index.begin());
         return true;
       },
       [this]() { loader_->BeforeFirst(); });
