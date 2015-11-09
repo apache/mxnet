@@ -6,13 +6,13 @@ Executor
 #=doc
 .. class:: Executor
 
-   An executor is a realization of a symbolic architecture defined by a :class:`SymbolicNode`.
+   An executor is a realization of a symbolic architecture defined by a :class:`Node`.
    The actual forward and backward computation specified by the network architecture can
    be carried out with an executor.
 =#
 type Executor
   handle :: MX_ExecutorHandle
-  symbol :: SymbolicNode
+  symbol :: Node
   arg_arrays  :: Vector{NDArray}
   grad_arrays :: Vector{Union{Void,NDArray}}
   aux_arrays  :: Vector{NDArray}
@@ -20,7 +20,7 @@ type Executor
   arg_dict    :: Dict{Base.Symbol, NDArray}
   aux_dict    :: Dict{Base.Symbol, NDArray}
 end
-function Executor(hdr :: MX_ExecutorHandle, symbol :: SymbolicNode,
+function Executor(hdr :: MX_ExecutorHandle, symbol :: Node,
                   arg_arrays :: Vector{NDArray}, grad_arrays :: Vector{Union{Void,NDArray}},
                   aux_arrays :: Vector{NDArray})
   # get output arrays
@@ -73,9 +73,9 @@ end
 #=doc
 .. function:: bind(sym, ctx, args; args_grad=Dict(), aux_states=Dict(), grad_req=GRAD_WRITE)
 
-   Create an :class:`Executor` by binding a :class:`SymbolicNode` to concrete :class:`NDArray`.
+   Create an :class:`Executor` by binding a :class:`Node` to concrete :class:`NDArray`.
 
-   :param SymbolicNode sym: the network architecture describing the computation graph.
+   :param Node sym: the network architecture describing the computation graph.
    :param Context ctx: the context on which the computation should run.
    :param args: either a list of :class:`NDArray` or a dictionary of name-array pairs. Concrete
           arrays for all the inputs in the network architecture. The inputs typically include
@@ -86,7 +86,7 @@ end
    :param grad_req:
 =#
 @enum GRAD_REQ GRAD_NOP=0 GRAD_WRITE=1 GRAD_ADD=3
-function bind(self :: SymbolicNode, ctx :: Context, args :: Union{Vector{NDArray},Dict{Base.Symbol,NDArray}};
+function bind(self :: Node, ctx :: Context, args :: Union{Vector{NDArray},Dict{Base.Symbol,NDArray}};
               args_grad  :: Union{Vector{NDArray},Dict{Base.Symbol,NDArray}} = Dict{Base.Symbol,NDArray}(),
               aux_states :: Union{Vector{NDArray},Dict{Base.Symbol,NDArray}} = Dict{Base.Symbol,NDArray}(),
               grad_req   :: Union{GRAD_REQ,Vector{GRAD_REQ},Dict{Base.Symbol,GRAD_REQ}} = GRAD_WRITE)
@@ -116,7 +116,7 @@ function bind(self :: SymbolicNode, ctx :: Context, args :: Union{Vector{NDArray
   executor = Executor(MX_ExecutorHandle(ref_hdr[]), self,
                       args, args_grad, aux_states)
 end
-function bind(self :: SymbolicNode; kwargs...)
+function bind(self :: Node; kwargs...)
   kwargs = Dict(kwargs)
   @assert(haskey(kwargs, :args), "Must specify args")
   args = pop!(kwargs, :args)
@@ -128,7 +128,7 @@ function bind(self :: SymbolicNode; kwargs...)
   bind(self, context, args; kwargs...)
 end
 
-function simple_bind(self :: SymbolicNode, ctx :: Context; grad_req :: GRAD_REQ=GRAD_WRITE, kwargs...)
+function simple_bind(self :: Node, ctx :: Context; grad_req :: GRAD_REQ=GRAD_WRITE, kwargs...)
   arg_shapes, out_shapes, aux_shapes = infer_shape(self; kwargs...)
   @assert(!isa(arg_shapes, Void), "Information not enough to perform complete shape inference")
 

@@ -35,7 +35,7 @@ and split it into mini-batches so that the model can consume the data in a unifo
    training stage, both *data* and *label* will be feeded into the model, while during
    prediction stage, only *data* is loaded. Otherwise, they could be anything, with any names, and
    of any shapes. The provided data and label names here should match the input names in a target
-   :class:`SymbolicNode`.
+   :class:`Node`.
 
    A data provider should also implement the Julia iteration interface, in order to allow iterating
    through the data set. The provider will be called in the following way:
