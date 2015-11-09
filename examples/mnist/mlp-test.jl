@@ -38,9 +38,9 @@ function mnist_fit_and_predict(optimizer, initializer, n_epoch)
   for i_epoch = 0:n_epoch
     @test isfile(mx.format("{1}-{2:04d}.params", cp_prefix, i_epoch))
   end
-  mlp_load = mx.load("$cp_prefix-symbol.json", mx.Symbol)
+  mlp_load = mx.load("$cp_prefix-symbol.json", mx.SymbolicNode)
   @test mx.to_json(mlp_load) == mx.to_json(mlp)
-  mlp_load = mx.from_json(readall("$cp_prefix-symbol.json"), mx.Symbol)
+  mlp_load = mx.from_json(readall("$cp_prefix-symbol.json"), mx.SymbolicNode)
   @test mx.to_json(mlp_load) == mx.to_json(mlp)
 
   #--------------------------------------------------------------------------------
