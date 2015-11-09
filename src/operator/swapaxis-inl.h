@@ -25,8 +25,6 @@ enum SwapAxisOpInputs {kData};
 enum SwapAxisOpOutputs {kOut};
 };
 
-using namespace mshadow;
-using namespace mshadow::expr;
 
 struct SwapAxisParam : public dmlc::Parameter<SwapAxisParam> {
   // use int for enumeration
@@ -50,7 +48,9 @@ class SwapAxisOp : public Operator {
     this->param_ = p;
   }
 
-  void Reshape2Five(Shape<5> *inter_shape, const TShape &shape, uint32_t dim1, uint32_t dim2) {
+  void Reshape2Five(mshadow::Shape<5> *inter_shape, const mshadow::TShape &shape, uint32_t dim1, uint32_t dim2) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
     index_t ndim_in = shape.ndim();
     int si;
 
@@ -79,9 +79,11 @@ class SwapAxisOp : public Operator {
     }
   }
 
-  void SwapAxis(Stream<xpu> *s,
+  void SwapAxis(mshadow::Stream<xpu> *s,
                   const std::vector<TBlob> &in_data,
                   const std::vector<TBlob> &out_data) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
     uint32_t dim1 = param_.dim1;
     uint32_t dim2 = param_.dim2;
 
@@ -110,6 +112,7 @@ class SwapAxisOp : public Operator {
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
+    using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     SwapAxis(s, in_data, out_data);
@@ -122,7 +125,9 @@ class SwapAxisOp : public Operator {
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &in_grad,
                        const std::vector<TBlob> &aux_args) {
+    using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
+
     SwapAxis(s, out_grad, in_grad);
   }
 
