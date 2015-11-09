@@ -20,7 +20,7 @@
 namespace mxnet {
 namespace op {
 
-struct SwapAxis{
+namespace SwapAxis{
 enum SwapAxisOpInputs {kData};
 enum SwapAxisOpOutputs {kOut};
 };
