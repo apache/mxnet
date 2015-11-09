@@ -1,4 +1,4 @@
-module TestSymbol
+module TestNode
 using MXNet
 using Base.Test
 
@@ -8,7 +8,7 @@ using ..Main: mlp2
 # Test Implementations
 ################################################################################
 function test_basic()
-  info("Symbol::basic")
+  info("Node::basic")
 
   model = mlp2()
   @test mx.list_arguments(model) == [:data,:fc1_weight,:fc1_bias,:fc2_weight,:fc2_bias]
@@ -17,7 +17,7 @@ function test_basic()
 end
 
 function test_internal()
-  info("Symbol::internal")
+  info("Node::internal")
 
   data  = mx.Variable(:data)
   oldfc = mx.FullyConnected(data=data, name=:fc1, num_hidden=10)
@@ -31,7 +31,7 @@ function test_internal()
 end
 
 function test_compose()
-  info("Symbol::compose")
+  info("Node::compose")
 
   data = mx.Variable(:data)
   net1 = mx.FullyConnected(data=data, name=:fc1, num_hidden=10)
@@ -47,7 +47,7 @@ function test_compose()
 end
 
 function test_infer_shape()
-  info("Symbol::infer_shape::mlp2")
+  info("Node::infer_shape::mlp2")
 
   model = mlp2()
   data_shape = (100, 100)
@@ -61,7 +61,7 @@ function test_infer_shape()
 end
 
 function test_infer_shape_error()
-  info("Symbol::infer_shape::throws")
+  info("Node::infer_shape::throws")
 
   model = mlp2()
   weight_shape = (100, 1)
@@ -70,12 +70,12 @@ function test_infer_shape_error()
 end
 
 function test_saveload()
-  info("Symbol::saveload::mlp2")
+  info("Node::saveload::mlp2")
 
   model = mlp2()
   fname = tempname()
   mx.save(fname, model)
-  model2 = mx.load(fname, mx.Symbol)
+  model2 = mx.load(fname, mx.Node)
   @test mx.to_json(model) == mx.to_json(model2)
 
   rm(fname)

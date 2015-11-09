@@ -4,50 +4,50 @@ Symbolic API
 =#
 
 #=doc
-.. class:: Symbol
+.. class:: Node
 
-   Symbol is the basic building block of the symbolic graph in MXNet.jl.
+   Node is the basic building block of the symbolic graph in MXNet.jl.
 
    .. note::
 
-      Throughout this documentation, ``Symbol`` always refer to this :class:`Symbol` type.
-      When we refer to the Julia's build-in symbol type (e.g. ``typeof(:foo)``), we always
+      Throughout this documentation, ``Node`` always refer to this :class:`Node` type.
+      When we refer to the Julia's build-in Node type (e.g. ``typeof(:foo)``), we always
       say ``Base.Symbol``.
 =#
-type Symbol
+type Node
   handle :: MX_SymbolHandle
 end
-function Base.unsafe_convert(::Type{MX_handle}, obj::Symbol)
+function Base.unsafe_convert(::Type{MX_handle}, obj::Node)
   Base.unsafe_convert(MX_handle, obj.handle)
 end
-Base.convert(t::Type{MX_handle}, obj::Symbol) = Base.unsafe_convert(t, obj)
-Base.cconvert(t::Type{MX_handle}, obj::Symbol) = Base.unsafe_convert(t, obj)
+Base.convert(t::Type{MX_handle}, obj::Node) = Base.unsafe_convert(t, obj)
+Base.cconvert(t::Type{MX_handle}, obj::Node) = Base.unsafe_convert(t, obj)
 
 #=doc
-.. function:: deepcopy(self :: Symbol)
+.. function:: deepcopy(self :: Node)
 
-   Make a deep copy of a symbol.
+   Make a deep copy of a Node.
 =#
-function Base.deepcopy(self :: Symbol)
+function Base.deepcopy(self :: Node)
   ref_hdr = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCopy, (MX_handle, Ref{MX_handle}), self, ref_hdr)
-  return Symbol(MX_SymbolHandle(ref_hdr[]))
+  return Node(MX_SymbolHandle(ref_hdr[]))
 end
 
 #=doc
-.. function:: copy(self :: Symbol)
+.. function:: copy(self :: Node)
 
-   Make a copy of a symbol. The same as making a deep copy.
+   Make a copy of a Node. The same as making a deep copy.
 =#
-function Base.copy(self :: Symbol)
+function Base.copy(self :: Node)
   Base.deepcopy(self)
 end
 
-function Base.call(self :: Symbol, args :: Symbol...)
+function Base.call(self :: Node, args :: Node...)
   s = deepcopy(self)
   _compose!(s, args...)
 end
-function Base.call(self :: Symbol; kwargs...)
+function Base.call(self :: Node; kwargs...)
   s = deepcopy(self)
   _compose!(s; kwargs...)
 end
@@ -64,10 +64,10 @@ macro _list_symbol_info(self, func_name)
     return names
   end
 end
-function list_arguments(self :: Symbol)
+function list_arguments(self :: Node)
   @_list_symbol_info(self, :MXSymbolListArguments)
 end
-function list_outputs(self :: Symbol)
+function list_outputs(self :: Node)
   @_list_symbol_info(self, :MXSymbolListOutputs)
 end
 """List all auxiliary states in the symbool.
@@ -77,31 +77,31 @@ and do not have gradient. But still be useful for the specific operations.
 A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
 Most operators do not have Auxiliary states.
 """
-function list_auxiliary_states(self :: Symbol)
+function list_auxiliary_states(self :: Node)
   @_list_symbol_info(self, :MXSymbolListAuxiliaryStates)
 end
 
-"Get a new grouped symbol whose output contains all the internal outputs of this symbol."
-function get_internals(self :: Symbol)
+"Get a new grouped Node whose output contains all the internal outputs of this Node."
+function get_internals(self :: Node)
   ref_hdr = Ref{MX_handle}(0)
   @mxcall(:MXSymbolGetInternals, (MX_handle, Ref{MX_handle}), self, ref_hdr)
-  return Symbol(MX_SymbolHandle(ref_hdr[]))
+  return Node(MX_SymbolHandle(ref_hdr[]))
 end
 
 "Create a symbolic variable with the given name"
 function Variable(name :: Union{Base.Symbol, AbstractString})
   hdr_ref = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCreateVariable, (char_p, Ref{MX_handle}), name, hdr_ref)
-  Symbol(MX_SymbolHandle(hdr_ref[]))
+  Node(MX_SymbolHandle(hdr_ref[]))
 end
 
-"Create a symbol that groups symbols together"
-function Group(symbols :: Symbol...)
+"Create a Node that groups symbols together"
+function Group(symbols :: Node...)
   handles = MX_handle[symbols...]
   ref_hdr = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCreateGroup, (MX_uint, Ptr{MX_handle}, Ref{MX_handle}),
           length(handles), handles, ref_hdr)
-  Symbol(MX_SymbolHandle(ref_hdr[]))
+  Node(MX_SymbolHandle(ref_hdr[]))
 end
 
 macro _infer_shape(self, keys, indptr, sdata)
@@ -147,7 +147,7 @@ macro _infer_shape(self, keys, indptr, sdata)
     end
   end
 end
-function infer_shape(self :: Symbol; kwargs...)
+function infer_shape(self :: Node; kwargs...)
   sdata  = MX_uint[]
   indptr = MX_uint[0]
   for (k,v) in kwargs
@@ -157,7 +157,7 @@ function infer_shape(self :: Symbol; kwargs...)
   keys = AbstractString[string(x[1]) for x in kwargs]
   @_infer_shape(self, keys, indptr, sdata)
 end
-function infer_shape(self :: Symbol, args :: Union{Tuple, Void}...)
+function infer_shape(self :: Node, args :: Union{Tuple, Void}...)
   sdata  = MX_uint[]
   indptr = MX_uint[0]
   for arg in args
@@ -169,42 +169,42 @@ function infer_shape(self :: Symbol, args :: Union{Tuple, Void}...)
   @_infer_shape(self, keys, indptr, sdata)
 end
 
-function Base.getindex(self :: Symbol, idx :: Union{Base.Symbol, AbstractString})
+function Base.getindex(self :: Node, idx :: Union{Base.Symbol, AbstractString})
   idx   = symbol(idx)
   i_idx = find(idx .== list_outputs(self))
   @assert(length(i_idx) > 0, "Cannot find output with name '$idx'")
   @assert(length(i_idx) < 2, "Found duplicated output with name '$idx'")
   Base.getindex(self, i_idx[1])
 end
-function Base.getindex(self :: Symbol, idx :: Int)
+function Base.getindex(self :: Node, idx :: Int)
   ref_hdr = Ref{MX_handle}(0)
   # note Julia is 1-based, while MXNet is 0-based
   @mxcall(:MXSymbolGetOutput, (MX_handle, MX_uint, Ref{MX_handle}), self, idx-1, ref_hdr)
-  return Symbol(MX_SymbolHandle(ref_hdr[]))
+  return Node(MX_SymbolHandle(ref_hdr[]))
 end
 
 import Base: +, .+
-function +(self :: Symbol, args :: Symbol...)
+function +(self :: Node, args :: Node...)
   ret = self
   for arg in args
     ret = _Plus(ret, arg)
   end
   ret
 end
-function .+(self :: Symbol, args :: Symbol...)
+function .+(self :: Node, args :: Node...)
   +(self, args...)
 end
 
 import Base: -, .-
-function -(self :: Symbol, arg :: Symbol)
+function -(self :: Node, arg :: Node)
   _Minus(self, arg)
 end
-function .-(self :: Symbol, arg :: Symbol)
+function .-(self :: Node, arg :: Node)
   -(self, arg)
 end
 
 import Base: .*
-function .*(self :: Symbol, args :: Symbol...)
+function .*(self :: Node, args :: Node...)
   ret = self
   for arg in args
     ret = _Mul(ret, arg)
@@ -213,11 +213,11 @@ function .*(self :: Symbol, args :: Symbol...)
 end
 
 import Base: ./
-function ./(self :: Symbol, arg :: Symbol)
+function ./(self :: Node, arg :: Node)
   _Div(self, arg)
 end
 
-function _compose!(sym :: Symbol; kwargs...)
+function _compose!(sym :: Node; kwargs...)
   name     = char_p(0)
   arg_keys = AbstractString[]
   arg_vals = MX_handle[]
@@ -226,7 +226,7 @@ function _compose!(sym :: Symbol; kwargs...)
     if k == :name
       name = string(v)
     else
-      @assert(isa(v, Symbol), "Compose expect `Symbol` as arguments")
+      @assert(isa(v, Node), "Compose expect `Node` as arguments")
       push!(arg_keys, string(k))
       push!(arg_vals, v)
     end
@@ -237,10 +237,10 @@ function _compose!(sym :: Symbol; kwargs...)
           sym, name, length(arg_keys), arg_keys, arg_vals)
   return sym
 end
-function _compose!(sym :: Symbol, args::Symbol...)
+function _compose!(sym :: Node, args::Node...)
   _compose!(sym, char_p(0), args...)
 end
-function _compose!(sym :: Symbol, name :: Union{Base.Symbol, char_p}, args::Symbol...)
+function _compose!(sym :: Node, name :: Union{Base.Symbol, char_p}, args::Node...)
   if isa(name, Base.Symbol); name = string(name); end
   arg_keys = Ptr{char_p}(0)
   arg_vals = MX_handle[args...]
@@ -251,27 +251,27 @@ function _compose!(sym :: Symbol, name :: Union{Base.Symbol, char_p}, args::Symb
   return sym
 end
 
-"""Save Symbol into a JSON string"""
-function to_json(self :: Symbol)
+"""Save Node into a JSON string"""
+function to_json(self :: Node)
   ref_json = Ref{char_p}(0)
   @mxcall(:MXSymbolSaveToJSON, (MX_handle, Ref{char_p}), self, ref_json)
   return bytestring(ref_json[])
 end
 
-"""Load Symbol from a JSON string representation."""
-function from_json(repr :: AbstractString, ::Type{Symbol})
+"""Load Node from a JSON string representation."""
+function from_json(repr :: AbstractString, ::Type{Node})
   ref_hdr = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCreateFromJSON, (char_p, Ref{MX_handle}), repr, ref_hdr)
-  return Symbol(MX_SymbolHandle(ref_hdr[]))
+  return Node(MX_SymbolHandle(ref_hdr[]))
 end
 
-"""Load Symbol from a JSON file."""
-function load(filename :: AbstractString, ::Type{Symbol})
+"""Load Node from a JSON file."""
+function load(filename :: AbstractString, ::Type{Node})
   ref_hdr = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCreateFromFile, (char_p, Ref{MX_handle}), filename, ref_hdr)
-  return Symbol(MX_SymbolHandle(ref_hdr[]))
+  return Node(MX_SymbolHandle(ref_hdr[]))
 end
-function save(filename :: AbstractString, sym :: Symbol)
+function save(filename :: AbstractString, sym :: Node)
   @mxcall(:MXSymbolSaveToFile, (MX_handle, char_p), sym, filename)
 end
 
@@ -279,10 +279,10 @@ end
 libmxnet APIs
 -------------
 
-**autogen:EMBED:symbol:EMBED:autogen**
+**autogen:EMBED:Node:EMBED:autogen**
 =#
 ################################################################################
-# Atomic Symbol functions dynamically imported from libmxnet
+# Atomic Node functions dynamically imported from libmxnet
 ################################################################################
 function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
   ref_name      = Ref{char_p}(0)
@@ -305,11 +305,11 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
   if gen_docs
     f_desc = bytestring(ref_desc[]) * "\n\n"
     if !isempty(kv_nargs_s)
-      f_desc *= "This function support variable length positional :class:`Symbol` inputs.\n\n"
+      f_desc *= "This function support variable length positional :class:`Node` inputs.\n\n"
     end
     f_desc *= _format_docstring(Int(ref_nargs[]), ref_arg_names, ref_arg_types, ref_arg_descs)
-    f_desc *= ":param Base.Symbol name: The name of the symbol. (e.g. `:my_symbol`), optional.\n\n"
-    f_desc *= ":return: the constructed :class:`Symbol`.\n\n"
+    f_desc *= ":param Base.Symbol name: The name of the Node. (e.g. `:my_symbol`), optional.\n\n"
+    f_desc *= ":return: the constructed :class:`Node`.\n\n"
     return (func_name, f_desc)
   end
 
@@ -325,7 +325,7 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
 
     param_keys = AbstractString[]
     param_vals = AbstractString[]
-    symbol_kws = Dict{Base.Symbol, Symbol}()
+    symbol_kws = Dict{Base.Symbol, Node}()
 
     $(if kv_nargs != symbol("")
       quote
@@ -338,7 +338,7 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
 
     for (k,v) in kwargs
       if k == :name; continue; end
-      if isa(v, Symbol)
+      if isa(v, Node)
         symbol_kws[k] = v
       else
         push!(param_keys, string(k))
@@ -352,20 +352,20 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
     $(if kv_nargs != symbol("")
       quote
         if length(symbol_kws) > 0
-          @assert(false, "$func_name takes variable number of Symbol arguments, please pass input Symbols " *
+          @assert(false, "$func_name takes variable number of Node arguments, please pass input Symbols " *
                          "via positional arguments, instead of keyword arguments.")
         end
       end
     end)
 
-    # create the symbol
+    # create the Node
     ref_sym_hdr = Ref{MX_handle}()
     @mxcall(:MXSymbolCreateAtomicSymbol,
             (MX_handle, MX_uint, Ptr{char_p}, Ptr{char_p}, Ref{MX_handle}),
             $hdr, length(param_keys), param_keys, param_vals, ref_sym_hdr)
     sym_hdr = ref_sym_hdr[]
 
-    sym = Symbol(MX_SymbolHandle(sym_hdr))
+    sym = Node(MX_SymbolHandle(sym_hdr))
     hint = lowercase(string($func_name))
     name = get!(DEFAULT_NAME_MANAGER, name, hint)
 

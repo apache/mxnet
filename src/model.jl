@@ -23,7 +23,7 @@ abstract AbstractModel
    that handles sequential data explicitly, please use **TODO**...
 =#
 type FeedForward <: AbstractModel
-  arch        :: Symbol
+  arch        :: Node
   ctx         :: Vector{Context}
 
   arg_params  :: Dict{Base.Symbol, NDArray}
@@ -32,7 +32,7 @@ type FeedForward <: AbstractModel
   pred_exec   :: Union{Executor, Void}
 
   # leave the rest fields undefined
-  FeedForward(arch :: Symbol, ctx :: Vector{Context}) = new(arch, ctx)
+  FeedForward(arch :: Node, ctx :: Vector{Context}) = new(arch, ctx)
 end
 
 """Get a split of `batch_size` into `n_split` pieces for data parallelization. Returns a vector
@@ -52,14 +52,14 @@ function _split_inputs(batch_size :: Int, n_split :: Int)
 end
 
 #=doc
-.. function:: FeedForward(arch :: Symbol, ctx)
+.. function:: FeedForward(arch :: Node, ctx)
 
    :param arch: the architecture of the network constructed using the symbolic API.
    :param ctx: the devices on which this model should do computation. It could be a single :class:`Context`
                or a list of :class:`Context` objects. In the latter case, data parallelization will be used
                for training. If no context is provided, the default context ``cpu()`` will be used.
 =#
-function FeedForward(arch :: Symbol; context :: Union{Context, Vector{Context}, Void} = nothing)
+function FeedForward(arch :: Node; context :: Union{Context, Vector{Context}, Void} = nothing)
   if isa(context, Void)
     context = [Context(CPU)]
   elseif isa(context, Context)
@@ -514,7 +514,7 @@ end
 function save_checkpoint(self :: FeedForward, prefix :: AbstractString, state :: OptimizationState)
   save_checkpoint(self.arch, self.arg_params, self.aux_params, prefix, state.curr_epoch)
 end
-function save_checkpoint(sym :: Symbol, arg_params :: Dict{Base.Symbol, NDArray},
+function save_checkpoint(sym :: Node, arg_params :: Dict{Base.Symbol, NDArray},
                          aux_params :: Dict{Base.Symbol, NDArray}, prefix :: AbstractString, epoch :: Int)
   save("$prefix-symbol.json", sym)
   save_dict = merge(Dict([symbol("arg:$k") => v for (k,v) in arg_params]),
@@ -525,7 +525,7 @@ function save_checkpoint(sym :: Symbol, arg_params :: Dict{Base.Symbol, NDArray}
 end
 
 function load_checkpoint(prefix :: AbstractString, epoch :: Int)
-  arch       = load("$prefix-symbol.json", Symbol)
+  arch       = load("$prefix-symbol.json", Node)
   saved_dict = load(format("{1}-{2:04d}.params", prefix, epoch), NDArray)
   arg_params = Dict{Base.Symbol, NDArray}()
   aux_params = Dict{Base.Symbol, NDArray}()
