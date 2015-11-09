@@ -51,9 +51,11 @@ function test_arrays_impl(data::Vector, label::Vector, provider::mx.ArrayDataPro
 
   for (d1, (_, d2)) in zip(data, mx.provide_data(provider))
     @test size(d1)[1:end-1] == d2[1:end-1]
+    @test batch_size == d2[end]
   end
   for (d1, (_, d2)) in zip(label, mx.provide_label(provider))
     @test size(d1)[1:end-1] == d2[1:end-1]
+    @test batch_size == d2[end]
   end
 
   info("IO::Array::#data=$(length(data)),#label=$(length(label)),batch_size=$batch_size")
