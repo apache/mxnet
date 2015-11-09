@@ -12,9 +12,9 @@ deep learning programs together to maximize the efficiency and your productivity
 
 What's New
 ----------
-* [Guide to Creating New Operators (Layers)](https://mxnet-bing.readthedocs.org/en/latest/tutorial/new_op_howto.html)
+* [Guide to Creating New Operators (Layers)](https://mxnet.readthedocs.org/en/latest/tutorial/new_op_howto.html)
 * [Minimum MXNet Library in One File](amalgamation)
-* [Training Deep Net on 14 Million Images on A Single Machine](https://mxnet-bing.readthedocs.org/en/latest/tutorial/imagenet_full.html)
+* [Training Deep Net on 14 Million Images on A Single Machine](https://mxnet.readthedocs.org/en/latest/tutorial/imagenet_full.html)
 * [MXNet.jl Julia binding initial release](https://github.com/dmlc/MXNet.jl)
 * [Design Note: Squeeze the Memory Consumption of Deep Learning](http://mxnet.readthedocs.org/en/latest/developer-guide/note_memory.html)
 
