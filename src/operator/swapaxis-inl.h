@@ -79,7 +79,7 @@ class SwapAxisOp : public Operator {
     }
   }
 
-  void __swapaxis(Stream<xpu> *s,
+  void SwapAxis(Stream<xpu> *s,
                   const std::vector<TBlob> &in_data,
                   const std::vector<TBlob> &out_data) {
     uint32_t dim1 = param_.dim1;
@@ -112,7 +112,7 @@ class SwapAxisOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
-    __swapaxis(s, in_data, out_data);
+    SwapAxis(s, in_data, out_data);
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -123,7 +123,7 @@ class SwapAxisOp : public Operator {
                        const std::vector<TBlob> &in_grad,
                        const std::vector<TBlob> &aux_args) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    __swapaxis(s, out_grad, in_grad);
+    SwapAxis(s, out_grad, in_grad);
   }
 
   SwapAxisParam param_;
@@ -152,11 +152,8 @@ class SwapAxisProp : public OperatorProperty {
   bool InferShape(std::vector<TShape> *in_shape,
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
-    int input_num = in_shape->size();
-    if (input_num == 0) {
-      std::cout << "Have no input data.\n";
-      return false;
-    }
+    CHECK_EQ(in_shape->size(), 1);
+
     TShape &shape0 = (*in_shape)[SwapAxis::kData];
     out_shape->clear();
     out_shape->push_back(shape0);
@@ -183,13 +180,7 @@ class SwapAxisProp : public OperatorProperty {
     const std::vector<int> &out_data) const override {
     return {out_grad[SwapAxis::kOut]};
   };
-/*
-  std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const override;
 
-  std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override;
-*/
   Operator* CreateOperator(Context ctx) const override;
 
  private:

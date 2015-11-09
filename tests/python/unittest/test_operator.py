@@ -172,23 +172,22 @@ def test_regression():
                      lambda x, y : x - y)
 
 def test_swapaxes():
-	  print 'test swapaxes...'
-	  data = mx.symbol.Variable('data')
-	  shape = (2, 3, 4)
-	  data_tmp = np.ones(shape)
-	  data_tmp[0] = 1
-	  data_tmp[1] = 2
-	  arr_data = mx.nd.array(data_tmp)
-	  swap0 = mx.symbol.SwapAxis(data=data, dim1=0, dim2=2)
-	  swap = mx.symbol.SwapAxis(data=swap0, dim1=1, dim2=2)
-	  exe_c = swap.bind(mx.cpu(), args=[arr_data])
-	  exe_c.forward()
-	  out = exe_c.outputs[0].asnumpy()
-	  print data_tmp.shape
-	  print data_tmp
-	  print out.shape
-	  print out
-	  print out.reshape((4, 6))
+    data = mx.symbol.Variable('data')
+    shape = (2, 3, 4)
+    data_tmp = np.ones(shape)
+    data_tmp[0] = 1
+    data_tmp[1] = 2
+    arr_data = mx.nd.array(data_tmp)
+    swap0 = mx.symbol.SwapAxis(data=data, dim1=0, dim2=2)
+    swap = mx.symbol.SwapAxis(data=swap0, dim1=1, dim2=2)
+    exe_c = swap.bind(mx.cpu(), args=[arr_data])
+    exe_c.forward()
+    out = exe_c.outputs[0].asnumpy()
+
+    swap0_ = np.swapaxes(data_tmp, 0, 2)
+    swap_ = np.swapaxes(swap0_, 1, 2)
+
+    assert reldiff(out, swap_) < 1e-6
 
 
 if __name__ == '__main__':
