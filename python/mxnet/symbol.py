@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 
 import ctypes
+from numbers import Number
 import sys
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str, string_types
@@ -32,6 +33,8 @@ class Symbol(object):
     def __add__(self, other):
         if isinstance(other, Symbol):
             return Symbol._Plus(self, other)
+        if isinstance(other, Number):
+            return Symbol._PlusScalar(self, other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -41,12 +44,22 @@ class Symbol(object):
     def __sub__(self, other):
         if isinstance(other, Symbol):
             return Symbol._Minus(self, other)
+        if isinstance(other, Number):
+            return Symbol._MinusScalar(self,value=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __rsub__(self, other):
+        if isinstance(other, Number):
+            return Symbol._MinusScalar(self,value=other,right=True)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __mul__(self, other):
         if isinstance(other, Symbol):
             return Symbol._Mul(self, other)
+        if isinstance(other, Number):
+            return Symbol._MulScalar(self, value=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -56,6 +69,14 @@ class Symbol(object):
     def __div__(self, other):
         if isinstance(other, Symbol):
             return Symbol._Div(self, other)
+        if isinstance(other, Number):
+            return Symbol._DivScalar(self, value=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __rdiv__(self, other):
+        if isinstance(other, Number):
+            return Symbol._DivScalar(self, value=other,right=True)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
