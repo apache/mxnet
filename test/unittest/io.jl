@@ -49,6 +49,13 @@ function test_arrays_impl(data::Vector, label::Vector, provider::mx.ArrayDataPro
   batch_size   = mx.get_batch_size(provider)
   idx_all = 1:batch_size:sample_count
 
+  for (d1, (_, d2)) in zip(data, mx.provide_data(provider))
+    @test size(d1)[1:end-1] == d2[1:end-1]
+  end
+  for (d1, (_, d2)) in zip(label, mx.provide_label(provider))
+    @test size(d1)[1:end-1] == d2[1:end-1]
+  end
+
   info("IO::Array::#data=$(length(data)),#label=$(length(label)),batch_size=$batch_size")
   for (idx, batch) in zip(idx_all, provider)
     data_batch = [x[[Colon() for i=1:ndims(x)-1]..., idx:min(idx+batch_size-1,sample_count)] for x in data]

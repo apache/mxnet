@@ -394,10 +394,10 @@ function ArrayDataProvider(data::Any, label::Any; batch_size::Int=0, shuffle::Bo
 end
 
 function provide_data(provider::ArrayDataProvider)
-  return collect(zip(provider.data_names, map(size, provider.data_arrays)))
+  return collect(zip(provider.data_names, map(size, provider.data_batch)))
 end
 function provide_label(provider::ArrayDataProvider)
-  return collect(zip(provider.label_names, map(size, provider.label_arrays)))
+  return collect(zip(provider.label_names, map(size, provider.label_batch)))
 end
 get_batch_size(provider::ArrayDataProvider) = provider.batch_size
 
