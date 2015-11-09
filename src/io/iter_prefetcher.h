@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 #include <queue>
+#include <algorithm>
 #include "./inst_vector.h"
 
 namespace mxnet {
@@ -80,8 +81,8 @@ class PrefetcherIter : public IIterator<DataBatch> {
                         batch.data[i].FlatTo2D<cpu, real_t>());
           (*dptr)->num_batch_padd = batch.num_batch_padd;
         }
-		std::copy(batch.inst_index, 
-                  batch.inst_index + batch.batch_size, 
+        std::copy(batch.inst_index,
+                  batch.inst_index + batch.batch_size,
                   (*dptr)->index.begin());
        return true;
       },
