@@ -207,7 +207,8 @@ class NDArrayIter(DataIter):
 
     def next(self):
         if self.iter_next():
-            return DataBatch(data=self.getdata(), label=self.getlabel(), pad=self.getpad())
+            return DataBatch(data=self.getdata(), label=self.getlabel(), \
+                    pad=self.getpad(), index=None)
         else:
             raise StopIteration
 
