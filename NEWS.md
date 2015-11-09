@@ -1,4 +1,11 @@
-# v.0.03 (2015.10.27)
+# v0.0.4 (2015.11.09)
+
+* ADAM optimizer (@cbecker)
+* Improved data provider API.
+* More documentation.
+* Fix a bug in array data iterator (@vchuravy)
+
+# v0.0.3 (2015.10.27)
 
 * Model prediction API.
 * Model checkpoint loading and saving.
