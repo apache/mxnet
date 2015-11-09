@@ -21,11 +21,32 @@ inline void Concatenate(const std::vector<mshadow::Tensor<xpu, dim> > &input,
   using mshadow::expr::slice;
   mshadow::Tensor<xpu, dim> out = *output;
   size_t size = input.size();
-  index_t begin = 0;
-  for (index_t i = 0; i < size; ++i) {
-    index_t end = begin + input[i].size(1);
-    slice<1>(out, begin, end) = input[i];
-    begin = end;
+  size_t dimension = 1;
+  switch (size) {
+    case 2: {
+      out = concat<dimension>(input[0], input[1]);
+      break;
+    }
+    case 3: {
+      out = concat<dimension>(input[0],
+                      concat<dimension>(input[1], input[2]));
+      break;
+    }
+    case 4: {
+      out = concat<dimension>(input[0],
+                      concat<dimension>(input[1],
+                                concat<dimension>(input[2], input[3])));
+      break;
+    }
+    default: {
+      index_t begin = 0;
+      for (index_t i = 0; i < size; ++i) {
+        index_t end = begin + input[i].size(dimension);
+        slice<dimension>(out, begin, end) = input[i];
+        begin = end;
+      }
+      break;
+    }
   }
 }
 
