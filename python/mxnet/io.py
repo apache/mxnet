@@ -281,7 +281,8 @@ class MXDataIter(DataIter):
 
     def next(self):
         if self._debug_skip_load and not self._debug_at_begin:
-            return  DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad(), index=self.getindex())
+            return  DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad(),
+                              index=self.getindex())
         if self.first_batch is not None:
             batch = self.first_batch
             self.first_batch = None
@@ -290,9 +291,8 @@ class MXDataIter(DataIter):
         next_res = ctypes.c_int(0)
         check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
         if next_res.value:
-            print 'label', self.getlabel().asnumpy()
-            print 'index', self.getindex()
-            return DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad(), index=self.getindex())
+            return DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad(),
+                             index=self.getindex())
         else:
             raise StopIteration
 
@@ -316,10 +316,11 @@ class MXDataIter(DataIter):
     def getindex(self):
         index_size = ctypes.c_uint64(0)
         index_data = ctypes.POINTER(ctypes.c_uint64)()
-        check_call(_LIB.MXDataIterGetIndex(self.handle, 
+        check_call(_LIB.MXDataIterGetIndex(self.handle,
                                            ctypes.byref(index_data),
                                            ctypes.byref(index_size)))
-        dbuffer = (ctypes.c_uint64* index_size.value).from_address(ctypes.addressof(index_data.contents))
+        address = ctypes.addressof(index_data.contents)
+        dbuffer = (ctypes.c_uint64* index_size.value).from_address(address)
         np_index = np.frombuffer(dbuffer, dtype=np.uint64)
         return np_index.copy()
 
