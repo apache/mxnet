@@ -30,11 +30,13 @@ train_dataiter = mx.io.MNISTIter(
         image="data/train-images-idx3-ubyte",
         label="data/train-labels-idx1-ubyte",
         data_shape=(784,),
+        label_name='sm_label',
         batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
 val_dataiter = mx.io.MNISTIter(
         image="data/t10k-images-idx3-ubyte",
         label="data/t10k-labels-idx1-ubyte",
         data_shape=(784,),
+        label_name='sm_label',
         batch_size=batch_size, shuffle=True, flat=True, silent=False)
 
 def test_mlp():
@@ -56,7 +58,7 @@ def test_mlp():
     prob = model.predict(val_dataiter)
     logging.info('Finish predict...')
     val_dataiter.reset()
-    y = np.concatenate([label.asnumpy() for _, label in val_dataiter]).astype('int')
+    y = np.concatenate([batch.label[0].asnumpy() for batch in val_dataiter]).astype('int')
     py = np.argmax(prob, axis=1)
     acc1 = float(np.sum(py == y)) / len(y)
     logging.info('final accuracy = %f', acc1)

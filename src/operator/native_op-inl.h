@@ -209,10 +209,11 @@ class NativeOpProp : public OperatorProperty {
     param_.pinfo->infer_shape(shapes.size(), ndims.data(), shapes.data(),
           param_.pinfo->p_infer_shape);
     for (unsigned i = 0; i < in_shape->size(); ++i) {
-      (*in_shape)[i] = TShape(shapes[i], shapes[i]+ndims[i]);
+      SHAPE_ASSIGN_CHECK(*in_shape, i, TShape(shapes[i], shapes[i]+ndims[i]));
     }
-    for (unsigned i = param_.num_inputs_; i < param_.num_inputs_ + out_shape->size(); ++i) {
-      (*out_shape)[i-param_.num_inputs_] = TShape(shapes[i], shapes[i]+ndims[i]);
+    out_shape->clear();
+    for (unsigned i = param_.num_inputs_; i < shapes.size(); ++i) {
+      out_shape->push_back(TShape(shapes[i], shapes[i]+ndims[i]));
     }
     return true;
   }

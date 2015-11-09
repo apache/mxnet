@@ -71,7 +71,8 @@ train_dataiter = mx.io.ImageRecordIter(
         rand_mirror=True,
         data_shape=(3,28,28),
         batch_size=batch_size,
-        preprocess_threads=1)
+        preprocess_threads=1,
+        label_name='loss_label')
 test_dataiter = mx.io.ImageRecordIter(
         path_imgrec="data/cifar/test.rec",
         mean_img="data/cifar/cifar_mean.bin",
@@ -79,7 +80,8 @@ test_dataiter = mx.io.ImageRecordIter(
         rand_mirror=False,
         data_shape=(3,28,28),
         batch_size=batch_size,
-        preprocess_threads=1)
+        preprocess_threads=1,
+        label_name='loss_label')
 
 def test_cifar():
     logging.basicConfig(level=logging.DEBUG)

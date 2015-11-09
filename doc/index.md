@@ -37,7 +37,7 @@ in terms of abstraction, optimization and trade-offs.
 Tutorial
 --------
 * [Training Deep Net on 14 Million Images on A Single Machine](tutorial/imagenet_full.md)
-
+* [How to Create New Operations (Layers)](tutorial/new_op_howto.md)
 
 Indices and tables
 ------------------

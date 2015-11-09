@@ -136,13 +136,21 @@ cd python; python setup.py develop --user
 R Package Installation
 ----------------------
 To install the R package. First finish the [Build MXNet Library](#build-mxnet-library) step.
-Then use the following command to install mxnet at root folder
+Then use the following command to install dependencies and build the package at root folder
 
 ```bash
-R CMD INSTALL R-package
+Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')" 
+cd R-package
+Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
+cd ..
+make rpkg
 ```
 
-Hopefully, we will now have mxnet on R!
+Now you should have the R package as a tar.gz file and you can install it as a normal package by (the version number might be different)
+
+```bash
+R CMD INSTALL mxnet_0.5.tar.gz
+```
 
 ## Note on Library Build
 We isolate the library build with Rcpp end to maximize the portability

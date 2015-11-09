@@ -93,6 +93,13 @@ model <- mx.mlp(train.x, train.y, hidden_node=10, out_node=2, out_activation="so
 
 Note that `mx.set.seed` is the correct function to control the random process in `mxnet`. You can see the accuracy in each round during training. It is also easy to make prediction and evaluate.
 
+To get an idea of what is happening, we can easily view the computation graph from R.
+
+```{r}
+graph.viz(model$symbol$as.json())
+```
+
+[<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/knitr/graph.computation.png">](https://github.com/dmlc/mxnet)
 
 ```r
 preds = predict(model, test.x)
