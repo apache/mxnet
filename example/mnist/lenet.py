@@ -23,7 +23,7 @@ tanh3 = mx.symbol.Activation(data=fc1, act_type="tanh")
 # second fullc
 fc2 = mx.symbol.FullyConnected(data=tanh3, num_hidden=10)
 # loss
-lenet = mx.symbol.SoftmaxOutput(data=fc2)
+lenet = mx.symbol.SoftmaxOutput(data=fc2, name='softmax')
 
 ## data
 train, val = mnist_iterator(batch_size=100, input_shape=(1,28,28))

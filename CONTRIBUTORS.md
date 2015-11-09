@@ -66,3 +66,4 @@ List of Contributors
   -Michaël contributes the R visualization module of mxnet
 * [Kublai Jing](https://github.com/Kublai-Jing)
 * [chenjx1005](https://github.com/chenjx1005)
+* [ry](https://github.com/ry)

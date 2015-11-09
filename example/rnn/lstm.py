@@ -5,7 +5,7 @@ import mxnet as mx
 import numpy as np
 from collections import namedtuple
 import time
-
+import math
 LSTMState = namedtuple("LSTMState", ["c", "h"])
 LSTMParam = namedtuple("LSTMParam", ["i2h_weight", "i2h_bias",
                                      "h2h_weight", "h2h_bias"])
@@ -69,10 +69,14 @@ def lstm_unroll(num_lstm_layer, seq_len,
                                       name="t%d_embed" % seqidx)
         # stack LSTM
         for i in range(num_lstm_layer):
+            if i==0:
+                dp=0.
+            else:
+                dp = dropout
             next_state = lstm(num_hidden, indata=hidden,
                               prev_state=last_states[i],
                               param=param_cells[i],
-                              seqidx=seqidx, layeridx=i, dropout=0.)
+                              seqidx=seqidx, layeridx=i, dropout=dp)
             hidden = next_state.h
             last_states[i] = next_state
         # decoder
@@ -175,18 +179,18 @@ def set_rnn_inputs(m, X, begin):
         m.seq_labels[seqidx][:] = y
 
 def calc_nll(seq_label_probs, X, begin):
-    eps = 1e-10
+    
     nll = 0.
     for seqidx in range(len(seq_label_probs)):
         next_idx = (begin + seqidx + 1) % X.shape[0]
         y = X[next_idx, :]
         py = seq_label_probs[seqidx].asnumpy()
-        nll += -np.sum(np.log(np.maximum(py, eps))) / len(y)
+        nll += -np.sum(np.log(py)) / len(y)
     return nll
 
 def train_lstm(model, X_train_batch, X_val_batch,
                num_round, update_period,
-               optimizer='sgd', half_life=2, **kwargs):
+               optimizer='sgd', half_life=2,max_grad_norm = 5.0, **kwargs):
     print("Training swith train.shape=%s" % str(X_train_batch.shape))
     print("Training swith val.shape=%s" % str(X_val_batch.shape))
     m = model
@@ -194,14 +198,14 @@ def train_lstm(model, X_train_batch, X_val_batch,
     batch_size = m.seq_data[0].shape[0]
     print("batch_size=%d" % batch_size)
     print("seq_len=%d" % seq_len)
-    rescale_grad = 1.0 / (seq_len * batch_size * update_period)
-    opt = mx.optimizer.create(optimizer,
-                              rescale_grad=rescale_grad,
+    
+    opt = mx.optimizer.create(optimizer,                              
                               **kwargs)
+    
     updater = mx.optimizer.get_updater(opt)
     epoch_counter = 0
     log_period = max(1000 / seq_len, 1)
-
+    last_perp = 10000000.0
     for iteration in range(num_round):
         nbatch = 0
         train_nll = 0
@@ -227,7 +231,15 @@ def train_lstm(model, X_train_batch, X_val_batch,
             epoch_counter += 1
             if epoch_counter % update_period == 0:
                 # updare parameters
+                norm = 0.
                 for idx, weight, grad, name in m.param_blocks:
+                    grad /= batch_size
+                    l2_norm = mx.nd.norm(grad).asscalar()
+                    norm += l2_norm*l2_norm
+                norm = math.sqrt(norm)
+                for idx, weight, grad, name in m.param_blocks:
+                    if norm > max_grad_norm:
+                        grad *= (max_grad_norm / norm)                    
                     updater(idx, grad, weight)
                     # reset gradient to zero
                     grad[:] = 0.0
@@ -235,11 +247,11 @@ def train_lstm(model, X_train_batch, X_val_batch,
 
             nbatch = begin + seq_len
             if epoch_counter % log_period == 0:
-                print("Epoch [%d] Train: NLL=%.3f, Prep=%.3f" % (
+                print("Epoch [%d] Train: NLL=%.3f, Perp=%.3f" % (
                     epoch_counter, train_nll / nbatch, np.exp(train_nll / nbatch)))
         # end of training loop
         toc = time.time()
-        print("Iter [%d] Train: Time: %.3f sec, NLL=%.3f, Prep=%.3f" % (
+        print("Iter [%d] Train: Time: %.3f sec, NLL=%.3f, Perp=%.3f" % (
             iteration, toc - tic, train_nll / nbatch, np.exp(train_nll / nbatch)))
 
         val_nll = 0.0
@@ -259,12 +271,13 @@ def train_lstm(model, X_train_batch, X_val_batch,
                 last.h.copyto(init.h)
             val_nll += calc_nll(seq_label_probs, X_val_batch, begin=begin)
         nbatch = X_val_batch.shape[0]
-        print("Iter [%d] Val: NLL=%.3f, Prep=%.3f" % (
+        perp = np.exp(val_nll / nbatch)
+        print("Iter [%d] Val: NLL=%.3f, Perp=%.3f" % (
             iteration, val_nll / nbatch, np.exp(val_nll / nbatch)))
-        if (iteration + 1) % half_life == 0:
-            opt.lr *= 0.9
+        if last_perp - 1.0 < perp:
+            opt.lr *= 0.5
             print("Reset learning rate to %g" % opt.lr)
-
+        last_perp = perp
 def setup_rnn_sample_model(ctx,
                            params,
                            num_lstm_layer,

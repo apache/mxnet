@@ -16,11 +16,11 @@ class EvalMetric(object):
 
         Parameters
         ----------
-        label : NDArray
-            The label of the data.
+        labels : list of NDArray
+            The labels of the data.
 
-        pred : NDArray
-            Predicted value.
+        preds : list of NDArray
+            Predicted values.
         """
         raise NotImplementedError()
 
@@ -47,12 +47,15 @@ class Accuracy(EvalMetric):
     def __init__(self):
         super(Accuracy, self).__init__('accuracy')
 
-    def update(self, label, pred):
-        pred = pred.asnumpy()
-        label = label.asnumpy().astype('int32')
-        pred_label = numpy.argmax(pred, axis=1)
-        self.sum_metric += numpy.sum(pred_label == label)
-        self.num_inst += label.size
+    def update(self, labels, preds):
+        assert len(labels) == len(preds)
+        for i in range(len(labels)):
+            pred = preds[i].asnumpy()
+            label = labels[i].asnumpy().astype('int32')
+            pred_label = numpy.argmax(pred, axis=1)
+            self.sum_metric += numpy.sum(pred_label == label)
+            num_inst = label.size
+        self.num_inst += num_inst
 
 
 class CustomMetric(EvalMetric):
@@ -74,8 +77,10 @@ class CustomMetric(EvalMetric):
         super(CustomMetric, self).__init__(name)
         self._feval = feval
 
-    def update(self, label, pred):
-        self.sum_metric += self._feval(label, pred)
+    def update(self, labels, preds):
+        assert len(labels) == len(preds)
+        for pred, label in zip(preds, labels):
+            self.sum_metric += self._feval(label, pred)
         self.num_inst += 1
 
 # pylint: disable=invalid-name

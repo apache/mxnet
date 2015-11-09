@@ -11,7 +11,7 @@ act1 = mx.symbol.Activation(data = fc1, name='relu1', act_type="relu")
 fc2 = mx.symbol.FullyConnected(data = act1, name = 'fc2', num_hidden = 64)
 act2 = mx.symbol.Activation(data = fc2, name='relu2', act_type="relu")
 fc3 = mx.symbol.FullyConnected(data = act2, name='fc3', num_hidden=10)
-mlp = mx.symbol.SoftmaxOutput(data = fc3, name = 'mlp')
+mlp = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
 
 # data
 
@@ -32,8 +32,8 @@ val_data[:] /= 256.0
 
 batch_size = 100
 # or you can use numpy iterator, which make using model easier
-train_iter = mx.io.NDArrayIter(data=train_data, label=train_label, batch_size=batch_size, shuffle=True)
-val_iter = mx.io.NDArrayIter(data=val_data, label=val_label, batch_size=batch_size)
+train_iter = mx.io.NDArrayIter(train_data, train_label, batch_size=batch_size, shuffle=True)
+val_iter = mx.io.NDArrayIter(val_data, val_label, batch_size=batch_size)
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -46,5 +46,7 @@ model = mx.model.FeedForward(
 model.fit(X=train_data, y=train_label)
 
 # train by using Numpy Iterator
-# model.fit(X=train_iter, eval_data=val_iter)
+#model.fit(train_iter, eval_data=val_iter)
 
+probs = model.predict(val_data)
+print(probs.shape)
