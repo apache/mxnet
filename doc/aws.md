@@ -3,10 +3,10 @@
 In this documents we give a step-by-step tutorial on how to setup Amazon AWS for
 MXNet. In particular, we will address:
 
-- [Use Amazon S3 to host data](use-amazon-s3-to-host-data)
-- [Setup EC2 GPU instance with all dependencies installed](setup-an-ec2-gpu-instance)
-- [Build and Run MXNet on a single machine](build-and-run-mxnet-on-a-gpu-instance)
-- [Setup an EC2 GPU cluster for distributed training](setup-an-ec2-gpu-cluster)
+- [Use Amazon S3 to host data](#use-amazon-s3-to-host-data)
+- [Setup EC2 GPU instance with all dependencies installed](#setup-an-ec2-gpu-instance)
+- [Build and Run MXNet on a single machine](#build-and-run-mxnet-on-a-gpu-instance)
+- [Setup an EC2 GPU cluster for distributed training](#setup-an-ec2-gpu-cluster)
 
 ## Use Amazon S3 to host data
 
@@ -134,6 +134,8 @@ directory of the root machine, such as `~/train`, and MXNet is built as `~/mxnet
   ```bash
   ~/mxnet/tracker/dmlc_ssh.sh -n 10 -s 10 -H hosts python train_mnist.py
   ```
+
+Here we use a simple ```dmlc_ssh``` that runs DMLC jobs without any cluster frameworks. We also provide other scripts in [tracker](https://github.com/dmlc/dmlc-core/tree/master/tracker) to run on other cluster frameworks, including Hadoop(YARN) and SGE.
 
 Note: Sometimes the jobs lingers at the slave machines even we pressed `Ctrl-c`
 at the root node. We can kill them by
