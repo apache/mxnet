@@ -41,6 +41,7 @@ config.mk
 *log
 Debug
 *suo
+tracker
 
 # vim
 *.swp
