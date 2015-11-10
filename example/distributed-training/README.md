@@ -59,12 +59,12 @@ Based on [train_cifar10.py](train_cifar10.py)
 
 ### System Performance
 
-| cluster | size | batch size per GPU | epoch (sec) |
+| cluster | # machines | # GPUs | batch size / GPU | kvstore | epoch time (sec) |
 | --- | --- | --- | --- |
-| GTX980 | 1 GTX 980 | 256 | 71 |
-| same | same | 128 | 128 |
-| same | 5 machines | 256 | 7 |
-| same | same | 128 | 11 |
+| GTX980 | 1 | 1 |  256 | `local` | 71 |
+|  - | 1 | 1 | 128 | `dist_sync` | 128 |
+| - | 5 | 10 | 256 | `dist_sync` | 7 |
+| - | 5 | 10 | 128 | `dist_sync` | 11 |
 
 
 ### Single GTX 980
@@ -143,11 +143,15 @@ Based on [train_imagenet.py](train_imagenet.py)
 
 ### System Performance
 
-| cluster | size | batch size per GPU | epoch (sec) |
+| cluster | # machines | # GPUs | batch size / GPU | kvstore | epoch time (sec) |
 | --- | --- | --- | --- |
-| GTX980 | 1 GTX 980 | 48 | 22800 |
-| same | 5 machines | 48 | 3000 |
-| same | 5 machines dist | 2800 |
+| GTX980 | 1 | 1 |  48 | `local` | ? |
+| GTX980 | 1 | 2 |  48 | `local` | ? |
+| - | 5 | 10 |  48 | `dist_sync` | 3000 |
+| - | 5 | 10 |  48 | `dist_async` | 2800 |
+| EC2-g2.8 | 1 | 4 | 36 |  `local` | 14203 |
+| - | 10 | 40 | 36 |  `dist_sync` | 1422 |
+
 
 ### Single GTX 980
 
@@ -219,4 +223,14 @@ full log [log/ilsvrc12/incept_4](log/ilsvrc12/incept_4)
 | 15 | 0.632609 | 0.584213 |
 | 20 | 0.669050 | 0.595749 |
 
-full log [log/ilsvrc12/incept_3](log/ilsvrc12/incept_3)
+full log
+
+### 10 EC2 g2.8x instances, Sync
+
+- `batch_size = 36 * 4`, `learning_rate = 0.05`
+
+| epoch | train accuracy | valid accuracy |
+| --- | --- | --- |
+| 5 | 0.516417 | 0.506337 |
+
+full log [log/ilsvrc12/incept_7](log/ilsvrc12/incept_7)
