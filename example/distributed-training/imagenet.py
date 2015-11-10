@@ -21,7 +21,9 @@ def ilsvrc12(data_dir, batch_size, num_parts=1, part_index=0):
         rand_crop   = False,
         rand_mirror = False,
         data_shape  = input_shape,
-        batch_size  = batch_size)
+        batch_size  = batch_size,
+        num_parts   = num_parts,
+        part_index  = part_index)
     return (train, val)
 
 def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0), name=None, suffix=''):
