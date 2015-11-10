@@ -20,7 +20,7 @@
 namespace mxnet {
 namespace op {
 
-namespace SwapAxis{
+namespace swapaxisenum {
 enum SwapAxisOpInputs {kData};
 enum SwapAxisOpOutputs {kOut};
 };
@@ -48,7 +48,9 @@ class SwapAxisOp : public Operator {
     this->param_ = p;
   }
 
-  void Reshape2Five(mshadow::Shape<5> *inter_shape, const mshadow::TShape &shape, uint32_t dim1, uint32_t dim2) {
+  void Reshape2Five(mshadow::Shape<5> *inter_shape,
+                    const mshadow::TShape &shape,
+                    uint32_t dim1, uint32_t dim2) {
     using namespace mshadow;
     using namespace mshadow::expr;
     index_t ndim_in = shape.ndim();
@@ -87,8 +89,8 @@ class SwapAxisOp : public Operator {
     uint32_t dim1 = param_.dim1;
     uint32_t dim2 = param_.dim2;
 
-    TBlob data_in = in_data[SwapAxis::kData];
-    TBlob data_out = out_data[SwapAxis::kData];
+    TBlob data_in = in_data[swapaxisenum::kData];
+    TBlob data_out = out_data[swapaxisenum::kData];
 
     TShape shape_in = data_in.shape_;
     TShape shape_out = data_out.shape_;
@@ -159,10 +161,10 @@ class SwapAxisProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     CHECK_EQ(in_shape->size(), 1);
 
-    TShape &shape0 = (*in_shape)[SwapAxis::kData];
+    TShape &shape0 = (*in_shape)[swapaxisenum::kData];
     out_shape->clear();
     out_shape->push_back(shape0);
-    TShape &shape1 = (*out_shape)[SwapAxis::kOut];
+    TShape &shape1 = (*out_shape)[swapaxisenum::kOut];
 
     std::swap(shape1[param_.dim1], shape1[param_.dim2]);
 
@@ -183,7 +185,7 @@ class SwapAxisProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    return {out_grad[SwapAxis::kOut]};
+    return {out_grad[swapaxisenum::kOut]};
   };
 
   Operator* CreateOperator(Context ctx) const override;
