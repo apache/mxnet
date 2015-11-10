@@ -49,14 +49,13 @@ type Accuracy <: AbstractEvalMetric
 end
 
 function _update_single_output(metric :: Accuracy, label :: NDArray, pred :: NDArray)
-  label = copy(label)
-  pred  = copy(pred)
-
-  n_sample = size(pred)[end]
-  metric.n_sample += n_sample
-  for i = 1:n_sample
-    klass = indmax(pred[:,i])
-    metric.acc_sum += (klass-1) == label[i]
+  @nd_as_jl ro=(label,pred) begin
+    n_sample = size(pred)[end]
+    metric.n_sample += n_sample
+    for i = 1:n_sample
+      klass = indmax(pred[:,i])
+      metric.acc_sum += (klass-1) == label[i]
+    end
   end
 end
 

@@ -178,7 +178,7 @@ Copying functions
 
 .. function:: convert(::Type{Array{T}}, arr :: NDArray)
 
-   Convert an :class:`NDArray` into a Julia ``Array`` of specific type.
+   Convert an :class:`NDArray` into a Julia ``Array`` of specific type. Data will be copied.
 
 
 
@@ -292,6 +292,75 @@ Basic arithmetics
 .. function:: /(arg0 :: NDArray, arg :: Real)
 
    Divide an :class:`NDArray` by a scalar. Matrix division (solving linear systems) is not implemented yet.
+
+
+
+
+Manipulating as Julia Arrays
+----------------------------
+
+.. function:: @nd_as_jl(captures..., statement)
+
+   A convenient macro that allows to operate :class:`NDArray` as Julia Arrays. For example,
+
+   .. code-block:: julia
+
+      x = mx.zeros(3,4)
+      y = mx.ones(3,4)
+      z = mx.zeros((3,4), mx.gpu())
+
+      @mx.nd_as_jl ro=(x,y) rw=z begin
+        # now x, y, z are just ordinary Julia Arrays
+        z[:,1] = y[:,2]
+        z[:,2] = 5
+      end
+
+   Under the hood, the macro convert all the declared captures from :class:`NDArray` into Julia
+   Arrays, by using :func:`try_get_shared`. And automatically commit the modifications back into
+   the :class:`NDArray` that is declared as ``rw``. This is useful for fast prototyping and when
+   implement non-critical computations, such as :class:`AbstractEvalMetric`.
+
+   .. note::
+
+      - Multiple ``rw`` and / or ``ro`` capture declaration could be made.
+      - The macro does **not** check to make sure that ``ro`` captures are not modified. If the
+        original :class:`NDArray` lives in CPU memory, then it is very likely the corresponding
+        Julia Array shares data with the :class:`NDArray`, so modifying the Julia Array will also
+        modify the underlying :class:`NDArray`.
+      - More importantly, since the :class:`NDArray` is
+        asynchronized, we will wait for *writing* for ``rw`` variables but wait only for *reading*
+        in ``ro`` variables. If we write into those ``ro`` variables, **and** if the memory is
+        shared, racing condition might happen, and the behavior is undefined.
+      - When an :class:`NDArray` is declared to be captured as ``rw``, its contents is always sync
+        back in the end.
+      - The execution results of the expanded macro is always ``nothing``.
+      - The statements are wrapped in a ``let``, thus locally introduced new variables will not be
+        available after the statements. So you will need to declare the variables before calling the
+        macro if needed.
+
+
+
+
+.. function:: try_get_shared(arr)
+
+   Try to create a Julia array by sharing the data with the underlying :class:`NDArray`.
+
+   :param NDArray arr: the array to be shared.
+
+   .. warning::
+
+      The returned array does not guarantee to share data with the underlying :class:`NDArray`.
+      In particular, data sharing is possible only when the :class:`NDArray` lives on CPU.
+
+
+
+
+.. function:: is_shared(j_arr, arr)
+
+   Test whether ``j_arr`` is sharing data with ``arr``.
+
+   :param Array j_arr: the Julia Array.
+   :param NDArray arr: the :class:`NDArray`.
 
 
 

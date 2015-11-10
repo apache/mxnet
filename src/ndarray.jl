@@ -615,6 +615,10 @@ Manipulating as Julia Arrays
         original :class:`NDArray` lives in CPU memory, then it is very likely the corresponding
         Julia Array shares data with the :class:`NDArray`, so modifying the Julia Array will also
         modify the underlying :class:`NDArray`.
+      - More importantly, since the :class:`NDArray` is
+        asynchronized, we will wait for *writing* for ``rw`` variables but wait only for *reading*
+        in ``ro`` variables. If we write into those ``ro`` variables, **and** if the memory is
+        shared, racing condition might happen, and the behavior is undefined.
       - When an :class:`NDArray` is declared to be captured as ``rw``, its contents is always sync
         back in the end.
       - The execution results of the expanded macro is always ``nothing``.
@@ -665,6 +669,8 @@ macro nd_as_jl(m_args...)
   rw_origs = [gensym() for _ in nd_rw]
 
   save_statements  = Expr(:block, [:($v_orig = $v) for (v_orig, v) in zip(rw_origs, nd_rw)]...)
+  wait_statements  = Expr(:block, [:(_wait_to_read($v)) for v in nd_ro]...,
+                                  [:(_wait_to_write($v)) for v in nd_rw]...)
   clear_statements = Expr(:block, [:($v_orig = nothing) for v_orig in rw_origs]...)
   let_assignments  = [:($v = try_get_shared($v)) for v in nd_all]
   sync_statements  = map(rw_origs, nd_rw) do v_orig, v
@@ -678,9 +684,11 @@ macro nd_as_jl(m_args...)
   sync_statements  = Expr(:block, sync_statements...)
 
   let_statement = Expr(:let, quote
+    $stmts
     $sync_statements
   end, let_assignments...)
   m_body = quote
+    $wait_statements
     $save_statements
     $let_statement
     $clear_statements
@@ -698,6 +706,13 @@ function pointer(arr :: NDArray)
   @mxcall(:MXNDArrayGetData, (MX_handle, Ref{Ptr{MX_float}}), arr, pdata)
   return pdata[]
 end
+function _wait_to_read(arr :: NDArray)
+  @mxcall(:MXNDArrayWaitToRead, (MX_handle,), arr)
+end
+function _wait_to_write(arr :: NDArray)
+  @mxcall(:MXNDArrayWaitToWrite, (MX_handle,), arr)
+end
+
 #=doc
 .. function:: try_get_shared(arr)
 
