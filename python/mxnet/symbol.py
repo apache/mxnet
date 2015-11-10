@@ -34,7 +34,7 @@ class Symbol(object):
         if isinstance(other, Symbol):
             return Symbol._Plus(self, other)
         if isinstance(other, Number):
-            return Symbol._PlusScalar(self, other)
+            return Symbol._PlusScalar(self, value=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -45,13 +45,13 @@ class Symbol(object):
         if isinstance(other, Symbol):
             return Symbol._Minus(self, other)
         if isinstance(other, Number):
-            return Symbol._MinusScalar(self,value=other)
+            return Symbol._MinusScalar(self, value=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rsub__(self, other):
         if isinstance(other, Number):
-            return Symbol._MinusScalar(self,value=other,right=True)
+            return Symbol._MinusScalar(self, value=other, right=True)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -76,12 +76,15 @@ class Symbol(object):
 
     def __rdiv__(self, other):
         if isinstance(other, Number):
-            return Symbol._DivScalar(self, value=other,right=True)
+            return Symbol._DivScalar(self, value=other, right=True)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __truediv__(self, other):
         return self.__div__(other)
+
+    def __rtruediv__(self, other):
+        return self.__rdiv__(other)
 
     def __del__(self):
         check_call(_LIB.MXSymbolFree(self.handle))
