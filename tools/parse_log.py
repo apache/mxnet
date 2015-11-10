@@ -15,11 +15,6 @@ parser.add_argument('--op', type=str, default='avg',
 
 args = parser.parse_args()
 
-# if len(sys.argv) != 2:
-#     print "parse mxnet output log into a markdown table"
-#     print "usage: %s log_file" % (sys.argv[0])
-#     exit(-1)
-
 with open(args.logfile[0]) as f:
     lines = f.readlines()
 

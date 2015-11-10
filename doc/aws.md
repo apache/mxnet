@@ -112,7 +112,8 @@ directory of the root machine, such as `~/train`, and MXNet is built as `~/mxnet
   synchronization:
 
   ```bash
-  ~/mxnet/tools/pack.sh python .
+  cp -r ~/mxnet/python/mxnet .
+  cp ~/mxnet/lib/libmxnet.so mxnet/
   ```
 
   And then copy the training program:
@@ -121,10 +122,9 @@ directory of the root machine, such as `~/train`, and MXNet is built as `~/mxnet
   cp ~/mxnet/example/distributed-training/*mnist* .
   ```
 
-2. Prepare a host file with all slaves's private IPs. An examples is
+2. Prepare a host file with all slaves's private IPs. For example, `cat hosts`
 
   ```bash
-  cat hosts
   172.30.0.172
   172.30.0.171
   ```
