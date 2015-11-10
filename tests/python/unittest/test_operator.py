@@ -234,7 +234,7 @@ def test_scalarop():
     test = (1+data+1)*2/5-0.2+3*data+5/data-data 
     exe_test = test.bind(mx.cpu(), args=[arr_data])
     exe_test.forward()
-    out = exe_add.outputs[0].asnumpy()
+    out = exe_test.outputs[0].asnumpy()
     
     npout = (1+data_tmp +1)*2/5-0.2+3*data_tmp+5/data_tmp-data_tmp
     assert reldiff(out, npout) < 1e-6
