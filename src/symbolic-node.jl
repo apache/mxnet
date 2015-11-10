@@ -302,7 +302,7 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
       f_desc *= "This function support variable length positional :class:`SymbolicNode` inputs.\n\n"
     end
     f_desc *= _format_docstring(Int(ref_nargs[]), ref_arg_names, ref_arg_types, ref_arg_descs)
-    f_desc *= ":param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.\n\n"
+    f_desc *= ":param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.\n\n"
     f_desc *= ":return: the constructed :class:`SymbolicNode`.\n\n"
     return (func_name, f_desc)
   end

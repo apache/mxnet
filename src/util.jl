@@ -47,6 +47,9 @@ end
 # Internal Utilities
 ################################################################################
 const DOC_EMBED_ANCHOR = "**autogen:EMBED:{1}:EMBED:autogen**"
+function _format_typestring(typestr :: AbstractString)
+  replace(typestr, r"\bSymbol\b", "SymbolicNode")
+end
 function _format_docstring(narg::Int, arg_names::Ref{char_pp}, arg_types::Ref{char_pp}, arg_descs::Ref{char_pp}, remove_dup::Bool=true)
   param_keys = Set{AbstractString}()
 
@@ -62,7 +65,7 @@ function _format_docstring(narg::Int, arg_names::Ref{char_pp}, arg_types::Ref{ch
     end
     push!(param_keys, arg_name)
 
-    arg_type = bytestring(arg_types[i])
+    arg_type = _format_typestring(bytestring(arg_types[i]))
     arg_desc = bytestring(arg_descs[i])
     push!(docstrings, ":param $arg_name: $arg_desc\n:type $arg_name: $arg_type\n\n")
   end

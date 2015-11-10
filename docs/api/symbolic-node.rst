@@ -36,13 +36,13 @@ Public APIs
    Apply activation function to input.
    
    :param data: Input data to activation function.
-   :type data: Symbol
+   :type data: SymbolicNode
    
    
    :param act_type: Activation function to be applied.
    :type act_type: {'relu', 'sigmoid', 'tanh'}, required
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -55,7 +55,7 @@ Public APIs
    Apply batch normalization to input.
    
    :param data: Input data to batch normalization
-   :type data: Symbol
+   :type data: SymbolicNode
    
    
    :param eps: Epsilon to prevent div 0
@@ -65,7 +65,7 @@ Public APIs
    :param momentum: Momentum for moving average
    :type momentum: float, optional, default=0.1
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -78,9 +78,9 @@ Public APIs
    Get output from a symbol and pass 0 gradient back
    
    :param data: Input data.
-   :type data: Symbol
+   :type data: SymbolicNode
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -97,7 +97,7 @@ Public APIs
    :param num_args: Number of inputs to be concated.
    :type num_args: int, required
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -110,15 +110,15 @@ Public APIs
    Apply convolution to input then add a bias.
    
    :param data: Input data to the ConvolutionOp.
-   :type data: Symbol
+   :type data: SymbolicNode
    
    
    :param weight: Weight matrix.
-   :type weight: Symbol
+   :type weight: SymbolicNode
    
    
    :param bias: Bias parameter.
-   :type bias: Symbol
+   :type bias: SymbolicNode
    
    
    :param kernel: convolution kernel size: (y, x)
@@ -148,7 +148,7 @@ Public APIs
    :param no_bias: Whether to disable bias parameter.
    :type no_bias: boolean, optional, default=False
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -161,15 +161,15 @@ Public APIs
    Apply deconvolution to input then add a bias.
    
    :param data: Input data to the DeconvolutionOp.
-   :type data: Symbol
+   :type data: SymbolicNode
    
    
    :param weight: Weight matrix.
-   :type weight: Symbol
+   :type weight: SymbolicNode
    
    
    :param bias: Bias parameter.
-   :type bias: Symbol
+   :type bias: SymbolicNode
    
    
    :param kernel: deconvolution kernel size: (y, x)
@@ -199,7 +199,7 @@ Public APIs
    :param no_bias: Whether to disable bias parameter.
    :type no_bias: boolean, optional, default=True
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -212,13 +212,13 @@ Public APIs
    Apply dropout to input
    
    :param data: Input data to dropout.
-   :type data: Symbol
+   :type data: SymbolicNode
    
    
    :param p: Fraction of the input that gets dropped out at training time
    :type p: float, optional, default=0.5
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -235,7 +235,7 @@ Public APIs
    :param num_args: Number of inputs to be sumed.
    :type num_args: int, required
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -248,9 +248,9 @@ Public APIs
    Flatten input
    
    :param data: Input data to  flatten.
-   :type data: Symbol
+   :type data: SymbolicNode
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -263,15 +263,15 @@ Public APIs
    Apply matrix multiplication to input then add a bias.
    
    :param data: Input data to the FullyConnectedOp.
-   :type data: Symbol
+   :type data: SymbolicNode
    
    
    :param weight: Weight matrix.
-   :type weight: Symbol
+   :type weight: SymbolicNode
    
    
    :param bias: Bias parameter.
-   :type bias: Symbol
+   :type bias: SymbolicNode
    
    
    :param num_hidden: Number of hidden nodes of the output.
@@ -281,7 +281,7 @@ Public APIs
    :param no_bias: Whether to disable bias parameter.
    :type no_bias: boolean, optional, default=False
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -294,7 +294,7 @@ Public APIs
    Apply convolution to input then add a bias.
    
    :param data: Input data to the ConvolutionOp.
-   :type data: Symbol
+   :type data: SymbolicNode
    
    
    :param alpha: value of the alpha variance scaling parameter in the normalization formula
@@ -312,7 +312,7 @@ Public APIs
    :param nsize: normalization window width in elements.
    :type nsize: int (non-negative), required
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -325,7 +325,7 @@ Public APIs
    Apply activation function to input.
    
    :param data: Input data to activation function.
-   :type data: Symbol
+   :type data: SymbolicNode
    
    
    :param act_type: Activation function to be applied.
@@ -343,7 +343,7 @@ Public APIs
    :param upper_bound: Upper bound of random slope. (For rrelu only)
    :type upper_bound: float, optional, default=0.334
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -356,13 +356,13 @@ Public APIs
    Use linear regression for final output, this is used on final output of a net.
    
    :param data: Input data to function.
-   :type data: Symbol
+   :type data: SymbolicNode
    
    
    :param label: Input label to function.
-   :type label: Symbol
+   :type label: SymbolicNode
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -376,13 +376,13 @@ Public APIs
    Logistic regression is suitable for binary classification or probability prediction tasks.
    
    :param data: Input data to function.
-   :type data: Symbol
+   :type data: SymbolicNode
    
    
    :param label: Input label to function.
-   :type label: Symbol
+   :type label: SymbolicNode
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -395,7 +395,7 @@ Public APIs
    Perform spatial pooling on inputs.
    
    :param data: Input data to the pooling operator.
-   :type data: Symbol
+   :type data: SymbolicNode
    
    
    :param kernel: pooling kernel size: (y, x)
@@ -413,7 +413,7 @@ Public APIs
    :param pad: pad for pooling: (y, x)
    :type pad: Shape(tuple), optional, default=(0, 0)
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -426,13 +426,13 @@ Public APIs
    Reshape input to target shape
    
    :param data: Input data to  reshape.
-   :type data: Symbol
+   :type data: SymbolicNode
    
    
    :param target_shape: Target new shape
    :type target_shape: Shape(tuple), required
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -447,7 +447,7 @@ Public APIs
    :param num_outputs: Number of outputs to be sliced.
    :type num_outputs: int, required
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -460,7 +460,7 @@ Public APIs
    DEPRECATED: Perform a softmax transformation on input. Please use SoftmaxOutput
    
    :param data: Input data to softmax.
-   :type data: Symbol
+   :type data: SymbolicNode
    
    
    :param grad_scale: Scale the gradient by a float factor
@@ -470,7 +470,7 @@ Public APIs
    :param multi_output: If set to true, for a (n,k,x_1,..,x_n) dimensionalinput tensor, softmax will generate n*x_1*...*x_n output, eachhas k classes
    :type multi_output: boolean, optional, default=False
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -483,7 +483,7 @@ Public APIs
    Perform a softmax transformation on input, backprop with logloss.
    
    :param data: Input data to softmax.
-   :type data: Symbol
+   :type data: SymbolicNode
    
    
    :param grad_scale: Scale the gradient by a float factor
@@ -493,7 +493,7 @@ Public APIs
    :param multi_output: If set to true, for a (n,k,x_1,..,x_n) dimensionalinput tensor, softmax will generate n*x_1*...*x_n output, eachhas k classes
    :type multi_output: boolean, optional, default=False
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -506,9 +506,9 @@ Public APIs
    Take exp of the src
    
    :param src: Source symbolic input to the function
-   :type src: Symbol
+   :type src: SymbolicNode
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -521,9 +521,9 @@ Public APIs
    Take log of the src
    
    :param src: Source symbolic input to the function
-   :type src: Symbol
+   :type src: SymbolicNode
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -536,9 +536,9 @@ Public APIs
    Take sqrt of the src
    
    :param src: Source symbolic input to the function
-   :type src: Symbol
+   :type src: SymbolicNode
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -551,9 +551,9 @@ Public APIs
    Take square of the src
    
    :param src: Source symbolic input to the function
-   :type src: Symbol
+   :type src: SymbolicNode
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -571,7 +571,7 @@ Internal APIs
 
    Perform an elementwise div.
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -583,7 +583,7 @@ Internal APIs
 
    Perform an elementwise minus.
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -595,7 +595,7 @@ Internal APIs
 
    Perform an elementwise mul.
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -614,7 +614,7 @@ Internal APIs
    :param need_top_grad: Whether this layer needs out grad for backward. Should be false for loss layers.
    :type need_top_grad: boolean, optional, default=True
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -626,7 +626,7 @@ Internal APIs
 
    Perform an elementwise plus.
    
-   :param Base.Symbol name: The name of the SymbolicNode. (e.g. `:my_symbol`), optional.
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
    
