@@ -375,58 +375,6 @@ function convert{T<:Real}(t::Type{Array{T}}, arr :: NDArray)
   convert(t, copy(arr))
 end
 
-# NOTE: internal use only. Accessing pointers on a different device (e.g. accessing GPU
-# pointers from CPU) leads to undefined behavior.
-import Base.pointer
-function pointer(arr :: NDArray)
-  pdata = Ref{Ptr{MX_float}}(0)
-  @mxcall(:MXNDArrayGetData, (MX_handle, Ref{Ptr{MX_float}}), arr, pdata)
-  return pdata[]
-end
-#=doc
-.. function:: try_get_shared(arr)
-
-   Try to create a Julia array by sharing the data with the underlying :class:`NDArray`.
-
-   :param NDArray arr: the array to be shared.
-
-   .. warning::
-
-      The returned array does not guarantee to share data with the underlying :class:`NDArray`.
-      In particular, data sharing is possible only when the :class:`NDArray` lives on CPU.
-=#
-function try_get_shared(arr :: NDArray)
-  if context(arr).device_type == CPU
-    # try to do data sharing
-    vec = pointer_to_array(pointer(arr), length(arr))
-    return reshape(vec, size(arr))
-  else
-    # impossible to share, just copying
-    return copy(arr)
-  end
-end
-
-#=doc
-.. function:: is_shared(j_arr, arr)
-
-   Test whether ``j_arr`` is sharing data with ``arr``.
-
-   :param Array j_arr: the Julia Array.
-   :param NDArray arr: the :class:`NDArray`.
-=#
-function is_shared{T}(j_arr :: Array{T}, arr :: NDArray)
-  false
-end
-function is_shared(j_arr :: Array{MX_float}, arr :: NDArray)
-  if length(j_arr) != length(arr)
-    return false
-  end
-  if context(arr).device_type != CPU
-    return false
-  end
-  return pointer(j_arr) == pointer(arr)
-end
-
 #=doc
 Basic arithmetics
 -----------------
@@ -632,6 +580,166 @@ end
 =#
 function /(arg0 :: NDArray, arg :: Real)
   ./(arg0, arg)
+end
+
+
+#=doc
+Manipulating as Julia Arrays
+----------------------------
+
+.. function:: @nd_as_jl(captures..., statement)
+
+   A convenient macro that allows to operate :class:`NDArray` as Julia Arrays. For example,
+
+   .. code-block:: julia
+
+      x = mx.zeros(3,4)
+      y = mx.ones(3,4)
+      z = mx.zeros((3,4), mx.gpu())
+
+      @mx.nd_as_jl ro=(x,y) rw=z begin
+        # now x, y, z are just ordinary Julia Arrays
+        z[:,1] = y[:,2]
+        z[:,2] = 5
+      end
+
+   Under the hood, the macro convert all the declared captures from :class:`NDArray` into Julia
+   Arrays, by using :func:`try_get_shared`. And automatically commit the modifications back into
+   the :class:`NDArray` that is declared as ``rw``. This is useful for fast prototyping and when
+   implement non-critical computations, such as :class:`AbstractEvalMetric`.
+
+   .. note::
+
+      - Multiple ``rw`` and / or ``ro`` capture declaration could be made.
+      - The macro does **not** check to make sure that ``ro`` captures are not modified. If the
+        original :class:`NDArray` lives in CPU memory, then it is very likely the corresponding
+        Julia Array shares data with the :class:`NDArray`, so modifying the Julia Array will also
+        modify the underlying :class:`NDArray`.
+      - When an :class:`NDArray` is declared to be captured as ``rw``, its contents is always sync
+        back in the end.
+      - The execution results of the expanded macro is always ``nothing``.
+      - The statements are wrapped in a ``let``, thus locally introduced new variables will not be
+        available after the statements. So you will need to declare the variables before calling the
+        macro if needed.
+=#
+macro nd_as_jl(m_args...)
+  @assert(length(m_args) > 0)
+  stmts = m_args[end]
+  @assert(isa(stmts, Expr) && stmts.head == :block,
+          "The last argument should be a statement block (begin-end); but get $stmts")
+  stmts = esc(stmts)
+
+  dclrs  = m_args[1:end-1]
+  nd_ro  = []
+  nd_rw  = []
+  nd_all = []
+  for declr in dclrs
+    @assert(isa(declr, Expr) && declr.head == :(=) && length(declr.args)==2 && declr.args[1] ∈ (:ro,:rw),
+            "Invalid declaration, should be rw=(x,y) or ro=z; but get $declr")
+
+    declr_vars = declr.args[2]
+    if isa(declr_vars, Symbol)
+      declr_vars = (declr_vars,)
+    elseif isa(declr_vars, Expr)
+      @assert(declr_vars.head ∈ (:tuple, :vect),
+              "Capture declaration should be a variable or a tuple of variables; but got $declr_vars")
+      declr_vars = declr_vars.args
+    else
+      @assert(false, "Capture declaration should be a variable or a tuple of variables; but got $declr_vars")
+    end
+    for declr_var in declr_vars
+      @assert(isa(declr_var, Symbol),
+              "Captured ndarrays in ro/rw declaration should be variables, but get $(declr_var)")
+    end
+    append!(nd_all, [declr_vars...])
+    if declr.args[1] == :ro
+      append!(nd_ro, [declr_vars...])
+    else
+      append!(nd_rw, [declr_vars...])
+    end
+  end
+
+  nd_ro    = map(esc, nd_ro)
+  nd_rw    = map(esc, nd_rw)
+  nd_all   = map(esc, nd_all)
+  rw_origs = [gensym() for _ in nd_rw]
+
+  save_statements  = Expr(:block, [:($v_orig = $v) for (v_orig, v) in zip(rw_origs, nd_rw)]...)
+  clear_statements = Expr(:block, [:($v_orig = nothing) for v_orig in rw_origs]...)
+  let_assignments  = [:($v = try_get_shared($v)) for v in nd_all]
+  sync_statements  = map(rw_origs, nd_rw) do v_orig, v
+    quote
+      if !is_shared($v, $v_orig)
+        # copy data back if not or no longer sharing data
+        copy!($v_orig, $v)
+      end
+    end
+  end
+  sync_statements  = Expr(:block, sync_statements...)
+
+  let_statement = Expr(:let, quote
+    $sync_statements
+  end, let_assignments...)
+  m_body = quote
+    $save_statements
+    $let_statement
+    $clear_statements
+    nothing # the final results is always nothing
+  end
+
+  m_body
+end
+
+# NOTE: internal use only. Accessing pointers on a different device (e.g. accessing GPU
+# pointers from CPU) leads to undefined behavior.
+import Base.pointer
+function pointer(arr :: NDArray)
+  pdata = Ref{Ptr{MX_float}}(0)
+  @mxcall(:MXNDArrayGetData, (MX_handle, Ref{Ptr{MX_float}}), arr, pdata)
+  return pdata[]
+end
+#=doc
+.. function:: try_get_shared(arr)
+
+   Try to create a Julia array by sharing the data with the underlying :class:`NDArray`.
+
+   :param NDArray arr: the array to be shared.
+
+   .. warning::
+
+      The returned array does not guarantee to share data with the underlying :class:`NDArray`.
+      In particular, data sharing is possible only when the :class:`NDArray` lives on CPU.
+=#
+function try_get_shared(arr :: NDArray)
+  if context(arr).device_type == CPU
+    # try to do data sharing
+    vec = pointer_to_array(pointer(arr), length(arr))
+    return reshape(vec, size(arr))
+  else
+    # impossible to share, just copying
+    return copy(arr)
+  end
+end
+
+#=doc
+.. function:: is_shared(j_arr, arr)
+
+   Test whether ``j_arr`` is sharing data with ``arr``.
+
+   :param Array j_arr: the Julia Array.
+   :param NDArray arr: the :class:`NDArray`.
+=#
+function is_shared{T}(j_arr :: Array{T}, arr :: NDArray)
+  false
+end
+function is_shared(j_arr :: Array{MX_float}, arr :: NDArray)
+  if length(j_arr) != length(arr)
+    return false
+  end
+  if context(arr).device_type != CPU
+    return false
+  end
+  return pointer(j_arr) == pointer(arr)
 end
 
 #=doc
