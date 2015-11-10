@@ -368,13 +368,64 @@ end
 #=doc
 .. function:: convert(::Type{Array{T}}, arr :: NDArray)
 
-   Convert an :class:`NDArray` into a Julia ``Array`` of specific type.
+   Convert an :class:`NDArray` into a Julia ``Array`` of specific type. Data will be copied.
 =#
 # Convert copy: NDArray -> Julia Array
 function convert{T<:Real}(t::Type{Array{T}}, arr :: NDArray)
   convert(t, copy(arr))
 end
 
+# NOTE: internal use only. Accessing pointers on a different device (e.g. accessing GPU
+# pointers from CPU) leads to undefined behavior.
+import Base.pointer
+function pointer(arr :: NDArray)
+  pdata = Ref{Ptr{MX_float}}(0)
+  @mxcall(:MXNDArrayGetData, (MX_handle, Ref{Ptr{MX_float}}), arr, pdata)
+  return pdata[]
+end
+#=doc
+.. function:: try_get_shared(arr)
+
+   Try to create a Julia array by sharing the data with the underlying :class:`NDArray`.
+
+   :param NDArray arr: the array to be shared.
+
+   .. warning::
+
+      The returned array does not guarantee to share data with the underlying :class:`NDArray`.
+      In particular, data sharing is possible only when the :class:`NDArray` lives on CPU.
+=#
+function try_get_shared(arr :: NDArray)
+  if context(arr).device_type == CPU
+    # try to do data sharing
+    vec = pointer_to_array(pointer(arr), length(arr))
+    return reshape(vec, size(arr))
+  else
+    # impossible to share, just copying
+    return copy(arr)
+  end
+end
+
+#=doc
+.. function:: is_shared(j_arr, arr)
+
+   Test whether ``j_arr`` is sharing data with ``arr``.
+
+   :param Array j_arr: the Julia Array.
+   :param NDArray arr: the :class:`NDArray`.
+=#
+function is_shared{T}(j_arr :: Array{T}, arr :: NDArray)
+  false
+end
+function is_shared(j_arr :: Array{MX_float}, arr :: NDArray)
+  if length(j_arr) != length(arr)
+    return false
+  end
+  if context(arr).device_type != CPU
+    return false
+  end
+  return pointer(j_arr) == pointer(arr)
+end
 
 #=doc
 Basic arithmetics
