@@ -29,6 +29,7 @@ Build OpenBlas for Android: [Build OpenBlas](https://github.com/xianyi/OpenBLAS/
 Type ```make ANDROID=1```
 Build will FAIL the first time as expected. Before this issue gets fixed, you need to manually remove include statements from mxnext_predict-all.cc and add <common.h> back. Here is the diff you want to apply:
 
+```
 19,33c19
 < #include <bits/exception_ptr.h>
 < #include <bits/nested_exception.h>
@@ -62,6 +63,8 @@ Build will FAIL the first time as expected. Before this issue gets fixed, you ne
 < #include <thread.h>
 60d36
 < #include <windows.h>
+
+```
 
 Type ```make ANDROID=1``` again to continue the build.
 
