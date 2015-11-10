@@ -223,7 +223,7 @@ full log [log/ilsvrc12/incept_4](log/ilsvrc12/incept_4)
 | 15 | 0.632609 | 0.584213 |
 | 20 | 0.669050 | 0.595749 |
 
-full log
+full log [log/ilsvrc12/incept_3](log/ilsvrc12/incept_3)
 
 ### 10 EC2 g2.8x instances, Sync
 
