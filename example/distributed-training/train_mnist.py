@@ -6,12 +6,13 @@ import logging
 ## in amazon s3:
 data_dir = "s3://dmlc/mnist/"
 ## in local machine:
-# data_dir = "data"
+# data_dir = "data/"
 ## in hdfs:
 # data_dir = hdfs:///dmlc/mnist/
 
 ## can be local, dist_async or dist_sync
-kv_type = 'dist_sync'
+kv_type = 'local'
+# kv_type = 'dist_sync'
 ## batch size
 batch_size = 100
 ## number of gpus used in a worker
