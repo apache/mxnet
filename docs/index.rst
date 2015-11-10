@@ -36,6 +36,7 @@ For more details, see documentation below. Please also checkout the `examples
    api/initializer
    api/optimizer
    api/callback
+   api/metric
    api/io
    api/ndarray
    api/symbolic-node

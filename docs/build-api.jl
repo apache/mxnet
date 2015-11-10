@@ -89,6 +89,7 @@ extract_doc("callback.rst", "callback.jl")
 extract_doc("model.rst", "model.jl")
 
 extract_doc("optimizer.rst", "optimizer.jl")
+extract_doc("metric.rst", "metric.jl")
 
 extract_doc("io.rst", "io.jl")
 embed_mxnet_api("io.rst", "io", mx._import_io_iterators)
