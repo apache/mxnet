@@ -2,11 +2,37 @@
 
 ## How to use
 
-- runs on multiple machines with machine names in `hosts`
+- If machines are ssh-able. First prepare a
+  file with all hostnames, such as `cat hosts`
 
-```
-../../../ps-lite/tracker/dmlc_mpi.py -n 2 -s 2 -H hosts python dist_sync_mlp.py
-```
+  ```bash
+  172.30.0.172
+  172.30.0.171
+  ```
+
+  Next prepare a working directory, and then copy mxnet libraries and the
+  trainig codes
+
+  ```bash
+  cp -r ../../python/mxnet working_dir
+  cp -r ../../lib/libmxnet.so working_dir/mxnet
+  cp -r *.py working_dir
+  ```
+
+  Then start the jobs with 2 workers (with 2 servers):
+
+  ```bash
+  cd workding_dir
+  mxnet_dir/tracker/dmlc_ssh.py -n 2 -s 2 -H hosts python dist_sync_mlp.py
+  ```
+
+- If mxnet is on a shared filesystem and `mpirun` is availabe,
+
+  ```
+  ../../tracker/dmlc_mpi.py -n 2 -s 2 -H hosts python dist_sync_mlp.py
+  ```
+
+- We can also submit the jobs by resource managers such as `Yarn`
 
 # Results
 
