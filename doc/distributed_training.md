@@ -105,22 +105,22 @@ gradients from all workers and then performances updating. While if using
 `dist_async`, the server updates the weight immediately after gradients from
 any one worker are received.
 
-### Implementation with the parameter server
+<!-- ### Implementation with the parameter server -->
 
-The `kvstore` is implemented by using the [parameter server](https://github.com/dmlc/ps-lite), which
-is a distributed framework optimized for machine learning jobs. In this
-framework, there are multiple worker nodes and server nodes. The architecture is shown below:
+<!-- The `kvstore` is implemented by using the [parameter server](https://github.com/dmlc/ps-lite), which -->
+<!-- is a distributed framework optimized for machine learning jobs. In this -->
+<!-- framework, there are multiple worker nodes and server nodes. The architecture is shown below: -->
 
-<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/multi-node/ps_arch.png width=400/>
+<!-- <img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/multi-node/ps_arch.png width=400/> -->
 
-- In each iteration, a worker first reads a data batch, next **pull** the weights from the
-  servers, and then compute the gradients and **push** them to the servers. Workers
-  use several technologies, such as pre-fetching, multi-threads, and data filters, to
-  reduce the I/O overhead.
+<!-- - In each iteration, a worker first reads a data batch, next **pull** the weights from the -->
+<!--   servers, and then compute the gradients and **push** them to the servers. Workers -->
+<!--   use several technologies, such as pre-fetching, multi-threads, and data filters, to -->
+<!--   reduce the I/O overhead. -->
 
-- A server maintains a part of the model, and **updates** the model using the
-  received gradients. It supports multiple data consistency models, with will be
-  explained later.
+<!-- - A server maintains a part of the model, and **updates** the model using the -->
+<!--   received gradients. It supports multiple data consistency models, with will be -->
+<!--   explained later. -->
 
 ## Launch Jobs on a Cluster
 
@@ -129,9 +129,9 @@ including by resource managers such as `Yarn` or simply via `ssh`. [This tutoria
 gives a step-by-step example on how to setup and run jobs on a GPU cluster at
 Amazon AWS.
 
-## More Readings
+<!-- ## More Readings -->
 
-- [Distributed training examples with results](https://github.com/dmlc/mxnet/tree/master/example/distributed-training)
-- Research papers for the parameter server: from the algorithm aspect
-  [NIPS'14](http://www.cs.cmu.edu/~muli/file/parameter_server_nips14.pdf), from
-  the system aspect [OSDI'14](http://www.cs.cmu.edu/~muli/file/parameter_server_osdi14.pdf)
+<!-- - [Distributed training examples with results](https://github.com/dmlc/mxnet/tree/master/example/distributed-training) -->
+<!-- - Research papers for the parameter server: from the algorithm aspect -->
+<!--   [NIPS'14](http://www.cs.cmu.edu/~muli/file/parameter_server_nips14.pdf), from -->
+<!--   the system aspect [OSDI'14](http://www.cs.cmu.edu/~muli/file/parameter_server_osdi14.pdf) -->
