@@ -4,7 +4,7 @@ import mxnet as mx
 import logging
 
 ## in local machine:
-data_dir = "data/cifar"
+data_dir = "data/cifar/"
 ## in amazon s3:
 # data_dir = "s3://dmlc/cifar10/"
 ## in hdfs:
