@@ -60,7 +60,7 @@ Based on [train_cifar10.py](train_cifar10.py)
 ### System Performance
 
 | cluster | # machines | # GPUs | batch size / GPU | kvstore | epoch time (sec) |
-| --- | --- | --- | --- |
+| --- | --- | --- | --- | --- | --- |
 | GTX980 | 1 | 1 |  256 | `local` | 71 |
 |  - | 1 | 1 | 128 | `dist_sync` | 128 |
 | - | 5 | 10 | 256 | `dist_sync` | 7 |
@@ -144,7 +144,7 @@ Based on [train_imagenet.py](train_imagenet.py)
 ### System Performance
 
 | cluster | # machines | # GPUs | batch size / GPU | kvstore | epoch time (sec) |
-| --- | --- | --- | --- |
+| --- | --- | --- | --- | --- | --- |
 | GTX980 | 1 | 1 |  48 | `local` | ? |
 | GTX980 | 1 | 2 |  48 | `local` | ? |
 | - | 5 | 10 |  48 | `dist_sync` | 3000 |
