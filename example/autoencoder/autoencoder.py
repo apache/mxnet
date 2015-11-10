@@ -120,18 +120,18 @@ class AutoEncoderModel(model.MXModel):
         solver = Solver('sgd', momentum=0.9, wd=decay, learning_rate=l_rate, lr_scheduler=lr_scheduler)
         solver.set_metric(mx.metric.CustomMetric(l2_norm))
         solver.set_monitor(Monitor(1000))
-        data_iter = mx.io.NDArrayIter([X], batch_size=batch_size, shuffle=False,
+        data_iter = mx.io.NDArrayIter({'data': X}, batch_size=batch_size, shuffle=False,
                                       last_batch_handle='roll_over')
         for i in range(self.N):
             if i == 0:
                 data_iter_i = data_iter
             else:
-                X_i = model.extract_feature(self.internals[i-1], self.args, ['data'],
-                                      data_iter, X.shape[0], self.xpu).values()[0]
-                data_iter_i = mx.io.NDArrayIter([X_i], batch_size=batch_size,
+                X_i = model.extract_feature(self.internals[i-1], self.args,
+                                            data_iter, X.shape[0], self.xpu).values()[0]
+                data_iter_i = mx.io.NDArrayIter({'data': X_i}, batch_size=batch_size,
                                                 last_batch_handle='roll_over')
-            solver.solve(self.xpu, self.stacks[i], self.args, self.args_grad, ['data'], data_iter_i,
-                         0, n_iter, self.args_mult)
+            solver.solve(self.xpu, self.stacks[i], self.args, self.args_grad, data_iter_i,
+                         0, n_iter, {}, False)
 
     def finetune(self, X, batch_size, n_iter, optimizer, l_rate, decay, lr_scheduler=None):
         def l2_norm(label, pred):
@@ -139,16 +139,16 @@ class AutoEncoderModel(model.MXModel):
         solver = Solver('sgd', momentum=0.9, wd=decay, learning_rate=l_rate, lr_scheduler=lr_scheduler)
         solver.set_metric(mx.metric.CustomMetric(l2_norm))
         solver.set_monitor(Monitor(1000))
-        data_iter = mx.io.NDArrayIter([X], batch_size=batch_size, shuffle=False,
+        data_iter = mx.io.NDArrayIter({'data': X}, batch_size=batch_size, shuffle=False,
                                       last_batch_handle='roll_over')
-        solver.solve(self.xpu, self.loss, self.args, self.args_grad, ['data'], data_iter,
-                     0, n_iter, self.args_mult)
+        solver.solve(self.xpu, self.loss, self.args, self.args_grad, data_iter,
+                     0, n_iter, {}, False)
 
     def eval(self, X):
         batch_size = 100
-        data_iter = mx.io.NDArrayIter([X], batch_size=batch_size, shuffle=False,
+        data_iter = mx.io.NDArrayIter({'data': X}, batch_size=batch_size, shuffle=False,
                                       last_batch_handle='pad')
-        Y = model.extract_feature(self.loss, self.args, ['data'], data_iter,
+        Y = model.extract_feature(self.loss, self.args, data_iter,
                                  X.shape[0], self.xpu).values()[0]
         return np.mean(np.square(Y-X))/2.0
 
