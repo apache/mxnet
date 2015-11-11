@@ -239,6 +239,27 @@ function test_sqrt()
   @test reldiff(copy(sqrt_ed), sqrt(j_array)) < 1e-6
 end
 
+function test_nd_as_jl()
+  dims = (2,3)
+  info("NDArray::nd_as_jl::dims = $dims")
+
+  x = mx.zeros(dims) + 5
+  y = mx.ones(dims)
+  z = mx.zeros(dims)
+  @mx.nd_as_jl ro=x rw=(y,z) begin
+    for i = 1:length(z)
+      z[i] = x[i]
+    end
+
+    z[:,1] = y[:,1]
+    y[:] = 0
+  end
+
+  @test reldiff(copy(y), 0) < 1e-6
+  @test reldiff(copy(z)[:,1], 1) < 1e-6
+  @test reldiff(copy(z)[:,2:end], copy(x)[:,2:end]) < 1e-6
+end
+
 
 ################################################################################
 # Run tests
@@ -254,5 +275,6 @@ test_gd()
 test_saveload()
 test_clip()
 test_sqrt()
+test_nd_as_jl()
 
 end
