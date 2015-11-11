@@ -27,25 +27,17 @@ Contents
 * [Open Source Design Notes](http://mxnet.readthedocs.org/en/latest/#open-source-design-notes)
 * [Code Examples](example)
 * [Pretrained Models](https://github.com/dmlc/mxnet-model-gallery)
-* [Installation](http://mxnet.readthedocs.org/en/latest/build.html)
-* [Features](#features)
 * [Contribute to MXNet](http://mxnet.readthedocs.org/en/latest/contribute.html)
-* [License](#license)
 
 Features
 --------
-* To Mix and Maximize
-  - Mix all flavours of programming models to maximize flexibility and efficiency.
-* Lightweight, scalable and memory efficient.
-  - Minimum build dependency, scales to multi-GPUs with very low memory usage.
-* Auto parallelization
-  - Write numpy-style ndarray GPU programs, which will be automatically parallelized.
-* Language agnostic
-  - With support for python, c++, R, more to come.
-* Cloud friendly
-  - Directly load/save from S3, HDFS, AZure
-* Easy extensibility
-  - Extending no requirement on GPU programming.
+* [Open sourced design note]((http://mxnet.readthedocs.org/en/latest/#open-source-design-notes) on how we did this and what can be re-used by general deep learning project.
+* Flexible configuration, for arbitrary computation graph.
+* Mix and Maximize good flavours of programmingto maximize flexibility and efficiency.
+* Lightweight, memory efficient and portable to smart devices.
+* Scales up to multi GPUs and distributed setting with auto parallelism.
+* Support python, R, C++, Julia,
+* Cloud friendly, and directly compatible with S3, HDFS, AZure
 
 Bug Reporting
 -------------
@@ -54,7 +46,6 @@ Bug Reporting
 License
 -------
 © Contributors, 2015. Licensed under an [Apache-2.0](https://github.com/dmlc/mxnet/blob/master/LICENSE) license.
-
 
 History
 -------
