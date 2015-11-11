@@ -37,6 +37,7 @@ Tutorial
 --------
 * [Training Deep Net on 14 Million Images on A Single Machine](tutorial/imagenet_full.md)
 * [How to Create New Operations (Layers)](tutorial/new_op_howto.md)
+* [Deep Learning in a Single File for Smart Devices](tutorial/smart_device.md)
 
 Indices and tables
 ------------------
