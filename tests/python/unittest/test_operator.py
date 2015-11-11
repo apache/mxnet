@@ -230,14 +230,24 @@ def test_scalarop():
     data_tmp = np.ones(shape)
     data_tmp[:]=5
     arr_data = mx.nd.array(data_tmp)
+    arr_grad = mx.nd.empty(shape) 
+    arr_grad[:]=3
     
-    test = (1+data+1)*2/5-0.2+3*data+5/data-data 
-    exe_test = test.bind(mx.cpu(), args=[arr_data])
+    test = 2 / (4-((1+data+1)*2/5)-0.2)
+    exe_test = test.bind(mx.cpu(), args=[arr_data], args_grad=[arr_grad])
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
-    
-    npout = (1+data_tmp +1)*2/5-0.2+3*data_tmp+5/data_tmp-data_tmp
+    npout_1 = (4-((1+data_tmp+1)*2/5)-0.2)
+    npout = 2/npout_1
     assert reldiff(out, npout) < 1e-6
+    
+    out_grad = mx.nd.empty(shape)
+    out_grad[:] = 2;
+    npout_grad = out_grad.asnumpy()
+    npout_grad = npout_grad*2/5
+    npout_grad = 2*npout_grad /(npout_1 *npout_1 )
+    exe_test.backward(out_grad)
+    assert reldiff(arr_grad.asnumpy(), npout_grad) < 1e-6
 
 if __name__ == '__main__':
     test_elementwise_sum()

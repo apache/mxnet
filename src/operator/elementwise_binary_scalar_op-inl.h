@@ -126,7 +126,11 @@ class ElementwiseBinaryScalarOp : public Operator {
         break;
       }
       case elembinary::kMinus: {
-        Assign(lhs_grad, req[elembinary::kLhs], F<mshadow_op::identity>(m_out_grad));
+        if (scalar_on_right_) {
+          Assign(lhs_grad, req[elembinary::kLhs], F<mshadow_op::negation>(m_out_grad));
+        } else {
+          Assign(lhs_grad, req[elembinary::kLhs], F<mshadow_op::identity>(m_out_grad));
+        }
         break;
       }
       case elembinary::kMul: {
@@ -137,10 +141,10 @@ class ElementwiseBinaryScalarOp : public Operator {
       case elembinary::kDiv: {
         Tensor<xpu, 2> lhs_data = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
         if (scalar_on_right_) {
-            Assign(lhs_grad, req[elembinary::kLhs],
-                F<mshadow_op::negation>(m_out_grad * scalar_) / F<mshadow_op::square>(lhs_data));
+          Assign(lhs_grad, req[elembinary::kLhs],
+                 F<mshadow_op::negation>(m_out_grad * scalar_) / F<mshadow_op::square>(lhs_data));
         } else {
-            Assign(lhs_grad, req[elembinary::kLhs], m_out_grad / scalar_);
+          Assign(lhs_grad, req[elembinary::kLhs], m_out_grad / scalar_);
         }
         break;
       }
