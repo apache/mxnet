@@ -1,6 +1,6 @@
 # Deep Learning in a Single File for Smart Devices
 
-Deep learning (DL) systems are complex and often have a few of dependencies. It is often painful to port a DL library into different platforms, especially for smart devices. There is one fun way to solve this problem:  provide a light interface and putting all required codes into ***a single file*** with minimal dependencies. In this tutorial we will give details on how to do the amalgamation. In addition, we will show a demo to run image object recognition on mobile devices.
+Deep learning (DL) systems are complex and often have a few of dependencies. It is often painful to port a DL library into different platforms, especially for smart devices. There is one fun way to solve this problem:  provide a light interface and ***put all required codes into a single file*** with minimal dependencies. In this tutorial we will give details on how to do the amalgamation. In addition, we will show a demo to run image object recognition on mobile devices.
 
 ## Amalgamation: Make the Whole System into a Single File
 
