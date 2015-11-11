@@ -10,9 +10,9 @@ We also have a minimal version removed BLAS dependency, and the single file can 
 
 The compiled library can be used by any other programming language easily. The `.h` file contains a light prediction API, porting to another language with a C foreign function interface needs little effect. For example
 
-Go: https://github.com/jdeng/gomxnet
-Java: https://github.com/dmlc/mxnet/tree/master/amalgamation/jni
-Python: https://github.com/dmlc/mxnet/tree/master/amalgamation/python
+- Go: https://github.com/jdeng/gomxnet
+- Java: https://github.com/dmlc/mxnet/tree/master/amalgamation/jni
+- Python: https://github.com/dmlc/mxnet/tree/master/amalgamation/python
 
 
 To do amalgamation, there are a few things we need to be careful about when building the project:
@@ -47,18 +47,18 @@ We tested on Nexus 5:
 
 ```
 |                  | Top-1 Validation on ILSVRC2012      | Time  | App Size  | Runtime Temp Memory Req |
-| ---------------- | ----------------------------------- | ----- | ----  | --------------- |
-| FastPoorNet      | around 52%, similar to 2011 winner  | 1s    | <10MB |      <5MB       |
-| Sub InceptionBN | around 64%, similar to 2013 winner  | 2.7s  | <40MB |      <10MB      |
-| InceptionBN     | around 70%                          | 4s-5s | <60MB |       10MB      |
+| ---------------- | ----------------------------------- | ----- | ----————— | ---------------———————— |
+| FastPoorNet      | around 52%, similar to 2011 winner  | 1s    | <10MB     |      <5MB               |
+| Sub InceptionBN  | around 64%, similar to 2013 winner  | 2.7s  | <40MB     |      <10MB              |
+| InceptionBN      | around 70%                          | 4s-5s | <60MB     |       10MB              |
 ```
 
 These models are just for demo purpose, as the models are not fine tuned for mobiles, there is definitely great room for improvement.  We believe making lightweight, portable and fast deep learning library is fun and interesting, and hope you have fun with the library.
 
 Demo APK Download:
 
-[FastPoorNet](https://github.com/dmlc/web-data/blob/master/mxnet/apk/fastpoornet.apk?raw=true)
-[SubInception](https://github.com/dmlc/web-data/blob/master/mxnet/apk/subinception.apk?raw=true)
+- [FastPoorNet](https://github.com/dmlc/web-data/blob/master/mxnet/apk/fastpoornet.apk?raw=true)
+- [SubInception](https://github.com/dmlc/web-data/blob/master/mxnet/apk/subinception.apk?raw=true)
 
 
 
