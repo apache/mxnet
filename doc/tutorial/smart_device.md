@@ -10,9 +10,9 @@ We also have a minimal version removed BLAS dependency, and the single file can 
 
 The compiled library can be used by any other programming language easily. The `.h` file contains a light prediction API, porting to another language with a C foreign function interface needs little effect. For example
 
-Go: https://github.com/jdeng/gomxnet
-Java: https://github.com/dmlc/mxnet/tree/master/amalgamation/jni
-Python: https://github.com/dmlc/mxnet/tree/master/amalgamation/python
+- Go: https://github.com/jdeng/gomxnet
+- Java: https://github.com/dmlc/mxnet/tree/master/amalgamation/jni
+- Python: https://github.com/dmlc/mxnet/tree/master/amalgamation/python
 
 
 To do amalgamation, there are a few things we need to be careful about when building the project:
@@ -57,8 +57,8 @@ These models are just for demo purpose, as the models are not fine tuned for mob
 
 Demo APK Download:
 
-[FastPoorNet](https://github.com/dmlc/web-data/blob/master/mxnet/apk/fastpoornet.apk?raw=true)
-[SubInception](https://github.com/dmlc/web-data/blob/master/mxnet/apk/subinception.apk?raw=true)
+- [FastPoorNet](https://github.com/dmlc/web-data/blob/master/mxnet/apk/fastpoornet.apk?raw=true)
+- [SubInception](https://github.com/dmlc/web-data/blob/master/mxnet/apk/subinception.apk?raw=true)
 
 
 
