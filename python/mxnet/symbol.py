@@ -34,7 +34,7 @@ class Symbol(object):
         if isinstance(other, Symbol):
             return Symbol._Plus(self, other)
         if isinstance(other, Number):
-            return Symbol._PlusScalar(self, value=other)
+            return Symbol._PlusScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -45,13 +45,13 @@ class Symbol(object):
         if isinstance(other, Symbol):
             return Symbol._Minus(self, other)
         if isinstance(other, Number):
-            return Symbol._MinusScalar(self, value=other)
+            return Symbol._MinusScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rsub__(self, other):
         if isinstance(other, Number):
-            return Symbol._MinusScalar(self, value=other, right=True)
+            return Symbol._MinusScalar(self, scalar=other, scalar_on_right=True)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -59,7 +59,7 @@ class Symbol(object):
         if isinstance(other, Symbol):
             return Symbol._Mul(self, other)
         if isinstance(other, Number):
-            return Symbol._MulScalar(self, value=other)
+            return Symbol._MulScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -70,13 +70,13 @@ class Symbol(object):
         if isinstance(other, Symbol):
             return Symbol._Div(self, other)
         if isinstance(other, Number):
-            return Symbol._DivScalar(self, value=other)
+            return Symbol._DivScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rdiv__(self, other):
         if isinstance(other, Number):
-            return Symbol._DivScalar(self, value=other, right=True)
+            return Symbol._DivScalar(self, scalar=other, scalar_on_right=True)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
