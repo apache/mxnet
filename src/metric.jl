@@ -40,6 +40,9 @@ abstract AbstractEvalMetric
 .. class:: Accuracy
 
    Multiclass classification accuracy.
+
+   Calculates the mean accuracy per sample for softmax in one dimension.
+   For a multi-dimensional softmax the mean accuracy over all dimensions is calculated.
 =#
 type Accuracy <: AbstractEvalMetric
   acc_sum  :: Float64
@@ -48,13 +51,47 @@ type Accuracy <: AbstractEvalMetric
   Accuracy() = new(0.0, 0)
 end
 
+"""
+Implementation taken from findmax in Julia base.
+Searches for the maximum value in p_dim of a.
+I and n are values for the other dimensions.
+"""
+function _indmax(a, I, p_dim, n)
+  m = a[I..., 1, n]
+  mi = 1
+  for i in 2:size(a, p_dim)
+    ai = a[I..., i, n]
+    if ai > m || m!=m
+      m = ai
+      mi = i
+    end
+  end
+  return mi
+end
+
 function _update_single_output(metric :: Accuracy, label :: NDArray, pred :: NDArray)
   @nd_as_jl ro=(label,pred) begin
-    n_sample = size(pred)[end]
-    metric.n_sample += n_sample
-    for i = 1:n_sample
-      klass = indmax(pred[:,i])
-      metric.acc_sum += (klass-1) == label[i]
+    if ndims(pred) > 2 # Multidimensional case
+      # Construct cartesian index
+      p_dim = ndims(pred)-1
+      initial = tuple(fill(1,p_dim-1)...)
+      dims = size(pred, (1:p_dim-1)...)
+      crange = CartesianRange(CartesianIndex(initial), CartesianIndex(dims))
+
+      for sample in 1:size(label, ndims(label))
+        for i in crange
+          l_i = sub2ind(dims, i.I...)
+          klass = _indmax(pred, i.I, p_dim, sample)
+          metric.acc_sum += (klass-1) == label[l_i, sample]
+          metric.n_sample += 1
+        end
+      end
+    else # 1-dimensional case
+      for sample in 1:size(label, 1)
+        klass = indmax(pred[:, sample])
+        metric.acc_sum += (klass-1) == label[sample]
+        metric.n_sample += 1
+      end
     end
   end
 end

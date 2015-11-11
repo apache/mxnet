@@ -501,6 +501,29 @@ Public APIs
 
 
 
+.. function:: SwapAxis(...)
+
+   Apply swapaxis to input.
+   
+   :param data: Input data to the SwapAxisOp.
+   :type data: SymbolicNode
+   
+   
+   :param dim1: the first axis to be swapped.
+   :type dim1: int (non-negative), optional, default=0
+   
+   
+   :param dim2: the second axis to be swapped.
+   :type dim2: int (non-negative), optional, default=0
+   
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
 .. function:: exp(...)
 
    Take exp of the src
