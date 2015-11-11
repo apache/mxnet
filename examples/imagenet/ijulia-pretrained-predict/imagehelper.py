@@ -20,7 +20,9 @@ def PreprocessImage(img):
     # WRONG channel will lead to WRONG result
     #-------------------------------------------------------------------
     # swap channel from RGB to BGR
-    sample = sample[:, :, [2,1,0]]
+    # sample = sample[:, :, [2,1,0]]
+    sample = sample[:, :, [0,1,2]] # actually, in this pre-trained model RGB is used
+
     # swap axes to make image from (224, 224, 4) to (3, 224, 224)
     sample = np.swapaxes(sample, 0, 2)
     sample = np.swapaxes(sample, 1, 2)
