@@ -135,7 +135,7 @@ directory of the root machine, such as `~/train`, and MXNet is built as `~/mxnet
   ~/mxnet/tracker/dmlc_ssh.sh -n 10 -s 10 -H hosts python train_mnist.py
   ```
 
-Here we use a simple ```dmlc_ssh``` that runs DMLC jobs without any cluster frameworks. We also provide other scripts in [tracker](https://github.com/dmlc/dmlc-core/tree/master/tracker) to run on other cluster frameworks, including Hadoop(YARN) and SGE.
+Here we use a simple ```dmlc_ssh``` that runs DMLC jobs without any cluster frameworks.
 
 Note: Sometimes the jobs lingers at the slave machines even we pressed `Ctrl-c`
 at the root node. We can kill them by
@@ -146,4 +146,13 @@ cat hosts | xargs -I{} ssh -o StrictHostKeyChecking=no {} 'uname -a; pgrep pytho
 
 Note: The above example is quite simple to train and therefore is not a good
 benchmark for the distributed training. We may consider other examples such as
-[imagenet using inception network](example/distributed-training/train_imagenet.py).
+[imagenet using inception network](https://github.com/dmlc/mxnet/tree/master/example/distributed-training/train_imagenet.py)
+
+## More NOTE
+### Use multiple data shards
+Usually it is common to pack dataset into multiple files, especially when we pack it distributedly. MXNet support direct loading from multiple data shards, simply put all the record files into a folder, and point the data path to the folder
+
+### Use YARN, MPI, SGE
+While ssh can be simple for cases when we do not have a cluster scheduling framework. MXNet is designed to be able to port to various platforms.  We also provide other scripts in [tracker](https://github.com/dmlc/dmlc-core/tree/master/tracker) to run on other cluster frameworks, including Hadoop(YARN) and SGE. Your contribution is more than welcomed to provide examples to run mxnet on your favorite distributed platform.
+  
+
