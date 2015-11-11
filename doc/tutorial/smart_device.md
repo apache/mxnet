@@ -16,6 +16,7 @@ The compiled library can be used by any other programming language easily. The `
 
 
 To do amalgamation, there are a few things we need to be careful about when building the project:
+
 - Minimize the dependency to other libraries and do.
 - Use namespace to encapsulate the types and operators.
 - Avoid do commands such as ```using namespace xyz``` on the global scope.
@@ -33,12 +34,14 @@ Next we will use the image recognition as an example to show how we try to get s
 
 
 
-Finally, we show an Android example, thanks to Leliana, : https://github.com/Leliana/WhatsThis demonstrate how to run on Android.
+Finally, we show an Android example, thanks to Leliana, [https://github.com/Leliana/WhatsThis](https://github.com/Leliana/WhatsThis) demonstrate how to run on Android.
 
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/apk/subinception.png" height="488" width="274">
 
-![alt text](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/apk/subinception.png "Sub Inception Example")
 
 By using amalgamation, we can easily port the prediction library to mobile devices,  with nearly no dependency. Compile on smart platform is no longer a painful task. After compiled library for smart platform, the last thing is call C-API in the target language (Jave/Swift).
+
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/apk/poolnet.png" height="488" width="274">
 
 Besides pre-trained Inception-BatchNorm network we provided two not bad pretrained models:
 
