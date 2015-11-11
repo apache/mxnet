@@ -64,7 +64,7 @@ public class Predictor {
       nativeForward(this.handle, key, input);
   }
 
-  static public float[] inputFromImage(Bitmap[] bmps, int meanR, int meanG, int meanB) {
+  static public float[] inputFromImage(Bitmap[] bmps, float meanR, float meanG, float meanB) {
     if (bmps.length == 0) return null;
 
     int width = bmps[0].getWidth();
