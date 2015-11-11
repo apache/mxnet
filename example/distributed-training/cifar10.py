@@ -4,10 +4,15 @@ import mxnet as mx
 
 def data(data_dir, batch_size, num_parts=1, part_index=0):
     """return cifar10 iterator"""
+    if data_dir == "data/cifar/":
+        sys.path.insert(0, "../../tests/python/common")
+        import get_data
+        get_data.GetCifar10()
+
     input_shape = (3,28,28)
     train = mx.io.ImageRecordIter(
-        path_imgrec = data_dir + "/train.rec",
-        mean_img    = data_dir + "/cifar_mean.bin",
+        path_imgrec = data_dir + "train.rec",
+        mean_img    = data_dir + "cifar_mean.bin",
         data_shape  = input_shape,
         batch_size  = batch_size,
         rand_crop   = True,
@@ -15,8 +20,8 @@ def data(data_dir, batch_size, num_parts=1, part_index=0):
         num_parts   = num_parts,
         part_index  = part_index)
     val = mx.io.ImageRecordIter(
-        path_imgrec = data_dir + "/test.rec",
-        mean_img    = data_dir + "/cifar_mean.bin",
+        path_imgrec = data_dir + "test.rec",
+        mean_img    = data_dir + "cifar_mean.bin",
         rand_crop   = False,
         rand_mirror = False,
         data_shape  = input_shape,
@@ -66,5 +71,5 @@ def inception():
     pool = mx.symbol.Pooling(data=in5b, pool_type="avg", kernel=(7,7), name="global_pool")
     flatten = mx.symbol.Flatten(data=pool, name="flatten1")
     fc = mx.symbol.FullyConnected(data=flatten, num_hidden=10, name="fc1")
-    softmax = mx.symbol.SoftmaxOutput(data=fc, name="loss")
+    softmax = mx.symbol.SoftmaxOutput(data=fc, name="softmax")
     return softmax

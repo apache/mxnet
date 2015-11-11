@@ -86,7 +86,7 @@ include $(PS_PATH)/make/ps.mk
 ifeq ($(USE_DIST_KVSTORE), 1)
 	CFLAGS += -DMXNET_USE_DIST_KVSTORE -I$(PS_PATH)/include -I$(DEPS_PATH)/include
 	LIB_DEP += $(PS_PATH)/build/libps.a
-	LDFLAGS += -Wl,-rpath,$(DEPS_PATH)/lib $(PS_LDFLAGS_SO)
+	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
 .PHONY: clean all test lint doc clean_all rcpplint rcppexport roxygen
@@ -124,13 +124,13 @@ lib/libmxnet.so: $(ALL_DEP)
 
 # ps-lite
 $(PS_PATH)/build/libps.a:
-	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) protobuf zmq
 	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) ps
+	ln -fs $(PS_PATH)/tracker .
 
 $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
-bin/im2rec: tools/im2rec.cc $(DMLC_CORE)/libdmlc.a
+bin/im2rec: tools/im2rec.cc $(ALL_DEP)
 
 $(BIN) :
 	@mkdir -p $(@D)

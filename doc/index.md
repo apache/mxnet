@@ -9,8 +9,9 @@ User Guide
 * [Python Package Document](python/index.md)
 * [R Package Document](R-package/index.md)
 * [MXNet.jl Julia Package](https://github.com/dmlc/MXNet.jl)
-* [Frequently Asked Questions](faq.md)
 * [Pretrained Model Gallery](pretrained.md)
+* [Distributed Training](distributed_training.md)
+* [Frequently Asked Questions](faq.md)
 
 Developer Guide
 ---------------
@@ -23,8 +24,7 @@ Developer Guide
 Open Source Design Notes
 ------------------------
 This section contains the design document and notes we made for mxnet system design and deep learning
-libraries in general. We believe that open sourcing the system design note, its motivations and choices
-can benefit general audience, for those who uses deep learning and who builds deep learning systems.
+libraries in general. We believe that open sourcing the system design note can letgeneral audiences understand the  motivations and the benefits drawbacks of design choices, and help those who uses deep learning and who builds deep learning systems.
 
 This section will be updated with self-contained design notes on various aspect of deep learning systems,
 in terms of abstraction, optimization and trade-offs.
