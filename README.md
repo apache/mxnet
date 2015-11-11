@@ -31,7 +31,7 @@ Contents
 
 Features
 --------
-* [Open sourced design note](http://mxnet.readthedocs.org/en/latest/#open-source-design-notes) on how we did this and what can be re-used by general deep learning project.
+* Open sourced design note on how we did this, which be re-used by general deep learning projects.
 * Flexible configuration, for arbitrary computation graph.
 * Mix and Maximize good flavours of programmingto maximize flexibility and efficiency.
 * Lightweight, memory efficient and portable to smart devices.
