@@ -31,7 +31,7 @@ Contents
 
 Features
 --------
-* Open sourced design note on how we did this, which be re-used by general deep learning projects.
+* Open sourced design note on useful insights that can re-used by general DL projects.
 * Flexible configuration, for arbitrary computation graph.
 * Mix and Maximize good flavours of programmingto maximize flexibility and efficiency.
 * Lightweight, memory efficient and portable to smart devices.
