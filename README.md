@@ -12,6 +12,7 @@ deep learning programs together to maximize the efficiency and your productivity
 
 What's New
 ----------
+* [MXNet on Android](https://mxnet.readthedocs.org/en/latest/tutorial/smart_device.html)
 * [Distributed Training](https://mxnet.readthedocs.org/en/latest/distributed_training.html)
 * [Guide to Creating New Operators (Layers)](https://mxnet.readthedocs.org/en/latest/tutorial/new_op_howto.html)
 * [Minimum MXNet Library in One File](amalgamation)
