@@ -40,6 +40,9 @@ abstract AbstractEvalMetric
 .. class:: Accuracy
 
    Multiclass classification accuracy.
+
+   Calculates the mean accuracy per sample for softmax in one dimension.
+   For a multi-dimensional softmax the mean accuracy over all dimensions is calculated.
 =#
 type Accuracy <: AbstractEvalMetric
   acc_sum  :: Float64
