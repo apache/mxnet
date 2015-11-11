@@ -33,7 +33,7 @@ JNIEXPORT jlong JNICALL Java_org_dmlc_mxnet_Predictor_createPredictor
 
 	PredictorHandle handle = 0;	
 	if (MXPredCreate((const char *)symbol, (const char *)params, params_len, devType, devId, (mx_uint)keys.size(), &(keys[0]), &(index[0]), &(shapes[0]), &handle) < 0) {
-		jclass MxnetException = env->FindClass("MxnetException");
+		jclass MxnetException = env->FindClass("org/dmlc/mxnet/MxnetException");
 		env->ThrowNew(MxnetException, MXGetLastError());
 	}
 
@@ -61,7 +61,7 @@ JNIEXPORT jfloatArray JNICALL Java_org_dmlc_mxnet_Predictor_nativeGetOutput
 	mx_uint *shape = 0;
 	mx_uint shape_len;
 	if (MXPredGetOutputShape(handle, index, &shape, &shape_len) < 0) {
-		jclass MxnetException = env->FindClass("MxnetException");
+		jclass MxnetException = env->FindClass("org/dmlc/mxnet/MxnetException");
 		env->ThrowNew(MxnetException, MXGetLastError());
 	}
 
@@ -70,7 +70,7 @@ JNIEXPORT jfloatArray JNICALL Java_org_dmlc_mxnet_Predictor_nativeGetOutput
 
 	std::vector<float> data(size);
 	if (MXPredGetOutput(handle, index, &(data[0]), size) < 0) {
-		jclass MxnetException = env->FindClass("MxnetException");
+		jclass MxnetException = env->FindClass("org/dmlc/mxnet/MxnetException");
 		env->ThrowNew(MxnetException, MXGetLastError());
 	}
 	
@@ -92,14 +92,14 @@ JNIEXPORT void JNICALL Java_org_dmlc_mxnet_Predictor_nativeForward
 	jsize input_len = env->GetArrayLength(jinput);
 
 	if (MXPredSetInput(handle, key, input, input_len) < 0) {
-		jclass MxnetException = env->FindClass("MxnetException");
+		jclass MxnetException = env->FindClass("org/dmlc/mxnet/MxnetException");
 		env->ThrowNew(MxnetException, MXGetLastError());
 	}
 
 	env->ReleaseStringUTFChars(jkey, key);
 	env->ReleaseFloatArrayElements(jinput, input, 0);
 	if (MXPredForward(handle) < 0) {
-		jclass MxnetException = env->FindClass("MxnetException");
+		jclass MxnetException = env->FindClass("org/dmlc/mxnet/MxnetException");
 		env->ThrowNew(MxnetException, MXGetLastError());
 	}
 }
