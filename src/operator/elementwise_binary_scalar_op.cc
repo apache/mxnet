@@ -23,19 +23,19 @@ DMLC_REGISTER_PARAMETER(ScalarOpParam);
 
 MXNET_REGISTER_OP_PROPERTY(_PlusScalar, ElementwiseBinaryScalarOpProp<mshadow::op::plus>)
 .describe("Perform an elementwise plus.")
-.add_argument("lhs", "Symbol", "Input data to activation function.")
+.add_argument("array", "Symbol", "Input array operand to the operation.")
 .add_arguments(ScalarOpParam::__FIELDS__());
 MXNET_REGISTER_OP_PROPERTY(_MinusScalar, ElementwiseBinaryScalarOpProp<mshadow::op::minus>)
 .describe("Perform an elementwise minus.")
-.add_argument("lhs", "Symbol", "Input data to activation function.")
+.add_argument("array", "Symbol", "Input array operand to the operation.")
 .add_arguments(ScalarOpParam::__FIELDS__());
 MXNET_REGISTER_OP_PROPERTY(_MulScalar, ElementwiseBinaryScalarOpProp<mshadow::op::mul>)
 .describe("Perform an elementwise mul.")
-.add_argument("lhs", "Symbol", "Input data to activation function.")
+.add_argument("array", "Symbol", "Input array operand to the operation.")
 .add_arguments(ScalarOpParam::__FIELDS__());
 MXNET_REGISTER_OP_PROPERTY(_DivScalar, ElementwiseBinaryScalarOpProp<mshadow::op::div>)
 .describe("Perform an elementwise div.")
-.add_argument("lhs", "Symbol", "Input data to activation function.")
+.add_argument("array", "Symbol", "Input array operand to the operation.")
 .add_arguments(ScalarOpParam::__FIELDS__());
 
 }  // namespace op
