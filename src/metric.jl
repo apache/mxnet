@@ -50,11 +50,27 @@ end
 
 function _update_single_output(metric :: Accuracy, label :: NDArray, pred :: NDArray)
   @nd_as_jl ro=(label,pred) begin
-    n_sample = size(pred)[end]
-    metric.n_sample += n_sample
-    for i = 1:n_sample
-      klass = indmax(pred[:,i])
-      metric.acc_sum += (klass-1) == label[i]
+    if ndims(label) > 1 # Multidimensional case
+      # Construct cartesian index
+      initial = tuple([1 for _ in 1:ndims(label)-1]...)
+      final = tuple([size(label, i) for i in 1:ndims(label)-1]...)
+      crange = CartesianRange(CartesianIndex(initial), CartesianIndex(final))
+
+      for sample in 1:size(label, ndims(label))
+        for i in crange
+          ps = sub(pred, i.I..., :, sample)
+          klass = indmax(ps)
+          metric.acc_sum += (klass-1) == label[i.I..., sample]
+          metric.n_sample += 1
+        end
+      end
+    else # 1-dimensional case
+      for sample in 1:size(label, 1)
+        ps = sub(pred, :, sample)
+        klass = indmax(ps)
+        metric.acc_sum += (klass-1) == label[sample]
+        metric.n_sample += 1
+      end
     end
   end
 end
