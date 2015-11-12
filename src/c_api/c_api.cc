@@ -180,6 +180,11 @@ int MXNDArrayWaitToWrite(NDArrayHandle handle) {
   API_END();
 }
 
+int MXNDArrayWaitAll() {
+  API_BEGIN();
+  Engine::Get()->WaitForAll();
+  API_END();
+}
 
 int MXNDArraySave(const char* fname,
                   mx_uint num_args,
