@@ -9,17 +9,17 @@ except:
    import pickle
 
 
-def extract_feature(sym, args, input_names, data_iter, N, xpu=mx.cpu()):
-    data_iter.reset()
-    input_buffs = [mx.nd.empty(i.shape, ctx=xpu) for i in data_iter.next()]
+def extract_feature(sym, args, data_iter, N, xpu=mx.cpu()):
+    input_buffs = [mx.nd.empty(shape, ctx=xpu) for k, shape in data_iter.provide_data]
+    input_names = [k for k, shape in data_iter.provide_data]
     args = dict(args, **dict(zip(input_names, input_buffs)))
     exe = sym.bind(xpu, args=args)
     outputs = [[] for i in exe.outputs]
     output_buffs = None
 
     data_iter.hard_reset()
-    for datas in data_iter:
-        for data, buff in zip(datas, input_buffs):
+    for batch in data_iter:
+        for data, buff in zip(batch.data, input_buffs):
             data.copyto(buff)
         exe.forward(is_train=False)
         if output_buffs is None:
