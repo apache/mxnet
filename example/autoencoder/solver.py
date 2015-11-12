@@ -52,14 +52,12 @@ class Solver(object):
     def set_iter_start_callback(self, callback):
         self.iter_start_callback = callback
 
-    def solve(self, xpu, sym, args, args_grad, input_names,
-              data_iter, begin_epoch, end_epoch, debug = False, args_lrmult={}):
-        data_iter.reset()
-        input_dict = {key: mx.nd.empty(arr.shape, ctx=xpu) for key, arr in zip(input_names, data_iter.next())}
-        batch_size = input_dict.values()[0].shape[0]
-        self.optimizer.rescale_grad = 1.0/batch_size
-        self.optimizer.set_lr_mult(args_lrmult)
-        args = dict(args, **input_dict)
+    def solve(self, xpu, sym, args, args_grad,
+              data_iter, begin_iter, end_iter, args_lrmult={}, debug = False):
+        input_desc = data_iter.provide_data + data_iter.provide_label
+        input_names = [k for k, shape in input_desc]
+        input_buffs = [mx.nd.empty(shape, ctx=xpu) for k, shape in input_desc]
+        args = dict(args, **dict(zip(input_names, input_buffs)))
 
         output_names = sym.list_outputs()
         if debug:
@@ -75,7 +73,11 @@ class Solver(object):
             sym = mx.symbol.Group(sym_group)
         exe = sym.bind(xpu, args=args, args_grad=args_grad)
 
-        update_dict = {name: args_grad[name] for name, nd in zip(sym.list_arguments(), exe.grad_arrays) if nd}
+        assert len(sym.list_arguments()) == len(exe.grad_arrays)
+        update_dict = {name: nd for name, nd in zip(sym.list_arguments(), exe.grad_arrays) if nd}
+        batch_size = input_buffs[0].shape[0]
+        self.optimizer.rescale_grad = 1.0/batch_size
+        self.optimizer.set_lr_scale(args_lrmult)
 
         output_dict = {}
         output_buff = {}
@@ -88,15 +90,16 @@ class Solver(object):
                 internal_dict[key] = arr
 
         data_iter.reset()
-        for i in range(begin_epoch, end_epoch):
+        for i in range(begin_iter, end_iter):
             if self.iter_start_callback is not None:
                 self.iter_start_callback(i)
             try:
-                data_list = data_iter.next()
+                batch = data_iter.next()
             except:
                 data_iter.reset()
-            for data, key in zip(data_list, input_names):
-                data.copyto(input_dict[key])
+                batch = data_iter.next()
+            for data, buff in zip(batch.data+batch.label, input_buffs):
+                data.copyto(buff)
             exe.forward(is_train=True)
             if self.monitor is not None:
                 self.monitor.forward_end(i, internal_dict)
@@ -108,16 +111,16 @@ class Solver(object):
             for key, arr in update_dict.items():
                 self.updater(key, arr, args[key])
 
-            exe.outputs[0].wait_to_read()
             if self.metric is not None:
-                self.metric.update(input_dict[input_names[-1]].asnumpy(),
-                                   output_buff[output_names[0]].asnumpy())
+                self.metric.update([input_buffs[-1].asnumpy()],
+                                   [output_buff[output_names[0]].asnumpy()])
 
             if self.monitor is not None:
                 self.monitor.backward_end(i, args, update_dict, self.metric)
 
             if self.iter_end_callback is not None:
                 self.iter_end_callback(i) 
+            exe.outputs[0].wait_to_read()
 
 
 
