@@ -81,7 +81,7 @@ class CustomMetric(EvalMetric):
         assert len(labels) == len(preds)
         for pred, label in zip(preds, labels):
             self.sum_metric += self._feval(label, pred)
-        self.num_inst += 1
+            self.num_inst += 1
 
 # pylint: disable=invalid-name
 def np(numpy_feval, name=None):
