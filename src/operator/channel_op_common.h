@@ -16,52 +16,144 @@ namespace op {
 
 template<typename xpu, int dim>
 inline void Concatenate(const std::vector<mshadow::Tensor<xpu, dim> > &input,
-                        mshadow::Tensor<xpu, dim> *output) {
+                        mshadow::Tensor<xpu, dim> *output, const int dimension) {
   using mshadow::expr::concat;
   using mshadow::expr::slice;
   mshadow::Tensor<xpu, dim> out = *output;
   size_t size = input.size();
-  size_t dimension = 1;
-  switch (size) {
-    case 2: {
-      out = concat<dimension>(input[0], input[1]);
-      break;
+  switch (dimension){
+    case 1:{
+        switch (size) {
+          case 2: {
+            out = concat<1>(input[0], input[1]);
+            break;
+          }
+          case 3: {
+            out = concat<1>(input[0],
+                            concat<1>(input[1], input[2]));
+            break;
+          }
+          case 4: {
+            out = concat<1>(input[0],
+                            concat<1>(input[1],
+                                      concat<1>(input[2], input[3])));
+            break;
+          }
+          default: {
+            index_t begin = 0;
+            for (index_t i = 0; i < size; ++i) {
+              index_t end = begin + input[i].size(1);
+              slice<1>(out, begin, end) = input[i];
+              begin = end;
+            }
+            break;
+          }
+        }
+        break;
     }
-    case 3: {
-      out = concat<dimension>(input[0],
-                      concat<dimension>(input[1], input[2]));
-      break;
-    }
-    case 4: {
-      out = concat<dimension>(input[0],
-                      concat<dimension>(input[1],
-                                concat<dimension>(input[2], input[3])));
-      break;
-    }
-    default: {
-      index_t begin = 0;
-      for (index_t i = 0; i < size; ++i) {
-        index_t end = begin + input[i].size(dimension);
-        slice<dimension>(out, begin, end) = input[i];
-        begin = end;
-      }
+    case 0:{
+        switch (size) {
+          case 2: {
+            out = concat<0>(input[0], input[1]);
+            break;
+          }
+          case 3: {
+            out = concat<0>(input[0],
+                            concat<0>(input[1], input[2]));
+            break;
+          }
+          case 4: {
+            out = concat<0>(input[0],
+                            concat<0>(input[1],
+                                      concat<0>(input[2], input[3])));
+            break;
+          }
+          default: {
+            index_t begin = 0;
+            for (index_t i = 0; i < size; ++i) {
+              index_t end = begin + input[i].size(0);
+              slice<0>(out, begin, end) = input[i];
+              begin = end;
+            }
+            break;
+          }
+        }
+        break;      
       break;
     }
   }
+
 }
+
+
 
 template<typename xpu, int dim>
 void Split(const mshadow::Tensor<xpu, dim> &input,
-           std::vector<mshadow::Tensor<xpu, dim> > *output) {
+           std::vector<mshadow::Tensor<xpu, dim> > *output, 
+           const int dimension) {
   using mshadow::expr::concat;
   using mshadow::expr::slice;
   std::vector<mshadow::Tensor<xpu, dim> > out = *output;
   size_t size = out.size();
-  index_t begin = 0;
-  for (index_t i = 0; i < size; ++i) {
-    index_t end = begin + out[i].size(1);
-    out[i] = slice<1>(input, begin, end);
-    begin = end;
+  switch (dimension){
+    case 1:{
+      switch (size) {
+        case 2: {
+          concat<1>(out[0], out[1]) = input;
+          break;
+        }
+        case 3: {
+          concat<1>(out[0],
+                    concat<1>(out[1], out[2])) = input;
+          break;
+        }
+        case 4: {
+          concat<1>(out[0],
+                    concat<1>(out[1],
+                              concat<1>(out[2], out[3]))) = input;
+          break;
+        }
+        default: {
+          index_t begin = 0;
+          for (index_t i = 0; i < size; ++i) {
+            index_t end = begin + out[i].size(1);
+            out[i] = slice<1>(input, begin, end);
+            begin = end;
+          }
+          break;
+        }
+      }      
+      break;
+    }
+    case 0:{
+      switch (size) {
+        case 2: {
+          concat<0>(out[0], out[1]) = input;
+          break;
+        }
+        case 3: {
+          concat<0>(out[0],
+                    concat<0>(out[1], out[2])) = input;
+          break;
+        }
+        case 4: {
+          concat<0>(out[0],
+                    concat<0>(out[1],
+                              concat<0>(out[2], out[3]))) = input;
+          break;
+        }
+        default: {
+          index_t begin = 0;
+          for (index_t i = 0; i < size; ++i) {
+            index_t end = begin + out[i].size(0);
+            out[i] = slice<0>(input, begin, end);
+            begin = end;
+          }
+          break;
+        }
+      }
+      break;
+    }
   }
 }
 }  // namespace op

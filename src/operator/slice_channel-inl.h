@@ -67,7 +67,7 @@ class SliceChannelOp : public Operator {
         outputs[i] = out_data[i].get<xpu, 4, real_t>(s);
       }
     }
-    Split(data, &outputs);
+    Split(data, &outputs, 1);
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -99,7 +99,7 @@ class SliceChannelOp : public Operator {
       }
       grad = in_grad[slice_enum::kData].get<xpu, 4, real_t>(s);
     }
-    Concatenate(grad_out, &grad);
+    Concatenate(grad_out, &grad, 1);
   }
 
  private:

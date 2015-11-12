@@ -79,18 +79,18 @@ def check_slice_channel(dim, num):
     exe.backward(o_nd)
     assert reldiff(grad_nd[0].asnumpy(), np.hstack([ins[i] + i for i in range(num)])) < 1e-5
 
-def check_concat_with_shape(shapes):
+def check_concat_with_shape(shapes, dimension):
     n = len(shapes)
     # forward
     target_dim = 0
     for shape in shapes:
-        target_dim += shape[1]
+        target_dim += shape[dimension]
 
     inputs = [mx.symbol.Variable('arg%d' % i) for i in range(n)]
-    out = mx.symbol.Concat(*inputs, name='conc')
+    out = mx.symbol.Concat(*inputs, name='conc',dimension=dimension)
     arr = [mx.nd.empty(shape) for shape in shapes]
     for i in range(n):
-        arr[i][:] = shapes[i][1]
+        arr[i][:] = shapes[i][dimension]
     arr_np = [np.copy(narray.asnumpy()) for narray in arr]
     arr_grad = [mx.nd.empty(shape) for shape in shapes]
     args = out.list_arguments()
@@ -101,7 +101,7 @@ def check_concat_with_shape(shapes):
                      args_grad=arr_grad)
     exec1.forward()
     out1 = exec1.outputs[0]
-    ret = np.concatenate([narray.asnumpy() for narray in arr], axis=1)
+    ret = np.concatenate([narray.asnumpy() for narray in arr], axis=dimension)
     assert same(out1.asnumpy(), ret)
     # backward
     out1.copyto(out_grad)
@@ -110,24 +110,34 @@ def check_concat_with_shape(shapes):
     for grad, np_grad in zip(arr_grad, arr_np):
         assert same(grad.asnumpy(), np_grad + 1)
 
-def test_concat():
+def test_concat(dimension):
     n = 2
-    batch = 2
-    ch = [2, 3, 4, 5, 6]
+    if dimension == 1:
+        batch = 2
+        ch = [2, 3, 4, 5, 6]
+    elif dimension == 0:
+        batch = [2, 3, 4, 5, 6]
+        ch = 2
     h = 3
     w = 4
     # test  2D
     for dim in range(2, 6):
         shapes = []
         for i in range(dim):
-            shapes.append((batch, ch[i]))
-        check_concat_with_shape(shapes)
+            if dimension == 1:
+                shapes.append((batch, ch[i]))
+            else:
+                shapes.append((batch[i], ch))
+        check_concat_with_shape(shapes,dimension)
     # test 4D
     for dim in range(2, 6):
         shapes = []
         for i in range(dim):
-            shapes.append((batch, ch[i], h, w))
-        check_concat_with_shape(shapes)
+            if dimension == 1:
+                shapes.append((batch, ch[i], h, w))
+            else:
+                shapes.append((batch[i], ch, h, w))
+        check_concat_with_shape(shapes,dimension)
 
 def test_slice_channel():
     check_slice_channel(2, 4)
@@ -345,7 +355,8 @@ def test_pow_fn():
 
 if __name__ == '__main__':
     test_elementwise_sum()
-    test_concat()
+    test_concat(0)
+    test_concat(1)
     test_slice_channel()
     test_regression()
     test_python_op()

@@ -27,9 +27,12 @@ enum ConcatOpOutputs {kOut};
 
 struct ConcatParam : public dmlc::Parameter<ConcatParam> {
   int num_args;
+  int dimension;
   DMLC_DECLARE_PARAMETER(ConcatParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs to be concated.");
+    DMLC_DECLARE_FIELD(dimension).set_range(0,  2).set_default(1)
+    .describe("the dimension to be concated.");
   }
 };  // struct ConcatParam
 
@@ -37,7 +40,7 @@ template<typename xpu>
 class ConcatOp : public Operator {
  public:
   explicit ConcatOp(ConcatParam param)
-    : size_(param.num_args) {}
+    : size_(param.num_args),dimension_(param.dimension) {}
 
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
@@ -53,13 +56,18 @@ class ConcatOp : public Operator {
     std::vector<Tensor<xpu, 4> > data(size_);
     Tensor<xpu, 4> out;
     if (in_data[concat_enum::kData0].ndim() == 2) {
+      CHECK_LE(dimension_, 1);
       uint32_t dim = 0;
       for (int i = 0; i < size_; ++i) {
         Shape<4> dshape = Shape4(in_data[i].shape_[0], in_data[i].shape_[1], 1, 1);
         data[i] = in_data[i].get_with_shape<xpu, 4, real_t>(dshape, s);
-        dim += in_data[i].shape_[1];
+        dim += in_data[i].shape_[dimension_];
       }
-      Shape<4> dshape_out = Shape4(in_data[concat_enum::kData0].shape_[0], dim, 1, 1);
+      Shape<4> dshape_out;
+      if (dimension_ == 1)
+        dshape_out = Shape4(in_data[concat_enum::kData0].shape_[0], dim, 1, 1);
+      else if (dimension_ == 0)
+        dshape_out = Shape4(dim, in_data[concat_enum::kData0].shape_[1], 1, 1);
       out = out_data[concat_enum::kOut].get_with_shape<xpu, 4, real_t>(dshape_out, s);
     } else {
       for (int i = 0; i < size_; ++i) {
@@ -67,7 +75,7 @@ class ConcatOp : public Operator {
       }
       out = out_data[concat_enum::kOut].get<xpu, 4, real_t>(s);
     }
-    Concatenate(data, &out);
+    Concatenate(data, &out, dimension_);
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -89,10 +97,14 @@ class ConcatOp : public Operator {
       for (int i = 0; i < size_; ++i) {
         Shape<4> dshape = Shape4(in_grad[i].shape_[0], in_grad[i].shape_[1], 1, 1);
         grad_in[i] = in_grad[i].get_with_shape<xpu, 4, real_t>(dshape, s);
-        dim += in_grad[i].shape_[1];
+        dim += in_grad[i].shape_[dimension_];
         CHECK_EQ(req[i], kWriteTo);
       }
-      Shape<4> dshape_out = Shape4(in_grad[concat_enum::kData0].shape_[0], dim, 1, 1);
+      Shape<4> dshape_out;
+      if (dimension_ == 1)
+        dshape_out = Shape4(in_grad[concat_enum::kData0].shape_[0], dim, 1, 1);
+      else if (dimension_ == 0)
+        dshape_out = Shape4(dim, in_grad[concat_enum::kData0].shape_[1], 1, 1);
       grad = out_grad[concat_enum::kOut].get_with_shape<xpu, 4, real_t>(dshape_out, s);
     } else {
       for (int i = 0; i < size_; ++i) {
@@ -101,11 +113,12 @@ class ConcatOp : public Operator {
       }
       grad = out_grad[concat_enum::kOut].get<xpu, 4, real_t>(s);
     }
-    Split(grad, &grad_in);
+    Split(grad, &grad_in, dimension_);
   }
 
  private:
   int size_;
+  int dimension_;
 };  // class ConcatOp
 
 template<typename xpu>
@@ -142,8 +155,8 @@ class ConcatProp : public OperatorProperty {
       const TShape &tmp = in_shape->at(i);
       if (tmp.ndim() == 0) return false;
       for (uint32_t j = 0; j < dshape.ndim(); ++j) {
-        if (j == 1) {
-          dshape[1] += tmp[1];
+        if (j == param_.dimension) {
+          dshape[param_.dimension] += tmp[param_.dimension];
         } else {
           CHECK_EQ(dshape[j], tmp[j])
               << "Incorrect shape[" << i << "]: "
