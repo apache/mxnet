@@ -47,3 +47,12 @@ set.
 
 
 
+
+.. class:: MSE
+
+   Mean Squared Error. Todo: add support for multi-dimensional outputs.
+
+   Calculates the mean squared error regression loss in one dimension.
+
+
+

@@ -116,7 +116,7 @@ end
 #=doc
 .. class:: MSE
 
-   Mean Squared Error.
+   Mean Squared Error. TODO: add support for multi-dimensional outputs.
 
    Calculates the mean squared error regression loss in one dimension.
 =#
