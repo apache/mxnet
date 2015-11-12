@@ -26,6 +26,129 @@ Symbolic API
 
 
 
+.. function::
+   call(self :: SymbolicNode, args :: SymbolicNode...)
+   call(self :: SymbolicNode; kwargs...)
+
+   Make a new node by composing ``self`` with ``args``. Or the arguments
+   can be specified using keyword arguments.
+
+
+
+
+.. function:: list_arguments(self :: SymbolicNode)
+
+   List all the arguments of this node. The argument for a node contains both
+   the inputs and parameters. For example, a :class:`FullyConnected` node will
+   have both data and weights in its arguments. A composed node (e.g. a MLP) will
+   list all the arguments for intermediate nodes.
+
+   :return: A list of symbols indicating the names of the arguments.
+
+
+
+
+.. function:: list_outputs(self :: SymbolicNode)
+
+   List all the outputs of this node.
+
+   :return: A list of symbols indicating the names of the outputs.
+
+
+
+
+.. function:: list_auxiliary_states(self :: SymbolicNode)
+
+
+   List all auxiliary states in the symbool.
+
+   Auxiliary states are special states of symbols that do not corresponds to an argument,
+   and do not have gradient. But still be useful for the specific operations.
+   A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
+   Most operators do not have Auxiliary states.
+
+   :return: A list of symbols indicating the names of the auxiliary states.
+
+
+
+
+.. function:: get_internals(self :: SymbolicNode)
+
+   Get a new grouped :class:`SymbolicNode` whose output contains all the internal outputs of
+   this :class:`SymbolicNode`.
+
+
+
+
+.. function:: Variable(name :: Union{Base.Symbol, AbstractString})
+
+   Create a symbolic variable with the given name. This is typically used as a placeholder.
+   For example, the data node, acting as the starting point of a network architecture.
+
+
+
+
+.. function:: Group(nodes :: SymbolicNode...)
+
+   Create a :class:`SymbolicNode` by grouping nodes together.
+
+
+
+
+.. function::
+   infer_shape(self :: SymbolicNode; args...)
+   infer_shape(self :: SymbolicNode; kwargs...)
+
+   Do shape inference according to the input shapes. The input shapes could be provided
+   as a list of shapes, which should specify the shapes of inputs in the same order as
+   the arguments returned by :func:`list_arguments`. Alternatively, the shape information
+   could be specified via keyword arguments.
+
+   :return: A 3-tuple containing shapes of all the arguments, shapes of all the outputs and
+            shapes of all the auxiliary variables. If shape inference failed due to incomplete
+            or incompatible inputs, the return value will be ``(nothing, nothing, nothing)``.
+
+
+
+
+.. function::
+   getindex(self :: SymbolicNode, idx :: Union{Int, Base.Symbol, AbstractString})
+
+   Get a node representing the specified output of this node. The index could be
+   a symbol or string indicating the name of the output, or a 1-based integer
+   indicating the index, as in the list of :func:`list_outputs`.
+
+
+
+
+.. function:: to_json(self :: SymbolicNode)
+
+   Convert a :class:`SymbolicNode` into a JSON string.
+
+
+
+
+.. function:: from_json(repr :: AbstractString, ::Type{SymbolicNode})
+
+   Load a :class:`SymbolicNode` from a JSON string representation.
+
+
+
+
+.. function:: load(filename :: AbstractString, ::Type{SymbolicNode})
+
+   Load a :class:`SymbolicNode` from a JSON file.
+
+
+
+
+.. function:: save(filename :: AbstractString, node :: SymbolicNode)
+
+   Save a :class:`SymbolicNode` to a JSON file.
+
+
+
+
 libmxnet APIs
 -------------
 

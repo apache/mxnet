@@ -37,6 +37,14 @@ function Base.copy(self :: SymbolicNode)
   Base.deepcopy(self)
 end
 
+#=doc
+.. function::
+   call(self :: SymbolicNode, args :: SymbolicNode...)
+   call(self :: SymbolicNode; kwargs...)
+
+   Make a new node by composing ``self`` with ``args``. Or the arguments
+   can be specified using keyword arguments.
+=#
 function Base.call(self :: SymbolicNode, args :: SymbolicNode...)
   s = deepcopy(self)
   _compose!(s, args...)
@@ -58,40 +66,81 @@ macro _list_symbol_info(self, func_name)
     return names
   end
 end
+
+#=doc
+.. function:: list_arguments(self :: SymbolicNode)
+
+   List all the arguments of this node. The argument for a node contains both
+   the inputs and parameters. For example, a :class:`FullyConnected` node will
+   have both data and weights in its arguments. A composed node (e.g. a MLP) will
+   list all the arguments for intermediate nodes.
+
+   :return: A list of symbols indicating the names of the arguments.
+=#
 function list_arguments(self :: SymbolicNode)
   @_list_symbol_info(self, :MXSymbolListArguments)
 end
+
+#=doc
+.. function:: list_outputs(self :: SymbolicNode)
+
+   List all the outputs of this node.
+
+   :return: A list of symbols indicating the names of the outputs.
+=#
 function list_outputs(self :: SymbolicNode)
   @_list_symbol_info(self, :MXSymbolListOutputs)
 end
-"""List all auxiliary states in the symbool.
 
-Auxiliary states are special states of symbols that do not corresponds to an argument,
-and do not have gradient. But still be useful for the specific operations.
-A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
-Most operators do not have Auxiliary states.
-"""
+
+#=doc
+.. function:: list_auxiliary_states(self :: SymbolicNode)
+
+
+   List all auxiliary states in the symbool.
+
+   Auxiliary states are special states of symbols that do not corresponds to an argument,
+   and do not have gradient. But still be useful for the specific operations.
+   A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
+   Most operators do not have Auxiliary states.
+
+   :return: A list of symbols indicating the names of the auxiliary states.
+=#
 function list_auxiliary_states(self :: SymbolicNode)
   @_list_symbol_info(self, :MXSymbolListAuxiliaryStates)
 end
 
-"Get a new grouped SymbolicNode whose output contains all the internal outputs of this SymbolicNode."
+#=doc
+.. function:: get_internals(self :: SymbolicNode)
+
+   Get a new grouped :class:`SymbolicNode` whose output contains all the internal outputs of
+   this :class:`SymbolicNode`.
+=#
 function get_internals(self :: SymbolicNode)
   ref_hdr = Ref{MX_handle}(0)
   @mxcall(:MXSymbolGetInternals, (MX_handle, Ref{MX_handle}), self, ref_hdr)
   return SymbolicNode(MX_SymbolHandle(ref_hdr[]))
 end
 
-"Create a symbolic variable with the given name"
+#=doc
+.. function:: Variable(name :: Union{Base.Symbol, AbstractString})
+
+   Create a symbolic variable with the given name. This is typically used as a placeholder.
+   For example, the data node, acting as the starting point of a network architecture.
+=#
 function Variable(name :: Union{Base.Symbol, AbstractString})
   hdr_ref = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCreateVariable, (char_p, Ref{MX_handle}), name, hdr_ref)
   SymbolicNode(MX_SymbolHandle(hdr_ref[]))
 end
 
-"Create a SymbolicNode that groups symbols together"
-function Group(symbols :: SymbolicNode...)
-  handles = MX_handle[symbols...]
+#=doc
+.. function:: Group(nodes :: SymbolicNode...)
+
+   Create a :class:`SymbolicNode` by grouping nodes together.
+=#
+function Group(nodes :: SymbolicNode...)
+  handles = MX_handle[nodes...]
   ref_hdr = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCreateGroup, (MX_uint, Ptr{MX_handle}, Ref{MX_handle}),
           length(handles), handles, ref_hdr)
@@ -141,6 +190,21 @@ macro _infer_shape(self, keys, indptr, sdata)
     end
   end
 end
+
+#=doc
+.. function::
+   infer_shape(self :: SymbolicNode; args...)
+   infer_shape(self :: SymbolicNode; kwargs...)
+
+   Do shape inference according to the input shapes. The input shapes could be provided
+   as a list of shapes, which should specify the shapes of inputs in the same order as
+   the arguments returned by :func:`list_arguments`. Alternatively, the shape information
+   could be specified via keyword arguments.
+
+   :return: A 3-tuple containing shapes of all the arguments, shapes of all the outputs and
+            shapes of all the auxiliary variables. If shape inference failed due to incomplete
+            or incompatible inputs, the return value will be ``(nothing, nothing, nothing)``.
+=#
 function infer_shape(self :: SymbolicNode; kwargs...)
   sdata  = MX_uint[]
   indptr = MX_uint[0]
@@ -163,6 +227,14 @@ function infer_shape(self :: SymbolicNode, args :: Union{Tuple, Void}...)
   @_infer_shape(self, keys, indptr, sdata)
 end
 
+#=doc
+.. function::
+   getindex(self :: SymbolicNode, idx :: Union{Int, Base.Symbol, AbstractString})
+
+   Get a node representing the specified output of this node. The index could be
+   a symbol or string indicating the name of the output, or a 1-based integer
+   indicating the index, as in the list of :func:`list_outputs`.
+=#
 function Base.getindex(self :: SymbolicNode, idx :: Union{Base.Symbol, AbstractString})
   idx   = symbol(idx)
   i_idx = find(idx .== list_outputs(self))
@@ -211,7 +283,7 @@ function ./(self :: SymbolicNode, arg :: SymbolicNode)
   _Div(self, arg)
 end
 
-function _compose!(sym :: SymbolicNode; kwargs...)
+function _compose!(node :: SymbolicNode; kwargs...)
   name     = char_p(0)
   arg_keys = AbstractString[]
   arg_vals = MX_handle[]
@@ -228,45 +300,63 @@ function _compose!(sym :: SymbolicNode; kwargs...)
 
   @mxcall(:MXSymbolCompose,
           (MX_handle, char_p, MX_uint, Ptr{char_p}, Ptr{MX_handle}),
-          sym, name, length(arg_keys), arg_keys, arg_vals)
-  return sym
+          node, name, length(arg_keys), arg_keys, arg_vals)
+  return node
 end
-function _compose!(sym :: SymbolicNode, args::SymbolicNode...)
-  _compose!(sym, char_p(0), args...)
+function _compose!(node :: SymbolicNode, args::SymbolicNode...)
+  _compose!(node, char_p(0), args...)
 end
-function _compose!(sym :: SymbolicNode, name :: Union{Base.Symbol, char_p}, args::SymbolicNode...)
+function _compose!(node :: SymbolicNode, name :: Union{Base.Symbol, char_p}, args::SymbolicNode...)
   if isa(name, Base.Symbol); name = string(name); end
   arg_keys = Ptr{char_p}(0)
   arg_vals = MX_handle[args...]
 
   @mxcall(:MXSymbolCompose,
           (MX_handle, char_p, MX_uint, Ptr{char_p}, Ptr{MX_handle}),
-          sym, name, length(arg_vals), arg_keys, arg_vals)
-  return sym
+          node, name, length(arg_vals), arg_keys, arg_vals)
+  return node
 end
 
-"""Save SymbolicNode into a JSON string"""
+#=doc
+.. function:: to_json(self :: SymbolicNode)
+
+   Convert a :class:`SymbolicNode` into a JSON string.
+=#
 function to_json(self :: SymbolicNode)
   ref_json = Ref{char_p}(0)
   @mxcall(:MXSymbolSaveToJSON, (MX_handle, Ref{char_p}), self, ref_json)
   return bytestring(ref_json[])
 end
 
-"""Load SymbolicNode from a JSON string representation."""
+#=doc
+.. function:: from_json(repr :: AbstractString, ::Type{SymbolicNode})
+
+   Load a :class:`SymbolicNode` from a JSON string representation.
+=#
 function from_json(repr :: AbstractString, ::Type{SymbolicNode})
   ref_hdr = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCreateFromJSON, (char_p, Ref{MX_handle}), repr, ref_hdr)
   return SymbolicNode(MX_SymbolHandle(ref_hdr[]))
 end
 
-"""Load SymbolicNode from a JSON file."""
+#=doc
+.. function:: load(filename :: AbstractString, ::Type{SymbolicNode})
+
+   Load a :class:`SymbolicNode` from a JSON file.
+=#
 function load(filename :: AbstractString, ::Type{SymbolicNode})
   ref_hdr = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCreateFromFile, (char_p, Ref{MX_handle}), filename, ref_hdr)
   return SymbolicNode(MX_SymbolHandle(ref_hdr[]))
 end
-function save(filename :: AbstractString, sym :: SymbolicNode)
-  @mxcall(:MXSymbolSaveToFile, (MX_handle, char_p), sym, filename)
+
+#=doc
+.. function:: save(filename :: AbstractString, node :: SymbolicNode)
+
+   Save a :class:`SymbolicNode` to a JSON file.
+=#
+function save(filename :: AbstractString, node :: SymbolicNode)
+  @mxcall(:MXSymbolSaveToFile, (MX_handle, char_p), node, filename)
 end
 
 #=doc
@@ -359,17 +449,17 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
             $hdr, length(param_keys), param_keys, param_vals, ref_sym_hdr)
     sym_hdr = ref_sym_hdr[]
 
-    sym = SymbolicNode(MX_SymbolHandle(sym_hdr))
+    node = SymbolicNode(MX_SymbolHandle(sym_hdr))
     hint = lowercase(string($func_name))
     name = get!(DEFAULT_NAME_MANAGER, name, hint)
 
     if length(args) != 0
-      _compose!(sym, name, args...)
+      _compose!(node, name, args...)
     else
-      _compose!(sym; name=name, symbol_kws...)
+      _compose!(node; name=name, symbol_kws...)
     end
 
-    return sym
+    return node
   end
 
   func_def = Expr(:function, func_head, Expr(:block, func_body))
