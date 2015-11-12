@@ -216,7 +216,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
             set_rnn_inputs(m, X_train_batch, begin=begin)
             m.rnn_exec.forward(is_train=True)
             # probability of each label class, used to evaluate nll
-            seq_label_probs = mx.nd.choose_element(m.seq_outputs,m.seq_labels)
+            seq_label_probs = mx.nd.choose_element_0index(m.seq_outputs,m.seq_labels)
             m.rnn_exec.backward()
             # transfer the states
             for init, last in zip(m.init_states, m.last_states):
@@ -258,7 +258,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
             set_rnn_inputs(m, X_val_batch, begin=begin)
             m.rnn_exec.forward(is_train=False)
             # probability of each label class, used to evaluate nll
-            seq_label_probs = mx.nd.choose_element(m.seq_outputs,m.seq_labels)
+            seq_label_probs = mx.nd.choose_element_0index(m.seq_outputs,m.seq_labels)
             # transfer the states
             for init, last in zip(m.init_states, m.last_states):
                 last.c.copyto(init.c)
