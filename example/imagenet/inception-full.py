@@ -92,7 +92,7 @@ num_round = 10
 logging.info("This script is used to train ImageNet fullset over 21841 classes.")
 logging.info("For noraml 1000 classes problem, please use inception.py")
 
-model = mx.model.FeedForward(ctx=gpus, symbol=softmax, num_round=num_round,
+model = mx.model.FeedForward(ctx=gpus, symbol=softmax, num_epoch=num_round,
                              learning_rate=0.05, momentum=0.9, wd=0.00001)
 
 model.fit(X=train,
