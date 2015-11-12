@@ -63,7 +63,7 @@ class RegressionOutputOp : public Operator {
     Tensor<xpu, 2> grad = in_grad[reg_enum::kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> label = in_data[reg_enum::kLabel]
       .get_with_shape<xpu, 2, real_t>(out.shape_, s);
-    Assign(grad, req[reg_enum::kData], F<BackwardOp>(out, label)/num_output);
+    Assign(grad, req[reg_enum::kData], F<BackwardOp>(out, reshape(label, grad.shape_))/num_output);
   }
 };
 
