@@ -1,0 +1,98 @@
+# An explicitly unrolled LSTM with fixed sequence length.
+using MXNet
+
+immutable LSTMState
+  c :: mx.SymbolicNode
+  h :: mx.SymbolicNode
+end
+
+immutable LSTMParam
+  i2h_W :: mx.SymbolicNode
+  h2h_W :: mx.SymbolicNode
+  i2h_b :: mx.SymbolicNode
+  h2h_b :: mx.SymbolicNode
+end
+
+function ltsm_cell(data::mx.SymbolicNode, prev_state::LSTMState, param::LSTMParam;
+                   num_hidden::Int=512, dropout::Real=0, name::Symbol=gensym())
+
+  if dropout > 0
+    data = mx.Dropout(data, p=dropout)
+  end
+
+  i2h = mx.FullyConnected(data, weight=param.i2h_W, bias=param.i2h_b,
+                          num_hidden=4num_hidden, name=symbol(name, "_i2h"))
+  h2h = mx.FullyConnected(prev_state.h, weight=param.h2h_W, bias=param.h2h_b,
+                          num_hidden=4num_hidden, name=symbol(name, "_h2h"))
+
+  gates = mx.SliceChannel(i2h + h2h, num_outputs=4, name=symbol(name, "_gates"))
+
+  in_gate     = mx.Activation(gates[1], act_type=:sigmoid)
+  in_trans    = mx.Activation(gates[2], act_type=:tanh)
+  forget_gate = mx.Activation(gates[3], act_type=:sigmoid)
+  out_gate    = mx.Activation(gates[4], act_type=:sigmoid)
+
+  next_c = (forget_gate .* prev_state.c) + (in_gate .* in_trans)
+  next_h = out_gate .* mx.Activation(next_c, act_type=:tanh)
+
+  return LTSMState(next_c, next_h)
+end
+
+function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_class::Int;
+              dropout::Real=0, name::Symbol=gensym())
+
+  # placeholder nodes for all parameters
+  embed_W = mx.Variable(symbol(name, "_embed_weight"))
+  pred_W  = mx.Variable(symbol(name, "_pred_weight"))
+  pred_b  = mx.Variable(symbol(name, "_pred_bias"))
+
+  layer_param_states = map(1:n_layer) do i
+    param = LSTMParam(mx.Variable(symbol(name, "_l$(i)_i2h_weight")),
+                      mx.Variable(symbol(name, "_l$(i)_h2h_weight")),
+                      mx.Variable(symbol(name, "_l$(i)_i2h_bias")),
+                      mx.Variable(symbol(name, "_l$(i)_h2h_bias")))
+    state = LTSMState(mx.Variable(symbol(name, "_l$(i)_init_c")),
+                      mx.Variable(symbol(name, "_l$(i)_init_h")))
+    (param, state)
+  end
+
+  # now unroll over time
+  outputs = mx.SymbolicNode[]
+  for t = 1:seq_len
+    data   = mx.Variable(symbol(name, "_data_$t"))
+    label  = mx.Variable(symbol(name, "_label_$t"))
+    hidden = mx.FullyConnected(data, weight=embed_W, num_hidden=dim_embed,
+                               no_bias=true, name=symbol(name, "_embed_$t"))
+
+
+    # stack LTSM cells
+    for i = 1:n_layer
+      l_param, l_state = layer_param_states[i]
+      dp = i == 1 ? 0 : dropout # don't do dropout for data
+      next_state = ltsm_cell(hidden, l_state, l_param, num_hidden=dim_hidden, dropout=dp,
+                             name=symbol(name, "_lstm_$t"))
+      hidden = next_state.h
+      layer_param_states[i] = (l_param, next_state)
+    end
+
+    # prediction / decoder
+    if dropout > 0
+      hidden = mx.Dropout(hidden, p=dropout)
+    end
+    pred = mx.FullyConnected(hidden, weight=pred_W, bias=pred_b, num_hidden=n_class,
+                             name=symbol(name, "_pred_$t"))
+    smax = mx.SoftmaxOutput(pred, label, name=symbol(name, "_softmax_$t"))
+    push!(outputs, smax)
+  end
+
+  # append block-gradient nodes to the final states
+  for i = 1:n_layer
+    l_param, l_state = layer_param_states[i]
+    final_state = LTSMState(mx.BlockGrad(l_state.c, name=symbol(name, "_l$(i)_last_c")),
+                            mx.BlockGrad(l_state.h, name=symbol(name, "_l$(i)_last_h")))
+    layer_param_states[i] = (l_param, final_state)
+  end
+
+  # now group all outputs together
+  return mx.Group(outputs...)
+end
