@@ -11,15 +11,14 @@ and `StatsBase.jl`.
 
 ## Training
 
-This example is adapted from the 
-[example in Python binding](https://github.com/dmlc/mxnet/blob/master/example/rnn/char_lstm.ipynb) of 
+This example is adapted from the
+[example in Python binding](https://github.com/dmlc/mxnet/blob/master/example/rnn/char_lstm.ipynb) of
 MXNet. The data `input.txt` can be downloaded [here](https://github.com/dmlc/web-data/tree/master/mxnet/tinyshakespeare).
 
 Modify parameters in [config.jl](config.jl) and then run [train.jl](train.jl). An example output
 of training looks like this:
 ```
 ...
-INFO: Speed: 356.66 samples/sec
 INFO: Speed: 357.72 samples/sec
 INFO: == Epoch 020 ==========
 INFO: ## Training summary
@@ -29,7 +28,7 @@ INFO:               time = 87.2631 seconds
 INFO: ## Validation summary
 INFO:                NLL = 1.6374
 INFO:         perplexity = 5.1418
-INFO: Saved checkpoint to 'examples/char-lstm/checkpoints/ptb-0020.params'
+INFO: Saved checkpoint to 'char-lstm/checkpoints/ptb-0020.params'
 INFO: Speed: 368.74 samples/sec
 INFO: Speed: 361.04 samples/sec
 INFO: Speed: 360.02 samples/sec

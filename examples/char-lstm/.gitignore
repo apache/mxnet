@@ -1,3 +1,5 @@
 input.txt
 vocab.dat
 checkpoints
+visualize.dot
+visualize.svg
