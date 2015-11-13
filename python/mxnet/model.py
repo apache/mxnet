@@ -93,14 +93,11 @@ def _split_input_slice(batch_size, ctx):
     ------
     ValueError
         If there are two many splits such that some slice can be empty.
-    ------
-    Known bugs:
-        We found that too small batch_size could cause ValueError problems in work_load based split,
-        e.g. batch_size = 6 and work_load_list = [1, 1, 1, 1]
     """
     work_load_list = [float(c.work_load) for c in ctx]
     total_work_load = sum(work_load_list)
-    batch_num_list = [round(work_load * batch_size / total_work_load) for work_load in work_load_list]
+    batch_num_list = [round(work_load * batch_size / total_work_load)
+                      for work_load in work_load_list]
     batch_num_sum = sum(batch_num_list)
     if batch_num_sum < batch_size:
         batch_num_list[-1] += batch_size - batch_num_sum
