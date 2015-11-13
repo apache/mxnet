@@ -24,12 +24,3 @@ const UNKNOWN_CHAR  = Char(0)
 const INPUT_FILE    = joinpath(dirname(@__FILE__), "input.txt")
 const VOCAB_FILE    = joinpath(dirname(@__FILE__), "vocab.dat")
 
-# helper function to convert a char into index in vocabulary
-function char_idx(vocab :: Dict{Char,Int}, c :: Char)
-  if haskey(vocab, c)
-    vocab[c]
-  else
-    vocab[UNKNOWN_CHAR]
-  end
-end
-

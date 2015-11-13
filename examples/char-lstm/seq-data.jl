@@ -97,3 +97,12 @@ function mx.eachbatch(p :: CharSeqProvider)
   return Task(_text_iter)
 end
 
+# helper function to convert a char into index in vocabulary
+function char_idx(vocab :: Dict{Char,Int}, c :: Char)
+  if haskey(vocab, c)
+    vocab[c]
+  else
+    vocab[UNKNOWN_CHAR]
+  end
+end
+
