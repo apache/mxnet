@@ -31,14 +31,6 @@ function build_vocabulary(corpus_fn::AbstractString, vocab_fn::AbstractString; m
   return vocab
 end
 
-function char_idx(vocab :: Dict{Char,Int}, c :: Char)
-  if haskey(vocab, c)
-    vocab[c]
-  else
-    vocab[UNKNOWN_CHAR]
-  end
-end
-
 type CharSeqProvider <: mx.AbstractDataProvider
   text       :: AbstractString
   batch_size :: Int

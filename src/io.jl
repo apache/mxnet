@@ -307,6 +307,9 @@ end
           be less samples to include than a mini-batch. This value specify a scalar to pad the
           contents of all the missing data points.
    :param Real label_padding: the same as ``data_padding``, except for the labels.
+
+   TODO: remove ``data_padding`` and ``label_padding``, and implement rollover that copies
+   the last or first several training samples to feed the padding.
 =#
 # Julia's type system is sometimes very frustrating. You cannot specify a function
 # with argument Vector{Pair} to expect to be matched when calling with the parameter
