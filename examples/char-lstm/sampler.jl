@@ -19,8 +19,14 @@ jl_h    = Pair[(symbol(NAME, "_l$(l)_init_h") => zeros(mx.MX_float, (DIM_HIDDEN,
 jl_data_start = jl_data[1].second
 jl_data_start[char_idx(vocab, SAMPLE_START),:] = 1
 
-# load model
-model = mx.load_checkpoint(CKPOINT_PREFIX, N_EPOCH, mx.FeedForward)
+# define a LSTM with sequence length 1, also output states so that we could manually copy the states
+# when sampling the next char
+lstm  = LSTM(LSTM_N_LAYER, 1, DIM_HIDDEN, DIM_EMBED, n_class, dropout=DROPOUT, name=NAME, output_states=true)
+model = mx.FeedForward(lstm, context=cpu())
+
+# load parameters from traind LSTM, though the sequence length is different, since the weights are shared
+# over time, this should be compatible.
+model = mx.load_checkpoint(model, CKPOINT_PREFIX, N_EPOCH, allow_different_arch=true)
 
 # prepare outputs
 Base.zero(::Type{Char}) = Char(0)
@@ -33,17 +39,24 @@ inv_vocab = Dict([v => k for (k,v) in vocab])
 # do prediction and sampling step by step
 for t = 2:SAMPLE_LENGTH-1
   data    = mx.ArrayDataProvider(jl_data ∪ jl_c ∪ jl_h)
-  outputs = mx.predict(model, data)
+  preds   = mx.predict(model, data)
 
-  # we will only use the first output to do sampling
-  outputs = outputs[1]
+  # the first output is prediction
+  outputs = preds[1]
 
+  # do sampling and init the next inputs
   jl_data_start[:] = 0
   for i = 1:BATCH_SIZE_SMP
     prob = WeightVec(outputs[:, i])
     k    = sample(prob)
     output_samples[t, i] = inv_vocab[k]
     jl_data_start[k, i]  = 1
+  end
+
+  # copy the states over
+  for l = 1:LSTM_N_LAYER
+    copy!(jl_c[l][2], preds[1+l])
+    copy!(jl_h[l][2], preds[1+LSTM_N_LAYER+l])
   end
 end
 
