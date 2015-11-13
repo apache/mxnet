@@ -60,7 +60,7 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
         continue
       end
     elseif op == "Convolution"
-      label = format("Convolution\nkernel={1},stride={2},n-filter={3}",
+      label = format("Convolution\nkernel={1}\nstride={2}\nn-filter={3}",
                      _extract_shape(node["param"]["kernel"]),
                      _extract_shape(node["param"]["stride"]),
                      node["param"]["num_filter"])
@@ -68,7 +68,21 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
     elseif op == "FullyConnected"
       label = format("FullyConnected\nnum-hidden={1}", node["param"]["num_hidden"])
       attr[:fillcolor] = cm[2]
-      # TODO: add more
+    elseif op == "Activation"
+      label = format("Activation\nact-type={1}", node["param"]["act_type"])
+      attr[:fillcolor] = cm[3]
+    elseif op == "BatchNorm"
+      attr[:fillcolor] = cm[4]
+    elseif op == "Pooling"
+      label = format("Pooling\ntype={1}\nkernel={2}\nstride={3}",
+                     node["param"]["pool_type"],
+                     _extract_shape(node["param"]["kernel"]),
+                     _extract_shape(node["param"]["stride"]))
+      attr[:fillcolor] = cm[5]
+    elseif op ∈ ("Concat", "Flatten", "Reshape")
+      attr[:fillcolor] = cm[6]
+    elseif endswith(op, "Output")
+      attr[:fillcolor] = cm[7]
     else
       attr[:fillcolor] = cm[8]
     end
