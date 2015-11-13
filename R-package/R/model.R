@@ -389,11 +389,6 @@ function(symbol, X, y=NULL, ctx=NULL,
       X <- t(X)
     }
   }
-
-  if (is.null(dim(y))) {
-    dim(y) <- c(1, length(y))
-  }
-
   X <- mx.model.init.iter(X, y, batch.size=array.batch.size, is.train=TRUE)
   if (!X$iter.next()) {
     x$reset()
