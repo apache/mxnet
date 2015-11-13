@@ -14,7 +14,22 @@ const NAME          = :ptb
 const N_GPU         = 4
 const USE_GPU       = true
 const DATA_TR_RATIO = 0.9
+const CKPOINT_PREFIX = joinpath(dirname(@__FILE__), "checkpoints/$NAME")
+
+const BATCH_SIZE_SMP= 10
+const SAMPLE_LENGTH = 100
+const SAMPLE_START  = 'a'
 
 const UNKNOWN_CHAR  = Char(0)
 const INPUT_FILE    = joinpath(dirname(@__FILE__), "input.txt")
 const VOCAB_FILE    = joinpath(dirname(@__FILE__), "vocab.dat")
+
+# helper function to convert a char into index in vocabulary
+function char_idx(vocab :: Dict{Char,Int}, c :: Char)
+  if haskey(vocab, c)
+    vocab[c]
+  else
+    vocab[UNKNOWN_CHAR]
+  end
+end
+
