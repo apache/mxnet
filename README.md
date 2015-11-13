@@ -1,16 +1,16 @@
 <img src=https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo-m/mxnet2.png width=135/> for Deep Learning
 =====
 
-[![Join the chat at https://gitter.im/dmlc/mxnet](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/dmlc/mxnet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
 [![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
 [![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.readthedocs.org/en/latest/)
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
+
 
 MXNet is a deep learning framework designed for both *efficiency* and *flexibility*.
 It allows you to mix the [flavours](http://mxnet.readthedocs.org/en/latest/program_model.html) of
 deep learning programs together to maximize the efficiency and your productivity.
 
+[![Join the chat at https://gitter.im/dmlc/mxnet](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/dmlc/mxnet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 What's New
 ----------
