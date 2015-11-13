@@ -1,4 +1,5 @@
 include(joinpath(dirname(@__FILE__), "config.jl"))
+include(joinpath(dirname(@__FILE__), "lstm.jl"))
 include(joinpath(dirname(@__FILE__), "seq-data.jl"))
 
 using StatsBase
@@ -6,10 +7,11 @@ using MXNet
 
 # load vocabulary
 vocab   = build_vocabulary(INPUT_FILE, VOCAB_FILE)
+n_class = length(vocab)
 
 # prepare data provider
 jl_data = Pair[(symbol(NAME, "_data_$t") => zeros(mx.MX_float, (length(vocab), BATCH_SIZE_SMP)))
-               for t = 1:SEQ_LENGTH]
+               for t = 1:1]
 jl_c    = Pair[(symbol(NAME, "_l$(l)_init_c") => zeros(mx.MX_float, (DIM_HIDDEN, BATCH_SIZE_SMP)))
                for l = 1:LSTM_N_LAYER]
 jl_h    = Pair[(symbol(NAME, "_l$(l)_init_h") => zeros(mx.MX_float, (DIM_HIDDEN, BATCH_SIZE_SMP)))
@@ -22,7 +24,7 @@ jl_data_start[char_idx(vocab, SAMPLE_START),:] = 1
 # define a LSTM with sequence length 1, also output states so that we could manually copy the states
 # when sampling the next char
 lstm  = LSTM(LSTM_N_LAYER, 1, DIM_HIDDEN, DIM_EMBED, n_class, dropout=DROPOUT, name=NAME, output_states=true)
-model = mx.FeedForward(lstm, context=cpu())
+model = mx.FeedForward(lstm, context=mx.cpu())
 
 # load parameters from traind LSTM, though the sequence length is different, since the weights are shared
 # over time, this should be compatible.
