@@ -33,12 +33,13 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
 
   conf = JSON.parse(to_json(network))
   nodes = conf["nodes"]
-  heads = unique(conf["heads"][1]+1)
+  heads = unique([x[1]+1 for x in conf["heads"]])
   node_attr = Dict(:shape => :box, :fixedsize => true, :width => 1.3,
                    :height => 0.8034, :style => :filled)
   io = IOBuffer()
   println(io, "digraph $(_simple_escape(title)) {")
   println(io, "node [fontsize=10];")
+  println(io, "edge [fontsize=10];")
 
   # color map
   cm = ("#8dd3c7", "#fb8072", "#ffffb3", "#bebada", "#80b1d3",
@@ -54,9 +55,11 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
 
     if op == "null"
       if i ∈ heads
+        # heads are output nodes
         label = node["name"]
         attr[:fillcolor] = cm[1]
       else
+        # otherwise, input nodes, might be data, label or parameters
         continue
       end
     elseif op == "Convolution"
@@ -81,12 +84,15 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
       attr[:fillcolor] = cm[5]
     elseif op ∈ ("Concat", "Flatten", "Reshape")
       attr[:fillcolor] = cm[6]
-    elseif endswith(op, "Output")
+    elseif endswith(op, "Output") || op == "BlockGrad"
       attr[:fillcolor] = cm[7]
     else
       attr[:fillcolor] = cm[8]
     end
 
+    if op != "null"
+      label = "$name\n$label"
+    end
     attr[:label] = label
     _format_graphviz_node(io, name, attr)
   end
@@ -116,7 +122,7 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
           label = "(" * join([string(x) for x in shape], ",") * ")"
           attr[:label] = label
         end
-        _format_graphviz_edge(io, input_name, name, attr)
+        _format_graphviz_edge(io, name, input_name, attr)
       end
     end
   end
