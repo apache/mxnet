@@ -134,7 +134,6 @@ class ElementwiseBinaryScalarOp : public Operator {
         break;
       }
       case elembinary::kMul: {
-        Tensor<xpu, 2> lhs_data = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
         Assign(lhs_grad, req[elembinary::kLhs], scalar_ * m_out_grad);
         break;
       }
