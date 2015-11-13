@@ -95,7 +95,13 @@ class RegressionOutputProp : public OperatorProperty {
     if (dshape.ndim() == 0) return false;
     auto &lshape = (*in_shape)[1];
     if (lshape.ndim() == 0) {
-      lshape = dshape;
+      // special treatment for 1D output, to allow 1D label by default.
+      // Think about change convention later
+      if (dshape.ndim() == 2 && dshape[1] == 1) {
+        lshape = Shape1(dshape[0]);
+      } else {
+        lshape = dshape;
+      }
     } else if (lshape[0] != dshape[0] || lshape.Size() != dshape.Size()) {
       std::ostringstream os;
       os << "Shape inconsistent, Provided " <<  '='<< lshape << ','
