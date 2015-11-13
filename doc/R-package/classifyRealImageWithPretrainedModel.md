@@ -80,7 +80,7 @@ We also need to load in the mean image, which is used for preprocessing using ``
 
 
 ```r
-mean.img = as.array(mx.nd.load("Inception/mean_224.nd")[["mean_img"]])
+mean.img = as.array(mx.nd.load("Inception/mean_224.nd"))
 ```
 
 Load and Preprocess the Image

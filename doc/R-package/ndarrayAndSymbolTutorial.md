@@ -143,7 +143,7 @@ You can save a list of `NDArray` object to your disk with `mx.nd.save`:
 
 ```r
 a <- mx.nd.ones(c(2, 3))
-mx.nd.save(list(a), "temp.ndarray")
+mx.nd.save(a, "temp.ndarray")
 ```
 
 You can also load it back easily:
@@ -151,7 +151,7 @@ You can also load it back easily:
 
 ```r
 a <- mx.nd.load("temp.ndarray")
-as.array(a[[1]])
+as.array(a)
 ```
 
 ```

@@ -165,7 +165,7 @@ rpkg:	roxygen
 	mkdir -p R-package/inst/include
 	cp -rf include/* R-package/inst/include
 	cp -rf dmlc-core/include/* R-package/inst/include/
-	R CMD build R-package
+	R CMD build --no-build-vignettes R-package
 
 clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
