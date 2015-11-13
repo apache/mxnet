@@ -59,7 +59,7 @@ function mx.provide_data(p :: CharSeqProvider)
   [(symbol(p.prefix, "_l$(l)_init_h"), (p.dim_hidden, p.batch_size)) for l=1:p.n_layer]
 end
 function mx.provide_label(p :: CharSeqProvider)
-  [(symbol(p.prefix, "_label_$t"), (p.batch_size),) for t = 1:p.seq_len]
+  [(symbol(p.prefix, "_label_$t"), (p.batch_size,)) for t = 1:p.seq_len]
 end
 
 function mx.eachbatch(p :: CharSeqProvider)
