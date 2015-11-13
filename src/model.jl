@@ -391,7 +391,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   # invoke callbacks on epoch 0
   _invoke_callbacks(self, opts.callbacks, op_state, AbstractEpochCallback)
 
-  # now start training...
+  info("Start training...")
   for i_epoch = 1:opts.n_epoch
     time_start = time()
     reset!(opts.eval_metric)

@@ -204,8 +204,8 @@ type DataBatch <: AbstractDataBatch
   count :: Int
 end
 count_samples(batch :: DataBatch) = batch.count
-get_data(batch :: DataBatch) = batch.data
-get_label(batch :: DataBatch) = batch.label
+get_data{Provider<:AbstractDataProvider}(::Provider, batch :: DataBatch) = batch.data
+get_label{Provider<:AbstractDataProvider}(::Provider, batch :: DataBatch) = batch.label
 
 #=doc
 .. class:: SlicedNDArray
