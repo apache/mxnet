@@ -28,9 +28,10 @@ else
 end
 
 model = mx.FeedForward(lstm, context=context)
-optimizer = mx.SGD(lr=LEARNING_RATE, momentum=MOMENTUM,
-                   weight_decay=WEIGHT_DECAY, grad_clip=CLIP_GRADIENT)
+optimizer = mx.SGD(lr_scheduler=mx.LearningRate.Exp(BASE_LR, gamma=LR_DECAY),
+                   momentum=MOMENTUM, weight_decay=WEIGHT_DECAY, grad_clip=CLIP_GRADIENT)
 
+ckpoint_prefix = joinpath(dirname(@__FILE__), "checkpoints/$NAME")
 mx.fit(model, optimizer, data_tr, eval_data=data_val, n_epoch=N_EPOCH,
        initializer=mx.UniformInitializer(0.1),
-       callbacks=[mx.speedometer()], eval_metric=NLL())
+       callbacks=[mx.speedometer(), mx.do_checkpoint(ckpoint_prefix)], eval_metric=NLL())
