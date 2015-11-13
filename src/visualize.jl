@@ -20,12 +20,12 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
   if !isa(input_shapes, Void)
     internals = get_internals(network)
     if isa(input_shapes, Dict)
-      _, out_shapes, _ = infer_shape(; input_shapes...)
+      _, out_shapes, _ = infer_shape(internals; input_shapes...)
     else
-      _, out_shapes, _ = infer_shape(input_shapes...)
+      _, out_shapes, _ = infer_shape(internals, input_shapes...)
     end
     @assert(!isa(out_shapes, Void), "Failed to do shape inference, input shapes are incomplete")
-    shapes = Dict(zip(list_outputs(internals), out_shapes))
+    shape_dict = Dict(zip(list_outputs(internals), out_shapes))
     draw_shape = true
   else
     draw_shape = false
@@ -149,8 +149,8 @@ function _format_graphviz_attr(io::IOBuffer, attrs)
   end
   println(io, "];")
 end
-function _simple_escape(str :: AbstractString)
-  str = replace(str, r"\n", "\\n")
+function _simple_escape(str)
+  str = replace(string(str), r"\n", "\\n")
   return "\"$str\""
 end
 function _format_graphviz_node(io::IOBuffer, name::AbstractString, attrs)
