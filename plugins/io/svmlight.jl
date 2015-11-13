@@ -44,6 +44,7 @@ function mx.eachbatch(provider :: SVMLightProvider)
   function _svmlight_iter()
     f = SVMLightFile(provider.filename)
     while true
+      error("This is actually buggy and needs fixing")
       raw = collect(take(f, provider.batch_size))
       cnt = length(raw)
       if cnt == 0

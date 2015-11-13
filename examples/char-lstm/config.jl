@@ -1,0 +1,19 @@
+const DROPOUT       = 0
+const BATCH_SIZE    = 32
+const SEQ_LENGTH    = 32
+const DIM_HIDDEN    = 256
+const DIM_EMBED     = 256
+const LTSM_N_LAYER  = 2
+const N_EPOCH       = 21
+const LEARNING_RATE = 1
+const WEIGHT_DECAY  = 0.00001
+const MOMENTUM      = 0.0
+const CLIP_GRADIENT = 1
+const NAME          = :ptb
+const N_GPU         = 4
+const USE_GPU       = true
+const DATA_TR_RATIO = 0.9
+
+const UNKNOWN_CHAR  = Char(0)
+const INPUT_FILE    = joinpath(dirname(@__FILE__), "input.txt")
+const VOCAB_FILE    = joinpath(dirname(@__FILE__), "vocab.dat")

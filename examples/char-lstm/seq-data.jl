@@ -1,14 +1,11 @@
 # Simple data provider that load text
+using Iterators
 using MXNet
-
-const UNKNOWN_CHAR = Char(0)
 
 function build_vocabulary(corpus_fn::AbstractString, vocab_fn::AbstractString; max_vocab=10000)
   if isfile(vocab_fn)
     info("Vocabulary already exists, reusing $vocab_fn...")
-    vocab = open(corpus_fn) do io
-      Dict([w[1] => i for (i,w) in enumerate(eachline(io))])
-    end
+    vocab = Dict{Char,Int}([w => i for (i,w) in enumerate(readall(vocab_fn))])
   else
     # count symbol frequency
     dict = Dict{Char,Int}()
@@ -24,14 +21,88 @@ function build_vocabulary(corpus_fn::AbstractString, vocab_fn::AbstractString; m
     vocab = vocab[1:min(max_vocab,length(vocab))]
     open(vocab_fn, "w") do io
       for x in vocab
-        println(io, x.first)
+        print(io, x.first)
       end
     end
 
     vocab = Dict([x.first => i for (i,x) in enumerate(vocab)])
   end
-  vocab[UNKNOWN_CHAR] = 0
+  vocab[UNKNOWN_CHAR] = length(vocab)
   return vocab
 end
 
-build_vocabulary("input.txt", "vocab.txt")
+function char_idx(vocab :: Dict{Char,Int}, c :: Char)
+  if haskey(vocab, c)
+    vocab[c]
+  else
+    vocab[UNKNOWN_CHAR]
+  end
+end
+
+type CharSeqProvider <: mx.AbstractDataProvider
+  text       :: AbstractString
+  batch_size :: Int
+  seq_len    :: Int
+  vocab      :: Dict{Char,Int}
+
+  prefix     :: Symbol
+  n_layer    :: Int
+  dim_hidden :: Int
+end
+
+function mx.get_batch_size(p :: CharSeqProvider)
+  p.batch_size
+end
+function mx.provide_data(p :: CharSeqProvider)
+  [(symbol(p.prefix, "_data_$t"), (length(p.vocab), p.batch_size)) for t = 1:p.seq_len] ∪
+  [(symbol(p.prefix, "_l$(l)_init_c"), (p.dim_hidden, p.batch_size)) for l=1:p.n_layer] ∪
+  [(symbol(p.prefix, "_l$(l)_init_h"), (p.dim_hidden, p.batch_size)) for l=1:p.n_layer]
+end
+function mx.provide_label(p :: CharSeqProvider)
+  [(symbol(p.prefix, "_label_$t"), (p.batch_size),) for t = 1:p.seq_len]
+end
+
+function mx.eachbatch(p :: CharSeqProvider)
+  data_all  = [mx.zeros(shape) for (name, shape) in mx.provide_data(p)]
+  label_all = [mx.zeros(shape) for (name, shape) in mx.provide_label(p)]
+
+  data_jl = [copy(x) for x in data_all]
+  label_jl= [copy(x) for x in label_all]
+
+  batch = mx.DataBatch(data_all, label_all, p.batch_size)
+
+  function _text_iter()
+    text = p.text
+
+    n_batch = floor(Int, length(text) / p.batch_size / p.seq_len)
+    text = text[1:n_batch*p.batch_size*p.seq_len] # discard tailing
+    idx_all = 1:length(text)
+
+    for idx_batch in partition(idx_all, p.batch_size*p.seq_len)
+      for i = 1:p.seq_len
+        data_jl[i][:] = 0
+        label_jl[i][:] = 0
+      end
+
+      for (i, idx_seq) in enumerate(partition(idx_batch, p.seq_len))
+        println("i = $i, idx_seq = $idx_seq")
+        for (j, idx) in enumerate(idx_seq)
+          c_this = text[idx]
+          c_next = idx == length(text) ? UNKNOWN_CHAR : text[idx+1]
+          data_jl[j][char_idx(vocab,c_this),i] = 1
+          label_jl[j][i] = char_idx(vocab,c_next)-1
+        end
+      end
+
+      for i = 1:p.seq_len
+        copy!(data_all[i], data_jl[i])
+        copy!(label_all[i], label_jl[i])
+      end
+
+      produce(batch)
+    end
+  end
+
+  return Task(_text_iter)
+end
+
