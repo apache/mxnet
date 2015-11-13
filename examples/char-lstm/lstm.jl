@@ -39,7 +39,7 @@ function lstm_cell(data::mx.SymbolicNode, prev_state::LSTMState, param::LSTMPara
 end
 
 function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_class::Int;
-              dropout::Real=0, name::Symbol=gensym())
+              dropout::Real=0, name::Symbol=gensym(), output_states::Bool=false)
 
   # placeholder nodes for all parameters
   embed_W = mx.Variable(symbol(name, "_embed_weight"))
@@ -94,6 +94,9 @@ function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_cla
   end
 
   # now group all outputs together
+  if output_states
+    outputs = outputs ∪ [x[2].c for x in layer_param_states] ∪ [x[2].h for x in layer_param_states]
+  end
   return mx.Group(outputs...)
 end
 
