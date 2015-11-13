@@ -96,3 +96,32 @@ function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_cla
   # now group all outputs together
   return mx.Group(outputs...)
 end
+
+
+# Negative Log-likelihood
+type NLL <: mx.AbstractEvalMetric
+  nll_sum  :: Float64
+  n_sample :: Int
+
+  NLL() = new(0.0, 0)
+end
+
+function mx.update!(metric :: NLL, labels :: Vector{mx.NDArray}, preds :: Vector{NDArray})
+  @assert length(labels) == length(preds)
+  nll = 0.0
+  for (label, pred) in zip(labels, preds)
+    @nd_as_jl ro=(label, pred) begin
+      nll -= sum(log(broadcast_getindex(pred, label+1, 1:length(label))))
+    end
+  end
+
+  nll = nll / length(labels)
+  metric.nll_sum += nll
+  metric.n_sample += length(labels[1])
+end
+
+function mx.get(metric :: NLL)
+  nll  = metric.nll / metric.n_sample
+  perp = exp(nll)
+  return [(symbol("neg-log-likelihood"), nll), (:perplexity, perp)]
+end
