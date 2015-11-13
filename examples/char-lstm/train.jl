@@ -31,4 +31,5 @@ model = mx.FeedForward(lstm, context=context)
 optimizer = mx.SGD(lr=LEARNING_RATE, momentum=MOMENTUM,
                    weight_decay=WEIGHT_DECAY, grad_clip=CLIP_GRADIENT)
 
-mx.fit(model, optimizer, data_tr, eval_data=data_val, n_epoch=N_EPOCH)
+mx.fit(model, optimizer, data_tr, eval_data=data_val, n_epoch=N_EPOCH, 
+       callbacks=[mx.speedometer()])
