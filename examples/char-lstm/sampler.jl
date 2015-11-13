@@ -23,7 +23,7 @@ jl_data_start[char_idx(vocab, SAMPLE_START),:] = 1
 
 # define a LSTM with sequence length 1, also output states so that we could manually copy the states
 # when sampling the next char
-lstm  = LSTM(LSTM_N_LAYER, 1, DIM_HIDDEN, DIM_EMBED, n_class, dropout=DROPOUT, name=NAME, output_states=true)
+lstm  = LSTM(LSTM_N_LAYER, 1, DIM_HIDDEN, DIM_EMBED, n_class, name=NAME, output_states=true)
 model = mx.FeedForward(lstm, context=mx.cpu())
 
 # load parameters from traind LSTM, though the sequence length is different, since the weights are shared
