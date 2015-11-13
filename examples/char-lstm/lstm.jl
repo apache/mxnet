@@ -13,7 +13,7 @@ immutable LSTMParam
   h2h_b :: mx.SymbolicNode
 end
 
-function ltsm_cell(data::mx.SymbolicNode, prev_state::LSTMState, param::LSTMParam;
+function lstm_cell(data::mx.SymbolicNode, prev_state::LSTMState, param::LSTMParam;
                    num_hidden::Int=512, dropout::Real=0, name::Symbol=gensym())
 
   if dropout > 0
@@ -35,7 +35,7 @@ function ltsm_cell(data::mx.SymbolicNode, prev_state::LSTMState, param::LSTMPara
   next_c = (forget_gate .* prev_state.c) + (in_gate .* in_trans)
   next_h = out_gate .* mx.Activation(next_c, act_type=:tanh)
 
-  return LTSMState(next_c, next_h)
+  return LSTMState(next_c, next_h)
 end
 
 function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_class::Int;
@@ -51,7 +51,7 @@ function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_cla
                       mx.Variable(symbol(name, "_l$(i)_h2h_weight")),
                       mx.Variable(symbol(name, "_l$(i)_i2h_bias")),
                       mx.Variable(symbol(name, "_l$(i)_h2h_bias")))
-    state = LTSMState(mx.Variable(symbol(name, "_l$(i)_init_c")),
+    state = LSTMState(mx.Variable(symbol(name, "_l$(i)_init_c")),
                       mx.Variable(symbol(name, "_l$(i)_init_h")))
     (param, state)
   end
@@ -65,11 +65,11 @@ function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_cla
                                no_bias=true, name=symbol(name, "_embed_$t"))
 
 
-    # stack LTSM cells
+    # stack LSTM cells
     for i = 1:n_layer
       l_param, l_state = layer_param_states[i]
       dp = i == 1 ? 0 : dropout # don't do dropout for data
-      next_state = ltsm_cell(hidden, l_state, l_param, num_hidden=dim_hidden, dropout=dp,
+      next_state = lstm_cell(hidden, l_state, l_param, num_hidden=dim_hidden, dropout=dp,
                              name=symbol(name, "_lstm_$t"))
       hidden = next_state.h
       layer_param_states[i] = (l_param, next_state)
@@ -88,7 +88,7 @@ function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_cla
   # append block-gradient nodes to the final states
   for i = 1:n_layer
     l_param, l_state = layer_param_states[i]
-    final_state = LTSMState(mx.BlockGrad(l_state.c, name=symbol(name, "_l$(i)_last_c")),
+    final_state = LSTMState(mx.BlockGrad(l_state.c, name=symbol(name, "_l$(i)_last_c")),
                             mx.BlockGrad(l_state.h, name=symbol(name, "_l$(i)_last_h")))
     layer_param_states[i] = (l_param, final_state)
   end

@@ -6,8 +6,8 @@ include(joinpath(dirname(@__FILE__), "seq-data.jl"))
 vocab   = build_vocabulary(INPUT_FILE, VOCAB_FILE)
 n_class = length(vocab)
 
-# define LTSM
-ltsm = LTSM(LTSM_N_LAYER, SEQ_LENGTH, DIM_HIDDEN, DIM_EMBED, n_class, dropout=DROPOUT, name=NAME)
+# define LSTM
+lstm = LSTM(LSTM_N_LAYER, SEQ_LENGTH, DIM_HIDDEN, DIM_EMBED, n_class, dropout=DROPOUT, name=NAME)
 
 # load data
 text_all  = readall(INPUT_FILE)
