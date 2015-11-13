@@ -77,14 +77,14 @@ def _check_arguments(symbol):
         aux_set.add(name)
 
 
-def _split_input_slice(batch_size, num_split):
+def _split_input_slice(batch_size, ctx):
     """Get input slice from the input shape.
     Parameters
     ----------
     batch_size : int
         The number of samples in a mini-batch.
-    num_split : int
-        The number of split we want to have.
+    ctx : list of Context class
+        The list of device context used in training
     Returns
     -------
     slices : list of slice
@@ -93,13 +93,23 @@ def _split_input_slice(batch_size, num_split):
     ------
     ValueError
         If there are two many splits such that some slice can be empty.
+    ------
+    Known bugs:
+        We found that too small batch_size could cause ValueError problems in work_load based split,
+        e.g. batch_size = 6 and work_load_list = [1, 1, 1, 1]
     """
-    step = (batch_size + num_split - 1) / num_split
+    work_load_list = [float(c.work_load) for c in ctx]
+    total_work_load = sum(work_load_list)
+    batch_num_list = [round(work_load * batch_size / total_work_load) for work_load in work_load_list]
+    batch_num_sum = sum(batch_num_list)
+    if batch_num_sum < batch_size:
+        batch_num_list[-1] += batch_size - batch_num_sum
     slices = []
-    for k in range(num_split):
-        begin = int(min(k * step, batch_size))
-        end = int(min((k+1) * step, batch_size))
-        if begin == end:
+    end = 0
+    for batch_num in batch_num_list:
+        begin = int(min((end, batch_size)))
+        end = int(min((begin + batch_num, batch_size)))
+        if begin >= end:
             raise ValueError('Too many slices such that some splits are empty')
         slices.append(slice(begin, end))
     return slices
@@ -211,7 +221,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     # make sure the architecture is valid
     _check_arguments(symbol)
 
-    slices = _split_input_slice(train_data.batch_size, num_device)
+    slices = _split_input_slice(train_data.batch_size, ctx)
     train_execs = []
     for i in range(len(ctx)):
         data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
