@@ -382,7 +382,8 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
            Ref{char_pp}, Ref{char_p}),
           hdr, ref_name, ref_desc, ref_nargs, ref_arg_names, ref_arg_types, ref_arg_descs, ref_kv_nargs)
 
-  func_name  = symbol(bytestring(ref_name[]))
+  func_name_s= bytestring(ref_name[])
+  func_name  = symbol(func_name_s)
   kv_nargs_s = bytestring(ref_kv_nargs[])
   kv_nargs   = symbol(kv_nargs_s)
 
@@ -431,12 +432,12 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
     end
 
     if length(args) != 0 && length(symbol_kws) != 0
-      @assert(false, "$func_name only accepts Symbols either as positional or keyword arguments, not both.")
+      @assert(false, $func_name_s * " only accepts Symbols either as positional or keyword arguments, not both.")
     end
     $(if kv_nargs != symbol("")
       quote
         if length(symbol_kws) > 0
-          @assert(false, "$func_name takes variable number of SymbolicNode arguments, please pass input Symbols " *
+          @assert(false, $func_name * " takes variable number of SymbolicNode arguments, please pass input Symbols " *
                          "via positional arguments, instead of keyword arguments.")
         end
       end
@@ -450,7 +451,7 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
     sym_hdr = ref_sym_hdr[]
 
     node = SymbolicNode(MX_SymbolHandle(sym_hdr))
-    hint = lowercase(string($func_name))
+    hint = lowercase($func_name_s)
     name = get!(DEFAULT_NAME_MANAGER, name, hint)
 
     if length(args) != 0
