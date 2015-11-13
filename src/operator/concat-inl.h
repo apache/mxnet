@@ -27,11 +27,11 @@ enum ConcatOpOutputs {kOut};
 
 struct ConcatParam : public dmlc::Parameter<ConcatParam> {
   int num_args;
-  int dimension;
+  int dim;
   DMLC_DECLARE_PARAMETER(ConcatParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs to be concated.");
-    DMLC_DECLARE_FIELD(dimension).set_range(0,  2).set_default(1)
+    DMLC_DECLARE_FIELD(dim).set_range(0,  2).set_default(1)
     .describe("the dimension to be concated.");
   }
 };  // struct ConcatParam
@@ -40,7 +40,7 @@ template<typename xpu>
 class ConcatOp : public Operator {
  public:
   explicit ConcatOp(ConcatParam param)
-    : size_(param.num_args),dimension_(param.dimension) {}
+    : size_(param.num_args),dimension_(param.dim) {}
 
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
@@ -155,8 +155,8 @@ class ConcatProp : public OperatorProperty {
       const TShape &tmp = in_shape->at(i);
       if (tmp.ndim() == 0) return false;
       for (uint32_t j = 0; j < dshape.ndim(); ++j) {
-        if (j == param_.dimension) {
-          dshape[param_.dimension] += tmp[param_.dimension];
+        if (j == param_.dim) {
+          dshape[param_.dim] += tmp[param_.dim];
         } else {
           CHECK_EQ(dshape[j], tmp[j])
               << "Incorrect shape[" << i << "]: "

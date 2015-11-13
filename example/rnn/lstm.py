@@ -84,14 +84,13 @@ def lstm_unroll(num_lstm_layer, seq_len,
         if dropout > 0.:
             hidden = mx.sym.Dropout(data=hidden, p=dropout)
         last_hidden.append(hidden)
-    concat = mx.sym.Concat(*last_hidden, dimension = 0)
+    concat = mx.sym.Concat(*last_hidden, dim = 0)
     fc = mx.sym.FullyConnected(data=concat,
                                weight=cls_weight,
                                bias=cls_bias,
                                num_hidden=num_label)
     sm = mx.sym.SoftmaxOutput(data=fc, label=label, name="sm")
     out_prob = [sm]
-
     for i in range(num_lstm_layer):
         state = last_states[i]
         state = LSTMState(c=mx.sym.BlockGrad(state.c, name="l%d_last_c" % i),

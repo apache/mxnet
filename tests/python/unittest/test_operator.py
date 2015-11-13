@@ -87,7 +87,7 @@ def check_concat_with_shape(shapes, dimension):
         target_dim += shape[dimension]
 
     inputs = [mx.symbol.Variable('arg%d' % i) for i in range(n)]
-    out = mx.symbol.Concat(*inputs, name='conc',dimension=dimension)
+    out = mx.symbol.Concat(*inputs, name='conc',dim=dimension)
     arr = [mx.nd.empty(shape) for shape in shapes]
     for i in range(n):
         arr[i][:] = shapes[i][dimension]
