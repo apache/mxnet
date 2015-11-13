@@ -461,9 +461,9 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
     info(format("== Epoch {1:0>3d} ==========", i_epoch))
     info("## Training summary")
     for (name, value) in get(opts.eval_metric)
-      info(format("{1:>15s} = {2:.4f}", name, value))
+      info(format("{1:>18s} = {2:.4f}", string(name), value))
     end
-    info(format("{1:>15s} = {2:.4f} seconds", "time", time_stop-time_start))
+    info(format("{1:>18s} = {2:.4f} seconds", "time", time_stop-time_start))
 
     # evaluation on validation set
     if !isa(opts.eval_data, Void)
@@ -491,7 +491,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
       info("## Validation summary")
       for (name, value) in get(opts.eval_metric)
-        info(format("{1:>15s} = {2:.4f}", name, value))
+        info(format("{1:>18s} = {2:.4f}", string(name), value))
       end
     end
 

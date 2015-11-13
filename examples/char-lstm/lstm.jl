@@ -123,5 +123,5 @@ end
 function mx.get(metric :: NLL)
   nll  = metric.nll / metric.n_sample
   perp = exp(nll)
-  return [(symbol("neg-log-likelihood"), nll), (:perplexity, perp)]
+  return [(:NLL, nll), (:perplexity, perp)]
 end
