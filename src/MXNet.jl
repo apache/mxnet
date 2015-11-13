@@ -29,6 +29,7 @@ include("callback.jl")
 include("model.jl")
 
 include("util.jl")
+include("visualize.jl")
 
 include("nn-factory.jl")
 

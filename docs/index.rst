@@ -42,6 +42,7 @@ For more details, see documentation below. Please also checkout the `examples
    api/symbolic-node
    api/nn-factory
    api/executor
+   api/visualize
 
 Indices and tables
 ==================

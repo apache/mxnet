@@ -725,6 +725,29 @@ Internal APIs
 
 
 
+.. function:: _DivScalar(...)
+
+   Perform an elementwise div.
+   
+   :param array: Input array operand to the operation.
+   :type array: SymbolicNode
+   
+   
+   :param scalar: scalar value.
+   :type scalar: float, required
+   
+   
+   :param scalar_on_right: scalar operand is on the right.
+   :type scalar_on_right: boolean, optional, default=False
+   
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
 .. function:: _Minus(...)
 
    Perform an elementwise minus.
@@ -737,9 +760,55 @@ Internal APIs
 
 
 
+.. function:: _MinusScalar(...)
+
+   Perform an elementwise minus.
+   
+   :param array: Input array operand to the operation.
+   :type array: SymbolicNode
+   
+   
+   :param scalar: scalar value.
+   :type scalar: float, required
+   
+   
+   :param scalar_on_right: scalar operand is on the right.
+   :type scalar_on_right: boolean, optional, default=False
+   
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
 .. function:: _Mul(...)
 
    Perform an elementwise mul.
+   
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: _MulScalar(...)
+
+   Perform an elementwise mul.
+   
+   :param array: Input array operand to the operation.
+   :type array: SymbolicNode
+   
+   
+   :param scalar: scalar value.
+   :type scalar: float, required
+   
+   
+   :param scalar_on_right: scalar operand is on the right.
+   :type scalar_on_right: boolean, optional, default=False
    
    :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
@@ -771,6 +840,29 @@ Internal APIs
 .. function:: _Plus(...)
 
    Perform an elementwise plus.
+   
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: _PlusScalar(...)
+
+   Perform an elementwise plus.
+   
+   :param array: Input array operand to the operation.
+   :type array: SymbolicNode
+   
+   
+   :param scalar: scalar value.
+   :type scalar: float, required
+   
+   
+   :param scalar_on_right: scalar operand is on the right.
+   :type scalar_on_right: boolean, optional, default=False
    
    :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
