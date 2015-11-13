@@ -106,12 +106,12 @@ type NLL <: mx.AbstractEvalMetric
   NLL() = new(0.0, 0)
 end
 
-function mx.update!(metric :: NLL, labels :: Vector{mx.NDArray}, preds :: Vector{NDArray})
+function mx.update!(metric :: NLL, labels :: Vector{mx.NDArray}, preds :: Vector{mx.NDArray})
   @assert length(labels) == length(preds)
   nll = 0.0
   for (label, pred) in zip(labels, preds)
-    @nd_as_jl ro=(label, pred) begin
-      nll -= sum(log(broadcast_getindex(pred, label+1, 1:length(label))))
+    @mx.nd_as_jl ro=(label, pred) begin
+      nll -= sum(log(max(broadcast_getindex(pred, round(Int,label+1), 1:length(label)), 1e-20)))
     end
   end
 
@@ -121,7 +121,12 @@ function mx.update!(metric :: NLL, labels :: Vector{mx.NDArray}, preds :: Vector
 end
 
 function mx.get(metric :: NLL)
-  nll  = metric.nll / metric.n_sample
+  nll  = metric.nll_sum / metric.n_sample
   perp = exp(nll)
   return [(:NLL, nll), (:perplexity, perp)]
+end
+
+function mx.reset!(metric :: NLL)
+  metric.nll_sum  = 0.0
+  metric.n_sample = 0
 end
