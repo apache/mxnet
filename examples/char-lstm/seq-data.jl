@@ -85,7 +85,6 @@ function mx.eachbatch(p :: CharSeqProvider)
       end
 
       for (i, idx_seq) in enumerate(partition(idx_batch, p.seq_len))
-        println("i = $i, idx_seq = $idx_seq")
         for (j, idx) in enumerate(idx_seq)
           c_this = text[idx]
           c_next = idx == length(text) ? UNKNOWN_CHAR : text[idx+1]

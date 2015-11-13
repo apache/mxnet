@@ -121,7 +121,7 @@ end
 
 function set_optimizer(self :: KVStore, optimizer :: AbstractOptimizer)
   ref_is_worker = Ref{Cint}(0)
-  @mxcall(:MXKVStoreIsWorkerSymbolicNode, (Ref{Cint},), ref_is_worker)
+  @mxcall(:MXKVStoreIsWorkerNode, (Ref{Cint},), ref_is_worker)
   is_worker = ref_is_worker[]
 
   if ismatch(r"dist", string(get_type(self))) && is_worker
