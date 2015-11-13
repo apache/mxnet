@@ -199,7 +199,7 @@ class NumpyOp(PythonOp):
                                  list_functype(list_outputs_entry),
                                  list_functype(list_arguments_entry),
                                  None, None, None, None, None)
-        cb_ptr = hex(cast(pointer(self.info_), c_void_p).value)
+        cb_ptr = format(cast(pointer(self.info_), c_void_p).value, 'x')
         # pylint: disable=E1101
         return symbol.Symbol._Native(*args,
                                      info=cb_ptr,
