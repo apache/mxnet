@@ -69,3 +69,4 @@ List of Contributors
 * [ry](https://github.com/ry)
 * [Ming Zhang](https://github.com/starimpact)
 * [sxjscience](https://github.com/sxjscience)
+* [Zheng Xu](https://github.com/XericZephyr)
