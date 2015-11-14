@@ -81,7 +81,7 @@ Since logical partition doesn't rely on the number of physical data files, we ca
 
 ## Data Loading and Preprocessing
  
-When the speed of loading and preprocessing can't cache up with the speed of training or evaluation, IO will become the bottleneck of the whole system. In this section, we will introduce our tricks to pursuit the ultimate efficiency to load and preprocess data packed in binary recordIO format. In our ImageNet practice, we can achieve the IO speed of **3000** images/s .
+When the speed of loading and preprocessing can't cache up with the speed of training or evaluation, IO will become the bottleneck of the whole system. In this section, we will introduce our tricks to pursuit the ultimate efficiency to load and preprocess data packed in binary recordIO format. In our ImageNet practice, we can achieve the IO speed of **3000** images/s **with normal HDD**.
  
 ### Loading and preprocessing on the fly
  
