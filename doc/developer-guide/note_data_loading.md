@@ -1,6 +1,6 @@
-MXNet IO Module Design: push the efficiency online and offline
-=============================================
-Data loading is an important part of the machine learning system, especially when the data is huge. The goal of MXNet IO design is to achieve more efficient data loading, less effort on data preparation, clean and flexible interface.
+Design Efficient Deep Learning Data Loading Module
+==================================================
+Data loading is an important part of the machine learning system, especially when the data is huge and do not fit into memory.  The general design goal of  data loading module is to achieve more efficient data loading, less effort on data preparation, clean and flexible interface.
  
 This tutorial will be organized as follows: in IO Design Insight section, we introduce some insights and guidelines in our IO modeule design; in Data Format section, we introduce our solution using dmlc-core's binary recordIO implementation; in Data Loading section, we introduce our method to hide IO cost by utilizing the Threadediter provided by dmlc-core; in the Interface Design section, we will show you the simple way to construct a MXNet data iterator in a few lines of python; in the Future Extension part, we discuss how to make MXNet IO more flexible to support more learning tasks.
 
