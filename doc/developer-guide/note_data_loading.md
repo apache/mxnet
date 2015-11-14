@@ -2,13 +2,21 @@ Design Efficient Deep Learning Data Loading Module
 ==================================================
 Data loading is an important part of the machine learning system, especially when the data is huge and do not fit into memory.  The general design goal of  data loading module is to achieve more efficient data loading, less effort on data preparation, clean and flexible interface.
  
-This tutorial will be organized as follows: in IO Design Insight section, we introduce some insights and guidelines in our IO modeule design; in Data Format section, we introduce our solution using dmlc-core's binary recordIO implementation; in Data Loading section, we introduce our method to hide IO cost by utilizing the Threadediter provided by dmlc-core; in the Interface Design section, we will show you the simple way to construct a MXNet data iterator in a few lines of python; in the Future Extension part, we discuss how to make MXNet IO more flexible to support more learning tasks.
+This tutorial will be organized as follows: in IO Design Insight section, we introduce some insights and guidelines in our data loading design; in Data Format section, we introduce our solution using dmlc-core's binary recordIO implementation; in Data Loading section, we introduce our method to hide IO cost by utilizing the Threadediter provided by dmlc-core; in the Interface Design section, we will show you the simple way to construct a MXNet data iterator in a few lines of python; in the Future Extension part, we discuss how to make data loading more flexible to support more learning tasks.
 
-## IO Design Insight
+We will cover the following key requirements, in detail in the later part of sections.
+
+***List of Key Requirements***
+- Small file size.
+- Allow parallel(distributed) packing of data.
+- Fast data loading and online augmentation.
+- Allow quick read arbitrary parts in distributed setting.
+
+## Design Insight
 IO design usually involves two kinds of work: data preparation and data loading. Data preparation usually influences the time consuming offline, while data loading influences the online performance. In this section, we will introduce our insight of IO design involving the two phases.
  
 ### Data Preparation
-Data preparation is to pack the data into certain format for later processing. When the data is huge, i.e. ImageNet_22K, this process may be time-consuming. Since that, there're several things we need to pay attention:
+Data preparation is to pack the data into certain format for later processing. When the data is huge, i.e. full ImageNet, this process may be time-consuming. Since that, there're several things we need to pay attention:
 
 - Pack the dataset into small numbers of files. A dataset may contain millions of data instances. Packed data distributes easily from machine to machine;
 - Do the packing once. No repacking is needed when the running setting has been changed (usually means the number of running machines);
