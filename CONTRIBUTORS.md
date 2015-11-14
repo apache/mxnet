@@ -70,3 +70,4 @@ List of Contributors
 * [Ming Zhang](https://github.com/starimpact)
 * [sxjscience](https://github.com/sxjscience)
 * [Zheng Xu](https://github.com/XericZephyr)
+* [Valentin Churavy](https://github.com/vchuravy)

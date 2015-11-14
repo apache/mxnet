@@ -141,7 +141,7 @@ include tests/cpp/unittest.mk
 test: $(TEST)
 
 lint: rcpplint
-	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python predict/python
+	python2 dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python predict/python
 
 doc: doxygen
 
@@ -150,7 +150,7 @@ doxygen:
 
 # R related shortcuts
 rcpplint:
-	python dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
+	python2 dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
 
 rcppexport:
 	Rscript -e "require(mxnet); mxnet::mxnet.export(\"R-package\")"
