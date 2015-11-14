@@ -14,12 +14,12 @@ deep learning programs together to maximize the efficiency and your productivity
 
 What's New
 ----------
+* [Design Note: Design Efficient Deep Learning Data Loading Module](http://mxnet.readthedocs.org/en/latest/developer-guide/note_data_loading.html)
 * [MXNet on Mobile Device](https://mxnet.readthedocs.org/en/latest/tutorial/smart_device.html)
 * [Distributed Training](https://mxnet.readthedocs.org/en/latest/distributed_training.html)
 * [Guide to Creating New Operators (Layers)](https://mxnet.readthedocs.org/en/latest/tutorial/new_op_howto.html)
 * [Amalgamation and Go Binding for Predictors](https://github.com/jdeng/gomxnet/)
 * [Training Deep Net on 14 Million Images on A Single Machine](https://mxnet.readthedocs.org/en/latest/tutorial/imagenet_full.html)
-* [MXNet.jl Julia binding initial release](https://github.com/dmlc/MXNet.jl)
 
 Contents
 --------
