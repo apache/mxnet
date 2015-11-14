@@ -33,7 +33,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-10f)
     .describe("Epsilon to prevent div 0");
-    DMLC_DECLARE_FIELD(momentum).set_default(0.1f)
+    DMLC_DECLARE_FIELD(momentum).set_default(0.9f)
     .describe("Momentum for moving average");
   }
 };

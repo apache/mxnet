@@ -90,7 +90,7 @@ model_prefix = "model/Inception"
 num_round = 40
 
 
-model = mx.model.FeedForward(ctx=gpus, symbol=softmax, num_round=num_round,
+model = mx.model.FeedForward(ctx=gpus, symbol=softmax, num_epoch=num_round,
                              learning_rate=0.05, momentum=0.9, wd=0.00001)
 
 model.fit(X=train, eval_data=val,
