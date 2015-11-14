@@ -41,7 +41,7 @@ model = mx.model.load("Inception/Inception_BN", iteration=39)
 We also need to load in the mean image, which is used for preprocessing using ```mx.nd.load```.
 
 ```{r}
-mean.img = as.array(mx.nd.load("Inception/mean_224.nd"))
+mean.img = as.array(mx.nd.load("Inception/mean_224.nd")[["mean_img"]])
 ```
 
 Load and Preprocess the Image

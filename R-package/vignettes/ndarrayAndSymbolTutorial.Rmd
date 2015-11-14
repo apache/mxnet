@@ -90,7 +90,7 @@ You can also load it back easily:
 
 ```{r}
 a <- mx.nd.load("temp.ndarray")
-as.array(a)
+as.array(a[[1]])
 ```
 
 In case you want to save data to the distributed file system such as S3 and HDFS,
