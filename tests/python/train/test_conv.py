@@ -24,11 +24,11 @@ mp2 = mx.symbol.Pooling(data = act2, name = 'mp2', kernel=(2,2), stride=(2,2), p
 
 fl = mx.symbol.Flatten(data = mp2, name="flatten")
 fc2 = mx.symbol.FullyConnected(data = fl, name='fc2', num_hidden=10)
-softmax = mx.symbol.Softmax(data = fc2, name = 'sm')
+softmax = mx.symbol.SoftmaxOutput(data = fc2, name = 'sm')
 
-num_round = 1
+num_epoch = 1
 model = mx.model.FeedForward(softmax, mx.cpu(),
-                             num_round=num_round,
+                             num_epoch=num_epoch,
                              learning_rate=0.1, wd=0.0001,
                              momentum=0.9)
 # check data
@@ -38,11 +38,13 @@ train_dataiter = mx.io.MNISTIter(
         image="data/train-images-idx3-ubyte",
         label="data/train-labels-idx1-ubyte",
         data_shape=(1, 28, 28),
+        label_name='sm_label',
         batch_size=batch_size, shuffle=True, flat=False, silent=False, seed=10)
 val_dataiter = mx.io.MNISTIter(
         image="data/t10k-images-idx3-ubyte",
         label="data/t10k-labels-idx1-ubyte",
         data_shape=(1, 28, 28),
+        label_name='sm_label',
         batch_size=batch_size, shuffle=True, flat=False, silent=False)
 
 def test_mnist():
@@ -58,7 +60,7 @@ def test_mnist():
     prob = model.predict(val_dataiter)
     logging.info('Finish predict...')
     val_dataiter.reset()
-    y = np.concatenate([label.asnumpy() for _, label in val_dataiter]).astype('int')
+    y = np.concatenate([batch.label[0].asnumpy() for batch in val_dataiter]).astype('int')
     py = np.argmax(prob, axis=1)
     acc1 = float(np.sum(py == y)) / len(y)
     logging.info('final accuracy = %f', acc1)

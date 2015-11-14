@@ -17,9 +17,11 @@
 #include "./operator_common.h"
 #include "./mshadow_op.h"
 
+namespace dropout {
 enum DropoutOpInputs {kData};
 enum DropoutOpOutputs {kOut, kMask};
 enum DropoutOpForwardResource {kRandom};
+}  // namespace dropout
 
 namespace mxnet {
 namespace op {
@@ -52,15 +54,15 @@ class DropoutOp : public Operator {
       CHECK_EQ(out_data.size(), 2);
     }
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> data = in_data[dropout::kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> out = out_data[dropout::kOut].FlatTo2D<xpu, real_t>(s);
     if (ctx.is_train) {
-      Tensor<xpu, 2> mask = out_data[kMask].FlatTo2D<xpu, real_t>(s);
-      Random<xpu> *prnd = ctx.requested[kRandom].get_random<xpu>(s);
+      Tensor<xpu, 2> mask = out_data[dropout::kMask].FlatTo2D<xpu, real_t>(s);
+      Random<xpu> *prnd = ctx.requested[dropout::kRandom].get_random<xpu>(s);
       mask = F<mshadow_op::threshold>(prnd->uniform(mask.shape_), pkeep_) * (1.0f / pkeep_);
-      Assign(out, req[kOut], data * mask);
+      Assign(out, req[dropout::kOut], data * mask);
     } else {
-      Assign(out, req[kOut], F<mshadow_op::identity>(data));
+      Assign(out, req[dropout::kOut], F<mshadow_op::identity>(data));
     }
   }
 
@@ -76,10 +78,10 @@ class DropoutOp : public Operator {
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(in_grad.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> grad = out_grad[kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> mask = out_data[kMask].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> gdata = in_grad[kData].FlatTo2D<xpu, real_t>(s);
-    Assign(gdata, req[kData], grad * mask);
+    Tensor<xpu, 2> grad = out_grad[dropout::kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> mask = out_data[dropout::kMask].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> gdata = in_grad[dropout::kData].FlatTo2D<xpu, real_t>(s);
+    Assign(gdata, req[dropout::kData], grad * mask);
   }
 
  private:
@@ -128,7 +130,7 @@ class DropoutProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    return {out_grad[kOut], out_data[kMask]};
+    return {out_grad[dropout::kOut], out_data[dropout::kMask]};
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
@@ -136,13 +138,13 @@ class DropoutProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data,
     const std::vector<void*> &in_grad) const override {
-    return {{out_grad[kOut], in_grad[kData]}};
+    return {{out_grad[dropout::kOut], in_grad[dropout::kData]}};
   }
 
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
     const std::vector<int> &in_data,
     const std::vector<void*> &out_data) const override {
-    return {{in_data[kData], out_data[kOut]}};
+    return {{in_data[dropout::kData], out_data[dropout::kOut]}};
   }
 
   std::vector<ResourceRequest> ForwardResource(
@@ -162,7 +164,7 @@ class DropoutProp : public OperatorProperty {
     return {"output", "mask"};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  private:
   DropoutParam param_;

@@ -12,6 +12,8 @@ from . import name
 from . import symbol as sym
 from . import symbol
 from . import io
+from . import recordio
+from . import operator
 # use mx.nd as short for mx.ndarray
 from . import ndarray as nd
 # use mx.rnd as short for mx.random

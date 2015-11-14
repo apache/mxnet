@@ -13,9 +13,9 @@
 /*! \brief MXNET_DLL prefix for windows" */
 #ifdef _WIN32
 #ifdef MXNET_EXPORTS
-#define MXNET_DLL MXNET_EXTERN_C __cdecl __declspec(dllexport)
+#define MXNET_DLL MXNET_EXTERN_C __declspec(dllexport)
 #else
-#define MXNET_DLL MXNET_EXTERN_C __cdecl __declspec(dllimport)
+#define MXNET_DLL MXNET_EXTERN_C __declspec(dllimport)
 #endif
 #else
 #define MXNET_DLL MXNET_EXTERN_C
@@ -46,6 +46,24 @@ typedef void *DataIterCreator;
 typedef void *DataIterHandle;
 /*! \brief handle to KVStore */
 typedef void *KVStoreHandle;
+/*! \brief handle to RecordIO */
+typedef void *RecordIOHandle;
+
+MXNET_EXTERN_C {
+struct NativeOpInfo {
+  void (*forward)(int, float**, int*, unsigned**, int*, void*);
+  void (*backward)(int, float**, int*, unsigned**, int*, void*);
+  void (*infer_shape)(int, int*, unsigned**, void*);
+  void (*list_outputs)(char***, void*);
+  void (*list_arguments)(char***, void*);
+  // all functions also pass a payload void* pointer
+  void* p_forward;
+  void* p_backward;
+  void* p_infer_shape;
+  void* p_list_outputs;
+  void* p_list_arguments;
+};
+}
 /*!
  * \brief return str message of the last error
  *  all function in this file will return 0 when success
@@ -690,7 +708,14 @@ MXNET_DLL int MXDataIterBeforeFirst(DataIterHandle handle);
  */
 MXNET_DLL int MXDataIterGetData(DataIterHandle handle,
                                 NDArrayHandle *out);
-
+/*!
+ * \brief Get the image index by array
+ * \param handle the handle pointer to the data iterator
+ * \return image index array and array size, index is const data
+ */
+MXNET_DLL int MXDataIterGetIndex(DataIterHandle handle,
+                                 uint64_t **out_index,
+                                 uint64_t *out_size);
 /*!
  * \brief Get the padding number in current data batch
  * \param handle the handle pointer to the data iterator
@@ -883,4 +908,53 @@ MXNET_DLL int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
                                              int cmd_id,
                                              const char* cmd_body);
 
+/**
+ * \brief Create a RecordIO writer object
+ * \param uri path to file
+ * \param out handle pointer to the created object
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOWriterCreate(const char *uri, RecordIOHandle *out);
+
+/**
+ * \brief Delete a RecordIO writer object
+ * \param handle handle to RecordIO object
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOWriterFree(RecordIOHandle handle);
+
+/**
+ * \brief Write a record to a RecordIO object
+ * \param handle handle to RecordIO object
+ * \param buf buffer to write
+ * \param size size of buffer
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOWriterWriteRecord(RecordIOHandle *handle,
+                                          const char *buf, size_t size);
+
+/**
+ * \brief Create a RecordIO reader object
+ * \param uri path to file
+ * \param out handle pointer to the created object
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOReaderCreate(const char *uri, RecordIOHandle *out);
+
+/**
+ * \brief Delete a RecordIO reader object
+ * \param handle handle to RecordIO object
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOReaderFree(RecordIOHandle *handle);
+
+/**
+ * \brief Write a record to a RecordIO object
+ * \param handle handle to RecordIO object
+ * \param buf pointer to return buffer
+ * \param size point to size of buffer
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
+                                        char const **buf, size_t *size);
 #endif  // MXNET_C_API_H_

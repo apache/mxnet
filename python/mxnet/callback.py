@@ -1,5 +1,5 @@
 # coding: utf-8
-"""Callback functions that can be used to track various status during iteration."""
+"""Callback functions that can be used to track various status during epoch."""
 from __future__ import absolute_import
 
 import sys
@@ -9,7 +9,7 @@ import time
 from .model import save_checkpoint
 
 def do_checkpoint(prefix):
-    """Callback to checkpoint the model to prefix every iteration.
+    """Callback to checkpoint the model to prefix every epoch.
 
     Parameters
     ----------
@@ -45,7 +45,7 @@ def log_train_metric(period):
         if param.nbatch % period == 0:
             name, value = param.eval_metric.get()
             logging.info('Iter[%d] Batch[%d] Train-%s=%f',
-                         param.iteration, param.nbatch, name, value)
+                         param.epoch, param.nbatch, name, value)
     return _callback
 
 
@@ -77,7 +77,7 @@ class Speedometer(object):
             if count % self.frequent == 0:
                 speed = self.frequent * self.batch_size / (time.time() - self.tic)
                 logging.info("Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
-                             param.iteration, count, speed)
+                             param.epoch, count, speed)
                 self.tic = time.time()
         else:
             self.init = True

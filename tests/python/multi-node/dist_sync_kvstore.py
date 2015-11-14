@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # pylint: skip-file
-#
-# run on local machine
-# $ ln -s ../../../dmlc-core/tracker/dmlc_local.py .
-# $ ./dmlc_local.py -n 4 -s 4 ./test_kvstore.py
 
+import sys
+sys.path.insert(0, "../../../python/")
 import mxnet as mx
 import numpy as np
 import time

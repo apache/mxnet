@@ -47,16 +47,16 @@ class CuDNNConvolutionOp : public Operator {
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1);
     Stream<gpu> *s = ctx.get_stream<gpu>();
-    Tensor<gpu, 4> data = in_data[kData].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> wmat = in_data[kWeight].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> out = out_data[kOut].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4> data = in_data[conv::kData].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4> wmat = in_data[conv::kWeight].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4> out = out_data[conv::kOut].get<gpu, 4, real_t>(s);
     CHECK_EQ(data.CheckContiguous(), true);
     CHECK_EQ(wmat.CheckContiguous(), true);
     CHECK_EQ(out.CheckContiguous(), true);
     if (!init_cudnn_) {
       Init(s, in_data, out_data);
     }
-    Tensor<gpu, 1> workspace = ctx.requested[kTempSpace].get_space<gpu>(
+    Tensor<gpu, 1> workspace = ctx.requested[conv::kTempSpace].get_space<gpu>(
       mshadow::Shape1(forward_workspace_), s);
     CHECK_EQ(cudnnConvolutionForward(s->dnn_handle_,
                                      &alpha,
@@ -73,7 +73,7 @@ class CuDNNConvolutionOp : public Operator {
                                      out.dptr_), CUDNN_STATUS_SUCCESS);
     if (!param_.no_bias) {
       beta = 1.0f;
-      Tensor<gpu, 1> bias = in_data[kBias].get<gpu, 1, real_t>(s);
+      Tensor<gpu, 1> bias = in_data[conv::kBias].get<gpu, 1, real_t>(s);
       CHECK_EQ(cudnnAddTensor(s->dnn_handle_,
                               CUDNN_ADD_SAME_C,
                               &alpha,
@@ -100,17 +100,17 @@ class CuDNNConvolutionOp : public Operator {
     CHECK_EQ(out_grad.size(), 1);
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     // TODO(bing): think about how to support add to
-    CHECK_EQ(req[kWeight], kWriteTo);
+    CHECK_EQ(req[conv::kWeight], kWriteTo);
     Stream<gpu> *s = ctx.get_stream<gpu>();
-    Tensor<gpu, 4> grad = out_grad[kOut].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> wmat = in_data[kWeight].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> gwmat = in_grad[kWeight].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> data = in_data[kData].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> gdata = in_grad[kData].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 1> workspace = ctx.requested[kTempSpace].get_space<gpu>(
+    Tensor<gpu, 4> grad = out_grad[conv::kOut].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4> wmat = in_data[conv::kWeight].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4> gwmat = in_grad[conv::kWeight].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4> data = in_data[conv::kData].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4> gdata = in_grad[conv::kData].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 1> workspace = ctx.requested[conv::kTempSpace].get_space<gpu>(
       mshadow::Shape1(backward_workspace_), s);
     if (!param_.no_bias) {
-      Tensor<gpu, 1> gbias = in_grad[kBias].get<gpu, 1, real_t>(s);
+      Tensor<gpu, 1> gbias = in_grad[conv::kBias].get<gpu, 1, real_t>(s);
       CHECK_EQ(cudnnConvolutionBackwardBias(s->dnn_handle_,
                                             &alpha,
                                             out_desc_,
@@ -160,8 +160,8 @@ class CuDNNConvolutionOp : public Operator {
       size_t workspace_byte = static_cast<size_t>(param_.workspace * sizeof(real_t));
       size_t back_size = 0;
       size_t back_size_w = 0;
-      Tensor<gpu, 4> data = in_data[kData].get<gpu, 4, real_t>(s);
-      Tensor<gpu, 4> out = out_data[kOut].get<gpu, 4, real_t>(s);
+      Tensor<gpu, 4> data = in_data[conv::kData].get<gpu, 4, real_t>(s);
+      Tensor<gpu, 4> out = out_data[conv::kOut].get<gpu, 4, real_t>(s);
       CHECK_EQ(cudnnCreateTensorDescriptor(&in_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateTensorDescriptor(&out_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateTensorDescriptor(&bias_desc_), CUDNN_STATUS_SUCCESS);
@@ -196,7 +196,7 @@ class CuDNNConvolutionOp : public Operator {
                                           out.shape_[2],
                                           out.shape_[3]), CUDNN_STATUS_SUCCESS);
       if (!param_.no_bias) {
-        Tensor<gpu, 1> bias = in_data[kBias].get<gpu, 1, real_t>(s);
+        Tensor<gpu, 1> bias = in_data[conv::kBias].get<gpu, 1, real_t>(s);
         CHECK_EQ(cudnnSetTensor4dDescriptor(bias_desc_,
                                             CUDNN_TENSOR_NCHW,
                                             dtype_,

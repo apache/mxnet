@@ -12,7 +12,11 @@ Note: A commonly mistake is forgetting shuffle the image list. This will lead fa
 
 - [alexnet.py](alexnet.py) : alexnet with 5 convolution layers followed by 3
   fully connnected layers
-- [inception.py](inception.py) : inception + batch norm network
+- [inception.py](inception.py) : inception + batch norm network for ImageNet with 1000 classes problem
+- [inception-full.py](inception-full.py) : This inception network is used for ImageNet with 21841 classes
+
+## Notebooks
+- [predict with pretained model](predict-with-pretrained-model.ipynb) gives you a demo of use a pretrained Inception-BN Network
 
 ## Results
 

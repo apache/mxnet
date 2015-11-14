@@ -15,8 +15,8 @@ Then we can read them in R and convert to matrices.
 
 ```{r}
 require(mxnet)
-train <- read.csv('data/train.csv', header=TRUE)
-test <- read.csv('data/test.csv', header=TRUE)
+train <- read.csv("train.csv", header=TRUE)
+test <- read.csv("test.csv", header=TRUE)
 train <- data.matrix(train)
 test <- data.matrix(test)
 
@@ -49,7 +49,7 @@ act1 <- mx.symbol.Activation(fc1, name="relu1", act_type="relu")
 fc2 <- mx.symbol.FullyConnected(act1, name="fc2", num_hidden=64)
 act2 <- mx.symbol.Activation(fc2, name="relu2", act_type="relu")
 fc3 <- mx.symbol.FullyConnected(act2, name="fc3", num_hidden=10)
-softmax <- mx.symbol.Softmax(fc3, name="sm")
+softmax <- mx.symbol.SoftmaxOutput(fc3, name="sm")
 ```
 
 1. In `mxnet`, we use its own data type `symbol` to configure the network. `data <- mx.symbol.Variable("data")` use `data` to represent the input data, i.e. the input layer.
@@ -99,7 +99,7 @@ With a little extra effort in the csv format, we can have our submission to the 
 
 ```{r}
 submission <- data.frame(ImageId=1:ncol(test), Label=pred.label)
-write.csv(submission, file='submission.csv', row.names=FALSE, quote=FALSE)
+#write.csv(submission, file='submission.csv', row.names=FALSE, quote=FALSE)
 ```
 
 ## LeNet
@@ -128,7 +128,7 @@ tanh3 <- mx.symbol.Activation(data=fc1, act_type="tanh")
 # second fullc
 fc2 <- mx.symbol.FullyConnected(data=tanh3, num_hidden=10)
 # loss
-lenet <- mx.symbol.Softmax(data=fc2)
+lenet <- mx.symbol.SoftmaxOutput(data=fc2)
 ```
 
 Then let us reshape the matrices into arrays:
@@ -143,7 +143,7 @@ dim(test.array) <- c(28, 28, 1, ncol(test))
 Next we are going to compare the training speed on different devices, so the definition of the devices goes first:
 
 ```{r}
-n.gpu <- 1 
+n.gpu <- 1
 device.cpu <- mx.cpu()
 device.gpu <- lapply(0:(n.gpu-1), function(i) {
   mx.gpu(i)
@@ -155,7 +155,7 @@ but since internal computation of cpu is already multi-threaded, there is less g
 
 We start by training on CPU first. Because it takes a bit time to do so, we will only run it for one iteration.
 
-```{r}
+```{r, eval=FALSE}
 mx.set.seed(0)
 tic <- proc.time()
 model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
@@ -163,12 +163,12 @@ model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
                                      learning.rate=0.05, momentum=0.9, wd=0.00001,
                                      eval.metric=mx.metric.accuracy,
                                      epoch.end.callback=mx.callback.log.train.metric(100))
-print(proc.time() - tic) 
+print(proc.time() - tic)
 ```
 
 Training on GPU:
 
-```{r}
+```{r, eval=FALSE}
 mx.set.seed(0)
 tic <- proc.time()
 model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
@@ -176,13 +176,13 @@ model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
                                      learning.rate=0.05, momentum=0.9, wd=0.00001,
                                      eval.metric=mx.metric.accuracy,
                                      epoch.end.callback=mx.callback.log.train.metric(100))
-print(proc.time() - tic) 
+print(proc.time() - tic)
 ```
 
 As you can see by using GPU, we can get a much faster speedup in training!
 Finally we can submit the result to Kaggle again to see the improvement of our ranking!
 
-```{r}
+```{r, eval=FALSE}
 preds <- predict(model, test.array)
 pred.label <- max.col(t(preds)) - 1
 submission <- data.frame(ImageId=1:ncol(test), Label=pred.label)

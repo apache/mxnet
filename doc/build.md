@@ -7,20 +7,27 @@ if you have ideas to improve this page, please send a pull request!
 
 Contents
 --------
-- [Build MXNet Library](#build-mxnet-library)
-  - Introduces how to build the mxnet core library for all packages.
-  - Supported platforms: linux, windows, osx
+- [Building MXNet Library](#build-mxnet-library)
+  - [Prerequisites](#prerequisites)
+  - [Building on Linux](#building-on-linux)
+  - [Building on OSX](#building-on-osx)
+  - [Building on Windows](#building-on-windows)
+  - [Installing pre-built packages on Windows](#installing-pre-built-packages-on-windows)
 - [Advanced Build Configurations](#advanced-build-configuration)
   - Introduces how to build mxnet with advanced features such as HDFS/S3 support, CUDNN
 - [Python Package Installation](#python-package-installation)
 - [R Package Installation](#r-package-installation)
+- [Docker Images](#docker-images)
 
 Build MXNet Library
 -------------------
+
+### Prerequisites
+
 MXNet have a general runtime library that can be used by various packages such as python, R and Julia.
 This section gives details about how to build the mxnet library.
 - On Linux/OSX the target library will be ```libmxnet.so```
-- On Windows the target libary is ```mxnet.dll```
+- On Windows the target libary is ```libmxnet.dll```
 
 Things to do before get started:
 
@@ -36,7 +43,7 @@ The system dependency requirement for mxnet libraries are
 - BLAS library.
 - opencv (optional if you do not need image augmentation, you can switch it off in config.mk)
 
-### Linux
+### Building on Linux
 
 On Ubuntu >= 13.10, one can install the dependencies by
 
@@ -51,7 +58,7 @@ make -j4
 ```
 Then proceed to package installation instructions for python or R in this page.
 
-### OSX
+### Buillding on OSX
 On OSX, we can install the dependencies by
 
 ```bash
@@ -73,7 +80,7 @@ make -j4
 
 Then proceed to package installation instructions for python or R in this page.
 
-### Windows
+### Building on Windows
 
 Firstly, we should make your Visual Studio 2013 support more C++11 features.
 
@@ -87,6 +94,14 @@ Secondly, fetch the third-party libraries, including [OpenCV](http://sourceforge
 Finally, use CMake to create a Visual Studio solution in `./build/`. During configuration, you may need to set the path of each third-party library, until no error is reported. Open the solution and compile, you will get a `mxnet.dll` in `./build/Release` or `./build/Debug`.
 
 Then proceed to package installation instructions for python or R in this page.
+
+### Installing pre-built packages on Windows
+
+Mxnet also provides pre-built packages on Windows. The pre-built package includes pre-build MxNet library, the dependent thrid-party libraries, a sample C++ solution in Visual Studio and the Python install script.
+
+You can download the packages from the [Releases tab](https://github.com/dmlc/mxnet/releases) of MxNet. There are two variants provided: one with GPU support (using CUDA and CUDNN v3) and one without GPU support. You can choose one that fits your hardward configuration.
+
+After download, unpack the package into a folder, say D:\MxNet, then install the package by double clicking the setupenv.cmd inside the folder. It will setup environmental variables needed by MxNet. After that, you should be able to usee the provided VS solution to build C++ programs, or to [install Python package](#python-package-installation).
 
 Advanced Build Configurations
 -----------------------------
@@ -121,14 +136,37 @@ cd python; python setup.py develop --user
 R Package Installation
 ----------------------
 To install the R package. First finish the [Build MXNet Library](#build-mxnet-library) step.
-Then use the following command to install mxnet at root folder
+Then use the following command to install dependencies and build the package at root folder
 
 ```bash
-R CMD INSTALL R-package
+Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')" 
+cd R-package
+Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
+cd ..
+make rpkg
 ```
 
-Hopefully, we will now have mxnet on R!
+Now you should have the R package as a tar.gz file and you can install it as a normal package by (the version number might be different)
+
+```bash
+R CMD INSTALL mxnet_0.5.tar.gz
+```
 
 ## Note on Library Build
 We isolate the library build with Rcpp end to maximize the portability
   - MSVC is needed on windows to build the mxnet library, because of CUDA compatiblity issue of toolchains.
+
+Docker Images
+-------------
+Builds of MXNet are available as [Docker](https://www.docker.com/whatisdocker) images:
+[MXNet Docker (CPU)](https://hub.docker.com/r/kaixhin/mxnet/) or [MXNet Docker (CUDA)](https://hub.docker.com/r/kaixhin/cuda-mxnet/).
+These are updated on a weekly basis with the latest builds of MXNet. Examples of running bash in a Docker container
+are as follows:
+
+```bash
+sudo docker run -it kaixhin/mxnet
+sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia0 kaixhin/cuda-mxnet:7.0
+```
+
+For a guide to Docker, see the [official docs](https://docs.docker.com/userguide/). For more details on how to use the
+MXNet Docker images, including requirements for CUDA support, consult the [source project](https://github.com/Kaixhin/dockerfiles).

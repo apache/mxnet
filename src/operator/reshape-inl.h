@@ -20,8 +20,10 @@
 namespace mxnet {
 namespace op {
 
+namespace reshape_enum {
 enum ReshapeOpInputs {kData};
 enum ReshapeOpOutputs {kOut};
+}  // namespace reshape_enum
 
 struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
   TShape target_shape;
@@ -33,7 +35,7 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
 template<typename xpu>
 class ReshapeOp : public Operator {
  public:
-  explicit ReshapeOp(ReshapeParam param) {}  // Do nothing, just make a special factory
+  explicit ReshapeOp(ReshapeParam param) {}  // Do nothing
 
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
@@ -45,16 +47,15 @@ class ReshapeOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(req.size(), 1);
     CHECK_EQ(out_data.size(), 1);
-    if (req[kOut] == kNullOp) return;
+    if (req[reshape_enum::kOut] == kNullOp) return;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    // TODO(bing): potentail bug here for non-4D input
-    Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> out = out_data[kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 2> data = in_data[reshape_enum::kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> out = out_data[reshape_enum::kOut].FlatTo2D<xpu, real_t>(s);
     CHECK_EQ(data.CheckContiguous(), true);
     CHECK_EQ(out.CheckContiguous(), true);
     if (data.dptr_ == out.dptr_) return;
     CHECK_EQ(data.shape_.Size(), out.shape_.Size());
-    Assign(out, req[kOut], reshape(data, out.shape_));
+    Assign(out, req[reshape_enum::kOut], reshape(data, out.shape_));
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -67,17 +68,17 @@ class ReshapeOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(req.size(), 1);
-    if (req[kData] == kNullOp) return;
+    if (req[reshape_enum::kData] == kNullOp) return;
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(in_grad.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> grad_out = out_grad[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> grad_in = in_grad[kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 2> grad_in = in_grad[reshape_enum::kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> grad_out = out_grad[reshape_enum::kData].FlatTo2D<xpu, real_t>(s);
     CHECK_EQ(grad_out.CheckContiguous(), true);
     CHECK_EQ(grad_in.CheckContiguous(), true);
     if (grad_out.dptr_ == grad_in.dptr_) return;
     CHECK_EQ(grad_out.shape_.Size(), grad_in.shape_.Size());
-    Assign(grad_in, req[kData], reshape(grad_out, grad_in.shape_));
+    Assign(grad_in, req[reshape_enum::kData], reshape(grad_out, grad_in.shape_));
   }
 };  // class ReshapeOp
 
@@ -101,7 +102,7 @@ class ReshapeProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     CHECK_EQ(in_shape->size(), 1) << "Input: [data]";
-    const TShape &dshape = in_shape->at(kData);
+    const TShape &dshape = in_shape->at(reshape_enum::kData);
     if (dshape.ndim() == 0) return false;
     CHECK(param_.target_shape.Size() == dshape.Size())
         << "Target shape size is different to source. "
@@ -126,13 +127,13 @@ class ReshapeProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    return {out_grad[kOut]};
+    return {out_grad[reshape_enum::kOut]};
   }
 
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
     const std::vector<int> &in_data,
     const std::vector<void*> &out_data) const override {
-    return {{in_data[kData], out_data[kOut]}};
+    return {{in_data[reshape_enum::kData], out_data[reshape_enum::kOut]}};
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
@@ -140,10 +141,10 @@ class ReshapeProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data,
     const std::vector<void*> &in_grad) const override {
-    return {{out_grad[kOut], in_grad[kData]}};
+    return {{out_grad[reshape_enum::kOut], in_grad[reshape_enum::kData]}};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  protected:
   ReshapeParam param_;
@@ -166,14 +167,14 @@ class FlattenProp : public ReshapeProp {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     CHECK_EQ(in_shape->size(), 1) << "Input: [data]";
-    const TShape &dshape = in_shape->at(kData);
+    const TShape &dshape = in_shape->at(reshape_enum::kData);
     if (dshape.ndim() == 0) return false;
     out_shape->clear();
     uint32_t target_dim = 1;
     for (uint32_t i = 1; i < dshape.ndim(); ++i) {
       target_dim *= dshape[i];
     }
-    out_shape->push_back(mshadow::Shape4(dshape[0], 1, 1, target_dim));
+    out_shape->push_back(mshadow::Shape2(dshape[0], target_dim));
     return true;
   }
 

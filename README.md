@@ -5,42 +5,40 @@
 [![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.readthedocs.org/en/latest/)
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
 
+
 MXNet is a deep learning framework designed for both *efficiency* and *flexibility*.
 It allows you to mix the [flavours](http://mxnet.readthedocs.org/en/latest/program_model.html) of
 deep learning programs together to maximize the efficiency and your productivity.
 
+[![Join the chat at https://gitter.im/dmlc/mxnet](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/dmlc/mxnet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 What's New
 ----------
-* [Design Note: Squeeze the Memory Consumption of Deep Learning](http://mxnet.readthedocs.org/en/latest/developer-guide/note_memory.html)
-* [LSTM Example by using symbolic API](https://github.com/dmlc/mxnet/tree/master/example/rnn)
-* [MXNet R Package brings Deep learning for R!](https://github.com/dmlc/mxnet/tree/master/R-package)
-* [Design Note: Dependency Engine for Deep Learning](http://mxnet.readthedocs.org/en/latest/developer-guide/note_engine.html)
+* [MXNet on Mobile Device](https://mxnet.readthedocs.org/en/latest/tutorial/smart_device.html)
+* [Distributed Training](https://mxnet.readthedocs.org/en/latest/distributed_training.html)
+* [Guide to Creating New Operators (Layers)](https://mxnet.readthedocs.org/en/latest/tutorial/new_op_howto.html)
+* [Amalgamation and Go Binding for Predictors](https://github.com/jdeng/gomxnet/)
+* [Training Deep Net on 14 Million Images on A Single Machine](https://mxnet.readthedocs.org/en/latest/tutorial/imagenet_full.html)
+* [MXNet.jl Julia binding initial release](https://github.com/dmlc/MXNet.jl)
 
 Contents
 --------
 * [Documentation and Tutorials](http://mxnet.readthedocs.org/en/latest/)
 * [Open Source Design Notes](http://mxnet.readthedocs.org/en/latest/#open-source-design-notes)
 * [Code Examples](example)
-* [Installation](http://mxnet.readthedocs.org/en/latest/build.html)
-* [Features](#features)
+* [Pretrained Models](https://github.com/dmlc/mxnet-model-gallery)
 * [Contribute to MXNet](http://mxnet.readthedocs.org/en/latest/contribute.html)
-* [License](#license)
+* [Frequent Asked Questions](http://mxnet.readthedocs.org/en/latest/faq.html)
 
 Features
 --------
-* To Mix and Maximize
-  - Mix all flavours of programming models to maximize flexibility and efficiency.
-* Lightweight, scalable and memory efficient.
-  - Minimum build dependency, scales to multi-GPUs with very low memory usage.
-* Auto parallelization
-  - Write numpy-style ndarray GPU programs, which will be automatically parallelized.
-* Language agnostic
-  - With support for python, c++, R, more to come.
-* Cloud friendly
-  - Directly load/save from S3, HDFS, AZure
-* Easy extensibility
-  - Extending no requirement on GPU programming.
+* Open sourced design note on useful insights that can re-used by general DL projects.
+* Flexible configuration, for arbitrary computation graph.
+* Mix and Maximize good flavours of programmingto maximize flexibility and efficiency.
+* Lightweight, memory efficient and portable to smart devices.
+* Scales up to multi GPUs and distributed setting with auto parallelism.
+* Support python, R, C++, Julia,
+* Cloud friendly, and directly compatible with S3, HDFS, AZure
 
 Bug Reporting
 -------------
@@ -49,7 +47,6 @@ Bug Reporting
 License
 -------
 © Contributors, 2015. Licensed under an [Apache-2.0](https://github.com/dmlc/mxnet/blob/master/LICENSE) license.
-
 
 History
 -------

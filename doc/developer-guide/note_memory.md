@@ -3,7 +3,7 @@ Squeeze the Memory Consumption of Deep Learning
 One important theme about deep learning is to train deeper and larger nets.
 While the hardware has been upgraded rapidly in recent years, the huge deepnet monsters are
 always hungry about the GPU RAMS. Being able to use less memory for the same net also means we can
-user larger batch size, and usually higher GPU utilization rate.
+use larger batch size, and usually higher GPU utilization rate.
 
 This article discusses how memory allocation optimization can be done for deep neural nets, and provide
 some of candidate solutions to the problems. The solutions discussed in this article is by no means complete,
@@ -213,8 +213,9 @@ The strategy discussed here is by no means the only solution, we can expect more
 How much can We Save
 --------------------
 Thanks for reading till this part! We have discussed the techniques and algorithms we can use to squeeze the memory usage of deep learning.
-Now comes the question on how much we can really save by using these techniques. The answer is we can roughly reduce the memory consumption
-by half using these techniques.
+Now comes the question on how much we can really save by using these techniques.
+
+The answer is we can roughly reduce the memory consumption ***by half*** using these techniques. This is on the coarse grained operation graphs that are already optimized with big operations. More memory reduction could be seen if we are optimizing a fine-grained computation network used by symbolic libraries such as Theano.
 
 Most of the ideas in this article inspires the design of mxnet.
 We provide an [Memory Cost Estimation Script](https://github.com/dmlc/mxnet/tree/master/example/memcost),

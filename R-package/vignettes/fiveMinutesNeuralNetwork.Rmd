@@ -29,47 +29,34 @@ test.x = data.matrix(Sonar[-train.ind, 1:60])
 test.y = Sonar[-train.ind, 61]
 ```
 
-The next step is to define the structure of the neural network.
+Next we are going to use a multi-layer perceptron as our classifier. In `mxnet`, we have a function called `mx.mlp` so that users can build a general multi-layer neural network to do classification or regression.
 
-```{r}
-# Define the input data
-data <- mx.symbol.Variable("data")
-# A fully connected hidden layer
-# data: input source
-# num_hidden: number of neurons in this hidden layer
-fc1 <- mx.symbol.FullyConnected(data, num_hidden=20)
+There are several parameters we have to feed to `mx.mlp`:
 
-# An activation function
-# fc1: input source
-# act_type: type for the activation function
-act1 <- mx.symbol.Activation(fc1, act_type="tanh")
-fc2 <- mx.symbol.FullyConnected(act1, num_hidden=2)
+- Training data and label.
+- Number of hidden nodes in each hidden layers.
+- Number of nodes in the output layer.
+- Type of the activation.
+- Type of the output loss.
+- The device to train (GPU or CPU).
+- Other parameters for `mx.model.FeedForward.create`.
 
-# Softmax function for the output layer
-softmax <- mx.symbol.Softmax(fc2)
-```
-
-According to the comments in the code, you can see the meaning of each function and its arguments. They can be easily modified according to your need.
-
-Before we start to train the model, we can specify where to run our program:
-
-```{r}
-device.cpu = mx.cpu()
-```
-
-Here we choose to run it on CPU.
-
-After the network configuration, we can start the training process:
+The following code piece is showing a possible usage of `mx.mlp`:
 
 ```{r}
 mx.set.seed(0)
-model <- mx.model.FeedForward.create(softmax, X=train.x, y=train.y,
-                                     ctx=device.cpu, num.round=20, array.batch.size=15,
-                                     learning.rate=0.07, momentum=0.9, eval.metric=mx.metric.accuracy,
-                                     epoch.end.callback=mx.callback.log.train.metric(100))
+model <- mx.mlp(train.x, train.y, hidden_node=10, out_node=2, out_activation="softmax",
+                num.round=20, array.batch.size=15, learning.rate=0.07, momentum=0.9, 
+                eval.metric=mx.metric.accuracy)
 ```
 
 Note that `mx.set.seed` is the correct function to control the random process in `mxnet`. You can see the accuracy in each round during training. It is also easy to make prediction and evaluate.
+
+To get an idea of what is happening, we can easily view the computation graph from R.
+
+```{r}
+graph.viz(model$symbol$as.json())
+```
 
 ```{r}
 preds = predict(model, test.x)
@@ -77,7 +64,7 @@ pred.label = max.col(t(preds))-1
 table(pred.label, test.y)
 ```
 
-Note for multi-class prediction, mxnet outputs nclass x nexamples, each each row corresponding to probability of that class.
+Note for multi-class prediction, mxnet outputs `nclass` x `nexamples`, each each row corresponding to probability of that class.
 
 ## Regression
 
@@ -93,7 +80,7 @@ test.x = data.matrix(BostonHousing[-train.ind, -14])
 test.y = BostonHousing[-train.ind, 14]
 ```
 
-We can configure another network as what we have done above. The main difference is in the output activation:
+Although we can use `mx.mlp` again to do regression by changing the `out_activation`, this time we are going to introduce a flexible way to configure neural networks in `mxnet`. The configuration is done by the "Symbol" system in `mxnet`, which takes care of the links among nodes, the activation, dropout ratio, etc. To configure a multi-layer neural network, we can do it in the following way:
 
 ```{r}
 # Define the input data
@@ -103,18 +90,19 @@ data <- mx.symbol.Variable("data")
 # num_hidden: number of neurons in this hidden layer
 fc1 <- mx.symbol.FullyConnected(data, num_hidden=1)
 
-# Softmax function for the output layer
+# Use linear regression for the output layer
 lro <- mx.symbol.LinearRegressionOutput(fc1)
 ```
 
-What we changed is mainly the last function, this enables the new network to optimize for squared loss. We can now train on this simple data set.
+What matters for a regression task is mainly the last function, this enables the new network to optimize for squared loss. We can now train on this simple data set. In this configuration, we dropped the hidden layer so the input layer is directly connected to the output layer.
+
+next we can make prediction with this structure and other parameters with `mx.model.FeedForward.create`:
 
 ```{r}
 mx.set.seed(0)
 model <- mx.model.FeedForward.create(lro, X=train.x, y=train.y,
-                                     ctx=device.cpu, num.round=50, array.batch.size=20,
-                                     learning.rate=2e-6, momentum=0.9, eval.metric=mx.metric.rmse,
-                                     epoch.end.callback=mx.callback.log.train.metric(100))
+                                     ctx=mx.cpu(), num.round=50, array.batch.size=20,
+                                     learning.rate=2e-6, momentum=0.9, eval.metric=mx.metric.rmse)
 ```
 
 It is also easy to make prediction and evaluate
@@ -124,7 +112,7 @@ preds = predict(model, test.x)
 sqrt(mean((preds-test.y)^2))
 ```
 
-Currently we have two pre-defined metrics "accuracy" and "rmse". One might wonder how to customize the evaluation metric. `mxnet` provides the interface for users to define their own metric of interests:
+Currently we have four pre-defined metrics "accuracy", "rmse", "mae" and "rmsle". One might wonder how to customize the evaluation metric. `mxnet` provides the interface for users to define their own metric of interests:
 
 ```{r}
 demo.metric.mae <- mx.metric.custom("mae", function(label, pred) {
@@ -138,11 +126,10 @@ This is an example for mean absolute error. We can simply plug it in the trainin
 ```{r}
 mx.set.seed(0)
 model <- mx.model.FeedForward.create(lro, X=train.x, y=train.y,
-                                     ctx=device.cpu, num.round=50, array.batch.size=20,
-                                     learning.rate=2e-6, momentum=0.9, eval.metric=demo.metric.mae,
-                                     epoch.end.callback=mx.callback.log.train.metric(100))
+                                     ctx=mx.cpu(), num.round=50, array.batch.size=20,
+                                     learning.rate=2e-6, momentum=0.9, eval.metric=demo.metric.mae)
 ```
 
-Congratulations! Now you have learnt the basic for using `mxnet`.
+Congratulations! Now you have learnt the basic for using `mxnet`. Please check the other tutorials for advanced features.
 
 

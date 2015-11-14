@@ -23,7 +23,7 @@ data = mx.symbol.Variable('data')
 fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
 act1 = mx.symbol.Activation(fc1, name='relu1', act_type='relu')
 fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=64)
-softmax = mx.symbol.Softmax(fc2, name='sm')
+softmax = mx.symbol.SoftmaxOutput(fc2, name='sm')
 # create a model
 model = mx.model.FeedForward.create(
      softmax,

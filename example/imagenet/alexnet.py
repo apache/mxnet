@@ -40,7 +40,7 @@ relu7 = mx.symbol.Activation(data=fc2, act_type="relu")
 dropout2 = mx.symbol.Dropout(data=relu7, p=0.5)
 # stage 6
 fc3 = mx.symbol.FullyConnected(data=dropout2, num_hidden=1000)
-softmax = mx.symbol.Softmax(data=fc3)
+softmax = mx.symbol.SoftmaxOutput(data=fc3, name='softmax')
 
 
 ## data
@@ -53,10 +53,10 @@ gpus = [mx.gpu(i) for i in range(num_gpus)]
 model = mx.model.FeedForward(
     ctx           = gpus,
     symbol        = softmax,
-    num_round     = 20,
+    num_epoch     = 20,
     learning_rate = 0.01,
     momentum      = 0.9,
     wd            = 0.00001)
 logging.basicConfig(level = logging.DEBUG)
 model.fit(X = train, eval_data = val,
-          epoch_end_callback = mx.callback.Speedometer(batch_size=batch_size))
+          batch_end_callback = mx.callback.Speedometer(batch_size=batch_size))

@@ -23,7 +23,7 @@ tanh3 = mx.symbol.Activation(data=fc1, act_type="tanh")
 # second fullc
 fc2 = mx.symbol.FullyConnected(data=tanh3, num_hidden=10)
 # loss
-lenet = mx.symbol.Softmax(data=fc2)
+lenet = mx.symbol.SoftmaxOutput(data=fc2, name='softmax')
 
 ## data
 train, val = mnist_iterator(batch_size=100, input_shape=(1,28,28))
@@ -33,7 +33,7 @@ logging.basicConfig(level=logging.DEBUG)
 # dev = [mx.gpu(i) for i in range(2)]
 dev = mx.gpu()
 model = mx.model.FeedForward(
-    ctx = dev, symbol = lenet, num_round = 20,
+    ctx = dev, symbol = lenet, num_epoch = 20,
     learning_rate = 0.05, momentum = 0.9, wd = 0.00001)
 model.fit(X=train, eval_data=val,
-          epoch_end_callback=mx.callback.Speedometer(100))
+          batch_end_callback=mx.callback.Speedometer(100))

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # pylint: skip-file
-import mxnet as mx
 import common
+import mxnet as mx
 import logging
 
 def test_lenet(devs, kv_type):
@@ -17,7 +17,7 @@ def test_lenet(devs, kv_type):
         kvstore       = kv_type,
         symbol        = common.lenet(),
         X             = train,
-        num_round     = 3,
+        num_epoch     = 3,
         learning_rate = 0.1,
         momentum      = 0.9,
         wd            = 0.00001)

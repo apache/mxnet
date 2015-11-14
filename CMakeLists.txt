@@ -9,6 +9,9 @@ mxnet_option(USE_OPENCV  "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP  "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN   "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_CUDA    "Build with CUDA support"   ON)
+mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support"   OFF)
+
+
 
 include(mshadow/cmake/mshadow.cmake)
 include(mshadow/cmake/Utils.cmake)
@@ -33,9 +36,6 @@ else(MSVC)
 endif(MSVC)
 
 if(USE_OPENCV)
-  if(MSVC)
-    set(OpenCV_STATIC OFF)
-  endif()
   find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
   if(NOT OpenCV_FOUND) # if not OpenCV 3.x, then imgcodecs are not found
     find_package(OpenCV REQUIRED COMPONENTS core highgui imgproc)
@@ -68,7 +68,9 @@ if(USE_CUDNN)
 endif()
 
 add_subdirectory("dmlc-core")
-add_subdirectory("ps-lite")
+if(USE_DIST_KVSTORE)
+	add_subdirectory("ps-lite")
+endif()
 
 mxnet_source_group("Source"   GLOB_RECURSE "src/*.cc")
 mxnet_source_group("Source\\Cuda" GLOB_RECURSE "src/*.cu")
@@ -76,11 +78,22 @@ mxnet_source_group("Source\\Cuda" GLOB_RECURSE "src/*.cu")
 FILE(GLOB_RECURSE SOURCE "src/*.cc")
 FILE(GLOB_RECURSE cuda "src/*.cu")
 
+if(MSVC)
+  foreach(flag_var
+        CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+        CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+    if(${flag_var} MATCHES "/MD")
+      string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+    endif(${flag_var} MATCHES "/MD")
+  endforeach(flag_var)
+endif()
+
 if(USE_CUDA)
   # define preprocessor macro so that we will not include the generated forcelink header
   mshadow_cuda_compile(cuda_objs ${cuda})
   list(APPEND SOURCE ${cuda_objs} ${cuda})
 endif()
+
 
 if(NOT MSVC)
   # Only add c++11 flags and definitions after cuda compiling
@@ -93,9 +106,17 @@ endif()
 add_library(mxnet SHARED ${SOURCE})
 target_link_libraries(mxnet ${mshadow_LINKER_LIBS})
 target_link_libraries(mxnet dmlccore)
-target_link_libraries(mxnet pslite)
-target_link_libraries(mxnet ${pslite_LINKER_LIBS})
+
+
+
 set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
+
+if(USE_DIST_KVSTORE)
+	add_definitions(-DMXNET_USE_DIST_KVSTORE)
+	target_link_libraries(mxnet pslite)
+	target_link_libraries(mxnet ${pslite_LINKER_LIBS})
+	include_directories(SYSTEM ${pslite_INCLUDE_DIR})
+endif()
 
 # ---[ Linter target
 if(MSVC)

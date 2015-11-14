@@ -21,9 +21,11 @@
 namespace mxnet {
 namespace op {
 
+namespace conv {
 enum ConvolutionOpInputs {kData, kWeight, kBias};
 enum ConvolutionOpOutputs {kOut};
 enum ConvolutionOpResource {kTempSpace};
+}
 
 struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   TShape kernel;
@@ -44,7 +46,9 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
     .describe("convolution filter(channel) number");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
-    .describe("number of groups partition");
+    .describe("Number of groups partition. "
+              "This option is not supported by CuDNN, you can use SliceChannel to num_group,"
+              "apply convolution and concat instead to achieve the same need.");
     DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(128, 4096)
     .describe("Tmp workspace for convolution (MB)");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
@@ -57,7 +61,7 @@ class ConvolutionOp : public Operator {
  public:
   explicit ConvolutionOp(ConvolutionParam p) {
     this->param_ = p;
-    // convert MB to words
+    // convert MBytes first to Bytes and then to elements.
     param_.workspace = (param_.workspace << 20) / sizeof(real_t);
   }
 
@@ -68,26 +72,24 @@ class ConvolutionOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(req[kOut], kWriteTo);
+    CHECK_EQ(req[conv::kOut], kWriteTo);
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1);
-    // TODO(bing): check the BLAS Handle, be careful
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
-    uint32_t ws[] = {param_.num_group,
-                     param_.num_filter / param_.num_group,
-                     data.shape_[1] / param_.num_group * param_.kernel[0] * param_.kernel[1]
-                    };
-    TShape wmat_shape(ws, ws + 3);
-    Tensor<xpu, 3> wmat = in_data[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
-    Tensor<xpu, 4> out = out_data[kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> data = in_data[conv::kData].get<xpu, 4, real_t>(s);
+    Shape<3> wmat_shape =
+        Shape3(param_.num_group,
+               param_.num_filter / param_.num_group,
+               data.shape_[1] / param_.num_group * param_.kernel[0] * param_.kernel[1]);
+    Tensor<xpu, 3> wmat = in_data[conv::kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
+    Tensor<xpu, 4> out = out_data[conv::kOut].get<xpu, 4, real_t>(s);
 #if defined(__CUDACC__)
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
 #endif
     const index_t nbatch = data.size(0);
-    Tensor<xpu, 1> workspace = ctx.requested[kTempSpace].get_space<xpu>(
+    Tensor<xpu, 1> workspace = ctx.requested[conv::kTempSpace].get_space<xpu>(
         Shape1(this->InitTemp(data.shape_, out.shape_)), s);
     for (index_t i = 0; i < nbatch; i += nstep_) {
       const index_t step = std::min(nstep_, nbatch - i);
@@ -102,15 +104,15 @@ class ConvolutionOp : public Operator {
         temp_col = unpack_patch2col(data.Slice(i, i + step),
                                     param_.kernel[0],
                                     param_.kernel[1],
-                                    param_.stride[0]);
-        // TODO(bing): make mshadow support dual stride
+                                    param_.stride[0],
+                                    param_.stride[1]);
       } else {
         temp_col = unpack_patch2col(pad(data.Slice(i, i + step),
                                         param_.pad[0], param_.pad[1]),
                                     param_.kernel[0],
                                     param_.kernel[1],
-                                    param_.stride[0]);
-        // TODO(bing): make mshadow support dual stride
+                                    param_.stride[0],
+                                    param_.stride[1]);
       }
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
@@ -126,7 +128,7 @@ class ConvolutionOp : public Operator {
     }
     if (!param_.no_bias) {
       // add bias, broadcast bias to dim 1: channel
-      Tensor<xpu, 1> bias = in_data[kBias].get<xpu, 1, real_t>(s);
+      Tensor<xpu, 1> bias = in_data[conv::kBias].get<xpu, 1, real_t>(s);
       out += broadcast<1>(bias, out.shape_);
     }
   }
@@ -145,25 +147,24 @@ class ConvolutionOp : public Operator {
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     CHECK_EQ(req.size(), expected);
-    CHECK_EQ(in_data[kWeight].CheckContiguous(), true);
+    CHECK_EQ(in_data[conv::kWeight].CheckContiguous(), true);
     // get data
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> data = in_data[kData].get<xpu, 4, real_t>(s);
-    uint32_t ws[] = {param_.num_group,
-                     param_.num_filter / param_.num_group,
-                     data.shape_[1] / param_.num_group * param_.kernel[0] * param_.kernel[1]
-                    };
-    TShape wmat_shape(ws, ws + 3);
-    Tensor<xpu, 3> wmat = in_data[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
-    Tensor<xpu, 4> grad = out_grad[kOut].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> gdata = in_grad[kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 3> gwmat = in_grad[kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
+    Tensor<xpu, 4> data = in_data[conv::kData].get<xpu, 4, real_t>(s);
+    Shape<3> wmat_shape =
+        Shape3(param_.num_group,
+               param_.num_filter / param_.num_group,
+               data.shape_[1] / param_.num_group * param_.kernel[0] * param_.kernel[1]);
+    Tensor<xpu, 3> wmat = in_data[conv::kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
+    Tensor<xpu, 4> grad = out_grad[conv::kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> gdata = in_grad[conv::kData].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 3> gwmat = in_grad[conv::kWeight].get_with_shape<xpu, 3, real_t>(wmat_shape, s);
 #if defined(__CUDACC__)
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
 #endif
     const index_t nbatch = data.size(0);
-    Tensor<xpu, 1> workspace = ctx.requested[kTempSpace].get_space<xpu>(
+    Tensor<xpu, 1> workspace = ctx.requested[conv::kTempSpace].get_space<xpu>(
               Shape1(this->InitTemp(data.shape_, grad.shape_)), s);
     for (index_t i = 0; i < nbatch; i += nstep_) {
       const index_t step = std::min(nstep_, nbatch - i);
@@ -176,29 +177,29 @@ class ConvolutionOp : public Operator {
                                                       shape_dstunit_[2] * step), s);
       temp_dst = reshape(swapaxis<1, 0>(grad.Slice(i, i + step)), temp_dst.shape_);
       if (param_.pad[0] == 0 && param_.pad[1] == 0) {
-        // TODO(bing): dual stride
         temp_col = unpack_patch2col(data.Slice(i, i + step),
                                      param_.kernel[0],
                                      param_.kernel[1],
-                                     param_.stride[0]);
+                                     param_.stride[0],
+                                     param_.stride[1]);
       } else {
-        // TODO(bing): dual stride
         temp_col = unpack_patch2col(pad(data.Slice(i, i + step), param_.pad[0], param_.pad[1]),
                                      param_.kernel[0],
                                      param_.kernel[1],
-                                     param_.stride[0]);
+                                     param_.stride[0],
+                                     param_.stride[1]);
       }
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
         Tensor<xpu, 2> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
         if (i == 0) {
           Tensor<xpu, 2> tmp_gwmat = gwmat[gid];
-          Assign(tmp_gwmat, req[kWeight], dot(temp_dst[gid], tmpc.T()));
+          Assign(tmp_gwmat, req[conv::kWeight], dot(temp_dst[gid], tmpc.T()));
         } else {
           gwmat[gid] += dot(temp_dst[gid], tmpc.T());
         }
       }
-      if (req[kData] == kWriteTo || req[kData] == kWriteInplace) {
+      if (req[conv::kData] == kWriteTo || req[conv::kData] == kWriteInplace) {
         for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
           Tensor<xpu, 2> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
           tmpc = dot(wmat[gid].T(), temp_dst[gid]);
@@ -223,8 +224,8 @@ class ConvolutionOp : public Operator {
       }
     }
     if (!param_.no_bias) {
-      Tensor<xpu, 1> gbias = in_grad[kBias].get<xpu, 1, real_t>(s);
-      Assign(gbias, req[kBias], sumall_except_dim<1>(grad));
+      Tensor<xpu, 1> gbias = in_grad[conv::kBias].get<xpu, 1, real_t>(s);
+      Assign(gbias, req[conv::kBias], sumall_except_dim<1>(grad));
     }
   }
 
@@ -238,20 +239,26 @@ class ConvolutionOp : public Operator {
     shape_dstunit_ = mshadow::Shape3(param_.num_group,
                                      param_.num_filter / param_.num_group,
                                      oshape[2] * oshape[3]);
-    const uint64_t workspace_size = param_.workspace;
-    nstep_ = std::max(std::min(static_cast<index_t>(workspace_size / shape_colunit_.Size()),
-                               ishape[0]), 1U);
-    int nop = (ishape[0] + nstep_ - 1) / nstep_;
+    const uint64_t workspace_size = param_.workspace;  // In elements of sizeof(real_t)
+    index_t nstep = std::max(std::min(static_cast<index_t>(workspace_size / shape_colunit_.Size()),
+                                      ishape[0]), 1U);
+    index_t nop = (ishape[0] + nstep - 1) / nstep;
     nstep_ = (ishape[0] + nop - 1) / nop;
+
+    if (nstep_ == nstep) {
+      nstep_ = std::max(nstep_ - 1, 1U);
+    }
+
     mshadow::Shape<2> scol = mshadow::Shape2(shape_colunit_[0],
                                              shape_colunit_[1] * nstep_);
     mshadow::Shape<3> sdst = mshadow::Shape3(shape_dstunit_[0],
                                              shape_dstunit_[1],
                                              shape_dstunit_[2] * nstep_);
-    CHECK_GE(param_.workspace, scol.Size() + sdst.Size())
-      << "\nMinimum workspace size: " << scol.Size() + sdst.Size() << "\n"
-      << "Given: " << param_.workspace;
-    return scol.Size() + sdst.Size();
+    index_t required_size = scol.Size() + sdst.Size();
+    CHECK_GE(param_.workspace, required_size)
+      << "\nMinimum workspace size: " << required_size * sizeof(real_t) << " Bytes\n"
+      << "Given: " << param_.workspace * sizeof(real_t) << " Bytes";
+    return required_size;
   }
 
   ConvolutionParam param_;
@@ -291,24 +298,20 @@ class ConvolutionProp : public OperatorProperty {
     } else {
       CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
     }
-    const TShape &dshape = (*in_shape)[kData];
+    const TShape &dshape = (*in_shape)[conv::kData];
     if (dshape.ndim() ==  0) return false;
     CHECK_EQ(dshape.ndim(), 4) \
         << "Input data should be 4D in batch-num_filter-y-x";
     SHAPE_ASSIGN_CHECK(*in_shape,
-                       kWeight,
+                       conv::kWeight,
                        Shape4(param_.num_filter, dshape[1], param_.kernel[0], param_.kernel[1]));
     if (!param_.no_bias) {
-      SHAPE_ASSIGN_CHECK(*in_shape, kBias, Shape1(param_.num_filter));
+      SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
     }
     out_shape->clear();
     out_shape->push_back(dshape);
     const index_t ksize_y = static_cast<index_t>(param_.kernel[0]);
     const index_t ksize_x = static_cast<index_t>(param_.kernel[1]);
-    const index_t kstride = static_cast<index_t>(param_.stride[0]);
-    // TODO(bing) : support dual stride
-    CHECK_EQ(param_.stride[0], param_.stride[1])
-        << "Only support same stride now";
     CHECK_EQ(dshape[1] % param_.num_group, 0) \
         << "input num_filter must divide group size";
     CHECK_EQ(param_.num_filter % param_.num_group, 0) \
@@ -319,9 +322,9 @@ class ConvolutionProp : public OperatorProperty {
         << "incorrect stride size: " << param_.stride;
     CHECK(ksize_x <= dshape[3] && ksize_y <= dshape[2])
         << "kernel size exceed input";
-    (*out_shape)[kOut][1] = param_.num_filter;
-    (*out_shape)[kOut][2] = (dshape[2] + 2 * param_.pad[0] - ksize_y) / kstride + 1;
-    (*out_shape)[kOut][3] = (dshape[3] + 2 * param_.pad[1] - ksize_x) / kstride + 1;
+    (*out_shape)[conv::kOut][1] = param_.num_filter;
+    (*out_shape)[conv::kOut][2] = (dshape[2] + 2 * param_.pad[0] - ksize_y) / param_.stride[0] + 1;
+    (*out_shape)[conv::kOut][3] = (dshape[3] + 2 * param_.pad[1] - ksize_x) / param_.stride[1] + 1;
     return true;
   }
 
@@ -339,7 +342,7 @@ class ConvolutionProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    return {out_grad[kOut], in_data[kData], in_data[kWeight]};
+    return {out_grad[conv::kOut], in_data[conv::kData], in_data[conv::kWeight]};
   }
 
   std::vector<ResourceRequest> ForwardResource(
@@ -352,7 +355,7 @@ class ConvolutionProp : public OperatorProperty {
     return {ResourceRequest::kTempSpace};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  private:
   ConvolutionParam param_;

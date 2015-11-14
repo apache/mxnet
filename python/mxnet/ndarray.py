@@ -45,6 +45,13 @@ def _new_alloc_handle(shape, ctx, delay_alloc):
         ctypes.byref(hdl)))
     return hdl
 
+def waitall():
+    """Wait all async operation to finish in MXNet
+
+    This function is used for benchmark only
+    """
+    check_call(_LIB.MXNDArrayWaitAll())
+
 class NDArray(object):
     """NDArray object in mxnet.
 
@@ -304,6 +311,20 @@ class NDArray(object):
             data.ctypes.data_as(mx_float_p),
             ctypes.c_size_t(data.size)))
         return data
+
+    def asscalar(self):
+        """Return a CPU scalar(float) of current ndarray.
+
+        This ndarray must have shape (1,)
+
+        Returns
+        -------
+        scalar : np.float
+            The scalar representation of the ndarray.
+        """
+        if self.shape != (1,):
+            raise ValueError("The current array is not a scalar")
+        return self.asnumpy()[0]
 
     def copyto(self, other):
         """Copy the content of current array to other.

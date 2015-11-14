@@ -15,6 +15,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <functional>
 
 #if DMLC_USE_CXX11
 #include <functional>
@@ -64,8 +65,7 @@ class TBlobOpRegEntry {
   std::string name;
   /*!
    * \brief set shape inference function, by default use same shape.
-   * \param dev_mask The device mask of the function can act on.
-   * \param funary The unary function that peforms the operation.
+   * \param fshapeinfer The unary function that peforms the operation.
    */
   virtual TSelf& set_shape_infer(UnaryShapeInfer fshapeinfer) = 0;
   /*!
@@ -73,10 +73,12 @@ class TBlobOpRegEntry {
    * \param dev_mask The device mask of the function can act on.
    * \param funary The unary function that peforms the operation.
    * \param inplace_in_out Whether do inplace optimization on in and out.
+   * \param register_symbolic Whether register a symbolic operator as well.
    */
   virtual TSelf& set_function(int dev_mask,
                               UnaryFunction funary,
-                              bool inplace_in_out) = 0;
+                              bool inplace_in_out,
+                              bool register_symbolic = true) = 0;
   /*!
    * \brief set gradient of the function of this function.
    * \param dev_mask The device mask of the function can act on.
