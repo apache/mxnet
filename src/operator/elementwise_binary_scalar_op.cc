@@ -38,5 +38,10 @@ MXNET_REGISTER_OP_PROPERTY(_DivScalar, ElementwiseBinaryScalarOpProp<mshadow::op
 .add_argument("array", "Symbol", "Input array operand to the operation.")
 .add_arguments(ScalarOpParam::__FIELDS__());
 
+MXNET_REGISTER_OP_PROPERTY(_PowerScalar, ElementwiseBinaryScalarOpProp<mshadow_op::power>)
+.describe("Perform an elementwise power.")
+.add_argument("array", "Symbol", "Input array operand to the operation.")
+.add_arguments(ScalarOpParam::__FIELDS__());
+
 }  // namespace op
 }  // namespace mxnet

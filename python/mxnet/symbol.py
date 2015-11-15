@@ -86,6 +86,14 @@ class Symbol(object):
     def __rtruediv__(self, other):
         return self.__rdiv__(other)
 
+    def __pow__(self, other):
+        if isinstance(other, Symbol):
+            return Symbol._Power(self, other)
+        if isinstance(other, Number):
+            return Symbol._PowerScalar(self, scalar=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
     def __del__(self):
         check_call(_LIB.MXSymbolFree(self.handle))
 
@@ -835,3 +843,28 @@ def _init_symbol_module():
 
 # Initialize the atomic symbo in startups
 _init_symbol_module()
+
+# pylint: disable=no-member
+# pylint: disable=redefined-builtin
+def pow(base, exp):
+    """ Raise base to an exp.
+
+    Parameters
+    ---------
+    base: Symbol or Number
+    exp: Symbol or Number
+
+    Returns
+    -------
+    result: Symbol or Number
+    """
+    if isinstance(base, Symbol) and isinstance(exp, Symbol):
+        return Symbol._Power(base, exp)
+    if  isinstance(base, Symbol) and isinstance(exp, Number):
+        return Symbol._PowerScalar(base, scalar=exp)
+    if  isinstance(base, Number) and isinstance(exp, Symbol):
+        return Symbol._PowerScalar(exp, scalar=base, scalar_on_right=True)
+    if  isinstance(base, Number) and isinstance(exp, Number):
+        return base**exp
+    else:
+        raise TypeError('types (%s, %s) not supported' % (str(type(base)), str(type(exp))))
