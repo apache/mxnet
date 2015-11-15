@@ -180,6 +180,11 @@ int MXNDArrayWaitToWrite(NDArrayHandle handle) {
   API_END();
 }
 
+int MXNDArrayWaitAll() {
+  API_BEGIN();
+  Engine::Get()->WaitForAll();
+  API_END();
+}
 
 int MXNDArraySave(const char* fname,
                   mx_uint num_args,
@@ -835,6 +840,14 @@ int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out) {
     *pndarray = db.data[1];
   }
   *out = pndarray;
+  API_END();
+}
+
+int MXDataIterGetIndex(DataIterHandle handle, uint64_t **out_index, uint64_t *out_size) {
+  API_BEGIN();
+  const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
+  *out_size = db.index.size();
+  *out_index = const_cast<uint64_t*>(db.index.data());
   API_END();
 }
 

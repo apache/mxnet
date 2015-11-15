@@ -11,7 +11,7 @@ Description: MXNet is a deep learning framework designed for both efficiency
 License: BSD
 URL: https://github.com/dmlc/mxnet/R-package
 BugReports: https://github.com/dmlc/mxnet/issues
-Imports:
+Imports: 
     methods,
     Rcpp (>= 0.12.1),
     DiagrammeR,
@@ -19,7 +19,12 @@ Imports:
     jsonlite,
     magrittr,
     stringr
-Suggests:
-    testthat, mlbench
+Suggests: 
+    testthat, 
+    mlbench,
+    knitr,
+    rmarkdown,
+    imager
 LinkingTo: Rcpp
 RoxygenNote: 5.0.0
+VignetteBuilder: knitr

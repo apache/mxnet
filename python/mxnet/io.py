@@ -74,6 +74,15 @@ class DataIter(object):
         """
         return self.getdata(-1)
 
+    def getindex(self):
+        """
+        Retures
+        -------
+        index : numpy.array
+            The index of current batch
+        """
+        pass
+
     def getpad(self):
         """Get the number of padding examples in current batch.
         Returns
@@ -84,7 +93,7 @@ class DataIter(object):
         pass
 
 
-DataBatch = namedtuple('DataBatch', ['data', 'label', 'pad'])
+DataBatch = namedtuple('DataBatch', ['data', 'label', 'pad', 'index'])
 
 def _init_data(data, allow_empty, default_name):
     """Convert data into canonical form."""
@@ -162,7 +171,7 @@ class NDArrayIter(DataIter):
             for k, _ in self.label:
                 self.label[k] = self.label[k][:new_n]
         self.num_data = self.data_list[0].shape[0]
-        assert self.num_data > batch_size, \
+        assert self.num_data >= batch_size, \
             "batch_size need to be smaller than data size when not padding."
         self.cursor = -batch_size
         self.batch_size = batch_size
@@ -198,7 +207,8 @@ class NDArrayIter(DataIter):
 
     def next(self):
         if self.iter_next():
-            return DataBatch(data=self.getdata(), label=self.getlabel(), pad=self.getpad())
+            return DataBatch(data=self.getdata(), label=self.getlabel(), \
+                    pad=self.getpad(), index=None)
         else:
             raise StopIteration
 
@@ -272,17 +282,18 @@ class MXDataIter(DataIter):
 
     def next(self):
         if self._debug_skip_load and not self._debug_at_begin:
-            return  DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad())
+            return  DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad(),
+                              index=self.getindex())
         if self.first_batch is not None:
             batch = self.first_batch
             self.first_batch = None
             return batch
-
         self._debug_at_begin = False
         next_res = ctypes.c_int(0)
         check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
         if next_res.value:
-            return DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad())
+            return DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad(),
+                             index=self.getindex())
         else:
             raise StopIteration
 
@@ -302,6 +313,17 @@ class MXDataIter(DataIter):
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
         return NDArray(hdl, False)
+
+    def getindex(self):
+        index_size = ctypes.c_uint64(0)
+        index_data = ctypes.POINTER(ctypes.c_uint64)()
+        check_call(_LIB.MXDataIterGetIndex(self.handle,
+                                           ctypes.byref(index_data),
+                                           ctypes.byref(index_size)))
+        address = ctypes.addressof(index_data.contents)
+        dbuffer = (ctypes.c_uint64* index_size.value).from_address(address)
+        np_index = np.frombuffer(dbuffer, dtype=np.uint64)
+        return np_index.copy()
 
     def getpad(self):
         pad = ctypes.c_int(0)

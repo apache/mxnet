@@ -59,6 +59,8 @@ Open Source Design Notes
 	  this motivates the design of Engine module.
 * [Squeeze the Memory Consumption of Deep Learning](note_memory.md)
 	- Introduces how we can reduce memory consumption of deep nets
+* [Efficient Data Loading Module for Deep Learning](note_data_loading.md)
+	- Push the efficiency offline data preparation and online data loading.
 	  
 List of Other Resources
 -----------------------

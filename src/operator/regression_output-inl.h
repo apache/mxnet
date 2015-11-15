@@ -63,7 +63,7 @@ class RegressionOutputOp : public Operator {
     Tensor<xpu, 2> grad = in_grad[reg_enum::kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> label = in_data[reg_enum::kLabel]
       .get_with_shape<xpu, 2, real_t>(out.shape_, s);
-    Assign(grad, req[reg_enum::kData], F<BackwardOp>(out, label)/num_output);
+    Assign(grad, req[reg_enum::kData], F<BackwardOp>(out, reshape(label, grad.shape_))/num_output);
   }
 };
 
@@ -95,7 +95,13 @@ class RegressionOutputProp : public OperatorProperty {
     if (dshape.ndim() == 0) return false;
     auto &lshape = (*in_shape)[1];
     if (lshape.ndim() == 0) {
-      lshape = dshape;
+      // special treatment for 1D output, to allow 1D label by default.
+      // Think about change convention later
+      if (dshape.ndim() == 2 && dshape[1] == 1) {
+        lshape = Shape1(dshape[0]);
+      } else {
+        lshape = dshape;
+      }
     } else if (lshape[0] != dshape[0] || lshape.Size() != dshape.Size()) {
       std::ostringstream os;
       os << "Shape inconsistent, Provided " <<  '='<< lshape << ','

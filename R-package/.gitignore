@@ -1,2 +1,7 @@
 .Rhistory
 R-package.Rproj
+*.Rproj
+*.o
+*.so
+*.html
+inst/doc
