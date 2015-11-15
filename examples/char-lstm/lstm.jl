@@ -65,6 +65,7 @@ function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_cla
   #...
   #--/LSTM-part1
 
+  #--LSTM-part2
   # now unroll over time
   outputs = mx.SymbolicNode[]
   for t = 1:seq_len
@@ -92,7 +93,10 @@ function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_cla
     smax = mx.SoftmaxOutput(pred, label, name=symbol(name, "_softmax_$t"))
     push!(outputs, smax)
   end
+  #...
+  #--/LSTM-part2
 
+  #--LSTM-part3
   # append block-gradient nodes to the final states
   for i = 1:n_layer
     l_param, l_state = layer_param_states[i]
@@ -103,10 +107,12 @@ function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_cla
 
   # now group all outputs together
   if output_states
-    outputs = outputs ∪ [x[2].c for x in layer_param_states] ∪ [x[2].h for x in layer_param_states]
+    outputs = outputs ∪ [x[2].c for x in layer_param_states] ∪
+                        [x[2].h for x in layer_param_states]
   end
   return mx.Group(outputs...)
 end
+#--/LSTM-part3
 
 
 # Negative Log-likelihood

@@ -59,62 +59,66 @@ and split it into mini-batches so that the model can consume the data in a unifo
 
    By default, :func:`eachbatch` simply returns the provider itself, so the iterator interface
    is implemented on the provider type itself. But the extra layer of abstraction allows us to
-   implement a data provider easily via a Julia ``Task`` coroutine.
-   The detailed interface function is listed below:
+   implement a data provider easily via a Julia ``Task`` coroutine. See the
+   data provider defined in :doc:`the char-lstm example
+   </tutorial/char-lstm>` for an example of using coroutine to define data
+   providers.
 
-   .. function:: Base.eltype(provider) -> AbstractDataBatch
+The detailed interface functions for the iterator API is listed below:
 
-      :param AbstractDataProvider provider: the data provider.
-      :return: the specific subtype representing a data batch. See :class:`AbstractDataBatch`.
+.. function:: Base.eltype(provider) -> AbstractDataBatch
 
-   .. function:: Base.start(provider) -> AbstractDataProviderState
+   :param AbstractDataProvider provider: the data provider.
+   :return: the specific subtype representing a data batch. See :class:`AbstractDataBatch`.
 
-      :param AbstractDataProvider provider: the data provider.
+.. function:: Base.start(provider) -> AbstractDataProviderState
 
-      This function is always called before iterating into the dataset. It should initialize
-      the iterator, reset the index, and do data shuffling if needed.
+   :param AbstractDataProvider provider: the data provider.
 
-   .. function:: Base.done(provider, state) -> Bool
+   This function is always called before iterating into the dataset. It should initialize
+   the iterator, reset the index, and do data shuffling if needed.
 
-      :param AbstractDataProvider provider: the data provider.
-      :param AbstractDataProviderState state: the state returned by :func:`Base.start` :func:`Base.next`.
-      :return: true if there is no more data to iterate in this dataset.
+.. function:: Base.done(provider, state) -> Bool
 
-   .. function:: Base.next(provider) -> (AbstractDataBatch, AbstractDataProviderState)
+   :param AbstractDataProvider provider: the data provider.
+   :param AbstractDataProviderState state: the state returned by :func:`Base.start` :func:`Base.next`.
+   :return: true if there is no more data to iterate in this dataset.
 
-      :param AbstractDataProvider provider: the data provider.
-      :return: the current data batch, and the state for the next iteration.
+.. function:: Base.next(provider) -> (AbstractDataBatch, AbstractDataProviderState)
 
-   Note sometimes you are wrapping an existing data iterator (e.g. the built-in libmxnet data iterator) that
-   is built with a different convention. It might be difficult to adapt to the interfaces stated here. In this
-   case, you can safely assume that
+   :param AbstractDataProvider provider: the data provider.
+   :return: the current data batch, and the state for the next iteration.
 
-   * :func:`Base.start` will always be called, and called only once before the iteration starts.
-   * :func:`Base.done` will always be called at the beginning of every iteration and always be called once.
-   * If :func:`Base.done` return true, the iteration will stop, until the next round, again, starting with
-     a call to :func:`Base.start`.
-   * :func:`Base.next` will always be called only once in each iteration. It will always be called after
-     one and only one call to :func:`Base.done`; but if :func:`Base.done` returns true, :func:`Base.next` will
-     not be called.
+Note sometimes you are wrapping an existing data iterator (e.g. the built-in libmxnet data iterator) that
+is built with a different convention. It might be difficult to adapt to the interfaces stated here. In this
+case, you can safely assume that
 
-   With those assumptions, it will be relatively easy to adapt any existing iterator. See the implementation
-   of the built-in :class:`MXDataProvider` for example.
+* :func:`Base.start` will always be called, and called only once before the iteration starts.
+* :func:`Base.done` will always be called at the beginning of every iteration and always be called once.
+* If :func:`Base.done` return true, the iteration will stop, until the next round, again, starting with
+  a call to :func:`Base.start`.
+* :func:`Base.next` will always be called only once in each iteration. It will always be called after
+  one and only one call to :func:`Base.done`; but if :func:`Base.done` returns true, :func:`Base.next` will
+  not be called.
 
-   .. caution::
+With those assumptions, it will be relatively easy to adapt any existing iterator. See the implementation
+of the built-in :class:`MXDataProvider` for example.
 
-      Please do not use the one data provider simultaneously in two different places, either in parallel,
-      or in a nested loop. For example, the behavior for the following code is undefined
+.. caution::
 
-      .. code-block:: julia
+   Please do not use the one data provider simultaneously in two different places, either in parallel,
+   or in a nested loop. For example, the behavior for the following code is undefined
 
-         for batch in data
-           # updating the parameters
+   .. code-block:: julia
 
-           # now let's test the performance on the training set
-           for b2 in data
-             # ...
-           end
-         end
+      for batch in data
+        # updating the parameters
+
+        # now let's test the performance on the training set
+        for b2 in data
+          # ...
+        end
+      end
 
 
 
@@ -163,7 +167,7 @@ and split it into mini-batches so that the model can consume the data in a unifo
       :param AbstractDataBatch batch: the data batch object.
       :param Base.Symbol name: the name of the data to get, should be one of the names
              provided in either :func:`provide_data() <AbstractDataProvider.provide_data>`
-             or :func:`provide_label() <AbstractDataprovider.provide_label>`.
+             or :func:`provide_label() <AbstractDataProvider.provide_label>`.
       :return: the corresponding data array corresponding to that name.
 
    .. function:: load_data!(provider, batch, targets)
@@ -242,6 +246,9 @@ Built-in data providers
           be less samples to include than a mini-batch. This value specify a scalar to pad the
           contents of all the missing data points.
    :param Real label_padding: the same as ``data_padding``, except for the labels.
+
+   TODO: remove ``data_padding`` and ``label_padding``, and implement rollover that copies
+   the last or first several training samples to feed the padding.
 
 
 

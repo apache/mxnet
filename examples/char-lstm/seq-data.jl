@@ -31,6 +31,7 @@ function build_vocabulary(corpus_fn::AbstractString, vocab_fn::AbstractString; m
   return vocab
 end
 
+#--CharSeqProvider
 type CharSeqProvider <: mx.AbstractDataProvider
   text       :: AbstractString
   batch_size :: Int
@@ -41,10 +42,13 @@ type CharSeqProvider <: mx.AbstractDataProvider
   n_layer    :: Int
   dim_hidden :: Int
 end
+#--/CharSeqProvider
 
 function mx.get_batch_size(p :: CharSeqProvider)
   p.batch_size
 end
+
+#--provide
 function mx.provide_data(p :: CharSeqProvider)
   [(symbol(p.prefix, "_data_$t"), (length(p.vocab), p.batch_size)) for t = 1:p.seq_len] ∪
   [(symbol(p.prefix, "_l$(l)_init_c"), (p.dim_hidden, p.batch_size)) for l=1:p.n_layer] ∪
@@ -53,7 +57,9 @@ end
 function mx.provide_label(p :: CharSeqProvider)
   [(symbol(p.prefix, "_label_$t"), (p.batch_size,)) for t = 1:p.seq_len]
 end
+#--/provide
 
+#--eachbatch-part1
 function mx.eachbatch(p :: CharSeqProvider)
   data_all  = [mx.zeros(shape) for (name, shape) in mx.provide_data(p)]
   label_all = [mx.zeros(shape) for (name, shape) in mx.provide_label(p)]
@@ -62,7 +68,11 @@ function mx.eachbatch(p :: CharSeqProvider)
   label_jl= [copy(x) for x in label_all]
 
   batch = mx.DataBatch(data_all, label_all, p.batch_size)
+  #...
+  #--/eachbatch-part1
 
+  #--eachbatch-part2
+  #...
   function _text_iter()
     text = p.text
 
@@ -96,6 +106,7 @@ function mx.eachbatch(p :: CharSeqProvider)
 
   return Task(_text_iter)
 end
+#--/eachbatch-part2
 
 # helper function to convert a char into index in vocabulary
 function char_idx(vocab :: Dict{Char,Int}, c :: Char)
