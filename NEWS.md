@@ -1,3 +1,12 @@
+# v0.0.5 (2015.11.14)
+
+* char-lstm example.
+* Network visualization via GraphViz.
+* NN-factory for common models.
+* Convenient `@nd_as_jl` macro to work with `NDArray` as Julia Arrays.
+* Refactoring: `Symbol` -> `SymbolicNode`.
+* More evaluation metrics (@vchuravy, @Andy-P)
+
 # v0.0.4 (2015.11.09)
 
 * ADAM optimizer (@cbecker)
