@@ -65,6 +65,9 @@ function mnist_fit_and_predict(optimizer, initializer, n_epoch)
   accuracy = 100correct/length(labels)
   println(mx.format("Accuracy on eval set: {1:.2f}%", accuracy))
 
+  # try to call visualization
+  dot_code = mx.to_graphviz(mlp)
+
   return accuracy
 end
 
