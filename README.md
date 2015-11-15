@@ -5,10 +5,16 @@
 [![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.readthedocs.org/en/latest/)
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
 
-
 MXNet is a deep learning framework designed for both *efficiency* and *flexibility*.
-It allows you to mix the [flavours](http://mxnet.readthedocs.org/en/latest/program_model.html) of
-deep learning programs together to maximize the efficiency and your productivity.
+It allows you to ***mix*** the [flavours](http://mxnet.readthedocs.org/en/latest/program_model.html) of symbolic
+programming and imperative programming together to ***maximize*** the efficiency and your productivity.
+In its core, a dynamic dependency scheduler that automatically parallelizes both symbolic and imperative operations on the fly.
+A graph optimization layer is build on top, which makes symbolic execution fast and efficient memory.
+The library is portable and lightweight, and is ready scales to multiple GPUs, and multiple machines.
+
+MXNet is also more than a deep learning project. It is also a collection of
+[blue prints and guidelines](http://mxnet.readthedocs.org/en/latest/#open-source-design-notes) for building
+deep learning system, and interesting insights of DL systems for hackers.
 
 [![Join the chat at https://gitter.im/dmlc/mxnet](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/dmlc/mxnet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
@@ -34,7 +40,7 @@ Features
 --------
 * Open sourced design note on useful insights that can re-used by general DL projects.
 * Flexible configuration, for arbitrary computation graph.
-* Mix and Maximize good flavours of programmingto maximize flexibility and efficiency.
+* Mix and Maximize good flavours of programming to maximize flexibility and efficiency.
 * Lightweight, memory efficient and portable to smart devices.
 * Scales up to multi GPUs and distributed setting with auto parallelism.
 * Support python, R, C++, Julia,
