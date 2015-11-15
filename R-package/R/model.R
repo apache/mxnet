@@ -406,7 +406,23 @@ function(symbol, X, y=NULL, ctx=NULL,
     batchsize = input.shape[[ndim]]
     optimizer <- mx.opt.create(optimizer, rescale.grad=(1/batchsize), ...)
   }
-
+  if (!is.null(eval.data) && !is.list(eval.data) && !is.mx.dataiter(eval.data)) {
+    stop("The validation set should be either a mx.io.DataIter or a R list")
+  }
+  if (is.list(eval.data)) {
+    if (is.null(eval.data$data) || is.null(eval.data$label)){
+      stop("Please provide the validation set as list(data=R.array, label=R.array)")
+    }
+    if (is.array(eval.data$data) || is.matrix(eval.data$data)) {
+      if (array.layout == "auto") {
+        array.layout <- mx.model.select.layout.train(eval.data$data, eval.data$label)
+      }
+      if (array.layout == "rowmajor") {
+        eval.data$data <- t(eval.data$data)
+      }
+    }
+    eval.data <- mx.model.init.iter(eval.data$data, eval.data$label, batch.size=array.batch.size, is.train = TRUE)
+  }
   kvstore <- mx.model.create.kvstore(kvstore, params$arg.params, length(ctx))
   model <- mx.model.train(symbol, ctx, input.shape,
                           params$arg.params, params$aux.params,
