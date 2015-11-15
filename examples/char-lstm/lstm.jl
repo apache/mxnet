@@ -1,18 +1,23 @@
 # An explicitly unrolled LSTM with fixed sequence length.
 using MXNet
 
+#--LSTMState
 immutable LSTMState
   c :: mx.SymbolicNode
   h :: mx.SymbolicNode
 end
+#--/LSTMState
 
+#--LSTMParam
 immutable LSTMParam
   i2h_W :: mx.SymbolicNode
   h2h_W :: mx.SymbolicNode
   i2h_b :: mx.SymbolicNode
   h2h_b :: mx.SymbolicNode
 end
+#--/LSTMParam
 
+#--lstm_cell
 function lstm_cell(data::mx.SymbolicNode, prev_state::LSTMState, param::LSTMParam;
                    num_hidden::Int=512, dropout::Real=0, name::Symbol=gensym())
 
@@ -37,7 +42,9 @@ function lstm_cell(data::mx.SymbolicNode, prev_state::LSTMState, param::LSTMPara
 
   return LSTMState(next_c, next_h)
 end
+#--/lstm_cell
 
+#--LSTM-part1
 function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_class::Int;
               dropout::Real=0, name::Symbol=gensym(), output_states::Bool=false)
 
@@ -55,6 +62,8 @@ function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_cla
                       mx.Variable(symbol(name, "_l$(i)_init_h")))
     (param, state)
   end
+  #...
+  #--/LSTM-part1
 
   # now unroll over time
   outputs = mx.SymbolicNode[]
@@ -63,7 +72,6 @@ function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_cla
     label  = mx.Variable(symbol(name, "_label_$t"))
     hidden = mx.FullyConnected(data=data, weight=embed_W, num_hidden=dim_embed,
                                no_bias=true, name=symbol(name, "_embed_$t"))
-
 
     # stack LSTM cells
     for i = 1:n_layer

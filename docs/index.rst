@@ -19,6 +19,7 @@ For more details, see documentation below. Please also checkout the `examples
    :caption: Tutorials
 
    tutorial/mnist
+   tutorial/char-lstm
 
 .. toctree::
    :maxdepth: 2
