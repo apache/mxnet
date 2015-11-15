@@ -23,7 +23,7 @@ mlp = @mx.chain mx.Variable(:data) =>
 
 # data provider
 batch_size = 100
-include(joinpath(Pkg.dir("MXNet"), "examples/mnist/mnist-data.jl"))
+include(Pkg.dir("MXNet", "examples", "mnist", "mnist-data.jl"))
 train_provider, eval_provider = get_mnist_providers(batch_size)
 
 # setup model
