@@ -19,43 +19,43 @@ Modify parameters in [config.jl](config.jl) and then run [train.jl](train.jl). A
 of training looks like this:
 ```
 ...
-INFO: Speed: 355.18 samples/sec
+INFO: Speed: 357.72 samples/sec
 INFO: == Epoch 020 ==========
 INFO: ## Training summary
-INFO:                NLL = 1.9670
-INFO:         perplexity = 7.1494
-INFO:               time = 88.0757 seconds
+INFO:                NLL = 1.4672
+INFO:         perplexity = 4.3373
+INFO:               time = 87.2631 seconds
 INFO: ## Validation summary
-INFO:                NLL = 2.0452
-INFO:         perplexity = 7.7307
-INFO: Saved checkpoint to 'examples/char-lstm/checkpoints/ptb-0020.params'
-INFO: Speed: 366.23 samples/sec
-INFO: Speed: 360.19 samples/sec
-INFO: Speed: 355.77 samples/sec
-INFO: Speed: 356.83 samples/sec
-INFO: Speed: 354.80 samples/sec
-INFO: Speed: 349.89 samples/sec
-INFO: Speed: 352.00 samples/sec
-INFO: Speed: 358.46 samples/sec
-INFO: Speed: 356.58 samples/sec
-INFO: Speed: 353.03 samples/sec
-INFO: Speed: 351.98 samples/sec
-INFO: Speed: 365.54 samples/sec
-INFO: Speed: 359.14 samples/sec
-INFO: Speed: 355.60 samples/sec
-INFO: Speed: 362.44 samples/sec
-INFO: Speed: 359.01 samples/sec
-INFO: Speed: 357.99 samples/sec
-INFO: Speed: 350.07 samples/sec
-INFO: Speed: 358.03 samples/sec
+INFO:                NLL = 1.6374
+INFO:         perplexity = 5.1418
+INFO: Saved checkpoint to 'char-lstm/checkpoints/ptb-0020.params'
+INFO: Speed: 368.74 samples/sec
+INFO: Speed: 361.04 samples/sec
+INFO: Speed: 360.02 samples/sec
+INFO: Speed: 362.34 samples/sec
+INFO: Speed: 360.80 samples/sec
+INFO: Speed: 362.77 samples/sec
+INFO: Speed: 357.18 samples/sec
+INFO: Speed: 355.30 samples/sec
+INFO: Speed: 362.33 samples/sec
+INFO: Speed: 359.23 samples/sec
+INFO: Speed: 358.09 samples/sec
+INFO: Speed: 356.89 samples/sec
+INFO: Speed: 371.91 samples/sec
+INFO: Speed: 372.24 samples/sec
+INFO: Speed: 356.59 samples/sec
+INFO: Speed: 356.64 samples/sec
+INFO: Speed: 360.24 samples/sec
+INFO: Speed: 360.32 samples/sec
+INFO: Speed: 362.38 samples/sec
 INFO: == Epoch 021 ==========
 INFO: ## Training summary
-INFO:                NLL = 1.9698
-INFO:         perplexity = 7.1695
-INFO:               time = 87.9392 seconds
+INFO:                NLL = 1.4655
+INFO:         perplexity = 4.3297
+INFO:               time = 86.9243 seconds
 INFO: ## Validation summary
-INFO:                NLL = 2.0458
-INFO:         perplexity = 7.7353
+INFO:                NLL = 1.6366
+INFO:         perplexity = 5.1378
 INFO: Saved checkpoint to 'examples/char-lstm/checkpoints/ptb-0021.params'
 ```
 
@@ -63,18 +63,59 @@ INFO: Saved checkpoint to 'examples/char-lstm/checkpoints/ptb-0021.params'
 
 Run [sampler.jl](sampler.jl) to generate sample sentences from the trained model. Some example sentences are
 ```
-...
+## Sample 1
+all have sir,
+Away will fill'd in His time, I'll keep her, do not madam, if they here? Some more ha?
+
+## Sample 2
+am.
+
+CLAUDIO:
+Hone here, let her, the remedge, and I know not slept a likely, thou some soully free?
+
+## Sample 3
+arrel which noble thing
+The exchnachsureding worns: I ne'er drunken Biancas, fairer, than the lawfu?
+
+## Sample 4
+augh assalu, you'ld tell me corn;
+Farew. First, for me of a loved. Has thereat I knock you presents?
+
+## Sample 5
+ame the first answer.
+
+MARIZARINIO:
+Door of Angelo as her lord, shrield liken Here fellow the fool ?
+
+## Sample 6
+ad well.
+
+CLAUDIO:
+Soon him a fellows here; for her fine edge in a bogms' lord's wife.
+
+LUCENTIO:
+I?
+
+## Sample 7
+adrezilian measure.
+
+LUCENTIO:
+So, help'd you hath nes have a than dream's corn, beautio, I perchas?
+
 ## Sample 8
-a, good. Baps,
-To she tur in his God twerian: well Resice hestle, the a I here's a not as I lign?
-H?
+as eatter me;
+The girlly: and no other conciolation!
+
+BISTRUMIO:
+I have be rest girl. O, that I a h?
 
 ## Sample 9
-ame.
-What high sisiss itle by mard have of on sol I cound:
-And pruch you betsts; you god eie hearry?
+and is intend you sort:
+What held her all 'clama's for maffice. Some servant.' what I say me the cu?
 
 ## Sample 10
-and oar
-Serens Iffall as a we of tere geling pover your nive relly lers; is here whill cheadaplee k?
+an thoughts will said in our pleasue,
+Not scanin on him that you live; believaries she.
+
+ISABELLLLL?
 ```
