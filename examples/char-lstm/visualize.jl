@@ -3,8 +3,8 @@ include(joinpath(dirname(@__FILE__), "lstm.jl"))
 
 using MXNet
 
-vis_n_layer = 2
-vis_seq_len = 3
+vis_n_layer = 1
+vis_seq_len = 2
 vis_n_class = 128
 
 lstm  = LSTM(vis_n_layer, vis_seq_len, DIM_HIDDEN, DIM_EMBED, vis_n_class, name=NAME, output_states=true)
