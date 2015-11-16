@@ -15,8 +15,8 @@ Then we can read them in R and convert to matrices.
 
 ```{r}
 require(mxnet)
-train <- read.csv('data/train.csv', header=TRUE)
-test <- read.csv('data/test.csv', header=TRUE)
+train <- read.csv("train.csv", header=TRUE)
+test <- read.csv("test.csv", header=TRUE)
 train <- data.matrix(train)
 test <- data.matrix(test)
 
@@ -99,7 +99,7 @@ With a little extra effort in the csv format, we can have our submission to the 
 
 ```{r}
 submission <- data.frame(ImageId=1:ncol(test), Label=pred.label)
-write.csv(submission, file='submission.csv', row.names=FALSE, quote=FALSE)
+#write.csv(submission, file='submission.csv', row.names=FALSE, quote=FALSE)
 ```
 
 ## LeNet
@@ -155,7 +155,7 @@ but since internal computation of cpu is already multi-threaded, there is less g
 
 We start by training on CPU first. Because it takes a bit time to do so, we will only run it for one iteration.
 
-```{r}
+```{r, eval=FALSE}
 mx.set.seed(0)
 tic <- proc.time()
 model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
@@ -168,7 +168,7 @@ print(proc.time() - tic)
 
 Training on GPU:
 
-```{r}
+```{r, eval=FALSE}
 mx.set.seed(0)
 tic <- proc.time()
 model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
@@ -182,7 +182,7 @@ print(proc.time() - tic)
 As you can see by using GPU, we can get a much faster speedup in training!
 Finally we can submit the result to Kaggle again to see the improvement of our ranking!
 
-```{r}
+```{r, eval=FALSE}
 preds <- predict(model, test.array)
 pred.label <- max.col(t(preds)) - 1
 submission <- data.frame(ImageId=1:ncol(test), Label=pred.label)

@@ -33,6 +33,16 @@ The following code gives an example of creating a Cifar data iterator.
 
 ```python
 >>>dataiter = mx.io.ImageRecordIter(
+>>>        # Utility Parameter
+>>>        # Optional
+>>>        # Name of the data, should match the name of the data input of the network
+>>>        # data_name='data',
+>>>        # Utility Parameter
+>>>        # Optional
+>>>        # Name of the label, should match the name of the label parameter of the network.
+>>>        # Usually, if the loss layer is named 'foo', then the label input has the name
+>>>        # 'foo_label', unless overwritten
+>>>        # label_name='softmax_label',
 >>>        # Dataset Paramter
 >>>        # Impulsary
 >>>        # indicating the data file, please check the data is already there

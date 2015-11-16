@@ -2,24 +2,23 @@
 import cifar10
 import mxnet as mx
 import logging
-import math
 
-# local, dist_async or dist_sync
+## in local machine:
+data_dir = "data/cifar/"
+## in amazon s3:
+# data_dir = "s3://dmlc/cifar10/"
+## in hdfs:
+# data_dir = hdfs:///dmlc/cifar10/
+
+## can be local, dist_async or dist_sync
 kv_type = 'dist_sync'
-# data dir
-data_dir = "data/cifar"
-# batch size
+## batch size
 batch_size = 256
-# number of gpus used in a worker
-num_gpus = 2
-# learning rate
+## number of gpus used in a worker
+num_gpus = 1
+## learning rate
 learning_rate = 0.1
 
-if data_dir == "data/cifar":
-    import sys
-    sys.path.insert(0, "../../tests/python/common")
-    import get_data
-    get_data.GetCifar10()
 
 kv = mx.kvstore.create(kv_type)
 
@@ -34,7 +33,7 @@ model = mx.model.FeedForward(
     ctx           = [mx.gpu(i) for i in range(num_gpus)],
     symbol        = cifar10.inception(),
     num_epoch     = 40,
-    epoch_size    = math.ceil(60000/batch_size/kv.num_workers),
+    epoch_size    = 60000 / batch_size / kv.num_workers,
     learning_rate = learning_rate,
     momentum      = 0.9,
     wd            = 0.00001,

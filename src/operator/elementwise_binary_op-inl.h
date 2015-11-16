@@ -22,7 +22,7 @@ namespace op {
 namespace elembinary {
 enum ElementWiseBinaryOpInputs {kLhs, kRhs};
 enum ElementWiseBinaryOpOutputs {kOut};
-enum ElementWiseBinaryOpType {kPlus, kMinus, kMul, kDiv};
+enum ElementWiseBinaryOpType {kPlus, kMinus, kMul, kDiv, kPower};
 }  // elembinary
 
 template<typename Op>
@@ -47,6 +47,10 @@ template<>
 inline elembinary::ElementWiseBinaryOpType GetOpType<mshadow::op::div>() {
   return elembinary::kDiv;
 }
+template<>
+inline elembinary::ElementWiseBinaryOpType GetOpType<mshadow_op::power>() {
+  return elembinary::kPower;
+}
 
 template<>
 inline const char* GetOpTypeString<mshadow::op::plus>() {
@@ -65,6 +69,11 @@ inline const char* GetOpTypeString<mshadow::op::mul>() {
 template<>
 inline const char* GetOpTypeString<mshadow::op::div>() {
   return "_Div";
+}
+
+template<>
+inline const char* GetOpTypeString<mshadow_op::power>() {
+  return "_Power";
 }
 
 template<typename xpu, typename ForwardOp>
@@ -133,6 +142,18 @@ class ElementWiseBinaryOp : public Operator {
         Assign(lhs_grad, req[elembinary::kLhs], m_out_grad / rhs_data);
         break;
       }
+      case elembinary::kPower: {
+        Tensor<xpu, 2> base_data = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
+        Tensor<xpu, 2> exponent_data = in_data[elembinary::kRhs].FlatTo2D<xpu, real_t>(s);
+        Tensor<xpu, 2> m_out_data = out_data[elembinary::kOut].FlatTo2D<xpu, real_t>(s);
+        // rhs cannot do inplace
+        CHECK_NE(req[elembinary::kRhs], kWriteInplace);
+        Assign(rhs_grad, req[elembinary::kRhs],
+               F<mshadow_op::log>(base_data) * m_out_data * m_out_grad);
+        Assign(lhs_grad, req[elembinary::kLhs],
+               exponent_data * F<mshadow_op::power>(base_data, exponent_data - 1) * m_out_grad);
+        break;
+      }
     }
   }
 };  // class ElementWiseBinaryOp
@@ -149,6 +170,8 @@ inline Operator* CreateElementWiseBinaryOp_(elembinary::ElementWiseBinaryOpType 
       return new ElementWiseBinaryOp<xpu, mshadow::op::mul>();
     case elembinary::kDiv:
       return new ElementWiseBinaryOp<xpu, mshadow::op::div>();
+    case elembinary::kPower:
+      return new ElementWiseBinaryOp<xpu, mshadow_op::power>();
   }
   LOG(FATAL) << "uknown op type";
   return NULL;
@@ -212,6 +235,9 @@ class ElementWiseBinaryOpProp : public OperatorProperty {
       case elembinary::kMul:
       case elembinary::kDiv:
         return {out_grad[elembinary::kOut], in_data[elembinary::kLhs], in_data[elembinary::kRhs]};
+      case elembinary::kPower:
+        return {out_grad[elembinary::kOut], in_data[elembinary::kLhs], in_data[elembinary::kRhs],
+                out_data[elembinary::kOut]};
     }
     LOG(FATAL) << "not reached";
     return {};
@@ -228,6 +254,7 @@ class ElementWiseBinaryOpProp : public OperatorProperty {
         return {};
       case elembinary::kMul:
       case elembinary::kDiv:
+      case elembinary::kPower:
         return {{out_grad[elembinary::kOut], in_grad[elembinary::kLhs]}};
     }
     LOG(FATAL) << "not reached";

@@ -1,5 +1,6 @@
 Classify Real-World Images with Pre-trained Model
 =================================================
+
 MXNet is a flexible and efficient deep learning framework. One of the cool thing that a deep learning
 algorithm can do is to classify real world images.
 
@@ -50,7 +51,7 @@ from imager package. But you can always change it to other images.
 
 Load and plot the image:
 
-```{r}
+```{r, fig.align='center'}
 im <- load.image(system.file("extdata/parrots.png", package="imager"))
 plot(im)
 ```

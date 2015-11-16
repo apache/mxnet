@@ -21,31 +21,11 @@ inline void Concatenate(const std::vector<mshadow::Tensor<xpu, dim> > &input,
   using mshadow::expr::slice;
   mshadow::Tensor<xpu, dim> out = *output;
   size_t size = input.size();
-  switch (size) {
-    case 2: {
-      out = concat<1>(input[0], input[1]);
-      break;
-    }
-    case 3: {
-      out = concat<1>(input[0],
-                      concat<1>(input[1], input[2]));
-      break;
-    }
-    case 4: {
-      out = concat<1>(input[0],
-                      concat<1>(input[1],
-                                concat<1>(input[2], input[3])));
-      break;
-    }
-    default: {
-      index_t begin = 0;
-      for (index_t i = 0; i < size; ++i) {
-        index_t end = begin + input[i].size(1);
-        slice<1>(out, begin, end) = input[i];
-        begin = end;
-      }
-      break;
-    }
+  index_t begin = 0;
+  for (index_t i = 0; i < size; ++i) {
+    index_t end = begin + input[i].size(1);
+    slice<1>(out, begin, end) = input[i];
+    begin = end;
   }
 }
 
@@ -56,31 +36,11 @@ void Split(const mshadow::Tensor<xpu, dim> &input,
   using mshadow::expr::slice;
   std::vector<mshadow::Tensor<xpu, dim> > out = *output;
   size_t size = out.size();
-  switch (size) {
-    case 2: {
-      concat<1>(out[0], out[1]) = input;
-      break;
-    }
-    case 3: {
-      concat<1>(out[0],
-                concat<1>(out[1], out[2])) = input;
-      break;
-    }
-    case 4: {
-      concat<1>(out[0],
-                concat<1>(out[1],
-                          concat<1>(out[2], out[3]))) = input;
-      break;
-    }
-    default: {
-      index_t begin = 0;
-      for (index_t i = 0; i < size; ++i) {
-        index_t end = begin + out[i].size(1);
-        out[i] = slice<1>(input, begin, end);
-        begin = end;
-      }
-      break;
-    }
+  index_t begin = 0;
+  for (index_t i = 0; i < size; ++i) {
+    index_t end = begin + out[i].size(1);
+    out[i] = slice<1>(input, begin, end);
+    begin = end;
   }
 }
 }  // namespace op

@@ -69,6 +69,7 @@ class BatchLoader : public IIterator<TBlobBatch> {
     label_shape_ = TShape(label_shape_vec.begin(), label_shape_vec.end());
     // Init space for out_
     out_.inst_index = new unsigned[param_.batch_size];
+    out_.batch_size = param_.batch_size;
     out_.data.clear();
     data_holder_ = mshadow::NewTensor<mshadow::cpu>(data_shape_.get<4>(), 0.0f);
     label_holder_ = mshadow::NewTensor<mshadow::cpu>(label_shape_.get<2>(), 0.0f);
@@ -88,6 +89,7 @@ class BatchLoader : public IIterator<TBlobBatch> {
   }
   inline bool Next(void) {
     out_.num_batch_padd = 0;
+    out_.batch_size = param_.batch_size;
     this->head_ = 0;
 
     // if overflow from previous round, directly return false, until before first is called

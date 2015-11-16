@@ -45,6 +45,13 @@ def _new_alloc_handle(shape, ctx, delay_alloc):
         ctypes.byref(hdl)))
     return hdl
 
+def waitall():
+    """Wait all async operation to finish in MXNet
+
+    This function is used for benchmark only
+    """
+    check_call(_LIB.MXNDArrayWaitAll())
+
 class NDArray(object):
     """NDArray object in mxnet.
 

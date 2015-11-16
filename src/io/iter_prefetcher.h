@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 #include <queue>
+#include <algorithm>
 #include "./inst_vector.h"
 
 namespace mxnet {
@@ -62,12 +63,12 @@ class PrefetcherIter : public IIterator<DataBatch> {
     iter_.Init([this](DataBatch **dptr) {
         if (!loader_->Next()) return false;
         const TBlobBatch& batch = loader_->Value();
-
         if (*dptr == nullptr) {
           // allocate databatch
           *dptr = new DataBatch();
           (*dptr)->num_batch_padd = batch.num_batch_padd;
           (*dptr)->data.resize(batch.data.size());
+          (*dptr)->index.resize(batch.batch_size);
           for (size_t i = 0; i < batch.data.size(); ++i) {
             (*dptr)->data.at(i) = NDArray(batch.data[i].shape_, Context::CPU());
           }
@@ -80,7 +81,12 @@ class PrefetcherIter : public IIterator<DataBatch> {
                         batch.data[i].FlatTo2D<cpu, real_t>());
           (*dptr)->num_batch_padd = batch.num_batch_padd;
         }
-        return true;
+        if (batch.inst_index) {
+          std::copy(batch.inst_index,
+                    batch.inst_index + batch.batch_size,
+                    (*dptr)->index.begin());
+        }
+       return true;
       },
       [this]() { loader_->BeforeFirst(); });
   }
