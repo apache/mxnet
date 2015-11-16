@@ -28,7 +28,7 @@ softmax = mx.symbol.SoftmaxOutput(fc2, name='sm')
 model = mx.model.FeedForward.create(
      softmax,
      X=data_set,
-     num_round=num_round,
+     num_epoch=num_epoch,
      learning_rate=0.01)
 ```
 You can also use scikit-learn style construct and fit function to create a model.
@@ -36,7 +36,7 @@ You can also use scikit-learn style construct and fit function to create a model
 # create a model using sklearn-style two step way
 model = mx.model.FeedForward.create(
      softmax,
-     num_round=num_round,
+     num_epoch=num_epoch,
      learning_rate=0.01)
 
 mode.fit(X=data_set)
