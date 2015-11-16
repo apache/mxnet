@@ -35,15 +35,17 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
   nodes = conf["nodes"]
   heads = unique([x[1]+1 for x in conf["heads"]])
   node_attr = Dict(:shape => :box, :fixedsize => true, :width => 1.3,
-                   :height => 0.8034, :style => :filled)
+                   :height => 0.8034, :style => (:rounded, :filled), :penwidth => 2)
   io = IOBuffer()
   println(io, "digraph $(_simple_escape(title)) {")
   println(io, "node [fontsize=10];")
   println(io, "edge [fontsize=10];")
 
   # color map
-  cm = ("#8dd3c7", "#fb8072", "#ffffb3", "#bebada", "#80b1d3",
-        "#fdb462", "#b3de69", "#fccde5")
+  fillcolors = ("#8dd3c7", "#fb8072", "#ffffb3", "#bebada", "#80b1d3",
+                "#fdb462", "#b3de69", "#fccde5")
+  edgecolors = ("#245b51", "#941305", "#999900", "#3b3564", "#275372",
+                "#975102", "#597d1c", "#90094e")
 
   # make nodes
   for i = 1:length(nodes)
@@ -57,7 +59,7 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
       if i ∈ heads
         # heads are output nodes
         label = node["name"]
-        attr[:fillcolor] = cm[1]
+        colorkey = 1
       else
         # otherwise, input nodes, might be data, label or parameters
         continue
@@ -67,33 +69,35 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
                      _extract_shape(node["param"]["kernel"]),
                      _extract_shape(node["param"]["stride"]),
                      node["param"]["num_filter"])
-      attr[:fillcolor] = cm[2]
+      colorkey = 2
     elseif op == "FullyConnected"
       label = format("FullyConnected\nnum-hidden={1}", node["param"]["num_hidden"])
-      attr[:fillcolor] = cm[2]
+      colorkey = 2
     elseif op == "Activation"
       label = format("Activation\nact-type={1}", node["param"]["act_type"])
-      attr[:fillcolor] = cm[3]
+      colorkey = 3
     elseif op == "BatchNorm"
-      attr[:fillcolor] = cm[4]
+      colorkey = 4
     elseif op == "Pooling"
       label = format("Pooling\ntype={1}\nkernel={2}\nstride={3}",
                      node["param"]["pool_type"],
                      _extract_shape(node["param"]["kernel"]),
                      _extract_shape(node["param"]["stride"]))
-      attr[:fillcolor] = cm[5]
+      colorkey = 5
     elseif op ∈ ("Concat", "Flatten", "Reshape")
-      attr[:fillcolor] = cm[6]
+      colorkey = 6
     elseif endswith(op, "Output") || op == "BlockGrad"
-      attr[:fillcolor] = cm[7]
+      colorkey = 7
     else
-      attr[:fillcolor] = cm[8]
+      colorkey = 8
     end
 
     if op != "null"
       label = "$name\n$label"
     end
-    attr[:label] = label
+    attr[:fillcolor] = fillcolors[colorkey]
+    attr[:color]     = edgecolors[colorkey]
+    attr[:label]     = label
     _format_graphviz_node(io, name, attr)
   end
 
@@ -110,7 +114,7 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
       input_node = nodes[item[1]+1]
       input_name = input_node["name"]
       if input_node["op"] != "null" || (item[1]+1) ∈ heads
-        attr = Dict(:dir => :back, :arrowtail => :open)
+        attr = Dict(:dir => :back, :arrowtail => :open, :color => "#737373")
         if draw_shape
           if input_node["op"] != "null"
             key   = symbol(input_name, "_output")
@@ -149,6 +153,8 @@ function _format_graphviz_attr(io::IOBuffer, attrs)
       if isa(v, AbstractString) && v[1] == '#'
         # color
         v = _simple_escape(v)
+      elseif isa(v, Tuple)
+        v = _simple_escape(join([string(x) for x in v], ","))
       end
       print(io, "$k=$v")
     end
