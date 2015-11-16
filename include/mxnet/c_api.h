@@ -302,6 +302,14 @@ MXNET_DLL int MXNDArrayWaitToWrite(NDArrayHandle handle);
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayWaitAll();
+
+//added by mzhang
+int MXNDArrayLoadFromBytes(const void* param_bytes, size_t param_size, 
+                  mx_uint *out_size,
+                  NDArrayHandle** out_arr,
+                  mx_uint *out_name_size,
+                  const char*** out_names);
+
 /*!
  * \brief free the narray handle
  * \param handle the handle to be freed
