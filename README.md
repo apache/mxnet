@@ -10,7 +10,6 @@ It allows you to ***mix*** the [flavours](http://mxnet.readthedocs.org/en/latest
 programming and imperative programming together to ***maximize*** the efficiency and your productivity.
 In its core, a dynamic dependency scheduler that automatically parallelizes both symbolic and imperative operations on the fly.
 A graph optimization layer is build on top, which makes symbolic execution fast and memory efficient.
-A graph optimization layer is build on top, which makes symbolic execution fast and efficient memory.
 The library is portable and lightweight, and is ready scales to multiple GPUs, and multiple machines.
 
 MXNet is also more than a deep learning project. It is also a collection of
