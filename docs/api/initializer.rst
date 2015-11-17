@@ -60,12 +60,12 @@ Built-in initializers
 
 
 
-.. class:: XaiverInitializer
+.. class:: XavierInitializer
 
    The initializer documented in the paper [Bengio and Glorot 2010]: *Understanding
    the difficulty of training deep feedforward neuralnetworks*.
 
-   There are several different version of the XaiverInitializer used in the wild.
+   There are several different version of the XavierInitializer used in the wild.
    The general idea is that the variance of the initialization distribution is controlled
    by the dimensionality of the input and output. As a distribution one can either choose
    a normal distribution with μ = 0 and σ² or a uniform distribution from -σ to σ.
@@ -81,7 +81,7 @@ Built-in initializers
    - mxnet: 3 / (in + out)
 
    Distribution and variant can be chosen by enums (prefixed by ``xv_``).
-   As an example take ``mx.XaiverInitializer(distribution = mx.xv_normal, variant = mx.xv_mxnet)``,
+   As an example take ``mx.XavierInitializer(distribution = mx.xv_normal, variant = mx.xv_mxnet)``,
    which is currently the default.
 
 
