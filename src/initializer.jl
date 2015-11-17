@@ -100,12 +100,12 @@ function _init_weight(self :: NormalInitializer, name :: Base.Symbol, array :: N
 end
 
 #=doc
-.. class:: XaiverInitializer
+.. class:: XavierInitializer
 
    The initializer documented in the paper [Bengio and Glorot 2010]: *Understanding
    the difficulty of training deep feedforward neuralnetworks*.
 
-   There are several different version of the XaiverInitializer used in the wild.
+   There are several different version of the XavierInitializer used in the wild.
    The general idea is that the variance of the initialization distribution is controlled
    by the dimensionality of the input and output. As a distribution one can either choose
    a normal distribution with μ = 0 and σ² or a uniform distribution from -σ to σ.
@@ -121,20 +121,20 @@ end
    - mxnet: 3 / (in + out)
 
    Distribution and variant can be chosen by enums (prefixed by ``xv_``).
-   As an example take ``mx.XaiverInitializer(distribution = mx.xv_normal, variant = mx.xv_mxnet)``,
+   As an example take ``mx.XavierInitializer(distribution = mx.xv_normal, variant = mx.xv_mxnet)``,
    which is currently the default.
 =#
 
-@enum XaiverDistribution xv_uniform xv_normal
-@enum XaiverVariant xv_original xv_mrsa xv_caffe_avg xv_caffe_in zv_caffe_out xv_mxnet
+@enum XavierDistribution xv_uniform xv_normal
+@enum XavierVariant xv_original xv_mrsa xv_caffe_avg xv_caffe_in zv_caffe_out xv_mxnet
 
-immutable XaiverInitializer <: AbstractInitializer
-  distribution :: XaiverDistribution
-  variant :: XaiverVariant
+immutable XavierInitializer <: AbstractInitializer
+  distribution :: XavierDistribution
+  variant :: XavierVariant
 end
-XaiverInitializer(; distribution = xv_uniform, variant = xv_mxnet) = XaiverInitializer(distribution, variant)
+XavierInitializer(; distribution = xv_uniform, variant = xv_mxnet) = XavierInitializer(distribution, variant)
 
-function _init_weight(self :: XaiverInitializer, name :: Base.Symbol, array :: NDArray)
+function _init_weight(self :: XavierInitializer, name :: Base.Symbol, array :: NDArray)
   dims    = size(array)
   fan_in  = prod(dims[2:end])
   fan_out = dims[1]
