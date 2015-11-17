@@ -130,6 +130,22 @@ bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
           throw dmlc::Error(os.str());
         }
       }
+
+      // set for auxilary states shape.
+      auto& source_aux_shapes = (*node_aux_shapes)[node.backward_source_id];
+      for (size_t i = 0; i < source_aux_shapes.size(); ++i) {
+	LOG(INFO) << nodes[nid].name << " " << source_aux_shapes[i];
+      	try {
+          (*node_aux_shapes)[nid].push_back(source_aux_shapes[i]);
+        } catch (const op::InferShapeError &err) {
+          const std::string &op_name = nodes[nid].name;
+          std::ostringstream os;
+          os << "InferShape Error in "
+             << op_name << "\'s" << " aux states\n"
+             << err.msg;
+          throw dmlc::Error(os.str());
+        }
+      }
     }
   }
   // TODO(bing) assign shape for head gradient

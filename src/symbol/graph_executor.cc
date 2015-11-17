@@ -352,15 +352,23 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NDArray> &in_args,
   }
   // bind aux args
   size_t aux_ndarray_idx = 0;
+//  printf("%d,%d\n", aux_states.size(), op_nodes_.size());
   for (size_t i = 0; i < aux_shapes.size(); ++i) {
     op_nodes_[i].aux_states.resize(aux_shapes[i].size());
+
     for (size_t j = 0; j < aux_shapes[i].size(); ++j) {
+//      printf("%d\n", aux_shapes[i].size());
+//      printf("%d\n", graph_.nodes[i].backward_source_id);
       DataEntryInfo &info = op_nodes_[i].aux_states[j];
       info.shape = aux_shapes[i][j];
       info.type = kBindByExternal;
-      CHECK_GT(aux_states.size(), aux_ndarray_idx)
-        << "Input auxiliary NDArray is less than required";
-      info.data = aux_states[aux_ndarray_idx++];
+      if (aux_ndarray_idx < aux_states.size()) {
+        info.data = aux_states[aux_ndarray_idx++];
+      } else {
+        CHECK_NE(graph_.nodes[i].backward_source_id, -1)
+          << "Input auxiliary NDArray is less than required";
+        info.data = op_nodes_[graph_.nodes[i].backward_source_id].aux_states[j].data;  
+      }
       CHECK_EQ(info.data.data().shape_, info.shape)
         << "Incorrect NDArray shape"
         << " Input: " << info.data.data().shape_
