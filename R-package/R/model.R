@@ -244,8 +244,14 @@ mx.model.train <- function(symbol, ctx, input.shape,
     }
     # get the model out
     model <- mx.model.extract.model(symbol, train.execs)
+
+    epoch_continue <- TRUE
     if (!is.null(epoch.end.callback)) {
-      epoch.end.callback(iteration, 0, environment())
+      epoch_continue <- epoch.end.callback(iteration, 0, environment())
+    }
+
+    if (!epoch_continue) {
+      break
     }
   }
   return(model)
