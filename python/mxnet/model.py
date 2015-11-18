@@ -546,13 +546,13 @@ class FeedForward(BASE_ESTIMATOR):
         aux_params = {k : nd.zeros(s) for k, s in zip(aux_names, aux_shapes)}
 
         for k, v in arg_params.items():
-            if k in self.arg_params and (not overwrite):
+            if self.arg_params and k in self.arg_params and (not overwrite):
                 arg_params[k][:] = self.arg_params[k][:]
             else:
                 self.initializer(k, v)
 
-        for k, v in self.aux_params.items():
-            if k in self.aux_params and (not overwrite):
+        for k, v in aux_params.items():
+            if self.aux_params and k in self.aux_params and (not overwrite):
                 aux_params[k][:] = self.aux_params[k][:]
             else:
                 self.initializer(k, v)
