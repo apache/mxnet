@@ -8,28 +8,32 @@ width=400/>
 
 ## How to use
 
-- First build mxnet by following the [guide](http://mxnet.readthedocs.org/en/latest/build.html)
+First build mxnet by following the [guide](http://mxnet.readthedocs.org/en/latest/build.html)
 
-- Use `train_dataset.py` to training models on a particular dataset. For example,
-  train a MLP on mnist
+### Train
+
+Use `train_dataset.py` to training models on a particular dataset. For example:
+
+
+- train a MLP on mnist
 
   ```bash
   python train_mnist.py
   ```
 
-  save models for each epoch
+- save the models for each epoch
 
   ```bash
   mkdir model; python train_mnist.py --model-prefix model/mnist
   ```
 
-  restart training from the model saved at epoch 8
+- restart training from the model saved at epoch 8
 
   ```bash
-  mkdir model; python train_mnist.py --model-prefix model/mnist --load-epoch 8
+  python train_mnist.py --model-prefix model/mnist --load-epoch 8
   ```
 
-  train a convolution neural network on mnist by using GPU 0:
+- train a convolution neural network on mnist by using GPU 0:
 
   ```bash
   python train_mnist.py --network lenet --gpus 0
@@ -37,26 +41,27 @@ width=400/>
 
   we can also use multiple GPUs by `---gpus 0,1,3`
 
+- uses `--help` to see more options
+
+- Distributed training, e.g.using multiple GPU machines, is also support, refer to
+  [Distributed Training](../distributed-training/) for how to launch the jobs.
   See more options by `--help`
 
-  ```bash
-  python train_mnist.py --help
-  ```
+### Predict
 
-  Distributed training, e.g.using multiple GPU machines, is also support, refer to
-  [Distributed Training](../distributed-training/) for how to launch the jobs.
+Pre-trained models are provided on the
+[model gallery](https://github.com/dmlc/mxnet-model-gallerya).
 
-- Pre-trained models are provided on the
-  [model gallery](https://github.com/dmlc/mxnet-model-gallerya). We can also
-  easily to run the prediction on various devices, such as [Android/iOS](http://dmlc.ml/mxnet/2015/11/10/deep-learning-in-a-single-file-for-smart-device.html)
+We can also easily to run the prediction on various devices, such as
+[Android/iOS](http://dmlc.ml/mxnet/2015/11/10/deep-learning-in-a-single-file-for-smart-device.html)
 
 
-## Prepare Datasets
+### Use Your Own Datasets
 
-For small datasets such as `mnist` and `cifar10`, we will automatically download
-the dataset. While for large ones, such as ImageNet, we need to prepare by
-ourselves. Please refer to the document
+Please refer to the document
 "[How to Create Dataset Using RecordIO](https://mxnet.readthedocs.org/en/latest/python/io.html#create-dataset-using-recordio)"
 for a step-by-step tutorial.
 
 Note: A commonly mistake is forgetting shuffle the image list during packing. This will lead fail of training, eg. ```accuracy``` keeps 0.001 for several rounds.
+
+Note: We will automatically download the small datasets such as `mnist` and `cifar10`
