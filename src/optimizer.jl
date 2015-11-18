@@ -211,7 +211,7 @@ abstract AbstractOptimizerOptions
 =#
 function normalized_gradient(opts::AbstractOptimizerOptions, state::OptimizationState,
                              weight::NDArray, grad::NDArray)
-  grad_scale = opts.grad_scale / state.batch_size
+  grad_scale = 1.0 / state.batch_size
 
   grad = grad_scale * grad
   if opts.grad_clip > 0

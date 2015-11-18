@@ -88,7 +88,7 @@ extract_doc("initializer.rst", "initializer.jl")
 extract_doc("callback.rst", "callback.jl")
 extract_doc("model.rst", "model.jl")
 
-extract_doc("optimizer.rst", "optimizer.jl")
+extract_doc("optimizer.rst", "optimizer.jl", "optimizers/sgd.jl", "optimizers/adam.jl")
 extract_doc("metric.rst", "metric.jl")
 
 extract_doc("io.rst", "io.jl")
