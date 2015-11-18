@@ -139,3 +139,47 @@ Built-in optimizers
 
 
 
+
+.. class:: SGD
+
+   Stochastic gradient descent optimizer.
+
+   .. function:: SGD(; kwargs...)
+
+      :param Real lr: default `0.01`, learning rate.
+      :param AbstractLearningRateScheduler lr_scheduler: default `nothing`, a
+             dynamic learning rate scheduler. If set, will overwrite the `lr`
+             parameter.
+      :param Real momentum: default `0.0`, the momentum.
+      :param AbstractMomentumScheduler momentum_scheduler: default `nothing`,
+             a dynamic momentum scheduler. If set, will overwrite the `momentum`
+             parameter.
+      :param Real grad_clip: default `0`, if positive, will clip the gradient
+             into the bounded range `[-grad_clip, grad_clip]`.
+      :param Real weight_decay: default `0.0001`, weight decay is equivalent to
+             adding a global l2 regularizer to the parameters.
+
+
+
+
+.. class:: ADAM
+
+   The solver described in Diederik Kingma, Jimmy Ba: *Adam: A Method for
+   Stochastic Optimization*. arXiv:1412.6980 [cs.LG].
+
+   .. function:: ADAM(; kwargs...)
+
+      :param Real lr: default `0.001`, learning rate.
+      :param AbstractLearningRateScheduler lr_scheduler: default `nothing`, a
+             dynamic learning rate scheduler. If set, will overwrite the `lr`
+             parameter.
+      :param Real beta1: default `0.9`.
+      :param Real beta2: default `0.999`.
+      :param Real epsilon: default `1e-8`.
+      :param Real grad_clip: default `0`, if positive, will clip the gradient
+             into the range `[-grad_clip, grad_clip]`.
+      :param Real weight_decay: default `0.00001`, weight decay is equivalent
+             to adding a global l2 regularizer for all the parameters.
+
+
+

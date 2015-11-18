@@ -186,7 +186,7 @@ Public APIs
    
    
    :param momentum: Momentum for moving average
-   :type momentum: float, optional, default=0.9
+   :type momentum: float, optional, default=0.1
    
    :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
