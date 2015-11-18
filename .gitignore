@@ -77,5 +77,3 @@ R-package/inst/*
 *.rec
 *.lst
 *.zip
-*ubyte
-*.bin
