@@ -1,6 +1,7 @@
 """
-Inception + Batch normalization. suitable for images has size 28 x 28
+simplified inception-bn.py for images has size around 28 x 28
 """
+
 import find_mxnet
 import mxnet as mx
 

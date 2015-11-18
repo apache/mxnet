@@ -9,15 +9,27 @@ width=400/>
 ## How to use
 
 - First build mxnet by following the [guide](http://mxnet.readthedocs.org/en/latest/build.html)
-- [network](network/) contains various neural networks
-- Other directories, e.g.~[mnist](mnist/), contain programs to train models on a
-  particular dataset. e.g.
+
+- Use `train_dataset.py` to training models on various dataset. For example,
+  train a MLP on mnist
 
   ```bash
-  cd mnist; python train_lenet.py
+  python train_mnist.py
   ```
 
-- pre-trained models are also provided.
+  or train a convetnet on mnist using GPU 0
+
+  ```bash
+  python train_mnist.py --network lenet --gpus 0
+  ```
+
+  See more options
+
+  ```bash
+  python train_mnist.py --help
+  ```
+
+- Pre-trained models are also provided.
 
 ## More
 
