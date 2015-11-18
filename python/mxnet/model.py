@@ -541,26 +541,24 @@ class FeedForward(BASE_ESTIMATOR):
         param_names = list(set(arg_names) - set(input_names))
         aux_names = self.symbol.list_auxiliary_states()
 
-        arg_defined = True
-        aux_defined = True
+        param_name_shapes = [x for x in zip(arg_names, arg_shapes) if x[0] in param_names]
+        arg_params = {k : nd.zeros(s) for k, s in param_name_shapes}
+        aux_params = {k : nd.zeros(s) for k, s in zip(aux_names, aux_shapes)}
 
-        if self.arg_params is None:
-            arg_defined = False
-            param_name_shapes = [x for x in zip(arg_names, arg_shapes) if x[0] in param_names]
-            self.arg_params = {k : nd.zeros(s) for k, s in param_name_shapes}
-
-        if self.aux_params is None:
-            aux_defined = False
-            self.aux_params = {k : nd.zeros(s) for k, s in zip(aux_names, aux_shapes)}
-
-        if (not arg_defined) or overwrite:
-            for k, v in self.arg_params.items():
+        for k, v in arg_params.items():
+            if self.arg_params and k in self.arg_params and (not overwrite):
+                arg_params[k][:] = self.arg_params[k][:]
+            else:
                 self.initializer(k, v)
 
-        if (not aux_defined) or overwrite:
-            for k, v in self.aux_params.items():
+        for k, v in aux_params.items():
+            if self.aux_params and k in self.aux_params and (not overwrite):
+                aux_params[k][:] = self.aux_params[k][:]
+            else:
                 self.initializer(k, v)
 
+        self.arg_params = arg_params
+        self.aux_params = aux_params
         return (arg_names, param_names, aux_names)
 
     def __getstate__(self):
