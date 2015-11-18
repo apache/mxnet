@@ -1,6 +1,8 @@
 # pylint: disable=fixme, invalid-name, unused-argument, too-many-arguments, no-name-in-module
 """Common Optimization algorithms with regularizations."""
 from .ndarray import NDArray, zeros, clip
+import math
+import mxnet as mx
 
 class Optimizer(object):
     """Base class of all optimizers."""
@@ -169,6 +171,124 @@ class SGD(Optimizer):
         else:
             assert self.momentum == 0.0
             weight[:] += -lr * (grad + self.wd * weight)
+
+@register
+class Adam(Optimizer):
+    """Adam optimizer as described in [King2014]_.
+
+    .. [King2014] Diederik Kingma, Jimmy Ba,
+       *Adam: A Method for Stochastic Optimization*,
+       http://arxiv.org/abs/1412.6980
+
+    the code in this class was adapted from
+    https://github.com/mila-udem/blocks/blob/master/blocks/algorithms/__init__.py#L765
+
+    Parameters
+    ----------
+    learning_rate : float, optional
+        Step size.
+        Default value is set to 0.0002.
+    beta1 : float, optional
+        Exponential decay rate for the first moment estimates.
+        Default value is set to 0.1.
+    beta2 : float, optional
+        Exponential decay rate for the second moment estimates.
+        Default value is set to 0.001.
+    epsilon : float, optional
+        Default value is set to 1e-8.
+    decay_factor : float, optional
+        Default value is set to 1 - 1e-8.
+
+    rescale_grad : float, optional
+        rescaling factor of gradient.
+
+    clip_gradient : float, optional
+        clip gradient in range [-clip_gradient, clip_gradient]
+    """
+    def __init__(self, learning_rate=0.002,
+                 beta1=0.1, beta2=0.001, epsilon=1e-8,
+                 decay_factor=(1 - 1e-8),
+                 rescale_grad=1, clip_gradient=None,
+                 lr_scheduler=None):
+        super(Adam, self).__init__(rescale_grad)
+        self.lr = learning_rate
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+        self.decay_factor = decay_factor
+        self.clip_gradient = clip_gradient
+        self.lr_scheduler = lr_scheduler
+        if lr_scheduler != None:
+            self.lr_scheduler.base_lr = learning_rate
+
+    def create_state(self, index, weight):
+        """Create additional optimizer state: mean, variance, previous_step
+
+        Parameters
+        ----------
+        weight : NDArray
+            The weight data
+
+        """
+        self.time = 0  # all parameters share the same time
+        self.time_first_index = None  # time is incremented only on the first index
+        return (zeros(weight.shape, weight.context),  # mean
+                zeros(weight.shape, weight.context),  # variance
+                zeros(weight.shape, weight.context))  # previous_step
+
+    def update(self, index, weight, grad, state):
+        """Update the parameters.
+
+        Parameters
+        ----------
+        index : int
+            An unique integer key used to index the parameters
+
+        weight : NDArray
+            weight ndarray
+
+        grad : NDArray
+            grad ndarray
+
+        state : NDArray or other objects returned by init_state
+            The auxiliary state used in optimization.
+        """
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        if self.lr_scheduler != None:
+            lr = self.lr_scheduler(self.epoch)
+        else:
+            lr = self.lr
+        lr *= self.lr_scale.get(index, 1.0)
+
+        mean, variance, previous_step = state
+
+        # increment time only when the first parameters is called
+        if self.time_first_index is None:
+            self.time_first_index = index
+        elif self.time_first_index == index:
+            self.time += 1
+
+        t1 = self.time + 1
+        learning_rate = (lr *
+                         math.sqrt((1. - (1. - self.beta2)**t1)) /
+                         (1. - (1. - self.beta1)**t1))
+        beta_1t = 1 - (1 - self.beta1) * self.decay_factor ** (t1 - 1)
+
+        grad = grad * self.rescale_grad
+        if self.clip_gradient != None:
+            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+
+        mean_t = beta_1t * previous_step + (1. - beta_1t) * mean
+        variance_t = (self.beta2 * mx.nd.sqr(previous_step) +
+                      (1. - self.beta2) * variance)
+        step = (learning_rate * mean_t /
+                (mx.nd.sqrt(variance_t) + self.epsilon))
+
+        weight[:] += step * grad
+        mean[:] = mean_t
+        variance[:] = variance_t
+        previous_step[:] = step
 
 @register
 class Test(Optimizer):
