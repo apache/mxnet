@@ -276,8 +276,8 @@ class Adam(Optimizer):
 
         t1 = self.time + 1
         learning_rate = (lr *
-                         math.sqrt(self.beta2**t1) /
-                         (self.beta1**t1))
+                         math.sqrt(1. - self.beta2**t1) /
+                         (1. - self.beta1**t1))
         beta_1t = self.beta1 * self.decay_factor ** (t1 - 1)
 
         grad = grad * self.rescale_grad
