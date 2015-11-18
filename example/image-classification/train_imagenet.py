@@ -2,6 +2,7 @@ import find_mxnet
 import mxnet as mx
 import logging
 import argparse
+import train_model
 
 # don't use -n and -s, which are resevered for the distributed training
 parser = argparse.ArgumentParser(description='train an image classifer on imagenet')
@@ -11,7 +12,7 @@ parser.add_argument('--network', type=str, default='alexnet',
 parser.add_argument('--data-dir', type=str, required=True,
                     help='the input data directory')
 parser.add_argument('--model-prefix', type=str,
-                    help='the prefix of the model')
+                    help='the prefix of the model to load/save')
 parser.add_argument('--lr', type=float, default=.05,
                     help='the initial learning rate')
 parser.add_argument('--num-epochs', type=int, default=20,
@@ -32,64 +33,32 @@ args = parser.parse_args()
 
 # network
 import importlib
-net = importlib.import_module(args.network)
-
-# kvstore
-kv = mx.kvstore.create(args.kv_type)
-head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
-logging.basicConfig(level=logging.DEBUG, format=head)
+net = importlib.import_module(args.network).get_symbol(args.num_classes)
 
 # data
-data_shape = (3, 224, 224)
-print args.data_dir
-train = mx.io.ImageRecordIter(
-    path_imgrec = args.data_dir + "train.rec",
-    mean_img    = args.data_dir + "mean.bin",
-    data_shape  = data_shape,
-    batch_size  = args.batch_size,
-    rand_crop   = True,
-    rand_mirror = True,
-    num_parts   = kv.num_workers,
-    part_index  = kv.rank)
+def get_iterator(args, kv):
+    data_shape = (3, 224, 224)
+    train = mx.io.ImageRecordIter(
+        path_imgrec = args.data_dir + "train.rec",
+        mean_img    = args.data_dir + "mean.bin",
+        data_shape  = data_shape,
+        batch_size  = args.batch_size,
+        rand_crop   = True,
+        rand_mirror = True,
+        num_parts   = kv.num_workers,
+        part_index  = kv.rank)
 
-val = mx.io.ImageRecordIter(
-    path_imgrec = args.data_dir + "val.rec",
-    mean_img    = args.data_dir + "mean.bin",
-    rand_crop   = False,
-    rand_mirror = False,
-    data_shape  = data_shape,
-    batch_size  = args.batch_size,
-    num_parts   = kv.num_workers,
-    part_index  = kv.rank)
+    val = mx.io.ImageRecordIter(
+        path_imgrec = args.data_dir + "val.rec",
+        mean_img    = args.data_dir + "mean.bin",
+        rand_crop   = False,
+        rand_mirror = False,
+        data_shape  = data_shape,
+        batch_size  = args.batch_size,
+        num_parts   = kv.num_workers,
+        part_index  = kv.rank)
 
-# load / save model?
-model_prefix = args.model_prefix
-checkpoint = None
-if model_prefix is not None:
-    model_prefix += "-%d" % (kv.rank)
-    checkpoint = mx.callback.do_checkpoint(model_prefix)
-
-load_model = {}
-if args.load_epoch is not None:
-    assert model_prefix is not None
-    tmp = mx.model.FeedForward.load(model_prefix, args.load_epoch)
-    load_model = {'arg_params' : tmp.arg_params,
-                  'aux_params' : tmp.aux_params,
-                  'begin_epoch' : args.load_epoch}
+    return (train, val)
 
 # train
-model = mx.model.FeedForward(
-    ctx                = [mx.gpu(int(i)) for i in args.gpus.split(',')],
-    symbol             = net.get_symbol(args.num_classes),
-    num_epoch          = args.num_epochs,
-    learning_rate      = args.lr,
-    momentum           = 0.9,
-    wd                 = 0.00001,
-    **load_model)
-
-model.fit(
-    X                  = train,
-    eval_data          = val,
-    kvstore            = kv,
-    batch_end_callback = mx.callback.Speedometer(args.batch_size, 50),
-    epoch_end_callback = checkpoint)
+train_model.fit(args, net, get_iterator)
