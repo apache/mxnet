@@ -19,6 +19,7 @@ Tutorials
 * [Classify Realworld Images with Pretrained Model](classifyRealImageWithPretrainedModel.md)
 * [Handwritten Digits Classification Competition](mnistCompetition.md)
 * [Tutorial on NDArray and Symbol](ndarrayAndSymbolTutorial.md)
+* [Tutorial on Callback Functions](CallbackFunctionTutorial.md)
 
 Resources
 ---------

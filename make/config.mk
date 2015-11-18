@@ -59,7 +59,7 @@ USE_OPENMP = 1
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
 USE_STATIC_MKL = NONE
-USE_BLAS = atlas
+USE_BLAS = blas
 
 # add path to intel libary, you may need it for MKL, if you did not add the path
 # to enviroment variable

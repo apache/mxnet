@@ -118,6 +118,8 @@ class NumpyOp(PythonOp):
     is intended for quickly hacking out a solution for non performance
     critical parts. Please consider write a c++ implementation if it becomes
     a bottleneck.
+    Note that if your operator contains internal states (like arrays),
+    it cannot be used for multi-gpu training.
     """
     def __init__(self, need_top_grad=True):
         super(NumpyOp, self).__init__(need_top_grad)
@@ -201,7 +203,11 @@ class NumpyOp(PythonOp):
                                  None, None, None, None, None)
         cb_ptr = format(cast(pointer(self.info_), c_void_p).value, 'x')
         # pylint: disable=E1101
-        return symbol.Symbol._Native(*args,
-                                     info=cb_ptr,
-                                     need_top_grad=self.need_top_grad(),
-                                     **kwargs)
+        sym = symbol.Symbol._Native(*args,
+                                    info=cb_ptr,
+                                    need_top_grad=self.need_top_grad(),
+                                    **kwargs)
+        # keep a reference of ourself in sym so we don't get garbage collected
+        # before sym is collected.
+        sym._numpy_op = self
+        return sym

@@ -4,7 +4,7 @@
 \alias{mx.callback.log.train.metric}
 \title{Log training metric each period}
 \usage{
-mx.callback.log.train.metric(period)
+mx.callback.log.train.metric(period, logger = NULL)
 }
 \description{
 Log training metric each period
