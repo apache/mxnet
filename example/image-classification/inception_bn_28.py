@@ -1,11 +1,7 @@
 """
 Inception + Batch normalization. suitable for images has size 28 x 28
 """
-
-import os
-import sys
-curr_path = os.path.abspath(os.path.dirname(__file__))
-sys.path.append(os.path.join(curr_path, "../../../python"))
+import find_mxnet
 import mxnet as mx
 
 # Basic Conv + BN + ReLU factory
@@ -35,7 +31,7 @@ def SimpleFactory(data, ch_1x1, ch_3x3):
     concat = mx.symbol.Concat(*[conv1x1, conv3x3])
     return concat
 
-def get_symbol(num_label = 10):
+def get_symbol(num_classes = 10):
     data = mx.symbol.Variable(name="data")
     conv1 = ConvFactory(data=data, kernel=(3,3), pad=(1,1), num_filter=96, act_type="relu")
     in3a = SimpleFactory(conv1, 32, 32)
@@ -50,6 +46,6 @@ def get_symbol(num_label = 10):
     in5b = SimpleFactory(in5a, 176, 160)
     pool = mx.symbol.Pooling(data=in5b, pool_type="avg", kernel=(7,7), name="global_pool")
     flatten = mx.symbol.Flatten(data=pool, name="flatten1")
-    fc = mx.symbol.FullyConnected(data=flatten, num_hidden=num_label, name="fc1")
+    fc = mx.symbol.FullyConnected(data=flatten, num_hidden=num_classes, name="fc1")
     softmax = mx.symbol.SoftmaxOutput(data=fc, name="softmax")
     return softmax
