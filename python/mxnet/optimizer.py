@@ -237,8 +237,7 @@ class Adam(Optimizer):
         """
         self.time_first_index = None  # time is incremented only on the first index
         return (zeros(weight.shape, weight.context),  # mean
-                zeros(weight.shape, weight.context),  # variance
-                )
+                zeros(weight.shape, weight.context))  # variance
 
     def update(self, index, weight, grad, state):
         """Update the parameters.
