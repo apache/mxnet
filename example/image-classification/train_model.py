@@ -4,7 +4,11 @@ import logging
 
 def fit(args, network, data_loader):
     # kvstore
+<<<<<<< HEAD
     kv = mx.kvstore.create(args.kv_store)
+=======
+    kv = mx.kvstore.create(args.kv_type)
+>>>>>>> [example] update
 
     # logging
     head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
@@ -15,11 +19,19 @@ def fit(args, network, data_loader):
     model_prefix = args.model_prefix
     if model_prefix is not None:
         model_prefix += "-%d" % (kv.rank)
+<<<<<<< HEAD
     model_args = {}
     if args.load_epoch is not None:
         assert model_prefix is not None
         tmp = mx.model.FeedForward.load(model_prefix, args.load_epoch)
         model_args = {'arg_params' : tmp.arg_params,
+=======
+    load_model = {}
+    if args.load_epoch is not None:
+        assert model_prefix is not None
+        tmp = mx.model.FeedForward.load(model_prefix, args.load_epoch)
+        load_model = {'arg_params' : tmp.arg_params,
+>>>>>>> [example] update
                       'aux_params' : tmp.aux_params,
                       'begin_epoch' : args.load_epoch}
     # save model?
@@ -29,6 +41,7 @@ def fit(args, network, data_loader):
     (train, val) = data_loader(args, kv)
 
     # train
+<<<<<<< HEAD
     devs = mx.cpu() if args.gpus is None else [
         mx.gpu(int(i)) for i in args.gpus.split(',')]
 
@@ -43,6 +56,11 @@ def fit(args, network, data_loader):
             step = max(int(epoch_size * args.lr_factor_epoch), 1),
             factor = args.lr_factor)
 
+=======
+    devs = mx.cpu()
+    if args.gpus is not None:
+        devs = [mx.gpu(int(i)) for i in args.gpus.split(',')]
+>>>>>>> [example] update
     model = mx.model.FeedForward(
         ctx                = devs,
         symbol             = network,
@@ -50,8 +68,12 @@ def fit(args, network, data_loader):
         learning_rate      = args.lr,
         momentum           = 0.9,
         wd                 = 0.00001,
+<<<<<<< HEAD
         **model_args)
 
+=======
+        **load_model)
+>>>>>>> [example] update
     model.fit(
         X                  = train,
         eval_data          = val,
