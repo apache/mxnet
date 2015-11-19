@@ -1,5 +1,8 @@
 CIFAR 10 Example
 ================
+
+***NOTE: DEPRECATED, see [../image-classification](../image-classification/) for the new version***
+
 * [cifar10.py](cifar10.py) provides an example to train a dual path model on CIFAR-10. Original network in CXXNET is able to achieve 91.6% accuracy.
 
 

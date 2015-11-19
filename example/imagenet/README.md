@@ -1,5 +1,7 @@
 # Training Neural Networks on Imagenet
 
+***NOTE: DEPRECATED, see [../image-classification](../image-classification/) for the new version***
+
 ## Prepare Dataset
 
 We are using RecordIO to pack image together. By packing images into Record IO, we can reach 3000 images/second on a normal HDD disk. This includes cost of crop from (3 x 256 x 256) to (3 x 224 x 224), random flip and other augmentation.

@@ -1,5 +1,7 @@
 # Training Neural Networks on MNIST
 
+***NOTE: DEPRECATED, see [../image-classification](../image-classification/) for the new version***
+
 The [MNIST](http://yann.lecun.com/exdb/mnist/) database of handwritten digits
 has a training set of 60,000 examples, and a test set of 10,000 examples. Each
 example is a 28 × 28 gray image. They are provided by Yann LeCun, Corinna
