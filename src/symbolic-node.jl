@@ -250,15 +250,25 @@ function Base.getindex(self :: SymbolicNode, idx :: Int)
 end
 
 import Base: +, .+
-function +(self :: SymbolicNode, args :: SymbolicNode...)
+function +(self :: SymbolicNode, args :: Union{SymbolicNode,Real}...)
   ret = self
   for arg in args
-    ret = _Plus(ret, arg)
+    if isa(arg, SymbolicNode)
+      ret = _Plus(ret, arg)
+    else
+      ret = _PlusScalar(ret, scalar=MX_float(arg))
+    end
   end
   ret
 end
-function .+(self :: SymbolicNode, args :: SymbolicNode...)
+function .+(self :: SymbolicNode, args :: Union{SymbolicNode,Real}...)
   +(self, args...)
+end
+function +(s1 :: Real, self :: SymbolicNode, args :: Union{SymbolicNode,Real}...)
+  +(self, s1, args...)
+end
+function .+(s1 :: Real, self :: SymbolicNode, args :: Union{SymbolicNode,Real}...)
+  +(self, s1, args...)
 end
 
 import Base: -, .-
@@ -268,19 +278,69 @@ end
 function .-(self :: SymbolicNode, arg :: SymbolicNode)
   -(self, arg)
 end
+function -(self :: SymbolicNode, arg :: Real)
+  _MinusScalar(self, scalar=MX_float(arg))
+end
+function .-(self :: SymbolicNode, arg :: Real)
+  -(self, arg)
+end
 
-import Base: .*
-function .*(self :: SymbolicNode, args :: SymbolicNode...)
+function -(arg :: Real, self :: SymbolicNode)
+  _MinusScalar(self, scalar=arg, scalar_on_right=true)
+end
+function .-(arg :: Real, self :: SymbolicNode)
+  -(arg, self)
+end
+
+function -(self :: SymbolicNode)
+  -(0, self)
+end
+
+import Base: .*, *
+function .*(self :: SymbolicNode, args :: Union{SymbolicNode,Real}...)
   ret = self
   for arg in args
-    ret = _Mul(ret, arg)
+    if isa(arg, SymbolicNode)
+      ret = _Mul(ret, arg)
+    else
+      ret = _MulScalar(ret, scalar=MX_float(arg))
+    end
   end
   ret
 end
+function .*(arg :: Real, self :: SymbolicNode, args :: Union{SymbolicNode,Real}...)
+  .*(self, arg, args...)
+end
+function *(arg :: Real, self :: SymbolicNode)
+  _MulScalar(self, scalar=arg)
+end
+function *(self :: SymbolicNode, arg :: Real)
+  *(arg, self)
+end
 
-import Base: ./
+import Base: ./, /
 function ./(self :: SymbolicNode, arg :: SymbolicNode)
   _Div(self, arg)
+end
+function ./(self :: SymbolicNode, arg :: Real)
+  _DivScalar(self, scalar=MX_float(arg))
+end
+function /(self :: SymbolicNode, arg :: Real)
+  ./(self, arg)
+end
+function ./(arg :: Real, self :: SymbolicNode)
+  _DivScalar(self, scalar=arg, scalar_on_right=true)
+end
+
+import Base: .^, ^
+function .^(self :: SymbolicNode, pow :: SymbolicNode)
+  _Power(self, pow)
+end
+function .^(self :: SymbolicNode, pow :: AbstractFloat)
+  _PowerScalar(self, scalar=pow)
+end
+function ^(self :: SymbolicNode, pow :: AbstractFloat)
+  .^(self, pow)
 end
 
 function _compose!(node :: SymbolicNode; kwargs...)
@@ -519,4 +579,3 @@ macro chain(layers)
   end
   return Expr(:block, exprs...)
 end
-
