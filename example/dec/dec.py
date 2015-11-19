@@ -1,6 +1,9 @@
 # pylint: skip-file
 import sys
-sys.path = ['../autoencoder'] + sys.path
+import os
+# code to automatically download dataset
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path = [os.path.join(curr_path, "../autoencoder")] + sys.path
 import mxnet as mx
 import numpy as np
 import data
@@ -10,7 +13,6 @@ import model
 from autoencoder import AutoEncoderModel
 from solver import Solver, Monitor
 import logging
-import os
 
 def cluster_acc(Y_pred, Y):
   from sklearn.utils.linear_assignment_ import linear_assignment
