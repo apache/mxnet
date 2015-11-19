@@ -114,7 +114,7 @@ class SGD(Optimizer):
         self.wd = wd
         self.clip_gradient = clip_gradient
         self.lr_scheduler = lr_scheduler
-        if lr_scheduler != None:
+        if lr_scheduler is not None:
             self.lr_scheduler.base_lr = learning_rate
         self.momentums = {}
 
@@ -152,14 +152,14 @@ class SGD(Optimizer):
         # TODO(bing) implement wd_bias, wd_gamma, wd_beta
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-        if self.lr_scheduler != None:
+        if self.lr_scheduler is not None:
             lr = self.lr_scheduler(self.epoch)
         else:
             lr = self.lr
         lr *= self.lr_scale.get(index, 1.0)
 
         grad = grad * self.rescale_grad
-        if self.clip_gradient != None:
+        if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
 
         if state:
@@ -221,7 +221,7 @@ class Adam(Optimizer):
         self.wd = wd
         self.clip_gradient = clip_gradient
         self.lr_scheduler = lr_scheduler
-        if lr_scheduler != None:
+        if lr_scheduler is not None:
             self.lr_scheduler.base_lr = learning_rate
         self.time = 0
         self.time_first_index = None
@@ -258,7 +258,7 @@ class Adam(Optimizer):
         """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-        if self.lr_scheduler != None:
+        if self.lr_scheduler is not None:
             lr = self.lr_scheduler(self.epoch)
         else:
             lr = self.lr
