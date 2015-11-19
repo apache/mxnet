@@ -33,7 +33,7 @@ args = parser.parse_args()
 
 # network
 import importlib
-net = importlib.import_module(args.network).get_symbol(args.num_classes)
+net = importlib.import_module('symbol_' + args.network).get_symbol(args.num_classes)
 
 # data
 def get_iterator(args, kv):

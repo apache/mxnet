@@ -41,7 +41,7 @@ def _download(data_dir):
 
 # network
 import importlib
-net = importlib.import_module(args.network).get_symbol(10)
+net = importlib.import_module('symbol_' + args.network).get_symbol(10)
 
 # data
 def get_iterator(args, kv):
