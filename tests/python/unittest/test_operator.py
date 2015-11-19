@@ -111,50 +111,46 @@ def check_concat_with_shape(shapes, dimension):
         assert same(grad.asnumpy(), np_grad + 1)
 
 def test_concat():
-    for dimension in range(2):
+    for dimension in range(4):
         n = 2
-        if dimension == 1:
-            batch = 2
-            ch = [2, 3, 4, 5, 6]
-        elif dimension == 0:
-            batch = [2, 3, 4, 5, 6]
-            ch = 2
-        h = 3
-        w = 4
+        merge = [2, 3, 4, 5, 6]
+        a = 2
+        b = 3
+        c = 4
         # test  2D
         if dimension<2:
             for dim in range(2, 6):
                 shapes = []
                 for i in range(dim):
-                    if dimension == 1:
-                        shapes.append((batch, ch[i]))
-                    elif dimension == 0:
-                        shapes.append((batch[i], ch))
+                    if dimension == 0:
+                        shapes.append((merge[i], a))
+                    elif dimension == 1:
+                        shapes.append((a, merge[i]))
                 check_concat_with_shape(shapes,dimension)
         #test 3D
         if dimension<3:
             for dim in range(2, 6):
                 shapes = []
                 for i in range(dim):
-                    if dimension == 1:
-                        shapes.append((batch, ch[i],h))
-                    elif dimension ==0:
-                        shapes.append((batch[i], ch,h))
+                    if dimension == 0:
+                        shapes.append((merge[i], a,b))
+                    elif dimension ==1:
+                        shapes.append((a,merge[i],b))
                     elif dimension ==2:
-                        shapes.append((h, ch,batch[i]))
+                        shapes.append((a,b,merge[i]))
                 check_concat_with_shape(shapes,dimension)            
         # test 4D
         for dim in range(2, 6):
             shapes = []
             for i in range(dim):
-                if dimension == 1:
-                    shapes.append((batch, ch[i], h, w))
-                elif dimension == 0:
-                    shapes.append((batch[i], ch, h, w))
+                if dimension == 0:
+                    shapes.append((merge[i],a,b,c))
+                elif dimension == 1:
+                    shapes.append((a,merge[i],b,c))
                 elif dimension ==2:
-                    shapes.append((h, ch, batch[i], w))
-                else dimension ==3:
-                    shapes.append((h, ch, w, batch[i]))
+                    shapes.append((a,b,merge[i],c))
+                elif dimension ==3:
+                    shapes.append((a,b,c,merge[i]))
             check_concat_with_shape(shapes,dimension)
 
 def test_slice_channel():
