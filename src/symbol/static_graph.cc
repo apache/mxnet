@@ -134,7 +134,7 @@ bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
       // set for auxilary states shape.
       auto& source_aux_shapes = (*node_aux_shapes)[node.backward_source_id];
       for (size_t i = 0; i < source_aux_shapes.size(); ++i) {
-      	try {
+        try {
           (*node_aux_shapes)[nid].push_back(source_aux_shapes[i]);
         } catch (const op::InferShapeError &err) {
           const std::string &op_name = nodes[nid].name;
