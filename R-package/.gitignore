@@ -4,3 +4,4 @@ R-package.Rproj
 *.o
 *.so
 *.html
+inst/doc

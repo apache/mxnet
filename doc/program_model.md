@@ -46,7 +46,7 @@ Then the real computation happens at the last step of the code. The major charac
 is the clear separation between the computation graph definition step, and the compile, running step.
 
 Examples of imperative style deep learning libraries includes Torch, Chainer, Minerva.
-While the example of symbolic style deep learning libraries include Theano, CGT.
+While the example of symbolic style deep learning libraries include Theano, CGT and Tensorflow.
 The libraries that uses configuration files like cxxnet, caffe can also be viewed as symbolic style libraries.
 Where the configuration file content defines the computation graph.
 

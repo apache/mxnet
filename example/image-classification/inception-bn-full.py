@@ -1,33 +1,12 @@
-import sys
-sys.path.insert(0, "../../python/")
+"""
+An variant of inception-bn.py for the full imagenet dataset with >= 21841 classes
+"""
+
+import find_mxnet
 import mxnet as mx
 
-def ilsvrc12(data_dir, batch_size, num_parts=1, part_index=0):
-    """return ilsvrc12 iterator
-    """
-    input_shape = (3, 224, 224)
-    train = mx.io.ImageRecordIter(
-        path_imgrec = data_dir + "train.rec",
-        mean_img    = data_dir + "mean.bin",
-        data_shape  = input_shape,
-        batch_size  = batch_size,
-        rand_crop   = True,
-        rand_mirror = True,
-        num_parts   = num_parts,
-        part_index  = part_index)
-    val = mx.io.ImageRecordIter(
-        path_imgrec = data_dir + "val.rec",
-        mean_img    = data_dir + "mean.bin",
-        rand_crop   = False,
-        rand_mirror = False,
-        data_shape  = input_shape,
-        batch_size  = batch_size,
-        num_parts   = num_parts,
-        part_index  = part_index)
-    return (train, val)
-
 def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0), name=None, suffix=''):
-    conv = mx.symbol.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, name='conv_%s%s' %(name, suffix))
+    conv = mx.symbol.Convolution(data=data, workspace=512, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, name='conv_%s%s' %(name, suffix))
     bn = mx.symbol.BatchNorm(data=conv, name='bn_%s%s' %(name, suffix))
     act = mx.symbol.Activation(data=bn, act_type='relu', name='relu_%s%s' %(name, suffix))
     return act
@@ -63,25 +42,25 @@ def InceptionFactoryB(data, num_3x3red, num_3x3, num_d3x3red, num_d3x3, name):
     concat = mx.symbol.Concat(*[c3x3, cd3x3, pooling], name='ch_concat_%s_chconcat' % name)
     return concat
 
-def inception(nhidden):
+def inception(num_classes = 21841):
     # data
     data = mx.symbol.Variable(name="data")
     # stage 1
-    conv1 = ConvFactory(data=data, num_filter=64, kernel=(7, 7), stride=(2, 2), pad=(3, 3), name='conv1')
+    conv1 = ConvFactory(data=data, num_filter=96, kernel=(7, 7), stride=(2, 2), pad=(3, 3), name='conv1')
     pool1 = mx.symbol.Pooling(data=conv1, kernel=(3, 3), stride=(2, 2), name='pool1', pool_type='max')
     # stage 2
-    conv2red = ConvFactory(data=pool1, num_filter=64, kernel=(1, 1), stride=(1, 1), name='conv2red')
-    conv2 = ConvFactory(data=conv2red, num_filter=192, kernel=(3, 3), stride=(1, 1), pad=(1, 1), name='conv2')
+    conv2red = ConvFactory(data=pool1, num_filter=128, kernel=(1, 1), stride=(1, 1), name='conv2red')
+    conv2 = ConvFactory(data=conv2red, num_filter=288, kernel=(3, 3), stride=(1, 1), pad=(1, 1), name='conv2')
     pool2 = mx.symbol.Pooling(data=conv2, kernel=(3, 3), stride=(2, 2), name='pool2', pool_type='max')
     # stage 2
-    in3a = InceptionFactoryA(pool2, 64, 64, 64, 64, 96, "avg", 32, '3a')
-    in3b = InceptionFactoryA(in3a, 64, 64, 96, 64, 96, "avg", 64, '3b')
-    in3c = InceptionFactoryB(in3b, 128, 160, 64, 96, '3c')
+    in3a = InceptionFactoryA(pool2, 96, 96, 96, 96, 144, "avg", 48, '3a')
+    in3b = InceptionFactoryA(in3a, 96, 96, 144, 96, 144, "avg", 96, '3b')
+    in3c = InceptionFactoryB(in3b, 192, 240, 96, 144, '3c')
     # stage 3
     in4a = InceptionFactoryA(in3c, 224, 64, 96, 96, 128, "avg", 128, '4a')
     in4b = InceptionFactoryA(in4a, 192, 96, 128, 96, 128, "avg", 128, '4b')
     in4c = InceptionFactoryA(in4b, 160, 128, 160, 128, 160, "avg", 128, '4c')
-    in4d = InceptionFactoryA(in4c, 96, 128, 192, 160, 192, "avg", 128, '4d')
+    in4d = InceptionFactoryA(in4c, 96, 128, 192, 160, 96, "avg", 128, '4d')
     in4e = InceptionFactoryB(in4d, 128, 192, 192, 256, '4e')
     # stage 4
     in5a = InceptionFactoryA(in4e, 352, 192, 320, 160, 224, "avg", 128, '5a')
@@ -90,6 +69,6 @@ def inception(nhidden):
     avg = mx.symbol.Pooling(data=in5b, kernel=(7, 7), stride=(1, 1), name="global_pool", pool_type='avg')
     # linear classifier
     flatten = mx.symbol.Flatten(data=avg, name='flatten')
-    fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=nhidden, name='fc1')
+    fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=num_classes, name='fc1')
     softmax = mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
     return softmax

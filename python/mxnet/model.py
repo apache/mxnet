@@ -77,14 +77,15 @@ def _check_arguments(symbol):
         aux_set.add(name)
 
 
-def _split_input_slice(batch_size, num_split):
+def _split_input_slice(batch_size, work_load_list):
     """Get input slice from the input shape.
     Parameters
     ----------
     batch_size : int
         The number of samples in a mini-batch.
-    num_split : int
-        The number of split we want to have.
+    work_load_list : list of float or int, optional
+        The list of work load for different devices,
+        in the same order as ctx
     Returns
     -------
     slices : list of slice
@@ -94,12 +95,18 @@ def _split_input_slice(batch_size, num_split):
     ValueError
         If there are two many splits such that some slice can be empty.
     """
-    step = (batch_size + num_split - 1) / num_split
+    total_work_load = sum(work_load_list)
+    batch_num_list = [round(work_load * batch_size / total_work_load)
+                      for work_load in work_load_list]
+    batch_num_sum = sum(batch_num_list)
+    if batch_num_sum < batch_size:
+        batch_num_list[-1] += batch_size - batch_num_sum
     slices = []
-    for k in range(num_split):
-        begin = int(min(k * step, batch_size))
-        end = int(min((k+1) * step, batch_size))
-        if begin == end:
+    end = 0
+    for batch_num in batch_num_list:
+        begin = int(min((end, batch_size)))
+        end = int(min((begin + batch_num, batch_size)))
+        if begin >= end:
             raise ValueError('Too many slices such that some splits are empty')
         slices.append(slice(begin, end))
     return slices
@@ -150,7 +157,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         kvstore, update_on_kvstore,
                         train_data, eval_data=None, eval_metric=None,
                         epoch_end_callback=None, batch_end_callback=None,
-                        logger=None):
+                        logger=None, work_load_list=None):
     """Internal training function on multiple devices.
     This function will also work for single device as well.
     Parameters
@@ -198,6 +205,9 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         whether or not perform weight updating on kvstore
     logger : logging logger
         When not specified, default logger will be used.
+    work_load_list : list of float or int, optional
+        The list of work load for different devices,
+        in the same order as ctx
     Notes
     -----
     - This function will inplace update the NDArrays in arg_parans and aux_states.
@@ -211,7 +221,11 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     # make sure the architecture is valid
     _check_arguments(symbol)
 
-    slices = _split_input_slice(train_data.batch_size, num_device)
+    if work_load_list is None:
+        work_load_list = [1] * num_device
+    assert isinstance(work_load_list, list) and len(work_load_list) == num_device, \
+        "Invalid settings for work load. "
+    slices = _split_input_slice(train_data.batch_size, work_load_list)
     train_execs = []
     for i in range(len(ctx)):
         data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
@@ -237,9 +251,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     for texec in train_execs:
         texec.copy_params_from(arg_params, aux_params)
 
-    # init optmizer
-    optimizer.begin_epoch(begin_epoch)
-
     if not update_on_kvstore:
         updater = get_updater(optimizer)
 
@@ -264,6 +275,9 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
 
     # Now start training
     for epoch in range(begin_epoch, end_epoch):
+        # init optmizer
+        optimizer.begin_epoch(epoch)
+
         # Training phase
         tic = time.time()
         eval_metric.reset()
@@ -527,26 +541,24 @@ class FeedForward(BASE_ESTIMATOR):
         param_names = list(set(arg_names) - set(input_names))
         aux_names = self.symbol.list_auxiliary_states()
 
-        arg_defined = True
-        aux_defined = True
+        param_name_shapes = [x for x in zip(arg_names, arg_shapes) if x[0] in param_names]
+        arg_params = {k : nd.zeros(s) for k, s in param_name_shapes}
+        aux_params = {k : nd.zeros(s) for k, s in zip(aux_names, aux_shapes)}
 
-        if self.arg_params is None:
-            arg_defined = False
-            param_name_shapes = [x for x in zip(arg_names, arg_shapes) if x[0] in param_names]
-            self.arg_params = {k : nd.zeros(s) for k, s in param_name_shapes}
-
-        if self.aux_params is None:
-            aux_defined = False
-            self.aux_params = {k : nd.zeros(s) for k, s in zip(aux_names, aux_shapes)}
-
-        if (not arg_defined) or overwrite:
-            for k, v in self.arg_params.items():
+        for k, v in arg_params.items():
+            if self.arg_params and k in self.arg_params and (not overwrite):
+                arg_params[k][:] = self.arg_params[k][:]
+            else:
                 self.initializer(k, v)
 
-        if (not aux_defined) or overwrite:
-            for k, v in self.aux_params.items():
+        for k, v in aux_params.items():
+            if self.aux_params and k in self.aux_params and (not overwrite):
+                aux_params[k][:] = self.aux_params[k][:]
+            else:
                 self.initializer(k, v)
 
+        self.arg_params = arg_params
+        self.aux_params = aux_params
         return (arg_names, param_names, aux_names)
 
     def __getstate__(self):
@@ -651,7 +663,8 @@ class FeedForward(BASE_ESTIMATOR):
             return outputs
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
-            epoch_end_callback=None, batch_end_callback=None, kvstore='local', logger=None):
+            epoch_end_callback=None, batch_end_callback=None, kvstore='local', logger=None,
+            work_load_list=None):
         """Fit the model.
         Parameters
         ----------
@@ -685,6 +698,9 @@ class FeedForward(BASE_ESTIMATOR):
            In default uses 'local', often no need to change for single machiine.
         logger : logging logger, optional
             When not specified, default logger will be used.
+        work_load_list : float or int, optional
+            The list of work load for different devices,
+            in the same order as ctx
         """
 
         data = self._init_iter(X, y, is_train=True)
@@ -723,7 +739,7 @@ class FeedForward(BASE_ESTIMATOR):
                             epoch_end_callback=epoch_end_callback,
                             batch_end_callback=batch_end_callback,
                             kvstore=kvstore, update_on_kvstore=update_on_kvstore,
-                            logger=logger)
+                            logger=logger, work_load_list=work_load_list)
 
 
     def save(self, prefix, epoch=None):
@@ -780,8 +796,9 @@ class FeedForward(BASE_ESTIMATOR):
     @staticmethod
     def create(symbol, X, y=None, ctx=None,
                num_epoch=None, epoch_size=None, optimizer='sgd', initializer=Uniform(0.01),
-               eval_data=None, eval_metric='acc', epoch_end_callback=None,
-               kvstore='local', logger=None, **kwargs):
+               eval_data=None, eval_metric='acc',
+               epoch_end_callback=None, batch_end_callback=None,
+               kvstore='local', logger=None, work_load_list=None, **kwargs):
         """Functional style to create a model.
         This function will be more consistent with functional
         languages such as R, where mutation is not allowed.
@@ -814,6 +831,9 @@ class FeedForward(BASE_ESTIMATOR):
         epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
             A callback that is invoked at end of each epoch.
             This can be used to checkpoint model each epoch.
+        batch_end_callback: callable(epoch)
+            A callback that is invoked at end of each batch
+            For print purpose
         kvstore: KVStore or str, optional
            The KVStore or a string kvstore type:
            'local' : multi-devices on a single machine, will automatically
@@ -822,11 +842,18 @@ class FeedForward(BASE_ESTIMATOR):
            'dist_sync' : multi-machines with BSP
            'dist_async' : multi-machines with partical asynchronous
            In default uses 'local', often no need to change for single machiine.
+        logger : logging logger, optional
+            When not specified, default logger will be used.
+        work_load_list : list of float or int, optional
+            The list of work load for different devices,
+            in the same order as ctx
         """
         model = FeedForward(symbol, ctx=ctx, num_epoch=num_epoch, epoch_size=epoch_size,
                             optimizer=optimizer, initializer=initializer, **kwargs)
         model.fit(X, y, eval_data=eval_data, eval_metric=eval_metric,
                   epoch_end_callback=epoch_end_callback,
+                  batch_end_callback=batch_end_callback,
                   kvstore=kvstore,
-                  logger=logger)
+                  logger=logger,
+                  work_load_list=work_load_list)
         return model

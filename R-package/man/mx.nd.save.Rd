@@ -19,7 +19,7 @@ mat = mx.nd.array(1:3)
 mx.nd.save(mat, 'temp.mat')
 mat2 = mx.nd.load('temp.mat')
 as.array(mat)
-as.array(mat2)
+as.array(mat2[[1]])
 
 }
 
