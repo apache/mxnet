@@ -61,7 +61,8 @@ We can train a model using multiple machines.
   here we can either use synchronized SGD `dist_sync` or use asynchronized SGD
   `dist_async`
 
-- assume there are several ssh-able machines, to run a job on these machines, we
+- assume there are several ssh-able machines, and this mxnet folder is
+  accessible on these machines (mounted as a NFS, see a tutorial for [Ubuntu](https://help.ubuntu.com/lts/serverguide/network-file-system.html)). To run a job on these machines, we
   first save their hostnames on a file, e.g.
 
   ```bash
@@ -74,6 +75,21 @@ We can train a model using multiple machines.
 
   ```bash
   ../../tools/launch.py -n 2 -H hosts python train_mnist.py --kv-store dist_sync
+  ```
+
+- If the mxnet folder is not available on other machines, we can first copy the mxnet
+  library to this example folder
+
+
+  ```bash
+  cp -r ../../python/mxnet .
+  cp -r ../../lib/libmxnet.so mxnet
+  ```
+
+  then synchronizing it to other machines' `/tmp/mxnet` before running
+
+  ```bash
+  ../../tools/launch.py -n 2 -H hosts --sync-dir /tmp/mxnet python train_mnist.py --kv-store dist_sync
   ```
 
 See more launch options, e.g. by `Yarn`, and how to write a distributed training
