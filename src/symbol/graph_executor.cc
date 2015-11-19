@@ -363,7 +363,7 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NDArray> &in_args,
       } else {
         CHECK_NE(graph_.nodes[i].backward_source_id, -1)
           << "Input auxiliary NDArray is less than required";
-        info.data = op_nodes_[graph_.nodes[i].backward_source_id].aux_states[j].data; 
+        info.data = op_nodes_[graph_.nodes[i].backward_source_id].aux_states[j].data;
       }
       CHECK_EQ(info.data.data().shape_, info.shape)
         << "Incorrect NDArray shape"
