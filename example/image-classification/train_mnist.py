@@ -24,7 +24,7 @@ parser.add_argument('--num-epochs', type=int, default=10,
                     help='the number of training epochs')
 parser.add_argument('--load-epoch', type=int,
                     help="load the model on an epoch using the model-prefix")
-parser.add_argument('--kv-type', type=str, default='local',
+parser.add_argument('--kv-store', type=str, default='local',
                     help='the kvstore type')
 parser.add_argument('--lr-factor', type=float, default=1,
                     help='times the lr with a factor for every lr-factor-epoch epoch')

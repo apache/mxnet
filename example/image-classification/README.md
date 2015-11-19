@@ -12,8 +12,7 @@ First build mxnet by following the [guide](http://mxnet.readthedocs.org/en/lates
 
 ### Train
 
-Use `train_dataset.py` to training models on a particular dataset. For example:
-
+Use `train_dataset.py` to train models on a particular dataset. For example:
 
 - train a MLP on mnist
 
@@ -33,19 +32,52 @@ Use `train_dataset.py` to training models on a particular dataset. For example:
   python train_mnist.py --model-prefix model/mnist --load-epoch 8
   ```
 
+- choose another intial learning rate, and decay it by 0.9 for every half epoch
+
+  ```bash
+  python train_mnist.py --lr .1 --lr-factor .9 --lr-factor-epoch .5
+  ```
+
 - train a convolution neural network on mnist by using GPU 0:
 
   ```bash
   python train_mnist.py --network lenet --gpus 0
   ```
 
-  we can also use multiple GPUs by `---gpus 0,1,3`
+  we can also use multiple GPUs by giving the list, e.g. `---gpus 0,1,3`
 
 - uses `--help` to see more options
 
-- Distributed training, e.g.using multiple GPU machines, is also support, refer to
-  [Distributed Training](../distributed-training/) for how to launch the jobs.
-  See more options by `--help`
+### Distributed Training
+
+We can train a model using multiple machines.
+
+- have a quick test on local machine by using two workers
+
+  ```bash
+  ../../tools/launch.py -n 2 python train_mnist.py --kv-store dist_sync
+  ```
+
+  here we can either use synchronized SGD `dist_sync` or use asynchronized SGD
+  `dist_async`
+
+- assume there are several ssh-able machines, to run a job on these machines, we
+  first save their hostnames on a file, e.g.
+
+  ```bash
+  $ cat hosts
+  172.30.0.172
+  172.30.0.171
+  ```
+
+  then pass this file by `-H`
+
+  ```bash
+  ../../tools/launch.py -n 2 -H hosts python train_mnist.py --kv-store dist_sync
+  ```
+
+See more launch options, e.g. by `Yarn`, and how to write a distributed training
+program on this [tutorial](http://mxnet.readthedocs.org/en/latest/distributed_training.html)
 
 ### Predict
 

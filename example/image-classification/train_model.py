@@ -4,7 +4,7 @@ import logging
 
 def fit(args, network, data_loader):
     # kvstore
-    kv = mx.kvstore.create(args.kv_type)
+    kv = mx.kvstore.create(args.kv_store)
 
     # logging
     head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
@@ -34,7 +34,7 @@ def fit(args, network, data_loader):
 
     epoch_size = args.num_examples / args.batch_size
 
-    if args.kv_type == 'dist_sync':
+    if args.kv_store == 'dist_sync':
         epoch_size /= kv.num_workers
         model_args['epoch_size'] = epoch_size
 
