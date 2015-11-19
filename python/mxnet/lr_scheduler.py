@@ -2,7 +2,6 @@
 learning rate scheduler, which adaptive changes the learning rate based on the
 progress
 """
-import math
 import logging
 
 class LRScheduler(object):
@@ -73,5 +72,5 @@ class FactorScheduler(LRScheduler):
             self.count += self.step
             self.base_lr *= self.factor
             logging.info("Update[%d]: Change learning rate to %.5f",
-                         num_update, self.base_lr )
+                         num_update, self.base_lr)
         return self.base_lr
