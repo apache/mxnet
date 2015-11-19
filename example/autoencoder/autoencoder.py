@@ -130,6 +130,7 @@ class AutoEncoderModel(model.MXModel):
                                             data_iter, X.shape[0], self.xpu).values()[0]
                 data_iter_i = mx.io.NDArrayIter({'data': X_i}, batch_size=batch_size,
                                                 last_batch_handle='roll_over')
+            logging.info('Pre-training layer %d...'%i)
             solver.solve(self.xpu, self.stacks[i], self.args, self.args_grad, data_iter_i,
                          0, n_iter, {}, False)
 
@@ -141,6 +142,7 @@ class AutoEncoderModel(model.MXModel):
         solver.set_monitor(Monitor(1000))
         data_iter = mx.io.NDArrayIter({'data': X}, batch_size=batch_size, shuffle=False,
                                       last_batch_handle='roll_over')
+        logging.info('Fine tuning...')
         solver.solve(self.xpu, self.loss, self.args, self.args_grad, data_iter,
                      0, n_iter, {}, False)
 

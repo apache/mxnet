@@ -20,6 +20,11 @@ Imports:
     magrittr,
     stringr
 Suggests:
-    testthat, mlbench
+    testthat,
+    mlbench,
+    knitr,
+    rmarkdown,
+    imager
 LinkingTo: Rcpp
-RoxygenNote: 5.0.0
+RoxygenNote: 5.0.1
+VignetteBuilder: knitr

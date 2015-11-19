@@ -32,6 +32,7 @@ in terms of abstraction, optimization and trade-offs.
 * [Programming Models for Deep Learning](program_model.md)
 * [Dependency Engine for Deep Learning](developer-guide/note_engine.md)
 * [Squeeze the Memory Consumption of Deep Learning](developer-guide/note_memory.md)
+* [Efficient Data Loading Module for Deep Learning](developer-guide/note_data_loading.md)
 
 Tutorial
 --------

@@ -1,30 +1,17 @@
-import sys
-sys.path.insert(0, "../../python/")
-import mxnet as mx
+"""
 
-def ilsvrc12(data_dir, batch_size, num_parts=1, part_index=0):
-    """return ilsvrc12 iterator
-    """
-    input_shape = (3, 224, 224)
-    train = mx.io.ImageRecordIter(
-        path_imgrec = data_dir + "train.rec",
-        mean_img    = data_dir + "mean.bin",
-        data_shape  = input_shape,
-        batch_size  = batch_size,
-        rand_crop   = True,
-        rand_mirror = True,
-        num_parts   = num_parts,
-        part_index  = part_index)
-    val = mx.io.ImageRecordIter(
-        path_imgrec = data_dir + "val.rec",
-        mean_img    = data_dir + "mean.bin",
-        rand_crop   = False,
-        rand_mirror = False,
-        data_shape  = input_shape,
-        batch_size  = batch_size,
-        num_parts   = num_parts,
-        part_index  = part_index)
-    return (train, val)
+Inception + BN, suitable for images with around 224 x 224
+
+Reference:
+
+Sergey Ioffe and Christian Szegedy. Batch normalization: Accelerating deep
+network training by reducing internal covariate shift. arXiv preprint
+arXiv:1502.03167, 2015.
+
+"""
+
+import find_mxnet
+import mxnet as mx
 
 def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0), name=None, suffix=''):
     conv = mx.symbol.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, name='conv_%s%s' %(name, suffix))
@@ -63,7 +50,7 @@ def InceptionFactoryB(data, num_3x3red, num_3x3, num_d3x3red, num_d3x3, name):
     concat = mx.symbol.Concat(*[c3x3, cd3x3, pooling], name='ch_concat_%s_chconcat' % name)
     return concat
 
-def inception(nhidden):
+def get_symbol(num_classes=1000):
     # data
     data = mx.symbol.Variable(name="data")
     # stage 1
@@ -90,6 +77,6 @@ def inception(nhidden):
     avg = mx.symbol.Pooling(data=in5b, kernel=(7, 7), stride=(1, 1), name="global_pool", pool_type='avg')
     # linear classifier
     flatten = mx.symbol.Flatten(data=avg, name='flatten')
-    fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=nhidden, name='fc1')
+    fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=num_classes, name='fc1')
     softmax = mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
     return softmax
