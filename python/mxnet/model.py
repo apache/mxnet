@@ -251,9 +251,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     for texec in train_execs:
         texec.copy_params_from(arg_params, aux_params)
 
-    # init optmizer
-    optimizer.begin_epoch(begin_epoch)
-
     if not update_on_kvstore:
         updater = get_updater(optimizer)
 
@@ -278,6 +275,9 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
 
     # Now start training
     for epoch in range(begin_epoch, end_epoch):
+        # init optmizer
+        optimizer.begin_epoch(epoch)
+
         # Training phase
         tic = time.time()
         eval_metric.reset()
@@ -796,7 +796,8 @@ class FeedForward(BASE_ESTIMATOR):
     @staticmethod
     def create(symbol, X, y=None, ctx=None,
                num_epoch=None, epoch_size=None, optimizer='sgd', initializer=Uniform(0.01),
-               eval_data=None, eval_metric='acc', epoch_end_callback=None,
+               eval_data=None, eval_metric='acc',
+               epoch_end_callback=None, batch_end_callback=None,
                kvstore='local', logger=None, work_load_list=None, **kwargs):
         """Functional style to create a model.
         This function will be more consistent with functional
@@ -830,6 +831,9 @@ class FeedForward(BASE_ESTIMATOR):
         epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
             A callback that is invoked at end of each epoch.
             This can be used to checkpoint model each epoch.
+        batch_end_callback: callable(epoch)
+            A callback that is invoked at end of each batch
+            For print purpose
         kvstore: KVStore or str, optional
            The KVStore or a string kvstore type:
            'local' : multi-devices on a single machine, will automatically
@@ -848,6 +852,7 @@ class FeedForward(BASE_ESTIMATOR):
                             optimizer=optimizer, initializer=initializer, **kwargs)
         model.fit(X, y, eval_data=eval_data, eval_metric=eval_metric,
                   epoch_end_callback=epoch_end_callback,
+                  batch_end_callback=batch_end_callback,
                   kvstore=kvstore,
                   logger=logger,
                   work_load_list=work_load_list)
