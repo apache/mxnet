@@ -4,6 +4,7 @@ from __future__ import absolute_import
 import ctypes
 import sys
 import pickle
+import logging
 from .base import _LIB, check_call
 from .kvstore import create
 
@@ -18,11 +19,19 @@ class KVStoreServer(object):
         """
         self.kvstore = kvstore
         self.handle = kvstore.handle
-
+        self.init_logginig = False
     def _controller(self):
         """return the server controller"""
         def server_controller(cmd_id, cmd_body):
             """server controler"""
+            if self.init_logginig == False:
+                # the reason put the codes here is because we cannot get
+                # kvstore.rank earlier
+                head = '%(asctime)-15s Server[' + str(
+                    self.kvstore.rank) + '] %(message)s'
+                logging.basicConfig(level=logging.DEBUG, format=head)
+                self.init_logginig = True
+
             if cmd_id == 0:
                 try:
                     optimizer = pickle.loads(cmd_body)
