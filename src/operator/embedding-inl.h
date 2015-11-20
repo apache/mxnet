@@ -1,11 +1,11 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file onehot-inl.h
+ * \file embedding-inl.h
  * \brief
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_ONEHOT_INL_H_
-#define MXNET_OPERATOR_ONEHOT_INL_H_
+#ifndef MXNET_OPERATOR_EMBEDDING_INL_H_
+#define MXNET_OPERATOR_EMBEDDING_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -19,15 +19,15 @@
 namespace mxnet {
 namespace op {
 
-namespace onehot {
-enum OnehotOpInputs {kData, kWeight};
-enum OnehotOpOutputs {kOut};
-}  // namespace onehot
+namespace embedding {
+enum EmbeddingOpInputs {kData, kWeight};
+enum EmbeddingOpOutputs {kOut};
+}  // namespace embedding
 
-struct OnehotParam: public dmlc::Parameter<OnehotParam> {
+struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
   int input_dim;
   int output_dim;
-  DMLC_DECLARE_PARAMETER(OnehotParam) {
+  DMLC_DECLARE_PARAMETER(EmbeddingParam) {
     DMLC_DECLARE_FIELD(input_dim).set_lower_bound(1)
     .describe("input dim of one-hot encoding");
     DMLC_DECLARE_FIELD(output_dim).set_lower_bound(1)
@@ -37,9 +37,9 @@ struct OnehotParam: public dmlc::Parameter<OnehotParam> {
 
 
 template<typename xpu>
-class OnehotEmbeddingOp : public Operator {
+class EmbeddingOp : public Operator {
  public:
-  explicit OnehotEmbeddingOp(OnehotParam p) {
+  explicit EmbeddingOp(EmbeddingParam p) {
     this->param_ = p;
   }
 
@@ -50,13 +50,13 @@ class OnehotEmbeddingOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(req[onehot::kOut], kWriteTo);
+    CHECK_EQ(req[embedding::kOut], kWriteTo);
     CHECK_EQ(in_data.size(), 2);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 1> data = in_data[onehot::kData].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 2> wmat = in_data[onehot::kWeight].get<xpu, 2, real_t>(s);
-    Tensor<xpu, 2> out = out_data[onehot::kOut].get<xpu, 2, real_t>(s);
+    Tensor<xpu, 1> data = in_data[embedding::kData].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 2> wmat = in_data[embedding::kWeight].get<xpu, 2, real_t>(s);
+    Tensor<xpu, 2> out = out_data[embedding::kOut].get<xpu, 2, real_t>(s);
     out = take(data, wmat);
   }
 
@@ -73,21 +73,21 @@ class OnehotEmbeddingOp : public Operator {
     CHECK_GE(in_data.size(), 1);
     CHECK_EQ(in_grad.size(), 2);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 1> data = in_data[onehot::kData].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 2> grad_out = out_grad[onehot::kOut].get<xpu, 2, real_t>(s);
-    Tensor<xpu, 2> grad_in = in_grad[onehot::kWeight].get<xpu, 2, real_t>(s);
+    Tensor<xpu, 1> data = in_data[embedding::kData].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 2> grad_out = out_grad[embedding::kOut].get<xpu, 2, real_t>(s);
+    Tensor<xpu, 2> grad_in = in_grad[embedding::kWeight].get<xpu, 2, real_t>(s);
     grad_in = take_grad(data, grad_out, param_.input_dim);
   }
 
  private:
-  OnehotParam param_;
-};  // class OnehotOp
+  EmbeddingParam param_;
+};  // class EmbeddingOp
 
 template<typename xpu>
-Operator* CreateOp(OnehotParam param);
+Operator* CreateOp(EmbeddingParam param);
 
 #if DMLC_USE_CXX11
-class OnehotEmbeddingProp : public OperatorProperty {
+class EmbeddingProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     return {"data", "weight"};
@@ -105,9 +105,9 @@ class OnehotEmbeddingProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    const TShape &dshape = (*in_shape)[onehot::kData];
+    const TShape &dshape = (*in_shape)[embedding::kData];
     if (dshape.ndim() ==  0) return false;
-    SHAPE_ASSIGN_CHECK(*in_shape, onehot::kWeight, Shape2(param_.input_dim,
+    SHAPE_ASSIGN_CHECK(*in_shape, embedding::kWeight, Shape2(param_.input_dim,
                                                           param_.output_dim));
     out_shape->clear();
     out_shape->push_back(Shape2(dshape[0], param_.output_dim));
@@ -115,29 +115,29 @@ class OnehotEmbeddingProp : public OperatorProperty {
   }
 
   OperatorProperty* Copy() const override {
-    auto sym = new OnehotEmbeddingProp();
+    auto sym = new EmbeddingProp();
     sym->param_ = this->param_;
     return sym;
   }
 
   std::string TypeString() const override {
-    return "OnehotEmbedding";
+    return "Embedding";
   }
 
   std::vector<int> DeclareBackwardDependency(
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    return {out_grad[onehot::kOut], in_data[onehot::kData]};
+    return {out_grad[embedding::kOut], in_data[embedding::kData]};
   }
 
   Operator* CreateOperator(Context ctx) const override;
 
  private:
-  OnehotParam param_;
-};  // class OnehotEmbeddingProp
+  EmbeddingParam param_;
+};  // class EmbeddingProp
 #endif  // DMLC_USE_CXX11
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_ONEHOT_INL_H_
+#endif  // MXNET_OPERATOR_EMBEDDING_INL_H_

@@ -1,16 +1,16 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file onehot.cu
+ * \file embedding.cu
  * \brief
  * \author Bing Xu
 */
 
-#include "./onehot-inl.h"
+#include "./embedding-inl.h"
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateOp<gpu>(OnehotParam param) {
-  return new OnehotEmbeddingOp<gpu>(param);
+Operator* CreateOp<gpu>(EmbeddingParam param) {
+  return new EmbeddingOp<gpu>(param);
 }
 }  // namespace op
 }  // namespace mxnet
