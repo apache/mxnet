@@ -126,7 +126,7 @@ def test_concat():
                         shapes.append((merge[i], a))
                     elif dimension == 1:
                         shapes.append((a, merge[i]))
-                check_concat_with_shape(shapes,dimension)
+                    check_concat_with_shape(shapes,dimension)
         #test 3D
         if dimension<3:
             for dim in range(2, 6):
@@ -138,7 +138,7 @@ def test_concat():
                         shapes.append((a,merge[i],b))
                     elif dimension ==2:
                         shapes.append((a,b,merge[i]))
-                check_concat_with_shape(shapes,dimension)            
+                check_concat_with_shape(shapes,dimension)
         # test 4D
         for dim in range(2, 6):
             shapes = []
@@ -274,6 +274,7 @@ def test_scalarop():
     exe_test.backward(out_grad)
     assert reldiff(arr_grad.asnumpy(), npout_grad) < 1e-6
 
+
 def test_scalar_pow():
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -367,7 +368,28 @@ def test_pow_fn():
 
     assert_allclose(grad, npgrad)
 
+
+# check ops handle duplicate input correctly.
+def test_binary_op_duplicate_input():
+    data = mx.symbol.Variable('data')
+    shape = (3, 4)
+    data_tmp = np.ones(shape)
+    data_tmp[:] = 5
+    arr_data = mx.nd.array(data_tmp)
+    arr_grad = mx.nd.empty(shape)
+    arr_grad[:] = 3
+    out_grad = mx.nd.empty(shape)
+    out_grad[:] = 1
+    square = data * data
+    exe_square = square.bind(mx.cpu(), args=[arr_data], args_grad=[arr_grad])
+    exe_square.forward()
+    assert reldiff(exe_square.outputs[0].asnumpy(), data_tmp * data_tmp) < 1e-6
+    exe_square.backward(out_grad)
+    assert reldiff(arr_grad.asnumpy(), 2.0 * data_tmp) < 1e-6
+
+
 if __name__ == '__main__':
+    test_binary_op_duplicate_input()
     test_elementwise_sum()
     test_concat()
     test_slice_channel()
