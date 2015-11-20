@@ -3,7 +3,10 @@ import mxnet as mx
 import argparse
 import os, sys
 import train_model
-
+import logging
+import argparse
+import os, sys
+logging.basicConfig(level=logging.DEBUG)
 parser = argparse.ArgumentParser(description='train an image classifer on mnist')
 parser.add_argument('--network', type=str, default='mlp',
                     choices = ['mlp', 'lenet'],
@@ -24,12 +27,8 @@ parser.add_argument('--num-epochs', type=int, default=10,
                     help='the number of training epochs')
 parser.add_argument('--load-epoch', type=int,
                     help="load the model on an epoch using the model-prefix")
-parser.add_argument('--kv-store', type=str, default='local',
+parser.add_argument('--kv-type', type=str, default='local',
                     help='the kvstore type')
-parser.add_argument('--lr-factor', type=float, default=1,
-                    help='times the lr with a factor for every lr-factor-epoch epoch')
-parser.add_argument('--lr-factor-epoch', type=float, default=1,
-                    help='the number of epoch to factor the lr, could be .5')
 args = parser.parse_args()
 
 def _download(data_dir):
@@ -96,6 +95,19 @@ def get_iterator(args, kv):
     if '://' not in args.data_dir:
         _download(args.data_dir)
         flat = False if len(data_shape) == 3 else True
+# data
+data_dir = args.data_dir
+if '://' not in args.data_dir:
+    _download(args.data_dir)
+flat = False if len(data_shape) == 3 else True
+
+train           = mx.io.MNISTIter(
+    image       = data_dir + "train-images-idx3-ubyte",
+    label       = data_dir + "train-labels-idx1-ubyte",
+    input_shape = data_shape,
+    batch_size  = args.batch_size,
+    shuffle     = True,
+    flat        = flat)
 
     train           = mx.io.MNISTIter(
         image       = data_dir + "train-images-idx3-ubyte",
@@ -118,5 +130,7 @@ def get_iterator(args, kv):
 
     return (train, val)
 
+
 # train
 train_model.fit(args, net, get_iterator)
+
