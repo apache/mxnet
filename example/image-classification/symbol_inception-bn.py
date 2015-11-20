@@ -1,16 +1,20 @@
-# pylint: skip-file
-import sys
-sys.path.insert(0, "../mxnet/python")
+"""
+
+Inception + BN, suitable for images with around 224 x 224
+
+Reference:
+
+Sergey Ioffe and Christian Szegedy. Batch normalization: Accelerating deep
+network training by reducing internal covariate shift. arXiv preprint
+arXiv:1502.03167, 2015.
+
+"""
+
+import find_mxnet
 import mxnet as mx
-import logging
-from data import ilsvrc12_iterator
-
-
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
 
 def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0), name=None, suffix=''):
-    conv = mx.symbol.Convolution(data=data, workspace=512, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, name='conv_%s%s' %(name, suffix))
+    conv = mx.symbol.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, name='conv_%s%s' %(name, suffix))
     bn = mx.symbol.BatchNorm(data=conv, name='bn_%s%s' %(name, suffix))
     act = mx.symbol.Activation(data=bn, act_type='relu', name='relu_%s%s' %(name, suffix))
     return act
@@ -46,25 +50,25 @@ def InceptionFactoryB(data, num_3x3red, num_3x3, num_d3x3red, num_d3x3, name):
     concat = mx.symbol.Concat(*[c3x3, cd3x3, pooling], name='ch_concat_%s_chconcat' % name)
     return concat
 
-def inception(nhidden, grad_scale):
+def get_symbol(num_classes=1000):
     # data
     data = mx.symbol.Variable(name="data")
     # stage 1
-    conv1 = ConvFactory(data=data, num_filter=96, kernel=(7, 7), stride=(2, 2), pad=(3, 3), name='conv1')
+    conv1 = ConvFactory(data=data, num_filter=64, kernel=(7, 7), stride=(2, 2), pad=(3, 3), name='conv1')
     pool1 = mx.symbol.Pooling(data=conv1, kernel=(3, 3), stride=(2, 2), name='pool1', pool_type='max')
     # stage 2
-    conv2red = ConvFactory(data=pool1, num_filter=128, kernel=(1, 1), stride=(1, 1), name='conv2red')
-    conv2 = ConvFactory(data=conv2red, num_filter=288, kernel=(3, 3), stride=(1, 1), pad=(1, 1), name='conv2')
+    conv2red = ConvFactory(data=pool1, num_filter=64, kernel=(1, 1), stride=(1, 1), name='conv2red')
+    conv2 = ConvFactory(data=conv2red, num_filter=192, kernel=(3, 3), stride=(1, 1), pad=(1, 1), name='conv2')
     pool2 = mx.symbol.Pooling(data=conv2, kernel=(3, 3), stride=(2, 2), name='pool2', pool_type='max')
     # stage 2
-    in3a = InceptionFactoryA(pool2, 96, 96, 96, 96, 144, "avg", 48, '3a')
-    in3b = InceptionFactoryA(in3a, 96, 96, 144, 96, 144, "avg", 96, '3b')
-    in3c = InceptionFactoryB(in3b, 192, 240, 96, 144, '3c')
+    in3a = InceptionFactoryA(pool2, 64, 64, 64, 64, 96, "avg", 32, '3a')
+    in3b = InceptionFactoryA(in3a, 64, 64, 96, 64, 96, "avg", 64, '3b')
+    in3c = InceptionFactoryB(in3b, 128, 160, 64, 96, '3c')
     # stage 3
     in4a = InceptionFactoryA(in3c, 224, 64, 96, 96, 128, "avg", 128, '4a')
     in4b = InceptionFactoryA(in4a, 192, 96, 128, 96, 128, "avg", 128, '4b')
     in4c = InceptionFactoryA(in4b, 160, 128, 160, 128, 160, "avg", 128, '4c')
-    in4d = InceptionFactoryA(in4c, 96, 128, 192, 160, 96, "avg", 128, '4d')
+    in4d = InceptionFactoryA(in4c, 96, 128, 192, 160, 192, "avg", 128, '4d')
     in4e = InceptionFactoryB(in4d, 128, 192, 192, 256, '4e')
     # stage 4
     in5a = InceptionFactoryA(in4e, 352, 192, 320, 160, 224, "avg", 128, '5a')
@@ -73,29 +77,6 @@ def inception(nhidden, grad_scale):
     avg = mx.symbol.Pooling(data=in5b, kernel=(7, 7), stride=(1, 1), name="global_pool", pool_type='avg')
     # linear classifier
     flatten = mx.symbol.Flatten(data=avg, name='flatten')
-    fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=nhidden, name='fc1')
+    fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=num_classes, name='fc1')
     softmax = mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
     return softmax
-
-softmax = inception(21841, 1.0)
-
-batch_size = 64
-num_gpu = 4
-gpus = [mx.gpu(i) for i in range(num_gpu)]
-input_shape = (3, 224, 224)
-
-train = ilsvrc12_iterator(batch_size=batch_size, input_shape=(3,224,224))
-
-model_prefix = "model/Inception-Full"
-num_round = 10
-
-logging.info("This script is used to train ImageNet fullset over 21841 classes.")
-logging.info("For noraml 1000 classes problem, please use inception.py")
-
-model = mx.model.FeedForward(ctx=gpus, symbol=softmax, num_epoch=num_round,
-                             learning_rate=0.05, momentum=0.9, wd=0.00001)
-
-model.fit(X=train,
-          eval_metric="acc",
-          batch_end_callback=[mx.callback.Speedometer(batch_size), mx.callback.log_train_metric(100)],
-	      epoch_end_callback=mx.callback.do_checkpoint(model_prefix))

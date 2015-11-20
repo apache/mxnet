@@ -59,11 +59,12 @@ def lstm_unroll(num_lstm_layer, seq_len,
         last_states.append(state)
     assert(len(last_states) == num_lstm_layer)
 
-    out_prob = []
+    label = mx.sym.Variable("label")
+    last_hidden = []
     for seqidx in range(seq_len):
         # embeding layer
         data = mx.sym.Variable("t%d_data" % seqidx)
-        label = mx.sym.Variable("t%d_label" % seqidx)
+        
         hidden = mx.sym.FullyConnected(data=data, weight=embed_weight,
                                       num_hidden = num_embed, no_bias=True,
                                       name="t%d_embed" % seqidx)
@@ -82,14 +83,14 @@ def lstm_unroll(num_lstm_layer, seq_len,
         # decoder
         if dropout > 0.:
             hidden = mx.sym.Dropout(data=hidden, p=dropout)
-        fc = mx.sym.FullyConnected(data=hidden,
-                                   weight=cls_weight,
-                                   bias=cls_bias,
-                                   num_hidden=num_label,
-                                   name="t%d_cls" % seqidx)
-        sm = mx.sym.SoftmaxOutput(data=fc, label=label, name="t%d_sm" % seqidx)
-        out_prob.append(sm)
-
+        last_hidden.append(hidden)
+    concat = mx.sym.Concat(*last_hidden, dim = 0)
+    fc = mx.sym.FullyConnected(data=concat,
+                               weight=cls_weight,
+                               bias=cls_bias,
+                               num_hidden=num_label)
+    sm = mx.sym.SoftmaxOutput(data=fc, label=label, name="sm")
+    out_prob = [sm]
     for i in range(num_lstm_layer):
         state = last_states[i]
         state = LSTMState(c=mx.sym.BlockGrad(state.c, name="l%d_last_c" % i),
@@ -153,11 +154,11 @@ def setup_rnn_model(ctx,
 
     init_states = [LSTMState(c=arg_dict["l%d_init_c" % i],
                              h=arg_dict["l%d_init_h" % i]) for i in range(num_lstm_layer)]
-    seq_labels = [rnn_exec.arg_dict["t%d_label" % i] for i in range(seq_len)]
+    seq_labels = rnn_exec.arg_dict["label"]
     seq_data = [rnn_exec.arg_dict["t%d_data" % i] for i in range(seq_len)]
     last_states = [LSTMState(c=out_dict["l%d_last_c_output" % i],
                              h=out_dict["l%d_last_h_output" % i]) for i in range(num_lstm_layer)]
-    seq_outputs = [out_dict["t%d_sm_output" % i] for i in range(seq_len)]
+    seq_outputs = out_dict["sm_output"]
 
     return LSTMModel(rnn_exec=rnn_exec, symbol=rnn_sym,
                      init_states=init_states, last_states=last_states,
@@ -176,16 +177,10 @@ def set_rnn_inputs(m, X, begin):
         y = X[next_idx, :]
         mx.nd.onehot_encode(mx.nd.array(x, ctx=m.seq_data[seqidx].context),
                 out=m.seq_data[seqidx])
-        m.seq_labels[seqidx][:] = y
+        m.seq_labels[seqidx*batch_size : seqidx*batch_size+batch_size] = y
 
 def calc_nll(seq_label_probs, X, begin):
-    
-    nll = 0.
-    for seqidx in range(len(seq_label_probs)):
-        next_idx = (begin + seqidx + 1) % X.shape[0]
-        y = X[next_idx, :]
-        py = seq_label_probs[seqidx].asnumpy()
-        nll += -np.sum(np.log(py)) / len(y)
+    nll = -np.sum(np.log(seq_label_probs.asnumpy())) / len(X[0,:])
     return nll
 
 def train_lstm(model, X_train_batch, X_val_batch,
@@ -220,8 +215,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
             set_rnn_inputs(m, X_train_batch, begin=begin)
             m.rnn_exec.forward(is_train=True)
             # probability of each label class, used to evaluate nll
-            seq_label_probs = [mx.nd.choose_element_0index(out, label).copyto(mx.cpu())
-                               for out, label in zip(m.seq_outputs, m.seq_labels)]
+            seq_label_probs = mx.nd.choose_element_0index(m.seq_outputs,m.seq_labels)
             m.rnn_exec.backward()
             # transfer the states
             for init, last in zip(m.init_states, m.last_states):
@@ -263,8 +257,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
             set_rnn_inputs(m, X_val_batch, begin=begin)
             m.rnn_exec.forward(is_train=False)
             # probability of each label class, used to evaluate nll
-            seq_label_probs = [mx.nd.choose_element_0index(out, label).copyto(mx.cpu())
-                               for out, label in zip(m.seq_outputs, m.seq_labels)]
+            seq_label_probs = mx.nd.choose_element_0index(m.seq_outputs,m.seq_labels)
             # transfer the states
             for init, last in zip(m.init_states, m.last_states):
                 last.c.copyto(init.c)
@@ -278,6 +271,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
             opt.lr *= 0.5
             print("Reset learning rate to %g" % opt.lr)
         last_perp = perp
+        
 def setup_rnn_sample_model(ctx,
                            params,
                            num_lstm_layer,

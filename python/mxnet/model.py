@@ -251,9 +251,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     for texec in train_execs:
         texec.copy_params_from(arg_params, aux_params)
 
-    # init optmizer
-    optimizer.begin_epoch(begin_epoch)
-
     if not update_on_kvstore:
         updater = get_updater(optimizer)
 
@@ -541,26 +538,24 @@ class FeedForward(BASE_ESTIMATOR):
         param_names = list(set(arg_names) - set(input_names))
         aux_names = self.symbol.list_auxiliary_states()
 
-        arg_defined = True
-        aux_defined = True
+        param_name_shapes = [x for x in zip(arg_names, arg_shapes) if x[0] in param_names]
+        arg_params = {k : nd.zeros(s) for k, s in param_name_shapes}
+        aux_params = {k : nd.zeros(s) for k, s in zip(aux_names, aux_shapes)}
 
-        if self.arg_params is None:
-            arg_defined = False
-            param_name_shapes = [x for x in zip(arg_names, arg_shapes) if x[0] in param_names]
-            self.arg_params = {k : nd.zeros(s) for k, s in param_name_shapes}
-
-        if self.aux_params is None:
-            aux_defined = False
-            self.aux_params = {k : nd.zeros(s) for k, s in zip(aux_names, aux_shapes)}
-
-        if (not arg_defined) or overwrite:
-            for k, v in self.arg_params.items():
+        for k, v in arg_params.items():
+            if self.arg_params and k in self.arg_params and (not overwrite):
+                arg_params[k][:] = self.arg_params[k][:]
+            else:
                 self.initializer(k, v)
 
-        if (not aux_defined) or overwrite:
-            for k, v in self.aux_params.items():
+        for k, v in aux_params.items():
+            if self.aux_params and k in self.aux_params and (not overwrite):
+                aux_params[k][:] = self.aux_params[k][:]
+            else:
                 self.initializer(k, v)
 
+        self.arg_params = arg_params
+        self.aux_params = aux_params
         return (arg_names, param_names, aux_names)
 
     def __getstate__(self):
@@ -798,7 +793,8 @@ class FeedForward(BASE_ESTIMATOR):
     @staticmethod
     def create(symbol, X, y=None, ctx=None,
                num_epoch=None, epoch_size=None, optimizer='sgd', initializer=Uniform(0.01),
-               eval_data=None, eval_metric='acc', epoch_end_callback=None,
+               eval_data=None, eval_metric='acc',
+               epoch_end_callback=None, batch_end_callback=None,
                kvstore='local', logger=None, work_load_list=None, **kwargs):
         """Functional style to create a model.
         This function will be more consistent with functional
@@ -832,6 +828,9 @@ class FeedForward(BASE_ESTIMATOR):
         epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
             A callback that is invoked at end of each epoch.
             This can be used to checkpoint model each epoch.
+        batch_end_callback: callable(epoch)
+            A callback that is invoked at end of each batch
+            For print purpose
         kvstore: KVStore or str, optional
            The KVStore or a string kvstore type:
            'local' : multi-devices on a single machine, will automatically
@@ -850,6 +849,7 @@ class FeedForward(BASE_ESTIMATOR):
                             optimizer=optimizer, initializer=initializer, **kwargs)
         model.fit(X, y, eval_data=eval_data, eval_metric=eval_metric,
                   epoch_end_callback=epoch_end_callback,
+                  batch_end_callback=batch_end_callback,
                   kvstore=kvstore,
                   logger=logger,
                   work_load_list=work_load_list)

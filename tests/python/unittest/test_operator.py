@@ -79,18 +79,18 @@ def check_slice_channel(dim, num):
     exe.backward(o_nd)
     assert reldiff(grad_nd[0].asnumpy(), np.hstack([ins[i] + i for i in range(num)])) < 1e-5
 
-def check_concat_with_shape(shapes):
+def check_concat_with_shape(shapes, dimension):
     n = len(shapes)
     # forward
     target_dim = 0
     for shape in shapes:
-        target_dim += shape[1]
+        target_dim += shape[dimension]
 
     inputs = [mx.symbol.Variable('arg%d' % i) for i in range(n)]
-    out = mx.symbol.Concat(*inputs, name='conc')
+    out = mx.symbol.Concat(*inputs, name='conc',dim=dimension)
     arr = [mx.nd.empty(shape) for shape in shapes]
     for i in range(n):
-        arr[i][:] = shapes[i][1]
+        arr[i][:] = shapes[i][dimension]
     arr_np = [np.copy(narray.asnumpy()) for narray in arr]
     arr_grad = [mx.nd.empty(shape) for shape in shapes]
     args = out.list_arguments()
@@ -101,7 +101,7 @@ def check_concat_with_shape(shapes):
                      args_grad=arr_grad)
     exec1.forward()
     out1 = exec1.outputs[0]
-    ret = np.concatenate([narray.asnumpy() for narray in arr], axis=1)
+    ret = np.concatenate([narray.asnumpy() for narray in arr], axis=dimension)
     assert same(out1.asnumpy(), ret)
     # backward
     out1.copyto(out_grad)
@@ -111,23 +111,47 @@ def check_concat_with_shape(shapes):
         assert same(grad.asnumpy(), np_grad + 1)
 
 def test_concat():
-    n = 2
-    batch = 2
-    ch = [2, 3, 4, 5, 6]
-    h = 3
-    w = 4
-    # test  2D
-    for dim in range(2, 6):
-        shapes = []
-        for i in range(dim):
-            shapes.append((batch, ch[i]))
-        check_concat_with_shape(shapes)
-    # test 4D
-    for dim in range(2, 6):
-        shapes = []
-        for i in range(dim):
-            shapes.append((batch, ch[i], h, w))
-        check_concat_with_shape(shapes)
+    for dimension in range(4):
+        n = 2
+        merge = [2, 3, 4, 5, 6]
+        a = 2
+        b = 3
+        c = 4
+        # test  2D
+        if dimension<2:
+            for dim in range(2, 6):
+                shapes = []
+                for i in range(dim):
+                    if dimension == 0:
+                        shapes.append((merge[i], a))
+                    elif dimension == 1:
+                        shapes.append((a, merge[i]))
+                check_concat_with_shape(shapes,dimension)
+        #test 3D
+        if dimension<3:
+            for dim in range(2, 6):
+                shapes = []
+                for i in range(dim):
+                    if dimension == 0:
+                        shapes.append((merge[i], a,b))
+                    elif dimension ==1:
+                        shapes.append((a,merge[i],b))
+                    elif dimension ==2:
+                        shapes.append((a,b,merge[i]))
+                check_concat_with_shape(shapes,dimension)            
+        # test 4D
+        for dim in range(2, 6):
+            shapes = []
+            for i in range(dim):
+                if dimension == 0:
+                    shapes.append((merge[i],a,b,c))
+                elif dimension == 1:
+                    shapes.append((a,merge[i],b,c))
+                elif dimension ==2:
+                    shapes.append((a,b,merge[i],c))
+                elif dimension ==3:
+                    shapes.append((a,b,c,merge[i]))
+            check_concat_with_shape(shapes,dimension)
 
 def test_slice_channel():
     check_slice_channel(2, 4)

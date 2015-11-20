@@ -28,7 +28,8 @@ from . import visualization
 # use viz as short for mx.ndarray
 from . import visualization as viz
 from . import callback
-from . import misc
+# from . import misc
+from . import lr_scheduler
 # use mx.kv as short for kvstore
 from . import kvstore as kv
 from . import kvstore_server
