@@ -14,7 +14,7 @@ C = A + B
 a = mx.nd.zeros(c(2), mx.cpu())
 b = mx.nd.array(as.array(c(1, 2)), mx.cpu())
 
-exec = mx.symbol.bind(
+exec = mxnet:::mx.symbol.bind(
   symbol=C,
   ctx=mx.cpu(),
   arg.arrays = list(A=a, B=b),
@@ -22,13 +22,12 @@ exec = mx.symbol.bind(
   grad.reqs = list(FALSE, FALSE))
 
 # calculate outputs
-exec = mx.exec.forward(exec)
-# TODO(KK) maybe change to read only property
+mx.exec.forward(exec)
 out = as.array(exec$outputs[[1]])
 print(out)
 
-exec = mx.exec.update.arg.arrays(exec, list(A=b, B=b))
-exec = mx.exec.forward(exec)
+mx.exec.update.arg.arrays(exec, list(A=b, B=b))
+mx.exec.forward(exec)
 
 out = as.array(exec$outputs[[1]])
 print(out)
