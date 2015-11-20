@@ -208,6 +208,10 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
       exec.use_vars.push_back(info.data.var());
     }
   }
+  // de-duplicate the used vars
+  std::sort(exec.use_vars.begin(), exec.use_vars.end());
+  exec.use_vars.resize(std::unique(exec.use_vars.begin(), exec.use_vars.end()) -
+                       exec.use_vars.begin());
 
   // start setup exec function.
   for (const Resource& r : op_node.op_ctx.requested) {

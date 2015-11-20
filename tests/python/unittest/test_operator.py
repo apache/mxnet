@@ -126,7 +126,7 @@ def test_concat():
                         shapes.append((merge[i], a))
                     elif dimension == 1:
                         shapes.append((a, merge[i]))
-                check_concat_with_shape(shapes,dimension)
+                    check_concat_with_shape(shapes,dimension)
         #test 3D
         if dimension<3:
             for dim in range(2, 6):
@@ -274,6 +274,7 @@ def test_scalarop():
     exe_test.backward(out_grad)
     assert reldiff(arr_grad.asnumpy(), npout_grad) < 1e-6
 
+
 def test_scalar_pow():
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -393,6 +394,7 @@ def test_embedding():
     exe_test.backward([grad])
     assert reldiff(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, np_grad)) < 1e-6
 if __name__ == '__main__':
+    test_binary_op_duplicate_input()
     test_elementwise_sum()
     test_concat()
     test_slice_channel()
