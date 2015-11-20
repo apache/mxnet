@@ -54,7 +54,7 @@ class SwapAxisOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     index_t ndim_in = shape.ndim();
-    int si;
+    index_t si;
 
     if (dim1 > dim2) {
       std::swap(dim1, dim2);
