@@ -158,6 +158,9 @@ Results by
 ```bash
 python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
 ```
+<img src=https://docs.google.com/spreadsheets/d/1kV2aDUXNyPn3t5nj8UdPA61AdRF4_w1UNmxaqu-cRBA/pubchart?oid=761035336&format=interactive
+width=400/>
+
 
 <iframe width="600" height="371" seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/1kV2aDUXNyPn3t5nj8UdPA61AdRF4_w1UNmxaqu-cRBA/pubchart?oid=761035336&amp;format=interactive"></iframe>
 
