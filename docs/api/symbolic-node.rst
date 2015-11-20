@@ -872,41 +872,6 @@ Internal APIs
 
 
 
-.. function:: _Power(...)
-
-   Perform an elementwise power.
-   
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
-   
-   :return: the constructed :class:`SymbolicNode`.
-   
-
-
-
-
-.. function:: _PowerScalar(...)
-
-   Perform an elementwise power.
-   
-   :param array: Input array operand to the operation.
-   :type array: SymbolicNode
-   
-   
-   :param scalar: scalar value.
-   :type scalar: float, required
-   
-   
-   :param scalar_on_right: scalar operand is on the right.
-   :type scalar_on_right: boolean, optional, default=False
-   
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
-   
-   :return: the constructed :class:`SymbolicNode`.
-   
-
-
-
-
 
 
 
