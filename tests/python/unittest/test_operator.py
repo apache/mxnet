@@ -412,7 +412,31 @@ def test_binary_op_duplicate_input():
     exe_square.backward(out_grad)
     assert reldiff(arr_grad.asnumpy(), 2.0 * data_tmp) < 1e-6
 
-if __name__ == '__main__':
+
+def test_abs():
+    data = mx.symbol.Variable('data')
+    shape = (3, 4)    
+    data_tmp = np.ones(shape)
+    data_tmp[:]=5
+    arr_data = mx.nd.array(data_tmp)
+    arr_grad = mx.nd.empty(shape) 
+    arr_grad[:]=3
+    
+    test = mx.sym.abs(data)
+    exe_test = test.bind(mx.cpu(), args=[arr_data], args_grad=[arr_grad])
+    exe_test.forward()
+    out = exe_test.outputs[0].asnumpy()
+    npout = abs(data_tmp)
+    assert reldiff(out, npout) < 1e-6
+    
+    out_grad = mx.nd.empty(shape)
+    out_grad[:] = 2;
+    npout_grad = out_grad.asnumpy()
+    npout_grad = npout_grad * np.sign(data_tmp)
+    exe_test.backward(out_grad)
+    assert reldiff(arr_grad.asnumpy(), npout_grad) < 1e-6
+    
+if __name__ == '__main__': 
     test_binary_op_duplicate_input()
     test_elementwise_sum()
     test_concat()
@@ -425,5 +449,6 @@ if __name__ == '__main__':
     test_symbol_pow()
     test_pow_fn()
     test_embedding()
+    test_abs()
     #check_softmax_with_shape((3,4), mx.cpu())
     #check_multi_softmax_with_shape((3,4,5), mx.cpu())

@@ -117,6 +117,26 @@ struct threshold {
   }
 };
 
+/*! \brief used for generate element of abs */
+struct abs {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return fabs(a);
+  }
+};
+
+struct abs_grad {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return (real_t(0) < a) - (a < real_t(0));
+  }
+};
+
+/*! \brief used for generate element of power */
+struct sign {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return (real_t(0) < a) - (a < real_t(0));
+  }
+};
+
 /*! \brief used for generate element of power */
 struct power {
   MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
