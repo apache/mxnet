@@ -49,19 +49,10 @@ class Optimizer(object):
             raise ValueError('Cannot find optimizer %s' % name)
 
     def __init__(self, rescale_grad=1):
-        self.epoch = 0
         self.rescale_grad = rescale_grad
         self.lr_scale = {}
-
-    def begin_epoch(self, epoch):
-        """Function called to notify beginning of epoch.
-
-        Parameters
-        ----------
-        epoch : int
-            The epoch number.
-        """
-        self.epoch = epoch
+        self.num_update = 0
+        self._index_update_count = {}
 
     def create_state(self, index, weight):
         """Create additional optimizer state such as momentum.
@@ -79,6 +70,20 @@ class Optimizer(object):
             set the lr multipler for index to float
         """
         self.lr_scale = args_lrscale.copy()
+
+    def _update_count(self, index):
+        """
+        update num_update
+
+        Parameters:
+        index : int
+            The index will be updated
+        """
+        if index not in self._index_update_count:
+            self._index_update_count[index] = 0
+        self._index_update_count[index] += 1
+        self.num_update = max(self._index_update_count[index], self.num_update)
+
 
 #convenience wrapper for Optimizer.Register
 register = Optimizer.register
@@ -115,7 +120,6 @@ class SGD(Optimizer):
         self.lr_scheduler = lr_scheduler
         if lr_scheduler != None:
             self.lr_scheduler.base_lr = learning_rate
-        self.momentums = {}
 
     def create_state(self, index, weight):
         """Create additional optimizer state such as momentum.
@@ -152,7 +156,8 @@ class SGD(Optimizer):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         if self.lr_scheduler != None:
-            lr = self.lr_scheduler(self.epoch)
+            lr = self.lr_scheduler(self.num_update)
+            self._update_count(index)
         else:
             lr = self.lr
         lr *= self.lr_scale.get(index, 1.0)
