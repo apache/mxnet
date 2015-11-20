@@ -275,9 +275,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
 
     # Now start training
     for epoch in range(begin_epoch, end_epoch):
-        # init optmizer
-        optimizer.begin_epoch(epoch)
-
         # Training phase
         tic = time.time()
         eval_metric.reset()

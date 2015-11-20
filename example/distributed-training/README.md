@@ -1,5 +1,7 @@
 # Examples for Distributed Training
 
+***NOTE: DEPRECATED, see [../image-classification](../image-classification/) for the new version***
+
 ## How to use
 
 - If machines are ssh-able. First prepare a
