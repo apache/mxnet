@@ -368,26 +368,31 @@ def test_pow_fn():
 
     assert_allclose(grad, npgrad)
 
+def test_embedding():
+    in_dim = 10
+    out_dim = 4
+    batch = 24
 
-# check ops handle duplicate input correctly.
-def test_binary_op_duplicate_input():
-    data = mx.symbol.Variable('data')
-    shape = (3, 4)
-    data_tmp = np.ones(shape)
-    data_tmp[:] = 5
-    arr_data = mx.nd.array(data_tmp)
-    arr_grad = mx.nd.empty(shape)
-    arr_grad[:] = 3
-    out_grad = mx.nd.empty(shape)
-    out_grad[:] = 1
-    square = data * data
-    exe_square = square.bind(mx.cpu(), args=[arr_data], args_grad=[arr_grad])
-    exe_square.forward()
-    assert reldiff(exe_square.outputs[0].asnumpy(), data_tmp * data_tmp) < 1e-6
-    exe_square.backward(out_grad)
-    assert reldiff(arr_grad.asnumpy(), 2.0 * data_tmp) < 1e-6
-
-
+    data = mx.sym.Variable("data")
+    embed = mx.sym.Embedding(data=data, input_dim=in_dim, output_dim=out_dim, name="embed")
+    exe_test = embed.simple_bind(mx.cpu(), data=(batch,))
+    arg_map = dict(zip(embed.list_arguments(), exe_test.arg_arrays))
+    grad_map = dict(zip(embed.list_arguments(), exe_test.grad_arrays))
+    np_data = np.random.randint(low=0, high=in_dim, size=batch)
+    np_weight = np.random.uniform(-0.01, 0.01, arg_map["embed_weight"].shape)
+    np_onehot = np.zeros((batch, in_dim))
+    np_onehot[np.arange(batch), np_data] = 1.0
+    # forward
+    arg_map["data"][:] = np_data
+    arg_map["embed_weight"][:] = np_weight
+    exe_test.forward()
+    assert reldiff(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, np_weight)) < 1e-6
+    # backward
+    np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
+    grad = mx.nd.zeros(np_grad.shape)
+    grad[:] = np_grad
+    exe_test.backward([grad])
+    assert reldiff(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, np_grad)) < 1e-6
 if __name__ == '__main__':
     test_binary_op_duplicate_input()
     test_elementwise_sum()
@@ -400,5 +405,6 @@ if __name__ == '__main__':
     test_scalar_pow()
     test_symbol_pow()
     test_pow_fn()
+    test_embedding()
     #check_softmax_with_shape((3,4), mx.cpu())
     #check_multi_softmax_with_shape((3,4,5), mx.cpu())
