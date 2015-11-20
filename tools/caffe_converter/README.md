@@ -16,5 +16,5 @@ We have verified the results of VGG_16 model and BVLC_googlenet results from Caf
 * Make sure ```protobuf``` has been installed. Get [protobuf](https://github.com/google/protobuf) source code, follow the installation steps.
 
 ## Usage
-```make tools``` (if caffe was not installed)  
+Run ```make tools``` in the root of the project. (if caffe was not installed)  
 Run ```python convert_model.py caffe_prototxt caffe_model save_model_name``` to convert the models. Run with ```-h``` for more details of parameters.
