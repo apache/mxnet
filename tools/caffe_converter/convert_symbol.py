@@ -1,11 +1,21 @@
-import caffe
-from caffe.proto import caffe_pb2
 from google.protobuf import text_format
 import argparse
 import sys
 
+caffe_flag = True
+try:
+    import caffe
+    from caffe.proto import caffe_pb2
+except ImportError:
+    caffe_flag = False
+    import caffe_parse.caffe_pb2
+
 def readProtoSolverFile(filepath):
-    solver_config = caffe.proto.caffe_pb2.NetParameter()
+    solver_config = ''
+    if caffe_flag:
+        solver_config = caffe.proto.caffe_pb2.NetParameter()
+    else:
+        solver_config = caffe_parse.caffe_pb2.NetParameter()
     return readProtoFile(filepath, solver_config)
 
 def readProtoFile(filepath, parser_object):
@@ -23,6 +33,7 @@ def proto2script(proto_file):
     top = dict()
     flatten_count = 0
     symbol_string = ""
+    layer = ''
     if len(proto.layer):
         layer = proto.layer
     elif len(proto.layers):
@@ -42,11 +53,24 @@ def proto2script(proto_file):
         if layer[i].type == 'Convolution' or layer[i].type == 4:
             type_string = 'mx.symbol.Convolution'
             param = layer[i].convolution_param
-            pad = 0 if len(param.pad) == 0 else param.pad[0]
-            stride = 1 if len(param.stride) == 0 else param.stride[0]
+            pad = 0
+            if isinstance(param.pad, int):
+                pad = param.pad
+            else:
+                pad = 0 if len(param.pad) == 0 else param.pad[0]
+            stride = 1
+            if isinstance(param.stride, int):
+                stride = param.stride
+            else:
+                stride = 1 if len(param.stride) == 0 else param.stride[0]
+            kernel_size = ''
+            if isinstance(param.kernel_size, int):
+                kernel_size = param.kernel_size
+            else:
+                kernel_size = param.kernel_size[0]
             param_string = "num_filter=%d, pad=(%d,%d), kernel=(%d,%d), stride=(%d,%d), no_bias=%s" %\
-                (param.num_output, pad, pad, param.kernel_size[0],\
-                param.kernel_size[0], stride, stride, not param.bias_term)
+                (param.num_output, pad, pad, kernel_size,\
+                kernel_size, stride, stride, not param.bias_term)
             need_flatten[name] = True
         if layer[i].type == 'Pooling' or layer[i].type == 17:
             type_string = 'mx.symbol.Pooling'

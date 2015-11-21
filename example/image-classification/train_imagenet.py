@@ -23,7 +23,7 @@ parser.add_argument('--batch-size', type=int, default=32,
                     help='the batch size')
 parser.add_argument('--gpus', type=str, default='0',
                     help='the gpus will be used, e.g "0,1,2,3"')
-parser.add_argument('--kv-type', type=str, default='local',
+parser.add_argument('--kv-store', type=str, default='local',
                     help='the kvstore type')
 parser.add_argument('--num-examples', type=int, default=1281167,
                     help='the number of training examples')
@@ -33,7 +33,7 @@ args = parser.parse_args()
 
 # network
 import importlib
-net = importlib.import_module(args.network).get_symbol(args.num_classes)
+net = importlib.import_module('symbol_' + args.network).get_symbol(args.num_classes)
 
 # data
 def get_iterator(args, kv):

@@ -1,3 +1,27 @@
+list.of.packages <- c("R.utils")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+setwd(tempdir())
+
+download.file("http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz", destfile="train-images-idx3-ubyte.gz")
+
+download.file("http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz", destfile="train-labels-idx1-ubyte.gz")
+
+download.file("http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz", destfile="t10k-images-idx3-ubyte.gz")
+
+download.file("http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz", destfile="t10k-labels-idx1-ubyte.gz")
+
+require(R.utils)
+
+gunzip("train-images-idx3-ubyte.gz")
+
+gunzip("train-labels-idx1-ubyte.gz")
+
+gunzip("t10k-images-idx3-ubyte.gz")
+
+gunzip("t10k-labels-idx1-ubyte.gz")
+
 require(mxnet)
 
 # Network configuration
@@ -11,8 +35,8 @@ fc3 <- mx.symbol.FullyConnected(act2, name="fc3", num_hidden=10)
 softmax <- mx.symbol.Softmax(fc3, name = "sm")
 
 dtrain = mx.io.MNISTIter(
-  image="data/train-images-idx3-ubyte",
-  label="data/train-labels-idx1-ubyte",
+  image="train-images-idx3-ubyte",
+  label="train-labels-idx1-ubyte",
   data.shape=c(784),
   batch.size=batch.size,
   shuffle=TRUE,
@@ -21,8 +45,8 @@ dtrain = mx.io.MNISTIter(
   seed=10)
 
 dtest = mx.io.MNISTIter(
-  image="data/t10k-images-idx3-ubyte",
-  label="data/t10k-labels-idx1-ubyte",
+  image="t10k-images-idx3-ubyte",
+  label="t10k-labels-idx1-ubyte",
   data.shape=c(784),
   batch.size=batch.size,
   shuffle=FALSE,

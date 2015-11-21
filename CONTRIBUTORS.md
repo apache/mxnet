@@ -72,3 +72,6 @@ List of Contributors
 * [Zheng Xu](https://github.com/XericZephyr)
 * [Valentin Churavy](https://github.com/vchuravy)
 * [Luke Metz](https://github.com/lukemetz)
+* [Guosheng Dong](https://github.com/dongguosheng)
+* [yang1fan2](https://github.com/yang1fan2)
+* [Wang Gu](https://github.com/wangg12)
