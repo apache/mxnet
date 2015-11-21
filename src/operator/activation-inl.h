@@ -61,7 +61,7 @@ class ActivationOp : public Operator {
     Assign(out, req[activation::kOut], F<ForwardOp>(data));
     // Use asynchronize complete notification
     // This is only intended as an example of async ops
-    if (s != nullptr) s->Wait();
+    if (s != NULL) s->Wait();
     ctx.async_on_complete();
   }
 
@@ -84,7 +84,7 @@ class ActivationOp : public Operator {
     Assign(m_in_grad, req[activation::kData], F<BackwardOp>(m_out_data) * m_out_grad);
     // Use asynchronize complete notification
     // This is only intended as an example of async ops
-    if (s != nullptr) s->Wait();
+    if (s != NULL) s->Wait();
     ctx.async_on_complete();
   }
 
