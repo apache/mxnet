@@ -1080,3 +1080,9 @@ int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
   *size = context->read_buff->size();
   API_END();
 }
+
+int MXInvokeOpCallback(void *handle) {
+  API_BEGIN();
+  (static_cast<OpContext*>(handle))->async_on_complete();
+  API_END();
+}

@@ -6,6 +6,7 @@ from __future__ import absolute_import
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer, c_void_p, cast, c_int, c_char, c_char_p
 from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared
 from . import symbol
+from .ndarray import NDArray
 
 class PythonOp(object):
     """Base class for operators implemented in python
@@ -125,6 +126,7 @@ class NumpyOp(PythonOp):
         super(NumpyOp, self).__init__(need_top_grad)
 
     def get_symbol(self, *args, **kwargs):
+        fb_async_functype = CFUNCTYPE(None, c_int, POINTER(c_void_p), c_int, POINTER(c_void_p), c_void_p, c_void_p)
         fb_functype = CFUNCTYPE(None, c_int, POINTER(POINTER(mx_float)), POINTER(c_int),
                                 POINTER(POINTER(mx_uint)), POINTER(c_int))
         infer_functype = CFUNCTYPE(None, c_int, POINTER(c_int), POINTER(POINTER(mx_uint)))
@@ -132,7 +134,7 @@ class NumpyOp(PythonOp):
         class NumpyOpInfo(Structure):
             """Structure that holds Callback information. Passed to NumpyOpProp"""
             _fields_ = [
-                ('forward', fb_functype),
+                ('forward', fb_async_functype),
                 ('backward', fb_functype),
                 ('infer_shape', infer_functype),
                 ('list_outputs', list_functype),
@@ -143,15 +145,12 @@ class NumpyOp(PythonOp):
                 ('p_list_outputs', c_void_p),
                 ('p_list_arguments', c_void_p),
                 ]
-        def forward_entry(num_tensor, tensor_ptrs, tensor_dims,
-                          tensor_shapes, tensor_tags):
+        def forward_entry(num_in, in_handels, num_out, out_handels, payload, callback):
             """C Callback for NumpyOp::Forward"""
-            tensors = [[] for i in range(4)]
-            for i in range(num_tensor):
-                shape = [tensor_shapes[i][j] for j in range(tensor_dims[i])]
-                buff = ctypes2numpy_shared(tensor_ptrs[i], shape)
-                tensors[tensor_tags[i]].append(buff)
-            self.forward(in_data=tensors[0], out_data=tensors[1])
+            in_nds = [NDArray(in_handels[i], False) for i in range(num_in)]
+            out_nds = [NDArray(out_handels[i], False) for i in range(num_out)]
+            self.forward(in_nds, out_nds)
+            check_call(_LIB.MXInvokeOpCallback(callback))
 
         def backward_entry(num_tensor, tensor_ptrs, tensor_dims,
                            tensor_shapes, tensor_tags):
