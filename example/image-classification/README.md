@@ -147,17 +147,17 @@ model.fit(X=train_data, y=train_label)
 
 - Machines
 
-| name | hardware | software |
-| --- | --- | --- |
-| GTX980 | dual Xeon E5-2680 v2, dual GTX 980, 1G Ethernet | GCC 4.8, CUDA 7.5, CUDNN v3 |
-| EC2-g2.8x | Xeon E5-2670, dual GRID K520, 10G Ethernet | GCC 4.8, CUDA 7.5, CUDNN v3 |
+  | name | hardware | software |
+  | --- | --- | --- |
+  | GTX980 | dual Xeon E5-2680 v2, dual GTX 980, 1G Ethernet | GCC 4.8, CUDA 7.5, CUDNN v3 |
+  | EC2-g2.8x | Xeon E5-2670, dual GRID K520, 10G Ethernet | GCC 4.8, CUDA 7.5, CUDNN v3 |
 
 - Datasets
 
-| name | class | image size | training | testing |
-| ---- | ----: | ---------: | -------: | ------: |
-| CIFAR 10 | 10 | 28 × 28 × 3 | 60,000  | 10,000 |
-| ILSVRC 12 | 1,000 | 227 × 227 × 3 | 1,281,167 | 50,000 |
+  | name | class | image size | training | testing |
+  | ---- | ----: | ---------: | -------: | ------: |
+  | CIFAR 10 | 10 | 28 × 28 × 3 | 60,000  | 10,000 |
+  | ILSVRC 12 | 1,000 | 227 × 227 × 3 | 1,281,167 | 50,000 |
 
 ### CIFAR 10
 
@@ -181,24 +181,24 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
 
 #### `train_imagenet.py` with `--network alexnet`
 
-time for one epoch:
+- time for one epoch:
 
-| 1 x GTX 980 | 2 x GTX 980  | 4 x GTX 980  |
-| ----------- | ------------ | ------------ |
-| 2,413 sec | 1,244 sec | 906 sec |
+  | 1 x GTX 980 | 2 x GTX 980  | 4 x GTX 980  |
+  | ----------- | ------------ | ------------ |
+  | 2,413 sec | 1,244 sec | 906 sec |
 
 #### `train_imagenet.py` with `--network inception-bn`
 
 - Performance
 
-| Cluster | # machines | # GPUs | batch size | kvstore | epoch time |
-| --- | --- | --- | --- | --- | ---: |
-| GTX980 | 1 | 1 |  32 | `local` | 13,210 |
-| - | 1 | 2 |  64 | `local` | 7,198 |
-| - | 1 | 3 |  128 | `local` | 4,952 |
-| - | 1 | 4 |  128 | `local` | 3,589 |
-| EC2-g2.8x | 1 | 4 | 144 |  `local` | 1,4203 |
-| - | 10 | 40 | 144 |  `dist_sync` | 1,422 |
+  | Cluster | # machines | # GPUs | batch size | kvstore | epoch time |
+  | --- | --- | --- | --- | --- | ---: |
+  | GTX980 | 1 | 1 |  32 | `local` | 13,210 |
+  | - | 1 | 2 |  64 | `local` | 7,198 |
+  | - | 1 | 3 |  128 | `local` | 4,952 |
+  | - | 1 | 4 |  128 | `local` | 3,589 |
+  | EC2-g2.8x | 1 | 4 | 144 |  `local` | 14,203 |
+  | - | 10 | 40 | 144 |  `dist_sync` | 1,422 |
 
 - Convergence
 
