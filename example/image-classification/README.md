@@ -179,7 +179,7 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
 
 ### ILSVRC 12
 
-- `train_imagenet.py` with `--network alexnet`
+#### `train_imagenet.py` with `--network alexnet`
 
 time for one epoch:
 
@@ -187,7 +187,7 @@ time for one epoch:
 | ----------- | ------------ | ------------ |
 | 2,413 sec | 1,244 sec | 906 sec |
 
-- `train_imagenet.py` with `--network inception-bn`
+#### `train_imagenet.py` with `--network inception-bn`
 
 - Performance
 
@@ -197,8 +197,6 @@ time for one epoch:
 | - | 1 | 2 |  64 | `local` | 7,198 |
 | - | 1 | 3 |  128 | `local` | 4,952 |
 | - | 1 | 4 |  128 | `local` | 3,589 |
-| - | 5 | 10 |  96  | `dist_sync` | 3000 |
-| - | 5 | 10 |  96 | `dist_async` | 2800 |
 | EC2-g2.8x | 1 | 4 | 144 |  `local` | 1,4203 |
 | - | 10 | 40 | 144 |  `dist_sync` | 1,422 |
 
@@ -207,7 +205,9 @@ time for one epoch:
   - `single machine` :
 
   ```bash
-  python train_imagenet.py --network inception-bn --batch-size 128 --lr 0.05 --num-epoch 60 --lr-factor .94 --data-dir ilsvrc12/ --model-prefix model/ilsvrc12
+  python train_imagenet.py --network inception-bn \
+      --batch-size 128 --lr 0.05 --num-epoch 60 --lr-factor .94 \
+      --data-dir ilsvrc12/ --model-prefix model/ilsvrc12
   ```
 
   - `10 x g2.8x` : `hosts` contains the private IPs of the 10 machines
@@ -217,11 +217,11 @@ time for one epoch:
       python train_imagenet.py --batch-size 144 --lr 0.05 --lr-factor .94 \
         --gpus 0,1,2,3 --num-epoch 60 --network inception-bn \
         --kv-store dist_sync \
-    --data-dir s3://dmlc/ilsvrc12/  --model-prefix s3://dmlc/model/ilsvrc12
+        --data-dir s3://dmlc/ilsvrc12/  --model-prefix s3://dmlc/model/ilsvrc12
   ```
 
-  *Note: S3 is unstable sometimes, recommend to download data to `/mnt` before if possible*
+  *Note: S3 is unstable sometimes, before fixing this problem, we recommend to download data to `/mnt` first*
 
-Accuracy vs epoch ([the interactive figure](https://docs.google.com/spreadsheets/d/1AEesHjWUZOzCN0Gp_PYI1Cw4U1kZMKot360p9Fowmjw/pubchart?oid=1740787404&format=interactive)):
+  Accuracy vs epoch ([the interactive figure](https://docs.google.com/spreadsheets/d/1AEesHjWUZOzCN0Gp_PYI1Cw4U1kZMKot360p9Fowmjw/pubchart?oid=1740787404&format=interactive)):
 
-<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/inception-with-bn-imagenet1k.png width=600px/>
+  <img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/inception-with-bn-imagnet1k.png width=600px/>
