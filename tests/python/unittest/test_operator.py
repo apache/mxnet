@@ -79,18 +79,18 @@ def check_slice_channel(dim, num):
     exe.backward(o_nd)
     assert reldiff(grad_nd[0].asnumpy(), np.hstack([ins[i] + i for i in range(num)])) < 1e-5
 
-def check_concat_with_shape(shapes):
+def check_concat_with_shape(shapes, dimension):
     n = len(shapes)
     # forward
     target_dim = 0
     for shape in shapes:
-        target_dim += shape[1]
+        target_dim += shape[dimension]
 
     inputs = [mx.symbol.Variable('arg%d' % i) for i in range(n)]
-    out = mx.symbol.Concat(*inputs, name='conc')
+    out = mx.symbol.Concat(*inputs, name='conc',dim=dimension)
     arr = [mx.nd.empty(shape) for shape in shapes]
     for i in range(n):
-        arr[i][:] = shapes[i][1]
+        arr[i][:] = shapes[i][dimension]
     arr_np = [np.copy(narray.asnumpy()) for narray in arr]
     arr_grad = [mx.nd.empty(shape) for shape in shapes]
     args = out.list_arguments()
@@ -101,7 +101,7 @@ def check_concat_with_shape(shapes):
                      args_grad=arr_grad)
     exec1.forward()
     out1 = exec1.outputs[0]
-    ret = np.concatenate([narray.asnumpy() for narray in arr], axis=1)
+    ret = np.concatenate([narray.asnumpy() for narray in arr], axis=dimension)
     assert same(out1.asnumpy(), ret)
     # backward
     out1.copyto(out_grad)
@@ -111,23 +111,47 @@ def check_concat_with_shape(shapes):
         assert same(grad.asnumpy(), np_grad + 1)
 
 def test_concat():
-    n = 2
-    batch = 2
-    ch = [2, 3, 4, 5, 6]
-    h = 3
-    w = 4
-    # test  2D
-    for dim in range(2, 6):
-        shapes = []
-        for i in range(dim):
-            shapes.append((batch, ch[i]))
-        check_concat_with_shape(shapes)
-    # test 4D
-    for dim in range(2, 6):
-        shapes = []
-        for i in range(dim):
-            shapes.append((batch, ch[i], h, w))
-        check_concat_with_shape(shapes)
+    for dimension in range(4):
+        n = 2
+        merge = [2, 3, 4, 5, 6]
+        a = 2
+        b = 3
+        c = 4
+        # test  2D
+        if dimension<2:
+            for dim in range(2, 6):
+                shapes = []
+                for i in range(dim):
+                    if dimension == 0:
+                        shapes.append((merge[i], a))
+                    elif dimension == 1:
+                        shapes.append((a, merge[i]))
+                    check_concat_with_shape(shapes,dimension)
+        #test 3D
+        if dimension<3:
+            for dim in range(2, 6):
+                shapes = []
+                for i in range(dim):
+                    if dimension == 0:
+                        shapes.append((merge[i], a,b))
+                    elif dimension ==1:
+                        shapes.append((a,merge[i],b))
+                    elif dimension ==2:
+                        shapes.append((a,b,merge[i]))
+                check_concat_with_shape(shapes,dimension)
+        # test 4D
+        for dim in range(2, 6):
+            shapes = []
+            for i in range(dim):
+                if dimension == 0:
+                    shapes.append((merge[i],a,b,c))
+                elif dimension == 1:
+                    shapes.append((a,merge[i],b,c))
+                elif dimension ==2:
+                    shapes.append((a,b,merge[i],c))
+                elif dimension ==3:
+                    shapes.append((a,b,c,merge[i]))
+            check_concat_with_shape(shapes,dimension)
 
 def test_slice_channel():
     check_slice_channel(2, 4)
@@ -250,6 +274,7 @@ def test_scalarop():
     exe_test.backward(out_grad)
     assert reldiff(arr_grad.asnumpy(), npout_grad) < 1e-6
 
+
 def test_scalar_pow():
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -343,7 +368,52 @@ def test_pow_fn():
 
     assert_allclose(grad, npgrad)
 
+def test_embedding():
+    in_dim = 10
+    out_dim = 4
+    batch = 24
+
+    data = mx.sym.Variable("data")
+    embed = mx.sym.Embedding(data=data, input_dim=in_dim, output_dim=out_dim, name="embed")
+    exe_test = embed.simple_bind(mx.cpu(), data=(batch,))
+    arg_map = dict(zip(embed.list_arguments(), exe_test.arg_arrays))
+    grad_map = dict(zip(embed.list_arguments(), exe_test.grad_arrays))
+    np_data = np.random.randint(low=0, high=in_dim, size=batch)
+    np_weight = np.random.uniform(-0.01, 0.01, arg_map["embed_weight"].shape)
+    np_onehot = np.zeros((batch, in_dim))
+    np_onehot[np.arange(batch), np_data] = 1.0
+    # forward
+    arg_map["data"][:] = np_data
+    arg_map["embed_weight"][:] = np_weight
+    exe_test.forward()
+    assert reldiff(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, np_weight)) < 1e-6
+    # backward
+    np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
+    grad = mx.nd.zeros(np_grad.shape)
+    grad[:] = np_grad
+    exe_test.backward([grad])
+    assert reldiff(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, np_grad)) < 1e-6
+
+# check ops handle duplicate input correctly.
+def test_binary_op_duplicate_input():
+    data = mx.symbol.Variable('data')
+    shape = (3, 4)
+    data_tmp = np.ones(shape)
+    data_tmp[:] = 5
+    arr_data = mx.nd.array(data_tmp)
+    arr_grad = mx.nd.empty(shape)
+    arr_grad[:] = 3
+    out_grad = mx.nd.empty(shape)
+    out_grad[:] = 1
+    square = data * data
+    exe_square = square.bind(mx.cpu(), args=[arr_data], args_grad=[arr_grad])
+    exe_square.forward()
+    assert reldiff(exe_square.outputs[0].asnumpy(), data_tmp * data_tmp) < 1e-6
+    exe_square.backward(out_grad)
+    assert reldiff(arr_grad.asnumpy(), 2.0 * data_tmp) < 1e-6
+
 if __name__ == '__main__':
+    test_binary_op_duplicate_input()
     test_elementwise_sum()
     test_concat()
     test_slice_channel()
@@ -354,5 +424,6 @@ if __name__ == '__main__':
     test_scalar_pow()
     test_symbol_pow()
     test_pow_fn()
+    test_embedding()
     #check_softmax_with_shape((3,4), mx.cpu())
     #check_multi_softmax_with_shape((3,4,5), mx.cpu())
