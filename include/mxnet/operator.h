@@ -46,6 +46,8 @@ struct OpContext {
   int is_train;
   /*! \brief RunContext related resources */
   RunContext run_ctx;
+  /*! \brief the callback when operation completes, used by asynchronize ops */
+  engine::CallbackOnComplete async_on_complete;
   /*! \brief Resources requested by the operator */
   std::vector<Resource> requested;
   /*!
@@ -73,6 +75,16 @@ struct OpContext {
  */
 class Operator {
  public:
+  /*! \brief the execution type of the operator */
+  enum ExecType {
+    /*! \brief Forward/Backward are synchronize calls */
+    kSync,
+    /*!
+     * \brief Forward/Backward are asynchronize,
+     *  will call OpContext.async_on_complete when operation finishes.
+     */
+    kAsync
+  };
   /*! \brief destructor */
   virtual ~Operator() {}
   /*!
@@ -127,6 +139,10 @@ class Operator {
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_states) {
     LOG(FATAL) << "Backward is not implemented";
+  }
+  /*! \return execution type of the operator */
+  virtual ExecType exec_type() const {
+    return kSync;
   }
 };
 

@@ -59,6 +59,9 @@ class GraphExecutor::BackwardOpWrapper : public Operator {
     // redirect internally
     op_->Backward(ctx, out_grad_, in_data_, out_data_, req, out_data, aux_states);
   }
+  virtual ExecType exec_type() const {
+    return op_->exec_type();
+  }
 
  private:
   /*! \brief internal forward operator */
@@ -221,7 +224,8 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
   Operator* op = op_node.op.get();
   OpContext* op_ctx_ptr = &op_node.op_ctx;
   bool is_gpu = op_node.ctx.dev_mask() == gpu::kDevMask;
-  exec.exec_fun = [op, is_gpu, op_ctx_ptr, in_array, req, out_array, aux_array]
+  bool is_async = op->exec_type() == Operator::kAsync;
+  exec.exec_fun = [op, is_gpu, is_async, op_ctx_ptr, in_array, req, out_array, aux_array]
       (RunContext ctx, Engine::CallbackOnComplete on_complete) {
     std::vector<TBlob> in_data(in_array.size());
     std::vector<TBlob> out_data(out_array.size());
@@ -236,16 +240,22 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
         return nd.data();
       });
     op_ctx_ptr->run_ctx = ctx;
-    op->Forward(*op_ctx_ptr, in_data, req, out_data, aux_data);
-    if (is_gpu) {
-#if MXNET_USE_CUDA
-      // Wait GPU kernel to finish.
-      ctx.get_stream<gpu>()->Wait();
-#else
-      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
+    if (is_async) {
+      op_ctx_ptr->async_on_complete = on_complete;
     }
-    on_complete();
+    op->Forward(*op_ctx_ptr, in_data, req, out_data, aux_data);
+    // call on complete only if it is async op
+    if (!is_async) {
+      if (is_gpu) {
+        #if MXNET_USE_CUDA
+        // Wait GPU kernel to finish.
+        ctx.get_stream<gpu>()->Wait();
+        #else
+        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+        #endif
+      }
+      on_complete();
+    }
   };
   return exec;
 }
