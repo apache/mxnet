@@ -393,6 +393,25 @@ def test_embedding():
     grad[:] = np_grad
     exe_test.backward([grad])
     assert reldiff(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, np_grad)) < 1e-6
+
+# check ops handle duplicate input correctly.
+def test_binary_op_duplicate_input():
+    data = mx.symbol.Variable('data')
+    shape = (3, 4)
+    data_tmp = np.ones(shape)
+    data_tmp[:] = 5
+    arr_data = mx.nd.array(data_tmp)
+    arr_grad = mx.nd.empty(shape)
+    arr_grad[:] = 3
+    out_grad = mx.nd.empty(shape)
+    out_grad[:] = 1
+    square = data * data
+    exe_square = square.bind(mx.cpu(), args=[arr_data], args_grad=[arr_grad])
+    exe_square.forward()
+    assert reldiff(exe_square.outputs[0].asnumpy(), data_tmp * data_tmp) < 1e-6
+    exe_square.backward(out_grad)
+    assert reldiff(arr_grad.asnumpy(), 2.0 * data_tmp) < 1e-6
+
 if __name__ == '__main__':
     test_binary_op_duplicate_input()
     test_elementwise_sum()

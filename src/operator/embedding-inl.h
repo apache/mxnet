@@ -72,6 +72,8 @@ class EmbeddingOp : public Operator {
     CHECK_EQ(out_grad.size(), 1);
     CHECK_GE(in_data.size(), 1);
     CHECK_EQ(in_grad.size(), 2);
+    CHECK_EQ(req[embedding::kData], kNullOp)
+      << "Embedding layer doesn't support calculate data gradient";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 1> data = in_data[embedding::kData].get<xpu, 1, real_t>(s);
     Tensor<xpu, 2> grad_out = out_grad[embedding::kOut].get<xpu, 2, real_t>(s);

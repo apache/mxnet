@@ -40,7 +40,7 @@ def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
     return LSTMState(c=next_c, h=next_h)
 
 
-def lstm_unroll(num_lstm_layer, seq_len,
+def lstm_unroll(num_lstm_layer, seq_len, input_size,
                 num_hidden, num_embed, num_label, dropout=0.):
     """unrolled lstm network"""
     # initialize the parameter symbols
@@ -64,10 +64,11 @@ def lstm_unroll(num_lstm_layer, seq_len,
     for seqidx in range(seq_len):
         # embeding layer
         data = mx.sym.Variable("t%d_data" % seqidx)
-        
-        hidden = mx.sym.FullyConnected(data=data, weight=embed_weight,
-                                      num_hidden = num_embed, no_bias=True,
-                                      name="t%d_embed" % seqidx)
+
+        hidden = mx.sym.Embedding(data=data, weight=embed_weight,
+                                  input_dim=input_size,
+                                  output_dim=num_embed,
+                                  name="t%d_embed" % seqidx)
         # stack LSTM
         for i in range(num_lstm_layer):
             if i==0:
@@ -117,6 +118,7 @@ def setup_rnn_model(ctx,
     rnn_sym = lstm_unroll(num_lstm_layer=num_lstm_layer,
                           num_hidden=num_hidden,
                           seq_len=seq_len,
+                          input_size=input_size,
                           num_embed=num_embed,
                           num_label=num_label,
                           dropout=dropout)
@@ -127,7 +129,7 @@ def setup_rnn_model(ctx,
         if name.endswith("init_c") or name.endswith("init_h"):
             input_shapes[name] = (batch_size, num_hidden)
         elif name.endswith("data"):
-            input_shapes[name] = (batch_size, input_size)
+            input_shapes[name] = (batch_size, )
         else:
             pass
 
@@ -169,14 +171,13 @@ def setup_rnn_model(ctx,
 
 def set_rnn_inputs(m, X, begin):
     seq_len = len(m.seq_data)
-    batch_size, vocab = m.seq_data[0].shape
+    batch_size = m.seq_data[0].shape[0]
     for seqidx in range(seq_len):
         idx = (begin + seqidx) % X.shape[0]
         next_idx = (begin + seqidx + 1) % X.shape[0]
         x = X[idx, :]
         y = X[next_idx, :]
-        mx.nd.onehot_encode(mx.nd.array(x, ctx=m.seq_data[seqidx].context),
-                out=m.seq_data[seqidx])
+        mx.nd.array(x).copyto(m.seq_data[seqidx])
         m.seq_labels[seqidx*batch_size : seqidx*batch_size+batch_size] = y
 
 def calc_nll(seq_label_probs, X, begin):
@@ -193,10 +194,10 @@ def train_lstm(model, X_train_batch, X_val_batch,
     batch_size = m.seq_data[0].shape[0]
     print("batch_size=%d" % batch_size)
     print("seq_len=%d" % seq_len)
-    
-    opt = mx.optimizer.create(optimizer,                              
+
+    opt = mx.optimizer.create(optimizer,
                               **kwargs)
-    
+
     updater = mx.optimizer.get_updater(opt)
     epoch_counter = 0
     log_period = max(1000 / seq_len, 1)
@@ -233,7 +234,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
                 norm = math.sqrt(norm)
                 for idx, weight, grad, name in m.param_blocks:
                     if norm > max_grad_norm:
-                        grad *= (max_grad_norm / norm)                    
+                        grad *= (max_grad_norm / norm)
                     updater(idx, grad, weight)
                     # reset gradient to zero
                     grad[:] = 0.0
@@ -271,7 +272,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
             opt.lr *= 0.5
             print("Reset learning rate to %g" % opt.lr)
         last_perp = perp
-        
+
 def setup_rnn_sample_model(ctx,
                            params,
                            num_lstm_layer,
