@@ -102,6 +102,7 @@ LIB_DEP += $(DMLC_CORE)/libdmlc.a
 ALL_DEP = $(OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
 	ALL_DEP += $(CUOBJ)
+	LDFLAGS += -lnvrtc -lcuda
 endif
 
 build/%.o: src/%.cc
