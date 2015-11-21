@@ -147,12 +147,25 @@ model.fit(X=train_data, y=train_label)
 
 In default we compile mxnet with CUDA7.5 + CUDNN 3
 
-- `train_cifar10.py`
+### CIFAR 10
+
+- Command
+
+```bash
+python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
+```
+
+- Performance:
 
 | 1 GTX 980 | 2 GTX 980 | 4 GTX 980 |
 | --- | --- | --- |
 | 842 img/sec | 1640 img/sec | 2943 img/sec |
 
+- Accuracy vs epoch ([interactive figure](https://docs.google.com/spreadsheets/d/1kV2aDUXNyPn3t5nj8UdPA61AdRF4_w1UNmxaqu-cRBA/pubchart?oid=761035336&format=interactive)):
+
+<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/inception-with-bn-cifar10.png width=600px/>
+
+### Imagenet
 
 - `train_imagenet.py` with `--network alexnet`
 
