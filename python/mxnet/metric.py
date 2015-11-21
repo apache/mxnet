@@ -53,8 +53,10 @@ class Accuracy(EvalMetric):
             pred = preds[i].asnumpy()
             label = labels[i].asnumpy().astype('int32')
             pred_label = numpy.argmax(pred, axis=1)
-            self.sum_metric += numpy.sum(pred_label == label)
-            num_inst = label.size
+            if label.shape[0] < pred_label.shape[0]:
+                raise Exception("Predict label is more than data label? ")
+            self.sum_metric += numpy.sum(pred_label == label[:pred_label.shape[0]])
+            num_inst = pred_label.shape[0]
         self.num_inst += num_inst
 
 
