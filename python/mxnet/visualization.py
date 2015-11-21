@@ -68,13 +68,7 @@ def plot_network(symbol, title="plot", shape=None, node_attrs={}):
     node_attr = {"shape": "box", "fixedsize": "true",
                  "width": "1.3", "height": "0.8034", "style": "filled"}
     # merge the dcit provided by user and the default one
-    if len(node_attrs) is not 0:
-        for k in node_attrs.keys():
-            if k in node_attr.keys():
-                node_attr[k] = node_attrs[k]
-            else:
-                raise ValueError("Input keys should be in: \
-                shape, fixedsize, width, height, style")
+    node_attr.update(node_attrs)
     dot = Digraph(name=title)
     # color map
     cm = ("#8dd3c7", "#fb8072", "#ffffb3", "#bebada", "#80b1d3",
