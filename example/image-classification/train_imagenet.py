@@ -15,6 +15,10 @@ parser.add_argument('--model-prefix', type=str,
                     help='the prefix of the model to load/save')
 parser.add_argument('--lr', type=float, default=.05,
                     help='the initial learning rate')
+parser.add_argument('--lr-factor', type=float, default=1,
+                    help='times the lr with a factor for every lr-factor-epoch epoch')
+parser.add_argument('--lr-factor-epoch', type=float, default=1,
+                    help='the number of epoch to factor the lr, could be .5')
 parser.add_argument('--num-epochs', type=int, default=20,
                     help='the number of training epochs')
 parser.add_argument('--load-epoch', type=int,
