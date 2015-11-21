@@ -145,7 +145,19 @@ model.fit(X=train_data, y=train_label)
 
 ## Results
 
-In default we compile mxnet with CUDA7.5 + CUDNN 3
+- Machines
+
+| name | hardware | software |
+| --- | --- | --- |
+| GTX980 | dual Xeon E5-2680 v2, dual GTX 980, 1G Ethernet | GCC 4.8, CUDA 7.5, CUDNN v3 |
+| EC2-g2.8x | Xeon E5-2670, dual GRID K520, 10G Ethernet | GCC 4.8, CUDA 7.5, CUDNN v3 |
+
+- Datasets
+
+| name | class | image size | training | testing |
+| ---- | ----: | ---------: | -------: | ------: |
+| CIFAR 10 | 10 | 28 × 28 × 3 | 60,000  | 10,000 |
+| ILSVRC 12 | 1,000 | 227 × 227 × 3 | 1,281,167 | 50,000 |
 
 ### CIFAR 10
 
@@ -165,19 +177,51 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
 
 <img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/inception-with-bn-cifar10.png width=600px/>
 
-### Imagenet
+### ILSVRC 12
 
 - `train_imagenet.py` with `--network alexnet`
 
+time for one epoch:
+
 | 1 x GTX 980 | 2 x GTX 980  | 4 x GTX 980  |
 | ----------- | ------------ | ------------ |
-| 527 img/sec | 1030 img/sec | 1413 img/sec |
+| 2,413 sec | 1,244 sec | 906 sec |
 
 - `train_imagenet.py` with `--network inception-bn`
 
-| 1 x GTX 980           | 2 x GTX 980            | 4 x GTX 980             |
-| --------------------- | ---------------------- | ----------------------- |
-| 97 img/sec (batch 32) | 178 img/sec (batch 64) | 357 img/sec (batch 128) |
+- Performance
 
-For Inception-BN network, single model + single center test top-5 accuracy will
-be round 90%.
+| Cluster | # machines | # GPUs | batch size | kvstore | epoch time |
+| --- | --- | --- | --- | --- | ---: |
+| GTX980 | 1 | 1 |  32 | `local` | 13,210 |
+| - | 1 | 2 |  64 | `local` | 7,198 |
+| - | 1 | 3 |  128 | `local` | 4,952 |
+| - | 1 | 4 |  128 | `local` | 3,589 |
+| - | 5 | 10 |  96  | `dist_sync` | 3000 |
+| - | 5 | 10 |  96 | `dist_async` | 2800 |
+| EC2-g2.8x | 1 | 4 | 144 |  `local` | 1,4203 |
+| - | 10 | 40 | 144 |  `dist_sync` | 1,422 |
+
+- Convergence
+
+  - `single machine` :
+
+  ```bash
+  python train_imagenet.py --network inception-bn --batch-size 128 --lr 0.05 --num-epoch 60 --lr-factor .94 --data-dir ilsvrc12/ --model-prefix model/ilsvrc12
+  ```
+
+  - `10 x g2.8x` : `hosts` contains the private IPs of the 10 machines
+
+  ```bash
+  ../../tools/launch.py -H hosts -n 10 --sync-dir /tmp/mxnet  \
+      python train_imagenet.py --batch-size 144 --lr 0.05 --lr-factor .94 \
+        --gpus 0,1,2,3 --num-epoch 60 --network inception-bn \
+        --kv-store dist_sync \
+    --data-dir s3://dmlc/ilsvrc12/  --model-prefix s3://dmlc/model/ilsvrc12
+  ```
+
+  *Note: S3 is unstable sometimes, recommend to download data to `/mnt` before if possible*
+
+Accuracy vs epoch ([the interactive figure](https://docs.google.com/spreadsheets/d/1AEesHjWUZOzCN0Gp_PYI1Cw4U1kZMKot360p9Fowmjw/pubchart?oid=1740787404&format=interactive)):
+
+<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/inception-with-bn-imagenet1k.png width=600px/>
