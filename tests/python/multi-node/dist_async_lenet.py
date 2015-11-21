@@ -1,14 +1,13 @@
 #!/usr/bin/env python
+import common
 import mxnet as mx
 import logging
-import common
 
 mx.random.seed(0)
 logging.basicConfig(level=logging.DEBUG)
 
 kv = mx.kvstore.create('dist_async')
 
-# feed each machine the whole data
 (train, val) = common.mnist(num_parts = kv.num_workers,
                             part_index = kv.rank,
                             batch_size = 100,
@@ -19,7 +18,7 @@ model  = mx.model.FeedForward.create(
     kvstore       = kv,
     symbol        = common.lenet(),
     X             = train,
-    num_round     = 10,
+    num_epoch     = 10,
     learning_rate = 0.05,
     momentum      = 0.9,
     wd            = 0.00001)

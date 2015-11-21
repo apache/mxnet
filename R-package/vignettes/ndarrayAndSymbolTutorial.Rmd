@@ -13,7 +13,7 @@ applications. There are two major concepts introduced in this tutorial.
 
 ## NDArray: Vectorized tensor computations on CPUs and GPUs
 
-`NDArray` is the basic vectorized operation unit in MXNet for matrix and tensor computations. 
+`NDArray` is the basic vectorized operation unit in MXNet for matrix and tensor computations.
 Users can perform usual calculations as on R"s array, but with two additional features:
 
 1.  **multiple devices**: all operations can be run on various devices including
@@ -67,7 +67,7 @@ d <- c / a - 5
 as.array(d)
 ```
 
-If two `NDArray`s sit on different divices, we need to explicitly move them 
+If two `NDArray`s sit on different divices, we need to explicitly move them
 into the same one. For instance:
 
 ```{r, eval=FALSE}
@@ -83,7 +83,7 @@ You can save a list of `NDArray` object to your disk with `mx.nd.save`:
 
 ```{r}
 a <- mx.nd.ones(c(2, 3))
-mx.nd.save(list(a), "temp.ndarray")
+mx.nd.save(a, "temp.ndarray")
 ```
 
 You can also load it back easily:
@@ -93,7 +93,7 @@ a <- mx.nd.load("temp.ndarray")
 as.array(a[[1]])
 ```
 
-In case you want to save data to the distributed file system such as S3 and HDFS, 
+In case you want to save data to the distributed file system such as S3 and HDFS,
 we can directly save to and load from them. For example:
 
 ```{r,eval=FALSE}
@@ -156,7 +156,7 @@ net <- mx.symbol.Variable("data")
 net <- mx.symbol.FullyConnected(data=net, name="fc1", num_hidden=128)
 net <- mx.symbol.Activation(data=net, name="relu1", act_type="relu")
 net <- mx.symbol.FullyConnected(data=net, name="fc2", num_hidden=64)
-net <- mx.symbol.Softmax(data=net, name="out")
+net <- mx.symbol.SoftmaxOutput(data=net, name="out")
 class(net)
 ```
 

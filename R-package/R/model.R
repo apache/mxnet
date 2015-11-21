@@ -96,8 +96,8 @@ mx.model.train <- function(symbol, ctx, input.shape,
                            begin.round, end.round, optimizer,
                            train.data, eval.data,
                            metric,
-                           iter.end.callback,
                            epoch.end.callback,
+                           batch.end.callback,
                            kvstore) {
   ndevice <- length(ctx)
   cat(paste0("Start training with ", ndevice, " devices\n"))
@@ -195,8 +195,8 @@ mx.model.train <- function(symbol, ctx, input.shape,
         }
       }
       nbatch <- nbatch + 1
-      if (!is.null(epoch.end.callback)) {
-        epoch.end.callback(iteration, nbatch, environment())
+      if (!is.null(batch.end.callback)) {
+        batch.end.callback(iteration, nbatch, environment())
       }
     }
     # reset training data
@@ -244,8 +244,14 @@ mx.model.train <- function(symbol, ctx, input.shape,
     }
     # get the model out
     model <- mx.model.extract.model(symbol, train.execs)
-    if (!is.null(iter.end.callback)) {
-      iter.end.callback(iteration, 0, environment())
+
+    epoch_continue <- TRUE
+    if (!is.null(epoch.end.callback)) {
+      epoch_continue <- epoch.end.callback(iteration, 0, environment())
+    }
+
+    if (!epoch_continue) {
+      break
     }
   }
   return(model)
@@ -355,9 +361,9 @@ mx.model.select.layout.predict <- function(X, model) {
 #'     The validation set used for validation evaluation during the progress
 #' @param eval.metric function, optional
 #'     The evaluation function on the results.
-#' @param iter.end.callback function, optional
-#'     The callback when iteration ends.
 #' @param epoch.end.callback function, optional
+#'     The callback when iteration ends.
+#' @param batch.end.callback function, optional
 #'     The callback when one mini-batch iteration ends.
 #' @param array.batch.size integer (default=128)
 #'     The batch size used for R array training.
@@ -377,7 +383,7 @@ function(symbol, X, y=NULL, ctx=NULL,
          num.round=10, optimizer="sgd",
          initializer=mx.init.uniform(0.01),
          eval.data=NULL, eval.metric=NULL,
-         iter.end.callback=NULL, epoch.end.callback=NULL,
+         epoch.end.callback=NULL, batch.end.callback=NULL,
          array.batch.size=128, array.layout="auto",
          kvstore="local",
          ...) {
@@ -406,15 +412,31 @@ function(symbol, X, y=NULL, ctx=NULL,
     batchsize = input.shape[[ndim]]
     optimizer <- mx.opt.create(optimizer, rescale.grad=(1/batchsize), ...)
   }
-
+  if (!is.null(eval.data) && !is.list(eval.data) && !is.mx.dataiter(eval.data)) {
+    stop("The validation set should be either a mx.io.DataIter or a R list")
+  }
+  if (is.list(eval.data)) {
+    if (is.null(eval.data$data) || is.null(eval.data$label)){
+      stop("Please provide the validation set as list(data=R.array, label=R.array)")
+    }
+    if (is.array(eval.data$data) || is.matrix(eval.data$data)) {
+      if (array.layout == "auto") {
+        array.layout <- mx.model.select.layout.train(eval.data$data, eval.data$label)
+      }
+      if (array.layout == "rowmajor") {
+        eval.data$data <- t(eval.data$data)
+      }
+    }
+    eval.data <- mx.model.init.iter(eval.data$data, eval.data$label, batch.size=array.batch.size, is.train = TRUE)
+  }
   kvstore <- mx.model.create.kvstore(kvstore, params$arg.params, length(ctx))
   model <- mx.model.train(symbol, ctx, input.shape,
                           params$arg.params, params$aux.params,
                           1, num.round, optimizer=optimizer,
                           train.data=X, eval.data=eval.data,
                           metric=eval.metric,
-                          iter.end.callback=iter.end.callback,
                           epoch.end.callback=epoch.end.callback,
+                          batch.end.callback=batch.end.callback,
                           kvstore=kvstore)
   return (model)
 }

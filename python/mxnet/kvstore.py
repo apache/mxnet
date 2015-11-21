@@ -310,7 +310,7 @@ class KVStore(object):
         >>> def update(key, input, stored):
         ...     print "update on key: %d" % key
         ...     stored += input * 2
-        >>> kv.set_updater(update)
+        >>> kv._set_updater(update)
         >>> kv.pull(3, out=a)
         >>> print a.asnumpy()
         [[ 4.  4.  4.]

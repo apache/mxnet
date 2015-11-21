@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 
 import ctypes
+from numbers import Number
 import sys
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str, string_types
@@ -32,6 +33,8 @@ class Symbol(object):
     def __add__(self, other):
         if isinstance(other, Symbol):
             return Symbol._Plus(self, other)
+        if isinstance(other, Number):
+            return Symbol._PlusScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -41,12 +44,22 @@ class Symbol(object):
     def __sub__(self, other):
         if isinstance(other, Symbol):
             return Symbol._Minus(self, other)
+        if isinstance(other, Number):
+            return Symbol._MinusScalar(self, scalar=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __rsub__(self, other):
+        if isinstance(other, Number):
+            return Symbol._MinusScalar(self, scalar=other, scalar_on_right=True)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __mul__(self, other):
         if isinstance(other, Symbol):
             return Symbol._Mul(self, other)
+        if isinstance(other, Number):
+            return Symbol._MulScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -56,11 +69,30 @@ class Symbol(object):
     def __div__(self, other):
         if isinstance(other, Symbol):
             return Symbol._Div(self, other)
+        if isinstance(other, Number):
+            return Symbol._DivScalar(self, scalar=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __rdiv__(self, other):
+        if isinstance(other, Number):
+            return Symbol._DivScalar(self, scalar=other, scalar_on_right=True)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __truediv__(self, other):
         return self.__div__(other)
+
+    def __rtruediv__(self, other):
+        return self.__rdiv__(other)
+
+    def __pow__(self, other):
+        if isinstance(other, Symbol):
+            return Symbol._Power(self, other)
+        if isinstance(other, Number):
+            return Symbol._PowerScalar(self, scalar=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
 
     def __del__(self):
         check_call(_LIB.MXSymbolFree(self.handle))
@@ -811,3 +843,28 @@ def _init_symbol_module():
 
 # Initialize the atomic symbo in startups
 _init_symbol_module()
+
+# pylint: disable=no-member
+# pylint: disable=redefined-builtin
+def pow(base, exp):
+    """ Raise base to an exp.
+
+    Parameters
+    ---------
+    base: Symbol or Number
+    exp: Symbol or Number
+
+    Returns
+    -------
+    result: Symbol or Number
+    """
+    if isinstance(base, Symbol) and isinstance(exp, Symbol):
+        return Symbol._Power(base, exp)
+    if  isinstance(base, Symbol) and isinstance(exp, Number):
+        return Symbol._PowerScalar(base, scalar=exp)
+    if  isinstance(base, Number) and isinstance(exp, Symbol):
+        return Symbol._PowerScalar(exp, scalar=base, scalar_on_right=True)
+    if  isinstance(base, Number) and isinstance(exp, Number):
+        return base**exp
+    else:
+        raise TypeError('types (%s, %s) not supported' % (str(type(base)), str(type(exp))))

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # pylint: skip-file
-import mxnet as mx
 import common
+import mxnet as mx
 import logging
 
 def test_inception(devs, kv_type):
@@ -17,7 +17,7 @@ def test_inception(devs, kv_type):
         X             = train,
         eval_data     = val,
         kvstore       = kv_type,
-        num_round     = 10,
+        num_epoch     = 10,
         learning_rate = 0.1,
         momentum      = 0.9,
         wd            = 0.00001,

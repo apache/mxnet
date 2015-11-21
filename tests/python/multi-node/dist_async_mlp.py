@@ -1,7 +1,7 @@
 #!/usr/bin/env python
+import common
 import mxnet as mx
 import logging
-import common
 
 mx.random.seed(0)
 logging.basicConfig(level=logging.DEBUG)
@@ -18,7 +18,7 @@ model  = mx.model.FeedForward.create(
     symbol        = common.mlp(),
     ctx           = mx.cpu(),
     X             = train,
-    num_round     = 4,
+    num_epoch     = 4,
     learning_rate = 0.05,
     wd            = 0.0004,
     momentum      = 0.9,

@@ -1,6 +1,6 @@
 import sys
 sys.path.insert(0, "../common/")
-sys.path.insert(0, "../../python/")
+sys.path.insert(0, "../../../python/")
 import mxnet as mx
 import get_data
 import numpy as np
@@ -97,5 +97,5 @@ def inception(nhidden):
     # linear classifier
     flatten = mx.symbol.Flatten(data=avg, name='flatten')
     fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=nhidden, name='fc1')
-    softmax = mx.symbol.Softmax(data=fc1, name='softmax')
+    softmax = mx.symbol.SotfmaxOutput(data=fc1, name='softmax')
     return softmax

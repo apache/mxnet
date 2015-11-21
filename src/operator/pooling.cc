@@ -11,11 +11,11 @@ namespace op {
 template<>
 Operator *CreateOp<cpu>(PoolingParam param) {
   switch (param.pool_type) {
-    case kMaxPooling:
+    case pool_enum::kMaxPooling:
       return new PoolingOp<cpu, mshadow::red::maximum>(param);
-    case kAvgPooling:
+    case pool_enum::kAvgPooling:
       return new PoolingOp<cpu, mshadow::red::sum>(param);
-    case kSumPooling:
+    case pool_enum::kSumPooling:
       return new PoolingOp<cpu, mshadow::red::sum>(param);
     default:
       LOG(FATAL) << "unknown activation type";

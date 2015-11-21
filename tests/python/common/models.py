@@ -24,6 +24,6 @@ def conv():
 
     fl = mx.symbol.Flatten(data = mp2, name="flatten")
     fc2 = mx.symbol.FullyConnected(data = fl, name='fc2', num_hidden=10)
-    softmax = mx.symbol.Softmax(data = fc2, name = 'sm')
+    softmax = mx.symbol.SoftmaxOutput(data = fc2, name = 'sm')
     return softmax
 

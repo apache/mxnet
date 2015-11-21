@@ -17,6 +17,7 @@ Contents
   - Introduces how to build mxnet with advanced features such as HDFS/S3 support, CUDNN
 - [Python Package Installation](#python-package-installation)
 - [R Package Installation](#r-package-installation)
+- [Docker Images](#docker-images)
 
 Build MXNet Library
 -------------------
@@ -135,14 +136,37 @@ cd python; python setup.py develop --user
 R Package Installation
 ----------------------
 To install the R package. First finish the [Build MXNet Library](#build-mxnet-library) step.
-Then use the following command to install mxnet at root folder
+Then use the following command to install dependencies and build the package at root folder
 
 ```bash
-R CMD INSTALL R-package
+Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')" 
+cd R-package
+Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
+cd ..
+make rpkg
 ```
 
-Hopefully, we will now have mxnet on R!
+Now you should have the R package as a tar.gz file and you can install it as a normal package by (the version number might be different)
+
+```bash
+R CMD INSTALL mxnet_0.5.tar.gz
+```
 
 ## Note on Library Build
 We isolate the library build with Rcpp end to maximize the portability
   - MSVC is needed on windows to build the mxnet library, because of CUDA compatiblity issue of toolchains.
+
+Docker Images
+-------------
+Builds of MXNet are available as [Docker](https://www.docker.com/whatisdocker) images:
+[MXNet Docker (CPU)](https://hub.docker.com/r/kaixhin/mxnet/) or [MXNet Docker (CUDA)](https://hub.docker.com/r/kaixhin/cuda-mxnet/).
+These are updated on a weekly basis with the latest builds of MXNet. Examples of running bash in a Docker container
+are as follows:
+
+```bash
+sudo docker run -it kaixhin/mxnet
+sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia0 kaixhin/cuda-mxnet:7.0
+```
+
+For a guide to Docker, see the [official docs](https://docs.docker.com/userguide/). For more details on how to use the
+MXNet Docker images, including requirements for CUDA support, consult the [source project](https://github.com/Kaixhin/dockerfiles).

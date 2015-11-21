@@ -19,8 +19,10 @@
 namespace mxnet {
 namespace op {
 
+namespace blockgrad {
 enum BlockGradientOpInputs {kData};
 enum BlockGradientOpOutputs {kOut};
+}  // namespace blockgrad
 
 template<typename xpu>
 class BlockGradientOp : public Operator {
@@ -35,8 +37,8 @@ class BlockGradientOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> data = in_data[blockgrad::kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> out = out_data[blockgrad::kOut].FlatTo2D<xpu, real_t>(s);
     out = F<mshadow_op::identity>(data);
   }
 
@@ -50,7 +52,7 @@ class BlockGradientOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> grad = in_grad[kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> grad = in_grad[blockgrad::kData].FlatTo2D<xpu, real_t>(s);
     grad = 0.f;
   }
 };  // class BlockGradientOp
@@ -72,7 +74,7 @@ class BlockGradientProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 1);
-    const TShape &dshape = in_shape->at(kData);
+    const TShape &dshape = in_shape->at(blockgrad::kData);
     if (dshape.ndim() == 0) return false;
     out_shape->clear();
     out_shape->push_back(dshape);
@@ -97,10 +99,10 @@ class BlockGradientProp : public OperatorProperty {
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
       const std::vector<int> &in_data,
       const std::vector<void*> &out_data) const override {
-    return {{in_data[kData], out_data[kOut]}};
+    return {{in_data[blockgrad::kData], out_data[blockgrad::kOut]}};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 };  // class BlockGradientProperty
 
 #endif  // DMLC_USE_CXX11

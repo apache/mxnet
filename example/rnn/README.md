@@ -8,4 +8,4 @@ This folder contains RNN examples using low level symbol interface.
 
 
 Performance Note:
-More ```MXNET_GPU_WORKER_NTHREADS``` may lead to better performance. For setting ```MXNET_GPU_WORKER_NTHREADS```, please refer [Environment Variables](https://mxnet.readthedocs.org/en/latest/env_var.html)
+More ```MXNET_GPU_WORKER_NTHREADS``` may lead to better performance. For setting ```MXNET_GPU_WORKER_NTHREADS```, please refer to [Environment Variables](https://mxnet.readthedocs.org/en/latest/env_var.html).

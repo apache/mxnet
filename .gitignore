@@ -41,6 +41,7 @@ config.mk
 *log
 Debug
 *suo
+tracker
 
 # vim
 *.swp
@@ -50,6 +51,7 @@ Debug
 .ycm_extra_conf.pyc
 
 # Emacs
+.#*
 .clang_complete
 .dir-locals.el
 __pycache__
@@ -66,3 +68,14 @@ deps
 # R
 *.Rcheck
 *.rds
+*.Rproj
+.Rproj.user
+R-package/inst/*
+*.tar.gz
+
+# data
+*.rec
+*.lst
+*.zip
+*ubyte
+*.bin

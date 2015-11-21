@@ -27,6 +27,13 @@ def test_single_kv_pair():
     kv.pull(3, out = val)
     check_diff_to_scalar(val, 1)
 
+def test_init():
+    """test init"""
+    kv = mx.kv.create()
+    kv.init(3, mx.nd.ones(shape)*4)
+    a = mx.nd.zeros(shape)
+    kv.pull(3, out=a)
+    check_diff_to_scalar(a, 4)
 
 def test_list_kv_pair():
     """list key-value pair push & pull"""
@@ -110,6 +117,7 @@ def test_get_type():
     assert kv.type == kvtype
 
 if __name__ == '__main__':
+    test_init()
     test_get_type()
     test_single_kv_pair()
     test_list_kv_pair()

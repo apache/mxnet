@@ -88,7 +88,7 @@ In default, `NDArray` performs elemental-wise operations:
 ```python
 >>> a = mx.nd.ones((2, 3)) * 2
 >>> b = mx.nd.ones((2, 3)) * 4
->>> print a.asnumpy()
+>>> print b.asnumpy()
 [[ 4.  4.  4.]
  [ 4.  4.  4.]]
 >>> c = a + b
@@ -227,7 +227,7 @@ The following codes create a two layer perceptrons network:
 >>> net = mx.symbol.FullyConnected(data=net, name='fc1', num_hidden=128)
 >>> net = mx.symbol.Activation(data=net, name='relu1', act_type="relu")
 >>> net = mx.symbol.FullyConnected(data=net, name='fc2', num_hidden=64)
->>> net = mx.symbol.Softmax(data=net, name='out')
+>>> net = mx.symbol.SoftmaxOutput(data=net, name='out')
 >>> type(net)
 <class 'mxnet.symbol.Symbol'>
 ```
@@ -419,7 +419,7 @@ control how data is merged.
 >>> def update(key, input, stored):
 >>>     print "update on key: %d" % key
 >>>     stored += input * 2
->>> kv.set_updater(update)
+>>> kv._set_updater(update)
 >>> kv.pull(3, out=a)
 >>> print a.asnumpy()
 [[ 4.  4.  4.]

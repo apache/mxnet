@@ -18,7 +18,8 @@ class TBlobOpRegEntryImpl : public TBlobOpRegEntry {
   // functions
   TSelf& set_function(int dev_mask,
                       UnaryFunction funary,
-                      bool inplace_in_out) override {
+                      bool inplace_in_out,
+                      bool register_symbolic) override {
     std::lock_guard<std::mutex> lock(mutex_);
     ++reg_counter_;
     if (funary_.size() <= static_cast<size_t>(dev_mask)) {
@@ -30,7 +31,13 @@ class TBlobOpRegEntryImpl : public TBlobOpRegEntry {
     }
     funary_[dev_mask] = funary;
     inplace_in0_out_forward_ = inplace_in_out;
-    if (reg_counter_ == 1) this->DoRegisterUnary();
+    if (reg_counter_ == 1) {
+      this->RegisterUnary();
+      register_symbolic_ = register_symbolic;
+      if (register_symbolic) {
+        this->RegisterUnarySymbolic();
+      }
+    }
     return *this;
   }
 
@@ -76,7 +83,9 @@ class TBlobOpRegEntryImpl : public TBlobOpRegEntry {
     std::lock_guard<std::mutex> lock(mutex_);
     if (reg_counter_ != 1) return *this;
     NDArrayReg().describe(description);
-    OpReg().describe(description);
+    if (register_symbolic_) {
+      OpReg().describe(description);
+    }
     return *this;
   }
 
@@ -87,6 +96,7 @@ class TBlobOpRegEntryImpl : public TBlobOpRegEntry {
   std::mutex mutex_;
   // registration counter
   int reg_counter_{0};
+  bool register_symbolic_{true};
   // unary shape inferencer
   UnaryShapeInfer unary_infer_{nullptr};
   // unary functions on each device mask
@@ -121,7 +131,8 @@ class TBlobOpRegEntryImpl : public TBlobOpRegEntry {
     return *op_reg_;
   }
   // start registering all stuffs
-  void DoRegisterUnary();
+  void RegisterUnary();
+  void RegisterUnarySymbolic();
 };
 
 // Unary operator to invoke generic TBlob function.
@@ -241,7 +252,7 @@ class TBlobUnaryOpProp : public OperatorProperty {
     }
   }
 
-  Operator* CreateOperator(Context ctx) const {
+  Operator* CreateOperator(Context ctx) const override {
     size_t dev_mask = ctx.dev_mask();
     TBlobUnaryOperator *op = new TBlobUnaryOperator();
     CHECK(dev_mask < source->funary_.size() && source->funary_[dev_mask] != nullptr);
@@ -256,7 +267,7 @@ class TBlobUnaryOpProp : public OperatorProperty {
   }
 };
 
-void TBlobOpRegEntryImpl::DoRegisterUnary() {
+void TBlobOpRegEntryImpl::RegisterUnary() {
   CHECK_EQ(reg_counter_, 1);
   // The body to be registered
   auto body = [this] (NDArray **used_vars,
@@ -264,12 +275,15 @@ void TBlobOpRegEntryImpl::DoRegisterUnary() {
                       NDArray **mutate_vars) {
     NDArray src = *used_vars[0];
     NDArray *out = mutate_vars[0];
+    TShape dshape = src.shape();
+    if (unary_infer_ != nullptr) dshape = unary_infer_(dshape);
 
     if (out->is_none()) {
-      *out = NDArray(src.shape(), src.ctx(), true);
+      *out = NDArray(dshape, src.ctx(), true);
     } else {
       CHECK(out->ctx() == src.ctx()) << "target context mismatch";
-      CHECK(out->shape() == src.shape()) << "target shape mismatch";
+      CHECK(out->shape() == dshape) << "target shape mismatch "
+      << out->shape() << " vs. " << dshape;
     }
     // important: callback must always capture by value
     NDArray ret = *out;
@@ -303,6 +317,9 @@ void TBlobOpRegEntryImpl::DoRegisterUnary() {
       .set_num_mutate_vars(1)
       .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
       .add_argument("src", "NDArray", "Source input to the function");
+}
+
+void TBlobOpRegEntryImpl::RegisterUnarySymbolic() {
   // register the operator
   auto op_factory = [this]() {
     TBlobUnaryOpProp *prop = new TBlobUnaryOpProp();
@@ -314,7 +331,6 @@ void TBlobOpRegEntryImpl::DoRegisterUnary() {
       .set_body(op_factory)
       .add_argument("src", "Symbol", "Source symbolic input to the function");
 }
-
 TBlobOpRegEntry& TBlobOpRegistry::__REGISTER_OR_FIND__(const std::string &name) {
   if (fmap_.count(name) != 0) return *fmap_.at(name);
   TBlobOpRegEntry *e = new TBlobOpRegEntryImpl();
