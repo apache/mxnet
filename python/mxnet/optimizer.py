@@ -295,7 +295,7 @@ class Adam(Optimizer):
         step = (learning_rate * mean_t /
                 (sqrt(variance_t) + self.epsilon))
         if self.wd > 0.:
-            step += learning_rate * self.wd * weight
+            step += lr * self.wd * weight
 
         weight[:] += -step
         mean[:] = mean_t
