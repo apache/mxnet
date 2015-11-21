@@ -6,6 +6,7 @@
  */
 #ifndef MXNET_MXRTC_H_
 #define MXNET_MXRTC_H_
+#if MXNET_USE_CUDA
 
 #include <nvrtc.h>
 #include <cuda.h>
@@ -45,8 +46,8 @@ class MXRtc {
     index_t num_input_, num_output_;
     std::string code_;
     char* ptx_;
-    CUmodule module_;
-    CUfunction func_;
+    std::unordered_map<int, CUmodule> module_;
+    std::unordered_map<int, CUfunction> func_;
 
     std::string decorate(const std::string& name,
                          std::vector<std::pair<std::string, NDArray*> > const& input,
@@ -56,4 +57,6 @@ class MXRtc {
 };
 
 }  // namespace mxnet
+
+#endif  // MXNET_USE_CUDA
 #endif  // MXNET_MXRTC_H_

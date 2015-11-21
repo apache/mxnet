@@ -4,6 +4,7 @@
  * \brief Wrapper for NVRTC
  * \author Junyuan Xie
  */
+#if MXNET_USE_CUDA
 #include <mxnet/mxrtc.h>
 
 namespace mxnet {
@@ -24,8 +25,6 @@ MXRtc::MXRtc(const std::string& name,
     } else {
         ptx_ = compile(name, code_);
     }
-    CHECK_EQ(cuModuleLoadDataEx(&module_, ptx_, 0, 0, 0), CUDA_SUCCESS);
-    CHECK_EQ(cuModuleGetFunction(&func_, module_, name_.c_str()), CUDA_SUCCESS);
 }
 
 void MXRtc::push(std::vector<NDArray*> const& input,
@@ -39,7 +38,18 @@ void MXRtc::push(std::vector<NDArray*> const& input,
     CHECK_EQ(num_input_, input.size());
     CHECK_EQ(num_output_, output.size());
     CHECK(output.size());
-    auto op = [this, input, output,
+    CUfunction func;
+    int dev_id = output[0]->ctx().dev_id;
+    if (func_.find(dev_id) != func_.end()) {
+        func = func_[dev_id];
+    } else {
+        CUmodule module;
+        CHECK_EQ(cuModuleLoadDataEx(&module, ptx_, 0, 0, 0), CUDA_SUCCESS);
+        CHECK_EQ(cuModuleGetFunction(&func, module, name_.c_str()), CUDA_SUCCESS);
+        module_[dev_id] = module;
+        func_[dev_id] = func;
+    }
+    auto op = [this, func, input, output,
                gridDimX, gridDimY, gridDimZ,
                blockDimX, blockDimY, blockDimZ](RunContext rctx) {
         std::vector<float*> float_args;
@@ -47,7 +57,7 @@ void MXRtc::push(std::vector<NDArray*> const& input,
         for (auto& i : output) float_args.push_back(static_cast<float*>(i->data().dptr_));
         std::vector<void*> args;
         for (auto& i : float_args) args.push_back(&i);
-        CHECK_EQ(cuLaunchKernel(func_,
+        CHECK_EQ(cuLaunchKernel(func,
                                 gridDimX, gridDimY, gridDimZ,
                                 blockDimX, blockDimY, blockDimZ,
                                 0, rctx.get_stream<mshadow::gpu>()->stream_,
@@ -122,3 +132,5 @@ char* MXRtc::compile(const std::string& name, const std::string& code) {
 }
 
 }  // namespace mxnet
+
+#endif  // MXNET_USE_CUDA
