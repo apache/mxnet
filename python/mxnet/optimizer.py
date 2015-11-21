@@ -264,7 +264,7 @@ class Adam(Optimizer):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         if self.lr_scheduler is not None:
-            lr = self.lr_scheduler(self.epoch)
+            lr = self.lr_scheduler(self.num_update)
             self._update_count(index)
         else:
             lr = self.lr
