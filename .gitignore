@@ -71,3 +71,17 @@ deps
 .Rproj.user
 R-package/inst/*
 *.tar.gz
+<<<<<<< HEAD
+=======
+
+# data
+*.rec
+*.lst
+*.zip
+*ubyte
+*.bin
+
+# ipython notebook
+example/notebooks/.ipynb_checkpoints/*
+
+>>>>>>> c064c64... modify example/notebooks/simple_bind.ipynb
