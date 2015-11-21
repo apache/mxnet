@@ -4,8 +4,8 @@
  * \brief Wrapper for NVRTC
  * \author Junyuan Xie
  */
-#if MXNET_USE_CUDA
 #include <mxnet/mxrtc.h>
+#if MXNET_USE_CUDA
 
 namespace mxnet {
 

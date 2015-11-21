@@ -48,6 +48,8 @@ typedef void *DataIterHandle;
 typedef void *KVStoreHandle;
 /*! \brief handle to RecordIO */
 typedef void *RecordIOHandle;
+/*! \brief handle to MXRtc*/
+typedef void *RtcHandle;
 
 MXNET_EXTERN_C {
 struct NativeOpInfo {
@@ -957,4 +959,29 @@ MXNET_DLL int MXRecordIOReaderFree(RecordIOHandle *handle);
 */
 MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
                                         char const **buf, size_t *size);
+
+/**
+ * \brief Create a MXRtc object
+*/
+MXNET_DLL int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
+                          char** input_names, char** output_names,
+                          NDArrayHandle* inputs, NDArrayHandle* outputs,
+                          char* kernel, RtcHandle *out);
+
+/**
+ * \brief Run cuda kernel
+*/
+MXNET_DLL int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
+                        NDArrayHandle* inputs, NDArrayHandle* outputs,
+                        mx_uint gridDimX,
+                        mx_uint gridDimY,
+                        mx_uint gridDimZ,
+                        mx_uint blockDimX,
+                        mx_uint blockDimY,
+                        mx_uint blockDimZ);
+
+/**
+ * \brief Delete a MXRtc object
+*/
+MXNET_DLL int MXRtcFree(RtcHandle handle);
 #endif  // MXNET_C_API_H_

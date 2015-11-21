@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <gtest/gtest.h>
 #include <dmlc/logging.h>
+#include <mxnet/base.h>
 
 #if MXNET_USE_CUDA
 
@@ -44,7 +45,7 @@ TEST(MXRtc, Basic_GPU) {
 	nd_input.push_back(input[0].second);
 	nd_output.clear();
 	nd_output.push_back(output[0].second);
-	mod.push(nd_input, nd_output, 100, 1, 1, 1, 1, 1);
+	mod.push(nd_input, nd_output, 1, 1, 1, 100, 1, 1);
 	nd_output[0]->WaitToRead();
 	nd_output[0]->SyncCopyToCPU(buff, 100);
 	for (int i = 0; i < 100; ++i) {

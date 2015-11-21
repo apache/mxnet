@@ -33,5 +33,6 @@ from . import lr_scheduler
 # use mx.kv as short for kvstore
 from . import kvstore as kv
 from . import kvstore_server
+from .rtc import Rtc as rtc
 
 __version__ = base.__version__

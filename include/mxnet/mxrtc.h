@@ -6,6 +6,7 @@
  */
 #ifndef MXNET_MXRTC_H_
 #define MXNET_MXRTC_H_
+#include "./base.h"
 #if MXNET_USE_CUDA
 
 #include <nvrtc.h>
