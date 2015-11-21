@@ -15,6 +15,10 @@
 #include "./base.h"
 
 namespace mxnet {
+
+// forward declare engine
+class Engine;
+
 /*! \brief namespace of engine internal types. */
 namespace engine {
 /*! \brief Internal representation of variable. */
@@ -25,6 +29,28 @@ struct Opr;
 typedef Var* VarHandle;
 /*! \brief Operator pointer type, usually hold by user.*/
 typedef Opr* OprHandle;
+/*!
+ * \brief OnComplete Callback to the engine,
+ *  called by AsyncFn when action completes
+ */
+class CallbackOnComplete {
+ public:
+  // use implicit copy and assign
+  /*! \brief involve the callback */
+  inline void operator()() const {
+    (*callback_)(engine_, param_);
+  }
+
+ private:
+  /*! \brief engine can see content of callback */
+  friend class ::mxnet::Engine;
+  /*! \brief the real callback */
+  void (*callback_)(Engine *, void *);
+  /*! \brief the engine class passed to callback */
+  Engine* engine_;
+  /*! \brief the parameter set on callback */
+  void* param_;
+};
 }  // namespace engine
 
 #if DMLC_USE_CXX11
@@ -47,28 +73,8 @@ enum class FnProperty {
 */
 class MXNET_API Engine {
  public:
-  /*!
-   * \brief OnComplete Callback to the engine,
-   *  called by AsyncFn when action completes
-   */
-  class CallbackOnComplete {
-   public:
-    // use implicit copy and assign
-    /*! \brief involve the callback */
-    inline void operator()() const {
-      (*callback_)(engine_, param_);
-    }
-
-   private:
-    /*! \brief engine can see content of callback */
-    friend class ::mxnet::Engine;
-    /*! \brief the real callback */
-    void (*callback_)(Engine *, void *);
-    /*! \brief the engine class passed to callback */
-    Engine* engine_;
-    /*! \brief the parameter set on callback */
-    void* param_;
-  };
+  /*! \brief callback on complete*/
+  typedef engine::CallbackOnComplete CallbackOnComplete;
   /*! \brief Synchronous operation to pass to engine. */
   typedef std::function<void(RunContext)> SyncFn;
   /*! \brief Asynchronous operation to pass to engine. */
