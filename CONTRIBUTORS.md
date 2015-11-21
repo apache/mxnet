@@ -74,3 +74,4 @@ List of Contributors
 * [Luke Metz](https://github.com/lukemetz)
 * [Guosheng Dong](https://github.com/dongguosheng)
 * [yang1fan2](https://github.com/yang1fan2)
+* [Wang Gu](https://github.com/wangg12)
