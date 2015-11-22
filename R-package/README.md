@@ -19,7 +19,17 @@ Resources
 
 Installation
 ------------
-Follow [Installation Guide](http://mxnet.readthedocs.org/en/latest/build.html)
+
+For Windows/Mac users, we provide pre-built binary package using CPU.
+You can install weekly updated package directly in R console:
+
+```r
+install.packages("drat", repos="https://cran.rstudio.com")
+drat:::addRepo("dmlc")
+install.packages("mxnet")
+```
+
+To use GPU version or use it on Linux, please follow [Installation Guide](http://mxnet.readthedocs.org/en/latest/build.html)
 
 License
 -------
