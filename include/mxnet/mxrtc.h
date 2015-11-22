@@ -32,12 +32,12 @@ class MXRtc {
           const std::string& kernel);
     void push(std::vector<NDArray*> const& input,
               std::vector<NDArray*> const& output,
-              unsigned int  gridDimX,
-              unsigned int  gridDimY,
-              unsigned int  gridDimZ,
-              unsigned int  blockDimX,
-              unsigned int  blockDimY,
-              unsigned int  blockDimZ);
+              unsigned int  grid_dim_X,
+              unsigned int  grid_dim_Y,
+              unsigned int  grid_dim_Z,
+              unsigned int  block_dim_X,
+              unsigned int  block_dim_Y,
+              unsigned int  block_dim_Z);
 
  private:
     static const std::string str_type;

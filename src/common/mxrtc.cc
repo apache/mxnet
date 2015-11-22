@@ -29,12 +29,12 @@ MXRtc::MXRtc(const std::string& name,
 
 void MXRtc::push(std::vector<NDArray*> const& input,
                  std::vector<NDArray*> const& output,
-                 unsigned int  gridDimX,
-                 unsigned int  gridDimY,
-                 unsigned int  gridDimZ,
-                 unsigned int  blockDimX,
-                 unsigned int  blockDimY,
-                 unsigned int  blockDimZ) {
+                 unsigned int grid_dim_X,
+                 unsigned int grid_dim_Y,
+                 unsigned int grid_dim_Z,
+                 unsigned int block_dim_X,
+                 unsigned int block_dim_Y,
+                 unsigned int block_dim_Z) {
     CHECK_EQ(num_input_, input.size());
     CHECK_EQ(num_output_, output.size());
     CHECK(output.size());
@@ -53,8 +53,8 @@ void MXRtc::push(std::vector<NDArray*> const& input,
         func_[dev_id] = func;
     }
     auto op = [this, func, input, output,
-               gridDimX, gridDimY, gridDimZ,
-               blockDimX, blockDimY, blockDimZ](RunContext rctx) {
+               grid_dim_X, grid_dim_Y, grid_dim_Z,
+               block_dim_X, block_dim_Y, block_dim_Z](RunContext rctx) {
         std::vector<float*> float_args;
         for (auto& i : input) float_args.push_back(static_cast<float*>(i->data().dptr_));
         for (auto& i : output) float_args.push_back(static_cast<float*>(i->data().dptr_));
@@ -62,8 +62,8 @@ void MXRtc::push(std::vector<NDArray*> const& input,
         for (auto& i : float_args) args.push_back(&i);
         cudaError_enum err;
         CHECK_EQ(err = cuLaunchKernel(func,
-                                gridDimX, gridDimY, gridDimZ,
-                                blockDimX, blockDimY, blockDimZ,
+                                grid_dim_X, grid_dim_Y, grid_dim_Z,
+                                block_dim_X, block_dim_Y, block_dim_Z,
                                 0, rctx.get_stream<mshadow::gpu>()->stream_,
                                 args.data(), 0), CUDA_SUCCESS) << "CudaError: " << err;
         CHECK_EQ(cudaStreamSynchronize(rctx.get_stream<mshadow::gpu>()->stream_), cudaSuccess);
