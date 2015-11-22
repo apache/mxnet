@@ -10,7 +10,7 @@
 #define MXNET_EXTERN_C extern "C"
 #endif
 
-/*! \brief MXNET_DLL prefix for windows" */
+/*! \brief MXNET_DLL prefix for windows */
 #ifdef _WIN32
 #ifdef MXNET_EXPORTS
 #define MXNET_DLL MXNET_EXTERN_C __declspec(dllexport)
@@ -711,9 +711,11 @@ MXNET_DLL int MXDataIterBeforeFirst(DataIterHandle handle);
 MXNET_DLL int MXDataIterGetData(DataIterHandle handle,
                                 NDArrayHandle *out);
 /*!
- * \brief Get the image index by array
+ * \brief Get the image index by array.
  * \param handle the handle pointer to the data iterator
- * \return image index array and array size, index is const data
+ * \param out_index output index of the array.
+ * \param out_size output size of the array.
+ * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDataIterGetIndex(DataIterHandle handle,
                                  uint64_t **out_index,
