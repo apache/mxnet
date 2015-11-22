@@ -87,6 +87,23 @@ class Symbol {
   void Compose(const std::unordered_map<std::string, Symbol>& kwargs,
                const std::string& name);
   /*!
+   * \brief set additional attributes of the symbol,
+   *  This only works for symbol with outputs from single operators.
+   *  For grouped sybmbol, an error will be raised.
+   * \param key the key of the attribute
+   * \param value the value of the attribute.
+   */
+  void SetAttr(const std::string &key, const std::string& value);
+  /*!
+   * \brief Get attributes from the symbol.
+   *  This only works for symbol with outputs from single operators.
+   *  For grouped sybmbol, an error will be raised.
+   * \param key Key of the attribute.
+   * \param out the output value of the attribute.
+   * \return true if the attribute exists, false if the attribute do not exist.
+   */
+  bool GetAttr(const std::string& key, std::string* out);
+  /*!
    * \brief Apply the symbol as a function, compose with arguments
    * \param args positional arguments for the symbol
    * \param name name of returned symbol.
