@@ -6,7 +6,7 @@ import train_model
 
 # don't use -n and -s, which are resevered for the distributed training
 parser = argparse.ArgumentParser(description='train an image classifer on imagenet')
-parser.add_argument('--network', type=str, default='alexnet',
+parser.add_argument('--network', type=str, default='inception-bn',
                     choices = ['alexnet', 'vgg', 'googlenet', 'inception-bn'],
                     help = 'the cnn to use')
 parser.add_argument('--data-dir', type=str, required=True,
@@ -15,6 +15,10 @@ parser.add_argument('--model-prefix', type=str,
                     help='the prefix of the model to load/save')
 parser.add_argument('--lr', type=float, default=.05,
                     help='the initial learning rate')
+parser.add_argument('--lr-factor', type=float, default=1,
+                    help='times the lr with a factor for every lr-factor-epoch epoch')
+parser.add_argument('--lr-factor-epoch', type=float, default=1,
+                    help='the number of epoch to factor the lr, could be .5')
 parser.add_argument('--num-epochs', type=int, default=20,
                     help='the number of training epochs')
 parser.add_argument('--load-epoch', type=int,

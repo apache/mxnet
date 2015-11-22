@@ -51,7 +51,7 @@ class Symbol(object):
 
     def __rsub__(self, other):
         if isinstance(other, Number):
-            return Symbol._MinusScalar(self, scalar=other, scalar_on_right=True)
+            return Symbol._MinusScalar(self, scalar=other, scalar_on_left=True)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -76,7 +76,7 @@ class Symbol(object):
 
     def __rdiv__(self, other):
         if isinstance(other, Number):
-            return Symbol._DivScalar(self, scalar=other, scalar_on_right=True)
+            return Symbol._DivScalar(self, scalar=other, scalar_on_left=True)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -863,7 +863,7 @@ def pow(base, exp):
     if  isinstance(base, Symbol) and isinstance(exp, Number):
         return Symbol._PowerScalar(base, scalar=exp)
     if  isinstance(base, Number) and isinstance(exp, Symbol):
-        return Symbol._PowerScalar(exp, scalar=base, scalar_on_right=True)
+        return Symbol._PowerScalar(exp, scalar=base, scalar_on_left=True)
     if  isinstance(base, Number) and isinstance(exp, Number):
         return base**exp
     else:
