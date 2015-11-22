@@ -87,5 +87,5 @@ class Rtc(object):
                                   mx_uint(grid_dims[1]),
                                   mx_uint(grid_dims[2]),
                                   mx_uint(block_dims[0]),
-                                  mx_uint(block_dims[0]),
-                                  mx_uint(block_dims[0])))
+                                  mx_uint(block_dims[1]),
+                                  mx_uint(block_dims[2])))
