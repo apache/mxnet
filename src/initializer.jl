@@ -113,26 +113,21 @@ end
    Several different ways of calculating the variance are given in the literature or are
    used by various libraries.
 
-   - original [Bengio and Glorot 2010]: σ² = 2 / (in + out)
-   - msra [K. He, X. Zhang, S. Ren, and J. Sun 2015]: σ² = 2 / in
-   - caffe_avg: 6 / (in + out)
-   - caffe_in: 3 / in
-   - caffe_out: 3 / out
-   - mxnet: 3 / (in + out)
-
-   Distribution and variant can be chosen by enums (prefixed by ``xv_``).
-   As an example take ``mx.XavierInitializer(distribution = mx.xv_normal, variant = mx.xv_mxnet)``,
-   which is currently the default.
+   - [Bengio and Glorot 2010]: ``mx.XavierInitializer(distribution = mx.xv_uniform, regularization = mx.xv_avg, magnitude = 1)``
+   - [K. He, X. Zhang, S. Ren, and J. Sun 2015]: ``mx.XavierInitializer(distribution = mx.xv_gaussian, regularization = mx.xv_in, magnitude = 2)``
+   - caffe_avg: ``mx.XavierInitializer(distribution = mx.xv_uniform, regularization = mx.xv_avg, magnitude = 3)``
 =#
 
 @enum XavierDistribution xv_uniform xv_normal
-@enum XavierVariant xv_original xv_mrsa xv_caffe_avg xv_caffe_in zv_caffe_out xv_mxnet
+@enum XavierRegularization xv_avg xv_in xv_out
 
 immutable XavierInitializer <: AbstractInitializer
   distribution :: XavierDistribution
-  variant :: XavierVariant
+  regularization :: XavierRegularization
+  magnitude :: Float64
 end
-XavierInitializer(; distribution = xv_uniform, variant = xv_mxnet) = XavierInitializer(distribution, variant)
+
+XavierInitializer(; distribution = xv_uniform, regularization = xv_avg, magnitude = 3.0) = XavierInitializer(distribution, regularization, magnitude)
 
 function _init_weight(self :: XavierInitializer, name :: Base.Symbol, array :: NDArray)
   dims    = size(array)
@@ -145,19 +140,15 @@ function _init_weight(self :: XavierInitializer, name :: Base.Symbol, array :: N
     func(σ, data) = randn!(0.0, σ, data)
   end
 
-  if self.variant == xv_caffe_avg
-    var = 6 / (fan_in + fan_out)
-  elseif self.variant == xv_caffe_in
-    var = 3 / fan_in
-  elseif self.variant == xv_caffe_out
-    var = 3 / fan_out
-  elseif self.variant == xv_mrsa
-    var = 2 / fan_in
-  elseif self.variant == xv_original
-    var = 2 / (fan_in + fan_out)
-  elseif self.variant == xv_mxnet
-    var = 3 / (fan_in + fan_out)
+  if self.regularization == xv_avg
+    factor = (fan_in + fan_out) / 2
+  elseif self.regularization == xv_in
+    factor = fan_in
+  elseif self.regularization == xv_out
+    factor = fan_out
   end
 
-  func(√var, array)
+  σ = √(self.magnitude / factor)
+
+  func(σ, array)
 end
