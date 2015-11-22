@@ -781,8 +781,8 @@ class FeedForward(BASE_ESTIMATOR):
             The loaded model that can be used for prediction.
         Notes
         -----
-        - ``prefix-symbol.json`` will be saved for symbol.
-        - ``prefix-epoch.params`` will be saved for parameters.
+        - symbol will be loaded from ``prefix-symbol.json``.
+        - parameters will be loaded from ``prefix-epoch.params``.
         """
         symbol, arg_params, aux_params = load_checkpoint(prefix, epoch)
         return FeedForward(symbol, ctx=ctx,
@@ -817,7 +817,7 @@ class FeedForward(BASE_ESTIMATOR):
             ceil(num_train_examples / batch_size)
         optimizer : str or Optimizer, optional
             Training parameter, name or optimizer object for training.
-        initializier : initializer function, optional
+        initializer : initializer function, optional
             Training parameter, the initialization scheme used.
         eval_data : DataIter or numpy.ndarray pair
             If eval_set is numpy.ndarray pair, it should be (valid_data, valid_label)
