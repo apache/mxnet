@@ -286,7 +286,7 @@ function .-(self :: SymbolicNode, arg :: Real)
 end
 
 function -(arg :: Real, self :: SymbolicNode)
-  _MinusScalar(self, scalar=arg, scalar_on_right=true)
+  _MinusScalar(self, scalar=arg, scalar_on_left=true)
 end
 function .-(arg :: Real, self :: SymbolicNode)
   -(arg, self)
@@ -329,7 +329,7 @@ function /(self :: SymbolicNode, arg :: Real)
   ./(self, arg)
 end
 function ./(arg :: Real, self :: SymbolicNode)
-  _DivScalar(self, scalar=arg, scalar_on_right=true)
+  _DivScalar(self, scalar=arg, scalar_on_left=true)
 end
 
 import Base: .^, ^
