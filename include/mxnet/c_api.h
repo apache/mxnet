@@ -51,7 +51,8 @@ typedef void *RecordIOHandle;
 
 MXNET_EXTERN_C {
 struct NativeOpInfo {
-  void (*forward)(int, float**, int*, unsigned**, int*, void*);
+  // in_size, in_data, out_size, out_data, payload, callback
+  void (*forward)(int, void**, int, void**, void*, const void*);
   void (*backward)(int, float**, int*, unsigned**, int*, void*);
   void (*infer_shape)(int, int*, unsigned**, void*);
   void (*list_outputs)(char***, void*);
@@ -64,6 +65,11 @@ struct NativeOpInfo {
   void* p_list_arguments;
 };
 }
+/*!
+ *
+ */
+MXNET_DLL int MXInvokeOpCallback(void *handle);
+
 /*!
  * \brief return str message of the last error
  *  all function in this file will return 0 when success

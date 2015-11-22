@@ -223,6 +223,8 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
 
   Operator* op = op_node.op.get();
   OpContext* op_ctx_ptr = &op_node.op_ctx;
+  // Set device context
+  op_ctx_ptr->ctx = op_node.ctx;
   bool is_gpu = op_node.ctx.dev_mask() == gpu::kDevMask;
   bool is_async = op->exec_type() == Operator::kAsync;
   exec.exec_fun = [op, is_gpu, is_async, op_ctx_ptr, in_array, req, out_array, aux_array]

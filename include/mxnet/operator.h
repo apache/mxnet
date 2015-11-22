@@ -46,6 +46,8 @@ struct OpContext {
   int is_train;
   /*! \brief RunContext related resources */
   RunContext run_ctx;
+  /*! Context the operator is running on.*/
+  Context ctx;
   /*! \brief the callback when operation completes, used by asynchronize ops */
   engine::CallbackOnComplete async_on_complete;
   /*! \brief Resources requested by the operator */

@@ -11,6 +11,7 @@
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <mxnet/c_api.h>
+#include <mxnet/ndarray.h>
 #include <map>
 #include <vector>
 #include <string>
@@ -49,25 +50,28 @@ class NativeOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    ptrs.clear();
-    ndims.clear();
-    shapes.clear();
-    tags.clear();
-    SyncVec(in_data, "in_data", s, 0);
-    SyncVec(out_data, "out_data", s, 1);
-    s->Wait();
-    param_.pinfo->forward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(),
-        tags.data(), param_.pinfo->p_forward);
-    for (index_t i = 0; i < out_data.size(); ++i) {
-      CHECK_NE(req[i], kAddTo) << "NativeOp doesn't support AddTo for output";
-      if (req[i] != kNullOp) {
-        std::stringstream ss;
-        ss << std::string("out_data") << i;
-        Copy(out_data[i].FlatTo2D<xpu, real_t>(s),
-             buffer_map[ss.str()].second, s);
-      }
+
+    std::vector<NDArray> in_ndarrs;
+    std::vector<void*> in_handels;
+    for (index_t i = 0; i < in_data.size(); ++i) {
+      NDArray arr = NDArray(in_data[i], ctx.ctx.dev_id);
+      in_ndarrs.push_back(arr);
+      in_handels.push_back(&arr);
     }
+
+    std::vector<NDArray> out_ndarrs;
+    std::vector<void*> out_handels;
+    for (index_t i = 0; i < out_data.size(); ++i) {
+      NDArray arr = NDArray(out_data[i], ctx.ctx.dev_id);
+      out_ndarrs.push_back(arr);
+      out_handels.push_back(&arr);
+    }
+
     s->Wait();
+    param_.pinfo->forward(in_handels.size(), in_handels.data(),
+                          out_handels.size(), out_handels.data(),
+                          param_.pinfo->p_forward, &ctx);
+
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -102,6 +106,7 @@ class NativeOp : public Operator {
       }
     }
     s->Wait();
+    ctx.async_on_complete();
   }
 
  private:
@@ -147,6 +152,11 @@ class NativeOp : public Operator {
       tags.push_back(tag);
     }
   }
+
+  virtual ExecType exec_type() const {
+    // Use asynchronize complete notification
+    return kAsync;
+ }
 };  // NativeOp
 
 template<typename xpu>
