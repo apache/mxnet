@@ -51,6 +51,10 @@ typedef void *RecordIOHandle;
 /*! \brief handle to MXRtc*/
 typedef void *RtcHandle;
 
+namespace mxnet {
+class NDArray;
+}  // namespace mxnet
+
 MXNET_EXTERN_C {
 struct NativeOpInfo {
   void (*forward)(int, float**, int*, unsigned**, int*, void*);
@@ -67,8 +71,8 @@ struct NativeOpInfo {
 };
 
 struct NDArrayOpInfo {
-  void (*forward)(int, void**, int*, void*);
-  void (*backward)(int, void**, int*, void*);
+  void (*forward)(int, mxnet::NDArray**, int*, void*);
+  void (*backward)(int, mxnet::NDArray**, int*, void*);
   void (*infer_shape)(int, int*, unsigned**, void*);
   void (*list_outputs)(char***, void*);
   void (*list_arguments)(char***, void*);
