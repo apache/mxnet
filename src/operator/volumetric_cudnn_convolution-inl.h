@@ -177,15 +177,6 @@ namespace mxnet {
                     int upscaleA[] = {1, 1, 1};
                     CHECK_EQ(cudnnSetConvolutionNdDescriptor(conv_desc_, 3, padA, filterStrideA, upscaleA, CUDNN_CROSS_CORRELATION), CUDNN_STATUS_SUCCESS);
 
-                    /* PixelOffset( n, c, h, w ) = n *input_stride + c * feature_stride + h * h_stride + w * w_stride
-
-   1)Example of all images in row major order one batch of features after the other (with an optional padding on row)
-   input_stride :  c x w*h*d
-   feature_stride : w*h*d
-   d_stride  :  w*h
-   h_stride  :  w  ( h_stride = w if no padding)
-   w_stride  : 1
-   */
                     int inDimA[] = {(int) data.shape_[0], (int) data.shape_[1], (int) data.shape_[2], (int) data.shape_[3], (int) data.shape_[4]};
                     int inStrideA[] = {
                             (int) (data.shape_[1] * data.shape_[2] * data.shape_[3] * data.shape_[4]),
