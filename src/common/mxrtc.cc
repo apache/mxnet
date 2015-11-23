@@ -67,8 +67,8 @@ void MXRtc::push(std::vector<NDArray> const& input,
                                 block_dim_X, block_dim_Y, block_dim_Z,
                                 0, rctx.get_stream<mshadow::gpu>()->stream_,
                                 args.data(), 0), CUDA_SUCCESS) << "CudaError: " << err;
-        CHECK_EQ(cuerr = cudaStreamSynchronize(rctx.get_stream<mshadow::gpu>()->stream_), cudaSuccess)
-            << "CudaError: " << cuerr;
+        CHECK_EQ(cuerr = cudaStreamSynchronize(rctx.get_stream<mshadow::gpu>()->stream_),
+                 cudaSuccess) << "CudaError: " << cuerr;
     };
     std::vector<Engine::VarHandle> var_in, var_out;
     for (auto& i : input) var_in.push_back(i.var());

@@ -65,8 +65,9 @@ void NDArrayOp<xpu>::Forward(const OpContext &ctx,
     ndcpy.push_back(*i);
   }
 
-  param_.pinfo->forward(ptrs.size(), ptrs.data(), tags.data(), param_.pinfo->p_forward);
-  Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx){ ctx.async_on_complete(); }, ndctx, ndvar, {});
+  CHECK(param_.pinfo->forward(ptrs.size(), ptrs.data(), tags.data(), param_.pinfo->p_forward));
+  Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx) {ctx.async_on_complete(); },
+                          ndctx, ndvar, {});
 }
 
 template<typename xpu>
@@ -83,7 +84,7 @@ void NDArrayOp<xpu>::Backward(const OpContext &ctx,
   std::vector<Engine::VarHandle> ndvar;
   std::vector<int> tags;
   for (auto& i : req) CHECK_NE(i, kAddTo);
-  
+
   for (auto& blob : in_data) {
     ptrs.push_back(new NDArray(blob, ndctx.dev_id));
     tags.push_back(0);
@@ -104,14 +105,15 @@ void NDArrayOp<xpu>::Backward(const OpContext &ctx,
     ptrs.push_back(new NDArray(blob, ndctx.dev_id));
     tags.push_back(3);
   }
-  
+
   std::vector<NDArray> ndcpy;
   for (auto& i : ptrs) {
     ndcpy.push_back(*i);
   }
 
-  param_.pinfo->backward(ptrs.size(), ptrs.data(), tags.data(), param_.pinfo->p_backward);
-  Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx){ ctx.async_on_complete(); }, ndctx, ndvar, {});
+  CHECK(param_.pinfo->backward(ptrs.size(), ptrs.data(), tags.data(), param_.pinfo->p_backward));
+  Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx){ ctx.async_on_complete(); },
+                          ndctx, ndvar, {});
 }
 
 Operator* NDArrayOpProp::CreateOperator(Context ctx) const {

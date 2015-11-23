@@ -71,12 +71,12 @@ struct NativeOpInfo {
 };
 
 struct NDArrayOpInfo {
-  void (*forward)(int, mxnet::NDArray**, int*, void*);
-  void (*backward)(int, mxnet::NDArray**, int*, void*);
-  void (*infer_shape)(int, int*, unsigned**, void*);
-  void (*list_outputs)(char***, void*);
-  void (*list_arguments)(char***, void*);
-  void (*declare_backward_dependency)(const int*, const int*, const int*,
+  bool (*forward)(int, mxnet::NDArray**, int*, void*);
+  bool (*backward)(int, mxnet::NDArray**, int*, void*);
+  bool (*infer_shape)(int, int*, unsigned**, void*);
+  bool (*list_outputs)(char***, void*);
+  bool (*list_arguments)(char***, void*);
+  bool (*declare_backward_dependency)(const int*, const int*, const int*,
                                       int*, int**, void*);
   // all functions also pass a payload void* pointer
   void* p_forward;

@@ -33,7 +33,7 @@ class NDArray {
   NDArray() {}
   /*!
    * \brief constructing a new dynamic NDArray
-   * \param shaape the shape of array
+   * \param shape the shape of array
    * \param ctx context of NDArray
    * \param delay_alloc whether delay the allocation
    */

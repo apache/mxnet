@@ -55,6 +55,7 @@ class NDArrayOp : public Operator {
   virtual ExecType exec_type() const {
     return kAsync;
   }
+
  private:
   NDArrayOpParam param_;
   Context get_ctx();
@@ -68,7 +69,7 @@ class NDArrayOpProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     char ** args = NULL;
-    param_.pinfo->list_arguments(&args, param_.pinfo->p_list_arguments);
+    CHECK(param_.pinfo->list_arguments(&args, param_.pinfo->p_list_arguments));
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
       ret.push_back(args[i]);
@@ -78,7 +79,7 @@ class NDArrayOpProp : public OperatorProperty {
 
   std::vector<std::string> ListOutputs() const override {
     char ** args = NULL;
-    param_.pinfo->list_outputs(&args, param_.pinfo->p_list_outputs);
+    CHECK(param_.pinfo->list_outputs(&args, param_.pinfo->p_list_outputs));
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
       ret.push_back(args[i]);
@@ -117,8 +118,8 @@ class NDArrayOpProp : public OperatorProperty {
     }
     shapes.resize(param_.num_inputs_+param_.num_outputs_);
     ndims.resize(param_.num_inputs_+param_.num_outputs_);
-    param_.pinfo->infer_shape(shapes.size(), ndims.data(), shapes.data(),
-          param_.pinfo->p_infer_shape);
+    CHECK(param_.pinfo->infer_shape(shapes.size(), ndims.data(), shapes.data(),
+                                    param_.pinfo->p_infer_shape));
     for (unsigned i = 0; i < in_shape->size(); ++i) {
       SHAPE_ASSIGN_CHECK(*in_shape, i, TShape(shapes[i], shapes[i]+ndims[i]));
     }
@@ -145,9 +146,9 @@ class NDArrayOpProp : public OperatorProperty {
     const std::vector<int> &out_data) const override {
     int num_dep;
     int *rdeps;
-    param_.pinfo->declare_backward_dependency(out_grad.data(), in_data.data(),
-                                              out_data.data(), &num_dep, &rdeps,
-                                              param_.pinfo->p_declare_backward_dependency);
+    CHECK(param_.pinfo->declare_backward_dependency(out_grad.data(), in_data.data(),
+                                                    out_data.data(), &num_dep, &rdeps,
+                                                    param_.pinfo->p_declare_backward_dependency));
     std::vector<int> deps;
     deps.insert(deps.end(), rdeps, rdeps+num_dep);
     return deps;
