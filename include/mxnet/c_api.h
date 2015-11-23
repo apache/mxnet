@@ -65,6 +65,20 @@ struct NativeOpInfo {
   void* p_list_outputs;
   void* p_list_arguments;
 };
+
+struct NDArrayOpInfo {
+  void (*forward)(int, void**, int*, void*);
+  void (*backward)(int, void**, int*, void*);
+  void (*infer_shape)(int, int*, unsigned**, void*);
+  void (*list_outputs)(char***, void*);
+  void (*list_arguments)(char***, void*);
+  // all functions also pass a payload void* pointer
+  void* p_forward;
+  void* p_backward;
+  void* p_infer_shape;
+  void* p_list_outputs;
+  void* p_list_arguments;
+};
 }
 /*!
  * \brief return str message of the last error
