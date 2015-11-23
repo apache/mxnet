@@ -1,6 +1,7 @@
 # coding: utf-8
 # pylint: disable=invalid-name, too-many-locals, fixme
 # pylint: disable=too-many-branches, too-many-statements
+# pylint: disable=dangerous-default-value
 """Visualization module"""
 from __future__ import absolute_import
 
@@ -25,7 +26,7 @@ def _str2tuple(string):
     return re.findall(r"\d+", string)
 
 
-def plot_network(symbol, title="plot", shape=None):
+def plot_network(symbol, title="plot", shape=None, node_attrs={}):
     """convert symbol to dot object for visualization
 
     Parameters
@@ -36,6 +37,11 @@ def plot_network(symbol, title="plot", shape=None):
         symbol to be visualized
     shape: dict
         dict of shapes, str->shape (tuple), given input shapes
+    node_attrs: dict
+        dict of node's attributes
+        for example:
+            node_attrs={"shape":"oval","fixedsize":"fasle"}
+            means to plot the network in "oval"
     Returns
     ------
     dot: Diagraph
@@ -59,8 +65,11 @@ def plot_network(symbol, title="plot", shape=None):
     conf = json.loads(symbol.tojson())
     nodes = conf["nodes"]
     heads = set([x[0] for x in conf["heads"]])  # TODO(xxx): check careful
+    # default attributes of node
     node_attr = {"shape": "box", "fixedsize": "true",
                  "width": "1.3", "height": "0.8034", "style": "filled"}
+    # merge the dcit provided by user and the default one
+    node_attr.update(node_attrs)
     dot = Digraph(name=title)
     # color map
     cm = ("#8dd3c7", "#fb8072", "#ffffb3", "#bebada", "#80b1d3",
