@@ -135,11 +135,21 @@ cd python; python setup.py develop --user
 
 R Package Installation
 ----------------------
+
+For Windows/Mac users, we provide pre-built binary package using CPU.
+You can install weekly updated package directly in R console:
+
+```r
+install.packages("drat", repos="https://cran.rstudio.com")
+drat:::addRepo("dmlc")
+install.packages("mxnet")
+```
+
 To install the R package. First finish the [Build MXNet Library](#build-mxnet-library) step.
 Then use the following command to install dependencies and build the package at root folder
 
 ```bash
-Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')" 
+Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
 cd R-package
 Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
 cd ..

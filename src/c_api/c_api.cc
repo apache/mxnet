@@ -532,6 +532,32 @@ int MXSymbolPrint(SymbolHandle symbol, const char **out_str) {
   API_END();
 }
 
+int MXSymbolGetAttr(SymbolHandle symbol,
+                    const char* key,
+                    const char** out,
+                    int* success) {
+  Symbol *s = static_cast<Symbol*>(symbol);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  if (s->GetAttr(key, &(ret->ret_str))) {
+    *out = (ret->ret_str).c_str();
+    *success = 1;
+  } else {
+    *out = nullptr;
+    *success = 0;
+  }
+  API_END();
+}
+
+int MXSymbolSetAttr(SymbolHandle symbol,
+                    const char* key,
+                    const char* value) {
+  Symbol *s = static_cast<Symbol*>(symbol);
+  API_BEGIN();
+  s->SetAttr(key, value);
+  API_END();
+}
+
 int MXSymbolListArguments(SymbolHandle symbol,
                           mx_uint *out_size,
                           const char ***out_str_array) {
