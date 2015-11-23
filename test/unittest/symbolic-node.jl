@@ -81,6 +81,14 @@ function test_saveload()
   rm(fname)
 end
 
+function test_attrs()
+  info("SymbolicNode::Attributes")
+
+  data = mx.Variable(:data)
+
+  mx.set_attr(data, :test, "1.0")
+  @test mx.get_attr(data, :test) == "1.0"
+end
 
 ################################################################################
 # Run tests
@@ -91,5 +99,6 @@ test_compose()
 test_infer_shape()
 test_infer_shape_error()
 test_saveload()
+test_attrs()
 
 end

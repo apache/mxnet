@@ -123,6 +123,35 @@ function get_internals(self :: SymbolicNode)
 end
 
 #=doc
+.. function:: get_attr(self :: SymbolicNode, key :: Symbol)
+
+   Get attribute attached to this :class:`SymbolicNode` belonging to key.
+=#
+function get_attr(self :: SymbolicNode, key :: Symbol)
+  key_s = bytestring(string(key))
+  ref_out = Ref{Cstring}()
+  ref_success = Ref{Cint}(-1)
+  @mxcall(:MXSymbolGetAttr, (MX_handle, Cstring, Ref{Cstring}, Ref{Cint}), self, key_s, ref_out, ref_success)
+  if ref_success[] == 1
+    return bytestring(ref_out[])
+  else
+    throw(KeyError(key))
+  end
+end
+
+#=doc
+.. function:: set_attr(self:: SymbolicNode, key :: Symbol, value :: AbstractString)
+
+   Set the attribute key to value for this :class:`SymbolicNode`.
+=#
+function set_attr(self :: SymbolicNode, key :: Symbol, value :: AbstractString)
+  key_s = bytestring(string(key))
+  value_s = bytestring(value)
+
+  @mxcall(:MXSymbolSetAttr, (MX_handle, Cstring, Cstring), self, key_s, value_s)
+end
+
+#=doc
 .. function:: Variable(name :: Union{Base.Symbol, AbstractString})
 
    Create a symbolic variable with the given name. This is typically used as a placeholder.
