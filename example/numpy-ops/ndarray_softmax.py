@@ -25,7 +25,6 @@ class NDArraySoftmax(mx.operator.NDArrayOp):
 
     def forward(self, in_data, out_data):
         x = in_data[0]
-        x1 = x.asnumpy()
         y = out_data[0]
         if self.fwd_kernel is None:
             self.fwd_kernel = mx.rtc('softmax', [('x', x)], [('y', y)], """
