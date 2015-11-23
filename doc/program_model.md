@@ -335,7 +335,7 @@ generate generic kernels from expression tree at compile time. You can refer to 
 for more details. CXXNet is a library that makes extensive use of expression template, this enables much shorter and more readable code, with matched
 performance with hand crafted kernels.
 
-The difference between expression template and python kernel generation is that the expression evaluation is done at compile time of c++, with a existing type,
+The difference between expression template and python kernel generation is that the expression evaluation is done at compile time of c++, with an existing type,
 so there is no additional runtime overhead. This is also in principle possible with other statically typed language that support template,
 however we have only seen this trick in C++ so far.
 
