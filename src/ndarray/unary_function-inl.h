@@ -86,8 +86,8 @@ void L2Norm(const TBlob &src,
 // The true means inplace can be enabled.
 MXNET_REGISTER_TBLOB_FUN(abs, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::abs>, true)
-.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::abs_grad>, true)
-.describe("Take square of the src");
+.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::sign>, true)
+.describe("Take absolute value of the src");
 // square
 MXNET_REGISTER_TBLOB_FUN(square, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::square>, true)
