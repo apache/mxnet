@@ -35,14 +35,6 @@ struct NDArrayOpParam : public dmlc::Parameter<NDArrayOpParam> {
   }
 };
 
-#define APPEND(source, tag)                                                       \
-do {                                                                              \
-  for (auto& blob : source) {                                                     \
-        ptrs.push_back(reinterpret_cast<void*>(new NDArray(blob, ndctx.dev_id))); \
-        tags.push_back(tag);                                                      \
-  }                                                                               \
-}while(0)
-
 template<typename xpu>
 class NDArrayOp : public Operator {
  public:

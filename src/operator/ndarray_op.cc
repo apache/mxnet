@@ -8,17 +8,39 @@
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 
+#define APPEND(source, tag)                                                       \
+do {                                                                              \
+  for (auto& blob : source) {                                                     \
+        ptrs.push_back(reinterpret_cast<void*>(new NDArray(blob, ndctx.dev_id))); \
+        tags.push_back(tag);                                                      \
+  }                                                                               \
+}while(0)
+
 namespace mxnet {
 namespace op {
+template<>
+Context NDArrayOp<cpu>::get_ctx() {
+  return Context::CPU();
+}
+
 template<>
 Operator *CreateOp<cpu>(NDArrayOpParam param) {
   return new NDArrayOp<cpu>(param);
 }
 
+#if MXNET_USE_CUDA
 template<>
-Context NDArrayOp<cpu>::get_ctx() {
-  return Context::CPU();
+Context NDArrayOp<gpu>::get_ctx() {
+  int dev_id;
+  CHECK_EQ(cudaGetDevice(&dev_id), cudaSuccess);
+  return Context::GPU(dev_id);
 }
+
+template<>
+Operator* CreateOp<gpu>(NDArrayOpParam param) {
+  return new NDArrayOp<gpu>(param);
+}
+#endif  // MXNET_USE_CUDA
 
 template<typename xpu>
 void NDArrayOp<xpu>::Forward(const OpContext &ctx,
@@ -55,12 +77,6 @@ void NDArrayOp<xpu>::Backward(const OpContext &ctx,
   APPEND(out_grad, 3);
   param_.pinfo->backward(ptrs.size(), ptrs.data(), tags.data(), param_.pinfo->p_backward);
 }
-
-template class NDArrayOp<cpu>;
-#if MXNET_USE_CUDA
-template class NDArrayOp<gpu>;
-#endif  // MXNET_USE_CUDA
-
 
 Operator* NDArrayOpProp::CreateOperator(Context ctx) const {
   DO_BIND_DISPATCH(CreateOp, param_);
