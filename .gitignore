@@ -79,3 +79,7 @@ R-package/inst/*
 *.zip
 *ubyte
 *.bin
+
+# ipython notebook
+example/notebooks/.ipynb_checkpoints/*
+
