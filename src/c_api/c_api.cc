@@ -768,9 +768,35 @@ int MXExecutorBind(SymbolHandle symbol_handle,
                    mx_uint aux_states_len,
                    NDArrayHandle *aux_states,
                    ExecutorHandle *out) {
+  return MXExecutorBindX(symbol_handle,
+                         dev_type, dev_id,
+                         0, nullptr, nullptr, nullptr,
+                         len, in_args, arg_grad_store, grad_req_type,
+                         aux_states_len, aux_states, out);
+}
+
+int MXExecutorBindX(SymbolHandle symbol_handle,
+                    int dev_type,
+                    int dev_id,
+                    mx_uint num_map_keys,
+                    const char** map_keys,
+                    const int* map_dev_types,
+                    const int* map_dev_ids,
+                    mx_uint len,
+                    NDArrayHandle *in_args,
+                    NDArrayHandle *arg_grad_store,
+                    mx_uint *grad_req_type,
+                    mx_uint aux_states_len,
+                    NDArrayHandle *aux_states,
+                    ExecutorHandle *out) {
   API_BEGIN();
   Symbol *symb = static_cast<Symbol*>(symbol_handle);
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
+  std::map<std::string, Context> ctx_map;
+  for (mx_uint i = 0; i < num_map_keys; ++i) {
+    ctx_map[std::string(map_keys[i])] = Context::Create(
+        static_cast<Context::DeviceType>(map_dev_types[i]), map_dev_ids[i]);
+  }
   NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args);
   NDArray **arg_grad_ptr = reinterpret_cast<NDArray**>(arg_grad_store);
   NDArray **aux_states_ptr = reinterpret_cast<NDArray**>(aux_states);
@@ -791,7 +817,8 @@ int MXExecutorBind(SymbolHandle symbol_handle,
   for (mx_uint i = 0; i < aux_states_len; ++i) {
     aux_states_vec.push_back(*(aux_states_ptr[i]));
   }
-  *out = Executor::Bind(*symb, ctx, in_args_vec, arg_grad_vec, grad_req_vec, aux_states_vec);
+  *out = Executor::Bind(*symb, ctx, ctx_map, in_args_vec,
+                        arg_grad_vec, grad_req_vec, aux_states_vec);
   API_END();
 }
 

@@ -12,36 +12,21 @@
 #include "../operator/operator_common.h"
 
 namespace mxnet {
-std::vector<uint32_t> StaticGraph::TopoSort() const {
+
+std::vector<uint32_t> StaticGraph::PostDFSOrder(const std::vector<uint32_t>& head_nodes) const {
+  std::vector<uint32_t> ret;
+  ret.reserve(nodes.size() / 2);
   std::vector<std::pair<uint32_t, uint32_t> > stack;
   std::unordered_set<uint32_t> visited;
-  std::vector<uint32_t> ret(nodes.size());
-  std::vector<uint32_t> head_node;
-  // out degree
-  std::vector<int> out_degree(nodes.size(), 0);
-  for (const Node& n : nodes) {
-    for (const DataEntry& e : n.inputs) {
-      ++out_degree[e.source_id];
-    }
-    if (n.is_backward()) {
-      ++out_degree[n.backward_source_id];
-    }
-  }
-  for (size_t i = 0; i < nodes.size(); ++i) {
-    if (out_degree[i] == 0) {
-      stack.push_back(std::make_pair(static_cast<uint32_t>(i), 0));
-    }
-  }
   // heads
-  for (auto &head : head_node) {
+  for (auto &head : head_nodes) {
     stack.push_back(std::make_pair(head, 0));
   }
-  int count = 0;
   while (!stack.empty()) {
     std::pair<uint32_t, uint32_t>& back = stack.back();
     const Node& n = nodes[back.first];
     if (back.second == n.inputs.size() + (n.is_backward() ? 1 : 0)) {
-      ret[count++] = back.first;
+      ret.push_back(back.first);
       visited.insert(back.first);
       stack.pop_back();
     } else {
@@ -58,6 +43,26 @@ std::vector<uint32_t> StaticGraph::TopoSort() const {
     }
   }
   return ret;
+}
+
+std::vector<uint32_t> StaticGraph::TopoSort() const {
+  // out degree
+  std::vector<int> out_degree(nodes.size(), 0);
+  for (const Node& n : nodes) {
+    for (const DataEntry& e : n.inputs) {
+      ++out_degree[e.source_id];
+    }
+    if (n.is_backward()) {
+      ++out_degree[n.backward_source_id];
+    }
+  }
+  std::vector<uint32_t> head_nodes;
+  for (size_t i = 0; i < nodes.size(); ++i) {
+    if (out_degree[i] == 0) {
+      head_nodes.push_back(static_cast<uint32_t>(i));
+    }
+  }
+  return PostDFSOrder(head_nodes);
 }
 
 bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
@@ -202,6 +207,14 @@ StaticGraph::Node StaticGraph::CreateSumNode(
   agg_node.op->Init({{"num_args", os_size.str()}});
   agg_node.inputs = grad_source;
   return agg_node;
+}
+
+StaticGraph::Node StaticGraph::CreateCopyNode(const DataEntry &source) {
+  // find multiple gradients, need aggregate
+  Node copy_node;
+  copy_node.op.reset(OperatorProperty::Create("_CrossDeviceCopy"));
+  copy_node.inputs = {source};
+  return copy_node;
 }
 
 void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
