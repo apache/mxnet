@@ -11,6 +11,7 @@ from .base import c_array, c_str, mx_uint, py_str, string_types
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from .base import check_call, ctypes2docstring
 from .name import NameManager
+from .attribute import AttrScope
 from .context import Context
 from .ndarray import NDArray, zeros
 from .executor import Executor
@@ -198,6 +199,42 @@ class Symbol(object):
         check_call(_LIB.MXSymbolGetOutput(
             self.handle, mx_uint(index), ctypes.byref(handle)))
         return Symbol(handle=handle)
+
+    def attr(self, key):
+        """Get attribute string from the symbol, this function only works for non-grouped symbol.
+
+        Parameters
+        ----------
+        key : str
+            The key to get attribute from.
+
+        Returns
+        -------
+        value : str
+            The attribute value of the key, returns None if attribute do not exist.
+        """
+        ret = ctypes.c_char_p()
+        success = ctypes.c_int()
+        check_call(_LIB.MXSymbolGetAttr(
+            self.handle, c_str(key), ctypes.byref(ret), ctypes.byref(success)))
+        if success.value != 0:
+            return py_str(ret.value)
+        else:
+            return None
+
+    def _set_attr(self, **kwargs):
+        """Set the attribute of the symbol.
+
+        Parameters
+        ----------
+        **kwargs
+            The attributes to set
+        """
+        for key, value in kwargs.items():
+            if not isinstance(value, string_types):
+                raise ValueError("Set Attr only accepts string values")
+            check_call(_LIB.MXSymbolSetAttr(
+                self.handle, c_str(key), c_str(str(value))))
 
     def get_internals(self):
         """Get a new grouped symbol whose output contains all the internal outputs of this symbol.
@@ -630,13 +667,15 @@ class Symbol(object):
     # pylint: enable= no-member
 
 
-def Variable(name):
+def Variable(name, attr=None):
     """Create a symbolic variable with specified name.
 
     Parameters
     ----------
     name : str
        Name of the variable.
+    attr : dict of string -> string
+       Additional attributes to set on the variable.
 
     Returns
     -------
@@ -647,7 +686,11 @@ def Variable(name):
         raise TypeError('Expect a string for variable `name`')
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateVariable(c_str(name), ctypes.byref(handle)))
-    return Symbol(handle)
+    ret = Symbol(handle)
+    attr = AttrScope.current.get(attr)
+    if attr:
+        ret._set_attr(**attr)
+    return ret
 
 
 def Group(symbols):
@@ -784,6 +827,7 @@ def _make_atomic_symbol_function(handle):
         param_vals = []
         symbol_kwargs = {}
         name = kwargs.pop('name', None)
+        attr = kwargs.pop('attr', None)
 
         if key_var_num_args and key_var_num_args not in kwargs:
             param_keys.append(c_str(key_var_num_args))
@@ -813,8 +857,10 @@ def _make_atomic_symbol_function(handle):
             raise ValueError('This function support variable length of Symbol arguments.\n' +
                              'Please pass all the input Symbols via positional arguments' +
                              ' instead of keyword arguments.')
-
         s = Symbol(sym_handle)
+        attr = AttrScope.current.get(attr)
+        if attr:
+            s._set_attr(**attr)
         hint = func_name.lower()
         name = NameManager.current.get(name, hint)
         s._compose(*args, name=name, **symbol_kwargs)

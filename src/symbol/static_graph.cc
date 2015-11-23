@@ -323,10 +323,12 @@ void StaticGraph::Node::Save(dmlc::JSONWriter *writer) const {
   writer->WriteObjectKeyValue("name", name);
   writer->WriteObjectKeyValue("inputs", inputs);
   writer->WriteObjectKeyValue("backward_source_id", backward_source_id);
+  if (attr.size() != 0) writer->WriteObjectKeyValue("attr", attr);
   writer->EndObject();
 }
 
 void StaticGraph::Node::Load(dmlc::JSONReader *reader) {
+  attr.clear();
   dmlc::JSONObjectReadHelper helper;
   std::string op_type_str;
   std::map<std::string, std::string> param;
@@ -335,6 +337,7 @@ void StaticGraph::Node::Load(dmlc::JSONReader *reader) {
   helper.DeclareField("name", &name);
   helper.DeclareField("inputs", &inputs);
   helper.DeclareField("backward_source_id", &backward_source_id);
+  helper.DeclareOptionalField("attr", &attr);
   helper.ReadAllFields(reader);
 
   if (op_type_str != "null") {

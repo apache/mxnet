@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <utility>
 #include <vector>
+#include <map>
 
 namespace mxnet {
 /*!
@@ -109,23 +110,24 @@ class StaticGraph {
      *  When the node is a Backward node, the op field will be nullptr
      */
     int32_t backward_source_id;
+    /*! \brief additional attributes about the node */
+    std::map<std::string, std::string> attr;
     /*! \brief default constructor */
     Node() : backward_source_id(-1) {}
-
-    friend void swap(Node& lhs, Node& rhs) {
-      std::swap(lhs.op, rhs.op);
-      std::swap(lhs.name, rhs.name);
-      std::swap(lhs.inputs, rhs.inputs);
-      std::swap(lhs.backward_source_id, rhs.backward_source_id);
-    }
     /*! \brief copy constructor in favor of serialization. */
-    Node(const Node& another) : op(another.op.get() ? another.op.get()->Copy() : nullptr),
-                                name(another.name),
-                                inputs(another.inputs),
-                                backward_source_id(another.backward_source_id) {}
+    Node(const Node& another)
+        : op(another.op.get() ? another.op.get()->Copy() : nullptr),
+          name(another.name),
+          inputs(another.inputs),
+          backward_source_id(another.backward_source_id),
+          attr(another.attr) {}
 
     inline Node& operator=(Node another) {
-      swap(*this, another);
+      op = std::move(another.op);
+      name = std::move(another.name);
+      inputs = std::move(another.inputs);
+      backward_source_id = std::move(another.backward_source_id);
+      attr = std::move(another.attr);
       return *this;
     }
     /*! \return whether the node is forward op node */

@@ -460,6 +460,37 @@ MXNET_DLL int MXSymbolCopy(SymbolHandle symbol, SymbolHandle *out);
  */
 MXNET_DLL int MXSymbolPrint(SymbolHandle symbol, const char **out_str);
 /*!
+ * \brief Get string attribute from symbol
+ * \param symbol the source symbol
+ * \param key The key of the symbol.
+ * \param out The result attribute, can be NULL if the attribute do not exist.
+ * \param success Whether the result is contained in out.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolGetAttr(SymbolHandle symbol,
+                              const char* key,
+                              const char** out,
+                              int *success);
+/*!
+ * \brief Set string attribute from symbol.
+ *  NOTE: Setting attribute to a symbol can affect the semantics(mutable/immutable) of symbolic graph.
+ *
+ *  Safe recommendaton: use  immutable graph
+ *  - Only allow set attributes during creation of new symbol as optional parameter
+ *
+ *  Mutable graph (be careful about the semantics):
+ *  - Allow set attr at any point.
+ *  - Mutating an attribute of some common node of two graphs can cause confusion from user.
+ *
+ * \param symbol the source symbol
+ * \param key The key of the symbol.
+ * \param value The value to be saved.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolSetAttr(SymbolHandle symbol,
+                              const char* key,
+                              const char* value);
+/*!
  * \brief List arguments in the symbol.
  * \param symbol the symbol
  * \param out_size output size
