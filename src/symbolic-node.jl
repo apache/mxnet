@@ -143,6 +143,13 @@ end
 .. function:: set_attr(self:: SymbolicNode, key :: Symbol, value :: AbstractString)
 
    Set the attribute key to value for this :class:`SymbolicNode`.
+
+   .. warning::
+
+      It is encouraged not to call this function directly, unless you know exactly what you are doing. The
+      recommended way of setting attributes is when creating the :class:`SymbolicNode`. Changing
+      the attributes of a :class:`SymbolicNode` that is already been used somewhere else might
+      cause unexpected behavior and inconsistency.
 =#
 function set_attr(self :: SymbolicNode, key :: Symbol, value :: AbstractString)
   key_s = bytestring(string(key))

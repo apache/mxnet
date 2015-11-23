@@ -80,6 +80,27 @@ Symbolic API
 
 
 
+.. function:: get_attr(self :: SymbolicNode, key :: Symbol)
+
+   Get attribute attached to this :class:`SymbolicNode` belonging to key.
+
+
+
+
+.. function:: set_attr(self:: SymbolicNode, key :: Symbol, value :: AbstractString)
+
+   Set the attribute key to value for this :class:`SymbolicNode`.
+
+   .. warning::
+
+      It is encouraged not to call this function directly, unless you know exactly what you are doing. The
+      recommended way of setting attributes is when creating the :class:`SymbolicNode`. Changing
+      the attributes of a :class:`SymbolicNode` that is already been used somewhere else might
+      cause unexpected behavior and inconsistency.
+
+
+
+
 .. function:: Variable(name :: Union{Base.Symbol, AbstractString})
 
    Create a symbolic variable with the given name. This is typically used as a placeholder.
@@ -220,6 +241,10 @@ Public APIs
    :param num_args: Number of inputs to be concated.
    :type num_args: int, required
    
+   
+   :param dim: the dimension to be concated.
+   :type dim: int, optional, default='1'
+   
    :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
    :return: the constructed :class:`SymbolicNode`.
@@ -357,6 +382,33 @@ Public APIs
    
    :param num_args: Number of inputs to be sumed.
    :type num_args: int, required
+   
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: Embedding(...)
+
+   Get embedding for one-hot input
+   
+   :param data: Input data to the EmbeddingOp.
+   :type data: SymbolicNode
+   
+   
+   :param weight: Enbedding weight matrix.
+   :type weight: SymbolicNode
+   
+   
+   :param input_dim: input dim of one-hot encoding
+   :type input_dim: int, required
+   
+   
+   :param output_dim: output dim of embedding
+   :type output_dim: int, required
    
    :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
@@ -737,8 +789,8 @@ Internal APIs
    :type scalar: float, required
    
    
-   :param scalar_on_right: scalar operand is on the right.
-   :type scalar_on_right: boolean, optional, default=False
+   :param scalar_on_left: scalar operand is on the left.
+   :type scalar_on_left: boolean, optional, default=False
    
    :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
@@ -772,8 +824,8 @@ Internal APIs
    :type scalar: float, required
    
    
-   :param scalar_on_right: scalar operand is on the right.
-   :type scalar_on_right: boolean, optional, default=False
+   :param scalar_on_left: scalar operand is on the left.
+   :type scalar_on_left: boolean, optional, default=False
    
    :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
@@ -807,8 +859,8 @@ Internal APIs
    :type scalar: float, required
    
    
-   :param scalar_on_right: scalar operand is on the right.
-   :type scalar_on_right: boolean, optional, default=False
+   :param scalar_on_left: scalar operand is on the left.
+   :type scalar_on_left: boolean, optional, default=False
    
    :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
@@ -861,8 +913,43 @@ Internal APIs
    :type scalar: float, required
    
    
-   :param scalar_on_right: scalar operand is on the right.
-   :type scalar_on_right: boolean, optional, default=False
+   :param scalar_on_left: scalar operand is on the left.
+   :type scalar_on_left: boolean, optional, default=False
+   
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: _Power(...)
+
+   Perform an elementwise power.
+   
+   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: _PowerScalar(...)
+
+   Perform an elementwise power.
+   
+   :param array: Input array operand to the operation.
+   :type array: SymbolicNode
+   
+   
+   :param scalar: scalar value.
+   :type scalar: float, required
+   
+   
+   :param scalar_on_left: scalar operand is on the left.
+   :type scalar_on_left: boolean, optional, default=False
    
    :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    
