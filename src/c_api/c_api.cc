@@ -1115,14 +1115,14 @@ int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
                 char* kernel, RtcHandle *out) {
   API_BEGIN();
 #if MXNET_USE_CUDA
-  std::vector<std::pair<std::string, NDArray*> > input, output;
+  std::vector<std::pair<std::string, NDArray> > input, output;
   for (mx_uint i = 0; i < num_input; ++i) {
-    input.push_back(std::pair<std::string, NDArray*>(input_names[i],
-                                                     reinterpret_cast<NDArray*>(inputs[i])));
+    input.push_back(std::pair<std::string, NDArray>(input_names[i],
+                                                    *reinterpret_cast<NDArray*>(inputs[i])));
   }
   for (mx_uint i = 0; i < num_output; ++i) {
-    output.push_back(std::pair<std::string, NDArray*>(output_names[i],
-                                                     reinterpret_cast<NDArray*>(inputs[i])));
+    output.push_back(std::pair<std::string, NDArray>(output_names[i],
+                                                     *reinterpret_cast<NDArray*>(inputs[i])));
   }
   MXRtc *rtc = new MXRtc(name, input, output, kernel);
   *out = reinterpret_cast<RtcHandle>(rtc);
@@ -1142,12 +1142,12 @@ int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
               mx_uint blockDimZ) {
   API_BEGIN();
 #if MXNET_USE_CUDA
-  std::vector<NDArray*> input, output;
+  std::vector<NDArray> input, output;
   for (mx_uint i = 0; i < num_input; ++i) {
-    input.push_back(reinterpret_cast<NDArray*>(inputs[i]));
+    input.push_back(*reinterpret_cast<NDArray*>(inputs[i]));
   }
   for (mx_uint i = 0; i < num_output; ++i) {
-    output.push_back(reinterpret_cast<NDArray*>(outputs[i]));
+    output.push_back(*reinterpret_cast<NDArray*>(outputs[i]));
   }
   reinterpret_cast<MXRtc*>(handle)->push(input, output,
                                          gridDimX,

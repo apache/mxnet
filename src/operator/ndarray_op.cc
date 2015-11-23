@@ -55,7 +55,16 @@ void NDArrayOp<xpu>::Forward(const OpContext &ctx,
   for (auto& i : req) CHECK_NE(i, kAddTo);
   APPEND(in_data, 0);
   APPEND(out_data, 1);
+  std::vector<NDArray> ndcpy;
+  std::vector<Engine::VarHandle> ndvar;
+  for (auto& i : ptrs) {
+    ndcpy.push_back(*reinterpret_cast<NDArray*>(i));
+    ndvar.push_back(reinterpret_cast<NDArray*>(i)->var());
+  }
+  std::sort(ndvar.begin(), ndvar.end());
+  ndvar.resize(std::unique(ndvar.begin(), ndvar.end()) - ndvar.begin());
   param_.pinfo->forward(ptrs.size(), ptrs.data(), tags.data(), param_.pinfo->p_forward);
+  Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx){ ctx.async_on_complete(); }, ndctx, ndvar, {});
 }
 
 template<typename xpu>
@@ -75,7 +84,16 @@ void NDArrayOp<xpu>::Backward(const OpContext &ctx,
   APPEND(out_data, 1);
   APPEND(in_grad, 2);
   APPEND(out_grad, 3);
+  std::vector<NDArray> ndcpy;
+  std::vector<Engine::VarHandle> ndvar;
+  for (auto& i : ptrs) {
+    ndcpy.push_back(*reinterpret_cast<NDArray*>(i));
+    ndvar.push_back(reinterpret_cast<NDArray*>(i)->var());
+  }
+  std::sort(ndvar.begin(), ndvar.end());
+  ndvar.resize(std::unique(ndvar.begin(), ndvar.end()) - ndvar.begin());
   param_.pinfo->backward(ptrs.size(), ptrs.data(), tags.data(), param_.pinfo->p_backward);
+  Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx){ ctx.async_on_complete(); }, ndctx, ndvar, {});
 }
 
 Operator* NDArrayOpProp::CreateOperator(Context ctx) const {

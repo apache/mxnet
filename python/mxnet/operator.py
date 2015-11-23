@@ -227,7 +227,7 @@ class NDArrayOp(PythonOp):
         super(NDArrayOp, self).__init__(need_top_grad)
 
     def get_symbol(self, *args, **kwargs):
-        fb_functype = CFUNCTYPE(None, c_int, POINTER(c_void_p), POINTER(c_int))
+        fb_functype = CFUNCTYPE(None, c_int, POINTER(c_void_p), POINTER(c_int), c_void_p)
         infer_functype = CFUNCTYPE(None, c_int, POINTER(c_int), POINTER(POINTER(mx_uint)))
         list_functype = CFUNCTYPE(None, POINTER(POINTER(POINTER(c_char))))
         class NDArrayOpInfo(Structure):
@@ -244,7 +244,7 @@ class NDArrayOp(PythonOp):
                 ('p_list_outputs', c_void_p),
                 ('p_list_arguments', c_void_p),
                 ]
-        def forward_entry(num_ndarray, ndarraies, tags):
+        def forward_entry(num_ndarray, ndarraies, tags, _):
             """C Callback for NDArrayOp::Forward"""
             tensors = [[] for i in range(4)]
             for i in range(num_ndarray):
@@ -255,10 +255,8 @@ class NDArrayOp(PythonOp):
                     tensors[tags[i]].append(NDArray(cast(ndarraies[i], NDArrayHandle),
                                                     writable=False))
             self.forward(in_data=tensors[0], out_data=tensors[1])
-            for x in tensors[1]:
-                x.wait_to_read()
 
-        def backward_entry(num_ndarray, ndarraies, tags):
+        def backward_entry(num_ndarray, ndarraies, tags, _):
             """C Callback for NDArrayOp::Backward"""
             tensors = [[] for i in range(4)]
             for i in range(num_ndarray):
@@ -270,8 +268,6 @@ class NDArrayOp(PythonOp):
                                                     writable=False))
             self.backward(in_data=tensors[0], out_data=tensors[1],
                           in_grad=tensors[2], out_grad=tensors[3])
-            for x in tensors[2]:
-                x.wait_to_read()
 
         def infer_shape_entry(num_tensor, tensor_dims,
                               tensor_shapes):
