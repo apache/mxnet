@@ -23,15 +23,11 @@ namespace op {
 
 struct NDArrayOpParam : public dmlc::Parameter<NDArrayOpParam> {
   void *info;
-  bool need_top_grad;
 
   NDArrayOpInfo *pinfo;
   int num_inputs_, num_outputs_;
   DMLC_DECLARE_PARAMETER(NDArrayOpParam) {
     DMLC_DECLARE_FIELD(info);
-    DMLC_DECLARE_FIELD(need_top_grad).set_default(true)
-    .describe("Whether this layer needs out grad for backward. "
-      "Should be false for loss layers.");
   }
 };
 
@@ -147,12 +143,13 @@ class NDArrayOpProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
+    int num_dep;
+    int *rdeps;
+    param_.pinfo->declare_backward_dependency(out_grad.data(), in_data.data(),
+                                              out_data.data(), &num_dep, &rdeps,
+                                              param_.pinfo->p_declare_backward_dependency);
     std::vector<int> deps;
-    if (param_.need_top_grad) {
-      deps.insert(deps.end(), out_grad.begin(), out_grad.end());
-    }
-    deps.insert(deps.end(), in_data.begin(), in_data.end());
-    deps.insert(deps.end(), out_data.begin(), out_data.end());
+    deps.insert(deps.end(), rdeps, rdeps+num_dep);
     return deps;
   }
 

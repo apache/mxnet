@@ -5,6 +5,7 @@ from __future__ import absolute_import
 
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer
 from ctypes import c_void_p, cast, c_int, c_char, c_char_p, cast
+c_int_p = POINTER(c_int)
 from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle
 from . import symbol
 from .ndarray import NDArray
@@ -113,6 +114,31 @@ class PythonOp(object):
             Should be set to False for loss layers.
         """
         return self.need_top_grad_
+
+    def declare_backward_dependency(self, out_grad, in_data, out_data):
+        """Declare dependencies of this operator for backward pass.
+
+        Parameters
+        ----------
+        out_grad : list of int
+            ids of out_grad blobs.
+        in_data : list of int
+            ids of in_data blobs.
+        out_data: list of int
+            ids of out_data blobs.
+
+        Returns
+        -------
+        deps : list of int 
+            ids of the needed blobs.
+        """
+        deps = []
+        if self.need_top_grad():
+            deps.extend(out_grad)
+        deps.extend(in_data)
+        deps.extend(out_data)
+        return deps
+
 
 class NumpyOp(PythonOp):
     """Base class for numpy operators. numpy operators allow parts
@@ -228,8 +254,9 @@ class NDArrayOp(PythonOp):
 
     def get_symbol(self, *args, **kwargs):
         fb_functype = CFUNCTYPE(None, c_int, POINTER(c_void_p), POINTER(c_int), c_void_p)
-        infer_functype = CFUNCTYPE(None, c_int, POINTER(c_int), POINTER(POINTER(mx_uint)))
-        list_functype = CFUNCTYPE(None, POINTER(POINTER(POINTER(c_char))))
+        infer_functype = CFUNCTYPE(None, c_int, POINTER(c_int), POINTER(POINTER(mx_uint)), c_void_p)
+        list_functype = CFUNCTYPE(None, POINTER(POINTER(POINTER(c_char))), c_void_p)
+        deps_functype = CFUNCTYPE(None, c_int_p, c_int_p, c_int_p, c_int_p, POINTER(c_int_p), c_void_p)
         class NDArrayOpInfo(Structure):
             """Structure that holds Callback information. Passed to NDArrayOpProp"""
             _fields_ = [
@@ -238,11 +265,13 @@ class NDArrayOp(PythonOp):
                 ('infer_shape', infer_functype),
                 ('list_outputs', list_functype),
                 ('list_arguments', list_functype),
+                ('declare_backward_dependency', deps_functype),
                 ('p_forward', c_void_p),
                 ('p_backward', c_void_p),
                 ('p_infer_shape', c_void_p),
                 ('p_list_outputs', c_void_p),
                 ('p_list_arguments', c_void_p),
+                ('p_declare_backward_dependency', c_void_p)
                 ]
         def forward_entry(num_ndarray, ndarraies, tags, _):
             """C Callback for NDArrayOp::Forward"""
@@ -270,7 +299,7 @@ class NDArrayOp(PythonOp):
                           in_grad=tensors[2], out_grad=tensors[3])
 
         def infer_shape_entry(num_tensor, tensor_dims,
-                              tensor_shapes):
+                              tensor_shapes, _):
             """C Callback for NDArrayOpProp::InferShape"""
             n_in = len(self.list_arguments())
             n_out = len(self.list_outputs())
@@ -285,32 +314,41 @@ class NDArrayOp(PythonOp):
                 tensor_shapes[i] = cast(c_array(mx_uint, rshape[i]), POINTER(mx_uint))
                 tensor_dims[i] = len(rshape[i])
 
-        def list_outputs_entry(out):
+        def list_outputs_entry(out, _):
             """C Callback for NDArrayOpProp::ListOutputs"""
             ret = self.list_outputs()
             ret = [c_str(i) for i in ret] + [c_char_p(0)]
             ret = c_array(c_char_p, ret)
             out[0] = cast(ret, POINTER(POINTER(c_char)))
 
-        def list_arguments_entry(out):
+        def list_arguments_entry(out, _):
             """C Callback for NDArrayOpProp::ListArguments"""
             ret = self.list_arguments()
             ret = [c_str(i) for i in ret] + [c_char_p(0)]
             ret = c_array(c_char_p, ret)
             out[0] = cast(ret, POINTER(POINTER(c_char)))
 
+        def declare_backward_dependency(out_grad, in_data, out_data, num_dep, deps, _):
+            """C Callback for NDArrayOpProp::DeclareBacwardDependency"""
+            out_grad = [out_grad[i] for i in xrange(len(self.list_outputs()))]
+            in_data = [in_data[i] for i in xrange(len(self.list_arguments()))]
+            out_data = [out_data[i] for i in xrange(len(self.list_outputs()))]
+            rdeps = self.declare_backward_dependency(out_grad, in_data, out_data)
+            num_dep[0] = len(rdeps)
+            rdeps = cast(c_array(c_int, rdeps), c_int_p)
+            deps[0] = rdeps
 
         self.info_ = NDArrayOpInfo(fb_functype(forward_entry),
                                    fb_functype(backward_entry),
                                    infer_functype(infer_shape_entry),
                                    list_functype(list_outputs_entry),
                                    list_functype(list_arguments_entry),
-                                   None, None, None, None, None)
+                                   deps_functype(declare_backward_dependency),
+                                   None, None, None, None, None, None)
         cb_ptr = format(cast(pointer(self.info_), c_void_p).value, 'x')
         # pylint: disable=E1101
         sym = symbol.Symbol._NDArray(*args,
                                      info=cb_ptr,
-                                     need_top_grad=self.need_top_grad(),
                                      **kwargs)
         # keep a reference of ourself in sym so we don't get garbage collected
         # before sym is collected.

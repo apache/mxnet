@@ -76,12 +76,15 @@ struct NDArrayOpInfo {
   void (*infer_shape)(int, int*, unsigned**, void*);
   void (*list_outputs)(char***, void*);
   void (*list_arguments)(char***, void*);
+  void (*declare_backward_dependency)(const int*, const int*, const int*,
+                                      int*, int**, void*);
   // all functions also pass a payload void* pointer
   void* p_forward;
   void* p_backward;
   void* p_infer_shape;
   void* p_list_outputs;
   void* p_list_arguments;
+  void* p_declare_backward_dependency;
 };
 }
 /*!
