@@ -15,6 +15,7 @@
 #include <string>
 #include <utility>
 #include "./base.h"
+#include "./c_api.h"
 #include "./ndarray.h"
 #include "./operator.h"
 
@@ -313,7 +314,7 @@ class Executor {
   /*!
    * \brief Install a callback to notify the completion of operation.
    */
-  virtual void SetMonitorCallback(void (*callback)(void*)) {};
+  virtual void SetMonitorCallback(ExcecutorMonitorCallback callback) {};
 };  // class operator
 }  // namespace mxnet
 #endif  // MXNET_SYMBOLIC_H_

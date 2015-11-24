@@ -823,7 +823,7 @@ int MXExecutorBindX(SymbolHandle symbol_handle,
 }
 
 int MXExecutorSetMonitorCallback(ExecutorHandle handle,
-                          void (*callback)(NDArrayHandle)) {
+                                 ExcecutorMonitorCallback callback) {
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
   exec->SetMonitorCallback(callback);

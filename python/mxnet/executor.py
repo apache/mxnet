@@ -118,10 +118,11 @@ class Executor(object):
             ndarray))
 
     def set_monitor_callback(self, callback):
-        cb_type = ctypes.CFUNCTYPE(None, NDArrayHandle)
+        cb_type = ctypes.CFUNCTYPE(None, ctypes.c_char_p, NDArrayHandle)
+        self.monitor_callback = cb_type(callback)
         check_call(_LIB.MXExecutorSetMonitorCallback(
             self.handle,
-            cb_type(callback)))
+            self.monitor_callback))
 
     @property
     def arg_dict(self):

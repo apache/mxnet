@@ -51,6 +51,9 @@ typedef void *RecordIOHandle;
 /*! \brief handle to MXRtc*/
 typedef void *RtcHandle;
 
+MXNET_EXTERN_C typedef void (*ExcecutorMonitorCallback)(const char*, 
+                                                        NDArrayHandle);
+
 MXNET_EXTERN_C {
 struct NativeOpInfo {
   void (*forward)(int, float**, int*, unsigned**, int*, void*);
@@ -723,7 +726,7 @@ MXNET_DLL int MXExecutorBindX(SymbolHandle symbol_handle,
  * \brief set a call back to notify the completion of operation
  */
 MXNET_DLL int MXExecutorSetMonitorCallback(ExecutorHandle handle,
-                                           void (*callback)(NDArrayHandle));
+                                           ExcecutorMonitorCallback callback);
 //--------------------------------------------
 // Part 5: IO Interface
 //--------------------------------------------

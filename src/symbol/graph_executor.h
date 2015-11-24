@@ -6,6 +6,7 @@
 #ifndef MXNET_SYMBOL_GRAPH_EXECUTOR_H_
 #define MXNET_SYMBOL_GRAPH_EXECUTOR_H_
 
+#include <mxnet/c_api.h>
 #include <mxnet/symbolic.h>
 #include <memory>
 #include <string>
@@ -30,7 +31,7 @@ class GraphExecutor : public Executor {
   }
   void Print(std::ostream &os) const override; // NOLINT(*)
   // install callback
-  void SetMonitorCallback(void (*callback)(void*)) {
+  void SetMonitorCallback(ExcecutorMonitorCallback callback) {
     monitor_callback_ = callback;
   }
   // implement Executor::Bind, only call it once.
@@ -229,7 +230,7 @@ class GraphExecutor : public Executor {
   std::vector<NDArray> heads_ndarray_;
   // monitor call back
   //void (*monitor_callback_)(void*);
-  std::function<void(void*)> monitor_callback_;
+  std::function<void(const char*, void*)> monitor_callback_;
 };  // class GraphExecutor
 }  // namespace mxnet
 #endif  // MXNET_SYMBOL_GRAPH_EXECUTOR_H_
