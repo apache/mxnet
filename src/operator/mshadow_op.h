@@ -132,7 +132,11 @@ struct sign {
     return 0.0f;
   }
 };
-
+struct sign_grad {
+    MSHADOW_XINLINE static real_t Map(real_t a) {
+        return 0.0f;
+    }
+};
 /*! \brief used for generate element of power */
 struct power {
   MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
