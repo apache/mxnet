@@ -126,6 +126,7 @@ end
 .. function:: get_attr(self :: SymbolicNode, key :: Symbol)
 
    Get attribute attached to this :class:`SymbolicNode` belonging to key.
+   :return: The value belonging to key as a :class:`Nullable`.
 =#
 function get_attr(self :: SymbolicNode, key :: Symbol)
   key_s = bytestring(string(key))
@@ -133,9 +134,9 @@ function get_attr(self :: SymbolicNode, key :: Symbol)
   ref_success = Ref{Cint}(-1)
   @mxcall(:MXSymbolGetAttr, (MX_handle, Cstring, Ref{Cstring}, Ref{Cint}), self, key_s, ref_out, ref_success)
   if ref_success[] == 1
-    return bytestring(ref_out[])
+    return Nullable{ByteString}(bytestring(ref_out[]))
   else
-    throw(KeyError(key))
+    return Nullable{ByteString}()
   end
 end
 
@@ -159,15 +160,22 @@ function set_attr(self :: SymbolicNode, key :: Symbol, value :: AbstractString)
 end
 
 #=doc
-.. function:: Variable(name :: Union{Base.Symbol, AbstractString})
+.. function:: Variable(name :: Union{Symbol, AbstractString})
 
    Create a symbolic variable with the given name. This is typically used as a placeholder.
    For example, the data node, acting as the starting point of a network architecture.
+
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`Variable`.
 =#
-function Variable(name :: Union{Base.Symbol, AbstractString})
+function Variable(name :: Union{Symbol, AbstractString}; attrs = Dict())
+  attrs = convert(Dict{Symbol, AbstractString}, attrs)
   hdr_ref = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCreateVariable, (char_p, Ref{MX_handle}), name, hdr_ref)
-  SymbolicNode(MX_SymbolHandle(hdr_ref[]))
+  node = SymbolicNode(MX_SymbolHandle(hdr_ref[]))
+  for (k, v) in attrs
+    set_attr(node, k, v)
+  end
+  node
 end
 
 #=doc
@@ -489,7 +497,8 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
       f_desc *= "This function support variable length positional :class:`SymbolicNode` inputs.\n\n"
     end
     f_desc *= _format_docstring(Int(ref_nargs[]), ref_arg_names, ref_arg_types, ref_arg_descs)
-    f_desc *= ":param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.\n\n"
+    f_desc *= ":param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.\n"
+    f_desc *= ":param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.\n\n"
     f_desc *= ":return: the constructed :class:`SymbolicNode`.\n\n"
     return (func_name, f_desc)
   end
@@ -506,7 +515,8 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
 
     param_keys = AbstractString[]
     param_vals = AbstractString[]
-    symbol_kws = Dict{Base.Symbol, SymbolicNode}()
+    symbol_kws = Dict{Symbol, SymbolicNode}()
+    attrs = Dict{Symbol, AbstractString}()
 
     $(if kv_nargs != symbol("")
       quote
@@ -521,6 +531,12 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
       if k == :name; continue; end
       if isa(v, SymbolicNode)
         symbol_kws[k] = v
+      elseif k == :attrs
+        if isa(v, Dict)
+          attrs = convert(Dict{Symbol, AbstractString}, v)
+        else
+          throw(ArgumentError("attrs needs to be a Dictionary"))
+        end
       else
         push!(param_keys, string(k))
         push!(param_vals, dump_mx_param(v))
@@ -549,6 +565,11 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
     node = SymbolicNode(MX_SymbolHandle(sym_hdr))
     hint = lowercase($func_name_s)
     name = get!(DEFAULT_NAME_MANAGER, name, hint)
+
+    # set attrs
+    for (k, v) in attrs
+      set_attr(node, k, v)
+    end
 
     if length(args) != 0
       _compose!(node, name, args...)

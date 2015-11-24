@@ -433,6 +433,17 @@ object (:class:`NDArray`) is returned. Otherwise, a tuple containing all the out
 
 Public APIs
 ^^^^^^^^^^^
+.. function:: abs(...)
+
+   Take absolute value of the src
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
+
 .. function:: choose_element_0index(...)
 
    Choose one element from each line(row for python, column for R/Julia) in lhs according to index indicated by rhs. This function assume rhs uses 0-based index.
