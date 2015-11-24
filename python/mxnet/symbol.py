@@ -533,7 +533,7 @@ class Symbol(object):
         executor = self.bind(ctx, arg_ndarrays, grad_ndarrays, grad_req, aux_ndarrays)
         return executor
 
-    def bind(self, ctx, args, args_grad=None, grad_req='write', aux_states=None):
+    def bind(self, ctx, args, args_grad=None, grad_req='write', aux_states=None, group2ctx=None):
         """Bind current symbol to get an executor.
 
         Parameters
@@ -576,6 +576,9 @@ class Symbol(object):
               to the corresponding NDArray,
             - In either case, all the auxiliary_states need to be provided.
 
+        group2ctx : dict of string to mx.Context
+            The dict mapping the ``ctx_group`` attribute to the context assignment.
+
         Returns
         -------
         executor : mxnet.Executor
@@ -591,7 +594,7 @@ class Symbol(object):
         User can give up gradient by using a dict in args_grad and only specify
         gradient they interested in.
         """
-        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-locals, too-many-branches
         if not isinstance(ctx, Context):
             raise TypeError("Context type error")
 
@@ -625,17 +628,31 @@ class Symbol(object):
                     req_array.append(mx_uint(0))
             reqs_array = c_array(mx_uint, req_array)
 
+        ctx_map_keys = []
+        ctx_map_dev_types = []
+        ctx_map_dev_ids = []
+
+        if group2ctx:
+            for key, val in group2ctx.items():
+                ctx_map_keys.append(c_str(key))
+                ctx_map_dev_types.append(ctypes.c_int(val.device_typeid))
+                ctx_map_dev_ids.append(ctypes.c_int(val.device_id))
+
         handle = ExecutorHandle()
-        check_call(_LIB.MXExecutorBind(self.handle,
-                                       ctypes.c_int(ctx.device_typeid),
-                                       ctypes.c_int(ctx.device_id),
-                                       mx_uint(len(args)),
-                                       args_handle,
-                                       args_grad_handle,
-                                       reqs_array,
-                                       mx_uint(len(aux_states)),
-                                       aux_args_handle,
-                                       ctypes.byref(handle)))
+        check_call(_LIB.MXExecutorBindX(self.handle,
+                                        ctypes.c_int(ctx.device_typeid),
+                                        ctypes.c_int(ctx.device_id),
+                                        mx_uint(len(ctx_map_keys)),
+                                        c_array(ctypes.c_char_p, ctx_map_keys),
+                                        c_array(ctypes.c_int, ctx_map_dev_types),
+                                        c_array(ctypes.c_int, ctx_map_dev_ids),
+                                        mx_uint(len(args)),
+                                        args_handle,
+                                        args_grad_handle,
+                                        reqs_array,
+                                        mx_uint(len(aux_states)),
+                                        aux_args_handle,
+                                        ctypes.byref(handle)))
         executor = Executor(handle, self)
         executor.arg_arrays = args
         executor.grad_arrays = args_grad

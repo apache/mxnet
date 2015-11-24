@@ -83,7 +83,14 @@ class Operator {
      * \brief Forward/Backward are asynchronize,
      *  will call OpContext.async_on_complete when operation finishes.
      */
-    kAsync
+    kAsync,
+    /*!
+     * \brief Cross device copy operation, this is a special operator
+     *  That indicates copy across devices, the input and output can sit on different device.
+     *  In current implementation, copy operator is specially handled by executor.
+     *  This flag is used for special case treatment and future extension of different copy ops.
+     */
+    kCrossDeviceCopy
   };
   /*! \brief destructor */
   virtual ~Operator() {}

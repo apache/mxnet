@@ -176,6 +176,13 @@ class StaticGraph {
    */
   std::vector<uint32_t> TopoSort() const;
   /*!
+   * \brief Get a post DFS order traversal order from the head nodes.
+   *  Post DFS order is a special case of Topological order.
+   * \param heads The head of the node.
+   * \return a post DFS visit order of nodes that can reach heads.
+   */
+  std::vector<uint32_t> PostDFSOrder(const std::vector<uint32_t>& head_nodes) const;
+  /*!
    * \brief infer the node shapes in the computation graph.
    *
    *  When calling this function, user can setup the shape information known into right position.
@@ -222,6 +229,7 @@ class StaticGraph {
    */
   void MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
                         std::vector<DataEntry> *arg_grads);
+
   /*!
    * \brief Convert symbol into static graph.
    * \param symbol the symbol to convert from.
@@ -235,6 +243,12 @@ class StaticGraph {
    * \return a created ElementWiseSum node
    */
   static Node CreateSumNode(const std::vector<DataEntry> &grad_source);
+  /*!
+   * \brief create a copy node.
+   * \param source the Source data
+   * \return a created _CrossDeviceCopy node
+   */
+  static Node CreateCopyNode(const DataEntry& source);
 };
 }  // namespace mxnet
 
