@@ -117,6 +117,12 @@ class Executor(object):
             mx_uint(len(out_grads)),
             ndarray))
 
+    def set_monitor_callback(self, callback):
+        cb_type = ctypes.CFUNCTYPE(None, NDArrayHandle)
+        check_call(_LIB.MXExecutorSetMonitorCallback(
+            self.handle,
+            cb_type(callback)))
+
     @property
     def arg_dict(self):
         """Get dictionary representation of argument arrrays.

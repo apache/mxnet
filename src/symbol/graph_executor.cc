@@ -749,6 +749,16 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
           exec.mutate_vars,
           FnProperty::kNormal);
     }
+    if (monitor_callback_) {
+      for (auto& output : opnode.outputs) {
+        NDArray out_data = output.data;
+        Engine::Get()->PushSync(
+            [this, out_data](RunContext ctx) {
+              NDArray *cpy = new NDArray(out_data);
+              this->monitor_callback_(reinterpret_cast<void*>(cpy));
+            }, out_data.ctx(), {out_data.var()}, {}, FnProperty::kNormal);
+      }
+    }
   }
 }
 

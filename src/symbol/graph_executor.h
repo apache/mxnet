@@ -21,6 +21,7 @@ namespace mxnet {
  */
 class GraphExecutor : public Executor {
  public:
+  GraphExecutor() : monitor_callback_(NULL) {}
   virtual ~GraphExecutor();
   void Forward(bool is_train) override;
   void Backward(const std::vector<NDArray> &head_grads) override;
@@ -28,6 +29,10 @@ class GraphExecutor : public Executor {
     return heads_ndarray_;
   }
   void Print(std::ostream &os) const override; // NOLINT(*)
+  // install callback
+  void SetMonitorCallback(void (*callback)(void*)) {
+    monitor_callback_ = callback;
+  }
   // implement Executor::Bind, only call it once.
   inline void Init(Symbol symbol,
                    const Context& default_ctx,
@@ -222,6 +227,9 @@ class GraphExecutor : public Executor {
   std::vector<OpNode> op_nodes_;
   // head NDArrays
   std::vector<NDArray> heads_ndarray_;
+  // monitor call back
+  //void (*monitor_callback_)(void*);
+  std::function<void(void*)> monitor_callback_;
 };  // class GraphExecutor
 }  // namespace mxnet
 #endif  // MXNET_SYMBOL_GRAPH_EXECUTOR_H_

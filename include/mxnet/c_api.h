@@ -684,7 +684,6 @@ MXNET_DLL int MXExecutorBind(SymbolHandle symbol_handle,
                              mx_uint aux_states_len,
                              NDArrayHandle *aux_states,
                              ExecutorHandle *out);
-
 /*!
  * \brief Generate Executor from symbol,
  *  This is advanced function, allow specify group2ctx map.
@@ -720,7 +719,11 @@ MXNET_DLL int MXExecutorBindX(SymbolHandle symbol_handle,
                               mx_uint aux_states_len,
                               NDArrayHandle *aux_states,
                               ExecutorHandle *out);
-
+/*!
+ * \brief set a call back to notify the completion of operation
+ */
+MXNET_DLL int MXExecutorSetMonitorCallback(ExecutorHandle handle,
+                                           void (*callback)(NDArrayHandle));
 //--------------------------------------------
 // Part 5: IO Interface
 //--------------------------------------------

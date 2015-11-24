@@ -822,6 +822,14 @@ int MXExecutorBindX(SymbolHandle symbol_handle,
   API_END();
 }
 
+int MXExecutorSetMonitorCallback(ExecutorHandle handle,
+                          void (*callback)(NDArrayHandle)) {
+  API_BEGIN();
+  Executor *exec = static_cast<Executor*>(handle);
+  exec->SetMonitorCallback(callback);
+  API_END();
+}
+
 //--------------------------------------------
 // Part 5: IO Interface
 //--------------------------------------------
