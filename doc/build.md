@@ -12,7 +12,7 @@ pull request if you can fix the problem.
 ## Contents
 - [Build the Shared Library](#build-mxnet-library)
   - [Prerequisites](#prerequisites)
-  - [Building on Linux](#building-on-linux)
+  - [Building on Ubuntu/Debian](#building-on-ubuntu-debian)
   - [Building on OSX](#building-on-osx)
   - [Building on Windows](#building-on-windows)
   - [Installing pre-built packages on Windows](#installing-pre-built-packages-on-windows)
@@ -43,10 +43,10 @@ We can edit `make/config.mk` to change the compile options, and then build by
 `make`. If everything goes well, we can go the
 [language package installation](#install-language-packages) step.
 
-On the remaining of this section, we provides instructions to install the
-dependencies and built mxnet from scratch for various systems.
+On the remaining of this section, we provide instructions to install the
+dependencies and build mxnet from scratch for various systems.
 
-### Building on Ubuntu
+### Building on Ubuntu/Debian
 
 On Ubuntu >= 13.10, one can install the dependencies by
 
@@ -119,7 +119,7 @@ The python package is located at [python/mxnet](../python/mxnet). It requires
 sudo pip install numpy
 ```
 
-otherwise using your package manager, e.g.
+otherwise use your package manager, e.g.
 
 ```bash
 sudo apt-get install python-numpy # for debian
