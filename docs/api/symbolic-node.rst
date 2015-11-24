@@ -83,6 +83,7 @@ Symbolic API
 .. function:: get_attr(self :: SymbolicNode, key :: Symbol)
 
    Get attribute attached to this :class:`SymbolicNode` belonging to key.
+   :return: The value belonging to key as a :class:`Nullable`.
 
 
 
@@ -101,10 +102,12 @@ Symbolic API
 
 
 
-.. function:: Variable(name :: Union{Base.Symbol, AbstractString})
+.. function:: Variable(name :: Union{Symbol, AbstractString})
 
    Create a symbolic variable with the given name. This is typically used as a placeholder.
    For example, the data node, acting as the starting point of a network architecture.
+
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`Variable`.
 
 
 
@@ -186,7 +189,8 @@ Public APIs
    :param act_type: Activation function to be applied.
    :type act_type: {'relu', 'sigmoid', 'tanh'}, required
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -209,7 +213,8 @@ Public APIs
    :param momentum: Momentum for moving average
    :type momentum: float, optional, default=0.9
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -224,7 +229,8 @@ Public APIs
    :param data: Input data.
    :type data: SymbolicNode
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -245,7 +251,8 @@ Public APIs
    :param dim: the dimension to be concated.
    :type dim: int, optional, default='1'
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -296,7 +303,8 @@ Public APIs
    :param no_bias: Whether to disable bias parameter.
    :type no_bias: boolean, optional, default=False
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -347,7 +355,8 @@ Public APIs
    :param no_bias: Whether to disable bias parameter.
    :type no_bias: boolean, optional, default=True
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -366,7 +375,8 @@ Public APIs
    :param p: Fraction of the input that gets dropped out at training time
    :type p: float, optional, default=0.5
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -383,7 +393,8 @@ Public APIs
    :param num_args: Number of inputs to be sumed.
    :type num_args: int, required
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -410,7 +421,8 @@ Public APIs
    :param output_dim: output dim of embedding
    :type output_dim: int, required
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -425,7 +437,8 @@ Public APIs
    :param data: Input data to  flatten.
    :type data: SymbolicNode
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -456,7 +469,8 @@ Public APIs
    :param no_bias: Whether to disable bias parameter.
    :type no_bias: boolean, optional, default=False
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -487,7 +501,8 @@ Public APIs
    :param nsize: normalization window width in elements.
    :type nsize: int (non-negative), required
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -518,7 +533,8 @@ Public APIs
    :param upper_bound: Upper bound of random slope. (For rrelu only)
    :type upper_bound: float, optional, default=0.334
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -537,7 +553,8 @@ Public APIs
    :param label: Input label to function.
    :type label: SymbolicNode
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -557,7 +574,8 @@ Public APIs
    :param label: Input label to function.
    :type label: SymbolicNode
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -588,7 +606,8 @@ Public APIs
    :param pad: pad for pooling: (y, x)
    :type pad: Shape(tuple), optional, default=(0, 0)
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -607,7 +626,8 @@ Public APIs
    :param target_shape: Target new shape
    :type target_shape: Shape(tuple), required
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -622,7 +642,8 @@ Public APIs
    :param num_outputs: Number of outputs to be sliced.
    :type num_outputs: int, required
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -645,7 +666,8 @@ Public APIs
    :param multi_output: If set to true, for a (n,k,x_1,..,x_n) dimensionalinput tensor, softmax will generate n*x_1*...*x_n output, eachhas k classes
    :type multi_output: boolean, optional, default=False
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -668,7 +690,8 @@ Public APIs
    :param multi_output: If set to true, for a (n,k,x_1,..,x_n) dimensionalinput tensor, softmax will generate n*x_1*...*x_n output, eachhas k classes
    :type multi_output: boolean, optional, default=False
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -691,7 +714,24 @@ Public APIs
    :param dim2: the second axis to be swapped.
    :type dim2: int (non-negative), optional, default=0
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: abs(...)
+
+   Take absolute value of the src
+   
+   :param src: Source symbolic input to the function
+   :type src: SymbolicNode
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -706,7 +746,8 @@ Public APIs
    :param src: Source symbolic input to the function
    :type src: SymbolicNode
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -721,7 +762,8 @@ Public APIs
    :param src: Source symbolic input to the function
    :type src: SymbolicNode
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -736,7 +778,8 @@ Public APIs
    :param src: Source symbolic input to the function
    :type src: SymbolicNode
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -751,7 +794,8 @@ Public APIs
    :param src: Source symbolic input to the function
    :type src: SymbolicNode
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -769,7 +813,8 @@ Internal APIs
 
    Perform an elementwise div.
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -792,7 +837,8 @@ Internal APIs
    :param scalar_on_left: scalar operand is on the left.
    :type scalar_on_left: boolean, optional, default=False
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -804,7 +850,8 @@ Internal APIs
 
    Perform an elementwise minus.
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -827,7 +874,8 @@ Internal APIs
    :param scalar_on_left: scalar operand is on the left.
    :type scalar_on_left: boolean, optional, default=False
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -839,7 +887,8 @@ Internal APIs
 
    Perform an elementwise mul.
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -862,7 +911,24 @@ Internal APIs
    :param scalar_on_left: scalar operand is on the left.
    :type scalar_on_left: boolean, optional, default=False
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: _NDArray(...)
+
+   Stub for implementing an operator implemented in native frontend language with ndarray.
+   
+   :param info: 
+   :type info: , required
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -881,7 +947,8 @@ Internal APIs
    :param need_top_grad: Whether this layer needs out grad for backward. Should be false for loss layers.
    :type need_top_grad: boolean, optional, default=True
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -893,7 +960,8 @@ Internal APIs
 
    Perform an elementwise plus.
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -916,7 +984,8 @@ Internal APIs
    :param scalar_on_left: scalar operand is on the left.
    :type scalar_on_left: boolean, optional, default=False
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -928,7 +997,8 @@ Internal APIs
 
    Perform an elementwise power.
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
@@ -951,7 +1021,8 @@ Internal APIs
    :param scalar_on_left: scalar operand is on the left.
    :type scalar_on_left: boolean, optional, default=False
    
-   :param Base.Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
    :return: the constructed :class:`SymbolicNode`.
    
