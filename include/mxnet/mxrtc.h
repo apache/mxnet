@@ -39,8 +39,8 @@ class MXRtc {
    * \param kernel cuda code.
    */
   MXRtc(const std::string& name,
-        std::vector<std::pair<std::string, NDArray*> > const& input,
-        std::vector<std::pair<std::string, NDArray*> > const& output,
+        std::vector<std::pair<std::string, NDArray> > const& input,
+        std::vector<std::pair<std::string, NDArray> > const& output,
         const std::string& kernel);
   /*!
    * \brief launch a kernel with the engine.
@@ -53,8 +53,8 @@ class MXRtc {
    * \param block_dim_Y kernel block dimensions.
    * \param block_dim_Z kernel block dimensions.
    */
-  void push(std::vector<NDArray*> const& input,
-            std::vector<NDArray*> const& output,
+  void push(std::vector<NDArray> const& input,
+            std::vector<NDArray> const& output,
             unsigned int  grid_dim_X,
             unsigned int  grid_dim_Y,
             unsigned int  grid_dim_Z,
@@ -77,8 +77,8 @@ class MXRtc {
    * \brief add supporting code to kernel.
    */
   std::string decorate(const std::string& name,
-                       std::vector<std::pair<std::string, NDArray*> > const& input,
-                       std::vector<std::pair<std::string, NDArray*> > const& output,
+                       std::vector<std::pair<std::string, NDArray> > const& input,
+                       std::vector<std::pair<std::string, NDArray> > const& output,
                        const std::string kernel);
   /*!
    * \brief compile the kernel with nvrtc.

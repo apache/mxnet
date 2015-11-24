@@ -431,8 +431,8 @@ def load_checkpoint(prefix, epoch):
         Model parameter, dict of name to NDArray of net's auxiliary states.
     Notes
     -----
-    - ``prefix-symbol.json`` will be saved for symbol.
-    - ``prefix-epoch.params`` will be saved for parameters.
+    - symbol will be loaded from ``prefix-symbol.json``.
+    - parameters will be loaded from ``prefix-epoch.params``.
     """
     symbol = sym.load('%s-symbol.json' % prefix)
     save_dict = nd.load('%s-%04d.params' % (prefix, epoch))
@@ -464,7 +464,7 @@ class FeedForward(BASE_ESTIMATOR):
         ceil(num_train_examples / batch_size)
     optimizer : str or Optimizer, optional
         Training parameter, name or optimizer object for training.
-    initializier : initializer function, optional
+    initializer : initializer function, optional
         Training parameter, the initialization scheme used.
     numpy_batch_size : int, optional
         The batch size of training data.

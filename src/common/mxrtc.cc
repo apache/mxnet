@@ -13,8 +13,8 @@ const std::string MXRtc::str_type = "float";
 std::unordered_map<std::string, char*> MXRtc::kernel_registry;
 
 MXRtc::MXRtc(const std::string& name,
-             std::vector<std::pair<std::string, NDArray*> > const& input,
-             std::vector<std::pair<std::string, NDArray*> > const& output,
+             std::vector<std::pair<std::string, NDArray> > const& input,
+             std::vector<std::pair<std::string, NDArray> > const& output,
              const std::string& kernel) {
     name_ = name;
     num_input_ = input.size();
@@ -27,8 +27,8 @@ MXRtc::MXRtc(const std::string& name,
     }
 }
 
-void MXRtc::push(std::vector<NDArray*> const& input,
-                 std::vector<NDArray*> const& output,
+void MXRtc::push(std::vector<NDArray> const& input,
+                 std::vector<NDArray> const& output,
                  unsigned int grid_dim_X,
                  unsigned int grid_dim_Y,
                  unsigned int grid_dim_Z,
@@ -40,7 +40,7 @@ void MXRtc::push(std::vector<NDArray*> const& input,
     CHECK(output.size());
     cudaError_enum err;
     CUfunction func;
-    int dev_id = output[0]->ctx().dev_id;
+    int dev_id = output[0].ctx().dev_id;
     if (func_.find(dev_id) != func_.end()) {
         func = func_[dev_id];
     } else {
@@ -56,27 +56,29 @@ void MXRtc::push(std::vector<NDArray*> const& input,
                grid_dim_X, grid_dim_Y, grid_dim_Z,
                block_dim_X, block_dim_Y, block_dim_Z](RunContext rctx) {
         std::vector<float*> float_args;
-        for (auto& i : input) float_args.push_back(static_cast<float*>(i->data().dptr_));
-        for (auto& i : output) float_args.push_back(static_cast<float*>(i->data().dptr_));
+        for (auto& i : input) float_args.push_back(static_cast<float*>(i.data().dptr_));
+        for (auto& i : output) float_args.push_back(static_cast<float*>(i.data().dptr_));
         std::vector<void*> args;
         for (auto& i : float_args) args.push_back(&i);
         cudaError_enum err;
+        cudaError_t cuerr;
         CHECK_EQ(err = cuLaunchKernel(func,
                                 grid_dim_X, grid_dim_Y, grid_dim_Z,
                                 block_dim_X, block_dim_Y, block_dim_Z,
                                 0, rctx.get_stream<mshadow::gpu>()->stream_,
                                 args.data(), 0), CUDA_SUCCESS) << "CudaError: " << err;
-        CHECK_EQ(cudaStreamSynchronize(rctx.get_stream<mshadow::gpu>()->stream_), cudaSuccess);
+        CHECK_EQ(cuerr = cudaStreamSynchronize(rctx.get_stream<mshadow::gpu>()->stream_),
+                 cudaSuccess) << "CudaError: " << cuerr;
     };
     std::vector<Engine::VarHandle> var_in, var_out;
-    for (auto& i : input) var_in.push_back(i->var());
-    for (auto& i : output) var_out.push_back(i->var());
-    Engine::Get()->PushSync(op, output[0]->ctx(), var_in, var_out);
+    for (auto& i : input) var_in.push_back(i.var());
+    for (auto& i : output) var_out.push_back(i.var());
+    Engine::Get()->PushSync(op, output[0].ctx(), var_in, var_out);
 }
 
 std::string MXRtc::decorate(const std::string& name,
-                         std::vector<std::pair<std::string, NDArray*> > const& input,
-                         std::vector<std::pair<std::string, NDArray*> > const& output,
+                         std::vector<std::pair<std::string, NDArray> > const& input,
+                         std::vector<std::pair<std::string, NDArray> > const& output,
                          const std::string kernel) {
     std::string source;
     source += "\nextern \"C\" __global__ void " + name + "(";
@@ -90,20 +92,20 @@ std::string MXRtc::decorate(const std::string& name,
     source = source + ") {\n";
     for (auto &i : input) {
         source += "const int " + i.first + "_ndim = " +
-                  std::to_string(i.second->shape().ndim()) + ";\n";
+                  std::to_string(i.second.shape().ndim()) + ";\n";
         source += "const int " + i.first + "_dims[] = {";
-        for (index_t j = 0; j < i.second->shape().ndim(); ++j) {
-            source += std::to_string(i.second->shape()[j]) + ",";
+        for (index_t j = 0; j < i.second.shape().ndim(); ++j) {
+            source += std::to_string(i.second.shape()[j]) + ",";
         }
         source.pop_back();
         source += "};\n";
     }
     for (auto &i : output) {
         source += "const int " + i.first + "_ndim = " +
-                  std::to_string(i.second->shape().ndim()) + ";\n";
+                  std::to_string(i.second.shape().ndim()) + ";\n";
         source += "const int " + i.first + "_dims[] = {";
-        for (index_t j = 0; j < i.second->shape().ndim(); ++j) {
-            source += std::to_string(i.second->shape()[j]) + ",";
+        for (index_t j = 0; j < i.second.shape().ndim(); ++j) {
+            source += std::to_string(i.second.shape()[j]) + ",";
         }
         source.pop_back();
         source += "};\n";
