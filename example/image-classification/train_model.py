@@ -48,8 +48,10 @@ def fit(args, network, data_loader):
         symbol             = network,
         num_epoch          = args.num_epochs,
         learning_rate      = args.lr,
+        clip_gradient      = args.clip_gradient,
         momentum           = 0.9,
         wd                 = 0.00001,
+        initializer        = mx.init.Xavier(factor_type="in", magnitude=2.34),
         **model_args)
 
     model.fit(
