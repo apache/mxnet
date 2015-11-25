@@ -1,29 +1,32 @@
+# pylint: skip-file
+from data import mnist_iterator
 import mxnet as mx
-import ctypes
+import numpy as np
+import logging
 
-x = mx.sym.Variable('x')
-x2 = mx.sym.Activation(x, name='relu', act_type="relu")
-x3 = mx.sym.Activation(x2, name='relu2', act_type="relu")
+data = mx.symbol.Variable('data')
+fc1 = mx.symbol.FullyConnected(data = data, name='fc1', num_hidden=128)
+act1 = mx.symbol.Activation(data = fc1, name='relu1', act_type="relu")
+fc2 = mx.symbol.FullyConnected(data = act1, name = 'fc2', num_hidden = 64)
+act2 = mx.symbol.Activation(data = fc2, name='relu2', act_type="relu")
+fc3 = mx.symbol.FullyConnected(data = act2, name='fc3', num_hidden=10)
+mlp = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
 
-X = mx.nd.ones((2,2))
-exe = x3.bind(mx.cpu(0), args={'x':X})
-a = None
-def p(name, d):
-	global a
-	print name
-	d = mx.nd.NDArray(ctypes.cast(d, mx.base.NDArrayHandle), writable=False)
-	a = mx.nd.norm(d)
-	#print name
-exe.set_monitor_callback(p)
-exe.forward()
-print 'out', exe.outputs[0].asnumpy()
-print a.asscalar()
-# dot = mx.viz.plot_network(z)
-# dot.format = 'png'
-# dot.render('a')
+# data
 
-# z._compose(x3)
+train, val = mnist_iterator(batch_size=100, input_shape = (784,))
 
-# dot = mx.viz.plot_network(z)
-# dot.format = 'png'
-# dot.render('b')
+# train
+
+logging.basicConfig(level=logging.DEBUG)
+
+model = mx.model.FeedForward(
+    ctx = mx.cpu(), symbol = mlp, num_epoch = 20,
+    learning_rate = 0.1, momentum = 0.9, wd = 0.00001)
+
+def norm_stat(d):
+    return mx.nd.norm(d)/np.sqrt(d.size)
+mon = mx.mon.Monitor(100, norm_stat)
+model.fit(X=train, eval_data=val, monitor=mon, 
+          batch_end_callback = mx.callback.Speedometer(100, 100))
+

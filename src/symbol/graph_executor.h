@@ -229,7 +229,6 @@ class GraphExecutor : public Executor {
   // head NDArrays
   std::vector<NDArray> heads_ndarray_;
   // monitor call back
-  //void (*monitor_callback_)(void*);
   std::function<void(const char*, void*)> monitor_callback_;
 };  // class GraphExecutor
 }  // namespace mxnet

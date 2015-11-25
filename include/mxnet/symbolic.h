@@ -314,7 +314,7 @@ class Executor {
   /*!
    * \brief Install a callback to notify the completion of operation.
    */
-  virtual void SetMonitorCallback(ExcecutorMonitorCallback callback) {};
+  virtual void SetMonitorCallback(ExcecutorMonitorCallback callback) {}
 };  // class operator
 }  // namespace mxnet
 #endif  // MXNET_SYMBOLIC_H_

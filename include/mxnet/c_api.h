@@ -51,7 +51,7 @@ typedef void *RecordIOHandle;
 /*! \brief handle to MXRtc*/
 typedef void *RtcHandle;
 
-MXNET_EXTERN_C typedef void (*ExcecutorMonitorCallback)(const char*, 
+MXNET_EXTERN_C typedef void (*ExcecutorMonitorCallback)(const char*,
                                                         NDArrayHandle);
 
 MXNET_EXTERN_C {
