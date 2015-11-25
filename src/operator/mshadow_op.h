@@ -157,6 +157,27 @@ struct square_root_grad {
   }
 };
 
+/*! \brief used for generate element of round */
+struct round {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return roundf(a);
+  }
+};
+
+/*! \brief used for generate element of ceil */
+struct ceil {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return ceilf(a);
+  }
+};
+
+/*! \brief used for generate element of floor */
+struct floor {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return floorf(a);
+  }
+};
+
 }  // namespace mshadow_op
 }  // namespace op
 }  // namespace mxnet

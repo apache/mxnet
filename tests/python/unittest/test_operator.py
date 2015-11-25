@@ -435,6 +435,29 @@ def test_sign():
     exe_test.backward(out_grad)
     assert reldiff(arr_grad.asnumpy(), npout_grad) < 1e-6
     
+def test_round_ceil_floor():
+    data = mx.symbol.Variable('data')
+    shape = (3, 4)
+    data_tmp = np.ones(shape)
+    data_tmp[:]=5.543
+    arr_data = mx.nd.array(data_tmp)
+    arr_grad = mx.nd.empty(shape)
+    arr_grad[:]= 2
+
+    test = mx.sym.round(data) + mx.sym.ceil(data) +  mx.sym.floor(data)
+    exe_test = test.bind(mx.cpu(), args=[arr_data], args_grad=[arr_grad])
+    exe_test.forward()
+    out = exe_test.outputs[0].asnumpy()
+    npout = np.round(data_tmp) + np.ceil(data_tmp) + np.floor(data_tmp)
+    assert reldiff(out, npout) < 1e-6
+
+    out_grad = mx.nd.empty(shape)
+    out_grad[:] = 3;
+    npout_grad = out_grad.asnumpy()
+    exe_test.backward(out_grad)
+    npout_grad = npout_grad+ npout_grad+ npout_grad
+    assert reldiff(arr_grad.asnumpy(), npout_grad) < 1e-6
+    
 def test_abs():
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -472,5 +495,6 @@ if __name__ == '__main__':
     test_pow_fn()
     test_embedding()
     test_abs()
+    test_round_ceil_floor()
     #check_softmax_with_shape((3,4), mx.cpu())
     #check_multi_softmax_with_shape((3,4,5), mx.cpu())
