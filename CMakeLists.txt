@@ -91,6 +91,7 @@ endif()
 if(USE_CUDA)
   # define preprocessor macro so that we will not include the generated forcelink header
   mshadow_cuda_compile(cuda_objs ${cuda})
+  list(APPEND mshadow_LINKER_LIBS nvrtc cuda)
   list(APPEND SOURCE ${cuda_objs} ${cuda})
 endif()
 
