@@ -294,7 +294,8 @@ class Executor {
    * \brief Create an operator by bind symbol with context and arguments.
    *  If user do not want to compute the gradients of i-th argument, grad_req_type[i] can be kNullOp.
    *
-   * \param ctx the context of binding.
+   * \param default_ctx the default context of binding.
+   * \param group2ctx Context mapping group to context.
    * \param symbol the symbol that specifies the output of Forward pass.
    * \param in_args the NDArray that stores the input arguments to the symbol.
    * \param arg_grad_store NDArray that is used to store the gradient output of the input arguments.
@@ -303,7 +304,8 @@ class Executor {
    * \return a new executor.
    */
   static Executor *Bind(Symbol symbol,
-                        Context ctx,
+                        const Context& default_ctx,
+                        const std::map<std::string, Context>& group2ctx,
                         const std::vector<NDArray> &in_args,
                         const std::vector<NDArray> &arg_grad_store,
                         const std::vector<OpReqType> &grad_req_type,

@@ -23,15 +23,11 @@ namespace op {
 
 struct NDArrayOpParam : public dmlc::Parameter<NDArrayOpParam> {
   void *info;
-  bool need_top_grad;
 
   NDArrayOpInfo *pinfo;
   int num_inputs_, num_outputs_;
   DMLC_DECLARE_PARAMETER(NDArrayOpParam) {
     DMLC_DECLARE_FIELD(info);
-    DMLC_DECLARE_FIELD(need_top_grad).set_default(true)
-    .describe("Whether this layer needs out grad for backward. "
-      "Should be false for loss layers.");
   }
 };
 
@@ -56,6 +52,10 @@ class NDArrayOp : public Operator {
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_args);
 
+  virtual ExecType exec_type() const {
+    return kAsync;
+  }
+
  private:
   NDArrayOpParam param_;
   Context get_ctx();
@@ -69,7 +69,7 @@ class NDArrayOpProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     char ** args = NULL;
-    param_.pinfo->list_arguments(&args, param_.pinfo->p_list_arguments);
+    CHECK(param_.pinfo->list_arguments(&args, param_.pinfo->p_list_arguments));
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
       ret.push_back(args[i]);
@@ -79,7 +79,7 @@ class NDArrayOpProp : public OperatorProperty {
 
   std::vector<std::string> ListOutputs() const override {
     char ** args = NULL;
-    param_.pinfo->list_outputs(&args, param_.pinfo->p_list_outputs);
+    CHECK(param_.pinfo->list_outputs(&args, param_.pinfo->p_list_outputs));
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
       ret.push_back(args[i]);
@@ -118,8 +118,8 @@ class NDArrayOpProp : public OperatorProperty {
     }
     shapes.resize(param_.num_inputs_+param_.num_outputs_);
     ndims.resize(param_.num_inputs_+param_.num_outputs_);
-    param_.pinfo->infer_shape(shapes.size(), ndims.data(), shapes.data(),
-          param_.pinfo->p_infer_shape);
+    CHECK(param_.pinfo->infer_shape(shapes.size(), ndims.data(), shapes.data(),
+                                    param_.pinfo->p_infer_shape));
     for (unsigned i = 0; i < in_shape->size(); ++i) {
       SHAPE_ASSIGN_CHECK(*in_shape, i, TShape(shapes[i], shapes[i]+ndims[i]));
     }
@@ -144,12 +144,13 @@ class NDArrayOpProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
+    int num_dep;
+    int *rdeps;
+    CHECK(param_.pinfo->declare_backward_dependency(out_grad.data(), in_data.data(),
+                                                    out_data.data(), &num_dep, &rdeps,
+                                                    param_.pinfo->p_declare_backward_dependency));
     std::vector<int> deps;
-    if (param_.need_top_grad) {
-      deps.insert(deps.end(), out_grad.begin(), out_grad.end());
-    }
-    deps.insert(deps.end(), in_data.begin(), in_data.end());
-    deps.insert(deps.end(), out_data.begin(), out_data.end());
+    deps.insert(deps.end(), rdeps, rdeps+num_dep);
     return deps;
   }
 

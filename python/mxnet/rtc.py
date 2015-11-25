@@ -22,8 +22,8 @@ class Rtc(object):
         Note that this is only the body of the kernel, i.e.
         after { and before }. Rtc will decorate the kernel.
         For example, if name = "mykernel" and
-        input_dict = {'x' : mx.nd.zeros((10,))}
-        output_dict = {'y' : mx.nd.zeros((10,))}
+        inputs = [('x', mx.nd.zeros((10,)))]
+        outputs = [('y', mx.nd.zeros((10,)))]
         kernel = "y[threadIdx.x] = x[threadIdx.x];",
         the kernel that is compile will be:
         extern "C" __global__ mykernel(float *x, float *y) {

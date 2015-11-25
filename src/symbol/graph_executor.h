@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <map>
 #include <utility>
 #include "./static_graph.h"
 #include "./graph_memory_allocator.h"
@@ -29,7 +30,8 @@ class GraphExecutor : public Executor {
   void Print(std::ostream &os) const override; // NOLINT(*)
   // implement Executor::Bind, only call it once.
   inline void Init(Symbol symbol,
-                   Context ctx,
+                   const Context& default_ctx,
+                   const std::map<std::string, Context>& ctx_map,
                    const std::vector<NDArray> &in_args,
                    const std::vector<NDArray> &arg_grad_store,
                    const std::vector<OpReqType> &grad_req_type,
@@ -41,7 +43,9 @@ class GraphExecutor : public Executor {
     for (auto req : grad_req_type) {
       if (req != kNullOp) need_backward = true;
     }
-    this->InitGraph(symbol, ctx, need_backward);
+    this->InitGraph(symbol, default_ctx, ctx_map,
+                    in_args, arg_grad_store, grad_req_type,
+                    need_backward);
     this->InitDataEntryInfo(in_args, arg_grad_store, grad_req_type, aux_states);
     this->InitDataEntryMemory();
     this->InitResources();
@@ -170,7 +174,13 @@ class GraphExecutor : public Executor {
    */
   inline OpExecEntry GetOpExecEntry(uint32_t node_id);
   // initialize the internal graph structure
-  void InitGraph(const Symbol &symbol, Context ctx, bool need_backward);
+  void InitGraph(const Symbol &symbol,
+                 const Context& default_ctx,
+                 const std::map<std::string, Context>& ctx_map,
+                 const std::vector<NDArray> &in_args,
+                 const std::vector<NDArray> &arg_grad_store,
+                 const std::vector<OpReqType> &grad_req_type,
+                 bool need_backward);
   // initialize internal DataEntryInfo, reference counting
   void InitDataEntryInfo(const std::vector<NDArray> &in_args,
                          const std::vector<NDArray> &arg_grad_store,
@@ -182,6 +192,13 @@ class GraphExecutor : public Executor {
   void InitResources();
   // initialize OpNode data structure
   void InitOpNodes();
+  // assign context to the graph, this will mutate the graph.
+  void AssignContext(const Context default_ctx,
+                     const std::map<std::string, Context>& ctx_map,
+                     const std::vector<NDArray> &in_args,
+                     const std::vector<NDArray> &arg_grad_store,
+                     const std::vector<OpReqType> &grad_req_type,
+                     std::vector<Context> *ctx_plan);
   // run ops from topo order start to end
   void RunOps(bool is_train, size_t topo_start, size_t topo_end);
   // internal computational graph

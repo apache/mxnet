@@ -8,14 +8,6 @@
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 
-#define APPEND(source, tag)                                                       \
-do {                                                                              \
-  for (auto& blob : source) {                                                     \
-        ptrs.push_back(reinterpret_cast<void*>(new NDArray(blob, ndctx.dev_id))); \
-        tags.push_back(tag);                                                      \
-  }                                                                               \
-}while(0)
-
 namespace mxnet {
 namespace op {
 template<>
@@ -50,12 +42,32 @@ void NDArrayOp<xpu>::Forward(const OpContext &ctx,
                    const std::vector<TBlob> &aux_args) {
   using namespace mshadow;
   Context ndctx = get_ctx();
-  std::vector<void*> ptrs;
+  std::vector<NDArray*> ptrs;
+  std::vector<Engine::VarHandle> ndvar;
   std::vector<int> tags;
   for (auto& i : req) CHECK_NE(i, kAddTo);
-  APPEND(in_data, 0);
-  APPEND(out_data, 1);
-  param_.pinfo->forward(ptrs.size(), ptrs.data(), tags.data(), param_.pinfo->p_forward);
+
+  for (auto& blob : in_data) {
+    ptrs.push_back(new NDArray(blob, ndctx.dev_id));
+    tags.push_back(0);
+  }
+  for (auto& blob : out_data) {
+    NDArray* nd = new NDArray(blob, ndctx.dev_id);
+    ptrs.push_back(nd);
+    ndvar.push_back(nd->var());
+    tags.push_back(1);
+  }
+  std::sort(ndvar.begin(), ndvar.end());
+  ndvar.resize(std::unique(ndvar.begin(), ndvar.end()) - ndvar.begin());
+
+  std::vector<NDArray> ndcpy;
+  for (auto& i : ptrs) {
+    ndcpy.push_back(*i);
+  }
+
+  CHECK(param_.pinfo->forward(ptrs.size(), ptrs.data(), tags.data(), param_.pinfo->p_forward));
+  Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx) {ctx.async_on_complete(); },
+                          ndctx, ndvar, {});
 }
 
 template<typename xpu>
@@ -68,14 +80,40 @@ void NDArrayOp<xpu>::Backward(const OpContext &ctx,
                     const std::vector<TBlob> &aux_args) {
   using namespace mshadow;
   Context ndctx = get_ctx();
-  std::vector<void*> ptrs;
+  std::vector<NDArray*> ptrs;
+  std::vector<Engine::VarHandle> ndvar;
   std::vector<int> tags;
   for (auto& i : req) CHECK_NE(i, kAddTo);
-  APPEND(in_data, 0);
-  APPEND(out_data, 1);
-  APPEND(in_grad, 2);
-  APPEND(out_grad, 3);
-  param_.pinfo->backward(ptrs.size(), ptrs.data(), tags.data(), param_.pinfo->p_backward);
+
+  for (auto& blob : in_data) {
+    ptrs.push_back(new NDArray(blob, ndctx.dev_id));
+    tags.push_back(0);
+  }
+  for (auto& blob : out_data) {
+    ptrs.push_back(new NDArray(blob, ndctx.dev_id));
+    tags.push_back(1);
+  }
+  for (auto& blob : in_grad) {
+    NDArray* nd = new NDArray(blob, ndctx.dev_id);
+    ptrs.push_back(nd);
+    ndvar.push_back(nd->var());
+    tags.push_back(2);
+  }
+  std::sort(ndvar.begin(), ndvar.end());
+  ndvar.resize(std::unique(ndvar.begin(), ndvar.end()) - ndvar.begin());
+  for (auto& blob : out_grad) {
+    ptrs.push_back(new NDArray(blob, ndctx.dev_id));
+    tags.push_back(3);
+  }
+
+  std::vector<NDArray> ndcpy;
+  for (auto& i : ptrs) {
+    ndcpy.push_back(*i);
+  }
+
+  CHECK(param_.pinfo->backward(ptrs.size(), ptrs.data(), tags.data(), param_.pinfo->p_backward));
+  Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx){ ctx.async_on_complete(); },
+                          ndctx, ndvar, {});
 }
 
 Operator* NDArrayOpProp::CreateOperator(Context ctx) const {
