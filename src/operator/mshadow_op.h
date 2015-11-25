@@ -68,6 +68,19 @@ struct xelu_grad {
   }
 };
 
+/*! \brief Exponential Linear Unit */
+struct elu {
+  MSHADOW_XINLINE static real_t Map(real_t x, real_t a) {
+    return x >= 0.0f ? x : a * (expf(x) - 1.0f);
+  }
+};
+
+struct elu_grad {
+  MSHADOW_XINLINE static real_t Map(real_t x, real_t a) {
+    return x >= 0.0f ? 1.0f : a * expf(x);
+  }
+};
+
 struct tanh {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return tanhf( a );
