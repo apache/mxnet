@@ -28,13 +28,13 @@ enum ElementwiseBinaryScalarOpType {kPlus, kMinus, kMul, kDiv, kPower};
 struct ScalarOpParam : public dmlc::Parameter<ScalarOpParam> {
     // use int for enumeration
     float scalar;
-    bool scalar_on_right;
+    bool scalar_on_left;
     DMLC_DECLARE_PARAMETER(ScalarOpParam) {
         DMLC_DECLARE_FIELD(scalar)
             .describe("scalar value.");
-        DMLC_DECLARE_FIELD(scalar_on_right)
+        DMLC_DECLARE_FIELD(scalar_on_left)
             .set_default(false)
-            .describe("scalar operand is on the right.");
+            .describe("scalar operand is on the left.");
     }
 };
 
@@ -93,7 +93,7 @@ template<typename xpu, typename ForwardOp>
 class ElementwiseBinaryScalarOp : public Operator {
  public:
   explicit ElementwiseBinaryScalarOp(ScalarOpParam param)
-      : scalar_(param.scalar), scalar_on_right_(param.scalar_on_right) {}
+      : scalar_(param.scalar), scalar_on_left_(param.scalar_on_left) {}
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
@@ -106,7 +106,7 @@ class ElementwiseBinaryScalarOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2> lhs = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> out = out_data[elembinary::kOut].FlatTo2D<xpu, real_t>(s);
-    if (scalar_on_right_) {
+    if (scalar_on_left_) {
       Assign(out, req[elembinary::kOut], F<ForwardOp>(scalar_, lhs));
     } else {
       Assign(out, req[elembinary::kOut], F<ForwardOp>(lhs, scalar_));
@@ -135,7 +135,7 @@ class ElementwiseBinaryScalarOp : public Operator {
         break;
       }
       case elembinary::kMinus: {
-        if (scalar_on_right_) {
+        if (scalar_on_left_) {
           Assign(lhs_grad, req[elembinary::kLhs], F<mshadow_op::negation>(m_out_grad));
         } else {
           Assign(lhs_grad, req[elembinary::kLhs], F<mshadow_op::identity>(m_out_grad));
@@ -148,7 +148,7 @@ class ElementwiseBinaryScalarOp : public Operator {
       }
       case elembinary::kDiv: {
         Tensor<xpu, 2> lhs_data = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
-        if (scalar_on_right_) {
+        if (scalar_on_left_) {
           Assign(lhs_grad, req[elembinary::kLhs],
                  F<mshadow_op::negation>(m_out_grad * scalar_) / F<mshadow_op::square>(lhs_data));
         } else {
@@ -159,7 +159,7 @@ class ElementwiseBinaryScalarOp : public Operator {
       case elembinary::kPower: {
         Tensor<xpu, 2> lhs_data = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
         Tensor<xpu, 2> m_out_data = out_data[elembinary::kOut].FlatTo2D<xpu, real_t>(s);
-        if (scalar_on_right_) {
+        if (scalar_on_left_) {
           Assign(lhs_grad, req[elembinary::kLhs],
                  log(scalar_) * m_out_data * m_out_grad);
         } else {
@@ -173,7 +173,7 @@ class ElementwiseBinaryScalarOp : public Operator {
 
  private:
     float scalar_;
-    bool scalar_on_right_;
+    bool scalar_on_left_;
 };  // class ElementwiseBinaryScalarOp
 
 

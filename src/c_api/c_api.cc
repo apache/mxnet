@@ -15,12 +15,14 @@
 #include <mxnet/io.h>
 #include <mxnet/c_api.h>
 #include <mxnet/kvstore.h>
+#include <mxnet/mxrtc.h>
 #include <vector>
 #include <sstream>
 #include <string>
 #include <mutex>
 #include <memory>
 #include <functional>
+#include <utility>
 #include "./c_api_error.h"
 #include "../common/thread_local.h"
 
@@ -530,6 +532,32 @@ int MXSymbolPrint(SymbolHandle symbol, const char **out_str) {
   API_END();
 }
 
+int MXSymbolGetAttr(SymbolHandle symbol,
+                    const char* key,
+                    const char** out,
+                    int* success) {
+  Symbol *s = static_cast<Symbol*>(symbol);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  if (s->GetAttr(key, &(ret->ret_str))) {
+    *out = (ret->ret_str).c_str();
+    *success = 1;
+  } else {
+    *out = nullptr;
+    *success = 0;
+  }
+  API_END();
+}
+
+int MXSymbolSetAttr(SymbolHandle symbol,
+                    const char* key,
+                    const char* value) {
+  Symbol *s = static_cast<Symbol*>(symbol);
+  API_BEGIN();
+  s->SetAttr(key, value);
+  API_END();
+}
+
 int MXSymbolListArguments(SymbolHandle symbol,
                           mx_uint *out_size,
                           const char ***out_str_array) {
@@ -740,9 +768,35 @@ int MXExecutorBind(SymbolHandle symbol_handle,
                    mx_uint aux_states_len,
                    NDArrayHandle *aux_states,
                    ExecutorHandle *out) {
+  return MXExecutorBindX(symbol_handle,
+                         dev_type, dev_id,
+                         0, nullptr, nullptr, nullptr,
+                         len, in_args, arg_grad_store, grad_req_type,
+                         aux_states_len, aux_states, out);
+}
+
+int MXExecutorBindX(SymbolHandle symbol_handle,
+                    int dev_type,
+                    int dev_id,
+                    mx_uint num_map_keys,
+                    const char** map_keys,
+                    const int* map_dev_types,
+                    const int* map_dev_ids,
+                    mx_uint len,
+                    NDArrayHandle *in_args,
+                    NDArrayHandle *arg_grad_store,
+                    mx_uint *grad_req_type,
+                    mx_uint aux_states_len,
+                    NDArrayHandle *aux_states,
+                    ExecutorHandle *out) {
   API_BEGIN();
   Symbol *symb = static_cast<Symbol*>(symbol_handle);
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
+  std::map<std::string, Context> ctx_map;
+  for (mx_uint i = 0; i < num_map_keys; ++i) {
+    ctx_map[std::string(map_keys[i])] = Context::Create(
+        static_cast<Context::DeviceType>(map_dev_types[i]), map_dev_ids[i]);
+  }
   NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args);
   NDArray **arg_grad_ptr = reinterpret_cast<NDArray**>(arg_grad_store);
   NDArray **aux_states_ptr = reinterpret_cast<NDArray**>(aux_states);
@@ -763,7 +817,8 @@ int MXExecutorBind(SymbolHandle symbol_handle,
   for (mx_uint i = 0; i < aux_states_len; ++i) {
     aux_states_vec.push_back(*(aux_states_ptr[i]));
   }
-  *out = Executor::Bind(*symb, ctx, in_args_vec, arg_grad_vec, grad_req_vec, aux_states_vec);
+  *out = Executor::Bind(*symb, ctx, ctx_map, in_args_vec,
+                        arg_grad_vec, grad_req_vec, aux_states_vec);
   API_END();
 }
 
@@ -1078,5 +1133,68 @@ int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
   context->reader->NextRecord(context->read_buff);
   *buf = context->read_buff->c_str();
   *size = context->read_buff->size();
+  API_END();
+}
+
+int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
+                char** input_names, char** output_names,
+                NDArrayHandle* inputs, NDArrayHandle* outputs,
+                char* kernel, RtcHandle *out) {
+  API_BEGIN();
+#if MXNET_USE_CUDA
+  std::vector<std::pair<std::string, NDArray> > input, output;
+  for (mx_uint i = 0; i < num_input; ++i) {
+    input.push_back(std::pair<std::string, NDArray>(input_names[i],
+                                                    *reinterpret_cast<NDArray*>(inputs[i])));
+  }
+  for (mx_uint i = 0; i < num_output; ++i) {
+    output.push_back(std::pair<std::string, NDArray>(output_names[i],
+                                                     *reinterpret_cast<NDArray*>(inputs[i])));
+  }
+  MXRtc *rtc = new MXRtc(name, input, output, kernel);
+  *out = reinterpret_cast<RtcHandle>(rtc);
+#else
+  CHECK(false) << "Need to compile with USE_CUDA=1 for MXRtc.";
+#endif  // MXNET_USE_CUDA
+  API_END();
+}
+
+int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
+              NDArrayHandle* inputs, NDArrayHandle* outputs,
+              mx_uint gridDimX,
+              mx_uint gridDimY,
+              mx_uint gridDimZ,
+              mx_uint blockDimX,
+              mx_uint blockDimY,
+              mx_uint blockDimZ) {
+  API_BEGIN();
+#if MXNET_USE_CUDA
+  std::vector<NDArray> input, output;
+  for (mx_uint i = 0; i < num_input; ++i) {
+    input.push_back(*reinterpret_cast<NDArray*>(inputs[i]));
+  }
+  for (mx_uint i = 0; i < num_output; ++i) {
+    output.push_back(*reinterpret_cast<NDArray*>(outputs[i]));
+  }
+  reinterpret_cast<MXRtc*>(handle)->push(input, output,
+                                         gridDimX,
+                                         gridDimY,
+                                         gridDimZ,
+                                         blockDimX,
+                                         blockDimY,
+                                         blockDimZ);
+#else
+  CHECK(false) << "Need to compile with USE_CUDA=1 for MXRtc.";
+#endif  // MXNET_USE_CUDA
+  API_END();
+}
+
+int MXRtcFree(RtcHandle handle) {
+  API_BEGIN();
+#if MXNET_USE_CUDA
+  delete reinterpret_cast<MXRtc*>(handle);
+#else
+  CHECK(false) << "Need to compile with USE_CUDA=1 for MXRtc.";
+#endif  // MXNET_USE_CUDA
   API_END();
 }

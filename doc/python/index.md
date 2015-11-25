@@ -12,7 +12,7 @@ Tutorials
 ---------
 * [Python Overview Tutorial](tutorial.md)
 * [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md)
-* [How to Create New Operations (Layers)](tutorial/new_op_howto.md)
+* [How to Create New Operations (Layers)](../tutorial/new_op_howto.md)
 
 
 Python API Documents

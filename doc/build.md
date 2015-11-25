@@ -1,64 +1,68 @@
 Installation Guide
 ==================
-This page gives the detail of how to install mxnet packages on various systems.
-We tried to listed the detailed, but if the information on this page does not work for you.
-Please ask questions at [mxnet/issues](https://github.com/dmlc/mxnet/issues), better still
-if you have ideas to improve this page, please send a pull request!
 
-Contents
---------
-- [Building MXNet Library](#build-mxnet-library)
+This page gives instructions of how to build and install the mxnet package from
+scratch on various systems. It consists of two steps, first we build the shared
+library from the C++ codes (`libmxnet.so` for linux/osx and `libmxnet.dll` for
+linux). Then we install the language, e.g. Python, packages. If the
+instructions on this page do not work for you, please feel free to ask questions
+at [mxnet/issues](https://github.com/dmlc/mxnet/issues), or even better to send
+pull request if you can fix the problem.
+
+## Contents
+- [Build the Shared Library](#build-mxnet-library)
   - [Prerequisites](#prerequisites)
-  - [Building on Linux](#building-on-linux)
+  - [Building on Ubuntu/Debian](#building-on-ubuntu-debian)
   - [Building on OSX](#building-on-osx)
   - [Building on Windows](#building-on-windows)
   - [Installing pre-built packages on Windows](#installing-pre-built-packages-on-windows)
-- [Advanced Build Configurations](#advanced-build-configuration)
-  - Introduces how to build mxnet with advanced features such as HDFS/S3 support, CUDNN
-- [Python Package Installation](#python-package-installation)
-- [R Package Installation](#r-package-installation)
+  - [Customized Building](#customized-building)
+- [Install Language Packages](#install-language-packages)
+  - [Python Package Installation](#python-package-installation)
+  - [R Package Installation](#r-package-installation)
 - [Docker Images](#docker-images)
 
-Build MXNet Library
--------------------
+## Build the Shared Library
 
-### Prerequisites
-
-MXNet have a general runtime library that can be used by various packages such as python, R and Julia.
-This section gives details about how to build the mxnet library.
-- On Linux/OSX the target library will be ```libmxnet.so```
+Our goal is to build the shared library:
+- On Linux/OSX the target library is ```libmxnet.so```
 - On Windows the target libary is ```libmxnet.dll```
 
-Things to do before get started:
+The minimal building requirement is
 
-- Clone the project from github
-```bash
-git clone --recursive https://github.com/dmlc/mxnet
-```
+- A recent c++ compiler supporting C++ 11 such as `g++ >= 4.8` or `clang`
+- A BLAS library, such as `libblas`, `libblas`, `openblas` `intel mkl`
 
-The system dependency requirement for mxnet libraries are
+Optional libraries
 
-- Recent c++ compiler supporting C++ 11 such as `g++ >= 4.8`
-- git
-- BLAS library.
-- opencv (optional if you do not need image augmentation, you can switch it off in config.mk)
+- CUDA to run on nvidia GPUs
+- CUDNN to accelerate the GPU computation (only CUDNN 3 is supported)
+- opencv for image augmentation
 
-### Building on Linux
+We can edit `make/config.mk` to change the compile options, and then build by
+`make`. If everything goes well, we can go the
+[language package installation](#install-language-packages) step.
+
+On the remaining of this section, we provide instructions to install the
+dependencies and build mxnet from scratch for various systems.
+
+### Building on Ubuntu/Debian
 
 On Ubuntu >= 13.10, one can install the dependencies by
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y build-essential git libblas-dev libopencv-dev
+sudo apt-get install -y build-essential git libatlas-base-dev libopencv-dev
 ```
 
-Then build mxnet on the project root
+Then build mxnet
 ```bash
-make -j4
+git clone --recursive https://github.com/dmlc/mxnet
+cd mxnet; make -j4
 ```
-Then proceed to package installation instructions for python or R in this page.
 
-### Buillding on OSX
+### Building on OSX
+
 On OSX, we can install the dependencies by
 
 ```bash
@@ -68,17 +72,12 @@ brew info opencv
 brew install opencv
 ```
 
-- Copy ```make/osx.mk``` to project root ```config.mk```.
-```bash
-cp make/osx.mk config.mk
-```
+Then build mxnet
 
-Then build mxnet on the project root
 ```bash
-make -j4
+git clone --recursive https://github.com/dmlc/mxnet
+cd mxnet; make -j4
 ```
-
-Then proceed to package installation instructions for python or R in this page.
 
 ### Building on Windows
 
@@ -93,8 +92,6 @@ Secondly, fetch the third-party libraries, including [OpenCV](http://sourceforge
 
 Finally, use CMake to create a Visual Studio solution in `./build/`. During configuration, you may need to set the path of each third-party library, until no error is reported. Open the solution and compile, you will get a `mxnet.dll` in `./build/Release` or `./build/Debug`.
 
-Then proceed to package installation instructions for python or R in this page.
-
 ### Installing pre-built packages on Windows
 
 Mxnet also provides pre-built packages on Windows. The pre-built package includes pre-build MxNet library, the dependent thrid-party libraries, a sample C++ solution in Visual Studio and the Python install script.
@@ -103,43 +100,105 @@ You can download the packages from the [Releases tab](https://github.com/dmlc/mx
 
 After download, unpack the package into a folder, say D:\MxNet, then install the package by double clicking the setupenv.cmd inside the folder. It will setup environmental variables needed by MxNet. After that, you should be able to usee the provided VS solution to build C++ programs, or to [install Python package](#python-package-installation).
 
-Advanced Build Configurations
------------------------------
+### Customized Building
+
 The configuration of mxnet can be modified by ```config.mk```
 - modify the compiling options such as compilers, CUDA, CUDNN, Intel MKL,
 various distributed filesystem such as HDFS/Amazon S3/...
-- First copy [make/config.mk](../make/config.mk) to the project root, then
-  modify the according flags.
+- First copy [make/config.mk](../make/config.mk) to the project root, on which
+  any local modification will be ignored by git, then modify the according flags.
 
-Python Package Installation
----------------------------
-To install the python package. First finish the [Build MXNet Library](#build-mxnet-library) step.
-Then use the following command to install mxnet.
+## Install Language Packages
 
-```bash
-cd python; python setup.py install
-```
+### Python Package Installation
 
-If anything goes well, now we can train a multilayer perceptron on the hand
-digit recognition dataset.
+The python package is located at [python/mxnet](../python/mxnet). It requires
+`python>=2.7` and `numpy`. To install the latter, if `pip` is available, then
 
 ```bash
-cd ..; python example/mnist/mlp.py
+sudo pip install numpy
 ```
 
-YOu can also install python to your user directory instead of root.
+otherwise use your package manager, e.g.
 
 ```bash
-cd python; python setup.py develop --user
+sudo apt-get install python-numpy # for debian
+sudo yum install python-numpy # for redhat
 ```
 
-R Package Installation
-----------------------
+To have a quick test of the python package, we can train
+a MLP on the mnist dataset:
+
+```bash
+python example/image-classification/train_mnist.py
+```
+
+or train a convolution neural network using GPU 0 if we set `USE_CUDA=1` during
+compiling:
+
+```bash
+python example/image-classification/train_mnist.py --network lenet --gpus 0
+```
+
+There are several ways to install the package:
+
+1. Install system-widely, which requires root permission
+
+   ```bash
+   cd python; sudo python setup.py install
+   ```
+
+   You will however need Python `distutils` module for this to
+   work. It is often part of the core python package or it can be installed using your
+   package manager, e.g. in Debian use
+
+   ```bash
+   sudo apt-get install python-setuptools
+   ```
+
+2. Install only for the current user, and allow to change the python codes.
+   It is recommended for developers who may change the codes.
+
+    ```bash
+    cd python; python setup.py develop --user
+    ```
+
+3. Only set the environment variable `PYTHONPATH` to tell python where to find
+   the library. For example, assume we cloned `mxnet` on the home directory
+   `~`. then we can added the following line in `~/.bashrc`
+
+    ```bash
+    export PYTHONPATH=~/mxnet/python
+    ```
+
+4. Copy the package into the working directory which contains the mxnet
+   application programs. In this approach we don't need to change the system,
+   and therefore is recommended for distributed training.
+
+   Assume we are on the working directory, and `mxnet` is cloned on the home
+   directory `~`.
+
+   ```bash
+   cp -r ~/mxnet/python/mxnet .
+   cp ~/mxnet/lib/libmxnet.so mxnet/
+   ```
+
+### R Package Installation
+
+For Windows/Mac users, we provide pre-built binary package using CPU.
+You can install weekly updated package directly in R console:
+
+```r
+install.packages("drat", repos="https://cran.rstudio.com")
+drat:::addRepo("dmlc")
+install.packages("mxnet")
+```
+
 To install the R package. First finish the [Build MXNet Library](#build-mxnet-library) step.
 Then use the following command to install dependencies and build the package at root folder
 
 ```bash
-Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')" 
+Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
 cd R-package
 Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
 cd ..
@@ -152,12 +211,13 @@ Now you should have the R package as a tar.gz file and you can install it as a n
 R CMD INSTALL mxnet_0.5.tar.gz
 ```
 
-## Note on Library Build
+Note on Library Build:
+
 We isolate the library build with Rcpp end to maximize the portability
   - MSVC is needed on windows to build the mxnet library, because of CUDA compatiblity issue of toolchains.
 
-Docker Images
--------------
+## Docker Images
+
 Builds of MXNet are available as [Docker](https://www.docker.com/whatisdocker) images:
 [MXNet Docker (CPU)](https://hub.docker.com/r/kaixhin/mxnet/) or [MXNet Docker (CUDA)](https://hub.docker.com/r/kaixhin/cuda-mxnet/).
 These are updated on a weekly basis with the latest builds of MXNet. Examples of running bash in a Docker container

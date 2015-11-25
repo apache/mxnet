@@ -22,21 +22,39 @@ namespace mxnet {
  * - Variable: the sym_ is nullptr, represents an named Variable of tensors that can be composed.
  */
 struct Symbol::Node {
-  /*! \brief source node of the current node */
-  std::shared_ptr<Symbol::Node> backward_source_node;
   /*! \brief Operator of this node */
   std::unique_ptr<OperatorProperty> op;
   /*! \brief name of the node */
   std::string name;
   /*! \brief inputs to this node */
   std::vector<DataEntry> inputs;
+  /*! \brief source node of the current node */
+  std::shared_ptr<Symbol::Node> backward_source_node;
+  /*!
+   * \brief additional attributes about the node,
+   *  Use pointer to save space, as attr can be accessed in a slow way,
+   *  not every node will have attributes.
+   */
+  std::unique_ptr<std::map<std::string, std::string> > attr;
   /*!
     *\brief constructor
     *\param op the OperatorProperty to construct the Node
     *\param name the name of the symbol
    */
-  explicit Node(OperatorProperty *op = nullptr, const std::string& name = "")
-      : op(op), name(name) {
+  explicit Node(OperatorProperty *op,
+                const std::string& name)
+      : op(op), name(name) {}
+  /*!
+    *\brief copy constructor constructor
+   */
+  explicit Node(const Node& other)
+      : name(other.name) {
+    if (other.op != nullptr) {
+      op.reset(other.op->Copy());
+    }
+    if (other.attr.get() != nullptr) {
+      attr.reset(new std::map<std::string, std::string>(*(other.attr)));
+    }
   }
   /*! \return Whether the symbol is atomic */
   inline bool is_atomic() const {
@@ -129,11 +147,7 @@ Symbol Symbol::Copy() const {
   std::unordered_map<Node*, std::shared_ptr<Node> > old_new;
   // use DFSVisit to copy all the nodes
   this->DFSVisit([&old_new](const std::shared_ptr<Node> &node) {
-      if (node->op == nullptr) {
-        old_new[node.get()] = std::make_shared<Node>(nullptr, node->name);
-      } else {
-        old_new[node.get()] =  std::make_shared<Node>(node->op->Copy(), node->name);
-      }
+      old_new[node.get()] =  std::make_shared<Node>(*node);
     });
   // connect nodes of new graph
   for (const auto &kv : old_new) {
@@ -310,6 +324,11 @@ void Symbol::Compose(const std::vector<Symbol>& args,
     for (size_t i = args.size(); i < req_args.size(); ++i) {
       heads_[0].source->inputs[i] = DataEntry(
           std::make_shared<Node>(nullptr, DefaultVarName(name, req_args[i])), 0);
+      // also copy attribute of operator over to automatically created variable
+      if (heads_[0].source->attr.get() != nullptr) {
+        heads_[0].source->inputs[i].source->attr.reset(
+            new std::map<std::string, std::string>(*(heads_[0].source->attr)));
+      }
     }
   } else {
     // find all the place holders
@@ -370,6 +389,11 @@ void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
       } else {
         heads_[0].source->inputs[i] = DataEntry(
             std::make_shared<Node>(nullptr, DefaultVarName(name, req_args[i])), 0);
+        // also copy attribute of operator over to automatically created variable
+        if (heads_[0].source->attr.get() != nullptr) {
+          heads_[0].source->inputs[i].source->attr.reset(
+              new std::map<std::string, std::string>(*(heads_[0].source->attr)));
+        }
       }
     }
     // if things goes wrong recover the old state
@@ -426,6 +450,31 @@ void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
   }
 }
 
+void Symbol::SetAttr(const std::string &key, const std::string& value) {
+  Node* node = heads_[0].source.get();
+  for (const DataEntry& e : heads_) {
+    CHECK(node == e.source.get())
+        << "Symbol.SetAttr only works for non-grouped symbol";
+  }
+  if (node->attr.get() == nullptr) {
+    node->attr.reset(new std::map<std::string, std::string>());
+  }
+  (*node->attr)[key] = value;
+}
+
+bool Symbol::GetAttr(const std::string& key, std::string* out) {
+  Node* node = heads_[0].source.get();
+  for (const DataEntry& e : heads_) {
+    CHECK(node == e.source.get())
+        << "Symbol.GetAttr only works for non-grouped symbol";
+  }
+  if (node->attr.get() == nullptr) return false;
+  auto it = node->attr->find(key);
+  if (it == node->attr->end()) return false;
+  *out = it->second;
+  return true;
+}
+
 Symbol Symbol::operator () (const std::vector<Symbol>& args,
                             const std::string& name) const {
   Symbol s = this->Copy();
@@ -453,8 +502,7 @@ Symbol Symbol::Grad(const std::vector<std::string>& wrt) const {
     });
   for (std::vector<StaticGraph::Node>::const_iterator it = g.nodes.begin() + num_nodes;
        it != g.nodes.end(); ++it) {
-    auto sym_node = std::make_shared<Symbol::Node>();
-    sym_node->name = it->name;
+    auto sym_node = std::make_shared<Symbol::Node>(nullptr, it->name);
     if (it->backward_source_id != -1) {
       sym_node->backward_source_node = shared_node[it->backward_source_id];
     }
@@ -557,7 +605,6 @@ Symbol Symbol::CreateVariable(const std::string &name) {
 }
 
 void Symbol::ToStaticGraph(StaticGraph *out_graph) const {
-  // TODO(bing): Check unique name
   std::vector<Node*> node_order;
   std::unordered_map<Node*, uint32_t> node_index;
   auto &arg_nodes = out_graph->arg_nodes;
@@ -586,6 +633,9 @@ void Symbol::ToStaticGraph(StaticGraph *out_graph) const {
     } else {
       out_graph->nodes[nid].backward_source_id = -1;
     }
+    if (node_order[nid]->attr.get() != nullptr) {
+      out_graph->nodes[nid].attr = *(node_order[nid]->attr);
+    }
     out_graph->nodes[nid].name = node_order[nid]->name;
     auto &inputs = out_graph->nodes[nid].inputs;
     inputs.clear();
@@ -612,13 +662,15 @@ void Symbol::FromStaticGraph(const StaticGraph &graph) {
   // copy ver nodes in topo order
   for (uint32_t nid : topo_order) {
     auto &gnode = graph.nodes[nid];
-    auto sym_node = std::make_shared<Symbol::Node>();
-    sym_node->name = gnode.name;
+    auto sym_node = std::make_shared<Symbol::Node>(nullptr, gnode.name);
     if (gnode.op.get() != nullptr) {
       sym_node->op.reset(gnode.op->Copy());
     }
     if (gnode.backward_source_id != -1) {
       sym_node->backward_source_node = nodes.at(gnode.backward_source_id);
+    }
+    if (gnode.attr.size() != 0) {
+      sym_node->attr.reset(new std::map<std::string, std::string>(gnode.attr));
     }
     for (const StaticGraph::DataEntry& e : gnode.inputs) {
       Symbol::DataEntry entry(nodes.at(e.source_id), e.index);

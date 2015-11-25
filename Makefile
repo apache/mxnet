@@ -102,6 +102,7 @@ LIB_DEP += $(DMLC_CORE)/libdmlc.a
 ALL_DEP = $(OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
 	ALL_DEP += $(CUOBJ)
+	LDFLAGS += -lnvrtc -lcuda
 endif
 
 build/%.o: src/%.cc
@@ -166,6 +167,9 @@ rpkg:	roxygen
 	cp -rf include/* R-package/inst/include
 	cp -rf dmlc-core/include/* R-package/inst/include/
 	R CMD build --no-build-vignettes R-package
+
+tools:  tools/caffe_converter/caffe_parse/caffe.proto
+	cd tools/caffe_converter; protoc --python_out=./ ./caffe_parse/caffe.proto
 
 clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
