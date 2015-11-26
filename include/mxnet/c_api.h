@@ -51,9 +51,8 @@ typedef void *RecordIOHandle;
 /*! \brief handle to MXRtc*/
 typedef void *RtcHandle;
 
-namespace mxnet {
-class NDArray;
-}  // namespace mxnet
+MXNET_EXTERN_C typedef void (*ExcecutorMonitorCallback)(const char*,
+                                                        NDArrayHandle);
 
 MXNET_EXTERN_C {
 struct NativeOpInfo {
@@ -71,8 +70,8 @@ struct NativeOpInfo {
 };
 
 struct NDArrayOpInfo {
-  bool (*forward)(int, mxnet::NDArray**, int*, void*);
-  bool (*backward)(int, mxnet::NDArray**, int*, void*);
+  bool (*forward)(int, void**, int*, void*);
+  bool (*backward)(int, void**, int*, void*);
   bool (*infer_shape)(int, int*, unsigned**, void*);
   bool (*list_outputs)(char***, void*);
   bool (*list_arguments)(char***, void*);
@@ -688,7 +687,46 @@ MXNET_DLL int MXExecutorBind(SymbolHandle symbol_handle,
                              mx_uint aux_states_len,
                              NDArrayHandle *aux_states,
                              ExecutorHandle *out);
-
+/*!
+ * \brief Generate Executor from symbol,
+ *  This is advanced function, allow specify group2ctx map.
+ *  The user can annotate "ctx_group" attribute to name each group.
+ *
+ * \param symbol_handle symbol handle
+ * \param dev_type device type of default context
+ * \param dev_id device id of default context
+ * \param num_map_keys size of group2ctx map
+ * \param map_keys keys of group2ctx map
+ * \param map_dev_types device type of group2ctx map
+ * \param map_dev_ids device id of group2ctx map
+ * \param len length
+ * \param in_args in args array
+ * \param arg_grad_store arg grads handle array
+ * \param grad_req_type grad req array
+ * \param aux_states_len length of auxiliary states
+ * \param aux_states auxiliary states array
+ * \param out output executor handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXExecutorBindX(SymbolHandle symbol_handle,
+                              int dev_type,
+                              int dev_id,
+                              mx_uint num_map_keys,
+                              const char** map_keys,
+                              const int* map_dev_types,
+                              const int* map_dev_ids,
+                              mx_uint len,
+                              NDArrayHandle *in_args,
+                              NDArrayHandle *arg_grad_store,
+                              mx_uint *grad_req_type,
+                              mx_uint aux_states_len,
+                              NDArrayHandle *aux_states,
+                              ExecutorHandle *out);
+/*!
+ * \brief set a call back to notify the completion of operation
+ */
+MXNET_DLL int MXExecutorSetMonitorCallback(ExecutorHandle handle,
+                                           ExcecutorMonitorCallback callback);
 //--------------------------------------------
 // Part 5: IO Interface
 //--------------------------------------------

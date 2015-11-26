@@ -24,7 +24,7 @@ namespace op {
 namespace leakyrelu {
 enum LeakyReLUOpInputs {kData, kGamma};
 enum LeakyReLUOpOutputs {kOut, kMask};
-enum LeakyReLUOpType {kLeakyReLU, kPReLU, kRReLU};
+enum LeakyReLUOpType {kLeakyReLU, kPReLU, kRReLU, kELU};
 enum LeakyReLUOpResource {kRandom};
 }  // namespace leakyrelu
 
@@ -39,9 +39,10 @@ struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
     .add_enum("rrelu", leakyrelu::kRReLU)
     .add_enum("leaky", leakyrelu::kLeakyReLU)
     .add_enum("prelu", leakyrelu::kPReLU)
+    .add_enum("elu", leakyrelu::kELU)
     .describe("Activation function to be applied.");
     DMLC_DECLARE_FIELD(slope).set_default(0.25f)
-    .describe("Init slope for the activation. (For leaky only)");
+    .describe("Init slope for the activation. (For leaky and elu only)");
     DMLC_DECLARE_FIELD(lower_bound).set_default(0.125f)
     .describe("Lower bound of random slope. (For rrelu only)");
     DMLC_DECLARE_FIELD(upper_bound).set_default(0.334f)
@@ -114,6 +115,10 @@ class LeakyReLUOp : public Operator {
         }
         break;
       }
+      case leakyrelu::kELU: {
+        Assign(out, req[leakyrelu::kOut], F<mshadow_op::elu>(data, param_.slope));
+        break;
+      }
       default:
         LOG(FATAL) << "Not implmented";
     }
@@ -177,6 +182,10 @@ class LeakyReLUOp : public Operator {
       }
       case leakyrelu::kRReLU: {
         Assign(gdata, req[leakyrelu::kData], F<mshadow_op::xelu_grad>(output, mask) * grad);
+        break;
+      }
+      case leakyrelu::kELU: {
+        Assign(gdata, req[leakyrelu::kData], F<mshadow_op::elu_grad>(output, param_.slope) * grad);
         break;
       }
       default:

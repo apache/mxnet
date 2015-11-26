@@ -88,6 +88,10 @@ MXNET_REGISTER_TBLOB_FUN(abs, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::abs>, true)
 .set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::sign>, true)
 .describe("Take absolute value of the src");
+MXNET_REGISTER_TBLOB_FUN(sign, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::sign>, true)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::sign_grad>, true)
+.describe("Take sign value of the src");
 // square
 MXNET_REGISTER_TBLOB_FUN(square, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::square>, true)
