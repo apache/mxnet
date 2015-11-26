@@ -43,12 +43,14 @@ def fit(args, network, data_loader):
             step = max(int(epoch_size * args.lr_factor_epoch), 1),
             factor = args.lr_factor)
 
+    if 'clip_gradient' in args and args.clip_gradient is not None:
+        model_args['clip_gradient'] = args.clip_gradient
+
     model = mx.model.FeedForward(
         ctx                = devs,
         symbol             = network,
         num_epoch          = args.num_epochs,
         learning_rate      = args.lr,
-        clip_gradient      = args.clip_gradient,
         momentum           = 0.9,
         wd                 = 0.00001,
         initializer        = mx.init.Xavier(factor_type="in", magnitude=2.34),
