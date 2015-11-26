@@ -44,7 +44,7 @@ This however, creates a challenge for GPU memory. As GTX980 only have 4G of GPU 
 
 Finally, we cannot train the model using a single GPU because this is a really large net, and a lot of data. We use data parallelism on four GPUs to train this model, which involves smart synchronization of parameters between different GPUs, and overlap the communication and computation. A [runtime denpdency engine](https://mxnet.readthedocs.org/en/latest/developer-guide/note_engine.html) is used to simplify this task, allowing us to run the training at around 170 images/sec.
 
-Here is a learning cureve of the training process:
+Here is a learning curve of the training process:
 ![alt text](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/imagenet_full/curve.png "Learning Curve")
 
 ## Evaluate the Performance
