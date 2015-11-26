@@ -27,6 +27,7 @@ class Monitor(object):
                 logging.log(self.level, 'Iter:%d  param:%s\t\tstat(%s):%s\t\tgrad_stat:%s'%(i, key, self.stat.__name__, str(self.stat(weights[key].asnumpy())), str(self.stat(arr.asnumpy()))))
         if i%self.interval == 0 and metric is not None:
                 logging.log(logging.INFO, 'Iter:%d metric:%f'%(i, metric.get()[1]))
+                metric.reset()
 
 class Solver(object):
     def __init__(self, optimizer, **kwargs):
@@ -108,12 +109,10 @@ class Solver(object):
                 output_dict[key].copyto(output_buff[key])
 
             exe.backward()
-            self.optimizer.begin_epoch(i)
             for key, arr in update_dict.items():
                 self.updater(key, arr, args[key])
 
             if self.metric is not None:
-                self.metric.reset()
                 self.metric.update([input_buffs[-1].asnumpy()],
                                    [output_buff[output_names[0]].asnumpy()])
 
@@ -129,5 +128,5 @@ class Solver(object):
 
 
 
-        
+
 
