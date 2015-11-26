@@ -283,6 +283,16 @@ class NDArray(object):
         return tuple(pdata[:ndim.value])
 
     @property
+    def size(self):
+        """Get size of current NDArray.
+
+        Returns
+        -------
+        an int representing size of current ndarray
+        """
+        return np.prod(self.shape)
+
+    @property
     def context(self):
         """Get context of current NDArray.
 
