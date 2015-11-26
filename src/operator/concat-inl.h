@@ -165,13 +165,13 @@ class ConcatProp : public OperatorProperty {
     TShape dshape = in_shape->at(concat_enum::kData0);
     if (dshape.ndim() == 0) return false;
     CHECK_GT(dshape.ndim(), 1);
-    CHECK_LT(param_.dim, dshape.ndim())
+    CHECK_LT(static_cast<index_t>(param_.dim), dshape.ndim())
         <<"the dimension to be concated is not in the range of input's dimension";
     for (int i = 1; i < param_.num_args; ++i) {
       const TShape &tmp = in_shape->at(i);
       if (tmp.ndim() == 0) return false;
-      for (uint32_t j = 0; j < dshape.ndim(); ++j) {
-        if (j == param_.dim) {
+      for (index_t j = 0; j < dshape.ndim(); ++j) {
+        if (j == static_cast<index_t>(param_.dim)) {
           dshape[param_.dim] += tmp[param_.dim];
         } else {
           CHECK_EQ(dshape[j], tmp[j])

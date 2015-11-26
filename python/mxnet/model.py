@@ -157,7 +157,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         kvstore, update_on_kvstore,
                         train_data, eval_data=None, eval_metric=None,
                         epoch_end_callback=None, batch_end_callback=None,
-                        logger=None, work_load_list=None):
+                        logger=None, work_load_list=None, monitor=None):
     """Internal training function on multiple devices.
     This function will also work for single device as well.
     Parameters
@@ -231,6 +231,8 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
                        for k, v in train_data.provide_data}
         train_exec = symbol.simple_bind(ctx[i], 'write', **data_shapes)
+        if monitor:
+            monitor.install(train_exec)
         train_execs.append(train_exec)
 
     # data structure
@@ -287,6 +289,8 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 _load_data(data_batch, data_arrays)
                 _load_label(data_batch, label_arrays)
 
+                if monitor is not None:
+                    monitor.tic()
                 # forward backward pass
                 for texec, islice in zip(train_execs, slices):
                     texec.forward(is_train=True)
@@ -318,6 +322,9 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                             # use a better solution latter
                             w, g = p
                             updater(index*num_device+k, g, w)
+
+                if monitor is not None:
+                    monitor.toc_print()
 
                 nbatch += 1
                 # batch callback (for print purpose)
@@ -661,7 +668,7 @@ class FeedForward(BASE_ESTIMATOR):
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
             epoch_end_callback=None, batch_end_callback=None, kvstore='local', logger=None,
-            work_load_list=None):
+            work_load_list=None, monitor=None):
         """Fit the model.
         Parameters
         ----------
@@ -736,7 +743,7 @@ class FeedForward(BASE_ESTIMATOR):
                             epoch_end_callback=epoch_end_callback,
                             batch_end_callback=batch_end_callback,
                             kvstore=kvstore, update_on_kvstore=update_on_kvstore,
-                            logger=logger, work_load_list=work_load_list)
+                            logger=logger, work_load_list=work_load_list, monitor=monitor)
 
 
     def save(self, prefix, epoch=None):
