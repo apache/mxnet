@@ -106,8 +106,27 @@ function Exp(base_lr::Real; gamma::Real=0.9, decay_on_iteration::Bool=false)
 end
 get_learning_rate(self :: Exp, state :: OptimizationState) =
     self.learning_rate * self.gamma ^ (self.on_iteration ? state.curr_iter : state.curr_epoch)
+#=doc
+.. class:: LearningRate.Inv
 
-end # module LearningRate
+   :math:`\eta_t = \eta_0 * (1 + \gamma * t)^(-power)`.
+   Here :math:`t` is the epoch count, or the iteration count if ``decay_on_iteration``
+   is set to true.
+=#
+type Inv <: AbstractLearningRateScheduler
+  learning_rate :: Float64
+  gamma         :: Float64
+  power         :: Float64
+  on_iteration  :: Bool
+end
+function Inv(base_lr :: Real; gamma::Real=0.9, power::Real=0.5, decay_on_iteration::Bool=false)
+  @assert(0 < gamma < 1)
+  @assert(0 <= power)
+  Inv(Float64(base_lr), Float64(gamma), Float64(power), decay_on_iteration)
+end
+get_learning_rate(self :: Inv, state :: OptimizationState) =
+  self.learning_rate * ( 1 + self.gamma * (self.on_iteration ? state.curr_iter : state.curr_epoch)) ^ (-self.power)
+end# module LearningRate
 ################################################################################
 function get_lr_scheduler(scheduler :: Any, lr :: Real)
   if isa(scheduler, AbstractLearningRateScheduler)
