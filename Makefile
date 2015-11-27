@@ -168,9 +168,6 @@ rpkg:	roxygen
 	cp -rf dmlc-core/include/* R-package/inst/include/
 	R CMD build --no-build-vignettes R-package
 
-tools:  tools/caffe_converter/caffe_parse/caffe.proto
-	cd tools/caffe_converter; protoc --python_out=./ ./caffe_parse/caffe.proto
-
 clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 
