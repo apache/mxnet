@@ -51,9 +51,8 @@ typedef void *RecordIOHandle;
 /*! \brief handle to MXRtc*/
 typedef void *RtcHandle;
 
-namespace mxnet {
-class NDArray;
-}  // namespace mxnet
+MXNET_EXTERN_C typedef void (*ExcecutorMonitorCallback)(const char*,
+                                                        NDArrayHandle);
 
 MXNET_EXTERN_C {
 struct NativeOpInfo {
@@ -71,8 +70,8 @@ struct NativeOpInfo {
 };
 
 struct NDArrayOpInfo {
-  bool (*forward)(int, mxnet::NDArray**, int*, void*);
-  bool (*backward)(int, mxnet::NDArray**, int*, void*);
+  bool (*forward)(int, void**, int*, void*);
+  bool (*backward)(int, void**, int*, void*);
   bool (*infer_shape)(int, int*, unsigned**, void*);
   bool (*list_outputs)(char***, void*);
   bool (*list_arguments)(char***, void*);
@@ -688,7 +687,6 @@ MXNET_DLL int MXExecutorBind(SymbolHandle symbol_handle,
                              mx_uint aux_states_len,
                              NDArrayHandle *aux_states,
                              ExecutorHandle *out);
-
 /*!
  * \brief Generate Executor from symbol,
  *  This is advanced function, allow specify group2ctx map.
@@ -724,7 +722,11 @@ MXNET_DLL int MXExecutorBindX(SymbolHandle symbol_handle,
                               mx_uint aux_states_len,
                               NDArrayHandle *aux_states,
                               ExecutorHandle *out);
-
+/*!
+ * \brief set a call back to notify the completion of operation
+ */
+MXNET_DLL int MXExecutorSetMonitorCallback(ExecutorHandle handle,
+                                           ExcecutorMonitorCallback callback);
 //--------------------------------------------
 // Part 5: IO Interface
 //--------------------------------------------

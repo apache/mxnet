@@ -15,6 +15,7 @@
 #include <string>
 #include <utility>
 #include "./base.h"
+#include "./c_api.h"
 #include "./ndarray.h"
 #include "./operator.h"
 
@@ -310,6 +311,10 @@ class Executor {
                         const std::vector<NDArray> &arg_grad_store,
                         const std::vector<OpReqType> &grad_req_type,
                         const std::vector<NDArray> &aux_states);
+  /*!
+   * \brief Install a callback to notify the completion of operation.
+   */
+  virtual void SetMonitorCallback(ExcecutorMonitorCallback callback) {}
 };  // class operator
 }  // namespace mxnet
 #endif  // MXNET_SYMBOLIC_H_

@@ -13,12 +13,14 @@ parser.add_argument('--data-dir', type=str, required=True,
                     help='the input data directory')
 parser.add_argument('--model-prefix', type=str,
                     help='the prefix of the model to load/save')
-parser.add_argument('--lr', type=float, default=.05,
+parser.add_argument('--lr', type=float, default=.01,
                     help='the initial learning rate')
 parser.add_argument('--lr-factor', type=float, default=1,
                     help='times the lr with a factor for every lr-factor-epoch epoch')
 parser.add_argument('--lr-factor-epoch', type=float, default=1,
                     help='the number of epoch to factor the lr, could be .5')
+parser.add_argument('--clip-gradient', type=float, default=5.,
+                    help='clip min/max gradient to prevent extreme value')
 parser.add_argument('--num-epochs', type=int, default=20,
                     help='the number of training epochs')
 parser.add_argument('--load-epoch', type=int,
@@ -44,7 +46,9 @@ def get_iterator(args, kv):
     data_shape = (3, 224, 224)
     train = mx.io.ImageRecordIter(
         path_imgrec = args.data_dir + "train.rec",
-        mean_img    = args.data_dir + "mean.bin",
+        mean_r      = 123.68,
+        mean_g      = 116.779,
+        mean_b      = 103.939,
         data_shape  = data_shape,
         batch_size  = args.batch_size,
         rand_crop   = True,
@@ -54,7 +58,9 @@ def get_iterator(args, kv):
 
     val = mx.io.ImageRecordIter(
         path_imgrec = args.data_dir + "val.rec",
-        mean_img    = args.data_dir + "mean.bin",
+        mean_r      = 123.68,
+        mean_g      = 116.779,
+        mean_b      = 103.939,
         rand_crop   = False,
         rand_mirror = False,
         data_shape  = data_shape,
