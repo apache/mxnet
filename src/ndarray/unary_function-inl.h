@@ -95,17 +95,14 @@ MXNET_REGISTER_TBLOB_FUN(sign, XPU)
 // round
 MXNET_REGISTER_TBLOB_FUN(round, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::round>, true)
-.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::identity_grad>, true)
 .describe("Take round value of the src");
 // ceil
 MXNET_REGISTER_TBLOB_FUN(ceil, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::ceil>, true)
-.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::identity_grad>, true)
 .describe("Take ceil value of the src");
 // floor
 MXNET_REGISTER_TBLOB_FUN(floor, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::floor>, true)
-.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::identity_grad>, true)
 .describe("Take floor value of the src");
 // square
 MXNET_REGISTER_TBLOB_FUN(square, XPU)
