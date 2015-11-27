@@ -162,7 +162,7 @@ for e in range(args.max_num_epochs):
         gram_executor[i].data_grad[:] *= args.style_weight
 
     # content gradient
-    content_grad = (model_executor.content - content_array) * args.content_weight
+    content_grad[:] = (model_executor.content - content_array) * args.content_weight
 
     # image gradient
     grad_array = [gram_executor[i].data_grad for i in range(len(gram_executor))] + [content_grad]
