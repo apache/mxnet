@@ -11,7 +11,7 @@ Usually you do not need to change these settings, but they are listed here for r
   - Maximum number of threads that do the CPU computation job.
 * MXNET_CPU_PRIORITY_NTHREADS (default=4)
 	- Number of threads given to prioritized CPU jobs.
-  * MXNET_EXEC_ENABLE_INPLACE (default=true)
+* MXNET_EXEC_ENABLE_INPLACE (default=true)
   - Whether to enable inplace optimization in symbolic execution.
 * MXNET_EXEC_MATCH_RANGE (default=10)
   - The rough matching scale in symbolic execution memory allocator.
