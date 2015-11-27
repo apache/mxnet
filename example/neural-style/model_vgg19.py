@@ -5,19 +5,6 @@ from collections import namedtuple
 
 ConvExecutor = namedtuple('ConvExecutor', ['executor', 'data', 'data_grad', 'style', 'content'])
 
-def _prepare_model():
-    if os.path.exists("./model/vgg19-0001.params"):
-        logging.info("find vgg19 model")
-        return
-    if not os.path.isdir("./model"):
-        os.system("mkdir model")
-    os.chdir("model")
-    file_path = os.path.abspath()
-    sys.path.append(os.path.join(curr_path, "../../python"))
-    tool = os.path.dirname(__file__) + "../../tools/caffe_converter/run.sh"
-    os.sytem(tool + " vgg19")
-    os.chdir("..")
-
 def get_model(input_size, ctx):
     # declare symbol
     data = mx.sym.Variable("data")
@@ -63,7 +50,6 @@ def get_model(input_size, ctx):
     arg_dict = dict(zip(arg_names, [mx.nd.zeros(shape, ctx=ctx) for shape in arg_shapes]))
     grad_dict = dict(zip(arg_names, [mx.nd.zeros(shape, ctx=ctx) for shape in arg_shapes]))
     # init with pretrained weight
-    # _prepare_model()
     pretrained = mx.nd.load("./model/vgg19.params")
     for name in arg_names:
         if name == "data":
