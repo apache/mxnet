@@ -3,6 +3,7 @@
 """Symbolic configuration API of mxnet."""
 from __future__ import absolute_import
 
+import copy
 import ctypes
 from numbers import Number
 import sys
@@ -99,9 +100,9 @@ class Symbol(object):
         check_call(_LIB.MXSymbolFree(self.handle))
 
     def __copy__(self):
-        return self.__deepcopy__()
+        return copy.deepcopy(self)
 
-    def __deepcopy__(self):
+    def __deepcopy__(self, _):
         handle = SymbolHandle()
         check_call(_LIB.MXSymbolCopy(self.handle,
                                      ctypes.byref(handle)))
@@ -137,7 +138,7 @@ class Symbol(object):
         -------
         the resulting symbol
         """
-        s = self.__deepcopy__()
+        s = copy.deepcopy(self)
         s._compose(*args, **kwargs)
         return s
 
