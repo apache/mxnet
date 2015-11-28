@@ -14,9 +14,9 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<gpu>(ActivationParam param) {
-  // Not supported by CUDNN yet
-  if (param.act_type == activation::kSoftplus)
-      return new ActivationOp<gpu, mshadow_op::softplus, mshadow_op::softplus_grad>();
+  // SoftReLU not supported by CUDNN yet
+  if (param.act_type == activation::kSoftReLU)
+      return new ActivationOp<gpu, mshadow_op::softrelu, mshadow_op::softrelu_grad>();
 
 #if MXNET_USE_CUDNN == 1
   return new CuDNNActivationOp(param);

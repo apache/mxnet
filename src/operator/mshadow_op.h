@@ -93,13 +93,13 @@ struct tanh_grad {
   }
 };
 
-/*! \brief Softplus activation, (Dugas et al., NIPS 2000) */
-struct softplus {
+/*! \brief SoftReLU, also known as softplus activation. */
+struct softrelu {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return log1pf(expf(a));
   }
 };
-struct softplus_grad {
+struct softrelu_grad {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return 1.0f - expf(-a);
   }
