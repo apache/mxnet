@@ -362,7 +362,7 @@ def test_sign():
     npout_grad = 0;
     exe_test.backward(out_grad)
     assert reldiff(arr_grad.asnumpy(), npout_grad) < 1e-6
-    
+
 def test_round_ceil_floor():
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -388,7 +388,7 @@ def test_rsqrt_cos_sin():
     arr_grad = mx.nd.empty(shape)
     arr_grad[:]=3
 
-    test =  mx.sym.rsqrt(data) + mx.sym.cos(data) + mx.sym.sin(data) 
+    test =  mx.sym.rsqrt(data) + mx.sym.cos(data) + mx.sym.sin(data)
     exe_test = test.bind(mx.cpu(), args=[arr_data], args_grad=[arr_grad])
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
@@ -401,7 +401,7 @@ def test_rsqrt_cos_sin():
     npout_grad = npout_grad * -(1.0 / (2.0 * data_tmp * np.sqrt(data_tmp))) + npout_grad * -1 * np.sin(data_tmp) + npout_grad * np.cos(data_tmp)
     exe_test.backward(out_grad)
     assert reldiff(arr_grad.asnumpy(), npout_grad) < 1e-6
-    
+
 def test_abs():
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -425,6 +425,113 @@ def test_abs():
     exe_test.backward(out_grad)
     assert reldiff(arr_grad.asnumpy(), npout_grad) < 1e-6
 
+def check_deconvolution_forward_backward(input_shape, num_filter, kernel, stride, pad):
+    """configure A: input --> conv --> deconv --> output.
+       the convolution and deconvoluiton has similar parameter which ensure
+       the input shape is the same as output, and the same weights between conv
+       and deconv;
+       If the input value of forward() and backwrad() is the same, then
+       the output value of them should also the same;
+    """
+    assert input_shape[1] == num_filter
+    data = mx.sym.Variable(name="data")
+    conv = mx.sym.Convolution(
+        data=data, kernel=kernel, stride=stride, pad=pad,
+        num_filter=num_filter, no_bias = "true", name = "conv")
+    deconv = mx.sym.Deconvolution(
+        data=conv, kernel=kernel, stride=stride, pad=pad,
+        num_filter=num_filter, no_bias = "true", name = "deconv")
+
+    arg_names = deconv.list_arguments()
+    arg_shapes, out_shapes, _ = deconv.infer_shape(data=input_shape)
+    input_data = mx.random.uniform(-5, 5, input_shape)
+    out_grad = input_data
+    args = {}
+    args["data"] = input_data
+    args['conv_weight'] = args['deconv_weight'] = mx.random.normal(0, 1,
+        (num_filter, input_shape[1]) + kernel)
+    args_grad = [mx.nd.empty(s) for s in arg_shapes]
+
+    exe = deconv.bind(mx.cpu(), args=args, args_grad=args_grad)
+    exe.forward()
+    out = exe.outputs[0].asnumpy()
+    exe.backward(out_grad)
+    assert reldiff(out, args_grad[0].asnumpy()) < 1e-6
+
+def check_deconvolution_gradient(input_shape, num_filter, pad):
+    """configure A: input --> conv --> output.
+       configure B: input --> deconv --> output
+       the convolution and deconvoluiton has similar parameter which ensure
+       the input shape is the same as output;
+       During backward(), if the input of A equals output of B, and the output
+       of A equals input of B, then the grad of weight should be the same;
+    """
+    stride = (1, 1)
+    kernel = (2*pad[0]+1, 2*pad[1]+1)
+    conv_data = mx.sym.Variable(name="conv_data")
+    conv = mx.sym.Convolution(
+        data=conv_data, kernel=kernel, stride=stride, pad=pad,
+        num_filter=num_filter, no_bias = "true", name = "conv")
+    deconv_data = mx.sym.Variable(name="deconv_data")
+    deconv = mx.sym.Deconvolution(
+        data=deconv_data, kernel=kernel, stride=stride, pad=pad,
+        num_filter=num_filter, no_bias = "true", name = "deconv")
+
+    conv_data = mx.random.uniform(-5, 5, input_shape)
+    conv_args = {}
+    conv_args["conv_data"] = conv_data
+    conv_args['conv_weight'] = \
+        mx.random.normal(0, 1,(num_filter, input_shape[1]) + kernel)
+    conv_args_grad = [mx.nd.zeros(conv_data.shape),
+        mx.nd.zeros((num_filter, input_shape[1]) + kernel)]
+    exe_conv = conv.bind(mx.cpu(), args=conv_args, args_grad=conv_args_grad)
+    conv_out_grad = mx.random.normal(0, 2, exe_conv.outputs[0].shape)
+    exe_conv.backward(conv_out_grad)
+
+    deconv_data = conv_out_grad
+    deconv_args = {}
+    deconv_args['deconv_data'] = deconv_data
+    deconv_args['deconv_weight'] = conv_args['conv_weight']
+    deconv_args_grad = [mx.nd.zeros(deconv_data.shape),
+        mx.nd.zeros((num_filter, input_shape[1]) + kernel)]
+    exe_deconv = deconv.bind(mx.cpu(), args=deconv_args, args_grad=deconv_args_grad)
+    deconv_out_grad = conv_data[:]
+    exe_deconv.backward(deconv_out_grad)
+    assert reldiff(conv_args_grad[1].asnumpy(), deconv_args_grad[1].asnumpy()) < 1e-6
+
+def test_deconvolution():
+    check_deconvolution_forward_backward(
+        input_shape         = (1,1,5,5),
+        num_filter          = 1,
+        kernel              = (3,3),
+        stride              = (1,1),
+        pad                 = (1,1)
+    )
+    check_deconvolution_forward_backward(
+        input_shape         = (32,3,28,28),
+        num_filter          = 3,
+        kernel              = (3,3),
+        stride              = (1,1),
+        pad                 = (1,1)
+    )
+    check_deconvolution_forward_backward(
+        input_shape         = (10, 3, 403, 403),
+        num_filter          = 3,
+        kernel              = (7,7),
+        stride              = (5,5),
+        pad                 = (2,2)
+    )
+    check_deconvolution_gradient(
+        input_shape = (1,3,5,5),
+        num_filter = 3,
+        pad = (1,1)
+    )
+    check_deconvolution_gradient(
+        input_shape = (5,3,100,100),
+        num_filter = 3,
+        pad = (3,3)
+    )
+
 if __name__ == '__main__':
     test_binary_op_duplicate_input()
     test_elementwise_sum()
@@ -441,5 +548,6 @@ if __name__ == '__main__':
     test_rsqrt_cos_sin()
     test_abs()
     test_round_ceil_floor()
+    test_deconvolution()
     #check_softmax_with_shape((3,4), mx.cpu())
     #check_multi_softmax_with_shape((3,4,5), mx.cpu())
