@@ -749,6 +749,25 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
           exec.mutate_vars,
           FnProperty::kNormal);
     }
+    if (monitor_callback_) {
+      std::vector<std::string> output_names;
+      if (graph_.nodes[nid].is_forward()) {
+        output_names = graph_.nodes[nid].op->ListOutputs();
+      } else {
+        int source_id = graph_.nodes[nid].backward_source_id;
+        output_names = graph_.nodes[source_id].op->ListArguments();
+      }
+      for (index_t i = 0; i < opnode.outputs.size(); ++i) {
+        NDArray out_data = opnode.outputs[i].data;
+        std::string name = graph_.nodes[nid].name + "_" + output_names[i];
+
+        Engine::Get()->PushSync(
+            [this, out_data, name](RunContext ctx) {
+              NDArray *cpy = new NDArray(out_data);
+              this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
+            }, out_data.ctx(), {out_data.var()}, {}, FnProperty::kNormal);
+      }
+    }
   }
 }
 

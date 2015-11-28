@@ -34,6 +34,7 @@ class Executor(object):
         self._arg_dict = None
         self._grad_dict = None
         self._aux_dict = None
+        self._monitor_callback = None
 
     def __del__(self):
         check_call(_LIB.MXExecutorFree(self.handle))
@@ -116,6 +117,20 @@ class Executor(object):
             self.handle,
             mx_uint(len(out_grads)),
             ndarray))
+
+    def set_monitor_callback(self, callback):
+        """Install callback.
+
+        Parameters
+        ----------
+        callback : function
+            Takes a string and an NDArrayHandle.
+        """
+        cb_type = ctypes.CFUNCTYPE(None, ctypes.c_char_p, NDArrayHandle)
+        self._monitor_callback = cb_type(callback)
+        check_call(_LIB.MXExecutorSetMonitorCallback(
+            self.handle,
+            self._monitor_callback))
 
     @property
     def arg_dict(self):
