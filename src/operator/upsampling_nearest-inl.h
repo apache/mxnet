@@ -4,8 +4,8 @@
  * \brief
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_UPSAMPLING_INL_H_
-#define MXNET_OPERATOR_UPSAMPLING_INL_H_
+#ifndef MXNET_OPERATOR_UPSAMPLING_NEAREST_INL_H_
+#define MXNET_OPERATOR_UPSAMPLING_NEAREST_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -21,23 +21,23 @@ namespace mxnet {
 namespace op {
 
 namespace up_enum {
-enum UpSamplingOpInputs {kData};
-enum UpSamplingOpOutputs {kOut};
+enum UpSamplingNearestOpInputs {kData};
+enum UpSamplingNearestOpOutputs {kOut};
 }  // namespace up_enum
 
-struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
+struct UpSamplingNearestParam : public dmlc::Parameter<UpSamplingNearestParam> {
   index_t scale;
-  DMLC_DECLARE_PARAMETER(UpSamplingParam) {
+  DMLC_DECLARE_PARAMETER(UpSamplingNearestParam) {
     DMLC_DECLARE_FIELD(scale)
     .set_range(1, 1000)
     .describe("Up sampling scale");
   }
-};  // struct UpSamplingParam
+};  // struct UpSamplingNearestParam
 
 template<typename xpu>
-class UpSamplingOp : public Operator {
+class UpSamplingNearestOp : public Operator {
  public:
-  explicit UpSamplingOp(UpSamplingParam p) {
+  explicit UpSamplingNearestOp(UpSamplingNearestParam p) {
     this->param_ = p;
   }
 
@@ -53,7 +53,7 @@ class UpSamplingOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data = in_data[up_enum::kData].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> out = out_data[up_enum::kOut].get<xpu, 4, real_t>(s);
-    Assign(out, req[up_enum::kOut], upsampling(data, param_.scale));
+    Assign(out, req[up_enum::kOut], upsampling_nearest(data, param_.scale));
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -81,15 +81,15 @@ class UpSamplingOp : public Operator {
   }
 
  private:
-  UpSamplingParam param_;
-};  // class UpSamplingOp
+  UpSamplingNearestParam param_;
+};  // class UpSamplingNearestOp
 
 template<typename xpu>
-Operator *CreateOp(UpSamplingParam param);
+Operator *CreateOp(UpSamplingNearestParam param);
 
 
 #if DMLC_USE_CXX11
-class UpSamplingProp : public OperatorProperty {
+class UpSamplingNearestProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -105,7 +105,7 @@ class UpSamplingProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 1);
     const TShape &dshape = (*in_shape)[0];
     CHECK_EQ(dshape.ndim(), 4) << \
-      "UpSampling: Input data should be 4D in (batch, channel, y, x)";
+      "UpSamplingNearest: Input data should be 4D in (batch, channel, y, x)";
     if (dshape.ndim() ==  0) return false;
     TShape oshape = dshape;
     oshape[2] = dshape[2] * param_.scale;
@@ -116,13 +116,13 @@ class UpSamplingProp : public OperatorProperty {
   }
 
   OperatorProperty* Copy() const override {
-    auto ptr = new UpSamplingProp();
+    auto ptr = new UpSamplingNearestProp();
     ptr->param_ = this->param_;
     return ptr;
   }
 
   std::string TypeString() const override {
-    return "UpSampling";
+    return "UpSamplingNearest";
   }
 
   std::vector<int> DeclareBackwardDependency(
@@ -143,11 +143,11 @@ class UpSamplingProp : public OperatorProperty {
   Operator* CreateOperator(Context ctx) const override;
 
  private:
-  UpSamplingParam param_;
-};  // class UpSamplingProp
+  UpSamplingNearestParam param_;
+};  // class UpSamplingNearestProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_UPSAMPLING_INL_H_
+#endif  // MXNET_OPERATOR_UPSAMPLING_NEAREST_INL_H_
 

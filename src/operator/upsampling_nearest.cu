@@ -6,13 +6,13 @@
 */
 
 
-#include "./upsampling-inl.h"
+#include "./upsampling_nearest-inl.h"
 
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<gpu>(UpSamplingParam param) {
-  return new UpSamplingOp<gpu>(param);
+Operator *CreateOp<gpu>(UpSamplingNearestParam param) {
+  return new UpSamplingNearestOp<gpu>(param);
 }
 
 }  // namespace op
