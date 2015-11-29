@@ -25,7 +25,9 @@ class Initializer(object):
             raise TypeError('name must be string')
         if not isinstance(arr, NDArray):
             raise TypeError('arr must be NDArray')
-        if name.endswith('bias'):
+        if name.startswith('upsampling'):
+            self._init_bilinear(name, arr)
+        elif name.endswith('bias'):
             self._init_bias(name, arr)
         elif name.endswith('gamma'):
             self._init_gamma(name, arr)
@@ -39,7 +41,18 @@ class Initializer(object):
             self._init_zero(name, arr)
         else:
             self._init_default(name, arr)
-    # pylint: disable=no-self-use, missing-docstring
+    # pylint: disable=no-self-use, missing-docstring, invalid-name
+    def _init_bilinear(self, _, arr):
+        weight = np.zeros(np.prod(arr.shape), dtype='float32')
+        shape = arr.shape
+        f = shape[3] / 2.
+        c = (2 * f - 1 - f % 2) / (2. * f)
+        for i in range(np.prod(shape)):
+            x = i % shape[3]
+            y = (i / shape[3]) % shape[2]
+            weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
+        arr[:] = weight.reshape(shape)
+
     def _init_zero(self, _, arr):
         arr[:] = 0.0
 
@@ -58,7 +71,7 @@ class Initializer(object):
 
     def _init_default(self, name, _):
         raise ValueError('Unknown initialization pattern for %s' % name)
-    # pylint: enable=no-self-use, missing-docstring
+    # pylint: enable=no-self-use, missing-docstring, invalid-name
 
 class Uniform(Initializer):
     """Initialize the weight with uniform [-scale, scale]
