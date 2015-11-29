@@ -4,8 +4,8 @@
  * \brief
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_UPSAMPLING_NEAREST_INL_H_
-#define MXNET_OPERATOR_UPSAMPLING_NEAREST_INL_H_
+#ifndef MXNET_OPERATOR_UPSAMPLING_INL_H_
+#define MXNET_OPERATOR_UPSAMPLING_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -21,23 +21,32 @@ namespace mxnet {
 namespace op {
 
 namespace up_enum {
-enum UpSamplingNearestOpInputs {kData};
-enum UpSamplingNearestOpOutputs {kOut};
+enum UpSamplingOpInputs {kData, kWeight};
+enum UpSamplingOpOutputs {kOut};
+enum UpSamplingType {kNearest, kBilinear};
 }  // namespace up_enum
 
-struct UpSamplingNearestParam : public dmlc::Parameter<UpSamplingNearestParam> {
+struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
   index_t scale;
-  DMLC_DECLARE_PARAMETER(UpSamplingNearestParam) {
+  index_t num_filter;
+  int sample_type;
+  DMLC_DECLARE_PARAMETER(UpSamplingParam) {
     DMLC_DECLARE_FIELD(scale)
     .set_range(1, 1000)
     .describe("Up sampling scale");
+    DMLC_DECLARE_FIELD(num_filter)
+    .describe("input filter");
+    DMLC_DECLARE_FIELD(sample_type)
+    .add_enum("nearest", up_enum::kNearest)
+    .add_enum("bilinear", up_enum::kBilinear)
+    .describe("upsampling method");
   }
-};  // struct UpSamplingNearestParam
+};  // struct UpSamplingParam
 
 template<typename xpu>
 class UpSamplingNearestOp : public Operator {
  public:
-  explicit UpSamplingNearestOp(UpSamplingNearestParam p) {
+  explicit UpSamplingNearestOp(UpSamplingParam p) {
     this->param_ = p;
   }
 
@@ -81,15 +90,15 @@ class UpSamplingNearestOp : public Operator {
   }
 
  private:
-  UpSamplingNearestParam param_;
+  UpSamplingParam param_;
 };  // class UpSamplingNearestOp
 
 template<typename xpu>
-Operator *CreateOp(UpSamplingNearestParam param);
+Operator *CreateOp(UpSamplingParam param);
 
 
 #if DMLC_USE_CXX11
-class UpSamplingNearestProp : public OperatorProperty {
+class UpSamplingProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -99,14 +108,35 @@ class UpSamplingNearestProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
+  std::vector<std::string> ListArguments() const override {
+    if (param_.sample_type == up_enum::kNearest) {
+      return {"data"};
+    } else {
+      return {"data", "weight"};
+    }
+  }
+
   bool InferShape(std::vector<TShape> *in_shape,
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
-    CHECK_EQ(in_shape->size(), 1);
+    CHECK_GE(in_shape->size(), 1);
     const TShape &dshape = (*in_shape)[0];
-    CHECK_EQ(dshape.ndim(), 4) << \
-      "UpSamplingNearest: Input data should be 4D in (batch, channel, y, x)";
-    if (dshape.ndim() ==  0) return false;
+    if (param_.sample_type == up_enum::kNearest) {
+      CHECK_EQ(in_shape->size(), 1) << "Input:[data]";
+      CHECK_EQ(dshape.ndim(), 4) << \
+        "UpSamplingNearest: Input data should be 4D in (batch, channel, y, x)";
+      if (dshape.ndim() ==  0) return false;
+    } else {
+      CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
+      CHECK_EQ(dshape.ndim(), 4) << \
+        "UpSamplingNearest: Input data should be 4D in (batch, channel, y, x)";
+      if (dshape.ndim() ==  0) return false;
+      // param_.num_filter = dshape[1];
+      int kernel = 2 * param_.scale - param_.scale % 2;
+      SHAPE_ASSIGN_CHECK(*in_shape,
+                         up_enum::kWeight,
+                         mshadow::Shape4(dshape[1], param_.num_filter, kernel, kernel));
+    }
     TShape oshape = dshape;
     oshape[2] = dshape[2] * param_.scale;
     oshape[3] = dshape[3] * param_.scale;
@@ -116,20 +146,24 @@ class UpSamplingNearestProp : public OperatorProperty {
   }
 
   OperatorProperty* Copy() const override {
-    auto ptr = new UpSamplingNearestProp();
+    auto ptr = new UpSamplingProp();
     ptr->param_ = this->param_;
     return ptr;
   }
 
   std::string TypeString() const override {
-    return "UpSamplingNearest";
+    return "UpSampling";
   }
 
   std::vector<int> DeclareBackwardDependency(
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    return {out_grad[up_enum::kOut]};
+    if (param_.sample_type == up_enum::kNearest) {
+      return {out_grad[up_enum::kOut]};
+    } else {
+      return {out_grad[up_enum::kOut], in_data[up_enum::kData], in_data[up_enum::kWeight]};
+    }
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
@@ -137,17 +171,39 @@ class UpSamplingNearestProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data,
     const std::vector<void*> &in_grad) const override {
-    return {{in_data[up_enum::kData], in_grad[up_enum::kData]}};
+    if (param_.sample_type == up_enum::kNearest) {
+      return {{in_data[up_enum::kData], in_grad[up_enum::kData]}};
+    } else {
+      return {};
+    }
+  }
+
+  std::vector<ResourceRequest> ForwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    if (param_.sample_type == up_enum::kNearest) {
+      return {};
+    } else {
+      return {ResourceRequest::kTempSpace};
+    }
+  }
+
+  std::vector<ResourceRequest> BackwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    if (param_.sample_type == up_enum::kNearest) {
+      return {};
+    } else {
+      return {ResourceRequest::kTempSpace};
+    }
   }
 
   Operator* CreateOperator(Context ctx) const override;
 
  private:
-  UpSamplingNearestParam param_;
-};  // class UpSamplingNearestProp
+  UpSamplingParam param_;
+};  // class UpSamplingProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_UPSAMPLING_NEAREST_INL_H_
+#endif  // MXNET_OPERATOR_UPSAMPLING_INL_H_
 
