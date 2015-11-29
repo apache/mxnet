@@ -135,7 +135,7 @@ class UpSamplingProp : public OperatorProperty {
       int kernel = 2 * param_.scale - param_.scale % 2;
       SHAPE_ASSIGN_CHECK(*in_shape,
                          up_enum::kWeight,
-                         mshadow::Shape4(dshape[1], param_.num_filter, kernel, kernel));
+                         mshadow::Shape4(dshape[1], 1, kernel, kernel));
     }
     TShape oshape = dshape;
     oshape[2] = dshape[2] * param_.scale;
