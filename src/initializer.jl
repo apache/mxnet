@@ -56,6 +56,10 @@ function _init_zero(self :: AbstractInitializer, name :: Base.Symbol, array :: N
   array[:] = 0
 end
 
+function _init_default(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
+  error("Do not know how to init $name")
+end
+
 #=doc
 Built-in initializers
 ---------------------
