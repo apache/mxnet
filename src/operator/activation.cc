@@ -18,6 +18,8 @@ Operator *CreateOp<cpu>(ActivationParam param) {
       return new ActivationOp<cpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad>();
     case activation::kTanh:
       return new ActivationOp<cpu, mshadow_op::tanh, mshadow_op::tanh_grad>();
+    case activation::kSoftReLU:
+      return new ActivationOp<cpu, mshadow_op::softrelu, mshadow_op::softrelu_grad>();
     default:
       LOG(FATAL) << "unknown activation type";
       return NULL;
