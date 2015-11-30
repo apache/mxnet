@@ -41,5 +41,5 @@ Settings for More GPU Parallelism
 ---------------------------------
 - Set ```MXNET_GPU_WORKER_NTHREADS``` to larger number (e.g. 2)
   - You may want to set ```MXNET_EXEC_NUM_TEMP``` to reduce memory usage.
-- This may not speedup things as GPU can already be fully occupied with serialized jobs.
+- This may not speed things up, especially for image applications, because GPU is usually fully utilized even with serialized jobs.
 
