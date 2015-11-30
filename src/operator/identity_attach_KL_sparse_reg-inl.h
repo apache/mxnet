@@ -3,8 +3,8 @@
  * \file sparse_reg-inl.h
  * \brief
 */
-#ifndef MXNET_OPERATOR_ATTACH_IDENTITY_KL_SPARSE_REG_INL_H_
-#define MXNET_OPERATOR_ATTACH_IDENTITY_KL_SPARSE_REG_INL_H_
+#ifndef MXNET_OPERATOR_IDENTITY_ATTACH_KL_SPARSE_REG_INL_H_
+#define MXNET_OPERATOR_IDENTITY_ATTACH_KL_SPARSE_REG_INL_H__
 #include <dmlc/logging.h>
 #include <mxnet/operator.h>
 #include <cstring>
@@ -65,7 +65,7 @@ class IdentityAttachKLSparseRegOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2> data = in_data[sparsereg::kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> out = out_data[sparsereg::kOut].FlatTo2D<xpu, real_t>(s);
-    Assign(out, req[sparsereg::kData], F<identity>(data));
+    Assign(out, req[sparsereg::kData], F<mshadow_op::identity>(data));
   }
 
   virtual void Backward(const OpContext &ctx,
