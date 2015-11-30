@@ -4,7 +4,7 @@
  * \brief
 */
 #ifndef MXNET_OPERATOR_IDENTITY_ATTACH_KL_SPARSE_REG_INL_H_
-#define MXNET_OPERATOR_IDENTITY_ATTACH_KL_SPARSE_REG_INL_H__
+#define MXNET_OPERATOR_IDENTITY_ATTACH_KL_SPARSE_REG_INL_H_
 #include <dmlc/logging.h>
 #include <mxnet/operator.h>
 #include <cstring>
