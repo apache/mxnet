@@ -119,7 +119,8 @@ MXNET_REGISTER_TBLOB_FUN(sqrt, XPU)
 // rsqrt
 MXNET_REGISTER_TBLOB_FUN(rsqrt, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::reciprocal_square_root>, true)
-.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::reciprocal_square_root_grad>, true)
+.set_gradient(XPU::kDevMask,
+              UnaryBackwardUseIn_<XPU, op::mshadow_op::reciprocal_square_root_grad>, true)
 .describe("Take rsqrt of the src");
 // exp
 MXNET_REGISTER_TBLOB_FUN(exp, XPU)
