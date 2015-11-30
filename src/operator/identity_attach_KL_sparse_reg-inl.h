@@ -65,7 +65,7 @@ class IdentityAttachKLSparseRegOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2> data = in_data[sparsereg::kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> out = out_data[sparsereg::kOut].FlatTo2D<xpu, real_t>(s);
-    out = F<mshadow_op::identity>(data);
+    Assign(out, req[sparsereg::kData], F<identity>(data));
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -131,7 +131,14 @@ class IdentityAttachKLSparseRegProp : public OperatorProperty {
   }
 
   std::string TypeString() const override {
-    return "KLSparseReg";
+    return "IdentityAttachKLSparseReg";
+  }
+
+  std::vector<int> DeclareBackwardDependency(
+      const std::vector<int> &out_grad,
+      const std::vector<int> &in_data,
+      const std::vector<int> &out_data) const override {
+    return {out_grad[sparsereg::kOut], in_data[sparsereg::kData]};
   }
 
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
