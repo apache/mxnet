@@ -43,7 +43,7 @@ Operator* UpSamplingProp::CreateOperator(Context ctx) const {
 DMLC_REGISTER_PARAMETER(UpSamplingParam);
 
 MXNET_REGISTER_OP_PROPERTY(UpSampling, UpSamplingProp)
-.describe("Perform simple nearest neighboor up sampling to inputs")
+.describe("Perform nearest neighboor/bilinear up sampling to inputs")
 .add_arguments(UpSamplingParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet
