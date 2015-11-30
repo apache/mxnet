@@ -131,7 +131,7 @@ class UpSamplingProp : public OperatorProperty {
       CHECK_EQ(dshape.ndim(), 4) << \
         "UpSamplingNearest: Input data should be 4D in (batch, channel, y, x)";
       if (dshape.ndim() ==  0) return false;
-      // param_.num_filter = dshape[1];
+      CHECK_EQ(param_.num_filter, dshape[1]) << "Input filter number is not correct";
       int kernel = 2 * param_.scale - param_.scale % 2;
       SHAPE_ASSIGN_CHECK(*in_shape,
                          up_enum::kWeight,
