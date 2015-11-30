@@ -92,6 +92,18 @@ MXNET_REGISTER_TBLOB_FUN(sign, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::sign>, true)
 .set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::sign_grad>, true)
 .describe("Take sign value of the src");
+// round
+MXNET_REGISTER_TBLOB_FUN(round, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::round>, true)
+.describe("Take round value of the src");
+// ceil
+MXNET_REGISTER_TBLOB_FUN(ceil, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::ceil>, true)
+.describe("Take ceil value of the src");
+// floor
+MXNET_REGISTER_TBLOB_FUN(floor, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::floor>, true)
+.describe("Take floor value of the src");
 // square
 MXNET_REGISTER_TBLOB_FUN(square, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::square>, true)

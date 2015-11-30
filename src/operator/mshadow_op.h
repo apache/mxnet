@@ -68,6 +68,19 @@ struct xelu_grad {
   }
 };
 
+/*! \brief Exponential Linear Unit */
+struct elu {
+  MSHADOW_XINLINE static real_t Map(real_t x, real_t a) {
+    return x >= 0.0f ? x : a * (expf(x) - 1.0f);
+  }
+};
+
+struct elu_grad {
+  MSHADOW_XINLINE static real_t Map(real_t x, real_t a) {
+    return x >= 0.0f ? 1.0f : a * expf(x);
+  }
+};
+
 struct tanh {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return tanhf( a );
@@ -77,6 +90,18 @@ struct tanh {
 struct tanh_grad {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return 1.0f - a * a;
+  }
+};
+
+/*! \brief SoftReLU, also known as softplus activation. */
+struct softrelu {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return log1pf(expf(a));
+  }
+};
+struct softrelu_grad {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return 1.0f - expf(-a);
   }
 };
 
@@ -154,6 +179,27 @@ struct square_root {
 struct square_root_grad {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return 0.5f / a;
+  }
+};
+
+/*! \brief used for generate element of round */
+struct round {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return roundf(a);
+  }
+};
+
+/*! \brief used for generate element of ceil */
+struct ceil {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return ceilf(a);
+  }
+};
+
+/*! \brief used for generate element of floor */
+struct floor {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return floorf(a);
   }
 };
 

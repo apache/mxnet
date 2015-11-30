@@ -51,7 +51,7 @@ VarHandle
 
 For example, if `Fn1`, `Fn2` both mutate `V2`, `Fn2` is guaranteed to be executed after `Fn1` if `Fn2` is pushed after `Fn1`. On the other hand, if `Fn1` and `Fn2` both use `V2`, their actual execution order could be any kind.
 
-This design allows the engine to schedule *non-functional* operations. For example, the weight update function in DNN could now use `+=` operator rather than generating a new weight array each time.
+This design allows the engine to schedule *state-mutating* operations. For example, the weight update function in DNN can now use `+=` operator to update the weights in place, rather than generating a new weight array each time.
 
 To create a variable, use `NewVar()` API. To delete a variable, use `PushDelete` API.
 
@@ -77,7 +77,7 @@ So you could keep pushing the `OprHandle` without repeatedly creating them:
 ```c++
 virtual void Push(OprHandle op, Context exec_ctx) = 0;
 ```
-To delete it, simply call `DeleteOperator(OprHandle op)` but please make sure the operator has finished computing.
+To delete it, simply call `DeleteOperator(OprHandle op)`. But please make sure the operator has finished computing.
 
 
 API Reference

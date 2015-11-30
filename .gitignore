@@ -82,3 +82,4 @@ R-package/inst/*
 
 # ipython notebook
 example/notebooks/.ipynb_checkpoints/*
+*_pb2.py
