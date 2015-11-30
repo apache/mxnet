@@ -468,18 +468,18 @@ def check_deconvolution_gradient(input_shape, num_filter, pad):
     """
     stride = (1, 1)
     kernel = (2*pad[0]+1, 2*pad[1]+1)
-    conv_data = mx.sym.Variable(name="conv_data")
+    data_conv = mx.sym.Variable(name="data_conv")
     conv = mx.sym.Convolution(
-        data=conv_data, kernel=kernel, stride=stride, pad=pad,
+        data=data_conv, kernel=kernel, stride=stride, pad=pad,
         num_filter=num_filter, no_bias = "true", name = "conv")
-    deconv_data = mx.sym.Variable(name="deconv_data")
+    data_deconv = mx.sym.Variable(name="data_deconv")
     deconv = mx.sym.Deconvolution(
-        data=deconv_data, kernel=kernel, stride=stride, pad=pad,
+        data=data_deconv, kernel=kernel, stride=stride, pad=pad,
         num_filter=num_filter, no_bias = "true", name = "deconv")
 
     conv_data = mx.random.uniform(-5, 5, input_shape)
     conv_args = {}
-    conv_args["conv_data"] = conv_data
+    conv_args["data_conv"] = conv_data
     conv_args['conv_weight'] = \
         mx.random.normal(0, 1,(num_filter, input_shape[1]) + kernel)
     conv_args_grad = [mx.nd.zeros(conv_data.shape),
@@ -490,7 +490,7 @@ def check_deconvolution_gradient(input_shape, num_filter, pad):
 
     deconv_data = conv_out_grad
     deconv_args = {}
-    deconv_args['deconv_data'] = deconv_data
+    deconv_args['data_deconv'] = deconv_data
     deconv_args['deconv_weight'] = conv_args['conv_weight']
     deconv_args_grad = [mx.nd.zeros(deconv_data.shape),
         mx.nd.zeros((num_filter, input_shape[1]) + kernel)]
