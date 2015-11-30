@@ -1,3 +1,4 @@
+import copy
 import os
 import mxnet as mx
 from common import models
@@ -29,6 +30,13 @@ def test_symbol_compose():
     multi_out = mx.symbol.Group([composed, net1])
     assert len(multi_out.list_outputs()) == 2
 
+
+def test_symbol_copy():
+    data = mx.symbol.Variable('data')
+    data_2 = copy.deepcopy(data)
+    data_3 = copy.copy(data)
+    assert data.tojson() == data_2.tojson()
+    assert data.tojson() == data_3.tojson()
 
 
 def test_symbol_internal():

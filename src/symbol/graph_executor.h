@@ -22,7 +22,7 @@ namespace mxnet {
  */
 class GraphExecutor : public Executor {
  public:
-  GraphExecutor() : monitor_callback_(NULL) {}
+  GraphExecutor() {}
   virtual ~GraphExecutor();
   void Forward(bool is_train) override;
   void Backward(const std::vector<NDArray> &head_grads) override;
