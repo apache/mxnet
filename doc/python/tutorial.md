@@ -349,7 +349,7 @@ which provides a detailed explanation of concepts in pictures.
 
 ### How Efficient is Symbolic API
 
-In short, they design to be very efficienct in both memory and runtime.
+In short, they are designed to be very efficient in both memory and runtime.
 
 The major reason for us to introduce Symbolic API, is to bring the efficient C++
 operations in powerful toolkits such as cxxnet and caffe together with the
