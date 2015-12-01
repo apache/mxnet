@@ -8,6 +8,9 @@ export mx
 module mx
 using Formatting
 
+# Functions from base that we can safely extend and that are defined by libmxnet.
+import Base: round, ceil, floor, cos, sin, abs, sign, exp, sqrt, exp, log, norm
+
 include("base.jl")
 include("context.jl")
 
