@@ -76,9 +76,9 @@ class Speedometer(object):
         if self.init:
             if count % self.frequent == 0:
                 speed = self.frequent * self.batch_size / (time.time() - self.tic)
-		        name, value = param.eval_metric.get()
+		name, value = param.eval_metric.get()
                 logging.info("Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%f",
-                             param.epoch, count, speed, name, value)
+                   param.epoch, count, speed, name, value)
                 self.tic = time.time()
         else:
             self.init = True
