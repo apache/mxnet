@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
            "\tlabel_width=WIDTH[default=1] specify the label_width in the list, by default set to 1\n"\
            "\tnsplit=NSPLIT[default=1] used for part generation, logically split the image.list to NSPLIT parts by position\n"\
            "\tpart=PART[default=0] used for part generation, pack the images from the specific part in image.list\n"
-           "\tcenter_crop=CENTER_CROP[default=0] specify whether to crop the center image to make it rectangular.\n"
+           "\tcenter_crop=CENTER_CROP[default=0] specify whether to crop the center image to make it square.\n"
            "\tquality=QUALITY[default=80] JPEG quality for encoding, 1-100.\n");
     return 0;
   }
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "Keep origin image size";
   }
   if (center_crop) {
-    LOG(INFO) << "Center cropping to rectangular";
+    LOG(INFO) << "Center cropping to square";
   }
   
   using namespace dmlc;
