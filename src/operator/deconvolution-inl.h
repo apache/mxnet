@@ -240,14 +240,15 @@ class DeconvolutionOp : public Operator {
                                      oshape[2] * oshape[3]);
     const uint64_t workspace_size = param_.workspace;
     index_t nstep = std::max(
-	std::min(static_cast<index_t>(workspace_size / shape_colunit_.Size() + shape_dstunit_.Size()),
-        ishape[0]), 
-	1U);
+        std::min(
+            static_cast<index_t>(workspace_size / shape_colunit_.Size() + shape_dstunit_.Size()),
+            ishape[0]),
+        1U);
     int nop = (ishape[0] + nstep - 1) / nstep;
     nstep_ = (ishape[0] + nop - 1) / nop;
     if (nstep_ == nstep) {
       nstep_ = std::max(nstep_ - 1, 1U);
-    } 
+    }
     mshadow::Shape<2> scol = mshadow::Shape2(shape_colunit_[0],
                                              shape_colunit_[1] * nstep_);
     mshadow::Shape<3> sdst = mshadow::Shape3(shape_dstunit_[0],
@@ -256,7 +257,7 @@ class DeconvolutionOp : public Operator {
     index_t required_size = scol.Size() + sdst.Size();
     CHECK_GE(param_.workspace, required_size)
       << "\nMinimum workspace size: " << required_size * sizeof(real_t) << " Bytes\n"
-      << "Given: " << param_.workspace * sizeof(real_t) ;
+      << "Given: " << param_.workspace * sizeof(real_t);
     return required_size;
   }
 
