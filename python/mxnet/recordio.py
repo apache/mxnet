@@ -12,7 +12,7 @@ from .base import check_call
 import struct
 import numpy as np
 try:
-    import cv, cv2
+    import cv2
     opencv_available = True
 except ImportError:
     print('OpenCV is unavailable.')
@@ -120,7 +120,7 @@ def pack_img(header, img, quality=80):
         s += img
     else:
         assert opencv_available
-        ret, buf = cv2.imencode('.JPEG', img, [cv.CV_IMWRITE_JPEG_QUALITY, quality])
+        ret, buf = cv2.imencode('.JPEG', img, [cv2.IMWRITE_JPEG_QUALITY, quality])
         assert ret
         s += buf.tostring()
     return s
