@@ -75,3 +75,8 @@ List of Contributors
 * [Guosheng Dong](https://github.com/dongguosheng)
 * [yang1fan2](https://github.com/yang1fan2)
 * [Wang Gu](https://github.com/wangg12)
+* [Zhenchuan Huang](https://github.com/chuan92)
+* [Hang Su](https://github.com/suhangpro)
+* [Rinu Boney](https://github.com/rinuboney)
+* [nowozin](https://github.com/nowozin)
+* [Mathis](https://github.com/sveitser)

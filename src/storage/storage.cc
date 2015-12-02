@@ -74,7 +74,7 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
             ptr = new CurrentStorageManager<storage::GPUDeviceStorage>();
             break;
           }
-          default: LOG(FATAL) <<  "Unimplemented device";
+          default: LOG(FATAL) <<  "Unimplemented device " << ctx.dev_type;
         }
         return ptr;
       });

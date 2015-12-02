@@ -117,9 +117,11 @@ int MXPredCreate(const char* symbol_json_str,
   ret->arg_arrays = arg_arrays;
   // bind
   {
+    std::map<std::string, Context> ctx_map;
     std::vector<NDArray> grad_store(arg_arrays.size());
     std::vector<OpReqType> grad_req(arg_arrays.size(), kNullOp);
-    ret->exec.reset(Executor::Bind(sym, ctx, arg_arrays,
+    ret->exec.reset(Executor::Bind(sym, ctx, ctx_map,
+                                   arg_arrays,
                                    grad_store, grad_req,
                                    aux_arrays));
     ret->out_arrays = ret->exec->outputs();

@@ -33,5 +33,12 @@ from . import lr_scheduler
 # use mx.kv as short for kvstore
 from . import kvstore as kv
 from . import kvstore_server
+# Runtime compile module
+from .rtc import Rtc as rtc
+# Attribute scope to add attributes to symbolic graphs
+from .attribute import AttrScope
+
+from . import monitor
+from . import monitor as mon
 
 __version__ = base.__version__

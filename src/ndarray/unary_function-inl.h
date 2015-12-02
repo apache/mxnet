@@ -84,6 +84,28 @@ void L2Norm(const TBlob &src,
 }
 // Register all unary operations here
 // The true means inplace can be enabled.
+// abs
+MXNET_REGISTER_TBLOB_FUN(abs, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::abs>, true)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::sign>, true)
+.describe("Take absolute value of the src");
+// sign
+MXNET_REGISTER_TBLOB_FUN(sign, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::sign>, true)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::sign_grad>, true)
+.describe("Take sign value of the src");
+// round
+MXNET_REGISTER_TBLOB_FUN(round, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::round>, true)
+.describe("Take round value of the src");
+// ceil
+MXNET_REGISTER_TBLOB_FUN(ceil, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::ceil>, true)
+.describe("Take ceil value of the src");
+// floor
+MXNET_REGISTER_TBLOB_FUN(floor, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::floor>, true)
+.describe("Take floor value of the src");
 // square
 MXNET_REGISTER_TBLOB_FUN(square, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::square>, true)
@@ -94,6 +116,12 @@ MXNET_REGISTER_TBLOB_FUN(sqrt, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::square_root>, true)
 .set_gradient(XPU::kDevMask, UnaryBackwardUseOut_<XPU, op::mshadow_op::square_root_grad>, true)
 .describe("Take sqrt of the src");
+// rsqrt
+MXNET_REGISTER_TBLOB_FUN(rsqrt, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::reciprocal_square_root>, true)
+.set_gradient(XPU::kDevMask,
+              UnaryBackwardUseIn_<XPU, op::mshadow_op::reciprocal_square_root_grad>, true)
+.describe("Take rsqrt of the src");
 // exp
 MXNET_REGISTER_TBLOB_FUN(exp, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::exp>, true)
@@ -104,6 +132,16 @@ MXNET_REGISTER_TBLOB_FUN(log, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::log>, true)
 .set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::log_grad>, true)
 .describe("Take log of the src");
+// cos
+MXNET_REGISTER_TBLOB_FUN(cos, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::cos>, true)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::cos_grad>, true)
+.describe("Take cos of the src");
+// sin
+MXNET_REGISTER_TBLOB_FUN(sin, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, op::mshadow_op::sin>, true)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, op::mshadow_op::sin_grad>, true)
+.describe("Take sin of the src");
 // L2 norm
 MXNET_REGISTER_TBLOB_FUN(norm, XPU)
 .set_function(XPU::kDevMask, L2Norm<XPU>, false, false)

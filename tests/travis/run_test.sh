@@ -6,8 +6,13 @@ if [ ${TASK} == "lint" ]; then
 fi
 
 if [ ${TASK} == "doc" ]; then
-    make doc | tee 2>log.txt
-    (cat log.txt|grep warning) && exit -1
+    make doc 2>log.txt
+    (cat log.txt| grep -v ENABLE_PREPROCESSING |grep -v "unsupported tag") > logclean.txt
+    echo "---------Error Log----------"
+    cat logclean.txt
+    echo "----------------------------"
+    (cat logclean.txt|grep warning) && exit -1
+    (cat logclean.txt|grep error) && exit -1
     exit 0
 fi
 
@@ -62,8 +67,8 @@ if [ ${TASK} == "r_test" ]; then
     cd /Volumes/XQuartz-2.7.8
     sudo installer -pkg "XQuartz.pkg" -target /
     cd -
-    Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')" 
-    Rscript -e "install.packages('imager', repo = 'https://cran.rstudio.com', type = 'source')" 
+    Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
+    Rscript -e "install.packages('imager', repo = 'https://cran.rstudio.com', type = 'source')"
     cd R-package
     Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
     cd ..
@@ -81,7 +86,7 @@ if [ ${TASK} == "r_test" ]; then
     cat *.R > r_test.R
 
     Rscript r_test.R || exit -1
-    
+
     exit 0
 fi
 
