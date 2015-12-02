@@ -80,3 +80,4 @@ List of Contributors
 * [Rinu Boney](https://github.com/rinuboney)
 * [nowozin](https://github.com/nowozin)
 * [Mathis](https://github.com/sveitser)
+* [sennendoko](https://github.com/sennendoko)
