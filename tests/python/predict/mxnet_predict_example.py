@@ -36,8 +36,6 @@ def PreprocessImage(path, show_img=False):
         io.imshow(resized_img)
     # convert to numpy.ndarray
     sample = np.asarray(resized_img) * 255
-    # swap channel from RGB to BGR
-    sample = sample[:, :, [2,1,0]]
     # swap axes to make image from (224, 224, 3) to (3, 224, 224)
     sample = np.swapaxes(sample, 0, 2)
     sample = np.swapaxes(sample, 1, 2)
