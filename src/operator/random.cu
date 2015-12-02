@@ -1,4 +1,5 @@
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file random.cc
  * \brief
  * \author Sebastian Nowozin

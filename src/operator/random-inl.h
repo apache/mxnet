@@ -1,4 +1,5 @@
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file random-inl.h
  * \brief Symbolic layer for random number generation.
  * \author Sebastian Nowozin
@@ -17,8 +18,6 @@
 #include <utility>
 #include "./operator_common.h"
 #include "./mshadow_op.h"
-
-#include <iostream>
 
 namespace random_enum {
 enum RandomOpOutputs { kOut };
@@ -67,9 +66,9 @@ class RandomOp : public Operator {
     } else if (random_type_ == random_enum::kGaussian) {
        out = prnd->gaussian(out.shape_);
     }
-	// Need Assign?
-    //Assign(out, req[random::kOut], data * mask);
-    //Assign(out, req[dropout::kOut], F<mshadow_op::identity>(data));
+    // Need Assign?
+    // Assign(out, req[random::kOut], data * mask);
+    // Assign(out, req[dropout::kOut], F<mshadow_op::identity>(data));
   }
 
   virtual void Backward(const OpContext &ctx,
