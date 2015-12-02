@@ -1,3 +1,9 @@
+$ v0.0.6 (2015.12.02)
+
+* Variants of Xaiver initializers (@vchuravy)
+* More arithmetic operators on symbolic nodes
+* Basic interface for symbolic node attributes (@vchuravy)
+
 # v0.0.5 (2015.11.14)
 
 * char-lstm example.
