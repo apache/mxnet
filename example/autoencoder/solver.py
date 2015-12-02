@@ -53,7 +53,7 @@ class Solver(object):
     def set_iter_start_callback(self, callback):
         self.iter_start_callback = callback
 
-    def solve(self, xpu, sym, args, args_grad,
+    def solve(self, xpu, sym, args, args_grad, auxs,
               data_iter, begin_iter, end_iter, args_lrmult={}, debug = False):
         input_desc = data_iter.provide_data + data_iter.provide_label
         input_names = [k for k, shape in input_desc]
@@ -72,7 +72,7 @@ class Solver(object):
                         x = mx.symbol.BlockGrad(x, name=blob_names[i])
                     sym_group.append(x)
             sym = mx.symbol.Group(sym_group)
-        exe = sym.bind(xpu, args=args, args_grad=args_grad)
+        exe = sym.bind(xpu, args=args, args_grad=args_grad, aux_states=auxs)
 
         assert len(sym.list_arguments()) == len(exe.grad_arrays)
         update_dict = {name: nd for name, nd in zip(sym.list_arguments(), exe.grad_arrays) if nd}
