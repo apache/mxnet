@@ -123,6 +123,29 @@ struct log_grad {
   }
 };
 
+struct cos {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return cosf(a);
+  }
+};
+
+struct cos_grad {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return -sinf(a);
+  }
+};
+
+struct sin {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return sinf(a);
+  }
+};
+
+struct sin_grad {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return cosf(a);
+  }
+};
 struct square {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return a * a;
@@ -158,9 +181,9 @@ struct sign {
   }
 };
 struct sign_grad {
-    MSHADOW_XINLINE static real_t Map(real_t a) {
-        return 0.0f;
-    }
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return 0.0f;
+  }
 };
 /*! \brief used for generate element of power */
 struct power {
@@ -179,6 +202,19 @@ struct square_root {
 struct square_root_grad {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return 0.5f / a;
+  }
+};
+
+/*!\ \brief used for generate element sqrt */
+struct reciprocal_square_root {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return 1.0/sqrt(a);
+  }
+};
+
+struct reciprocal_square_root_grad {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return -(1.0 / (2.0 * a * sqrt(a)));
   }
 };
 

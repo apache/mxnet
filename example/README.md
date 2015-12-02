@@ -14,6 +14,7 @@ Langauges Bindings
 
 Examples Codes
 --------------
+* [C++ examples](https://github.com/dmlc/mxnet/tree/master/example/cpp) - Example code for using C++ interface, including NDArray, symbolic layer and models.
 * [Image classification](https://github.com/dmlc/mxnet/tree/master/example/image-classification) - Image classification on MNIST,CIFAR,ImageNet-1k,ImageNet-Full, ***with multiple GPU and distributed training***.
 * [Recurrent Neural Net](https://github.com/dmlc/mxnet/tree/master/example/rnn) - LSTM and RNN for language modeling and character level generation.
 * [Autoencoder](https://github.com/dmlc/mxnet/tree/master/example/autoencoder) - Auto encoder training.
