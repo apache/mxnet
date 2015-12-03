@@ -1,4 +1,4 @@
-@defstruct SGDOptions AbstractOptimizerOptions (
+@defstruct SGDOptions <: AbstractOptimizerOptions (
   (lr                :: Real = 0.01, lr > 0),
   (momentum          :: Real = 0.0, momentum >= 0),
   (grad_clip         :: Real = 0, grad_clip >= 0),

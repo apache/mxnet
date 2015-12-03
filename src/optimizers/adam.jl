@@ -1,4 +1,4 @@
-@defstruct ADAMOptions AbstractOptimizerOptions (
+@defstruct ADAMOptions <: AbstractOptimizerOptions (
   (lr           :: Real = 0.001, lr > 0),
   (grad_clip    :: Real = 0, grad_clip >= 0),
   (weight_decay :: Real = 0.00001, weight_decay >= 0),
