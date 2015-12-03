@@ -67,10 +67,10 @@ MXNet提供命令式的张量计算来桥接主语言的和符号表达式。下
 另一方面，NDArray可以无缝和符号表达式进行对接。假设我们使用Symbol定义了一个神经网络，那么我们可以如下实现一个梯度下降算法
 
 ```c++
-for (int i = 0; i < max_iter; ++i) {
-  network.forward();
-  network.backward();
-  network.weight -= eta * network.gradient
+for (int i = 0; i < n; ++i) {
+  net.forward();
+  net.backward();
+  net.weight -= eta * net.grad
 }
 ```
 
@@ -87,15 +87,15 @@ MXNet提供一个分布式的key-value存储来进行数据交换。它主要有
 在下面例子中，我们将前面的梯度下降算法改成分布式梯度下降。
 
 ```c++
-KVStore kvstore("dist_async");
-kvstore.set_updater([](NDArray weight, NDArray gradient) {
-    weight -= eta * gradient;
+KVStore kv("dist_async");
+kv.set_updater([](NDArray w, NDArray g) {
+    w -= eta * g;
   });
 for (int i = 0; i < max_iter; ++i) {
-   kvstore.pull(network.weight);
-   network.forward();
-   network.backward();
-   kvstore.push(network.gradient);
+   kv.pull(net.weight);
+   net.forward();
+   net.backward();
+   kv.push(net.grad);
 }
 ```
 
