@@ -338,8 +338,6 @@ class RMSProp(Optimizer):
         self.lr_scheduler = lr_scheduler
         if lr_scheduler is not None:
             self.lr_scheduler.base_lr = learning_rate
-        self.time = 0
-        self.time_first_index = None
     def create_state(self, index, weight):
         """Create additional optimizer state: mean, variance
         Parameters
@@ -348,7 +346,6 @@ class RMSProp(Optimizer):
             The weight data
 
         """
-        self.time_first_index = None  # time is incremented only on the first index
         return (zeros(weight.shape, weight.context),  # n
                 zeros(weight.shape, weight.context),  # g
                 zeros(weight.shape, weight.context))  # delta
@@ -372,15 +369,9 @@ class RMSProp(Optimizer):
         """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-        if self.lr_scheduler is not None:
-            lr = self.lr_scheduler(self.num_update)
-            self._update_count(index)
-        else:
-            lr = self.lr
+        lr = self.lr
         lr *= self.lr_scale.get(index, 1.0)
-            
         n, g, delta = state
-        
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
