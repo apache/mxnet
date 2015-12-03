@@ -3,21 +3,21 @@ MXNet Python Overview Tutorial
 
 This page gives a general overview of MXNet's python package. MXNet contains a
 mixed flavor of elements to bake flexible and efficient
-applications. There are mainly three concepts:
+applications. There are three main concepts:
 
 * [NDArray](#ndarray-numpy-style-tensor-computations-on-cpus-and-gpus)
   offers matrix and tensor computations on both CPU and GPU, with automatic
   parallelization
 * [Symbol](#symbol-and-automatic-differentiation) makes defining a neural
   network extremely easy, and provides automatic differentiation.
-* [KVStore](#distributed-key-value-store) easy the data synchronization between
-  multi-GPUs and multi-machines.
+* [KVStore](#distributed-key-value-store) provides data synchronization between
+  multiple GPUs and multiple machines.
 
-You can find more information at [Python Package Overview Page](index.md)
+You can find more information at the [Python Package Overview Page](index.md)
 
 ## NDArray: Numpy style tensor computations on CPUs and GPUs
 
-`NDArray` is the basic operation unit in MXNet for matrix and tensor
+`NDArray` is the basic operational unit in MXNet for matrix and tensor
 computations. It is similar to `numpy.ndarray`, but with two additional
 features:
 
@@ -28,7 +28,7 @@ CPU and GPU
 
 ### Create and Initialization
 
-We can create `NDArray` on either GPU or GPU
+We can create an `NDArray` on either CPU or GPU:
 
 ```python
 >>> import mxnet as mx
@@ -41,15 +41,15 @@ We can create `NDArray` on either GPU or GPU
 gpu(2)
 ```
 
-They can be initialized by various ways:
+They can be initialized in various ways:
 
 ```python
->>> a = mx.nd.zeros((2, 3)) # create a 2-by-3 matrix and filled with 0
->>> b = mx.nd.ones((2, 3))  # create a 2-by-3 matrix and filled with 1
->>> b[:] = 2 # assign all elements of b with 2
+>>> a = mx.nd.zeros((2, 3)) # create a 2-by-3 matrix filled with 0
+>>> b = mx.nd.ones((2, 3))  # create a 2-by-3 matrix filled with 1
+>>> b[:] = 2 # set all elements of b to 2
 ```
 
-We can copy the value from one to anther, even if they sit on different devices
+We can copy the value from one `NDArray` to another, even if they sit on different devices:
 
 ```python
 >>> a = mx.nd.ones((2, 3))
@@ -57,7 +57,7 @@ We can copy the value from one to anther, even if they sit on different devices
 >>> a.copyto(b) # copy data from cpu to gpu
 ```
 
-We can also convert `NDArray` to `numpy.ndarray`
+We can also convert `NDArray` to `numpy.ndarray`:
 
 ```python
 >>> a = mx.nd.ones((2, 3))
@@ -69,9 +69,10 @@ We can also convert `NDArray` to `numpy.ndarray`
  [ 1.  1.  1.]]
 ```
 
-and verse vice
+and vice versa:
 
 ```python
+>>> import numpy as np
 >>> a = mx.nd.empty((2, 3))
 >>> a[:] = np.random.uniform(-0.1, 0.1, a.shape)
 >>> print a.asnumpy()
@@ -81,9 +82,9 @@ and verse vice
 
 ### Basic Operations
 
-#### Elemental-wise operations
+#### Element-wise operations
 
-In default, `NDArray` performs elemental-wise operations:
+By default, `NDArray` performs element-wise operations:
 
 ```python
 >>> a = mx.nd.ones((2, 3)) * 2
@@ -101,8 +102,8 @@ In default, `NDArray` performs elemental-wise operations:
  [ 8.  8.  8.]]
 ```
 
-If two `NDArray` sit on different devices, we need explicitly move them into the
-same one. The following example performing computations on GPU 0:
+If two `NDArray`s sit on different devices, we need to explicitly move them into the
+same one. The following example performs computations on GPU 0:
 
 ```python
 >>> a = mx.nd.ones((2, 3)) * 2
@@ -117,7 +118,7 @@ same one. The following example performing computations on GPU 0:
 
 There are two ways to save data to (load from) disks easily. The first way uses
 `pickle`.  `NDArray` is pickle compatible, which means you can simply pickle the
-NArray like what you did with `numpy.ndarray`.
+`NDArray` as you do with `numpy.ndarray`.
 
 ```python
 >>> import mxnet as mx
@@ -131,7 +132,7 @@ NArray like what you did with `numpy.ndarray`.
  [ 2.  2.  2.]]
 ```
 
-On the second way, we directly dump a list of `NDArray` into disk in binary format.
+The second way is to directly dump a list of `NDArray` to disk in binary format.
 
 ```python
 >>> a = mx.nd.ones((2,3))*2
@@ -146,7 +147,7 @@ On the second way, we directly dump a list of `NDArray` into disk in binary form
  [ 3.  3.  3.]]
 ```
 
-We can also dump a dict.
+We can also dump a dict:
 
 ```python
 >>> mx.nd.save('mydata.bin', {'a':a, 'b':b})
@@ -159,7 +160,7 @@ We can also dump a dict.
  [ 3.  3.  3.]]
 ```
 
-In addition, we have setup the distributed filesystem such as S3 and HDFS, we
+In addition, if we have set up distributed filesystems such as S3 and HDFS, we
 can directly save to and load from them. For example:
 
 ```python
@@ -168,17 +169,17 @@ can directly save to and load from them. For example:
 ```
 
 ### Automatic Parallelization
-`NDArray` can automatically execute operations in parallel. It is desirable when we
+`NDArray` can automatically execute operations in parallel. This is desirable when we
 use multiple resources such as CPU, GPU cards, and CPU-to-GPU memory bandwidth.
 
 For example, if we write `a += 1` followed by `b += 1`, and `a` is on CPU while
-`b` is on GPU, then want to execute them in parallel to improve the
-efficiency. Furthermore, data copy between CPU and GPU are also expensive, we
-hope to run it parallel with other computations as well.
+`b` is on GPU, then we will want to execute them in parallel to improve the
+efficiency. Furthermore, data copies between CPU and GPU are also expensive, so we
+hope to run them in parallel with other computations as well.
 
-However, finding the codes can be executed in parallel by eye is hard. In the
+However, finding statements by eye that can be executed in parallel is hard. In the
 following example, `a+=1` and `c*=3` can be executed in parallel, but `a+=1` and
-`b*=3` should be in sequential.
+`b*=3` have to be sequential.
 
 ```python
 a = mx.nd.ones((2,3))
@@ -191,35 +192,35 @@ c *= 3
 
 Luckily, MXNet can automatically resolve the dependencies and
 execute operations in parallel with correctness guaranteed. In other words, we
-can write program as by assuming there is only a single thread, while MXNet will
-automatically dispatch it into multi-devices, such as multi GPU cards or multi
+can write a program as if it were only a single thread, and MXNet will
+automatically dispatch it to multiple devices such as multiple GPU cards or multiple
 machines.
 
-It is achieved by lazy evaluation. Any operation we write down is issued into a
+This is achieved by lazy evaluation. Any operation we write down is issued to a
 internal engine, and then returned. For example, if we run `a += 1`, it
-returns immediately after pushing the plus operator to the engine. This
-asynchronous allows us to push more operators to the engine, so it can determine
-the read and write dependency and find a best way to execute them in
+returns immediately after pushing the plus operation to the engine. This
+asynchronicity allows us to push more operations to the engine, so it can determine
+the read and write dependency and find the best way to execute them in
 parallel.
 
-The actual computations are finished if we want to copy the results into some
+The actual computations are finished when we want to copy the results into some
 other place, such as `print a.asnumpy()` or `mx.nd.save([a])`. Therefore, if we
-want to write highly parallelized codes, we only need to postpone when we need
+want to write highly parallelized code, we only need to postpone asking for
 the results.
 
 
-## Symbol and Automatic Differentiation
+## Symbolic and Automatic Differentiation
 
-NDArray is the basic computation unit in MXNet. Besides, MXNet provides a
+NDArray is the basic computation unit in MXNet. Besides this, MXNet provides a
 symbolic interface, named Symbol, to simplify constructing neural networks. The
-symbol combines both flexibility and efficiency. On one hand, it is similar to
+symbol combines flexibility and efficiency. On the one hand, it is similar to
 the network configuration in [Caffe](http://caffe.berkeleyvision.org/) and
-[CXXNet](https://github.com/dmlc/cxxnet), on the other hand, the symbol defines
+[CXXNet](https://github.com/dmlc/cxxnet); on the other, symbols define
 the computation graph in [Theano](http://deeplearning.net/software/theano/).
 
 ### Basic Composition of Symbols
 
-The following codes create a two layer perceptrons network:
+The following code creates a two layer perceptron network:
 
 ```python
 >>> import mxnet as mx
@@ -233,19 +234,19 @@ The following codes create a two layer perceptrons network:
 ```
 
 Each symbol takes a (unique) string name. *Variable* often defines the inputs,
-or free variables. Other symbols take a symbol as the input (*data*),
-and may accept other hyper-parameters such as the number of hidden neurons (*num_hidden*)
+or free variables. Other symbols take a symbol as their input (*data*),
+and may accept other hyperparameters such as the number of hidden neurons (*num_hidden*)
 or the activation type (*act_type*).
 
-The symbol can be simply viewed as a function taking several arguments, whose
-names are automatically generated and can be get by
+The symbol can be viewed simply as a function taking several arguments whose
+names are automatically generated and can be got by
 
 ```python
 >>> net.list_arguments()
 ['data', 'fc1_weight', 'fc1_bias', 'fc2_weight', 'fc2_bias', 'out_label']
 ```
 
-As can be seen, these arguments are the parameters need by each symbol:
+As can be seen, these arguments are the parameters needed by each symbol:
 
 - *data* : input data needed by the variable *data*
 - *fc1_weight* and *fc1_bias* : the weight and bias for the first fully connected layer *fc1*
@@ -257,7 +258,7 @@ We can also specify the automatic generated names explicitly:
 ```python
 >>> net = mx.symbol.Variable('data')
 >>> w = mx.symbol.Variable('myweight')
->>> net = sym.FullyConnected(data=net, weight=w, name='fc1', num_hidden=128)
+>>> net = mx.symbol.FullyConnected(data=net, weight=w, name='fc1', num_hidden=128)
 >>> net.list_arguments()
 ['data', 'myweight', 'fc1_bias']
 ```
@@ -268,7 +269,7 @@ MXNet provides well-optimized symbols (see
 [src/operator](https://github.com/dmlc/mxnet/tree/master/src/operator)) for
 commonly used layers in deep learning. We can also easily define new operators
 in python.  The following example first performs an elementwise add between two
-symbols, then feed them to the fully connected operator.
+symbols, then feeds them to the fully connected operator.
 
 ```python
 >>> lhs = mx.symbol.Variable('data1')
@@ -278,8 +279,8 @@ symbols, then feed them to the fully connected operator.
 ['data1', 'data2', 'fc1_weight', 'fc1_bias']
 ```
 
-We can also construct symbol in a more flexible way rather than the single
-forward composition we addressed before.
+We can also construct a symbol in a more flexible way than the single
+forward composition exemplified above.
 
 ```python
 >>> net = mx.symbol.Variable('data')
@@ -291,14 +292,14 @@ forward composition we addressed before.
 ['data2', 'net2_weight', 'net2_bias', 'compose_fc1_weight', 'compose_fc1_bias']
 ```
 
-In the above example, *net* is used a function to apply to an existing symbol
-*net*, the resulting *composed_net* will replace the original argument *data* by
+In the above example, *net* is used as a function to apply to an existing symbol
+*net*, and the resulting *composed_net* will replace the original argument *data* by
 *net2* instead.
 
-### Argument Shapes Inference
+### Argument Shape Inference
 
-Now we have known how to define the symbol. Next we can inference the shapes of
-all the arguments it needed by given the input data shape.
+Now we know how to define a symbol. Next, we can infer the shapes of
+all the arguments it needs given the shape of its input data.
 
 ```python
 >>> net = mx.symbol.Variable('data')
@@ -310,13 +311,13 @@ all the arguments it needed by given the input data shape.
 [(100, 10)]
 ```
 
-The shape inference can be used as an earlier debugging mechanism to detect
+This shape inference can be used as an early debugging mechanism to detect
 shape inconsistency.
 
 ### Bind the Symbols and Run
 
-Now we can bind the free variables of the symbol and perform forward and backward.
-The bind function will create a ```Executor``` that can be used to carry out the real computations.
+Now we can bind the free variables of the symbol and perform forward and backward operations.
+The ```bind``` function will create a ```Executor``` that can be used to carry out the real computations.
 
 ```python
 >>> # define computation graphs
@@ -333,7 +334,7 @@ The bind function will create a ```Executor``` that can be used to carry out the
 [ 8.  8.  8.]
 ```
 For neural nets, a more commonly used pattern is ```simple_bind```, which will create
-all the arguments arrays for you. Then you can call forward, and backward(if gradient is needed)
+all the argument arrays for you. Then you can call ```forward```, and ```backward``` (if gradient is needed)
 to get the gradient.
 ```python
 >>> # define computation graphs
@@ -344,23 +345,23 @@ to get the gradient.
 ```
 The [model API](../../python/mxnet/model.py) is a thin wrapper around the symbolic executors to support neural net training.
 
-You are also highly encouraged to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md),
-which provides a detailed explanation of concepts in pictures.
+You are also strongly encouraged to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md),
+which provides a detailed explanation of the concepts in pictures.
 
-### How Efficient is Symbolic API
+### How Efficient is the Symbolic API?
 
-In short, they are designed to be very efficient in both memory and runtime.
+In short, it is designed to be very efficient in both memory and runtime.
 
-The major reason for us to introduce Symbolic API, is to bring the efficient C++
+The major reason for us to introduce the Symbolic API is to bring the efficient C++
 operations in powerful toolkits such as cxxnet and caffe together with the
-flexible dynamic NArray operations. All the memory and computation resources are
+flexible dynamic NDArray operations. All the memory and computation resources are
 allocated statically during Bind, to maximize the runtime performance and memory
 utilization.
 
 The coarse grained operators are equivalent to cxxnet layers, which are
 extremely efficient.  We also provide fine grained operators for more flexible
 composition. Because we are also doing more inplace memory allocation, mxnet can
-be ***more memory efficient*** than cxxnet, and gets to same runtime, with
+be ***more memory efficient*** than cxxnet, and achieves the same runtime, with
 greater flexiblity.
 
 ## Distributed Key-value Store
@@ -371,7 +372,7 @@ and pull data out.
 
 ### Initialization
 
-Let's first consider a simple example. It initializes
+Let's first consider a simple example: initialize
 a (`int`, `NDAarray`) pair into the store, and then pull the value out.
 
 ```python
@@ -411,8 +412,8 @@ values and then push the aggregated value.
  [ 4.  4.  4.]]
 ```
 
-For each push, KVStore applies the pushed value into the value stored by a
-`updater`. The default updater is `ASSGIN`, we can replace the default one to
+For each push, KVStore combines the pushed value with the value stored using an
+`updater`. The default updater is `ASSIGN`; we can replace the default to
 control how data is merged.
 
 ```python
@@ -434,7 +435,7 @@ update on key: 3
 
 ### Pull
 
-We already see how to pull a single key-value pair. Similar to push, we can also
+We have already seen how to pull a single key-value pair. Similarly to push, we can also
 pull the value into several devices by a single call.
 
 ```python
@@ -447,8 +448,8 @@ pull the value into several devices by a single call.
 
 ### Handle a list of key-value pairs
 
-All operations introduced so far are about a single key. KVStore also provides
-the interface for a list of key-value pairs. For single device:
+All operations introduced so far involve a single key. KVStore also provides
+an interface for a list of key-value pairs. For a single device:
 
 ```python
 >>> keys = [5, 7, 9]
@@ -464,7 +465,7 @@ update on key: 9
  [ 3.  3.  3.]]
 ```
 
-For multi-devices:
+For multiple devices:
 
 ```python
 >>> b = [[mx.nd.ones(shape, gpu) for gpu in gpus]] * len(keys)

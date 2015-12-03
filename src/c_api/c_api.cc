@@ -1138,9 +1138,13 @@ int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
   API_BEGIN();
   MXRecordIOContext *context =
     reinterpret_cast<MXRecordIOContext*>(handle);
-  context->reader->NextRecord(context->read_buff);
-  *buf = context->read_buff->c_str();
-  *size = context->read_buff->size();
+  if (context->reader->NextRecord(context->read_buff)) {
+    *buf = context->read_buff->c_str();
+    *size = context->read_buff->size();
+  } else {
+    *buf = NULL;
+    *size = 0;
+  }
   API_END();
 }
 

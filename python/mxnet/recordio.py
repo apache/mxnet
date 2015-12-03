@@ -1,13 +1,22 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments
+# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, no-member
 
 """Python interface for DLMC RecrodIO data format"""
 from __future__ import absolute_import
+from collections import namedtuple
 
 import ctypes
 from .base import _LIB
 from .base import RecordIOHandle
 from .base import check_call
+import struct
+import numpy as np
+try:
+    import cv2
+    opencv_available = True
+except ImportError:
+    print('OpenCV is unavailable.')
+    opencv_available = False
 
 class MXRecordIO(object):
     """Python interface for read/write RecordIO data formmat
@@ -64,5 +73,89 @@ class MXRecordIO(object):
         check_call(_LIB.MXRecordIOReaderReadRecord(self.handle,
                                                    ctypes.byref(buf),
                                                    ctypes.byref(size)))
-        buf = ctypes.cast(buf, ctypes.POINTER(ctypes.c_char*size.value))
-        return buf.contents.raw
+        if buf:
+            buf = ctypes.cast(buf, ctypes.POINTER(ctypes.c_char*size.value))
+            return buf.contents.raw
+        else:
+            return None
+
+IRHeader = namedtuple('HEADER', ['flag', 'label', 'id', 'id2'])
+_IRFormat = 'IfQQ'
+_IRSize = struct.calcsize(_IRFormat)
+
+def pack(header, s):
+    """pack an string into MXImageRecord
+
+    Parameters
+    ----------
+    header : IRHeader
+        header of the image record
+    s : str
+        string to pack
+    """
+    header = IRHeader(*header)
+    s = struct.pack(_IRFormat, *header) + s
+    return s
+
+def unpack(s):
+    """unpack a MXImageRecord to string
+
+    Parameters
+    ----------
+    s : str
+        string buffer from MXRecordIO.read
+
+    Returns
+    -------
+    header : IRHeader
+        header of the image record
+    s : str
+        unpacked string
+    """
+    header = IRHeader(*struct.unpack(_IRFormat, s[:_IRSize]))
+    return header, s[_IRSize:]
+
+def unpack_img(s, iscolor=-1):
+    """unpack a MXImageRecord to image
+
+    Parameters
+    ----------
+    s : str
+        string buffer from MXRecordIO.read
+    iscolor : int
+        image format option for cv2.imdecode
+
+    Returns
+    -------
+    header : IRHeader
+        header of the image record
+    img : numpy.ndarray
+        unpacked image
+    """
+    header, s = unpack(s)
+    img = np.fromstring(s, dtype=np.uint8)
+    assert opencv_available
+    img = cv2.imdecode(img, iscolor)
+    return header, img
+
+def pack_img(header, img, quality=80):
+    """pack an image into MXImageRecord
+
+    Parameters
+    ----------
+    header : IRHeader
+        header of the image record
+    img : numpy.ndarray
+        image to pack
+    quality : int
+        quality for JPEG encoding. 1-100
+
+    Returns
+    -------
+    s : str
+        The packed string
+    """
+    assert opencv_available
+    ret, buf = cv2.imencode('.JPEG', img, [cv2.IMWRITE_JPEG_QUALITY, quality])
+    assert ret
+    return pack(header, buf.tostring())

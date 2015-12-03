@@ -44,8 +44,8 @@ void UnaryBackwardUseIn_(const arg::OutGrad& out_grad,
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   mshadow::Tensor<xpu, 2> igrad = in_grad->FlatTo2D<xpu, real_t>(s);
   Assign(igrad, req,
-         F<OP>(in_data0.data.FlatTo2D<xpu, real_t>(s)) *
-         out_grad.data.FlatTo2D<xpu, real_t>());
+         (F<OP>(in_data0.data.FlatTo2D<xpu, real_t>(s)) *
+         out_grad.data.FlatTo2D<xpu, real_t>()));
 }
 
 // backward function that takes output value of the op
@@ -60,8 +60,8 @@ void UnaryBackwardUseOut_(const arg::OutGrad& out_grad,
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   mshadow::Tensor<xpu, 2> igrad = in_grad->FlatTo2D<xpu, real_t>(s);
   Assign(igrad, req,
-         F<OP>(out_value.data.FlatTo2D<xpu, real_t>(s)) *
-         out_grad.data.FlatTo2D<xpu, real_t>());
+         (F<OP>(out_value.data.FlatTo2D<xpu, real_t>(s)) *
+         out_grad.data.FlatTo2D<xpu, real_t>()));
 }
 
 // return a shape of scalar

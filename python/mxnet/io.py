@@ -127,8 +127,10 @@ class NDArrayIter(DataIter):
     """NDArrayIter object in mxnet. Taking NDArray or numpy array to get dataiter.
     Parameters
     ----------
-    data_list or data, label: a list of, or two separate NDArray or numpy.ndarray
-        list of NDArray for data. The last one is treated as label.
+    data: NDArray or numpy.ndarray, a list of them, or a dict of string to them.
+        NDArrayIter supports single or multiple data and label.
+    label: NDArray or numpy.ndarray, a list of them, or a dict of them.
+        Same as data, but is not fed to the model during testing.
     batch_size: int
         Batch Size
     shuffle: bool
