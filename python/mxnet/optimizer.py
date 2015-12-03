@@ -335,9 +335,6 @@ class RMSProp(Optimizer):
         self.gamma2 = gamma2
         self.wd = wd
         self.clip_gradient = clip_gradient
-        self.lr_scheduler = lr_scheduler
-        if lr_scheduler is not None:
-            self.lr_scheduler.base_lr = learning_rate
     def create_state(self, index, weight):
         """Create additional optimizer state: mean, variance
         Parameters
