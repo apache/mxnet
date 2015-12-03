@@ -24,7 +24,10 @@ try:
 except ImportError:
     import pickle
 from multiprocessing import Process, JoinableQueue
-from Queue import Empty
+try:
+    from Queue import Empty
+except ImportError:
+    from queue import Empty
 
 class DataIter(object):
     """DataIter object in mxnet. """
@@ -360,13 +363,12 @@ class PickleIter(DataIter):
         self.cursor = -self.batch_size
 
     def reset(self):
+        self.thread.terminate()
         while not self.queue.empty():
             try:
                 self.queue.get(False)
             except Empty:
-                continue
-            self.queue.task_done()
-        self.thread.terminate()
+                self.queue.task_done()
         self.thread = self.pickle_file_processor(self.num_datafile, self.datapath)
         self.thread.start()
         self.get_data_from_new_file()
