@@ -300,11 +300,12 @@ class Adam(Optimizer):
         weight[:] += -step
         mean[:] = mean_t
         variance[:] = variance_t
-@register   
+@register
 class RMSProp(Optimizer):
     """RMSProp optimizer of Tieleman & Hinton, 2012,
 
-    This code follows the version in  http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
+    This code follows the version in  http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45)
+    by Alex Graves, 2013.
 
     Parameters
     ----------
@@ -324,9 +325,9 @@ class RMSProp(Optimizer):
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
     """
-    def __init__(self, learning_rate=0.002, gamma1 = 0.95, gamma2 = 0.9,
+    def __init__(self, learning_rate=0.002, gamma1=0.95, gamma2=0.9,
                  wd=0.,
-                 rescale_grad=1, clip_gradient=None, 
+                 rescale_grad=1, clip_gradient=None,
                  lr_scheduler=None):
         super(RMSProp, self).__init__(rescale_grad)
         self.lr = learning_rate
@@ -339,10 +340,8 @@ class RMSProp(Optimizer):
             self.lr_scheduler.base_lr = learning_rate
         self.time = 0
         self.time_first_index = None
-        
     def create_state(self, index, weight):
         """Create additional optimizer state: mean, variance
-    
         Parameters
         ----------
         weight : NDArray
@@ -381,15 +380,6 @@ class RMSProp(Optimizer):
         lr *= self.lr_scale.get(index, 1.0)
             
         n, g, delta = state
-            
-        # increment time only when the first parameters is called
-        if self.time_first_index is None:
-            self.time_first_index = index
-            self.time = 0  # all parameters share the same time
-        elif self.time_first_index == index:
-            self.time += 1 
-        
-        t1 = self.time + 1 
         
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
@@ -398,7 +388,6 @@ class RMSProp(Optimizer):
         g[:] = (1 - self.gamma1) * grad + self.gamma1 * g
         delta[:] = (self.gamma2) * delta - lr * (grad/sqrt(n - g*g + 1e-4) + self.wd * weight)
         weight[:] += delta
-
 @register
 class Test(Optimizer):
     """For test use"""
