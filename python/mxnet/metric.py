@@ -60,6 +60,24 @@ class Accuracy(EvalMetric):
         self.num_inst += num_inst
 
 
+class ErrorRate(EvalMetric):
+    """Calculate error rate"""
+    def __init__(self):
+        super(ErrorRate, self).__init__('error')
+
+    def update(self, labels, preds):
+        assert len(labels) == len(preds)
+        for i in range(len(labels)):
+            pred = preds[i].asnumpy()
+            label = labels[i].asnumpy().astype('int32')
+            pred_label = numpy.argmax(pred, axis=1)
+            if label.shape[0] < pred_label.shape[0]:
+                raise Exception("Predict label is more than data label? ")
+            self.sum_metric += numpy.sum(pred_label != label[:pred_label.shape[0]])
+            num_inst = pred_label.shape[0]
+        self.num_inst += num_inst
+
+
 class CustomMetric(EvalMetric):
     """Custom evaluation metric that takes a NDArray function.
 
@@ -119,5 +137,7 @@ def create(metric):
         raise TypeError('metric should either be callable or str')
     if metric == 'acc' or metric == 'accuracy':
         return Accuracy()
+    elif metric == 'err' or metric == 'error':
+        return ErrorRate()
     else:
         raise ValueError('Cannot find metric %s' % metric)
