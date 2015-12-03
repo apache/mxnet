@@ -673,7 +673,9 @@ class FeedForward(BASE_ESTIMATOR):
         Parameters
         ----------
         X : DataIter, or numpy.ndarray/NDArray
-            Training data.
+            Training data. If X is an DataIter, the name or, if not available,
+            position, of its outputs should match the corresponding variable
+            names defined in the symbolic graph.
         y : numpy.ndarray/NDArray, optional
             Training set label.
             If X is numpy.ndarray/NDArray, y is required to be set.
