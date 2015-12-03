@@ -87,9 +87,9 @@ class Monitor(object):
         for n, k, v in self.queue:
             assert isinstance(v, NDArray)
             if v.shape == (1,):
-                res.append((n, k, v.asscalar()))
+                res.append((n, k, str(v.asscalar())))
             else:
-                res.append((n, k, v.asnumpy()))
+                res.append((n, k, str(v.asnumpy())))
         self.queue = []
         return res
 
@@ -97,7 +97,7 @@ class Monitor(object):
         """End collecting and print results"""
         res = self.toc()
         for n, k, v in res:
-            logging.info('Batch: {:7d} {:30s} {:f}'.format(n, k, v))
+            logging.info('Batch: {:7d} {:30s} {:s}'.format(n, k, v))
 
 
 
