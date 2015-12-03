@@ -9,7 +9,7 @@ import ctypes
 import sys
 import numpy as np
 import logging
-from scipy.sparse.csr import csr_matrix
+from scipy.sparse import csr_matrix, coo_matrix, csc_matrix
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str
 from .base import DataIterHandle, NDArrayHandle
@@ -295,7 +295,8 @@ class PickleIter(DataIter):
         self.queue.task_done()
         label = d['label'].toarray() if d['label'] != None else None
         data = d['data']
-        if isinstance(data, csr_matrix):
+        if isinstance(data, csr_matrix) or isinstance(data, coo_matrix) \
+           or isinstance(data, csc_matrix):
             data = data.toarray()
         self.data = _init_data(data, allow_empty=False, default_name='data')
         self.label = _init_data(label, allow_empty=True, default_name='softmax_label')
