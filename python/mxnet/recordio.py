@@ -73,15 +73,50 @@ class MXRecordIO(object):
         check_call(_LIB.MXRecordIOReaderReadRecord(self.handle,
                                                    ctypes.byref(buf),
                                                    ctypes.byref(size)))
-        buf = ctypes.cast(buf, ctypes.POINTER(ctypes.c_char*size.value))
-        return buf.contents.raw
+        if buf:
+            buf = ctypes.cast(buf, ctypes.POINTER(ctypes.c_char*size.value))
+            return buf.contents.raw
+        else:
+            return None
 
 IRHeader = namedtuple('HEADER', ['flag', 'label', 'id', 'id2'])
 _IRFormat = 'IfQQ'
 _IRSize = struct.calcsize(_IRFormat)
 
+def pack(header, s):
+    """pack an string into MXImageRecord
+
+    Parameters
+    ----------
+    header : IRHeader
+        header of the image record
+    s : str
+        string to pack
+    """
+    header = IRHeader(*header)
+    s = struct.pack(_IRFormat, *header) + s
+    return s
+
+def unpack(s):
+    """unpack a MXImageRecord to string
+
+    Parameters
+    ----------
+    s : str
+        string buffer from MXRecordIO.read
+
+    Returns
+    -------
+    header : IRHeader
+        header of the image record
+    s : str
+        unpacked string
+    """
+    header = IRHeader(*struct.unpack(_IRFormat, s[:_IRSize]))
+    return header, s[_IRSize:]
+
 def unpack_img(s, iscolor=-1):
-    """unpack a MXImageRecord
+    """unpack a MXImageRecord to image
 
     Parameters
     ----------
@@ -91,15 +126,16 @@ def unpack_img(s, iscolor=-1):
         image format option for cv2.imdecode
 
     Returns
+    -------
     header : IRHeader
         header of the image record
     img : numpy.ndarray
         unpacked image
     """
-    header = IRHeader(*struct.unpack(_IRFormat, s[:_IRSize]))
-    img = np.fromstring(s[_IRSize:], dtype=np.uint8)
-    if opencv_available:
-        img = cv2.imdecode(img, iscolor)
+    header, s = unpack(s)
+    img = np.fromstring(s, dtype=np.uint8)
+    assert opencv_available
+    img = cv2.imdecode(img, iscolor)
     return header, img
 
 def pack_img(header, img, quality=80):
@@ -113,14 +149,13 @@ def pack_img(header, img, quality=80):
         image to pack
     quality : int
         quality for JPEG encoding. 1-100
+
+    Returns
+    -------
+    s : str
+        The packed string
     """
-    header = IRHeader(*header)
-    s = struct.pack(_IRFormat, *header)
-    if isinstance(img, str):
-        s += img
-    else:
-        assert opencv_available
-        ret, buf = cv2.imencode('.JPEG', img, [cv2.IMWRITE_JPEG_QUALITY, quality])
-        assert ret
-        s += buf.tostring()
-    return s
+    assert opencv_available
+    ret, buf = cv2.imencode('.JPEG', img, [cv2.IMWRITE_JPEG_QUALITY, quality])
+    assert ret
+    return pack(header, buf.tostring())
