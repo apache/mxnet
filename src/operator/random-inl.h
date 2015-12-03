@@ -45,7 +45,6 @@ template<typename xpu>
 class RandomOp : public Operator {
  public:
   explicit RandomOp(RandomParam param) {
-    this->target_shape = param.target_shape;
     this->random_type_ = param.random_type;
   }
 
