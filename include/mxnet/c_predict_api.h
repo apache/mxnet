@@ -101,7 +101,7 @@ MXNET_DLL int MXPredForward(PredictorHandle handle);
  * \brief Run a interactive forward pass to get the output.
  *  This is helpful for displaying progress of prediction which can be slow.
  *  User must call PartialForward from step=0, keep increasing it until step_left=0.
- * \begincode
+ * \code
  * int step_left = 1;
  * for (int step = 0; step_left != 0; ++step) {
  *    MXPredPartialForward(handle, step, &step_left);
