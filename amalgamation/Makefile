@@ -55,6 +55,8 @@ else
         android: jni_libmxnet_predict.so
 endif
 
+libmxnet_predict.js: mxnet_predict-all.cc
+	emcc -std=c++11 -O2  -o $@ $+ -s -D__MXNET_JS__ EXPORTED_FUNCTIONS="['_MXPredCreate', '_MXPredGetOutputShape', '_MXPredSetInput', '_MXPredForward', '_MXPredGetOutput', '_MXPredFree', '_MXNDListCreate', '_MXNDListGet', '_MXNDListFree']" -s ALLOW_MEMORY_GROWTH=1
 
 ${MXNET_ROOT}/lib/libmxnet_predict.so:  mxnet_predict-all.o
 	@mkdir -p ${MXNET_ROOT}/lib
