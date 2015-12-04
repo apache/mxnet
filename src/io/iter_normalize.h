@@ -177,9 +177,9 @@ class ImageNormalizeIter : public IIterator<DataInst> {
 
     if (param_.mean_r > 0.0f || param_.mean_g > 0.0f || param_.mean_b > 0.0f) {
       // substract mean value
-      data[0] -= param_.mean_b;
+      data[0] -= param_.mean_r;
       data[1] -= param_.mean_g;
-      data[2] -= param_.mean_r;
+      data[2] -= param_.mean_b;
       if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
         outimg_ = mirror(data * contrast + illumination) * param_.scale;
       } else {
