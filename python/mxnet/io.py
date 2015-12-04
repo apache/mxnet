@@ -9,12 +9,25 @@ import ctypes
 import sys
 import numpy as np
 import logging
+try:
+    from scipy.sparse import csr_matrix, coo_matrix, csc_matrix
+except ImportError:
+    pass
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str
 from .base import DataIterHandle, NDArrayHandle
 from .base import check_call, ctypes2docstring
 from .ndarray import NDArray
 from .ndarray import array
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+from multiprocessing import Process, JoinableQueue
+try:
+    from Queue import Empty
+except ImportError:
+    from queue import Empty
 
 class DataIter(object):
     """DataIter object in mxnet. """
@@ -100,7 +113,6 @@ def _init_data(data, allow_empty, default_name):
     assert (data is not None) or allow_empty
     if data is None:
         data = []
-
     if isinstance(data, (np.ndarray, NDArray)):
         data = [data]
     if isinstance(data, list):
@@ -168,10 +180,10 @@ class NDArrayIter(DataIter):
         # batching
         if last_batch_handle == 'discard':
             new_n = self.data_list[0].shape[0] - self.data_list[0].shape[0] % batch_size
-            for k, _ in self.data:
-                self.data[k] = self.data[k][:new_n]
-            for k, _ in self.label:
-                self.label[k] = self.label[k][:new_n]
+            for i, v in enumerate(self.data):
+                self.data[i] = (v[0], v[1][:new_n])
+            for i, v in enumerate(self.label):
+                self.label[i] = (v[0], v[1][:new_n])
         self.num_data = self.data_list[0].shape[0]
         assert self.num_data >= batch_size, \
             "batch_size need to be smaller than data size when not padding."
@@ -224,6 +236,176 @@ class NDArrayIter(DataIter):
             return [array(np.concatenate((x[1][self.cursor:], x[1][:pad]),
                                          axis=0)) for x in data_source]
 
+    def getdata(self):
+        return self._getdata(self.data)
+
+    def getlabel(self):
+        return self._getdata(self.label)
+
+    def getpad(self):
+        if self.last_batch_handle == 'pad' and \
+           self.cursor + self.batch_size > self.num_data:
+            return self.cursor + self.batch_size - self.num_data
+        else:
+            return 0
+
+
+class PickleIter(DataIter):
+    """PickleIter object in mxnet. Taking path list of files which store data and label \
+       using pickle to get data iter.
+    Parameters
+    ----------
+    datapath: list of str
+        list of file paths where data and label are stored in a dictionary with attributes \
+        'data' and 'label'. The data and label should be NDArray, or numpy.ndarray, or list \
+        of them or dict with them as values.
+    max_queue: int
+        max queue buffer size
+    batch_size: int
+        Batch Size
+    shuffle: bool
+        Whether to shuffle the data in one data file
+    data_pad_value: float, optional
+        Padding value for data
+    label_pad_value: float, optionl
+        Padding value for label
+    last_batch_handle: 'pad', 'discard' or 'roll_over'
+        How to handle the last batch
+    Note
+    ----
+    This iterator will pad, discard or roll over the last batch if
+    the size of data does not match batch_size. Roll over is intended
+    for training and can cause problems if used for prediction.
+    """
+    eof_flag = False
+    queue = None
+
+    class pickle_file_processor(Process):
+        """Process to read data from files using pickle"""
+        def __init__(self, num_datafile, datapath):
+            Process.__init__(self)
+            self.num_datafile = num_datafile
+            self.datapath = datapath
+        def run(self):
+            file_cursor = -1
+            while True:
+                file_cursor += 1
+                if file_cursor < self.num_datafile:
+                    with open(self.datapath[file_cursor]) as f:
+                        PickleIter.queue.put(pickle.load(f))
+                else:
+                    PickleIter.eof_flag = True
+                    break
+
+    def get_data_from_new_file(self):
+        """Load data from underlying arrays, internal use only"""
+        d = self.queue.get()
+        self.queue.task_done()
+        label = d['label'].toarray() if d['label'] != None else None
+        data = d['data']
+        try:
+            if isinstance(data, csr_matrix) or isinstance(data, coo_matrix) \
+               or isinstance(data, csc_matrix):
+                data = data.toarray()
+        except NameError:
+            pass
+        self.data = _init_data(data, allow_empty=False, default_name='data')
+        self.label = _init_data(label, allow_empty=True, default_name='softmax_label')
+
+        # shuffle data
+        if self.shuffle:
+            idx = np.arange(self.data[0][1].shape[0])
+            np.random.shuffle(idx)
+            self.data = [(k, v[idx]) for k, v in self.data]
+            self.label = [(k, v[idx]) for k, v in self.label]
+
+        self.data_list = [x[1] for x in self.data] + [x[1] for x in self.label]
+        self.num_source = len(self.data_list)
+
+        # batching
+        if self.last_batch_handle == 'discard':
+            new_n = self.data_list[0].shape[0] - self.data_list[0].shape[0] % self.batch_size
+            for k, v in enumerate(self.data):
+                self.data[k] = (v[0], v[1][:new_n])
+            for k, v in enumerate(self.label):
+                self.label[k] = (v[0], v[1][:new_n])
+        self.num_data = self.data_list[0].shape[0]
+
+        assert self.num_data >= self.batch_size, \
+            "batch_size need to be smaller than data size when not padding."
+        self.cursor = -self.batch_size
+
+    def __init__(self, datapath, max_queue=1, batch_size=1, shuffle=False, last_batch_handle='pad'):
+        # pylint: disable=W0201
+
+        super(PickleIter, self).__init__()
+
+        self.batch_size = batch_size
+        PickleIter.queue = JoinableQueue(max_queue)
+        self.datapath = [x for x in datapath if x]
+        self.num_datafile = len(self.datapath)
+        self.shuffle = shuffle
+        self.last_batch_handle = last_batch_handle
+        self.thread = self.pickle_file_processor(self.num_datafile, self.datapath)
+        self.thread.start()
+        self.get_data_from_new_file()
+
+    @property
+    def provide_data(self):
+        """The name and shape of data provided by this iterator"""
+        return [(k, tuple([self.batch_size] + list(v.shape[1:]))) for k, v in self.data]
+
+    @property
+    def provide_label(self):
+        """The name and shape of label provided by this iterator"""
+        return [(k, tuple([self.batch_size] + list(v.shape[1:]))) for k, v in self.label]
+
+    def hard_reset(self):
+        """Igore roll over data and set to start"""
+        self.cursor = -self.batch_size
+
+    def reset(self):
+        self.thread.terminate()
+        while not self.queue.empty():
+            try:
+                self.queue.get(False)
+            except Empty:
+                self.queue.task_done()
+        self.thread = self.pickle_file_processor(self.num_datafile, self.datapath)
+        self.thread.start()
+        self.get_data_from_new_file()
+        if self.last_batch_handle == 'roll_over' and self.cursor > self.num_data:
+            self.cursor = -self.batch_size + (self.cursor % self.num_data) % self.batch_size
+        else:
+            self.cursor = -self.batch_size
+
+    def iter_next(self):
+        self.cursor += self.batch_size
+        if self.cursor < self.num_data:
+            return 1 # next batch
+        elif not self.eof_flag or not self.queue.empty():
+            return 0 # next data file
+        else:
+            return -1 # end of data
+
+    def next(self):
+        if self.iter_next() == 1: # next batch
+            return DataBatch(data=self.getdata(), label=self.getlabel(), \
+                    pad=self.getpad(), index=None)
+        elif self.iter_next() == -1: # end of data
+            raise StopIteration
+        else: # next data file
+            self.get_data_from_new_file()
+            return self.next()
+
+    def _getdata(self, data_source):
+        """Load data from underlying arrays, internal use only"""
+        if self.cursor + self.batch_size <= self.num_data:
+            return [array(x[1][self.cursor:self.cursor + self.batch_size]) for x in data_source]
+        else:
+            pad = self.batch_size - self.num_data + self.cursor
+            return [array(np.concatenate((x[1][self.cursor:], x[1][:pad]),
+                                         axis=0)) for x in data_source]
     def getdata(self):
         return self._getdata(self.data)
 
