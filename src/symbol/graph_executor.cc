@@ -806,6 +806,15 @@ void GraphExecutor::Forward(bool is_train) {
   RunOps(is_train, 0, num_forward_nodes_);
 }
 
+void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
+  size_t sstep = static_cast<size_t>(step);
+  if (sstep >= num_forward_nodes_) {
+    *step_left = 0; return;
+  }
+  RunOps(is_train, sstep, sstep + 1);
+  *step_left = static_cast<int>(num_forward_nodes_ - sstep - 1);
+}
+
 void GraphExecutor::Backward(const std::vector<NDArray> &head_grads) {
   if (head_grads.size() != 0) {
     // TODO(bing, min): consider pass a map for backward

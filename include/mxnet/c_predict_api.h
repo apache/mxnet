@@ -92,11 +92,28 @@ MXNET_DLL int MXPredSetInput(PredictorHandle handle,
                              const mx_float* data,
                              mx_uint size);
 /*!
- * \brief Run a forward pass to get the output
+ * \brief Run a forward pass to get the output.
  * \param handle The handle of the predictor.
  * \return 0 when success, -1 when failure.
  */
 MXNET_DLL int MXPredForward(PredictorHandle handle);
+/*!
+ * \brief Run a interactive forward pass to get the output.
+ *  This is helpful for displaying progress of prediction which can be slow.
+ *  User must call PartialForward from step=0, keep increasing it until step_left=0.
+ * \begincode
+ * int step_left = 1;
+ * for (int step = 0; step_left != 0; ++step) {
+ *    MXPredPartialForward(handle, step, &step_left);
+ *    printf("Current progress [%d/%d]\n", step, step + step_left + 1);
+ * }
+ * \endcode
+ * \param handle The handle of the predictor.
+ * \param step The current step to run forward on.
+ * \param step_left The number of steps left
+ * \return 0 when success, -1 when failure.
+ */
+MXNET_DLL int MXPredPartialForward(PredictorHandle handle, int step, int* step_left);
 /*!
  * \brief Get the output value of prediction.
  * \param handle The handle of the predictor.
