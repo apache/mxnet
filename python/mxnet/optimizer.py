@@ -346,10 +346,9 @@ class RMSProp(Optimizer):
         return (zeros(weight.shape, weight.context),  # n
                 zeros(weight.shape, weight.context),  # g
                 zeros(weight.shape, weight.context))  # delta
-                
+
     def update(self, index, weight, grad, state):
         """Update the parameters.
-    
         Parameters
         ----------
         index : int
