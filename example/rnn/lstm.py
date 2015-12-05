@@ -186,7 +186,7 @@ def calc_nll(seq_label_probs, X, begin):
 
 def train_lstm(model, X_train_batch, X_val_batch,
                num_round, update_period,
-               optimizer='sgd', half_life=2,max_grad_norm = 5.0, **kwargs):
+               optimizer='rmsprop', half_life=2,max_grad_norm = 5.0, **kwargs):
     print("Training swith train.shape=%s" % str(X_train_batch.shape))
     print("Training swith val.shape=%s" % str(X_val_batch.shape))
     m = model
