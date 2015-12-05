@@ -20,6 +20,8 @@ deep learning system, and interesting insights of DL systems for hackers.
 
 What's New
 ----------
+* [MXNet.js: Javascript Package for Deep Learning in Browser (without server)
+](https://github.com/dmlc/mxnet.js/blob/master/README.md)
 * [Design Note: Design Efficient Deep Learning Data Loading Module](http://mxnet.readthedocs.org/en/latest/developer-guide/note_data_loading.html)
 * [MXNet on Mobile Device](https://mxnet.readthedocs.org/en/latest/tutorial/smart_device.html)
 * [Distributed Training](https://mxnet.readthedocs.org/en/latest/distributed_training.html)
