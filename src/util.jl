@@ -18,8 +18,8 @@ function get_mnist_ubyte()
   filenames = [k => joinpath(mnist_dir, v) for (k,v) in filenames]
   if !all(isfile, values(filenames))
     cd(mnist_dir) do
-      run(`wget http://webdocs.cs.ualberta.ca/~bx3/data/mnist.zip`)
-      run(`unzip -u mnist.zip`)
+      mnist_dir = download("http://webdocs.cs.ualberta.ca/~bx3/data/mnist.zip", "mnist.zip")
+      run(`unzip -u $mnist_dir`)
     end
   end
   return filenames
