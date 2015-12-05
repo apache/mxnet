@@ -300,7 +300,82 @@ class Adam(Optimizer):
         weight[:] += -step
         mean[:] = mean_t
         variance[:] = variance_t
+@register
+class RMSProp(Optimizer):
+    """RMSProp optimizer of Tieleman & Hinton, 2012,
 
+    This code follows the version in  http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45)
+    by Alex Graves, 2013.
+
+    Parameters
+    ----------
+    learning_rate : float, optional
+        Step size.
+        Default value is set to 0.002.
+    gamma1: float, optional
+        decay factor of moving average for gradient, gradient^2.
+        Default value is set to 0.95.
+    gamma2: float, optional
+        "momentum" factor.
+        Default value if set to 0.9.
+    wd : float, optional
+        L2 regularization coefficient add to all the weights
+    rescale_grad : float, optional
+        rescaling factor of gradient.
+    clip_gradient : float, optional
+        clip gradient in range [-clip_gradient, clip_gradient]
+    """
+    def __init__(self, learning_rate=0.002, gamma1=0.95, gamma2=0.9,
+                 wd=0.,
+                 rescale_grad=1, clip_gradient=None,
+                 lr_scheduler=None):
+        super(RMSProp, self).__init__(rescale_grad)
+        self.lr = learning_rate
+        self.gamma1 = gamma1
+        self.gamma2 = gamma2
+        self.wd = wd
+        self.clip_gradient = clip_gradient
+    def create_state(self, index, weight):
+        """Create additional optimizer state: mean, variance
+        Parameters
+        ----------
+        weight : NDArray
+            The weight data
+
+        """
+        return (zeros(weight.shape, weight.context),  # n
+                zeros(weight.shape, weight.context),  # g
+                zeros(weight.shape, weight.context))  # delta
+                
+    def update(self, index, weight, grad, state):
+        """Update the parameters.
+    
+        Parameters
+        ----------
+        index : int
+            An unique integer key used to index the parameters
+
+        weight : NDArray
+            weight ndarray
+
+        grad : NDArray
+            grad ndarray
+
+        state : NDArray or other objects returned by init_state
+            The auxiliary state used in optimization.
+        """
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        lr = self.lr
+        lr *= self.lr_scale.get(index, 1.0)
+        n, g, delta = state
+        grad = grad * self.rescale_grad
+        if self.clip_gradient is not None:
+            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+        n[:] = (1 - self.gamma1) * (grad * grad) + self.gamma1 * n
+        g[:] = (1 - self.gamma1) * grad + self.gamma1 * g
+        delta[:] = (self.gamma2) * delta - lr * (grad/sqrt(n - g*g + 1e-4) + self.wd * weight)
+        weight[:] += delta
 @register
 class Test(Optimizer):
     """For test use"""
