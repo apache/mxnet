@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, W0221, W0201
+# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, W0221, W0201, no-self-use
 
 """NDArray interface of mxnet"""
 from __future__ import absolute_import
@@ -9,12 +9,16 @@ import ctypes
 import sys
 import numpy as np
 import logging
+import threading
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str
 from .base import DataIterHandle, NDArrayHandle
 from .base import check_call, ctypes2docstring
 from .ndarray import NDArray
 from .ndarray import array
+
+
+DataBatch = namedtuple('DataBatch', ['data', 'label', 'pad', 'index'])
 
 class DataIter(object):
     """DataIter object in mxnet. """
@@ -30,15 +34,19 @@ class DataIter(object):
         pass
 
     def next(self):
-        """Get next data batch from iterator
+        """Get next data batch from iterator. Equivalent to
+        self.iter_next()
+        DataBatch(self.getdata(), self.getlabel(), self.getpad(), None)
         Returns
         -------
-        data : NDArray
+        data : DataBatch
             The data of next batch.
-        label : NDArray
-            The label of next batch.
         """
-        pass
+        if self.iter_next():
+            return DataBatch(data=self.getdata(), label=self.getlabel(), \
+                    pad=self.getpad(), index=self.getindex())
+        else:
+            raise StopIteration
 
     def __next__(self):
         return self.next()
@@ -52,12 +60,9 @@ class DataIter(object):
         """
         pass
 
-    def getdata(self, index=0):
+    def getdata(self):
         """Get data of current batch.
-        Parameters
-        ----------
-        index : int
-            The index of data source to retrieve.
+
         Returns
         -------
         data : NDArray
@@ -72,7 +77,7 @@ class DataIter(object):
         label : NDArray
             The label of current batch.
         """
-        return self.getdata(-1)
+        pass
 
     def getindex(self):
         """
@@ -81,7 +86,7 @@ class DataIter(object):
         index : numpy.array
             The index of current batch
         """
-        pass
+        return None
 
     def getpad(self):
         """Get the number of padding examples in current batch.
@@ -92,8 +97,89 @@ class DataIter(object):
         """
         pass
 
+class PrefetchingIter(DataIter):
+    """Base class for prefetching iterators."""
+    def __init__(self):
+        super(PrefetchingIter, self).__init__()
+        self.data_ready = threading.Event()
+        self.data_taken = threading.Event()
+        self.data_taken.set()
+        self.running = True
+        self.current_batch = self.next_batch = None
+        self.provide_data = []
+        self.provide_label = []
+        def prefetch_func(self):
+            """Thread entry"""
+            while True:
+                self.data_taken.wait()
+                if not self.running:
+                    break
+                try:
+                    self.next_batch = self.prefetch_next()
+                except StopIteration:
+                    self.next_batch = None
+                self.data_taken.clear()
+                self.data_ready.set()
+        self.prefetch_thread = threading.Thread(target=prefetch_func, args=[self])
+        self.prefetch_thread.setDaemon(True)
 
-DataBatch = namedtuple('DataBatch', ['data', 'label', 'pad', 'index'])
+    def __del__(self):
+        self.running = False
+        self.data_taken.set()
+        self.prefetch_thread.join()
+
+    def start(self):
+        """start prefetching. should only be called once for each instance."""
+        self.prefetch_thread.start()
+
+    def prefetch_next(self):
+        """Return the next batch of data without moving iterator.
+        This function is called by the prefetching thread.
+
+        Returns
+        -------
+        data : DataBatch
+            the next batch or raise StopIteration if the current iteration ends.
+        """
+        raise NotImplementedError
+
+    def prefetch_reset(self):
+        """Reset prefetching to first batch."""
+        raise NotImplementedError
+
+    def reset(self):
+        self.data_ready.wait()
+        self.prefetch_reset()
+        self.data_ready.clear()
+        self.data_taken.set()
+
+    def iter_next(self):
+        self.data_ready.wait()
+        self.current_batch = self.next_batch
+        if self.current_batch is None:
+            return False
+        else:
+            self.data_ready.clear()
+            self.data_taken.set()
+            return True
+
+    def next(self):
+        if self.iter_next():
+            return self.current_batch
+        else:
+            raise StopIteration
+
+    def getdata(self):
+        return self.current_batch.data
+
+    def getlabel(self):
+        return self.current_batch.label
+
+    def getindex(self):
+        return self.current_batch.index
+
+    def getpad(self):
+        return self.current_batch.pad
 
 def _init_data(data, allow_empty, default_name):
     """Convert data into canonical form."""
