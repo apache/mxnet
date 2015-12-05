@@ -542,15 +542,8 @@ def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
     exe.backward(exe.outputs)
     for k in range(len(shapes)):
         name = 'arg_%d'%k
-        try:
-            assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
-        except:
-            print shapes, scale, root_scale, exe.outputs[0].shape
-            print exe.outputs[0].asnumpy()
-            print arr[name].asnumpy()*root_scale**2*scale**(2*k)
-            print arr_grad[name].asnumpy()
-            print arr[name].asnumpy()*root_scale**2*scale**(2*k) - arr_grad[name].asnumpy()
-            assert False
+        assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
+
 
 def test_nearest_upsampling():
     for root_scale in [1,2,3]:

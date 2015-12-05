@@ -98,7 +98,8 @@ class DataIter(object):
         pass
 
 class PrefetchingIter(DataIter):
-    """Base class for prefetching iterators."""
+    """Base class for prefetching iterators. Subclass and override prefetch_next
+    and prefetch_reset to create your own date iterator with prefetching."""
     def __init__(self):
         super(PrefetchingIter, self).__init__()
         self.data_ready = threading.Event()

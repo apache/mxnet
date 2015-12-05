@@ -59,6 +59,17 @@ class Accuracy(EvalMetric):
             num_inst = pred_label.shape[0]
         self.num_inst += num_inst
 
+class L1(EvalMetric):
+    """Calculate L1 norm loss"""
+    def __init__(self):
+        super(L1, self).__init__('l1')
+
+    def update(self, labels, preds):
+        assert len(labels) == len(preds)
+        for label, pred in zip(labels, preds):
+            assert label.shape == pred.shape
+            self.sum_metric += numpy.sum(numpy.abs(label.asnumpy() - pred.asnumpy()))
+            self.num_inst += numpy.prod(label.shape)
 
 class CustomMetric(EvalMetric):
     """Custom evaluation metric that takes a NDArray function.
