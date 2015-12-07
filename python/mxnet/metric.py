@@ -59,10 +59,10 @@ class Accuracy(EvalMetric):
             num_inst = pred_label.shape[0]
         self.num_inst += num_inst
 
-class L1(EvalMetric):
-    """Calculate L1 norm loss"""
+class MAE(EvalMetric):
+    """Calculate Mean Absolute Error loss"""
     def __init__(self):
-        super(L1, self).__init__('l1')
+        super(MAE, self).__init__('mae')
 
     def update(self, labels, preds):
         assert len(labels) == len(preds)

@@ -24,7 +24,7 @@ class DataIter(object):
     """DataIter object in mxnet. """
 
     def __init__(self):
-        pass
+        self.batch_size = 0
 
     def __iter__(self):
         return self
@@ -98,70 +98,102 @@ class DataIter(object):
         pass
 
 class PrefetchingIter(DataIter):
-    """Base class for prefetching iterators. Subclass and override prefetch_next
-    and prefetch_reset to create your own date iterator with prefetching."""
-    def __init__(self):
+    """Base class for prefetching iterators. Takes one or more DataIters (
+    or any class with "reset" and "read" methods) and combine them with
+    prefetching. For example:
+    iter = PrefetchingIter([NDArrayIter({'data': X1}), NDArrayIter({'data': X2})],
+                           rename_data=[{'data': 'data1'}, {'data': 'data2'}])
+
+    Parameters
+    ----------
+    iters : DataIter or list of DataIter
+        one or more DataIters (or any class with "reset" and "read" methods)
+    rename_data : None or list of dict
+        i-th element is a renaming map for i-th iter, in the form of
+        {'original_name' : 'new_name'}. Should have one entry for each entry
+        in iter[i].provide_data
+    rename_label : None or list of dict
+        Similar to rename_data
+    """
+    def __init__(self, iters, rename_data=None, rename_label=None):
         super(PrefetchingIter, self).__init__()
-        self.data_ready = threading.Event()
-        self.data_taken = threading.Event()
-        self.data_taken.set()
-        self.running = True
-        self.current_batch = self.next_batch = None
-        self.provide_data = []
-        self.provide_label = []
-        def prefetch_func(self):
+        if not isinstance(iters, list):
+            iters = [iters]
+        self.n_iter = len(iters)
+        assert self.n_iter > 0
+        self.iters = iters
+        if rename_data is None:
+            self.provide_data = sum([i.provide_data for i in iters], [])
+        else:
+            self.provide_data = sum([[(r[n], s) for n, s in i.provide_data] \
+                                    for r, i in zip(rename_data, iters)], [])
+        if rename_label is None:
+            self.provide_label = sum([i.provide_label for i in iters], [])
+        else:
+            self.provide_label = sum([[(r[n], s) for n, s in i.provide_label] \
+                                    for r, i in zip(rename_label, iters)], [])
+        self.batch_size = self.provide_data[0][1][0]
+        self.data_ready = [threading.Event() for i in range(self.n_iter)]
+        self.data_taken = [threading.Event() for i in range(self.n_iter)]
+        for e in self.data_taken:
+            e.set()
+        self.started = True
+        self.current_batch = [None for i in range(self.n_iter)]
+        self.next_batch = [None for i in range(self.n_iter)]
+        def prefetch_func(self, i):
             """Thread entry"""
             while True:
-                self.data_taken.wait()
-                if not self.running:
+                self.data_taken[i].wait()
+                if not self.started:
                     break
                 try:
-                    self.next_batch = self.prefetch_next()
+                    self.next_batch[i] = self.iters[i].next()
                 except StopIteration:
-                    self.next_batch = None
-                self.data_taken.clear()
-                self.data_ready.set()
-        self.prefetch_thread = threading.Thread(target=prefetch_func, args=[self])
-        self.prefetch_thread.setDaemon(True)
+                    self.next_batch[i] = None
+                self.data_taken[i].clear()
+                self.data_ready[i].set()
+        self.prefetch_threads = [threading.Thread(target=prefetch_func, args=[self, i]) \
+                                 for i in range(self.n_iter)]
+        for thread in self.prefetch_threads:
+            thread.setDaemon(True)
+            thread.start()
 
     def __del__(self):
-        self.running = False
-        self.data_taken.set()
-        self.prefetch_thread.join()
-
-    def start(self):
-        """start prefetching. should only be called once for each instance."""
-        self.prefetch_thread.start()
-
-    def prefetch_next(self):
-        """Return the next batch of data without moving iterator.
-        This function is called by the prefetching thread.
-
-        Returns
-        -------
-        data : DataBatch
-            the next batch or raise StopIteration if the current iteration ends.
-        """
-        raise NotImplementedError
-
-    def prefetch_reset(self):
-        """Reset prefetching to first batch."""
-        raise NotImplementedError
+        self.started = False
+        for e in self.data_taken:
+            e.set()
+        for thread in self.prefetch_threads:
+            thread.join()
 
     def reset(self):
-        self.data_ready.wait()
-        self.prefetch_reset()
-        self.data_ready.clear()
-        self.data_taken.set()
+        for e in self.data_ready:
+            e.wait()
+        for i in self.iters:
+            i.reset()
+        for e in self.data_ready:
+            e.clear()
+        for e in self.data_taken:
+            e.set()
 
     def iter_next(self):
-        self.data_ready.wait()
-        self.current_batch = self.next_batch
-        if self.current_batch is None:
+        for e in self.data_ready:
+            e.wait()
+        if self.next_batch[0] is None:
+            for i in self.next_batch:
+                assert i is None, "Number of entry mismatches between iterators"
             return False
         else:
-            self.data_ready.clear()
-            self.data_taken.set()
+            for batch in self.next_batch:
+                assert batch.pad == self.next_batch[0].pad, \
+                    "Number of entry mismatches between iterators"
+            self.current_batch = DataBatch(sum([batch.data for batch in self.next_batch], []),
+                                           sum([batch.label for batch in self.next_batch], []),
+                                           self.next_batch[0].pad,
+                                           self.next_batch[0].index)
+            for e in self.data_ready:
+                e.clear()
+            for e in self.data_taken:
+                e.set()
             return True
 
     def next(self):
