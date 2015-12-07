@@ -240,17 +240,11 @@ class ConvolutionOp : public Operator {
                                      param_.num_filter / param_.num_group,
                                      oshape[2] * oshape[3]);
     const uint64_t workspace_size = param_.workspace;  // In elements of sizeof(real_t)
-    index_t nstep = std::max(
+    nstep_ = std::max(
         std::min(
           static_cast<index_t>(workspace_size / (shape_colunit_.Size() + shape_dstunit_.Size())),
           ishape[0]),
         1U);
-    index_t nop = (ishape[0] + nstep - 1) / nstep;
-    nstep_ = (ishape[0] + nop - 1) / nop;
-
-    if (nstep_ == nstep) {
-      nstep_ = std::max(nstep_ - 1, 1U);
-    }
 
     mshadow::Shape<2> scol = mshadow::Shape2(shape_colunit_[0],
                                              shape_colunit_[1] * nstep_);
