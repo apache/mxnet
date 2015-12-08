@@ -47,6 +47,7 @@ tracker
 *.swp
 *.swo
 *.swn
+.vimrc
 .ycm_extra_conf.py
 .ycm_extra_conf.pyc
 
@@ -83,3 +84,10 @@ R-package/inst/*
 # ipython notebook
 example/notebooks/.ipynb_checkpoints/*
 *_pb2.py
+
+# Jetbrain
+.idea
+
+# ctags
+tags
+

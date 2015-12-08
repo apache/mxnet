@@ -165,6 +165,13 @@ int MXPredForward(PredictorHandle handle) {
   API_END();
 }
 
+int MXPredPartialForward(PredictorHandle handle, int step, int* step_left) {
+  MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
+  API_BEGIN();
+  p->exec->PartialForward(false, step, step_left);
+  API_END();
+}
+
 int MXPredGetOutput(PredictorHandle handle,
                     mx_uint index,
                     mx_float* data,

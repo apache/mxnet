@@ -8,7 +8,8 @@
 #define MSHADOW_USE_MKL 	0
 #define MSHADOW_RABIT_PS 	0
 #define MSHADOW_DIST_PS 	0
-#ifdef __ANDROID__
+
+#if defined(__ANDROID__) || defined(__MXNET_JS__)
 #define MSHADOW_USE_SSE         0
 #endif
 

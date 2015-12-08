@@ -760,12 +760,8 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
       for (index_t i = 0; i < opnode.outputs.size(); ++i) {
         NDArray out_data = opnode.outputs[i].data;
         std::string name = graph_.nodes[nid].name + "_" + output_names[i];
-
-        Engine::Get()->PushSync(
-            [this, out_data, name](RunContext ctx) {
-              NDArray *cpy = new NDArray(out_data);
-              this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
-            }, out_data.ctx(), {out_data.var()}, {}, FnProperty::kNormal);
+        NDArray *cpy = new NDArray(out_data);
+        this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
       }
     }
   }
@@ -808,6 +804,15 @@ void GraphExecutor::Print(std::ostream &os) const {
 
 void GraphExecutor::Forward(bool is_train) {
   RunOps(is_train, 0, num_forward_nodes_);
+}
+
+void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
+  size_t sstep = static_cast<size_t>(step);
+  if (sstep >= num_forward_nodes_) {
+    *step_left = 0; return;
+  }
+  RunOps(is_train, sstep, sstep + 1);
+  *step_left = static_cast<int>(num_forward_nodes_ - sstep - 1);
 }
 
 void GraphExecutor::Backward(const std::vector<NDArray> &head_grads) {

@@ -489,7 +489,7 @@ bool NDArray::Load(dmlc::Stream *strm) {
   int32_t type_flag;
   if (strm->Read(&type_flag, sizeof(type_flag)) != sizeof(type_flag)) return false;
   CHECK(type_flag == mshadow::DataType<real_t>::kFlag)
-      << "Only support float NDArray so far";
+      << "Only support float NDArray so far, type_flag=" << type_flag;
   // load data into CPU
   NDArray temp(shape, Context::CPU());
   TBlob load_data = temp.data();

@@ -20,6 +20,8 @@ deep learning system, and interesting insights of DL systems for hackers.
 
 What's New
 ----------
+* [MXNet.js: Javascript Package for Deep Learning in Browser (without server)
+](https://github.com/dmlc/mxnet.js/)
 * [Design Note: Design Efficient Deep Learning Data Loading Module](http://mxnet.readthedocs.org/en/latest/developer-guide/note_data_loading.html)
 * [MXNet on Mobile Device](https://mxnet.readthedocs.org/en/latest/tutorial/smart_device.html)
 * [Distributed Training](https://mxnet.readthedocs.org/en/latest/distributed_training.html)
@@ -53,6 +55,14 @@ Bug Reporting
 License
 -------
 © Contributors, 2015. Licensed under an [Apache-2.0](https://github.com/dmlc/mxnet/blob/master/LICENSE) license.
+
+Reference Paper
+---------------
+
+Tianqi Chen, Mu Li, Yutian Li, Min Lin, Naiyan Wang, Minjie Wang, Tianjun Xiao,
+Bing Xu, Chiyuan Zhang, and Zheng Zhang.
+[MXNet: A Flexible and Efficient Machine Learning Library for Heterogeneous Distributed Systems](https://github.com/dmlc/web-data/raw/master/mxnet/paper/mxnet-learningsys.pdf).
+In Neural Information Processing Systems, Workshop on Machine Learning Systems, 2015
 
 History
 -------

@@ -25,6 +25,7 @@ class GraphExecutor : public Executor {
   GraphExecutor() {}
   virtual ~GraphExecutor();
   void Forward(bool is_train) override;
+  void PartialForward(bool is_train, int step, int *step_left) override;
   void Backward(const std::vector<NDArray> &head_grads) override;
   const std::vector<NDArray> &outputs() const override {
     return heads_ndarray_;
