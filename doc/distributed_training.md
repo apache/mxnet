@@ -129,6 +129,18 @@ including by resource managers such as `Yarn` or simply via `ssh`. [This tutoria
 gives a step-by-step example on how to setup and run jobs on a GPU cluster at
 Amazon AWS.
 
+## Machines with multiple NIC (Network Interface Card)
+
+For the user who's cluster is composed of machines equipped with multiple NICs, MXNet provides a way to let you choose the NIC you want to use. 
+For example, your machine is equipped with two NICs, one card's name is "eth0 (ethernet device)", another one is named "ib0 (infiniband device)".
+You can choose NIC which you will by following the guide below.
+```
+export DMLC_INTERFACE="ib0"
+```
+or
+```
+export DMLC_INTERFACE="eth0"
+```
 <!-- ## More Readings -->
 
 <!-- - [Distributed training examples with results](https://github.com/dmlc/mxnet/tree/master/example/distributed-training) -->
