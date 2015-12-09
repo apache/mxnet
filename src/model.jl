@@ -469,7 +469,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
     metric = get(opts.eval_metric)
     info(format("== Epoch {1:0>3d} ==========", i_epoch))
     info("## Training summary")
-    for (name, value) in get(opts.eval_metric)
+    for (name, value) in metric
       info(format("{1:>18s} = {2:.4f}", string(name), value))
     end
     info(format("{1:>18s} = {2:.4f} seconds", "time", time_stop-time_start))
