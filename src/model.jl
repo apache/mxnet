@@ -260,7 +260,7 @@ function _create_kvstore(kv_type :: Base.Symbol, num_device :: Int, arg_params :
   return (kv, update_on_kvstore)
 end
 
-@defstruct TrainingOptions (
+@defstruct TrainingOptions Any (
   initializer :: AbstractInitializer = UniformInitializer(0.01),
   n_epoch     :: Int = 10,
   eval_data   :: Union{Void, AbstractDataProvider} = nothing,
@@ -270,13 +270,14 @@ end
   callbacks   :: Vector{AbstractCallback} = AbstractCallback[],
 )
 
-function _invoke_callbacks(self::FeedForward, callbacks::Vector{AbstractCallback},
-                           state::OptimizationState, type_filter::Type)
+function _invoke_callbacks{T<:Real}(self::FeedForward, callbacks::Vector{AbstractCallback},
+                                    state::OptimizationState, type_filter::Type;
+                                    metric::Vector{Tuple{Base.Symbol, T}} = Vector{Tuple{Base.Symbol, Real}}())
   map(callbacks) do cb
     if isa(cb, type_filter)
       if type_filter == AbstractEpochCallback
         # epoch callback have extra access to the model object
-        cb(self, state)
+        cb(self, state, metric)
       else
         cb(state)
       end
@@ -465,6 +466,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
     end # end of one epoch
 
     time_stop = time()
+    metric = get(opts.eval_metric)
     info(format("== Epoch {1:0>3d} ==========", i_epoch))
     info("## Training summary")
     for (name, value) in get(opts.eval_metric)
@@ -514,7 +516,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
         copy!(self.aux_params[name], aux_avg)
       end
     end
-    _invoke_callbacks(self, opts.callbacks, op_state, AbstractEpochCallback)
+    _invoke_callbacks(self, opts.callbacks, op_state, AbstractEpochCallback; metric=metric)
   end # end of all epochs
 end
 
@@ -573,4 +575,3 @@ function load_checkpoint(self :: FeedForward, prefix :: AbstractString, epoch ::
   self.aux_params = aux_params
   return self
 end
-
