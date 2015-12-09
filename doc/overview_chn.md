@@ -208,20 +208,20 @@ KVStore的实现是基于参数服务器。但它跟前面的工作有两个显�
 
 ## 过去，现状，和未来
 
-大半年前我们拉来数个优秀的C++机器学习系统的开发人员成立了DMLC，本意是更方便共享各自项目的代码，并给用户提供一致的体验。当时我们有两个深度学习的项目，一个是CXXNet，其通过配置来定义和训练神经网络。另一个是Minerva，提供类似numpy一样的张量计算接口。前者在图片分类等使用卷积网络上很方便，而后者更灵活。那时候我们想要能不能一个两者功能都具备的系统，于是这样就有了MXNet。其名字来自Minerva的M和CXXNet的XNet。其中Symbol的想法来自CXXNet，而NDArray的想法来自Minerva。我们也常把MXNet叫“mix net”。
+大半年前我们拉来数个优秀的C++机器学习系统的开发人员成立了DMLC，本意是更方便共享各自项目的代码，并给用户提供一致的体验。当时我们有两个深度学习的项目，一个是CXXNet，其通过配置来定义和训练神经网络。另一个是Minerva，提供类似numpy一样的张量计算接口。前者在图片分类等使用卷积网络上很方便，而后者更灵活。那时候我们想能不能做一个两者功能都具备的系统，于是这样就有了MXNet。其名字来自Minerva的M和CXXNet的XNet。其中Symbol的想法来自CXXNet，而NDArray的想法来自Minerva。我们也常把MXNet叫“mix net”。
 
-MXNet是DMLC第一个结合了所有的成员努力的项目，也同时吸引了很多核心成员的加入。MXNet目的是做一个有意思的系统，能够让大家用着方便的系统，一个轻量的和可以快速测试系统和算法想法的系统。对于未来，我们主要关注下面四个方向：
+MXNet是DMLC第一个结合了所有成员努力的项目，也同时吸引了很多核心成员的加入。MXNet的目的是做一个有意思的系统，能够让大家用着方便的系统，一个轻量的和可以快速测试系统和算法想法的系统。对于未来，我们主要关注下面四个方向：
 
 1. 支持更多的硬件，我们目前在积极考虑支持AMD GPU，高通GPU，Intel Phi，FPGA，和更多智能设备。相信MXNet的轻量和内存节省可以在这些上大有作为。
 2. 更加完善的操作子。目前不论是Symbol还是NDArray支持的操作还是有限，我们希望能够尽快的扩充他们。
 3. 更多编程语言。除了C++，目前MXNet对Python，R和Julia的支持比较完善。但我们希望还能有很多的语言，例如javascript。
-4. 更的应用。我们之前花了很多精力在图片分类上，下面我们会考虑很多的应用。例如上周我们试了下如何利用一张图片的风格和一张图片的内容合成一张新图片。下图是利用我办公室窗景和梵高的starry night来合成图片
+4. 更多的应用。我们之前花了很多精力在图片分类上，下面我们会考虑很多的应用。例如上周我们试了下如何利用一张图片的风格和一张图片的内容合成一张新图片。下图是利用我办公室窗景和梵高的starry night来合成图片
 
  <img src=https://github.com/dmlc/web-data/raw/master/mxnet/neural-style/input/IMG_4343.jpg width=300px><img src=https://github.com/dmlc/web-data/raw/master/mxnet/neural-style/input/starry_night.jpg width=300px>
 
  <img src=https://github.com/dmlc/web-data/raw/master/mxnet/neural-style/output/4343_starry_night.jpg width=600px>
 
- 接下来我们希望能够在更多应用，例如语音，翻译，问答，上有所产出。
+ 接下来我们希望能够在更多应用，例如语音、翻译、问答上有所产出。
 
 我们忠心希望MXNet能为大家做深度学习相关研究和应用带来便利。也希望能与更多的开发者一起学习和进步。
 
