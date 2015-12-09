@@ -532,7 +532,29 @@ def test_deconvolution():
         pad = (3,3)
     )
 
+def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
+    arr = {'arg_%d'%i: mx.random.uniform(-10.0, 10.0, shape) for i, shape in zip(range(len(shapes)), shapes)}
+    arr_grad = {'arg_%d'%i: mx.nd.zeros(shape) for i, shape in zip(range(len(shapes)), shapes)}
+
+    up = mx.sym.UpSampling(*[mx.sym.Variable('arg_%d'%i) for i in range(len(shapes))], sample_type='nearest', scale=root_scale)
+    exe = up.bind(mx.cpu(), args=arr, args_grad=arr_grad)
+    exe.forward(is_train=True)
+    exe.backward(exe.outputs)
+    for k in range(len(shapes)):
+        name = 'arg_%d'%k
+        assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
+
+
+def test_nearest_upsampling():
+    for root_scale in [1,2,3]:
+        for scale in [1,2,3]:
+            for num_shape in [1,2,3]:
+                for base in [1,2,3]:
+                    shapes = [(1,3,base*root_scale*scale**(num_shape-1-i),base*root_scale*scale**(num_shape-1-i)) for i in range(num_shape)]
+                    check_nearest_upsampling_with_shape(shapes, scale, root_scale)
+
 if __name__ == '__main__':
+    test_nearest_upsampling()
     test_binary_op_duplicate_input()
     test_elementwise_sum()
     test_concat()

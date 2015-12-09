@@ -36,7 +36,8 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
     .set_range(1, 1000)
     .describe("Up sampling scale");
     DMLC_DECLARE_FIELD(num_filter)
-    .describe("input filter (deprecated, donot use)");
+    .describe("Input filter. Only used by nearest sample_type.")
+    .set_default(0);
     DMLC_DECLARE_FIELD(sample_type)
     .add_enum("nearest", up_enum::kNearest)
     .add_enum("bilinear", up_enum::kBilinear)
@@ -63,7 +64,7 @@ class UpSamplingNearestOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1);
+    CHECK_EQ(in_data.size(), param_.num_args);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> out = out_data[up_enum::kOut].get<xpu, 4, real_t>(s);
@@ -92,7 +93,7 @@ class UpSamplingNearestOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_grad.size(), 1);
+    CHECK_EQ(in_grad.size(), param_.num_args);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> grad = out_grad[up_enum::kOut].get<xpu, 4, real_t>(s);
     if (param_.num_args > 1) {
@@ -103,19 +104,17 @@ class UpSamplingNearestOp : public Operator {
         int end = begin + input_grad.size(1);
         int scale = grad.size(2)/in_shape[0];
         Assign(input_grad, req[i],
-             static_cast<float>(1.0f / scale / scale) * \
-             pool<mshadow::red::sum>(slice<1>(grad, begin, end),
-                                     in_shape,
-                                     scale,
-                                     scale,
-                                     scale));
+               pool<mshadow::red::sum>(slice<1>(grad, begin, end),
+                                       in_shape,
+                                       scale,
+                                       scale,
+                                       scale));
         begin = end;
       }
     } else {
       Tensor<xpu, 4> input_grad = in_grad[up_enum::kData].get<xpu, 4, real_t>(s);
       mshadow::Shape<2> in_shape = Shape2(input_grad.shape_[2], input_grad.shape_[3]);
       Assign(input_grad, req[up_enum::kData],
-             static_cast<float>(1.0f / param_.scale / param_.scale) * \
              pool<mshadow::red::sum>(grad,
                                      in_shape,
                                      param_.scale,
@@ -145,7 +144,11 @@ class UpSamplingProp : public OperatorProperty {
 
   std::vector<std::string> ListArguments() const override {
     if (param_.sample_type == up_enum::kNearest) {
-      return {"data"};
+      std::vector<std::string> ret;
+      for (int i = 0; i < param_.num_args; ++i) {
+        ret.push_back(std::string("arg") + static_cast<char>('0' + i));
+      }
+      return ret;
     } else {
       return {"data", "weight"};
     }
@@ -156,8 +159,10 @@ class UpSamplingProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     CHECK_GE(in_shape->size(), 1);
     const TShape &dshape = (*in_shape)[0];
+    TShape oshape = dshape;
     if (param_.sample_type == up_enum::kNearest) {
       CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
+      oshape[1] = 0;
       for (auto& shape : *in_shape) {
         CHECK_EQ(shape.ndim(), 4) << \
           "UpSamplingNearest: Input data should be 4D in (batch, channel, y, x)";
@@ -166,6 +171,7 @@ class UpSamplingProp : public OperatorProperty {
           "does not divide output height of " << oh;
         CHECK_EQ(ow%shape[3], 0) << "UpSamplingNearest: input weight of " << shape[3] << \
           "does not divide output weight of " << ow;
+        oshape[1] += shape[1];
       }
     } else {
       CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
@@ -176,8 +182,8 @@ class UpSamplingProp : public OperatorProperty {
       SHAPE_ASSIGN_CHECK(*in_shape,
                          up_enum::kWeight,
                          mshadow::Shape4(dshape[1], 1, kernel, kernel));
+      oshape = dshape;
     }
-    TShape oshape = dshape;
     oshape[2] = dshape[2] * param_.scale;
     oshape[3] = dshape[3] * param_.scale;
     out_shape->clear();
@@ -211,11 +217,7 @@ class UpSamplingProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data,
     const std::vector<void*> &in_grad) const override {
-    if (param_.sample_type == up_enum::kNearest) {
-      return {{in_data[up_enum::kData], in_grad[up_enum::kData]}};
-    } else {
-      return {};
-    }
+    return {};
   }
 
   std::vector<ResourceRequest> ForwardResource(
