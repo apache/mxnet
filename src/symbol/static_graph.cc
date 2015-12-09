@@ -13,14 +13,18 @@
 
 namespace mxnet {
 
-std::vector<uint32_t> StaticGraph::PostDFSOrder(const std::vector<uint32_t>& head_nodes) const {
+std::vector<uint32_t> StaticGraph::PostDFSOrder(const std::vector<uint32_t>& head_nodes,
+                                                const std::unordered_set<uint32_t>& banned) const {
   std::vector<uint32_t> ret;
+  std::unordered_set<uint32_t> visited;
   ret.reserve(nodes.size() / 2);
   std::vector<std::pair<uint32_t, uint32_t> > stack;
-  std::unordered_set<uint32_t> visited;
   // heads
   for (auto &head : head_nodes) {
     stack.push_back(std::make_pair(head, 0));
+    CHECK_EQ(banned.count(head), 0);
+    // bugfix
+    visited.insert(head);
   }
   while (!stack.empty()) {
     std::pair<uint32_t, uint32_t>& back = stack.back();
@@ -37,7 +41,7 @@ std::vector<uint32_t> StaticGraph::PostDFSOrder(const std::vector<uint32_t>& hea
       } else {
         input = n.inputs[back.second++].source_id;
       }
-      if (visited.count(input) == 0) {
+      if (visited.count(input) == 0 && banned.count(input) == 0) {
         stack.push_back(std::make_pair(input, 0));
       }
     }
@@ -62,7 +66,7 @@ std::vector<uint32_t> StaticGraph::TopoSort() const {
       head_nodes.push_back(static_cast<uint32_t>(i));
     }
   }
-  return PostDFSOrder(head_nodes);
+  return PostDFSOrder(head_nodes, {});
 }
 
 bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
@@ -186,10 +190,22 @@ bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
     const DataEntry &e = heads[i];
     (*out_shape)[i] = node_out_shapes[e.source_id][e.index];
   }
+
+  // set back auxiliary nodes.
   aux_shape->clear();
-  for (size_t i = 0; i < node_aux_shapes.size(); ++i) {
-    if (node_aux_shapes[i].size() > 0) {
-      for (auto const &shape : node_aux_shapes[i]) {
+  std::vector<uint32_t> head_nodes;
+  for (const auto& head : heads) {
+    head_nodes.push_back(head.source_id);
+  }
+  std::sort(head_nodes.begin(), head_nodes.end());
+  head_nodes.resize(std::unique(head_nodes.begin(), head_nodes.end()) - head_nodes.begin());
+  std::vector<uint32_t> fwd_nodes = PostDFSOrder(head_nodes, {});
+  uint32_t counter = 0;
+  for (uint32_t nid : fwd_nodes) {
+    // backward consistentcy check.
+    CHECK(nid == counter++);
+    if (node_aux_shapes[nid].size() > 0) {
+      for (auto const &shape : node_aux_shapes[nid]) {
         aux_shape->push_back(shape);
       }
     }
@@ -218,11 +234,50 @@ StaticGraph::Node StaticGraph::CreateCopyNode(const DataEntry &source) {
 }
 
 void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
-                                   std::vector<DataEntry> *arg_grads) {
-  arg_grads->clear();
-  head_grad_nodes->clear();
+                                   std::vector<DataEntry>* arg_grads,
+                                   std::map<uint32_t, uint32_t>* out_mirror_map) {
   // get topo order of nodes, before new nodes are added
   std::vector<uint32_t> topo_order = TopoSort();
+
+  // build a mirror map, experimental
+  std::map<uint32_t, uint32_t>& mirror_map = *out_mirror_map;
+  mirror_map.clear();
+  int do_mirror = dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0);
+  int mirror_step = dmlc::GetEnv("MXNET_BACKWARD_MIRROR_STEP", 100);
+  int counter = 0;
+
+  auto need_mirror = [this, do_mirror, &counter, mirror_step](uint32_t nid) {
+    if (do_mirror == 0) return false;
+    if (!nodes[nid].is_forward()) return false;
+    std::string type = nodes[nid].op->TypeString();
+    if (type == "Convolution") return false;
+    if (type == "FullyConnected") return false;
+    if (type == "Dropout") return false;
+    if (type == "Concat") return false;
+    if (type == "SoftmaxOutput") return false;
+    counter = counter + 1;
+    if (counter % mirror_step == 0) return false;
+    return true;
+  };
+
+  for (uint32_t nid : topo_order) {
+    if (need_mirror(nid)) {
+      uint32_t dup_node_id = static_cast<uint32_t>(nodes.size());
+      Node node(nodes[nid]);
+      node.name += "_mirror";
+      for (DataEntry& e : node.inputs) {
+        e.source_id = mirror_map.at(e.source_id);
+      }
+      nodes.push_back(std::move(node));
+      mirror_map[nid] = dup_node_id;
+    } else {
+      mirror_map[nid] = nid;
+    }
+  }
+
+  // normal gradient
+  arg_grads->clear();
+  head_grad_nodes->clear();
   // map out_data entry to out_grad
   std::map<DataEntry, std::vector<DataEntry> > grad_map;
   // allocate head gradient nodes
@@ -260,11 +315,12 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
     int ntotal = nodes[nid].op->NumOutputs();
     // check all outpus
     for (int i = 0; i < ntotal; ++i) {
-      DataEntry odata(nid, static_cast<uint32_t>(i));
+      DataEntry odata(mirror_map[nid], static_cast<uint32_t>(i));
+      DataEntry okey(nid, static_cast<uint32_t>(i));
       out_data.push_back(odata);
       if (i >= nvisible) continue;
       // get out_grad
-      auto it = grad_map.find(odata);
+      auto it = grad_map.find(okey);
       CHECK(it != grad_map.end()) << "bad graph";
       std::vector<DataEntry> &gnodes = it->second;
       if (gnodes.size() == 1) {
@@ -283,9 +339,15 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
     Node grad_node;
     // Point to the corresponding source
     grad_node.backward_source_id = nid;
+
+    std::vector<DataEntry> source_inputs;
+    for (const DataEntry& e : nodes[nid].inputs) {
+      source_inputs.push_back(DataEntry(mirror_map[e.source_id], e.index));
+    }
     // select out the dependent inputs
     grad_node.inputs = nodes[nid].op->BackwardInputs(
-        out_grad, nodes[nid].inputs, out_data);
+        out_grad, source_inputs, out_data);
+
     grad_node.name = nodes[nid].name + "_backward";
     uint32_t grad_node_id = static_cast<uint32_t>(nodes.size());
     nodes.push_back(std::move(grad_node));
@@ -319,6 +381,7 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
       arg_grads->at(i) = DataEntry(agg_node_id, 0);
     }
   }
+  LOG(INFO) << "FINSIHED";
 }
 
 void StaticGraph::Node::Save(dmlc::JSONWriter *writer) const {
