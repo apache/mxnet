@@ -110,13 +110,13 @@ end
 function every_n_epoch(callback :: Function, n :: Int; call_on_0 :: Bool = false)
   EpochCallback(n, call_on_0, callback)
 end
-function Base.call(cb :: EpochCallback, model :: Any, state :: OptimizationState)
+function Base.call{T<:Real}(cb :: EpochCallback, model :: Any, state :: OptimizationState, metric :: Vector{Tuple{Base.Symbol, T}})
   if state.curr_epoch == 0
     if cb.call_on_0
-      cb.callback(model, state)
+      cb.callback(model, state, metric)
     end
   elseif state.curr_epoch % cb.frequency == 0
-    cb.callback(model, state)
+    cb.callback(model, state, metric)
   end
 end
 
@@ -136,7 +136,7 @@ end
 =#
 function do_checkpoint(prefix::AbstractString; frequency::Int=1, save_epoch_0=false)
   mkpath(dirname(prefix))
-  every_n_epoch(frequency, call_on_0=save_epoch_0) do model, state
+  every_n_epoch(frequency, call_on_0=save_epoch_0) do model, state, metric
     save_checkpoint(model, prefix, state)
   end
 end
