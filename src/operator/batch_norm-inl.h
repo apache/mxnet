@@ -30,11 +30,14 @@ enum BatchNormBackResource {kTempSpace};
 struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   float eps;
   float momentum;
+  bool fix_gamma;
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
-    DMLC_DECLARE_FIELD(eps).set_default(1e-10f)
+    DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
     .describe("Epsilon to prevent div 0");
     DMLC_DECLARE_FIELD(momentum).set_default(0.9f)
     .describe("Momentum for moving average");
+    DMLC_DECLARE_FIELD(fix_gamma).set_default(true)
+    .describe("Fix gamma while training");
   }
 };
 
@@ -171,7 +174,9 @@ class BatchNormOp : public Operator {
     tmp *= gvar;
     gmean += tmp;
     // assign
-    Assign(gslope, req[batchnorm::kGamma], sumall_except_dim<1>(grad * out_no_affine));
+    if (!param_.fix_gamma) {
+      Assign(gslope, req[batchnorm::kGamma], sumall_except_dim<1>(grad * out_no_affine));
+    }
     Assign(gbias, req[batchnorm::kBeta], sumall_except_dim<1>(grad));
     Assign(grad_in, req[batchnorm::kData], (grad * broadcast<1>(slope, data.shape_)) *
            broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps), data.shape_) +
