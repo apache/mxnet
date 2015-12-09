@@ -260,7 +260,7 @@ function _create_kvstore(kv_type :: Base.Symbol, num_device :: Int, arg_params :
   return (kv, update_on_kvstore)
 end
 
-@defstruct TrainingOptions Any (
+@defstruct TrainingOptions (
   initializer :: AbstractInitializer = UniformInitializer(0.01),
   n_epoch     :: Int = 10,
   eval_data   :: Union{Void, AbstractDataProvider} = nothing,
