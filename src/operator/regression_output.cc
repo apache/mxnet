@@ -40,7 +40,8 @@ MXNET_REGISTER_OP_PROPERTY(LinearRegressionOutput, RegressionOutputProp<reg_enum
 .add_arguments(RegressionOutputParam::__FIELDS__());
 
 MXNET_REGISTER_OP_PROPERTY(MAERegressionOutput, RegressionOutputProp<reg_enum::kMAE>)
-.describe("Use mean absolute error regression for final output, this is used on final output of a net.")
+.describe("Use mean absolute error regression for final output, "
+          "this is used on final output of a net.")
 .add_argument("data", "Symbol", "Input data to function.")
 .add_argument("label", "Symbol", "Input label to function.");
 
