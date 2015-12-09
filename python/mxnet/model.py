@@ -326,6 +326,9 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 if monitor is not None:
                     monitor.toc_print()
 
+                # evaluate at end, so out_cpu_array can lazy copy
+                eval_metric.update(data_batch.label, cpu_output_arrays)
+
                 nbatch += 1
                 # batch callback (for print purpose)
                 if batch_end_callback != None:
@@ -337,9 +340,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                             call(batch_end_params)
                     else:
                         batch_end_callback(batch_end_params)
-
-                # evaluate at end, so out_cpu_array can lazy copy
-                eval_metric.update(data_batch.label, cpu_output_arrays)
 
                 # this epoch is done possibly earlier
                 if epoch_size is not None and nbatch >= epoch_size:

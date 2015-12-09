@@ -89,17 +89,13 @@ class SoftmaxOutputOp : public Operator {
       Tensor<xpu, 3> out = out_data[softmaxout_enum::kOut].get_with_shape<xpu, 3, real_t>(s3, s);
       Tensor<xpu, 3> grad = in_grad[softmaxout_enum::kData].get_with_shape<xpu, 3, real_t>(s3, s);
       SoftmaxGrad(grad, out, label);
-      if (param_.grad_scale < 1.0) {
-        grad *= param_.grad_scale;
-      }
+      grad *= param_.grad_scale;
     } else {
       Tensor<xpu, 1> label = in_data[softmaxout_enum::kLabel].get<xpu, 1, real_t>(s);
       Tensor<xpu, 2> out = out_data[softmaxout_enum::kOut].FlatTo2D<xpu, real_t>(s);
       Tensor<xpu, 2> grad = in_grad[softmaxout_enum::kData].FlatTo2D<xpu, real_t>(s);
       SoftmaxGrad(grad, out, label);
-      if (param_.grad_scale < 1.0) {
-        grad *= param_.grad_scale;
-      }
+      grad *= param_.grad_scale;
     }
   }
 

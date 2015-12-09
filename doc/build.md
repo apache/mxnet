@@ -35,7 +35,8 @@ The minimal building requirement is
 
 Optional libraries
 
-- CUDA to run on nvidia GPUs
+- `CUDA Toolkit >= v7.0` to run on nvidia GPUs
+  - Requires GPU with support for `Compute Capability >= 2.0`
 - CUDNN to accelerate the GPU computation (only CUDNN 3 is supported)
 - opencv for image augmentation
 

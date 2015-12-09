@@ -23,11 +23,21 @@ enum RegressionOutputOutputs {kOut};
 enum RegressionOutputType {kLinear, kLogistic};
 }  // reg_enum
 
+struct RegressionOutputParam : public dmlc::Parameter<RegressionOutputParam> {
+  float grad_scale;
+  DMLC_DECLARE_PARAMETER(RegressionOutputParam) {
+    DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
+    .describe("Scale the gradient by a float factor");
+  };
+};
+
 // Special Operator to output regression value in forward
 // And get gradient in calculation.
 template<typename xpu, typename ForwardOp, typename BackwardOp>
 class RegressionOutputOp : public Operator {
  public:
+  explicit RegressionOutputOp(RegressionOutputParam param) : param_(param) {}
+
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
@@ -64,12 +74,17 @@ class RegressionOutputOp : public Operator {
     Tensor<xpu, 2> label = in_data[reg_enum::kLabel]
       .get_with_shape<xpu, 2, real_t>(out.shape_, s);
     Assign(grad, req[reg_enum::kData], F<BackwardOp>(out, reshape(label, grad.shape_))/num_output);
+    grad *= param_.grad_scale;
   }
+
+ private:
+  RegressionOutputParam param_;
 };
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateRegressionOutputOp(reg_enum::RegressionOutputType type);
+Operator* CreateRegressionOutputOp(reg_enum::RegressionOutputType type,
+                                   RegressionOutputParam param);
 
 #if DMLC_USE_CXX11
 template<reg_enum::RegressionOutputType type>
@@ -80,10 +95,11 @@ class RegressionOutputProp : public OperatorProperty {
   }
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
+    param_.Init(kwargs);
   }
 
   std::map<std::string, std::string> GetParams() const override {
-    return std::map<std::string, std::string>();
+    return param_.__DICT__();
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
@@ -114,7 +130,9 @@ class RegressionOutputProp : public OperatorProperty {
   }
 
   OperatorProperty* Copy() const override {
-    return new RegressionOutputProp<type>();
+    auto ptr = new RegressionOutputProp<type>();
+    ptr->param_ = param_;
+    return ptr;
   }
 
   std::string TypeString() const override {
@@ -147,6 +165,9 @@ class RegressionOutputProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const override;
+
+ protected:
+  RegressionOutputParam param_;
 };
 #endif  // DMLC_USE_CXX11
 }  // namespace op
