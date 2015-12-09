@@ -18,7 +18,7 @@ Operator *CreateRegressionOutputOp<cpu>(reg_enum::RegressionOutputType type,
     case reg_enum::kLogistic:
       return new RegressionOutputOp<cpu, mshadow_op::sigmoid, mshadow::op::minus>(param);
     case reg_enum::kMAE:
-      return new RegressionOutputOp<cpu, mshadow::op::identity, mshadow_op::minus_sign>();
+      return new RegressionOutputOp<cpu, mshadow::op::identity, mshadow_op::minus_sign>(param);
     default:
       LOG(FATAL) << "unknown activation type " << type;
   }

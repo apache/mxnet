@@ -42,12 +42,63 @@ struct SGDParam : public dmlc::Parameter<SGDParam> {
   }
 };
 
+
+struct sgd_clip {
+  MSHADOW_XINLINE static real_t Map(real_t x, real_t bound) {
+    if (x > bound) {
+      return bound;
+    } else if (x < -bound) {
+      return -bound;
+    } else {
+      return x;
+    }
+  }
+};
+
 template<typename xpu>
 void sgd_mom_update(RunContext ctx, TBlob weight, const TBlob grad, TBlob mom,
-                float lr, const SGDParam& param);
+                float lr, const SGDParam& param) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  Tensor<xpu, 2> weight2d = weight.FlatTo2D<xpu, real_t>(s);
+  Tensor<xpu, 2> mom2d = mom.FlatTo2D<xpu, real_t>(s);
+  Tensor<xpu, 2> grad2d = grad.FlatTo2D<xpu, real_t>(s);
+  if (param.clip_gradient >= 0.0f) {
+    mom2d = param.momentum*mom2d -
+            lr*(param.rescale_grad*F<sgd_clip>(grad2d, param.clip_gradient) + param.wd*weight2d);
+  } else {
+    mom2d = param.momentum*mom2d - lr*(param.rescale_grad*grad2d + param.wd*weight2d);
+  }
+  weight2d += mom2d;
+}
+
 template<typename xpu>
 void sgd_update(RunContext ctx, TBlob weight, const TBlob grad,
+                float lr, const SGDParam& param) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  Tensor<xpu, 2> weight2d = weight.FlatTo2D<xpu, real_t>(s);
+  Tensor<xpu, 2> grad2d = grad.FlatTo2D<xpu, real_t>(s);
+  if (param.clip_gradient >= 0.0f) {
+    weight2d -= lr*(param.rescale_grad*F<sgd_clip>(grad2d, param.clip_gradient) +
+                param.wd*weight2d);
+  } else {
+    weight2d -= lr*(param.rescale_grad*grad2d + param.wd*weight2d);
+  }
+}
+
+void call_sgd_mom_update_cpu(RunContext ctx, TBlob weight, const TBlob grad, TBlob mom,
                 float lr, const SGDParam& param);
+void call_sgd_update_cpu(RunContext ctx, TBlob weight, const TBlob grad,
+                float lr, const SGDParam& param);
+#if MXNET_USE_CUDA
+void call_sgd_mom_update_gpu(RunContext ctx, TBlob weight, const TBlob grad, TBlob mom,
+                float lr, const SGDParam& param);
+void call_sgd_update_gpu(RunContext ctx, TBlob weight, const TBlob grad,
+                float lr, const SGDParam& param);
+#endif  // MXNET_USE_CUDA
 
 #if DMLC_USE_CXX11
 #include <mxnet/ndarray.h>
@@ -68,33 +119,41 @@ class SGDOpt : public Optimizer {
   void Update(const int index, NDArray *weight,
               const NDArray *grad, const float lr) override {
     NDArray w = *weight, g = *grad;
-    if (param_.momentum > 0.0f) {
-      CreateState(index, weight);
-      if (w.ctx().dev_type == Context::kCPU ||
-          w.ctx().dev_type == Context::kCPUPinned) {
+    CreateState(index, weight);
+    switch (w.ctx().dev_type) {
+     case Context::kCPU:
+     case Context::kCPUPinned:
+      if (param_.momentum > 0.0f) {
         Engine::Get()->PushSync([this, index, w, g, lr](RunContext ctx) {
-          sgd_mom_update<cpu>(ctx, w.data(), g.data(), mom[index].data(), lr, param_);
-        }, w.ctx(), {g.var()}, {w.var(), mom[index].var()}, FnProperty::kNormal);
-      } else if (w.ctx().dev_type == Context::kGPU) {
-        Engine::Get()->PushSync([this, index, w, g, lr](RunContext ctx) {
-          sgd_mom_update<gpu>(ctx, w.data(), g.data(), mom[index].data(), lr, param_);
+          call_sgd_mom_update_cpu(ctx, w.data(), g.data(), mom[index].data(), lr, param_);
         }, w.ctx(), {g.var()}, {w.var(), mom[index].var()}, FnProperty::kNormal);
       } else {
-        LOG(FATAL) << "Unsupported device type for sgd optimizer: " << w.ctx().dev_type;
+#if MXNET_USE_CUDA
+        Engine::Get()->PushSync([this, index, w, g, lr](RunContext ctx) {
+          call_sgd_update_cpu(ctx, w.data(), g.data(), lr, param_);
+        }, w.ctx(), {g.var()}, {w.var()}, FnProperty::kNormal);
+#else
+        LOG(FATAL) << "Please compile with CUDA enabled for cuda features";
+#endif  // MXNET_USE_CUDA
       }
-    } else {
-      if (w.ctx().dev_type == Context::kCPU ||
-          w.ctx().dev_type == Context::kCPUPinned) {
+      break;
+     case Context::kGPU:
+      if (param_.momentum > 0.0f) {
         Engine::Get()->PushSync([this, index, w, g, lr](RunContext ctx) {
-          sgd_update<cpu>(ctx, w.data(), g.data(), lr, param_);
-        }, w.ctx(), {g.var()}, {w.var()}, FnProperty::kNormal);
-      } else if (w.ctx().dev_type == Context::kGPU) {
-        Engine::Get()->PushSync([this, index, w, g, lr](RunContext ctx) {
-          sgd_update<gpu>(ctx, w.data(), g.data(), lr, param_);
-        }, w.ctx(), {g.var()}, {w.var()}, FnProperty::kNormal);
+          call_sgd_mom_update_gpu(ctx, w.data(), g.data(), mom[index].data(), lr, param_);
+        }, w.ctx(), {g.var()}, {w.var(), mom[index].var()}, FnProperty::kNormal);
       } else {
-        LOG(FATAL) << "Unsupported device type for sgd optimizer: " << w.ctx().dev_type;
+#if MXNET_USE_CUDA
+        Engine::Get()->PushSync([this, index, w, g, lr](RunContext ctx) {
+          call_sgd_update_gpu(ctx, w.data(), g.data(), lr, param_);
+        }, w.ctx(), {g.var()}, {w.var()}, FnProperty::kNormal);
+#else
+        LOG(FATAL) << "Please compile with CUDA enabled for cuda features";
+#endif  // MXNET_USE_CUDA
       }
+      break;
+     default:
+      LOG(FATAL) << "Unsupported device type for sgd optimizer: " << w.ctx().dev_type;
     }
   }
 
