@@ -128,30 +128,26 @@ class SGDOpt : public Optimizer {
           call_sgd_mom_update_cpu(ctx, w.data(), g.data(), mom[index].data(), lr, param_);
         }, w.ctx(), {g.var()}, {w.var(), mom[index].var()}, FnProperty::kNormal);
       } else {
-#if MXNET_USE_CUDA
         Engine::Get()->PushSync([this, index, w, g, lr](RunContext ctx) {
           call_sgd_update_cpu(ctx, w.data(), g.data(), lr, param_);
         }, w.ctx(), {g.var()}, {w.var()}, FnProperty::kNormal);
-#else
-        LOG(FATAL) << "Please compile with CUDA enabled for cuda features";
-#endif  // MXNET_USE_CUDA
       }
       break;
      case Context::kGPU:
+#if MXNET_USE_CUDA
       if (param_.momentum > 0.0f) {
         Engine::Get()->PushSync([this, index, w, g, lr](RunContext ctx) {
           call_sgd_mom_update_gpu(ctx, w.data(), g.data(), mom[index].data(), lr, param_);
         }, w.ctx(), {g.var()}, {w.var(), mom[index].var()}, FnProperty::kNormal);
       } else {
-#if MXNET_USE_CUDA
         Engine::Get()->PushSync([this, index, w, g, lr](RunContext ctx) {
           call_sgd_update_gpu(ctx, w.data(), g.data(), lr, param_);
         }, w.ctx(), {g.var()}, {w.var()}, FnProperty::kNormal);
+      }
+      break;
 #else
         LOG(FATAL) << "Please compile with CUDA enabled for cuda features";
 #endif  // MXNET_USE_CUDA
-      }
-      break;
      default:
       LOG(FATAL) << "Unsupported device type for sgd optimizer: " << w.ctx().dev_type;
     }
