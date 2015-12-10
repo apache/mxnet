@@ -17,6 +17,8 @@ Operator *CreateRegressionOutputOp<cpu>(reg_enum::RegressionOutputType type,
       return new RegressionOutputOp<cpu, mshadow::op::identity, mshadow::op::minus>(param);
     case reg_enum::kLogistic:
       return new RegressionOutputOp<cpu, mshadow_op::sigmoid, mshadow::op::minus>(param);
+    case reg_enum::kMAE:
+      return new RegressionOutputOp<cpu, mshadow::op::identity, mshadow_op::minus_sign>(param);
     default:
       LOG(FATAL) << "unknown activation type " << type;
   }
@@ -36,6 +38,12 @@ MXNET_REGISTER_OP_PROPERTY(LinearRegressionOutput, RegressionOutputProp<reg_enum
 .add_argument("data", "Symbol", "Input data to function.")
 .add_argument("label", "Symbol", "Input label to function.")
 .add_arguments(RegressionOutputParam::__FIELDS__());
+
+MXNET_REGISTER_OP_PROPERTY(MAERegressionOutput, RegressionOutputProp<reg_enum::kMAE>)
+.describe("Use mean absolute error regression for final output, "
+          "this is used on final output of a net.")
+.add_argument("data", "Symbol", "Input data to function.")
+.add_argument("label", "Symbol", "Input label to function.");
 
 MXNET_REGISTER_OP_PROPERTY(LogisticRegressionOutput, RegressionOutputProp<reg_enum::kLogistic>)
 .describe("Use Logistic regression for final output, this is used on final output of a net.\n"
