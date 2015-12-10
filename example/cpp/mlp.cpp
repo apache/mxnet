@@ -16,7 +16,7 @@ using namespace std;
 /*
  * In this example, 
  * we make by hand some data in 10 classes with some pattern 
- * and try to use MLP to recongnize the pattern.
+ * and try to use MLP to recognize the pattern.
  */
 
 class MLP{
