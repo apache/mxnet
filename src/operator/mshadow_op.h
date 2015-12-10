@@ -264,6 +264,13 @@ struct floor {
   }
 };
 
+/*! \brief used for generate gradient of MAE loss*/
+struct minus_sign {
+  MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
+    return a-b > 0.0f ? 1.0f : -1.0f;
+  }
+};
+
 }  // namespace mshadow_op
 }  // namespace op
 }  // namespace mxnet

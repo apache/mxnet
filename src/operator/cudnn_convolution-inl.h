@@ -211,7 +211,7 @@ class CuDNNConvolutionOp : public Operator {
                filter_desc_,
                conv_desc_,
                out_desc_,
-               CUDNN_CONVOLUTION_FWD_PREFER_FASTEST,
+               CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT,
                workspace_byte,
                &algo_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnGetConvolutionBackwardFilterAlgorithm(s->dnn_handle_,
@@ -219,7 +219,7 @@ class CuDNNConvolutionOp : public Operator {
                out_desc_,
                conv_desc_,
                filter_desc_,
-               CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST,
+               CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT,
                workspace_byte,
                &back_algo_w_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnGetConvolutionBackwardDataAlgorithm(s->dnn_handle_,
@@ -227,7 +227,7 @@ class CuDNNConvolutionOp : public Operator {
                out_desc_,
                conv_desc_,
                in_desc_,
-               CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST,
+               CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT,
                workspace_byte,
                &back_algo_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnGetConvolutionBackwardDataWorkspaceSize(s->dnn_handle_,
