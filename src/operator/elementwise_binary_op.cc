@@ -28,6 +28,10 @@ MXNET_REGISTER_OP_PROPERTY(_Div, ElementWiseBinaryOpProp<mshadow::op::div>)
 .describe("Perform an elementwise div.");
 MXNET_REGISTER_OP_PROPERTY(_Power, ElementWiseBinaryOpProp<mshadow_op::power>)
 .describe("Perform an elementwise power.");
+MXNET_REGISTER_OP_PROPERTY(_Maximum, ElementWiseBinaryOpProp<mshadow_op::maximum>)
+.describe("Perform an elementwise power.");
+MXNET_REGISTER_OP_PROPERTY(_Minimum, ElementWiseBinaryOpProp<mshadow_op::minimum>)
+.describe("Perform an elementwise power.");
 
 }  // namespace op
 }  // namespace mxnet

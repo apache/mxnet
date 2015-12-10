@@ -402,6 +402,74 @@ def test_rsqrt_cos_sin():
     exe_test.backward(out_grad)
     assert reldiff(arr_grad.asnumpy(), npout_grad) < 1e-6
 
+def test_maximum_minimum():
+    data1 = mx.symbol.Variable('data')
+    data2 = mx.symbol.Variable('data')
+    shape = (3, 4)
+    data_tmp1 = np.random.rand(3,4)
+    data_tmp2 = np.random.rand(3,4)
+    data_tmp1[:] = 2
+    data_tmp2[:] = 3
+    
+    arr_data1 = mx.nd.array(data_tmp1)
+    arr_data2 = mx.nd.array(data_tmp2)
+
+    
+    arr_grad1 = mx.nd.empty(shape)
+    arr_grad2 = mx.nd.empty(shape)
+
+
+    test =  mx.sym.maximum(data1,data2) + mx.sym.minimum(data1,data2);
+    exe_test = test.bind(mx.cpu(), args=[arr_data1,arr_data2], args_grad=[arr_grad1,arr_grad2])
+    exe_test.forward()
+    out = exe_test.outputs[0].asnumpy()
+    npout =  np.maximum(data_tmp1,data_tmp2) + np.minimum(data_tmp1,data_tmp2)
+    assert reldiff(out, npout) < 1e-6
+
+    out_grad = mx.nd.empty(shape)
+    out_grad[:] = 2
+    exe_test.backward(out_grad)
+    
+    npout_grad = np.ones(shape)
+    npout_grad[:] = 2
+    mask1 = (data_tmp1 > data_tmp2).astype('float')
+    mask2 = (data_tmp1 < data_tmp2).astype('float')
+    npout_grad1 = npout_grad * mask1 + npout_grad * mask2
+    npout_grad2 = (npout_grad - npout_grad * mask1) + (npout_grad - npout_grad * mask2)
+    
+    assert reldiff(arr_grad1.asnumpy(), npout_grad1) < 1e-6
+    assert reldiff(arr_grad2.asnumpy(), npout_grad2) < 1e-6
+
+def test_maximum_minimum_scalar():
+    data1 = mx.symbol.Variable('data')
+    shape = (3, 4)
+    data_tmp1 = np.random.rand(3,4)
+    data_tmp1[:] = 2
+ 
+    arr_data1 = mx.nd.array(data_tmp1)
+    arr_grad1 = mx.nd.empty(shape)
+
+    test =  mx.sym.maximum(data1,3) + mx.sym.maximum(9,data1) + mx.sym.minimum(5,data1) + mx.sym.minimum(data1,4)
+    exe_test = test.bind(mx.cpu(), args=[arr_data1], args_grad=[arr_grad1])
+    exe_test.forward()
+    out = exe_test.outputs[0].asnumpy()
+    npout =  np.maximum(data_tmp1,3) + np.maximum(9,data_tmp1) + np.minimum(5,data_tmp1) + np.minimum(data_tmp1,4)
+    assert reldiff(out, npout) < 1e-6
+
+    out_grad = mx.nd.empty(shape)
+    out_grad[:] = 2
+    exe_test.backward(out_grad)
+    
+    npout_grad = np.ones(shape)
+    npout_grad[:] = 2
+    mask1 = (data_tmp1 > 3).astype('float')
+    mask2 = (9 > data_tmp1).astype('float')
+    mask3 = (5 < data_tmp1).astype('float')
+    mask4 = (data_tmp1 < 4).astype('float')
+    npout_grad1 = npout_grad * mask1 + (npout_grad - npout_grad * mask2) + (npout_grad - npout_grad * mask3) + npout_grad * mask4
+    
+    assert reldiff(arr_grad1.asnumpy(), npout_grad1) < 1e-6
+
 def test_abs():
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -568,6 +636,8 @@ if __name__ == '__main__':
     test_pow_fn()
     test_embedding()
     test_rsqrt_cos_sin()
+    test_maximum_minimum()
+    test_maximum_minimum_scalar()
     test_abs()
     test_round_ceil_floor()
     test_deconvolution()
