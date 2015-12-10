@@ -192,6 +192,31 @@ struct power {
   }
 };
 
+/*! \brief used for generate element of maximum */
+struct maximum {
+  MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
+    return a > b ? a : b;
+  }
+};
+
+struct maximum_grad {
+  MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
+    return a > b ? 1 : 0;
+  }
+};
+
+/*! \brief used for generate element of minimum */
+struct minimum {
+  MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
+    return a < b ? a : b;
+  }
+};
+struct minimum_grad  {
+  MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
+    return a < b ? 1 : 0;
+  }
+};
+
 /*!\ \brief used for generate element sqrt */
 struct square_root {
   MSHADOW_XINLINE static real_t Map(real_t a) {

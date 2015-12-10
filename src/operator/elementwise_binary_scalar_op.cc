@@ -42,6 +42,14 @@ MXNET_REGISTER_OP_PROPERTY(_PowerScalar, ElementwiseBinaryScalarOpProp<mshadow_o
 .describe("Perform an elementwise power.")
 .add_argument("array", "Symbol", "Input array operand to the operation.")
 .add_arguments(ScalarOpParam::__FIELDS__());
+MXNET_REGISTER_OP_PROPERTY(_MaximumScalar, ElementwiseBinaryScalarOpProp<mshadow_op::maximum>)
+.describe("Perform an elementwise maximum.")
+.add_argument("array", "Symbol", "Input array operand to the operation.")
+.add_arguments(ScalarOpParam::__FIELDS__());
+MXNET_REGISTER_OP_PROPERTY(_MinimumScalar, ElementwiseBinaryScalarOpProp<mshadow_op::minimum>)
+.describe("Perform an elementwise minimum.")
+.add_argument("array", "Symbol", "Input array operand to the operation.")
+.add_arguments(ScalarOpParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
