@@ -6,3 +6,6 @@ mlp: ./mlp.cpp
 
 use_ndarray: ./use_ndarray.cpp
 	g++ -std=c++0x $(CFLAGS) $(LDFLAGS) -o $@ $^
+
+lint:
+	python2 ../../dmlc-core/scripts/lint.py mxnet "cpp" ./
