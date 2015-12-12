@@ -435,7 +435,7 @@ immutable ArrayDataBatch <: AbstractDataBatch
   idx :: UnitRange{Int}
 end
 function Base.next(provider :: ArrayDataProvider, state :: ArrayDataProviderState)
-  idx = state.curr_idx:min(state.curr_idx+provider.batch_size-1, provider.sample_count)
+  idx = state.curr_idx:Base.min(state.curr_idx+provider.batch_size-1, provider.sample_count)
   return (ArrayDataBatch(idx), ArrayDataProviderState(idx.stop+1))
 end
 

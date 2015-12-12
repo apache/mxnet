@@ -43,7 +43,7 @@ function _split_inputs(batch_size :: Int, n_split :: Int)
   @assert(batch_size >= n_split)
   per_split = floor(Int, batch_size / n_split)
   counts    = Base.zeros(Int, n_split)+per_split
-  extra     = batch_size - sum(counts)
+  extra     = batch_size - Base.sum(counts)
   counts[1:extra] += 1
 
   cum = [0, cumsum(counts)...]
