@@ -24,7 +24,7 @@ namespace op {
 namespace activation {
 enum ActivationOpInputs {kData};
 enum ActivationOpOutputs {kOut};
-enum ActivationOpType {kReLU, kSigmoid, kTanh, kSoftReLU};
+enum ActivationOpType {kReLU, kSigmoid, kTanh, kSoftReLU, kSoftmax};
 }  // activation
 
 struct ActivationParam : public dmlc::Parameter<ActivationParam> {
@@ -36,6 +36,7 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
     .add_enum("sigmoid", activation::kSigmoid)
     .add_enum("tanh", activation::kTanh)
     .add_enum("softrelu", activation::kSoftReLU)
+    .add_enum("softmax", activation::kSoftmax)
     .describe("Activation function to be applied.");
   }
 };
@@ -139,7 +140,11 @@ class ActivationProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
 #if MXNET_USE_CUDNN == 1
-    return {out_grad[activation::kOut], out_data[activation::kOut], in_data[activation::kData]};
+    if (param_.act_type == activation::kSoftmax) {
+      return {out_grad[activation::kOut], out_data[activation::kOut]};
+    } else {
+      return {out_grad[activation::kOut], out_data[activation::kOut], in_data[activation::kData]};
+    }
 #else
     return {out_grad[activation::kOut], out_data[activation::kOut]};
 #endif  // MXNET_USE_CUDNN

@@ -29,6 +29,8 @@ class CuDNNActivationOp : public Operator {
       case activation::kTanh:
         mode_ = CUDNN_ACTIVATION_TANH;
         break;
+      case activation::kSoftmax:
+        break;
       default:
         LOG(FATAL) << "Not implmented";
         break;
@@ -51,14 +53,17 @@ class CuDNNActivationOp : public Operator {
     Stream<gpu> *s = ctx.get_stream<gpu>();
     Tensor<gpu, 4> data;
     Tensor<gpu, 4> out;
+    cudnnSoftmaxMode_t softmax_mode;
     if (in_data[activation::kData].ndim() == 2) {
       Shape<4> dshape = Shape4(in_data[activation::kData].shape_[0],
                                in_data[activation::kData].shape_[1], 1, 1);
       data = in_data[activation::kData].get_with_shape<gpu, 4, real_t>(dshape, s);
       out = out_data[activation::kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
+      softmax_mode = CUDNN_SOFTMAX_MODE_INSTANCE;
     } else {
       data = in_data[activation::kData].get<gpu, 4, real_t>(s);
       out = out_data[activation::kOut].get<gpu, 4, real_t>(s);
+      softmax_mode = CUDNN_SOFTMAX_MODE_CHANNEL;
     }
     float alpha = 1.0f;
     float beta = 0.0f;
@@ -74,14 +79,26 @@ class CuDNNActivationOp : public Operator {
                                           data.shape_[2],
                                           data.shape_[3]), CUDNN_STATUS_SUCCESS);
     }
-    CHECK_EQ(cudnnActivationForward(s->dnn_handle_,
-                                    mode_,
-                                    &alpha,
-                                    shape_desc_,
-                                    data.dptr_,
-                                    &beta,
-                                    shape_desc_,
-                                    out.dptr_), CUDNN_STATUS_SUCCESS);
+    if (param_.act_type == activation::kSoftmax) {
+      CHECK_EQ(cudnnSoftmaxForward(s->dnn_handle_,
+                                   CUDNN_SOFTMAX_ACCURATE,
+                                   softmax_mode,
+                                   &alpha,
+                                   shape_desc_,
+                                   data.dptr_,
+                                   &beta,
+                                   shape_desc_,
+                                   out.dptr_), CUDNN_STATUS_SUCCESS);
+    } else {
+      CHECK_EQ(cudnnActivationForward(s->dnn_handle_,
+                                      mode_,
+                                      &alpha,
+                                      shape_desc_,
+                                      data.dptr_,
+                                      &beta,
+                                      shape_desc_,
+                                      out.dptr_), CUDNN_STATUS_SUCCESS);
+    }
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -94,7 +111,9 @@ class CuDNNActivationOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_data.size(), 1);
+    if (param_.act_type != activation::kSoftmax) {
+      CHECK_EQ(in_data.size(), 1);
+    }
     CHECK_EQ(out_data.size(), 1);
     CHECK_EQ(req.size(), 1);
     CHECK_EQ(in_grad.size(), 1);
@@ -105,32 +124,53 @@ class CuDNNActivationOp : public Operator {
     Tensor<gpu, 4> data;
     Tensor<gpu, 4> output_data;
     Tensor<gpu, 4> input_grad;
-    if (in_data[activation::kData].ndim() == 2) {
-      Shape<4> dshape = Shape4(in_data[activation::kData].shape_[0],
-                               in_data[activation::kData].shape_[1], 1, 1);
-      data = in_data[activation::kData].get_with_shape<gpu, 4, real_t>(dshape, s);
+    cudnnSoftmaxMode_t softmax_mode;
+    if (in_grad[activation::kData].ndim() == 2) {
+      Shape<4> dshape = Shape4(in_grad[activation::kData].shape_[0],
+                               in_grad[activation::kData].shape_[1], 1, 1);
+      if (param_.act_type != activation::kSoftmax) {
+        data = in_data[activation::kData].get_with_shape<gpu, 4, real_t>(dshape, s);
+      }
       grad = out_grad[activation::kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
       output_data = out_data[activation::kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
       input_grad = in_grad[activation::kData].get_with_shape<gpu, 4, real_t>(dshape, s);
+      softmax_mode = CUDNN_SOFTMAX_MODE_INSTANCE;
     } else {
-      data = in_data[activation::kData].get<gpu, 4, real_t>(s);
+      if (param_.act_type != activation::kSoftmax) {
+        data = in_data[activation::kData].get<gpu, 4, real_t>(s);
+      }
       output_data = out_data[activation::kOut].get<gpu, 4, real_t>(s);
       grad = out_grad[activation::kOut].get<gpu, 4, real_t>(s);
       input_grad = in_grad[activation::kData].get<gpu, 4, real_t>(s);
+      softmax_mode = CUDNN_SOFTMAX_MODE_CHANNEL;
     }
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
-    CHECK_EQ(cudnnActivationBackward(s->dnn_handle_,
-                                     mode_,
-                                     &alpha,
-                                     shape_desc_,
-                                     output_data.dptr_,
-                                     shape_desc_,
-                                     grad.dptr_,
-                                     shape_desc_,
-                                     data.dptr_,
-                                     &beta,
-                                     shape_desc_,
-                                     input_grad.dptr_), CUDNN_STATUS_SUCCESS);
+    if (param_.act_type == activation::kSoftmax) {
+      CHECK_EQ(cudnnSoftmaxBackward(s->dnn_handle_,
+                                    CUDNN_SOFTMAX_ACCURATE,
+                                    softmax_mode,
+                                    &alpha,
+                                    shape_desc_,
+                                    output_data.dptr_,
+                                    shape_desc_,
+                                    grad.dptr_,
+                                    &beta,
+                                    shape_desc_,
+                                    input_grad.dptr_), CUDNN_STATUS_SUCCESS);
+    } else {
+      CHECK_EQ(cudnnActivationBackward(s->dnn_handle_,
+                                       mode_,
+                                       &alpha,
+                                       shape_desc_,
+                                       output_data.dptr_,
+                                       shape_desc_,
+                                       grad.dptr_,
+                                       shape_desc_,
+                                       data.dptr_,
+                                       &beta,
+                                       shape_desc_,
+                                       input_grad.dptr_), CUDNN_STATUS_SUCCESS);
+    }
   }
 
  private:
