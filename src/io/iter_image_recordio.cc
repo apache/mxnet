@@ -245,19 +245,30 @@ ParseNext(std::vector<InstVector> *out_vec) {
       cv::Mat res;
       rec.Load(blob.dptr, blob.size);
       cv::Mat buf(1, rec.content_size, CV_8U, rec.content);
-      res = cv::imdecode(buf, 1);
+      // -1 to keep the number of channel of the encoded image, and not force gray or color.
+      res = cv::imdecode(buf, -1);
+      int n_channels = res.channels();
       res = augmenters_[tid]->Process(res, prnds_[tid]);
       out.Push(static_cast<unsigned>(rec.image_index()),
-               mshadow::Shape3(3, res.rows, res.cols),
+               mshadow::Shape3(n_channels, res.rows, res.cols),
                mshadow::Shape1(param_.label_width));
 
       mshadow::Tensor<cpu, 3> data = out.data().Back();
-      for (int i = 0; i < res.rows; ++i) {
-        for (int j = 0; j < res.cols; ++j) {
-          cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
-          data[0][i][j] = bgr[2];
-          data[1][i][j] = bgr[1];
-          data[2][i][j] = bgr[0];
+      // Substract mean value on each channel.
+      if (n_channels == 3) {
+        for (int i = 0; i < res.rows; ++i) {
+          for (int j = 0; j < res.cols; ++j) {
+            cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
+            data[0][i][j] = bgr[2];
+            data[1][i][j] = bgr[1];
+            data[2][i][j] = bgr[0];
+          }
+        }
+      } else {
+        for (int i = 0; i < res.rows; ++i) {
+          for (int j = 0; j < res.cols; ++j) {
+            data[0][i][j] = res.at<uint8_t>(i, j);
+          }
         }
       }
       mshadow::Tensor<cpu, 1> label = out.label().Back();
