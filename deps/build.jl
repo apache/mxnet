@@ -31,8 +31,8 @@ if !libmxnet_detected
   #--------------------------------------------------------------------------------
   # Install dependencies, blas
   @linux_only begin
-    blas = library_dependency("blas", aliases=["libblas","libblas.so.3"])
-    provides(AptGet, "libblas-dev", blas)
+    blas = library_dependency("cblas", aliases=["libcblas"])
+    provides(AptGet, "libatlas-base-dev", blas)
     provides(Pacman, "blas", blas)
     provides(Yum, "blas-devel", blas)
 
