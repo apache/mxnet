@@ -25,6 +25,7 @@ int main(int argc, char *argv[]) {
   if (argc < 4) {
     printf("Usage: <image.lst> <image_root_dir> <output.rec> [additional parameters in form key=value]\n"\
            "Possible additional parameters:\n"\
+           "\tcolor=USE_COLOR[default=1] Use color (1) or gray image (0)\n"\
            "\tresize=newsize resize the shorter edge of image to the newsize, original images will be packed by default\n"\
            "\tlabel_width=WIDTH[default=1] specify the label_width in the list, by default set to 1\n"\
            "\tnsplit=NSPLIT[default=1] used for part generation, logically split the image.list to NSPLIT parts by position\n"\
@@ -39,6 +40,7 @@ int main(int argc, char *argv[]) {
   int partid = 0;
   int center_crop = 0;
   int quality = 80;
+  int color_mode = CV_LOAD_IMAGE_COLOR;
   for (int i = 4; i < argc; ++i) {
     char key[128], val[128];
     if (sscanf(argv[i], "%[^=]=%s", key, val) == 2) {
@@ -48,6 +50,7 @@ int main(int argc, char *argv[]) {
       if (!strcmp(key, "part")) partid = atoi(val);
       if (!strcmp(key, "center_crop")) center_crop = atoi(val);
       if (!strcmp(key, "quality")) quality = atoi(val);
+      if (!strcmp(key, "color")) color_mode = atoi(val);
     }
   }
   if (new_size > 0) {
@@ -57,6 +60,9 @@ int main(int argc, char *argv[]) {
   }
   if (center_crop) {
     LOG(INFO) << "Center cropping to square";
+  }
+  if (color_mode == 0) {
+    LOG(INFO) << "Use gray images";
   }
   
   using namespace dmlc;
@@ -119,7 +125,7 @@ int main(int argc, char *argv[]) {
     }
     delete fi;
     if (new_size > 0) {
-      cv::Mat img = cv::imdecode(decode_buf, CV_LOAD_IMAGE_COLOR);
+      cv::Mat img = cv::imdecode(decode_buf, color_mode);
       CHECK(img.data != NULL) << "OpenCV decode fail:" << path;
       if (center_crop) {
         if (img.rows > img.cols) {
