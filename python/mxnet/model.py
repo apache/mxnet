@@ -124,7 +124,9 @@ def _create_kvstore(kvstore, num_device, arg_params):
         Model parameter, dict of name to NDArray of net's weights.
     """
 
-    if isinstance(kvstore, kvs.KVStore):
+    if kvstore is None:
+        kv = None
+    elif isinstance(kvstore, kvs.KVStore):
         kv = kvstore
     elif isinstance(kvstore, str):
         # create kvstore using the string type
@@ -142,7 +144,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
                 logging.info('Auto-select kvstore type = %s', kvstore)
             kv = kvs.create(kvstore)
     else:
-        raise TypeError('kvstore must be either KVStore or str')
+        raise TypeError('kvstore must be KVStore, str or None')
 
     # detect whether or not update weight on kvstore
     update_on_kvstore = True

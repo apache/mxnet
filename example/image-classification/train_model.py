@@ -3,15 +3,8 @@ import mxnet as mx
 import logging
 
 def fit(args, network, data_loader):
-    # devices
-    devs = mx.cpu() if args.gpus is None else [
-        mx.gpu(int(i)) for i in args.gpus.split(',')]
-
     # kvstore
-    kv_type = args.kv_store
-    if 'local' in kv_type and len(devs) == 1:
-        kv_type = None
-    kv = mx.kvstore.create(kv_type)
+    kv = mx.kvstore.create(args.kv_store)
 
     # logging
     head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
@@ -36,6 +29,8 @@ def fit(args, network, data_loader):
     (train, val) = data_loader(args, kv)
 
     # train
+    devs = mx.cpu() if args.gpus is None else [
+        mx.gpu(int(i)) for i in args.gpus.split(',')]
 
     epoch_size = args.num_examples / args.batch_size
 
@@ -50,6 +45,11 @@ def fit(args, network, data_loader):
 
     if 'clip_gradient' in args and args.clip_gradient is not None:
         model_args['clip_gradient'] = args.clip_gradient
+
+    # disable kvstore for single device
+    if 'local' in kv.type and (
+            args.gpus is None or len(args.gpus.split(',')) is 1):
+        kv = None
 
     model = mx.model.FeedForward(
         ctx                = devs,
