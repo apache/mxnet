@@ -3,8 +3,15 @@ import mxnet as mx
 import logging
 
 def fit(args, network, data_loader):
+    # devices
+    devs = mx.cpu() if args.gpus is None else [
+        mx.gpu(int(i)) for i in args.gpus.split(',')]
+
     # kvstore
-    kv = mx.kvstore.create(args.kv_store)
+    kv_type = args.kv_store
+    if 'local' in kv_type and len(devs) == 1:
+        kv_type = None
+    kv = mx.kvstore.create(kv_type)
 
     # logging
     head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
@@ -29,8 +36,6 @@ def fit(args, network, data_loader):
     (train, val) = data_loader(args, kv)
 
     # train
-    devs = mx.cpu() if args.gpus is None else [
-        mx.gpu(int(i)) for i in args.gpus.split(',')]
 
     epoch_size = args.num_examples / args.batch_size
 
