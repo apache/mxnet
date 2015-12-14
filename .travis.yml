@@ -28,7 +28,7 @@ addons:
 before_install:
   - export TRAVIS=test/travis
   - source $TRAVIS/setup_env.sh
-  - source $TRAVIS/build_mxnet.sh
+    #- source $TRAVIS/build_mxnet.sh
 
 notifications:
   email: false
