@@ -19,9 +19,9 @@ addons:
       - git
       - libcurl4-openssl-dev
       - unzip
-        #- libatlas-base-dev
-        #- libatlas-dev
-        #- libopencv-dev
+      - libatlas-base-dev
+      - libatlas-dev
+      - libopencv-dev
       - gcc-4.8
       - g++-4.8
 
