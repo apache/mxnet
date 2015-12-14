@@ -60,12 +60,6 @@ if !libmxnet_detected
           `cp make/config.mk config.mk`
           @osx_only `cp make/osx.mk config.mk`
           `sed -i -s 's/USE_OPENCV = 1/USE_OPENCV = 0/' config.mk`
-          if haskey(ENV, "MXNET_CC")
-            `sed -i -s 's/export CC = gcc/export CC = $(ENV["MXNET_CC"])/g' config.mk`
-          end
-          if haskey(ENV, "MXNET_CXX")
-            `sed -i -s 's/export CXX = g++/export CC = $(ENV["MXNET_CXX"])/g' config.mk`
-          end
           `make`
           `cp lib/libmxnet.so $_libdir`
         end)

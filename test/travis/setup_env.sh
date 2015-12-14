@@ -12,6 +12,8 @@ if [ ${TRAVIS_OS_NAME} == "osx" ]; then
 fi
 
 if [ ${TRAVIS_OS_NAME} == "linux" ]; then
-  export MXNET_CC=gcc-4.8
-  export MXNET_CXX=g++-4.8
+  mkdir shadow_bin
+  ln -s `which gcc-4.8` shadow_bin/gcc
+  ln -s `which g++-4.8` shadow_bin/g++
+  export PATH=$PWD/shadow_bin:$PATH
 fi
