@@ -3,7 +3,7 @@ FCN-xs EXAMPLES
 This folder contains the examples of image segmentation in MXNet.
 
 ## Sample results
-![fcn-xs pasval_voc result](C:\Users\Administrator\Desktop\fcn\fcn-xs_pascal.jpg)
+![fcn-xs pasval_voc result](https://github.com/tornadomeet/mxnet/blob/seg/example/fcn-xs/fcn-xs_pascal.jpg)
 
 ## How to train fcn-xs in mxnet
 #### step1: get the fully convulutional style of vgg16 model  
