@@ -371,7 +371,7 @@ What we usually observe is that it is usually helpful to write parameter updates
 while the gradient calculations can be done more effectively in symbolic programs.
 
 The mix of programs is actually happening in existing symbolic libraries, because python itself is imperative.
-For example, the following programs mixed the symbolic part together with numpy(which is imperative).
+For example, the following program mixes the symbolic part together with numpy(which is imperative).
 ```python
 A = Variable('A')
 B = Variable('B')

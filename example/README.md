@@ -25,7 +25,7 @@ IPython Notebooks
 -----------------
 * [Predict with Pre-trained model](https://github.com/dmlc/mxnet/blob/master/example/notebooks/predict-with-pretrained-model.ipynb) - Notebook on how to predict with pretrained model.
 * [composite symbol](notebooks/composite_symbol.ipynb) - A demo of how to composite a symbolic Inception-BatchNorm Network
-* [cifar-10 recipe](notebooks/cifar-recipe.ipynb) - A step by step demo of how to use MXNet
+* [cifar-10 recipe](notebooks/cifar10-recipe.ipynb) - A step by step demo of how to use MXNet
 * [cifar-100](notebooks/cifar-100.ipynb) - A demo of how to train a 75.68% accuracy CIFAR-100 model
 * [simple bind](notebooks/simple_bind.ipynb) - A demo of low level training API.
 
