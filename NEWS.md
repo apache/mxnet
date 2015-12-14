@@ -1,4 +1,9 @@
-$ v0.0.6 (2015.12.02)
+# v0.0.7 (2015.12.14)
+
+* Fix compatability with Julia v0.4.2 (@BigEpsilon)
+* Metrics in epoch callbacks (@kasiabozek)
+
+# v0.0.6 (2015.12.02)
 
 * Variants of Xaiver initializers (@vchuravy)
 * More arithmetic operators on symbolic nodes

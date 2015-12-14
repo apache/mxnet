@@ -444,6 +444,17 @@ Public APIs
 
 
 
+.. function:: ceil(...)
+
+   Take ceil value of the src
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
+
 .. function:: choose_element_0index(...)
 
    Choose one element from each line(row for python, column for R/Julia) in lhs according to index indicated by rhs. This function assume rhs uses 0-based index.
@@ -478,6 +489,17 @@ Public APIs
 
 
 
+.. function:: cos(...)
+
+   Take cos of the src
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
+
 .. function:: dot(...)
 
    Calcuate 2D matrix multiplication
@@ -504,6 +526,17 @@ Public APIs
 
 
 
+.. function:: floor(...)
+
+   Take floor value of the src
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
+
 .. function:: log(...)
 
    Take log of the src
@@ -515,9 +548,75 @@ Public APIs
 
 
 
+.. function:: max(...)
+
+   Take max of the src.The result will be ndarray of shape (1,) on the same device.
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
+
+.. function:: min(...)
+
+   Take min of the src.The result will be ndarray of shape (1,) on the same device.
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
+
 .. function:: norm(...)
 
    Take L2 norm of the src.The result will be ndarray of shape (1,) on the same device.
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
+
+.. function:: round(...)
+
+   Take round value of the src
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
+
+.. function:: rsqrt(...)
+
+   Take rsqrt of the src
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
+
+.. function:: sign(...)
+
+   Take sign value of the src
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
+
+.. function:: sin(...)
+
+   Take sin of the src
    
    :param src: Source input to the function
    :type src: NDArray
@@ -540,6 +639,17 @@ Public APIs
 .. function:: square(...)
 
    Take square of the src
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
+
+.. function:: sum(...)
+
+   Take sum of the src.The result will be ndarray of shape (1,) on the same device.
    
    :param src: Source input to the function
    :type src: NDArray

@@ -187,7 +187,7 @@ Public APIs
    
    
    :param act_type: Activation function to be applied.
-   :type act_type: {'relu', 'sigmoid', 'tanh'}, required
+   :type act_type: {'relu', 'sigmoid', 'softrelu', 'tanh'}, required
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -207,11 +207,15 @@ Public APIs
    
    
    :param eps: Epsilon to prevent div 0
-   :type eps: float, optional, default=1e-10
+   :type eps: float, optional, default=0.001
    
    
    :param momentum: Momentum for moving average
    :type momentum: float, optional, default=0.9
+   
+   
+   :param fix_gamma: Fix gamma while training
+   :type fix_gamma: boolean, optional, default=True
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -478,6 +482,34 @@ Public APIs
 
 
 
+.. function:: IdentityAttachKLSparseReg(...)
+
+   Apply a sparse regularization to the output a sigmoid activation function.
+   
+   :param data: Input data.
+   :type data: SymbolicNode
+   
+   
+   :param sparseness_target: The sparseness target
+   :type sparseness_target: float, optional, default=0.1
+   
+   
+   :param penalty: The tradeoff parameter for the sparseness penalty
+   :type penalty: float, optional, default=0.001
+   
+   
+   :param momentum: The momentum for running average
+   :type momentum: float, optional, default=0.9
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
 .. function:: LRN(...)
 
    Apply convolution to input then add a bias.
@@ -519,10 +551,10 @@ Public APIs
    
    
    :param act_type: Activation function to be applied.
-   :type act_type: {'leaky', 'prelu', 'rrelu'},optional, default='leaky'
+   :type act_type: {'elu', 'leaky', 'prelu', 'rrelu'},optional, default='leaky'
    
    
-   :param slope: Init slope for the activation. (For leaky only)
+   :param slope: Init slope for the activation. (For leaky and elu only)
    :type slope: float, optional, default=0.25
    
    
@@ -553,6 +585,10 @@ Public APIs
    :param label: Input label to function.
    :type label: SymbolicNode
    
+   
+   :param grad_scale: Scale the gradient by a float factor
+   :type grad_scale: float, optional, default=1
+   
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
@@ -573,6 +609,34 @@ Public APIs
    
    :param label: Input label to function.
    :type label: SymbolicNode
+   
+   
+   :param grad_scale: Scale the gradient by a float factor
+   :type grad_scale: float, optional, default=1
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: MAERegressionOutput(...)
+
+   Use mean absolute error regression for final output, this is used on final output of a net.
+   
+   :param data: Input data to function.
+   :type data: SymbolicNode
+   
+   
+   :param label: Input label to function.
+   :type label: SymbolicNode
+   
+   
+   :param grad_scale: Scale the gradient by a float factor
+   :type grad_scale: float, optional, default=1
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -623,7 +687,7 @@ Public APIs
    :type data: SymbolicNode
    
    
-   :param target_shape: Target new shape
+   :param target_shape: Target new shape. One and only one dim can be 0, in which case it will be infered from the rest of dims
    :type target_shape: Shape(tuple), required
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
@@ -723,9 +787,71 @@ Public APIs
 
 
 
+.. function:: UpSampling(...)
+
+   Perform nearest neighboor/bilinear up sampling to inputs
+   
+   This function support variable length positional :class:`SymbolicNode` inputs.
+   
+   :param scale: Up sampling scale
+   :type scale: int (non-negative), required
+   
+   
+   :param num_filter: Input filter. Only used by nearest sample_type.
+   :type num_filter: int (non-negative), optional, default=0
+   
+   
+   :param sample_type: upsampling method
+   :type sample_type: {'bilinear', 'nearest'}, required
+   
+   
+   :param num_args: Number of inputs to be upsampled. For nearest neighbor upsampling, this can be 1-N; the size of output will be(scale*h_0,scale*w_0) and all other inputs will be upsampled to thesame size. For bilinear upsampling this must be 2; 1 input and 1 weight.
+   :type num_args: int, required
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
 .. function:: abs(...)
 
    Take absolute value of the src
+   
+   :param src: Source symbolic input to the function
+   :type src: SymbolicNode
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: ceil(...)
+
+   Take ceil value of the src
+   
+   :param src: Source symbolic input to the function
+   :type src: SymbolicNode
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: cos(...)
+
+   Take cos of the src
    
    :param src: Source symbolic input to the function
    :type src: SymbolicNode
@@ -755,9 +881,89 @@ Public APIs
 
 
 
+.. function:: floor(...)
+
+   Take floor value of the src
+   
+   :param src: Source symbolic input to the function
+   :type src: SymbolicNode
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
 .. function:: log(...)
 
    Take log of the src
+   
+   :param src: Source symbolic input to the function
+   :type src: SymbolicNode
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: round(...)
+
+   Take round value of the src
+   
+   :param src: Source symbolic input to the function
+   :type src: SymbolicNode
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: rsqrt(...)
+
+   Take rsqrt of the src
+   
+   :param src: Source symbolic input to the function
+   :type src: SymbolicNode
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: sign(...)
+
+   Take sign value of the src
+   
+   :param src: Source symbolic input to the function
+   :type src: SymbolicNode
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: sin(...)
+
+   Take sin of the src
    
    :param src: Source symbolic input to the function
    :type src: SymbolicNode
@@ -809,6 +1015,19 @@ Internal APIs
 
    Document and signatures for internal API functions might be incomplete.
 
+.. function:: _CrossDeviceCopy(...)
+
+   Special op to copy data cross device
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
 .. function:: _Div(...)
 
    Perform an elementwise div.
@@ -825,6 +1044,80 @@ Internal APIs
 .. function:: _DivScalar(...)
 
    Perform an elementwise div.
+   
+   :param array: Input array operand to the operation.
+   :type array: SymbolicNode
+   
+   
+   :param scalar: scalar value.
+   :type scalar: float, required
+   
+   
+   :param scalar_on_left: scalar operand is on the left.
+   :type scalar_on_left: boolean, optional, default=False
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: _Maximum(...)
+
+   Perform an elementwise power.
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: _MaximumScalar(...)
+
+   Perform an elementwise maximum.
+   
+   :param array: Input array operand to the operation.
+   :type array: SymbolicNode
+   
+   
+   :param scalar: scalar value.
+   :type scalar: float, required
+   
+   
+   :param scalar_on_left: scalar operand is on the left.
+   :type scalar_on_left: boolean, optional, default=False
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: _Minimum(...)
+
+   Perform an elementwise power.
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: _MinimumScalar(...)
+
+   Perform an elementwise minimum.
    
    :param array: Input array operand to the operation.
    :type array: SymbolicNode

@@ -80,6 +80,15 @@ Common interfaces
 
 
 
+.. class:: LearningRate.Inv
+
+   :math:`\eta_t = \eta_0 * (1 + \gamma * t)^(-power)`.
+   Here :math:`t` is the epoch count, or the iteration count if ``decay_on_iteration``
+   is set to true.
+
+
+
+
 .. function:: get_momentum(scheduler, state)
 
    :param AbstractMomentumScheduler scheduler: the momentum scheduler.
