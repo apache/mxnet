@@ -143,6 +143,37 @@ val_iter = mx.io.NDArrayIter(val_data, val_label, batch_size=batch_size)
 model.fit(X=train_data, y=train_label)
 ```
 
+## Note on Performance
+
+The following factors may significant affect the performance:
+
+- Use a fast backend. A fast BLAS library, e.g. openblas, altas,
+and mkl, is necessary if only using CPU. While for Nvidia GPUs, we strongly
+recommend to use CUDNN.
+- Three important things for the input data:
+  - data format. If you are using the `rec` format, then everything should be
+    fine.
+  - decoding. In default MXNet uses 4 CPU threads for decoding the images, which
+    are often able to decode over 1k images per second. You
+    may increase the number of threads if either you are using a low-end CPU or
+    you GPUs are very powerful.
+  - place to store the data. Any local or distributed filesystem (HDFS, Amazon
+    S3) should be fine. There may be a problem if multiple machines read the
+    data from the network shared filesystem (NFS) at the same time.
+- Use a large batch size. We often choose the largest one which can fit into
+  the GPU memory. But a too large value may slow down the convergence. For
+  example, the safe batch size for CIFAR 10 is around 200, while for ImageNet
+  1K, the batch size can go beyond 1K.
+- Choose the proper `kvstore` if using more than one GPU. (See
+  [doc/developer-guide/multi_node.md](../../doc/developer-guide/multi_node.md)
+  for more information)
+  - For a single machine, often the default `local` is good enough. But you may want
+  to use `local_allreduce_device` for models with size >> 100MB such as AlexNet
+  and VGG. But also note that `local_allreduce_device` takes more GPU memory than
+  others.
+  - For multiple machines, we recommend to try `dist_sync` first. But if the
+  model size is quite large or you use a large number of machines, you may want to use `dist_async`.
+
 ## Results
 
 - Machines
