@@ -12,6 +12,6 @@ if [ ${TRAVIS_OS_NAME} == "osx" ]; then
 fi
 
 if [ ${TRAVIS_OS_NAME} == "linux" ]; then
-  alias gcc='gcc-4.8'
-  alias g++='g++-4.8'
+  export MXNET_CC=gcc-4.8
+  export MXNET_CXX=g++-4.8
 fi
