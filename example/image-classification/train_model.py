@@ -46,6 +46,11 @@ def fit(args, network, data_loader):
     if 'clip_gradient' in args and args.clip_gradient is not None:
         model_args['clip_gradient'] = args.clip_gradient
 
+    # disable kvstore for single device
+    if 'local' in kv.type and (
+            args.gpus is None or len(args.gpus.split(',')) is 1):
+        kv = None
+
     model = mx.model.FeedForward(
         ctx                = devs,
         symbol             = network,
