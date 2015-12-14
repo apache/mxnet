@@ -19,7 +19,8 @@ Examples Codes
 * [Recurrent Neural Net](https://github.com/dmlc/mxnet/tree/master/example/rnn) - LSTM and RNN for language modeling and character level generation.
 * [Autoencoder](https://github.com/dmlc/mxnet/tree/master/example/autoencoder) - Auto encoder training.
 * [Numpy Operator Customization](https://github.com/dmlc/mxnet/tree/master/example/numpy-ops) - Example on quick customize new ops with numpy.
-* [Adversary Sample Generation](adversary) - Find adversary sample by using fast sign method
+* [Adversary Sample Generation](adversary) - Find adversary sample by using fast sign method.
+* [Neural Art](neural-style) -  Generate artistic style images.
 
 IPython Notebooks
 -----------------
