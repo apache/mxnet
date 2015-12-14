@@ -52,7 +52,8 @@ class Monitor(object):
             the Executor (returned by symbol.bind) to install to.
         """
         exe.set_monitor_callback(self.stat_helper)
-        self.exes.append(exe)
+        #self.exes.append(exe)
+	self.exes = [exe]
 
     def tic(self):
         """start collecting stats for current batch.

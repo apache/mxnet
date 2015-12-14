@@ -28,6 +28,7 @@ enum SoftmaxOutputOpOutputs {kOut};
 struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
   float grad_scale;
   bool multi_output;
+  float ignore_label;
   DMLC_DECLARE_PARAMETER(SoftmaxOutputParam) {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
     .describe("Scale the gradient by a float factor");
@@ -35,6 +36,9 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
     .describe("If set to true, for a (n,k,x_1,..,x_n) dimensional"
       "input tensor, softmax will generate n*x_1*...*x_n output, each"
       "has k classes");
+    DMLC_DECLARE_FIELD(ignore_label).set_default(-1.0f)
+    .describe("the ignore_label will not work in backward, and this only"
+      "be used when multi_output=true");
   };
 };
 
@@ -56,7 +60,7 @@ class SoftmaxOutputOp : public Operator {
     if (param_.multi_output) {
       int n = in_data[softmaxout_enum::kData].size(0);
       int k = in_data[softmaxout_enum::kData].size(1);
-      Shape<3> s3 = Shape3(n, k, static_cast<int>(in_data[softmaxout_enum::kData].Size()/n/k));
+      Shape<3> s3 = Shape3(n, k, static_cast<int>(in_data[softmaxout_enum::kData].Size()/n/k));  // 即(n, k, c)
       Tensor<xpu, 3> data = in_data[softmaxout_enum::kData].get_with_shape<xpu, 3, real_t>(s3, s);
       Tensor<xpu, 3> out = out_data[softmaxout_enum::kOut].get_with_shape<xpu, 3, real_t>(s3, s);
       Softmax(out, data);
@@ -88,7 +92,7 @@ class SoftmaxOutputOp : public Operator {
       Tensor<xpu, 2> label = in_data[softmaxout_enum::kLabel].FlatTo2D<xpu, real_t>(s);
       Tensor<xpu, 3> out = out_data[softmaxout_enum::kOut].get_with_shape<xpu, 3, real_t>(s3, s);
       Tensor<xpu, 3> grad = in_grad[softmaxout_enum::kData].get_with_shape<xpu, 3, real_t>(s3, s);
-      SoftmaxGrad(grad, out, label);
+      SoftmaxGrad(grad, out, label, static_cast<real_t>(param_.ignore_label));
       if (param_.grad_scale < 1.0) {
         grad *= param_.grad_scale;
       }
