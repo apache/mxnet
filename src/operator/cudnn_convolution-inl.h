@@ -75,7 +75,6 @@ class CuDNNConvolutionOp : public Operator {
       beta = 1.0f;
       Tensor<gpu, 1> bias = in_data[conv::kBias].get<gpu, 1, real_t>(s);
       CHECK_EQ(cudnnAddTensor(s->dnn_handle_,
-                              CUDNN_ADD_SAME_C,
                               &alpha,
                               bias_desc_,
                               bias.dptr_,
