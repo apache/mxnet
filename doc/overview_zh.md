@@ -1,3 +1,6 @@
+The following is an overview of MXNet in Chinese. For english readers, please
+refer to our [NIPS learnsys paper](http://learningsys.org/papers/LearningSys_2015_paper_1.pdf)
+
 # MXNet设计和实现简介
 
 神经网络本质上是一种语言，我们通过它来表达对应用问题的理解。例如我们用卷积层来表达空间相关性，RNN来表达时间连续性。根据问题的复杂性和信息如何从输入到输出一步步提取，我们将不同大小的层按一定原则连接起来。近年来随着数据的激增和计算能力的大幅提升，神经网络也变得越来越深和大。例如最近几次imagnet竞赛的冠军都使用有数十至百层的网络。对于这一类神经网络我们通常称之为深度学习。从应用的角度而言，对深度学习最重要的是如何方便地表述神经网络，以及如何快速训练得到模型。
@@ -27,8 +30,7 @@
 
 MXNet的系统架构如下图所示：
 
-<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/paper/sys.png
-width=300/>
+<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/paper/sys.png width=300/>
 
 从上到下分别为各种主语言的嵌入，编程接口（矩阵运算，符号表达式，分布式通讯），两种编程模式的统一系统实现，以及各硬件的支持。接下一章我们将介绍编程接口，然后下一章介绍系统实现。之后我们给出一些实验对比结果，以及讨论MXNet的未来。
 
@@ -111,7 +113,7 @@ for (int i = 0; i < max_iter; ++i) {
 
 ### 训练模块
 
-MXNet实现了常用的优化算法来训练模型。用户只需要提供数据数据迭代器和神经网络的Symbol便可。此外，用户可以提供额外的KVStore来进行分布式的训练。例如下面代码使用分布式异步SGD来训练一个模型，其中每个计算节点使用两快GPU。
+MXNet实现了常用的优化算法来训练模型。用户只需要提供数据数据迭代器和神经网络的Symbol便可。此外，用户可以提供额外的KVStore来进行分布式的训练。例如下面代码使用分布式异步SGD来训练一个模型，其中每个计算节点使用两块GPU。
 
 ```python
 import MXNet as mx
@@ -136,8 +138,7 @@ model.fit(
 
 一个已经赋值的符号表达式可以表示成一个计算图。下图是之前定义的多层感知机的部分计算图，包含forward和backward。
 
-<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/paper/graph.png
-width=300/>
+<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/paper/graph.png width=300/>
 
 其中圆表示变量，方框表示操作子，箭头表示数据依赖关系。在执行之前，MXNet会对计算图进行优化，以及为所有变量提前申请空间。
 
