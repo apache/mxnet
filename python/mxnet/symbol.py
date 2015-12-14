@@ -932,3 +932,55 @@ def pow(base, exp):
         return base**exp
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(base)), str(type(exp))))
+
+
+# pylint: disable=no-member
+# pylint: disable=redefined-builtin
+def maximum(left, right):
+    """ maximum left and right
+
+    Parameters
+    ---------
+    left: Symbol or Number
+    right: Symbol or Number
+
+    Returns
+    -------
+    result: Symbol or Number
+    """
+    if isinstance(left, Symbol) and isinstance(right, Symbol):
+        return Symbol._Maximum(left, right)
+    if  isinstance(left, Symbol) and isinstance(right, Number):
+        return Symbol._MaximumScalar(left, scalar=right)
+    if  isinstance(left, Number) and isinstance(right, Symbol):
+        return Symbol._MaximumScalar(right, scalar=left, scalar_on_left=True)
+    if  isinstance(left, Number) and isinstance(right, Number):
+        return left if left > right else right
+    else:
+        raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
+
+# pylint: disable=no-member
+# pylint: disable=redefined-builtin
+def minimum(left, right):
+    """ minimum left and right
+
+    Parameters
+    ---------
+    left: Symbol or Number
+    right: Symbol or Number
+
+    Returns
+    -------
+    result: Symbol or Number
+    """
+    if isinstance(left, Symbol) and isinstance(right, Symbol):
+        return Symbol._Minimum(left, right)
+    if  isinstance(left, Symbol) and isinstance(right, Number):
+        return Symbol._MinimumScalar(left, scalar=right)
+    if  isinstance(left, Number) and isinstance(right, Symbol):
+        return Symbol._MinimumScalar(right, scalar=left, scalar_on_left=True)
+    if  isinstance(left, Number) and isinstance(right, Number):
+        return left if left > right else right
+    else:
+        raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
+

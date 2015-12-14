@@ -37,7 +37,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     DMLC_DECLARE_FIELD(momentum).set_default(0.9f)
     .describe("Momentum for moving average");
     DMLC_DECLARE_FIELD(fix_gamma).set_default(true)
-    .describe("Use fixed gamma");
+    .describe("Fix gamma while training");
   }
 };
 

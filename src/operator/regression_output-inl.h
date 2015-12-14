@@ -20,7 +20,7 @@ namespace op {
 namespace reg_enum {
 enum RegressionOutputOpInputs {kData, kLabel};
 enum RegressionOutputOutputs {kOut};
-enum RegressionOutputType {kLinear, kLogistic};
+enum RegressionOutputType {kLinear, kLogistic, kMAE};
 }  // reg_enum
 
 struct RegressionOutputParam : public dmlc::Parameter<RegressionOutputParam> {
@@ -73,8 +73,8 @@ class RegressionOutputOp : public Operator {
     Tensor<xpu, 2> grad = in_grad[reg_enum::kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> label = in_data[reg_enum::kLabel]
       .get_with_shape<xpu, 2, real_t>(out.shape_, s);
-    Assign(grad, req[reg_enum::kData], F<BackwardOp>(out, reshape(label, grad.shape_))/num_output);
-    grad *= param_.grad_scale;
+    Assign(grad, req[reg_enum::kData], param_.grad_scale/num_output*
+      F<BackwardOp>(out, reshape(label, grad.shape_)));
   }
 
  private:
@@ -139,6 +139,7 @@ class RegressionOutputProp : public OperatorProperty {
     switch (type) {
       case reg_enum::kLinear: return "LinearRegressionOutput";
       case reg_enum::kLogistic: return "LogisticRegressionOutput";
+      case reg_enum::kMAE: return "MAERegressionOutput";
       default: LOG(FATAL) << "unknown type"; return "";
     }
   }

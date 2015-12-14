@@ -50,6 +50,10 @@ typedef void *KVStoreHandle;
 typedef void *RecordIOHandle;
 /*! \brief handle to MXRtc*/
 typedef void *RtcHandle;
+/*! \brief handle to a function that takes param and creates optimizer*/
+typedef void *OptimizerCreator;
+/*! \brief handle to Optimizer*/
+typedef void *OptimizerHandle;
 
 MXNET_EXTERN_C typedef void (*ExcecutorMonitorCallback)(const char*,
                                                         NDArrayHandle);
@@ -1076,4 +1080,22 @@ MXNET_DLL int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
  * \brief Delete a MXRtc object
 */
 MXNET_DLL int MXRtcFree(RtcHandle handle);
+
+MXNET_DLL int MXOptimizerFindCreator(const char *key,
+                                     OptimizerCreator *out);
+
+MXNET_DLL int MXOptimizerCreateOptimizer(OptimizerCreator creator,
+                                         mx_uint num_param,
+                                         const char **keys,
+                                         const char **vals,
+                                         OptimizerHandle *out);
+
+MXNET_DLL int MXOptimizerFree(OptimizerHandle handle);
+
+MXNET_DLL int MXOptimizerUpdate(OptimizerHandle handle,
+                                int index,
+                                NDArrayHandle weight,
+                                NDArrayHandle grad,
+                                mx_float lr);
+
 #endif  // MXNET_C_API_H_
