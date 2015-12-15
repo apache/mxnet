@@ -17,11 +17,6 @@ How to Extrat Feature Map of Certain Layer
 See this [notebook](https://github.com/dmlc/mxnet/blob/master/example/notebooks/predict-with-pretrained-model.ipynb)
 
 
-How to Upgrade MXNet to most Recent Version
--------------------------------------------
-See [Installation Guide](./build.md)
-
-
 What is the relation between MXNet and CXXNet, Minerva, Purine2
 ---------------------------------------------------------------
 MXNet is created in collaboration by authors from the three projects.
