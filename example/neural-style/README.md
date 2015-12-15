@@ -18,9 +18,6 @@ It takes 50 secs for a GTX 980 to generate the above 600x400 image.
 
 ## Note
 
-* There is a bug when using `CUDNN`, one need to set `CUDNN=0` during compiling
-  before the bug is fixed
-
 * The current implementation is based the
   [torch implementation](https://github.com/jcjohnson/neural-style). But we may
   change it dramatically in the near future.
