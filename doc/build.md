@@ -175,13 +175,13 @@ There are several ways to install the package:
 2. Only set the environment variable `PYTHONPATH` to tell python where to find
    the library. For example, assume we cloned `mxnet` on the home directory
    `~`. then we can added the following line in `~/.bashrc`
-   It is recommended for developers who may change the codes. The changes will be immediately reflected once you pulled the code and rebuild the project (no need to call ```setup``` again)
+   It is ***recommended for developers*** who may change the codes. The changes will be immediately reflected once you pulled the code and rebuild the project (no need to call ```setup``` again)
 
     ```bash
     export PYTHONPATH=~/mxnet/python
     ```
 
-3. Install only for the current user, and allow to change the python codes.
+3. Install only for the current user.
 
     ```bash
     cd python; python setup.py develop --user
