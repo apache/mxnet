@@ -88,3 +88,4 @@ List of Contributors
 * [Nan Zhu](https://github.com/CodingCat)
 * [Ye Zhou](https://github.com/zhouye)
 * [Zhang Chen](https://github.com/zhangchen-qinyinghua)
+* [Xianliang Wang](https://github.com/wangxianliang)
