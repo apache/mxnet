@@ -17,9 +17,8 @@ pull request if you can fix the problem.
   - [Building on Windows](#building-on-windows)
   - [Installing pre-built packages on Windows](#installing-pre-built-packages-on-windows)
   - [Customized Building](#customized-building)
-- [Install Language Packages](#install-language-packages)
-  - [Python Package Installation](#python-package-installation)
-  - [R Package Installation](#r-package-installation)
+- [Python Package Installation](#python-package-installation)
+- [R Package Installation](#r-package-installation)
 - [Docker Images](#docker-images)
 
 ## Build the Shared Library
@@ -127,9 +126,8 @@ various distributed filesystem such as HDFS/Amazon S3/...
 - First copy [make/config.mk](../make/config.mk) to the project root, on which
   any local modification will be ignored by git, then modify the according flags.
 
-## Install Language Packages
 
-### Python Package Installation
+## Python Package Installation
 
 The python package is located at [python/mxnet](../python/mxnet). It requires
 `python>=2.7` and `numpy`. To install the latter, if `pip` is available, then
@@ -174,20 +172,19 @@ There are several ways to install the package:
    ```bash
    sudo apt-get install python-setuptools
    ```
-
-2. Install only for the current user, and allow to change the python codes.
-   It is recommended for developers who may change the codes.
-
-    ```bash
-    cd python; python setup.py develop --user
-    ```
-
-3. Only set the environment variable `PYTHONPATH` to tell python where to find
+2. Only set the environment variable `PYTHONPATH` to tell python where to find
    the library. For example, assume we cloned `mxnet` on the home directory
    `~`. then we can added the following line in `~/.bashrc`
+   It is recommended for developers who may change the codes. The changes will be immediately reflected once you pulled the code and rebuild the project (no need to call ```setup``` again)
 
     ```bash
     export PYTHONPATH=~/mxnet/python
+    ```
+
+3. Install only for the current user, and allow to change the python codes.
+
+    ```bash
+    cd python; python setup.py develop --user
     ```
 
 4. Copy the package into the working directory which contains the mxnet
@@ -202,7 +199,7 @@ There are several ways to install the package:
    cp ~/mxnet/lib/libmxnet.so mxnet/
    ```
 
-### R Package Installation
+## R Package Installation
 
 For Windows/Mac users, we provide pre-built binary package using CPU.
 You can install weekly updated package directly in R console:
