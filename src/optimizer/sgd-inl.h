@@ -101,7 +101,6 @@ void call_sgd_update_gpu(RunContext ctx, TBlob weight, const TBlob grad,
 #endif  // MXNET_USE_CUDA
 
 #if DMLC_USE_CXX11
-#include <mxnet/ndarray.h>
 
 class SGDOpt : public Optimizer {
  public:

@@ -17,9 +17,15 @@
 #include "./base.h"
 #include "./resource.h"
 
+#if DMLC_USE_CXX11
+#include <mxnet/ndarray.h>
+#endif
+
 namespace mxnet {
 
+#if !DMLC_USE_CXX11
 class NDArray;
+#endif
 
 class Optimizer {
  public:
