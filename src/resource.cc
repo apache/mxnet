@@ -153,6 +153,7 @@ class ResourceManagerImpl : public ResourceManager {
         Engine::Get()->DeleteVariable(
             [r](RunContext rctx){
               MSHADOW_CATCH_ERROR(r->Release());
+              delete r;
             }, ctx, resource[i].var);
       }
     }
