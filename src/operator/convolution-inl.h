@@ -49,9 +49,8 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     .describe("Number of groups partition. "
               "This option is not supported by CuDNN, you can use SliceChannel to num_group,"
               "apply convolution and concat instead to achieve the same need.");
-    DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 4096)
-    .describe("Tmp workspace for convolution (MB)."
-              "If set to zero the necessary memory is allocated.");
+    DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(128, 4096)
+    .describe("Tmp workspace for convolution (MB)");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
   }
@@ -240,13 +239,18 @@ class ConvolutionOp : public Operator {
     shape_dstunit_ = mshadow::Shape3(param_.num_group,
                                      param_.num_filter / param_.num_group,
                                      oshape[2] * oshape[3]);
-    // param_.workspace is in elements of sizeof(real_t)
-    // if param_.workspace is set to zero the nstep_ equals ishape[0] (batch)
-    nstep_ = std::max(
+    const uint64_t workspace_size = param_.workspace;  // In elements of sizeof(real_t)
+    index_t nstep = std::max(
         std::min(
-          static_cast<index_t>(param_.workspace / (shape_colunit_.Size() + shape_dstunit_.Size())),
+          static_cast<index_t>(workspace_size / (shape_colunit_.Size() + shape_dstunit_.Size())),
           ishape[0]),
         1U);
+    index_t nop = (ishape[0] + nstep - 1) / nstep;
+    nstep_ = (ishape[0] + nop - 1) / nop;
+
+    if (nstep_ == nstep) {
+      nstep_ = std::max(nstep_ - 1, 1U);
+    }
 
     mshadow::Shape<2> scol = mshadow::Shape2(shape_colunit_[0],
                                              shape_colunit_[1] * nstep_);
@@ -254,11 +258,9 @@ class ConvolutionOp : public Operator {
                                              shape_dstunit_[1],
                                              shape_dstunit_[2] * nstep_);
     index_t required_size = scol.Size() + sdst.Size();
-    if (param_.workspace != 0) {
-      CHECK_GE(param_.workspace, required_size)
-        << "\nMinimum workspace size: " << required_size * sizeof(real_t) << " Bytes\n"
-        << "Given: " << param_.workspace * sizeof(real_t) << " Bytes";
-    }
+    CHECK_GE(param_.workspace, required_size)
+      << "\nMinimum workspace size: " << required_size * sizeof(real_t) << " Bytes\n"
+      << "Given: " << param_.workspace * sizeof(real_t) << " Bytes";
     return required_size;
   }
 
