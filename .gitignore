@@ -106,6 +106,10 @@ mxnet-scala/src_managed/
 mxnet-scala/project/boot/
 mxnet-scala/project/plugins/project/
 
+#scala target folders
+scala-package/*/target/
+scala-package/*/*/target/
+
 # IDE specific
 mxnet-scala/.scala_dependencies
 mxnet-scala/.worksheet
