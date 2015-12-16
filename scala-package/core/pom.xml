@@ -18,6 +18,12 @@
         <platform>osx-x86_64</platform>
       </properties>
     </profile>
+    <profile>
+      <id>Linux</id>
+      <properties>
+        <platform>linux-x86_64</platform>
+      </properties>     
+    </profile>
   </profiles>
 
   <build>
