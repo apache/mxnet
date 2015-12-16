@@ -26,6 +26,12 @@ The committers are the granted write access to the project.
   - Mingjie is the initiator, and contributes the design of the dependency engine.
 * [Chuntao Hong](https://github.com/hjk41)
   - Chuntao is the initiator and provides the initial design of engine.
+* [Chiyuan Zhang](https://github.com/pluskid)
+  - Chiyuan is the creator of MXNet Julia Package.
+* [Qiang Kou](https://github.com/thirdwing)
+  - KK is a R ninja, he makes mxnet available for R users.
+* [Tong He](https://github.com/hetong007)
+  - Tong is the major maintainer of MXNetR, he designs the mxnet interface and wrote many of the tutorials on R.
 
 ### Become a Comitter
 MXNet is a opensource project and we are actively looking for new comitters
@@ -39,12 +45,10 @@ List of Contributors
 --------------------
 * [Full List of Contributors](https://github.com/dmlc/mxnet/graphs/contributors)
   - To contributors: please add your name to the list when you submit a patch to the project:)
-* [Qiang Kou](https://github.com/thirdwing)
-  - KK is a R ninja, he makes mxnet available for R users.
-* [Tong He](https://github.com/hetong007)
-  - Tong is the major maintainer of MXNetR, he designs the mxnet interface and wrote many of the tutorials on R.
 * [Feng Wang](https://github.com/happynear)
   - Feng makes mxnet compatible with Windows Visual Studio.
+* [Jack Deng](https://github.com/jdeng)
+  - Jack created the amalgamation script and Go bind for mxnet.
 * [Li Dong](https://github.com/donglixp)
 * [Piji Li](https://github.com/lipiji)
 * [Hu Shiwen](https://github.com/yajiedesign)
@@ -53,3 +57,35 @@ List of Contributors
   - Junran makes device kvstore allocation strategy smarter
 * [Shuzhe Wu](https://github.com/II-Matto)
 * [Xiaodong](https://github.com/XD-DENG)
+* [Nan Xiao](https://github.com/road2stat)
+* [Junyuan Xie](https://github.com/piiswrong)
+* [Wei Wu](https://github.com/tornadomeet)
+* [Yuan Tang](https://github.com/terrytangyuan)
+  - Yuan set up the R Travis environment to make development safer.
+* [Michaël Benesty](https://github.com/pommedeterresautee)
+  -Michaël contributes the R visualization module of mxnet
+* [Kublai Jing](https://github.com/Kublai-Jing)
+* [chenjx1005](https://github.com/chenjx1005)
+* [ry](https://github.com/ry)
+* [Ming Zhang](https://github.com/starimpact)
+* [sxjscience](https://github.com/sxjscience)
+* [Zheng Xu](https://github.com/XericZephyr)
+* [Valentin Churavy](https://github.com/vchuravy)
+* [Luke Metz](https://github.com/lukemetz)
+* [Guosheng Dong](https://github.com/dongguosheng)
+* [yang1fan2](https://github.com/yang1fan2)
+* [Wang Gu](https://github.com/wangg12)
+* [Zhenchuan Huang](https://github.com/chuan92)
+* [Hang Su](https://github.com/suhangpro)
+* [Rinu Boney](https://github.com/rinuboney)
+* [nowozin](https://github.com/nowozin)
+* [Mathis](https://github.com/sveitser)
+* [sennendoko](https://github.com/sennendoko)
+* [srand99](https://github.com/srand99)
+* [Yizhi Liu](https://github.com/javelinjs)
+* [Taiyun](https://github.com/taiyun)
+* [Yanghao Li](https://github.com/lyttonhao)
+* [Nan Zhu](https://github.com/CodingCat)
+* [Ye Zhou](https://github.com/zhouye)
+* [Zhang Chen](https://github.com/zhangchen-qinyinghua)
+* [Xianliang Wang](https://github.com/wangxianliang)

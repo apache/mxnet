@@ -19,31 +19,46 @@
 namespace mxnet {
 namespace op {
 
+namespace elembinary {
 enum ElementWiseBinaryOpInputs {kLhs, kRhs};
 enum ElementWiseBinaryOpOutputs {kOut};
-enum ElementWiseBinaryOpType {kPlus, kMinus, kMul, kDiv};
+enum ElementWiseBinaryOpType {kPlus, kMinus, kMul, kDiv, kPower, kMaximum, kMinimum};
+enum ElementWiseBinaryOpResource { kTempSpace };
+}  // elembinary
 
 template<typename Op>
-inline ElementWiseBinaryOpType GetOpType();
+inline elembinary::ElementWiseBinaryOpType GetOpType();
 
 template<typename Op>
 inline const char* GetOpTypeString();
 
 template<>
-inline ElementWiseBinaryOpType GetOpType<mshadow::op::plus>() {
-  return kPlus;
+inline elembinary::ElementWiseBinaryOpType GetOpType<mshadow::op::plus>() {
+  return elembinary::kPlus;
 }
 template<>
-inline ElementWiseBinaryOpType GetOpType<mshadow::op::minus>() {
-  return kMinus;
+inline elembinary::ElementWiseBinaryOpType GetOpType<mshadow::op::minus>() {
+  return elembinary::kMinus;
 }
 template<>
-inline ElementWiseBinaryOpType GetOpType<mshadow::op::mul>() {
-  return kMul;
+inline elembinary::ElementWiseBinaryOpType GetOpType<mshadow::op::mul>() {
+  return elembinary::kMul;
 }
 template<>
-inline ElementWiseBinaryOpType GetOpType<mshadow::op::div>() {
-  return kDiv;
+inline elembinary::ElementWiseBinaryOpType GetOpType<mshadow::op::div>() {
+  return elembinary::kDiv;
+}
+template<>
+inline elembinary::ElementWiseBinaryOpType GetOpType<mshadow_op::power>() {
+  return elembinary::kPower;
+}
+template<>
+inline elembinary::ElementWiseBinaryOpType GetOpType<mshadow_op::maximum>() {
+  return elembinary::kMaximum;
+}
+template<>
+inline elembinary::ElementWiseBinaryOpType GetOpType<mshadow_op::minimum>() {
+  return elembinary::kMinimum;
 }
 
 template<>
@@ -65,6 +80,21 @@ inline const char* GetOpTypeString<mshadow::op::div>() {
   return "_Div";
 }
 
+template<>
+inline const char* GetOpTypeString<mshadow_op::power>() {
+  return "_Power";
+}
+
+template<>
+inline const char* GetOpTypeString<mshadow_op::maximum>() {
+  return "_Maximum";
+}
+
+template<>
+inline const char* GetOpTypeString<mshadow_op::minimum>() {
+  return "_Minimum";
+}
+
 template<typename xpu, typename ForwardOp>
 class ElementWiseBinaryOp : public Operator {
  public:
@@ -78,10 +108,10 @@ class ElementWiseBinaryOp : public Operator {
     CHECK_EQ(in_data.size(), 2);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> lhs = in_data[kLhs].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> rhs = in_data[kRhs].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
-    Assign(out, req[kOut], F<ForwardOp>(lhs, rhs));
+    Tensor<xpu, 2> lhs = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> rhs = in_data[elembinary::kRhs].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> out = out_data[elembinary::kOut].FlatTo2D<xpu, real_t>(s);
+    Assign(out, req[elembinary::kOut], F<ForwardOp>(lhs, rhs));
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -98,55 +128,91 @@ class ElementWiseBinaryOp : public Operator {
     CHECK_EQ(req.size(), 2);
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> m_out_grad = out_grad[kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> lhs_grad = in_grad[kLhs].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> rhs_grad = in_grad[kRhs].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> m_out_grad = out_grad[elembinary::kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> lhs_grad = in_grad[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> rhs_grad = in_grad[elembinary::kRhs].FlatTo2D<xpu, real_t>(s);
     switch (GetOpType<ForwardOp>()) {
-      case kPlus: {
-        Assign(lhs_grad, req[kLhs], F<mshadow_op::identity>(m_out_grad));
-        Assign(rhs_grad, req[kRhs], F<mshadow_op::identity>(m_out_grad));
-        break;
-      }
-      case kMinus: {
-        Assign(lhs_grad, req[kLhs], F<mshadow_op::identity>(m_out_grad));
-        Assign(rhs_grad, req[kRhs], F<mshadow_op::negation>(m_out_grad));
-        break;
-      }
-      case kMul: {
-        Tensor<xpu, 2> lhs_data = in_data[kLhs].FlatTo2D<xpu, real_t>(s);
-        Tensor<xpu, 2> rhs_data = in_data[kRhs].FlatTo2D<xpu, real_t>(s);
-        // rhs cannot do inplace
-        CHECK_NE(req[kRhs], kWriteInplace);
-        Assign(rhs_grad, req[kRhs], lhs_data * m_out_grad);
-        Assign(lhs_grad, req[kLhs], rhs_data * m_out_grad);
-        break;
-      }
-      case kDiv: {
-        Tensor<xpu, 2> lhs_data = in_data[kLhs].FlatTo2D<xpu, real_t>(s);
-        Tensor<xpu, 2> rhs_data = in_data[kRhs].FlatTo2D<xpu, real_t>(s);
-        // rhs cannot do inplace
-        CHECK_NE(req[kRhs], kWriteInplace);
-        Assign(rhs_grad, req[kRhs],
-               F<mshadow_op::negation>(m_out_grad * lhs_data) / F<mshadow_op::square>(rhs_data));
-        Assign(lhs_grad, req[kLhs], m_out_grad / rhs_data);
-        break;
-      }
+    case elembinary::kPlus: {
+      Assign(lhs_grad, req[elembinary::kLhs], F<mshadow_op::identity>(m_out_grad));
+      Assign(rhs_grad, req[elembinary::kRhs], F<mshadow_op::identity>(m_out_grad));
+      break;
+    }
+    case elembinary::kMinus: {
+      Assign(lhs_grad, req[elembinary::kLhs], F<mshadow_op::identity>(m_out_grad));
+      Assign(rhs_grad, req[elembinary::kRhs], F<mshadow_op::negation>(m_out_grad));
+      break;
+    }
+    case elembinary::kMul: {
+      Tensor<xpu, 2> lhs_data = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> rhs_data = in_data[elembinary::kRhs].FlatTo2D<xpu, real_t>(s);
+      // rhs cannot do inplace
+      CHECK_NE(req[elembinary::kRhs], kWriteInplace);
+      Assign(rhs_grad, req[elembinary::kRhs], lhs_data * m_out_grad);
+      Assign(lhs_grad, req[elembinary::kLhs], rhs_data * m_out_grad);
+      break;
+    }
+    case elembinary::kDiv: {
+      Tensor<xpu, 2> lhs_data = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> rhs_data = in_data[elembinary::kRhs].FlatTo2D<xpu, real_t>(s);
+      // rhs cannot do inplace
+      CHECK_NE(req[elembinary::kRhs], kWriteInplace);
+      Assign(rhs_grad, req[elembinary::kRhs],
+             F<mshadow_op::negation>(m_out_grad * lhs_data) / F<mshadow_op::square>(rhs_data));
+      Assign(lhs_grad, req[elembinary::kLhs], m_out_grad / rhs_data);
+      break;
+    }
+    case elembinary::kPower: {
+      Tensor<xpu, 2> base_data = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> exponent_data = in_data[elembinary::kRhs].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> m_out_data = out_data[elembinary::kOut].FlatTo2D<xpu, real_t>(s);
+      // rhs cannot do inplace
+      CHECK_NE(req[elembinary::kRhs], kWriteInplace);
+      Assign(rhs_grad, req[elembinary::kRhs],
+             F<mshadow_op::log>(base_data) * m_out_data * m_out_grad);
+      Assign(lhs_grad, req[elembinary::kLhs],
+             exponent_data * F<mshadow_op::power>(base_data, exponent_data - 1) * m_out_grad);
+      break;
+    }
+    case elembinary::kMaximum: {
+      Tensor<xpu, 2> lhs_data = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> rhs_data = in_data[elembinary::kRhs].FlatTo2D<xpu, real_t>(s);
+      Assign(lhs_grad, req[elembinary::kLhs],
+             m_out_grad * F<mshadow_op::maximum_grad>(lhs_data, rhs_data));
+      Assign(rhs_grad, req[elembinary::kRhs],
+             m_out_grad * F<mshadow_op::minimum_grad>(lhs_data, rhs_data));
+      break;
+    }
+    case elembinary::kMinimum: {
+      Tensor<xpu, 2> lhs_data = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> rhs_data = in_data[elembinary::kRhs].FlatTo2D<xpu, real_t>(s);
+      Assign(lhs_grad, req[elembinary::kLhs],
+             m_out_grad * F<mshadow_op::minimum_grad>(lhs_data, rhs_data));
+      Assign(rhs_grad, req[elembinary::kRhs],
+             m_out_grad * F<mshadow_op::maximum_grad>(lhs_data, rhs_data));
+      break;
+    }
     }
   }
 };  // class ElementWiseBinaryOp
 
 
 template<typename xpu>
-inline Operator* CreateElementWiseBinaryOp_(ElementWiseBinaryOpType type) {
+inline Operator* CreateElementWiseBinaryOp_(elembinary::ElementWiseBinaryOpType type) {
   switch (type) {
-    case kPlus:
-      return new ElementWiseBinaryOp<xpu, mshadow::op::plus>();
-    case kMinus:
-      return new ElementWiseBinaryOp<xpu, mshadow::op::minus>();
-    case kMul:
-      return new ElementWiseBinaryOp<xpu, mshadow::op::mul>();
-    case kDiv:
-      return new ElementWiseBinaryOp<xpu, mshadow::op::div>();
+  case elembinary::kPlus:
+    return new ElementWiseBinaryOp<xpu, mshadow::op::plus>();
+  case elembinary::kMinus:
+    return new ElementWiseBinaryOp<xpu, mshadow::op::minus>();
+  case elembinary::kMul:
+    return new ElementWiseBinaryOp<xpu, mshadow::op::mul>();
+  case elembinary::kDiv:
+    return new ElementWiseBinaryOp<xpu, mshadow::op::div>();
+  case elembinary::kPower:
+    return new ElementWiseBinaryOp<xpu, mshadow_op::power>();
+  case elembinary::kMaximum:
+    return new ElementWiseBinaryOp<xpu, mshadow_op::maximum>();
+  case elembinary::kMinimum:
+    return new ElementWiseBinaryOp<xpu, mshadow_op::minimum>();
   }
   LOG(FATAL) << "uknown op type";
   return NULL;
@@ -154,7 +220,7 @@ inline Operator* CreateElementWiseBinaryOp_(ElementWiseBinaryOpType type) {
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateElementWiseBinaryOp(ElementWiseBinaryOpType type);
+Operator* CreateElementWiseBinaryOp(elembinary::ElementWiseBinaryOpType type);
 
 #if DMLC_USE_CXX11
 template<typename ForwardOp>
@@ -173,14 +239,14 @@ class ElementWiseBinaryOpProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2) << "Input:[lhs, rhs]";
-    if (in_shape->at(kLhs).ndim() != 0) {
-      SHAPE_ASSIGN_CHECK(*in_shape, kRhs, in_shape->at(kLhs));
-    } else if (in_shape->at(kRhs).ndim() != 0) {
-      in_shape->at(kLhs) = in_shape->at(kRhs);
+    if (in_shape->at(elembinary::kLhs).ndim() != 0) {
+      SHAPE_ASSIGN_CHECK(*in_shape, elembinary::kRhs, in_shape->at(elembinary::kLhs));
+    } else if (in_shape->at(elembinary::kRhs).ndim() != 0) {
+      in_shape->at(elembinary::kLhs) = in_shape->at(elembinary::kRhs);
     } else {
       return false;
     }
-    const TShape &dshape = in_shape->at(kLhs);
+    const TShape &dshape = in_shape->at(elembinary::kLhs);
     out_shape->clear();
     out_shape->push_back(dshape);
     return true;
@@ -204,12 +270,17 @@ class ElementWiseBinaryOpProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
     switch (GetOpType<ForwardOp>()) {
-      case kPlus:
-      case kMinus:
-        return {out_grad[kOut]};
-      case kMul:
-      case kDiv:
-        return {out_grad[kOut], in_data[kLhs], in_data[kRhs]};
+    case elembinary::kPlus:
+    case elembinary::kMinus:
+      return {out_grad[elembinary::kOut]};
+    case elembinary::kMul:
+    case elembinary::kDiv:
+    case elembinary::kMaximum:
+    case elembinary::kMinimum:
+      return {out_grad[elembinary::kOut], in_data[elembinary::kLhs], in_data[elembinary::kRhs]};
+    case elembinary::kPower:
+      return {out_grad[elembinary::kOut], in_data[elembinary::kLhs], in_data[elembinary::kRhs],
+              out_data[elembinary::kOut]};
     }
     LOG(FATAL) << "not reached";
     return {};
@@ -221,12 +292,15 @@ class ElementWiseBinaryOpProp : public OperatorProperty {
     const std::vector<int> &out_data,
     const std::vector<void*> &in_grad) const override {
     switch (GetOpType<ForwardOp>()) {
-      case kPlus:
-      case kMinus:
-        return {};
-      case kMul:
-      case kDiv:
-        return {{out_grad[kOut], in_grad[kLhs]}};
+    case elembinary::kPlus:
+    case elembinary::kMinus:
+    case elembinary::kMaximum:
+    case elembinary::kMinimum:
+      return {};
+    case elembinary::kMul:
+    case elembinary::kDiv:
+    case elembinary::kPower:
+      return {{out_grad[elembinary::kOut], in_grad[elembinary::kLhs]}};
     }
     LOG(FATAL) << "not reached";
     return {};
@@ -235,7 +309,7 @@ class ElementWiseBinaryOpProp : public OperatorProperty {
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
     const std::vector<int> &in_data,
     const std::vector<void*> &out_data) const override {
-    return {{in_data[kLhs], out_data[kOut]}};
+    return {{in_data[elembinary::kLhs], out_data[elembinary::kOut]}};
   }
 
   Operator* CreateOperator(Context ctx) const override;

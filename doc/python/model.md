@@ -1,6 +1,6 @@
 MXNet Python Model API
 ======================
-The model API in mxnet as not really an API.
+The model API in mxnet is not really an API.
 It is a thin wrapper build on top of [ndarray](ndarray.md) and [symbolic](symbol.md)
 modules to make neural network training easy.
 
@@ -23,20 +23,20 @@ data = mx.symbol.Variable('data')
 fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
 act1 = mx.symbol.Activation(fc1, name='relu1', act_type='relu')
 fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=64)
-softmax = mx.symbol.Softmax(fc2, name='sm')
+softmax = mx.symbol.SoftmaxOutput(fc2, name='sm')
 # create a model
 model = mx.model.FeedForward.create(
      softmax,
      X=data_set,
-     num_round=num_round,
+     num_epoch=num_epoch,
      learning_rate=0.01)
 ```
 You can also use scikit-learn style construct and fit function to create a model.
 ```python
 # create a model using sklearn-style two step way
-model = mx.model.FeedForward.create(
+model = mx.model.FeedForward(
      softmax,
-     num_round=num_round,
+     num_epoch=num_epoch,
      learning_rate=0.01)
 
 mode.fit(X=data_set)

@@ -1,4 +1,3 @@
-# disable sudo to use container based build
 sudo: false
 
 language: cpp
@@ -9,15 +8,17 @@ os:
 
 env:
   # code analysis
-  - TASK=lint
+  #- TASK=lint
   # test doc build
-  - TASK=doc
+  #- TASK=doc
   # build mxnet.so with CUDA
   - TASK=build
   # run tests/cpp
-  - TASK=cpp_test
+  #- TASK=cpp_test
   # run tests/python
-  - TASK=python_test
+  #- TASK=python_test
+  #- TASK=r_test
+  - TASK=scala_test
 
   # TODO, R test, distributed test, clang, more g++ versions
 
@@ -27,6 +28,10 @@ matrix:
       env: TASK=lint
     - os: osx
       env: TASK=doc
+    - os: linux
+      env: TASK=r_test
+    - os: linux
+      env: TASK=scala_test
 
 # dependent apt packages
 addons:
@@ -67,10 +72,13 @@ cache:
 
 before_cache:
   - dmlc-core/scripts/travis/travis_before_cache.sh
+  
+after_failure:
+  - tests/travis/travis_after_failure.sh
 
 notifications:
 # Emails are sent to the committer's git-configured email address by default,
   email:
     on_success: change
     on_failure: always
-  slack: dmlc:NmroCzntCiWOuxUZpii40USd
+  #slack: dmlc:NmroCzntCiWOuxUZpii40USd

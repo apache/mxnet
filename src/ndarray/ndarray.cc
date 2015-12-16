@@ -489,7 +489,7 @@ bool NDArray::Load(dmlc::Stream *strm) {
   int32_t type_flag;
   if (strm->Read(&type_flag, sizeof(type_flag)) != sizeof(type_flag)) return false;
   CHECK(type_flag == mshadow::DataType<real_t>::kFlag)
-      << "Only support float NDArray so far";
+      << "Only support float NDArray so far, type_flag=" << type_flag;
   // load data into CPU
   NDArray temp(shape, Context::CPU());
   TBlob load_data = temp.data();
@@ -507,10 +507,9 @@ bool NDArray::Load(dmlc::Stream *strm) {
 
 const uint64_t kMXAPINDArrayListMagic = 0x112;
 
-void NDArray::Save(const std::string& fname,
+void NDArray::Save(dmlc::Stream* fo,
                    const std::vector<NDArray>& data,
                    const std::vector<std::string>& names) {
-  std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(fname.c_str(), "w"));
   uint64_t header = kMXAPINDArrayListMagic, reserved = 0;
   fo->Write(&header, sizeof(header));
   fo->Write(&reserved, sizeof(reserved));
@@ -518,10 +517,9 @@ void NDArray::Save(const std::string& fname,
   fo->Write(names);
 }
 
-void NDArray::Load(const std::string& fname,
+void NDArray::Load(dmlc::Stream* fi,
                    std::vector<NDArray>* data,
                    std::vector<std::string>* keys) {
-  std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname.c_str(), "r"));
   uint64_t header, reserved;
   CHECK(fi->Read(&header))
       << "Invalid NDArray file format";
@@ -597,9 +595,11 @@ void NDArray::SyncCopyToCPU(real_t *data, size_t size) const {
   }
 }
 
+#if MXNET_PREDICT_ONLY == 0
 // register API function
 // those with underscore will be registered at NDArray
 MXNET_REGISTER_NDARRAY_FUN(_set_value).set_function(SetValueOp);
+
 
 MXNET_REGISTER_NDARRAY_FUN(_plus).set_function(BinaryOp<ndarray::Plus>);
 MXNET_REGISTER_NDARRAY_FUN(_minus).set_function(BinaryOp<ndarray::Minus>);
@@ -608,6 +608,15 @@ MXNET_REGISTER_NDARRAY_FUN(_div).set_function(BinaryOp<ndarray::Div>);
 
 MXNET_REGISTER_NDARRAY_FUN(dot).set_function(BinaryOp<ndarray::Dot>)
 .describe("Calcuate 2D matrix multiplication");
+
+MXNET_REGISTER_NDARRAY_FUN(_onehot_encode).set_function(BinaryOp<ndarray::OneHotEncode>);
+
+MXNET_REGISTER_NDARRAY_FUN(choose_element_0index)
+.set_function(BinaryOp<ndarray::MatChooseRowElem>)
+.describe("Choose one element from each line(row for python, column for R/Julia)"
+          " in lhs according to index indicated by rhs."
+          " This function assume rhs uses 0-based index.");
+
 // register API function
 // those with underscore will be registered at NDArray
 MXNET_REGISTER_NDARRAY_FUN(_plus_scalar).set_function(ScalarOp<ndarray::Plus, false>);
@@ -652,4 +661,5 @@ MXNET_REGISTER_NDARRAY_FUN(clip)
 .add_argument("src", "NDArray", "Source input")
 .add_argument("a_min", "real_t", "Minimum value")
 .add_argument("a_max", "real_t", "Maximum value");
+#endif
 }  // namespace mxnet

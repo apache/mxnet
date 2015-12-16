@@ -21,18 +21,21 @@ namespace mxnet {
 namespace op {
 // Declare enumeration of input order to make code more intuitive.
 // // These enums are only visible within this header
+namespace activation {
 enum ActivationOpInputs {kData};
 enum ActivationOpOutputs {kOut};
-enum ActivationOpType {kReLU, kSigmoid, kTanh};
+enum ActivationOpType {kReLU, kSigmoid, kTanh, kSoftReLU};
+}  // activation
 
 struct ActivationParam : public dmlc::Parameter<ActivationParam> {
   // use int for enumeration
   int act_type;
   DMLC_DECLARE_PARAMETER(ActivationParam) {
     DMLC_DECLARE_FIELD(act_type)
-    .add_enum("relu", kReLU)
-    .add_enum("sigmoid", kSigmoid)
-    .add_enum("tanh", kTanh)
+    .add_enum("relu", activation::kReLU)
+    .add_enum("sigmoid", activation::kSigmoid)
+    .add_enum("tanh", activation::kTanh)
+    .add_enum("softrelu", activation::kSoftReLU)
     .describe("Activation function to be applied.");
   }
 };
@@ -54,9 +57,13 @@ class ActivationOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
-    Assign(out, req[kOut], F<ForwardOp>(data));
+    Tensor<xpu, 2> data = in_data[activation::kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> out = out_data[activation::kOut].FlatTo2D<xpu, real_t>(s);
+    Assign(out, req[activation::kOut], F<ForwardOp>(data));
+    // Use asynchronize complete notification
+    // This is only intended as an example of async ops
+    if (s != NULL) s->Wait();
+    ctx.async_on_complete();
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -72,10 +79,20 @@ class ActivationOp : public Operator {
     CHECK(in_data.size() == 1 && in_grad.size() == 1);
     CHECK_EQ(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> m_out_grad = out_grad[kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> m_out_data = out_data[kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> m_in_grad = in_grad[kData].FlatTo2D<xpu, real_t>(s);
-    Assign(m_in_grad, req[kData], F<BackwardOp>(m_out_data) * m_out_grad);
+    Tensor<xpu, 2> m_out_grad = out_grad[activation::kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> m_out_data = out_data[activation::kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> m_in_grad = in_grad[activation::kData].FlatTo2D<xpu, real_t>(s);
+    Assign(m_in_grad, req[activation::kData], F<BackwardOp>(m_out_data) * m_out_grad);
+    // Use asynchronize complete notification
+    // This is only intended as an example of async ops
+    if (s != NULL) s->Wait();
+    ctx.async_on_complete();
+  }
+
+  virtual ExecType exec_type() const {
+    // Use asynchronize complete notification
+    // This is only intended as an example of async ops
+    return kAsync;
   }
 };  // class ActivationOp
 
@@ -99,7 +116,7 @@ class ActivationProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 1) << "Input:[data]";
-    const TShape &dshape = in_shape->at(kData);
+    const TShape &dshape = in_shape->at(activation::kData);
     if (dshape.ndim() == 0) return false;
     out_shape->clear();
     out_shape->push_back(dshape);
@@ -122,9 +139,9 @@ class ActivationProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
 #if MXNET_USE_CUDNN == 1
-    return {out_grad[kOut], out_data[kOut], in_data[kData]};
+    return {out_grad[activation::kOut], out_data[activation::kOut], in_data[activation::kData]};
 #else
-    return {out_grad[kOut], out_data[kOut]};
+    return {out_grad[activation::kOut], out_data[activation::kOut]};
 #endif  // MXNET_USE_CUDNN
   }
 
@@ -133,16 +150,16 @@ class ActivationProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data,
     const std::vector<void*> &in_grad) const override {
-    return {{out_grad[kOut], in_grad[kData]}};
+    return {{out_grad[activation::kOut], in_grad[activation::kData]}};
   }
 
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
     const std::vector<int> &in_data,
     const std::vector<void*> &out_data) const override {
-    return {{in_data[kData], out_data[kOut]}};
+    return {{in_data[activation::kData], out_data[activation::kOut]}};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  private:
   ActivationParam param_;

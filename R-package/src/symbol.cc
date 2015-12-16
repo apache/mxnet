@@ -120,7 +120,9 @@ inline Rcpp::List BuildShapeData(mx_uint shape_size,
                                  const std::vector<std::string> &names) {
   Rcpp::List ret(shape_size);
   for (mx_uint i = 0; i < shape_size; ++i) {
-    ret[i] = Rcpp::IntegerVector(shape_data[i], shape_data[i] + shape_ndim[i]);
+    Rcpp::IntegerVector dim(shape_data[i], shape_data[i] + shape_ndim[i]);
+    std::reverse(dim.begin(), dim.end());
+    ret[i] = dim;
   }
   ret.names() = names;
   return ret;
@@ -136,7 +138,7 @@ SEXP Symbol::InferShape(const Rcpp::List& kwargs) const {
   for (size_t i = 0; i < kwargs.size(); ++i) {
     RCHECK(keys[i].length() != 0)
       << "Need to pass parameters in key=value style.\n";
-    std::vector<mx_uint> dim = Dim2Vec(kwargs[i]);
+    std::vector<mx_uint> dim = Dim2InternalShape(kwargs[i]);
     arg_shape_data.insert(arg_shape_data.end(), dim.begin(), dim.end());
     arg_ind_ptr.push_back(static_cast<mx_uint>(arg_shape_data.size()));
   }

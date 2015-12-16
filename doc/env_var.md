@@ -3,7 +3,7 @@ Environment Variables
 MXNet have several settings that can be changed via environment variable.
 Usually you do not need to change these settings, but they are listed here for reference.
 
-* MXNET_GPU_WORKER_NTHREADS (default=1)
+* MXNET_GPU_WORKER_NTHREADS (default=2)
   - Maximum number of threads that do the computation job on each GPU.
 * MXNET_GPU_COPY_NTHREADS (default=1)
   - Maximum number of threads that do memory copy job on each GPU.
@@ -11,12 +11,12 @@ Usually you do not need to change these settings, but they are listed here for r
   - Maximum number of threads that do the CPU computation job.
 * MXNET_CPU_PRIORITY_NTHREADS (default=4)
 	- Number of threads given to prioritized CPU jobs.
-  * MXNET_EXEC_ENABLE_INPLACE (default=true)
+* MXNET_EXEC_ENABLE_INPLACE (default=true)
   - Whether to enable inplace optimization in symbolic execution.
 * MXNET_EXEC_MATCH_RANGE (default=10)
   - The rough matching scale in symbolic execution memory allocator.
   - Set this to 0 if we do not want to enable memory sharing between graph nodes(for debug purpose).
-* MXNET_EXEC_NUM_TEMP (default=4)
+* MXNET_EXEC_NUM_TEMP (default=1)
   - Maximum number of temp workspace we can allocate to each device.
   - Set this to small number can save GPU memory.
   - It will also likely to decrease level of parallelism, which is usually OK.
@@ -41,5 +41,5 @@ Settings for More GPU Parallelism
 ---------------------------------
 - Set ```MXNET_GPU_WORKER_NTHREADS``` to larger number (e.g. 2)
   - You may want to set ```MXNET_EXEC_NUM_TEMP``` to reduce memory usage.
-- This may not speedup things as GPU can already be fully occupied with serialized jobs.
+- This may not speed things up, especially for image applications, because GPU is usually fully utilized even with serialized jobs.
 

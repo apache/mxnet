@@ -41,15 +41,18 @@ config.mk
 *log
 Debug
 *suo
+tracker
 
 # vim
 *.swp
 *.swo
 *.swn
+.vimrc
 .ycm_extra_conf.py
 .ycm_extra_conf.pyc
 
 # Emacs
+.#*
 .clang_complete
 .dir-locals.el
 __pycache__
@@ -66,3 +69,47 @@ deps
 # R
 *.Rcheck
 *.rds
+*.Rproj
+.Rproj.user
+R-package/inst/*
+*.tar.gz
+
+# data
+*.rec
+*.lst
+*.zip
+*ubyte
+*.bin
+
+# ipython notebook
+example/notebooks/.ipynb_checkpoints/*
+*_pb2.py
+
+
+# Scala package
+# Jetbrain
+mxnet-scala/.idea
+
+# ctags
+mxnet-scala/tags
+
+mxnet-scala/*.class
+mxnet-scala/*.log
+
+# sbt specific
+mxnet-scala/.cache
+mxnet-scala/.lib/
+mxnet-scala/dist/*
+mxnet-scala/target/
+mxnet-scala/lib_managed/
+mxnet-scala/src_managed/
+mxnet-scala/project/boot/
+mxnet-scala/project/plugins/project/
+
+# IDE specific
+mxnet-scala/.scala_dependencies
+mxnet-scala/.worksheet
+mxnet-scala/.idea
+mxnet-scala/*.iml
+
+

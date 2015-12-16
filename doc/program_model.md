@@ -1,20 +1,20 @@
 Programming Models for Deep Learning
 ====================================
 There are a lot of deep learning libraries, each comes with its own flavour.
-How can each flavour introduced by each library provide advantage or drawbacks in terms of system optimization and user experience?
-This article aims to compare these flavours in terms of programming models, discuss the fundamental advantage and drawbacks
-introduced by these model, and how we can learn from them.
+How can each flavour introduced by each library provide advantages or drawbacks in terms of system optimization and user experience?
+This article aims to compare these flavours in terms of programming models, discuss the fundamental advantages and drawbacks
+introduced by these models, and how we can learn from them.
 
 We will focus on the programming model itself instead of the implementations. So this article is not about benchmarking
 deep learning libraries. Instead, we will divide the libraries into several categories in terms of what user interface they offer,
-and discuss how these style of interface will affect performance and flexibility of deep learning programs.
+and discuss how these styles of interface affect performance and flexibility of deep learning programs.
 The discussion in this article may not be specific to deep learning, but we will keep deep learning applications as our use-cases and goal of optimization.
 
 Symbolic vs Imperative Programs
 -------------------------------
 This is the first section to get started, the first thing we are going to compare is symbolic style programs vs imperative style programs.
 If you are a python or c++ programmer, it is likely you are already familiar with imperative programs.
-Imperative style programs conduct the computation as we run them. Most code you will write in python is imperative,
+Imperative style programs conduct the computation as we run them. Most code you write in python is imperative,
 for example, the following numpy snippet.
 ```python
 import numpy as np
@@ -23,7 +23,7 @@ b = np.ones(10) * 2
 c = b * a
 d = c + 1
 ```
-When the programs execute to ```c = b * a```, it runs the actual computation. Symbolic programs are bit different.
+When the programs execute to ```c = b * a```, it runs the actual computation. Symbolic programs are a bit different.
 The following snippet is an equivalent symbolic style program you can write to achieve the same goal of calculating ```d```.
 ```python
 A = Variable('A')
@@ -35,20 +35,20 @@ f = compile(D)
 d = f(A=np.ones(10), B=np.ones(10)*2)
 ```
 The difference in symbolic programs is when ```C = B * A``` is executed, there is no actual computation happening.
-Instead, these operations generates a computation graph (symbolic graph) that represents the computation it described.
+Instead, these operations generate a computation graph (symbolic graph) that represents the computation it described.
 The following picture gives a computation graph to compute ```D```.
 
-![Comp Graph](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/prog_model/comp_graph.png)
+![Comp Graph](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/prog_model/comp_graph.png)
 
-Most symbolic style programs will contain, either explicitly or implicitly, a ```compile``` step.
+Most symbolic style programs contain, either explicitly or implicitly, a ```compile``` step.
 This converts the computation graph into a function that can be called.
 Then the real computation happens at the last step of the code. The major characteristic of symbolic programs
 is the clear separation between the computation graph definition step, and the compile, running step.
 
-Examples of imperative style deep learning libraries includes Torch, Chainer, Minerva.
-While the example of symbolic style deep learning libraries include Theano, CGT.
-The libraries that uses configuration files like cxxnet, caffe can also be viewed as symbolic style libraries.
-Where the configuration file content defines the computation graph.
+Examples of imperative style deep learning libraries include Torch, Chainer and Minerva.
+While the examples of symbolic style deep learning libraries include Theano, CGT and Tensorflow.
+Libraries that use configuration files like cxxnet, caffe can also be viewed as symbolic style libraries,
+where the configuration file content defines the computation graph.
 
 Now you know the two different programming models, let us start to compare them!
 
@@ -64,7 +64,7 @@ d = np.zeros(10)
 for i in range(d):
     d += np.zeros(10)
 ```
-You will find it is actually not easy, because there is a python for-loop that may not readily supported by the symbolic API.
+You can find it is actually not easy, because there is a python for-loop that may not readily supported by the symbolic API.
 If you are writing a symbolic programs in python, you are NOT writing in python.
 Instead, you actually write a domain specific language defined by the symbolic API.
 The symbolic APIs are more powerful version of DSL that generates the computation graphs or configuration of neural nets.
@@ -88,7 +88,7 @@ d = c + 1
 ...
 ```
 
-![Comp Graph](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/prog_model/comp_graph.png)
+![Comp Graph](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/prog_model/comp_graph.png)
 
 Assume each cell in the array cost 8 bytes. How many memory do we need to cost if we are going to execute the above program in python console?
 Let us do some math, we need memory for 4 arrays of size 10, that means we will need ```4 * 10 * 8 = 320``` bytes. On the other hand,
@@ -110,7 +110,7 @@ Another optimization that symbolic programs can do is operation folding. In the 
 Which is represented in the following graph. This means one GPU kernel will be executed(instead of two) if the computation runs on GPU.
 This is actually what we will do to hand crafted operations in optimized libraries such as cxxnet, caffe. Doing so will improve the computation efficiency.
 
-![Comp Graph Folded](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/prog_model/comp_graph_fold.png)
+![Comp Graph Folded](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/prog_model/comp_graph_fold.png)
 
 We cannot do that in imperative programs. Because the intermediate value can be reference
 some point in the future. The reason that such optimization is possible in symbolic programs, is that we get the entire computation graph, and a clear
@@ -178,7 +178,7 @@ grad_a, grad_b = f(A=np.ones(10), B=np.ones(10)*2)
 The grad function of D generate a backward computation graph, and return a gradient node ```gA, gB```.
 They corresponds to the red nodes in the following figure.
 
-![Comp Graph Folded](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/prog_model/comp_graph_backward.png)
+![Comp Graph Folded](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/prog_model/comp_graph_backward.png)
 
 What the imperative program did was actually the same as the symbolic way. It implicitly saves a backward
 computation graph in the grad closure. When we invoked the ```d.grad```, we start from ```d(D)```,
@@ -335,7 +335,7 @@ generate generic kernels from expression tree at compile time. You can refer to 
 for more details. CXXNet is a library that makes extensive use of expression template, this enables much shorter and more readable code, with matched
 performance with hand crafted kernels.
 
-The difference between expression template and python kernel generation is that the expression evaluation is done at compile time of c++, with a existing type,
+The difference between expression template and python kernel generation is that the expression evaluation is done at compile time of c++, with an existing type,
 so there is no additional runtime overhead. This is also in principle possible with other statically typed language that support template,
 however we have only seen this trick in C++ so far.
 
@@ -371,7 +371,7 @@ What we usually observe is that it is usually helpful to write parameter updates
 while the gradient calculations can be done more effectively in symbolic programs.
 
 The mix of programs is actually happening in existing symbolic libraries, because python itself is imperative.
-For example, the following programs mixed the symbolic part together with numpy(which is imperative).
+For example, the following program mixes the symbolic part together with numpy(which is imperative).
 ```python
 A = Variable('A')
 B = Variable('B')
@@ -391,7 +391,7 @@ However, using numpy as imperative component might be undesirable, as the parame
 
 Combining small and big operations is also possible, and actually we might have a good reason to do it. Consider applications such as changing
 a loss function or adding a few customized layers to an existing structure. What we usually can do is use big operations to compose up the existing
-components, and use smaller operations to building up the new parts.
+components, and use smaller operations to build up the new parts.
 
 Recall Amdahl's law, usually these new components may not be the bottleneck of computation. As the performance critical part is already optimized by
 the bigger operations, it is even OK that we do not optimize these additional small operations at all, or only do a few memory optimization instead
@@ -400,7 +400,7 @@ of operation fusion and directly running them.
 ### Choose your Own Flavours
 
 As we have compare the flavours of deep learning programs. The goal of this article is to list these choices and compare their trade-offs.
-There may not be a universal solution for all. But you can always choose your flavour, or combines the flavours you like to create
+There may not be a universal solution for all. But you can always choose your flavour, or combine the flavours you like to create
 more interesting and intelligent deep learning libraries.
 
 Contribution to this Note

@@ -21,8 +21,10 @@ namespace op {
 
 // Declare enumeration of input order to make code more intuitive.
 // These enums are only visible within this header
+namespace fullc {
 enum FullyConnectedOpInputs {kData, kWeight, kBias};
 enum FullyConnectedOpOutputs {kOut};
+}  // fullc
 
 struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
   int num_hidden;
@@ -55,7 +57,7 @@ class FullyConnectedOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(req[kOut], kWriteTo);
+    CHECK_EQ(req[fullc::kOut], kWriteTo);
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1);
@@ -67,12 +69,12 @@ class FullyConnectedOp : public Operator {
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
-    Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> wmat = in_data[kWeight].get<xpu, 2, real_t>(s);
-    Tensor<xpu, 2> out = out_data[kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> data = in_data[fullc::kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> wmat = in_data[fullc::kWeight].get<xpu, 2, real_t>(s);
+    Tensor<xpu, 2> out = out_data[fullc::kOut].FlatTo2D<xpu, real_t>(s);
     out = dot(data, wmat.T());
     if (!param_.no_bias) {
-      Tensor<xpu, 1> bias = in_data[kBias].get<xpu, 1, real_t>(s);
+      Tensor<xpu, 1> bias = in_data[fullc::kBias].get<xpu, 1, real_t>(s);
       out += repmat(bias, data.size(0));
     }
   }
@@ -93,26 +95,26 @@ class FullyConnectedOp : public Operator {
     // TODO(bing): check the BLAS Handle, be careful
     //  maybe need blas handle from context
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> wmat = in_data[kWeight].get<xpu, 2, real_t>(s);
-    Tensor<xpu, 2> grad = out_grad[kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> data = in_data[fullc::kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> wmat = in_data[fullc::kWeight].get<xpu, 2, real_t>(s);
+    Tensor<xpu, 2> grad = out_grad[fullc::kOut].FlatTo2D<xpu, real_t>(s);
 #if defined(__CUDACC__)
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
 #endif
     //  backprop
-    CHECK_NE(req[kWeight], kWriteInplace) << "cannot write weight inplace";
+    CHECK_NE(req[fullc::kWeight], kWriteInplace) << "cannot write weight inplace";
     // gradient of weight
-    Tensor<xpu, 2> gwmat = in_grad[kWeight].get<xpu, 2, real_t>(s);
-    Assign(gwmat, req[kWeight], dot(grad.T(), data));
+    Tensor<xpu, 2> gwmat = in_grad[fullc::kWeight].get<xpu, 2, real_t>(s);
+    Assign(gwmat, req[fullc::kWeight], dot(grad.T(), data));
     // gradient of bias
     if (!param_.no_bias) {
-      Tensor<xpu, 1> gbias = in_grad[kBias].get<xpu, 1, real_t>(s);
-      Assign(gbias, req[kBias], sum_rows(grad));
+      Tensor<xpu, 1> gbias = in_grad[fullc::kBias].get<xpu, 1, real_t>(s);
+      Assign(gbias, req[fullc::kBias], sum_rows(grad));
     }
     // gradient of data
-    Tensor<xpu, 2> gdata = in_grad[kData].FlatTo2D<xpu, real_t>(s);
-    Assign(gdata, req[kData], dot(grad, wmat));
+    Tensor<xpu, 2> gdata = in_grad[fullc::kData].FlatTo2D<xpu, real_t>(s);
+    Assign(gdata, req[fullc::kData], dot(grad, wmat));
   }
 
  private:
@@ -151,16 +153,16 @@ class FullyConnectedProp : public OperatorProperty {
     } else {
       CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
     }
-    const TShape &dshape = (*in_shape)[kData];
+    const TShape &dshape = (*in_shape)[fullc::kData];
     // require data to be known
     if (dshape.ndim() ==  0) return false;
 
     index_t num_input = 0;
     mshadow::Shape<2> ishape = dshape.FlatTo2D();
     num_input = ishape[1];
-    SHAPE_ASSIGN_CHECK(*in_shape, kWeight, Shape2(param_.num_hidden, num_input));
+    SHAPE_ASSIGN_CHECK(*in_shape, fullc::kWeight, Shape2(param_.num_hidden, num_input));
     if (!param_.no_bias) {
-      SHAPE_ASSIGN_CHECK(*in_shape, kBias, Shape1(param_.num_hidden));
+      SHAPE_ASSIGN_CHECK(*in_shape, fullc::kBias, Shape1(param_.num_hidden));
     }
     out_shape->clear();
     out_shape->push_back(Shape2(dshape[0], param_.num_hidden));
@@ -182,7 +184,7 @@ class FullyConnectedProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    return {out_grad[kOut], in_data[kData], in_data[kWeight]};
+    return {out_grad[fullc::kOut], in_data[fullc::kData], in_data[fullc::kWeight]};
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
@@ -190,10 +192,10 @@ class FullyConnectedProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data,
     const std::vector<void*> &in_grad) const override {
-    return {{in_data[kData], in_grad[kData]}};
+    return {{in_data[fullc::kData], in_grad[fullc::kData]}};
   }
 
-  Operator* CreateOperator(Context ctx) const;
+  Operator* CreateOperator(Context ctx) const override;
 
  private:
   FullyConnectedParam param_;

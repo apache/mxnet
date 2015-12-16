@@ -46,6 +46,8 @@ struct OpContext {
   int is_train;
   /*! \brief RunContext related resources */
   RunContext run_ctx;
+  /*! \brief the callback when operation completes, used by asynchronize ops */
+  engine::CallbackOnComplete async_on_complete;
   /*! \brief Resources requested by the operator */
   std::vector<Resource> requested;
   /*!
@@ -73,6 +75,23 @@ struct OpContext {
  */
 class Operator {
  public:
+  /*! \brief the execution type of the operator */
+  enum ExecType {
+    /*! \brief Forward/Backward are synchronize calls */
+    kSync,
+    /*!
+     * \brief Forward/Backward are asynchronize,
+     *  will call OpContext.async_on_complete when operation finishes.
+     */
+    kAsync,
+    /*!
+     * \brief Cross device copy operation, this is a special operator
+     *  That indicates copy across devices, the input and output can sit on different device.
+     *  In current implementation, copy operator is specially handled by executor.
+     *  This flag is used for special case treatment and future extension of different copy ops.
+     */
+    kCrossDeviceCopy
+  };
   /*! \brief destructor */
   virtual ~Operator() {}
   /*!
@@ -127,6 +146,10 @@ class Operator {
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_states) {
     LOG(FATAL) << "Backward is not implemented";
+  }
+  /*! \return execution type of the operator */
+  virtual ExecType exec_type() const {
+    return kSync;
   }
 };
 
@@ -400,7 +423,7 @@ class OperatorProperty {
 };
 
 /*! \brief typedef the factory function of operator property */
-typedef OperatorProperty *(*OperatorPropertyFactory)();
+typedef std::function<OperatorProperty *()> OperatorPropertyFactory;
 /*!
  * \brief Registry entry for OperatorProperty factory functions.
  */
@@ -454,12 +477,8 @@ struct OperatorPropertyReg
  * \endcode
  */
 #define MXNET_REGISTER_OP_PROPERTY(name, OperatorPropertyType)          \
-  static ::mxnet::OperatorProperty* __create__ ## OperatorProperty ## name ## __() { \
-    OperatorProperty* ret = new OperatorPropertyType();                 \
-    return ret;                                                         \
-  }                                                                     \
   DMLC_REGISTRY_REGISTER(::mxnet::OperatorPropertyReg, OperatorPropertyReg, name) \
-  .set_body(__create__ ## OperatorProperty ## name ## __)               \
+  .set_body([]() { return new OperatorPropertyType(); })                \
   .check_name()
 
 #endif  // DMLC_USE_CXX11

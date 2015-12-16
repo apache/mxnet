@@ -9,6 +9,12 @@ real world image. The network architecture is decribed in [1].
 The pre-trained Inception-BatchNorm network is able to be downloaded from [this link](http://webdocs.cs.ualberta.ca/~bx3/data/Inception.zip)
 This model gives the recent state-of-art prediction accuracy on image net dataset.
 
+Preface
+-------
+This tutorial is written in Rmarkdown.
+- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.org/en/latest/R-package/classifyRealImageWithPretrainedModel.html)
+- You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/classifyRealImageWithPretrainedModel.Rmd)
+
 Pacakge Loading
 ---------------
 To get started, we load the mxnet package by require mxnet.
@@ -115,12 +121,10 @@ preproc.image <-function(im, mean.image) {
   # convert to array (x, y, channel)
   arr <- as.array(resized)
   dim(arr) = c(224, 224, 3)
-  # Change to the format of mxnet (channel, height, width)
-  sample <- aperm(arr, c(3, 2, 1))
   # substract the mean
-  normed <- sample - mean.img
-  # Reshape to format needed by mxnet
-  dim(normed) <- c(1, 3, 224, 224)
+  normed <- arr - mean.img
+  # Reshape to format needed by mxnet (width, height, channel, num)
+  dim(normed) <- c(224, 224, 3, 1)
   return(normed)
 }
 ```
@@ -144,16 +148,16 @@ dim(prob)
 ```
 
 ```
-## [1]    1 1000
+## [1] 1000    1
 ```
 
 As you can see ```prob``` is a 1 times 1000 array, which gives the probability
 over the 1000 image classes of the input.
 
-We can use the ```max.col``` to get the class index.
+We can use the ```max.col``` on the transpose of prob. get the class index.
 
 ```r
-max.idx <- max.col(prob)
+max.idx <- max.col(t(prob))
 max.idx
 ```
 

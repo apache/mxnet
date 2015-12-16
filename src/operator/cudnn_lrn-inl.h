@@ -38,8 +38,8 @@ class CuDNNLocalResponseNormOp : public Operator {
     float alpha = 1.0f;
     float beta = 0.0f;
     Stream<gpu> *s = ctx.get_stream<gpu>();
-    Tensor<gpu, 4> data = in_data[kData].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> out = out_data[kOut].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4> data = in_data[lrn_enum::kData].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4> out = out_data[lrn_enum::kOut].get<gpu, 4, real_t>(s);
     if (!init_cudnn_) {
       this->Init(s, in_data, out_data);
     }
@@ -72,10 +72,10 @@ class CuDNNLocalResponseNormOp : public Operator {
     float alpha = 1.0f;
     float beta = 0.0f;
     Stream<gpu> *s = ctx.get_stream<gpu>();
-    Tensor<gpu, 4> grad = out_grad[kOut].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> data = in_data[kData].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> output_data = out_data[kOut].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> input_grad = in_grad[kData].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4> grad = out_grad[lrn_enum::kOut].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4> data = in_data[lrn_enum::kData].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4> output_data = out_data[lrn_enum::kOut].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4> input_grad = in_grad[lrn_enum::kData].get<gpu, 4, real_t>(s);
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
     CHECK_EQ(cudnnLRNCrossChannelBackward(s->dnn_handle_,
                                           lrn_desc_,
@@ -101,8 +101,8 @@ class CuDNNLocalResponseNormOp : public Operator {
     CHECK_EQ(out_data.size(), 1);
     if (!init_cudnn_) {
       init_cudnn_ = true;
-      Tensor<gpu, 4> data = in_data[kData].get<gpu, 4, real_t>(s);
-      Tensor<gpu, 4> out = out_data[kOut].get<gpu, 4, real_t>(s);
+      Tensor<gpu, 4> data = in_data[lrn_enum::kData].get<gpu, 4, real_t>(s);
+      Tensor<gpu, 4> out = out_data[lrn_enum::kOut].get<gpu, 4, real_t>(s);
       unsigned lrn_n = param_.nsize;
       double alpha = param_.alpha;
       double beta = param_.beta;

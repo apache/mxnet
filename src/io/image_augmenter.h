@@ -192,20 +192,20 @@ class ImageAugmenter {
         y /= 2; x /= 2;
       }
       cv::Rect roi(x, y, rand_crop_size, rand_crop_size);
-      cv::resize(res(roi), res, cv::Size(param_.data_shape[1], param_.data_shape[2]));
+      cv::resize(res(roi), res, cv::Size(param_.data_shape[2], param_.data_shape[1]));
     } else {
-      CHECK(static_cast<index_t>(res.cols) >= param_.data_shape[1]
-            && static_cast<index_t>(res.rows) >= param_.data_shape[2])
+      CHECK(static_cast<index_t>(res.rows) >= param_.data_shape[1]
+            && static_cast<index_t>(res.cols) >= param_.data_shape[2])
           << "input image size smaller than input shape";
-      index_t y = res.rows - param_.data_shape[2];
-      index_t x = res.cols - param_.data_shape[1];
+      index_t y = res.rows - param_.data_shape[1];
+      index_t x = res.cols - param_.data_shape[2];
       if (param_.rand_crop != 0) {
         y = std::uniform_int_distribution<index_t>(0, y)(*prnd);
         x = std::uniform_int_distribution<index_t>(0, x)(*prnd);
       } else {
         y /= 2; x /= 2;
       }
-      cv::Rect roi(x, y, param_.data_shape[1], param_.data_shape[2]);
+      cv::Rect roi(x, y, param_.data_shape[2], param_.data_shape[1]);
       res = res(roi);
     }
     return res;

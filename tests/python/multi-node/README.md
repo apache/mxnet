@@ -1,15 +1,21 @@
-# Test multi-devices and multi-machines
+# Tests for multi-devices and multi-machines
 
-must disable `CUDNN`
+- `local_*` for multi-devices and single machine. Requires at least two GPUs.
+- `dist_sync_*` for multi-machines with BSP synchronizations
+- `dist_async_*` for multi-machines with asynchronous SGD
 
-`local_*` for multi-devices and single machine. Requires two GPUs.
+(Note that `CUDNN` leads to randomness, need to disable if comparing to the baseline)
 
-
-`dist_*` for multi-machines. Run in local machine with 2 workers (requires at
-least two gpus) and 2 servers.
-
+- runs on local machine with two servers and two workers
 
 ```
-ln -s ../../../dmlc-core/tracker/dmlc_local.py
-./dmlc_local.py -n 2 -s 2 ./dist_sync_mlp.py
+../../../ps-lite/tracker/dmlc_local.py -n 2 -s 2 python dist_sync_mlp.py
 ```
+
+- runs on multiple machines with machine names in `hosts`
+
+```
+../../../ps-lite/tracker/dmlc_mpi.py -n 2 -s 2 -H hosts python dist_sync_mlp.py
+```
+
+See more examples on [example/distributed-training/](../../../example/distributed-training)

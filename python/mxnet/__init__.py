@@ -12,6 +12,8 @@ from . import name
 from . import symbol as sym
 from . import symbol
 from . import io
+from . import recordio
+from . import operator
 # use mx.nd as short for mx.ndarray
 from . import ndarray as nd
 # use mx.rnd as short for mx.random
@@ -26,9 +28,17 @@ from . import visualization
 # use viz as short for mx.ndarray
 from . import visualization as viz
 from . import callback
-from . import misc
+# from . import misc
+from . import lr_scheduler
 # use mx.kv as short for kvstore
 from . import kvstore as kv
 from . import kvstore_server
+# Runtime compile module
+from .rtc import Rtc as rtc
+# Attribute scope to add attributes to symbolic graphs
+from .attribute import AttrScope
+
+from . import monitor
+from . import monitor as mon
 
 __version__ = base.__version__

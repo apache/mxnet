@@ -12,36 +12,21 @@
 #include "../operator/operator_common.h"
 
 namespace mxnet {
-std::vector<uint32_t> StaticGraph::TopoSort() const {
+
+std::vector<uint32_t> StaticGraph::PostDFSOrder(const std::vector<uint32_t>& head_nodes) const {
+  std::vector<uint32_t> ret;
+  ret.reserve(nodes.size() / 2);
   std::vector<std::pair<uint32_t, uint32_t> > stack;
   std::unordered_set<uint32_t> visited;
-  std::vector<uint32_t> ret(nodes.size());
-  std::vector<uint32_t> head_node;
-  // out degree
-  std::vector<int> out_degree(nodes.size(), 0);
-  for (const Node& n : nodes) {
-    for (const DataEntry& e : n.inputs) {
-      ++out_degree[e.source_id];
-    }
-    if (n.is_backward()) {
-      ++out_degree[n.backward_source_id];
-    }
-  }
-  for (size_t i = 0; i < nodes.size(); ++i) {
-    if (out_degree[i] == 0) {
-      stack.push_back(std::make_pair(static_cast<uint32_t>(i), 0));
-    }
-  }
   // heads
-  for (auto &head : head_node) {
+  for (auto &head : head_nodes) {
     stack.push_back(std::make_pair(head, 0));
   }
-  int count = 0;
   while (!stack.empty()) {
     std::pair<uint32_t, uint32_t>& back = stack.back();
     const Node& n = nodes[back.first];
     if (back.second == n.inputs.size() + (n.is_backward() ? 1 : 0)) {
-      ret[count++] = back.first;
+      ret.push_back(back.first);
       visited.insert(back.first);
       stack.pop_back();
     } else {
@@ -58,6 +43,26 @@ std::vector<uint32_t> StaticGraph::TopoSort() const {
     }
   }
   return ret;
+}
+
+std::vector<uint32_t> StaticGraph::TopoSort() const {
+  // out degree
+  std::vector<int> out_degree(nodes.size(), 0);
+  for (const Node& n : nodes) {
+    for (const DataEntry& e : n.inputs) {
+      ++out_degree[e.source_id];
+    }
+    if (n.is_backward()) {
+      ++out_degree[n.backward_source_id];
+    }
+  }
+  std::vector<uint32_t> head_nodes;
+  for (size_t i = 0; i < nodes.size(); ++i) {
+    if (out_degree[i] == 0) {
+      head_nodes.push_back(static_cast<uint32_t>(i));
+    }
+  }
+  return PostDFSOrder(head_nodes);
 }
 
 bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
@@ -130,6 +135,21 @@ bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
           throw dmlc::Error(os.str());
         }
       }
+
+      // set for auxilary states shape.
+      auto& source_aux_shapes = (*node_aux_shapes)[node.backward_source_id];
+      for (size_t i = 0; i < source_aux_shapes.size(); ++i) {
+        try {
+          (*node_aux_shapes)[nid].push_back(source_aux_shapes[i]);
+        } catch (const op::InferShapeError &err) {
+          const std::string &op_name = nodes[nid].name;
+          std::ostringstream os;
+          os << "InferShape Error in "
+             << op_name << "\'s" << " aux states\n"
+             << err.msg;
+          throw dmlc::Error(os.str());
+        }
+      }
     }
   }
   // TODO(bing) assign shape for head gradient
@@ -187,6 +207,14 @@ StaticGraph::Node StaticGraph::CreateSumNode(
   agg_node.op->Init({{"num_args", os_size.str()}});
   agg_node.inputs = grad_source;
   return agg_node;
+}
+
+StaticGraph::Node StaticGraph::CreateCopyNode(const DataEntry &source) {
+  // find multiple gradients, need aggregate
+  Node copy_node;
+  copy_node.op.reset(OperatorProperty::Create("_CrossDeviceCopy"));
+  copy_node.inputs = {source};
+  return copy_node;
 }
 
 void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
@@ -308,10 +336,12 @@ void StaticGraph::Node::Save(dmlc::JSONWriter *writer) const {
   writer->WriteObjectKeyValue("name", name);
   writer->WriteObjectKeyValue("inputs", inputs);
   writer->WriteObjectKeyValue("backward_source_id", backward_source_id);
+  if (attr.size() != 0) writer->WriteObjectKeyValue("attr", attr);
   writer->EndObject();
 }
 
 void StaticGraph::Node::Load(dmlc::JSONReader *reader) {
+  attr.clear();
   dmlc::JSONObjectReadHelper helper;
   std::string op_type_str;
   std::map<std::string, std::string> param;
@@ -320,6 +350,7 @@ void StaticGraph::Node::Load(dmlc::JSONReader *reader) {
   helper.DeclareField("name", &name);
   helper.DeclareField("inputs", &inputs);
   helper.DeclareField("backward_source_id", &backward_source_id);
+  helper.DeclareOptionalField("attr", &attr);
   helper.ReadAllFields(reader);
 
   if (op_type_str != "null") {

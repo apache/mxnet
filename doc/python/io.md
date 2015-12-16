@@ -33,6 +33,16 @@ The following code gives an example of creating a Cifar data iterator.
 
 ```python
 >>>dataiter = mx.io.ImageRecordIter(
+>>>        # Utility Parameter
+>>>        # Optional
+>>>        # Name of the data, should match the name of the data input of the network
+>>>        # data_name='data',
+>>>        # Utility Parameter
+>>>        # Optional
+>>>        # Name of the label, should match the name of the label parameter of the network.
+>>>        # Usually, if the loss layer is named 'foo', then the label input has the name
+>>>        # 'foo_label', unless overwritten
+>>>        # label_name='softmax_label',
 >>>        # Dataset Paramter
 >>>        # Impulsary
 >>>        # indicating the data file, please check the data is already there
@@ -121,6 +131,34 @@ A sample command:
 ./bin/im2rec image.lst image_root_dir output.bin resize=256
 ```
 More details can be found by running ```./bin/im2rec```.
+
+### Extension: Mutliple Labels for a Single Image
+
+The `im2rec` tool and `mx.io.ImageRecordIter` also has a mutli-label support for a single image.
+Assume you have 4 labels for a single image, you can take the following steps to utilize the RecordIO tools.
+
+1. Write the the image list files as follows:
+```
+integer_image_index \t label_1 \t label_2 \t label_3 \t label_4 \t path_to_image
+```
+
+2. When use `im2rec` tools, add a 'label_width=4' to the command argument, e.g.
+```bash
+./bin/im2rec image.lst image_root_dir output.bin resize=256 label_width=4
+```
+
+3. In your iterator generation code, set `label_width=4` and `path_imglist=<<The PATH TO YOUR image.lst>>`, e.g.
+
+```python
+dataiter = mx.io.ImageRecordIter(
+  path_imgrec="data/cifar/train.rec",
+  data_shape=(3,28,28),
+  path_imglist="data/cifar/image.lst",
+  label_width=4
+)
+```
+
+Then you're all set for a multi-label image iterator.
 
 IO API Reference
 ----------------

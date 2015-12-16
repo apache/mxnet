@@ -21,6 +21,7 @@ class StorageImpl : public Storage {
  public:
   Handle Alloc(size_t size, Context ctx) override;
   void Free(Handle handle) override;
+  StorageImpl() {}
   virtual ~StorageImpl() = default;
 
  private:
@@ -74,7 +75,7 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
             ptr = new CurrentStorageManager<storage::GPUDeviceStorage>();
             break;
           }
-          default: LOG(FATAL) <<  "Unimplemented device";
+          default: LOG(FATAL) <<  "Unimplemented device " << ctx.dev_type;
         }
         return ptr;
       });
@@ -96,6 +97,11 @@ void StorageImpl::Free(Storage::Handle handle) {
 }
 
 std::shared_ptr<Storage> Storage::_GetSharedRef() {
+#ifdef __MXNET_JS__
+  // dummy code needed for emscripten code to pass
+  // do not know why, the new will be NULLPTR
+  static int *q = new int();
+#endif
   static std::shared_ptr<Storage> inst(new StorageImpl());
   return inst;
 }

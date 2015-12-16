@@ -25,7 +25,9 @@ class Initializer(object):
             raise TypeError('name must be string')
         if not isinstance(arr, NDArray):
             raise TypeError('arr must be NDArray')
-        if name.endswith('bias'):
+        if name.startswith('upsampling'):
+            self._init_bilinear(name, arr)
+        elif name.endswith('bias'):
             self._init_bias(name, arr)
         elif name.endswith('gamma'):
             self._init_gamma(name, arr)
@@ -37,9 +39,22 @@ class Initializer(object):
             self._init_zero(name, arr)
         elif name.endswith("moving_var"):
             self._init_zero(name, arr)
+        elif name.endswith("moving_avg"):
+            self._init_zero(name, arr)
         else:
             self._init_default(name, arr)
-    # pylint: disable=no-self-use, missing-docstring
+    # pylint: disable=no-self-use, missing-docstring, invalid-name
+    def _init_bilinear(self, _, arr):
+        weight = np.zeros(np.prod(arr.shape), dtype='float32')
+        shape = arr.shape
+        f = shape[3] / 2.
+        c = (2 * f - 1 - f % 2) / (2. * f)
+        for i in range(np.prod(shape)):
+            x = i % shape[3]
+            y = (i / shape[3]) % shape[2]
+            weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
+        arr[:] = weight.reshape(shape)
+
     def _init_zero(self, _, arr):
         arr[:] = 0.0
 
@@ -58,7 +73,7 @@ class Initializer(object):
 
     def _init_default(self, name, _):
         raise ValueError('Unknown initialization pattern for %s' % name)
-    # pylint: enable=no-self-use, missing-docstring
+    # pylint: enable=no-self-use, missing-docstring, invalid-name
 
 class Uniform(Initializer):
     """Initialize the weight with uniform [-scale, scale]
@@ -91,11 +106,41 @@ class Normal(Initializer):
 
 
 class Xavier(Initializer):
-    """Initialize the weight with Xavier initialization scheme."""
+    """Initialize the weight with Xavier or similar initialization scheme.
+
+    Parameters
+    ----------
+    rnd_type: str, optional
+        Use ```gaussian``` or ```uniform``` to init
+
+    factor_type: str, optional
+        Use ```avg```, ```in```, or ```out``` to init
+
+    magnitude: float, optional
+        scale of random number range
+    """
+    def __init__(self, rnd_type="uniform", factor_type="avg", magnitude=3):
+        self.rnd_type = rnd_type
+        self.factor_type = factor_type
+        self.magnitude = magnitude
+
 
     def _init_weight(self, _, arr):
         shape = arr.shape
         fan_in, fan_out = np.prod(shape[1:]), shape[0]
-        scale = np.sqrt(3. / (fan_in + fan_out))
-        random.uniform(-scale, scale, out=arr)
-
+        factor = 1
+        if self.factor_type == "avg":
+            factor = (fan_in + fan_out) / 2
+        elif self.factor_type == "in":
+            factor = fan_in
+        elif self.factor_type == "out":
+            factor = fan_out
+        else:
+            raise ValueError("Incorrect factor type")
+        scale = np.sqrt(self.magnitude / factor)
+        if self.rnd_type == "uniform":
+            random.uniform(-scale, scale, out=arr)
+        elif self.rnd_type == "gaussian":
+            random.normal(0, scale, out=arr)
+        else:
+            raise ValueError("Unknown random type")

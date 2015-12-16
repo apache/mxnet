@@ -12,12 +12,14 @@ namespace op {
 template<>
 Operator *CreateOp<cpu>(ActivationParam param) {
   switch (param.act_type) {
-    case kReLU:
+    case activation::kReLU:
       return new ActivationOp<cpu, mshadow_op::relu, mshadow_op::relu_grad>();
-    case kSigmoid:
+    case activation::kSigmoid:
       return new ActivationOp<cpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad>();
-    case kTanh:
+    case activation::kTanh:
       return new ActivationOp<cpu, mshadow_op::tanh, mshadow_op::tanh_grad>();
+    case activation::kSoftReLU:
+      return new ActivationOp<cpu, mshadow_op::softrelu, mshadow_op::softrelu_grad>();
     default:
       LOG(FATAL) << "unknown activation type";
       return NULL;

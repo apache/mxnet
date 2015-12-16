@@ -6,10 +6,12 @@
 #ifndef MXNET_SYMBOL_GRAPH_EXECUTOR_H_
 #define MXNET_SYMBOL_GRAPH_EXECUTOR_H_
 
+#include <mxnet/c_api.h>
 #include <mxnet/symbolic.h>
 #include <memory>
 #include <string>
 #include <vector>
+#include <map>
 #include <utility>
 #include "./static_graph.h"
 #include "./graph_memory_allocator.h"
@@ -20,16 +22,23 @@ namespace mxnet {
  */
 class GraphExecutor : public Executor {
  public:
+  GraphExecutor() {}
   virtual ~GraphExecutor();
   void Forward(bool is_train) override;
+  void PartialForward(bool is_train, int step, int *step_left) override;
   void Backward(const std::vector<NDArray> &head_grads) override;
   const std::vector<NDArray> &outputs() const override {
     return heads_ndarray_;
   }
   void Print(std::ostream &os) const override; // NOLINT(*)
+  // install callback
+  void SetMonitorCallback(ExcecutorMonitorCallback callback) {
+    monitor_callback_ = callback;
+  }
   // implement Executor::Bind, only call it once.
   inline void Init(Symbol symbol,
-                   Context ctx,
+                   const Context& default_ctx,
+                   const std::map<std::string, Context>& ctx_map,
                    const std::vector<NDArray> &in_args,
                    const std::vector<NDArray> &arg_grad_store,
                    const std::vector<OpReqType> &grad_req_type,
@@ -41,7 +50,9 @@ class GraphExecutor : public Executor {
     for (auto req : grad_req_type) {
       if (req != kNullOp) need_backward = true;
     }
-    this->InitGraph(symbol, ctx, need_backward);
+    this->InitGraph(symbol, default_ctx, ctx_map,
+                    in_args, arg_grad_store, grad_req_type,
+                    need_backward);
     this->InitDataEntryInfo(in_args, arg_grad_store, grad_req_type, aux_states);
     this->InitDataEntryMemory();
     this->InitResources();
@@ -170,7 +181,13 @@ class GraphExecutor : public Executor {
    */
   inline OpExecEntry GetOpExecEntry(uint32_t node_id);
   // initialize the internal graph structure
-  void InitGraph(const Symbol &symbol, Context ctx, bool need_backward);
+  void InitGraph(const Symbol &symbol,
+                 const Context& default_ctx,
+                 const std::map<std::string, Context>& ctx_map,
+                 const std::vector<NDArray> &in_args,
+                 const std::vector<NDArray> &arg_grad_store,
+                 const std::vector<OpReqType> &grad_req_type,
+                 bool need_backward);
   // initialize internal DataEntryInfo, reference counting
   void InitDataEntryInfo(const std::vector<NDArray> &in_args,
                          const std::vector<NDArray> &arg_grad_store,
@@ -182,6 +199,13 @@ class GraphExecutor : public Executor {
   void InitResources();
   // initialize OpNode data structure
   void InitOpNodes();
+  // assign context to the graph, this will mutate the graph.
+  void AssignContext(const Context default_ctx,
+                     const std::map<std::string, Context>& ctx_map,
+                     const std::vector<NDArray> &in_args,
+                     const std::vector<NDArray> &arg_grad_store,
+                     const std::vector<OpReqType> &grad_req_type,
+                     std::vector<Context> *ctx_plan);
   // run ops from topo order start to end
   void RunOps(bool is_train, size_t topo_start, size_t topo_end);
   // internal computational graph
@@ -205,6 +229,8 @@ class GraphExecutor : public Executor {
   std::vector<OpNode> op_nodes_;
   // head NDArrays
   std::vector<NDArray> heads_ndarray_;
+  // monitor call back
+  std::function<void(const char*, void*)> monitor_callback_;
 };  // class GraphExecutor
 }  // namespace mxnet
 #endif  // MXNET_SYMBOL_GRAPH_EXECUTOR_H_

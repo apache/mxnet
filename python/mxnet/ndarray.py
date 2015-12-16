@@ -45,6 +45,13 @@ def _new_alloc_handle(shape, ctx, delay_alloc):
         ctypes.byref(hdl)))
     return hdl
 
+def waitall():
+    """Wait all async operation to finish in MXNet
+
+    This function is used for benchmark only
+    """
+    check_call(_LIB.MXNDArrayWaitAll())
+
 class NDArray(object):
     """NDArray object in mxnet.
 
@@ -276,6 +283,16 @@ class NDArray(object):
         return tuple(pdata[:ndim.value])
 
     @property
+    def size(self):
+        """Get size of current NDArray.
+
+        Returns
+        -------
+        an int representing size of current ndarray
+        """
+        return np.prod(self.shape)
+
+    @property
     def context(self):
         """Get context of current NDArray.
 
@@ -304,6 +321,20 @@ class NDArray(object):
             data.ctypes.data_as(mx_float_p),
             ctypes.c_size_t(data.size)))
         return data
+
+    def asscalar(self):
+        """Return a CPU scalar(float) of current ndarray.
+
+        This ndarray must have shape (1,)
+
+        Returns
+        -------
+        scalar : np.float
+            The scalar representation of the ndarray.
+        """
+        if self.shape != (1,):
+            raise ValueError("The current array is not a scalar")
+        return self.asnumpy()[0]
 
     def copyto(self, other):
         """Copy the content of current array to other.
@@ -334,6 +365,28 @@ class NDArray(object):
         else:
             raise TypeError('copyto do not support type ' + str(type(other)))
     # pylint: enable= no-member
+
+
+def onehot_encode(indices, out):
+    """One hot encoding indices into matrix out.
+
+    Parameters
+    ----------
+    indices: NDArray
+        An NDArray containing indices of the categorical features.
+
+    out: NDArray
+        The result holder of the encoding.
+
+    Returns
+    -------
+    out: Array
+        Same as out.
+    """
+    # pylint: disable= no-member, protected-access
+    return NDArray._onehot_encode(indices, out, out=out)
+    # pylint: enable= no-member, protected-access
+
 
 def empty(shape, ctx=None):
     """Create an empty uninitialized new NDArray, with specified shape.
@@ -515,7 +568,6 @@ def _make_ndarray_function(handle):
     NDARRAY_ARG_BEFORE_SCALAR = 1
     ACCEPT_EMPTY_MUTATE_TARGET = 1 << 2
     # Get the property of NDArray
-    n_mutate_vars = 0
     n_used_vars = mx_uint()
     n_scalars = mx_uint()
     n_mutate_vars = mx_uint()

@@ -1,11 +1,11 @@
 Handwritten Digits Classification Competition
-======================================================
+=============================================
 
-[MNIST](http://yann.lecun.com/exdb/mnist/) is a handwritten digits image data set created by Yann LeCun. Every digit is represented by a 28x28 image. It has become a standard data set to test classifiers on simple image input. Neural network is no doubt a strong model for image classification tasks. There's a [long-term hosted competition](https://www.kaggle.com/c/digit-recognizer) on Kaggle using this data set. We will present the basic usage of [mxnet](https://github.com/dmlc/mxnet/tree/master/R-package) to compete in this challenge.
+[MNIST](http://yann.lecun.com/exdb/mnist/) is a handwritten digits image data set created by Yann LeCun. Every digit is represented by a 28x28 image. It has become a standard data set to test classifiers on simple image input. Neural network is no doubt a strong model for image classification tasks. There's a [long-term hosted competition](https://www.kaggle.com/c/digit-recognizer) on Kaggle using this data set.
+We will present the basic usage of [mxnet](https://github.com/dmlc/mxnet/tree/master/R-package) to compete in this challenge.
 
 This tutorial is written in Rmarkdown. You can download the source [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/mnistCompetition.Rmd) and view a
 hosted version of tutorial [here](http://mxnet.readthedocs.org/en/latest/R-package/mnistCompetition.html).
-
 
 ## Data Loading
 
@@ -37,9 +37,10 @@ Here every image is represented as a single row in train/test. The greyscale of 
 
 
 ```r
-train.x <- train.x/255
-test <- test/255
+train.x <- t(train.x/255)
+test <- t(test/255)
 ```
+We also transpose the input matrix to npixel x nexamples, which is the column major format accepted by mxnet (and the convention of R).
 
 In the label part, we see the number of each digit is fairly even:
 
@@ -50,7 +51,7 @@ table(train.y)
 
 ```
 ## train.y
-##    0    1    2    3    4    5    6    7    8    9 
+##    0    1    2    3    4    5    6    7    8    9
 ## 4132 4684 4177 4351 4072 3795 4137 4401 4063 4188
 ```
 
@@ -66,7 +67,7 @@ act1 <- mx.symbol.Activation(fc1, name="relu1", act_type="relu")
 fc2 <- mx.symbol.FullyConnected(act1, name="fc2", num_hidden=64)
 act2 <- mx.symbol.Activation(fc2, name="relu2", act_type="relu")
 fc3 <- mx.symbol.FullyConnected(act2, name="fc3", num_hidden=10)
-softmax <- mx.symbol.Softmax(fc3, name="sm")
+softmax <- mx.symbol.SoftmaxOutput(fc3, name="sm")
 ```
 
 1. In `mxnet`, we use its own data type `symbol` to configure the network. `data <- mx.symbol.Variable("data")` use `data` to represent the input data, i.e. the input layer.
@@ -77,7 +78,7 @@ softmax <- mx.symbol.Softmax(fc3, name="sm")
 6. Here comes the output layer. Since there's only 10 digits, we set the number of neurons to 10.
 7. Finally we set the activation to softmax to get a probabilistic prediction.
 
-## Training 
+## Training
 
 We are almost ready for the training process. Before we start the computation, let's decide what device should we use.
 
@@ -163,20 +164,20 @@ dim(preds)
 ```
 
 ```
-## [1] 28000    10
+## [1]    10 28000
 ```
 
 It is a matrix with 28000 rows and 10 cols, containing the desired classification probabilities from the output layer. To extract the maximum label for each row, we can use the `max.col` in R:
 
 
 ```r
-pred.label <- max.col(preds) - 1
+pred.label <- max.col(t(preds)) - 1
 table(pred.label)
 ```
 
 ```
 ## pred.label
-##    0    1    2    3    4    5    6    7    8    9 
+##    0    1    2    3    4    5    6    7    8    9
 ## 2818 3195 2744 2767 2683 2596 2798 2790 2784 2825
 ```
 
@@ -184,7 +185,7 @@ With a little extra effort in the csv format, we can have our submission to the 
 
 
 ```r
-submission <- data.frame(ImageId=1:nrow(test), Label=pred.label)
+submission <- data.frame(ImageId=1:ncol(test), Label=pred.label)
 write.csv(submission, file='submission.csv', row.names=FALSE, quote=FALSE)
 ```
 
@@ -215,26 +216,24 @@ tanh3 <- mx.symbol.Activation(data=fc1, act_type="tanh")
 # second fullc
 fc2 <- mx.symbol.FullyConnected(data=tanh3, num_hidden=10)
 # loss
-lenet <- mx.symbol.Softmax(data=fc2)
+lenet <- mx.symbol.SoftmaxOutput(data=fc2)
 ```
 
 Then let us reshape the matrices into arrays:
 
 
 ```r
-train.array <- t(train.x)
-dim(train.array) <- c(1,28,28,nrow(train.x))
-train.array <- aperm(train.array, c(4,1,2,3))
-test.array <- t(test)
-dim(test.array) <- c(1,28,28,nrow(test))
-test.array <- aperm(test.array, c(4,1,2,3))
+train.array <- train.x
+dim(train.array) <- c(28, 28, 1, ncol(train.x))
+test.array <- test
+dim(test.array) <- c(28, 28, 1, ncol(test))
 ```
 
 Next we are going to compare the training speed on different devices, so the definition of the devices goes first:
 
 
 ```r
-n.gpu <- 1 
+n.gpu <- 1
 device.cpu <- mx.cpu()
 device.gpu <- lapply(0:(n.gpu-1), function(i) {
   mx.gpu(i)
@@ -259,20 +258,20 @@ model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
 
 ```
 ## Start training with 1 devices
-## Batch [100] Train-accuracy=0.1054
-## Batch [200] Train-accuracy=0.1237
-## Batch [300] Train-accuracy=0.352766666666667
-## Batch [400] Train-accuracy=0.498824999999999
-## [1] Train-accuracy=0.519546539379474
+## Batch [100] Train-accuracy=0.1066
+## Batch [200] Train-accuracy=0.16495
+## Batch [300] Train-accuracy=0.401766666666667
+## Batch [400] Train-accuracy=0.537675
+## [1] Train-accuracy=0.557136038186157
 ```
 
 ```r
-print(proc.time() - tic) 
+print(proc.time() - tic)
 ```
 
 ```
-##    user  system elapsed 
-## 132.340 203.621  84.825
+##    user  system elapsed
+## 130.030 204.976  83.821
 ```
 
 Training on GPU:
@@ -290,40 +289,40 @@ model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
 
 ```
 ## Start training with 1 devices
-## Batch [100] Train-accuracy=0.1055
-## Batch [200] Train-accuracy=0.1197
-## Batch [300] Train-accuracy=0.346266666666667
-## Batch [400] Train-accuracy=0.4925
-## [1] Train-accuracy=0.513699284009546
-## Batch [100] Train-accuracy=0.9577
-## Batch [200] Train-accuracy=0.961849999999999
-## Batch [300] Train-accuracy=0.966
-## Batch [400] Train-accuracy=0.968750000000003
-## [2] Train-accuracy=0.969404761904765
-## Batch [100] Train-accuracy=0.977399999999999
-## Batch [200] Train-accuracy=0.97815
-## Batch [300] Train-accuracy=0.980033333333335
-## Batch [400] Train-accuracy=0.981400000000003
-## [3] Train-accuracy=0.981761904761908
-## Batch [100] Train-accuracy=0.985799999999999
-## Batch [200] Train-accuracy=0.98575
-## Batch [300] Train-accuracy=0.986666666666668
-## Batch [400] Train-accuracy=0.987550000000003
-## [4] Train-accuracy=0.987880952380955
-## Batch [100] Train-accuracy=0.9918
-## Batch [200] Train-accuracy=0.9908
-## Batch [300] Train-accuracy=0.991566666666668
-## Batch [400] Train-accuracy=0.992175000000002
-## [5] Train-accuracy=0.992380952380955
+## Batch [100] Train-accuracy=0.1066
+## Batch [200] Train-accuracy=0.1596
+## Batch [300] Train-accuracy=0.3983
+## Batch [400] Train-accuracy=0.533975
+## [1] Train-accuracy=0.553532219570405
+## Batch [100] Train-accuracy=0.958
+## Batch [200] Train-accuracy=0.96155
+## Batch [300] Train-accuracy=0.966100000000001
+## Batch [400] Train-accuracy=0.968550000000003
+## [2] Train-accuracy=0.969071428571432
+## Batch [100] Train-accuracy=0.977
+## Batch [200] Train-accuracy=0.97715
+## Batch [300] Train-accuracy=0.979566666666668
+## Batch [400] Train-accuracy=0.980900000000003
+## [3] Train-accuracy=0.981309523809527
+## Batch [100] Train-accuracy=0.9853
+## Batch [200] Train-accuracy=0.985899999999999
+## Batch [300] Train-accuracy=0.986966666666668
+## Batch [400] Train-accuracy=0.988150000000002
+## [4] Train-accuracy=0.988452380952384
+## Batch [100] Train-accuracy=0.990199999999999
+## Batch [200] Train-accuracy=0.98995
+## Batch [300] Train-accuracy=0.990600000000001
+## Batch [400] Train-accuracy=0.991325000000002
+## [5] Train-accuracy=0.991523809523812
 ```
 
 ```r
-print(proc.time() - tic) 
+print(proc.time() - tic)
 ```
 
 ```
-##    user  system elapsed 
-##  10.176   1.608   7.743
+##    user  system elapsed
+##   9.288   1.680   6.889
 ```
 
 As you can see by using GPU, we can get a much faster speedup in training!
@@ -332,8 +331,8 @@ Finally we can submit the result to Kaggle again to see the improvement of our r
 
 ```r
 preds <- predict(model, test.array)
-pred.label <- max.col(preds) - 1
-submission <- data.frame(ImageId=1:nrow(test), Label=pred.label)
+pred.label <- max.col(t(preds)) - 1
+submission <- data.frame(ImageId=1:ncol(test), Label=pred.label)
 write.csv(submission, file='submission.csv', row.names=FALSE, quote=FALSE)
 ```
 

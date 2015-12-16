@@ -49,7 +49,11 @@ dataiter = mx.io.ImageRecordIter(
         round_batch=True)
 
 batchidx = 0
-for data, label in dataiter:
+for dbatch in dataiter:
+    data = dbatch.data[0]
+    label = dbatch.label[0]
+    pad = dbatch.pad
+    index = dbatch.index
     print("Batch", batchidx)
     print(label.asnumpy().flatten())
     batchidx += 1

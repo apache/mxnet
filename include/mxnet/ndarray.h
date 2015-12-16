@@ -27,7 +27,7 @@ namespace mxnet {
 /*!
  * \brief ndarray interface
  */
-class NDArray {
+class MXNET_API NDArray {
  public:
   /*! \brief default cosntructor */
   NDArray() {}
@@ -243,21 +243,21 @@ class NDArray {
     ptr_->CheckAndAlloc();
   }
   /*!
-   * \brief Save list of narray into the file.
-   * \param fname name of the file.
+   * \brief Save list of narray into the Stream.x
+   * \param fo The stream of output.
    * \param data the NDArrays to be saved.
    * \param names the name of the NDArray, optional, can be zero length.
    */
-  static void Save(const std::string& fname,
+  static void Save(dmlc::Stream* fo,
                    const std::vector<NDArray>& data,
                    const std::vector<std::string>& names);
   /*!
-   * \brief Load list of narray into from the file.
-   * \param fname name of the file.
+   * \brief Load list of narray into from the stream.
+   * \param fi The stream of the input file.
    * \param data the NDArrays to be loaded
    * \param keys the name of the NDArray, if saved in the file.
    */
-  static void Load(const std::string& fname,
+  static void Load(dmlc::Stream* fi,
                    std::vector<NDArray>* data,
                    std::vector<std::string>* keys);
 
@@ -339,7 +339,7 @@ class NDArray {
  * \note The function name explicitly marks the order of from and to
  *     due to different possible convention carried by copy function.
  */
-void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
+MXNET_API void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
 
 /*!
  * \brief Perform elementwise sum over each data from source, store result into out.
@@ -347,7 +347,7 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
  * \param out the target ndarray
  * \param priority Priority of the action.
  */
-void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priority = 0);
+MXNET_API void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priority = 0);
 
 /*!
  * \brief elementwise add
@@ -355,69 +355,69 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator+(const NDArray &lhs, const NDArray &rhs);
+MXNET_API NDArray operator+(const NDArray &lhs, const NDArray &rhs);
 /*!
  * \brief elementwise add
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator+(const NDArray &lhs, const real_t &rhs);
+MXNET_API NDArray operator+(const NDArray &lhs, const real_t &rhs);
 /*!
  * \brief elementwise substraction
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator-(const NDArray &lhs, const NDArray &rhs);
+MXNET_API NDArray operator-(const NDArray &lhs, const NDArray &rhs);
 /*!
  * \brief elementwise substraction
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator-(const NDArray &lhs, const real_t &rhs);
+MXNET_API NDArray operator-(const NDArray &lhs, const real_t &rhs);
 /*!
  * \brief elementwise multiplication
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator*(const NDArray &lhs, const NDArray &rhs);\
+MXNET_API NDArray operator*(const NDArray &lhs, const NDArray &rhs); \
 /*!
  * \brief elementwise multiplication
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator*(const NDArray &lhs, const real_t &rhs);
+MXNET_API NDArray operator*(const NDArray &lhs, const real_t &rhs);
 /*!
  * \brief elementwise division
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator/(const NDArray &lhs, const NDArray &rhs);
+MXNET_API NDArray operator/(const NDArray &lhs, const NDArray &rhs);
 /*!
  * \brief elementwise division
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator/(const NDArray &lhs, const real_t &rhs);
+MXNET_API NDArray operator/(const NDArray &lhs, const real_t &rhs);
 
 /*!
  * \brief Seed the random number generator.
  * \param seed the seed to set to global random number generators.
  */
-void RandomSeed(uint32_t seed);
+MXNET_API void RandomSeed(uint32_t seed);
 /*!
  * \brief Sample uniform distribution for each elements of out.
  * \param begin lower bound of distribution.
  * \param end upper bound of distribution.
  * \param out output NDArray.
  */
-void SampleUniform(real_t begin, real_t end, NDArray *out);
+MXNET_API void SampleUniform(real_t begin, real_t end, NDArray *out);
 
 /*!
  * \brief Sample gaussian distribution for each elements of out.
@@ -425,7 +425,7 @@ void SampleUniform(real_t begin, real_t end, NDArray *out);
  * \param sigma standard deviation of gaussian distribution.
  * \param out output NDArray.
  */
-void SampleGaussian(real_t mu, real_t sigma, NDArray *out);
+MXNET_API void SampleGaussian(real_t mu, real_t sigma, NDArray *out);
 //--------------------------------------------------------------
 // The following part are API Registration of NDArray functions.
 //--------------------------------------------------------------

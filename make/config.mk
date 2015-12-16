@@ -58,8 +58,13 @@ USE_OPENMP = 1
 
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
-USE_STATIC_MKL = NONE
-USE_BLAS = blas
+# in default use atlas for linux while apple for osx
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S), Darwin)
+USE_BLAS = apple
+else
+USE_BLAS = atlas
+endif
 
 # add path to intel libary, you may need it for MKL, if you did not add the path
 # to enviroment variable
@@ -67,7 +72,9 @@ USE_INTEL_PATH = NONE
 
 # If use MKL, choose static link automaticly to allow python wrapper
 ifeq ($(USE_BLAS), mkl)
-	USE_STATIC_MKL = 1
+USE_STATIC_MKL = 1
+else
+USE_STATIC_MKL = NONE
 endif
 
 #----------------------------

@@ -1,3 +1,27 @@
+list.of.packages <- c("R.utils")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+setwd(tempdir())
+
+download.file("http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz", destfile="train-images-idx3-ubyte.gz")
+
+download.file("http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz", destfile="train-labels-idx1-ubyte.gz")
+
+download.file("http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz", destfile="t10k-images-idx3-ubyte.gz")
+
+download.file("http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz", destfile="t10k-labels-idx1-ubyte.gz")
+
+require(R.utils)
+
+gunzip("train-images-idx3-ubyte.gz")
+
+gunzip("train-labels-idx1-ubyte.gz")
+
+gunzip("t10k-images-idx3-ubyte.gz")
+
+gunzip("t10k-labels-idx1-ubyte.gz")
+
 require(mxnet)
 
 # Network configuration
@@ -11,8 +35,8 @@ fc3 <- mx.symbol.FullyConnected(act2, name="fc3", num_hidden=10)
 softmax <- mx.symbol.Softmax(fc3, name = "sm")
 
 dtrain = mx.io.MNISTIter(
-  image="data/train-images-idx3-ubyte",
-  label="data/train-labels-idx1-ubyte",
+  image="train-images-idx3-ubyte",
+  label="train-labels-idx1-ubyte",
   data.shape=c(784),
   batch.size=batch.size,
   shuffle=TRUE,
@@ -21,8 +45,8 @@ dtrain = mx.io.MNISTIter(
   seed=10)
 
 dtest = mx.io.MNISTIter(
-  image="data/t10k-images-idx3-ubyte",
-  label="data/t10k-labels-idx1-ubyte",
+  image="t10k-images-idx3-ubyte",
+  label="t10k-labels-idx1-ubyte",
   data.shape=c(784),
   batch.size=batch.size,
   shuffle=FALSE,
@@ -39,9 +63,8 @@ model <- mx.model.FeedForward.create(softmax, X=dtrain, eval.data=dtest,
                                      ctx=devices, num.round=1,
                                      learning.rate=0.1, momentum=0.9,
                                      initializer=mx.init.uniform(0.07),
-                                     iter.end.callback=mx.callback.save.checkpoint("chkpt"),
-                                     epoch.end.callback=mx.callback.log.train.metric(100))
-
+                                     epoch.end.callback=mx.callback.save.checkpoint("chkpt"),
+                                     batch.end.callback=mx.callback.log.train.metric(100))
 
 # do prediction
 pred <- predict(model, dtest)
@@ -51,11 +74,10 @@ dataX <- mx.io.extract(dtest, "data")
 pred2 <- predict(model, X=dataX)
 
 accuracy <- function(label, pred) {
-  ypred = max.col(as.array(pred))
+  ypred = max.col(t(as.array(pred)))
   return(sum((as.array(label) + 1) == ypred) / length(label))
 }
 
 print(paste0("Finish prediction... accuracy=", accuracy(label, pred)))
 print(paste0("Finish prediction... accuracy2=", accuracy(label, pred2)))
-
 

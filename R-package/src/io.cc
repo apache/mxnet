@@ -43,6 +43,18 @@ ArrayDataIter::ArrayDataIter(const Rcpp::NumericVector& data,
                              const Rcpp::NumericVector& unif_rnds,
                              int batch_size,
                              bool shuffle) : counter_(0) {
+  Rcpp::IntegerVector dshape = data.attr("dim");
+  Rcpp::IntegerVector lshape = label.attr("dim");
+  if (dshape[dshape.size() - 1] != lshape[lshape.size() - 1]) {
+    if (dshape[0] == lshape[0]) {
+      RLOG_FATAL << "Seems X, y was passed in a Row major way, "
+                 << "MXNetR adopts a column major convention.\n"
+                 << "Please pass in transpose of X instead";
+    } else {
+      RLOG_FATAL << "Data and label shape in-consistent";
+    }
+  }
+
   std::vector<size_t> order(label.size());
   for (size_t i = 0; i < order.size(); ++i) {
     order[i] = i;
@@ -70,15 +82,16 @@ void ArrayDataIter::Convert(const Rcpp::NumericVector& src,
                             std::vector<NDArray> *out) {
   Rcpp::RObject dim = src.attr("dim");
   Rcpp::Dimension rshape(dim);
-  std::vector<mx_float> temp, batch;
-  ConvertToRowMajor(src, &temp);
+  size_t ndim = rshape.size();
+  std::vector<mx_float> temp(src.size()), batch;
+  std::copy(src.begin(), src.end(), temp.begin());
   out->clear();
-  out->reserve(rshape[0] / batch_size + 1);
+  out->reserve(rshape[ndim - 1] / batch_size + 1);
   size_t line_size = 1;
-  for (size_t i = 1; i < rshape.size(); ++i) {
+  for (size_t i = 0; i < rshape.size() - 1; ++i) {
     line_size *= rshape[i];
   }
-  rshape[0] = batch_size;
+  rshape[ndim - 1] = batch_size;
   batch.resize(batch_size * line_size, 0.0f);
 
   for (size_t begin = 0; begin < order.size(); begin += batch_size) {

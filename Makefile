@@ -34,7 +34,11 @@ else
 endif
 CFLAGS += -I./mshadow/ -I./dmlc-core/include -fPIC -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
-NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+ifeq ($(DEBUG), 1)
+	NVCCFLAGS = -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+else
+	NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+endif
 ROOTDIR = $(CURDIR)
 
 ifndef LINT_LANG
@@ -80,9 +84,9 @@ PS_PATH=./ps-lite
 DEPS_PATH=$(shell pwd)/deps
 include $(PS_PATH)/make/ps.mk
 ifeq ($(USE_DIST_KVSTORE), 1)
-	CFLAGS += -DMXNET_USE_DIST_KVSTORE -I$(PS_PATH)/src
+	CFLAGS += -DMXNET_USE_DIST_KVSTORE -I$(PS_PATH)/include -I$(DEPS_PATH)/include
 	LIB_DEP += $(PS_PATH)/build/libps.a
-	LDFLAGS += -Wl,-rpath,$(DEPS_PATH)/lib $(PS_LDFLAGS_SO)
+	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
 .PHONY: clean all test lint doc clean_all rcpplint rcppexport roxygen
@@ -98,14 +102,15 @@ LIB_DEP += $(DMLC_CORE)/libdmlc.a
 ALL_DEP = $(OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
 	ALL_DEP += $(CUOBJ)
+	LDFLAGS += -lnvrtc -lcuda
 endif
 
-build/%.o: src/%.cc $(LIB_DEP)
+build/%.o: src/%.cc
 	@mkdir -p $(@D)
 	$(CXX) -std=c++0x $(CFLAGS) -MM -MT build/$*.o $< >build/$*.d
 	$(CXX) -std=c++0x -c $(CFLAGS) -c $< -o $@
 
-build/%_gpu.o: src/%.cu $(LIB_DEP)
+build/%_gpu.o: src/%.cu
 	@mkdir -p $(@D)
 	$(NVCC) $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" -M build/$*_gpu.o $< >build/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $<
@@ -120,13 +125,13 @@ lib/libmxnet.so: $(ALL_DEP)
 
 # ps-lite
 $(PS_PATH)/build/libps.a:
-	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) deps
 	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) ps
+	ln -fs $(PS_PATH)/tracker .
 
 $(DMLC_CORE)/libdmlc.a:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
-bin/im2rec: tools/im2rec.cc $(DMLC_CORE)/libdmlc.a
+bin/im2rec: tools/im2rec.cc $(ALL_DEP)
 
 $(BIN) :
 	@mkdir -p $(@D)
@@ -137,7 +142,7 @@ include tests/cpp/unittest.mk
 test: $(TEST)
 
 lint: rcpplint
-	python dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python
+	python2 dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python predict/python
 
 doc: doxygen
 
@@ -146,13 +151,22 @@ doxygen:
 
 # R related shortcuts
 rcpplint:
-	python dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
+	python2 dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
 
 rcppexport:
 	Rscript -e "require(mxnet); mxnet::mxnet.export(\"R-package\")"
 
 roxygen:
 	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
+
+rpkg:	roxygen
+	mkdir -p R-package/inst
+	mkdir -p R-package/inst/libs
+	cp -rf lib/libmxnet.so R-package/inst/libs
+	mkdir -p R-package/inst/include
+	cp -rf include/* R-package/inst/include
+	cp -rf dmlc-core/include/* R-package/inst/include/
+	R CMD build --no-build-vignettes R-package
 
 clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~

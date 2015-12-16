@@ -20,13 +20,13 @@ class CuDNNActivationOp : public Operator {
     init_cudnn_ = false;
     dtype_ = CUDNN_DATA_FLOAT;
     switch (param_.act_type) {
-      case kReLU:
+      case activation::kReLU:
         mode_ = CUDNN_ACTIVATION_RELU;
         break;
-      case kSigmoid:
+      case activation::kSigmoid:
         mode_ = CUDNN_ACTIVATION_SIGMOID;
         break;
-      case kTanh:
+      case activation::kTanh:
         mode_ = CUDNN_ACTIVATION_TANH;
         break;
       default:
@@ -51,14 +51,14 @@ class CuDNNActivationOp : public Operator {
     Stream<gpu> *s = ctx.get_stream<gpu>();
     Tensor<gpu, 4> data;
     Tensor<gpu, 4> out;
-    if (in_data[kData].ndim() == 2) {
-      uint32_t ds[] = {in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1};
-      TShape dshape(ds, ds + 4);
-      data = in_data[kData].get_with_shape<gpu, 4, real_t>(dshape, s);
-      out = out_data[kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
+    if (in_data[activation::kData].ndim() == 2) {
+      Shape<4> dshape = Shape4(in_data[activation::kData].shape_[0],
+                               in_data[activation::kData].shape_[1], 1, 1);
+      data = in_data[activation::kData].get_with_shape<gpu, 4, real_t>(dshape, s);
+      out = out_data[activation::kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
     } else {
-      data = in_data[kData].get<gpu, 4, real_t>(s);
-      out = out_data[kOut].get<gpu, 4, real_t>(s);
+      data = in_data[activation::kData].get<gpu, 4, real_t>(s);
+      out = out_data[activation::kOut].get<gpu, 4, real_t>(s);
     }
     float alpha = 1.0f;
     float beta = 0.0f;
@@ -105,18 +105,18 @@ class CuDNNActivationOp : public Operator {
     Tensor<gpu, 4> data;
     Tensor<gpu, 4> output_data;
     Tensor<gpu, 4> input_grad;
-    if (in_data[kData].ndim() == 2) {
-      uint32_t ds[] = {in_data[kData].shape_[0], in_data[kData].shape_[1], 1, 1};
-      TShape dshape(ds, ds + 4);
-      data = in_data[kData].get_with_shape<gpu, 4, real_t>(dshape, s);
-      grad = out_grad[kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
-      output_data = out_data[kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
-      input_grad = in_grad[kData].get_with_shape<gpu, 4, real_t>(dshape, s);
+    if (in_data[activation::kData].ndim() == 2) {
+      Shape<4> dshape = Shape4(in_data[activation::kData].shape_[0],
+                               in_data[activation::kData].shape_[1], 1, 1);
+      data = in_data[activation::kData].get_with_shape<gpu, 4, real_t>(dshape, s);
+      grad = out_grad[activation::kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
+      output_data = out_data[activation::kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
+      input_grad = in_grad[activation::kData].get_with_shape<gpu, 4, real_t>(dshape, s);
     } else {
-      data = in_data[kData].get<gpu, 4, real_t>(s);
-      output_data = out_data[kOut].get<gpu, 4, real_t>(s);
-      grad = out_grad[kOut].get<gpu, 4, real_t>(s);
-      input_grad = in_grad[kData].get<gpu, 4, real_t>(s);
+      data = in_data[activation::kData].get<gpu, 4, real_t>(s);
+      output_data = out_data[activation::kOut].get<gpu, 4, real_t>(s);
+      grad = out_grad[activation::kOut].get<gpu, 4, real_t>(s);
+      input_grad = in_grad[activation::kData].get<gpu, 4, real_t>(s);
     }
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
     CHECK_EQ(cudnnActivationBackward(s->dnn_handle_,

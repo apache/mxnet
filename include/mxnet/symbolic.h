@@ -15,6 +15,7 @@
 #include <string>
 #include <utility>
 #include "./base.h"
+#include "./c_api.h"
 #include "./ndarray.h"
 #include "./operator.h"
 
@@ -86,6 +87,23 @@ class Symbol {
    */
   void Compose(const std::unordered_map<std::string, Symbol>& kwargs,
                const std::string& name);
+  /*!
+   * \brief set additional attributes of the symbol,
+   *  This only works for symbol with outputs from single operators.
+   *  For grouped sybmbol, an error will be raised.
+   * \param key the key of the attribute
+   * \param value the value of the attribute.
+   */
+  void SetAttr(const std::string &key, const std::string& value);
+  /*!
+   * \brief Get attributes from the symbol.
+   *  This only works for symbol with outputs from single operators.
+   *  For grouped sybmbol, an error will be raised.
+   * \param key Key of the attribute.
+   * \param out the output value of the attribute.
+   * \return true if the attribute exists, false if the attribute do not exist.
+   */
+  bool GetAttr(const std::string& key, std::string* out);
   /*!
    * \brief Apply the symbol as a function, compose with arguments
    * \param args positional arguments for the symbol
@@ -254,6 +272,15 @@ class Executor {
    */
   virtual void Forward(bool is_train) = 0;
   /*!
+   * \brief Perform a Partial Forward operation of Operator.
+   *  Only issue operation specified by step.
+   *  The caller must keep calling PartialForward with increasing steps, until step_left=0.
+   * \param is_train Whether this is training phase.
+   * \param step current step, user can always start from 0
+   * \param step_left Number of steps left to finish the forward.
+   */
+  virtual void PartialForward(bool is_train, int step, int *step_left) = 0;
+  /*!
    * \brief Perform a Backward operation of the Operator.
    *  This must be called after Forward.
    *  After this operation, NDArrays specified by grad_in_args_store will be updated accordingly.
@@ -277,7 +304,8 @@ class Executor {
    * \brief Create an operator by bind symbol with context and arguments.
    *  If user do not want to compute the gradients of i-th argument, grad_req_type[i] can be kNullOp.
    *
-   * \param ctx the context of binding.
+   * \param default_ctx the default context of binding.
+   * \param group2ctx Context mapping group to context.
    * \param symbol the symbol that specifies the output of Forward pass.
    * \param in_args the NDArray that stores the input arguments to the symbol.
    * \param arg_grad_store NDArray that is used to store the gradient output of the input arguments.
@@ -286,11 +314,16 @@ class Executor {
    * \return a new executor.
    */
   static Executor *Bind(Symbol symbol,
-                        Context ctx,
+                        const Context& default_ctx,
+                        const std::map<std::string, Context>& group2ctx,
                         const std::vector<NDArray> &in_args,
                         const std::vector<NDArray> &arg_grad_store,
                         const std::vector<OpReqType> &grad_req_type,
                         const std::vector<NDArray> &aux_states);
+  /*!
+   * \brief Install a callback to notify the completion of operation.
+   */
+  virtual void SetMonitorCallback(ExcecutorMonitorCallback callback) {}
 };  // class operator
 }  // namespace mxnet
 #endif  // MXNET_SYMBOLIC_H_

@@ -8,7 +8,7 @@ net = mx.symbol.Variable('data')
 fc1 = mx.symbol.FullyConnected(data=net, name='fc1', num_hidden=128)
 net = mx.symbol.Activation(data=fc1, name='relu1', act_type="relu")
 net = mx.symbol.FullyConnected(data=net, name='fc2', num_hidden=64)
-out = mx.symbol.Softmax(data=net, name='softmax')
+out = mx.symbol.SoftmaxOutput(data=net, name='softmax')
 # group fc1 and out together
 group = mx.symbol.Group([fc1, out])
 print group.list_outputs()
