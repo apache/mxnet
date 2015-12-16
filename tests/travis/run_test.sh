@@ -121,6 +121,7 @@ if [ ${TASK} == "scala_test" ]; then
 
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
         cd scala-package
+        export JAVA_HOME=$(/usr/libexec/java_home)
         mvn clean package -P osx-x86_64
         mvn integration-test -P osx-x86_64
     fi
