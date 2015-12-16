@@ -18,6 +18,7 @@ env:
   # run tests/python
   - TASK=python_test
   - TASK=r_test
+  - TASK=scala_test
 
   # TODO, R test, distributed test, clang, more g++ versions
 
@@ -29,6 +30,8 @@ matrix:
       env: TASK=doc
     - os: linux
       env: TASK=r_test
+    - os: linux
+      env: TASK=scala_test
 
 # dependent apt packages
 addons:

@@ -110,3 +110,22 @@ if [ ${TASK} == "python_test" ]; then
     fi
     exit 0
 fi
+
+
+if [ ${TASK} == "scala_test" ]; then
+    make all || exit -1
+    # use cached dir for storing data
+    rm -rf ${PWD}/data
+    mkdir -p ${CACHE_PREFIX}/data
+    ln -s ${CACHE_PREFIX}/data ${PWD}/data
+
+    if [ ${TRAVIS_OS_NAME} == "osx" ]; then
+        cd scala-package
+        mvn clean package -P osx-x86_64
+        mvn integration-test -P osx-x86_64
+    fi
+
+    exit 0
+fi
+
+
