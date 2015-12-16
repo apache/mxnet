@@ -85,9 +85,31 @@ R-package/inst/*
 example/notebooks/.ipynb_checkpoints/*
 *_pb2.py
 
+
+# Scala package
 # Jetbrain
-.idea
+mxnet-scala/.idea
 
 # ctags
-tags
+mxnet-scala/tags
+
+mxnet-scala/*.class
+mxnet-scala/*.log
+
+# sbt specific
+mxnet-scala/.cache
+mxnet-scala/.lib/
+mxnet-scala/dist/*
+mxnet-scala/target/
+mxnet-scala/lib_managed/
+mxnet-scala/src_managed/
+mxnet-scala/project/boot/
+mxnet-scala/project/plugins/project/
+
+# IDE specific
+mxnet-scala/.scala_dependencies
+mxnet-scala/.worksheet
+mxnet-scala/.idea
+mxnet-scala/*.iml
+
 
