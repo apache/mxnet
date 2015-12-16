@@ -1,0 +1,107 @@
+<project>
+
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>ml.dmlc.mxnet</groupId>
+    <artifactId>mxnet-scala-native-parent</artifactId>
+    <version>0.1-SNAPSHOT</version>
+  </parent>
+
+  <groupId>ml.dmlc.mxnet</groupId>
+  <artifactId>libmxnet-scala</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>MXNet Scala Package - Native Linux-x86_64</name>
+  <url>http://maven.apache.org</url>
+
+  <packaging>so</packaging>
+
+  <dependencies>
+    <dependency>
+      <groupId>ml.dmlc.mxnet</groupId>
+      <artifactId>mxnet-scala-core</artifactId>
+      <version>0.1-SNAPSHOT</version>
+      <type>jar</type>
+      <scope>compile</scope>
+    </dependency>   
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>     
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>native-maven-plugin</artifactId>
+        <extensions>true</extensions>
+        <configuration>
+          <!--  trigger javah -->
+          <javahOS>linux</javahOS>
+          <compilerProvider>generic-classic</compilerProvider>
+          <compilerExecutable>g++</compilerExecutable>
+          <linkerExecutable>g++</linkerExecutable>
+          <sources>
+            <source>
+              <directory>../src/main/native</directory>
+              <fileNames>
+                <fileName>ml_dmlc_mxnet_native_c_api.c</fileName>
+              </fileNames>
+            </source>
+          </sources>
+          <compilerStartOptions>
+            <compilerStartOption>-std=c++0x</compilerStartOption>
+          </compilerStartOptions>
+          <compilerMiddleOptions>
+            <compilerMiddleOption>
+              -msse3 -funroll-loops -Wno-unused-parameter -Wno-unknown-pragmas
+            </compilerMiddleOption>
+          </compilerMiddleOptions>
+          <compilerEndOptions>
+            <compilerEndOption>-I../../../include/mxnet</compilerEndOption>
+            <compilerEndOption>-fPIC</compilerEndOption>
+          </compilerEndOptions>
+          <linkerStartOptions>
+            <linkerStartOption>-shared</linkerStartOption>
+          </linkerStartOptions>
+          <linkerMiddleOptions>
+            <linkerMiddleOption>
+              -fopenmp
+            </linkerMiddleOption>
+            <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
+            <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption>
+            <linkerMiddleOption>-Wl,-no-whole-archive</linkerMiddleOption>
+            <!--
+            <linkerMiddleOption>
+              -pthread -lm -lblas -lrt -fopenmp
+            </linkerMiddleOption>
+            <linkerMiddleOption>-Wl,-exported_symbol,_Java_*</linkerMiddleOption>
+            <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
+            -->
+          </linkerMiddleOptions>
+        </configuration>
+
+        <executions>
+          <execution>
+            <id>javah</id>
+            <phase>generate-sources</phase>
+            <configuration>
+              <javahOS>linux</javahOS>
+              <javahProvider>default</javahProvider>
+              <javahOutputDirectory>${project.build.directory}/custom-javah</javahOutputDirectory>
+              <workingDirectory>${basedir}</workingDirectory>
+              <javahOutputFileName>ml_dmlc_mxnet_native_c_api.h</javahOutputFileName>
+              <javahClassNames>
+                <javahClassName>ml.dmlc.mxnet.LibInfo</javahClassName>
+              </javahClassNames>
+            </configuration>
+            <goals>
+              <goal>javah</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

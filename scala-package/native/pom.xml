@@ -32,6 +32,9 @@
           <arch>x64</arch>
         </os>
       </activation>
+      <modules>
+            <module>linux-x86_64</module>
+    </modules>
     </profile>
   </profiles>
 </project>

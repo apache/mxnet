@@ -121,6 +121,8 @@
                    we have to compile all the modules first.
                    Run in this way:
                    mvn clean package -P osx-x86_64 && mvn integration-test -P osx-x86_64
+                   for linux:
+                   mvn clean package -P Linux && mvn integration-test -P Linux
                    This is a temporary solution. -->
               <phase>integration-test</phase>
               <goals>
