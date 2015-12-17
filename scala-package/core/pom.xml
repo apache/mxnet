@@ -19,7 +19,7 @@
       </properties>
     </profile>
     <profile>
-      <id>Linux</id>
+      <id>linux-x86_64</id>
       <properties>
         <platform>linux-x86_64</platform>
       </properties>     
