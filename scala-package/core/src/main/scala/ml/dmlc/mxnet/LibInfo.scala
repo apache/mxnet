@@ -47,4 +47,12 @@ class LibInfo {
                              start: MXUint,
                              end: MXUint,
                              sliceHandle: NDArrayHandle): Int
+  @native def mxDataIterBeforeFirst(handle: DataIterHandle): Int
+  @native def mxDataIterNext(handle: DataIterHandle): Int
+  @native def mxDataIterGetLabel(handle: DataIterHandle,
+                                 out: NDArrayHandle): Int
+  @native def mxDataIterGetData(handle: DataIterHandle,
+                                out: NDArrayHandle): Int
+  @native def mxDataIterGetPadNum(handle: DataIterHandle,
+                                 out: MXUintRef): Int
 }

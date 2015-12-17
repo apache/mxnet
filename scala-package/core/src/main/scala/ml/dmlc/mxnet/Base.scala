@@ -16,6 +16,7 @@ object Base {
   type MXFloatRef = RefFloat
   type NDArrayHandle = RefLong
   type FunctionHandle = RefLong
+  type DataIterHandle = RefLong
 
   System.loadLibrary("mxnet-scala")
   val _LIB = new LibInfo

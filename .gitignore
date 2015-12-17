@@ -88,23 +88,23 @@ example/notebooks/.ipynb_checkpoints/*
 
 # Scala package
 # Jetbrain
-mxnet-scala/.idea
+scala-package/.idea
 
 # ctags
-mxnet-scala/tags
+scala-package/tags
 
-mxnet-scala/*.class
-mxnet-scala/*.log
+scala-package/*.class
+scala-package/*.log
 
 # sbt specific
-mxnet-scala/.cache
-mxnet-scala/.lib/
-mxnet-scala/dist/*
-mxnet-scala/target/
-mxnet-scala/lib_managed/
-mxnet-scala/src_managed/
-mxnet-scala/project/boot/
-mxnet-scala/project/plugins/project/
+scala-package/.cache
+scala-package/.lib/
+scala-package/dist/*
+scala-package/target/
+scala-package/lib_managed/
+scala-package/src_managed/
+scala-package/project/boot/
+scala-package/project/plugins/project/
 
 #scala target folders
 scala-package/*/target/
@@ -116,9 +116,7 @@ scala-package/*/*/target/
 .settings
 
 # IDE specific
-mxnet-scala/.scala_dependencies
-mxnet-scala/.worksheet
-mxnet-scala/.idea
-mxnet-scala/*.iml
-
-
+.scala_dependencies
+.worksheet
+.idea
+*.iml
