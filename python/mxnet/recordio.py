@@ -157,7 +157,7 @@ def unpack_img(s, iscolor=-1):
     img = cv2.imdecode(img, iscolor)
     return header, img
 
-def pack_img(header, img, quality=80):
+def pack_img(header, img, quality=80, format='.JPEG'):
     """pack an image into MXImageRecord
 
     Parameters
@@ -175,6 +175,6 @@ def pack_img(header, img, quality=80):
         The packed string
     """
     assert opencv_available
-    ret, buf = cv2.imencode('.JPEG', img, [cv2.IMWRITE_JPEG_QUALITY, quality])
+    ret, buf = cv2.imencode(format, img, [cv2.IMWRITE_JPEG_QUALITY, quality])
     assert ret
     return pack(header, buf.tostring())
