@@ -334,7 +334,9 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     this
   }
 
-  def set(other: NDArray) = ???
+  def set(other: NDArray) = {
+    copyTo(other)
+  }
 
   def +(other: NDArray): NDArray = {
     NDArray._binaryNDArrayFunction("_plus", this, other)
@@ -449,7 +451,9 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
    *
    * @return The scalar representation of the ndarray.
    */
-  def toScalar: Float = ???
+  def toScalar: Float = {
+    this.toArray(0)
+  }
 
   /**
    * Copy the content of current array to other.
