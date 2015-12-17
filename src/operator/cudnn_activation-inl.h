@@ -61,8 +61,19 @@ class CuDNNActivationOp : public Operator {
       out = out_data[activation::kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
       softmax_mode = CUDNN_SOFTMAX_MODE_INSTANCE;
     } else {
-      data = in_data[activation::kData].get<gpu, 4, real_t>(s);
-      out = out_data[activation::kOut].get<gpu, 4, real_t>(s);
+      Shape<4> dshape;
+      index_t size_left = in_data[activation::kData].Size();
+      for (int i = 0; i < 3; ++i) {
+        if (i < in_data[activation::kData].ndim()) {
+          dshape[i] = in_data[activation::kData].shape_[i];
+        } else {
+          dshape[i] = 1;
+        }
+        size_left /= dshape[i];
+      }
+      dshape[3] = size_left;
+      data = in_data[activation::kData].get_with_shape<gpu, 4, real_t>(dshape, s);
+      out = out_data[activation::kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
       softmax_mode = CUDNN_SOFTMAX_MODE_CHANNEL;
     }
     float alpha = 1.0f;
@@ -136,12 +147,23 @@ class CuDNNActivationOp : public Operator {
       input_grad = in_grad[activation::kData].get_with_shape<gpu, 4, real_t>(dshape, s);
       softmax_mode = CUDNN_SOFTMAX_MODE_INSTANCE;
     } else {
-      if (param_.act_type != activation::kSoftmax) {
-        data = in_data[activation::kData].get<gpu, 4, real_t>(s);
+      Shape<4> dshape;
+      index_t size_left = in_grad[activation::kData].Size();
+      for (int i = 0; i < 3; ++i) {
+        if (i < in_grad[activation::kData].ndim()) {
+          dshape[i] = in_grad[activation::kData].shape_[i];
+        } else {
+          dshape[i] = 1;
+        }
+        size_left /= dshape[i];
       }
-      output_data = out_data[activation::kOut].get<gpu, 4, real_t>(s);
-      grad = out_grad[activation::kOut].get<gpu, 4, real_t>(s);
-      input_grad = in_grad[activation::kData].get<gpu, 4, real_t>(s);
+      dshape[3] = size_left;
+      if (param_.act_type != activation::kSoftmax) {
+        data = in_data[activation::kData].get_with_shape<gpu, 4, real_t>(dshape, s);
+      }
+      output_data = out_data[activation::kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
+      grad = out_grad[activation::kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
+      input_grad = in_grad[activation::kData].get_with_shape<gpu, 4, real_t>(dshape, s);
       softmax_mode = CUDNN_SOFTMAX_MODE_CHANNEL;
     }
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
