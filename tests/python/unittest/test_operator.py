@@ -621,31 +621,7 @@ def test_nearest_upsampling():
                     shapes = [(1,3,base*root_scale*scale**(num_shape-1-i),base*root_scale*scale**(num_shape-1-i)) for i in range(num_shape)]
                     check_nearest_upsampling_with_shape(shapes, scale, root_scale)
 
-def check_prod_sum_with_shape(shape, dot_dim):
-    x = mx.sym.Variable('x')
-    X = mx.random.uniform(-1, 1, shape=shape, ctx=mx.cpu())
-    dX = mx.nd.zeros(shape, ctx=mx.cpu())
-    y = mx.sym.Variable('y')
-    Y = mx.random.uniform(-1, 1, shape=shape, ctx=mx.cpu())
-    dY = mx.nd.zeros(shape, ctx=mx.cpu())
-    z = mx.sym.ProdSum(lhs=x, rhs=y, dot_dim=dot_dim)
-    exe = z.bind(mx.cpu(), args={'x':X, 'y': Y}, args_grad={'x': dX, 'y': dY})
-    exe.forward(is_train=True)
-    assert_allclose(exe.outputs[0].asnumpy(), np.sum(X.asnumpy()*Y.asnumpy(), axis=dot_dim), rtol=1e-4)
-    dZ = mx.nd.ones(exe.outputs[0].shape, ctx=mx.cpu())
-    exe.backward(dZ)
-    assert_allclose(dX.asnumpy(), Y.asnumpy(), rtol=1e-4)
-    assert_allclose(dY.asnumpy(), X.asnumpy(), rtol=1e-4)
-
-
-def test_prod_sum():
-    check_prod_sum_with_shape((3,5,3), 0)
-    check_prod_sum_with_shape((3,5,3), 1)
-    check_prod_sum_with_shape((3,5,3), 2)
-
-
 if __name__ == '__main__':
-    test_prod_sum();
     test_nearest_upsampling()
     test_binary_op_duplicate_input()
     test_elementwise_sum()

@@ -1,11 +1,11 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file activation-inl.h
- * \brief Activation operator
- * \author Bing Xu
+ * \file softmax_activation-inl.h
+ * \brief SoftmaxActivation operator
+ * \author Junyuan Xie
 */
-#ifndef MXNET_OPERATOR_ACTIVATION_INL_H_
-#define MXNET_OPERATOR_ACTIVATION_INL_H_
+#ifndef MXNET_OPERATOR_SOFTMAX_ACTIVATION_INL_H_
+#define MXNET_OPERATOR_SOFTMAX_ACTIVATION_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -21,32 +21,39 @@ namespace mxnet {
 namespace op {
 // Declare enumeration of input order to make code more intuitive.
 // // These enums are only visible within this header
-namespace activation {
-enum ActivationOpInputs {kData};
-enum ActivationOpOutputs {kOut};
-enum ActivationOpType {kReLU, kSigmoid, kTanh, kSoftReLU};
-}  // activation
+namespace softmax_activation {
+enum SoftmaxActivationOpInputs {kData};
+enum SoftmaxActivationOpOutputs {kOut};
+enum SoftmaxActivationOpType {kInstance, kChannel};
+}  // softmax_activation
 
-struct ActivationParam : public dmlc::Parameter<ActivationParam> {
+struct SoftmaxActivationParam : public dmlc::Parameter<SoftmaxActivationParam> {
   // use int for enumeration
-  int act_type;
-  DMLC_DECLARE_PARAMETER(ActivationParam) {
-    DMLC_DECLARE_FIELD(act_type)
-    .add_enum("relu", activation::kReLU)
-    .add_enum("sigmoid", activation::kSigmoid)
-    .add_enum("tanh", activation::kTanh)
-    .add_enum("softrelu", activation::kSoftReLU)
-    .describe("Activation function to be applied.");
+  int type;
+  DMLC_DECLARE_PARAMETER(SoftmaxActivationParam) {
+    DMLC_DECLARE_FIELD(type)
+    .add_enum("instance", softmax_activation::kInstance)
+    .add_enum("channel", softmax_activation::kChannel)
+    .set_default(softmax_activation::kInstance)
+    .describe("Softmax Mode. If set to instance, this operator will compute a "
+    "softmax for each instance in the batch; this is the default mode. "
+    "If set to channel, this operator will compute a num_channel-class softmax at "
+    "each position of each instance; this can be used for fully convolutional network, "
+    "image segmentation, etc.");
   }
 };
 
 /**
- * \brief This is the implementation of activation operator.
+ * \brief This is the implementation of softmax_activation operator.
  * \tparam xpu The device that the op will be executed on.
  */
-template<typename xpu, typename ForwardOp, typename BackwardOp>
-class ActivationOp : public Operator {
+template<typename xpu>
+class SoftmaxActivationOp : public Operator {
  public:
+  explicit SoftmaxActivationOp(SoftmaxActivationParam p) {
+    this->param_ = p;
+  }
+
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
@@ -56,14 +63,10 @@ class ActivationOp : public Operator {
     using namespace mshadow::expr;
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[activation::kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> out = out_data[activation::kOut].FlatTo2D<xpu, real_t>(s);
-    Assign(out, req[activation::kOut], F<ForwardOp>(data));
-    // Use asynchronize complete notification
-    // This is only intended as an example of async ops
-    if (s != NULL) s->Wait();
-    ctx.async_on_complete();
+    // Stream<xpu> *s = ctx.get_stream<xpu>();
+    // Tensor<xpu, 2> data = in_data[softmax_activation::kData].FlatTo2D<xpu, real_t>(s);
+    // Tensor<xpu, 2> out = out_data[softmax_activation::kOut].FlatTo2D<xpu, real_t>(s);
+    LOG(FATAL) << "non-cuDNN version not implemented yet.";
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -78,30 +81,23 @@ class ActivationOp : public Operator {
     CHECK_EQ(out_grad.size(), 1);
     CHECK(in_data.size() == 1 && in_grad.size() == 1);
     CHECK_EQ(req.size(), 1);
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> m_out_grad = out_grad[activation::kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> m_out_data = out_data[activation::kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> m_in_grad = in_grad[activation::kData].FlatTo2D<xpu, real_t>(s);
-    Assign(m_in_grad, req[activation::kData], F<BackwardOp>(m_out_data) * m_out_grad);
-    // Use asynchronize complete notification
-    // This is only intended as an example of async ops
-    if (s != NULL) s->Wait();
-    ctx.async_on_complete();
+    // Stream<xpu> *s = ctx.get_stream<xpu>();
+    // Tensor<xpu, 2> m_out_grad = out_grad[softmax_activation::kOut].FlatTo2D<xpu, real_t>(s);
+    // Tensor<xpu, 2> m_out_data = out_data[softmax_activation::kOut].FlatTo2D<xpu, real_t>(s);
+    // Tensor<xpu, 2> m_in_grad = in_grad[softmax_activation::kData].FlatTo2D<xpu, real_t>(s);
+    LOG(FATAL) << "non-cuDNN version not implemented yet.";
   }
 
-  virtual ExecType exec_type() const {
-    // Use asynchronize complete notification
-    // This is only intended as an example of async ops
-    return kAsync;
-  }
-};  // class ActivationOp
+ private:
+  SoftmaxActivationParam param_;
+};  // class SoftmaxActivationOp
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(ActivationParam type);
+Operator* CreateOp(SoftmaxActivationParam type);
 
 #if DMLC_USE_CXX11
-class ActivationProp : public OperatorProperty {
+class SoftmaxActivationProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -116,7 +112,7 @@ class ActivationProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 1) << "Input:[data]";
-    const TShape &dshape = in_shape->at(activation::kData);
+    const TShape &dshape = in_shape->at(softmax_activation::kData);
     if (dshape.ndim() == 0) return false;
     out_shape->clear();
     out_shape->push_back(dshape);
@@ -124,13 +120,13 @@ class ActivationProp : public OperatorProperty {
   }
 
   OperatorProperty* Copy() const override {
-    auto ptr = new ActivationProp();
+    auto ptr = new SoftmaxActivationProp();
     ptr->param_ = param_;
     return ptr;
   }
 
   std::string TypeString() const override {
-    return "Activation";
+    return "SoftmaxActivation";
   }
 
   // decalre dependency and inplace optimization options
@@ -138,11 +134,7 @@ class ActivationProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-#if MXNET_USE_CUDNN == 1
-    return {out_grad[activation::kOut], out_data[activation::kOut], in_data[activation::kData]};
-#else
-    return {out_grad[activation::kOut], out_data[activation::kOut]};
-#endif  // MXNET_USE_CUDNN
+    return {out_grad[softmax_activation::kOut], out_data[softmax_activation::kOut]};
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
@@ -150,21 +142,21 @@ class ActivationProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data,
     const std::vector<void*> &in_grad) const override {
-    return {{out_grad[activation::kOut], in_grad[activation::kData]}};
+    return {{out_grad[softmax_activation::kOut], in_grad[softmax_activation::kData]}};
   }
 
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
     const std::vector<int> &in_data,
     const std::vector<void*> &out_data) const override {
-    return {{in_data[activation::kData], out_data[activation::kOut]}};
+    return {{in_data[softmax_activation::kData], out_data[softmax_activation::kOut]}};
   }
 
   Operator* CreateOperator(Context ctx) const override;
 
  private:
-  ActivationParam param_;
+  SoftmaxActivationParam param_;
 };
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_ACTIVATION_INL_H_
+#endif  // MXNET_OPERATOR_SOFTMAX_ACTIVATION_INL_H_

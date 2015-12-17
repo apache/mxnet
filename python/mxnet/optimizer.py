@@ -72,7 +72,7 @@ class Optimizer(object):
             handle to the optimizer
         """
         creator = OptimizerCreator()
-        check_call(_LIB.MXOptimizerFindCreator(ctypes.c_char_p(name),
+        check_call(_LIB.MXOptimizerFindCreator(c_str(name),
                                                ctypes.byref(creator)))
         assert creator, "Cannot find c++ implementation of optimizer \
                         registered with name "+name
