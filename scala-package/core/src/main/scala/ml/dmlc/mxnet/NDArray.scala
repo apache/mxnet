@@ -217,15 +217,23 @@ object NDArray {
    * @param ctx The context of the NDArray, default to current default context.
    * @return The created NDArray.
    */
-  def ones(shape: Array[Int], ctx: Context=null): NDArray = ???
+  def ones(shape: Array[Int], ctx: Context=null): NDArray = {
+    val arr = empty(shape, ctx)
+    arr(0).set(1f)
+    arr
+  }
 
   /**
    * Create a new NDArray that copies content from source_array.
-   * @param source Source data to create NDArray from.
+   * @param source_arr Source data to create NDArray from.
    * @param ctx The context of the NDArray, default to current default context.
    * @return The created NDArray.
    */
-  def array(source: Array[Float], ctx: Context=null): NDArray = ???
+  def array(source_arr: Array[Int], ctx: Context=null): NDArray = {
+    val arr = empty(source_arr, ctx)
+    arr(0).set(source_arr.length)
+    arr
+  }
 
   /**
    * Load ndarray from binary file.
