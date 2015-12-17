@@ -119,11 +119,16 @@ if [ ${TASK} == "scala_test" ]; then
     mkdir -p ${CACHE_PREFIX}/data
     ln -s ${CACHE_PREFIX}/data ${PWD}/data
 
+    cd scala-package
+    export JAVA_HOME=$(/usr/libexec/java_home)
+
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
-        cd scala-package
-        export JAVA_HOME=$(/usr/libexec/java_home)
         mvn clean package -P osx-x86_64
         mvn integration-test -P osx-x86_64
+    fi
+    if [ ${TRAVIS_OS_NAME} == "linux" ]; then
+        mvn clean package -P linux-x86_64
+        mvn integration-test -P linux-x86_64
     fi
 
     exit 0
