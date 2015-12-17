@@ -72,13 +72,6 @@
             <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
             <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-no-whole-archive</linkerMiddleOption>
-            <!--
-            <linkerMiddleOption>
-              -pthread -lm -lblas -lrt -fopenmp
-            </linkerMiddleOption>
-            <linkerMiddleOption>-Wl,-exported_symbol,_Java_*</linkerMiddleOption>
-            <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
-            -->
           </linkerMiddleOptions>
         </configuration>
 

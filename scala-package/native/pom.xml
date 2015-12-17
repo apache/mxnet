@@ -25,16 +25,16 @@
       </modules>
     </profile>
     <profile>
-      <id>Linux</id>
+      <id>linux-x86_64</id>
       <activation>
-        <os>
-          <family>Linux</family>
-          <arch>x64</arch>
-        </os>
+        <property>
+          <name>platform</name>
+          <value>linux-x86_64</value>
+        </property>
       </activation>
       <modules>
-            <module>linux-x86_64</module>
-    </modules>
+        <module>linux-x86_64</module>
+      </modules>
     </profile>
   </profiles>
 </project>

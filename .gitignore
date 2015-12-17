@@ -110,6 +110,11 @@ mxnet-scala/project/plugins/project/
 scala-package/*/target/
 scala-package/*/*/target/
 
+#eclipse
+.classpath
+.project
+.settings
+
 # IDE specific
 mxnet-scala/.scala_dependencies
 mxnet-scala/.worksheet
