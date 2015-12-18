@@ -245,8 +245,9 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
   int do_mirror = dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0);
   int mirror_step = dmlc::GetEnv("MXNET_BACKWARD_MIRROR_STEP", 100);
   int counter = 0;
+  int *pcounter = &counter;
 
-  auto need_mirror = [this, do_mirror, &counter, mirror_step](uint32_t nid) {
+  auto need_mirror = [this, do_mirror, pcounter, mirror_step](uint32_t nid) {
     if (do_mirror == 0) return false;
     if (!nodes[nid].is_forward()) return false;
     std::string type = nodes[nid].op->TypeString();
@@ -255,8 +256,8 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
     if (type == "Dropout") return false;
     if (type == "Concat") return false;
     if (type == "SoftmaxOutput") return false;
-    counter = counter + 1;
-    if (counter % mirror_step == 0) return false;
+    ++pcounter[0];
+    if (pcounter[0] % mirror_step == 0) return false;
     return true;
   };
 
@@ -304,6 +305,7 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
   // do backward pass traverse
   for (auto it = topo_order.rbegin(); it != topo_order.rend(); ++it) {
     uint32_t nid = *it;
+    uint32_t mirror_nid = mirror_map[nid];
     // skip variables
     if (nodes[nid].is_variable()) continue;
     CHECK(nodes[nid].is_forward()) << "Do not support Backward of Backward";
@@ -315,7 +317,7 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
     int ntotal = nodes[nid].op->NumOutputs();
     // check all outpus
     for (int i = 0; i < ntotal; ++i) {
-      DataEntry odata(mirror_map[nid], static_cast<uint32_t>(i));
+      DataEntry odata(mirror_nid, static_cast<uint32_t>(i));
       DataEntry okey(nid, static_cast<uint32_t>(i));
       out_data.push_back(odata);
       if (i >= nvisible) continue;
@@ -338,17 +340,17 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
     // Create a gradient backward node
     Node grad_node;
     // Point to the corresponding source
-    grad_node.backward_source_id = nid;
+    grad_node.backward_source_id = mirror_nid;
 
     std::vector<DataEntry> source_inputs;
     for (const DataEntry& e : nodes[nid].inputs) {
       source_inputs.push_back(DataEntry(mirror_map[e.source_id], e.index));
     }
     // select out the dependent inputs
-    grad_node.inputs = nodes[nid].op->BackwardInputs(
+    grad_node.inputs = nodes[mirror_nid].op->BackwardInputs(
         out_grad, source_inputs, out_data);
 
-    grad_node.name = nodes[nid].name + "_backward";
+    grad_node.name = nodes[mirror_nid].name + "_backward";
     uint32_t grad_node_id = static_cast<uint32_t>(nodes.size());
     nodes.push_back(std::move(grad_node));
     // update gradient map
@@ -381,7 +383,6 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
       arg_grads->at(i) = DataEntry(agg_node_id, 0);
     }
   }
-  LOG(INFO) << "FINSIHED";
 }
 
 void StaticGraph::Node::Save(dmlc::JSONWriter *writer) const {
