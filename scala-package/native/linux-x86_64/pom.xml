@@ -33,6 +33,39 @@
       </plugin>     
 
       <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <exportAntProperties>true</exportAntProperties>
+              <tasks>
+                <taskdef resource="net/sf/antcontrib/antcontrib.properties" classpathref="maven.plugin.classpath" />
+                <if>
+                  <isset property="intel" />
+                  <then>
+                    <property name="use.cblas" value="0" />
+                    <property name="use.mkl" value="1" />
+                    <property name="cflags.blas" value="-I${intel}/mkl/include" />
+                    <property name="ldflags.blas" value="-L${intel}/mkl/lib -L${intel}/lib" />
+                  </then>
+                  <else>
+                    <property name="use.cblas" value="1" />
+                    <property name="use.mkl" value="0" />
+                    <property name="cflags.blas" value="" />
+                    <property name="ldflags.blas" value="-lcblas" />
+                  </else>
+                </if>
+              </tasks>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>native-maven-plugin</artifactId>
         <extensions>true</extensions>
@@ -46,7 +79,7 @@
             <source>
               <directory>../src/main/native</directory>
               <fileNames>
-                <fileName>ml_dmlc_mxnet_native_c_api.c</fileName>
+                <fileName>ml_dmlc_mxnet_native_c_api.cc</fileName>
               </fileNames>
             </source>
           </sources>
@@ -59,7 +92,12 @@
             </compilerMiddleOption>
           </compilerMiddleOptions>
           <compilerEndOptions>
-            <compilerEndOption>-I../../../include/mxnet</compilerEndOption>
+            <compilerEndOption>-I../../../include</compilerEndOption>
+            <compilerEndOption>-I../../../dmlc-core/include</compilerEndOption>
+            <compilerEndOption>-I../../../mshadow ${cflags.blas}</compilerEndOption>
+            <compilerEndOption>-DMSHADOW_USE_CUDA=0</compilerEndOption>
+            <compilerEndOption>-DMSHADOW_USE_CBLAS=${use.cblas}</compilerEndOption>
+            <compilerEndOption>-DMSHADOW_USE_MKL=${use.mkl}</compilerEndOption>
             <compilerEndOption>-fPIC</compilerEndOption>
           </compilerEndOptions>
           <linkerStartOptions>
