@@ -5,6 +5,10 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
+/**
+ * NDArray API of mxnet
+ * @author Yizhi Liu, Terry Tang
+ */
 object NDArray {
   private val logger = LoggerFactory.getLogger(classOf[NDArray])
   private val functions: Map[String, NDArrayFunction] = _initNdarrayModule()
