@@ -12,6 +12,8 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
   test("to scalar") {
     val ndzeros = NDArray.zeros(Array(2, 1))
     assert(ndzeros.toScalar === 0f)
+    val ndones = NDArray.ones(Array(2, 1))
+    assert(ndzeros.toScalar === 1f)
   }
 
   test("plus") {
@@ -24,5 +26,17 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
     ndones += ndones
     assert(ndones.toArray === Array(2f, 2f))
   }
-  
+
+  test("minus") {
+    val ndones = NDArray.ones(Array(2, 1))
+    val ndzeros = ndones - 1f
+    assert(ndzeros.toArray === Array(0f, 0f))
+    assert((ndones - ndzeros).toArray === Array(1f, 1f))
+    assert((ndzeros - ndones).toArray === Array(-1f, -1f))
+    assert((ndones - 1).toArray === Array(0f, 0f))
+    // in-place
+    ndones -= ndones
+    assert(ndones.toArray === Array(0f, 0f))
+  }
+
 }
