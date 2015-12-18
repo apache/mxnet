@@ -71,6 +71,18 @@ class MAE(EvalMetric):
             self.sum_metric += numpy.sum(numpy.abs(label.asnumpy() - pred.asnumpy()))
             self.num_inst += numpy.prod(label.shape)
 
+class RMSE(EvalMetric):
+    """Calculate Root Mean Squred Error loss"""
+    def __init__(self):
+        super(RMSE, self).__init__('rmse')
+
+    def update(self, labels, preds):
+        assert len(labels) == len(preds)
+        for label, pred in zip(labels, preds):
+            assert label.shape == pred.shape
+            self.sum_metric += numpy.sqrt(numpy.mean((label.asnumpy() - pred.asnumpy())**2))
+        self.num_inst += 1
+
 class CustomMetric(EvalMetric):
     """Custom evaluation metric that takes a NDArray function.
 

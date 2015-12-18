@@ -493,7 +493,7 @@ class FeedForward(BASE_ESTIMATOR):
         The additional keyword arguments passed to optimizer.
     """
     def __init__(self, symbol, ctx=None,
-                 num_epoch=None, epoch_size=None, optimizer='sgd',
+                 num_epoch=None, epoch_size=None, optimizer='ccsgd',
                  initializer=Uniform(0.01),
                  numpy_batch_size=128,
                  arg_params=None, aux_params=None,
@@ -632,11 +632,13 @@ class FeedForward(BASE_ESTIMATOR):
                             'NDArray/numpy.ndarray/list pair (i.e. tuple/list of length 2)')
         return eval_data
 
-    def predict(self, X):
+    def predict(self, X, num_batch=None):
         """Run the prediction, always only use one device.
         Parameters
         ----------
         X : mxnet.DataIter
+        num_batch : int or None
+            the number of batch to run. Go though all batches if None
         Returns
         -------
         y : numpy.ndarray or a list of numpy.ndarray if the network has multiple outputs.
@@ -652,7 +654,12 @@ class FeedForward(BASE_ESTIMATOR):
         data_arrays = [self._pred_exec.arg_dict[name] for name in data_names]
         output_list = [[] for _ in range(len(self._pred_exec.outputs))]
 
+        i = 0
         for batch in X:
+            if num_batch is not None and i == num_batch:
+                break
+            i += 1
+
             _load_data(batch, data_arrays)
             self._pred_exec.forward(is_train=False)
             padded = batch.pad
@@ -803,7 +810,7 @@ class FeedForward(BASE_ESTIMATOR):
 
     @staticmethod
     def create(symbol, X, y=None, ctx=None,
-               num_epoch=None, epoch_size=None, optimizer='sgd', initializer=Uniform(0.01),
+               num_epoch=None, epoch_size=None, optimizer='ccsgd', initializer=Uniform(0.01),
                eval_data=None, eval_metric='acc',
                epoch_end_callback=None, batch_end_callback=None,
                kvstore='local', logger=None, work_load_list=None, **kwargs):
