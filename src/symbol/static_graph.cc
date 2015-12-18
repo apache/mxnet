@@ -66,7 +66,7 @@ std::vector<uint32_t> StaticGraph::TopoSort() const {
       head_nodes.push_back(static_cast<uint32_t>(i));
     }
   }
-  return PostDFSOrder(head_nodes, {});
+  return PostDFSOrder(head_nodes, std::unordered_set<uint32_t>());
 }
 
 bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
@@ -199,7 +199,7 @@ bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
   }
   std::sort(head_nodes.begin(), head_nodes.end());
   head_nodes.resize(std::unique(head_nodes.begin(), head_nodes.end()) - head_nodes.begin());
-  std::vector<uint32_t> fwd_nodes = PostDFSOrder(head_nodes, {});
+  std::vector<uint32_t> fwd_nodes = PostDFSOrder(head_nodes, std::unordered_set<uint32_t>());
   uint32_t counter = 0;
   for (uint32_t nid : fwd_nodes) {
     // backward consistentcy check.
