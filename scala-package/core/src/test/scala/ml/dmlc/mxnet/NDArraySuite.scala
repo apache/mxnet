@@ -39,4 +39,28 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
     assert(ndones.toArray === Array(0f, 0f))
   }
 
+  test("multiplication") {
+    val ndones = NDArray.ones(Array(2, 1))
+    val ndtwos = ndones * 2
+    assert(ndtwos.toArray === Array(2f, 2f))
+    assert((ndones * ndones).toArray === Array(1f, 1f))
+    assert((ndtwos * ndtwos).toArray === Array(4f, 4f))
+    ndtwos *= ndtwos
+    // in-place
+    assert(ndtwos.toArray === Array(4f, 4f))
+  }
+
+  test("division") {
+    val ndones = NDArray.ones(Array(2, 1))
+    val ndzeros = ndones - 1f
+    val ndhalves = ndones / 2
+    assert(ndhalves.toArray === Array(0.5f, 0.5f))
+    assert((ndhalves / ndhalves).toArray === Array(1f, 1f))
+    assert((ndones / ndones).toArray === Array(1f, 1f))
+    assert((ndzeros / ndones).toArray === Array(0f, 0f))
+    ndhalves /= ndhalves
+    // in-place
+    assert(ndhalves.toArray === Array(1f, 1f))
+  }
+
 }
