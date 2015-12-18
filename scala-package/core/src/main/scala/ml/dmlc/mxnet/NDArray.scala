@@ -452,9 +452,6 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
    * @return The scalar representation of the ndarray.
    */
   def toScalar: Float = {
-    if (this.size != 1) {
-      throw new IllegalArgumentException("The current array is not a scalar")
-    }
     require(shape.sameElements(Array(1)), "The current array is not a scalar")
     this.toArray(0)
   }
