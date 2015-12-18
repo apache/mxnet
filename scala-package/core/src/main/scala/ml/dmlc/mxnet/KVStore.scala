@@ -14,23 +14,10 @@ object KVStore {
 
     println("Setting updater")
     val updater = new MXKVStoreUpdater {
-      /**
-       * user-defined updater for the kvstore
-       * It's this updater's responsibility to delete recv and local
-       * @param key the key
-       * @param recv the pushed value on this key
-       * @param local the value stored on local on this key
-       * @param handle The additional handle to the updater
-       */
       override def update(key: Int, input: NDArray, stored: NDArray, handle: AnyRef): Unit = {
         println(s"update on key: $key")
         stored += input * 2
       }
-      /*
-      override def update(key: Int): Unit = {
-        println(s"update on key $key")
-      }
-      */
     }
     kv._setUpdater(updater)
 

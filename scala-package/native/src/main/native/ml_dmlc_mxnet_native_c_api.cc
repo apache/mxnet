@@ -214,6 +214,11 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySlice(JNIEnv *env, jo
   return ret;
 }
 
+// The related c api MXKVStoreSetUpdater function take a c function pointer as its parameter,
+// while we write java functions here in scala-package.
+// Thus we have to wrap the function in a java object, and run env->CallVoidMethod(obj) once updater is invoked,
+// which implies the function registered to KVStore must be stateful.
+// This is why we re-implement MXKVStoreSetUpdater as follows.
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreSetUpdater(JNIEnv *env, jobject obj,
                                                                       jobject kvStoreHandle,
                                                                       jobject updaterFuncObj,
@@ -254,10 +259,10 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreSetUpdater(JNIEnv *en
   };
   try {
     static_cast<mxnet::KVStore*>((KVStoreHandle)kvStorePtr)->set_updater(updt);
-  } catch(dmlc::Error &_except_) {
-    // It'll be too complicated for us to set & get mx error in jni code.
-    // thus simply return -1 to indicate a failure,
-    // which implies we cannot run MXGetLastError to get the error message after this function fails.
+  } catch(dmlc::Error &except) {
+    // It'll be too complicated to set & get mx error in jni code.
+    // thus simply return -1 to indicate a failure.
+    // Note that we'll not able to run MXGetLastError to get the error message after this function fails.
     return -1;
   }
   return 0;
