@@ -7,32 +7,6 @@ import ml.dmlc.mxnet.Base._
  * @author Yizhi Liu
  */
 object KVStore {
-  /*
-  def main(args: Array[String]): Unit = {
-    val kv = KVStore.create()
-    println(kv.handle.value)
-
-    println("Setting updater")
-    val updater = new MXKVStoreUpdater {
-      override def update(key: Int, input: NDArray, stored: NDArray, handle: AnyRef): Unit = {
-        println(s"update on key: $key")
-        stored += input * 2
-      }
-    }
-    kv.setUpdater(updater)
-
-    val shape = Array(2, 1)
-    val a = NDArray.zeros(shape)
-
-    kv.init(Array(3), Array(NDArray.zeros(shape)+4))
-    kv.pull(Array(3), Array(a))
-    println(a.toArray.mkString(","))
-
-    kv.push(Array(3), Array(NDArray.zeros(shape)+1))
-    kv.pull(Array(3), Array(a))
-    println(a.toArray.mkString(","))
-  }
-  */
   /**
    * Create a new KVStore.
    *
