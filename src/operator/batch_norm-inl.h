@@ -99,7 +99,8 @@ class BatchNormOp : public Operator {
       CHECK(req[batchnorm::kVar] == kNullOp || req[batchnorm::kVar] == kWriteTo);
       // The first three steps must be enforced.
       mean = scale * sumall_except_dim<1>(data);
-      var = scale * sumall_except_dim<1>(F<mshadow_op::square>(data - broadcast<1>(mean, data.shape_)));
+      var = scale * sumall_except_dim<1>(F<mshadow_op::square>(
+          data - broadcast<1>(mean, data.shape_)));
       out_no_affine = (data - broadcast<1>(mean, data.shape_)) /
              F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_));
       Assign(out, req[batchnorm::kOut], out_no_affine * broadcast<1>(slope, out.shape_) +
