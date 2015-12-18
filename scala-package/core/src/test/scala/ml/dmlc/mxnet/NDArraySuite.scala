@@ -16,6 +16,12 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
     assert(ndones.toScalar === 1f)
   }
 
+  test("size and shape") {
+    val ndzeros = NDArray.zeros(Array(4, 1))
+    assert(ndzeros.shape === Array(4, 1))
+    assert(ndzeros.size === 4)
+  }
+
   test("plus") {
     val ndzeros = NDArray.zeros(Array(2, 1))
     val ndones = ndzeros + 1f
