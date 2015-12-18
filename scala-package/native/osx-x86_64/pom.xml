@@ -46,21 +46,24 @@
             <source>
               <directory>../src/main/native</directory>
               <fileNames>
-                <fileName>ml_dmlc_mxnet_native_c_api.c</fileName>
+                <fileName>ml_dmlc_mxnet_native_c_api.cc</fileName>
               </fileNames>
             </source>
           </sources>
           <compilerEndOptions>
-            <compilerEndOption>-I../../../include/mxnet</compilerEndOption>
+            <compilerEndOption>-I../../../include</compilerEndOption>
+            <compilerEndOption>-I../../../dmlc-core/include</compilerEndOption>
+            <compilerEndOption>-I../../../mshadow</compilerEndOption>
+            <compilerEndOption>-DMSHADOW_USE_CUDA=0</compilerEndOption>
+            <compilerEndOption>-DMSHADOW_USE_CBLAS=1</compilerEndOption>
+            <compilerEndOption>-DMSHADOW_USE_MKL=0</compilerEndOption>
+            <compilerEndOption>-I/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/Headers</compilerEndOption>
             <compilerEndOption>-fPIC</compilerEndOption>
+            <compilerEndOption>-std=c++11</compilerEndOption>
           </compilerEndOptions>
           <linkerMiddleOptions>
             <linkerMiddleOption>-dynamiclib</linkerMiddleOption>
             <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption>
-            <!--
-            <linkerMiddleOption>-L/Users/lewis/Workspace/source-codes/dmlc/mxnet/lib</linkerMiddleOption>
-            <linkerMiddleOption>-lmxnet</linkerMiddleOption>
-            -->
             <linkerMiddleOption>-framework JavaVM</linkerMiddleOption>
             <linkerMiddleOption>-framework Accelerate</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-dead_strip</linkerMiddleOption>

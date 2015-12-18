@@ -47,4 +47,28 @@ class LibInfo {
                              start: MXUint,
                              end: MXUint,
                              sliceHandle: NDArrayHandle): Int
+  @native def mxKVStoreCreate(name: String, handle: KVStoreHandle): Int
+  @native def mxKVStoreInit(handle: KVStoreHandle,
+                            len: MXUint,
+                            keys: Array[Int],
+                            // values ought to be Array[NDArrayHandle],
+                            // we pass ptr address directly for performance consideration
+                            values: Array[CPtrAddress]): Int
+  @native def mxKVStorePush(handle: KVStoreHandle,
+                            len: MXUint,
+                            keys: Array[Int],
+                            // values ought to be Array[NDArrayHandle],
+                            // we pass ptr address directly for performance consideration
+                            values: Array[CPtrAddress],
+                            priority: Int): Int
+  @native def mxKVStorePull(handle: KVStoreHandle,
+                            len: MXUint,
+                            keys: Array[Int],
+                            // outs ought to be Array[NDArrayHandle],
+                            // we pass ptr address directly for performance consideration
+                            outs: Array[CPtrAddress],
+                            priority: Int): Int
+  @native def mxKVStoreSetUpdater(handle: KVStoreHandle,
+                                  updaterFunc: MXKVStoreUpdater,
+                                  updaterHandle: AnyRef): Int
 }
