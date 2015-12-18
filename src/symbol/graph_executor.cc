@@ -286,6 +286,7 @@ void GraphExecutor::InitGraph(const Symbol &symbol,
       }
     }
   }
+
   // assign context, this will change the graph.
   std::vector<Context> ctx_assignment;
   this->AssignContext(default_ctx, ctx_map,
@@ -326,7 +327,6 @@ void GraphExecutor::InitGraph(const Symbol &symbol,
   for (uint32_t nid : topo) {
     if (finished.count(nid) == 0) topo_order_.push_back(nid);
   }
-
   // setup all the operator nodes data structure
   op_nodes_.resize(graph_.nodes.size());
   for (size_t i = 0; i < graph_.nodes.size(); ++i) {
@@ -509,6 +509,9 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NDArray> &in_args,
         op_nodes_[e.source_id].activated = true;
       }
     }
+    if (graph_.nodes[nid].is_backward()) {
+      op_nodes_[graph_.nodes[nid].backward_source_id].activated = true;
+    }
   }
   // shape inference
   std::vector<std::vector<TShape> > out_shapes(op_nodes_.size());
@@ -526,7 +529,6 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NDArray> &in_args,
       op_nodes_[i].outputs[j].shape = out_shapes[i][j];
     }
   }
-
   // bind aux args
   size_t aux_ndarray_idx = 0;
   for (auto i : topo_order_) {
