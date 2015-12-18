@@ -229,11 +229,7 @@ object NDArray {
    * @param ctx The context of the NDArray, default to current default context.
    * @return The created NDArray.
    */
-  def array(source_arr: Array[Int], ctx: Context=null): NDArray = {
-    val arr = empty(source_arr, ctx)
-    arr(0).set(source_arr.length)
-    arr
-  }
+  def array(source_arr: Array[Int], ctx: Context=null): NDArray = ???
 
   /**
    * Load ndarray from binary file.

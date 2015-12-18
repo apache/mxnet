@@ -13,7 +13,7 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
     val ndzeros = NDArray.zeros(Array(2, 1))
     assert(ndzeros.toScalar === 0f)
     val ndones = NDArray.ones(Array(2, 1))
-    assert(ndzeros.toScalar === 1f)
+    assert(ndones.toScalar === 1f)
   }
 
   test("plus") {
