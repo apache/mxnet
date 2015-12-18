@@ -10,9 +10,9 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("to scalar") {
-    val ndzeros = NDArray.zeros(Array(2, 1))
+    val ndzeros = NDArray.zeros(Array(1, 1))
     assert(ndzeros.toScalar === 0f)
-    val ndones = NDArray.ones(Array(2, 1))
+    val ndones = NDArray.ones(Array(1, 1))
     assert(ndones.toScalar === 1f)
   }
 

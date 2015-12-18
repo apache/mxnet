@@ -225,11 +225,11 @@ object NDArray {
 
   /**
    * Create a new NDArray that copies content from source_array.
-   * @param source_arr Source data to create NDArray from.
+   * @param sourceArr Source data to create NDArray from.
    * @param ctx The context of the NDArray, default to current default context.
    * @return The created NDArray.
    */
-  def array(source_arr: Array[Int], ctx: Context=null): NDArray = ???
+  def array(sourceArr: Array[Int], ctx: Context=null): NDArray = ???
 
   /**
    * Load ndarray from binary file.
@@ -331,7 +331,7 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
   }
 
   def set(other: NDArray) = {
-    copyTo(other)
+    other.copyTo(this)
   }
 
   def +(other: NDArray): NDArray = {
@@ -448,6 +448,9 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
    * @return The scalar representation of the ndarray.
    */
   def toScalar: Float = {
+    if (this.size != 1) {
+      throw new IllegalArgumentException("The current array is not a scalar")
+    }
     this.toArray(0)
   }
 
