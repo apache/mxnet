@@ -94,11 +94,15 @@ class BatchNormOp : public Operator {
     if (ctx.is_train) {
       Tensor<xpu, 1> mean = out_data[batchnorm::kMean].get<xpu, 1, real_t>(s);
       Tensor<xpu, 1> var = out_data[batchnorm::kVar].get<xpu, 1, real_t>(s);
-      Assign(mean, req[batchnorm::kMean], scale * sumall_except_dim<1>(data));
-      Assign(var, req[batchnorm::kVar], scale * sumall_except_dim<1>(
-               F<mshadow_op::square>(data - broadcast<1>(mean, data.shape_))));
-      Assign(out_no_affine, req[batchnorm::kOutNoAffine], (data - broadcast<1>(mean, data.shape_)) /
-             F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)));
+      CHECK(req[batchnorm::kOutNoAffine] == kNullOp || req[batchnorm::kOutNoAffine] == kWriteTo);
+      CHECK(req[batchnorm::kMean] == kNullOp || req[batchnorm::kMean] == kWriteTo);
+      CHECK(req[batchnorm::kVar] == kNullOp || req[batchnorm::kVar] == kWriteTo);
+      // The first three steps must be enforced.
+      mean = scale * sumall_except_dim<1>(data);
+      var = scale * sumall_except_dim<1>(F<mshadow_op::square>(
+          data - broadcast<1>(mean, data.shape_)));
+      out_no_affine = (data - broadcast<1>(mean, data.shape_)) /
+             F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_));
       Assign(out, req[batchnorm::kOut], out_no_affine * broadcast<1>(slope, out.shape_) +
              broadcast<1>(bias, out.shape_));
     } else {
@@ -125,22 +129,20 @@ class BatchNormOp : public Operator {
     CHECK_EQ(in_grad.size(), 3);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data, grad, grad_in;
-    Tensor<xpu, 4> out, out_no_affine;
-    const real_t scale = static_cast<real_t>(out_data[batchnorm::kOut].shape_[1]) /
-                         static_cast<real_t>(out_data[batchnorm::kOut].shape_.Size());
+    Tensor<xpu, 4> out_no_affine;
+    const real_t scale = static_cast<real_t>(out_grad[batchnorm::kOut].shape_[1]) /
+                         static_cast<real_t>(out_grad[batchnorm::kOut].shape_.Size());
     if (in_data[batchnorm::kData].ndim() == 2) {
-      Shape<4> dshape = Shape4(out_data[batchnorm::kOut].shape_[0],
-                               out_data[batchnorm::kOut].shape_[1], 1, 1);
+      Shape<4> dshape = Shape4(out_grad[batchnorm::kOut].shape_[0],
+                               out_grad[batchnorm::kOut].shape_[1], 1, 1);
       data = in_data[batchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       grad = out_grad[batchnorm::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
       grad_in = in_grad[batchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
-      out = out_data[batchnorm::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
       out_no_affine = out_data[batchnorm::kOutNoAffine].get_with_shape<xpu, 4, real_t>(dshape, s);
     } else {
       data = in_data[batchnorm::kData].get<xpu, 4, real_t>(s);
       grad = out_grad[batchnorm::kOut].get<xpu, 4, real_t>(s);
       grad_in = in_grad[batchnorm::kData].get<xpu, 4, real_t>(s);
-      out = out_data[batchnorm::kOut].get<xpu, 4, real_t>(s);
       out_no_affine = out_data[batchnorm::kOutNoAffine].get<xpu, 4, real_t>(s);
     }
 
@@ -152,7 +154,7 @@ class BatchNormOp : public Operator {
     Tensor<xpu, 1> gbias = in_grad[batchnorm::kBeta].get<xpu, 1, real_t>(s);
     // get requested temp space
     Tensor<xpu, 2> workspace = ctx.requested[batchnorm::kTempSpace].get_space<xpu>(
-        mshadow::Shape2(3, out.shape_[1]), s);
+        mshadow::Shape2(3, mean.shape_[0]), s);
     Tensor<xpu, 1> gmean = workspace[0];
     Tensor<xpu, 1> gvar = workspace[1];
     Tensor<xpu, 1> tmp = workspace[2];
@@ -239,7 +241,6 @@ class BatchNormProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
     return {out_grad[batchnorm::kOut],
-            out_data[batchnorm::kOut],
             out_data[batchnorm::kOutNoAffine],
             out_data[batchnorm::kMean],
             out_data[batchnorm::kVar],
@@ -292,4 +293,3 @@ class BatchNormProp : public OperatorProperty {
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_BATCH_NORM_INL_H_
-
