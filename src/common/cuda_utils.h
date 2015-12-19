@@ -151,8 +151,5 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
     CHECK_EQ(e, CUDNN_STATUS_SUCCESS) << "cuDNN: " << cudnnGetErrorString(e); \
   }
 
-#define CUDNN_VERSION_EQUAL(major, minor) \
-  ((CUDNN_MAJOR * 1000 + CUDNN_MINOR * 100) == (major * 1000 + minor * 100))
-
 #endif  // MXNET_USE_CUDNN
 #endif  // MXNET_COMMON_CUDA_UTILS_H_

@@ -73,7 +73,7 @@ class CuDNNConvolutionOp : public Operator {
     if (!param_.no_bias) {
       beta = 1.0f;
       Tensor<gpu, 1> bias = in_data[conv::kBias].get<gpu, 1, real_t>(s);
-#if CUDNN_VERSION_EQUAL(4, 0)
+#if CUDNN_MAJOR == 4
       CHECK_EQ(cudnnAddTensor(s->dnn_handle_,
                               &alpha,
                               bias_desc_,
@@ -82,7 +82,7 @@ class CuDNNConvolutionOp : public Operator {
                               out_desc_,
                               out.dptr_), CUDNN_STATUS_SUCCESS);
 #endif
-#if CUDNN_VERSION_EQUAL(3, 0)
+#if CUDNN_MAJOR == 3
       CHECK_EQ(cudnnAddTensor(s->dnn_handle_,
                               CUDNN_ADD_SAME_C,
                               &alpha,
