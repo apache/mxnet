@@ -71,4 +71,8 @@ class LibInfo {
   @native def mxKVStoreSetUpdater(handle: KVStoreHandle,
                                   updaterFunc: MXKVStoreUpdater,
                                   updaterHandle: AnyRef): Int
+  @native def mxKVStoreIsWorkerNode(isWorker: RefInt): Int
+  @native def mxKVStoreGetType(handle: KVStoreHandle, kvType: RefString): Int
+  @native def mxKVStoreSendCommmandToServers(handle: KVStoreHandle,
+                                             head: Int, body: String): Int
 }

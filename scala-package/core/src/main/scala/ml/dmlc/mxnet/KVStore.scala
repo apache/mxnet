@@ -98,6 +98,32 @@ class KVStore(private val handle: KVStoreHandle) {
     pull(Array(key), Array(out), priority)
   }
 
+  // Get the type of this kvstore
+  def getType: String = {
+    val kvType = new RefString
+    checkCall(_LIB.mxKVStoreGetType(handle, kvType))
+    kvType.value
+  }
+
+  /**
+   * Register an optimizer to the store
+   * If there are multiple machines, this process (should be a worker node)
+   * will pack this optimizer and send it to all servers. It returns after
+   * this action is done.
+   *
+   * @param optimizer the optimizer
+   */
+  def setOptimizer(optimizer: Optimizer): Unit = {
+    val isWorker = new RefInt
+    checkCall(_LIB.mxKVStoreIsWorkerNode(isWorker))
+    if ("dist" == getType && isWorker.value != 0) {
+      val optSerialized = Serializer.getSerializer.serialize(optimizer)
+      _sendCommandToServers(0, Serializer.encodeBase64String(optSerialized))
+    } else {
+      setUpdater(Optimizer.getUpdater(optimizer))
+    }
+  }
+
   /**
    * Set a push updater into the store.
    *
@@ -109,5 +135,20 @@ class KVStore(private val handle: KVStoreHandle) {
   def setUpdater(updater: MXKVStoreUpdater): Unit = {
     this.updaterFunc = updater
     checkCall(_LIB.mxKVStoreSetUpdater(handle, updaterFunc, null))
+  }
+
+  /**
+   * Send a command to all server nodes
+   *
+   * Send a command to all server nodes, which will make each server node run
+   * KVStoreServer.controller
+   *
+   * This function returns after the command has been executed in all server nodes
+   *
+   * @param head the head of the command
+   * @param body the body of the command
+   */
+  private def _sendCommandToServers(head: Int, body: String): Unit = {
+    checkCall(_LIB.mxKVStoreSendCommmandToServers(handle, head, body))
   }
 }
