@@ -127,7 +127,8 @@ if [ ${TASK} == "scala_test" ]; then
         mvn integration-test -P osx-x86_64
     fi
     if [ ${TRAVIS_OS_NAME} == "linux" ]; then
-        mvn clean package -P linux-x86_64
+        # use g++-4.8 for linux
+        mvn clean package -P linux-x86_64 -D cxx=g++-4.8
         mvn integration-test -P linux-x86_64
     fi
 

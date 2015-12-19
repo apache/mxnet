@@ -10,10 +10,14 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("to scalar") {
-    val ndzeros = NDArray.zeros(Array(1, 1))
+    val ndzeros = NDArray.zeros(Array(1))
     assert(ndzeros.toScalar === 0f)
-    val ndones = NDArray.ones(Array(1, 1))
+    val ndones = NDArray.ones(Array(1))
     assert(ndones.toScalar === 1f)
+  }
+
+  test ("call toScalar on an ndarray which is not a scalar") {
+    intercept[Exception] { NDArray.zeros(Array(1,1)).toScalar }
   }
 
   test("size and shape") {

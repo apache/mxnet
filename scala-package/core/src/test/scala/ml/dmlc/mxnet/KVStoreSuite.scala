@@ -1,0 +1,48 @@
+package ml.dmlc.mxnet
+
+import org.scalatest.{BeforeAndAfterAll, FunSuite}
+
+class KVStoreSuite extends FunSuite with BeforeAndAfterAll {
+  test("init and pull") {
+    val kv = KVStore.create()
+    val shape = Array(2, 1)
+    val ndArray = NDArray.zeros(shape)
+
+    kv.init(3, NDArray.ones(shape))
+    kv.pull(3, ndArray)
+    assert(ndArray.toArray === Array(1f, 1f))
+  }
+
+  test("push and pull") {
+    val kv = KVStore.create()
+    val shape = Array(2, 1)
+    val ndArray = NDArray.zeros(shape)
+
+    kv.init(3, NDArray.ones(shape))
+    kv.push(3, NDArray.ones(shape) * 4)
+    kv.pull(3, ndArray)
+    assert(ndArray.toArray === Array(4f, 4f))
+  }
+
+  test("updater runs when push") {
+    val kv = KVStore.create()
+    val updater = new MXKVStoreUpdater {
+      override def update(key: Int, input: NDArray, stored: NDArray, handle: AnyRef): Unit = {
+        println(s"update on key $key")
+        stored += input * 2
+      }
+    }
+    kv.setUpdater(updater)
+
+    val shape = Array(2, 1)
+    val ndArray = NDArray.zeros(shape)
+
+    kv.init(3, NDArray.ones(shape) * 4)
+    kv.pull(3, ndArray)
+    assert(ndArray.toArray === Array(4f, 4f))
+
+    kv.push(3, NDArray.ones(shape))
+    kv.pull(3, ndArray)
+    assert(ndArray.toArray === Array(6f, 6f))
+  }
+}

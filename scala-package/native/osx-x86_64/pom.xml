@@ -30,7 +30,50 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-      </plugin>     
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <exportAntProperties>true</exportAntProperties>
+              <tasks>
+                <taskdef resource="net/sf/antcontrib/antcontrib.properties" classpathref="maven.plugin.classpath" />
+                <property environment="env"/>
+                <if>
+                  <isset property="intel" />
+                  <then>
+                    <property name="use.cblas" value="0" />
+                    <property name="use.mkl" value="1" />
+                    <property name="cflags.blas" value="-I${intel}/mkl/include" />
+                    <property name="ldflags.blas" value="-L${intel}/mkl/lib -L${intel}/lib" />
+                  </then>
+                  <else>
+                    <property name="use.cblas" value="1" />
+                    <property name="use.mkl" value="0" />
+                    <property name="cflags.blas"
+                      value="-I/System/Library/Frameworks/Accelerate.framework/Versions/Current/Frameworks/vecLib.framework/Versions/Current/Headers" />
+                    <property name="ldflags.blas" value="-framework Accelerate" />
+                  </else>
+                </if>
+                <if>
+                  <not>
+                    <isset property="cxx" />
+                  </not>
+                  <then>
+                    <property name="cxx" value="clang++" />
+                  </then>
+                </if>
+              </tasks>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
 
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -40,29 +83,30 @@
           <!--  trigger javah -->
           <javahOS>darwin</javahOS>
           <compilerProvider>generic-classic</compilerProvider>
-          <compilerExecutable>clang++</compilerExecutable>
-          <linkerExecutable>clang++</linkerExecutable>
+          <compilerExecutable>${cxx}</compilerExecutable>
+          <linkerExecutable>${cxx}</linkerExecutable>
           <sources>
             <source>
               <directory>../src/main/native</directory>
               <fileNames>
-                <fileName>ml_dmlc_mxnet_native_c_api.c</fileName>
+                <fileName>ml_dmlc_mxnet_native_c_api.cc</fileName>
               </fileNames>
             </source>
           </sources>
           <compilerEndOptions>
-            <compilerEndOption>-I../../../include/mxnet</compilerEndOption>
+            <compilerEndOption>-I../../../include</compilerEndOption>
+            <compilerEndOption>-I../../../dmlc-core/include</compilerEndOption>
+            <compilerEndOption>-I../../../mshadow ${cflags.blas}</compilerEndOption>
+            <compilerEndOption>-DMSHADOW_USE_CUDA=0</compilerEndOption>
+            <compilerEndOption>-DMSHADOW_USE_CBLAS=${use.cblas}</compilerEndOption>
+            <compilerEndOption>-DMSHADOW_USE_MKL=${use.mkl}</compilerEndOption>
             <compilerEndOption>-fPIC</compilerEndOption>
+            <compilerEndOption>-std=c++11</compilerEndOption>
           </compilerEndOptions>
           <linkerMiddleOptions>
             <linkerMiddleOption>-dynamiclib</linkerMiddleOption>
             <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption>
-            <!--
-            <linkerMiddleOption>-L/Users/lewis/Workspace/source-codes/dmlc/mxnet/lib</linkerMiddleOption>
-            <linkerMiddleOption>-lmxnet</linkerMiddleOption>
-            -->
-            <linkerMiddleOption>-framework JavaVM</linkerMiddleOption>
-            <linkerMiddleOption>-framework Accelerate</linkerMiddleOption>
+            <linkerMiddleOption>-framework JavaVM ${ldflags.blas}</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-dead_strip</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-exported_symbol,_Java_*</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-x</linkerMiddleOption>

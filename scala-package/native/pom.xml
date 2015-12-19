@@ -14,24 +14,18 @@
   <profiles>
     <profile>
       <id>osx-x86_64</id>
-      <activation>
-        <property>
-          <name>platform</name>
-          <value>osx-x86_64</value>
-        </property>
-      </activation>
+      <properties>
+        <platform>osx-x86_64</platform>
+      </properties>
       <modules>
         <module>osx-x86_64</module>
       </modules>
     </profile>
     <profile>
       <id>linux-x86_64</id>
-      <activation>
-        <property>
-          <name>platform</name>
-          <value>linux-x86_64</value>
-        </property>
-      </activation>
+      <properties>
+        <platform>linux-x86_64</platform>
+      </properties>
       <modules>
         <module>linux-x86_64</module>
       </modules>
