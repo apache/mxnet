@@ -76,7 +76,7 @@ Then build mxnet
 
 ```bash
 git clone --recursive https://github.com/dmlc/mxnet
-cd mxnet; cp make/osx.mk .;make -j4
+cd mxnet; cp make/osx.mk ./config.mk; make -j4
 ```
 
 Troubleshooting:
