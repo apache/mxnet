@@ -59,6 +59,14 @@
                     <property name="ldflags.blas" value="-lcblas" />
                   </else>
                 </if>
+                <if>
+                  <not>
+                    <isset property="cxx" />
+                  </not>
+                  <then>
+                    <property name="cxx" value="g++" />
+                  </then>
+                </if>
               </tasks>
             </configuration>
           </execution>
@@ -73,8 +81,8 @@
           <!--  trigger javah -->
           <javahOS>linux</javahOS>
           <compilerProvider>generic-classic</compilerProvider>
-          <compilerExecutable>g++</compilerExecutable>
-          <linkerExecutable>g++</linkerExecutable>
+          <compilerExecutable>${cxx}</compilerExecutable>
+          <linkerExecutable>${cxx}</linkerExecutable>
           <sources>
             <source>
               <directory>../src/main/native</directory>

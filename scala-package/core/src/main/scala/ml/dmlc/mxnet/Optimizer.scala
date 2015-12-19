@@ -14,5 +14,4 @@ trait MXKVStoreUpdater {
    * @param handle The additional handle to the updater
    */
   def update(key: Int, recv: NDArray, local: NDArray, handle: AnyRef): Unit
-  //def update(key: Int): Unit
 }

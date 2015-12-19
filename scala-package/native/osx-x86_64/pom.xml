@@ -44,6 +44,7 @@
               <exportAntProperties>true</exportAntProperties>
               <tasks>
                 <taskdef resource="net/sf/antcontrib/antcontrib.properties" classpathref="maven.plugin.classpath" />
+                <property environment="env"/>
                 <if>
                   <isset property="intel" />
                   <then>
@@ -60,6 +61,14 @@
                     <property name="ldflags.blas" value="-framework Accelerate" />
                   </else>
                 </if>
+                <if>
+                  <not>
+                    <isset property="cxx" />
+                  </not>
+                  <then>
+                    <property name="cxx" value="clang++" />
+                  </then>
+                </if>
               </tasks>
             </configuration>
           </execution>
@@ -74,8 +83,8 @@
           <!--  trigger javah -->
           <javahOS>darwin</javahOS>
           <compilerProvider>generic-classic</compilerProvider>
-          <compilerExecutable>clang++</compilerExecutable>
-          <linkerExecutable>clang++</linkerExecutable>
+          <compilerExecutable>${cxx}</compilerExecutable>
+          <linkerExecutable>${cxx}</linkerExecutable>
           <sources>
             <source>
               <directory>../src/main/native</directory>
