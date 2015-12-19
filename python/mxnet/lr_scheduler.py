@@ -71,6 +71,6 @@ class FactorScheduler(LRScheduler):
         if num_update > self.count + self.step:
             self.count += self.step
             self.base_lr *= self.factor
-            logging.info("Update[%d]: Change learning rate to %.5f",
+            logging.info("Update[%d]: Change learning rate to %0.5e",
                          num_update, self.base_lr)
         return self.base_lr
