@@ -1,30 +1,21 @@
 # Convert Caffe Model to Mxnet Format
 
-This tool converts a caffe model into mxnet's format.
+### Build
 
-## Build
-If the Caffe python package is installed then no other step is required for
-using. Otherwise, it requires Google protobuf to compile Caffe's model
-format. One can either install protobuf by using package manager or build from
-the source. For the latter, one can set `USE_DIST_KVSTORE = 1` when compiling
-mxnet, namely
+Either [Caffe's python package](http://caffe.berkeleyvision.org/installation.html) or [Google protobuf](https://developers.google.com/protocol-buffers/?hl=en) is required. The latter is often much easier to install:  
 
-```
-make -C ../.. USE_DIST_KVSTORE = 1
-```
+1. We first install the protobuf compiler. If you compiled mxnet with `USE_DIST_KVSTORE = 1` then it is already built. Otherwise, install `protobuf-compiler` by your favor package manager, e.g. `sudo apt-get install protobuf-compiler` for ubuntu and `sudo yum install protobuf-compiler` for redhat/fedora. 
 
-Once `protobuf` is available, then run `make` in the current directory.
+2. Then install the protobuf's python binding. For example `sudo pip install protobuf`
 
-## How to use
+Now we can build the tool by running `make` in the current directory.
 
-Run ```python convert_model.py caffe_prototxt caffe_model save_model_name``` to convert the models. Run with ```-h``` for more details of parameters.
+### How to use
 
+Use `./run.sh model_name` to download and convert a model. E.g. `./run.sh vgg19`
 
-Or use `./run.sh model_name` to download and convert a model. Sample usage:
-`./run.sh vgg19`
+### Note
 
-## Note
-
-* We have verified the results of VGG_16 model and BVLC_googlenet results from Caffe model zoo.
+* We have verified the results of VGG_16/VGG_19 model and BVLC_googlenet results from Caffe model zoo.
 * The tool only supports single input and single output network.
 * The tool can only work with the L2LayerParameter in Caffe.
