@@ -1,11 +1,14 @@
+/*!
+ * Copyright (c) 2015 by Contributors
+ */
+
 #include <iostream>
 using namespace std;
 
 #include "mxnet/ndarray.h"
 #include "mxnet/base.h"
 
-int main(int argc, char ** argv)
-{
+int main(int argc, char** argv) {
   // using NDArray interface
   const int m = 3;
   const int n = 5;
@@ -16,12 +19,10 @@ int main(int argc, char ** argv)
   mxnet::NDArray b(f, d, false);
   mxnet::real_t* aptr = static_cast<mxnet::real_t*>(a.data().dptr_);
   mxnet::real_t* bptr = static_cast<mxnet::real_t*>(b.data().dptr_);
-  for (int i = 0; i < m; i++)
-  {
-    for (int j = 0; j < n; j++)
-    {
-      aptr[i*n + j] = i*n + j;
-      bptr[i*n + j] = i*n + j;
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < n; j++) {
+      aptr[i * n + j] = i * n + j;
+      bptr[i * n + j] = i * n + j;
     }
   }
   mxnet::NDArray c = a + b;

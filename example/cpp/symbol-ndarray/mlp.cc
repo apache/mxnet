@@ -15,9 +15,9 @@
 
 using namespace std;
 
-#if MSHADOW_USE_CUDA
+#if MSHADOW_USE_CUDA == 1
 #define DEV_CTX \
-  (mxnet::Context::Create(mxnet::Context::kGPU, 0))  // use no.0 gpu
+  (mxnet::Context::Create(mxnet::Context::kGPU, 2))  // use no.0 gpu
 #else
 #define DEV_CTX (mxnet::Context::Create(mxnet::Context::kCPU, 0))  // use cpu
 #endif
@@ -202,6 +202,9 @@ class MLP {
       exe->Backward(std::vector<mxnet::NDArray>());
       for (int i = 1; i < 5; ++i) {
         in_args[i] -= arg_grad_store[i] * learning_rate;
+      }
+      for (int i = 1; i < 5; ++i) {
+        in_args[i].WaitToRead();
       }
     }
 
