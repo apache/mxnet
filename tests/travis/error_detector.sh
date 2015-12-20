@@ -1,4 +1,5 @@
 #!/bin/bash
+pwd
 file=scala_test_results.txt
 
 testFail=$(grep -ci "[ERROR]" $file)
