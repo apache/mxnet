@@ -37,7 +37,7 @@ struct MXAPINDList {
 
 int MXPredCreate(const char* symbol_json_str,
                  const char* param_bytes,
-                 size_t param_size,
+                 int param_size,
                  int dev_type, int dev_id,
                  mx_uint num_input_nodes,
                  const char** input_keys,
@@ -192,7 +192,7 @@ int MXPredFree(PredictorHandle handle) {
 }
 
 int MXNDListCreate(const char* nd_file_bytes,
-                   size_t nd_file_size,
+                   int nd_file_size,
                    NDListHandle *out,
                    mx_uint* out_length) {
   MXAPINDList* ret = new MXAPINDList();
@@ -242,5 +242,3 @@ int MXNDListFree(NDListHandle handle) {
   delete static_cast<MXAPINDList*>(handle);
   API_END();
 }
-
-
