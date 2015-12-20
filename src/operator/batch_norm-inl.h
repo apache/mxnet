@@ -22,7 +22,7 @@ namespace op {
 
 namespace batchnorm {
 enum BatchNormOpInputs {kData, kGamma, kBeta};
-enum BatchNormOpOutputs {kOut, kOutNoAffine, kMean, kVar};
+enum BatchNormOpOutputs {kOut, kMean, kVar, kOutNoAffine};
 enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};
 enum BatchNormBackResource {kTempSpace};
 }  // namespace batchnorm
@@ -55,11 +55,12 @@ class BatchNormOp : public Operator {
                        const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    const size_t expected_out = this->param_.fix_gamma ? 3 : 4;
     CHECK_EQ(in_data.size(), 3);
     CHECK_EQ(aux_states.size(), 2);
     if (ctx.is_train) {
-      CHECK_EQ(out_data.size(), 4);
-      CHECK_EQ(req.size(), 4);
+      CHECK_EQ(out_data.size(), expected_out);
+      CHECK_EQ(req.size(), expected_out);
     } else {
       CHECK_GE(out_data.size(), 1);
       CHECK_GE(req.size(), 1);
@@ -76,13 +77,14 @@ class BatchNormOp : public Operator {
                                in_data[batchnorm::kData].shape_[1], 1, 1);
       data = in_data[batchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       out = out_data[batchnorm::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
-      if (ctx.is_train) {
-        out_no_affine = out_data[batchnorm::kOutNoAffine].get_with_shape<xpu, 4, real_t>(dshape, s);
+      if (ctx.is_train && !param_.fix_gamma) {
+        out_no_affine = out_data[batchnorm::kOutNoAffine].get_with_shape<xpu, 4, real_t>(dshape,
+                                                                                         s);
       }
     } else {
       data = in_data[batchnorm::kData].get<xpu, 4, real_t>(s);
       out = out_data[batchnorm::kOut].get<xpu, 4, real_t>(s);
-      if (ctx.is_train) {
+      if (ctx.is_train && !param_.fix_gamma) {
         out_no_affine = out_data[batchnorm::kOutNoAffine].get<xpu, 4, real_t>(s);
       }
     }
@@ -94,17 +96,23 @@ class BatchNormOp : public Operator {
     if (ctx.is_train) {
       Tensor<xpu, 1> mean = out_data[batchnorm::kMean].get<xpu, 1, real_t>(s);
       Tensor<xpu, 1> var = out_data[batchnorm::kVar].get<xpu, 1, real_t>(s);
-      CHECK(req[batchnorm::kOutNoAffine] == kNullOp || req[batchnorm::kOutNoAffine] == kWriteTo);
       CHECK(req[batchnorm::kMean] == kNullOp || req[batchnorm::kMean] == kWriteTo);
       CHECK(req[batchnorm::kVar] == kNullOp || req[batchnorm::kVar] == kWriteTo);
       // The first three steps must be enforced.
       mean = scale * sumall_except_dim<1>(data);
       var = scale * sumall_except_dim<1>(F<mshadow_op::square>(
           data - broadcast<1>(mean, data.shape_)));
-      out_no_affine = (data - broadcast<1>(mean, data.shape_)) /
-             F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_));
-      Assign(out, req[batchnorm::kOut], out_no_affine * broadcast<1>(slope, out.shape_) +
-             broadcast<1>(bias, out.shape_));
+      if (param_.fix_gamma) {
+        Assign(out, req[batchnorm::kOut], (data - broadcast<1>(mean, data.shape_)) /
+               F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
+               broadcast<1>(bias, out.shape_));
+      } else {
+        CHECK(req[batchnorm::kOutNoAffine] == kNullOp || req[batchnorm::kOutNoAffine] == kWriteTo);
+        out_no_affine = (data - broadcast<1>(mean, data.shape_)) /
+                       F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_));
+        Assign(out, req[batchnorm::kOut], out_no_affine * broadcast<1>(slope, out.shape_) +
+              broadcast<1>(bias, out.shape_));
+      }
     } else {
       Assign(out, req[batchnorm::kOut], broadcast<1>(slope /
                                           F<mshadow_op::square_root>(moving_var + param_.eps),
@@ -123,9 +131,10 @@ class BatchNormOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    const size_t expected_out = param_.fix_gamma ? 3 : 4;
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(in_data.size(), 3);
-    CHECK_EQ(out_data.size(), 4);
+    CHECK_EQ(out_data.size(), expected_out);
     CHECK_EQ(in_grad.size(), 3);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data, grad, grad_in;
@@ -138,12 +147,17 @@ class BatchNormOp : public Operator {
       data = in_data[batchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       grad = out_grad[batchnorm::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
       grad_in = in_grad[batchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
-      out_no_affine = out_data[batchnorm::kOutNoAffine].get_with_shape<xpu, 4, real_t>(dshape, s);
+      if (!param_.fix_gamma) {
+        out_no_affine = out_data[batchnorm::kOutNoAffine].get_with_shape<xpu, 4, real_t>(dshape,
+                                                                                         s);
+      }
     } else {
       data = in_data[batchnorm::kData].get<xpu, 4, real_t>(s);
       grad = out_grad[batchnorm::kOut].get<xpu, 4, real_t>(s);
       grad_in = in_grad[batchnorm::kData].get<xpu, 4, real_t>(s);
-      out_no_affine = out_data[batchnorm::kOutNoAffine].get<xpu, 4, real_t>(s);
+      if (!param_.fix_gamma) {
+        out_no_affine = out_data[batchnorm::kOutNoAffine].get<xpu, 4, real_t>(s);
+      }
     }
 
     Tensor<xpu, 1> mean = out_data[batchnorm::kMean].get<xpu, 1, real_t>(s);
@@ -178,13 +192,19 @@ class BatchNormOp : public Operator {
     // assign
     if (!param_.fix_gamma) {
       Assign(gslope, req[batchnorm::kGamma], sumall_except_dim<1>(grad * out_no_affine));
-    }
-    Assign(gbias, req[batchnorm::kBeta], sumall_except_dim<1>(grad));
-    Assign(grad_in, req[batchnorm::kData], (grad * broadcast<1>(slope, data.shape_)) *
+      Assign(grad_in, req[batchnorm::kData], (grad * broadcast<1>(slope, data.shape_)) *
            broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps), data.shape_) +
            broadcast<1>(gvar, data.shape_) * scale * 2.0f * (data - broadcast<1>(mean,
                                                                                  data.shape_)) +
            broadcast<1>(gmean, data.shape_) * scale);
+    } else {
+      Assign(grad_in, req[batchnorm::kData], grad *
+           broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps), data.shape_) +
+           broadcast<1>(gvar, data.shape_) * scale * 2.0f * (data - broadcast<1>(mean,
+                                                                                 data.shape_)) +
+           broadcast<1>(gmean, data.shape_) * scale);
+    }
+    Assign(gbias, req[batchnorm::kBeta], sumall_except_dim<1>(grad));
   }
 
  private:
@@ -217,9 +237,11 @@ class BatchNormProp : public OperatorProperty {
     in_shape->at(2) = TShape(Shape1(dshape[1]));
     out_shape->clear();
     out_shape->push_back(dshape);
-    out_shape->push_back(dshape);
     out_shape->push_back(Shape1(dshape[1]));
     out_shape->push_back(Shape1(dshape[1]));
+    if (!param_.fix_gamma) {
+      out_shape->push_back(dshape);
+    }
     aux_shape->clear();
     aux_shape->push_back(Shape1(dshape[1]));
     aux_shape->push_back(Shape1(dshape[1]));
@@ -240,14 +262,24 @@ class BatchNormProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    return {out_grad[batchnorm::kOut],
-            out_data[batchnorm::kOutNoAffine],
-            out_data[batchnorm::kMean],
-            out_data[batchnorm::kVar],
-            in_data[batchnorm::kData],
-            in_data[batchnorm::kGamma],
-            in_data[batchnorm::kBeta]
-           };
+    if (param_.fix_gamma) {
+      return {out_grad[batchnorm::kOut],
+              out_data[batchnorm::kMean],
+              out_data[batchnorm::kVar],
+              in_data[batchnorm::kData],
+              in_data[batchnorm::kGamma],
+              in_data[batchnorm::kBeta]
+            };
+    } else {
+      return {out_grad[batchnorm::kOut],
+              out_data[batchnorm::kOutNoAffine],
+              out_data[batchnorm::kMean],
+              out_data[batchnorm::kVar],
+              in_data[batchnorm::kData],
+              in_data[batchnorm::kGamma],
+              in_data[batchnorm::kBeta]
+            };
+    }
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
@@ -268,7 +300,7 @@ class BatchNormProp : public OperatorProperty {
   }
 
   int NumOutputs() const override {
-    return 4;
+    return param_.fix_gamma ? 3 : 4;
   }
 
   std::vector<std::string> ListArguments() const override {
@@ -276,7 +308,11 @@ class BatchNormProp : public OperatorProperty {
   }
 
   std::vector<std::string> ListOutputs() const override {
-    return {"output", "output_no_affine", "mean", "var"};
+    if (param_.fix_gamma) {
+      return {"output", "mean", "var"};
+    } else {
+      return {"output", "mean", "var", "output_no_affine"};
+    }
   }
 
   std::vector<std::string> ListAuxiliaryStates() const override {
