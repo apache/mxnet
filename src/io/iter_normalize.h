@@ -176,10 +176,14 @@ class ImageNormalizeIter : public IIterator<DataInst> {
         rand_uniform(rnd_) * param_.max_random_illumination * 2 - param_.max_random_illumination;
 
     if (param_.mean_r > 0.0f || param_.mean_g > 0.0f || param_.mean_b > 0.0f) {
-      // substract mean value
-      data[0] -= param_.mean_r;
-      data[1] -= param_.mean_g;
-      data[2] -= param_.mean_b;
+      // If the input has 3 channels, we substract the mean value on each
+      if (data.shape_[0] == 3) {
+        data[0] -= param_.mean_r;
+        data[1] -= param_.mean_g;
+        data[2] -= param_.mean_b;
+      } else {
+        data[0] -= param_.mean_r;
+      }
       if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
         outimg_ = mirror(data * contrast + illumination) * param_.scale;
       } else {
