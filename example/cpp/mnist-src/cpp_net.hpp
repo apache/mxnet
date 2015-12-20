@@ -241,6 +241,9 @@ class MXNET_API CppNet {
       arg_grad_store.push_back(mxnet::NDArray(arg_shapes[i], ctx_dev, false));
       grad_req_type.push_back(mxnet::kWriteTo);
     }
+    for (size_t i = 0; i < aux_shapes.size(); ++i) {
+      aux_states.push_back(mxnet::NDArray(aux_shapes[i], ctx_dev, false));
+    }
 
     for (size_t i = 0; i < in_args.size(); ++i) {
       in_args[i].WaitToRead();
