@@ -98,6 +98,52 @@ class KVStore(private val handle: KVStoreHandle) {
     pull(Array(key), Array(out), priority)
   }
 
+  // Get the type of this kvstore
+  def `type`: String = {
+    val kvType = new RefString
+    checkCall(_LIB.mxKVStoreGetType(handle, kvType))
+    kvType.value
+  }
+
+  /**
+   * Get the number of worker nodes
+   * @return The number of worker nodes
+   */
+  def numWorkers: Int = {
+    val size = new RefInt
+    checkCall(_LIB.mxKVStoreGetGroupSize(handle, size))
+    size.value
+  }
+
+  /**
+   * Get the rank of this worker node
+   * @return The rank of this node, which is in [0, get_num_workers())
+   */
+  def rank: Int = {
+    val rank = new RefInt
+    checkCall(_LIB.mxKVStoreGetRank(handle, rank))
+    rank.value
+  }
+
+  /**
+   * Register an optimizer to the store
+   * If there are multiple machines, this process (should be a worker node)
+   * will pack this optimizer and send it to all servers. It returns after
+   * this action is done.
+   *
+   * @param optimizer the optimizer
+   */
+  def setOptimizer(optimizer: Optimizer): Unit = {
+    val isWorker = new RefInt
+    checkCall(_LIB.mxKVStoreIsWorkerNode(isWorker))
+    if ("dist" == `type` && isWorker.value != 0) {
+      val optSerialized = Serializer.getSerializer.serialize(optimizer)
+      _sendCommandToServers(0, Serializer.encodeBase64String(optSerialized))
+    } else {
+      setUpdater(Optimizer.getUpdater(optimizer))
+    }
+  }
+
   /**
    * Set a push updater into the store.
    *
@@ -109,5 +155,32 @@ class KVStore(private val handle: KVStoreHandle) {
   def setUpdater(updater: MXKVStoreUpdater): Unit = {
     this.updaterFunc = updater
     checkCall(_LIB.mxKVStoreSetUpdater(handle, updaterFunc, null))
+  }
+
+  /**
+   * Global barrier among all worker nodes
+   *
+   * For example, assume there are n machines, we want to let machine 0 first
+   * init the values, and then pull the inited value to all machines. Before
+   * pulling, we can place a barrier to guarantee that the initialization is
+   * finished.
+   */
+  def barrier() {
+    checkCall(_LIB.mxKVStoreBarrier(handle))
+  }
+
+  /**
+   * Send a command to all server nodes
+   *
+   * Send a command to all server nodes, which will make each server node run
+   * KVStoreServer.controller
+   *
+   * This function returns after the command has been executed in all server nodes
+   *
+   * @param head the head of the command
+   * @param body the body of the command
+   */
+  private def _sendCommandToServers(head: Int, body: String): Unit = {
+    checkCall(_LIB.mxKVStoreSendCommmandToServers(handle, head, body))
   }
 }

@@ -45,4 +45,15 @@ class KVStoreSuite extends FunSuite with BeforeAndAfterAll {
     kv.pull(3, ndArray)
     assert(ndArray.toArray === Array(6f, 6f))
   }
+
+  test("get type") {
+    val kv = KVStore.create("local")
+    assert(kv.`type` === "local")
+  }
+
+  test("get numWorkers and rank") {
+    val kv = KVStore.create("local")
+    assert(kv.numWorkers === 1)
+    assert(kv.rank === 0)
+  }
 }
