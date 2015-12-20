@@ -132,6 +132,9 @@ if [ ${TASK} == "scala_test" ]; then
         mvn integration-test -P linux-x86_64  > scala_test_results.txt
     fi
 
+    chmod +x tests/travis/error_detector.sh
+    ./tests/travis/error_detector.sh
+    
     exit 0
 fi
 
