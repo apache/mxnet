@@ -20,7 +20,8 @@ std::vector<uint32_t> StaticGraph::PostDFSOrder(const std::vector<uint32_t>& hea
   ret.reserve(nodes.size() / 2);
   std::vector<std::pair<uint32_t, uint32_t> > stack;
   // heads
-  for (auto &head : head_nodes) {
+  for (auto head : head_nodes) {
+    if (visited.count(head) != 0) continue;
     stack.push_back(std::make_pair(head, 0));
     CHECK_EQ(banned.count(head), 0);
     // bugfix
@@ -197,8 +198,6 @@ bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
   for (const auto& head : heads) {
     head_nodes.push_back(head.source_id);
   }
-  std::sort(head_nodes.begin(), head_nodes.end());
-  head_nodes.resize(std::unique(head_nodes.begin(), head_nodes.end()) - head_nodes.begin());
   std::vector<uint32_t> fwd_nodes = PostDFSOrder(head_nodes, std::unordered_set<uint32_t>());
   uint32_t counter = 0;
   for (uint32_t nid : fwd_nodes) {
