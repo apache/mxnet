@@ -3,7 +3,8 @@ package ml.dmlc.mxnet
 import java.io._
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
-import java.util.Base64
+
+import org.apache.commons.codec.binary.Base64
 
 import scala.reflect.ClassTag
 
@@ -32,11 +33,11 @@ object Serializer {
   }
 
   def encodeBase64String(bytes: ByteBuffer): String = {
-    new String(Base64.getEncoder.encode(bytes).array, UTF8)
+    new String(Base64.encodeBase64(bytes.array), UTF8)
   }
 
   def decodeBase64String(str: String): ByteBuffer = {
-    ByteBuffer.wrap(Base64.getDecoder.decode(str.getBytes(UTF8)))
+    ByteBuffer.wrap(Base64.decodeBase64(str.getBytes(UTF8)))
   }
 }
 

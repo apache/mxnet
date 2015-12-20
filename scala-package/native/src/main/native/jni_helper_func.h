@@ -15,4 +15,10 @@ jint getIntField(JNIEnv *env, jobject obj) {
   return env->GetIntField(obj, refFid);
 }
 
+void setIntField(JNIEnv *env, jobject obj, jint value) {
+  jclass refClass = env->FindClass("ml/dmlc/mxnet/Base$RefInt");
+  jfieldID refFid = env->GetFieldID(refClass, "value", "I");
+  env->SetIntField(obj, refFid, value);
+}
+
 #endif

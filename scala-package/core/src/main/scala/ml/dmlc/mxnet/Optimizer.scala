@@ -3,7 +3,7 @@ package ml.dmlc.mxnet
 object Optimizer {
   def getUpdater(optimizer: Optimizer): MXKVStoreUpdater = {
     new MXKVStoreUpdater {
-      val states = new scala.collection.mutable.HashMap[Int, AnyRef]
+      private val states = new scala.collection.mutable.HashMap[Int, AnyRef]
       override def update(index: Int, grad: NDArray, weight: NDArray, handle: AnyRef): Unit = {
         val state = states.getOrElseUpdate(index, optimizer.createState(index, weight))
         optimizer.update(index, weight, grad, state)

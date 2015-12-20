@@ -353,6 +353,30 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreSendCommmandToServers
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreBarrier
+  (JNIEnv *env, jobject obj, jobject kvStoreHandle) {
+  jlong kvStorePtr = getLongField(env, kvStoreHandle);
+  return MXKVStoreBarrier((KVStoreHandle)kvStorePtr);
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreGetGroupSize
+  (JNIEnv *env, jobject obj, jobject kvStoreHandle, jobject sizeRef) {
+  jlong kvStorePtr = getLongField(env, kvStoreHandle);
+  int size;
+  int ret = MXKVStoreGetGroupSize((KVStoreHandle)kvStorePtr, &size);
+  setIntField(env, sizeRef, size);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreGetRank
+  (JNIEnv *env, jobject obj, jobject kvStoreHandle, jobject rankRef) {
+  jlong kvStorePtr = getLongField(env, kvStoreHandle);
+  int rank;
+  int ret = MXKVStoreGetRank((KVStoreHandle)kvStorePtr, &rank);
+  setIntField(env, rankRef, rank);
+  return ret;
+}
+
 JNIEXPORT jstring JNICALL Java_ml_dmlc_mxnet_LibInfo_mxGetLastError(JNIEnv * env, jobject obj) {
   char *tmpstr = "MXNetError";
   jstring rtstr = env->NewStringUTF(tmpstr);

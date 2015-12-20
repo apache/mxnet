@@ -99,10 +99,30 @@ class KVStore(private val handle: KVStoreHandle) {
   }
 
   // Get the type of this kvstore
-  def getType: String = {
+  def `type`: String = {
     val kvType = new RefString
     checkCall(_LIB.mxKVStoreGetType(handle, kvType))
     kvType.value
+  }
+
+  /**
+   * Get the number of worker nodes
+   * @return The number of worker nodes
+   */
+  def numWorkers: Int = {
+    val size = new RefInt
+    checkCall(_LIB.mxKVStoreGetGroupSize(handle, size))
+    size.value
+  }
+
+  /**
+   * Get the rank of this worker node
+   * @return The rank of this node, which is in [0, get_num_workers())
+   */
+  def rank: Int = {
+    val rank = new RefInt
+    checkCall(_LIB.mxKVStoreGetRank(handle, rank))
+    rank.value
   }
 
   /**
@@ -116,7 +136,7 @@ class KVStore(private val handle: KVStoreHandle) {
   def setOptimizer(optimizer: Optimizer): Unit = {
     val isWorker = new RefInt
     checkCall(_LIB.mxKVStoreIsWorkerNode(isWorker))
-    if ("dist" == getType && isWorker.value != 0) {
+    if ("dist" == `type` && isWorker.value != 0) {
       val optSerialized = Serializer.getSerializer.serialize(optimizer)
       _sendCommandToServers(0, Serializer.encodeBase64String(optSerialized))
     } else {
@@ -135,6 +155,18 @@ class KVStore(private val handle: KVStoreHandle) {
   def setUpdater(updater: MXKVStoreUpdater): Unit = {
     this.updaterFunc = updater
     checkCall(_LIB.mxKVStoreSetUpdater(handle, updaterFunc, null))
+  }
+
+  /**
+   * Global barrier among all worker nodes
+   *
+   * For example, assume there are n machines, we want to let machine 0 first
+   * init the values, and then pull the inited value to all machines. Before
+   * pulling, we can place a barrier to guarantee that the initialization is
+   * finished.
+   */
+  def barrier() {
+    checkCall(_LIB.mxKVStoreBarrier(handle))
   }
 
   /**
