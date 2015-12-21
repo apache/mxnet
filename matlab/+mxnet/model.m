@@ -26,10 +26,43 @@ function load(obj, model_prefix, num_epoch)
 %   model = mxnet.model
 %   model.load('outptu/vgg19', 8)
 
+% TODO
 end
 
-function r = forward(obj, r)
+function outputs = forward(obj, imgs)
 %FORWARD perform forward
+%
+% OUT = MODEL.FORWARD(imgs) returns the forward (prediction) outputs of a list
+% of images, where imgs can be either a single image with the format
+%
+%   width x height x channel
+%
+% which is return format of `imread` or a list of images with format
+%
+%   width x height x channel x num_images
+%
+% MODEL.FORWARD(imgs, 'gpu', [0, 1]) uses GPU 0 and 1 for prediction
+%
+% MODEL.FORWARD(imgs, {'conv4', 'conv5'}) extract outputs for two internal layers
+%
+% Examples
+%
+%   % load and resize an image
+%   img = imread('test.jpg')
+%   img = imresize(img, [224 224])
+%   % get the softmax output
+%   out = model.forward(img)
+%   % get the output of two internal layers
+%   out = model.forward(img, {'conv4', 'conv5'})
+%   % use gpu 0
+%   out = model.forward(img, 'gpu', 0)
+%   % use two gpus for a image list
+%   imgs(:,:,:,1) = img1
+%   imgs(:,:,:,2) = img2
+%   out = model.forward(imgs, 'gpu', [0,1])
+
+
+% TODO
 r = 0;
 end
 

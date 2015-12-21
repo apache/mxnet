@@ -1,4 +1,4 @@
-function callmxnet(func)
+function callmxnet(func, )
 %CALLMXNET call mxnet functions
 
 if ~libisloaded('libmxnet')
@@ -20,6 +20,8 @@ if ~libisloaded('libmxnet')
   assert(isempty(err));
   if warn, warn, end
 end
+
+assert(ischar(func))
 
 
 end
