@@ -16,6 +16,7 @@ object Base {
   type NDArrayHandle = RefLong
   type FunctionHandle = RefLong
   type DataIterHandle = RefLong
+  type DataIterCreator = RefLong
   type KVStoreHandle = RefLong
 
 

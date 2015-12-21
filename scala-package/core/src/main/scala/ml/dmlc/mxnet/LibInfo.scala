@@ -78,12 +78,28 @@ class LibInfo {
   @native def mxKVStoreBarrier(handle: KVStoreHandle): Int
   @native def mxKVStoreGetGroupSize(handle: KVStoreHandle, size: RefInt): Int
   @native def mxKVStoreGetRank(handle: KVStoreHandle, size: RefInt): Int
+  //DataIter Funcs
+  @native def mxListDataIters(handles: Array[DataIterCreator]): Int
+  @native def mxDateIterCreateIter(handle: DataIterCreator,
+                                   keys: Array[String],
+                                   vals: Array[String],
+                                   out: DataIterHandle): Int
+  @native def mxDataIterGetIterInfo(creator: DataIterCreator,
+                                    name: RefString,
+                                    description: RefString,
+                                    argNames: ListBuffer[String],
+                                    argTypeInfos: ListBuffer[String],
+                                    argDescriptions: ListBuffer[String]): Int
+  @native def mxDataIterFree(handle: DataIterHandle): Int
   @native def mxDataIterBeforeFirst(handle: DataIterHandle): Int
-  @native def mxDataIterNext(handle: DataIterHandle): Int
+  @native def mxDataIterNext(handle: DataIterHandle, out: RefInt): Int
   @native def mxDataIterGetLabel(handle: DataIterHandle,
                                  out: NDArrayHandle): Int
   @native def mxDataIterGetData(handle: DataIterHandle,
                                 out: NDArrayHandle): Int
+  @native def mxDataIterGetIndex(handle: DataIterHandle,
+                                outIndex: ListBuffer[Long],
+                                outSize: RefLong): Int
   @native def mxDataIterGetPadNum(handle: DataIterHandle,
                                   out: MXUintRef): Int
 }
