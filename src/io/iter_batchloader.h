@@ -36,11 +36,11 @@ struct BatchParam : public dmlc::Parameter<BatchParam> {
 class BatchLoader : public IIterator<TBlobBatch> {
  public:
   explicit BatchLoader(IIterator<DataInst> *base):
-      base_(base), head_(1), num_overflow_(0) {}
+      base_(base), head_(1), num_overflow_(0) {
+  }
 
   virtual ~BatchLoader(void) {
     delete base_;
-    delete [] out_.inst_index;
   }
 
   inline void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
