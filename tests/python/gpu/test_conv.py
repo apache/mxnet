@@ -21,7 +21,7 @@ def get_conv():
 
     fl = mx.symbol.Flatten(data = mp2)
     fc2 = mx.symbol.FullyConnected(data = fl, num_hidden=10)
-    softmax = mx.symbol.SoftmaxOutput(data = fc2)
+    softmax = mx.symbol.SoftmaxOutput(data = fc2, name='softmax')
     return softmax
 
 def get_iter(data_dir):
