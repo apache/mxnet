@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory
  * @author Yuan Tang
  */
 
-abstract class LRScheduler(var baseLR: Double = 0.01) {
+abstract class LRScheduler(protected var baseLR: Float = 0.01f) {
   /**
    * Base class of a learning rate scheduler
    *
@@ -20,7 +20,7 @@ abstract class LRScheduler(var baseLR: Double = 0.01) {
    *
    * @param numUpdate Int, the maximal number of updates applied to a weight.
    */
-  def apply(numUpdate: Int): Double
+  def apply(numUpdate: Int): Float
 }
 
 /**
@@ -33,20 +33,20 @@ abstract class LRScheduler(var baseLR: Double = 0.01) {
  * @param factor Float, the factor for reducing the learning rate
  *
  */
-class FactorScheduler(var step: Int, var factor: Float) extends LRScheduler {
+class FactorScheduler(protected var step: Int, protected var factor: Float) extends LRScheduler {
 
-  var count: Int = 0
+  protected var count: Int = 0
   private val logger = LoggerFactory.getLogger(classOf[FactorScheduler])
 
   require(step < 1, "Schedule step must be greater or equal than 1 round")
   require(factor >= 1.0, "Factor must be less than 1 to make lr reduce")
 
-  def apply(numUpdate: Int): Double = {
+  def apply(numUpdate: Int): Float = {
 
     if (numUpdate > this.count + this.step) {
       this.count += this.step
       this.baseLR *= this.factor
-      this.logger.info(s"""Update$numUpdate: Change learning rate to ${this.baseLR}""")
+      this.logger.info(s"Update$numUpdate: Change learning rate to ${this.baseLR}")
     }
     this.baseLR
   }
