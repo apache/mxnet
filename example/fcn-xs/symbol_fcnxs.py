@@ -173,17 +173,17 @@ def get_fcn8s_symbol(numclass=21, workspace_default=1024):
     pool4 = vgg16_pool4(pool3, workspace_default)
     score = vgg16_score(pool4, numclass, workspace_default)
     # score 2X
-    score2 = mx.symbol.Deconvolution(data=score, kernel=(4, 4), stride=(2, 2),num_filter=21,
+    score2 = mx.symbol.Deconvolution(data=score, kernel=(4, 4), stride=(2, 2),num_filter=numclass,
                 workspace=workspace_default, name="score2")  # 2X
-    score_pool4 = mx.symbol.Convolution(data=pool4, kernel=(1, 1), num_filter=21,
+    score_pool4 = mx.symbol.Convolution(data=pool4, kernel=(1, 1), num_filter=numclass,
                 workspace=workspace_default, name="score_pool4")
     score_pool4c = mx.symbol.Crop(data=score_pool4, crop_like=score2,
                 offset=offset()["score_pool4c"], name="score_pool4c")
     score_fused = mx.symbol.ElementWiseSum(*[score2, score_pool4c], name='score_fused')
     # score 4X
-    score4 = mx.symbol.Deconvolution(data=score_fused, kernel=(4, 4), stride=(2, 2),num_filter=21,
+    score4 = mx.symbol.Deconvolution(data=score_fused, kernel=(4, 4), stride=(2, 2),num_filter=numclass,
                 workspace=workspace_default, name="score4") # 4X
-    score_pool3 = mx.symbol.Convolution(data=pool3, kernel=(1, 1), num_filter=21,
+    score_pool3 = mx.symbol.Convolution(data=pool3, kernel=(1, 1), num_filter=numclass,
                 workspace=workspace_default, name="score_pool3")
     score_pool3c = mx.symbol.Crop(data=score_pool3, crop_like=score4,
                 offset=offset()["score_pool3c"], name="score_pool3c")
