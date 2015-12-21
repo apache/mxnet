@@ -7,7 +7,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 /**
  * NDArray API of mxnet
- * @author Yizhi Liu, Terry Tang
+ * @author Yizhi Liu, Yuan Tang
  */
 object NDArray {
   private val logger = LoggerFactory.getLogger(classOf[NDArray])
