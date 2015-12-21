@@ -31,8 +31,7 @@ class SGD(val learningRate: Float = 0.01f, val momentum: Float = 0.0f,
 
     var resdGrad = grad * rescaleGrad
     if (clipGradient != 0f) {
-      resdGrad = NDArray._genericNDArrayFunction(
-        "clip", Array(resdGrad, -clipGradient, clipGradient))(0)
+      resdGrad = NDArray.clip(resdGrad, -clipGradient, clipGradient)
     }
     if (state != null) {
       val mom = state.asInstanceOf[NDArray]

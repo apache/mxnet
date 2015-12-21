@@ -201,6 +201,10 @@ object NDArray {
     new NDArray(handle = NDArray._newAllocHandle(shape, context, delayAlloc = false))
   }
 
+  def empty(shape: Int *): NDArray = empty(shape.toArray)
+
+  def empty(ctx: Context, shape: Int *): NDArray = empty(shape.toArray, ctx)
+
   /**
    * Create a new NDArray filled with 0, with specified shape.
    *
@@ -215,6 +219,10 @@ object NDArray {
     arr
   }
 
+  def zeros(shape: Int *): NDArray = zeros(shape.toArray)
+
+  def zeros(ctx: Context, shape: Int *): NDArray = zeros(shape.toArray, ctx)
+
   /**
    * Create a new NDArray filled with 1, with specified shape.
    * @param shape shape of the NDArray.
@@ -225,6 +233,21 @@ object NDArray {
     val arr = empty(shape, ctx)
     arr(0).set(1f)
     arr
+  }
+
+  def ones(shape: Int *): NDArray = ones(shape.toArray)
+
+  def ones(ctx: Context, shape: Int *): NDArray = ones(shape.toArray, ctx)
+
+  /**
+   * Clip ndarray elements to range (from, to)
+   * @param array ndarray to be clipped
+   * @param min array min elements
+   * @param max array max elements
+   * @return a new clipped [[NDArray]]
+   */
+  def clip(array: NDArray, min: Float, max: Float): NDArray = {
+    NDArray._genericNDArrayFunction("clip", Array(array, min, max))(0)
   }
 
   /**
