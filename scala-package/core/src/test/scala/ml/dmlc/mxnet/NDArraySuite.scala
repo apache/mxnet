@@ -26,6 +26,18 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
     assert(ndzeros.size === 4)
   }
 
+  test("set scalar value") {
+    val ndarray = NDArray.empty(2, 1)
+    ndarray.set(10f)
+    assert(ndarray.toArray === Array(10f, 10f))
+  }
+
+  test("copy from java array") {
+    val ndarray = NDArray.empty(4, 1)
+    ndarray.set(Array(1f, 2f, 3f, 4f))
+    assert(ndarray.toArray === Array(1f, 2f, 3f, 4f))
+  }
+
   test("plus") {
     val ndzeros = NDArray.zeros(2, 1)
     val ndones = ndzeros + 1f
@@ -74,10 +86,8 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("clip") {
-    val ndarray = NDArray.zeros(3, 2)
-    ndarray(0, 1).set(1f)
-    ndarray(1, 2).set(2f)
-    ndarray(2, 3).set(3f)
-    assert(NDArray.clip(ndarray, 2f, 3f).toArray === Array(2f, 2f, 2f, 2f, 3f, 3f))
+    val ndarray = NDArray.empty(3, 2)
+    ndarray.set(Array(1f, 2f, 3f, 4f, 5f, 6f))
+    assert(NDArray.clip(ndarray, 2f, 5f).toArray === Array(2f, 2f, 3f, 4f, 5f, 5f))
   }
 }

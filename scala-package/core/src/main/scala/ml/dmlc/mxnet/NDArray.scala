@@ -215,7 +215,7 @@ object NDArray {
    */
   def zeros(shape: Array[Int], ctx: Context=null): NDArray = {
     val arr = empty(shape, ctx)
-    arr(0).set(0f)
+    arr.set(0f)
     arr
   }
 
@@ -231,7 +231,7 @@ object NDArray {
    */
   def ones(shape: Array[Int], ctx: Context=null): NDArray = {
     val arr = empty(shape, ctx)
-    arr(0).set(1f)
+    arr.set(1f)
     arr
   }
 
@@ -308,7 +308,10 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
    * Peform an synchronize copy from the array.
    * @param source The data source we should like to copy from.
    */
-  def _syncCopyfrom(source: Array[Float]): Unit = ???
+  private def syncCopyfrom(source: Array[Float]): Unit = {
+    require(source.length == size, "array size do not match the size of NDArray")
+    checkCall(_LIB.mxNDArraySyncCopyFromCPU(handle, source, source.length))
+  }
 
   /**
    * Return a sliced NDArray that shares memory with current one.
@@ -325,10 +328,6 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     new NDArray(handle = sliceHandle, writable = this.writable)
   }
 
-  private def _slice(start: Int): NDArray = {
-    _slice(start, shape(0))
-  }
-
   /**
    * Block until all pending writes operations on current NDArray are finished.
    * This function will return when all the pending writes to the current
@@ -337,7 +336,6 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
    */
   def waitToRead(): Unit = ???
 
-  def apply(sliceStart: Int): NDArray = _slice(sliceStart)
   def apply(sliceStart: Int, sliceEnd: Int): NDArray = _slice(sliceStart, sliceEnd)
 
   /**
@@ -357,8 +355,15 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     this
   }
 
-  def set(other: NDArray) = {
+  def set(other: NDArray): NDArray = {
+    require(writable, "trying to assign to a readonly NDArray")
     other.copyTo(this)
+  }
+
+  def set(other: Array[Float]): NDArray = {
+    require(writable, "trying to assign to a readonly NDArray")
+    syncCopyfrom(other)
+    this
   }
 
   def +(other: NDArray): NDArray = {

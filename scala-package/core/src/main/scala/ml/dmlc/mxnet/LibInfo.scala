@@ -41,12 +41,15 @@ class LibInfo {
                                 ndim: MXUintRef,
                                 data: ArrayBuffer[Int]): Int
   @native def mxNDArraySyncCopyToCPU(handle: NDArrayHandle,
-                                     data: Array[Float],
+                                     data: Array[MXFloat],
                                      size: Int): Int
   @native def mxNDArraySlice(handle: NDArrayHandle,
                              start: MXUint,
                              end: MXUint,
                              sliceHandle: NDArrayHandle): Int
+  @native def mxNDArraySyncCopyFromCPU(handle: NDArrayHandle,
+                                       source: Array[MXFloat],
+                                       size: Int): Int
   @native def mxKVStoreCreate(name: String, handle: KVStoreHandle): Int
   @native def mxKVStoreInit(handle: KVStoreHandle,
                             len: MXUint,
