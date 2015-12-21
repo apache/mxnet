@@ -82,3 +82,10 @@ LIBJVM=$(JAVA_HOME)/jre/lib/amd64/server
 # libcurl4-openssl-dev is required, it can be installed on Ubuntu by
 # sudo apt-get install -y libcurl4-openssl-dev
 USE_S3 = 0
+
+#----------------------------
+# additional operators
+#----------------------------
+
+# path to folders containing projects specific operators that you don't want to put in src/operators
+EXTRA_OPERATORS =

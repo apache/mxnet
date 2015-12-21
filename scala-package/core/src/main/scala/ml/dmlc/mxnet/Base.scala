@@ -7,7 +7,6 @@ object Base {
   class RefFloat(val value: Float = 0)
   class RefString(val value: String = null)
 
-  // type definitions
   type MXUint = Int
   type MXFloat = Float
   type CPtrAddress = Long
@@ -17,6 +16,8 @@ object Base {
   type NDArrayHandle = RefLong
   type FunctionHandle = RefLong
   type DataIterHandle = RefLong
+  type KVStoreHandle = RefLong
+
 
   System.loadLibrary("mxnet-scala")
   val _LIB = new LibInfo

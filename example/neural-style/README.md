@@ -14,7 +14,7 @@ Then run `python run.py`, use `-h` to see more options
 
 <img src=https://github.com/dmlc/web-data/raw/master/mxnet/neural-style/output/4343_starry_night.jpg width=600px>
 
-It takes 50 secs for a GTX 980 to generate the above 600x400 image.
+It takes 30 secs for a Titan X to generate the above 600x400 image.
 
 ## Note
 

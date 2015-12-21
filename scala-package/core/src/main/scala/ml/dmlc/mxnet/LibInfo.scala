@@ -47,6 +47,37 @@ class LibInfo {
                              start: MXUint,
                              end: MXUint,
                              sliceHandle: NDArrayHandle): Int
+  @native def mxKVStoreCreate(name: String, handle: KVStoreHandle): Int
+  @native def mxKVStoreInit(handle: KVStoreHandle,
+                            len: MXUint,
+                            keys: Array[Int],
+                            // values ought to be Array[NDArrayHandle],
+                            // we pass ptr address directly for performance consideration
+                            values: Array[CPtrAddress]): Int
+  @native def mxKVStorePush(handle: KVStoreHandle,
+                            len: MXUint,
+                            keys: Array[Int],
+                            // values ought to be Array[NDArrayHandle],
+                            // we pass ptr address directly for performance consideration
+                            values: Array[CPtrAddress],
+                            priority: Int): Int
+  @native def mxKVStorePull(handle: KVStoreHandle,
+                            len: MXUint,
+                            keys: Array[Int],
+                            // outs ought to be Array[NDArrayHandle],
+                            // we pass ptr address directly for performance consideration
+                            outs: Array[CPtrAddress],
+                            priority: Int): Int
+  @native def mxKVStoreSetUpdater(handle: KVStoreHandle,
+                                  updaterFunc: MXKVStoreUpdater,
+                                  updaterHandle: AnyRef): Int
+  @native def mxKVStoreIsWorkerNode(isWorker: RefInt): Int
+  @native def mxKVStoreGetType(handle: KVStoreHandle, kvType: RefString): Int
+  @native def mxKVStoreSendCommmandToServers(handle: KVStoreHandle,
+                                             head: Int, body: String): Int
+  @native def mxKVStoreBarrier(handle: KVStoreHandle): Int
+  @native def mxKVStoreGetGroupSize(handle: KVStoreHandle, size: RefInt): Int
+  @native def mxKVStoreGetRank(handle: KVStoreHandle, size: RefInt): Int
   @native def mxDataIterBeforeFirst(handle: DataIterHandle): Int
   @native def mxDataIterNext(handle: DataIterHandle): Int
   @native def mxDataIterGetLabel(handle: DataIterHandle,
@@ -54,5 +85,5 @@ class LibInfo {
   @native def mxDataIterGetData(handle: DataIterHandle,
                                 out: NDArrayHandle): Int
   @native def mxDataIterGetPadNum(handle: DataIterHandle,
-                                 out: MXUintRef): Int
+                                  out: MXUintRef): Int
 }

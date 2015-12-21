@@ -110,13 +110,12 @@ scala-package/project/plugins/project/
 scala-package/*/target/
 scala-package/*/*/target/
 
+# IDE specific
+*.scala_dependencies
+*.worksheet
+*.idea
+*.iml
 #eclipse
 .classpath
 .project
 .settings
-
-# IDE specific
-.scala_dependencies
-.worksheet
-.idea
-*.iml
