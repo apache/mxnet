@@ -391,7 +391,7 @@ class FeedForward(BASE_ESTIMATOR):
         The additional keyword arguments passed to optimizer.
     """
     def __init__(self, symbol, ctx=None,
-                 num_epoch=None, epoch_size=None, optimizer='ccsgd',
+                 num_epoch=None, epoch_size=None, optimizer='sgd',
                  initializer=Uniform(0.01),
                  numpy_batch_size=128,
                  arg_params=None, aux_params=None,
