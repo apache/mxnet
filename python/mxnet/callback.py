@@ -79,10 +79,10 @@ class Speedometer(object):
                 if param.eval_metric is not None:
                     name, value = param.eval_metric.get()
                     logging.info("Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%f",
-                             param.epoch, count, speed, name, value)
+                                 param.epoch, count, speed, name, value)
                 else:
                     logging.info("Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
-                             param.epoch, count, speed)
+                                 param.epoch, count, speed)
                 self.tic = time.time()
         else:
             self.init = True
