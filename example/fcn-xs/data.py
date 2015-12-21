@@ -89,8 +89,7 @@ class FileIter(DataIter):
         """The name and shape of label provided by this iterator"""
         return [(k, tuple([1] + list(v.shape[1:]))) for k, v in self.label]
 
-    @property
-    def batch_size(self):
+    def get_batch_size(self):
         return 1
 
     def reset(self):
