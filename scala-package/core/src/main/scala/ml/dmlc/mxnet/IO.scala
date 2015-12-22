@@ -1,11 +1,40 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
-import ml.dmlc.mxnet.NDArray
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
 
+object IO {
+  type IterCreateFunc = (Array[String], Array[String])=>DataIter
+  private val iterCreateFuncs: Map[String, IterCreateFunc] = _initIOModule()
+
+  def _initIOModule(): Map[String, IterCreateFunc] = {
+    val IterCreators = new ListBuffer[DataIterCreator]
+    checkCall(_LIB.mxListDataIters(IterCreators))
+    IterCreators.map(_makeIOIterator).toMap
+  }
+
+  def _makeIOIterator(handle: DataIterCreator): (String, IterCreateFunc) = {
+    val name = new RefString
+    val desc = new RefString
+    val argNames = new ListBuffer[String]
+    val argTypes = new ListBuffer[String]
+    val argDescs = new ListBuffer[String]
+    checkCall(_LIB.mxDataIterGetIterInfo(handle, name, desc, argNames, argTypes, argDescs))
+    val paramStr = Base.ctypes2docstring(argNames, argTypes, argDescs)
+    val docStr = s"${name.value}\n${desc.value}\n\n$paramStr\n"
+    return (name.value, creator(handle))
+  }
+
+  def creator(handle:DataIterCreator)(
+              keys: Array[String],
+              values: Array[String]): DataIter = {
+    val out = new DataIterHandle
+    checkCall(_LIB.mxDateIterCreateIter(handle, keys, values, out))
+    return new MXDataIter(out)
+  }
+}
 
 abstract class DataIter (val batchSize: Int = 0) {
   /**
@@ -106,3 +135,5 @@ class MXDataIter(var handle: DataIterHandle) extends DataIter {
     return out.value
   }
 }
+
+

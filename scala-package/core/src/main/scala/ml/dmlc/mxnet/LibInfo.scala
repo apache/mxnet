@@ -79,7 +79,7 @@ class LibInfo {
   @native def mxKVStoreGetGroupSize(handle: KVStoreHandle, size: RefInt): Int
   @native def mxKVStoreGetRank(handle: KVStoreHandle, size: RefInt): Int
   //DataIter Funcs
-  @native def mxListDataIters(handles: Array[DataIterCreator]): Int
+  @native def mxListDataIters(handles: ListBuffer[DataIterCreator]): Int
   @native def mxDateIterCreateIter(handle: DataIterCreator,
                                    keys: Array[String],
                                    vals: Array[String],

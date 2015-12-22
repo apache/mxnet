@@ -389,3 +389,27 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayFree(JNIEnv * env, jo
   return 0;
 }
 
+//IO funcs
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxListDataIters
+  (JNIEnv * env, jobject obj, jobjectArray creators) {
+  // Base.FunctionHandle.constructor
+    jclass chClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
+    jmethodID chConstructor = env->GetMethodID(chClass,"<init>","(J)V");
+
+    // scala.collection.mutable.ListBuffer append method
+    jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+    jmethodID listAppend = env->GetMethodID(listClass,
+      "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+
+    // Get function list
+    DataIterCreator *outArray;
+    mx_uint outSize;
+    int ret = MXListDataIters(&outSize, &outArray);
+    for (int i = 0; i < outSize; ++i) {
+      DataIterCreator chAddr = outArray[i];
+      jobject chObj = env->NewObject(chClass, chConstructor, (long)chAddr);
+      env->CallObjectMethod(creators, listAppend, chObj);
+    }
+    return ret;
+}
+
