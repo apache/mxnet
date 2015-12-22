@@ -10,7 +10,7 @@ properties
   verbose
 end
 
-properties (Access = private)
+properties %(Access = private)
 % mxnet predictor
   predictor
 % the previous input size
@@ -55,9 +55,9 @@ methods
   obj.symbol = fileread([model_prefix, '-symbol.json']);
 
   % read params
-  fid = fopen(sprintf('%s-%04d.params', model_prefix, num_epoch), 'r');
+  fid = fopen(sprintf('%s-%04d.params', model_prefix, num_epoch), 'rb');
   assert(fid ~= 0);
-  obj.params = fread(fid, inf, 'uint8=>uint8');
+  obj.params = fread(fid, inf, '*ubit8');
   fclose(fid);
   end
 
@@ -119,31 +119,31 @@ methods
   end
 
   dev_type = 1;
-  if isempty(obj.predictor.Value)
+  if obj.predictor.Value == 0
     if obj.verbose
-      fprintf('create predictor with input size');
+      fprintf('create predictor with input size ');
       fprintf('%d ', siz);
       fprintf('\n');
     end
     callmxnet('MXPredCreate', obj.symbol, ...
-              obj.param, length(obj), ...
+              libpointer('voidPtr', obj.params), ...
+              length(obj.params), ...
               dev_type, 0, ...
               1, {'data'}, ...
               uint32([0, 4]), ...
-              uint32(size), ...
-              obj.handle);
+              uint32(siz(end:-1:1)), ...
+              obj.predictor);
   end
 
   % feed input
-  callmxnet('MXPredSetInput', obj.handle, 'key', single(imgs), numel(imgs));
-
+  callmxnet('MXPredSetInput', obj.predictor, 'data', single(imgs(:)), uint32(numel(imgs)));
   % forward
-  callmxnet('MXPredForward', obj.handle);
+  callmxnet('MXPredForward', obj.predictor);
 
   % get output
   out_dim = libpointer('uint32Ptr', 0);
   out_shape = libpointer('uint32PtrPtr', 0);
-  callmxnet('MXPredGetOutputShape', obj.handle, 0, out_dim, out_shape);
+  callmxnet('MXPredGetOutputShape', obj.predictor, 0, out_dim, out_shape);
 
   get(out_dim)
   get(out_shape)
@@ -154,11 +154,11 @@ methods (Access = private)
 
   function free_predictor(obj)
   % free the predictor
-  if ~isempty(obj.predictor.Value)
+  if obj.predictor.Value ~= 0
     if obj.verbose
       fprintf('destroy predictor\n')
     end
-    callmxnet('MXPredFree', obj.predictor.Value);
+    callmxnet('MXPredFree', obj.predictor);
   end
   end
 end

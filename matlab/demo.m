@@ -17,8 +17,11 @@ model.load('model/Inception_BN', 39);
 img = imresize(imread('cat.png'), [224 224]);
 
 %% Run prediction
+
+
 model.forward(img);
 
+return
 %% Print all layers in the symbol
 sym = model.parse_symbol();
 layers = {};

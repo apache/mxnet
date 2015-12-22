@@ -3,7 +3,7 @@ function callmxnet(func, varargin)
 
 if ~libisloaded('libmxnet')
   cur_pwd = pwd;
-  mxnet_root = [fileparts(mfilename('fullpath')), '/../../'];
+  mxnet_root = [fileparts(mfilename('fullpath')), '/../../../'];
   cd(mxnet_root);
   mxnet_root = pwd;
   cd(cur_pwd);
@@ -22,6 +22,9 @@ if ~libisloaded('libmxnet')
 end
 
 assert(ischar(func))
-ret = calllib('libmxnet', func, varargin);
+
+varargin
+ret = calllib('libmxnet', func, varargin{:});
+
 assert(ret == 0)
 end
