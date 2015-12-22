@@ -16,7 +16,7 @@ NULL
 #'
 #' @export
 mx.symbol.Group <- function(...) {
-  mx.varg.symbo.internal.Group(list(...))
+  mx.varg.symbol.internal.Group(list(...))
 }
 
 #' Save an mx.symbol object
