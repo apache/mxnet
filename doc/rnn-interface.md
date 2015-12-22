@@ -1,0 +1,30 @@
+# Survey of existing interfaces and implementations
+
+Some commonly used deep learning libraries with good RNN / LSTM support include [Theano](http://deeplearning.net/software/theano/library/scan.html) and its wrappers [Lasagne](http://lasagne.readthedocs.org/en/latest/modules/layers/recurrent.html) and [Keras](http://keras.io/layers/recurrent/); [CNTK](https://cntk.codeplex.com/); [TensorFlow](https://www.tensorflow.org/versions/master/tutorials/recurrent/index.html); and various implementations in Torch like [char-rnn](https://github.com/karpathy/char-rnn), [this](https://github.com/Element-Research/rnn) and [this](https://github.com/wojzaremba/lstm).
+
+## Theano
+
+RNN support in Theano is provided by its [scan operator](http://deeplearning.net/software/theano/library/scan.html), which allows construction of a loop where the number of iterations is specified via a runtime value of a symbolic variable. An official example of LSTM implementation with scan can be found [here](http://deeplearning.net/tutorial/lstm.html).
+
+### Implementation seems
+
+I'm not very familiar with the Theano internals, but it seems from [theano/scan_module/scan_op.py#execute](https://github.com/Theano/Theano/blob/master/theano/scan_module/scan_op.py#L1225) that the scan operator is implemented with a loop in Python that perform one iteration at a time:
+
+```python
+fn = self.fn.fn
+
+while (i < n_steps) and cond:
+    # ...
+    fn()
+```
+
+The `grad` function in Theano constructs a symbolic graph for computing gradients. So the `grad` for the scan operator is actually implemented by [constructing another scan operator](https://github.com/Theano/Theano/blob/master/theano/scan_module/scan_op.py#L2527):
+
+```python
+local_op = Scan(inner_gfn_ins, inner_gfn_outs, info)
+outputs = local_op(*outer_inputs)
+```
+
+The [performance guide](http://deeplearning.net/software/theano/library/scan.html#optimizing-scan-s-performance) for Theano's scan operator suggests minimizing the usage of scan. This might be due to the fact that the loop is executed in Python, which might be a bit slow (due to context switching, and performance of Python itself). Moreover, since no unrolling is performed, the graph optimizer cannot see the big picture here.
+
+If I understand correctly, when multiple RNN/LSTM layers are stacked, instead of a single loop with each iteration computing the whole feedforward network operation, the computation goes by doing a separate loop for each of the layer that uses the scan operator, sequentially. This is fine if all the intermediate values are stored to support computing the gradients. But otherwise, using a single loop could be more memory efficient.
