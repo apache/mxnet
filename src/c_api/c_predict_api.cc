@@ -36,7 +36,7 @@ struct MXAPINDList {
 };
 
 int MXPredCreate(const char* symbol_json_str,
-                 const char* param_bytes,
+                 const void* param_bytes,
                  int param_size,
                  int dev_type, int dev_id,
                  mx_uint num_input_nodes,

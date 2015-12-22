@@ -57,7 +57,7 @@ MXNET_DLL const char* MXGetLastError();
  * \return 0 when success, -1 when failure.
  */
 MXNET_DLL int MXPredCreate(const char* symbol_json_str,
-                           const char* param_bytes,
+                           const void* param_bytes,
                            int param_size,
                            int dev_type, int dev_id,
                            mx_uint num_input_nodes,
