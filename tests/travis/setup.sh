@@ -8,6 +8,9 @@ if [ ${TRAVIS_OS_NAME} == "osx" ]; then
     brew install python3
     brew install fftw
     brew install ImageMagick
+    LIB_GOMP_PATH=`find /usr/local -name libgomp.dylib | grep -v i386 | head -n1`
+    echo "libgomp: $LIB_GOMP"
+    ln -sf $LIB_GOMP_PATH /usr/local/lib/libgomp.dylib
     if [ ${TASK} == "python_test" ]; then
         python -m pip install nose numpy --user `whoami`
         python3 -m pip install nose numpy --user `whoami`
