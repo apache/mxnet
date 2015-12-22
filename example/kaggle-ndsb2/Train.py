@@ -1,7 +1,5 @@
-
-# coding: utf-8
-
-# In[1]:
+"""Training script, this is converted from a ipython notebook
+"""
 
 import os
 import csv
@@ -13,12 +11,11 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-
 # In[2]:
 
-nframe = 30
-noutput = 600
 def get_lenet():
+    """ A lenet style net, takes difference of each frame as input.
+    """
     source = mx.sym.Variable("data")
     source = (source - 128) * (1.0/128)
     frames = mx.sym.SliceChannel(source, num_outputs=30)
@@ -36,9 +33,13 @@ def get_lenet():
     flatten = mx.symbol.Flatten(net)
     flatten = mx.symbol.Dropout(flatten)
     fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=600)
+    # Name the final layer as softmax so it auto matches the naming of data iterator
+    # Otherwise we can also change the provide_data in the data iter
     return mx.symbol.LogisticRegressionOutput(data=fc1, name='softmax')
 
 def CRPS(label, pred):
+    """ Custom evaluation metric on CRPS.
+    """
     for i in range(pred.shape[0]):
         for j in range(pred.shape[1] - 1):
             if pred[i, j] > pred[i, j + 1]:
@@ -49,6 +50,8 @@ def CRPS(label, pred):
 # In[3]:
 
 def encode_label(label_data):
+    """Run encoding to encode the label into the CDF target.
+    """
     stytole = label_data[:, 1]
     diastole = label_data[:, 2]
     stytole_encode = np.array([
@@ -64,6 +67,9 @@ def encode_csv(label_csv, stytole_csv, diastole_csv):
     np.savetxt(stytole_csv, stytole_encode, delimiter=",", fmt="%g")
     np.savetxt(diastole_csv, diastole_encode, delimiter=",", fmt="%g")
 
+# Write encoded label into the target csv
+# We use CSV so that not all data need to sit into memory
+# You can also use inmemory numpy array if your machine is large enough
 encode_csv("./train-label.csv", "./train-stytole.csv", "./train-diastole.csv")
 
 
@@ -209,9 +215,3 @@ for line in fi:
             out.extend(hSystole)
     fo.writerow(out)
 f.close()
-
-
-# In[ ]:
-
-
-
