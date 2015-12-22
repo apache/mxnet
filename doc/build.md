@@ -275,7 +275,7 @@ MXNet Docker images, including requirements for CUDA support, consult the [sourc
    need to clean all first:
 
     ```bash
-    git submodule update && make clean_all && make -j4
+    make clean_all && make -j4
     ```
 
 3. **Still get the error message e.g. `compile with USE_DIST_KVSTORE=1 to use
