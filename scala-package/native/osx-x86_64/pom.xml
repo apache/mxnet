@@ -70,7 +70,7 @@
                     <isset property="cxx" />
                   </not>
                   <then>
-                    <property name="cxx" value="clang++" />
+                    <property name="cxx" value="g++" />
                   </then>
                 </if>
                 <!-- echo opencv libs to a temp file and then load it into a property -->
