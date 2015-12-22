@@ -201,6 +201,10 @@ object NDArray {
     new NDArray(handle = NDArray._newAllocHandle(shape, context, delayAlloc = false))
   }
 
+  def empty(shape: Int *): NDArray = empty(shape.toArray)
+
+  def empty(ctx: Context, shape: Int *): NDArray = empty(shape.toArray, ctx)
+
   /**
    * Create a new NDArray filled with 0, with specified shape.
    *
@@ -211,9 +215,13 @@ object NDArray {
    */
   def zeros(shape: Array[Int], ctx: Context=null): NDArray = {
     val arr = empty(shape, ctx)
-    arr(0).set(0f)
+    arr.set(0f)
     arr
   }
+
+  def zeros(shape: Int *): NDArray = zeros(shape.toArray)
+
+  def zeros(ctx: Context, shape: Int *): NDArray = zeros(shape.toArray, ctx)
 
   /**
    * Create a new NDArray filled with 1, with specified shape.
@@ -223,8 +231,23 @@ object NDArray {
    */
   def ones(shape: Array[Int], ctx: Context=null): NDArray = {
     val arr = empty(shape, ctx)
-    arr(0).set(1f)
+    arr.set(1f)
     arr
+  }
+
+  def ones(shape: Int *): NDArray = ones(shape.toArray)
+
+  def ones(ctx: Context, shape: Int *): NDArray = ones(shape.toArray, ctx)
+
+  /**
+   * Clip ndarray elements to range (from, to)
+   * @param array ndarray to be clipped
+   * @param min array min elements
+   * @param max array max elements
+   * @return a new clipped [[NDArray]]
+   */
+  def clip(array: NDArray, min: Float, max: Float): NDArray = {
+    NDArray._genericNDArrayFunction("clip", Array(array, min, max))(0)
   }
 
   /**
@@ -285,7 +308,10 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
    * Peform an synchronize copy from the array.
    * @param source The data source we should like to copy from.
    */
-  def _syncCopyfrom(source: Array[Float]): Unit = ???
+  private def syncCopyfrom(source: Array[Float]): Unit = {
+    require(source.length == size, "array size do not match the size of NDArray")
+    checkCall(_LIB.mxNDArraySyncCopyFromCPU(handle, source, source.length))
+  }
 
   /**
    * Return a sliced NDArray that shares memory with current one.
@@ -296,14 +322,14 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
    *
    * @return a sliced NDArray that shares memory with current one.
    */
-  private def _slice(start: Int, stop: Int): NDArray = {
+  def slice(start: Int, stop: Int): NDArray = {
     val sliceHandle = new NDArrayHandle()
     checkCall(_LIB.mxNDArraySlice(handle, start, stop, sliceHandle))
     new NDArray(handle = sliceHandle, writable = this.writable)
   }
 
-  private def _slice(start: Int): NDArray = {
-    _slice(start, shape(0))
+  def slice(start: Int): NDArray = {
+    slice(start, shape(0))
   }
 
   /**
@@ -313,9 +339,6 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
    * function returns.
    */
   def waitToRead(): Unit = ???
-
-  def apply(sliceStart: Int): NDArray = _slice(sliceStart)
-  def apply(sliceStart: Int, sliceEnd: Int): NDArray = _slice(sliceStart, sliceEnd)
 
   /**
    * Get context of current NDArray.
@@ -334,8 +357,15 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     this
   }
 
-  def set(other: NDArray) = {
+  def set(other: NDArray): NDArray = {
+    require(writable, "trying to assign to a readonly NDArray")
     other.copyTo(this)
+  }
+
+  def set(other: Array[Float]): NDArray = {
+    require(writable, "trying to assign to a readonly NDArray")
+    syncCopyfrom(other)
+    this
   }
 
   def +(other: NDArray): NDArray = {

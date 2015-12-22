@@ -204,6 +204,15 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySlice(JNIEnv *env, jo
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySyncCopyFromCPU
+  (JNIEnv *env, jobject obj, jobject ndArrayHandle, jfloatArray sourceArr, jint arrSize) {
+  jlong arrayPtr = getLongField(env, ndArrayHandle);
+  jfloat *sourcePtr = env->GetFloatArrayElements(sourceArr, NULL);
+  int ret = MXNDArraySyncCopyFromCPU((NDArrayHandle)arrayPtr, (const mx_float *)sourcePtr, arrSize);
+  env->ReleaseFloatArrayElements(sourceArr, sourcePtr, 0);
+  return ret;
+}
+
 // The related c api MXKVStoreSetUpdater function takes a c function pointer as its parameter,
 // while we write java functions here in scala-package.
 // Thus we have to wrap the function in a java object, and run env->CallVoidMethod(obj) once updater is invoked,

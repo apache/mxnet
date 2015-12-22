@@ -5,29 +5,41 @@ import ml.dmlc.mxnet.NDArrayConversions._
 
 class NDArraySuite extends FunSuite with BeforeAndAfterAll {
   test("to java array") {
-    val ndarray = NDArray.zeros(Array(2, 2))
+    val ndarray = NDArray.zeros(2, 2)
     assert(ndarray.toArray === Array(0f, 0f, 0f, 0f))
   }
 
   test("to scalar") {
-    val ndzeros = NDArray.zeros(Array(1))
+    val ndzeros = NDArray.zeros(1)
     assert(ndzeros.toScalar === 0f)
-    val ndones = NDArray.ones(Array(1))
+    val ndones = NDArray.ones(1)
     assert(ndones.toScalar === 1f)
   }
 
   test ("call toScalar on an ndarray which is not a scalar") {
-    intercept[Exception] { NDArray.zeros(Array(1,1)).toScalar }
+    intercept[Exception] { NDArray.zeros(1, 1).toScalar }
   }
 
   test("size and shape") {
-    val ndzeros = NDArray.zeros(Array(4, 1))
+    val ndzeros = NDArray.zeros(4, 1)
     assert(ndzeros.shape === Array(4, 1))
     assert(ndzeros.size === 4)
   }
 
+  test("set scalar value") {
+    val ndarray = NDArray.empty(2, 1)
+    ndarray.set(10f)
+    assert(ndarray.toArray === Array(10f, 10f))
+  }
+
+  test("copy from java array") {
+    val ndarray = NDArray.empty(4, 1)
+    ndarray.set(Array(1f, 2f, 3f, 4f))
+    assert(ndarray.toArray === Array(1f, 2f, 3f, 4f))
+  }
+
   test("plus") {
-    val ndzeros = NDArray.zeros(Array(2, 1))
+    val ndzeros = NDArray.zeros(2, 1)
     val ndones = ndzeros + 1f
     assert(ndones.toArray === Array(1f, 1f))
     assert((ndones + ndzeros).toArray === Array(1f, 1f))
@@ -38,7 +50,7 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("minus") {
-    val ndones = NDArray.ones(Array(2, 1))
+    val ndones = NDArray.ones(2, 1)
     val ndzeros = ndones - 1f
     assert(ndzeros.toArray === Array(0f, 0f))
     assert((ndones - ndzeros).toArray === Array(1f, 1f))
@@ -50,7 +62,7 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("multiplication") {
-    val ndones = NDArray.ones(Array(2, 1))
+    val ndones = NDArray.ones(2, 1)
     val ndtwos = ndones * 2
     assert(ndtwos.toArray === Array(2f, 2f))
     assert((ndones * ndones).toArray === Array(1f, 1f))
@@ -61,7 +73,7 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("division") {
-    val ndones = NDArray.ones(Array(2, 1))
+    val ndones = NDArray.ones(2, 1)
     val ndzeros = ndones - 1f
     val ndhalves = ndones / 2
     assert(ndhalves.toArray === Array(0.5f, 0.5f))
@@ -73,4 +85,9 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
     assert(ndhalves.toArray === Array(1f, 1f))
   }
 
+  test("clip") {
+    val ndarray = NDArray.empty(3, 2)
+    ndarray.set(Array(1f, 2f, 3f, 4f, 5f, 6f))
+    assert(NDArray.clip(ndarray, 2f, 5f).toArray === Array(2f, 2f, 3f, 4f, 5f, 5f))
+  }
 }

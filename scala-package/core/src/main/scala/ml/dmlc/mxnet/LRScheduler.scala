@@ -51,4 +51,3 @@ class FactorScheduler(protected var step: Int, protected var factor: Float) exte
     this.baseLR
   }
 }
-
