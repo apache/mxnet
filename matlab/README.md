@@ -1,4 +1,13 @@
+# MATLAB binding for mxnet
 
+### How to use
+
+The only requirment is build mxnet to get `lib/libmxnet.so`. Then run `demo` in
+matlab.
+
+### FAQ
+
+1. You may get the error `GLIBCXX_x.x.xx` is not found. Such as on Ubuntu 14.04:
 
 ```
 > In loadlibrary (line 359)
@@ -15,11 +24,10 @@ Caused by:
     /home/muli/work/mxnet/lib/libmxnet.so)
 ```
 
+   One way to fix it is to link `MATLAB_ROOT/sys/os/glnxa64/libstdc++.so.6` to
+   your system's `libstdc++`. For example
+
 ```bash
 muli@ghc:/usr/local/MATLAB/R2015a/sys/os/glnxa64$ sudo rm -r libstdc++.so.6
-[sudo] password for muli:
-muli@ghc:/usr/local/MATLAB/R2015a/sys/os/glnxa64$ sudo ln -s libstdc++.so.6 /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.19
-ln: failed to create symbolic link ‘/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.19’: File exists
 muli@ghc:/usr/local/MATLAB/R2015a/sys/os/glnxa64$ sudo ln -s /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.19 libstdc++.so.6
-muli@ghc:/usr/local/MATLAB/R2015a/sys/os/glnxa64$
 ```
