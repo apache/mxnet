@@ -2,13 +2,13 @@ Installation Guide
 ==================
 
 This page gives instructions of how to build and install the mxnet package from
-scratch on various systems. It consists of two steps,
+scratch on various systems. It consists of two steps:
 
-1. Fist we build the shared library from the C++ codes (`libmxnet.so` for linux,
+1. Fist build the shared library from the C++ codes (`libmxnet.so` for linux,
  `libmxnet.dylib` for osx and `libmxnet.dll` for windows).
-2. Then we install the language packages (e.g. Python).
+2. Then install the language packages (e.g. Python package).
 
-Please refer to [FAQ](#frequently-asked-questions) if you have any problem
+Please refer to [FAQ](#frequently-asked-questions) first if you had any problem
 during installation. If the instructions do not work for you, please feel free
 to ask questions at [mxnet/issues](https://github.com/dmlc/mxnet/issues), or
 even better to send pull request if you can fix the problem.
