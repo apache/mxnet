@@ -10,18 +10,16 @@ properties
   verbose
 end
 
-properties %(Access = private)
+properties (Access = private)
 % mxnet predictor
   predictor
 % the previous input size
   prev_input_size
 % the previous device id, -1 means cpu
   prev_dev_id
-
 end
 
 methods
-
   function obj = model()
   %CONSTRUCTOR
   obj.predictor = libpointer('voidPtr', 0);
@@ -32,7 +30,7 @@ methods
 
   function delete(obj)
   %DESTRUCTOR
-  obj.free_predictor()
+  obj.free_predictor();
   end
 
   function load(obj, model_prefix, num_epoch)
@@ -99,6 +97,7 @@ methods
   %   out = model.forward(imgs, 'gpu', [0,1])
 
   % check arguments
+  assert(length(varargin) == 0, 'sorry, not implemented yet..');
 
   % convert from matlab order (col-major) into c order (row major):
   siz = size(imgs);
@@ -117,6 +116,7 @@ methods
   if any(siz ~= obj.prev_input_size)
     obj.free_predictor()
   end
+  obj.prev_input_size = siz;
 
   dev_type = 1;
   if obj.predictor.Value == 0
@@ -140,18 +140,26 @@ methods
   % forward
   callmxnet('MXPredForward', obj.predictor);
 
-  % get output
+  % get output size
   out_dim = libpointer('uint32Ptr', 0);
-  out_shape = libpointer('uint32PtrPtr', 0);
-  callmxnet('MXPredGetOutputShape', obj.predictor, 0, out_dim, out_shape);
+  out_shape = libpointer('uint32PtrPtr', ones(4,1));
+  callmxnet('MXPredGetOutputShape', obj.predictor, 0, out_shape, out_dim);
+  assert(out_dim.Value <= 4);
+  out_siz = out_shape.Value(1:out_dim.Value);
+  out_siz = double(out_siz(:)');
 
-  get(out_dim)
-  get(out_shape)
+  % get output
+  out = libpointer('singlePtr', single(ones(out_siz)));
+
+  callmxnet('MXPredGetOutput', obj.predictor, 0, ...
+            out, uint32(prod(out_siz)));
+
+  % TODO convert from c order to matlab order...
+  outputs = out.Value;
   end
 end
 
 methods (Access = private)
-
   function free_predictor(obj)
   % free the predictor
   if obj.predictor.Value ~= 0

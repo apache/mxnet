@@ -22,9 +22,6 @@ if ~libisloaded('libmxnet')
 end
 
 assert(ischar(func))
-
-varargin
 ret = calllib('libmxnet', func, varargin{:});
-
 assert(ret == 0)
 end

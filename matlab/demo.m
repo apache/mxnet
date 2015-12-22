@@ -17,21 +17,36 @@ model.load('model/Inception_BN', 39);
 img = imresize(imread('cat.png'), [224 224]);
 
 %% Run prediction
+pred = model.forward(img);
 
-
-model.forward(img);
-
-return
-%% Print all layers in the symbol
-sym = model.parse_symbol();
-layers = {};
-for i = 1 : length(sym.nodes)
-  if ~strcmp(sym.nodes{i}.op, 'null')
-    layers{end+1} = sym.nodes{i}.name;
-  end
+%% load the labels
+labels = {};
+fid = fopen('model/synset.txt', 'r');
+assert(fid >= 0);
+tline = fgetl(fid);
+while ischar(tline)
+  labels{end+1} = tline;
+  tline = fgetl(fid);
 end
-layers
+fclose(fid);
+
+%% find the predict label
+[p, i] = max(pred);
+
+fprintf('the best result is %s, with probability %f\n', labels{i}, p)
+
+%% Print all layers in the symbol
+
+% sym = model.parse_symbol();
+% layers = {};
+% for i = 1 : length(sym.nodes)
+%   if ~strcmp(sym.nodes{i}.op, 'null')
+%     layers{end+1} = sym.nodes{i}.name;
+%   end
+% end
+% layers
 
 %% Extract feature
 
+% TODO
 %%
