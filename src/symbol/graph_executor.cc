@@ -300,7 +300,7 @@ void GraphExecutor::InitGraph(const Symbol &symbol,
   }
   std::sort(head_nodes.begin(), head_nodes.end());
   head_nodes.resize(std::unique(head_nodes.begin(), head_nodes.end()) - head_nodes.begin());
-  std::vector<uint32_t> fwd_nodes = graph_.PostDFSOrder(head_nodes, {});
+  std::vector<uint32_t> fwd_nodes = graph_.PostDFSOrder(head_nodes, std::unordered_set<uint32_t>());
   num_forward_nodes_ = fwd_nodes.size();
 
   std::unordered_set<uint32_t> fwd_set(fwd_nodes.begin(), fwd_nodes.end());
