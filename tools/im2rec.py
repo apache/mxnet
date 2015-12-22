@@ -41,7 +41,7 @@ def make_list(prefix_out, root, recursive, exts, num_chunks, train_ratio):
     image_list = list_image(root, recursive, exts)
     random.shuffle(image_list)
     N = len(image_list)
-    chunk_size = N/num_chunks
+    chunk_size = (N+num_chunks-1)/num_chunks
     for i in xrange(num_chunks):
         chunk = image_list[i*chunk_size:(i+1)*chunk_size]
         if num_chunks > 1:
