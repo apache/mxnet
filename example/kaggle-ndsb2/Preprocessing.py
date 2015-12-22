@@ -1,8 +1,7 @@
+"""Preprocessing script.
 
-# coding: utf-8
-
-# In[ ]:
-
+This script walks over the directories and dump the frames into a csv file
+"""
 import os
 import csv
 import sys
@@ -12,15 +11,11 @@ import numpy as np
 import dicom
 from skimage import io, transform
 
-
-# In[ ]:
-
 def mkdir(fname):
    try:
        os.mkdir(fname)
    except:
        pass
-
 
 def get_frames(root_path):
    """Get path to all the frame in view SAX and contain complete frames"""
@@ -36,6 +31,7 @@ def get_frames(root_path):
    # sort for reproduciblity
    return sorted(ret, key = lambda x: x[0])
 
+
 def get_label_map(fname):
    labelmap = {}
    fi = open(fname)
@@ -44,6 +40,7 @@ def get_label_map(fname):
        arr = line.split(',')
        labelmap[int(arr[0])] = line
    return labelmap
+
 
 def write_label_csv(fname, frames, label_map):
    fo = open(fname, "w")
@@ -54,6 +51,7 @@ def write_label_csv(fname, frames, label_map):
        else:
            fo.write("%d,0,0\n" % index)
    fo.close()
+
 
 def write_data_csv(fname, frames, preproc):
    """Write data to csv file"""
@@ -80,6 +78,7 @@ def write_data_csv(fname, frames, preproc):
    fdata.close()
    return result
 
+
 def crop_resize(img, size):
    """crop center and resize"""
    if img.shape[0] < img.shape[1]:
@@ -94,6 +93,7 @@ def crop_resize(img, size):
    resized_img *= 255
    return resized_img.astype("uint8")
 
+
 def local_split(train_index):
    random.seed(0)
    train_index = set(train_index)
@@ -103,6 +103,7 @@ def local_split(train_index):
    train_set = set(all_index[num_test:])
    test_set = set(all_index[:num_test])
    return train_set, test_set
+
 
 def split_csv(src_csv, split_to_train, train_csv, test_csv):
    ftrain = open(train_csv, "w")
@@ -117,43 +118,24 @@ def split_csv(src_csv, split_to_train, train_csv, test_csv):
    ftrain.close()
    ftest.close()
 
-
-# In[ ]:
-
+# Load the list of all the training frames, and shuffle them
 # Shuffle the training frames
 random.seed(10)
 train_frames = get_frames("./data/train")
 random.shuffle(train_frames)
 validate_frames = get_frames("./data/validate")
 
+# Write the corresponding label information of each frame into file.
 write_label_csv("./train-label.csv", train_frames, get_label_map("./data/train.csv"))
 write_label_csv("./validate-label.csv", validate_frames, None)
 
-
-# In[ ]:
-
+# Dump the data of each frame into a CSV file, apply crop to 64 preprocessor
 train_lst = write_data_csv("./train-64x64-data.csv", train_frames, lambda x: crop_resize(x, 64))
 valid_lst = write_data_csv("./validate-64x64-data.csv", validate_frames, lambda x: crop_resize(x, 64))
 
-
-# In[ ]:
-
+# Generate local train/test split, which you could use to tune your model locally.
 train_index = np.loadtxt("./train-label.csv", delimiter=",")[:,0].astype("int")
 train_set, test_set = local_split(train_index)
 split_to_train = [x in train_set for x in train_index]
 split_csv("./train-label.csv", split_to_train, "./local_train-label.csv", "./local_test-label.csv")
 split_csv("./train-64x64-data.csv", split_to_train, "./local_train-64x64-data.csv", "./local_test-64x64-data.csv")
-
-
-# In[ ]:
-
-
-
-# In[ ]:
-
-
-
-# In[ ]:
-
-
-
