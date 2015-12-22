@@ -57,8 +57,8 @@ MXNET_DLL const char* MXGetLastError();
  * \return 0 when success, -1 when failure.
  */
 MXNET_DLL int MXPredCreate(const char* symbol_json_str,
-                           const char* param_bytes,
-                           size_t param_size,
+                           const void* param_bytes,
+                           int param_size,
                            int dev_type, int dev_id,
                            mx_uint num_input_nodes,
                            const char** input_keys,
@@ -142,7 +142,7 @@ MXNET_DLL int MXPredFree(PredictorHandle handle);
  * \return 0 when success, -1 when failure.
  */
 MXNET_DLL int MXNDListCreate(const char* nd_file_bytes,
-                             size_t nd_file_size,
+                             int nd_file_size,
                              NDListHandle *out,
                              mx_uint* out_length);
 /*!
