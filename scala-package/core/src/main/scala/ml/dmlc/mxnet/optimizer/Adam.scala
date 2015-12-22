@@ -8,6 +8,8 @@ import ml.dmlc.mxnet.NDArrayConversions._
  * Adam: A Method for Stochastic Optimization,
  * http://arxiv.org/abs/1412.6980
  *
+ * @author Yuan Tang
+ *
  * @param learningRate Float, Step size.
  * @param beta1 Float, Exponential decay rate for the first moment estimates.
  * @param beta2 Float, Exponential decay rate for the second moment estimates.
@@ -67,7 +69,7 @@ class Adam(var learningRate: Float = 0.002f, val beta1: Float = 0.9f, val beta2:
     var step = learningRate * meanT / (math.sqrt(varianceT) + epsilon)
 
     if (wd > 0.0f) {
-      step += lr * wd * weight
+      step += (lr * wd * weight).toScalar
     }
 
     weight += -step.toFloat
