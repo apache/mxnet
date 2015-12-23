@@ -50,3 +50,38 @@ Keras currently supports both Theano and TensorFlow backend. RNN for the Theano 
 * The basic RNN/LSTM modules only run *one* time step upon one call of `forward` (and accumulate / store necessary information to support backward computation if needed). So the users could have detailed control when using this API directly.
 * A collection of `Sequencer` are defined to model common scenarios like forward sequence, bi-directional sequence, attention models, etc.
 * Other utility modules like masking to support variable length sequences, etc.
+
+## CNTK
+
+CNTK looks quite different from other common deep learning libraries. I cannot understand it very well. I will talk with Yu to get more details.
+
+It seems the basic data types are matrices (although there is also a `TensorView` utility class). The mini-batch data for sequence data is packed in a matrix with N-row being `feature_dimension` and N-column being `sequence_length * batch_size` (see Figure 2.9 at page 50 of the [CNTKBook](http://research.microsoft.com/pubs/226641/CNTKBook-20151201.pdf)).
+
+Recurrent networks is a first-class citizen in CNTK. In section 5.2.1.8 of the CNTKBook, we can see an example of customized computation node. The node need to explicitly define function for standard forward and forward with a time index, which is used for RNN evaluation:
+
+```cpp
+virtual void EvaluateThisNode()
+{
+    EvaluateThisNodeS(FunctionValues(), Inputs(0)->
+        FunctionValues(), Inputs(1)->FunctionValues());
+}
+virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+{
+    Matrix<ElemType> sliceInputValue = Inputs(1)->
+        FunctionValues().ColumnSlice(timeIdxInSeq *
+        m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+    Matrix<ElemType> sliceOutputValue = m_functionValues.
+        ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep,
+        m_samplesInRecurrentStep);
+    EvaluateThisNodeS(sliceOutputValue, Inputs(0)->
+        FunctionValues(), sliceInput1Value);
+}
+```
+
+The function `ColumnSlice(start_col, num_col)` takes out the packed data for that time index as described above (here `m_samplesInRecurrentStep` must be mini-batch size).
+
+The low-level API for recurrent connection seem to be a *delay node*. But I'm not sure how to use this low level API. The [example of ptb language model](https://cntk.codeplex.com/SourceControl/latest#Examples/Text/PennTreebank/Config/rnn.config) uses very high-level API (simply setting `recurrentLayer = 1` in the config).
+
+## TensorFlow
+
+The [current example of RNNLM](https://www.tensorflow.org/versions/master/tutorials/recurrent/index.html#recurrent-neural-networks) in TensorFlow use explicit unrolling for a predefined number of time steps. The white paper mentioned advanced control flow API (Theano's scan-like) coming in the future.
