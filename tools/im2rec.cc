@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
   }
   LOG(INFO) << "Write to output: " << os.str();
   dmlc::Stream *fo = dmlc::Stream::Create(os.str().c_str(), "w");
-  LOG(INFO) << "Output: " << argv[3];
+  LOG(INFO) << "Output: " << os.str();
   dmlc::RecordIOWriter writer(fo);
   std::string fname, path, blob;
   std::vector<unsigned char> decode_buf;
