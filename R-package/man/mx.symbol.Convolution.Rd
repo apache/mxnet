@@ -32,7 +32,7 @@ convolution filter(channel) number}
 Number of groups partition. This option is not supported by CuDNN, you can use SliceChannel to num_group,apply convolution and concat instead to achieve the same need.}
 
 \item{workspace}{long (non-negative), optional, default=512
-Tmp workspace for convolution (MB)}
+Tmp workspace for convolution (MB).}
 
 \item{no.bias}{boolean, optional, default=False
 Whether to disable bias parameter.}

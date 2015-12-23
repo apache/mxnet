@@ -10,11 +10,11 @@ mx.symbol.LeakyReLU(...)
 \item{data}{Symbol
 Input data to activation function.}
 
-\item{act.type}{{'leaky', 'prelu', 'rrelu'},optional, default='leaky'
+\item{act.type}{{'elu', 'leaky', 'prelu', 'rrelu'},optional, default='leaky'
 Activation function to be applied.}
 
 \item{slope}{float, optional, default=0.25
-Init slope for the activation. (For leaky only)}
+Init slope for the activation. (For leaky and elu only)}
 
 \item{lower.bound}{float, optional, default=0.125
 Lower bound of random slope. (For rrelu only)}
