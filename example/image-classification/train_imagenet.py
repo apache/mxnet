@@ -35,6 +35,10 @@ parser.add_argument('--num-examples', type=int, default=1281167,
                     help='the number of training examples')
 parser.add_argument('--num-classes', type=int, default=1000,
                     help='the number of classes')
+parser.add_argument('--log-file', type=str, 
+		    help='the name of log file')
+parser.add_argument('--log-dir', type=str, default="/tmp/",
+                    help='directory of the log file')
 args = parser.parse_args()
 
 # network
