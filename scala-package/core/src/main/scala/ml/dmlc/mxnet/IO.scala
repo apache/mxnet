@@ -6,7 +6,8 @@ import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
 
 object IO {
-  type IterCreateFunc = (Array[String], Array[String])=>DataIter
+  private val logger = LoggerFactory.getLogger(classOf[DataIter])
+  type IterCreateFunc = (Map[String, String])=>DataIter
   private val iterCreateFuncs: Map[String, IterCreateFunc] = _initIOModule()
 
   def _initIOModule(): Map[String, IterCreateFunc] = {
@@ -24,14 +25,16 @@ object IO {
     checkCall(_LIB.mxDataIterGetIterInfo(handle, name, desc, argNames, argTypes, argDescs))
     val paramStr = Base.ctypes2docstring(argNames, argTypes, argDescs)
     val docStr = s"${name.value}\n${desc.value}\n\n$paramStr\n"
+    logger.debug(docStr)
     return (name.value, creator(handle))
   }
 
   def creator(handle:DataIterCreator)(
-              keys: Array[String],
-              values: Array[String]): DataIter = {
+              params: Map[String, String]): DataIter = {
     val out = new DataIterHandle
-    checkCall(_LIB.mxDateIterCreateIter(handle, keys, values, out))
+    val keys = params.keys.toArray
+    val vals = params.values.toArray
+    checkCall(_LIB.mxDateIterCreateIter(handle, keys, vals, out))
     return new MXDataIter(out)
   }
 }

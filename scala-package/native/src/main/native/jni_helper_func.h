@@ -21,4 +21,9 @@ void setIntField(JNIEnv *env, jobject obj, jint value) {
   env->SetIntField(obj, refFid, value);
 }
 
+void setLongField(JNIEnv *env, jobject obj, jlong value) {
+  jclass refClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
+  jfieldID refFid = env->GetFieldID(refClass, "value", "J");
+  env->SetLongField(obj, refFid, value);
+}
 #endif
