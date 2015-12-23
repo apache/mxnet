@@ -63,7 +63,7 @@ def write_data_csv(fname, frames, preproc):
        data = []
        for path in lst:
            f = dicom.read_file(path)
-           img = preproc(f.pixel_array / np.max(f.pixel_array))
+           img = preproc(f.pixel_array.astype(float) / np.max(f.pixel_array))
            dst_path = path.rsplit(".", 1)[0] + ".64x64.jpg"
            scipy.misc.imsave(dst_path, img)
            result.append(dst_path)
