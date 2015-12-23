@@ -402,6 +402,74 @@ def test_rsqrt_cos_sin():
     exe_test.backward(out_grad)
     assert reldiff(arr_grad.asnumpy(), npout_grad) < 1e-6
 
+def test_maximum_minimum():
+    data1 = mx.symbol.Variable('data')
+    data2 = mx.symbol.Variable('data')
+    shape = (3, 4)
+    data_tmp1 = np.random.rand(3,4)
+    data_tmp2 = np.random.rand(3,4)
+    data_tmp1[:] = 2
+    data_tmp2[:] = 3
+    
+    arr_data1 = mx.nd.array(data_tmp1)
+    arr_data2 = mx.nd.array(data_tmp2)
+
+    
+    arr_grad1 = mx.nd.empty(shape)
+    arr_grad2 = mx.nd.empty(shape)
+
+
+    test =  mx.sym.maximum(data1,data2) + mx.sym.minimum(data1,data2);
+    exe_test = test.bind(mx.cpu(), args=[arr_data1,arr_data2], args_grad=[arr_grad1,arr_grad2])
+    exe_test.forward()
+    out = exe_test.outputs[0].asnumpy()
+    npout =  np.maximum(data_tmp1,data_tmp2) + np.minimum(data_tmp1,data_tmp2)
+    assert reldiff(out, npout) < 1e-6
+
+    out_grad = mx.nd.empty(shape)
+    out_grad[:] = 2
+    exe_test.backward(out_grad)
+    
+    npout_grad = np.ones(shape)
+    npout_grad[:] = 2
+    mask1 = (data_tmp1 > data_tmp2).astype('float')
+    mask2 = (data_tmp1 < data_tmp2).astype('float')
+    npout_grad1 = npout_grad * mask1 + npout_grad * mask2
+    npout_grad2 = (npout_grad - npout_grad * mask1) + (npout_grad - npout_grad * mask2)
+    
+    assert reldiff(arr_grad1.asnumpy(), npout_grad1) < 1e-6
+    assert reldiff(arr_grad2.asnumpy(), npout_grad2) < 1e-6
+
+def test_maximum_minimum_scalar():
+    data1 = mx.symbol.Variable('data')
+    shape = (3, 4)
+    data_tmp1 = np.random.rand(3,4)
+    data_tmp1[:] = 2
+ 
+    arr_data1 = mx.nd.array(data_tmp1)
+    arr_grad1 = mx.nd.empty(shape)
+
+    test =  mx.sym.maximum(data1,3) + mx.sym.maximum(9,data1) + mx.sym.minimum(5,data1) + mx.sym.minimum(data1,4)
+    exe_test = test.bind(mx.cpu(), args=[arr_data1], args_grad=[arr_grad1])
+    exe_test.forward()
+    out = exe_test.outputs[0].asnumpy()
+    npout =  np.maximum(data_tmp1,3) + np.maximum(9,data_tmp1) + np.minimum(5,data_tmp1) + np.minimum(data_tmp1,4)
+    assert reldiff(out, npout) < 1e-6
+
+    out_grad = mx.nd.empty(shape)
+    out_grad[:] = 2
+    exe_test.backward(out_grad)
+    
+    npout_grad = np.ones(shape)
+    npout_grad[:] = 2
+    mask1 = (data_tmp1 > 3).astype('float')
+    mask2 = (9 > data_tmp1).astype('float')
+    mask3 = (5 < data_tmp1).astype('float')
+    mask4 = (data_tmp1 < 4).astype('float')
+    npout_grad1 = npout_grad * mask1 + (npout_grad - npout_grad * mask2) + (npout_grad - npout_grad * mask3) + npout_grad * mask4
+    
+    assert reldiff(arr_grad1.asnumpy(), npout_grad1) < 1e-6
+
 def test_abs():
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -532,7 +600,29 @@ def test_deconvolution():
         pad = (3,3)
     )
 
+def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
+    arr = {'arg_%d'%i: mx.random.uniform(-10.0, 10.0, shape) for i, shape in zip(range(len(shapes)), shapes)}
+    arr_grad = {'arg_%d'%i: mx.nd.zeros(shape) for i, shape in zip(range(len(shapes)), shapes)}
+
+    up = mx.sym.UpSampling(*[mx.sym.Variable('arg_%d'%i) for i in range(len(shapes))], sample_type='nearest', scale=root_scale)
+    exe = up.bind(mx.cpu(), args=arr, args_grad=arr_grad)
+    exe.forward(is_train=True)
+    exe.backward(exe.outputs)
+    for k in range(len(shapes)):
+        name = 'arg_%d'%k
+        assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
+
+
+def test_nearest_upsampling():
+    for root_scale in [1,2,3]:
+        for scale in [1,2,3]:
+            for num_shape in [1,2,3]:
+                for base in [1,2,3]:
+                    shapes = [(1,3,base*root_scale*scale**(num_shape-1-i),base*root_scale*scale**(num_shape-1-i)) for i in range(num_shape)]
+                    check_nearest_upsampling_with_shape(shapes, scale, root_scale)
+
 if __name__ == '__main__':
+    test_nearest_upsampling()
     test_binary_op_duplicate_input()
     test_elementwise_sum()
     test_concat()
@@ -546,6 +636,8 @@ if __name__ == '__main__':
     test_pow_fn()
     test_embedding()
     test_rsqrt_cos_sin()
+    test_maximum_minimum()
+    test_maximum_minimum_scalar()
     test_abs()
     test_round_ceil_floor()
     test_deconvolution()

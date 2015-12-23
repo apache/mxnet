@@ -1,3 +1,6 @@
+The following is an overview of MXNet in Chinese. For english readers, please
+refer to our [NIPS learnsys paper](http://learningsys.org/papers/LearningSys_2015_paper_1.pdf)
+
 # MXNet设计和实现简介
 
 神经网络本质上是一种语言，我们通过它来表达对应用问题的理解。例如我们用卷积层来表达空间相关性，RNN来表达时间连续性。根据问题的复杂性和信息如何从输入到输出一步步提取，我们将不同大小的层按一定原则连接起来。近年来随着数据的激增和计算能力的大幅提升，神经网络也变得越来越深和大。例如最近几次imagnet竞赛的冠军都使用有数十至百层的网络。对于这一类神经网络我们通常称之为深度学习。从应用的角度而言，对深度学习最重要的是如何方便地表述神经网络，以及如何快速训练得到模型。
@@ -27,8 +30,7 @@
 
 MXNet的系统架构如下图所示：
 
-<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/paper/sys.png
-width=300/>
+<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/paper/sys.png width=300/>
 
 从上到下分别为各种主语言的嵌入，编程接口（矩阵运算，符号表达式，分布式通讯），两种编程模式的统一系统实现，以及各硬件的支持。接下一章我们将介绍编程接口，然后下一章介绍系统实现。之后我们给出一些实验对比结果，以及讨论MXNet的未来。
 
@@ -67,10 +69,10 @@ MXNet提供命令式的张量计算来桥接主语言的和符号表达式。下
 另一方面，NDArray可以无缝和符号表达式进行对接。假设我们使用Symbol定义了一个神经网络，那么我们可以如下实现一个梯度下降算法
 
 ```c++
-for (int i = 0; i < max_iter; ++i) {
-  network.forward();
-  network.backward();
-  network.weight -= eta * network.gradient
+for (int i = 0; i < n; ++i) {
+  net.forward();
+  net.backward();
+  net.weight -= eta * net.grad
 }
 ```
 
@@ -87,15 +89,15 @@ MXNet提供一个分布式的key-value存储来进行数据交换。它主要有
 在下面例子中，我们将前面的梯度下降算法改成分布式梯度下降。
 
 ```c++
-KVStore kvstore("dist_async");
-kvstore.set_updater([](NDArray weight, NDArray gradient) {
-    weight -= eta * gradient;
+KVStore kv("dist_async");
+kv.set_updater([](NDArray w, NDArray g) {
+    w -= eta * g;
   });
 for (int i = 0; i < max_iter; ++i) {
-   kvstore.pull(network.weight);
-   network.forward();
-   network.backward();
-   kvstore.push(network.gradient);
+   kv.pull(net.weight);
+   net.forward();
+   net.backward();
+   kv.push(net.grad);
 }
 ```
 
@@ -111,7 +113,7 @@ for (int i = 0; i < max_iter; ++i) {
 
 ### 训练模块
 
-MXNet实现了常用的优化算法来训练模型。用户只需要提供数据数据迭代器和神经网络的Symbol便可。此外，用户可以提供额外的KVStore来进行分布式的训练。例如下面代码使用分布式异步SGD来训练一个模型，其中每个计算节点使用两快GPU。
+MXNet实现了常用的优化算法来训练模型。用户只需要提供数据数据迭代器和神经网络的Symbol便可。此外，用户可以提供额外的KVStore来进行分布式的训练。例如下面代码使用分布式异步SGD来训练一个模型，其中每个计算节点使用两块GPU。
 
 ```python
 import MXNet as mx
@@ -136,8 +138,7 @@ model.fit(
 
 一个已经赋值的符号表达式可以表示成一个计算图。下图是之前定义的多层感知机的部分计算图，包含forward和backward。
 
-<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/paper/graph.png
-width=300/>
+<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/paper/graph.png width=300/>
 
 其中圆表示变量，方框表示操作子，箭头表示数据依赖关系。在执行之前，MXNet会对计算图进行优化，以及为所有变量提前申请空间。
 
@@ -208,20 +209,20 @@ KVStore的实现是基于参数服务器。但它跟前面的工作有两个显�
 
 ## 过去，现状，和未来
 
-大半年前我们拉来数个优秀的C++机器学习系统的开发人员成立了DMLC，本意是更方便共享各自项目的代码，并给用户提供一致的体验。当时我们有两个深度学习的项目，一个是CXXNet，其通过配置来定义和训练神经网络。另一个是Minerva，提供类似numpy一样的张量计算接口。前者在图片分类等使用卷积网络上很方便，而后者更灵活。那时候我们想要能不能一个两者功能都具备的系统，于是这样就有了MXNet。其名字来自Minerva的M和CXXNet的XNet。其中Symbol的想法来自CXXNet，而NDArray的想法来自Minerva。我们也常把MXNet叫“mix net”。
+大半年前我们拉来数个优秀的C++机器学习系统的开发人员成立了DMLC，本意是更方便共享各自项目的代码，并给用户提供一致的体验。当时我们有两个深度学习的项目，一个是CXXNet，其通过配置来定义和训练神经网络。另一个是Minerva，提供类似numpy一样的张量计算接口。前者在图片分类等使用卷积网络上很方便，而后者更灵活。那时候我们想能不能做一个两者功能都具备的系统，于是这样就有了MXNet。其名字来自Minerva的M和CXXNet的XNet。其中Symbol的想法来自CXXNet，而NDArray的想法来自Minerva。我们也常把MXNet叫“mix net”。
 
-MXNet是DMLC第一个结合了所有的成员努力的项目，也同时吸引了很多核心成员的加入。MXNet目的是做一个有意思的系统，能够让大家用着方便的系统，一个轻量的和可以快速测试系统和算法想法的系统。对于未来，我们主要关注下面四个方向：
+MXNet是DMLC第一个结合了所有成员努力的项目，也同时吸引了很多核心成员的加入。MXNet的目的是做一个有意思的系统，能够让大家用着方便的系统，一个轻量的和可以快速测试系统和算法想法的系统。对于未来，我们主要关注下面四个方向：
 
 1. 支持更多的硬件，我们目前在积极考虑支持AMD GPU，高通GPU，Intel Phi，FPGA，和更多智能设备。相信MXNet的轻量和内存节省可以在这些上大有作为。
 2. 更加完善的操作子。目前不论是Symbol还是NDArray支持的操作还是有限，我们希望能够尽快的扩充他们。
 3. 更多编程语言。除了C++，目前MXNet对Python，R和Julia的支持比较完善。但我们希望还能有很多的语言，例如javascript。
-4. 更的应用。我们之前花了很多精力在图片分类上，下面我们会考虑很多的应用。例如上周我们试了下如何利用一张图片的风格和一张图片的内容合成一张新图片。下图是利用我办公室窗景和梵高的starry night来合成图片
+4. 更多的应用。我们之前花了很多精力在图片分类上，下面我们会考虑很多的应用。例如上周我们试了下如何利用一张图片的风格和一张图片的内容合成一张新图片。下图是利用我办公室窗景和梵高的starry night来合成图片
 
  <img src=https://github.com/dmlc/web-data/raw/master/mxnet/neural-style/input/IMG_4343.jpg width=300px><img src=https://github.com/dmlc/web-data/raw/master/mxnet/neural-style/input/starry_night.jpg width=300px>
 
  <img src=https://github.com/dmlc/web-data/raw/master/mxnet/neural-style/output/4343_starry_night.jpg width=600px>
 
- 接下来我们希望能够在更多应用，例如语音，翻译，问答，上有所产出。
+ 接下来我们希望能够在更多应用，例如语音、翻译、问答上有所产出。
 
 我们忠心希望MXNet能为大家做深度学习相关研究和应用带来便利。也希望能与更多的开发者一起学习和进步。
 

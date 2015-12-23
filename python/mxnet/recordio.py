@@ -29,22 +29,41 @@ class MXRecordIO(object):
         "r" for reading or "w" writing.
     """
     def __init__(self, uri, flag):
-        uri = ctypes.c_char_p(uri)
+        self.uri = ctypes.c_char_p(uri)
         self.handle = RecordIOHandle()
-        if flag == "w":
-            check_call(_LIB.MXRecordIOWriterCreate(uri, ctypes.byref(self.handle)))
+        self.flag = flag
+        self.is_open = False
+        self.open()
+
+    def open(self):
+        """Open record file"""
+        if self.flag == "w":
+            check_call(_LIB.MXRecordIOWriterCreate(self.uri, ctypes.byref(self.handle)))
             self.writable = True
-        elif flag == "r":
-            check_call(_LIB.MXRecordIOReaderCreate(uri, ctypes.byref(self.handle)))
+        elif self.flag == "r":
+            check_call(_LIB.MXRecordIOReaderCreate(self.uri, ctypes.byref(self.handle)))
             self.writable = False
         else:
-            raise ValueError("Invalid flag %s"%flag)
+            raise ValueError("Invalid flag %s"%self.flag)
+        self.is_open = True
 
     def __del__(self):
+        self.close()
+
+    def close(self):
+        """close record file"""
+        if not self.is_open:
+            return
         if self.writable:
             check_call(_LIB.MXRecordIOWriterFree(self.handle))
         else:
             check_call(_LIB.MXRecordIOReaderFree(self.handle))
+
+    def reset(self):
+        """Reset pointer to first item. If record is opened with 'w',
+        this will truncate the file to empty"""
+        self.close()
+        self.open()
 
     def write(self, buf):
         """Write a string buffer as a record
@@ -138,7 +157,7 @@ def unpack_img(s, iscolor=-1):
     img = cv2.imdecode(img, iscolor)
     return header, img
 
-def pack_img(header, img, quality=80):
+def pack_img(header, img, quality=80, img_fmt='.jpg'):
     """pack an image into MXImageRecord
 
     Parameters
@@ -148,7 +167,9 @@ def pack_img(header, img, quality=80):
     img : numpy.ndarray
         image to pack
     quality : int
-        quality for JPEG encoding. 1-100
+        quality for JPEG encoding. 1-100, or compression for PNG encoding. 1-9.
+    img_fmt : str
+        Encoding of the image. .jpg for JPEG, .png for PNG.
 
     Returns
     -------
@@ -156,6 +177,10 @@ def pack_img(header, img, quality=80):
         The packed string
     """
     assert opencv_available
-    ret, buf = cv2.imencode('.JPEG', img, [cv2.IMWRITE_JPEG_QUALITY, quality])
-    assert ret
+    if img_fmt is '.jpg':
+        encode_params = [cv2.IMWRITE_JPEG_QUALITY, quality]
+    elif img_fmt is '.png':
+        encode_params = [cv2.IMWRITE_PNG_COMPRESSION, quality]
+    ret, buf = cv2.imencode(img_fmt, img, encode_params)
+    assert ret, 'failed encoding image'
     return pack(header, buf.tostring())
