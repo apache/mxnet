@@ -70,9 +70,12 @@ def write_record(args, image_list):
     record = mx.recordio.MXRecordIO(args.prefix+'.rec', 'w')
     lock = threading.Lock()
     tic = [time.time()]
+    color_modes = {-1: cv2.IMREAD_UNCHANGED,
+                    0: cv2.IMREAD_GRAYSCALE,
+                    1: cv2.IMREAD_COLOR}
     def worker(i):
         item = source.pop(0)
-        img = cv2.imread(os.path.join(args.root, item[1]))
+        img = cv2.imread(os.path.join(args.root, item[1]), color_modes[args.color])
         if args.center_crop:
             if img.shape[0] > img.shape[1]:
                 margin = (img.shape[0] - img.shape[1])/2;
@@ -87,7 +90,7 @@ def write_record(args, image_list):
                 newsize = (args.resize, img.shape[1]*args.resize/img.shape[0])
             img = cv2.resize(img, newsize)
         header = mx.recordio.IRHeader(0, item[2], item[0], 0)
-        s = mx.recordio.pack_img(header, img, quality=args.quality)
+        s = mx.recordio.pack_img(header, img, quality=args.quality, img_fmt=args.encoding)
         lock.acquire()
         record.write(s)
         sink.append(item)
@@ -141,12 +144,19 @@ def main():
     rgroup.add_argument('--center_crop', type=bool, default=False,
         help='specify whether to crop the center image to make it rectangular.')
     rgroup.add_argument('--quality', type=int, default=80,
-        help='JPEG quality for encoding, 1-100.')
+        help='JPEG quality for encoding, 1-100; or PNG compression for encoding, 1-9')
     rgroup.add_argument('--num_thread', type=int, default=1,
         help='number of thread to use for encoding. order of images will be different\
         from the input list if >1. the input list will be modified to match the\
         resulting order.')
-
+    rgroup.add_argument('--color', type=int, default=1, choices=[-1, 0, 1],
+        help='specify the color mode of the loaded image.\
+        1: Loads a color image. Any transparency of image will be neglected. It is the default flag.\
+        0: Loads image in grayscale mode.\
+        -1:Loads image as such including alpha channel.')
+    rgroup.add_argument('--encoding', type=str, default='.jpg', choices=['.jpg', '.png'],
+        help='specify the encoding of the images.')
+        
     args = parser.parse_args()
     
     if args.list:

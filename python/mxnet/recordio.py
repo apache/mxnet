@@ -157,7 +157,7 @@ def unpack_img(s, iscolor=-1):
     img = cv2.imdecode(img, iscolor)
     return header, img
 
-def pack_img(header, img, quality=80, img_fmt='.JPEG'):
+def pack_img(header, img, quality=80, img_fmt='.jpg'):
     """pack an image into MXImageRecord
 
     Parameters
@@ -167,7 +167,9 @@ def pack_img(header, img, quality=80, img_fmt='.JPEG'):
     img : numpy.ndarray
         image to pack
     quality : int
-        quality for JPEG encoding. 1-100
+        quality for JPEG encoding. 1-100, or compression for PNG encoding. 1-9.
+    img_fmt : str
+        Encoding of the image. .jpg for JPEG, .png for PNG.
 
     Returns
     -------
@@ -175,6 +177,10 @@ def pack_img(header, img, quality=80, img_fmt='.JPEG'):
         The packed string
     """
     assert opencv_available
-    ret, buf = cv2.imencode(img_fmt, img, [cv2.IMWRITE_JPEG_QUALITY, quality])
+    if img_fmt is '.jpg':
+        encode_params = [cv2.IMWRITE_JPEG_QUALITY, quality]
+    elif img_fmt is '.png':
+        encode_params = [cv2.IMWRITE_PNG_COMPRESSION, quality]
+    ret, buf = cv2.imencode(img_fmt, img, encode_params)
     assert ret, 'failed encoding image'
     return pack(header, buf.tostring())
