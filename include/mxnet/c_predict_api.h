@@ -64,7 +64,9 @@ MXNET_DLL int MXPredCreate(const char* symbol_json_str,
                            const char** input_keys,
                            const mx_uint* input_shape_indptr,
                            const mx_uint* input_shape_data,
-                           PredictorHandle* out);
+                           PredictorHandle* out,
+                           int num_output_nodes = 0,
+                           const char** num_output_keys = NULL);
 /*!
  * \brief Get the shape of output node.
  *  The returned shape_data and shape_ndim is only valid before next call to MXPred function.
