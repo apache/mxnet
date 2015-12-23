@@ -3,6 +3,8 @@ package ml.dmlc.mxnet
 /**
  * Base class of all evaluation metrics
  * @param name Metric name
+ *
+ * @author Yuan Tang
  */
 abstract class EvalMetric(protected val name: String) {
 
@@ -87,8 +89,9 @@ class RMSE extends EvalMetric("rmse") {
 /**
  * Custom evaluation metric that takes a NDArray function.
  * @param fEval Customized evaluation function.
+ * @param name The name of the metric
  */
-class CustomMetric(var fEval: () => Unit, var name: String) extends EvalMetric(name) {
+class CustomMetric(var fEval: () => Unit, override var name: String) extends EvalMetric(name) {
   def update(labels: NDArray, preds: NDArray): Unit = {
 
     require(labels.size == preds.size, "labels and predictions should have the same length.")
