@@ -177,9 +177,9 @@ def pack_img(header, img, quality=80, img_fmt='.jpg'):
         The packed string
     """
     assert opencv_available
-    if img_fmt is '.jpg':
+    if img_fmt == '.jpg':
         encode_params = [cv2.IMWRITE_JPEG_QUALITY, quality]
-    elif img_fmt is '.png':
+    elif img_fmt == '.png':
         encode_params = [cv2.IMWRITE_PNG_COMPRESSION, quality]
     ret, buf = cv2.imencode(img_fmt, img, encode_params)
     assert ret, 'failed encoding image'
