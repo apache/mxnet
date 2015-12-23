@@ -54,6 +54,10 @@
           <argLine>-Djava.library.path=${project.parent.basedir}/native/${platform}/target</argLine> 
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.scalastyle</groupId>
+        <artifactId>scalastyle-maven-plugin</artifactId>
+      </plugin>
     </plugins>
   </build>
   <dependencies>
