@@ -25,13 +25,36 @@ class Accuracy extends EvalMetric("accuracy") {
     (0 to preds.size) foreach (i => {
       val pred: NDArray = preds.slice(i, i)
       val label: NDArray = labels.slice(i, i)
-      val predLabel = pred.toArray.max
 
 //      require(label.shape(0) < predLabel.shape(0), "Should not have more predict labels than actual labels ")
-//      this.sumMetric += predLabel == label
     })
   }
 }
+
+class MAE extends EvalMetric("mae") {
+  def update(labels: NDArray, preds: NDArray): Unit = {
+
+    require(labels.size == preds.size, "labels and predictions should have the same length.")
+
+    for ( (label, pred) <- (labels.toArray zip preds.toArray)) {
+
+    }
+  }
+}
+
+
+class RMSE extends EvalMetric("rmse") {
+  def update(labels: NDArray, preds: NDArray): Unit = {
+
+    require(labels.size == preds.size, "labels and predictions should have the same length.")
+
+    for ( (label, pred) <- (labels.toArray zip preds.toArray)) {
+
+    }
+  }
+}
+
+
 
 
 
