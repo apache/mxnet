@@ -255,6 +255,7 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
     if (type == "Dropout") return false;
     if (type == "Concat") return false;
     if (type == "SoftmaxOutput") return false;
+    if (type == "CuDNNBatchNorm") return false;
     ++pcounter[0];
     if (pcounter[0] % mirror_step == 0) return false;
     return true;
