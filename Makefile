@@ -98,7 +98,7 @@ OBJ = $(patsubst src/%.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*.cu)
 CUOBJ = $(patsubst src/%.cu, build/%_gpu.o, $(CUSRC))
 
-ifneq ($(EXTRA_OPERATORS), NONE)
+ifneq ($(EXTRA_OPERATORS),)
 	EXTRA_SRC = $(wildcard $(EXTRA_OPERATORS)/*.cc $(EXTRA_OPERATORS)/*/*.cc)
 	EXTRA_OBJ = $(patsubst $(EXTRA_OPERATORS)/%.cc, $(EXTRA_OPERATORS)/build/%.o, $(EXTRA_SRC))
 	EXTRA_CUSRC = $(wildcard $(EXTRA_OPERATORS)/*.cu $(EXTRA_OPERATORS)/*/*.cu)
@@ -201,3 +201,6 @@ clean_all: clean
 
 -include build/*.d
 -include build/*/*.d
+ifneq ($(EXTRA_OPERATORS),)
+	-include $(EXTRA_OPERATORS)/build/*.d
+endif
