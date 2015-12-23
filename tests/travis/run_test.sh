@@ -113,6 +113,10 @@ fi
 
 
 if [ ${TASK} == "scala_test" ]; then
+    if [ ${TRAVIS_OS_NAME} == "osx" ]; then
+        LIB_GOMP_PATH=`find /usr/local/lib -name libgomp.dylib | grep -v i386 | head -n1`
+        ln -sf $LIB_GOMP_PATH /usr/local/lib/libgomp.dylib
+    fi
     make all || exit -1
     # use cached dir for storing data
     rm -rf ${PWD}/data

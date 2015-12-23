@@ -90,4 +90,10 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
     ndarray.set(Array(1f, 2f, 3f, 4f, 5f, 6f))
     assert(NDArray.clip(ndarray, 2f, 5f).toArray === Array(2f, 2f, 3f, 4f, 5f, 5f))
   }
+
+  test("sqrt") {
+    val ndarray = NDArray.empty(4, 1)
+    ndarray.set(Array(0f, 1f, 4f, 9f))
+    assert(NDArray.sqrt(ndarray).toArray === Array(0f, 1f, 2f, 3f))
+  }
 }
