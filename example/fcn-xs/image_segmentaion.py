@@ -43,12 +43,12 @@ def get_data(img_path):
     return img
 
 def main():
-    fcn32s, fcn32s_arg_params, fcn32s_aux_params = mx.model.load_checkpoint(model_previx, epoch)
-    fcn32s_arg_params["data"] = mx.nd.array(get_data(img), ctx)
-    data_shape = fcn32s_arg_params["data"].shape
+    fcnxs, fcnxs_args, fcnxs_auxs = mx.model.load_checkpoint(model_previx, epoch)
+    fcnxs_args["data"] = mx.nd.array(get_data(img), ctx)
+    data_shape = fcnxs_args["data"].shape
     label_shape = (1, data_shape[2]*data_shape[3])
-    fcn32s_arg_params["softmax_label"] = mx.nd.empty(label_shape, ctx)
-    exector = fcn32s.bind(ctx, fcn32s_arg_params ,args_grad=None, grad_req="null", aux_states=fcn32s_arg_params)
+    fcnxs_args["softmax_label"] = mx.nd.empty(label_shape, ctx)
+    exector = fcnxs.bind(ctx, fcnxs_args ,args_grad=None, grad_req="null", aux_states=fcnxs_args)
     exector.forward(is_train=False)
     output = exector.outputs[0]
     out_img = np.uint8(np.squeeze(output.asnumpy().argmax(axis=1)))
