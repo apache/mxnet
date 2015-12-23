@@ -6,7 +6,7 @@ Some commonly used deep learning libraries with good RNN / LSTM support include 
 
 RNN support in Theano is provided by its [scan operator](http://deeplearning.net/software/theano/library/scan.html), which allows construction of a loop where the number of iterations is specified via a runtime value of a symbolic variable. An official example of LSTM implementation with scan can be found [here](http://deeplearning.net/tutorial/lstm.html).
 
-### Implementation seems
+### Implementation
 
 I'm not very familiar with the Theano internals, but it seems from [theano/scan_module/scan_op.py#execute](https://github.com/Theano/Theano/blob/master/theano/scan_module/scan_op.py#L1225) that the scan operator is implemented with a loop in Python that perform one iteration at a time:
 
@@ -28,3 +28,11 @@ outputs = local_op(*outer_inputs)
 The [performance guide](http://deeplearning.net/software/theano/library/scan.html#optimizing-scan-s-performance) for Theano's scan operator suggests minimizing the usage of scan. This might be due to the fact that the loop is executed in Python, which might be a bit slow (due to context switching, and performance of Python itself). Moreover, since no unrolling is performed, the graph optimizer cannot see the big picture here.
 
 If I understand correctly, when multiple RNN/LSTM layers are stacked, instead of a single loop with each iteration computing the whole feedforward network operation, the computation goes by doing a separate loop for each of the layer that uses the scan operator, sequentially. This is fine if all the intermediate values are stored to support computing the gradients. But otherwise, using a single loop could be more memory efficient.
+
+### Lasagne
+
+The documentation for RNN in Lasagne can be found [here](http://lasagne.readthedocs.org/en/latest/modules/layers/recurrent.html). In Lasagne, a recurrent layer is just like standard layers, except that the input shape is expected to be `(batch_size, sequence_length, feature_dimension)`. The output shape is then `(batch_size, sequence_length, output_dimension)`.
+
+Both `batch_size` and `sequence_length` are specified as `None`, and inferred from the data. Alternative, when memory is enough and the (maximum) sequence length is known a prior, the user can set `unroll_scan` to `False`. Then Lasagne will unroll the graph explicitly, instead of using Theano `scan` operator. Explicitly unrolling is implemented in [utils.py#unroll_scan](https://github.com/Lasagne/Lasagne/blob/master/lasagne/utils.py#L340).
+
+The recurrent layer also accept a `mask_input`, to support the case of variable length sequences (e.g. sequences could be of different length even within a mini-batch). The mask is of shape `(batch_size, sequence_length)`.
