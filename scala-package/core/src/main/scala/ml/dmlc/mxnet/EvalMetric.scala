@@ -91,7 +91,7 @@ class RMSE extends EvalMetric("rmse") {
  * @param fEval Customized evaluation function.
  * @param name The name of the metric
  */
-class CustomMetric(var fEval: () => Unit, override var name: String) extends EvalMetric(name) {
+class CustomMetric(var fEval: () => Unit, override val name: String) extends EvalMetric(name) {
   def update(labels: NDArray, preds: NDArray): Unit = {
 
     require(labels.size == preds.size, "labels and predictions should have the same length.")

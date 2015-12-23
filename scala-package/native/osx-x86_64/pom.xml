@@ -13,6 +13,10 @@
   <name>MXNet Scala Package - Native OSX-x86_64</name>
   <url>http://maven.apache.org</url>
 
+  <properties>
+    <opencv.pkg.tmpfile>opencv.pkg.txt</opencv.pkg.tmpfile>
+  </properties>
+
   <packaging>jnilib</packaging>
 
   <dependencies>
@@ -66,9 +70,15 @@
                     <isset property="cxx" />
                   </not>
                   <then>
-                    <property name="cxx" value="clang++" />
+                    <property name="cxx" value="g++" />
                   </then>
                 </if>
+                <!-- echo opencv libs to a temp file and then load it into a property -->
+                <exec executable="pkg-config" output="${opencv.pkg.tmpfile}" failonerror="true">
+                  <arg line="--libs opencv" />
+                </exec>
+                <loadfile srcfile="${opencv.pkg.tmpfile}" property="ldflags.opencv" />
+                <delete file="${opencv.pkg.tmpfile}" />
               </tasks>
             </configuration>
           </execution>
@@ -93,6 +103,14 @@
               </fileNames>
             </source>
           </sources>
+          <compilerStartOptions>
+            <compilerStartOption>-std=c++0x</compilerStartOption>
+          </compilerStartOptions>
+          <compilerMiddleOptions>
+            <compilerMiddleOption>
+              -msse3 -funroll-loops -Wno-unused-parameter -Wno-unknown-pragmas
+            </compilerMiddleOption>
+          </compilerMiddleOptions>
           <compilerEndOptions>
             <compilerEndOption>-I../../../include</compilerEndOption>
             <compilerEndOption>-I../../../dmlc-core/include</compilerEndOption>
@@ -101,15 +119,19 @@
             <compilerEndOption>-DMSHADOW_USE_CBLAS=${use.cblas}</compilerEndOption>
             <compilerEndOption>-DMSHADOW_USE_MKL=${use.mkl}</compilerEndOption>
             <compilerEndOption>-fPIC</compilerEndOption>
-            <compilerEndOption>-std=c++11</compilerEndOption>
           </compilerEndOptions>
+          <linkerStartOptions>
+            <linkerStartOption>-shared</linkerStartOption>
+          </linkerStartOptions>
           <linkerMiddleOptions>
-            <linkerMiddleOption>-dynamiclib</linkerMiddleOption>
-            <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption>
+            <linkerMiddleOption>-fopenmp</linkerMiddleOption>
+            <linkerMiddleOption>-lm</linkerMiddleOption>
+            <linkerMiddleOption>-framework Accelerate ${ldflags.opencv}</linkerMiddleOption>
             <linkerMiddleOption>-framework JavaVM ${ldflags.blas}</linkerMiddleOption>
-            <linkerMiddleOption>-Wl,-dead_strip</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-exported_symbol,_Java_*</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
+            <linkerMiddleOption>../../../dmlc-core/libdmlc.a</linkerMiddleOption>
+            <linkerMiddleOption>-force_load ../../../lib/libmxnet.a</linkerMiddleOption>
           </linkerMiddleOptions>
         </configuration>
 

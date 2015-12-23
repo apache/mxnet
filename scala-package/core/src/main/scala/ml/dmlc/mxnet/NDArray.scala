@@ -251,6 +251,15 @@ object NDArray {
   }
 
   /**
+   * Take sqrt of the src
+   * @param src Source input to the function
+   * @return new [[NDArray]]
+   */
+  def sqrt(src: NDArray): NDArray = {
+    NDArray._unaryNDArrayFunction("sqrt", src)
+  }
+
+  /**
    * Create a new NDArray that copies content from source_array.
    * @param sourceArr Source data to create NDArray from.
    * @param ctx The context of the NDArray, default to current default context.
