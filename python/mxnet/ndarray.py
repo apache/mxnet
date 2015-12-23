@@ -91,12 +91,7 @@ class NDArray(object):
         check_call(_LIB.MXNDArrayFree(self.handle))
 
     def __add__(self, other):
-        if isinstance(other, NDArray):
-            return NDArray._plus(self, other)
-        elif isinstance(other, numeric_types):
-            return NDArray._plus_scalar(self, float(other))
-        else:
-            raise TypeError('type %s not supported' % str(type(other)))
+        return add(self, other)
 
     def __iadd__(self, other):
         if not self.writable:
@@ -112,12 +107,8 @@ class NDArray(object):
         return self.__add__(other)
 
     def __sub__(self, other):
-        if isinstance(other, NDArray):
-            return NDArray._minus(self, other)
-        elif isinstance(other, numeric_types):
-            return NDArray._minus_scalar(self, float(other))
-        else:
-            raise TypeError('type %s not supported' % str(type(other)))
+        return subtract(self, other)
+
     def __isub__(self, other):
         if not self.writable:
             raise ValueError('trying to subtract from a readonly NDArray')
@@ -129,18 +120,10 @@ class NDArray(object):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rsub__(self, other):
-        if isinstance(other, numeric_types):
-            return NDArray._rminus_scalar(self, float(other))
-        else:
-            raise TypeError('type %s not supported' % str(type(other)))
+        return subtract(other, self)
 
     def __mul__(self, other):
-        if isinstance(other, NDArray):
-            return NDArray._mul(self, other)
-        elif isinstance(other, numeric_types):
-            return NDArray._mul_scalar(self, float(other))
-        else:
-            raise TypeError('type %s not supported' % str(type(other)))
+        return multiply(self, other)
 
     def __neg__(self):
         return NDArray._mul_scalar(self, -1.0)
@@ -159,18 +142,10 @@ class NDArray(object):
         return self.__mul__(other)
 
     def __div__(self, other):
-        if isinstance(other, NDArray):
-            return NDArray._div(self, other)
-        elif isinstance(other, numeric_types):
-            return NDArray._div_scalar(self, float(other))
-        else:
-            raise TypeError('type %s not supported' % str(type(other)))
+        return divide(self, other)
 
     def __rdiv__(self, other):
-        if isinstance(other, numeric_types):
-            return NDArray._rdiv_scalar(self, float(other))
-        else:
-            raise TypeError('type %s not supported' % str(type(other)))
+        return divide(other, self)
 
     def __idiv__(self, other):
         if not self.writable:
@@ -472,6 +447,125 @@ def empty(shape, ctx=None, dtype=mx_real_t):
     if ctx is None:
         ctx = Context.default_ctx
     return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))
+
+def add(lhs, rhs):
+    """ Perform element-wise addition
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    if isinstance(lhs, numeric_types):
+        if isinstance(rhs, numeric_types):
+            return lhs + rhs
+        else:
+            return add(rhs, lhs)
+    elif isinstance(rhs, NDArray):
+        return NDArray._plus(lhs, rhs)
+    elif isinstance(rhs, numeric_types):
+        return NDArray._plus_scalar(lhs, float(rhs))
+    else:
+        raise TypeError('type %s not supported' % str(type(rhs)))
+
+def subtract(lhs, rhs):
+    """ Perform element-wise subtract
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    if isinstance(lhs, numeric_types):
+        if isinstance(rhs, numeric_types):
+            return lhs / rhs
+        elif isinstance(rhs, NDArray):
+            return NDArray._rminus_scalar(rhs, float(lhs))
+        else:
+            raise TypeError('type %s not supported' % str(type(rhs)))
+    elif isinstance(rhs, NDArray):
+        return NDArray._minus(lhs, rhs)
+    elif isinstance(rhs, numeric_types):
+        return NDArray._minus_scalar(lhs, float(rhs))
+    else:
+        raise TypeError('type %s not supported' % str(type(rhs)))
+
+def multiply(lhs, rhs):
+    """ Perform element-wise multiplication
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    if isinstance(lhs, numeric_types):
+        if isinstance(rhs, numeric_types):
+            return lhs * rhs
+        else:
+            return multiply(rhs, lhs)
+    elif isinstance(rhs, NDArray):
+        return NDArray._mul(lhs, rhs)
+    elif isinstance(rhs, numeric_types):
+        return NDArray._mul_scalar(lhs, float(rhs))
+    else:
+        raise TypeError('type %s not supported' % str(type(rhs)))
+
+def divide(lhs, rhs):
+    """ Perform element-wise divide
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    if isinstance(lhs, numeric_types):
+        if isinstance(rhs, numeric_types):
+            return lhs / rhs
+        elif isinstance(rhs, NDArray):
+            return NDArray._rdiv_scalar(rhs, float(lhs))
+        else:
+            raise TypeError('type %s not supported' % str(type(rhs)))
+    elif isinstance(rhs, NDArray):
+        return NDArray._div(lhs, rhs)
+    elif isinstance(rhs, numeric_types):
+        return NDArray._div_scalar(lhs, float(rhs))
+    else:
+        raise TypeError('type %s not supported' % str(type(rhs)))
+
+def negate(array):
+    return multiply(array, -1.0)
 
 def zeros(shape, ctx=None, dtype=mx_real_t):
     """Create a new NDArray filled with 0, with specified shape.
