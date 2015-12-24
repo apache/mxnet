@@ -44,9 +44,33 @@ int MXPredCreate(const char* symbol_json_str,
                  const char** input_keys,
                  const mx_uint* input_shape_indptr,
                  const mx_uint* input_shape_data,
-                 PredictorHandle* out,
-                 int num_output_nodes,
-                 const char** num_output_keys) {
+                PredictorHandle* out) {
+  return MXPredCreatePartialOut(
+      symbol_json_str,
+      param_bytes,
+      param_size,
+      dev_type,
+      dev_id,
+      num_input_nodes,
+      input_keys,
+      input_shape_indptr,
+      input_shape_data,
+      0,
+      NULL,
+      out);
+}
+
+int MXPredCreatePartialOut(const char* symbol_json_str,
+                           const void* param_bytes,
+                           int param_size,
+                           int dev_type, int dev_id,
+                           mx_uint num_input_nodes,
+                           const char** input_keys,
+                           const mx_uint* input_shape_indptr,
+                           const mx_uint* input_shape_data,
+                           mx_uint num_output_nodes,
+                           const char** output_keys,
+                           PredictorHandle* out) {
   MXAPIPredictor* ret = new MXAPIPredictor();
   API_BEGIN();
   Symbol sym;
@@ -62,8 +86,8 @@ int MXPredCreate(const char* symbol_json_str,
     Symbol internal = sym.GetInternals();
     std::vector<std::string> all_out = internal.ListOutputs();
     std::vector<Symbol> out_syms(num_output_nodes);
-    for (int i = 0; i < num_output_nodes; ++i) {
-      std::string out_key(num_output_keys[i]);
+    for (mx_uint i = 0; i < num_output_nodes; ++i) {
+      std::string out_key(output_keys[i]);
       for (size_t j = 0; j < all_out.size(); ++j) {
         if (all_out[j] == out_key) {
           out_syms[i] = internal[j];
