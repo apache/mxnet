@@ -88,6 +88,7 @@ int MXPredCreatePartialOut(const char* symbol_json_str,
     std::vector<Symbol> out_syms(num_output_nodes);
     for (mx_uint i = 0; i < num_output_nodes; ++i) {
       std::string out_key(output_keys[i]);
+      out_key += "_output";
       for (size_t j = 0; j < all_out.size(); ++j) {
         if (all_out[j] == out_key) {
           out_syms[i] = internal[j];
