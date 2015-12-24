@@ -28,31 +28,30 @@ The only requirment is build mxnet to get `lib/libmxnet.so`. Sample usage
 
 ### Note on Implementation
 
-We use `loadlibrary` to load mxnet library directly into Matlab and `calllib`
-to call functions. Note that Matlab uses column-major to store N-dim array while
-and MXNet uses row-major. Assume we create a tensor in matlab with
+We use `loadlibrary` to load mxnet library directly into Matlab and `calllib` to
+call MXNet functions. Note that Matlab uses the column-major to store N-dim
+arraies while and MXNet uses the row-major. So assume we create an array in
+matlab with
 
 ```matlab
 X = zeros([2,3,4,5]);
 ```
 
-If we pass the memory of `X` into MXNet directly, then the shape will be
-`[5,4,3,2]` in MXNet.
-
-When processing images, MXNet assumes the data layout is
+If we pass the memory of `X` into MXNet, then the correct shape will be
+`[5,4,3,2]` in MXNet. When processing images, MXNet assumes the data layout is
 
 ```c++
 example x channel x width x height
 ```
 
-while we often store images in matlab by
+while in matlab we often store images by
 
 ```matlab
 width x height x channel x example
 ```
 
-So we should permuate the order by `X = permute(X, [2, 1, 3, 4])` before pass
-`X` into MXNet.
+So we should permuate the dimensions by `X = permute(X, [2, 1, 3, 4])` before
+passing `X` into MXNet.
 
 ### FAQ
 
