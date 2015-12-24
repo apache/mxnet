@@ -180,8 +180,10 @@ recommend to use CUDNN.
 
   | name | hardware | software |
   | --- | --- | --- |
-  | GTX980 | dual Xeon E5-2680 v2, dual GTX 980, 1G Ethernet | GCC 4.8, CUDA 7.5, CUDNN v3 |
-  | EC2-g2.8x | Xeon E5-2670, dual GRID K520, 10G Ethernet | GCC 4.8, CUDA 7.5, CUDNN v3 |
+  <!-- | GTX980 | dual Xeon E5-2680 v2, dual GTX 980, 1G Ethernet | GCC 4.8, CUDA 7.5, CUDNN v3 | -->
+  | GTX980 | Xeon E5-1650 v3, 4 x GTX 980 | GCC 4.8, CUDA 7.5, CUDNN 3 |
+  | TitanX | dual Xeon E5-2630 v3, 4 x GTX Titan X | GCC 4.8, CUDA 7.5, CUDNN 3 |
+  | EC2-g2.8x | Xeon E5-2670, 2 x GRID K520, 10G Ethernet | GCC 4.8, CUDA 7.5, CUDNN 3 |
 
 - Datasets
 
@@ -225,9 +227,14 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
   | Cluster | # machines | # GPUs | batch size | kvstore | epoch time |
   | --- | --- | --- | --- | --- | ---: |
   | GTX980 | 1 | 1 |  32 | `local` | 13,210 |
-  | - | 1 | 2 |  64 | `local` | 7,198 |
-  | - | 1 | 3 |  128 | `local` | 4,952 |
-  | - | 1 | 4 |  128 | `local` | 3,589 |
+  | - | - | 2 |  64 | - | 7,198 |
+  | - | - | 3 |  128 | - | 4,952 |
+  | - | - | 4 |  - | - | 3,589 |
+  | TitanX | 1 | 1 | 128 | `none` | 10,666 |
+  | - | - | 2 | - | `local` | 5,161 |
+  | - | - | 3 | - | - | 3,460 |
+  | - | - | 4 | - | - | 2,844 |
+  | - | - | - | 512 | - | 2,495 |
   | EC2-g2.8x | 1 | 4 | 144 |  `local` | 14,203 |
   | - | 10 | 40 | 144 |  `dist_sync` | 1,422 |
 
