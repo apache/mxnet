@@ -180,7 +180,6 @@ recommend to use CUDNN.
 
   | name | hardware | software |
   | --- | --- | --- |
-  <!-- | GTX980 | dual Xeon E5-2680 v2, dual GTX 980, 1G Ethernet | GCC 4.8, CUDA 7.5, CUDNN v3 | -->
   | GTX980 | Xeon E5-1650 v3, 4 x GTX 980 | GCC 4.8, CUDA 7.5, CUDNN 3 |
   | TitanX | dual Xeon E5-2630 v3, 4 x GTX Titan X | GCC 4.8, CUDA 7.5, CUDNN 3 |
   | EC2-g2.8x | Xeon E5-2670, 2 x GRID K520, 10G Ethernet | GCC 4.8, CUDA 7.5, CUDNN 3 |
