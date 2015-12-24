@@ -15,7 +15,7 @@ model.load('model/Inception_BN', 39);
 
 %% Load and resize the image
 img = imresize(imread('cat.png'), [224 224]);
-
+img = single(img) - 120;
 %% Run prediction
 pred = model.forward(img);
 
@@ -32,7 +32,6 @@ fclose(fid);
 
 %% find the predict label
 [p, i] = max(pred);
-
 fprintf('the best result is %s, with probability %f\n', labels{i}, p)
 
 %% Print all layers in the symbol
