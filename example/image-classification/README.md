@@ -242,8 +242,8 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
   - `single machine` :
 
   ```bash
-  python train_imagenet.py --network inception-bn \
-      --batch-size 128 --lr 0.05 --num-epoch 60 --lr-factor .94 \
+  python train_imagenet.py --batch-size 144 --lr 0.05 --lr-factor .94 \
+      --gpus 0,1,2,3 --num-epoch 60 --network inception-bn \
       --data-dir ilsvrc12/ --model-prefix model/ilsvrc12
   ```
 
@@ -257,7 +257,8 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
         --data-dir s3://dmlc/ilsvrc12/  --model-prefix s3://dmlc/model/ilsvrc12
   ```
 
-  *Note: S3 is unstable sometimes, before fixing this problem, we recommend to download data to `/mnt` first*
+  *Note: S3 is unstable sometimes, if your training hangs or getting error
+   freqently, you cant download data to `/mnt` first*
 
   Accuracy vs epoch ([the interactive figure](https://docs.google.com/spreadsheets/d/1AEesHjWUZOzCN0Gp_PYI1Cw4U1kZMKot360p9Fowmjw/pubchart?oid=1740787404&format=interactive)):
 
