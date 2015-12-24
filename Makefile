@@ -114,9 +114,15 @@ LIB_DEP += $(DMLC_CORE)/libdmlc.a
 ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ)
-	LDFLAGS += -lnvrtc -lcuda
+	LDFLAGS += -lcuda
 endif
 
+ifeq ($(USE_NVRTC), 1)
+	LDFLAGS += -lnvrtc
+	CFLAGS += -DMXNET_USE_NVRTC=1
+else
+	CFLAGS += -DMXNET_USE_NVRTC=0
+endif
 
 
 build/%.o: src/%.cc
