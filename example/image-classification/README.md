@@ -211,15 +211,34 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
 
 ### ILSVRC 12
 
-#### `train_imagenet.py` with `--network alexnet`
+<!-- #### Alexnet -->
 
-- time for one epoch:
+<!-- `train_imagenet.py` with `--network alexnet` -->
 
-  | 1 x GTX 980 | 2 x GTX 980  | 4 x GTX 980  |
-  | ----------- | ------------ | ------------ |
-  | 2,413 sec | 1,244 sec | 906 sec |
+<!-- - time for one epoch: -->
 
-#### `train_imagenet.py` with `--network inception-bn`
+<!--   | 1 x GTX 980 | 2 x GTX 980  | 4 x GTX 980  | -->
+<!--   | ----------- | ------------ | ------------ | -->
+<!--   | 2,413 sec | 1,244 sec | 906 sec | -->
+
+#### VGG
+
+`train_imagenet.py` with `--network vgg`
+
+- Performance
+
+  | Cluster | # machines | # GPUs | batch size | kvstore | epoch time |
+  | --- | --- | --- | --- | --- | ---: |
+  | TitanX | 1 | 1 | 96 | `none` | 14,545 |
+  | - | - | 2 | - | `local` | 19,692 |
+  | - | - | 4 | - | - | 20,014 |
+  | - | - | 2 | - | `local_allreduce_device` | 9,142 |
+  | - | - | 4 | - | - | 8,533 |
+  | - | - | - | 384 | - | 5,161 |
+
+#### Inception with Batch Normalization
+
+`train_imagenet.py` with `--network inception-bn`
 
 - Performance
 
