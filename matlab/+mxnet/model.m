@@ -97,7 +97,18 @@ methods
   %   out = model.forward(imgs, 'gpu', [0,1])
 
   % check arguments
-  assert(length(varargin) == 0, 'sorry, not implemented yet..');
+  dev_type = 1; % cpu in default
+  dev_id = 0;
+  while length(varargin) > 0
+    if ischar(varargin{1}) && strcmp(varargin{1}, 'gpu')
+      assert(length(varargin) > 1, 'arg error: no gpu id')
+      assert(isnumeric(varargin{2}))
+      dev_type = 2;
+      dev_id = varargin{2};
+      varargin = varargin(3:end);
+    end
+
+  end
 
   % convert from matlab order (col-major) into c order (row major):
   siz = size(imgs);
@@ -118,20 +129,20 @@ methods
   end
   obj.prev_input_size = siz;
 
-  dev_type = 1;
   if obj.predictor.Value == 0
     if obj.verbose
       fprintf('create predictor with input size ');
       fprintf('%d ', siz);
       fprintf('\n');
     end
-    callmxnet('MXPredCreate', obj.symbol, ...
+    callmxnet('MXPredCreatePartialOut', obj.symbol, ...
               libpointer('voidPtr', obj.params), ...
               length(obj.params), ...
-              dev_type, 0, ...
+              int32(dev_type), int32(dev_id), ...
               1, {'data'}, ...
               uint32([0, 4]), ...
               uint32(siz(end:-1:1)), ...
+              0, {}, ...
               obj.predictor);
   end
 
@@ -163,10 +174,8 @@ methods (Access = private)
   function free_predictor(obj)
   % free the predictor
   if obj.predictor.Value ~= 0
-    if obj.verbose
-      fprintf('destroy predictor\n')
-    end
     callmxnet('MXPredFree', obj.predictor);
+    obj.predictor = libpointer('voidPtr', 0);
   end
   end
 end
