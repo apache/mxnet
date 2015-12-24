@@ -34,6 +34,11 @@ err = err / length(Y);
 fprintf('prediction error: %f\n', err)
 
 %%
+% ix = 1:2;
+% x = X(:,:,:,ix);
+% pred = model.forward(x, {'pooling1', 'fullyconnected1', 'softmax'});
+
+%%
 % batch = 1000;
 % e = 0;
 % for i = 1 : batch

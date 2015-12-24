@@ -19,6 +19,8 @@ properties (Access = private)
   prev_dev_id
 % the previous device type (cpu or gpu)
   prev_dev_type
+% the previous output layers
+  prev_out_layers
 end
 
 methods
@@ -89,9 +91,10 @@ methods
   %   imgs(:,:,:,2) = img2
   %   out = model.forward(imgs, 'gpu', [0,1])
 
-  % check arguments
+  % parse arguments
   dev_type = 1; % cpu in default
   dev_id = 0;
+  out_layers = {};
   while length(varargin) > 0
     if ischar(varargin{1}) && strcmp(varargin{1}, 'gpu')
       assert(length(varargin) > 1, 'arg error: no gpu id')
@@ -99,6 +102,19 @@ methods
       dev_type = 2;
       dev_id = varargin{2};
       varargin = varargin(3:end);
+      continue
+    end
+
+    if ischar(varargin{1})
+      out_layers{end+1} = varargin{1};
+      varargin = varargin(2:end);
+      continue
+    end
+
+    if iscell(varargin{1})
+      out_layers = varargin{1};
+      varargin = varargin(2:end);
+      continue
     end
   end
 
@@ -108,17 +124,9 @@ methods
   % convert from matlab order (col-major) into c order (row major):
   input = obj.convert_ndarray(input);
 
-
-  if length(siz) ~= length(obj.prev_input_size) || ...
-        any(siz ~= obj.prev_input_size) || ...
-        dev_type ~= obj.prev_dev_type || ...
-        length(dev_id) ~= length(obj.prev_dev_id) || ...
-        any(dev_id ~= obj.prev_dev_id)
+  if obj.changed(siz, dev_type, dev_id, out_layers)
     obj.free_predictor()
   end
-  obj.prev_input_size = siz;
-  obj.prev_dev_type = dev_type;
-  obj.prev_dev_id = dev_id;
 
   if obj.predictor.Value == 0
     fprintf('create predictor with input size ');
@@ -132,7 +140,7 @@ methods
               1, {'data'}, ...
               uint32([0, 4]), ...
               uint32(csize), ...
-              0, {}, ...
+              uint32(length(out_layers)), out_layers, ...
               obj.predictor);
   end
 
@@ -141,26 +149,19 @@ methods
   % forward
   callmxnet('MXPredForward', obj.predictor);
 
-  % get output size
-  out_dim = libpointer('uint32Ptr', 0);
-  out_shape = libpointer('uint32PtrPtr', ones(4,1));
-  callmxnet('MXPredGetOutputShape', obj.predictor, 0, out_shape, out_dim);
-  assert(out_dim.Value <= 4);
-  out_siz = out_shape.Value(1:out_dim.Value);
-  out_siz = double(out_siz(end:-1:1))';
-
   % get output
-  out = libpointer('singlePtr', single(zeros(out_siz)));
+  num_out = 1;
+  if ~isempty(out_layers), num_out = length(out_layers); end
 
-  callmxnet('MXPredGetOutput', obj.predictor, 0, ...
-            out, uint32(prod(out_siz)));
-
-  % TODO convert from c order to matlab order...
-  outputs = out.Value;
-  % outputs = obj.convert_ndarray(out.Value);
-  if length(out_siz) > 2
-    outputs = convert_ndarray(outputs);
+  if num_out == 1
+    outputs = obj.get_output(0);
+  else
+    outputs = cell(num_out,1);
+    for i = 1 : num_out
+      outputs{i} = obj.get_output(i-1);
+    end
   end
+
   end
 end
 
@@ -178,6 +179,47 @@ methods (Access = private)
   siz = size(X);
   Y = permute(X, [2 1 3:length(siz)]);
   end
+
+  function ret = changed(obj, input_size, dev_type, dev_id, out_layers)
+  % check if arguments changed since last call
+  ret = 0;
+  if length(input_size) ~= length(obj.prev_input_size) || ...
+        any(input_size ~= obj.prev_input_size) || ...
+        dev_type ~= obj.prev_dev_type || ...
+        length(dev_id) ~= length(obj.prev_dev_id) || ...
+        any(dev_id ~= obj.prev_dev_id) || ...
+        length(out_layers) ~= length(obj.prev_out_layers) || ...
+        ~all(cellfun(@strcmp, out_layers, obj.prev_out_layers))
+    ret = 1;
+  end
+  obj.prev_input_size = input_size;
+  obj.prev_dev_type = dev_type;
+  obj.prev_dev_id = dev_id;
+  obj.prev_out_layers = out_layers;
+  end
+
+  function out = get_output(obj, index)
+  % get the i-th output
+  out_dim = libpointer('uint32Ptr', 0);
+  out_shape = libpointer('uint32PtrPtr', ones(4,1));
+  callmxnet('MXPredGetOutputShape', obj.predictor, index, out_shape, out_dim);
+  assert(out_dim.Value <= 4);
+  out_siz = out_shape.Value(1:out_dim.Value);
+  out_siz = double(out_siz(end:-1:1))';
+
+  % get output
+  out = libpointer('singlePtr', single(zeros(out_siz)));
+
+  callmxnet('MXPredGetOutput', obj.predictor, index, ...
+            out, uint32(prod(out_siz)));
+
+  % TODO convert from c order to matlab order...
+  out = reshape(out.Value, out_siz);
+  if length(out_siz) > 2
+    out = obj.convert_ndarray(out);
+  end
+  end
+
 end
 
 end
