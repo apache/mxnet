@@ -90,7 +90,8 @@ class ImageNormalizeIter : public IIterator<DataInst> {
     param_.InitAllowUnknown(kwargs);
     base_->Init(kwargs);
     rnd_.seed(kRandMagic + param_.seed);
-
+    outimg_.set_pad(false);
+    meanimg_.set_pad(false);
     if (param_.mean_img.length() != 0) {
       std::unique_ptr<dmlc::Stream> fi(
           dmlc::Stream::Create(param_.mean_img.c_str(), "r", true));
