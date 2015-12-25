@@ -889,6 +889,13 @@ MXNET_DLL int MXKVStorePull(KVStoreHandle handle,
                             const int* keys,
                             NDArrayHandle* vals,
                             int priority);
+
+MXNET_DLL int MXKVStorePushPulll(KVStoreHandle handle,
+                                 mx_uint num,
+                                 const int* keys,
+                                 NDArrayHandle* push_vals,
+                                 NDArrayHandle* pull_vals,
+                                 int priority);
 /*!
  * \brief user-defined updater for the kvstore
  * It's this updater's responsibility to delete \a recv and \a local

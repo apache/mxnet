@@ -124,6 +124,14 @@ class KVStore {
                     const std::vector<NDArray*>& values,
                     int priority = 0) = 0;
 
+  virtual void PushPull(const std::vector<int>& keys,
+                        const std::vector<NDArray>& push_values,
+                        const std::vector<NDArray*>& pull_values,
+                        int priority = 0) {
+    Push(keys, push_values, priority);
+    Pull(keys, pull_values, priority);
+  }
+
   /**
    * \brief the prototype of user-defined updater
    */
