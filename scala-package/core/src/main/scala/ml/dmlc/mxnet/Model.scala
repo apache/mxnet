@@ -2,6 +2,10 @@ package ml.dmlc.mxnet
 
 import org.slf4j.LoggerFactory
 
+/**
+ * Describe the model flow
+ * @author Yizhi Liu
+ */
 object Model {
   private val logger = LoggerFactory.getLogger(classOf[Model])
   /**
@@ -43,7 +47,7 @@ object Model {
 
   // Initialize kvstore
   private def initializeKVStore(kvStore: KVStore,
-                                paramArrays: Array[NDArray],
+                                paramArrays: Array[Array[NDArray]],
                                 argParams: Map[String, NDArray],
                                 paramNames: Array[String],
                                 updateOnKVStore: Boolean): Unit = {
@@ -53,6 +57,44 @@ object Model {
       kvStore.init(idx, argParams(paramNames(idx)))
       if (updateOnKVStore) {
         kvStore.pull(idx, paramOnDevs, -idx)
+      }
+    }
+  }
+
+  // Perform update of param_arrays from grad_arrays on kvstore
+  private def updateParamsOnKVStore(paramArrays: Array[Array[NDArray]],
+                                    gradArrays: Array[Array[NDArray]],
+                                    kvStore: KVStore): Unit = {
+    (paramArrays zip gradArrays).zipWithIndex.foreach { case ((argList, gradList), index) =>
+      if (gradList != null) {
+        // push gradient, priority is negative index
+        kvStore.push(index, gradList, -index)
+        // pull back the weights
+        kvStore.pull(index, argList, -index)
+      }
+    }
+  }
+
+  // Perform update of param_arrays from grad_arrays not on kvstore
+  private def updateParams(paramArrays: Array[Array[NDArray]],
+                           gradArrays: Array[Array[NDArray]],
+                           updater: MXKVStoreUpdater,
+                           numDevice: Int,
+                           kvStore: Option[KVStore] = None) {
+    (paramArrays zip gradArrays).zipWithIndex.foreach { case ((argList, gradList), index) =>
+      if (gradList != null) {
+        kvStore.foreach(kv => {
+          // push gradient, priority is negative index
+          kv.push(index, gradList, -index)
+          // pull back the sum gradients, to the same locations.
+          kv.pull(index, gradList, -index)
+        })
+        (argList zip gradList).zipWithIndex.foreach { case ((w: NDArray, g: NDArray), k: Int) =>
+          // faked an index here, to make optimizer create diff
+          // state for the same index but on diff devs,
+          // (copy from python package) TODO(mli) use a better solution latter
+          updater.update(index * numDevice + k, g, w)
+        }
       }
     }
   }
