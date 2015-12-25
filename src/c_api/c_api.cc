@@ -1010,6 +1010,7 @@ int MXKVStorePushPull(KVStoreHandle handle,
       v_keys, v_push_vals, v_pull_vals, priority);
   API_END();
 }
+
 int MXKVStoreSetUpdater(KVStoreHandle handle,
                         MXKVStoreUpdater updater,
                         void* updater_handle) {

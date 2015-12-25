@@ -890,7 +890,7 @@ MXNET_DLL int MXKVStorePull(KVStoreHandle handle,
                             NDArrayHandle* vals,
                             int priority);
 
-MXNET_DLL int MXKVStorePushPulll(KVStoreHandle handle,
+MXNET_DLL int MXKVStorePushPull(KVStoreHandle handle,
                                  mx_uint num,
                                  const int* keys,
                                  NDArrayHandle* push_vals,

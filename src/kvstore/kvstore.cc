@@ -31,9 +31,9 @@ KVStore* KVStore::Create(const char *type_name) {
              tname == "local_allreduce_device") {
     tname = "local_allreduce_device";
 #if MXNET_USE_CUDA && MXNET_USE_NCCL
-    kv = new kvstore::KVStoreDevice();
-#else
     kv = new kvstore::KVStoreNCCL();
+#else
+    kv = new kvstore::KVStoreDevice();
 #endif  // MXNET_USE_CUDA && MXNET_USE_NCCL
   } else if (tname == "dist_async" ||
              tname == "dist_sync" ||

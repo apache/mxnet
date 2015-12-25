@@ -168,8 +168,8 @@ recommend to use CUDNN.
   [doc/developer-guide/multi_node.md](../../doc/developer-guide/multi_node.md)
   for more information)
   1. For a single machine, often the default `local` is good enough. But you may want
-  to use `local_allreduce_device` for models with size >> 100MB such as AlexNet
-  and VGG. But also note that `local_allreduce_device` takes more GPU memory than
+  to use `device` for models with size >> 100MB such as AlexNet
+  and VGG. But also note that `device` takes more GPU memory than
   others.
   2. For multiple machines, we recommend to try `dist_sync` first. But if the
   model size is quite large or you use a large number of machines, you may want to use `dist_async`.
@@ -232,7 +232,7 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
   | TitanX | 1 | 1 | 96 | `none` | 14,545 |
   | - | - | 2 | - | `local` | 19,692 |
   | - | - | 4 | - | - | 20,014 |
-  | - | - | 2 | - | `local_allreduce_device` | 9,142 |
+  | - | - | 2 | - | `device` | 9,142 |
   | - | - | 4 | - | - | 8,533 |
   | - | - | - | 384 | - | 5,161 |
 

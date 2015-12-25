@@ -228,6 +228,13 @@ class KVStore(object):
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
             ctypes.c_int(priority)))
 
+    def push_pull(self, key, value, out, priority=0):
+        ckeys, cpushvals = _ctype_key_value(key, value)
+        ckey2, cpullvals = _ctype_key_value(key, out)
+        check_call(_LIB.MXKVStorePushPull(
+            self.handle, mx_uint(len(ckeys)), ckeys, cpushvals, cpullvals,
+            ctypes.c_int(priority)))
+
     def set_optimizer(self, optimizer):
         """Register an optimizer to the store
 

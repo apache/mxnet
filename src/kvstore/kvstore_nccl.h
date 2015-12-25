@@ -30,6 +30,7 @@ class KVStoreNCCL : public KVStore {
  public:
   KVStoreNCCL() {
     inited_nccl_ = false;
+    LOG(ERROR) << "use nccl";
   }
 
   virtual ~KVStoreNCCL() {
