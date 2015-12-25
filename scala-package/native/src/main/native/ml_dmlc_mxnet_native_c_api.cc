@@ -386,6 +386,42 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreGetRank
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorOutputs
+  (JNIEnv *env, jobject obj, jobject executorHandle, jobject outputs) {
+
+  jlong executorPtr = getLongField(env, executorHandle);
+  mx_uint outSize;
+  NDArrayHandle *out;
+  int ret = MXExecutorOutputs((ExecutorHandle)executorPtr, &outSize, &out);
+
+  // Base.ExecutorHandle.constructor
+  jclass ndArrayClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
+  jmethodID ndArrayConstructor = env->GetMethodID(fhClass,"<init>","(J)V");
+
+  // fill java outputs
+  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jmethodID arrayAppend = env->GetMethodID(arrayClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+  for (int i = 0; i < outSize; ++i) {
+    jobject ndArray = env->NewObject(ndArrayClass, ndArrayConstructor, (long)out[i]);
+    env->CallObjectMethod(outputs, arrayAppend, ndArray);
+  }
+
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorFree
+  (JNIEnv * env, jobject obj, jobject handle) {
+  jlong ptr = getLongField(env, handle);
+  return MXExecutorFree((ExecutorHandle) ptr);
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorForward
+  (JNIEnv * env, jobject obj, jobject handle, jint isTrain) {
+  jlong ptr = getLongField(env, handle);
+  return MXExecutorForward((ExecutorHandle)ptr, (int)isTrain);
+}
+
 JNIEXPORT jstring JNICALL Java_ml_dmlc_mxnet_LibInfo_mxGetLastError(JNIEnv * env, jobject obj) {
   char *tmpstr = "MXNetError";
   jstring rtstr = env->NewStringUTF(tmpstr);

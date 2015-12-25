@@ -4,7 +4,10 @@ import ml.dmlc.mxnet.Base._
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
-// JNI functions
+/**
+ * JNI functions
+ * @author Yizhi Liu
+ */
 class LibInfo {
   @native def mxNDArrayFree(handle: NDArrayHandle): Int
   @native def mxGetLastError(): String
@@ -81,4 +84,7 @@ class LibInfo {
   @native def mxKVStoreBarrier(handle: KVStoreHandle): Int
   @native def mxKVStoreGetGroupSize(handle: KVStoreHandle, size: RefInt): Int
   @native def mxKVStoreGetRank(handle: KVStoreHandle, size: RefInt): Int
+  @native def mxExecutorOutputs(handle: ExecutorHandle, outputs: ArrayBuffer[NDArrayHandle]): Int
+  @native def mxExecutorFree(handle: ExecutorHandle): Int
+  @native def mxExecutorForward(handle: ExecutorHandle, isTrain: Int): Int
 }
