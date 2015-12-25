@@ -229,6 +229,27 @@ class KVStore(object):
             ctypes.c_int(priority)))
 
     def push_pull(self, key, value, out, priority=0):
+        """ Push and the pull a single value or a sequence of values
+
+        This function is equal to call push and then pull. However, the former
+        could be more efficient.
+
+        Parameters
+        ----------
+        key : int or list of int
+            Keys
+
+        value : NDArray or list of NDArray or list of list of NDArray
+            According values for push
+
+        out: NDArray or list of NDArray or list of list of NDArray
+            According values for pull, out could be identical to value.
+
+        priority : int, optional
+            The priority of the push operation.
+            The higher the priority, the faster this action is likely
+            to be executed before other push actions.
+        """
         ckeys, cpushvals = _ctype_key_value(key, value)
         ckey2, cpullvals = _ctype_key_value(key, out)
         check_call(_LIB.MXKVStorePushPull(

@@ -30,7 +30,6 @@ class KVStoreNCCL : public KVStore {
  public:
   KVStoreNCCL() {
     inited_nccl_ = false;
-    LOG(ERROR) << "use nccl";
   }
 
   virtual ~KVStoreNCCL() {
@@ -186,6 +185,7 @@ class KVStoreNCCL : public KVStore {
     }
     // wait until finished
     for (size_t i = 0; i < devs_.size(); ++i) {
+      CUDACHECK(cudaSetDevice(devs_[i]));
       CUDACHECK(cudaStreamSynchronize(streams_[i]));
     }
   }
