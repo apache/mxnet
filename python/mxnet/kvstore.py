@@ -251,7 +251,7 @@ class KVStore(object):
             to be executed before other push actions.
         """
         ckeys, cpushvals = _ctype_key_value(key, value)
-        ckey2, cpullvals = _ctype_key_value(key, out)
+        _, cpullvals = _ctype_key_value(key, out)
         check_call(_LIB.MXKVStorePushPull(
             self.handle, mx_uint(len(ckeys)), ckeys, cpushvals, cpullvals,
             ctypes.c_int(priority)))

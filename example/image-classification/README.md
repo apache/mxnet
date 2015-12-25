@@ -211,15 +211,17 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
 
 ### ILSVRC 12
 
-<!-- #### Alexnet -->
+#### Alexnet
 
-<!-- `train_imagenet.py` with `--network alexnet` -->
+`train_imagenet.py` with `--network alexnet`
 
-<!-- - time for one epoch: -->
-
-<!--   | 1 x GTX 980 | 2 x GTX 980  | 4 x GTX 980  | -->
-<!--   | ----------- | ------------ | ------------ | -->
-<!--   | 2,413 sec | 1,244 sec | 906 sec | -->
+  | Cluster | # machines | # GPUs | batch size | kvstore | sec per epoch |
+  | --- | --- | --- | --- | --- | ---: |
+  | TitanX | 1 | 1 | 1,024 | `none` | 2,206 |
+  | - | - | 2 | - | `local` | 1,333 |
+  | - | - | 4 | - | - | 1,280 |
+  | - | - | 2 | - | `device` | 1,289 |
+  | - | - | 4 | - | - | 603 |
 
 #### VGG
 
@@ -227,7 +229,7 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
 
 - Performance
 
-  | Cluster | # machines | # GPUs | batch size | kvstore | epoch time |
+  | Cluster | # machines | # GPUs | batch size | kvstore | sec per epoch |
   | --- | --- | --- | --- | --- | ---: |
   | TitanX | 1 | 1 | 96 | `none` | 14,545 |
   | - | - | 2 | - | `local` | 19,692 |
@@ -242,7 +244,7 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
 
 - Performance
 
-  | Cluster | # machines | # GPUs | batch size | kvstore | epoch time |
+  | Cluster | # machines | # GPUs | batch size | kvstore | sec per epoch |
   | --- | --- | --- | --- | --- | ---: |
   | GTX980 | 1 | 1 |  32 | `local` | 13,210 |
   | - | - | 2 |  64 | - | 7,198 |

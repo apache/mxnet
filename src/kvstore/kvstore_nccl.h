@@ -10,6 +10,7 @@
 #include <mxnet/kvstore.h>
 #include <algorithm>
 #include <vector>
+#include <utility>
 
 namespace mxnet {
 namespace kvstore {
@@ -18,13 +19,13 @@ namespace kvstore {
     cudaError_t e = cmd;                                 \
     CHECK(e == cudaSuccess) << "CUDA failure "           \
                             << cudaGetErrorString(e);    \
-  } while(false)
+  } while (false)
 
 #define NCCLCHECK(cmd) do {                             \
     ncclResult_t e = cmd;                               \
     CHECK(e == ncclSuccess) << "NCLL failure "          \
                             << ncclGetErrorString(e);   \
-  } while(false)
+  } while (false)
 
 class KVStoreNCCL : public KVStore {
  public:
@@ -196,7 +197,7 @@ class KVStoreNCCL : public KVStore {
   std::vector<cudaStream_t> streams_;
 };
 
-} // namespace kvstore
-} // namespace mxnet
+}  // namespace kvstore
+}  // namespace mxnet
 
 #endif  // MXNET_KVSTORE_KVSTORE_NCCL_H_
