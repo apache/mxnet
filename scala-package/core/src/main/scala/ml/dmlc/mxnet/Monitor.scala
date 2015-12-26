@@ -1,5 +1,6 @@
 package ml.dmlc.mxnet
 
+import ml.dmlc.mxnet.Base.NDArrayHandle
 import org.slf4j.LoggerFactory
 import scala.collection.mutable
 
@@ -27,10 +28,11 @@ class Monitor(protected val interval: Int, protected var statFunc: (NDArray) => 
   private var step: Int = 0
   private var exes =  new mutable.Queue[Executor]
 
-  protected val statHelper = (name: String, arr: NDArray) => {
+  protected def statHelper(name: String, arr: NDArrayHandle): Unit = {
     if (activated) {
       // TODO: more details here
-      queue ++= List((step, name, statFunc(arr)))
+      val array = new NDArray(arr, writable=false)
+      queue ++= List((step, name, statFunc(array)))
     }
   }
 
