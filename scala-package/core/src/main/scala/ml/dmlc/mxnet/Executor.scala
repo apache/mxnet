@@ -6,6 +6,6 @@ package ml.dmlc.mxnet
 abstract class Executor(var argArrays: Array[NDArray]) {
   def forward
   def backward
-  def set_monitor_callback(callback: Unit)
+  def setMonitorCallback(callback: (String, NDArray) => Any)
 
 }

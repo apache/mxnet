@@ -1,8 +1,7 @@
 package ml.dmlc.mxnet
 
 import org.slf4j.LoggerFactory
-
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable
 
 /**
  * Monitor outputs, weights, and gradients for debugging.
@@ -23,15 +22,15 @@ class Monitor(protected val interval: Int, protected var statFunc: (NDArray) => 
     statFunc = (x: NDArray) => x
   }
 
-  protected var activated: Boolean = false
-  protected var queue =  ArrayBuffer.empty[(Int, String, NDArray)]
-  protected var step: Int = 0
-  protected var exes =  ArrayBuffer.empty[Executor]
+  private var activated: Boolean = false
+  private var queue =  new mutable.Queue[(Int, String, NDArray)]
+  private var step: Int = 0
+  private var exes =  new mutable.Queue[Executor]
 
   protected val statHelper = (name: String, arr: NDArray) => {
     if (activated) {
       // TODO: more details here
-      queue.append((step, name, statFunc(arr)))
+      queue ++= List((step, name, statFunc(arr)))
     }
   }
 
@@ -42,8 +41,8 @@ class Monitor(protected val interval: Int, protected var statFunc: (NDArray) => 
    * @param exe the Executor (returned by symbol.bind) to install to.
    */
   def install(exe: Executor) = {
-    exe.set_monitor_callback(statHelper)
-    exes.append(exe)
+    exe.setMonitorCallback(statHelper)
+    exes ++= List(exe)
   }
 
 
@@ -56,7 +55,7 @@ class Monitor(protected val interval: Int, protected var statFunc: (NDArray) => 
       exes.foreach { exe =>
         exe.argArrays.foreach {arr => arr.waitToRead()}
       }
-      queue =  ArrayBuffer.empty[(Int, String, NDArray)]
+      queue =  new mutable.Queue[(Int, String, NDArray)]
       activated = true
     }
     step += 1
@@ -67,7 +66,7 @@ class Monitor(protected val interval: Int, protected var statFunc: (NDArray) => 
    * End collecting for current batch and return results.
    * Call after computation of current batch.
    */
-  def toc: ArrayBuffer[(Int, String, String)] = {
+  def toc: mutable.Queue[(Int, String, String)] = {
 
     if (activated) {
       exes.foreach { exe =>
@@ -80,24 +79,23 @@ class Monitor(protected val interval: Int, protected var statFunc: (NDArray) => 
           self.queue.append((self.step, name, self.stat_func(array)))*/
       }
     } else {
-      return ArrayBuffer.empty[(Int, String, String)]
+      return new mutable.Queue[(Int, String, String)]
     }
 
     activated = false
 
-    val res = ArrayBuffer.empty[(Int, String, String)]
+    val res = new mutable.Queue[(Int, String, String)]
 
     queue.foreach { q =>
       val (n, k, v) = q
-      require(v.isInstanceOf[NDArray])
       if (v.shape.sameElements(Array(1))) {
-        res.append((n, k, v.toScalar.toString))
+        res ++= List((n, k, v.toScalar.toString))
       } else {
-        res.append((n, k, v.toArray.toString))
+        res ++= List((n, k, v.toArray.toString))
       }
     }
 
-    queue = ArrayBuffer.empty[(Int, String, NDArray)]
+    queue = new mutable.Queue[(Int, String, NDArray)]
 
     return res
   }
