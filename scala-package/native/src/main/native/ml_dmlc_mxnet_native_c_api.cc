@@ -422,6 +422,26 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorForward
   return MXExecutorForward((ExecutorHandle)ptr, (int)isTrain);
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBackward
+  (JNIEnv * env, jobject obj, jobject handle, jint gradsSize, jlongArray grads) {
+  jlong executorPtr = getLongField(env, handle);
+  jlong *gradArr = env->GetLongArrayElements(grads, NULL);
+  int ret = MXExecutorBackward((ExecutorHandle)executorPtr,
+                               (mx_uint)gradsSize,
+                               (NDArrayHandle *)gradArr)
+  env->ReleaseLongArrayElements(grads, gradArr, 0);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorPrint
+  (JNIEnv * env, jobject obj, jobject handle, jobject debugStr) {
+  jlong ptr = getLongField(env, handle);
+  const char *retDebugStr;
+  int ret = MXExecutorPrint((ExecutorHandle)handle, &retDebugStr);
+  setStringField(env, debugStr, retDebugStr);
+  return ret;
+}
+
 JNIEXPORT jstring JNICALL Java_ml_dmlc_mxnet_LibInfo_mxGetLastError(JNIEnv * env, jobject obj) {
   char *tmpstr = "MXNetError";
   jstring rtstr = env->NewStringUTF(tmpstr);
@@ -433,4 +453,3 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayFree(JNIEnv * env, jo
   puts("Free ndarray called");
   return 0;
 }
-

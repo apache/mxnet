@@ -87,4 +87,10 @@ class LibInfo {
   @native def mxExecutorOutputs(handle: ExecutorHandle, outputs: ArrayBuffer[NDArrayHandle]): Int
   @native def mxExecutorFree(handle: ExecutorHandle): Int
   @native def mxExecutorForward(handle: ExecutorHandle, isTrain: Int): Int
+  @native def mxExecutorBackward(handle: ExecutorHandle,
+                                 gradsSize: Int,
+                                 // outs ought to be Array[NDArrayHandle],
+                                 // we pass ptr address directly for performance consideration
+                                 grads: Array[CPtrAddress]): Int
+  @native def mxExecutorPrint(handle: ExecutorHandle, debugStr: RefString): Int
 }

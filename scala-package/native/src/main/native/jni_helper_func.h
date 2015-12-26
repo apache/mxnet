@@ -21,4 +21,10 @@ void setIntField(JNIEnv *env, jobject obj, jint value) {
   env->SetIntField(obj, refFid, value);
 }
 
+void setStringField(JNIEnv *env, jobject obj, const char *value) {
+  jclass refClass = env->FindClass("ml/dmlc/mxnet/Base$RefString");
+  jfieldID refFid = env->GetFieldID(refClass, "value", "Ljava/lang/String;");
+  env->SetObjectField(obj, refFid, env->NewStringUTF(value));
+}
+
 #endif

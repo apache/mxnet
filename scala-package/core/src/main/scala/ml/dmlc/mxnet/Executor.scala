@@ -22,14 +22,14 @@ object Executor {
  * @see Symbol.bind : to create executor
  */
 class Executor(val handle: ExecutorHandle, val symbol: Symbol) {
-  var argArrays: Array = _
-  var gradArrays: Array = _
-  var auxArrays: Array = _
+  var argArrays: Array[NDArray] = null
+  var gradArrays: Array[NDArray] = null
+  var auxArrays: Array[NDArray] = null
   var outputs: Array[NDArray] = getOutputs
-  var argDict: Map[String, NDArray] = _
+  var _argDict: Map[String, NDArray] = null
+  var _auxDict: Map[String, NDArray] = null
   /*
   self._grad_dict = None
-  self._aux_dict = None
   self._monitor_callback = None
   */
 
@@ -72,5 +72,97 @@ class Executor(val handle: ExecutorHandle, val symbol: Symbol) {
    *   on outputs that are not a loss function.
    */
   def backward(outGrads: Array[NDArray]):Unit = {
+    require(outGrads != null)
+    val ndArrayPtrs = outGrads.map(_.handle.value)
+    checkCall(_LIB.mxExecutorBackward(handle, outGrads.length, ndArrayPtrs))
+  }
+
+  def backward(outGrad: NDArray): Unit = {
+    require(outGrad != null)
+    backward(Array(outGrad))
+  }
+
+  def backward(): Unit = {
+    backward(Array.empty[NDArray])
+  }
+
+  /**
+   * Install callback.
+   * callback  Takes a string and an NDArrayHandle.
+   */
+  def setMonitorCallback(callback: (String, NDArrayHandle) => Unit): Unit = ???
+
+  /**
+   * Get dictionary representation of argument arrrays.
+   * @return The dictionary that maps name of arguments to NDArrays.
+   * @throws IllegalArgumentException if there are duplicated names in the arguments.
+   */
+  def argDict: Map[String, NDArray] = {
+    if (_argDict == null) {
+      _argDict = Executor.getDict(symbol.listArguments(), argArrays)
+    }
+    _argDict
+  }
+
+  /**
+   * Get dictionary representation of auxiliary states arrays.
+   * @return The dictionary that maps name of auxiliary states to NDArrays.
+   * @throws IllegalArgumentException if there are duplicated names in the auxiliary states.
+   */
+  def auxDict: Map[String, NDArray] = {
+    if (_auxDict == null) {
+      _auxDict = Executor.getDict(
+      symbol.listAuxiliaryStates(), auxArrays)
+    }
+    _auxDict
+  }
+
+  /**
+   * Copy parameters from arg_params, aux_params into executor's internal array.
+   * @param argParams : dict of name to NDArray of arguments
+   * @param auxParams : dict of name to NDArray of auxiliary states.
+   * @param allowExtraParams
+   *        Whether allow extra parameters that are not needed by symbol
+   *        If this is True, no error will be thrown when arg_params or aux_params
+   *        contain extra parameters that is not needed by the executor.
+   * @throws IllegalArgumentException If there is additional parameters in the dict but allow_extra_params=False
+   */
+  def copyParamsFrom(argParams: Map[String, NDArray],
+                     auxParams: Map[String, NDArray],
+                     allowExtraParams: Boolean = false): Unit = {
+    argParams.foreach { case (name, array) =>
+      if (argDict.contains(name)) {
+        array.copyTo(argDict(name))
+      } else {
+        require(allowExtraParams, s"Find name $name that is not in the arguments")
+      }
+    }
+    if (auxParams != null) {
+      auxParams.foreach { case (name, array) =>
+        if (auxDict.contains(name)) {
+          array.copyTo(auxDict(name))
+        } else {
+          require(allowExtraParams, s"Find name $name that is not in the auxiliary states")
+        }
+      }
+    }
+  }
+
+  def copyParamsFrom(argParams: Map[String, NDArray], allowExtraParams: Boolean): Unit = {
+    copyParamsFrom(argParams, null, allowExtraParams)
+  }
+
+  def copyParamsFrom(argParams: Map[String, NDArray]): Unit = {
+    copyParamsFrom(argParams, allowExtraParams = false)
+  }
+
+  /**
+   * Get a debug string about internal execution plan.
+   * @return Debug string of the executor.
+   */
+  def debugStr: String = {
+    val str = new RefString
+    checkCall(_LIB.mxExecutorPrint(handle, str))
+    str.value
   }
 }
