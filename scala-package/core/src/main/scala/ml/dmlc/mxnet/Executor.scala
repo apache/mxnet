@@ -13,21 +13,10 @@ object Executor {
 
   /**
    * Get input slice from the input shape.
-    Parameters
-    ----------
-   * batch_size : int
-   *     The number of samples in a mini-batch.
-   * work_load_list : list of float or int, optional
-   *     The list of work load for different devices,
-   *     in the same order as ctx
-   * Returns
-   * -------
-   * slices : list of slice
-   *     The split slices to get a specific slice.
-   * Raises
-   * ------
-   * ValueError
-   *     If there are two many splits such that some slice can be empty.
+   * @param batchSize The number of samples in a mini-batch.
+   * @param workLoadList The list of work load for different devices, in the same order as ctx
+   * @return The split slices to get a specific slice.
+   * @throws IllegalArgumentException If there are two many splits such that some slice can be empty.
    */
   private def splitInputSlice[@specialized(Int, Float, Double) V]
                               (batchSize: Int, workLoadList: Array[V])
@@ -49,6 +38,40 @@ object Executor {
       slices.append((begin, end))
     })
     slices.toArray
+  }
+
+  /**
+   * Check the argument names of symbol.
+   * This function checks the duplication of arguments in Symbol.
+   * The check is done for feedforward net for now.
+   * @param symbol The network configuration
+   */
+  private def checkArguments(symbol: Symbol): Unit = {
+    val argNames = symbol.listArguments()
+    require(argNames.toSet.size == argNames.length,
+      "Find duplicated argument name," +
+      "please make the weight name non-duplicated(using name arguments)," +
+      s"arguments are $argNames")
+
+    val auxNames = symbol.listAuxiliaryStates()
+    require(auxNames.toSet.size == auxNames.length,
+      "Find duplicated auxiliary param name," +
+      "please make the weight name non-duplicated(using name arguments)," +
+      s"arguments are $auxNames")
+  }
+
+  // Load a list of arrays into a list of arrays
+  private def loadGeneral(data: Array[NDArray], targets: Array[NDArray]): Unit = {
+    (data zip targets).foreach { case (dSrc, dTarget) =>
+      dSrc.copyTo(dTarget)
+    }
+  }
+
+  // Load a list of arrays into a list of arrays specified by slices
+  private def loadGeneral(data: Array[NDArray], targets: Array[(Int, Int, NDArray)]): Unit = {
+    (data zip targets).foreach { case (dSrc, (start, end, dTarget)) =>
+      dSrc.slice(start, end).copyTo(dTarget)
+    }
   }
 }
 
@@ -128,7 +151,8 @@ class Executor(val handle: ExecutorHandle, val symbol: Symbol) {
 
   /**
    * Install callback.
-   * callback  Takes a string and an NDArrayHandle.
+   * TODO: make callback a java class to make it java-friendly
+   * @param callback Takes a string and an NDArrayHandle.
    */
   def setMonitorCallback(callback: (String, NDArrayHandle) => Unit): Unit = ???
 
