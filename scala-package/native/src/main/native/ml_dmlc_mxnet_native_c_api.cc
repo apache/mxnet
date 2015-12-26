@@ -428,10 +428,16 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDateIterCreateIter
     vals[i] = (char*)env->GetStringUTFChars(jval, 0);
   }
 
+//  printf("paramSize: %d\n", paramSize);
+//  for(int i=0; i<paramSize; i++) {
+//    printf("key: %s\t",keys[i]);
+//    printf("value: %s\n", vals[i]);
+//  }
+
   //create iter
   jlong creatorPtr = getLongField(env, creator);
   DataIterHandle out;
-  int ret = MXDataIterCreateIter((DataIterCreator)creator,
+  int ret = MXDataIterCreateIter((DataIterCreator)creatorPtr,
                                   (mx_uint) paramSize,
                                   (const char**) keys,
                                   (const char**) vals,
@@ -517,7 +523,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterGetLabel
   env->SetLongField(ndArrayHandle, refLongFid, (jlong)out);
   return ret;
 }
-
+l
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterGetData
   (JNIEnv *env, jobject obj, jobject handle, jobject ndArrayHandle) {
   jlong handlePtr = getLongField(env, handle);
@@ -535,7 +541,18 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterGetIndex
   uint64_t* coutIndex;
   uint64_t coutSize;
   int ret = MXDataIterGetIndex((DataIterHandle)handlePtr, &coutIndex, &coutSize);
-  //to do
+  //set field
+  setLongField(env, outSize, (long)coutSize);
+  // scala.collection.mutable.ListBuffer append method
+  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+  jmethodID listAppend = env->GetMethodID(listClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+
+  printf("outSize: %ld\n", coutSize);
+  for(int i=0; i<coutSize; i++) {
+    printf("%ld\t", coutIndex[i]);
+    env->CallObjectMethod(outIndex, listAppend, (jlong)coutIndex[i]);
+  }
   return ret;
 }
 
