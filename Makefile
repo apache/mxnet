@@ -54,11 +54,6 @@ else
 	CFLAGS+= -DMXNET_USE_OPENCV=0
 endif
 
-ifeq ($(USE_NCCL), 1)
-	CFLAGS += -DMXNET_USE_NCCL=1
-	LDFLAGS += -lnccl
-endif
-
 ifeq ($(USE_OPENMP), 1)
 	CFLAGS += -fopenmp
 endif

@@ -11,11 +11,6 @@
 #if MXNET_USE_DIST_KVSTORE
 #include "./kvstore_dist.h"
 #endif  // MXNET_USE_DIST_KVSTORE
-#if MXNET_USE_CUDA
-#if MXNET_USE_NCCL
-#include "./kvstore_nccl.h"
-#endif  // MXNET_USE_NCCL
-#endif  // MXNET_USE_CUDA
 
 namespace mxnet {
 
@@ -30,11 +25,7 @@ KVStore* KVStore::Create(const char *type_name) {
   } else if (tname == "device" ||
              tname == "local_allreduce_device") {
     tname = "local_allreduce_device";
-#if MXNET_USE_CUDA && MXNET_USE_NCCL
-    kv = new kvstore::KVStoreNCCL();
-#else
     kv = new kvstore::KVStoreDevice();
-#endif  // MXNET_USE_CUDA && MXNET_USE_NCCL
   } else if (tname == "dist_async" ||
              tname == "dist_sync" ||
              tname == "dist") {

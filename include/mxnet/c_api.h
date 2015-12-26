@@ -889,23 +889,6 @@ MXNET_DLL int MXKVStorePull(KVStoreHandle handle,
                             const int* keys,
                             NDArrayHandle* vals,
                             int priority);
-
-/*!
- * \brief push and then pull
- * \param handle handle to the kvstore
- * \param num the number of key-value pairs
- * \param keys the list of keys
- * \param push_vals the list of values for pushing
- * \param pull_vals the list of values for pulling
- * \param priority the priority of the action
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXKVStorePushPull(KVStoreHandle handle,
-                                 mx_uint num,
-                                 const int* keys,
-                                 NDArrayHandle* push_vals,
-                                 NDArrayHandle* pull_vals,
-                                 int priority);
 /*!
  * \brief user-defined updater for the kvstore
  * It's this updater's responsibility to delete \a recv and \a local

@@ -124,27 +124,6 @@ class KVStore {
                     const std::vector<NDArray*>& values,
                     int priority = 0) = 0;
 
-
-  /*!
-   * \brief perform push and then pull
-   *
-   * PushPull is equal to call Push and then Pull. Howerver the former could be
-   * more efficient than the latter.
-   * \param keys the list of keys
-
-   * \param push_values the list of values for pushing
-   * \param pull_values the list of buffers for the pulled data, they should be
-   * preallocated. pull_values could be identical to push_values
-   * \param priority Priority of the action.
-   */
-  virtual void PushPull(const std::vector<int>& keys,
-                        const std::vector<NDArray>& push_values,
-                        const std::vector<NDArray*>& pull_values,
-                        int priority = 0) {
-    Push(keys, push_values, priority);
-    Pull(keys, pull_values, priority);
-  }
-
   /**
    * \brief the prototype of user-defined updater
    */
