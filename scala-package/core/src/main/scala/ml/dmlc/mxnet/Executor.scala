@@ -10,6 +10,46 @@ object Executor {
     require(names.toSet.size == names.length, "Duplicate names detected")
     (names zip ndarrays).toMap
   }
+
+  /**
+   * Get input slice from the input shape.
+    Parameters
+    ----------
+   * batch_size : int
+   *     The number of samples in a mini-batch.
+   * work_load_list : list of float or int, optional
+   *     The list of work load for different devices,
+   *     in the same order as ctx
+   * Returns
+   * -------
+   * slices : list of slice
+   *     The split slices to get a specific slice.
+   * Raises
+   * ------
+   * ValueError
+   *     If there are two many splits such that some slice can be empty.
+   */
+  private def splitInputSlice[@specialized(Int, Float, Double) V]
+                              (batchSize: Int, workLoadList: Array[V])
+                              (implicit num: Numeric[V]): Array[(Int, Int)] = {
+    val totalWorkLoad = workLoadList.sum.asInstanceOf[Float]
+    val batchNumList = workLoadList.map(workLoad =>
+      math.round(workLoad.asInstanceOf[Float] * batchSize / totalWorkLoad))
+    val batchNumSum = batchNumList.sum
+    if (batchNumSum < batchSize) {
+      batchNumList(batchNumList.length-1) += batchSize - batchNumSum
+    }
+
+    val slices = ArrayBuffer.empty[(Int, Int)]
+    var end = 0
+    batchNumList.foreach(batchNum => {
+      val begin = math.min(end, batchSize)
+      end = math.min(begin + batchNum, batchSize)
+      require(begin < end, "Too many slices such that some splits are empty")
+      slices.append((begin, end))
+    })
+    slices.toArray
+  }
 }
 
 /**

@@ -396,7 +396,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorOutputs
 
   // Base.ExecutorHandle.constructor
   jclass ndArrayClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
-  jmethodID ndArrayConstructor = env->GetMethodID(fhClass,"<init>","(J)V");
+  jmethodID ndArrayConstructor = env->GetMethodID(ndArrayClass,"<init>","(J)V");
 
   // fill java outputs
   jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
@@ -428,7 +428,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBackward
   jlong *gradArr = env->GetLongArrayElements(grads, NULL);
   int ret = MXExecutorBackward((ExecutorHandle)executorPtr,
                                (mx_uint)gradsSize,
-                               (NDArrayHandle *)gradArr)
+                               (NDArrayHandle *)gradArr);
   env->ReleaseLongArrayElements(grads, gradArr, 0);
   return ret;
 }
