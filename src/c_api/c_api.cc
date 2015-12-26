@@ -991,6 +991,26 @@ int MXKVStorePull(KVStoreHandle handle,
   API_END();
 }
 
+int MXKVStorePushPull(KVStoreHandle handle,
+                      mx_uint num,
+                      const int* keys,
+                      NDArrayHandle* push_vals,
+                      NDArrayHandle* pull_vals,
+                      int priority) {
+  API_BEGIN();
+  std::vector<int> v_keys(num);
+  std::vector<NDArray> v_push_vals(num);
+  std::vector<NDArray*> v_pull_vals(num);
+  for (mx_uint i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+    v_push_vals[i] = *static_cast<NDArray*>(push_vals[i]);
+    v_pull_vals[i] = static_cast<NDArray*>(pull_vals[i]);
+  }
+  static_cast<KVStore*>(handle)->PushPull(
+      v_keys, v_push_vals, v_pull_vals, priority);
+  API_END();
+}
+
 int MXKVStoreSetUpdater(KVStoreHandle handle,
                         MXKVStoreUpdater updater,
                         void* updater_handle) {

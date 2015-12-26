@@ -104,9 +104,10 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
             continue
         if kvstore:
             # push gradient, priority is negative index
-            kvstore.push(index, grad_list, priority=-index)
+            # kvstore.push(index, grad_list, priority=-index)
             # pull back the sum gradients, to the same locations.
-            kvstore.pull(index, grad_list, priority=-index)
+            # kvstore.pull(index, grad_list, priority=-index)
+            kvstore.push_pull(index, grad_list, grad_list, priority=-index)
         for k, p in enumerate(zip(arg_list, grad_list)):
             # faked an index here, to make optimizer create diff
             # state for the same index but on diff devs, TODO(mli)

@@ -77,6 +77,10 @@ else
 USE_STATIC_MKL = NONE
 endif
 
+# whether use nvidia NCCL for GPU communication.
+# One need to install NCCL https://github.com/nvidia/nccl
+USE_NCCL = 0
+
 #----------------------------
 # distributed computing
 #----------------------------
