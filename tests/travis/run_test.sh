@@ -131,8 +131,14 @@ if [ ${TASK} == "scala_test" ]; then
         mvn integration-test -P osx-x86_64 --log-file scala_test_results.txt
     fi
     if [ ${TRAVIS_OS_NAME} == "linux" ]; then
+        # (Yizhi Liu) I'm not sure it is a proper solution,
+        # which is mentioned here:
+        # http://stackoverflow.com/questions/9558909/jni-symbol-lookup-error-in-shared-library-on-linux/13086028#13086028
+        # I really don't know why we have to export LD_PRELOAD
+        # to make libblas loaded in travis. It just works.
+        export LD_PRELOAD=/usr/lib/libblas/libblas.so
         # use g++-4.8 for linux
-        mvn clean package -P linux-x86_64 -D cxx=g++-4.8
+        mvn clean package -P linux-x86_64 -D cxx=g++-4.8 -D ldflags.blas=-lblas
         mvn integration-test -P linux-x86_64  --log-file scala_test_results.txt
     fi
 
@@ -141,5 +147,3 @@ if [ ${TASK} == "scala_test" ]; then
     
     exit 0
 fi
-
-
