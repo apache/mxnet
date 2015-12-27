@@ -10,6 +10,7 @@
  */
 #include <cctype>
 #include <cstring>
+#include <string>
 #include <vector>
 #include <iomanip>
 #include <sstream>
@@ -25,13 +26,15 @@ int main(int argc, char *argv[]) {
   if (argc < 4) {
     printf("Usage: <image.lst> <image_root_dir> <output.rec> [additional parameters in form key=value]\n"\
            "Possible additional parameters:\n"\
-           "\tcolor=USE_COLOR[default=1] Use color (1) or gray image (0)\n"\
+           "\tcolor=USE_COLOR[default=1] Force color (1), gray image (0) or keep source unchanged (-1).\n"\
            "\tresize=newsize resize the shorter edge of image to the newsize, original images will be packed by default\n"\
            "\tlabel_width=WIDTH[default=1] specify the label_width in the list, by default set to 1\n"\
            "\tnsplit=NSPLIT[default=1] used for part generation, logically split the image.list to NSPLIT parts by position\n"\
-           "\tpart=PART[default=0] used for part generation, pack the images from the specific part in image.list\n"
-           "\tcenter_crop=CENTER_CROP[default=0] specify whether to crop the center image to make it square.\n"
-           "\tquality=QUALITY[default=80] JPEG quality for encoding, 1-100.\n");
+           "\tpart=PART[default=0] used for part generation, pack the images from the specific part in image.list\n"\
+           "\tcenter_crop=CENTER_CROP[default=0] specify whether to crop the center image to make it square.\n"\
+           "\tquality=QUALITY[default=80] JPEG quality for encoding (1-100, default: 80) or PNG compression for encoding (1-9, default: 3).\n"\
+           "\tencoding=ENCODING[default='.jpg'] Encoding type. Can be '.jpg' or '.png'\n"\
+           "\tunchanged=UNCHANGED[default=0] Keep the original image encoding, size and color. If set to 1, it will ignore the others parameters.\n");
     return 0;
   }
   int label_width = 1;
@@ -41,6 +44,8 @@ int main(int argc, char *argv[]) {
   int center_crop = 0;
   int quality = 80;
   int color_mode = CV_LOAD_IMAGE_COLOR;
+  int unchanged=0;
+  std::string encoding(".jpg");
   for (int i = 4; i < argc; ++i) {
     char key[128], val[128];
     if (sscanf(argv[i], "%[^=]=%s", key, val) == 2) {
@@ -51,8 +56,18 @@ int main(int argc, char *argv[]) {
       if (!strcmp(key, "center_crop")) center_crop = atoi(val);
       if (!strcmp(key, "quality")) quality = atoi(val);
       if (!strcmp(key, "color")) color_mode = atoi(val);
+      if (!strcmp(key, "encoding")) encoding = std::string(val);
+      if (!strcmp(key, "unchanged")) unchanged = atoi(val);
     }
   }
+  // Check parameters ranges
+  if(color_mode != -1 && color_mode != 0 && color_mode != 1) {
+      LOG(FATAL) << "Color mode must be -1, 0 or 1.";
+  }
+  if(encoding != std::string(".jpg") && encoding != std::string(".png")) {
+      LOG(FATAL) << "Encoding mode must be .jpg or .png.";
+  }
+  
   if (new_size > 0) {
     LOG(INFO) << "New Image Size: Short Edge " << new_size;
   } else {
@@ -63,6 +78,14 @@ int main(int argc, char *argv[]) {
   }
   if (color_mode == 0) {
     LOG(INFO) << "Use gray images";
+  }
+  if (color_mode == -1) {
+    LOG(INFO) << "Keep original color mode";
+  } 
+  LOG(INFO) << "Encoding is " << encoding;
+
+  if(encoding == std::string(".png") and quality > 9) {
+      quality = 3;
   }
   
   using namespace dmlc;
@@ -81,15 +104,22 @@ int main(int argc, char *argv[]) {
   }
   LOG(INFO) << "Write to output: " << os.str();
   dmlc::Stream *fo = dmlc::Stream::Create(os.str().c_str(), "w");
-  LOG(INFO) << "Output: " << argv[3];
+  LOG(INFO) << "Output: " << os.str();
   dmlc::RecordIOWriter writer(fo);
   std::string fname, path, blob;
   std::vector<unsigned char> decode_buf;
   std::vector<unsigned char> encode_buf;
   std::vector<int> encode_params;
-  encode_params.push_back(CV_IMWRITE_JPEG_QUALITY);
-  encode_params.push_back(quality);
-  LOG(INFO) << "JPEG encoding quality: " << quality;
+  if(encoding == std::string(".png")) {
+      encode_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+      encode_params.push_back(quality);
+      LOG(INFO) << "PNG encoding compression: " << quality;
+  }
+  else {
+      encode_params.push_back(CV_IMWRITE_JPEG_QUALITY);
+      encode_params.push_back(quality);
+      LOG(INFO) << "JPEG encoding quality: " << quality;
+  }
   dmlc::InputSplit::Blob line;
 
   while (flist->NextRecord(&line)) {
@@ -124,33 +154,37 @@ int main(int argc, char *argv[]) {
       if (nread != kBufferSize) break;
     }
     delete fi;
-    if (new_size > 0) {
+    
+    if(unchanged != 1) {
       cv::Mat img = cv::imdecode(decode_buf, color_mode);
       CHECK(img.data != NULL) << "OpenCV decode fail:" << path;
-      if (center_crop) {
+      cv::Mat res = img;
+      if (new_size > 0) {
+        if (center_crop) {
+          if (img.rows > img.cols) {
+            int margin = (img.rows - img.cols)/2;
+            img = img(cv::Range(margin, margin+img.cols), cv::Range(0, img.cols));
+          } else {
+            int margin = (img.cols - img.rows)/2;
+            img = img(cv::Range(0, img.rows), cv::Range(margin, margin + img.rows));
+          }
+        }
         if (img.rows > img.cols) {
-          int margin = (img.rows - img.cols)/2;
-          img = img(cv::Range(margin, margin+img.cols), cv::Range(0, img.cols));
+          cv::resize(img, res, cv::Size(new_size, img.rows * new_size / img.cols),
+                     0, 0, CV_INTER_LINEAR);
         } else {
-          int margin = (img.cols - img.rows)/2;
-          img = img(cv::Range(0, img.rows), cv::Range(margin, margin + img.rows));
+          cv::resize(img, res, cv::Size(new_size * img.cols / img.rows, new_size),
+                     0, 0, CV_INTER_LINEAR);
         }
       }
-      cv::Mat res;
-      if (img.rows > img.cols) {
-        cv::resize(img, res, cv::Size(new_size, img.rows * new_size / img.cols),
-                0, 0, CV_INTER_LINEAR);
-      } else {
-        cv::resize(img, res, cv::Size(new_size * img.cols / img.rows, new_size),
-                0, 0, CV_INTER_LINEAR);
-      }
       encode_buf.clear();
-      CHECK(cv::imencode(".jpg", res, encode_buf, encode_params));
+      CHECK(cv::imencode(encoding, res, encode_buf, encode_params));
       size_t bsize = blob.size();
       blob.resize(bsize + encode_buf.size());
       memcpy(BeginPtr(blob) + bsize,
              BeginPtr(encode_buf), encode_buf.size());
-    } else {
+    }
+    else {
       size_t bsize = blob.size();
       blob.resize(bsize + decode_buf.size());
       memcpy(BeginPtr(blob) + bsize,

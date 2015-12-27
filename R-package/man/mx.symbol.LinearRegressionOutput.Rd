@@ -13,6 +13,9 @@ Input data to function.}
 \item{label}{Symbol
 Input label to function.}
 
+\item{grad.scale}{float, optional, default=1
+Scale the gradient by a float factor}
+
 \item{name}{string, optional
 Name of the resulting symbol.}
 }

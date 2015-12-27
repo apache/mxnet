@@ -183,7 +183,8 @@ class StaticGraph {
    * \return a post DFS visit order of nodes that can reach heads.
    */
   std::vector<uint32_t> PostDFSOrder(const std::vector<uint32_t>& head_nodes,
-                                     const std::unordered_set<uint32_t>& banned = {}) const;
+                                     const std::unordered_set<uint32_t>& banned
+                                     = std::unordered_set<uint32_t>()) const;
   /*!
    * \brief infer the node shapes in the computation graph.
    *

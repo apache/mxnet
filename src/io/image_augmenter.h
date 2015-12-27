@@ -132,7 +132,9 @@ class ImageAugmenter {
 
     // normal augmentation by affine transformation.
     if (param_.max_rotate_angle > 0 || param_.max_shear_ratio > 0.0f
-        || param_.rotate > 0 || rotate_list_.size() > 0) {
+        || param_.rotate > 0 || rotate_list_.size() > 0 || param_.max_random_scale != 1.0
+        || param_.min_random_scale != 1.0 || param_.max_aspect_ratio != 0.0f
+        || param_.max_img_size != 1e10f || param_.min_img_size != 0.0f) {
       std::uniform_real_distribution<float> rand_uniform(0, 1);
       // shear
       float s = rand_uniform(*prnd) * param_.max_shear_ratio * 2 - param_.max_shear_ratio;

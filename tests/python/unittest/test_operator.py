@@ -621,6 +621,29 @@ def test_nearest_upsampling():
                     shapes = [(1,3,base*root_scale*scale**(num_shape-1-i),base*root_scale*scale**(num_shape-1-i)) for i in range(num_shape)]
                     check_nearest_upsampling_with_shape(shapes, scale, root_scale)
 
+def test_batchnorm_training():
+    for shape in [(2, 3), (2, 3, 2, 2)]:
+        data_tmp = np.random.normal(size=shape)
+        s = shape[1],
+        gamma = np.ones(s)
+        beta = np.ones(s)
+        gamma[1] = 3
+        beta[0] = 3
+
+        rolling_mean = np.random.uniform(size=s)
+        rolling_std = np.random.uniform(size=s)
+
+        data = mx.symbol.Variable('data')
+        test = mx.symbol.BatchNorm(data, fix_gamma=False)
+
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-3, check_eps=5e-2)
+
+        # Gamma needs to be fixed at one when fix_gamma is true,
+        gamma = np.ones(s)
+
+        test = mx.symbol.BatchNorm(data, fix_gamma=True)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-3, check_eps=5e-2)
+
 if __name__ == '__main__':
     test_nearest_upsampling()
     test_binary_op_duplicate_input()
@@ -641,5 +664,6 @@ if __name__ == '__main__':
     test_abs()
     test_round_ceil_floor()
     test_deconvolution()
+    test_batchnorm_training()
     #check_softmax_with_shape((3,4), mx.cpu())
     #check_multi_softmax_with_shape((3,4,5), mx.cpu())
