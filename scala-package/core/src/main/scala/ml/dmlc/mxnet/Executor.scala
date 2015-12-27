@@ -154,7 +154,7 @@ class Executor(val handle: ExecutorHandle, val symbol: Symbol) {
    * TODO: make callback a java class to make it java-friendly
    * @param callback Takes a string and an NDArrayHandle.
    */
-  def setMonitorCallback(callback: (String, NDArrayHandle) => Unit): Unit = ???
+  def setMonitorCallback(callback: MXMonitorCallback): Unit = ???
 
   /**
    * Get dictionary representation of argument arrrays.

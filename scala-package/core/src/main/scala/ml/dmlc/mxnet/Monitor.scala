@@ -28,11 +28,13 @@ class Monitor(protected val interval: Int, protected var statFunc: (NDArray) => 
   private var step: Int = 0
   private var exes =  new mutable.Queue[Executor]
 
-  protected def statHelper(name: String, arr: NDArrayHandle): Unit = {
-    if (activated) {
-      // TODO: more details here
-      val array = new NDArray(arr, writable=false)
-      queue ++= List((step, name, statFunc(array)))
+  val statHelper: MXMonitorCallback = new MXMonitorCallback {
+    override def invoke(name: String, arr: NDArrayHandle): Unit = {
+      if (activated) {
+        // TODO: more details here
+        val array = new NDArray(arr, writable=false)
+        queue ++= List((step, name, statFunc(array)))
+      }
     }
   }
 
@@ -113,4 +115,8 @@ class Monitor(protected val interval: Int, protected var statFunc: (NDArray) => 
     }
   }
 
+}
+
+trait MXMonitorCallback {
+  def invoke(name: String, arr: NDArrayHandle): Unit
 }
