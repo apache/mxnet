@@ -16,7 +16,7 @@ NULL
 #'
 #' @export
 mx.symbol.Group <- function(...) {
-  mx.varg.symbo.internal.Group(list(...))
+  mx.varg.symbol.internal.Group(list(...))
 }
 
 #' Save an mx.symbol object
@@ -105,14 +105,25 @@ init.symbol.methods <- function() {
   setMethod("+", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
     mx.varg.symbol.internal.Plus(list(e1, e2))
   })
+  setMethod("+", signature(e1 = "Rcpp_MXSymbol", e2 = "numeric"), function(e1, e2) {
+    mx.varg.symbol.internal.PlusScalar(list(e1, scalar = e2))
+  })
   setMethod("-", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
     mx.varg.symbol.internal.Minus(list(e1, e2))
+  })
+  setMethod("-", signature(e1 = "Rcpp_MXSymbol", e2 = "numeric"), function(e1, e2) {
+    mx.varg.symbol.internal.MinusScalar(list(e1, scalar = e2))
   })
   setMethod("*", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
     mx.varg.symbol.internal.Mul(list(e1, e2))
   })
+  setMethod("*", signature(e1 = "Rcpp_MXSymbol", e2 = "numeric"), function(e1, e2) {
+    mx.varg.symbol.internal.MulScalar(list(e1, scalar = e2))
+  })
   setMethod("/", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
     mx.varg.symbol.internal.Div(list(e1, e2))
   })
-
+  setMethod("/", signature(e1 = "Rcpp_MXSymbol", e2 = "numeric"), function(e1, e2) {
+    mx.varg.symbol.internal.DivScalar(list(e1, scalar = e2))
+  })
 }

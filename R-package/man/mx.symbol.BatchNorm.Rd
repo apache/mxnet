@@ -10,11 +10,14 @@ mx.symbol.BatchNorm(...)
 \item{data}{Symbol
 Input data to batch normalization}
 
-\item{eps}{float, optional, default=1e-10
+\item{eps}{float, optional, default=0.001
 Epsilon to prevent div 0}
 
-\item{momentum}{float, optional, default=0.1
+\item{momentum}{float, optional, default=0.9
 Momentum for moving average}
+
+\item{fix.gamma}{boolean, optional, default=True
+Fix gamma while training}
 
 \item{name}{string, optional
 Name of the resulting symbol.}
