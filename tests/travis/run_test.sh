@@ -139,7 +139,7 @@ if [ ${TASK} == "scala_test" ]; then
         export LD_PRELOAD=/usr/lib/libblas/libblas.so
         # use g++-4.8 for linux
         mvn clean package -P linux-x86_64 -D cxx=g++-4.8 -D ldflags.blas=-lblas
-        mvn integration-test -P linux-x86_64  --log-file scala_test_results.txt
+        mvn integration-test -P linux-x86_64 -D cxx=g++-4.8 -D ldflags.blas=-lblas --log-file scala_test_results.txt
     fi
 
     chmod +x ../tests/travis/error_detector.sh
