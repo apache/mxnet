@@ -25,7 +25,7 @@ object IO {
     checkCall(_LIB.mxDataIterGetIterInfo(handle, name, desc, argNames, argTypes, argDescs))
     val paramStr = Base.ctypes2docstring(argNames, argTypes, argDescs)
     val docStr = s"${name.value}\n${desc.value}\n\n$paramStr\n"
-//    logger.debug(docStr)
+    logger.debug(docStr)
     return (name.value, creator(handle))
   }
 
@@ -37,14 +37,18 @@ object IO {
     checkCall(_LIB.mxDateIterCreateIter(handle, keys, vals, out))
     return new MXDataIter(out)
   }
-
-  def _init_data(data: List[NDArray], allowEmpty: Boolean,
-                 defaultName: String): List[Tuple2[]] = {
-
-  }
 }
 
-abstract class DataIter (val batchSize: Int = 0) {
+//class for batch of data
+class DataBatch(val data: NDArray,
+                val label: NDArray,
+                val index: List[Long],
+                val pad: Int)
+
+/**
+  *DataIter object in mxnet.
+  */
+abstract class DataIter {
   /**
     * reset the iterator
     */
@@ -79,6 +83,14 @@ abstract class DataIter (val batchSize: Int = 0) {
     * @return
     */
   def getIndex(): List[Long]
+
+  /**
+    * return next batch of data
+    * @return
+    */
+  def next(): DataBatch = {
+      return new DataBatch(getData(), getLabel(), getIndex(), getPad())
+  }
 }
 
 /**

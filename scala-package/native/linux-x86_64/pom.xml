@@ -67,6 +67,12 @@
                     <property name="cxx" value="g++" />
                   </then>
                 </if>
+                <!-- echo opencv libs to a temp file and then load it into a property -->
+                <exec executable="pkg-config" output="${opencv.pkg.tmpfile}" failonerror="true">
+                  <arg line="--libs opencv" />
+                </exec>
+                <loadfile srcfile="${opencv.pkg.tmpfile}" property="ldflags.opencv" />
+                <delete file="${opencv.pkg.tmpfile}" />
               </tasks>
             </configuration>
           </execution>
@@ -112,11 +118,11 @@
             <linkerStartOption>-shared</linkerStartOption>
           </linkerStartOptions>
           <linkerMiddleOptions>
-            <linkerMiddleOption>
-              -fopenmp -lopencv_calib3d
-            </linkerMiddleOption>
+            <linkerMiddleOption>-fopenmp</linkerMiddleOption>
+            <linkerMiddleOption>${ldflags.opencv}</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
-            <linkerMiddleOption>../../../lib/libmxnet.a ../../../dmlc-core/libdmlc.a
+            <linkerMiddleOption>
+              ../../../lib/libmxnet.a ../../../dmlc-core/libdmlc.a
             </linkerMiddleOption>
             <linkerMiddleOption>-Wl,--no-whole-archive</linkerMiddleOption>
           </linkerMiddleOptions>
