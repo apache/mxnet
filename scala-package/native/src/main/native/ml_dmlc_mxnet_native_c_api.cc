@@ -3,6 +3,7 @@
 #include <functional>
 #include <mxnet/ndarray.h>
 #include <mxnet/kvstore.h>
+#include <mxnet/symbolic.h>
 #include <mxnet/c_api.h>
 
 #include "jni_helper_func.h"
@@ -440,6 +441,41 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorPrint
   int ret = MXExecutorPrint((ExecutorHandle)handle, &retDebugStr);
   setStringField(env, debugStr, retDebugStr);
   return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorSetMonitorCallback
+  (JNIEnv *env, jobject obj, jobject handle, jobject callbackFuncObj) {
+  jlong executorPtr = getLongField(env, handle);
+  jobject callbackFuncObjGlb = env->NewGlobalRef(callbackFuncObj);
+  std::function<void(const char *, NDArrayHandle)> callback
+  = [env, callbackFuncObjGlb](const char *name, NDArrayHandle array) {
+    // find java callback method
+    jclass callbackClass = env->GetObjectClass(callbackFuncObjGlb);
+    jmethodID invokeFunc = env->GetMethodID(callbackClass,
+      "invoke", "(Ljava/lang/String;Lml/dmlc/mxnet/Base$RefLong;)V");
+
+    jstring jname = env->NewStringUTF(name);
+    // ndArray handle
+    jclass ndHandleClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
+    jmethodID ndHandleCont = env->GetMethodID(ndHandleClass,"<init>","(J)V");
+    jobject jNDArrayHandle = env->NewObject(ndHandleClass, ndHandleCont, (long)array);
+
+    env->CallVoidMethod(callbackFuncObjGlb, invokeFunc, jname, jNDArrayHandle);
+    env->DeleteGlobalRef(callbackFuncObjGlb);
+  };
+  /* TODO: we need to modify Executor::SetMonitorCallback, make it take std::function as param
+  try {
+    mxnet::Executor *exec = static_cast<mxnet::Executor*>((ExecutorHandle)executorPtr);
+    exec->SetMonitorCallback(callback);
+  } catch(dmlc::Error &except) {
+    // It'll be too complicated to set & get mx error in jni code.
+    // thus simply return -1 to indicate a failure.
+    // Notice that we'll NOT be able to run MXGetLastError
+    // to get the error message after this function fails.
+    return -1;
+  }
+  */
+  return 0;
 }
 
 JNIEXPORT jstring JNICALL Java_ml_dmlc_mxnet_LibInfo_mxGetLastError(JNIEnv * env, jobject obj) {

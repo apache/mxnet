@@ -93,4 +93,5 @@ class LibInfo {
                                  // we pass ptr address directly for performance consideration
                                  grads: Array[CPtrAddress]): Int
   @native def mxExecutorPrint(handle: ExecutorHandle, debugStr: RefString): Int
+  @native def mxExecutorSetMonitorCallback(handle: ExecutorHandle, callback: MXMonitorCallback): Int
 }

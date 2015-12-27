@@ -86,15 +86,12 @@ object Executor {
  */
 class Executor(val handle: ExecutorHandle, val symbol: Symbol) {
   var argArrays: Array[NDArray] = null
-  var gradArrays: Array[NDArray] = null
-  var auxArrays: Array[NDArray] = null
-  var outputs: Array[NDArray] = getOutputs
-  var _argDict: Map[String, NDArray] = null
-  var _auxDict: Map[String, NDArray] = null
-  /*
-  self._grad_dict = None
-  self._monitor_callback = None
-  */
+  protected var gradArrays: Array[NDArray] = null
+  protected var auxArrays: Array[NDArray] = null
+  protected var outputs: Array[NDArray] = getOutputs
+  protected var _argDict: Map[String, NDArray] = null
+  protected var _auxDict: Map[String, NDArray] = null
+  protected var monitorCallback: MXMonitorCallback = null
 
   override def finalize(): Unit = {
     checkCall(_LIB.mxExecutorFree(handle))
@@ -151,10 +148,12 @@ class Executor(val handle: ExecutorHandle, val symbol: Symbol) {
 
   /**
    * Install callback.
-   * TODO: make callback a java class to make it java-friendly
    * @param callback Takes a string and an NDArrayHandle.
    */
-  def setMonitorCallback(callback: MXMonitorCallback): Unit = ???
+  def setMonitorCallback(callback: MXMonitorCallback): Unit = {
+    monitorCallback = callback
+    checkCall(_LIB.mxExecutorSetMonitorCallback(handle, monitorCallback))
+  }
 
   /**
    * Get dictionary representation of argument arrrays.
