@@ -26,7 +26,7 @@ class Monitor(protected val interval: Int, protected var statFunc: (NDArray) => 
   }
 
   private var activated: Boolean = false
-  private var queue =  new mutable.Queue[(Int, String, NDArray)]
+  private var queue = new mutable.Queue[(Int, String, NDArray)]
   private var step: Int = 0
   private var exes =  new mutable.Queue[Executor]
 
