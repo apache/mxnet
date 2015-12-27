@@ -151,7 +151,6 @@ DataIterCreateFunction::DataIterCreateFunction
   const char **arg_names;
   const char **arg_type_infos;
   const char **arg_descriptions;
-  const char *key_var_num_args;
 
   MX_CALL(MXDataIterGetIterInfo(
       handle_, &name, &description, &num_args,

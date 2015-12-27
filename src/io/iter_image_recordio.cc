@@ -247,30 +247,31 @@ ParseNext(std::vector<InstVector> *out_vec) {
       cv::Mat buf(1, rec.content_size, CV_8U, rec.content);
       // -1 to keep the number of channel of the encoded image, and not force gray or color.
       res = cv::imdecode(buf, -1);
-      int n_channels = res.channels();
+      const int n_channels = res.channels();
       res = augmenters_[tid]->Process(res, prnds_[tid]);
       out.Push(static_cast<unsigned>(rec.image_index()),
                mshadow::Shape3(n_channels, res.rows, res.cols),
                mshadow::Shape1(param_.label_width));
 
       mshadow::Tensor<cpu, 3> data = out.data().Back();
-      // Substract mean value on each channel.
-      if (n_channels == 3) {
-        for (int i = 0; i < res.rows; ++i) {
-          for (int j = 0; j < res.cols; ++j) {
-            cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
-            data[0][i][j] = bgr[2];
-            data[1][i][j] = bgr[1];
-            data[2][i][j] = bgr[0];
+
+      // For RGB or RGBA data, swap the B and R channel:
+      // OpenCV store as BGR (or BGRA) and we want RGB (or RGBA)
+      std::vector<int> swap_indices;
+      if (n_channels == 1) swap_indices = {0};
+      if (n_channels == 3) swap_indices = {2, 1, 0};
+      if (n_channels == 4) swap_indices = {2, 1, 0, 3};
+
+      for (int i = 0; i < res.rows; ++i) {
+        uchar* im_data = res.ptr<uchar>(i);
+        for (int j = 0; j < res.cols; ++j) {
+          for (int k = 0; k < n_channels; ++k) {
+              data[k][i][j] = im_data[swap_indices[k]];
           }
-        }
-      } else {
-        for (int i = 0; i < res.rows; ++i) {
-          for (int j = 0; j < res.cols; ++j) {
-            data[0][i][j] = res.at<uint8_t>(i, j);
-          }
+          im_data += n_channels;
         }
       }
+
       mshadow::Tensor<cpu, 1> label = out.label().Back();
       if (label_map_ != nullptr) {
         mshadow::Copy(label, label_map_->Find(rec.image_index()));

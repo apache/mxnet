@@ -180,8 +180,9 @@ recommend to use CUDNN.
 
   | name | hardware | software |
   | --- | --- | --- |
-  | GTX980 | dual Xeon E5-2680 v2, dual GTX 980, 1G Ethernet | GCC 4.8, CUDA 7.5, CUDNN v3 |
-  | EC2-g2.8x | Xeon E5-2670, dual GRID K520, 10G Ethernet | GCC 4.8, CUDA 7.5, CUDNN v3 |
+  | GTX980 | Xeon E5-1650 v3, 4 x GTX 980 | GCC 4.8, CUDA 7.5, CUDNN 3 |
+  | TitanX | dual Xeon E5-2630 v3, 4 x GTX Titan X | GCC 4.8, CUDA 7.5, CUDNN 3 |
+  | EC2-g2.8x | Xeon E5-2670, 2 x GRID K520, 10G Ethernet | GCC 4.8, CUDA 7.5, CUDNN 3 |
 
 - Datasets
 
@@ -210,24 +211,48 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
 
 ### ILSVRC 12
 
-#### `train_imagenet.py` with `--network alexnet`
+<!-- #### Alexnet -->
 
-- time for one epoch:
+<!-- `train_imagenet.py` with `--network alexnet` -->
 
-  | 1 x GTX 980 | 2 x GTX 980  | 4 x GTX 980  |
-  | ----------- | ------------ | ------------ |
-  | 2,413 sec | 1,244 sec | 906 sec |
+<!-- - time for one epoch: -->
 
-#### `train_imagenet.py` with `--network inception-bn`
+<!--   | 1 x GTX 980 | 2 x GTX 980  | 4 x GTX 980  | -->
+<!--   | ----------- | ------------ | ------------ | -->
+<!--   | 2,413 sec | 1,244 sec | 906 sec | -->
+
+#### VGG
+
+`train_imagenet.py` with `--network vgg`
+
+- Performance
+
+  | Cluster | # machines | # GPUs | batch size | kvstore | epoch time |
+  | --- | --- | --- | --- | --- | ---: |
+  | TitanX | 1 | 1 | 96 | `none` | 14,545 |
+  | - | - | 2 | - | `local` | 19,692 |
+  | - | - | 4 | - | - | 20,014 |
+  | - | - | 2 | - | `local_allreduce_device` | 9,142 |
+  | - | - | 4 | - | - | 8,533 |
+  | - | - | - | 384 | - | 5,161 |
+
+#### Inception with Batch Normalization
+
+`train_imagenet.py` with `--network inception-bn`
 
 - Performance
 
   | Cluster | # machines | # GPUs | batch size | kvstore | epoch time |
   | --- | --- | --- | --- | --- | ---: |
   | GTX980 | 1 | 1 |  32 | `local` | 13,210 |
-  | - | 1 | 2 |  64 | `local` | 7,198 |
-  | - | 1 | 3 |  128 | `local` | 4,952 |
-  | - | 1 | 4 |  128 | `local` | 3,589 |
+  | - | - | 2 |  64 | - | 7,198 |
+  | - | - | 3 |  128 | - | 4,952 |
+  | - | - | 4 |  - | - | 3,589 |
+  | TitanX | 1 | 1 | 128 | `none` | 10,666 |
+  | - | - | 2 | - | `local` | 5,161 |
+  | - | - | 3 | - | - | 3,460 |
+  | - | - | 4 | - | - | 2,844 |
+  | - | - | - | 512 | - | 2,495 |
   | EC2-g2.8x | 1 | 4 | 144 |  `local` | 14,203 |
   | - | 10 | 40 | 144 |  `dist_sync` | 1,422 |
 
@@ -236,8 +261,8 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
   - `single machine` :
 
   ```bash
-  python train_imagenet.py --network inception-bn \
-      --batch-size 128 --lr 0.05 --num-epoch 60 --lr-factor .94 \
+  python train_imagenet.py --batch-size 144 --lr 0.05 --lr-factor .94 \
+      --gpus 0,1,2,3 --num-epoch 60 --network inception-bn \
       --data-dir ilsvrc12/ --model-prefix model/ilsvrc12
   ```
 
@@ -251,7 +276,8 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
         --data-dir s3://dmlc/ilsvrc12/  --model-prefix s3://dmlc/model/ilsvrc12
   ```
 
-  *Note: S3 is unstable sometimes, before fixing this problem, we recommend to download data to `/mnt` first*
+  *Note: S3 is unstable sometimes, if your training hangs or getting error
+   freqently, you cant download data to `/mnt` first*
 
   Accuracy vs epoch ([the interactive figure](https://docs.google.com/spreadsheets/d/1AEesHjWUZOzCN0Gp_PYI1Cw4U1kZMKot360p9Fowmjw/pubchart?oid=1740787404&format=interactive)):
 

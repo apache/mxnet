@@ -53,6 +53,14 @@ class EmbeddingOp : public Operator {
     CHECK_EQ(req[embedding::kOut], kWriteTo);
     CHECK_EQ(in_data.size(), 2);
     CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(in_data[embedding::kData].ndim(), 1)
+        << "Embedding layer expects its input to be one-dimensional. "
+        << in_data[embedding::kData].ndim()
+        << " dimensional input is given instead";
+    CHECK_EQ(in_data[embedding::kWeight].ndim(), 2)
+        << "Embedding layer expects its weight to be two-dimensional. "
+        << in_data[embedding::kWeight].ndim()
+        << " dimensional input is given instead";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 1> data = in_data[embedding::kData].get<xpu, 1, real_t>(s);
     Tensor<xpu, 2> wmat = in_data[embedding::kWeight].get<xpu, 2, real_t>(s);

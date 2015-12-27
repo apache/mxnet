@@ -9,7 +9,8 @@
 #include <mxnet/symbolic.h>
 #include <mxnet/ndarray.h>
 #include <memory>
-
+#include <unordered_set>
+#include <unordered_map>
 #include "./c_api_error.h"
 
 using namespace mxnet;
@@ -36,14 +37,40 @@ struct MXAPINDList {
 };
 
 int MXPredCreate(const char* symbol_json_str,
-                 const char* param_bytes,
-                 size_t param_size,
+                 const void* param_bytes,
+                 int param_size,
                  int dev_type, int dev_id,
                  mx_uint num_input_nodes,
                  const char** input_keys,
                  const mx_uint* input_shape_indptr,
                  const mx_uint* input_shape_data,
-                 PredictorHandle* out) {
+                PredictorHandle* out) {
+  return MXPredCreatePartialOut(
+      symbol_json_str,
+      param_bytes,
+      param_size,
+      dev_type,
+      dev_id,
+      num_input_nodes,
+      input_keys,
+      input_shape_indptr,
+      input_shape_data,
+      0,
+      NULL,
+      out);
+}
+
+int MXPredCreatePartialOut(const char* symbol_json_str,
+                           const void* param_bytes,
+                           int param_size,
+                           int dev_type, int dev_id,
+                           mx_uint num_input_nodes,
+                           const char** input_keys,
+                           const mx_uint* input_shape_indptr,
+                           const mx_uint* input_shape_data,
+                           mx_uint num_output_nodes,
+                           const char** output_keys,
+                           PredictorHandle* out) {
   MXAPIPredictor* ret = new MXAPIPredictor();
   API_BEGIN();
   Symbol sym;
@@ -54,9 +81,37 @@ int MXPredCreate(const char* symbol_json_str,
     dmlc::JSONReader reader(&is);
     sym.Load(&reader);
   }
+  // looks likely to output the internal results
+  if (num_output_nodes != 0) {
+    Symbol internal = sym.GetInternals();
+    std::vector<std::string> all_out = internal.ListOutputs();
+    std::vector<Symbol> out_syms(num_output_nodes);
+    for (mx_uint i = 0; i < num_output_nodes; ++i) {
+      std::string out_key(output_keys[i]);
+      out_key += "_output";
+      for (size_t j = 0; j < all_out.size(); ++j) {
+        if (all_out[j] == out_key) {
+          out_syms[i] = internal[j];
+          break;
+        }
+        CHECK_NE(j, all_out.size() - 1) << "didn't find node name: " << out_key;
+      }
+    }
+    sym = Symbol::CreateGroup(out_syms);
+  }
+
   // load the parameters
   std::unordered_map<std::string, NDArray> arg_params, aux_params;
   {
+    std::unordered_set<std::string> arg_names, aux_names;
+    std::vector<std::string> arg_names_vec = sym.ListArguments();
+    std::vector<std::string> aux_names_vec = sym.ListAuxiliaryStates();
+    for (size_t i = 0; i < arg_names_vec.size(); ++i) {
+      arg_names.insert(arg_names_vec[i]);
+    }
+    for (size_t i = 0; i < aux_names_vec.size(); ++i) {
+      aux_names.insert(aux_names_vec[i]);
+    }
     std::vector<NDArray> data;
     std::vector<std::string> names;
     dmlc::MemoryFixedSizeStream fi((void*)param_bytes, param_size);  // NOLINT(*)
@@ -65,10 +120,16 @@ int MXPredCreate(const char* symbol_json_str,
         << "Invalid param file format";
     for (size_t i = 0; i < names.size(); ++i) {
       if (!strncmp(names[i].c_str(), "aux:", 4)) {
-        aux_params[std::string(names[i].c_str() + 4)]  = data[i];
+        std::string name(names[i].c_str() + 4);
+        if (aux_names.count(name) != 0) {
+          aux_params[name] = data[i];
+        }
       }
       if (!strncmp(names[i].c_str(), "arg:", 4)) {
-        arg_params[std::string(names[i].c_str() + 4)]  = data[i];
+        std::string name(names[i].c_str() + 4);
+        if (arg_names.count(name) != 0) {
+          arg_params[name] = data[i];
+        }
       }
     }
   }
@@ -192,7 +253,7 @@ int MXPredFree(PredictorHandle handle) {
 }
 
 int MXNDListCreate(const char* nd_file_bytes,
-                   size_t nd_file_size,
+                   int nd_file_size,
                    NDListHandle *out,
                    mx_uint* out_length) {
   MXAPINDList* ret = new MXAPINDList();
@@ -242,5 +303,3 @@ int MXNDListFree(NDListHandle handle) {
   delete static_cast<MXAPINDList*>(handle);
   API_END();
 }
-
-
