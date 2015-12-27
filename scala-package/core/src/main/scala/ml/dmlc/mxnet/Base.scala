@@ -16,6 +16,7 @@ object Base {
   type NDArrayHandle = RefLong
   type FunctionHandle = RefLong
   type KVStoreHandle = RefLong
+  type ExecutorHandle = RefLong
 
   System.loadLibrary("mxnet-scala")
   val _LIB = new LibInfo

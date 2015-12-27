@@ -56,7 +56,14 @@
                     <property name="use.cblas" value="1" />
                     <property name="use.mkl" value="0" />
                     <property name="cflags.blas" value="" />
-                    <property name="ldflags.blas" value="-lcblas" />
+                    <if>
+                      <not>
+                        <isset property="ldflags.blas" />
+                      </not>
+                      <then>
+                        <property name="ldflags.blas" value="-lcblas" />
+                      </then>
+                    </if>
                   </else>
                 </if>
                 <if>
@@ -112,9 +119,7 @@
             <linkerStartOption>-shared</linkerStartOption>
           </linkerStartOptions>
           <linkerMiddleOptions>
-            <linkerMiddleOption>
-              -fopenmp
-            </linkerMiddleOption>
+            <linkerMiddleOption>-fopenmp ${ldflags.blas}</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
             <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-no-whole-archive</linkerMiddleOption>
