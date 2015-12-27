@@ -7,7 +7,7 @@ import scala.collection.mutable.ListBuffer
 
 object IO {
   private val logger = LoggerFactory.getLogger(classOf[DataIter])
-  type IterCreateFunc = (Map[String, String])=>DataIter
+  type IterCreateFunc = (Map[String, String]) => DataIter
   val iterCreateFuncs: Map[String, IterCreateFunc] = _initIOModule()
 
   def _initIOModule(): Map[String, IterCreateFunc] = {
@@ -29,13 +29,18 @@ object IO {
     return (name.value, creator(handle))
   }
 
-  def creator(handle:DataIterCreator)(
+  def creator(handle: DataIterCreator)(
               params: Map[String, String]): DataIter = {
     val out = new DataIterHandle
     val keys = params.keys.toArray
     val vals = params.values.toArray
     checkCall(_LIB.mxDateIterCreateIter(handle, keys, vals, out))
     return new MXDataIter(out)
+  }
+
+  def _init_data(data: List[NDArray], allowEmpty: Boolean,
+                 defaultName: String): List[Tuple2[]] = {
+
   }
 }
 
@@ -76,6 +81,10 @@ abstract class DataIter (val batchSize: Int = 0) {
   def getIndex(): List[Long]
 }
 
+/**
+  * DataIter built in MXNet.
+  * @param handle the handle to the underlying C++ Data Iterator
+  */
 class MXDataIter(var handle: DataIterHandle) extends DataIter {
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
 
@@ -137,6 +146,54 @@ class MXDataIter(var handle: DataIterHandle) extends DataIter {
     checkCall(_LIB.mxDataIterGetPadNum(handle, out))
     return out.value
   }
+}
+
+/**
+  * NDArrayIter object in mxnet. Taking NDArray or numpy array to get dataiter.
+  * @param data a list of NDArray
+  * @param label a list of NDArray
+  * @param batch_size Batch Size
+  * @param shuffle Whether to shuffle the data
+  * @param last_batch_handle 'pad', 'discard' or 'roll_over',  How to handle the last batch
+  */
+class NDArrayIter(var data: List[NDArray], var label: List[NDArray],
+                  var batch_size: Int, var shuffle: Boolean,
+                  var last_batch_handle: String) extends DataIter {
+  /**
+    * reset the iterator
+    */
+  override def reset(): Unit = ???
+
+  /**
+    * get data of current batch
+    * @return the data of current batch
+    */
+  override def getData(): NDArray = ???
+
+  /**
+    * Get label of current batch
+    * @return the label of current batch
+    */
+  override def getLabel(): NDArray = ???
+
+  /**
+    * the index of current batch
+    * @return
+    */
+  override def getIndex(): List[Long] = ???
+
+  /**
+    * Iterate to next batch
+    * @return whether the move is successful
+    */
+  override def iterNext(): Boolean = ???
+
+  /**
+    * get the number of padding examples
+    * in current batch
+    * @return number of padding examples in current batch
+    */
+  override def getPad(): MXUint = ???
 }
 
 

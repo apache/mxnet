@@ -113,7 +113,7 @@
           </linkerStartOptions>
           <linkerMiddleOptions>
             <linkerMiddleOption>
-              -fopenmp
+              -fopenmp -lopencv_calib3d
             </linkerMiddleOption>
             <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
             <linkerMiddleOption>../../../lib/libmxnet.a ../../../dmlc-core/libdmlc.a

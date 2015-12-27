@@ -523,7 +523,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterGetLabel
   env->SetLongField(ndArrayHandle, refLongFid, (jlong)out);
   return ret;
 }
-l
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterGetData
   (JNIEnv *env, jobject obj, jobject handle, jobject ndArrayHandle) {
   jlong handlePtr = getLongField(env, handle);
@@ -548,9 +548,9 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterGetIndex
   jmethodID listAppend = env->GetMethodID(listClass,
     "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
 
-  printf("outSize: %ld\n", coutSize);
+//  printf("outSize: %ld\n", coutSize);
   for(int i=0; i<coutSize; i++) {
-    printf("%ld\t", coutIndex[i]);
+//    printf("%ld\t", coutIndex[i]);
     env->CallObjectMethod(outIndex, listAppend, (jlong)coutIndex[i]);
   }
   return ret;
