@@ -42,7 +42,7 @@ abstract class Initializer(protected val name: String, protected var arr: NDArra
 
     (0 to (arr.size)).foreach { i =>
       var x = i % shape(3)
-      var y = (i % shape(3)) % shape(2)
+      var y = (i / shape(3)) % shape(2)
       weight(i) = (1 - math.abs(x / f - c)) * (1 - math.abs(y / f - c))
     }
 
@@ -122,7 +122,7 @@ class Xavier(name: String, arr: NDArray, protected val rndType: String ="uniform
       case "out" => fanOut
       case _ => throw new IllegalArgumentException("Incorrect factor type")
     }
-    val scale = math.sqrt(magnitude / factor) toFloat
+    val scale = math.sqrt(magnitude / factor).toFloat
 
     rndType match {
       case "uniform" => Random.uniform(-scale, scale, out=arr)
