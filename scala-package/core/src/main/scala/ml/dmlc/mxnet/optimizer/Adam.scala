@@ -52,7 +52,7 @@ class Adam(var learningRate: Float = 0.002f, val beta1: Float = 0.9f, val beta2:
         this.learningRate
       }) * lrScale.getOrElse(index, 1f)
 
-    var (mean, variance) = state.asInstanceOf[(NDArray, NDArray)]
+    val (mean, variance) = state.asInstanceOf[(NDArray, NDArray)]
 
     // increment time only when the first parameters is called
     if (timeFirstIndex == None) {
@@ -81,8 +81,8 @@ class Adam(var learningRate: Float = 0.002f, val beta1: Float = 0.9f, val beta2:
     }
 
     weight += -step
-    mean = meanT
-    variance = varianceT
+    mean.set(meanT)
+    variance.set(varianceT)
   }
 
   // Create additional optimizer state: mean, variance
