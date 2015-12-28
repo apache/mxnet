@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory
  * @author Yuan Tang
  */
 
-abstract class LRScheduler(protected var baseLR: Float = 0.01f) {
+abstract class LRScheduler(var baseLR: Float = 0.01f) {
   /**
    * Base class of a learning rate scheduler
    *
