@@ -18,6 +18,7 @@ object Base {
   type DataIterHandle = RefLong
   type DataIterCreator = RefLong
   type KVStoreHandle = RefLong
+  type ExecutorHandle = RefLong
 
 
   System.loadLibrary("mxnet-scala")

@@ -3,6 +3,7 @@
 #include <functional>
 #include <mxnet/ndarray.h>
 #include <mxnet/kvstore.h>
+#include <mxnet/symbolic.h>
 #include <mxnet/c_api.h>
 
 #include "jni_helper_func.h"
@@ -384,6 +385,97 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreGetRank
   int ret = MXKVStoreGetRank((KVStoreHandle)kvStorePtr, &rank);
   setIntField(env, rankRef, rank);
   return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorOutputs
+  (JNIEnv *env, jobject obj, jobject executorHandle, jobject outputs) {
+
+  jlong executorPtr = getLongField(env, executorHandle);
+  mx_uint outSize;
+  NDArrayHandle *out;
+  int ret = MXExecutorOutputs((ExecutorHandle)executorPtr, &outSize, &out);
+
+  // Base.ExecutorHandle.constructor
+  jclass ndArrayClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
+  jmethodID ndArrayConstructor = env->GetMethodID(ndArrayClass,"<init>","(J)V");
+
+  // fill java outputs
+  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jmethodID arrayAppend = env->GetMethodID(arrayClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+  for (int i = 0; i < outSize; ++i) {
+    jobject ndArray = env->NewObject(ndArrayClass, ndArrayConstructor, (long)out[i]);
+    env->CallObjectMethod(outputs, arrayAppend, ndArray);
+  }
+
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorFree
+  (JNIEnv * env, jobject obj, jobject handle) {
+  jlong ptr = getLongField(env, handle);
+  return MXExecutorFree((ExecutorHandle) ptr);
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorForward
+  (JNIEnv * env, jobject obj, jobject handle, jint isTrain) {
+  jlong ptr = getLongField(env, handle);
+  return MXExecutorForward((ExecutorHandle)ptr, (int)isTrain);
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBackward
+  (JNIEnv * env, jobject obj, jobject handle, jint gradsSize, jlongArray grads) {
+  jlong executorPtr = getLongField(env, handle);
+  jlong *gradArr = env->GetLongArrayElements(grads, NULL);
+  int ret = MXExecutorBackward((ExecutorHandle)executorPtr,
+                               (mx_uint)gradsSize,
+                               (NDArrayHandle *)gradArr);
+  env->ReleaseLongArrayElements(grads, gradArr, 0);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorPrint
+  (JNIEnv * env, jobject obj, jobject handle, jobject debugStr) {
+  jlong ptr = getLongField(env, handle);
+  const char *retDebugStr;
+  int ret = MXExecutorPrint((ExecutorHandle)handle, &retDebugStr);
+  setStringField(env, debugStr, retDebugStr);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorSetMonitorCallback
+  (JNIEnv *env, jobject obj, jobject handle, jobject callbackFuncObj) {
+  jlong executorPtr = getLongField(env, handle);
+  jobject callbackFuncObjGlb = env->NewGlobalRef(callbackFuncObj);
+  std::function<void(const char *, NDArrayHandle)> callback
+  = [env, callbackFuncObjGlb](const char *name, NDArrayHandle array) {
+    // find java callback method
+    jclass callbackClass = env->GetObjectClass(callbackFuncObjGlb);
+    jmethodID invokeFunc = env->GetMethodID(callbackClass,
+      "invoke", "(Ljava/lang/String;Lml/dmlc/mxnet/Base$RefLong;)V");
+
+    jstring jname = env->NewStringUTF(name);
+    // ndArray handle
+    jclass ndHandleClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
+    jmethodID ndHandleCont = env->GetMethodID(ndHandleClass,"<init>","(J)V");
+    jobject jNDArrayHandle = env->NewObject(ndHandleClass, ndHandleCont, (long)array);
+
+    env->CallVoidMethod(callbackFuncObjGlb, invokeFunc, jname, jNDArrayHandle);
+    env->DeleteGlobalRef(callbackFuncObjGlb);
+  };
+  /* TODO: we need to modify Executor::SetMonitorCallback, make it take std::function as param
+  try {
+    mxnet::Executor *exec = static_cast<mxnet::Executor*>((ExecutorHandle)executorPtr);
+    exec->SetMonitorCallback(callback);
+  } catch(dmlc::Error &except) {
+    // It'll be too complicated to set & get mx error in jni code.
+    // thus simply return -1 to indicate a failure.
+    // Notice that we'll NOT be able to run MXGetLastError
+    // to get the error message after this function fails.
+    return -1;
+  }
+  */
+  return 0;
 }
 
 JNIEXPORT jstring JNICALL Java_ml_dmlc_mxnet_LibInfo_mxGetLastError(JNIEnv * env, jobject obj) {
