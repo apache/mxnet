@@ -43,7 +43,7 @@ Batch Param: Batch size.}
 \item{round.batch}{boolean, optional, default=True
 Batch Param: Use round robin to handle overflow batch.}
 
-\item{prefetch.buffer}{, optional, default=4
+\item{prefetch.buffer}{long (non-negative), optional, default=4
 Backend Param: Number of prefetched parameters}
 
 \item{rand.crop}{boolean, optional, default=False
@@ -104,10 +104,13 @@ Augmentation Param: Mean Image to be subtracted.}
 Augmentation Param: Mean value on R channel.}
 
 \item{mean.g}{float, optional, default=0
-Augmentation: Mean value on G channel.}
+Augmentation Param: Mean value on G channel.}
 
 \item{mean.b}{float, optional, default=0
-Augmentation: Mean value on B channel.}
+Augmentation Param: Mean value on B channel.}
+
+\item{mean.a}{float, optional, default=0
+Augmentation Param: Mean value on Alpha channel.}
 
 \item{scale}{float, optional, default=1
 Augmentation Param: Scale in color space.}
