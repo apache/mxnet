@@ -87,35 +87,14 @@ example/notebooks/.ipynb_checkpoints/*
 
 
 # Scala package
-# Jetbrain
-scala-package/.idea
-
-# ctags
-scala-package/tags
-
-scala-package/*.class
-scala-package/*.log
-
-# sbt specific
-scala-package/.cache
-scala-package/.lib/
-scala-package/dist/*
-scala-package/target/
-scala-package/lib_managed/
-scala-package/src_managed/
-scala-package/project/boot/
-scala-package/project/plugins/project/
-
-#scala target folders
+*.idea
+*.class
 scala-package/*/target/
 scala-package/*/*/target/
-
-# IDE specific
 *.scala_dependencies
 *.worksheet
 *.idea
 *.iml
-#eclipse
-.classpath
-.project
-.settings
+*.classpath
+*.project
+*.settings

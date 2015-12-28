@@ -53,17 +53,14 @@ Prepare raw data in ```data``` folder. The tree of ```data``` folder is like
 
 2. Run ```python3 Preprocessing.py``` to do preprocessing of data.
 3. After we have the processed data, run ```python3 Train.py``` to generate ```submission.csv```
-
+4. We also provide the R code with the same network structure and parameters in ```Train.R```. Right now it used the pre-processed csv files by ```Preprocessing.py```. We will add the pre-processing R code later.
 
 Note:
 - To run with python2, you need to change ```Train.py, line #139``` to the python2 syntax.
-- To modify network, change ```get_lenet``` function in ```Train.py```
+- To modify network, change ```get_lenet``` function in ```Train.py``` or ```get.lenet``` function in ```Train.R```.
 - We also provide ```local_train```, ```local_test``` file for local parameter tuning.
-- To run on multiple GPU with huge network, or questions about saving network paramter etc, please refer [MXNet docs](https://mxnet.readthedocs.org/en/latest/)
+- To run on multiple GPU with huge network, or questions about saving network parameters etc, please refer [MXNet docs](https://mxnet.readthedocs.org/en/latest/)
 
 
 ## About MXNet
-MXNet is a deep learning framework designed for both efficiency and flexibility by DMLC group. Like all other packages in DMLC,  it will fully utilize all the resources to solve the problem under limited resource constraint, with a flexible programming interface. You can use it for all purposes of data science and deep learning tasks with R, Julia, python and more. see
-
-
-
+MXNet is a deep learning framework designed for both efficiency and flexibility by DMLC group. Like all other packages in DMLC, it will fully utilize all the resources to solve the problem under limited resource constraint, with a flexible programming interface. You can use it for all purposes of data science and deep learning tasks with R, Julia, python and more.
