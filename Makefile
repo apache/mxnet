@@ -28,7 +28,7 @@ CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 # CFLAGS for debug
 ifeq ($(DEBUG), 1)
-	CFLAGS += -g -O0
+	CFLAGS += -g -O0 -DDMLC_LOG_FATAL_THROW=0
 else
 	CFLAGS += -O3
 endif
@@ -93,9 +93,6 @@ endif
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
-# test scala
-scala: scala-package/native/linux-x86_64/target/libmxnet-scala.so
-
 SRC = $(wildcard src/*.cc src/*/*.cc)
 OBJ = $(patsubst src/%.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*.cu)
@@ -150,9 +147,6 @@ lib/libmxnet.so: $(ALL_DEP)
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
 
-scala-package/native/linux-x86_64/target/libmxnet-scala.so: scala-package/native/src/main/native/jni_helper_func.h scala-package/native/src/main/native/ml_dmlc_mxnet_native_c_api.cc $(LIB_DEP) lib/libmxnet.a
-	$(CXX) -std=c++0x $(CFLAGS) -Iscala-package/native/linux-x86_64/target/custom-javah -I${JAVA_HOME}/include -I${JAVA_HOME}/include/linux -shared -o $@ $(filter %.cpp %.o %.c %.cc, $^) -Wl,--whole-archive $(filter %.a, $^) -Wl,--no-whole-archive $(LDFLAGS)
-
 # ps-lite
 $(PS_PATH)/build/libps.a:
 	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) ps
@@ -168,11 +162,6 @@ $(BIN) :
 	$(CXX) $(CFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
 include tests/cpp/unittest.mk
-
-info:
-	echo $(CFLAGS)
-	echo $(LDFLAGS)
-	echo $(LIB_DEP)
 
 test: $(TEST)
 
