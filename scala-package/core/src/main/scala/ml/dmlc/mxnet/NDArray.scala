@@ -280,7 +280,7 @@ object NDArray {
    * @param ctx The context of the NDArray, default to current default context.
    * @return The created NDArray.
    */
-  def array(sourceArr: Array[Int], ctx: Context=null): NDArray = ???
+  def array(sourceArr: Array[Float], ctx: Context=null): NDArray = ???
 
   /**
    * Load ndarray from binary file.
