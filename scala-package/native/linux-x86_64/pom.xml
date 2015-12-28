@@ -124,17 +124,19 @@
             <compilerEndOption>-DMSHADOW_USE_CBLAS=${use.cblas}</compilerEndOption>
             <compilerEndOption>-DMSHADOW_USE_MKL=${use.mkl}</compilerEndOption>
             <compilerEndOption>-fPIC</compilerEndOption>
+
           </compilerEndOptions>
           <linkerStartOptions>
             <linkerStartOption>-shared</linkerStartOption>
           </linkerStartOptions>
           <linkerMiddleOptions>
-            <linkerMiddleOption>-lm -lrt</linkerMiddleOption>
-            <linkerMiddleOption>${ldflags.opencv}</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
             <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption>
             <linkerMiddleOption>../../../dmlc-core/libdmlc.a</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--no-whole-archive</linkerMiddleOption>
+            <linkerMiddleOption>-lm -lrt -fopenmp</linkerMiddleOption>
+            <linkerMiddleOption>${ldflags.opencv}</linkerMiddleOption>
+            <linkerMiddleOption>${ldflags.blas}</linkerMiddleOption>
           </linkerMiddleOptions>
         </configuration>
 
