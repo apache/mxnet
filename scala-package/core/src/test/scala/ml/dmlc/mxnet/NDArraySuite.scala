@@ -1,7 +1,8 @@
 package ml.dmlc.mxnet
 
-import org.scalatest.{FunSuite, BeforeAndAfterAll}
 import ml.dmlc.mxnet.NDArrayConversions._
+import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import org.scalactic.Tolerance._
 
 class NDArraySuite extends FunSuite with BeforeAndAfterAll {
   test("to java array") {
@@ -95,5 +96,13 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
     val ndarray = NDArray.empty(4, 1)
     ndarray.set(Array(0f, 1f, 4f, 9f))
     assert(NDArray.sqrt(ndarray).toArray === Array(0f, 1f, 2f, 3f))
+  }
+
+  test("norm") {
+    val ndarray = NDArray.empty(3, 1)
+    ndarray.set(Array(1f, 2f, 3f))
+    val normed = NDArray.norm(ndarray)
+    assert(normed.shape === Array(1))
+    assert(normed.toScalar === math.sqrt(14.0).toFloat +- 1e-3f)
   }
 }

@@ -260,6 +260,15 @@ object NDArray {
   }
 
   /**
+   * Take L2 norm of the src.
+   * @param src Source input to the function
+   * @return new [[NDArray]] of shape (1,) on the same device
+   */
+  def norm(src: NDArray): NDArray = {
+    NDArray._unaryNDArrayFunction("norm", src)
+  }
+
+  /**
    * Create a new NDArray that copies content from source_array.
    * @param sourceArr Source data to create NDArray from.
    * @param ctx The context of the NDArray, default to current default context.
