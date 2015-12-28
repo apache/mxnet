@@ -1,29 +1,69 @@
 package ml.dmlc.mxnet
 
+import ml.dmlc.mxnet.Base._
+import ml.dmlc.mxnet.NDArray.{_randomUniform, _randomGaussian, empty}
 
-import ml.dmlc.mxnet.NDArray.{_randomUniform}
 /**
- * Created by yuantang on 12/27/15.
+ * Random Number interface of mxnet.
+ * @author Yuan Tang
  */
 class Random {
-
+  /**
+   * Generate uniform distribution in [low, high) with shape.
+   *
+   * @param low The lower bound of distribution.
+   * @param high The upper bound of distribution.
+   * @param shape Output shape of the NDArray generated.
+   * @param ctx Context of output NDArray, will use default context if not specified.
+   * @param out Output place holder
+   * @return The result NDArray with generated result.
+   */
   def uniform(low: Float, high: Float, shape: Array[Int]=null, ctx: Context=null, out: NDArray=null): NDArray = {
     if (out != null) {
       require(shape == null & ctx == null, "shape and ctx is not needed when out is specified.")
     } else {
       require(shape != null, "shape is required when out is not specified")
-      var out = NDArray.empty(shape, ctx)
+      var out = empty(shape, ctx)
     }
-    return NDArray._randomUniform(low, high, out)
+    return _randomUniform(low, high, out)
   }
 
+
+  /**
+   * Generate normal(Gaussian) distribution N(mean, stdvar^^2) with shape.
+   *
+   * @param mean The mean of the normal distribution.
+   * @param stdvar The standard deviation of normal distribution.
+   * @param shape Output shape of the NDArray generated.
+   * @param ctx Context of output NDArray, will use default context if not specified.
+   * @param out Output place holder
+   * @return The result NDArray with generated result.
+   */
   def normal(mean: Float, stdvar: Float, shape: Array[Int]=null, ctx: Context=null, out: NDArray=null): NDArray = {
     if (out != null) {
       require(shape == null & ctx == null, "shape and ctx is not needed when out is specified.")
     } else {
       require(shape != null, "shape is required when out is not specified")
-      var out = NDArray.empty(shape, ctx)
+      var out = empty(shape, ctx)
     }
-    return NDArray._randomGaussian(mean, stdvar, out)
+    return _randomGaussian(mean, stdvar, out)
+  }
+
+
+  /**
+   * Seed the random number generators in mxnet.
+   *
+   * This seed will affect behavior of functions in this module,
+   * as well as results from executors that contains Random number
+   * such as Dropout operators.
+   *
+   * @param seedState The random number seed to set to all devices.
+   * @note The random number generator of mxnet is by default device specific.
+   *       This means if you set the same seed, the random number sequence
+   *       generated from GPU0 can be different from CPU.
+   */
+  def seed(seedState: Int) = {
+    // TODO
+//    checkCall(_LIB.mxRandomSeed(seedState))
   }
 }
