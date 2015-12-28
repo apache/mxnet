@@ -19,13 +19,14 @@ object Random {
    * @return The result NDArray with generated result.
    */
   def uniform(low: Float, high: Float, shape: Array[Int]=null, ctx: Context=null, out: NDArray=null): NDArray = {
-    if (out != null) {
+    var outCopy = out
+    if (outCopy != null) {
       require(shape == null & ctx == null, "shape and ctx is not needed when out is specified.")
     } else {
       require(shape != null, "shape is required when out is not specified")
-      var out = empty(shape, ctx)
+      outCopy = empty(shape, ctx)
     }
-    return _randomUniform(low, high, out)
+    return _randomUniform(low, high, outCopy)
   }
 
 
@@ -40,13 +41,14 @@ object Random {
    * @return The result NDArray with generated result.
    */
   def normal(mean: Float, stdvar: Float, shape: Array[Int]=null, ctx: Context=null, out: NDArray=null): NDArray = {
-    if (out != null) {
+    var outCopy = out
+    if (outCopy != null) {
       require(shape == null & ctx == null, "shape and ctx is not needed when out is specified.")
     } else {
       require(shape != null, "shape is required when out is not specified")
-      var out = empty(shape, ctx)
+      outCopy = empty(shape, ctx)
     }
-    return _randomGaussian(mean, stdvar, out)
+    return _randomGaussian(mean, stdvar, outCopy)
   }
 
 

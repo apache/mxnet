@@ -35,14 +35,14 @@ abstract class Initializer(protected val name: String, protected var arr: NDArra
   }
 
   def _initBilinear() = {
-    var weight = Array.fill[Float](arr.size)(0.0f)
+    val weight = Array.fill[Float](arr.size)(0.0f)
     val shape = arr.shape
     val f = shape(3) / 2.0f
     val c = (2 * f - 1 - f % 2) / (2.0f * f)
 
     (0 to (arr.size)).foreach { i =>
-      var x = i % shape(3)
-      var y = (i / shape(3)) % shape(2)
+      val x = i % shape(3)
+      val y = (i / shape(3)) % shape(2)
       weight(i) = (1 - math.abs(x / f - c)) * (1 - math.abs(y / f - c))
     }
 
