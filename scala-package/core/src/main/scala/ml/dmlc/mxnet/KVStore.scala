@@ -71,6 +71,15 @@ class KVStore(private val handle: KVStoreHandle) {
     push(Array(key), Array(value), priority)
   }
 
+  def push(key: Int, values: Array[NDArray], priority: Int): Unit = {
+    val keys = Array.fill(values.length)(key)
+    push(keys, values, priority)
+  }
+
+  def push(key: Int, values: Array[NDArray]): Unit = {
+    push(key, values, 0)
+  }
+
   /**
    * Pull a single value or a sequence of values from the store.
    *
@@ -96,6 +105,15 @@ class KVStore(private val handle: KVStoreHandle) {
 
   def pull(key: Int, out: NDArray, priority: Int = 0): Unit = {
     pull(Array(key), Array(out), priority)
+  }
+
+  def pull(key: Int, outs: Array[NDArray], priority: Int): Unit = {
+    val keys = Array.fill(outs.length)(key)
+    pull(keys, outs, priority)
+  }
+
+  def pull(key: Int, outs: Array[NDArray]): Unit = {
+    pull(key, outs, 0)
   }
 
   // Get the type of this kvstore

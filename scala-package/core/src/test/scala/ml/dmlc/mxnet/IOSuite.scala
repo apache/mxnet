@@ -6,8 +6,8 @@ import scala.sys.process._
 
 class IOSuite extends FunSuite with BeforeAndAfterAll {
   test("test MNISTIter") {
-    //mkdir data
-    "./get_data.sh" !
+    //get data
+    "./scripts/get_mnist_data.sh" !
 
     val params = Map(
       "image" -> "data/train-images-idx3-ubyte",
@@ -19,8 +19,10 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
       "silent" -> "0",
       "seed" -> "10"
     )
-//    println("create MNISTIter")
-    val mnist_iter = IO.iterCreateFuncs("MNISTIter")(params)
+
+    //println("create MNISTIter")
+    val mnist_iter = IO.createIterator("MNISTIter", params)
+    //test_loop
     mnist_iter.reset()
     val nBatch = 600
     var batchCount = 0
@@ -36,12 +38,17 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     val label0 = mnist_iter.getLabel().toArray
     mnist_iter.iterNext()
     mnist_iter.iterNext()
+    mnist_iter.iterNext()
     mnist_iter.reset()
     mnist_iter.iterNext()
     val label1 = mnist_iter.getLabel().toArray
     assert(label0 === label1)
   }
 
+
+  /**
+    * link error
+    */
 //  test("test ImageRecordIter") {
 //    val params = Map(
 //      "path_imgrec" -> "data/cifar/train.rec",
@@ -61,7 +68,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
 //    }
 //  }
 
-  test("test NDarryIter") {
-
-  }
+//  test("test NDarryIter") {
+//
+//  }
 }

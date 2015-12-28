@@ -4,7 +4,10 @@ import ml.dmlc.mxnet.Base._
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
-// JNI functions
+/**
+ * JNI functions
+ * @author Yizhi Liu
+ */
 class LibInfo {
   @native def mxNDArrayFree(handle: NDArrayHandle): Int
   @native def mxGetLastError(): String
@@ -81,6 +84,7 @@ class LibInfo {
   @native def mxKVStoreBarrier(handle: KVStoreHandle): Int
   @native def mxKVStoreGetGroupSize(handle: KVStoreHandle, size: RefInt): Int
   @native def mxKVStoreGetRank(handle: KVStoreHandle, size: RefInt): Int
+
   //DataIter Funcs
   @native def mxListDataIters(handles: ListBuffer[DataIterCreator]): Int
   @native def mxDateIterCreateIter(handle: DataIterCreator,
@@ -105,4 +109,15 @@ class LibInfo {
                                 outSize: RefLong): Int
   @native def mxDataIterGetPadNum(handle: DataIterHandle,
                                   out: MXUintRef): Int
+  //Executors
+  @native def mxExecutorOutputs(handle: ExecutorHandle, outputs: ArrayBuffer[NDArrayHandle]): Int
+  @native def mxExecutorFree(handle: ExecutorHandle): Int
+  @native def mxExecutorForward(handle: ExecutorHandle, isTrain: Int): Int
+  @native def mxExecutorBackward(handle: ExecutorHandle,
+                                 gradsSize: Int,
+                                 // grads ought to be Array[NDArrayHandle],
+                                 // we pass ptr address directly for performance consideration
+                                 grads: Array[CPtrAddress]): Int
+  @native def mxExecutorPrint(handle: ExecutorHandle, debugStr: RefString): Int
+  @native def mxExecutorSetMonitorCallback(handle: ExecutorHandle, callback: MXMonitorCallback): Int
 }

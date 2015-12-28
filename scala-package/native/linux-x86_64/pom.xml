@@ -13,6 +13,10 @@
   <name>MXNet Scala Package - Native Linux-x86_64</name>
   <url>http://maven.apache.org</url>
 
+  <properties>
+    <opencv.pkg.tmpfile>opencv.pkg.txt</opencv.pkg.tmpfile>
+  </properties>
+
   <packaging>so</packaging>
 
   <dependencies>
@@ -56,7 +60,14 @@
                     <property name="use.cblas" value="1" />
                     <property name="use.mkl" value="0" />
                     <property name="cflags.blas" value="" />
-                    <property name="ldflags.blas" value="-lcblas" />
+                    <if>
+                      <not>
+                        <isset property="ldflags.blas" />
+                      </not>
+                      <then>
+                        <property name="ldflags.blas" value="-lcblas" />
+                      </then>
+                    </if>
                   </else>
                 </if>
                 <if>
@@ -102,7 +113,7 @@
           </compilerStartOptions>
           <compilerMiddleOptions>
             <compilerMiddleOption>
-              -msse3 -funroll-loops -Wno-unused-parameter -Wno-unknown-pragmas
+              -msse3 -funroll-loops -Wno-unused-parameter -Wno-unknown-pragmas -fopenmp
             </compilerMiddleOption>
           </compilerMiddleOptions>
           <compilerEndOptions>
@@ -118,12 +129,11 @@
             <linkerStartOption>-shared</linkerStartOption>
           </linkerStartOptions>
           <linkerMiddleOptions>
-            <linkerMiddleOption>-fopenmp</linkerMiddleOption>
+            <linkerMiddleOption>-lm -lrt</linkerMiddleOption>
             <linkerMiddleOption>${ldflags.opencv}</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
-            <linkerMiddleOption>
-              ../../../lib/libmxnet.a ../../../dmlc-core/libdmlc.a
-            </linkerMiddleOption>
+            <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption>
+            <linkerMiddleOption>../../../dmlc-core/libdmlc.a</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--no-whole-archive</linkerMiddleOption>
           </linkerMiddleOptions>
         </configuration>

@@ -6,17 +6,32 @@ import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
 
 object IO {
-  private val logger = LoggerFactory.getLogger(classOf[DataIter])
   type IterCreateFunc = (Map[String, String]) => DataIter
-  val iterCreateFuncs: Map[String, IterCreateFunc] = _initIOModule()
 
-  def _initIOModule(): Map[String, IterCreateFunc] = {
+  private val logger = LoggerFactory.getLogger(classOf[DataIter])
+  private val iterCreateFuncs: Map[String, IterCreateFunc] = _initIOModule()
+
+  /**
+    * create iterator via iterName and params
+    * @param iterName name of iterator; "MNISTIter" or "ImageRecordIter"
+    * @param params paramters for create iterator
+    * @return
+    */
+  def createIterator(iterName: String, params: Map[String, String]): DataIter = {
+    return iterCreateFuncs(iterName)(params)
+  }
+
+  /**
+    * initi all IO creator Functions
+    * @return
+    */
+  private def _initIOModule(): Map[String, IterCreateFunc] = {
     val IterCreators = new ListBuffer[DataIterCreator]
     checkCall(_LIB.mxListDataIters(IterCreators))
     IterCreators.map(_makeIOIterator).toMap
   }
 
-  def _makeIOIterator(handle: DataIterCreator): (String, IterCreateFunc) = {
+  private def _makeIOIterator(handle: DataIterCreator): (String, IterCreateFunc) = {
     val name = new RefString
     val desc = new RefString
     val argNames = new ListBuffer[String]
@@ -29,7 +44,13 @@ object IO {
     return (name.value, creator(handle))
   }
 
-  def creator(handle: DataIterCreator)(
+  /**
+    *
+    * @param handle
+    * @param params
+    * @return
+    */
+  private def creator(handle: DataIterCreator)(
               params: Map[String, String]): DataIter = {
     val out = new DataIterHandle
     val keys = params.keys.toArray
@@ -39,7 +60,14 @@ object IO {
   }
 }
 
-//class for batch of data
+
+/**
+  * class batch of data
+  * @param data
+  * @param label
+  * @param index
+  * @param pad
+  */
 class DataBatch(val data: NDArray,
                 val label: NDArray,
                 val index: List[Long],
@@ -48,7 +76,7 @@ class DataBatch(val data: NDArray,
 /**
   *DataIter object in mxnet.
   */
-abstract class DataIter {
+abstract class DataIter (val batchSize: Int = 0) {
   /**
     * reset the iterator
     */
@@ -58,6 +86,14 @@ abstract class DataIter {
     * @return whether the move is successful
     */
   def iterNext(): Boolean
+
+  /**
+    * get next data batch from iterator
+    * @return
+    */
+  def next(): DataBatch = {
+    return new DataBatch(getData(), getLabel(), getIndex(), getPad())
+  }
 
   /**
     * get data of current batch
@@ -84,13 +120,6 @@ abstract class DataIter {
     */
   def getIndex(): List[Long]
 
-  /**
-    * return next batch of data
-    * @return
-    */
-  def next(): DataBatch = {
-      return new DataBatch(getData(), getLabel(), getIndex(), getPad())
-  }
 }
 
 /**
@@ -161,16 +190,9 @@ class MXDataIter(var handle: DataIterHandle) extends DataIter {
 }
 
 /**
-  * NDArrayIter object in mxnet. Taking NDArray or numpy array to get dataiter.
-  * @param data a list of NDArray
-  * @param label a list of NDArray
-  * @param batch_size Batch Size
-  * @param shuffle Whether to shuffle the data
-  * @param last_batch_handle 'pad', 'discard' or 'roll_over',  How to handle the last batch
+  * To do
   */
-class NDArrayIter(var data: List[NDArray], var label: List[NDArray],
-                  var batch_size: Int, var shuffle: Boolean,
-                  var last_batch_handle: String) extends DataIter {
+class ArrayDataIter() extends DataIter {
   /**
     * reset the iterator
     */
