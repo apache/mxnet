@@ -28,7 +28,7 @@ CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 # CFLAGS for debug
 ifeq ($(DEBUG), 1)
-	CFLAGS += -g -O0
+	CFLAGS += -g -O0 -DDMLC_LOG_FATAL_THROW=0
 else
 	CFLAGS += -O3
 endif
