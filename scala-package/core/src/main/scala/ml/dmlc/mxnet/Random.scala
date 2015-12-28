@@ -7,7 +7,7 @@ import ml.dmlc.mxnet.NDArray.{_randomUniform, _randomGaussian, empty}
  * Random Number interface of mxnet.
  * @author Yuan Tang
  */
-class Random {
+object Random {
   /**
    * Generate uniform distribution in [low, high) with shape.
    *
