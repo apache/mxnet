@@ -13,6 +13,10 @@
   <name>MXNet Scala Package - Native Linux-x86_64</name>
   <url>http://maven.apache.org</url>
 
+  <properties>
+    <opencv.pkg.tmpfile>opencv.pkg.txt</opencv.pkg.tmpfile>
+  </properties>
+
   <packaging>so</packaging>
 
   <dependencies>
@@ -74,6 +78,12 @@
                     <property name="cxx" value="g++" />
                   </then>
                 </if>
+                <!-- echo opencv libs to a temp file and then load it into a property -->
+                <exec executable="pkg-config" output="${opencv.pkg.tmpfile}" failonerror="true">
+                  <arg line="--libs opencv" />
+                </exec>
+                <loadfile srcfile="${opencv.pkg.tmpfile}" property="ldflags.opencv" />
+                <delete file="${opencv.pkg.tmpfile}" />
               </tasks>
             </configuration>
           </execution>
@@ -103,7 +113,7 @@
           </compilerStartOptions>
           <compilerMiddleOptions>
             <compilerMiddleOption>
-              -msse3 -funroll-loops -Wno-unused-parameter -Wno-unknown-pragmas
+              -msse3 -funroll-loops -Wno-unused-parameter -Wno-unknown-pragmas -fopenmp
             </compilerMiddleOption>
           </compilerMiddleOptions>
           <compilerEndOptions>
@@ -119,7 +129,8 @@
             <linkerStartOption>-shared</linkerStartOption>
           </linkerStartOptions>
           <linkerMiddleOptions>
-            <linkerMiddleOption>-fopenmp ${ldflags.blas}</linkerMiddleOption>
+            <linkerMiddleOption>-lm -lrt</linkerMiddleOption>
+            <linkerMiddleOption>${ldflags.opencv}</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
             <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption>
             <linkerMiddleOption>../../../dmlc-core/libdmlc.a</linkerMiddleOption>
