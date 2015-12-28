@@ -268,6 +268,12 @@ object NDArray {
     NDArray._unaryNDArrayFunction("norm", src)
   }
 
+  // TODO
+  def _randomUniform(low: Float, high: Float, out: NDArray) = ???
+
+  def _randomGaussian(mean: Float, stdvar: Float, out: NDArray) = ???
+
+
   /**
    * Create a new NDArray that copies content from source_array.
    * @param sourceArr Source data to create NDArray from.
