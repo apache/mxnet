@@ -824,10 +824,14 @@ int MXExecutorBindX(SymbolHandle symbol_handle,
 }
 
 int MXExecutorSetMonitorCallback(ExecutorHandle handle,
-                                 ExcecutorMonitorCallback callback) {
+                                 ExecutorMonitorCallback callback) {
   API_BEGIN();
+  std::function<void(const char*, void*)> clbk
+  = [callback](const char *name, void* handle) {
+    callback(name, handle);
+  };
   Executor *exec = static_cast<Executor*>(handle);
-  exec->SetMonitorCallback(callback);
+  exec->SetMonitorCallback(clbk);
   API_END();
 }
 
