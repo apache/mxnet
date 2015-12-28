@@ -98,7 +98,7 @@ OBJ = $(patsubst src/%.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*.cu)
 CUOBJ = $(patsubst src/%.cu, build/%_gpu.o, $(CUSRC))
 
-ifneq ($(EXTRA_OPERATORS), NONE)
+ifneq ($(EXTRA_OPERATORS),)
 	EXTRA_SRC = $(wildcard $(EXTRA_OPERATORS)/*.cc $(EXTRA_OPERATORS)/*/*.cc)
 	EXTRA_OBJ = $(patsubst $(EXTRA_OPERATORS)/%.cc, $(EXTRA_OPERATORS)/build/%.o, $(EXTRA_SRC))
 	EXTRA_CUSRC = $(wildcard $(EXTRA_OPERATORS)/*.cu $(EXTRA_OPERATORS)/*/*.cu)
@@ -114,9 +114,15 @@ LIB_DEP += $(DMLC_CORE)/libdmlc.a
 ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ)
-	LDFLAGS += -lnvrtc -lcuda
+	LDFLAGS += -lcuda
 endif
 
+ifeq ($(USE_NVRTC), 1)
+	LDFLAGS += -lnvrtc
+	CFLAGS += -DMXNET_USE_NVRTC=1
+else
+	CFLAGS += -DMXNET_USE_NVRTC=0
+endif
 
 
 build/%.o: src/%.cc
@@ -201,3 +207,6 @@ clean_all: clean
 
 -include build/*.d
 -include build/*/*.d
+ifneq ($(EXTRA_OPERATORS),)
+	-include $(EXTRA_OPERATORS)/build/*.d
+endif

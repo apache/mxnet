@@ -1154,7 +1154,7 @@ int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
                 NDArrayHandle* inputs, NDArrayHandle* outputs,
                 char* kernel, RtcHandle *out) {
   API_BEGIN();
-#if MXNET_USE_CUDA
+#if ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
   std::vector<std::pair<std::string, NDArray> > input, output;
   for (mx_uint i = 0; i < num_input; ++i) {
     input.push_back(std::pair<std::string, NDArray>(input_names[i],
@@ -1167,8 +1167,8 @@ int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
   MXRtc *rtc = new MXRtc(name, input, output, kernel);
   *out = reinterpret_cast<RtcHandle>(rtc);
 #else
-  LOG(FATAL) << "Need to compile with USE_CUDA=1 for MXRtc.";
-#endif  // MXNET_USE_CUDA
+  LOG(FATAL) << "Need to compile with USE_CUDA=1 and USE_NVRTC=1 for MXRtc.";
+#endif  // ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
   API_END();
 }
 
@@ -1181,7 +1181,7 @@ int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
               mx_uint blockDimY,
               mx_uint blockDimZ) {
   API_BEGIN();
-#if MXNET_USE_CUDA
+#if ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
   std::vector<NDArray> input, output;
   for (mx_uint i = 0; i < num_input; ++i) {
     input.push_back(*reinterpret_cast<NDArray*>(inputs[i]));
@@ -1197,18 +1197,18 @@ int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
                                          blockDimY,
                                          blockDimZ);
 #else
-  LOG(FATAL) << "Need to compile with USE_CUDA=1 for MXRtc.";
-#endif  // MXNET_USE_CUDA
+  LOG(FATAL) << "Need to compile with USE_CUDA=1 and USE_NVRTC=1 for MXRtc.";
+#endif  // ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
   API_END();
 }
 
 int MXRtcFree(RtcHandle handle) {
   API_BEGIN();
-#if MXNET_USE_CUDA
+#if ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
   delete reinterpret_cast<MXRtc*>(handle);
 #else
-  LOG(FATAL) << "Need to compile with USE_CUDA=1 for MXRtc.";
-#endif  // MXNET_USE_CUDA
+  LOG(FATAL) << "Need to compile with USE_CUDA=1 and USE_NVRTC=1 for MXRtc.";
+#endif  // ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
   API_END();
 }
 
