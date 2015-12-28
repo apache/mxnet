@@ -87,37 +87,14 @@ example/notebooks/.ipynb_checkpoints/*
 
 
 # Scala package
-# Jetbrain
-mxnet-scala/.idea
-
-# ctags
-mxnet-scala/tags
-
-mxnet-scala/*.class
-mxnet-scala/*.log
-
-# sbt specific
-mxnet-scala/.cache
-mxnet-scala/.lib/
-mxnet-scala/dist/*
-mxnet-scala/target/
-mxnet-scala/lib_managed/
-mxnet-scala/src_managed/
-mxnet-scala/project/boot/
-mxnet-scala/project/plugins/project/
-
-#scala target folders
+*.idea
+*.class
 scala-package/*/target/
 scala-package/*/*/target/
-
-# IDE specific
 *.scala_dependencies
 *.worksheet
 *.idea
 *.iml
-#eclipse
-.classpath
-.project
-.settings
-
-
+*.classpath
+*.project
+*.settings
