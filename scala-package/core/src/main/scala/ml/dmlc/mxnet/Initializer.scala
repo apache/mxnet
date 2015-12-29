@@ -43,7 +43,7 @@ abstract class Initializer(protected val name: String, protected var arr: NDArra
     }
   }
 
-  def _initBilinear() = {
+  def _initBilinear(): Unit = {
     val weight = Array.fill[Float](arr.size)(0.0f)
     val shape = arr.shape
     val f = shape(3) / 2.0f
@@ -55,26 +55,26 @@ abstract class Initializer(protected val name: String, protected var arr: NDArra
       weight(i) = (1 - math.abs(x / f - c)) * (1 - math.abs(y / f - c))
     }
 
-    arr = array(weight)
+    arr.set(array(weight))
   }
 
-  def _initZero() = {
-    arr = zeros(arr.size)
+  def _initZero(): Unit = {
+    arr.set(zeros(arr.size))
   }
 
-  def _initBias() = {
-    arr = zeros(arr.size)
+  def _initBias(): Unit = {
+    arr.set(zeros(arr.size))
   }
 
-  def _initGamma() = {
-    arr = ones(arr.size)
+  def _initGamma(): Unit = {
+    arr.set(ones(arr.size))
   }
 
-  def _initBeta() = {
-    arr = zeros(arr.size)
+  def _initBeta(): Unit = {
+    arr.set(zeros(arr.size))
   }
 
-  def _initWeight()
+  def _initWeight(): Unit
 }
 
 
@@ -86,7 +86,7 @@ abstract class Initializer(protected val name: String, protected var arr: NDArra
  * @param scale The scale of uniform distribution
  */
 class Uniform(name: String, arr: NDArray, protected val scale: Float=0.07f) extends Initializer(name: String, arr: NDArray) {
-  def _initWeight() = {
+  override def _initWeight(): Unit = {
     Random.uniform(-scale, scale, out=arr)
   }
 }
@@ -100,7 +100,7 @@ class Uniform(name: String, arr: NDArray, protected val scale: Float=0.07f) exte
  * @param sigma Standard deviation for gaussian distribution.
  */
 class Normal(name: String, arr: NDArray, protected val sigma: Float=0.01f) extends Initializer(name: String, arr: NDArray) {
-  def _initWeight() = {
+  override def _initWeight(): Unit = {
     Random.normal(0, sigma, out=arr)
   }
 }
