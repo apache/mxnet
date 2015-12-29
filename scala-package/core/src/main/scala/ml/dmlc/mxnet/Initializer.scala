@@ -56,19 +56,19 @@ abstract class Initializer {
   }
 
   def _initZero(name: String, arr: NDArray): Unit = {
-    arr.set(zeros(arr.size))
+    arr.set(0f)
   }
 
   def _initBias(name: String, arr: NDArray): Unit = {
-    arr.set(zeros(arr.size))
+    arr.set(0f)
   }
 
   def _initGamma(name: String, arr: NDArray): Unit = {
-    arr.set(ones(arr.size))
+    arr.set(1f)
   }
 
   def _initBeta(name: String, arr: NDArray): Unit = {
-    arr.set(zeros(arr.size))
+    arr.set(0f)
   }
 
   def _initWeight(name: String, arr: NDArray): Unit
