@@ -8,11 +8,8 @@ import ml.dmlc.mxnet.NDArray.{array, zeros, ones}
  * Base class for Initializer.
  *
  * @author Yuan Tang
- *
- * @param name name of corrosponding ndarray
- * @param arr ndarray to be Initialized
  */
-abstract class Initializer(protected val name: String, protected var arr: NDArray) {
+abstract class Initializer {
 
   /**
    * Initialize an Initializer
@@ -20,30 +17,30 @@ abstract class Initializer(protected val name: String, protected var arr: NDArra
    * @param name name of corrosponding ndarray
    * @param arr ndarray to be Initialized
    */
-  def apply(name: String, arr: NDArray) = {
+  def apply(name: String, arr: NDArray): Unit = {
 
     if (name.startsWith("upsampling")) {
-      _initBilinear()
+      _initBilinear(name, arr)
     } else if (name.endsWith("bias")) {
-      _initBias()
+      _initBias(name, arr)
     } else if (name.endsWith("gamma")) {
-      _initGamma()
+      _initGamma(name, arr)
     } else if (name.endsWith("beta")) {
-      _initBeta()
+      _initBeta(name, arr)
     } else if (name.endsWith("weight")) {
-      _initWeight()
+      _initWeight(name, arr)
     } else if (name.endsWith("moving_mean")) {
-      _initZero()
+      _initZero(name, arr)
     } else if (name.endsWith("moving_var")) {
-      _initZero()
+      _initZero(name, arr)
     } else if (name.endsWith("moving_avg")) {
-      _initZero()
+      _initZero(name, arr)
     } else {
       throw new IllegalArgumentException(s"Unknown initialization pattern for ${name}.")
     }
   }
 
-  def _initBilinear(): Unit = {
+  def _initBilinear(name: String, arr: NDArray): Unit = {
     val weight = Array.fill[Float](arr.size)(0.0f)
     val shape = arr.shape
     val f = shape(3) / 2.0f
@@ -58,35 +55,33 @@ abstract class Initializer(protected val name: String, protected var arr: NDArra
     arr.set(array(weight))
   }
 
-  def _initZero(): Unit = {
+  def _initZero(name: String, arr: NDArray): Unit = {
     arr.set(zeros(arr.size))
   }
 
-  def _initBias(): Unit = {
+  def _initBias(name: String, arr: NDArray): Unit = {
     arr.set(zeros(arr.size))
   }
 
-  def _initGamma(): Unit = {
+  def _initGamma(name: String, arr: NDArray): Unit = {
     arr.set(ones(arr.size))
   }
 
-  def _initBeta(): Unit = {
+  def _initBeta(name: String, arr: NDArray): Unit = {
     arr.set(zeros(arr.size))
   }
 
-  def _initWeight(): Unit
+  def _initWeight(name: String, arr: NDArray): Unit
 }
 
 
 /**
  * Initialize the weight with uniform [-scale, scale]
  *
- * @param name name of corrosponding ndarray
- * @param arr ndarray to be Initialized
  * @param scale The scale of uniform distribution
  */
-class Uniform(name: String, arr: NDArray, protected val scale: Float=0.07f) extends Initializer(name: String, arr: NDArray) {
-  override def _initWeight(): Unit = {
+class Uniform(protected val scale: Float=0.07f) extends Initializer {
+  override def _initWeight(name: String, arr: NDArray): Unit = {
     Random.uniform(-scale, scale, out=arr)
   }
 }
@@ -95,12 +90,10 @@ class Uniform(name: String, arr: NDArray, protected val scale: Float=0.07f) exte
 /**
  * Initialize the weight with normal(0, sigma)
  *
- * @param name name of corrosponding ndarray
- * @param arr ndarray to be Initialized
  * @param sigma Standard deviation for gaussian distribution.
  */
-class Normal(name: String, arr: NDArray, protected val sigma: Float=0.01f) extends Initializer(name: String, arr: NDArray) {
-  override def _initWeight(): Unit = {
+class Normal(protected val sigma: Float=0.01f) extends Initializer {
+  override def _initWeight(name: String, arr: NDArray): Unit = {
     Random.normal(0, sigma, out=arr)
   }
 }
@@ -109,17 +102,15 @@ class Normal(name: String, arr: NDArray, protected val sigma: Float=0.01f) exten
 /**
  * Initialize the weight with Xavier or similar initialization scheme.
  *
- * @param name name of corrosponding ndarray
- * @param arr ndarray to be Initialized
  * @param rndType Options are: "gaussian" or "uniform"
  * @param factorType Options are: "avg", "in", "out"
  * @param magnitude scale of random number range
  */
-class Xavier(name: String, arr: NDArray, protected val rndType: String ="uniform",
-             protected val factorType: String ="avg", protected val magnitude: Int = 3)
-  extends Initializer(name: String, arr: NDArray) {
+class Xavier(protected val rndType: String ="uniform",
+             protected val factorType: String ="avg",
+             protected val magnitude: Int = 3) extends Initializer {
 
-  def _initWeight() = {
+  override def _initWeight(name: String, arr: NDArray): Unit = {
     val shape = arr.shape
     val fanIn = shape.slice(1, shape.length).product
     val fanOut = shape(0)
