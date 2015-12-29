@@ -50,7 +50,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     */
 //  test("test ImageRecordIter") {
 //    //get data
-//    "./scripts/get_cifar_data.sh" !
+//    //"./scripts/get_cifar_data.sh" !
 //
 //    val params = Map(
 //      "path_imgrec" -> "data/cifar/train.rec",

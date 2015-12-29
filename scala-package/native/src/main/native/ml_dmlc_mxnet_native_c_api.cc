@@ -514,7 +514,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxListDataIters
     return ret;
 }
 
-JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDateIterCreateIter
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterCreateIter
   (JNIEnv * env, jobject obj, jobject creator,
    jobjectArray jkeys, jobjectArray jvals, jobject dataIterHandle) {
   //keys and values
