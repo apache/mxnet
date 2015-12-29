@@ -56,7 +56,8 @@ typedef void *OptimizerCreator;
 typedef void *OptimizerHandle;
 
 MXNET_EXTERN_C typedef void (*ExecutorMonitorCallback)(const char*,
-                                                       NDArrayHandle);
+                                                       NDArrayHandle,
+                                                       void *);
 
 MXNET_EXTERN_C {
 struct NativeOpInfo {
@@ -730,7 +731,8 @@ MXNET_DLL int MXExecutorBindX(SymbolHandle symbol_handle,
  * \brief set a call back to notify the completion of operation
  */
 MXNET_DLL int MXExecutorSetMonitorCallback(ExecutorHandle handle,
-                                           ExecutorMonitorCallback callback);
+                                           ExecutorMonitorCallback callback,
+                                           void* callback_handle);
 //--------------------------------------------
 // Part 5: IO Interface
 //--------------------------------------------

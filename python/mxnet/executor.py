@@ -12,6 +12,13 @@ from . import ndarray as nd
 from .context import cpu
 import logging
 
+def _monitor_callback_wrapper(callback):
+    """ a wrapper for the user-defined handle """
+    def callback_handle(name, array, _):
+        """ ctypes function """
+        callback(name, array)
+    return callback_handle
+
 class Executor(object):
     """ Executor is the actual executing object of MXNet."""
     def __init__(self, handle, symbol):
@@ -129,11 +136,12 @@ class Executor(object):
         callback : function
             Takes a string and an NDArrayHandle.
         """
-        cb_type = ctypes.CFUNCTYPE(None, ctypes.c_char_p, NDArrayHandle)
-        self._monitor_callback = cb_type(callback)
+        cb_type = ctypes.CFUNCTYPE(None, ctypes.c_char_p, NDArrayHandle, ctypes.c_void_p)
+        self._monitor_callback = cb_type(_monitor_callback_wrapper(callback))
         check_call(_LIB.MXExecutorSetMonitorCallback(
             self.handle,
-            self._monitor_callback))
+            self._monitor_callback,
+            None))
 
     @property
     def arg_dict(self):
