@@ -522,18 +522,20 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDateIterCreateIter
   char** keys = new char*[paramSize];
   char** vals = new char*[paramSize];
   jstring jkey, jval;
+  //use strcpy and release char* created by JNI inplace
   for(int i=0; i<paramSize; i++) {
     jkey = (jstring) env->GetObjectArrayElement(jkeys, i);
-    keys[i] = (char*)env->GetStringUTFChars(jkey, 0);
-    jval = (jstring) env->GetObjectArrayElement(jvals, i);
-    vals[i] = (char*)env->GetStringUTFChars(jval, 0);
-  }
+    const char* ckey = env->GetStringUTFChars(jkey, 0);
+    keys[i] = new char[env->GetStringLength(jkey)];
+    strcpy(keys[i], ckey);
+    env->ReleaseStringUTFChars(jkey, ckey);
 
-//  printf("paramSize: %d\n", paramSize);
-//  for(int i=0; i<paramSize; i++) {
-//    printf("key: %s\t",keys[i]);
-//    printf("value: %s\n", vals[i]);
-//  }
+    jval = (jstring) env->GetObjectArrayElement(jvals, i);
+    const char* cval = env->GetStringUTFChars(jval, 0);
+    vals[i] = new char[env->GetStringLength(jval)];
+    strcpy(vals[i], cval);
+    env->ReleaseStringUTFChars(jval, cval);
+  }
 
   //create iter
   jlong creatorPtr = getLongField(env, creator);
@@ -547,13 +549,14 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDateIterCreateIter
   jfieldID ptr = env->GetFieldID(hClass, "value", "J");
   env->SetLongField(dataIterHandle, ptr, (long)out);
 
-  //release const char*
+  //release keys and vals
   for(int i=0; i<paramSize; i++) {
-      jkey = (jstring) env->GetObjectArrayElement(jkeys, i);
-      env->ReleaseStringUTFChars(jkey,(const char*)keys[i]);
-      jval = (jstring) env->GetObjectArrayElement(jvals, i);
-      env->ReleaseStringUTFChars(jval,(const char*)vals[i]);
+      delete[] keys[i];
+      delete[] vals[i];
   }
+  delete[] keys;
+  delete[] vals;
+
   return ret;
 }
 
@@ -649,9 +652,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterGetIndex
   jmethodID listAppend = env->GetMethodID(listClass,
     "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
 
-//  printf("outSize: %ld\n", coutSize);
   for(int i=0; i<coutSize; i++) {
-//    printf("%ld\t", coutIndex[i]);
     env->CallObjectMethod(outIndex, listAppend, (jlong)coutIndex[i]);
   }
   return ret;

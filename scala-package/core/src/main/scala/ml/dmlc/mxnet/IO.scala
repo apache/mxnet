@@ -126,8 +126,12 @@ abstract class DataIter (val batchSize: Int = 0) {
   * DataIter built in MXNet.
   * @param handle the handle to the underlying C++ Data Iterator
   */
-class MXDataIter(var handle: DataIterHandle) extends DataIter {
+class MXDataIter(val handle: DataIterHandle) extends DataIter {
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
+
+  override def finalize() = {
+    checkCall(_LIB.mxDataIterFree(handle))
+  }
 
   /**
     * reset the iterator

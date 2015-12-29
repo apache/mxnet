@@ -20,28 +20,27 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
       "seed" -> "10"
     )
 
-    //println("create MNISTIter")
-    val mnist_iter = IO.createIterator("MNISTIter", params)
+    val mnistIter = IO.createIterator("MNISTIter", params)
     //test_loop
-    mnist_iter.reset()
+    mnistIter.reset()
     val nBatch = 600
     var batchCount = 0
-    while(mnist_iter.iterNext()) {
-      val batch = mnist_iter.next()
+    while(mnistIter.iterNext()) {
+      val batch = mnistIter.next()
       batchCount+=1
     }
     //test loop
     assert(nBatch === batchCount)
     //test reset
-    mnist_iter.reset()
-    mnist_iter.iterNext()
-    val label0 = mnist_iter.getLabel().toArray
-    mnist_iter.iterNext()
-    mnist_iter.iterNext()
-    mnist_iter.iterNext()
-    mnist_iter.reset()
-    mnist_iter.iterNext()
-    val label1 = mnist_iter.getLabel().toArray
+    mnistIter.reset()
+    mnistIter.iterNext()
+    val label0 = mnistIter.getLabel().toArray
+    mnistIter.iterNext()
+    mnistIter.iterNext()
+    mnistIter.iterNext()
+    mnistIter.reset()
+    mnistIter.iterNext()
+    val label1 = mnistIter.getLabel().toArray
     assert(label0 === label1)
   }
 
