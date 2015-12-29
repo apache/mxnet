@@ -147,6 +147,26 @@ MXNET_DLL int MXNDArrayCreate(const mx_uint *shape,
                               int dev_id,
                               int delay_alloc,
                               NDArrayHandle *out);
+
+/*!
+ * \brief create a NDArray with specified shape and data type
+ * \param shape the pointer to the shape
+ * \param ndim the dimension of the shape
+ * \param dev_type device type, specify device we want to take
+ * \param dev_id the device id of the specific device
+ * \param delay_alloc whether to delay allocation until
+ *    the narray is first mutated
+ * \param dtype data type of created array
+ * \param out the returning handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayCreateEx(const mx_uint *shape,
+                              mx_uint ndim,
+                              int dev_type,
+                              int dev_id,
+                              int delay_alloc,
+                              int dtype,
+                              NDArrayHandle *out);
 /*!
  * \brief create a NDArray handle that is loaded from raw bytes.
  * \param buf the head of the raw bytes
@@ -205,7 +225,7 @@ MXNET_DLL int MXNDArrayLoad(const char* fname,
  * \param size the memory size we want to copy from.
  */
 MXNET_DLL int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
-                                       const mx_float *data,
+                                       const void *data,
                                        size_t size);
 /*!
  * \brief Perform a synchronize copyto a continugous CPU memory region.
@@ -219,7 +239,7 @@ MXNET_DLL int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
  * \param size the memory size we want to copy into.
  */
 MXNET_DLL int MXNDArraySyncCopyToCPU(NDArrayHandle handle,
-                                     mx_float *data,
+                                     void *data,
                                      size_t size);
 /*!
  * \brief Wait until all the pending writes with respect NDArray are finished.
@@ -277,6 +297,14 @@ MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
  */
 MXNET_DLL int MXNDArrayGetData(NDArrayHandle handle,
                                mx_float **out_pdata);
+/*!
+ * \brief get the type of the data in NDArray
+ * \param handle the handle to the narray
+ * \param out_dtype pointer holder to get type of data
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayGetDType(NDArrayHandle handle,
+                               int *out_dtype);
 /*!
  * \brief get the context of the NDArray
  * \param handle the handle to the narray

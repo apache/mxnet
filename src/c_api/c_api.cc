@@ -128,6 +128,22 @@ int MXNDArrayCreate(const mx_uint *shape,
   API_END();
 }
 
+int MXNDArrayCreateEx(const mx_uint *shape,
+                    mx_uint ndim,
+                    int dev_type,
+                    int dev_id,
+                    int delay_alloc,
+                    int dtype,
+                    NDArrayHandle *out) {
+  API_BEGIN();
+  *out = new NDArray(
+      TShape(shape, shape + ndim),
+      Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
+      delay_alloc != 0,
+      dtype);
+  API_END();
+}
+
 int MXNDArrayLoadFromRawBytes(const void *buf,
                               size_t size,
                               NDArrayHandle *out) {
@@ -156,7 +172,7 @@ int MXNDArraySaveRawBytes(NDArrayHandle handle,
 }
 
 int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
-                             const mx_float *data,
+                             const void *data,
                              size_t size) {
   API_BEGIN();
   static_cast<NDArray*>(handle)->SyncCopyFromCPU(data, size);
@@ -164,7 +180,7 @@ int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
 }
 
 int MXNDArraySyncCopyToCPU(NDArrayHandle handle,
-                           mx_float *data,
+                           void *data,
                            size_t size) {
   API_BEGIN();
   static_cast<NDArray*>(handle)->SyncCopyToCPU(data, size);
@@ -288,6 +304,18 @@ int MXNDArrayGetData(NDArrayHandle handle,
     *out_pdata = b.FlatTo2D<cpu, mx_float>().dptr_;
   } else {
     *out_pdata = nullptr;
+  }
+  API_END();
+}
+
+int MXNDArrayGetDType(NDArrayHandle handle,
+                     int *out_dtype) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  if (!arr->is_none()) {
+    *out_dtype = arr->dtype();
+  } else {
+    *out_dtype = -1;
   }
   API_END();
 }
