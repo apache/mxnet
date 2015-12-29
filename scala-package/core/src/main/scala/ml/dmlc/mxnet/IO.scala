@@ -55,7 +55,7 @@ object IO {
     val out = new DataIterHandle
     val keys = params.keys.toArray
     val vals = params.values.toArray
-    checkCall(_LIB.mxDateIterCreateIter(handle, keys, vals, out))
+    checkCall(_LIB.mxDataIterCreateIter(handle, keys, vals, out))
     return new MXDataIter(out)
   }
 }
@@ -68,10 +68,10 @@ object IO {
   * @param index
   * @param pad
   */
-class DataBatch(val data: NDArray,
-                val label: NDArray,
-                val index: List[Long],
-                val pad: Int)
+case class DataBatch(val data: NDArray,
+                     val label: NDArray,
+                     val index: List[Long],
+                     val pad: Int)
 
 /**
   *DataIter object in mxnet.

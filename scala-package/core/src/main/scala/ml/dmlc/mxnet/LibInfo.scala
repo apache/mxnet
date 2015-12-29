@@ -87,7 +87,7 @@ class LibInfo {
 
   //DataIter Funcs
   @native def mxListDataIters(handles: ListBuffer[DataIterCreator]): Int
-  @native def mxDateIterCreateIter(handle: DataIterCreator,
+  @native def mxDataIterCreateIter(handle: DataIterCreator,
                                    keys: Array[String],
                                    vals: Array[String],
                                    out: DataIterHandle): Int

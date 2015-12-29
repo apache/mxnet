@@ -1,0 +1,664 @@
+[INFO] Scanning for projects...
+[WARNING] 
+[WARNING] Some problems were encountered while building the effective model for ml.dmlc.mxnet:mxnet-scala-core:jar:0.1-SNAPSHOT
+[WARNING] 'build.plugins.plugin.version' for org.apache.maven.plugins:maven-compiler-plugin is missing. @ line 42, column 15
+[WARNING] 
+[WARNING] Some problems were encountered while building the effective model for ml.dmlc.mxnet:libmxnet-scala:so:0.0.1-SNAPSHOT
+[WARNING] 'build.plugins.plugin.version' for org.apache.maven.plugins:maven-compiler-plugin is missing. @ line 34, column 15
+[WARNING] 
+[WARNING] It is highly recommended to fix these problems because they threaten the stability of your build.
+[WARNING] 
+[WARNING] For this reason, future Maven versions might no longer support building such malformed projects.
+[WARNING] 
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] MXNet Scala Package - Parent
+[INFO] MXNet Scala Package - Core
+[INFO] MXNet Scala Package - Native Parent
+[INFO] MXNet Scala Package - Native Linux-x86_64
+[INFO]                                                                         
+[INFO] ------------------------------------------------------------------------
+[INFO] Building MXNet Scala Package - Parent 0.1-SNAPSHOT
+[INFO] ------------------------------------------------------------------------
+[INFO]                                                                         
+[INFO] ------------------------------------------------------------------------
+[INFO] Building MXNet Scala Package - Core 0.1-SNAPSHOT
+[INFO] ------------------------------------------------------------------------
+[INFO] 
+[INFO] --- maven-resources-plugin:2.7:copy-resources (copy-resources) @ mxnet-scala-core ---
+[WARNING] File encoding has not been set, using platform encoding UTF-8, i.e. build is platform dependent!
+[WARNING] Using platform encoding (UTF-8 actually) to copy filtered resources, i.e. build is platform dependent!
+[INFO] Copying 2 resources
+[INFO] 
+[INFO] --- maven-resources-plugin:2.7:resources (default-resources) @ mxnet-scala-core ---
+[WARNING] Using platform encoding (UTF-8 actually) to copy filtered resources, i.e. build is platform dependent!
+[INFO] Copying 2 resources
+[INFO] 
+[INFO] --- scala-maven-plugin:3.2.2:compile (default) @ mxnet-scala-core ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- maven-compiler-plugin:2.0.2:compile (default-compile) @ mxnet-scala-core ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- scala-maven-plugin:3.2.2:compile (compile) @ mxnet-scala-core ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- maven-resources-plugin:2.7:testResources (default-testResources) @ mxnet-scala-core ---
+[WARNING] Using platform encoding (UTF-8 actually) to copy filtered resources, i.e. build is platform dependent!
+[INFO] skip non existing resourceDirectory /home/hzx/workspace/git/mxnet-scala/mxnet/scala-package/core/src/test/resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:2.0.2:testCompile (default-testCompile) @ mxnet-scala-core ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- scala-maven-plugin:3.2.2:testCompile (test-compile) @ mxnet-scala-core ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- maven-surefire-plugin:2.7:test (default-test) @ mxnet-scala-core ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- maven-jar-plugin:2.5:jar (default-jar) @ mxnet-scala-core ---
+[INFO] Building jar: /home/hzx/workspace/git/mxnet-scala/mxnet/scala-package/core/target/mxnet-scala-core-0.1-SNAPSHOT.jar
+[INFO] 
+[INFO] --- maven-dependency-plugin:2.9:copy-dependencies (copy-dependencies) @ mxnet-scala-core ---
+[INFO] log4j:log4j:jar:1.2.17 already exists in destination.
+[INFO] org.slf4j:slf4j-api:jar:1.7.5 already exists in destination.
+[INFO] org.slf4j:slf4j-log4j12:jar:1.7.7 already exists in destination.
+[INFO] org.scala-lang:scala-library:jar:2.10.4 already exists in destination.
+[INFO] commons-codec:commons-codec:jar:1.10 already exists in destination.
+[INFO] 
+[INFO] --- maven-jar-plugin:2.5:jar (default) @ mxnet-scala-core ---
+[INFO] 
+[INFO] --- scalatest-maven-plugin:1.0:test (test) @ mxnet-scala-core ---
+[36mDiscovery starting.[0m
+[36mDiscovery completed in 183 milliseconds.[0m
+[36mRun starting. Expected test count is: 19[0m
+[32mKVStoreSuite:[0m
+2015-12-28 23:08:03,245 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+_set_value
+
+
+Parameters
+----------
+src : real_t
+Source input to the function.
+
+
+2015-12-28 23:08:03,245 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+_plus
+
+
+Parameters
+----------
+lhs : NDArray
+Left operand to the function.
+rhs : NDArray
+Right operand to the function.
+
+
+2015-12-28 23:08:03,246 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+_minus
+
+
+Parameters
+----------
+lhs : NDArray
+Left operand to the function.
+rhs : NDArray
+Right operand to the function.
+
+
+2015-12-28 23:08:03,246 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+_mul
+
+
+Parameters
+----------
+lhs : NDArray
+Left operand to the function.
+rhs : NDArray
+Right operand to the function.
+
+
+2015-12-28 23:08:03,247 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+_div
+
+
+Parameters
+----------
+lhs : NDArray
+Left operand to the function.
+rhs : NDArray
+Right operand to the function.
+
+
+2015-12-28 23:08:03,247 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+dot
+Calcuate 2D matrix multiplication
+
+Parameters
+----------
+lhs : NDArray
+Left operand to the function.
+rhs : NDArray
+Right operand to the function.
+
+
+2015-12-28 23:08:03,247 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+_onehot_encode
+
+
+Parameters
+----------
+lhs : NDArray
+Left operand to the function.
+rhs : NDArray
+Right operand to the function.
+
+
+2015-12-28 23:08:03,248 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+choose_element_0index
+Choose one element from each line(row for python, column for R/Julia) in lhs according to index indicated by rhs. This function assume rhs uses 0-based index.
+
+Parameters
+----------
+lhs : NDArray
+Left operand to the function.
+rhs : NDArray
+Right operand to the function.
+
+
+2015-12-28 23:08:03,248 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+_plus_scalar
+
+
+Parameters
+----------
+lhs : NDArray
+Left operand to the function.
+rhs : real_t
+Right operand to the function.
+
+
+2015-12-28 23:08:03,249 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+_minus_scalar
+
+
+Parameters
+----------
+lhs : NDArray
+Left operand to the function.
+rhs : real_t
+Right operand to the function.
+
+
+2015-12-28 23:08:03,249 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+_mul_scalar
+
+
+Parameters
+----------
+lhs : NDArray
+Left operand to the function.
+rhs : real_t
+Right operand to the function.
+
+
+2015-12-28 23:08:03,249 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+_div_scalar
+
+
+Parameters
+----------
+lhs : NDArray
+Left operand to the function.
+rhs : real_t
+Right operand to the function.
+
+
+2015-12-28 23:08:03,250 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+_rminus_scalar
+
+
+Parameters
+----------
+lhs : NDArray
+Left operand to the function.
+rhs : real_t
+Right operand to the function.
+
+
+2015-12-28 23:08:03,250 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+_rdiv_scalar
+
+
+Parameters
+----------
+lhs : NDArray
+Left operand to the function.
+rhs : real_t
+Right operand to the function.
+
+
+2015-12-28 23:08:03,250 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+_copyto
+
+
+Parameters
+----------
+src : NDArray
+Source input to the function.
+
+
+2015-12-28 23:08:03,251 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+_random_uniform
+
+
+Parameters
+----------
+
+
+
+2015-12-28 23:08:03,251 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+_random_gaussian
+
+
+Parameters
+----------
+
+
+
+2015-12-28 23:08:03,251 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+clip
+Clip ndarray elements to range (a_min, a_max)
+
+Parameters
+----------
+src : NDArray
+Source input
+a_min : real_t
+Minimum value
+a_max : real_t
+Maximum value
+
+
+2015-12-28 23:08:03,252 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+abs
+Take absolute value of the src
+
+Parameters
+----------
+src : NDArray
+Source input to the function
+
+
+2015-12-28 23:08:03,252 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+sign
+Take sign value of the src
+
+Parameters
+----------
+src : NDArray
+Source input to the function
+
+
+2015-12-28 23:08:03,252 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+round
+Take round value of the src
+
+Parameters
+----------
+src : NDArray
+Source input to the function
+
+
+2015-12-28 23:08:03,253 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+ceil
+Take ceil value of the src
+
+Parameters
+----------
+src : NDArray
+Source input to the function
+
+
+2015-12-28 23:08:03,253 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+floor
+Take floor value of the src
+
+Parameters
+----------
+src : NDArray
+Source input to the function
+
+
+2015-12-28 23:08:03,253 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+square
+Take square of the src
+
+Parameters
+----------
+src : NDArray
+Source input to the function
+
+
+2015-12-28 23:08:03,253 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+sqrt
+Take sqrt of the src
+
+Parameters
+----------
+src : NDArray
+Source input to the function
+
+
+2015-12-28 23:08:03,254 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+rsqrt
+Take rsqrt of the src
+
+Parameters
+----------
+src : NDArray
+Source input to the function
+
+
+2015-12-28 23:08:03,254 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+exp
+Take exp of the src
+
+Parameters
+----------
+src : NDArray
+Source input to the function
+
+
+2015-12-28 23:08:03,254 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+log
+Take log of the src
+
+Parameters
+----------
+src : NDArray
+Source input to the function
+
+
+2015-12-28 23:08:03,255 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+cos
+Take cos of the src
+
+Parameters
+----------
+src : NDArray
+Source input to the function
+
+
+2015-12-28 23:08:03,255 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+sin
+Take sin of the src
+
+Parameters
+----------
+src : NDArray
+Source input to the function
+
+
+2015-12-28 23:08:03,255 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+norm
+Take L2 norm of the src.The result will be ndarray of shape (1,) on the same device.
+
+Parameters
+----------
+src : NDArray
+Source input to the function
+
+
+2015-12-28 23:08:03,256 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+max
+Take max of the src.The result will be ndarray of shape (1,) on the same device.
+
+Parameters
+----------
+src : NDArray
+Source input to the function
+
+
+2015-12-28 23:08:03,256 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+min
+Take min of the src.The result will be ndarray of shape (1,) on the same device.
+
+Parameters
+----------
+src : NDArray
+Source input to the function
+
+
+2015-12-28 23:08:03,256 [ScalaTest-main-running-KVStoreSuite] [ml.dmlc.mxnet.NDArray] [DEBUG] - NDArray function defination:
+sum
+Take sum of the src.The result will be ndarray of shape (1,) on the same device.
+
+Parameters
+----------
+src : NDArray
+Source input to the function
+
+
+[32m- init and pull[0m
+[32m- push and pull[0m
+update on key 3
+[32m- updater runs when push[0m
+[32m- get type[0m
+[32m- get numWorkers and rank[0m
+2015-12-28 23:08:03,303 [ScalaTest-main-running-IOSuite] [ml.dmlc.mxnet.DataIter] [DEBUG] - ImageRecordIter
+Create iterator for dataset packed in recordio.
+
+Parameters
+----------
+path_imglist : string, optional, default=''
+Dataset Param: Path to image list.
+path_imgrec : string, optional, default='./data/imgrec.rec'
+Dataset Param: Path to image record file.
+label_width : int, optional, default='1'
+Dataset Param: How many labels for an image.
+data_shape : Shape(tuple), required
+Dataset Param: Shape of each instance generated by the DataIter.
+preprocess_threads : int, optional, default='4'
+Backend Param: Number of thread to do preprocessing.
+verbose : boolean, optional, default=True
+Auxiliary Param: Whether to output parser information.
+num_parts : int, optional, default='1'
+partition the data into multiple parts
+part_index : int, optional, default='0'
+the index of the part will read
+shuffle : boolean, optional, default=False
+Augmentation Param: Whether to shuffle data.
+seed : int, optional, default='0'
+Augmentation Param: Random Seed.
+verbose : boolean, optional, default=True
+Auxiliary Param: Whether to output information.
+batch_size : int (non-negative), required
+Batch Param: Batch size.
+round_batch : boolean, optional, default=True
+Batch Param: Use round robin to handle overflow batch.
+prefetch_buffer : long (non-negative), optional, default=4
+Backend Param: Number of prefetched parameters
+rand_crop : boolean, optional, default=False
+Augmentation Param: Whether to random crop on the image
+crop_y_start : int, optional, default='-1'
+Augmentation Param: Where to nonrandom crop on y.
+crop_x_start : int, optional, default='-1'
+Augmentation Param: Where to nonrandom crop on x.
+max_rotate_angle : int, optional, default='0'
+Augmentation Param: rotated randomly in [-max_rotate_angle, max_rotate_angle].
+max_aspect_ratio : float, optional, default=0
+Augmentation Param: denotes the max ratio of random aspect ratio augmentation.
+max_shear_ratio : float, optional, default=0
+Augmentation Param: denotes the max random shearing ratio.
+max_crop_size : int, optional, default='-1'
+Augmentation Param: Maximum crop size.
+min_crop_size : int, optional, default='-1'
+Augmentation Param: Minimum crop size.
+max_random_scale : float, optional, default=1
+Augmentation Param: Maxmum scale ratio.
+min_random_scale : float, optional, default=1
+Augmentation Param: Minimum scale ratio.
+max_img_size : float, optional, default=1e+10
+Augmentation Param: Maxmum image size after resizing.
+min_img_size : float, optional, default=0
+Augmentation Param: Minimum image size after resizing.
+rotate : int, optional, default='-1'
+Augmentation Param: Rotate angle.
+fill_value : int, optional, default='255'
+Augmentation Param: Maximum value of illumination variation.
+data_shape : Shape(tuple), required
+Dataset Param: Shape of each instance generated by the DataIter.
+seed : int, optional, default='0'
+Augmentation Param: Random Seed.
+mirror : boolean, optional, default=False
+Augmentation Param: Whether to mirror the image.
+rand_mirror : boolean, optional, default=False
+Augmentation Param: Whether to mirror the image randomly.
+mean_img : string, optional, default=''
+Augmentation Param: Mean Image to be subtracted.
+mean_r : float, optional, default=0
+Augmentation Param: Mean value on R channel.
+mean_g : float, optional, default=0
+Augmentation Param: Mean value on G channel.
+mean_b : float, optional, default=0
+Augmentation Param: Mean value on B channel.
+mean_a : float, optional, default=0
+Augmentation Param: Mean value on Alpha channel.
+scale : float, optional, default=1
+Augmentation Param: Scale in color space.
+max_random_contrast : float, optional, default=0
+Augmentation Param: Maximum ratio of contrast variation.
+max_random_illumination : float, optional, default=0
+Augmentation Param: Maximum value of illumination variation.
+verbose : boolean, optional, default=True
+Augmentation Param: Whether to print augmentor info.
+
+
+2015-12-28 23:08:03,304 [ScalaTest-main-running-IOSuite] [ml.dmlc.mxnet.DataIter] [DEBUG] - MNISTIter
+Create iterator for MNIST hand-written digit number recognition dataset.
+
+Parameters
+----------
+image : string, optional, default='./train-images-idx3-ubyte'
+Dataset Param: Mnist image path.
+label : string, optional, default='./train-labels-idx1-ubyte'
+Dataset Param: Mnist label path.
+batch_size : int, optional, default='128'
+Batch Param: Batch Size.
+shuffle : boolean, optional, default=True
+Augmentation Param: Whether to shuffle data.
+flat : boolean, optional, default=False
+Augmentation Param: Whether to flat the data into 1D.
+seed : int, optional, default='0'
+Augmentation Param: Random Seed.
+silent : boolean, optional, default=False
+Auxiliary Param: Whether to print out data info.
+num_parts : int, optional, default='1'
+partition the data into multiple parts
+part_index : int, optional, default='0'
+the index of the part will read
+prefetch_buffer : long (non-negative), optional, default=4
+Backend Param: Number of prefetched parameters
+
+
+2015-12-28 23:08:03,305 [ScalaTest-main-running-IOSuite] [ml.dmlc.mxnet.DataIter] [DEBUG] - CSVIter
+Create iterator for dataset in csv.
+
+Parameters
+----------
+data_csv : string, required
+Dataset Param: Data csv path.
+data_shape : Shape(tuple), required
+Dataset Param: Shape of the data.
+label_csv : string, optional, default='NULL'
+Dataset Param: Label csv path. If is NULL, all labels will be returned as 0
+label_shape : Shape(tuple), optional, default=(1,)
+Dataset Param: Shape of the label.
+
+
+[32mIOSuite:[0m
+[23:08:04] src/io/iter_mnist.cc:91: MNISTIter: load 60000 images, shuffle=1, shape=(100,784)
+[32m- test MNISTIter[0m
+[32mNDArraySuite:[0m
+[32m- to java array[0m
+[32m- to scalar[0m
+[32m- call toScalar on an ndarray which is not a scalar[0m
+[32m- size and shape[0m
+[32m- set scalar value[0m
+[32m- copy from java array[0m
+[32m- plus[0m
+[32m- minus[0m
+[32m- multiplication[0m
+[32m- division[0m
+[32m- clip[0m
+[32m- sqrt[0m
+[32m- norm[0m
+[36mRun completed in 1 second, 908 milliseconds.[0m
+[36mTotal number of tests run: 19[0m
+[36mSuites: completed 4, aborted 0[0m
+[36mTests: succeeded 19, failed 0, canceled 0, ignored 0, pending 0[0m
+[32mAll tests passed.[0m
+[INFO]                                                                         
+[INFO] ------------------------------------------------------------------------
+[INFO] Building MXNet Scala Package - Native Parent 0.1-SNAPSHOT
+[INFO] ------------------------------------------------------------------------
+[INFO]                                                                         
+[INFO] ------------------------------------------------------------------------
+[INFO] Building MXNet Scala Package - Native Linux-x86_64 0.0.1-SNAPSHOT
+[INFO] ------------------------------------------------------------------------
+[INFO] 
+[INFO] --- maven-resources-plugin:2.7:copy-resources (copy-resources) @ libmxnet-scala ---
+[WARNING] File encoding has not been set, using platform encoding UTF-8, i.e. build is platform dependent!
+[WARNING] Using platform encoding (UTF-8 actually) to copy filtered resources, i.e. build is platform dependent!
+[INFO] skip non existing resourceDirectory /home/hzx/workspace/git/mxnet-scala/mxnet/scala-package/native/linux-x86_64/src/main/resources
+[INFO] 
+[INFO] --- native-maven-plugin:1.0-alpha-7:initialize (default-initialize) @ libmxnet-scala ---
+[INFO] 
+[INFO] --- native-maven-plugin:1.0-alpha-7:unzipinc (default-unzipinc) @ libmxnet-scala ---
+[INFO] 
+[INFO] --- native-maven-plugin:1.0-alpha-7:javah (default-javah) @ libmxnet-scala ---
+[INFO] 
+[INFO] --- maven-antrun-plugin:1.7:run (default) @ libmxnet-scala ---
+[WARNING] Parameter tasks is deprecated, use target instead
+[INFO] Executing tasks
+
+main:
+   [delete] Deleting: /home/hzx/workspace/git/mxnet-scala/mxnet/scala-package/native/linux-x86_64/opencv.pkg.txt
+[INFO] Executed tasks
+[INFO] 
+[INFO] --- native-maven-plugin:1.0-alpha-7:javah (javah) @ libmxnet-scala ---
+[INFO] /bin/sh -c cd /home/hzx/workspace/git/mxnet-scala/mxnet/scala-package/native/linux-x86_64 && javah -o /home/hzx/workspace/git/mxnet-scala/mxnet/scala-package/native/linux-x86_64/target/custom-javah/ml_dmlc_mxnet_native_c_api.h -classpath /home/hzx/workspace/git/mxnet-scala/mxnet/scala-package/native/linux-x86_64/target/classes:/home/hzx/workspace/git/mxnet-scala/mxnet/scala-package/core/target/mxnet-scala-core-0.1-SNAPSHOT.jar:/home/hzx/.m2/repository/org/scala-lang/scala-library/2.10.4/scala-library-2.10.4.jar:/home/hzx/.m2/repository/commons-codec/commons-codec/1.10/commons-codec-1.10.jar:/home/hzx/.m2/repository/log4j/log4j/1.2.17/log4j-1.2.17.jar:/home/hzx/.m2/repository/org/slf4j/slf4j-api/1.7.5/slf4j-api-1.7.5.jar:/home/hzx/.m2/repository/org/slf4j/slf4j-log4j12/1.7.7/slf4j-log4j12-1.7.7.jar ml.dmlc.mxnet.LibInfo
+[INFO] 
+[INFO] --- native-maven-plugin:1.0-alpha-7:compile (default-compile) @ libmxnet-scala ---
+[INFO] 
+[INFO] --- native-maven-plugin:1.0-alpha-7:link (default-link) @ libmxnet-scala ---
+[INFO] /bin/sh -c cd /home/hzx/workspace/git/mxnet-scala/mxnet/scala-package/native/linux-x86_64 && g++-4.8 -shared -o/home/hzx/workspace/git/mxnet-scala/mxnet/scala-package/native/linux-x86_64/target/libmxnet-scala.so target/objs/ml_dmlc_mxnet_native_c_api.o -Wl,--whole-archive ../../../lib/libmxnet.a ../../../dmlc-core/libdmlc.a -Wl,--no-whole-archive -lm -lrt -fopenmp /usr/lib/x86_64-linux-gnu/libopencv_calib3d.so /usr/lib/x86_64-linux-gnu/libopencv_contrib.so /usr/lib/x86_64-linux-gnu/libopencv_core.so /usr/lib/x86_64-linux-gnu/libopencv_features2d.so /usr/lib/x86_64-linux-gnu/libopencv_flann.so /usr/lib/x86_64-linux-gnu/libopencv_gpu.so /usr/lib/x86_64-linux-gnu/libopencv_highgui.so /usr/lib/x86_64-linux-gnu/libopencv_imgproc.so /usr/lib/x86_64-linux-gnu/libopencv_legacy.so /usr/lib/x86_64-linux-gnu/libopencv_ml.so /usr/lib/x86_64-linux-gnu/libopencv_objdetect.so /usr/lib/x86_64-linux-gnu/libopencv_ocl.so /usr/lib/x86_64-linux-gnu/libopencv_photo.so /usr/lib/x86_64-linux-gnu/libopencv_stitching.so /usr/lib/x86_64-linux-gnu/libopencv_superres.so /usr/lib/x86_64-linux-gnu/libopencv_ts.so /usr/lib/x86_64-linux-gnu/libopencv_video.so /usr/lib/x86_64-linux-gnu/libopencv_videostab.so -lopencv_calib3d -lopencv_contrib -lopencv_core -lopencv_features2d -lopencv_flann -lopencv_gpu -lopencv_highgui -lopencv_imgproc -lopencv_legacy -lopencv_ml -lopencv_objdetect -lopencv_ocl -lopencv_photo -lopencv_stitching -lopencv_superres -lopencv_ts -lopencv_video -lopencv_videostab -lblas
+[INFO] 
+[INFO] --- maven-resources-plugin:2.7:testResources (default-testResources) @ libmxnet-scala ---
+[WARNING] Using platform encoding (UTF-8 actually) to copy filtered resources, i.e. build is platform dependent!
+[INFO] skip non existing resourceDirectory /home/hzx/workspace/git/mxnet-scala/mxnet/scala-package/native/linux-x86_64/src/test/resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.3:testCompile (default-testCompile) @ libmxnet-scala ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- maven-surefire-plugin:2.7:test (default-test) @ libmxnet-scala ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- native-maven-plugin:1.0-alpha-7:inczip (default-inczip) @ libmxnet-scala ---
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary:
+[INFO] 
+[INFO] MXNet Scala Package - Parent ...................... SUCCESS [0.033s]
+[INFO] MXNet Scala Package - Core ........................ SUCCESS [4.727s]
+[INFO] MXNet Scala Package - Native Parent ............... SUCCESS [0.001s]
+[INFO] MXNet Scala Package - Native Linux-x86_64 ......... SUCCESS [2.198s]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time: 7.507s
+[INFO] Finished at: Mon Dec 28 23:08:07 CST 2015
+[INFO] Final Memory: 24M/341M
+[INFO] ------------------------------------------------------------------------
