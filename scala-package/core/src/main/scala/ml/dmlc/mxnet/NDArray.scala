@@ -268,13 +268,19 @@ object NDArray {
     NDArray._unaryNDArrayFunction("norm", src)
   }
 
+  // TODO
+  def _randomUniform(low: Float, high: Float, out: NDArray) = ???
+
+  def _randomGaussian(mean: Float, stdvar: Float, out: NDArray) = ???
+
+
   /**
    * Create a new NDArray that copies content from source_array.
    * @param sourceArr Source data to create NDArray from.
    * @param ctx The context of the NDArray, default to current default context.
    * @return The created NDArray.
    */
-  def array(sourceArr: Array[Int], ctx: Context=null): NDArray = ???
+  def array(sourceArr: Array[Float], ctx: Context=null): NDArray = ???
 
   /**
    * Load ndarray from binary file.
