@@ -14,24 +14,33 @@ import ml.dmlc.mxnet.NDArray.{array, zeros, ones}
  */
 abstract class Initializer(protected val name: String, protected var arr: NDArray) {
 
-  if (name.startsWith("upsampling")) {
-    _initBilinear()
-  } else if (name.endsWith("bias")) {
-    _initBias()
-  } else if (name.endsWith("gamma")) {
-    _initGamma()
-  } else if (name.endsWith("beta")) {
-    _initBeta()
-  } else if (name.endsWith("weight")) {
-    _initWeight()
-  } else if (name.endsWith("moving_mean")) {
-    _initZero()
-  } else if (name.endsWith("moving_var")) {
-    _initZero()
-  } else if (name.endsWith("moving_avg")) {
-    _initZero()
-  } else {
-    throw new IllegalArgumentException(s"Unknown initialization pattern for ${name}.")
+  /**
+   * Initialize an Initializer
+   *
+   * @param name name of corrosponding ndarray
+   * @param arr ndarray to be Initialized
+   */
+  def apply(name: String, arr: NDArray) = {
+
+    if (name.startsWith("upsampling")) {
+      _initBilinear()
+    } else if (name.endsWith("bias")) {
+      _initBias()
+    } else if (name.endsWith("gamma")) {
+      _initGamma()
+    } else if (name.endsWith("beta")) {
+      _initBeta()
+    } else if (name.endsWith("weight")) {
+      _initWeight()
+    } else if (name.endsWith("moving_mean")) {
+      _initZero()
+    } else if (name.endsWith("moving_var")) {
+      _initZero()
+    } else if (name.endsWith("moving_avg")) {
+      _initZero()
+    } else {
+      throw new IllegalArgumentException(s"Unknown initialization pattern for ${name}.")
+    }
   }
 
   def _initBilinear() = {
