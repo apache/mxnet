@@ -84,6 +84,32 @@ class LibInfo {
   @native def mxKVStoreBarrier(handle: KVStoreHandle): Int
   @native def mxKVStoreGetGroupSize(handle: KVStoreHandle, size: RefInt): Int
   @native def mxKVStoreGetRank(handle: KVStoreHandle, size: RefInt): Int
+
+  //DataIter Funcs
+  @native def mxListDataIters(handles: ListBuffer[DataIterCreator]): Int
+  @native def mxDataIterCreateIter(handle: DataIterCreator,
+                                   keys: Array[String],
+                                   vals: Array[String],
+                                   out: DataIterHandle): Int
+  @native def mxDataIterGetIterInfo(creator: DataIterCreator,
+                                    name: RefString,
+                                    description: RefString,
+                                    argNames: ListBuffer[String],
+                                    argTypeInfos: ListBuffer[String],
+                                    argDescriptions: ListBuffer[String]): Int
+  @native def mxDataIterFree(handle: DataIterHandle): Int
+  @native def mxDataIterBeforeFirst(handle: DataIterHandle): Int
+  @native def mxDataIterNext(handle: DataIterHandle, out: RefInt): Int
+  @native def mxDataIterGetLabel(handle: DataIterHandle,
+                                 out: NDArrayHandle): Int
+  @native def mxDataIterGetData(handle: DataIterHandle,
+                                out: NDArrayHandle): Int
+  @native def mxDataIterGetIndex(handle: DataIterHandle,
+                                outIndex: ListBuffer[Long],
+                                outSize: RefLong): Int
+  @native def mxDataIterGetPadNum(handle: DataIterHandle,
+                                  out: MXUintRef): Int
+  //Executors
   @native def mxExecutorOutputs(handle: ExecutorHandle, outputs: ArrayBuffer[NDArrayHandle]): Int
   @native def mxExecutorFree(handle: ExecutorHandle): Int
   @native def mxExecutorForward(handle: ExecutorHandle, isTrain: Int): Int

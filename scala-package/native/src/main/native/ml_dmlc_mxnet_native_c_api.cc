@@ -489,3 +489,180 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayFree(JNIEnv * env, jo
   puts("Free ndarray called");
   return 0;
 }
+
+//IO funcs
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxListDataIters
+  (JNIEnv * env, jobject obj, jobject creators) {
+  // Base.FunctionHandle.constructor
+    jclass chClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
+    jmethodID chConstructor = env->GetMethodID(chClass,"<init>","(J)V");
+
+    // scala.collection.mutable.ListBuffer append method
+    jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+    jmethodID listAppend = env->GetMethodID(listClass,
+      "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+
+    // Get function list
+    DataIterCreator *outArray;
+    mx_uint outSize;
+    int ret = MXListDataIters(&outSize, &outArray);
+    for (int i = 0; i < outSize; ++i) {
+      DataIterCreator chAddr = outArray[i];
+      jobject chObj = env->NewObject(chClass, chConstructor, (long)chAddr);
+      env->CallObjectMethod(creators, listAppend, chObj);
+    }
+    return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterCreateIter
+  (JNIEnv * env, jobject obj, jobject creator,
+   jobjectArray jkeys, jobjectArray jvals, jobject dataIterHandle) {
+  //keys and values
+  int paramSize = env->GetArrayLength(jkeys);
+  char** keys = new char*[paramSize];
+  char** vals = new char*[paramSize];
+  jstring jkey, jval;
+  //use strcpy and release char* created by JNI inplace
+  for(int i=0; i<paramSize; i++) {
+    jkey = (jstring) env->GetObjectArrayElement(jkeys, i);
+    const char* ckey = env->GetStringUTFChars(jkey, 0);
+    keys[i] = new char[env->GetStringLength(jkey)];
+    strcpy(keys[i], ckey);
+    env->ReleaseStringUTFChars(jkey, ckey);
+
+    jval = (jstring) env->GetObjectArrayElement(jvals, i);
+    const char* cval = env->GetStringUTFChars(jval, 0);
+    vals[i] = new char[env->GetStringLength(jval)];
+    strcpy(vals[i], cval);
+    env->ReleaseStringUTFChars(jval, cval);
+  }
+
+  //create iter
+  jlong creatorPtr = getLongField(env, creator);
+  DataIterHandle out;
+  int ret = MXDataIterCreateIter((DataIterCreator)creatorPtr,
+                                  (mx_uint) paramSize,
+                                  (const char**) keys,
+                                  (const char**) vals,
+                                  &out);
+  jclass hClass = env->GetObjectClass(dataIterHandle);
+  jfieldID ptr = env->GetFieldID(hClass, "value", "J");
+  env->SetLongField(dataIterHandle, ptr, (long)out);
+
+  //release keys and vals
+  for(int i=0; i<paramSize; i++) {
+      delete[] keys[i];
+      delete[] vals[i];
+  }
+  delete[] keys;
+  delete[] vals;
+
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterGetIterInfo
+  (JNIEnv * env, jobject obj, jobject creator, jobject jname,
+   jobject jdesc, jobject jargNames, jobject jargTypeInfos, jobject jargDescs) {
+  jlong creatorPtr = getLongField(env, creator);
+  const char* name;
+  const char* description;
+  mx_uint numArgs;
+  const char** argNames;
+  const char** argTypeInfos;
+  const char** argDescs;
+  int ret = MXDataIterGetIterInfo((DataIterCreator)creatorPtr,
+                                   &name,
+                                   &description,
+                                   &numArgs,
+                                   &argNames,
+                                   &argTypeInfos,
+                                   &argDescs);
+
+  jclass refStringClass = env->FindClass("ml/dmlc/mxnet/Base$RefString");
+  jfieldID valueStr = env->GetFieldID(refStringClass, "value", "Ljava/lang/String;");
+  //set params
+  env->SetObjectField(jname, valueStr, env->NewStringUTF(name));
+  env->SetObjectField(jdesc, valueStr, env->NewStringUTF(description));
+  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+  jmethodID listAppend = env->GetMethodID(listClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+  for(int i=0; i<numArgs; i++) {
+    env->CallObjectMethod(jargNames, listAppend, env->NewStringUTF(argNames[i]));
+    env->CallObjectMethod(jargTypeInfos, listAppend, env->NewStringUTF(argTypeInfos[i]));
+    env->CallObjectMethod(jargDescs, listAppend, env->NewStringUTF(argDescs[i]));
+  }
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterFree
+  (JNIEnv *env, jobject obj, jobject handle) {
+  jlong handlePtr = getLongField(env, handle);
+  int ret = MXDataIterFree((DataIterHandle) handlePtr);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterBeforeFirst
+  (JNIEnv *env, jobject obj, jobject handle) {
+  jlong handlePtr = getLongField(env, handle);
+  int ret = MXDataIterBeforeFirst((DataIterHandle) handlePtr);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterNext
+  (JNIEnv *env, jobject obj, jobject handle, jobject out) {
+  jlong handlePtr = getLongField(env, handle);
+  int cout;
+  int ret = MXDataIterNext((DataIterHandle)handlePtr, &cout);
+  setIntField(env, out, cout);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterGetLabel
+  (JNIEnv *env, jobject obj, jobject handle, jobject ndArrayHandle) {
+  jlong handlePtr = getLongField(env, handle);
+  NDArrayHandle out;
+  int ret = MXDataIterGetLabel((DataIterHandle)handlePtr, &out);
+  jclass refLongClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
+  jfieldID refLongFid = env->GetFieldID(refLongClass, "value", "J");
+  env->SetLongField(ndArrayHandle, refLongFid, (jlong)out);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterGetData
+  (JNIEnv *env, jobject obj, jobject handle, jobject ndArrayHandle) {
+  jlong handlePtr = getLongField(env, handle);
+  NDArrayHandle out;
+  int ret = MXDataIterGetData((DataIterHandle)handlePtr, &out);
+  jclass refLongClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
+  jfieldID refLongFid = env->GetFieldID(refLongClass, "value", "J");
+  env->SetLongField(ndArrayHandle, refLongFid, (jlong)out);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterGetIndex
+  (JNIEnv *env, jobject obj, jobject handle, jobject outIndex, jobject outSize) {
+  jlong handlePtr = getLongField(env, handle);
+  uint64_t* coutIndex;
+  uint64_t coutSize;
+  int ret = MXDataIterGetIndex((DataIterHandle)handlePtr, &coutIndex, &coutSize);
+  //set field
+  setLongField(env, outSize, (long)coutSize);
+  // scala.collection.mutable.ListBuffer append method
+  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+  jmethodID listAppend = env->GetMethodID(listClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+
+  for(int i=0; i<coutSize; i++) {
+    env->CallObjectMethod(outIndex, listAppend, (jlong)coutIndex[i]);
+  }
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterGetPadNum
+  (JNIEnv *env, jobject obj, jobject handle, jobject pad) {
+  jlong handlePtr = getLongField(env, handle);
+  int cpad;
+  int ret = MXDataIterGetPadNum((DataIterHandle)handlePtr, &cpad);
+  setIntField(env, pad, cpad);
+  return ret;
+}
