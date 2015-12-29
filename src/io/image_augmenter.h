@@ -87,7 +87,7 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
     DMLC_DECLARE_FIELD(random_s).set_default(0)
         .describe("Augmentation Param: Maximum value of S channel in HSV color space.");
     DMLC_DECLARE_FIELD(random_l).set_default(0)
-        .describe("Augmentation Param: Maximum value of V channel in HSV color space.");
+        .describe("Augmentation Param: Maximum value of L channel in HSV color space.");
     DMLC_DECLARE_FIELD(rotate).set_default(-1.0f)
         .describe("Augmentation Param: Rotate angle.");
     DMLC_DECLARE_FIELD(fill_value).set_default(255)
