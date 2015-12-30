@@ -564,7 +564,10 @@ def divide(lhs, rhs):
     else:
         raise TypeError('type %s not supported' % str(type(rhs)))
 
-def negate(array):
+def true_divide(lhs, rhs):
+    return divide(lhs, rhs)
+
+def negative(array):
     return multiply(array, -1.0)
 
 def zeros(shape, ctx=None, dtype=mx_real_t):
@@ -605,6 +608,26 @@ def ones(shape, ctx=None, dtype=mx_real_t):
     arr[:] = 1.0
     return arr
 
+def full(shape, val, ctx=None):
+    """Create a new NDArray filled with given value, with specified shape.
+
+    Parameters
+    ----------
+    shape : tuple
+        shape of the NDArray.
+    val : float
+        value to be filled with.
+    ctx : Context, optional
+        The context of the NDArray, default to current default context.
+
+    Returns
+    -------
+    out: Array
+        The created NDArray.
+    """
+    arr = empty(shape, ctx)
+    arr[:] = val
+    return arr
 
 def array(source_array, ctx=None, dtype=mx_real_t):
     """Create a new NDArray that copies content from source_array.
