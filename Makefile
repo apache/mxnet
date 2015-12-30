@@ -200,10 +200,10 @@ rpkg:	roxygen
 
 clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
-
-clean_all: clean
 	cd $(DMLC_CORE); make clean; cd -
 	cd $(PS_PATH); make clean; cd -
+
+clean_all: clean
 
 -include build/*.d
 -include build/*/*.d

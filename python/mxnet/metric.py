@@ -56,7 +56,7 @@ class Accuracy(EvalMetric):
             if label.shape[0] < pred_label.shape[0]:
                 raise Exception("Predict label is more than data label? ")
             self.sum_metric += numpy.sum(pred_label == label[:pred_label.shape[0]])
-            num_inst = pred_label.shape[0]
+            num_inst = pred_label.size
         self.num_inst += num_inst
 
 class MAE(EvalMetric):
