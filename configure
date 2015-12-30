@@ -1,0 +1,270 @@
+#!/bin/bash
+##=============================================================================
+## Main configuration processing
+set -e
+PROJECT_HOME=$PWD
+DEPS_PREFIX=$PWD/deps/local
+
+if [[ $OSTYPE == linux* ]]; then
+        DEFAULT_DATO_DEPS_VERSION=4
+elif [[ $OSTYPE == darwin* ]]; then
+        DEFAULT_DATO_DEPS_VERSION=4
+elif [[ $OSTYPE == msys ]]; then
+        DEFAULT_DATO_DEPS_VERSION=4
+fi
+
+## Support code
+function download_file {
+  # detect wget
+  echo "Downloading $2 from $1 ..."
+  # if it is a file
+  if [ -e $1 ] ; then
+    cp $1 $2
+    return
+  fi
+  if [ -z `which wget` ] ; then
+    if [ -z `which curl` ] ; then
+      echo "Unable to find either curl or wget! Cannot proceed with
+            automatic install."
+      exit 1
+    fi
+    curl $1 -o $2
+  else
+    wget $1 -O $2
+  fi
+} # end of download file
+
+function print_help {
+  echo "Configures the build with the specified toolchain. "
+  echo
+  echo "If configure has already been run before, running configure "
+  echo "will simply reconfigures the build with no changes. "
+  echo "To rebuild with a new toolchain, it is recommended to clean everything"
+  echo " (--cleanup) and run configure again"
+  echo
+  echo "Usage: ./configure --toolchain=[toolchain] [remaining options]"
+  echo
+  echo "  --cleanup               cleanups everything"
+  echo
+  echo "  --cleanup_if_invalid    cleanups everything if toolchain version is different"
+  echo 
+  echo "  --yes                   Defaults to yes on a prompt"
+  echo
+  echo "  --toolchain=[toolchain] Toolchain is either a dato-deps file on disk, "
+  echo "                          or a URL to a toolchain. If toolchain is"
+  echo "                          \"default\", a default one is selected"
+  echo
+  echo "  --cuda_path             Cuda library path. If specified, mxnet will be built with cuda support"
+  echo 
+  echo "  -D var=value            Specify CFLAGS definitions to be passed on to cmake."
+  echo 
+  echo "Configure with either default toolchain, or an existing toolchain if there is one."
+  echo "Example: ./configure"
+  echo
+  echo "Cleanup all build directories"
+  echo "Example: ./configure --cleanup"
+  echo
+  echo "Download the default toolchain, and configure with it"
+  echo "Example: ./configure --toolchain=default"
+  echo
+  echo "Configure with a toolchain you have already downloaded"
+  echo "Example: ./configure --toolchain=dato_deps_linux_gcc_4.9.2.tar.gz"
+  echo
+  echo "Configure with a toolchain you download from the internet."
+  echo "Example: ./configure --toolchain=https://s3-us-west-2.amazonaws.com/dato-deps/1/dato_deps_linux_gcc_4.9.2.tar.gz"
+  echo
+  echo "All remaining options will be forwarded to cmake."
+  exit 1
+} # end of print help
+
+
+function unknown_option {
+  echo "Unrecognized option: $1"
+  echo "To get help, run ./configure --help"
+  exit 1
+} # end of unknown option
+
+function run_cleanup {
+  #!/bin/bash
+  echo "cleaning up";
+  rm -rf deps dato_deps*
+} 
+
+
+function run_cleanup_prompt {
+  #!/bin/bash
+  echo "This script completely erases all build folders including dependencies!"
+  if [[ $default_yes == 1 ]]; then
+          yesorno="yes"
+  else
+          echo "Are you sure you want to continue? (yes or no)"
+          read yesorno;
+  fi
+
+  if [ "$yesorno" == "yes" ]; then
+    run_cleanup
+  else
+    echo "Doing nothing!";
+  fi
+} 
+
+# check for existing toolchain
+# we do so by checking for the existance of the compiler in deps/local/bin/cc
+has_existing_toolchain=0
+if [ -e deps/local/bin/cc ]; then
+  has_existing_toolchain=1
+fi
+
+dependency_bad_version=0
+if [ -e deps_version ]; then
+        cur_version=`cat deps_version`
+        if [[ $cur_version < $DEFAULT_DATO_DEPS_VERSION ]]; then
+                echo "Your dependency toolchain is out of date. "
+                echo "Run ./configure --cleanup to get a new dependency version."
+                dependency_bad_version=1
+        fi
+else
+        echo "Your dependency toolchain is either using a custom version, or is out of date. "
+        echo "Run ./configure --cleanup to get a new dependency version."
+        dependency_bad_version=1
+fi
+
+# the three stages 
+run_toolchain_install=1
+
+# command flag options
+cleanup_option=0
+cleanup_if_invalid_option=0
+toolchain=""
+default_yes=0
+no_cuda=1 # we don't need cuda from dato-deps
+cuda_path=""
+
+# Parse command line configure flags ------------------------------------------
+while [ $# -gt 0 ]
+  do case $1 in
+    --toolchain=*)          toolchain=${1##--toolchain=};;
+    --cleanup)              cleanup_option=1;;
+    --cleanup_if_invalid)   cleanup_if_invalid_option=1;;
+    --cuda_path=*)          cuda_path=${1##--cuda_path=};;
+    --yes)                  default_yes=1;;
+    --help)                 print_help ;;
+    -D)                     CFLAGS="$CFLAGS -D $2"; shift ;;
+    *) unknown_option $1 ;;
+  esac
+  shift
+done
+
+if [[ $cleanup_option == 1 ]]; then
+        run_cleanup_prompt
+        exit 1
+fi
+
+if [[ $cleanup_if_invalid_option == 1 ]]; then
+        if [[ $dependency_bad_version == 1 ]]; then
+                default_yes=1
+                run_cleanup_prompt
+                has_existing_toolchain=0
+        fi
+fi
+
+if [[ $has_existing_toolchain == 1 && $toolchain == "" ]]; then
+  echo
+  echo "Existing toolchain detected, using existing toolchain to configure."
+  echo
+  run_toolchain_install=0
+fi
+
+if [[ $run_toolchain_install == 1 ]]; then
+        run_cleanup
+        ./scripts/install_python_toolchain.sh
+        REMAINING_OPTIONS=$@
+        if [[ $toolchain == default || $toolchain == "" ]]; then
+                if [[ $OSTYPE == darwin* ]]; then
+                        toolchain="http://s3-us-west-2.amazonaws.com/dato-deps/$DEFAULT_DATO_DEPS_VERSION/dato_deps_mac_default.tar.gz"
+                elif [[ $OSTYPE == linux* ]]; then
+                        if [[ $no_cuda == 1 ]]; then
+                          toolchain="http://s3-us-west-2.amazonaws.com/dato-deps/$DEFAULT_DATO_DEPS_VERSION/dato_deps_linux_no_cuda.tar.gz"
+                        else
+                          toolchain="http://s3-us-west-2.amazonaws.com/dato-deps/$DEFAULT_DATO_DEPS_VERSION/dato_deps_linux_default.tar.gz"
+                        fi
+                elif [[ $OSTYPE == msys ]]; then
+                        toolchain="http://s3-us-west-2.amazonaws.com/dato-deps/$DEFAULT_DATO_DEPS_VERSION/dato_deps_win_default.tar.gz"
+                else 
+                        echo "Unknown toolchain for the operating system"
+                        exit 1
+                fi
+                echo $DEFAULT_DATO_DEPS_VERSION > deps_version
+        fi
+
+        filename=`basename $toolchain`
+        if [[ ! -e $filename ]]; then
+                download_file $toolchain $filename
+                tar -xzvf $filename deps
+        else
+                tar -xzvf $filename deps
+        fi
+fi
+
+CC=$PWD/deps/local/bin/cc
+CXX=$PWD/deps/local/bin/c++
+if [[ $OSTYPE == msys ]]; then
+        CC=gcc.exe
+        CXX=g++.exe
+fi
+
+export LD_LIBRARY_PATH=${PWD}/deps/local/lib64:${LD_LIBRARY_PATH}
+
+CMAKE=$PWD/deps/local/bin/cmake
+LINKER=""
+if [ -e $PWD/deps/local/bin/ld.gold ]; then
+        LINKER="-DCMAKE_LINKER=$PWD/deps/local/bin/ld.gold"
+elif [ -e $PWD/deps/local/bin/ld ]; then
+        LINKER="-DCMAKE_LINKER=$PWD/deps/local/bin/ld"
+else
+        LINKER=""
+fi
+
+echo "======================= BUILD CONFIGURATION ========================"
+echo "System Information: " 
+uname -v
+echo "Compiler Information: "
+$CC --version
+$CXX --version
+$CMAKE --version 
+
+echo "======================= Config File ================================"
+## ============================================================================
+# Generate config.mk 
+CC=$CC
+CXX=$CXX
+
+# OS Dependent Flags
+if [[ $OSTYPE == linux* ]]; then
+        USE_OPENMP=1
+        USE_BLAS="blas"
+        SHARED_LINKER_FLAGS="-Wl,-rpath,\\\$\$ORIGIN -Wl,-rpath,${PWD}/deps/local/lib64 -Wl,-rpath,${PWD}/deps/local/lib"
+elif [[ $OSTYPE == darwin* ]]; then
+        USE_OPENMP=0
+        USE_BLAS="apple"
+        SHARED_LINKER_FLAGS="-Wl,-rpath,@loader_path -Wl,-rpath,${PWD}/deps/local/lib64 -Wl,-rpath,${PWD}/deps/local/lib"
+elif [[ $OSTYPE == msys ]]; then
+        USE_OPENMP=0
+        USE_BLAS="blas"
+        SHARED_LINKER_FLAGS="-Wl,-rpath,/mingw64/bin -Wl,-rpath,${PWD}/deps/local/lib64 -Wl,-rpath,${PWD}/deps/local/lib"
+fi
+
+USE_CUDA_PATH=${cuda_path}
+# CUDA Flags
+if [ -z "$USE_CUDA_PATH" ]; then
+  USE_CUDA_PATH=NONE
+  USE_CUDA=0
+else
+  USE_CUDA=1
+  SHARED_LINKER_FLAGS+=" -Wl,-rpath,${USE_CUDA_PATH}/lib64"
+fi
+
+DEPS=$PWD/deps/local
+eval "echo \"$(cat make/dato-config.mk)\" | tee config.mk"
+echo "======================================================="
+echo "Success! Generated config file: config.mk"
