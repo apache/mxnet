@@ -2,7 +2,7 @@
  * Copyright (c) 2015 by Contributors
  * \file softmax_output-inl.h
  * \brief
- * \author Junyuan Xie
+ * \author Bing Xu
 */
 #ifndef MXNET_OPERATOR_SOFTMAX_OUTPUT_INL_H_
 #define MXNET_OPERATOR_SOFTMAX_OUTPUT_INL_H_
@@ -27,14 +27,22 @@ enum SoftmaxOutputOpOutputs {kOut};
 
 struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
   float grad_scale;
+  float ignore_label;
   bool multi_output;
+  bool use_ignore;
   DMLC_DECLARE_PARAMETER(SoftmaxOutputParam) {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
     .describe("Scale the gradient by a float factor");
+    DMLC_DECLARE_FIELD(ignore_label).set_default(-1.0f)
+    .describe("the ignore_label will not work in backward, and this only"
+      "be used when multi_output=true");
     DMLC_DECLARE_FIELD(multi_output).set_default(false)
     .describe("If set to true, for a (n,k,x_1,..,x_n) dimensional"
       "input tensor, softmax will generate n*x_1*...*x_n output, each"
       "has k classes");
+    DMLC_DECLARE_FIELD(use_ignore).set_default(false)
+    .describe("If set to true, the ignore_label value will not contributor"
+      "to the backward gradient");
   };
 };
 
@@ -88,8 +96,12 @@ class SoftmaxOutputOp : public Operator {
       Tensor<xpu, 2> label = in_data[softmaxout_enum::kLabel].FlatTo2D<xpu, real_t>(s);
       Tensor<xpu, 3> out = out_data[softmaxout_enum::kOut].get_with_shape<xpu, 3, real_t>(s3, s);
       Tensor<xpu, 3> grad = in_grad[softmaxout_enum::kData].get_with_shape<xpu, 3, real_t>(s3, s);
-      SoftmaxGrad(grad, out, label);
-      grad *= param_.grad_scale/s3[2];
+      if (param_.use_ignore) {
+          SoftmaxGrad(grad, out, label, static_cast<real_t>(param_.ignore_label));
+      } else {
+          SoftmaxGrad(grad, out, label);
+      }
+      grad *= param_.grad_scale;
     } else {
       Tensor<xpu, 1> label = in_data[softmaxout_enum::kLabel].get<xpu, 1, real_t>(s);
       Tensor<xpu, 2> out = out_data[softmaxout_enum::kOut].FlatTo2D<xpu, real_t>(s);

@@ -7,6 +7,7 @@ from .base import NDArrayHandle
 from . import ndarray
 import logging
 from math import sqrt
+import re
 
 
 class Monitor(object):
@@ -20,8 +21,13 @@ class Monitor(object):
         a function that computes statistics of tensors.
         Takes a NDArray and returns a NDArray. defaults to mean
         absolute value |x|/size(x).
+    pattern : str
+        A regular expression specifying which tensors to monitor.
+        Only tensors with names that match name_pattern will be included.
+        For example, '.*weight|.*output' will print all weights and outputs;
+        '.*backward.*' will print all gradients.
     """
-    def __init__(self, interval, stat_func=None):
+    def __init__(self, interval, stat_func=None, pattern='.*', sort=False):
         if stat_func is None:
             def asum_stat(x):
                 """returns |x|/size(x), async execution."""
@@ -33,9 +39,11 @@ class Monitor(object):
         self.queue = []
         self.step = 0
         self.exes = []
+        self.re_prog = re.compile(pattern)
+        self.sort = sort
         def stat_helper(name, array):
             """wrapper for executor callback"""
-            if not self.activated:
+            if not self.activated or not self.re_prog.match(name):
                 return
             array = ctypes.cast(array, NDArrayHandle)
             array = NDArray(array, writable=False)
@@ -73,23 +81,31 @@ class Monitor(object):
         Returns
         -------
         res : list of """
-        if self.activated:
-            for exe in self.exes:
-                for array in exe.arg_arrays:
-                    array.wait_to_read()
-            for exe in self.exes:
-                for name, array in zip(exe._symbol.list_arguments(), exe.arg_arrays):
-                    self.queue.append((self.step, name, self.stat_func(array)))
-        else:
+        if not self.activated:
             return []
+        for exe in self.exes:
+            for array in exe.arg_arrays:
+                array.wait_to_read()
+        for exe in self.exes:
+            for name, array in zip(exe._symbol.list_arguments(), exe.arg_arrays):
+                if self.re_prog.match(name):
+                    self.queue.append((self.step, name, self.stat_func(array)))
         self.activated = False
         res = []
-        for n, k, v in self.queue:
-            assert isinstance(v, NDArray)
-            if v.shape == (1,):
-                res.append((n, k, str(v.asscalar())))
-            else:
-                res.append((n, k, str(v.asnumpy())))
+        if self.sort:
+            self.queue.sort(key=lambda x: x[1])
+        for n, k, v_list in self.queue:
+            if isinstance(v_list, NDArray):
+                v_list = [v_list]
+            assert isinstance(v_list, list)
+            s = ''
+            for v in v_list:
+                assert isinstance(v, NDArray)
+                if v.shape == (1,):
+                    s += str(v.asscalar()) + '\t'
+                else:
+                    s += str(v.asnumpy()) + '\t'
+            res.append((n, k, s))
         self.queue = []
         return res
 

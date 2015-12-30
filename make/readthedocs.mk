@@ -40,7 +40,7 @@ USE_INTEL_PATH = NONE
 
 
 # the additional link flags you want to add
-ADD_LDFLAGS =
+ADD_LDFLAGS = -lgomp
 
 # the additional compile flags you want to add
 ADD_CFLAGS = -DMSHADOW_STAND_ALONE=1

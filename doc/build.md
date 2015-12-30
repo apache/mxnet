@@ -2,12 +2,16 @@ Installation Guide
 ==================
 
 This page gives instructions of how to build and install the mxnet package from
-scratch on various systems. It consists of two steps, first we build the shared
-library from the C++ codes (`libmxnet.so` for linux/osx and `libmxnet.dll` for
-windows). Then we install the language, e.g. Python, packages. If the
-instructions on this page do not work for you, please feel free to ask questions
-at [mxnet/issues](https://github.com/dmlc/mxnet/issues), or even better to send
-pull request if you can fix the problem.
+scratch on various systems. It consists of two steps:
+
+1. Fist build the shared library from the C++ codes (`libmxnet.so` for linux,
+ `libmxnet.dylib` for osx and `libmxnet.dll` for windows).
+2. Then install the language packages (e.g. Python package).
+
+Please refer to [FAQ](#frequently-asked-questions) first if you had any problem
+during installation. If the instructions do not work for you, please feel free
+to ask questions at [mxnet/issues](https://github.com/dmlc/mxnet/issues), or
+even better to send pull request if you can fix the problem.
 
 ## Contents
 - [Build the Shared Library](#build-mxnet-library)
@@ -20,6 +24,7 @@ pull request if you can fix the problem.
 - [Python Package Installation](#python-package-installation)
 - [R Package Installation](#r-package-installation)
 - [Docker Images](#docker-images)
+- [Frequently asked questions](#frequently-asked-questions)
 
 ## Build the Shared Library
 
@@ -175,6 +180,10 @@ There are several ways to install the package:
    ```bash
    sudo apt-get install python-setuptools
    ```
+
+   *NOTE: If you recompiled mxnet, then you need to reinstall mxnet again to
+    make the new library take effect*
+
 2. Only set the environment variable `PYTHONPATH` to tell python where to find
    the library. For example, assume we cloned `mxnet` on the home directory
    `~`. then we can added the following line in `~/.bashrc`
@@ -249,3 +258,29 @@ sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /d
 
 For a guide to Docker, see the [official docs](https://docs.docker.com/userguide/). For more details on how to use the
 MXNet Docker images, including requirements for CUDA support, consult the [source project](https://github.com/Kaixhin/dockerfiles).
+
+## Frequently Asked Questions
+
+1. **Compile failed after `git pull`**
+
+   Please first update the submodules, clean all and recompile:
+
+   ```bash
+   git submodule update && make clean_all && make -j4
+   ```
+
+2. **Compile failed after `config.mk` is modified**
+
+   This often happens if `USE_CUDA` or `USE_DIST_KVSTORE` has been changed. You
+   need to clean all first:
+
+    ```bash
+    make clean_all && make -j4
+    ```
+
+3. **Still get the error message e.g. `compile with USE_DIST_KVSTORE=1 to use
+   dist` after recomplied with `USE_DIST_KVSTORE=1`**
+
+   It is often because mxnet is failed to load the new built library. If you
+   installed mxnet system-widely, e.g. `python setup.py install`, then you need
+   to reinstall the package again.
