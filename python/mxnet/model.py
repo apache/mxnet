@@ -621,6 +621,7 @@ class FeedForward(BASE_ESTIMATOR):
 
         arg_names, param_names, aux_names = \
                 self._init_params(dict(data.provide_data+data.provide_label))
+        self.kwargs["arg_names"] = arg_names
 
         # setup metric
         if not isinstance(eval_metric, metric.EvalMetric):
@@ -708,7 +709,7 @@ class FeedForward(BASE_ESTIMATOR):
 
     @staticmethod
     def create(symbol, X, y=None, ctx=None,
-               num_epoch=None, epoch_size=None, optimizer='ccsgd', initializer=Uniform(0.01),
+               num_epoch=None, epoch_size=None, optimizer='sgd', initializer=Uniform(0.01),
                eval_data=None, eval_metric='acc',
                epoch_end_callback=None, batch_end_callback=None,
                kvstore='local', logger=None, work_load_list=None, **kwargs):
