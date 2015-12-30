@@ -11,7 +11,9 @@ if [ "$testFail" == "0" ]; then
   # print results if anything fails
   cat $file
   echo "Some unit tests failed. "
+  rm $file
   exit 1
 else
   echo "All unit tests passed! "
+  rm $file
 fi
