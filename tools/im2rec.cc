@@ -21,7 +21,31 @@
 #include <dmlc/recordio.h>
 #include <opencv2/opencv.hpp>
 #include "../src/io/image_recordio.h"
-
+#include <random>
+/*!
+ *\brief get interpolation method with given inter_method, 0-CV_INTER_NN 1-CV_INTER_LINEAR 2-CV_INTER_CUBIC
+ *\ 3-CV_INTER_AREA 4-CV_INTER_LANCZOS4 9-AUTO(cubic for enlarge, area for shrink, bilinear for others) 10-RAND(0-4)
+ */
+int GetInterMethod(int inter_method, int old_width, int old_height, int new_width, int new_height, std::mt19937& prnd){
+    if(inter_method==9){
+        if(new_width > old_width && new_height > old_height){
+            return 2;//CV_INTER_CUBIC for enlarge
+        }
+        else if(new_width <old_width && new_height < old_height){
+            return 3;//CV_INTER_AREA for shrink
+        }
+        else{
+            return 1;//CV_INTER_LINEAR for others
+        }
+    }
+    else if(inter_method==10){
+        std::uniform_int_distribution<size_t> rand_uniform_int(0, 4);
+        return rand_uniform_int(prnd);
+    }
+    else{
+        return inter_method;
+    }
+}
 int main(int argc, char *argv[]) {
   if (argc < 4) {
     printf("Usage: <image.lst> <image_root_dir> <output.rec> [additional parameters in form key=value]\n"\
@@ -34,6 +58,7 @@ int main(int argc, char *argv[]) {
            "\tcenter_crop=CENTER_CROP[default=0] specify whether to crop the center image to make it square.\n"\
            "\tquality=QUALITY[default=80] JPEG quality for encoding (1-100, default: 80) or PNG compression for encoding (1-9, default: 3).\n"\
            "\tencoding=ENCODING[default='.jpg'] Encoding type. Can be '.jpg' or '.png'\n"\
+           "\tinter_method=INTER_METHOD[default=1] NN(0) BILINEAR(1) CUBIC(2) AREA(3) LANCZOS4(4) AUTO(9) RAND(10).\n"\
            "\tunchanged=UNCHANGED[default=0] Keep the original image encoding, size and color. If set to 1, it will ignore the others parameters.\n");
     return 0;
   }
@@ -45,6 +70,7 @@ int main(int argc, char *argv[]) {
   int quality = 80;
   int color_mode = CV_LOAD_IMAGE_COLOR;
   int unchanged=0;
+  int inter_method=CV_INTER_LINEAR;
   std::string encoding(".jpg");
   for (int i = 4; i < argc; ++i) {
     char key[128], val[128];
@@ -87,7 +113,34 @@ int main(int argc, char *argv[]) {
   if(encoding == std::string(".png") and quality > 9) {
       quality = 3;
   }
-  
+  if (inter_method!=1) {
+      switch(inter_method){
+        case 0:
+            LOG(INFO) << "Use inter_method CV_INTER_NN";
+            break;
+        case 2:
+            LOG(INFO) << "Use inter_method CV_INTER_CUBIC";
+            break;
+        case 3:
+            LOG(INFO) << "Use inter_method CV_INTER_AREA";
+            break;
+        case 4:
+            LOG(INFO) << "Use inter_method CV_INTER_LANCZOS4";
+            break;
+        case 9:
+            LOG(INFO) << "Use inter_method mod auto(cubic for enlarge, area for shrink)";
+            break;
+        case 10:
+            LOG(INFO) << "Use inter_method mod rand(nn/bilinear/cubic/area/lanczos4)";
+           break;
+        default:
+            LOG(INFO) << "Unkown inter_method";
+            return 0;
+            
+      }
+  }
+  std::random_device rd;
+  std::mt19937 prnd(rd());
   using namespace dmlc;
   const static size_t kBufferSize = 1 << 20UL;
   std::string root = argv[2];
@@ -169,12 +222,27 @@ int main(int argc, char *argv[]) {
             img = img(cv::Range(0, img.rows), cv::Range(margin, margin + img.rows));
           }
         }
+        int interpolation_method=1;
+        if(img.rows > img.cols){
+            interpolation_method=GetInterMethod(inter_method, new_size, img.rows * new_size / img.cols, img.cols, img.rows, prnd);
+        }
+        else{
+            interpolation_method=GetInterMethod(inter_method, new_size * img.cols / img.rows, new_size, img.cols, img.rows, prnd);
+        }
         if (img.rows > img.cols) {
-          cv::resize(img, res, cv::Size(new_size, img.rows * new_size / img.cols),
-                     0, 0, CV_INTER_LINEAR);
+            if(img.cols!=new_size){
+                cv::resize(img, res, cv::Size(new_size, img.rows * new_size / img.cols), 0, 0, interpolation_method);
+            }
+            else{
+                res=img.clone();
+            }
         } else {
-          cv::resize(img, res, cv::Size(new_size * img.cols / img.rows, new_size),
-                     0, 0, CV_INTER_LINEAR);
+            if(img.rows!=new_size){
+                cv::resize(img, res, cv::Size(new_size * img.cols / img.rows, new_size), 0, 0, interpolation_method);
+            }
+            else{
+                res=img.clone();
+            }
         }
       }
       encode_buf.clear();
