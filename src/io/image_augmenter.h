@@ -44,6 +44,12 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
   float min_img_size;
   /*! \brief max image size */
   float max_img_size;
+  /*! \brief max random in H channel */
+  int random_h;
+  /*! \brief max random in S channel */
+  int random_s;
+  /*! \brief max random in L channel */
+  int random_l;
   /*! \brief rotate angle */
   int rotate;
   /*! \brief filled color while padding */
@@ -76,6 +82,12 @@ struct ImageAugmentParam : public dmlc::Parameter<ImageAugmentParam> {
         .describe("Augmentation Param: Maxmum image size after resizing.");
     DMLC_DECLARE_FIELD(min_img_size).set_default(0.0f)
         .describe("Augmentation Param: Minimum image size after resizing.");
+    DMLC_DECLARE_FIELD(random_h).set_default(0)
+        .describe("Augmentation Param: Maximum value of H channel in HSL color space.");
+    DMLC_DECLARE_FIELD(random_s).set_default(0)
+        .describe("Augmentation Param: Maximum value of S channel in HSL color space.");
+    DMLC_DECLARE_FIELD(random_l).set_default(0)
+        .describe("Augmentation Param: Maximum value of L channel in HSL color space.");
     DMLC_DECLARE_FIELD(rotate).set_default(-1.0f)
         .describe("Augmentation Param: Rotate angle.");
     DMLC_DECLARE_FIELD(fill_value).set_default(255)
@@ -210,8 +222,32 @@ class ImageAugmenter {
       cv::Rect roi(x, y, param_.data_shape[2], param_.data_shape[1]);
       res = res(roi);
     }
+
+    // color space augmentation
+    if (param_.random_h != 0 || param_.random_s != 0 || param_.random_l != 0) {
+      std::uniform_real_distribution<float> rand_uniform(0, 1);
+      cvtColor(res, res, CV_BGR2HLS);
+      int h = rand_uniform(*prnd) * param_.random_h * 2 - param_.random_h;
+      int s = rand_uniform(*prnd) * param_.random_s * 2 - param_.random_s;
+      int l = rand_uniform(*prnd) * param_.random_l * 2 - param_.random_l;
+      int temp[3] = {h, l, s};
+      int limit[3] = {180, 255, 255};
+      for (int i = 0; i < res.rows; ++i) {
+        for (int j = 0; j < res.cols; ++j) {
+          for (int k = 0; k < 3; ++k) {
+            int v = res.at<cv::Vec3b>(i, j)[k];
+            v += temp[k];
+            v = std::max(0, std::min(limit[k], v));
+            res.at<cv::Vec3b>(i, j)[k] = v;
+          }
+        }
+      }
+      cvtColor(res, res, CV_HLS2BGR);
+    }
     return res;
   }
+
+
 #endif
 
  private:
