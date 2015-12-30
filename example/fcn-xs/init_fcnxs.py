@@ -46,6 +46,9 @@ def init_from_vgg16(ctx, fcnxs_symbol, vgg16fc_args, vgg16fc_auxs):
     return fcnxs_args, fcnxs_auxs
 
 def init_from_fcnxs(ctx, fcnxs_symbol, fcnxs_args_from, fcnxs_auxs_from):
+    """ use zero initialization for better convergence, because it tends to oputut 0,
+    and the label 0 stands for background, which may occupy most size of one image.
+    """
     fcnxs_args = fcnxs_args_from.copy()
     fcnxs_auxs = fcnxs_auxs_from.copy()
     for k,v in fcnxs_args.items():

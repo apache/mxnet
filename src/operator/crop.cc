@@ -21,9 +21,10 @@ Operator* CropProp::CreateOperator(Context ctx) const {
 DMLC_REGISTER_PARAMETER(CropParam);
 
 MXNET_REGISTER_OP_PROPERTY(Crop, CropProp)
-.add_argument("data", "Symbol", "Input data to the CropOp.")
-.add_argument("crop_like", "Symbol", "crop_like data to the CropOp.")
+.describe("Crop the 2th and 3th dim of input data, with the corresponding size of crop_like.")
+// .add_argument("data", "Symbol", "Input data to the CropOp.")
+// .add_argument("crop_like", "Symbol", "crop_like data to the CropOp.")
 .add_arguments(CropParam::__FIELDS__())
-.describe("Crop the 2th and 3th dim of input data, with the corresponding size of crop_like.");
+.set_key_var_num_args("num_args");
 }  // namespace op
 }  // namespace mxnet

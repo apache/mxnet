@@ -25,12 +25,20 @@ enum CropOpOutputs {kOut};
 }  // namespace crop_enum
 
 struct CropParam : public dmlc::Parameter<CropParam> {
+  int num_args;
   TShape offset;
+  TShape h_w;
   bool center_crop;
   DMLC_DECLARE_PARAMETER(CropParam) {
+    DMLC_DECLARE_FIELD(num_args).set_range(1, 3)
+    .describe("Number of inputs for crop, if equals one, then we will use the h_w"
+      "for crop heihgt and width, else if equals two, then we will use the height"
+      "and width of the second input symbol, we name crop_like here");
     int shape[] = {0, 0};
     DMLC_DECLARE_FIELD(offset).set_default(TShape(shape, shape + 2))
     .describe("corp offset coordinate: (y, x)");
+    DMLC_DECLARE_FIELD(h_w).set_default(TShape(shape, shape + 2))
+    .describe("corp height and weight: (h, w)");
     DMLC_DECLARE_FIELD(center_crop).set_default(false)
     .describe("If set to true, then it will use be the center_crop,"
       "or it will crop using the shape of crop_like");
@@ -130,25 +138,47 @@ class CropProp : public OperatorProperty {
   }
 
   std::vector<std::string> ListArguments() const override {
-    return {"data", "crop_like"};
+    // return {"data", "crop_like"};
+    std::vector<std::string> ret;
+    for (int i = 0; i < param_.num_args; ++i) {
+      ret.push_back(std::string("arg") + static_cast<char>('0' + i));
+    }
+    return ret;
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 2) << "Input:[data, crop_like]";
+    CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
     TShape data_shape = in_shape->at(crop_enum::kData);
     if (data_shape.ndim() == 0) return false;
     CHECK_EQ(data_shape.ndim(), 4) << \
         "Input data should be 4D in batch-num_filter-y-x";
-    TShape crop_shape = in_shape->at(crop_enum::kCropLike);
-    if (crop_shape.ndim() == 0) return false;
-    CHECK_EQ(crop_shape.ndim(), 4) << \
-        "Input crop_like should be 4D in batch-num_filter/batch-num_channel-y-x";
+    std::vector<int> crop_shape;
+    if (param_.num_args == 1) {
+      std::cout << "ok1" << std::endl;
+      CHECK_GE(static_cast<int>(param_.h_w[0]), 1) <<
+          "the crop height(h_w[0]) should be larger than 1";
+      CHECK_LE(static_cast<int>(param_.h_w[0]), static_cast<int>(data_shape[2])) <<
+          "the crop height(h_w[0]) should be less than the input data's height";
+      CHECK_GE(static_cast<int>(param_.h_w[1]), 1) <<
+          "the crop width(h_w[1]) should be larger than 1";
+      CHECK_LE(static_cast<int>(param_.h_w[1]), static_cast<int>(data_shape[3])) <<
+          "the crop width(h_w[1]) should be less than the input data's width";
+      crop_shape.push_back(param_.h_w[0]);
+      crop_shape.push_back(param_.h_w[1]);
+    } else if (param_.num_args == 2) {
+      TShape crop_like_shape = in_shape->at(crop_enum::kCropLike);
+      crop_shape.push_back(crop_like_shape[2]);
+      crop_shape.push_back(crop_like_shape[3]);
+    }
+    if (crop_shape.size() == 0) return false;
+    CHECK_EQ(crop_shape.size(), 2) << \
+        "Input crop_like should be 2D in height-width";
     out_shape->clear();
-    data_shape[2] = crop_shape[2];
-    data_shape[3] = crop_shape[3];
+    data_shape[2] = crop_shape[0];
+    data_shape[3] = crop_shape[1];
     out_shape->push_back(data_shape);
     return true;
   }

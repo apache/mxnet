@@ -4,7 +4,6 @@ import mxnet as mx
 import numpy as np
 import sys, os
 from mxnet.io import DataIter
-from skimage import io
 from PIL import Image
 
 class FileIter(DataIter):
@@ -62,7 +61,16 @@ class FileIter(DataIter):
         if self.cut_off_size is not None:
             max_hw = max(img.shape[0], img.shape[1])
             min_hw = min(img.shape[0], img.shape[1])
-            if max_hw > cut_off_size:
+            if min_hw > self.cut_off_size:
+                rand_start_max = round(np.random.uniform(0, max_hw - self.cut_off_size - 1))
+                rand_start_min = round(np.random.uniform(0, min_hw - self.cut_off_size - 1))
+                if img.shape[0] == max_hw :
+                    img = img[rand_start_max : rand_start_max + self.cut_off_size, rand_start_min : rand_start_min + self.cut_off_size]
+                    label = label[rand_start_max : rand_start_max + self.cut_off_size, rand_start_min : rand_start_min + self.cut_off_size]
+                else :
+                    img = img[rand_start_min : rand_start_min + self.cut_off_size, rand_start_max : rand_start_max + self.cut_off_size]
+                    label = label[rand_start_min : rand_start_min + self.cut_off_size, rand_start_max : rand_start_max + self.cut_off_size]
+            elif max_hw > self.cut_off_size:
                 rand_start = round(np.random.uniform(0, max_hw - min_hw - 1))
                 if img.shape[0] == max_hw :
                     img = img[rand_start : rand_start + min_hw, :]
@@ -74,9 +82,9 @@ class FileIter(DataIter):
         img = img - reshaped_mean
         img = np.swapaxes(img, 0, 2)
         img = np.swapaxes(img, 1, 2)  # (c, h, w)
-        img = np.expand_dims(img, axis=0)  # (1, c, h, w) or (1, h, w)
+        img = np.expand_dims(img, axis=0)  # (1, c, h, w)
         label = np.array(label)  # (h, w)
-        label = np.expand_dims(label, axis=0)  # (1, c, h, w) or (1, h, w)
+        label = np.expand_dims(label, axis=0)  # (1, h, w)
         return (img, label)
 
     @property
