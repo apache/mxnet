@@ -157,7 +157,6 @@ class CropProp : public OperatorProperty {
         "Input data should be 4D in batch-num_filter-y-x";
     std::vector<int> crop_shape;
     if (param_.num_args == 1) {
-      std::cout << "ok1" << std::endl;
       CHECK_GE(static_cast<int>(param_.h_w[0]), 1) <<
           "the crop height(h_w[0]) should be larger than 1";
       CHECK_LE(static_cast<int>(param_.h_w[0]), static_cast<int>(data_shape[2])) <<

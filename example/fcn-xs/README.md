@@ -17,10 +17,10 @@ the training image number is only : 2027, and the Validation image number is: 46
 
 ## How to train fcn-xs in mxnet
 #### step1: download the vgg16fc model and experiment data
-* vgg16fc model : you can download the ```VGG_FC_ILSVRC_16_layers-symbol.json``` and ```VGG_FC_ILSVRC_16_layers-0074.params``` from [yun.baidu](http://pan.baidu.com/s/1gerce1H).  
+* vgg16fc model : you can download the ```VGG_FC_ILSVRC_16_layers-symbol.json``` and ```VGG_FC_ILSVRC_16_layers-0074.params``` from [yun.baidu](http://pan.baidu.com/s/1bgz4PC).  
 this is the fully convolution style of the origin
 [VGG_ILSVRC_16_layers.caffemodel](http://www.robots.ox.ac.uk/~vgg/software/very_deep/caffe/VGG_ILSVRC_16_layers.caffemodel), and the corresponding [VGG_ILSVRC_16_layers_deploy.prototxt](https://gist.github.com/ksimonyan/211839e770f7b538e2d8#file-vgg_ilsvrc_16_layers_deploy-prototxt), the vgg16 model has [license](http://creativecommons.org/licenses/by-nc/4.0/) for non-commercial use only.
-* experiment data : you can download the ```VOC2012.rar``` from [yun.baidu](http://pan.baidu.com/s/1jGlOvno), and Extract it. the file/folder will be like:  
+* experiment data : you can download the ```VOC2012.rar``` from [yun.baidu](http://pan.baidu.com/s/1bgz4PC), and Extract it. the file/folder will be like:  
 ```JPEGImages folder```, ```SegmentationClass folder```, ```train.lst```, ```val.lst```, ```test.lst```
 
 #### step2: train fcn-xs model
@@ -47,7 +47,7 @@ INFO:root:Epoch[0] Batch [350]  Speed: 1.12 samples/sec Train-accuracy=0.912080
 ```
 
 ## Using the pre-trained model for image segmentation
-* similarly, you should firstly download the pre-trained model from  [yun.baidu](http://pan.baidu.com/s/1gerce1H), the symbol and model file is ```FCN8s_VGG16-symbol.json```, ```FCN8s_VGG16-0019.params```
+* similarly, you should firstly download the pre-trained model from  [yun.baidu](http://pan.baidu.com/s/1bgz4PC), the symbol and model file is ```FCN8s_VGG16-symbol.json```, ```FCN8s_VGG16-0019.params```
 * then put the image in your directory for segmentation, and change the ```img = YOUR_IMAGE_NAME``` in ```image_segmentaion.py```
 * lastly, use ```image_segmentaion.py``` to segmentation one image by run in shell ```python image_segmentaion.py```, then you will get the segmentation image like the sample result above.
 
