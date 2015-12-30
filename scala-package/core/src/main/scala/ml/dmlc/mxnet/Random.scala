@@ -1,7 +1,6 @@
 package ml.dmlc.mxnet
 
-import ml.dmlc.mxnet.Base._
-import ml.dmlc.mxnet.NDArray.{_randomUniform, _randomGaussian, empty}
+import ml.dmlc.mxnet.NDArray.{_randomGaussian, _randomUniform, empty}
 
 /**
  * Random Number interface of mxnet.
@@ -18,7 +17,11 @@ object Random {
    * @param out Output place holder
    * @return The result NDArray with generated result.
    */
-  def uniform(low: Float, high: Float, shape: Array[Int]=null, ctx: Context=null, out: NDArray=null): NDArray = {
+  def uniform(low: Float,
+              high: Float,
+              shape: Array[Int] = null,
+              ctx: Context = null,
+              out: NDArray = null): NDArray = {
     var outCopy = out
     if (outCopy != null) {
       require(shape == null & ctx == null, "shape and ctx is not needed when out is specified.")
@@ -26,7 +29,7 @@ object Random {
       require(shape != null, "shape is required when out is not specified")
       outCopy = empty(shape, ctx)
     }
-    return _randomUniform(low, high, outCopy)
+    _randomUniform(low, high, outCopy)
   }
 
 
@@ -40,7 +43,11 @@ object Random {
    * @param out Output place holder
    * @return The result NDArray with generated result.
    */
-  def normal(mean: Float, stdvar: Float, shape: Array[Int]=null, ctx: Context=null, out: NDArray=null): NDArray = {
+  def normal(mean: Float,
+             stdvar: Float,
+             shape: Array[Int] = null,
+             ctx: Context = null,
+             out: NDArray = null): NDArray = {
     var outCopy = out
     if (outCopy != null) {
       require(shape == null & ctx == null, "shape and ctx is not needed when out is specified.")
@@ -48,7 +55,7 @@ object Random {
       require(shape != null, "shape is required when out is not specified")
       outCopy = empty(shape, ctx)
     }
-    return _randomGaussian(mean, stdvar, outCopy)
+    _randomGaussian(mean, stdvar, outCopy)
   }
 
 
@@ -64,7 +71,7 @@ object Random {
    *       This means if you set the same seed, the random number sequence
    *       generated from GPU0 can be different from CPU.
    */
-  def seed(seedState: Int) = {
+  def seed(seedState: Int): Unit = {
     // TODO
 //    checkCall(_LIB.mxRandomSeed(seedState))
   }

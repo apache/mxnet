@@ -28,7 +28,9 @@ class KVStoreSuite extends FunSuite with BeforeAndAfterAll {
     val kv = KVStore.create()
     val updater = new MXKVStoreUpdater {
       override def update(key: Int, input: NDArray, stored: NDArray, handle: AnyRef): Unit = {
+        // scalastyle:off println
         println(s"update on key $key")
+        // scalastyle:on println
         stored += input * 2
       }
     }

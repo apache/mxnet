@@ -6,7 +6,7 @@ import scala.sys.process._
 
 class IOSuite extends FunSuite with BeforeAndAfterAll {
   test("test MNISTIter") {
-    //get data
+    // get data
     "./scripts/get_mnist_data.sh" !
 
     val params = Map(
@@ -21,7 +21,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     )
 
     val mnistIter = IO.createIterator("MNISTIter", params)
-    //test_loop
+    // test_loop
     mnistIter.reset()
     val nBatch = 600
     var batchCount = 0
@@ -29,9 +29,9 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
       val batch = mnistIter.next()
       batchCount+=1
     }
-    //test loop
+    // test loop
     assert(nBatch === batchCount)
-    //test reset
+    // test reset
     mnistIter.reset()
     mnistIter.iterNext()
     val label0 = mnistIter.getLabel().toArray

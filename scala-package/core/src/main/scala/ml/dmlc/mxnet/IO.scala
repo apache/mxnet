@@ -12,19 +12,19 @@ object IO {
   private val iterCreateFuncs: Map[String, IterCreateFunc] = _initIOModule()
 
   /**
-    * create iterator via iterName and params
-    * @param iterName name of iterator; "MNISTIter" or "ImageRecordIter"
-    * @param params paramters for create iterator
-    * @return
-    */
+   * create iterator via iterName and params
+   * @param iterName name of iterator; "MNISTIter" or "ImageRecordIter"
+   * @param params paramters for create iterator
+   * @return
+   */
   def createIterator(iterName: String, params: Map[String, String]): DataIter = {
-    return iterCreateFuncs(iterName)(params)
+    iterCreateFuncs(iterName)(params)
   }
 
   /**
-    * initi all IO creator Functions
-    * @return
-    */
+   * initi all IO creator Functions
+   * @return
+   */
   private def _initIOModule(): Map[String, IterCreateFunc] = {
     val IterCreators = new ListBuffer[DataIterCreator]
     checkCall(_LIB.mxListDataIters(IterCreators))
@@ -41,15 +41,15 @@ object IO {
     val paramStr = Base.ctypes2docstring(argNames, argTypes, argDescs)
     val docStr = s"${name.value}\n${desc.value}\n\n$paramStr\n"
     logger.debug(docStr)
-    return (name.value, creator(handle))
+    (name.value, creator(handle))
   }
 
   /**
-    *
-    * @param handle
-    * @param params
-    * @return
-    */
+   *
+   * @param handle
+   * @param params
+   * @return
+   */
   private def creator(handle: DataIterCreator)(
               params: Map[String, String]): DataIter = {
     val out = new DataIterHandle
@@ -62,62 +62,63 @@ object IO {
 
 
 /**
-  * class batch of data
-  * @param data
-  * @param label
-  * @param index
-  * @param pad
-  */
-case class DataBatch(val data: NDArray,
-                     val label: NDArray,
-                     val index: List[Long],
-                     val pad: Int)
+ * class batch of data
+ * @param data
+ * @param label
+ * @param index
+ * @param pad
+ */
+case class DataBatch(data: NDArray,
+                     label: NDArray,
+                     index: List[Long],
+                     pad: Int)
 
 /**
-  *DataIter object in mxnet.
-  */
+ * DataIter object in mxnet.
+ */
 abstract class DataIter (val batchSize: Int = 0) {
   /**
-    * reset the iterator
-    */
+   * reset the iterator
+   */
   def reset(): Unit
+
   /**
-    * Iterate to next batch
-    * @return whether the move is successful
-    */
+   * Iterate to next batch
+   * @return whether the move is successful
+   */
   def iterNext(): Boolean
 
   /**
-    * get next data batch from iterator
-    * @return
-    */
+   * get next data batch from iterator
+   * @return
+   */
   def next(): DataBatch = {
-    return new DataBatch(getData(), getLabel(), getIndex(), getPad())
+    new DataBatch(getData(), getLabel(), getIndex(), getPad())
   }
 
   /**
-    * get data of current batch
-    * @return the data of current batch
-    */
+   * get data of current batch
+   * @return the data of current batch
+   */
   def getData(): NDArray
 
   /**
-    * Get label of current batch
-    * @return the label of current batch
-    */
+   * Get label of current batch
+   * @return the label of current batch
+   */
   def getLabel(): NDArray
 
   /**
-    * get the number of padding examples
-    * in current batch
-    * @return number of padding examples in current batch
-    */
+   * get the number of padding examples
+   * in current batch
+   * @return number of padding examples in current batch
+   */
   def getPad(): Int
 
   /**
-    * the index of current batch
-    * @return
-    */
+   * the index of current batch
+   * @return
+   */
   def getIndex(): List[Long]
 
 }
@@ -126,54 +127,55 @@ abstract class DataIter (val batchSize: Int = 0) {
   * DataIter built in MXNet.
   * @param handle the handle to the underlying C++ Data Iterator
   */
+// scalastyle:off finalize
 class MXDataIter(val handle: DataIterHandle) extends DataIter {
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
 
-  override def finalize() = {
+  override def finalize(): Unit = {
     checkCall(_LIB.mxDataIterFree(handle))
   }
 
   /**
-    * reset the iterator
-    */
+   * reset the iterator
+   */
   override def reset(): Unit = {
     checkCall(_LIB.mxDataIterBeforeFirst(handle))
   }
 
   /**
-    * Iterate to next batch
-    * @return whether the move is successful
-    */
+   * Iterate to next batch
+   * @return whether the move is successful
+   */
   override def iterNext(): Boolean = {
     val next = new RefInt
     checkCall(_LIB.mxDataIterNext(handle, next))
-    return next.value > 0
+    next.value > 0
   }
 
   /**
-    * get data of current batch
-    * @return the data of current batch
-    */
+   * get data of current batch
+   * @return the data of current batch
+   */
   override def getData(): NDArray = {
     val out = new NDArrayHandle
     checkCall(_LIB.mxDataIterGetData(handle, out))
-    return new NDArray(out, writable = false)
+    new NDArray(out, writable = false)
   }
 
   /**
-    * Get label of current batch
-    * @return the label of current batch
-    */
+   * Get label of current batch
+   * @return the label of current batch
+   */
   override def getLabel(): NDArray = {
     val out = new NDArrayHandle
     checkCall(_LIB.mxDataIterGetLabel(handle, out))
-    return new NDArray(out, writable = false)
+    new NDArray(out, writable = false)
   }
 
   /**
-    * the index of current batch
-    * @return
-    */
+   * the index of current batch
+   * @return
+   */
   override def getIndex(): List[Long] = {
     val outIndex = new ListBuffer[Long]
     val outSize = new RefLong
@@ -182,56 +184,57 @@ class MXDataIter(val handle: DataIterHandle) extends DataIter {
   }
 
   /**
-    * get the number of padding examples
-    * in current batch
-    * @return number of padding examples in current batch
-    */
+   * get the number of padding examples
+   * in current batch
+   * @return number of padding examples in current batch
+   */
   override def getPad(): MXUint = {
     val out = new MXUintRef
     checkCall(_LIB.mxDataIterGetPadNum(handle, out))
-    return out.value
+    out.value
   }
 }
+// scalastyle:on finalize
 
 /**
-  * To do
-  */
+ * TODO
+ */
 class ArrayDataIter() extends DataIter {
   /**
-    * reset the iterator
-    */
+   * reset the iterator
+   */
   override def reset(): Unit = ???
 
   /**
-    * get data of current batch
-    * @return the data of current batch
-    */
+   * get data of current batch
+   * @return the data of current batch
+   */
   override def getData(): NDArray = ???
 
   /**
-    * Get label of current batch
-    * @return the label of current batch
-    */
+   * Get label of current batch
+   * @return the label of current batch
+   */
   override def getLabel(): NDArray = ???
 
   /**
-    * the index of current batch
-    * @return
-    */
+   * the index of current batch
+   * @return
+   */
   override def getIndex(): List[Long] = ???
 
   /**
-    * Iterate to next batch
-    * @return whether the move is successful
-    */
+   * Iterate to next batch
+   * @return whether the move is successful
+   */
   override def iterNext(): Boolean = ???
 
   /**
-    * get the number of padding examples
-    * in current batch
-    * @return number of padding examples in current batch
-    */
-  override def getPad(): MXUint = ???
+   * get the number of padding examples
+   * in current batch
+   * @return number of padding examples in current batch
+   */
+  override def getPad(): Int = ???
 }
 
 

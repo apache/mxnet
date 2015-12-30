@@ -39,7 +39,9 @@ object NDArray {
   }
 
   // internal NDArray function
-  private[mxnet] def _unaryNDArrayFunction(funcName: String, src: NDArray, out: NDArray = null): NDArray = {
+  private[mxnet] def _unaryNDArrayFunction(funcName: String,
+                                           src: NDArray,
+                                           out: NDArray = null): NDArray = {
     var output = out
     val function = functions(funcName)
     require(function != null, s"invalid function name $funcName")
@@ -112,7 +114,9 @@ object NDArray {
    *
    * @return a new empty ndarray handle
    */
-  private def _newAllocHandle(shape: Array[Int], ctx: Context, delayAlloc: Boolean): NDArrayHandle = {
+  private def _newAllocHandle(shape: Array[Int],
+                              ctx: Context,
+                              delayAlloc: Boolean): NDArrayHandle = {
     val hdl = new NDArrayHandle
     checkCall(_LIB.mxNDArrayCreate(
       shape,
@@ -169,7 +173,11 @@ object NDArray {
     } else if (nMutateVars.value == 1 && nUsedVars.value == 1 && nScalars.value == 0) {
       (name.value, UnaryNDArrayFunction(handle, acceptEmptyMutate))
     } else {
-      (name.value, GenericNDArrayFunction(handle, acceptEmptyMutate, nMutateVars.value, useVarsRange, scalarRange))
+      (name.value, GenericNDArrayFunction(handle,
+                                          acceptEmptyMutate,
+                                          nMutateVars.value,
+                                          useVarsRange,
+                                          scalarRange))
     }
   }
 
@@ -196,7 +204,7 @@ object NDArray {
    *
    * @return The created NDArray.
    */
-  def empty(shape: Array[Int], ctx: Context=null): NDArray = {
+  def empty(shape: Array[Int], ctx: Context = null): NDArray = {
     val context = if (ctx == null) Context.defaultCtx else ctx
     new NDArray(handle = NDArray._newAllocHandle(shape, context, delayAlloc = false))
   }
@@ -213,7 +221,7 @@ object NDArray {
    *
    * @return The created NDArray.
    */
-  def zeros(shape: Array[Int], ctx: Context=null): NDArray = {
+  def zeros(shape: Array[Int], ctx: Context = null): NDArray = {
     val arr = empty(shape, ctx)
     arr.set(0f)
     arr
@@ -229,7 +237,7 @@ object NDArray {
    * @param ctx The context of the NDArray, default to current default context.
    * @return The created NDArray.
    */
-  def ones(shape: Array[Int], ctx: Context=null): NDArray = {
+  def ones(shape: Array[Int], ctx: Context = null): NDArray = {
     val arr = empty(shape, ctx)
     arr.set(1f)
     arr
@@ -269,9 +277,9 @@ object NDArray {
   }
 
   // TODO
-  def _randomUniform(low: Float, high: Float, out: NDArray) = ???
+  def _randomUniform(low: Float, high: Float, out: NDArray): NDArray = ???
 
-  def _randomGaussian(mean: Float, stdvar: Float, out: NDArray) = ???
+  def _randomGaussian(mean: Float, stdvar: Float, out: NDArray): NDArray = ???
 
 
   /**
@@ -280,7 +288,7 @@ object NDArray {
    * @param ctx The context of the NDArray, default to current default context.
    * @return The created NDArray.
    */
-  def array(sourceArr: Array[Float], ctx: Context=null): NDArray = ???
+  def array(sourceArr: Array[Float], ctx: Context = null): NDArray = ???
 
   /**
    * Load ndarray from binary file.
@@ -323,8 +331,9 @@ object NDArray {
  * NDArray object in mxnet.
  * NDArray is basic ndarray/Tensor like data structure in mxnet.
  */
+// scalastyle:off finalize
 class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
-  override def finalize() = {
+  override def finalize(): Unit = {
     checkCall(_LIB.mxNDArrayFree(handle))
   }
 
@@ -377,7 +386,7 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
    */
   def set(value: Float): NDArray = {
     require(writable, "trying to assign to a readonly NDArray")
-    NDArray._genericNDArrayFunction("_set_value", Array[Any](value), out=Array(this))
+    NDArray._genericNDArrayFunction("_set_value", Array[Any](value), out = Array(this))
     this
   }
 
@@ -404,14 +413,14 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     if (!writable) {
       throw new IllegalArgumentException("trying to add to a readonly NDArray")
     }
-    NDArray._binaryNDArrayFunction("_plus", this, other, out=this)
+    NDArray._binaryNDArrayFunction("_plus", this, other, out = this)
   }
 
   def +=(other: Float): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to add to a readonly NDArray")
     }
-    NDArray._genericNDArrayFunction("_plus_scalar", Array[Any](this, other), out=Array(this))
+    NDArray._genericNDArrayFunction("_plus_scalar", Array[Any](this, other), out = Array(this))
     this
   }
 
@@ -427,14 +436,14 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     if (!writable) {
       throw new IllegalArgumentException("trying to subtract from a readonly NDArray")
     }
-    NDArray._binaryNDArrayFunction("_minus", this, other, out=this)
+    NDArray._binaryNDArrayFunction("_minus", this, other, out = this)
   }
 
   def -=(other: Float): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to subtract from a readonly NDArray")
     }
-    NDArray._genericNDArrayFunction("_minus_scalar", Array[Any](this, other), out=Array(this))
+    NDArray._genericNDArrayFunction("_minus_scalar", Array[Any](this, other), out = Array(this))
     this
   }
 
@@ -450,18 +459,18 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     NDArray._genericNDArrayFunction("_mul_scalar", Array[Any](this, -1f))(0)
   }
 
-  def *=(other: NDArray) = {
+  def *=(other: NDArray): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to multiply to a readonly NDArray")
     }
-    NDArray._binaryNDArrayFunction("_mul", this, other, out=this)
+    NDArray._binaryNDArrayFunction("_mul", this, other, out = this)
   }
 
-  def *=(other: Float) = {
+  def *=(other: Float): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to multiply to a readonly NDArray")
     }
-    NDArray._genericNDArrayFunction("_mul_scalar", Array[Any](this, other), out=Array(this))
+    NDArray._genericNDArrayFunction("_mul_scalar", Array[Any](this, other), out = Array(this))
     this
   }
 
@@ -477,14 +486,14 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     if (!writable) {
       throw new IllegalArgumentException("trying to divide from a readonly NDArray")
     }
-    NDArray._binaryNDArrayFunction("_div", this, other, out=this)
+    NDArray._binaryNDArrayFunction("_div", this, other, out = this)
   }
 
   def /=(other: Float): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to divide from a readonly NDArray")
     }
-    NDArray._genericNDArrayFunction("_div_scalar", Array[Any](this, other), out=Array(this))
+    NDArray._genericNDArrayFunction("_div_scalar", Array[Any](this, other), out = Array(this))
     this
   }
 
@@ -541,6 +550,7 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
   // Get size of current NDArray.
   def size: Int = shape.product
 }
+// scalastyle:on finalize
 
 object NDArrayConversions {
   implicit def int2Scalar(x: Int): NDArrayConversions = new NDArrayConversions(x.toFloat)

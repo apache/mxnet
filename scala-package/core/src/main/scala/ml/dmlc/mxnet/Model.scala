@@ -16,14 +16,16 @@ object Model {
    * @param maxSize max size of the kvstore
    * @return Option of created [[KVStore]] and whether or not update weight on it
    */
-  private def createKVStore(kvStore: String, numDevice: Int, maxSize: Int): (Option[KVStore], Boolean) = {
+  private def createKVStore(kvStore: String,
+                            numDevice: Int,
+                            maxSize: Int): (Option[KVStore], Boolean) = {
     if (numDevice == 1 && !kvStore.contains("dist")) {
       // no need to use kv for single device and single machine
       (None, false)
     } else {
       var kvType = kvStore
       if (kvType == "local") {
-        //automatically select a proper local
+        // automatically select a proper local
         kvType =
           if (maxSize < 1024 * 1024 * 16) {
             "local_update_cpu"
