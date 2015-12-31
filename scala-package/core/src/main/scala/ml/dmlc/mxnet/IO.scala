@@ -14,7 +14,7 @@ object IO {
   /**
    * create iterator via iterName and params
    * @param iterName name of iterator; "MNISTIter" or "ImageRecordIter"
-   * @param params paramters for create iterator
+   * @param params parameters for create iterator
    * @return
    */
   def createIterator(iterName: String, params: Map[String, String]): DataIter = {

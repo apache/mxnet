@@ -120,4 +120,15 @@ class LibInfo {
                                  grads: Array[CPtrAddress]): Int
   @native def mxExecutorPrint(handle: ExecutorHandle, debugStr: RefString): Int
   @native def mxExecutorSetMonitorCallback(handle: ExecutorHandle, callback: MXMonitorCallback): Int
+
+  // Symbols
+  @native def mxSymbolListAtomicSymbolCreators(symbolList: ListBuffer[SymbolHandle]): Int
+  @native def mxSymbolGetAtomicSymbolInfo(handle: SymbolHandle,
+                                          name: RefString,
+                                          desc: RefString,
+                                          numArgs: MXUintRef,
+                                          argNames: ListBuffer[String],
+                                          argTypes: ListBuffer[String],
+                                          argDescs: ListBuffer[String],
+                                          keyVarNumArgs: RefString): Int
 }

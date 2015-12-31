@@ -666,3 +666,66 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterGetPadNum
   setIntField(env, pad, cpad);
   return ret;
 }
+
+// Symbol functions
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolListAtomicSymbolCreators
+  (JNIEnv *env, jobject obj, jobject symbolList) {
+  mx_uint outSize;
+  AtomicSymbolCreator *outArray;
+  int ret = MXSymbolListAtomicSymbolCreators(&outSize, &outArray);
+
+  jclass longCls = env->FindClass("java/lang/Long");
+  jmethodID longConst = env->GetMethodID(longCls, "<init>", "(J)V");
+
+  jclass listCls = env->FindClass("scala/collection/mutable/ListBuffer");
+  jmethodID listAppend = env->GetMethodID(listCls,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+
+  for (int i = 0; i < outSize; ++i) {
+    env->CallObjectMethod(symbolList, listAppend,
+                          env->NewObject(longCls, longConst, outArray[i]));
+  }
+
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolGetAtomicSymbolInfo
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jobject name, jobject desc, jobject numArgs,
+   jobject argNames, jobject argTypes, jobject argDescs, jobject keyVarNumArgs) {
+
+  const char *cName;
+  const char *cDesc;
+  mx_uint cNumArgs;
+  const char **cArgNames;
+  const char **cArgTypes;
+  const char **cArgDescs;
+  const char *cKeyVarNumArgs;
+
+  int ret = MXSymbolGetAtomicSymbolInfo((AtomicSymbolCreator) symbolPtr,
+                                         &cName, &cDesc, &cNumArgs,
+                                         &cArgNames, &cArgTypes, &cArgDescs,
+                                         &cKeyVarNumArgs);
+
+  jclass refIntClass = env->FindClass("ml/dmlc/mxnet/Base$RefInt");
+  jfieldID valueInt = env->GetFieldID(refIntClass, "value", "I");
+
+  jclass refStringClass = env->FindClass("ml/dmlc/mxnet/Base$RefString");
+  jfieldID valueStr = env->GetFieldID(refStringClass, "value", "Ljava/lang/String;");
+
+  // scala.collection.mutable.ListBuffer append method
+  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+  jmethodID listAppend = env->GetMethodID(listClass, "$plus$eq",
+      "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+
+  env->SetObjectField(name, valueStr, env->NewStringUTF(cName));
+  env->SetObjectField(desc, valueStr, env->NewStringUTF(cDesc));
+  env->SetObjectField(keyVarNumArgs, valueStr, env->NewStringUTF(cKeyVarNumArgs));
+  env->SetIntField(numArgs, valueInt, (jint)cNumArgs);
+  for (int i = 0; i < cNumArgs; ++i) {
+    env->CallObjectMethod(argNames, listAppend, env->NewStringUTF(cArgNames[i]));
+    env->CallObjectMethod(argTypes, listAppend, env->NewStringUTF(cArgTypes[i]));
+    env->CallObjectMethod(argDescs, listAppend, env->NewStringUTF(cArgDescs[i]));
+  }
+
+  return ret;
+}
