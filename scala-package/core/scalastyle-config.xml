@@ -142,4 +142,7 @@ You can also disable only one rule, by specifying its rule id, as specified in:
   <check level="error" class="org.scalastyle.scalariform.IllegalImportsChecker" enabled="true">
     <parameters><parameter name="illegalImports"><![CDATA[sun._,java.awt._]]></parameter></parameters>
   </check>
+
+  <!-- We can use return quite a bit for control flows and guards -->
+  <check level="warning" class="org.scalastyle.scalariform.ReturnChecker" enabled="true"></check>
 </scalastyle>

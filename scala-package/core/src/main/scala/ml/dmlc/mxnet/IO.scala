@@ -56,7 +56,7 @@ object IO {
     val keys = params.keys.toArray
     val vals = params.values.toArray
     checkCall(_LIB.mxDataIterCreateIter(handle, keys, vals, out))
-    return new MXDataIter(out)
+    new MXDataIter(out)
   }
 }
 
@@ -180,7 +180,7 @@ class MXDataIter(val handle: DataIterHandle) extends DataIter {
     val outIndex = new ListBuffer[Long]
     val outSize = new RefLong
     checkCall(_LIB.mxDataIterGetIndex(handle, outIndex, outSize))
-    return outIndex.toList
+    outIndex.toList
   }
 
   /**
