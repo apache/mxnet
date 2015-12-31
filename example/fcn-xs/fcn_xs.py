@@ -1,11 +1,6 @@
 # pylint: skip-file
 import sys, os
 import argparse
-# mxnet_train = "/home/work/wuwei/tools/mxnet/lib/python2.7/site-packages/mxnet-0.5.0-py2.7.egg"
-mxnet_train = "/home/work/wuwei/.local/lib/python2.7/site-packages/mxnet-0.5.0-py2.7.egg"
-if mxnet_train in sys.path:
-    sys.path.remove(mxnet_train)
-sys.path.insert(0, mxnet_train)
 import mxnet as mx
 import numpy as np
 import logging
@@ -43,7 +38,6 @@ def main():
     val_dataiter = FileIter(
         root_dir             = "./VOC2012",
         flist_name           = "val.lst",
-        # cut_off_size         = 400,
         rgb_mean             = (123.68, 116.779, 103.939),
         )
     model = Solver(
