@@ -30,6 +30,7 @@ namespace deconv {
 struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   TShape kernel;
   TShape stride;
+  TShape dilate;
   TShape pad;
   uint32_t num_filter;
   uint32_t num_group;
@@ -40,6 +41,8 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
     DMLC_DECLARE_FIELD(kernel).describe("deconvolution kernel size: (y, x)");
     DMLC_DECLARE_FIELD(stride).set_default(TShape(shape, shape + 2))
     .describe("deconvolution stride: (y, x)");
+    DMLC_DECLARE_FIELD(dilate).set_default(TShape(shape, shape + 2))
+    .describe("deconvolution dilate: (y, x)");
     shape[0] = shape[1] = 0;
     DMLC_DECLARE_FIELD(pad).set_default(TShape(shape, shape + 2))
     .describe("pad for deconvolution: (y, x)");
@@ -104,14 +107,18 @@ class DeconvolutionOp : public Operator {
                                     param_.kernel[0],
                                     param_.kernel[1],
                                     param_.stride[0],
-                                    param_.stride[1]);
+                                    param_.stride[1],
+                                    param_.dilate[0],
+                                    param_.dilate[1]);
       } else {
         temp_col = unpack_patch2col(pad(out.Slice(i, i + step),
                                         param_.pad[0], param_.pad[1]),
                                     param_.kernel[0],
                                     param_.kernel[1],
                                     param_.stride[0],
-                                    param_.stride[1]);
+                                    param_.stride[1],
+                                    param_.dilate[0],
+                                    param_.dilate[1]);
       }
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
@@ -124,7 +131,8 @@ class DeconvolutionOp : public Operator {
                                    out.Slice(i, i + step).shape_,
                                    param_.kernel[0],
                                    param_.kernel[1],
-                                   param_.stride[0]);
+                                   param_.stride[0],
+                                   param_.dilate[0]);
       } else {
         Shape<4> pshape = out.Slice(i, i + step).shape_;
         pshape[2] += 2 * param_.pad[0];
@@ -133,7 +141,8 @@ class DeconvolutionOp : public Operator {
                                         pshape,
                                         param_.kernel[0],
                                         param_.kernel[1],
-                                        param_.stride[0]),
+                                        param_.stride[0],
+                                        param_.dilate[0]),
                                         out[i][0].shape_);
       }
     }
@@ -192,13 +201,17 @@ class DeconvolutionOp : public Operator {
                                      param_.kernel[0],
                                      param_.kernel[1],
                                      param_.stride[0],
-                                     param_.stride[1]);
+                                     param_.stride[1],
+                                     param_.dilate[0],
+                                     param_.dilate[1]);
       } else {
         temp_col = unpack_patch2col(pad(grad.Slice(i, i + step), param_.pad[0], param_.pad[1]),
                                      param_.kernel[0],
                                      param_.kernel[1],
                                      param_.stride[0],
-                                     param_.stride[1]);
+                                     param_.stride[1],
+                                     param_.dilate[0],
+                                     param_.dilate[1]);
       }
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
@@ -316,6 +329,8 @@ class DeconvolutionProp : public OperatorProperty {
         << "incorrect kernel size: " << param_.kernel;
     CHECK_GE(param_.stride.Size(), 0) \
         << "incorrect stride size: " << param_.stride;
+    CHECK_EQ(param_.dilate.Size(), 1) \
+        << "Dilate not supported in deconvolution, incorrect stride size: " << param_.stride;
     (*out_shape)[deconv::kOut][1] = param_.num_filter;
     (*out_shape)[deconv::kOut][2] = param_.stride[0] * (dshape[2] - 1) +
         ksize_y - 2 * param_.pad[0];
