@@ -50,7 +50,8 @@ class Accuracy extends EvalMetric("accuracy") {
       val pred: NDArray = preds.slice(i, i)
       val label: NDArray = labels.slice(i, i)
 
-//      require(label.shape(0) < predLabel.shape(0), "Should not have more predict labels than actual labels ")
+      // require(label.shape(0) < predLabel.shape(0),
+      // "Should not have more predict labels than actual labels ")
     })
   }
 }

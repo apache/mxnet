@@ -16,7 +16,8 @@ object Executor {
    * @param batchSize The number of samples in a mini-batch.
    * @param workLoadList The list of work load for different devices, in the same order as ctx
    * @return The split slices to get a specific slice.
-   * @throws IllegalArgumentException If there are two many splits such that some slice can be empty.
+   * @throws IllegalArgumentException
+   *         If there are two many splits such that some slice can be empty.
    */
   private def splitInputSlice[@specialized(Int, Float, Double) V]
                               (batchSize: Int, workLoadList: Array[V])
@@ -84,6 +85,7 @@ object Executor {
  * @param symbol
  * @see Symbol.bind : to create executor
  */
+// scalastyle:off finalize
 class Executor(val handle: ExecutorHandle, val symbol: Symbol) {
   var argArrays: Array[NDArray] = null
   protected var gradArrays: Array[NDArray] = null
@@ -131,7 +133,7 @@ class Executor(val handle: ExecutorHandle, val symbol: Symbol) {
    *   This parameter is only needed when bind is called
    *   on outputs that are not a loss function.
    */
-  def backward(outGrads: Array[NDArray]):Unit = {
+  def backward(outGrads: Array[NDArray]): Unit = {
     require(outGrads != null)
     val ndArrayPtrs = outGrads.map(_.handle.value)
     checkCall(_LIB.mxExecutorBackward(handle, outGrads.length, ndArrayPtrs))
@@ -188,7 +190,8 @@ class Executor(val handle: ExecutorHandle, val symbol: Symbol) {
    *        Whether allow extra parameters that are not needed by symbol
    *        If this is True, no error will be thrown when arg_params or aux_params
    *        contain extra parameters that is not needed by the executor.
-   * @throws IllegalArgumentException If there is additional parameters in the dict but allow_extra_params=False
+   * @throws IllegalArgumentException
+   *         If there is additional parameters in the dict but allow_extra_params=False
    */
   def copyParamsFrom(argParams: Map[String, NDArray],
                      auxParams: Map[String, NDArray],
@@ -229,3 +232,4 @@ class Executor(val handle: ExecutorHandle, val symbol: Symbol) {
     str.value
   }
 }
+// scalastyle:on finalize

@@ -111,7 +111,6 @@ if [ ${TASK} == "python_test" ]; then
     exit 0
 fi
 
-
 if [ ${TASK} == "scala_test" ]; then
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
         LIB_GOMP_PATH=`find /usr/local/lib -name libgomp.dylib | grep -v i386 | head -n1`
@@ -139,5 +138,12 @@ if [ ${TASK} == "scala_test" ]; then
     chmod +x ../tests/travis/error_detector.sh
     ../tests/travis/error_detector.sh || exit -1
     
+    exit 0
+fi
+
+if [ ${TASK} == "scala_lint" ]; then
+    export JAVA_HOME=$(/usr/libexec/java_home)
+    cd scala-package/core
+    mvn scalastyle:check || exit -1
     exit 0
 fi

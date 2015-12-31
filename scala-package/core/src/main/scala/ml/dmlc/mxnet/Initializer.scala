@@ -1,6 +1,6 @@
 package ml.dmlc.mxnet
 
-import ml.dmlc.mxnet.NDArray.{array, zeros, ones}
+import ml.dmlc.mxnet.NDArray.array
 
 
 /**
@@ -80,9 +80,9 @@ abstract class Initializer {
  *
  * @param scale The scale of uniform distribution
  */
-class Uniform(protected val scale: Float=0.07f) extends Initializer {
+class Uniform(protected val scale: Float = 0.07f) extends Initializer {
   override def _initWeight(name: String, arr: NDArray): Unit = {
-    Random.uniform(-scale, scale, out=arr)
+    Random.uniform(-scale, scale, out = arr)
   }
 }
 
@@ -92,9 +92,9 @@ class Uniform(protected val scale: Float=0.07f) extends Initializer {
  *
  * @param sigma Standard deviation for gaussian distribution.
  */
-class Normal(protected val sigma: Float=0.01f) extends Initializer {
+class Normal(protected val sigma: Float = 0.01f) extends Initializer {
   override def _initWeight(name: String, arr: NDArray): Unit = {
-    Random.normal(0, sigma, out=arr)
+    Random.normal(0, sigma, out = arr)
   }
 }
 
@@ -106,8 +106,8 @@ class Normal(protected val sigma: Float=0.01f) extends Initializer {
  * @param factorType Options are: "avg", "in", "out"
  * @param magnitude scale of random number range
  */
-class Xavier(protected val rndType: String ="uniform",
-             protected val factorType: String ="avg",
+class Xavier(protected val rndType: String = "uniform",
+             protected val factorType: String = "avg",
              protected val magnitude: Int = 3) extends Initializer {
 
   override def _initWeight(name: String, arr: NDArray): Unit = {
@@ -125,8 +125,8 @@ class Xavier(protected val rndType: String ="uniform",
     val scale = math.sqrt(magnitude / factor).toFloat
 
     rndType match {
-      case "uniform" => Random.uniform(-scale, scale, out=arr)
-      case "normal" => Random.normal(0, scale, out=arr)
+      case "uniform" => Random.uniform(-scale, scale, out = arr)
+      case "normal" => Random.normal(0, scale, out = arr)
       case _ => throw new IllegalArgumentException("Unknown random type")
     }
   }
