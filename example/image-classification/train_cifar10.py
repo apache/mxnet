@@ -15,9 +15,9 @@ parser.add_argument('--num-examples', type=int, default=60000,
                     help='the number of training examples')
 parser.add_argument('--batch-size', type=int, default=128,
                     help='the batch size')
-parser.add_argument('--lr', type=float, default=.05,
+parser.add_argument('--lr', type=float, default=0.1,
                     help='the initial learning rate')
-parser.add_argument('--lr-factor', type=float, default=1,
+parser.add_argument('--lr-factor', type=float, default=0.94,
                     help='times the lr with a factor for every lr-factor-epoch epoch')
 parser.add_argument('--lr-factor-epoch', type=float, default=1,
                     help='the number of epoch to factor the lr, could be .5')
