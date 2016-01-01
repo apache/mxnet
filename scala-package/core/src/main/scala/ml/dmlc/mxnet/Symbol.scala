@@ -16,7 +16,7 @@ object Symbol {
     symbolList.map(makeAtomicSymbolFunction).toMap
   }
 
-  // Create an atomic symbol function by handle and funciton name.
+  // Create an atomic symbol function by handle and function name.
   private def makeAtomicSymbolFunction(handle: SymbolHandle): (String, SymbolFunction) = {
     val name = new RefString
     val desc = new RefString
@@ -33,6 +33,49 @@ object Symbol {
     logger.debug("Atomic Symbol function defination:\n{}", docStr)
     (name.value, new SymbolFunction(handle, keyVarNumArgs.value))
   }
+
+  /**
+   * Activation Operator of Neural Net.
+   * The parameters listed below can be passed in as keyword arguments.
+   * @param name Name of the resulting symbol.
+   *             // TODO
+   * @return the resulting symbol
+   */
+  def creator(operator: String,
+              name: String,
+              attr: Map[String, String],
+              paramKwargs: Map[String, String],
+              symbols: Symbol*): Symbol = {
+    val function = functions(operator)
+    require(function != null, s"invalid operator name $operator")
+
+    val addkeyVarNumArgs =
+      (function.keyVarNumArgs != null) && !paramKwargs.contains(function.keyVarNumArgs)
+
+    val paramKeys: Array[String] = (
+        if (addkeyVarNumArgs) Array[String](function.keyVarNumArgs)
+        else Array.empty[String]
+      ) ++ paramKwargs.keys
+    val paramVals: Array[String] = (
+        if (addkeyVarNumArgs) Array[String](symbols.length.toString)
+        else Array.empty[String]
+      ) ++ paramKwargs.values
+
+    // create atomic symbol
+    val symHandle = new SymbolHandleRef
+    checkCall(_LIB.mxSymbolCreateAtomicSymbol(
+      function.handle, paramKeys, paramVals, symHandle))
+
+    val s = new Symbol(symHandle.value)
+    val attrAll = AttrScope.current.get(attr)
+    s.setAttr(attrAll)
+    val hint = operator.toLowerCase
+    /* TODO
+    name = NameManager.current.get(name, hint)
+    s._compose(*args, name = name, **symbol_kwargs)
+    */
+    s
+  }
 }
 
 class Symbol(private[mxnet] val handle: SymbolHandle) {
@@ -48,7 +91,7 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
   def listArguments(): Array[String] = ???
 
   /**
-   * List all auxiliary states in the symbool.
+   * List all auxiliary states in the symbol.
    * @return The names of the auxiliary states.
    * Notes
    * -----
@@ -58,6 +101,13 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
    * Most operators do not have Auxiliary states.
    */
   def listAuxiliaryStates(): Array[String] = ???
+
+  // Set the attribute of the symbol.
+  private def setAttr(attr: Map[String, String]): Unit = {
+    attr.foreach { case (key, value) =>
+      checkCall(_LIB.mxSymbolSetAttr(handle, key, value))
+    }
+  }
 }
 
 case class SymbolFunction(handle: SymbolHandle, keyVarNumArgs: String)

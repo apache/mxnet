@@ -729,3 +729,47 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolGetAtomicSymbolInfo
 
   return ret;
 }
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolCreateAtomicSymbol
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jobjectArray paramKeys,
+   jobjectArray paramVals, jobject symbolRef) {
+  int paramSize = env->GetArrayLength(paramKeys);
+  const char **keys = new const char*[paramSize];
+  const char **vals = new const char*[paramSize];
+  for (int i = 0; i < paramSize; i++) {
+    jstring key = (jstring) env->GetObjectArrayElement(paramKeys, i);
+    const char *rawKey = env->GetStringUTFChars(key, 0);
+    keys[i] = rawKey;
+
+    jstring value = (jstring) env->GetObjectArrayElement(paramVals, i);
+    const char *rawValue = env->GetStringUTFChars(value, 0);
+    vals[i] = rawValue;
+  }
+
+  SymbolHandle out;
+  int ret = MXSymbolCreateAtomicSymbol(
+    (AtomicSymbolCreator) symbolPtr, (mx_uint) paramSize, keys, vals, &out);
+  setLongField(env, symbolRef, (jlong) out);
+
+  // release keys and vals
+  for (int i = 0; i < paramSize; i++) {
+    jstring key = (jstring) env->GetObjectArrayElement(paramKeys, i);
+    env->ReleaseStringUTFChars(key, keys[i]);
+    jstring value = (jstring) env->GetObjectArrayElement(paramVals, i);
+    env->ReleaseStringUTFChars(value, vals[i]);
+  }
+  delete[] keys;
+  delete[] vals;
+
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolSetAttr
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jstring jkey, jstring jvalue) {
+  const char *ckey = env->GetStringUTFChars(jkey, 0);
+  const char *cvalue = env->GetStringUTFChars(jvalue, 0);
+  int ret = MXSymbolSetAttr((SymbolHandle) symbolPtr, ckey, cvalue);
+  env->ReleaseStringUTFChars(jkey, ckey);
+  env->ReleaseStringUTFChars(jvalue, cvalue);
+  return ret;
+}

@@ -131,4 +131,9 @@ class LibInfo {
                                           argTypes: ListBuffer[String],
                                           argDescs: ListBuffer[String],
                                           keyVarNumArgs: RefString): Int
+  @native def mxSymbolCreateAtomicSymbol(handle: SymbolHandle,
+                                         paramKeys: Array[String],
+                                         paramVals: Array[String],
+                                         symHandleRef: SymbolHandleRef): Int
+  @native def mxSymbolSetAttr(handle: SymbolHandle, key: String, value: String): Int
 }

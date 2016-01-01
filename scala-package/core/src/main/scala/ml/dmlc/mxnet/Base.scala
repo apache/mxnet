@@ -21,6 +21,7 @@ object Base {
   type DataIterCreator = RefLong
   type KVStoreHandle = RefLong
   type ExecutorHandle = RefLong
+  type SymbolHandleRef = RefLong
 
   System.loadLibrary("mxnet-scala")
   val _LIB = new LibInfo
