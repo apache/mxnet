@@ -70,8 +70,8 @@ object Symbol {
     val attrAll = AttrScope.current.get(attr)
     s.setAttr(attrAll)
     val hint = operator.toLowerCase
+    val managedName = NameManager.current.get(name, hint)
     /* TODO
-    name = NameManager.current.get(name, hint)
     s._compose(*args, name = name, **symbol_kwargs)
     */
     s
