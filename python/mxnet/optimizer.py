@@ -161,8 +161,9 @@ class SGD(Optimizer):
         self.weight_set = set([])
         if lr_scheduler is not None:
             self.lr_scheduler.base_lr = learning_rate
-
+        self.specialized = False
         if arg_names is not None:
+            self.specialized = True
             for idx, name in enumerate(arg_names):
                 if name.endswith("weight"):
                     self.weight_set.add(idx)
@@ -207,9 +208,11 @@ class SGD(Optimizer):
             lr = self.lr
         lr *= self.lr_scale.get(index, 1.0)
 
-        wd = 0.
-        if index in self.weight_set:
-            wd = self.wd
+        wd = self.wd
+        if self.specialized == True:
+            wd = 0.
+            if index in self.weight_set:
+                wd = self.wd
 
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
