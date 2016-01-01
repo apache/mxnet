@@ -127,16 +127,13 @@ if [ ${TASK} == "scala_test" ]; then
 
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
         mvn clean package -P osx-x86_64
-        mvn integration-test -P osx-x86_64 --log-file scala_test_results.txt
+        mvn integration-test -P osx-x86_64 || exit -1
     fi
     if [ ${TRAVIS_OS_NAME} == "linux" ]; then
         # use g++-4.8 for linux
         mvn clean package -P linux-x86_64 -D cxx=g++-4.8 -D ldflags.blas=-lblas
-        mvn integration-test -P linux-x86_64 -D cxx=g++-4.8 -D ldflags.blas=-lblas --log-file scala_test_results.txt
+        mvn integration-test -P linux-x86_64 -D cxx=g++-4.8 -D ldflags.blas=-lblas || exit -1
     fi
-
-    chmod +x ../tests/travis/error_detector.sh
-    ../tests/travis/error_detector.sh || exit -1
     
     exit 0
 fi
