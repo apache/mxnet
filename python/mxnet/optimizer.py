@@ -86,11 +86,23 @@ class Optimizer(object):
             ctypes.byref(handle)))
         return handle
 
-    def __init__(self, rescale_grad=1):
+    def __init__(self, rescale_grad=1, arg_names=None):
         self.rescale_grad = rescale_grad
         self.lr_scale = {}
         self.num_update = 0
         self._index_update_count = {}
+        self.specialized = False
+        self.weight_set = set([])
+        if arg_names is not None:
+            self.specialized = True
+            index = 0
+            for name in arg_names:
+                if name.endswith('data') or name.endswith('label'):
+                    continue
+                elif name.endswith("weight"):
+                    self.weight_set.add(index)
+                index += 1
+
 
     def create_state(self, index, weight):
         """Create additional optimizer state such as momentum.
@@ -152,20 +164,14 @@ class SGD(Optimizer):
     def __init__(self, learning_rate=0.01, momentum=0.0,
                  wd=0.0001, rescale_grad=1, clip_gradient=None,
                  lr_scheduler=None, arg_names=None):
-        super(SGD, self).__init__(rescale_grad)
+        super(SGD, self).__init__(rescale_grad, arg_names)
         self.lr = learning_rate
         self.momentum = momentum
         self.wd = wd
         self.clip_gradient = clip_gradient
         self.lr_scheduler = lr_scheduler
-        self.weight_set = set([])
         if lr_scheduler is not None:
             self.lr_scheduler.base_lr = learning_rate
-
-        if arg_names is not None:
-            for idx, name in enumerate(arg_names):
-                if name.endswith("weight"):
-                    self.weight_set.add(idx)
 
     def create_state(self, index, weight):
         """Create additional optimizer state such as momentum.
@@ -207,9 +213,11 @@ class SGD(Optimizer):
             lr = self.lr
         lr *= self.lr_scale.get(index, 1.0)
 
-        wd = 0.
-        if index in self.weight_set:
-            wd = self.wd
+        wd = self.wd
+        if self.specialized == True:
+            wd = 0.
+            if index in self.weight_set:
+                wd = self.wd
 
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
@@ -283,7 +291,6 @@ class ccSGD(Optimizer):
         state : NDArray or other objects returned by init_state
             The auxiliary state used in optimization.
         """
-        # TODO(bing) implement wd_bias, wd_gamma, wd_beta
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         if self.lr_scheduler is not None:
@@ -450,8 +457,8 @@ class RMSProp(Optimizer):
     def __init__(self, learning_rate=0.002, gamma1=0.95, gamma2=0.9,
                  wd=0.,
                  rescale_grad=1, clip_gradient=None,
-                 lr_scheduler=None):
-        super(RMSProp, self).__init__(rescale_grad)
+                 lr_scheduler=None, arg_names=None):
+        super(RMSProp, self).__init__(rescale_grad, arg_names)
         self.lr = learning_rate
         self.gamma1 = gamma1
         self.gamma2 = gamma2
@@ -490,12 +497,17 @@ class RMSProp(Optimizer):
         lr = self.lr
         lr *= self.lr_scale.get(index, 1.0)
         n, g, delta = state
+        wd = self.wd
+        if self.specialized == True:
+            wd = 0.
+            if index in self.weight_set:
+                wd = self.wd
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
         n[:] = (1 - self.gamma1) * (grad * grad) + self.gamma1 * n
         g[:] = (1 - self.gamma1) * grad + self.gamma1 * g
-        delta[:] = (self.gamma2) * delta - lr * (grad/sqrt(n - g*g + 1e-4) + self.wd * weight)
+        delta[:] = (self.gamma2) * delta - lr * (grad/sqrt(n - g*g + 1e-4) + wd * weight)
         weight[:] += delta
 @register
 class Test(Optimizer):
