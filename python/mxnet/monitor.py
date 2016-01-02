@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=protected-access, logging-format-interpolation, invalid-name, no-member
+# pylint: disable=protected-access, logging-format-interpolation, invalid-name, no-member, wrong-import-order
 """Monitor outputs, weights, and gradients for debugging."""
 import ctypes
 from .ndarray import NDArray

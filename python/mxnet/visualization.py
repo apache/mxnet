@@ -1,7 +1,7 @@
 # coding: utf-8
 # pylint: disable=invalid-name, too-many-locals, fixme
 # pylint: disable=too-many-branches, too-many-statements
-# pylint: disable=dangerous-default-value
+# pylint: disable=dangerous-default-value, wrong-import-order, consider-using-enumerate
 """Visualization module"""
 from __future__ import absolute_import
 
@@ -59,7 +59,7 @@ def plot_network(symbol, title="plot", shape=None, node_attrs={}):
         draw_shape = True
         interals = symbol.get_internals()
         _, out_shapes, _ = interals.infer_shape(**shape)
-        if out_shapes == None:
+        if out_shapes is None:
             raise ValueError("Input shape is incompete")
         shape_dict = dict(zip(interals.list_outputs(), out_shapes))
     conf = json.loads(symbol.tojson())

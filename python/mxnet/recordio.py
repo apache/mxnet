@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, no-member
+# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, no-member, wrong-import-order
 
 """Python interface for DLMC RecrodIO data format"""
 from __future__ import absolute_import

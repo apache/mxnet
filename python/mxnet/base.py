@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, no-member, wrong-import-order
 """ ctypes library of mxnet and helper functions """
 from __future__ import absolute_import
 

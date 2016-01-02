@@ -1,6 +1,6 @@
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, W0221, W0201, no-self-use
-
+# pylint: disable=redefined-variable-type, simplifiable-if-statement, no-member, wrong-import-order
 """NDArray interface of mxnet"""
 from __future__ import absolute_import
 from collections import namedtuple, OrderedDict

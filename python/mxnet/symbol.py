@@ -517,7 +517,7 @@ class Symbol(object):
             The generated Executor
         """
         arg_shapes, _, aux_shapes = self.infer_shape(**kwargs)
-        if arg_shapes == None:
+        if arg_shapes is None:
             raise ValueError("Input node is not complete")
         # alloc space
         arg_ndarrays = [zeros(shape, ctx) for shape in arg_shapes]

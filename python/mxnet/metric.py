@@ -1,4 +1,5 @@
 # coding: utf-8
+# pylint: disable=consider-using-enumerate, wrong-import-order, no-member
 """Online evaluation metric module."""
 from __future__ import absolute_import
 
