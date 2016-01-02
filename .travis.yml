@@ -32,7 +32,7 @@ matrix:
     - os: linux
       env: TASK=r_test
     - os: osx
-      env TASK=scala_lint
+      env: TASK=scala_lint
 
 # dependent apt packages
 addons:
