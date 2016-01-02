@@ -209,7 +209,7 @@ class SGD(Optimizer):
         lr *= self.lr_scale.get(index, 1.0)
 
         wd = self.wd
-        if self.specialized == True:
+        if self.specialized is True:
             wd = 0.
             if index in self.weight_set:
                 wd = self.wd

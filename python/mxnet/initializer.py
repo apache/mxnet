@@ -1,4 +1,5 @@
 # coding: utf-8
+# pylint: disable=wrong-import-order, no-member
 """Initialization helper for mxnet"""
 from __future__ import absolute_import
 

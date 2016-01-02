@@ -622,7 +622,7 @@ def _make_ndarray_function(handle):
         """Internal binary function
         """
         if out:
-            if isinstance(out, NDArray) == False:
+            if isinstance(out, NDArray) is False:
                 raise TypeError('out must be NDArray')
             if not out.writable:
                 raise TypeError('out must be writable')
@@ -639,7 +639,7 @@ def _make_ndarray_function(handle):
     def unary_ndarray_function(src, out=None):
         """internal NDArray function"""
         if out:
-            if isinstance(out, NDArray) == False:
+            if isinstance(out, NDArray) is False:
                 raise TypeError('out must be NDArray')
             if not out.writable:
                 raise TypeError('out must be writable')

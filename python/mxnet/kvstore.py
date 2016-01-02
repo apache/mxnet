@@ -1,13 +1,14 @@
 # coding: utf-8
+# pylint: disable=consider-using-enumerate
 """ Key value store interface of MXNet for parameter synchronization."""
 from __future__ import absolute_import
 
 import ctypes
-import pickle
 from .ndarray import NDArray
 from .base import _LIB
 from .base import check_call, c_array, c_str, string_types, mx_uint, py_str
 from .base import NDArrayHandle, KVStoreHandle
+from . import misc
 from . import optimizer as opt
 
 def _ctype_key_value(keys, vals):
@@ -248,7 +249,7 @@ class KVStore(object):
             # send the optimizer to server
             try:
                 # use ASCII protocol 0, might be slower, but not a big ideal
-                optim_str = pickle.dumps(optimizer, 0)
+                optim_str = misc.dumps(optimizer, 0)
             except:
                 raise
             self._send_command_to_servers(0, optim_str)

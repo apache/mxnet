@@ -1,65 +1,39 @@
-# pylint: disable=invalid-name
-"""learning rate scheduler"""
+"""helper functions for mxnet"""
+# pylint: disable=exec-used
+import inspect
+import pickle
 
-import math
-import logging
+def dumps(obj, protocol=0):
+    """pickle module, class, method, function
 
-class LearningRateScheduler(object):
-    """Base class of learning rate scheduler"""
-    def __init__(self):
-        self.base_lr = 0.01
+    Parameters:
+    -----------
+    obj: module, class, method, function
+        object to be pickled
 
-    def __call__(self, iteration):
-        """
-        Call to schedule current learning rate
+    protocol: int, optional
+        pickle protocol
 
-        Parameters
-        ----------
-        iteration: int
-            Current iteration count
-        """
-        raise NotImplementedError("must override this")
-
-
-class FactorScheduler(LearningRateScheduler):
-    """Reduce learning rate in factor
-
-    Parameters
-    ----------
-    step: int
-        schedule learning rate after every round
-    factor: float
-        reduce learning rate factor
+    Returns:
+    -------
+        pickled list with obj source and object
     """
-    def __init__(self, step, factor=0.1):
-        super(FactorScheduler, self).__init__()
-        if step < 1:
-            raise ValueError("Schedule step must be greater or equal than 1 round")
-        if factor >= 1.0:
-            raise ValueError("Factor must be less than 1 to make lr reduce")
-        self.step = step
-        self.factor = factor
-        self.old_lr = self.base_lr
-        self.init = False
+    src = "".join(inspect.getsourcelines(type(obj))[0])
+    pickled_obj = pickle.dumps(obj, protocol)
+    return pickle.dumps([src, pickled_obj])
 
-    def __call__(self, iteration):
-        """
-        Call to schedule current learning rate
+def loads(obj):
+    """load pickled module, class, method, function
 
-        Parameters
-        ----------
-        iteration: int
-            Current iteration count
-        """
+    Parameters:
+    ----------
+    obj: pickled list
+        pickled list of obj source and obj
 
-        if self.init == False:
-            self.init = True
-            self.old_lr = self.base_lr
-        lr = self.base_lr * math.pow(self.factor, int(iteration / self.step))
-        if lr != self.old_lr:
-            self.old_lr = lr
-            logging.info("At Iteration [%d]: Swith to new learning rate %.5f",
-                         iteration, lr)
-        return lr
-
-
+    Returns:
+    -------
+        class/function/method object
+    """
+    src, pickled_obj = pickle.loads(obj)
+    exec(src)
+    return pickle.loads(pickled_obj)

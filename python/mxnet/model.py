@@ -1,5 +1,6 @@
 # pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, too-many-lines
-# pylint: disable=too-many-branches, too-many-statements
+# pylint: disable=too-many-branches, too-many-statements, wrong-import-position, consider-using-enumerate
+# pylint: disable=too-many-nested-blocks, wrong-import-order
 """MXNet model module"""
 from __future__ import absolute_import
 
@@ -257,7 +258,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                     do_reset = False
                     break
 
-            if do_reset == True:
+            if do_reset is True:
                 train_data.reset()
 
             # this epoch is done

@@ -1,5 +1,6 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments
+# pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments, wrong-import-order
+# pylint: disable=consider-using-enumerate
 """Symbolic Executor component of MXNet."""
 from __future__ import absolute_import
 
