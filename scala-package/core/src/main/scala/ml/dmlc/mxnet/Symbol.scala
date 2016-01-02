@@ -9,6 +9,21 @@ object Symbol {
   private val logger = LoggerFactory.getLogger(classOf[Symbol])
   private val functions: Map[String, SymbolFunction] = initSymbolModule()
 
+  /**
+   * Create a symbolic variable with specified name.
+   * @param name Name of the variable.
+   * @param attr dict of string -> string
+       Additional attributes to set on the variable.
+   * @return The created variable symbol.
+   */
+  def Variable(name: String, attr: Map[String, String] = null): Symbol = {
+    val handle = new SymbolHandleRef
+    checkCall(_LIB.mxSymbolCreateVariable(name, handle))
+    val sym = new Symbol(handle.value)
+    sym.setAttr(AttrScope.current.get(attr))
+    sym
+  }
+
   // List and add all the atomic symbol functions to current module.
   private def initSymbolModule(): Map[String, SymbolFunction] = {
     val symbolList = ListBuffer.empty[SymbolHandle]
@@ -71,9 +86,7 @@ object Symbol {
     s.setAttr(attrAll)
     val hint = operator.toLowerCase
     val managedName = NameManager.current.get(name, hint)
-    /* TODO
-    s._compose(*args, name = name, **symbol_kwargs)
-    */
+    s.compose(name = managedName, symbols.toArray)
     s
   }
 }
@@ -102,12 +115,40 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
    */
   def listAuxiliaryStates(): Array[String] = ???
 
+  /**
+   * Get attribute string from the symbol, this function only works for non-grouped symbol.
+   * @param key  The key to get attribute from.
+   * @return value The attribute value of the key, returns None if attribute do not exist.
+   */
+  def attr(key: String): Option[String] = {
+    val ret = new RefString
+    val success = new RefInt
+    checkCall(_LIB.mxSymbolGetAttr(handle, key, ret, success))
+    if (success.value != 0) {
+      Option(ret.value)
+    } else {
+      None
+    }
+  }
+
   // Set the attribute of the symbol.
   private def setAttr(attr: Map[String, String]): Unit = {
     attr.foreach { case (key, value) =>
       checkCall(_LIB.mxSymbolSetAttr(handle, key, value))
     }
   }
+
+  /**
+   * Compose symbol on inputs.
+   * This call mutates the current symbol.
+   * @param symbols provide positional arguments
+   * @return the resulting symbol
+   */
+  private def compose(name: String, symbols: Array[Symbol]): Unit = {
+    val args = symbols.map(_.handle)
+    checkCall(_LIB.mxSymbolCompose(handle, name, null, args))
+  }
+
 }
 
 case class SymbolFunction(handle: SymbolHandle, keyVarNumArgs: String)

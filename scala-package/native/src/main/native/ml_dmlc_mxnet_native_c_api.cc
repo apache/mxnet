@@ -773,3 +773,48 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolSetAttr
   env->ReleaseStringUTFChars(jvalue, cvalue);
   return ret;
 }
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolCompose
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jstring jname,
+   jobjectArray jkeys, jlongArray jargs) {
+  int argSize = env->GetArrayLength(jargs);
+  const char **keys = NULL;
+  if (jkeys != NULL) {
+    // TODO
+  }
+  jlong *args = env->GetLongArrayElements(jargs, NULL);
+  const char *name = env->GetStringUTFChars(jname, 0);
+  int ret = MXSymbolCompose((SymbolHandle) symbolPtr,
+                            name, (mx_uint) argSize, keys,
+                            (SymbolHandle*) args);
+  if (jkeys != NULL) {
+    // TODO
+  }
+  env->ReleaseStringUTFChars(jname, name);
+  env->ReleaseLongArrayElements(jargs, args, 0);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolCreateVariable
+  (JNIEnv *env, jobject obj, jstring jname, jobject handle) {
+  SymbolHandle out;
+  const char *name = env->GetStringUTFChars(jname, 0);
+  int ret = MXSymbolCreateVariable(name, &out);
+  env->ReleaseStringUTFChars(jname, name);
+  setLongField(env, handle, (long)out);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolGetAttr
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jstring jkey, jobject retRef, jobject successRef) {
+
+  const char *out;
+  int success;
+  const char *key = env->GetStringUTFChars(jkey, 0);
+  int ret = MXSymbolGetAttr((SymbolHandle) symbolPtr, key, &out, &success);
+  env->ReleaseStringUTFChars(jkey, key);
+
+  setStringField(env, retRef, out);
+  setIntField(env, successRef, success);
+  return ret;
+}

@@ -136,4 +136,13 @@ class LibInfo {
                                          paramVals: Array[String],
                                          symHandleRef: SymbolHandleRef): Int
   @native def mxSymbolSetAttr(handle: SymbolHandle, key: String, value: String): Int
+  @native def mxSymbolCompose(handle: SymbolHandle,
+                              name: String,
+                              keys: Array[String],
+                              args: Array[SymbolHandle]): Int
+  @native def mxSymbolCreateVariable(name: String, out: SymbolHandleRef): Int
+  @native def mxSymbolGetAttr(handle: SymbolHandle,
+                              key: String,
+                              ret: RefString,
+                              success: RefInt): Int
 }

@@ -6,6 +6,8 @@ object AttrScope {
   private def setCurrentAttr(attr: AttrScope): Unit = {
     _current = attr
   }
+
+  def apply(attr: Map[String, String] = Map.empty): AttrScope = new AttrScope(attr)
 }
 
 /**
@@ -13,7 +15,7 @@ object AttrScope {
  * User can also inherit this object to change naming behavior.
  * @author Yizhi Liu
  */
-class AttrScope(val attr: Map[String, String] = Map.empty) {
+class AttrScope(attr: Map[String, String] = Map.empty) {
   private var _attr = attr
   /**
    * Get the attribute dict given the attribute set by the symbol.
@@ -21,12 +23,16 @@ class AttrScope(val attr: Map[String, String] = Map.empty) {
    * @return Updated attributes to add other scope related attributes.
    */
   def get(userDefinedAttr: Map[String, String]): Map[String, String] = {
-    attr ++ userDefinedAttr
+    if (userDefinedAttr != null) {
+      attr ++ userDefinedAttr
+    } else {
+      attr
+    }
   }
 
   def withScope[T](body: => T): T = {
     val oldAttrScope = AttrScope.current
-    this._attr = AttrScope.current.attr ++ this._attr
+    this._attr = AttrScope.current._attr ++ this._attr
     AttrScope.setCurrentAttr(this)
     try {
       body
