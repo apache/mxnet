@@ -780,15 +780,25 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolCompose
   int argSize = env->GetArrayLength(jargs);
   const char **keys = NULL;
   if (jkeys != NULL) {
-    // TODO
+    keys = new const char*[argSize];
+    for (int i = 0; i < argSize; i++) {
+      jstring jkey = (jstring) env->GetObjectArrayElement(jkeys, i);
+      const char *key = env->GetStringUTFChars(jkey, 0);
+      keys[i] = key;
+    }
   }
   jlong *args = env->GetLongArrayElements(jargs, NULL);
   const char *name = env->GetStringUTFChars(jname, 0);
   int ret = MXSymbolCompose((SymbolHandle) symbolPtr,
                             name, (mx_uint) argSize, keys,
                             (SymbolHandle*) args);
+  // release allocated memory
   if (jkeys != NULL) {
-    // TODO
+    for (int i = 0; i < argSize; i++) {
+      jstring jkey = (jstring) env->GetObjectArrayElement(jkeys, i);
+      env->ReleaseStringUTFChars(jkey, keys[i]);
+    }
+    delete[] keys;
   }
   env->ReleaseStringUTFChars(jname, name);
   env->ReleaseLongArrayElements(jargs, args, 0);

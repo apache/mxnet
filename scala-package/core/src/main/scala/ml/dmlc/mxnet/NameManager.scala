@@ -11,16 +11,13 @@ class NameManager {
   val counter: mutable.Map[String, Int] = mutable.HashMap.empty[String, Int]
   /**
    * Get the canonical name for a symbol.
-   *     This is default implementation.
-   *     When user specified a name,
-   *     the user specified name will be used.
+   * This is default implementation.
+   * When user specified a name,
+   * the user specified name will be used.
+   * When user did not, we will automatically generate a name based on hint string.
    *
-   *     When user did not, we will automatically generate a
-   *     name based on hint string.
-   * @param name : str or None
-            The name user specified.
-   * @param hint : str
-            A hint string, which can be used to generate name.
+   * @param name : The name user specified.
+   * @param hint : A hint string, which can be used to generate name.
    * @return A canonical name for the user.
    */
   def get(name: String, hint: String): String = {
@@ -30,9 +27,9 @@ class NameManager {
       if (!counter.contains(hint)) {
         counter(hint) = 0
       }
-      val name = s"$hint${counter(hint)}"
+      val generatedName = s"$hint${counter(hint)}"
       counter(hint) += 1
-      name
+      generatedName
     }
   }
 
