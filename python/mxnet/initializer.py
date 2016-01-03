@@ -41,6 +41,8 @@ class Initializer(object):
             self._init_zero(name, arr)
         elif name.endswith("moving_var"):
             self._init_zero(name, arr)
+        elif name.endswith("moving_inv_var"):
+            self._init_zero(name, arr)
         elif name.endswith("moving_avg"):
             self._init_zero(name, arr)
         else:
