@@ -336,8 +336,10 @@ class ConvolutionProp : public OperatorProperty {
     CHECK(ksize_x <= dshape[3] && ksize_y <= dshape[2])
         << "kernel size exceed input";
     (*out_shape)[conv::kOut][1] = param_.num_filter;
-    (*out_shape)[conv::kOut][2] = (dshape[2] + 2 * param_.pad[0] - (param_.dilate[0] == 1 ? ksize_y : ksize_y * param_.dilate[0] - 1)) / param_.stride[0] + 1;
-    (*out_shape)[conv::kOut][3] = (dshape[3] + 2 * param_.pad[1] - (param_.dilate[1] == 1 ? ksize_x : ksize_x * param_.dilate[1] - 1)) / param_.stride[1] + 1;
+    (*out_shape)[conv::kOut][2] = (dshape[2] + 2 * param_.pad[0] -
+        (param_.dilate[0] == 1 ? ksize_y : ksize_y * param_.dilate[0] - 1)) / param_.stride[0] + 1;
+    (*out_shape)[conv::kOut][3] = (dshape[3] + 2 * param_.pad[1] -
+        (param_.dilate[1] == 1 ? ksize_x : ksize_x * param_.dilate[1] - 1)) / param_.stride[1] + 1;
     return true;
   }
 
