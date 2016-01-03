@@ -1,3 +1,6 @@
+# For cmake_parse_arguments
+include(CMakeParseArguments)
+
 ################################################################################################
 # Command alias for debugging messages
 # Usage:
@@ -396,3 +399,4 @@ function(mxnet_source_group group)
     source_group(${group} FILES ${srcs2})
   endif()
 endfunction()
+
