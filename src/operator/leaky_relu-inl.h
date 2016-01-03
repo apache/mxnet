@@ -105,7 +105,7 @@ class LeakyReLUOp : public Operator {
       }
       case leakyrelu::kRReLU: {
         if (ctx.is_train) {
-          Random<xpu>* prnd = ctx.requested[leakyrelu::kRandom].get_random<xpu>(s);
+          Random<xpu>* prnd = ctx.requested[leakyrelu::kRandom].get_random<xpu, real_t>(s);
           mask = prnd->uniform(mask.shape_);
           mask = mask * (param_.upper_bound - param_.lower_bound) + param_.lower_bound;
           Assign(out, req[leakyrelu::kOut], F<mshadow_op::xelu>(data, mask));
