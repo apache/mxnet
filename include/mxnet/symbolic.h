@@ -321,9 +321,13 @@ class Executor {
                         const std::vector<OpReqType> &grad_req_type,
                         const std::vector<NDArray> &aux_states);
   /*!
+   * \brief the prototype of user-defined monitor callback
+   */
+  typedef std::function<void(const char*, void*)> MonitorCallback;
+  /*!
    * \brief Install a callback to notify the completion of operation.
    */
-  virtual void SetMonitorCallback(ExcecutorMonitorCallback callback) {}
+  virtual void SetMonitorCallback(const MonitorCallback& callback) {}
 };  // class operator
 }  // namespace mxnet
 #endif  // MXNET_SYMBOLIC_H_
