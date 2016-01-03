@@ -104,14 +104,16 @@ class DeconvolutionOp : public Operator {
                                     param_.kernel[0],
                                     param_.kernel[1],
                                     param_.stride[0],
-                                    param_.stride[1]);
+                                    param_.stride[1],
+                                    1, 1);  // Deconvolution only support dilate equals 1
       } else {
         temp_col = unpack_patch2col(pad(out.Slice(i, i + step),
                                         param_.pad[0], param_.pad[1]),
                                     param_.kernel[0],
                                     param_.kernel[1],
                                     param_.stride[0],
-                                    param_.stride[1]);
+                                    param_.stride[1],
+                                    1, 1);  // Deconvolution only support dilate equals 1
       }
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
@@ -124,7 +126,8 @@ class DeconvolutionOp : public Operator {
                                    out.Slice(i, i + step).shape_,
                                    param_.kernel[0],
                                    param_.kernel[1],
-                                   param_.stride[0]);
+                                   param_.stride[0],
+                                   1);  // Deconvolution only support dilate equals 1
       } else {
         Shape<4> pshape = out.Slice(i, i + step).shape_;
         pshape[2] += 2 * param_.pad[0];
@@ -133,7 +136,8 @@ class DeconvolutionOp : public Operator {
                                         pshape,
                                         param_.kernel[0],
                                         param_.kernel[1],
-                                        param_.stride[0]),
+                                        param_.stride[0],
+                                        1),  // Deconvolution only support dilate equals 1
                                         out[i][0].shape_);
       }
     }
@@ -192,13 +196,15 @@ class DeconvolutionOp : public Operator {
                                      param_.kernel[0],
                                      param_.kernel[1],
                                      param_.stride[0],
-                                     param_.stride[1]);
+                                     param_.stride[1],
+                                     1, 1);  // Deconvolution only support dilate equals 1
       } else {
         temp_col = unpack_patch2col(pad(grad.Slice(i, i + step), param_.pad[0], param_.pad[1]),
                                      param_.kernel[0],
                                      param_.kernel[1],
                                      param_.stride[0],
-                                     param_.stride[1]);
+                                     param_.stride[1],
+                                     1, 1);  // Deconvolution only support dilate equals 1
       }
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
