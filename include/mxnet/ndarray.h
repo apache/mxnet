@@ -36,6 +36,7 @@ class MXNET_API NDArray {
    * \param shape the shape of array
    * \param ctx context of NDArray
    * \param delay_alloc whether delay the allocation
+   * \param dtype data type of this ndarray
    */
   NDArray(const TShape &shape, Context ctx,
           bool delay_alloc = false, int dtype = mshadow::default_type_flag)
@@ -202,7 +203,6 @@ class MXNET_API NDArray {
    *
    * \param data the data source to copy from.
    * \param size the size of the source array, in sizeof(DType) not raw btyes.
-   * \param dtype the data type of source array.
    */
   void SyncCopyFromCPU(const void *data, size_t size) const;
   /*!
@@ -214,7 +214,6 @@ class MXNET_API NDArray {
    *
    * \param data the data source to copyinto.
    * \param size the memory size we want to copy into, in sizeof(DType) not raw btyes.
-   * \param dtype the data type of target array.
    */
   void SyncCopyToCPU(void *data, size_t size) const;
   /*!
