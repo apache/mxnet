@@ -5,7 +5,7 @@ import ctypes
 from .base import _LIB, check_call
 from .base import c_array, mx_uint, mx_float, c_str
 from .base import OptimizerHandle, OptimizerCreator
-from .ndarray import NDArray, zeros, clip, sqrt
+from .ndarray import NDArray, zeros, clip, sqrt, norm
 
 class Optimizer(object):
     """Base class of all optimizers."""
@@ -256,7 +256,7 @@ class ccSGD(Optimizer):
     """
     def __init__(self, learning_rate=0.01, momentum=0.0,
                  wd=0.0001, rescale_grad=1, clip_gradient=-1,
-                 lr_scheduler=None):
+                 lr_scheduler=None, arg_names=None):
         super(ccSGD, self).__init__(rescale_grad)
         self.lr = learning_rate
         self.momentum = momentum
@@ -268,8 +268,23 @@ class ccSGD(Optimizer):
 
         self.handle = Optimizer._init_cc_optimizer(
             'ccsgd',
-            ['momentum', 'wd', 'rescale_grad', 'clip_gradient'],
-            [momentum, wd, rescale_grad, clip_gradient])
+            ['momentum', 'rescale_grad', 'clip_gradient'],
+            [momentum, rescale_grad, clip_gradient])
+
+    def __getstate__(self):
+        this = self.__dict__.copy()
+        if this.get('handle', None) is not None:
+            this['handle'] = True
+        else:
+            this['handle'] = False
+
+    def __setstate__(self, state):
+        if state.get('handle', False):
+            state['handle'] = Optimizer._init_cc_optimizer(
+                'ccsgd',
+                ['momentum', 'rescale_grad', 'clip_gradient'],
+                [state['momentum'], state['rescale_grad'], state['clip_gradient']])
+        self.__dict__.update(state)
 
     def create_state(self, index, weight):
         return None
@@ -303,7 +318,8 @@ class ccSGD(Optimizer):
                                           ctypes.c_int(index),
                                           weight.handle,
                                           grad.handle,
-                                          mx_float(lr)))
+                                          mx_float(lr),
+                                          mx_float(self.wd)))
 
 @register
 class Adam(Optimizer):

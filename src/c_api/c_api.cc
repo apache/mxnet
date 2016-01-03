@@ -1354,12 +1354,13 @@ int MXOptimizerUpdate(OptimizerHandle handle,
                       int index,
                       NDArrayHandle weight,
                       NDArrayHandle grad,
-                      mx_float lr) {
+                      mx_float lr,
+                      mx_float wd) {
   API_BEGIN();
   Optimizer *opt = static_cast<Optimizer*>(handle);
   opt->Update(index,
               static_cast<NDArray*>(weight),
               static_cast<NDArray*>(grad),
-              lr);
+              lr, wd);
   API_END();
 }

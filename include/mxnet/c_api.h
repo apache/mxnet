@@ -1178,6 +1178,7 @@ MXNET_DLL int MXOptimizerUpdate(OptimizerHandle handle,
                                 int index,
                                 NDArrayHandle weight,
                                 NDArrayHandle grad,
-                                mx_float lr);
+                                mx_float lr,
+                                mx_float wd);
 
 #endif  // MXNET_C_API_H_
