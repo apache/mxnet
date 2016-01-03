@@ -214,6 +214,11 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySyncCopyFromCPU
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayFree
+  (JNIEnv * env, jobject obj, jobject ndArrayHandle) {
+  return MXNDArrayFree((NDArrayHandle) getLongField(env, ndArrayHandle));
+}
+
 // The related c api MXKVStoreSetUpdater function takes a c function pointer as its parameter,
 // while we write java functions here in scala-package.
 // Thus we have to wrap the function in a java object, and run env->CallVoidMethod(obj) once updater is invoked,
@@ -482,12 +487,6 @@ JNIEXPORT jstring JNICALL Java_ml_dmlc_mxnet_LibInfo_mxGetLastError(JNIEnv * env
   char *tmpstr = "MXNetError";
   jstring rtstr = env->NewStringUTF(tmpstr);
   return rtstr;
-}
-
-JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayFree(JNIEnv * env, jobject obj, jobject ndArrayHandle) {
-  // TODO
-  puts("Free ndarray called");
-  return 0;
 }
 
 //IO funcs
@@ -826,5 +825,66 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolGetAttr
 
   setStringField(env, retRef, out);
   setIntField(env, successRef, success);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolListArguments
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jobject arguments) {
+  mx_uint outSize;
+  const char **outStrArray;
+  int ret = MXSymbolListArguments((SymbolHandle) symbolPtr, &outSize, &outStrArray);
+
+  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jmethodID arrayAppend = env->GetMethodID(arrayClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+  for (int i = 0; i < outSize; i++) {
+    jstring argument = env->NewStringUTF(outStrArray[i]);
+    env->CallObjectMethod(arguments, arrayAppend, argument);
+  }
+
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolListOutputs
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jobject outputs) {
+  mx_uint outSize;
+  const char **outStrArray;
+  int ret = MXSymbolListOutputs((SymbolHandle) symbolPtr, &outSize, &outStrArray);
+
+  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jmethodID arrayAppend = env->GetMethodID(arrayClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+  for (int i = 0; i < outSize; i++) {
+    jstring output = env->NewStringUTF(outStrArray[i]);
+    env->CallObjectMethod(outputs, arrayAppend, output);
+  }
+
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolCopy
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jobject clonedSymbolRef) {
+  SymbolHandle clonedSymbol;
+  int ret = MXSymbolCopy((SymbolHandle) symbolPtr, &clonedSymbol);
+  setLongField(env, clonedSymbolRef, (long)clonedSymbol);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolCreateGroup
+  (JNIEnv *env, jobject obj, jlongArray jsymbols, jobject out) {
+  int numSymbols = env->GetArrayLength(jsymbols);
+  SymbolHandle handle;
+  jlong *symbols = env->GetLongArrayElements(jsymbols, NULL);
+  int ret = MXSymbolCreateGroup(numSymbols, (SymbolHandle *)symbols, &handle);
+  env->ReleaseLongArrayElements(jsymbols, symbols, 0);
+  setLongField(env, out, (long)handle);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolPrint
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jobject out) {
+  const char *outStr;
+  int ret = MXSymbolPrint((SymbolHandle) symbolPtr, &outStr);
+  setStringField(env, out, outStr);
   return ret;
 }

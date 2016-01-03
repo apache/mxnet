@@ -3,23 +3,40 @@ package ml.dmlc.mxnet
 import ml.dmlc.mxnet.Base._
 import org.slf4j.LoggerFactory
 
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 /**
  * Symbolic configuration API of mxnet.
  * @author Yizhi Liu
  */
 class Symbol(private[mxnet] val handle: SymbolHandle) {
-  def +(other: Symbol): Symbol = Symbol.creator("_Plus", other)
-  def +(other: Int): Symbol = ???
-  def +(other: Float): Symbol = ???
-  def +(other: Double): Symbol = ???
+  def +(other: Symbol): Symbol = Symbol.create("_Plus", other)
+
+  override def clone(): Symbol = {
+    val clonedHandle = new SymbolHandleRef
+    checkCall(_LIB.mxSymbolCopy(handle, clonedHandle))
+    new Symbol(clonedHandle.value)
+  }
 
   /**
    * List all the arguments in the symbol.
    * @return Array of all the arguments.
    */
-  def listArguments(): Array[String] = ???
+  def listArguments(): Array[String] = {
+    val arr = ArrayBuffer.empty[String]
+    checkCall(_LIB.mxSymbolListArguments(handle, arr))
+    arr.toArray
+  }
+
+  /**
+   * List all outputs in the symbol.
+   * @return : List of all the outputs.
+   */
+  def listOutputs(): Array[String] = {
+    val arr = ArrayBuffer.empty[String]
+    checkCall(_LIB.mxSymbolListOutputs(handle, arr))
+    arr.toArray
+  }
 
   /**
    * List all auxiliary states in the symbol.
@@ -49,6 +66,28 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
     }
   }
 
+  /**
+   * Invoke symbol as function on inputs.
+   * @param name resulting symbol name
+   * @param symbols provide named symbols
+   * @return the resulting symbol
+   */
+  def apply(name: String, symbols: Map[String, Symbol]): Symbol = {
+    val s = clone()
+    s.compose(name, symbols)
+    s
+  }
+
+  /**
+   * Get a debug string.
+   * @return Debug string of the symbol.
+   */
+  def debugStr: String = {
+    val str = new RefString
+    checkCall(_LIB.mxSymbolPrint(handle, str))
+    str.value
+  }
+
   // Set the attribute of the symbol.
   private def setAttr(attr: Map[String, String]): Unit = {
     attr.foreach { case (key, value) =>
@@ -59,6 +98,7 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
   /**
    * Compose symbol on inputs.
    * This call mutates the current symbol.
+   * @param name resulting symbol name
    * @param symbols provide positional arguments
    * @return the resulting symbol
    */
@@ -70,7 +110,7 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
   private def compose(name: String, symbols: Map[String, Symbol]): Unit = {
     val keys = symbols.keys.toArray
     val args = symbols.values.map(_.handle).toArray
-    checkCall(_LIB.mxSymbolCompose(handle, name, null, args))
+    checkCall(_LIB.mxSymbolCompose(handle, name, keys, args))
   }
 }
 
@@ -88,8 +128,36 @@ object Symbol {
     val handle = new SymbolHandleRef
     checkCall(_LIB.mxSymbolCreateVariable(name, handle))
     val sym = new Symbol(handle.value)
-    sym.setAttr(AttrScope.current.get(attr))
+    sym.setAttr(AttrScope.current.get(Option(attr)))
     sym
+  }
+
+  def FullyConnected: Map[String, Any] => Symbol = {
+    FullyConnected(null)
+  }
+
+  def FullyConnected(attr: Map[String, String]): Map[String, Any] => Symbol = {
+    createNoCheck("FullyConnected", attr)
+  }
+
+  def Activation: Map[String, Any] => Symbol = {
+    Activation(null)
+  }
+
+  def Activation(attr: Map[String, String]): Map[String, Any] => Symbol = {
+    createNoCheck("Activation", attr)
+  }
+
+  /**
+   * Create a symbol that groups symbols together.
+   * @param symbols List of symbols to be grouped.
+   * @return The created group symbol.
+   */
+  def Group(symbols: Symbol*): Symbol = {
+    val ihandles = symbols.map(_.handle).toArray
+    val handle = new SymbolHandleRef
+    checkCall(_LIB.mxSymbolCreateGroup(ihandles, handle))
+    new Symbol(handle.value)
   }
 
   // List and add all the atomic symbol functions to current module.
@@ -120,30 +188,31 @@ object Symbol {
   /**
    * Activation Operator of Neural Net.
    * The parameters listed below can be passed in as keyword arguments.
-   * @param name Name of the resulting symbol.
-   *             // TODO
+   * @param symbols Symbol parameters passed to create the resulting symbol
+   * @param paramKwargs Key-value parameters passed to create the resulting symbol
+   * @param attr Attributes set to the resulting symbol
    * @return the resulting symbol
    */
-  private def creator(operator: String,
-                      name: String,
-                      attr: Map[String, String],
-                      paramKwargs: Map[String, String],
-                      symbols: Symbol*): Symbol = {
+  def create(operator: String,
+             symbols: Array[Symbol],
+             paramKwargs: Map[String, String],
+             attr: Map[String, String]): Symbol = {
     val function = functions(operator)
     require(function != null, s"invalid operator name $operator")
 
+    val params = if (paramKwargs == null) Map.empty[String, String] else paramKwargs
     val addkeyVarNumArgs = (function.keyVarNumArgs != null
       && !function.keyVarNumArgs.isEmpty
-      && !paramKwargs.contains(function.keyVarNumArgs))
+      && !params.contains(function.keyVarNumArgs))
 
     val paramKeys: Array[String] = (
         if (addkeyVarNumArgs) Array[String](function.keyVarNumArgs)
         else Array.empty[String]
-      ) ++ paramKwargs.keys
+      ) ++ (params - "name").keys
     val paramVals: Array[String] = (
         if (addkeyVarNumArgs) Array[String](symbols.length.toString)
         else Array.empty[String]
-      ) ++ paramKwargs.values
+      ) ++ (params - "name").values
 
     // create atomic symbol
     val symHandle = new SymbolHandleRef
@@ -151,48 +220,81 @@ object Symbol {
       function.handle, paramKeys, paramVals, symHandle))
 
     val s = new Symbol(symHandle.value)
-    val attrAll = AttrScope.current.get(attr)
+    val attrAll = AttrScope.current.get(Option(attr))
     s.setAttr(attrAll)
     val hint = operator.toLowerCase
-    val managedName = NameManager.current.get(name, hint)
-    s.compose(managedName, symbols.toArray)
+    val managedName = NameManager.current.get(params.get("name"), hint)
+    s.compose(managedName, symbols)
     s
   }
 
-  private def creator(operator: String, symbols: Symbol*): Symbol = {
-    creator(operator, null, null, Map.empty[String, String], symbols:_*)
+  def create(operator: String, symbols: Symbol*): Symbol = {
+    create(operator, symbols.toArray, null, null)
   }
 
-  private def creator(operator: String,
-                      name: String,
-                      attr: Map[String, String],
-                      paramKwargs: Map[String, String],
-                      symbols: Map[String, Symbol]): Symbol = {
+  /**
+   * Activation Operator of Neural Net.
+   * The parameters listed below can be passed in as keyword arguments.
+   * @param symbols Named symbol parameters passed to create the resulting symbol
+   * @param paramKwargs Key-value parameters passed to create the resulting symbol
+   * @param attr Attributes set to the resulting symbol
+   * @return the resulting symbol
+   */
+  private def create(operator: String,
+                     symbols: Map[String, Symbol],
+                     paramKwargs: Map[String, String],
+                     attr: Map[String, String]): Symbol = {
     val function = functions(operator)
     require(function != null, s"invalid operator name $operator")
     require(function.keyVarNumArgs == null || function.keyVarNumArgs.isEmpty,
       "This function support variable length of Symbol arguments.\n" +
       "Please pass all the input Symbols via positional arguments instead of keyword arguments.")
 
-    val paramKeys = paramKwargs.keys.toArray
-    val paramVals = paramKwargs.values.toArray
+    val paramKeys =
+      if (paramKwargs == null) Array.empty[String]
+      else (paramKwargs - "name").keys.toArray
+    val paramVals =
+      if (paramKwargs == null) Array.empty[String]
+      else (paramKwargs - "name").values.toArray
     val symHandle = new SymbolHandleRef
     checkCall(_LIB.mxSymbolCreateAtomicSymbol(
       function.handle, paramKeys, paramVals, symHandle))
 
     val s = new Symbol(symHandle.value)
-    val attrAll = AttrScope.current.get(attr)
+    val attrAll = AttrScope.current.get(Option(attr))
     s.setAttr(attrAll)
     val hint = operator.toLowerCase
-    val managedName = NameManager.current.get(name, hint)
+    val managedName = NameManager.current.get(paramKwargs.get("name"), hint)
     s.compose(managedName, symbols)
     s
   }
 
-  private def creator(operator: String, symbols: Map[String, Symbol]): Symbol = {
-    creator(operator, null, null, Map.empty[String, String], symbols)
+  def create(operator: String, symbols: Map[String, Symbol]): Symbol = {
+    create(operator, symbols, null, null)
   }
 
+  def create(operator: String,
+             symbols: Map[String, Symbol],
+             paramKwargs: Map[String, String]): Symbol = {
+    create(operator, symbols, paramKwargs, null)
+  }
+
+  // a more friendly interface for creating symbols
+  // all values except symbols in kwargs will be cast to String using its toString() method
+  def createNoCheck(operator: String, attr: Map[String, String] = null)(
+                    kwargs: Map[String, Any]): Symbol = {
+    val symbolArgs = kwargs.filter { case (key, value) =>
+      value.isInstanceOf[Symbol]
+    }.map { case (key, value) =>
+      (key, value.asInstanceOf[Symbol])
+    }
+    val strArgs = kwargs.filter { case (key, value) =>
+      !value.isInstanceOf[Symbol]
+    }.map { case (key, value) =>
+      (key, value.toString)
+    }
+    create(operator, symbolArgs, strArgs, attr)
+  }
 }
 
 private case class SymbolFunction(handle: SymbolHandle, keyVarNumArgs: String)

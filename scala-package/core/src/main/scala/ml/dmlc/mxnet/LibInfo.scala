@@ -145,4 +145,11 @@ class LibInfo {
                               key: String,
                               ret: RefString,
                               success: RefInt): Int
+  @native def mxSymbolListArguments(handle: SymbolHandle,
+                                    arguments: ArrayBuffer[String]): Int
+  @native def mxSymbolCopy(handle: SymbolHandle, clonedHandle: SymbolHandleRef): Int
+  @native def mxSymbolListOutputs(handle: SymbolHandle,
+                                  outputs: ArrayBuffer[String]): Int
+  @native def mxSymbolCreateGroup(handles: Array[SymbolHandle], out: SymbolHandleRef): Int
+  @native def mxSymbolPrint(handle: SymbolHandle, str: RefString): Int
 }

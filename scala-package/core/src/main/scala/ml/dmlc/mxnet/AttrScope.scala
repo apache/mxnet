@@ -12,12 +12,8 @@ class AttrScope(attr: Map[String, String] = Map.empty) {
    * @param userDefinedAttr The attribute passed in by user during symbol creation.
    * @return Updated attributes to add other scope related attributes.
    */
-  def get(userDefinedAttr: Map[String, String]): Map[String, String] = {
-    if (userDefinedAttr != null) {
-      attr ++ userDefinedAttr
-    } else {
-      attr
-    }
+  def get(userDefinedAttr: Option[Map[String, String]]): Map[String, String] = {
+    _attr ++ userDefinedAttr.getOrElse(Map.empty[String, String])
   }
 
   def withScope[T](body: => T): T = {

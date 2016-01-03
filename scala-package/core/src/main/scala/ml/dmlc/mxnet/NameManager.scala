@@ -20,10 +20,8 @@ class NameManager {
    * @param hint : A hint string, which can be used to generate name.
    * @return A canonical name for the user.
    */
-  def get(name: String, hint: String): String = {
-    if (name != null) {
-      name
-    } else {
+  def get(name: Option[String], hint: String): String = {
+    name.getOrElse {
       if (!counter.contains(hint)) {
         counter(hint) = 0
       }
