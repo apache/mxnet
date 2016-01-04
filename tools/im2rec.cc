@@ -80,6 +80,7 @@ int main(int argc, char *argv[]) {
       if (!strcmp(key, "color")) color_mode = atoi(val);
       if (!strcmp(key, "encoding")) encoding = std::string(val);
       if (!strcmp(key, "unchanged")) unchanged = atoi(val);
+	  if (!strcmp(key, "inter_method")) inter_method = atoi(val);
     }
   }
   // Check parameters ranges
