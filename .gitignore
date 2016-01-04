@@ -21,6 +21,7 @@
 *.la
 *.a
 *.lib
+lib/*
 
 # Executables
 *.exe
@@ -91,3 +92,5 @@ example/notebooks/.ipynb_checkpoints/*
 # ctags
 tags
 
+
+miniconda.sh

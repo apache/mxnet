@@ -22,7 +22,7 @@ include mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
 unexport NO_OPENMP
 
-# all tge possible warning tread
+# all the possible warning tread
 WARNFLAGS= -Wall
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
@@ -76,7 +76,10 @@ ifneq ($(ADD_LDFLAGS), NONE)
 endif
 
 ifneq ($(USE_CUDA_PATH), NONE)
-	NVCC=$(USE_CUDA_PATH)/bin/nvcc
+	NVCC = $(USE_CUDA_PATH)/bin/nvcc
+	CUDA_DEP = $(wildcard $(USE_CUDA_PATH)/lib64/libcudart.so*)
+	CUDA_DEP += $(wildcard $(USE_CUDA_PATH)/lib64/libcurand.so*)
+	CUDA_DEP += $(wildcard $(USE_CUDA_PATH)/lib64/libcublas.so*)
 endif
 
 # ps-lite
@@ -111,10 +114,9 @@ else
 endif
 
 LIB_DEP += $(DMLC_CORE)/libdmlc.a
-ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(LIB_DEP)
+ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(LIB_DEP) $(config)
 ifeq ($(USE_CUDA), 1)
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ)
-	LDFLAGS += -lcuda
 endif
 
 ifeq ($(USE_NVRTC), 1)
@@ -149,7 +151,13 @@ lib/libmxnet.a: $(ALL_DEP)
 	@mkdir -p $(@D)
 	ar crv $@ $(filter %.o, $?)
 
-lib/libmxnet.so: $(ALL_DEP)
+copy_cuda_deps:
+ifdef CUDA_DEP
+	@mkdir -p lib
+	cp $(CUDA_DEP) lib
+endif
+
+lib/libmxnet.so: $(ALL_DEP) copy_cuda_deps
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
 
