@@ -26,23 +26,19 @@
  *\brief get interpolation method with given inter_method, 0-CV_INTER_NN 1-CV_INTER_LINEAR 2-CV_INTER_CUBIC
  *\ 3-CV_INTER_AREA 4-CV_INTER_LANCZOS4 9-AUTO(cubic for enlarge, area for shrink, bilinear for others) 10-RAND(0-4)
  */
-int GetInterMethod(int inter_method, int old_width, int old_height, int new_width, int new_height, std::mt19937& prnd){
-    if(inter_method==9){
-        if(new_width > old_width && new_height > old_height){
-            return 2;//CV_INTER_CUBIC for enlarge
+int GetInterMethod(int inter_method, int old_width, int old_height, int new_width, int new_height, std::mt19937& prnd) {
+    if (inter_method == 9) {
+        if (new_width > old_width && new_height > old_height) {
+            return 2;  // CV_INTER_CUBIC for enlarge
+        } else if (new_width <old_width && new_height < old_height) {
+            return 3;  // CV_INTER_AREA for shrink
+        } else {
+            return 1;  // CV_INTER_LINEAR for others
         }
-        else if(new_width <old_width && new_height < old_height){
-            return 3;//CV_INTER_AREA for shrink
-        }
-        else{
-            return 1;//CV_INTER_LINEAR for others
-        }
-    }
-    else if(inter_method==10){
+    } else if (inter_method == 10) {
         std::uniform_int_distribution<size_t> rand_uniform_int(0, 4);
         return rand_uniform_int(prnd);
-    }
-    else{
+    } else {
         return inter_method;
     }
 }
@@ -69,8 +65,8 @@ int main(int argc, char *argv[]) {
   int center_crop = 0;
   int quality = 80;
   int color_mode = CV_LOAD_IMAGE_COLOR;
-  int unchanged=0;
-  int inter_method=CV_INTER_LINEAR;
+  int unchanged = 0;
+  int inter_method = CV_INTER_LINEAR;
   std::string encoding(".jpg");
   for (int i = 4; i < argc; ++i) {
     char key[128], val[128];
@@ -87,13 +83,12 @@ int main(int argc, char *argv[]) {
     }
   }
   // Check parameters ranges
-  if(color_mode != -1 && color_mode != 0 && color_mode != 1) {
+  if (color_mode != -1 && color_mode != 0 && color_mode != 1) {
       LOG(FATAL) << "Color mode must be -1, 0 or 1.";
   }
-  if(encoding != std::string(".jpg") && encoding != std::string(".png")) {
+  if (encoding != std::string(".jpg") && encoding != std::string(".png")) {
       LOG(FATAL) << "Encoding mode must be .jpg or .png.";
   }
-  
   if (new_size > 0) {
     LOG(INFO) << "New Image Size: Short Edge " << new_size;
   } else {
@@ -107,14 +102,14 @@ int main(int argc, char *argv[]) {
   }
   if (color_mode == -1) {
     LOG(INFO) << "Keep original color mode";
-  } 
+  }
   LOG(INFO) << "Encoding is " << encoding;
 
-  if(encoding == std::string(".png") and quality > 9) {
+  if (encoding == std::string(".png") and quality > 9) {
       quality = 3;
   }
-  if (inter_method!=1) {
-      switch(inter_method){
+  if (inter_method != 1) {
+      switch (inter_method) {
         case 0:
             LOG(INFO) << "Use inter_method CV_INTER_NN";
             break;
@@ -136,7 +131,6 @@ int main(int argc, char *argv[]) {
         default:
             LOG(INFO) << "Unkown inter_method";
             return 0;
-            
       }
   }
   std::random_device rd;
@@ -148,7 +142,7 @@ int main(int argc, char *argv[]) {
   size_t imcnt = 0;
   double tstart = dmlc::GetTime();
   dmlc::InputSplit *flist = dmlc::InputSplit::
-      Create(argv[1], partid, nsplit, "text");  
+      Create(argv[1], partid, nsplit, "text");
   std::ostringstream os;
   if (nsplit == 1) {
     os << argv[3];
@@ -163,12 +157,11 @@ int main(int argc, char *argv[]) {
   std::vector<unsigned char> decode_buf;
   std::vector<unsigned char> encode_buf;
   std::vector<int> encode_params;
-  if(encoding == std::string(".png")) {
+  if (encoding == std::string(".png")) {
       encode_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
       encode_params.push_back(quality);
       LOG(INFO) << "PNG encoding compression: " << quality;
-  }
-  else {
+  } else {
       encode_params.push_back(CV_IMWRITE_JPEG_QUALITY);
       encode_params.push_back(quality);
       LOG(INFO) << "JPEG encoding quality: " << quality;
@@ -179,7 +172,7 @@ int main(int argc, char *argv[]) {
     std::string sline(static_cast<char*>(line.dptr), line.size);
     std::istringstream is(sline);
     if (!(is >> rec.header.image_id[0] >> rec.header.label)) continue;
-    for (int k = 1; k < label_width; ++ k) {
+    for (int k = 1; k < label_width; ++k) {
       float tmp;
       CHECK(is >> tmp)
           << "Invalid ImageList, did you provide the correct label_width?";
@@ -207,8 +200,7 @@ int main(int argc, char *argv[]) {
       if (nread != kBufferSize) break;
     }
     delete fi;
-    
-    if(unchanged != 1) {
+    if (unchanged != 1) {
       cv::Mat img = cv::imdecode(decode_buf, color_mode);
       CHECK(img.data != NULL) << "OpenCV decode fail:" << path;
       cv::Mat res = img;
@@ -222,22 +214,20 @@ int main(int argc, char *argv[]) {
             img = img(cv::Range(0, img.rows), cv::Range(margin, margin + img.rows));
           }
         }
-        int interpolation_method=1;
+        int interpolation_method = 1;
         if (img.rows > img.cols) {
-            if(img.cols!=new_size){
-                interpolation_method=GetInterMethod(inter_method, img.cols, img.rows, new_size, img.rows * new_size / img.cols, prnd);
+            if (img.cols != new_size) {
+                interpolation_method = GetInterMethod(inter_method, img.cols, img.rows, new_size, img.rows * new_size / img.cols, prnd);
                 cv::resize(img, res, cv::Size(new_size, img.rows * new_size / img.cols), 0, 0, interpolation_method);
-            }
-            else{
-                res=img.clone();
+            } else {
+                res = img.clone();
             }
         } else {
-            if(img.rows!=new_size){
-                interpolation_method=GetInterMethod(inter_method, img.cols, img.rows, new_size * img.cols / img.rows, new_size, prnd);
+            if (img.rows != new_size) {
+                interpolation_method = GetInterMethod(inter_method, img.cols, img.rows, new_size * img.cols / img.rows, new_size, prnd);
                 cv::resize(img, res, cv::Size(new_size * img.cols / img.rows, new_size), 0, 0, interpolation_method);
-            }
-            else{
-                res=img.clone();
+            } else {
+                res = img.clone();
             }
         }
       }
@@ -247,8 +237,7 @@ int main(int argc, char *argv[]) {
       blob.resize(bsize + encode_buf.size());
       memcpy(BeginPtr(blob) + bsize,
              BeginPtr(encode_buf), encode_buf.size());
-    }
-    else {
+    } else {
       size_t bsize = blob.size();
       blob.resize(bsize + decode_buf.size());
       memcpy(BeginPtr(blob) + bsize,
