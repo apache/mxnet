@@ -30,6 +30,7 @@ enum ConvolutionOpResource {kTempSpace};
 struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   TShape kernel;
   TShape stride;
+  TShape dilate;
   TShape pad;
   uint32_t num_filter;
   uint32_t num_group;
@@ -40,6 +41,8 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     DMLC_DECLARE_FIELD(kernel).describe("convolution kernel size: (y, x)");
     DMLC_DECLARE_FIELD(stride).set_default(TShape(shape, shape + 2))
     .describe("convolution stride: (y, x)");
+    DMLC_DECLARE_FIELD(dilate).set_default(TShape(shape, shape + 2))
+    .describe("convolution dilate: (y, x)");
     shape[0] = shape[1] = 0;
     DMLC_DECLARE_FIELD(pad).set_default(TShape(shape, shape + 2))
     .describe("pad for convolution: (y, x)");
@@ -105,14 +108,18 @@ class ConvolutionOp : public Operator {
                                     param_.kernel[0],
                                     param_.kernel[1],
                                     param_.stride[0],
-                                    param_.stride[1]);
+                                    param_.stride[1],
+                                    param_.dilate[0],
+                                    param_.dilate[1]);
       } else {
         temp_col = unpack_patch2col(pad(data.Slice(i, i + step),
                                         param_.pad[0], param_.pad[1]),
                                     param_.kernel[0],
                                     param_.kernel[1],
                                     param_.stride[0],
-                                    param_.stride[1]);
+                                    param_.stride[1],
+                                    param_.dilate[0],
+                                    param_.dilate[1]);
       }
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
@@ -181,13 +188,17 @@ class ConvolutionOp : public Operator {
                                      param_.kernel[0],
                                      param_.kernel[1],
                                      param_.stride[0],
-                                     param_.stride[1]);
+                                     param_.stride[1],
+                                     param_.dilate[0],
+                                     param_.dilate[1]);
       } else {
         temp_col = unpack_patch2col(pad(data.Slice(i, i + step), param_.pad[0], param_.pad[1]),
                                      param_.kernel[0],
                                      param_.kernel[1],
                                      param_.stride[0],
-                                     param_.stride[1]);
+                                     param_.stride[1],
+                                     param_.dilate[0],
+                                     param_.dilate[1]);
       }
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
@@ -209,7 +220,8 @@ class ConvolutionOp : public Operator {
                                      data.Slice(i, i + step).shape_,
                                      param_.kernel[0],
                                      param_.kernel[1],
-                                     param_.stride[0]);
+                                     param_.stride[0],
+                                     param_.dilate[0]);
         } else {
           Shape<4> pshape = data.Slice(i, i + step).shape_;
           pshape[2] += 2 * param_.pad[0];
@@ -218,7 +230,8 @@ class ConvolutionOp : public Operator {
                                           pshape,
                                           param_.kernel[0],
                                           param_.kernel[1],
-                                          param_.stride[0]),
+                                          param_.stride[0],
+                                          param_.dilate[0]),
                                           gdata[i][0].shape_);
         }
       }
@@ -318,11 +331,15 @@ class ConvolutionProp : public OperatorProperty {
         << "incorrect kernel size: " << param_.kernel;
     CHECK_GE(param_.stride.Size(), 0) \
         << "incorrect stride size: " << param_.stride;
+    CHECK_GE(param_.dilate.Size(), 0) \
+        << "incorrect dilate size: " << param_.dilate;
     CHECK(ksize_x <= dshape[3] && ksize_y <= dshape[2])
         << "kernel size exceed input";
     (*out_shape)[conv::kOut][1] = param_.num_filter;
-    (*out_shape)[conv::kOut][2] = (dshape[2] + 2 * param_.pad[0] - ksize_y) / param_.stride[0] + 1;
-    (*out_shape)[conv::kOut][3] = (dshape[3] + 2 * param_.pad[1] - ksize_x) / param_.stride[1] + 1;
+    (*out_shape)[conv::kOut][2] = (dshape[2] + 2 * param_.pad[0] -
+        (param_.dilate[0] == 1 ? ksize_y : ksize_y * param_.dilate[0] - 1)) / param_.stride[0] + 1;
+    (*out_shape)[conv::kOut][3] = (dshape[3] + 2 * param_.pad[1] -
+        (param_.dilate[1] == 1 ? ksize_x : ksize_x * param_.dilate[1] - 1)) / param_.stride[1] + 1;
     return true;
   }
 
