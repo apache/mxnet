@@ -11,6 +11,7 @@ import numpy as np
 import dicom
 from skimage import io, transform
 from joblib import Parallel, delayed
+import dill
 
 def mkdir(fname):
    try:
@@ -54,12 +55,12 @@ def write_label_csv(fname, frames, label_map):
    fo.close()
 
 
-def get_data(lst):
+def get_data(lst,preproc):
    data = []
    result=[]
    for path in lst:
        f = dicom.read_file(path)
-       img = crop_resize(f.pixel_array.astype(float) / np.max(f.pixel_array),64)
+       img = preproc(f.pixel_array.astype(float) / np.max(f.pixel_array))
        dst_path = path.rsplit(".", 1)[0] + ".64x64.jpg"
        scipy.misc.imsave(dst_path, img)
        result.append(dst_path)
@@ -74,7 +75,7 @@ def get_data(lst):
 def write_data_csv(fname, frames, preproc):
    """Write data to csv file"""
    fdata = open(fname, "w")
-   dr=Parallel()(delayed(get_data)(lst) for lst in frames)
+   dr=Parallel()(delayed(get_data)(lst,preproc) for lst in frames)
    data,result=zip(*dr)
    for entry in data:
       fdata.write(','.join(entry)+'\r\n')
