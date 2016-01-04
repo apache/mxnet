@@ -212,7 +212,7 @@ class ImageAugmenter {
       M.at<float>(1, 2) = (new_height - ori_center_height) / 2;
       CHECK((param_.inter_method>=1 && param_.inter_method<=4) || (param_.inter_method>=9 && param_.inter_method<=10))
           << "invalid inter_method: valid value 0,1,2,3,9,10";
-      int interpolation_method=GetInterMethod(param_.inter_method, new_width, new_height, src.cols, src.rows, prnd);
+      int interpolation_method=GetInterMethod(param_.inter_method, src.cols, src.rows, new_width, new_height, prnd);
       cv::warpAffine(src, temp_, M, cv::Size(new_width, new_height),
                      interpolation_method,
                      cv::BORDER_CONSTANT,
@@ -238,7 +238,7 @@ class ImageAugmenter {
         y /= 2; x /= 2;
       }
       cv::Rect roi(x, y, rand_crop_size, rand_crop_size);
-      int interpolation_method=GetInterMethod(param_.inter_method, param_.data_shape[2], param_.data_shape[1], rand_crop_size, rand_crop_size, prnd);
+      int interpolation_method=GetInterMethod(param_.inter_method, rand_crop_size, rand_crop_size, param_.data_shape[2], param_.data_shape[1], prnd);
       cv::resize(res(roi), res, cv::Size(param_.data_shape[2], param_.data_shape[1]),0,0,interpolation_method);
     } else {
       CHECK(static_cast<index_t>(res.rows) >= param_.data_shape[1]

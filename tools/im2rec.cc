@@ -223,14 +223,9 @@ int main(int argc, char *argv[]) {
           }
         }
         int interpolation_method=1;
-        if(img.rows > img.cols){
-            interpolation_method=GetInterMethod(inter_method, new_size, img.rows * new_size / img.cols, img.cols, img.rows, prnd);
-        }
-        else{
-            interpolation_method=GetInterMethod(inter_method, new_size * img.cols / img.rows, new_size, img.cols, img.rows, prnd);
-        }
         if (img.rows > img.cols) {
             if(img.cols!=new_size){
+                interpolation_method=GetInterMethod(inter_method, img.cols, img.rows, new_size, img.rows * new_size / img.cols, prnd);
                 cv::resize(img, res, cv::Size(new_size, img.rows * new_size / img.cols), 0, 0, interpolation_method);
             }
             else{
@@ -238,6 +233,7 @@ int main(int argc, char *argv[]) {
             }
         } else {
             if(img.rows!=new_size){
+                interpolation_method=GetInterMethod(inter_method, img.cols, img.rows, new_size * img.cols / img.rows, new_size, prnd);
                 cv::resize(img, res, cv::Size(new_size * img.cols / img.rows, new_size), 0, 0, interpolation_method);
             }
             else{
