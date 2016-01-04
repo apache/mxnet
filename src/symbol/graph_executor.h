@@ -32,7 +32,8 @@ class GraphExecutor : public Executor {
   }
   void Print(std::ostream &os) const override; // NOLINT(*)
   // install callback
-  void SetMonitorCallback(ExcecutorMonitorCallback callback) {
+  void SetMonitorCallback(const MonitorCallback& callback) {
+    CHECK(callback) << "invalid callback";
     monitor_callback_ = callback;
   }
   // implement Executor::Bind, only call it once.
