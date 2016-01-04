@@ -189,7 +189,7 @@ class Xavier(Initializer):
     def __init__(self, rnd_type="uniform", factor_type="avg", magnitude=3):
         self.rnd_type = rnd_type
         self.factor_type = factor_type
-        self.magnitude = magnitude
+        self.magnitude = float(magnitude)
 
 
     def _init_weight(self, _, arr):
@@ -197,7 +197,7 @@ class Xavier(Initializer):
         fan_in, fan_out = np.prod(shape[1:]), shape[0]
         factor = 1
         if self.factor_type == "avg":
-            factor = (fan_in + fan_out) / 2
+            factor = (fan_in + fan_out) / 2.0
         elif self.factor_type == "in":
             factor = fan_in
         elif self.factor_type == "out":
