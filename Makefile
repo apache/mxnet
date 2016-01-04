@@ -165,7 +165,7 @@ bin/im2rec: tools/im2rec.cc $(ALL_DEP)
 
 $(BIN) :
 	@mkdir -p $(@D)
-	$(CXX) $(CFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
+	$(CXX) $(CFLAGS) -std=c++0x  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
 include tests/cpp/unittest.mk
 
