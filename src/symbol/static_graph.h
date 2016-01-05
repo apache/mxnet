@@ -200,6 +200,20 @@ class StaticGraph {
                        std::vector<std::vector<TShape> > *node_out_shapes,
                        std::vector<std::vector<TShape> > *node_aux_shapes) const;
   /*!
+   * \brief infer the node types in the computation graph.
+   *
+   *  When calling this function, user can setup the shape information known into right position.
+   *  Unknown shape are indicated by shape.ndim() == 0.
+   *
+   * \param topo_order The topological order of node index, as created by TopoSort.
+   * \param node_out_types The types of the each outputs of nodes in the graph.
+   * \param node_aux_types The types of the each auxiliary states of nodes in the graph.
+   * \return if the shape inference is successful, return true, else return false.
+   */
+  bool InferNodeTypes(const std::vector<uint32_t> &topo_order,
+                       std::vector<std::vector<int> > *node_out_types,
+                       std::vector<std::vector<int> > *node_aux_types) const;
+  /*!
    * \brief infer the shapes of outputs and unknown input arguments
    * \param in_shape the shape of input arguments of the operator
    *     this should be of same length as the vector returned by ListArguments

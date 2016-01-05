@@ -87,6 +87,8 @@ class GraphExecutor : public Executor {
     DataEntryType type;
     // shape of this entry
     TShape shape;
+    // data type of this entry
+    int type_flag;
     // storage id from allocator if it is internal allocation.
     GraphStorageAllocator::StorageID storage_id;
     // reference count on how many times this entry is being used.
@@ -216,8 +218,8 @@ class GraphExecutor : public Executor {
   std::vector<uint32_t> topo_order_;
   // whether to enable inplace space
   bool enable_inplace_allocation_;
-  // total allocated space in #reals
-  size_t total_allocated_reals_;
+  // total allocated space in bytes
+  size_t total_allocated_bytes_;
   // total allocated temp space
   size_t total_allocated_temp_;
   // number of forward nodes in the graph
