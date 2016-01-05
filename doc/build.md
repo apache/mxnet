@@ -35,7 +35,7 @@ Our goal is to build the shared library:
 The minimal building requirement is
 
 - A recent c++ compiler supporting C++ 11 such as `g++ >= 4.8` or `clang`
-- A BLAS library, such as `libblas`, `libblas`, `openblas` `intel mkl`
+- A BLAS library, such as `libblas`, `atlas`, `openblas` or `intel mkl`
 
 Optional libraries
 
