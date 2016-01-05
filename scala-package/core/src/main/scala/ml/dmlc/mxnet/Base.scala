@@ -11,6 +11,8 @@ object Base {
   type MXFloat = Float
   type CPtrAddress = Long
 
+  type SymbolHandle = CPtrAddress
+
   type MXUintRef = RefInt
   type MXFloatRef = RefFloat
   type NDArrayHandle = RefLong
@@ -19,11 +21,10 @@ object Base {
   type DataIterCreator = RefLong
   type KVStoreHandle = RefLong
   type ExecutorHandle = RefLong
-
+  type SymbolHandleRef = RefLong
 
   System.loadLibrary("mxnet-scala")
   val _LIB = new LibInfo
-
 
   // helper function definitions
   /**

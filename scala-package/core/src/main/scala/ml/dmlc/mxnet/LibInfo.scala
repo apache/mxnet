@@ -120,4 +120,36 @@ class LibInfo {
                                  grads: Array[CPtrAddress]): Int
   @native def mxExecutorPrint(handle: ExecutorHandle, debugStr: RefString): Int
   @native def mxExecutorSetMonitorCallback(handle: ExecutorHandle, callback: MXMonitorCallback): Int
+
+  // Symbols
+  @native def mxSymbolListAtomicSymbolCreators(symbolList: ListBuffer[SymbolHandle]): Int
+  @native def mxSymbolGetAtomicSymbolInfo(handle: SymbolHandle,
+                                          name: RefString,
+                                          desc: RefString,
+                                          numArgs: MXUintRef,
+                                          argNames: ListBuffer[String],
+                                          argTypes: ListBuffer[String],
+                                          argDescs: ListBuffer[String],
+                                          keyVarNumArgs: RefString): Int
+  @native def mxSymbolCreateAtomicSymbol(handle: SymbolHandle,
+                                         paramKeys: Array[String],
+                                         paramVals: Array[String],
+                                         symHandleRef: SymbolHandleRef): Int
+  @native def mxSymbolSetAttr(handle: SymbolHandle, key: String, value: String): Int
+  @native def mxSymbolCompose(handle: SymbolHandle,
+                              name: String,
+                              keys: Array[String],
+                              args: Array[SymbolHandle]): Int
+  @native def mxSymbolCreateVariable(name: String, out: SymbolHandleRef): Int
+  @native def mxSymbolGetAttr(handle: SymbolHandle,
+                              key: String,
+                              ret: RefString,
+                              success: RefInt): Int
+  @native def mxSymbolListArguments(handle: SymbolHandle,
+                                    arguments: ArrayBuffer[String]): Int
+  @native def mxSymbolCopy(handle: SymbolHandle, clonedHandle: SymbolHandleRef): Int
+  @native def mxSymbolListOutputs(handle: SymbolHandle,
+                                  outputs: ArrayBuffer[String]): Int
+  @native def mxSymbolCreateGroup(handles: Array[SymbolHandle], out: SymbolHandleRef): Int
+  @native def mxSymbolPrint(handle: SymbolHandle, str: RefString): Int
 }
