@@ -67,7 +67,7 @@ def main():
 if __name__ == '__main__':
   parser=argparse.ArgumentParser()
   parser.add_argument('-m', '--model', help='the model to speed up')
-  parser.add_argument('-g', '--gpus', default='0,1,2,3', help='the gpus to be used in ctx')
+  parser.add_argument('-g', '--gpus', default='0', help='the gpus to be used in ctx')
   parser.add_argument('--load-epoch',type=int,default=1)
   parser.add_argument('--layer')
   parser.add_argument('--K', type=int)
