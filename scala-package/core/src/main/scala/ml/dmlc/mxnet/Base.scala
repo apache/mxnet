@@ -12,11 +12,13 @@ object Base {
   type CPtrAddress = Long
 
   type SymbolHandle = CPtrAddress
+  type NDArrayHandle = CPtrAddress
+  type FunctionHandle = CPtrAddress
 
   type MXUintRef = RefInt
   type MXFloatRef = RefFloat
-  type NDArrayHandle = RefLong
-  type FunctionHandle = RefLong
+  type NDArrayHandleRef = RefLong
+  type FunctionHandleRef = RefLong
   type DataIterHandle = RefLong
   type DataIterCreator = RefLong
   type KVStoreHandle = RefLong

@@ -37,7 +37,7 @@ class KVStore(private val handle: KVStoreHandle) {
    */
   def init(keys: Array[Int], values: Array[NDArray]): Unit = {
     require(keys.length == values.length, "len(keys) != len(values)")
-    val valuePtrs = values.map(_.handle.value)
+    val valuePtrs = values.map(_.handle)
     checkCall(_LIB.mxKVStoreInit(handle, keys.length, keys, valuePtrs))
   }
 
@@ -61,7 +61,7 @@ class KVStore(private val handle: KVStoreHandle) {
    */
   def push(keys: Array[Int], values: Array[NDArray], priority: Int): Unit = {
     require(keys.length == values.length, "len(keys) != len(values)")
-    val valuePtrs = values.map(_.handle.value)
+    val valuePtrs = values.map(_.handle)
     checkCall(_LIB.mxKVStorePush(handle, keys.length, keys, valuePtrs, priority))
   }
 
@@ -97,7 +97,7 @@ class KVStore(private val handle: KVStoreHandle) {
    */
   def pull(keys: Array[Int], outs: Array[NDArray], priority: Int): Unit = {
     require(keys.length == outs.length, "len(keys) != len(outs)")
-    val outPtrs = outs.map(_.handle.value)
+    val outPtrs = outs.map(_.handle)
     checkCall(_LIB.mxKVStorePull(handle, keys.length, keys, outPtrs, priority))
   }
 

@@ -11,13 +11,13 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 class LibInfo {
   @native def mxNDArrayFree(handle: NDArrayHandle): Int
   @native def mxGetLastError(): String
-  @native def mxNDArrayCreateNone(out: NDArrayHandle): Int
+  @native def mxNDArrayCreateNone(out: NDArrayHandleRef): Int
   @native def mxNDArrayCreate(shape: Array[Int],
                               ndim: Int,
                               devType: Int,
                               devId: Int,
                               delayAlloc: Int,
-                              out: NDArrayHandle): Int
+                              out: NDArrayHandleRef): Int
   @native def mxNDArrayWaitAll(): Int
   @native def mxListFunctions(functions: ListBuffer[FunctionHandle]): Int
   @native def mxFuncDescribe(handle: FunctionHandle,
@@ -33,13 +33,9 @@ class LibInfo {
                             argTypes: ListBuffer[String],
                             argDescs: ListBuffer[String]): Int
   @native def mxFuncInvoke(function: FunctionHandle,
-                           // useVars ought to be Array[NDArrayHandle],
-                           // we pass ptr address directly for performance consideration
-                           useVars: Array[CPtrAddress],
+                           useVars: Array[NDArrayHandle],
                            scalarArgs: Array[MXFloat],
-                           // mutateVars ought to be Array[NDArrayHandle],
-                           // we pass ptr address directly for performance consideration
-                           mutateVars: Array[CPtrAddress]): Int
+                           mutateVars: Array[NDArrayHandle]): Int
   @native def mxNDArrayGetShape(handle: NDArrayHandle,
                                 ndim: MXUintRef,
                                 data: ArrayBuffer[Int]): Int
@@ -49,7 +45,7 @@ class LibInfo {
   @native def mxNDArraySlice(handle: NDArrayHandle,
                              start: MXUint,
                              end: MXUint,
-                             sliceHandle: NDArrayHandle): Int
+                             sliceHandle: NDArrayHandleRef): Int
   @native def mxNDArraySyncCopyFromCPU(handle: NDArrayHandle,
                                        source: Array[MXFloat],
                                        size: Int): Int
@@ -57,22 +53,16 @@ class LibInfo {
   @native def mxKVStoreInit(handle: KVStoreHandle,
                             len: MXUint,
                             keys: Array[Int],
-                            // values ought to be Array[NDArrayHandle],
-                            // we pass ptr address directly for performance consideration
-                            values: Array[CPtrAddress]): Int
+                            values: Array[NDArrayHandle]): Int
   @native def mxKVStorePush(handle: KVStoreHandle,
                             len: MXUint,
                             keys: Array[Int],
-                            // values ought to be Array[NDArrayHandle],
-                            // we pass ptr address directly for performance consideration
-                            values: Array[CPtrAddress],
+                            values: Array[NDArrayHandle],
                             priority: Int): Int
   @native def mxKVStorePull(handle: KVStoreHandle,
                             len: MXUint,
                             keys: Array[Int],
-                            // outs ought to be Array[NDArrayHandle],
-                            // we pass ptr address directly for performance consideration
-                            outs: Array[CPtrAddress],
+                            outs: Array[NDArrayHandle],
                             priority: Int): Int
   @native def mxKVStoreSetUpdater(handle: KVStoreHandle,
                                   updaterFunc: MXKVStoreUpdater,
@@ -101,9 +91,9 @@ class LibInfo {
   @native def mxDataIterBeforeFirst(handle: DataIterHandle): Int
   @native def mxDataIterNext(handle: DataIterHandle, out: RefInt): Int
   @native def mxDataIterGetLabel(handle: DataIterHandle,
-                                 out: NDArrayHandle): Int
+                                 out: NDArrayHandleRef): Int
   @native def mxDataIterGetData(handle: DataIterHandle,
-                                out: NDArrayHandle): Int
+                                out: NDArrayHandleRef): Int
   @native def mxDataIterGetIndex(handle: DataIterHandle,
                                 outIndex: ListBuffer[Long],
                                 outSize: RefLong): Int
@@ -115,9 +105,7 @@ class LibInfo {
   @native def mxExecutorForward(handle: ExecutorHandle, isTrain: Int): Int
   @native def mxExecutorBackward(handle: ExecutorHandle,
                                  gradsSize: Int,
-                                 // grads ought to be Array[NDArrayHandle],
-                                 // we pass ptr address directly for performance consideration
-                                 grads: Array[CPtrAddress]): Int
+                                 grads: Array[NDArrayHandle]): Int
   @native def mxExecutorPrint(handle: ExecutorHandle, debugStr: RefString): Int
   @native def mxExecutorSetMonitorCallback(handle: ExecutorHandle, callback: MXMonitorCallback): Int
 

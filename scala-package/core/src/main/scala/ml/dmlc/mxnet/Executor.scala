@@ -135,7 +135,7 @@ class Executor(val handle: ExecutorHandle, val symbol: Symbol) {
    */
   def backward(outGrads: Array[NDArray]): Unit = {
     require(outGrads != null)
-    val ndArrayPtrs = outGrads.map(_.handle.value)
+    val ndArrayPtrs = outGrads.map(_.handle)
     checkCall(_LIB.mxExecutorBackward(handle, outGrads.length, ndArrayPtrs))
   }
 

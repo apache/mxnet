@@ -157,9 +157,9 @@ class MXDataIter(val handle: DataIterHandle) extends DataIter {
    * @return the data of current batch
    */
   override def getData(): NDArray = {
-    val out = new NDArrayHandle
+    val out = new NDArrayHandleRef
     checkCall(_LIB.mxDataIterGetData(handle, out))
-    new NDArray(out, writable = false)
+    new NDArray(out.value, writable = false)
   }
 
   /**
@@ -167,9 +167,9 @@ class MXDataIter(val handle: DataIterHandle) extends DataIter {
    * @return the label of current batch
    */
   override def getLabel(): NDArray = {
-    val out = new NDArrayHandle
+    val out = new NDArrayHandleRef
     checkCall(_LIB.mxDataIterGetLabel(handle, out))
-    new NDArray(out, writable = false)
+    new NDArray(out.value, writable = false)
   }
 
   /**
