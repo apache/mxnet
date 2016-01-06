@@ -104,6 +104,16 @@ struct softrelu_grad {
     return 1.0f - expf(-a);
   }
 };
+struct softsign {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return a / (fabs(a) + 1);
+  }
+};
+struct softsign_grad {
+  MSHADOW_XINLINE static real_t Map(real_t x, real_t a) {
+    return a / ((fabs(x) + 1) * (fabs(x) + 1));
+  }
+};
 
 struct exp {
   MSHADOW_XINLINE static real_t Map(real_t a) {
