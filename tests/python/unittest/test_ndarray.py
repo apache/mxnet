@@ -80,6 +80,17 @@ def test_ndarray_choose():
                     mx.nd.choose_element_0index(arr, mx.nd.array(indices)).asnumpy())
 
 
+def test_ndarray_fill():
+    shape = (100, 20)
+    npy = np.arange(np.prod(shape)).reshape(shape)
+    arr = mx.nd.array(npy)
+    nrepeat = 3
+    for repeat in range(nrepeat):
+        indices = np.random.randint(shape[1], size=shape[0])
+        assert same(npy[np.arange(shape[0]), indices],
+                    mx.nd.choose_element_0index(arr, mx.nd.array(indices)).asnumpy())
+
+
 def test_ndarray_onehot():
     shape = (100, 20)
     npy = np.arange(np.prod(shape)).reshape(shape)
@@ -191,3 +202,4 @@ if __name__ == '__main__':
     test_clip()
     test_dot()
     test_ndarray_choose()
+    test_ndarray_onehot()
