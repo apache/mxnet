@@ -24,15 +24,15 @@ object NDArray {
     require(function != null, s"invalid function name $funcName")
     require(output == null || output.writable, "out must be writable")
     function match {
-      case BinaryNDArrayFunction(handle: NDArrayHandle, acceptEmptyMutate: Boolean) =>
+      case BinaryNDArrayFunction(handle: FunctionHandle, acceptEmptyMutate: Boolean) =>
         if (output == null) {
           require(acceptEmptyMutate, s"argument out is required to call $funcName")
           output = new NDArray(_newEmptyHandle())
         }
         checkCall(_LIB.mxFuncInvoke(handle,
-          Array(lhs.handle.value, rhs.handle.value),
+          Array(lhs.handle, rhs.handle),
           Array[MXFloat](),
-          Array(output.handle.value)))
+          Array(output.handle)))
       case _ => throw new RuntimeException(s"call $funcName as binary function")
     }
     output
@@ -53,9 +53,9 @@ object NDArray {
           output = new NDArray(_newEmptyHandle())
         }
         checkCall(_LIB.mxFuncInvoke(handle,
-          Array(src.handle.value),
+          Array(src.handle),
           Array[MXFloat](),
-          Array(output.handle.value)))
+          Array(output.handle)))
       case _ => throw new RuntimeException(s"call $funcName as unary function")
     }
     output
@@ -88,9 +88,9 @@ object NDArray {
           mutateVars = Array.fill[NDArray](nMutateVars)(new NDArray(_newEmptyHandle()))
         }
         checkCall(_LIB.mxFuncInvoke(handle,
-          useVarsRange.map(args(_).asInstanceOf[NDArray].handle.value).toArray,
+          useVarsRange.map(args(_).asInstanceOf[NDArray].handle).toArray,
           scalarRange.map(args(_).asInstanceOf[MXFloat]).toArray,
-          mutateVars.map(_.handle.value).array))
+          mutateVars.map(_.handle).array))
       case _ => throw new RuntimeException(s"call $funcName as generic function")
     }
     mutateVars
@@ -103,9 +103,9 @@ object NDArray {
    * @return a new empty ndarray handle
    */
   private def _newEmptyHandle(): NDArrayHandle = {
-    val hdl: NDArrayHandle = new NDArrayHandle
+    val hdl = new NDArrayHandleRef
     checkCall(_LIB.mxNDArrayCreateNone(hdl))
-    hdl
+    hdl.value
   }
 
   /**
@@ -117,7 +117,7 @@ object NDArray {
   private def _newAllocHandle(shape: Array[Int],
                               ctx: Context,
                               delayAlloc: Boolean): NDArrayHandle = {
-    val hdl = new NDArrayHandle
+    val hdl = new NDArrayHandleRef
     checkCall(_LIB.mxNDArrayCreate(
       shape,
       shape.length,
@@ -125,7 +125,7 @@ object NDArray {
       ctx.deviceId,
       if (delayAlloc) 1 else 0,
       hdl))
-    hdl
+    hdl.value
   }
 
   /**
@@ -332,7 +332,7 @@ object NDArray {
  * NDArray is basic ndarray/Tensor like data structure in mxnet.
  */
 // scalastyle:off finalize
-class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
+class NDArray(private[mxnet] val handle: NDArrayHandle, val writable: Boolean = true) {
   override def finalize(): Unit = {
     checkCall(_LIB.mxNDArrayFree(handle))
   }
@@ -356,9 +356,9 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
    * @return a sliced NDArray that shares memory with current one.
    */
   def slice(start: Int, stop: Int): NDArray = {
-    val sliceHandle = new NDArrayHandle()
+    val sliceHandle = new NDArrayHandleRef
     checkCall(_LIB.mxNDArraySlice(handle, start, stop, sliceHandle))
-    new NDArray(handle = sliceHandle, writable = this.writable)
+    new NDArray(handle = sliceHandle.value, writable = this.writable)
   }
 
   def slice(start: Int): NDArray = {
