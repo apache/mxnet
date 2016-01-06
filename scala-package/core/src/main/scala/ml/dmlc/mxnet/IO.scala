@@ -52,11 +52,11 @@ object IO {
    */
   private def creator(handle: DataIterCreator)(
               params: Map[String, String]): DataIter = {
-    val out = new DataIterHandle
+    val out = new DataIterHandleRef
     val keys = params.keys.toArray
     val vals = params.values.toArray
     checkCall(_LIB.mxDataIterCreateIter(handle, keys, vals, out))
-    new MXDataIter(out)
+    new MXDataIter(out.value)
   }
 }
 

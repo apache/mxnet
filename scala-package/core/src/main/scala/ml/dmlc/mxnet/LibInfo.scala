@@ -80,7 +80,7 @@ class LibInfo {
   @native def mxDataIterCreateIter(handle: DataIterCreator,
                                    keys: Array[String],
                                    vals: Array[String],
-                                   out: DataIterHandle): Int
+                                   out: DataIterHandleRef): Int
   @native def mxDataIterGetIterInfo(creator: DataIterCreator,
                                     name: RefString,
                                     description: RefString,
