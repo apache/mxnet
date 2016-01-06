@@ -27,6 +27,7 @@ class Monitor(object):
                 logging.log(self.level, 'Iter:%d  param:%s\t\tstat(%s):%s\t\tgrad_stat:%s'%(i, key, self.stat.__name__, str(self.stat(weights[key].asnumpy())), str(self.stat(arr.asnumpy()))))
         if i%self.interval == 0 and metric is not None:
                 logging.log(logging.INFO, 'Iter:%d metric:%f'%(i, metric.get()[1]))
+                metric.reset()
 
 class Solver(object):
     def __init__(self, optimizer, **kwargs):
@@ -52,7 +53,7 @@ class Solver(object):
     def set_iter_start_callback(self, callback):
         self.iter_start_callback = callback
 
-    def solve(self, xpu, sym, args, args_grad,
+    def solve(self, xpu, sym, args, args_grad, auxs,
               data_iter, begin_iter, end_iter, args_lrmult={}, debug = False):
         input_desc = data_iter.provide_data + data_iter.provide_label
         input_names = [k for k, shape in input_desc]
@@ -71,7 +72,7 @@ class Solver(object):
                         x = mx.symbol.BlockGrad(x, name=blob_names[i])
                     sym_group.append(x)
             sym = mx.symbol.Group(sym_group)
-        exe = sym.bind(xpu, args=args, args_grad=args_grad)
+        exe = sym.bind(xpu, args=args, args_grad=args_grad, aux_states=auxs)
 
         assert len(sym.list_arguments()) == len(exe.grad_arrays)
         update_dict = {name: nd for name, nd in zip(sym.list_arguments(), exe.grad_arrays) if nd}
@@ -108,12 +109,10 @@ class Solver(object):
                 output_dict[key].copyto(output_buff[key])
 
             exe.backward()
-            self.optimizer.begin_epoch(i)
             for key, arr in update_dict.items():
                 self.updater(key, arr, args[key])
 
             if self.metric is not None:
-                self.metric.reset()
                 self.metric.update([input_buffs[-1].asnumpy()],
                                    [output_buff[output_names[0]].asnumpy()])
 
@@ -129,5 +128,5 @@ class Solver(object):
 
 
 
-        
+
 

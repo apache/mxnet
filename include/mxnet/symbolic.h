@@ -272,6 +272,15 @@ class Executor {
    */
   virtual void Forward(bool is_train) = 0;
   /*!
+   * \brief Perform a Partial Forward operation of Operator.
+   *  Only issue operation specified by step.
+   *  The caller must keep calling PartialForward with increasing steps, until step_left=0.
+   * \param is_train Whether this is training phase.
+   * \param step current step, user can always start from 0
+   * \param step_left Number of steps left to finish the forward.
+   */
+  virtual void PartialForward(bool is_train, int step, int *step_left) = 0;
+  /*!
    * \brief Perform a Backward operation of the Operator.
    *  This must be called after Forward.
    *  After this operation, NDArrays specified by grad_in_args_store will be updated accordingly.
@@ -312,9 +321,13 @@ class Executor {
                         const std::vector<OpReqType> &grad_req_type,
                         const std::vector<NDArray> &aux_states);
   /*!
+   * \brief the prototype of user-defined monitor callback
+   */
+  typedef std::function<void(const char*, void*)> MonitorCallback;
+  /*!
    * \brief Install a callback to notify the completion of operation.
    */
-  virtual void SetMonitorCallback(ExcecutorMonitorCallback callback) {}
+  virtual void SetMonitorCallback(const MonitorCallback& callback) {}
 };  // class operator
 }  // namespace mxnet
 #endif  // MXNET_SYMBOLIC_H_

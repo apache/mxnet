@@ -1,6 +1,6 @@
 # Setup an AWS GPU Cluster from Stratch
 
-In this documents we give a step-by-step tutorial on how to setup Amazon AWS for
+In this document we give a step-by-step tutorial on how to set up Amazon AWS for
 MXNet. In particular, we will address:
 
 - [Use Amazon S3 to host data](#use-amazon-s3-to-host-data)
@@ -10,14 +10,14 @@ MXNet. In particular, we will address:
 
 ## Use Amazon S3 to host data
 
-Amazon S3 is distributed data storage, which is quite convenient for host large
-scale datasets. In order to S3, we need first to get the
+Amazon S3 is distributed data storage, which is quite convenient for hosting large
+scale datasets. In order to use S3, we need first to get the
 [AWS credentials](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html)),
-which includes a `ACCESS_KEY_ID` and a `SECRET_ACCESS_KEY`.
+which includes an `ACCESS_KEY_ID` and a `SECRET_ACCESS_KEY`.
 
 In order for MXNet to use S3, we only need to set the environment variables `AWS_ACCESS_KEY_ID` and
 `AWS_SECRET_ACCESS_KEY` properly. For example, we can add the following two lines in
-`~/.bashrc` (replace the strings with the correct ones)
+`~/.bashrc` (replacing the strings with the correct ones)
 
 ```bash
 export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
@@ -42,12 +42,12 @@ MXNet requires the following libraries
 - `opencv` for image augmentations
 - `curl` and `openssl` for read/write Amazon S3
 
-Installing `CUDA` on EC2 instances needs a little bit effects. Caffe has a nice
+Installing `CUDA` on EC2 instances needs a little bit of effort. Caffe has a nice
 [tutorial](https://github.com/BVLC/caffe/wiki/Install-Caffe-on-EC2-from-scratch-(Ubuntu,-CUDA-7,-cuDNN))
 on how to install CUDA 7.0 on Ubuntu 14.04 (Note: we tried CUDA 7.5 on Nov 7
 2015, but it is problematic.)
 
-The reset can be installed by the package manager. For example, on Ubuntu:
+The rest can be installed by the package manager. For example, on Ubuntu:
 
 ```
 sudo apt-get update
@@ -74,7 +74,7 @@ echo "USE_S3=1" >>config.mk
 make -j8
 ```
 
-Test if every goes well, we train a convolution neural network on MNIST using GPU:
+In order to test whether everything has installed properly, we train a convolution neural network on MNIST using GPU:
 
 ```bash
 python tests/python/gpu/test_conv.py
@@ -101,8 +101,8 @@ with dependencies installed. There are two suggestions:
 1. Make all slaves' ports are accessible (same for the root) by setting **type: All TCP**,
    **Source: Anywhere** in **Configure Security Group**
 
-2. Use the same `pem` as the root machine to access all slaves machines. And
-   then cpy the `pem` file into root machine's `~/.ssh/id_rsa`, it all slaves
+2. Use the same `pem` as the root machine to access all slaves machine, and
+   then copy the `pem` file into root machine's `~/.ssh/id_rsa`, it all slaves
    machines are ssh-able from the root.
 
 Now we run the previous CNN on multiple machines. Assume we are on a working

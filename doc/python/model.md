@@ -1,6 +1,6 @@
 MXNet Python Model API
 ======================
-The model API in mxnet as not really an API.
+The model API in mxnet is not really an API.
 It is a thin wrapper build on top of [ndarray](ndarray.md) and [symbolic](symbol.md)
 modules to make neural network training easy.
 
@@ -34,7 +34,7 @@ model = mx.model.FeedForward.create(
 You can also use scikit-learn style construct and fit function to create a model.
 ```python
 # create a model using sklearn-style two step way
-model = mx.model.FeedForward.create(
+model = mx.model.FeedForward(
      softmax,
      num_epoch=num_epoch,
      learning_rate=0.01)

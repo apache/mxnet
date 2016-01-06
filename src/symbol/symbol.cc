@@ -494,7 +494,10 @@ Symbol Symbol::Grad(const std::vector<std::string>& wrt) const {
   uint32_t num_nodes = g.nodes.size();
   std::vector<uint32_t> head_grad_nodes;
   std::vector<StaticGraph::DataEntry> arg_grads;
-  g.MakeBackwardPass(&head_grad_nodes, &arg_grads);
+  // mirror is need to be disabled here.
+  std::map<uint32_t, uint32_t> mirror;
+  g.MakeBackwardPass(&head_grad_nodes, &arg_grads, &mirror);
+
   std::vector<std::shared_ptr<Node> > shared_node;
   this->DFSVisit([&shared_node](const std::shared_ptr<Node> &n) {
       shared_node.push_back(n);

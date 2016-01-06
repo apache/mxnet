@@ -28,7 +28,9 @@ enum ReshapeOpOutputs {kOut};
 struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
   TShape target_shape;
   DMLC_DECLARE_PARAMETER(ReshapeParam) {
-    DMLC_DECLARE_FIELD(target_shape).describe("Target new shape");
+    DMLC_DECLARE_FIELD(target_shape)
+    .describe("Target new shape. One and only one dim can be 0, "
+              "in which case it will be infered from the rest of dims");
   }
 };
 
@@ -104,12 +106,25 @@ class ReshapeProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 1) << "Input: [data]";
     const TShape &dshape = in_shape->at(reshape_enum::kData);
     if (dshape.ndim() == 0) return false;
-    CHECK(param_.target_shape.Size() == dshape.Size())
+    TShape oshape = param_.target_shape;
+    int neg_count = 0;
+    index_t neg_idx = 0;
+    for (index_t i = 0; i < oshape.ndim(); ++i) {
+      if (oshape[i] == 0) {
+        neg_count++;
+        neg_idx = i;
+      }
+    }
+    if (neg_count == 1) {
+      oshape[neg_idx] = 1;
+      oshape[neg_idx] = dshape.Size()/oshape.Size();
+    }
+    CHECK(oshape.Size() == dshape.Size())
         << "Target shape size is different to source. "
         << "Target: " << param_.target_shape.Size()
         << "\nSource: " << dshape.Size();
     out_shape->clear();
-    out_shape->push_back(param_.target_shape);
+    out_shape->push_back(oshape);
     return true;
   }
 

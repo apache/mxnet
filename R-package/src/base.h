@@ -15,6 +15,7 @@
 #include <sstream>
 #include <set>
 #include <vector>
+#include <algorithm>
 
 /*! \brief namespace of mxnet */
 namespace mxnet {
@@ -265,7 +266,8 @@ inline bool isSimple(const Rcpp::RObject& val) {
 inline std::string toPyString(const std::string &key, const Rcpp::RObject& val) {
   std::ostringstream os;
   int len = Rf_length(val);
-  if (len != 1) {
+  if (len != 1  ||
+      key.substr(std::max(5, static_cast<int>(key.size())) - 5) == std::string("shape")) {
     RCHECK(TYPEOF(val) == INTSXP || TYPEOF(val) == REALSXP)
         << "Only accept integer vectors or simple types";
     // Do shape convesion back to reversed shape.

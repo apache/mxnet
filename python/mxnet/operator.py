@@ -18,6 +18,8 @@ class PythonOp(object):
     need_top_grad : bool
         the default need_top_grad() function returns this value
     """
+    _ref_holder = []
+
     def __init__(self, need_top_grad=True):
         self.info_ = None
         self.need_top_grad_ = need_top_grad
@@ -211,9 +213,8 @@ class NumpyOp(PythonOp):
                                     info=cb_ptr,
                                     need_top_grad=self.need_top_grad(),
                                     **kwargs)
-        # keep a reference of ourself in sym so we don't get garbage collected
-        # before sym is collected.
-        sym._numpy_op = self
+        # keep a reference of ourself in PythonOp so we don't get garbage collected.
+        PythonOp._ref_holder.append(self)
         return sym
 
 class NDArrayOp(PythonOp):
@@ -358,9 +359,8 @@ class NDArrayOp(PythonOp):
         sym = symbol.Symbol._NDArray(*args,
                                      info=cb_ptr,
                                      **kwargs)
-        # keep a reference of ourself in sym so we don't get garbage collected
-        # before sym is collected.
-        sym._ndarray_op = self
+        # keep a reference of ourself in PythonOp so we don't get garbage collected.
+        PythonOp._ref_holder.append(self)
         return sym
 
     def declare_backward_dependency(self, out_grad, in_data, out_data):

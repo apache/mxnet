@@ -9,11 +9,11 @@ except:
    import pickle
 
 
-def extract_feature(sym, args, data_iter, N, xpu=mx.cpu()):
+def extract_feature(sym, args, auxs, data_iter, N, xpu=mx.cpu()):
     input_buffs = [mx.nd.empty(shape, ctx=xpu) for k, shape in data_iter.provide_data]
     input_names = [k for k, shape in data_iter.provide_data]
     args = dict(args, **dict(zip(input_names, input_buffs)))
-    exe = sym.bind(xpu, args=args)
+    exe = sym.bind(xpu, args=args, aux_states=auxs)
     outputs = [[] for i in exe.outputs]
     output_buffs = None
 
@@ -41,6 +41,7 @@ class MXModel(object):
         self.args = {}
         self.args_grad = {}
         self.args_mult = {}
+        self.auxs = {}
         self.setup(*args, **kwargs)
 
     def save(self, fname):

@@ -278,8 +278,15 @@ void GraphExecutor::InitGraph(const Symbol &symbol,
   // initialize all internal data structures
   graph_.FromSymbol(symbol);
   if (need_backward) {
-    graph_.MakeBackwardPass(&head_grad_nodes_, &arg_grads_);
+    std::map<uint32_t, uint32_t> mirror;
+    graph_.MakeBackwardPass(&head_grad_nodes_, &arg_grads_, &mirror);
+    for (auto kv : mirror) {
+      if (kv.first != kv.second) {
+        mirror_source_map_[kv.second] = kv.first;
+      }
+    }
   }
+
   // assign context, this will change the graph.
   std::vector<Context> ctx_assignment;
   this->AssignContext(default_ctx, ctx_map,
@@ -293,20 +300,33 @@ void GraphExecutor::InitGraph(const Symbol &symbol,
   }
   std::sort(head_nodes.begin(), head_nodes.end());
   head_nodes.resize(std::unique(head_nodes.begin(), head_nodes.end()) - head_nodes.begin());
-  std::vector<uint32_t> fwd_nodes = graph_.PostDFSOrder(head_nodes);
+  std::vector<uint32_t> fwd_nodes = graph_.PostDFSOrder(head_nodes, std::unordered_set<uint32_t>());
+  num_forward_nodes_ = fwd_nodes.size();
+
   std::unordered_set<uint32_t> fwd_set(fwd_nodes.begin(), fwd_nodes.end());
   std::vector<uint32_t> topo = graph_.TopoSort();
   std::vector<uint32_t>  backward;
+
   for (uint32_t nid : topo) {
     if (fwd_set.count(nid) != 0) {
       topo_order_.push_back(nid);
     } else {
-      backward.push_back(nid);
+      // TODO(tqchen) find less hacky way to decide mirror node.
+      const std::string& name = graph_.nodes[nid].name;
+      bool is_mirror = graph_.nodes[nid].is_forward() &&
+          name.substr(name.length() - 7, 7) ==  "_mirror";
+      if (!is_mirror) backward.push_back(nid);
     }
   }
-  num_forward_nodes_ = fwd_nodes.size();
-  topo_order_.insert(topo_order_.end(), backward.begin(), backward.end());
-
+  std::unordered_set<uint32_t> finished(fwd_nodes.begin(), fwd_nodes.end());
+  for (uint32_t nid : backward) {
+    std::vector<uint32_t> pass = graph_.PostDFSOrder({nid}, finished);
+    topo_order_.insert(topo_order_.end(), pass.begin(), pass.end());
+    finished.insert(pass.begin(), pass.end());
+  }
+  for (uint32_t nid : topo) {
+    if (finished.count(nid) == 0) topo_order_.push_back(nid);
+  }
   // setup all the operator nodes data structure
   op_nodes_.resize(graph_.nodes.size());
   for (size_t i = 0; i < graph_.nodes.size(); ++i) {
@@ -489,6 +509,9 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NDArray> &in_args,
         op_nodes_[e.source_id].activated = true;
       }
     }
+    if (graph_.nodes[nid].is_backward()) {
+      op_nodes_[graph_.nodes[nid].backward_source_id].activated = true;
+    }
   }
   // shape inference
   std::vector<std::vector<TShape> > out_shapes(op_nodes_.size());
@@ -508,25 +531,29 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NDArray> &in_args,
   }
   // bind aux args
   size_t aux_ndarray_idx = 0;
-  for (size_t i = 0; i < aux_shapes.size(); ++i) {
+  for (auto i : topo_order_) {
     op_nodes_[i].aux_states.resize(aux_shapes[i].size());
     for (size_t j = 0; j < aux_shapes[i].size(); ++j) {
       DataEntryInfo &info = op_nodes_[i].aux_states[j];
       info.shape = aux_shapes[i][j];
       info.type = kBindByExternal;
-      if (graph_.nodes[i].backward_source_id == -1) {
-        info.data = aux_states[aux_ndarray_idx++];
-        CHECK(info.data.ctx() == op_nodes_[i].ctx)
-            << "Auxiliary NDArray's context must match the operator's context assignment";
+      if (mirror_source_map_.count(i) == 0) {
+        if (graph_.nodes[i].backward_source_id == -1) {
+          info.data = aux_states[aux_ndarray_idx++];
+          CHECK(info.data.ctx() == op_nodes_[i].ctx)
+              << "Auxiliary NDArray's context must match the operator's context assignment";
+        } else {
+          CHECK_NE(graph_.nodes[i].backward_source_id, -1)
+              << "Input auxiliary NDArray is less than required";
+          info.data = op_nodes_[graph_.nodes[i].backward_source_id].aux_states[j].data;
+        }
       } else {
-        CHECK_NE(graph_.nodes[i].backward_source_id, -1)
-          << "Input auxiliary NDArray is less than required";
-        info.data = op_nodes_[graph_.nodes[i].backward_source_id].aux_states[j].data;
+        info.data = op_nodes_[mirror_source_map_[i]].aux_states[j].data;
       }
       CHECK_EQ(info.data.data().shape_, info.shape)
-        << "Incorrect NDArray shape"
-        << " Input: " << info.data.data().shape_
-        << " Desired: " << info.shape;
+          << "Incorrect NDArray shape"
+          << " Input: " << info.data.data().shape_
+          << " Desired: " << info.shape;
     }
   }
 }
@@ -760,12 +787,8 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
       for (index_t i = 0; i < opnode.outputs.size(); ++i) {
         NDArray out_data = opnode.outputs[i].data;
         std::string name = graph_.nodes[nid].name + "_" + output_names[i];
-
-        Engine::Get()->PushSync(
-            [this, out_data, name](RunContext ctx) {
-              NDArray *cpy = new NDArray(out_data);
-              this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
-            }, out_data.ctx(), {out_data.var()}, {}, FnProperty::kNormal);
+        NDArray *cpy = new NDArray(out_data);
+        this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
       }
     }
   }
@@ -808,6 +831,15 @@ void GraphExecutor::Print(std::ostream &os) const {
 
 void GraphExecutor::Forward(bool is_train) {
   RunOps(is_train, 0, num_forward_nodes_);
+}
+
+void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
+  size_t sstep = static_cast<size_t>(step);
+  if (sstep >= num_forward_nodes_) {
+    *step_left = 0; return;
+  }
+  RunOps(is_train, sstep, sstep + 1);
+  *step_left = static_cast<int>(num_forward_nodes_ - sstep - 1);
 }
 
 void GraphExecutor::Backward(const std::vector<NDArray> &head_grads) {

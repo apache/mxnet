@@ -48,6 +48,9 @@ USE_CUDA_PATH = NONE
 # whether use CUDNN R3 library
 USE_CUDNN = 0
 
+# whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
+USE_NVRTC = 0
+
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
 # imbin iterator
@@ -82,3 +85,10 @@ LIBJVM=$(JAVA_HOME)/jre/lib/amd64/server
 # libcurl4-openssl-dev is required, it can be installed on Ubuntu by
 # sudo apt-get install -y libcurl4-openssl-dev
 USE_S3 = 0
+
+#----------------------------
+# additional operators
+#----------------------------
+
+# path to folders containing projects specific operators that you don't want to put in src/operators
+EXTRA_OPERATORS =

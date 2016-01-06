@@ -12,6 +12,7 @@ User Guide
 * [Pretrained Model Gallery](pretrained.md)
 * [Distributed Training](distributed_training.md)
 * [Frequently Asked Questions](faq.md)
+* [MXNet Overview in Chinese](overview_zh.md)
 
 Developer Guide
 ---------------

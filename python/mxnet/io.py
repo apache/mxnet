@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, W0221, W0201
+# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, W0221, W0201, no-self-use
 
 """NDArray interface of mxnet"""
 from __future__ import absolute_import
@@ -9,6 +9,7 @@ import ctypes
 import sys
 import numpy as np
 import logging
+import threading
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str
 from .base import DataIterHandle, NDArrayHandle
@@ -16,11 +17,14 @@ from .base import check_call, ctypes2docstring
 from .ndarray import NDArray
 from .ndarray import array
 
+
+DataBatch = namedtuple('DataBatch', ['data', 'label', 'pad', 'index'])
+
 class DataIter(object):
     """DataIter object in mxnet. """
 
     def __init__(self):
-        pass
+        self.batch_size = 0
 
     def __iter__(self):
         return self
@@ -30,15 +34,19 @@ class DataIter(object):
         pass
 
     def next(self):
-        """Get next data batch from iterator
+        """Get next data batch from iterator. Equivalent to
+        self.iter_next()
+        DataBatch(self.getdata(), self.getlabel(), self.getpad(), None)
         Returns
         -------
-        data : NDArray
+        data : DataBatch
             The data of next batch.
-        label : NDArray
-            The label of next batch.
         """
-        pass
+        if self.iter_next():
+            return DataBatch(data=self.getdata(), label=self.getlabel(), \
+                    pad=self.getpad(), index=self.getindex())
+        else:
+            raise StopIteration
 
     def __next__(self):
         return self.next()
@@ -52,12 +60,9 @@ class DataIter(object):
         """
         pass
 
-    def getdata(self, index=0):
+    def getdata(self):
         """Get data of current batch.
-        Parameters
-        ----------
-        index : int
-            The index of data source to retrieve.
+
         Returns
         -------
         data : NDArray
@@ -72,7 +77,7 @@ class DataIter(object):
         label : NDArray
             The label of current batch.
         """
-        return self.getdata(-1)
+        pass
 
     def getindex(self):
         """
@@ -81,7 +86,7 @@ class DataIter(object):
         index : numpy.array
             The index of current batch
         """
-        pass
+        return None
 
     def getpad(self):
         """Get the number of padding examples in current batch.
@@ -92,8 +97,122 @@ class DataIter(object):
         """
         pass
 
+class PrefetchingIter(DataIter):
+    """Base class for prefetching iterators. Takes one or more DataIters (
+    or any class with "reset" and "read" methods) and combine them with
+    prefetching. For example:
+    iter = PrefetchingIter([NDArrayIter({'data': X1}), NDArrayIter({'data': X2})],
+                           rename_data=[{'data': 'data1'}, {'data': 'data2'}])
 
-DataBatch = namedtuple('DataBatch', ['data', 'label', 'pad', 'index'])
+    Parameters
+    ----------
+    iters : DataIter or list of DataIter
+        one or more DataIters (or any class with "reset" and "read" methods)
+    rename_data : None or list of dict
+        i-th element is a renaming map for i-th iter, in the form of
+        {'original_name' : 'new_name'}. Should have one entry for each entry
+        in iter[i].provide_data
+    rename_label : None or list of dict
+        Similar to rename_data
+    """
+    def __init__(self, iters, rename_data=None, rename_label=None):
+        super(PrefetchingIter, self).__init__()
+        if not isinstance(iters, list):
+            iters = [iters]
+        self.n_iter = len(iters)
+        assert self.n_iter > 0
+        self.iters = iters
+        if rename_data is None:
+            self.provide_data = sum([i.provide_data for i in iters], [])
+        else:
+            self.provide_data = sum([[(r[n], s) for n, s in i.provide_data] \
+                                    for r, i in zip(rename_data, iters)], [])
+        if rename_label is None:
+            self.provide_label = sum([i.provide_label for i in iters], [])
+        else:
+            self.provide_label = sum([[(r[n], s) for n, s in i.provide_label] \
+                                    for r, i in zip(rename_label, iters)], [])
+        self.batch_size = self.provide_data[0][1][0]
+        self.data_ready = [threading.Event() for i in range(self.n_iter)]
+        self.data_taken = [threading.Event() for i in range(self.n_iter)]
+        for e in self.data_taken:
+            e.set()
+        self.started = True
+        self.current_batch = [None for i in range(self.n_iter)]
+        self.next_batch = [None for i in range(self.n_iter)]
+        def prefetch_func(self, i):
+            """Thread entry"""
+            while True:
+                self.data_taken[i].wait()
+                if not self.started:
+                    break
+                try:
+                    self.next_batch[i] = self.iters[i].next()
+                except StopIteration:
+                    self.next_batch[i] = None
+                self.data_taken[i].clear()
+                self.data_ready[i].set()
+        self.prefetch_threads = [threading.Thread(target=prefetch_func, args=[self, i]) \
+                                 for i in range(self.n_iter)]
+        for thread in self.prefetch_threads:
+            thread.setDaemon(True)
+            thread.start()
+
+    def __del__(self):
+        self.started = False
+        for e in self.data_taken:
+            e.set()
+        for thread in self.prefetch_threads:
+            thread.join()
+
+    def reset(self):
+        for e in self.data_ready:
+            e.wait()
+        for i in self.iters:
+            i.reset()
+        for e in self.data_ready:
+            e.clear()
+        for e in self.data_taken:
+            e.set()
+
+    def iter_next(self):
+        for e in self.data_ready:
+            e.wait()
+        if self.next_batch[0] is None:
+            for i in self.next_batch:
+                assert i is None, "Number of entry mismatches between iterators"
+            return False
+        else:
+            for batch in self.next_batch:
+                assert batch.pad == self.next_batch[0].pad, \
+                    "Number of entry mismatches between iterators"
+            self.current_batch = DataBatch(sum([batch.data for batch in self.next_batch], []),
+                                           sum([batch.label for batch in self.next_batch], []),
+                                           self.next_batch[0].pad,
+                                           self.next_batch[0].index)
+            for e in self.data_ready:
+                e.clear()
+            for e in self.data_taken:
+                e.set()
+            return True
+
+    def next(self):
+        if self.iter_next():
+            return self.current_batch
+        else:
+            raise StopIteration
+
+    def getdata(self):
+        return self.current_batch.data
+
+    def getlabel(self):
+        return self.current_batch.label
+
+    def getindex(self):
+        return self.current_batch.index
+
+    def getpad(self):
+        return self.current_batch.pad
 
 def _init_data(data, allow_empty, default_name):
     """Convert data into canonical form."""
@@ -127,8 +246,10 @@ class NDArrayIter(DataIter):
     """NDArrayIter object in mxnet. Taking NDArray or numpy array to get dataiter.
     Parameters
     ----------
-    data_list or data, label: a list of, or two separate NDArray or numpy.ndarray
-        list of NDArray for data. The last one is treated as label.
+    data: NDArray or numpy.ndarray, a list of them, or a dict of string to them.
+        NDArrayIter supports single or multiple data and label.
+    label: NDArray or numpy.ndarray, a list of them, or a dict of them.
+        Same as data, but is not fed to the model during testing.
     batch_size: int
         Batch Size
     shuffle: bool

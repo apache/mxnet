@@ -56,9 +56,32 @@ class Accuracy(EvalMetric):
             if label.shape[0] < pred_label.shape[0]:
                 raise Exception("Predict label is more than data label? ")
             self.sum_metric += numpy.sum(pred_label == label[:pred_label.shape[0]])
-            num_inst = pred_label.shape[0]
+            num_inst = pred_label.size
         self.num_inst += num_inst
 
+class MAE(EvalMetric):
+    """Calculate Mean Absolute Error loss"""
+    def __init__(self):
+        super(MAE, self).__init__('mae')
+
+    def update(self, labels, preds):
+        assert len(labels) == len(preds)
+        for label, pred in zip(labels, preds):
+            assert label.shape == pred.shape
+            self.sum_metric += numpy.sum(numpy.abs(label.asnumpy() - pred.asnumpy()))
+            self.num_inst += numpy.prod(label.shape)
+
+class RMSE(EvalMetric):
+    """Calculate Root Mean Squred Error loss"""
+    def __init__(self):
+        super(RMSE, self).__init__('rmse')
+
+    def update(self, labels, preds):
+        assert len(labels) == len(preds)
+        for label, pred in zip(labels, preds):
+            assert label.shape == pred.shape
+            self.sum_metric += numpy.sqrt(numpy.mean((label.asnumpy() - pred.asnumpy())**2))
+        self.num_inst += 1
 
 class CustomMetric(EvalMetric):
     """Custom evaluation metric that takes a NDArray function.

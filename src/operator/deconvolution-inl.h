@@ -59,7 +59,7 @@ class DeconvolutionOp : public Operator {
  public:
   explicit DeconvolutionOp(DeconvolutionParam p) {
     this->param_ = p;
-    // convert MB to words
+    // convert MBytes first to Bytes and then to elements.
     param_.workspace = (param_.workspace << 20) / sizeof(real_t);
   }
 
@@ -104,14 +104,16 @@ class DeconvolutionOp : public Operator {
                                     param_.kernel[0],
                                     param_.kernel[1],
                                     param_.stride[0],
-                                    param_.stride[1]);
+                                    param_.stride[1],
+                                    1, 1);  // Deconvolution only support dilate equals 1
       } else {
         temp_col = unpack_patch2col(pad(out.Slice(i, i + step),
                                         param_.pad[0], param_.pad[1]),
                                     param_.kernel[0],
                                     param_.kernel[1],
                                     param_.stride[0],
-                                    param_.stride[1]);
+                                    param_.stride[1],
+                                    1, 1);  // Deconvolution only support dilate equals 1
       }
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
@@ -124,7 +126,8 @@ class DeconvolutionOp : public Operator {
                                    out.Slice(i, i + step).shape_,
                                    param_.kernel[0],
                                    param_.kernel[1],
-                                   param_.stride[0]);
+                                   param_.stride[0],
+                                   1);  // Deconvolution only support dilate equals 1
       } else {
         Shape<4> pshape = out.Slice(i, i + step).shape_;
         pshape[2] += 2 * param_.pad[0];
@@ -133,7 +136,8 @@ class DeconvolutionOp : public Operator {
                                         pshape,
                                         param_.kernel[0],
                                         param_.kernel[1],
-                                        param_.stride[0]),
+                                        param_.stride[0],
+                                        1),  // Deconvolution only support dilate equals 1
                                         out[i][0].shape_);
       }
     }
@@ -192,13 +196,15 @@ class DeconvolutionOp : public Operator {
                                      param_.kernel[0],
                                      param_.kernel[1],
                                      param_.stride[0],
-                                     param_.stride[1]);
+                                     param_.stride[1],
+                                     1, 1);  // Deconvolution only support dilate equals 1
       } else {
         temp_col = unpack_patch2col(pad(grad.Slice(i, i + step), param_.pad[0], param_.pad[1]),
                                      param_.kernel[0],
                                      param_.kernel[1],
                                      param_.stride[0],
-                                     param_.stride[1]);
+                                     param_.stride[1],
+                                     1, 1);  // Deconvolution only support dilate equals 1
       }
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
@@ -238,20 +244,23 @@ class DeconvolutionOp : public Operator {
     shape_dstunit_ = mshadow::Shape3(param_.num_group,
                                      oshape[1] / param_.num_group,
                                      oshape[2] * oshape[3]);
-    const uint64_t workspace_size = param_.workspace;
-    nstep_ = std::max(std::min(static_cast<index_t>(workspace_size / shape_colunit_.Size()),
-                               ishape[0]), 1U);
-    int nop = (ishape[0] + nstep_ - 1) / nstep_;
-    nstep_ = (ishape[0] + nop - 1) / nop;
+    // See convolution for workspace calculations
+    nstep_ = std::max(
+        std::min(
+            static_cast<index_t>(param_.workspace / shape_colunit_.Size() + shape_dstunit_.Size()),
+            ishape[0]),
+        1U);
+
     mshadow::Shape<2> scol = mshadow::Shape2(shape_colunit_[0],
                                              shape_colunit_[1] * nstep_);
     mshadow::Shape<3> sdst = mshadow::Shape3(shape_dstunit_[0],
                                              shape_dstunit_[1],
                                              shape_dstunit_[2] * nstep_);
-    CHECK_GE(param_.workspace, scol.Size() + sdst.Size())
-      << "\nMinimum workspace size: " << scol.Size() + sdst.Size() << "\n"
-      << "Given: " << param_.workspace;
-    return scol.Size() + sdst.Size();
+    index_t required_size = scol.Size() + sdst.Size();
+    CHECK_GE(param_.workspace, required_size)
+      << "\nMinimum workspace size: " << required_size * sizeof(real_t) << " Bytes\n"
+      << "Given: " << param_.workspace * sizeof(real_t);
+    return required_size;
   }
 
   DeconvolutionParam param_;

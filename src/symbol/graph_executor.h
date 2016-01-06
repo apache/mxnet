@@ -25,13 +25,15 @@ class GraphExecutor : public Executor {
   GraphExecutor() {}
   virtual ~GraphExecutor();
   void Forward(bool is_train) override;
+  void PartialForward(bool is_train, int step, int *step_left) override;
   void Backward(const std::vector<NDArray> &head_grads) override;
   const std::vector<NDArray> &outputs() const override {
     return heads_ndarray_;
   }
   void Print(std::ostream &os) const override; // NOLINT(*)
   // install callback
-  void SetMonitorCallback(ExcecutorMonitorCallback callback) {
+  void SetMonitorCallback(const MonitorCallback& callback) {
+    CHECK(callback) << "invalid callback";
     monitor_callback_ = callback;
   }
   // implement Executor::Bind, only call it once.
@@ -222,6 +224,8 @@ class GraphExecutor : public Executor {
   size_t num_forward_nodes_;
   // head gradient node in the graph, if there is backward pass
   std::vector<uint32_t> head_grad_nodes_;
+  // mirror map of nodes, experimental feature, normally can be ignored.
+  std::map<uint32_t, uint32_t> mirror_source_map_;
   // argument node in the graph, if there is backward pass
   std::vector<StaticGraph::DataEntry> arg_grads_;
   // operational nodes

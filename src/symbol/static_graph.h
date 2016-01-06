@@ -179,9 +179,12 @@ class StaticGraph {
    * \brief Get a post DFS order traversal order from the head nodes.
    *  Post DFS order is a special case of Topological order.
    * \param heads The head of the node.
+   * \param banned The banned map, used to ban some nodes from the graph.
    * \return a post DFS visit order of nodes that can reach heads.
    */
-  std::vector<uint32_t> PostDFSOrder(const std::vector<uint32_t>& head_nodes) const;
+  std::vector<uint32_t> PostDFSOrder(const std::vector<uint32_t>& head_nodes,
+                                     const std::unordered_set<uint32_t>& banned
+                                     = std::unordered_set<uint32_t>()) const;
   /*!
    * \brief infer the node shapes in the computation graph.
    *
@@ -226,10 +229,11 @@ class StaticGraph {
    *
    * \param head_grad_nodes used to store the created head gradient inputs for backward pass.
    * \param arg_grads used to store gradients to args, can be multiple one if an argument is used by operator
+   * \param out_mirror_map The mirror map of the backward plan.
    */
   void MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
-                        std::vector<DataEntry> *arg_grads);
-
+                        std::vector<DataEntry> *arg_grads,
+                        std::map<uint32_t, uint32_t>* out_mirror_map);
   /*!
    * \brief Convert symbol into static graph.
    * \param symbol the symbol to convert from.

@@ -26,24 +26,23 @@ namespace op {
  * \tparam OType output type
  * \tparam Exp expression type
  */
-template<typename OType, typename Exp>
-inline void Assign(OType &out, // NOLINT(*)
-                   OpReqType req,
-                   const Exp &exp) {
-  switch (req) {
-    case kNullOp:
-      break;
-    case kWriteTo:
-    case kWriteInplace:
-      out = exp;
-      break;
-    case kAddTo:
-      out += exp;
-      break;
-    default:
-      LOG(FATAL) << "not reached";
+#define Assign(out, req, exp)           \
+  {                                     \
+    switch (req) {                      \
+      case kNullOp:                     \
+        break;                          \
+      case kWriteTo:                    \
+      case kWriteInplace:               \
+        (out) = (exp);                  \
+        break;                          \
+      case kAddTo:                      \
+        (out) += (exp);                 \
+        break;                          \
+      default:                          \
+        LOG(FATAL) << "not reached";    \
+    }                                   \
   }
-}
+
 
 /*! \brief exception throwed by InferShape error */
 struct InferShapeError {

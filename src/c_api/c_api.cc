@@ -12,6 +12,7 @@
 #include <mxnet/ndarray.h>
 #include <mxnet/symbolic.h>
 #include <mxnet/operator.h>
+#include <mxnet/optimizer.h>
 #include <mxnet/io.h>
 #include <mxnet/c_api.h>
 #include <mxnet/kvstore.h>
@@ -823,10 +824,17 @@ int MXExecutorBindX(SymbolHandle symbol_handle,
 }
 
 int MXExecutorSetMonitorCallback(ExecutorHandle handle,
-                                 ExcecutorMonitorCallback callback) {
+                                 ExecutorMonitorCallback callback,
+                                 void* callback_handle) {
   API_BEGIN();
+  ExecutorMonitorCallback callback_temp = callback;
+  void* callback_handle_temp = callback_handle;
+  std::function<void(const char*, void*)> clbk
+  = [callback_temp, callback_handle_temp](const char *name, void* handle) {
+    callback_temp(name, handle, callback_handle_temp);
+  };
   Executor *exec = static_cast<Executor*>(handle);
-  exec->SetMonitorCallback(callback);
+  exec->SetMonitorCallback(clbk);
   API_END();
 }
 
@@ -1138,9 +1146,13 @@ int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
   API_BEGIN();
   MXRecordIOContext *context =
     reinterpret_cast<MXRecordIOContext*>(handle);
-  context->reader->NextRecord(context->read_buff);
-  *buf = context->read_buff->c_str();
-  *size = context->read_buff->size();
+  if (context->reader->NextRecord(context->read_buff)) {
+    *buf = context->read_buff->c_str();
+    *size = context->read_buff->size();
+  } else {
+    *buf = NULL;
+    *size = 0;
+  }
   API_END();
 }
 
@@ -1149,7 +1161,7 @@ int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
                 NDArrayHandle* inputs, NDArrayHandle* outputs,
                 char* kernel, RtcHandle *out) {
   API_BEGIN();
-#if MXNET_USE_CUDA
+#if ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
   std::vector<std::pair<std::string, NDArray> > input, output;
   for (mx_uint i = 0; i < num_input; ++i) {
     input.push_back(std::pair<std::string, NDArray>(input_names[i],
@@ -1162,8 +1174,8 @@ int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
   MXRtc *rtc = new MXRtc(name, input, output, kernel);
   *out = reinterpret_cast<RtcHandle>(rtc);
 #else
-  CHECK(false) << "Need to compile with USE_CUDA=1 for MXRtc.";
-#endif  // MXNET_USE_CUDA
+  LOG(FATAL) << "Need to compile with USE_CUDA=1 and USE_NVRTC=1 for MXRtc.";
+#endif  // ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
   API_END();
 }
 
@@ -1176,7 +1188,7 @@ int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
               mx_uint blockDimY,
               mx_uint blockDimZ) {
   API_BEGIN();
-#if MXNET_USE_CUDA
+#if ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
   std::vector<NDArray> input, output;
   for (mx_uint i = 0; i < num_input; ++i) {
     input.push_back(*reinterpret_cast<NDArray*>(inputs[i]));
@@ -1192,17 +1204,62 @@ int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
                                          blockDimY,
                                          blockDimZ);
 #else
-  CHECK(false) << "Need to compile with USE_CUDA=1 for MXRtc.";
-#endif  // MXNET_USE_CUDA
+  LOG(FATAL) << "Need to compile with USE_CUDA=1 and USE_NVRTC=1 for MXRtc.";
+#endif  // ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
   API_END();
 }
 
 int MXRtcFree(RtcHandle handle) {
   API_BEGIN();
-#if MXNET_USE_CUDA
+#if ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
   delete reinterpret_cast<MXRtc*>(handle);
 #else
-  CHECK(false) << "Need to compile with USE_CUDA=1 for MXRtc.";
-#endif  // MXNET_USE_CUDA
+  LOG(FATAL) << "Need to compile with USE_CUDA=1 and USE_NVRTC=1 for MXRtc.";
+#endif  // ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
+  API_END();
+}
+
+int MXOptimizerFindCreator(const char *key,
+                           OptimizerCreator *out) {
+  API_BEGIN();
+  *out = (OptimizerCreator*)dmlc::Registry<OptimizerReg>::Find(key);  // NOLINT(*)
+  API_END();
+}
+
+int MXOptimizerCreateOptimizer(OptimizerCreator creator,
+                               mx_uint num_param,
+                               const char **keys,
+                               const char **vals,
+                               OptimizerHandle *out) {
+  API_BEGIN();
+  OptimizerReg *e = static_cast<OptimizerReg *>(creator);
+  Optimizer* opt = e->body();
+  std::vector<std::pair<std::string, std::string> > kwargs;
+  for (mx_uint i = 0; i < num_param; ++i) {
+    kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
+  }
+  opt->Init(kwargs);
+  *out = opt;
+  API_END();
+}
+
+int MXOptimizerFree(OptimizerHandle handle) {
+  API_BEGIN();
+  Optimizer *opt = static_cast<Optimizer*>(handle);
+  delete opt;
+  API_END();
+}
+
+int MXOptimizerUpdate(OptimizerHandle handle,
+                      int index,
+                      NDArrayHandle weight,
+                      NDArrayHandle grad,
+                      mx_float lr) {
+  API_BEGIN();
+  Optimizer *opt = static_cast<Optimizer*>(handle);
+  opt->Update(index,
+              static_cast<NDArray*>(weight),
+              static_cast<NDArray*>(grad),
+              lr);
   API_END();
 }

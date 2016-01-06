@@ -1,6 +1,20 @@
 Frequently Asked Questions
-========================
+==========================
 This document contains the frequently asked questions to mxnet.
+
+How to Copy Part of Parameters to Another Model
+-----------------------------------------------
+Most MXNet's model consists two parts, the argument arrays and symbol. You can simply copy the argument arrary to the argument array of another model. For example, in python model API, you can do
+```python
+copied_model =  mx.model.FeedForward(ctx=mx.gpu(), symbol=new_symbol,
+                                     arg_params=old_arg_params, aux_params=old_aux_params,
+                                     allow_extra_params=True);
+```
+To copy model parameter from existing ```old_arg_params```, see also this [notebook](https://github.com/dmlc/mxnet/blob/master/example/notebooks/predict-with-pretrained-model.ipynb)
+
+How to Extrat Feature Map of Certain Layer
+------------------------------------------
+See this [notebook](https://github.com/dmlc/mxnet/blob/master/example/notebooks/predict-with-pretrained-model.ipynb)
 
 
 What is the relation between MXNet and CXXNet, Minerva, Purine2

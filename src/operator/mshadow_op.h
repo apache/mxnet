@@ -71,13 +71,13 @@ struct xelu_grad {
 /*! \brief Exponential Linear Unit */
 struct elu {
   MSHADOW_XINLINE static real_t Map(real_t x, real_t a) {
-    return x >= 0.0f ? x : a * (expf(x) - 1.0f);
+    return x > 0.0f ? x : a * (expf(x) - 1.0f);
   }
 };
 
 struct elu_grad {
   MSHADOW_XINLINE static real_t Map(real_t x, real_t a) {
-    return x >= 0.0f ? 1.0f : a * expf(x);
+    return x > 0.0f ? 1.0f : a * expf(x);
   }
 };
 
@@ -90,6 +90,18 @@ struct tanh {
 struct tanh_grad {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return 1.0f - a * a;
+  }
+};
+
+/*! \brief SoftReLU, also known as softplus activation. */
+struct softrelu {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return log1pf(expf(a));
+  }
+};
+struct softrelu_grad {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return 1.0f - expf(-a);
   }
 };
 
@@ -111,6 +123,29 @@ struct log_grad {
   }
 };
 
+struct cos {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return cosf(a);
+  }
+};
+
+struct cos_grad {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return -sinf(a);
+  }
+};
+
+struct sin {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return sinf(a);
+  }
+};
+
+struct sin_grad {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return cosf(a);
+  }
+};
 struct square {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return a * a;
@@ -146,14 +181,39 @@ struct sign {
   }
 };
 struct sign_grad {
-    MSHADOW_XINLINE static real_t Map(real_t a) {
-        return 0.0f;
-    }
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return 0.0f;
+  }
 };
 /*! \brief used for generate element of power */
 struct power {
   MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
     return powf( a, b );
+  }
+};
+
+/*! \brief used for generate element of maximum */
+struct maximum {
+  MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
+    return a > b ? a : b;
+  }
+};
+
+struct maximum_grad {
+  MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
+    return a > b ? 1 : 0;
+  }
+};
+
+/*! \brief used for generate element of minimum */
+struct minimum {
+  MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
+    return a < b ? a : b;
+  }
+};
+struct minimum_grad  {
+  MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
+    return a < b ? 1 : 0;
   }
 };
 
@@ -167,6 +227,19 @@ struct square_root {
 struct square_root_grad {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return 0.5f / a;
+  }
+};
+
+/*!\ \brief used for generate element sqrt */
+struct reciprocal_square_root {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return 1.0/sqrt(a);
+  }
+};
+
+struct reciprocal_square_root_grad {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return -(1.0 / (2.0 * a * sqrt(a)));
   }
 };
 
@@ -188,6 +261,13 @@ struct ceil {
 struct floor {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return floorf(a);
+  }
+};
+
+/*! \brief used for generate gradient of MAE loss*/
+struct minus_sign {
+  MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
+    return a-b > 0.0f ? 1.0f : -1.0f;
   }
 };
 

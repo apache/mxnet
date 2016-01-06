@@ -14,17 +14,19 @@ Langauges Bindings
 
 Examples Codes
 --------------
+* [C++ examples](https://github.com/dmlc/mxnet/tree/master/example/cpp) - Example code for using C++ interface, including NDArray, symbolic layer and models.
 * [Image classification](https://github.com/dmlc/mxnet/tree/master/example/image-classification) - Image classification on MNIST,CIFAR,ImageNet-1k,ImageNet-Full, ***with multiple GPU and distributed training***.
 * [Recurrent Neural Net](https://github.com/dmlc/mxnet/tree/master/example/rnn) - LSTM and RNN for language modeling and character level generation.
 * [Autoencoder](https://github.com/dmlc/mxnet/tree/master/example/autoencoder) - Auto encoder training.
 * [Numpy Operator Customization](https://github.com/dmlc/mxnet/tree/master/example/numpy-ops) - Example on quick customize new ops with numpy.
-* [Adversary Sample Generation](adversary) - Find adversary sample by using fast sign method
+* [Adversary Sample Generation](adversary) - Find adversary sample by using fast sign method.
+* [Neural Art](neural-style) -  Generate artistic style images.
 
 IPython Notebooks
 -----------------
 * [Predict with Pre-trained model](https://github.com/dmlc/mxnet/blob/master/example/notebooks/predict-with-pretrained-model.ipynb) - Notebook on how to predict with pretrained model.
 * [composite symbol](notebooks/composite_symbol.ipynb) - A demo of how to composite a symbolic Inception-BatchNorm Network
-* [cifar-10 recipe](notebooks/cifar-recipe.ipynb) - A step by step demo of how to use MXNet
+* [cifar-10 recipe](notebooks/cifar10-recipe.ipynb) - A step by step demo of how to use MXNet
 * [cifar-100](notebooks/cifar-100.ipynb) - A demo of how to train a 75.68% accuracy CIFAR-100 model
 * [simple bind](notebooks/simple_bind.ipynb) - A demo of low level training API.
 

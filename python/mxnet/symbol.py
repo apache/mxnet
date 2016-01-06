@@ -3,6 +3,7 @@
 """Symbolic configuration API of mxnet."""
 from __future__ import absolute_import
 
+import copy
 import ctypes
 from numbers import Number
 import sys
@@ -99,9 +100,9 @@ class Symbol(object):
         check_call(_LIB.MXSymbolFree(self.handle))
 
     def __copy__(self):
-        return self.__deepcopy__()
+        return copy.deepcopy(self)
 
-    def __deepcopy__(self):
+    def __deepcopy__(self, _):
         handle = SymbolHandle()
         check_call(_LIB.MXSymbolCopy(self.handle,
                                      ctypes.byref(handle)))
@@ -137,7 +138,7 @@ class Symbol(object):
         -------
         the resulting symbol
         """
-        s = self.__deepcopy__()
+        s = copy.deepcopy(self)
         s._compose(*args, **kwargs)
         return s
 
@@ -931,3 +932,55 @@ def pow(base, exp):
         return base**exp
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(base)), str(type(exp))))
+
+
+# pylint: disable=no-member
+# pylint: disable=redefined-builtin
+def maximum(left, right):
+    """ maximum left and right
+
+    Parameters
+    ---------
+    left: Symbol or Number
+    right: Symbol or Number
+
+    Returns
+    -------
+    result: Symbol or Number
+    """
+    if isinstance(left, Symbol) and isinstance(right, Symbol):
+        return Symbol._Maximum(left, right)
+    if  isinstance(left, Symbol) and isinstance(right, Number):
+        return Symbol._MaximumScalar(left, scalar=right)
+    if  isinstance(left, Number) and isinstance(right, Symbol):
+        return Symbol._MaximumScalar(right, scalar=left, scalar_on_left=True)
+    if  isinstance(left, Number) and isinstance(right, Number):
+        return left if left > right else right
+    else:
+        raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
+
+# pylint: disable=no-member
+# pylint: disable=redefined-builtin
+def minimum(left, right):
+    """ minimum left and right
+
+    Parameters
+    ---------
+    left: Symbol or Number
+    right: Symbol or Number
+
+    Returns
+    -------
+    result: Symbol or Number
+    """
+    if isinstance(left, Symbol) and isinstance(right, Symbol):
+        return Symbol._Minimum(left, right)
+    if  isinstance(left, Symbol) and isinstance(right, Number):
+        return Symbol._MinimumScalar(left, scalar=right)
+    if  isinstance(left, Number) and isinstance(right, Symbol):
+        return Symbol._MinimumScalar(right, scalar=left, scalar_on_left=True)
+    if  isinstance(left, Number) and isinstance(right, Number):
+        return left if left > right else right
+    else:
+        raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
+

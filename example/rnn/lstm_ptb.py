@@ -52,7 +52,7 @@ num_hidden = 200
 num_embed = 200
 num_lstm_layer = 2
 num_round = 25
-learning_rate= 1
+learning_rate= 0.1
 wd=0.
 momentum=0.0
 max_grad_norm = 5.0
@@ -70,7 +70,7 @@ X_train_batch = drop_tail(X_train_batch, seq_len)
 X_val_batch = drop_tail(X_val_batch, seq_len)
 
 
-model = lstm.setup_rnn_model(mx.gpu(),
+model = lstm.setup_rnn_model(mx.cpu(),
                              num_lstm_layer=num_lstm_layer,
                              seq_len=seq_len,
                              num_hidden=num_hidden,
@@ -86,6 +86,6 @@ lstm.train_lstm(model, X_train_batch, X_val_batch,
                 max_grad_norm = max_grad_norm,
                 update_period=update_period,
                 learning_rate=learning_rate,
-                wd=wd,
-                momentum=momentum)
+                wd=wd)
+#               momentum=momentum)
 
