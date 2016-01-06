@@ -33,6 +33,7 @@ def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=
             out2 = uf(*numpy_arg).astype(dtype)
         else:
             out2 = npuf(*numpy_arg).astype(dtype)
+            
         assert out1.shape == out2.shape
         if isinstance(out1, mx.nd.NDArray):
             out1 = out1.asnumpy()
