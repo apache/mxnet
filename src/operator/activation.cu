@@ -17,6 +17,12 @@ Operator *CreateOp<gpu>(ActivationParam param) {
   // SoftReLU not supported by CUDNN yet
   if (param.act_type == activation::kSoftReLU)
       return new ActivationOp<gpu, mshadow_op::softrelu, mshadow_op::softrelu_grad>();
+  // Elu not supported by CUDNN yet
+  if (param.act_type == activation::kElu)
+      return new ActivationOp<gpu, mshadow_op::elu, mshadow_op::elu_grad>();
+  // SoftSign not supported by CUDNN yet
+  if (param.act_type == activation::kSoftSign)
+      return new ActivationOp<gpu, mshadow_op::softsign, mshadow_op::softsign_grad>();
 
 #if MXNET_USE_CUDNN == 1
   return new CuDNNActivationOp(param);

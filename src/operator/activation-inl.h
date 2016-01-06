@@ -24,7 +24,7 @@ namespace op {
 namespace activation {
 enum ActivationOpInputs {kData};
 enum ActivationOpOutputs {kOut};
-enum ActivationOpType {kReLU, kSigmoid, kTanh, kSoftReLU};
+enum ActivationOpType {kReLU, kSigmoid, kTanh, kSoftReLU, kElu, kSoftSign};
 }  // activation
 
 struct ActivationParam : public dmlc::Parameter<ActivationParam> {
@@ -36,6 +36,8 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
     .add_enum("sigmoid", activation::kSigmoid)
     .add_enum("tanh", activation::kTanh)
     .add_enum("softrelu", activation::kSoftReLU)
+    .add_enum("elu", activation::kElu)
+    .add_enum("softsign", activation::kSoftSign)
     .describe("Activation function to be applied.");
   }
 };
