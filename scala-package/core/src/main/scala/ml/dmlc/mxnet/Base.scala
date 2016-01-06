@@ -14,13 +14,15 @@ object Base {
   type SymbolHandle = CPtrAddress
   type NDArrayHandle = CPtrAddress
   type FunctionHandle = CPtrAddress
+  type DataIterHandle = CPtrAddress
+  type DataIterCreator = CPtrAddress
 
   type MXUintRef = RefInt
   type MXFloatRef = RefFloat
   type NDArrayHandleRef = RefLong
   type FunctionHandleRef = RefLong
-  type DataIterHandle = RefLong
-  type DataIterCreator = RefLong
+  type DataIterHandleRef = RefLong
+  type DataIterCreatorRef = RefLong
   type KVStoreHandle = RefLong
   type ExecutorHandle = RefLong
   type SymbolHandleRef = RefLong
