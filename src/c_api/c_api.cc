@@ -41,6 +41,8 @@ struct MXAPIThreadLocalEntry {
   std::vector<void *> ret_handles;
   /*! \brief result holder for returning shapes */
   std::vector<TShape> arg_shapes, out_shapes, aux_shapes;
+  /*! \brief result holder for returning type flags */
+  std::vector<int> arg_types, out_types, aux_types;
   /*! \brief result holder for returning shape dimensions */
   std::vector<mx_uint> arg_shape_ndim, out_shape_ndim, aux_shape_ndim;
   /*! \brief result holder for returning shape pointer */
@@ -724,6 +726,48 @@ int MXSymbolInferShape(SymbolHandle sym,
     *aux_shape_size = static_cast<mx_uint>(ret->aux_shapes.size());
     *aux_shape_ndim = dmlc::BeginPtr(ret->aux_shape_ndim);
     *aux_shape_data = dmlc::BeginPtr(ret->aux_shape_data);
+    *complete = 1;
+  } else {
+    *complete = 0;
+  }
+  API_END();
+}
+
+int MXSymbolInferType(SymbolHandle sym,
+                      mx_uint num_args,
+                      const char** keys,
+                      const int *arg_type_data,
+                      mx_uint *in_type_size,
+                      const int **in_type_data,
+                      mx_uint *out_type_size,
+                      const int **out_type_data,
+                      mx_uint *aux_type_size,
+                      const int **aux_type_data,
+                      int *complete) {
+  Symbol *s = static_cast<Symbol*>(sym);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  bool succ;
+  API_BEGIN();
+  if (keys == nullptr && num_args != 0) {
+    ret->arg_types.clear();
+    for (mx_uint i = 0; i < num_args; ++i) {
+      ret->arg_types.push_back(arg_type_data[i]);
+    }
+    succ = s->InferType(&(ret->arg_types), &(ret->out_types), &(ret->aux_types));
+  } else {
+    std::unordered_map<std::string, int> kwargs;
+    for (mx_uint i = 0; i < num_args; ++i) {
+      kwargs[keys[i]] = arg_type_data[i];
+    }
+    succ = s->InferType(kwargs, &(ret->arg_types), &(ret->out_types), &(ret->aux_types));
+  }
+  if (succ) {
+    *in_type_size = static_cast<mx_uint>(ret->arg_types.size());
+    *in_type_data = dmlc::BeginPtr(ret->arg_types);
+    *out_type_size = static_cast<mx_uint>(ret->out_types.size());
+    *out_type_data = dmlc::BeginPtr(ret->out_types);
+    *aux_type_size = static_cast<mx_uint>(ret->aux_types.size());
+    *aux_type_data = dmlc::BeginPtr(ret->aux_types);
     *complete = 1;
   } else {
     *complete = 0;

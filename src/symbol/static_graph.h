@@ -232,6 +232,26 @@ class StaticGraph {
   bool InferShape(std::vector<TShape>* in_shape,
                   std::vector<TShape>* out_shape,
                   std::vector<TShape>* aux_shape) const;
+
+  /*!
+   * \brief infer the types of outputs and unknown input arguments
+   * \param in_type the type of input arguments of the operator
+   *     this should be of same length as the vector returned by ListArguments
+   *     in_type allows unknown elements, which are checked by type.ndim() == 0.
+   *     For unknown types, Infertype will try to fill in the correct type in in_type
+   *     For known types, Infertype will check type consistency
+   *
+   *     common practice: set the type of data input, and usually weight's type can be infered
+   *
+   * \param out_type the type of outputs of the operator
+   *     Infertype will modify the vector to fill output int
+   * \param aux_type the type of auxiliary states of the operator
+   *     Infertype will modify the vector to fill output int
+   * \return if the type inference is successful, return true, else return false.
+   */
+  bool InferType(std::vector<int>* in_type,
+                  std::vector<int>* out_type,
+                  std::vector<int>* aux_type) const;
   /*!
    * \brief Add a full backward pass in the static graph.
    *  This function will add gradient nodes for each heads,

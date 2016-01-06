@@ -571,6 +571,10 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NDArray> &in_args,
           << "Incorrect NDArray shape"
           << " Input: " << info.data.data().shape_
           << " Desired: " << info.shape;
+      CHECK_EQ(info.data.dtype(), info.type_flag)
+          << "Incorrect NDArray type"
+          << " Input: " << info.data.dtype()
+          << " Desired: " << info.type_flag;
     }
   }
 }

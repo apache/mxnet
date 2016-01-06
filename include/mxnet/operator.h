@@ -262,7 +262,8 @@ class OperatorProperty {
     CHECK_LE(in_type->size(), this->ListArguments().size());
     int n_in = this->ListArguments().size();
     for (unsigned i = 0; i < in_type->size(); ++i) {
-      CHECK_EQ(in_type->at(i), mshadow::default_type_flag);
+      CHECK(in_type->at(i) == mshadow::default_type_flag ||
+            in_type->at(i) == -1) << "Unsupported data type " << in_type->at(i);
     }
     in_type->clear();
     for (int i = 0; i < n_in; ++i ) in_type->push_back(mshadow::default_type_flag);
@@ -285,24 +286,6 @@ class OperatorProperty {
    * \brief Create a Operator on specific context
    */
   virtual Operator* CreateOperator(Context ctx) const = 0;
-  /*!
-   * \brief Create a Operator on specific context
-   */
-  virtual Operator* CreateOperatorEx(Context ctx,
-                                     std::vector<int> in_type,
-                                     std::vector<int> out_type,
-                                     std::vector<int> aux_type) {
-    for (unsigned i = 0; i < in_type.size(); ++i) {
-      CHECK_EQ(in_type[i], mshadow::default_type_flag);
-    }
-    for (unsigned i = 0; i < out_type.size(); ++i) {
-      CHECK_EQ(out_type[i], mshadow::default_type_flag);
-    }
-    for (unsigned i = 0; i < aux_type.size(); ++i) {
-      CHECK_EQ(aux_type[i], mshadow::default_type_flag);
-    }
-    return this->CreateOperator(ctx);
-  }
   /*!
    * \brief return the type string of the Operator
    *  subclasses override this function.

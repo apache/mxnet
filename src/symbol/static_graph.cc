@@ -303,6 +303,57 @@ bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
   return true;
 }
 
+bool StaticGraph::InferType(std::vector<int> *in_type,
+                             std::vector<int> *out_type,
+                             std::vector<int> *aux_type) const {
+  std::vector<std::vector<int> > node_out_types(nodes.size());
+  std::vector<std::vector<int> > node_aux_types(nodes.size());
+  for (size_t i = 0; i < nodes.size(); ++i) {
+    int nout = 1;
+    if (nodes[i].is_forward()) {
+      nout = nodes[i].op->NumOutputs();
+    } else if (nodes[i].is_backward()) {
+      nout = static_cast<int>(nodes[nodes[i].backward_source_id].inputs.size());
+    }
+    node_out_types[i].resize(nout, -1);
+  }
+  CHECK(in_type->size() == arg_nodes.size())
+        << "Wrong number of inputs to infer type";
+  for (size_t i = 0; i < arg_nodes.size(); ++i) {
+    node_out_types[arg_nodes[i]][0] = (*in_type)[i];
+  }
+  if (!InferNodeTypes(this->TopoSort(),
+                       &node_out_types,
+                       &node_aux_types)) return false;
+  for (size_t i = 0; i < arg_nodes.size(); ++i) {
+    (*in_type)[i] = node_out_types[arg_nodes[i]][0];
+  }
+  out_type->resize(heads.size());
+  for (size_t i = 0; i < heads.size(); ++i) {
+    const DataEntry &e = heads[i];
+    (*out_type)[i] = node_out_types[e.source_id][e.index];
+  }
+
+  // set back auxiliary nodes.
+  aux_type->clear();
+  std::vector<uint32_t> head_nodes;
+  for (const auto& head : heads) {
+    head_nodes.push_back(head.source_id);
+  }
+  std::vector<uint32_t> fwd_nodes = PostDFSOrder(head_nodes, std::unordered_set<uint32_t>());
+  uint32_t counter = 0;
+  for (uint32_t nid : fwd_nodes) {
+    // backward consistentcy check.
+    CHECK(nid == counter++);
+    if (node_aux_types[nid].size() > 0) {
+      for (auto const &type : node_aux_types[nid]) {
+        aux_type->push_back(type);
+      }
+    }
+  }
+  return true;
+}
+
 StaticGraph::Node StaticGraph::CreateSumNode(
     const std::vector<DataEntry> &grad_source) {
   // find multiple gradients, need aggregate
