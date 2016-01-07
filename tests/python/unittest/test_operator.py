@@ -410,11 +410,11 @@ def test_maximum_minimum():
     data_tmp2 = np.random.rand(3,4)
     data_tmp1[:] = 2
     data_tmp2[:] = 3
-    
+
     arr_data1 = mx.nd.array(data_tmp1)
     arr_data2 = mx.nd.array(data_tmp2)
 
-    
+
     arr_grad1 = mx.nd.empty(shape)
     arr_grad2 = mx.nd.empty(shape)
 
@@ -429,14 +429,14 @@ def test_maximum_minimum():
     out_grad = mx.nd.empty(shape)
     out_grad[:] = 2
     exe_test.backward(out_grad)
-    
+
     npout_grad = np.ones(shape)
     npout_grad[:] = 2
     mask1 = (data_tmp1 > data_tmp2).astype('float')
     mask2 = (data_tmp1 < data_tmp2).astype('float')
     npout_grad1 = npout_grad * mask1 + npout_grad * mask2
     npout_grad2 = (npout_grad - npout_grad * mask1) + (npout_grad - npout_grad * mask2)
-    
+
     assert reldiff(arr_grad1.asnumpy(), npout_grad1) < 1e-6
     assert reldiff(arr_grad2.asnumpy(), npout_grad2) < 1e-6
 
@@ -445,7 +445,7 @@ def test_maximum_minimum_scalar():
     shape = (3, 4)
     data_tmp1 = np.random.rand(3,4)
     data_tmp1[:] = 2
- 
+
     arr_data1 = mx.nd.array(data_tmp1)
     arr_grad1 = mx.nd.empty(shape)
 
@@ -459,7 +459,7 @@ def test_maximum_minimum_scalar():
     out_grad = mx.nd.empty(shape)
     out_grad[:] = 2
     exe_test.backward(out_grad)
-    
+
     npout_grad = np.ones(shape)
     npout_grad[:] = 2
     mask1 = (data_tmp1 > 3).astype('float')
@@ -467,7 +467,7 @@ def test_maximum_minimum_scalar():
     mask3 = (5 < data_tmp1).astype('float')
     mask4 = (data_tmp1 < 4).astype('float')
     npout_grad1 = npout_grad * mask1 + (npout_grad - npout_grad * mask2) + (npout_grad - npout_grad * mask3) + npout_grad * mask4
-    
+
     assert reldiff(arr_grad1.asnumpy(), npout_grad1) < 1e-6
 
 def test_abs():
@@ -644,6 +644,21 @@ def test_batchnorm_training():
         test = mx.symbol.BatchNorm(data, fix_gamma=True)
         check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-3, check_eps=5e-2)
 
+def test_conv_deconv_group_shape():
+    data = mx.sym.Variable(name="data")
+    conv = mx.sym.Convolution(data=data, kernel=(3, 3), num_filter=10, num_group=2, name = "conv")
+    data_shape = (4, 2, 100, 100)
+    arg_shapes, _, _ = conv.infer_shape(data=data_shape)
+    arg_names = conv.list_arguments()
+    dict_shape = dict(zip(arg_names, arg_shapes))
+    assert dict_shape["conv_weight"] == (2L, 5L, 9L)
+    data_shape = (2, 9, 50, 100)
+    deconv = mx.sym.Deconvolution(data=data, kernel=(5, 5), num_filter=15, num_group=3, name = "deconv")
+    arg_names = deconv.list_arguments()
+    arg_shapes, out_shapes, _ = deconv.infer_shape(data=data_shape)
+    dict_shape = dict(zip(arg_names, arg_shapes))
+    assert dict_shape["deconv_weight"] == (3L, 3L, 125L)
+
 if __name__ == '__main__':
     test_nearest_upsampling()
     test_binary_op_duplicate_input()
@@ -665,5 +680,6 @@ if __name__ == '__main__':
     test_round_ceil_floor()
     test_deconvolution()
     test_batchnorm_training()
+    test_conv_deconv_group_shape()
     #check_softmax_with_shape((3,4), mx.cpu())
     #check_multi_softmax_with_shape((3,4,5), mx.cpu())
