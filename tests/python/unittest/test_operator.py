@@ -651,13 +651,13 @@ def test_conv_deconv_group_shape():
     arg_shapes, _, _ = conv.infer_shape(data=data_shape)
     arg_names = conv.list_arguments()
     dict_shape = dict(zip(arg_names, arg_shapes))
-    assert dict_shape["conv_weight"] == (2L, 5L, 9L)
+    assert dict_shape["conv_weight"] == (2, 5, 9)
     data_shape = (2, 9, 50, 100)
     deconv = mx.sym.Deconvolution(data=data, kernel=(5, 5), num_filter=15, num_group=3, name = "deconv")
     arg_names = deconv.list_arguments()
     arg_shapes, out_shapes, _ = deconv.infer_shape(data=data_shape)
     dict_shape = dict(zip(arg_names, arg_shapes))
-    assert dict_shape["deconv_weight"] == (3L, 3L, 125L)
+    assert dict_shape["deconv_weight"] == (3, 3, 125)
 
 if __name__ == '__main__':
     test_nearest_upsampling()
