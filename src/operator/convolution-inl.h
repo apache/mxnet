@@ -313,9 +313,19 @@ class ConvolutionProp : public OperatorProperty {
     if (dshape.ndim() ==  0) return false;
     CHECK_EQ(dshape.ndim(), 4) \
         << "Input data should be 4D in batch-num_filter-y-x";
-    SHAPE_ASSIGN_CHECK(*in_shape,
-                       conv::kWeight,
-                       Shape4(param_.num_filter, dshape[1], param_.kernel[0], param_.kernel[1]));
+    if (1 == param_.num_group) {
+      SHAPE_ASSIGN_CHECK(
+        *in_shape,
+        conv::kWeight,
+        Shape4(param_.num_filter, dshape[1], param_.kernel[0], param_.kernel[1]));
+    } else {
+      SHAPE_ASSIGN_CHECK(
+        *in_shape,
+        conv::kWeight,
+        Shape3(param_.num_group,
+               param_.num_filter / param_.num_group,
+               dshape[1] / param_.num_group * param_.kernel[0] * param_.kernel[1]));
+    }
     if (!param_.no_bias) {
       SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
     }
