@@ -1,6 +1,7 @@
 import mxnet as mx
 import copy
 import json
+import ast
 
 def load_model(args):
   devs = mx.cpu() if args.gpus == None else [mx.gpu(int(i)) for i in args.gpus.split(',')]  
@@ -14,10 +15,7 @@ def topsort(nodes):
     if node.has_key('inputs'):
       for j in node['inputs']:
         deg[i] += 1
-        g[j[0]].append(i)
-        if node['name'] == '':
-          print node
-          print '!!!',j[0]
+        g[j[0]].append(i)        
   from collections import deque
   q = deque([i for i in xrange(n) if deg[i]==0])
   res = []  
@@ -38,7 +36,18 @@ def topsort(nodes):
 def is_input(node):
   name = node['name']
   return len(node['inputs']) == 0 and ('weight' not in name) and ('bias' not in name) and ('label' not in name)
-  
+
+def sym_factory(node, data):
+  name = node['name']
+  params = {}
+  if 'param' in node:    
+    for k, v in node['param'].iteritems():
+      try:
+        params[k] = ast.literal_eval(v)
+      except ValueError, e:
+        params[k] = v
+  return getattr(mx.symbol, node['op'])(data=data, name=name, **params)
+
 def replace_conv_layer(layer_name, old_model, sym_handle, arg_handle):
   conf = json.loads(old_model.symbol.tojson())
   sym_dict = {}
@@ -57,45 +66,15 @@ def replace_conv_layer(layer_name, old_model, sym_handle, arg_handle):
       try:
         data=sym_dict[datas[0]]
       except Exception, e:
-        print 'can not find symbol %s'%(datas[0])      
+        print 'can not find symbol %s'%(datas[0])
         raise e    
       if node['name'] == layer_name:
         sym = sym_handle(data, node)          
       else:
-        if node['op'] == 'Convolution':           
-          kernel = eval(node['param']['kernel'])
-          pad = eval(node['param']['pad'])
-          num_filter = int(node['param']['num_filter'])
-          name = node['name']
-          sym = mx.symbol.Convolution(data=data, kernel=kernel, pad=pad, num_filter=num_filter, name=name)        
-        elif node['op'] == 'Activation':
-          sym = mx.symbol.Activation(data=data, act_type=node['param']['act_type'], name=node['name'])
-        elif node['op'] == 'Pooling':
-          kernel = eval(node['param']['kernel'])
-          pad = eval(node['param']['pad'])
-          pool_type = node['param']['pool_type']
-          stride = eval(node['param']['stride'])
-          sym = mx.symbol.Pooling(data=data, kernel=kernel, pad=pad, pool_type=pool_type, stride=stride, name=node['name'])
-        elif node['op'] == 'Dropout':
-          p = float(node['param']['p'])
-          sym = mx.symbol.Dropout(data=data, p=p, name=node['name'])
-        elif node['op'] == 'FullyConnected':
-          no_bias = True if node['param']['no_bias']=='True' else False
-          num_hidden = int(node['param']['num_hidden'])
-          sym = mx.symbol.FullyConnected(data=data, num_hidden=num_hidden, no_bias=no_bias, name=node['name'])
-        elif node['op'] == 'Flatten':        
-          sym = mx.symbol.Flatten(data=data, name=node['name'])
-        elif node['op'] == 'SoftmaxOutput':        
-          sym = mx.symbol.SoftmaxOutput(data=data, name='softmax')
-          res_sym = sym      
-        elif node['op'] == 'Reshape':
-          target_shape = eval(node['param']['target_shape'])
-          sym = mx.symbol.Reshape(data=data, target_shape=target_shape)
-          res_sym = sym
-        else:
-          raise Exception("Invalid symbol")
+        sym = sym_factory(node, data)        
     if sym:
       sym_dict[node['name']] = sym
+      res_sym = sym
 
   arg_params = copy.deepcopy(old_model.arg_params)
   if layer_name:  
