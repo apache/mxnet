@@ -57,7 +57,7 @@ def write_label_csv(fname, frames, label_map):
 
 def get_data(lst,preproc):
    data = []
-   result=[]
+   result = []
    for path in lst:
        f = dicom.read_file(path)
        img = preproc(f.pixel_array.astype(float) / np.max(f.pixel_array))
@@ -75,13 +75,13 @@ def get_data(lst,preproc):
 def write_data_csv(fname, frames, preproc):
    """Write data to csv file"""
    fdata = open(fname, "w")
-   dr=Parallel()(delayed(get_data)(lst,preproc) for lst in frames)
-   data,result=zip(*dr)
+   dr = Parallel()(delayed(get_data)(lst,preproc) for lst in frames)
+   data,result = zip(*dr)
    for entry in data:
       fdata.write(','.join(entry)+'\r\n')
    print("All finished, %d slices in total" % len(data))
    fdata.close()
-   result=np.ravel(result)
+   result = np.ravel(result)
    return result
 
 
