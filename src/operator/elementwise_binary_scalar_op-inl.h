@@ -252,7 +252,7 @@ class ElementwiseBinaryScalarOpProp : public OperatorProperty {
     param_.Init(kwargs);
   }
   std::map<std::string, std::string> GetParams() const override {
-    return std::map<std::string, std::string>();
+    return param_.__DICT__();
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
