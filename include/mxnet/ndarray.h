@@ -12,6 +12,7 @@
 #include <dmlc/type_traits.h>
 #include <dmlc/registry.h>
 #include <vector>
+#include <map>
 #include <string>
 #include <memory>
 #include "./base.h"
@@ -446,7 +447,10 @@ MXNET_API void SampleGaussian(real_t mu, real_t sigma, NDArray *out);
 /*! \brief definition of NDArray function */
 typedef std::function<void (NDArray **used_vars,
                             real_t *scalars,
-                            NDArray **mutate_vars)> NDArrayAPIFunction;
+                            NDArray **mutate_vars,
+                            int num_params,
+                            char **param_keys,
+                            char **param_vals)> NDArrayAPIFunction;
 /*! \brief mask information on how functions can be exposed */
 enum NDArrayFunctionTypeMask {
   /*! \brief all the use_vars should go before scalar */
@@ -491,7 +495,8 @@ struct NDArrayFunctionReg
    */
   inline NDArrayFunctionReg &set_function(void (*fsetvalue)(const real_t &rhs,
                                                             NDArray *out)) {
-    body = [fsetvalue] (NDArray **used_vars, real_t *s, NDArray **mutate_vars) {
+    body = [fsetvalue] (NDArray **used_vars, real_t *s, NDArray **mutate_vars,
+                        int num_params, char **param_keys, char **param_vals) {
       (*fsetvalue)(s[0], mutate_vars[0]);
     };
     num_mutate_vars = 1; num_scalars = 1;
@@ -507,8 +512,8 @@ struct NDArrayFunctionReg
   inline NDArrayFunctionReg &set_function(void (*fbinary)(const NDArray &lhs,
                                                           const NDArray &rhs,
                                                           NDArray *out)) {
-    body = [fbinary] (NDArray **used_vars,
-                      real_t *s, NDArray **mutate_vars) {
+    body = [fbinary] (NDArray **used_vars, real_t *s, NDArray **mutate_vars,
+                      int num_params, char **param_keys, char **param_vals) {
       (*fbinary)(*used_vars[0], *used_vars[1], mutate_vars[0]);
     };
     num_use_vars = 2; num_mutate_vars = 1;
@@ -526,8 +531,8 @@ struct NDArrayFunctionReg
   inline NDArrayFunctionReg &set_function(void (*fscalar)(const NDArray &lhs,
                                                           const real_t &rhs,
                                                           NDArray *out)) {
-    body = [fscalar] (NDArray **used_vars,
-                      real_t *s, NDArray **mutate_vars) {
+    body = [fscalar] (NDArray **used_vars, real_t *s, NDArray **mutate_vars,
+                      int num_params, char **param_keys, char **param_vals) {
       (*fscalar)(*used_vars[0], s[0], mutate_vars[0]);
     };
     num_use_vars = 1; num_mutate_vars = 1; num_scalars = 1;
@@ -544,13 +549,34 @@ struct NDArrayFunctionReg
    */
   inline NDArrayFunctionReg &set_function(void (*funary)(const NDArray &src,
                                                          NDArray *out)) {
-    body = [funary] (NDArray **used_vars,
-                     real_t *s, NDArray **mutate_vars) {
+    body = [funary] (NDArray **used_vars, real_t *s, NDArray **mutate_vars,
+                     int num_params, char **param_keys, char **param_vals) {
       (*funary)(*used_vars[0], mutate_vars[0]);
     };
     num_use_vars = 1; num_mutate_vars = 1;
     type_mask = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
     this->add_argument("src", "NDArray", "Source input to the function.");
+    return *this;
+  }
+  /*!
+   * \brief set the function body to a unary NDArray function
+   *  this will also auto set the parameters correctly
+   * \param funary function body to set
+   * \return ref to the registered entry, used to set properties
+   */
+  inline NDArrayFunctionReg &set_function(
+    void (*fgeneric)(NDArray **used_vars,
+                     real_t *s,
+                     NDArray **mutate_vars,
+                     const std::map<std::string, std::string>& param)) {
+    body = [fgeneric] (NDArray **used_vars, real_t *s, NDArray **mutate_vars,
+                       int num_params, char **param_keys, char **param_vals) {
+      std::map<std::string, std::string> param;
+      for (int i = 0; i < num_params; ++i) {
+        param[param_keys[i]] = param_vals[i];
+      }
+      fgeneric(used_vars, s, mutate_vars, param);
+    };
     return *this;
   }
   /*!

@@ -382,7 +382,10 @@ MXNET_DLL int MXFuncDescribe(FunctionHandle fun,
 MXNET_DLL int MXFuncInvoke(FunctionHandle fun,
                            NDArrayHandle *use_vars,
                            mx_float *scalar_args,
-                           NDArrayHandle *mutate_vars);
+                           NDArrayHandle *mutate_vars,
+                           int num_params,
+                           char **param_keys,
+                           char **param_vals);
 
 //--------------------------------------------
 // Part 3: symbolic configuration generation

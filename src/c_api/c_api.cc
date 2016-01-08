@@ -383,12 +383,18 @@ int MXFuncDescribe(FunctionHandle fun,
 int MXFuncInvoke(FunctionHandle fun,
                  NDArrayHandle *use_vars,
                  mx_float *scalar_args,
-                 NDArrayHandle *mutate_vars) {
+                 NDArrayHandle *mutate_vars,
+                 int num_params,
+                 char **param_keys,
+                 char **param_vals) {
   API_BEGIN();
   auto *f = static_cast<const NDArrayFunctionReg*>(fun);
   f->body((NDArray**)(use_vars),  //  NOLINT(*)
           scalar_args,
-          (NDArray**)(mutate_vars));  //  NOLINT(*)
+          (NDArray**)(mutate_vars),  //  NOLINT(*)
+          num_params,
+          param_keys,
+          param_vals);
   API_END();
 }
 
