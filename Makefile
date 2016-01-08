@@ -145,6 +145,8 @@ $(EXTRA_OPERATORS)/build/%_gpu.o: $(EXTRA_OPERATORS)/%.cu
 	$(NVCC) $(NVCCFLAGS) -Xcompiler "$(CFLAGS) -Isrc/operator" -M -MT $(EXTRA_OPERATORS)/build/$*_gpu.o $< >$(EXTRA_OPERATORS)/build/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS) -Isrc/operator" $<
 
+# NOTE: to statically link libmxnet.a we need the option
+# --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
 lib/libmxnet.a: $(ALL_DEP)
 	@mkdir -p $(@D)
 	ar crv $@ $(filter %.o, $?)
@@ -153,7 +155,6 @@ lib/libmxnet.so: $(ALL_DEP)
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
 
-# ps-lite
 $(PS_PATH)/build/libps.a:
 	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) ps
 	ln -fs $(PS_PATH)/tracker .
