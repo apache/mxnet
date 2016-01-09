@@ -94,3 +94,4 @@ List of Contributors
 * [Lowik CHANUSSOT](https://github.com/Nzeuwik)
 * [Alexander Skidanov](https://github.com/SkidanovAlex)
 * [Ruixiang Zhang](https://github.com/sodabeta7)
+* [Lodewic van Twillert](https://github.com/Lodewic)
