@@ -199,10 +199,18 @@ rpkg:	roxygen
 	cp -rf dmlc-core/include/* R-package/inst/include/
 	R CMD build --no-build-vignettes R-package
 
+ifneq ($(EXTRA_OPERATORS),)
 clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 	cd $(DMLC_CORE); make clean; cd -
 	cd $(PS_PATH); make clean; cd -
+	$(RM) -r $(EXTRA_OPERATORS)/build
+else
+clean:
+	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
+	cd $(DMLC_CORE); make clean; cd -
+	cd $(PS_PATH); make clean; cd -
+endif
 
 clean_all: clean
 

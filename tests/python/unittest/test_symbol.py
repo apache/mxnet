@@ -1,6 +1,7 @@
 import copy
 import os
 import mxnet as mx
+import numpy as np
 from common import models
 import pickle as pkl
 
@@ -10,7 +11,6 @@ def test_symbol_basic():
     for m in mlist:
         m.list_arguments()
         m.list_outputs()
-
 
 def test_symbol_compose():
     data = mx.symbol.Variable('data')
@@ -68,8 +68,19 @@ def test_symbol_saveload():
     assert sym.tojson() == data2.tojson()
     os.remove(fname)
 
+def test_symbol_infer_type():
+    data = mx.symbol.Variable('data')
+    f32data = mx.symbol.Cast(data=data, dtype='float32')
+    fc1  = mx.symbol.FullyConnected(data = f32data, name='fc1', num_hidden=128)
+    mlp  = mx.symbol.SoftmaxOutput(data = fc1, name = 'softmax')
+
+    arg, out, aux = mlp.infer_type(data=np.float16)
+    assert arg == [np.float16, np.float32, np.float32, np.float32]
+    assert out == [np.float32]
+    assert aux == []
 
 if __name__ == '__main__':
+    test_symbol_infer_type()
     test_symbol_internal()
     test_symbol_basic()
     test_symbol_compose()
