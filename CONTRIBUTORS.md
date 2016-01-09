@@ -92,3 +92,4 @@ List of Contributors
 * [Junru Shao](https://github.com/yzgysjr)
 * [Xiao Liu](https://github.com/skylook)
 * [Lowik CHANUSSOT](https://github.com/Nzeuwik)
+* [Alexander Skidanov](https://github.com/SkidanovAlex)
