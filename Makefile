@@ -93,9 +93,9 @@ endif
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
-SRC = $(wildcard src/*.cc src/*/*.cc src/*/*/*.cc)
+SRC = $(wildcard src/*.cc src/*/*.cc)
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
-CUSRC = $(wildcard src/*/*.cu src/*/*/*.cu)
+CUSRC = $(wildcard src/*/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
 
 ifneq ($(EXTRA_OPERATORS),)
@@ -113,7 +113,10 @@ endif
 # plugin
 ifeq ($(USE_TORCH), 1)
 	CFLAGS += -I$(TORCH_PATH)/install/include -I$(TORCH_PATH)/install/include/TH -I$(TORCH_PATH)/install/include/THC -DMXNET_USE_TORCH=1
-	LDFLAGS += -Wl,-export-dynamic -L$(TORCH_PATH)/install/lib -L$(TORCH_PATH)/install/lib/lua/5.1 -lluajit -lluaT -lTH -lTHC -lpaths -ltorch -lcutorch -lnn -lcunn
+	LDFLAGS += -L$(TORCH_PATH)/install/lib -L$(TORCH_PATH)/install/lib/lua/5.1 -lluajit -lluaT -lTH -lTHC -lpaths -ltorch -lnn
+	ifeq ($(USE_CUDA), 1)
+		LDFLAGS += -lcutorch -lcunn
+	endif
 	
 	TORCH_SRC = $(wildcard plugin/torch/*.cc)
 	PLUGIN_OBJ += $(patsubst %.cc, build/%.o, $(TORCH_SRC))
@@ -240,6 +243,7 @@ clean_all: clean
 
 -include build/*.d
 -include build/*/*.d
+-include build/*/*/*.d
 ifneq ($(EXTRA_OPERATORS),)
 	-include $(EXTRA_OPERATORS)/build/*.d
 endif

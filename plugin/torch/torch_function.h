@@ -80,11 +80,11 @@ void TorchOp(NDArray **u, real_t *s, NDArray **out,
     }
   } else {
     CHECK(param.count("ctx")) << "Must provide keyword argument ctx for TorchOp with 0 inputs";
-    std::istringstream str_ctx(param.at("ctx"));
-    std::string dev;
+    std::string str_ctx(param.at("ctx"));
     int id;
-    char tmp;
-    str_ctx >> dev >> tmp >> id >> tmp;
+    char tmp[4];
+    sscanf(str_ctx.c_str(), "%3s(%d)", tmp, &id);
+    std::string dev(tmp);
     if (dev == "cpu") {
       ctx = Context::Create(Context::kCPU, id);
     } else if (dev == "gpu") {
@@ -138,12 +138,31 @@ void TorchOp(NDArray **u, real_t *s, NDArray **out,
   }
 }
 
-struct TorchUnaryOpDesc {
+struct TorchFirstShape {
   static std::vector<mshadow::TShape> GetShape(NDArray **u,
     const std::map<std::string, std::string>& param) {
     return {u[0]->shape()};
   }
-  static const int num_inputs = 1;
+};
+
+struct TorchConstructorShape {
+  static std::vector<mshadow::TShape> GetShape(NDArray **u,
+    const std::map<std::string, std::string>& param) {
+    std::vector<index_t> shape;
+    std::string format = param.at("format");
+    std::istringstream args(param.at("args"));
+    std::string val;
+    std::getline(args, val, ',');
+    CHECK_LE(format.size(), 5) << "Only support up to 4 dimensions.";
+    for (size_t i = 1; i < format.size(); ++i) {
+      CHECK_EQ(format[i], 'i') << "Only take integer arguments.";
+      std::getline(args, val, ',');
+      shape.push_back(std::stoi(val));
+    }
+    mshadow::TShape tshape(shape.begin(), shape.end());
+    return {tshape};
+  }
+  static const int num_inputs = 0;
   static const int num_outputs = 1;
 };
 
@@ -155,10 +174,41 @@ struct TorchUnaryOpDesc {
   .set_type_mask(kAcceptEmptyMutateTarget)
 
 #define MXNET_REGISTER_TORCH_UNARY_FUN(name, func)                            \
-  struct TorchUnaryOpDesc_ ## name ## _ ## func : public TorchUnaryOpDesc {   \
+  struct TorchUnaryOpDesc_ ## name ## _ ## func : public TorchFirstShape {    \
     static constexpr const char* fname = #func;                               \
+    static const int num_inputs = 1;                                          \
+    static const int num_outputs = 1;                                         \
   };                                                                          \
-  MXNET_REGISTER_TORCH_FUN(name, TorchUnaryOpDesc_ ## name ## _ ## func);
+  MXNET_REGISTER_TORCH_FUN(name, TorchUnaryOpDesc_ ## name ## _ ## func)      \
+  .add_argument("x", "NDArray", "Input NDArray")
+
+#define MXNET_REGISTER_TORCH_BINARY_FUN(name, func)                           \
+  struct TorchBinaryOpDesc_ ## name ## _ ## func : public TorchFirstShape {   \
+    static constexpr const char* fname = #func;                               \
+    static const int num_inputs = 2;                                          \
+    static const int num_outputs = 1;                                         \
+  };                                                                          \
+  MXNET_REGISTER_TORCH_FUN(name, TorchBinaryOpDesc_ ## name ## _ ## func)
+
+#define MXNET_REGISTER_TORCH_BINARY_FUN_WITH_ARG(name, func)                  \
+  MXNET_REGISTER_TORCH_BINARY_FUN(name, func)                                 \
+  .add_argument("x1", "NDArray", "First Input NDArray")                       \
+  .add_argument("x2", "NDArray", "Second Input NDArray")
+
+#define MXNET_REGISTER_TORCH_TENARY_FUN(name, func)                           \
+  struct TorchTenaryOpDesc_ ## name ## _ ## func : public TorchFirstShape {   \
+    static constexpr const char* fname = #func;                               \
+    static const int num_inputs = 3;                                          \
+    static const int num_outputs = 1;                                         \
+  };                                                                          \
+  MXNET_REGISTER_TORCH_FUN(name, TorchTenaryOpDesc_ ## name ## _ ## func)
+
+#define MXNET_REGISTER_TORCH_CONSTRUCTOR_FUN(name, func)                                  \
+  struct TorchConstructorOpDesc_ ## name ## _ ## func : public TorchConstructorShape {    \
+    static constexpr const char* fname = #func;                                           \
+  };                                                                                      \
+  MXNET_REGISTER_TORCH_FUN(name, TorchConstructorOpDesc_ ## name ## _ ## func)
+
 
 }  // namespace mxnet
 #endif  // PLUGIN_TORCH_TORCH_FUNCTION_H_

@@ -332,7 +332,7 @@ class TorchModuleProp : public OperatorProperty {
       while (lua_next(L, -3)) {
         THFloatTensor* param = reinterpret_cast<THFloatTensor*>(luaT_toudata(L, -1,
           TorchTensor::TensorType(mshadow::cpu::kDevMask)));
-        size_t* size = param->size;
+        long int* size = param->size;  // NOLINT(*)
         (*in_shape)[index++] = TShape(size, size + THFloatTensor_nDimension(param));
         lua_pop(L, 1);
       }
@@ -343,7 +343,7 @@ class TorchModuleProp : public OperatorProperty {
     } else if (param_.num_outputs == 1) {
       THFloatTensor* output = reinterpret_cast<THFloatTensor*>(luaT_toudata(L, -1,
         TorchTensor::TensorType(mshadow::cpu::kDevMask)));
-      size_t* size = output->size;
+      long int* size = output->size;  // NOLINT(*)
       (*out_shape)[0] = TShape(size, size + THFloatTensor_nDimension(output));
     } else {
       for (uint32_t data_index = 0; data_index < param_.num_outputs; ++data_index) {
@@ -352,7 +352,7 @@ class TorchModuleProp : public OperatorProperty {
         while (lua_next(L, -2)) {
           THFloatTensor* out = reinterpret_cast<THFloatTensor*>(luaT_toudata(L, -1,
             TorchTensor::TensorType(mshadow::cpu::kDevMask)));
-          size_t* size = out->size;
+          long int* size = out->size;  // NOLINT(*)
           (*out_shape)[index++] = TShape(size, size + THFloatTensor_nDimension(out));
         }
       }

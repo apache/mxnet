@@ -6,10 +6,15 @@ from __future__ import absolute_import
 import ctypes
 import sys
 from .base import _LIB
-from .base import c_array, py_str
+from .base import c_array, py_str, ctypes2docstring
 from .base import mx_uint, mx_float, NDArrayHandle, FunctionHandle
 from .base import check_call
 from .ndarray import NDArray, _new_empty_handle
+
+try:
+    _LUAJIT = ctypes.CDLL("libluajit.so", mode=ctypes.RTLD_GLOBAL)
+except OSError:
+    pass
 
 # pylint: disable=too-many-locals, invalid-name
 def _make_torch_function(handle):
@@ -47,13 +52,19 @@ def _make_torch_function(handle):
     func_name = py_str(name.value)
     if not func_name.startswith('_th_'):
         return None
-
+    param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
+    if n_mutate_vars > 1:
+        res = ','.join(['res%d '%i for i in range(n_mutate_vars)])
+    else:
+        res = 'res '
     doc_str = (('Interface for Torch function {name}.\n' +
-                'Invoke with\nres = mxnet.th.{name}(...)\nor\n'+
-                'mxnet.th.{name}(res, ...).\n\n' +
-                'detailed help can be found at ' +
+                'Invoke with\n{res}= mxnet.th.{name}(Parameters)\nor\n'+
+                'mxnet.th.{name}({res}, Parameters).\n\n' +
+                '{param_str}\n' +
+                'Reference: ' +
                 'https://github.com/torch/torch7/blob/master/doc/maths.md\n').format(
-                    name=func_name[4:]))
+                    name=func_name[4:], param_str=param_str,
+                    res=res))
 
     def generic_torch_function(*args, **kwargs):
         """Invoke this function by passing in parameters
@@ -104,14 +115,17 @@ def _make_torch_function(handle):
         kwargs['format'] = arg_format
         kwargs['args'] = value
 
-        check_call(_LIB.MXFuncInvoke( \
-                handle, \
-                c_array(NDArrayHandle, [x.handle for x in ndargs[n_mutate_vars:]]), \
-                c_array(mx_float, []), \
-                c_array(NDArrayHandle, [x.handle for x in ndargs[:n_mutate_vars]]),
-                ctypes.c_int(len(kwargs)),
-                c_array(ctypes.c_char_p, kwargs.keys()),
-                c_array(ctypes.c_char_p, kwargs.values()),))
+        for k in kwargs:
+            kwargs[k] = str(kwargs[k])
+
+        check_call(_LIB.MXFuncInvokeEx( \
+                   handle, \
+                   c_array(NDArrayHandle, [x.handle for x in ndargs[n_mutate_vars:]]), \
+                   c_array(mx_float, []), \
+                   c_array(NDArrayHandle, [x.handle for x in ndargs[:n_mutate_vars]]),
+                   ctypes.c_int(len(kwargs)),
+                   c_array(ctypes.c_char_p, kwargs.keys()),
+                   c_array(ctypes.c_char_p, kwargs.values()),))
         if n_mutate_vars == 1:
             return ndargs[0]
         else:

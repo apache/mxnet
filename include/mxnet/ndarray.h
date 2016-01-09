@@ -561,7 +561,7 @@ struct NDArrayFunctionReg
   /*!
    * \brief set the function body to a unary NDArray function
    *  this will also auto set the parameters correctly
-   * \param funary function body to set
+   * \param fgeneric function body to set
    * \return ref to the registered entry, used to set properties
    */
   inline NDArrayFunctionReg &set_function(

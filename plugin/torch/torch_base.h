@@ -161,7 +161,8 @@ class TorchTensor {
         break;
       }
 #endif
-      default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+      default:
+        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
     }
     THLongStorage_free(thshape);
 
@@ -178,9 +179,10 @@ class TorchTensor {
         THFloatStorage* original = static_cast<THFloatTensor*>(tensor)->storage;
         static_cast<THFloatTensor*>(tensor)->storage = storage;
         THFloatStorage_free(original);
+        break;
       }
-      case gpu::kDevMask: {
 #if MXNET_USE_CUDA
+      case gpu::kDevMask: {
         THCState* state = TorchState::CudaState();
         THCudaStorage* storage = THCudaStorage_newWithData(state,
                                                            static_cast<real_t*>(blob.dptr_),
@@ -190,12 +192,11 @@ class TorchTensor {
         THCudaStorage* original = static_cast<THCudaTensor*>(tensor)->storage;
         static_cast<THCudaTensor*>(tensor)->storage = storage;
         THCudaStorage_free(state, original);
-#else
-        LOG(FATAL) << "GPU is not enabled";
-#endif
+        break;
       }
+#endif
       default:
-        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+        LOG(FATAL) << "Unknown device type " << blob.dev_mask_;
     }
   }
 
