@@ -95,4 +95,4 @@ List of Contributors
 * [Alexander Skidanov](https://github.com/SkidanovAlex)
 * [Ruixiang Zhang](https://github.com/sodabeta7)
 * [Lodewic van Twillert](https://github.com/Lodewic)
-* [https://github.com/hiraditya](https://github.com/hiraditya)
+* [Aditya Kumar](https://github.com/hiraditya)
