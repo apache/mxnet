@@ -58,7 +58,7 @@ class DropoutOp : public Operator {
     Tensor<xpu, 2> out = out_data[dropout::kOut].FlatTo2D<xpu, real_t>(s);
     if (ctx.is_train) {
       Tensor<xpu, 2> mask = out_data[dropout::kMask].FlatTo2D<xpu, real_t>(s);
-      Random<xpu> *prnd = ctx.requested[dropout::kRandom].get_random<xpu>(s);
+      Random<xpu> *prnd = ctx.requested[dropout::kRandom].get_random<xpu, real_t>(s);
       mask = F<mshadow_op::threshold>(prnd->uniform(mask.shape_), pkeep_) * (1.0f / pkeep_);
       Assign(out, req[dropout::kOut], data * mask);
     } else {

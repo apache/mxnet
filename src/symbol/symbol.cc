@@ -563,9 +563,43 @@ bool Symbol::InferShape(const std::unordered_map<std::string, TShape>& known_arg
     std::vector<std::string> keys(known_arg_shapes.size());
     std::transform(known_arg_shapes.begin(), known_arg_shapes.end(), keys.begin(),
                    [](decltype(*known_arg_shapes.begin())& kv)->std::string { return kv.first; });
-    KeywordArgumentMismatch("Symbol.InterShape", keys, ListArguments());
+    KeywordArgumentMismatch("Symbol.InferShape", keys, ListArguments());
   }
   return g.InferShape(arg_shapes, out_shapes, aux_shapes);
+}
+
+bool Symbol::InferType(std::vector<int> *arg_types,
+                        std::vector<int> *out_types,
+                        std::vector<int> *aux_types) const {
+  StaticGraph g;
+  this->ToStaticGraph(&g);
+  return g.InferType(arg_types, out_types, aux_types);
+}
+
+bool Symbol::InferType(const std::unordered_map<std::string, int>& known_arg_types,
+                        std::vector<int> *arg_types,
+                        std::vector<int> *out_types,
+                        std::vector<int> *aux_types) const {
+  StaticGraph g;
+  this->ToStaticGraph(&g);
+  arg_types->clear();
+  arg_types->resize(g.arg_nodes.size(), -1);
+  size_t nmatched = 0;
+  for (size_t i = 0; i < g.arg_nodes.size(); ++i) {
+    const std::string& name = g.nodes[g.arg_nodes[i]].name;
+    auto it = known_arg_types.find(name);
+    if (it != known_arg_types.end()) {
+      arg_types->at(i) = it->second;
+      ++nmatched;
+    }
+  }
+  if (nmatched != known_arg_types.size()) {
+    std::vector<std::string> keys(known_arg_types.size());
+    std::transform(known_arg_types.begin(), known_arg_types.end(), keys.begin(),
+                   [](decltype(*known_arg_types.begin())& kv)->std::string { return kv.first; });
+    KeywordArgumentMismatch("Symbol.InferType", keys, ListArguments());
+  }
+  return g.InferType(arg_types, out_types, aux_types);
 }
 
 
