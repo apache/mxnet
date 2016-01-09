@@ -46,7 +46,7 @@ class GraphStorageAllocator {
    * \param shape shape of the NDArray we want
    * \param node_id the node that is requesting the memory, used as hint.
    */
-  StorageID Request(Context ctx, TShape shape, uint32_t node_id);
+  StorageID Request(Context ctx, int type_flag, TShape shape, uint32_t node_id);
   /*!
    * \brief Release a memory.
    * \param id the storage ID of the memory.
@@ -72,6 +72,8 @@ class GraphStorageAllocator {
     StorageID id;
     /*! \brief the context of the storage */
     Context ctx;
+    /*! \brief the data type enum of the storage */
+    int type_flag;
     /*! \brief maximum size of the storage that is requested */
     size_t max_size;
     /*! \brief node index that released it last time */
@@ -86,7 +88,7 @@ class GraphStorageAllocator {
    * \param ctx the context of the graph
    * \param shape shape of the NDArray we want
    */
-  StorageID Alloc(Context ctx, size_t size);
+  StorageID Alloc(Context ctx, int type_flag, size_t size);
   /*!
    * \brief Initialize the colors of graph nodes.
    * \param topo_order the topological order in the graph.
@@ -137,21 +139,22 @@ void GraphStorageAllocator::InitColor(const std::vector<uint32_t>& topo_order) {
 }
 
 GraphStorageAllocator::StorageID
-GraphStorageAllocator::Alloc(Context ctx, size_t size) {
+GraphStorageAllocator::Alloc(Context ctx, int type_flag, size_t size) {
   StorageID id = static_cast<StorageID>(data_.size());
   std::unique_ptr<StorageEntry> ptr(new StorageEntry());
   ptr->id = id;
   ptr->ctx = ctx;
+  ptr->type_flag = type_flag;
   ptr->max_size = size;
   data_.push_back(std::move(ptr));
   return id;
 }
 
 GraphStorageAllocator::StorageID
-GraphStorageAllocator::Request(Context ctx, TShape shape, uint32_t node_id) {
+GraphStorageAllocator::Request(Context ctx, int type_flag, TShape shape, uint32_t node_id) {
   // search memory block in [size / match_range_, size * match_range_)
   size_t size = shape.Size();
-  if (match_range_ == 0) return this->Alloc(ctx, size);
+  if (match_range_ == 0) return this->Alloc(ctx, type_flag, size);
   auto begin = free_.lower_bound(size / match_range_);
   auto mid = free_.lower_bound(size);
   auto end = free_.upper_bound(size * match_range_);
@@ -160,6 +163,7 @@ GraphStorageAllocator::Request(Context ctx, TShape shape, uint32_t node_id) {
   for (auto it = mid; it != end; ++it) {
     StorageEntry *e = it->second;
     if (e->ctx != ctx) continue;
+    if (e->type_flag != type_flag) continue;
     if (node_color_[e->released_by_node] != node_color_[node_id]) continue;
     // Use exect matching strategy
     e->max_size = std::max(size, e->max_size);
@@ -172,6 +176,7 @@ GraphStorageAllocator::Request(Context ctx, TShape shape, uint32_t node_id) {
     --it;
     StorageEntry *e = it->second;
     if (e->ctx != ctx) continue;
+    if (e->type_flag != type_flag) continue;
     if (node_color_[e->released_by_node] != node_color_[node_id]) continue;
     // Use exect matching strategy
     e->max_size = std::max(size, e->max_size);
@@ -180,7 +185,7 @@ GraphStorageAllocator::Request(Context ctx, TShape shape, uint32_t node_id) {
     return e->id;
   }
   // cannot find anything return a new one.
-  return this->Alloc(ctx, size);
+  return this->Alloc(ctx, type_flag, size);
 }
 
 void GraphStorageAllocator::Release(StorageID id, uint32_t node_id) {
@@ -195,8 +200,8 @@ size_t GraphStorageAllocator::InitStorages() {
   for (size_t i = 0; i < data_.size(); ++i) {
     StorageEntry *e = data_[i].get();
     TShape shape = mshadow::Shape1(e->max_size);
-    e->data = NDArray(shape, e->ctx);
-    total += e->max_size;
+    e->data = NDArray(shape, e->ctx, false, e->type_flag);
+    total += e->max_size * mshadow::mshadow_sizeof(e->type_flag);
   }
   return total;
 }
