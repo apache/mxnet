@@ -93,3 +93,4 @@ List of Contributors
 * [Xiao Liu](https://github.com/skylook)
 * [Lowik CHANUSSOT](https://github.com/Nzeuwik)
 * [Alexander Skidanov](https://github.com/SkidanovAlex)
+* [Ruixiang Zhang](https://github.com/sodabeta7)
