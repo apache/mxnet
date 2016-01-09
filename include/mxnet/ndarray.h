@@ -491,19 +491,19 @@ struct NDArrayFunctionReg
   * \return ref to the registered entry, used to set properties
   */
   inline NDArrayFunctionReg &set_function(void(*fternary)(const NDArray &lhs,
-	  const NDArray &mhs,
-	  const NDArray &rhs,
-	  NDArray *out)) {
-	  body = [fternary](NDArray **used_vars,
-		  real_t *s, NDArray **mutate_vars) {
-		  (*fternary)(*used_vars[0], *used_vars[1], *used_vars[2], mutate_vars[0]);
-	  };
-	  num_use_vars = 3; num_mutate_vars = 1;
-	  type_mask = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
-	  this->add_argument("lhs", "NDArray", "Left operand to the function.");
-	  this->add_argument("mhs", "NDArray", "Middle operand to the function.");
-	  this->add_argument("rhs", "NDArray", "Right operand to the function.");
-	  return *this;
+                                                          const NDArray &mhs,
+                                                          const NDArray &rhs,
+                                                                NDArray *out)) {
+    body = [fternary](NDArray **used_vars,
+      real_t *s, NDArray **mutate_vars) {
+      (*fternary)(*used_vars[0], *used_vars[1], *used_vars[2], mutate_vars[0]);
+    };
+    num_use_vars = 3; num_mutate_vars = 1;
+    type_mask = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
+    this->add_argument("lhs", "NDArray", "Left operand to the function.");
+    this->add_argument("mhs", "NDArray", "Middle operand to the function.");
+    this->add_argument("rhs", "NDArray", "Right operand to the function.");
+    return *this;
   }
   /*!
    * \brief set the function body to a binary NDArray function
