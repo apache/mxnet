@@ -16,6 +16,7 @@ object Base {
   type FunctionHandle = CPtrAddress
   type DataIterHandle = CPtrAddress
   type DataIterCreator = CPtrAddress
+  type KVStoreHandle = CPtrAddress
 
   type MXUintRef = RefInt
   type MXFloatRef = RefFloat
@@ -23,7 +24,7 @@ object Base {
   type FunctionHandleRef = RefLong
   type DataIterHandleRef = RefLong
   type DataIterCreatorRef = RefLong
-  type KVStoreHandle = RefLong
+  type KVStoreHandleRef = RefLong
   type ExecutorHandle = RefLong
   type SymbolHandleRef = RefLong
 

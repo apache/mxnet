@@ -49,7 +49,7 @@ class LibInfo {
   @native def mxNDArraySyncCopyFromCPU(handle: NDArrayHandle,
                                        source: Array[MXFloat],
                                        size: Int): Int
-  @native def mxKVStoreCreate(name: String, handle: KVStoreHandle): Int
+  @native def mxKVStoreCreate(name: String, handle: KVStoreHandleRef): Int
   @native def mxKVStoreInit(handle: KVStoreHandle,
                             len: MXUint,
                             keys: Array[Int],

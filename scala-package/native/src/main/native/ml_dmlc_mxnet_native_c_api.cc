@@ -193,13 +193,8 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayFree
 // Thus we have to wrap the function in a java object, and run env->CallVoidMethod(obj) once updater is invoked,
 // which implies the function registered to KVStore must be stateful.
 // This is why we re-implement MXKVStoreSetUpdater as follows.
-JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreSetUpdater(JNIEnv *env, jobject obj,
-                                                                      jobject kvStoreHandle,
-                                                                      jobject updaterFuncObj,
-                                                                      jobject updaterHandle) {
-  // get kv store ptr
-  jlong kvStorePtr = getLongField(env, kvStoreHandle);
-
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreSetUpdater
+  (JNIEnv *env, jobject obj, jlong kvStorePtr, jobject updaterFuncObj, jobject updaterHandle) {
   jobject updaterFuncObjGlb = env->NewGlobalRef(updaterFuncObj);
   jobject updaterHandleGlb = env->NewGlobalRef(updaterHandle);
   std::function<void(int, const mxnet::NDArray&, mxnet::NDArray*)> updt
@@ -237,9 +232,8 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreSetUpdater(JNIEnv *en
   return 0;
 }
 
-JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreCreate(JNIEnv *env, jobject obj,
-                                                                  jstring name,
-                                                                  jobject kvStoreHandle) {
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreCreate
+  (JNIEnv *env, jobject obj, jstring name, jobject kvStoreHandle) {
   jclass refLongClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
   jfieldID refLongFid = env->GetFieldID(refLongClass, "value", "J");
 
@@ -252,14 +246,8 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreCreate(JNIEnv *env, j
   return ret;
 }
 
-JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreInit(JNIEnv *env, jobject obj,
-                                                                jobject kvStoreHandle,
-                                                                jint len,
-                                                                jintArray keys,
-                                                                jlongArray values) {
-  // get kv store ptr
-  jlong kvStorePtr = getLongField(env, kvStoreHandle);
-
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreInit
+  (JNIEnv *env, jobject obj, jlong kvStorePtr, jint len, jintArray keys, jlongArray values) {
   jint *keyArray = env->GetIntArrayElements(keys, NULL);
   jlong *valueArray = env->GetLongArrayElements(values, NULL);
   int ret = MXKVStoreInit((KVStoreHandle) kvStorePtr,
@@ -271,15 +259,9 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreInit(JNIEnv *env, job
   return ret;
 }
 
-JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStorePush(JNIEnv *env, jobject obj,
-                                                                jobject kvStoreHandle,
-                                                                jint len,
-                                                                jintArray keys,
-                                                                jlongArray values,
-                                                                jint priority) {
-  // get kv store ptr
-  jlong kvStorePtr = getLongField(env, kvStoreHandle);
-
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStorePush
+  (JNIEnv *env, jobject obj, jlong kvStorePtr, jint len, jintArray keys,
+   jlongArray values, jint priority) {
   jint *keyArray = env->GetIntArrayElements(keys, NULL);
   jlong *valueArray = env->GetLongArrayElements(values, NULL);
   int ret = MXKVStorePush((KVStoreHandle)kvStorePtr,
@@ -292,15 +274,9 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStorePush(JNIEnv *env, job
   return ret;
 }
 
-JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStorePull(JNIEnv *env, jobject obj,
-                                                                jobject kvStoreHandle,
-                                                                jint len,
-                                                                jintArray keys,
-                                                                jlongArray outs,
-                                                                jint priority) {
-  // get kv store ptr
-  jlong kvStorePtr = getLongField(env, kvStoreHandle);
-
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStorePull
+  (JNIEnv *env, jobject obj, jlong kvStorePtr, jint len, jintArray keys,
+   jlongArray outs, jint priority) {
   jint *keyArray = env->GetIntArrayElements(keys, NULL);
   jlong *outArray = env->GetLongArrayElements(outs, NULL);
   int ret = MXKVStorePull((KVStoreHandle)kvStorePtr,
@@ -314,8 +290,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStorePull(JNIEnv *env, job
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreGetType
-  (JNIEnv *env, jobject obj, jobject kvStoreHandle, jobject kvType) {
-  jlong kvStorePtr = getLongField(env, kvStoreHandle);
+  (JNIEnv *env, jobject obj, jlong kvStorePtr, jobject kvType) {
   const char *type;
   int ret = MXKVStoreGetType((KVStoreHandle)kvStorePtr, &type);
   jclass refStringClass = env->FindClass("ml/dmlc/mxnet/Base$RefString");
@@ -325,8 +300,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreGetType
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreSendCommmandToServers
-  (JNIEnv *env, jobject obj, jobject kvStoreHandle, jint head, jstring body) {
-  jlong kvStorePtr = getLongField(env, kvStoreHandle);
+  (JNIEnv *env, jobject obj, jlong kvStorePtr, jint head, jstring body) {
   const char *bodyCStr = env->GetStringUTFChars(body, 0);
   int ret = MXKVStoreSendCommmandToServers((KVStoreHandle)kvStorePtr, head, bodyCStr);
   env->ReleaseStringUTFChars(body, bodyCStr);
@@ -334,14 +308,12 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreSendCommmandToServers
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreBarrier
-  (JNIEnv *env, jobject obj, jobject kvStoreHandle) {
-  jlong kvStorePtr = getLongField(env, kvStoreHandle);
+  (JNIEnv *env, jobject obj, jlong kvStorePtr) {
   return MXKVStoreBarrier((KVStoreHandle)kvStorePtr);
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreGetGroupSize
-  (JNIEnv *env, jobject obj, jobject kvStoreHandle, jobject sizeRef) {
-  jlong kvStorePtr = getLongField(env, kvStoreHandle);
+  (JNIEnv *env, jobject obj, jlong kvStorePtr, jobject sizeRef) {
   int size;
   int ret = MXKVStoreGetGroupSize((KVStoreHandle)kvStorePtr, &size);
   setIntField(env, sizeRef, size);
@@ -349,8 +321,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreGetGroupSize
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreGetRank
-  (JNIEnv *env, jobject obj, jobject kvStoreHandle, jobject rankRef) {
-  jlong kvStorePtr = getLongField(env, kvStoreHandle);
+  (JNIEnv *env, jobject obj, jlong kvStorePtr, jobject rankRef) {
   int rank;
   int ret = MXKVStoreGetRank((KVStoreHandle)kvStorePtr, &rank);
   setIntField(env, rankRef, rank);

@@ -17,9 +17,9 @@ object KVStore {
    * @return The created KVStore
    */
   def create(name: String = "local"): KVStore = {
-    val handle = new KVStoreHandle
+    val handle = new KVStoreHandleRef
     checkCall(_LIB.mxKVStoreCreate(name, handle))
-    new KVStore(handle)
+    new KVStore(handle.value)
   }
 }
 
@@ -156,7 +156,7 @@ class KVStore(private val handle: KVStoreHandle) {
     checkCall(_LIB.mxKVStoreIsWorkerNode(isWorker))
     if ("dist" == `type` && isWorker.value != 0) {
       val optSerialized = Serializer.getSerializer.serialize(optimizer)
-      _sendCommandToServers(0, Serializer.encodeBase64String(optSerialized))
+      sendCommandToServers(0, Serializer.encodeBase64String(optSerialized))
     } else {
       setUpdater(Optimizer.getUpdater(optimizer))
     }
@@ -198,7 +198,7 @@ class KVStore(private val handle: KVStoreHandle) {
    * @param head the head of the command
    * @param body the body of the command
    */
-  private def _sendCommandToServers(head: Int, body: String): Unit = {
+  private def sendCommandToServers(head: Int, body: String): Unit = {
     checkCall(_LIB.mxKVStoreSendCommmandToServers(handle, head, body))
   }
 }
