@@ -51,7 +51,8 @@ class MXNET_API NDArray {
    * \param dev_id the device id this tensor sits at
    */
   NDArray(const TBlob &data, int dev_id)
-      : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_), offset_(0) {
+      : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_), offset_(0),
+        dtype_(data.type_flag_) {
   }
   /*!
    * \return the shape of current NDArray
