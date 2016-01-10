@@ -14,7 +14,7 @@
 #ifndef DECL_TERNARY
 #define DECL_TERNARY(XPU, OP, FUN)                                       \
   template<>                                                            \
-  void Eval<XPU, OP>(const TBlob &lhs, const TBlob &mhs,
+  void Eval<XPU, OP>(const TBlob &lhs, const TBlob &mhs, \
                                        const TBlob &rhs, TBlob *ret, RunContext ctx) { \
     FUN<XPU, OP>(lhs, mhs, rhs, ret, ctx);                                   \
   }
