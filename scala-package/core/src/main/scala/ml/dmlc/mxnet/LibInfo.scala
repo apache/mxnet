@@ -104,7 +104,6 @@ class LibInfo {
   @native def mxExecutorFree(handle: ExecutorHandle): Int
   @native def mxExecutorForward(handle: ExecutorHandle, isTrain: Int): Int
   @native def mxExecutorBackward(handle: ExecutorHandle,
-                                 gradsSize: Int,
                                  grads: Array[NDArrayHandle]): Int
   @native def mxExecutorPrint(handle: ExecutorHandle, debugStr: RefString): Int
   @native def mxExecutorSetMonitorCallback(handle: ExecutorHandle, callback: MXMonitorCallback): Int

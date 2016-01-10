@@ -11,12 +11,13 @@ object Base {
   type MXFloat = Float
   type CPtrAddress = Long
 
-  type SymbolHandle = CPtrAddress
   type NDArrayHandle = CPtrAddress
   type FunctionHandle = CPtrAddress
   type DataIterHandle = CPtrAddress
   type DataIterCreator = CPtrAddress
   type KVStoreHandle = CPtrAddress
+  type ExecutorHandle = CPtrAddress
+  type SymbolHandle = CPtrAddress
 
   type MXUintRef = RefInt
   type MXFloatRef = RefFloat
@@ -25,7 +26,7 @@ object Base {
   type DataIterHandleRef = RefLong
   type DataIterCreatorRef = RefLong
   type KVStoreHandleRef = RefLong
-  type ExecutorHandle = RefLong
+  type ExecutorHandleRef = RefLong
   type SymbolHandleRef = RefLong
 
   System.loadLibrary("mxnet-scala")

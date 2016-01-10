@@ -86,7 +86,7 @@ object Executor {
  * @see Symbol.bind : to create executor
  */
 // scalastyle:off finalize
-class Executor(val handle: ExecutorHandle, val symbol: Symbol) {
+class Executor(private[mxnet] val handle: ExecutorHandle, private[mxnet] val symbol: Symbol) {
   var argArrays: Array[NDArray] = null
   protected var gradArrays: Array[NDArray] = null
   protected var auxArrays: Array[NDArray] = null
@@ -136,7 +136,7 @@ class Executor(val handle: ExecutorHandle, val symbol: Symbol) {
   def backward(outGrads: Array[NDArray]): Unit = {
     require(outGrads != null)
     val ndArrayPtrs = outGrads.map(_.handle)
-    checkCall(_LIB.mxExecutorBackward(handle, outGrads.length, ndArrayPtrs))
+    checkCall(_LIB.mxExecutorBackward(handle, ndArrayPtrs))
   }
 
   def backward(outGrad: NDArray): Unit = {

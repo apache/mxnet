@@ -329,9 +329,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreGetRank
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorOutputs
-  (JNIEnv *env, jobject obj, jobject executorHandle, jobject outputs) {
-
-  jlong executorPtr = getLongField(env, executorHandle);
+  (JNIEnv *env, jobject obj, jlong executorPtr, jobject outputs) {
   mx_uint outSize;
   NDArrayHandle *out;
   int ret = MXExecutorOutputs((ExecutorHandle)executorPtr, &outSize, &out);
@@ -352,20 +350,18 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorOutputs
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorFree
-  (JNIEnv * env, jobject obj, jobject handle) {
-  jlong ptr = getLongField(env, handle);
+  (JNIEnv * env, jobject obj, jlong ptr) {
   return MXExecutorFree((ExecutorHandle) ptr);
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorForward
-  (JNIEnv * env, jobject obj, jobject handle, jint isTrain) {
-  jlong ptr = getLongField(env, handle);
+  (JNIEnv * env, jobject obj, jlong ptr, jint isTrain) {
   return MXExecutorForward((ExecutorHandle)ptr, (int)isTrain);
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBackward
-  (JNIEnv * env, jobject obj, jobject handle, jint gradsSize, jlongArray grads) {
-  jlong executorPtr = getLongField(env, handle);
+  (JNIEnv * env, jobject obj, jlong executorPtr, jlongArray grads) {
+  int gradsSize = env->GetArrayLength(grads);
   jlong *gradArr = env->GetLongArrayElements(grads, NULL);
   int ret = MXExecutorBackward((ExecutorHandle)executorPtr,
                                (mx_uint)gradsSize,
@@ -375,17 +371,15 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBackward
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorPrint
-  (JNIEnv * env, jobject obj, jobject handle, jobject debugStr) {
-  jlong ptr = getLongField(env, handle);
+  (JNIEnv * env, jobject obj, jlong ptr, jobject debugStr) {
   const char *retDebugStr;
-  int ret = MXExecutorPrint((ExecutorHandle)handle, &retDebugStr);
+  int ret = MXExecutorPrint((ExecutorHandle)ptr, &retDebugStr);
   setStringField(env, debugStr, retDebugStr);
   return ret;
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorSetMonitorCallback
-  (JNIEnv *env, jobject obj, jobject handle, jobject callbackFuncObj) {
-  jlong executorPtr = getLongField(env, handle);
+  (JNIEnv *env, jobject obj, jlong executorPtr, jobject callbackFuncObj) {
   jobject callbackFuncObjGlb = env->NewGlobalRef(callbackFuncObj);
   std::function<void(const char *, NDArrayHandle)> callback
   = [env, callbackFuncObjGlb](const char *name, NDArrayHandle array) {
