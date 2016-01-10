@@ -49,7 +49,7 @@ class LibInfo {
   @native def mxNDArraySyncCopyFromCPU(handle: NDArrayHandle,
                                        source: Array[MXFloat],
                                        size: Int): Int
-  @native def mxKVStoreCreate(name: String, handle: KVStoreHandle): Int
+  @native def mxKVStoreCreate(name: String, handle: KVStoreHandleRef): Int
   @native def mxKVStoreInit(handle: KVStoreHandle,
                             len: MXUint,
                             keys: Array[Int],
@@ -104,7 +104,6 @@ class LibInfo {
   @native def mxExecutorFree(handle: ExecutorHandle): Int
   @native def mxExecutorForward(handle: ExecutorHandle, isTrain: Int): Int
   @native def mxExecutorBackward(handle: ExecutorHandle,
-                                 gradsSize: Int,
                                  grads: Array[NDArrayHandle]): Int
   @native def mxExecutorPrint(handle: ExecutorHandle, debugStr: RefString): Int
   @native def mxExecutorSetMonitorCallback(handle: ExecutorHandle, callback: MXMonitorCallback): Int
