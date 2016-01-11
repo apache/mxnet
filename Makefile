@@ -94,9 +94,9 @@ endif
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
 SRC = $(wildcard src/*.cc src/*/*.cc)
-OBJ = $(patsubst src/%.cc, build/%.o, $(SRC))
+OBJ = $(patsubst %.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*.cu)
-CUOBJ = $(patsubst src/%.cu, build/%_gpu.o, $(CUSRC))
+CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
 
 ifneq ($(EXTRA_OPERATORS),)
 	EXTRA_SRC = $(wildcard $(EXTRA_OPERATORS)/*.cc $(EXTRA_OPERATORS)/*/*.cc)
@@ -110,10 +110,26 @@ else
 	EXTRA_CUOBJ =
 endif
 
+# plugin
+ifeq ($(USE_TORCH), 1)
+	CFLAGS += -I$(TORCH_PATH)/install/include -I$(TORCH_PATH)/install/include/TH -I$(TORCH_PATH)/install/include/THC -DMXNET_USE_TORCH=1
+	LDFLAGS += -L$(TORCH_PATH)/install/lib -lluajit -lluaT -lTH -lTHC -L$(TORCH_PATH)/install/lib/lua/5.1 -lpaths -ltorch -lnn
+	ifeq ($(USE_CUDA), 1)
+		LDFLAGS += -lcutorch -lcunn
+	endif
+	
+	TORCH_SRC = $(wildcard plugin/torch/*.cc)
+	PLUGIN_OBJ += $(patsubst %.cc, build/%.o, $(TORCH_SRC))
+	TORCH_CUSRC = $(wildcard plugin/torch/*.cu)
+	PLUGIN_CUOBJ += $(patsubst %.cu, build/%_gpu.o, $(TORCH_CUSRC))
+else
+	CFLAGS += -DMXNET_USE_TORCH=0
+endif
+
 LIB_DEP += $(DMLC_CORE)/libdmlc.a
-ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(LIB_DEP)
+ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
-	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ)
+	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
 	LDFLAGS += -lcuda
 endif
 
@@ -125,14 +141,25 @@ else
 endif
 
 
-build/%.o: src/%.cc
+build/src/%.o: src/%.cc
 	@mkdir -p $(@D)
-	$(CXX) -std=c++0x $(CFLAGS) -MM -MT build/$*.o $< >build/$*.d
+	$(CXX) -std=c++0x $(CFLAGS) -MM -MT build/src/$*.o $< >build/src/$*.d
 	$(CXX) -std=c++0x -c $(CFLAGS) -c $< -o $@
 
-build/%_gpu.o: src/%.cu
+build/src/%_gpu.o: src/%.cu
 	@mkdir -p $(@D)
-	$(NVCC) $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" -M -MT build/$*_gpu.o $< >build/$*_gpu.d
+	$(NVCC) $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" -M -MT build/src/$*_gpu.o $< >build/src/$*_gpu.d
+	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $<
+
+build/plugin/%.o: plugin/%.cc
+	@mkdir -p $(@D)
+	$(CXX) -std=c++0x $(CFLAGS) -MM -MT build/plugin/$*.o $< >build/plugin/$*.d
+	$(CXX) -std=c++0x -c $(CFLAGS) -c $< -o $@
+
+# A nvcc bug cause this to generate "generic/xxx.h" dependencies from torch headers.
+# $(NVCC) $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" -M -MT build/plugin/$*_gpu.o $< >build/plugin/$*_gpu.d
+build/plugin/%_gpu.o: plugin/%.cu
+	@mkdir -p $(@D)
 	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $<
 
 $(EXTRA_OPERATORS)/build/%.o: $(EXTRA_OPERATORS)/%.cc
@@ -173,7 +200,7 @@ include tests/cpp/unittest.mk
 test: $(TEST)
 
 lint: rcpplint
-	python2 dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python predict/python
+	python2 dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src plugin scripts python predict/python 
 
 doc: doxygen
 
@@ -216,6 +243,7 @@ clean_all: clean
 
 -include build/*.d
 -include build/*/*.d
+-include build/*/*/*.d
 ifneq ($(EXTRA_OPERATORS),)
 	-include $(EXTRA_OPERATORS)/build/*.d
 endif
