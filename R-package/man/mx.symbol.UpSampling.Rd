@@ -16,6 +16,9 @@ Input filter. Only used by nearest sample_type.}
 \item{sample.type}{{'bilinear', 'nearest'}, required
 upsampling method}
 
+\item{multi.input.mode}{{'concat', 'sum'},optional, default='concat'
+How to handle multiple input. concat means concatenate upsampled images along the channel dimension. sum means add all images together, only available for nearest neighbor upsampling.}
+
 \item{num.args}{int, required
 Number of inputs to be upsampled. For nearest neighbor upsampling, this can be 1-N; the size of output will be(scale*h_0,scale*w_0) and all other inputs will be upsampled to thesame size. For bilinear upsampling this must be 2; 1 input and 1 weight.}
 

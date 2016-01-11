@@ -162,6 +162,38 @@ class Symbol {
                   std::vector<TShape> *arg_shapes,
                   std::vector<TShape> *out_shapes,
                   std::vector<TShape> *aux_shapes) const;
+
+  /*!
+   * \brief infer the types of outputs and unknown input arguments
+   * \param arg_types the type of input arguments of the operator
+   *     this should be of same length as the vector returned by ListArguments
+   *     in_type allows unknown elements, which are checked by type.ndim() == 0.
+   *     For unknown types, Infertype will try to fill in the correct type in in_type
+   *     For known types, Infertype will check type consistency
+   *
+   *     common practice: set the type of data input, and usually weight's type can be infered
+   *
+   * \param out_types Use to store the infered types of outputs.
+   * \param aux_types Use to store the infered types of auxiliary states
+   * \return true if the type inference is successful, false if there is not enough information.
+   * \throws dmlc::Error if the known arg_types are inconsistent.
+   */
+  bool InferType(std::vector<int> *arg_types,
+                  std::vector<int> *out_types,
+                  std::vector<int> *aux_types) const;
+  /*!
+   * \brief infer the types by providing types of known arguments.
+   * \param known_arg_types map of argument name to type of arguments with known types.
+   * \param arg_types used to store infered types of arguments.
+   * \param out_types used to store infered types of outputs.
+   * \param aux_types Use to store the infered types of auxiliary states
+   * \return true if the type inference is successful, false if there is not enough information.
+   * \throws dmlc::Error if the known arg_types are inconsistent.
+   */
+  bool InferType(const std::unordered_map<std::string, int> &known_arg_types,
+                  std::vector<int> *arg_types,
+                  std::vector<int> *out_types,
+                  std::vector<int> *aux_types) const;
   /*!
    * \brief interface for json serialization.
    * \param writer the JSON writer write json.

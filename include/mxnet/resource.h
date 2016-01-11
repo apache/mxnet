@@ -61,12 +61,12 @@ struct Resource {
    * \return the mshadow random number generator requested.
    * \tparam xpu the device type of random number generator.
    */
-  template<typename xpu>
-  inline mshadow::Random<xpu>* get_random(
+  template<typename xpu, typename DType>
+  inline mshadow::Random<xpu, DType>* get_random(
       mshadow::Stream<xpu> *stream) const {
     CHECK_EQ(req.type, ResourceRequest::kRandom);
-    mshadow::Random<xpu> *ret =
-        static_cast<mshadow::Random<xpu>*>(ptr_);
+    mshadow::Random<xpu, DType> *ret =
+        static_cast<mshadow::Random<xpu, DType>*>(ptr_);
     ret->set_stream(stream);
     return ret;
   }

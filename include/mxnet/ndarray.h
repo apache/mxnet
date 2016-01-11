@@ -36,10 +36,12 @@ class MXNET_API NDArray {
    * \param shape the shape of array
    * \param ctx context of NDArray
    * \param delay_alloc whether delay the allocation
+   * \param dtype data type of this ndarray
    */
   NDArray(const TShape &shape, Context ctx,
-          bool delay_alloc = false)
-      : ptr_(std::make_shared<Chunk>(shape.Size(), ctx, delay_alloc)), shape_(shape), offset_(0) {
+          bool delay_alloc = false, int dtype = mshadow::default_type_flag)
+      : ptr_(std::make_shared<Chunk>(shape.Size(), ctx, delay_alloc, dtype)),
+        shape_(shape), offset_(0), dtype_(dtype) {
   }
   /*!
    * \brief constructing a static NDArray that shares data with TBlob
@@ -49,7 +51,8 @@ class MXNET_API NDArray {
    * \param dev_id the device id this tensor sits at
    */
   NDArray(const TBlob &data, int dev_id)
-      : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_), offset_(0) {
+      : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_), offset_(0),
+        dtype_(data.type_flag_) {
   }
   /*!
    * \return the shape of current NDArray
@@ -61,14 +64,23 @@ class MXNET_API NDArray {
    * \return the data TBlob
    */
   inline TBlob data() const {
-    return TBlob(static_cast<real_t*>(ptr_->shandle.dptr) + offset_, \
-                 shape_, ptr_->shandle.ctx.dev_mask());
+    MSHADOW_TYPE_SWITCH(dtype_, DType, {
+      return TBlob(static_cast<DType*>(ptr_->shandle.dptr)
+        + offset_, shape_, ptr_->shandle.ctx.dev_mask());
+    });
+    return TBlob();
   }
   /*!
    * \return the context of NDArray, this function is only valid when the NDArray is not empty
    */
   inline Context ctx() const {
     return ptr_->shandle.ctx;
+  }
+  /*!
+   * \return the data type of NDArray, this function is only valid when the NDArray is not empty
+   */
+  inline int dtype() const {
+    return dtype_;
   }
   /*! \return whether this ndarray is not initialized */
   inline bool is_none() const {
@@ -191,9 +203,9 @@ class MXNET_API NDArray {
    *  not wrapped by NDArray(thus dependency not being tracked).
    *
    * \param data the data source to copy from.
-   * \param size the memory size we want to copy from.
+   * \param size the size of the source array, in sizeof(DType) not raw btyes.
    */
-  void SyncCopyFromCPU(const real_t *data, size_t size) const;
+  void SyncCopyFromCPU(const void *data, size_t size) const;
   /*!
    * \brief Do a synchronize copy to a continugous CPU memory region.
    *
@@ -202,9 +214,9 @@ class MXNET_API NDArray {
    *  not wrapped by NDArray(thus dependency not being tracked).
    *
    * \param data the data source to copyinto.
-   * \param size the memory size we want to copy into.
+   * \param size the memory size we want to copy into, in sizeof(DType) not raw btyes.
    */
-  void SyncCopyToCPU(real_t *data, size_t size) const;
+  void SyncCopyToCPU(void *data, size_t size) const;
   /*!
    * \brief Slice a NDArray
    * \param begin begin index in first dim
@@ -291,13 +303,13 @@ class MXNET_API NDArray {
         shandle.ctx = Context::GPU(dev_id);
       }
       shandle.dptr = data.dptr_;
-      shandle.size = data.shape_.Size() * sizeof(real_t);
+      shandle.size = data.shape_.Size() * mshadow::mshadow_sizeof(data.type_flag_);
     }
     /*! \brief construct a new chunk */
-    Chunk(uint64_t size, Context ctx, bool delay_alloc_)
+    Chunk(uint64_t size, Context ctx, bool delay_alloc_, int dtype)
         : static_data(false), delay_alloc(true) {
       var = Engine::Get()->NewVariable();
-      shandle.size = size * sizeof(real_t);
+      shandle.size = size * mshadow::mshadow_sizeof(dtype);
       shandle.ctx = ctx;
       if (!delay_alloc_) this->CheckAndAlloc();
     }
@@ -326,6 +338,8 @@ class MXNET_API NDArray {
   TShape shape_;
   /*! \brief offset in chunk */
   size_t offset_;
+  /*! \brief type of data */
+  int dtype_;
 };
 
 /*!

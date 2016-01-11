@@ -22,6 +22,9 @@ convolution kernel size: (y, x)}
 \item{stride}{Shape(tuple), optional, default=(1, 1)
 convolution stride: (y, x)}
 
+\item{dilate}{Shape(tuple), optional, default=(1, 1)
+convolution dilate: (y, x)}
+
 \item{pad}{Shape(tuple), optional, default=(0, 0)
 pad for convolution: (y, x)}
 
