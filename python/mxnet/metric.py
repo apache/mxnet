@@ -83,6 +83,17 @@ class RMSE(EvalMetric):
             self.sum_metric += numpy.sqrt(numpy.mean((label.asnumpy() - pred.asnumpy())**2))
         self.num_inst += 1
 
+class Torch(EvalMetric):
+    """Dummy metric for torch criterions"""
+    def __init__(self):
+        super(Torch, self).__init__('torch')
+
+    def update(self, labels, preds):
+        self.reset()
+        for p in preds:
+            self.sum_metric += p.asnumpy().mean()
+        self.num_inst += 1
+
 class CustomMetric(EvalMetric):
     """Custom evaluation metric that takes a NDArray function.
 

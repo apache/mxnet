@@ -4,14 +4,14 @@
  * \brief activation op
  * \author Bing Xu
 */
-#include "./torch_module-inl.h"
+#include "./torch_criterion-inl.h"
 #include "../../src/operator/mshadow_op.h"
 
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<gpu>(TorchModuleParam param) {
-  return new TorchModuleOp<gpu>(param);
+Operator *CreateOp<gpu>(TorchCriterionParam param) {
+  return new TorchCriterionOp<gpu>(param);
 }
 
 }  // namespace op

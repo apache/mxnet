@@ -28,7 +28,7 @@ struct TorchModuleParam : public dmlc::Parameter<TorchModuleParam> {
   uint32_t num_outputs;
   DMLC_DECLARE_PARAMETER(TorchModuleParam) {
     DMLC_DECLARE_FIELD(lua_string)
-    .describe("lua string that is called to generate the object");
+    .describe("lua string that is called to generate the torch module object");
     DMLC_DECLARE_FIELD(num_data)
     .describe("the number of input data");
     DMLC_DECLARE_FIELD(num_params)
@@ -73,6 +73,23 @@ class TorchModuleOp : public Operator {
       lua_pop(L, 2);
     }
     CHECK_EQ(param_num, param_.num_params);
+    // // Free the parameters allocated by torch so it doesn't take up memory.
+    // if (param_.num_params != 0) {
+    //   // get the parameters into the stack
+    //   lua_getfield(L, -1, "parameters");
+    //   lua_pushvalue(L, -2);
+    //   int err = lua_pcall(L, 1, 1, 0);
+    //   CHECK_EQ(err, 0);
+    //   // iterate the parameters table to put tblobs inside
+    //   lua_pushnil(L);
+    //   while (lua_next(L, -2)) {
+    //     CHECK(luaT_isudata(L, -1, TorchTensor::TensorType(xpu::kDevMask)));
+    //     void* udata = luaT_toudata(L, -1, TorchTensor::TensorType(xpu::kDevMask));
+    //     TorchTensor::FreeInternal(static_cast<THGeneralTensor>(udata), xpu::kDevMask);
+    //     lua_pop(L, 1);
+    //   }
+    //   lua_pop(L, 1);  // pop the parameter table
+    // }
     // serialize
     TorchState::Serialize(&chunk_);
   }

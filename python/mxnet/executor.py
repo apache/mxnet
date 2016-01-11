@@ -353,7 +353,7 @@ class DataParallelExecutorManager(object):
         self.train_execs = []
         for i in range(len(ctx)):
             data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
-                           for k, v in train_data.provide_data}
+                           for k, v in train_data.provide_data + train_data.provide_label}
             train_exec = symbol.simple_bind(ctx[i], 'write', **data_shapes)
             self.train_execs.append(train_exec)
 
