@@ -95,7 +95,7 @@ def get_iterator(args, kv):
     data_dir = args.data_dir
     if '://' not in args.data_dir:
         _download(args.data_dir)
-        flat = False if len(data_shape) == 3 else True
+    flat = False if len(data_shape) == 3 else True
 
     train           = mx.io.MNISTIter(
         image       = data_dir + "train-images-idx3-ubyte",
