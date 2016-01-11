@@ -73,23 +73,23 @@ class TorchModuleOp : public Operator {
       lua_pop(L, 2);
     }
     CHECK_EQ(param_num, param_.num_params);
-    // // Free the parameters allocated by torch so it doesn't take up memory.
-    // if (param_.num_params != 0) {
-    //   // get the parameters into the stack
-    //   lua_getfield(L, -1, "parameters");
-    //   lua_pushvalue(L, -2);
-    //   int err = lua_pcall(L, 1, 1, 0);
-    //   CHECK_EQ(err, 0);
-    //   // iterate the parameters table to put tblobs inside
-    //   lua_pushnil(L);
-    //   while (lua_next(L, -2)) {
-    //     CHECK(luaT_isudata(L, -1, TorchTensor::TensorType(xpu::kDevMask)));
-    //     void* udata = luaT_toudata(L, -1, TorchTensor::TensorType(xpu::kDevMask));
-    //     TorchTensor::FreeInternal(static_cast<THGeneralTensor>(udata), xpu::kDevMask);
-    //     lua_pop(L, 1);
-    //   }
-    //   lua_pop(L, 1);  // pop the parameter table
-    // }
+    // Free the parameters allocated by torch so it doesn't take up memory.
+    if (param_.num_params != 0) {
+      // get the parameters into the stack
+      lua_getfield(L, -1, "parameters");
+      lua_pushvalue(L, -2);
+      int err = lua_pcall(L, 1, 1, 0);
+      CHECK_EQ(err, 0);
+      // iterate the parameters table to free tblobs inside
+      lua_pushnil(L);
+      while (lua_next(L, -2)) {
+        CHECK(luaT_isudata(L, -1, TorchTensor::TensorType(xpu::kDevMask)));
+        void* udata = luaT_toudata(L, -1, TorchTensor::TensorType(xpu::kDevMask));
+        TorchTensor::FreeInternal(static_cast<THGeneralTensor>(udata), xpu::kDevMask);
+        lua_pop(L, 1);
+      }
+      lua_pop(L, 1);  // pop the parameter table
+    }
     // serialize
     TorchState::Serialize(&chunk_);
   }
@@ -223,6 +223,8 @@ Operator* CreateOp(TorchModuleParam type);
 class TorchModuleProp : public OperatorProperty {
  protected:
   mutable THCharStorage* chunk_;
+  mutable std::vector<std::string> arguments_;
+
   void InitChunk_() const {
     lua_State* L = TorchState::LuaState();
     std::string exec = std::string("return ") + param_.lua_string;
@@ -241,49 +243,50 @@ class TorchModuleProp : public OperatorProperty {
 
  public:
   std::vector<std::string> ListArguments() const override {
-    std::vector<std::string> ret;
-    if (!chunk_) {
-      InitChunk_();
-    }
-    std::string data = "data";
-    for (uint32_t i = 0; i < param_.num_data; ++i) {
-      ret.push_back(data + "_" + std::to_string(i));
-    }
-    std::string lua_code =
-        "return function(module)\n"
-        "          local params = module:parameters()\n"
-        "          local dict = {}\n"
-        "          if params == nil then\n"
-        "             return {}\n"
-        "          end\n"
-        "          for id, p in ipairs(params) do\n"
-        "             dict[p] = string.format('param_%d', id)\n"
-        "          end\n"
-        "          for key, value in pairs(module) do\n"
-        "             if dict[value] then\n"
-        "                dict[value] = key\n"
-        "             end\n"
-        "          end\n"
-        "          local ret = {}\n"
-        "          for _, p in ipairs(params) do\n"
-        "             table.insert(ret, dict[p])\n"
-        "          end\n"
-        "          return ret\n"
-        "end\n";
-    lua_State* L = TorchState::LuaState();
-    luaL_loadstring(L, lua_code.c_str());
-    int err = lua_pcall(L, 0, 1, 0);  // return the function
-    CHECK_EQ(err, 0) << lua_tostring(L, -1);
-    TorchState::Deserialize(chunk_);
-    err = lua_pcall(L, 1, 1, 0);  // call the function
-    CHECK_EQ(err, 0) << lua_tostring(L, -1);
-    lua_pushnil(L);
-    while (lua_next(L, -2)) {
-      ret.push_back(lua_tostring(L, -1));
+    if (arguments_.size() == 0) {
+      if (!chunk_) {
+        InitChunk_();
+      }
+      for (uint32_t i = 0; i < param_.num_data; ++i) {
+        std::string data = "data_" + std::to_string(i);
+        arguments_.push_back(data);
+      }
+      std::string lua_code =
+          "return function(module)\n"
+          "          local params = module:parameters()\n"
+          "          local dict = {}\n"
+          "          if params == nil then\n"
+          "             return {}\n"
+          "          end\n"
+          "          for id, p in ipairs(params) do\n"
+          "             dict[p] = string.format('param_%d', id)\n"
+          "          end\n"
+          "          for key, value in pairs(module) do\n"
+          "             if dict[value] then\n"
+          "                dict[value] = key\n"
+          "             end\n"
+          "          end\n"
+          "          local ret = {}\n"
+          "          for _, p in ipairs(params) do\n"
+          "             table.insert(ret, dict[p])\n"
+          "          end\n"
+          "          return ret\n"
+          "end\n";
+      lua_State* L = TorchState::LuaState();
+      luaL_loadstring(L, lua_code.c_str());
+      int err = lua_pcall(L, 0, 1, 0);  // return the function
+      CHECK_EQ(err, 0) << lua_tostring(L, -1);
+      TorchState::Deserialize(chunk_);
+      err = lua_pcall(L, 1, 1, 0);  // call the function
+      CHECK_EQ(err, 0) << lua_tostring(L, -1);
+      lua_pushnil(L);
+      while (lua_next(L, -2)) {
+        arguments_.push_back(lua_tostring(L, -1));
+        lua_pop(L, 1);
+      }
       lua_pop(L, 1);
     }
-    lua_pop(L, 1);
-    return ret;
+    return arguments_;
   }
 
   virtual std::vector<std::string> ListOutputs() const {

@@ -169,57 +169,6 @@ class TorchTensor {
     return tensor;
   }
 
-  static TBlob THTensorToTBlob(THGeneralTensor* handle) {
-    using namespace mshadow;
-    lua_State* L = TorchState::LuaState();
-    TBlob res;
-    lua_getfield(L, -1, "contiguous");
-    lua_pushvalue(L, -2);
-    int err = lua_pcall(L, 1, 1, 0);
-    CHECK_EQ(err, 0);
-    if (luaT_isudata(L, -1, TorchTensor::TensorType(cpu::kDevMask))) {
-      THFloatTensor* tensor = static_cast<THFloatTensor*>(luaT_toudata(L, -1,
-        TorchTensor::TensorType(cpu::kDevMask)));
-      *handle = static_cast<THGeneralTensor>(tensor);
-      THFloatStorage* storage = tensor->storage;
-      TShape shape(tensor->size, tensor->size + tensor->nDimension);
-      res = TBlob(storage->data, shape, cpu::kDevMask);
-#if MXNET_USE_CUDA
-    } else if (luaT_isudata(L, -1, TorchTensor::TensorType(gpu::kDevMask))) {
-      THCudaTensor* tensor = static_cast<THCudaTensor*>(luaT_toudata(L, -1,
-        TorchTensor::TensorType(gpu::kDevMask)));
-      *handle = static_cast<THGeneralTensor>(tensor);
-      THCudaStorage* storage = tensor->storage;
-      TShape shape(tensor->size, tensor->size + tensor->nDimension);
-      res = TBlob(storage->data, shape, gpu::kDevMask);
-#endif
-    } else {
-      LOG(FATAL) << "Unsupported Torch Tensor type " << luaT_typename(L, -1);
-    }
-    lua_pop(L, 2);
-    return res;
-  }
-
-  static void THTensorFree(THGeneralTensor handle, int dev_mask) {
-    switch (dev_mask) {
-      case cpu::kDevMask: {
-        THFloatTensor* original = static_cast<THFloatTensor*>(handle);
-        THFloatTensor_free(original);
-        break;
-      }
-#if MXNET_USE_CUDA
-      case gpu::kDevMask: {
-        THCState* state = TorchState::CudaState();
-        THCudaTensor* original = static_cast<THCudaTensor*>(handle);
-        THCudaTensor_free(state, original);
-        break;
-      }
-#endif
-      default:
-        LOG(FATAL) << "Unknown device type " << dev_mask;
-    }
-  }
-
   static void FreeInternal(THGeneralTensor tensor, int dev_mask) {
     switch (dev_mask) {
       case cpu::kDevMask: {

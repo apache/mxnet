@@ -88,10 +88,9 @@ class Torch(EvalMetric):
     def __init__(self):
         super(Torch, self).__init__('torch')
 
-    def update(self, labels, preds):
-        self.reset()
-        for p in preds:
-            self.sum_metric += p.asnumpy().mean()
+    def update(self, _, preds):
+        for pred in preds:
+            self.sum_metric += pred.asnumpy().mean()
         self.num_inst += 1
 
 class CustomMetric(EvalMetric):
