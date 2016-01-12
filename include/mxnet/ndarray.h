@@ -28,7 +28,7 @@ namespace mxnet {
 /*!
  * \brief ndarray interface
  */
-class MXNET_API NDArray {
+class NDArray {
  public:
   /*! \brief default cosntructor */
   NDArray() {}
@@ -354,7 +354,7 @@ class MXNET_API NDArray {
  * \note The function name explicitly marks the order of from and to
  *     due to different possible convention carried by copy function.
  */
-MXNET_API void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
+void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
 
 /*!
  * \brief Perform elementwise sum over each data from source, store result into out.
@@ -362,7 +362,7 @@ MXNET_API void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
  * \param out the target ndarray
  * \param priority Priority of the action.
  */
-MXNET_API void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priority = 0);
+void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priority = 0);
 
 /*!
  * \brief elementwise add
@@ -370,69 +370,69 @@ MXNET_API void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, 
  * \param rhs right operand
  * \return a new result ndarray
  */
-MXNET_API NDArray operator+(const NDArray &lhs, const NDArray &rhs);
+NDArray operator+(const NDArray &lhs, const NDArray &rhs);
 /*!
  * \brief elementwise add
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-MXNET_API NDArray operator+(const NDArray &lhs, const real_t &rhs);
+NDArray operator+(const NDArray &lhs, const real_t &rhs);
 /*!
  * \brief elementwise substraction
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-MXNET_API NDArray operator-(const NDArray &lhs, const NDArray &rhs);
+NDArray operator-(const NDArray &lhs, const NDArray &rhs);
 /*!
  * \brief elementwise substraction
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-MXNET_API NDArray operator-(const NDArray &lhs, const real_t &rhs);
+NDArray operator-(const NDArray &lhs, const real_t &rhs);
 /*!
  * \brief elementwise multiplication
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-MXNET_API NDArray operator*(const NDArray &lhs, const NDArray &rhs); \
+NDArray operator*(const NDArray &lhs, const NDArray &rhs); \
 /*!
  * \brief elementwise multiplication
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-MXNET_API NDArray operator*(const NDArray &lhs, const real_t &rhs);
+NDArray operator*(const NDArray &lhs, const real_t &rhs);
 /*!
  * \brief elementwise division
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-MXNET_API NDArray operator/(const NDArray &lhs, const NDArray &rhs);
+NDArray operator/(const NDArray &lhs, const NDArray &rhs);
 /*!
  * \brief elementwise division
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-MXNET_API NDArray operator/(const NDArray &lhs, const real_t &rhs);
+NDArray operator/(const NDArray &lhs, const real_t &rhs);
 
 /*!
  * \brief Seed the random number generator.
  * \param seed the seed to set to global random number generators.
  */
-MXNET_API void RandomSeed(uint32_t seed);
+void RandomSeed(uint32_t seed);
 /*!
  * \brief Sample uniform distribution for each elements of out.
  * \param begin lower bound of distribution.
  * \param end upper bound of distribution.
  * \param out output NDArray.
  */
-MXNET_API void SampleUniform(real_t begin, real_t end, NDArray *out);
+void SampleUniform(real_t begin, real_t end, NDArray *out);
 
 /*!
  * \brief Sample gaussian distribution for each elements of out.
@@ -440,7 +440,7 @@ MXNET_API void SampleUniform(real_t begin, real_t end, NDArray *out);
  * \param sigma standard deviation of gaussian distribution.
  * \param out output NDArray.
  */
-MXNET_API void SampleGaussian(real_t mu, real_t sigma, NDArray *out);
+void SampleGaussian(real_t mu, real_t sigma, NDArray *out);
 //--------------------------------------------------------------
 // The following part are API Registration of NDArray functions.
 //--------------------------------------------------------------
