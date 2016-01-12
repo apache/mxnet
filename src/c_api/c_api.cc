@@ -41,6 +41,8 @@ struct MXAPIThreadLocalEntry {
   std::vector<void *> ret_handles;
   /*! \brief result holder for returning shapes */
   std::vector<TShape> arg_shapes, out_shapes, aux_shapes;
+  /*! \brief result holder for returning type flags */
+  std::vector<int> arg_types, out_types, aux_types;
   /*! \brief result holder for returning shape dimensions */
   std::vector<mx_uint> arg_shape_ndim, out_shape_ndim, aux_shape_ndim;
   /*! \brief result holder for returning shape pointer */
@@ -128,6 +130,22 @@ int MXNDArrayCreate(const mx_uint *shape,
   API_END();
 }
 
+int MXNDArrayCreateEx(const mx_uint *shape,
+                    mx_uint ndim,
+                    int dev_type,
+                    int dev_id,
+                    int delay_alloc,
+                    int dtype,
+                    NDArrayHandle *out) {
+  API_BEGIN();
+  *out = new NDArray(
+      TShape(shape, shape + ndim),
+      Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
+      delay_alloc != 0,
+      dtype);
+  API_END();
+}
+
 int MXNDArrayLoadFromRawBytes(const void *buf,
                               size_t size,
                               NDArrayHandle *out) {
@@ -156,7 +174,7 @@ int MXNDArraySaveRawBytes(NDArrayHandle handle,
 }
 
 int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
-                             const mx_float *data,
+                             const void *data,
                              size_t size) {
   API_BEGIN();
   static_cast<NDArray*>(handle)->SyncCopyFromCPU(data, size);
@@ -164,7 +182,7 @@ int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
 }
 
 int MXNDArraySyncCopyToCPU(NDArrayHandle handle,
-                           mx_float *data,
+                           void *data,
                            size_t size) {
   API_BEGIN();
   static_cast<NDArray*>(handle)->SyncCopyToCPU(data, size);
@@ -292,6 +310,18 @@ int MXNDArrayGetData(NDArrayHandle handle,
   API_END();
 }
 
+int MXNDArrayGetDType(NDArrayHandle handle,
+                     int *out_dtype) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  if (!arr->is_none()) {
+    *out_dtype = arr->dtype();
+  } else {
+    *out_dtype = -1;
+  }
+  API_END();
+}
+
 int MXNDArrayGetContext(NDArrayHandle handle,
                         int *out_dev_type,
                         int *out_dev_id) {
@@ -358,7 +388,28 @@ int MXFuncInvoke(FunctionHandle fun,
   auto *f = static_cast<const NDArrayFunctionReg*>(fun);
   f->body((NDArray**)(use_vars),  //  NOLINT(*)
           scalar_args,
-          (NDArray**)(mutate_vars));  //  NOLINT(*)
+          (NDArray**)(mutate_vars),  //  NOLINT(*)
+          0,
+          NULL,
+          NULL);
+  API_END();
+}
+
+int MXFuncInvokeEx(FunctionHandle fun,
+                 NDArrayHandle *use_vars,
+                 mx_float *scalar_args,
+                 NDArrayHandle *mutate_vars,
+                 int num_params,
+                 char **param_keys,
+                 char **param_vals) {
+  API_BEGIN();
+  auto *f = static_cast<const NDArrayFunctionReg*>(fun);
+  f->body((NDArray**)(use_vars),  //  NOLINT(*)
+          scalar_args,
+          (NDArray**)(mutate_vars),  //  NOLINT(*)
+          num_params,
+          param_keys,
+          param_vals);
   API_END();
 }
 
@@ -696,6 +747,48 @@ int MXSymbolInferShape(SymbolHandle sym,
     *aux_shape_size = static_cast<mx_uint>(ret->aux_shapes.size());
     *aux_shape_ndim = dmlc::BeginPtr(ret->aux_shape_ndim);
     *aux_shape_data = dmlc::BeginPtr(ret->aux_shape_data);
+    *complete = 1;
+  } else {
+    *complete = 0;
+  }
+  API_END();
+}
+
+int MXSymbolInferType(SymbolHandle sym,
+                      mx_uint num_args,
+                      const char** keys,
+                      const int *arg_type_data,
+                      mx_uint *in_type_size,
+                      const int **in_type_data,
+                      mx_uint *out_type_size,
+                      const int **out_type_data,
+                      mx_uint *aux_type_size,
+                      const int **aux_type_data,
+                      int *complete) {
+  Symbol *s = static_cast<Symbol*>(sym);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  bool succ;
+  API_BEGIN();
+  if (keys == nullptr && num_args != 0) {
+    ret->arg_types.clear();
+    for (mx_uint i = 0; i < num_args; ++i) {
+      ret->arg_types.push_back(arg_type_data[i]);
+    }
+    succ = s->InferType(&(ret->arg_types), &(ret->out_types), &(ret->aux_types));
+  } else {
+    std::unordered_map<std::string, int> kwargs;
+    for (mx_uint i = 0; i < num_args; ++i) {
+      kwargs[keys[i]] = arg_type_data[i];
+    }
+    succ = s->InferType(kwargs, &(ret->arg_types), &(ret->out_types), &(ret->aux_types));
+  }
+  if (succ) {
+    *in_type_size = static_cast<mx_uint>(ret->arg_types.size());
+    *in_type_data = dmlc::BeginPtr(ret->arg_types);
+    *out_type_size = static_cast<mx_uint>(ret->out_types.size());
+    *out_type_data = dmlc::BeginPtr(ret->out_types);
+    *aux_type_size = static_cast<mx_uint>(ret->aux_types.size());
+    *aux_type_data = dmlc::BeginPtr(ret->aux_types);
     *complete = 1;
   } else {
     *complete = 0;

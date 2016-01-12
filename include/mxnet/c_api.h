@@ -147,6 +147,26 @@ MXNET_DLL int MXNDArrayCreate(const mx_uint *shape,
                               int dev_id,
                               int delay_alloc,
                               NDArrayHandle *out);
+
+/*!
+ * \brief create a NDArray with specified shape and data type
+ * \param shape the pointer to the shape
+ * \param ndim the dimension of the shape
+ * \param dev_type device type, specify device we want to take
+ * \param dev_id the device id of the specific device
+ * \param delay_alloc whether to delay allocation until
+ *    the narray is first mutated
+ * \param dtype data type of created array
+ * \param out the returning handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayCreateEx(const mx_uint *shape,
+                              mx_uint ndim,
+                              int dev_type,
+                              int dev_id,
+                              int delay_alloc,
+                              int dtype,
+                              NDArrayHandle *out);
 /*!
  * \brief create a NDArray handle that is loaded from raw bytes.
  * \param buf the head of the raw bytes
@@ -205,7 +225,7 @@ MXNET_DLL int MXNDArrayLoad(const char* fname,
  * \param size the memory size we want to copy from.
  */
 MXNET_DLL int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
-                                       const mx_float *data,
+                                       const void *data,
                                        size_t size);
 /*!
  * \brief Perform a synchronize copyto a continugous CPU memory region.
@@ -219,7 +239,7 @@ MXNET_DLL int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
  * \param size the memory size we want to copy into.
  */
 MXNET_DLL int MXNDArraySyncCopyToCPU(NDArrayHandle handle,
-                                     mx_float *data,
+                                     void *data,
                                      size_t size);
 /*!
  * \brief Wait until all the pending writes with respect NDArray are finished.
@@ -277,6 +297,14 @@ MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
  */
 MXNET_DLL int MXNDArrayGetData(NDArrayHandle handle,
                                mx_float **out_pdata);
+/*!
+ * \brief get the type of the data in NDArray
+ * \param handle the handle to the narray
+ * \param out_dtype pointer holder to get type of data
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayGetDType(NDArrayHandle handle,
+                               int *out_dtype);
 /*!
  * \brief get the context of the NDArray
  * \param handle the handle to the narray
@@ -355,7 +383,26 @@ MXNET_DLL int MXFuncInvoke(FunctionHandle fun,
                            NDArrayHandle *use_vars,
                            mx_float *scalar_args,
                            NDArrayHandle *mutate_vars);
-
+/*!
+ * \brief invoke a function, the array size of passed in arguments
+ *   must match the values in the
+ * \param fun the function
+ * \param use_vars the normal arguments passed to function
+ * \param scalar_args the scalar qarguments
+ * \param mutate_vars the mutate arguments
+ * \param num_params number of keyword parameters
+ * \param param_keys keys for keyword parameters
+ * \param param_vals values for keyword parameters
+ * \return 0 when success, -1 when failure happens
+ * \sa MXFuncDescribeArgs
+ */
+MXNET_DLL int MXFuncInvokeEx(FunctionHandle fun,
+                             NDArrayHandle *use_vars,
+                             mx_float *scalar_args,
+                             NDArrayHandle *mutate_vars,
+                             int num_params,
+                             char **param_keys,
+                             char **param_vals);
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------
@@ -618,6 +665,35 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
                                  const mx_uint **aux_shape_ndim,
                                  const mx_uint ***aux_shape_data,
                                  int *complete);
+/*!
+ * \brief infer type of unknown input types given the known one.
+ *  The types are packed into a CSR matrix represented by arg_ind_ptr and arg_type_data
+ *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *
+ * \param sym symbol handle
+ * \param num_args numbe of input arguments.
+ * \param keys the key of keyword args (optional)
+ * \param arg_type_data the content of the CSR
+ * \param in_type_size sizeof the returning array of in_types
+ * \param in_type_data returning array of pointers to head of the input type.
+ * \param out_type_size sizeof the returning array of out_types
+ * \param out_type_data returning array of pointers to head of the input type.
+ * \param aux_type_size sizeof the returning array of aux_types
+ * \param aux_type_data returning array of pointers to head of the auxiliary type.
+ * \param complete whether infer type completes or more information is needed.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
+                                mx_uint num_args,
+                                const char** keys,
+                                const int *arg_type_data,
+                                mx_uint *in_type_size,
+                                const int **in_type_data,
+                                mx_uint *out_type_size,
+                                const int **out_type_data,
+                                mx_uint *aux_type_size,
+                                const int **aux_type_data,
+                                int *complete);
 //--------------------------------------------
 // Part 4: Executor interface
 //--------------------------------------------

@@ -92,3 +92,7 @@ List of Contributors
 * [Junru Shao](https://github.com/yzgysjr)
 * [Xiao Liu](https://github.com/skylook)
 * [Lowik CHANUSSOT](https://github.com/Nzeuwik)
+* [Alexander Skidanov](https://github.com/SkidanovAlex)
+* [Ruixiang Zhang](https://github.com/sodabeta7)
+* [Lodewic van Twillert](https://github.com/Lodewic)
+* [Aditya Kumar](https://github.com/hiraditya)

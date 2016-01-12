@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-arguments
+# pylint: disable=invalid-name, protected-access, too-many-arguments, too-many-lines
 """Symbolic configuration API of mxnet."""
 from __future__ import absolute_import
 
@@ -7,14 +7,15 @@ import copy
 import ctypes
 from numbers import Number
 import sys
+import numpy
 from .base import _LIB
-from .base import c_array, c_str, mx_uint, py_str, string_types
+from .base import c_array, c_str, mx_uint, py_str, string_types, mx_real_t
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from .base import check_call, ctypes2docstring
 from .name import NameManager
 from .attribute import AttrScope
 from .context import Context
-from .ndarray import NDArray, zeros
+from .ndarray import NDArray, zeros, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .executor import Executor
 
 
@@ -299,6 +300,87 @@ class Symbol(object):
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
+    def infer_type(self, *args, **kwargs):
+        """Infer the type of outputs and arguments of given known types of arguments.
+
+        User can either pass in the known types in positional way or keyword argument way.
+        Tuple of Nones is returned if there is not enough information passed in.
+        An error will be raised if there is inconsistency found in the known types passed in.
+
+        Parameters
+        ----------
+        *args :
+            Provide type of arguments in a positional way.
+            Unknown type can be marked as None
+
+        **kwargs :
+            Provide keyword arguments of known types.
+
+        Returns
+        -------
+        arg_types : list of numpy.dtype or None
+            List of types of arguments.
+            The order is in the same order as list_arguments()
+        out_types : list of numpy.dtype or None
+            List of types of outputs.
+            The order is in the same order as list_outputs()
+        aux_types : list of numpy.dtype or None
+            List of types of outputs.
+            The order is in the same order as list_auxiliary()
+        """
+        # pylint: disable=too-many-locals
+        if len(args) != 0 and len(kwargs) != 0:
+            raise ValueError('Can only specify known argument \
+                    types either by positional or kwargs way.')
+        sdata = []
+        if len(args) != 0:
+            keys = None
+            for s in args:
+                if s is not None:
+                    s = numpy.dtype(s).type
+                    if s not in _DTYPE_NP_TO_MX:
+                        raise TypeError('Argument need to be one of '+str(_DTYPE_NP_TO_MX))
+                    sdata.append(_DTYPE_NP_TO_MX[s])
+                else:
+                    sdata.append(-1)
+        else:
+            keys = []
+            for k, v in kwargs.items():
+                v = numpy.dtype(v).type
+                if v in _DTYPE_NP_TO_MX:
+                    keys.append(c_str(k))
+                    sdata.append(_DTYPE_NP_TO_MX[v])
+        arg_type_size = mx_uint()
+        arg_type_data = ctypes.POINTER(ctypes.c_int)()
+        out_type_size = mx_uint()
+        out_type_data = ctypes.POINTER(ctypes.c_int)()
+        aux_type_size = mx_uint()
+        aux_type_data = ctypes.POINTER(ctypes.c_int)()
+        complete = ctypes.c_int()
+        check_call(_LIB.MXSymbolInferType(
+            self.handle,
+            mx_uint(len(sdata)),
+            c_array(ctypes.c_char_p, keys),
+            c_array(ctypes.c_int, sdata),
+            ctypes.byref(arg_type_size),
+            ctypes.byref(arg_type_data),
+            ctypes.byref(out_type_size),
+            ctypes.byref(out_type_data),
+            ctypes.byref(aux_type_size),
+            ctypes.byref(aux_type_data),
+            ctypes.byref(complete)))
+        if complete.value != 0:
+            arg_types = [
+                _DTYPE_MX_TO_NP[arg_type_data[i]] for i in range(arg_type_size.value)]
+            out_types = [
+                _DTYPE_MX_TO_NP[out_type_data[i]] for i in range(out_type_size.value)]
+            aux_types = [
+                _DTYPE_MX_TO_NP[aux_type_data[i]] for i in range(aux_type_size.value)]
+            return (arg_types, out_types, aux_types)
+        else:
+            return (None, None, None)
+        # pylint: enable=too-many-locals
+
     def infer_shape(self, *args, **kwargs):
         """Infer the shape of outputs and arguments of given known shapes of arguments.
 
@@ -491,8 +573,9 @@ class Symbol(object):
             raise TypeError('Only Accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays
 
-    def simple_bind(self, ctx, grad_req='write', **kwargs):
+    def simple_bind(self, ctx, grad_req='write', type_dict=None, **kwargs):
         """Bind current symbol to get an executor, allocate all the ndarrays needed.
+        Allows specifying data types.
 
         This function will ask user to pass in ndarray of position
         they like to bind to, and it will automatically allocate the ndarray
@@ -508,6 +591,12 @@ class Symbol(object):
             - 'write' means everytime gradient is write to specified args_grad NDArray.
             - 'add' means everytime gradient is add to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
+        type_dict  : dict of str->numpy.dtype
+            Input type dictionary, name->dtype
+        kwargs : dict of str->shape
+            Input shape dictionary, name->shape
+        type_dict  : dict of str->numpy.dtype
+            Input type dictionary, name->dtype
         kwargs : dict of str->shape
             Input shape dictionary, name->shape
 
@@ -516,21 +605,27 @@ class Symbol(object):
         executor : mxnet.Executor
             The generated Executor
         """
+        # pylint: disable=too-many-locals
+        if type_dict is None:
+            type_dict = {k: mx_real_t for k in self.list_arguments()}
         arg_shapes, _, aux_shapes = self.infer_shape(**kwargs)
-        if arg_shapes == None:
+        arg_types, _, aux_types = self.infer_type(**type_dict)
+        if arg_shapes == None or arg_types == None:
             raise ValueError("Input node is not complete")
         # alloc space
-        arg_ndarrays = [zeros(shape, ctx) for shape in arg_shapes]
+        arg_ndarrays = [zeros(shape, ctx, dtype=dtype)for dtype, shape in zip(arg_types,
+                                                                              arg_shapes)]
 
         if grad_req != 'null':
             grad_ndarrays = {}
-            for name, shape in zip(self.list_arguments(), arg_shapes):
+            for name, shape, dtype in zip(self.list_arguments(), arg_shapes, arg_types):
                 if not (name.endswith('data') or name.endswith('label')):
-                    grad_ndarrays[name] = zeros(shape, ctx)
+                    grad_ndarrays[name] = zeros(shape, ctx, dtype=dtype)
         else:
             grad_ndarrays = None
 
-        aux_ndarrays = [zeros(shape, ctx) for shape in aux_shapes]
+        aux_ndarrays = [zeros(shape, ctx, dtype=dtype) for shape, dtype in zip(aux_shapes,
+                                                                               aux_types)]
         executor = self.bind(ctx, arg_ndarrays, grad_ndarrays, grad_req, aux_ndarrays)
         return executor
 

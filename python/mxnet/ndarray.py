@@ -7,11 +7,27 @@ import warnings
 import sys
 import numpy as np
 from .base import _LIB, string_types, numeric_types
-from .base import c_array, py_str, c_str
-from .base import mx_uint, mx_float, mx_float_p, NDArrayHandle, FunctionHandle
+from .base import c_array, py_str, c_str, mx_real_t
+from .base import mx_uint, mx_float, NDArrayHandle, FunctionHandle
 from .base import ctypes2buffer
 from .base import check_call, ctypes2docstring
 from .context import Context
+
+_DTYPE_NP_TO_MX = {
+    np.float32 : 0,
+    np.float64 : 1,
+    np.float16 : 2,
+    np.uint8   : 3,
+    np.int32   : 4
+}
+
+_DTYPE_MX_TO_NP = {
+    0 : np.float32,
+    1 : np.float64,
+    2 : np.float16,
+    3 : np.uint8,
+    4 : np.int32
+}
 
 def _new_empty_handle():
     """Return a new empty handle.
@@ -26,7 +42,7 @@ def _new_empty_handle():
     check_call(_LIB.MXNDArrayCreateNone(ctypes.byref(hdl)))
     return hdl
 
-def _new_alloc_handle(shape, ctx, delay_alloc):
+def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     """Return a new handle with specified shape and context.
 
     Empty handle is only used to hold results
@@ -36,12 +52,13 @@ def _new_alloc_handle(shape, ctx, delay_alloc):
     a new empty ndarray handle
     """
     hdl = NDArrayHandle()
-    check_call(_LIB.MXNDArrayCreate(
+    check_call(_LIB.MXNDArrayCreateEx(
         c_array(mx_uint, shape),
         mx_uint(len(shape)),
         ctypes.c_int(ctx.device_typeid),
         ctypes.c_int(ctx.device_id),
         ctypes.c_int(int(delay_alloc)),
+        ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
         ctypes.byref(hdl)))
     return hdl
 
@@ -230,16 +247,16 @@ class NDArray(object):
         """
         if not isinstance(source_array, np.ndarray):
             try:
-                source_array = np.array(source_array, dtype=np.float32)
+                source_array = np.array(source_array, dtype=self.dtype)
             except:
                 raise TypeError('array must be an array_like data,' +
                                 'type %s is not supported' % str(type(array)))
-        source_array = np.ascontiguousarray(source_array, dtype=np.float32)
+        source_array = np.ascontiguousarray(source_array, dtype=self.dtype)
         if source_array.shape != self.shape:
             raise ValueError('array shape do not match the shape of NDArray')
         check_call(_LIB.MXNDArraySyncCopyFromCPU(
             self.handle,
-            source_array.ctypes.data_as(mx_float_p),
+            source_array.ctypes.data_as(ctypes.c_void_p),
             ctypes.c_size_t(source_array.size)))
 
     def _slice(self, start, stop):
@@ -307,6 +324,19 @@ class NDArray(object):
             self.handle, ctypes.byref(dev_typeid), ctypes.byref(dev_id)))
         return Context(Context.devtype2str[dev_typeid.value], dev_id.value)
 
+    @property
+    def dtype(self):
+        """Get data type of current NDArray.
+
+        Returns
+        -------
+        an numpy.dtype object representing type of current ndarray
+        """
+        mx_dtype = ctypes.c_int()
+        check_call(_LIB.MXNDArrayGetDType(
+            self.handle, ctypes.byref(mx_dtype)))
+        return _DTYPE_MX_TO_NP[mx_dtype.value]
+
     def asnumpy(self):
         """Return a copied numpy array of current array.
 
@@ -315,10 +345,10 @@ class NDArray(object):
         array : numpy.ndarray
             A copy of array content.
         """
-        data = np.empty(self.shape, dtype=np.float32)
+        data = np.empty(self.shape, dtype=self.dtype)
         check_call(_LIB.MXNDArraySyncCopyToCPU(
             self.handle,
-            data.ctypes.data_as(mx_float_p),
+            data.ctypes.data_as(ctypes.c_void_p),
             ctypes.c_size_t(data.size)))
         return data
 
@@ -335,6 +365,23 @@ class NDArray(object):
         if self.shape != (1,):
             raise ValueError("The current array is not a scalar")
         return self.asnumpy()[0]
+
+    def astype(self, dtype):
+        """Return a copied numpy array of current array with specified type.
+
+        Parameters
+        ----------
+        dtype : numpy.dtype or string
+            Desired type of result array.
+
+        Returns
+        -------
+        array : numpy.ndarray
+            A copy of array content.
+        """
+        res = empty(self.shape, ctx=self.context, dtype=dtype)
+        self.copyto(res)
+        return res
 
     def copyto(self, other):
         """Copy the content of current array to other.
@@ -360,7 +407,7 @@ class NDArray(object):
                 return
             return NDArray._copyto(self, out=other)
         elif isinstance(other, Context):
-            hret = NDArray(_new_alloc_handle(self.shape, other, True))
+            hret = NDArray(_new_alloc_handle(self.shape, other, True, self.dtype))
             return NDArray._copyto(self, out=hret)
         else:
             raise TypeError('copyto do not support type ' + str(type(other)))
@@ -388,7 +435,7 @@ def onehot_encode(indices, out):
     # pylint: enable= no-member, protected-access
 
 
-def empty(shape, ctx=None):
+def empty(shape, ctx=None, dtype=mx_real_t):
     """Create an empty uninitialized new NDArray, with specified shape.
 
     Parameters
@@ -408,9 +455,9 @@ def empty(shape, ctx=None):
         shape = (shape, )
     if ctx is None:
         ctx = Context.default_ctx
-    return NDArray(handle=_new_alloc_handle(shape, ctx, False))
+    return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))
 
-def zeros(shape, ctx=None):
+def zeros(shape, ctx=None, dtype=mx_real_t):
     """Create a new NDArray filled with 0, with specified shape.
 
     Parameters
@@ -425,11 +472,11 @@ def zeros(shape, ctx=None):
     out: Array
         The created NDArray.
     """
-    arr = empty(shape, ctx)
+    arr = empty(shape, ctx, dtype)
     arr[:] = 0.0
     return arr
 
-def ones(shape, ctx=None):
+def ones(shape, ctx=None, dtype=mx_real_t):
     """Create a new NDArray filled with 1, with specified shape.
 
     Parameters
@@ -444,12 +491,12 @@ def ones(shape, ctx=None):
     out: Array
         The created NDArray.
     """
-    arr = empty(shape, ctx)
+    arr = empty(shape, ctx, dtype)
     arr[:] = 1.0
     return arr
 
 
-def array(source_array, ctx=None):
+def array(source_array, ctx=None, dtype=mx_real_t):
     """Create a new NDArray that copies content from source_array.
 
     Parameters
@@ -468,10 +515,10 @@ def array(source_array, ctx=None):
 
     if not isinstance(source_array, np.ndarray):
         try:
-            source_array = np.array(source_array, dtype=np.float32)
+            source_array = np.array(source_array, dtype=dtype)
         except:
             raise TypeError('source_array must be array like object')
-    arr = empty(source_array.shape, ctx)
+    arr = empty(source_array.shape, ctx, dtype)
     arr[:] = source_array
     return arr
 
@@ -630,10 +677,13 @@ def _make_ndarray_function(handle):
             if not accept_empty_mutate:
                 raise TypeError('argument out is required to call %s' % func_name)
             out = NDArray(_new_empty_handle())
-        check_call(_LIB.MXFuncInvoke(handle,
-                                     c_array(NDArrayHandle, (lhs.handle, rhs.handle)),
-                                     c_array(mx_float, ()),
-                                     c_array(NDArrayHandle, (out.handle,))))
+        check_call(_LIB.MXFuncInvokeEx(handle,
+                                       c_array(NDArrayHandle, (lhs.handle, rhs.handle)),
+                                       c_array(mx_float, ()),
+                                       c_array(NDArrayHandle, (out.handle,)),
+                                       ctypes.c_int(0),
+                                       c_array(ctypes.c_char_p, []),
+                                       c_array(ctypes.c_char_p, [])))
         return out
 
     def unary_ndarray_function(src, out=None):
@@ -647,11 +697,14 @@ def _make_ndarray_function(handle):
             if not accept_empty_mutate:
                 raise TypeError('argument out is required to call %s' % func_name)
             out = NDArray(_new_empty_handle())
-        check_call(_LIB.MXFuncInvoke( \
+        check_call(_LIB.MXFuncInvokeEx( \
                 handle, \
                 c_array(NDArrayHandle, (src.handle,)), \
                 c_array(mx_float, ()), \
-                c_array(NDArrayHandle, (out.handle,))))
+                c_array(NDArrayHandle, (out.handle,)), \
+                ctypes.c_int(0), \
+                c_array(ctypes.c_char_p, []), \
+                c_array(ctypes.c_char_p, [])))
         return out
 
     def generic_ndarray_function(*args, **kwargs):
@@ -681,11 +734,14 @@ def _make_ndarray_function(handle):
                     NDArray(_new_empty_handle()) for i in range(n_mutate_vars))
             else:
                 raise TypeError('argument out is required to call %s' % func_name)
-        check_call(_LIB.MXFuncInvoke( \
+        check_call(_LIB.MXFuncInvokeEx( \
                 handle, \
                 c_array(NDArrayHandle, [args[i].handle for i in use_vars_range]), \
                 c_array(mx_float, [args[i] for i in scalar_range]), \
-                c_array(NDArrayHandle, [v.handle for v in mutate_vars])))
+                c_array(NDArrayHandle, [v.handle for v in mutate_vars]), \
+                ctypes.c_int(0), \
+                c_array(ctypes.c_char_p, []), \
+                c_array(ctypes.c_char_p, [])))
         if n_mutate_vars == 1:
             return mutate_vars[0]
         else:

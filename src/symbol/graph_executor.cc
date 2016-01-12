@@ -529,6 +529,22 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NDArray> &in_args,
       op_nodes_[i].outputs[j].shape = out_shapes[i][j];
     }
   }
+  // type inference
+  std::vector<std::vector<int> > out_types(op_nodes_.size());
+  std::vector<std::vector<int> > aux_types(op_nodes_.size());
+  for (size_t i = 0; i < out_types.size(); ++i) {
+    out_types[i].resize(op_nodes_[i].outputs.size(), -1);
+  }
+  for (size_t i = 0; i < graph_.arg_nodes.size(); ++i) {
+    out_types[graph_.arg_nodes[i]][0] = in_args[i].dtype();
+  }
+  CHECK(graph_.InferNodeTypes(topo_order_, &out_types, &aux_types))
+      << "Type inference cannot be complete in bind";
+  for (size_t i = 0; i < out_types.size(); ++i) {
+    for (size_t j = 0; j < out_types[i].size(); ++j) {
+      op_nodes_[i].outputs[j].type_flag = out_types[i][j];
+    }
+  }
   // bind aux args
   size_t aux_ndarray_idx = 0;
   for (auto i : topo_order_) {
@@ -536,6 +552,7 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NDArray> &in_args,
     for (size_t j = 0; j < aux_shapes[i].size(); ++j) {
       DataEntryInfo &info = op_nodes_[i].aux_states[j];
       info.shape = aux_shapes[i][j];
+      info.type_flag = aux_types[i][j];
       info.type = kBindByExternal;
       if (mirror_source_map_.count(i) == 0) {
         if (graph_.nodes[i].backward_source_id == -1) {
@@ -554,6 +571,10 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NDArray> &in_args,
           << "Incorrect NDArray shape"
           << " Input: " << info.data.data().shape_
           << " Desired: " << info.shape;
+      CHECK_EQ(info.data.dtype(), info.type_flag)
+          << "Incorrect NDArray type"
+          << " Input: " << info.data.dtype()
+          << " Desired: " << info.type_flag;
     }
   }
 }
@@ -614,7 +635,7 @@ void GraphExecutor::InitDataEntryMemory() {
       }
       if (out->type == kNotInitialized) {
         out->storage_id = allocator.Request(
-            op_nodes_[nid].ctx, out->shape, nid);
+            op_nodes_[nid].ctx, out->type_flag, out->shape, nid);
         out->type = kInternalAllocated;
       }
     }
@@ -639,7 +660,7 @@ void GraphExecutor::InitDataEntryMemory() {
     }
   }
   // one pass complete, allocate real memory
-  this->total_allocated_reals_ = allocator.InitStorages();
+  this->total_allocated_bytes_ = allocator.InitStorages();
   // get the real data NDArray into the DataEntryInfo
   for (size_t i = 0; i < topo_order_.size(); ++i) {
     uint32_t nid = topo_order_[i];
@@ -825,7 +846,7 @@ void GraphExecutor::Print(std::ostream &os) const {
       os << '\n';
     }
   }
-  os << "Total " << (total_allocated_reals_ >> 18UL) <<" MB allocated\n";
+  os << "Total " << (total_allocated_bytes_ >> 20UL) <<" MB allocated\n";
   os << "Total " << total_allocated_temp_ <<" TempSpace resource requested\n";
 }
 

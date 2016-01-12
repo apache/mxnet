@@ -34,7 +34,7 @@ void BinaryOp(const NDArray &lhs,
   }
   // if out is none, allocate space
   if (out->is_none()) {
-    *out = NDArray(OP::GetShape(lhs.shape(), rhs.shape()), lhs.ctx(), true);
+    *out = NDArray(OP::GetShape(lhs.shape(), rhs.shape()), lhs.ctx(), true, lhs.dtype());
   } else {
     // no check if both of them are on cpu
     if (lhs.ctx().dev_mask() != cpu::kDevMask ||
@@ -118,7 +118,7 @@ void ScalarOp(const NDArray &lhs,
               const real_t &rhs,
               NDArray *out) {
   if (out->is_none()) {
-    *out = NDArray(lhs.shape(), lhs.ctx(), true);
+    *out = NDArray(lhs.shape(), lhs.ctx(), true, lhs.dtype());
   } else {
     CHECK(out->ctx() == lhs.ctx()) << "target context mismatch";
     CHECK(out->shape() == lhs.shape()) << "target shape mismatch";
@@ -276,7 +276,7 @@ void ClipOp(const NDArray &src,
             const real_t &a_min, const real_t &a_max,
             NDArray *out) {
   if (out->is_none()) {
-    *out = NDArray(src.shape(), src.ctx(), true);
+    *out = NDArray(src.shape(), src.ctx(), true, src.dtype());
   } else {
     CHECK(out->ctx() == src.ctx()) << "target context mismatch";
     CHECK(out->shape() == src.shape()) << "target shape mismatch";
@@ -466,12 +466,9 @@ void NDArray::Save(dmlc::Stream *strm) const {
   }
   // save type flag
   int32_t type_flag = save_data.type_flag_;
-  CHECK(type_flag == mshadow::DataType<real_t>::kFlag)
-      << "Only support float NDArray so far";
   strm->Write(&type_flag, sizeof(type_flag));
   CHECK(save_data.CheckContiguous());
-  // save data: need to change this after more type mask is supported
-  size_t type_size = sizeof(real_t);
+  size_t type_size = mshadow::mshadow_sizeof(type_flag);
   strm->Write(save_data.dptr_, type_size * shape_.Size());
 }
 
@@ -488,12 +485,10 @@ bool NDArray::Load(dmlc::Stream *strm) {
   // load type flag
   int32_t type_flag;
   if (strm->Read(&type_flag, sizeof(type_flag)) != sizeof(type_flag)) return false;
-  CHECK(type_flag == mshadow::DataType<real_t>::kFlag)
-      << "Only support float NDArray so far, type_flag=" << type_flag;
   // load data into CPU
-  NDArray temp(shape, Context::CPU());
+  NDArray temp(shape, Context::CPU(), false, type_flag);
   TBlob load_data = temp.data();
-  size_t type_size = sizeof(real_t);
+  size_t type_size = mshadow::mshadow_sizeof(type_flag);
   size_t nread = type_size * shape.Size();
 
   if (strm->Read(load_data.dptr_, nread) != nread) return false;
@@ -536,19 +531,19 @@ void NDArray::Load(dmlc::Stream* fi,
 }
 
 NDArray NDArray::Copy(Context ctx) const {
-  NDArray ret(shape(), ctx, true);
+  NDArray ret(shape(), ctx, true, dtype_);
   CopyFromTo(*this, &ret);
   return ret;
 }
 
-void NDArray::SyncCopyFromCPU(const real_t *data, size_t size) const {
+void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   this->WaitToWrite();
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
   Context ctx = this->ctx();
   TBlob dst = this->data();
-  TBlob src((real_t*)data, dshape, cpu::kDevMask); // NOLINT(*)
+  TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
 
   RunContext run_ctx;
   run_ctx.stream = nullptr;
@@ -568,14 +563,14 @@ void NDArray::SyncCopyFromCPU(const real_t *data, size_t size) const {
   }
 }
 
-void NDArray::SyncCopyToCPU(real_t *data, size_t size) const {
+void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   this->WaitToRead();
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
   Context ctx = this->ctx();
   TBlob src = this->data();
-  TBlob dst(data, dshape, cpu::kDevMask); // NOLINT(*)
+  TBlob dst(data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
 
   RunContext run_ctx;
   run_ctx.stream = nullptr;
@@ -636,14 +631,16 @@ MXNET_REGISTER_NDARRAY_FUN(_copyto)
 
 // register random number generators
 MXNET_REGISTER_NDARRAY_FUN(_random_uniform)
-.set_body([](NDArray **u, real_t *s, NDArray **out) {
+.set_body([](NDArray **u, real_t *s, NDArray **out,
+             int num_params, char **param_keys, char **param_vals) {
     SampleUniform(s[0], s[1], out[0]);
   })
 .set_num_scalars(2)
 .set_num_mutate_vars(1);
 
 MXNET_REGISTER_NDARRAY_FUN(_random_gaussian)
-.set_body([](NDArray **u, real_t *s, NDArray **out) {
+.set_body([](NDArray **u, real_t *s, NDArray **out,
+             int num_params, char **param_keys, char **param_vals) {
     SampleGaussian(s[0], s[1], out[0]);
   })
 .set_num_scalars(2)
@@ -651,7 +648,8 @@ MXNET_REGISTER_NDARRAY_FUN(_random_gaussian)
 
 MXNET_REGISTER_NDARRAY_FUN(clip)
 .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
-.set_body([](NDArray **u, real_t *s, NDArray **out) {
+.set_body([](NDArray **u, real_t *s, NDArray **out,
+             int num_params, char **param_keys, char **param_vals) {
     ClipOp(*u[0], s[0], s[1], out[0]);
   })
 .set_num_use_vars(1)

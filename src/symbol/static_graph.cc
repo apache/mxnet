@@ -161,6 +161,97 @@ bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
   return true;
 }
 
+bool StaticGraph::InferNodeTypes(const std::vector<uint32_t> &topo_order,
+                                  std::vector<std::vector<int> > *node_out_types,
+                                  std::vector<std::vector<int> > *node_aux_types) const {
+  for (uint32_t nid : topo_order) {
+    const Node& node = nodes[nid];
+    if (node.is_forward()) {
+      std::vector<int> in_type;
+      for (const DataEntry& e : node.inputs) {
+        in_type.push_back((*node_out_types)[e.source_id][e.index]);
+      }
+      try {
+        if (!node.op->InferType(&in_type,
+                                 &(*node_out_types)[nid],
+                                 &(*node_aux_types)[nid])) return false;
+      } catch (const op::InferTypeError &err) {
+        // error handling
+        const std::string &op_name = node.name;
+        std::string arg_name = node.op->ListArguments()[err.index];
+        std::ostringstream os;
+        os << "InferType Error in "
+           << op_name << "\'s" << ' ' << arg_name << " argument\n";
+        auto &source = nodes[node.inputs[err.index].source_id];
+        if (source.is_variable()) {
+          os << "Corresponding keyword of symbol: " << source.name << '\n' << err.msg;
+        }
+        throw dmlc::Error(os.str());
+      }
+      for (size_t i = 0; i < node.inputs.size(); ++i) {
+        const DataEntry& e = node.inputs[i];
+        (*node_out_types)[e.source_id][e.index] = in_type[i];
+      }
+    } else if (nodes[nid].is_backward()) {
+      // simply use types from forward pass to assign backward type
+      const Node& forward = nodes[node.backward_source_id];
+      CHECK(forward.is_forward());
+      std::vector<int>& in_grad_types = (*node_out_types)[nid];
+      CHECK(in_grad_types.size() == forward.inputs.size());
+      // assign the input type to output gradients
+      for (size_t i = 0; i < forward.inputs.size(); ++i) {
+        const DataEntry &e = forward.inputs[i];
+        try {
+          TYPE_ASSIGN_CHECK(in_grad_types, i, (*node_out_types)[e.source_id][e.index]);
+        } catch (const op::InferTypeError &err) {
+          const std::string &op_name = forward.name;
+          std::string arg_name = forward.op->ListArguments()[e.index];
+          std::ostringstream os;
+          os << "InferType Error in "
+             << op_name << "\'s" << ' ' << arg_name << " gradient argument\n"
+             << err.msg;
+          throw dmlc::Error(os.str());
+        }
+      }
+      // consistent check for input types
+      auto& out_data_types = (*node_out_types)[node.backward_source_id];
+      // use BackwardInputs to select entries corresponding to node.inputs
+      auto in_type = forward.op->BackwardInputs(
+          out_data_types, in_grad_types, out_data_types);
+      for (size_t i = 0; i < node.inputs.size(); ++i) {
+        const DataEntry& e = node.inputs[i];
+        try {
+          TYPE_ASSIGN_CHECK((*node_out_types)[e.source_id], e.index, in_type[i]);
+        } catch (const op::InferTypeError &err) {
+          const std::string &op_name = nodes[e.source_id].name;
+          std::ostringstream os;
+          os << "InferType Error in "
+             << op_name << "\'s" << " gradient values\n"
+             << err.msg;
+          throw dmlc::Error(os.str());
+        }
+      }
+
+      // set for auxilary states type.
+      auto& source_aux_types = (*node_aux_types)[node.backward_source_id];
+      for (size_t i = 0; i < source_aux_types.size(); ++i) {
+        try {
+          (*node_aux_types)[nid].push_back(source_aux_types[i]);
+        } catch (const op::InferTypeError &err) {
+          const std::string &op_name = nodes[nid].name;
+          std::ostringstream os;
+          os << "InferType Error in "
+             << op_name << "\'s" << " aux states\n"
+             << err.msg;
+          throw dmlc::Error(os.str());
+        }
+      }
+    }
+  }
+  // TODO(bing) assign type for head gradient
+  return true;
+}
+
 bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
                              std::vector<TShape> *out_shape,
                              std::vector<TShape> *aux_shape) const {
@@ -206,6 +297,57 @@ bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
     if (node_aux_shapes[nid].size() > 0) {
       for (auto const &shape : node_aux_shapes[nid]) {
         aux_shape->push_back(shape);
+      }
+    }
+  }
+  return true;
+}
+
+bool StaticGraph::InferType(std::vector<int> *in_type,
+                             std::vector<int> *out_type,
+                             std::vector<int> *aux_type) const {
+  std::vector<std::vector<int> > node_out_types(nodes.size());
+  std::vector<std::vector<int> > node_aux_types(nodes.size());
+  for (size_t i = 0; i < nodes.size(); ++i) {
+    int nout = 1;
+    if (nodes[i].is_forward()) {
+      nout = nodes[i].op->NumOutputs();
+    } else if (nodes[i].is_backward()) {
+      nout = static_cast<int>(nodes[nodes[i].backward_source_id].inputs.size());
+    }
+    node_out_types[i].resize(nout, -1);
+  }
+  CHECK(in_type->size() == arg_nodes.size())
+        << "Wrong number of inputs to infer type";
+  for (size_t i = 0; i < arg_nodes.size(); ++i) {
+    node_out_types[arg_nodes[i]][0] = (*in_type)[i];
+  }
+  if (!InferNodeTypes(this->TopoSort(),
+                       &node_out_types,
+                       &node_aux_types)) return false;
+  for (size_t i = 0; i < arg_nodes.size(); ++i) {
+    (*in_type)[i] = node_out_types[arg_nodes[i]][0];
+  }
+  out_type->resize(heads.size());
+  for (size_t i = 0; i < heads.size(); ++i) {
+    const DataEntry &e = heads[i];
+    (*out_type)[i] = node_out_types[e.source_id][e.index];
+  }
+
+  // set back auxiliary nodes.
+  aux_type->clear();
+  std::vector<uint32_t> head_nodes;
+  for (const auto& head : heads) {
+    head_nodes.push_back(head.source_id);
+  }
+  std::vector<uint32_t> fwd_nodes = PostDFSOrder(head_nodes, std::unordered_set<uint32_t>());
+  uint32_t counter = 0;
+  for (uint32_t nid : fwd_nodes) {
+    // backward consistentcy check.
+    CHECK(nid == counter++);
+    if (node_aux_types[nid].size() > 0) {
+      for (auto const &type : node_aux_types[nid]) {
+        aux_type->push_back(type);
       }
     }
   }
