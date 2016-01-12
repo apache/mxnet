@@ -89,6 +89,8 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
+include $(MXNET_PLUGINS)
+
 .PHONY: clean all test lint doc clean_all rcpplint rcppexport roxygen
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
@@ -117,7 +119,7 @@ ifeq ($(USE_TORCH), 1)
 	ifeq ($(USE_CUDA), 1)
 		LDFLAGS += -lcutorch -lcunn
 	endif
-	
+
 	TORCH_SRC = $(wildcard plugin/torch/*.cc)
 	PLUGIN_OBJ += $(patsubst %.cc, build/%.o, $(TORCH_SRC))
 	TORCH_CUSRC = $(wildcard plugin/torch/*.cu)
@@ -200,7 +202,7 @@ include tests/cpp/unittest.mk
 test: $(TEST)
 
 lint: rcpplint
-	python2 dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src plugin scripts python predict/python 
+	python2 dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src plugin scripts python predict/python
 
 doc: doxygen
 
