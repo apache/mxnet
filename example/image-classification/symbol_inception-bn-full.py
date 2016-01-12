@@ -42,7 +42,7 @@ def InceptionFactoryB(data, num_3x3red, num_3x3, num_d3x3red, num_d3x3, name):
     concat = mx.symbol.Concat(*[c3x3, cd3x3, pooling], name='ch_concat_%s_chconcat' % name)
     return concat
 
-def inception(num_classes = 21841):
+def get_symbol(num_classes = 21841):
     # data
     data = mx.symbol.Variable(name="data")
     # stage 1
