@@ -1,5 +1,7 @@
 package ml.dmlc.mxnet
 
+import java.io.File
+
 import ml.dmlc.mxnet.NDArrayConversions._
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.scalactic.Tolerance._
@@ -104,5 +106,51 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
     val normed = NDArray.norm(ndarray)
     assert(normed.shape === Array(1))
     assert(normed.toScalar === math.sqrt(14.0).toFloat +- 1e-3f)
+  }
+
+  test("one hot encode") {
+    // TODO
+  }
+
+  test("dot") {
+    // TODO
+  }
+
+  test("choose_element_0index") {
+    // TODO
+  }
+
+  test("copy to") {
+    // TODO
+  }
+
+  test("random uniform") {
+    // TODO
+  }
+
+  test("random gaussian") {
+    // TODO
+  }
+
+  test("abs") {
+    // TODO
+  }
+
+  test("save and load") {
+    val filename = "ndarray.bin"
+    try {
+      val ndarray = NDArray.array(Array(1f, 2f, 3f), shape = Array(3, 1))
+      NDArray.save(filename, Map("local" -> ndarray))
+      val (keys, arrays) = NDArray.load(filename)
+      assert(keys.length === 1)
+      assert(keys(0) === "local")
+      assert(arrays.length === 1)
+      val loadedArray = arrays(0)
+      assert(loadedArray.shape === Array(3, 1))
+      assert(loadedArray.toArray === Array(1f, 2f, 3f))
+    } finally {
+      val file = new File(filename)
+      file.delete()
+    }
   }
 }

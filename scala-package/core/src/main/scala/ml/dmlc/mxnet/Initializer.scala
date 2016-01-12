@@ -1,8 +1,5 @@
 package ml.dmlc.mxnet
 
-import ml.dmlc.mxnet.NDArray.array
-
-
 /**
  *
  * Base class for Initializer.
@@ -46,13 +43,13 @@ abstract class Initializer {
     val f = shape(3) / 2.0f
     val c = (2 * f - 1 - f % 2) / (2.0f * f)
 
-    (0 to (arr.size)).foreach { i =>
+    (0 to arr.size).foreach { i =>
       val x = i % shape(3)
       val y = (i / shape(3)) % shape(2)
       weight(i) = (1 - math.abs(x / f - c)) * (1 - math.abs(y / f - c))
     }
 
-    arr.set(array(weight))
+    arr.set(NDArray.array(weight, shape))
   }
 
   def _initZero(name: String, arr: NDArray): Unit = {

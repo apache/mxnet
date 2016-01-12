@@ -188,6 +188,82 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayFree
   return MXNDArrayFree((NDArrayHandle) ndArrayHandle);
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayLoad
+  (JNIEnv * env, jobject obj, jstring jfname, jobject joutSize,
+   jobject jhandles, jobject joutNameSize, jobject jnames) {
+  mx_uint outSize;
+  NDArrayHandle *outArr;
+  mx_uint outNameSize;
+  const char **outNames;
+
+  const char *fname = env->GetStringUTFChars(jfname, 0);
+  int ret = MXNDArrayLoad(fname, &outSize, &outArr, &outNameSize, &outNames);
+  env->ReleaseStringUTFChars(jfname, fname);
+
+  if (ret) {
+    return ret;
+  }
+
+  // fill sizes
+  jclass refIntClass = env->FindClass("ml/dmlc/mxnet/Base$RefInt");
+  jfieldID valueInt = env->GetFieldID(refIntClass, "value", "I");
+  env->SetIntField(joutSize, valueInt, outSize);
+  env->SetIntField(joutNameSize, valueInt, outNameSize);
+
+  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jmethodID arrayAppend = env->GetMethodID(arrayClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+
+  // fill handles
+  jclass longCls = env->FindClass("java/lang/Long");
+  jmethodID longConst = env->GetMethodID(longCls, "<init>", "(J)V");
+  for (int i = 0; i < outSize; ++i) {
+    jobject handle = env->NewObject(longCls, longConst, outArr[i]);
+    env->CallObjectMethod(jhandles, arrayAppend, handle);
+  }
+
+  // fill names
+  for (int i = 0; i < outNameSize; ++i) {
+    jstring jname = env->NewStringUTF(outNames[i]);
+    env->CallObjectMethod(jnames, arrayAppend, jname);
+  }
+
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySave
+  (JNIEnv * env, jobject obj, jstring jfname, jlongArray jhandles, jobjectArray jkeys) {
+  int numArgs = env->GetArrayLength(jhandles);
+  const char **keys = NULL;
+  if (jkeys != NULL) {
+    keys = new const char *[numArgs];
+    for (int i = 0; i < numArgs; i++) {
+      jstring jkey = (jstring) env->GetObjectArrayElement(jkeys, i);
+      const char *key = env->GetStringUTFChars(jkey, 0);
+      keys[i] = key;
+    }
+  }
+
+  const char *fname = env->GetStringUTFChars(jfname, 0);
+  jlong *handles = env->GetLongArrayElements(jhandles, NULL);
+
+  int ret = MXNDArraySave(fname, (mx_uint) numArgs, (NDArrayHandle *) handles, keys);
+
+  env->ReleaseLongArrayElements(jhandles, handles, 0);
+  env->ReleaseStringUTFChars(jfname, fname);
+
+  // release allocated memory
+  if (jkeys != NULL) {
+    for (int i = 0; i < numArgs; i++) {
+      jstring jkey = (jstring) env->GetObjectArrayElement(jkeys, i);
+      env->ReleaseStringUTFChars(jkey, keys[i]);
+    }
+    delete[] keys;
+  }
+
+  return ret;
+}
+
 // The related c api MXKVStoreSetUpdater function takes a c function pointer as its parameter,
 // while we write java functions here in scala-package.
 // Thus we have to wrap the function in a java object, and run env->CallVoidMethod(obj) once updater is invoked,
