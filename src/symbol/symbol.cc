@@ -86,19 +86,19 @@ inline void Symbol::DFSVisit(FVisit fvisit) const {
       stack.push_back(std::make_pair(&head.source, 0));
       visited.insert(ptr);
     }
-  }
-  while (!stack.empty()) {
-    std::pair<const std::shared_ptr<Node> *, uint32_t>& back = stack.back();
-    if (back.second == back.first->get()->inputs.size()) {
-      fvisit(*(back.first));
-      stack.pop_back();
-    } else {
-      std::vector<Symbol::DataEntry>& inputs = back.first->get()->inputs;
-      Symbol::DataEntry& input = inputs.at(back.second++);
-      Node* ptr = input.source.get();
-      if (visited.count(ptr) == 0) {
-        stack.push_back(std::make_pair(&input.source, 0));
-        visited.insert(ptr);
+    while (!stack.empty()) {
+      std::pair<const std::shared_ptr<Node> *, uint32_t>& back = stack.back();
+      if (back.second == back.first->get()->inputs.size()) {
+        fvisit(*(back.first));
+        stack.pop_back();
+      } else {
+        std::vector<Symbol::DataEntry>& inputs = back.first->get()->inputs;
+        Symbol::DataEntry& input = inputs.at(back.second++);
+        Node* ptr = input.source.get();
+        if (visited.count(ptr) == 0) {
+          stack.push_back(std::make_pair(&input.source, 0));
+          visited.insert(ptr);
+        }
       }
     }
   }
