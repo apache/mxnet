@@ -88,7 +88,7 @@ struct elu {
 struct elu_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType x, DType a) {
-    return DType(x > 0.0f ? 1.0f : a * expf(x));
+    return DType(x > 0.0f ? 1.0f : a + x);
   }
 };
 
