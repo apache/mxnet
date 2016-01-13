@@ -7,22 +7,23 @@
 #ifndef PLUGIN_TORCH_TORCH_BASE_H_
 #define PLUGIN_TORCH_TORCH_BASE_H_
 #include <mxnet/base.h>
-#include <vector>
 
 extern "C" {
 #include <lua.h>
 #include <luaT.h>
 #include <lualib.h>
-#include <THStorage.h>
-#include <THTensor.h>
+#include <TH/THStorage.h>
+#include <TH/THTensor.h>
 }
 
 #if MXNET_USE_CUDA
 extern "C" {
-#include <THCStorage.h>
-#include <THCTensor.h>
+#include <THC/THCStorage.h>
+#include <THC/THCTensor.h>
 }
 #endif  // MXNET_USE_CUDA
+
+#include <vector>
 
 namespace mxnet {
 

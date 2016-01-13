@@ -99,5 +99,5 @@ EXTRA_OPERATORS =
 #----------------------------
 
 # whether to use torch integration. This requires installing torch.
-USE_TORCH = 0
-TORCH_PATH = $(HOME)/torch
+# TORCH_PATH = $(HOME)/torch
+# MXNET_PLUGINS += plugin/torch/torch.mk
