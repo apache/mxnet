@@ -13,13 +13,15 @@ template<>
 Operator *CreateOp<cpu>(ActivationParam param) {
   switch (param.act_type) {
     case activation::kReLU:
-      return new ActivationOp<cpu, mshadow_op::relu, mshadow_op::relu_grad>();
+        return new ActivationOp<cpu, mshadow_op::relu, mshadow_op::relu_grad>();
     case activation::kSigmoid:
-      return new ActivationOp<cpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad>();
+        return new ActivationOp<cpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad>();
     case activation::kTanh:
-      return new ActivationOp<cpu, mshadow_op::tanh, mshadow_op::tanh_grad>();
+        return new ActivationOp<cpu, mshadow_op::tanh, mshadow_op::tanh_grad>();
     case activation::kSoftReLU:
-      return new ActivationOp<cpu, mshadow_op::softrelu, mshadow_op::softrelu_grad>();
+        return new ActivationOp<cpu, mshadow_op::softrelu, mshadow_op::softrelu_grad>();
+    case activation::kSoftSign:
+        return new ActivationOp<cpu, mshadow_op::softsign, mshadow_op::softsign_grad>();
     default:
       LOG(FATAL) << "unknown activation type";
       return NULL;
