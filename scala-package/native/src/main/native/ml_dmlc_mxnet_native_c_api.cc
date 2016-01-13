@@ -281,48 +281,39 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySave
   return ret;
 }
 
-// The related c api MXKVStoreSetUpdater function takes a c function pointer as its parameter,
-// while we write java functions here in scala-package.
-// Thus we have to wrap the function in a java object, and run env->CallVoidMethod(obj) once updater is invoked,
-// which implies the function registered to KVStore must be stateful.
-// This is why we re-implement MXKVStoreSetUpdater as follows.
+extern "C" void KVStoreUpdaterCallbackFunc
+  (int key, NDArrayHandle recv, NDArrayHandle local, void *handle) {
+  JNIClosure *closure = (JNIClosure *) handle;
+  JNIEnv *env = closure->env;
+  jobject updaterFuncObjGlb = closure->obj;
+
+  // find java updater method
+  jclass updtClass = env->GetObjectClass(updaterFuncObjGlb);
+  jmethodID updtFunc = env->GetMethodID(updtClass,
+    "update", "(ILml/dmlc/mxnet/NDArray;Lml/dmlc/mxnet/NDArray;)V");
+
+  // find java NDArray constructor
+  jclass ndObjClass = env->FindClass("ml/dmlc/mxnet/NDArray");
+  jmethodID ndObjConstructor = env->GetMethodID(ndObjClass, "<init>", "(JZ)V");
+
+  jobject ndRecv = env->NewObject(ndObjClass, ndObjConstructor, (jlong)recv, true);
+  jobject ndLocal = env->NewObject(ndObjClass, ndObjConstructor, (jlong)local, true);
+
+  env->CallVoidMethod(updaterFuncObjGlb, updtFunc, key, ndRecv, ndLocal);
+  // FIXME: This function can be called multiple times,
+  // can we find a way to safely destroy these two objects ?
+  // env->DeleteGlobalRef(updaterFuncObjGlb);
+  // delete closure;
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreSetUpdater
-  (JNIEnv *env, jobject obj, jlong kvStorePtr, jobject updaterFuncObj, jobject updaterHandle) {
+  (JNIEnv *env, jobject obj, jlong kvStorePtr, jobject updaterFuncObj) {
   jobject updaterFuncObjGlb = env->NewGlobalRef(updaterFuncObj);
-  jobject updaterHandleGlb = env->NewGlobalRef(updaterHandle);
-  std::function<void(int, const mxnet::NDArray&, mxnet::NDArray*)> updt
-  = [env, updaterFuncObjGlb, updaterHandleGlb](int key, const mxnet::NDArray& recv, mxnet::NDArray* local) {
-    // find java updater method
-    jclass updtClass = env->GetObjectClass(updaterFuncObjGlb);
-    jmethodID updtFunc = env->GetMethodID(updtClass,
-      "update", "(ILml/dmlc/mxnet/NDArray;Lml/dmlc/mxnet/NDArray;Ljava/lang/Object;)V");
-
-    // find java NDArray constructor
-    jclass ndObjClass = env->FindClass("ml/dmlc/mxnet/NDArray");
-    jmethodID ndObjConstructor = env->GetMethodID(ndObjClass, "<init>", "(JZ)V");
-
-    mxnet::NDArray *recvCopy = new mxnet::NDArray();
-    *recvCopy = recv;
-    jobject jNdRecvCopy = env->NewObject(ndObjClass, ndObjConstructor, (jlong)recvCopy, true);
-
-    mxnet::NDArray *localCopy = new mxnet::NDArray();
-    *localCopy = *local;
-    jobject jNdLocalCopy = env->NewObject(ndObjClass, ndObjConstructor, (jlong)localCopy, true);
-
-    env->CallVoidMethod(updaterFuncObjGlb, updtFunc, key, jNdRecvCopy, jNdLocalCopy, updaterHandleGlb);
-    env->DeleteGlobalRef(updaterFuncObjGlb);
-    env->DeleteGlobalRef(updaterHandleGlb);
-  };
-  try {
-    static_cast<mxnet::KVStore*>((KVStoreHandle)kvStorePtr)->set_updater(updt);
-  } catch(dmlc::Error &except) {
-    // It'll be too complicated to set & get mx error in jni code.
-    // thus simply return -1 to indicate a failure.
-    // Notice that we'll NOT be able to run MXGetLastError
-    // to get the error message after this function fails.
-    return -1;
-  }
-  return 0;
+  JNIClosure *closure = new JNIClosure();
+  closure->env = env;
+  closure->obj = updaterFuncObjGlb;
+  return MXKVStoreSetUpdater((KVStoreHandle) kvStorePtr,
+                             KVStoreUpdaterCallbackFunc, (void *) closure);
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreCreate

@@ -76,9 +76,7 @@ class LibInfo {
                             keys: Array[Int],
                             outs: Array[NDArrayHandle],
                             priority: Int): Int
-  @native def mxKVStoreSetUpdater(handle: KVStoreHandle,
-                                  updaterFunc: MXKVStoreUpdater,
-                                  updaterHandle: AnyRef): Int
+  @native def mxKVStoreSetUpdater(handle: KVStoreHandle, updaterFunc: MXKVStoreUpdater): Int
   @native def mxKVStoreIsWorkerNode(isWorker: RefInt): Int
   @native def mxKVStoreGetType(handle: KVStoreHandle, kvType: RefString): Int
   @native def mxKVStoreSendCommmandToServers(handle: KVStoreHandle,

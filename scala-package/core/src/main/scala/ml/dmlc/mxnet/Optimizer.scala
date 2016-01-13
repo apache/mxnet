@@ -6,7 +6,7 @@ object Optimizer {
   def getUpdater(optimizer: Optimizer): MXKVStoreUpdater = {
     new MXKVStoreUpdater {
       val states = new scala.collection.mutable.HashMap[Int, AnyRef]
-      override def update(index: Int, grad: NDArray, weight: NDArray, handle: AnyRef): Unit = {
+      override def update(index: Int, grad: NDArray, weight: NDArray): Unit = {
         val state = states.getOrElseUpdate(index, optimizer.createState(index, weight))
         optimizer.update(index, weight, grad, state)
       }
@@ -57,7 +57,6 @@ trait MXKVStoreUpdater {
    * @param key the key
    * @param recv the pushed value on this key
    * @param local the value stored on local on this key
-   * @param handle The additional handle to the updater
    */
-  def update(key: Int, recv: NDArray, local: NDArray, handle: AnyRef = null): Unit
+  def update(key: Int, recv: NDArray, local: NDArray): Unit
 }
