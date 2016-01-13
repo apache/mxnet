@@ -40,6 +40,11 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayWaitAll(JNIEnv *env, 
   return MXNDArrayWaitAll();
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayWaitToRead
+  (JNIEnv *env, jobject obj, jlong arrayPtr) {
+  return MXNDArrayWaitToRead((NDArrayHandle) arrayPtr);
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxListFunctions
   (JNIEnv *env, jobject obj, jobject functions) {
   jclass longCls = env->FindClass("java/lang/Long");
@@ -180,6 +185,18 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySyncCopyFromCPU
   jfloat *sourcePtr = env->GetFloatArrayElements(sourceArr, NULL);
   int ret = MXNDArraySyncCopyFromCPU((NDArrayHandle)arrayPtr, (const mx_float *)sourcePtr, arrSize);
   env->ReleaseFloatArrayElements(sourceArr, sourcePtr, 0);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayGetContext
+  (JNIEnv *env, jobject obj, jlong arrayPtr, jobject devTypeId, jobject devId) {
+  int outDevType;
+  int outDevId;
+  int ret = MXNDArrayGetContext((NDArrayHandle) arrayPtr, &outDevType, &outDevId);
+  jclass refClass = env->FindClass("ml/dmlc/mxnet/Base$RefInt");
+  jfieldID refFid = env->GetFieldID(refClass, "value", "I");
+  env->SetIntField(devTypeId, refFid, outDevType);
+  env->SetIntField(devId, refFid, outDevId);
   return ret;
 }
 

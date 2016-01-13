@@ -9,6 +9,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  * @author Yizhi Liu
  */
 class LibInfo {
+  // NDArray
   @native def mxNDArrayFree(handle: NDArrayHandle): Int
   @native def mxGetLastError(): String
   @native def mxNDArrayCreateNone(out: NDArrayHandleRef): Int
@@ -19,6 +20,7 @@ class LibInfo {
                               delayAlloc: Int,
                               out: NDArrayHandleRef): Int
   @native def mxNDArrayWaitAll(): Int
+  @native def mxNDArrayWaitToRead(handle: NDArrayHandle): Int
   @native def mxListFunctions(functions: ListBuffer[FunctionHandle]): Int
   @native def mxFuncDescribe(handle: FunctionHandle,
                              nUsedVars: MXUintRef,
@@ -57,6 +59,7 @@ class LibInfo {
   @native def mxNDArraySave(fname: String,
                             handles: Array[NDArrayHandle],
                             keys: Array[String]): Int
+  @native def mxNDArrayGetContext(handle: NDArrayHandle, devTypeId: RefInt, devId: RefInt): Int
   // KVStore
   @native def mxKVStoreCreate(name: String, handle: KVStoreHandleRef): Int
   @native def mxKVStoreInit(handle: KVStoreHandle,

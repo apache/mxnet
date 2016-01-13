@@ -11,7 +11,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  */
 object NDArray {
   private val logger = LoggerFactory.getLogger(classOf[NDArray])
-  private val functions: Map[String, NDArrayFunction] = initNDarrayModule()
+  private val functions: Map[String, NDArrayFunction] = initNDArrayModule()
 
   // Definition of internal functions.
   // Internal binary function
@@ -178,7 +178,7 @@ object NDArray {
   }
 
   // List and add all the ndarray functions to current module.
-  private def initNDarrayModule(): Map[String, NDArrayFunction] = {
+  private def initNDArrayModule(): Map[String, NDArrayFunction] = {
     val functions = ListBuffer[FunctionHandle]()
     checkCall(_LIB.mxListFunctions(functions))
     functions.map(makeNdarrayFunction).toMap
@@ -265,7 +265,14 @@ object NDArray {
     NDArray.invokeUnaryFunc("sqrt", src)
   }
 
-  def rsqrt(src: NDArray): NDArray = ???
+  /**
+   * Take rsqrt of the src
+   * @param src Source input to the function
+   * @return new [[NDArray]]
+   */
+  def rsqrt(src: NDArray): NDArray = {
+    NDArray.invokeUnaryFunc("rsqrt", src)
+  }
 
   /**
    * Calculate 2D matrix multiplication
@@ -288,43 +295,133 @@ object NDArray {
 
   /**
    * Take absolute value of the src
-   * @param src Source nd-array
+   * @param src Source ndarray
    * @return a new [[NDArray]]
    */
   def abs(src: NDArray): NDArray = {
     NDArray.invokeUnaryFunc("abs", src)
   }
 
-  def sign(src: NDArray): NDArray = ???
-
-  def round(src: NDArray): NDArray = ???
-
-  def ceil(src: NDArray): NDArray = ???
-
-  def floor(src: NDArray): NDArray = ???
-
-  def square(src: NDArray): NDArray = ???
-
-  def exp(src: NDArray): NDArray = ???
-
-  def log(src: NDArray): NDArray = ???
-
-  def cos(src: NDArray): NDArray = ???
-
-  def sin(src: NDArray): NDArray = ???
-
-  def max(src: NDArray): NDArray = ???
-
-  def min(src: NDArray): NDArray = ???
-
-  def sum(src: NDArray): NDArray = ???
-
-  def argmaxChannel(src: NDArray): NDArray = ???
+  /**
+   * Take sign value of the src
+   * @param src Source ndarray
+   * @return a new [[NDArray]]
+   */
+  def sign(src: NDArray): NDArray = {
+    NDArray.invokeUnaryFunc("sign", src)
+  }
 
   /**
-   * TODO:
-   * Choose one element from each line(row for python, column for R/Julia)
-   * in array according to the index. This function assume index uses 0-based index.
+   * Take round value of the src
+   * @param src Source ndarray
+   * @return a new [[NDArray]]
+   */
+  def round(src: NDArray): NDArray = {
+    NDArray.invokeUnaryFunc("round", src)
+  }
+
+  /**
+   * Take ceil value of the src
+   * @param src Source ndarray
+   * @return a new [[NDArray]]
+   */
+  def ceil(src: NDArray): NDArray = {
+    NDArray.invokeUnaryFunc("ceil", src)
+  }
+
+  /**
+   * Take floor value of the src
+   * @param src Source ndarray
+   * @return a new [[NDArray]]
+   */
+  def floor(src: NDArray): NDArray = {
+    NDArray.invokeUnaryFunc("floor", src)
+  }
+
+  /**
+   * Take square of the src
+   * @param src Source ndarray
+   * @return a new [[NDArray]]
+   */
+  def square(src: NDArray): NDArray = {
+    NDArray.invokeUnaryFunc("square", src)
+  }
+
+  /**
+   * Take exp of the src
+   * @param src Source ndarray
+   * @return a new [[NDArray]]
+   */
+  def exp(src: NDArray): NDArray = {
+    NDArray.invokeUnaryFunc("exp", src)
+  }
+
+  /**
+   * Take log of the src
+   * @param src Source ndarray
+   * @return a new [[NDArray]]
+   */
+  def log(src: NDArray): NDArray = {
+    NDArray.invokeUnaryFunc("log", src)
+  }
+
+  /**
+   * Take cos of the src
+   * @param src Source ndarray
+   * @return a new [[NDArray]]
+   */
+  def cos(src: NDArray): NDArray = {
+    NDArray.invokeUnaryFunc("cos", src)
+  }
+
+  /**
+   * Take sin of the src
+   * @param src Source ndarray
+   * @return a new [[NDArray]]
+   */
+  def sin(src: NDArray): NDArray = {
+    NDArray.invokeUnaryFunc("sin", src)
+  }
+
+  /**
+   * Take max of the src. The result will be ndarray of shape (1,) on the same device.
+   * @param src Source ndarray
+   * @return a new [[NDArray]]
+   */
+  def max(src: NDArray): NDArray = {
+    NDArray.invokeUnaryFunc("max", src)
+  }
+
+  /**
+   * Take max of the src.The result will be ndarray of shape (1,) on the same device.
+   * @param src Source ndarray
+   * @return a new [[NDArray]]
+   */
+  def min(src: NDArray): NDArray = {
+    NDArray.invokeUnaryFunc("min", src)
+  }
+
+  /**
+   * Take sum of the src. The result will be ndarray of shape (1,) on the same device.
+   * @param src Source ndarray
+   * @return a new [[NDArray]]
+   */
+  def sum(src: NDArray): NDArray = {
+    NDArray.invokeUnaryFunc("sum", src)
+  }
+
+  /**
+   * Take the argmax index of each channel (row) in src.
+   * @param src Source ndarray
+   * @return a new [[NDArray]]
+   */
+  def argmaxChannel(src: NDArray): NDArray = {
+    NDArray.invokeUnaryFunc("argmax_channel", src)
+  }
+
+  /**
+   * Choose one element from each row in array according to the index.
+   * This function assume index uses 0-based index.
    * @param array source array
    * @param index index array
    * @return a new [[NDArray]]
@@ -380,6 +477,16 @@ object NDArray {
     (names.toArray, handles.map(new NDArray(_)).toArray)
   }
 
+  def load2Map(fname: String): Map[String, NDArray] = {
+    val (keys, vals) = load(fname)
+    require(keys.length == vals.length, "Loaded NDArrays have no name")
+    (keys zip vals).toMap
+  }
+
+  def load2Array(fname: String): Array[NDArray] = {
+    load(fname)._2
+  }
+
   /**
    * Save list of NDArray or dict of str->NDArray to binary file.
    *
@@ -400,6 +507,10 @@ object NDArray {
     val keys = data.keys.toArray
     val handles = data.values.map(_.handle).toArray
     save(fname, keys, handles)
+  }
+
+  def save(fname: String, data: Traversable[NDArray]): Unit = {
+    save(fname, null, data.map(_.handle).toArray)
   }
 
   private def save(fname: String, keys: Array[String], handles: Array[NDArrayHandle]): Unit = {
@@ -451,13 +562,20 @@ class NDArray(private[mxnet] val handle: NDArrayHandle, val writable: Boolean = 
    * NDArray finishes. There can still be pending read going on when the
    * function returns.
    */
-  def waitToRead(): Unit = ???
+  def waitToRead(): Unit = {
+    checkCall(_LIB.mxNDArrayWaitToRead(handle))
+  }
 
   /**
    * Get context of current NDArray.
    * @return The context of current NDArray.
    */
-  def context: Context = ???
+  def context: Context = {
+    val devTypeId = new RefInt
+    val devId = new RefInt
+    checkCall(_LIB.mxNDArrayGetContext(handle, devTypeId, devId))
+    new Context(Context.devtype2str(devTypeId.value), devId.value)
+  }
 
   /**
    * Set the values of the NDArray
@@ -578,10 +696,9 @@ class NDArray(private[mxnet] val handle: NDArrayHandle, val writable: Boolean = 
   }
 
   /**
-   * Return a copied flat java array of current array.
+   * Return a copied flat java array of current array (row-major).
    * @return  A copy of array content.
    */
-  // TODO: Shall we use column-major or row-major ?
   def toArray: Array[Float] = {
     val data = Array.ofDim[Float](size)
     checkCall(_LIB.mxNDArraySyncCopyToCPU(handle, data, size))
