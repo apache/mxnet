@@ -114,3 +114,8 @@ EXTRA_OPERATORS =
 # whether to use torch integration. This requires installing torch.
 USE_TORCH = 0
 TORCH_PATH = $(HOME)/torch
+
+# whether to use sframe integration. This requires build sframe
+# git@github.com:dato-code/SFrame.git
+# SFRAME_PATH = $(HOME)/SFrame
+# MXNET_PLUGINS += plugin/sframe/plugin.mk
