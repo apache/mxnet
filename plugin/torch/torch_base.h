@@ -20,6 +20,7 @@ extern "C" {
 extern "C" {
 #include <THC/THCStorage.h>
 #include <THC/THCTensor.h>
+#include <THC/THCTensorCopy.h>
 }
 #endif  // MXNET_USE_CUDA
 
@@ -221,22 +222,73 @@ class TorchTensor {
     }
   }
 
-  static void TBlobVectorAsTable(const std::vector<TBlob>::const_iterator begin,
-                         const std::vector<TBlob>::const_iterator end) {
+  static std::vector<THGeneralTensor> TBlobVectorAsTable(
+    const std::vector<TBlob>::const_iterator begin,
+    const std::vector<TBlob>::const_iterator end) {
     lua_State* L = TorchState::LuaState();
+    std::vector<THGeneralTensor> res;
     int num = end - begin;
     if (num > 1) {
       lua_createtable(L, num, 0);
       int index = 1;
       for (std::vector<TBlob>::const_iterator it = begin; it != end; ++it) {
         THGeneralTensor th = TorchTensor::TBlobToTHTensor(*it);
+        res.push_back(th);
         luaT_pushudata(L, th, TorchTensor::TensorType(*it));
         lua_rawseti(L, -2, index++);
       }
     } else if (num == 0) {
       lua_pushnil(L);
     } else {
-      luaT_pushudata(L, TorchTensor::TBlobToTHTensor(*begin), TorchTensor::TensorType(*begin));
+      THGeneralTensor th = TorchTensor::TBlobToTHTensor(*begin);
+      res.push_back(th);
+      luaT_pushudata(L, th, TorchTensor::TensorType(*begin));
+    }
+    return res;
+  }
+
+  static void CopyIfDifferent(TBlob dst, THGeneralTensor th_dst) {
+    lua_State* L = TorchState::LuaState();
+    if (luaT_isudata(L, -1, TorchTensor::TensorType(cpu::kDevMask))) {
+      CHECK_EQ(dst.dev_mask_, cpu::kDevMask) << "Device type mismatch.";
+      THFloatTensor* src = static_cast<THFloatTensor*>(
+        luaT_toudata(L, -1, TorchTensor::TensorType(cpu::kDevMask)));
+      if (src->storage != static_cast<THFloatTensor*>(th_dst)->storage) {
+        THFloatTensor_copy(static_cast<THFloatTensor*>(th_dst), src);
+      }
+#if MXNET_USE_CUDA
+    } else if (luaT_isudata(L, -1, TorchTensor::TensorType(gpu::kDevMask))) {
+      CHECK_EQ(dst.dev_mask_, gpu::kDevMask) << "Device type mismatch.";
+      THCudaTensor* src = static_cast<THCudaTensor*>(
+        luaT_toudata(L, -1, TorchTensor::TensorType(gpu::kDevMask)));
+      if (src->storage != static_cast<THCudaTensor*>(th_dst)->storage) {
+        THCudaTensor_copy(TorchState::CudaState(), static_cast<THCudaTensor*>(th_dst), src);
+      }
+#endif  // MXNET_USE_CUDA
+    } else {
+      LOG(FATAL) << "Unsupported Torch tensor type " << luaT_typename(L, -1);
+    }
+  }
+
+  static void CheckOutput(std::vector<TBlob>::const_iterator begin,
+                          std::vector<TBlob>::const_iterator end,
+                          std::vector<THGeneralTensor>::const_iterator th_begin,
+                          std::vector<THGeneralTensor>::const_iterator th_end) {
+    lua_State* L = TorchState::LuaState();
+    int num = end - begin;
+    CHECK_EQ(th_end - th_begin, num);
+    if (num == 0) {
+    } else if (num == 1) {
+      CopyIfDifferent(*begin, *th_begin);
+    } else {
+      CHECK(lua_istable(L, -1));
+      lua_pushnil(L);
+      for (; begin != end; ++begin, ++th_begin) {
+        CHECK(lua_next(L, -2));
+        CopyIfDifferent(*begin, *th_begin);
+        lua_pop(L, 1);
+      }
+      lua_pop(L, 1);
     }
   }
 };

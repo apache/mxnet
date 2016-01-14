@@ -106,7 +106,8 @@ class TorchModuleOp : public Operator {
     TorchState::SetStream(s);
     // Deserialize self table
     TorchState::Deserialize(chunk_);
-    TorchTensor::TBlobVectorAsTable(out_data.begin(), out_data.begin() + param_.num_outputs);
+    std::vector<THGeneralTensor> th_output =
+      TorchTensor::TBlobVectorAsTable(out_data.begin(), out_data.begin() + param_.num_outputs);
     // set the output field
     lua_setfield(L, -2, "output");
     // set the parameters
@@ -136,8 +137,11 @@ class TorchModuleOp : public Operator {
     // | self | updateOutput | self
     TorchTensor::TBlobVectorAsTable(in_data.begin(), in_data.begin() + param_.num_data);
     // | self | updateOutput | self | inputs
-    int err = lua_pcall(L, 2, 0, 0);  // doesn't need the output
+    int err = lua_pcall(L, 2, 1, 0);  // doesn't need the output
     CHECK_EQ(err, 0) << lua_tostring(L, -1);
+    TorchTensor::CheckOutput(out_data.begin(), out_data.begin() + param_.num_outputs,
+                             th_output.begin(), th_output.end());
+    lua_pop(L, 1);
     TorchState::Serialize(&chunk_);
     CHECK_EQ(lua_gettop(L), 0);
   }
@@ -160,7 +164,8 @@ class TorchModuleOp : public Operator {
     TorchState::Deserialize(chunk_);
     TorchTensor::TBlobVectorAsTable(out_data.begin(), out_data.end());
     lua_setfield(L, -2, "output");
-    TorchTensor::TBlobVectorAsTable(in_grad.begin(), in_grad.begin() + param_.num_data);
+    std::vector<THGeneralTensor> th_grad =
+      TorchTensor::TBlobVectorAsTable(in_grad.begin(), in_grad.begin() + param_.num_data);
     lua_setfield(L, -2, "gradInput");
     if (param_.num_params != 0) {
       // get the parameters into the stack
@@ -207,9 +212,11 @@ class TorchModuleOp : public Operator {
     lua_pushvalue(L, -4);
     lua_pushvalue(L, -4);
     lua_pushvalue(L, -4);
-    err = lua_pcall(L, 3, 0, 0);  // doesn't need the output
+    err = lua_pcall(L, 3, 1, 0);  // doesn't need the output
     CHECK_EQ(err, 0) << lua_tostring(L, -1);
-    lua_pop(L, 2);
+    TorchTensor::CheckOutput(in_grad.begin(), in_grad.begin() + param_.num_data,
+                             th_grad.begin(), th_grad.end());
+    lua_pop(L, 3);
     TorchState::Serialize(&chunk_);
     CHECK_EQ(lua_gettop(L), 0);
   }
