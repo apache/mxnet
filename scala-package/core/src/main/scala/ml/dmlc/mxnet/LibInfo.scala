@@ -9,6 +9,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  * @author Yizhi Liu
  */
 class LibInfo {
+  // NDArray
   @native def mxNDArrayFree(handle: NDArrayHandle): Int
   @native def mxGetLastError(): String
   @native def mxNDArrayCreateNone(out: NDArrayHandleRef): Int
@@ -19,6 +20,7 @@ class LibInfo {
                               delayAlloc: Int,
                               out: NDArrayHandleRef): Int
   @native def mxNDArrayWaitAll(): Int
+  @native def mxNDArrayWaitToRead(handle: NDArrayHandle): Int
   @native def mxListFunctions(functions: ListBuffer[FunctionHandle]): Int
   @native def mxFuncDescribe(handle: FunctionHandle,
                              nUsedVars: MXUintRef,
@@ -49,6 +51,16 @@ class LibInfo {
   @native def mxNDArraySyncCopyFromCPU(handle: NDArrayHandle,
                                        source: Array[MXFloat],
                                        size: Int): Int
+  @native def mxNDArrayLoad(fname: String,
+                            outSize: MXUintRef,
+                            handles: ArrayBuffer[NDArrayHandle],
+                            outNameSize: MXUintRef,
+                            names: ArrayBuffer[String]): Int
+  @native def mxNDArraySave(fname: String,
+                            handles: Array[NDArrayHandle],
+                            keys: Array[String]): Int
+  @native def mxNDArrayGetContext(handle: NDArrayHandle, devTypeId: RefInt, devId: RefInt): Int
+  // KVStore
   @native def mxKVStoreCreate(name: String, handle: KVStoreHandleRef): Int
   @native def mxKVStoreInit(handle: KVStoreHandle,
                             len: MXUint,
@@ -64,9 +76,7 @@ class LibInfo {
                             keys: Array[Int],
                             outs: Array[NDArrayHandle],
                             priority: Int): Int
-  @native def mxKVStoreSetUpdater(handle: KVStoreHandle,
-                                  updaterFunc: MXKVStoreUpdater,
-                                  updaterHandle: AnyRef): Int
+  @native def mxKVStoreSetUpdater(handle: KVStoreHandle, updaterFunc: MXKVStoreUpdater): Int
   @native def mxKVStoreIsWorkerNode(isWorker: RefInt): Int
   @native def mxKVStoreGetType(handle: KVStoreHandle, kvType: RefString): Int
   @native def mxKVStoreSendCommmandToServers(handle: KVStoreHandle,

@@ -40,6 +40,11 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayWaitAll(JNIEnv *env, 
   return MXNDArrayWaitAll();
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayWaitToRead
+  (JNIEnv *env, jobject obj, jlong arrayPtr) {
+  return MXNDArrayWaitToRead((NDArrayHandle) arrayPtr);
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxListFunctions
   (JNIEnv *env, jobject obj, jobject functions) {
   jclass longCls = env->FindClass("java/lang/Long");
@@ -183,53 +188,132 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySyncCopyFromCPU
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayGetContext
+  (JNIEnv *env, jobject obj, jlong arrayPtr, jobject devTypeId, jobject devId) {
+  int outDevType;
+  int outDevId;
+  int ret = MXNDArrayGetContext((NDArrayHandle) arrayPtr, &outDevType, &outDevId);
+  jclass refClass = env->FindClass("ml/dmlc/mxnet/Base$RefInt");
+  jfieldID refFid = env->GetFieldID(refClass, "value", "I");
+  env->SetIntField(devTypeId, refFid, outDevType);
+  env->SetIntField(devId, refFid, outDevId);
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayFree
   (JNIEnv * env, jobject obj, jlong ndArrayHandle) {
   return MXNDArrayFree((NDArrayHandle) ndArrayHandle);
 }
 
-// The related c api MXKVStoreSetUpdater function takes a c function pointer as its parameter,
-// while we write java functions here in scala-package.
-// Thus we have to wrap the function in a java object, and run env->CallVoidMethod(obj) once updater is invoked,
-// which implies the function registered to KVStore must be stateful.
-// This is why we re-implement MXKVStoreSetUpdater as follows.
-JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreSetUpdater
-  (JNIEnv *env, jobject obj, jlong kvStorePtr, jobject updaterFuncObj, jobject updaterHandle) {
-  jobject updaterFuncObjGlb = env->NewGlobalRef(updaterFuncObj);
-  jobject updaterHandleGlb = env->NewGlobalRef(updaterHandle);
-  std::function<void(int, const mxnet::NDArray&, mxnet::NDArray*)> updt
-  = [env, updaterFuncObjGlb, updaterHandleGlb](int key, const mxnet::NDArray& recv, mxnet::NDArray* local) {
-    // find java updater method
-    jclass updtClass = env->GetObjectClass(updaterFuncObjGlb);
-    jmethodID updtFunc = env->GetMethodID(updtClass,
-      "update", "(ILml/dmlc/mxnet/NDArray;Lml/dmlc/mxnet/NDArray;Ljava/lang/Object;)V");
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayLoad
+  (JNIEnv * env, jobject obj, jstring jfname, jobject joutSize,
+   jobject jhandles, jobject joutNameSize, jobject jnames) {
+  mx_uint outSize;
+  NDArrayHandle *outArr;
+  mx_uint outNameSize;
+  const char **outNames;
 
-    // find java NDArray constructor
-    jclass ndObjClass = env->FindClass("ml/dmlc/mxnet/NDArray");
-    jmethodID ndObjConstructor = env->GetMethodID(ndObjClass, "<init>", "(JZ)V");
+  const char *fname = env->GetStringUTFChars(jfname, 0);
+  int ret = MXNDArrayLoad(fname, &outSize, &outArr, &outNameSize, &outNames);
+  env->ReleaseStringUTFChars(jfname, fname);
 
-    mxnet::NDArray *recvCopy = new mxnet::NDArray();
-    *recvCopy = recv;
-    jobject jNdRecvCopy = env->NewObject(ndObjClass, ndObjConstructor, (jlong)recvCopy, true);
-
-    mxnet::NDArray *localCopy = new mxnet::NDArray();
-    *localCopy = *local;
-    jobject jNdLocalCopy = env->NewObject(ndObjClass, ndObjConstructor, (jlong)localCopy, true);
-
-    env->CallVoidMethod(updaterFuncObjGlb, updtFunc, key, jNdRecvCopy, jNdLocalCopy, updaterHandleGlb);
-    env->DeleteGlobalRef(updaterFuncObjGlb);
-    env->DeleteGlobalRef(updaterHandleGlb);
-  };
-  try {
-    static_cast<mxnet::KVStore*>((KVStoreHandle)kvStorePtr)->set_updater(updt);
-  } catch(dmlc::Error &except) {
-    // It'll be too complicated to set & get mx error in jni code.
-    // thus simply return -1 to indicate a failure.
-    // Notice that we'll NOT be able to run MXGetLastError
-    // to get the error message after this function fails.
-    return -1;
+  if (ret) {
+    return ret;
   }
-  return 0;
+
+  // fill sizes
+  jclass refIntClass = env->FindClass("ml/dmlc/mxnet/Base$RefInt");
+  jfieldID valueInt = env->GetFieldID(refIntClass, "value", "I");
+  env->SetIntField(joutSize, valueInt, outSize);
+  env->SetIntField(joutNameSize, valueInt, outNameSize);
+
+  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jmethodID arrayAppend = env->GetMethodID(arrayClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+
+  // fill handles
+  jclass longCls = env->FindClass("java/lang/Long");
+  jmethodID longConst = env->GetMethodID(longCls, "<init>", "(J)V");
+  for (int i = 0; i < outSize; ++i) {
+    jobject handle = env->NewObject(longCls, longConst, outArr[i]);
+    env->CallObjectMethod(jhandles, arrayAppend, handle);
+  }
+
+  // fill names
+  for (int i = 0; i < outNameSize; ++i) {
+    jstring jname = env->NewStringUTF(outNames[i]);
+    env->CallObjectMethod(jnames, arrayAppend, jname);
+  }
+
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySave
+  (JNIEnv * env, jobject obj, jstring jfname, jlongArray jhandles, jobjectArray jkeys) {
+  int numArgs = env->GetArrayLength(jhandles);
+  const char **keys = NULL;
+  if (jkeys != NULL) {
+    keys = new const char *[numArgs];
+    for (int i = 0; i < numArgs; i++) {
+      jstring jkey = (jstring) env->GetObjectArrayElement(jkeys, i);
+      const char *key = env->GetStringUTFChars(jkey, 0);
+      keys[i] = key;
+    }
+  }
+
+  const char *fname = env->GetStringUTFChars(jfname, 0);
+  jlong *handles = env->GetLongArrayElements(jhandles, NULL);
+
+  int ret = MXNDArraySave(fname, (mx_uint) numArgs, (NDArrayHandle *) handles, keys);
+
+  env->ReleaseLongArrayElements(jhandles, handles, 0);
+  env->ReleaseStringUTFChars(jfname, fname);
+
+  // release allocated memory
+  if (jkeys != NULL) {
+    for (int i = 0; i < numArgs; i++) {
+      jstring jkey = (jstring) env->GetObjectArrayElement(jkeys, i);
+      env->ReleaseStringUTFChars(jkey, keys[i]);
+    }
+    delete[] keys;
+  }
+
+  return ret;
+}
+
+extern "C" void KVStoreUpdaterCallbackFunc
+  (int key, NDArrayHandle recv, NDArrayHandle local, void *handle) {
+  JNIClosure *closure = (JNIClosure *) handle;
+  JNIEnv *env = closure->env;
+  jobject updaterFuncObjGlb = closure->obj;
+
+  // find java updater method
+  jclass updtClass = env->GetObjectClass(updaterFuncObjGlb);
+  jmethodID updtFunc = env->GetMethodID(updtClass,
+    "update", "(ILml/dmlc/mxnet/NDArray;Lml/dmlc/mxnet/NDArray;)V");
+
+  // find java NDArray constructor
+  jclass ndObjClass = env->FindClass("ml/dmlc/mxnet/NDArray");
+  jmethodID ndObjConstructor = env->GetMethodID(ndObjClass, "<init>", "(JZ)V");
+
+  jobject ndRecv = env->NewObject(ndObjClass, ndObjConstructor, (jlong)recv, true);
+  jobject ndLocal = env->NewObject(ndObjClass, ndObjConstructor, (jlong)local, true);
+
+  env->CallVoidMethod(updaterFuncObjGlb, updtFunc, key, ndRecv, ndLocal);
+  // FIXME: This function can be called multiple times,
+  // can we find a way to safely destroy these two objects ?
+  // env->DeleteGlobalRef(updaterFuncObjGlb);
+  // delete closure;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreSetUpdater
+  (JNIEnv *env, jobject obj, jlong kvStorePtr, jobject updaterFuncObj) {
+  jobject updaterFuncObjGlb = env->NewGlobalRef(updaterFuncObj);
+  JNIClosure *closure = new JNIClosure();
+  closure->env = env;
+  closure->obj = updaterFuncObjGlb;
+  return MXKVStoreSetUpdater((KVStoreHandle) kvStorePtr,
+                             KVStoreUpdaterCallbackFunc, (void *) closure);
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreCreate

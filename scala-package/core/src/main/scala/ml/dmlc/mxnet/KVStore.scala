@@ -172,7 +172,7 @@ class KVStore(private val handle: KVStoreHandle) {
    */
   def setUpdater(updater: MXKVStoreUpdater): Unit = {
     this.updaterFunc = updater
-    checkCall(_LIB.mxKVStoreSetUpdater(handle, updaterFunc, null))
+    checkCall(_LIB.mxKVStoreSetUpdater(handle, updaterFunc))
   }
 
   /**

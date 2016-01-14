@@ -1,10 +1,15 @@
 package ml.dmlc.mxnet
 
+import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
+
 import ml.dmlc.mxnet.NDArrayConversions._
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.scalactic.Tolerance._
 
 class NDArraySuite extends FunSuite with BeforeAndAfterAll {
+  private val sequence: AtomicInteger = new AtomicInteger(0)
+
   test("to java array") {
     val ndarray = NDArray.zeros(2, 2)
     assert(ndarray.toArray === Array(0f, 0f, 0f, 0f))
@@ -98,11 +103,191 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
     assert(NDArray.sqrt(ndarray).toArray === Array(0f, 1f, 2f, 3f))
   }
 
+  test("rsqrt") {
+    val ndarray = NDArray.array(Array(1f, 4f), shape = Array(2, 1))
+    assert(NDArray.rsqrt(ndarray).toArray === Array(1f, 0.5f))
+  }
+
   test("norm") {
     val ndarray = NDArray.empty(3, 1)
     ndarray.set(Array(1f, 2f, 3f))
     val normed = NDArray.norm(ndarray)
     assert(normed.shape === Array(1))
     assert(normed.toScalar === math.sqrt(14.0).toFloat +- 1e-3f)
+  }
+
+  test("one hot encode") {
+    val indices = NDArray.array(Array(1f, 0f, 2f), shape = Array(3))
+    val array = NDArray.empty(3, 3)
+    NDArray.onehotEncode(indices, array)
+    assert(array.shape === Array(3, 3))
+    assert(array.toArray === Array(0f, 1f, 0f,
+                                   1f, 0f, 0f,
+                                   0f, 0f, 1f))
+  }
+
+  test("dot") {
+    val arr1 = NDArray.array(Array(1f, 2f), shape = Array(1, 2))
+    val arr2 = NDArray.array(Array(3f, 4f), shape = Array(2, 1))
+    val res = NDArray.dot(arr1, arr2)
+    assert(res.shape === Array(1, 1))
+    assert(res.toArray === Array(11f))
+  }
+
+  test("choose_element_0index") {
+    val arr = NDArray.array(Array(1f, 2f, 3f, 4f, 6f, 5f), shape = Array(2, 3))
+    val indices = NDArray.array(Array(0f, 1f), shape = Array(2))
+    val res = NDArray.chooseElement0Index(arr, indices)
+    assert(res.toArray === Array(1f, 6f))
+  }
+
+  test("copy to") {
+    val source = NDArray.array(Array(1f, 2f, 3f), shape = Array(1, 3))
+    val dest = NDArray.empty(1, 3)
+    source.copyTo(dest)
+    assert(dest.shape === Array(1, 3))
+    assert(dest.toArray === Array(1f, 2f, 3f))
+  }
+
+  test("random uniform") {
+    val matrix = NDArray.empty(3, 2)
+    NDArray.randomUniform(0f, 1f, matrix)
+    assert(matrix.shape === Array(3, 2))
+    val arr = matrix.toArray
+    // scalastyle:off println
+    println(s"Random Uniform: [${arr.mkString(",")}]")
+    // scalastyle:on println
+    arr.foreach { elem =>
+      assert(elem > 0f && elem < 1f)
+    }
+  }
+
+  test("random gaussian") {
+    val matrix = NDArray.empty(3, 2)
+    NDArray.randomGaussian(0f, 1f, matrix)
+    assert(matrix.shape === Array(3, 2))
+    val arr = matrix.toArray
+    // scalastyle:off println
+    println(s"Random Gaussian: [${arr.mkString(",")}]")
+    // scalastyle:on println
+  }
+
+  test("abs") {
+    val arr = NDArray.array(Array(-1f, -2f, 3f), shape = Array(3, 1))
+    assert(NDArray.abs(arr).toArray === Array(1f, 2f, 3f))
+  }
+
+  test("sign") {
+    val arr = NDArray.array(Array(-1f, -2f, 3f), shape = Array(3, 1))
+    assert(NDArray.sign(arr).toArray === Array(-1f, -1f, 1f))
+  }
+
+  test("round") {
+    val arr = NDArray.array(Array(1.5f, 2.1f, 3.7f), shape = Array(3, 1))
+    assert(NDArray.round(arr).toArray === Array(2f, 2f, 4f))
+  }
+
+  test("ceil") {
+    val arr = NDArray.array(Array(1.5f, 2.1f, 3.7f), shape = Array(3, 1))
+    assert(NDArray.ceil(arr).toArray === Array(2f, 3f, 4f))
+  }
+
+  test("floor") {
+    val arr = NDArray.array(Array(1.5f, 2.1f, 3.7f), shape = Array(3, 1))
+    assert(NDArray.floor(arr).toArray === Array(1f, 2f, 3f))
+  }
+
+  test("square") {
+    val arr = NDArray.array(Array(1f, 2f, 3f), shape = Array(3, 1))
+    assert(NDArray.square(arr).toArray === Array(1f, 4f, 9f))
+  }
+
+  test("exp") {
+    val arr = NDArray.ones(1)
+    assert(NDArray.exp(arr).toScalar === 2.71828f +- 1e-3f)
+  }
+
+  test("log") {
+    val arr = NDArray.empty(1)
+    arr.set(10f)
+    assert(NDArray.log(arr).toScalar === 2.302585f +- 1e-5f)
+  }
+
+  test("cos") {
+    val arr = NDArray.empty(1)
+    arr.set(12f)
+    assert(NDArray.cos(arr).toScalar === 0.8438539f +- 1e-5f)
+  }
+
+  test("sin") {
+    val arr = NDArray.empty(1)
+    arr.set(12f)
+    assert(NDArray.sin(arr).toScalar === -0.536572918f +- 1e-5f)
+  }
+
+  test("max") {
+    val arr = NDArray.array(Array(1.5f, 2.1f, 3.7f), shape = Array(3, 1))
+    assert(NDArray.max(arr).toScalar === 3.7f +- 1e-3f)
+  }
+
+  test("min") {
+    val arr = NDArray.array(Array(1.5f, 2.1f, 3.7f), shape = Array(3, 1))
+    assert(NDArray.min(arr).toScalar === 1.5f +- 1e-3f)
+  }
+
+  test("sum") {
+    val arr = NDArray.array(Array(1f, 2f, 3f, 4f), shape = Array(2, 2))
+    assert(NDArray.sum(arr).toScalar === 10f +- 1e-3f)
+  }
+
+  test("argmaxChannel") {
+    val arr = NDArray.array(Array(1f, 2f, 4f, 3f), shape = Array(2, 2))
+    val argmax = NDArray.argmaxChannel(arr)
+    assert(argmax.shape === Array(2))
+    assert(argmax.toArray === Array(1f, 0f))
+  }
+
+  test("save and load with names") {
+    val filename
+      = s"${System.getProperty("java.io.tmpdir")}/ndarray-${sequence.getAndIncrement}.bin"
+    try {
+      val ndarray = NDArray.array(Array(1f, 2f, 3f), shape = Array(3, 1))
+      NDArray.save(filename, Map("local" -> ndarray))
+      val (keys, arrays) = NDArray.load(filename)
+      assert(keys.length === 1)
+      assert(keys(0) === "local")
+      assert(arrays.length === 1)
+      val loadedArray = arrays(0)
+      assert(loadedArray.shape === Array(3, 1))
+      assert(loadedArray.toArray === Array(1f, 2f, 3f))
+    } finally {
+      val file = new File(filename)
+      file.delete()
+    }
+  }
+
+  test("save and load without names") {
+    val filename
+      = s"${System.getProperty("java.io.tmpdir")}/ndarray-${sequence.getAndIncrement}.bin"
+    try {
+      val ndarray = NDArray.array(Array(1f, 2f, 3f), shape = Array(3, 1))
+      NDArray.save(filename, Array(ndarray))
+      val (keys, arrays) = NDArray.load(filename)
+      assert(keys.length === 0)
+      assert(arrays.length === 1)
+      val loadedArray = arrays(0)
+      assert(loadedArray.shape === Array(3, 1))
+      assert(loadedArray.toArray === Array(1f, 2f, 3f))
+    } finally {
+      val file = new File(filename)
+      file.delete()
+    }
+  }
+
+  test("get context") {
+    val ndarray = NDArray.ones(3, 2)
+    val ctx = ndarray.context
+    assert(ctx.deviceType === "cpu")
+    assert(ctx.deviceId === 0)
   }
 }

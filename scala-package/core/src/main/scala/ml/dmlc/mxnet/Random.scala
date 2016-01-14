@@ -1,6 +1,6 @@
 package ml.dmlc.mxnet
 
-import ml.dmlc.mxnet.NDArray.{_randomGaussian, _randomUniform, empty}
+import ml.dmlc.mxnet.NDArray.{randomGaussian, randomUniform, empty}
 
 /**
  * Random Number interface of mxnet.
@@ -29,7 +29,7 @@ object Random {
       require(shape != null, "shape is required when out is not specified")
       outCopy = empty(shape, ctx)
     }
-    _randomUniform(low, high, outCopy)
+    randomUniform(low, high, outCopy)
   }
 
 
@@ -55,7 +55,7 @@ object Random {
       require(shape != null, "shape is required when out is not specified")
       outCopy = empty(shape, ctx)
     }
-    _randomGaussian(mean, stdvar, outCopy)
+    randomGaussian(mean, stdvar, outCopy)
   }
 
 
