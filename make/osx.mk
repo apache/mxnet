@@ -92,3 +92,12 @@ USE_S3 = 0
 
 # path to folders containing projects specific operators that you don't want to put in src/operators
 EXTRA_OPERATORS =
+
+
+#----------------------------
+# plugins
+#----------------------------
+
+# whether to use torch integration. This requires installing torch.
+# TORCH_PATH = $(HOME)/torch
+# MXNET_PLUGINS += plugin/torch/torch.mk

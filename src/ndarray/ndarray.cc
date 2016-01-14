@@ -701,14 +701,16 @@ MXNET_REGISTER_NDARRAY_FUN(_copyto)
 
 // register random number generators
 MXNET_REGISTER_NDARRAY_FUN(_random_uniform)
-.set_body([](NDArray **u, real_t *s, NDArray **out) {
+.set_body([](NDArray **u, real_t *s, NDArray **out,
+             int num_params, char **param_keys, char **param_vals) {
     SampleUniform(s[0], s[1], out[0]);
   })
 .set_num_scalars(2)
 .set_num_mutate_vars(1);
 
 MXNET_REGISTER_NDARRAY_FUN(_random_gaussian)
-.set_body([](NDArray **u, real_t *s, NDArray **out) {
+.set_body([](NDArray **u, real_t *s, NDArray **out,
+             int num_params, char **param_keys, char **param_vals) {
     SampleGaussian(s[0], s[1], out[0]);
   })
 .set_num_scalars(2)
@@ -716,7 +718,8 @@ MXNET_REGISTER_NDARRAY_FUN(_random_gaussian)
 
 MXNET_REGISTER_NDARRAY_FUN(clip)
 .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
-.set_body([](NDArray **u, real_t *s, NDArray **out) {
+.set_body([](NDArray **u, real_t *s, NDArray **out,
+             int num_params, char **param_keys, char **param_vals) {
     ClipOp(*u[0], s[0], s[1], out[0]);
   })
 .set_num_use_vars(1)

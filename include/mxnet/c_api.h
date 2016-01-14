@@ -383,7 +383,26 @@ MXNET_DLL int MXFuncInvoke(FunctionHandle fun,
                            NDArrayHandle *use_vars,
                            mx_float *scalar_args,
                            NDArrayHandle *mutate_vars);
-
+/*!
+ * \brief invoke a function, the array size of passed in arguments
+ *   must match the values in the
+ * \param fun the function
+ * \param use_vars the normal arguments passed to function
+ * \param scalar_args the scalar qarguments
+ * \param mutate_vars the mutate arguments
+ * \param num_params number of keyword parameters
+ * \param param_keys keys for keyword parameters
+ * \param param_vals values for keyword parameters
+ * \return 0 when success, -1 when failure happens
+ * \sa MXFuncDescribeArgs
+ */
+MXNET_DLL int MXFuncInvokeEx(FunctionHandle fun,
+                             NDArrayHandle *use_vars,
+                             mx_float *scalar_args,
+                             NDArrayHandle *mutate_vars,
+                             int num_params,
+                             char **param_keys,
+                             char **param_vals);
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------

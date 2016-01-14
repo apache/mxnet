@@ -41,4 +41,7 @@ from .attribute import AttrScope
 from . import monitor
 from . import monitor as mon
 
+from . import torch
+from . import torch as th
+
 __version__ = base.__version__

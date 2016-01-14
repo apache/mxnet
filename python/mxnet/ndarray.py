@@ -677,10 +677,13 @@ def _make_ndarray_function(handle):
             if not accept_empty_mutate:
                 raise TypeError('argument out is required to call %s' % func_name)
             out = NDArray(_new_empty_handle())
-        check_call(_LIB.MXFuncInvoke(handle,
-                                     c_array(NDArrayHandle, (lhs.handle, rhs.handle)),
-                                     c_array(mx_float, ()),
-                                     c_array(NDArrayHandle, (out.handle,))))
+        check_call(_LIB.MXFuncInvokeEx(handle,
+                                       c_array(NDArrayHandle, (lhs.handle, rhs.handle)),
+                                       c_array(mx_float, ()),
+                                       c_array(NDArrayHandle, (out.handle,)),
+                                       ctypes.c_int(0),
+                                       c_array(ctypes.c_char_p, []),
+                                       c_array(ctypes.c_char_p, [])))
         return out
 
     def unary_ndarray_function(src, out=None):
@@ -694,11 +697,14 @@ def _make_ndarray_function(handle):
             if not accept_empty_mutate:
                 raise TypeError('argument out is required to call %s' % func_name)
             out = NDArray(_new_empty_handle())
-        check_call(_LIB.MXFuncInvoke( \
+        check_call(_LIB.MXFuncInvokeEx( \
                 handle, \
                 c_array(NDArrayHandle, (src.handle,)), \
                 c_array(mx_float, ()), \
-                c_array(NDArrayHandle, (out.handle,))))
+                c_array(NDArrayHandle, (out.handle,)), \
+                ctypes.c_int(0), \
+                c_array(ctypes.c_char_p, []), \
+                c_array(ctypes.c_char_p, [])))
         return out
 
     def generic_ndarray_function(*args, **kwargs):
@@ -728,11 +734,14 @@ def _make_ndarray_function(handle):
                     NDArray(_new_empty_handle()) for i in range(n_mutate_vars))
             else:
                 raise TypeError('argument out is required to call %s' % func_name)
-        check_call(_LIB.MXFuncInvoke( \
+        check_call(_LIB.MXFuncInvokeEx( \
                 handle, \
                 c_array(NDArrayHandle, [args[i].handle for i in use_vars_range]), \
                 c_array(mx_float, [args[i] for i in scalar_range]), \
-                c_array(NDArrayHandle, [v.handle for v in mutate_vars])))
+                c_array(NDArrayHandle, [v.handle for v in mutate_vars]), \
+                ctypes.c_int(0), \
+                c_array(ctypes.c_char_p, []), \
+                c_array(ctypes.c_char_p, [])))
         if n_mutate_vars == 1:
             return mutate_vars[0]
         else:

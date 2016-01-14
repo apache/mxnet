@@ -595,6 +595,10 @@ class Symbol(object):
             Input type dictionary, name->dtype
         kwargs : dict of str->shape
             Input shape dictionary, name->shape
+        type_dict  : dict of str->numpy.dtype
+            Input type dictionary, name->dtype
+        kwargs : dict of str->shape
+            Input shape dictionary, name->shape
 
         Returns
         -------
