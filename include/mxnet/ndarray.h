@@ -514,7 +514,8 @@ struct NDArrayFunctionReg
                                                           const NDArray &rhs,
                                                                 NDArray *out)) {
     body = [fternary](NDArray **used_vars,
-      real_t *s, NDArray **mutate_vars) {
+      real_t *s, NDArray **mutate_vars,
+      int num_params, char **param_keys, char **param_vals) {
       (*fternary)(*used_vars[0], *used_vars[1], *used_vars[2], mutate_vars[0]);
     };
     num_use_vars = 3; num_mutate_vars = 1;
