@@ -49,29 +49,29 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
 
 
   /**
-    * not work now
+    * for time
     */
-//  test("test ImageRecordIter") {
-//    //get data
-//    //"./scripts/get_cifar_data.sh" !
-//
-//    val params = Map(
-//      "path_imgrec" -> "data/cifar/train.rec",
-//      "mean_img" -> "data/cifar/cifar10_mean.bin",
-//      "rand_crop" -> "False",
-//      "and_mirror" -> "False",
-//      "shuffle" -> "False",
-//      "data_shape" -> "(3,28,28)",
-//      "batch_size" -> "100",
-//      "preprocess_threads" -> "4",
-//      "prefetch_buffer" -> "1"
-//    )
-//    val img_iter = IO.createIterator("ImageRecordIter", params)
-//    img_iter.reset()
-//    while(img_iter.iterNext()) {
-//      val batch = img_iter.next()
-//    }
-//  }
+  test("test ImageRecordIter") {
+    //get data
+    "./scripts/get_cifar_data.sh" !
+
+    val params = Map(
+      "path_imgrec" -> "data/cifar/train.rec",
+      "mean_img" -> "data/cifar/cifar10_mean.bin",
+      "rand_crop" -> "False",
+      "and_mirror" -> "False",
+      "shuffle" -> "False",
+      "data_shape" -> "(3,28,28)",
+      "batch_size" -> "100",
+      "preprocess_threads" -> "4",
+      "prefetch_buffer" -> "1"
+    )
+    val img_iter = IO.createIterator("ImageRecordIter", params)
+    img_iter.reset()
+    while(img_iter.iterNext()) {
+      val batch = img_iter.next()
+    }
+  }
 
 //  test("test NDarryIter") {
 //

@@ -648,8 +648,13 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterGetIndex
   jmethodID listAppend = env->GetMethodID(listClass,
     "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
 
+  //long class
+  jclass longCls = env->FindClass("java/lang/Long");
+  jmethodID longConst = env->GetMethodID(longCls, "<init>", "(J)V");
+
   for(int i=0; i<coutSize; i++) {
-    env->CallObjectMethod(outIndex, listAppend, (jlong)coutIndex[i]);
+    env->CallObjectMethod(outIndex, listAppend,
+                          env->NewObject(longCls, longConst, coutIndex[i]));
   }
   return ret;
 }
