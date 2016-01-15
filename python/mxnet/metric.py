@@ -1,6 +1,7 @@
 # coding: utf-8
 """Online evaluation metric module."""
 from __future__ import absolute_import
+from . import ndarray
 import numpy
 
 def check_label_shapes(labels, preds, shape=0):
@@ -66,11 +67,10 @@ class Accuracy(EvalMetric):
         check_label_shapes(labels, preds)
 
         for i in range(len(labels)):
-            pred = preds[i].asnumpy()
+            pred_label = ndarray.argmax_channel(preds[i]).asnumpy().astype('int32')
             label = labels[i].asnumpy().astype('int32')
-            pred_label = numpy.argmax(pred, axis=1)
 
-            check_label_shapes(label, pred)
+            check_label_shapes(label, pred_label)
 
             self.sum_metric += (pred_label == label).sum()
             self.num_inst += pred_label.shape[0]

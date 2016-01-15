@@ -97,7 +97,7 @@ class Load(object):
         assert isinstance(param, dict)
         self.param = {}
         for name, arr in param.items():
-            if name.startswith('arg:'):
+            if name.startswith('arg:') or name.startswith('aux:'):
                 self.param[name[4:]] = arr
             else:
                 self.param[name] = arr
