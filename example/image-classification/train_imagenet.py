@@ -39,6 +39,10 @@ parser.add_argument('--log-file', type=str,
 		    help='the name of log file')
 parser.add_argument('--log-dir', type=str, default="/tmp/",
                     help='directory of the log file')
+parser.add_argument('--train-dataset', type=str, default="train.rec",
+                    help='train dataset name')
+parser.add_argument('--val-dataset', type=str, default="val.rec",
+                    help="validation dataset name")
 args = parser.parse_args()
 
 # network
@@ -49,7 +53,7 @@ net = importlib.import_module('symbol_' + args.network).get_symbol(args.num_clas
 def get_iterator(args, kv):
     data_shape = (3, 224, 224)
     train = mx.io.ImageRecordIter(
-        path_imgrec = args.data_dir + "train.rec",
+        path_imgrec = args.data_dir + args.train_dataset,
         mean_r      = 123.68,
         mean_g      = 116.779,
         mean_b      = 103.939,
@@ -61,7 +65,7 @@ def get_iterator(args, kv):
         part_index  = kv.rank)
 
     val = mx.io.ImageRecordIter(
-        path_imgrec = args.data_dir + "val.rec",
+        path_imgrec = args.data_dir + args.val_dataset,
         mean_r      = 123.68,
         mean_g      = 116.779,
         mean_b      = 103.939,
