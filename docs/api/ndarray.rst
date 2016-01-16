@@ -444,6 +444,17 @@ Public APIs
 
 
 
+.. function:: argmax_channel(...)
+
+   Take sum of the src.The result will be ndarray of shape (1,) on the same device.
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
+
 .. function:: ceil(...)
 
    Take ceil value of the src

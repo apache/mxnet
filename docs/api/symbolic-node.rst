@@ -180,7 +180,7 @@ Public APIs
 ^^^^^^^^^^^
 .. function:: Activation(...)
 
-   Apply activation function to input.
+   Apply activation function to input.Softmax Activation is only available with CUDNN on GPUand will be computed at each location across channel if input is 4D.
    
    :param data: Input data to activation function.
    :type data: SymbolicNode
@@ -242,6 +242,26 @@ Public APIs
 
 
 
+.. function:: Cast(...)
+
+   Cast array to a different data type.
+   
+   :param data: Input data to cast function.
+   :type data: SymbolicNode
+   
+   
+   :param dtype: Target data type.
+   :type dtype: {'float16', 'float32', 'float64', 'int32', 'uint8'}, required
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
 .. function:: Concat(...)
 
    Perform an feature concat on channel dim (dim 1) over all the inputs.
@@ -288,6 +308,10 @@ Public APIs
    :type stride: Shape(tuple), optional, default=(1, 1)
    
    
+   :param dilate: convolution dilate: (y, x)
+   :type dilate: Shape(tuple), optional, default=(1, 1)
+   
+   
    :param pad: pad for convolution: (y, x)
    :type pad: Shape(tuple), optional, default=(0, 0)
    
@@ -300,12 +324,42 @@ Public APIs
    :type num_group: int (non-negative), optional, default=1
    
    
-   :param workspace: Tmp workspace for convolution (MB)
+   :param workspace: Tmp workspace for convolution (MB).
    :type workspace: long (non-negative), optional, default=512
    
    
    :param no_bias: Whether to disable bias parameter.
    :type no_bias: boolean, optional, default=False
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: Crop(...)
+
+   Crop the 2th and 3th dim of input data, with the corresponding size of w_h orwith widht and height of the second input symbol
+   
+   This function support variable length positional :class:`SymbolicNode` inputs.
+   
+   :param num_args: Number of inputs for crop, if equals one, then we will use the h_wfor crop heihgt and width, else if equals two, then we will use the heightand width of the second input symbol, we name crop_like here
+   :type num_args: int, required
+   
+   
+   :param offset: corp offset coordinate: (y, x)
+   :type offset: Shape(tuple), optional, default=(0, 0)
+   
+   
+   :param h_w: corp height and weight: (h, w)
+   :type h_w: Shape(tuple), optional, default=(0, 0)
+   
+   
+   :param center_crop: If set to true, then it will use be the center_crop,or it will crop using the shape of crop_like
+   :type center_crop: boolean, optional, default=False
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -727,8 +781,36 @@ Public APIs
    :type grad_scale: float, optional, default=1
    
    
+   :param ignore_label: the ignore_label will not work in backward, and this onlybe used when multi_output=true
+   :type ignore_label: float, optional, default=-1
+   
+   
    :param multi_output: If set to true, for a (n,k,x_1,..,x_n) dimensionalinput tensor, softmax will generate n*x_1*...*x_n output, eachhas k classes
    :type multi_output: boolean, optional, default=False
+   
+   
+   :param use_ignore: If set to true, the ignore_label value will not contributorto the backward gradient
+   :type use_ignore: boolean, optional, default=False
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: the constructed :class:`SymbolicNode`.
+   
+
+
+
+
+.. function:: SoftmaxActivation(...)
+
+   Apply softmax activation to input. This is intended for internal layers. For output (loss layer) please use SoftmaxOutput. If type=instance, this operator will compute a softmax for each instance in the batch; this is the default mode. If type=channel, this operator will compute a num_channel-class softmax at each position of each instance; this can be used for fully convolutional network, image segmentation, etc.
+   
+   :param data: Input data to activation function.
+   :type data: SymbolicNode
+   
+   
+   :param type: Softmax Mode. If set to instance, this operator will compute a softmax for each instance in the batch; this is the default mode. If set to channel, this operator will compute a num_channel-class softmax at each position of each instance; this can be used for fully convolutional network, image segmentation, etc.
+   :type type: {'channel', 'instance'},optional, default='instance'
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -751,8 +833,16 @@ Public APIs
    :type grad_scale: float, optional, default=1
    
    
+   :param ignore_label: the ignore_label will not work in backward, and this onlybe used when multi_output=true
+   :type ignore_label: float, optional, default=-1
+   
+   
    :param multi_output: If set to true, for a (n,k,x_1,..,x_n) dimensionalinput tensor, softmax will generate n*x_1*...*x_n output, eachhas k classes
    :type multi_output: boolean, optional, default=False
+   
+   
+   :param use_ignore: If set to true, the ignore_label value will not contributorto the backward gradient
+   :type use_ignore: boolean, optional, default=False
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -803,6 +893,10 @@ Public APIs
    
    :param sample_type: upsampling method
    :type sample_type: {'bilinear', 'nearest'}, required
+   
+   
+   :param multi_input_mode: How to handle multiple input. concat means concatenate upsampled images along the channel dimension. sum means add all images together, only available for nearest neighbor upsampling.
+   :type multi_input_mode: {'concat', 'sum'},optional, default='concat'
    
    
    :param num_args: Number of inputs to be upsampled. For nearest neighbor upsampling, this can be 1-N; the size of output will be(scale*h_0,scale*w_0) and all other inputs will be upsampled to thesame size. For bilinear upsampling this must be 2; 1 input and 1 weight.

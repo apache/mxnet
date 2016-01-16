@@ -267,6 +267,33 @@ libmxnet data providers
 
 
 
+.. function:: CSVIter(...)
+
+   Can also be called with the alias ``CSVProvider``.
+   Create iterator for dataset in csv.
+   
+   :param Base.Symbol data_name: keyword argument, default ``:data``. The name of the data.
+   :param Base.Symbol label_name: keyword argument, default ``:softmax_label``. The name of the label. Could be ``nothing`` if no label is presented in this dataset.
+   
+   :param data_csv: Dataset Param: Data csv path.
+   :type data_csv: string, required
+   
+   
+   :param data_shape: Dataset Param: Shape of the data.
+   :type data_shape: Shape(tuple), required
+   
+   
+   :param label_csv: Dataset Param: Label csv path. If is NULL, all labels will be returned as 0
+   :type label_csv: string, optional, default='NULL'
+   
+   
+   :param label_shape: Dataset Param: Shape of the label.
+   :type label_shape: Shape(tuple), optional, default=(1,)
+   
+   :return: the constructed :class:`MXDataProvider`.
+
+
+
 .. function:: ImageRecordIter(...)
 
    Can also be called with the alias ``ImageRecordProvider``.
@@ -375,12 +402,28 @@ libmxnet data providers
    :type min_img_size: float, optional, default=0
    
    
+   :param random_h: Augmentation Param: Maximum value of H channel in HSL color space.
+   :type random_h: int, optional, default='0'
+   
+   
+   :param random_s: Augmentation Param: Maximum value of S channel in HSL color space.
+   :type random_s: int, optional, default='0'
+   
+   
+   :param random_l: Augmentation Param: Maximum value of L channel in HSL color space.
+   :type random_l: int, optional, default='0'
+   
+   
    :param rotate: Augmentation Param: Rotate angle.
    :type rotate: int, optional, default='-1'
    
    
    :param fill_value: Augmentation Param: Maximum value of illumination variation.
    :type fill_value: int, optional, default='255'
+   
+   
+   :param inter_method: Augmentation Param: 0-NN 1-bilinear 2-cubic 3-area 4-lanczos4 9-auto 10-rand.
+   :type inter_method: int, optional, default='1'
    
    
    :param mirror: Augmentation Param: Whether to mirror the image.
@@ -399,12 +442,16 @@ libmxnet data providers
    :type mean_r: float, optional, default=0
    
    
-   :param mean_g: Augmentation: Mean value on G channel.
+   :param mean_g: Augmentation Param: Mean value on G channel.
    :type mean_g: float, optional, default=0
    
    
-   :param mean_b: Augmentation: Mean value on B channel.
+   :param mean_b: Augmentation Param: Mean value on B channel.
    :type mean_b: float, optional, default=0
+   
+   
+   :param mean_a: Augmentation Param: Mean value on Alpha channel.
+   :type mean_a: float, optional, default=0
    
    
    :param scale: Augmentation Param: Scale in color space.

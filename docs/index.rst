@@ -27,6 +27,7 @@ For more details, see documentation below. Please also checkout the `examples
 
    user-guide/install
    user-guide/overview
+   user-guide/faq
 
 .. toctree::
    :maxdepth: 1
