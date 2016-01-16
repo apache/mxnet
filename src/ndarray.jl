@@ -940,6 +940,13 @@ function _import_ndarray_functions(;gen_docs=false)
       _use_vars = Expr(:ref, :MX_handle, [symbol("in$i") for i=1:n_used_vars]...)
       _scalars  = Expr(:ref, :MX_float, [symbol("sca$i") for i=1:n_scalars]...)
       _mut_vars = Expr(:ref, :MX_handle, [symbol("out$i") for i=1:n_mutate_vars]...)
+
+      # XXX: hacky way of solving the problem that the arguments of `dot` should be swapped
+      # See https://github.com/dmlc/MXNet.jl/issues/55
+      if func_name == :dot
+        _use_vars.args[2:end] = flipdim(_use_vars.args[2:end], 1)
+      end
+
       stmt_call = Expr(:call, :_invoke_mxfunction, func_handle, _use_vars, _scalars, _mut_vars)
       if n_mutate_vars == 1
         stmt_ret = :(return out1)

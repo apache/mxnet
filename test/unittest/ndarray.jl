@@ -260,6 +260,17 @@ function test_nd_as_jl()
   @test reldiff(copy(z)[:,2:end], copy(x)[:,2:end]) < 1e-6
 end
 
+function test_dot()
+  dims1 = (2, 3)
+  dims2 = (3, 8)
+  info("NDArray::dot")
+
+  x = mx.zeros(dims1)
+  y = mx.zeros(dims2)
+  z = mx.dot(x, y)
+  @test size(z) == (2, 8)
+end
+
 
 ################################################################################
 # Run tests
@@ -276,5 +287,6 @@ test_saveload()
 test_clip()
 test_sqrt()
 test_nd_as_jl()
+test_dot()
 
 end
