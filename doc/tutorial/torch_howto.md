@@ -10,8 +10,7 @@ This tutorial demonstrates how to use MXNet as front-end to two of Torch's major
 
 ## Compile with Torch
 * First install Torch following [official guide](http://torch.ch/docs/getting-started.html).
-* Then, in `config.mk` (if you haven't already, copy `make/config.mk` (Linux) or `make/osx.mk` (Mac) into MXNet root folder as `config.mk`) set `USE_TORCH = 1`
-and `TORCH_PATH = /path/to/torch`. By default Torch should be installed in your home folder (so `TORCH_PATH = $(HOME)/torch`).
+* Then, in `config.mk` (if you haven't already, copy `make/config.mk` (Linux) or `make/osx.mk` (Mac) into MXNet root folder as `config.mk`) uncomment the lines `TORCH_PATH = $(HOME)/torch` and `MXNET_PLUGINS += plugin/torch/torch.mk`. By default Torch should be installed in your home folder (so `TORCH_PATH = $(HOME)/torch`). Modify TORCH_PATH to point to your torch installation if necessary. 
 * Run `make clean && make` to build with torch support.
 
 ## Tensor Mathematics
