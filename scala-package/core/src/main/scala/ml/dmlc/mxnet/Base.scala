@@ -10,6 +10,8 @@ object Base {
   type MXUint = Int
   type MXFloat = Float
   type CPtrAddress = Long
+  // TODO: make it more friendly to java
+  type Shape = Array[Int]
 
   type NDArrayHandle = CPtrAddress
   type FunctionHandle = CPtrAddress

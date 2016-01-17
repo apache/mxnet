@@ -11,6 +11,21 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  */
 object NDArray {
   private val logger = LoggerFactory.getLogger(classOf[NDArray])
+
+  private[mxnet] val DTYPE_NATIVE_TO_MX: Map[Class[_ >: Float with Int with Double], Int] = Map(
+    classOf[Float] -> 0,
+    classOf[Double] -> 1,
+    classOf[Int] -> 4
+  )
+
+  private[mxnet] val DTYPE_MX_TO_NATIVE: Map[Int, Class[_ >: Float with Int with Double]] = Map(
+    0 -> classOf[Float],
+    1 -> classOf[Double],
+    2 -> classOf[Float],
+    3 -> classOf[Int],
+    4 -> classOf[Int]
+  )
+
   private val functions: Map[String, NDArrayFunction] = initNDArrayModule()
 
   // Definition of internal functions.

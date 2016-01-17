@@ -1,12 +1,14 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable.ArrayBuffer
 
 object Executor {
   // Get the dictionary given name and ndarray pairs.
-  private def getDict(names: Array[String], ndarrays: Array[NDArray]): Map[String, NDArray] = {
+  private[mxnet] def getDict(names: Seq[String],
+                             ndarrays: Seq[NDArray]): Map[String, NDArray] = {
     require(names.toSet.size == names.length, "Duplicate names detected")
     (names zip ndarrays).toMap
   }
@@ -19,12 +21,12 @@ object Executor {
    * @throws IllegalArgumentException
    *         If there are two many splits such that some slice can be empty.
    */
-  private def splitInputSlice[@specialized(Int, Float, Double) V]
-                              (batchSize: Int, workLoadList: Array[V])
-                              (implicit num: Numeric[V]): Array[(Int, Int)] = {
+  private[mxnet] def splitInputSlice[@specialized(Int, Float, Double) V]
+                                    (batchSize: Int, workLoadList: Seq[V])
+                                    (implicit num: Numeric[V]): Array[(Int, Int)] = {
     val totalWorkLoad = workLoadList.sum.asInstanceOf[Float]
     val batchNumList = workLoadList.map(workLoad =>
-      math.round(workLoad.asInstanceOf[Float] * batchSize / totalWorkLoad))
+      math.round(workLoad.asInstanceOf[Float] * batchSize / totalWorkLoad)).toArray
     val batchNumSum = batchNumList.sum
     if (batchNumSum < batchSize) {
       batchNumList(batchNumList.length-1) += batchSize - batchNumSum
@@ -47,7 +49,7 @@ object Executor {
    * The check is done for feedforward net for now.
    * @param symbol The network configuration
    */
-  private def checkArguments(symbol: Symbol): Unit = {
+  private[mxnet] def checkArguments(symbol: Symbol): Unit = {
     val argNames = symbol.listArguments()
     require(argNames.toSet.size == argNames.length,
       "Find duplicated argument name," +
@@ -62,14 +64,15 @@ object Executor {
   }
 
   // Load a list of arrays into a list of arrays
-  private def loadGeneral(data: Array[NDArray], targets: Array[NDArray]): Unit = {
+  private[mxnet] def loadGeneral(data: Array[NDArray], targets: Array[NDArray]): Unit = {
     (data zip targets).foreach { case (dSrc, dTarget) =>
       dSrc.copyTo(dTarget)
     }
   }
 
   // Load a list of arrays into a list of arrays specified by slices
-  private def loadGeneral(data: Array[NDArray], targets: Array[(Int, Int, NDArray)]): Unit = {
+  private[mxnet] def loadGeneral(data: Array[NDArray],
+                                 targets: Array[(Int, Int, NDArray)]): Unit = {
     (data zip targets).foreach { case (dSrc, (start, end, dTarget)) =>
       dSrc.slice(start, end).copyTo(dTarget)
     }
@@ -87,9 +90,9 @@ object Executor {
  */
 // scalastyle:off finalize
 class Executor(private[mxnet] val handle: ExecutorHandle, private[mxnet] val symbol: Symbol) {
-  var argArrays: Array[NDArray] = null
-  protected var gradArrays: Array[NDArray] = null
-  protected var auxArrays: Array[NDArray] = null
+  private[mxnet] var argArrays: Array[NDArray] = null
+  private[mxnet] var gradArrays: Array[NDArray] = null
+  private[mxnet] var auxArrays: Array[NDArray] = null
   protected var outputs: Array[NDArray] = getOutputs
   protected var _argDict: Map[String, NDArray] = null
   protected var _auxDict: Map[String, NDArray] = null
@@ -233,3 +236,73 @@ class Executor(private[mxnet] val handle: ExecutorHandle, private[mxnet] val sym
   }
 }
 // scalastyle:on finalize
+
+/**
+ * Helper class to manage multiple executors for data parallelism.
+ * @param symbol output symbol
+ * @param ctx devices to run on
+ * @param paramNames Name of all trainable parameters of the network.
+ * @param argNames Name of all arguments of the network.
+ * @param auxNames Name of all auxiliary states of the network.
+ * @param trainData Training data iterator.
+ * @param workLoadList The list of work load for different devices, in the same order as ctx
+ * @param logger When not specified, default logger will be used.
+ */
+class DataParallelExecutorManager(symbol: Symbol,
+                                  ctx: Seq[Context],
+                                  paramNames: Seq[String],
+                                  argNames: Seq[String],
+                                  auxNames: Seq[String],
+                                  trainData: DataIter,
+                                  private var workLoadList: Seq[Float] = null,
+                                  logger: Logger = DataParallelExecutorManager.logger) {
+  // preparation
+  val numDevice = ctx.size
+  logger.info(s"Start training with ${ctx.mkString(",")}")
+
+  // make sure the architecture is valid
+  Executor.checkArguments(symbol)
+
+  if (workLoadList == null) {
+    workLoadList = List.fill(numDevice)(1f)
+  }
+  require(workLoadList.size == numDevice, "Invalid settings for work load.")
+
+  val slices = Executor.splitInputSlice(trainData.batchSize, workLoadList)
+
+  /*
+  self.train_execs = []
+  for i in range(len(ctx)):
+    data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
+      for k, v in train_data.provide_data}
+    train_exec = symbol.simple_bind(ctx[i], 'write', **data_shapes)
+    self.train_execs.append(train_exec)
+
+  // data structure
+  self.data_names = [x[0] for x in train_data.provide_data]
+  self.label_names = [x[0] for x in train_data.provide_label]
+  self.aux_names = aux_names
+
+  self.data_arrays = [[(slices[i], e.arg_dict[name]) for i, e in enumerate(self.train_execs)]
+  for name in self.data_names]
+  self.label_arrays = [[(slices[i], e.arg_dict[name]) for i, e in enumerate(self.train_execs)]
+  for name in self.label_names]
+
+  self.param_idx = [i for i in range(len(arg_names)) if arg_names[i] in param_names]
+  self.param_names = [arg_names[i] for i in self.param_idx]
+  self.param_arrays = [[e.arg_arrays[i] for e in self.train_execs] for i in self.param_idx]
+  self.grad_arrays = [[e.grad_arrays[i] for e in self.train_execs] for i in self.param_idx]
+
+  self.aux_arrays = [[e.aux_arrays[i] for e in self.train_execs] for i in range(len(aux_names))]
+
+  batch_size = train_data.batch_size
+
+  output_shapes = [tuple([batch_size]+list(x.shape[1:])) for x in self.train_execs[0].outputs]
+  self.cpu_output_arrays = [nd.zeros(s) for s in output_shapes]
+  */
+}
+
+object DataParallelExecutorManager {
+  private val logger = LoggerFactory.getLogger(classOf[Model])
+}
+

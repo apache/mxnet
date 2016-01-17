@@ -20,7 +20,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
       "seed" -> "10"
     )
 
-    val mnistIter = IO.createIterator("MNISTIter", params)
+    val mnistIter = IO.MNISTIter(params)
     // test_loop
     mnistIter.reset()
     val nBatch = 600

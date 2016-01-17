@@ -11,6 +11,8 @@ object IO {
   private val logger = LoggerFactory.getLogger(classOf[DataIter])
   private val iterCreateFuncs: Map[String, IterCreateFunc] = _initIOModule()
 
+  def MNISTIter: IterCreateFunc = iterCreateFuncs("MNISTIter")
+
   /**
    * create iterator via iterName and params
    * @param iterName name of iterator; "MNISTIter" or "ImageRecordIter"

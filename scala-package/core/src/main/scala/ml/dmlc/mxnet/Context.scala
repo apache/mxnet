@@ -23,4 +23,8 @@ class Context(deviceTypeName: String, val deviceId: Int = 0) {
    * @return device_type
    */
   def deviceType: String = Context.devtype2str(deviceTypeid)
+
+  override def toString: String = {
+    deviceType
+  }
 }
