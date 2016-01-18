@@ -8,6 +8,8 @@ import time
 parser = argparse.ArgumentParser(description='generate predictions an image classifer on Kaggle Data Science Bowl 1')
 parser.add_argument('--batch-size', type=int, default=100,
                     help='the batch size')
+parser.add_argument('--data-dir', type=str, default="data48/",
+                    help='the input data directory')
 parser.add_argument('--gpus', type=str, default='0',
                     help='the gpus will be used, e.g "0,1,2,3"')
 parser.add_argument('--model-prefix', type=str,default= "./models/sample_net-0",
@@ -30,7 +32,7 @@ model = mx.model.FeedForward.load(args.model_prefix, args.num_round, ctx=devs, n
 # test set data iterator
 data_shape = (3, 36, 36)
 test = mx.io.ImageRecordIter(
-    path_imgrec = "data/test.rec",
+    path_imgrec = args.data_dir + "test.rec",
     mean_r      = 128,
     mean_b      = 128,
     mean_g      = 128,

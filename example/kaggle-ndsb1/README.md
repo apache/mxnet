@@ -24,9 +24,10 @@ Uncompress train.zip and test.zip folders.
 
 
 #### Step 2: Generate Image Record (new shape with short edge = 48)
-- Run command ```../../bin/im2rec data/tr.lst ./ data/tr.rec resize=48``` to generate training data record file
-- Run command ```../../bin/im2rec data/va.lst ./ data/va.rec resize=48``` to generate validation data record file
-- Run command ```../../bin/im2rec data/test.lst ./ data/test.rec resize=48``` to generate validation data record file
+- mkdir data48 
+- Run command ```../../bin/im2rec data/tr.lst ./ data48/tr.rec resize=48``` to generate training data record file
+- Run command ```../../bin/im2rec data/va.lst ./ data48/va.rec resize=48``` to generate validation data record file
+- Run command ```../../bin/im2rec data/test.lst ./ data48/test.rec resize=48``` to generate validation data record file
 
 #### Step 3: Train Model
 - The network structure is defined in file symbol_dsb.py
