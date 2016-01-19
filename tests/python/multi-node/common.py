@@ -69,7 +69,7 @@ def accuracy(model, data):
     py = np.argmax(prob, axis=1)
     # get label
     data.reset()
-    y = np.concatenate([label.asnumpy() for _, label in data]).astype('int')
+    y = np.concatenate([label[0].asnumpy() for _, label, _, _ in data]).astype('int')
     y = y[0:len(py)]
     acc = float(np.sum(py == y)) / len(y)
     logging.info('Accuracy = %f', acc)
