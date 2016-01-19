@@ -306,7 +306,7 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
     val (argTypes, _, auxTypes) = inferType(types)
     require(argShapes != null && argTypes != null, "Input node is not complete")
     // alloc space
-    val argNDarrays = (argShapes zip argTypes) map { case (shape, t) =>
+    val argNDArrays = (argShapes zip argTypes) map { case (shape, t) =>
       // TODO: NDArray dtype
       NDArray.zeros(shape, ctx)
     }
@@ -327,8 +327,7 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
       // TODO: NDArray dtype
       NDArray.zeros(shape, ctx)
     }
-    // TODO: bind(ctx, arg_ndarrays, grad_ndarrays, grad_req, aux_ndarrays)
-    null
+    bind(ctx, argNDArrays, gradNDArrays, gradReq, auxNDArrays, null)
   }
 
   /**
@@ -375,25 +374,238 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
    *     User can give up gradient by using a dict in args_grad and only specify
    *     gradient they interested in.
    */
-  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Seq[NDArray] = null,
-           gradReq: String = "write", auxStates: Seq[NDArray] = null,
-           group2ctx: Map[String, Context] = null): Executor = {
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Seq[NDArray],
+           gradReq: String, auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
     val symbolArguments = listArguments()
-    val (argsHandle, argsNDArray)
-      = Symbol.getNDArrayInputs("args", args, symbolArguments, allowMissing = false)
+    bindHelper(ctx, symbolArguments, args, argsGrad,
+               Seq.fill(symbolArguments.size)(gradReq), auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Seq[NDArray],
+           gradReq: String, auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad,
+               Seq.fill(symbolArguments.size)(gradReq), auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Map[String, NDArray],
+           gradReq: String, auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad,
+               Seq.fill(symbolArguments.size)(gradReq), auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Map[String, NDArray],
+           gradReq: String, auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad,
+               Seq.fill(symbolArguments.size)(gradReq), auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Seq[NDArray],
+           gradReq: String, auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad,
+               Seq.fill(symbolArguments.size)(gradReq), auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Seq[NDArray],
+           gradReq: String, auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad,
+               Seq.fill(symbolArguments.size)(gradReq), auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Map[String, NDArray],
+           gradReq: String, auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad,
+               Seq.fill(symbolArguments.size)(gradReq), auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Map[String, NDArray],
+           gradReq: String, auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad,
+               Seq.fill(symbolArguments.size)(gradReq), auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Seq[NDArray],
+           gradsReq: Seq[String], auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Seq[NDArray],
+           gradsReq: Seq[String], auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Map[String, NDArray],
+           gradsReq: Seq[String], auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Map[String, NDArray],
+           gradsReq: Seq[String], auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Seq[NDArray],
+           gradsReq: Seq[String], auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Seq[NDArray],
+           gradsReq: Seq[String], auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Map[String, NDArray],
+           gradsReq: Seq[String], auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Map[String, NDArray],
+           gradsReq: Seq[String], auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Seq[NDArray],
+           gradsReq: Map[String, String], auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Seq[NDArray],
+           gradsReq: Map[String, String], auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Map[String, NDArray],
+           gradsReq: Map[String, String], auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Map[String, NDArray],
+           gradsReq: Map[String, String], auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Seq[NDArray],
+           gradsReq: Map[String, String], auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Seq[NDArray],
+           gradsReq: Map[String, String], auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Map[String, NDArray],
+           gradsReq: Map[String, String], auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Map[String, NDArray],
+           gradsReq: Map[String, String], auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  private def bindHelper(ctx: Context, symbolArguments: Seq[String],
+                         args: Iterable[_], argsGrad: Iterable[_],
+                         gradsReq: Iterable[_], auxStates: Iterable[_],
+                         group2ctx: Map[String, Context]): Executor = {
+    require(args != null && !args.isInstanceOf[Set[_]])
+    require(argsGrad == null || !argsGrad.isInstanceOf[Set[_]])
+    require(auxStates == null || !auxStates.isInstanceOf[Set[_]])
+    require(gradsReq != null && !gradsReq.isInstanceOf[Set[_]])
+
+    val (argsHandle, argsNDArray) =
+      if (args.isInstanceOf[Seq[_]]) {
+        Symbol.getNDArrayInputs("args", args.asInstanceOf[Seq[NDArray]],
+                                symbolArguments, allowMissing = false)
+      } else {
+        Symbol.getNDArrayInputs("args", args.asInstanceOf[Map[String, NDArray]],
+                                symbolArguments, allowMissing = false)
+      }
 
     // setup args gradient
     val (argsGradHandle, argsGradNDArray) =
-      if (argsGrad == null) (Array.fill[NDArrayHandle](args.size)(0L), null)
-      else Symbol.getNDArrayInputs("args_grad", argsGrad, symbolArguments, allowMissing = true)
+      if (argsGrad == null) {
+        (Array.fill[NDArrayHandle](args.size)(0L), null)
+      } else if (argsGrad.isInstanceOf[Seq[_]]) {
+        Symbol.getNDArrayInputs("args_grad", argsGrad.asInstanceOf[Seq[NDArray]],
+                                symbolArguments, allowMissing = true)
+      } else {
+        Symbol.getNDArrayInputs("args_grad", argsGrad.asInstanceOf[Map[String, NDArray]],
+                                symbolArguments, allowMissing = true)
+      }
 
-    val auxStatesFix = if (auxStates == null) Nil else auxStates
-    val (auxArgsHandle, auxStatesNDArray) = Symbol.getNDArrayInputs(
-      "aux_states", auxStatesFix, listAuxiliaryStates(), allowMissing = false)
+    val (auxArgsHandle, auxStatesNDArray) =
+      if (auxStates == null) {
+        Symbol.getNDArrayInputs("aux_states", Nil, listAuxiliaryStates(), allowMissing = false)
+      } else if (auxStates.isInstanceOf[Seq[_]]) {
+        Symbol.getNDArrayInputs("aux_states", auxStates.asInstanceOf[Seq[NDArray]],
+                                listAuxiliaryStates(), allowMissing = false)
+      } else {
+        Symbol.getNDArrayInputs("aux_states", auxStates.asInstanceOf[Map[String, NDArray]],
+                                listAuxiliaryStates(), allowMissing = false)
+      }
 
     // setup requirements
-    require(Symbol.bindReqMap.contains(gradReq), s"grad_req must be in ${Symbol.bindReqMap}")
-    val reqsArray = Array.fill(symbolArguments.size)(Symbol.bindReqMap(gradReq))
+    val reqsArray =
+      if (gradsReq.isInstanceOf[Seq[_]]) {
+        gradsReq.asInstanceOf[Seq[String]].map { req =>
+          require(Symbol.bindReqMap.contains(req), s"grad_req must be in ${Symbol.bindReqMap}")
+          Symbol.bindReqMap(req)
+        }.toArray
+      } else {
+        val gradsReqMap = gradsReq.asInstanceOf[Map[String, String]]
+        symbolArguments.map { req =>
+          val value = gradsReqMap.getOrElse(req, "null")
+          require(Symbol.bindReqMap.contains(value), s"grad_req must be in ${Symbol.bindReqMap}")
+          Symbol.bindReqMap(value)
+        }.toArray
+      }
 
     val ctxMapKeys = ArrayBuffer.empty[String]
     val ctxMapDevTypes = ArrayBuffer.empty[Int]
@@ -666,7 +878,7 @@ object Symbol {
     val argHandles = ArrayBuffer.empty[NDArrayHandle]
     argNames.foreach { name =>
       args.get(name) match {
-        case narr: Option[NDArray] =>
+        case narr: Some[NDArray] =>
           argArrays += narr.get
           argHandles += narr.get.handle
         case None =>

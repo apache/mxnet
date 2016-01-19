@@ -21,12 +21,11 @@ object Executor {
    * @throws IllegalArgumentException
    *         If there are two many splits such that some slice can be empty.
    */
-  private[mxnet] def splitInputSlice[@specialized(Int, Float, Double) V]
-                                    (batchSize: Int, workLoadList: Seq[V])
-                                    (implicit num: Numeric[V]): Array[(Int, Int)] = {
-    val totalWorkLoad = workLoadList.sum.asInstanceOf[Float]
+  private[mxnet] def splitInputSlice(batchSize: Int,
+                                     workLoadList: Seq[Float]): Array[(Int, Int)] = {
+    val totalWorkLoad = workLoadList.sum
     val batchNumList = workLoadList.map(workLoad =>
-      math.round(workLoad.asInstanceOf[Float] * batchSize / totalWorkLoad)).toArray
+      math.round(workLoad * batchSize / totalWorkLoad)).toArray
     val batchNumSum = batchNumList.sum
     if (batchNumSum < batchSize) {
       batchNumList(batchNumList.length-1) += batchSize - batchNumSum
@@ -249,7 +248,7 @@ class Executor(private[mxnet] val handle: ExecutorHandle, private[mxnet] val sym
  * @param logger When not specified, default logger will be used.
  */
 class DataParallelExecutorManager(symbol: Symbol,
-                                  ctx: Seq[Context],
+                                  ctx: Array[Context],
                                   paramNames: Seq[String],
                                   argNames: Seq[String],
                                   auxNames: Seq[String],
@@ -257,7 +256,7 @@ class DataParallelExecutorManager(symbol: Symbol,
                                   private var workLoadList: Seq[Float] = null,
                                   logger: Logger = DataParallelExecutorManager.logger) {
   // preparation
-  val numDevice = ctx.size
+  val numDevice = ctx.length
   logger.info(s"Start training with ${ctx.mkString(",")}")
 
   // make sure the architecture is valid
