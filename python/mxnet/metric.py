@@ -1,4 +1,6 @@
 # coding: utf-8
+# pylint: disable=no-member
+
 """Online evaluation metric module."""
 from __future__ import absolute_import
 from . import ndarray
@@ -51,7 +53,10 @@ class EvalMetric(object):
         value : float
            Value of the evaluation.
         """
-        return (self.name, self.sum_metric / self.num_inst)
+        if self.num_inst == 0:
+            return (self.name, float('nan'))
+        else:
+            return (self.name, self.sum_metric / self.num_inst)
 
 ########################
 # CLASSIFICATION METRICS
@@ -72,8 +77,8 @@ class Accuracy(EvalMetric):
 
             check_label_shapes(label, pred_label)
 
-            self.sum_metric += (pred_label == label).sum()
-            self.num_inst += pred_label.shape[0]
+            self.sum_metric += (pred_label.flat == label.flat).sum()
+            self.num_inst += len(pred_label.flat)
 
 class F1(EvalMetric):
     """Calculate the F1 score of a binary classification problem."""

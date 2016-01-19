@@ -120,7 +120,8 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         kvstore, update_on_kvstore,
                         train_data, eval_data=None, eval_metric=None,
                         epoch_end_callback=None, batch_end_callback=None,
-                        logger=None, work_load_list=None, monitor=None):
+                        logger=None, work_load_list=None, monitor=None,
+                        eval_iters=None, eval_batch_end_callback=None):
     """Internal training function on multiple devices.
     This function will also work for single device as well.
     Parameters
@@ -215,7 +216,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         while True:
             do_reset = True
             for data_batch in train_data:
-
                 executor_manager.load_data_batch(data_batch)
 
                 if monitor is not None:
@@ -238,8 +238,8 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 if monitor is not None:
                     monitor.toc_print()
 
-                # evaluate at end, so out_cpu_array can lazy copy
-                eval_metric.update(data_batch.label, executor_manager.cpu_output_arrays)
+                # evaluate at end, so we can lazy copy
+                executor_manager.update_metric(eval_metric, data_batch.label)
 
                 nbatch += 1
                 # batch callback (for print purpose)
@@ -269,17 +269,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         logger.info('Epoch[%d] Train-%s=%f', epoch, name, value)
         toc = time.time()
         logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc - tic))
-        # evaluation
-        if eval_data:
-            eval_metric.reset()
-            eval_data.reset()
-            for eval_batch in eval_data:
-                executor_manager.load_data_batch(eval_batch)
-                executor_manager.forward(is_train=False)
-                eval_metric.update(eval_batch.label, executor_manager.cpu_output_arrays)
-
-            name, value = eval_metric.get()
-            logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
 
         if epoch_end_callback or epoch + 1 == end_epoch:
             executor_manager.copy_to(arg_params, aux_params)
@@ -290,6 +279,28 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                     call(epoch, symbol, arg_params, aux_params)
             else:
                 epoch_end_callback(epoch, symbol, arg_params, aux_params)
+
+        # evaluation
+        if eval_data:
+            eval_metric.reset()
+            eval_data.reset()
+            for i, eval_batch in enumerate(eval_data):
+                if eval_iters is not None and eval_iters <= i:
+                    break
+                executor_manager.load_data_batch(eval_batch)
+                executor_manager.forward(is_train=False)
+                executor_manager.update_metric(eval_metric, eval_batch.label)
+                if eval_batch_end_callback != None:
+                    batch_end_params = BatchEndParam(epoch=epoch,
+                                                     nbatch=i,
+                                                     eval_metric=eval_metric)
+                    if isinstance(eval_batch_end_callback, list):
+                        for call in eval_batch_end_callback:
+                            call(batch_end_params)
+                    else:
+                        eval_batch_end_callback(batch_end_params)
+            name, value = eval_metric.get()
+            logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
     # end of all epochs
     return
 
@@ -398,6 +409,7 @@ class FeedForward(BASE_ESTIMATOR):
                  arg_params=None, aux_params=None,
                  allow_extra_params=False,
                  begin_epoch=0,
+                 eval_iters=None,
                  **kwargs):
         # check if symbol contain duplicated names.
         _check_arguments(symbol)
@@ -421,6 +433,7 @@ class FeedForward(BASE_ESTIMATOR):
         # training parameters
         self.num_epoch = num_epoch
         self.epoch_size = epoch_size
+        self.eval_iters = eval_iters
         self.kwargs = kwargs.copy()
         self.optimizer = optimizer
         self.initializer = initializer
@@ -443,7 +456,7 @@ class FeedForward(BASE_ESTIMATOR):
 
         arg_names = self.symbol.list_arguments()
         input_names = input_shapes.keys()
-        param_names = set(arg_names) - set(input_names)
+        param_names = [key for key in arg_names if key not in input_names]
         aux_names = self.symbol.list_auxiliary_states()
 
         param_name_shapes = [x for x in zip(arg_names, arg_shapes) if x[0] in param_names]
@@ -531,7 +544,7 @@ class FeedForward(BASE_ESTIMATOR):
                             'NDArray/numpy.ndarray/list pair (i.e. tuple/list of length 2)')
         return eval_data
 
-    def predict(self, X, num_batch=None):
+    def predict(self, X, num_batch=None, return_data=False, reset=True):
         """Run the prediction, always only use one device.
         Parameters
         ----------
@@ -545,13 +558,17 @@ class FeedForward(BASE_ESTIMATOR):
         """
         X = self._init_iter(X, None, is_train=False)
 
-        X.reset()
+        if reset:
+            X.reset()
         data_shapes = X.provide_data
         data_names = [x[0] for x in data_shapes]
         self._init_predictor(data_shapes)
         batch_size = X.batch_size
         data_arrays = [self._pred_exec.arg_dict[name] for name in data_names]
         output_list = [[] for _ in range(len(self._pred_exec.outputs))]
+        if return_data:
+            data_list = [[] for _ in X.provide_data]
+            label_list = [[] for _ in X.provide_label]
 
         i = 0
         for batch in X:
@@ -567,16 +584,30 @@ class FeedForward(BASE_ESTIMATOR):
             for o_list, o_nd in zip(output_list, self._pred_exec.outputs):
                 o_list.append(o_nd[0:real_size].asnumpy())
 
-        outputs = [np.concatenate(x) for x in output_list]
+            if return_data:
+                for j, x in enumerate(batch.data):
+                    data_list[j].append(x[0:real_size].asnumpy())
+                for j, x in enumerate(batch.label):
+                    label_list[j].append(x[0:real_size].asnumpy())
 
+        outputs = [np.concatenate(x) for x in output_list]
         if len(outputs) == 1:
-            return outputs[0]
+            outputs = outputs[0]
+
+        if return_data:
+            data = [np.concatenate(x) for x in data_list]
+            label = [np.concatenate(x) for x in label_list]
+            if len(data) == 1:
+                data = data[0]
+            if len(label) == 1:
+                label = label[0]
+            return outputs, data, label
         else:
             return outputs
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
             epoch_end_callback=None, batch_end_callback=None, kvstore='local', logger=None,
-            work_load_list=None, monitor=None):
+            work_load_list=None, monitor=None, eval_batch_end_callback=None):
         """Fit the model.
         Parameters
         ----------
@@ -654,7 +685,9 @@ class FeedForward(BASE_ESTIMATOR):
                             epoch_end_callback=epoch_end_callback,
                             batch_end_callback=batch_end_callback,
                             kvstore=kvstore, update_on_kvstore=update_on_kvstore,
-                            logger=logger, work_load_list=work_load_list, monitor=monitor)
+                            logger=logger, work_load_list=work_load_list, monitor=monitor,
+                            eval_iters=self.eval_iters,
+                            eval_batch_end_callback=eval_batch_end_callback)
 
 
     def save(self, prefix, epoch=None):
@@ -713,7 +746,8 @@ class FeedForward(BASE_ESTIMATOR):
                num_epoch=None, epoch_size=None, optimizer='sgd', initializer=Uniform(0.01),
                eval_data=None, eval_metric='acc',
                epoch_end_callback=None, batch_end_callback=None,
-               kvstore='local', logger=None, work_load_list=None, **kwargs):
+               kvstore='local', logger=None, work_load_list=None,
+               eval_iters=None, eval_batch_end_callback=None, **kwargs):
         """Functional style to create a model.
         This function will be more consistent with functional
         languages such as R, where mutation is not allowed.
@@ -763,12 +797,14 @@ class FeedForward(BASE_ESTIMATOR):
             The list of work load for different devices,
             in the same order as ctx
         """
-        model = FeedForward(symbol, ctx=ctx, num_epoch=num_epoch, epoch_size=epoch_size,
+        model = FeedForward(symbol, ctx=ctx, num_epoch=num_epoch,
+                            epoch_size=epoch_size, eval_iters=eval_iters,
                             optimizer=optimizer, initializer=initializer, **kwargs)
         model.fit(X, y, eval_data=eval_data, eval_metric=eval_metric,
                   epoch_end_callback=epoch_end_callback,
                   batch_end_callback=batch_end_callback,
                   kvstore=kvstore,
                   logger=logger,
-                  work_load_list=work_load_list)
+                  work_load_list=work_load_list,
+                  eval_batch_end_callback=eval_batch_end_callback)
         return model
