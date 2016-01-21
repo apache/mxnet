@@ -43,6 +43,8 @@ parser.add_argument('--train-dataset', type=str, default="train.rec",
                     help='train dataset name')
 parser.add_argument('--val-dataset', type=str, default="val.rec",
                     help="validation dataset name")
+parser.add_argument('--data-shape', type=int, default=224,
+                    help='set image's shape')
 args = parser.parse_args()
 
 # network
@@ -51,7 +53,7 @@ net = importlib.import_module('symbol_' + args.network).get_symbol(args.num_clas
 
 # data
 def get_iterator(args, kv):
-    data_shape = (3, 224, 224)
+    data_shape = (3, args.data_shape, args.data_shape)
     train = mx.io.ImageRecordIter(
         path_imgrec = args.data_dir + args.train_dataset,
         mean_r      = 123.68,
