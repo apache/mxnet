@@ -17,7 +17,7 @@ parser.add_argument('--lr', type=float, default=.01,
                     help='the initial learning rate')
 parser.add_argument('--lr-factor', type=float, default=1,
                     help='times the lr with a factor for every lr-factor-epoch epoch')
-parser.add_argument('--lr-factor-epoch', type=float, default=15,
+parser.add_argument('--lr-factor-epoch', type=float, default=60,
                     help='the number of epoch to factor the lr, could be .5')
 parser.add_argument('--clip-gradient', type=float, default=5.,
                     help='clip min/max gradient to prevent extreme value')
@@ -31,7 +31,7 @@ parser.add_argument('--gpus', type=str, default='0',
                     help='the gpus will be used, e.g "0,1,2,3"')
 parser.add_argument('--kv-store', type=str, default='local',
                     help='the kvstore type')
-parser.add_argument('--num-examples', type=int, default=20000,
+parser.add_argument('--num-examples', type=int, default=22574,
                     help='the number of training examples')
 parser.add_argument('--num-classes', type=int, default=121,
                     help='the number of classes')
