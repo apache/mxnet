@@ -202,7 +202,7 @@ class OperatorProperty {
   }
   /*! \return number of real return values of the Operator */
   virtual int NumOutputs() const {
-    return 1;
+    return this->ListOutputs().size();
   }
   /*!
    * \brief get number of visible return values during Symbol creation.
