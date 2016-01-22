@@ -412,9 +412,13 @@ class Symbol(object):
         return self._infer_shape_impl(False, *args, **kwargs)
 
     def infer_shape_partial(self, *args, **kwargs):
+        """Partially infer the shape. The same as infer_shape, except that the partial
+        results can be returned.
+        """
         return self._infer_shape_impl(True, *args, **kwargs)
 
     def _infer_shape_impl(self, partial, *args, **kwargs):
+        """The actual implementation for calling shape inference API."""
         # pylint: disable=too-many-locals
         if len(args) != 0 and len(kwargs) != 0:
             raise ValueError('Can only specify known argument \

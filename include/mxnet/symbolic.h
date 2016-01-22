@@ -150,7 +150,7 @@ class Symbol {
   bool InferShape(std::vector<TShape> *arg_shapes,
                   std::vector<TShape> *out_shapes,
                   std::vector<TShape> *aux_shapes,
-                  bool partial_infer=false) const;
+                  bool partial_infer = false) const;
 
   /*!
    * \brief infer the shapes by providing shapes of known arguments.
@@ -166,7 +166,7 @@ class Symbol {
                   std::vector<TShape> *arg_shapes,
                   std::vector<TShape> *out_shapes,
                   std::vector<TShape> *aux_shapes,
-                  bool partial_infer=false) const;
+                  bool partial_infer = false) const;
 
   /*!
    * \brief infer the types of outputs and unknown input arguments

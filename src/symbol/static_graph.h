@@ -200,7 +200,7 @@ class StaticGraph {
   bool InferNodeShapes(const std::vector<uint32_t> &topo_order,
                        std::vector<std::vector<TShape> > *node_out_shapes,
                        std::vector<std::vector<TShape> > *node_aux_shapes,
-                       bool partial_infer=false) const;
+                       bool partial_infer = false) const;
   /*!
    * \brief infer the node types in the computation graph.
    *
@@ -235,7 +235,7 @@ class StaticGraph {
   bool InferShape(std::vector<TShape>* in_shape,
                   std::vector<TShape>* out_shape,
                   std::vector<TShape>* aux_shape,
-                  bool partial_infer=false) const;
+                  bool partial_infer = false) const;
 
   /*!
    * \brief infer the types of outputs and unknown input arguments
