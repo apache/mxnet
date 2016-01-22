@@ -23,10 +23,10 @@ def test_symbol_compose():
     net2 = mx.symbol.FullyConnected(name='fc3', num_hidden=10)
     net2 = mx.symbol.Activation(data=net2, act_type='relu')
     net2 = mx.symbol.FullyConnected(data=net2, name='fc4', num_hidden=20)
-    print(net2.debug_str())
+    #print(net2.debug_str())
 
     composed = net2(fc3_data=net1, name='composed')
-    print(composed.debug_str())
+    #print(composed.debug_str())
     multi_out = mx.symbol.Group([composed, net1])
     assert len(multi_out.list_outputs()) == 2
 
@@ -79,7 +79,7 @@ def test_symbol_infer_type():
     assert out == [np.float32]
     assert aux == []
 
-def test_infer_shape():
+def test_symbol_infer_shape():
     num_hidden = 128
     num_dim    = 64
     num_sample = 10
@@ -111,6 +111,7 @@ def test_infer_shape():
 
 
 if __name__ == '__main__':
+    test_symbol_infer_shape()
     test_symbol_infer_type()
     test_symbol_internal()
     test_symbol_basic()
