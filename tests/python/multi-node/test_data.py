@@ -5,9 +5,9 @@ import numpy as np
 
 def get_XY(data_iter):
     data_iter.reset()
-    Y = np.concatenate([y.asnumpy() for _, y in data_iter])
+    Y = np.concatenate([y[0].asnumpy() for _, y, _, _ in data_iter])
     data_iter.reset()
-    X = np.concatenate([x.asnumpy() for x, _ in data_iter])
+    X = np.concatenate([x[0].asnumpy() for x, _, _, _ in data_iter])
     assert X.shape[0] == Y.shape[0]
     return (X,Y)
 
