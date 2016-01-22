@@ -143,25 +143,30 @@ class Symbol {
    *
    * \param out_shapes Use to store the infered shapes of outputs.
    * \param aux_shapes Use to store the infered shapes of auxiliary states
+   * \param partial_infer Return partially inferred results if true.
    * \return true if the shape inference is successful, false if there is not enough information.
    * \throws dmlc::Error if the known arg_shapes are inconsistent.
    */
   bool InferShape(std::vector<TShape> *arg_shapes,
                   std::vector<TShape> *out_shapes,
-                  std::vector<TShape> *aux_shapes) const;
+                  std::vector<TShape> *aux_shapes,
+                  bool partial_infer=false) const;
+
   /*!
    * \brief infer the shapes by providing shapes of known arguments.
    * \param known_arg_shapes map of argument name to shape of arguments with known shapes.
    * \param arg_shapes used to store infered shapes of arguments.
    * \param out_shapes used to store infered shapes of outputs.
    * \param aux_shapes Use to store the infered shapes of auxiliary states
+   * \param partial_infer Return partially inferred results if true.
    * \return true if the shape inference is successful, false if there is not enough information.
    * \throws dmlc::Error if the known arg_shapes are inconsistent.
    */
   bool InferShape(const std::unordered_map<std::string, TShape> &known_arg_shapes,
                   std::vector<TShape> *arg_shapes,
                   std::vector<TShape> *out_shapes,
-                  std::vector<TShape> *aux_shapes) const;
+                  std::vector<TShape> *aux_shapes,
+                  bool partial_infer=false) const;
 
   /*!
    * \brief infer the types of outputs and unknown input arguments

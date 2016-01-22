@@ -409,6 +409,12 @@ class Symbol(object):
             List of shapes of outputs.
             The order is in the same order as list_auxiliary()
         """
+        return self._infer_shape_impl(False, *args, **kwargs)
+
+    def infer_shape_partial(self, *args, **kwargs):
+        return self._infer_shape_impl(True, *args, **kwargs)
+
+    def _infer_shape_impl(self, partial, *args, **kwargs):
         # pylint: disable=too-many-locals
         if len(args) != 0 and len(kwargs) != 0:
             raise ValueError('Can only specify known argument \
@@ -440,7 +446,11 @@ class Symbol(object):
         aux_shape_ndim = ctypes.POINTER(mx_uint)()
         aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
         complete = ctypes.c_int()
-        check_call(_LIB.MXSymbolInferShape(
+        if partial:
+            infer_func = _LIB.MXSymbolInferShapePartial
+        else:
+            infer_func = _LIB.MXSymbolInferShape
+        check_call(infer_func(
             self.handle,
             mx_uint(len(indptr) - 1),
             c_array(ctypes.c_char_p, keys),
