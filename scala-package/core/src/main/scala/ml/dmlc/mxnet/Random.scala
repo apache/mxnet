@@ -1,5 +1,6 @@
 package ml.dmlc.mxnet
 
+import ml.dmlc.mxnet.Base.Shape
 import ml.dmlc.mxnet.NDArray.{randomGaussian, randomUniform, empty}
 
 /**
@@ -19,7 +20,7 @@ object Random {
    */
   def uniform(low: Float,
               high: Float,
-              shape: Array[Int] = null,
+              shape: Shape = null,
               ctx: Context = null,
               out: NDArray = null): NDArray = {
     var outCopy = out
@@ -45,7 +46,7 @@ object Random {
    */
   def normal(mean: Float,
              stdvar: Float,
-             shape: Array[Int] = null,
+             shape: Shape = null,
              ctx: Context = null,
              out: NDArray = null): NDArray = {
     var outCopy = out

@@ -567,6 +567,10 @@ class NDArray(private[mxnet] val handle: NDArrayHandle, val writable: Boolean = 
     new NDArray(handle = sliceHandle.value, writable = this.writable)
   }
 
+  def slice(range: (Int, Int)): NDArray = {
+    slice(range._1, range._2)
+  }
+
   def slice(start: Int): NDArray = {
     slice(start, shape(0))
   }

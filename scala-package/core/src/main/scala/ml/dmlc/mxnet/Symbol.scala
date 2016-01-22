@@ -10,7 +10,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  * @author Yizhi Liu
  */
 class Symbol(private[mxnet] val handle: SymbolHandle) {
-  def +(other: Symbol): Symbol = Symbol.create("_Plus", other)
+  def +(other: Symbol): Symbol = Symbol.create("_Plus", this, other)
 
   override def clone(): Symbol = {
     val clonedHandle = new SymbolHandleRef
@@ -297,8 +297,8 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
    * @return The generated Executor
    */
   def simpleBind(ctx: Context, gradReq: String = "write",
-                 typeDict: Map[String, Class[_ >: Float with Int with Double]] = null,
-                 shapeDict: Map[String, Shape]): Executor = {
+                 shapeDict: Map[String, Shape],
+                 typeDict: Map[String, Class[_ >: Float with Int with Double]] = null): Executor = {
     val types =
       if (typeDict == null) listArguments().map((_, classOf[Float])).toMap
       else typeDict
@@ -333,46 +333,43 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
   /**
    * Bind current symbol to get an executor.
    *
-   * @param ctx : Context The device context the generated executor to run on.
-   * @param args : list of NDArray or dict of str to NDArray
-            Input arguments to the symbol.
-            - If type is list of NDArray, the position is in the same order of list_arguments.
-            - If type is dict of str to NDArray, then it maps the name of arguments
-              to the corresponding NDArray.
-            - In either case, all the arguments must be provided.
-
-   * @param argsGrad : list of NDArray or dict of str to NDArray, optional
-            When specified, args_grad provide NDArrays to hold
-            the result of gradient value in backward.
-            - If type is list of NDArray, the position is in the same order of list_arguments.
-            - If type is dict of str to NDArray, then it maps the name of arguments
-              to the corresponding NDArray.
-            - When the type is dict of str to NDArray, users only need to provide the dict
-              for needed argument gradient.
-              Only the specified argument gradient will be calculated.
-   * @param gradReq : {'write', 'add', 'null'}, or list of str or dict of str to str, optional
-            Specifies how we should update the gradient to the args_grad.
-
-            - 'write' means everytime gradient is write to specified args_grad NDArray.
-            - 'add' means everytime gradient is add to the specified NDArray.
-            - 'null' means no action is taken, the gradient may not be calculated.
-   * @param auxStates : list of NDArray, or dict of str to NDArray, optional
-            Input auxiliary states to the symbol, only need to specify when
-            list_auxiliary_states is not empty.
-            - If type is list of NDArray, the position is in the same order of list_auxiliary_states
-            - If type is dict of str to NDArray, then it maps the name of auxiliary_states
-              to the corresponding NDArray,
-            - In either case, all the auxiliary_states need to be provided.
+   * @param ctx Context The device context the generated executor to run on.
+   * @param args Input arguments to the symbol.
+   *             - If type is list of NDArray, the position is in the same order of list_arguments.
+   *             - If type is dict of str to NDArray, then it maps the name of arguments
+   *               to the corresponding NDArray.
+   *             - In either case, all the arguments must be provided.
+   * @param argsGrad When specified, args_grad provide NDArrays to hold
+   *                 the result of gradient value in backward.
+   *                 - If type is list of NDArray,
+   *                   the position is in the same order of list_arguments.
+   *                 - If type is dict of str to NDArray, then it maps the name of arguments
+   *                   to the corresponding NDArray.
+   *                 - When the type is dict of str to NDArray, users only need to provide the dict
+   *                   for needed argument gradient.
+   *                   Only the specified argument gradient will be calculated.
+   * @param gradReq {'write', 'add', 'null'}, or list of str or dict of str to str, optional
+   *                Specifies how we should update the gradient to the args_grad.
+   *                - 'write' means everytime gradient is write to specified args_grad NDArray.
+   *                - 'add' means everytime gradient is add to the specified NDArray.
+   *                - 'null' means no action is taken, the gradient may not be calculated.
+   * @param auxStates Input auxiliary states to the symbol, only need to specify when
+   *                  list_auxiliary_states is not empty.
+   *                  - If type is list of NDArray,
+   *                    the position is in the same order of listAuxiliaryStates
+   *                  - If type is dict of str to NDArray, then it maps the name of auxiliary_states
+   *                    to the corresponding NDArray,
+   *                  - In either case, all the auxiliary_states need to be provided.
    * @param group2ctx The dict mapping the ``ctx_group`` attribute to the context assignment.
    * @return The generated Executor
    * @note
-   *     Auxiliary states are special states of symbols that do not corresponds to an argument,
-   *     and do not have gradient. But still be useful for the specific operations.
-   *     A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
-   *     Most operators do not have auxiliary states and this parameter can be safely ignored.
+   * Auxiliary states are special states of symbols that do not corresponds to an argument,
+   * and do not have gradient. But still be useful for the specific operations.
+   * A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
+   * Most operators do not have auxiliary states and this parameter can be safely ignored.
    *
-   *     User can give up gradient by using a dict in args_grad and only specify
-   *     gradient they interested in.
+   * User can give up gradient by using a dict in args_grad and only specify
+   * gradient they interested in.
    */
   def bind(ctx: Context, args: Seq[NDArray], argsGrad: Seq[NDArray],
            gradReq: String, auxStates: Seq[NDArray],
@@ -548,6 +545,26 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
            group2ctx: Map[String, Context]): Executor = {
     val symbolArguments = listArguments()
     bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Seq[NDArray]): Executor = {
+    bind(ctx, args, argsGrad, "write", Nil, null)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Map[String, NDArray]): Executor = {
+    bind(ctx, args, argsGrad, "write", Nil, null)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, null,
+               Seq.fill(symbolArguments.size)("write"), Nil, null)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, null,
+      Seq.fill(symbolArguments.size)("write"), Nil, null)
   }
 
   private def bindHelper(ctx: Context, symbolArguments: Seq[String],

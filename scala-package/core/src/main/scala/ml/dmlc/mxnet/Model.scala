@@ -1,6 +1,10 @@
 package ml.dmlc.mxnet
 
+import ml.dmlc.mxnet.Base.Shape
+import ml.dmlc.mxnet.optimizer.SGD
 import org.slf4j.{Logger, LoggerFactory}
+
+import scala.collection.mutable
 
 /**
  * Describe the model flow
@@ -14,12 +18,12 @@ object Model {
    * This function select and create a proper kvstore given the kvstore type
    * @param kvStore KVStore type
    * @param numDevice The number of devices
-   * @param maxSize max size of the kvstore
+   * @param argParams Model parameter, dict of name to NDArray of net's weights.
    * @return Option of created [[KVStore]] and whether or not update weight on it
    */
-  private def createKVStore(kvStore: String,
-                            numDevice: Int,
-                            maxSize: Int): (Option[KVStore], Boolean) = {
+  private[mxnet] def createKVStore(kvStore: String,
+                                   numDevice: Int,
+                                   argParams: Map[String, NDArray]): (Option[KVStore], Boolean) = {
     if (numDevice == 1 && !kvStore.contains("dist")) {
       // no need to use kv for single device and single machine
       (None, false)
@@ -27,6 +31,7 @@ object Model {
       var kvType = kvStore
       if (kvType == "local") {
         // automatically select a proper local
+        val maxSize = argParams.values.map(_.shape.product).max
         kvType =
           if (maxSize < 1024 * 1024 * 16) {
             "local_update_cpu"
@@ -40,8 +45,8 @@ object Model {
   }
 
   /**
-   * Create a kvstore (wrap it with Option, None if given kvStore == null)
-   * @param kvStore
+   * Create a kvStore (wrap it with Option, None if given kvStore == null)
+   * @param kvStore KVStore
    * @return Option of created [[KVStore]] and whether or not update weight on it
    */
   private def createKVStore(kvStore: KVStore): (Option[KVStore], Boolean) = {
@@ -103,6 +108,7 @@ object Model {
   }
 
   /**
+   * TODO
    * Internal training function on multiple devices.
    * This function will also work for single device as well.
    * @param symbol The network configuration
@@ -117,7 +123,7 @@ object Model {
    * @param epochSize Number of batches in a epoch.
    *                  In default, it is set to ceil(num_train_examples / batch_size)
    * @param optimizer The optimization algorithm
-   * @param kvstore The KVStore
+   * @param kvStore The KVStore
    * @param updateOnKVStore whether or not perform weight updating on kvstore
    * @param trainData Training data iterator.
    * @param evalData Validation data iterator.
@@ -133,20 +139,20 @@ object Model {
    * @note This function will inplace update the NDArrays in argParams and auxStates.
    */
   // scalastyle:off parameterNum
-  private def trainMultiDevice(symbol: Symbol, ctx: Array[Context],
-                               argNames: Seq[String], paramNames: Seq[String],
-                               auxNames: Seq[String], argParams: Map[String, NDArray],
-                               auxParams: Map[String, NDArray],
-                               beginEpoch: Int, endEpoch: Int, epochSize: Int,
-                               optimizer: Optimizer,
-                               kvstore: KVStore, updateOnKVStore: Boolean,
-                               trainData: DataIter = null, evalData: DataIter = null,
-                               evalMetric: EvalMetric = null,
-                               epochEndCallback: EpochEndCallback = null,
-                               batchEndCallback: BatchEndCallback = null,
-                               logger: Logger = logger,
-                               workLoadList: Seq[Float] = Nil,
-                               monitor: Monitor = null): Unit = {
+  private[mxnet] def trainMultiDevice(symbol: Symbol, ctx: Array[Context],
+                                      argNames: Seq[String], paramNames: Seq[String],
+                                      auxNames: Seq[String], argParams: Map[String, NDArray],
+                                      auxParams: Map[String, NDArray],
+                                      beginEpoch: Int, endEpoch: Int, epochSize: Int,
+                                      optimizer: Optimizer,
+                                      kvStore: KVStore, updateOnKVStore: Boolean,
+                                      trainData: DataIter = null, evalData: DataIter = null,
+                                      evalMetric: EvalMetric = null,
+                                      epochEndCallback: EpochEndCallback = null,
+                                      batchEndCallback: BatchEndCallback = null,
+                                      logger: Logger = logger,
+                                      workLoadList: Seq[Float] = Nil,
+                                      monitor: Monitor = null): Unit = {
     val executorManager = new DataParallelExecutorManager(
         symbol = symbol,
         ctx = ctx,
@@ -172,49 +178,41 @@ trait BatchEndCallback {
 
 /**
  * Model class of MXNet for training and predicting feedforward nets.
- *   This class is designed for a single-data single output supervised network.
- * @param symbol : Symbol
-        The symbol configuration of computation network.
- * @param   ctx : Context or list of Context, optional
-        The device context of training and prediction.
-        To use multi GPU training, pass in a list of gpu contexts.
- * @param   numEpoch : int, optional
-        Training parameter, number of training epochs(epochs).
- * @param   epochSize : int, optional
-        Number of batches in a epoch. In default, it is set to
-        ceil(num_train_examples / batch_size)
- * @param   optimizer : str or Optimizer, optional
-        Training parameter, name or optimizer object for training.
- * @param   initializer : initializer function, optional
-        Training parameter, the initialization scheme used.
- * @param   argParams : dict of str to NDArray, optional
-        Model parameter, dict of name to NDArray of net's weights.
- * @param   auxParams : dict of str to NDArray, optional
-        Model parameter, dict of name to NDArray of net's auxiliary states.
- * @param   allowExtraParams : boolean, optional
-        Whether allow extra parameters that are not needed by symbol
-        to be passed by aux_params and arg_params.
-        If this is True, no error will be thrown when aux_params and arg_params
-        contain extra parameters than needed.
- * @param   beginEpoch : int, optional
-        The begining training epoch.
- * @param   kwargs : dict
-        The additional keyword arguments passed to optimizer.
+ * This class is designed for a single-data single output supervised network.
+ * @param symbol The symbol configuration of computation network.
+ * @param ctx The device context of training and prediction.
+ *            To use multi GPU training, pass in a list of gpu contexts.
+ * @param numEpoch Training parameter, number of training epochs(epochs).
+ * @param epochSize Number of batches in a epoch. In default, it is set to
+ *                  ceil(num_train_examples / batch_size)
+ * @param optimizer Training parameter, name or optimizer object for training.
+ * @param initializer Training parameter, the initialization scheme used.
+ * @param batchSize The batch size of training data.
+ * @param argParams Model parameter, dict of name to NDArray of net's weights.
+ * @param auxParams Model parameter, dict of name to NDArray of net's auxiliary states.
+ * @param allowExtraParams Whether allow extra parameters that are not needed by symbol
+ *                         to be passed by aux_params and arg_params.
+ *                         If this is True, no error will be thrown when aux_params and arg_params
+ *                         contain extra parameters than needed.
+ * @param beginEpoch The begining training epoch.
+ * @param kwargs The additional keyword arguments passed to optimizer.
  */
 class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(new Context("cpu")),
                   val numEpoch: Int = -1, val epochSize: Int = -1,
                   val optimizer: String = "sgd",
                   val initializer: Initializer = new Uniform(0.01f),
-                  val argParams: Map[String, NDArray] = null,
-                  val auxParams: Map[String, NDArray] = null,
+                  val batchSize: Int = 128,
+                  argParams: Map[String, NDArray] = null,
+                  auxParams: Map[String, NDArray] = null,
                   allowExtraParams: Boolean = false,
                   val beginEpoch: Int = 0,
-                  val kwargs: Map[String, Any]) {
+                  val kwargs: mutable.Map[String, Any]) {
+  private val LOG: Logger = LoggerFactory.getLogger(classOf[FeedForward])
   // check if symbol contain duplicated names.
   Executor.checkArguments(symbol)
 
   // rematch parameters to delete useless ones
-  val _argParams =
+  private var _argParams =
     if (allowExtraParams) {
       if (argParams != null) {
         val argNames = symbol.listArguments().toSet
@@ -225,7 +223,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(new Contex
     } else {
       argParams
     }
-  val _auxParams =
+  private var _auxParams =
     if (allowExtraParams) {
       if (auxParams != null) {
         val auxNames = symbol.listAuxiliaryStates().toSet
@@ -238,9 +236,138 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(new Contex
     }
 
   // internal helper state
-  val predExec: Context = null
+  var predExec: Executor = null
 
+  // Initialize weight parameters and auxiliary states
+  private def initParams(inputShapes: Map[String, Shape], overwrite: Boolean = false)
+      : (Seq[String], Seq[String], Seq[String]) = {
+    val (argShapes, _, auxShapes) = symbol.inferShape(inputShapes)
+    val argNames = symbol.listArguments()
+    val inputNames = inputShapes.keys
+    val paramNames = argNames.toSet -- inputNames.toSet
+    val auxNames = symbol.listAuxiliaryStates()
 
+    val paramNameShapes = (argNames zip argShapes).filter { case (name, _) =>
+      paramNames.contains(name)
+    }
+    val argParams = paramNameShapes.map { case (name, shape) =>
+      (name, NDArray.zeros(shape))
+    }.toMap
+    val auxParams = (auxNames zip auxShapes).map { case (name, shape) =>
+      (name, NDArray.zeros(shape))
+    }.toMap
+
+    for ((k, v) <- argParams) {
+      if (_argParams != null && _argParams.contains(k) && (!overwrite)) {
+        argParams(k).set(_argParams(k))
+      } else {
+        initializer(k, v)
+      }
+    }
+
+    for ((k, v) <- auxParams) {
+      if (_auxParams != null && _auxParams.contains(k) && (!overwrite)) {
+        auxParams(k).set(_auxParams(k))
+      } else {
+        initializer(k, v)
+      }
+    }
+
+    _argParams = argParams
+    _auxParams = auxParams
+    (argNames, paramNames.toSeq, auxNames)
+  }
+
+  // Initialize the predictor module for running prediction.
+  private def initPredictor(inputShapes: Map[String, Shape]): Unit = {
+    if (this.predExec == null) {
+      val predExec = symbol.simpleBind(ctx(0), gradReq = "null", shapeDict = inputShapes)
+      predExec.copyParamsFrom(_argParams, _auxParams)
+      Executor.checkArguments(symbol)
+      this.predExec = predExec
+    }
+  }
+
+  // Initialize the iterator given input.
+  private def initIter(X: NDArray, y: NDArray, isTrain: Boolean): DataIter = {
+    require(y != null || !isTrain, "y must be specified")
+    val label = if (y == null) NDArray.zeros(X.shape(0)) else y
+    require(label.shape.length == 1, "Label must be 1D")
+    require(X.shape(0) == label.shape(0), "The numbers of data points and labels not equal")
+    if (isTrain) {
+      new NDArrayIter(X, label, batchSize, shuffle = isTrain, lastBatchHandle = "roll_over")
+    } else {
+      new NDArrayIter(X, label, batchSize, shuffle = false)
+    }
+  }
+
+  // Initialize the iterator given eval_data.
+  private def initEvalIter(evalData: (NDArray, NDArray)): DataIter = {
+    if (evalData == null) {
+      null
+    } else {
+      initIter(evalData._1, evalData._2, isTrain = true)
+    }
+  }
+
+  /**
+   * TODO
+   * Fit the model.
+   * @param trainData Training data. If X is an DataIter, the name or, if not available,
+   *                  position, of its outputs should match the corresponding variable
+   *                  names defined in the symbolic graph.
+   * @param evalData If eval_data is numpy.ndarray/list/NDArray pair,
+   *                 it should be (valid_data, valid_label).
+   * @param evalMetric The evaluation metric, name of evaluation metric.
+   *                   Or a customize evaluation function that returns the statistics
+   *                   based on minibatch.
+   * @param epochEndCallback A callback that is invoked at end of each epoch.
+   *                         This can be used to checkpoint model each epoch.
+   * @param batchEndCallback A callback that is invoked at end of each batch
+   *                         For print purpose
+   * @param kvStoreType A string kvstore type:
+   *                    'local' : multi-devices on a single machine, will automatically
+   *                              choose one from 'local_update_cpu', 'local_allreduce_cpu', and
+   *                              'local_allreduce_device'
+   *                    'dist_sync' : multi-machines with BSP
+   *                    'dist_async' : multi-machines with partical asynchronous
+   *                    In default uses 'local', often no need to change for single machiine.
+   * @param logger When not specified, default logger will be used.
+   * @param workLoadList The list of work load for different devices, in the same order as ctx
+   */
+  def fit(trainData: DataIter, evalData: DataIter, evalMetric: String = "acc",
+          kvStoreType: String = "local", logger: Logger = LOG,
+          workLoadList: Seq[Float] = null): Unit = {
+    val (argNames, paramNames, auxNames) =
+      initParams(trainData.provideData ++ trainData.provideLabel)
+    // TODO: kwargs.put("arg_names", argNames)
+
+    // TODO: setup metric
+
+    // create kvstore
+    val (kvStore, updateOnKVStore) = Model.createKVStore(kvStoreType, ctx.length, _argParams)
+
+    // init optmizer
+    val batchSizeMultiplier = kvStore.map { kv =>
+      if (kv.`type` == "dist_sync") {
+        kv.numWorkers
+      } else {
+        1
+      }
+    }
+    val batchSize = trainData.batchSize * batchSizeMultiplier.getOrElse(1)
+    // TODO: temporarily hard-coded sgd optimizer
+    val optimizer = new SGD(rescaleGrad = 1f / batchSize)
+    Model.trainMultiDevice(
+      symbol, ctx, argNames, paramNames, auxNames,
+      _argParams, _auxParams,
+      this.beginEpoch, this.numEpoch,
+      this.epochSize,
+      optimizer,
+      kvStore.orNull, updateOnKVStore,
+      trainData = trainData, evalData = evalData,
+      logger = logger, workLoadList = workLoadList)
+  }
 }
 
 object FeedForward {

@@ -34,15 +34,15 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     // test reset
     mnistIter.reset()
     mnistIter.iterNext()
-    val label0 = mnistIter.getLabel().toArray
-    val data0 = mnistIter.getData().toArray
+    val label0 = mnistIter.getLabel().head.toArray
+    val data0 = mnistIter.getData().head.toArray
     mnistIter.iterNext()
     mnistIter.iterNext()
     mnistIter.iterNext()
     mnistIter.reset()
     mnistIter.iterNext()
-    val label1 = mnistIter.getLabel().toArray
-    val data1 = mnistIter.getData().toArray
+    val label1 = mnistIter.getLabel().head.toArray
+    val data1 = mnistIter.getData().head.toArray
     assert(label0 === label1)
     assert(data0 === data1)
   }
