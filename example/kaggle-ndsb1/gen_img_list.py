@@ -2,6 +2,8 @@ import csv
 import os
 import sys
 import random
+import pandas as pd
+from sklearn.cross_validation import StratifiedShuffleSplit
 
 if len(sys.argv) < 3:
     print "Usage: gen_img_list.py train/test train_folder img.lst"
@@ -11,7 +13,8 @@ random.seed(888)
 
 task = sys.argv[1]
 fi = sys.argv[2]
-fo = csv.writer(open(sys.argv[3], "w"), delimiter='\t', lineterminator='\n')
+fo=sys.argv[3]
+
 
 
 #check sampleSubmission.csv from kaggle website to view submission format
@@ -27,6 +30,9 @@ if task == "train":
         for img in lst:
             img_lst.append((cnt, i, path + '/' + img))
             cnt += 1
+
+
+
 else:
     lst = os.listdir(fi)
     for img in lst:
@@ -35,8 +41,22 @@ else:
 
 # shuffle
 random.shuffle(img_lst)
-
 #write
-for item in img_lst:
-    fo.writerow(item)
+img_lst=pd.DataFrame(img_lst)
+img_lst.to_csv(fo,sep="\t",index=False,header=False)
+
+
+
+if task == "train":
+    ## Stratified sampling to generate train and validation sets
+    labels_train=img_lst.ix[:,1]
+    # unique_train, counts_train = np.unique(labels_train, return_counts=True) # To have a look at the frecuency distribution
+    sss = StratifiedShuffleSplit(labels_train, 1, test_size=0.25, random_state=0)
+    for tr_idx, va_idx in sss:
+        print "Train subset has ", len(tr_idx), " cases. Validation subset has ", len(va_idx), "cases"
+        tr_lst=img_lst.iloc[tr_idx,:]
+        va_lst=img_lst.iloc[va_idx,:]
+        tr_lst.to_csv("data/tr.lst",sep="\t",index=False,header=False)
+        va_lst.to_csv("data/va.lst",sep="\t",index=False,header=False)
+
 

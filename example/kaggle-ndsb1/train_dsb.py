@@ -31,7 +31,7 @@ parser.add_argument('--gpus', type=str, default='0',
                     help='the gpus will be used, e.g "0,1,2,3"')
 parser.add_argument('--kv-store', type=str, default='local',
                     help='the kvstore type')
-parser.add_argument('--num-examples', type=int, default=20000,
+parser.add_argument('--num-examples', type=int, default=22574,
                     help='the number of training examples')
 parser.add_argument('--num-classes', type=int, default=121,
                     help='the number of classes')
