@@ -153,6 +153,7 @@ class CuDNNBatchNormOp : public Operator {
                                              param_.eps,
                                              save_mean.dptr_,
                                              save_inv_var.dptr_), CUDNN_STATUS_SUCCESS);
+    if (param_.fix_gamma) dgamma = 0;
   }
 
  private:
