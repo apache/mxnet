@@ -76,6 +76,33 @@ def test_bind():
                                     lambda g, x, y: (g / y, -x * g/ (y**2)),
                                     dim)
 
+def test_hybrid_backward():
+    data = mx.symbol.Variable('data')
+    label = mx.symbol.Variable('label')
+    loss = mx.symbol.SoftmaxOutput(data=data, label=label)
+    data2 = mx.symbol.Variable('data2')
+    out = mx.symbol.Group([loss, data+data2])
+
+    X = mx.nd.array(np.random.uniform(-10, 10, (2,10)))
+    X2 = mx.nd.array(np.random.uniform(-10, 10, (2,10)))
+    Y = mx.nd.array(np.array([0,1]))
+    Xg = mx.nd.empty(X.shape)
+
+    e = out.bind(mx.Context('cpu'), \
+            args={'data': X, 'label': Y, 'data2': X2}, \
+            args_grad={'data2': Xg})
+    e.forward()
+    assert reldiff(e.outputs[1].asnumpy(), (X+X2).asnumpy()) < 1e-6
+
+    grad_top = mx.nd.array(np.random.uniform(-10, 10, (2,10)))
+    # output is a group of a loss and a dangling variable, we provide
+    # only one top-gradient because the loss can compute the gradient
+    # by its own
+    e.backward(grad_top)
+    assert reldiff(Xg.asnumpy(), grad_top.asnumpy()) < 1e-6
+
+
 
 if __name__ == "__main__":
     test_bind()
+    test_hybrid_backward()

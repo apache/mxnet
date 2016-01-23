@@ -868,15 +868,26 @@ void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
 void GraphExecutor::Backward(const std::vector<NDArray> &head_grads) {
   if (head_grads.size() != 0) {
     // TODO(bing, min): consider pass a map for backward
-    CHECK_EQ(head_grad_nodes_.size(), head_grads.size());
+
+    int cnt_non_loss = 0;
     for (size_t i = 0; i < head_grad_nodes_.size(); ++i) {
       uint32_t nid = head_grad_nodes_[i];
-      CHECK(graph_.nodes[nid].is_variable());
       DataEntryInfo &info = op_nodes_[nid].outputs[0];
-      CHECK_EQ(info.type, kTobeBindByExternal);
-      info.data = head_grads[i];
-      CHECK(op_nodes_[nid].ctx == head_grads[i].ctx())
-          << "Head Gradient context do not match the context of output op";
+      cnt_non_loss += (info.ref_count != 0);
+    }
+    CHECK_EQ(cnt_non_loss, head_grads.size());
+    size_t k = 0;
+    for (size_t i = 0; i < head_grad_nodes_.size(); ++i) {
+      uint32_t nid = head_grad_nodes_[i];
+      DataEntryInfo &info = op_nodes_[nid].outputs[0];
+      if (info.ref_count != 0) {
+        CHECK(graph_.nodes[nid].is_variable());
+        CHECK_EQ(info.type, kTobeBindByExternal);
+        info.data = head_grads[k];
+        CHECK(op_nodes_[nid].ctx == head_grads[k].ctx())
+            << "Head Gradient context do not match the context of output op";
+        k++;
+      }
     }
   } else {
     // check all the head_grad_nodes need to have zero ref_count
