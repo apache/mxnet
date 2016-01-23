@@ -206,13 +206,13 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         kvstore.set_optimizer(optimizer)
 
     # Now start training
+    train_data.reset()
     for epoch in range(begin_epoch, end_epoch):
         # Training phase
         tic = time.time()
         eval_metric.reset()
         nbatch = 0
         # Iterate over training data.
-        train_data.reset()
         while True:
             do_reset = True
             for data_batch in train_data:
@@ -259,6 +259,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                     break
 
             if do_reset == True:
+                logger.info('Epoch[%d] Resetting Data Iterator', epoch)
                 train_data.reset()
 
             # this epoch is done
