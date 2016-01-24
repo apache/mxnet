@@ -17,9 +17,9 @@ Uncompress train.zip and test.zip folders.
     |   |--.../
     |--test/...
 ```
-- Run command ``` python gen_img_list.py train data/train/ data/train.lst``` to generate a full train image list
-- If option above is "train" it will automatically split the list into a train and validation set (tr.lst and va.lst in the /data directory) using stratified sampling.
-- Run command ``` python gen_img_list.py test data/test/ data/test.lst``` to generate a test image list
+- Run command ``` python gen_img_list.py --train``` to generate a the train image list
+- If no extra arguments are passed it will generate the list of the train set (train.lst) and it will also automatically split the list into a train and validation set (tr.lst and va.lst in the /data directory). There is an option to use using stratified sampling and/or to give the percentage of set that is assigned to validation.
+- Run command ``` python gen_img_list.py --image-folder=data/test/ --out-file=test.lst``` to generate a test image list
 
 
 #### Step 2: Generate Image Record (new shape with short edge = 48)
