@@ -104,7 +104,7 @@ mx.model.train <- function(symbol, ctx, input.shape,
   # create the executors
   sliceinfo <- mx.model.slice.shape(input.shape, ndevice)
   train.execs <- lapply(1:ndevice, function(i) {
-    mx.simple.bind(symbol, ctx=ctx[[i]], data=sliceinfo[[i]]$shape, grad.req=TRUE)
+    mx.simple.bind(symbol, ctx=ctx[[i]], data=sliceinfo[[i]]$shape, grad.req="write")
   })
   # set the parameters into executors
   for (texec in train.execs) {
@@ -469,7 +469,7 @@ predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128,
   X$reset()
   if (!X$iter.next()) stop("Cannot predict on empty iterator")
   dlist = X$value()
-  pexec <- mx.simple.bind(model$symbol, ctx=ctx, data=dim(dlist$data), grad.req=FALSE)
+  pexec <- mx.simple.bind(model$symbol, ctx=ctx, data=dim(dlist$data), grad.req="null")
   mx.exec.update.arg.arrays(pexec, model$arg.params, match.name=TRUE)
   mx.exec.update.aux.arrays(pexec, model$aux.params, match.name=TRUE)
   packer <- mx.nd.arraypacker()
