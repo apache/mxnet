@@ -253,7 +253,7 @@ mx.io.CSVIter <- function(...) {
 #'     Batch Param: Batch size.
 #' @param round.batch  boolean, optional, default=True
 #'     Batch Param: Use round robin to handle overflow batch.
-#' @param prefetch.buffer  , optional, default=4
+#' @param prefetch.buffer  long (non-negative), optional, default=4
 #'     Backend Param: Number of prefetched parameters
 #' @param rand.crop  boolean, optional, default=False
 #'     Augmentation Param: Whether to random crop on the image
@@ -340,7 +340,7 @@ mx.io.ImageRecordIter <- function(...) {
 #'     partition the data into multiple parts
 #' @param part.index  int, optional, default='0'
 #'     the index of the part will read
-#' @param prefetch.buffer  , optional, default=4
+#' @param prefetch.buffer  long (non-negative), optional, default=4
 #'     Backend Param: Number of prefetched parameters
 #' @return iter The result mx.dataiter
 #' 
