@@ -5,7 +5,10 @@ import random
 <<<<<<< HEAD
 =======
 import pandas as pd
+<<<<<<< HEAD
 >>>>>>> e9492a5... removed panda dependecies and added optional stratified sampling
+=======
+>>>>>>> c3f3292338699026019c1173229424b5be926367
 import numpy as np
 import argparse
 
