@@ -7,6 +7,9 @@
 mx.symbol.Concat(...)
 }
 \arguments{
+\item{data}{Symbol[]
+List of tensors to concatenate}
+
 \item{num.args}{int, required
 Number of inputs to be concated.}
 

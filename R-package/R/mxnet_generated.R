@@ -253,7 +253,7 @@ mx.io.CSVIter <- function(...) {
 #'     Batch Param: Batch size.
 #' @param round.batch  boolean, optional, default=True
 #'     Batch Param: Use round robin to handle overflow batch.
-#' @param prefetch.buffer  long (non-negative), optional, default=4
+#' @param prefetch.buffer  , optional, default=4
 #'     Backend Param: Number of prefetched parameters
 #' @param rand.crop  boolean, optional, default=False
 #'     Augmentation Param: Whether to random crop on the image
@@ -340,7 +340,7 @@ mx.io.ImageRecordIter <- function(...) {
 #'     partition the data into multiple parts
 #' @param part.index  int, optional, default='0'
 #'     the index of the part will read
-#' @param prefetch.buffer  long (non-negative), optional, default=4
+#' @param prefetch.buffer  , optional, default=4
 #'     Backend Param: Number of prefetched parameters
 #' @return iter The result mx.dataiter
 #' 
@@ -413,6 +413,8 @@ mx.symbol.Cast <- function(...) {
 
 #' Perform an feature concat on channel dim (dim 1) over all the inputs.
 #' 
+#' @param data  Symbol[]
+#'     List of tensors to concatenate
 #' @param num.args  int, required
 #'     Number of inputs to be concated.
 #' @param dim  int, optional, default='1'
@@ -792,6 +794,8 @@ mx.symbol.SoftmaxActivation <- function(...) {
 #' 
 #' @param data  Symbol
 #'     Input data to softmax.
+#' @param label  Symbol
+#'     Label data.
 #' @param grad.scale  float, optional, default=1
 #'     Scale the gradient by a float factor
 #' @param ignore.label  float, optional, default=-1
@@ -828,6 +832,8 @@ mx.symbol.SwapAxis <- function(...) {
 
 #' Perform nearest neighboor/bilinear up sampling to inputs
 #' 
+#' @param data  Symbol[]
+#'     Array of tensors to upsample
 #' @param scale  int (non-negative), required
 #'     Up sampling scale
 #' @param num.filter  int (non-negative), optional, default=0
