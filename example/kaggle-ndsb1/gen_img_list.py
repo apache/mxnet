@@ -2,6 +2,10 @@ import csv
 import os
 import sys
 import random
+<<<<<<< HEAD
+=======
+import pandas as pd
+>>>>>>> e9492a5... removed panda dependecies and added optional stratified sampling
 import numpy as np
 import argparse
 
