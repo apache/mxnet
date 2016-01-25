@@ -16,6 +16,7 @@ object IO {
   private val iterCreateFuncs: Map[String, IterCreateFunc] = _initIOModule()
 
   def MNISTIter: IterCreateFunc = iterCreateFuncs("MNISTIter")
+  def ImageRecordIter: IterCreateFunc = iterCreateFuncs("ImageRecordIter")
 
   /**
    * create iterator via iterName and params
