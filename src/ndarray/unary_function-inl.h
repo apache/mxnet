@@ -228,8 +228,8 @@ MXNET_REGISTER_TBLOB_FUN(sum, XPU)
 MXNET_REGISTER_TBLOB_FUN(argmax_channel, XPU)
 .set_function(XPU::kDevMask, ReduceChannel<XPU, mshadow::red::maximum, true>, false, false)
 .set_shape_infer(ReduceChannelShape)
-.describe("Take sum of the src."
-          "The result will be ndarray of shape (1,) on the same device.");
+.describe("Take argmax indices of each channel of the src."
+          "The result will be ndarray of shape (num_channel,) on the same device.");
 }  // namespace ndarray
 }  // namespace mxnet
 #endif  // MXNET_NDARRAY_UNARY_FUNCTION_INL_H_

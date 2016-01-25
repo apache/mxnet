@@ -260,7 +260,7 @@ class NDArray(object):
             ctypes.c_size_t(source_array.size)))
 
     def _slice(self, start, stop):
-        """Return a sliiced NDArray that shares memory with current one.
+        """Return a sliced NDArray that shares memory with current one.
 
         Parameters
         ----------
