@@ -9,8 +9,6 @@ os:
 env:
   # code analysis
   - TASK=lint
-  # test doc build
-  - TASK=doc
   # build mxnet.so with CUDA
   - TASK=build
   # run tests/cpp
@@ -25,8 +23,6 @@ matrix:
   exclude:
     - os: osx
       env: TASK=lint
-    - os: osx
-      env: TASK=doc
     - os: linux
       env: TASK=r_test
 
@@ -69,7 +65,7 @@ cache:
 
 before_cache:
   - dmlc-core/scripts/travis/travis_before_cache.sh
-  
+
 after_failure:
   - tests/travis/travis_after_failure.sh
 

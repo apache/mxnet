@@ -298,19 +298,21 @@ void GraphExecutor::InitGraph(const Symbol &symbol,
   for (const auto& head : graph_.heads) {
     head_nodes.push_back(head.source_id);
   }
-  std::sort(head_nodes.begin(), head_nodes.end());
-  head_nodes.resize(std::unique(head_nodes.begin(), head_nodes.end()) - head_nodes.begin());
   std::vector<uint32_t> fwd_nodes = graph_.PostDFSOrder(head_nodes, std::unordered_set<uint32_t>());
   num_forward_nodes_ = fwd_nodes.size();
 
   std::unordered_set<uint32_t> fwd_set(fwd_nodes.begin(), fwd_nodes.end());
   std::vector<uint32_t> topo = graph_.TopoSort();
-  std::vector<uint32_t>  backward;
+  std::unordered_set<uint32_t> fwd_bwd_set(topo.begin(), topo.end());
+  std::vector<uint32_t> backward;
 
-  for (uint32_t nid : topo) {
-    if (fwd_set.count(nid) != 0) {
+  for (uint32_t nid : fwd_nodes) {
+    if (fwd_bwd_set.count(nid) != 0) {
       topo_order_.push_back(nid);
-    } else {
+    }
+  }
+  for (uint32_t nid : topo) {
+    if (fwd_set.count(nid) == 0) {
       // TODO(tqchen) find less hacky way to decide mirror node.
       const std::string& name = graph_.nodes[nid].name;
       bool is_mirror = graph_.nodes[nid].is_forward() &&
@@ -892,7 +894,7 @@ void GraphExecutor::Backward(const std::vector<NDArray> &head_grads) {
 
 Executor *Executor::Bind(Symbol symbol,
                          const Context& default_ctx,
-                        const std::map<std::string, Context>& group2ctx,
+                         const std::map<std::string, Context>& group2ctx,
                          const std::vector<NDArray> &in_args,
                          const std::vector<NDArray> &arg_grad_store,
                          const std::vector<OpReqType> &grad_req_type,
