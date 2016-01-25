@@ -135,8 +135,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         Name of all trainable parameters of the network.
     aux_names: list of str
         Name of all auxiliary states of the network.
-    input_shape : tuple
-        Shape of input data batch.
     arg_params : dict of str to NDArray
         Model parameter, dict of name to NDArray of net's weights.
     aux_params : dict of str to NDArray
@@ -171,9 +169,12 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     work_load_list : list of float or int, optional
         The list of work load for different devices,
         in the same order as ctx
+    monitor : Monitor, optional
+        Monitor installed to executor,
+        for monitoring outputs, weights, and gradients for debugging.
     Notes
     -----
-    - This function will inplace update the NDArrays in arg_parans and aux_states.
+    - This function will inplace update the NDArrays in arg_params and aux_states.
     """
     if logger is None:
         logger = logging
@@ -442,7 +443,7 @@ class FeedForward(BASE_ESTIMATOR):
 
         arg_names = self.symbol.list_arguments()
         input_names = input_shapes.keys()
-        param_names = list(set(arg_names) - set(input_names))
+        param_names = set(arg_names) - set(input_names)
         aux_names = self.symbol.list_auxiliary_states()
 
         param_name_shapes = [x for x in zip(arg_names, arg_shapes) if x[0] in param_names]
@@ -463,7 +464,7 @@ class FeedForward(BASE_ESTIMATOR):
 
         self.arg_params = arg_params
         self.aux_params = aux_params
-        return (arg_names, param_names, aux_names)
+        return (arg_names, list(param_names), aux_names)
 
     def __getstate__(self):
         this = self.__dict__.copy()

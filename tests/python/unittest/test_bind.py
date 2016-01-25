@@ -31,9 +31,6 @@ def check_bind_with_uniform(uf, gf, dim):
 
 
     exec4 = ret.bind(mx.Context('cpu'),
-                     args={'rhs': rhs_arr, 'lhs': lhs_arr})
-
-    exec4 = ret.bind(mx.Context('cpu'),
                      args={'rhs': rhs_arr, 'lhs': lhs_arr},
                      args_grad={'lhs': lhs_grad, 'rhs': rhs_grad})
 
