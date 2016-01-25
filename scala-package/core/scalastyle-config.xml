@@ -60,7 +60,7 @@ You can also disable only one rule, by specifying its rule id, as specified in:
     <parameters><parameter name="regex"><![CDATA[^[a-z][A-Za-z]*$]]></parameter></parameters>
   </check>
 
-  <check level="error" class="org.scalastyle.scalariform.ParameterNumberChecker" enabled="true">
+  <check customId="parameterNum" level="error" class="org.scalastyle.scalariform.ParameterNumberChecker" enabled="true">
     <parameters><parameter name="maxParameters"><![CDATA[10]]></parameter></parameters>
   </check>
 

@@ -10,7 +10,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  * @author Yizhi Liu
  */
 class Symbol(private[mxnet] val handle: SymbolHandle) {
-  def +(other: Symbol): Symbol = Symbol.create("_Plus", other)
+  def +(other: Symbol): Symbol = Symbol.create("_Plus", this, other)
 
   override def clone(): Symbol = {
     val clonedHandle = new SymbolHandleRef
@@ -18,37 +18,203 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
     new Symbol(clonedHandle.value)
   }
 
+  def get(index: Int): Symbol = {
+    val newHandle = new SymbolHandleRef
+    checkCall(_LIB.mxSymbolGetOutput(handle, index, newHandle))
+    new Symbol(handle = newHandle.value)
+  }
+
+  def get(name: String): Symbol = {
+    var index: Int = -1
+    for ((output, i) <- listOutputs().view.zipWithIndex) {
+      if (output == name) {
+        require(index == -1, s"There are multiple outputs with name $name")
+        index = i
+      }
+    }
+    require(index >= 0, s"Cannot find output that matches name $name")
+    get(index)
+  }
+
+  /**
+   * Get a new grouped symbol whose output contains all the internal outputs of this symbol.
+   * @return The internal of the symbol.
+   */
+  def getInternals: Symbol = {
+    val newHandle = new SymbolHandleRef
+    checkCall(_LIB.mxSymbolGetInternals(handle, newHandle))
+    new Symbol(handle = newHandle.value)
+  }
+
   /**
    * List all the arguments in the symbol.
    * @return Array of all the arguments.
    */
-  def listArguments(): Array[String] = {
+  def listArguments(): Seq[String] = {
     val arr = ArrayBuffer.empty[String]
     checkCall(_LIB.mxSymbolListArguments(handle, arr))
-    arr.toArray
+    arr
   }
 
   /**
    * List all outputs in the symbol.
    * @return : List of all the outputs.
    */
-  def listOutputs(): Array[String] = {
+  def listOutputs(): Seq[String] = {
     val arr = ArrayBuffer.empty[String]
     checkCall(_LIB.mxSymbolListOutputs(handle, arr))
-    arr.toArray
+    arr
   }
 
   /**
    * List all auxiliary states in the symbol.
    * @return The names of the auxiliary states.
-   * Notes
-   * -----
+   * @note
    * Auxiliary states are special states of symbols that do not corresponds to an argument,
    * and do not have gradient. But still be useful for the specific operations.
    * A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
    * Most operators do not have Auxiliary states.
    */
-  def listAuxiliaryStates(): Array[String] = ???
+  def listAuxiliaryStates(): Seq[String] = {
+    val sarr = ArrayBuffer.empty[String]
+    checkCall(_LIB.mxSymbolListAuxiliaryStates(handle, sarr))
+    sarr
+  }
+
+  /**
+   * Infer the type of outputs and arguments of given known types of arguments.
+   * Tuple of Nones is returned if there is not enough information passed in.
+   * An error will be raised if there is inconsistency found in the known types passed in.
+   * @param args Provide type of arguments in a positional way. Unknown type can be marked as null
+   * @return
+   * argTypes : list of numpy.dtype or None
+   *            List of types of arguments.
+   *            The order is in the same order as list_arguments()
+   * outTypes : list of numpy.dtype or None
+   *            List of types of outputs.
+   *            The order is in the same order as list_outputs()
+   * auxTypes : list of numpy.dtype or None
+   *            List of types of outputs.
+   *            The order is in the same order as list_auxiliary()
+   */
+  def inferType(args: Class[_ >: Float with Int with Double]*)
+    : (Seq[Class[_ >: Float with Int with Double]],
+       Seq[Class[_ >: Float with Int with Double]],
+       Seq[Class[_ >: Float with Int with Double]]) = {
+    val sdata: Array[Int] = args.map(NDArray.DTYPE_NATIVE_TO_MX.getOrElse(_, -1)).toArray
+    inferType(null, sdata)
+  }
+
+  /**
+   * Infer the type of outputs and arguments of given known types of arguments.
+   * Tuple of Nones is returned if there is not enough information passed in.
+   * An error will be raised if there is inconsistency found in the known types passed in.
+   * @param kwargs Provide keyword arguments of known types.
+   * @return
+   * argTypes : list of numpy.dtype or None
+   *            List of types of arguments.
+   *            The order is in the same order as list_arguments()
+   * outTypes : list of numpy.dtype or None
+   *            List of types of outputs.
+   *            The order is in the same order as list_outputs()
+   * auxTypes : list of numpy.dtype or None
+   *            List of types of outputs.
+   *            The order is in the same order as list_auxiliary()
+   */
+  def inferType(kwargs: Map[String, Class[_ >: Float with Int with Double]])
+    : (Seq[Class[_ >: Float with Int with Double]],
+       Seq[Class[_ >: Float with Int with Double]],
+       Seq[Class[_ >: Float with Int with Double]]) = {
+    val filteredArgs = kwargs.filter { case (key, value) =>
+      NDArray.DTYPE_NATIVE_TO_MX.contains(value)
+    }
+    val keys = filteredArgs.keys.toArray
+    val sdata = filteredArgs.values.map(NDArray.DTYPE_NATIVE_TO_MX(_)).toArray
+    inferType(keys, sdata)
+  }
+
+  private def inferType(keys: Array[String], values: Array[Int])
+    : (Seq[Class[_ >: Float with Int with Double]],
+       Seq[Class[_ >: Float with Int with Double]],
+       Seq[Class[_ >: Float with Int with Double]]) = {
+    val argTypeData = ListBuffer.empty[Int]
+    val outTypeData = ListBuffer.empty[Int]
+    val auxTypeData = ListBuffer.empty[Int]
+    val complete = new RefInt
+    checkCall(_LIB.mxSymbolInferType(
+      handle, keys, values, argTypeData, outTypeData, auxTypeData, complete))
+    if (complete.value != 0) {
+      (argTypeData.map(NDArray.DTYPE_MX_TO_NATIVE),
+        outTypeData.map(NDArray.DTYPE_MX_TO_NATIVE),
+        auxTypeData.map(NDArray.DTYPE_MX_TO_NATIVE))
+    } else {
+      (null, null, null)
+    }
+  }
+
+  /**
+   * Infer the shape of outputs and arguments of given known shapes of arguments.
+   * User can either pass in the known shapes in positional way or keyword argument way.
+   * Tuple of Nones is returned if there is not enough information passed in.
+   * An error will be raised if there is inconsistency found in the known shapes passed in.
+   * @param args Provide shape of arguments in a positional way.
+   *             Unknown shape can be marked as None
+   * @return
+   * argShapes List of shapes of arguments. The order is in the same order as list_arguments()
+   * outShapes List of shapes of outputs. The order is in the same order as list_outputs()
+   * auxShapes List of shapes of outputs. The order is in the same order as list_auxiliary()
+   */
+  def inferShape(args: Shape*): (Seq[Shape], Seq[Shape], Seq[Shape]) = {
+    val keys: Array[String] = null
+    val indPtr = ArrayBuffer(0)
+    val sdata = ArrayBuffer.empty[Int]
+    args.foreach { shape =>
+      if (shape != null) {
+        sdata ++= shape
+        indPtr += sdata.size
+      }
+    }
+    inferShape(keys, indPtr.toArray, sdata.toArray)
+  }
+
+  /**
+   * Infer the shape of outputs and arguments of given known shapes of arguments.
+   * User can either pass in the known shapes in positional way or keyword argument way.
+   * Tuple of Nones is returned if there is not enough information passed in.
+   * An error will be raised if there is inconsistency found in the known shapes passed in.
+   * @param kwargs Provide keyword arguments of known shapes.
+   * @return
+   * argShapes List of shapes of arguments. The order is in the same order as list_arguments()
+   * outShapes List of shapes of outputs. The order is in the same order as list_outputs()
+   * auxShapes List of shapes of outputs. The order is in the same order as list_auxiliary()
+   */
+  def inferShape(kwargs: Map[String, Shape]): (Seq[Shape], Seq[Shape], Seq[Shape]) = {
+    val keys = ArrayBuffer.empty[String]
+    val indPtr = ArrayBuffer(0)
+    val sdata = ArrayBuffer.empty[Int]
+    kwargs.foreach { case (key, shape) =>
+      keys += key
+      sdata ++= shape
+      indPtr += sdata.size
+    }
+    inferShape(keys.toArray, indPtr.toArray, sdata.toArray)
+  }
+
+  def inferShape(keys: Array[String], indPtr: Array[Int], values: Array[Int])
+    : (Seq[Shape], Seq[Shape], Seq[Shape]) = {
+    val argShapeData = ListBuffer.empty[Shape]
+    val outShapeData = ListBuffer.empty[Shape]
+    val auxShapeData = ListBuffer.empty[Shape]
+    val complete = new RefInt
+
+    checkCall(_LIB.mxSymbolInferShape(handle, indPtr.size - 1, keys, indPtr, values,
+      argShapeData, outShapeData, auxShapeData, complete))
+    if (complete.value != 0) {
+      (argShapeData, outShapeData, auxShapeData)
+    } else {
+      (null, null, null)
+    }
+  }
 
   /**
    * Get attribute string from the symbol, this function only works for non-grouped symbol.
@@ -112,11 +278,390 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
     val args = symbols.values.map(_.handle).toArray
     checkCall(_LIB.mxSymbolCompose(handle, name, keys, args))
   }
+
+  /**
+   * Bind current symbol to get an executor, allocate all the ndarrays needed.
+   * Allows specifying data types.
+   * This function will ask user to pass in ndarray of position
+   * they like to bind to, and it will automatically allocate the ndarray
+   * for arguments and auxiliary states that user did not specify explicitly.
+   *
+   * @param ctx The device context the generated executor to run on.
+   * @param gradReq {'write', 'add', 'null'}, or list of str or dict of str to str, optional
+   *                Specifies how we should update the gradient to the args_grad.
+   *                - 'write' means everytime gradient is write to specified args_grad NDArray.
+   *                - 'add' means everytime gradient is add to the specified NDArray.
+   *                - 'null' means no action is taken, the gradient may not be calculated.
+   * @param typeDict Input type dictionary, name->dtype
+   * @param shapeDict Input shape dictionary, name->shape
+   * @return The generated Executor
+   */
+  def simpleBind(ctx: Context, gradReq: String = "write",
+                 shapeDict: Map[String, Shape],
+                 typeDict: Map[String, Class[_ >: Float with Int with Double]] = null): Executor = {
+    val types =
+      if (typeDict == null) listArguments().map((_, classOf[Float])).toMap
+      else typeDict
+    val (argShapes, _, auxShapes) = inferShape(shapeDict)
+    val (argTypes, _, auxTypes) = inferType(types)
+    require(argShapes != null && argTypes != null, "Input node is not complete")
+    // alloc space
+    val argNDArrays = (argShapes zip argTypes) map { case (shape, t) =>
+      // TODO: NDArray dtype
+      NDArray.zeros(shape, ctx)
+    }
+    val gradNDArrays =
+      if (gradReq != "null") {
+        (((listArguments() zip argShapes) zip argTypes) flatMap { case ((name, shape), t) =>
+          if (!(name.endsWith("data") || name.endsWith("label"))) {
+            // TODO: NDArray dtype
+            Map(name -> NDArray.zeros(shape, ctx))
+          } else {
+            Map.empty[String, NDArray]
+          }
+        }).toMap
+      } else {
+        null
+      }
+    val auxNDArrays = (auxShapes zip auxTypes) map { case (shape, t) =>
+      // TODO: NDArray dtype
+      NDArray.zeros(shape, ctx)
+    }
+    bind(ctx, argNDArrays, gradNDArrays, gradReq, auxNDArrays, null)
+  }
+
+  /**
+   * Bind current symbol to get an executor.
+   *
+   * @param ctx Context The device context the generated executor to run on.
+   * @param args Input arguments to the symbol.
+   *             - If type is list of NDArray, the position is in the same order of list_arguments.
+   *             - If type is dict of str to NDArray, then it maps the name of arguments
+   *               to the corresponding NDArray.
+   *             - In either case, all the arguments must be provided.
+   * @param argsGrad When specified, args_grad provide NDArrays to hold
+   *                 the result of gradient value in backward.
+   *                 - If type is list of NDArray,
+   *                   the position is in the same order of list_arguments.
+   *                 - If type is dict of str to NDArray, then it maps the name of arguments
+   *                   to the corresponding NDArray.
+   *                 - When the type is dict of str to NDArray, users only need to provide the dict
+   *                   for needed argument gradient.
+   *                   Only the specified argument gradient will be calculated.
+   * @param gradReq {'write', 'add', 'null'}, or list of str or dict of str to str, optional
+   *                Specifies how we should update the gradient to the args_grad.
+   *                - 'write' means everytime gradient is write to specified args_grad NDArray.
+   *                - 'add' means everytime gradient is add to the specified NDArray.
+   *                - 'null' means no action is taken, the gradient may not be calculated.
+   * @param auxStates Input auxiliary states to the symbol, only need to specify when
+   *                  list_auxiliary_states is not empty.
+   *                  - If type is list of NDArray,
+   *                    the position is in the same order of listAuxiliaryStates
+   *                  - If type is dict of str to NDArray, then it maps the name of auxiliary_states
+   *                    to the corresponding NDArray,
+   *                  - In either case, all the auxiliary_states need to be provided.
+   * @param group2ctx The dict mapping the ``ctx_group`` attribute to the context assignment.
+   * @return The generated Executor
+   * @note
+   * Auxiliary states are special states of symbols that do not corresponds to an argument,
+   * and do not have gradient. But still be useful for the specific operations.
+   * A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
+   * Most operators do not have auxiliary states and this parameter can be safely ignored.
+   *
+   * User can give up gradient by using a dict in args_grad and only specify
+   * gradient they interested in.
+   */
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Seq[NDArray],
+           gradReq: String, auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad,
+               Seq.fill(symbolArguments.size)(gradReq), auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Seq[NDArray],
+           gradReq: String, auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad,
+               Seq.fill(symbolArguments.size)(gradReq), auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Map[String, NDArray],
+           gradReq: String, auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad,
+               Seq.fill(symbolArguments.size)(gradReq), auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Map[String, NDArray],
+           gradReq: String, auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad,
+               Seq.fill(symbolArguments.size)(gradReq), auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Seq[NDArray],
+           gradReq: String, auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad,
+               Seq.fill(symbolArguments.size)(gradReq), auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Seq[NDArray],
+           gradReq: String, auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad,
+               Seq.fill(symbolArguments.size)(gradReq), auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Map[String, NDArray],
+           gradReq: String, auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad,
+               Seq.fill(symbolArguments.size)(gradReq), auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Map[String, NDArray],
+           gradReq: String, auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad,
+               Seq.fill(symbolArguments.size)(gradReq), auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Seq[NDArray],
+           gradsReq: Seq[String], auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Seq[NDArray],
+           gradsReq: Seq[String], auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Map[String, NDArray],
+           gradsReq: Seq[String], auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Map[String, NDArray],
+           gradsReq: Seq[String], auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Seq[NDArray],
+           gradsReq: Seq[String], auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Seq[NDArray],
+           gradsReq: Seq[String], auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Map[String, NDArray],
+           gradsReq: Seq[String], auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Map[String, NDArray],
+           gradsReq: Seq[String], auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Seq[NDArray],
+           gradsReq: Map[String, String], auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Seq[NDArray],
+           gradsReq: Map[String, String], auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Map[String, NDArray],
+           gradsReq: Map[String, String], auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Map[String, NDArray],
+           gradsReq: Map[String, String], auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Seq[NDArray],
+           gradsReq: Map[String, String], auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Seq[NDArray],
+           gradsReq: Map[String, String], auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Map[String, NDArray],
+           gradsReq: Map[String, String], auxStates: Seq[NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Map[String, NDArray],
+           gradsReq: Map[String, String], auxStates: Map[String, NDArray],
+           group2ctx: Map[String, Context]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, argsGrad, gradsReq, auxStates, group2ctx)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Seq[NDArray]): Executor = {
+    bind(ctx, args, argsGrad, "write", Nil, null)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray], argsGrad: Map[String, NDArray]): Executor = {
+    bind(ctx, args, argsGrad, "write", Nil, null)
+  }
+
+  def bind(ctx: Context, args: Seq[NDArray]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, null,
+               Seq.fill(symbolArguments.size)("write"), Nil, null)
+  }
+
+  def bind(ctx: Context, args: Map[String, NDArray]): Executor = {
+    val symbolArguments = listArguments()
+    bindHelper(ctx, symbolArguments, args, null,
+      Seq.fill(symbolArguments.size)("write"), Nil, null)
+  }
+
+  private def bindHelper(ctx: Context, symbolArguments: Seq[String],
+                         args: Iterable[_], argsGrad: Iterable[_],
+                         gradsReq: Iterable[_], auxStates: Iterable[_],
+                         group2ctx: Map[String, Context]): Executor = {
+    require(args != null && !args.isInstanceOf[Set[_]])
+    require(argsGrad == null || !argsGrad.isInstanceOf[Set[_]])
+    require(auxStates == null || !auxStates.isInstanceOf[Set[_]])
+    require(gradsReq != null && !gradsReq.isInstanceOf[Set[_]])
+
+    val (argsHandle, argsNDArray) =
+      if (args.isInstanceOf[Seq[_]]) {
+        Symbol.getNDArrayInputs("args", args.asInstanceOf[Seq[NDArray]],
+                                symbolArguments, allowMissing = false)
+      } else {
+        Symbol.getNDArrayInputs("args", args.asInstanceOf[Map[String, NDArray]],
+                                symbolArguments, allowMissing = false)
+      }
+
+    // setup args gradient
+    val (argsGradHandle, argsGradNDArray) =
+      if (argsGrad == null) {
+        (Array.fill[NDArrayHandle](args.size)(0L), null)
+      } else if (argsGrad.isInstanceOf[Seq[_]]) {
+        Symbol.getNDArrayInputs("args_grad", argsGrad.asInstanceOf[Seq[NDArray]],
+                                symbolArguments, allowMissing = true)
+      } else {
+        Symbol.getNDArrayInputs("args_grad", argsGrad.asInstanceOf[Map[String, NDArray]],
+                                symbolArguments, allowMissing = true)
+      }
+
+    val (auxArgsHandle, auxStatesNDArray) =
+      if (auxStates == null) {
+        Symbol.getNDArrayInputs("aux_states", Nil, listAuxiliaryStates(), allowMissing = false)
+      } else if (auxStates.isInstanceOf[Seq[_]]) {
+        Symbol.getNDArrayInputs("aux_states", auxStates.asInstanceOf[Seq[NDArray]],
+                                listAuxiliaryStates(), allowMissing = false)
+      } else {
+        Symbol.getNDArrayInputs("aux_states", auxStates.asInstanceOf[Map[String, NDArray]],
+                                listAuxiliaryStates(), allowMissing = false)
+      }
+
+    // setup requirements
+    val reqsArray =
+      if (gradsReq.isInstanceOf[Seq[_]]) {
+        gradsReq.asInstanceOf[Seq[String]].map { req =>
+          require(Symbol.bindReqMap.contains(req), s"grad_req must be in ${Symbol.bindReqMap}")
+          Symbol.bindReqMap(req)
+        }.toArray
+      } else {
+        val gradsReqMap = gradsReq.asInstanceOf[Map[String, String]]
+        symbolArguments.map { req =>
+          val value = gradsReqMap.getOrElse(req, "null")
+          require(Symbol.bindReqMap.contains(value), s"grad_req must be in ${Symbol.bindReqMap}")
+          Symbol.bindReqMap(value)
+        }.toArray
+      }
+
+    val ctxMapKeys = ArrayBuffer.empty[String]
+    val ctxMapDevTypes = ArrayBuffer.empty[Int]
+    val ctxMapDevIDs = ArrayBuffer.empty[Int]
+
+    if (group2ctx != null) {
+      group2ctx.foreach { case (key, value) =>
+        ctxMapKeys += key
+        ctxMapDevTypes += value.deviceTypeid
+        ctxMapDevIDs += value.deviceId
+      }
+    }
+
+    val execHandle = new ExecutorHandleRef
+    checkCall(_LIB.mxExecutorBindX(handle,
+                                   ctx.deviceTypeid,
+                                   ctx.deviceId,
+                                   ctxMapKeys.size,
+                                   ctxMapKeys.toArray,
+                                   ctxMapDevTypes.toArray,
+                                   ctxMapDevIDs.toArray,
+                                   args.size,
+                                   argsHandle,
+                                   argsGradHandle,
+                                   reqsArray,
+                                   auxArgsHandle,
+                                   execHandle))
+    val executor = new Executor(execHandle.value, this)
+    executor.argArrays = argsNDArray
+    executor.gradArrays = argsGradNDArray
+    executor.auxArrays = auxStatesNDArray
+    executor
+  }
 }
 
 object Symbol {
   private val logger = LoggerFactory.getLogger(classOf[Symbol])
   private val functions: Map[String, SymbolFunction] = initSymbolModule()
+  private val bindReqMap = Map("null" -> 0, "write" -> 1, "add" -> 3)
 
   /**
    * Create a symbolic variable with specified name.
@@ -146,6 +691,34 @@ object Symbol {
 
   def Activation(attr: Map[String, String]): Map[String, Any] => Symbol = {
     createNoCheck("Activation", attr)
+  }
+
+  def Convolution(attr: Map[String, String]): Map[String, Any] => Symbol = {
+    createNoCheck("Convolution", attr)
+  }
+
+  def Convolution: Map[String, Any] => Symbol = {
+    Convolution(null)
+  }
+
+  def BatchNorm: Map[String, Any] => Symbol = {
+    createNoCheck("BatchNorm")
+  }
+
+  def Pooling: Map[String, Any] => Symbol = {
+    createNoCheck("Pooling")
+  }
+
+  def Flatten: Map[String, Any] => Symbol = {
+    createNoCheck("Flatten")
+  }
+
+  def SoftmaxOutput: Map[String, Any] => Symbol = {
+    createNoCheck("SoftmaxOutput")
+  }
+
+  def Cast: Map[String, Any] => Symbol = {
+    createNoCheck("Cast")
   }
 
   /**
@@ -294,6 +867,44 @@ object Symbol {
       (key, value.toString)
     }
     create(operator, symbolArgs, strArgs, attr)
+  }
+
+  /**
+   * Helper function to get ndarray lists handles from various inputs.
+   * @param argKey The name of argument, used for error message.
+   * @param args list of NDArray or dict of str to NDArray
+   *             Input arguments to the symbols.
+   *             If type is list of NDArray, the position is in the same order of arg_names.
+   *             If type is dict of str to NDArray, then it maps the name of arguments
+   *             to the corresponding NDArray
+   * @param argNames List of argument names.
+   * @param allowMissing Whether missing argument is allowed.
+   *                     When allowed, the missing handle will be set to None(null)
+   * @return The positional list of NDArrayHandles generated from input.
+   */
+  private def getNDArrayInputs(argKey: String, args: Seq[NDArray], argNames: Seq[String],
+                               allowMissing: Boolean): (Array[NDArrayHandle], Array[NDArray]) = {
+    require(args.length == argNames.length, s"Length of $argKey do not match number of arguments")
+    val argHandles = args.map(_.handle)
+    (argHandles.toArray, args.toArray)
+  }
+
+  private def getNDArrayInputs(argKey: String, args: Map[String, NDArray], argNames: Seq[String],
+                               allowMissing: Boolean): (Array[NDArrayHandle], Array[NDArray]) = {
+    val argArrays = ArrayBuffer.empty[NDArray]
+    val argHandles = ArrayBuffer.empty[NDArrayHandle]
+    argNames.foreach { name =>
+      args.get(name) match {
+        case narr: Some[NDArray] =>
+          argArrays += narr.get
+          argHandles += narr.get.handle
+        case None =>
+          require(allowMissing, s"Must specify all the arguments in $argKey")
+          argArrays += null
+          argHandles += 0L
+      }
+    }
+    (argHandles.toArray, argArrays.toArray)
   }
 }
 
