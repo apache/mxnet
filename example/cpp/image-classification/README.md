@@ -43,7 +43,7 @@ The only parameter is the path of the test image.
 * The model used in the sample can be downloaded here:
 http://pan.baidu.com/s/1sjXKrqX
 
-* If you donot run it in the mxnet root path, maybe you will need to copy lib folder here.
+* If you don't run it in the mxnet root path, maybe you will need to copy lib folder here.
 
 # Author
 * **Xiao Liu**

@@ -26,24 +26,24 @@ std::vector<uint32_t> StaticGraph::PostDFSOrder(const std::vector<uint32_t>& hea
     CHECK_EQ(banned.count(head), 0);
     // bugfix
     visited.insert(head);
-  }
-  while (!stack.empty()) {
-    std::pair<uint32_t, uint32_t>& back = stack.back();
-    const Node& n = nodes[back.first];
-    if (back.second == n.inputs.size() + (n.is_backward() ? 1 : 0)) {
-      ret.push_back(back.first);
-      visited.insert(back.first);
-      stack.pop_back();
-    } else {
-      uint32_t input;
-      if (back.second == n.inputs.size() && n.is_backward()) {
-        input = n.backward_source_id;
-        back.second++;
+    while (!stack.empty()) {
+      std::pair<uint32_t, uint32_t>& back = stack.back();
+      const Node& n = nodes[back.first];
+      if (back.second == n.inputs.size() + (n.is_backward() ? 1 : 0)) {
+        ret.push_back(back.first);
+        visited.insert(back.first);
+        stack.pop_back();
       } else {
-        input = n.inputs[back.second++].source_id;
-      }
-      if (visited.count(input) == 0 && banned.count(input) == 0) {
-        stack.push_back(std::make_pair(input, 0));
+        uint32_t input;
+        if (back.second == n.inputs.size() && n.is_backward()) {
+          input = n.backward_source_id;
+          back.second++;
+        } else {
+          input = n.inputs[back.second++].source_id;
+        }
+        if (visited.count(input) == 0 && banned.count(input) == 0) {
+          stack.push_back(std::make_pair(input, 0));
+        }
       }
     }
   }

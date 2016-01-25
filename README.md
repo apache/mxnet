@@ -20,6 +20,7 @@ deep learning system, and interesting insights of DL systems for hackers.
 
 What's New
 ----------
+* [Embedding Torch layers and functions in MXNet](https://mxnet.readthedocs.org/en/latest/tutorial/torch_howto.html)
 * [MXNet.js: Javascript Package for Deep Learning in Browser (without server)
 ](https://github.com/dmlc/mxnet.js/)
 * [Design Note: Design Efficient Deep Learning Data Loading Module](http://mxnet.readthedocs.org/en/latest/developer-guide/note_data_loading.html)
@@ -34,6 +35,7 @@ Contents
 * [Documentation and Tutorials](http://mxnet.readthedocs.org/en/latest/)
 * [Open Source Design Notes](http://mxnet.readthedocs.org/en/latest/#open-source-design-notes)
 * [Code Examples](example)
+* [Installation](http://mxnet.readthedocs.org/en/latest/build.html)
 * [Pretrained Models](https://github.com/dmlc/mxnet-model-gallery)
 * [Contribute to MXNet](http://mxnet.readthedocs.org/en/latest/contribute.html)
 * [Frequent Asked Questions](http://mxnet.readthedocs.org/en/latest/faq.html)

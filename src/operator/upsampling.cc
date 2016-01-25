@@ -44,6 +44,7 @@ DMLC_REGISTER_PARAMETER(UpSamplingParam);
 
 MXNET_REGISTER_OP_PROPERTY(UpSampling, UpSamplingProp)
 .describe("Perform nearest neighboor/bilinear up sampling to inputs")
+.add_argument("data", "Symbol[]", "Array of tensors to upsample")
 .add_arguments(UpSamplingParam::__FIELDS__())
 .set_key_var_num_args("num_args");
 }  // namespace op

@@ -24,7 +24,7 @@ even better to send pull request if you can fix the problem.
 - [Python Package Installation](#python-package-installation)
 - [R Package Installation](#r-package-installation)
 - [Docker Images](#docker-images)
-- [Frequently asked questions](#frequently-asked-questions)
+- [Trouble Shooting](#trouble-shooting)
 
 ## Build the Shared Library
 
@@ -240,10 +240,10 @@ R CMD INSTALL mxnet_0.5.tar.gz
 ```
 
 
-To install the package using GPU on Windows without building the package from scratch. Note that you need a couple of programs installed already:  
+To install the package using GPU on Windows without building the package from scratch. Note that you need a couple of programs installed already:
 - You'll need the [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit). This depends on Visual Studio, and a free compatible version would be [Visual Studio Community 2013](https://www.visualstudio.com/en-us/news/vs2013-community-vs.aspx). For instructions and compatibility checks, read http://docs.nvidia.com/cuda/cuda-getting-started-guide-for-microsoft-windows/ .
 
-- You will also need to register as a developer at nvidia and download CUDNN V3, https://developer.nvidia.com/cudnn . 
+- You will also need to register as a developer at nvidia and download CUDNN V3, https://developer.nvidia.com/cudnn .
 
 
 1. Download the mxnet package as a ZIP from the Github repository https://github.com/dmlc/mxnet and unpack it. You will be editing the `/mxnet/R-package` folder.
@@ -256,7 +256,7 @@ To install the package using GPU on Windows without building the package from sc
 
 4. Create the folder `R-package/inst/libs/x64`. We only support 64-bit operating system now, so you need the x64 folder;
 
-5. Put dll files in `R-package/inst/libs/x64`. 
+5. Put dll files in `R-package/inst/libs/x64`.
 
 The first dll file you need is `nocudnn/lib/libmxnet.dll`. The other dll files you need are the ones in all 4 subfolders of `nocudnn/3rdparty/`, for the `cudnn` and `openblas` you'll need to look in the `/bin` folders. There should be 11 dll files now in `R-package/inst/libs/x64`.
 
@@ -284,9 +284,9 @@ sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /d
 For a guide to Docker, see the [official docs](https://docs.docker.com/userguide/). For more details on how to use the
 MXNet Docker images, including requirements for CUDA support, consult the [source project](https://github.com/Kaixhin/dockerfiles).
 
-## Frequently Asked Questions
+## Trouble Shooting
 
-1. **Compile failed after `git pull`**
+### Compile failed after git pull
 
    Please first update the submodules, clean all and recompile:
 
@@ -294,7 +294,7 @@ MXNet Docker images, including requirements for CUDA support, consult the [sourc
    git submodule update && make clean_all && make -j4
    ```
 
-2. **Compile failed after `config.mk` is modified**
+### Compile failed after config.mk is modified
 
    This often happens if `USE_CUDA` or `USE_DIST_KVSTORE` has been changed. You
    need to clean all first:
@@ -303,7 +303,9 @@ MXNet Docker images, including requirements for CUDA support, consult the [sourc
     make clean_all && make -j4
     ```
 
-3. **Still get the error message e.g. `compile with USE_DIST_KVSTORE=1 to use
+### Still get the error message after re-installation
+
+   e.g. `compile with USE_DIST_KVSTORE=1 to use
    dist` after recomplied with `USE_DIST_KVSTORE=1`**
 
    It is often because mxnet is failed to load the new built library. If you

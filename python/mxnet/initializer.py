@@ -171,6 +171,42 @@ class Normal(Initializer):
     def _init_weight(self, _, arr):
         random.normal(0, self.sigma, out=arr)
 
+class Orthogonal(Initializer):
+    """Intialize weight as Orthogonal matrix
+
+    Parameters
+    ----------
+    scale : float optional
+        scaling factor of weight
+
+    rand_type: string optional
+        use "uniform" or "normal" random number to initialize weight
+
+    Reference
+    ---------
+    Exact solutions to the nonlinear dynamics of learning in deep linear neural networks
+    arXiv preprint arXiv:1312.6120 (2013).
+    """
+    def __init__(self, scale=1.414, rand_type="uniform"):
+        self.scale = scale
+        self.rand_type = rand_type
+
+    # pylint: disable=invalid-name
+    def _init_weight(self, _, arr):
+        nout = arr.shape[0]
+        nin = np.prod(arr.shape[1:])
+        if self.rand_type == "uniform":
+            tmp = np.random.uniform(-1.0, 1.0, (nout, nin))
+        elif self.rand_type == "normal":
+            tmp = np.random.normal(0.0, 1.0, (nout, nin))
+        u, _, v = np.linalg.svd(tmp, full_matrices=False)
+        if u.shape == tmp.shape:
+            q = u
+        else:
+            q = v
+        q = self.scale * q.reshape(arr.shape)
+        arr[:] = q
+
 
 class Xavier(Initializer):
     """Initialize the weight with Xavier or similar initialization scheme.
