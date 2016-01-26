@@ -2,30 +2,39 @@ from collections import namedtuple, deque
 from copy import copy
 
 from . import symbol
+from . import metric
+from . import context
+from . import ndarray as nd
 
 from .ndarray import NDArray, zeros
+from .optimizer import get_updater
+from .initializer import Uniform
 
 # TODO: those are to be stored in the symbols like attributes
 # connecting output delayed by t steps to input
 RecurrentRule = namedtuple('RecurrentRule', ['output', 'input', 't'])
 
-def SimpleRecurrece(input_var, name, num_hidden, act_type='relu'):
+def SimpleRecurrece(data, name, num_hidden, act_type='relu'):
     recurrent_name = name + '_recurrent'
     recurrent_var  = symbol.Variable(recurrent_name)
     recurrent_hid  = symbol.FullyConnected(data=recurrent_var, name=name+'_rhid', num_hidden=num_hidden)
-    input_hid      = symbol.FullyConnected(data=input_var, name=name+'_ihid', num_hidden=num_hidden, no_bias=True)
+    input_hid      = symbol.FullyConnected(data=data, name=name+'_ihid', num_hidden=num_hidden, no_bias=True)
     output         = symbol.Activation(data=input_hid+recurrent_hid, name=name, act_type=act_type)
     output_name    = name + '_output'
 
-    return (output, RecurrentRule(output=output_name, input=recurrent_name, t=1))
+    return (output, [RecurrentRule(output=output_name, input=recurrent_name, t=1)])
 
 
 class Sequencer(object):
-    def __init__(self, sym, rules, ctx):
+    def __init__(self, sym, rules, ctx, arg_params=None, aux_params=None, initializer=Uniform(0.01)):
         self.orig_sym = sym
         self.rules    = rules
         self.sym      = self.extract_states(sym, rules)
         self.ctx      = ctx
+
+        self.arg_params = arg_params
+        self.aux_params = aux_params
+        self.initializer = initializer
 
     def infer_shape(self, **data_shapes):
         arg_shapes, out_shapes, aux_shapes = self.sym.infer_shape_partial(**data_shapes)
@@ -49,6 +58,8 @@ class Sequencer(object):
 
     def _init_params(self, input_shapes, overwrite=False):
         arg_shapes, out_shapes, aux_shapes = self.infer_shape(**input_shapes)
+        #for n, s in zip(self.sym.list_arguments(), arg_shapes):
+        #    print('%s: %s' % (n, s))
 
         arg_names   = self.sym.list_arguments()
         input_names = input_shapes.keys()
@@ -93,10 +104,14 @@ class Sequencer(object):
         grad_arrays = {arg_names[i]: zeros(arg_shapes[i]) \
                 for i in range(len(arg_names)) if grad_req[i] != 'null'}
 
-        return self.sym.bind(ctx, arg_ndarrays, grad_ndarrays, grad_req, aux_ndarrays)
+        return self.sym.bind(ctx, arg_arrays, grad_arrays, grad_req, aux_arrays)
 
 
-    def fit(self, data, begin_epoch=0, end_epoch=1):
+    def fit(self, data, optimizer, eval_data=None, begin_epoch=0, end_epoch=1, eval_metric='acc'):
+        # setup metric
+        if not isinstance(eval_metric, metric.EvalMetric):
+            eval_metric = metric.create(eval_metric)
+
         input_shapes = dict(data.provide_data+data.provide_label)
         arg_names, param_names, aux_names = self._init_params(input_shapes)
         state_names = self.state_names
@@ -130,11 +145,47 @@ class Sequencer(object):
             i_output = output_names.index(rule.output)
             idx_rules.append(RecurrentRule(output=i_output, input=i_input, t=rule.t))
 
+        updater = get_updater(optimizer)
+
         for epoch in range(begin_epoch, end_epoch):
-            train_data.reset()
+            if eval_data is not None:
+                eval_metric.reset()
+                eval_data.reset()
+
+                for eval_batch in eval_data:
+                    seq_len = eval_batch.sequence_length
+                    fwd_states = deque(maxlen=seq_len)
+
+                    eval_metric.begin_sequence()
+                    for t in range(seq_len):
+                        self.load_data(eval_batch.data_at(t), data_arrays)
+
+                        # copy states over
+                        for rule in idx_rules:
+                            if t >= rule.t:
+                                fwd_states[t-rule.t][rule.output].copyto(state_arrays[rule.input])
+                            else:
+                                state_arrays[rule.input][:] = 0
+
+                       # forward 1 step
+                        exec_train.forward(is_train=True)
+
+                        # save states
+                        fwd_states.append([x.copyto(x.context) for x in exec_train.outputs])
+
+                        pred_output = exec_train.outputs[:n_loss]
+                        #if len(pred_output) == 1:
+                        #    pred_output = pred_output[0]
+                        eval_metric.update_at(eval_batch.label_at(t), pred_output, t)
+                    eval_metric.end_sequence()
+
+                name, value = eval_metric.get()
+                print('Epoch[%d] Validation-%s=%f' % (epoch, name, value))
+
+            data.reset()
             for batch in data:
                 seq_len = batch.sequence_length
-                fwd_states = deque(maxlen=self.max_delay)
+                fwd_states = []
 
                 # forward pass through time
                 for t in range(seq_len):
@@ -144,7 +195,7 @@ class Sequencer(object):
                     # copy states over
                     for rule in idx_rules:
                         if t >= rule.t:
-                            fwd_states[-rule.t][rule.output].copyto(state_arrays[rule.input])
+                            fwd_states[t-rule.t][rule.output].copyto(state_arrays[rule.input])
                         else:
                             state_arrays[rule.input][:] = 0
 
@@ -154,21 +205,35 @@ class Sequencer(object):
                     # save states
                     fwd_states.append([x.copyto(x.context) for x in exec_train.outputs])
 
-                fwd_states.clear()
                 bwd_states = deque(maxlen=self.max_delay)
 
                 # backward pass through time
                 for grad in param_grads:
                     grad[:] = 0
 
-                for t in range(seq_len):
+                for t in reversed(range(seq_len)):
                     # load data and label
-                    self.load_data(batch.data_at(seq_len-t-1), data_arrays)
-                    self.load_data(batch.label_at(seq_len-t-1), label_arrays)
+                    self.load_data(batch.data_at(t), data_arrays)
+                    self.load_data(batch.label_at(t), label_arrays)
+
+                    # need to run forward one more time, as the intermediate
+                    # states for time index t during forward has been destroyed
+                    for rule in idx_rules:
+                        if t >= rule.t:
+                            fwd_states[t-rule.t][rule.output].copyto(state_arrays[rule.input])
+                        else:
+                            state_arrays[rule.input][:] = 0
+
+                    exec_train.forward(is_train=True)
+
+                    # save memory, the last fwd-state is no longer needed
+                    fwd_states.pop()
+
+                    # now we can run backward
 
                     # copy state grads over
                     for rule in idx_rules:
-                        if t >= rule.t:
+                        if t + rule.t < seq_len:
                             bwd_states[-rule.t][rule.input].copyto(out_state_grads[rule.output-n_loss])
                         else:
                             out_state_grads[rule.output-n_loss][:] = 0
@@ -181,13 +246,11 @@ class Sequencer(object):
                 bwd_states.clear()
 
                 # update parameters
-
-
-
-
-
-
-
+                for index, pair in enumerate(zip(param_arrays, param_grads)):
+                    the_param, the_grad = pair
+                    if the_grad is None:
+                        continue
+                    updater(index, the_grad, the_param)
 
 
     @staticmethod
@@ -203,4 +266,8 @@ class Sequencer(object):
         sym_all = sym.get_internals()
         sym_grp = symbol.Group([sym_all[x] for x in outputs+states])
         return sym_grp
+
+
+
+
 
