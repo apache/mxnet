@@ -67,9 +67,9 @@ object IO {
   }
 
   // Convert data into canonical form.
-  private def initData(data: NDArray, allowEmpty: Boolean, defaultName: String) = {
+  private def initData(data: List[NDArray], allowEmpty: Boolean, defaultName: String) = {
     require(data != null || allowEmpty)
-    // TODO
+    //TODO
   }
 }
 
@@ -221,10 +221,14 @@ class MXDataIter(val handle: DataIterHandle,
   }
 
   // The name and shape of data provided by this iterator
-  override def provideData: Map[String, Shape] = ???
+  override def provideData: Map[String, Shape] = {
+    Map(dataName -> firstBatch.data.head.shape)
+  }
 
   // The name and shape of label provided by this iterator
-  override def provideLabel: Map[String, Shape] = ???
+  override def provideLabel: Map[String, Shape] = {
+    Map(labelName -> firstBatch.label.head.shape)
+  }
 }
 // scalastyle:on finalize
 
