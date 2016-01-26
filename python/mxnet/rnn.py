@@ -1,3 +1,13 @@
+# TODO items
+# - Store RecurrentRules as part of the symbol
+# - Zero-masking to handle variable-length sequence within mini-batch
+# - Implement graph manipulation tools
+#   - Cloning & Renaming: all the nodes needs to be renamed when unrolled copy of graphs are to be merged into one
+# - Put state-copying code in C++ to speed up (do we need?)
+# - Refactoring Sequencer with existing FeedForward model
+# - LSTM
+# - Other sequencer, bidirectional
+
 from collections import namedtuple, deque
 from copy import copy
 
