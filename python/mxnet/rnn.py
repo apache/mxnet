@@ -17,8 +17,8 @@ RecurrentRule = namedtuple('RecurrentRule', ['output', 'input', 't'])
 def SimpleRecurrece(data, name, num_hidden, act_type='relu'):
     recurrent_name = name + '_recurrent'
     recurrent_var  = symbol.Variable(recurrent_name)
-    recurrent_hid  = symbol.FullyConnected(data=recurrent_var, name=name+'_rhid', num_hidden=num_hidden)
-    input_hid      = symbol.FullyConnected(data=data, name=name+'_ihid', num_hidden=num_hidden, no_bias=True)
+    recurrent_hid  = symbol.FullyConnected(data=recurrent_var, name=name+'_rhid', num_hidden=num_hidden, no_bias=True)
+    input_hid      = symbol.FullyConnected(data=data, name=name+'_ihid', num_hidden=num_hidden)
     output         = symbol.Activation(data=input_hid+recurrent_hid, name=name, act_type=act_type)
     output_name    = name + '_output'
 
@@ -74,6 +74,7 @@ class Sequencer(object):
             if self.arg_params and k in self.arg_params and (not overwrite):
                 arg_params[k][:] = self.arg_params[k]
             else:
+                print("Initializing %s" % k)
                 self.initializer(k, v)
 
         for k, v in aux_params.items():
@@ -127,6 +128,7 @@ class Sequencer(object):
         out_state_idx = range(n_loss, n_state+n_loss)
 
         exec_train = self.bind_executor(self.ctx, need_grad=True, **input_shapes)
+        exec_train.copy_params_from(self.arg_params, self.aux_params)
 
         param_arrays = [exec_train.arg_arrays[i] for i in param_idx]
         state_arrays = [exec_train.arg_arrays[i] for i in state_idx]
@@ -168,7 +170,7 @@ class Sequencer(object):
                                 state_arrays[rule.input][:] = 0
 
                        # forward 1 step
-                        exec_train.forward(is_train=True)
+                        exec_train.forward(is_train=False)
 
                         # save states
                         fwd_states.append([x.copyto(x.context) for x in exec_train.outputs])
@@ -194,6 +196,7 @@ class Sequencer(object):
 
                     # copy states over
                     for rule in idx_rules:
+                        state_arrays[rule.input][:] = 0
                         if t >= rule.t:
                             fwd_states[t-rule.t][rule.output].copyto(state_arrays[rule.input])
                         else:
@@ -219,12 +222,13 @@ class Sequencer(object):
                     # need to run forward one more time, as the intermediate
                     # states for time index t during forward has been destroyed
                     for rule in idx_rules:
+                        state_arrays[rule.input][:] = 0
                         if t >= rule.t:
                             fwd_states[t-rule.t][rule.output].copyto(state_arrays[rule.input])
                         else:
                             state_arrays[rule.input][:] = 0
 
-                    exec_train.forward(is_train=True)
+                        exec_train.forward(is_train=True)
 
                     # save memory, the last fwd-state is no longer needed
                     fwd_states.pop()
@@ -233,6 +237,7 @@ class Sequencer(object):
 
                     # copy state grads over
                     for rule in idx_rules:
+                        out_state_grads[rule.output-n_loss][:] = 0
                         if t + rule.t < seq_len:
                             bwd_states[-rule.t][rule.input].copyto(out_state_grads[rule.output-n_loss])
                         else:
