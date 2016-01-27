@@ -27,7 +27,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     var batchCount = 0
     while(mnistIter.iterNext()) {
       val batch = mnistIter.next()
-      batchCount+=1
+      batchCount += 1
     }
     // test loop
     assert(nBatch === batchCount)
@@ -49,11 +49,11 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
 
 
   /**
-    * for time
+    * default skip this for saving time
     */
   test("test ImageRecordIter") {
     //get data
-    "./scripts/get_cifar_data.sh" !
+    //"./scripts/get_cifar_data.sh" !
 
     val params = Map(
       "path_imgrec" -> "data/cifar/train.rec",
@@ -66,11 +66,30 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
       "preprocess_threads" -> "4",
       "prefetch_buffer" -> "1"
     )
-    val img_iter = IO.createIterator("ImageRecordIter", params)
-    img_iter.reset()
-    while(img_iter.iterNext()) {
-      val batch = img_iter.next()
+    val imgRecIter = IO.createIterator("ImageRecordIter", params)
+    val nBatch = 500
+    var batchCount = 0
+    imgRecIter.reset()
+    while(imgRecIter.iterNext()) {
+      val batch = imgRecIter.next()
+      batchCount += 1
     }
+    // test loop
+    assert(batchCount === nBatch)
+    // test reset
+    imgRecIter.reset()
+    imgRecIter.iterNext()
+    val label0 = imgRecIter.getLabel().toArray
+    val data0 = imgRecIter.getData().toArray
+    imgRecIter.iterNext()
+    imgRecIter.iterNext()
+    imgRecIter.iterNext()
+    imgRecIter.reset()
+    imgRecIter.iterNext()
+    val label1 = imgRecIter.getLabel().toArray
+    val data1 = imgRecIter.getData().toArray
+    assert(label0 === label1)
+    assert(data0 === data1)
   }
 
 //  test("test NDarryIter") {
