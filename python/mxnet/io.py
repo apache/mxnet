@@ -288,9 +288,9 @@ class NDArrayIter(DataIter):
         if last_batch_handle == 'discard':
             new_n = self.data_list[0].shape[0] - self.data_list[0].shape[0] % batch_size
             for k, _ in self.data:
-                self.data[k] = self.data[k][:new_n]
+                self.data[k] = self.data_list[0][:new_n]
             for k, _ in self.label:
-                self.label[k] = self.label[k][:new_n]
+                self.label[k] = self.data_list[1][:new_n]
         self.num_data = self.data_list[0].shape[0]
         assert self.num_data >= batch_size, \
             "batch_size need to be smaller than data size when not padding."
