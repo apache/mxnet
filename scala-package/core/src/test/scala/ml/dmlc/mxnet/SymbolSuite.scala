@@ -8,7 +8,7 @@ class SymbolSuite extends FunSuite with BeforeAndAfterAll {
 
     var net1 = Symbol.FullyConnected(Map("data" -> data, "name" -> "fc1", "num_hidden" -> 10))
     net1 = Symbol.FullyConnected(Map("data" -> net1, "name" -> "fc2", "num_hidden" -> 100))
-    assert(net1.listArguments() ===
+    assert(net1.listArguments().toArray ===
       Array("data", "fc1_weight", "fc1_bias", "fc2_weight", "fc2_bias"))
 
     var net2 = Symbol.FullyConnected(Map("name" -> "fc3", "num_hidden" -> 10))
@@ -24,5 +24,28 @@ class SymbolSuite extends FunSuite with BeforeAndAfterAll {
     // scalastyle:on println
     val multiOut = Symbol.Group(composed, net1)
     assert(multiOut.listOutputs().length === 2)
+  }
+
+  test("symbol internal") {
+    val data = Symbol.Variable("data")
+    val oldfc = Symbol.FullyConnected(Map("data" -> data, "name" -> "fc1", "num_hidden" -> 10))
+    val net1 = Symbol.FullyConnected(Map("data" -> oldfc, "name" -> "fc2", "num_hidden" -> 100))
+    assert(net1.listArguments().toArray
+      === Array("data", "fc1_weight", "fc1_bias", "fc2_weight", "fc2_bias"))
+    val internal = net1.getInternals
+    val fc1 = internal.get("fc1_output")
+    assert(fc1.listArguments() === oldfc.listArguments())
+  }
+
+  test("symbol infer type") {
+    val data = Symbol.Variable("data")
+    val f32data = Symbol.Cast(Map("data" -> data, "dtype" -> "float32"))
+    val fc1 = Symbol.FullyConnected(Map("data" -> f32data, "name" -> "fc1", "num_hidden" -> 128))
+    val mlp = Symbol.SoftmaxOutput(Map("data" -> fc1, "name" -> "softmax"))
+
+    val (arg, out, aux) = mlp.inferType(Map("data" -> classOf[Double]))
+    assert(arg.toArray === Array(classOf[Double], classOf[Float], classOf[Float], classOf[Float]))
+    assert(out.toArray === Array(classOf[Float]))
+    assert(aux.isEmpty)
   }
 }

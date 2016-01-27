@@ -527,7 +527,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxListDataIters
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterCreateIter
   (JNIEnv * env, jobject obj, jlong creator, jobjectArray jkeys,
    jobjectArray jvals, jobject dataIterHandleRef) {
-  //keys and values
+  // keys and values
   int paramSize = env->GetArrayLength(jkeys);
   char** keys = new char*[paramSize];
   char** vals = new char*[paramSize];
@@ -863,6 +863,23 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolListOutputs
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolListAuxiliaryStates
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jobject outputs) {
+  mx_uint outSize;
+  const char **outStrArray;
+  int ret = MXSymbolListAuxiliaryStates((SymbolHandle) symbolPtr, &outSize, &outStrArray);
+
+  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jmethodID arrayAppend = env->GetMethodID(arrayClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+  for (int i = 0; i < outSize; i++) {
+    jstring output = env->NewStringUTF(outStrArray[i]);
+    env->CallObjectMethod(outputs, arrayAppend, output);
+  }
+
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolCopy
   (JNIEnv *env, jobject obj, jlong symbolPtr, jobject clonedSymbolRef) {
   SymbolHandle clonedSymbol;
@@ -887,5 +904,233 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolPrint
   const char *outStr;
   int ret = MXSymbolPrint((SymbolHandle) symbolPtr, &outStr);
   setStringField(env, out, outStr);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolGetOutput
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jint index, jobject jout) {
+  SymbolHandle out;
+  int ret = MXSymbolGetOutput((SymbolHandle) symbolPtr, (mx_uint) index, &out);
+  setLongField(env, jout, (long) out);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolGetInternals
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jobject jout) {
+  SymbolHandle out;
+  int ret = MXSymbolGetInternals((SymbolHandle) symbolPtr, &out);
+  setLongField(env, jout, (long)out);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolInferType
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jobjectArray jkeys, jintArray jvals,
+   jobject jargTypeData, jobject joutTypeData, jobject jauxTypeData, jobject jcomplete) {
+  int numArgs = env->GetArrayLength(jvals);
+  const char **keys = NULL;
+  if (jkeys != NULL) {
+    keys = new const char *[numArgs];
+    for (int i = 0; i < numArgs; i++) {
+      jstring jkey = (jstring) env->GetObjectArrayElement(jkeys, i);
+      const char *key = env->GetStringUTFChars(jkey, 0);
+      keys[i] = key;
+    }
+  }
+
+  mx_uint inTypeSize;
+  const int *inTypeData;
+  mx_uint outTypeSize;
+  const int *outTypeData;
+  mx_uint auxTypeSize;
+  const int *auxTypeData;
+  int complete;
+
+  jint *vals = env->GetIntArrayElements(jvals, NULL);
+  int ret = MXSymbolInferType((SymbolHandle) symbolPtr,
+                              (mx_uint) numArgs, keys, (const int *) vals,
+                              &inTypeSize, &inTypeData,
+                              &outTypeSize, &outTypeData,
+                              &auxTypeSize, &auxTypeData,
+                              &complete);
+  env->ReleaseIntArrayElements(jvals, vals, 0);
+
+  jclass integerClass = env->FindClass("java/lang/Integer");
+  jmethodID newInteger = env->GetMethodID(integerClass, "<init>", "(I)V");
+
+  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+  jmethodID listAppend = env->GetMethodID(listClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+
+  for (int i = 0; i < inTypeSize; ++i) {
+    jobject data = env->NewObject(integerClass, newInteger, inTypeData[i]);
+    env->CallObjectMethod(jargTypeData, listAppend, data);
+  }
+  for (int i = 0; i < outTypeSize; ++i) {
+    jobject data = env->NewObject(integerClass, newInteger, outTypeData[i]);
+    env->CallObjectMethod(joutTypeData, listAppend, data);
+  }
+  for (int i = 0; i < auxTypeSize; ++i) {
+    jobject data = env->NewObject(integerClass, newInteger, auxTypeData[i]);
+    env->CallObjectMethod(jauxTypeData, listAppend, data);
+  }
+
+  setIntField(env, jcomplete, complete);
+
+  // release allocated memory
+  if (jkeys != NULL) {
+    for (int i = 0; i < numArgs; i++) {
+      jstring jkey = (jstring) env->GetObjectArrayElement(jkeys, i);
+      env->ReleaseStringUTFChars(jkey, keys[i]);
+    }
+    delete[] keys;
+  }
+
+  return ret;
+}
+
+int FillSymbolInferShape
+  (JNIEnv *env, jmethodID listAppend, jobject joutData,
+   mx_uint shapeSize, const mx_uint *shapeNdim, const mx_uint **shapeData) {
+  for (int i = 0; i < shapeSize; ++i) {
+    jintArray jshape;
+    jshape = env->NewIntArray(shapeNdim[i]);
+    if (jshape == NULL) {
+      // TODO: out of memory error thrown, return a specific error code ?
+      return -1;
+    }
+    env->SetIntArrayRegion(jshape, 0, shapeNdim[i], (const jint *) shapeData[i]);
+    env->CallObjectMethod(joutData, listAppend, jshape);
+  }
+  return 0;
+}
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolInferShape
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jint jnumArgs, jobjectArray jkeys,
+   jintArray jargIndPtr, jintArray jargShapeData,
+   jobject jinShapeData, jobject joutShapeData, jobject jauxShapeData, jobject jcomplete) {
+  const char **keys = NULL;
+  if (jkeys != NULL) {
+    keys = new const char *[jnumArgs];
+    for (int i = 0; i < jnumArgs; i++) {
+      jstring jkey = (jstring) env->GetObjectArrayElement(jkeys, i);
+      const char *key = env->GetStringUTFChars(jkey, 0);
+      keys[i] = key;
+    }
+  }
+
+  mx_uint inShapeSize;
+  const mx_uint *inShapeNdim;
+  const mx_uint **inShapeData;
+
+  mx_uint outShapeSize;
+  const mx_uint *outShapeNdim;
+  const mx_uint **outShapeData;
+
+  mx_uint auxShapeSize;
+  const mx_uint *auxShapeNdim;
+  const mx_uint **auxShapeData;
+
+  int complete;
+
+  jint *argIndPtr = env->GetIntArrayElements(jargIndPtr, NULL);
+  jint *argShapeData = env->GetIntArrayElements(jargShapeData, NULL);
+  int ret = MXSymbolInferShape((SymbolHandle) symbolPtr,
+                               (mx_uint) jnumArgs,
+                               keys,
+                               (const mx_uint *) argIndPtr,
+                               (const mx_uint *) argShapeData,
+                               &inShapeSize,
+                               &inShapeNdim,
+                               &inShapeData,
+                               &outShapeSize,
+                               &outShapeNdim,
+                               &outShapeData,
+                               &auxShapeSize,
+                               &auxShapeNdim,
+                               &auxShapeData,
+                               &complete);
+  env->ReleaseIntArrayElements(jargShapeData, argShapeData, 0);
+  env->ReleaseIntArrayElements(jargIndPtr, argIndPtr, 0);
+
+  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+  jmethodID listAppend = env->GetMethodID(listClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+
+  if (FillSymbolInferShape(env, listAppend, jinShapeData, inShapeSize, inShapeNdim, inShapeData)) {
+    // TODO: out of memory error thrown, return a specific error code ?
+    return -1;
+  }
+  if (FillSymbolInferShape(
+        env, listAppend, joutShapeData, outShapeSize, outShapeNdim, outShapeData)) {
+    // TODO: out of memory error thrown, return a specific error code ?
+    return -1;
+  }
+  if (FillSymbolInferShape(
+        env, listAppend, jauxShapeData, auxShapeSize, auxShapeNdim, auxShapeData)) {
+    // TODO: out of memory error thrown, return a specific error code ?
+    return -1;
+  }
+
+  setIntField(env, jcomplete, complete);
+
+  // release allocated memory
+  if (jkeys != NULL) {
+    for (int i = 0; i < jnumArgs; i++) {
+      jstring jkey = (jstring) env->GetObjectArrayElement(jkeys, i);
+      env->ReleaseStringUTFChars(jkey, keys[i]);
+    }
+    delete[] keys;
+  }
+
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBindX
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jint deviceTypeId, jint deviceID, jint numCtx,
+   jobjectArray jctxMapKeys, jintArray jctxMapDevTypes, jintArray jctxMapDevIDs, jint numArgs,
+   jlongArray jargsHandle, jlongArray jargsGradHandle, jintArray jreqsArray,
+   jlongArray jauxArgsHandle, jobject jexecOut) {
+
+  ExecutorHandle out;
+  int auxStatesLen = env->GetArrayLength(jauxArgsHandle);
+
+  const char **mapKeys = new const char *[numCtx];
+  for (int i = 0; i < numCtx; i++) {
+    jstring jkey = (jstring) env->GetObjectArrayElement(jctxMapKeys, i);
+    const char *key = env->GetStringUTFChars(jkey, 0);
+    mapKeys[i] = key;
+  }
+  jlong *auxStates = env->GetLongArrayElements(jauxArgsHandle, NULL);
+  jint *gradReqType = env->GetIntArrayElements(jreqsArray, NULL);
+  jlong *inArgs = env->GetLongArrayElements(jargsHandle, NULL);
+  jlong *argGradStore = env->GetLongArrayElements(jargsGradHandle, NULL);
+  jint *mapDevTypes = env->GetIntArrayElements(jctxMapDevTypes, NULL);
+  jint *mapDevIDs = env->GetIntArrayElements(jctxMapDevIDs, NULL);
+  int ret = MXExecutorBindX((SymbolHandle) symbolPtr,
+                            deviceTypeId,
+                            deviceID,
+                            (mx_uint) numCtx,
+                            mapKeys,
+                            mapDevTypes,
+                            mapDevIDs,
+                            (mx_uint) numArgs,
+                            (NDArrayHandle *) inArgs,
+                            (NDArrayHandle *) argGradStore,
+                            (mx_uint *) gradReqType,
+                            (mx_uint) auxStatesLen,
+                            (NDArrayHandle *) auxStates,
+                            &out);
+  env->ReleaseIntArrayElements(jctxMapDevIDs, mapDevIDs, 0);
+  env->ReleaseIntArrayElements(jctxMapDevTypes, mapDevTypes, 0);
+  env->ReleaseLongArrayElements(jargsGradHandle, argGradStore, 0);
+  env->ReleaseLongArrayElements(jargsHandle, inArgs, 0);
+  env->ReleaseIntArrayElements(jreqsArray, gradReqType, 0);
+  env->ReleaseLongArrayElements(jauxArgsHandle, auxStates, 0);
+  for (int i = 0; i < numCtx; i++) {
+    jstring jkey = (jstring) env->GetObjectArrayElement(jctxMapKeys, i);
+    env->ReleaseStringUTFChars(jkey, mapKeys[i]);
+  }
+  delete[] mapKeys;
+
+  setLongField(env, jexecOut, (long) out);
   return ret;
 }

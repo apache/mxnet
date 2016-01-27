@@ -145,8 +145,43 @@ class LibInfo {
   @native def mxSymbolListArguments(handle: SymbolHandle,
                                     arguments: ArrayBuffer[String]): Int
   @native def mxSymbolCopy(handle: SymbolHandle, clonedHandle: SymbolHandleRef): Int
+  @native def mxSymbolListAuxiliaryStates(handle: SymbolHandle,
+                                          arguments: ArrayBuffer[String]): Int
   @native def mxSymbolListOutputs(handle: SymbolHandle,
                                   outputs: ArrayBuffer[String]): Int
   @native def mxSymbolCreateGroup(handles: Array[SymbolHandle], out: SymbolHandleRef): Int
   @native def mxSymbolPrint(handle: SymbolHandle, str: RefString): Int
+  @native def mxSymbolGetInternals(handle: SymbolHandle, out: SymbolHandleRef): Int
+  @native def mxSymbolInferType(handle: SymbolHandle,
+                                keys: Array[String],
+                                sdata: Array[Int],
+                                argTypeData: ListBuffer[Int],
+                                outTypeData: ListBuffer[Int],
+                                auxTypeData: ListBuffer[Int],
+                                complete: RefInt): Int
+  @native def mxSymbolInferShape(handle: SymbolHandle,
+                                 numArgs: MXUint,
+                                 keys: Array[String],
+                                 argIndPtr: Array[MXUint],
+                                 argShapeData: Array[MXUint],
+                                 inShapeData: ListBuffer[Shape],
+                                 outShapeData: ListBuffer[Shape],
+                                 auxShapeData: ListBuffer[Shape],
+                                 complete: RefInt): Int
+  @native def mxSymbolGetOutput(handle: SymbolHandle, index: Int, out: SymbolHandleRef): Int
+  // scalastyle:off parameterNum
+  @native def mxExecutorBindX(handle: SymbolHandle,
+                              deviceTypeId: Int,
+                              deviceID: Int,
+                              numCtx: Int,
+                              ctxMapKeys: Array[String],
+                              ctxMapDevTypes: Array[Int],
+                              ctxMapDevIDs: Array[Int],
+                              numArgs: Int,
+                              argsHandle: Array[NDArrayHandle],
+                              argsGradHandle: Array[NDArrayHandle],
+                              reqsArray: Array[Int],
+                              auxArgsHandle: Array[NDArrayHandle],
+                              out: ExecutorHandleRef): Int
+  // scalastyle:on parameterNum
 }
