@@ -17,6 +17,7 @@ object IO {
 
   def MNISTIter: IterCreateFunc = iterCreateFuncs("MNISTIter")
   def ImageRecordIter: IterCreateFunc = iterCreateFuncs("ImageRecordIter")
+  def CSVIter: IterCreateFunc = iterCreateFuncs("CSVIter")
 
   /**
    * create iterator via iterName and params
@@ -69,7 +70,7 @@ object IO {
   // Convert data into canonical form.
   private def initData(data: List[NDArray], allowEmpty: Boolean, defaultName: String) = {
     require(data != null || allowEmpty)
-    //TODO
+    // TODO
   }
 }
 
@@ -151,7 +152,7 @@ class MXDataIter(val handle: DataIterHandle,
                  val labelName: String = "label") extends DataIter {
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
 
-  //get first batch
+  // get first batch
   reset()
   iterNext()
   val firstBatch = next()
