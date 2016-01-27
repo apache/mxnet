@@ -1,11 +1,8 @@
 #!/bin/bash
 
 if [ ${TASK} == "lint" ]; then
-    make lint
-    exit $?
-fi
-
-if [ ${TASK} == "doc" ]; then
+    make lint || exit -1
+    echo "Check documentations of c++ code..."
     make doc 2>log.txt
     (cat log.txt| grep -v ENABLE_PREPROCESSING |grep -v "unsupported tag") > logclean.txt
     echo "---------Error Log----------"

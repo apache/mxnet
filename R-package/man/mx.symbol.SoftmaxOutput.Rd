@@ -10,6 +10,9 @@ mx.symbol.SoftmaxOutput(...)
 \item{data}{Symbol
 Input data to softmax.}
 
+\item{label}{Symbol
+Label data.}
+
 \item{grad.scale}{float, optional, default=1
 Scale the gradient by a float factor}
 

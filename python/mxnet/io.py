@@ -254,10 +254,6 @@ class NDArrayIter(DataIter):
         Batch Size
     shuffle: bool
         Whether to shuffle the data
-    data_pad_value: float, optional
-        Padding value for data
-    label_pad_value: float, optionl
-        Padding value for label
     last_batch_handle: 'pad', 'discard' or 'roll_over'
         How to handle the last batch
     Note

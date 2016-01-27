@@ -413,6 +413,8 @@ mx.symbol.Cast <- function(...) {
 
 #' Perform an feature concat on channel dim (dim 1) over all the inputs.
 #' 
+#' @param data  Symbol[]
+#'     List of tensors to concatenate
 #' @param num.args  int, required
 #'     Number of inputs to be concated.
 #' @param dim  int, optional, default='1'
@@ -792,6 +794,8 @@ mx.symbol.SoftmaxActivation <- function(...) {
 #' 
 #' @param data  Symbol
 #'     Input data to softmax.
+#' @param label  Symbol
+#'     Label data.
 #' @param grad.scale  float, optional, default=1
 #'     Scale the gradient by a float factor
 #' @param ignore.label  float, optional, default=-1
@@ -828,6 +832,8 @@ mx.symbol.SwapAxis <- function(...) {
 
 #' Perform nearest neighboor/bilinear up sampling to inputs
 #' 
+#' @param data  Symbol[]
+#'     Array of tensors to upsample
 #' @param scale  int (non-negative), required
 #'     Up sampling scale
 #' @param num.filter  int (non-negative), optional, default=0

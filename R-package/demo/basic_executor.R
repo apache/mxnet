@@ -19,7 +19,7 @@ exec = mxnet:::mx.symbol.bind(
   ctx=mx.cpu(),
   arg.arrays = list(A=a, B=b),
   aux.arrays = list(),
-  grad.reqs = list(FALSE, FALSE))
+  grad.reqs = list("null", "null"))
 
 # calculate outputs
 mx.exec.forward(exec)

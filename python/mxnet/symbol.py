@@ -280,7 +280,7 @@ class Symbol(object):
         return [py_str(sarr[i]) for i in range(size.value)]
 
     def list_auxiliary_states(self):
-        """List all auxiliary states in the symbool.
+        """List all auxiliary states in the symbol.
 
         Returns
         -------
@@ -694,13 +694,14 @@ class Symbol(object):
         if not isinstance(ctx, Context):
             raise TypeError("Context type error")
 
-        args_handle, args = self._get_ndarray_inputs('args', args, self.list_arguments(), False)
+        listed_arguments = self.list_arguments()
+        args_handle, args = self._get_ndarray_inputs('args', args, listed_arguments, False)
         # setup args gradient
         if args_grad is None:
             args_grad_handle = c_array(NDArrayHandle, [None] * len(args))
         else:
             args_grad_handle, args_grad = self._get_ndarray_inputs(
-                'args_grad', args_grad, self.list_arguments(), True)
+                'args_grad', args_grad, listed_arguments, True)
 
         if aux_states is None:
             aux_states = []
@@ -712,12 +713,12 @@ class Symbol(object):
         if isinstance(grad_req, string_types):
             if grad_req not in req_map:
                 raise ValueError('grad_req must be in %s' % str(req_map))
-            reqs_array = c_array(mx_uint, [mx_uint(req_map[grad_req])] * len(self.list_arguments()))
+            reqs_array = c_array(mx_uint, [mx_uint(req_map[grad_req])] * len(listed_arguments))
         elif isinstance(grad_req, list):
             reqs_array = c_array(mx_uint, [mx_uint(req_map[item]) for item in grad_req])
         elif isinstance(grad_req, dict):
             req_array = []
-            for name in self.list_arguments():
+            for name in listed_arguments:
                 if name in grad_req:
                     req_array.append(mx_uint(req_map[grad_req[name]]))
                 else:
