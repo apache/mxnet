@@ -30,9 +30,10 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     mnistIter.reset()
     val nBatch = 600
     var batchCount = 0
-    while(mnistIter.iterNext()) {
-      val batch = mnistIter.next()
+    var batch = mnistIter.next()
+    while (batch != null) {
       batchCount += 1
+      batch = mnistIter.next()
     }
     // test loop
     assert(nBatch === batchCount)

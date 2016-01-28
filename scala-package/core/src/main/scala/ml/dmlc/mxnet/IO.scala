@@ -155,7 +155,6 @@ class MXDataIter(private[mxnet] val handle: DataIterHandle,
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
 
   // load the first batch to get shape information
-  iterNext()
   private var firstBatch: DataBatch = next()
   private val data = firstBatch.data(0)
   private val label = firstBatch.label(0)
@@ -173,6 +172,8 @@ class MXDataIter(private[mxnet] val handle: DataIterHandle,
    * reset the iterator
    */
   override def reset(): Unit = {
+    // TODO: self._debug_at_begin = True
+    firstBatch = null
     checkCall(_LIB.mxDataIterBeforeFirst(handle))
   }
 
@@ -192,7 +193,7 @@ class MXDataIter(private[mxnet] val handle: DataIterHandle,
       if (nextRes.value > 0) {
         new DataBatch(data = getData(), label = getLabel(), index = getIndex(), pad = getPad())
       } else {
-        //TODO raise StopIteration
+        // TODO raise StopIteration
         null
       }
     }
@@ -203,9 +204,16 @@ class MXDataIter(private[mxnet] val handle: DataIterHandle,
    * @return whether the move is successful
    */
   override def iterNext(): Boolean = {
-    val next = new RefInt
-    checkCall(_LIB.mxDataIterNext(handle, next))
-    next.value > 0
+    if (firstBatch != null) {
+      // FIXME: this implementation is confusing,
+      // if we call iterNext() continuously from the very beginning,
+      // it always returns true but never moves forward
+      true
+    } else {
+      val next = new RefInt
+      checkCall(_LIB.mxDataIterNext(handle, next))
+      next.value > 0
+    }
   }
 
   /**

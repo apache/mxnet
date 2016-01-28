@@ -164,6 +164,8 @@ object Model {
     monitor.foreach(executorManager.installMonitor)
     executorManager.setParams(argParams, auxParams)
 
+    // TODO: initialize kvstore when updateOnKVStore = true
+
     // Now start training
     for (epoch <- beginEpoch until endEpoch) {
       // Training phase
@@ -175,11 +177,8 @@ object Model {
       while (!epochDone) {
         var doReset = true
         // TODO: make DataIter implement Iterator
-        while (doReset && trainData.iterNext()) {
-          val dataBatch = new DataBatch(data = trainData.getData(),
-                                        label= trainData.getLabel(),
-                                        pad = trainData.getPad(),
-                                        index = trainData.getIndex())
+        var dataBatch = trainData.next()
+        while (doReset && dataBatch != null) {
           executorManager.loadDataBatch(dataBatch)
           monitor.foreach(_.tic())
           executorManager.forward(isTrain = true)
@@ -203,16 +202,17 @@ object Model {
           // TODO: batch callback (for print purpose)
 
           // this epoch is done possibly earlier
-          if (epochSize > 0 && nBatch >= epochSize) {
+          if (epochSize != -1 && nBatch >= epochSize) {
             doReset = false
           }
+          dataBatch = trainData.next()
         }
         if (doReset) {
           trainData.reset()
         }
 
         // this epoch is done
-        epochDone = (epochSize == 0 || nBatch >= epochSize)
+        epochDone = (epochSize == -1 || nBatch >= epochSize)
       }
 
       val (name, value) = evalMetric.get
