@@ -16,6 +16,8 @@ object IO {
   private val iterCreateFuncs: Map[String, IterCreateFunc] = _initIOModule()
 
   def MNISTIter: IterCreateFunc = iterCreateFuncs("MNISTIter")
+  def ImageRecordIter: IterCreateFunc = iterCreateFuncs("ImageRecordIter")
+  def CSVIter: IterCreateFunc = iterCreateFuncs("CSVIter")
 
   /**
    * create iterator via iterName and params
@@ -66,7 +68,7 @@ object IO {
   }
 
   // Convert data into canonical form.
-  private def initData(data: NDArray, allowEmpty: Boolean, defaultName: String) = {
+  private def initData(data: List[NDArray], allowEmpty: Boolean, defaultName: String) = {
     require(data != null || allowEmpty)
     // TODO
   }
@@ -145,8 +147,16 @@ abstract class DataIter(val batchSize: Int = 0) {
   * @param handle the handle to the underlying C++ Data Iterator
   */
 // scalastyle:off finalize
-class MXDataIter(val handle: DataIterHandle) extends DataIter {
+class MXDataIter(val handle: DataIterHandle,
+                 val dataName: String = "data",
+                 val labelName: String = "label") extends DataIter {
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
+
+  // get first batch
+  reset()
+  iterNext()
+  val firstBatch = next()
+  reset()
 
   override def finalize(): Unit = {
     checkCall(_LIB.mxDataIterFree(handle))
@@ -212,17 +222,28 @@ class MXDataIter(val handle: DataIterHandle) extends DataIter {
   }
 
   // The name and shape of data provided by this iterator
-  override def provideData: Map[String, Shape] = ???
+  override def provideData: Map[String, Shape] = {
+    Map(dataName -> firstBatch.data.head.shape)
+  }
 
   // The name and shape of label provided by this iterator
-  override def provideLabel: Map[String, Shape] = ???
+  override def provideLabel: Map[String, Shape] = {
+    Map(labelName -> firstBatch.label.head.shape)
+  }
 }
 // scalastyle:on finalize
 
 /**
- * TODO
- */
-class ArrayDataIter() extends DataIter {
+  * Base class for prefetching iterators. Takes one or more DataIters
+  * (or any class with "reset" and "read" methods) and combine them with
+  * prefetching.
+  * @param iters list of DataIters
+  * @param dataNames
+  * @param labelNames
+  */
+class PrefetchingIter(val iters: List[DataIter],
+                      val dataNames: Map[String, String] = null,
+                      val labelNames: Map[String, String] = null) extends DataIter {
   /**
    * reset the iterator
    */
