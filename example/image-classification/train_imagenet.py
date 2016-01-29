@@ -45,6 +45,8 @@ parser.add_argument('--val-dataset', type=str, default="val.rec",
                     help="validation dataset name")
 parser.add_argument('--data-shape', type=int, default=224,
                     help='set image's shape')
+arser.add_argument('--mean-file', type=str, default="mean.bin",
+                    help='set mean file')                    
 args = parser.parse_args()
 
 # network
@@ -56,9 +58,7 @@ def get_iterator(args, kv):
     data_shape = (3, args.data_shape, args.data_shape)
     train = mx.io.ImageRecordIter(
         path_imgrec = args.data_dir + args.train_dataset,
-        mean_r      = 123.68,
-        mean_g      = 116.779,
-        mean_b      = 103.939,
+        mean_img    = args.data_dir + args.mean_file,
         data_shape  = data_shape,
         batch_size  = args.batch_size,
         rand_crop   = True,
@@ -68,9 +68,7 @@ def get_iterator(args, kv):
 
     val = mx.io.ImageRecordIter(
         path_imgrec = args.data_dir + args.val_dataset,
-        mean_r      = 123.68,
-        mean_g      = 116.779,
-        mean_b      = 103.939,
+        mean_img    = args.data_dir + args.mean_file,
         rand_crop   = False,
         rand_mirror = False,
         data_shape  = data_shape,
