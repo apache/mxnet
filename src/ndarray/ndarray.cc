@@ -17,6 +17,70 @@ DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 }  // namespace dmlc
 
 namespace mxnet {
+
+/*!
+* \brief run a ternary operation
+* \param lhs left operand
+* \param mhs middle operand
+* \param rhs right operand
+* \param out the output ndarray
+*/
+template<typename OP>
+void TernaryOp(const NDArray &lhs,
+  const NDArray &mhs,
+  const NDArray &rhs,
+  NDArray *out) {
+  // no check if all of them are on cpu
+  if (lhs.ctx().dev_mask() != cpu::kDevMask || mhs.ctx().dev_mask() != cpu::kDevMask
+                                            || rhs.ctx().dev_mask() != cpu::kDevMask) {
+    CHECK((lhs.ctx() == mhs.ctx()) && (mhs.ctx() == rhs.ctx())) << "operands context mismatch";
+  }
+  // if out is none, allocate space
+  if (out->is_none()) {
+    *out = NDArray(OP::GetShape(lhs.shape(), mhs.shape(), rhs.shape()), lhs.ctx(), true);
+  } else {
+    // no check if both of them are on cpu
+    if (lhs.ctx().dev_mask() != cpu::kDevMask ||
+      out->ctx().dev_mask() != cpu::kDevMask) {
+      CHECK(out->ctx() == lhs.ctx()) << "target context mismatch";
+    }
+    CHECK(out->shape() == OP::GetShape(lhs.shape(), mhs.shape(), rhs.shape()))
+      << "target shape mismatch";
+  }
+  // important: callback must always capture by value
+  NDArray ret = *out;
+  // get the const variables
+  std::vector<Engine::VarHandle> const_vars;
+  if (lhs.var() != ret.var()) const_vars.push_back(lhs.var());
+  if (mhs.var() != ret.var()) const_vars.push_back(mhs.var());
+  if (rhs.var() != ret.var()) const_vars.push_back(rhs.var());
+
+  // redirect everything to mshadow operations
+  switch (lhs.ctx().dev_mask()) {
+  case cpu::kDevMask: {
+    Engine::Get()->PushSync([lhs, mhs, rhs, ret](RunContext ctx) {
+      ret.CheckAndAlloc();
+      TBlob tmp = ret.data();
+      ndarray::Eval<cpu, OP>(lhs.data(), mhs.data(), rhs.data(), &tmp, ctx);
+    }, lhs.ctx(), const_vars, { ret.var() });
+    break;
+  }
+#if MXNET_USE_CUDA
+  case gpu::kDevMask: {
+    Engine::Get()->PushSync([lhs, mhs, rhs, ret](RunContext ctx) {
+      ret.CheckAndAlloc();
+      TBlob tmp = ret.data();
+      ndarray::Eval<gpu, OP>(lhs.data(), mhs.data(), rhs.data(), &tmp, ctx);
+      // Wait GPU kernel to complete
+      ctx.get_stream<gpu>()->Wait();
+    }, lhs.ctx(), const_vars, { ret.var() });
+    break;
+  }
+#endif
+  default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+  }
+}
+
 /*!
  * \brief run a binary operation
  * \param lhs left operand
@@ -611,6 +675,12 @@ MXNET_REGISTER_NDARRAY_FUN(choose_element_0index)
 .describe("Choose one element from each line(row for python, column for R/Julia)"
           " in lhs according to index indicated by rhs."
           " This function assume rhs uses 0-based index.");
+
+MXNET_REGISTER_NDARRAY_FUN(fill_element_0index)
+.set_function(TernaryOp<ndarray::MatFillRowElem>)
+.describe("Fill one element of each line(row for python, column for R/Julia)"
+" in lhs according to index indicated by rhs and values indicated by mhs."
+" This function assume rhs uses 0-based index.");
 
 // register API function
 // those with underscore will be registered at NDArray
