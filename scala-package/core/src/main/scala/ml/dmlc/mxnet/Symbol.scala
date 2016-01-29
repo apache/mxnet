@@ -656,6 +656,17 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
     executor.auxArrays = auxStatesNDArray
     executor
   }
+
+  /**
+   * Save symbol into a JSON string.
+   * See Also
+   * symbol.loadJson : Used to load symbol from JSON string.
+   */
+  def toJson: String = {
+    val jsonStr = new RefString
+    checkCall(_LIB.mxSymbolSaveToJSON(handle, jsonStr))
+    jsonStr.value
+  }
 }
 
 object Symbol {

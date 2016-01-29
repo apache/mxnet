@@ -48,4 +48,10 @@ class SymbolSuite extends FunSuite with BeforeAndAfterAll {
     assert(out.toArray === Array(classOf[Float]))
     assert(aux.isEmpty)
   }
+
+  test("symbol copy") {
+    val data = Symbol.Variable("data")
+    val data2 = data.clone()
+    assert(data.toJson === data2.toJson)
+  }
 }
