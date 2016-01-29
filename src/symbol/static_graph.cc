@@ -72,7 +72,8 @@ std::vector<uint32_t> StaticGraph::TopoSort() const {
 
 bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
                                   std::vector<std::vector<TShape> > *node_out_shapes,
-                                  std::vector<std::vector<TShape> > *node_aux_shapes) const {
+                                  std::vector<std::vector<TShape> > *node_aux_shapes,
+                                  bool partial_infer) const {
   for (uint32_t nid : topo_order) {
     const Node& node = nodes[nid];
     if (node.is_forward()) {
@@ -83,7 +84,11 @@ bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
       try {
         if (!node.op->InferShape(&in_shape,
                                  &(*node_out_shapes)[nid],
-                                 &(*node_aux_shapes)[nid])) return false;
+                                 &(*node_aux_shapes)[nid])) {
+          if (partial_infer)
+            continue;
+          return false;
+        }
       } catch (const op::InferShapeError &err) {
         // error handling
         const std::string &op_name = node.name;
@@ -254,7 +259,8 @@ bool StaticGraph::InferNodeTypes(const std::vector<uint32_t> &topo_order,
 
 bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
                              std::vector<TShape> *out_shape,
-                             std::vector<TShape> *aux_shape) const {
+                             std::vector<TShape> *aux_shape,
+                             bool partial_infer) const {
   std::vector<std::vector<TShape> > node_out_shapes(nodes.size());
   std::vector<std::vector<TShape> > node_aux_shapes(nodes.size());
   for (size_t i = 0; i < nodes.size(); ++i) {
@@ -273,7 +279,8 @@ bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
   }
   if (!InferNodeShapes(this->TopoSort(),
                        &node_out_shapes,
-                       &node_aux_shapes)) return false;
+                       &node_aux_shapes,
+                       partial_infer)) return false;
   for (size_t i = 0; i < arg_nodes.size(); ++i) {
     (*in_shape)[i] = node_out_shapes[arg_nodes[i]][0];
   }

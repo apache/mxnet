@@ -194,11 +194,13 @@ class StaticGraph {
    * \param topo_order The topological order of node index, as created by TopoSort.
    * \param node_out_shapes The shapes of the each outputs of nodes in the graph.
    * \param node_aux_shapes The shapes of the each auxiliary states of nodes in the graph.
+   * \param partial_infer Whether return partially inferred results.
    * \return if the shape inference is successful, return true, else return false.
    */
   bool InferNodeShapes(const std::vector<uint32_t> &topo_order,
                        std::vector<std::vector<TShape> > *node_out_shapes,
-                       std::vector<std::vector<TShape> > *node_aux_shapes) const;
+                       std::vector<std::vector<TShape> > *node_aux_shapes,
+                       bool partial_infer = false) const;
   /*!
    * \brief infer the node types in the computation graph.
    *
@@ -227,11 +229,13 @@ class StaticGraph {
    *     InferShape will modify the vector to fill output TShape
    * \param aux_shape the shape of auxiliary states of the operator
    *     InferShape will modify the vector to fill output TShape
+   * \param partial_infer Whether return partially inferred results.
    * \return if the shape inference is successful, return true, else return false.
    */
   bool InferShape(std::vector<TShape>* in_shape,
                   std::vector<TShape>* out_shape,
-                  std::vector<TShape>* aux_shape) const;
+                  std::vector<TShape>* aux_shape,
+                  bool partial_infer = false) const;
 
   /*!
    * \brief infer the types of outputs and unknown input arguments
