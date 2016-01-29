@@ -64,7 +64,9 @@ object IO {
     val keys = params.keys.toArray
     val vals = params.values.toArray
     checkCall(_LIB.mxDataIterCreateIter(handle, keys, vals, out))
-    new MXDataIter(out.value)
+    val dataName = params.getOrElse("data_name", "data")
+    val labelName = params.getOrElse("label_name", "label")
+    new MXDataIter(out.value, dataName, labelName)
   }
 
   // Convert data into canonical form.
@@ -147,16 +149,20 @@ abstract class DataIter(val batchSize: Int = 0) {
   * @param handle the handle to the underlying C++ Data Iterator
   */
 // scalastyle:off finalize
-class MXDataIter(val handle: DataIterHandle,
-                 val dataName: String = "data",
-                 val labelName: String = "label") extends DataIter {
+class MXDataIter(private[mxnet] val handle: DataIterHandle,
+                 private val dataName: String = "data",
+                 private val labelName: String = "label") extends DataIter {
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
 
-  // get first batch
-  reset()
-  iterNext()
-  val firstBatch = next()
-  reset()
+  // load the first batch to get shape information
+  private var firstBatch: DataBatch = next()
+  private val data = firstBatch.data(0)
+  private val label = firstBatch.label(0)
+
+  // properties
+  val _provideData: Map[String, Shape] = Map(dataName -> data.shape)
+  val _provideLabel: Map[String, Shape] = Map(labelName -> label.shape)
+  override val batchSize = data.shape(0)
 
   override def finalize(): Unit = {
     checkCall(_LIB.mxDataIterFree(handle))
@@ -166,7 +172,31 @@ class MXDataIter(val handle: DataIterHandle,
    * reset the iterator
    */
   override def reset(): Unit = {
+    // TODO: self._debug_at_begin = True
+    firstBatch = null
     checkCall(_LIB.mxDataIterBeforeFirst(handle))
+  }
+
+  override def next(): DataBatch = {
+    // TODO
+    // if self._debug_skip_load and not self._debug_at_begin:
+    //   return DataBatch(data =[self.getdata()], label =[self.getlabel()],
+    //                    pad = self.getpad(), index = self.getindex())
+    if (firstBatch != null) {
+      val batch = firstBatch
+      firstBatch = null
+      batch
+    } else {
+      // self._debug_at_begin = False
+      val nextRes = new RefInt
+      checkCall(_LIB.mxDataIterNext(handle, nextRes))
+      if (nextRes.value > 0) {
+        new DataBatch(data = getData(), label = getLabel(), index = getIndex(), pad = getPad())
+      } else {
+        // TODO raise StopIteration
+        null
+      }
+    }
   }
 
   /**
@@ -174,9 +204,16 @@ class MXDataIter(val handle: DataIterHandle,
    * @return whether the move is successful
    */
   override def iterNext(): Boolean = {
-    val next = new RefInt
-    checkCall(_LIB.mxDataIterNext(handle, next))
-    next.value > 0
+    if (firstBatch != null) {
+      // FIXME: this implementation is confusing,
+      // if we call iterNext() continuously from the very beginning,
+      // it always returns true but never moves forward
+      true
+    } else {
+      val next = new RefInt
+      checkCall(_LIB.mxDataIterNext(handle, next))
+      next.value > 0
+    }
   }
 
   /**
@@ -222,14 +259,10 @@ class MXDataIter(val handle: DataIterHandle,
   }
 
   // The name and shape of data provided by this iterator
-  override def provideData: Map[String, Shape] = {
-    Map(dataName -> firstBatch.data.head.shape)
-  }
+  override def provideData: Map[String, Shape] = _provideData
 
   // The name and shape of label provided by this iterator
-  override def provideLabel: Map[String, Shape] = {
-    Map(labelName -> firstBatch.label.head.shape)
-  }
+  override def provideLabel: Map[String, Shape] = _provideLabel
 }
 // scalastyle:on finalize
 

@@ -988,6 +988,14 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolInferType
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolSaveToJSON
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jobject jout) {
+  const char *out;
+  int ret = MXSymbolSaveToJSON((SymbolHandle) symbolPtr, &out);
+  setStringField(env, jout, out);
+  return ret;
+}
+
 int FillSymbolInferShape
   (JNIEnv *env, jmethodID listAppend, jobject joutData,
    mx_uint shapeSize, const mx_uint *shapeNdim, const mx_uint **shapeData) {

@@ -4,7 +4,7 @@ package ml.dmlc.mxnet
  * Base class of all evaluation metrics
  * @param name Metric name
  *
- * @author Yuan Tang
+ * @author Yuan Tang, Yizhi Liu
  */
 abstract class EvalMetric(protected val name: String) {
 
@@ -17,12 +17,12 @@ abstract class EvalMetric(protected val name: String) {
    * @param labels The labels of the data
    * @param preds Predicted values.
    */
-  def update(labels: NDArray, preds: NDArray): Unit
+  def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit
 
   /**
    * Clear the internal statistics to initial state.
    */
-  def reset: Unit = {
+  def reset(): Unit = {
     this.numInst = 0
     this.sumMetric = 0.0f
   }
@@ -37,22 +37,26 @@ abstract class EvalMetric(protected val name: String) {
   }
 }
 
-
 /**
  * Calculate accuracy
  */
 class Accuracy extends EvalMetric("accuracy") {
-  def update(labels: NDArray, preds: NDArray): Unit = {
+  def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
+    require(labels.length == preds.length,
+      "labels and predictions should have the same length.")
 
-    require(labels.size == preds.size, "labels and predictions should have the same length.")
-
-    (0 to preds.size) foreach (i => {
-      val pred: NDArray = preds.slice(i, i)
-      val label: NDArray = labels.slice(i, i)
-
-      // require(label.shape(0) < predLabel.shape(0),
-      // "Should not have more predict labels than actual labels ")
-    })
+    for ((pred, label) <- preds zip labels) {
+      val predLabel = NDArray.argmaxChannel(pred)
+      require(label.shape.sameElements(predLabel.shape),
+        s"label (${label.shape.mkString(",")}) and prediction (${predLabel.shape.mkString(",")})" +
+        s"should have the same length.")
+      for ((labelElem, predElem) <- label.toArray zip predLabel.toArray) {
+        if (labelElem == predElem) {
+          this.sumMetric += 1
+        }
+      }
+      this.numInst += predLabel.shape(0)
+    }
   }
 }
 
@@ -61,11 +65,11 @@ class Accuracy extends EvalMetric("accuracy") {
  * Calculate Mean Absolute Error loss
  */
 class MAE extends EvalMetric("mae") {
-  def update(labels: NDArray, preds: NDArray): Unit = {
+  def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
 
     require(labels.size == preds.size, "labels and predictions should have the same length.")
 
-    for ( (label, pred) <- (labels.toArray zip preds.toArray)) {
+    for ( (label, pred) <- labels zip preds) {
 
     }
   }
@@ -76,11 +80,11 @@ class MAE extends EvalMetric("mae") {
  * Calculate Root Mean Squred Error loss
  */
 class RMSE extends EvalMetric("rmse") {
-  def update(labels: NDArray, preds: NDArray): Unit = {
+  def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
 
     require(labels.size == preds.size, "labels and predictions should have the same length.")
 
-    for ( (label, pred) <- (labels.toArray zip preds.toArray)) {
+    for ( (label, pred) <- labels zip preds) {
 
     }
   }
@@ -93,11 +97,11 @@ class RMSE extends EvalMetric("rmse") {
  * @param name The name of the metric
  */
 class CustomMetric(var fEval: () => Unit, override val name: String) extends EvalMetric(name) {
-  def update(labels: NDArray, preds: NDArray): Unit = {
+  def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
 
     require(labels.size == preds.size, "labels and predictions should have the same length.")
 
-    for ( (label, pred) <- (labels.toArray zip preds.toArray)) {
+    for ( (label, pred) <- labels zip preds) {
 
     }
   }

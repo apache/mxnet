@@ -169,6 +169,7 @@ class LibInfo {
                                  auxShapeData: ListBuffer[Shape],
                                  complete: RefInt): Int
   @native def mxSymbolGetOutput(handle: SymbolHandle, index: Int, out: SymbolHandleRef): Int
+  @native def mxSymbolSaveToJSON(handle: SymbolHandle, out: RefString): Int
   // scalastyle:off parameterNum
   @native def mxExecutorBindX(handle: SymbolHandle,
                               deviceTypeId: Int,

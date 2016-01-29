@@ -4,8 +4,6 @@ import ml.dmlc.mxnet.Base.Shape
 import ml.dmlc.mxnet.optimizer.SGD
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.collection.mutable
-
 /**
  * Describe the model flow
  * @author Yizhi Liu
@@ -72,13 +70,13 @@ object Model {
   // Perform update of param_arrays from grad_arrays on kvstore
   private def updateParamsOnKVStore(paramArrays: Array[Array[NDArray]],
                                     gradArrays: Array[Array[NDArray]],
-                                    kvStore: KVStore): Unit = {
+                                    kvStore: Option[KVStore]): Unit = {
     (paramArrays zip gradArrays).zipWithIndex.foreach { case ((argList, gradList), index) =>
       if (gradList != null) {
         // push gradient, priority is negative index
-        kvStore.push(index, gradList, -index)
+        kvStore.foreach(_.push(index, gradList, -index))
         // pull back the weights
-        kvStore.pull(index, argList, -index)
+        kvStore.foreach(_.pull(index, argList, -index))
       }
     }
   }
@@ -145,14 +143,14 @@ object Model {
                                       auxParams: Map[String, NDArray],
                                       beginEpoch: Int, endEpoch: Int, epochSize: Int,
                                       optimizer: Optimizer,
-                                      kvStore: KVStore, updateOnKVStore: Boolean,
+                                      kvStore: Option[KVStore], updateOnKVStore: Boolean,
                                       trainData: DataIter = null, evalData: DataIter = null,
                                       evalMetric: EvalMetric = null,
                                       epochEndCallback: EpochEndCallback = null,
                                       batchEndCallback: BatchEndCallback = null,
                                       logger: Logger = logger,
                                       workLoadList: Seq[Float] = Nil,
-                                      monitor: Monitor = null): Unit = {
+                                      monitor: Option[Monitor] = None): Unit = {
     val executorManager = new DataParallelExecutorManager(
         symbol = symbol,
         ctx = ctx,
@@ -162,6 +160,68 @@ object Model {
         auxNames = auxNames,
         workLoadList = workLoadList,
         logger = logger)
+
+    monitor.foreach(executorManager.installMonitor)
+    executorManager.setParams(argParams, auxParams)
+
+    // TODO: initialize kvstore when updateOnKVStore = true
+
+    // Now start training
+    for (epoch <- beginEpoch until endEpoch) {
+      // Training phase
+      val tic = System.currentTimeMillis
+      evalMetric.reset()
+      var nBatch = 0
+      var epochDone = false
+      // Iterate over training data.
+      while (!epochDone) {
+        var doReset = true
+        // TODO: make DataIter implement Iterator
+        var dataBatch = trainData.next()
+        while (doReset && dataBatch != null) {
+          executorManager.loadDataBatch(dataBatch)
+          monitor.foreach(_.tic())
+          executorManager.forward(isTrain = true)
+          executorManager.backward()
+          if (updateOnKVStore) {
+            updateParamsOnKVStore(executorManager.paramArrays,
+                                  executorManager.gradArrays,
+                                  kvStore)
+          } else {
+            val updater = Optimizer.getUpdater(optimizer)
+            updateParams(executorManager.paramArrays,
+                         executorManager.gradArrays,
+                         updater, ctx.length,
+                         kvStore)
+          }
+          monitor.foreach(_.tocPrint())
+          // evaluate at end, so out_cpu_array can lazy copy
+          evalMetric.update(dataBatch.label, executorManager.cpuOutputArrays)
+
+          nBatch += 1
+          // TODO: batch callback (for print purpose)
+
+          // this epoch is done possibly earlier
+          if (epochSize != -1 && nBatch >= epochSize) {
+            doReset = false
+          }
+          dataBatch = trainData.next()
+        }
+        if (doReset) {
+          trainData.reset()
+        }
+
+        // this epoch is done
+        epochDone = (epochSize == -1 || nBatch >= epochSize)
+      }
+
+      val (name, value) = evalMetric.get
+      logger.info(s"Epoch[$epoch] Train-$name=$value")
+      val toc = System.currentTimeMillis
+      logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
+
+      // TODO: evaluation on evalData, epoch_end_callback
+    }
   }
   // scalastyle:on parameterNum
 }
@@ -195,7 +255,7 @@ trait BatchEndCallback {
  *                         If this is True, no error will be thrown when aux_params and arg_params
  *                         contain extra parameters than needed.
  * @param beginEpoch The begining training epoch.
- * @param kwargs The additional keyword arguments passed to optimizer.
+ * TODO: @param kwargs The additional keyword arguments passed to optimizer.
  */
 class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(new Context("cpu")),
                   val numEpoch: Int = -1, val epochSize: Int = -1,
@@ -205,8 +265,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(new Contex
                   argParams: Map[String, NDArray] = null,
                   auxParams: Map[String, NDArray] = null,
                   allowExtraParams: Boolean = false,
-                  val beginEpoch: Int = 0,
-                  val kwargs: mutable.Map[String, Any]) {
+                  val beginEpoch: Int = 0) {
   private val LOG: Logger = LoggerFactory.getLogger(classOf[FeedForward])
   // check if symbol contain duplicated names.
   Executor.checkArguments(symbol)
@@ -331,7 +390,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(new Contex
    *                              'local_allreduce_device'
    *                    'dist_sync' : multi-machines with BSP
    *                    'dist_async' : multi-machines with partical asynchronous
-   *                    In default uses 'local', often no need to change for single machiine.
+   *                    In default uses 'local', often no need to change for single machine.
    * @param logger When not specified, default logger will be used.
    * @param workLoadList The list of work load for different devices, in the same order as ctx
    */
@@ -356,7 +415,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(new Contex
       }
     }
     val batchSize = trainData.batchSize * batchSizeMultiplier.getOrElse(1)
-    // TODO: temporarily hard-coded sgd optimizer
+    // TODO: temporarily hard-coded sgd optimizer, accuracy evalMetric
     val optimizer = new SGD(rescaleGrad = 1f / batchSize)
     Model.trainMultiDevice(
       symbol, ctx, argNames, paramNames, auxNames,
@@ -364,8 +423,9 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(new Contex
       this.beginEpoch, this.numEpoch,
       this.epochSize,
       optimizer,
-      kvStore.orNull, updateOnKVStore,
+      kvStore, updateOnKVStore,
       trainData = trainData, evalData = evalData,
+      evalMetric = new Accuracy(),
       logger = logger, workLoadList = workLoadList)
   }
 }

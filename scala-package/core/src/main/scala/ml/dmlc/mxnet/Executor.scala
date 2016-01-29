@@ -315,8 +315,12 @@ class DataParallelExecutorManager(symbol: Symbol,
     paramNames.contains(argNames(i))
   }
   private val _paramNames = paramIdx.map(argNames(_))
-  private val paramArrays = paramIdx.map { i => trainExecs.map(_.argArrays(i)) }.toArray
-  private val gradArrays = paramIdx.map { i => trainExecs.map(_.gradArrays(i)) }.toArray
+  private[mxnet] val paramArrays = paramIdx.map { i =>
+    trainExecs.map(_.argArrays(i))
+  }.toArray
+  private[mxnet] val gradArrays = paramIdx.map { i =>
+    trainExecs.map(_.gradArrays(i))
+  }.toArray
 
   private val auxArrays = (0 until auxNames.length).map { i =>
     trainExecs.map(_.auxArrays(i))
@@ -325,7 +329,7 @@ class DataParallelExecutorManager(symbol: Symbol,
   private val outputShapes: Array[Shape] = trainExecs(0).outputs.map { x: NDArray =>
       Array(batchSize) ++ x.shape.drop(1)
     }
-  private val cpuOutputArrays = outputShapes.map(NDArray.zeros(_))
+  private[mxnet] val cpuOutputArrays = outputShapes.map(NDArray.zeros(_))
 
   // Install monitor on all executors
   def installMonitor(monitor: Monitor): Unit = {
