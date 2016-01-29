@@ -4,6 +4,7 @@
 [![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
 [![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.readthedocs.org/en/latest/)
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
+[![todofy badge](https://todofy.org/b/dmlc/mxnet)](https://todofy.org/r/dmlc/mxnet)
 
 MXNet is a deep learning framework designed for both *efficiency* and *flexibility*.
 It allows you to ***mix*** the [flavours](http://mxnet.readthedocs.org/en/latest/program_model.html) of symbolic
