@@ -2,7 +2,7 @@
 #' with information from input shapes.
 #'
 #' @export
-mx.simple.bind <- function(symbol, ctx, grad.req=FALSE, ...) {
+mx.simple.bind <- function(symbol, ctx, grad.req = "null", ...) {
   if (!is.MXSymbol(symbol)) stop("symbol need to be MXSymbol")
   slist <- symbol$infer.shape(list(...))
 
@@ -16,9 +16,11 @@ mx.simple.bind <- function(symbol, ctx, grad.req=FALSE, ...) {
     mx.nd.zeros(shape, ctx)
   }, simplify = FALSE, USE.NAMES = TRUE)
   grad.reqs <- lapply(names(slist$arg.shapes), function(nm) {
-    grad.req &&
-    !mx.util.str.endswith(nm, "label") &&
-    !mx.util.str.endswith(nm, "data")
+    if (!mx.util.str.endswith(nm, "label") && !mx.util.str.endswith(nm, "data")) {
+      grad.req
+    } else {
+      "null"
+    }
   })
   mx.symbol.bind(symbol, ctx,
                  arg.arrays=arg.arrays,

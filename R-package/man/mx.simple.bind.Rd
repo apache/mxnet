@@ -5,7 +5,7 @@
 \title{Simple bind the symbol to executor,
 with information from input shapes.}
 \usage{
-mx.simple.bind(symbol, ctx, grad.req = FALSE, ...)
+mx.simple.bind(symbol, ctx, grad.req = "null", ...)
 }
 \description{
 Simple bind the symbol to executor,

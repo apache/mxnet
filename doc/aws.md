@@ -1,4 +1,4 @@
-# Setup an AWS GPU Cluster from Stratch
+# Setup an AWS GPU Cluster from Scratch
 
 In this document we give a step-by-step tutorial on how to set up Amazon AWS for
 MXNet. In particular, we will address:
@@ -10,13 +10,12 @@ MXNet. In particular, we will address:
 
 ## Use Amazon S3 to host data
 
-Amazon S3 is distributed data storage, which is quite convenient for hosting large
-scale datasets. In order to use S3, we need first to get the
-[AWS credentials](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html)),
+Amazon S3 is distributed data storage, which is quite convenient for hosting large datasets. To use S3, we first get the
+[AWS credentials](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html),
 which includes an `ACCESS_KEY_ID` and a `SECRET_ACCESS_KEY`.
 
-In order for MXNet to use S3, we only need to set the environment variables `AWS_ACCESS_KEY_ID` and
-`AWS_SECRET_ACCESS_KEY` properly. For example, we can add the following two lines in
+To use MXNet with S3, we must set the environment variables `AWS_ACCESS_KEY_ID` and
+`AWS_SECRET_ACCESS_KEY` properly. This can be done by adding the following two lines in
 `~/.bashrc` (replacing the strings with the correct ones)
 
 ```bash
@@ -32,7 +31,7 @@ wget http://webdocs.cs.ualberta.ca/~bx3/data/mnist.zip
 unzip mnist.zip && s3cmd put t*-ubyte s3://dmlc/mnist/
 ```
 
-## Setup an EC2 GPU Instance
+## Set Up an EC2 GPU Instance
 
 MXNet requires the following libraries
 
@@ -42,7 +41,7 @@ MXNet requires the following libraries
 - `opencv` for image augmentations
 - `curl` and `openssl` for read/write Amazon S3
 
-Installing `CUDA` on EC2 instances needs a little bit of effort. Caffe has a nice
+Installing `CUDA` on EC2 instances requires some effort. Caffe has a nice
 [tutorial](https://github.com/BVLC/caffe/wiki/Install-Caffe-on-EC2-from-scratch-(Ubuntu,-CUDA-7,-cuDNN))
 on how to install CUDA 7.0 on Ubuntu 14.04 (Note: we tried CUDA 7.5 on Nov 7
 2015, but it is problematic.)
@@ -74,14 +73,13 @@ echo "USE_S3=1" >>config.mk
 make -j8
 ```
 
-In order to test whether everything has installed properly, we train a convolution neural network on MNIST using GPU:
+To test whether everything is installed properly, we train a Convolutional neural network on MNIST using a GPU:
 
 ```bash
 python tests/python/gpu/test_conv.py
 ```
 
-If the MNISt data is placed on `s3://dmlc/mnist`, we can let the program read
-the S3 data directly:
+If the MNISt data is placed on `s3://dmlc/mnist`, we can read the S3 data directly with the following command
 
 ```bash
 sed -i.bak "s!data_dir = 'data'!data_dir = 's3://dmlc/mnist'!" tests/python/gpu/test_conv.py
@@ -89,21 +87,20 @@ sed -i.bak "s!data_dir = 'data'!data_dir = 's3://dmlc/mnist'!" tests/python/gpu/
 
 Note: We can use `sudo ln /dev/null /dev/raw1394` to fix the opencv error `libdc1394 error: Failed to initialize libdc1394`.
 
-## Setup an EC2 GPU Cluster
+## Set Up an EC2 GPU Cluster
 
 A cluster consists of multiple machines. We can use the machine with MXNet
 installed as the root machine for submitting jobs, and then launch several
 slaves machine to run the jobs. For example, launch multiple instances using a
 AMI, e.g.
 [ami-12fd8178](https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#LaunchInstanceWizard:ami=ami-12fd8178),
-with dependencies installed. There are two suggestions:
+with dependencies installed. There are two options:
 
-1. Make all slaves' ports are accessible (same for the root) by setting **type: All TCP**,
+1. Make all slaves' ports accessible (same for the root) by setting **type: All TCP**,
    **Source: Anywhere** in **Configure Security Group**
 
-2. Use the same `pem` as the root machine to access all slaves machine, and
-   then copy the `pem` file into root machine's `~/.ssh/id_rsa`, it all slaves
-   machines are ssh-able from the root.
+2. Use the same `pem` as the root machine to access all slave machines, and
+   then copy the `pem` file into root machine's `~/.ssh/id_rsa`. If you do this, all slave machines are ssh-able from the root.
 
 Now we run the previous CNN on multiple machines. Assume we are on a working
 directory of the root machine, such as `~/train`, and MXNet is built as `~/mxnet`.
@@ -147,7 +144,7 @@ benchmark for the distributed training. We may consider other [examples](https:/
 
 ## More NOTE
 ### Use multiple data shards
-Usually it is common to pack dataset into multiple files, especially when we pack it distributedly. MXNet support direct loading from multiple data shards, simply put all the record files into a folder, and point the data path to the folder
+It is common to pack a dataset into multiple files, especially when working in a distributed environment. MXNet supports direct loading from multiple data shards. Simply put all the record files into a folder, and point the data path to the folder.
 
 ### Use YARN, MPI, SGE
 While ssh can be simple for cases when we do not have a cluster scheduling framework. MXNet is designed to be able to port to various platforms.  We also provide other scripts in [tracker](https://github.com/dmlc/dmlc-core/tree/master/tracker) to run on other cluster frameworks, including Hadoop(YARN) and SGE. Your contribution is more than welcomed to provide examples to run mxnet on your favorite distributed platform.

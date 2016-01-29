@@ -345,8 +345,8 @@ class Adam(Optimizer):
                  decay_factor=(1 - 1e-8),
                  wd=0.,
                  rescale_grad=1, clip_gradient=None,
-                 lr_scheduler=None):
-        super(Adam, self).__init__(rescale_grad)
+                 lr_scheduler=None, arg_names=None):
+        super(Adam, self).__init__(rescale_grad, arg_names)
         self.lr = learning_rate
         self.beta1 = beta1
         self.beta2 = beta2
