@@ -107,3 +107,15 @@ if [ ${TASK} == "python_test" ]; then
     fi
     exit 0
 fi
+
+if [ ${TASK} == "julia" ]; then
+    make all || exit -1
+    # use cached dir for storing data
+    rm -rf ${PWD}/data
+    mkdir -p ${CACHE_PREFIX}/data
+    ln -s ${CACHE_PREFIX}/data ${PWD}/data
+
+    export MXNET_HOME="${PWD}"
+    julia -e 'Pkg.clone("MXNet"); Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
+    exit 0
+fi
