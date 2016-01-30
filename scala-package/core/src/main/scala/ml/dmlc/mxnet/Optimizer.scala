@@ -14,10 +14,26 @@ object Optimizer {
   }
 }
 
-abstract class Optimizer(protected var rescaleGrad: Float = 1f) extends Serializable {
+abstract class Optimizer(protected var rescaleGrad: Float = 1f,
+                         protected val argNames: Seq[String] = null) extends Serializable {
   protected var lrScale: mutable.Map[Int, Float] = mutable.HashMap.empty[Int, Float]
   protected var numUpdate: Int = 0
   protected val indexUpdateCount: mutable.Map[Int, Int] = mutable.HashMap.empty[Int, Int]
+
+  protected var specialized: Boolean = false
+  protected val weightSet: mutable.Set[Int] = mutable.HashSet.empty[Int]
+  if (argNames != null) {
+    specialized = true
+    var index = 0
+    argNames foreach { name =>
+      if (!name.endsWith("data") && !name.endsWith("label")) {
+        if (name.endsWith("weight")) {
+          weightSet.add(index)
+        }
+        index += 1
+      }
+    }
+  }
 
   /**
    * Update the parameters.

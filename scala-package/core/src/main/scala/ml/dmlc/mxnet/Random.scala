@@ -25,7 +25,7 @@ object Random {
               out: NDArray = null): NDArray = {
     var outCopy = out
     if (outCopy != null) {
-      require(shape == null & ctx == null, "shape and ctx is not needed when out is specified.")
+      require(shape == null && ctx == null, "shape and ctx is not needed when out is specified.")
     } else {
       require(shape != null, "shape is required when out is not specified")
       outCopy = empty(shape, ctx)
