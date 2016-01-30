@@ -15,13 +15,13 @@ namespace mxnet {
 namespace io {
 // CSV parameters
 struct CSVIterParam : public dmlc::Parameter<CSVIterParam> {
-  /*! \brief path to the csv file */
+  /*! \brief path to data csv file */
   std::string data_csv;
-  /*! \brief input shape */
+  /*! \brief data shape */
   TShape data_shape;
   /*! \brief path to label csv file */
   std::string label_csv;
-  /*! \brief path to label csv file */
+  /*! \brief label shape */
   TShape label_shape;
   // declare parameters
   DMLC_DECLARE_PARAMETER(CSVIterParam) {

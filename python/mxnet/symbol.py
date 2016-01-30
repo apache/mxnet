@@ -968,7 +968,7 @@ def _make_atomic_symbol_function(handle):
                 '%s can only accept input'
                 'Symbols either as positional or keyword arguments, not both' % func_name)
         if key_var_num_args and len(symbol_kwargs) != 0:
-            raise ValueError('This function support variable length of Symbol arguments.\n' +
+            raise ValueError('This function supports variable length of Symbol arguments.\n' +
                              'Please pass all the input Symbols via positional arguments' +
                              ' instead of keyword arguments.')
         s = Symbol(sym_handle)

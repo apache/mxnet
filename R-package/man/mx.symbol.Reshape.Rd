@@ -11,7 +11,7 @@ mx.symbol.Reshape(...)
 Input data to  reshape.}
 
 \item{target.shape}{Shape(tuple), required
-Target new shape. One and only one dim can be 0, in which case it will be infered from the rest of dims}
+Target new shape. One and only one dim can be 0, in which case it will be inferred from the rest of dims}
 
 \item{name}{string, optional
 Name of the resulting symbol.}

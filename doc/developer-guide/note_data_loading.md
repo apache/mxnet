@@ -108,17 +108,17 @@ The following code gives an example of creating a Cifar data iterator.
  
 ```python
 dataiter = mx.io.ImageRecordIter(
-    # Dataset Paramter, indicating the data file, please check the data is already there
+    # Dataset Parameter, indicating the data file, please check the data is already there
     path_imgrec="data/cifar/train.rec",
-    # Dataset Paramter, indicating the image size after preprocessing
+    # Dataset Parameter, indicating the image size after preprocessing
     data_shape=(3,28,28),
-    # Batch Paramter, tells how many images in a batch
+    # Batch Parameter, tells how many images in a batch
     batch_size=100,
     # Augmentation Parameter, when offers mean_img, each image will substract the mean value at each pixel
     mean_img="data/cifar/cifar10_mean.bin",
     # Augmentation Parameter, randomly crop a patch of the data_shape from the original image
     rand_crop=True,
-    # Augmentation Parameter, randly mirror the image horizontally
+    # Augmentation Parameter, randomly mirror the image horizontally
     rand_mirror=True,
     # Augmentation Parameter, randomly shuffle the data
     shuffle=False,
@@ -136,10 +136,10 @@ Generally to create a data iterator, you need to provide five kinds of parameter
 * **Backend Param** controls the behavior of the backend threads to hide data loading cost.
 * **Auxiliary Param** provides options to help checking and debugging.
  
-Usually, **Dataset Param** and **Batch Param** MUST be given, otherwise data batch can't be create. Other paramters can be given according to algorithm and performance need, or just use the defalt value we set for you.
+Usually, **Dataset Param** and **Batch Param** MUST be given, otherwise data batch can't be created. Other parameters can be given according to algorithm and performance need, or just use the default value we set for you.
 
-Ideally we should separte the MX Data IO into modules, some of which might be useful to expose to users:
-Efficient prefetcher: allow the user to write a data loader that read their customized binary format, and automatically enjoy multi-thread prefetcher support
+Ideally we should separate the MX Data IO into modules, some of which might be useful to expose to users:
+Efficient prefetcher: allow the user to write a data loader that reads their customized binary format, and automatically enjoy multi-thread prefetcher support
 Data transformer: image random cropping, mirroring, etc. should be quite useful to allow the users to use those tools, or plug in their own customized transformers (maybe they want to add some specific kind of coherent random noise to data, etc.) 
 
 ## Future Extension

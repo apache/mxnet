@@ -90,7 +90,7 @@ def cpu(device_id=0):
 def gpu(device_id=0):
     """Return a GPU context.
 
-    This function is a short cut for Context('cpu', device_id)
+    This function is a short cut for Context('gpu', device_id)
 
     Parameters
     ----------

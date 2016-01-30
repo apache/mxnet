@@ -57,7 +57,7 @@ class Speedometer(object):
     batch_size: int
         batch_size of data
     frequent: int
-        calcutaion frequent
+        calculation frequent
     """
     def __init__(self, batch_size, frequent=50):
         self.batch_size = batch_size
