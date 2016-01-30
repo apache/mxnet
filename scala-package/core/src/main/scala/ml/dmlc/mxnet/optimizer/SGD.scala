@@ -9,7 +9,8 @@ import ml.dmlc.mxnet.NDArrayConversions._
  */
 class SGD(val learningRate: Float = 0.01f, val momentum: Float = 0.0f,
           val wd: Float = 0.0001f, rescaleGrad: Float = 1f, val clipGradient: Float = 0f,
-          val lrScheduler: LRScheduler = null) extends Optimizer(rescaleGrad: Float) {
+          val lrScheduler: LRScheduler = null, argNames: Seq[String] = null)
+          extends Optimizer(rescaleGrad, argNames) {
   /**
    * Update the parameters.
    * @param index An unique integer key used to index the parameters
@@ -29,6 +30,17 @@ class SGD(val learningRate: Float = 0.01f, val momentum: Float = 0.0f,
         this.learningRate
       }) * lrScale.getOrElse(index, 1f)
 
+    val wd =
+      if (specialized) {
+        if (this.weightSet.contains(index)) {
+          this.wd
+        } else {
+          0f
+        }
+      } else {
+        this.wd
+      }
+
     var resdGrad = grad * rescaleGrad
     if (clipGradient != 0f) {
       resdGrad = NDArray.clip(resdGrad, -clipGradient, clipGradient)
@@ -36,11 +48,11 @@ class SGD(val learningRate: Float = 0.01f, val momentum: Float = 0.0f,
     if (state != null) {
       val mom = state.asInstanceOf[NDArray]
       mom *= momentum
-      mom += -lr * (grad + wd * weight)
+      mom += -lr * (resdGrad + wd * weight)
       weight += mom
     } else {
       require(momentum == 0f)
-      weight += -lr * (grad + wd * weight)
+      weight += -lr * (resdGrad + this.wd * weight)
     }
   }
 

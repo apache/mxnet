@@ -166,6 +166,9 @@ object Model {
 
     // TODO: initialize kvstore when updateOnKVStore = true
 
+    // updater for updateOnKVStore = false
+    val updaterLocal = Optimizer.getUpdater(optimizer)
+
     // Now start training
     for (epoch <- beginEpoch until endEpoch) {
       // Training phase
@@ -188,10 +191,9 @@ object Model {
                                   executorManager.gradArrays,
                                   kvStore)
           } else {
-            val updater = Optimizer.getUpdater(optimizer)
             updateParams(executorManager.paramArrays,
                          executorManager.gradArrays,
-                         updater, ctx.length,
+                         updaterLocal, ctx.length,
                          kvStore)
           }
           monitor.foreach(_.tocPrint())
@@ -416,7 +418,8 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(new Contex
     }
     val batchSize = trainData.batchSize * batchSizeMultiplier.getOrElse(1)
     // TODO: temporarily hard-coded sgd optimizer, accuracy evalMetric
-    val optimizer = new SGD(rescaleGrad = 1f / batchSize)
+    val optimizer = new SGD(learningRate = 0.1f, momentum = 0.9f, wd = 0.0001f,
+                            rescaleGrad = 1f / batchSize, argNames = argNames)
     Model.trainMultiDevice(
       symbol, ctx, argNames, paramNames, auxNames,
       _argParams, _auxParams,
