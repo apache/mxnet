@@ -70,7 +70,8 @@ for i in range(num_round):
     for dbatch in train_iter:
         data = dbatch.data[0]
         label = dbatch.label[0]
-        # copy data and two labels into args
+        # Copy data and two labels into args
+        # Note you need to assign specific labels in your own applications. 
         args["data"][:] = data 
         args["softmax1_label"][:] = label
         args["softmax2_label"][:] = label
