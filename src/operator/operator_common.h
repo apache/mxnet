@@ -71,7 +71,7 @@ struct InferTypeError {
  *  Use macro so we can see the error file more clearly
  * \param shape_array the shape array to store the result
  * \param index the index of in the array
- * \param shape the infered shape
+ * \param shape the inferred shape
  */
 #define SHAPE_ASSIGN_CHECK(shape_array, index, shape)                   \
   {                                                                     \
@@ -93,7 +93,7 @@ struct InferTypeError {
  *  Use macro so we can see the error file more clearly
  * \param type_array the type array to store the result
  * \param index the index of in the array
- * \param type the infered type
+ * \param type the inferred type
  */
 #define TYPE_ASSIGN_CHECK(type_array, index, type)                      \
   {                                                                     \

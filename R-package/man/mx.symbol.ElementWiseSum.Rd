@@ -8,7 +8,7 @@ mx.symbol.ElementWiseSum(...)
 }
 \arguments{
 \item{num.args}{int, required
-Number of inputs to be sumed.}
+Number of inputs to be summed.}
 
 \item{name}{string, optional
 Name of the resulting symbol.}

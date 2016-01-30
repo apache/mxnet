@@ -345,7 +345,7 @@ void GraphExecutor::AssignContext(const Context default_ctx,
                                   std::vector<Context> *ctx_plan) {
   ctx_plan->resize(graph_.nodes.size());
   std::vector<bool> assigned(graph_.nodes.size(), false);
-  // assign context of node to the binded version
+  // assign context of node to the bound version
   for (size_t i = 0; i < graph_.arg_nodes.size(); ++i) {
     uint32_t nid = graph_.arg_nodes[i];
     assigned[nid] = true;

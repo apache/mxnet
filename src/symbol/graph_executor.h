@@ -65,9 +65,9 @@ class GraphExecutor : public Executor {
   class BackwardOpWrapper;
   // type of data entry
   enum DataEntryType {
-    // memory is binded by external NDArray in Bind
+    // memory is bound by external NDArray in Bind
     kBindByExternal,
-    // to be binded by external NDArray in Forward and Backward
+    // to be bound by external NDArray in Forward and Backward
     kTobeBindByExternal,
     // internal memory, allocated
     kInternalAllocated,
