@@ -314,7 +314,7 @@ class DataParallelExecutorManager(symbol: Symbol,
   private val paramIdx = (0 until argNames.length).filter { i =>
     paramNames.contains(argNames(i))
   }
-  private val _paramNames = paramIdx.map(argNames(_))
+  private[mxnet] val _paramNames = paramIdx.map(argNames(_))
   private[mxnet] val paramArrays = paramIdx.map { i =>
     trainExecs.map(_.argArrays(i))
   }.toArray
