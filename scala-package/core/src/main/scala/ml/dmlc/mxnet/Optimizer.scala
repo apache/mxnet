@@ -14,26 +14,14 @@ object Optimizer {
   }
 }
 
-abstract class Optimizer(protected var rescaleGrad: Float = 1f,
-                         protected val argNames: Seq[String] = null) extends Serializable {
+abstract class Optimizer extends Serializable {
   protected var lrScale: mutable.Map[Int, Float] = mutable.HashMap.empty[Int, Float]
   protected var numUpdate: Int = 0
   protected val indexUpdateCount: mutable.Map[Int, Int] = mutable.HashMap.empty[Int, Int]
 
   protected var specialized: Boolean = false
   protected val weightSet: mutable.Set[Int] = mutable.HashSet.empty[Int]
-  if (argNames != null) {
-    specialized = true
-    var index = 0
-    argNames foreach { name =>
-      if (!name.endsWith("data") && !name.endsWith("label")) {
-        if (name.endsWith("weight")) {
-          weightSet.add(index)
-        }
-        index += 1
-      }
-    }
-  }
+  protected var rescaleGrad: Float = 1
 
   /**
    * Update the parameters.
@@ -53,6 +41,26 @@ abstract class Optimizer(protected var rescaleGrad: Float = 1f,
   // Set individual learning rate scale for parameters
   def setLrScale(lrScale: Map[Int, Float]) {
     this.lrScale = mutable.Map(lrScale.toSeq: _*)
+  }
+
+  def setArgNames(argNames: Seq[String]): Unit = {
+    if (argNames != null) {
+      specialized = true
+      var index = 0
+      argNames foreach { name =>
+        if (!name.endsWith("data") && !name.endsWith("label")) {
+          if (name.endsWith("weight")) {
+            weightSet.add(index)
+          }
+          index += 1
+        }
+      }
+    }
+  }
+
+  // Set rescaling factor of gradient.
+  def setRescaleGrad(rescaleGrad: Float): Unit = {
+    this.rescaleGrad = rescaleGrad
   }
 
   /**

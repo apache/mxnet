@@ -1,5 +1,6 @@
 package ml.dmlc.mxnet.train
 
+import ml.dmlc.mxnet.optimizer.SGD
 import ml.dmlc.mxnet.{IO, Context, FeedForward, Symbol}
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
@@ -30,7 +31,8 @@ class ConvSuite extends FunSuite with BeforeAndAfterAll {
     val softmax = Symbol.SoftmaxOutput(Map("data" -> fc2, "name" -> "sm"))
 
     val numEpoch = 1
-    val model = new FeedForward(softmax, Array(Context.cpu()), numEpoch = numEpoch)
+    val model = new FeedForward(softmax, Context.cpu(), numEpoch = numEpoch,
+      optimizer = new SGD(learningRate = 0.1f, momentum = 0.9f, wd = 0.0001f))
 
     // get data
     "./scripts/get_mnist_data.sh" !

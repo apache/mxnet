@@ -18,14 +18,12 @@ import ml.dmlc.mxnet.NDArrayConversions._
  * @param epsilon Float
  * @param decayFactor Float
  * @param wd Float, L2 regularization coefficient add to all the weights
- * @param rescaleGrad Float, rescaling factor of gradient.
  * @param clipGradient Float, clip gradient in range [-clip_gradient, clip_gradient]
  * @param lrScheduler The learning rate scheduler
  */
 class Adam(var learningRate: Float = 0.002f, val beta1: Float = 0.9f, val beta2: Float = 0.999f,
            val epsilon: Float = 1e-8f, val decayFactor: Float = 1-1e-8f, val wd: Float = 0.0f,
-           rescaleGrad: Float = 1f, val clipGradient: Float = 0f,
-           val lrScheduler: LRScheduler = null) extends Optimizer(rescaleGrad: Float) {
+           val clipGradient: Float = 0f, val lrScheduler: LRScheduler = null) extends Optimizer {
 
   protected var time: Int = 0
   protected var timeFirstIndex: Option[Int] = None

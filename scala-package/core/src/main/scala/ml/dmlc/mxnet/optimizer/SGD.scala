@@ -7,10 +7,9 @@ import ml.dmlc.mxnet.NDArrayConversions._
  * A very simple SGD optimizer with momentum and weight regularization.
  * @author Yizhi Liu
  */
-class SGD(val learningRate: Float = 0.01f, val momentum: Float = 0.0f,
-          val wd: Float = 0.0001f, rescaleGrad: Float = 1f, val clipGradient: Float = 0f,
-          val lrScheduler: LRScheduler = null, argNames: Seq[String] = null)
-          extends Optimizer(rescaleGrad, argNames) {
+class SGD(private val learningRate: Float = 0.01f, private val momentum: Float = 0.0f,
+          private val wd: Float = 0.0001f, private val clipGradient: Float = 0f,
+          private val lrScheduler: LRScheduler = null) extends Optimizer {
   /**
    * Update the parameters.
    * @param index An unique integer key used to index the parameters
@@ -41,7 +40,7 @@ class SGD(val learningRate: Float = 0.01f, val momentum: Float = 0.0f,
         this.wd
       }
 
-    var resdGrad = grad * rescaleGrad
+    var resdGrad = grad * this.rescaleGrad
     if (clipGradient != 0f) {
       resdGrad = NDArray.clip(resdGrad, -clipGradient, clipGradient)
     }

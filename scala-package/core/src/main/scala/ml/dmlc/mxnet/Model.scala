@@ -256,12 +256,11 @@ trait BatchEndCallback {
  *                         to be passed by aux_params and arg_params.
  *                         If this is True, no error will be thrown when aux_params and arg_params
  *                         contain extra parameters than needed.
- * @param beginEpoch The begining training epoch.
- * TODO: @param kwargs The additional keyword arguments passed to optimizer.
+ * @param beginEpoch The beginning training epoch.
  */
-class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(new Context("cpu")),
+class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cpu()),
                   val numEpoch: Int = -1, val epochSize: Int = -1,
-                  val optimizer: String = "sgd",
+                  val optimizer: Optimizer = new SGD(),
                   val initializer: Initializer = new Uniform(0.01f),
                   val batchSize: Int = 128,
                   argParams: Map[String, NDArray] = null,
@@ -401,14 +400,13 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(new Contex
           workLoadList: Seq[Float] = null): Unit = {
     val (argNames, paramNames, auxNames) =
       initParams(trainData.provideData ++ trainData.provideLabel)
-    // TODO: kwargs.put("arg_names", argNames)
 
     // TODO: setup metric
 
     // create kvstore
     val (kvStore, updateOnKVStore) = Model.createKVStore(kvStoreType, ctx.length, _argParams)
 
-    // init optmizer
+    // init optimizer
     val batchSizeMultiplier = kvStore.map { kv =>
       if (kv.`type` == "dist_sync") {
         kv.numWorkers
@@ -417,15 +415,15 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(new Contex
       }
     }
     val batchSize = trainData.batchSize * batchSizeMultiplier.getOrElse(1)
-    // TODO: temporarily hard-coded sgd optimizer, accuracy evalMetric
-    val optimizer = new SGD(learningRate = 0.1f, momentum = 0.9f, wd = 0.0001f,
-                            rescaleGrad = 1f / batchSize, argNames = argNames)
+    this.optimizer.setArgNames(argNames)
+    this.optimizer.setRescaleGrad(1f / batchSize)
+
+    // TODO: temporarily hard-coded accuracy evalMetric
     Model.trainMultiDevice(
       symbol, ctx, argNames, paramNames, auxNames,
       _argParams, _auxParams,
       this.beginEpoch, this.numEpoch,
-      this.epochSize,
-      optimizer,
+      this.epochSize, this.optimizer,
       kvStore, updateOnKVStore,
       trainData = trainData, evalData = evalData,
       evalMetric = new Accuracy(),
