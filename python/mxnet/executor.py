@@ -64,7 +64,7 @@ class Executor(object):
 
         Returns
         -------
-        A list of ndarray binded to the heads of executor.
+        A list of ndarray bound to the heads of executor.
         """
         out_size = mx_uint()
         handles = ctypes.POINTER(NDArrayHandle)()
@@ -73,7 +73,7 @@ class Executor(object):
         return [NDArray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
 
     def forward(self, is_train=False, **kwargs):
-        """Calculate the outputs specified by the binded symbol.
+        """Calculate the outputs specified by the bound symbol.
 
         Parameters
         ----------

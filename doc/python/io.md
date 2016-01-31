@@ -1,7 +1,7 @@
 MXNet Python Data Loading API
 =============================
 * [Introduction](#introduction) introduces the main feature of data loader in MXNet.
-* [Parameters For Data Iterator](#parameters-for-data-iterator) clarifies the different usages for dataiter paramters.
+* [Parameters For Data Iterator](#parameters-for-data-iterator) clarifies the different usages for dataiter parameters.
 * [Create A Data Iterator](#create-a-data-iterator) introduces how to create a data iterator in MXNet python.
 * [How To Get Data](#how-to-get-data) introduces the data resource and data preparation tools.
 * [IO API Reference](#io-api-reference) reference for the IO API and their explanation.
@@ -24,7 +24,7 @@ Generally to create a data iterator, you need to provide five kinds of parameter
 * **Backend Param** controls the behavior of the backend threads to hide data loading cost.
 * **Auxiliary Param** provides options to help checking and debugging.
 
-Usually, **Dataset Param** and **Batch Param** MUST be given, otherwise data batch can't be create. Other paramters can be given according to algorithm and performance need. Examples and detail explanation of the options will be provided in the later Section.
+Usually, **Dataset Param** and **Batch Param** MUST be given, otherwise data batch can't be create. Other parameters can be given according to algorithm and performance need. Examples and detail explanation of the options will be provided in the later Section.
 
 Create A Data Iterator
 ----------------------
@@ -43,15 +43,15 @@ The following code gives an example of creating a Cifar data iterator.
 >>>        # Usually, if the loss layer is named 'foo', then the label input has the name
 >>>        # 'foo_label', unless overwritten
 >>>        # label_name='softmax_label',
->>>        # Dataset Paramter
+>>>        # Dataset Parameter
 >>>        # Impulsary
 >>>        # indicating the data file, please check the data is already there
 >>>        path_imgrec="data/cifar/train.rec",
->>>        # Dataset Paramter
+>>>        # Dataset Parameter
 >>>        # Impulsary
 >>>        # indicating the image size after preprocessing
 >>>        data_shape=(3,28,28),
->>>        # Batch Paramter
+>>>        # Batch Parameter
 >>>        # Impulsary
 >>>        # tells how many images in a batch
 >>>        batch_size=100,
@@ -65,7 +65,7 @@ The following code gives an example of creating a Cifar data iterator.
 >>>        rand_crop=True,
 >>>        # Augmentation Parameter
 >>>        # Optional
->>>        # randly mirror the image horizontally
+>>>        # randomly mirror the image horizontally
 >>>        rand_mirror=True,
 >>>        # Augmentation Parameter
 >>>        # Optional
