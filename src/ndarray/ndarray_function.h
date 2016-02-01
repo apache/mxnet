@@ -94,6 +94,16 @@ struct MatChooseRowElem {
   }
 };
 
+struct MatFillRowElem {
+  inline static TShape GetShape(const TShape &lshape, const TShape &mshape, const TShape &rshape) {
+    CHECK(lshape.ndim() == 2 && mshape.ndim() == 1 && rshape.ndim() == 1)
+        << "fill_row_element only support 2D Matrix, 1D value and 1D index";
+    CHECK((lshape[0] == mshape[0]) && (mshape[0] == rshape[0]))
+        << "choose_row_element index vector, value vector and matrix shape mismatch";
+    return lshape;
+  }
+};
+
 // type holder for random number generators
 struct UniformDistribution {};
 
@@ -102,6 +112,9 @@ struct GaussianDistribution {};
 template<typename Device>
 void EvalClip(const TBlob &src, const real_t &a_min, const real_t &a_max,
               TBlob *ret, RunContext ctx);
+
+template<typename Device, typename OP>
+void Eval(const TBlob &lhs, const TBlob &mhs, const TBlob &rhs, TBlob *ret, RunContext ctx);
 
 template<typename Device, typename OP>
 void Eval(const TBlob &lhs, const TBlob &rhs, TBlob *ret, RunContext ctx);

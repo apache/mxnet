@@ -30,7 +30,7 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
   DMLC_DECLARE_PARAMETER(ReshapeParam) {
     DMLC_DECLARE_FIELD(target_shape)
     .describe("Target new shape. One and only one dim can be 0, "
-              "in which case it will be infered from the rest of dims");
+              "in which case it will be inferred from the rest of dims");
   }
 };
 

@@ -131,7 +131,7 @@ class Mixed(object):
     """
     def __init__(self, patterns, initializers):
         assert len(patterns) == len(initializers)
-        self.map = zip([re.compile(p) for p in patterns], initializers)
+        self.map = list(zip([re.compile(p) for p in patterns], initializers))
 
     def __call__(self, name, arr):
         for prog, init in self.map:
