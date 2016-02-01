@@ -355,7 +355,7 @@ MXNET_DLL int MXFuncGetInfo(FunctionHandle fun,
                             const char ***arg_names,
                             const char ***arg_type_infos,
                             const char ***arg_descriptions,
-                            const char **return_type);
+                            const char **return_type = NULL);
 /*!
  * \brief get the argument requirements of the function
  * \param fun input function handle
