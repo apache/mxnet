@@ -247,6 +247,14 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
     assert(argmax.toArray === Array(1f, 0f))
   }
 
+  test("concatenate") {
+    val arr1 = NDArray.array(Array(1f, 2f, 4f, 3f, 3f, 3f), shape = Array(2, 3))
+    val arr2 = NDArray.array(Array(8f, 7f, 6f), shape = Array(1, 3))
+    val arr = NDArray.concatenate(arr1, arr2)
+    assert(arr.shape === Array(3, 3))
+    assert(arr.toArray === Array(1f, 2f, 4f, 3f, 3f, 3f, 8f, 7f, 6f))
+  }
+
   test("save and load with names") {
     val filename
       = s"${System.getProperty("java.io.tmpdir")}/ndarray-${sequence.getAndIncrement}.bin"

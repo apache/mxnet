@@ -467,6 +467,39 @@ object NDArray {
   }
 
   /**
+   * Join a sequence of arrays at the first axis
+   * TODO: shall we make it native?
+   * @param arrays
+   */
+  def concatenate(arrays: Seq[NDArray], ctx: Context = null): NDArray = {
+    require(arrays != null && arrays.size > 0, "arrays empty")
+    val array0 = arrays.head
+    val shape = Array.ofDim[Int](array0.shape.length)
+    array0.shape.copyToArray(shape)
+    var axis0 = shape(0)
+    val shapeRemain = shape.drop(1)
+    arrays.drop(1).foreach { array =>
+      require(shapeRemain.sameElements(array.shape.drop(1)),
+        s"shape mismatch between (${array.shape.mkString(",")}) and (${shape.mkString(",")})")
+      axis0 += array.shape(0)
+    }
+
+    shape(0) = axis0
+    val output = NDArray.empty(shape, ctx)
+    axis0 = 0
+    arrays.foreach { array =>
+      output.slice(axis0, axis0 + array.shape(0)).set(array)
+      axis0 += array.shape(0)
+    }
+
+    output
+  }
+
+  def concatenate(arrays: NDArray *): NDArray = {
+    concatenate(arrays.toSeq)
+  }
+
+  /**
    * Load ndarray from binary file.
    *
    * You can also use pickle to do the job if you only work on python.
@@ -760,6 +793,12 @@ class NDArray(private[mxnet] val handle: NDArrayHandle, val writable: Boolean = 
     val ret = new NDArray(NDArray.newAllocHandle(shape, ctx, delayAlloc = true))
     copyTo(ret)
   }
+
+  /**
+   * Clone the current array
+   * @return the copied NDArray in the same context
+   */
+  def copy(): NDArray = copyTo(this.context)
 
   /**
    * Get shape of current NDArray.

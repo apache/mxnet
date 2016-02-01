@@ -4,6 +4,8 @@ import ml.dmlc.mxnet.Base.Shape
 import ml.dmlc.mxnet.optimizer.SGD
 import org.slf4j.{Logger, LoggerFactory}
 
+import scala.collection.mutable.{ListBuffer, ArrayBuffer}
+
 /**
  * Describe the model flow
  * @author Yizhi Liu
@@ -238,6 +240,9 @@ object Model {
           evalMetric.update(evalBatch.label, executorManager.cpuOutputArrays)
           evalBatch = evalDataIter.next()
         }
+
+        val (name, value) = evalMetric.get
+        logger.info(s"Epoch[$epoch] Validation-$name=$value")
       }
 
       if (epochEndCallback.isDefined || epoch + 1 == endEpoch) {
@@ -389,6 +394,38 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
     } else {
       initIter(evalData._1, evalData._2, isTrain = true)
     }
+  }
+
+  /**
+   * Run the prediction, always only use one device.
+   * @param data eval data
+   * @param numBatch the number of batch to run. Go though all batches if set -1
+   * @return The predicted value of the output.
+   *         Note the network may have multiple outputs, thus it return an array of [[NDArray]]
+   */
+  def predict(data: DataIter, numBatch: Int = -1): Array[NDArray] = {
+    data.reset()
+    val dataShapes = data.provideData
+    val dataNames = dataShapes.map(_._1).toArray
+    initPredictor(dataShapes)
+    val batchSize = data.batchSize
+    val dataArrays = dataNames.map(predExec.argDict(_))
+    val outputs = Array.fill(predExec.outputs.length)(ListBuffer.empty[NDArray])
+
+    var i = 0
+    var batch = data.next()
+    while (batch != null && i != numBatch) {
+      i += 1
+      Executor.loadData(batch, dataArrays)
+      predExec.forward(isTrain = false)
+      val padded = batch.pad
+      val realSize = batchSize - padded
+      for ((list, nd) <- outputs zip predExec.outputs) {
+        list += nd.slice(0, realSize).copy()
+      }
+      batch = data.next()
+    }
+    outputs.map(NDArray.concatenate(_))
   }
 
   /**
