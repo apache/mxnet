@@ -22,6 +22,7 @@ DMLC_REGISTER_PARAMETER(SliceChannelParam);
 
 MXNET_REGISTER_OP_PROPERTY(SliceChannel, SliceChannelProp)
 .describe("Slice channel into many outputs with equally divided channel")
+.set_return_type("Symbol[]")
 .add_arguments(SliceChannelParam::__FIELDS__());
 
 }  // namespace op
