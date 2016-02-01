@@ -345,6 +345,7 @@ MXNET_DLL int MXGetFunction(const char *name,
  * \param arg_names Name of the arguments.
  * \param arg_type_infos Type informations about the arguments.
  * \param arg_descriptions Description information about the arguments.
+ * \param return_type Return type of the function.
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXFuncGetInfo(FunctionHandle fun,
@@ -353,7 +354,8 @@ MXNET_DLL int MXFuncGetInfo(FunctionHandle fun,
                             mx_uint *num_args,
                             const char ***arg_names,
                             const char ***arg_type_infos,
-                            const char ***arg_descriptions);
+                            const char ***arg_descriptions,
+                            const char **return_type);
 /*!
  * \brief get the argument requirements of the function
  * \param fun input function handle
@@ -428,6 +430,7 @@ MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
  *            of positional arguments, and will need the caller to pass it in in
  *            MXSymbolCreateAtomicSymbol,
  *            With key = key_var_num_args, and value = number of positional arguments.
+ * \param return_type Return type of the function, can be Symbol or Symbol[]
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
@@ -437,7 +440,8 @@ MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                           const char ***arg_names,
                                           const char ***arg_type_infos,
                                           const char ***arg_descriptions,
-                                          const char **key_var_num_args);
+                                          const char **key_var_num_args,
+                                          const char **return_type = NULL);
 /*!
  * \brief Create an AtomicSymbol.
  * \param creator the AtomicSymbolCreator
