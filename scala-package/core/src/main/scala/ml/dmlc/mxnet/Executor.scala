@@ -63,15 +63,15 @@ object Executor {
   }
 
   // Load a list of arrays into a list of arrays
-  private[mxnet] def loadGeneral(data: Array[NDArray], targets: Array[NDArray]): Unit = {
+  private[mxnet] def loadGeneral(data: Seq[NDArray], targets: Seq[NDArray]): Unit = {
     (data zip targets).foreach { case (dSrc, dTarget) =>
       dSrc.copyTo(dTarget)
     }
   }
 
   // Load a list of arrays into a list of arrays specified by slices
-  private[mxnet] def loadGeneral(data: IndexedSeq[NDArray],
-                                 targets: Seq[Array[(Int, Int, NDArray)]]): Unit = {
+  private[mxnet] def loadGeneralMulti(data: Seq[NDArray],
+                                      targets: Seq[Array[(Int, Int, NDArray)]]): Unit = {
     for ((src, dTargets) <- data zip targets) {
       for ((start, end, dst) <- dTargets) {
         src.slice(start, end).copyTo(dst)
@@ -80,14 +80,22 @@ object Executor {
   }
 
   // Load data into sliced arrays
-  private[mxnet] def loadData(batch: DataBatch,
-                              targets: Seq[Array[(Int, Int, NDArray)]]): Unit = {
+  private[mxnet] def loadDataMulti(batch: DataBatch,
+                                   targets: Seq[Array[(Int, Int, NDArray)]]): Unit = {
+    loadGeneralMulti(batch.data, targets)
+  }
+
+  private[mxnet] def loadData(batch: DataBatch, targets: Seq[NDArray]): Unit = {
     loadGeneral(batch.data, targets)
   }
 
   // Load label into sliced arrays
-  private[mxnet] def loadLabel(batch: DataBatch,
-                               targets: Seq[Array[(Int, Int, NDArray)]]): Unit = {
+  private[mxnet] def loadLabelMulti(batch: DataBatch,
+                                    targets: Seq[Array[(Int, Int, NDArray)]]): Unit = {
+    loadGeneralMulti(batch.label, targets)
+  }
+
+  private[mxnet] def loadLabel(batch: DataBatch, targets: Seq[NDArray]): Unit = {
     loadGeneral(batch.label, targets)
   }
 }
@@ -191,8 +199,7 @@ class Executor(private[mxnet] val handle: ExecutorHandle, private[mxnet] val sym
    */
   def auxDict: Map[String, NDArray] = {
     if (_auxDict == null) {
-      _auxDict = Executor.getDict(
-      symbol.listAuxiliaryStates(), auxArrays)
+      _auxDict = Executor.getDict(symbol.listAuxiliaryStates(), auxArrays)
     }
     _auxDict
   }
@@ -271,7 +278,7 @@ class DataParallelExecutorManager(symbol: Symbol,
                                   logger: Logger = DataParallelExecutorManager.logger) {
   // preparation
   private val numDevice = ctx.length
-  logger.info(s"Start training with ${ctx.mkString(",")}")
+  logger.info(s"Start training with [${ctx.mkString(",")}]")
 
   // make sure the architecture is valid
   Executor.checkArguments(symbol)
@@ -314,7 +321,7 @@ class DataParallelExecutorManager(symbol: Symbol,
   private val paramIdx = (0 until argNames.length).filter { i =>
     paramNames.contains(argNames(i))
   }
-  private val _paramNames = paramIdx.map(argNames(_))
+  private[mxnet] val _paramNames = paramIdx.map(argNames(_))
   private[mxnet] val paramArrays = paramIdx.map { i =>
     trainExecs.map(_.argArrays(i))
   }.toArray
@@ -364,8 +371,8 @@ class DataParallelExecutorManager(symbol: Symbol,
 
   // load data and labels into arrays
   def loadDataBatch(dataBatch: DataBatch): Unit = {
-    Executor.loadData(dataBatch, dataArrays)
-    Executor.loadLabel(dataBatch, labelArrays)
+    Executor.loadDataMulti(dataBatch, dataArrays)
+    Executor.loadLabelMulti(dataBatch, labelArrays)
   }
 
   // Perform a forward pass on each executor

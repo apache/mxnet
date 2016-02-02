@@ -4,6 +4,8 @@ import ml.dmlc.mxnet.Base.Shape
 import ml.dmlc.mxnet.optimizer.SGD
 import org.slf4j.{Logger, LoggerFactory}
 
+import scala.collection.mutable.{ListBuffer, ArrayBuffer}
+
 /**
  * Describe the model flow
  * @author Yizhi Liu
@@ -53,9 +55,9 @@ object Model {
 
   // Initialize kvstore
   private def initializeKVStore(kvStore: KVStore,
-                                paramArrays: Array[Array[NDArray]],
+                                paramArrays: IndexedSeq[Array[NDArray]],
                                 argParams: Map[String, NDArray],
-                                paramNames: Array[String],
+                                paramNames: IndexedSeq[String],
                                 updateOnKVStore: Boolean): Unit = {
     require(paramArrays.length == paramNames.length)
     for (idx <- 0 until paramArrays.length) {
@@ -106,7 +108,6 @@ object Model {
   }
 
   /**
-   * TODO
    * Internal training function on multiple devices.
    * This function will also work for single device as well.
    * @param symbol The network configuration
@@ -144,10 +145,11 @@ object Model {
                                       beginEpoch: Int, endEpoch: Int, epochSize: Int,
                                       optimizer: Optimizer,
                                       kvStore: Option[KVStore], updateOnKVStore: Boolean,
-                                      trainData: DataIter = null, evalData: DataIter = null,
-                                      evalMetric: EvalMetric = null,
-                                      epochEndCallback: EpochEndCallback = null,
-                                      batchEndCallback: BatchEndCallback = null,
+                                      trainData: DataIter = null,
+                                      evalData: Option[DataIter] = None,
+                                      evalMetric: EvalMetric,
+                                      epochEndCallback: Option[EpochEndCallback] = None,
+                                      batchEndCallback: Option[BatchEndCallback] = None,
                                       logger: Logger = logger,
                                       workLoadList: Seq[Float] = Nil,
                                       monitor: Option[Monitor] = None): Unit = {
@@ -164,10 +166,14 @@ object Model {
     monitor.foreach(executorManager.installMonitor)
     executorManager.setParams(argParams, auxParams)
 
-    // TODO: initialize kvstore when updateOnKVStore = true
-
     // updater for updateOnKVStore = false
     val updaterLocal = Optimizer.getUpdater(optimizer)
+
+    kvStore.foreach(initializeKVStore(_, executorManager.paramArrays,
+      argParams, executorManager._paramNames, updateOnKVStore))
+    if (updateOnKVStore) {
+      kvStore.foreach(_.setOptimizer(optimizer))
+    }
 
     // Now start training
     for (epoch <- beginEpoch until endEpoch) {
@@ -177,6 +183,7 @@ object Model {
       var nBatch = 0
       var epochDone = false
       // Iterate over training data.
+      trainData.reset()
       while (!epochDone) {
         var doReset = true
         // TODO: make DataIter implement Iterator
@@ -201,7 +208,7 @@ object Model {
           evalMetric.update(dataBatch.label, executorManager.cpuOutputArrays)
 
           nBatch += 1
-          // TODO: batch callback (for print purpose)
+          batchEndCallback.foreach(_.invoke(epoch, nBatch, evalMetric))
 
           // this epoch is done possibly earlier
           if (epochSize != -1 && nBatch >= epochSize) {
@@ -222,7 +229,26 @@ object Model {
       val toc = System.currentTimeMillis
       logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
 
-      // TODO: evaluation on evalData, epoch_end_callback
+      evalData.foreach { evalDataIter =>
+        evalMetric.reset()
+        evalDataIter.reset()
+        // TODO: make DataIter implement Iterator
+        var evalBatch = evalDataIter.next()
+        while (evalBatch != null) {
+          executorManager.loadDataBatch(evalBatch)
+          executorManager.forward(isTrain = false)
+          evalMetric.update(evalBatch.label, executorManager.cpuOutputArrays)
+          evalBatch = evalDataIter.next()
+        }
+
+        val (name, value) = evalMetric.get
+        logger.info(s"Epoch[$epoch] Validation-$name=$value")
+      }
+
+      if (epochEndCallback.isDefined || epoch + 1 == endEpoch) {
+        executorManager.copyTo(argParams, auxParams)
+      }
+      epochEndCallback.foreach(_.invoke(epoch, symbol, argParams, auxParams))
     }
   }
   // scalastyle:on parameterNum
@@ -256,12 +282,11 @@ trait BatchEndCallback {
  *                         to be passed by aux_params and arg_params.
  *                         If this is True, no error will be thrown when aux_params and arg_params
  *                         contain extra parameters than needed.
- * @param beginEpoch The begining training epoch.
- * TODO: @param kwargs The additional keyword arguments passed to optimizer.
+ * @param beginEpoch The beginning training epoch.
  */
-class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(new Context("cpu")),
+class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cpu()),
                   val numEpoch: Int = -1, val epochSize: Int = -1,
-                  val optimizer: String = "sgd",
+                  val optimizer: Optimizer = new SGD(),
                   val initializer: Initializer = new Uniform(0.01f),
                   val batchSize: Int = 128,
                   argParams: Map[String, NDArray] = null,
@@ -372,16 +397,42 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(new Contex
   }
 
   /**
-   * TODO
+   * Run the prediction, always only use one device.
+   * @param data eval data
+   * @param numBatch the number of batch to run. Go though all batches if set -1
+   * @return The predicted value of the output.
+   *         Note the network may have multiple outputs, thus it return an array of [[NDArray]]
+   */
+  def predict(data: DataIter, numBatch: Int = -1): Array[NDArray] = {
+    data.reset()
+    val dataShapes = data.provideData
+    val dataNames = dataShapes.map(_._1).toArray
+    initPredictor(dataShapes)
+    val batchSize = data.batchSize
+    val dataArrays = dataNames.map(predExec.argDict(_))
+    val outputs = Array.fill(predExec.outputs.length)(ListBuffer.empty[NDArray])
+
+    var i = 0
+    var batch = data.next()
+    while (batch != null && i != numBatch) {
+      i += 1
+      Executor.loadData(batch, dataArrays)
+      predExec.forward(isTrain = false)
+      val padded = batch.pad
+      val realSize = batchSize - padded
+      for ((list, nd) <- outputs zip predExec.outputs) {
+        list += nd.slice(0, realSize).copy()
+      }
+      batch = data.next()
+    }
+    outputs.map(NDArray.concatenate(_))
+  }
+
+  /**
    * Fit the model.
-   * @param trainData Training data. If X is an DataIter, the name or, if not available,
-   *                  position, of its outputs should match the corresponding variable
-   *                  names defined in the symbolic graph.
-   * @param evalData If eval_data is numpy.ndarray/list/NDArray pair,
-   *                 it should be (valid_data, valid_label).
-   * @param evalMetric The evaluation metric, name of evaluation metric.
-   *                   Or a customize evaluation function that returns the statistics
-   *                   based on minibatch.
+   * @param trainData Training data
+   * @param evalData Evaluation data
+   * @param evalMetric The evaluation metric, cannot be null
    * @param epochEndCallback A callback that is invoked at end of each epoch.
    *                         This can be used to checkpoint model each epoch.
    * @param batchEndCallback A callback that is invoked at end of each batch
@@ -396,19 +447,18 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(new Contex
    * @param logger When not specified, default logger will be used.
    * @param workLoadList The list of work load for different devices, in the same order as ctx
    */
-  def fit(trainData: DataIter, evalData: DataIter, evalMetric: String = "acc",
-          kvStoreType: String = "local", logger: Logger = LOG,
+  def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric = new Accuracy(),
+          kvStoreType: String = "local", epochEndCallback: EpochEndCallback = null,
+          batchEndCallback: BatchEndCallback = null, logger: Logger = LOG,
           workLoadList: Seq[Float] = null): Unit = {
+    require(evalMetric != null, "evalMetric cannot be null")
     val (argNames, paramNames, auxNames) =
       initParams(trainData.provideData ++ trainData.provideLabel)
-    // TODO: kwargs.put("arg_names", argNames)
-
-    // TODO: setup metric
 
     // create kvstore
     val (kvStore, updateOnKVStore) = Model.createKVStore(kvStoreType, ctx.length, _argParams)
 
-    // init optmizer
+    // init optimizer
     val batchSizeMultiplier = kvStore.map { kv =>
       if (kv.`type` == "dist_sync") {
         kv.numWorkers
@@ -417,18 +467,19 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(new Contex
       }
     }
     val batchSize = trainData.batchSize * batchSizeMultiplier.getOrElse(1)
-    // TODO: temporarily hard-coded sgd optimizer, accuracy evalMetric
-    val optimizer = new SGD(learningRate = 0.1f, momentum = 0.9f, wd = 0.0001f,
-                            rescaleGrad = 1f / batchSize, argNames = argNames)
+    this.optimizer.setArgNames(argNames)
+    this.optimizer.setRescaleGrad(1f / batchSize)
+
     Model.trainMultiDevice(
       symbol, ctx, argNames, paramNames, auxNames,
       _argParams, _auxParams,
       this.beginEpoch, this.numEpoch,
-      this.epochSize,
-      optimizer,
+      this.epochSize, this.optimizer,
       kvStore, updateOnKVStore,
-      trainData = trainData, evalData = evalData,
-      evalMetric = new Accuracy(),
+      trainData = trainData, evalData = Option(evalData),
+      evalMetric = evalMetric,
+      epochEndCallback = Option(epochEndCallback),
+      batchEndCallback = Option(batchEndCallback),
       logger = logger, workLoadList = workLoadList)
   }
 }

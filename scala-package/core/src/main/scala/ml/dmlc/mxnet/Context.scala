@@ -12,6 +12,8 @@ object Context {
   def gpu(deviceId: Int = 0): Context = {
     new Context("gpu", deviceId)
   }
+
+  implicit def ctx2Array(ctx: Context): Array[Context] = Array(ctx)
 }
 
 /**
@@ -34,6 +36,6 @@ class Context(deviceTypeName: String, val deviceId: Int = 0) {
   def deviceType: String = Context.devtype2str(deviceTypeid)
 
   override def toString: String = {
-    deviceType
+    s"$deviceType($deviceId)"
   }
 }

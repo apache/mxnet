@@ -1,11 +1,16 @@
 package ml.dmlc.mxnet.train
 
-import ml.dmlc.mxnet.{IO, Context, FeedForward, Symbol}
+import ml.dmlc.mxnet.optimizer.SGD
+import ml.dmlc.mxnet._
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import org.slf4j.LoggerFactory
 
+import scala.collection.mutable.ListBuffer
 import scala.sys.process._
 
 class ConvSuite extends FunSuite with BeforeAndAfterAll {
+  private val logger = LoggerFactory.getLogger(classOf[ConvSuite])
+
   test("train mnist") {
     // symbol net
     val batchSize = 100
@@ -30,11 +35,12 @@ class ConvSuite extends FunSuite with BeforeAndAfterAll {
     val softmax = Symbol.SoftmaxOutput(Map("data" -> fc2, "name" -> "sm"))
 
     val numEpoch = 1
-    val model = new FeedForward(softmax, Array(Context.cpu()), numEpoch = numEpoch)
+    val model = new FeedForward(softmax, Context.cpu(), numEpoch = numEpoch,
+      optimizer = new SGD(learningRate = 0.1f, momentum = 0.9f, wd = 0.0001f))
 
     // get data
     "./scripts/get_mnist_data.sh" !
-    val params = Map(
+    val trainDataIter = IO.MNISTIter(Map(
       "image" -> "data/train-images-idx3-ubyte",
       "label" -> "data/train-labels-idx1-ubyte",
       "data_shape" -> "(1, 28, 28)",
@@ -43,10 +49,47 @@ class ConvSuite extends FunSuite with BeforeAndAfterAll {
       "shuffle" -> "1",
       "flat" -> "0",
       "silent" -> "0",
-      "seed" -> "10"
-    )
-    val trainDataIter = IO.MNISTIter(params)
+      "seed" -> "10"))
 
-    model.fit(trainDataIter, null)
+    val valDataIter = IO.MNISTIter(Map(
+      "image" -> "data/t10k-images-idx3-ubyte",
+      "label" -> "data/t10k-labels-idx1-ubyte",
+      "data_shape" -> "(1, 28, 28)",
+      "label_name" -> "sm_label",
+      "batch_size" -> batchSize.toString,
+      "shuffle" -> "1",
+      "flat" -> "0", "silent" -> "0"))
+
+    model.fit(trainDataIter, valDataIter)
+    logger.info("Finish fit ...")
+
+    val probArrays = model.predict(valDataIter)
+    assert(probArrays.length === 1)
+    val prob = probArrays(0)
+    logger.info("Finish predict ...")
+
+    valDataIter.reset()
+    val labels = ListBuffer.empty[NDArray]
+    var evalData = valDataIter.next()
+    while (evalData != null) {
+      labels += evalData.label(0).copy()
+      evalData = valDataIter.next()
+    }
+    val y = NDArray.concatenate(labels)
+
+    val py = NDArray.argmaxChannel(prob)
+    assert(y.shape === py.shape)
+
+    var numCorrect = 0
+    var numInst = 0
+    for ((labelElem, predElem) <- y.toArray zip py.toArray) {
+      if (labelElem == predElem) {
+        numCorrect += 1
+      }
+      numInst += 1
+    }
+    val acc = numCorrect.toFloat / numInst
+    logger.info(s"Final accuracy = $acc")
+    assert(acc > 0.96)
   }
 }
