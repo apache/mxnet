@@ -955,8 +955,7 @@ int MXDataIterGetIterInfo(DataIterCreator creator,
                           mx_uint *num_args,
                           const char ***arg_names,
                           const char ***arg_type_infos,
-                          const char ***arg_descriptions,
-                          const char **return_type) {
+                          const char ***arg_descriptions) {
   DataIteratorReg *e = static_cast<DataIteratorReg *>(creator);
   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
                                  arg_names, arg_type_infos, arg_descriptions,
