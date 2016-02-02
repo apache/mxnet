@@ -1142,3 +1142,8 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBindX
   setLongField(env, jexecOut, (long) out);
   return ret;
 }
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRandomSeed
+  (JNIEnv *env, jobject obj, jint seed) {
+  return MXRandomSeed(seed);
+}

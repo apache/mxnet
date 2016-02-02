@@ -4,7 +4,7 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
 class ExecutorSuite extends FunSuite with BeforeAndAfterAll {
   test("bind") {
-    val shape = Array(100, 30)
+    val shape = Vector(100, 30)
     val lhs = Symbol.Variable("lhs")
     val rhs = Symbol.Variable("rhs")
     val ret = lhs + rhs

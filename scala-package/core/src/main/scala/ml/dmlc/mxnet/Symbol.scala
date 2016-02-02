@@ -202,15 +202,15 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
 
   def inferShape(keys: Array[String], indPtr: Array[Int], values: Array[Int])
     : (Seq[Shape], Seq[Shape], Seq[Shape]) = {
-    val argShapeData = ListBuffer.empty[Shape]
-    val outShapeData = ListBuffer.empty[Shape]
-    val auxShapeData = ListBuffer.empty[Shape]
+    val argShapeData = ListBuffer.empty[Array[Int]]
+    val outShapeData = ListBuffer.empty[Array[Int]]
+    val auxShapeData = ListBuffer.empty[Array[Int]]
     val complete = new RefInt
 
     checkCall(_LIB.mxSymbolInferShape(handle, indPtr.size - 1, keys, indPtr, values,
       argShapeData, outShapeData, auxShapeData, complete))
     if (complete.value != 0) {
-      (argShapeData, outShapeData, auxShapeData)
+      (argShapeData.map(_.toVector), outShapeData.map(_.toVector), auxShapeData.map(_.toVector))
     } else {
       (null, null, null)
     }

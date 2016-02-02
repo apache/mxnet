@@ -125,12 +125,12 @@ object NDArray {
    *
    * @return a new empty ndarray handle
    */
-  private def newAllocHandle(shape: Array[Int],
+  private def newAllocHandle(shape: Shape,
                              ctx: Context,
                              delayAlloc: Boolean): NDArrayHandle = {
     val hdl = new NDArrayHandleRef
     checkCall(_LIB.mxNDArrayCreate(
-      shape,
+      shape.toArray,
       shape.length,
       ctx.deviceTypeid,
       ctx.deviceId,
@@ -217,14 +217,14 @@ object NDArray {
    *
    * @return The created NDArray.
    */
-  def empty(shape: Array[Int], ctx: Context = null): NDArray = {
+  def empty(shape: Shape, ctx: Context = null): NDArray = {
     val context = if (ctx == null) Context.defaultCtx else ctx
     new NDArray(handle = NDArray.newAllocHandle(shape, context, delayAlloc = false))
   }
 
-  def empty(shape: Int *): NDArray = empty(shape.toArray)
+  def empty(shape: Int *): NDArray = empty(shape.toVector)
 
-  def empty(ctx: Context, shape: Int *): NDArray = empty(shape.toArray, ctx)
+  def empty(ctx: Context, shape: Int *): NDArray = empty(shape.toVector, ctx)
 
   /**
    * Create a new NDArray filled with 0, with specified shape.
@@ -234,15 +234,15 @@ object NDArray {
    *
    * @return The created NDArray.
    */
-  def zeros(shape: Array[Int], ctx: Context = null): NDArray = {
+  def zeros(shape: Shape, ctx: Context = null): NDArray = {
     val arr = empty(shape, ctx)
     arr.set(0f)
     arr
   }
 
-  def zeros(shape: Int *): NDArray = zeros(shape.toArray)
+  def zeros(shape: Int *): NDArray = zeros(shape.toVector)
 
-  def zeros(ctx: Context, shape: Int *): NDArray = zeros(shape.toArray, ctx)
+  def zeros(ctx: Context, shape: Int *): NDArray = zeros(shape.toVector, ctx)
 
   /**
    * Create a new NDArray filled with 1, with specified shape.
@@ -250,15 +250,15 @@ object NDArray {
    * @param ctx The context of the NDArray, default to current default context.
    * @return The created NDArray.
    */
-  def ones(shape: Array[Int], ctx: Context = null): NDArray = {
+  def ones(shape: Shape, ctx: Context = null): NDArray = {
     val arr = empty(shape, ctx)
     arr.set(1f)
     arr
   }
 
-  def ones(shape: Int *): NDArray = ones(shape.toArray)
+  def ones(shape: Int *): NDArray = ones(shape.toVector)
 
-  def ones(ctx: Context, shape: Int *): NDArray = ones(shape.toArray, ctx)
+  def ones(ctx: Context, shape: Int *): NDArray = ones(shape.toVector, ctx)
 
   /**
    * Clip ndarray elements to range (from, to)
@@ -460,7 +460,7 @@ object NDArray {
    * @param ctx The context of the NDArray, default to current default context.
    * @return The created NDArray.
    */
-  def array(sourceArr: Array[Float], shape: Array[Int], ctx: Context = null): NDArray = {
+  def array(sourceArr: Array[Float], shape: Shape, ctx: Context = null): NDArray = {
      val arr = empty(shape, ctx)
      arr.set(sourceArr)
      arr
@@ -474,18 +474,15 @@ object NDArray {
   def concatenate(arrays: Seq[NDArray], ctx: Context = null): NDArray = {
     require(arrays != null && arrays.size > 0, "arrays empty")
     val array0 = arrays.head
-    val shape = Array.ofDim[Int](array0.shape.length)
-    array0.shape.copyToArray(shape)
-    var axis0 = shape(0)
-    val shapeRemain = shape.drop(1)
+    val shape = array0.shape.drop(1)
+    var axis0 = array0.shape(0)
     arrays.drop(1).foreach { array =>
-      require(shapeRemain.sameElements(array.shape.drop(1)),
+      require(shape.sameElements(array.shape.drop(1)),
         s"shape mismatch between (${array.shape.mkString(",")}) and (${shape.mkString(",")})")
       axis0 += array.shape(0)
     }
 
-    shape(0) = axis0
-    val output = NDArray.empty(shape, ctx)
+    val output = NDArray.empty(Vector(axis0) ++ shape, ctx)
     axis0 = 0
     arrays.foreach { array =>
       output.slice(axis0, axis0 + array.shape(0)).set(array)
@@ -804,12 +801,12 @@ class NDArray(private[mxnet] val handle: NDArrayHandle, val writable: Boolean = 
    * Get shape of current NDArray.
    * @return an array representing shape of current ndarray
    */
-  def shape: Array[Int] = {
+  def shape: Shape = {
     val ndim = new MXUintRef
     val data = ArrayBuffer[Int]()
     checkCall(_LIB.mxNDArrayGetShape(handle, ndim, data))
     require(ndim.value == data.length, s"ndim=$ndim, while len(pdata)=${data.length}")
-    data.toArray
+    data.toVector
   }
 
   // Get size of current NDArray.
