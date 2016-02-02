@@ -653,7 +653,7 @@ def _make_ndarray_function(handle):
         ctypes.byref(arg_names),
         ctypes.byref(arg_types),
         ctypes.byref(arg_descs),
-	ctypes.byref(ret_type)))
+        ctypes.byref(ret_type)))
     func_name = py_str(name.value)
     param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
     doc_str = ('%s\n\n' +
