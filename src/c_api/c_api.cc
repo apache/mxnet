@@ -74,13 +74,15 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
                                    mx_uint *num_args,
                                    const char ***arg_names,
                                    const char ***arg_type_infos,
-                                   const char ***arg_descriptions) {
+                                   const char ***arg_descriptions,
+                                   const char **return_type) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
   API_BEGIN();
   *name = e->name.c_str();
   *description = e->description.c_str();
   *num_args = static_cast<mx_uint>(e->arguments.size());
+  if (return_type) *return_type = e->return_type.c_str();
   ret->ret_vec_charp.clear();
   for (size_t i = 0; i < e->arguments.size(); ++i) {
     ret->ret_vec_charp.push_back(e->arguments[i].name.c_str());
@@ -360,10 +362,12 @@ int MXFuncGetInfo(FunctionHandle fun,
                   mx_uint *num_args,
                   const char ***arg_names,
                   const char ***arg_type_infos,
-                  const char ***arg_descriptions) {
+                  const char ***arg_descriptions,
+                  const char **return_type) {
   return MXAPIGetFunctionRegInfo(static_cast<const NDArrayFunctionReg *>(fun),
                                  name, description, num_args,
-                                 arg_names, arg_type_infos, arg_descriptions);
+                                 arg_names, arg_type_infos, arg_descriptions,
+                                 return_type);
 }
 
 int MXFuncDescribe(FunctionHandle fun,
@@ -441,11 +445,13 @@ int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                 const char ***arg_names,
                                 const char ***arg_type_infos,
                                 const char ***arg_descriptions,
-                                const char **key_var_num_args) {
+                                const char **key_var_num_args,
+                                const char **return_type) {
   OperatorPropertyReg *e = static_cast<OperatorPropertyReg *>(creator);
   *key_var_num_args = e->key_var_num_args.c_str();
   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
-                                 arg_names, arg_type_infos, arg_descriptions);
+                                 arg_names, arg_type_infos, arg_descriptions,
+                                 return_type);
 }
 
 int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
@@ -952,7 +958,8 @@ int MXDataIterGetIterInfo(DataIterCreator creator,
                           const char ***arg_descriptions) {
   DataIteratorReg *e = static_cast<DataIteratorReg *>(creator);
   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
-                                 arg_names, arg_type_infos, arg_descriptions);
+                                 arg_names, arg_type_infos, arg_descriptions,
+                                 NULL);
 }
 
 int MXDataIterCreateIter(DataIterCreator creator,
