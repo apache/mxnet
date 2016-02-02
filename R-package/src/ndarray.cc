@@ -326,7 +326,7 @@ NDArrayFunction::NDArrayFunction(FunctionHandle handle)
     const char *ret_type;
     MX_CALL(MXFuncGetInfo(handle, &name, &description, &num_args,
                           &arg_names, &arg_type_infos, &arg_descriptions,
-		          &ret_type));
+                          &ret_type));
     if (name[0] == '_') {
       name_ = std::string("mx.nd.internal.") + (name + 1);
     } else {
@@ -460,7 +460,7 @@ FunctionHandle NDArrayFunction::FindHandle(const std::string& hname) {
     const char *ret_type;
     MX_CALL(MXFuncGetInfo(handle, &name, &description, &num_args,
                           &arg_names, &arg_type_infos, &arg_descriptions,
-			  &ret_type));
+                          &ret_type));
     if (name == hname) return handle;
   }
   RLOG_FATAL << "FindHandle: cannot find function " << hname;
