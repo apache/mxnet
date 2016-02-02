@@ -30,7 +30,8 @@ except ImportError:
 BatchEndParam = namedtuple('BatchEndParams',
                            ['epoch',
                             'nbatch',
-                            'eval_metric'])
+                            'eval_metric',
+                            'locals'])
 
 def _create_kvstore(kvstore, num_device, arg_params):
     """Create kvstore
@@ -246,7 +247,8 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 if batch_end_callback != None:
                     batch_end_params = BatchEndParam(epoch=epoch,
                                                      nbatch=nbatch,
-                                                     eval_metric=eval_metric)
+                                                     eval_metric=eval_metric,
+                                                     locals=locals())
                     if isinstance(batch_end_callback, list):
                         for call in batch_end_callback:
                             call(batch_end_params)
@@ -294,7 +296,8 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 if eval_batch_end_callback != None:
                     batch_end_params = BatchEndParam(epoch=epoch,
                                                      nbatch=i,
-                                                     eval_metric=eval_metric)
+                                                     eval_metric=eval_metric,
+                                                     locals=locals())
                     if isinstance(eval_batch_end_callback, list):
                         for call in eval_batch_end_callback:
                             call(batch_end_params)
@@ -605,6 +608,53 @@ class FeedForward(BASE_ESTIMATOR):
             return outputs, data, label
         else:
             return outputs
+
+    def score(self, X, eval_metric='acc', num_batch=None, batch_end_callback=None, reset=True):
+        """Run the model on X and calculate the score with eval_metric
+        Parameters
+        ----------
+        X : mxnet.DataIter
+        eval_metric : metric.metric
+            The metric for calculating score
+        num_batch : int or None
+            the number of batch to run. Go though all batches if None
+        Returns
+        -------
+        s : float
+            the final score
+        """
+        # setup metric
+        if not isinstance(eval_metric, metric.EvalMetric):
+            eval_metric = metric.create(eval_metric)
+
+        X = self._init_iter(X, None, is_train=False)
+        if reset:
+            X.reset()
+
+        data_shapes = X.provide_data
+        data_names = [x[0] for x in data_shapes]
+        self._init_predictor(data_shapes)
+        data_arrays = [self._pred_exec.arg_dict[name] for name in data_names]
+
+        for i, batch in enumerate(X):
+            if num_batch is not None and i == num_batch:
+                break
+            _load_data(batch, data_arrays)
+            self._pred_exec.forward(is_train=False)
+            eval_metric.update(batch.label, self._pred_exec.outputs)
+
+            if batch_end_callback != None:
+                batch_end_params = BatchEndParam(epoch=0,
+                                                 nbatch=i,
+                                                 eval_metric=eval_metric,
+                                                 locals=locals())
+                if isinstance(batch_end_callback, list):
+                    for call in batch_end_callback:
+                        call(batch_end_params)
+                else:
+                    batch_end_callback(batch_end_params)
+        return eval_metric.get()[1]
+
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
             epoch_end_callback=None, batch_end_callback=None, kvstore='local', logger=None,
