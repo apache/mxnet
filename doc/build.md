@@ -1,15 +1,14 @@
 Installation Guide
 ==================
 
-This page gives instructions of how to build and install the mxnet package from
+This page gives instructions of how to build and install the MXNet package from
 scratch on various systems. It consists of two steps:
 
-1. Fist build the shared library from the C++ codes (`libmxnet.so` for linux,
+1. First build the shared library from the C++ codes (`libmxnet.so` for linux,
  `libmxnet.dylib` for osx and `libmxnet.dll` for windows).
 2. Then install the language packages (e.g. Python package).
 
-Please refer to [FAQ](#frequently-asked-questions) first if you had any problem
-during installation. If the instructions do not work for you, please feel free
+Please refer to [FAQ](#frequently-asked-questions) if you have any problems during installation. If the instructions do not work for you, please feel free
 to ask questions at [mxnet/issues](https://github.com/dmlc/mxnet/issues), or
 even better to send pull request if you can fix the problem.
 
@@ -86,7 +85,7 @@ cd mxnet; cp make/osx.mk ./config.mk; make -j4
 
 Troubleshooting:
 
-Some of the users might meet the link error `ld: library not found for -lgomp`, indicating that the GNU implementation of OpenMP is not in the library path of operating system.
+Some users experience the link error `ld: library not found for -lgomp`, indicating that the GNU implementation of OpenMP is not in the library path of operating system.
 
 To resolve this issue, run the following commands:
 
@@ -104,12 +103,12 @@ then run `make -j4` again.
 
 ### Building on Windows
 
-Firstly, we should make your Visual Studio 2013 support more C++11 features.
+First, enable Visual Studio 2013 to support more C++11 features.
 
  - Download and install [Visual C++ Compiler Nov 2013 CTP](http://www.microsoft.com/en-us/download/details.aspx?id=41151).
  - Copy all files in `C:\Program Files (x86)\Microsoft Visual C++ Compiler Nov 2013 CTP` (or the folder where you extracted the zip archive) to `C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC` and overwrite all existed files. Don't forget to backup the original files before copying.
 
-Secondly, fetch the third-party libraries, including [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download), [CuDNN](https://developer.nvidia.com/cudnn) and [OpenBlas](http://sourceforge.net/projects/openblas/files/v0.2.14/)(ignore this if you have MKL).
+Second, fetch the third-party libraries, including [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download), [CuDNN](https://developer.nvidia.com/cudnn) and [OpenBlas](http://sourceforge.net/projects/openblas/files/v0.2.14/)(ignore this if you have MKL).
 
  - NOTICE: You need to register as a NVIDIA community user to get the download link of CuDNN.
 
@@ -167,7 +166,7 @@ python example/image-classification/train_mnist.py --network lenet --gpus 0
 
 There are several ways to install the package:
 
-1. Install system-widely, which requires root permission
+1. Install system-wide, which requires root permission
 
    ```bash
    cd python; sudo python setup.py install
