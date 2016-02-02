@@ -281,6 +281,7 @@ MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
                              NDArrayHandle *out);
 /*!
  * \brief Reshape the NDArray.
+ * \param handle the handle to the narray
  * \param ndim number of dimensions of new shape
  * \param dims new shape
  * \param out the NDArrayHandle of reshaped NDArray
