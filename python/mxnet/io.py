@@ -111,11 +111,16 @@ class ResizeIter(DataIter):
     """
 
     def __init__(self, data_iter, size, reset_internal=True):
+        super(ResizeIter, self).__init__()
         self.data_iter = data_iter
         self.size = size
         self.reset_internal = reset_internal
         self.cur = 0
         self.current_batch = None
+
+        self.provide_data = data_iter.provide_data
+        self.provide_label = data_iter.provide_label
+        self.batch_size = data_iter.batch_size
 
     def reset(self):
         self.cur = 0
