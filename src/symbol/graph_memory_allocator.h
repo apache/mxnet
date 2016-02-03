@@ -17,6 +17,13 @@
 
 namespace mxnet {
 /*!
+ * \brief Memory pool holding a list of NDArrays for sharing between executors.
+ */
+struct GraphStoragePool {
+  std::vector<NDArray> pool;
+};
+
+/*!
  * \brief Memory allocators for the GraphExecutor.
  *  This class is intended to be used by GraphExecutor
  *  to allocate the memory for each DataEntryInfo.
@@ -40,7 +47,8 @@ class GraphStorageAllocator {
   explicit GraphStorageAllocator(
       StaticGraph *graph,
       const std::vector<uint32_t>& topo_order,
-      std::vector<NDArray> shared_ndarray = std::vector<NDArray>()) noexcept(false);
+      std::shared_ptr<GraphStoragePool> shared_mem
+        = std::make_shared<GraphStoragePool>()) noexcept(false);
   /*!
    * \brief Request a memory.
    * \param ctx the context of the graph
@@ -59,11 +67,6 @@ class GraphStorageAllocator {
    * \return size of memory allocated.
    */
   size_t InitStorages();
-  /*!
-   * \brief List all the memories allocated
-   * \return a vector of all allocated ndarrays.
-   */
-  std::vector<NDArray> ListStorages();
   /*!
    * \brief Get the the memory allocated in planning phase.
    * \param id the storage id allocated in planning phase.
@@ -116,14 +119,16 @@ class GraphStorageAllocator {
   std::vector<uint32_t> node_color_;
   /*! \brief whether use color based match algorithm */
   uint32_t num_match_color_;
+  /*! \brief shared memory pool */
+  std::shared_ptr<GraphStoragePool> shared_mem_;
 };
 
 // put implementation in header files for now
 GraphStorageAllocator::GraphStorageAllocator(
     StaticGraph *graph,
     const std::vector<uint32_t>& topo_order,
-    std::vector<NDArray> shared_ndarray) noexcept(false)
-    : graph_(graph) , num_match_color_(0) {
+    std::shared_ptr<GraphStoragePool> shared_mem) noexcept(false)
+    : graph_(graph) , num_match_color_(0), shared_mem_(shared_mem) {
   match_range_ = dmlc::GetEnv("MXNET_EXEC_MATCH_RANGE", 16);
   // if we set this to 1, this means no color based match.
   // color based match will cost a bit more memory usually
@@ -131,7 +136,7 @@ GraphStorageAllocator::GraphStorageAllocator(
   num_match_color_ = static_cast<uint32_t>(common::GetExecNumMatchColor());
   this->InitColor(topo_order);
 
-  for (auto& it : shared_ndarray) {
+  for (auto& it : shared_mem_->pool) {
     CHECK(!it.is_none());
     CHECK_EQ(it.shape().ndim(), 1);
     StorageID id = static_cast<StorageID>(data_.size());
@@ -234,21 +239,12 @@ size_t GraphStorageAllocator::InitStorages() {
       TShape shape = mshadow::Shape1(e->max_size);
       e->data = NDArray(shape, e->ctx, false, e->type_flag);
       total += e->max_size * mshadow::mshadow_sizeof(e->type_flag);
+      shared_mem_->pool.push_back(e->data);
     }
   }
+  CHECK_EQ(shared_mem_->pool.size(), data_.size());
   return total;
 }
-
-std::vector<NDArray> GraphStorageAllocator::ListStorages() {
-  std::vector<NDArray> list;
-  for (size_t i = 0; i < data_.size(); ++i) {
-    StorageEntry *e = data_[i].get();
-    CHECK(!e->data.is_none()) << "ListStorages should be called after InitStorages.";
-    list.push_back(e->data);
-  }
-  return list;
-}
-
 
 NDArray GraphStorageAllocator::Get(StorageID id, TShape shape) {
   CHECK_NE(id, kBadStorageID);

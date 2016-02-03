@@ -8,6 +8,7 @@
 #include <mxnet/symbolic.h>
 #include <memory>
 #include <map>
+#include <set>
 #include "./graph_executor.h"
 #include "./graph_algorithm.h"
 
@@ -590,7 +591,7 @@ void GraphExecutor::InitDataEntryMemory() {
   }
 
   // use allocator to allocate memory.
-  GraphStorageAllocator allocator(&graph_, topo_order_, shared_ndarray_);
+  GraphStorageAllocator allocator(&graph_, topo_order_, shared_mem_);
   for (size_t i = 0; i < topo_order_.size(); ++i) {
     uint32_t nid = topo_order_[i];
     if (!op_nodes_[nid].activated) continue;
@@ -680,8 +681,6 @@ void GraphExecutor::InitDataEntryMemory() {
     CHECK_EQ(info.type, kInternalAllocated);
     heads_ndarray_.push_back(info.data);
   }
-
-  shared_ndarray_ = allocator.ListStorages();
 }
 
 void GraphExecutor::InitResources() {
