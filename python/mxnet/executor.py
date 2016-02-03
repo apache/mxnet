@@ -350,25 +350,28 @@ class DataParallelExecutorManager(object):
         slices = _split_input_slice(train_data.batch_size, work_load_list)
         self.slices = slices
 
+        self.data_names = [x[0] for x in train_data.provide_data]
+        self.label_names = [x[0] for x in train_data.provide_label]
+        self.aux_names = aux_names
+        self.param_idx = [i for i in range(len(arg_names)) if arg_names[i] in param_names]
+        self.param_names = [arg_names[i] for i in self.param_idx]
+
+        update_dict = {k: 'write' if k in self.param_names else 'null' for k in arg_names}
+
         self.train_execs = []
         for i in range(len(ctx)):
             data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
                            for k, v in train_data.provide_data + train_data.provide_label}
-            train_exec = symbol.simple_bind(ctx[i], 'write', **data_shapes)
+            train_exec = symbol.simple_bind(ctx[i], update_dict, **data_shapes)
             self.train_execs.append(train_exec)
 
         # data structure
-        self.data_names = [x[0] for x in train_data.provide_data]
-        self.label_names = [x[0] for x in train_data.provide_label]
-        self.aux_names = aux_names
 
         self.data_arrays = [[(slices[i], e.arg_dict[name]) for i, e in enumerate(self.train_execs)]
                             for name in self.data_names]
         self.label_arrays = [[(slices[i], e.arg_dict[name]) for i, e in enumerate(self.train_execs)]
                              for name in self.label_names]
 
-        self.param_idx = [i for i in range(len(arg_names)) if arg_names[i] in param_names]
-        self.param_names = [arg_names[i] for i in self.param_idx]
         self.param_arrays = [[e.arg_arrays[i] for e in self.train_execs]
                              for i in self.param_idx]
         self.grad_arrays = [[e.grad_arrays[i] for e in self.train_execs]
@@ -376,11 +379,6 @@ class DataParallelExecutorManager(object):
 
         self.aux_arrays = [[e.aux_arrays[i] for e in self.train_execs]
                            for i in range(len(aux_names))]
-
-        batch_size = train_data.batch_size
-
-        output_shapes = [tuple([batch_size]+list(x.shape[1:])) for x in self.train_execs[0].outputs]
-        self.cpu_output_arrays = [nd.zeros(s) for s in output_shapes]
 
     def install_monitor(self, monitor):
         """ Install monitor on all executors """
@@ -426,12 +424,16 @@ class DataParallelExecutorManager(object):
 
     def forward(self, is_train=False):
         """ Perform a forward pass on each executor """
-        for texec, islice in zip(self.train_execs, self.slices):
+        for texec in self.train_execs:
             texec.forward(is_train=is_train)
-            for cpu_out, dev_out in zip(self.cpu_output_arrays, texec.outputs):
-                dev_out.copyto(cpu_out[islice])
 
     def backward(self):
         """ Perform a backward pass on each executor """
         for texec in self.train_execs:
             texec.backward()
+
+    def update_metric(self, metric, labels):
+        """ Update evaluation metric with label and current outputs """
+        for texec, islice in zip(self.train_execs, self.slices):
+            labels_slice = [label[islice] for label in labels]
+            metric.update(labels_slice, texec.outputs)

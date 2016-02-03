@@ -281,6 +281,18 @@ int MXNDArraySlice(NDArrayHandle handle,
   API_END_HANDLE_ERROR(delete ptr);
 }
 
+MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
+                               int ndim,
+                               int *dims,
+                               NDArrayHandle *out) {
+  NDArray *ptr = new NDArray();
+  API_BEGIN();
+  TShape new_shape(dims, dims+ndim);
+  *ptr = static_cast<NDArray*>(handle)->Reshape(new_shape);
+  *out = ptr;
+  API_END_HANDLE_ERROR(delete ptr);
+}
+
 int MXNDArrayGetShape(NDArrayHandle handle,
                       mx_uint *out_dim,
                       const mx_uint **out_pdata) {
@@ -1354,12 +1366,13 @@ int MXOptimizerUpdate(OptimizerHandle handle,
                       int index,
                       NDArrayHandle weight,
                       NDArrayHandle grad,
-                      mx_float lr) {
+                      mx_float lr,
+                      mx_float wd) {
   API_BEGIN();
   Optimizer *opt = static_cast<Optimizer*>(handle);
   opt->Update(index,
               static_cast<NDArray*>(weight),
               static_cast<NDArray*>(grad),
-              lr);
+              lr, wd);
   API_END();
 }

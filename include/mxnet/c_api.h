@@ -280,6 +280,18 @@ MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
                              mx_uint slice_end,
                              NDArrayHandle *out);
 /*!
+ * \brief Reshape the NDArray.
+ * \param handle the handle to the narray
+ * \param ndim number of dimensions of new shape
+ * \param dims new shape
+ * \param out the NDArrayHandle of reshaped NDArray
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
+                               int ndim,
+                               int *dims,
+                               NDArrayHandle *out);
+/*!
  * \brief get the shape of the array
  * \param handle the handle to the narray
  * \param out_dim the output dimension
@@ -1178,6 +1190,7 @@ MXNET_DLL int MXOptimizerUpdate(OptimizerHandle handle,
                                 int index,
                                 NDArrayHandle weight,
                                 NDArrayHandle grad,
-                                mx_float lr);
+                                mx_float lr,
+                                mx_float wd);
 
 #endif  // MXNET_C_API_H_

@@ -41,6 +41,8 @@ class Initializer(object):
             self._init_zero(name, arr)
         elif name.endswith("moving_var"):
             self._init_zero(name, arr)
+        elif name.endswith("moving_inv_var"):
+            self._init_zero(name, arr)
         elif name.endswith("moving_avg"):
             self._init_zero(name, arr)
         else:
@@ -95,7 +97,7 @@ class Load(object):
         assert isinstance(param, dict)
         self.param = {}
         for name, arr in param.items():
-            if name.startswith('arg:'):
+            if name.startswith('arg:') or name.startswith('aux:'):
                 self.param[name[4:]] = arr
             else:
                 self.param[name] = arr

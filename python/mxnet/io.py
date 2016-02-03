@@ -97,6 +97,60 @@ class DataIter(object):
         """
         pass
 
+class ResizeIter(DataIter):
+    """Resize a DataIter to given number of batches per epoch.
+    May produce incomplete batch in the middle of an epoch due
+    to padding from internal iterator.
+
+    Parameters
+    ----------
+    data_iter : DataIter
+        Internal data iterator.
+    size : number of batches per epoch to resize to.
+    reset_internal : whether to reset internal iterator on ResizeIter.reset
+    """
+
+    def __init__(self, data_iter, size, reset_internal=True):
+        super(ResizeIter, self).__init__()
+        self.data_iter = data_iter
+        self.size = size
+        self.reset_internal = reset_internal
+        self.cur = 0
+        self.current_batch = None
+
+        self.provide_data = data_iter.provide_data
+        self.provide_label = data_iter.provide_label
+        self.batch_size = data_iter.batch_size
+
+    def reset(self):
+        self.cur = 0
+        if self.reset_internal:
+            self.data_iter.reset()
+
+    def iter_next(self):
+        if self.cur == self.size:
+            return False
+        try:
+            self.current_batch = self.data_iter.next()
+        except StopIteration:
+            self.data_iter.reset()
+            self.current_batch = self.data_iter.next()
+
+        self.cur += 1
+        return True
+
+    def getdata(self):
+        return self.current_batch.data
+
+    def getlabel(self):
+        return self.current_batch.label
+
+    def getindex(self):
+        return self.current_batch.index
+
+    def getpad(self):
+        return self.current_batch.pad
+
 class PrefetchingIter(DataIter):
     """Base class for prefetching iterators. Takes one or more DataIters (
     or any class with "reset" and "read" methods) and combine them with
