@@ -122,7 +122,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         train_data, eval_data=None, eval_metric=None,
                         epoch_end_callback=None, batch_end_callback=None,
                         logger=None, work_load_list=None, monitor=None,
-                        eval_iters=None, eval_batch_end_callback=None):
+                        eval_batch_end_callback=None):
     """Internal training function on multiple devices.
     This function will also work for single device as well.
     Parameters
@@ -288,8 +288,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
             eval_metric.reset()
             eval_data.reset()
             for i, eval_batch in enumerate(eval_data):
-                if eval_iters is not None and eval_iters <= i:
-                    break
                 executor_manager.load_data_batch(eval_batch)
                 executor_manager.forward(is_train=False)
                 executor_manager.update_metric(eval_metric, eval_batch.label)
@@ -413,7 +411,6 @@ class FeedForward(BASE_ESTIMATOR):
                  arg_params=None, aux_params=None,
                  allow_extra_params=False,
                  begin_epoch=0,
-                 eval_iters=None,
                  **kwargs):
         # check if symbol contain duplicated names.
         _check_arguments(symbol)
@@ -437,7 +434,6 @@ class FeedForward(BASE_ESTIMATOR):
         # training parameters
         self.num_epoch = num_epoch
         self.epoch_size = epoch_size
-        self.eval_iters = eval_iters
         self.kwargs = kwargs.copy()
         self.optimizer = optimizer
         self.initializer = initializer
@@ -737,7 +733,6 @@ class FeedForward(BASE_ESTIMATOR):
                             batch_end_callback=batch_end_callback,
                             kvstore=kvstore, update_on_kvstore=update_on_kvstore,
                             logger=logger, work_load_list=work_load_list, monitor=monitor,
-                            eval_iters=self.eval_iters,
                             eval_batch_end_callback=eval_batch_end_callback)
 
 
@@ -798,7 +793,7 @@ class FeedForward(BASE_ESTIMATOR):
                eval_data=None, eval_metric='acc',
                epoch_end_callback=None, batch_end_callback=None,
                kvstore='local', logger=None, work_load_list=None,
-               eval_iters=None, eval_batch_end_callback=None, **kwargs):
+               eval_batch_end_callback=None, **kwargs):
         """Functional style to create a model.
         This function will be more consistent with functional
         languages such as R, where mutation is not allowed.
@@ -849,7 +844,7 @@ class FeedForward(BASE_ESTIMATOR):
             in the same order as ctx
         """
         model = FeedForward(symbol, ctx=ctx, num_epoch=num_epoch,
-                            epoch_size=epoch_size, eval_iters=eval_iters,
+                            epoch_size=epoch_size,
                             optimizer=optimizer, initializer=initializer, **kwargs)
         model.fit(X, y, eval_data=eval_data, eval_metric=eval_metric,
                   epoch_end_callback=epoch_end_callback,
