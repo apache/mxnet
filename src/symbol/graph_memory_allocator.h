@@ -39,7 +39,8 @@ class GraphStorageAllocator {
   /*! \brief constructor to the graph memory allocator */
   explicit GraphStorageAllocator(
       StaticGraph *graph,
-      const std::vector<uint32_t>& topo_order) noexcept(false);
+      const std::vector<uint32_t>& topo_order,
+      std::vector<NDArray> shared_ndarray = std::vector<NDArray>()) noexcept(false);
   /*!
    * \brief Request a memory.
    * \param ctx the context of the graph
@@ -58,6 +59,11 @@ class GraphStorageAllocator {
    * \return size of memory allocated.
    */
   size_t InitStorages();
+  /*!
+   * \brief List all the memories allocated
+   * \return a vector of all allocated ndarrays.
+   */
+  std::vector<NDArray> ListStorages();
   /*!
    * \brief Get the the memory allocated in planning phase.
    * \param id the storage id allocated in planning phase.
@@ -115,7 +121,8 @@ class GraphStorageAllocator {
 // put implementation in header files for now
 GraphStorageAllocator::GraphStorageAllocator(
     StaticGraph *graph,
-    const std::vector<uint32_t>& topo_order) noexcept(false)
+    const std::vector<uint32_t>& topo_order,
+    std::vector<NDArray> shared_ndarray) noexcept(false)
     : graph_(graph) , num_match_color_(0) {
   match_range_ = dmlc::GetEnv("MXNET_EXEC_MATCH_RANGE", 16);
   // if we set this to 1, this means no color based match.
@@ -123,6 +130,24 @@ GraphStorageAllocator::GraphStorageAllocator(
   // but also enables more parallelization.
   num_match_color_ = static_cast<uint32_t>(common::GetExecNumMatchColor());
   this->InitColor(topo_order);
+
+  for (auto& it : shared_ndarray) {
+    CHECK(!it.is_none());
+    CHECK_EQ(it.shape().ndim(), 1);
+    StorageID id = static_cast<StorageID>(data_.size());
+    std::unique_ptr<StorageEntry> ptr(new StorageEntry());
+    ptr->id = id;
+    ptr->ctx = it.ctx();
+    ptr->type_flag = it.dtype();
+    ptr->max_size = it.shape()[0];
+    ptr->data = it;
+    data_.push_back(std::move(ptr));
+
+    StorageEntry *e = data_[id].get();
+    // set to dummy node.
+    e->released_by_node = node_color_.size() - 1;
+    free_.insert({e->max_size, e});
+  }
 }
 
 void GraphStorageAllocator::InitColor(const std::vector<uint32_t>& topo_order) {
@@ -136,6 +161,8 @@ void GraphStorageAllocator::InitColor(const std::vector<uint32_t>& topo_order) {
       *graph_, topo_order,
       importance, num_match_color_,
       &node_color_);
+  //  dummy color for shared memory
+  node_color_.push_back(num_match_color_+1);
 }
 
 GraphStorageAllocator::StorageID
@@ -164,7 +191,9 @@ GraphStorageAllocator::Request(Context ctx, int type_flag, TShape shape, uint32_
     StorageEntry *e = it->second;
     if (e->ctx != ctx) continue;
     if (e->type_flag != type_flag) continue;
-    if (node_color_[e->released_by_node] != node_color_[node_id]) continue;
+    if (node_color_[e->released_by_node] != num_match_color_ + 1
+        && node_color_[e->released_by_node] != node_color_[node_id]) continue;
+    if (!e->data.is_none() && size > e->max_size) continue;
     // Use exect matching strategy
     e->max_size = std::max(size, e->max_size);
     // find a exact match, erase from map and return
@@ -177,7 +206,9 @@ GraphStorageAllocator::Request(Context ctx, int type_flag, TShape shape, uint32_
     StorageEntry *e = it->second;
     if (e->ctx != ctx) continue;
     if (e->type_flag != type_flag) continue;
-    if (node_color_[e->released_by_node] != node_color_[node_id]) continue;
+    if (node_color_[e->released_by_node] != num_match_color_ + 1
+        && node_color_[e->released_by_node] != node_color_[node_id]) continue;
+    if (!e->data.is_none() && size > e->max_size) continue;
     // Use exect matching strategy
     e->max_size = std::max(size, e->max_size);
     // find a exact match, erase from map and return
@@ -199,12 +230,25 @@ size_t GraphStorageAllocator::InitStorages() {
   size_t total = 0;
   for (size_t i = 0; i < data_.size(); ++i) {
     StorageEntry *e = data_[i].get();
-    TShape shape = mshadow::Shape1(e->max_size);
-    e->data = NDArray(shape, e->ctx, false, e->type_flag);
-    total += e->max_size * mshadow::mshadow_sizeof(e->type_flag);
+    if (e->data.is_none()) {
+      TShape shape = mshadow::Shape1(e->max_size);
+      e->data = NDArray(shape, e->ctx, false, e->type_flag);
+      total += e->max_size * mshadow::mshadow_sizeof(e->type_flag);
+    }
   }
   return total;
 }
+
+std::vector<NDArray> GraphStorageAllocator::ListStorages() {
+  std::vector<NDArray> list;
+  for (size_t i = 0; i < data_.size(); ++i) {
+    StorageEntry *e = data_[i].get();
+    CHECK(!e->data.is_none()) << "ListStorages should be called after InitStorages.";
+    list.push_back(e->data);
+  }
+  return list;
+}
+
 
 NDArray GraphStorageAllocator::Get(StorageID id, TShape shape) {
   CHECK_NE(id, kBadStorageID);
