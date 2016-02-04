@@ -1,6 +1,7 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
+import ml.dmlc.mxnet.IO._
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
@@ -11,6 +12,7 @@ import scala.collection.mutable.ListBuffer
  */
 object IO {
   type IterCreateFunc = (Map[String, String]) => DataIter
+  type PackCreateFunc = (Map[String, String]) => DataPack
 
   private val logger = LoggerFactory.getLogger(classOf[DataIter])
   private val iterCreateFuncs: Map[String, IterCreateFunc] = _initIOModule()
@@ -18,6 +20,11 @@ object IO {
   def MNISTIter: IterCreateFunc = iterCreateFuncs("MNISTIter")
   def ImageRecordIter: IterCreateFunc = iterCreateFuncs("ImageRecordIter")
   def CSVIter: IterCreateFunc = iterCreateFuncs("CSVIter")
+
+  def MNISTPack: PackCreateFunc = createDataPack("MNISTIter")
+  def ImageRecodePack: PackCreateFunc = createDataPack("ImageRecordIter")
+  def CSVPack: PackCreateFunc = createDataPack("CSVIter")
+
 
   /**
    * create iterator via iterName and params
@@ -27,6 +34,16 @@ object IO {
    */
   def createIterator(iterName: String, params: Map[String, String]): DataIter = {
     iterCreateFuncs(iterName)(params)
+  }
+
+  /**
+    * create dataPack for iterator via itername and params
+    * @param iterName name of iterator: "MNISTIter" or "ImageRecordIter"
+    * @param params parameters for create iterator
+    * @return
+    */
+  def createDataPack(iterName: String)(params: Map[String, String]): DataPack = {
+    new MXDataPack(iterName, params)
   }
 
   /**
@@ -53,7 +70,7 @@ object IO {
   }
 
   /**
-   *
+   * DataIter creator
    * @param handle
    * @param params
    * @return
@@ -89,10 +106,11 @@ case class DataBatch(data: IndexedSeq[NDArray],
                      index: IndexedSeq[Long],
                      pad: Int)
 
+
 /**
  * DataIter object in mxnet.
  */
-abstract class DataIter(val batchSize: Int = 0) {
+abstract class DataIter(val batchSize: Int = 0) extends Iterator[DataBatch] {
   /**
    * reset the iterator
    */
@@ -144,6 +162,15 @@ abstract class DataIter(val batchSize: Int = 0) {
   def provideLabel: Map[String, Shape]
 }
 
+abstract class DataPack() extends Iterable[DataBatch] {
+  /**
+    * get data iterator
+    * @return DataIter
+    */
+  def iterator: DataIter
+}
+
+
 /**
   * DataIter built in MXNet.
   * @param handle the handle to the underlying C++ Data Iterator
@@ -154,10 +181,14 @@ class MXDataIter(private[mxnet] val handle: DataIterHandle,
                  private val labelName: String = "label") extends DataIter {
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
 
-  // load the first batch to get shape information
-  private var firstBatch: DataBatch = next()
-  private val data = firstBatch.data(0)
-  private val label = firstBatch.label(0)
+  // use currentBatch to implement hasNext
+  // (may be this is not the best way to do this work,
+  // fix me if any better way found)
+  private var currentBatch: DataBatch = null
+  iterNext()
+  private val data = currentBatch.data(0)
+  private val label = currentBatch.label(0)
+  reset()
 
   // properties
   val _provideData: Map[String, Shape] = Map(dataName -> data.shape)
@@ -173,7 +204,7 @@ class MXDataIter(private[mxnet] val handle: DataIterHandle,
    */
   override def reset(): Unit = {
     // TODO: self._debug_at_begin = True
-    firstBatch = null
+    currentBatch = null
     checkCall(_LIB.mxDataIterBeforeFirst(handle))
   }
 
@@ -182,20 +213,17 @@ class MXDataIter(private[mxnet] val handle: DataIterHandle,
     // if self._debug_skip_load and not self._debug_at_begin:
     //   return DataBatch(data =[self.getdata()], label =[self.getlabel()],
     //                    pad = self.getpad(), index = self.getindex())
-    if (firstBatch != null) {
-      val batch = firstBatch
-      firstBatch = null
+    if (currentBatch == null) {
+      iterNext()
+    }
+
+    if (currentBatch != null) {
+      val batch = currentBatch
+      currentBatch = null
       batch
     } else {
-      // self._debug_at_begin = False
-      val nextRes = new RefInt
-      checkCall(_LIB.mxDataIterNext(handle, nextRes))
-      if (nextRes.value > 0) {
-        new DataBatch(data = getData(), label = getLabel(), index = getIndex(), pad = getPad())
-      } else {
         // TODO raise StopIteration
         null
-      }
     }
   }
 
@@ -204,16 +232,14 @@ class MXDataIter(private[mxnet] val handle: DataIterHandle,
    * @return whether the move is successful
    */
   override def iterNext(): Boolean = {
-    if (firstBatch != null) {
-      // FIXME: this implementation is confusing,
-      // if we call iterNext() continuously from the very beginning,
-      // it always returns true but never moves forward
-      true
-    } else {
       val next = new RefInt
       checkCall(_LIB.mxDataIterNext(handle, next))
+      currentBatch = null
+      if (next.value > 0) {
+        currentBatch = new DataBatch(data = getData(), label = getLabel(),
+                                     index = getIndex(), pad = getPad())
+      }
       next.value > 0
-    }
   }
 
   /**
@@ -263,8 +289,27 @@ class MXDataIter(private[mxnet] val handle: DataIterHandle,
 
   // The name and shape of label provided by this iterator
   override def provideLabel: Map[String, Shape] = _provideLabel
+
+  override def hasNext: Boolean = {
+    if (currentBatch != null) {
+      true
+    } else {
+      iterNext()
+    }
+  }
 }
+
 // scalastyle:on finalize
+class MXDataPack(val iterName: String,
+                 val params: Map[String, String]) extends DataPack {
+  /**
+    * get data iterator
+    * @return DataIter
+    */
+  override def iterator: DataIter = {
+    createIterator(iterName, params)
+  }
+}
 
 /**
   * Base class for prefetching iterators. Takes one or more DataIters
@@ -318,6 +363,8 @@ class PrefetchingIter(val iters: List[DataIter],
 
   // The name and shape of label provided by this iterator
   override def provideLabel: Map[String, Shape] = ???
+
+  override def hasNext: Boolean = ???
 }
 
 /**
@@ -377,4 +424,6 @@ class NDArrayIter(data: NDArray, label: NDArray = null,
 
   // The name and shape of label provided by this iterator
   override def provideLabel: Map[String, Shape] = ???
+
+  override def hasNext: Boolean = ???
 }
