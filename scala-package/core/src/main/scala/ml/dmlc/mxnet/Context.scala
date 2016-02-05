@@ -5,7 +5,7 @@ object Context {
   val devstr2type = Map("cpu" -> 1, "gpu" -> 2, "cpu_pinned" -> 3)
   private var _defaultCtx = new Context("cpu", 0)
 
-  def defaultCtx = _defaultCtx
+  def defaultCtx: Context = _defaultCtx
 
   def cpu(deviceId: Int = 0): Context = {
     new Context("cpu", deviceId)

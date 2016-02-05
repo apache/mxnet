@@ -467,7 +467,7 @@ object NDArray {
   }
 
   /**
-   * Join a sequence of arrays at the first axis
+   * Join a sequence of arrays at axis-0
    * TODO: shall we make it native?
    * @param arrays
    */
@@ -601,8 +601,14 @@ class NDArray(private[mxnet] val handle: NDArrayHandle, val writable: Boolean = 
     slice(range._1, range._2)
   }
 
-  def slice(start: Int): NDArray = {
-    slice(start, shape(0))
+  /**
+   * Return a sliced NDArray at the ith position of axis0
+   * NDArray only support continuous slicing on axis 0
+   * @param i
+   * @return a sliced NDArray that shares memory with current one.
+   */
+  def slice(i: Int): NDArray = {
+    slice(i, i + 1)
   }
 
   /**
@@ -811,6 +817,13 @@ class NDArray(private[mxnet] val handle: NDArrayHandle, val writable: Boolean = 
 
   // Get size of current NDArray.
   def size: Int = shape.product
+
+  override def equals(o: Any): Boolean = o match {
+    case that: NDArray => {
+      that.shape == this.shape && that.toArray.sameElements(this.toArray)
+    }
+    case _ => false
+  }
 }
 // scalastyle:on finalize
 

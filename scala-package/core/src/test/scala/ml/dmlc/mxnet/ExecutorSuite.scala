@@ -1,6 +1,7 @@
 package ml.dmlc.mxnet
 
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import ml.dmlc.mxnet.CheckUtils._
 
 class ExecutorSuite extends FunSuite with BeforeAndAfterAll {
   test("bind") {
@@ -38,11 +39,5 @@ class ExecutorSuite extends FunSuite with BeforeAndAfterAll {
     executor.backward(Array(outGrad))
     assert(reldiff(lhsGrad, lhsGrad2) < 1e-6)
     assert(reldiff(rhsGrad, rhsGrad2) < 1e-6)
-  }
-
-  private def reldiff(a: NDArray, b: NDArray): Float = {
-    val diff = NDArray.sum(NDArray.abs(a - b)).toScalar
-    val norm = NDArray.sum(NDArray.abs(a)).toScalar
-    diff / norm
   }
 }

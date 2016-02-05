@@ -555,6 +555,10 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
     bind(ctx, args, argsGrad, "write", Nil, null)
   }
 
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Map[String, NDArray]): Executor = {
+    bind(ctx, args, argsGrad, "write", Nil, null)
+  }
+
   def bind(ctx: Context, args: Seq[NDArray]): Executor = {
     val symbolArguments = listArguments()
     bindHelper(ctx, symbolArguments, args, null,
@@ -730,6 +734,21 @@ object Symbol {
 
   def Cast: Map[String, Any] => Symbol = {
     createNoCheck("Cast")
+  }
+
+  def ElementWiseSum(name: String, inputs: Symbol *): Symbol = {
+    create("ElementWiseSum", inputs.toArray, Map("name" -> name), null)
+  }
+
+  def ElementWiseSum(inputs: Seq[Symbol], name: String): Symbol = {
+    create("ElementWiseSum", inputs.toArray, Map("name" -> name), null)
+  }
+
+  def Concat(inputs: Seq[Symbol],
+             paramKwargs: Map[String, Any],
+             attr: Map[String, String] = null): Symbol = {
+    create("Concat", inputs.toArray,
+           paramKwargs.map { case (k, v) => (k, v.toString) }, attr)
   }
 
   /**

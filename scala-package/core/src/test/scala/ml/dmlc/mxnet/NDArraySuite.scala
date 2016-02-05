@@ -4,10 +4,9 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 
 import ml.dmlc.mxnet.NDArrayConversions._
-import org.scalatest.{BeforeAndAfterAll, FunSuite}
-import org.scalactic.Tolerance._
+import org.scalatest.{Matchers, BeforeAndAfterAll, FunSuite}
 
-class NDArraySuite extends FunSuite with BeforeAndAfterAll {
+class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
   private val sequence: AtomicInteger = new AtomicInteger(0)
 
   test("to java array") {
@@ -297,5 +296,27 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
     val ctx = ndarray.context
     assert(ctx.deviceType === "cpu")
     assert(ctx.deviceId === 0)
+  }
+
+  test("equals") {
+    val ndarray1 = NDArray.array(Array(1f, 2f, 3f), shape = Vector(3, 1))
+    val ndarray2 = NDArray.array(Array(1f, 2f, 3f), shape = Vector(3, 1))
+    val ndarray3 = NDArray.array(Array(1f, 2f, 3f), shape = Vector(1, 3))
+    val ndarray4 = NDArray.array(Array(3f, 2f, 3f), shape = Vector(3, 1))
+    ndarray1 shouldEqual ndarray2
+    ndarray1 shouldNot equal(ndarray3)
+    ndarray1 shouldNot equal(ndarray4)
+  }
+
+  test("slice") {
+    val arr =  NDArray.array(Array(1f, 2f, 3f, 4f, 5f, 6f), shape = Vector(3, 2))
+
+    val arr1 = arr.slice(1)
+    assert(arr1.shape === Vector(1, 2))
+    assert(arr1.toArray === Array(3f, 4f))
+
+    val arr2 = arr.slice(1, 3)
+    assert(arr2.shape === Vector(2, 2))
+    assert(arr2.toArray === Array(3f, 4f, 5f, 6f))
   }
 }

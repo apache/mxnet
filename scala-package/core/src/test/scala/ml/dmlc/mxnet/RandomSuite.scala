@@ -11,7 +11,7 @@ class RandomSuite extends FunSuite with BeforeAndAfterAll {
       val un1 = Random.uniform(a, b, shape)
       Random.seed(128)
       val un2 = Random.uniform(a, b, shape)
-      assert(un1.toArray === un2.toArray)
+      assert(un1 === un2)
       assert(Math.abs(un1.toArray.sum / un1.size - (a + b) / 2f) < 0.1)
     }
   }
@@ -23,7 +23,7 @@ class RandomSuite extends FunSuite with BeforeAndAfterAll {
     val ret1 = Random.normal(mu, sigma, shape)
     Random.seed(128)
     val ret2 = Random.normal(mu, sigma, shape)
-    assert(ret1.toArray === ret2.toArray)
+    assert(ret1 === ret2)
 
     val array = ret1.toArray
     val mean = array.sum / ret1.size
