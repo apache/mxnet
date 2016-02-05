@@ -629,7 +629,8 @@ class Symbol(object):
         executor = self.bind(ctx, arg_ndarrays, grad_ndarrays, grad_req, aux_ndarrays)
         return executor
 
-    def bind(self, ctx, args, args_grad=None, grad_req='write', aux_states=None, group2ctx=None):
+    def bind(self, ctx, args, args_grad=None, grad_req='write',
+             aux_states=None, group2ctx=None, shared_exec=None):
         """Bind current symbol to get an executor.
 
         Parameters
@@ -674,6 +675,11 @@ class Symbol(object):
 
         group2ctx : dict of string to mx.Context
             The dict mapping the ``ctx_group`` attribute to the context assignment.
+
+        shared_exec : mx.executor.Executor
+            Executor to share memory with. This is intended for runtime reshaping, variable length
+            sequences, etc. The returned executor shares state with shared_exec, and should not be
+            used in parallel with it.
 
         Returns
         -------
@@ -736,21 +742,23 @@ class Symbol(object):
                 ctx_map_dev_ids.append(ctypes.c_int(val.device_id))
 
         handle = ExecutorHandle()
-        check_call(_LIB.MXExecutorBindX(self.handle,
-                                        ctypes.c_int(ctx.device_typeid),
-                                        ctypes.c_int(ctx.device_id),
-                                        mx_uint(len(ctx_map_keys)),
-                                        c_array(ctypes.c_char_p, ctx_map_keys),
-                                        c_array(ctypes.c_int, ctx_map_dev_types),
-                                        c_array(ctypes.c_int, ctx_map_dev_ids),
-                                        mx_uint(len(args)),
-                                        args_handle,
-                                        args_grad_handle,
-                                        reqs_array,
-                                        mx_uint(len(aux_states)),
-                                        aux_args_handle,
-                                        ctypes.byref(handle)))
-        executor = Executor(handle, self)
+        shared_handle = shared_exec.handle if shared_exec is not None else ExecutorHandle()
+        check_call(_LIB.MXExecutorBindEX(self.handle,
+                                         ctypes.c_int(ctx.device_typeid),
+                                         ctypes.c_int(ctx.device_id),
+                                         mx_uint(len(ctx_map_keys)),
+                                         c_array(ctypes.c_char_p, ctx_map_keys),
+                                         c_array(ctypes.c_int, ctx_map_dev_types),
+                                         c_array(ctypes.c_int, ctx_map_dev_ids),
+                                         mx_uint(len(args)),
+                                         args_handle,
+                                         args_grad_handle,
+                                         reqs_array,
+                                         mx_uint(len(aux_states)),
+                                         aux_args_handle,
+                                         shared_handle,
+                                         ctypes.byref(handle)))
+        executor = Executor(handle, self, ctx, grad_req, group2ctx)
         executor.arg_arrays = args
         executor.grad_arrays = args_grad
         executor.aux_arrays = aux_states

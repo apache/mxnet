@@ -343,6 +343,7 @@ class Executor {
    * \param arg_grad_store NDArray that is used to store the gradient output of the input arguments.
    * \param grad_req_type requirment type of gradient saving. Can only be in {kNullOp, kAddTo, kWriteTo}.
    * \param aux_states NDArray that is used as internal state in op
+   * \param shared_exec input executor to share memory with.
    * \return a new executor.
    */
   static Executor *Bind(Symbol symbol,
@@ -351,7 +352,8 @@ class Executor {
                         const std::vector<NDArray> &in_args,
                         const std::vector<NDArray> &arg_grad_store,
                         const std::vector<OpReqType> &grad_req_type,
-                        const std::vector<NDArray> &aux_states);
+                        const std::vector<NDArray> &aux_states,
+                        Executor* shared_exec = NULL);
   /*!
    * \brief the prototype of user-defined monitor callback
    */

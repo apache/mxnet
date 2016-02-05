@@ -901,6 +901,29 @@ int MXExecutorBindX(SymbolHandle symbol_handle,
                     mx_uint aux_states_len,
                     NDArrayHandle *aux_states,
                     ExecutorHandle *out) {
+  return MXExecutorBindEX(symbol_handle,
+                          dev_type, dev_id,
+                          num_map_keys, map_keys, map_dev_types, map_dev_ids,
+                          len, in_args, arg_grad_store, grad_req_type,
+                          aux_states_len, aux_states,
+                          NULL, out);
+}
+
+int MXExecutorBindEX(SymbolHandle symbol_handle,
+                     int dev_type,
+                     int dev_id,
+                     mx_uint num_map_keys,
+                     const char** map_keys,
+                     const int* map_dev_types,
+                     const int* map_dev_ids,
+                     mx_uint len,
+                     NDArrayHandle *in_args,
+                     NDArrayHandle *arg_grad_store,
+                     mx_uint *grad_req_type,
+                     mx_uint aux_states_len,
+                     NDArrayHandle *aux_states,
+                     ExecutorHandle *shared_exec,
+                     ExecutorHandle *out) {
   API_BEGIN();
   Symbol *symb = static_cast<Symbol*>(symbol_handle);
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
@@ -930,7 +953,8 @@ int MXExecutorBindX(SymbolHandle symbol_handle,
     aux_states_vec.push_back(*(aux_states_ptr[i]));
   }
   *out = Executor::Bind(*symb, ctx, ctx_map, in_args_vec,
-                        arg_grad_vec, grad_req_vec, aux_states_vec);
+                        arg_grad_vec, grad_req_vec, aux_states_vec,
+                        reinterpret_cast<Executor*>(shared_exec));
   API_END();
 }
 
