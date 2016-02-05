@@ -824,6 +824,11 @@ class NDArray(private[mxnet] val handle: NDArrayHandle, val writable: Boolean = 
     }
     case _ => false
   }
+
+  override def hashCode: Int = {
+    // TODO: naive implementation
+    shape.hashCode + toArray.hashCode
+  }
 }
 // scalastyle:on finalize
 

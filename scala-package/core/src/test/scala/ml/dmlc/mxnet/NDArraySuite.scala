@@ -309,7 +309,7 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
   }
 
   test("slice") {
-    val arr =  NDArray.array(Array(1f, 2f, 3f, 4f, 5f, 6f), shape = Vector(3, 2))
+    val arr = NDArray.array(Array(1f, 2f, 3f, 4f, 5f, 6f), shape = Vector(3, 2))
 
     val arr1 = arr.slice(1)
     assert(arr1.shape === Vector(1, 2))
