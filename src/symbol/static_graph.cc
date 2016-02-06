@@ -101,6 +101,11 @@ bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
           os << "Corresponding keyword of symbol: " << source.name << '\n' << err.msg;
         }
         throw dmlc::Error(os.str());
+      } catch (const dmlc::Error &err) {
+        const std::string &op_name = node.name;
+        std::ostringstream os;
+        os << "InferShape Error in " << op_name << ": " << err.what();
+        throw dmlc::Error(os.str());
       }
       for (size_t i = 0; i < node.inputs.size(); ++i) {
         const DataEntry& e = node.inputs[i];
@@ -191,6 +196,11 @@ bool StaticGraph::InferNodeTypes(const std::vector<uint32_t> &topo_order,
         if (source.is_variable()) {
           os << "Corresponding keyword of symbol: " << source.name << '\n' << err.msg;
         }
+        throw dmlc::Error(os.str());
+      } catch (const dmlc::Error &err) {
+        const std::string &op_name = node.name;
+        std::ostringstream os;
+        os << "InferType Error in " << op_name << ": " << err.what();
         throw dmlc::Error(os.str());
       }
       for (size_t i = 0; i < node.inputs.size(); ++i) {
@@ -567,9 +577,15 @@ void StaticGraph::Node::Load(dmlc::JSONReader *reader) {
   helper.ReadAllFields(reader);
 
   if (op_type_str != "null") {
-    op.reset(OperatorProperty::Create(op_type_str.c_str()));
-    std::vector<std::pair<std::string, std::string> > vec(param.begin(), param.end());
-    op->Init(vec);
+    try {
+      op.reset(OperatorProperty::Create(op_type_str.c_str()));
+      std::vector<std::pair<std::string, std::string> > vec(param.begin(), param.end());
+      op->Init(vec);
+    } catch (const dmlc::Error &err) {
+      std::ostringstream os;
+      os << "Failed loading Op " << name << " of type " << op_type_str << ": " << err.what();
+      throw dmlc::Error(os.str());
+    }
   } else {
     op.reset(nullptr);
   }

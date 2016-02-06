@@ -36,9 +36,9 @@ struct CropParam : public dmlc::Parameter<CropParam> {
       "and width of the second input symbol, we name crop_like here");
     int shape[] = {0, 0};
     DMLC_DECLARE_FIELD(offset).set_default(TShape(shape, shape + 2))
-    .describe("corp offset coordinate: (y, x)");
+    .describe("crop offset coordinate: (y, x)");
     DMLC_DECLARE_FIELD(h_w).set_default(TShape(shape, shape + 2))
-    .describe("corp height and weight: (h, w)");
+    .describe("crop height and weight: (h, w)");
     DMLC_DECLARE_FIELD(center_crop).set_default(false)
     .describe("If set to true, then it will use be the center_crop,"
       "or it will crop using the shape of crop_like");

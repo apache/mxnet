@@ -10,6 +10,16 @@
 #include "./ndarray_function.h"
 // this file will be included twice by CPU and GPU
 // macro to help specialize evaluation function
+
+#ifndef DECL_TERNARY
+#define DECL_TERNARY(XPU, OP, FUN)                                       \
+  template<>                                                            \
+  void Eval<XPU, OP>(const TBlob &lhs, const TBlob &mhs, \
+                                       const TBlob &rhs, TBlob *ret, RunContext ctx) { \
+    FUN<XPU, OP>(lhs, mhs, rhs, ret, ctx);                                   \
+  }
+#endif
+
 #ifndef DECL_BINARY
 #define DECL_BINARY(XPU, OP, FUN)                                       \
   template<>                                                            \
@@ -98,6 +108,17 @@ inline void EvalMatChooseRowElem_(const TBlob &lhs, const TBlob &rhs,
   ret->get<xpu, 1, real_t>(s)
       = mat_choose_row_element(lhs.get<xpu, 2, real_t>(s),
                                rhs.get<xpu, 1, real_t>(s));
+}
+
+template<typename xpu, typename OP>
+inline void EvalMatFillRowElem_(const TBlob &lhs, const TBlob &mhs, const TBlob &rhs,
+                                  TBlob *ret, RunContext ctx) {
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  ret->get<xpu, 2, real_t>(s)
+          = mat_fill_row_element(lhs.get<xpu, 2, real_t>(s),
+                                 mhs.get<xpu, 1, real_t>(s),
+                                 rhs.get<xpu, 1, real_t>(s));
 }
 
 template<typename xpu, typename OP, bool reverse>
@@ -253,6 +274,7 @@ void ElementwiseSum<DEVICE>(const std::vector<TBlob> source,
 
 // declarations
 DECL_BINARY(DEVICE, MatChooseRowElem, EvalMatChooseRowElem_)
+DECL_TERNARY(DEVICE, MatFillRowElem, EvalMatFillRowElem_)
 DECL_BINARY(DEVICE, Dot, EvalDot_)
 DECL_BINARY(DEVICE, OneHotEncode, EvalOneHot_)
 DECL_BINARY(DEVICE, Plus, EvalBinary_)

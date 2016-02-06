@@ -8,6 +8,7 @@
 #include <mxnet/symbolic.h>
 #include <memory>
 #include <map>
+#include <set>
 #include "./graph_executor.h"
 #include "./graph_algorithm.h"
 
@@ -345,7 +346,7 @@ void GraphExecutor::AssignContext(const Context default_ctx,
                                   std::vector<Context> *ctx_plan) {
   ctx_plan->resize(graph_.nodes.size());
   std::vector<bool> assigned(graph_.nodes.size(), false);
-  // assign context of node to the binded version
+  // assign context of node to the bound version
   for (size_t i = 0; i < graph_.arg_nodes.size(); ++i) {
     uint32_t nid = graph_.arg_nodes[i];
     assigned[nid] = true;
@@ -590,7 +591,7 @@ void GraphExecutor::InitDataEntryMemory() {
   }
 
   // use allocator to allocate memory.
-  GraphStorageAllocator allocator(&graph_, topo_order_);
+  GraphStorageAllocator allocator(&graph_, topo_order_, shared_mem_);
   for (size_t i = 0; i < topo_order_.size(); ++i) {
     uint32_t nid = topo_order_[i];
     if (!op_nodes_[nid].activated) continue;
@@ -898,10 +899,11 @@ Executor *Executor::Bind(Symbol symbol,
                          const std::vector<NDArray> &in_args,
                          const std::vector<NDArray> &arg_grad_store,
                          const std::vector<OpReqType> &grad_req_type,
-                         const std::vector<NDArray> &aux_states) {
+                         const std::vector<NDArray> &aux_states,
+                         Executor* shared_exec) {
   GraphExecutor *exec = new GraphExecutor();
   exec->Init(symbol, default_ctx, group2ctx,
-             in_args, arg_grad_store, grad_req_type, aux_states);
+             in_args, arg_grad_store, grad_req_type, aux_states, shared_exec);
   return exec;
 }
 }  // namespace mxnet

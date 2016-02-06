@@ -4,6 +4,8 @@
 from __future__ import absolute_import
 
 import ctypes
+import copy
+import numpy as np
 from .base import _LIB
 from .base import mx_uint, NDArrayHandle, ExecutorHandle
 from .base import check_call, c_array, py_str
@@ -21,7 +23,7 @@ def _monitor_callback_wrapper(callback):
 
 class Executor(object):
     """ Executor is the actual executing object of MXNet."""
-    def __init__(self, handle, symbol):
+    def __init__(self, handle, symbol, ctx, grad_req, group2ctx):
         """Constructor, used Symbol.bind and Symbol.simple_bind instead.
 
         Parameters
@@ -40,11 +42,14 @@ class Executor(object):
         self.grad_arrays = []
         self.aux_arrays = []
         self.outputs = self._get_outputs()
-        self._symbol = symbol
+        self._symbol = copy.deepcopy(symbol)
         self._arg_dict = None
         self._grad_dict = None
         self._aux_dict = None
         self._monitor_callback = None
+        self._ctx = copy.deepcopy(ctx)
+        self._grad_req = copy.deepcopy(grad_req)
+        self._group2ctx = copy.deepcopy(group2ctx)
 
     def __del__(self):
         check_call(_LIB.MXExecutorFree(self.handle))
@@ -64,7 +69,7 @@ class Executor(object):
 
         Returns
         -------
-        A list of ndarray binded to the heads of executor.
+        A list of ndarray bound to the heads of executor.
         """
         out_size = mx_uint()
         handles = ctypes.POINTER(NDArrayHandle)()
@@ -73,7 +78,7 @@ class Executor(object):
         return [NDArray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
 
     def forward(self, is_train=False, **kwargs):
-        """Calculate the outputs specified by the binded symbol.
+        """Calculate the outputs specified by the bound symbol.
 
         Parameters
         ----------
@@ -215,6 +220,84 @@ class Executor(object):
                 if not allow_extra_params:
                     raise ValueError('Find name %s that is not in the auxiliary states' % name)
 
+    def reshape(self, partial_shaping=False, allow_up_sizing=False, **kwargs):
+        """Return a new executor with the same symbol and shared memory,
+        but different input/output shapes.
+        For runtime reshaping, variable length sequences, etc.
+        The returned executor shares state with the current one,
+        and cannot be used in parallel with it.
+
+        Parameters
+        ----------
+        partial_shaping : bool
+            Whether to allow changing the shape of unspecified arguments.
+        allow_up_sizing : bool
+            Whether to allow allocating new ndarrays that's larger than the original.
+        kwargs : dict of string to tuple of int
+            new shape for arguments.
+        Returns
+        -------
+        exec : Executor
+            A new executor that shares memory with self.
+        """
+        # pylint: disable=too-many-branches
+        arg_shapes, _, aux_shapes = self._symbol.infer_shape(**kwargs)
+        if arg_shapes == None:
+            raise ValueError("Insufficient argument shapes provided.")
+
+        new_arg_dict = {}
+        new_grad_dict = {}
+        for i, name in enumerate(self._symbol.list_arguments()):
+            new_shape = arg_shapes[i]
+            arr = self.arg_arrays[i]
+            darr = self.grad_arrays[i]
+            if partial_shaping or name in kwargs or new_shape == arr.shape:
+                if np.prod(new_shape) > np.prod(arr.shape):
+                    assert allow_up_sizing, "New shape of arg:%s larger than original. "%name + \
+                        "First making a big executor and then down sizing it " + \
+                        "is more efficient than the reverse." + \
+                        "If you really want to up size, set allow_up_sizing=True " + \
+                        "to enable allocation of new arrays."
+                    new_arg_dict[name] = nd.empty(new_shape, ctx=arr.context)
+                    if darr is not None:
+                        new_grad_dict[name] = nd.empty(new_shape, ctx=darr.context)
+                else:
+                    new_arg_dict[name] = arr.reshape(new_shape)
+                    if darr is not None:
+                        new_grad_dict[name] = darr.reshape(new_shape)
+            else:
+                raise AssertionError("Shape of unspecified array arg:%s changed. "%name + \
+                    "This can cause the new executor to not share parameters " + \
+                    "with the old one. Please check for error in network." +\
+                    "If this is intended, set partial_shaping=True to suppress this warning.")
+
+        new_aux_dict = {}
+        for name, new_shape, arr in zip(self._symbol.list_auxiliary_states(),
+                                        aux_shapes, self.aux_arrays):
+            if partial_shaping or new_shape == arr.shape:
+                if np.prod(new_shape) > np.prod(arr.shape):
+                    assert allow_up_sizing, "New shape of arg:%s larger than original. "%name + \
+                        "First making a big executor and then down sizing it " + \
+                        "is more efficient than the reverse." + \
+                        "If you really want to up size, set allow_up_sizing=True " + \
+                        "to enable allocation of new arrays."
+                    new_aux_dict[name] = nd.empty(new_shape, ctx=arr.context)
+                else:
+                    new_aux_dict[name] = arr.reshape(new_shape)
+            else:
+                raise AssertionError("Shape of unspecified array aux:%s changed. "%name + \
+                    "This can cause the new executor to not share parameters " + \
+                    "with the old one. Please check for error in network." +\
+                    "If this is intended, set partial_shaping=True to suppress this warning.")
+
+        return self._symbol.bind(self._ctx,
+                                 args=new_arg_dict,
+                                 args_grad=new_grad_dict,
+                                 grad_req=self._grad_req,
+                                 aux_states=new_aux_dict,
+                                 group2ctx=self._group2ctx,
+                                 shared_exec=self)
+
     def debug_str(self):
         """Get a debug string about internal execution plan.
 
@@ -350,25 +433,28 @@ class DataParallelExecutorManager(object):
         slices = _split_input_slice(train_data.batch_size, work_load_list)
         self.slices = slices
 
+        self.data_names = [x[0] for x in train_data.provide_data]
+        self.label_names = [x[0] for x in train_data.provide_label]
+        self.aux_names = aux_names
+        self.param_idx = [i for i in range(len(arg_names)) if arg_names[i] in param_names]
+        self.param_names = [arg_names[i] for i in self.param_idx]
+
+        update_dict = {k: 'write' if k in self.param_names else 'null' for k in arg_names}
+
         self.train_execs = []
         for i in range(len(ctx)):
             data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
                            for k, v in train_data.provide_data + train_data.provide_label}
-            train_exec = symbol.simple_bind(ctx[i], 'write', **data_shapes)
+            train_exec = symbol.simple_bind(ctx[i], update_dict, **data_shapes)
             self.train_execs.append(train_exec)
 
         # data structure
-        self.data_names = [x[0] for x in train_data.provide_data]
-        self.label_names = [x[0] for x in train_data.provide_label]
-        self.aux_names = aux_names
 
         self.data_arrays = [[(slices[i], e.arg_dict[name]) for i, e in enumerate(self.train_execs)]
                             for name in self.data_names]
         self.label_arrays = [[(slices[i], e.arg_dict[name]) for i, e in enumerate(self.train_execs)]
                              for name in self.label_names]
 
-        self.param_idx = [i for i in range(len(arg_names)) if arg_names[i] in param_names]
-        self.param_names = [arg_names[i] for i in self.param_idx]
         self.param_arrays = [[e.arg_arrays[i] for e in self.train_execs]
                              for i in self.param_idx]
         self.grad_arrays = [[e.grad_arrays[i] for e in self.train_execs]
@@ -376,11 +462,6 @@ class DataParallelExecutorManager(object):
 
         self.aux_arrays = [[e.aux_arrays[i] for e in self.train_execs]
                            for i in range(len(aux_names))]
-
-        batch_size = train_data.batch_size
-
-        output_shapes = [tuple([batch_size]+list(x.shape[1:])) for x in self.train_execs[0].outputs]
-        self.cpu_output_arrays = [nd.zeros(s) for s in output_shapes]
 
     def install_monitor(self, monitor):
         """ Install monitor on all executors """
@@ -426,12 +507,16 @@ class DataParallelExecutorManager(object):
 
     def forward(self, is_train=False):
         """ Perform a forward pass on each executor """
-        for texec, islice in zip(self.train_execs, self.slices):
+        for texec in self.train_execs:
             texec.forward(is_train=is_train)
-            for cpu_out, dev_out in zip(self.cpu_output_arrays, texec.outputs):
-                dev_out.copyto(cpu_out[islice])
 
     def backward(self):
         """ Perform a backward pass on each executor """
         for texec in self.train_execs:
             texec.backward()
+
+    def update_metric(self, metric, labels):
+        """ Update evaluation metric with label and current outputs """
+        for texec, islice in zip(self.train_execs, self.slices):
+            labels_slice = [label[islice] for label in labels]
+            metric.update(labels_slice, texec.outputs)

@@ -139,7 +139,7 @@ class Symbol {
    *     For unknown shapes, InferShape will try to fill in the correct Shape in in_shape
    *     For known shapes, InferShape will check shape consistency
    *
-   *     common practice: set the shape of data input, and usually weight's shape can be infered
+   *     common practice: set the shape of data input, and usually weight's shape can be inferred
    *
    * \param out_shapes Use to store the infered shapes of outputs.
    * \param aux_shapes Use to store the infered shapes of auxiliary states
@@ -176,10 +176,10 @@ class Symbol {
    *     For unknown types, Infertype will try to fill in the correct type in in_type
    *     For known types, Infertype will check type consistency
    *
-   *     common practice: set the type of data input, and usually weight's type can be infered
+   *     common practice: set the type of data input, and usually weight's type can be inferred
    *
-   * \param out_types Use to store the infered types of outputs.
-   * \param aux_types Use to store the infered types of auxiliary states
+   * \param out_types Use to store the inferred types of outputs.
+   * \param aux_types Use to store the inferred types of auxiliary states
    * \return true if the type inference is successful, false if there is not enough information.
    * \throws dmlc::Error if the known arg_types are inconsistent.
    */
@@ -189,9 +189,9 @@ class Symbol {
   /*!
    * \brief infer the types by providing types of known arguments.
    * \param known_arg_types map of argument name to type of arguments with known types.
-   * \param arg_types used to store infered types of arguments.
-   * \param out_types used to store infered types of outputs.
-   * \param aux_types Use to store the infered types of auxiliary states
+   * \param arg_types used to store inferred types of arguments.
+   * \param out_types used to store inferred types of outputs.
+   * \param aux_types Use to store the inferred types of auxiliary states
    * \return true if the type inference is successful, false if there is not enough information.
    * \throws dmlc::Error if the known arg_types are inconsistent.
    */
@@ -348,6 +348,7 @@ class Executor {
    * \param arg_grad_store NDArray that is used to store the gradient output of the input arguments.
    * \param grad_req_type requirment type of gradient saving. Can only be in {kNullOp, kAddTo, kWriteTo}.
    * \param aux_states NDArray that is used as internal state in op
+   * \param shared_exec input executor to share memory with.
    * \return a new executor.
    */
   static Executor *Bind(Symbol symbol,
@@ -356,7 +357,8 @@ class Executor {
                         const std::vector<NDArray> &in_args,
                         const std::vector<NDArray> &arg_grad_store,
                         const std::vector<OpReqType> &grad_req_type,
-                        const std::vector<NDArray> &aux_states);
+                        const std::vector<NDArray> &aux_states,
+                        Executor* shared_exec = NULL);
   /*!
    * \brief the prototype of user-defined monitor callback
    */

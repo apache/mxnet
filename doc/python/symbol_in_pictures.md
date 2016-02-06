@@ -35,7 +35,7 @@ to get a ```Executor```.
 
 ![Bind](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/bind_basic.png)
 
-You can call ```Executor.Forward``` to get the output results, given the binded NDArrays as input.
+You can call ```Executor.Forward``` to get the output results, given the bound NDArrays as input.
 
 ![Forward](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/executor_forward.png)
 

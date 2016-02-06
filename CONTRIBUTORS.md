@@ -96,3 +96,4 @@ List of Contributors
 * [Ruixiang Zhang](https://github.com/sodabeta7)
 * [Lodewic van Twillert](https://github.com/Lodewic)
 * [Aditya Kumar](https://github.com/hiraditya)
+* [Dan Becker](https://github.com/dansbecker)

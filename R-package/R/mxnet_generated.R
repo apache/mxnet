@@ -413,6 +413,8 @@ mx.symbol.Cast <- function(...) {
 
 #' Perform an feature concat on channel dim (dim 1) over all the inputs.
 #' 
+#' @param data  Symbol[]
+#'     List of tensors to concatenate
 #' @param num.args  int, required
 #'     Number of inputs to be concated.
 #' @param dim  int, optional, default='1'
@@ -459,14 +461,14 @@ mx.symbol.Convolution <- function(...) {
   mx.varg.symbol.Convolution(list(...))
 }
 
-#' Crop the 2th and 3th dim of input data, with the corresponding size of w_h orwith widht and height of the second input symbol
+#' Crop the 2nd and 3rd dim of input data, with the corresponding size of w_h or with width and height of the second input symbol
 #' 
 #' @param num.args  int, required
 #'     Number of inputs for crop, if equals one, then we will use the h_wfor crop heihgt and width, else if equals two, then we will use the heightand width of the second input symbol, we name crop_like here
 #' @param offset  Shape(tuple), optional, default=(0, 0)
-#'     corp offset coordinate: (y, x)
+#'     crop offset coordinate: (y, x)
 #' @param h.w  Shape(tuple), optional, default=(0, 0)
-#'     corp height and weight: (h, w)
+#'     crop height and weight: (h, w)
 #' @param center.crop  boolean, optional, default=False
 #'     If set to true, then it will use be the center_crop,or it will crop using the shape of crop_like
 #' @param name  string, optional
@@ -527,7 +529,7 @@ mx.symbol.Dropout <- function(...) {
 #' Perform an elementwise sum over all the inputs.
 #' 
 #' @param num.args  int, required
-#'     Number of inputs to be sumed.
+#'     Number of inputs to be summed.
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -729,7 +731,7 @@ mx.symbol.Pooling <- function(...) {
 #' @param data  Symbol
 #'     Input data to  reshape.
 #' @param target.shape  Shape(tuple), required
-#'     Target new shape. One and only one dim can be 0, in which case it will be infered from the rest of dims
+#'     Target new shape. One and only one dim can be 0, in which case it will be inferred from the rest of dims
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -759,11 +761,11 @@ mx.symbol.SliceChannel <- function(...) {
 #' @param grad.scale  float, optional, default=1
 #'     Scale the gradient by a float factor
 #' @param ignore.label  float, optional, default=-1
-#'     the ignore_label will not work in backward, and this onlybe used when multi_output=true
+#'     the ignore_label will not work in backward, and this only be used when multi_output=true
 #' @param multi.output  boolean, optional, default=False
-#'     If set to true, for a (n,k,x_1,..,x_n) dimensionalinput tensor, softmax will generate n*x_1*...*x_n output, eachhas k classes
+#'     If set to true, for a (n,k,x_1,..,x_n) dimensional input tensor, softmax will generate n*x_1*...*x_n output, each has k classes
 #' @param use.ignore  boolean, optional, default=False
-#'     If set to true, the ignore_label value will not contributorto the backward gradient
+#'     If set to true, the ignore_label value will not contribute to the backward gradient
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -792,12 +794,14 @@ mx.symbol.SoftmaxActivation <- function(...) {
 #' 
 #' @param data  Symbol
 #'     Input data to softmax.
+#' @param label  Symbol
+#'     Label data.
 #' @param grad.scale  float, optional, default=1
 #'     Scale the gradient by a float factor
 #' @param ignore.label  float, optional, default=-1
-#'     the ignore_label will not work in backward, and this onlybe used when multi_output=true
+#'     the ignore_label will not work in backward, and this only be used when multi_output=true
 #' @param multi.output  boolean, optional, default=False
-#'     If set to true, for a (n,k,x_1,..,x_n) dimensionalinput tensor, softmax will generate n*x_1*...*x_n output, eachhas k classes
+#'     If set to true, for a (n,k,x_1,..,x_n) dimensional input tensor, softmax will generate n*x_1*...*x_n output, each has k classes
 #' @param use.ignore  boolean, optional, default=False
 #'     If set to true, the ignore_label value will not contributorto the backward gradient
 #' @param name  string, optional
@@ -828,6 +832,8 @@ mx.symbol.SwapAxis <- function(...) {
 
 #' Perform nearest neighboor/bilinear up sampling to inputs
 #' 
+#' @param data  Symbol[]
+#'     Array of tensors to upsample
 #' @param scale  int (non-negative), required
 #'     Up sampling scale
 #' @param num.filter  int (non-negative), optional, default=0

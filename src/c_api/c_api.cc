@@ -74,13 +74,15 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
                                    mx_uint *num_args,
                                    const char ***arg_names,
                                    const char ***arg_type_infos,
-                                   const char ***arg_descriptions) {
+                                   const char ***arg_descriptions,
+                                   const char **return_type) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
   API_BEGIN();
   *name = e->name.c_str();
   *description = e->description.c_str();
   *num_args = static_cast<mx_uint>(e->arguments.size());
+  if (return_type) *return_type = e->return_type.c_str();
   ret->ret_vec_charp.clear();
   for (size_t i = 0; i < e->arguments.size(); ++i) {
     ret->ret_vec_charp.push_back(e->arguments[i].name.c_str());
@@ -279,6 +281,18 @@ int MXNDArraySlice(NDArrayHandle handle,
   API_END_HANDLE_ERROR(delete ptr);
 }
 
+MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
+                               int ndim,
+                               int *dims,
+                               NDArrayHandle *out) {
+  NDArray *ptr = new NDArray();
+  API_BEGIN();
+  TShape new_shape(dims, dims+ndim);
+  *ptr = static_cast<NDArray*>(handle)->Reshape(new_shape);
+  *out = ptr;
+  API_END_HANDLE_ERROR(delete ptr);
+}
+
 int MXNDArrayGetShape(NDArrayHandle handle,
                       mx_uint *out_dim,
                       const mx_uint **out_pdata) {
@@ -360,10 +374,12 @@ int MXFuncGetInfo(FunctionHandle fun,
                   mx_uint *num_args,
                   const char ***arg_names,
                   const char ***arg_type_infos,
-                  const char ***arg_descriptions) {
+                  const char ***arg_descriptions,
+                  const char **return_type) {
   return MXAPIGetFunctionRegInfo(static_cast<const NDArrayFunctionReg *>(fun),
                                  name, description, num_args,
-                                 arg_names, arg_type_infos, arg_descriptions);
+                                 arg_names, arg_type_infos, arg_descriptions,
+                                 return_type);
 }
 
 int MXFuncDescribe(FunctionHandle fun,
@@ -441,11 +457,13 @@ int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                 const char ***arg_names,
                                 const char ***arg_type_infos,
                                 const char ***arg_descriptions,
-                                const char **key_var_num_args) {
+                                const char **key_var_num_args,
+                                const char **return_type) {
   OperatorPropertyReg *e = static_cast<OperatorPropertyReg *>(creator);
   *key_var_num_args = e->key_var_num_args.c_str();
   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
-                                 arg_names, arg_type_infos, arg_descriptions);
+                                 arg_names, arg_type_infos, arg_descriptions,
+                                 return_type);
 }
 
 int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
@@ -940,6 +958,29 @@ int MXExecutorBindX(SymbolHandle symbol_handle,
                     mx_uint aux_states_len,
                     NDArrayHandle *aux_states,
                     ExecutorHandle *out) {
+  return MXExecutorBindEX(symbol_handle,
+                          dev_type, dev_id,
+                          num_map_keys, map_keys, map_dev_types, map_dev_ids,
+                          len, in_args, arg_grad_store, grad_req_type,
+                          aux_states_len, aux_states,
+                          NULL, out);
+}
+
+int MXExecutorBindEX(SymbolHandle symbol_handle,
+                     int dev_type,
+                     int dev_id,
+                     mx_uint num_map_keys,
+                     const char** map_keys,
+                     const int* map_dev_types,
+                     const int* map_dev_ids,
+                     mx_uint len,
+                     NDArrayHandle *in_args,
+                     NDArrayHandle *arg_grad_store,
+                     mx_uint *grad_req_type,
+                     mx_uint aux_states_len,
+                     NDArrayHandle *aux_states,
+                     ExecutorHandle *shared_exec,
+                     ExecutorHandle *out) {
   API_BEGIN();
   Symbol *symb = static_cast<Symbol*>(symbol_handle);
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
@@ -969,7 +1010,8 @@ int MXExecutorBindX(SymbolHandle symbol_handle,
     aux_states_vec.push_back(*(aux_states_ptr[i]));
   }
   *out = Executor::Bind(*symb, ctx, ctx_map, in_args_vec,
-                        arg_grad_vec, grad_req_vec, aux_states_vec);
+                        arg_grad_vec, grad_req_vec, aux_states_vec,
+                        reinterpret_cast<Executor*>(shared_exec));
   API_END();
 }
 
@@ -1009,7 +1051,8 @@ int MXDataIterGetIterInfo(DataIterCreator creator,
                           const char ***arg_descriptions) {
   DataIteratorReg *e = static_cast<DataIteratorReg *>(creator);
   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
-                                 arg_names, arg_type_infos, arg_descriptions);
+                                 arg_names, arg_type_infos, arg_descriptions,
+                                 NULL);
 }
 
 int MXDataIterCreateIter(DataIterCreator creator,
@@ -1319,7 +1362,7 @@ int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
   }
   for (mx_uint i = 0; i < num_output; ++i) {
     output.push_back(std::pair<std::string, NDArray>(output_names[i],
-                                                     *reinterpret_cast<NDArray*>(inputs[i])));
+                                                     *reinterpret_cast<NDArray*>(outputs[i])));
   }
   MXRtc *rtc = new MXRtc(name, input, output, kernel);
   *out = reinterpret_cast<RtcHandle>(rtc);
@@ -1404,12 +1447,13 @@ int MXOptimizerUpdate(OptimizerHandle handle,
                       int index,
                       NDArrayHandle weight,
                       NDArrayHandle grad,
-                      mx_float lr) {
+                      mx_float lr,
+                      mx_float wd) {
   API_BEGIN();
   Optimizer *opt = static_cast<Optimizer*>(handle);
   opt->Update(index,
               static_cast<NDArray*>(weight),
               static_cast<NDArray*>(grad),
-              lr);
+              lr, wd);
   API_END();
 }

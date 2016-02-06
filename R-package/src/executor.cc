@@ -97,7 +97,7 @@ void Executor::Forward(bool is_train,
 
 void Executor::Backward(const Rcpp::List &output_grads) {
   RCHECK(grad_arrays_ != nullptr)
-      << "This executor has not been binded with req.grad";
+      << "This executor has not been bound with req.grad";
   std::vector<NDArrayHandle> grad_handles
       = NDArray::GetHandles(output_grads, "output_grads", false);
   MX_CALL(MXExecutorBackward(handle_,
@@ -141,14 +141,22 @@ inline Rcpp::List* CreateGradList(const Rcpp::List& source_array,
     ret->names() = names;
     handles->resize(grad_reqs.size(), nullptr);
     grad_req_type->resize(grad_reqs.size(), 0);
+    std::map<std::string, int> req_map;
+    req_map["null"] = 0;
+    req_map["write"] = 1;
+    req_map["add"] = 3;
 
     for (size_t i = 0; i < grad_reqs.size(); ++i) {
-      RCHECK(Rcpp::is<bool>(grad_reqs[i]))
-          << "Expect input grad_reqs to be list of booleans";
-      if (Rcpp::as<bool>(grad_reqs[i])) {
+      if (Rcpp::as<std::string>(grad_reqs[i]) != "null"
+          && Rcpp::as<std::string>(grad_reqs[i]) != "write"
+          && Rcpp::as<std::string>(grad_reqs[i]) != "add") {
+        RLOG_FATAL << "grad_req must be one of 'null', 'write' or 'add'";
+      }
+
+      if (Rcpp::as<std::string>(grad_reqs[i]) != "null") {
         ret->at(i) = NDArray::Empty(NDArray::FromRObject(source_array[i]).dim(), ctx);
         handles->at(i) = NDArray::FromRObject(ret->at(i))->handle;
-        grad_req_type->at(i) = 1;
+        grad_req_type->at(i) = req_map[Rcpp::as<std::string>(grad_reqs[i])];
       }
     }
   } catch(const Rcpp::exception& ex) {

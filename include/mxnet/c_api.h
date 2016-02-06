@@ -280,6 +280,18 @@ MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
                              mx_uint slice_end,
                              NDArrayHandle *out);
 /*!
+ * \brief Reshape the NDArray.
+ * \param handle the handle to the narray
+ * \param ndim number of dimensions of new shape
+ * \param dims new shape
+ * \param out the NDArrayHandle of reshaped NDArray
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
+                               int ndim,
+                               int *dims,
+                               NDArrayHandle *out);
+/*!
  * \brief get the shape of the array
  * \param handle the handle to the narray
  * \param out_dim the output dimension
@@ -345,6 +357,7 @@ MXNET_DLL int MXGetFunction(const char *name,
  * \param arg_names Name of the arguments.
  * \param arg_type_infos Type informations about the arguments.
  * \param arg_descriptions Description information about the arguments.
+ * \param return_type Return type of the function.
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXFuncGetInfo(FunctionHandle fun,
@@ -353,7 +366,8 @@ MXNET_DLL int MXFuncGetInfo(FunctionHandle fun,
                             mx_uint *num_args,
                             const char ***arg_names,
                             const char ***arg_type_infos,
-                            const char ***arg_descriptions);
+                            const char ***arg_descriptions,
+                            const char **return_type = NULL);
 /*!
  * \brief get the argument requirements of the function
  * \param fun input function handle
@@ -428,6 +442,7 @@ MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
  *            of positional arguments, and will need the caller to pass it in in
  *            MXSymbolCreateAtomicSymbol,
  *            With key = key_var_num_args, and value = number of positional arguments.
+ * \param return_type Return type of the function, can be Symbol or Symbol[]
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
@@ -437,7 +452,8 @@ MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                           const char ***arg_names,
                                           const char ***arg_type_infos,
                                           const char ***arg_descriptions,
-                                          const char **key_var_num_args);
+                                          const char **key_var_num_args,
+                                          const char **return_type = NULL);
 /*!
  * \brief Create an AtomicSymbol.
  * \param creator the AtomicSymbolCreator
@@ -844,6 +860,43 @@ MXNET_DLL int MXExecutorBindX(SymbolHandle symbol_handle,
                               NDArrayHandle *aux_states,
                               ExecutorHandle *out);
 /*!
+ * \brief Generate Executor from symbol,
+ *  This is advanced function, allow specify group2ctx map.
+ *  The user can annotate "ctx_group" attribute to name each group.
+ *
+ * \param symbol_handle symbol handle
+ * \param dev_type device type of default context
+ * \param dev_id device id of default context
+ * \param num_map_keys size of group2ctx map
+ * \param map_keys keys of group2ctx map
+ * \param map_dev_types device type of group2ctx map
+ * \param map_dev_ids device id of group2ctx map
+ * \param len length
+ * \param in_args in args array
+ * \param arg_grad_store arg grads handle array
+ * \param grad_req_type grad req array
+ * \param aux_states_len length of auxiliary states
+ * \param aux_states auxiliary states array
+ * \param shared_exec input executor handle for memory sharing
+ * \param out output executor handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXExecutorBindEX(SymbolHandle symbol_handle,
+                               int dev_type,
+                               int dev_id,
+                               mx_uint num_map_keys,
+                               const char** map_keys,
+                               const int* map_dev_types,
+                               const int* map_dev_ids,
+                               mx_uint len,
+                               NDArrayHandle *in_args,
+                               NDArrayHandle *arg_grad_store,
+                               mx_uint *grad_req_type,
+                               mx_uint aux_states_len,
+                               NDArrayHandle *aux_states,
+                               ExecutorHandle *shared_exec,
+                               ExecutorHandle *out);
+/*!
  * \brief set a call back to notify the completion of operation
  */
 MXNET_DLL int MXExecutorSetMonitorCallback(ExecutorHandle handle,
@@ -1214,6 +1267,7 @@ MXNET_DLL int MXOptimizerUpdate(OptimizerHandle handle,
                                 int index,
                                 NDArrayHandle weight,
                                 NDArrayHandle grad,
-                                mx_float lr);
+                                mx_float lr,
+                                mx_float wd);
 
 #endif  // MXNET_C_API_H_

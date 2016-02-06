@@ -227,7 +227,7 @@ class OperatorProperty {
    *     For unknown shapes, InferShape will try to fill in the correct Shape in in_shape
    *     For known shapes, InferShape will check shape consistency
    *
-   *     common practice: set the shape of data input, and usually weight's shape can be infered
+   *     common practice: set the shape of data input, and usually weight's shape can be inferred
    *
    * \param out_shape the shape of outputs of the operator
    *     InferShape will modify the vector to fill output TShape
@@ -247,7 +247,7 @@ class OperatorProperty {
    *     For unknown types, Infertype will try to fill in the correct type in in_type
    *     For known types, Infertype will check type consistency
    *
-   *     common practice: set the type of data input, and usually weight's type can be infered
+   *     common practice: set the type of data input, and usually weight's type can be inferred
    *
    * \param out_type the type of outputs of the operator
    *     Infertype will modify the vector to fill output Ttype
@@ -517,6 +517,7 @@ struct OperatorPropertyReg
 #define MXNET_REGISTER_OP_PROPERTY(name, OperatorPropertyType)          \
   DMLC_REGISTRY_REGISTER(::mxnet::OperatorPropertyReg, OperatorPropertyReg, name) \
   .set_body([]() { return new OperatorPropertyType(); })                \
+  .set_return_type("Symbol") \
   .check_name()
 
 #endif  // DMLC_USE_CXX11
