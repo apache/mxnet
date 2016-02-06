@@ -1305,7 +1305,7 @@ int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
   }
   for (mx_uint i = 0; i < num_output; ++i) {
     output.push_back(std::pair<std::string, NDArray>(output_names[i],
-                                                     *reinterpret_cast<NDArray*>(inputs[i])));
+                                                     *reinterpret_cast<NDArray*>(outputs[i])));
   }
   MXRtc *rtc = new MXRtc(name, input, output, kernel);
   *out = reinterpret_cast<RtcHandle>(rtc);

@@ -115,7 +115,7 @@ class Load(object):
                 logging.info('Initialized %s by loading', name)
         else:
             assert self.default_init is not None, \
-                "Cannot Initialize %s. Not found in loaded param " + \
+                "Cannot Initialize %s. Not found in loaded param "%name + \
                 "and no default Initializer is provided."
             self.default_init(name, arr)
             if self.verbose:
