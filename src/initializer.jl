@@ -24,7 +24,7 @@ Or, if full behavior customization is needed, override the following function
 =#
 abstract AbstractInitializer
 
-function call(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
+function call{T<:AbstractInitializer}(self :: T, name :: Base.Symbol, array :: NDArray)
   strname = string(name)
   if endswith(strname, "bias")
     _init_bias(self, name, array)
