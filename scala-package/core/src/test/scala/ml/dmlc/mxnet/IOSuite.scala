@@ -48,14 +48,14 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     assert(nBatch === batchCount)
     // test reset
     mnistIter.reset()
-    mnistIter.iterNext()
+    mnistIter.next()
     val label0 = mnistIter.getLabel().head.toArray
     val data0 = mnistIter.getData().head.toArray
-    mnistIter.iterNext()
-    mnistIter.iterNext()
-    mnistIter.iterNext()
+    mnistIter.next()
+    mnistIter.next()
+    mnistIter.next()
     mnistIter.reset()
-    mnistIter.iterNext()
+    mnistIter.next()
     val label1 = mnistIter.getLabel().head.toArray
     val data1 = mnistIter.getData().head.toArray
     assert(label0 === label1)
@@ -91,7 +91,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
 //    assert(provideLabel("label") === Array(100))
 //
 //    imgRecIter.reset()
-//    while(imgRecIter.iterNext()) {
+//    while(imgRecIter.hasNext()) {
 //      val batch = imgRecIter.next()
 //      batchCount += 1
 //    }
@@ -99,14 +99,14 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
 //    assert(batchCount === nBatch)
 //    // test reset
 //    imgRecIter.reset()
-//    imgRecIter.iterNext()
+//    imgRecIter.next()
 //    val label0 = imgRecIter.getLabel().head.toArray
 //    val data0 = imgRecIter.getData().head.toArray
-//    imgRecIter.iterNext()
-//    imgRecIter.iterNext()
-//    imgRecIter.iterNext()
 //    imgRecIter.reset()
-//    imgRecIter.iterNext()
+//    imgRecIter.reset()
+//    imgRecIter.reset()
+//    imgRecIter.reset()
+//    imgRecIter.reset()
 //    val label1 = imgRecIter.getLabel().head.toArray
 //    val data1 = imgRecIter.getData().head.toArray
 //    assert(label0 === label1)
