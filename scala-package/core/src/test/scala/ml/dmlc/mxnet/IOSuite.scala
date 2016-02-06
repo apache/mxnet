@@ -5,7 +5,7 @@ import scala.sys.process._
 
 
 class IOSuite extends FunSuite with BeforeAndAfterAll {
-  test("test MNISTIter") {
+  test("test MNISTIter & MNISTPack") {
     // get data
     "./scripts/get_mnist_data.sh" !
 
@@ -20,7 +20,17 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
       "seed" -> "10"
     )
 
-    val mnistIter = IO.MNISTIter(params)
+    val mnistPack = IO.MNISTPack(params)
+    // test DataPack
+    val nBatch = 600
+    var batchCount = 0
+    for(batch <- mnistPack) {
+      batchCount += 1
+    }
+    assert(nBatch === batchCount)
+
+    // test DataIter
+    val mnistIter = mnistPack.iterator
     // test provideData
     val provideData = mnistIter.provideData
     val provideLabel = mnistIter.provideLabel
@@ -28,8 +38,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     assert(provideLabel("label") === Array(100))
     // test_loop
     mnistIter.reset()
-    val nBatch = 600
-    var batchCount = 0
+    batchCount = 0
     var batch = mnistIter.next()
     while (batch != null) {
       batchCount += 1
@@ -39,14 +48,14 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     assert(nBatch === batchCount)
     // test reset
     mnistIter.reset()
-    mnistIter.iterNext()
+    mnistIter.next()
     val label0 = mnistIter.getLabel().head.toArray
     val data0 = mnistIter.getData().head.toArray
-    mnistIter.iterNext()
-    mnistIter.iterNext()
-    mnistIter.iterNext()
+    mnistIter.next()
+    mnistIter.next()
+    mnistIter.next()
     mnistIter.reset()
-    mnistIter.iterNext()
+    mnistIter.next()
     val label1 = mnistIter.getLabel().head.toArray
     val data1 = mnistIter.getData().head.toArray
     assert(label0 === label1)
@@ -82,7 +91,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
 //    assert(provideLabel("label") === Array(100))
 //
 //    imgRecIter.reset()
-//    while(imgRecIter.iterNext()) {
+//    while(imgRecIter.hasNext()) {
 //      val batch = imgRecIter.next()
 //      batchCount += 1
 //    }
@@ -90,14 +99,14 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
 //    assert(batchCount === nBatch)
 //    // test reset
 //    imgRecIter.reset()
-//    imgRecIter.iterNext()
+//    imgRecIter.next()
 //    val label0 = imgRecIter.getLabel().head.toArray
 //    val data0 = imgRecIter.getData().head.toArray
-//    imgRecIter.iterNext()
-//    imgRecIter.iterNext()
-//    imgRecIter.iterNext()
 //    imgRecIter.reset()
-//    imgRecIter.iterNext()
+//    imgRecIter.reset()
+//    imgRecIter.reset()
+//    imgRecIter.reset()
+//    imgRecIter.reset()
 //    val label1 = imgRecIter.getLabel().head.toArray
 //    val data1 = imgRecIter.getData().head.toArray
 //    assert(label0 === label1)
