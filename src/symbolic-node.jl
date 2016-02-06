@@ -480,11 +480,13 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
   ref_arg_names = Ref{char_pp}(0)
   ref_arg_types = Ref{char_pp}(0)
   ref_arg_descs = Ref{char_pp}(0)
+  ref_ret_type  = Ref{char_p}(0)
 
   @mxcall(:MXSymbolGetAtomicSymbolInfo,
           (MX_handle, Ref{char_p}, Ref{char_p}, Ref{MX_uint}, Ref{char_pp}, Ref{char_pp},
-           Ref{char_pp}, Ref{char_p}),
-          hdr, ref_name, ref_desc, ref_nargs, ref_arg_names, ref_arg_types, ref_arg_descs, ref_kv_nargs)
+           Ref{char_pp}, Ref{char_p}, Ref{char_p}),
+          hdr, ref_name, ref_desc, ref_nargs, ref_arg_names, ref_arg_types, ref_arg_descs,
+          ref_kv_nargs, ref_ret_type)
 
   func_name_s= bytestring(ref_name[])
   func_name  = symbol(func_name_s)
@@ -499,7 +501,7 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
     f_desc *= _format_docstring(Int(ref_nargs[]), ref_arg_names, ref_arg_types, ref_arg_descs)
     f_desc *= ":param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.\n"
     f_desc *= ":param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.\n\n"
-    f_desc *= ":return: the constructed :class:`SymbolicNode`.\n\n"
+    f_desc *= ":return: $(_format_typestring(bytestring(ref_ret_type[]))).\n\n"
     return (func_name, f_desc)
   end
 

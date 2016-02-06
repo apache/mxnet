@@ -446,7 +446,7 @@ Public APIs
 
 .. function:: argmax_channel(...)
 
-   Take sum of the src.The result will be ndarray of shape (1,) on the same device.
+   Take argmax indices of each channel of the src.The result will be ndarray of shape (num_channel,) on the same device.
    
    :param src: Source input to the function
    :type src: NDArray
@@ -513,7 +513,7 @@ Public APIs
 
 .. function:: dot(...)
 
-   Calcuate 2D matrix multiplication
+   Calculate 2D matrix multiplication
    
    :param lhs: Left operand to the function.
    :type lhs: NDArray
@@ -532,6 +532,25 @@ Public APIs
    
    :param src: Source input to the function
    :type src: NDArray
+   
+
+
+
+
+.. function:: fill_element_0index(...)
+
+   Fill one element of each line(row for python, column for R/Julia) in lhs according to index indicated by rhs and values indicated by mhs. This function assume rhs uses 0-based index.
+   
+   :param lhs: Left operand to the function.
+   :type lhs: NDArray
+   
+   
+   :param mhs: Middle operand to the function.
+   :type mhs: NDArray
+   
+   
+   :param rhs: Right operand to the function.
+   :type rhs: NDArray
    
 
 
@@ -711,6 +730,45 @@ Internal APIs
    
    :param rhs: Right operand to the function.
    :type rhs: real_t
+   
+
+
+
+
+.. function:: _imdecode(...)
+
+   Decode an image, clip to (x0, y0, x1, y1), substract mean, and write to buffer
+   
+   :param mean: image mean
+   :type mean: NDArray
+   
+   
+   :param index: buffer position for output
+   :type index: int
+   
+   
+   :param x0: x0
+   :type x0: int
+   
+   
+   :param y0: y0
+   :type y0: int
+   
+   
+   :param x1: x1
+   :type x1: int
+   
+   
+   :param y1: y1
+   :type y1: int
+   
+   
+   :param c: channel
+   :type c: int
+   
+   
+   :param size: length of str_img
+   :type size: int
    
 
 
