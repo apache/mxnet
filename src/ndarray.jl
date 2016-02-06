@@ -895,9 +895,13 @@ function _import_ndarray_functions(;gen_docs=false)
     ref_arg_types = Ref{char_pp}(0)
     ref_arg_descs = Ref{char_pp}(0)
 
+    ref_ret_type  = Ref{char_p}(0)
+
     @mxcall(:MXFuncGetInfo,
-            (MX_handle, Ref{char_p}, Ref{char_p}, Ref{MX_uint}, Ref{char_pp}, Ref{char_pp}, Ref{char_pp}),
-            func_handle, ref_name, ref_desc, ref_narg, ref_arg_names, ref_arg_types, ref_arg_descs)
+            (MX_handle, Ref{char_p}, Ref{char_p}, Ref{MX_uint}, Ref{char_pp},
+             Ref{char_pp}, Ref{char_pp}, Ref{char_p}),
+            func_handle, ref_name, ref_desc, ref_narg, ref_arg_names,
+            ref_arg_types, ref_arg_descs, ref_ret_type)
 
     func_name = symbol(bytestring(ref_name[]))
 
