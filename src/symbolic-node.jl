@@ -549,8 +549,8 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
     $(if kv_nargs != symbol("")
       quote
         if length(symbol_kws) > 0
-          @assert(false, $func_name * " takes variable number of SymbolicNode arguments, please pass input Symbols " *
-                         "via positional arguments, instead of keyword arguments.")
+          @assert(false, $func_name_s * " takes variable number of SymbolicNode arguments, " *
+                         "please pass input Symbols via positional arguments, instead of keyword arguments.")
         end
       end
     end)
