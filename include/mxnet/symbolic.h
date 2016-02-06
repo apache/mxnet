@@ -141,8 +141,8 @@ class Symbol {
    *
    *     common practice: set the shape of data input, and usually weight's shape can be inferred
    *
-   * \param out_shapes Use to store the infered shapes of outputs.
-   * \param aux_shapes Use to store the infered shapes of auxiliary states
+   * \param out_shapes Use to store the inferred shapes of outputs.
+   * \param aux_shapes Use to store the inferred shapes of auxiliary states
    * \param partial_infer Return partially inferred results if true.
    * \return true if the shape inference is successful, false if there is not enough information.
    * \throws dmlc::Error if the known arg_shapes are inconsistent.
@@ -155,9 +155,9 @@ class Symbol {
   /*!
    * \brief infer the shapes by providing shapes of known arguments.
    * \param known_arg_shapes map of argument name to shape of arguments with known shapes.
-   * \param arg_shapes used to store infered shapes of arguments.
-   * \param out_shapes used to store infered shapes of outputs.
-   * \param aux_shapes Use to store the infered shapes of auxiliary states
+   * \param arg_shapes used to store inferred shapes of arguments.
+   * \param out_shapes used to store inferred shapes of outputs.
+   * \param aux_shapes Use to store the inferred shapes of auxiliary states
    * \param partial_infer Return partially inferred results if true.
    * \return true if the shape inference is successful, false if there is not enough information.
    * \throws dmlc::Error if the known arg_shapes are inconsistent.
