@@ -772,6 +772,63 @@ int MXSymbolInferShape(SymbolHandle sym,
   API_END();
 }
 
+int MXSymbolInferShapePartial(SymbolHandle sym,
+                       mx_uint num_args,
+                       const char** keys,
+                       const mx_uint *arg_ind_ptr,
+                       const mx_uint *arg_shape_data,
+                       mx_uint *in_shape_size,
+                       const mx_uint **in_shape_ndim,
+                       const mx_uint ***in_shape_data,
+                       mx_uint *out_shape_size,
+                       const mx_uint **out_shape_ndim,
+                       const mx_uint ***out_shape_data,
+                       mx_uint *aux_shape_size,
+                       const mx_uint **aux_shape_ndim,
+                       const mx_uint ***aux_shape_data,
+                       int *complete) {
+  Symbol *s = static_cast<Symbol*>(sym);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  bool succ;
+  API_BEGIN();
+  if (keys == nullptr && num_args != 0) {
+    ret->arg_shapes.clear();
+    for (mx_uint i = 0; i < num_args; ++i) {
+      ret->arg_shapes.push_back(TShape(arg_shape_data + arg_ind_ptr[i],
+                                       arg_shape_data + arg_ind_ptr[i+1]));
+    }
+    succ = s->InferShape(&(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes), true);
+  } else {
+    std::unordered_map<std::string, TShape> kwargs;
+    for (mx_uint i = 0; i < num_args; ++i) {
+      kwargs[keys[i]] = TShape(arg_shape_data + arg_ind_ptr[i],
+                               arg_shape_data + arg_ind_ptr[i+1]);
+    }
+    succ = s->InferShape(kwargs, &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes), true);
+  }
+  if (succ) {
+    MXAPIThreadLocalEntry::SetupShapeArrayReturn(
+        ret->arg_shapes, &(ret->arg_shape_ndim), &(ret->arg_shape_data));
+    MXAPIThreadLocalEntry::SetupShapeArrayReturn(
+        ret->out_shapes, &(ret->out_shape_ndim), &(ret->out_shape_data));
+    MXAPIThreadLocalEntry::SetupShapeArrayReturn(
+        ret->aux_shapes, &(ret->aux_shape_ndim), &(ret->aux_shape_data));
+    *in_shape_size = static_cast<mx_uint>(ret->arg_shapes.size());
+    *in_shape_ndim = dmlc::BeginPtr(ret->arg_shape_ndim);
+    *in_shape_data = dmlc::BeginPtr(ret->arg_shape_data);
+    *out_shape_size = static_cast<mx_uint>(ret->out_shapes.size());
+    *out_shape_ndim = dmlc::BeginPtr(ret->out_shape_ndim);
+    *out_shape_data = dmlc::BeginPtr(ret->out_shape_data);
+    *aux_shape_size = static_cast<mx_uint>(ret->aux_shapes.size());
+    *aux_shape_ndim = dmlc::BeginPtr(ret->aux_shape_ndim);
+    *aux_shape_data = dmlc::BeginPtr(ret->aux_shape_data);
+    *complete = 1;
+  } else {
+    *complete = 0;
+  }
+  API_END();
+}
+
 int MXSymbolInferType(SymbolHandle sym,
                       mx_uint num_args,
                       const char** keys,

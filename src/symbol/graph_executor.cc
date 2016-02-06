@@ -525,7 +525,7 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NDArray> &in_args,
   for (size_t i = 0; i < graph_.arg_nodes.size(); ++i) {
     out_shapes[graph_.arg_nodes[i]][0] = in_args[i].shape();
   }
-  CHECK(graph_.InferNodeShapes(topo_order_, &out_shapes, &aux_shapes))
+  CHECK(graph_.InferNodeShapes(topo_order_, &out_shapes, &aux_shapes, false))
       << "Shape inference cannot be complete in bind";
   for (size_t i = 0; i < out_shapes.size(); ++i) {
     for (size_t j = 0; j < out_shapes[i].size(); ++j) {

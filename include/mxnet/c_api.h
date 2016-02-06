@@ -682,6 +682,46 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
                                  const mx_uint ***aux_shape_data,
                                  int *complete);
 /*!
+ * \brief partially infer shape of unknown input shapes given the known one.
+ *
+ *  Return partially inferred results if not all shapes could be inferred.
+ *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
+ *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *
+ * \param sym symbol handle
+ * \param num_args numbe of input arguments.
+ * \param keys the key of keyword args (optional)
+ * \param arg_ind_ptr the head pointer of the rows in CSR
+ * \param arg_shape_data the content of the CSR
+ * \param in_shape_size sizeof the returning array of in_shapes
+ * \param in_shape_ndim returning array of shape dimensions of eachs input shape.
+ * \param in_shape_data returning array of pointers to head of the input shape.
+ * \param out_shape_size sizeof the returning array of out_shapes
+ * \param out_shape_ndim returning array of shape dimensions of eachs input shape.
+ * \param out_shape_data returning array of pointers to head of the input shape.
+ * \param aux_shape_size sizeof the returning array of aux_shapes
+ * \param aux_shape_ndim returning array of shape dimensions of eachs auxiliary shape.
+ * \param aux_shape_data returning array of pointers to head of the auxiliary shape.
+ * \param complete whether infer shape completes or more information is needed.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolInferShapePartial(SymbolHandle sym,
+                                 mx_uint num_args,
+                                 const char** keys,
+                                 const mx_uint *arg_ind_ptr,
+                                 const mx_uint *arg_shape_data,
+                                 mx_uint *in_shape_size,
+                                 const mx_uint **in_shape_ndim,
+                                 const mx_uint ***in_shape_data,
+                                 mx_uint *out_shape_size,
+                                 const mx_uint **out_shape_ndim,
+                                 const mx_uint ***out_shape_data,
+                                 mx_uint *aux_shape_size,
+                                 const mx_uint **aux_shape_ndim,
+                                 const mx_uint ***aux_shape_data,
+                                 int *complete);
+
+/*!
  * \brief infer type of unknown input types given the known one.
  *  The types are packed into a CSR matrix represented by arg_ind_ptr and arg_type_data
  *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
