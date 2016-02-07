@@ -50,8 +50,9 @@ Features
 * Support python, R, C++, Julia,
 * Cloud friendly, and directly compatible with S3, HDFS, AZure
 
-Bug Reporting
--------------
+Ask a Question
+--------------
+* Join [MXNet Google Group Mailist](https://groups.google.com/forum/#!forum/mxnet) for discussions, annoucements about development and deployments.
 * For reporting bugs please use the [mxnet/issues](https://github.com/dmlc/mxnet/issues) page.
 
 License
