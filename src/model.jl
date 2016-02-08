@@ -109,12 +109,12 @@ function init_model(self :: FeedForward, initializer :: AbstractInitializer; ove
   # initialize the contents of the parameters
   if !arg_defined || overwrite
     for (k,v) in self.arg_params
-      initializer(k, v)
+      init(initializer, k, v)
     end
   end
   if !aux_defined || overwrite
     for (k,v) in self.aux_params
-      initializer(k, v)
+      init(initializer, k, v)
     end
   end
 
