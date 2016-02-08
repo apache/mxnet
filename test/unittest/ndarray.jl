@@ -192,7 +192,7 @@ function test_saveload()
 
   # save and load N arrays of different shape
   arrays = [rand_tensors(rand_dims()) for i = 1:n_arrays]
-  nd_arrays = NDArray[x[2] for x in arrays]
+  nd_arrays = mx.NDArray[x[2] for x in arrays]
   mx.save(fname, nd_arrays)
   data = mx.load(fname, mx.NDArray)
   @test isa(data, Vector{mx.NDArray})
