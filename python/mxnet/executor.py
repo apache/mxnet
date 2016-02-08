@@ -250,7 +250,7 @@ class Executor(object):
         for i, name in enumerate(self._symbol.list_arguments()):
             new_shape = arg_shapes[i]
             arr = self.arg_arrays[i]
-            darr = self.grad_arrays[i]
+            darr = None if self.grad_arrays is None else self.grad_arrays[i]
             if partial_shaping or name in kwargs or new_shape == arr.shape:
                 if np.prod(new_shape) > np.prod(arr.shape):
                     assert allow_up_sizing, "New shape of arg:%s larger than original. "%name + \
