@@ -51,7 +51,7 @@ class Initializer(object):
     def _init_bilinear(self, _, arr):
         weight = np.zeros(np.prod(arr.shape), dtype='float32')
         shape = arr.shape
-        f = shape[3] / 2.
+        f = np.ceil(shape[3] / 2.)
         c = (2 * f - 1 - f % 2) / (2. * f)
         for i in range(np.prod(shape)):
             x = i % shape[3]
