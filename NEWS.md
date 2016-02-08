@@ -1,3 +1,8 @@
+# v0.0.8 (2016.02.08)
+
+* Fix compatability with Julia v0.5.
+* Fix seg-faults introduced by upstream API changes.
+
 # v0.0.7 (2015.12.14)
 
 * Fix compatability with Julia v0.4.2 (@BigEpsilon)
