@@ -15,7 +15,6 @@ try:
     import cv2
     opencv_available = True
 except ImportError:
-    print('OpenCV is unavailable.')
     opencv_available = False
 
 class MXRecordIO(object):
