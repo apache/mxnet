@@ -21,7 +21,7 @@ enough to derive a new type, and implement one or more of the following methods:
 
 Or, if full behavior customization is needed, override the following function
 
-.. function:: call(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
+.. function:: init(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
 
 
 
