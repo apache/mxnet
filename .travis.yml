@@ -16,6 +16,7 @@ env:
   # run tests/python
   - TASK=python_test
   - TASK=r_test
+  - TASK=julia JULIA_VER=0.4
 
   # TODO, R test, distributed test, clang, more g++ versions
 
@@ -23,6 +24,8 @@ matrix:
   exclude:
     - os: osx
       env: TASK=lint
+    - os: osx
+      env: TASK=julia JULIA_VER=0.4
     - os: linux
       env: TASK=r_test
 
