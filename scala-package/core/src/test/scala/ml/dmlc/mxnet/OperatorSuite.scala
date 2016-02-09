@@ -93,4 +93,82 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
       checkConcatWithShape(shapes, 0, skipSecond = false)
     }
   }
+
+  private def checkRegression(model: Symbol,
+                              forward: Float => Float,
+                              backward: (Float, Float) => Float) = {
+    val shape = Vector(3, 1)
+    val arrData = Random.uniform(-1, 1, shape)
+    val arrLabel = Random.uniform(0, 1, Vector(shape.head))
+    val arrGrad = NDArray.empty(shape)
+    val exec1 = model.bind(Context.cpu(),
+      args = Array(arrData, arrLabel), argsGrad = Map("data" -> arrGrad))
+    exec1.forward()
+    assert(exec1.outputs(0).shape === shape)
+    val out1 = exec1.outputs(0).toArray
+    val npout = arrData.toArray.map(forward(_))
+    assert(CheckUtils.reldiff(npout, out1) < 1e-6f)
+
+    exec1.backward()
+    // arrData shape: Vector(3, 1)
+    // arrLabel shape: Vector(3)
+    val npoutBack = (npout zip arrLabel.toArray).map { case (data, label) =>
+      backward(data, label)
+    }
+    assert(CheckUtils.reldiff(npoutBack, arrGrad.toArray) < 1e-6f)
+  }
+
+  test("regression") {
+    checkRegression(Symbol.LogisticRegressionOutput(
+      Array(Symbol.Variable("data"), Symbol.Variable("label"))),
+      (x: Float) => 1.0f / (1.0f + Math.exp(-x).toFloat),
+      (x: Float, y: Float) => x - y)
+    checkRegression(Symbol.LinearRegressionOutput(
+      Array(Symbol.Variable("data"), Symbol.Variable("label"))),
+      (x: Float) => x,
+      (x: Float, y: Float) => x - y)
+  }
+
+  // TODO: test softmax
+
+  test("swap axes") {
+    val data = Symbol.Variable("data")
+    val shape = Vector(2, 3, 4)
+    val arrData = NDArray.ones(shape)
+    arrData.slice(0).set(1f)
+    arrData.slice(1).set(2f)
+    // arrData =
+    //
+    // [[[ 1.,  1.,  1.,  1.],
+    //   [ 1.,  1.,  1.,  1.],
+    //   [ 1.,  1.,  1.,  1.]],
+    //
+    // [[ 2.,  2.,  2.,  2.],
+    //  [ 2.,  2.,  2.,  2.],
+    //  [ 2.,  2.,  2.,  2.]]]
+    val swap0 = Symbol.SwapAxis(data = data, dim1 = 0, dim2 = 2)
+    val swap = Symbol.SwapAxis(data = swap0, dim1 = 1, dim2 = 2)
+    val exec = swap.bind(Context.cpu(), args = Array(arrData))
+    exec.forward()
+    val out = exec.outputs(0)
+
+    // After swapaxes(swapaxes(arrData, 0, 2), 1, 2)
+    // out should be
+    // [[[ 1.,  1.,  1.],
+    //   [ 2.,  2.,  2.]],
+    //
+    //  [[ 1.,  1.,  1.],
+    //   [ 2.,  2.,  2.]],
+    //
+    //  [[ 1.,  1.,  1.],
+    //   [ 2.,  2.,  2.]],
+    //
+    //  [[ 1.,  1.,  1.],
+    //   [ 2.,  2.,  2.]]]
+    assert(out.shape === Vector(4, 2, 3))
+    for (i <- 0 until 4) {
+      val axis0 = out.slice(i)
+      assert(CheckUtils.reldiff(axis0.toArray, Array(1f, 1f, 1f, 2f, 2f, 2f)) < 1e-6f)
+    }
+  }
 }

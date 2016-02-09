@@ -6,4 +6,11 @@ object CheckUtils {
     val norm = NDArray.sum(NDArray.abs(a)).toScalar
     diff / norm
   }
+
+  def reldiff(a: Array[Float], b: Array[Float]): Float = {
+    val diff =
+      (a zip b).map { case (aElem, bElem) => Math.abs(aElem - bElem) }.sum
+    val norm: Float = a.reduce(Math.abs(_) + Math.abs(_))
+    diff / norm
+  }
 }
