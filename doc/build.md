@@ -277,7 +277,7 @@ are as follows:
 
 ```bash
 sudo docker run -it kaixhin/mxnet
-sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia0 kaixhin/cuda-mxnet:7.0
+sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia0 kaixhin/mxnet:latest
 ```
 
 For a guide to Docker, see the [official docs](https://docs.docker.com/userguide/). For more details on how to use the
