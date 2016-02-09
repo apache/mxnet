@@ -52,9 +52,9 @@ Features
 * Support for python, R, C++ and Julia
 * Cloud-friendly and directly compatible with S3, HDFS, and Azure
 
-Bug Reporting
--------------
-* For reporting bugs please use the [mxnet/issues](https://github.com/dmlc/mxnet/issues) page.
+Ask Questions
+* Please use [DMLC/mxnet Forum](http://forum.dmlc.ml/c/mxnet) for any questions about how to use mxnet. 
+* For reporting bugs, please use the [mxnet/issues](https://github.com/dmlc/mxnet/issues) page.
 
 License
 -------
