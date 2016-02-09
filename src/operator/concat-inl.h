@@ -65,12 +65,12 @@ class ConcatOp : public Operator {
     size_t mid = out_data[concat_enum::kOut].shape_[dimension_];
     Shape<3> oshape = Shape3(leading, mid, trailing);
     out = out_data[concat_enum::kOut].get_with_shape<xpu, 3, real_t>(oshape, s);
-    
+
     for (int i = 0; i < size_; ++i) {
       Shape<3> dshape = Shape3(leading, in_data[i].shape_[dimension_], trailing);
       data[i] = in_data[i].get_with_shape<xpu, 3, real_t>(dshape, s);
     }
-    Concatenate(data, &out, dimension_, req[concat_enum::kOut]);
+    Concatenate(data, &out, 1, req[concat_enum::kOut]);
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -97,12 +97,12 @@ class ConcatOp : public Operator {
     size_t mid = out_grad[concat_enum::kOut].shape_[dimension_];
     Shape<3> oshape = Shape3(leading, mid, trailing);
     grad = out_grad[concat_enum::kOut].get_with_shape<xpu, 3, real_t>(oshape, s);
-    
+
     for (int i = 0; i < size_; ++i) {
       Shape<3> dshape = Shape3(leading, in_grad[i].shape_[dimension_], trailing);
       grad_in[i] = in_grad[i].get_with_shape<xpu, 3, real_t>(dshape, s);
     }
-    Split(grad, &grad_in, dimension_, req);
+    Split(grad, &grad_in, 1, req);
   }
 
  private:

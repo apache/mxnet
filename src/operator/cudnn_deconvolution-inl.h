@@ -131,7 +131,8 @@ class CuDNNDeconvolutionOp : public Operator {
                                               grad.dptr_ + out_offset_ * g,
                                               &beta,
                                               bias_desc_,
-                                              gbias.dptr_ + bias_offset_ * g), CUDNN_STATUS_SUCCESS);
+                                              gbias.dptr_ + bias_offset_ * g),
+                 CUDNN_STATUS_SUCCESS);
       }
       CHECK_EQ(cudnnConvolutionBackwardFilter_v3(s->dnn_handle_,
                &alpha,
