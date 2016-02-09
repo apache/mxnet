@@ -276,8 +276,12 @@ These are updated on a weekly basis with the latest builds of MXNet. Examples of
 are as follows:
 
 ```bash
+# CPU only docker
 sudo docker run -it kaixhin/mxnet
-sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia0 kaixhin/cuda-mxnet:7.0
+
+OR
+# CPU enabled docker
+sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia0 kaixhin/cuda-mxnet:latest
 ```
 
 For a guide to Docker, see the [official docs](https://docs.docker.com/userguide/). For more details on how to use the
