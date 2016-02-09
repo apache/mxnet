@@ -4,10 +4,9 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 
 import ml.dmlc.mxnet.NDArrayConversions._
-import org.scalatest.{BeforeAndAfterAll, FunSuite}
-import org.scalactic.Tolerance._
+import org.scalatest.{Matchers, BeforeAndAfterAll, FunSuite}
 
-class NDArraySuite extends FunSuite with BeforeAndAfterAll {
+class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
   private val sequence: AtomicInteger = new AtomicInteger(0)
 
   test("to java array") {
@@ -104,7 +103,7 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("rsqrt") {
-    val ndarray = NDArray.array(Array(1f, 4f), shape = Array(2, 1))
+    val ndarray = NDArray.array(Array(1f, 4f), shape = Vector(2, 1))
     assert(NDArray.rsqrt(ndarray).toArray === Array(1f, 0.5f))
   }
 
@@ -117,7 +116,7 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("one hot encode") {
-    val indices = NDArray.array(Array(1f, 0f, 2f), shape = Array(3))
+    val indices = NDArray.array(Array(1f, 0f, 2f), shape = Vector(3))
     val array = NDArray.empty(3, 3)
     NDArray.onehotEncode(indices, array)
     assert(array.shape === Array(3, 3))
@@ -127,22 +126,22 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("dot") {
-    val arr1 = NDArray.array(Array(1f, 2f), shape = Array(1, 2))
-    val arr2 = NDArray.array(Array(3f, 4f), shape = Array(2, 1))
+    val arr1 = NDArray.array(Array(1f, 2f), shape = Vector(1, 2))
+    val arr2 = NDArray.array(Array(3f, 4f), shape = Vector(2, 1))
     val res = NDArray.dot(arr1, arr2)
     assert(res.shape === Array(1, 1))
     assert(res.toArray === Array(11f))
   }
 
   test("choose_element_0index") {
-    val arr = NDArray.array(Array(1f, 2f, 3f, 4f, 6f, 5f), shape = Array(2, 3))
-    val indices = NDArray.array(Array(0f, 1f), shape = Array(2))
+    val arr = NDArray.array(Array(1f, 2f, 3f, 4f, 6f, 5f), shape = Vector(2, 3))
+    val indices = NDArray.array(Array(0f, 1f), shape = Vector(2))
     val res = NDArray.chooseElement0Index(arr, indices)
     assert(res.toArray === Array(1f, 6f))
   }
 
   test("copy to") {
-    val source = NDArray.array(Array(1f, 2f, 3f), shape = Array(1, 3))
+    val source = NDArray.array(Array(1f, 2f, 3f), shape = Vector(1, 3))
     val dest = NDArray.empty(1, 3)
     source.copyTo(dest)
     assert(dest.shape === Array(1, 3))
@@ -173,32 +172,32 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("abs") {
-    val arr = NDArray.array(Array(-1f, -2f, 3f), shape = Array(3, 1))
+    val arr = NDArray.array(Array(-1f, -2f, 3f), shape = Vector(3, 1))
     assert(NDArray.abs(arr).toArray === Array(1f, 2f, 3f))
   }
 
   test("sign") {
-    val arr = NDArray.array(Array(-1f, -2f, 3f), shape = Array(3, 1))
+    val arr = NDArray.array(Array(-1f, -2f, 3f), shape = Vector(3, 1))
     assert(NDArray.sign(arr).toArray === Array(-1f, -1f, 1f))
   }
 
   test("round") {
-    val arr = NDArray.array(Array(1.5f, 2.1f, 3.7f), shape = Array(3, 1))
+    val arr = NDArray.array(Array(1.5f, 2.1f, 3.7f), shape = Vector(3, 1))
     assert(NDArray.round(arr).toArray === Array(2f, 2f, 4f))
   }
 
   test("ceil") {
-    val arr = NDArray.array(Array(1.5f, 2.1f, 3.7f), shape = Array(3, 1))
+    val arr = NDArray.array(Array(1.5f, 2.1f, 3.7f), shape = Vector(3, 1))
     assert(NDArray.ceil(arr).toArray === Array(2f, 3f, 4f))
   }
 
   test("floor") {
-    val arr = NDArray.array(Array(1.5f, 2.1f, 3.7f), shape = Array(3, 1))
+    val arr = NDArray.array(Array(1.5f, 2.1f, 3.7f), shape = Vector(3, 1))
     assert(NDArray.floor(arr).toArray === Array(1f, 2f, 3f))
   }
 
   test("square") {
-    val arr = NDArray.array(Array(1f, 2f, 3f), shape = Array(3, 1))
+    val arr = NDArray.array(Array(1f, 2f, 3f), shape = Vector(3, 1))
     assert(NDArray.square(arr).toArray === Array(1f, 4f, 9f))
   }
 
@@ -226,30 +225,30 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("max") {
-    val arr = NDArray.array(Array(1.5f, 2.1f, 3.7f), shape = Array(3, 1))
+    val arr = NDArray.array(Array(1.5f, 2.1f, 3.7f), shape = Vector(3, 1))
     assert(NDArray.max(arr).toScalar === 3.7f +- 1e-3f)
   }
 
   test("min") {
-    val arr = NDArray.array(Array(1.5f, 2.1f, 3.7f), shape = Array(3, 1))
+    val arr = NDArray.array(Array(1.5f, 2.1f, 3.7f), shape = Vector(3, 1))
     assert(NDArray.min(arr).toScalar === 1.5f +- 1e-3f)
   }
 
   test("sum") {
-    val arr = NDArray.array(Array(1f, 2f, 3f, 4f), shape = Array(2, 2))
+    val arr = NDArray.array(Array(1f, 2f, 3f, 4f), shape = Vector(2, 2))
     assert(NDArray.sum(arr).toScalar === 10f +- 1e-3f)
   }
 
   test("argmaxChannel") {
-    val arr = NDArray.array(Array(1f, 2f, 4f, 3f), shape = Array(2, 2))
+    val arr = NDArray.array(Array(1f, 2f, 4f, 3f), shape = Vector(2, 2))
     val argmax = NDArray.argmaxChannel(arr)
     assert(argmax.shape === Array(2))
     assert(argmax.toArray === Array(1f, 0f))
   }
 
   test("concatenate") {
-    val arr1 = NDArray.array(Array(1f, 2f, 4f, 3f, 3f, 3f), shape = Array(2, 3))
-    val arr2 = NDArray.array(Array(8f, 7f, 6f), shape = Array(1, 3))
+    val arr1 = NDArray.array(Array(1f, 2f, 4f, 3f, 3f, 3f), shape = Vector(2, 3))
+    val arr2 = NDArray.array(Array(8f, 7f, 6f), shape = Vector(1, 3))
     val arr = NDArray.concatenate(arr1, arr2)
     assert(arr.shape === Array(3, 3))
     assert(arr.toArray === Array(1f, 2f, 4f, 3f, 3f, 3f, 8f, 7f, 6f))
@@ -259,7 +258,7 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
     val filename
       = s"${System.getProperty("java.io.tmpdir")}/ndarray-${sequence.getAndIncrement}.bin"
     try {
-      val ndarray = NDArray.array(Array(1f, 2f, 3f), shape = Array(3, 1))
+      val ndarray = NDArray.array(Array(1f, 2f, 3f), shape = Vector(3, 1))
       NDArray.save(filename, Map("local" -> ndarray))
       val (keys, arrays) = NDArray.load(filename)
       assert(keys.length === 1)
@@ -278,7 +277,7 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
     val filename
       = s"${System.getProperty("java.io.tmpdir")}/ndarray-${sequence.getAndIncrement}.bin"
     try {
-      val ndarray = NDArray.array(Array(1f, 2f, 3f), shape = Array(3, 1))
+      val ndarray = NDArray.array(Array(1f, 2f, 3f), shape = Vector(3, 1))
       NDArray.save(filename, Array(ndarray))
       val (keys, arrays) = NDArray.load(filename)
       assert(keys.length === 0)
@@ -297,5 +296,27 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
     val ctx = ndarray.context
     assert(ctx.deviceType === "cpu")
     assert(ctx.deviceId === 0)
+  }
+
+  test("equals") {
+    val ndarray1 = NDArray.array(Array(1f, 2f, 3f), shape = Vector(3, 1))
+    val ndarray2 = NDArray.array(Array(1f, 2f, 3f), shape = Vector(3, 1))
+    val ndarray3 = NDArray.array(Array(1f, 2f, 3f), shape = Vector(1, 3))
+    val ndarray4 = NDArray.array(Array(3f, 2f, 3f), shape = Vector(3, 1))
+    ndarray1 shouldEqual ndarray2
+    ndarray1 shouldNot equal(ndarray3)
+    ndarray1 shouldNot equal(ndarray4)
+  }
+
+  test("slice") {
+    val arr = NDArray.array(Array(1f, 2f, 3f, 4f, 5f, 6f), shape = Vector(3, 2))
+
+    val arr1 = arr.slice(1)
+    assert(arr1.shape === Vector(1, 2))
+    assert(arr1.toArray === Array(3f, 4f))
+
+    val arr2 = arr.slice(1, 3)
+    assert(arr2.shape === Vector(2, 2))
+    assert(arr2.toArray === Array(3f, 4f, 5f, 6f))
   }
 }

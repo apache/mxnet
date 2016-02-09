@@ -426,6 +426,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
       }
       batch = data.next()
     }
+    // TODO: we can use Symbol.concat to do the same thing. Can it be more efficient?
     outputs.map(NDArray.concatenate(_))
   }
 

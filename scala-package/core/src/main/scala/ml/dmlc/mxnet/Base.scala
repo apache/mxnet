@@ -11,7 +11,7 @@ object Base {
   type MXFloat = Float
   type CPtrAddress = Long
   // TODO: make it more friendly to java
-  type Shape = Array[Int]
+  type Shape = Vector[Int]
 
   type NDArrayHandle = CPtrAddress
   type FunctionHandle = CPtrAddress

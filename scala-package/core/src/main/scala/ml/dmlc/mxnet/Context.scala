@@ -3,7 +3,9 @@ package ml.dmlc.mxnet
 object Context {
   val devtype2str = Map(1 -> "cpu", 2 -> "gpu", 3 -> "cpu_pinned")
   val devstr2type = Map("cpu" -> 1, "gpu" -> 2, "cpu_pinned" -> 3)
-  val defaultCtx = new Context("cpu", 0)
+  private var _defaultCtx = new Context("cpu", 0)
+
+  def defaultCtx: Context = _defaultCtx
 
   def cpu(deviceId: Int = 0): Context = {
     new Context("cpu", deviceId)
@@ -11,6 +13,16 @@ object Context {
 
   def gpu(deviceId: Int = 0): Context = {
     new Context("gpu", deviceId)
+  }
+
+  def withScope[T](device: Context)(body: => T): T = {
+    val oldDefaultCtx = Context.defaultCtx
+    Context._defaultCtx = device
+    try {
+      body
+    } finally {
+      Context._defaultCtx = oldDefaultCtx
+    }
   }
 
   implicit def ctx2Array(ctx: Context): Array[Context] = Array(ctx)

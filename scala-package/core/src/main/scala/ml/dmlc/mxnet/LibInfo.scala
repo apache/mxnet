@@ -164,9 +164,9 @@ class LibInfo {
                                  keys: Array[String],
                                  argIndPtr: Array[MXUint],
                                  argShapeData: Array[MXUint],
-                                 inShapeData: ListBuffer[Shape],
-                                 outShapeData: ListBuffer[Shape],
-                                 auxShapeData: ListBuffer[Shape],
+                                 inShapeData: ListBuffer[Array[Int]],
+                                 outShapeData: ListBuffer[Array[Int]],
+                                 auxShapeData: ListBuffer[Array[Int]],
                                  complete: RefInt): Int
   @native def mxSymbolGetOutput(handle: SymbolHandle, index: Int, out: SymbolHandleRef): Int
   @native def mxSymbolSaveToJSON(handle: SymbolHandle, out: RefString): Int
@@ -185,4 +185,7 @@ class LibInfo {
                               auxArgsHandle: Array[NDArrayHandle],
                               out: ExecutorHandleRef): Int
   // scalastyle:on parameterNum
+
+  // Random
+  @native def mxRandomSeed(seed: Int): Int
 }

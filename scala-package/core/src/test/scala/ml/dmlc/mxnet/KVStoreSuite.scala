@@ -5,7 +5,7 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite}
 class KVStoreSuite extends FunSuite with BeforeAndAfterAll {
   test("init and pull") {
     val kv = KVStore.create()
-    val shape = Array(2, 1)
+    val shape = Vector(2, 1)
     val ndArray = NDArray.zeros(shape)
 
     kv.init(3, NDArray.ones(shape))
@@ -15,7 +15,7 @@ class KVStoreSuite extends FunSuite with BeforeAndAfterAll {
 
   test("push and pull") {
     val kv = KVStore.create()
-    val shape = Array(2, 1)
+    val shape = Vector(2, 1)
     val ndArray = NDArray.zeros(shape)
 
     kv.init(3, NDArray.ones(shape))
@@ -36,7 +36,7 @@ class KVStoreSuite extends FunSuite with BeforeAndAfterAll {
     }
     kv.setUpdater(updater)
 
-    val shape = Array(2, 1)
+    val shape = Vector(2, 1)
     val ndArray = NDArray.zeros(shape)
 
     kv.init(3, NDArray.ones(shape) * 4)

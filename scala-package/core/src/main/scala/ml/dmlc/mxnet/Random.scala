@@ -1,6 +1,6 @@
 package ml.dmlc.mxnet
 
-import ml.dmlc.mxnet.Base.Shape
+import ml.dmlc.mxnet.Base._
 import ml.dmlc.mxnet.NDArray.{randomGaussian, randomUniform, empty}
 
 /**
@@ -73,7 +73,6 @@ object Random {
    *       generated from GPU0 can be different from CPU.
    */
   def seed(seedState: Int): Unit = {
-    // TODO
-//    checkCall(_LIB.mxRandomSeed(seedState))
+    checkCall(_LIB.mxRandomSeed(seedState))
   }
 }

@@ -202,15 +202,15 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
 
   def inferShape(keys: Array[String], indPtr: Array[Int], values: Array[Int])
     : (Seq[Shape], Seq[Shape], Seq[Shape]) = {
-    val argShapeData = ListBuffer.empty[Shape]
-    val outShapeData = ListBuffer.empty[Shape]
-    val auxShapeData = ListBuffer.empty[Shape]
+    val argShapeData = ListBuffer.empty[Array[Int]]
+    val outShapeData = ListBuffer.empty[Array[Int]]
+    val auxShapeData = ListBuffer.empty[Array[Int]]
     val complete = new RefInt
 
     checkCall(_LIB.mxSymbolInferShape(handle, indPtr.size - 1, keys, indPtr, values,
       argShapeData, outShapeData, auxShapeData, complete))
     if (complete.value != 0) {
-      (argShapeData, outShapeData, auxShapeData)
+      (argShapeData.map(_.toVector), outShapeData.map(_.toVector), auxShapeData.map(_.toVector))
     } else {
       (null, null, null)
     }
@@ -555,6 +555,10 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
     bind(ctx, args, argsGrad, "write", Nil, null)
   }
 
+  def bind(ctx: Context, args: Seq[NDArray], argsGrad: Map[String, NDArray]): Executor = {
+    bind(ctx, args, argsGrad, "write", Nil, null)
+  }
+
   def bind(ctx: Context, args: Seq[NDArray]): Executor = {
     val symbolArguments = listArguments()
     bindHelper(ctx, symbolArguments, args, null,
@@ -670,6 +674,7 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
 }
 
 object Symbol {
+  private type SymbolCreateFunc = Map[String, Any] => Symbol
   private val logger = LoggerFactory.getLogger(classOf[Symbol])
   private val functions: Map[String, SymbolFunction] = initSymbolModule()
   private val bindReqMap = Map("null" -> 0, "write" -> 1, "add" -> 3)
@@ -688,23 +693,23 @@ object Symbol {
     sym
   }
 
-  def FullyConnected: Map[String, Any] => Symbol = {
+  def FullyConnected: SymbolCreateFunc = {
     FullyConnected(null)
   }
 
-  def FullyConnected(attr: Map[String, String]): Map[String, Any] => Symbol = {
+  def FullyConnected(attr: Map[String, String]): SymbolCreateFunc = {
     createNoCheck("FullyConnected", attr)
   }
 
-  def Activation: Map[String, Any] => Symbol = {
+  def Activation: SymbolCreateFunc = {
     Activation(null)
   }
 
-  def Activation(attr: Map[String, String]): Map[String, Any] => Symbol = {
+  def Activation(attr: Map[String, String]): SymbolCreateFunc = {
     createNoCheck("Activation", attr)
   }
 
-  def Convolution(attr: Map[String, String]): Map[String, Any] => Symbol = {
+  def Convolution(attr: Map[String, String]): SymbolCreateFunc = {
     createNoCheck("Convolution", attr)
   }
 
@@ -730,6 +735,43 @@ object Symbol {
 
   def Cast: Map[String, Any] => Symbol = {
     createNoCheck("Cast")
+  }
+
+  def ElementWiseSum(name: String, inputs: Symbol *): Symbol = {
+    create("ElementWiseSum", inputs.toArray, Map("name" -> name), null)
+  }
+
+  def ElementWiseSum(inputs: Seq[Symbol], name: String): Symbol = {
+    create("ElementWiseSum", inputs.toArray, Map("name" -> name), null)
+  }
+
+  def Concat(inputs: Seq[Symbol],
+             paramKwargs: Map[String, Any],
+             attr: Map[String, String] = null): Symbol = {
+    create("Concat", inputs.toArray,
+           paramKwargs.map { case (k, v) => (k, v.toString) }, attr)
+  }
+
+  // Use Logistic regression for final output, this is used on final output of a net.
+  // Logistic regression is suitable for binary classification or probability prediction tasks.
+  def LogisticRegressionOutput(inputs: Seq[Symbol], attr: Map[String, String] = null): Symbol = {
+    create("LogisticRegressionOutput", inputs.toArray, null, attr)
+  }
+
+  // Use linear regression for final output, this is used on final output of a net.
+  def LinearRegressionOutput(inputs: Seq[Symbol], attr: Map[String, String] = null): Symbol = {
+    create("LinearRegressionOutput", inputs.toArray, null, attr)
+  }
+
+  /**
+   * Apply swapaxis to input.
+   * @param data Input data to the SwapAxisOp.
+   * @param dim1 (non-negative), default=0, the first axis to be swapped.
+   * @param dim2 (non-negative), default=0, the second axis to be swapped.
+   */
+  def SwapAxis(data: Symbol, dim1: Int = 0, dim2: Int = 0,
+               attr: Map[String, String] = null): Symbol = {
+    createNoCheck("SwapAxis")(Map("data" -> data, "dim1" -> dim1, "dim2" -> dim2))
   }
 
   /**
