@@ -41,8 +41,6 @@ class CuDNNConvolutionOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     size_t expected = param_.no_bias ? 2 : 3;
-    float alpha = 1.0f;
-    float beta = 0.0f;
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1);
     Stream<gpu> *s = ctx.get_stream<gpu>();
@@ -57,41 +55,45 @@ class CuDNNConvolutionOp : public Operator {
     }
     Tensor<gpu, 1> workspace = ctx.requested[conv::kTempSpace].get_space<gpu>(
                                  mshadow::Shape1(forward_workspace_), s);
-    CHECK_EQ(cudnnConvolutionForward(s->dnn_handle_,
-                                     &alpha,
-                                     in_desc_,
-                                     data.dptr_,
-                                     filter_desc_,
-                                     wmat.dptr_,
-                                     conv_desc_,
-                                     algo_,
-                                     workspace.dptr_,
-                                     forward_workspace_byte_,
-                                     &beta,
-                                     out_desc_,
-                                     out.dptr_), CUDNN_STATUS_SUCCESS);
-    if (!param_.no_bias) {
-      beta = 1.0f;
-      Tensor<gpu, 1> bias = in_data[conv::kBias].get<gpu, 1, real_t>(s);
+    for (uint32_t g = 0; g < param_.num_group; ++g) {
+      float alpha = 1.0f;
+      float beta = 0.0f;
+      CHECK_EQ(cudnnConvolutionForward(s->dnn_handle_,
+                                       &alpha,
+                                       in_desc_,
+                                       data.dptr_ + data_offset_ * g,
+                                       filter_desc_,
+                                       wmat.dptr_ + weight_offset_ * g,
+                                       conv_desc_,
+                                       algo_,
+                                       workspace.dptr_,
+                                       forward_workspace_byte_,
+                                       &beta,
+                                       out_desc_,
+                                       out.dptr_ + out_offset_ * g), CUDNN_STATUS_SUCCESS);
+      if (!param_.no_bias) {
+        beta = 1.0f;
+        Tensor<gpu, 1> bias = in_data[conv::kBias].get<gpu, 1, real_t>(s);
 #if CUDNN_MAJOR == 4
-      CHECK_EQ(cudnnAddTensor(s->dnn_handle_,
-                              &alpha,
-                              bias_desc_,
-                              bias.dptr_,
-                              &beta,
-                              out_desc_,
-                              out.dptr_), CUDNN_STATUS_SUCCESS);
+        CHECK_EQ(cudnnAddTensor(s->dnn_handle_,
+                                &alpha,
+                                bias_desc_,
+                                bias.dptr_ + bias_offset_ * g,
+                                &beta,
+                                out_desc_,
+                                out.dptr_ + out_offset_ * g), CUDNN_STATUS_SUCCESS);
 #endif
 #if CUDNN_MAJOR == 3
-      CHECK_EQ(cudnnAddTensor(s->dnn_handle_,
-                              CUDNN_ADD_SAME_C,
-                              &alpha,
-                              bias_desc_,
-                              bias.dptr_,
-                              &beta,
-                              out_desc_,
-                              out.dptr_), CUDNN_STATUS_SUCCESS);
+        CHECK_EQ(cudnnAddTensor(s->dnn_handle_,
+                                CUDNN_ADD_SAME_C,
+                                &alpha,
+                                bias_desc_,
+                                bias.dptr_ + bias_offset_ * g,
+                                &beta,
+                                out_desc_,
+                                out.dptr_ + out_offset_ * g), CUDNN_STATUS_SUCCESS);
 #endif
+      }
     }
   }
 
@@ -104,8 +106,6 @@ class CuDNNConvolutionOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    float alpha = 1.0f;
-    float beta = 0.0f;
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK_EQ(out_grad.size(), 1);
     CHECK(in_data.size() == expected && in_grad.size() == expected);
@@ -119,42 +119,47 @@ class CuDNNConvolutionOp : public Operator {
     Tensor<gpu, 4> gdata = in_grad[conv::kData].get<gpu, 4, real_t>(s);
     Tensor<gpu, 1> workspace = ctx.requested[conv::kTempSpace].get_space<gpu>(
                                  mshadow::Shape1(backward_workspace_), s);
-    if (!param_.no_bias) {
-      Tensor<gpu, 1> gbias = in_grad[conv::kBias].get<gpu, 1, real_t>(s);
-      CHECK_EQ(cudnnConvolutionBackwardBias(s->dnn_handle_,
-                                            &alpha,
-                                            out_desc_,
-                                            grad.dptr_,
-                                            &beta,
-                                            bias_desc_,
-                                            gbias.dptr_), CUDNN_STATUS_SUCCESS);
+    for (uint32_t g = 0; g < param_.num_group; ++g) {
+      float alpha = 1.0f;
+      float beta = 0.0f;
+      if (!param_.no_bias) {
+        Tensor<gpu, 1> gbias = in_grad[conv::kBias].get<gpu, 1, real_t>(s);
+        CHECK_EQ(cudnnConvolutionBackwardBias(s->dnn_handle_,
+                                              &alpha,
+                                              out_desc_,
+                                              grad.dptr_ + out_offset_ * g,
+                                              &beta,
+                                              bias_desc_,
+                                              gbias.dptr_ + bias_offset_ * g),
+                 CUDNN_STATUS_SUCCESS);
+      }
+      CHECK_EQ(cudnnConvolutionBackwardFilter_v3(s->dnn_handle_,
+               &alpha,
+               in_desc_,
+               data.dptr_ + data_offset_ * g,
+               out_desc_,
+               grad.dptr_ + out_offset_ * g,
+               conv_desc_,
+               back_algo_w_,
+               workspace.dptr_,
+               backward_workspace_byte_,
+               &beta,
+               filter_desc_,
+               gwmat.dptr_ + weight_offset_ * g), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnConvolutionBackwardData_v3(s->dnn_handle_,
+               &alpha,
+               filter_desc_,
+               wmat.dptr_ + weight_offset_ * g,
+               out_desc_,
+               grad.dptr_ + out_offset_ * g,
+               conv_desc_,
+               back_algo_,
+               workspace.dptr_,
+               backward_workspace_byte_,
+               &beta,
+               in_desc_,
+               gdata.dptr_ + data_offset_ * g), CUDNN_STATUS_SUCCESS);
     }
-    CHECK_EQ(cudnnConvolutionBackwardFilter_v3(s->dnn_handle_,
-             &alpha,
-             in_desc_,
-             data.dptr_,
-             out_desc_,
-             grad.dptr_,
-             conv_desc_,
-             back_algo_w_,
-             workspace.dptr_,
-             backward_workspace_byte_,
-             &beta,
-             filter_desc_,
-             gwmat.dptr_), CUDNN_STATUS_SUCCESS);
-    CHECK_EQ(cudnnConvolutionBackwardData_v3(s->dnn_handle_,
-             &alpha,
-             filter_desc_,
-             wmat.dptr_,
-             out_desc_,
-             grad.dptr_,
-             conv_desc_,
-             back_algo_,
-             workspace.dptr_,
-             backward_workspace_byte_,
-             &beta,
-             in_desc_,
-             gdata.dptr_), CUDNN_STATUS_SUCCESS);
   }
 
  private:
@@ -172,6 +177,10 @@ class CuDNNConvolutionOp : public Operator {
       size_t back_size_w = 0;
       Tensor<gpu, 4> data = in_data[conv::kData].get<gpu, 4, real_t>(s);
       Tensor<gpu, 4> out = out_data[conv::kOut].get<gpu, 4, real_t>(s);
+      data_offset_ = data.shape_[1] / param_.num_group * data.shape_[2] * data.shape_[3];
+      out_offset_ = out.shape_[1] /param_.num_group * out.shape_[2] * out.shape_[3];
+      weight_offset_ = param_.num_filter / param_.num_group * data.shape_[1] / param_.num_group
+                       * param_.kernel[0] * param_.kernel[1];
       CHECK_EQ(cudnnCreateTensorDescriptor(&in_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateTensorDescriptor(&out_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateTensorDescriptor(&bias_desc_), CUDNN_STATUS_SUCCESS);
@@ -179,39 +188,46 @@ class CuDNNConvolutionOp : public Operator {
       CHECK_EQ(cudnnCreateConvolutionDescriptor(&conv_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetFilter4dDescriptor(filter_desc_,
                                           dtype_,
-                                          param_.num_filter,
-                                          data.shape_[1],
+                                          param_.num_filter / param_.num_group,
+                                          data.shape_[1] / param_.num_group,
                                           param_.kernel[0],
                                           param_.kernel[1]), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetConvolution2dDescriptor(conv_desc_,
-               param_.pad[0],
-               param_.pad[1],
-               param_.stride[0],
-               param_.stride[1],
-               1,
-               1,
-               CUDNN_CROSS_CORRELATION), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensor4dDescriptor(in_desc_,
-                                          CUDNN_TENSOR_NCHW,
-                                          dtype_,
-                                          data.shape_[0],
-                                          data.shape_[1],
-                                          data.shape_[2],
-                                          data.shape_[3]), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensor4dDescriptor(out_desc_,
-                                          CUDNN_TENSOR_NCHW,
-                                          dtype_,
-                                          out.shape_[0],
-                                          out.shape_[1],
-                                          out.shape_[2],
-                                          out.shape_[3]), CUDNN_STATUS_SUCCESS);
+                                               param_.pad[0],
+                                               param_.pad[1],
+                                               param_.stride[0],
+                                               param_.stride[1],
+                                               1,
+                                               1,
+                                               CUDNN_CROSS_CORRELATION), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnSetTensor4dDescriptorEx(in_desc_,
+                                            dtype_,
+                                            data.shape_[0],
+                                            data.shape_[1] / param_.num_group,
+                                            data.shape_[2],
+                                            data.shape_[3],
+                                            data.shape_[1] * data.shape_[2] * data.shape_[3],
+                                            data.shape_[2] * data.shape_[3],
+                                            data.shape_[3],
+                                            1), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnSetTensor4dDescriptorEx(out_desc_,
+                                            dtype_,
+                                            out.shape_[0],
+                                            out.shape_[1] / param_.num_group,
+                                            out.shape_[2],
+                                            out.shape_[3],
+                                            out.shape_[1] * out.shape_[2] * out.shape_[3],
+                                            out.shape_[2] * out.shape_[3],
+                                            out.shape_[3],
+                                            1), CUDNN_STATUS_SUCCESS);
       if (!param_.no_bias) {
         Tensor<gpu, 1> bias = in_data[conv::kBias].get<gpu, 1, real_t>(s);
+        bias_offset_ = bias.shape_[0] / param_.num_group;
         CHECK_EQ(cudnnSetTensor4dDescriptor(bias_desc_,
                                             CUDNN_TENSOR_NCHW,
                                             dtype_,
                                             1,
-                                            bias.shape_[0],
+                                            bias.shape_[0] / param_.num_group,
                                             1,
                                             1), CUDNN_STATUS_SUCCESS);
       }
@@ -272,6 +288,10 @@ class CuDNNConvolutionOp : public Operator {
   size_t backward_workspace_;
   size_t forward_workspace_byte_;
   size_t backward_workspace_byte_;
+  size_t data_offset_;
+  size_t out_offset_;
+  size_t weight_offset_;
+  size_t bias_offset_;
   cudnnDataType_t dtype_;
   cudnnTensorDescriptor_t in_desc_;
   cudnnTensorDescriptor_t out_desc_;
