@@ -23,8 +23,10 @@ void TorchRunOp(std::vector<NDArray> arr_in,
                 std::vector<NDArray> arr_out,
                 const std::map<std::string, std::string>& param,
                 RunContext ctx) {
-  lua_State* L = TorchState::LuaState();
-  TorchState::SetStream(ctx.get_stream<xpu>());
+  TorchState* torchState = TorchState::ThreadSharedLuaState();
+  torchState->SetStream(ctx.get_stream<xpu>());
+  lua_State* L = torchState->L;
+
   lua_getglobal(L, "torch");
   lua_getfield(L, -1, OP::fname);
   int idx = 0;
@@ -39,7 +41,7 @@ void TorchRunOp(std::vector<NDArray> arr_in,
       case 'n': {
         CHECK(idx < arr.size()) << "Too few NDArray arguments for Torch." << OP::fname;
         luaT_pushudata(L,
-                       TorchTensor::TBlobToTHTensor(arr[idx].data()),
+                       TorchTensor::TBlobToTHTensor(torchState, arr[idx].data()),
                        TorchTensor::TensorType(arr[idx].data()));
         idx++;
         break;

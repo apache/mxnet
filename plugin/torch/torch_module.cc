@@ -10,13 +10,13 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<cpu>(TorchModuleParam param) {
-  return new TorchModuleOp<cpu>(param);
+Operator *CreateOp<cpu>(TorchModuleParam param, TorchState* torchState) {
+  return new TorchModuleOp<cpu>(param, torchState);
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
 Operator *TorchModuleProp::CreateOperator(Context ctx) const {
-  DO_BIND_DISPATCH(CreateOp, param_);
+  DO_BIND_DISPATCH(CreateOp, param_, torchState_);
 }
 
 DMLC_REGISTER_PARAMETER(TorchModuleParam);
