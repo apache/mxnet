@@ -9,33 +9,6 @@ import numpy as np
 import mxnet as mx
 import train_mnist
 
-class BucketBatch(object):
-    def __init__(self, iter, batch):
-        self.iter = iter
-        self.batch = batch
-
-        # we just pick a random bucket for each
-        # batch as all the buckets are trivially
-        # the same
-        self.bucket_key = np.random.choice(iter.buckets)
-
-    @property
-    def provide_data(self):
-        return self.iter.provide_data
-
-    @property
-    def provide_label(self):
-        return self.iter.provide_label
-
-    @property
-    def data(self):
-        return self.batch.data
-
-    @property
-    def label(self):
-        return self.batch.label
-
-
 class BucketIter(mx.io.DataIter):
     def __init__(self, data_iter, buckets):
         self.data_iter = data_iter
@@ -60,7 +33,10 @@ class BucketIter(mx.io.DataIter):
 
     def __iter__(self):
         for i, batch in enumerate(self.data_iter):
-            bucket_batch = BucketBatch(self, batch)
+            bucket_batch = batch
+            bucket_batch.bucket_key = np.random.choice(self.buckets)
+            bucket_batch.provide_data = self.provide_data
+            bucket_batch.provide_label = self.provide_label
 
             # accumulate statistics for debugging
             self.stats[self.buckets.index(bucket_batch.bucket_key)] += 1
@@ -71,6 +47,7 @@ class BucketIter(mx.io.DataIter):
         for b, c in zip(self.buckets, self.stats):
             print("%6s : %d" % (b, c))
         print("")
+
 
 def get_iterator(buckets):
     data_shape = (784, )

@@ -20,6 +20,19 @@ from .ndarray import array
 
 DataBatch = namedtuple('DataBatch', ['data', 'label', 'pad', 'index'])
 
+class DataBatch(object):
+    def __init__(self, data, label, pad, index,
+            bucket_key=None, provide_data=None, provide_label=None):
+        self.data = data
+        self.label = label
+        self.pad = pad
+        self.index = index
+
+        # the following properties are only used when bucketing is used
+        self.bucket_key = bucket_key
+        self.provide_data = provide_data
+        self.provide_label = provide_label
+
 class DataIter(object):
     """DataIter object in mxnet. """
 
