@@ -660,7 +660,38 @@ def test_batchnorm_training():
         test = mx.symbol.BatchNorm(data, fix_gamma=True)
         check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-3, check_eps=5e-2)
 
+def test_convolution_grouping():
+    num_filter = 4
+    num_group = 2
+    kernel = (3, 3)
+    shape = (1, 4, 9, 9)
+
+    x = mx.sym.Variable('x')
+    w = mx.sym.Variable('w')
+    b = mx.sym.Variable('b')
+    y1 = mx.sym.Convolution(data=x, weight=w, bias=b, num_filter=num_filter, num_group=num_group, kernel=kernel)
+    xslice = mx.sym.SliceChannel(data=x, num_outputs=num_group, axis=1)
+    wslice = mx.sym.SliceChannel(data=w, num_outputs=num_group, axis=0)
+    bslice = mx.sym.SliceChannel(data=b, num_outputs=num_group, axis=0)
+    y2 = mx.sym.Concat(*[mx.sym.Convolution(data=xslice[i], weight=wslice[i], bias=bslice[i],
+                                            num_filter=num_filter//num_group, kernel=kernel)
+                       for i in range(num_group)])
+
+    exe1 = y1.simple_bind(mx.cpu(), x=shape)
+    exe2 = y2.simple_bind(mx.cpu(), x=shape, w=(num_filter, shape[1]//num_group, kernel[0], kernel[1]), b=(num_filter,))
+    for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
+        arr1[:] = np.random.normal(size=arr1.shape)
+        arr2[:] = arr1
+    exe1.forward(is_train=True)
+    exe1.backward(exe1.outputs[0])
+    exe2.forward(is_train=True)
+    exe2.backward(exe2.outputs[0])
+
+    for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
+        np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3)
+
 if __name__ == '__main__':
+    test_convolution_grouping()
     test_nearest_upsampling()
     test_binary_op_duplicate_input()
     test_elementwise_sum()
