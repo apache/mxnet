@@ -94,6 +94,11 @@ class DataParallelExecutorGroup(object):
         _check_arguments(sym)
         arg_names = sym.list_arguments()
 
+        if shared_group is None:
+            self.shared_data_arrays = [{} for _ in ctx]
+        else:
+            self.shared_data_arrays = shared_group.shared_data_arrays
+
         self.data_names = [x[0] for x in train_data.provide_data]
         self.label_names = [x[0] for x in train_data.provide_label]
         self.aux_names = sym.list_auxiliary_states()
@@ -106,7 +111,8 @@ class DataParallelExecutorGroup(object):
                            for k, v in train_data.provide_data + train_data.provide_label}
             shared_exec = None if shared_group is None else shared_group.train_execs[i]
             train_exec = self.bind_exec(sym, ctx[i], data_shapes, self.param_names,
-                    need_grad=True, base_exec=shared_exec)
+                    need_grad=True, base_exec=shared_exec,
+                    shared_data_arrays=self.shared_data_arrays[i])
             self.train_execs.append(train_exec)
 
         # data structure
@@ -125,7 +131,8 @@ class DataParallelExecutorGroup(object):
 
         self.slices = slices
 
-    def bind_exec(self, sym, ctx, input_shapes, param_names, need_grad=False, base_exec=None):
+    def bind_exec(self, sym, ctx, input_shapes, param_names, need_grad=False,
+            base_exec=None, shared_data_arrays=None):
         arg_shape, out_shape, aux_shape = sym.infer_shape(**input_shapes)
         arg_arrays = []
         grad_arrays = {} if need_grad else None
@@ -134,21 +141,34 @@ class DataParallelExecutorGroup(object):
 
         # create or borrow arguments and gradients
         for i in range(len(arg_names)):
-            if not arg_names[i] in param_names:
-                # data or label, allocate new array
-                arg_arrays.append(nd.zeros(arg_shape[i], ctx))
+            name = arg_names[i]
+            if not name in param_names:
+                # data or label
+                if shared_data_arrays is not None and \
+                        name in shared_data_arrays:
+                    arg_arr = shared_data_arrays[name]
+
+                    # in bucketing, we want to be strict here to avoid
+                    # potential bugs
+                    assert(arg_shape[i] == arg_arr.shape)
+                    assert(arg_arr.context == ctx[i])
+                else:
+                    arg_arr = nd.zeros(arg_shape[i], ctx)
+                arg_arrays.append(arg_arr)
+                if shared_data_arrays is not None:
+                    shared_data_arrays[name] = arg_arr
             else:
                 # model parameter
                 if base_exec is None:
                     arg_arr = nd.zeros(arg_shape[i], ctx)
                     if need_grad:
                         grad_arr = nd.zeros(arg_shape[i], ctx)
-                        grad_arrays[arg_names[i]] = grad_arr
+                        grad_arrays[name] = grad_arr
                 else:
                     arg_arr = base_exec.arg_arrays[i]
                     assert arg_arr.shape == arg_shape[i]
                     if need_grad:
-                        grad_arrays[arg_names[i]] = base_exec.grad_arrays[i]
+                        grad_arrays[name] = base_exec.grad_arrays[i]
                 arg_arrays.append(arg_arr)
 
         # create or borrow aux variables
