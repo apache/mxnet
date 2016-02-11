@@ -141,7 +141,27 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
     return executor
 
 class DataParallelExecutorGroup(object):
-    """A group of executors living on different devices, for data parallelization."""
+    """A group of executors living on different devices, for data parallelization.
+
+    Parameters
+    ----------
+    sym: Symbol
+        The network configuration.
+    arg_names: list of str
+        Equals `sym.list_arguments()`
+    param_names: list of str
+        List of names of all trainable parameters.
+    ctx: list of Context
+        List of devices for training (data parallelization)
+    slices: list of int
+        Describes how the data parallelization splits data into different devices.
+    train_data: DataIter (or DataBatch)
+        The dataset for training. It could be any object with `provide_data` and
+        `provide_label` properties. Loading of actual data is not necessarily needed
+        at this stage.
+    shared_grop: DataParallelExecutorGroup
+        An existing executor group, if to share parameters with it.
+    """
     def __init__(self, sym, arg_names, param_names, ctx, slices, train_data, shared_group=None):
         # make sure the architecture is valid
         _check_arguments(sym)
@@ -226,7 +246,7 @@ class DataParallelExecutorManager(object):
     logger : logging logger
         When not specified, default logger will be used.
     sym_gen : a function that generate new Symbols depending on different
-        input shapes.
+        input shapes. Used only for bucketing.
     """
     def __init__(self, symbol, ctx, train_data,
                  arg_names, param_names, aux_names,
