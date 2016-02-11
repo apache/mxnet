@@ -16,7 +16,7 @@ from .context import Context, cpu
 from .initializer import Uniform
 from collections import namedtuple
 from .optimizer import get_updater
-from .executor import DataParallelExecutorManager, _check_arguments, _load_data
+from .executor_manager import DataParallelExecutorManager, _check_arguments, _load_data
 
 BASE_ESTIMATOR = object
 
