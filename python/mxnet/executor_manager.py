@@ -88,65 +88,28 @@ def _load_label(batch, targets):
     """Load label into sliced arrays"""
     _load_general(batch.label, targets)
 
-class DataParallelExecutorManager(object):
-    """ Helper class to manage multiple executors for data parallelism.
-    Parameters
-    ----------
-    symbol : Symbol
-        output symbol
-    ctx : list of Context
-        devices to run on
-    param_names: list of str
-        Name of all trainable parameters of the network.
-    arg_names: list of str
-        Name of all arguments of the network.
-    aux_names: list of str
-        Name of all auxiliary states of the network.
-    train_data : DataIter
-        Training data iterator.
-    work_load_list : list of float or int, optional
-        The list of work load for different devices,
-        in the same order as ctx
-    logger : logging logger
-        When not specified, default logger will be used.
-    """
-    def __init__(self, symbol, ctx, train_data,
-                 param_names, arg_names, aux_names,
-                 work_load_list=None, logger=None):
-        if logger is None:
-            logger = logging
-        # preparation
-        num_device = len(ctx)
-        logger.info('Start training with %s', str(ctx))
-
+class DataParallelExecutorGroup(object):
+    def __init__(self, sym, param_names, ctx, slices, train_data, shared_group=None):
         # make sure the architecture is valid
-        _check_arguments(symbol)
-
-        if work_load_list is None:
-            work_load_list = [1] * num_device
-        assert isinstance(work_load_list, list) and len(work_load_list) == num_device, \
-            "Invalid settings for work load. "
-
-        slices = _split_input_slice(train_data.batch_size, work_load_list)
-        self.slices = slices
+        _check_arguments(sym)
+        arg_names = sym.list_arguments()
 
         self.data_names = [x[0] for x in train_data.provide_data]
         self.label_names = [x[0] for x in train_data.provide_label]
-        self.aux_names = aux_names
+        self.aux_names = sym.list_auxiliary_states()
         self.param_idx = [i for i in range(len(arg_names)) if arg_names[i] in param_names]
         self.param_names = [arg_names[i] for i in self.param_idx]
-
-        update_dict = {k: 'write' if k in self.param_names else 'null' for k in arg_names}
 
         self.train_execs = []
         for i in range(len(ctx)):
             data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
                            for k, v in train_data.provide_data + train_data.provide_label}
-            train_exec = symbol.simple_bind(ctx[i], update_dict, **data_shapes)
+            shared_exec = None if shared_group is None else shared_group.train_execs[i]
+            train_exec = self.bind_exec(sym, ctx[i], data_shapes, self.param_names,
+                    need_grad=True, base_exec=shared_exec)
             self.train_execs.append(train_exec)
 
         # data structure
-
         self.data_arrays = [[(slices[i], e.arg_dict[name]) for i, e in enumerate(self.train_execs)]
                             for name in self.data_names]
         self.label_arrays = [[(slices[i], e.arg_dict[name]) for i, e in enumerate(self.train_execs)]
@@ -158,44 +121,46 @@ class DataParallelExecutorManager(object):
                             for i in self.param_idx]
 
         self.aux_arrays = [[e.aux_arrays[i] for e in self.train_execs]
-                           for i in range(len(aux_names))]
+                           for i in range(len(self.aux_names))]
 
-    def install_monitor(self, monitor):
-        """ Install monitor on all executors """
-        for train_exec in self.train_execs:
-            monitor.install(train_exec)
+        self.slices = slices
 
-    def set_params(self, arg_params, aux_params):
-        """ set parameter and aux values
-        Parameters
-        ----------
-        arg_params : list of NDArray
-            source parameter arrays
-        aux_params : list of NDArray
-            source aux arrays
-        """
+    def bind_exec(self, sym, ctx, input_shapes, param_names, need_grad=False, base_exec=None):
+        arg_shape, out_shape, aux_shape = sym.infer_shape(**input_shapes)
+        arg_arrays = []
+        grad_arrays = {} if need_grad else None
 
-        for texec in self.train_execs:
-            texec.copy_params_from(arg_params, aux_params)
+        arg_names = sym.list_arguments()
 
-    def copy_to(self, arg_params, aux_params):
-        """ Copy data from each executor to `arg_params` and `aux_params`
-        Parameters
-        ----------
-        arg_params : list of NDArray
-            target parameter arrays
-        aux_params : list of NDArray
-            target aux arrays
-        Notes
-        -----
-        - This function will inplace update the NDArrays in arg_params and aux_params.
-        """
-        for name, block in zip(self.param_names, self.param_arrays):
-            weight = sum(w.copyto(cpu()) for w in block) / len(block)
-            weight.copyto(arg_params[name])
-        for name, block in zip(self.aux_names, self.aux_arrays):
-            weight = sum(w.copyto(cpu()) for w in block) / len(block)
-            weight.copyto(aux_params[name])
+        # create or borrow arguments and gradients
+        for i in range(len(arg_names)):
+            if not arg_names[i] in param_names:
+                # data or label, allocate new array
+                arg_arrays.append(nd.zeros(arg_shape[i], ctx))
+            else:
+                # model parameter
+                if base_exec is None:
+                    arg_arr = nd.zeros(arg_shape[i], ctx)
+                    if need_grad:
+                        grad_arr = nd.zeros(arg_shape[i], ctx)
+                        grad_arrays[arg_names[i]] = grad_arr
+                else:
+                    arg_arr = base_exec.arg_arrays[i]
+                    assert arg_arr.shape == arg_shape[i]
+                    if need_grad:
+                        grad_arrays[arg_names[i]] = base_exec.grad_arrays[i]
+                arg_arrays.append(arg_arr)
+
+        # create or borrow aux variables
+        if base_exec is None:
+            aux_arrays = [mx.nd.zeros(s, ctx) for s in aux_shape]
+        else:
+            aux_arrays = [a for a in base_exec.aux_arrays]
+
+
+        executor = sym.bind(ctx=ctx, args=arg_arrays, args_grad=grad_arrays,
+                grad_req='write' if need_grad else 'null', shared_exec=base_exec)
+        return executor
 
     def load_data_batch(self, data_batch):
         """ load data and labels into arrays """
@@ -218,3 +183,123 @@ class DataParallelExecutorManager(object):
             labels_slice = [label[islice] for label in labels]
             metric.update(labels_slice, texec.outputs)
 
+class DataParallelExecutorManager(object):
+    """ Helper class to manage multiple executors for data parallelism.
+    Parameters
+    ----------
+    symbol : Symbol
+        output symbol
+    ctx : list of Context
+        devices to run on
+    param_names: list of str
+        Name of all trainable parameters of the network.
+    arg_names: list of str
+        Name of all arguments of the network.
+    aux_names: list of str
+        Name of all auxiliary states of the network.
+    train_data : DataIter
+        Training data iterator.
+    work_load_list : list of float or int, optional
+        The list of work load for different devices,
+        in the same order as ctx
+    logger : logging logger
+        When not specified, default logger will be used.
+    sym_gen : a function that generate new Symbols depending on different
+        input shapes.
+    """
+    def __init__(self, symbol, ctx, train_data,
+                 param_names, arg_names, aux_names,
+                 work_load_list=None, logger=None, sym_gen=None):
+        if logger is None:
+            logger = logging
+        # preparation
+        num_device = len(ctx)
+        logger.info('Start training with %s', str(ctx))
+
+        if work_load_list is None:
+            work_load_list = [1] * num_device
+        assert isinstance(work_load_list, list) and len(work_load_list) == num_device, \
+            "Invalid settings for work load. "
+
+        slices = _split_input_slice(train_data.batch_size, work_load_list)
+        self.slices = slices
+
+        self.param_names = param_names
+        self.ctx = ctx
+
+        self.execgrp = DataParallelExecutorGroup(symbol, self.param_names, self.ctx,
+                self.slices, train_data)
+        self.symbol = symbol
+
+        self.sym_gen = sym_gen
+        if self.sym_gen is not None:
+            self.execgrp_bucket = {train_data.default_key: self.execgrp}
+
+
+    def install_monitor(self, monitor):
+        """ Install monitor on all executors """
+        if self.sym_gen is not None:
+            raise NotImplementedError("Monitoring is not implemented for bucketing")
+
+        for train_exec in self.execgrp.train_execs:
+            monitor.install(train_exec)
+
+    def set_params(self, arg_params, aux_params):
+        """ set parameter and aux values
+        Parameters
+        ----------
+        arg_params : list of NDArray
+            source parameter arrays
+        aux_params : list of NDArray
+            source aux arrays
+        """
+
+        for texec in self.execgrp.train_execs:
+            texec.copy_params_from(arg_params, aux_params)
+
+    def copy_to(self, arg_params, aux_params):
+        """ Copy data from each executor to `arg_params` and `aux_params`
+        Parameters
+        ----------
+        arg_params : list of NDArray
+            target parameter arrays
+        aux_params : list of NDArray
+            target aux arrays
+        Notes
+        -----
+        - This function will inplace update the NDArrays in arg_params and aux_params.
+        """
+        for name, block in zip(self.param_names, self.param_arrays):
+            weight = sum(w.copyto(cpu()) for w in block) / len(block)
+            weight.copyto(arg_params[name])
+        for name, block in zip(self.aux_names, self.aux_arrays):
+            weight = sum(w.copyto(cpu()) for w in block) / len(block)
+            weight.copyto(aux_params[name])
+
+    @property
+    def param_arrays(self):
+        # param arrays should be shared by all executor groups
+        return self.execgrp.param_arrays
+    @property
+    def grad_arrays(self):
+        # grad arrays should be shared by all executor groups
+        return self.execgrp.grad_arrays
+
+    def load_data_batch(self, data_batch):
+        """ load data and labels into arrays """
+        if self.sym_gen is not None:
+            # TODO: get the correct execgrp
+            self.curr_execgrp = self.execgrp
+        else:
+            self.curr_execgrp = self.execgrp
+
+        self.curr_execgrp.load_data_batch(data_batch)
+
+    def forward(self, is_train=False):
+        self.curr_execgrp.forward(is_train=is_train)
+
+    def backward(self):
+        self.curr_execgrp.backward()
+
+    def update_metric(self, metric, labels):
+        self.curr_execgrp.update_metric(metric, labels)

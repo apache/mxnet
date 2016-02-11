@@ -387,6 +387,7 @@ class FeedForward(BASE_ESTIMATOR):
         Training parameter, name or optimizer object for training.
     initializer : initializer function, optional
         Training parameter, the initialization scheme used.
+    sym_gen: a symbol generator, useful for bucketing.
     numpy_batch_size : int, optional
         The batch size of training data.
         Only needed when input array is numpy.
@@ -404,7 +405,7 @@ class FeedForward(BASE_ESTIMATOR):
     **kwargs : dict
         The additional keyword arguments passed to optimizer.
     """
-    def __init__(self, symbol, ctx=None,
+    def __init__(self, symbol, ctx=None, sym_gen=None,
                  num_epoch=None, epoch_size=None, optimizer='sgd',
                  initializer=Uniform(0.01),
                  numpy_batch_size=128,
@@ -426,6 +427,7 @@ class FeedForward(BASE_ESTIMATOR):
                               if k in aux_names}
         # basic configuration
         self.symbol = symbol
+        self.sym_gen = sym_gen
         if ctx is None:
             ctx = [cpu()]
         elif isinstance(ctx, Context):
