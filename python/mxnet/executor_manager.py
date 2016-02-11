@@ -88,8 +88,8 @@ def _load_label(batch, targets):
     """Load label into sliced arrays"""
     _load_general(batch.label, targets)
 
-def _bind_exec(self, sym, ctx, input_shapes, param_names, need_grad=False,
-              base_exec=None, shared_data_arrays=None):
+def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
+               base_exec=None, shared_data_arrays=None):
     """bind executor for bucketing, potentially sharing data with an existing executor."""
     arg_shape, _, aux_shape = sym.infer_shape(**input_shapes)
     arg_arrays = []
@@ -141,10 +141,10 @@ def _bind_exec(self, sym, ctx, input_shapes, param_names, need_grad=False,
     return executor
 
 class DataParallelExecutorGroup(object):
-    def __init__(self, sym, param_names, ctx, slices, train_data, shared_group=None):
+    """A group of executors living on different devices, for data parallelization."""
+    def __init__(self, sym, arg_names, param_names, ctx, slices, train_data, shared_group=None):
         # make sure the architecture is valid
         _check_arguments(sym)
-        arg_names = sym.list_arguments()
 
         if shared_group is None:
             self.shared_data_arrays = [{} for _ in ctx]
@@ -163,8 +163,8 @@ class DataParallelExecutorGroup(object):
                            for k, v in train_data.provide_data + train_data.provide_label}
             shared_exec = None if shared_group is None else shared_group.train_execs[i]
             train_exec = _bind_exec(sym, ctx[i], data_shapes, self.param_names,
-                                        need_grad=True, base_exec=shared_exec,
-                                        shared_data_arrays=self.shared_data_arrays[i])
+                                    need_grad=True, base_exec=shared_exec,
+                                    shared_data_arrays=self.shared_data_arrays[i])
             self.train_execs.append(train_exec)
 
         # data structure
@@ -229,7 +229,7 @@ class DataParallelExecutorManager(object):
         input shapes.
     """
     def __init__(self, symbol, ctx, train_data,
-                 param_names, aux_names,
+                 arg_names, param_names, aux_names,
                  work_load_list=None, logger=None, sym_gen=None):
         if logger is None:
             logger = logging
@@ -245,11 +245,12 @@ class DataParallelExecutorManager(object):
         slices = _split_input_slice(train_data.batch_size, work_load_list)
         self.slices = slices
 
+        self.arg_names = arg_names
         self.param_names = param_names
         self.aux_names = aux_names
         self.ctx = ctx
 
-        self.execgrp = DataParallelExecutorGroup(symbol, self.param_names, self.ctx,
+        self.execgrp = DataParallelExecutorGroup(symbol, self.arg_names, self.param_names, self.ctx,
                                                  self.slices, train_data)
         self.symbol = symbol
 
@@ -301,15 +302,18 @@ class DataParallelExecutorManager(object):
 
     @property
     def param_arrays(self):
+        """shared parameter arrays"""
         # param arrays should be shared by all executor groups
         return self.execgrp.param_arrays
     @property
     def grad_arrays(self):
+        """shared gradient arrays"""
         # grad arrays should be shared by all executor groups
         return self.execgrp.grad_arrays
 
     @property
     def aux_arrays(self):
+        """shared aux states"""
         # aux arrays are also shared by all executor groups
         return self.execgrp.aux_arrays
 
@@ -320,7 +324,8 @@ class DataParallelExecutorManager(object):
             if key not in self.execgrp_bucket:
                 # create new bucket entry
                 symbol = self.sym_gen(key)
-                execgrp = DataParallelExecutorGroup(symbol, self.param_names, self.ctx,
+                execgrp = DataParallelExecutorGroup(symbol, self.arg_names,
+                                                    self.param_names, self.ctx,
                                                     self.slices, data_batch,
                                                     shared_group=self.execgrp)
                 self.execgrp_bucket[key] = execgrp
@@ -332,10 +337,13 @@ class DataParallelExecutorManager(object):
         self.curr_execgrp.load_data_batch(data_batch)
 
     def forward(self, is_train=False):
+        """run forward on the current executor"""
         self.curr_execgrp.forward(is_train=is_train)
 
     def backward(self):
+        """run backward on the current executor"""
         self.curr_execgrp.backward()
 
     def update_metric(self, metric, labels):
+        """update metric with the current executor"""
         self.curr_execgrp.update_metric(metric, labels)

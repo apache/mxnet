@@ -184,6 +184,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                                                    ctx=ctx,
                                                    train_data=train_data,
                                                    param_names=param_names,
+                                                   arg_names=arg_names,
                                                    aux_names=aux_names,
                                                    work_load_list=work_load_list,
                                                    logger=logger)
@@ -386,7 +387,7 @@ class FeedForward(BASE_ESTIMATOR):
         Training parameter, name or optimizer object for training.
     initializer : initializer function, optional
         Training parameter, the initialization scheme used.
-    sym_gen: a symbol generator, used for bucketing.
+    sym_gen: a symbol generator, useful for bucketing.
     numpy_batch_size : int, optional
         The batch size of training data.
         Only needed when input array is numpy.
