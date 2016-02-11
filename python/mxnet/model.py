@@ -122,7 +122,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         train_data, eval_data=None, eval_metric=None,
                         epoch_end_callback=None, batch_end_callback=None,
                         logger=None, work_load_list=None, monitor=None,
-                        eval_batch_end_callback=None):
+                        eval_batch_end_callback=None, sym_gen=None):
     """Internal training function on multiple devices.
     This function will also work for single device as well.
     Parameters
@@ -181,6 +181,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     if logger is None:
         logger = logging
     executor_manager = DataParallelExecutorManager(symbol=symbol,
+                                                   sym_gen=sym_gen,
                                                    ctx=ctx,
                                                    train_data=train_data,
                                                    param_names=param_names,
@@ -455,6 +456,7 @@ class FeedForward(BASE_ESTIMATOR):
     def _init_params(self, input_shapes, overwrite=False):
         """Initialize weight parameters and auxiliary states"""
         arg_shapes, _, aux_shapes = self.symbol.infer_shape(**input_shapes)
+        assert(arg_shapes is not None)
 
         arg_names = self.symbol.list_arguments()
         input_names = input_shapes.keys()
@@ -735,7 +737,8 @@ class FeedForward(BASE_ESTIMATOR):
                             batch_end_callback=batch_end_callback,
                             kvstore=kvstore, update_on_kvstore=update_on_kvstore,
                             logger=logger, work_load_list=work_load_list, monitor=monitor,
-                            eval_batch_end_callback=eval_batch_end_callback)
+                            eval_batch_end_callback=eval_batch_end_callback,
+                            sym_gen=self.sym_gen)
 
 
     def save(self, prefix, epoch=None):

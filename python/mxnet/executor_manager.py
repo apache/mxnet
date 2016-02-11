@@ -109,7 +109,6 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
                 # in bucketing, we want to be strict here to avoid
                 # potential bugs
                 assert(arg_shape[i] == arg_arr.shape)
-                assert(arg_arr.context == ctx[i])
             else:
                 arg_arr = nd.zeros(arg_shape[i], ctx)
             arg_arrays.append(arg_arr)
