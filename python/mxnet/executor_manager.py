@@ -225,6 +225,7 @@ class DataParallelExecutorManager(object):
         self.slices = slices
 
         self.param_names = param_names
+        self.aux_names = aux_names
         self.ctx = ctx
 
         self.execgrp = DataParallelExecutorGroup(symbol, self.param_names, self.ctx,
@@ -233,7 +234,7 @@ class DataParallelExecutorManager(object):
 
         self.sym_gen = sym_gen
         if self.sym_gen is not None:
-            self.execgrp_bucket = {train_data.default_key: self.execgrp}
+            self.execgrp_bucket = {train_data.default_bucket_key: self.execgrp}
 
 
     def install_monitor(self, monitor):
@@ -285,11 +286,23 @@ class DataParallelExecutorManager(object):
         # grad arrays should be shared by all executor groups
         return self.execgrp.grad_arrays
 
+    @property
+    def aux_arrays(self):
+        # aux arrays are also shared by all executor groups
+        return self.execgrp.aux_arrays
+
     def load_data_batch(self, data_batch):
         """ load data and labels into arrays """
         if self.sym_gen is not None:
-            # TODO: get the correct execgrp
-            self.curr_execgrp = self.execgrp
+            key = data_batch.bucket_key
+            if key not in self.execgrp_bucket:
+                # create new bucket entry
+                symbol = self.sym_gen(key)
+                execgrp = DataParallelExecutorGroup(symbol, self.param_names, self.ctx,
+                        self.slices, data_batch, shared_group=self.execgrp)
+                self.execgrp_bucket[key] = execgrp
+
+            self.curr_execgrp = self.execgrp_bucket[key]
         else:
             self.curr_execgrp = self.execgrp
 

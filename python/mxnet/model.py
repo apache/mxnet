@@ -387,7 +387,7 @@ class FeedForward(BASE_ESTIMATOR):
         Training parameter, name or optimizer object for training.
     initializer : initializer function, optional
         Training parameter, the initialization scheme used.
-    sym_gen: a symbol generator, useful for bucketing.
+    sym_gen: a symbol generator, used for bucketing.
     numpy_batch_size : int, optional
         The batch size of training data.
         Only needed when input array is numpy.
