@@ -140,6 +140,10 @@ class CuDNNBatchNormOp : public Operator {
                                              CUDNN_BATCHNORM_SPATIAL,
                                              &a,
                                              &b,
+#if CUDNN_VERSION >= 4007
+                                             &a,
+                                             &b,
+#endif  // CUDNN_VERSION >= 4007
                                              io_desc_,
                                              x.dptr_,
                                              io_desc_,
