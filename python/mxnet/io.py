@@ -3,7 +3,7 @@
 
 """NDArray interface of mxnet"""
 from __future__ import absolute_import
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict
 
 import ctypes
 import sys
@@ -18,11 +18,10 @@ from .ndarray import NDArray
 from .ndarray import array
 
 
-DataBatch = namedtuple('DataBatch', ['data', 'label', 'pad', 'index'])
-
 class DataBatch(object):
+    """Default object for holding a mini-batch of data and related information."""
     def __init__(self, data, label, pad, index,
-            bucket_key=None, provide_data=None, provide_label=None):
+                 bucket_key=None, provide_data=None, provide_label=None):
         self.data = data
         self.label = label
         self.pad = pad

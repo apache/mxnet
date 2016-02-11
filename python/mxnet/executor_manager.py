@@ -88,6 +88,58 @@ def _load_label(batch, targets):
     """Load label into sliced arrays"""
     _load_general(batch.label, targets)
 
+def _bind_exec(self, sym, ctx, input_shapes, param_names, need_grad=False,
+              base_exec=None, shared_data_arrays=None):
+    """bind executor for bucketing, potentially sharing data with an existing executor."""
+    arg_shape, _, aux_shape = sym.infer_shape(**input_shapes)
+    arg_arrays = []
+    grad_arrays = {} if need_grad else None
+
+    arg_names = sym.list_arguments()
+
+    # create or borrow arguments and gradients
+    for i in range(len(arg_names)):
+        name = arg_names[i]
+        if not name in param_names:
+            # data or label
+            if shared_data_arrays is not None and \
+                    name in shared_data_arrays:
+                arg_arr = shared_data_arrays[name]
+
+                # in bucketing, we want to be strict here to avoid
+                # potential bugs
+                assert(arg_shape[i] == arg_arr.shape)
+                assert(arg_arr.context == ctx[i])
+            else:
+                arg_arr = nd.zeros(arg_shape[i], ctx)
+            arg_arrays.append(arg_arr)
+            if shared_data_arrays is not None:
+                shared_data_arrays[name] = arg_arr
+        else:
+            # model parameter
+            if base_exec is None:
+                arg_arr = nd.zeros(arg_shape[i], ctx)
+                if need_grad:
+                    grad_arr = nd.zeros(arg_shape[i], ctx)
+                    grad_arrays[name] = grad_arr
+            else:
+                arg_arr = base_exec.arg_arrays[i]
+                assert arg_arr.shape == arg_shape[i]
+                if need_grad:
+                    grad_arrays[name] = base_exec.grad_arrays[i]
+            arg_arrays.append(arg_arr)
+
+    # create or borrow aux variables
+    if base_exec is None:
+        aux_arrays = [nd.zeros(s, ctx) for s in aux_shape]
+    else:
+        aux_arrays = [a for a in base_exec.aux_arrays]
+
+    executor = sym.bind(ctx=ctx, args=arg_arrays, args_grad=grad_arrays,
+                        aux_states=aux_arrays,
+                        grad_req='write' if need_grad else 'null', shared_exec=base_exec)
+    return executor
+
 class DataParallelExecutorGroup(object):
     def __init__(self, sym, param_names, ctx, slices, train_data, shared_group=None):
         # make sure the architecture is valid
@@ -110,9 +162,9 @@ class DataParallelExecutorGroup(object):
             data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
                            for k, v in train_data.provide_data + train_data.provide_label}
             shared_exec = None if shared_group is None else shared_group.train_execs[i]
-            train_exec = self.bind_exec(sym, ctx[i], data_shapes, self.param_names,
-                    need_grad=True, base_exec=shared_exec,
-                    shared_data_arrays=self.shared_data_arrays[i])
+            train_exec = _bind_exec(sym, ctx[i], data_shapes, self.param_names,
+                                        need_grad=True, base_exec=shared_exec,
+                                        shared_data_arrays=self.shared_data_arrays[i])
             self.train_execs.append(train_exec)
 
         # data structure
@@ -130,57 +182,6 @@ class DataParallelExecutorGroup(object):
                            for i in range(len(self.aux_names))]
 
         self.slices = slices
-
-    def bind_exec(self, sym, ctx, input_shapes, param_names, need_grad=False,
-            base_exec=None, shared_data_arrays=None):
-        arg_shape, out_shape, aux_shape = sym.infer_shape(**input_shapes)
-        arg_arrays = []
-        grad_arrays = {} if need_grad else None
-
-        arg_names = sym.list_arguments()
-
-        # create or borrow arguments and gradients
-        for i in range(len(arg_names)):
-            name = arg_names[i]
-            if not name in param_names:
-                # data or label
-                if shared_data_arrays is not None and \
-                        name in shared_data_arrays:
-                    arg_arr = shared_data_arrays[name]
-
-                    # in bucketing, we want to be strict here to avoid
-                    # potential bugs
-                    assert(arg_shape[i] == arg_arr.shape)
-                    assert(arg_arr.context == ctx[i])
-                else:
-                    arg_arr = nd.zeros(arg_shape[i], ctx)
-                arg_arrays.append(arg_arr)
-                if shared_data_arrays is not None:
-                    shared_data_arrays[name] = arg_arr
-            else:
-                # model parameter
-                if base_exec is None:
-                    arg_arr = nd.zeros(arg_shape[i], ctx)
-                    if need_grad:
-                        grad_arr = nd.zeros(arg_shape[i], ctx)
-                        grad_arrays[name] = grad_arr
-                else:
-                    arg_arr = base_exec.arg_arrays[i]
-                    assert arg_arr.shape == arg_shape[i]
-                    if need_grad:
-                        grad_arrays[name] = base_exec.grad_arrays[i]
-                arg_arrays.append(arg_arr)
-
-        # create or borrow aux variables
-        if base_exec is None:
-            aux_arrays = [mx.nd.zeros(s, ctx) for s in aux_shape]
-        else:
-            aux_arrays = [a for a in base_exec.aux_arrays]
-
-
-        executor = sym.bind(ctx=ctx, args=arg_arrays, args_grad=grad_arrays,
-                grad_req='write' if need_grad else 'null', shared_exec=base_exec)
-        return executor
 
     def load_data_batch(self, data_batch):
         """ load data and labels into arrays """
@@ -228,7 +229,7 @@ class DataParallelExecutorManager(object):
         input shapes.
     """
     def __init__(self, symbol, ctx, train_data,
-                 param_names, arg_names, aux_names,
+                 param_names, aux_names,
                  work_load_list=None, logger=None, sym_gen=None):
         if logger is None:
             logger = logging
@@ -249,10 +250,11 @@ class DataParallelExecutorManager(object):
         self.ctx = ctx
 
         self.execgrp = DataParallelExecutorGroup(symbol, self.param_names, self.ctx,
-                self.slices, train_data)
+                                                 self.slices, train_data)
         self.symbol = symbol
 
         self.sym_gen = sym_gen
+        self.curr_execgrp = None # this is set when data is loaded
         if self.sym_gen is not None:
             self.execgrp_bucket = {train_data.default_bucket_key: self.execgrp}
 
@@ -319,7 +321,8 @@ class DataParallelExecutorManager(object):
                 # create new bucket entry
                 symbol = self.sym_gen(key)
                 execgrp = DataParallelExecutorGroup(symbol, self.param_names, self.ctx,
-                        self.slices, data_batch, shared_group=self.execgrp)
+                                                    self.slices, data_batch,
+                                                    shared_group=self.execgrp)
                 self.execgrp_bucket[key] = execgrp
 
             self.curr_execgrp = self.execgrp_bucket[key]

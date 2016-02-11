@@ -11,7 +11,6 @@ from .base import mx_uint, NDArrayHandle, ExecutorHandle
 from .base import check_call, c_array, py_str
 from .ndarray import NDArray
 from . import ndarray as nd
-import logging
 
 def _monitor_callback_wrapper(callback):
     """ a wrapper for the user-defined handle """

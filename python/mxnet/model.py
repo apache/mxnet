@@ -184,7 +184,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                                                    ctx=ctx,
                                                    train_data=train_data,
                                                    param_names=param_names,
-                                                   arg_names=arg_names,
                                                    aux_names=aux_names,
                                                    work_load_list=work_load_list,
                                                    logger=logger)
