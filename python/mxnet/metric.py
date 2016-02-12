@@ -65,13 +65,11 @@ class EvalMetric(object):
 class Accuracy(EvalMetric):
     """Calculate accuracy"""
 
-    def __init__(self, do_check_label_shapes=True):
+    def __init__(self):
         super(Accuracy, self).__init__('accuracy')
-        self.do_check_label_shapes = do_check_label_shapes
 
     def update(self, labels, preds):
-        if self.do_check_label_shapes:
-            check_label_shapes(labels, preds)
+        check_label_shapes(labels, preds)
 
         for i in range(len(labels)):
             pred_label = ndarray.argmax_channel(preds[i]).asnumpy().astype('int32')

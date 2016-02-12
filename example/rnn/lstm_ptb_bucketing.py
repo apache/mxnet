@@ -78,6 +78,8 @@ class BucketSentenceIter(mx.io.DataIter):
 
         for sentence in sentences:
             sentence = text2id(sentence, vocab)
+            if len(sentence) == 0:
+                continue
             for i, bkt in enumerate(buckets):
                 if bkt >= len(sentence):
                     self.data[i].append(sentence)
@@ -190,16 +192,17 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
                                   name='t%d_sm' % seqidx)
         loss_all.append(sm)
 
-    for i in range(num_lstm_layer):
-        state = last_states[i]
-        state = LSTMState(c=mx.sym.BlockGrad(state.c, name="l%d_last_c" % i),
-                          h=mx.sym.BlockGrad(state.h, name="l%d_last_h" % i))
-        last_states[i] = state
-
-    unpack_c = [state.c for state in last_states]
-    unpack_h = [state.h for state in last_states]
-
-    return mx.sym.Group(loss_all + unpack_c + unpack_h)
+    # for i in range(num_lstm_layer):
+    #     state = last_states[i]
+    #     state = LSTMState(c=mx.sym.BlockGrad(state.c, name="l%d_last_c" % i),
+    #                       h=mx.sym.BlockGrad(state.h, name="l%d_last_h" % i))
+    #     last_states[i] = state
+    #
+    # unpack_c = [state.c for state in last_states]
+    # unpack_h = [state.h for state in last_states]
+    #
+    # return mx.sym.Group(loss_all + unpack_c + unpack_h)
+    return mx.sym.Group(loss_all)
 
 
 if __name__ == '__main__':
@@ -242,5 +245,6 @@ if __name__ == '__main__':
             wd            = 0.00001,
             initializer   = mx.init.Xavier(factor_type="in", magnitude=2.34))
 
-    model.fit(X=data_train, eval_data=data_val, eval_metric=mx.metric.Accuracy(do_check_label_shapes=False))
+    model.fit(X=data_train, eval_data=data_val,
+              batch_end_callback = mx.callback.Speedometer(batch_size, 10),)
 
