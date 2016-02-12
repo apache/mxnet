@@ -10,8 +10,8 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<gpu>(TorchModuleParam param) {
-  return new TorchModuleOp<gpu>(param);
+Operator *CreateOp<gpu>(TorchModuleParam param, TorchState* torchState) {
+  return new TorchModuleOp<gpu>(param, torchState);
 }
 
 }  // namespace op
