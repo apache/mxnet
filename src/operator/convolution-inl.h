@@ -315,7 +315,8 @@ class ConvolutionProp : public OperatorProperty {
         << "Input data should be 4D in batch-num_filter-y-x";
     SHAPE_ASSIGN_CHECK(*in_shape,
                        conv::kWeight,
-                       Shape4(param_.num_filter, dshape[1], param_.kernel[0], param_.kernel[1]));
+                       Shape4(param_.num_filter, dshape[1] / param_.num_group,
+                              param_.kernel[0], param_.kernel[1]));
     if (!param_.no_bias) {
       SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
     }

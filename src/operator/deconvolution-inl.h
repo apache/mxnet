@@ -49,7 +49,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
     .describe("number of groups partition");
     DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 4096)
     .describe("Tmp workspace for deconvolution (MB)");
-    DMLC_DECLARE_FIELD(no_bias).set_default(true)
+    DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
   }
 };
@@ -306,7 +306,8 @@ class DeconvolutionProp : public OperatorProperty {
         << "Input data should be 4D in batch-num_filter-y-x";
     SHAPE_ASSIGN_CHECK(*in_shape,
                        deconv::kWeight,
-                       Shape4(dshape[1], param_.num_filter, param_.kernel[0], param_.kernel[1]));
+                       Shape4(dshape[1], param_.num_filter / param_.num_group,
+                              param_.kernel[0], param_.kernel[1]));
     if (!param_.no_bias) {
       SHAPE_ASSIGN_CHECK(*in_shape, deconv::kBias, Shape1(param_.num_filter));
     }
