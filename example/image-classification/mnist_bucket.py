@@ -4,6 +4,13 @@
 # each model in the bucket will be different. For example,
 # they could corresponds to sequence models of different
 # length.
+#
+# The key for each bucket is an integer. We will use
+# different batch-size for each different bucket, by
+# simply duplicating the training data k times, where
+# k is the bucket key.
+
+from copy import deepcopy
 
 import numpy as np
 import mxnet as mx
@@ -35,8 +42,26 @@ class BucketIter(mx.io.DataIter):
         for i, batch in enumerate(self.data_iter):
             bucket_batch = batch
             bucket_batch.bucket_key = np.random.choice(self.buckets)
-            bucket_batch.provide_data = self.provide_data
-            bucket_batch.provide_label = self.provide_label
+            bucket_batch.provide_data = deepcopy(self.provide_data)
+            bucket_batch.provide_label = deepcopy(self.provide_label)
+
+            if bucket_batch.bucket_key > 1:
+                # change batch-size by duplicating
+                def modify(s):
+                    s = list(s)
+                    s[0] = s[0] * bucket_batch.bucket_key
+                    return tuple(s)
+                bucket_batch.provide_data = \
+                        [(k,modify(s)) for k,s in bucket_batch.provide_data]
+                bucket_batch.provide_label = \
+                        [(k,modify(s)) for k,s in bucket_batch.provide_label]
+
+                bucket_batch.data = [
+                        mx.nd.array(np.vstack([x.asnumpy() for i in range(bucket_batch.bucket_key)]))
+                        for x in bucket_batch.data]
+                bucket_batch.label = [
+                        mx.nd.array(np.hstack([y.asnumpy() for i in range(bucket_batch.bucket_key)]))
+                        for y in bucket_batch.label]
 
             # accumulate statistics for debugging
             self.stats[self.buckets.index(bucket_batch.bucket_key)] += 1
@@ -63,7 +88,7 @@ if __name__ == '__main__':
     args.network = 'mlp'
     net = train_mnist.get_mlp()
 
-    buckets = ['foo', 'bar', 'baz']
+    buckets = [1, 2, 3]
     def symbol_generator(key):
         return net # all the symbols are the same for all bucket entries
 
