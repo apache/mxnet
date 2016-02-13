@@ -89,6 +89,11 @@ class BucketSentenceIter(mx.io.DataIter):
         # Get the size of each bucket, so that we could sample
         # uniformly from the bucket
         bucket_sizes = [len(x) for x in self.data]
+
+        print("Summary of dataset ==================")
+        for bkt, sz in zip(buckets, bucket_sizes):
+            print("bucket of len %3d : %d samples" % (bkt, sz))
+
         bucket_size_tot = float(sum(bucket_sizes))
         bucket_ratio_cum = [sum(bucket_sizes[:i+1]) / bucket_size_tot
                 for i in range(len(bucket_sizes))]
@@ -118,6 +123,7 @@ class BucketSentenceIter(mx.io.DataIter):
                 if ratio >= rnd:
                     i_bucket = i
                     break
+
             data = np.zeros((self.batch_size, self.buckets[i_bucket]))
             label = np.zeros((self.batch_size, self.buckets[i_bucket]))
 
@@ -136,8 +142,9 @@ class BucketSentenceIter(mx.io.DataIter):
             label_names = ['%s/%d' % (self.label_name, t)
                     for t in range(self.buckets[i_bucket])]
 
-            yield SimpleBatch(data_names, data_all, label_names, label_all,
+            data_batch = SimpleBatch(data_names, data_all, label_names, label_all,
                               self.buckets[i_bucket])
+            yield data_batch
 
 # we define a new unrolling function here because the original
 # one in lstm.py concats all the labels at the last layer together,
@@ -206,8 +213,8 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
 
 
 if __name__ == '__main__':
-    batch_size = 20
-    buckets = [10, 15, 20, 30, 40]
+    batch_size = 32
+    buckets = [10, 20, 30, 40]
     num_hidden = 200
     num_embed = 200
     num_lstm_layer = 2
@@ -216,7 +223,7 @@ if __name__ == '__main__':
     learning_rate = 0.1
     momentum = 0.0
 
-    contexts = mx.context.cpu()
+    contexts = [mx.context.gpu(i) for i in range(1)]
 
     vocab = build_vocab("./data/ptb.train.txt")
 
@@ -245,6 +252,10 @@ if __name__ == '__main__':
             wd            = 0.00001,
             initializer   = mx.init.Xavier(factor_type="in", magnitude=2.34))
 
+    import logging
+    head = '%(asctime)-15s %(message)s'
+    logging.basicConfig(level=logging.DEBUG, format=head)
+
     model.fit(X=data_train, eval_data=data_val,
-              batch_end_callback = mx.callback.Speedometer(batch_size, 10),)
+              batch_end_callback = mx.callback.Speedometer(batch_size, 50),)
 
