@@ -40,7 +40,7 @@ Optional libraries
 
 - `CUDA Toolkit >= v7.0` to run on nvidia GPUs
   - Requires GPU with support for `Compute Capability >= 2.0`
-- CUDNN to accelerate the GPU computation (only CUDNN 3 is supported)
+- CUDNN to accelerate the GPU computation 
 - opencv for image augmentation
 
 We can edit `make/config.mk` to change the compile options, and then build by
