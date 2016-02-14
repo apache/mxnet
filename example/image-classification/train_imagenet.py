@@ -46,6 +46,8 @@ parser.add_argument('--val-dataset', type=str, default="val.rec",
                     help="validation dataset name")
 parser.add_argument('--data-shape', type=int, default=224,
                     help='set image\'s shape')
+parser.add_argument('--initializer-schema', type=str, default='normal',
+                    help="set the initializer of the model")
 args = parser.parse_args()
 
 # network

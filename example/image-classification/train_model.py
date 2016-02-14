@@ -3,6 +3,16 @@ import mxnet as mx
 import logging
 import os
 
+def get_initializer(args):
+  if args.initializer_schema == 'xavier':
+    return mx.init.Xavier(factor_type="in", magnitude=2.34)
+  elif args.initializer_schema == "normal":
+    return  mx.init.Normal()
+  elif args.initializer_schema == "uniform":
+    return mx.init.Uniform()
+  else:
+    return mx.init.Normal()
+
 def fit(args, network, data_loader):
     # kvstore
     kv = mx.kvstore.create(args.kv_store)
@@ -73,7 +83,7 @@ def fit(args, network, data_loader):
         learning_rate      = args.lr,
         momentum           = 0.9,
         wd                 = 0.00001,
-        initializer        = mx.init.Xavier(factor_type="in", magnitude=2.34),
+        initializer        = get_initializer(args),
         **model_args)
 
     model.fit(

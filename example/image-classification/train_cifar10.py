@@ -29,6 +29,8 @@ parser.add_argument('--load-epoch', type=int,
                     help="load the model on an epoch using the model-prefix")
 parser.add_argument('--kv-store', type=str, default='local',
                     help='the kvstore type')
+parser.add_argument('--initializer-schema', type=str, default='normal',
+                    help="set the initializer of the model")
 args = parser.parse_args()
 
 # download data if necessary
