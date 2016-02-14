@@ -32,7 +32,7 @@ parser.add_argument('--lr-factor-epoch', type=float, default=1,
                     help='the number of epoch to factor the lr, could be .5')
 parser.add_argument('--initializer-schema', type=str, default='normal',
                     help="set the initializer of the model")
-args = parser.parse_args('initializer-schema', type=str, default='normal')
+args = parser.parse_args()
 
 def _download(data_dir):
     if not os.path.isdir(data_dir):
