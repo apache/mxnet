@@ -14,14 +14,19 @@ fi
 gpus=`seq 0 $((num_gpus-1)) | paste -sd ","`
 
 # build
+build() {
 cp ../../make/config.mk ../..
 cat >>../../config.mk <<EOF
 USE_CUDA=1
 USE_CUDA_PATH=/usr/local/cuda
 USE_CUDNN=1
+USE_DIST_KVSTORE=1
 EOF
 make -C ../.. clean
-juLog -name=Build -error=Error make -C ../.. -j8
+make -C ../.. -j8
+return $?
+}
+juLog -name=Build -error=Error build
 
 # download data
 juLog -name=DownloadData bash ./download.sh
@@ -37,6 +42,9 @@ check_val() {
     rm -f log
 }
 
+# python: distributed lenet + mnist
+juLog -name=Python.Distributed.KVStore -error=Error ../../tools/launch.py -n 4 python dist_sync_kvstore.py
+
 example_dir=../../example/image-classification
 # python: lenet + mnist
 test_lenet() {
@@ -47,12 +55,23 @@ test_lenet() {
 }
 juLog -name=Python.Lenet.Mnist -error=Fail test_lenet
 
+# python: distributed lenet + mnist
+test_dist_lenet() {
+    ../../tools/launch.py -n ${num_gpus} \
+        python ./dist_lenet.py --data-dir `pwd`/data/mnist/ \
+        --kv-store dist_sync \
+        --num-epochs 10 \
+        2>&1 | tee log
+    check_val 0.98
+}
+juLog -name=Python.Distributed.Lenet.Mnist -error=Fail test_dist_lenet
+
 # python: inception + cifar10
 test_inception_cifar10() {
     python $example_dir/train_cifar10.py \
         --data-dir `pwd`/data/cifar10/ --gpus $gpus --num-epochs 20 --batch-size 256 \
         2>&1 | tee log
-    check_val 0.78
+    check_val 0.82
 }
 juLog -name=Python.Inception.Cifar10 -error=Fail test_inception_cifar10
 

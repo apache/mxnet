@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # pylint: skip-file
-
 import sys
-sys.path.insert(0, "../../../python/")
+sys.path.insert(0, "../../python/")
 import mxnet as mx
 import numpy as np
 import time
@@ -45,6 +44,5 @@ def test_sync_push_pull():
     kv.pull(99, out = val2)
     check_diff_to_scalar(val2, num)
 
-# TODO data slice,
 if __name__ == "__main__":
     test_sync_push_pull()
