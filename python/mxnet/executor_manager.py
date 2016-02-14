@@ -88,6 +88,7 @@ def _load_label(batch, targets):
     """Load label into sliced arrays"""
     _load_general(batch.label, targets)
 
+# pylint: disable=too-many-branches
 def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
                base_exec=None, shared_data_arrays=None):
     """bind executor for bucketing, potentially sharing data with an existing executor."""
