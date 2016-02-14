@@ -11,6 +11,24 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  */
 class Symbol(private[mxnet] val handle: SymbolHandle) {
   def +(other: Symbol): Symbol = Symbol.create("_Plus", this, other)
+  def +[@specialized(Int, Float, Double) V](other: V): Symbol = {
+    Symbol.create("_PlusScalar", Array(this), Map("scalar" -> other.toString))
+  }
+
+  def -(other: Symbol): Symbol = Symbol.create("_Minus", this, other)
+  def -[@specialized(Int, Float, Double) V](other: V): Symbol = {
+    Symbol.create("_MinusScalar", Array(this), Map("scalar" -> other.toString))
+  }
+
+  def *(other: Symbol): Symbol = Symbol.create("_Mul", this, other)
+  def *[@specialized(Int, Float, Double) V](other: V): Symbol = {
+    Symbol.create("_MulScalar", Array(this), Map("scalar" -> other.toString))
+  }
+
+  def /(other: Symbol): Symbol = Symbol.create("_Div", this, other)
+  def /[@specialized(Int, Float, Double) V](other: V): Symbol = {
+    Symbol.create("_DivScalar", Array(this), Map("scalar" -> other.toString))
+  }
 
   override def clone(): Symbol = {
     val clonedHandle = new SymbolHandleRef
@@ -679,6 +697,19 @@ object Symbol {
   private val functions: Map[String, SymbolFunction] = initSymbolModule()
   private val bindReqMap = Map("null" -> 0, "write" -> 1, "add" -> 3)
 
+  def pow(sym1: Symbol, sym2: Symbol): Symbol = {
+    Symbol.create("_Power", sym1, sym2)
+  }
+
+  def pow[@specialized(Int, Float, Double) V](sym: Symbol, number: V): Symbol = {
+    Symbol.create("_PowerScalar", Array(sym), Map("scalar" -> number.toString))
+  }
+
+  def pow[@specialized(Int, Float, Double) V](number: V, sym: Symbol): Symbol = {
+    Symbol.create("_PowerScalar", Array(sym),
+      Map("scalar" -> number.toString, "scalar_on_left" -> "True"))
+  }
+
   /**
    * Create a symbolic variable with specified name.
    * @param name Name of the variable.
@@ -854,6 +885,12 @@ object Symbol {
     s
   }
 
+  def create(operator: String,
+             symbols: Array[Symbol],
+             paramKwargs: Map[String, String]): Symbol = {
+    create(operator, symbols, paramKwargs, null)
+  }
+
   def create(operator: String, symbols: Symbol*): Symbol = {
     create(operator, symbols.toArray, null, null)
   }
@@ -962,3 +999,29 @@ object Symbol {
 }
 
 private case class SymbolFunction(handle: SymbolHandle, keyVarNumArgs: String)
+
+object SymbolConversions {
+  implicit def int2Scalar(x: Int): SymbolConversions[Int] = new SymbolConversions(x)
+  implicit def double2Scalar(x: Double): SymbolConversions[Double] = new SymbolConversions(x)
+  implicit def float2Scalar(x: Float): SymbolConversions[Float] = new SymbolConversions(x)
+}
+
+class SymbolConversions[@specialized(Int, Float, Double) V](val value: V) {
+  def +(other: Symbol): Symbol = {
+    other + value
+  }
+
+  def -(other: Symbol): Symbol = {
+    Symbol.create("_MinusScalar", Array(other),
+      Map("scalar" -> value.toString, "scalar_on_left" -> "True"))
+  }
+
+  def *(other: Symbol): Symbol = {
+    other + value
+  }
+
+  def /(other: Symbol): Symbol = {
+    Symbol.create("_DivScalar", Array(other),
+      Map("scalar" -> value.toString, "scalar_on_left" -> "True"))
+  }
+}
