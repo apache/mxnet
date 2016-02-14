@@ -50,7 +50,7 @@ juLog -name=Python.Lenet.Mnist -error=Fail test_lenet
 # python: inception + cifar10
 test_inception_cifar10() {
     python $example_dir/train_cifar10.py \
-        --data-dir `pwd`/data/cifar10/ --gpus $gpus --num-epochs 10 --batch-size 512 \
+        --data-dir `pwd`/data/cifar10/ --gpus $gpus --num-epochs 20 --batch-size 256 \
         2>&1 | tee log
     check_val 0.78
 }
