@@ -4,8 +4,6 @@ sys.path.insert(0, "../../python")
 import mxnet as mx
 import numpy as np
 
-from scipy.sparse import coo_matrix
-
 from lstm import LSTMState, LSTMParam, LSTMModel, lstm
 
 # The interface of a data iter that works for bucketing
@@ -64,7 +62,7 @@ class SimpleBatch(object):
 
 class BucketSentenceIter(mx.io.DataIter):
     def __init__(self, path, vocab, buckets, batch_size,
-            init_states, n_batch=None, 
+            init_states, n_batch=None,
             data_name='data', label_name='label'):
         content = read_content(path)
         sentences = content.split(' <eos> ')
@@ -112,13 +110,13 @@ class BucketSentenceIter(mx.io.DataIter):
         self.init_states = init_states
         self.init_state_arrays = [mx.nd.zeros(x[1]) for x in init_states]
 
-        self.provide_data = [('%s/%d' % (self.data_name, t), (self.batch_size, self.vocab_size))
+        self.provide_data = [('%s/%d' % (self.data_name, t), (self.batch_size,))
                 for t in range(self.default_bucket_key)] + init_states
         self.provide_label = [('%s/%d' % (self.label_name, t), (self.batch_size,))
                 for t in range(self.default_bucket_key)]
 
     def embed_data(self, x):
-        return coo_matrix((np.ones(len(x)), (np.arange(len(x)), x)), 
+        return coo_matrix((np.ones(len(x)), (np.arange(len(x)), x)),
                           shape=(self.batch_size, self.vocab_size)).todense()
 
     def __iter__(self):
@@ -141,7 +139,7 @@ class BucketSentenceIter(mx.io.DataIter):
                 data[i, :len(sentence)] = sentence
                 label[i, :len(sentence)-1] = sentence[1:]
 
-            data_all = [mx.nd.array(self.embed_data(data[:, t]))
+            data_all = [mx.nd.array(data[:, t])
                     for t in range(self.buckets[i_bucket])] + self.init_state_arrays
             label_all = [mx.nd.array(label[:, t])
                     for t in range(self.buckets[i_bucket])]
@@ -182,13 +180,10 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
         # embeding layer
         data = mx.sym.Variable("data/%d" % seqidx)
 
-        #hidden = mx.sym.Embedding(data=data, weight=embed_weight,
-        #                          input_dim=input_size,
-        #                          output_dim=num_embed,
-        #                          name="t%d_embed" % seqidx)
-        hidden = mx.sym.FullyConnected(data=data, weight=embed_weight,
-                                       num_hidden=num_embed, no_bias=True,
-                                       name="t%d_embed" % seqidx)
+        hidden = mx.sym.Embedding(data=data, weight=embed_weight,
+                                  input_dim=input_size,
+                                  output_dim=num_embed,
+                                  name="t%d_embed" % seqidx)
         # stack LSTM
         for i in range(num_lstm_layer):
             if i==0:
@@ -234,7 +229,7 @@ if __name__ == '__main__':
     learning_rate = 0.1
     momentum = 0.0
 
-    contexts = [mx.context.gpu(i) for i in range(1)]
+    contexts = [mx.context.cpu(i) for i in range(1)]
 
     vocab = build_vocab("./data/ptb.train.txt")
 
