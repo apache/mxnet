@@ -132,6 +132,9 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
     if base_exec is None:
         aux_arrays = [nd.zeros(s, ctx) for s in aux_shape]
     else:
+        for i, a in enumerate(base_exec.aux_arrays):
+            assert aux_shape[i] == a.shape
+
         aux_arrays = [a for a in base_exec.aux_arrays]
 
     executor = sym.bind(ctx=ctx, args=arg_arrays, args_grad=grad_arrays,
