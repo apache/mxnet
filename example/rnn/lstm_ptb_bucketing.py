@@ -4,6 +4,8 @@ sys.path.insert(0, "../../python")
 import mxnet as mx
 import numpy as np
 
+from scipy.sparse import coo_matrix
+
 from lstm import LSTMState, LSTMParam, LSTMModel, lstm
 
 # The interface of a data iter that works for bucketing
@@ -62,11 +64,12 @@ class SimpleBatch(object):
 
 class BucketSentenceIter(mx.io.DataIter):
     def __init__(self, path, vocab, buckets, batch_size,
-            init_states, n_batch=None,
+            init_states, n_batch=None, 
             data_name='data', label_name='label'):
         content = read_content(path)
         sentences = content.split(' <eos> ')
 
+        self.vocab_size = len(vocab)
         self.data_name = data_name
         self.label_name = label_name
 
@@ -83,6 +86,7 @@ class BucketSentenceIter(mx.io.DataIter):
             for i, bkt in enumerate(buckets):
                 if bkt >= len(sentence):
                     self.data[i].append(sentence)
+                    break
             # we just ignore the sentence it is longer than the maximum
             # bucket size here
 
@@ -108,10 +112,14 @@ class BucketSentenceIter(mx.io.DataIter):
         self.init_states = init_states
         self.init_state_arrays = [mx.nd.zeros(x[1]) for x in init_states]
 
-        self.provide_data = [('%s/%d' % (self.data_name, t), (self.batch_size,))
+        self.provide_data = [('%s/%d' % (self.data_name, t), (self.batch_size, self.vocab_size))
                 for t in range(self.default_bucket_key)] + init_states
         self.provide_label = [('%s/%d' % (self.label_name, t), (self.batch_size,))
                 for t in range(self.default_bucket_key)]
+
+    def embed_data(self, x):
+        return coo_matrix((np.ones(len(x)), (np.arange(len(x)), x)), 
+                          shape=(self.batch_size, self.vocab_size)).todense()
 
     def __iter__(self):
         init_state_names = [x[0] for x in self.init_states]
@@ -133,7 +141,7 @@ class BucketSentenceIter(mx.io.DataIter):
                 data[i, :len(sentence)] = sentence
                 label[i, :len(sentence)-1] = sentence[1:]
 
-            data_all = [mx.nd.array(data[:, t])
+            data_all = [mx.nd.array(self.embed_data(data[:, t]))
                     for t in range(self.buckets[i_bucket])] + self.init_state_arrays
             label_all = [mx.nd.array(label[:, t])
                     for t in range(self.buckets[i_bucket])]
@@ -174,10 +182,13 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
         # embeding layer
         data = mx.sym.Variable("data/%d" % seqidx)
 
-        hidden = mx.sym.Embedding(data=data, weight=embed_weight,
-                                  input_dim=input_size,
-                                  output_dim=num_embed,
-                                  name="t%d_embed" % seqidx)
+        #hidden = mx.sym.Embedding(data=data, weight=embed_weight,
+        #                          input_dim=input_size,
+        #                          output_dim=num_embed,
+        #                          name="t%d_embed" % seqidx)
+        hidden = mx.sym.FullyConnected(data=data, weight=embed_weight,
+                                       num_hidden=num_embed, no_bias=True,
+                                       name="t%d_embed" % seqidx)
         # stack LSTM
         for i in range(num_lstm_layer):
             if i==0:
