@@ -8,7 +8,7 @@ import train_model
 # don't use -n and -s, which are resevered for the distributed training
 parser = argparse.ArgumentParser(description='train an image classifer on imagenet')
 parser.add_argument('--network', type=str, default='inception-bn',
-                    choices = ['alexnet', 'vgg', 'googlenet', 'inception-bn', 'inception-bn-full'],
+                    choices = ['alexnet', 'vgg', 'googlenet', 'inception-bn', 'inception-bn-full', 'inception-v3'],
                     help = 'the cnn to use')
 parser.add_argument('--data-dir', type=str, required=True,
                     help='the input data directory')
