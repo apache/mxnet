@@ -58,7 +58,7 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
    * Get a new grouped symbol whose output contains all the internal outputs of this symbol.
    * @return The internal of the symbol.
    */
-  def getInternals: Symbol = {
+  def getInternals(): Symbol = {
     val newHandle = new SymbolHandleRef
     checkCall(_LIB.mxSymbolGetInternals(handle, newHandle))
     new Symbol(handle = newHandle.value)
@@ -711,6 +711,128 @@ object Symbol {
   }
 
   /**
+   * Take absolute value of the src
+   * @param src Source symbolic input to the function
+   */
+  def abs(src: Symbol): Symbol = {
+    create("abs", Array(src), null, null)
+  }
+
+  /**
+   * Take sign value of the src
+   * @param src Source symbolic input to the function
+   */
+  def sign(src: Symbol): Symbol = {
+    create("sign", Array(src), null, null)
+  }
+
+  /**
+   * Take round value of the src
+   * @param src Source input to the function
+   */
+  def round(src: Symbol): Symbol = {
+    create("round", Array(src), null, null)
+  }
+
+  /**
+   * Take ceil value of the src
+   * src Source input to the function
+   */
+  def ceil(src: Symbol): Symbol = {
+    create("ceil", Array(src), null, null)
+  }
+
+  /**
+   * Take floor value of the src
+   * @param src Source input to the function
+   */
+  def floor(src: Symbol): Symbol = {
+    create("floor", Array(src), null, null)
+  }
+
+  /**
+   * Take square of the src
+   * @param src Source symbolic input to the function
+   */
+  def square(src: Symbol): Symbol = {
+    create("square", Array(src), null, null)
+  }
+
+  /**
+   * Take sqrt of the src
+   * src Source symbolic input to the function
+   */
+  def sqrt(src: Symbol): Symbol = {
+    create("sqrt", Array(src), null, null)
+  }
+
+  /**
+   * Take rsqrt of the src
+   * @param src Source symbolic input to the function
+   */
+  def rsqrt(src: Symbol): Symbol = {
+    create("rsqrt", Array(src), null, null)
+  }
+
+  /**
+   * Take exp of the src
+   * @param src Source symbolic input to the function
+   */
+  def exp(src: Symbol): Symbol = {
+    create("exp", Array(src), null, null)
+  }
+
+  /**
+   * Take log of the src
+   * @param src Source symbolic input to the function
+   */
+  def log(src: Symbol): Symbol = {
+    create("log", Array(src), null, null)
+  }
+
+  /**
+   * Take cos of the src
+   * @param src Source symbolic input to the function
+   */
+  def cos(src: Symbol): Symbol = {
+    create("cos", Array(src), null, null)
+  }
+
+  /**
+   * Take sin of the src
+   * @param src Source symbolic input to the function
+   */
+  def sin(src: Symbol): Symbol = {
+    create("sin", Array(src), null, null)
+  }
+
+  def max(left: Symbol, right: Symbol): Symbol = {
+    Symbol.create("_Maximum", left, right)
+  }
+
+  def max[@specialized(Int, Float, Double) V](left: Symbol, right: V): Symbol = {
+    Symbol.create("_MaximumScalar", Array(left), Map("scalar" -> right.toString))
+  }
+
+  def max[@specialized(Int, Float, Double) V](left: V, right: Symbol): Symbol = {
+    Symbol.create("_MaximumScalar", Array(right),
+      Map("scalar" -> left.toString, "scalar_on_left" -> "True"))
+  }
+
+  def min(left: Symbol, right: Symbol): Symbol = {
+    Symbol.create("_Minimum", left, right)
+  }
+
+  def min[@specialized(Int, Float, Double) V](left: Symbol, right: V): Symbol = {
+    Symbol.create("_MinimumScalar", Array(left), Map("scalar" -> right.toString))
+  }
+
+  def min[@specialized(Int, Float, Double) V](left: V, right: Symbol): Symbol = {
+    Symbol.create("_MinimumScalar", Array(right),
+      Map("scalar" -> left.toString, "scalar_on_left" -> "True"))
+  }
+
+  /**
    * Create a symbolic variable with specified name.
    * @param name Name of the variable.
    * @param attr Additional attributes to set on the variable.
@@ -802,7 +924,27 @@ object Symbol {
    */
   def SwapAxis(data: Symbol, dim1: Int = 0, dim2: Int = 0,
                attr: Map[String, String] = null): Symbol = {
-    createNoCheck("SwapAxis")(Map("data" -> data, "dim1" -> dim1, "dim2" -> dim2))
+    createNoCheck("SwapAxis", attr)(Map("data" -> data, "dim1" -> dim1, "dim2" -> dim2))
+  }
+
+  /**
+   * Get embedding for one-hot input
+   * @param data Symbol, Input data to the EmbeddingOp.
+   * @param weight Symbol, Embedding weight matrix.
+   * @param inputDim input dim of one-hot encoding
+   * @param outputDim output dim of embedding
+   * @param name symbol name
+   */
+  def Embedding(data: Symbol,
+                inputDim: Int,
+                outputDim: Int,
+                weight: Symbol = null,
+                name: String = null,
+                attr: Map[String, String] = null): Symbol = {
+    val params = Map("data" -> data, "input_dim" -> inputDim, "output_dim" -> outputDim) ++
+      (if (weight != null) Map("weight" -> weight) else Map.empty[String, Any]) ++
+      (if (name != null) Map("name" -> name) else Map.empty[String, Any])
+    createNoCheck("Embedding", attr)(params)
   }
 
   /**

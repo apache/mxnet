@@ -32,7 +32,7 @@ class SymbolSuite extends FunSuite with BeforeAndAfterAll {
     val net1 = Symbol.FullyConnected(Map("data" -> oldfc, "name" -> "fc2", "num_hidden" -> 100))
     assert(net1.listArguments().toArray
       === Array("data", "fc1_weight", "fc1_bias", "fc2_weight", "fc2_bias"))
-    val internal = net1.getInternals
+    val internal = net1.getInternals()
     val fc1 = internal.get("fc1_output")
     assert(fc1.listArguments() === oldfc.listArguments())
   }

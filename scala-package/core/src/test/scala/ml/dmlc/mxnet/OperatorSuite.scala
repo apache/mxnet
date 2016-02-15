@@ -242,6 +242,167 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
       Seq(NDArray.ones(shape) * 8 * Math.log(2).toFloat))
   }
 
+  test("embedding") {
+    val inDim = 10
+    val outDim = 4
+    val batch = 24
+
+    val data = Symbol.Variable("data")
+    val embed = Symbol.Embedding(data, inDim, outDim, name = "embed")
+    // TODO
+    // scalastyle:off println
+    println(s"Embeded symbol: ${embed.toJson}")
+    // scalastyle:on println
+  }
+
+  // check ops handle duplicate input correctly.
+  test("binary op duplicate input") {
+    val data = Symbol.Variable("data")
+    val shape = Vector(3, 4)
+    val dataTmp = NDArray.ones(shape) * 5
+    val arrData = dataTmp.copy()
+    val arrGrad = NDArray.ones(shape) * 3
+    val outGrad = NDArray.ones(shape)
+    val square = data * data
+    val exeSquare = square.bind(Context.cpu(), args = Array(arrData), argsGrad = Array(arrGrad))
+    exeSquare.forward()
+    assert(reldiff(exeSquare.outputs.head, dataTmp * dataTmp) < 1e-6f)
+    exeSquare.backward(outGrad)
+    assert(reldiff(arrGrad, dataTmp * 2f) < 1e-6f)
+  }
+
+  test("sign") {
+    val data = Symbol.Variable("data")
+    val shape = Vector(3, 4)
+    val dataTmp = NDArray.ones(shape) * 5
+    val arrData = dataTmp.copy()
+    val arrGrad = NDArray.ones(shape) * 3
+
+    val test = Symbol.sign(data)
+    val exeTest = test.bind(Context.cpu(), args = Array(arrData), argsGrad = Array(arrGrad))
+    exeTest.forward()
+    val out = exeTest.outputs.head
+    val npout = NDArray.sign(dataTmp)
+    assert(reldiff(out, npout) < 1e-6)
+
+    val outGrad = NDArray.ones(shape) * 2
+    exeTest.backward(outGrad)
+    arrGrad.toArray.foreach(elem => assert(elem === 0f +- 1e-3f))
+  }
+
+  test("round, ceil, floor") {
+    val data = Symbol.Variable("data")
+    val shape = Vector(3, 4)
+    val dataTmp = NDArray.ones(shape) * 5.543f
+    val arrData = dataTmp.copy()
+    val arrGrad = NDArray.ones(shape) * 2
+
+    val test = Symbol.round(data) + Symbol.ceil(data) + Symbol.floor(data)
+    val exeTest = test.bind(Context.cpu(), args = Array(arrData))
+    exeTest.forward()
+    val out = exeTest.outputs.head
+    val npout = NDArray.round(dataTmp) + NDArray.ceil(dataTmp) + NDArray.floor(dataTmp)
+    assert(reldiff(out, npout) < 1e-6)
+  }
+
+  test("rsqrt, cos, sin") {
+    val data = Symbol.Variable("data")
+    val shape = Vector(3, 4)
+    val dataTmp = NDArray.ones(shape) * 5
+    val arrData = dataTmp.copy()
+    val arrGrad = NDArray.ones(shape) * 3
+
+    val test = Symbol.rsqrt(data) + Symbol.cos(data) + Symbol.sin(data)
+    val exeTest = test.bind(Context.cpu(), args = Array(arrData), argsGrad = Array(arrGrad))
+    exeTest.forward()
+    val out = exeTest.outputs.head
+    val npout = {
+      import ml.dmlc.mxnet.NDArrayConversions._
+      1 / NDArray.sqrt(dataTmp) + NDArray.cos(dataTmp) + NDArray.sin(dataTmp)
+    }
+    assert(reldiff(out, npout) < 1e-6)
+
+    val outGrad = NDArray.ones(shape) * 2
+    val npoutGrad = {
+      import ml.dmlc.mxnet.NDArrayConversions._
+      outGrad * -(1 / (2 * dataTmp * NDArray.sqrt(dataTmp))) +
+        outGrad * -1 * NDArray.sin(dataTmp) + outGrad * NDArray.cos(dataTmp)
+    }
+    exeTest.backward(outGrad)
+    assert(reldiff(arrGrad, npoutGrad) < 1e-6)
+  }
+
+  test("maximum") {
+    val data1 = Symbol.Variable("data")
+    val data2 = Symbol.Variable("data")
+    val shape = Vector(3, 4)
+    val dataTmp1 = Random.uniform(0, 100, shape)
+    val dataTmp2 = Random.uniform(0, 100, shape)
+
+    val arrData1 = dataTmp1.copy()
+    val arrData2 = dataTmp2.copy()
+
+    val test = Symbol.max(data1, data2)
+    val exeTest = test.bind(Context.cpu(), args = Array(arrData1, arrData2))
+    exeTest.forward()
+    val out = exeTest.outputs.head
+    val expected = (dataTmp1.toArray zip dataTmp2.toArray).map { case (a, b) => Math.max(a, b) }
+    assert(reldiff(out.toArray, expected) < 1e-6)
+  }
+
+  test("minimum") {
+    val data1 = Symbol.Variable("data")
+    val data2 = Symbol.Variable("data")
+    val shape = Vector(3, 4)
+    val dataTmp1 = Random.uniform(0, 100, shape)
+    val dataTmp2 = Random.uniform(0, 100, shape)
+
+    val arrData1 = dataTmp1.copy()
+    val arrData2 = dataTmp2.copy()
+
+    val test = Symbol.min(data1, data2)
+    val exeTest = test.bind(Context.cpu(), args = Array(arrData1, arrData2))
+    exeTest.forward()
+    val out = exeTest.outputs.head
+    val expected = (dataTmp1.toArray zip dataTmp2.toArray).map { case (a, b) => Math.min(a, b) }
+    assert(reldiff(out.toArray, expected) < 1e-6)
+  }
+
+  test("maximum minimum scalar") {
+    val data = Symbol.Variable("data")
+    val shape = Vector(3, 4)
+    val dataTmp = NDArray.ones(shape) * 2
+
+    val arrData = dataTmp.copy()
+
+    val test = Symbol.max(data, 3) + Symbol.max(9, data) + Symbol.min(5, data) + Symbol.min(data, 4)
+    val exeTest = test.bind(Context.cpu(), args = Array(arrData))
+    exeTest.forward()
+    val out = exeTest.outputs.head
+    // 3 + 9 + 2 + 2
+    assert(reldiff(out, NDArray.ones(shape) * 16) < 1e-6)
+  }
+
+  test("abs") {
+    val data = Symbol.Variable("data")
+    val shape = Vector(3, 4)
+    val dataTmp = NDArray.ones(shape) * 5
+    val arrData = dataTmp.copy()
+    val arrGrad = NDArray.ones(shape) * 3
+
+    val test = Symbol.abs(data)
+    val exeTest = test.bind(Context.cpu(), args = Array(arrData), argsGrad = Array(arrGrad))
+    exeTest.forward()
+    val out = exeTest.outputs.head
+    val npout = NDArray.abs(dataTmp)
+    assert(reldiff(out, npout) < 1e-6)
+
+    val outGrad = NDArray.ones(shape) * 2
+    val npoutGrad = outGrad * NDArray.sign(dataTmp)
+    exeTest.backward(outGrad)
+    assert(reldiff(arrGrad, npoutGrad) < 1e-6)
+  }
+
   /**
    * Compare foward call to expected value.
    * @param sym output symbol
