@@ -449,6 +449,7 @@ class FeedForward(BASE_ESTIMATOR):
         self.begin_epoch = begin_epoch
 
     def _check_arguments(self):
+        """verify the argument of the default symbol and user provided parameters"""
         if self.argument_checked:
             return
 
@@ -461,11 +462,11 @@ class FeedForward(BASE_ESTIMATOR):
         if self.allow_extra_params:
             if self.arg_params:
                 arg_names = set(self.symbol.list_arguments())
-                self.arg_params = {k : v for k, v in arg_params.items()
+                self.arg_params = {k : v for k, v in self.arg_params.items()
                                    if k in arg_names}
             if aux_params:
                 aux_names = set(self.symbol.list_auxiliary_states())
-                self.aux_params = {k : v for k, v in aux_params.items()
+                self.aux_params = {k : v for k, v in self.aux_params.items()
                                    if k in aux_names}
 
 
@@ -724,7 +725,7 @@ class FeedForward(BASE_ESTIMATOR):
         eval_data = self._init_eval_iter(eval_data)
 
         if self.sym_gen:
-            self.symbol = self.sym_gen(data.default_bucket_key)
+            self.symbol = self.sym_gen(data.default_bucket_key) # pylint: disable=no-member
             self._check_arguments()
 
         arg_names, param_names, aux_names = \
