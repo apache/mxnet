@@ -100,7 +100,7 @@ def write_record(args, image_list):
 
         try:
             s = mx.recordio.pack_img(header, img, quality=args.quality, img_fmt=args.encoding)
-            q_out.put(('data', s))
+            q_out.put(('data', s, item))
         except:
             print 'pack_img error:',item[1]
             return
@@ -112,17 +112,18 @@ def write_record(args, image_list):
 
     def write_worker(q_out, prefix):
         pre_time = time.time()
-        cnt = 0
+        sink = []
         record = mx.recordio.MXRecordIO(prefix+'.rec', 'w')
         while True:
-            stat, s = q_out.get()
+            stat, s, item = q_out.get()
             if stat == 'finish':
+                write_list(prefix+'.lst', sink)
                 break
             record.write(s)
-            cnt += 1
-            if cnt % 1000 == 0:
+            sink.append(item)
+            if len(sink) % 1000 == 0:
                 cur_time = time.time()
-                print 'time:', cur_time - pre_time, ' count:', cnt
+                print 'time:', cur_time - pre_time, ' count:', len(sink)
                 pre_time = cur_time
 
     try:
@@ -139,7 +140,7 @@ def write_record(args, image_list):
         write_process.start()
         for p in read_process:
             p.join()
-        q_out.put(('finish', ''))
+        q_out.put(('finish', '', []))
         write_process.join()
     except ImportError:
         print('multiprocessing not available, fall back to single threaded encoding')
@@ -152,7 +153,7 @@ def write_record(args, image_list):
             image_encode(item, q_out)
             if q_out.empty():
                 continue
-            _, s = q_out.get()
+            _, s, _ = q_out.get()
             record.write(s)
             cnt += 1
             if cnt % 1000 == 0:
