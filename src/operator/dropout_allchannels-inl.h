@@ -5,8 +5,8 @@
  * \author Bing Xu, Kai Londenberg
 */
 
-#ifndef MXNET_RCPP_OPERATOR_DROPOUT_ALLCHANNELS_INL_H_
-#define MXNET_RCPP_OPERATOR_DROPOUT_ALLCHANNELS_INL_H_
+#ifndef MXNET_OPERATOR_DROPOUT_ALLCHANNELS_INL_H_
+#define MXNET_OPERATOR_DROPOUT_ALLCHANNELS_INL_H_
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
@@ -176,5 +176,5 @@ class DropoutAllchannelsProp : public OperatorProperty {
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_RCPP_OPERATOR_DROPOUT_ALLCHANNELS_INL_H_
+#endif  // MXNET_OPERATOR_DROPOUT_ALLCHANNELS_INL_H_
 
