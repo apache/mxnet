@@ -464,7 +464,7 @@ class FeedForward(BASE_ESTIMATOR):
                 arg_names = set(self.symbol.list_arguments())
                 self.arg_params = {k : v for k, v in self.arg_params.items()
                                    if k in arg_names}
-            if aux_params:
+            if self.aux_params:
                 aux_names = set(self.symbol.list_auxiliary_states())
                 self.aux_params = {k : v for k, v in self.aux_params.items()
                                    if k in aux_names}
