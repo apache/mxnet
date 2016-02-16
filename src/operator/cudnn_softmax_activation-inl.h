@@ -22,7 +22,9 @@ class CuDNNSoftmaxActivationOp : public Operator {
   }
 
   ~CuDNNSoftmaxActivationOp() {
-    CHECK_EQ(cudnnDestroyTensorDescriptor(shape_desc_), CUDNN_STATUS_SUCCESS);
+    if (init_cudnn_) {
+      CHECK_EQ(cudnnDestroyTensorDescriptor(shape_desc_), CUDNN_STATUS_SUCCESS);
+    }
   }
 
   virtual void Forward(const OpContext &ctx,

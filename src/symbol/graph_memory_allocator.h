@@ -49,8 +49,7 @@ class GraphStorageAllocator {
   explicit GraphStorageAllocator(
       StaticGraph *graph,
       const std::vector<uint32_t>& topo_order,
-      std::shared_ptr<GraphStoragePool> shared_mem
-        = std::make_shared<GraphStoragePool>()) noexcept(false);
+      std::shared_ptr<GraphStoragePool> shared_mem) noexcept(false);
   /*!
    * \brief Request a memory.
    * \param ctx the context of the graph

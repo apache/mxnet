@@ -5,7 +5,9 @@ dmlc_download() {
     dir=$1
     file=$2
     if [ ! -e data/${dir}/$file ]; then
-        wget -q ${url}/${dir}/${file} -P data/${dir}/ || exit -1
+        wget ${url}/${dir}/${file} -P data/${dir}/ || exit -1
+    else
+        echo "data/${dir}/$file already exits"
     fi
 }
 
