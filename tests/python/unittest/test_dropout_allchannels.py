@@ -7,7 +7,7 @@ def same(a, b):
 
 def check_with_device(device):
     with mx.Context(device):
-	shape = (3,10, 10, 10)
+	shape = (10,10, 10, 10)
 	a = mx.nd.ones(shape, dtype=np.float32)
 	c = mx.symbol.Variable('input')
 	e = mx.symbol.DropoutAllchannels(data=c)
@@ -18,7 +18,6 @@ def check_with_device(device):
 		for j in range(shape[1]-1):
 		    # Making sure all channels have been dropped out the same way
  	  	    assert(same(ret[i,j,:,:], ret[i,j+1,:,:]))
-	print "OK"
 	
 def test_dropout_allchannels():
     check_with_device(mx.cpu())
