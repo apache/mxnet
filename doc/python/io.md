@@ -44,15 +44,15 @@ The following code gives an example of creating a Cifar data iterator.
 >>>        # 'foo_label', unless overwritten
 >>>        # label_name='softmax_label',
 >>>        # Dataset Paramter
->>>        # Impulsary
+>>>        # Compulsory
 >>>        # indicating the data file, please check the data is already there
 >>>        path_imgrec="data/cifar/train.rec",
 >>>        # Dataset Paramter
->>>        # Impulsary
+>>>        # Compulsory
 >>>        # indicating the image size after preprocessing
 >>>        data_shape=(3,28,28),
 >>>        # Batch Paramter
->>>        # Impulsary
+>>>        # Compulsory
 >>>        # tells how many images in a batch
 >>>        batch_size=100,
 >>>        # Augmentation Parameter
