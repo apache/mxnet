@@ -328,6 +328,13 @@ class NDArray(object):
             self.handle, ctypes.byref(mx_dtype)))
         return _DTYPE_MX_TO_NP[mx_dtype.value]
 
+    @property
+    def T(self):
+        """Get transpose of current NDArray"""
+        if len(self.shape) != 2:
+            raise ValueError('Only 2D matrix is allowed to be transposed')
+        return transpose(self)
+
     def asnumpy(self):
         """Return a copied numpy array of current array.
 

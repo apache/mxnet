@@ -140,6 +140,24 @@ inline TShape ReduceChannelShape(const TShape& ishape) {
   return TShape(shape.begin(), shape.end());
 }
 
+
+template<typename xpu>
+void Transpose(const TBlob &src,
+            TBlob *ret,
+            OpReqType req,
+            RunContext ctx) {
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  mshadow::Tensor<xpu, 2> out = ret->FlatTo2D<xpu, real_t>(s);
+  mshadow::Tensor<xpu, 2> in = src.FlatTo2D<xpu, real_t>(s);
+  out = in.T();
+}
+inline TShape TransposeShape(const TShape& shp) {
+  std::vector<mshadow::index_t> ret;
+  ret.push_back(shp[1]);
+  ret.push_back(shp[0]);
+  return TShape(ret.begin(), ret.end());
+}
+
 // Register all unary operations here
 // The true means inplace can be enabled.
 // abs
@@ -230,6 +248,11 @@ MXNET_REGISTER_TBLOB_FUN(argmax_channel, XPU)
 .set_shape_infer(ReduceChannelShape)
 .describe("Take argmax indices of each channel of the src."
           "The result will be ndarray of shape (num_channel,) on the same device.");
+// transpose
+MXNET_REGISTER_TBLOB_FUN(transpose, XPU)
+.set_function(XPU::kDevMask, Transpose<XPU>, false, false)
+.set_shape_infer(TransposeShape)
+.describe("Transpose the input matrix and return a new one");
 }  // namespace ndarray
 }  // namespace mxnet
 #endif  // MXNET_NDARRAY_UNARY_FUNCTION_INL_H_
