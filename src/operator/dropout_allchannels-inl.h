@@ -5,8 +5,8 @@
  * \author Bing Xu, Kai Londenberg
 */
 
-#ifndef MXNET_OPERATOR_DROPOUT_ALLCHANNELS_INL_H_
-#define MXNET_OPERATOR_DROPOUT_ALLCHANNELS_INL_H_
+#ifndef MXNET_RCPP_OPERATOR_DROPOUT_ALLCHANNELS_INL_H_
+#define MXNET_RCPP_OPERATOR_DROPOUT_ALLCHANNELS_INL_H_
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
@@ -59,10 +59,11 @@ class DropoutAllchannelsOp : public Operator {
     Tensor<xpu, 4> data = in_data[dropout_allchannels::kData].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> out = out_data[dropout_allchannels::kOut].get<xpu, 4, real_t>(s);
     if (ctx.is_train) {
-      Tensor<xpu, 4> mask = out_data[dropout_allchannels::kMask].get<xpu,4,real_t>(s);
+      Tensor<xpu, 4> mask = out_data[dropout_allchannels::kMask].get<xpu, 4, real_t>(s);
       Random<xpu> *prnd = ctx.requested[dropout_allchannels::kRandom].get_random<xpu, real_t>(s);
       Shape<3> subshp = Shape3(mask.shape_[0], mask.shape_[2], mask.shape_[3]);
-      mask = broadcast_with_axis(F<mshadow_op::threshold>(prnd->uniform(subshp), pkeep_) * (1.0f / pkeep_), 0, mask.shape_[1]);
+      mask = broadcast_with_axis(F<mshadow_op::threshold>(prnd->uniform(subshp), pkeep_)
+                                                       * (1.0f / pkeep_), 0, mask.shape_[1]);
       Assign(out, req[dropout_allchannels::kOut], data * mask);
     } else {
       Assign(out, req[dropout_allchannels::kOut], F<mshadow_op::identity>(data));
@@ -175,5 +176,5 @@ class DropoutAllchannelsProp : public OperatorProperty {
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_DROPOUT_ALLCHANNELS_INL_H_
+#endif  // MXNET_RCPP_OPERATOR_DROPOUT_ALLCHANNELS_INL_H_
 
