@@ -74,6 +74,7 @@ def fit(args, network, data_loader):
         momentum           = 0.9,
         wd                 = 0.00001,
         initializer        = mx.init.Xavier(factor_type="in", magnitude=2.34),
+        sym_gen            = sym_gen,
         **model_args)
 
     model.fit(
