@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) 2015,2016 by Contributors
+ * Copyright (c) 2015, 2016 by Contributors
  * \file dropout_allchannels-inl.h
  * \brief
  * \author Bing Xu, Kai Londenberg
