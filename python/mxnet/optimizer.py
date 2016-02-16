@@ -540,6 +540,62 @@ class RMSProp(Optimizer):
         weight[:] += delta
 
 @register
+class AdaDelta(Optimizer):
+    """
+    AdaDelta optimizer as described in
+    Zeiler, M. D. (2012).
+    *ADADELTA: An adaptive learning rate method.*
+
+    http://arxiv.org/abs/1212.5701
+
+    Parameters
+    ----------
+    rho: float
+        Decay rate for both squared gradients and delta x
+    epsilon : float
+        The constant as described in the thesis
+    wd : float
+        L2 regularization coefficient add to all the weights
+    rescale_grad : float, optional
+        rescaling factor of gradient.
+    clip_gradient : float, optional
+        clip gradient in range [-clip_gradient, clip_gradient]
+    """
+    def __init__(self, rho=0.90, epsilon=1e-5,
+                 wd=0.000001, rescale_grad=1., clip_gradient=None,
+                 **kwargs):
+        super(AdaDelta, self).__init__(**kwargs)
+        self.rho = rho
+        self.epsilon = epsilon
+        self.wd = wd
+        self.rescale_grad = rescale_grad
+        self.clip_gradient = clip_gradient
+
+    def create_state(self, index, weight):
+        return (zeros(weight.shape, weight.context), # accumulated g
+                zeros(weight.shape, weight.context)) # accumulated delta
+
+    def update(self, index, weight, grad, state):
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+
+        # preprocess grad
+        grad *= self.rescale_grad
+        if self.clip_gradient is not None:
+            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+
+        # accumulated g and delta initlization
+        acc_g, acc_delta = state
+
+        # update g, delta
+        acc_g[:] = self.rho * acc_g + (1. - self.rho) * grad * grad
+        current_delta = sqrt(acc_delta + self.epsilon) / sqrt(acc_g + self.epsilon)  * grad
+        acc_delta[:] = self.rho * acc_delta + (1. - self.rho) * current_delta * current_delta
+
+        # update weight
+        weight[:] -= current_delta + self.wd * weight
+
+@register
 class Test(Optimizer):
     """For test use"""
     def __init__(self, rescale_grad=1):
