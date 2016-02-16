@@ -18,6 +18,13 @@ class CuDNNBatchNormOp : public Operator {
     dtype_ = CUDNN_DATA_FLOAT;
   }
 
+  ~CuDNNBatchNormOp() {
+    if (init_cudnn_) {
+      CHECK_EQ(cudnnDestroyTensorDescriptor(io_desc_), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnDestroyTensorDescriptor(mean_desc_), CUDNN_STATUS_SUCCESS);
+    }
+  }
+
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
