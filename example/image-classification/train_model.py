@@ -3,7 +3,7 @@ import mxnet as mx
 import logging
 import os
 
-def fit(args, network, data_loader):
+def fit(args, network, data_loader, sym_gen=None):
     # kvstore
     kv = mx.kvstore.create(args.kv_store)
 
@@ -13,7 +13,7 @@ def fit(args, network, data_loader):
         log_file = args.log_file
         log_dir = args.log_dir
         log_file_full_name = os.path.join(log_dir, log_file)
-        if not os.path.exists(log_dir): 
+        if not os.path.exists(log_dir):
             os.mkdir(log_dir)
         logger = logging.getLogger()
         handler = logging.FileHandler(log_file_full_name)
@@ -74,6 +74,7 @@ def fit(args, network, data_loader):
         momentum           = 0.9,
         wd                 = 0.00001,
         initializer        = mx.init.Xavier(factor_type="in", magnitude=2.34),
+        sym_gen            = sym_gen,
         **model_args)
 
     model.fit(

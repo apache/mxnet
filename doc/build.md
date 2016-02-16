@@ -40,7 +40,7 @@ Optional libraries
 
 - `CUDA Toolkit >= v7.0` to run on nvidia GPUs
   - Requires GPU with support for `Compute Capability >= 2.0`
-- CUDNN to accelerate the GPU computation (only CUDNN 3 is supported)
+- CUDNN to accelerate the GPU computation 
 - opencv for image augmentation
 
 We can edit `make/config.mk` to change the compile options, and then build by
@@ -276,8 +276,12 @@ These are updated on a weekly basis with the latest builds of MXNet. Examples of
 are as follows:
 
 ```bash
+# CPU only docker
 sudo docker run -it kaixhin/mxnet
-sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia0 kaixhin/cuda-mxnet:7.0
+
+OR
+# CPU enabled docker
+sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia0 kaixhin/cuda-mxnet:latest
 ```
 
 For a guide to Docker, see the [official docs](https://docs.docker.com/userguide/). For more details on how to use the
