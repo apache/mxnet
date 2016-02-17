@@ -1,7 +1,7 @@
 #' Convenience interface for multiple layer perceptron
 #' 
-#' @param data the input matrix.
-#' @param label the training label.
+#' @param data the input matrix. Only mx.io.DataIter and R array/matrix types supported.
+#' @param label the training label. Only R array type supported.
 #' @param hidden_node a vector containing number of hidden nodes on each hidden layer as well as the output layer.
 #' @param out_node the number of nodes on the output layer.
 #' @param dropout a number in [0,1) containing the dropout ratio from the last hidden layer to the output layer.
