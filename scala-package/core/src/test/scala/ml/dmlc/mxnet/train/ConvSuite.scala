@@ -18,14 +18,14 @@ class ConvSuite extends FunSuite with BeforeAndAfterAll {
     val data = Symbol.Variable("data")
     val conv1 = Symbol.Convolution(Map("data" -> data, "name" -> "conv1",
                                        "num_filter" -> 32, "kernel" -> (3, 3), "stride" -> (2, 2)))
-    val bn1 = Symbol.BatchNorm(Map("data" -> conv1, "name" -> "bn1"))
+    val bn1 = Symbol.BatchNorm()(Map("data" -> conv1, "name" -> "bn1"))
     val act1 = Symbol.Activation(Map("data" -> bn1, "name" -> "relu1", "act_type" -> "relu"))
     val mp1 = Symbol.Pooling(Map("data" -> act1, "name" -> "mp1",
                                  "kernel" -> (2, 2), "stride" -> (2, 2), "pool_type" -> "max"))
 
     val conv2 = Symbol.Convolution(Map("data" -> mp1, "name" -> "conv2", "num_filter" -> 32,
                                        "kernel" -> (3, 3), "stride" -> (2, 2)))
-    val bn2 = Symbol.BatchNorm(Map("data" -> conv2, "name" -> "bn2"))
+    val bn2 = Symbol.BatchNorm()(Map("data" -> conv2, "name" -> "bn2"))
     val act2 = Symbol.Activation(Map("data" -> bn2, "name" -> "relu2", "act_type" -> "relu"))
     val mp2 = Symbol.Pooling(Map("data" -> act2, "name" -> "mp2",
                                  "kernel" -> (2, 2), "stride" -> (2, 2), "pool_type" -> "max"))

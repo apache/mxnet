@@ -403,8 +403,170 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     assert(reldiff(arrGrad, npoutGrad) < 1e-6)
   }
 
+  // configure A: input --> conv --> deconv --> output.
+  // the convolution and deconvoluiton has similar parameter which ensure
+  // the input shape is the same as output, and the same weights between conv
+  // and deconv;
+  // If the input value of forward() and backwrad() is the same, then
+  // the output value of them should also the same;
+  private def checkDeconvolutionForwardBackward(inputShape: Shape,
+                                                numFilter: Int,
+                                                kernel: (Int, Int),
+                                                stride: (Int, Int),
+                                                pad: (Int, Int)): Unit = {
+    require(inputShape(1) == numFilter)
+    val data = Symbol.Variable(name = "data")
+    val conv = Symbol.Convolution(Map(
+      "data" -> data, "kernel" -> kernel, "stride" -> stride, "pad" -> pad,
+      "num_filter" -> numFilter, "no_bias" -> "true", "name" -> "conv"))
+    val deconv = Symbol.Deconvolution()(Map(
+      "data" -> conv, "kernel" -> kernel, "stride" -> stride, "pad" -> pad,
+      "num_filter" -> numFilter, "no_bias" -> "true", "name" -> "deconv"))
+
+    val argNames = deconv.listArguments()
+    val (argShapes, outShapes, _) = deconv.inferShape(Map("data" -> inputShape))
+    val inputData = Random.uniform(-5, 5, inputShape)
+    val outGrad = inputData
+    val convWeight = Random.normal(0, 1, Vector(numFilter, inputShape(1), kernel._1, kernel._2))
+    val args: Map[String, NDArray] =
+      Map("data" -> inputData, "conv_weight" -> convWeight, "deconv_weight" -> convWeight)
+    val argsGrad: Seq[NDArray] = argShapes.map(NDArray.empty(_))
+
+    val exe = deconv.bind(Context.cpu(), args = args, argsGrad = argsGrad)
+    exe.forward()
+    val out = exe.outputs.head
+    exe.backward(outGrad)
+    assert(reldiff(out, argsGrad.head) < 1e-6)
+  }
+
+  test("deconvolution forward & backward") {
+    checkDeconvolutionForwardBackward(
+      inputShape = Vector(1, 1, 5, 5),
+      numFilter = 1,
+      kernel = (3, 3),
+      stride = (1, 1),
+      pad = (1, 1)
+    )
+    checkDeconvolutionForwardBackward(
+      inputShape = Vector(32, 3, 28, 28),
+      numFilter = 3,
+      kernel = (3, 3),
+      stride = (1, 1),
+      pad = (1, 1)
+    )
+    checkDeconvolutionForwardBackward(
+      inputShape = Vector(10, 3, 403, 403),
+      numFilter = 3,
+      kernel = (7, 7),
+      stride = (5, 5),
+      pad = (2, 2)
+    )
+  }
+
+  // configure A: input --> conv --> output.
+  // configure B: input --> deconv --> output
+  // the convolution and deconvoluiton has similar parameter which ensure
+  // the input shape is the same as output;
+  // During backward(), if the input of A equals output of B, and the output
+  // of A equals input of B, then the grad of weight should be the same;
+  private def checkDeconvolutionGradient(inputShape: Shape,
+                                         numFilter: Int,
+                                         pad: (Int, Int)): Unit = {
+    val stride = (1, 1)
+    val kernel = (2 * pad._1 + 1, 2 * pad._2 + 1)
+    val dataConv = Symbol.Variable(name = "data_conv")
+    val conv = Symbol.Convolution(Map(
+      "data" -> dataConv, "kernel" -> kernel, "stride" -> stride, "pad" -> pad,
+      "num_filter" -> numFilter, "no_bias" -> "true", "name" -> "conv"))
+    val dataDeconv = Symbol.Variable(name = "data_deconv")
+    val deconv = Symbol.Deconvolution()(Map(
+      "data" -> dataDeconv, "kernel" -> kernel, "stride" -> stride, "pad" -> pad,
+      "num_filter" -> numFilter, "no_bias" -> "true", "name" -> "deconv"))
+
+    val convData = Random.uniform(-5, 5, inputShape)
+    val convArgs = Map("data_conv" -> convData,
+      "conv_weight" -> Random.normal(0, 1, Vector(numFilter, inputShape(1), kernel._1, kernel._2)))
+
+    val convArgsGrad = Seq(NDArray.zeros(convData.shape),
+      NDArray.zeros(Vector(numFilter, inputShape(1), kernel._1, kernel._2)))
+    val exeConv = conv.bind(Context.cpu(), args = convArgs, argsGrad = convArgsGrad)
+    val convOutGrad = Random.normal(0, 2, exeConv.outputs.head.shape)
+    exeConv.backward(convOutGrad)
+
+    val deconvData = convOutGrad
+    val deconvArgs = Map("data_deconv" -> deconvData, "deconv_weight" -> convArgs("conv_weight"))
+    val deconvArgsGrad = Seq(NDArray.zeros(deconvData.shape),
+      NDArray.zeros(Vector(numFilter, inputShape(1), kernel._1, kernel._2)))
+    val exeDeconv = deconv.bind(Context.cpu(), args = deconvArgs, argsGrad = deconvArgsGrad)
+    val deconvOutGrad = convData
+    exeDeconv.backward(deconvOutGrad)
+    assert(reldiff(convArgsGrad(1), deconvArgsGrad(1)) < 1e-6)
+  }
+
+  test("deconvolution gradient") {
+    checkDeconvolutionGradient(
+      inputShape = Vector(1, 3, 5, 5),
+      numFilter = 3,
+      pad = (1, 1)
+    )
+    checkDeconvolutionGradient(
+      inputShape = Vector(5, 3, 100, 100),
+      numFilter = 3,
+      pad = (3, 3)
+    )
+  }
+
+  private def checkNearestUpSamplingWithShape(shapes: Seq[Shape],
+                                              scale: Int,
+                                              rootScale: Int): Unit = {
+    val arr = shapes.zipWithIndex.map { case (shape, i) =>
+      (s"arg_$i", Random.uniform(-10, 10, shape))
+    }.toMap
+
+    val arrGrad = shapes.zipWithIndex.map { case (shape, i) =>
+      (s"arg_$i", NDArray.zeros(shape))
+    }.toMap
+
+    val up = Symbol.UpSampling((0 until shapes.size).map(i => Symbol.Variable(s"arg_$i")),
+      Map("sample_type" -> "nearest", "scale" -> rootScale))
+    val exe = up.bind(Context.cpu(), args = arr, argsGrad = arrGrad)
+    exe.forward(isTrain = true)
+    exe.backward(exe.outputs)
+    for (k <- 0 until shapes.size) {
+      val name = s"arg_$k"
+      val expected =
+        arr(name).toArray.map(_ * Math.pow(rootScale, 2).toFloat * Math.pow(scale, 2 * k).toFloat)
+      val real = arrGrad(name).toArray
+      (expected zip real) foreach { case (e, r) =>
+        assert(r === e +- 0.1f)
+      }
+    }
+  }
+
+  test("nearest upsampling") {
+    for (rootScale <- 1 to 3) {
+      for (scale <- 1 to 3) {
+        for (numShape <- 1 to 3) {
+          for (base <- 1 to 3) {
+            val shapes = (0 until numShape).map(i =>
+              Vector(1, 3, base * rootScale * Math.pow(scale, numShape - 1 - i).toInt,
+                     base * rootScale * Math.pow(scale, numShape - 1 - i).toInt))
+            checkNearestUpSamplingWithShape(shapes, scale, rootScale)
+          }
+        }
+      }
+    }
+  }
+
+  test("batch norm") {
+    val data = Symbol.Variable("data")
+    val test = Symbol.BatchNorm()(Map("data" -> data, "fix_gamma" -> "False"))
+    println(s"BatchNorm: ${test.toJson}")
+    // TODO: check numeric gradient
+  }
+
   /**
-   * Compare foward call to expected value.
+   * Compare forward call to expected value.
    * @param sym output symbol
    * @param location list of numpy arrays corresponding to sym.list_arguments
    * @param expected list of arrays corresponding to sym.outputs
