@@ -388,7 +388,6 @@ class FeedForward(BASE_ESTIMATOR):
         Training parameter, name or optimizer object for training.
     initializer : initializer function, optional
         Training parameter, the initialization scheme used.
-    sym_gen: a symbol generator, useful for bucketing.
     numpy_batch_size : int, optional
         The batch size of training data.
         Only needed when input array is numpy.
@@ -406,7 +405,7 @@ class FeedForward(BASE_ESTIMATOR):
     **kwargs : dict
         The additional keyword arguments passed to optimizer.
     """
-    def __init__(self, symbol, ctx=None, sym_gen=None,
+    def __init__(self, symbol, ctx=None,
                  num_epoch=None, epoch_size=None, optimizer='sgd',
                  initializer=Uniform(0.01),
                  numpy_batch_size=128,
@@ -414,21 +413,25 @@ class FeedForward(BASE_ESTIMATOR):
                  allow_extra_params=False,
                  begin_epoch=0,
                  **kwargs):
-        # check if symbol contain duplicated names.
-        _check_arguments(symbol)
-        # rematch parameters to delete useless ones
-        if allow_extra_params:
-            if arg_params:
-                arg_names = set(symbol.list_arguments())
-                arg_params = {k : v for k, v in arg_params.items()
-                              if k in arg_names}
-            if aux_params:
-                aux_names = set(symbol.list_auxiliary_states())
-                aux_params = {k : v for k, v in aux_params.items()
-                              if k in aux_names}
+
+        if isinstance(symbol, sym.Symbol):
+            self.symbol = symbol
+            self.sym_gen = None
+        else:
+            assert(callable(symbol))
+            self.symbol = None
+            self.sym_gen = symbol
+
+        # model parameters
+        self.arg_params = arg_params
+        self.aux_params = aux_params
+        self.allow_extra_params = allow_extra_params
+
+        self.argument_checked = False
+        if self.sym_gen is None:
+            self._check_arguments()
+
         # basic configuration
-        self.symbol = symbol
-        self.sym_gen = sym_gen
         if ctx is None:
             ctx = [cpu()]
         elif isinstance(ctx, Context):
@@ -441,12 +444,31 @@ class FeedForward(BASE_ESTIMATOR):
         self.optimizer = optimizer
         self.initializer = initializer
         self.numpy_batch_size = numpy_batch_size
-        # model parameters
-        self.arg_params = arg_params
-        self.aux_params = aux_params
         # internal helper state
         self._pred_exec = None
         self.begin_epoch = begin_epoch
+
+    def _check_arguments(self):
+        """verify the argument of the default symbol and user provided parameters"""
+        if self.argument_checked:
+            return
+
+        assert(self.symbol is not None)
+        self.argument_checked = True
+
+        # check if symbol contain duplicated names.
+        _check_arguments(self.symbol)
+        # rematch parameters to delete useless ones
+        if self.allow_extra_params:
+            if self.arg_params:
+                arg_names = set(self.symbol.list_arguments())
+                self.arg_params = {k : v for k, v in self.arg_params.items()
+                                   if k in arg_names}
+            if self.aux_params:
+                aux_names = set(self.symbol.list_auxiliary_states())
+                self.aux_params = {k : v for k, v in self.aux_params.items()
+                                   if k in aux_names}
+
 
     @staticmethod
     def _is_data_arg(name):
@@ -701,6 +723,10 @@ class FeedForward(BASE_ESTIMATOR):
 
         data = self._init_iter(X, y, is_train=True)
         eval_data = self._init_eval_iter(eval_data)
+
+        if self.sym_gen:
+            self.symbol = self.sym_gen(data.default_bucket_key) # pylint: disable=no-member
+            self._check_arguments()
 
         arg_names, param_names, aux_names = \
                 self._init_params(dict(data.provide_data+data.provide_label))

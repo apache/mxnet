@@ -247,11 +247,9 @@ if __name__ == '__main__':
     data_val   = BucketSentenceIter("./data/ptb.valid.txt", vocab,
                                     buckets, batch_size, init_states)
 
-    sym = sym_gen(data_train.default_bucket_key)
     model = mx.model.FeedForward(
             ctx           = contexts,
-            symbol        = sym_gen(data_train.default_bucket_key),
-            sym_gen       = sym_gen,
+            symbol        = sym_gen,
             num_epoch     = num_epoch,
             learning_rate = learning_rate,
             momentum      = momentum,

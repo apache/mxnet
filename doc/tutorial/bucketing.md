@@ -14,14 +14,13 @@ Taking the [PennTreeBank language model example](https://github.com/dmlc/mxnet/t
 
 The architecture used in the example is a simple word-embedding layer followed by two LSTM layers. In the original example, the model is unrolled explicitly in time for a fixed length of 32. In this demo, we will show how to use bucketing to implement variable-length sequence training.
 
-In order to enable bucketing, MXNet need to know how to construct a new unrolled symbolic architecture for a different sequence length. To achieve this, we need to define a callback and pass it as the `sym_gen` parameter when constructing the model.
+In order to enable bucketing, MXNet need to know how to construct a new unrolled symbolic architecture for a different sequence length. To achieve this, instead of constructing a model with a fixed `Symbol`, we use a callback function that generating new `Symbol` on a *bucket key*.
 
 
 ```python
 model = mx.model.FeedForward(
         ctx     = contexts,
-        symbol  = default_sym,
-        sym_gen = sym_gen)
+        symbol  = sym_gen)
 ```
 
 Here `sym_gen` must be a function taking one argument `bucket_key` and returns a `Symbol` for this bucket. In our example, we will use the sequence length as the bucket key. But in general, a bucket key could be anything. For example, in neural translation, since different combination of input-output sequence lengths correspond to different unrolling, the bucket key could be a pair of lengths.
@@ -32,14 +31,7 @@ def sym_gen(seq_len):
                        num_hidden=num_hidden, num_embed=num_embed,
                        num_label=len(vocab))
 ```
-
-In order to be compatible with the existing API that does not use bucketing, we still need to pass the `symbol` parameter when constructing the model. This model **should** be the default model corresponding to the `default_bucket_key`.
-
-```python
-default_sym = sym_gen(data_train.default_bucket_key)
-```
-
-The data iterator is responsible to report what the default bucket key is. After this, the model is capable of training with different buckets by sharing the parameters as well as intermediate computation buffers between bucket executors.
+The data iterator need to report the `default_bucket_key`, which allows MXNet to do some parameter initialization before actually reading the data. Now the model is capable of training with different buckets by sharing the parameters as well as intermediate computation buffers between bucket executors.
 
 However, to achieve training, we still need to add some extra bits to our `DataIter`. Apart from reporting the `default_bucket_key` as mentioned above, we also need to report the current `bucket_key` for each mini-batch. More specifically, the `DataBatch` object returned in each mini-batch by the `DataIter` should contain the following *extra* properties
 
