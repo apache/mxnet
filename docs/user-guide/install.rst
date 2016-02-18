@@ -53,4 +53,4 @@ Basically, MXNet.jl will search ``libmxnet.so`` or ``libmxnet.dll`` in the follo
 * ``Pkg.dir("MXNet")/deps/usr/lib``: automatic builds
 * Any system wide library search path
 
-Note that MXNet.jl will not find ``libmxnet.so`` even if it is on the path if a library it depends upon is missing from the LD_LIBRARY_PATH.  Thus, if you are going to compile to add CUDA, the path to the CUDA libraries will have to be added to LD_LIBRARY_PATH.
+Note that MXNet.jl will not find ``libmxnet.so`` even if it is on one of the paths above if a library it depends upon is missing from the ``LD_LIBRARY_PATH``.  Thus, if you are going to compile to add CUDA, the path to the CUDA libraries will have to be added to ``LD_LIBRARY_PATH``.
