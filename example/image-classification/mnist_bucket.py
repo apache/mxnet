@@ -92,5 +92,4 @@ if __name__ == '__main__':
     def symbol_generator(key):
         return net # all the symbols are the same for all bucket entries
 
-    train_mnist.train_model.fit(args, net, get_iterator(buckets),
-            sym_gen=symbol_generator)
+    train_mnist.train_model.fit(args, symbol_generator, get_iterator(buckets))
