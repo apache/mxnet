@@ -50,7 +50,7 @@ def numeric_grad(executor, location, eps=1e-4):
         a[:] = np.asarray(l)
     approx_grads = [np.zeros_like(l) for l in location]
 
-    executor.forward()
+    executor.forward(is_train=True)
     f_x = executor.outputs[0].asnumpy()
 
     x_copy = [np.copy(x) for x in location]
@@ -62,7 +62,7 @@ def numeric_grad(executor, location, eps=1e-4):
             # set initial states. Need to set all due to inplace operations
             for inp, val in zip(args, location):
                 inp[:] = val
-            executor.forward()
+            executor.forward(is_train=True)
             f_eps = executor.outputs[0].asnumpy()
             ap_grad.ravel()[i] = (f_eps - f_x) / eps
             loc.ravel()[i] = reset.ravel()[i]
@@ -72,7 +72,7 @@ def numeric_grad(executor, location, eps=1e-4):
 
 rng = np.random.RandomState(1234)
 
-def check_numeric_gradient(sym, location, numeric_eps=1e-4, check_eps=1e-2):
+def check_numeric_gradient(sym, location, aux_states=[], numeric_eps=1e-4, check_eps=1e-2):
     """
     Verify an operation by checking backwards pass via
     finite difference method.
@@ -114,8 +114,9 @@ def check_numeric_gradient(sym, location, numeric_eps=1e-4, check_eps=1e-2):
 
     arr_data = [mx.nd.array(l) for l in location] + [mx.nd.empty(out_shape[0])]
     arr_grad = [mx.nd.empty(l.shape) for l in location] + [mx.nd.empty(out_shape[0])]
+    arr_aux = [mx.nd.array(l) for l in aux_states]
 
-    executor = out.bind(mx.cpu(), args=arr_data, args_grad=arr_grad)
+    executor = out.bind(mx.cpu(), args=arr_data, args_grad=arr_grad, aux_states=arr_aux)
 
     location = location + [random_projection(out_shape[0])]
     inps = executor.arg_arrays
@@ -132,7 +133,7 @@ def check_numeric_gradient(sym, location, numeric_eps=1e-4, check_eps=1e-2):
 
     assert len(executor.outputs) == 1
 
-    executor.forward()
+    executor.forward(is_train=True)
     executor.backward()
     # remove the proj from grads
     symbolic_grad = [g.asnumpy() for g in executor.grad_arrays[0:-1]]
@@ -140,9 +141,10 @@ def check_numeric_gradient(sym, location, numeric_eps=1e-4, check_eps=1e-2):
     # refactor forward out of here as this no longer computes correct forward pass
     numeric_gradients = numeric_grad(executor, location, eps=numeric_eps)
 
-    for numeric, symbolic in zip(numeric_gradients, symbolic_grad):
+    for name, numeric, symbolic in zip(out.list_arguments(), numeric_gradients, symbolic_grad):
         rel = reldiff(numeric, symbolic)
-        assert rel <= check_eps
+        if rel > check_eps:
+            raise Exception("Numeric check failed for %s. relative error of %f expected <= %f"%(name, rel, check_eps))
 
 def check_symbolic_forward(sym, location, expected, check_eps=1e-5):
     """ Compare foward call to expected value.

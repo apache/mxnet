@@ -7,8 +7,14 @@
 mx.symbol.Concat(...)
 }
 \arguments{
+\item{data}{Symbol[]
+List of tensors to concatenate}
+
 \item{num.args}{int, required
 Number of inputs to be concated.}
+
+\item{dim}{int, optional, default='1'
+the dimension to be concated.}
 
 \item{name}{string, optional
 Name of the resulting symbol.}

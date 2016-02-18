@@ -134,7 +134,7 @@ class AutoEncoderModel(model.MXModel):
     def layerwise_pretrain(self, X, batch_size, n_iter, optimizer, l_rate, decay, lr_scheduler=None):
         def l2_norm(label, pred):
             return np.mean(np.square(label-pred))/2.0
-        solver = Solver('sgd', momentum=0.9, wd=decay, learning_rate=l_rate, lr_scheduler=lr_scheduler)
+        solver = Solver(optimizer, momentum=0.9, wd=decay, learning_rate=l_rate, lr_scheduler=lr_scheduler)
         solver.set_metric(mx.metric.CustomMetric(l2_norm))
         solver.set_monitor(Monitor(1000))
         data_iter = mx.io.NDArrayIter({'data': X}, batch_size=batch_size, shuffle=True,
@@ -154,7 +154,7 @@ class AutoEncoderModel(model.MXModel):
     def finetune(self, X, batch_size, n_iter, optimizer, l_rate, decay, lr_scheduler=None):
         def l2_norm(label, pred):
            return np.mean(np.square(label-pred))/2.0
-        solver = Solver('sgd', momentum=0.9, wd=decay, learning_rate=l_rate, lr_scheduler=lr_scheduler)
+        solver = Solver(optimizer, momentum=0.9, wd=decay, learning_rate=l_rate, lr_scheduler=lr_scheduler)
         solver.set_metric(mx.metric.CustomMetric(l2_norm))
         solver.set_monitor(Monitor(1000))
         data_iter = mx.io.NDArrayIter({'data': X}, batch_size=batch_size, shuffle=True,

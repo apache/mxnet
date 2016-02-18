@@ -227,7 +227,7 @@ class OperatorProperty {
    *     For unknown shapes, InferShape will try to fill in the correct Shape in in_shape
    *     For known shapes, InferShape will check shape consistency
    *
-   *     common practice: set the shape of data input, and usually weight's shape can be infered
+   *     common practice: set the shape of data input, and usually weight's shape can be inferred
    *
    * \param out_shape the shape of outputs of the operator
    *     InferShape will modify the vector to fill output TShape
@@ -239,6 +239,44 @@ class OperatorProperty {
   virtual bool InferShape(std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape,
                           std::vector<TShape> *aux_shape) const = 0;
+  /*!
+   * \brief infer the data types of outputs and unknown input arguments
+   * \param in_type the type of input arguments of the operator
+   *     this should be of same length as the vector returned by DescribeArgs
+   *     in_type allows unknown elements, which are checked by type.ndim() == 0.
+   *     For unknown types, Infertype will try to fill in the correct type in in_type
+   *     For known types, Infertype will check type consistency
+   *
+   *     common practice: set the type of data input, and usually weight's type can be inferred
+   *
+   * \param out_type the type of outputs of the operator
+   *     Infertype will modify the vector to fill output Ttype
+   * \param aux_type the type of auxiliary states of the operator
+   *     Infertype will modify the vector to fill output Ttype
+   * \return true if the type inference is successful, false if there is not enough information.
+   * \throws dmlc::Error if the known arg_types are inconsistent.
+   */
+  virtual bool InferType(std::vector<int> *in_type,
+                          std::vector<int> *out_type,
+                          std::vector<int> *aux_type) {
+    CHECK_LE(in_type->size(), this->ListArguments().size());
+    int n_in = this->ListArguments().size();
+    for (unsigned i = 0; i < in_type->size(); ++i) {
+      CHECK(in_type->at(i) == mshadow::default_type_flag ||
+            in_type->at(i) == -1) << "Unsupported data type " << in_type->at(i);
+    }
+    in_type->clear();
+    for (int i = 0; i < n_in; ++i ) in_type->push_back(mshadow::default_type_flag);
+
+    int n_out = this->ListOutputs().size();
+    out_type->clear();
+    for (int i = 0; i < n_out; ++i ) out_type->push_back(mshadow::default_type_flag);
+
+    int n_aux = this->ListAuxiliaryStates().size();
+    aux_type->clear();
+    for (int i = 0; i < n_aux; ++i ) aux_type->push_back(mshadow::default_type_flag);
+    return true;
+  }
   /*!
    * \brief Copy this OperatorProperty.
    * \return a pointer to the copied OperatorProperty
@@ -479,6 +517,7 @@ struct OperatorPropertyReg
 #define MXNET_REGISTER_OP_PROPERTY(name, OperatorPropertyType)          \
   DMLC_REGISTRY_REGISTER(::mxnet::OperatorPropertyReg, OperatorPropertyReg, name) \
   .set_body([]() { return new OperatorPropertyType(); })                \
+  .set_return_type("Symbol") \
   .check_name()
 
 #endif  // DMLC_USE_CXX11

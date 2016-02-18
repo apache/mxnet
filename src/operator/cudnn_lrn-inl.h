@@ -22,8 +22,10 @@ class CuDNNLocalResponseNormOp : public Operator {
   }
 
   ~CuDNNLocalResponseNormOp() {
-    CHECK_EQ(cudnnDestroyLRNDescriptor(lrn_desc_), CUDNN_STATUS_SUCCESS);
-    CHECK_EQ(cudnnDestroyTensorDescriptor(shape_desc_), CUDNN_STATUS_SUCCESS);
+    if (init_cudnn_) {
+      CHECK_EQ(cudnnDestroyLRNDescriptor(lrn_desc_), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnDestroyTensorDescriptor(shape_desc_), CUDNN_STATUS_SUCCESS);
+    }
   }
 
   virtual void Forward(const OpContext &ctx,

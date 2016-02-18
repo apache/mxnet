@@ -5,10 +5,8 @@
  * \author Junyuan Xie
  */
 #include <mxnet/mxrtc.h>
-#if MXNET_USE_CUDA
-
+#if ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
 namespace mxnet {
-
 const std::string MXRtc::str_type = "float";
 std::unordered_map<std::string, char*> MXRtc::kernel_registry;
 
@@ -139,4 +137,4 @@ char* MXRtc::compile(const std::string& name, const std::string& code) {
 
 }  // namespace mxnet
 
-#endif  // MXNET_USE_CUDA
+#endif  // ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))

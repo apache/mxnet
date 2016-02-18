@@ -1,13 +1,16 @@
 Installation Guide
 ==================
 
-This page gives instructions of how to build and install the mxnet package from
-scratch on various systems. It consists of two steps, first we build the shared
-library from the C++ codes (`libmxnet.so` for linux/osx and `libmxnet.dll` for
-windows). Then we install the language, e.g. Python, packages. If the
-instructions on this page do not work for you, please feel free to ask questions
-at [mxnet/issues](https://github.com/dmlc/mxnet/issues), or even better to send
-pull request if you can fix the problem.
+This page gives instructions of how to build and install the MXNet package from
+scratch on various systems. It consists of two steps:
+
+1. First build the shared library from the C++ codes (`libmxnet.so` for linux,
+ `libmxnet.dylib` for osx and `libmxnet.dll` for windows).
+2. Then install the language packages (e.g. Python package).
+
+Please refer to [FAQ](#frequently-asked-questions) if you have any problems during installation. If the instructions do not work for you, please feel free
+to ask questions at [mxnet/issues](https://github.com/dmlc/mxnet/issues), or
+even better to send pull request if you can fix the problem.
 
 ## Contents
 - [Build the Shared Library](#build-mxnet-library)
@@ -20,6 +23,7 @@ pull request if you can fix the problem.
 - [Python Package Installation](#python-package-installation)
 - [R Package Installation](#r-package-installation)
 - [Docker Images](#docker-images)
+- [Trouble Shooting](#trouble-shooting)
 
 ## Build the Shared Library
 
@@ -30,13 +34,13 @@ Our goal is to build the shared library:
 The minimal building requirement is
 
 - A recent c++ compiler supporting C++ 11 such as `g++ >= 4.8` or `clang`
-- A BLAS library, such as `libblas`, `libblas`, `openblas` `intel mkl`
+- A BLAS library, such as `libblas`, `atlas`, `openblas` or `intel mkl`
 
 Optional libraries
 
 - `CUDA Toolkit >= v7.0` to run on nvidia GPUs
   - Requires GPU with support for `Compute Capability >= 2.0`
-- CUDNN to accelerate the GPU computation (only CUDNN 3 is supported)
+- CUDNN to accelerate the GPU computation 
 - opencv for image augmentation
 
 We can edit `make/config.mk` to change the compile options, and then build by
@@ -76,12 +80,12 @@ Then build mxnet
 
 ```bash
 git clone --recursive https://github.com/dmlc/mxnet
-cd mxnet; cp make/osx.mk .;make -j4
+cd mxnet; cp make/osx.mk ./config.mk; make -j4
 ```
 
 Troubleshooting:
 
-Some of the users might meet the link error `ld: library not found for -lgomp`, indicating that the GNU implementation of OpenMP is not in the library path of operating system.
+Some users experience the link error `ld: library not found for -lgomp`, indicating that the GNU implementation of OpenMP is not in the library path of operating system.
 
 To resolve this issue, run the following commands:
 
@@ -99,12 +103,12 @@ then run `make -j4` again.
 
 ### Building on Windows
 
-Firstly, we should make your Visual Studio 2013 support more C++11 features.
+First, enable Visual Studio 2013 to support more C++11 features.
 
  - Download and install [Visual C++ Compiler Nov 2013 CTP](http://www.microsoft.com/en-us/download/details.aspx?id=41151).
  - Copy all files in `C:\Program Files (x86)\Microsoft Visual C++ Compiler Nov 2013 CTP` (or the folder where you extracted the zip archive) to `C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC` and overwrite all existed files. Don't forget to backup the original files before copying.
 
-Secondly, fetch the third-party libraries, including [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download), [CuDNN](https://developer.nvidia.com/cudnn) and [OpenBlas](http://sourceforge.net/projects/openblas/files/v0.2.14/)(ignore this if you have MKL).
+Second, fetch the third-party libraries, including [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download), [CuDNN](https://developer.nvidia.com/cudnn) and [OpenBlas](http://sourceforge.net/projects/openblas/files/v0.2.14/)(ignore this if you have MKL).
 
  - NOTICE: You need to register as a NVIDIA community user to get the download link of CuDNN.
 
@@ -162,7 +166,7 @@ python example/image-classification/train_mnist.py --network lenet --gpus 0
 
 There are several ways to install the package:
 
-1. Install system-widely, which requires root permission
+1. Install system-wide, which requires root permission
 
    ```bash
    cd python; sudo python setup.py install
@@ -175,6 +179,10 @@ There are several ways to install the package:
    ```bash
    sudo apt-get install python-setuptools
    ```
+
+   *NOTE: If you recompiled mxnet, then you need to reinstall mxnet again to
+    make the new library take effect*
+
 2. Only set the environment variable `PYTHONPATH` to tell python where to find
    the library. For example, assume we cloned `mxnet` on the home directory
    `~`. then we can added the following line in `~/.bashrc`
@@ -230,6 +238,31 @@ Now you should have the R package as a tar.gz file and you can install it as a n
 R CMD INSTALL mxnet_0.5.tar.gz
 ```
 
+
+To install the package using GPU on Windows without building the package from scratch. Note that you need a couple of programs installed already:
+- You'll need the [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit). This depends on Visual Studio, and a free compatible version would be [Visual Studio Community 2013](https://www.visualstudio.com/en-us/news/vs2013-community-vs.aspx). For instructions and compatibility checks, read http://docs.nvidia.com/cuda/cuda-getting-started-guide-for-microsoft-windows/ .
+
+- You will also need to register as a developer at nvidia and download CUDNN V3, https://developer.nvidia.com/cudnn .
+
+
+1. Download the mxnet package as a ZIP from the Github repository https://github.com/dmlc/mxnet and unpack it. You will be editing the `/mxnet/R-package` folder.
+
+2. Download the most recent GPU-enabled package from the [Releases tab](https://github.com/dmlc/mxnet/releases). Unzip this file so you have a folder `/nocudnn`. Note that this file and the folder you'll save it in will be used for future reference and not directly for installing the package. Only some files will be copied from it into the `R-package` folder.
+
+(Note: you now have 2 folders we're working with, possibly in different locations, that we'll reference with `R-package/` and `nocudnn/`.)
+
+3. Download CUDNN V3 from https://developer.nvidia.com/cudnn. Unpack the .zip file and you'll see 3 folders, `/bin`, `/include`, `/lib`. Copy and replace these 3 folders into `nocudnn/3rdparty/cudnn/`, or unpack the .zip file there directly.
+
+4. Create the folder `R-package/inst/libs/x64`. We only support 64-bit operating system now, so you need the x64 folder;
+
+5. Put dll files in `R-package/inst/libs/x64`.
+
+The first dll file you need is `nocudnn/lib/libmxnet.dll`. The other dll files you need are the ones in all 4 subfolders of `nocudnn/3rdparty/`, for the `cudnn` and `openblas` you'll need to look in the `/bin` folders. There should be 11 dll files now in `R-package/inst/libs/x64`.
+
+6. Copy the folder `nocudnn/include/` to `R-package/inst/`. So now you should have a folder `R-package/inst/include/` with 3 subfolders.
+
+7. Run `R CMD INSTALL --no-multiarch R-package`. Make sure that R is added to your PATH in Environment Variables. Running the command `Where R` in Command Prompt should return the location.
+
 Note on Library Build:
 
 We isolate the library build with Rcpp end to maximize the portability
@@ -243,9 +276,41 @@ These are updated on a weekly basis with the latest builds of MXNet. Examples of
 are as follows:
 
 ```bash
+# CPU only docker
 sudo docker run -it kaixhin/mxnet
-sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia0 kaixhin/cuda-mxnet:7.0
+
+OR
+# CPU enabled docker
+sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia0 kaixhin/cuda-mxnet:latest
 ```
 
 For a guide to Docker, see the [official docs](https://docs.docker.com/userguide/). For more details on how to use the
 MXNet Docker images, including requirements for CUDA support, consult the [source project](https://github.com/Kaixhin/dockerfiles).
+
+## Trouble Shooting
+
+### Compile failed after git pull
+
+   Please first update the submodules, clean all and recompile:
+
+   ```bash
+   git submodule update && make clean_all && make -j4
+   ```
+
+### Compile failed after config.mk is modified
+
+   This often happens if `USE_CUDA` or `USE_DIST_KVSTORE` has been changed. You
+   need to clean all first:
+
+    ```bash
+    make clean_all && make -j4
+    ```
+
+### Still get the error message after re-installation
+
+   e.g. `compile with USE_DIST_KVSTORE=1 to use
+   dist` after recomplied with `USE_DIST_KVSTORE=1`**
+
+   It is often because mxnet is failed to load the new built library. If you
+   installed mxnet system-widely, e.g. `python setup.py install`, then you need
+   to reinstall the package again.

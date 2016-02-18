@@ -9,9 +9,9 @@ mx.mlp(data, label, hidden_node = 1, out_node, dropout = NULL,
   device = mx.ctx.default(), ...)
 }
 \arguments{
-\item{data}{the input matrix.}
+\item{data}{the input matrix. Only mx.io.DataIter and R array/matrix types supported.}
 
-\item{label}{the training label.}
+\item{label}{the training label. Only R array type supported.}
 
 \item{hidden_node}{a vector containing number of hidden nodes on each hidden layer as well as the output layer.}
 

@@ -17,3 +17,10 @@ fi
 if [ ${TASK} == "lint" ]; then
     pip install cpplint 'pylint==1.4.4' 'astroid==1.3.6' --user `whoami`
 fi
+
+if [ ${TASK} == "julia" ]; then
+  mkdir -p ~/julia
+  curl -s -L --retry 7 "https://s3.amazonaws.com/julialang/bin/linux/x64/${JULIA_VER}/julia-${JULIA_VER}-latest-linux-x86_64.tar.gz" | tar -C ~/julia -x -z --strip-components=1 -f -
+  export PATH="${PATH}:${HOME}/julia/bin"
+  julia -e 'versioninfo()'
+fi

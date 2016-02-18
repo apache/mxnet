@@ -15,7 +15,6 @@ try:
     import cv2
     opencv_available = True
 except ImportError:
-    print('OpenCV is unavailable.')
     opencv_available = False
 
 class MXRecordIO(object):
@@ -157,7 +156,7 @@ def unpack_img(s, iscolor=-1):
     img = cv2.imdecode(img, iscolor)
     return header, img
 
-def pack_img(header, img, quality=80):
+def pack_img(header, img, quality=80, img_fmt='.jpg'):
     """pack an image into MXImageRecord
 
     Parameters
@@ -167,7 +166,9 @@ def pack_img(header, img, quality=80):
     img : numpy.ndarray
         image to pack
     quality : int
-        quality for JPEG encoding. 1-100
+        quality for JPEG encoding. 1-100, or compression for PNG encoding. 1-9.
+    img_fmt : str
+        Encoding of the image. .jpg for JPEG, .png for PNG.
 
     Returns
     -------
@@ -175,6 +176,14 @@ def pack_img(header, img, quality=80):
         The packed string
     """
     assert opencv_available
-    ret, buf = cv2.imencode('.JPEG', img, [cv2.IMWRITE_JPEG_QUALITY, quality])
-    assert ret
+    jpg_formats = set(['.jpg', '.jpeg', '.JPG', '.JPEG'])
+    png_formats = set(['.png', '.PNG'])
+    encode_params = None
+    if img_fmt in jpg_formats:
+        encode_params = [cv2.IMWRITE_JPEG_QUALITY, quality]
+    elif img_fmt in png_formats:
+        encode_params = [cv2.IMWRITE_PNG_COMPRESSION, quality]
+
+    ret, buf = cv2.imencode(img_fmt, img, encode_params)
+    assert ret, 'failed encoding image'
     return pack(header, buf.tostring())

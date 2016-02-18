@@ -19,10 +19,13 @@ Bias parameter.}
 \item{kernel}{Shape(tuple), required
 convolution kernel size: (y, x)}
 
-\item{stride}{Shape(tuple), optional, default=(1, 1)
+\item{stride}{Shape(tuple), optional, default=(1,1)
 convolution stride: (y, x)}
 
-\item{pad}{Shape(tuple), optional, default=(0, 0)
+\item{dilate}{Shape(tuple), optional, default=(1,1)
+convolution dilate: (y, x)}
+
+\item{pad}{Shape(tuple), optional, default=(0,0)
 pad for convolution: (y, x)}
 
 \item{num.filter}{int (non-negative), required
@@ -32,7 +35,7 @@ convolution filter(channel) number}
 Number of groups partition. This option is not supported by CuDNN, you can use SliceChannel to num_group,apply convolution and concat instead to achieve the same need.}
 
 \item{workspace}{long (non-negative), optional, default=512
-Tmp workspace for convolution (MB)}
+Tmp workspace for convolution (MB).}
 
 \item{no.bias}{boolean, optional, default=False
 Whether to disable bias parameter.}

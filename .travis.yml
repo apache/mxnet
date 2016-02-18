@@ -9,8 +9,6 @@ os:
 env:
   # code analysis
   - TASK=lint
-  # test doc build
-  - TASK=doc
   # build mxnet.so with CUDA
   - TASK=build
   # run tests/cpp
@@ -18,6 +16,7 @@ env:
   # run tests/python
   - TASK=python_test
   - TASK=r_test
+  - TASK=julia JULIA_VER=0.4
 
   # TODO, R test, distributed test, clang, more g++ versions
 
@@ -26,7 +25,7 @@ matrix:
     - os: osx
       env: TASK=lint
     - os: osx
-      env: TASK=doc
+      env: TASK=julia JULIA_VER=0.4
     - os: linux
       env: TASK=r_test
 
@@ -69,7 +68,7 @@ cache:
 
 before_cache:
   - dmlc-core/scripts/travis/travis_before_cache.sh
-  
+
 after_failure:
   - tests/travis/travis_after_failure.sh
 

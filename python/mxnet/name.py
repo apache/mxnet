@@ -5,7 +5,7 @@ from __future__ import absolute_import
 class NameManager(object):
     """NameManager to do automatic naming.
 
-    User can also inheritate this object to change naming behavior.
+    User can also inherit this object to change naming behavior.
     """
     current = None
 

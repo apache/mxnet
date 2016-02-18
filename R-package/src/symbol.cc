@@ -109,7 +109,7 @@ Symbol::RObjectType Symbol::GetInternals() const {
 
 Symbol::RObjectType Symbol::GetOutput(mx_uint index) const {
   SymbolHandle out;
-  MX_CALL(MXSymbolGetOutput(handle_, index, &out));
+  MX_CALL(MXSymbolGetOutput(handle_, index - 1, &out));
   return Symbol::RObject(out);
 }
 
@@ -222,11 +222,12 @@ SymbolFunction::SymbolFunction(AtomicSymbolCreator handle)
   const char **arg_type_infos;
   const char **arg_descriptions;
   const char *key_var_num_args;
+  const char *ret_type;
 
   MX_CALL(MXSymbolGetAtomicSymbolInfo(
       handle_, &name, &description, &num_args,
       &arg_names, &arg_type_infos, &arg_descriptions,
-      &key_var_num_args));
+      &key_var_num_args, &ret_type));
   if (key_var_num_args != nullptr) {
     key_var_num_args_ = key_var_num_args;
   }
@@ -315,6 +316,8 @@ void Symbol::InitRcppModule() {
       .method("get.internals", &Symbol::GetInternals,
               "Get a symbol that contains all the internals")
       .method("get.output", &Symbol::GetOutput,
+              "Get index-th output symbol of current one")
+      .method("[[", &Symbol::GetOutput,
               "Get index-th output symbol of current one")
       .method("infer.shape", &Symbol::InferShape,
               "Inference the shape information given unknown ones");

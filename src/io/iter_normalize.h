@@ -37,6 +37,8 @@ struct ImageNormalizeParam :  public dmlc::Parameter<ImageNormalizeParam> {
   float mean_g;
   /*! \brief mean value for b channel */
   float mean_b;
+  /*! \brief mean value for alpha channel */
+  float mean_a;
   /*! \brief scale on color space */
   float scale;
   /*! \brief maximum ratio of contrast variation */
@@ -58,9 +60,11 @@ struct ImageNormalizeParam :  public dmlc::Parameter<ImageNormalizeParam> {
     DMLC_DECLARE_FIELD(mean_r).set_default(0.0f)
         .describe("Augmentation Param: Mean value on R channel.");
     DMLC_DECLARE_FIELD(mean_g).set_default(0.0f)
-        .describe("Augmentation: Mean value on G channel.");
+        .describe("Augmentation Param: Mean value on G channel.");
     DMLC_DECLARE_FIELD(mean_b).set_default(0.0f)
-        .describe("Augmentation: Mean value on B channel.");
+        .describe("Augmentation Param: Mean value on B channel.");
+    DMLC_DECLARE_FIELD(mean_a).set_default(0.0f)
+        .describe("Augmentation Param: Mean value on Alpha channel.");
     DMLC_DECLARE_FIELD(scale).set_default(1.0f)
         .describe("Augmentation Param: Scale in color space.");
     DMLC_DECLARE_FIELD(max_random_contrast).set_default(0.0f)
@@ -86,7 +90,8 @@ class ImageNormalizeIter : public IIterator<DataInst> {
     param_.InitAllowUnknown(kwargs);
     base_->Init(kwargs);
     rnd_.seed(kRandMagic + param_.seed);
-
+    outimg_.set_pad(false);
+    meanimg_.set_pad(false);
     if (param_.mean_img.length() != 0) {
       std::unique_ptr<dmlc::Stream> fi(
           dmlc::Stream::Create(param_.mean_img.c_str(), "r", true));
@@ -175,11 +180,17 @@ class ImageNormalizeIter : public IIterator<DataInst> {
     float illumination =
         rand_uniform(rnd_) * param_.max_random_illumination * 2 - param_.max_random_illumination;
 
-    if (param_.mean_r > 0.0f || param_.mean_g > 0.0f || param_.mean_b > 0.0f) {
-      // substract mean value
+    if (param_.mean_r > 0.0f || param_.mean_g > 0.0f ||
+        param_.mean_b > 0.0f || param_.mean_a > 0.0f) {
+      // substract mean per channel
       data[0] -= param_.mean_r;
-      data[1] -= param_.mean_g;
-      data[2] -= param_.mean_b;
+      if (data.shape_[0] >= 3) {
+        data[1] -= param_.mean_g;
+        data[2] -= param_.mean_b;
+      }
+      if (data.shape_[0] == 4) {
+        data[3] -= param_.mean_a;
+      }
       if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
         outimg_ = mirror(data * contrast + illumination) * param_.scale;
       } else {

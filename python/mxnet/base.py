@@ -46,6 +46,7 @@ _LIB = _load_lib()
 mx_uint = ctypes.c_uint
 mx_float = ctypes.c_float
 mx_float_p = ctypes.POINTER(mx_float)
+mx_real_t = np.float32
 NDArrayHandle = ctypes.c_void_p
 FunctionHandle = ctypes.c_void_p
 SymbolCreatorHandle = ctypes.c_void_p

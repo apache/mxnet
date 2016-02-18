@@ -53,9 +53,10 @@ class Optimizer {
    *  \param weight the weight to update.
    *  \param grad gradient for the weight.
    *  \param lr learning rate for this update.
+   *  \param wd weight decay for this update.
    */
   virtual void Update(const int index, NDArray *weight,
-                      const NDArray *grad, const float lr) = 0;
+                      const NDArray *grad, const float lr, const float wd) = 0;
   /*!
    * \brief create Optimizer
    * \param type_name the type string of the Optimizer

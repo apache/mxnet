@@ -24,6 +24,7 @@ namespace up_enum {
 enum UpSamplingOpInputs {kData, kWeight};
 enum UpSamplingOpOutputs {kOut};
 enum UpSamplingType {kNearest, kBilinear};
+enum UpSamplingMultiInputMode {kConcat, kSum};
 }  // namespace up_enum
 
 struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
@@ -31,6 +32,7 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
   index_t num_filter;
   int sample_type;
   int num_args;
+  int multi_input_mode;
   DMLC_DECLARE_PARAMETER(UpSamplingParam) {
     DMLC_DECLARE_FIELD(scale)
     .set_range(1, 1000)
@@ -42,6 +44,13 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
     .add_enum("nearest", up_enum::kNearest)
     .add_enum("bilinear", up_enum::kBilinear)
     .describe("upsampling method");
+    DMLC_DECLARE_FIELD(multi_input_mode)
+    .add_enum("concat", up_enum::kConcat)
+    .add_enum("sum", up_enum::kSum)
+    .set_default(up_enum::kConcat)
+    .describe("How to handle multiple input. concat means concatenate upsampled "
+    "images along the channel dimension. sum means add all images together, "
+    "only available for nearest neighbor upsampling.");
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs to be upsampled. For nearest neighbor "
     "upsampling, this can be 1-N; the size of output will be"
@@ -66,6 +75,9 @@ class UpSamplingNearestOp : public Operator {
     using namespace mshadow::expr;
     CHECK_EQ(in_data.size(), param_.num_args);
     CHECK_EQ(out_data.size(), 1);
+    if (req[up_enum::kOut] == kNullOp) {
+      return;
+    }
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> out = out_data[up_enum::kOut].get<xpu, 4, real_t>(s);
     if (param_.num_args > 1) {
@@ -74,7 +86,15 @@ class UpSamplingNearestOp : public Operator {
         Tensor<xpu, 4> data = in_data[i].get<xpu, 4, real_t>(s);
         int end = begin + data.size(1);
         int scale = out_data[up_enum::kOut].size(2)/in_data[i].size(2);
-        Assign(slice<1>(out, begin, end), req[up_enum::kOut], upsampling_nearest(data, scale));
+        if (param_.multi_input_mode == up_enum::kSum) {
+          if (i == 0) {
+            Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale));
+          } else {
+            out += upsampling_nearest(data, scale);
+          }
+        } else {
+          Assign(slice<1>(out, begin, end), req[up_enum::kOut], upsampling_nearest(data, scale));
+        }
         begin = end;
       }
     } else {
@@ -103,12 +123,21 @@ class UpSamplingNearestOp : public Operator {
         mshadow::Shape<2> in_shape = Shape2(input_grad.shape_[2], input_grad.shape_[3]);
         int end = begin + input_grad.size(1);
         int scale = grad.size(2)/in_shape[0];
-        Assign(input_grad, req[i],
-               pool<mshadow::red::sum>(slice<1>(grad, begin, end),
-                                       in_shape,
-                                       scale,
-                                       scale,
-                                       scale));
+        if (param_.multi_input_mode == up_enum::kSum) {
+          Assign(input_grad, req[i],
+                 pool<mshadow::red::sum>(grad,
+                                         in_shape,
+                                         scale,
+                                         scale,
+                                         scale));
+        } else {
+          Assign(input_grad, req[i],
+                 pool<mshadow::red::sum>(slice<1>(grad, begin, end),
+                                         in_shape,
+                                         scale,
+                                         scale,
+                                         scale));
+        }
         begin = end;
       }
     } else {
@@ -171,7 +200,13 @@ class UpSamplingProp : public OperatorProperty {
           "does not divide output height of " << oh;
         CHECK_EQ(ow%shape[3], 0) << "UpSamplingNearest: input weight of " << shape[3] << \
           "does not divide output weight of " << ow;
-        oshape[1] += shape[1];
+        if (param_.multi_input_mode == up_enum::kSum) {
+          CHECK(oshape[1] == 0 || oshape[1] == shape[1]) << \
+            "Number of channels must be the same when multi_input_mode==sum";
+          oshape[1] = shape[1];
+        } else {
+          oshape[1] += shape[1];
+        }
       }
     } else {
       CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
