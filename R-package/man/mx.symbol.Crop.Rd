@@ -10,10 +10,10 @@ mx.symbol.Crop(...)
 \item{num.args}{int, required
 Number of inputs for crop, if equals one, then we will use the h_wfor crop heihgt and width, else if equals two, then we will use the heightand width of the second input symbol, we name crop_like here}
 
-\item{offset}{Shape(tuple), optional, default=(0, 0)
+\item{offset}{Shape(tuple), optional, default=(0,0)
 crop offset coordinate: (y, x)}
 
-\item{h.w}{Shape(tuple), optional, default=(0, 0)
+\item{h.w}{Shape(tuple), optional, default=(0,0)
 crop height and weight: (h, w)}
 
 \item{center.crop}{boolean, optional, default=False

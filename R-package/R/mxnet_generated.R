@@ -12,7 +12,7 @@
 #' @name mx.nd.abs
 NULL
 
-#' Take sum of the src.The result will be ndarray of shape (1,) on the same device.
+#' Take argmax indices of each channel of the src.The result will be ndarray of shape (num_channel,) on the same device.
 #' 
 #' @param src  NDArray
 #'     Source input to the function
@@ -68,7 +68,7 @@ NULL
 #' @name mx.nd.cos
 NULL
 
-#' Calcuate 2D matrix multiplication
+#' Calculate 2D matrix multiplication
 #' 
 #' @param lhs  NDArray
 #'     Left operand to the function.
@@ -88,6 +88,20 @@ NULL
 #' 
 #' @export
 #' @name mx.nd.exp
+NULL
+
+#' Fill one element of each line(row for python, column for R/Julia) in lhs according to index indicated by rhs and values indicated by mhs. This function assume rhs uses 0-based index.
+#' 
+#' @param lhs  NDArray
+#'     Left operand to the function.
+#' @param mhs  NDArray
+#'     Middle operand to the function.
+#' @param rhs  NDArray
+#'     Right operand to the function.
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.fill.element.0index
 NULL
 
 #' Take floor value of the src
@@ -438,11 +452,11 @@ mx.symbol.Concat <- function(...) {
 #'     Bias parameter.
 #' @param kernel  Shape(tuple), required
 #'     convolution kernel size: (y, x)
-#' @param stride  Shape(tuple), optional, default=(1, 1)
+#' @param stride  Shape(tuple), optional, default=(1,1)
 #'     convolution stride: (y, x)
-#' @param dilate  Shape(tuple), optional, default=(1, 1)
+#' @param dilate  Shape(tuple), optional, default=(1,1)
 #'     convolution dilate: (y, x)
-#' @param pad  Shape(tuple), optional, default=(0, 0)
+#' @param pad  Shape(tuple), optional, default=(0,0)
 #'     pad for convolution: (y, x)
 #' @param num.filter  int (non-negative), required
 #'     convolution filter(channel) number
@@ -465,9 +479,9 @@ mx.symbol.Convolution <- function(...) {
 #' 
 #' @param num.args  int, required
 #'     Number of inputs for crop, if equals one, then we will use the h_wfor crop heihgt and width, else if equals two, then we will use the heightand width of the second input symbol, we name crop_like here
-#' @param offset  Shape(tuple), optional, default=(0, 0)
+#' @param offset  Shape(tuple), optional, default=(0,0)
 #'     crop offset coordinate: (y, x)
-#' @param h.w  Shape(tuple), optional, default=(0, 0)
+#' @param h.w  Shape(tuple), optional, default=(0,0)
 #'     crop height and weight: (h, w)
 #' @param center.crop  boolean, optional, default=False
 #'     If set to true, then it will use be the center_crop,or it will crop using the shape of crop_like
@@ -490,9 +504,9 @@ mx.symbol.Crop <- function(...) {
 #'     Bias parameter.
 #' @param kernel  Shape(tuple), required
 #'     deconvolution kernel size: (y, x)
-#' @param stride  Shape(tuple), optional, default=(1, 1)
+#' @param stride  Shape(tuple), optional, default=(1,1)
 #'     deconvolution stride: (y, x)
-#' @param pad  Shape(tuple), optional, default=(0, 0)
+#' @param pad  Shape(tuple), optional, default=(0,0)
 #'     pad for deconvolution: (y, x)
 #' @param num.filter  int (non-negative), required
 #'     deconvolution filter(channel) number
@@ -500,7 +514,7 @@ mx.symbol.Crop <- function(...) {
 #'     number of groups partition
 #' @param workspace  long (non-negative), optional, default=512
 #'     Tmp workspace for deconvolution (MB)
-#' @param no.bias  boolean, optional, default=True
+#' @param no.bias  boolean, optional, default=False
 #'     Whether to disable bias parameter.
 #' @param name  string, optional
 #'     Name of the resulting symbol.
@@ -713,9 +727,9 @@ mx.symbol.MAERegressionOutput <- function(...) {
 #'     pooling kernel size: (y, x)
 #' @param pool.type  {'avg', 'max', 'sum'}, required
 #'     Pooling type to be applied.
-#' @param stride  Shape(tuple), optional, default=(1, 1)
+#' @param stride  Shape(tuple), optional, default=(1,1)
 #'     stride: for pooling (y, x)
-#' @param pad  Shape(tuple), optional, default=(0, 0)
+#' @param pad  Shape(tuple), optional, default=(0,0)
 #'     pad for pooling: (y, x)
 #' @param name  string, optional
 #'     Name of the resulting symbol.
@@ -741,10 +755,12 @@ mx.symbol.Reshape <- function(...) {
   mx.varg.symbol.Reshape(list(...))
 }
 
-#' Slice channel into many outputs with equally divided channel
+#' Slice input equally along specified axis
 #' 
 #' @param num.outputs  int, required
 #'     Number of outputs to be sliced.
+#' @param axis  int, optional, default='1'
+#'     Dimension along which to slice.
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -803,7 +819,7 @@ mx.symbol.SoftmaxActivation <- function(...) {
 #' @param multi.output  boolean, optional, default=False
 #'     If set to true, for a (n,k,x_1,..,x_n) dimensional input tensor, softmax will generate n*x_1*...*x_n output, each has k classes
 #' @param use.ignore  boolean, optional, default=False
-#'     If set to true, the ignore_label value will not contributorto the backward gradient
+#'     If set to true, the ignore_label value will not contribute to the backward gradient
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol

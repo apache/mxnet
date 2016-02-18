@@ -2,7 +2,7 @@
 % Please edit documentation in R/mxnet_generated.R
 \name{mx.nd.dot}
 \alias{mx.nd.dot}
-\title{Calcuate 2D matrix multiplication}
+\title{Calculate 2D matrix multiplication}
 \arguments{
 \item{lhs}{NDArray
 Left operand to the function.}
@@ -14,6 +14,6 @@ Right operand to the function.}
 out The result mx.ndarray
 }
 \description{
-Calcuate 2D matrix multiplication
+Calculate 2D matrix multiplication
 }
 
