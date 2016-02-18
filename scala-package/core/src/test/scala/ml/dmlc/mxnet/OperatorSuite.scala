@@ -14,7 +14,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   private def checkElementwiseSumWithShape(shape: Shape, n: Int) = {
     // forward
     val inputs = (0 until n).map(i => Symbol.Variable(s"arg $i"))
-    val out = Symbol.ElementWiseSum("esum", inputs: _*)
+    val out = Symbol.ElementWiseSum(name = "esum")(inputs.toArray)
     val arr = (0 until n).map(_ => Random.uniform(-10, 10, shape))
     val arrGrad = (0 until n).map(_ => NDArray.empty(shape))
     val exec = out.bind(Context.cpu(), args = arr, argsGrad = arrGrad)
@@ -47,7 +47,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     val targetDim = shapes.map(_(dimension)).sum
 
     val inputs = (0 until shapes.size).map(i => Symbol.Variable(s"arg$i"))
-    val out = Symbol.Concat(inputs, Map("name" -> "conc", "dim" -> dimension))
+    val out = Symbol.Concat(name = "conc")(inputs.toArray, Map("dim" -> dimension))
     val arr = shapes.map { shape =>
       val nd = NDArray.empty(shape)
       nd.set(shape(dimension))
@@ -121,12 +121,12 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("regression") {
-    checkRegression(Symbol.LogisticRegressionOutput(
-      Array(Symbol.Variable("data"), Symbol.Variable("label"))),
+    checkRegression(Symbol.LogisticRegressionOutput()(
+      Map("data" -> Symbol.Variable("data"), "label" -> Symbol.Variable("label"))),
       (x: Float) => 1.0f / (1.0f + Math.exp(-x).toFloat),
       (x: Float, y: Float) => x - y)
-    checkRegression(Symbol.LinearRegressionOutput(
-      Array(Symbol.Variable("data"), Symbol.Variable("label"))),
+    checkRegression(Symbol.LinearRegressionOutput()(
+      Map("data" -> Symbol.Variable("data"), "label" -> Symbol.Variable("label"))),
       (x: Float) => x,
       (x: Float, y: Float) => x - y)
   }
@@ -148,8 +148,8 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     // [[ 2.,  2.,  2.,  2.],
     //  [ 2.,  2.,  2.,  2.],
     //  [ 2.,  2.,  2.,  2.]]]
-    val swap0 = Symbol.SwapAxis(data = data, dim1 = 0, dim2 = 2)
-    val swap = Symbol.SwapAxis(data = swap0, dim1 = 1, dim2 = 2)
+    val swap0 = Symbol.SwapAxis()(Map("data" -> data, "dim1" -> 0, "dim2" -> 2))
+    val swap = Symbol.SwapAxis()(Map("data" -> swap0, "dim1" -> 1, "dim2" -> 2))
     val exec = swap.bind(Context.cpu(), args = Array(arrData))
     exec.forward()
     val out = exec.outputs(0)
@@ -204,7 +204,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     val dataTmp = NDArray.ones(shape) * 3
     val dataTmpPowered = NDArray.ones(shape) * 9
     val test = Symbol.pow(data, 2)
-    // TODO: check_numeric_gradient(test, [data_tmp])
+    // TODO: check numeric gradient
     checkSymbolicForward(test, Array(dataTmp), Array(dataTmpPowered))
     checkSymbolicBackward(test, Array(dataTmp), Array(NDArray.ones(shape)), Array(dataTmp * 2))
   }
@@ -220,7 +220,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
 
     val test = Symbol.pow(data, exp)
 
-    // TODO: check_numeric_gradient(test, [data_tmp, exp_tmp])
+    // TODO: check numeric gradient
     checkSymbolicForward(test, Seq(dataTmp, expTmp), Seq(NDArray.ones(shape) * 8))
 
     val dataDir = NDArray.ones(shape) * 4 * expTmp // dataTmp**(expTmp - 1) * expTmp
@@ -235,7 +235,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     val exp = Symbol.Variable("exp")
     val y = Symbol.pow(2, exp)
     val x = NDArray.ones(shape) * 3
-    // TODO: check_numeric_gradient(y, [x])
+    // TODO: check numeric gradient
     checkSymbolicForward(y, Seq(x), Seq(NDArray.ones(shape) * 8)) // 2**x
     checkSymbolicBackward(y, Seq(x), Seq(NDArray.ones(shape)),
       // log(2) * 2**x
@@ -248,7 +248,8 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     val batch = 24
 
     val data = Symbol.Variable("data")
-    val embed = Symbol.Embedding(data, inDim, outDim, name = "embed")
+    val embed = Symbol.Embedding(name = "embed")(
+      Map("data" -> data, "input_dim" -> inDim, "output_dim" -> outDim))
     // TODO
     // scalastyle:off println
     println(s"Embeded symbol: ${embed.toJson}")
@@ -416,12 +417,12 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
                                                 pad: (Int, Int)): Unit = {
     require(inputShape(1) == numFilter)
     val data = Symbol.Variable(name = "data")
-    val conv = Symbol.Convolution(Map(
+    val conv = Symbol.Convolution(name = "conv")(Map(
       "data" -> data, "kernel" -> kernel, "stride" -> stride, "pad" -> pad,
-      "num_filter" -> numFilter, "no_bias" -> "true", "name" -> "conv"))
-    val deconv = Symbol.Deconvolution()(Map(
+      "num_filter" -> numFilter, "no_bias" -> "true"))
+    val deconv = Symbol.Deconvolution(name = "deconv")(Map(
       "data" -> conv, "kernel" -> kernel, "stride" -> stride, "pad" -> pad,
-      "num_filter" -> numFilter, "no_bias" -> "true", "name" -> "deconv"))
+      "num_filter" -> numFilter, "no_bias" -> "true"))
 
     val argNames = deconv.listArguments()
     val (argShapes, outShapes, _) = deconv.inferShape(Map("data" -> inputShape))
@@ -475,13 +476,13 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     val stride = (1, 1)
     val kernel = (2 * pad._1 + 1, 2 * pad._2 + 1)
     val dataConv = Symbol.Variable(name = "data_conv")
-    val conv = Symbol.Convolution(Map(
+    val conv = Symbol.Convolution(name = "conv")(Map(
       "data" -> dataConv, "kernel" -> kernel, "stride" -> stride, "pad" -> pad,
-      "num_filter" -> numFilter, "no_bias" -> "true", "name" -> "conv"))
+      "num_filter" -> numFilter, "no_bias" -> "true"))
     val dataDeconv = Symbol.Variable(name = "data_deconv")
-    val deconv = Symbol.Deconvolution()(Map(
+    val deconv = Symbol.Deconvolution(name = "deconv")(Map(
       "data" -> dataDeconv, "kernel" -> kernel, "stride" -> stride, "pad" -> pad,
-      "num_filter" -> numFilter, "no_bias" -> "true", "name" -> "deconv"))
+      "num_filter" -> numFilter, "no_bias" -> "true"))
 
     val convData = Random.uniform(-5, 5, inputShape)
     val convArgs = Map("data_conv" -> convData,
@@ -527,7 +528,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
       (s"arg_$i", NDArray.zeros(shape))
     }.toMap
 
-    val up = Symbol.UpSampling((0 until shapes.size).map(i => Symbol.Variable(s"arg_$i")),
+    val up = Symbol.UpSampling()((0 until shapes.size).map(i => Symbol.Variable(s"arg_$i")).toArray,
       Map("sample_type" -> "nearest", "scale" -> rootScale))
     val exe = up.bind(Context.cpu(), args = arr, argsGrad = arrGrad)
     exe.forward(isTrain = true)
@@ -560,8 +561,10 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
 
   test("batch norm") {
     val data = Symbol.Variable("data")
-    val test = Symbol.BatchNorm()(Map("data" -> data, "fix_gamma" -> "False"))
+    val test = Symbol.BatchNorm(name = "bn")(Map("data" -> data, "fix_gamma" -> "False"))
+    // scalastyle:off println
     println(s"BatchNorm: ${test.toJson}")
+    // scalastyle:on println
     // TODO: check numeric gradient
   }
 

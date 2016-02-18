@@ -10,24 +10,24 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  * @author Yizhi Liu
  */
 class Symbol(private[mxnet] val handle: SymbolHandle) {
-  def +(other: Symbol): Symbol = Symbol.create("_Plus", this, other)
+  def +(other: Symbol): Symbol = Symbol.createFromListedSymbols("_Plus")(Array(this, other))
   def +[@specialized(Int, Float, Double) V](other: V): Symbol = {
-    Symbol.create("_PlusScalar", Array(this), Map("scalar" -> other.toString))
+    Symbol.createFromListedSymbols("_PlusScalar")(Array(this), Map("scalar" -> other.toString))
   }
 
-  def -(other: Symbol): Symbol = Symbol.create("_Minus", this, other)
+  def -(other: Symbol): Symbol = Symbol.createFromListedSymbols("_Minus")(Array(this, other))
   def -[@specialized(Int, Float, Double) V](other: V): Symbol = {
-    Symbol.create("_MinusScalar", Array(this), Map("scalar" -> other.toString))
+    Symbol.createFromListedSymbols("_MinusScalar")(Array(this), Map("scalar" -> other.toString))
   }
 
-  def *(other: Symbol): Symbol = Symbol.create("_Mul", this, other)
+  def *(other: Symbol): Symbol = Symbol.createFromListedSymbols("_Mul")(Array(this, other))
   def *[@specialized(Int, Float, Double) V](other: V): Symbol = {
-    Symbol.create("_MulScalar", Array(this), Map("scalar" -> other.toString))
+    Symbol.createFromListedSymbols("_MulScalar")(Array(this), Map("scalar" -> other.toString))
   }
 
-  def /(other: Symbol): Symbol = Symbol.create("_Div", this, other)
+  def /(other: Symbol): Symbol = Symbol.createFromListedSymbols("_Div")(Array(this, other))
   def /[@specialized(Int, Float, Double) V](other: V): Symbol = {
-    Symbol.create("_DivScalar", Array(this), Map("scalar" -> other.toString))
+    Symbol.createFromListedSymbols("_DivScalar")(Array(this), Map("scalar" -> other.toString))
   }
 
   override def clone(): Symbol = {
@@ -696,7 +696,7 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
 }
 
 object Symbol {
-  private type SymbolCreateFunc = Map[String, Any] => Symbol
+  private type SymbolCreateNamedFunc = Map[String, Any] => Symbol
   private val logger = LoggerFactory.getLogger(classOf[Symbol])
   private val functions: Map[String, SymbolFunction] = initSymbolModule()
   private val bindReqMap = Map("null" -> 0, "write" -> 1, "add" -> 3)
@@ -704,15 +704,15 @@ object Symbol {
   // TODO: _CrossDeviceCopy
 
   def pow(sym1: Symbol, sym2: Symbol): Symbol = {
-    Symbol.create("_Power", sym1, sym2)
+    Symbol.createFromListedSymbols("_Power")(Array(sym1, sym2))
   }
 
   def pow[@specialized(Int, Float, Double) V](sym: Symbol, number: V): Symbol = {
-    Symbol.create("_PowerScalar", Array(sym), Map("scalar" -> number.toString))
+    Symbol.createFromListedSymbols("_PowerScalar")(Array(sym), Map("scalar" -> number.toString))
   }
 
   def pow[@specialized(Int, Float, Double) V](number: V, sym: Symbol): Symbol = {
-    Symbol.create("_PowerScalar", Array(sym),
+    Symbol.createFromListedSymbols("_PowerScalar")(Array(sym),
       Map("scalar" -> number.toString, "scalar_on_left" -> "True"))
   }
 
@@ -721,7 +721,7 @@ object Symbol {
    * @param src Source symbolic input to the function
    */
   def abs(src: Symbol): Symbol = {
-    create("abs", Array(src), null, null)
+    createFromListedSymbols("abs")(Array(src))
   }
 
   /**
@@ -729,7 +729,7 @@ object Symbol {
    * @param src Source symbolic input to the function
    */
   def sign(src: Symbol): Symbol = {
-    create("sign", Array(src), null, null)
+    createFromListedSymbols("sign")(Array(src))
   }
 
   /**
@@ -737,7 +737,7 @@ object Symbol {
    * @param src Source input to the function
    */
   def round(src: Symbol): Symbol = {
-    create("round", Array(src), null, null)
+    createFromListedSymbols("round")(Array(src))
   }
 
   /**
@@ -745,7 +745,7 @@ object Symbol {
    * src Source input to the function
    */
   def ceil(src: Symbol): Symbol = {
-    create("ceil", Array(src), null, null)
+    createFromListedSymbols("ceil")(Array(src))
   }
 
   /**
@@ -753,7 +753,7 @@ object Symbol {
    * @param src Source input to the function
    */
   def floor(src: Symbol): Symbol = {
-    create("floor", Array(src), null, null)
+    createFromListedSymbols("floor")(Array(src))
   }
 
   /**
@@ -761,7 +761,7 @@ object Symbol {
    * @param src Source symbolic input to the function
    */
   def square(src: Symbol): Symbol = {
-    create("square", Array(src), null, null)
+    createFromListedSymbols("square")(Array(src))
   }
 
   /**
@@ -769,7 +769,7 @@ object Symbol {
    * src Source symbolic input to the function
    */
   def sqrt(src: Symbol): Symbol = {
-    create("sqrt", Array(src), null, null)
+    createFromListedSymbols("sqrt")(Array(src))
   }
 
   /**
@@ -777,7 +777,7 @@ object Symbol {
    * @param src Source symbolic input to the function
    */
   def rsqrt(src: Symbol): Symbol = {
-    create("rsqrt", Array(src), null, null)
+    createFromListedSymbols("rsqrt")(Array(src))
   }
 
   /**
@@ -785,7 +785,7 @@ object Symbol {
    * @param src Source symbolic input to the function
    */
   def exp(src: Symbol): Symbol = {
-    create("exp", Array(src), null, null)
+    createFromListedSymbols("exp")(Array(src))
   }
 
   /**
@@ -793,7 +793,7 @@ object Symbol {
    * @param src Source symbolic input to the function
    */
   def log(src: Symbol): Symbol = {
-    create("log", Array(src), null, null)
+    createFromListedSymbols("log")(Array(src))
   }
 
   /**
@@ -801,7 +801,7 @@ object Symbol {
    * @param src Source symbolic input to the function
    */
   def cos(src: Symbol): Symbol = {
-    create("cos", Array(src), null, null)
+    createFromListedSymbols("cos")(Array(src))
   }
 
   /**
@@ -809,32 +809,32 @@ object Symbol {
    * @param src Source symbolic input to the function
    */
   def sin(src: Symbol): Symbol = {
-    create("sin", Array(src), null, null)
+    createFromListedSymbols("sin")(Array(src))
   }
 
   def max(left: Symbol, right: Symbol): Symbol = {
-    Symbol.create("_Maximum", left, right)
+    createFromListedSymbols("_Maximum")(Array(left, right))
   }
 
   def max[@specialized(Int, Float, Double) V](left: Symbol, right: V): Symbol = {
-    Symbol.create("_MaximumScalar", Array(left), Map("scalar" -> right.toString))
+    createFromListedSymbols("_MaximumScalar")(Array(left), Map("scalar" -> right.toString))
   }
 
   def max[@specialized(Int, Float, Double) V](left: V, right: Symbol): Symbol = {
-    Symbol.create("_MaximumScalar", Array(right),
+    createFromListedSymbols("_MaximumScalar")(Array(right),
       Map("scalar" -> left.toString, "scalar_on_left" -> "True"))
   }
 
   def min(left: Symbol, right: Symbol): Symbol = {
-    Symbol.create("_Minimum", left, right)
+    createFromListedSymbols("_Minimum")(Array(left, right))
   }
 
   def min[@specialized(Int, Float, Double) V](left: Symbol, right: V): Symbol = {
-    Symbol.create("_MinimumScalar", Array(left), Map("scalar" -> right.toString))
+    createFromListedSymbols("_MinimumScalar")(Array(left), Map("scalar" -> right.toString))
   }
 
   def min[@specialized(Int, Float, Double) V](left: V, right: Symbol): Symbol = {
-    Symbol.create("_MinimumScalar", Array(right),
+    createFromListedSymbols("_MinimumScalar")(Array(right),
       Map("scalar" -> left.toString, "scalar_on_left" -> "True"))
   }
 
@@ -865,12 +865,15 @@ Input data.
 
   /** TODO
     * Crop
-    * Crop the 2th and 3th dim of input data, with the corresponding size of w_h orwith widht and height of the second input symbol
+    * Crop the 2th and 3th dim of input data, with the corresponding size of w_h or with width
+    * and height of the second input symbol
 
 Parameters
 ----------
 num_args : int, required
-Number of inputs for crop, if equals one, then we will use the h_wfor crop heihgt and width, else if equals two, then we will use the heightand width of the second input symbol, we name crop_like here
+Number of inputs for crop, if equals one, then we will use the h_wfor crop heihgt and width,
+else if equals two, then we will use the heightand width of the second input symbol,
+we name crop_like here
 offset : Shape(tuple), optional, default=(0, 0)
 corp offset coordinate: (y, x)
 h_w : Shape(tuple), optional, default=(0, 0)
@@ -971,7 +974,8 @@ Parameters
 data : Symbol
 Input data to  reshape.
 target_shape : Shape(tuple), required
-Target new shape. One and only one dim can be 0, in which case it will be infered from the rest of dims
+Target new shape. One and only one dim can be 0,
+in which case it will be infered from the rest of dims
    * @return
    */
 
@@ -988,20 +992,25 @@ Number of outputs to be sliced.
 
   /**
    * SoftmaxActivation
-Apply softmax activation to input. This is intended for internal layers. For output (loss layer) please use SoftmaxOutput. If type=instance, this operator will compute a softmax for each instance in the batch; this is the default mode. If type=channel, this operator will compute a num_channel-class softmax at each position of each instance; this can be used for fully convolutional network, image segmentation, etc.
+Apply softmax activation to input. This is intended for internal layers. For output (loss layer)
+please use SoftmaxOutput. If type=instance,
+this operator will compute a softmax for each instance in the batch;
+this is the default mode. If type=channel,
+this operator will compute a num_channel-class softmax at each position of each instance;
+this can be used for fully convolutional network, image segmentation, etc.
 
 Parameters
 ----------
 data : Symbol
 Input data to activation function.
 type : {'channel', 'instance'},optional, default='instance'
-Softmax Mode. If set to instance, this operator will compute a softmax for each instance in the batch; this is the default mode. If set to channel, this operator will compute a num_channel-class softmax at each position of each instance; this can be used for fully convolutional network, image segmentation, etc.
+Softmax Mode. If set to instance,
+this operator will compute a softmax for each instance in the batch; this is the default mode.
+If set to channel, this operator will compute a num_channel-class softmax
+at each position of each instance; this can be used for fully convolutional network,
+image segmentation, etc.
    * @return
    */
-
-  def FullyConnected: SymbolCreateFunc = {
-    FullyConnected(null)
-  }
 
   /**
    * Apply matrix multiplication to input then add a bias.
@@ -1014,16 +1023,24 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
    * num_hidden : int, required. Number of hidden nodes of the output.
    * no_bias : boolean, optional, default=False. Whether to disable bias parameter.
    */
-  def FullyConnected(attr: Map[String, String]): SymbolCreateFunc = {
-    createNoCheck("FullyConnected", attr)
+  def FullyConnected(name: String = null,
+                     attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("FullyConnected", name, attr)
   }
 
-  def Activation: SymbolCreateFunc = {
-    Activation(null)
-  }
-
-  def Activation(attr: Map[String, String]): SymbolCreateFunc = {
-    createNoCheck("Activation", attr)
+  /**
+   * Apply activation function to input.
+   * Softmax Activation is only available with CUDNN on GPUand will be computed
+   * at each location across channel if input is 4D.
+   *
+   * Parameters
+   * ----------
+   * data : Symbol. Input data to activation function.
+   * act_type : {'relu', 'sigmoid', 'softrelu', 'tanh'}, required.
+   *            Activation function to be applied.
+   */
+  def Activation(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("Activation", name, attr)
   }
 
   /**
@@ -1047,12 +1064,8 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
    * workspace : long (non-negative), optional, default=512. Tmp workspace for convolution (MB).
    * no_bias : boolean, optional, default=False. Whether to disable bias parameter.
    */
-  def Convolution(attr: Map[String, String]): SymbolCreateFunc = {
-    createNoCheck("Convolution", attr)
-  }
-
-  def Convolution: Map[String, Any] => Symbol = {
-    Convolution(null)
+  def Convolution(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("Convolution", name, attr)
   }
 
   /**
@@ -1071,8 +1084,9 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
    * workspace : long (non-negative), optional, default=512. Tmp workspace for deconvolution (MB)
    * no_bias : boolean, optional, default=True. Whether to disable bias parameter.
    */
-  def Deconvolution(attr: Map[String, String] = null): SymbolCreateFunc = {
-    createNoCheck("Deconvolution", attr)
+  def Deconvolution(name: String = null,
+                    attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("Deconvolution", name, attr)
   }
 
   /**
@@ -1086,18 +1100,18 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
    * stride : Shape(tuple), optional, default=(1, 1), stride for pooling (y, x)
    * pad : Shape(tuple), optional, default=(0, 0), pad for pooling: (y, x)
    */
-  def Pooling: Map[String, Any] => Symbol = {
-    createNoCheck("Pooling")
+  def Pooling(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("Pooling", name, attr)
   }
 
   /**
    * Flatten input
    * Parameters
    * ----------
-   * data : Symbol. Input data to  flatten.
+   * data : Symbol. Input data to flatten.
    */
-  def Flatten: Map[String, Any] => Symbol = {
-    createNoCheck("Flatten")
+  def Flatten(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("Flatten", name, attr)
   }
 
   /**
@@ -1118,8 +1132,9 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
    *              If set to true,
    *              the ignore_label value will not contributorto the backward gradient
    */
-  def SoftmaxOutput: Map[String, Any] => Symbol = {
-    createNoCheck("SoftmaxOutput")
+  def SoftmaxOutput(name: String = null,
+                    attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("SoftmaxOutput", name, attr)
   }
 
   /**
@@ -1129,8 +1144,8 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
    * data : Symbol, Input data to cast function.
    * dtype : {Int, Double, Short, Float}, required, Target data type.
    */
-  def Cast: Map[String, Any] => Symbol = {
-    createNoCheck("Cast")
+  def Cast(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("Cast", name, attr)
   }
 
   /**
@@ -1140,12 +1155,10 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
    * ----------
    * num_args : int, required. Number of inputs to be sum.
    */
-  def ElementWiseSum(name: String, inputs: Symbol *): Symbol = {
-    create("ElementWiseSum", inputs.toArray, Map("name" -> name), null)
-  }
-
-  def ElementWiseSum(inputs: Seq[Symbol], name: String): Symbol = {
-    create("ElementWiseSum", inputs.toArray, Map("name" -> name), null)
+  def ElementWiseSum(name: String = null,
+                     attr: Map[String, String] = null)(
+                     symbols: Array[Symbol], params: Map[String, Any] = null): Symbol = {
+    createFromListedSymbolsNoCheck("ElementWiseSum", name, attr)(symbols, params)
   }
 
   /**
@@ -1158,12 +1171,12 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
    * momentum : float, optional, default=0.9, Momentum for moving average
    * fix_gamma : boolean, optional, default=True, Fix gamma while training
    */
-  def BatchNorm(attr: Map[String, String] = null): SymbolCreateFunc = {
-    createNoCheck("BatchNorm", attr)
+  def BatchNorm(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("BatchNorm", name, attr)
   }
 
   /**
-   * Perform nearest neighboor/bilinear up sampling to inputs
+   * Perform nearest neighbor/bilinear up sampling to inputs
    *
    * Parameters
    * ----------
@@ -1183,11 +1196,9 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
    *            and all other inputs will be upsampled to thesame size.
    *            For bilinear upsampling this must be 2; 1 input and 1 weight.
    */
-  def UpSampling(inputs: Seq[Symbol], params: Map[String, Any]): Symbol = {
-    val kwargs = params.map { case (key, value) =>
-      (key, value.toString)
-    }
-    create("UpSampling", inputs.toArray, kwargs, null)
+  def UpSampling(name: String = null, attr: Map[String, String] = null)(
+                 inputs: Array[Symbol], params: Map[String, Any] = null): Symbol = {
+    createFromListedSymbolsNoCheck("UpSampling", name, attr)(inputs, params)
   }
 
   /**
@@ -1199,11 +1210,9 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
    * num_args : int, required. Number of inputs to be concated.
    * dim : int, optional, default='1'. the dimension to be concated.
    */
-  def Concat(inputs: Seq[Symbol],
-             paramKwargs: Map[String, Any],
-             attr: Map[String, String] = null): Symbol = {
-    create("Concat", inputs.toArray,
-           paramKwargs.map { case (k, v) => (k, v.toString) }, attr)
+  def Concat(name: String = null, attr: Map[String, String] = null)(
+             inputs: Array[Symbol], params: Map[String, Any] = null): Symbol = {
+    createFromListedSymbolsNoCheck("Concat", name, attr)(inputs, params)
   }
 
   /**
@@ -1215,8 +1224,9 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
    * label : Symbol. Input label to function.
    * grad_scale : float, optional, default=1. Scale the gradient by a float factor
    */
-  def LogisticRegressionOutput(inputs: Seq[Symbol], attr: Map[String, String] = null): Symbol = {
-    create("LogisticRegressionOutput", inputs.toArray, null, attr)
+  def LogisticRegressionOutput(name: String = null,
+                               attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("LogisticRegressionOutput", name, attr)
   }
 
   /**
@@ -1227,39 +1237,36 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
    * label : Symbol. Input label to function.
    * grad_scale : float, optional, default=1. Scale the gradient by a float factor
    */
-  def LinearRegressionOutput(inputs: Seq[Symbol], attr: Map[String, String] = null): Symbol = {
-    create("LinearRegressionOutput", inputs.toArray, null, attr)
+  def LinearRegressionOutput(name: String = null,
+                             attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("LinearRegressionOutput", name, attr)
   }
 
   /**
    * Apply swapaxis to input.
-   * @param data Input data to the SwapAxisOp.
-   * @param dim1 (non-negative), default=0, the first axis to be swapped.
-   * @param dim2 (non-negative), default=0, the second axis to be swapped.
+   *
+   * Parameters
+   * ----------
+   * data : Symbol. Input data to the SwapAxisOp.
+   * dim1 : int (non-negative), default=0, the first axis to be swapped.
+   * dim2 : int (non-negative), default=0, the second axis to be swapped.
    */
-  def SwapAxis(data: Symbol, dim1: Int = 0, dim2: Int = 0,
-               attr: Map[String, String] = null): Symbol = {
-    createNoCheck("SwapAxis", attr)(Map("data" -> data, "dim1" -> dim1, "dim2" -> dim2))
+  def SwapAxis(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("SwapAxis", name, attr)
   }
 
   /**
    * Get embedding for one-hot input
-   * @param data Symbol, Input data to the EmbeddingOp.
-   * @param weight Symbol, Embedding weight matrix.
-   * @param inputDim input dim of one-hot encoding
-   * @param outputDim output dim of embedding
-   * @param name symbol name
+   *
+   * Parameters
+   * ----------
+   * data : Symbol, Input data to the EmbeddingOp.
+   * weight : Symbol, Embedding weight matrix.
+   * input_dim : int, input dim of one-hot encoding
+   * output_dim : int, output dim of embedding
    */
-  def Embedding(data: Symbol,
-                inputDim: Int,
-                outputDim: Int,
-                weight: Symbol = null,
-                name: String = null,
-                attr: Map[String, String] = null): Symbol = {
-    val params = Map("data" -> data, "input_dim" -> inputDim, "output_dim" -> outputDim) ++
-      (if (weight != null) Map("weight" -> weight) else Map.empty[String, Any]) ++
-      (if (name != null) Map("name" -> name) else Map.empty[String, Any])
-    createNoCheck("Embedding", attr)(params)
+  def Embedding(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("Embedding", name, attr)
   }
 
   /**
@@ -1307,10 +1314,9 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
    * @param attr Attributes set to the resulting symbol
    * @return the resulting symbol
    */
-  def create(operator: String,
-             symbols: Array[Symbol],
-             paramKwargs: Map[String, String],
-             attr: Map[String, String]): Symbol = {
+  def createFromListedSymbols(
+      operator: String, name: String = null, attr: Map[String, String] = null)(
+      symbols: Array[Symbol], paramKwargs: Map[String, String] = null): Symbol = {
     val function = functions(operator)
     require(function != null, s"invalid operator name $operator")
 
@@ -1322,11 +1328,11 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
     val paramKeys: Array[String] = (
         if (addkeyVarNumArgs) Array[String](function.keyVarNumArgs)
         else Array.empty[String]
-      ) ++ (params - "name").keys
+      ) ++ params.keys
     val paramVals: Array[String] = (
         if (addkeyVarNumArgs) Array[String](symbols.length.toString)
         else Array.empty[String]
-      ) ++ (params - "name").values
+      ) ++ params.values
 
     // create atomic symbol
     val symHandle = new SymbolHandleRef
@@ -1337,19 +1343,9 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
     val attrAll = AttrScope.current.get(Option(attr))
     s.setAttr(attrAll)
     val hint = operator.toLowerCase
-    val managedName = NameManager.current.get(params.get("name"), hint)
+    val managedName = NameManager.current.get(Option(name), hint)
     s.compose(managedName, symbols)
     s
-  }
-
-  def create(operator: String,
-             symbols: Array[Symbol],
-             paramKwargs: Map[String, String]): Symbol = {
-    create(operator, symbols, paramKwargs, null)
-  }
-
-  def create(operator: String, symbols: Symbol*): Symbol = {
-    create(operator, symbols.toArray, null, null)
   }
 
   /**
@@ -1360,10 +1356,9 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
    * @param attr Attributes set to the resulting symbol
    * @return the resulting symbol
    */
-  private def create(operator: String,
-                     symbols: Map[String, Symbol],
-                     paramKwargs: Map[String, String],
-                     attr: Map[String, String]): Symbol = {
+  def createFromNamedSymbols(
+      operator: String, name: String = null, attr: Map[String, String] = null)(
+      symbols: Map[String, Symbol], paramKwargs: Map[String, String] = null): Symbol = {
     val function = functions(operator)
     require(function != null, s"invalid operator name $operator")
     require(function.keyVarNumArgs == null || function.keyVarNumArgs.isEmpty,
@@ -1372,10 +1367,10 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
 
     val paramKeys =
       if (paramKwargs == null) Array.empty[String]
-      else (paramKwargs - "name").keys.toArray
+      else paramKwargs.keys.toArray
     val paramVals =
       if (paramKwargs == null) Array.empty[String]
-      else (paramKwargs - "name").values.toArray
+      else paramKwargs.values.toArray
     val symHandle = new SymbolHandleRef
     checkCall(_LIB.mxSymbolCreateAtomicSymbol(
       function.handle, paramKeys, paramVals, symHandle))
@@ -1384,25 +1379,16 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
     val attrAll = AttrScope.current.get(Option(attr))
     s.setAttr(attrAll)
     val hint = operator.toLowerCase
-    val managedName = NameManager.current.get(paramKwargs.get("name"), hint)
+    val managedName = NameManager.current.get(Option(name), hint)
     s.compose(managedName, symbols)
     s
   }
 
-  def create(operator: String, symbols: Map[String, Symbol]): Symbol = {
-    create(operator, symbols, null, null)
-  }
-
-  def create(operator: String,
-             symbols: Map[String, Symbol],
-             paramKwargs: Map[String, String]): Symbol = {
-    create(operator, symbols, paramKwargs, null)
-  }
-
   // a more friendly interface for creating symbols
   // all values except symbols in kwargs will be cast to String using its toString() method
-  def createNoCheck(operator: String, attr: Map[String, String] = null)(
-                    kwargs: Map[String, Any]): Symbol = {
+  def createFromNamedSymbolsNoCheck(
+      operator: String, name: String = null, attr: Map[String, String] = null)(
+      kwargs: Map[String, Any]): Symbol = {
     val symbolArgs = kwargs.filter { case (key, value) =>
       value.isInstanceOf[Symbol]
     }.map { case (key, value) =>
@@ -1413,7 +1399,18 @@ Softmax Mode. If set to instance, this operator will compute a softmax for each 
     }.map { case (key, value) =>
       (key, value.toString)
     }
-    create(operator, symbolArgs, strArgs, attr)
+    createFromNamedSymbols(operator, name, attr)(symbolArgs, strArgs)
+  }
+
+  // a more friendly interface for creating symbols
+  // all values except symbols in kwargs will be cast to String using its toString() method
+  def createFromListedSymbolsNoCheck(
+       operator: String, name: String = null, attr: Map[String, String] = null)(
+       symbols: Array[Symbol], kwargs: Map[String, Any] = null): Symbol = {
+    val args =
+      if (kwargs == null) null
+      else kwargs.map { case (key, value) => (key, value.toString) }
+    createFromListedSymbols(operator, name, attr)(symbols, args)
   }
 
   /**
@@ -1469,7 +1466,7 @@ class SymbolConversions[@specialized(Int, Float, Double) V](val value: V) {
   }
 
   def -(other: Symbol): Symbol = {
-    Symbol.create("_MinusScalar", Array(other),
+    Symbol.createFromListedSymbols("_MinusScalar")(Array(other),
       Map("scalar" -> value.toString, "scalar_on_left" -> "True"))
   }
 
@@ -1478,7 +1475,7 @@ class SymbolConversions[@specialized(Int, Float, Double) V](val value: V) {
   }
 
   def /(other: Symbol): Symbol = {
-    Symbol.create("_DivScalar", Array(other),
+    Symbol.createFromListedSymbols("_DivScalar")(Array(other),
       Map("scalar" -> value.toString, "scalar_on_left" -> "True"))
   }
 }
