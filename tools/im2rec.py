@@ -1,4 +1,7 @@
 import os
+import sys
+curr_path = os.path.abspath(os.path.dirname(__file__))
+sys.path.append(os.path.join(curr_path, "../python"))
 import mxnet as mx
 import random
 import numpy as np
@@ -6,7 +9,6 @@ import argparse
 import threading
 import cv, cv2
 import time
-
 def list_image(root, recursive, exts):
     image_list = []
     if recursive:
@@ -66,16 +68,21 @@ def read_list(path_in):
 
 def write_record(args, image_list):
     source = image_list
-    sink = []
-    record = mx.recordio.MXRecordIO(args.prefix+'.rec', 'w')
-    lock = threading.Lock()
     tic = [time.time()]
     color_modes = {-1: cv2.IMREAD_UNCHANGED,
                     0: cv2.IMREAD_GRAYSCALE,
                     1: cv2.IMREAD_COLOR}
-    def worker(i):
-        item = source.pop(0)
-        img = cv2.imread(os.path.join(args.root, item[1]), color_modes[args.color])
+    total = len(source)
+    
+    def image_encode(item, q_out):
+        try:
+            img = cv2.imread(os.path.join(args.root, item[1]), color_modes[args.color])
+        except:
+            print 'imread error:', item[1]
+            return
+        if img == None:
+            print 'read none error:', item[1]
+            return
         if args.center_crop:
             if img.shape[0] > img.shape[1]:
                 margin = (img.shape[0] - img.shape[1])/2;
@@ -90,29 +97,69 @@ def write_record(args, image_list):
                 newsize = (args.resize, img.shape[1]*args.resize/img.shape[0])
             img = cv2.resize(img, newsize)
         header = mx.recordio.IRHeader(0, item[2], item[0], 0)
-        s = mx.recordio.pack_img(header, img, quality=args.quality, img_fmt=args.encoding)
-        lock.acquire()
-        record.write(s)
-        sink.append(item)
-        if len(sink)%1000 == 0:
-            print(len(sink), time.time()-tic[0])
-            tic[0] = time.time()
-        lock.release()
+
+        try:
+            s = mx.recordio.pack_img(header, img, quality=args.quality, img_fmt=args.encoding)
+            q_out.put(('data', s, item))
+        except:
+            print 'pack_img error:',item[1]
+            return
+
+    def read_worker(q_in, q_out):
+        while not q_in.empty():
+            item = q_in.get()
+            image_encode(item, q_out)
+
+    def write_worker(q_out, prefix):
+        pre_time = time.time()
+        sink = []
+        record = mx.recordio.MXRecordIO(prefix+'.rec', 'w')
+        while True:
+            stat, s, item = q_out.get()
+            if stat == 'finish':
+                write_list(prefix+'.lst', sink)
+                break
+            record.write(s)
+            sink.append(item)
+            if len(sink) % 1000 == 0:
+                cur_time = time.time()
+                print 'time:', cur_time - pre_time, ' count:', len(sink)
+                pre_time = cur_time
 
     try:
-        from multiprocessing.pool import ThreadPool
-        multi_available = True
+        import multiprocessing
+        q_in = [multiprocessing.Queue() for i in range(args.num_thread)]
+        q_out = multiprocessing.Queue(1024)
+        for i in range(len(image_list)):
+            q_in[i % len(q_in)].put(image_list[i])
+        read_process = [multiprocessing.Process(target=read_worker, args=(q_in[i], q_out)) \
+                for i in range(args.num_thread)]
+        for p in read_process:
+            p.start()
+        write_process = multiprocessing.Process(target=write_worker, args=(q_out,args.prefix))
+        write_process.start()
+        for p in read_process:
+            p.join()
+        q_out.put(('finish', '', []))
+        write_process.join()
     except ImportError:
         print('multiprocessing not available, fall back to single threaded encoding')
-        multi_available = False 
-
-    if multi_available and args.num_thread > 1:
-        p = ThreadPool(args.num_thread)
-        p.map(worker, [i for i in range(len(source))])
-        write_list(args.prefix+'.lst', sink)
-    else:
-        while len(source):
-            worker(len(sink))
+        import Queue
+        q_out = Queue.Queue()
+        record = mx.recordio.MXRecordIO(args.prefix+'.rec', 'w')
+        cnt = 0
+        pre_time = time.time()
+        for item in image_list:
+            image_encode(item, q_out)
+            if q_out.empty():
+                continue
+            _, s, _ = q_out.get()
+            record.write(s)
+            cnt += 1
+            if cnt % 1000 == 0:
+                cur_time = time.time()
+                print 'time:', cur_time - pre_time, ' count:', cnt
+                pre_time = cur_time
 
 def main():
     parser = argparse.ArgumentParser(
