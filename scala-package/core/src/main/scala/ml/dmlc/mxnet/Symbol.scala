@@ -852,165 +852,164 @@ object Symbol {
     sym
   }
 
-  /** TODO
-   * BlockGrad
-Get output from a symbol and pass 0 gradient back
-
-Parameters
-----------
-data : Symbol
-Input data.
-   * @return
+  /**
+   * Get output from a symbol and pass 0 gradient back
+   *
+   * Parameters
+   * ----------
+   * data : Symbol. Input data.
    */
-
-  /** TODO
-    * Crop
-    * Crop the 2th and 3th dim of input data, with the corresponding size of w_h or with width
-    * and height of the second input symbol
-
-Parameters
-----------
-num_args : int, required
-Number of inputs for crop, if equals one, then we will use the h_wfor crop heihgt and width,
-else if equals two, then we will use the heightand width of the second input symbol,
-we name crop_like here
-offset : Shape(tuple), optional, default=(0, 0)
-corp offset coordinate: (y, x)
-h_w : Shape(tuple), optional, default=(0, 0)
-corp height and weight: (h, w)
-center_crop : boolean, optional, default=False
-If set to true, then it will use be the center_crop,or it will crop using the shape of crop_like
-    * @return
-    */
-
-  /** TODO
-  Dropout
-Apply dropout to input
-
-Parameters
-----------
-data : Symbol
-Input data to dropout.
-p : float, optional, default=0.5
-Fraction of the input that gets dropped out at training time
-   */
+  def BlockGrad(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("BlockGrad", name, attr)
+  }
 
   /**
-   * IdentityAttachKLSparseReg
-Apply a sparse regularization to the output a sigmoid activation function.
-
-Parameters
-----------
-data : Symbol
-Input data.
-sparseness_target : float, optional, default=0.1
-The sparseness target
-penalty : float, optional, default=0.001
-The tradeoff parameter for the sparseness penalty
-momentum : float, optional, default=0.9
-The momentum for running average
-   * @return
+   * Crop the 2th and 3th dim of input data, with the corresponding size of w_h or with width
+   * and height of the second input symbol
+   *
+   * Parameters
+   * ----------
+   * num_args : int, required.
+   *            Number of inputs for crop,
+   *            if equals one, then we will use the h_w for crop height and width,
+   *            else if equals two,
+   *            then we will use the height and width of the second input symbol,
+   *            we name crop_like here
+   * offset : Shape(tuple), optional, default=(0, 0), corp offset coordinate: (y, x)
+   * h_w : Shape(tuple), optional, default=(0, 0), corp height and weight: (h, w)
+   * center_crop : boolean, optional, default=False.
+   *               If set to true, then it will use be the center_crop,
+   *               or it will crop using the shape of crop_like
    */
+  def Crop(name: String = null, attr: Map[String, String] = null)(
+           inputs: Array[Symbol], params: Map[String, Any] = null): Symbol = {
+    createFromListedSymbolsNoCheck("Crop", name, attr)(inputs, params)
+  }
 
   /**
-   * LeakyReLU
-Apply activation function to input.
-
-Parameters
-----------
-data : Symbol
-Input data to activation function.
-act_type : {'elu', 'leaky', 'prelu', 'rrelu'},optional, default='leaky'
-Activation function to be applied.
-slope : float, optional, default=0.25
-Init slope for the activation. (For leaky and elu only)
-lower_bound : float, optional, default=0.125
-Lower bound of random slope. (For rrelu only)
-upper_bound : float, optional, default=0.334
-Upper bound of random slope. (For rrelu only)
-   * @return
+   * Apply dropout to input
+   *
+   * Parameters
+   * ----------
+   * data : Symbol. Input data to dropout.
+   * p : float, optional, default=0.5. Fraction of the input that gets dropped out at training time
    */
+  def Dropout(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("Dropout", name, attr)
+  }
 
   /**
-   * LRN
-Apply convolution to input then add a bias.
-
-Parameters
-----------
-data : Symbol
-Input data to the ConvolutionOp.
-alpha : float, optional, default=0.0001
-value of the alpha variance scaling parameter in the normalization formula
-beta : float, optional, default=0.75
-value of the beta power parameter in the normalization formula
-knorm : float, optional, default=2
-value of the k parameter in normalization formula
-nsize : int (non-negative), required
-normalization window width in elements.
-   * @return
+   * Apply a sparse regularization to the output a sigmoid activation function.
+   *
+   * Parameters
+   * ----------
+   * data : Symbol. Input data.
+   * sparseness_target : float, optional, default=0.1. The sparseness target
+   * penalty : float, optional, default=0.001. The tradeoff parameter for the sparseness penalty
+   * momentum : float, optional, default=0.9. The momentum for running average
    */
+  def IdentityAttachKLSparseReg(name: String = null,
+                                attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("IdentityAttachKLSparseReg", name, attr)
+  }
 
   /**
-   * MAERegressionOutput
-Use mean absolute error regression for final output, this is used on final output of a net.
-
-Parameters
-----------
-data : Symbol
-Input data to function.
-label : Symbol
-Input label to function.
-grad_scale : float, optional, default=1
-Scale the gradient by a float factor
-   * @return
+   * Apply activation function to input.
+   *
+   * Parameters
+   * ----------
+   * data : Symbol. Input data to activation function.
+   * act_type : {'elu', 'leaky', 'prelu', 'rrelu'},optional, default='leaky'
+   *            Activation function to be applied.
+   * slope : float, optional, default=0.25. Init slope for the activation. (For leaky and elu only)
+   * lower_bound : float, optional, default=0.125. Lower bound of random slope. (For rrelu only)
+   * upper_bound : float, optional, default=0.334. Upper bound of random slope. (For rrelu only)
    */
+  def LeakyReLU(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("LeakyReLU", name, attr)
+  }
 
   /**
-   * Reshape
-Reshape input to target shape
-
-Parameters
-----------
-data : Symbol
-Input data to  reshape.
-target_shape : Shape(tuple), required
-Target new shape. One and only one dim can be 0,
-in which case it will be infered from the rest of dims
-   * @return
+   * Apply convolution to input then add a bias.
+   *
+   * Parameters
+   * ----------
+   * data : Symbol. Input data to the ConvolutionOp.
+   * alpha : float, optional, default=0.0001,
+   *         value of the alpha variance scaling parameter in the normalization formula
+   * beta : float, optional, default=0.75,
+   *        value of the beta power parameter in the normalization formula
+   * knorm : float, optional, default=2, value of the k parameter in normalization formula
+   * nsize : int (non-negative), required, normalization window width in elements.
    */
+  def LRN(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("LRN", name, attr)
+  }
 
   /**
-   * SliceChannel
-Slice channel into many outputs with equally divided channel
-
-Parameters
-----------
-num_outputs : int, required
-Number of outputs to be sliced.
-   * @return
+   * Use mean absolute error regression for final output, this is used on final output of a net.
+   *
+   * Parameters
+   * ----------
+   * data : Symbol. Input data to function.
+   * label : Symbol. Input label to function.
+   * grad_scale : float, optional, default=1. Scale the gradient by a float factor
    */
+  def MAERegressionOutput(name: String = null,
+                          attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("MAERegressionOutput", name, attr)
+  }
 
   /**
-   * SoftmaxActivation
-Apply softmax activation to input. This is intended for internal layers. For output (loss layer)
-please use SoftmaxOutput. If type=instance,
-this operator will compute a softmax for each instance in the batch;
-this is the default mode. If type=channel,
-this operator will compute a num_channel-class softmax at each position of each instance;
-this can be used for fully convolutional network, image segmentation, etc.
-
-Parameters
-----------
-data : Symbol
-Input data to activation function.
-type : {'channel', 'instance'},optional, default='instance'
-Softmax Mode. If set to instance,
-this operator will compute a softmax for each instance in the batch; this is the default mode.
-If set to channel, this operator will compute a num_channel-class softmax
-at each position of each instance; this can be used for fully convolutional network,
-image segmentation, etc.
-   * @return
+   * Reshape input to target shape
+   *
+   * Parameters
+   * ----------
+   * data : Symbol. Input data to  reshape.
+   * target_shape : Shape(tuple), required. Target new shape. One and only one dim can be 0,
+   *                in which case it will be infered from the rest of dims
    */
+  def Reshape(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("Reshape", name, attr)
+  }
+
+  /**
+   * Slice channel into many outputs with equally divided channel
+   *
+   * Parameters
+   * ----------
+   * num_outputs : int, required. Number of outputs to be sliced.
+   */
+  def SliceChannel(name: String = null, attr: Map[String, String] = null)(
+                   inputs: Array[Symbol], params: Map[String, Any] = null): Symbol = {
+    createFromListedSymbolsNoCheck("SliceChannel", name, attr)(inputs, params)
+  }
+
+  /**
+   * Apply softmax activation to input.
+   * This is intended for internal layers. For output (loss layer) please use SoftmaxOutput.
+   * If type=instance,
+   * this operator will compute a softmax for each instance in the batch; this is the default mode.
+   * If type=channel,
+   * this operator will compute a num_channel-class softmax at each position of each instance;
+   * this can be used for fully convolutional network, image segmentation, etc.
+   *
+   * Parameters
+   * ----------
+   * data : Symbol. Input data to activation function.
+   * type : {'channel', 'instance'},optional, default='instance'. Softmax Mode.
+   *        If set to instance,
+   *        this operator will compute a softmax for each instance in the batch;
+   *        this is the default mode.
+   *        If set to channel,
+   *        this operator will compute a num_channel-class softmax
+   *        at each position of each instance;
+   *        this can be used for fully convolutional network, image segmentation, etc.
+   */
+  def SoftmaxActivation(name: String = null,
+                        attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("SoftmaxActivation", name, attr)
+  }
 
   /**
    * Apply matrix multiplication to input then add a bias.
