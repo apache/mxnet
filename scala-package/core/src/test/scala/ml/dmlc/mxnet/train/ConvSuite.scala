@@ -16,23 +16,23 @@ class ConvSuite extends FunSuite with BeforeAndAfterAll {
     val batchSize = 100
 
     val data = Symbol.Variable("data")
-    val conv1 = Symbol.Convolution(Map("data" -> data, "name" -> "conv1",
-                                       "num_filter" -> 32, "kernel" -> (3, 3), "stride" -> (2, 2)))
-    val bn1 = Symbol.BatchNorm(Map("data" -> conv1, "name" -> "bn1"))
-    val act1 = Symbol.Activation(Map("data" -> bn1, "name" -> "relu1", "act_type" -> "relu"))
-    val mp1 = Symbol.Pooling(Map("data" -> act1, "name" -> "mp1",
-                                 "kernel" -> (2, 2), "stride" -> (2, 2), "pool_type" -> "max"))
+    val conv1 = Symbol.Convolution(name = "conv1")(Map("data" -> data, "num_filter" -> 32,
+                                                       "kernel" -> (3, 3), "stride" -> (2, 2)))
+    val bn1 = Symbol.BatchNorm(name = "bn1")(Map("data" -> conv1))
+    val act1 = Symbol.Activation(name = "relu1")(Map("data" -> bn1, "act_type" -> "relu"))
+    val mp1 = Symbol.Pooling(name = "mp1")(Map("data" -> act1, "kernel" -> (2, 2),
+                                               "stride" -> (2, 2), "pool_type" -> "max"))
 
-    val conv2 = Symbol.Convolution(Map("data" -> mp1, "name" -> "conv2", "num_filter" -> 32,
-                                       "kernel" -> (3, 3), "stride" -> (2, 2)))
-    val bn2 = Symbol.BatchNorm(Map("data" -> conv2, "name" -> "bn2"))
-    val act2 = Symbol.Activation(Map("data" -> bn2, "name" -> "relu2", "act_type" -> "relu"))
-    val mp2 = Symbol.Pooling(Map("data" -> act2, "name" -> "mp2",
-                                 "kernel" -> (2, 2), "stride" -> (2, 2), "pool_type" -> "max"))
+    val conv2 = Symbol.Convolution(name = "conv2")(Map("data" -> mp1, "num_filter" -> 32,
+                                                       "kernel" -> (3, 3), "stride" -> (2, 2)))
+    val bn2 = Symbol.BatchNorm(name = "bn2")(Map("data" -> conv2))
+    val act2 = Symbol.Activation(name = "relu2")(Map("data" -> bn2, "act_type" -> "relu"))
+    val mp2 = Symbol.Pooling(name = "mp2")(Map("data" -> act2, "kernel" -> (2, 2),
+                                               "stride" -> (2, 2), "pool_type" -> "max"))
 
-    val fl = Symbol.Flatten(Map("data" -> mp2, "name" -> "flatten"))
-    val fc2 = Symbol.FullyConnected(Map("data" -> fl, "name" -> "fc2", "num_hidden" -> 10))
-    val softmax = Symbol.SoftmaxOutput(Map("data" -> fc2, "name" -> "sm"))
+    val fl = Symbol.Flatten(name = "flatten")(Map("data" -> mp2))
+    val fc2 = Symbol.FullyConnected(name = "fc2")(Map("data" -> fl, "num_hidden" -> 10))
+    val softmax = Symbol.SoftmaxOutput(name = "sm")(Map("data" -> fc2))
 
     val numEpoch = 1
     val model = new FeedForward(softmax, Context.cpu(), numEpoch = numEpoch,
