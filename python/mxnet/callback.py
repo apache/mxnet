@@ -27,13 +27,15 @@ def do_checkpoint(prefix):
     return _callback
 
 
-def log_train_metric(period):
+def log_train_metric(period, auto_reset=False):
     """Callback to log the training evaluation result every period.
 
     Parameters
     ----------
     period : int
         The number of batch to log the training evaluation metric.
+    auto_reset : bool
+        Reset the metric after each log
 
     Returns
     -------
@@ -46,6 +48,8 @@ def log_train_metric(period):
             name, value = param.eval_metric.get()
             logging.info('Iter[%d] Batch[%d] Train-%s=%f',
                          param.epoch, param.nbatch, name, value)
+            if auto_reset:
+                param.eval_metric.reset()
     return _callback
 
 
@@ -57,7 +61,7 @@ class Speedometer(object):
     batch_size: int
         batch_size of data
     frequent: int
-        calcutaion frequent
+        calculation frequent
     """
     def __init__(self, batch_size, frequent=50):
         self.batch_size = batch_size

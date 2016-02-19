@@ -41,6 +41,8 @@ class Initializer(object):
             self._init_zero(name, arr)
         elif name.endswith("moving_var"):
             self._init_zero(name, arr)
+        elif name.endswith("moving_inv_var"):
+            self._init_zero(name, arr)
         elif name.endswith("moving_avg"):
             self._init_zero(name, arr)
         else:
@@ -49,7 +51,7 @@ class Initializer(object):
     def _init_bilinear(self, _, arr):
         weight = np.zeros(np.prod(arr.shape), dtype='float32')
         shape = arr.shape
-        f = shape[3] / 2.
+        f = np.ceil(shape[3] / 2.)
         c = (2 * f - 1 - f % 2) / (2. * f)
         for i in range(np.prod(shape)):
             x = i % shape[3]
@@ -95,7 +97,7 @@ class Load(object):
         assert isinstance(param, dict)
         self.param = {}
         for name, arr in param.items():
-            if name.startswith('arg:'):
+            if name.startswith('arg:') or name.startswith('aux:'):
                 self.param[name[4:]] = arr
             else:
                 self.param[name] = arr
@@ -113,7 +115,7 @@ class Load(object):
                 logging.info('Initialized %s by loading', name)
         else:
             assert self.default_init is not None, \
-                "Cannot Initialize %s. Not found in loaded param " + \
+                "Cannot Initialize %s. Not found in loaded param "%name + \
                 "and no default Initializer is provided."
             self.default_init(name, arr)
             if self.verbose:

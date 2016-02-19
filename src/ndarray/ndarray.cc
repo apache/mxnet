@@ -12,11 +12,79 @@
 #include <mshadow/tensor.h>
 #include "./ndarray_function.h"
 
+#if MXNET_USE_OPENCV
+#include <opencv2/opencv.hpp>
+#endif  // MXNET_USE_OPENCV
+
 namespace dmlc {
 DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 }  // namespace dmlc
 
 namespace mxnet {
+
+/*!
+* \brief run a ternary operation
+* \param lhs left operand
+* \param mhs middle operand
+* \param rhs right operand
+* \param out the output ndarray
+*/
+template<typename OP>
+void TernaryOp(const NDArray &lhs,
+  const NDArray &mhs,
+  const NDArray &rhs,
+  NDArray *out) {
+  // no check if all of them are on cpu
+  if (lhs.ctx().dev_mask() != cpu::kDevMask || mhs.ctx().dev_mask() != cpu::kDevMask
+                                            || rhs.ctx().dev_mask() != cpu::kDevMask) {
+    CHECK((lhs.ctx() == mhs.ctx()) && (mhs.ctx() == rhs.ctx())) << "operands context mismatch";
+  }
+  // if out is none, allocate space
+  if (out->is_none()) {
+    *out = NDArray(OP::GetShape(lhs.shape(), mhs.shape(), rhs.shape()), lhs.ctx(), true);
+  } else {
+    // no check if both of them are on cpu
+    if (lhs.ctx().dev_mask() != cpu::kDevMask ||
+      out->ctx().dev_mask() != cpu::kDevMask) {
+      CHECK(out->ctx() == lhs.ctx()) << "target context mismatch";
+    }
+    CHECK(out->shape() == OP::GetShape(lhs.shape(), mhs.shape(), rhs.shape()))
+      << "target shape mismatch";
+  }
+  // important: callback must always capture by value
+  NDArray ret = *out;
+  // get the const variables
+  std::vector<Engine::VarHandle> const_vars;
+  if (lhs.var() != ret.var()) const_vars.push_back(lhs.var());
+  if (mhs.var() != ret.var()) const_vars.push_back(mhs.var());
+  if (rhs.var() != ret.var()) const_vars.push_back(rhs.var());
+
+  // redirect everything to mshadow operations
+  switch (lhs.ctx().dev_mask()) {
+  case cpu::kDevMask: {
+    Engine::Get()->PushSync([lhs, mhs, rhs, ret](RunContext ctx) {
+      ret.CheckAndAlloc();
+      TBlob tmp = ret.data();
+      ndarray::Eval<cpu, OP>(lhs.data(), mhs.data(), rhs.data(), &tmp, ctx);
+    }, lhs.ctx(), const_vars, { ret.var() });
+    break;
+  }
+#if MXNET_USE_CUDA
+  case gpu::kDevMask: {
+    Engine::Get()->PushSync([lhs, mhs, rhs, ret](RunContext ctx) {
+      ret.CheckAndAlloc();
+      TBlob tmp = ret.data();
+      ndarray::Eval<gpu, OP>(lhs.data(), mhs.data(), rhs.data(), &tmp, ctx);
+      // Wait GPU kernel to complete
+      ctx.get_stream<gpu>()->Wait();
+    }, lhs.ctx(), const_vars, { ret.var() });
+    break;
+  }
+#endif
+  default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+  }
+}
+
 /*!
  * \brief run a binary operation
  * \param lhs left operand
@@ -612,6 +680,12 @@ MXNET_REGISTER_NDARRAY_FUN(choose_element_0index)
           " in lhs according to index indicated by rhs."
           " This function assume rhs uses 0-based index.");
 
+MXNET_REGISTER_NDARRAY_FUN(fill_element_0index)
+.set_function(TernaryOp<ndarray::MatFillRowElem>)
+.describe("Fill one element of each line(row for python, column for R/Julia)"
+" in lhs according to index indicated by rhs and values indicated by mhs."
+" This function assume rhs uses 0-based index.");
+
 // register API function
 // those with underscore will be registered at NDArray
 MXNET_REGISTER_NDARRAY_FUN(_plus_scalar).set_function(ScalarOp<ndarray::Plus, false>);
@@ -659,5 +733,106 @@ MXNET_REGISTER_NDARRAY_FUN(clip)
 .add_argument("src", "NDArray", "Source input")
 .add_argument("a_min", "real_t", "Minimum value")
 .add_argument("a_max", "real_t", "Maximum value");
+
+void Imdecode(NDArray *ret, NDArray mean, size_t index,
+              size_t x0, size_t y0, size_t x1, size_t y1, size_t n_channels,
+              size_t size, char *str_img) {
+#if MXNET_USE_OPENCV
+  cv::Mat buf(1, size, CV_8U, str_img);
+  cv::Mat res = cv::imdecode(buf, n_channels == 1 ? 0 : -1);
+  CHECK_NE(res.data, NULL) << "OpenCV Failed to decode image";
+  CHECK_LE(n_channels, static_cast<size_t>(res.channels()));
+  if (y1 - y0 == 0) {
+    x0 = 0;
+    x1 = res.cols;
+    y0 = 0;
+    y1 = res.rows;
+  }
+  CHECK(x0 >= 0 && y0 >= 0 && x1 <= static_cast<size_t>(res.cols) &&
+        y1 <= static_cast<size_t>(res.rows));
+
+  if (ret->is_none()) {
+    *ret = NDArray(mshadow::Shape3(n_channels, y1-y0, x1-x0),
+                   Context::CPU(), false,
+                   mean.is_none() ? mshadow::default_type_flag : mean.dtype());
+  }
+  NDArray buff;
+  if (ret->shape().ndim() == 3) {
+    buff = ret->Reshape(mshadow::Shape4(1, ret->shape()[0], ret->shape()[1], ret->shape()[2]));
+  } else {
+    CHECK_EQ(ret->shape().ndim(), 4);
+    buff = ret->Slice(index, index+1);
+  }
+  CHECK_EQ(buff.ctx().dev_mask(), cpu::kDevMask);
+  CHECK_EQ(n_channels, buff.shape()[1]);
+  CHECK_EQ(y1-y0, buff.shape()[2]);
+  CHECK_EQ(x1-x0, buff.shape()[3]);
+  buff.WaitToWrite();
+  if (mean.is_none()) {
+    MSHADOW_TYPE_SWITCH(buff.dtype(), DType, {
+      mshadow::Tensor<cpu, 4, DType> tensor = buff.data().get<cpu, 4, DType>();
+      for (index_t i = 0; i < y1-y0; i++) {
+        uchar* im_data = res.ptr<uchar>(y0+i) + res.channels()*x0;
+        for (index_t j = 0; j < x1-x0; j++) {
+          for (index_t k = 0; k < n_channels; k++) {
+            tensor[0][k][i][j] = DType(im_data[k]);  // NOLINT(*)
+          }
+          im_data += res.channels();
+        }
+      }
+    })
+  } else {
+    CHECK_EQ(mean.dtype(), buff.dtype());
+    CHECK_EQ(mean.ctx().dev_mask(), cpu::kDevMask);
+    CHECK_EQ(mean.shape()[0], buff.shape()[1]);
+    CHECK_EQ(mean.shape()[1], buff.shape()[2]);
+    CHECK_EQ(mean.shape()[2], buff.shape()[3]);
+    mean.WaitToRead();
+    MSHADOW_TYPE_SWITCH(buff.dtype(), DType, {
+      mshadow::Tensor<cpu, 4, DType> tensor = buff.data().get<cpu, 4, DType>();
+      mshadow::Tensor<cpu, 3, DType> tmean = mean.data().get<cpu, 3, DType>();
+      for (index_t i = 0; i < y1-y0; i++) {
+        uchar* im_data = res.ptr<uchar>(y0+i) + res.channels()*x0;
+        for (index_t j = 0; j < x1-x0; j++) {
+          for (index_t k = 0; k < n_channels; k++) {
+            tensor[0][k][i][j] = DType(im_data[k]) - tmean[k][i][j];  // NOLINT(*)
+          }
+          im_data += res.channels();
+        }
+      }
+    })
+  }
+#else
+  LOG(FATAL) << "Compile with OpenCV for image decoding.";
+#endif  // MXNET_USE_OPENCV
+}
+
+MXNET_REGISTER_NDARRAY_FUN(_imdecode)
+.set_type_mask(kAcceptEmptyMutateTarget | kNDArrayArgBeforeScalar)
+.set_body([](NDArray **u, real_t *s, NDArray **out,
+             int num_params, char **param_keys, char **param_vals) {
+    CHECK_EQ(num_params, 1);
+    Imdecode(out[0], *u[0],
+             static_cast<size_t>(s[0]),
+             static_cast<size_t>(s[1]),
+             static_cast<size_t>(s[2]),
+             static_cast<size_t>(s[3]),
+             static_cast<size_t>(s[4]),
+             static_cast<size_t>(s[5]),
+             static_cast<size_t>(s[6]),
+             param_vals[0]);
+  })
+.set_num_use_vars(1)
+.set_num_scalars(7)
+.set_num_mutate_vars(1)
+.describe("Decode an image, clip to (x0, y0, x1, y1), substract mean, and write to buffer")
+.add_argument("mean", "NDArray", "image mean")
+.add_argument("index", "int", "buffer position for output")
+.add_argument("x0", "int", "x0")
+.add_argument("y0", "int", "y0")
+.add_argument("x1", "int", "x1")
+.add_argument("y1", "int", "y1")
+.add_argument("c", "int", "channel")
+.add_argument("size", "int", "length of str_img");
 #endif
 }  // namespace mxnet

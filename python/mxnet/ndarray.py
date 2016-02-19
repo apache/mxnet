@@ -276,6 +276,22 @@ class NDArray(object):
             self.handle, start, stop, ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
+    def reshape(self, new_shape):
+        """Return a reshaped NDArray that shares memory with current one.
+
+        Parameters
+        ----------
+        new_shape : iterable of int
+            new shape of NDArray
+        """
+        handle = NDArrayHandle()
+        check_call(_LIB.MXNDArrayReshape(self.handle,
+                                         len(new_shape),
+                                         c_array(ctypes.c_int, new_shape),
+                                         ctypes.byref(handle)))
+        return NDArray(handle=handle, writable=self.writable)
+
+
     def wait_to_read(self):
         """Block until all pending writes operations on current NDArray are finished.
 
@@ -608,6 +624,46 @@ def save(fname, data):
                                   c_array(NDArrayHandle, handles),
                                   keys))
 
+def imdecode(str_img, clip_rect=(0, 0, 0, 0), out=None, index=0, channels=3, mean=None):
+    """Decode an image from string. Requires OpenCV to work.
+
+    Parameters
+    ----------
+    str_img : str
+        binary image data
+    clip_rect : iterable of 4 int
+        clip decoded image to rectangle (x0, y0, x1, y1)
+    out : NDArray
+        output buffer. can be 3 dimensional (c, h, w) or 4 dimensional (n, c, h, w)
+    index : int
+        output decoded image to i-th slice of 4 dimensional buffer
+    channels : int
+        number of channels to output. Decode to grey scale when channels = 1.
+    mean : NDArray
+        substract mean from decode image before outputing.
+    """
+    # pylint: disable= no-member, protected-access, too-many-arguments
+    if mean is None:
+        mean = NDArray(_new_empty_handle())
+    if out is None:
+        return NDArray._imdecode(mean, index,
+                                 clip_rect[0],
+                                 clip_rect[1],
+                                 clip_rect[2],
+                                 clip_rect[3],
+                                 channels,
+                                 len(str_img),
+                                 str_img=str_img)
+    else:
+        return NDArray._imdecode(mean, index,
+                                 clip_rect[0],
+                                 clip_rect[1],
+                                 clip_rect[2],
+                                 clip_rect[3],
+                                 channels,
+                                 len(str_img),
+                                 str_img=str_img,
+                                 out=out)
 
 # pylint: disable=too-many-locals, invalid-name
 def _make_ndarray_function(handle):
@@ -645,13 +701,15 @@ def _make_ndarray_function(handle):
     arg_names = ctypes.POINTER(ctypes.c_char_p)()
     arg_types = ctypes.POINTER(ctypes.c_char_p)()
     arg_descs = ctypes.POINTER(ctypes.c_char_p)()
+    ret_type = ctypes.c_char_p()
 
     check_call(_LIB.MXFuncGetInfo(
         handle, ctypes.byref(name), ctypes.byref(desc),
         ctypes.byref(num_args),
         ctypes.byref(arg_names),
         ctypes.byref(arg_types),
-        ctypes.byref(arg_descs)))
+        ctypes.byref(arg_descs),
+        ctypes.byref(ret_type)))
     func_name = py_str(name.value)
     param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
     doc_str = ('%s\n\n' +
@@ -728,6 +786,7 @@ def _make_ndarray_function(handle):
                 mutate_vars = (mutate_vars,)
             if len(mutate_vars) != n_mutate_vars:
                 raise TypeError('expect %d out in %s', n_mutate_vars, func_name)
+            del kwargs['out']
         else:
             if accept_empty_mutate:
                 mutate_vars = tuple(
@@ -739,9 +798,9 @@ def _make_ndarray_function(handle):
                 c_array(NDArrayHandle, [args[i].handle for i in use_vars_range]), \
                 c_array(mx_float, [args[i] for i in scalar_range]), \
                 c_array(NDArrayHandle, [v.handle for v in mutate_vars]), \
-                ctypes.c_int(0), \
-                c_array(ctypes.c_char_p, []), \
-                c_array(ctypes.c_char_p, [])))
+                ctypes.c_int(len(kwargs)), \
+                c_array(ctypes.c_char_p, kwargs.keys()), \
+                c_array(ctypes.c_char_p, [str(i) for i in kwargs.values()])))
         if n_mutate_vars == 1:
             return mutate_vars[0]
         else:

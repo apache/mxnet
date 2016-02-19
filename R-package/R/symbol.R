@@ -50,6 +50,15 @@ mx.symbol.load <-function(filename) {
   mx.symbol.load(filename)
 }
 
+#' Load an mx.symbol object from a json string
+#'
+#' @param str the json str represent a mx.symbol
+#'
+#' @export
+#' @name mx.symbol.load.json
+NULL
+
+
 #' Inference the shape of arguments, outputs, and auxiliary states.
 #'
 #' @param symbol The \code{mx.symbol} object

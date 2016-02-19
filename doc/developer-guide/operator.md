@@ -184,7 +184,7 @@ class ConvolutionOpProperty : public OperatorProperty {
 };
 ```
 
-### Paramterize Operator
+### Parameterize Operator
 When implementing convolution operator, we need to know the kernal size, the stride size, padding size and so on. These parameters should be passed to the operator before any `Forward` or `Backward` interface is called. To do so, user could define a `ConvolutionParam` structure:
 ```c++
 #include <dmlc/parameter.h>

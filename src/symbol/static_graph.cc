@@ -72,7 +72,8 @@ std::vector<uint32_t> StaticGraph::TopoSort() const {
 
 bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
                                   std::vector<std::vector<TShape> > *node_out_shapes,
-                                  std::vector<std::vector<TShape> > *node_aux_shapes) const {
+                                  std::vector<std::vector<TShape> > *node_aux_shapes,
+                                  bool partial_infer) const {
   for (uint32_t nid : topo_order) {
     const Node& node = nodes[nid];
     if (node.is_forward()) {
@@ -83,7 +84,11 @@ bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
       try {
         if (!node.op->InferShape(&in_shape,
                                  &(*node_out_shapes)[nid],
-                                 &(*node_aux_shapes)[nid])) return false;
+                                 &(*node_aux_shapes)[nid])) {
+          if (partial_infer)
+            continue;
+          return false;
+        }
       } catch (const op::InferShapeError &err) {
         // error handling
         const std::string &op_name = node.name;
@@ -95,6 +100,11 @@ bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
         if (source.is_variable()) {
           os << "Corresponding keyword of symbol: " << source.name << '\n' << err.msg;
         }
+        throw dmlc::Error(os.str());
+      } catch (const dmlc::Error &err) {
+        const std::string &op_name = node.name;
+        std::ostringstream os;
+        os << "InferShape Error in " << op_name << ": " << err.what();
         throw dmlc::Error(os.str());
       }
       for (size_t i = 0; i < node.inputs.size(); ++i) {
@@ -187,6 +197,11 @@ bool StaticGraph::InferNodeTypes(const std::vector<uint32_t> &topo_order,
           os << "Corresponding keyword of symbol: " << source.name << '\n' << err.msg;
         }
         throw dmlc::Error(os.str());
+      } catch (const dmlc::Error &err) {
+        const std::string &op_name = node.name;
+        std::ostringstream os;
+        os << "InferType Error in " << op_name << ": " << err.what();
+        throw dmlc::Error(os.str());
       }
       for (size_t i = 0; i < node.inputs.size(); ++i) {
         const DataEntry& e = node.inputs[i];
@@ -254,7 +269,8 @@ bool StaticGraph::InferNodeTypes(const std::vector<uint32_t> &topo_order,
 
 bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
                              std::vector<TShape> *out_shape,
-                             std::vector<TShape> *aux_shape) const {
+                             std::vector<TShape> *aux_shape,
+                             bool partial_infer) const {
   std::vector<std::vector<TShape> > node_out_shapes(nodes.size());
   std::vector<std::vector<TShape> > node_aux_shapes(nodes.size());
   for (size_t i = 0; i < nodes.size(); ++i) {
@@ -273,7 +289,8 @@ bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
   }
   if (!InferNodeShapes(this->TopoSort(),
                        &node_out_shapes,
-                       &node_aux_shapes)) return false;
+                       &node_aux_shapes,
+                       partial_infer)) return false;
   for (size_t i = 0; i < arg_nodes.size(); ++i) {
     (*in_shape)[i] = node_out_shapes[arg_nodes[i]][0];
   }
@@ -560,9 +577,15 @@ void StaticGraph::Node::Load(dmlc::JSONReader *reader) {
   helper.ReadAllFields(reader);
 
   if (op_type_str != "null") {
-    op.reset(OperatorProperty::Create(op_type_str.c_str()));
-    std::vector<std::pair<std::string, std::string> > vec(param.begin(), param.end());
-    op->Init(vec);
+    try {
+      op.reset(OperatorProperty::Create(op_type_str.c_str()));
+      std::vector<std::pair<std::string, std::string> > vec(param.begin(), param.end());
+      op->Init(vec);
+    } catch (const dmlc::Error &err) {
+      std::ostringstream os;
+      os << "Failed loading Op " << name << " of type " << op_type_str << ": " << err.what();
+      throw dmlc::Error(os.str());
+    }
   } else {
     op.reset(nullptr);
   }

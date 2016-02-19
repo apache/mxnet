@@ -42,13 +42,15 @@ def _make_torch_function(handle):
     arg_names = ctypes.POINTER(ctypes.c_char_p)()
     arg_types = ctypes.POINTER(ctypes.c_char_p)()
     arg_descs = ctypes.POINTER(ctypes.c_char_p)()
+    ret_type = ctypes.c_char_p()
 
     check_call(_LIB.MXFuncGetInfo(
         handle, ctypes.byref(name), ctypes.byref(desc),
         ctypes.byref(num_args),
         ctypes.byref(arg_names),
         ctypes.byref(arg_types),
-        ctypes.byref(arg_descs)))
+        ctypes.byref(arg_descs),
+        ctypes.byref(ret_type)))
     func_name = py_str(name.value)
     if not func_name.startswith('_th_'):
         return None

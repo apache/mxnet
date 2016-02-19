@@ -97,7 +97,7 @@ void Executor::Forward(bool is_train,
 
 void Executor::Backward(const Rcpp::List &output_grads) {
   RCHECK(grad_arrays_ != nullptr)
-      << "This executor has not been binded with req.grad";
+      << "This executor has not been bound with req.grad";
   std::vector<NDArrayHandle> grad_handles
       = NDArray::GetHandles(output_grads, "output_grads", false);
   MX_CALL(MXExecutorBackward(handle_,
