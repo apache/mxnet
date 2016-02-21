@@ -127,7 +127,7 @@ class Xavier(protected val rndType: String = "uniform",
 
     rndType match {
       case "uniform" => Random.uniform(-scale, scale, out = arr)
-      case "normal" => Random.normal(0, scale, out = arr)
+      case "gaussian" => Random.normal(0, scale, out = arr)
       case _ => throw new IllegalArgumentException("Unknown random type")
     }
   }
