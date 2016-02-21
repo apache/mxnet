@@ -20,17 +20,17 @@
 
 
 namespace dropout_allchannels {
-enum DropoutAllchannelsOpInputs {kData};
-enum DropoutAllchannelsOpOutputs {kOut, kMask};
-enum DropoutAllchannelsOpForwardResource {kRandom};
+enum DropoutAllChannelsOpInputs {kData};
+enum DropoutAllChannelsOpOutputs {kOut, kMask};
+enum DropoutAllChannelsOpForwardResource {kRandom};
 }  // namespace dropout_allchannels
 
 namespace mxnet {
 namespace op {
 
-struct DropoutAllchannelsParam : public dmlc::Parameter<DropoutAllchannelsParam> {
+struct DropoutAllChannelsParam : public dmlc::Parameter<DropoutAllChannelsParam> {
   float p;
-  DMLC_DECLARE_PARAMETER(DropoutAllchannelsParam) {
+  DMLC_DECLARE_PARAMETER(DropoutAllChannelsParam) {
     DMLC_DECLARE_FIELD(p).set_default(0.5)
     .set_range(0, 1)
     .describe("Fraction of the input that gets dropped out at training time");
@@ -38,9 +38,9 @@ struct DropoutAllchannelsParam : public dmlc::Parameter<DropoutAllchannelsParam>
 };  // struct DropoutParam
 
 template<typename xpu>
-class DropoutAllchannelsOp : public Operator {
+class DropoutAllChannelsOp : public Operator {
  public:
-  explicit DropoutAllchannelsOp(DropoutAllchannelsParam param) {
+  explicit DropoutAllChannelsOp(DropoutAllChannelsParam param) {
     this->pkeep_ = 1.0f - param.p;
   }
 
@@ -82,9 +82,9 @@ class DropoutAllchannelsOp : public Operator {
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(in_grad.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> grad = in_data[dropout_allchannels::kOut].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> mask = in_data[dropout_allchannels::kMask].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> gdata = in_data[dropout_allchannels::kData].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> grad = in_grad[dropout_allchannels::kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> mask = out_data[dropout_allchannels::kMask].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> gdata = in_grad[dropout_allchannels::kData].get<xpu, 4, real_t>(s);
     Assign(gdata, req[dropout_allchannels::kData], grad * mask);
   }
 
@@ -94,10 +94,10 @@ class DropoutAllchannelsOp : public Operator {
 
 
 template<typename xpu>
-Operator *CreateOp(DropoutAllchannelsParam param);
+Operator *CreateOp(DropoutAllChannelsParam param);
 
 #if DMLC_USE_CXX11
-class DropoutAllchannelsProp : public OperatorProperty {
+class DropoutAllChannelsProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -121,13 +121,13 @@ class DropoutAllchannelsProp : public OperatorProperty {
   }
 
   OperatorProperty* Copy() const override {
-    auto ptr = new DropoutAllchannelsProp();
+    auto ptr = new DropoutAllChannelsProp();
     ptr->param_ = param_;
     return ptr;
   }
 
   std::string TypeString() const override {
-    return "DropoutAllchannels";
+    return "DropoutAllChannels";
   }
 
   std::vector<int> DeclareBackwardDependency(
@@ -171,8 +171,8 @@ class DropoutAllchannelsProp : public OperatorProperty {
   Operator* CreateOperator(Context ctx) const override;
 
  private:
-  DropoutAllchannelsParam param_;
-};  // class DropoutAllchannelsProp
+  DropoutAllChannelsParam param_;
+};  // class DropoutAllChannelsProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet

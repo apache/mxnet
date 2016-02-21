@@ -10,8 +10,8 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<gpu>(DropoutAllchannelsParam param) {
-  return new DropoutAllchannelsOp<gpu>(param);
+Operator *CreateOp<gpu>(DropoutAllChannelsParam param) {
+  return new DropoutAllChannelsOp<gpu>(param);
 }
 }  // namespace op
 }  // namespace mxnet
