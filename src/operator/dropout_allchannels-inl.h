@@ -82,7 +82,7 @@ class DropoutAllChannelsOp : public Operator {
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(in_grad.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> grad = in_grad[dropout_allchannels::kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> grad = out_grad[dropout_allchannels::kOut].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> mask = out_data[dropout_allchannels::kMask].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> gdata = in_grad[dropout_allchannels::kData].get<xpu, 4, real_t>(s);
     Assign(gdata, req[dropout_allchannels::kData], grad * mask);
