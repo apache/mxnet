@@ -14,6 +14,12 @@
   <profiles>
     <profile>
       <id>osx-x86_64</id>
+      <activation>
+        <os>
+          <family>mac</family>
+          <arch>x86_64</arch>
+        </os>
+      </activation>
       <properties>
         <platform>osx-x86_64</platform>
       </properties>
@@ -23,6 +29,11 @@
     </profile>
     <profile>
       <id>linux-x86_64</id>
+      <activation>
+        <os>
+          <family>linux</family>
+        </os>
+      </activation>
       <properties>
         <platform>linux-x86_64</platform>
       </properties>

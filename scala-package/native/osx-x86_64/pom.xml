@@ -37,55 +37,6 @@
       </plugin>
 
       <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <execution>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <exportAntProperties>true</exportAntProperties>
-              <tasks>
-                <taskdef resource="net/sf/antcontrib/antcontrib.properties" classpathref="maven.plugin.classpath" />
-                <property environment="env"/>
-                <if>
-                  <isset property="intel" />
-                  <then>
-                    <property name="use.cblas" value="0" />
-                    <property name="use.mkl" value="1" />
-                    <property name="cflags.blas" value="-I${intel}/mkl/include" />
-                    <property name="ldflags.blas" value="-L${intel}/mkl/lib -L${intel}/lib" />
-                  </then>
-                  <else>
-                    <property name="use.cblas" value="1" />
-                    <property name="use.mkl" value="0" />
-                    <property name="cflags.blas"
-                      value="-I/System/Library/Frameworks/Accelerate.framework/Versions/Current/Frameworks/vecLib.framework/Versions/Current/Headers" />
-                    <property name="ldflags.blas" value="-framework Accelerate" />
-                  </else>
-                </if>
-                <if>
-                  <not>
-                    <isset property="cxx" />
-                  </not>
-                  <then>
-                    <property name="cxx" value="g++" />
-                  </then>
-                </if>
-                <!-- echo opencv libs to a temp file and then load it into a property -->
-                <exec executable="pkg-config" output="${opencv.pkg.tmpfile}" failonerror="true">
-                  <arg line="--libs opencv" />
-                </exec>
-                <loadfile srcfile="${opencv.pkg.tmpfile}" property="ldflags.opencv" />
-                <delete file="${opencv.pkg.tmpfile}" />
-              </tasks>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>native-maven-plugin</artifactId>
         <extensions>true</extensions>
@@ -106,33 +57,23 @@
           <compilerStartOptions>
             <compilerStartOption>-std=c++0x</compilerStartOption>
           </compilerStartOptions>
-          <compilerMiddleOptions>
-            <compilerMiddleOption>
-              -msse3 -funroll-loops -Wno-unused-parameter -Wno-unknown-pragmas
-            </compilerMiddleOption>
-          </compilerMiddleOptions>
           <compilerEndOptions>
             <compilerEndOption>-I../../../include</compilerEndOption>
-            <compilerEndOption>-I../../../dmlc-core/include</compilerEndOption>
-            <compilerEndOption>-I../../../mshadow ${cflags.blas}</compilerEndOption>
-            <compilerEndOption>-DMSHADOW_USE_CUDA=0</compilerEndOption>
-            <compilerEndOption>-DMSHADOW_USE_CBLAS=${use.cblas}</compilerEndOption>
-            <compilerEndOption>-DMSHADOW_USE_MKL=${use.mkl}</compilerEndOption>
-            <compilerEndOption>-fPIC</compilerEndOption>
+            <compilerEndOption>${cflags}</compilerEndOption>
           </compilerEndOptions>
           <linkerStartOptions>
             <linkerStartOption>-shared</linkerStartOption>
           </linkerStartOptions>
           <linkerMiddleOptions>
-            <linkerMiddleOption>-fopenmp</linkerMiddleOption>
-            <linkerMiddleOption>-lm</linkerMiddleOption>
-            <linkerMiddleOption>-framework Accelerate ${ldflags.opencv}</linkerMiddleOption>
-            <linkerMiddleOption>-framework JavaVM ${ldflags.blas}</linkerMiddleOption>
-            <linkerMiddleOption>-Wl,-exported_symbol,_Java_*</linkerMiddleOption>
-            <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
-            <linkerMiddleOption>../../../dmlc-core/libdmlc.a</linkerMiddleOption>
-            <linkerMiddleOption>-force_load ../../../lib/libmxnet.a</linkerMiddleOption>
+            <linkerMiddleOption>${ldflags}</linkerMiddleOption>
           </linkerMiddleOptions>
+          <linkerEndOptions>
+            <linkerEndOption>-framework JavaVM</linkerEndOption>
+            <linkerEndOption>-Wl,-exported_symbol,_Java_*</linkerEndOption>
+            <linkerEndOption>-Wl,-x</linkerEndOption>
+            <linkerEndOption>../../../dmlc-core/libdmlc.a</linkerEndOption>
+            <linkerEndOption>-force_load ../../../lib/libmxnet.a</linkerEndOption>
+          </linkerEndOptions>
         </configuration>
 
         <executions>

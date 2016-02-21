@@ -1,3 +1,5 @@
+ROOTDIR = $(CURDIR)
+
 ifndef config
 ifdef CXXNET_CONFIG
 	config = $(CXXNET_CONFIG)
@@ -32,14 +34,13 @@ ifeq ($(DEBUG), 1)
 else
 	CFLAGS += -O3
 endif
-CFLAGS += -I./mshadow/ -I./dmlc-core/include -fPIC -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS = -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else
 	NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
-ROOTDIR = $(CURDIR)
 
 ifndef LINT_LANG
 	LINT_LANG="all"
@@ -217,6 +218,12 @@ rpkg:	roxygen
 	cp -rf include/* R-package/inst/include
 	cp -rf dmlc-core/include/* R-package/inst/include/
 	R CMD build --no-build-vignettes R-package
+
+scalapkg:
+	(cd scala-package; mvn clean package -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)"; cd $(ROOTDIR))
+
+scalatest:
+	(cd scala-package; mvn integration-test -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" $(SCALA_TEST_ARGS); cd $(ROOTDIR))
 
 ifneq ($(EXTRA_OPERATORS),)
 clean:
