@@ -20,7 +20,6 @@ env:
   #- TASK=r_test
   #- TASK=julia JULIA_VER=0.4
   - TASK=scala_test
-  - TASK=scala_lint
 
   # TODO, R test, distributed test, clang, more g++ versions
 

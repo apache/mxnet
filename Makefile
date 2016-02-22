@@ -223,7 +223,7 @@ scalapkg:
 	(cd scala-package; mvn clean package -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)"; cd $(ROOTDIR))
 
 scalatest:
-	(cd scala-package; mvn integration-test -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" $(SCALA_TEST_ARGS); cd $(ROOTDIR))
+	(cd scala-package; mvn verify -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" $(SCALA_TEST_ARGS); cd $(ROOTDIR))
 
 ifneq ($(EXTRA_OPERATORS),)
 clean:

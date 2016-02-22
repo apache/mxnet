@@ -125,7 +125,7 @@ class RMSE extends EvalMetric("rmse") {
  */
 class CustomMetric(private val fEval: (NDArray, NDArray) => Float,
                    override val name: String) extends EvalMetric(name) {
-  def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
+  override def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
     require(labels.size == preds.size, "labels and predictions should have the same length.")
 
     for ((label, pred) <- labels zip preds) {
@@ -134,8 +134,3 @@ class CustomMetric(private val fEval: (NDArray, NDArray) => Float,
     }
   }
 }
-
-
-
-
-

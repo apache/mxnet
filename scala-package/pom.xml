@@ -1,9 +1,10 @@
 <project>
   <modelVersion>4.0.0</modelVersion>
   <groupId>ml.dmlc.mxnet</groupId>
-  <artifactId>mxnet-scala-parent</artifactId>
+  <artifactId>mxnet-scala-parent_2.10</artifactId>
   <version>0.1-SNAPSHOT</version>
   <name>MXNet Scala Package - Parent</name>
+
   <properties>
     <scala.version>2.10.4</scala.version>
     <scala.binary.version>2.10</scala.binary.version>
@@ -13,6 +14,7 @@
   <modules>
     <module>core</module>
     <module>native</module>
+    <module>examples</module>
   </modules>
   <build>
     <pluginManagement>
@@ -142,7 +144,7 @@
             <failOnWarning>false</failOnWarning>
             <sourceDirectory>${basedir}/src/main/scala</sourceDirectory>
             <testSourceDirectory>${basedir}/src/test/scala</testSourceDirectory>
-            <configLocation>${basedir}/scalastyle-config.xml</configLocation>
+            <configLocation>scalastyle-config.xml</configLocation>
             <outputFile>${basedir}/target/scalastyle-output.xml</outputFile>
             <outputEncoding>UTF-8</outputEncoding>
           </configuration>
