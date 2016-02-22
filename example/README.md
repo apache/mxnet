@@ -48,7 +48,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 ###Web Predictive Services
 -----------------------
 * [MXNet Shinny](https://github.com/thirdwing/mxnet_shiny) - Source code for quickly creating a Shiny R app to host online image classification.
-
+* [Machine Eye] (http://rupeshs.github.io/machineye/)- Web service for local image file/image URL classification without uploading.
 ## List of tutorials
 
 ### Deep learning for hackers with MXnet
