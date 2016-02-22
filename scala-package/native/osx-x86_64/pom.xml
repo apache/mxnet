@@ -61,14 +61,14 @@
             <linkerStartOption>-shared</linkerStartOption>
           </linkerStartOptions>
           <linkerMiddleOptions>
-            <linkerMiddleOption>${ldflags}</linkerMiddleOption>
+            <linkerMiddleOption>-framework JavaVM</linkerMiddleOption>
+            <linkerMiddleOption>-Wl,-exported_symbol,_Java_*</linkerMiddleOption>
+            <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
+            <linkerMiddleOption>../../../dmlc-core/libdmlc.a</linkerMiddleOption>
+            <linkerMiddleOption>-force_load ../../../lib/libmxnet.a</linkerMiddleOption>
           </linkerMiddleOptions>
           <linkerEndOptions>
-            <linkerEndOption>-framework JavaVM</linkerEndOption>
-            <linkerEndOption>-Wl,-exported_symbol,_Java_*</linkerEndOption>
-            <linkerEndOption>-Wl,-x</linkerEndOption>
-            <linkerEndOption>../../../dmlc-core/libdmlc.a</linkerEndOption>
-            <linkerEndOption>-force_load ../../../lib/libmxnet.a</linkerEndOption>
+            <linkerEndOption>${ldflags}</linkerEndOption>
           </linkerEndOptions>
         </configuration>
 
