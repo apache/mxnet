@@ -16,7 +16,7 @@ from .context import Context, cpu
 from .initializer import Uniform
 from collections import namedtuple
 from .optimizer import get_updater
-from .executor import DataParallelExecutorManager, _check_arguments, _load_data
+from .executor_manager import DataParallelExecutorManager, _check_arguments, _load_data
 
 BASE_ESTIMATOR = object
 
@@ -122,7 +122,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         train_data, eval_data=None, eval_metric=None,
                         epoch_end_callback=None, batch_end_callback=None,
                         logger=None, work_load_list=None, monitor=None,
-                        eval_batch_end_callback=None):
+                        eval_batch_end_callback=None, sym_gen=None):
     """Internal training function on multiple devices.
     This function will also work for single device as well.
     Parameters
@@ -181,6 +181,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     if logger is None:
         logger = logging
     executor_manager = DataParallelExecutorManager(symbol=symbol,
+                                                   sym_gen=sym_gen,
                                                    ctx=ctx,
                                                    train_data=train_data,
                                                    param_names=param_names,
@@ -412,20 +413,25 @@ class FeedForward(BASE_ESTIMATOR):
                  allow_extra_params=False,
                  begin_epoch=0,
                  **kwargs):
-        # check if symbol contain duplicated names.
-        _check_arguments(symbol)
-        # rematch parameters to delete useless ones
-        if allow_extra_params:
-            if arg_params:
-                arg_names = set(symbol.list_arguments())
-                arg_params = {k : v for k, v in arg_params.items()
-                              if k in arg_names}
-            if aux_params:
-                aux_names = set(symbol.list_auxiliary_states())
-                aux_params = {k : v for k, v in aux_params.items()
-                              if k in aux_names}
+
+        if isinstance(symbol, sym.Symbol):
+            self.symbol = symbol
+            self.sym_gen = None
+        else:
+            assert(callable(symbol))
+            self.symbol = None
+            self.sym_gen = symbol
+
+        # model parameters
+        self.arg_params = arg_params
+        self.aux_params = aux_params
+        self.allow_extra_params = allow_extra_params
+
+        self.argument_checked = False
+        if self.sym_gen is None:
+            self._check_arguments()
+
         # basic configuration
-        self.symbol = symbol
         if ctx is None:
             ctx = [cpu()]
         elif isinstance(ctx, Context):
@@ -438,12 +444,31 @@ class FeedForward(BASE_ESTIMATOR):
         self.optimizer = optimizer
         self.initializer = initializer
         self.numpy_batch_size = numpy_batch_size
-        # model parameters
-        self.arg_params = arg_params
-        self.aux_params = aux_params
         # internal helper state
         self._pred_exec = None
         self.begin_epoch = begin_epoch
+
+    def _check_arguments(self):
+        """verify the argument of the default symbol and user provided parameters"""
+        if self.argument_checked:
+            return
+
+        assert(self.symbol is not None)
+        self.argument_checked = True
+
+        # check if symbol contain duplicated names.
+        _check_arguments(self.symbol)
+        # rematch parameters to delete useless ones
+        if self.allow_extra_params:
+            if self.arg_params:
+                arg_names = set(self.symbol.list_arguments())
+                self.arg_params = {k : v for k, v in self.arg_params.items()
+                                   if k in arg_names}
+            if self.aux_params:
+                aux_names = set(self.symbol.list_auxiliary_states())
+                self.aux_params = {k : v for k, v in self.aux_params.items()
+                                   if k in aux_names}
+
 
     @staticmethod
     def _is_data_arg(name):
@@ -453,6 +478,7 @@ class FeedForward(BASE_ESTIMATOR):
     def _init_params(self, input_shapes, overwrite=False):
         """Initialize weight parameters and auxiliary states"""
         arg_shapes, _, aux_shapes = self.symbol.infer_shape(**input_shapes)
+        assert(arg_shapes is not None)
 
         arg_names = self.symbol.list_arguments()
         input_names = input_shapes.keys()
@@ -698,6 +724,10 @@ class FeedForward(BASE_ESTIMATOR):
         data = self._init_iter(X, y, is_train=True)
         eval_data = self._init_eval_iter(eval_data)
 
+        if self.sym_gen:
+            self.symbol = self.sym_gen(data.default_bucket_key) # pylint: disable=no-member
+            self._check_arguments()
+
         arg_names, param_names, aux_names = \
                 self._init_params(dict(data.provide_data+data.provide_label))
         self.kwargs["arg_names"] = arg_names
@@ -733,7 +763,8 @@ class FeedForward(BASE_ESTIMATOR):
                             batch_end_callback=batch_end_callback,
                             kvstore=kvstore, update_on_kvstore=update_on_kvstore,
                             logger=logger, work_load_list=work_load_list, monitor=monitor,
-                            eval_batch_end_callback=eval_batch_end_callback)
+                            eval_batch_end_callback=eval_batch_end_callback,
+                            sym_gen=self.sym_gen)
 
 
     def save(self, prefix, epoch=None):

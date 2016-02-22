@@ -196,7 +196,7 @@ def submission_helper(pred):
 fi = csv.reader(open("data/sample_submission_validate.csv"))
 f = open("submission.csv", "w")
 fo = csv.writer(f, lineterminator='\n')
-fo.writerow(fi.__next__())
+fo.writerow(fi.__next__()) # Python2: fo.writerow(fi.next())
 for line in fi:
     idx = line[0]
     key, target = idx.split('_')
