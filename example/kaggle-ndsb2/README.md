@@ -56,7 +56,7 @@ Prepare raw data in ```data``` folder. The tree of ```data``` folder is like
 4. We also provide the R code with the same network structure and parameters in ```Train.R```. Right now it used the pre-processed csv files by ```Preprocessing.py```. We will add the pre-processing R code later.
 
 Note:
-- To run with python2, you need to change ```Train.py, line #139``` to the python2 syntax.
+- To run with python2, you need to change ```Train.py, line #145 #199``` to the python2 syntax.
 - To modify network, change ```get_lenet``` function in ```Train.py``` or ```get.lenet``` function in ```Train.R```.
 - We also provide ```local_train```, ```local_test``` file for local parameter tuning.
 - To run on multiple GPU with huge network, or questions about saving network parameters etc, please refer [MXNet docs](https://mxnet.readthedocs.org/en/latest/)
