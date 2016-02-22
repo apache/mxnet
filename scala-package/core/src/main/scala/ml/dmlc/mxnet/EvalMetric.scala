@@ -37,11 +37,14 @@ abstract class EvalMetric(protected val name: String) {
   }
 }
 
+
+// Classification metrics
+
 /**
  * Calculate accuracy
  */
 class Accuracy extends EvalMetric("accuracy") {
-  def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
+  override def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
     require(labels.length == preds.length,
       "labels and predictions should have the same length.")
 
@@ -60,33 +63,57 @@ class Accuracy extends EvalMetric("accuracy") {
   }
 }
 
+// Regression metrics
 
 /**
  * Calculate Mean Absolute Error loss
  */
 class MAE extends EvalMetric("mae") {
-  def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
-
+  override def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
     require(labels.size == preds.size, "labels and predictions should have the same length.")
 
-    for ( (label, pred) <- labels zip preds) {
-
+    for ((label, pred) <- labels zip preds) {
+      val labelArr = label.toArray
+      val predArr = pred.toArray
+      require(labelArr.length == predArr.length)
+      this.sumMetric += (labelArr zip predArr).map { case (l, p) => Math.abs(l - p) }.sum
+      this.numInst += labelArr.length
     }
   }
 }
 
+// Calculate Mean Squared Error loss
+class MSE extends EvalMetric("mse") {
+  override def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
+    require(labels.size == preds.size, "labels and predictions should have the same length.")
+
+    for ((label, pred) <- labels zip preds) {
+      val labelArr = label.toArray
+      val predArr = pred.toArray
+      require(labelArr.length == predArr.length)
+      this.sumMetric +=
+        (labelArr zip predArr).map { case (l, p) => (l - p) * (l - p) }.sum / labelArr.length
+      this.numInst += labelArr.length
+    }
+  }
+}
 
 /**
  * Calculate Root Mean Squred Error loss
  */
 class RMSE extends EvalMetric("rmse") {
-  def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
-
+  override def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
     require(labels.size == preds.size, "labels and predictions should have the same length.")
 
-    for ( (label, pred) <- labels zip preds) {
-
+    for ((label, pred) <- labels zip preds) {
+      val labelArr = label.toArray
+      val predArr = pred.toArray
+      require(labelArr.length == predArr.length)
+      val metric: Double = Math.sqrt(
+        (labelArr zip predArr).map { case (l, p) => (l - p) * (l - p) }.sum / labelArr.length)
+      this.sumMetric += metric.toFloat
     }
+    this.numInst += 1
   }
 }
 
@@ -96,13 +123,14 @@ class RMSE extends EvalMetric("rmse") {
  * @param fEval Customized evaluation function.
  * @param name The name of the metric
  */
-class CustomMetric(var fEval: () => Unit, override val name: String) extends EvalMetric(name) {
+class CustomMetric(private val fEval: (NDArray, NDArray) => Float,
+                   override val name: String) extends EvalMetric(name) {
   def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
-
     require(labels.size == preds.size, "labels and predictions should have the same length.")
 
-    for ( (label, pred) <- labels zip preds) {
-
+    for ((label, pred) <- labels zip preds) {
+      this.sumMetric += fEval(label, pred)
+      this.numInst += 1
     }
   }
 }
