@@ -126,10 +126,3 @@ if [ ${TASK} == "scala_test" ]; then
     
     exit 0
 fi
-
-if [ ${TASK} == "scala_lint" ]; then
-    export JAVA_HOME=$(/usr/libexec/java_home)
-    cd scala-package/core
-    mvn scalastyle:check || exit -1
-    exit 0
-fi

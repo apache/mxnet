@@ -13,16 +13,12 @@
   <name>MXNet Scala Package - Native Linux-x86_64</name>
   <url>http://maven.apache.org</url>
 
-  <properties>
-    <opencv.pkg.tmpfile>opencv.pkg.txt</opencv.pkg.tmpfile>
-  </properties>
-
   <packaging>so</packaging>
 
   <dependencies>
     <dependency>
       <groupId>ml.dmlc.mxnet</groupId>
-      <artifactId>mxnet-scala-core</artifactId>
+      <artifactId>mxnet-scala-core_${scala.binary.version}</artifactId>
       <version>0.1-SNAPSHOT</version>
       <type>jar</type>
       <scope>compile</scope>
@@ -65,14 +61,14 @@
             <linkerStartOption>-shared</linkerStartOption>
           </linkerStartOptions>
           <linkerMiddleOptions>
-            <linkerMiddleOption>${ldflags}</linkerMiddleOption>
-            <linkerMiddleOption>-fopenmp</linkerMiddleOption>
+            <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
+            <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption>
+            <linkerMiddleOption>../../../dmlc-core/libdmlc.a</linkerMiddleOption>
+            <linkerMiddleOption>-Wl,--no-whole-archive</linkerMiddleOption>
           </linkerMiddleOptions>
           <linkerEndOptions>
-            <linkerEndOption>-Wl,--whole-archive</linkerEndOption>
-            <linkerEndOption>../../../lib/libmxnet.a</linkerEndOption>
-            <linkerEndOption>../../../dmlc-core/libdmlc.a</linkerEndOption>
-            <linkerEndOption>-Wl,--no-whole-archive</linkerEndOption>
+            <linkerEndOption>${ldflags}</linkerEndOption>
+            <linkerEndOption>-fopenmp</linkerEndOption>
           </linkerEndOptions>
         </configuration>
 

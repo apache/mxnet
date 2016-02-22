@@ -15,16 +15,6 @@ object Context {
     new Context("gpu", deviceId)
   }
 
-  def withScope[T](device: Context)(body: => T): T = {
-    val oldDefaultCtx = Context.defaultCtx
-    Context._defaultCtx = device
-    try {
-      body
-    } finally {
-      Context._defaultCtx = oldDefaultCtx
-    }
-  }
-
   implicit def ctx2Array(ctx: Context): Array[Context] = Array(ctx)
 }
 
@@ -39,6 +29,16 @@ class Context(deviceTypeName: String, val deviceId: Int = 0) {
 
   def this(context: Context) = {
     this(context.deviceType, context.deviceId)
+  }
+
+  def withScope[T](body: => T): T = {
+    val oldDefaultCtx = Context.defaultCtx
+    Context._defaultCtx = this
+    try {
+      body
+    } finally {
+      Context._defaultCtx = oldDefaultCtx
+    }
   }
 
   /**

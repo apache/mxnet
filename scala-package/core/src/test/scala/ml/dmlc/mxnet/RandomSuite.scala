@@ -4,7 +4,7 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
 class RandomSuite extends FunSuite with BeforeAndAfterAll {
   test("uniform on cpu") {
-    Context.withScope(Context.cpu()) {
+    Context.cpu().withScope {
       val (a, b) = (-10, 10)
       val shape = Vector(100, 100)
       Random.seed(128)

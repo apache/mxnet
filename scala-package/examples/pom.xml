@@ -1,4 +1,5 @@
 <project>
+
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>ml.dmlc.mxnet</groupId>
@@ -6,10 +7,9 @@
     <version>0.1-SNAPSHOT</version>
   </parent>
 
-  <groupId>ml.dmlc.mxnet</groupId>
-  <artifactId>mxnet-scala-core_2.10</artifactId>
-  <version>0.1-SNAPSHOT</version>
-  <name>MXNet Scala Package - Core</name>
+  <artifactId>mxnet-scala-examples_2.10</artifactId>
+  <name>MXNet Scala Package - Examples</name>
+  <packaging>pom</packaging>
 
   <profiles>
     <profile>
@@ -33,7 +33,7 @@
       </activation>
       <properties>
         <platform>linux-x86_64</platform>
-      </properties>     
+      </properties>
     </profile>
   </profiles>
 
@@ -59,19 +59,18 @@
         <artifactId>scala-maven-plugin</artifactId>
       </plugin>
       <plugin>
-        <groupId>org.scalatest</groupId>
-        <artifactId>scalatest-maven-plugin</artifactId>
-        <configuration>
-          <argLine>-Djava.library.path=${project.parent.basedir}/native/${platform}/target</argLine> 
-        </configuration>
-      </plugin>
-      <plugin>
         <groupId>org.scalastyle</groupId>
         <artifactId>scalastyle-maven-plugin</artifactId>
       </plugin>
     </plugins>
   </build>
   <dependencies>
+    <dependency>
+      <groupId>ml.dmlc.mxnet</groupId>
+      <artifactId>mxnet-scala-core_${scala.binary.version}</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
@@ -91,10 +90,6 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.scalatest</groupId>
-      <artifactId>scalatest_${scala.binary.version}</artifactId>
     </dependency>
     <dependency>
       <groupId>org.scalacheck</groupId>

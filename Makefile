@@ -220,10 +220,10 @@ rpkg:	roxygen
 	R CMD build --no-build-vignettes R-package
 
 scalapkg:
-	(cd scala-package; mvn clean package -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)"; cd $(ROOTDIR))
+	(cd $(ROOTDIR)/scala-package; mvn clean package -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)")
 
 scalatest:
-	(cd scala-package; mvn integration-test -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" $(SCALA_TEST_ARGS); cd $(ROOTDIR))
+	(cd $(ROOTDIR)/scala-package; mvn verify -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" $(SCALA_TEST_ARGS))
 
 ifneq ($(EXTRA_OPERATORS),)
 clean:
