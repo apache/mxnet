@@ -2,7 +2,7 @@
 % Please edit documentation in R/mxnet_generated.R
 \name{mx.nd.argmax.channel}
 \alias{mx.nd.argmax.channel}
-\title{Take sum of the src.The result will be ndarray of shape (1,) on the same device.}
+\title{Take argmax indices of each channel of the src.The result will be ndarray of shape (num_channel,) on the same device.}
 \arguments{
 \item{src}{NDArray
 Source input to the function}
@@ -11,6 +11,6 @@ Source input to the function}
 out The result mx.ndarray
 }
 \description{
-Take sum of the src.The result will be ndarray of shape (1,) on the same device.
+Take argmax indices of each channel of the src.The result will be ndarray of shape (num_channel,) on the same device.
 }
 

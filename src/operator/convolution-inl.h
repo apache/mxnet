@@ -52,7 +52,7 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     .describe("Number of groups partition. "
               "This option is not supported by CuDNN, you can use SliceChannel to num_group,"
               "apply convolution and concat instead to achieve the same need.");
-    DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(128, 4096)
+    DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 4096)
     .describe("Tmp workspace for convolution (MB).");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
@@ -315,7 +315,8 @@ class ConvolutionProp : public OperatorProperty {
         << "Input data should be 4D in batch-num_filter-y-x";
     SHAPE_ASSIGN_CHECK(*in_shape,
                        conv::kWeight,
-                       Shape4(param_.num_filter, dshape[1], param_.kernel[0], param_.kernel[1]));
+                       Shape4(param_.num_filter, dshape[1] / param_.num_group,
+                              param_.kernel[0], param_.kernel[1]));
     if (!param_.no_bias) {
       SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
     }

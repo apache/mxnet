@@ -143,25 +143,30 @@ class Symbol {
    *
    * \param out_shapes Use to store the inferred shapes of outputs.
    * \param aux_shapes Use to store the inferred shapes of auxiliary states
+   * \param partial_infer Return partially inferred results if true.
    * \return true if the shape inference is successful, false if there is not enough information.
    * \throws dmlc::Error if the known arg_shapes are inconsistent.
    */
   bool InferShape(std::vector<TShape> *arg_shapes,
                   std::vector<TShape> *out_shapes,
-                  std::vector<TShape> *aux_shapes) const;
+                  std::vector<TShape> *aux_shapes,
+                  bool partial_infer = false) const;
+
   /*!
    * \brief infer the shapes by providing shapes of known arguments.
    * \param known_arg_shapes map of argument name to shape of arguments with known shapes.
    * \param arg_shapes used to store inferred shapes of arguments.
    * \param out_shapes used to store inferred shapes of outputs.
    * \param aux_shapes Use to store the inferred shapes of auxiliary states
+   * \param partial_infer Return partially inferred results if true.
    * \return true if the shape inference is successful, false if there is not enough information.
    * \throws dmlc::Error if the known arg_shapes are inconsistent.
    */
   bool InferShape(const std::unordered_map<std::string, TShape> &known_arg_shapes,
                   std::vector<TShape> *arg_shapes,
                   std::vector<TShape> *out_shapes,
-                  std::vector<TShape> *aux_shapes) const;
+                  std::vector<TShape> *aux_shapes,
+                  bool partial_infer = false) const;
 
   /*!
    * \brief infer the types of outputs and unknown input arguments
@@ -343,6 +348,7 @@ class Executor {
    * \param arg_grad_store NDArray that is used to store the gradient output of the input arguments.
    * \param grad_req_type requirment type of gradient saving. Can only be in {kNullOp, kAddTo, kWriteTo}.
    * \param aux_states NDArray that is used as internal state in op
+   * \param shared_exec input executor to share memory with.
    * \return a new executor.
    */
   static Executor *Bind(Symbol symbol,
@@ -351,7 +357,8 @@ class Executor {
                         const std::vector<NDArray> &in_args,
                         const std::vector<NDArray> &arg_grad_store,
                         const std::vector<OpReqType> &grad_req_type,
-                        const std::vector<NDArray> &aux_states);
+                        const std::vector<NDArray> &aux_states,
+                        Executor* shared_exec = NULL);
   /*!
    * \brief the prototype of user-defined monitor callback
    */

@@ -1,7 +1,8 @@
-<img src=https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo-m/mxnet2.png width=135/> for Deep Learning
+<img src=https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo-m/mxnet2.png width=135/> *for Deep Learning*
 =====
 
 [![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
+[![Build Status](http://ci.dmlc.ml/buildStatus/icon?job=mxnet)](http://ci.dmlc.ml/job/mxnet)
 [![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.readthedocs.org/en/latest/)
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
 [![todofy badge](https://todofy.org/b/dmlc/mxnet)](https://todofy.org/r/dmlc/mxnet)
@@ -51,9 +52,10 @@ Features
 * Support for python, R, C++ and Julia
 * Cloud-friendly and directly compatible with S3, HDFS, and Azure
 
-Bug Reporting
+Ask Questions
 -------------
-* For reporting bugs please use the [mxnet/issues](https://github.com/dmlc/mxnet/issues) page.
+* Please use [DMLC/mxnet Forum](http://forum.dmlc.ml/c/mxnet) for any questions about how to use mxnet. 
+* For reporting bugs, please use the [mxnet/issues](https://github.com/dmlc/mxnet/issues) page.
 
 License
 -------

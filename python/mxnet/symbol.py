@@ -409,6 +409,16 @@ class Symbol(object):
             List of shapes of outputs.
             The order is in the same order as list_auxiliary()
         """
+        return self._infer_shape_impl(False, *args, **kwargs)
+
+    def infer_shape_partial(self, *args, **kwargs):
+        """Partially infer the shape. The same as infer_shape, except that the partial
+        results can be returned.
+        """
+        return self._infer_shape_impl(True, *args, **kwargs)
+
+    def _infer_shape_impl(self, partial, *args, **kwargs):
+        """The actual implementation for calling shape inference API."""
         # pylint: disable=too-many-locals
         if len(args) != 0 and len(kwargs) != 0:
             raise ValueError('Can only specify known argument \
@@ -440,7 +450,11 @@ class Symbol(object):
         aux_shape_ndim = ctypes.POINTER(mx_uint)()
         aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
         complete = ctypes.c_int()
-        check_call(_LIB.MXSymbolInferShape(
+        if partial:
+            infer_func = _LIB.MXSymbolInferShapePartial
+        else:
+            infer_func = _LIB.MXSymbolInferShape
+        check_call(infer_func(
             self.handle,
             mx_uint(len(indptr) - 1),
             c_array(ctypes.c_char_p, keys),
@@ -629,7 +643,8 @@ class Symbol(object):
         executor = self.bind(ctx, arg_ndarrays, grad_ndarrays, grad_req, aux_ndarrays)
         return executor
 
-    def bind(self, ctx, args, args_grad=None, grad_req='write', aux_states=None, group2ctx=None):
+    def bind(self, ctx, args, args_grad=None, grad_req='write',
+             aux_states=None, group2ctx=None, shared_exec=None):
         """Bind current symbol to get an executor.
 
         Parameters
@@ -674,6 +689,11 @@ class Symbol(object):
 
         group2ctx : dict of string to mx.Context
             The dict mapping the ``ctx_group`` attribute to the context assignment.
+
+        shared_exec : mx.executor.Executor
+            Executor to share memory with. This is intended for runtime reshaping, variable length
+            sequences, etc. The returned executor shares state with shared_exec, and should not be
+            used in parallel with it.
 
         Returns
         -------
@@ -736,21 +756,23 @@ class Symbol(object):
                 ctx_map_dev_ids.append(ctypes.c_int(val.device_id))
 
         handle = ExecutorHandle()
-        check_call(_LIB.MXExecutorBindX(self.handle,
-                                        ctypes.c_int(ctx.device_typeid),
-                                        ctypes.c_int(ctx.device_id),
-                                        mx_uint(len(ctx_map_keys)),
-                                        c_array(ctypes.c_char_p, ctx_map_keys),
-                                        c_array(ctypes.c_int, ctx_map_dev_types),
-                                        c_array(ctypes.c_int, ctx_map_dev_ids),
-                                        mx_uint(len(args)),
-                                        args_handle,
-                                        args_grad_handle,
-                                        reqs_array,
-                                        mx_uint(len(aux_states)),
-                                        aux_args_handle,
-                                        ctypes.byref(handle)))
-        executor = Executor(handle, self)
+        shared_handle = shared_exec.handle if shared_exec is not None else ExecutorHandle()
+        check_call(_LIB.MXExecutorBindEX(self.handle,
+                                         ctypes.c_int(ctx.device_typeid),
+                                         ctypes.c_int(ctx.device_id),
+                                         mx_uint(len(ctx_map_keys)),
+                                         c_array(ctypes.c_char_p, ctx_map_keys),
+                                         c_array(ctypes.c_int, ctx_map_dev_types),
+                                         c_array(ctypes.c_int, ctx_map_dev_ids),
+                                         mx_uint(len(args)),
+                                         args_handle,
+                                         args_grad_handle,
+                                         reqs_array,
+                                         mx_uint(len(aux_states)),
+                                         aux_args_handle,
+                                         shared_handle,
+                                         ctypes.byref(handle)))
+        executor = Executor(handle, self, ctx, grad_req, group2ctx)
         executor.arg_arrays = args
         executor.grad_arrays = args_grad
         executor.aux_arrays = aux_states
@@ -898,6 +920,7 @@ def _make_atomic_symbol_function(handle):
     arg_names = ctypes.POINTER(ctypes.c_char_p)()
     arg_types = ctypes.POINTER(ctypes.c_char_p)()
     arg_descs = ctypes.POINTER(ctypes.c_char_p)()
+    ret_type = ctypes.c_char_p()
 
     check_call(_LIB.MXSymbolGetAtomicSymbolInfo(
         handle, ctypes.byref(name), ctypes.byref(desc),
@@ -905,7 +928,8 @@ def _make_atomic_symbol_function(handle):
         ctypes.byref(arg_names),
         ctypes.byref(arg_types),
         ctypes.byref(arg_descs),
-        ctypes.byref(key_var_num_args)))
+        ctypes.byref(key_var_num_args),
+        ctypes.byref(ret_type)))
     param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
     key_var_num_args = py_str(key_var_num_args.value)
     func_name = py_str(name.value)

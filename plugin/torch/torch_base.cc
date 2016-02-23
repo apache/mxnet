@@ -7,25 +7,29 @@
 #include "./torch_base.h"
 
 namespace mxnet {
-lua_State* TorchState::LuaState() {
-  thread_local lua_State* state = NULL;
-  if (!state) {
-    state = luaL_newstate();
-    luaL_openlibs(state);
-    luaL_loadstring(state,
-                    "require 'torch'\n"
-                    "require 'nn'\n"
+TorchState::TorchState() {
+  this->L = luaL_newstate();
+
+  luaL_openlibs(L);
+  luaL_loadstring(L,
+                  "require 'torch'\n"
+                  "require 'nn'\n"
 #if MXNET_USE_CUDA
-                    "require 'cutorch'\n"
-                    "require 'cunn'\n"
+                  "require 'cutorch'\n"
+                  "require 'cunn'\n"
 #if MXNET_USE_CUDNN
-                    "require 'cudnn'\n"
+                  "require 'cudnn'\n"
 #endif  // MXNET_USE_CUDNN
 #endif  // MXNET_USE_CUDA
-                    "local ss = require 'threads.sharedserialize'\n"
-                    "Serialize, Deserialize = ss.save, ss.load\n");
-    int err = lua_pcall(state, 0, 0, 0);
-    CHECK_EQ(err, 0) << lua_tostring(state, -1);
+                  ); // NOLINT(*)
+  int err = lua_pcall(L, 0, 0, 0);
+  CHECK_EQ(err, 0) << lua_tostring(L, -1);
+}
+
+TorchState* TorchState::ThreadSharedLuaState() {
+  thread_local TorchState* state = nullptr;
+  if (!state) {
+    state = new TorchState();
   }
   return state;
 }
@@ -38,7 +42,7 @@ void TorchState::SetStream(mshadow::Stream<mshadow::cpu>* s) {
 #if MXNET_USE_CUDA
 template<>
 void TorchState::SetStream(mshadow::Stream<mshadow::gpu>* s) {
-  TorchState::CudaState()->currentStream = mshadow::Stream<gpu>::GetStream(s);
+  CudaState()->currentStream = mshadow::Stream<gpu>::GetStream(s);
 }
 #endif  // MXNET_USE_CUDA
 }  // namespace mxnet

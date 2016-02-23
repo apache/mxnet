@@ -222,11 +222,12 @@ SymbolFunction::SymbolFunction(AtomicSymbolCreator handle)
   const char **arg_type_infos;
   const char **arg_descriptions;
   const char *key_var_num_args;
+  const char *ret_type;
 
   MX_CALL(MXSymbolGetAtomicSymbolInfo(
       handle_, &name, &description, &num_args,
       &arg_names, &arg_type_infos, &arg_descriptions,
-      &key_var_num_args));
+      &key_var_num_args, &ret_type));
   if (key_var_num_args != nullptr) {
     key_var_num_args_ = key_var_num_args;
   }

@@ -13,7 +13,7 @@ def fit(args, network, data_loader):
         log_file = args.log_file
         log_dir = args.log_dir
         log_file_full_name = os.path.join(log_dir, log_file)
-        if not os.path.exists(log_dir): 
+        if not os.path.exists(log_dir):
             os.mkdir(log_dir)
         logger = logging.getLogger()
         handler = logging.FileHandler(log_file_full_name)

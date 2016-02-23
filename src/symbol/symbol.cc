@@ -536,16 +536,18 @@ Symbol Symbol::Grad(const std::vector<std::string>& wrt) const {
 
 bool Symbol::InferShape(std::vector<TShape> *arg_shapes,
                         std::vector<TShape> *out_shapes,
-                        std::vector<TShape> *aux_shapes) const {
+                        std::vector<TShape> *aux_shapes,
+                        bool partial_infer) const {
   StaticGraph g;
   this->ToStaticGraph(&g);
-  return g.InferShape(arg_shapes, out_shapes, aux_shapes);
+  return g.InferShape(arg_shapes, out_shapes, aux_shapes, partial_infer);
 }
 
 bool Symbol::InferShape(const std::unordered_map<std::string, TShape>& known_arg_shapes,
                         std::vector<TShape> *arg_shapes,
                         std::vector<TShape> *out_shapes,
-                        std::vector<TShape> *aux_shapes) const {
+                        std::vector<TShape> *aux_shapes,
+                        bool partial_infer) const {
   StaticGraph g;
   this->ToStaticGraph(&g);
   arg_shapes->clear();
@@ -565,7 +567,7 @@ bool Symbol::InferShape(const std::unordered_map<std::string, TShape>& known_arg
                    [](decltype(*known_arg_shapes.begin())& kv)->std::string { return kv.first; });
     KeywordArgumentMismatch("Symbol.InferShape", keys, ListArguments());
   }
-  return g.InferShape(arg_shapes, out_shapes, aux_shapes);
+  return g.InferShape(arg_shapes, out_shapes, aux_shapes, partial_infer);
 }
 
 bool Symbol::InferType(std::vector<int> *arg_types,
