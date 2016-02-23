@@ -501,7 +501,7 @@ def subtract(lhs, rhs):
     """
     if isinstance(lhs, numeric_types):
         if isinstance(rhs, numeric_types):
-            return lhs / rhs
+            return lhs - rhs
         elif isinstance(rhs, NDArray):
             return NDArray._rminus_scalar(rhs, float(lhs))
         else:
