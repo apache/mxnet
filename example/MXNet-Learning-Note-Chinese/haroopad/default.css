@@ -1,0 +1,53 @@
+/**
+  You can only use the following style.
+
+  - color, font-family, font-style
+  - text-shadow
+  - background-*
+
+  Example:
+    font-family: "微软雅黑", "Meiryo UI", "Malgun Gothic", "Segoe UI", "Trebuchet MS", Helvetica, sans-serif !important;
+    text-shadow: 0 1px rgba(0, 0, 0, .8);
+    background-image: url('wood.jpg');
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: cover;
+*/
+
+editor {font-family: "微软雅黑", "Meiryo UI", "Malgun Gothic", "Segoe UI", "Trebuchet MS", Helvetica, sans-serif !important;
+    text-shadow: 0 1px rgba(0, 0, 0, .8);
+    background-image: url('wood.jpg');
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: cover;}
+linenumber {}
+activeline {font-family: "微软雅黑", "Meiryo UI", "Malgun Gothic", "Segoe UI", "Trebuchet MS", Helvetica, sans-serif !important;
+    text-shadow: 0 1px rgba(0, 0, 0, .8);
+    background-image: url('wood.jpg');
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: cover;}
+
+/*
+  You can only use the following style.
+
+  - color, font-family, font-style
+  - text-shadow
+
+  Example:
+    color: #adadad;
+    font-style: bold;
+    text-shadow: 0 1px rgba(0, 0, 0, .8);
+*/
+header {}
+code {}
+blockquote {}
+li1 {}
+li2 {}
+li3 {}
+hr {}
+img {}
+a {}
+em {}
+i {}
+strong {}

@@ -1,0 +1,1 @@
+	Tshape.ndim() //返回该Tshape的维数大小,1,2,3,4
