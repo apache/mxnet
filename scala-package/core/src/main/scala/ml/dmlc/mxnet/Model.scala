@@ -5,7 +5,8 @@ import ml.dmlc.mxnet.io.NDArrayIter
 import ml.dmlc.mxnet.optimizer.SGD
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.collection.mutable.{ListBuffer, ArrayBuffer}
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 /**
  * Describe the model flow
@@ -14,6 +15,61 @@ import scala.collection.mutable.{ListBuffer, ArrayBuffer}
 class Model
 object Model {
   private val logger = LoggerFactory.getLogger(classOf[Model])
+
+  /**
+   * Checkpoint the model data into file.
+   * @param prefix Prefix of model name.
+   * @param epoch The epoch number of the model.
+   * @param symbol The input symbol
+   * @param argParams Model parameter, dict of name to NDArray of net's weights.
+   * @param auxParams Model parameter, dict of name to NDArray of net's auxiliary states.
+   * @note
+   * - ``prefix-symbol.json`` will be saved for symbol.
+   * - ``prefix-epoch.params`` will be saved for parameters.
+   */
+  def saveCheckpoint(prefix: String, epoch: Int, symbol: Symbol,
+                     argParams: Map[String, NDArray], auxParams: Map[String, NDArray]): Unit = {
+    symbol.save(s"$prefix-symbol.json")
+    val saveDict = argParams.map { case (k, v) => s"arg:$k" -> v } ++
+      auxParams.map { case (k, v) => s"aux:$k" -> v }
+    val paramName = "%s-%04d.params".format(prefix, epoch)
+    NDArray.save(paramName, saveDict)
+    logger.info(s"Saved checkpoint to $paramName")
+  }
+
+  /**
+   * Load model checkpoint from file.
+   *
+   * @param prefix Prefix of model name.
+   * @param epoch Epoch number of model we would like to load.
+   *
+   * @return
+   * symbol : The symbol configuration of computation network.
+   * argParams : Model parameter, dict of name to NDArray of net's weights.
+   * auxParams : Model parameter, dict of name to NDArray of net's auxiliary states.
+   * @note
+   * - symbol will be loaded from ``prefix-symbol.json``.
+   * - parameters will be loaded from ``prefix-epoch.params``.
+   */
+  def loadCheckpoint(prefix: String, epoch: Int):
+    (Symbol, Map[String, NDArray], Map[String, NDArray]) = {
+    val symbol = Symbol.load(s"$prefix-symbol.json")
+    val saveDict = NDArray.load("%s-%04d.params".format(prefix, epoch))
+    val argParams = mutable.HashMap[String, NDArray]()
+    val auxParams = mutable.HashMap[String, NDArray]()
+    for ((k, v) <- saveDict._1 zip saveDict._2) {
+      val splitted = k.split(":", 2)
+      val tp = splitted(0)
+      val name = splitted(1)
+      if (tp == "arg") {
+        argParams(name) = v
+      } else if (tp == "aux") {
+        auxParams(name) = v
+      }
+    }
+    (symbol, argParams.toMap, auxParams.toMap)
+  }
+
   /**
    * Create kvstore
    * This function select and create a proper kvstore given the kvstore type
@@ -50,7 +106,7 @@ object Model {
    * @param kvStore KVStore
    * @return Option of created [[KVStore]] and whether or not update weight on it
    */
-  private def createKVStore(kvStore: KVStore): (Option[KVStore], Boolean) = {
+  private[mxnet] def createKVStore(kvStore: KVStore): (Option[KVStore], Boolean) = {
     (Option(kvStore), kvStore != null && !kvStore.`type`.contains("local_allreduce"))
   }
 
@@ -322,12 +378,15 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
       auxParams
     }
 
+  def getArgParams: Map[String, NDArray] = _argParams
+  def getAuxParams: Map[String, NDArray] = _auxParams
+
   // internal helper state
   var predExec: Executor = null
 
   // Initialize weight parameters and auxiliary states
   private def initParams(inputShapes: Map[String, Shape], overwrite: Boolean = false)
-      : (Seq[String], Seq[String], Seq[String]) = {
+  : (Seq[String], Seq[String], Seq[String]) = {
     val (argShapes, _, auxShapes) = symbol.inferShape(inputShapes)
     val argNames = symbol.listArguments()
     val inputNames = inputShapes.keys
@@ -441,24 +500,79 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
    *                         For print purpose
    * @param kvStoreType A string kvstore type:
    *                    'local' : multi-devices on a single machine, will automatically
-   *                              choose one from 'local_update_cpu', 'local_allreduce_cpu', and
-   *                              'local_allreduce_device'
+   *                    choose one from 'local_update_cpu', 'local_allreduce_cpu', and
+   *                    'local_allreduce_device'
    *                    'dist_sync' : multi-machines with BSP
    *                    'dist_async' : multi-machines with partical asynchronous
    *                    In default uses 'local', often no need to change for single machine.
    * @param logger When not specified, default logger will be used.
    * @param workLoadList The list of work load for different devices, in the same order as ctx
    */
-  def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric = new Accuracy(),
-          kvStoreType: String = "local", epochEndCallback: EpochEndCallback = null,
-          batchEndCallback: BatchEndCallback = null, logger: Logger = LOG,
-          workLoadList: Seq[Float] = null): Unit = {
+  def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric, kvStoreType: String,
+          epochEndCallback: EpochEndCallback, batchEndCallback: BatchEndCallback,
+          logger: Logger, workLoadList: Seq[Float]): Unit = {
+    // create kvstore
+    val (kvStore, updateOnKVStore) = Model.createKVStore(kvStoreType, ctx.length, _argParams)
+    fit(trainData, evalData, evalMetric, kvStore, updateOnKVStore,
+        epochEndCallback, batchEndCallback, logger, workLoadList)
+  }
+
+  def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric,
+          kvStoreType: String, epochEndCallback: EpochEndCallback,
+          batchEndCallback: BatchEndCallback): Unit = {
+    fit(trainData, evalData, evalMetric, kvStoreType,
+        epochEndCallback, batchEndCallback, LOG, null)
+  }
+
+  def fit(trainData: DataIter, evalData: DataIter,
+          evalMetric: EvalMetric, kvStoreType: String): Unit = {
+    fit(trainData, evalData, evalMetric, kvStoreType,
+        epochEndCallback = null, batchEndCallback = null)
+  }
+
+  def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric): Unit = {
+    fit(trainData, evalData, evalMetric, kvStoreType = "local")
+  }
+
+  def fit(trainData: DataIter, evalData: DataIter): Unit = {
+    fit(trainData, evalData, new Accuracy())
+  }
+
+  def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric,
+          kv: KVStore,
+          epochEndCallback: EpochEndCallback,
+          batchEndCallback: BatchEndCallback, logger: Logger,
+          workLoadList: Seq[Float]): Unit = {
+    // create kvstore
+    val (kvStore, updateOnKVStore) = Model.createKVStore(kv)
+    fit(trainData, evalData, evalMetric, kvStore, updateOnKVStore,
+      epochEndCallback, batchEndCallback, logger, workLoadList)
+  }
+
+  def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric,
+          kvStore: KVStore,
+          epochEndCallback: EpochEndCallback,
+          batchEndCallback: BatchEndCallback): Unit = {
+    fit(trainData, evalData, evalMetric, kvStore, epochEndCallback, batchEndCallback, LOG, null)
+  }
+
+  def fit(trainData: DataIter, evalData: DataIter,
+          evalMetric: EvalMetric, kvStore: KVStore): Unit = {
+    fit(trainData, evalData, evalMetric, kvStore, epochEndCallback = null, batchEndCallback = null)
+  }
+
+  def fit(trainData: DataIter, evalData: DataIter, kvStore: KVStore): Unit = {
+    fit(trainData, evalData, new Accuracy(), kvStore)
+  }
+
+  private def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric = new Accuracy(),
+                  kvStore: Option[KVStore], updateOnKVStore: Boolean,
+                  epochEndCallback: EpochEndCallback = null,
+                  batchEndCallback: BatchEndCallback = null, logger: Logger = LOG,
+                  workLoadList: Seq[Float] = null): Unit = {
     require(evalMetric != null, "evalMetric cannot be null")
     val (argNames, paramNames, auxNames) =
       initParams(trainData.provideData ++ trainData.provideLabel)
-
-    // create kvstore
-    val (kvStore, updateOnKVStore) = Model.createKVStore(kvStoreType, ctx.length, _argParams)
 
     // init optimizer
     val batchSizeMultiplier = kvStore.map { kv =>
@@ -484,11 +598,54 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
       batchEndCallback = Option(batchEndCallback),
       logger = logger, workLoadList = workLoadList)
   }
+
+  /**
+   * Checkpoint the model checkpoint into file.
+   * You can also use pickle to do the job if you only work on python.
+   * The advantage of load/save is the file is language agnostic.
+   * This means the file saved using save can be loaded by other language binding of mxnet.
+   * You also get the benefit being able to directly load/save from cloud storage(S3, HDFS)
+   * @param prefix Prefix of model name.
+   * @see FeedForward.load : the method to load the model back.
+   * @note
+   * - ``prefix-symbol.json`` will be saved for symbol.
+   * - ``prefix-epoch.params`` will be saved for parameters.
+   */
+  def save(prefix: String, epoch: Int = this.numEpoch): Unit = {
+    require(epoch >= 0)
+    Model.saveCheckpoint(prefix, epoch, this.symbol, this.argParams, this.auxParams)
+  }
 }
 
 object FeedForward {
   // Check if name is a data argument.
   private def isDataArg(name: String): Boolean = {
     name.endsWith("data") || name.endsWith("label")
+  }
+
+  /**
+   * Load model checkpoint from file.
+   * @param prefix Prefix of model name.
+   * @param epoch epoch number of model we would like to load.
+   * @return The loaded model that can be used for prediction.
+   * @note
+   * - ``prefix-symbol.json`` will be saved for symbol.
+   * - ``prefix-epoch.params`` will be saved for parameters.
+   */
+  def load(prefix: String, epoch: Int,
+           ctx: Array[Context] = Array(Context.cpu()),
+           numEpoch: Int = -1,
+           epochSize: Int = -1,
+           optimizer: Optimizer = new SGD(),
+           initializer: Initializer = new Uniform(0.01f),
+           batchSize: Int = 128,
+           allowExtraParams: Boolean = false): FeedForward = {
+    val (symbol, argParams, auxParams) = Model.loadCheckpoint(prefix, epoch)
+    new FeedForward(symbol, ctx = ctx,
+      argParams = argParams, auxParams = auxParams,
+      beginEpoch = epoch, numEpoch = numEpoch,
+      epochSize = epochSize, optimizer = optimizer,
+      initializer = initializer, batchSize = batchSize,
+      allowExtraParams = allowExtraParams)
   }
 }
