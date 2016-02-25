@@ -1,10 +1,11 @@
-package ml.dmlc.mxnet.examples
+package ml.dmlc.mxnet.examples.imclassification
 
 import ml.dmlc.mxnet.Base.Shape
 import ml.dmlc.mxnet._
-import ml.dmlc.mxnet.examples.imclassification.ModelTrain
-import ml.dmlc.mxnet.optimizer.SGD
+import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
+
+import scala.collection.JavaConverters._
 
 object TrainMnist {
   private val logger = LoggerFactory.getLogger(classOf[TrainMnist])
@@ -19,6 +20,32 @@ object TrainMnist {
     val fc3 = Symbol.FullyConnected(name = "fc3")(Map("data" -> act2, "num_hidden" -> 10))
     val mlp = Symbol.SoftmaxOutput(name = "softmax")(Map("data" -> fc3))
     mlp
+  }
+
+  // LeCun, Yann, Leon Bottou, Yoshua Bengio, and Patrick
+  // Haffner. "Gradient-based learning applied to document recognition."
+  // Proceedings of the IEEE (1998)
+  def getLenet: Symbol = {
+    val data = Symbol.Variable("data")
+    // first conv
+    val conv1 = Symbol.Convolution()(Map("data" -> data, "kernel" -> "(5, 5)", "num_filter" -> 20))
+    val tanh1 = Symbol.Activation()(Map("data" -> conv1, "act_type" -> "tanh"))
+    val pool1 = Symbol.Pooling()(Map("data" -> tanh1, "pool_type" -> "max",
+                                     "kernel" -> "(2, 2)", "stride" -> "(2, 2)"))
+    // second conv
+    val conv2 = Symbol.Convolution()(Map("data" -> pool1, "kernel" -> "(5, 5)", "num_filter" -> 50))
+    val tanh2 = Symbol.Activation()(Map("data" -> conv2, "act_type" -> "tanh"))
+    val pool2 = Symbol.Pooling()(Map("data" -> tanh2, "pool_type" -> "max",
+                                     "kernel" -> "(2, 2)", "stride" -> "(2, 2)"))
+    // first fullc
+    val flatten = Symbol.Flatten()(Map("data" -> pool2))
+    val fc1 = Symbol.FullyConnected()(Map("data" -> flatten, "num_hidden" -> 500))
+    val tanh3 = Symbol.Activation()(Map("data" -> fc1, "act_type" -> "tanh"))
+    // second fullc
+    val fc2 = Symbol.FullyConnected()(Map("data" -> tanh3, "num_hidden" -> 10))
+    // loss
+    val lenet = Symbol.SoftmaxOutput(name = "softmax")(Map("data" -> fc2))
+    lenet
   }
 
   def getIterator(dataShape: Shape)
@@ -51,15 +78,63 @@ object TrainMnist {
 
 
   def main(args: Array[String]): Unit = {
-    ModelTrain.fit(dataDir = "/Users/lewis/Workspace/source-codes/forks/mxnet/data/",
-      batchSize = 128, numExamples = 60000, devs = Context.cpu(0),
-      network = getMlp, dataLoader = getIterator(Vector(784)),
-      kvStore = "local", numEpochs = 10, modelPrefix = null, loadEpoch = -1,
-      lr = 0.1f, lrFactor = 1f, lrFactorEpoch = 1f,
-      clipGradient = 0f)
+    val inst = new TrainMnist
+    val parser: CmdLineParser = new CmdLineParser(inst)
+    try {
+      parser.parseArgument(args.toList.asJava)
 
-    logger.info("Finish fit ...")
+      val (dataShape, net) =
+        if (inst.network == "mlp") (Vector(784), getMlp)
+        else (Vector(1, 28, 28), getLenet)
+
+      val devs =
+        if (inst.gpus != null) inst.gpus.split(',').map(id => Context.gpu(id.trim.toInt))
+        else if (inst.cpus != null) inst.cpus.split(',').map(id => Context.cpu(id.trim.toInt))
+        else Array(Context.cpu(0))
+
+      ModelTrain.fit(dataDir = inst.dataDir,
+        batchSize = inst.batchSize, numExamples = inst.numExamples, devs = devs,
+        network = net, dataLoader = getIterator(dataShape),
+        kvStore = inst.kvStore, numEpochs = inst.numEpochs,
+        modelPrefix = inst.modelPrefix, loadEpoch = inst.loadEpoch,
+        lr = inst.lr, lrFactor = inst.lrFactor, lrFactorEpoch = inst.lrFactorEpoch)
+      logger.info("Finish fit ...")
+    } catch {
+      case ex: Exception => {
+        logger.error(ex.getMessage, ex)
+        parser.printUsage(System.err)
+        sys.exit(1)
+      }
+    }
   }
 }
 
-class TrainMnist
+class TrainMnist {
+  @Option(name = "--network", usage = "the cnn to use: ['mlp', 'lenet']")
+  private var network: String = "mlp"
+  @Option(name = "--data-dir", usage = "the input data directory")
+  private var dataDir: String = "mnist/"
+  @Option(name = "--gpus", usage = "the gpus will be used, e.g. '0,1,2,3'")
+  private var gpus: String = _
+  @Option(name = "--cpus", usage = "the cpus will be used, e.g. '0,1,2,3'")
+  private var cpus: String = _
+  @Option(name = "--num-examples", usage = "the number of training examples")
+  private var numExamples: Int = 60000
+  @Option(name = "--batch-size", usage = "the batch size")
+  private var batchSize: Int = 128
+  @Option(name = "--lr", usage = "the initial learning rate")
+  private var lr: Float = 0.1f
+  @Option(name = "--model-prefix", usage = "the prefix of the model to load/save")
+  private var modelPrefix: String = _
+  @Option(name = "--num-epochs", usage = "the number of training epochs")
+  private var numEpochs = 10
+  @Option(name = "--load-epoch", usage = "load the model on an epoch using the model-prefix")
+  private var loadEpoch: Int = -1
+  @Option(name = "--kv-store", usage = "the kvstore type")
+  private var kvStore = "local"
+  @Option(name = "--lr-factor",
+          usage = "times the lr with a factor for every lr-factor-epoch epoch")
+  private var lrFactor: Float = 1f
+  @Option(name = "--lr-factor-epoch", usage = "the number of epoch to factor the lr, could be .5")
+  private var lrFactorEpoch: Float = 1f
+}
