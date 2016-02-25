@@ -131,7 +131,7 @@ various distributed filesystem such as HDFS/Amazon S3/...
   any local modification will be ignored by git, then modify the according flags.
 
 #### Building with Intel MKL Support
-First, `source /path/to/intel/bin/compilervars.sh` to automatically set environment variables. Then, edit [make/config.mk](../make/config.mk), let `USE_BLAS = mkl`. `USE_INTEL_PATH = NONE` is usually not necessary to be modified.
+First, `source path/to/intel/pkg_bin/compilervars.sh -arch intel64 -platform linux` to automatically set environment variables where `-arch` and `-platform` should be modified according to your own needs. Then, edit [make/config.mk](../make/config.mk), let `USE_BLAS = mkl`. `USE_INTEL_PATH = NONE` is usually not necessary to be modified.
 
 
 ## Python Package Installation
