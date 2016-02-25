@@ -185,6 +185,8 @@ class LibInfo {
                               auxArgsHandle: Array[NDArrayHandle],
                               out: ExecutorHandleRef): Int
   // scalastyle:on parameterNum
+  @native def mxSymbolSaveToFile(handle: SymbolHandle, fname: String): Int
+  @native def mxSymbolCreateFromFile(fname: String, handle: SymbolHandleRef): Int
 
   // Random
   @native def mxRandomSeed(seed: Int): Int

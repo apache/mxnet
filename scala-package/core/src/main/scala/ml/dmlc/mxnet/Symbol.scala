@@ -280,6 +280,23 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
   }
 
   /**
+   * Save symbol into file.
+   * You can also use pickle to do the job if you only work on python.
+   * The advantage of load/save is the file is language agnostic.
+   * This means the file saved using save can be loaded by other language binding of mxnet.
+   * You also get the benefit being able to directly load/save from cloud storage(S3, HDFS)
+   *
+   * @param fname The name of the file
+   *        - s3://my-bucket/path/my-s3-symbol
+   *        - hdfs://my-bucket/path/my-hdfs-symbol
+   *        - /path-to/my-local-symbol
+   * @see Symbol.load : Used to load symbol from file.
+   */
+  def save(fname: String): Unit = {
+    checkCall(_LIB.mxSymbolSaveToFile(this.handle, fname))
+  }
+
+  /**
    * Compose symbol on inputs.
    * This call mutates the current symbol.
    * @param name resulting symbol name
@@ -1448,6 +1465,27 @@ object Symbol {
       }
     }
     (argHandles.toArray, argArrays.toArray)
+  }
+
+  /**
+   * Load symbol from a JSON file.
+   *
+   * You can also use pickle to do the job if you only work on python.
+   * The advantage of load/save is the file is language agnostic.
+   * This means the file saved using save can be loaded by other language binding of mxnet.
+   * You also get the benefit being able to directly load/save from cloud storage(S3, HDFS)
+   *
+   * @param fname The name of the file, examples:
+   *        - `s3://my-bucket/path/my-s3-symbol`
+   *        - `hdfs://my-bucket/path/my-hdfs-symbol`
+   *        - `/path-to/my-local-symbol`
+   * @return The loaded symbol.
+   * @see Symbol.save : Used to save symbol into file.
+   */
+  def load(fname: String): Symbol = {
+    val handle = new SymbolHandleRef
+    checkCall(_LIB.mxSymbolCreateFromFile(fname, handle))
+    new Symbol(handle.value)
   }
 }
 

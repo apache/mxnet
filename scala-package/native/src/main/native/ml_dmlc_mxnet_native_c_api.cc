@@ -316,6 +316,14 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreSetUpdater
                              KVStoreUpdaterCallbackFunc, (void *) closure);
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreIsWorkerNode
+  (JNIEnv *env, jobject obj, jobject isWorkerRef) {
+  int isWorker;
+  int ret = MXKVStoreIsWorkerNode(&isWorker);
+  setIntField(env, isWorkerRef, isWorker);
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreCreate
   (JNIEnv *env, jobject obj, jstring name, jobject kvStoreHandle) {
   jclass refLongClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
@@ -993,6 +1001,24 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolSaveToJSON
   const char *out;
   int ret = MXSymbolSaveToJSON((SymbolHandle) symbolPtr, &out);
   setStringField(env, jout, out);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolSaveToFile
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jstring jfname) {
+  const char *fname = env->GetStringUTFChars(jfname, 0);
+  int ret = MXSymbolSaveToFile((SymbolHandle) symbolPtr, fname);
+  env->ReleaseStringUTFChars(jfname, fname);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolCreateFromFile
+  (JNIEnv *env, jobject obj, jstring jfname, jobject jhandleRef) {
+  const char *fname = env->GetStringUTFChars(jfname, 0);
+  SymbolHandle out;
+  int ret = MXSymbolCreateFromFile(fname, &out);
+  setLongField(env, jhandleRef, (long)out);
+  env->ReleaseStringUTFChars(jfname, fname);
   return ret;
 }
 

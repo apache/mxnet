@@ -109,7 +109,7 @@ class Normal(protected val sigma: Float = 0.01f) extends Initializer {
  */
 class Xavier(protected val rndType: String = "uniform",
              protected val factorType: String = "avg",
-             protected val magnitude: Int = 3) extends Initializer {
+             protected val magnitude: Float = 3) extends Initializer {
 
   override def initWeight(name: String, arr: NDArray): Unit = {
     val shape = arr.shape
