@@ -50,8 +50,8 @@ class Accuracy extends EvalMetric("accuracy") {
 
     for ((pred, label) <- preds zip labels) {
       val predLabel = NDArray.argmaxChannel(pred)
-      require(label.shape.sameElements(predLabel.shape),
-        s"label (${label.shape.mkString(",")}) and prediction (${predLabel.shape.mkString(",")})" +
+      require(label.shape == predLabel.shape,
+        s"label ${label.shape} and prediction ${predLabel.shape}" +
         s"should have the same length.")
       for ((labelElem, predElem) <- label.toArray zip predLabel.toArray) {
         if (labelElem == predElem) {

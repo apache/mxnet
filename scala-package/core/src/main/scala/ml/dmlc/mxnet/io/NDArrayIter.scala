@@ -1,7 +1,7 @@
 package ml.dmlc.mxnet.io
 
 import ml.dmlc.mxnet.Base._
-import ml.dmlc.mxnet.{DataIter, NDArray}
+import ml.dmlc.mxnet.{DataIter, NDArray, Shape}
 
 /**
   * TODO

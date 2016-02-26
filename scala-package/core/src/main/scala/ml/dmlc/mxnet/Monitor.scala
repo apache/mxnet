@@ -85,7 +85,7 @@ class Monitor(protected val interval: Int, protected var statFunc: (NDArray) => 
       val res = new mutable.Queue[(Int, String, String)]
       queue.foreach { q =>
         val (n, k, v) = q
-        if (v.shape.sameElements(Array(1))) {
+        if (v.shape == Shape(1)) {
           res += ((n, k, v.toScalar.toString))
         } else {
           res += ((n, k, s"[${v.toArray.mkString(",")}]"))

@@ -34,8 +34,8 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     // test provideData
     val provideData = mnistIter.provideData
     val provideLabel = mnistIter.provideLabel
-    assert(provideData("data") === Array(100, 784))
-    assert(provideLabel("label") === Array(100))
+    assert(provideData("data") === Shape(100, 784))
+    assert(provideLabel("label") === Shape(100))
     // test_loop
     mnistIter.reset()
     batchCount = 0

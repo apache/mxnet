@@ -222,9 +222,9 @@ object NDArray {
     new NDArray(handle = NDArray.newAllocHandle(shape, context, delayAlloc = false))
   }
 
-  def empty(shape: Int *): NDArray = empty(shape.toVector)
+  def empty(shape: Int *): NDArray = empty(Shape(shape: _*))
 
-  def empty(ctx: Context, shape: Int *): NDArray = empty(shape.toVector, ctx)
+  def empty(ctx: Context, shape: Int *): NDArray = empty(Shape(shape: _*), ctx)
 
   /**
    * Create a new NDArray filled with 0, with specified shape.
@@ -240,9 +240,9 @@ object NDArray {
     arr
   }
 
-  def zeros(shape: Int *): NDArray = zeros(shape.toVector)
+  def zeros(shape: Int *): NDArray = zeros(Shape(shape: _*))
 
-  def zeros(ctx: Context, shape: Int *): NDArray = zeros(shape.toVector, ctx)
+  def zeros(ctx: Context, shape: Int *): NDArray = zeros(Shape(shape: _*), ctx)
 
   /**
    * Create a new NDArray filled with 1, with specified shape.
@@ -256,9 +256,9 @@ object NDArray {
     arr
   }
 
-  def ones(shape: Int *): NDArray = ones(shape.toVector)
+  def ones(shape: Int *): NDArray = ones(Shape(shape: _*))
 
-  def ones(ctx: Context, shape: Int *): NDArray = ones(shape.toVector, ctx)
+  def ones(ctx: Context, shape: Int *): NDArray = ones(Shape(shape: _*), ctx)
 
   /**
    * Clip ndarray elements to range (from, to)
@@ -477,12 +477,12 @@ object NDArray {
     val shape = array0.shape.drop(1)
     var axis0 = array0.shape(0)
     arrays.drop(1).foreach { array =>
-      require(shape.sameElements(array.shape.drop(1)),
-        s"shape mismatch between (${array.shape.mkString(",")}) and (${shape.mkString(",")})")
+      require(shape == array.shape.drop(1),
+        s"shape mismatch between ${array.shape} and $shape")
       axis0 += array.shape(0)
     }
 
-    val output = NDArray.empty(Vector(axis0) ++ shape, ctx)
+    val output = NDArray.empty(Shape(axis0) ++ shape, ctx)
     axis0 = 0
     arrays.foreach { array =>
       output.slice(axis0, axis0 + array.shape(0)).set(array)
@@ -767,7 +767,7 @@ class NDArray(private[mxnet] val handle: NDArrayHandle, val writable: Boolean = 
    * @return The scalar representation of the ndarray.
    */
   def toScalar: Float = {
-    require(shape.sameElements(Array(1)), "The current array is not a scalar")
+    require(shape == Shape(1), "The current array is not a scalar")
     this.toArray(0)
   }
 
@@ -812,16 +812,15 @@ class NDArray(private[mxnet] val handle: NDArrayHandle, val writable: Boolean = 
     val data = ArrayBuffer[Int]()
     checkCall(_LIB.mxNDArrayGetShape(handle, ndim, data))
     require(ndim.value == data.length, s"ndim=$ndim, while len(pdata)=${data.length}")
-    data.toVector
+    Shape(data)
   }
 
   // Get size of current NDArray.
   def size: Int = shape.product
 
   override def equals(o: Any): Boolean = o match {
-    case that: NDArray => {
-      that.shape == this.shape && that.toArray.sameElements(this.toArray)
-    }
+    case that: NDArray =>
+      that != null && that.shape == this.shape && that.toArray.sameElements(this.toArray)
     case _ => false
   }
 

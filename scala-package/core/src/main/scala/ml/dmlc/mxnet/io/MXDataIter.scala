@@ -1,7 +1,7 @@
 package ml.dmlc.mxnet.io
 
 import ml.dmlc.mxnet.Base._
-import ml.dmlc.mxnet.{DataPack, DataBatch, DataIter, NDArray}
+import ml.dmlc.mxnet.{DataPack, DataBatch, DataIter, NDArray, Shape}
 import ml.dmlc.mxnet.IO._
 import org.slf4j.LoggerFactory
 

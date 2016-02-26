@@ -294,7 +294,7 @@ class DataParallelExecutorManager(symbol: Symbol,
     ctx.zipWithIndex.map { case (context, i) =>
       val dataShapes =
         trainData.provideData.map { case (name: String, shape: Shape) =>
-          (name, Vector(slices(i)._2 - slices(i)._1) ++ shape.drop(1))
+          (name, Shape(slices(i)._2 - slices(i)._1) ++ shape.drop(1))
         }
       symbol.simpleBind(context, "write", shapeDict = dataShapes)
     }
@@ -334,7 +334,7 @@ class DataParallelExecutorManager(symbol: Symbol,
   }.toArray
   private val batchSize = trainData.batchSize
   private val outputShapes: Array[Shape] = trainExecs(0).outputs.map { x: NDArray =>
-      Vector(batchSize) ++ x.shape.drop(1)
+      Shape(batchSize) ++ x.shape.drop(1)
     }
   private[mxnet] val cpuOutputArrays = outputShapes.map(NDArray.zeros(_))
 
