@@ -133,6 +133,7 @@ various distributed filesystem such as HDFS/Amazon S3/...
 #### Building with Intel MKL Support
 First, `source /path/to/intel/bin/compilervars.sh` to automatically set environment variables. Then, edit [make/config.mk](../make/config.mk), let `USE_BLAS = mkl`. `USE_INTEL_PATH = NONE` is usually not necessary to be modified.
 
+ - NOTICE: For `intel-mkl` version later than `parallel_studio_xe_2016.2.062`, you should use `source /path/to/intel/pkg_bin/compilervars.sh -arch intel64` instead where `-arch` must be specified according to your own architecture.
 
 ## Python Package Installation
 
