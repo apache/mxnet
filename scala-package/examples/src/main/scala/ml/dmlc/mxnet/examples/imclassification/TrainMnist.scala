@@ -1,6 +1,5 @@
 package ml.dmlc.mxnet.examples.imclassification
 
-import ml.dmlc.mxnet.Base.Shape
 import ml.dmlc.mxnet._
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
@@ -56,7 +55,7 @@ object TrainMnist {
       "image" -> (dataDir + "train-images-idx3-ubyte"),
       "label" -> (dataDir + "train-labels-idx1-ubyte"),
       "label_name" -> "softmax_label",
-      "input_shape" -> s"(${dataShape.mkString(",")})",
+      "input_shape" -> dataShape.toString,
       "batch_size" -> batchSize.toString,
       "shuffle" -> "True",
       "flat" -> flat,
@@ -67,7 +66,7 @@ object TrainMnist {
       "image" -> (dataDir + "t10k-images-idx3-ubyte"),
       "label" -> (dataDir + "t10k-labels-idx1-ubyte"),
       "label_name" -> "softmax_label",
-      "input_shape" -> s"(${dataShape.mkString(",")})",
+      "input_shape" -> dataShape.toString,
       "batch_size" -> batchSize.toString,
       "flat" -> flat,
       "num_parts" -> kv.numWorkers.toString,
@@ -84,8 +83,8 @@ object TrainMnist {
       parser.parseArgument(args.toList.asJava)
 
       val (dataShape, net) =
-        if (inst.network == "mlp") (Vector(784), getMlp)
-        else (Vector(1, 28, 28), getLenet)
+        if (inst.network == "mlp") (Shape(784), getMlp)
+        else (Shape(1, 28, 28), getLenet)
 
       val devs =
         if (inst.gpus != null) inst.gpus.split(',').map(id => Context.gpu(id.trim.toInt))

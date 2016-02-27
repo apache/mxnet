@@ -5,7 +5,7 @@ import ml.dmlc.mxnet.CheckUtils._
 
 class ExecutorSuite extends FunSuite with BeforeAndAfterAll {
   test("bind") {
-    val shape = Vector(100, 30)
+    val shape = Shape(100, 30)
     val lhs = Symbol.Variable("lhs")
     val rhs = Symbol.Variable("rhs")
     val ret = lhs + rhs

@@ -6,7 +6,7 @@ class RandomSuite extends FunSuite with BeforeAndAfterAll {
   test("uniform on cpu") {
     Context.cpu().withScope {
       val (a, b) = (-10, 10)
-      val shape = Vector(100, 100)
+      val shape = Shape(100, 100)
       Random.seed(128)
       val un1 = Random.uniform(a, b, shape)
       Random.seed(128)
@@ -18,7 +18,7 @@ class RandomSuite extends FunSuite with BeforeAndAfterAll {
 
   test("normal on cpu") {
     val (mu, sigma) = (10f, 2f)
-    val shape = Vector(100, 100)
+    val shape = Shape(100, 100)
     Random.seed(128)
     val ret1 = Random.normal(mu, sigma, shape)
     Random.seed(128)

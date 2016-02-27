@@ -18,7 +18,7 @@ class ModelParallelSuite extends FunSuite with BeforeAndAfterAll {
       net = net + data1
     }
 
-    val shape = Vector(4, 5)
+    val shape = Shape(4, 5)
     val (arr, arrGrad) =
       new Context(Context.cpu(0)).withScope {
         val arr = (0 until n).map(_ => NDArray.empty(shape))

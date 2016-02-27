@@ -1,6 +1,5 @@
 package ml.dmlc.mxnet
 
-import ml.dmlc.mxnet.Base.Shape
 import ml.dmlc.mxnet.io.NDArrayIter
 import ml.dmlc.mxnet.optimizer.SGD
 import org.slf4j.{Logger, LoggerFactory}

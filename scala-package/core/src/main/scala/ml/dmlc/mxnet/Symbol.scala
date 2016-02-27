@@ -188,7 +188,7 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
     val sdata = ArrayBuffer.empty[Int]
     args.foreach { shape =>
       if (shape != null) {
-        sdata ++= shape
+        sdata ++= shape.toVector
         indPtr += sdata.size
       }
     }
@@ -212,7 +212,7 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
     val sdata = ArrayBuffer.empty[Int]
     kwargs.foreach { case (key, shape) =>
       keys += key
-      sdata ++= shape
+      sdata ++= shape.toVector
       indPtr += sdata.size
     }
     inferShape(keys.toArray, indPtr.toArray, sdata.toArray)
@@ -228,7 +228,9 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
     checkCall(_LIB.mxSymbolInferShape(handle, indPtr.size - 1, keys, indPtr, values,
       argShapeData, outShapeData, auxShapeData, complete))
     if (complete.value != 0) {
-      (argShapeData.map(_.toVector), outShapeData.map(_.toVector), auxShapeData.map(_.toVector))
+      (argShapeData.map(s => Shape(s)),
+       outShapeData.map(s => Shape(s)),
+       auxShapeData.map(s => Shape(s)))
     } else {
       (null, null, null)
     }

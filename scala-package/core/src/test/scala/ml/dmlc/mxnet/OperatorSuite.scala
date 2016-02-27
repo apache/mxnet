@@ -1,6 +1,5 @@
 package ml.dmlc.mxnet
 
-import ml.dmlc.mxnet.Base.Shape
 import ml.dmlc.mxnet.CheckUtils._
 
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
@@ -30,10 +29,10 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("elementwise sum") {
-    checkElementwiseSumWithShape(Vector(5, 5, 3), 4)
+    checkElementwiseSumWithShape(Shape(5, 5, 3), 4)
     forAll (Gen.choose(1, 4), Gen.choose(1, 8)) { (dim, n) =>
       forAll (Gen.listOfN(dim, Gen.choose(1, Math.pow(1000, 1.0 / dim).toInt))) { shape =>
-        checkElementwiseSumWithShape(shape.toVector, n)
+        checkElementwiseSumWithShape(Shape(shape), n)
       }
     }
   }
@@ -86,9 +85,9 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   test("concat") {
     val merge = Array(2, 3, 4, 5, 6)
     forAll (Gen.choose(2, 5)) { dim =>
-      val shapes = mutable.ArrayBuffer.empty[Vector[Int]]
+      val shapes = mutable.ArrayBuffer.empty[Shape]
       for (i <- 0 until dim) {
-        shapes += Vector(merge(i), 2)
+        shapes += Shape(merge(i), 2)
       }
       // TODO: check dimension > 0
       checkConcatWithShape(shapes, 0, skipSecond = true)
@@ -99,9 +98,9 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   private def checkRegression(model: Symbol,
                               forward: Float => Float,
                               backward: (Float, Float) => Float) = {
-    val shape = Vector(3, 1)
+    val shape = Shape(3, 1)
     val arrData = Random.uniform(-1, 1, shape)
-    val arrLabel = Random.uniform(0, 1, Vector(shape.head))
+    val arrLabel = Random.uniform(0, 1, Shape(shape.head))
     val arrGrad = NDArray.empty(shape)
     val exec1 = model.bind(Context.cpu(),
       args = Array(arrData, arrLabel), argsGrad = Map("data" -> arrGrad))
@@ -135,7 +134,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
 
   test("swap axes") {
     val data = Symbol.Variable("data")
-    val shape = Vector(2, 3, 4)
+    val shape = Shape(2, 3, 4)
     val arrData = NDArray.ones(shape)
     arrData.slice(0).set(1f)
     arrData.slice(1).set(2f)
@@ -167,7 +166,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     //
     //  [[ 1.,  1.,  1.],
     //   [ 2.,  2.,  2.]]]
-    assert(out.shape === Vector(4, 2, 3))
+    assert(out.shape === Shape(4, 2, 3))
     for (i <- 0 until 4) {
       val axis0 = out.slice(i)
       assert(CheckUtils.reldiff(axis0.toArray, Array(1f, 1f, 1f, 2f, 2f, 2f)) < 1e-6f)
@@ -176,7 +175,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
 
   test("scalar op") {
     val data = Symbol.Variable("data")
-    val shape = Vector(3, 4)
+    val shape = Shape(3, 4)
     val dataTmp = NDArray.ones(shape) * 5
 
     val test = {
@@ -200,7 +199,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
 
   test("scalar pow") {
     val data = Symbol.Variable("data")
-    val shape = Vector(1, 1)
+    val shape = Shape(1, 1)
     val dataTmp = NDArray.ones(shape) * 3
     val dataTmpPowered = NDArray.ones(shape) * 9
     val test = Symbol.pow(data, 2)
@@ -210,7 +209,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("symbol pow") {
-    val shape = Vector(1, 1)
+    val shape = Shape(1, 1)
 
     val data = Symbol.Variable("data")
     val dataTmp = NDArray.ones(shape) * 2
@@ -231,7 +230,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("pow fn") {
-    val shape = Vector(3, 4)
+    val shape = Shape(3, 4)
     val exp = Symbol.Variable("exp")
     val y = Symbol.pow(2, exp)
     val x = NDArray.ones(shape) * 3
@@ -259,7 +258,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   // check ops handle duplicate input correctly.
   test("binary op duplicate input") {
     val data = Symbol.Variable("data")
-    val shape = Vector(3, 4)
+    val shape = Shape(3, 4)
     val dataTmp = NDArray.ones(shape) * 5
     val arrData = dataTmp.copy()
     val arrGrad = NDArray.ones(shape) * 3
@@ -274,7 +273,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
 
   test("sign") {
     val data = Symbol.Variable("data")
-    val shape = Vector(3, 4)
+    val shape = Shape(3, 4)
     val dataTmp = NDArray.ones(shape) * 5
     val arrData = dataTmp.copy()
     val arrGrad = NDArray.ones(shape) * 3
@@ -293,7 +292,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
 
   test("round, ceil, floor") {
     val data = Symbol.Variable("data")
-    val shape = Vector(3, 4)
+    val shape = Shape(3, 4)
     val dataTmp = NDArray.ones(shape) * 5.543f
     val arrData = dataTmp.copy()
     val arrGrad = NDArray.ones(shape) * 2
@@ -308,7 +307,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
 
   test("rsqrt, cos, sin") {
     val data = Symbol.Variable("data")
-    val shape = Vector(3, 4)
+    val shape = Shape(3, 4)
     val dataTmp = NDArray.ones(shape) * 5
     val arrData = dataTmp.copy()
     val arrGrad = NDArray.ones(shape) * 3
@@ -336,7 +335,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   test("maximum") {
     val data1 = Symbol.Variable("data")
     val data2 = Symbol.Variable("data")
-    val shape = Vector(3, 4)
+    val shape = Shape(3, 4)
     val dataTmp1 = Random.uniform(0, 100, shape)
     val dataTmp2 = Random.uniform(0, 100, shape)
 
@@ -354,7 +353,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   test("minimum") {
     val data1 = Symbol.Variable("data")
     val data2 = Symbol.Variable("data")
-    val shape = Vector(3, 4)
+    val shape = Shape(3, 4)
     val dataTmp1 = Random.uniform(0, 100, shape)
     val dataTmp2 = Random.uniform(0, 100, shape)
 
@@ -371,7 +370,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
 
   test("maximum minimum scalar") {
     val data = Symbol.Variable("data")
-    val shape = Vector(3, 4)
+    val shape = Shape(3, 4)
     val dataTmp = NDArray.ones(shape) * 2
 
     val arrData = dataTmp.copy()
@@ -386,7 +385,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
 
   test("abs") {
     val data = Symbol.Variable("data")
-    val shape = Vector(3, 4)
+    val shape = Shape(3, 4)
     val dataTmp = NDArray.ones(shape) * 5
     val arrData = dataTmp.copy()
     val arrGrad = NDArray.ones(shape) * 3
@@ -428,7 +427,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     val (argShapes, outShapes, _) = deconv.inferShape(Map("data" -> inputShape))
     val inputData = Random.uniform(-5, 5, inputShape)
     val outGrad = inputData
-    val convWeight = Random.normal(0, 1, Vector(numFilter, inputShape(1), kernel._1, kernel._2))
+    val convWeight = Random.normal(0, 1, Shape(numFilter, inputShape(1), kernel._1, kernel._2))
     val args: Map[String, NDArray] =
       Map("data" -> inputData, "conv_weight" -> convWeight, "deconv_weight" -> convWeight)
     val argsGrad: Seq[NDArray] = argShapes.map(NDArray.empty(_))
@@ -442,21 +441,21 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
 
   test("deconvolution forward & backward") {
     checkDeconvolutionForwardBackward(
-      inputShape = Vector(1, 1, 5, 5),
+      inputShape = Shape(1, 1, 5, 5),
       numFilter = 1,
       kernel = (3, 3),
       stride = (1, 1),
       pad = (1, 1)
     )
     checkDeconvolutionForwardBackward(
-      inputShape = Vector(32, 3, 28, 28),
+      inputShape = Shape(32, 3, 28, 28),
       numFilter = 3,
       kernel = (3, 3),
       stride = (1, 1),
       pad = (1, 1)
     )
     checkDeconvolutionForwardBackward(
-      inputShape = Vector(10, 3, 403, 403),
+      inputShape = Shape(10, 3, 403, 403),
       numFilter = 3,
       kernel = (7, 7),
       stride = (5, 5),
@@ -486,10 +485,10 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
 
     val convData = Random.uniform(-5, 5, inputShape)
     val convArgs = Map("data_conv" -> convData,
-      "conv_weight" -> Random.normal(0, 1, Vector(numFilter, inputShape(1), kernel._1, kernel._2)))
+      "conv_weight" -> Random.normal(0, 1, Shape(numFilter, inputShape(1), kernel._1, kernel._2)))
 
     val convArgsGrad = Seq(NDArray.zeros(convData.shape),
-      NDArray.zeros(Vector(numFilter, inputShape(1), kernel._1, kernel._2)))
+      NDArray.zeros(Shape(numFilter, inputShape(1), kernel._1, kernel._2)))
     val exeConv = conv.bind(Context.cpu(), args = convArgs, argsGrad = convArgsGrad)
     val convOutGrad = Random.normal(0, 2, exeConv.outputs.head.shape)
     exeConv.backward(convOutGrad)
@@ -497,7 +496,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     val deconvData = convOutGrad
     val deconvArgs = Map("data_deconv" -> deconvData, "deconv_weight" -> convArgs("conv_weight"))
     val deconvArgsGrad = Seq(NDArray.zeros(deconvData.shape),
-      NDArray.zeros(Vector(numFilter, inputShape(1), kernel._1, kernel._2)))
+      NDArray.zeros(Shape(numFilter, inputShape(1), kernel._1, kernel._2)))
     val exeDeconv = deconv.bind(Context.cpu(), args = deconvArgs, argsGrad = deconvArgsGrad)
     val deconvOutGrad = convData
     exeDeconv.backward(deconvOutGrad)
@@ -506,12 +505,12 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
 
   test("deconvolution gradient") {
     checkDeconvolutionGradient(
-      inputShape = Vector(1, 3, 5, 5),
+      inputShape = Shape(1, 3, 5, 5),
       numFilter = 3,
       pad = (1, 1)
     )
     checkDeconvolutionGradient(
-      inputShape = Vector(5, 3, 100, 100),
+      inputShape = Shape(5, 3, 100, 100),
       numFilter = 3,
       pad = (3, 3)
     )
@@ -550,7 +549,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
         for (numShape <- 1 to 3) {
           for (base <- 1 to 3) {
             val shapes = (0 until numShape).map(i =>
-              Vector(1, 3, base * rootScale * Math.pow(scale, numShape - 1 - i).toInt,
+              Shape(1, 3, base * rootScale * Math.pow(scale, numShape - 1 - i).toInt,
                      base * rootScale * Math.pow(scale, numShape - 1 - i).toInt))
             checkNearestUpSamplingWithShape(shapes, scale, rootScale)
           }
