@@ -23,8 +23,13 @@ object KVStore {
   }
 }
 
+// scalastyle:off finalize
 class KVStore(private val handle: KVStoreHandle) {
   private var updaterFunc: MXKVStoreUpdater = null
+
+  override def finalize(): Unit = {
+    checkCall(_LIB.mxKVStoreFree(handle))
+  }
 
   /**
    * Initialize a single or a sequence of key-value pairs into the store.
@@ -202,3 +207,4 @@ class KVStore(private val handle: KVStoreHandle) {
     checkCall(_LIB.mxKVStoreSendCommmandToServers(handle, head, body))
   }
 }
+// scalastyle:off finalize

@@ -420,6 +420,11 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreGetRank
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreFree
+  (JNIEnv * env, jobject obj, jlong ptr) {
+  return MXKVStoreFree((KVStoreHandle) ptr);
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorOutputs
   (JNIEnv *env, jobject obj, jlong executorPtr, jobject outputs) {
   mx_uint outSize;
@@ -676,6 +681,11 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterGetPadNum
 }
 
 // Symbol functions
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolFree
+  (JNIEnv * env, jobject obj, jlong ptr) {
+  return MXSymbolFree((SymbolHandle) ptr);
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolListAtomicSymbolCreators
   (JNIEnv *env, jobject obj, jobject symbolList) {
   mx_uint outSize;

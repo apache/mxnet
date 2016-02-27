@@ -84,6 +84,7 @@ class LibInfo {
   @native def mxKVStoreBarrier(handle: KVStoreHandle): Int
   @native def mxKVStoreGetGroupSize(handle: KVStoreHandle, size: RefInt): Int
   @native def mxKVStoreGetRank(handle: KVStoreHandle, size: RefInt): Int
+  @native def mxKVStoreFree(handle: KVStoreHandle): Int
 
   // DataIter Funcs
   @native def mxListDataIters(handles: ListBuffer[DataIterCreator]): Int
@@ -187,6 +188,7 @@ class LibInfo {
   // scalastyle:on parameterNum
   @native def mxSymbolSaveToFile(handle: SymbolHandle, fname: String): Int
   @native def mxSymbolCreateFromFile(fname: String, handle: SymbolHandleRef): Int
+  @native def mxSymbolFree(handle: SymbolHandle): Int
 
   // Random
   @native def mxRandomSeed(seed: Int): Int

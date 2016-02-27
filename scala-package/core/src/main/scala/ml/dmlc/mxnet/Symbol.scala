@@ -9,7 +9,12 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  * Symbolic configuration API of mxnet.
  * @author Yizhi Liu
  */
+// scalastyle:off finalize
 class Symbol(private[mxnet] val handle: SymbolHandle) {
+  override def finalize(): Unit = {
+    checkCall(_LIB.mxSymbolFree(handle))
+  }
+
   def +(other: Symbol): Symbol = Symbol.createFromListedSymbols("_Plus")(Array(this, other))
   def +[@specialized(Int, Float, Double) V](other: V): Symbol = {
     Symbol.createFromListedSymbols("_PlusScalar")(Array(this), Map("scalar" -> other.toString))
@@ -713,6 +718,7 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
     jsonStr.value
   }
 }
+// scalastyle:on finalize
 
 object Symbol {
   private type SymbolCreateNamedFunc = Map[String, Any] => Symbol
