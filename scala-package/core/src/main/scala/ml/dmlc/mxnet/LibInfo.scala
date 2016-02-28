@@ -9,6 +9,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  * @author Yizhi Liu
  */
 class LibInfo {
+  @native def nativeLibInit(): Int
   // NDArray
   @native def mxNDArrayFree(handle: NDArrayHandle): Int
   @native def mxGetLastError(): String

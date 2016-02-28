@@ -31,6 +31,7 @@ object Base {
 
   System.loadLibrary("mxnet-scala")
   val _LIB = new LibInfo
+  checkCall(_LIB.nativeLibInit())
 
   // helper function definitions
   /**
