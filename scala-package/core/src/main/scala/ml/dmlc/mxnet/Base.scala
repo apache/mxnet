@@ -33,6 +33,12 @@ object Base {
   val _LIB = new LibInfo
   checkCall(_LIB.nativeLibInit())
 
+  Runtime.getRuntime.addShutdownHook(new Thread() {
+    override def run(): Unit = {
+      notifyShutdown()
+    }
+  })
+
   // helper function definitions
   /**
    * Check the return value of C API call
@@ -48,7 +54,7 @@ object Base {
   }
 
   // Notify MXNet about a shutdown
-  def notifyShutdown(): Unit = {
+  private def notifyShutdown(): Unit = {
     checkCall(_LIB.mxNotifyShutdown())
   }
 
