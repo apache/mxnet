@@ -113,8 +113,8 @@ class Solver(object):
                 self.updater(key, arr, args[key])
 
             if self.metric is not None:
-                self.metric.update([input_buffs[-1].asnumpy()],
-                                   [output_buff[output_names[0]].asnumpy()])
+                self.metric.update([input_buffs[-1]],
+                                   [output_buff[output_names[0]]])
 
             if self.monitor is not None:
                 self.monitor.backward_end(i, args, update_dict, self.metric)
