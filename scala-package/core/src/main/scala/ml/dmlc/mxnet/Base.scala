@@ -47,6 +47,11 @@ object Base {
     }
   }
 
+  // Notify MXNet about a shutdown
+  def notifyShutdown(): Unit = {
+    checkCall(_LIB.mxNotifyShutdown())
+  }
+
   // Convert ctypes returned doc string information into parameters docstring.
   def ctypes2docstring(
       argNames: Seq[String],

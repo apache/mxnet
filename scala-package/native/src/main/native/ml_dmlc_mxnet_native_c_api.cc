@@ -20,9 +20,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayCreateNone
   (JNIEnv *env, jobject obj, jobject ndArrayHandle) {
   NDArrayHandle out;
   int ret = MXNDArrayCreateNone(&out);
-  jclass ndClass = env->GetObjectClass(ndArrayHandle);
-  jfieldID ptr = env->GetFieldID(ndClass, "value", "J");
-  env->SetLongField(ndArrayHandle, ptr, (long)out);
+  setLongField(env, ndArrayHandle, (jlong) out);
   return ret;
 }
 
@@ -37,9 +35,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayCreate(JNIEnv *env, j
   NDArrayHandle out;
   int ret = MXNDArrayCreate((mx_uint *)shapeArr, (mx_uint)ndim, devType, devId, delayAlloc, &out);
   env->ReleaseIntArrayElements(shape, shapeArr, 0);
-  jclass ndClass = env->GetObjectClass(ndArrayHandle);
-  jfieldID ptr = env->GetFieldID(ndClass, "value", "J");
-  env->SetLongField(ndArrayHandle, ptr, (long)out);
+  setLongField(env, ndArrayHandle, (jlong) out);
   return ret;
 }
 
@@ -316,10 +312,11 @@ extern "C" void KVStoreUpdaterCallbackFunc
 
   env->DeleteLocalRef(ndLocal);
   env->DeleteLocalRef(ndRecv);
+  env->DeleteLocalRef(ndObjClass);
+  env->DeleteLocalRef(updtClass);
   // FIXME: This function can be called multiple times,
   // can we find a way to safely destroy these two objects ?
   // env->DeleteGlobalRef(updaterFuncObjGlb);
-  // delete closure;
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreSetUpdater
@@ -523,9 +520,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorSetMonitorCallback
 }
 
 JNIEXPORT jstring JNICALL Java_ml_dmlc_mxnet_LibInfo_mxGetLastError(JNIEnv * env, jobject obj) {
-  char *tmpstr = "MXNetError";
-  jstring rtstr = env->NewStringUTF(tmpstr);
-  return rtstr;
+  return env->NewStringUTF(MXGetLastError());
 }
 
 //IO funcs
@@ -1216,4 +1211,9 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBindX
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRandomSeed
   (JNIEnv *env, jobject obj, jint seed) {
   return MXRandomSeed(seed);
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNotifyShutdown
+  (JNIEnv *env, jobject obj) {
+  return MXNotifyShutdown();
 }

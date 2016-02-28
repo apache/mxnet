@@ -97,6 +97,7 @@ object TrainMnist {
         kvStore = inst.kvStore, numEpochs = inst.numEpochs,
         modelPrefix = inst.modelPrefix, loadEpoch = inst.loadEpoch,
         lr = inst.lr, lrFactor = inst.lrFactor, lrFactorEpoch = inst.lrFactorEpoch)
+      Base.notifyShutdown()
       logger.info("Finish fit ...")
     } catch {
       case ex: Exception => {

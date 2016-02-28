@@ -193,4 +193,6 @@ class LibInfo {
 
   // Random
   @native def mxRandomSeed(seed: Int): Int
+
+  @native def mxNotifyShutdown(): Int
 }
