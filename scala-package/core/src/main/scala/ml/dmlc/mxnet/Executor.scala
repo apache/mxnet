@@ -119,8 +119,17 @@ class Executor(private[mxnet] val handle: ExecutorHandle, private[mxnet] val sym
   protected var _auxDict: Map[String, NDArray] = null
   protected var monitorCallback: MXMonitorCallback = null
 
+  private var destroyed = false
+
   override def finalize(): Unit = {
-    checkCall(_LIB.mxExecutorFree(handle))
+    destroy()
+  }
+
+  def destroy(): Unit = {
+    if (!destroyed) {
+      _LIB.mxExecutorFree(handle)
+      destroyed = true
+    }
   }
 
   /**
@@ -337,6 +346,10 @@ class DataParallelExecutorManager(symbol: Symbol,
       Shape(batchSize) ++ x.shape.drop(1)
     }
   private[mxnet] val cpuOutputArrays = outputShapes.map(NDArray.zeros(_))
+
+  def destroy(): Unit = {
+    trainExecs.foreach(_.destroy())
+  }
 
   // Install monitor on all executors
   def installMonitor(monitor: Monitor): Unit = {

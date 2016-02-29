@@ -569,8 +569,17 @@ object NDArray {
  */
 // scalastyle:off finalize
 class NDArray(private[mxnet] val handle: NDArrayHandle, val writable: Boolean = true) {
+  private var destroyed = false
+
   override def finalize(): Unit = {
-    checkCall(_LIB.mxNDArrayFree(handle))
+    destroy()
+  }
+
+  def destroy(): Unit = {
+    if (!destroyed) {
+      _LIB.mxNDArrayFree(handle)
+      destroyed = true
+    }
   }
 
   /**

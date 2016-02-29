@@ -11,8 +11,17 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  */
 // scalastyle:off finalize
 class Symbol(private[mxnet] val handle: SymbolHandle) {
+  private var destroyed = false
+
   override def finalize(): Unit = {
-    checkCall(_LIB.mxSymbolFree(handle))
+    destroy()
+  }
+
+  def destroy(): Unit = {
+    if (!destroyed) {
+      _LIB.mxSymbolFree(handle)
+      destroyed = true
+    }
   }
 
   def +(other: Symbol): Symbol = Symbol.createFromListedSymbols("_Plus")(Array(this, other))

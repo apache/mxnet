@@ -104,8 +104,16 @@ object IO {
 case class DataBatch(data: IndexedSeq[NDArray],
                      label: IndexedSeq[NDArray],
                      index: IndexedSeq[Long],
-                     pad: Int)
-
+                     pad: Int) {
+  def destroy(): Unit = {
+    if (data != null) {
+      data.foreach(arr => if (arr != null) arr.destroy())
+    }
+    if (label != null) {
+      label.foreach(arr => if (arr != null) arr.destroy())
+    }
+  }
+}
 
 /**
  * DataIter object in mxnet.

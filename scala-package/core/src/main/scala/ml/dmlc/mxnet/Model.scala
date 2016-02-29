@@ -270,6 +270,7 @@ object Model {
           if (epochSize != -1 && nBatch >= epochSize) {
             doReset = false
           }
+          dataBatch.destroy()
           dataBatch = trainData.next()
         }
         if (doReset) {
@@ -306,6 +307,7 @@ object Model {
       }
       epochEndCallback.foreach(_.invoke(epoch, symbol, argParams, auxParams))
     }
+    executorManager.destroy()
   }
   // scalastyle:on parameterNum
 }

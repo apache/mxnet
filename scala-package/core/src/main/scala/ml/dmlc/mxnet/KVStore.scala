@@ -26,9 +26,17 @@ object KVStore {
 // scalastyle:off finalize
 class KVStore(private val handle: KVStoreHandle) {
   private var updaterFunc: MXKVStoreUpdater = null
+  private var destroyed = false
 
   override def finalize(): Unit = {
-    checkCall(_LIB.mxKVStoreFree(handle))
+    destroy()
+  }
+
+  def destroy(): Unit = {
+    if (!destroyed) {
+      _LIB.mxKVStoreFree(handle)
+      destroyed = true
+    }
   }
 
   /**
