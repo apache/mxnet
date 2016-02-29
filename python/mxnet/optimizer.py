@@ -6,6 +6,7 @@ from .base import _LIB, check_call
 from .base import c_array, mx_uint, mx_float, c_str
 from .base import OptimizerHandle, OptimizerCreator
 from .ndarray import NDArray, zeros, clip, sqrt
+from .random import normal
 
 class Optimizer(object):
     """Base class of all optimizers."""
@@ -248,6 +249,88 @@ class SGD(Optimizer):
         else:
             assert self.momentum == 0.0
             weight[:] += -lr * (grad + self.wd * weight)
+
+@register
+class SGLD(Optimizer):
+    """Stochastic Langevin Dynamics Updater to sample from a distribution.
+
+    Parameters
+    ----------
+    learning_rate : float, optional
+        learning_rate of SGD
+
+    wd : float, optional
+        L2 regularization coefficient add to all the weights
+
+    rescale_grad : float, optional
+        rescaling factor of gradient.
+
+    clip_gradient : float, optional
+        clip gradient in range [-clip_gradient, clip_gradient]
+
+    arg_names : list(str), optional
+        special treat weight decay in parameter ends with bias, gamma, and beta
+    """
+    def __init__(self, learning_rate=0.01,
+                 wd=0.0001, rescale_grad=1, clip_gradient=None,
+                 lr_scheduler=None, arg_names=None):
+        super(SGLD, self).__init__(rescale_grad, arg_names)
+        self.lr = learning_rate
+        self.wd = wd
+        self.clip_gradient = clip_gradient
+        self.lr_scheduler = lr_scheduler
+        if lr_scheduler is not None:
+            self.lr_scheduler.base_lr = learning_rate
+
+    def create_state(self, index, weight):
+        """Create additional optimizer state such as momentum.
+
+        Parameters
+        ----------
+        weight : NDArray
+            The weight data
+
+        """
+        return None
+
+    def update(self, index, weight, grad, state):
+        """Update the parameters.
+
+        Parameters
+        ----------
+        index : int
+            An unique integer key used to index the parameters
+
+        weight : NDArray
+            weight ndarray
+
+        grad : NDArray
+            grad ndarray
+
+        state : NDArray or other objects returned by init_state
+            The auxiliary state used in optimization.
+        """
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        if self.lr_scheduler is not None:
+            lr = self.lr_scheduler(self.num_update)
+            self._update_count(index)
+        else:
+            lr = self.lr
+        lr *= self.lr_scale.get(index, 1.0)
+
+        wd = self.wd
+        if self.specialized == True:
+            wd = 0.
+            if index in self.weight_set:
+                wd = self.wd
+
+        grad = grad * self.rescale_grad
+        if self.clip_gradient is not None:
+            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+        weight[:] += - lr/2 * (grad + wd * weight) \
+                     + normal(0, math.sqrt(lr), weight.shape, weight.context)
+
 
 @register
 class ccSGD(Optimizer):
