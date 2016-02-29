@@ -10,6 +10,8 @@
 #define MXNET_EXTERN_C extern "C"
 #endif
 
+#include <stdint.h>
+
 /*! \brief MXNET_DLL prefix for windows */
 #ifdef _WIN32
 #ifdef MXNET_EXPORTS
