@@ -21,7 +21,35 @@
 #include <dmlc/recordio.h>
 #include <opencv2/opencv.hpp>
 #include "../src/io/image_recordio.h"
+#include <random>
+#include <stdio.h>
+#include <setjmp.h>
 
+//#define TRY do{ jmp_buf ex_buf__; if( !setjmp(ex_buf__) ){
+//#define CATCH } else {
+//#define ETRY } }while(0)
+//#define THROW longjmp(ex_buf__, 1)
+
+/*!
+ *\brief get interpolation method with given inter_method, 0-CV_INTER_NN 1-CV_INTER_LINEAR 2-CV_INTER_CUBIC
+ *\ 3-CV_INTER_AREA 4-CV_INTER_LANCZOS4 9-AUTO(cubic for enlarge, area for shrink, bilinear for others) 10-RAND(0-4)
+ */
+int GetInterMethod(int inter_method, int old_width, int old_height, int new_width, int new_height, std::mt19937& prnd) {
+    if (inter_method == 9) {
+        if (new_width > old_width && new_height > old_height) {
+            return 2;  // CV_INTER_CUBIC for enlarge
+        } else if (new_width <old_width && new_height < old_height) {
+            return 3;  // CV_INTER_AREA for shrink
+        } else {
+            return 1;  // CV_INTER_LINEAR for others
+        }
+    } else if (inter_method == 10) {
+        std::uniform_int_distribution<size_t> rand_uniform_int(0, 4);
+        return rand_uniform_int(prnd);
+    } else {
+        return inter_method;
+    }
+}
 int main(int argc, char *argv[]) {
   if (argc < 4) {
     printf("Usage: <image.lst> <image_root_dir> <output.rec> [additional parameters in form key=value]\n"\
@@ -34,6 +62,7 @@ int main(int argc, char *argv[]) {
            "\tcenter_crop=CENTER_CROP[default=0] specify whether to crop the center image to make it square.\n"\
            "\tquality=QUALITY[default=80] JPEG quality for encoding (1-100, default: 80) or PNG compression for encoding (1-9, default: 3).\n"\
            "\tencoding=ENCODING[default='.jpg'] Encoding type. Can be '.jpg' or '.png'\n"\
+           "\tinter_method=INTER_METHOD[default=1] NN(0) BILINEAR(1) CUBIC(2) AREA(3) LANCZOS4(4) AUTO(9) RAND(10).\n"\
            "\tunchanged=UNCHANGED[default=0] Keep the original image encoding, size and color. If set to 1, it will ignore the others parameters.\n");
     return 0;
   }
@@ -44,7 +73,8 @@ int main(int argc, char *argv[]) {
   int center_crop = 0;
   int quality = 80;
   int color_mode = CV_LOAD_IMAGE_COLOR;
-  int unchanged=0;
+  int unchanged = 0;
+  int inter_method = CV_INTER_LINEAR;
   std::string encoding(".jpg");
   for (int i = 4; i < argc; ++i) {
     char key[128], val[128];
@@ -58,16 +88,16 @@ int main(int argc, char *argv[]) {
       if (!strcmp(key, "color")) color_mode = atoi(val);
       if (!strcmp(key, "encoding")) encoding = std::string(val);
       if (!strcmp(key, "unchanged")) unchanged = atoi(val);
+      if (!strcmp(key, "inter_method")) inter_method = atoi(val);
     }
   }
   // Check parameters ranges
-  if(color_mode != -1 && color_mode != 0 && color_mode != 1) {
+  if (color_mode != -1 && color_mode != 0 && color_mode != 1) {
       LOG(FATAL) << "Color mode must be -1, 0 or 1.";
   }
-  if(encoding != std::string(".jpg") && encoding != std::string(".png")) {
+  if (encoding != std::string(".jpg") && encoding != std::string(".png")) {
       LOG(FATAL) << "Encoding mode must be .jpg or .png.";
   }
-  
   if (new_size > 0) {
     LOG(INFO) << "New Image Size: Short Edge " << new_size;
   } else {
@@ -81,13 +111,39 @@ int main(int argc, char *argv[]) {
   }
   if (color_mode == -1) {
     LOG(INFO) << "Keep original color mode";
-  } 
+  }
   LOG(INFO) << "Encoding is " << encoding;
 
-  if(encoding == std::string(".png") and quality > 9) {
+  if (encoding == std::string(".png") and quality > 9) {
       quality = 3;
   }
-  
+  if (inter_method != 1) {
+      switch (inter_method) {
+        case 0:
+            LOG(INFO) << "Use inter_method CV_INTER_NN";
+            break;
+        case 2:
+            LOG(INFO) << "Use inter_method CV_INTER_CUBIC";
+            break;
+        case 3:
+            LOG(INFO) << "Use inter_method CV_INTER_AREA";
+            break;
+        case 4:
+            LOG(INFO) << "Use inter_method CV_INTER_LANCZOS4";
+            break;
+        case 9:
+            LOG(INFO) << "Use inter_method mod auto(cubic for enlarge, area for shrink)";
+            break;
+        case 10:
+            LOG(INFO) << "Use inter_method mod rand(nn/bilinear/cubic/area/lanczos4)";
+           break;
+        default:
+            LOG(INFO) << "Unkown inter_method";
+            return 0;
+      }
+  }
+  std::random_device rd;
+  std::mt19937 prnd(rd());
   using namespace dmlc;
   const static size_t kBufferSize = 1 << 20UL;
   std::string root = argv[2];
@@ -95,7 +151,7 @@ int main(int argc, char *argv[]) {
   size_t imcnt = 0;
   double tstart = dmlc::GetTime();
   dmlc::InputSplit *flist = dmlc::InputSplit::
-      Create(argv[1], partid, nsplit, "text");  
+      Create(argv[1], partid, nsplit, "text");
   std::ostringstream os;
   if (nsplit == 1) {
     os << argv[3];
@@ -110,54 +166,96 @@ int main(int argc, char *argv[]) {
   std::vector<unsigned char> decode_buf;
   std::vector<unsigned char> encode_buf;
   std::vector<int> encode_params;
-  if(encoding == std::string(".png")) {
+  if (encoding == std::string(".png")) {
       encode_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
       encode_params.push_back(quality);
       LOG(INFO) << "PNG encoding compression: " << quality;
-  }
-  else {
+  } else {
       encode_params.push_back(CV_IMWRITE_JPEG_QUALITY);
       encode_params.push_back(quality);
       LOG(INFO) << "JPEG encoding quality: " << quality;
   }
   dmlc::InputSplit::Blob line;
 
+  // Create a new image list which only contains valid image informations
+  FILE *new_list;
+  std::string new_list_name = std::string(argv[1]) + ".new";
+  new_list = fopen(new_list_name.c_str(), "w+");
+
   while (flist->NextRecord(&line)) {
     std::string sline(static_cast<char*>(line.dptr), line.size);
-    std::istringstream is(sline);
-    if (!(is >> rec.header.image_id[0] >> rec.header.label)) continue;
-    for (int k = 1; k < label_width; ++ k) {
-      float tmp;
-      CHECK(is >> tmp)
-          << "Invalid ImageList, did you provide the correct label_width?";
+    path = root;    
+    
+    //Catch error for list format error.
+    try{
+        std::istringstream is(sline);
+        if (!(is >> rec.header.image_id[0] >> rec.header.label)) continue;
+        for (int k = 1; k < label_width; ++k) {
+            float tmp;
+            CHECK(is >> tmp)
+                << "Invalid ImageList, did you provide the correct label_width?";
+        }
+        CHECK(std::getline(is, fname));
+
+        // eliminate invalid chars in the end
+        while (fname.length() != 0 &&
+            (isspace(*fname.rbegin()) || !isprint(*fname.rbegin()))) {
+                fname.resize(fname.length() - 1);
+        }
+        // eliminate invalid chars in beginning.
+        const char *p = fname.c_str();
+        while (isspace(*p)) ++p;
+        path = path + p;
     }
-    CHECK(std::getline(is, fname));
-    // eliminate invalid chars in the end
-    while (fname.length() != 0 &&
-           (isspace(*fname.rbegin()) || !isprint(*fname.rbegin()))) {
-      fname.resize(fname.length() - 1);
+    catch(...){
+        LOG(INFO) << "Catch error when parsing lst: " << sline;
+        continue;
     }
-    // eliminate invalid chars in beginning.
-    const char *p = fname.c_str();
-    while (isspace(*p)) ++p;
-    path = root + p;
-    // use "r" is equal to rb in dmlc::Stream
-    dmlc::Stream *fi = dmlc::Stream::Create(path.c_str(), "r");
+
+    dmlc::Stream *fi = NULL;
+    
+    //Catch error for creating dmlc stream
+    try{
+      fi = dmlc::Stream::Create(path.c_str(), "r");
+    }
+    catch(...){
+      LOG(INFO) << "Catch error when opening file: " << path.c_str();
+      continue;
+    }
+
     rec.SaveHeader(&blob);
     decode_buf.clear();
     size_t imsize = 0;
-    while (true) {
-      decode_buf.resize(imsize + kBufferSize);
-      size_t nread = fi->Read(BeginPtr(decode_buf) + imsize, kBufferSize);
-      imsize += nread;
-      decode_buf.resize(imsize);
-      if (nread != kBufferSize) break;
+
+    //Catch error for decoding file
+    try{
+        while (true) {
+            decode_buf.resize(imsize + kBufferSize);
+            size_t nread = fi->Read(BeginPtr(decode_buf) + imsize, kBufferSize);
+            imsize += nread;
+            decode_buf.resize(imsize);
+            if (nread != kBufferSize) break;
+        }
+        delete fi;
     }
-    delete fi;
-    
-    if(unchanged != 1) {
-      cv::Mat img = cv::imdecode(decode_buf, color_mode);
-      CHECK(img.data != NULL) << "OpenCV decode fail:" << path;
+    catch(...){
+        LOG(INFO) << "Catch error when decoding file: " << path.c_str();
+        continue;
+    }
+
+    if (unchanged != 1) {
+      cv::Mat img;
+      
+      //Catch error for creating cv image
+      try{
+           img = cv::imdecode(decode_buf, color_mode);
+           CHECK(img.data != NULL) << "OpenCV decode fail:" << path;
+      }
+      catch(...){
+         LOG(INFO) << "Catch error when OpenCV decoding: " <<path.c_str();
+         continue;
+      }
+
       cv::Mat res = img;
       if (new_size > 0) {
         if (center_crop) {
@@ -169,12 +267,21 @@ int main(int argc, char *argv[]) {
             img = img(cv::Range(0, img.rows), cv::Range(margin, margin + img.rows));
           }
         }
+        int interpolation_method = 1;
         if (img.rows > img.cols) {
-          cv::resize(img, res, cv::Size(new_size, img.rows * new_size / img.cols),
-                     0, 0, CV_INTER_LINEAR);
+            if (img.cols != new_size) {
+                interpolation_method = GetInterMethod(inter_method, img.cols, img.rows, new_size, img.rows * new_size / img.cols, prnd);
+                cv::resize(img, res, cv::Size(new_size, img.rows * new_size / img.cols), 0, 0, interpolation_method);
+            } else {
+                res = img.clone();
+            }
         } else {
-          cv::resize(img, res, cv::Size(new_size * img.cols / img.rows, new_size),
-                     0, 0, CV_INTER_LINEAR);
+            if (img.rows != new_size) {
+                interpolation_method = GetInterMethod(inter_method, img.cols, img.rows, new_size * img.cols / img.rows, new_size, prnd);
+                cv::resize(img, res, cv::Size(new_size * img.cols / img.rows, new_size), 0, 0, interpolation_method);
+            } else {
+                res = img.clone();
+            }
         }
       }
       encode_buf.clear();
@@ -183,21 +290,25 @@ int main(int argc, char *argv[]) {
       blob.resize(bsize + encode_buf.size());
       memcpy(BeginPtr(blob) + bsize,
              BeginPtr(encode_buf), encode_buf.size());
-    }
+    } 
     else {
       size_t bsize = blob.size();
       blob.resize(bsize + decode_buf.size());
       memcpy(BeginPtr(blob) + bsize,
              BeginPtr(decode_buf), decode_buf.size());
     }
+    
     writer.WriteRecord(BeginPtr(blob), blob.size());
     // write header
+    fprintf(new_list, "%s\n", sline.c_str());
     ++imcnt;
     if (imcnt % 1000 == 0) {
       LOG(INFO) << imcnt << " images processed, " << GetTime() - tstart << " sec elapsed";
     }
   }
+
   LOG(INFO) << "Total: " << imcnt << " images processed, " << GetTime() - tstart << " sec elapsed";
+  fclose(new_list);
   delete fo;
   delete flist;
   return 0;
