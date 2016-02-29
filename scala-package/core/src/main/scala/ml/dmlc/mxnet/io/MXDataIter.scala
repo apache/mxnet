@@ -31,7 +31,7 @@ class MXDataIter(private[mxnet] val handle: DataIterHandle,
   val _provideLabel: Map[String, Shape] = Map(labelName -> label.shape)
   override val batchSize = data.shape(0)
 
-  override def finalize(): Unit = {
+  override protected def finalize(): Unit = {
     checkCall(_LIB.mxDataIterFree(handle))
   }
 

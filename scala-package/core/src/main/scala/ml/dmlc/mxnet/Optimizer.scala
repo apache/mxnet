@@ -10,6 +10,12 @@ object Optimizer {
         val state = states.getOrElseUpdate(index, optimizer.createState(index, weight))
         optimizer.update(index, weight, grad, state)
       }
+      override def destroy(): Unit = {
+        states.values.foreach {
+          case array: NDArray => array.destroy()
+          case _ =>
+        }
+      }
     }
   }
 }
@@ -83,4 +89,5 @@ trait MXKVStoreUpdater {
    * @param local the value stored on local on this key
    */
   def update(key: Int, recv: NDArray, local: NDArray): Unit
+  def destroy(): Unit
 }

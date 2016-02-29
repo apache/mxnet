@@ -571,7 +571,7 @@ object NDArray {
 class NDArray(private[mxnet] val handle: NDArrayHandle, val writable: Boolean = true) {
   private var destroyed = false
 
-  override def finalize(): Unit = {
+  override protected def finalize(): Unit = {
     destroy()
   }
 

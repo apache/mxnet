@@ -28,7 +28,7 @@ class KVStore(private val handle: KVStoreHandle) {
   private var updaterFunc: MXKVStoreUpdater = null
   private var destroyed = false
 
-  override def finalize(): Unit = {
+  override protected def finalize(): Unit = {
     destroy()
   }
 

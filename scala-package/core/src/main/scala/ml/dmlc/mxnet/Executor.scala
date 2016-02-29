@@ -121,12 +121,13 @@ class Executor(private[mxnet] val handle: ExecutorHandle, private[mxnet] val sym
 
   private var destroyed = false
 
-  override def finalize(): Unit = {
+  override protected def finalize(): Unit = {
     destroy()
   }
 
   def destroy(): Unit = {
     if (!destroyed) {
+      outputs.foreach(_.destroy())
       _LIB.mxExecutorFree(handle)
       destroyed = true
     }

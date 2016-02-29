@@ -295,6 +295,7 @@ object Model {
           executorManager.loadDataBatch(evalBatch)
           executorManager.forward(isTrain = false)
           evalMetric.update(evalBatch.label, executorManager.cpuOutputArrays)
+          evalBatch.destroy()
           evalBatch = evalDataIter.next()
         }
 
@@ -307,6 +308,8 @@ object Model {
       }
       epochEndCallback.foreach(_.invoke(epoch, symbol, argParams, auxParams))
     }
+
+    updaterLocal.destroy()
     executorManager.destroy()
   }
   // scalastyle:on parameterNum

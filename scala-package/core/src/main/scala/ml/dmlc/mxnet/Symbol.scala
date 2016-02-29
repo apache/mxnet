@@ -13,7 +13,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 class Symbol(private[mxnet] val handle: SymbolHandle) {
   private var destroyed = false
 
-  override def finalize(): Unit = {
+  override protected def finalize(): Unit = {
     destroy()
   }
 
