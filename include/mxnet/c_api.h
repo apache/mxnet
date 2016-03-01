@@ -23,8 +23,9 @@
 
 /*! \brief manually define unsigned int */
 typedef unsigned int mx_uint;
+/*! \brief manually define unsigned long long */
 typedef unsigned long long mx_ulonglong;
-/*! \brief manually define unsigned int */
+/*! \brief manually define float */
 typedef float mx_float;
 // all the handles are simply void *
 // will be casted internally to specific pointers types
