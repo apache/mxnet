@@ -565,20 +565,28 @@ object NDArray {
 
 /**
  * NDArray object in mxnet.
- * NDArray is basic ndarray/Tensor like data structure in mxnet.
+ * NDArray is basic ndarray/Tensor like data structure in mxnet. <br />
+ * <b>
+ * WARNING: it is your responsibility to clear this object through dispose().
+ * NEVER rely on the GC strategy
+ * </b>
  */
 // scalastyle:off finalize
-class NDArray(private[mxnet] val handle: NDArrayHandle, val writable: Boolean = true) {
-  private var destroyed = false
-
+class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
+                             val writable: Boolean = true) {
+  private var disposed = false
   override protected def finalize(): Unit = {
-    destroy()
+    dispose()
   }
 
-  def destroy(): Unit = {
-    if (!destroyed) {
+  /**
+   * Release the native memory.
+   * The object shall never be used after it is disposed.
+   */
+  def dispose(): Unit = {
+    if (!disposed) {
       _LIB.mxNDArrayFree(handle)
-      destroyed = true
+      disposed = true
     }
   }
 

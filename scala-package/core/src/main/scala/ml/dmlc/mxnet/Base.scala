@@ -36,7 +36,6 @@ object Base {
   Runtime.getRuntime.addShutdownHook(new Thread() {
     override def run(): Unit = {
       notifyShutdown()
-      System.gc()
     }
   })
 

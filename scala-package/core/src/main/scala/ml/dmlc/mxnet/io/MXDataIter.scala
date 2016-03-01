@@ -8,13 +8,13 @@ import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
 
 /**
-  * DataIter built in MXNet.
-  * @param handle the handle to the underlying C++ Data Iterator
-  */
+ * DataIter built in MXNet.
+ * @param handle the handle to the underlying C++ Data Iterator
+ */
 // scalastyle:off finalize
-class MXDataIter(private[mxnet] val handle: DataIterHandle,
-                 private val dataName: String = "data",
-                 private val labelName: String = "label") extends DataIter {
+class MXDataIter private[mxnet](private[mxnet] val handle: DataIterHandle,
+                                private val dataName: String = "data",
+                                private val labelName: String = "label") extends DataIter {
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
 
   // use currentBatch to implement hasNext
@@ -30,14 +30,26 @@ class MXDataIter(private[mxnet] val handle: DataIterHandle,
   val _provideData: Map[String, Shape] = Map(dataName -> data.shape)
   val _provideLabel: Map[String, Shape] = Map(labelName -> label.shape)
   override val batchSize = data.shape(0)
+  private var disposed = false
 
   override protected def finalize(): Unit = {
-    checkCall(_LIB.mxDataIterFree(handle))
+    dispose()
   }
 
   /**
-    * reset the iterator
-    */
+   * Release the native memory.
+   * The object shall never be used after it is disposed.
+   */
+  def dispose(): Unit = {
+    if (!disposed) {
+      _LIB.mxDataIterFree(handle)
+      disposed = true
+    }
+  }
+
+  /**
+   * reset the iterator
+   */
   override def reset(): Unit = {
     // TODO: self._debug_at_begin = True
     currentBatch = null
@@ -64,9 +76,9 @@ class MXDataIter(private[mxnet] val handle: DataIterHandle,
   }
 
   /**
-    * Iterate to next batch
-    * @return whether the move is successful
-    */
+   * Iterate to next batch
+   * @return whether the move is successful
+   */
   private def iterNext(): Boolean = {
     val next = new RefInt
     checkCall(_LIB.mxDataIterNext(handle, next))
@@ -79,9 +91,9 @@ class MXDataIter(private[mxnet] val handle: DataIterHandle,
   }
 
   /**
-    * get data of current batch
-    * @return the data of current batch
-    */
+   * get data of current batch
+   * @return the data of current batch
+   */
   override def getData(): IndexedSeq[NDArray] = {
     val out = new NDArrayHandleRef
     checkCall(_LIB.mxDataIterGetData(handle, out))
@@ -89,9 +101,9 @@ class MXDataIter(private[mxnet] val handle: DataIterHandle,
   }
 
   /**
-    * Get label of current batch
-    * @return the label of current batch
-    */
+   * Get label of current batch
+   * @return the label of current batch
+   */
   override def getLabel(): IndexedSeq[NDArray] = {
     val out = new NDArrayHandleRef
     checkCall(_LIB.mxDataIterGetLabel(handle, out))
@@ -99,9 +111,9 @@ class MXDataIter(private[mxnet] val handle: DataIterHandle,
   }
 
   /**
-    * the index of current batch
-    * @return
-    */
+   * Get the index of current batch
+   * @return the index of current batch
+   */
   override def getIndex(): IndexedSeq[Long] = {
     val outIndex = new ListBuffer[Long]
     val outSize = new RefLong
@@ -110,10 +122,10 @@ class MXDataIter(private[mxnet] val handle: DataIterHandle,
   }
 
   /**
-    * get the number of padding examples
-    * in current batch
-    * @return number of padding examples in current batch
-    */
+   * get the number of padding examples
+   * in current batch
+   * @return number of padding examples in current batch
+   */
   override def getPad(): MXUint = {
     val out = new MXUintRef
     checkCall(_LIB.mxDataIterGetPadNum(handle, out))

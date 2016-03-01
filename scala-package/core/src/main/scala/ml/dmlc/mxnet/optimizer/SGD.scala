@@ -45,32 +45,32 @@ class SGD(private val learningRate: Float = 0.01f, private val momentum: Float =
       // to get rid of memory leak
       val oldResdGrad = resdGrad
       resdGrad = NDArray.clip(resdGrad, -clipGradient, clipGradient)
-      oldResdGrad.destroy()
+      oldResdGrad.dispose()
     }
 
     if (state != null) {
       val mom = state.asInstanceOf[NDArray]
       mom *= momentum
-      // to get rid of memory leak
+      // adder = -lr * (resdGrad + wd * weight)
+      // we write in this way to get rid of memory leak
       val adder = wd * weight
       adder += resdGrad
       adder *= (-lr)
-      // mom += -lr * (resdGrad + wd * weight)
       mom += adder
       weight += mom
-      adder.destroy()
+      adder.dispose()
     } else {
       require(momentum == 0f)
-      // to get rid of memory leak
+      // adder = -lr * (resdGrad + this.wd * weight)
+      // we write in this way to get rid of memory leak
       val adder = this.wd * weight
       adder += resdGrad
       adder *= (-lr)
-      // weight += -lr * (resdGrad + this.wd * weight)
       weight += adder
-      adder.destroy()
+      adder.dispose()
     }
 
-    resdGrad.destroy()
+    resdGrad.dispose()
   }
 
   // Create additional optimizer state such as momentum.

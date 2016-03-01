@@ -33,7 +33,7 @@ class KVStoreSuite extends FunSuite with BeforeAndAfterAll {
         // scalastyle:on println
         stored += input * 2
       }
-      override def destroy(): Unit = {}
+      override def dispose(): Unit = {}
     }
     kv.setUpdater(updater)
 

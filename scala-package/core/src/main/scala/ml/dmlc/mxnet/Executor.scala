@@ -101,7 +101,12 @@ object Executor {
 }
 
 /**
- * Symbolic Executor component of MXNet
+ * Symbolic Executor component of MXNet <br />
+ * <b>
+ * WARNING: it is your responsibility to clear this object through dispose().
+ * NEVER rely on the GC strategy
+ * </b>
+ *
  * @author Yizhi Liu
  *
  * Constructor: please use Symbol.bind and Symbol.simpleBind instead.
@@ -110,7 +115,8 @@ object Executor {
  * @see Symbol.bind : to create executor
  */
 // scalastyle:off finalize
-class Executor(private[mxnet] val handle: ExecutorHandle, private[mxnet] val symbol: Symbol) {
+class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
+                              private[mxnet] val symbol: Symbol) {
   private[mxnet] var argArrays: Array[NDArray] = null
   private[mxnet] var gradArrays: Array[NDArray] = null
   private[mxnet] var auxArrays: Array[NDArray] = null
@@ -119,17 +125,17 @@ class Executor(private[mxnet] val handle: ExecutorHandle, private[mxnet] val sym
   protected var _auxDict: Map[String, NDArray] = null
   protected var monitorCallback: MXMonitorCallback = null
 
-  private var destroyed = false
+  private var disposed = false
 
   override protected def finalize(): Unit = {
-    destroy()
+    dispose()
   }
 
-  def destroy(): Unit = {
-    if (!destroyed) {
-      outputs.foreach(_.destroy())
+  def dispose(): Unit = {
+    if (!disposed) {
+      outputs.foreach(_.dispose())
       _LIB.mxExecutorFree(handle)
-      destroyed = true
+      disposed = true
     }
   }
 
@@ -348,8 +354,12 @@ class DataParallelExecutorManager(symbol: Symbol,
     }
   private[mxnet] val cpuOutputArrays = outputShapes.map(NDArray.zeros(_))
 
-  def destroy(): Unit = {
-    trainExecs.foreach(_.destroy())
+  /**
+   * Release the related executors.
+   * The object shall never be used after it is disposed.
+   */
+  def dispose(): Unit = {
+    trainExecs.foreach(_.dispose())
   }
 
   // Install monitor on all executors

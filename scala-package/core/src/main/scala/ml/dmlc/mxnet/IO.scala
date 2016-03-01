@@ -15,7 +15,7 @@ object IO {
   type PackCreateFunc = (Map[String, String]) => DataPack
 
   private val logger = LoggerFactory.getLogger(classOf[DataIter])
-  private val iterCreateFuncs: Map[String, IterCreateFunc] = _initIOModule()
+  private val iterCreateFuncs: Map[String, IterCreateFunc] = initIOModule()
 
   def MNISTIter: IterCreateFunc = iterCreateFuncs("MNISTIter")
   def ImageRecordIter: IterCreateFunc = iterCreateFuncs("ImageRecordIter")
@@ -30,7 +30,7 @@ object IO {
    * create iterator via iterName and params
    * @param iterName name of iterator; "MNISTIter" or "ImageRecordIter"
    * @param params parameters for create iterator
-   * @return
+   * @return created data iterator
    */
   def createIterator(iterName: String, params: Map[String, String]): DataIter = {
     iterCreateFuncs(iterName)(params)
@@ -40,23 +40,23 @@ object IO {
     * create dataPack for iterator via itername and params
     * @param iterName name of iterator: "MNISTIter" or "ImageRecordIter"
     * @param params parameters for create iterator
-    * @return
+    * @return created dataPack
     */
   def createMXDataPack(iterName: String)(params: Map[String, String]): DataPack = {
     new MXDataPack(iterName, params)
   }
 
   /**
-   * initi all IO creator Functions
-   * @return
+   * initialize all IO creator Functions
+   * @return Map from name to iter creator function
    */
-  private def _initIOModule(): Map[String, IterCreateFunc] = {
+  private def initIOModule(): Map[String, IterCreateFunc] = {
     val IterCreators = new ListBuffer[DataIterCreator]
     checkCall(_LIB.mxListDataIters(IterCreators))
-    IterCreators.map(_makeIOIterator).toMap
+    IterCreators.map(makeIOIterator).toMap
   }
 
-  private def _makeIOIterator(handle: DataIterCreator): (String, IterCreateFunc) = {
+  private def makeIOIterator(handle: DataIterCreator): (String, IterCreateFunc) = {
     val name = new RefString
     val desc = new RefString
     val argNames = new ListBuffer[String]
@@ -71,12 +71,12 @@ object IO {
 
   /**
    * DataIter creator
-   * @param handle
-   * @param params
-   * @return
+   * @param handle native memory ptr for the iterator
+   * @param params parameter passed to the iterator
+   * @return created DataIter
    */
   private def creator(handle: DataIterCreator)(
-              params: Map[String, String]): DataIter = {
+                      params: Map[String, String]): DataIter = {
     val out = new DataIterHandleRef
     val keys = params.keys.toArray
     val vals = params.values.toArray
@@ -96,21 +96,21 @@ object IO {
 
 /**
  * class batch of data
- * @param data
- * @param label
- * @param index
- * @param pad
  */
 case class DataBatch(data: IndexedSeq[NDArray],
                      label: IndexedSeq[NDArray],
                      index: IndexedSeq[Long],
                      pad: Int) {
-  def destroy(): Unit = {
+  /**
+   * Dispose its data and labels
+   * The object shall never be used after it is disposed.
+   */
+  def dispose(): Unit = {
     if (data != null) {
-      data.foreach(arr => if (arr != null) arr.destroy())
+      data.foreach(arr => if (arr != null) arr.dispose())
     }
     if (label != null) {
-      label.foreach(arr => if (arr != null) arr.destroy())
+      label.foreach(arr => if (arr != null) arr.dispose())
     }
   }
 }
@@ -145,15 +145,15 @@ abstract class DataIter(val batchSize: Int = 0) extends Iterator[DataBatch] {
   def getLabel(): IndexedSeq[NDArray]
 
   /**
-   * get the number of padding examples
+   * Get the number of padding examples
    * in current batch
    * @return number of padding examples in current batch
    */
   def getPad(): Int
 
   /**
-   * the index of current batch
-   * @return
+   * Get the index of current batch
+   * @return the index of current batch
    */
   def getIndex(): IndexedSeq[Long]
 
@@ -165,13 +165,13 @@ abstract class DataIter(val batchSize: Int = 0) extends Iterator[DataBatch] {
 }
 
 /**
-  * pack of DataIter, use as Iterable class
-  */
+ * pack of DataIter, use as Iterable class
+ */
 abstract class DataPack() extends Iterable[DataBatch] {
   /**
-    * get data iterator
-    * @return DataIter
-    */
+   * get data iterator
+   * @return DataIter
+   */
   def iterator: DataIter
 }
 

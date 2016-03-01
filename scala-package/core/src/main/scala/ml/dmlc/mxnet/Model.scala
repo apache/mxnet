@@ -270,7 +270,7 @@ object Model {
           if (epochSize != -1 && nBatch >= epochSize) {
             doReset = false
           }
-          dataBatch.destroy()
+          dataBatch.dispose()
           dataBatch = trainData.next()
         }
         if (doReset) {
@@ -295,7 +295,7 @@ object Model {
           executorManager.loadDataBatch(evalBatch)
           executorManager.forward(isTrain = false)
           evalMetric.update(evalBatch.label, executorManager.cpuOutputArrays)
-          evalBatch.destroy()
+          evalBatch.dispose()
           evalBatch = evalDataIter.next()
         }
 
@@ -309,8 +309,8 @@ object Model {
       epochEndCallback.foreach(_.invoke(epoch, symbol, argParams, auxParams))
     }
 
-    updaterLocal.destroy()
-    executorManager.destroy()
+    updaterLocal.dispose()
+    executorManager.dispose()
   }
   // scalastyle:on parameterNum
 }
@@ -519,6 +519,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
     val (kvStore, updateOnKVStore) = Model.createKVStore(kvStoreType, ctx.length, _argParams)
     fit(trainData, evalData, evalMetric, kvStore, updateOnKVStore,
         epochEndCallback, batchEndCallback, logger, workLoadList)
+    kvStore.foreach(_.dispose())
   }
 
   def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric,

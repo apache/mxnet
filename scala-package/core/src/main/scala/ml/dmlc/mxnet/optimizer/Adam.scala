@@ -10,6 +10,10 @@ import ml.dmlc.mxnet.NDArrayConversions._
  * Adam: A Method for Stochastic Optimization,
  * http://arxiv.org/abs/1412.6980
  *
+ * <b>WARNING</b>
+ * TODO: This class has NOT been tested yet.
+ * And there exists potential <b>memory leak</b> in the implementation
+ *
  * @author Yuan Tang, Yizhi Liu
  *
  * @param learningRate Float, Step size.

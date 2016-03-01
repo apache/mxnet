@@ -8,7 +8,11 @@ import ml.dmlc.mxnet.Base._
  */
 object KVStore {
   /**
-   * Create a new KVStore.
+   * Create a new KVStore. <br />
+   * <b>
+   * WARNING: it is your responsibility to clear this object through dispose().
+   * NEVER rely on the GC strategy
+   * </b>
    *
    * @param name : {'local', 'dist'}
    *     The type of KVStore
@@ -26,16 +30,20 @@ object KVStore {
 // scalastyle:off finalize
 class KVStore(private val handle: KVStoreHandle) {
   private var updaterFunc: MXKVStoreUpdater = null
-  private var destroyed = false
+  private var disposed = false
 
   override protected def finalize(): Unit = {
-    destroy()
+    dispose()
   }
 
-  def destroy(): Unit = {
-    if (!destroyed) {
+  /**
+   * Release the native memory.
+   * The object shall never be used after it is disposed.
+   */
+  def dispose(): Unit = {
+    if (!disposed) {
       _LIB.mxKVStoreFree(handle)
-      destroyed = true
+      disposed = true
     }
   }
 
