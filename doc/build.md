@@ -222,7 +222,7 @@ drat:::addRepo("dmlc")
 install.packages("mxnet")
 ```
 
-To install the R package. First finish the [Build MXNet Library](#build-mxnet-library) step.
+To install the R package. First finish the [Build the Shared Library](#build-the-shared-library) step.
 Then use the following command to install dependencies and build the package at root folder
 
 ```bash
