@@ -9,7 +9,6 @@ github: https://github.com/DeepScale/SqueezeNet
     Year = {2016}
 }
 
-squeezenet
 """
 
 import find_mxnet
