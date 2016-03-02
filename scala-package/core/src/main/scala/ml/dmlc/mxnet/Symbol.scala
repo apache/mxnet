@@ -6,10 +6,32 @@ import org.slf4j.LoggerFactory
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 /**
- * Symbolic configuration API of mxnet.
+ * Symbolic configuration API of mxnet. <br />
+ * <b>
+ * WARNING: it is your responsibility to clear this object through dispose().
+ * NEVER rely on the GC strategy
+ * </b>
  * @author Yizhi Liu
  */
-class Symbol(private[mxnet] val handle: SymbolHandle) {
+// scalastyle:off finalize
+class Symbol private(private[mxnet] val handle: SymbolHandle) {
+  private var disposed = false
+
+  override protected def finalize(): Unit = {
+    dispose()
+  }
+
+  /**
+   * Release the native memory.
+   * The object shall never be used after it is disposed.
+   */
+  def dispose(): Unit = {
+    if (!disposed) {
+      _LIB.mxSymbolFree(handle)
+      disposed = true
+    }
+  }
+
   def +(other: Symbol): Symbol = Symbol.createFromListedSymbols("_Plus")(Array(this, other))
   def +[@specialized(Int, Float, Double) V](other: V): Symbol = {
     Symbol.createFromListedSymbols("_PlusScalar")(Array(this), Map("scalar" -> other.toString))
@@ -713,6 +735,7 @@ class Symbol(private[mxnet] val handle: SymbolHandle) {
     jsonStr.value
   }
 }
+// scalastyle:on finalize
 
 object Symbol {
   private type SymbolCreateNamedFunc = Map[String, Any] => Symbol

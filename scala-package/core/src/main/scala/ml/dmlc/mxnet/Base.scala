@@ -31,6 +31,13 @@ object Base {
 
   System.loadLibrary("mxnet-scala")
   val _LIB = new LibInfo
+  checkCall(_LIB.nativeLibInit())
+
+  Runtime.getRuntime.addShutdownHook(new Thread() {
+    override def run(): Unit = {
+      notifyShutdown()
+    }
+  })
 
   // helper function definitions
   /**
@@ -44,6 +51,11 @@ object Base {
     if (ret != 0) {
       throw new MXNetError(_LIB.mxGetLastError())
     }
+  }
+
+  // Notify MXNet about a shutdown
+  private def notifyShutdown(): Unit = {
+    checkCall(_LIB.mxNotifyShutdown())
   }
 
   // Convert ctypes returned doc string information into parameters docstring.

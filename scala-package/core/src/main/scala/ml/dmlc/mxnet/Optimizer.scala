@@ -10,6 +10,15 @@ object Optimizer {
         val state = states.getOrElseUpdate(index, optimizer.createState(index, weight))
         optimizer.update(index, weight, grad, state)
       }
+      override def dispose(): Unit = {
+        states.values.foreach {
+          case array: NDArray => array.dispose()
+          case sym: Symbol => sym.dispose()
+          case exec: Executor => exec.dispose()
+          case kv: KVStore => kv.dispose()
+          case _ =>
+        }
+      }
     }
   }
 }
@@ -83,4 +92,5 @@ trait MXKVStoreUpdater {
    * @param local the value stored on local on this key
    */
   def update(key: Int, recv: NDArray, local: NDArray): Unit
+  def dispose(): Unit
 }

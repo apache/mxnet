@@ -77,6 +77,7 @@ object ModelTrain {
               kvStore = kv,
               batchEndCallback = new Speedometer(batchSize, 50),
               epochEndCallback = checkpoint)
+    kv.dispose()
   }
   // scalastyle:on parameterNum
 }
