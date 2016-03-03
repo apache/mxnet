@@ -460,13 +460,19 @@ class FeedForward(BASE_ESTIMATOR):
         if self.arg_params:
             arg_names = set(self.symbol.list_arguments())
             arg_names_not_used = set(self.arg_params.keys()).difference(arg_names)
+            arg_names_reinit = set(arg_names).difference(self.arg_params.keys() + ['data', 'softmax_label'])
             for name in arg_names_not_used:
                 logging.info('Skip parameter arg:%s', name)
+            for name in arg_names_reinit:
+                logging.info('Reinitialize parameter arg:%s', name)
         if self.aux_params:
             aux_names = set(self.symbol.list_auxiliary_states())
             aux_names_not_used = set(self.aux_params.keys()).difference(aux_names)
+            aux_names_reinit = set(aux_names).difference(self.aux_params.keys())
             for name in aux_names_not_used:
                 logging.info('Skip parameter aux:%s', name)
+            for name in aux_names_reinit:
+                logging.info('Reinitialize parameter aux:%s', name)
 
         # check if symbol contain duplicated names.
         _check_arguments(self.symbol)
