@@ -80,7 +80,7 @@ def write_record(args, image_list):
         except:
             print 'imread error:', item[1]
             return
-        if img == None:
+        if img is None:
             print 'read none error:', item[1]
             return
         if args.center_crop:
@@ -126,24 +126,7 @@ def write_record(args, image_list):
                 print 'time:', cur_time - pre_time, ' count:', len(sink)
                 pre_time = cur_time
 
-    try:
-        import multiprocessing
-        q_in = [multiprocessing.Queue() for i in range(args.num_thread)]
-        q_out = multiprocessing.Queue(1024)
-        for i in range(len(image_list)):
-            q_in[i % len(q_in)].put(image_list[i])
-        read_process = [multiprocessing.Process(target=read_worker, args=(q_in[i], q_out)) \
-                for i in range(args.num_thread)]
-        for p in read_process:
-            p.start()
-        write_process = multiprocessing.Process(target=write_worker, args=(q_out,args.prefix))
-        write_process.start()
-        for p in read_process:
-            p.join()
-        q_out.put(('finish', '', []))
-        write_process.join()
-    except ImportError:
-        print('multiprocessing not available, fall back to single threaded encoding')
+    if args.num_thread == 1:
         import Queue
         q_out = Queue.Queue()
         record = mx.recordio.MXRecordIO(args.prefix+'.rec', 'w')
@@ -160,6 +143,22 @@ def write_record(args, image_list):
                 cur_time = time.time()
                 print 'time:', cur_time - pre_time, ' count:', cnt
                 pre_time = cur_time
+    else:
+        import multiprocessing
+        q_in = [multiprocessing.Queue() for i in range(args.num_thread)]
+        q_out = multiprocessing.Queue(1024)
+        for i in range(len(image_list)):
+            q_in[i % len(q_in)].put(image_list[i])
+        read_process = [multiprocessing.Process(target=read_worker, args=(q_in[i], q_out)) \
+                for i in range(args.num_thread)]
+        for p in read_process:
+            p.start()
+        write_process = multiprocessing.Process(target=write_worker, args=(q_out,args.prefix))
+        write_process.start()
+        for p in read_process:
+            p.join()
+        q_out.put(('finish', '', []))
+        write_process.join()
 
 def main():
     parser = argparse.ArgumentParser(
