@@ -9,7 +9,7 @@ FactorScheduler <- function(step, factor_val) {
     if (num_update > count + step){
       count = count + step
       lr = lr * factor_val
-      print(paste("Update[", num_update, "]: learning rate is changed to", lr, "\n"))
+      cat(paste0("Update[", num_update, "]: learning rate is changed to ", lr, "\n"))
       optimizerEnv$lr <- lr
       optimizerEnv$count <- count
     }
