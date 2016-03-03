@@ -192,7 +192,7 @@ include tests/cpp/unittest.mk
 
 test: $(TEST)
 
-lint: rcpplint
+lint: rcpplint jnilint
 	python2 dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src plugin scripts python predict/python
 
 doc: doxygen
@@ -224,6 +224,9 @@ scalapkg:
 
 scalatest:
 	(cd $(ROOTDIR)/scala-package; mvn verify -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" $(SCALA_TEST_ARGS))
+
+jnilint:
+	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
 
 ifneq ($(EXTRA_OPERATORS),)
 clean:

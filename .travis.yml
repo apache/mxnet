@@ -8,7 +8,7 @@ os:
 
 env:
   # code analysis
-  #- TASK=lint
+  - TASK=lint
   # test doc build
   #- TASK=doc
   # build mxnet.so with CUDA
@@ -31,8 +31,6 @@ matrix:
       env: TASK=julia JULIA_VER=0.4
     - os: linux
       env: TASK=r_test
-    - os: osx
-      env: TASK=scala_lint
 
 # dependent apt packages
 addons:
