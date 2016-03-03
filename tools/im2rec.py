@@ -7,7 +7,7 @@ import random
 import numpy as np
 import argparse
 import threading
-import cv, cv2
+import cv2
 import time
 def list_image(root, recursive, exts):
     image_list = []
