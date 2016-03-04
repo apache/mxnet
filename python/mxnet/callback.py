@@ -97,7 +97,8 @@ class Speedometer(object):
                         logging.info("Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%f",
                                      param.epoch, count, speed, name, value)
                     else:
-                        logging_string = 'Epoch[%d] Batch[%d]\tSpeed: %.2f samples/sec\t' % (param.epoch, count, speed)
+                        logging_string = 'Epoch[%d] Batch[%d]\tSpeed: %.2f samples/sec\t' \
+                                         % (param.epoch, count, speed)
                         for i in range(len(param.eval_metric)):
                             name, value = param.eval_metric[i].get()
                             logging_string += 'Train-%s=%f ' % (name, value)
