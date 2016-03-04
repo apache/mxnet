@@ -8,7 +8,8 @@ mx.model.FeedForward.create(symbol, X, y = NULL, ctx = NULL,
   num.round = 10, optimizer = "sgd", initializer = mx.init.uniform(0.01),
   eval.data = NULL, eval.metric = NULL, epoch.end.callback = NULL,
   batch.end.callback = NULL, array.batch.size = 128,
-  array.layout = "auto", kvstore = "local", verbose = TRUE, ...)
+  array.layout = "auto", kvstore = "local", verbose = TRUE,
+  arg.params = NULL, aux.params = NULL, ...)
 }
 \arguments{
 \item{symbol}{The symbolic configuration of the neural network.}
@@ -58,6 +59,12 @@ The parameter synchronization scheme in multiple devices.}
 
 \item{verbose}{logical (default=TRUE)
 Specifies whether to print information on the iterations during training.}
+
+\item{arg.params}{list, optional
+Model parameter, list of name to NDArray of net's weights.}
+
+\item{aux.params}{list, optional
+Model parameter, list of name to NDArray of net's auxiliary states.}
 }
 \value{
 model A trained mxnet model.

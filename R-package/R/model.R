@@ -378,9 +378,14 @@ mx.model.select.layout.predict <- function(X, model) {
 #'     The parameter synchronization scheme in multiple devices.
 #' @param verbose logical (default=TRUE)
 #'     Specifies whether to print information on the iterations during training.     
+#' @param arg.params list, optional
+#'     Model parameter, list of name to NDArray of net's weights.
+#' @param aux.params list, optional
+#'     Model parameter, list of name to NDArray of net's auxiliary states.
 #' @return model A trained mxnet model.
 #'
 #' @export
+
 mx.model.FeedForward.create <-
 function(symbol, X, y=NULL, ctx=NULL,
          num.round=10, optimizer="sgd",
@@ -390,6 +395,7 @@ function(symbol, X, y=NULL, ctx=NULL,
          array.batch.size=128, array.layout="auto",
          kvstore="local",
          verbose=TRUE,
+         arg.params=NULL, aux.params=NULL,
          ...) {
   if (is.array(X) || is.matrix(X)) {
     if (array.layout == "auto") {
@@ -406,6 +412,8 @@ function(symbol, X, y=NULL, ctx=NULL,
   }
   input.shape <- dim((X$value())$data)
   params <- mx.model.init.params(symbol, input.shape, initializer, mx.cpu())
+  if (!is.null(arg.params)) params$arg.params <- arg.params
+  if (!is.null(aux.params)) params$aux.params <- aux.params
   if (is.null(ctx)) ctx <- mx.ctx.default()
   if (is.mx.context(ctx)) {
     ctx <- list(ctx)
