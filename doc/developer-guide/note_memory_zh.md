@@ -178,7 +178,7 @@ Script](https://github.com/dmlc/mxnet/tree/master/example/memcost)，你可以�
 
 -	使用图计算图巧妙和正确地分配内存。
 -	运行深度学习预测的消耗比深度学习训练的内存消耗要少得多。
--	
+
 
 贡献说明
 -------------------------
