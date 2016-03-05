@@ -547,6 +547,44 @@ class Adam(Optimizer):
         variance[:] = variance_t
 
 @register
+class AdaGrad(Optimizer):
+    """AdaGrad optimizer of Duchi et al., 2011,
+
+    This code follows the version in http://arxiv.org/pdf/1212.5701v1.pdf  Eq(5)
+    by Matthew D. Zeiler, 2012. AdaGrad will help the network to converge faster
+    in some cases.
+
+    Parameters
+    ----------
+    learning_rate : float, optional
+        Step size.
+        Default value is set to 0.05.
+    wd : float, optional
+        L2 regularization coefficient add to all the weights
+    rescale_grad : float, optional
+        rescaling factor of gradient.
+    eps: float, optional
+        A small float number to make the updating processing stable
+        Default value is set to 1e-7.
+    """
+    def __init__(self, learning_rate=0.05, wd=0., rescale_grad=1, eps=1e-7, arg_names=None):
+        super(AdaGrad, self).__init__(rescale_grad, arg_names, wd)
+        self.lr = learning_rate
+        self.float_stable_eps = eps
+        self.rescale_grad = rescale_grad
+    def create_state(self, index, weight):
+        return zeros(weight.shape, weight.context)   #history
+    def update(self, index, weight, grad, state):
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        grad = grad*self.rescale_grad
+        history = state
+        history[:] += (grad * grad)
+        delta = zeros(weight.shape, weight.context)
+        delta[:] = -self.lr * (grad / sqrt(history + self.float_stable_eps) + self.wd*weight)
+        weight[:] += delta
+
+@register
 class RMSProp(Optimizer):
     """RMSProp optimizer of Tieleman & Hinton, 2012,
 
