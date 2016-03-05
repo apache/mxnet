@@ -60,7 +60,7 @@ mx.init.Xavier <- function(rnd_type = "uniform", factor_type = "avg",
     }
 
     fan_out = shape[length(shape)]
-    fan_in  = shape[-length(shape)]
+    fan_in  = prod(shape[-length(shape)])
     factor_val  = 1
     if (factor_type == "avg") {
       factor_val = (fan_in + fan_out) / 2
