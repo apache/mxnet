@@ -577,12 +577,10 @@ class AdaGrad(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-        grad = grad*self.rescale_grad
+        grad = grad * self.rescale_grad
         history = state
         history[:] += (grad * grad)
-        delta = zeros(weight.shape, weight.context)
-        delta[:] = -self.lr * (grad / sqrt(history + self.float_stable_eps) + self.wd*weight)
-        weight[:] += delta
+        weight[:] += -self.lr * (grad / sqrt(history + self.float_stable_eps) + self.wd * weight)
 
 @register
 class RMSProp(Optimizer):
