@@ -1,5 +1,4 @@
 <project>
-
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>ml.dmlc.mxnet</groupId>
@@ -9,7 +8,7 @@
 
   <groupId>ml.dmlc.mxnet</groupId>
   <artifactId>libmxnet-scala</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.1-SNAPSHOT</version>
   <name>MXNet Scala Package - Native OSX-x86_64</name>
   <url>http://maven.apache.org</url>
 
