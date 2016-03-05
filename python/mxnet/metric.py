@@ -272,6 +272,8 @@ def create(metric):
 
     if callable(metric):
         return CustomMetric(metric)
+    elif isinstance(metric, EvalMetric):
+        return metric
     try:
         return metrics[metric.lower()]
     except:
