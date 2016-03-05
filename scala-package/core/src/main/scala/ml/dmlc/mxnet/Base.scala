@@ -1,6 +1,11 @@
 package ml.dmlc.mxnet
 
+import ml.dmlc.mxnet.util.NativeLibraryLoader
+import org.slf4j.{LoggerFactory, Logger}
+
 object Base {
+  private val logger: Logger = LoggerFactory.getLogger("MXNetJVM")
+
   // type definitions
   class RefInt(val value: Int = 0)
   class RefLong(val value: Long = 0)
@@ -29,10 +34,23 @@ object Base {
   type ExecutorHandleRef = RefLong
   type SymbolHandleRef = RefLong
 
-  System.loadLibrary("mxnet-scala")
+  try {
+    try {
+      System.loadLibrary("mxnet-scala")
+    } catch {
+      case e: UnsatisfiedLinkError =>
+        NativeLibraryLoader.loadLibrary("mxnet-scala")
+    }
+  } catch {
+    case e: UnsatisfiedLinkError =>
+      logger.error("Couldn't find native library mxnet-scala")
+      throw e
+  }
+
   val _LIB = new LibInfo
   checkCall(_LIB.nativeLibInit())
 
+  // TODO: shutdown hook won't work on Windows
   Runtime.getRuntime.addShutdownHook(new Thread() {
     override def run(): Unit = {
       notifyShutdown()

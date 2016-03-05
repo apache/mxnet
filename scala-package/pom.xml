@@ -15,6 +15,7 @@
     <module>core</module>
     <module>native</module>
     <module>examples</module>
+    <module>assembly</module>
   </modules>
   <build>
     <pluginManagement>
@@ -28,54 +29,19 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
-            <source>1.8</source>
-            <target>1.8</target>
+            <source>1.6</source>
+            <target>1.6</target>
             <encoding>UTF-8</encoding>
           </configuration>
         </plugin>
         <plugin>
           <artifactId>maven-resources-plugin</artifactId>
           <version>2.7</version>
-          <executions>
-            <execution>
-              <id>copy-resources</id>
-              <phase>validate</phase>
-              <goals>
-                <goal>copy-resources</goal>
-              </goals>
-              <configuration>
-                <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-                <resources>
-                  <resource>
-                    <directory>src/main/resources</directory>
-                    <filtering>true</filtering>
-                  </resource>
-                </resources>
-              </configuration>
-            </execution>
-          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-dependency-plugin</artifactId>
           <version>2.9</version>
-          <executions>
-            <execution>
-              <id>copy-dependencies</id>
-              <phase>package</phase>
-              <goals>
-                <goal>copy-dependencies</goal>
-              </goals>
-              <configuration>
-                <outputDirectory>${project.build.outputDirectory}/lib</outputDirectory>
-                <includeScope>runtime</includeScope>
-                <excludeScope>test,provided</excludeScope>
-                <overWriteReleases>false</overWriteReleases>
-                <overWriteSnapshots>false</overWriteSnapshots>
-                <overWriteIfNewer>true</overWriteIfNewer>
-              </configuration>
-            </execution>
-          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -94,6 +60,26 @@
               </configuration>
             </execution>
           </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>2.5.5</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>2.4.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-install-plugin</artifactId>
+          <version>2.5.2</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>2.8.2</version>
         </plugin>
         <!-- Surefire runs all Java tests -->
         <plugin>
@@ -117,15 +103,12 @@
           <executions>
             <execution>
               <id>test</id>
-              <!-- We put it in the integration-test phase,
-                   because the test suites require the jni library,
-                   which means, in order to run the unit tests,
-                   we have to compile all the modules first.
-                   Run in this way:
-                   mvn clean package -P osx-x86_64 && mvn integration-test -P osx-x86_64
-                   for linux:
-                   mvn clean package -P linux-x86_64 && mvn integration-test -P linux-x86_64
-                   This is a temporary solution. -->
+              <!--
+               We put it in the integration-test phase,
+               because the test suites require the jni library,
+               which means, in order to run the unit tests,
+               we have to compile all the modules first.
+              -->
               <phase>integration-test</phase>
               <goals>
                 <goal>test</goal>
