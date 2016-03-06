@@ -39,10 +39,9 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     // test_loop
     mnistIter.reset()
     batchCount = 0
-    var batch = mnistIter.next()
-    while (batch != null) {
+    while (mnistIter.hasNext) {
+      mnistIter.next()
       batchCount += 1
-      batch = mnistIter.next()
     }
     // test loop
     assert(nBatch === batchCount)
@@ -66,54 +65,50 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
   /**
     * default skip this test for saving time
     */
-//  test("test ImageRecordIter") {
-//    // get data
-//    "./scripts/get_cifar_data.sh" !
-//
-//    val params = Map(
-//      "path_imgrec" -> "data/cifar/train.rec",
-//      "mean_img" -> "data/cifar/cifar10_mean.bin",
-//      "rand_crop" -> "False",
-//      "and_mirror" -> "False",
-//      "shuffle" -> "False",
-//      "data_shape" -> "(3,28,28)",
-//      "batch_size" -> "100",
-//      "preprocess_threads" -> "4",
-//      "prefetch_buffer" -> "1"
-//    )
-//    val imgRecIter = IO.ImageRecordIter(params)
-//    val nBatch = 500
-//    var batchCount = 0
-//    // test provideData
-//    val provideData = imgRecIter.provideData
-//    val provideLabel = imgRecIter.provideLabel
-//    assert(provideData("data") === Array(100, 3, 28, 28))
-//    assert(provideLabel("label") === Array(100))
-//
-//    imgRecIter.reset()
-//    while(imgRecIter.hasNext()) {
-//      val batch = imgRecIter.next()
-//      batchCount += 1
-//    }
-//    // test loop
-//    assert(batchCount === nBatch)
-//    // test reset
-//    imgRecIter.reset()
-//    imgRecIter.next()
-//    val label0 = imgRecIter.getLabel().head.toArray
-//    val data0 = imgRecIter.getData().head.toArray
-//    imgRecIter.reset()
-//    imgRecIter.reset()
-//    imgRecIter.reset()
-//    imgRecIter.reset()
-//    imgRecIter.reset()
-//    val label1 = imgRecIter.getLabel().head.toArray
-//    val data1 = imgRecIter.getData().head.toArray
-//    assert(label0 === label1)
-//    assert(data0 === data1)
-//  }
+  test("test ImageRecordIter") {
+    // get data
+    "./scripts/get_cifar_data.sh" !
 
-//  test("test NDarryIter") {
-//
-//  }
+    val params = Map(
+      "path_imgrec" -> "data/cifar/train.rec",
+      "mean_img" -> "data/cifar/cifar10_mean.bin",
+      "rand_crop" -> "False",
+      "and_mirror" -> "False",
+      "shuffle" -> "False",
+      "data_shape" -> "(3,28,28)",
+      "batch_size" -> "100",
+      "preprocess_threads" -> "4",
+      "prefetch_buffer" -> "1"
+    )
+    val imgRecIter = IO.ImageRecordIter(params)
+    val nBatch = 500
+    var batchCount = 0
+    // test provideData
+    val provideData = imgRecIter.provideData
+    val provideLabel = imgRecIter.provideLabel
+    assert(provideData("data").toArray === Array(100, 3, 28, 28))
+    assert(provideLabel("label").toArray === Array(100))
+
+    imgRecIter.reset()
+    while (imgRecIter.hasNext) {
+      imgRecIter.next()
+      batchCount += 1
+    }
+    // test loop
+    assert(batchCount === nBatch)
+    // test reset
+    imgRecIter.reset()
+    imgRecIter.next()
+    val label0 = imgRecIter.getLabel().head.toArray
+    val data0 = imgRecIter.getData().head.toArray
+    imgRecIter.reset()
+    imgRecIter.reset()
+    imgRecIter.reset()
+    imgRecIter.reset()
+    imgRecIter.reset()
+    val label1 = imgRecIter.getLabel().head.toArray
+    val data1 = imgRecIter.getData().head.toArray
+    assert(label0 === label1)
+    assert(data0 === data1)
+  }
 }

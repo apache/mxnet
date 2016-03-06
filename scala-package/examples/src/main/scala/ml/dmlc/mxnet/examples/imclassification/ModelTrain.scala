@@ -13,7 +13,7 @@ object ModelTrain {
           network: Symbol, dataLoader: (String, Int, KVStore) => (DataIter, DataIter),
           kvStore: String, numEpochs: Int, modelPrefix: String = null, loadEpoch: Int = -1,
           lr: Float = 0.1f, lrFactor: Float = 1f, lrFactorEpoch: Float = 1f,
-          clipGradient: Float = 0f): Unit = {
+          clipGradient: Float = 0f, monitorSize: Int = -1): Unit = {
     // kvstore
     // TODO: if local mode and no gpu is used, set kv = null
     val kv = KVStore.create(kvStore)
@@ -71,6 +71,9 @@ object ModelTrain {
                                 auxParams = auxParams,
                                 beginEpoch = beginEpoch,
                                 epochSize = epochSize)
+    if (monitorSize > 0) {
+      model.setMonitor(new Monitor(monitorSize))
+    }
     model.fit(trainData = train,
               evalData = validation,
               evalMetric = new Accuracy(),

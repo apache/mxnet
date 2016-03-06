@@ -45,7 +45,6 @@ Here is a Scala example of how training a simple 3-layer MLP on MNIST looks like
 ```scala
 import ml.dmlc.mxnet._
 import ml.dmlc.mxnet.optimizer.SGD
-import org.slf4j.LoggerFactory
 
 // model definition
 val data = Symbol.Variable("data")
@@ -95,10 +94,9 @@ val prob = probArrays(0)
 import scala.collection.mutable.ListBuffer
 valDataIter.reset()
 val labels = ListBuffer.empty[NDArray]
-var evalData = valDataIter.next()
-while (evalData != null) {
+while (valDataIter.hasNext) {
+  val evalData = valDataIter.next()
   labels += evalData.label(0).copy()
-  evalData = valDataIter.next()
 }
 val y = NDArray.concatenate(labels)
 

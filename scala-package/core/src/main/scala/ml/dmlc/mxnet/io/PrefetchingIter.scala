@@ -51,4 +51,6 @@ class PrefetchingIter(val iters: List[DataIter],
   override def provideData: Map[String, Shape] = ???
 
   override def hasNext: Boolean = ???
+
+  override def batchSize: Int = ???
 }

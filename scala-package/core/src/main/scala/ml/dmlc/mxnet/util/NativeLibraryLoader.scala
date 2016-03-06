@@ -80,7 +80,7 @@ object NativeLibraryLoader {
    */
   private def unifyOSName(osname: String): String = {
     if (osname.startsWith("Windows")) {
-      return "Windows"
+      "Windows"
     }
     osname
   }
