@@ -317,8 +317,8 @@ extern "C" void KVStoreUpdaterCallbackFunc
   env->DeleteLocalRef(ndRecv);
   env->DeleteLocalRef(ndObjClass);
   env->DeleteLocalRef(updtClass);
-  // FIXME: This function can be called multiple times,
-  // can we find a way to safely destroy these two objects ?
+  // FIXME(Yizhi): This function can be called multiple times,
+  // can we find a way to safely destroy this object ?
   // env->DeleteGlobalRef(updaterFuncObjGlb);
 }
 
@@ -490,39 +490,33 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorPrint
   return ret;
 }
 
+extern "C" void ExecutorMonitorCallbackFunc
+  (const char *name, NDArrayHandle arr, void *handle) {
+  jobject callbackFuncObjGlb = static_cast<jobject>(handle);
+
+  JNIEnv *env;
+  _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+
+  // find java callback method
+  jclass callbackClass = env->GetObjectClass(callbackFuncObjGlb);
+  jmethodID callbackFunc = env->GetMethodID(callbackClass, "invoke", "(Ljava/lang/String;J)V");
+
+  // invoke java callback method
+  jstring jname = env->NewStringUTF(name);
+  env->CallVoidMethod(callbackFuncObjGlb, callbackFunc, jname, reinterpret_cast<jlong>(arr));
+  env->DeleteLocalRef(jname);
+
+  env->DeleteLocalRef(callbackClass);
+  // FIXME(Yizhi): This function can be called multiple times,
+  // can we find a way to safely destroy this global ref ?
+  // env->DeleteGlobalRef(callbackFuncObjGlb);
+}
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorSetMonitorCallback
   (JNIEnv *env, jobject obj, jlong executorPtr, jobject callbackFuncObj) {
   jobject callbackFuncObjGlb = env->NewGlobalRef(callbackFuncObj);
-  std::function<void(const char *, NDArrayHandle)> callback
-  = [env, callbackFuncObjGlb](const char *name, NDArrayHandle array) {
-    // find java callback method
-    jclass callbackClass = env->GetObjectClass(callbackFuncObjGlb);
-    jmethodID invokeFunc = env->GetMethodID(callbackClass,
-      "invoke", "(Ljava/lang/String;Lml/dmlc/mxnet/Base$RefLong;)V");
-
-    jstring jname = env->NewStringUTF(name);
-    // ndArray handle
-    jclass ndHandleClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
-    jmethodID ndHandleCont = env->GetMethodID(ndHandleClass, "<init>", "(J)V");
-    jobject jNDArrayHandle
-      = env->NewObject(ndHandleClass, ndHandleCont, reinterpret_cast<uint64_t>(array));
-
-    env->CallVoidMethod(callbackFuncObjGlb, invokeFunc, jname, jNDArrayHandle);
-    env->DeleteGlobalRef(callbackFuncObjGlb);
-  };
-  /* TODO: we need to modify Executor::SetMonitorCallback, make it take std::function as param
-  try {
-    mxnet::Executor *exec = static_cast<mxnet::Executor*>((ExecutorHandle)executorPtr);
-    exec->SetMonitorCallback(callback);
-  } catch(dmlc::Error &except) {
-    // It'll be too complicated to set & get mx error in jni code.
-    // thus simply return -1 to indicate a failure.
-    // Notice that we'll NOT be able to run MXGetLastError
-    // to get the error message after this function fails.
-    return -1;
-  }
-  */
-  return 0;
+  return MXExecutorSetMonitorCallback(reinterpret_cast<ExecutorHandle>(executorPtr),
+                                      ExecutorMonitorCallbackFunc,
+                                      reinterpret_cast<void *>(callbackFuncObjGlb));
 }
 
 JNIEXPORT jstring JNICALL Java_ml_dmlc_mxnet_LibInfo_mxGetLastError(JNIEnv * env, jobject obj) {

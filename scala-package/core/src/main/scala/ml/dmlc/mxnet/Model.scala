@@ -385,6 +385,16 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
   // internal helper state
   var predExec: Executor = null
 
+  private var monitor: Option[Monitor] = None
+
+  def setMonitor(m: Monitor): Unit = {
+    monitor = Option(m)
+  }
+
+  def unsetMonitor(): Unit = {
+    setMonitor(null)
+  }
+
   // Initialize weight parameters and auxiliary states
   private def initParams(inputShapes: Map[String, Shape], overwrite: Boolean = false)
   : (Seq[String], Seq[String], Seq[String]) = {
@@ -601,7 +611,8 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
       evalMetric = evalMetric,
       epochEndCallback = Option(epochEndCallback),
       batchEndCallback = Option(batchEndCallback),
-      logger = logger, workLoadList = workLoadList)
+      logger = logger, workLoadList = workLoadList,
+      monitor = monitor)
   }
 
   /**

@@ -96,7 +96,8 @@ object TrainMnist {
         network = net, dataLoader = getIterator(dataShape),
         kvStore = inst.kvStore, numEpochs = inst.numEpochs,
         modelPrefix = inst.modelPrefix, loadEpoch = inst.loadEpoch,
-        lr = inst.lr, lrFactor = inst.lrFactor, lrFactorEpoch = inst.lrFactorEpoch)
+        lr = inst.lr, lrFactor = inst.lrFactor, lrFactorEpoch = inst.lrFactorEpoch,
+        monitorSize = inst.monitor)
       logger.info("Finish fit ...")
     } catch {
       case ex: Exception => {
@@ -110,30 +111,32 @@ object TrainMnist {
 
 class TrainMnist {
   @Option(name = "--network", usage = "the cnn to use: ['mlp', 'lenet']")
-  private var network: String = "mlp"
+  private val network: String = "mlp"
   @Option(name = "--data-dir", usage = "the input data directory")
-  private var dataDir: String = "mnist/"
+  private val dataDir: String = "mnist/"
   @Option(name = "--gpus", usage = "the gpus will be used, e.g. '0,1,2,3'")
-  private var gpus: String = _
+  private val gpus: String = null
   @Option(name = "--cpus", usage = "the cpus will be used, e.g. '0,1,2,3'")
-  private var cpus: String = _
+  private val cpus: String = null
   @Option(name = "--num-examples", usage = "the number of training examples")
-  private var numExamples: Int = 60000
+  private val numExamples: Int = 60000
   @Option(name = "--batch-size", usage = "the batch size")
-  private var batchSize: Int = 128
+  private val batchSize: Int = 128
   @Option(name = "--lr", usage = "the initial learning rate")
-  private var lr: Float = 0.1f
+  private val lr: Float = 0.1f
   @Option(name = "--model-prefix", usage = "the prefix of the model to load/save")
-  private var modelPrefix: String = _
+  private val modelPrefix: String = null
   @Option(name = "--num-epochs", usage = "the number of training epochs")
-  private var numEpochs = 10
+  private val numEpochs = 10
   @Option(name = "--load-epoch", usage = "load the model on an epoch using the model-prefix")
-  private var loadEpoch: Int = -1
+  private val loadEpoch: Int = -1
   @Option(name = "--kv-store", usage = "the kvstore type")
-  private var kvStore = "local"
+  private val kvStore = "local"
   @Option(name = "--lr-factor",
           usage = "times the lr with a factor for every lr-factor-epoch epoch")
-  private var lrFactor: Float = 1f
+  private val lrFactor: Float = 1f
   @Option(name = "--lr-factor-epoch", usage = "the number of epoch to factor the lr, could be .5")
-  private var lrFactorEpoch: Float = 1f
+  private val lrFactorEpoch: Float = 1f
+  @Option(name = "--monitor", usage = "monitor the training process every N batch")
+  private val monitor: Int = -1
 }
