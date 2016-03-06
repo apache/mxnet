@@ -120,7 +120,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         arg_params, aux_params,
                         begin_epoch, end_epoch, epoch_size, optimizer,
                         kvstore, update_on_kvstore,
-                        train_data, eval_data=None, eval_metric=None,
+                        train_data, eval_data=None, eval_metric=None, eval_epoch=1,
                         epoch_end_callback=None, batch_end_callback=None,
                         logger=None, work_load_list=None, monitor=None,
                         eval_batch_end_callback=None, sym_gen=None):
@@ -284,7 +284,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 epoch_end_callback(epoch, symbol, arg_params, aux_params)
 
         # evaluation
-        if eval_data:
+        if eval_data and (epoch+1) % eval_epoch == 0:
             eval_metric.reset()
             eval_data.reset()
             for i, eval_batch in enumerate(eval_data):
@@ -688,7 +688,7 @@ class FeedForward(BASE_ESTIMATOR):
         return eval_metric.get()[1]
 
 
-    def fit(self, X, y=None, eval_data=None, eval_metric='acc',
+    def fit(self, X, y=None, eval_data=None, eval_metric='acc', eval_epoch=1,
             epoch_end_callback=None, batch_end_callback=None, kvstore='local', logger=None,
             work_load_list=None, monitor=None, eval_batch_end_callback=None):
         """Fit the model.
@@ -780,7 +780,7 @@ class FeedForward(BASE_ESTIMATOR):
                             epoch_size=self.epoch_size,
                             optimizer=optimizer,
                             train_data=data, eval_data=eval_data,
-                            eval_metric=eval_metric,
+                            eval_metric=eval_metric, eval_epoch=eval_epoch,
                             epoch_end_callback=epoch_end_callback,
                             batch_end_callback=batch_end_callback,
                             kvstore=kvstore, update_on_kvstore=update_on_kvstore,
@@ -845,7 +845,7 @@ class FeedForward(BASE_ESTIMATOR):
     @staticmethod
     def create(symbol, X, y=None, ctx=None,
                num_epoch=None, epoch_size=None, optimizer='sgd', initializer=Uniform(0.01),
-               eval_data=None, eval_metric='acc',
+               eval_data=None, eval_metric='acc', eval_epoch=1,
                epoch_end_callback=None, batch_end_callback=None,
                kvstore='local', logger=None, work_load_list=None,
                eval_batch_end_callback=None, **kwargs):
@@ -898,6 +898,7 @@ class FeedForward(BASE_ESTIMATOR):
                             epoch_size=epoch_size,
                             optimizer=optimizer, initializer=initializer, **kwargs)
         model.fit(X, y, eval_data=eval_data, eval_metric=eval_metric,
+                  eval_epoch=eval_epoch,
                   epoch_end_callback=epoch_end_callback,
                   batch_end_callback=batch_end_callback,
                   kvstore=kvstore,
