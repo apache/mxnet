@@ -5,6 +5,8 @@ from __future__ import absolute_import
 import ctypes
 import warnings
 import sys
+import functools
+import operator
 import numpy as np
 from .base import _LIB, string_types, numeric_types
 from .base import c_array, py_str, c_str, mx_real_t
@@ -614,6 +616,63 @@ def ones(shape, ctx=None, dtype=mx_real_t):
     arr = empty(shape, ctx, dtype)
     arr[:] = 1.0
     return arr
+
+def sum(a, axis=None, keepdims=False):
+    # Sanity checks.
+    ndim = len(a.shape)
+    if axis is None:
+        axis = list(range(ndim))
+    elif type(axis) is int:
+        axis = [axis]
+    elif type(axis) is tuple:
+        axis = list(axis)
+    else:
+        raise TypeError('\'%s\' object cannot be interpreted as an integer' % type(axis).__name__)
+    for i in axis:
+        if type(i) is not int:
+            raise TypeError('\'%s\' object cannot be interpreted as an integer' % type(i).__name__)
+    axis = sorted(map(lambda x: x if 0 <= x else x + ndim, axis))
+    for i in axis:
+        if i < 0 or ndim <= i:
+            raise ValueError('\'axis\' entry is out of bounds')
+    if len(set(axis)) != len(axis):
+        raise ValueError('duplicate value in \'axis\'')
+    assert(len(axis) != 0)
+
+    # Get consecutive ranges.
+    def get_ranges(l):
+        i = 0
+        j = 0
+        ret = []
+        while j < len(l) - 1:
+            if l[j] + 1 != l[j + 1]:
+                ret.append((l[i], l[j]))
+                i = j + 1
+            j += 1
+        ret.append((l[i], l[j]))
+        return ret
+    r = get_ranges(axis)
+
+    # Reduction.
+    shape = a.shape
+    ret = a
+    for i in reversed(r):
+        old_shape = shape
+        after_dim = shape[i[1] + 1:]
+        after = functools.reduce(operator.mul, after_dim, 1)
+        before_dim = shape[:i[0]]
+        before = functools.reduce(operator.mul, before_dim, 1)
+        between = functools.reduce(operator.mul, shape[i[0]:i[1] + 1], 1)
+        interval = i[1] - i[0] + 1
+        shape = before_dim + tuple([1] * (interval if keepdims else 0)) + after_dim
+        reduction_shape = (before, between, after)
+        ret = ret.reshape(reduction_shape)
+        ret = sum_mid_internal(ret)
+        if len(shape) == 0:
+            ret = ret.reshape((1,)).asnumpy()[0]
+        else:
+            ret = ret.reshape(shape)
+    return ret
 
 def full(shape, val, ctx=None):
     """Create a new NDArray filled with given value, with specified shape.
