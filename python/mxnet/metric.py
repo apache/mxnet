@@ -146,8 +146,8 @@ class MAE(EvalMetric):
             if len(label.shape) == 1:
                 label = label.reshape(label.shape[0], 1)
 
-            self.sum_metric += numpy.abs(label - pred).sum()
-            self.num_inst += numpy.prod(label.shape)
+            self.sum_metric += numpy.abs(label - pred).mean()
+            self.num_inst += 1 # numpy.prod(label.shape)
 
 class MSE(EvalMetric):
     """Calculate Mean Squared Error loss"""
@@ -165,7 +165,7 @@ class MSE(EvalMetric):
                 label = label.reshape(label.shape[0], 1)
 
             self.sum_metric += ((label - pred)**2.0).mean()
-            self.num_inst += numpy.prod(label.shape)
+            self.num_inst += 1 # numpy.prod(label.shape)
 
 class RMSE(EvalMetric):
     """Calculate Root Mean Squred Error loss"""
@@ -183,7 +183,7 @@ class RMSE(EvalMetric):
                 label = label.reshape(label.shape[0], 1)
 
             self.sum_metric += numpy.sqrt(((label - pred)**2.0).mean())
-        self.num_inst += 1
+            self.num_inst += 1
 
 class Torch(EvalMetric):
     """Dummy metric for torch criterions"""
