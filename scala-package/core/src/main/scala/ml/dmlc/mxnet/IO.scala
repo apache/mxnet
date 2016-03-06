@@ -118,16 +118,19 @@ case class DataBatch(data: IndexedSeq[NDArray],
 /**
  * DataIter object in mxnet.
  */
-abstract class DataIter(val batchSize: Int = 0) extends Iterator[DataBatch] {
+abstract class DataIter extends Iterator[DataBatch] {
   /**
    * reset the iterator
    */
   def reset(): Unit
 
+  def batchSize: Int
+
   /**
    * get next data batch from iterator
    * @return
    */
+  @throws(classOf[NoSuchElementException])
   def next(): DataBatch = {
     new DataBatch(getData(), getLabel(), getIndex(), getPad())
   }

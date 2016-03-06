@@ -242,9 +242,8 @@ object Model {
       trainData.reset()
       while (!epochDone) {
         var doReset = true
-        // TODO: make DataIter implement Iterator
-        var dataBatch = trainData.next()
-        while (doReset && dataBatch != null) {
+        while (doReset && trainData.hasNext) {
+          val dataBatch = trainData.next()
           executorManager.loadDataBatch(dataBatch)
           monitor.foreach(_.tic())
           executorManager.forward(isTrain = true)
@@ -271,7 +270,6 @@ object Model {
             doReset = false
           }
           dataBatch.dispose()
-          dataBatch = trainData.next()
         }
         if (doReset) {
           trainData.reset()
@@ -290,13 +288,12 @@ object Model {
         evalMetric.reset()
         evalDataIter.reset()
         // TODO: make DataIter implement Iterator
-        var evalBatch = evalDataIter.next()
-        while (evalBatch != null) {
+        while (evalDataIter.hasNext) {
+          val evalBatch = evalDataIter.next()
           executorManager.loadDataBatch(evalBatch)
           executorManager.forward(isTrain = false)
           evalMetric.update(evalBatch.label, executorManager.cpuOutputArrays)
           evalBatch.dispose()
-          evalBatch = evalDataIter.next()
         }
 
         val (name, value) = evalMetric.get
@@ -477,8 +474,8 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
     val outputs = Array.fill(predExec.outputs.length)(ListBuffer.empty[NDArray])
 
     var i = 0
-    var batch = data.next()
-    while (batch != null && i != numBatch) {
+    while (data.hasNext && i != numBatch) {
+      val batch = data.next()
       i += 1
       Executor.loadData(batch, dataArrays)
       predExec.forward(isTrain = false)
@@ -487,10 +484,13 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
       for ((list, nd) <- outputs zip predExec.outputs) {
         list += nd.slice(0, realSize).copy()
       }
-      batch = data.next()
     }
-    // TODO: we can use Symbol.concat to do the same thing. Can it be more efficient?
-    outputs.map(NDArray.concatenate(_))
+    // TODO(Yizhi): we can use Symbol.concat to do the same thing. Can it be more efficient?
+    val results = outputs.map(NDArray.concatenate(_))
+    for (output <- outputs) {
+      output.foreach(_.dispose())
+    }
+    results
   }
 
   /**

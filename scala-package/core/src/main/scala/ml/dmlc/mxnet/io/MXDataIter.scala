@@ -21,17 +21,22 @@ class MXDataIter private[mxnet](private[mxnet] val handle: DataIterHandle,
   // (may be this is not the best way to do this work,
   // fix me if any better way found)
   private var currentBatch: DataBatch = null
-  iterNext()
-  private val data = currentBatch.data(0)
-  private val label = currentBatch.label(0)
-  reset()
 
-  // properties
-  val _provideData: Map[String, Shape] = Map(dataName -> data.shape)
-  val _provideLabel: Map[String, Shape] = Map(labelName -> label.shape)
-  override val batchSize = data.shape(0)
+  private val (_provideData: Map[String, Shape],
+               _provideLabel: Map[String, Shape],
+               _batchSize: Int) =
+    if (hasNext) {
+      iterNext()
+      val data = currentBatch.data(0)
+      val label = currentBatch.label(0)
+      reset()
+      // properties
+      (Map(dataName -> data.shape), Map(labelName -> label.shape), data.shape(0))
+    } else {
+      (null, null, 0)
+    }
+
   private var disposed = false
-
   override protected def finalize(): Unit = {
     dispose()
   }
@@ -51,16 +56,12 @@ class MXDataIter private[mxnet](private[mxnet] val handle: DataIterHandle,
    * reset the iterator
    */
   override def reset(): Unit = {
-    // TODO: self._debug_at_begin = True
     currentBatch = null
     checkCall(_LIB.mxDataIterBeforeFirst(handle))
   }
 
+  @throws(classOf[NoSuchElementException])
   override def next(): DataBatch = {
-    // TODO
-    // if self._debug_skip_load and not self._debug_at_begin:
-    //   return DataBatch(data =[self.getdata()], label =[self.getlabel()],
-    //                    pad = self.getpad(), index = self.getindex())
     if (currentBatch == null) {
       iterNext()
     }
@@ -70,8 +71,7 @@ class MXDataIter private[mxnet](private[mxnet] val handle: DataIterHandle,
       currentBatch = null
       batch
     } else {
-      // TODO raise StopIteration
-      null
+      throw new NoSuchElementException
     }
   }
 
@@ -145,6 +145,8 @@ class MXDataIter private[mxnet](private[mxnet] val handle: DataIterHandle,
       iterNext()
     }
   }
+
+  override def batchSize: Int = _batchSize
 }
 
 // scalastyle:on finalize

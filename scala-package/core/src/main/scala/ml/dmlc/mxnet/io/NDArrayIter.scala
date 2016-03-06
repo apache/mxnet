@@ -8,7 +8,7 @@ import ml.dmlc.mxnet.{DataIter, NDArray, Shape}
  * NDArrayIter object in mxnet. Taking NDArray or numpy array to get dataiter.
  * @param data NDArrayIter supports single or multiple data and label.
  * @param label Same as data, but is not fed to the model during testing.
- * @param batchSize Batch Size
+ * @param dataBatchSize Batch Size
  * @param shuffle Whether to shuffle the data
  * @param lastBatchHandle "pad", "discard" or "roll_over". How to handle the last batch
  * @note
@@ -17,8 +17,8 @@ import ml.dmlc.mxnet.{DataIter, NDArray, Shape}
  * for training and can cause problems if used for prediction.
  */
 class NDArrayIter(data: NDArray, label: NDArray = null,
-                  batchSize: Int = 1, shuffle: Boolean = false,
-                  lastBatchHandle: String = "pad") extends DataIter(batchSize) {
+                  private val dataBatchSize: Int = 1, shuffle: Boolean = false,
+                  lastBatchHandle: String = "pad") extends DataIter {
   /**
    * reset the iterator
    */
@@ -56,4 +56,6 @@ class NDArrayIter(data: NDArray, label: NDArray = null,
   override def provideLabel: Map[String, Shape] = ???
 
   override def hasNext: Boolean = ???
+
+  override def batchSize: Int = dataBatchSize
 }
