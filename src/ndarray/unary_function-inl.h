@@ -112,6 +112,27 @@ void Reduce(const TBlob &src,
   out = mshadow::expr::reduce_except_dim<0, Reducer>(in);
 }
 
+template <typename xpu, typename Reducer, int dimension>
+void Reduce2D(TBlob const& src,
+              TBlob* ret,
+              OpReqType,
+              RunContext ctx) {
+  static_assert(dimension == 0 || dimension == 1, "Reduction dimension must be 0 or 1.");
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  mshadow::Tensor<xpu, 1> out = ret->get<xpu, 1, real_t>(s);
+  mshadow::Tensor<xpu, 2> in = src.get<xpu, 2, real_t>(s);
+  out = mshadow::expr::reduce_with_axis<Reducer, false>(in, dimension);
+}
+
+template <int dimension>
+inline TShape Reduce2DShape(TShape const& ishape) {
+  static_assert(dimension == 0 || dimension == 1, "Reduction dimension must be 0 or 1.");
+  CHECK_EQ(ishape.ndim(), 2) << "Input shape must be 2 dimensional.";
+  std::vector<mshadow::index_t> shape;
+  shape.push_back(ishape[1 - dimension]);
+  return TShape(shape.begin(), shape.end());
+}
+
 template<typename xpu, typename Reducer, bool get_mask>
 void ReduceChannel(const TBlob &src,
                    TBlob *ret,
@@ -242,6 +263,18 @@ MXNET_REGISTER_TBLOB_FUN(sum, XPU)
 .set_shape_infer(ScalarShape)
 .describe("Take sum of the src."
           "The result will be ndarray of shape (1,) on the same device.");
+// sum_row
+MXNET_REGISTER_TBLOB_FUN(sum_row, XPU)
+.set_function(XPU::kDevMask, Reduce2D<XPU, mshadow::red::sum, 0>, false, false)
+.set_shape_infer(Reduce2DShape<0>)
+.describe("Take sum on row of the src.");
+
+// sum_col
+MXNET_REGISTER_TBLOB_FUN(sum_col, XPU)
+.set_function(XPU::kDevMask, Reduce2D<XPU, mshadow::red::sum, 1>, false, false)
+.set_shape_infer(Reduce2DShape<1>)
+.describe("Take sum on column of the src.");
+
 // argmax channel
 MXNET_REGISTER_TBLOB_FUN(argmax_channel, XPU)
 .set_function(XPU::kDevMask, ReduceChannel<XPU, mshadow::red::maximum, true>, false, false)
