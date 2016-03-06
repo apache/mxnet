@@ -112,23 +112,22 @@ void Reduce(const TBlob &src,
   out = mshadow::expr::reduce_except_dim<0, Reducer>(in);
 }
 
-template <typename xpu, typename Reducer, int dimension>
-void Reduce2D(TBlob const& src,
-              TBlob* ret,
-              OpReqType,
-              RunContext ctx) {
-  CHECK(dimension == 0 || dimension == 1) << "Reduction dimension must be 0 or 1.";
+template <typename xpu, typename Reducer>
+void ReduceMid(TBlob const& src,
+               TBlob* ret,
+               OpReqType,
+               RunContext ctx) {
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
-  mshadow::Tensor<xpu, 1> out = ret->get<xpu, 1, real_t>(s);
-  mshadow::Tensor<xpu, 2> in = src.get<xpu, 2, real_t>(s);
-  out = mshadow::expr::reduce_with_axis<Reducer, false>(in, dimension);
+  mshadow::Tensor<xpu, 2> out = ret->get<xpu, 2, real_t>(s);
+  mshadow::Tensor<xpu, 3> in = src.get<xpu, 3, real_t>(s);
+  out = mshadow::expr::reduce_with_axis<Reducer, false>(in, 1);
 }
 
-template <int dimension>
-inline TShape Reduce2DShape(TShape const& ishape) {
-  CHECK(dimension == 0 || dimension == 1) << "Reduction dimension must be 0 or 1.";
+inline TShape ReduceMidShape(TShape const& ishape) {
+  CHECK_EQ(ishape.ndim(), 3) << "Input shape must be 3 dimensional.";
   std::vector<mshadow::index_t> shape;
-  shape.push_back(ishape[1 - dimension]);
+  shape.push_back(ishape[0]);
+  shape.push_back(ishape[2]);
   return TShape(shape.begin(), shape.end());
 }
 
@@ -262,17 +261,12 @@ MXNET_REGISTER_TBLOB_FUN(sum_internal, XPU)
 .set_shape_infer(ScalarShape)
 .describe("Take sum of the src."
           "The result will be ndarray of shape (1,) on the same device.");
-// sum_row
-MXNET_REGISTER_TBLOB_FUN(sum_row_internal, XPU)
-.set_function(XPU::kDevMask, Reduce2D<XPU, mshadow::red::sum, 0>, false, false)
-.set_shape_infer(Reduce2DShape<0>)
-.describe("Take sum on row of the src.");
 
-// sum_col
-MXNET_REGISTER_TBLOB_FUN(sum_col_internal, XPU)
-.set_function(XPU::kDevMask, Reduce2D<XPU, mshadow::red::sum, 1>, false, false)
-.set_shape_infer(Reduce2DShape<1>)
-.describe("Take sum on column of the src.");
+// sum_mid
+MXNET_REGISTER_TBLOB_FUN(sum_mid_internal, XPU)
+.set_function(XPU::kDevMask, ReduceMid<XPU, mshadow::red::sum>, false, false)
+.set_shape_infer(ReduceMidShape)
+.describe("Take sum on medium dimension of the 3D src.");
 
 // argmax channel
 MXNET_REGISTER_TBLOB_FUN(argmax_channel, XPU)
