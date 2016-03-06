@@ -96,3 +96,4 @@ List of Contributors
 * [Lodewic van Twillert](https://github.com/Lodewic)
 * [Aditya Kumar](https://github.com/hiraditya)
 * [Dan Becker](https://github.com/dansbecker)
+* [Yun Yan](https://github.com/Puriney)
