@@ -294,6 +294,18 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
                                int *dims,
                                NDArrayHandle *out);
 /*!
+ * \brief Broadcast the NDArray.
+ * \param handle the handle to the narray
+ * \param dim dimension to broadcast
+ * \param size size after broadcasting
+ * \param out the NDArrayHandle of broadcasted NDArray
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayBroadcast(NDArrayHandle handle,
+                                 int dim,
+                                 int size,
+                                 NDArrayHandle *out);
+/*!
  * \brief get the shape of the array
  * \param handle the handle to the narray
  * \param out_dim the output dimension
