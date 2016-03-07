@@ -124,4 +124,4 @@ We will provide pre-built binary package on [Maven Repository](http://mvnreposit
 
 License
 -------
-MXNet Scala Package is licensed under [BSD](https://github.com/dmlc/mxnet/blob/master/scala-package/LICENSE) license.
+MXNet Scala Package is licensed under [Apache-2](https://github.com/dmlc/mxnet/blob/master/scala-package/LICENSE) license.
