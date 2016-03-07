@@ -515,6 +515,59 @@ NDArray &NDArray::operator/=(const real_t &src) {
   return ScalarOpApply<ndarray::Div>(this, src);
 }
 
+template <typename xpu>
+void DoBroadcast(TBlob const& src, TBlob* ret, int size, RunContext ctx) {
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  mshadow::Tensor<xpu, 3> out = ret->get<xpu, 3, real_t>(s);
+  mshadow::Tensor<xpu, 3> in = src.get<xpu, 3, real_t>(s);
+  out = mshadow::expr::broadcast_with_axis(in, 1, size);
+}
+
+NDArray NDArray::Broadcast(int dim, int size) const {
+  CHECK(0 <= dim && dim < shape_.ndim()) << "Broadcast dimension out of bound.";
+  CHECK(shape_[dim] == 1) << "Cannot broadcast a dimension that is not 1.";
+  TShape new_shape = shape_;
+  new_shape[dim] = size;
+  NDArray ret(new_shape, ctx(), true, dtype());
+  std::vector<Engine::VarHandle> const_vars;
+  const_vars.push_back(lhs.var());
+  size_t before = 1;
+  size_t after = 1;
+  for (index_t i = 0; i < dim; ++i) {
+    before *= shape_[i];
+  }
+  for (index_t i = dim + 1; i < shape_.ndim(); ++i) {
+    after *= shape_[i];
+  }
+  size_t inter_shape[] = {before, 1, after};
+  NDArray inter_in = Reshape(TShape(inter_shape, inter_shape + 3));
+  inter_shape[1] = size;
+  NDArray inter_out = ret.Reshape(TShape(inter_shape, inter_shape + 3));
+  switch (lhs.ctx().dev_mask()) {
+    case cpu::kDevMask: {
+      Engine::Get()->PushSync([inter_in, inter_out](RunContext ctx) {
+          inter_out.CheckAndAlloc();
+          TBlob tmp = inter_out.data();
+          DoBroadcast<cpu>(inter_in.data(), &tmp, ctx);
+      }, ctx(), const_vars, {ret.var()});
+      break;
+    }
+#if MXNET_USE_CUDA
+    case gpu::kDevMask: {
+      Engine::Get()->PushSync([inter_in, inter_out](RunContext ctx) {
+          inter_out.CheckAndAlloc();
+          TBlob tmp = inter_out.data();
+          DoBroadcast<gpu>(inter_in.data(), &tmp, ctx);
+          ctx.get_stream<gpu>()->Wait();
+      }, ctx(), const_vars, {ret.var()});
+      break;
+    }
+#endif
+    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+  }
+  return ret;
+}
+
 void NDArray::Save(dmlc::Stream *strm) const {
   // save shape
   shape_.Save(strm);

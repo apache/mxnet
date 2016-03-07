@@ -249,6 +249,13 @@ class NDArray {
     return ret;
   }
   /*!
+   * \brief Get a broadcasted NDArray
+   * \param dim dimension to broadcast
+   * \param size size after broadcasting
+   * \return NDArray in new shape
+   */
+  NDArray Broadcast(int dim, int size) const;
+  /*!
    * \brief Allocate the space if it is delayed allocated.
    * This is an internal function used by system that normal user should not use
    */
