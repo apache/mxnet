@@ -58,7 +58,6 @@ momentum=0.0
 max_grad_norm = 5.0
 update_period = 1
 
-
 X_train, dic = load_data("./data/ptb.train.txt")
 X_val, _ = load_data("./data/ptb.valid.txt", dic)
 X_train_batch = replicate_data(X_train, batch_size)

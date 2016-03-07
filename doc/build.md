@@ -40,7 +40,7 @@ Optional libraries
 
 - `CUDA Toolkit >= v7.0` to run on nvidia GPUs
   - Requires GPU with support for `Compute Capability >= 2.0`
-- CUDNN to accelerate the GPU computation (only CUDNN 3 is supported)
+- CUDNN to accelerate the GPU computation 
 - opencv for image augmentation
 
 We can edit `make/config.mk` to change the compile options, and then build by
@@ -133,6 +133,7 @@ various distributed filesystem such as HDFS/Amazon S3/...
 #### Building with Intel MKL Support
 First, `source /path/to/intel/bin/compilervars.sh` to automatically set environment variables. Then, edit [make/config.mk](../make/config.mk), let `USE_BLAS = mkl`. `USE_INTEL_PATH = NONE` is usually not necessary to be modified.
 
+ - NOTICE: For `intel-mkl` version later than `parallel_studio_xe_2016.2.062`, you should use `source /path/to/intel/pkg_bin/compilervars.sh -arch intel64` instead where `-arch` must be specified according to your own architecture.
 
 ## Python Package Installation
 
@@ -221,7 +222,7 @@ drat:::addRepo("dmlc")
 install.packages("mxnet")
 ```
 
-To install the R package. First finish the [Build MXNet Library](#build-mxnet-library) step.
+To install the R package. First finish the [Build the Shared Library](#build-the-shared-library) step.
 Then use the following command to install dependencies and build the package at root folder
 
 ```bash
@@ -276,8 +277,12 @@ These are updated on a weekly basis with the latest builds of MXNet. Examples of
 are as follows:
 
 ```bash
+# CPU only docker
 sudo docker run -it kaixhin/mxnet
-sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia0 kaixhin/cuda-mxnet:7.0
+
+OR
+# CPU enabled docker
+sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia0 kaixhin/cuda-mxnet:latest
 ```
 
 For a guide to Docker, see the [official docs](https://docs.docker.com/userguide/). For more details on how to use the

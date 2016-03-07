@@ -12,7 +12,7 @@ copied_model =  mx.model.FeedForward(ctx=mx.gpu(), symbol=new_symbol,
 ```
 To copy model parameter from existing ```old_arg_params```, see also this [notebook](https://github.com/dmlc/mxnet/blob/master/example/notebooks/predict-with-pretrained-model.ipynb)
 
-How to Extrat Feature Map of Certain Layer
+How to Extract Feature Map of Certain Layer
 ------------------------------------------
 See this [notebook](https://github.com/dmlc/mxnet/blob/master/example/notebooks/predict-with-pretrained-model.ipynb)
 

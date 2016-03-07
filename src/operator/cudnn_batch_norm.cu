@@ -18,6 +18,13 @@ class CuDNNBatchNormOp : public Operator {
     dtype_ = CUDNN_DATA_FLOAT;
   }
 
+  ~CuDNNBatchNormOp() {
+    if (init_cudnn_) {
+      CHECK_EQ(cudnnDestroyTensorDescriptor(io_desc_), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnDestroyTensorDescriptor(mean_desc_), CUDNN_STATUS_SUCCESS);
+    }
+  }
+
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
@@ -136,6 +143,27 @@ class CuDNNBatchNormOp : public Operator {
     Tensor<gpu, 1> save_inv_var = out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
     float a = 1.0f, b = 0.0f;
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
+#if CUDNN_VERSION >= 4007
+    CHECK_EQ(cudnnBatchNormalizationBackward(s->dnn_handle_,
+                                             CUDNN_BATCHNORM_SPATIAL,
+                                             &a,
+                                             &b,
+                                             &a,
+                                             &b,
+                                             io_desc_,
+                                             x.dptr_,
+                                             io_desc_,
+                                             dy.dptr_,
+                                             io_desc_,
+                                             dx.dptr_,
+                                             mean_desc_,
+                                             gamma.dptr_,
+                                             dgamma.dptr_,
+                                             dbeta.dptr_,
+                                             param_.eps,
+                                             save_mean.dptr_,
+                                             save_inv_var.dptr_), CUDNN_STATUS_SUCCESS);
+#else  // CUDNN_VERSION < 4007
     CHECK_EQ(cudnnBatchNormalizationBackward(s->dnn_handle_,
                                              CUDNN_BATCHNORM_SPATIAL,
                                              &a,
@@ -153,6 +181,7 @@ class CuDNNBatchNormOp : public Operator {
                                              param_.eps,
                                              save_mean.dptr_,
                                              save_inv_var.dptr_), CUDNN_STATUS_SUCCESS);
+#endif
     if (param_.fix_gamma) dgamma = 0;
   }
 

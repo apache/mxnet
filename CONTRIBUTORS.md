@@ -61,7 +61,6 @@ List of Contributors
 * [Junyuan Xie](https://github.com/piiswrong)
 * [Wei Wu](https://github.com/tornadomeet)
 * [Yuan Tang](https://github.com/terrytangyuan)
-  - Yuan set up the R Travis environment to make development safer.
 * [Michaël Benesty](https://github.com/pommedeterresautee)
   -Michaël contributes the R visualization module of mxnet
 * [Kublai Jing](https://github.com/Kublai-Jing)
@@ -97,3 +96,4 @@ List of Contributors
 * [Lodewic van Twillert](https://github.com/Lodewic)
 * [Aditya Kumar](https://github.com/hiraditya)
 * [Dan Becker](https://github.com/dansbecker)
+* [Yun Yan](https://github.com/Puriney)
