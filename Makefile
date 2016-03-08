@@ -1,3 +1,5 @@
+ROOTDIR = $(CURDIR)
+
 ifndef config
 ifdef CXXNET_CONFIG
 	config = $(CXXNET_CONFIG)
@@ -32,14 +34,13 @@ ifeq ($(DEBUG), 1)
 else
 	CFLAGS += -O3
 endif
-CFLAGS += -I./mshadow/ -I./dmlc-core/include -fPIC -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS = -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else
 	NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
-ROOTDIR = $(CURDIR)
 
 ifndef LINT_LANG
 	LINT_LANG="all"
@@ -191,7 +192,7 @@ include tests/cpp/unittest.mk
 
 test: $(TEST)
 
-lint: rcpplint
+lint: rcpplint jnilint
 	python2 dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src plugin scripts python predict/python
 
 doc: doxygen
@@ -217,6 +218,15 @@ rpkg:	roxygen
 	cp -rf include/* R-package/inst/include
 	cp -rf dmlc-core/include/* R-package/inst/include/
 	R CMD build --no-build-vignettes R-package
+
+scalapkg:
+	(cd $(ROOTDIR)/scala-package; mvn clean package -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)")
+
+scalatest:
+	(cd $(ROOTDIR)/scala-package; mvn verify -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" $(SCALA_TEST_ARGS))
+
+jnilint:
+	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
 
 ifneq ($(EXTRA_OPERATORS),)
 clean:

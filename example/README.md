@@ -48,7 +48,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 ###Web Predictive Services
 -----------------------
 * [MXNet Shinny](https://github.com/thirdwing/mxnet_shiny) - Source code for quickly creating a Shiny R app to host online image classification.
-
+* [Machine Eye] (http://rupeshs.github.io/machineye/)- Web service for local image file/image URL classification without uploading.
 ## List of tutorials
 
 ### Deep learning for hackers with MXnet
@@ -62,3 +62,6 @@ If you want to contribute to this list and the examples, please open a new pull 
 ### Kaggle tutorials
 * [Kaggle 2nd Annual Data Science Bowl End-to-End Deep Learning Tutorial (Python)](https://www.kaggle.com/c/second-annual-data-science-bowl/forums/t/18079/end-to-end-deep-learning-tutorial-0-0392) - an end-to-end python tutorial for Kaggle heart disease diagnose competition (public leaderboard score 0.0392)
 * [Kaggle 2nd Annual Data Science Bowl End-to-End Deep Learning Tutorial (R)](https://www.kaggle.com/c/second-annual-data-science-bowl/forums/t/18122/deep-learning-model-in-r) - an end-to-end R tutorial for Kaggle heart disease diagnose competition
+
+###Learning Note
+* [Learning Note in Chinese](https://github.com/zhubuntu/MXNet-Learning-Note) - Mxnet learning note in chinese.
