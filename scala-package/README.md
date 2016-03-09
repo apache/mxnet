@@ -76,10 +76,14 @@ val valDataIter = IO.MNISTIter(Map(
   "shuffle" -> "1",
   "flat" -> "0", "silent" -> "0"))
 
-// setup model
-val model = new FeedForward(mlp, Context.cpu(), numEpoch = 10,
-	optimizer = new SGD(learningRate = 0.1f, momentum = 0.9f, wd = 0.0001f))
-model.fit(trainDataIter, valDataIter)
+// setup model and fit the training data
+val model = FeedForward.newBuilder(mlp)
+      .setContext(Context.cpu())
+      .setNumEpoch(10)
+      .setOptimizer(new SGD(learningRate = 0.1f, momentum = 0.9f, wd = 0.0001f))
+      .setTrainData(trainDataIter)
+      .setEvalData(valDataIter)
+      .build()
 ```
 
 Predict using the model in the following way:

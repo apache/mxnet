@@ -34,10 +34,6 @@ class ConvSuite extends FunSuite with BeforeAndAfterAll {
     val fc2 = Symbol.FullyConnected(name = "fc2")(Map("data" -> fl, "num_hidden" -> 10))
     val softmax = Symbol.SoftmaxOutput(name = "sm")(Map("data" -> fc2))
 
-    val numEpoch = 1
-    val model = new FeedForward(softmax, Context.cpu(), numEpoch = numEpoch,
-      optimizer = new SGD(learningRate = 0.1f, momentum = 0.9f, wd = 0.0001f))
-
     // get data
     "./scripts/get_mnist_data.sh" !
     val trainDataIter = IO.MNISTIter(Map(
@@ -60,7 +56,13 @@ class ConvSuite extends FunSuite with BeforeAndAfterAll {
       "shuffle" -> "1",
       "flat" -> "0", "silent" -> "0"))
 
-    model.fit(trainDataIter, valDataIter)
+    val model = FeedForward.newBuilder(softmax)
+          .setContext(Context.cpu())
+          .setNumEpoch(1)
+          .setOptimizer(new SGD(learningRate = 0.1f, momentum = 0.9f, wd = 0.0001f))
+          .setTrainData(trainDataIter)
+          .setEvalData(valDataIter)
+          .build()
     logger.info("Finish fit ...")
 
     val probArrays = model.predict(valDataIter)
