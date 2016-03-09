@@ -299,7 +299,6 @@ MXNET_DLL int MXNDArrayBroadcast(NDArrayHandle handle,
                                  NDArrayHandle* out) {
   NDArray *ptr = new NDArray();
   API_BEGIN();
-  TShape new_shape(dims, dims+ndim);
   *ptr = static_cast<NDArray*>(handle)->Broadcast(dim, size);
   *out = ptr;
   API_END_HANDLE_ERROR(delete ptr);

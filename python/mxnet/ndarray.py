@@ -674,6 +674,26 @@ def sum(a, axis=None, keepdims=False):
             ret = ret.reshape(shape)
     return ret
 
+def broadcast_to(a, shape):
+    cur_shape = a.shape
+    err_str = 'operands could not be broadcast together with remapped shapes [original->remapped]: {} and requested shape {}'.format(cur_shape, shape)
+    if len(shape) != len(cur_shape):
+        raise ValueError(err_str)
+    for i, j in zip(cur_shape, shape):
+        if i != 1 and i != j:
+            raise ValueError(err_str)
+    ret = a
+    cur_handle = a.handle
+    for index, (i, j) in enumerate(zip(cur_shape, shape)):
+        if i != j:
+            handle = NDArrayHandle()
+            check_call(_LIB.MXNDArrayBroadcast(cur_handle,
+                                               index,
+                                               j,
+                                               ctypes.byref(handle)))
+            cur_handle = handle
+    return NDArray(handle=cur_handle, writable=a.writable)
+
 def full(shape, val, ctx=None):
     """Create a new NDArray filled with given value, with specified shape.
 

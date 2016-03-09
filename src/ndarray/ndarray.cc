@@ -519,8 +519,8 @@ template <typename xpu>
 void DoBroadcast(TBlob const& src, TBlob* ret, int size, RunContext ctx) {
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   mshadow::Tensor<xpu, 3> out = ret->get<xpu, 3, real_t>(s);
-  mshadow::Tensor<xpu, 3> in = src.get<xpu, 3, real_t>(s);
-  out = mshadow::expr::broadcast_with_axis(in, 1, size);
+  mshadow::Tensor<xpu, 2> in = src.get<xpu, 2, real_t>(s);
+  out = mshadow::expr::broadcast_with_axis(in, 0, size);
 }
 
 NDArray NDArray::Broadcast(int dim, int size) const {
@@ -530,7 +530,7 @@ NDArray NDArray::Broadcast(int dim, int size) const {
   new_shape[dim] = size;
   NDArray ret(new_shape, ctx(), true, dtype());
   std::vector<Engine::VarHandle> const_vars;
-  const_vars.push_back(lhs.var());
+  const_vars.push_back(var());
   size_t before = 1;
   size_t after = 1;
   for (index_t i = 0; i < dim; ++i) {
@@ -539,25 +539,25 @@ NDArray NDArray::Broadcast(int dim, int size) const {
   for (index_t i = dim + 1; i < shape_.ndim(); ++i) {
     after *= shape_[i];
   }
-  size_t inter_shape[] = {before, 1, after};
-  NDArray inter_in = Reshape(TShape(inter_shape, inter_shape + 3));
-  inter_shape[1] = size;
-  NDArray inter_out = ret.Reshape(TShape(inter_shape, inter_shape + 3));
-  switch (lhs.ctx().dev_mask()) {
+  size_t inter_in_shape[] = {before, after};
+  size_t inter_out_shape[] = {before, size, after};
+  NDArray inter_in = Reshape(TShape(inter_in_shape, inter_in_shape + 2));
+  NDArray inter_out = ret.Reshape(TShape(inter_out_shape, inter_out_shape + 3));
+  switch (ctx().dev_mask()) {
     case cpu::kDevMask: {
-      Engine::Get()->PushSync([inter_in, inter_out](RunContext ctx) {
+      Engine::Get()->PushSync([inter_in, inter_out, size](RunContext ctx) {
           inter_out.CheckAndAlloc();
           TBlob tmp = inter_out.data();
-          DoBroadcast<cpu>(inter_in.data(), &tmp, ctx);
+          DoBroadcast<cpu>(inter_in.data(), &tmp, size, ctx);
       }, ctx(), const_vars, {ret.var()});
       break;
     }
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
-      Engine::Get()->PushSync([inter_in, inter_out](RunContext ctx) {
+      Engine::Get()->PushSync([inter_in, inter_out, size](RunContext ctx) {
           inter_out.CheckAndAlloc();
           TBlob tmp = inter_out.data();
-          DoBroadcast<gpu>(inter_in.data(), &tmp, ctx);
+          DoBroadcast<gpu>(inter_in.data(), &tmp, size, ctx);
           ctx.get_stream<gpu>()->Wait();
       }, ctx(), const_vars, {ret.var()});
       break;
