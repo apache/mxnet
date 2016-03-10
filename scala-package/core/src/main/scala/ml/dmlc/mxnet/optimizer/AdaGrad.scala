@@ -17,15 +17,9 @@ import ml.dmlc.mxnet.NDArrayConversions._
   * @param epsilon Float
   * @param rescaleGradient Float, rescaling factor of gradient.
   * @param wd Float, L2 regularization coefficient add to all the weights
-  * @param lrScheduler The learning rate scheduler
   */
 class AdaGrad(var learningRate: Float = 0.05f, val rescaleGradient: Float = 1.0f,
-           val epsilon: Float = 1e-8f, val wd: Float = 0.0f,
-           val lrScheduler: LRScheduler = null) extends Optimizer {
-
-  if (lrScheduler != null) {
-    lrScheduler.baseLR = learningRate
-  }
+           val epsilon: Float = 1e-8f, val wd: Float = 0.0f) extends Optimizer {
 
   /**
     * Update the parameters.
@@ -36,14 +30,7 @@ class AdaGrad(var learningRate: Float = 0.05f, val rescaleGradient: Float = 1.0f
     *              The auxiliary state used in optimization.
     */
   override def update(index: Int, weight: NDArray, grad: NDArray, state: AnyRef): Unit = {
-    val lr =
-      (if (lrScheduler != null) {
-        val scheduledLr = lrScheduler(numUpdate)
-        updateCount(index)
-        scheduledLr
-      } else {
-        this.learningRate
-      }) * lrScale.getOrElse(index, 1f)
+    val lr = this.learningRate
 
     val grad = rescaleGradient * grad
     val history = state.asInstanceOf[NDArray]
