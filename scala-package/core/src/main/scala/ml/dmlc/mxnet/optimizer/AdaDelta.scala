@@ -7,10 +7,6 @@ import ml.dmlc.mxnet.NDArrayConversions._
   * AdaDelta optimizer as described in Matthew D. Zeiler, 2012.
   * http://arxiv.org/abs/1212.5701
   *
-  * <b>WARNING</b>
-  * TODO: This class has NOT been tested yet.
-  * And there exists potential <b>memory leak</b> in the implementation
-  *
   * @author Yuan Tang
   *
   * @param rho Float, Decay rate for both squared gradients and delta x.
@@ -50,6 +46,8 @@ class AdaDelta(var rho: Float = 0.05f, val rescaleGradient: Float = 1.0f,
 
     weight -= current_delta + this.wd * weight
 
+    resdGrad.dispose()
+    current_delta.dispose()
   }
 
   override def createState(index: Int, weight: NDArray): (NDArray, NDArray) = {

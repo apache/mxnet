@@ -7,10 +7,6 @@ import ml.dmlc.mxnet.NDArrayConversions._
   * RMSProp optimizer as described in Tieleman & Hinton, 2012.
   * http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
   *
-  * <b>WARNING</b>
-  * TODO: This class has NOT been tested yet.
-  * And there exists potential <b>memory leak</b> in the implementation
-  *
   * @author Yuan Tang
   *
   * @param learningRate Float, Step size.
@@ -21,7 +17,7 @@ import ml.dmlc.mxnet.NDArrayConversions._
   * @param clipGradient Float, clip gradient in range [-clip_gradient, clip_gradient]
   * @param lrScheduler The learning rate scheduler
   */
-class RMSProp(var learningRate: Float = 0.05f, val rescaleGradient: Float = 1.0f,
+class RMSProp(val learningRate: Float = 0.05f, val rescaleGradient: Float = 1.0f,
               val gamma1: Float = 0.95f, val gamma2: Float = 0.9f, val wd: Float = 0.0f,
               val lrScheduler: LRScheduler = null, val clipGradient: Float = 0f) extends Optimizer {
 
