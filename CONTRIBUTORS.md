@@ -102,3 +102,4 @@ List of Contributors
 * [Aditya Kumar](https://github.com/hiraditya)
 * [Dan Becker](https://github.com/dansbecker)
 * [Yun Yan](https://github.com/Puriney)
+* [Tao Wei](https://github.com/taoari)
