@@ -32,10 +32,10 @@ class AdaGrad(var learningRate: Float = 0.05f, val rescaleGradient: Float = 1.0f
   override def update(index: Int, weight: NDArray, grad: NDArray, state: AnyRef): Unit = {
     val lr = this.learningRate
 
-    val grad: NDArray = rescaleGradient * grad
+    val resdGrad = rescaleGradient * grad
     val history = state.asInstanceOf[NDArray]
-    history.set(history + grad * grad)
-    weight.set(-lr * (grad / NDArray.sqrt(history + this.epsilon) + this.wd * weight))
+    history.set(history + resdGrad * resdGrad)
+    weight.set(-lr * (resdGrad / NDArray.sqrt(history + this.epsilon) + this.wd * weight))
   }
 
   override def createState(index: Int, weight: NDArray): NDArray = {

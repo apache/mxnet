@@ -33,7 +33,7 @@ class AdaDelta(var rho: Float = 0.05f, val rescaleGradient: Float = 1.0f,
     */
   override def update(index: Int, weight: NDArray, grad: NDArray, state: AnyRef): Unit = {
 
-    var resdGrad: NDArray = grad * this.rescaleGrad
+    var resdGrad = grad * this.rescaleGrad
 
     if (clipGradient != 0f) {
       val oldResdGrad = resdGrad
@@ -43,9 +43,9 @@ class AdaDelta(var rho: Float = 0.05f, val rescaleGradient: Float = 1.0f,
 
     val (acc_g, acc_delta) = state.asInstanceOf[(NDArray, NDArray)]
 
-    acc_g.set(this.rho * acc_g + (1.0f - this.rho) * grad * grad)
+    acc_g.set(this.rho * acc_g + (1.0f - this.rho) * resdGrad * resdGrad)
     val current_delta = NDArray.sqrt(acc_delta + this.epsilon) /
-      NDArray.sqrt(acc_g + this.epsilon) * grad
+      NDArray.sqrt(acc_g + this.epsilon) * resdGrad
     acc_delta.set(this.rho * acc_delta + (1.0f - this.rho) * current_delta * current_delta)
 
     weight -= current_delta + this.wd * weight
