@@ -397,7 +397,7 @@ function(symbol, X, y=NULL, ctx=NULL,
   }
   X <- mx.model.init.iter(X, y, batch.size=array.batch.size, is.train=TRUE)
   if (!X$iter.next()) {
-    x$reset()
+    X$reset()
     if (!X$iter.next()) stop("Empty input")
   }
   input.shape <- dim((X$value())$data)
