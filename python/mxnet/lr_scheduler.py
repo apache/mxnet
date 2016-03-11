@@ -115,7 +115,7 @@ class MultiFactorScheduler(LRScheduler):
             the maximal number of updates applied to a weight.
         """
 
-        if self.cur_step_ind <= len(self.step)-1:        
+        if self.cur_step_ind <= len(self.step)-1:
             if num_update > self.step[self.cur_step_ind]:
                 self.count = self.step[self.cur_step_ind]
                 self.cur_step_ind += 1
