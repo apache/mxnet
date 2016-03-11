@@ -170,6 +170,20 @@ class Executor(object):
         return self._arg_dict
 
     @property
+    def grad_dict(self):
+        """Get dictionary representation of gradient arrays.
+
+        Returns
+        -------
+        grad_dict : dict of str to NDArray
+            The dictionary that maps name of arguments to gradient arrays.
+        """
+        if self._grad_dict is None:
+            self._grad_dict = Executor._get_dict(
+                self._symbol.list_arguments(), self.grad_arrays)
+        return self._grad_dict
+
+    @property
     def aux_dict(self):
         """Get dictionary representation of auxiliary states arrays.
 
