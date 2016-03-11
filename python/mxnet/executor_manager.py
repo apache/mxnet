@@ -123,10 +123,10 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
                     grad_arr = nd.zeros(arg_shape[i], ctx)
                     grad_arrays[name] = grad_arr
             else:
-                arg_arr = base_exec.arg_arrays[i]
+                arg_arr = base_exec.arg_dict[name]
                 assert arg_arr.shape == arg_shape[i]
                 if need_grad:
-                    grad_arrays[name] = base_exec.grad_arrays[i]
+                    grad_arrays[name] = base_exec.grad_dict[name]
             arg_arrays.append(arg_arr)
 
     # create or borrow aux variables
