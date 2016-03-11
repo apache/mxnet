@@ -10,10 +10,6 @@ import ml.dmlc.mxnet.NDArrayConversions._
  * Adam: A Method for Stochastic Optimization,
  * http://arxiv.org/abs/1412.6980
  *
- * <b>WARNING</b>
- * TODO: This class has NOT been tested yet.
- * And there exists potential <b>memory leak</b> in the implementation
- *
  * @author Yuan Tang, Yizhi Liu
  *
  * @param learningRate Float, Step size.
@@ -70,7 +66,9 @@ class Adam(var learningRate: Float = 0.002f, val beta1: Float = 0.9f, val beta2:
 
     var resdGrad = grad * rescaleGrad
     if (clipGradient != 0f) {
+      val oldResdGrad = resdGrad
       resdGrad = NDArray.clip(resdGrad, -clipGradient, clipGradient)
+      oldResdGrad.dispose()
     }
 
     val meanT = beta1t * mean + (1.0 - beta1t) * resdGrad
@@ -85,6 +83,11 @@ class Adam(var learningRate: Float = 0.002f, val beta1: Float = 0.9f, val beta2:
     weight += -step
     mean.set(meanT)
     variance.set(varianceT)
+
+    meanT.dispose()
+    varianceT.dispose()
+    step.dispose()
+    resdGrad.dispose()
   }
 
   // Create additional optimizer state: mean, variance
