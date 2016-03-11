@@ -2,8 +2,9 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>ml.dmlc.mxnet</groupId>
-    <artifactId>mxnet-scala-parent_2.10</artifactId>
+    <artifactId>mxnet-parent_2.10</artifactId>
     <version>0.1-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
   </parent>
 
   <artifactId>mxnet-scala-native-parent</artifactId>
@@ -12,32 +13,21 @@
 
   <profiles>
     <profile>
-      <id>osx-x86_64</id>
-      <activation>
-        <os>
-          <family>mac</family>
-          <arch>x86_64</arch>
-        </os>
-      </activation>
-      <properties>
-        <platform>osx-x86_64</platform>
-      </properties>
+      <id>osx-x86_64-cpu</id>
       <modules>
-        <module>osx-x86_64</module>
+        <module>osx-x86_64-cpu</module>
       </modules>
     </profile>
     <profile>
-      <id>linux-x86_64</id>
-      <activation>
-        <os>
-          <family>linux</family>
-        </os>
-      </activation>
-      <properties>
-        <platform>linux-x86_64</platform>
-      </properties>
+      <id>linux-x86_64-cpu</id>
       <modules>
-        <module>linux-x86_64</module>
+        <module>linux-x86_64-cpu</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>linux-x86_64-gpu</id>
+      <modules>
+        <module>linux-x86_64-gpu</module>
       </modules>
     </profile>
   </profiles>
