@@ -229,7 +229,7 @@ if __name__ == '__main__':
     learning_rate = 0.1
     momentum = 0.0
 
-    contexts = [mx.context.cpu(i) for i in range(1)]
+    contexts = [mx.context.gpu(i) for i in range(1)]
 
     vocab = build_vocab("./data/ptb.train.txt")
 
