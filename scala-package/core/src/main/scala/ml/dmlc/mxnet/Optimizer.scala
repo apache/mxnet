@@ -78,6 +78,18 @@ abstract class Optimizer extends Serializable {
     indexUpdateCount.update(index, count)
     numUpdate = Math.max(count, numUpdate)
   }
+
+  protected def getWd(index: Int, wd: Float): Float = {
+    if (specialized) {
+      if (this.weightSet.contains(index)) {
+        wd
+      } else {
+        0f
+      }
+    } else {
+      wd
+    }
+  }
 }
 
 trait MXKVStoreUpdater {
