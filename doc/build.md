@@ -281,7 +281,7 @@ are as follows:
 sudo docker run -it kaixhin/mxnet
 
 OR
-# CPU enabled docker
+# GPU enabled docker
 sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia0 kaixhin/cuda-mxnet:latest
 ```
 
