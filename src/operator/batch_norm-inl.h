@@ -31,6 +31,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   float eps;
   float momentum;
   bool fix_gamma;
+  bool use_global_stats;
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
     .describe("Epsilon to prevent div 0");
@@ -38,6 +39,8 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     .describe("Momentum for moving average");
     DMLC_DECLARE_FIELD(fix_gamma).set_default(true)
     .describe("Fix gamma while training");
+    DMLC_DECLARE_FIELD(use_gloabal_stats).set_default(false)
+    .describe("Use global mean and variance for training");
   }
 };
 
@@ -99,9 +102,16 @@ class BatchNormOp : public Operator {
       CHECK(req[batchnorm::kMean] == kNullOp || req[batchnorm::kMean] == kWriteTo);
       CHECK(req[batchnorm::kVar] == kNullOp || req[batchnorm::kVar] == kWriteTo);
       // The first three steps must be enforced.
-      mean = scale * sumall_except_dim<1>(data);
-      var = scale * sumall_except_dim<1>(F<mshadow_op::square>(
+      if (param_.use_global_stats)
+      {
+        mean = moving_mean;
+        var = moving_var;
+      }else
+      {
+        mean = scale * sumall_except_dim<1>(data);
+        var = scale * sumall_except_dim<1>(F<mshadow_op::square>(
           data - broadcast<1>(mean, data.shape_)));
+      }
       if (param_.fix_gamma) {
         Assign(out, req[batchnorm::kOut], (data - broadcast<1>(mean, data.shape_)) /
                F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
