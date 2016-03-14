@@ -11,13 +11,7 @@ object Optimizer {
         optimizer.update(index, weight, grad, state)
       }
       override def dispose(): Unit = {
-        states.values.foreach {
-          case array: NDArray => array.dispose()
-          case sym: Symbol => sym.dispose()
-          case exec: Executor => exec.dispose()
-          case kv: KVStore => kv.dispose()
-          case _ =>
-        }
+        states.values.foreach(optimizer.disposeState)
       }
     }
   }
@@ -46,6 +40,9 @@ abstract class Optimizer extends Serializable {
   // Create additional optimizer state such as momentum.
   // TODO: make returned state a ClassTag
   def createState(index: Int, weight: NDArray): AnyRef
+
+  // Dispose the state it created
+  def disposeState(state: AnyRef): Unit
 
   // Set individual learning rate scale for parameters
   def setLrScale(lrScale: Map[Int, Float]) {

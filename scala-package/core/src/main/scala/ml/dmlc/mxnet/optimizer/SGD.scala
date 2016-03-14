@@ -81,4 +81,11 @@ class SGD(private val learningRate: Float = 0.01f, private val momentum: Float =
       NDArray.zeros(weight.shape, weight.context)
     }
   }
+
+  // Dispose the state it created
+  override def disposeState(state: AnyRef): Unit = {
+    if (state != null) {
+      state.asInstanceOf[NDArray].dispose()
+    }
+  }
 }

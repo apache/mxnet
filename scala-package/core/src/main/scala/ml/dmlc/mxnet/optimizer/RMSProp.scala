@@ -65,5 +65,8 @@ class RMSProp(val learningRate: Float = 0.05f, val rescaleGradient: Float = 1.0f
       NDArray.zeros(weight.shape, weight.context), // g
         NDArray.zeros(weight.shape, weight.context)) // delta
   }
+
+  // Dispose the state it created
+  override def disposeState(state: AnyRef): Unit = ???
 }
 

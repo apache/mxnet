@@ -96,4 +96,7 @@ class Adam(var learningRate: Float = 0.002f, val beta1: Float = 0.9f, val beta2:
     (NDArray.zeros(weight.shape, weight.context), // mean
       NDArray.zeros(weight.shape, weight.context)) // variance
   }
+
+  // Dispose the state it created
+  override def disposeState(state: AnyRef): Unit = ???
 }
