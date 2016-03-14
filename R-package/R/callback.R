@@ -3,11 +3,11 @@ mx.metric.logger <- setRefClass("mx.metric.logger", fields = list(train = "numer
 
 #' Log training metric each period
 #' @export
-mx.callback.log.train.metric <- function(period, logger=NULL) {
+mx.callback.log.train.metric <- function(period, logger=NULL, verbose=FALSE) {
   function(iteration, nbatch, env) {
     if (nbatch %% period == 0 && !is.null(env$metric)) {
       result <- env$metric$get(env$train.metric)
-      if (nbatch != 0)
+      if (nbatch != 0 & verbose)
         cat(paste0("Batch [", nbatch, "] Train-", result$name, "=", result$value, "\n"))
       if (!is.null(logger)) {
         if (class(logger) != "mx.metric.logger") {
@@ -16,7 +16,7 @@ mx.callback.log.train.metric <- function(period, logger=NULL) {
         logger$train <- c(logger$train, result$value)
         if (!is.null(env$eval.metric)) {
           result <- env$metric$get(env$eval.metric)
-          if (nbatch != 0)
+          if (nbatch != 0 & verbose)
             cat(paste0("Batch [", nbatch, "] Validation-", result$name, "=", result$value, "\n"))
           logger$eval <- c(logger$eval, result$value)
         }
@@ -31,12 +31,15 @@ mx.callback.log.train.metric <- function(period, logger=NULL) {
 #'
 #' @param prefix The prefix of the model checkpoint.
 #'
+#' @param verbose logical (default=FALSE)
+#'     Specifies whether to print information on the iterations during training.  
+#'
 #' @export
-mx.callback.save.checkpoint <- function(prefix, period=1) {
+mx.callback.save.checkpoint <- function(prefix, period=1, verbos =FLASE) {
   function(iteration, nbatch, env) {
     if (iteration %% period == 0) {
       mx.model.save(env$model, prefix, iteration)
-      cat(sprintf("Model checkpoint saved to %s-%04d.params\n", prefix, iteration))
+      if(verbose) cat(sprintf("Model checkpoint saved to %s-%04d.params\n", prefix, iteration))
     }
     return(TRUE)
   }
