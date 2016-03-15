@@ -102,24 +102,31 @@ class BatchNormOp : public Operator {
       CHECK(req[batchnorm::kMean] == kNullOp || req[batchnorm::kMean] == kWriteTo);
       CHECK(req[batchnorm::kVar] == kNullOp || req[batchnorm::kVar] == kWriteTo);
       // The first three steps must be enforced.
-      if (param_.use_global_stats)
-      {
-        mean = moving_mean;
-        var = moving_var;
-      }else
-      {
         mean = scale * sumall_except_dim<1>(data);
         var = scale * sumall_except_dim<1>(F<mshadow_op::square>(
           data - broadcast<1>(mean, data.shape_)));
-      }
       if (param_.fix_gamma) {
-        Assign(out, req[batchnorm::kOut], (data - broadcast<1>(mean, data.shape_)) /
+        if (param_.use_global_stats)
+        {
+          Assign(out, req[batchnorm::kOut], (data - broadcast<1>(moving_mean, data.shape_)) /
+               F<mshadow_op::square_root>(broadcast<1>(moving_var + param_.eps, data.shape_)) +
+               broadcast<1>(bias, out.shape_));
+        }else{
+          Assign(out, req[batchnorm::kOut], (data - broadcast<1>(mean, data.shape_)) /
                F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
                broadcast<1>(bias, out.shape_));
+        }
+        
       } else {
         CHECK(req[batchnorm::kOutNoAffine] == kNullOp || req[batchnorm::kOutNoAffine] == kWriteTo);
-        out_no_affine = (data - broadcast<1>(mean, data.shape_)) /
+        if (param_.use_global_stats)
+        {
+            out_no_affine = (data - broadcast<1>(moving_mean, data.shape_)) /
+                       F<mshadow_op::square_root>(broadcast<1>(moving_var + param_.eps, data.shape_));
+        }else{
+            out_no_affine = (data - broadcast<1>(mean, data.shape_)) /
                        F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_));
+        }
         Assign(out, req[batchnorm::kOut], out_no_affine * broadcast<1>(slope, out.shape_) +
               broadcast<1>(bias, out.shape_));
       }
