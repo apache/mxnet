@@ -12,14 +12,6 @@
   <version>0.1-SNAPSHOT</version>
   <name>MXNet Scala Package - Core</name>
 
-  <url>https://github.com/dmlc/mxnet/tree/master/scala-package</url>
-  <description>MXNet Scala core without native lib</description>
-
-  <organization>
-    <name>Distributed (Deep) Machine Learning Community</name>
-    <url>http://dmlc.ml</url>
-  </organization>
-
   <profiles>
     <profile>
       <id>osx-x86_64-cpu</id>
@@ -41,16 +33,6 @@
     </profile>
     <profile>
       <id>release</id>
-      <distributionManagement>
-        <snapshotRepository>
-          <id>nexus-release</id>
-          <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-        </snapshotRepository>
-        <repository>
-          <id>nexus-release</id>
-          <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-      </distributionManagement>
       <build>
         <plugins>
           <plugin>
@@ -64,6 +46,10 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-gpg-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
           </plugin>
         </plugins>
       </build>
