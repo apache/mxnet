@@ -87,13 +87,16 @@ def residual_net(data, n):
      
     return data
 
-def get_symbol(num_classes = 10):
+def get_symbol(num_classes = 10, fine_tune = False):
     conv = conv_factory(data=mx.symbol.Variable(name='data'), num_filter=16, kernel=(3,3), stride=(1,1), pad=(1,1), act_type='relu', conv_type=0)
     n = 3 # set n = 3 means get a model with 3*6+2=20 layers, set n = 9 means 9*6+2=56 layers
     resnet = residual_net(conv, n) # 
     pool = mx.symbol.Pooling(data=resnet, kernel=(7,7), pool_type='avg')
     flatten = mx.symbol.Flatten(data=pool, name='flatten')
-    fc = mx.symbol.FullyConnected(data=flatten, num_hidden=num_classes,  name='fc1')
+    if fine_tune:
+        flatten = mx.sym.BlockGrad(flatten)
+    fc = mx.symbol.FullyConnected(data=flatten, num_hidden=num_classes,
+                                  name='fc1_%d_classes' % num_classes)
     softmax = mx.symbol.SoftmaxOutput(data=fc, name='softmax')
     return softmax
 

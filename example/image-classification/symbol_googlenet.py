@@ -30,7 +30,7 @@ def InceptionFactory(data, num_1x1, num_3x3red, num_3x3, num_d5x5red, num_d5x5, 
     concat = mx.symbol.Concat(*[c1x1, c3x3, cd5x5, cproj], name='ch_concat_%s_chconcat' % name)
     return concat
 
-def get_symbol(num_classes = 1000):
+def get_symbol(num_classes = 1000, fine_tune = False):
     data = mx.sym.Variable("data")
     conv1 = ConvFactory(data, 64, kernel=(7, 7), stride=(2,2), pad=(3, 3), name="conv1")
     pool1 = mx.sym.Pooling(conv1, kernel=(3, 3), stride=(2, 2), pool_type="max")
@@ -51,6 +51,9 @@ def get_symbol(num_classes = 1000):
     in5b = InceptionFactory(in5a, 384, 192, 384, 48, 128, "max", 128, name="in5b")
     pool6 = mx.sym.Pooling(in5b, kernel=(7, 7), stride=(1,1), pool_type="avg")
     flatten = mx.sym.Flatten(data=pool6)
-    fc1 = mx.sym.FullyConnected(data=flatten, num_hidden=num_classes)
+    if fine_tune:
+        flatten = mx.sym.BlockGrad(flatten)
+    fc1 = mx.sym.FullyConnected(data=flatten, num_hidden=num_classes,
+                                name='fc1_%d_classes' % num_classes)
     softmax = mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
     return softmax

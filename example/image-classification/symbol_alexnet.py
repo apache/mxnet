@@ -6,7 +6,7 @@ Krizhevsky, Alex, Ilya Sutskever, and Geoffrey E. Hinton. "Imagenet classificati
 import find_mxnet
 import mxnet as mx
 
-def get_symbol(num_classes = 1000):
+def get_symbol(num_classes = 1000, fine_tune = False):
     input_data = mx.symbol.Variable(name="data")
     # stage 1
     conv1 = mx.symbol.Convolution(
@@ -42,6 +42,9 @@ def get_symbol(num_classes = 1000):
     relu7 = mx.symbol.Activation(data=fc2, act_type="relu")
     dropout2 = mx.symbol.Dropout(data=relu7, p=0.5)
     # stage 6
-    fc3 = mx.symbol.FullyConnected(data=dropout2, num_hidden=num_classes)
+    if fine_tune:
+        dropout2 = mx.sym.BlockGrad(dropout2)
+    fc3 = mx.symbol.FullyConnected(data=dropout2, num_hidden=num_classes,
+                                   name='fc3_%d_classes' % num_classes)
     softmax = mx.symbol.SoftmaxOutput(data=fc3, name='softmax')
     return softmax

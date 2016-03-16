@@ -42,7 +42,7 @@ def InceptionFactoryB(data, num_3x3red, num_3x3, num_d3x3red, num_d3x3, name):
     concat = mx.symbol.Concat(*[c3x3, cd3x3, pooling], name='ch_concat_%s_chconcat' % name)
     return concat
 
-def get_symbol(num_classes = 21841):
+def get_symbol(num_classes = 21841, fine_tune = False):
     # data
     data = mx.symbol.Variable(name="data")
     # stage 1
@@ -69,6 +69,9 @@ def get_symbol(num_classes = 21841):
     avg = mx.symbol.Pooling(data=in5b, kernel=(7, 7), stride=(1, 1), name="global_pool", pool_type='avg')
     # linear classifier
     flatten = mx.symbol.Flatten(data=avg, name='flatten')
-    fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=num_classes, name='fc1')
+    if fine_tune:
+        flatten = mx.sym.BlockGrad(flatten)
+    fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=num_classes,
+                                   name='fc1_%d_classes' % num_classes)
     softmax = mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
     return softmax

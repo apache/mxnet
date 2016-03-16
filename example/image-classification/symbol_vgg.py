@@ -6,7 +6,7 @@ large-scale image recognition." arXiv preprint arXiv:1409.1556 (2014).
 import find_mxnet
 import mxnet as mx
 
-def get_symbol(num_classes = 1000):
+def get_symbol(num_classes = 1000, fine_tune = False):
     ## define alexnet
     data = mx.symbol.Variable(name="data")
     # group 1
@@ -57,6 +57,9 @@ def get_symbol(num_classes = 1000):
     relu7 = mx.symbol.Activation(data=fc7, act_type="relu", name="relu7")
     drop7 = mx.symbol.Dropout(data=relu7, p=0.5, name="drop7")
     # output
-    fc8 = mx.symbol.FullyConnected(data=drop7, num_hidden=num_classes, name="fc8")
+    if fine_tune:
+        drop7 = mx.sym.BlockGrad(drop7)
+    fc8 = mx.symbol.FullyConnected(data=drop7, num_hidden=num_classes,
+                                   name="fc8_%d_classes" % num_classes)
     softmax = mx.symbol.SoftmaxOutput(data=fc8, name='softmax')
     return softmax
