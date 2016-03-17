@@ -52,8 +52,8 @@ class FactorScheduler(LRScheduler):
         super(FactorScheduler, self).__init__()
         if step < 1:
             raise ValueError("Schedule step must be greater or equal than 1 round")
-        if factor >= 1.0:
-            raise ValueError("Factor must be less than 1 to make lr reduce")
+        if factor > 1.0:
+            raise ValueError("Factor must be no more than 1 to make lr reduce")
         self.step = step
         self.factor = factor
         self.count = 0
@@ -98,8 +98,8 @@ class MultiFactorScheduler(LRScheduler):
                 raise ValueError("Schedule step must be an increasing integer list")
             if _step < 1:
                 raise ValueError("Schedule step must be greater or equal than 1 round")
-        if factor >= 1.0:
-            raise ValueError("Factor must be less than 1 to make lr reduce")
+        if factor > 1.0:
+            raise ValueError("Factor must be no more than 1 to make lr reduce")
         self.step = step
         self.cur_step_ind = 0
         self.factor = factor
