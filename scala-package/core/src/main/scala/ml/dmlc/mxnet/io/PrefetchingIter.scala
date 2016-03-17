@@ -1,19 +1,26 @@
 package ml.dmlc.mxnet.io
 
-import ml.dmlc.mxnet.{DataIter, NDArray, Shape}
+import ml.dmlc.mxnet.{DataBatch, DataIter, NDArray, Shape}
+import org.slf4j.LoggerFactory
 
 /**
  * TODO
  * Base class for prefetching iterators. Takes one or more DataIters
- * (or any class with "reset" and "read" methods) and combine them with
- * prefetching.
+ * and combine them with prefetching.
+ *
+ *
  * @param iters list of DataIters
  * @param dataNames
  * @param labelNames
  */
-class PrefetchingIter(val iters: List[DataIter],
+class PrefetchingIter(val iters: IndexedSeq[DataIter],
                       val dataNames: Map[String, String] = null,
                       val labelNames: Map[String, String] = null) extends DataIter {
+  private val logger = LoggerFactory.getLogger(classOf[PrefetchingIter])
+
+  private var currentBatch: DataBatch = null
+  private var nextBatch: DataBatch = null
+
   /**
    * reset the iterator
    */

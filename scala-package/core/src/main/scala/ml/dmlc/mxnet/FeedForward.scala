@@ -135,9 +135,10 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
     require(label.shape.length == 1, "Label must be 1D")
     require(X.shape(0) == label.shape(0), "The numbers of data points and labels not equal")
     if (isTrain) {
-      new NDArrayIter(X, label, batchSize, shuffle = isTrain, lastBatchHandle = "roll_over")
+      new NDArrayIter(IndexedSeq(X), IndexedSeq(label), batchSize,
+        shuffle = isTrain, lastBatchHandle = "roll_over")
     } else {
-      new NDArrayIter(X, label, batchSize, shuffle = false)
+      new NDArrayIter(IndexedSeq(X), IndexedSeq(label), batchSize, shuffle = false)
     }
   }
 
