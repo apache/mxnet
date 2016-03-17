@@ -185,6 +185,25 @@ class RMSE(EvalMetric):
             self.sum_metric += numpy.sqrt(((label - pred)**2.0).mean())
             self.num_inst += 1
 
+class CrossEntropy(EvalMetric):
+    """Calculate Cross Entropy loss"""
+    def __init__(self):
+        super(CrossEntropy, self).__init__('cross-entropy')
+
+    def update(self, labels, preds):
+        check_label_shapes(labels, preds)
+
+        for label, pred in zip(labels, preds):
+            label = label.asnumpy()
+            pred = pred.asnumpy()
+
+            label = label.ravel()
+            assert label.shape[0] == pred.shape[0]
+
+            prob = pred[numpy.arange(label.shape[0]), numpy.int64(label)]
+            self.sum_metric += (-numpy.log(prob)).sum()
+            self.num_inst += label.shape[0]
+
 class Torch(EvalMetric):
     """Dummy metric for torch criterions"""
     def __init__(self):
@@ -261,7 +280,9 @@ def create(metric):
         'acc' : Accuracy(),
         'rmse' : RMSE(),
         'mae' : MAE(),
-        'mse' : MSE()
+        'mse' : MSE(),
+        'ce' : CrossEntropy(),
+        'cross-entropy' : CrossEntropy()
     }
 
     if callable(metric):
