@@ -10,8 +10,14 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<gpu>(CastParam param) {
-  return new CastOp<gpu>();
+Operator *CreateOp<gpu>(CastParam param, std::vector<int> *in_type) {
+  Operator *op = NULL;
+  MSHADOW_TYPE_SWITCH((*in_type)[0], SrcDType, {
+    MSHADOW_TYPE_SWITCH(param.dtype, DstDType, {
+        op = new CastOp<gpu, SrcDType, DstDType>();
+    })
+  })
+  return op;
 }
 }  // op
 }  // namespace mxnet
