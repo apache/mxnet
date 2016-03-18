@@ -102,31 +102,26 @@ class BatchNormOp : public Operator {
       CHECK(req[batchnorm::kMean] == kNullOp || req[batchnorm::kMean] == kWriteTo);
       CHECK(req[batchnorm::kVar] == kNullOp || req[batchnorm::kVar] == kWriteTo);
       // The first three steps must be enforced.
+      if (param_.use_global_stats)
+      {
+
+        mean = F<mshadow_op::identity>(moving_mean);
+        var = F<mshadow_op::identity>(moving_var);
+      }
+      else
+      {
         mean = scale * sumall_except_dim<1>(data);
         var = scale * sumall_except_dim<1>(F<mshadow_op::square>(
           data - broadcast<1>(mean, data.shape_)));
+      }
       if (param_.fix_gamma) {
-        if (param_.use_global_stats)
-        {
-          Assign(out, req[batchnorm::kOut], (data - broadcast<1>(moving_mean, data.shape_)) /
-               F<mshadow_op::square_root>(broadcast<1>(moving_var + param_.eps, data.shape_)) +
-               broadcast<1>(bias, out.shape_));
-        }else{
-          Assign(out, req[batchnorm::kOut], (data - broadcast<1>(mean, data.shape_)) /
+        Assign(out, req[batchnorm::kOut], (data - broadcast<1>(mean, data.shape_)) /
                F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
                broadcast<1>(bias, out.shape_));
-        }
-        
       } else {
         CHECK(req[batchnorm::kOutNoAffine] == kNullOp || req[batchnorm::kOutNoAffine] == kWriteTo);
-        if (param_.use_global_stats)
-        {
-            out_no_affine = (data - broadcast<1>(moving_mean, data.shape_)) /
-                       F<mshadow_op::square_root>(broadcast<1>(moving_var + param_.eps, data.shape_));
-        }else{
-            out_no_affine = (data - broadcast<1>(mean, data.shape_)) /
+        out_no_affine = (data - broadcast<1>(mean, data.shape_)) /
                        F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_));
-        }
         Assign(out, req[batchnorm::kOut], out_no_affine * broadcast<1>(slope, out.shape_) +
               broadcast<1>(bias, out.shape_));
       }
@@ -192,20 +187,28 @@ class BatchNormOp : public Operator {
     // update moving avg
     Tensor<xpu, 1> moving_mean = aux_states[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> moving_var = aux_states[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
-
-    moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
-    moving_var = moving_var * param_.momentum + var * (1 - param_.momentum);
-    // cal
-    gvar = sumall_except_dim<1>((grad * broadcast<1>(slope, data.shape_)) *
-                                (data - broadcast<1>(mean, data.shape_)) *
-                                -0.5f *
-                                F<mshadow_op::power>(broadcast<1>(var + param_.eps, data.shape_),
-                                                     -1.5f));
-    gmean = sumall_except_dim<1>(grad * broadcast<1>(slope, data.shape_));
-    gmean *= -1.0f / F<mshadow_op::square_root>(var + param_.eps);
-    tmp = scale * sumall_except_dim<1>(-2.0f * (data - broadcast<1>(mean, data.shape_)));
-    tmp *= gvar;
-    gmean += tmp;
+    if(param_.use_global_stats)
+    {
+      gvar = 0;
+      gmean = 0;  
+    }
+    else
+    {
+      moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
+      moving_var = moving_var * param_.momentum + var * (1 - param_.momentum);
+        // cal
+      gvar = sumall_except_dim<1>((grad * broadcast<1>(slope, data.shape_)) *
+                                  (data - broadcast<1>(mean, data.shape_)) *
+                                  -0.5f *
+                                  F<mshadow_op::power>(broadcast<1>(var + param_.eps, data.shape_),
+                                                       -1.5f));
+      gmean = sumall_except_dim<1>(grad * broadcast<1>(slope, data.shape_));
+      gmean *= -1.0f / F<mshadow_op::square_root>(var + param_.eps);
+      tmp = scale * sumall_except_dim<1>(-2.0f * (data - broadcast<1>(mean, data.shape_)));
+      tmp *= gvar;
+      gmean += tmp;
+    }
+    
     // assign
     if (!param_.fix_gamma) {
       Assign(gslope, req[batchnorm::kGamma], sumall_except_dim<1>(grad * out_no_affine));
