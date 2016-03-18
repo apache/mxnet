@@ -8,7 +8,11 @@ namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<gpu>(FullyConnectedParam param) {
-  return new FullyConnectedOp<gpu>(param);
+  Operator *op = NULL;
+  MSHADOW_REAL_TYPE_SWITCH(param.dtype, DType, {
+    op = new FullyConnectedOp<gpu, DType>(param);
+  })
+  return op;
 }
 }  // namespace op
 }  // namespace mxnet

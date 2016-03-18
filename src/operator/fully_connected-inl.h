@@ -29,6 +29,7 @@ enum FullyConnectedOpOutputs {kOut};
 struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
   int num_hidden;
   bool no_bias;
+  int dtype;
   DMLC_DECLARE_PARAMETER(FullyConnectedParam) {
     // TODO(bing) change to only set lower bound
     // add support for boolean
@@ -36,6 +37,12 @@ struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
     .describe("Number of hidden nodes of the output.");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
+    DMLC_DECLARE_FIELD(dtype)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .set_default(mshadow::kFloat32)
+    .describe("input/output data type.");
   }
 };
 
@@ -43,7 +50,7 @@ struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
  * \brief This is the implementation of fully connected operator.
  * \tparam xpu The device that the op will be executed on.
  */
-template<typename xpu>
+template<typename xpu, typename DType>
 class FullyConnectedOp : public Operator {
  public:
   explicit FullyConnectedOp(FullyConnectedParam p) {
@@ -70,12 +77,12 @@ class FullyConnectedOp : public Operator {
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
-    Tensor<xpu, 2> data = in_data[fullc::kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> wmat = in_data[fullc::kWeight].get<xpu, 2, real_t>(s);
-    Tensor<xpu, 2> out = out_data[fullc::kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2, DType> data = in_data[fullc::kData].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(s);
+    Tensor<xpu, 2, DType> out = out_data[fullc::kOut].FlatTo2D<xpu, DType>(s);
     out = dot(data, wmat.T());
     if (!param_.no_bias) {
-      Tensor<xpu, 1> bias = in_data[fullc::kBias].get<xpu, 1, real_t>(s);
+      Tensor<xpu, 1, DType> bias = in_data[fullc::kBias].get<xpu, 1, DType>(s);
       out += repmat(bias, data.size(0));
     }
   }
@@ -96,9 +103,9 @@ class FullyConnectedOp : public Operator {
     // TODO(bing): check the BLAS Handle, be careful
     //  maybe need blas handle from context
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[fullc::kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> wmat = in_data[fullc::kWeight].get<xpu, 2, real_t>(s);
-    Tensor<xpu, 2> grad = out_grad[fullc::kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2, DType> data = in_data[fullc::kData].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(s);
+    Tensor<xpu, 2, DType> grad = out_grad[fullc::kOut].FlatTo2D<xpu, DType>(s);
 #if defined(__CUDACC__)
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
@@ -106,15 +113,15 @@ class FullyConnectedOp : public Operator {
     //  backprop
     CHECK_NE(req[fullc::kWeight], kWriteInplace) << "cannot write weight inplace";
     // gradient of weight
-    Tensor<xpu, 2> gwmat = in_grad[fullc::kWeight].get<xpu, 2, real_t>(s);
+    Tensor<xpu, 2, DType> gwmat = in_grad[fullc::kWeight].get<xpu, 2, DType>(s);
     Assign(gwmat, req[fullc::kWeight], dot(grad.T(), data));
     // gradient of bias
     if (!param_.no_bias) {
-      Tensor<xpu, 1> gbias = in_grad[fullc::kBias].get<xpu, 1, real_t>(s);
+      Tensor<xpu, 1, DType> gbias = in_grad[fullc::kBias].get<xpu, 1, DType>(s);
       Assign(gbias, req[fullc::kBias], sum_rows(grad));
     }
     // gradient of data
-    Tensor<xpu, 2> gdata = in_grad[fullc::kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2, DType> gdata = in_grad[fullc::kData].FlatTo2D<xpu, DType>(s);
     Assign(gdata, req[fullc::kData], dot(grad, wmat));
   }
 
@@ -170,6 +177,17 @@ class FullyConnectedProp : public OperatorProperty {
     return true;
   }
 
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    for (int type : *in_type) {
+      CHECK_EQ(type, param_.dtype);
+    }
+    out_type->clear();
+    out_type->push_back(param_.dtype);
+    return true;
+  }
+
   OperatorProperty* Copy() const override {
     FullyConnectedProp* fc_sym = new FullyConnectedProp();
     fc_sym->param_ = this->param_;
@@ -196,7 +214,13 @@ class FullyConnectedProp : public OperatorProperty {
     return {{in_data[fullc::kData], in_grad[fullc::kData]}};
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented.";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   FullyConnectedParam param_;
