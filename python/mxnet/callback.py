@@ -82,18 +82,10 @@ class Speedometer(object):
             if count % self.frequent == 0:
                 speed = self.frequent * self.batch_size / (time.time() - self.tic)
                 if param.eval_metric is not None:
-<<<<<<< HEAD
                     name_value = param.eval_metric.get_name_value()
                     for name, value in name_value:
                         logging.info('Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%f',
                                      param.epoch, count, speed, name, value)
-=======
-                    name, value = param.eval_metric.get()
-                    if not isinstance(value, list): value = [value]
-                    value = ' '.join([str(x) for x in value])
-                    logging.info("Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%s",
-                                 param.epoch, count, speed, name, value)
->>>>>>> Add support for multiple outputs in metric.py
                 else:
                     logging.info("Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
                                  param.epoch, count, speed)

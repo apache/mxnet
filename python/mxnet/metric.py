@@ -64,8 +64,10 @@ class EvalMetric(object):
             else:
                 return (self.name, self.sum_metric / self.num_inst)
         else:
-            value = [x / y if y != 0 else float('nan') for x, y in zip(self.sum_metric, self.num_inst)]
-            return (self.name, value)
+            names = ['%s_%d'%(self.name, i) for i in range(self.num)]
+            values = [x / y if y != 0 else float('nan') \
+                for x, y in zip(self.sum_metric, self.num_inst)]
+            return (names, values)
 
     def get_name_value(self):
         """Get zipped name and value pairs"""
