@@ -249,3 +249,45 @@ class Xavier(Initializer):
             random.normal(0, scale, out=arr)
         else:
             raise ValueError("Unknown random type")
+
+
+class Kaiming(Initializer):
+    """Initialize the weight with Kaiming initialization scheme.
+
+    Reference paper
+    ----------
+    Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun, 
+    Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification, ICCV 2015
+    http://research.microsoft.com/en-us/um/people/kahe/publications/iccv15imgnet.pdf
+
+    Parameters
+    ----------
+    rnd_type: str, optional
+        Use ```gaussian``` or ```uniform``` to init
+
+    factor_type: str, optional
+        Use ```in```, or ```out``` to init
+    """
+    def __init__(self, rnd_type="gaussian", factor_type="out"):
+        self.rnd_type = rnd_type
+        self.factor_type = factor_type
+
+
+    def _init_weight(self, _, arr):
+        shape = arr.shape
+        fan_in = shape[0]
+        fan_out = shape[1]
+        factor = 1
+        if self.factor_type == "in":
+            factor = fan_in * 1 if len(shape) == 2 else np.prod(shape[2:])
+        elif self.factor_type == "out":
+            factor = fan_out * (1 if len(shape) == 2 else np.prod(shape[2:]))
+        else:
+            raise ValueError("Incorrect factor type")
+        scale = np.sqrt(2.0 / factor)
+        if self.rnd_type == "uniform":
+            random.uniform(-scale, scale, out=arr)
+        elif self.rnd_type == "gaussian":
+            random.normal(0, scale, out=arr)
+        else:
+            raise ValueError("Unknown random type")
