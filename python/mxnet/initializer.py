@@ -256,9 +256,10 @@ class Kaiming(Initializer):
 
     Reference paper
     ----------
-    Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun, 
-    Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification, ICCV 2015
-    http://research.microsoft.com/en-us/um/people/kahe/publications/iccv15imgnet.pdf
+    Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun,
+    Delving Deep into Rectifiers:
+    Surpassing Human-Level Performance on ImageNet Classification, ICCV 2015
+    link: http://research.microsoft.com/en-us/um/people/kahe/publications/iccv15imgnet.pdf
 
     Parameters
     ----------
