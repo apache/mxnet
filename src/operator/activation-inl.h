@@ -30,6 +30,7 @@ enum ActivationOpType {kReLU, kSigmoid, kTanh, kSoftReLU};
 struct ActivationParam : public dmlc::Parameter<ActivationParam> {
   // use int for enumeration
   int act_type;
+  int dtype;
   DMLC_DECLARE_PARAMETER(ActivationParam) {
     DMLC_DECLARE_FIELD(act_type)
     .add_enum("relu", activation::kReLU)
@@ -37,6 +38,12 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
     .add_enum("tanh", activation::kTanh)
     .add_enum("softrelu", activation::kSoftReLU)
     .describe("Activation function to be applied.");
+    DMLC_DECLARE_FIELD(dtype)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .set_default(mshadow::kFloat32)
+    .describe("input/output data type.");
   }
 };
 
@@ -44,7 +51,7 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
  * \brief This is the implementation of activation operator.
  * \tparam xpu The device that the op will be executed on.
  */
-template<typename xpu, typename ForwardOp, typename BackwardOp>
+template<typename xpu, typename ForwardOp, typename BackwardOp, typename DType>
 class ActivationOp : public Operator {
  public:
   virtual void Forward(const OpContext &ctx,
@@ -57,8 +64,8 @@ class ActivationOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[activation::kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> out = out_data[activation::kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2, DType> data = in_data[activation::kData].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> out = out_data[activation::kOut].FlatTo2D<xpu, DType>(s);
     Assign(out, req[activation::kOut], F<ForwardOp>(data));
     // Use asynchronize complete notification
     // This is only intended as an example of async ops
@@ -79,9 +86,9 @@ class ActivationOp : public Operator {
     CHECK(in_data.size() == 1 && in_grad.size() == 1);
     CHECK_EQ(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> m_out_grad = out_grad[activation::kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> m_out_data = out_data[activation::kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> m_in_grad = in_grad[activation::kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2, DType> m_out_grad = out_grad[activation::kOut].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> m_out_data = out_data[activation::kOut].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> m_in_grad = in_grad[activation::kData].FlatTo2D<xpu, DType>(s);
     Assign(m_in_grad, req[activation::kData], F<BackwardOp>(m_out_data) * m_out_grad);
     // Use asynchronize complete notification
     // This is only intended as an example of async ops
@@ -123,6 +130,17 @@ class ActivationProp : public OperatorProperty {
     return true;
   }
 
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    for (int type : *in_type) {
+      CHECK_EQ(type, param_.dtype);
+    }
+    out_type->clear();
+    out_type->push_back(param_.dtype);
+    return true;
+  }
+
   OperatorProperty* Copy() const override {
     auto ptr = new ActivationProp();
     ptr->param_ = param_;
@@ -159,7 +177,13 @@ class ActivationProp : public OperatorProperty {
     return {{in_data[activation::kData], out_data[activation::kOut]}};
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented.";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   ActivationParam param_;
