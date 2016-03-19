@@ -3,13 +3,13 @@
   <parent>
     <groupId>ml.dmlc.mxnet</groupId>
     <artifactId>mxnet-scala-native-parent</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.1.0-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
   <groupId>ml.dmlc.mxnet</groupId>
   <artifactId>libmxnet-scala</artifactId>
-  <version>0.1-SNAPSHOT</version>
+  <version>0.1.0-SNAPSHOT</version>
   <name>MXNet Scala Package - Native Linux-x86_64 CPU-only</name>
   <url>http://maven.apache.org</url>
 
@@ -19,10 +19,10 @@
     <dependency>
       <groupId>ml.dmlc.mxnet</groupId>
       <artifactId>mxnet-core_${scala.binary.version}</artifactId>
-      <version>0.1-SNAPSHOT</version>
+      <version>${project.version}</version>
       <type>jar</type>
       <scope>compile</scope>
-    </dependency>   
+    </dependency>
   </dependencies>
 
   <build>
@@ -30,7 +30,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-      </plugin>     
+      </plugin>
 
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
