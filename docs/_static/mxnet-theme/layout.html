@@ -37,13 +37,6 @@
       {%- if render_sidebar %}
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-          {%- block sidebarlogo %}
-          {%- if logo %}
-            <p class="logo"><a href="{{ pathto(master_doc) }}">
-              <img class="logo" src="{{ pathto('_static/' + logo, 1) }}" alt="Logo"/>
-            </a></p>
-          {%- endif %}
-          {%- endblock %}
           {%- if sidebars != None %}
             {#- new style sidebar: explicitly include/exclude templates #}
             {%- for sidebartemplate in sidebars %}
@@ -53,9 +46,6 @@
             {#- old style sidebars: using blocks -- should be deprecated #}
             {%- block sidebartoc %}
             {%- include "localtoc.html" %}
-            {%- endblock %}
-            {%- block sidebarsearch %}
-            {%- include "searchbox.html" %}
             {%- endblock %}
           {%- endif %}
         </div>
@@ -81,14 +71,11 @@
 
 {%- macro css() %}
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
-    <!-- <link rel="stylesheet" href="{{ pathto('_static/navbar.css', 1) }}"> -->
     {% if pagename == 'index' %}
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
-    <!-- <link rel="stylesheet" href="_static/index.css"> -->
     {%- else %}
     <link rel="stylesheet" href="{{ pathto('_static/' + style, 1) }}" type="text/css" />
     <link rel="stylesheet" href="{{ pathto('_static/pygments.css', 1) }}" type="text/css" />
-    <!-- <link rel="stylesheet" href="{{ pathto('_static/page.css', 1) }}"> -->
     {%- endif %}
 
     <link rel="stylesheet" href="{{ pathto('_static/mxnet.css', 1) }}">
@@ -160,7 +147,7 @@
     {%- include "footer.html" %}
     {%- endif %} <!-- pagename != index -->
 
-    <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+    <!-- <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script> -->
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
   </body>
 </html>
