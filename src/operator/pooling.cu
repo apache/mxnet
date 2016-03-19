@@ -8,7 +8,7 @@
 #include "./pooling-inl.h"
 #if MXNET_USE_CUDNN == 1
 #include "./cudnn_pooling-inl.h"
-#endif // MXNET_USE_CUDNN
+#endif  // MXNET_USE_CUDNN
 
 namespace mxnet {
 namespace op {
