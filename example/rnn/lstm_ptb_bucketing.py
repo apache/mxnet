@@ -1,10 +1,11 @@
-# pylint:skip-file
+# pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
+# pylint: disable=superfluous-parens, no-member
 import sys
 sys.path.insert(0, "../../python")
-import mxnet as mx
 import numpy as np
+import mxnet as mx
 
-from lstm import LSTMState, LSTMParam, LSTMModel, lstm
+from lstm import LSTMState, LSTMParam, lstm
 
 # The interface of a data iter that works for bucketing
 #
@@ -17,8 +18,8 @@ from lstm import LSTMState, LSTMParam, LSTMModel, lstm
 #   - bucket_key: the key for the bucket that should be used for this batch
 
 def read_content(path):
-    with open(path) as input:
-        content = input.read()
+    with open(path) as ins:
+        content = ins.read()
         content = content.replace('\n', ' <eos> ').replace('. ', ' <eos> ')
         return content
 
@@ -26,18 +27,18 @@ def build_vocab(path):
     content = read_content(path)
     content = content.split(' ')
     idx = 1 # 0 is left for zero-padding
-    vocab = {}
+    the_vocab = {}
     for word in content:
         if len(word) == 0:
             continue
-        if not word in vocab:
-            vocab[word] = idx
+        if not word in the_vocab:
+            the_vocab[word] = idx
             idx += 1
-    return vocab
+    return the_vocab
 
-def text2id(sentence, vocab):
+def text2id(sentence, the_vocab):
     words = sentence.split(' ')
-    words = [vocab[w] for w in words if len(w) > 0]
+    words = [the_vocab[w] for w in words if len(w) > 0]
     return words
 
 class SimpleBatch(object):
@@ -62,6 +63,7 @@ class SimpleBatch(object):
 class DummyIter(mx.io.DataIter):
     "A dummy iterator that always return the same batch, used for speed testing"
     def __init__(self, real_iter):
+        super(DummyIter, self).__init__()
         self.real_iter = real_iter
         self.provide_data = real_iter.provide_data
         self.provide_label = real_iter.provide_label
@@ -79,8 +81,8 @@ class DummyIter(mx.io.DataIter):
 
 class BucketSentenceIter(mx.io.DataIter):
     def __init__(self, path, vocab, buckets, batch_size,
-            init_states, n_batch=None,
-            data_name='data', label_name='label'):
+                 init_states, data_name='data', label_name='label'):
+        super(BucketSentenceIter, self).__init__()
         content = read_content(path)
         sentences = content.split(' <eos> ')
 
@@ -90,7 +92,7 @@ class BucketSentenceIter(mx.io.DataIter):
 
         buckets.sort()
         self.buckets = buckets
-        self.data = [[] for k in buckets]
+        self.data = [[] for _ in buckets]
 
         self.default_bucket_key = buckets[0]
 
@@ -106,11 +108,11 @@ class BucketSentenceIter(mx.io.DataIter):
             # bucket size here
 
         # convert data into ndarrays for better speed during training
-        data = [np.zeros((len(x), buckets[i])) for i,x in enumerate(self.data)]
+        data = [np.zeros((len(x), buckets[i])) for i, x in enumerate(self.data)]
         for i_bucket in range(len(self.buckets)):
             for j in range(len(self.data[i_bucket])):
                 sentence = self.data[i_bucket][j]
-                data[i_bucket][j,:len(sentence)] = sentence
+                data[i_bucket][j, :len(sentence)] = sentence
         self.data = data
 
         # Get the size of each bucket, so that we could sample
@@ -118,8 +120,8 @@ class BucketSentenceIter(mx.io.DataIter):
         bucket_sizes = [len(x) for x in self.data]
 
         print("Summary of dataset ==================")
-        for bkt, sz in zip(buckets, bucket_sizes):
-            print("bucket of len %3d : %d samples" % (bkt, sz))
+        for bkt, size in zip(buckets, bucket_sizes):
+            print("bucket of len %3d : %d samples" % (bkt, size))
 
         self.batch_size = batch_size
         self.make_data_iter_plan()
@@ -128,9 +130,9 @@ class BucketSentenceIter(mx.io.DataIter):
         self.init_state_arrays = [mx.nd.zeros(x[1]) for x in init_states]
 
         self.provide_data = [('%s/%d' % (self.data_name, t), (self.batch_size,))
-                for t in range(self.default_bucket_key)] + init_states
+                             for t in range(self.default_bucket_key)] + init_states
         self.provide_label = [('%s/%d' % (self.label_name, t), (self.batch_size,))
-                for t in range(self.default_bucket_key)]
+                              for t in range(self.default_bucket_key)]
 
     def make_data_iter_plan(self):
         "make a random data iteration plan"
@@ -140,7 +142,7 @@ class BucketSentenceIter(mx.io.DataIter):
             bucket_n_batches.append(len(self.data[i]) / self.batch_size)
             self.data[i] = self.data[i][:bucket_n_batches[i]*self.batch_size]
 
-        bucket_plan = np.hstack([np.zeros(n, int)+i for i,n in enumerate(bucket_n_batches)])
+        bucket_plan = np.hstack([np.zeros(n, int)+i for i, n in enumerate(bucket_n_batches)])
         np.random.shuffle(bucket_plan)
 
         bucket_idx_all = [np.random.permutation(len(x)) for x in self.data]
@@ -168,20 +170,20 @@ class BucketSentenceIter(mx.io.DataIter):
             idx = self.bucket_idx_all[i_bucket][i_idx:i_idx+self.batch_size]
             self.bucket_curr_idx[i_bucket] += self.batch_size
             data[:] = self.data[i_bucket][idx]
-            label[:,:-1] = data[:,1:]
-            label[:,-1] = 0
+            label[:, :-1] = data[:, 1:]
+            label[:, -1] = 0
 
             data_all = [mx.nd.array(data[:, t])
-                    for t in range(self.buckets[i_bucket])] + self.init_state_arrays
+                        for t in range(self.buckets[i_bucket])] + self.init_state_arrays
             label_all = [mx.nd.array(label[:, t])
-                    for t in range(self.buckets[i_bucket])]
+                         for t in range(self.buckets[i_bucket])]
             data_names = ['%s/%d' % (self.data_name, t)
-                    for t in range(self.buckets[i_bucket])] + init_state_names
+                          for t in range(self.buckets[i_bucket])] + init_state_names
             label_names = ['%s/%d' % (self.label_name, t)
-                    for t in range(self.buckets[i_bucket])]
+                           for t in range(self.buckets[i_bucket])]
 
             data_batch = SimpleBatch(data_names, data_all, label_names, label_all,
-                              self.buckets[i_bucket])
+                                     self.buckets[i_bucket])
             yield data_batch
 
 # we define a new unrolling function here because the original
@@ -192,16 +194,16 @@ class BucketSentenceIter(mx.io.DataIter):
 def lstm_unroll(num_lstm_layer, seq_len, input_size,
                 num_hidden, num_embed, num_label, dropout=0.):
 
-    embed_weight=mx.sym.Variable("embed_weight")
+    embed_weight = mx.sym.Variable("embed_weight")
     cls_weight = mx.sym.Variable("cls_weight")
     cls_bias = mx.sym.Variable("cls_bias")
     param_cells = []
     last_states = []
     for i in range(num_lstm_layer):
-        param_cells.append(LSTMParam(i2h_weight = mx.sym.Variable("l%d_i2h_weight" % i),
-                                      i2h_bias = mx.sym.Variable("l%d_i2h_bias" % i),
-                                      h2h_weight = mx.sym.Variable("l%d_h2h_weight" % i),
-                                      h2h_bias = mx.sym.Variable("l%d_h2h_bias" % i)))
+        param_cells.append(LSTMParam(i2h_weight=mx.sym.Variable("l%d_i2h_weight" % i),
+                                     i2h_bias=mx.sym.Variable("l%d_i2h_bias" % i),
+                                     h2h_weight=mx.sym.Variable("l%d_h2h_weight" % i),
+                                     h2h_bias=mx.sym.Variable("l%d_h2h_bias" % i)))
         state = LSTMState(c=mx.sym.Variable("l%d_init_c" % i),
                           h=mx.sym.Variable("l%d_init_h" % i))
         last_states.append(state)
