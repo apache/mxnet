@@ -21,7 +21,7 @@ Operator *CreateOp<gpu>(ActivationParam param) {
 #if MXNET_USE_CUDNN == 1
   return new CuDNNActivationOp(param);
 #else
-  switch(param.act_type) {
+  switch (param.act_type) {
     case activation::kReLU:
       return new ActivationOp<gpu, mshadow_op::relu, mshadow_op::relu_grad>();
     case activation::kSigmoid:
@@ -34,6 +34,6 @@ Operator *CreateOp<gpu>(ActivationParam param) {
   }
 #endif  // MXNET_USE_CUDNN
 }
-}  // op
+}  // namespace op
 }  // namespace mxnet
 
