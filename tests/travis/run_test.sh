@@ -109,7 +109,6 @@ if [ ${TASK} == "python_test" ]; then
 fi
 
 if [ ${TASK} == "scala_test" ]; then
-    export MAVEN_OPTS="-Xmx256m -XX:MaxPermSize=128m"
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
         LIB_GOMP_PATH=`find /usr/local/lib -name libgomp.dylib | grep -v i386 | head -n1`
         ln -sf $LIB_GOMP_PATH /usr/local/lib/libgomp.dylib
@@ -121,6 +120,7 @@ if [ ${TASK} == "scala_test" ]; then
     ln -s ${CACHE_PREFIX}/data ${PWD}/data
 
     export JAVA_HOME=$(/usr/libexec/java_home)
+    export MAVEN_OPTS="-Xmx512m -XX:MaxPermSize=128m"
 
     make scalapkg || exit -1
     make scalatest || exit -1

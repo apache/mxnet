@@ -24,7 +24,7 @@
     </dependency>
     <dependency>
       <groupId>ml.dmlc.mxnet</groupId>
-      <artifactId>libmxnet-scala</artifactId>
+      <artifactId>libmxnet-scala-osx-x86_64-cpu</artifactId>
       <version>${project.version}</version>
       <type>jnilib</type>
     </dependency>
