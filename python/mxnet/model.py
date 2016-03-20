@@ -155,7 +155,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     eval_data : DataIter
         Validation data iterator.
     eval_metric : EvalMetric
-        A evaluation function.
+        An evaluation function or a list of evaluation functions.
     epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
         A callback that is invoked at end of each epoch.
         This can be used to checkpoint model each epoch.
@@ -269,8 +269,10 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
             if epoch_size is None or nbatch >= epoch_size:
                 break
 
-        name, value = eval_metric.get()
-        logger.info('Epoch[%d] Train-%s=%f', epoch, name, value)
+        name_value = eval_metric.get_name_value()
+        for name, value in name_value:
+            logger.info('Epoch[%d] Train-%s=%f', epoch, name, value)
+
         toc = time.time()
         logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc - tic))
 
@@ -302,8 +304,9 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                             call(batch_end_params)
                     else:
                         eval_batch_end_callback(batch_end_params)
-            name, value = eval_metric.get()
-            logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
+            name_value = eval_metric.get_name_value()
+            for name, value in name_value:
+                logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
     # end of all epochs
     return
 
