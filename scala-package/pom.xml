@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>ml.dmlc.mxnet</groupId>
   <artifactId>mxnet-parent_2.10</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.0</version>
   <name>MXNet Scala Package - Parent</name>
   <url>https://github.com/dmlc/mxnet/tree/master/scala-package</url>
   <description>MXNet Scala Package</description>
@@ -75,6 +75,9 @@
                 <goals>
                   <goal>jar-no-fork</goal>
                 </goals>
+                <configuration>
+                  <includePom>true</includePom>>
+                </configuration>
               </execution>
             </executions>
           </plugin>
@@ -88,6 +91,15 @@
                 <goals>
                   <goal>jar</goal>
                 </goals>
+                <configuration>
+                  <includeDependencySources>true</includeDependencySources>
+                  <dependencySourceExcludes>
+                    <dependencySourceExclude>commons-codec:*</dependencySourceExclude>
+                    <dependencySourceExclude>org.scala-lang:*</dependencySourceExclude>
+                    <dependencySourceExclude>log4j:*</dependencySourceExclude>
+                    <dependencySourceExclude>org.slf4j:*</dependencySourceExclude>
+                  </dependencySourceExcludes>
+                </configuration>
               </execution>
             </executions>
           </plugin>
