@@ -38,7 +38,10 @@ def fit(args, network, data_loader):
                       'aux_params' : tmp.aux_params,
                       'begin_epoch' : args.load_epoch}
     # save model
-    checkpoint = None if model_prefix is None else mx.callback.do_checkpoint(model_prefix)
+    save_model_prefix = args.save_model_prefix
+    if save_model_prefix is None:
+        save_model_prefix = model_prefix
+    checkpoint = None if save_model_prefix is None else mx.callback.do_checkpoint(save_model_prefix)
 
     # data
     (train, val) = data_loader(args, kv)
