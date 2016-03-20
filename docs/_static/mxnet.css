@@ -68,7 +68,16 @@
 
 
 /* sidebar */
-div.sphinxsidebar { margin-left: 0; position: fixed; overflow-y: scroll; width: 250px; top: 52px; bottom: 0; display: none }
+div.sphinxsidebar {
+    margin-top: 20px;
+    margin-left: 0;
+    position: fixed;
+    overflow-y: scroll;
+    width: 250px;
+    top: 52px;
+    bottom: 0;
+    display: none
+}
 div.sphinxsidebar ul { padding: 0 }
 div.sphinxsidebar ul ul { margin-left: 15px }
 
@@ -88,7 +97,7 @@ div.sphinxsidebar ul ul { margin-left: 15px }
 }
 
 body>.container {
-    padding-top: 65px
+    padding-top: 80px
 }
 
 body {
@@ -131,5 +140,5 @@ pre {
 }
 .dropdown-menu li a {
     color: #0079b2;
-    font-size: 18px;
+    font-size: 20px;
 }

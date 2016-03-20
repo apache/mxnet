@@ -300,3 +300,29 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 #texinfo_show_urls = 'footnote'
+
+# hook for doxygen
+def run_doxygen(folder):
+    """Run the doxygen make command in the designated folder."""
+    try:
+        retcode = subprocess.call("cd %s; make doxygen" % folder, shell=True)
+        retcode = subprocess.call("cp -rf doxygen/html _build/html/doxygen", shell=True)
+        if retcode < 0:
+            sys.stderr.write("doxygen terminated by signal %s" % (-retcode))
+    except OSError as e:
+        sys.stderr.write("doxygen execution failed: %s" % e)
+
+
+def generate_doxygen_xml(app):
+    """Run the doxygen make commands if we're on the ReadTheDocs server"""
+    run_doxygen('..')
+    sys.stderr.write('The Lib path: %s\n' % str(os.listdir('../lib')))
+
+# def setup(app):
+#     # Add hook for building doxygen xml when needed
+#     # no c++ API for now
+#     app.connect("builder-inited", generate_doxygen_xml)
+#     app.add_config_value('recommonmark_config', {
+#             'url_resolver': lambda url: github_doc_root + url,
+#             }, True)
+#     app.add_transform(AutoStructify)
