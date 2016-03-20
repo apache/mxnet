@@ -58,6 +58,57 @@ class EvalMetric(object):
         else:
             return (self.name, self.sum_metric / self.num_inst)
 
+    def get_name_value(self):
+        """Get zipped name and value pairs"""
+        name, value = self.get()
+        if not isinstance(name, list):
+            name = [name]
+        if not isinstance(value, list):
+            value = [value]
+        return zip(name, value)
+
+class CompositeEvalMetric(EvalMetric):
+    """Manage multiple evaluation metrics."""
+
+    def __init__(self, **kwargs):
+        super(CompositeEvalMetric, self).__init__('composite')
+        try:
+            self.metrics = kwargs['metrics']
+        except KeyError:
+            self.metrics = []
+
+    def add(self, metric):
+        """Add a child metric."""
+        self.metrics.append(metric)
+
+    def get_metric(self, index):
+        """Get a child metric."""
+        try:
+            return self.metrics[index]
+        except IndexError:
+            return ValueError("Metric index {} is out of range 0 and {}".format(
+                index, len(self.metrics)))
+
+    def update(self, labels, preds):
+        for metric in self.metrics:
+            metric.update(labels, preds)
+
+    def reset(self):
+        try:
+            for metric in self.metrics:
+                metric.reset()
+        except AttributeError:
+            pass
+
+    def get(self):
+        names = []
+        results = []
+        for metric in self.metrics:
+            result = metric.get()
+            names.append(result[0])
+            results.append(result[1])
+        return (names, results)
+
 ########################
 # CLASSIFICATION METRICS
 ########################
@@ -79,6 +130,37 @@ class Accuracy(EvalMetric):
 
             self.sum_metric += (pred_label.flat == label.flat).sum()
             self.num_inst += len(pred_label.flat)
+
+class TopKAccuracy(EvalMetric):
+    """Calculate top k predictions accuracy"""
+
+    def __init__(self, **kwargs):
+        super(TopKAccuracy, self).__init__('top_k_accuracy')
+        try:
+            self.top_k = kwargs['top_k']
+        except KeyError:
+            self.top_k = 1
+        assert(self.top_k > 1), 'Please use Accuracy if top_k is no more than 1'
+        self.name += '_%d' % self.top_k
+
+    def update(self, labels, preds):
+        check_label_shapes(labels, preds)
+
+        for i in range(len(labels)):
+            assert(len(preds[i].shape) <= 2), 'Predictions should be no more than 2 dims'
+            pred_label = numpy.argsort(preds[i].asnumpy().astype('float32'), axis=1)
+            label = labels[i].asnumpy().astype('int32')
+            check_label_shapes(label, pred_label)
+            num_samples = pred_label.shape[0]
+            num_dims = len(pred_label.shape)
+            if num_dims == 1:
+                self.sum_metric += (pred_label.flat == label.flat).sum()
+            elif num_dims == 2:
+                num_classes = pred_label.shape[1]
+                top_k = min(num_classes, self.top_k)
+                for j in range(top_k):
+                    self.sum_metric += (pred_label[:, num_classes - 1 - j].flat == label.flat).sum()
+            self.num_inst += num_samples
 
 class F1(EvalMetric):
     """Calculate the F1 score of a binary classification problem."""
@@ -264,7 +346,7 @@ def np(numpy_feval, name=None):
     return CustomMetric(feval, name)
 # pylint: enable=invalid-name
 
-def create(metric):
+def create(metric, **kwargs):
     """Create an evaluation metric.
 
     Parameters
@@ -274,23 +356,29 @@ def create(metric):
         providing statistics given pred, label NDArray.
     """
 
-    metrics = {
-        'accuracy' : Accuracy(),
-        'f1' : F1(),
-        'acc' : Accuracy(),
-        'rmse' : RMSE(),
-        'mae' : MAE(),
-        'mse' : MSE(),
-        'ce' : CrossEntropy(),
-        'cross-entropy' : CrossEntropy()
-    }
-
     if callable(metric):
         return CustomMetric(metric)
     elif isinstance(metric, EvalMetric):
         return metric
+    elif isinstance(metric, list):
+        composite_metric = CompositeEvalMetric()
+        for child_metric in metric:
+            composite_metric.add(create(child_metric, **kwargs))
+        return composite_metric
+
+    metrics = {
+        'acc': Accuracy,
+        'accuracy': Accuracy,
+        'ce': CrossEntropy,
+        'f1': F1,
+        'mae': MAE,
+        'mse': MSE,
+        'rmse': RMSE,
+        'top_k_accuracy': TopKAccuracy
+    }
+
     try:
-        return metrics[metric.lower()]
+        return metrics[metric.lower()](**kwargs)
     except:
         raise ValueError("Metric must be either callable or in {}".format(
             metrics.keys()))
