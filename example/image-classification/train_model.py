@@ -38,7 +38,10 @@ def fit(args, network, data_loader):
                       'aux_params' : tmp.aux_params,
                       'begin_epoch' : args.load_epoch}
     # save model
-    checkpoint = None if model_prefix is None else mx.callback.do_checkpoint(model_prefix)
+    save_model_prefix = args.save_model_prefix
+    if save_model_prefix is None:
+        save_model_prefix = model_prefix
+    checkpoint = None if save_model_prefix is None else mx.callback.do_checkpoint(save_model_prefix)
 
     # data
     (train, val) = data_loader(args, kv)
@@ -76,9 +79,15 @@ def fit(args, network, data_loader):
         initializer        = mx.init.Xavier(factor_type="in", magnitude=2.34),
         **model_args)
 
+    eval_metrics = ['accuracy']
+    ## TopKAccuracy only allows top_k > 1
+    for top_k in [5, 10, 20]:
+        eval_metrics.append(mx.metric.create('top_k_accuracy', top_k = top_k))
+
     model.fit(
         X                  = train,
         eval_data          = val,
+        eval_metric        = eval_metrics,
         kvstore            = kv,
         batch_end_callback = mx.callback.Speedometer(args.batch_size, 50),
         epoch_end_callback = checkpoint)
