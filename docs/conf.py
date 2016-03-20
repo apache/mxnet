@@ -52,6 +52,7 @@ project = u'mxnet'
 author = u'%s developers' % project
 copyright = u'2015, %s' % author
 github_doc_root = 'https://github.com/dmlc/mxnet/tree/master/doc/'
+doc_root = 'http://mxnet.dmlc.ml/'
 
 # add markdown parser
 MarkdownParser.github_doc_root = github_doc_root
@@ -318,11 +319,11 @@ def generate_doxygen_xml(app):
     run_doxygen('..')
     sys.stderr.write('The Lib path: %s\n' % str(os.listdir('../lib')))
 
-# def setup(app):
-#     # Add hook for building doxygen xml when needed
-#     # no c++ API for now
-#     app.connect("builder-inited", generate_doxygen_xml)
-#     app.add_config_value('recommonmark_config', {
-#             'url_resolver': lambda url: github_doc_root + url,
-#             }, True)
-#     app.add_transform(AutoStructify)
+def setup(app):
+    # Add hook for building doxygen xml when needed
+    # no c++ API for now
+    app.connect("builder-inited", generate_doxygen_xml)
+    app.add_config_value('recommonmark_config', {
+            'url_resolver': lambda url: doc_root + url,
+            }, True)
+    app.add_transform(AutoStructify)
