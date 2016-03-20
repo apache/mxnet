@@ -13,22 +13,22 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<gpu>(ActivationParam param) {
+Operator *CreateOp<gpu>(ActivationParam param, int dtype) {
   Operator *op = NULL;
   // SoftReLU not supported by CUDNN yet
   if (param.act_type == activation::kSoftReLU) {
-    MSHADOW_REAL_TYPE_SWITCH(param.dtype, DType, {
+    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       op = new ActivationOp<gpu, mshadow_op::softrelu, mshadow_op::softrelu_grad, DType>();
     })
   }
 
 #if MXNET_USE_CUDNN == 1
-  MSHADOW_REAL_TYPE_SWITCH(param.dtype, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new CuDNNActivationOp<DType>(param);
   })
 #else
-  MSHADOW_REAL_TYPE_SWITCH(param.dtype, DType, {
-    switch(param.act_type) {
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    switch (param.act_type) {
       case activation::kReLU:
         op = new ActivationOp<gpu, mshadow_op::relu, mshadow_op::relu_grad, DType>();
         break;

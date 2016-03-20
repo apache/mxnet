@@ -10,9 +10,9 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<cpu>(ActivationParam param) {
+Operator *CreateOp<cpu>(ActivationParam param, int dtype) {
   Operator *op = NULL;
-  MSHADOW_REAL_TYPE_SWITCH(param.dtype, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     switch (param.act_type) {
       case activation::kReLU:
         op = new ActivationOp<cpu, mshadow_op::relu, mshadow_op::relu_grad, DType>();
@@ -40,7 +40,7 @@ Operator *ActivationProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_
   std::vector<int> out_type, aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-  DO_BIND_DISPATCH(CreateOp, param_);
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 
 DMLC_REGISTER_PARAMETER(ActivationParam);

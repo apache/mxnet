@@ -30,7 +30,6 @@ enum ActivationOpType {kReLU, kSigmoid, kTanh, kSoftReLU};
 struct ActivationParam : public dmlc::Parameter<ActivationParam> {
   // use int for enumeration
   int act_type;
-  int dtype;
   DMLC_DECLARE_PARAMETER(ActivationParam) {
     DMLC_DECLARE_FIELD(act_type)
     .add_enum("relu", activation::kReLU)
@@ -38,12 +37,6 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
     .add_enum("tanh", activation::kTanh)
     .add_enum("softrelu", activation::kSoftReLU)
     .describe("Activation function to be applied.");
-    DMLC_DECLARE_FIELD(dtype)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
-    .set_default(mshadow::kFloat32)
-    .describe("input/output data type.");
   }
 };
 
@@ -105,7 +98,7 @@ class ActivationOp : public Operator {
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(ActivationParam type);
+Operator* CreateOp(ActivationParam type, int dtype);
 
 #if DMLC_USE_CXX11
 class ActivationProp : public OperatorProperty {
@@ -133,11 +126,20 @@ class ActivationProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    for (int type : *in_type) {
-      CHECK_EQ(type, param_.dtype);
+    CHECK_GE(in_type->size(), 1);
+    int dtype = (*in_type)[0];
+    CHECK_NE(dtype, -1) << "First input must have specified type";
+    for (index_t i = 0; i < in_type->size(); ++i) {
+      if ((*in_type)[i] == -1) {
+        (*in_type)[i] = dtype;
+      } else {
+        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
+                                       << "Expected " << dtype << " v.s. given "
+                                       << (*in_type)[i] << " at " << ListArguments()[i];
+      }
     }
     out_type->clear();
-    out_type->push_back(param_.dtype);
+    out_type->push_back(dtype);
     return true;
   }
 

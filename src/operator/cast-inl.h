@@ -78,7 +78,6 @@ class CastOp : public Operator {
     Tensor<xpu, 2, DstDType> m_out_grad = out_grad[cast::kOut].FlatTo2D<xpu, DstDType>(s);
     Tensor<xpu, 2, SrcDType> m_in_grad = in_grad[cast::kData].FlatTo2D<xpu, SrcDType>(s);
     Assign(m_in_grad, req[cast::kData], tcast<SrcDType>(m_out_grad));
-
   }
 };  // class CastOp
 

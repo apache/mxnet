@@ -4,6 +4,8 @@
  * \brief
  * \author Junyuan Xie
 */
+#include <vector>
+
 #include "./cast-inl.h"
 #include "./mshadow_op.h"
 
@@ -19,6 +21,6 @@ Operator *CreateOp<gpu>(CastParam param, std::vector<int> *in_type) {
   })
   return op;
 }
-}  // op
+}  // namespace op
 }  // namespace mxnet
 

@@ -29,7 +29,6 @@ enum FullyConnectedOpOutputs {kOut};
 struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
   int num_hidden;
   bool no_bias;
-  int dtype;
   DMLC_DECLARE_PARAMETER(FullyConnectedParam) {
     // TODO(bing) change to only set lower bound
     // add support for boolean
@@ -37,12 +36,6 @@ struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
     .describe("Number of hidden nodes of the output.");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
-    DMLC_DECLARE_FIELD(dtype)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
-    .set_default(mshadow::kFloat32)
-    .describe("input/output data type.");
   }
 };
 
@@ -131,7 +124,7 @@ class FullyConnectedOp : public Operator {
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(FullyConnectedParam param);
+Operator* CreateOp(FullyConnectedParam param, int dtype);
 
 #if DMLC_USE_CXX11
 class FullyConnectedProp : public OperatorProperty {
@@ -180,11 +173,20 @@ class FullyConnectedProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    for (int type : *in_type) {
-      CHECK_EQ(type, param_.dtype);
+    CHECK_GE(in_type->size(), 1);
+    int dtype = (*in_type)[0];
+    CHECK_NE(dtype, -1) << "First input must have specified type";
+    for (index_t i = 0; i < in_type->size(); ++i) {
+      if ((*in_type)[i] == -1) {
+        (*in_type)[i] = dtype;
+      } else {
+        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
+                                       << "Expected " << dtype << " v.s. given "
+                                       << (*in_type)[i] << " at " << ListArguments()[i];
+      }
     }
     out_type->clear();
-    out_type->push_back(param_.dtype);
+    out_type->push_back(dtype);
     return true;
   }
 

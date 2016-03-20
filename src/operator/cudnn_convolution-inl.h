@@ -54,8 +54,9 @@ class CuDNNConvolutionOp : public Operator {
     if (!init_cudnn_) {
       Init(s, in_data, out_data);
     }
-    Tensor<gpu, 1, DType> workspace = ctx.requested[conv::kTempSpace].get_space_typed<gpu, 1, DType>(
-                                 mshadow::Shape1(forward_workspace_), s);
+    Tensor<gpu, 1, DType> workspace =
+        ctx.requested[conv::kTempSpace].get_space_typed<gpu, 1, DType>(
+            mshadow::Shape1(forward_workspace_), s);
     for (uint32_t g = 0; g < param_.num_group; ++g) {
       typename DataType<DType>::ScaleType alpha = 1.0f;
       typename DataType<DType>::ScaleType beta = 0.0f;
@@ -118,8 +119,9 @@ class CuDNNConvolutionOp : public Operator {
     Tensor<gpu, 4, DType> gwmat = in_grad[conv::kWeight].get<gpu, 4, DType>(s);
     Tensor<gpu, 4, DType> data = in_data[conv::kData].get<gpu, 4, DType>(s);
     Tensor<gpu, 4, DType> gdata = in_grad[conv::kData].get<gpu, 4, DType>(s);
-    Tensor<gpu, 1, DType> workspace = ctx.requested[conv::kTempSpace].get_space_typed<gpu, 1, DType>(
-                                 mshadow::Shape1(backward_workspace_), s);
+    Tensor<gpu, 1, DType> workspace =
+        ctx.requested[conv::kTempSpace].get_space_typed<gpu, 1, DType>(
+            mshadow::Shape1(backward_workspace_), s);
     for (uint32_t g = 0; g < param_.num_group; ++g) {
       typename DataType<DType>::ScaleType alpha = 1.0f;
       typename DataType<DType>::ScaleType beta = 0.0f;

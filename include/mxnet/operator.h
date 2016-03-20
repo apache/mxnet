@@ -287,7 +287,11 @@ class OperatorProperty {
    */
   virtual Operator* CreateOperator(Context ctx) const = 0;
   /*!
-   * \brief Create a Operator on specific context and input type
+   * \brief Create a Operator on specific context and input shape/type
+   * \param ctx context of this operator
+   * \param in_shape shape of the input ndarrays
+   * \param in_type dtype of the input ndarrays
+   * \return the created operator
    */
   virtual Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                      std::vector<int> *in_type) const {

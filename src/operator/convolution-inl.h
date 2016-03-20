@@ -36,7 +36,6 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   uint32_t num_group;
   uint64_t workspace;
   bool no_bias;
-  int dtype;
   DMLC_DECLARE_PARAMETER(ConvolutionParam) {
     int shape[] = {1, 1};
     DMLC_DECLARE_FIELD(kernel).describe("convolution kernel size: (y, x)");
@@ -57,12 +56,6 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     .describe("Tmp workspace for convolution (MB).");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
-    DMLC_DECLARE_FIELD(dtype)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
-    .set_default(mshadow::kFloat32)
-    .describe("input/output data type.");
   }
 };
 
@@ -92,21 +85,24 @@ class ConvolutionOp : public Operator {
         Shape3(param_.num_group,
                param_.num_filter / param_.num_group,
                data.shape_[1] / param_.num_group * param_.kernel[0] * param_.kernel[1]);
-    Tensor<xpu, 3, DType> wmat = in_data[conv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
+    Tensor<xpu, 3, DType> wmat =
+        in_data[conv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
     Tensor<xpu, 4, DType> out = out_data[conv::kOut].get<xpu, 4, DType>(s);
 #if defined(__CUDACC__)
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
 #endif
     const index_t nbatch = data.size(0);
-    Tensor<xpu, 1, DType> workspace = ctx.requested[conv::kTempSpace].get_space_typed<xpu, 1, DType>(
-        Shape1(this->InitTemp(data.shape_, out.shape_)), s);
+    Tensor<xpu, 1, DType> workspace =
+        ctx.requested[conv::kTempSpace].get_space_typed<xpu, 1, DType>(
+            Shape1(this->InitTemp(data.shape_, out.shape_)), s);
     for (index_t i = 0; i < nbatch; i += nstep_) {
       const index_t step = std::min(nstep_, nbatch - i);
       Tensor<xpu, 2, DType> temp_col = Tensor<xpu, 2, DType>(workspace.dptr_,
                                                Shape2(shape_colunit_[0],
                                                       shape_colunit_[1] * step), s);
-      Tensor<xpu, 3, DType> temp_dst = Tensor<xpu, 3, DType>(workspace.dptr_ + temp_col.shape_.Size(),
+      Tensor<xpu, 3, DType> temp_dst = Tensor<xpu, 3, DType>(
+                                               workspace.dptr_ + temp_col.shape_.Size(),
                                                Shape3(shape_dstunit_[0],
                                                       shape_dstunit_[1],
                                                       shape_dstunit_[2] * step), s);
@@ -169,23 +165,27 @@ class ConvolutionOp : public Operator {
         Shape3(param_.num_group,
                param_.num_filter / param_.num_group,
                data.shape_[1] / param_.num_group * param_.kernel[0] * param_.kernel[1]);
-    Tensor<xpu, 3, DType> wmat = in_data[conv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
+    Tensor<xpu, 3, DType> wmat =
+        in_data[conv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
     Tensor<xpu, 4, DType> grad = out_grad[conv::kOut].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> gdata = in_grad[conv::kData].get<xpu, 4, DType>(s);
-    Tensor<xpu, 3, DType> gwmat = in_grad[conv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
+    Tensor<xpu, 3, DType> gwmat =
+        in_grad[conv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
 #if defined(__CUDACC__)
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
 #endif
     const index_t nbatch = data.size(0);
-    Tensor<xpu, 1, DType> workspace = ctx.requested[conv::kTempSpace].get_space_typed<xpu, 1, DType>(
-              Shape1(this->InitTemp(data.shape_, grad.shape_)), s);
+    Tensor<xpu, 1, DType> workspace =
+        ctx.requested[conv::kTempSpace].get_space_typed<xpu, 1, DType>(
+            Shape1(this->InitTemp(data.shape_, grad.shape_)), s);
     for (index_t i = 0; i < nbatch; i += nstep_) {
       const index_t step = std::min(nstep_, nbatch - i);
       Tensor<xpu, 2, DType> temp_col = Tensor<xpu, 2, DType>(workspace.dptr_,
                                                Shape2(shape_colunit_[0],
                                                       shape_colunit_[1] * step), s);
-      Tensor<xpu, 3, DType> temp_dst = Tensor<xpu, 3, DType>(workspace.dptr_ + temp_col.shape_.Size(),
+      Tensor<xpu, 3, DType> temp_dst = Tensor<xpu, 3, DType>(
+                                               workspace.dptr_ + temp_col.shape_.Size(),
                                                Shape3(shape_dstunit_[0],
                                                       shape_dstunit_[1],
                                                       shape_dstunit_[2] * step), s);
@@ -287,7 +287,7 @@ class ConvolutionOp : public Operator {
 };  // class ConvolutionOp
 
 template<typename xpu>
-Operator* CreateOp(ConvolutionParam param);
+Operator* CreateOp(ConvolutionParam param, int dtype);
 
 #if DMLC_USE_CXX11
 class ConvolutionProp : public OperatorProperty {
@@ -355,11 +355,20 @@ class ConvolutionProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    for (int type : *in_type) {
-      CHECK_EQ(type, param_.dtype);
+    CHECK_GE(in_type->size(), 1);
+    int dtype = (*in_type)[0];
+    CHECK_NE(dtype, -1) << "First input must have specified type";
+    for (index_t i = 0; i < in_type->size(); ++i) {
+      if ((*in_type)[i] == -1) {
+        (*in_type)[i] = dtype;
+      } else {
+        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
+                                       << "Expected " << dtype << " v.s. given "
+                                       << (*in_type)[i] << " at " << ListArguments()[i];
+      }
     }
     out_type->clear();
-    out_type->push_back(param_.dtype);
+    out_type->push_back(dtype);
     return true;
   }
 

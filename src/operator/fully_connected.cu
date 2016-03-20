@@ -7,9 +7,9 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateOp<gpu>(FullyConnectedParam param) {
+Operator* CreateOp<gpu>(FullyConnectedParam param, int dtype) {
   Operator *op = NULL;
-  MSHADOW_REAL_TYPE_SWITCH(param.dtype, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new FullyConnectedOp<gpu, DType>(param);
   })
   return op;

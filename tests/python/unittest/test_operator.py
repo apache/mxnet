@@ -319,7 +319,7 @@ def test_embedding():
 
     data = mx.sym.Variable("data")
     embed = mx.sym.Embedding(data=data, input_dim=in_dim, output_dim=out_dim, name="embed")
-    exe_test = embed.simple_bind(mx.cpu(), data=(batch,))
+    exe_test = embed.simple_bind(mx.cpu(), grad_req={'data': 'null', 'embed_weight': 'write'}, data=(batch,))
     arg_map = dict(zip(embed.list_arguments(), exe_test.arg_arrays))
     grad_map = dict(zip(embed.list_arguments(), exe_test.grad_arrays))
     np_data = np.random.randint(low=0, high=in_dim, size=batch)
