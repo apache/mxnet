@@ -243,6 +243,9 @@ scalatest:
 scalainstall:
 	(cd $(ROOTDIR)/scala-package; mvn install -P$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)")
 
+scaladeploy:
+	(cd $(ROOTDIR)/scala-package; mvn deploy -Prelease,$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)")
+
 jnilint:
 	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
 

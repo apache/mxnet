@@ -39,6 +39,11 @@ object Base {
       System.loadLibrary("mxnet-scala")
     } catch {
       case e: UnsatisfiedLinkError =>
+        logger.warn("MXNet Scala native library not found in path. " +
+          "Copying native library from the archive. " +
+          "Consider installing the library somewhere in the path " +
+          "(for Windows: PATH, for Linux: LD_LIBRARY_PATH), " +
+          "or specifying by Java cmd option -Djava.library.path=[lib path].")
         NativeLibraryLoader.loadLibrary("mxnet-scala")
     }
   } catch {
