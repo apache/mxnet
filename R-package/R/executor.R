@@ -44,6 +44,15 @@ mx.exec.update.aux.arrays <- function(exec, arg.arrays, match.name=FALSE, skip.n
   exec$update.aux.arrays(arg.arrays, match.name, skip.null)
 }
 
+#' Update the executors with new arrays
+#' This function will MUTATE the state of exec
+#'
+#' @export
+mx.exec.update.grad.arrays <- function(exec, arg.arrays, match.name=FALSE, skip.null=FALSE) {
+  exec$update.grad.arrays(arg.arrays, match.name, skip.null)
+}
+
+
 #' Peform an forward on the executors
 #' This function will MUTATE the state of exec
 #'

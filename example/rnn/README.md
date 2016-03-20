@@ -2,9 +2,16 @@ RNN Example
 ===========
 This folder contains RNN examples using low level symbol interface.
 
+## Python
+
 - [lstm.py](lstm.py) Functions for building a LSTM Network
 - [lstm_bucketing.py](lstm_bucketing.py) PennTreeBank language model by using LSTM
 - [char_lstm.ipynb](char_lstm.ipynb) Notebook to demo how to train a character LSTM by using ```lstm.py```
+
+## R
+
+- [lstm.R](lstm.R) Functions for building a LSTM Network
+- [char_lstm.R](char_lstm.R) demo how to train a character LSTM by using ```lstm.R```
 
 
 Performance Note:
