@@ -212,7 +212,11 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     for epoch in range(begin_epoch, end_epoch):
         # Training phase
         tic = time.time()
-        eval_metric.reset()
+        if not isinstance(eval_metric, list):
+            eval_metric.reset()
+        else:
+            for i in range(len(eval_metric)):
+                eval_metric[i].reset()
         nbatch = 0
         # Iterate over training data.
         while True:
@@ -241,7 +245,11 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                     monitor.toc_print()
 
                 # evaluate at end, so we can lazy copy
-                executor_manager.update_metric(eval_metric, data_batch.label)
+                if not isinstance(eval_metric, list):
+                    executor_manager.update_metric(eval_metric, data_batch.label)
+                else:
+                    for i in range(len(eval_metric)):
+                        executor_manager.update_metric(eval_metric[i], data_batch.label)
 
                 nbatch += 1
                 # batch callback (for print purpose)
@@ -269,8 +277,15 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
             if epoch_size is None or nbatch >= epoch_size:
                 break
 
-        name, value = eval_metric.get()
-        logger.info('Epoch[%d] Train-%s=%f', epoch, name, value)
+        if not isinstance(eval_metric, list):
+            name, value = eval_metric.get()
+            logger.info('Epoch[%d] Train-%s=%f', epoch, name, value)
+        else:
+            logging_string = 'Epoch[%d] ' % epoch
+            for i in range(len(eval_metric)):
+                name, value = eval_metric[i].get()
+                logging_string += 'Train-%s=%f ' % (name, value)
+            logger.info(logging_string)
         toc = time.time()
         logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc - tic))
 
@@ -286,12 +301,20 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
 
         # evaluation
         if eval_data:
-            eval_metric.reset()
+            if not isinstance(eval_metric, list):
+                eval_metric.reset()
+            else:
+                for i in range(len(eval_metric)):
+                    eval_metric[i].reset()
             eval_data.reset()
             for i, eval_batch in enumerate(eval_data):
                 executor_manager.load_data_batch(eval_batch)
                 executor_manager.forward(is_train=False)
-                executor_manager.update_metric(eval_metric, eval_batch.label)
+                if not isinstance(eval_metric, list):
+                    executor_manager.update_metric(eval_metric, eval_batch.label)
+                else:
+                    for j in range(len(eval_metric)):
+                        executor_manager.update_metric(eval_metric[j], eval_batch.label)
                 if eval_batch_end_callback != None:
                     batch_end_params = BatchEndParam(epoch=epoch,
                                                      nbatch=i,
@@ -302,8 +325,15 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                             call(batch_end_params)
                     else:
                         eval_batch_end_callback(batch_end_params)
-            name, value = eval_metric.get()
-            logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
+            if not isinstance(eval_metric, list):
+                name, value = eval_metric.get()
+                logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
+            else:
+                logging_string = 'Epoch[%d] ' % epoch
+                for i in range(len(eval_metric)):
+                    name, value = eval_metric[i].get()
+                    logging_string += 'Validation-%s=%f ' % (name, value)
+                logger.info(logging_string)
     # end of all epochs
     return
 
@@ -646,8 +676,12 @@ class FeedForward(BASE_ESTIMATOR):
             the final score
         """
         # setup metric
-        if not isinstance(eval_metric, metric.EvalMetric):
-            eval_metric = metric.create(eval_metric)
+        if not isinstance(eval_metric, list):
+            if not isinstance(eval_metric, metric.EvalMetric):
+                eval_metric = metric.create(eval_metric)
+        else:
+            for i in range(len(eval_metric)):
+                eval_metric[i] = metric.create(eval_metric[i])
 
         X = self._init_iter(X, None, is_train=False)
         if reset:
@@ -663,7 +697,11 @@ class FeedForward(BASE_ESTIMATOR):
                 break
             _load_data(batch, data_arrays)
             self._pred_exec.forward(is_train=False)
-            eval_metric.update(batch.label, self._pred_exec.outputs)
+            if not isinstance(eval_metric, list):
+                eval_metric.update(batch.label, self._pred_exec.outputs)
+            else:
+                for j in range(len(eval_metric)):
+                    eval_metric[j].update(batch.label, self._pred_exec.outputs)
 
             if batch_end_callback != None:
                 batch_end_params = BatchEndParam(epoch=0,
@@ -675,7 +713,13 @@ class FeedForward(BASE_ESTIMATOR):
                         call(batch_end_params)
                 else:
                     batch_end_callback(batch_end_params)
-        return eval_metric.get()[1]
+        if not isinstance(eval_metric, list):
+            return eval_metric.get()[1]
+        else:
+            scores = []
+            for i in range(len(eval_metric)):
+                scores += [eval_metric[i].get()[1]]
+            return scores
 
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
@@ -733,8 +777,13 @@ class FeedForward(BASE_ESTIMATOR):
         self.kwargs["arg_names"] = arg_names
 
         # setup metric
-        if not isinstance(eval_metric, metric.EvalMetric):
-            eval_metric = metric.create(eval_metric)
+        if not isinstance(eval_metric, list):
+            if not isinstance(eval_metric, metric.EvalMetric):
+                eval_metric = metric.create(eval_metric)
+        else:
+            for i in range(len(eval_metric)):
+                if not isinstance(eval_metric[i], metric.EvalMetric):
+                    eval_metric[i] = metric.create(eval_metric[i])
 
         # create kvstore
         (kvstore, update_on_kvstore) = _create_kvstore(
