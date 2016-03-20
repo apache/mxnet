@@ -109,7 +109,7 @@ def Inception7E(data,
 
 # In[49]:
 
-def get_symbol(num_classes=1000):
+def get_symbol(num_classes=1000, fune_tune=False):
     data = mx.symbol.Variable(name="data")
     # stage 1
     conv = Conv(data, 32, kernel=(3, 3), stride=(2, 2), name="conv")
@@ -168,7 +168,9 @@ def get_symbol(num_classes=1000):
     # pool
     pool = mx.sym.Pooling(data=in5b, kernel=(8, 8), stride=(1, 1), pool_type="avg", name="global_pool")
     flatten = mx.sym.Flatten(data=pool, name="flatten")
-    fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=num_classes, name='fc1')
+    if fine_tune:
+        flatten = mx.sym.BlockGrad(flatten)
+    fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=num_classes, name='fc1_%d_classes' % num_classes)
     softmax = mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
     return softmax
 

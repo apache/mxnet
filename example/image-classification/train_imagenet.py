@@ -48,11 +48,17 @@ parser.add_argument('--val-dataset', type=str, default="val.rec",
                     help="validation dataset name")
 parser.add_argument('--data-shape', type=int, default=224,
                     help='set image\'s shape')
+parser.add_argument('--fine-tune', action='store_true', default=False,
+                    help='Fine tune a new network with a pre-trained model, default False')
 args = parser.parse_args()
 
 # network
 import importlib
-net = importlib.import_module('symbol_' + args.network).get_symbol(args.num_classes)
+if args.fine_tune:
+    net = importlib.import_module('symbol_' + args.network).get_symbol(
+              args.num_classes, args.fine_tune)
+else:
+    net = importlib.import_module('symbol_' + args.network).get_symbol(args.num_classes)
 
 # data
 def get_iterator(args, kv):

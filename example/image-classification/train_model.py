@@ -69,6 +69,9 @@ def fit(args, network, data_loader):
             args.gpus is None or len(args.gpus.split(',')) is 1):
         kv = None
 
+    ## Log network definition for post mortem examination
+    logging.info(network.debug_str())
+
     model = mx.model.FeedForward(
         ctx                = devs,
         symbol             = network,
