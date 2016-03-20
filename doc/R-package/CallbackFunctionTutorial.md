@@ -60,7 +60,7 @@ model <- mx.model.FeedForward.create(
 ## [10] Validation-rmse=8.19509291481822
 ```
 
-Besides, we provide two optional paramters, `batch.end.callback` and `epoch.end.callback`, which can provide great flexibility in model training.
+Besides, we provide two optional parameters, `batch.end.callback` and `epoch.end.callback`, which can provide great flexibility in model training.
 
 How to use callback functions
 ---------

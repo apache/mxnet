@@ -8,6 +8,7 @@
 #include <mxnet/symbolic.h>
 #include <memory>
 #include <map>
+#include <set>
 #include "./graph_executor.h"
 #include "./graph_algorithm.h"
 
@@ -298,19 +299,21 @@ void GraphExecutor::InitGraph(const Symbol &symbol,
   for (const auto& head : graph_.heads) {
     head_nodes.push_back(head.source_id);
   }
-  std::sort(head_nodes.begin(), head_nodes.end());
-  head_nodes.resize(std::unique(head_nodes.begin(), head_nodes.end()) - head_nodes.begin());
   std::vector<uint32_t> fwd_nodes = graph_.PostDFSOrder(head_nodes, std::unordered_set<uint32_t>());
   num_forward_nodes_ = fwd_nodes.size();
 
   std::unordered_set<uint32_t> fwd_set(fwd_nodes.begin(), fwd_nodes.end());
   std::vector<uint32_t> topo = graph_.TopoSort();
-  std::vector<uint32_t>  backward;
+  std::unordered_set<uint32_t> fwd_bwd_set(topo.begin(), topo.end());
+  std::vector<uint32_t> backward;
 
-  for (uint32_t nid : topo) {
-    if (fwd_set.count(nid) != 0) {
+  for (uint32_t nid : fwd_nodes) {
+    if (fwd_bwd_set.count(nid) != 0) {
       topo_order_.push_back(nid);
-    } else {
+    }
+  }
+  for (uint32_t nid : topo) {
+    if (fwd_set.count(nid) == 0) {
       // TODO(tqchen) find less hacky way to decide mirror node.
       const std::string& name = graph_.nodes[nid].name;
       bool is_mirror = graph_.nodes[nid].is_forward() &&
@@ -343,7 +346,7 @@ void GraphExecutor::AssignContext(const Context default_ctx,
                                   std::vector<Context> *ctx_plan) {
   ctx_plan->resize(graph_.nodes.size());
   std::vector<bool> assigned(graph_.nodes.size(), false);
-  // assign context of node to the binded version
+  // assign context of node to the bound version
   for (size_t i = 0; i < graph_.arg_nodes.size(); ++i) {
     uint32_t nid = graph_.arg_nodes[i];
     assigned[nid] = true;
@@ -522,11 +525,27 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NDArray> &in_args,
   for (size_t i = 0; i < graph_.arg_nodes.size(); ++i) {
     out_shapes[graph_.arg_nodes[i]][0] = in_args[i].shape();
   }
-  CHECK(graph_.InferNodeShapes(topo_order_, &out_shapes, &aux_shapes))
+  CHECK(graph_.InferNodeShapes(topo_order_, &out_shapes, &aux_shapes, false))
       << "Shape inference cannot be complete in bind";
   for (size_t i = 0; i < out_shapes.size(); ++i) {
     for (size_t j = 0; j < out_shapes[i].size(); ++j) {
       op_nodes_[i].outputs[j].shape = out_shapes[i][j];
+    }
+  }
+  // type inference
+  std::vector<std::vector<int> > out_types(op_nodes_.size());
+  std::vector<std::vector<int> > aux_types(op_nodes_.size());
+  for (size_t i = 0; i < out_types.size(); ++i) {
+    out_types[i].resize(op_nodes_[i].outputs.size(), -1);
+  }
+  for (size_t i = 0; i < graph_.arg_nodes.size(); ++i) {
+    out_types[graph_.arg_nodes[i]][0] = in_args[i].dtype();
+  }
+  CHECK(graph_.InferNodeTypes(topo_order_, &out_types, &aux_types))
+      << "Type inference cannot be complete in bind";
+  for (size_t i = 0; i < out_types.size(); ++i) {
+    for (size_t j = 0; j < out_types[i].size(); ++j) {
+      op_nodes_[i].outputs[j].type_flag = out_types[i][j];
     }
   }
   // bind aux args
@@ -536,6 +555,7 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NDArray> &in_args,
     for (size_t j = 0; j < aux_shapes[i].size(); ++j) {
       DataEntryInfo &info = op_nodes_[i].aux_states[j];
       info.shape = aux_shapes[i][j];
+      info.type_flag = aux_types[i][j];
       info.type = kBindByExternal;
       if (mirror_source_map_.count(i) == 0) {
         if (graph_.nodes[i].backward_source_id == -1) {
@@ -554,6 +574,10 @@ void GraphExecutor::InitDataEntryInfo(const std::vector<NDArray> &in_args,
           << "Incorrect NDArray shape"
           << " Input: " << info.data.data().shape_
           << " Desired: " << info.shape;
+      CHECK_EQ(info.data.dtype(), info.type_flag)
+          << "Incorrect NDArray type"
+          << " Input: " << info.data.dtype()
+          << " Desired: " << info.type_flag;
     }
   }
 }
@@ -567,7 +591,7 @@ void GraphExecutor::InitDataEntryMemory() {
   }
 
   // use allocator to allocate memory.
-  GraphStorageAllocator allocator(&graph_, topo_order_);
+  GraphStorageAllocator allocator(&graph_, topo_order_, shared_mem_);
   for (size_t i = 0; i < topo_order_.size(); ++i) {
     uint32_t nid = topo_order_[i];
     if (!op_nodes_[nid].activated) continue;
@@ -614,7 +638,7 @@ void GraphExecutor::InitDataEntryMemory() {
       }
       if (out->type == kNotInitialized) {
         out->storage_id = allocator.Request(
-            op_nodes_[nid].ctx, out->shape, nid);
+            op_nodes_[nid].ctx, out->type_flag, out->shape, nid);
         out->type = kInternalAllocated;
       }
     }
@@ -639,7 +663,7 @@ void GraphExecutor::InitDataEntryMemory() {
     }
   }
   // one pass complete, allocate real memory
-  this->total_allocated_reals_ = allocator.InitStorages();
+  this->total_allocated_bytes_ = allocator.InitStorages();
   // get the real data NDArray into the DataEntryInfo
   for (size_t i = 0; i < topo_order_.size(); ++i) {
     uint32_t nid = topo_order_[i];
@@ -825,7 +849,7 @@ void GraphExecutor::Print(std::ostream &os) const {
       os << '\n';
     }
   }
-  os << "Total " << (total_allocated_reals_ >> 18UL) <<" MB allocated\n";
+  os << "Total " << (total_allocated_bytes_ >> 20UL) <<" MB allocated\n";
   os << "Total " << total_allocated_temp_ <<" TempSpace resource requested\n";
 }
 
@@ -871,14 +895,15 @@ void GraphExecutor::Backward(const std::vector<NDArray> &head_grads) {
 
 Executor *Executor::Bind(Symbol symbol,
                          const Context& default_ctx,
-                        const std::map<std::string, Context>& group2ctx,
+                         const std::map<std::string, Context>& group2ctx,
                          const std::vector<NDArray> &in_args,
                          const std::vector<NDArray> &arg_grad_store,
                          const std::vector<OpReqType> &grad_req_type,
-                         const std::vector<NDArray> &aux_states) {
+                         const std::vector<NDArray> &aux_states,
+                         Executor* shared_exec) {
   GraphExecutor *exec = new GraphExecutor();
   exec->Init(symbol, default_ctx, group2ctx,
-             in_args, arg_grad_store, grad_req_type, aux_states);
+             in_args, arg_grad_store, grad_req_type, aux_states, shared_exec);
   return exec;
 }
 }  // namespace mxnet

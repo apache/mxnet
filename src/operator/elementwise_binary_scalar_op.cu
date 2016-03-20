@@ -8,8 +8,9 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateElementwiseBinaryScalarOp<gpu>(elembinary::ElementwiseBinaryScalarOpType type, ScalarOpParam param) {
-    return CreateElementwiseBinaryScalarOp_<gpu>(type, param);
+Operator* CreateElementwiseBinaryScalarOp<gpu>(elembinary::ElementwiseBinaryScalarOpType type,
+                                               ScalarOpParam param) {
+  return CreateElementwiseBinaryScalarOp_<gpu>(type, param);
 }
 }  // namespace op
 }  // namespace mxnet

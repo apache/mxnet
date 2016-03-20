@@ -86,19 +86,19 @@ inline void Symbol::DFSVisit(FVisit fvisit) const {
       stack.push_back(std::make_pair(&head.source, 0));
       visited.insert(ptr);
     }
-  }
-  while (!stack.empty()) {
-    std::pair<const std::shared_ptr<Node> *, uint32_t>& back = stack.back();
-    if (back.second == back.first->get()->inputs.size()) {
-      fvisit(*(back.first));
-      stack.pop_back();
-    } else {
-      std::vector<Symbol::DataEntry>& inputs = back.first->get()->inputs;
-      Symbol::DataEntry& input = inputs.at(back.second++);
-      Node* ptr = input.source.get();
-      if (visited.count(ptr) == 0) {
-        stack.push_back(std::make_pair(&input.source, 0));
-        visited.insert(ptr);
+    while (!stack.empty()) {
+      std::pair<const std::shared_ptr<Node> *, uint32_t>& back = stack.back();
+      if (back.second == back.first->get()->inputs.size()) {
+        fvisit(*(back.first));
+        stack.pop_back();
+      } else {
+        std::vector<Symbol::DataEntry>& inputs = back.first->get()->inputs;
+        Symbol::DataEntry& input = inputs.at(back.second++);
+        Node* ptr = input.source.get();
+        if (visited.count(ptr) == 0) {
+          stack.push_back(std::make_pair(&input.source, 0));
+          visited.insert(ptr);
+        }
       }
     }
   }
@@ -536,16 +536,18 @@ Symbol Symbol::Grad(const std::vector<std::string>& wrt) const {
 
 bool Symbol::InferShape(std::vector<TShape> *arg_shapes,
                         std::vector<TShape> *out_shapes,
-                        std::vector<TShape> *aux_shapes) const {
+                        std::vector<TShape> *aux_shapes,
+                        bool partial_infer) const {
   StaticGraph g;
   this->ToStaticGraph(&g);
-  return g.InferShape(arg_shapes, out_shapes, aux_shapes);
+  return g.InferShape(arg_shapes, out_shapes, aux_shapes, partial_infer);
 }
 
 bool Symbol::InferShape(const std::unordered_map<std::string, TShape>& known_arg_shapes,
                         std::vector<TShape> *arg_shapes,
                         std::vector<TShape> *out_shapes,
-                        std::vector<TShape> *aux_shapes) const {
+                        std::vector<TShape> *aux_shapes,
+                        bool partial_infer) const {
   StaticGraph g;
   this->ToStaticGraph(&g);
   arg_shapes->clear();
@@ -563,9 +565,43 @@ bool Symbol::InferShape(const std::unordered_map<std::string, TShape>& known_arg
     std::vector<std::string> keys(known_arg_shapes.size());
     std::transform(known_arg_shapes.begin(), known_arg_shapes.end(), keys.begin(),
                    [](decltype(*known_arg_shapes.begin())& kv)->std::string { return kv.first; });
-    KeywordArgumentMismatch("Symbol.InterShape", keys, ListArguments());
+    KeywordArgumentMismatch("Symbol.InferShape", keys, ListArguments());
   }
-  return g.InferShape(arg_shapes, out_shapes, aux_shapes);
+  return g.InferShape(arg_shapes, out_shapes, aux_shapes, partial_infer);
+}
+
+bool Symbol::InferType(std::vector<int> *arg_types,
+                        std::vector<int> *out_types,
+                        std::vector<int> *aux_types) const {
+  StaticGraph g;
+  this->ToStaticGraph(&g);
+  return g.InferType(arg_types, out_types, aux_types);
+}
+
+bool Symbol::InferType(const std::unordered_map<std::string, int>& known_arg_types,
+                        std::vector<int> *arg_types,
+                        std::vector<int> *out_types,
+                        std::vector<int> *aux_types) const {
+  StaticGraph g;
+  this->ToStaticGraph(&g);
+  arg_types->clear();
+  arg_types->resize(g.arg_nodes.size(), -1);
+  size_t nmatched = 0;
+  for (size_t i = 0; i < g.arg_nodes.size(); ++i) {
+    const std::string& name = g.nodes[g.arg_nodes[i]].name;
+    auto it = known_arg_types.find(name);
+    if (it != known_arg_types.end()) {
+      arg_types->at(i) = it->second;
+      ++nmatched;
+    }
+  }
+  if (nmatched != known_arg_types.size()) {
+    std::vector<std::string> keys(known_arg_types.size());
+    std::transform(known_arg_types.begin(), known_arg_types.end(), keys.begin(),
+                   [](decltype(*known_arg_types.begin())& kv)->std::string { return kv.first; });
+    KeywordArgumentMismatch("Symbol.InferType", keys, ListArguments());
+  }
+  return g.InferType(arg_types, out_types, aux_types);
 }
 
 

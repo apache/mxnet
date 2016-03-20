@@ -8,7 +8,7 @@ applications. There are three main concepts:
 * [NDArray](#ndarray-numpy-style-tensor-computations-on-cpus-and-gpus)
   offers matrix and tensor computations on both CPU and GPU, with automatic
   parallelization
-* [Symbol](#symbol-and-automatic-differentiation) makes defining a neural
+* [Symbol](#symbolic-and-automatic-differentiation) makes defining a neural
   network extremely easy, and provides automatic differentiation.
 * [KVStore](#distributed-key-value-store) provides data synchronization between
   multiple GPUs and multiple machines.

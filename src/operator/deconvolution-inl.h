@@ -47,9 +47,9 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
     .describe("deconvolution filter(channel) number");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
     .describe("number of groups partition");
-    DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(128, 4096)
+    DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 4096)
     .describe("Tmp workspace for deconvolution (MB)");
-    DMLC_DECLARE_FIELD(no_bias).set_default(true)
+    DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
   }
 };
@@ -104,14 +104,16 @@ class DeconvolutionOp : public Operator {
                                     param_.kernel[0],
                                     param_.kernel[1],
                                     param_.stride[0],
-                                    param_.stride[1]);
+                                    param_.stride[1],
+                                    1, 1);  // Deconvolution only support dilate equals 1
       } else {
         temp_col = unpack_patch2col(pad(out.Slice(i, i + step),
                                         param_.pad[0], param_.pad[1]),
                                     param_.kernel[0],
                                     param_.kernel[1],
                                     param_.stride[0],
-                                    param_.stride[1]);
+                                    param_.stride[1],
+                                    1, 1);  // Deconvolution only support dilate equals 1
       }
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
@@ -124,7 +126,8 @@ class DeconvolutionOp : public Operator {
                                    out.Slice(i, i + step).shape_,
                                    param_.kernel[0],
                                    param_.kernel[1],
-                                   param_.stride[0]);
+                                   param_.stride[0],
+                                   1);  // Deconvolution only support dilate equals 1
       } else {
         Shape<4> pshape = out.Slice(i, i + step).shape_;
         pshape[2] += 2 * param_.pad[0];
@@ -133,7 +136,8 @@ class DeconvolutionOp : public Operator {
                                         pshape,
                                         param_.kernel[0],
                                         param_.kernel[1],
-                                        param_.stride[0]),
+                                        param_.stride[0],
+                                        1),  // Deconvolution only support dilate equals 1
                                         out[i][0].shape_);
       }
     }
@@ -192,13 +196,15 @@ class DeconvolutionOp : public Operator {
                                      param_.kernel[0],
                                      param_.kernel[1],
                                      param_.stride[0],
-                                     param_.stride[1]);
+                                     param_.stride[1],
+                                     1, 1);  // Deconvolution only support dilate equals 1
       } else {
         temp_col = unpack_patch2col(pad(grad.Slice(i, i + step), param_.pad[0], param_.pad[1]),
                                      param_.kernel[0],
                                      param_.kernel[1],
                                      param_.stride[0],
-                                     param_.stride[1]);
+                                     param_.stride[1],
+                                     1, 1);  // Deconvolution only support dilate equals 1
       }
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
@@ -300,7 +306,8 @@ class DeconvolutionProp : public OperatorProperty {
         << "Input data should be 4D in batch-num_filter-y-x";
     SHAPE_ASSIGN_CHECK(*in_shape,
                        deconv::kWeight,
-                       Shape4(dshape[1], param_.num_filter, param_.kernel[0], param_.kernel[1]));
+                       Shape4(dshape[1], param_.num_filter / param_.num_group,
+                              param_.kernel[0], param_.kernel[1]));
     if (!param_.no_bias) {
       SHAPE_ASSIGN_CHECK(*in_shape, deconv::kBias, Shape1(param_.num_filter));
     }

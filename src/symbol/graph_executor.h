@@ -32,7 +32,8 @@ class GraphExecutor : public Executor {
   }
   void Print(std::ostream &os) const override; // NOLINT(*)
   // install callback
-  void SetMonitorCallback(ExcecutorMonitorCallback callback) {
+  void SetMonitorCallback(const MonitorCallback& callback) {
+    CHECK(callback) << "invalid callback";
     monitor_callback_ = callback;
   }
   // implement Executor::Bind, only call it once.
@@ -42,8 +43,16 @@ class GraphExecutor : public Executor {
                    const std::vector<NDArray> &in_args,
                    const std::vector<NDArray> &arg_grad_store,
                    const std::vector<OpReqType> &grad_req_type,
-                   const std::vector<NDArray> &aux_states) {
+                   const std::vector<NDArray> &aux_states,
+                   Executor* shared_exec = nullptr) {
     enable_inplace_allocation_ = dmlc::GetEnv("MXNET_EXEC_ENABLE_INPLACE", true);
+    if (shared_exec != NULL) {
+      GraphExecutor* gexec = dynamic_cast<GraphExecutor*>(shared_exec);
+      CHECK(gexec) << "Input executor for sharing memory must have GraphExecutor type.";
+      shared_mem_ = gexec->shared_mem_;
+    } else {
+      shared_mem_ = std::make_shared<GraphStoragePool>();
+    }
 
     CHECK_EQ(grad_req_type.size(), arg_grad_store.size());
     bool need_backward = false;
@@ -64,9 +73,9 @@ class GraphExecutor : public Executor {
   class BackwardOpWrapper;
   // type of data entry
   enum DataEntryType {
-    // memory is binded by external NDArray in Bind
+    // memory is bound by external NDArray in Bind
     kBindByExternal,
-    // to be binded by external NDArray in Forward and Backward
+    // to be bound by external NDArray in Forward and Backward
     kTobeBindByExternal,
     // internal memory, allocated
     kInternalAllocated,
@@ -86,6 +95,8 @@ class GraphExecutor : public Executor {
     DataEntryType type;
     // shape of this entry
     TShape shape;
+    // data type of this entry
+    int type_flag;
     // storage id from allocator if it is internal allocation.
     GraphStorageAllocator::StorageID storage_id;
     // reference count on how many times this entry is being used.
@@ -215,8 +226,8 @@ class GraphExecutor : public Executor {
   std::vector<uint32_t> topo_order_;
   // whether to enable inplace space
   bool enable_inplace_allocation_;
-  // total allocated space in #reals
-  size_t total_allocated_reals_;
+  // total allocated space in bytes
+  size_t total_allocated_bytes_;
   // total allocated temp space
   size_t total_allocated_temp_;
   // number of forward nodes in the graph
@@ -231,6 +242,8 @@ class GraphExecutor : public Executor {
   std::vector<OpNode> op_nodes_;
   // head NDArrays
   std::vector<NDArray> heads_ndarray_;
+  // shared NDArrays
+  std::shared_ptr<GraphStoragePool> shared_mem_;
   // monitor call back
   std::function<void(const char*, void*)> monitor_callback_;
 };  // class GraphExecutor

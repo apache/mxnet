@@ -19,10 +19,10 @@ Bias parameter.}
 \item{kernel}{Shape(tuple), required
 deconvolution kernel size: (y, x)}
 
-\item{stride}{Shape(tuple), optional, default=(1, 1)
+\item{stride}{Shape(tuple), optional, default=(1,1)
 deconvolution stride: (y, x)}
 
-\item{pad}{Shape(tuple), optional, default=(0, 0)
+\item{pad}{Shape(tuple), optional, default=(0,0)
 pad for deconvolution: (y, x)}
 
 \item{num.filter}{int (non-negative), required
@@ -34,7 +34,7 @@ number of groups partition}
 \item{workspace}{long (non-negative), optional, default=512
 Tmp workspace for deconvolution (MB)}
 
-\item{no.bias}{boolean, optional, default=True
+\item{no.bias}{boolean, optional, default=False
 Whether to disable bias parameter.}
 
 \item{name}{string, optional

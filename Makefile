@@ -1,3 +1,5 @@
+ROOTDIR = $(CURDIR)
+
 ifndef config
 ifdef CXXNET_CONFIG
 	config = $(CXXNET_CONFIG)
@@ -32,14 +34,13 @@ ifeq ($(DEBUG), 1)
 else
 	CFLAGS += -O3
 endif
-CFLAGS += -I./mshadow/ -I./dmlc-core/include -fPIC -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS = -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else
 	NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
-ROOTDIR = $(CURDIR)
 
 ifndef LINT_LANG
 	LINT_LANG="all"
@@ -94,10 +95,11 @@ endif
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
 SRC = $(wildcard src/*.cc src/*/*.cc)
-OBJ = $(patsubst src/%.cc, build/%.o, $(SRC))
+OBJ = $(patsubst %.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*.cu)
-CUOBJ = $(patsubst src/%.cu, build/%_gpu.o, $(CUSRC))
+CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
 
+# extra operators
 ifneq ($(EXTRA_OPERATORS),)
 	EXTRA_SRC = $(wildcard $(EXTRA_OPERATORS)/*.cc $(EXTRA_OPERATORS)/*/*.cc)
 	EXTRA_OBJ = $(patsubst $(EXTRA_OPERATORS)/%.cc, $(EXTRA_OPERATORS)/build/%.o, $(EXTRA_SRC))
@@ -110,10 +112,16 @@ else
 	EXTRA_CUOBJ =
 endif
 
+# plugin
+PLUGIN_OBJ =
+PLUGIN_CUOBJ =
+include $(MXNET_PLUGINS)
+
+# all dep
 LIB_DEP += $(DMLC_CORE)/libdmlc.a
-ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(LIB_DEP)
+ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
-	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ)
+	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
 	LDFLAGS += -lcuda
 endif
 
@@ -125,14 +133,26 @@ else
 endif
 
 
-build/%.o: src/%.cc
+build/src/%.o: src/%.cc
 	@mkdir -p $(@D)
-	$(CXX) -std=c++0x $(CFLAGS) -MM -MT build/$*.o $< >build/$*.d
+	$(CXX) -std=c++0x $(CFLAGS) -MM -MT build/src/$*.o $< >build/src/$*.d
 	$(CXX) -std=c++0x -c $(CFLAGS) -c $< -o $@
 
-build/%_gpu.o: src/%.cu
+build/src/%_gpu.o: src/%.cu
 	@mkdir -p $(@D)
-	$(NVCC) $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" -M -MT build/$*_gpu.o $< >build/$*_gpu.d
+	$(NVCC) $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" -M -MT build/src/$*_gpu.o $< >build/src/$*_gpu.d
+	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $<
+
+build/plugin/%.o: plugin/%.cc
+	@mkdir -p $(@D)
+	$(CXX) -std=c++0x $(CFLAGS) -MM -MT build/plugin/$*.o $< >build/plugin/$*.d
+	$(CXX) -std=c++0x -c $(CFLAGS) -c $< -o $@
+
+# A nvcc bug cause it to generate "generic/xxx.h" dependencies from torch headers.
+# Use CXX to generate dependency instead.
+build/plugin/%_gpu.o: plugin/%.cu
+	@mkdir -p $(@D)
+	$(CXX) -std=c++0x $(CFLAGS) -MM -MT build/plugin/$*_gpu.o $< >build/plugin/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $<
 
 $(EXTRA_OPERATORS)/build/%.o: $(EXTRA_OPERATORS)/%.cc
@@ -145,6 +165,8 @@ $(EXTRA_OPERATORS)/build/%_gpu.o: $(EXTRA_OPERATORS)/%.cu
 	$(NVCC) $(NVCCFLAGS) -Xcompiler "$(CFLAGS) -Isrc/operator" -M -MT $(EXTRA_OPERATORS)/build/$*_gpu.o $< >$(EXTRA_OPERATORS)/build/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS) -Isrc/operator" $<
 
+# NOTE: to statically link libmxnet.a we need the option
+# --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
 lib/libmxnet.a: $(ALL_DEP)
 	@mkdir -p $(@D)
 	ar crv $@ $(filter %.o, $?)
@@ -153,7 +175,6 @@ lib/libmxnet.so: $(ALL_DEP)
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
 
-# ps-lite
 $(PS_PATH)/build/libps.a:
 	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) ps
 	ln -fs $(PS_PATH)/tracker .
@@ -165,14 +186,14 @@ bin/im2rec: tools/im2rec.cc $(ALL_DEP)
 
 $(BIN) :
 	@mkdir -p $(@D)
-	$(CXX) $(CFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
+	$(CXX) $(CFLAGS) -std=c++0x  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
 include tests/cpp/unittest.mk
 
 test: $(TEST)
 
-lint: rcpplint
-	python2 dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src scripts python predict/python
+lint: rcpplint jnilint
+	python2 dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src plugin scripts python predict/python
 
 doc: doxygen
 
@@ -198,15 +219,33 @@ rpkg:	roxygen
 	cp -rf dmlc-core/include/* R-package/inst/include/
 	R CMD build --no-build-vignettes R-package
 
+scalapkg:
+	(cd $(ROOTDIR)/scala-package; mvn clean package -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)")
+
+scalatest:
+	(cd $(ROOTDIR)/scala-package; mvn verify -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" $(SCALA_TEST_ARGS))
+
+jnilint:
+	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
+
+ifneq ($(EXTRA_OPERATORS),)
 clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 	cd $(DMLC_CORE); make clean; cd -
 	cd $(PS_PATH); make clean; cd -
+	$(RM) -r $(EXTRA_OPERATORS)/build
+else
+clean:
+	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
+	cd $(DMLC_CORE); make clean; cd -
+	cd $(PS_PATH); make clean; cd -
+endif
 
 clean_all: clean
 
 -include build/*.d
 -include build/*/*.d
+-include build/*/*/*.d
 ifneq ($(EXTRA_OPERATORS),)
 	-include $(EXTRA_OPERATORS)/build/*.d
 endif

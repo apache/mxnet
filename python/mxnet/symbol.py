@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-arguments
+# pylint: disable=invalid-name, protected-access, too-many-arguments, too-many-lines
 """Symbolic configuration API of mxnet."""
 from __future__ import absolute_import
 
@@ -7,14 +7,15 @@ import copy
 import ctypes
 from numbers import Number
 import sys
+import numpy
 from .base import _LIB
-from .base import c_array, c_str, mx_uint, py_str, string_types
+from .base import c_array, c_str, mx_uint, py_str, string_types, mx_real_t
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from .base import check_call, ctypes2docstring
 from .name import NameManager
 from .attribute import AttrScope
 from .context import Context
-from .ndarray import NDArray, zeros
+from .ndarray import NDArray, zeros, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .executor import Executor
 
 
@@ -279,7 +280,7 @@ class Symbol(object):
         return [py_str(sarr[i]) for i in range(size.value)]
 
     def list_auxiliary_states(self):
-        """List all auxiliary states in the symbool.
+        """List all auxiliary states in the symbol.
 
         Returns
         -------
@@ -298,6 +299,87 @@ class Symbol(object):
         check_call(_LIB.MXSymbolListAuxiliaryStates(
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
+
+    def infer_type(self, *args, **kwargs):
+        """Infer the type of outputs and arguments of given known types of arguments.
+
+        User can either pass in the known types in positional way or keyword argument way.
+        Tuple of Nones is returned if there is not enough information passed in.
+        An error will be raised if there is inconsistency found in the known types passed in.
+
+        Parameters
+        ----------
+        *args :
+            Provide type of arguments in a positional way.
+            Unknown type can be marked as None
+
+        **kwargs :
+            Provide keyword arguments of known types.
+
+        Returns
+        -------
+        arg_types : list of numpy.dtype or None
+            List of types of arguments.
+            The order is in the same order as list_arguments()
+        out_types : list of numpy.dtype or None
+            List of types of outputs.
+            The order is in the same order as list_outputs()
+        aux_types : list of numpy.dtype or None
+            List of types of outputs.
+            The order is in the same order as list_auxiliary()
+        """
+        # pylint: disable=too-many-locals
+        if len(args) != 0 and len(kwargs) != 0:
+            raise ValueError('Can only specify known argument \
+                    types either by positional or kwargs way.')
+        sdata = []
+        if len(args) != 0:
+            keys = None
+            for s in args:
+                if s is not None:
+                    s = numpy.dtype(s).type
+                    if s not in _DTYPE_NP_TO_MX:
+                        raise TypeError('Argument need to be one of '+str(_DTYPE_NP_TO_MX))
+                    sdata.append(_DTYPE_NP_TO_MX[s])
+                else:
+                    sdata.append(-1)
+        else:
+            keys = []
+            for k, v in kwargs.items():
+                v = numpy.dtype(v).type
+                if v in _DTYPE_NP_TO_MX:
+                    keys.append(c_str(k))
+                    sdata.append(_DTYPE_NP_TO_MX[v])
+        arg_type_size = mx_uint()
+        arg_type_data = ctypes.POINTER(ctypes.c_int)()
+        out_type_size = mx_uint()
+        out_type_data = ctypes.POINTER(ctypes.c_int)()
+        aux_type_size = mx_uint()
+        aux_type_data = ctypes.POINTER(ctypes.c_int)()
+        complete = ctypes.c_int()
+        check_call(_LIB.MXSymbolInferType(
+            self.handle,
+            mx_uint(len(sdata)),
+            c_array(ctypes.c_char_p, keys),
+            c_array(ctypes.c_int, sdata),
+            ctypes.byref(arg_type_size),
+            ctypes.byref(arg_type_data),
+            ctypes.byref(out_type_size),
+            ctypes.byref(out_type_data),
+            ctypes.byref(aux_type_size),
+            ctypes.byref(aux_type_data),
+            ctypes.byref(complete)))
+        if complete.value != 0:
+            arg_types = [
+                _DTYPE_MX_TO_NP[arg_type_data[i]] for i in range(arg_type_size.value)]
+            out_types = [
+                _DTYPE_MX_TO_NP[out_type_data[i]] for i in range(out_type_size.value)]
+            aux_types = [
+                _DTYPE_MX_TO_NP[aux_type_data[i]] for i in range(aux_type_size.value)]
+            return (arg_types, out_types, aux_types)
+        else:
+            return (None, None, None)
+        # pylint: enable=too-many-locals
 
     def infer_shape(self, *args, **kwargs):
         """Infer the shape of outputs and arguments of given known shapes of arguments.
@@ -327,6 +409,16 @@ class Symbol(object):
             List of shapes of outputs.
             The order is in the same order as list_auxiliary()
         """
+        return self._infer_shape_impl(False, *args, **kwargs)
+
+    def infer_shape_partial(self, *args, **kwargs):
+        """Partially infer the shape. The same as infer_shape, except that the partial
+        results can be returned.
+        """
+        return self._infer_shape_impl(True, *args, **kwargs)
+
+    def _infer_shape_impl(self, partial, *args, **kwargs):
+        """The actual implementation for calling shape inference API."""
         # pylint: disable=too-many-locals
         if len(args) != 0 and len(kwargs) != 0:
             raise ValueError('Can only specify known argument \
@@ -358,7 +450,11 @@ class Symbol(object):
         aux_shape_ndim = ctypes.POINTER(mx_uint)()
         aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
         complete = ctypes.c_int()
-        check_call(_LIB.MXSymbolInferShape(
+        if partial:
+            infer_func = _LIB.MXSymbolInferShapePartial
+        else:
+            infer_func = _LIB.MXSymbolInferShape
+        check_call(infer_func(
             self.handle,
             mx_uint(len(indptr) - 1),
             c_array(ctypes.c_char_p, keys),
@@ -491,8 +587,9 @@ class Symbol(object):
             raise TypeError('Only Accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays
 
-    def simple_bind(self, ctx, grad_req='write', **kwargs):
+    def simple_bind(self, ctx, grad_req='write', type_dict=None, **kwargs):
         """Bind current symbol to get an executor, allocate all the ndarrays needed.
+        Allows specifying data types.
 
         This function will ask user to pass in ndarray of position
         they like to bind to, and it will automatically allocate the ndarray
@@ -508,6 +605,12 @@ class Symbol(object):
             - 'write' means everytime gradient is write to specified args_grad NDArray.
             - 'add' means everytime gradient is add to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
+        type_dict  : dict of str->numpy.dtype
+            Input type dictionary, name->dtype
+        kwargs : dict of str->shape
+            Input shape dictionary, name->shape
+        type_dict  : dict of str->numpy.dtype
+            Input type dictionary, name->dtype
         kwargs : dict of str->shape
             Input shape dictionary, name->shape
 
@@ -516,25 +619,32 @@ class Symbol(object):
         executor : mxnet.Executor
             The generated Executor
         """
+        # pylint: disable=too-many-locals
+        if type_dict is None:
+            type_dict = {k: mx_real_t for k in self.list_arguments()}
         arg_shapes, _, aux_shapes = self.infer_shape(**kwargs)
-        if arg_shapes == None:
+        arg_types, _, aux_types = self.infer_type(**type_dict)
+        if arg_shapes == None or arg_types == None:
             raise ValueError("Input node is not complete")
         # alloc space
-        arg_ndarrays = [zeros(shape, ctx) for shape in arg_shapes]
+        arg_ndarrays = [zeros(shape, ctx, dtype=dtype)for dtype, shape in zip(arg_types,
+                                                                              arg_shapes)]
 
         if grad_req != 'null':
             grad_ndarrays = {}
-            for name, shape in zip(self.list_arguments(), arg_shapes):
+            for name, shape, dtype in zip(self.list_arguments(), arg_shapes, arg_types):
                 if not (name.endswith('data') or name.endswith('label')):
-                    grad_ndarrays[name] = zeros(shape, ctx)
+                    grad_ndarrays[name] = zeros(shape, ctx, dtype=dtype)
         else:
             grad_ndarrays = None
 
-        aux_ndarrays = [zeros(shape, ctx) for shape in aux_shapes]
+        aux_ndarrays = [zeros(shape, ctx, dtype=dtype) for shape, dtype in zip(aux_shapes,
+                                                                               aux_types)]
         executor = self.bind(ctx, arg_ndarrays, grad_ndarrays, grad_req, aux_ndarrays)
         return executor
 
-    def bind(self, ctx, args, args_grad=None, grad_req='write', aux_states=None, group2ctx=None):
+    def bind(self, ctx, args, args_grad=None, grad_req='write',
+             aux_states=None, group2ctx=None, shared_exec=None):
         """Bind current symbol to get an executor.
 
         Parameters
@@ -580,6 +690,11 @@ class Symbol(object):
         group2ctx : dict of string to mx.Context
             The dict mapping the ``ctx_group`` attribute to the context assignment.
 
+        shared_exec : mx.executor.Executor
+            Executor to share memory with. This is intended for runtime reshaping, variable length
+            sequences, etc. The returned executor shares state with shared_exec, and should not be
+            used in parallel with it.
+
         Returns
         -------
         executor : mxnet.Executor
@@ -599,13 +714,14 @@ class Symbol(object):
         if not isinstance(ctx, Context):
             raise TypeError("Context type error")
 
-        args_handle, args = self._get_ndarray_inputs('args', args, self.list_arguments(), False)
+        listed_arguments = self.list_arguments()
+        args_handle, args = self._get_ndarray_inputs('args', args, listed_arguments, False)
         # setup args gradient
         if args_grad is None:
             args_grad_handle = c_array(NDArrayHandle, [None] * len(args))
         else:
             args_grad_handle, args_grad = self._get_ndarray_inputs(
-                'args_grad', args_grad, self.list_arguments(), True)
+                'args_grad', args_grad, listed_arguments, True)
 
         if aux_states is None:
             aux_states = []
@@ -617,12 +733,12 @@ class Symbol(object):
         if isinstance(grad_req, string_types):
             if grad_req not in req_map:
                 raise ValueError('grad_req must be in %s' % str(req_map))
-            reqs_array = c_array(mx_uint, [mx_uint(req_map[grad_req])] * len(self.list_arguments()))
+            reqs_array = c_array(mx_uint, [mx_uint(req_map[grad_req])] * len(listed_arguments))
         elif isinstance(grad_req, list):
             reqs_array = c_array(mx_uint, [mx_uint(req_map[item]) for item in grad_req])
         elif isinstance(grad_req, dict):
             req_array = []
-            for name in self.list_arguments():
+            for name in listed_arguments:
                 if name in grad_req:
                     req_array.append(mx_uint(req_map[grad_req[name]]))
                 else:
@@ -640,21 +756,23 @@ class Symbol(object):
                 ctx_map_dev_ids.append(ctypes.c_int(val.device_id))
 
         handle = ExecutorHandle()
-        check_call(_LIB.MXExecutorBindX(self.handle,
-                                        ctypes.c_int(ctx.device_typeid),
-                                        ctypes.c_int(ctx.device_id),
-                                        mx_uint(len(ctx_map_keys)),
-                                        c_array(ctypes.c_char_p, ctx_map_keys),
-                                        c_array(ctypes.c_int, ctx_map_dev_types),
-                                        c_array(ctypes.c_int, ctx_map_dev_ids),
-                                        mx_uint(len(args)),
-                                        args_handle,
-                                        args_grad_handle,
-                                        reqs_array,
-                                        mx_uint(len(aux_states)),
-                                        aux_args_handle,
-                                        ctypes.byref(handle)))
-        executor = Executor(handle, self)
+        shared_handle = shared_exec.handle if shared_exec is not None else ExecutorHandle()
+        check_call(_LIB.MXExecutorBindEX(self.handle,
+                                         ctypes.c_int(ctx.device_typeid),
+                                         ctypes.c_int(ctx.device_id),
+                                         mx_uint(len(ctx_map_keys)),
+                                         c_array(ctypes.c_char_p, ctx_map_keys),
+                                         c_array(ctypes.c_int, ctx_map_dev_types),
+                                         c_array(ctypes.c_int, ctx_map_dev_ids),
+                                         mx_uint(len(args)),
+                                         args_handle,
+                                         args_grad_handle,
+                                         reqs_array,
+                                         mx_uint(len(aux_states)),
+                                         aux_args_handle,
+                                         shared_handle,
+                                         ctypes.byref(handle)))
+        executor = Executor(handle, self, ctx, grad_req, group2ctx)
         executor.arg_arrays = args
         executor.grad_arrays = args_grad
         executor.aux_arrays = aux_states
@@ -802,6 +920,7 @@ def _make_atomic_symbol_function(handle):
     arg_names = ctypes.POINTER(ctypes.c_char_p)()
     arg_types = ctypes.POINTER(ctypes.c_char_p)()
     arg_descs = ctypes.POINTER(ctypes.c_char_p)()
+    ret_type = ctypes.c_char_p()
 
     check_call(_LIB.MXSymbolGetAtomicSymbolInfo(
         handle, ctypes.byref(name), ctypes.byref(desc),
@@ -809,7 +928,8 @@ def _make_atomic_symbol_function(handle):
         ctypes.byref(arg_names),
         ctypes.byref(arg_types),
         ctypes.byref(arg_descs),
-        ctypes.byref(key_var_num_args)))
+        ctypes.byref(key_var_num_args),
+        ctypes.byref(ret_type)))
     param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
     key_var_num_args = py_str(key_var_num_args.value)
     func_name = py_str(name.value)
@@ -872,7 +992,7 @@ def _make_atomic_symbol_function(handle):
                 '%s can only accept input'
                 'Symbols either as positional or keyword arguments, not both' % func_name)
         if key_var_num_args and len(symbol_kwargs) != 0:
-            raise ValueError('This function support variable length of Symbol arguments.\n' +
+            raise ValueError('This function supports variable length of Symbol arguments.\n' +
                              'Please pass all the input Symbols via positional arguments' +
                              ' instead of keyword arguments.')
         s = Symbol(sym_handle)

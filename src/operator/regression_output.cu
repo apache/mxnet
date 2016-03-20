@@ -10,7 +10,8 @@ namespace mxnet {
 namespace op {
 
 template<>
-Operator *CreateRegressionOutputOp<gpu>(reg_enum::RegressionOutputType type, RegressionOutputParam param) {
+Operator *CreateRegressionOutputOp<gpu>(reg_enum::RegressionOutputType type,
+                                        RegressionOutputParam param) {
   switch (type) {
     case reg_enum::kLinear:
       return new RegressionOutputOp<gpu, mshadow::op::identity, mshadow::op::minus>(param);

@@ -10,6 +10,8 @@ import scipy
 import numpy as np
 import dicom
 from skimage import io, transform
+from joblib import Parallel, delayed
+import dill
 
 def mkdir(fname):
    try:
@@ -21,6 +23,8 @@ def get_frames(root_path):
    """Get path to all the frame in view SAX and contain complete frames"""
    ret = []
    for root, _, files in os.walk(root_path):
+       root=root.replace('\\','/')
+       files=[s for s in files if ".dcm" in s]
        if len(files) == 0 or not files[0].endswith(".dcm") or root.find("sax") == -1:
            continue
        prefix = files[0].rsplit('-', 1)[0]
@@ -53,29 +57,33 @@ def write_label_csv(fname, frames, label_map):
    fo.close()
 
 
+def get_data(lst,preproc):
+   data = []
+   result = []
+   for path in lst:
+       f = dicom.read_file(path)
+       img = preproc(f.pixel_array.astype(float) / np.max(f.pixel_array))
+       dst_path = path.rsplit(".", 1)[0] + ".64x64.jpg"
+       scipy.misc.imsave(dst_path, img)
+       result.append(dst_path)
+       data.append(img)
+   data = np.array(data, dtype=np.uint8)
+   data = data.reshape(data.size)
+   data = np.array(data,dtype=np.str_)
+   data = data.reshape(data.size)
+   return [data,result]
+
+
 def write_data_csv(fname, frames, preproc):
    """Write data to csv file"""
    fdata = open(fname, "w")
-   dwriter = csv.writer(fdata)
-   counter = 0
-   result = []
-   for lst in frames:
-       data = []
-       for path in lst:
-           f = dicom.read_file(path)
-           img = preproc(f.pixel_array.astype(float) / np.max(f.pixel_array))
-           dst_path = path.rsplit(".", 1)[0] + ".64x64.jpg"
-           scipy.misc.imsave(dst_path, img)
-           result.append(dst_path)
-           data.append(img)
-       data = np.array(data, dtype=np.uint8)
-       data = data.reshape(data.size)
-       dwriter.writerow(data)
-       counter += 1
-       if counter % 100 == 0:
-           print("%d slices processed" % counter)
-   print("All finished, %d slices in total" % counter)
+   dr = Parallel()(delayed(get_data)(lst,preproc) for lst in frames)
+   data,result = zip(*dr)
+   for entry in data:
+      fdata.write(','.join(entry)+'\r\n')
+   print("All finished, %d slices in total" % len(data))
    fdata.close()
+   result = np.ravel(result)
    return result
 
 

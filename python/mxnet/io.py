@@ -3,7 +3,7 @@
 
 """NDArray interface of mxnet"""
 from __future__ import absolute_import
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict
 
 import ctypes
 import sys
@@ -18,7 +18,19 @@ from .ndarray import NDArray
 from .ndarray import array
 
 
-DataBatch = namedtuple('DataBatch', ['data', 'label', 'pad', 'index'])
+class DataBatch(object):
+    """Default object for holding a mini-batch of data and related information."""
+    def __init__(self, data, label, pad, index,
+                 bucket_key=None, provide_data=None, provide_label=None):
+        self.data = data
+        self.label = label
+        self.pad = pad
+        self.index = index
+
+        # the following properties are only used when bucketing is used
+        self.bucket_key = bucket_key
+        self.provide_data = provide_data
+        self.provide_label = provide_label
 
 class DataIter(object):
     """DataIter object in mxnet. """
@@ -96,6 +108,60 @@ class DataIter(object):
             Number of padding examples in current batch
         """
         pass
+
+class ResizeIter(DataIter):
+    """Resize a DataIter to given number of batches per epoch.
+    May produce incomplete batch in the middle of an epoch due
+    to padding from internal iterator.
+
+    Parameters
+    ----------
+    data_iter : DataIter
+        Internal data iterator.
+    size : number of batches per epoch to resize to.
+    reset_internal : whether to reset internal iterator on ResizeIter.reset
+    """
+
+    def __init__(self, data_iter, size, reset_internal=True):
+        super(ResizeIter, self).__init__()
+        self.data_iter = data_iter
+        self.size = size
+        self.reset_internal = reset_internal
+        self.cur = 0
+        self.current_batch = None
+
+        self.provide_data = data_iter.provide_data
+        self.provide_label = data_iter.provide_label
+        self.batch_size = data_iter.batch_size
+
+    def reset(self):
+        self.cur = 0
+        if self.reset_internal:
+            self.data_iter.reset()
+
+    def iter_next(self):
+        if self.cur == self.size:
+            return False
+        try:
+            self.current_batch = self.data_iter.next()
+        except StopIteration:
+            self.data_iter.reset()
+            self.current_batch = self.data_iter.next()
+
+        self.cur += 1
+        return True
+
+    def getdata(self):
+        return self.current_batch.data
+
+    def getlabel(self):
+        return self.current_batch.label
+
+    def getindex(self):
+        return self.current_batch.index
+
+    def getpad(self):
+        return self.current_batch.pad
 
 class PrefetchingIter(DataIter):
     """Base class for prefetching iterators. Takes one or more DataIters (
@@ -254,10 +320,6 @@ class NDArrayIter(DataIter):
         Batch Size
     shuffle: bool
         Whether to shuffle the data
-    data_pad_value: float, optional
-        Padding value for data
-    label_pad_value: float, optionl
-        Padding value for label
     last_batch_handle: 'pad', 'discard' or 'roll_over'
         How to handle the last batch
     Note
@@ -287,10 +349,14 @@ class NDArrayIter(DataIter):
         # batching
         if last_batch_handle == 'discard':
             new_n = self.data_list[0].shape[0] - self.data_list[0].shape[0] % batch_size
+            data_dict = OrderedDict(self.data)
+            label_dict = OrderedDict(self.label)
             for k, _ in self.data:
-                self.data[k] = self.data[k][:new_n]
+                data_dict[k] = data_dict[k][:new_n]
             for k, _ in self.label:
-                self.label[k] = self.label[k][:new_n]
+                label_dict[k] = label_dict[k][:new_n]
+            self.data = data_dict.items()
+            self.label = label_dict.items()
         self.num_data = self.data_list[0].shape[0]
         assert self.num_data >= batch_size, \
             "batch_size need to be smaller than data size when not padding."

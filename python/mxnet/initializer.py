@@ -41,6 +41,8 @@ class Initializer(object):
             self._init_zero(name, arr)
         elif name.endswith("moving_var"):
             self._init_zero(name, arr)
+        elif name.endswith("moving_inv_var"):
+            self._init_zero(name, arr)
         elif name.endswith("moving_avg"):
             self._init_zero(name, arr)
         else:
@@ -49,7 +51,7 @@ class Initializer(object):
     def _init_bilinear(self, _, arr):
         weight = np.zeros(np.prod(arr.shape), dtype='float32')
         shape = arr.shape
-        f = shape[3] / 2.
+        f = np.ceil(shape[3] / 2.)
         c = (2 * f - 1 - f % 2) / (2. * f)
         for i in range(np.prod(shape)):
             x = i % shape[3]
@@ -95,7 +97,7 @@ class Load(object):
         assert isinstance(param, dict)
         self.param = {}
         for name, arr in param.items():
-            if name.startswith('arg:'):
+            if name.startswith('arg:') or name.startswith('aux:'):
                 self.param[name[4:]] = arr
             else:
                 self.param[name] = arr
@@ -113,7 +115,7 @@ class Load(object):
                 logging.info('Initialized %s by loading', name)
         else:
             assert self.default_init is not None, \
-                "Cannot Initialize %s. Not found in loaded param " + \
+                "Cannot Initialize %s. Not found in loaded param "%name + \
                 "and no default Initializer is provided."
             self.default_init(name, arr)
             if self.verbose:
@@ -131,7 +133,7 @@ class Mixed(object):
     """
     def __init__(self, patterns, initializers):
         assert len(patterns) == len(initializers)
-        self.map = zip([re.compile(p) for p in patterns], initializers)
+        self.map = list(zip([re.compile(p) for p in patterns], initializers))
 
     def __call__(self, name, arr):
         for prog, init in self.map:
@@ -171,6 +173,42 @@ class Normal(Initializer):
     def _init_weight(self, _, arr):
         random.normal(0, self.sigma, out=arr)
 
+class Orthogonal(Initializer):
+    """Intialize weight as Orthogonal matrix
+
+    Parameters
+    ----------
+    scale : float optional
+        scaling factor of weight
+
+    rand_type: string optional
+        use "uniform" or "normal" random number to initialize weight
+
+    Reference
+    ---------
+    Exact solutions to the nonlinear dynamics of learning in deep linear neural networks
+    arXiv preprint arXiv:1312.6120 (2013).
+    """
+    def __init__(self, scale=1.414, rand_type="uniform"):
+        self.scale = scale
+        self.rand_type = rand_type
+
+    # pylint: disable=invalid-name
+    def _init_weight(self, _, arr):
+        nout = arr.shape[0]
+        nin = np.prod(arr.shape[1:])
+        if self.rand_type == "uniform":
+            tmp = np.random.uniform(-1.0, 1.0, (nout, nin))
+        elif self.rand_type == "normal":
+            tmp = np.random.normal(0.0, 1.0, (nout, nin))
+        u, _, v = np.linalg.svd(tmp, full_matrices=False)
+        if u.shape == tmp.shape:
+            q = u
+        else:
+            q = v
+        q = self.scale * q.reshape(arr.shape)
+        arr[:] = q
+
 
 class Xavier(Initializer):
     """Initialize the weight with Xavier or similar initialization scheme.
@@ -189,7 +227,7 @@ class Xavier(Initializer):
     def __init__(self, rnd_type="uniform", factor_type="avg", magnitude=3):
         self.rnd_type = rnd_type
         self.factor_type = factor_type
-        self.magnitude = magnitude
+        self.magnitude = float(magnitude)
 
 
     def _init_weight(self, _, arr):
@@ -197,7 +235,7 @@ class Xavier(Initializer):
         fan_in, fan_out = np.prod(shape[1:]), shape[0]
         factor = 1
         if self.factor_type == "avg":
-            factor = (fan_in + fan_out) / 2
+            factor = (fan_in + fan_out) / 2.0
         elif self.factor_type == "in":
             factor = fan_in
         elif self.factor_type == "out":

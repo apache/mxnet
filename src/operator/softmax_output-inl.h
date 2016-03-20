@@ -34,14 +34,14 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
     .describe("Scale the gradient by a float factor");
     DMLC_DECLARE_FIELD(ignore_label).set_default(-1.0f)
-    .describe("the ignore_label will not work in backward, and this only"
+    .describe("the ignore_label will not work in backward, and this only "
       "be used when multi_output=true");
     DMLC_DECLARE_FIELD(multi_output).set_default(false)
-    .describe("If set to true, for a (n,k,x_1,..,x_n) dimensional"
-      "input tensor, softmax will generate n*x_1*...*x_n output, each"
+    .describe("If set to true, for a (n,k,x_1,..,x_n) dimensional "
+      "input tensor, softmax will generate n*x_1*...*x_n output, each "
       "has k classes");
     DMLC_DECLARE_FIELD(use_ignore).set_default(false)
-    .describe("If set to true, the ignore_label value will not contributor"
+    .describe("If set to true, the ignore_label value will not contribute "
       "to the backward gradient");
   };
 };
@@ -101,7 +101,7 @@ class SoftmaxOutputOp : public Operator {
       } else {
           SoftmaxGrad(grad, out, label);
       }
-      grad *= param_.grad_scale;
+      grad *= param_.grad_scale/s3[2];
     } else {
       Tensor<xpu, 1> label = in_data[softmaxout_enum::kLabel].get<xpu, 1, real_t>(s);
       Tensor<xpu, 2> out = out_data[softmaxout_enum::kOut].FlatTo2D<xpu, real_t>(s);

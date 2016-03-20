@@ -40,12 +40,12 @@ ADD_CFLAGS =
 # whether use CUDA during compile
 USE_CUDA = 0
 
-# add the path to CUDA libary to link and compile flag
-# if you have already add them to enviroment variable, leave it as NONE
+# add the path to CUDA library to link and compile flag
+# if you have already add them to environment variable, leave it as NONE
 # USE_CUDA_PATH = /usr/local/cuda
 USE_CUDA_PATH = NONE
 
-# whether use CUDNN R3 library
+# whether use CuDNN R3 library
 USE_CUDNN = 0
 
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
@@ -69,11 +69,11 @@ else
 USE_BLAS = atlas
 endif
 
-# add path to intel libary, you may need it for MKL, if you did not add the path
-# to enviroment variable
+# add path to intel library, you may need it for MKL, if you did not add the path
+# to environment variable
 USE_INTEL_PATH = NONE
 
-# If use MKL, choose static link automaticly to allow python wrapper
+# If use MKL, choose static link automatically to allow python wrapper
 ifeq ($(USE_BLAS), mkl)
 USE_STATIC_MKL = 1
 else
@@ -84,7 +84,7 @@ endif
 # distributed computing
 #----------------------------
 
-# whether or not to enable mullti-machine supporting
+# whether or not to enable multi-machine supporting
 USE_DIST_KVSTORE = 0
 
 # whether or not allow to read and write HDFS directly. If yes, then hadoop is
@@ -105,3 +105,17 @@ USE_S3 = 0
 
 # path to folders containing projects specific operators that you don't want to put in src/operators
 EXTRA_OPERATORS =
+
+
+#----------------------------
+# plugins
+#----------------------------
+
+# whether to use torch integration. This requires installing torch.
+# TORCH_PATH = $(HOME)/torch
+# MXNET_PLUGINS += plugin/torch/torch.mk
+
+# whether to use sframe integration. This requires build sframe
+# git@github.com:dato-code/SFrame.git
+# SFRAME_PATH = $(HOME)/SFrame
+# MXNET_PLUGINS += plugin/sframe/plugin.mk

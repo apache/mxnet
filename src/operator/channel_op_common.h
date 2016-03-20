@@ -14,95 +14,72 @@
 namespace mxnet {
 namespace op {
 
-template<typename xpu, int dim>
-inline void Concatenate(const std::vector<mshadow::Tensor<xpu, dim> > &input,
-                        mshadow::Tensor<xpu, dim> *output, const int dimension) {
+template<typename xpu, int dim, int cdim>
+inline void concatenate_helper(const std::vector<mshadow::Tensor<xpu, dim> > &input,
+                               mshadow::Tensor<xpu, dim> *output, const int dimension,
+                               const OpReqType req) {
   using mshadow::expr::concat;
   using mshadow::expr::slice;
-  mshadow::Tensor<xpu, dim> out = *output;
-  size_t size = input.size();
 
-  index_t begin = 0;
-  switch (dimension) {
-    case 0: {
-        for (index_t i = 0; i < size; ++i) {
-          index_t end = begin + input[i].size(0);
-          slice<0>(out, begin, end) = input[i];
-          begin = end;
-        }
-        break;
+  if (dimension == cdim) {
+    mshadow::Tensor<xpu, dim> out = *output;
+    size_t size = input.size();
+    index_t begin = 0;
+    for (index_t i = 0; i < size; ++i) {
+      index_t end = begin + input[i].size(cdim);
+      Assign(slice<cdim>(out, begin, end), req, input[i]);
+      begin = end;
     }
-    case 1: {
-        for (index_t i = 0; i < size; ++i) {
-          index_t end = begin + input[i].size(1);
-          slice<1>(out, begin, end) = input[i];
-          begin = end;
-        }
-        break;
-    }
-    case 2: {
-        for (index_t i = 0; i < size; ++i) {
-          index_t end = begin + input[i].size(2);
-          slice<2>(out, begin, end) = input[i];
-          begin = end;
-        }
-        break;
-    }
-    case 3: {
-        for (index_t i = 0; i < size; ++i) {
-          index_t end = begin + input[i].size(3);
-          slice<3>(out, begin, end) = input[i];
-          begin = end;
-        }
-        break;
-    }
+  } else {
+    concatenate_helper<xpu, dim, (cdim > 0 ? cdim - 1 : 0)>(input, output, dimension, req);
+  }
+}
+
+template<typename xpu, int dim>
+inline void Concatenate(const std::vector<mshadow::Tensor<xpu, dim> > &input,
+                        mshadow::Tensor<xpu, dim> *output, const int dimension,
+                        const OpReqType req) {
+  if (dimension < 0) {
+    LOG(FATAL) << "dimension (" << dimension << ") must be greater than 0";
+  } else if (dimension >= dim) {
+    LOG(FATAL) << "dimension (" << dimension << ") must be smaller than dim (" << dim << ")";
+  } else {
+    concatenate_helper<xpu, dim, dim-1>(input, output, dimension, req);
   }
 }
 
 
+template<typename xpu, int dim, int cdim>
+void split_helper(const mshadow::Tensor<xpu, dim> &input,
+           std::vector<mshadow::Tensor<xpu, dim> > *output,
+           const int dimension, const std::vector<OpReqType> &req) {
+  using mshadow::expr::concat;
+  using mshadow::expr::slice;
+
+  if (dimension == cdim) {
+    std::vector<mshadow::Tensor<xpu, dim> > out = *output;
+    size_t size = out.size();
+    index_t begin = 0;
+    for (index_t i = 0; i < size; ++i) {
+      index_t end = begin + out[i].size(cdim);
+      Assign(out[i], req[i], slice<cdim>(input, begin, end));
+      begin = end;
+    }
+  } else {
+    split_helper<xpu, dim, (cdim > 0 ? cdim - 1 : 0)>(input, output, dimension, req);
+  }
+}
 
 template<typename xpu, int dim>
 void Split(const mshadow::Tensor<xpu, dim> &input,
            std::vector<mshadow::Tensor<xpu, dim> > *output,
-           const int dimension) {
-  using mshadow::expr::concat;
-  using mshadow::expr::slice;
-  std::vector<mshadow::Tensor<xpu, dim> > out = *output;
-  size_t size = out.size();
-  index_t begin = 0;
-  switch (dimension) {
-    case 0: {
-      for (index_t i = 0; i < size; ++i) {
-        index_t end = begin + out[i].size(0);
-        out[i] = slice<0>(input, begin, end);
-        begin = end;
-      }
-      break;
-    }
-    case 1: {
-      for (index_t i = 0; i < size; ++i) {
-        index_t end = begin + out[i].size(1);
-        out[i] = slice<1>(input, begin, end);
-        begin = end;
-      }
-      break;
-    }
-    case 2: {
-      for (index_t i = 0; i < size; ++i) {
-        index_t end = begin + out[i].size(2);
-        out[i] = slice<2>(input, begin, end);
-        begin = end;
-      }
-      break;
-    }
-    case 3: {
-      for (index_t i = 0; i < size; ++i) {
-        index_t end = begin + out[i].size(3);
-        out[i] = slice<3>(input, begin, end);
-        begin = end;
-      }
-      break;
-    }
+           const int dimension, const std::vector<OpReqType> &req) {
+  if (dimension < 0) {
+    LOG(FATAL) << "dimension (" << dimension << ") must be greater than 0";
+  } else if (dimension >= dim) {
+    LOG(FATAL) << "dimension (" << dimension << ") must be smaller than dim (" << dim << ")";
+  } else {
+    split_helper<xpu, dim, dim-1>(input, output, dimension, req);
   }
 }
 }  // namespace op

@@ -194,11 +194,27 @@ class StaticGraph {
    * \param topo_order The topological order of node index, as created by TopoSort.
    * \param node_out_shapes The shapes of the each outputs of nodes in the graph.
    * \param node_aux_shapes The shapes of the each auxiliary states of nodes in the graph.
+   * \param partial_infer Whether return partially inferred results.
    * \return if the shape inference is successful, return true, else return false.
    */
   bool InferNodeShapes(const std::vector<uint32_t> &topo_order,
                        std::vector<std::vector<TShape> > *node_out_shapes,
-                       std::vector<std::vector<TShape> > *node_aux_shapes) const;
+                       std::vector<std::vector<TShape> > *node_aux_shapes,
+                       bool partial_infer = false) const;
+  /*!
+   * \brief infer the node types in the computation graph.
+   *
+   *  When calling this function, user can setup the shape information known into right position.
+   *  Unknown shape are indicated by shape.ndim() == 0.
+   *
+   * \param topo_order The topological order of node index, as created by TopoSort.
+   * \param node_out_types The types of the each outputs of nodes in the graph.
+   * \param node_aux_types The types of the each auxiliary states of nodes in the graph.
+   * \return if the shape inference is successful, return true, else return false.
+   */
+  bool InferNodeTypes(const std::vector<uint32_t> &topo_order,
+                       std::vector<std::vector<int> > *node_out_types,
+                       std::vector<std::vector<int> > *node_aux_types) const;
   /*!
    * \brief infer the shapes of outputs and unknown input arguments
    * \param in_shape the shape of input arguments of the operator
@@ -207,17 +223,39 @@ class StaticGraph {
    *     For unknown shapes, InferShape will try to fill in the correct Shape in in_shape
    *     For known shapes, InferShape will check shape consistency
    *
-   *     common practice: set the shape of data input, and usually weight's shape can be infered
+   *     common practice: set the shape of data input, and usually weight's shape can be inferred
    *
    * \param out_shape the shape of outputs of the operator
    *     InferShape will modify the vector to fill output TShape
    * \param aux_shape the shape of auxiliary states of the operator
    *     InferShape will modify the vector to fill output TShape
+   * \param partial_infer Whether return partially inferred results.
    * \return if the shape inference is successful, return true, else return false.
    */
   bool InferShape(std::vector<TShape>* in_shape,
                   std::vector<TShape>* out_shape,
-                  std::vector<TShape>* aux_shape) const;
+                  std::vector<TShape>* aux_shape,
+                  bool partial_infer = false) const;
+
+  /*!
+   * \brief infer the types of outputs and unknown input arguments
+   * \param in_type the type of input arguments of the operator
+   *     this should be of same length as the vector returned by ListArguments
+   *     in_type allows unknown elements, which are checked by type.ndim() == 0.
+   *     For unknown types, Infertype will try to fill in the correct type in in_type
+   *     For known types, Infertype will check type consistency
+   *
+   *     common practice: set the type of data input, and usually weight's type can be inferred
+   *
+   * \param out_type the type of outputs of the operator
+   *     Infertype will modify the vector to fill output int
+   * \param aux_type the type of auxiliary states of the operator
+   *     Infertype will modify the vector to fill output int
+   * \return if the type inference is successful, return true, else return false.
+   */
+  bool InferType(std::vector<int>* in_type,
+                  std::vector<int>* out_type,
+                  std::vector<int>* aux_type) const;
   /*!
    * \brief Add a full backward pass in the static graph.
    *  This function will add gradient nodes for each heads,

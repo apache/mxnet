@@ -14,7 +14,7 @@ BugReports: https://github.com/dmlc/mxnet/issues
 Imports:
     methods,
     Rcpp (>= 0.12.1),
-    DiagrammeR,
+    DiagrammeR (>= 0.8.1),
     data.table,
     jsonlite,
     magrittr,
@@ -24,7 +24,8 @@ Suggests:
     mlbench,
     knitr,
     rmarkdown,
-    imager
+    imager,
+    roxygen2
 LinkingTo: Rcpp
 RoxygenNote: 5.0.1
 VignetteBuilder: knitr

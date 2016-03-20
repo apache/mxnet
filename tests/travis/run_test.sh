@@ -1,11 +1,8 @@
 #!/bin/bash
 
 if [ ${TASK} == "lint" ]; then
-    make lint
-    exit $?
-fi
-
-if [ ${TASK} == "doc" ]; then
+    make lint || exit -1
+    echo "Check documentations of c++ code..."
     make doc 2>log.txt
     (cat log.txt| grep -v ENABLE_PREPROCESSING |grep -v "unsupported tag") > logclean.txt
     echo "---------Error Log----------"
@@ -108,5 +105,25 @@ if [ ${TASK} == "python_test" ]; then
         nosetests3 tests/python/unittest || exit -1
         nosetests3 tests/python/train || exit -1
     fi
+    exit 0
+fi
+
+if [ ${TASK} == "scala_test" ]; then
+    export MAVEN_OPTS="-Xmx256m -XX:MaxPermSize=128m"
+    if [ ${TRAVIS_OS_NAME} == "osx" ]; then
+        LIB_GOMP_PATH=`find /usr/local/lib -name libgomp.dylib | grep -v i386 | head -n1`
+        ln -sf $LIB_GOMP_PATH /usr/local/lib/libgomp.dylib
+    fi
+    make all || exit -1
+    # use cached dir for storing data
+    rm -rf ${PWD}/data
+    mkdir -p ${CACHE_PREFIX}/data
+    ln -s ${CACHE_PREFIX}/data ${PWD}/data
+
+    export JAVA_HOME=$(/usr/libexec/java_home)
+
+    make scalapkg || exit -1
+    make scalatest || exit -1
+    
     exit 0
 fi

@@ -13,7 +13,7 @@ def fit(args, network, data_loader):
         log_file = args.log_file
         log_dir = args.log_dir
         log_file_full_name = os.path.join(log_dir, log_file)
-        if not os.path.exists(log_dir): 
+        if not os.path.exists(log_dir):
             os.mkdir(log_dir)
         logger = logging.getLogger()
         handler = logging.FileHandler(log_file_full_name)
@@ -26,7 +26,7 @@ def fit(args, network, data_loader):
         logging.basicConfig(level=logging.DEBUG, format=head)
         logging.info('start with arguments %s', args)
 
-    # load model?
+    # load model
     model_prefix = args.model_prefix
     if model_prefix is not None:
         model_prefix += "-%d" % (kv.rank)
@@ -37,7 +37,7 @@ def fit(args, network, data_loader):
         model_args = {'arg_params' : tmp.arg_params,
                       'aux_params' : tmp.aux_params,
                       'begin_epoch' : args.load_epoch}
-    # save model?
+    # save model
     checkpoint = None if model_prefix is None else mx.callback.do_checkpoint(model_prefix)
 
     # data

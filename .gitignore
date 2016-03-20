@@ -82,8 +82,9 @@ R-package/inst/*
 *.bin
 
 # ipython notebook
-example/notebooks/.ipynb_checkpoints/*
 *_pb2.py
+*.ipynb_checkpoints*
+input.txt*
 
 # Jetbrain
 .idea
@@ -91,3 +92,14 @@ example/notebooks/.ipynb_checkpoints/*
 # ctags
 tags
 
+# Scala package
+*.class
+scala-package/*/target/
+scala-package/*/*/target/
+*.scala_dependencies
+*.worksheet
+*.idea
+*.iml
+*.classpath
+*.project
+*.settings

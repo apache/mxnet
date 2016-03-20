@@ -272,16 +272,20 @@ void TBlobOpRegEntryImpl::RegisterUnary() {
   // The body to be registered
   auto body = [this] (NDArray **used_vars,
                       real_t *s,
-                      NDArray **mutate_vars) {
+                      NDArray **mutate_vars,
+                      int num_params,
+                      char **param_keys,
+                      char **param_vals) {
     NDArray src = *used_vars[0];
     NDArray *out = mutate_vars[0];
     TShape dshape = src.shape();
     if (unary_infer_ != nullptr) dshape = unary_infer_(dshape);
 
     if (out->is_none()) {
-      *out = NDArray(dshape, src.ctx(), true);
+      *out = NDArray(dshape, src.ctx(), true, src.dtype());
     } else {
       CHECK(out->ctx() == src.ctx()) << "target context mismatch";
+      CHECK(out->dtype() == src.dtype()) << "target data type mismatch";
       CHECK(out->shape() == dshape) << "target shape mismatch "
       << out->shape() << " vs. " << dshape;
     }

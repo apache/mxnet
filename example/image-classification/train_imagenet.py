@@ -2,12 +2,13 @@ import find_mxnet
 import mxnet as mx
 import logging
 import argparse
+import os
 import train_model
 
 # don't use -n and -s, which are resevered for the distributed training
 parser = argparse.ArgumentParser(description='train an image classifer on imagenet')
 parser.add_argument('--network', type=str, default='inception-bn',
-                    choices = ['alexnet', 'vgg', 'googlenet', 'inception-bn', 'inception-bn-full.py'],
+                    choices = ['alexnet', 'vgg', 'googlenet', 'inception-bn', 'inception-bn-full', 'inception-v3'],
                     help = 'the cnn to use')
 parser.add_argument('--data-dir', type=str, required=True,
                     help='the input data directory')
@@ -39,6 +40,12 @@ parser.add_argument('--log-file', type=str,
 		    help='the name of log file')
 parser.add_argument('--log-dir', type=str, default="/tmp/",
                     help='directory of the log file')
+parser.add_argument('--train-dataset', type=str, default="train.rec",
+                    help='train dataset name')
+parser.add_argument('--val-dataset', type=str, default="val.rec",
+                    help="validation dataset name")
+parser.add_argument('--data-shape', type=int, default=224,
+                    help='set image\'s shape')
 args = parser.parse_args()
 
 # network
@@ -47,9 +54,9 @@ net = importlib.import_module('symbol_' + args.network).get_symbol(args.num_clas
 
 # data
 def get_iterator(args, kv):
-    data_shape = (3, 224, 224)
+    data_shape = (3, args.data_shape, args.data_shape)
     train = mx.io.ImageRecordIter(
-        path_imgrec = args.data_dir + "train.rec",
+        path_imgrec = os.path.join(args.data_dir, args.train_dataset),
         mean_r      = 123.68,
         mean_g      = 116.779,
         mean_b      = 103.939,
@@ -61,7 +68,7 @@ def get_iterator(args, kv):
         part_index  = kv.rank)
 
     val = mx.io.ImageRecordIter(
-        path_imgrec = args.data_dir + "val.rec",
+        path_imgrec = os.path.join(args.data_dir, args.val_dataset),
         mean_r      = 123.68,
         mean_g      = 116.779,
         mean_b      = 103.939,

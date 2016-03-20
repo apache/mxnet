@@ -4,9 +4,19 @@
 mx.opt.sgd <- function(learning.rate,
                        momentum=0,
                        wd=0,
-                       rescale.grad=1) {
+                       rescale.grad=1,
+                       clip_gradient = NULL, 
+                       lr_scheduler = NULL) {
   # use lr as short for learing rate.
   lr <- learning.rate
+  count       <- 0
+  num_update  <- 0
+
+  sgd <- new.env()
+  sgd$lr <- lr
+  sgd$count <- 0
+  sgd$num_update <- 0
+
   create.state <- function(index, weight) {
     if (momentum == 0) {
       return(NULL)
@@ -16,12 +26,38 @@ mx.opt.sgd <- function(learning.rate,
     }
   }
   update <- function(index, weight, grad, state) {
+
+    if (!is.null(lr_scheduler)){
+      lr_scheduler(sgd) ## changing lr
+      lr <- sgd$lr
+      ## update count
+      indexKey <- paste0('ik', index)
+      if (!exists(envir = sgd, x = indexKey)){
+        assign(x = indexKey, value = 0, envir = sgd)
+      } else {
+        indexValue <- get(envir = sgd, x = indexKey)
+        assign(x = indexKey, value = indexValue + 1, envir = sgd)
+        sgd$num_update <- max(sgd$num_update, get(envir = sgd, x = indexKey))
+      }
+    }
+    grad <- grad * rescale.grad
+    if (!is.null(clip_gradient)){
+      if(clip_gradient >= 0){
+          grad_ctx <- ctx(grad)
+          grad <- as.array(grad)
+          grad <- pmax(grad, -1 * clip_gradient)
+          grad <- pmin(grad, clip_gradient)
+          grad <- mx.nd.array(grad, grad_ctx)
+      } else {
+        stop("Error: clip_gradient should be positive number.")
+      }
+    }
     if (is.null(state)) {
-      weight <- weight - lr * (grad * rescale.grad + wd * weight)
+      weight <- weight - lr * (grad + wd * weight)
     } else {
       mom <- state
       mom <- mom * momentum
-      mom <- mom - lr * (grad * rescale.grad + wd * weight)
+      mom <- mom - lr * (grad + wd * weight)
       weight <- weight + mom
       state <- mom
     }
