@@ -1,5 +1,5 @@
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
-# pylint: disable=superfluous-parens, no-member
+# pylint: disable=superfluous-parens, no-member, invalid-name
 import sys
 sys.path.insert(0, "../../python")
 import numpy as np
@@ -220,14 +220,14 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
                                   name="t%d_embed" % seqidx)
         # stack LSTM
         for i in range(num_lstm_layer):
-            if i==0:
-                dp=0.
+            if i == 0:
+                dp_ratio = 0.
             else:
-                dp = dropout
+                dp_ratio = dropout
             next_state = lstm(num_hidden, indata=hidden,
                               prev_state=last_states[i],
                               param=param_cells[i],
-                              seqidx=seqidx, layeridx=i, dropout=dp)
+                              seqidx=seqidx, layeridx=i, dropout=dp_ratio)
             hidden = next_state.h
             last_states[i] = next_state
         # decoder
@@ -282,8 +282,8 @@ if __name__ == '__main__':
 
     data_train = BucketSentenceIter("./data/ptb.train.txt", vocab,
                                     buckets, batch_size, init_states)
-    data_val   = BucketSentenceIter("./data/ptb.valid.txt", vocab,
-                                    buckets, batch_size, init_states)
+    data_val = BucketSentenceIter("./data/ptb.valid.txt", vocab,
+                                  buckets, batch_size, init_states)
 
     if dummy_data:
         data_train = DummyIter(data_train)
@@ -295,19 +295,18 @@ if __name__ == '__main__':
     else:
         symbol = sym_gen
 
-    model = mx.model.FeedForward(
-            ctx           = contexts,
-            symbol        = symbol,
-            num_epoch     = num_epoch,
-            learning_rate = learning_rate,
-            momentum      = momentum,
-            wd            = 0.00001,
-            initializer   = mx.init.Xavier(factor_type="in", magnitude=2.34))
+    model = mx.model.FeedForward(ctx=contexts,
+                                 symbol=symbol,
+                                 num_epoch=num_epoch,
+                                 learning_rate=learning_rate,
+                                 momentum=momentum,
+                                 wd=0.00001,
+                                 initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
 
     import logging
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
 
     model.fit(X=data_train, eval_data=data_val,
-              batch_end_callback = mx.callback.Speedometer(batch_size, 50),)
+              batch_end_callback=mx.callback.Speedometer(batch_size, 50),)
 
