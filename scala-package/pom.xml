@@ -21,7 +21,7 @@
   </licenses>
   <scm>
     <connection>scm:git:git@github.com:dmlc/mxnet.git</connection>
-    <developerConnection>scm:git:git@github.com:javelinjs/mxnet.git</developerConnection>
+    <developerConnection>scm:git:git@github.com:dmlc/mxnet.git</developerConnection>
     <url>https://github.com/dmlc/mxnet</url>
   </scm>
 
@@ -68,7 +68,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-source-plugin</artifactId>
-            <version>2.2.1</version>
             <executions>
               <execution>
                 <phase>package</phase>
@@ -84,7 +83,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <version>2.9.1</version>
             <executions>
               <execution>
                 <phase>package</phase>
@@ -106,7 +104,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-gpg-plugin</artifactId>
-            <version>1.5</version>
             <executions>
               <execution>
                 <id>sign-artifacts</id>
@@ -117,11 +114,9 @@
               </execution>
             </executions>
           </plugin>
-          <!-- OSSRH Repo -->
           <plugin>
             <groupId>org.sonatype.plugins</groupId>
             <artifactId>nexus-staging-maven-plugin</artifactId>
-            <version>1.6.3</version>
             <extensions>true</extensions>
             <configuration>
               <serverId>ossrh</serverId>
@@ -301,6 +296,27 @@
               <version>20020829</version>
             </dependency>
           </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>2.2.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>2.9.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-gpg-plugin</artifactId>
+          <version>1.5</version>
+        </plugin>
+        <!-- OSSRH Repo -->
+        <plugin>
+          <groupId>org.sonatype.plugins</groupId>
+          <artifactId>nexus-staging-maven-plugin</artifactId>
+          <version>1.6.3</version>
         </plugin>
       </plugins>
     </pluginManagement>

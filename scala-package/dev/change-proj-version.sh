@@ -16,6 +16,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# (Yizhi) This is mainly inspired by the script in apache/spark.
+# I did some modificaiton to get it with our project.
+#
 
 set -e
 
