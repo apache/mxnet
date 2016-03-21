@@ -145,6 +145,10 @@ void ElementwiseSum(const std::vector<TBlob> source,
                     TBlob *out,
                     RunContext ctx);
 
+// broadcasting
+template <typename Device>
+void EvalBroadcast(TBlob const& src, TBlob* ret, int size, RunContext ctx);
+
 }  // namespace ndarray
 }  // namespace mxnet
 #endif  // MXNET_NDARRAY_NDARRAY_FUNCTION_H_

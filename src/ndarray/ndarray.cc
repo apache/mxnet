@@ -515,57 +515,64 @@ NDArray &NDArray::operator/=(const real_t &src) {
   return ScalarOpApply<ndarray::Div>(this, src);
 }
 
-template <typename xpu>
-void DoBroadcast(TBlob const& src, TBlob* ret, int size, RunContext ctx) {
-  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
-  mshadow::Tensor<xpu, 3> out = ret->get<xpu, 3, real_t>(s);
-  mshadow::Tensor<xpu, 2> in = src.get<xpu, 2, real_t>(s);
-  out = mshadow::expr::broadcast_with_axis(in, 0, size);
-}
-
-NDArray NDArray::Broadcast(int dim, int size) const {
-  CHECK(0 <= dim && dim < shape_.ndim()) << "Broadcast dimension out of bound.";
-  CHECK(shape_[dim] == 1) << "Cannot broadcast a dimension that is not 1.";
-  TShape new_shape = shape_;
+/*!
+ * \brief Get a broadcasted NDArray
+ * \param src the source ndarray
+ * \param dim dimension to broadcast
+ * \param size size after broadcasting
+ */
+void Broadcast(const NDArray& src, int dim, int size, NDArray *out) {
+  CHECK(0 <= dim && dim < src.shape().ndim()) << "Broadcast dimension out of bound.";
+  CHECK(src.shape()[dim] == 1) << "Cannot broadcast a dimension that is not 1.";
+  TShape new_shape = src.shape();
   new_shape[dim] = size;
-  NDArray ret(new_shape, ctx(), true, dtype());
+  if (out->is_none()) {
+    *out = NDArray(new_shape, src.ctx(), true, src.dtype());
+  } else {
+    CHECK(out->ctx() == src.ctx()) << "target context mismatch";
+    CHECK(out->shape() == new_shape)
+      << "invalid target shape: " << out->shape() << " should be: " << new_shape;
+  }
   std::vector<Engine::VarHandle> const_vars;
-  const_vars.push_back(var());
+  const_vars.push_back(src.var());
   size_t before = 1;
   size_t after = 1;
   for (index_t i = 0; i < dim; ++i) {
-    before *= shape_[i];
+    before *= src.shape()[i];
   }
-  for (index_t i = dim + 1; i < shape_.ndim(); ++i) {
-    after *= shape_[i];
+  for (index_t i = dim + 1; i < src.shape().ndim(); ++i) {
+    after *= src.shape()[i];
   }
-  size_t inter_in_shape[] = {before, after};
-  size_t inter_out_shape[] = {before, size, after};
-  NDArray inter_in = Reshape(TShape(inter_in_shape, inter_in_shape + 2));
-  NDArray inter_out = ret.Reshape(TShape(inter_out_shape, inter_out_shape + 3));
-  switch (ctx().dev_mask()) {
+  // important: callback must always capture by value
+  NDArray ret = *out;
+  switch (src.ctx().dev_mask()) {
     case cpu::kDevMask: {
-      Engine::Get()->PushSync([inter_in, inter_out, size](RunContext ctx) {
-          inter_out.CheckAndAlloc();
+      Engine::Get()->PushSync([src, ret, before, size, after](RunContext ctx) {
+          ret.CheckAndAlloc();
+          NDArray inter_in = src.Reshape(mshadow::Shape2(before, after));
+          NDArray inter_out = ret.Reshape(mshadow::Shape3(before, size, after));
           TBlob tmp = inter_out.data();
-          DoBroadcast<cpu>(inter_in.data(), &tmp, size, ctx);
-      }, ctx(), const_vars, {ret.var()});
+          LOG(INFO) << "out: " << ret.var();
+          ndarray::EvalBroadcast<cpu>(inter_in.data(), &tmp, size, ctx);
+      }, src.ctx(), const_vars, {ret.var()});
       break;
     }
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
-      Engine::Get()->PushSync([inter_in, inter_out, size](RunContext ctx) {
-          inter_out.CheckAndAlloc();
+      Engine::Get()->PushSync([src, ret, before, size, after](RunContext ctx) {
+          ret.CheckAndAlloc();
+          NDArray inter_in = src.Reshape(mshadow::Shape2(before, after));
+          NDArray inter_out = ret.Reshape(mshadow::Shape3(before, size, after));
           TBlob tmp = inter_out.data();
-          DoBroadcast<gpu>(inter_in.data(), &tmp, size, ctx);
+          ndarray::EvalBroadcast<gpu>(inter_in.data(), &tmp, size, ctx);
+          // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-      }, ctx(), const_vars, {ret.var()});
+      }, src.ctx(), const_vars, {ret.var()});
       break;
     }
 #endif
     default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
   }
-  return ret;
 }
 
 void NDArray::Save(dmlc::Stream *strm) const {
@@ -859,6 +866,23 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
   LOG(FATAL) << "Compile with OpenCV for image decoding.";
 #endif  // MXNET_USE_OPENCV
 }
+
+MXNET_REGISTER_NDARRAY_FUN(_broadcast)
+.set_type_mask(kAcceptEmptyMutateTarget | kNDArrayArgBeforeScalar)
+.set_body([](NDArray **u, real_t *s, NDArray **out,
+             int num_params, char **param_keys, char **param_vals) {
+      Broadcast(*u[0],
+                static_cast<int>(s[0]),
+                static_cast<int>(s[1]),
+                out[0]);
+    })
+.set_num_use_vars(1)
+.set_num_scalars(2)
+.set_num_mutate_vars(1)
+.describe("Broadcast array in the given axis to the given size")
+.add_argument("src", "NDArray", "source ndarray")
+.add_argument("axis", "int", "axis to broadcast")
+.add_argument("size", "int", "size of broadcast");
 
 MXNET_REGISTER_NDARRAY_FUN(_imdecode)
 .set_type_mask(kAcceptEmptyMutateTarget | kNDArrayArgBeforeScalar)

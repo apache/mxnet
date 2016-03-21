@@ -272,6 +272,15 @@ void ElementwiseSum<DEVICE>(const std::vector<TBlob> source,
   });
 }
 
+template <>
+void EvalBroadcast<DEVICE>(TBlob const& src, TBlob* ret, int size, RunContext ctx) {
+  typedef DEVICE xpu;
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  mshadow::Tensor<xpu, 3> out = ret->get<xpu, 3, real_t>(s);
+  mshadow::Tensor<xpu, 2> in = src.get<xpu, 2, real_t>(s);
+  out = mshadow::expr::broadcast_with_axis(in, 0, size);
+}
+
 // declarations
 DECL_BINARY(DEVICE, MatChooseRowElem, EvalMatChooseRowElem_)
 DECL_TERNARY(DEVICE, MatFillRowElem, EvalMatFillRowElem_)
