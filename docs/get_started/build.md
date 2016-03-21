@@ -19,6 +19,7 @@ pull request if you can fix the problem.
   - [Customized Building](#customized-building)
 - [Python Package Installation](#python-package-installation)
 - [R Package Installation](#r-package-installation)
+- [Julia Package Installation](#julia-package-installation)
 - [Docker Images](#docker-images)
 
 ## Build the Shared Library
@@ -234,6 +235,22 @@ Note on Library Build:
 
 We isolate the library build with Rcpp end to maximize the portability
   - MSVC is needed on windows to build the mxnet library, because of CUDA compatiblity issue of toolchains.
+
+## Julia Package Installation
+
+The Julia package is hosted in a separate repository [MXNet.jl](https://github.com/dmlc/MXNet.jl). To use the Julia binding with an existing libmxnet installation, set the following environment variable
+
+```bash
+export MXNET_HOME=/path/to/libmxnet
+```
+
+The path should be the root directory of libmxnet, in other words, `libmxnet.so` should be found at `$MXNET_HOME/lib`. You might want to add it to your `.bashrc`. Then the Julia package could be installed via
+
+```julia
+Pkg.add("MXNet")
+```
+
+in a Julia console. For more details, please refer to the [full documentation of MXNet.jl](http://mxnetjl.readthedocs.org/en/latest/user-guide/install.html).
 
 ## Docker Images
 
