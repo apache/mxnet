@@ -6,6 +6,7 @@
 */
 
 #include "./cudnn_batch_norm-inl.h"
+#include <vector>
 
 namespace mxnet {
 namespace op {
@@ -74,15 +75,22 @@ class CuDNNBatchNormOp : public Operator {
 
     Stream<gpu> *s = ctx.get_stream<gpu>();
     Tensor<gpu, 4> x = in_data[cudnnbatchnorm::kData].get_with_shape<gpu, 4, real_t>(shape_, s);
-    Tensor<gpu, 1> gamma = in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> beta = in_data[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
+    Tensor<gpu, 1> gamma =
+      in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
+    Tensor<gpu, 1> beta =
+      in_data[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
     Tensor<gpu, 4> y = out_data[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, real_t>(shape_, s);
-    Tensor<gpu, 1> moving_mean = aux_states[cudnnbatchnorm::kMovingMean].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> moving_inv_var = aux_states[cudnnbatchnorm::kMovingInvVar].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
+    Tensor<gpu, 1> moving_mean =
+      aux_states[cudnnbatchnorm::kMovingMean].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
+    Tensor<gpu, 1> moving_inv_var =
+      aux_states[cudnnbatchnorm::kMovingInvVar]
+      .get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
     float a = 1.0f, b = 0.0f;
     if (ctx.is_train) {
-      Tensor<gpu, 1> save_mean = out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-      Tensor<gpu, 1> save_inv_var = out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1> save_mean =
+        out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1> save_inv_var =
+        out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
       CHECK_EQ(cudnnBatchNormalizationForwardTraining(s->dnn_handle_,
                                                       CUDNN_BATCHNORM_SPATIAL,
                                                       &a,
@@ -136,11 +144,16 @@ class CuDNNBatchNormOp : public Operator {
     Tensor<gpu, 4> x = in_data[cudnnbatchnorm::kData].get_with_shape<gpu, 4, real_t>(shape_, s);
     Tensor<gpu, 4> dx = in_grad[cudnnbatchnorm::kData].get_with_shape<gpu, 4, real_t>(shape_, s);
     Tensor<gpu, 4> dy = out_grad[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, real_t>(shape_, s);
-    Tensor<gpu, 1> gamma = in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> dbeta = in_grad[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> dgamma = in_grad[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> save_mean = out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> save_inv_var = out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
+    Tensor<gpu, 1> gamma =
+      in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
+    Tensor<gpu, 1> dbeta =
+      in_grad[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
+    Tensor<gpu, 1> dgamma =
+      in_grad[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
+    Tensor<gpu, 1> save_mean =
+      out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
+    Tensor<gpu, 1> save_inv_var =
+      out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
     float a = 1.0f, b = 0.0f;
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
 #if CUDNN_VERSION >= 4007

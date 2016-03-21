@@ -559,28 +559,47 @@ class AdaGrad(Optimizer):
     learning_rate : float, optional
         Step size.
         Default value is set to 0.05.
+
     wd : float, optional
         L2 regularization coefficient add to all the weights
+
     rescale_grad : float, optional
         rescaling factor of gradient.
+
     eps: float, optional
         A small float number to make the updating processing stable
         Default value is set to 1e-7.
+
+    clip_gradient : float, optional
+        clip gradient in range [-clip_gradient, clip_gradient]
     """
-    def __init__(self, learning_rate=0.05, wd=0., rescale_grad=1, eps=1e-7, arg_names=None):
+    def __init__(self, learning_rate=0.05, wd=0., rescale_grad=1, eps=1e-7, clip_gradient=None,
+                 lr_scheduler=None, arg_names=None):
         super(AdaGrad, self).__init__(rescale_grad, arg_names, wd)
         self.lr = learning_rate
         self.float_stable_eps = eps
         self.rescale_grad = rescale_grad
+        self.clip_gradient = clip_gradient
+        self.lr_scheduler = lr_scheduler
+
     def create_state(self, index, weight):
-        return zeros(weight.shape, weight.context)   #history
+        return zeros(weight.shape, weight.context)
+
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        if self.lr_scheduler is not None:
+            lr = self.lr_scheduler(self.num_update)
+            self._update_count(index)
+        else:
+            lr = self.lr
+        lr *= self.lr_scale.get(index, 1.0)
         grad = grad * self.rescale_grad
+        if self.clip_gradient is not None:
+            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
         history = state
         history[:] += (grad * grad)
-        weight[:] += -self.lr * (grad / sqrt(history + self.float_stable_eps) + self.wd * weight)
+        weight[:] += -lr * (grad / sqrt(history + self.float_stable_eps) + self.wd * weight)
 
 @register
 class RMSProp(Optimizer):
