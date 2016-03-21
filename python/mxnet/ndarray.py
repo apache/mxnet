@@ -478,10 +478,16 @@ def add(lhs, rhs):
             return lhs + rhs
         else:
             return add(rhs, lhs)
-    elif isinstance(rhs, NDArray):
-        return NDArray._plus(lhs, rhs)
     elif isinstance(rhs, numeric_types):
         return NDArray._plus_scalar(lhs, float(rhs))
+    elif isinstance(rhs, NDArray):
+        lsize = reduce(operator.mul, lhs.shape)
+        rsize = reduce(operator.mul, rhs.shape)
+        if lsize < rsize:
+            lhs = broadcast_to(lhs, rhs.shape)
+        elif lsize > rsize:
+            rhs = broadcast_to(rhs, lhs.shape)
+        return NDArray._plus(lhs, rhs)
     else:
         raise TypeError('type %s not supported' % str(type(rhs)))
 
@@ -508,10 +514,16 @@ def subtract(lhs, rhs):
             return NDArray._rminus_scalar(rhs, float(lhs))
         else:
             raise TypeError('type %s not supported' % str(type(rhs)))
-    elif isinstance(rhs, NDArray):
-        return NDArray._minus(lhs, rhs)
     elif isinstance(rhs, numeric_types):
         return NDArray._minus_scalar(lhs, float(rhs))
+    elif isinstance(rhs, NDArray):
+        lsize = reduce(operator.mul, lhs.shape)
+        rsize = reduce(operator.mul, rhs.shape)
+        if lsize < rsize:
+            lhs = broadcast_to(lhs, rhs.shape)
+        elif lsize > rsize:
+            rhs = broadcast_to(rhs, lhs.shape)
+        return NDArray._minus(lhs, rhs)
     else:
         raise TypeError('type %s not supported' % str(type(rhs)))
 
@@ -536,10 +548,16 @@ def multiply(lhs, rhs):
             return lhs * rhs
         else:
             return multiply(rhs, lhs)
-    elif isinstance(rhs, NDArray):
-        return NDArray._mul(lhs, rhs)
     elif isinstance(rhs, numeric_types):
         return NDArray._mul_scalar(lhs, float(rhs))
+    elif isinstance(rhs, NDArray):
+        lsize = reduce(operator.mul, lhs.shape)
+        rsize = reduce(operator.mul, rhs.shape)
+        if lsize < rsize:
+            lhs = broadcast_to(lhs, rhs.shape)
+        elif lsize > rsize:
+            rhs = broadcast_to(rhs, lhs.shape)
+        return NDArray._mul(lhs, rhs)
     else:
         raise TypeError('type %s not supported' % str(type(rhs)))
 
@@ -566,10 +584,16 @@ def divide(lhs, rhs):
             return NDArray._rdiv_scalar(rhs, float(lhs))
         else:
             raise TypeError('type %s not supported' % str(type(rhs)))
-    elif isinstance(rhs, NDArray):
-        return NDArray._div(lhs, rhs)
     elif isinstance(rhs, numeric_types):
         return NDArray._div_scalar(lhs, float(rhs))
+    elif isinstance(rhs, NDArray):
+        lsize = reduce(operator.mul, lhs.shape)
+        rsize = reduce(operator.mul, rhs.shape)
+        if lsize < rsize:
+            lhs = broadcast_to(lhs, rhs.shape)
+        elif lsize > rsize:
+            rhs = broadcast_to(rhs, lhs.shape)
+        return NDArray._div(lhs, rhs)
     else:
         raise TypeError('type %s not supported' % str(type(rhs)))
 
