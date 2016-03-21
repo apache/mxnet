@@ -36,7 +36,7 @@ object Base {
 
   try {
     try {
-      System.loadLibrary("mxnet-scala")
+      tryLoadLibraryOS("mxnet-scala")
     } catch {
       case e: UnsatisfiedLinkError =>
         logger.warn("MXNet Scala native library not found in path. " +
@@ -61,6 +61,39 @@ object Base {
       notifyShutdown()
     }
   })
+
+  @throws(classOf[UnsatisfiedLinkError])
+  private def tryLoadLibraryOS(libname: String): Unit = {
+    try {
+      logger.info(s"Try loading $libname from native path.")
+      System.loadLibrary(libname)
+    } catch {
+      case e: UnsatisfiedLinkError =>
+        val os = System.getProperty("os.name")
+        // ref: http://lopica.sourceforge.net/os.html
+        if (os.startsWith("Linux")) {
+          tryLoadLibraryXPU(libname, "linux-x86_64")
+        } else if (os.startsWith("Mac")) {
+          tryLoadLibraryXPU(libname, "osx-x86_64")
+        } else {
+          // TODO(yizhi) support windows later
+          throw new UnsatisfiedLinkError()
+        }
+    }
+  }
+
+  @throws(classOf[UnsatisfiedLinkError])
+  private def tryLoadLibraryXPU(libname: String, arch: String): Unit = {
+    try {
+      // try gpu first
+      logger.info(s"Try loading $libname-$arch-gpu from native path.")
+      System.loadLibrary(s"$libname-$arch-gpu")
+    } catch {
+      case e: UnsatisfiedLinkError =>
+        logger.info(s"Try loading $libname-$arch-cpu from native path.")
+        System.loadLibrary(s"$libname-$arch-cpu")
+    }
+  }
 
   // helper function definitions
   /**
