@@ -406,6 +406,7 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
   int *pcounter = &counter;
 
   auto need_mirror = [this, do_mirror, pcounter, mirror_step](uint32_t nid) {
+    if (nodes[nid].get_attr("force_mirroring", false)) return true;
     if (do_mirror == 0) return false;
     if (!nodes[nid].is_forward()) return false;
     std::string type = nodes[nid].op->TypeString();
