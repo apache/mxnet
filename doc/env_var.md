@@ -20,6 +20,9 @@ Usually you do not need to change these settings, but they are listed here for r
   - Maximum number of temp workspace we can allocate to each device.
   - Set this to small number can save GPU memory.
   - It will also likely to decrease level of parallelism, which is usually OK.
+* MXNET_EXEC_INPLACE_GRAD_SUM_CAP (default=8)
+	- When doing gradient accumulation from gradients bigger than this cap, use AddTo logic to save temp gradient memory.
+	- This optimization be helpful to save memory in settings such as RNN.
 * MXNET_ENGINE_TYPE (default=ThreadedEnginePerDevice)
   - The type of underlying execution engine of MXNet.
   - List of choices
@@ -42,4 +45,3 @@ Settings for More GPU Parallelism
 - Set ```MXNET_GPU_WORKER_NTHREADS``` to larger number (e.g. 2)
   - You may want to set ```MXNET_EXEC_NUM_TEMP``` to reduce memory usage.
 - This may not speed things up, especially for image applications, because GPU is usually fully utilized even with serialized jobs.
-
