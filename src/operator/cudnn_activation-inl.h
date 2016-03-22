@@ -33,11 +33,18 @@ class CuDNNActivationOp : public Operator {
         LOG(FATAL) << "Not implmented";
         break;
     }
+#if CUDNN_MAJOR == 5
+    nan_prop_ = CUDNN_NOT_PROPAGATE_NAN;
+    CHECK_EQ(cudnnCreateActivationDescriptor(&desc_),
+             CUDNN_STATUS_SUCCESS);
+    CHECK_EQ(cudnnSetActivationDescriptor(desc_, mode_, nan_prop_, relu_ceil_),
+             CUDNN_STATUS_SUCCESS);
   }
-
+#endif
   ~CuDNNActivationOp() {
     if (init_cudnn_) {
       CHECK_EQ(cudnnDestroyTensorDescriptor(shape_desc_), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnDestroyActivationDescriptor(desc_), CUDNN_STATUS_SUCCESS);
     }
   }
 
@@ -88,7 +95,12 @@ class CuDNNActivationOp : public Operator {
                                           data.shape_[3]), CUDNN_STATUS_SUCCESS);
     }
     CHECK_EQ(cudnnActivationForward(s->dnn_handle_,
-                                    mode_,
+                                    #if CUDNN_MAJOR <= 4
+                                     mode_,
+                                    #endif
+                                    #if CUDNN_MAJOR == 5
+                                     desc_,
+                                    #endif
                                     &alpha,
                                     shape_desc_,
                                     data.dptr_,
@@ -144,7 +156,12 @@ class CuDNNActivationOp : public Operator {
     }
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
     CHECK_EQ(cudnnActivationBackward(s->dnn_handle_,
+                                     #if CUDNN_MAJOR <= 4
                                      mode_,
+                                     #endif
+                                     #if CUDNN_MAJOR == 5
+                                     desc_,
+                                     #endif
                                      &alpha,
                                      shape_desc_,
                                      output_data.dptr_,
@@ -161,6 +178,11 @@ class CuDNNActivationOp : public Operator {
   bool init_cudnn_;
   cudnnDataType_t dtype_;
   cudnnActivationMode_t mode_;
+#if CUDNN_MAJOR == 5
+  cudnnActivationDescriptor_t desc_;
+  cudnnNanPropagation_t nan_prop_;
+  double relu_ceil_;
+#endif
   cudnnTensorDescriptor_t shape_desc_;
   ActivationParam param_;
 };  // class CuDNNActivationOp

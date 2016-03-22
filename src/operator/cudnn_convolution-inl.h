@@ -74,7 +74,7 @@ class CuDNNConvolutionOp : public Operator {
       if (!param_.no_bias) {
         beta = 1.0f;
         Tensor<gpu, 1> bias = in_data[conv::kBias].get<gpu, 1, real_t>(s);
-#if CUDNN_MAJOR == 4
+#if CUDNN_MAJOR >= 4
         CHECK_EQ(cudnnAddTensor(s->dnn_handle_,
                                 &alpha,
                                 bias_desc_,
@@ -133,7 +133,12 @@ class CuDNNConvolutionOp : public Operator {
                                               gbias.dptr_ + bias_offset_ * g),
                  CUDNN_STATUS_SUCCESS);
       }
+      #if CUDNN_MAJOR <= 4
       CHECK_EQ(cudnnConvolutionBackwardFilter_v3(s->dnn_handle_,
+      #endif
+      #if CUDNN_MAJOR == 5
+      CHECK_EQ(cudnnConvolutionBackwardFilter(s->dnn_handle_,
+      #endif
                &alpha,
                in_desc_,
                data.dptr_ + data_offset_ * g,
@@ -146,7 +151,12 @@ class CuDNNConvolutionOp : public Operator {
                &beta,
                filter_desc_,
                gwmat.dptr_ + weight_offset_ * g), CUDNN_STATUS_SUCCESS);
+      #if CUDNN_MAJOR <= 4
       CHECK_EQ(cudnnConvolutionBackwardData_v3(s->dnn_handle_,
+      #endif
+      #if CUDNN_MAJOR == 5
+      CHECK_EQ(cudnnConvolutionBackwardData(s->dnn_handle_,
+      #endif
                &alpha,
                filter_desc_,
                wmat.dptr_ + weight_offset_ * g,
@@ -168,6 +178,9 @@ class CuDNNConvolutionOp : public Operator {
                    const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     size_t expected = param_.no_bias ? 2 : 3;
+    #if CUDNN_MAJOR == 5
+    format_ = CUDNN_TENSOR_NCHW;
+    #endif
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1);
     if (!init_cudnn_) {
@@ -188,6 +201,9 @@ class CuDNNConvolutionOp : public Operator {
       CHECK_EQ(cudnnCreateConvolutionDescriptor(&conv_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetFilter4dDescriptor(filter_desc_,
                                           dtype_,
+                                          #if CUDNN_MAJOR == 5
+                                          format_,
+                                          #endif
                                           param_.num_filter / param_.num_group,
                                           data.shape_[1] / param_.num_group,
                                           param_.kernel[0],
@@ -301,6 +317,9 @@ class CuDNNConvolutionOp : public Operator {
   cudnnConvolutionFwdAlgo_t algo_;
   cudnnConvolutionBwdDataAlgo_t back_algo_;
   cudnnConvolutionBwdFilterAlgo_t back_algo_w_;
+  #if CUDNN_MAJOR == 5
+  cudnnTensorFormat_t format_;
+  #endif
   ConvolutionParam param_;
 };
 #endif  // __CUDACC__ && CUDNN

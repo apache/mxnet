@@ -1,4 +1,5 @@
-import find_mxnet
+import sys
+sys.path.insert(0, "../../python/")
 import mxnet as mx
 import argparse
 import os, sys
@@ -92,6 +93,8 @@ def parse_args():
                         help = 'the cnn to use')
     parser.add_argument('--data-dir', type=str, default='mnist/',
                         help='the input data directory')
+    parser.add_argument('--save_model_prefix', type=str,
+                        help='save model prefix')
     parser.add_argument('--gpus', type=str,
                         help='the gpus will be used, e.g "0,1,2,3"')
     parser.add_argument('--num-examples', type=int, default=60000,
