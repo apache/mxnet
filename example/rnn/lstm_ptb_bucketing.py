@@ -1,10 +1,11 @@
-# pylint:skip-file
+# pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
+# pylint: disable=superfluous-parens, no-member, invalid-name
 import sys
 sys.path.insert(0, "../../python")
-import mxnet as mx
 import numpy as np
+import mxnet as mx
 
-from lstm import LSTMState, LSTMParam, LSTMModel, lstm
+from lstm import LSTMState, LSTMParam, lstm
 
 # The interface of a data iter that works for bucketing
 #
@@ -17,8 +18,8 @@ from lstm import LSTMState, LSTMParam, LSTMModel, lstm
 #   - bucket_key: the key for the bucket that should be used for this batch
 
 def read_content(path):
-    with open(path) as input:
-        content = input.read()
+    with open(path) as ins:
+        content = ins.read()
         content = content.replace('\n', ' <eos> ').replace('. ', ' <eos> ')
         return content
 
@@ -26,18 +27,18 @@ def build_vocab(path):
     content = read_content(path)
     content = content.split(' ')
     idx = 1 # 0 is left for zero-padding
-    vocab = {}
+    the_vocab = {}
     for word in content:
         if len(word) == 0:
             continue
-        if not word in vocab:
-            vocab[word] = idx
+        if not word in the_vocab:
+            the_vocab[word] = idx
             idx += 1
-    return vocab
+    return the_vocab
 
-def text2id(sentence, vocab):
+def text2id(sentence, the_vocab):
     words = sentence.split(' ')
-    words = [vocab[w] for w in words if len(w) > 0]
+    words = [the_vocab[w] for w in words if len(w) > 0]
     return words
 
 class SimpleBatch(object):
@@ -59,11 +60,29 @@ class SimpleBatch(object):
     def provide_label(self):
         return [(n, x.shape) for n, x in zip(self.label_names, self.label)]
 
+class DummyIter(mx.io.DataIter):
+    "A dummy iterator that always return the same batch, used for speed testing"
+    def __init__(self, real_iter):
+        super(DummyIter, self).__init__()
+        self.real_iter = real_iter
+        self.provide_data = real_iter.provide_data
+        self.provide_label = real_iter.provide_label
+        self.batch_size = real_iter.batch_size
+
+        for batch in real_iter:
+            self.the_batch = batch
+            break
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        return self.the_batch
 
 class BucketSentenceIter(mx.io.DataIter):
     def __init__(self, path, vocab, buckets, batch_size,
-            init_states, n_batch=None,
-            data_name='data', label_name='label'):
+                 init_states, data_name='data', label_name='label'):
+        super(BucketSentenceIter, self).__init__()
         content = read_content(path)
         sentences = content.split(' <eos> ')
 
@@ -73,7 +92,7 @@ class BucketSentenceIter(mx.io.DataIter):
 
         buckets.sort()
         self.buckets = buckets
-        self.data = [[] for k in buckets]
+        self.data = [[] for _ in buckets]
 
         self.default_bucket_key = buckets[0]
 
@@ -88,68 +107,83 @@ class BucketSentenceIter(mx.io.DataIter):
             # we just ignore the sentence it is longer than the maximum
             # bucket size here
 
+        # convert data into ndarrays for better speed during training
+        data = [np.zeros((len(x), buckets[i])) for i, x in enumerate(self.data)]
+        for i_bucket in range(len(self.buckets)):
+            for j in range(len(self.data[i_bucket])):
+                sentence = self.data[i_bucket][j]
+                data[i_bucket][j, :len(sentence)] = sentence
+        self.data = data
+
         # Get the size of each bucket, so that we could sample
         # uniformly from the bucket
         bucket_sizes = [len(x) for x in self.data]
 
         print("Summary of dataset ==================")
-        for bkt, sz in zip(buckets, bucket_sizes):
-            print("bucket of len %3d : %d samples" % (bkt, sz))
-
-        bucket_size_tot = float(sum(bucket_sizes))
-        bucket_ratio_cum = [sum(bucket_sizes[:i+1]) / bucket_size_tot
-                for i in range(len(bucket_sizes))]
-
-        self.bucket_ratio_cum = bucket_ratio_cum
+        for bkt, size in zip(buckets, bucket_sizes):
+            print("bucket of len %3d : %d samples" % (bkt, size))
 
         self.batch_size = batch_size
-        if n_batch is None:
-            n_batch = int(bucket_size_tot / batch_size)
-        self.n_batch = n_batch
+        self.make_data_iter_plan()
 
         self.init_states = init_states
         self.init_state_arrays = [mx.nd.zeros(x[1]) for x in init_states]
 
         self.provide_data = [('%s/%d' % (self.data_name, t), (self.batch_size,))
-                for t in range(self.default_bucket_key)] + init_states
+                             for t in range(self.default_bucket_key)] + init_states
         self.provide_label = [('%s/%d' % (self.label_name, t), (self.batch_size,))
-                for t in range(self.default_bucket_key)]
+                              for t in range(self.default_bucket_key)]
 
-    def embed_data(self, x):
-        return coo_matrix((np.ones(len(x)), (np.arange(len(x)), x)),
-                          shape=(self.batch_size, self.vocab_size)).todense()
+    def make_data_iter_plan(self):
+        "make a random data iteration plan"
+        # truncate each bucket into multiple of batch-size
+        bucket_n_batches = []
+        for i in range(len(self.data)):
+            bucket_n_batches.append(len(self.data[i]) / self.batch_size)
+            self.data[i] = self.data[i][:bucket_n_batches[i]*self.batch_size]
+
+        bucket_plan = np.hstack([np.zeros(n, int)+i for i, n in enumerate(bucket_n_batches)])
+        np.random.shuffle(bucket_plan)
+
+        bucket_idx_all = [np.random.permutation(len(x)) for x in self.data]
+
+        self.bucket_plan = bucket_plan
+        self.bucket_idx_all = bucket_idx_all
+        self.bucket_curr_idx = [0 for x in self.data]
+
+        self.data_buffer = []
+        self.label_buffer = []
+        for i_bucket in range(len(self.data)):
+            data = np.zeros((self.batch_size, self.buckets[i_bucket]))
+            label = np.zeros((self.batch_size, self.buckets[i_bucket]))
+            self.data_buffer.append(data)
+            self.label_buffer.append(label)
 
     def __iter__(self):
         init_state_names = [x[0] for x in self.init_states]
 
-        for i_batch in range(self.n_batch):
-            # pick a random bucket
-            rnd = np.random.rand()
-            for i, ratio in enumerate(self.bucket_ratio_cum):
-                if ratio >= rnd:
-                    i_bucket = i
-                    break
+        for i_bucket in self.bucket_plan:
+            data = self.data_buffer[i_bucket]
+            label = self.label_buffer[i_bucket]
 
-            data = np.zeros((self.batch_size, self.buckets[i_bucket]))
-            label = np.zeros((self.batch_size, self.buckets[i_bucket]))
-
-            for i in range(self.batch_size):
-                # pick a random sentence from the bucket
-                sentence = np.random.choice(self.data[i_bucket])
-                data[i, :len(sentence)] = sentence
-                label[i, :len(sentence)-1] = sentence[1:]
+            i_idx = self.bucket_curr_idx[i_bucket]
+            idx = self.bucket_idx_all[i_bucket][i_idx:i_idx+self.batch_size]
+            self.bucket_curr_idx[i_bucket] += self.batch_size
+            data[:] = self.data[i_bucket][idx]
+            label[:, :-1] = data[:, 1:]
+            label[:, -1] = 0
 
             data_all = [mx.nd.array(data[:, t])
-                    for t in range(self.buckets[i_bucket])] + self.init_state_arrays
+                        for t in range(self.buckets[i_bucket])] + self.init_state_arrays
             label_all = [mx.nd.array(label[:, t])
-                    for t in range(self.buckets[i_bucket])]
+                         for t in range(self.buckets[i_bucket])]
             data_names = ['%s/%d' % (self.data_name, t)
-                    for t in range(self.buckets[i_bucket])] + init_state_names
+                          for t in range(self.buckets[i_bucket])] + init_state_names
             label_names = ['%s/%d' % (self.label_name, t)
-                    for t in range(self.buckets[i_bucket])]
+                           for t in range(self.buckets[i_bucket])]
 
             data_batch = SimpleBatch(data_names, data_all, label_names, label_all,
-                              self.buckets[i_bucket])
+                                     self.buckets[i_bucket])
             yield data_batch
 
 # we define a new unrolling function here because the original
@@ -160,16 +194,16 @@ class BucketSentenceIter(mx.io.DataIter):
 def lstm_unroll(num_lstm_layer, seq_len, input_size,
                 num_hidden, num_embed, num_label, dropout=0.):
 
-    embed_weight=mx.sym.Variable("embed_weight")
+    embed_weight = mx.sym.Variable("embed_weight")
     cls_weight = mx.sym.Variable("cls_weight")
     cls_bias = mx.sym.Variable("cls_bias")
     param_cells = []
     last_states = []
     for i in range(num_lstm_layer):
-        param_cells.append(LSTMParam(i2h_weight = mx.sym.Variable("l%d_i2h_weight" % i),
-                                      i2h_bias = mx.sym.Variable("l%d_i2h_bias" % i),
-                                      h2h_weight = mx.sym.Variable("l%d_h2h_weight" % i),
-                                      h2h_bias = mx.sym.Variable("l%d_h2h_bias" % i)))
+        param_cells.append(LSTMParam(i2h_weight=mx.sym.Variable("l%d_i2h_weight" % i),
+                                     i2h_bias=mx.sym.Variable("l%d_i2h_bias" % i),
+                                     h2h_weight=mx.sym.Variable("l%d_h2h_weight" % i),
+                                     h2h_bias=mx.sym.Variable("l%d_h2h_bias" % i)))
         state = LSTMState(c=mx.sym.Variable("l%d_init_c" % i),
                           h=mx.sym.Variable("l%d_init_h" % i))
         last_states.append(state)
@@ -186,14 +220,14 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
                                   name="t%d_embed" % seqidx)
         # stack LSTM
         for i in range(num_lstm_layer):
-            if i==0:
-                dp=0.
+            if i == 0:
+                dp_ratio = 0.
             else:
-                dp = dropout
+                dp_ratio = dropout
             next_state = lstm(num_hidden, indata=hidden,
                               prev_state=last_states[i],
                               param=param_cells[i],
-                              seqidx=seqidx, layeridx=i, dropout=dp)
+                              seqidx=seqidx, layeridx=i, dropout=dp_ratio)
             hidden = next_state.h
             last_states[i] = next_state
         # decoder
@@ -221,6 +255,7 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
 if __name__ == '__main__':
     batch_size = 32
     buckets = [10, 20, 30, 40]
+    #buckets = [32]
     num_hidden = 200
     num_embed = 200
     num_lstm_layer = 2
@@ -228,6 +263,9 @@ if __name__ == '__main__':
     num_epoch = 25
     learning_rate = 0.1
     momentum = 0.0
+
+    # dummy data is used to test speed without IO
+    dummy_data = False
 
     contexts = [mx.context.gpu(i) for i in range(1)]
 
@@ -244,22 +282,31 @@ if __name__ == '__main__':
 
     data_train = BucketSentenceIter("./data/ptb.train.txt", vocab,
                                     buckets, batch_size, init_states)
-    data_val   = BucketSentenceIter("./data/ptb.valid.txt", vocab,
-                                    buckets, batch_size, init_states)
+    data_val = BucketSentenceIter("./data/ptb.valid.txt", vocab,
+                                  buckets, batch_size, init_states)
 
-    model = mx.model.FeedForward(
-            ctx           = contexts,
-            symbol        = sym_gen,
-            num_epoch     = num_epoch,
-            learning_rate = learning_rate,
-            momentum      = momentum,
-            wd            = 0.00001,
-            initializer   = mx.init.Xavier(factor_type="in", magnitude=2.34))
+    if dummy_data:
+        data_train = DummyIter(data_train)
+        data_val = DummyIter(data_val)
+
+    if len(buckets) == 1:
+        # only 1 bucket, disable bucketing
+        symbol = sym_gen(buckets[0])
+    else:
+        symbol = sym_gen
+
+    model = mx.model.FeedForward(ctx=contexts,
+                                 symbol=symbol,
+                                 num_epoch=num_epoch,
+                                 learning_rate=learning_rate,
+                                 momentum=momentum,
+                                 wd=0.00001,
+                                 initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
 
     import logging
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
 
     model.fit(X=data_train, eval_data=data_val,
-              batch_end_callback = mx.callback.Speedometer(batch_size, 50),)
+              batch_end_callback=mx.callback.Speedometer(batch_size, 50),)
 

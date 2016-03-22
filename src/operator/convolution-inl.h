@@ -210,30 +210,31 @@ class ConvolutionOp : public Operator {
           gwmat[gid] += dot(temp_dst[gid], tmpc.T());
         }
       }
-      if (req[conv::kData] == kWriteTo || req[conv::kData] == kWriteInplace) {
-        for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
-          Tensor<xpu, 2> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
-          tmpc = dot(wmat[gid].T(), temp_dst[gid]);
-        }
-        if (param_.pad[0] == 0 && param_.pad[1] == 0) {
-          gdata.Slice(i, i + step) = pack_col2patch(temp_col,
-                                     data.Slice(i, i + step).shape_,
-                                     param_.kernel[0],
-                                     param_.kernel[1],
-                                     param_.stride[0],
-                                     param_.dilate[0]);
-        } else {
-          Shape<4> pshape = data.Slice(i, i + step).shape_;
-          pshape[2] += 2 * param_.pad[0];
-          pshape[3] += 2 * param_.pad[1];
-          gdata.Slice(i, i + step) = crop(pack_col2patch(temp_col,
-                                          pshape,
-                                          param_.kernel[0],
-                                          param_.kernel[1],
-                                          param_.stride[0],
-                                          param_.dilate[0]),
-                                          gdata[i][0].shape_);
-        }
+
+      for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
+        Tensor<xpu, 2> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
+        tmpc = dot(wmat[gid].T(), temp_dst[gid]);
+      }
+      if (param_.pad[0] == 0 && param_.pad[1] == 0) {
+        Assign(gdata.Slice(i, i + step), req[conv::kData],
+               pack_col2patch(temp_col,
+                              data.Slice(i, i + step).shape_,
+                              param_.kernel[0],
+                              param_.kernel[1],
+                              param_.stride[0],
+                              param_.dilate[0]));
+      } else {
+        Shape<4> pshape = data.Slice(i, i + step).shape_;
+        pshape[2] += 2 * param_.pad[0];
+        pshape[3] += 2 * param_.pad[1];
+        Assign(gdata.Slice(i, i + step), req[conv::kData],
+               crop(pack_col2patch(temp_col,
+                                   pshape,
+                                   param_.kernel[0],
+                                   param_.kernel[1],
+                                   param_.stride[0],
+                                   param_.dilate[0]),
+                    gdata[i][0].shape_));
       }
     }
     if (!param_.no_bias) {
