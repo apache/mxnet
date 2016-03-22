@@ -8,7 +8,7 @@ mx.model.FeedForward.create(symbol, X, y = NULL, ctx = NULL,
   num.round = 10, optimizer = "sgd", initializer = mx.init.uniform(0.01),
   eval.data = NULL, eval.metric = NULL, epoch.end.callback = NULL,
   batch.end.callback = NULL, array.batch.size = 128,
-  array.layout = "auto", kvstore = "local", ...)
+  array.layout = "auto", kvstore = "local", verbose = TRUE, ...)
 }
 \arguments{
 \item{symbol}{The symbolic configuration of the neural network.}
@@ -55,6 +55,9 @@ For matrix, "rowmajor" means dim(X) = c(nexample, nfeatures),
 
 \item{kvstore}{string (default="local")
 The parameter synchronization scheme in multiple devices.}
+
+\item{verbose}{logical (default=TRUE)
+Specifies whether to print information on the iterations during training.}
 }
 \value{
 model A trained mxnet model.

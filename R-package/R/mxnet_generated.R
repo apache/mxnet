@@ -267,7 +267,7 @@ mx.io.CSVIter <- function(...) {
 #'     Batch Param: Batch size.
 #' @param round.batch  boolean, optional, default=True
 #'     Batch Param: Use round robin to handle overflow batch.
-#' @param prefetch.buffer  long (non-negative), optional, default=4
+#' @param prefetch.buffer  , optional, default=4
 #'     Backend Param: Number of prefetched parameters
 #' @param rand.crop  boolean, optional, default=False
 #'     Augmentation Param: Whether to random crop on the image
@@ -354,7 +354,7 @@ mx.io.ImageRecordIter <- function(...) {
 #'     partition the data into multiple parts
 #' @param part.index  int, optional, default='0'
 #'     the index of the part will read
-#' @param prefetch.buffer  long (non-negative), optional, default=4
+#' @param prefetch.buffer  , optional, default=4
 #'     Backend Param: Number of prefetched parameters
 #' @return iter The result mx.dataiter
 #' 
@@ -423,23 +423,6 @@ mx.symbol.BlockGrad <- function(...) {
 #' @export
 mx.symbol.Cast <- function(...) {
   mx.varg.symbol.Cast(list(...))
-}
-
-#' Perform an feature concat on channel dim (dim 1) over all the inputs.
-#' 
-#' @param data  Symbol[]
-#'     List of tensors to concatenate
-#' @param num.args  int, required
-#'     Number of inputs to be concated.
-#' @param dim  int, optional, default='1'
-#'     the dimension to be concated.
-#' @param name  string, optional
-#'     Name of the resulting symbol.
-#' @return out The result mx.symbol
-#' 
-#' @export
-mx.symbol.Concat <- function(...) {
-  mx.varg.symbol.Concat(list(...))
 }
 
 #' Apply convolution to input then add a bias.
