@@ -120,7 +120,6 @@ if [ ${TASK} == "scala_test" ]; then
     ln -s ${CACHE_PREFIX}/data ${PWD}/data
 
     export JAVA_HOME=$(/usr/libexec/java_home)
-    export MAVEN_OPTS="-Xmx512m -XX:MaxPermSize=256m"
 
     make scalapkg || exit -1
     make scalatest || exit -1

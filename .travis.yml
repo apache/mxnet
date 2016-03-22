@@ -56,6 +56,7 @@ before_install:
   - export NVCC_PREFIX=${HOME}
   - source dmlc-core/scripts/travis/travis_setup_env.sh
   - export PYTHONPATH=${PYTHONPATH}:${PWD}/python
+  - export MAVEN_OPTS="-Xmx256m -XX:MaxPermSize=256m -XX:-UseGCOverheadLimit"
 
 install:
   - source tests/travis/setup.sh
