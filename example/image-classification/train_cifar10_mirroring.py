@@ -9,7 +9,9 @@
 #
 # When mirroring is turned on and set properly, we could expect smaller memory
 # consumption with slightly slower computation speed (due to extra forward 
-# steps).
+# steps). We are not including a sample running log here, as this test case
+# is only a functionality test. The using of pycuda GPU memory query is also
+# not very good way of measuring the memory usage here.
 #################################################################################
 import find_mxnet
 import mxnet as mx
@@ -102,14 +104,6 @@ def report_gpu_memory(every_n_batch=50):
             (free, total) = cuda.mem_get_info()
             logging.info('        GPU Memory: %.2f%%' % (100.0*free / total))
     return __callback
-
-################################################################################
-print("*" * 80)
-print("  WARM UP")
-print("*" * 80)
-
-# train
-train_model.fit(args, net, get_iterator, batch_end_callback=report_gpu_memory())
 
 ################################################################################
 print("*" * 80)
