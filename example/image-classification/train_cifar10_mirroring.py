@@ -1,3 +1,16 @@
+#################################################################################
+# This is a functional test for the currently internal-testing feature of
+# "mirroring" some nodes in the computation graph to reduce memory consumption
+# with computation. Briefly, the feed-forward intermediate results for all
+# operators typically saved if they are needed for backward computation. However,
+# for some operators, computation is cheap, so we can discard the intermediate
+# results and repeat that forward computation during when needed. Detailed
+# documentation could be expected when this feature is mature.
+#
+# When mirroring is turned on and set properly, we could expect smaller memory
+# consumption with slightly slower computation speed (due to extra forward 
+# steps).
+#################################################################################
 import find_mxnet
 import mxnet as mx
 import argparse
@@ -47,7 +60,9 @@ def _download(data_dir):
 
 # network
 import importlib
-net = importlib.import_module('symbol_' + args.network).get_symbol(10)
+net_gen = importlib.import_module('symbol_' + args.network)
+net = net_gen.get_symbol(10)
+net_mirrored = net_gen.get_symbol(10, force_mirroring=True)
 
 # data
 def get_iterator(args, kv):
@@ -88,7 +103,15 @@ def report_gpu_memory(every_n_batch=50):
             logging.info('        GPU Memory: %.2f%%' % (100.0*free / total))
     return __callback
 
+################################################################################
+print("*" * 80)
+print("  WARM UP")
+print("*" * 80)
 
+# train
+train_model.fit(args, net, get_iterator, batch_end_callback=report_gpu_memory())
+
+################################################################################
 print("*" * 80)
 print("  WITHOUT mirroring")
 print("*" * 80)
@@ -96,11 +119,19 @@ print("*" * 80)
 # train
 train_model.fit(args, net, get_iterator, batch_end_callback=report_gpu_memory())
 
+################################################################################
+print("*" * 80)
+print("  WITH mirroring via attributes")
+print("*" * 80)
 
+# train
+train_model.fit(args, net_mirrored, get_iterator, batch_end_callback=report_gpu_memory())
+
+################################################################################
 import os
 os.environ['MXNET_BACKWARD_DO_MIRROR'] = '1'
 print("*" * 80)
-print("  WITH mirroring")
+print("  WITH mirroring via environment variable")
 print("*" * 80)
 
 # train
