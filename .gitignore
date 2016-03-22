@@ -103,3 +103,6 @@ scala-package/*/*/target/
 *.classpath
 *.project
 *.settings
+
+#makefile
+./make/*
