@@ -25,7 +25,7 @@ parser.add_argument('--model-prefix', type=str,
                     help='the prefix of the model to load/save')
 parser.add_argument('--save-model-prefix', type=str,
                     help='the prefix of the model to save')
-parser.add_argument('--num-epochs', type=int, default=20,
+parser.add_argument('--num-epochs', type=int, default=1,
                     help='the number of training epochs')
 parser.add_argument('--load-epoch', type=int,
                     help="load the model on an epoch using the model-prefix")
@@ -85,8 +85,23 @@ def report_gpu_memory(every_n_batch=50):
     def __callback(param):
         if param.nbatch % every_n_batch == 0:
             (free, total) = cuda.mem_get_info()
-            logging.info('        GPU Memory: %.2f%%' % 100.0*free / total)
+            logging.info('        GPU Memory: %.2f%%' % (100.0*free / total))
     return __callback
+
+
+print("*" * 80)
+print("  WITHOUT mirroring")
+print("*" * 80)
+
+# train
+train_model.fit(args, net, get_iterator, batch_end_callback=report_gpu_memory())
+
+
+import os
+os.environ['MXNET_BACKWARD_DO_MIRROR'] = '1'
+print("*" * 80)
+print("  WITH mirroring")
+print("*" * 80)
 
 # train
 train_model.fit(args, net, get_iterator, batch_end_callback=report_gpu_memory())
