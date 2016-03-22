@@ -76,7 +76,7 @@ class MAE extends EvalMetric("mae") {
       val labelArr = label.toArray
       val predArr = pred.toArray
       require(labelArr.length == predArr.length)
-      this.sumMetric += 
+      this.sumMetric +=
         (labelArr zip predArr).map { case (l, p) => Math.abs(l - p) }.sum / labelArr.length
       this.numInst += 1
     }
