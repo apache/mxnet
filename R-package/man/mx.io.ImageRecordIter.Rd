@@ -43,7 +43,7 @@ Batch Param: Batch size.}
 \item{round.batch}{boolean, optional, default=True
 Batch Param: Use round robin to handle overflow batch.}
 
-\item{prefetch.buffer}{long (non-negative), optional, default=4
+\item{prefetch.buffer}{, optional, default=4
 Backend Param: Number of prefetched parameters}
 
 \item{rand.crop}{boolean, optional, default=False
