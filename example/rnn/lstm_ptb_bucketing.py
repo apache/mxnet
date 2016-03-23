@@ -5,7 +5,7 @@ sys.path.insert(0, "../../python")
 import numpy as np
 import mxnet as mx
 
-from rnn_model import lstm_unroll
+from lstm import lstm_unroll
 from bucket_io import BucketSentenceIter, build_vocab
 
 def Perplexity(label, pred):
@@ -16,14 +16,14 @@ def Perplexity(label, pred):
 
 if __name__ == '__main__':
     batch_size = 32
-    buckets = [10, 20, 30, 40]
+    buckets = [10, 20, 30, 40, 50, 60]
     #buckets = [32]
     num_hidden = 200
     num_embed = 200
     num_lstm_layer = 2
 
     num_epoch = 25
-    learning_rate = 0.1
+    learning_rate = 0.01
     momentum = 0.0
 
     # dummy data is used to test speed without IO
