@@ -258,7 +258,7 @@ class OperatorProperty {
    */
   virtual bool InferType(std::vector<int> *in_type,
                           std::vector<int> *out_type,
-                          std::vector<int> *aux_type) {
+                          std::vector<int> *aux_type) const {
     CHECK_LE(in_type->size(), this->ListArguments().size());
     int n_in = this->ListArguments().size();
     for (unsigned i = 0; i < in_type->size(); ++i) {
@@ -286,6 +286,21 @@ class OperatorProperty {
    * \brief Create a Operator on specific context
    */
   virtual Operator* CreateOperator(Context ctx) const = 0;
+  /*!
+   * \brief Create a Operator on specific context and input shape/type
+   * \param ctx context of this operator
+   * \param in_shape shape of the input ndarrays
+   * \param in_type dtype of the input ndarrays
+   * \return the created operator
+   */
+  virtual Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                                     std::vector<int> *in_type) const {
+    std::vector<int> out_type, aux_type;
+    std::vector<TShape> out_shape, aux_shape;
+    CHECK(InferType(in_type, &out_type, &aux_type));
+    CHECK(InferShape(in_shape, &out_shape, &aux_shape));
+    return CreateOperator(ctx);
+  }
   /*!
    * \brief return the type string of the Operator
    *  subclasses override this function.

@@ -773,7 +773,13 @@ void GraphExecutor::InitOpNodes() {
     if (graph_.nodes[nid].is_variable()) continue;
     OpNode& op_node = op_nodes_[nid];
     if (graph_.nodes[nid].is_forward()) {
-      op_node.op.reset(graph_.nodes[nid].op->CreateOperator(op_node.ctx));
+      std::vector<int> in_types;
+      std::vector<TShape> in_shapes;
+      for (auto e : graph_.nodes[nid].inputs) {
+        in_types.push_back(op_nodes_[e.source_id].outputs[e.index].type_flag);
+        in_shapes.push_back(op_nodes_[e.source_id].outputs[e.index].shape);
+      }
+      op_node.op.reset(graph_.nodes[nid].op->CreateOperatorEx(op_node.ctx, &in_shapes, &in_types));
     } else {
       CHECK(graph_.nodes[nid].is_backward());
       op_node.op.reset(new BackwardOpWrapper(
