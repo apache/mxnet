@@ -184,4 +184,5 @@ class BucketSentenceIter(mx.io.DataIter):
                                      self.buckets[i_bucket])
             yield data_batch
 
-
+    def reset(self):
+        self.bucket_curr_idx = [0 for x in self.data]
