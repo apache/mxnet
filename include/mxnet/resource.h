@@ -90,6 +90,26 @@ struct Resource {
     return mshadow::Tensor<xpu, ndim, real_t>(
         space->dptr_, shape, shape[ndim - 1], stream);
   }
+  /*!
+   * \brief Get space requested as mshadow Tensor in specified type.
+   *  The caller can request arbitrary size.
+   *
+   * \param shape the Shape of returning tensor.
+   * \param stream the stream of retruning tensor.
+   * \return the mshadow tensor requested.
+   * \tparam xpu the device type of random number generator.
+   * \tparam ndim the number of dimension of the tensor requested.
+   */
+  template<typename xpu, int ndim, typename DType>
+  inline mshadow::Tensor<xpu, ndim, DType> get_space_typed(
+      mshadow::Shape<ndim> shape, mshadow::Stream<xpu> *stream) const {
+    CHECK_EQ(req.type, ResourceRequest::kTempSpace);
+    mshadow::TensorContainer<xpu, 1, DType> *space =
+        static_cast<mshadow::TensorContainer<xpu, 1, DType>*>(ptr_);
+    space->Resize(mshadow::Shape1(shape.Size()));
+    return mshadow::Tensor<xpu, ndim, DType>(
+        space->dptr_, shape, shape[ndim - 1], stream);
+  }
 };
 
 /*! \brief Global resource manager */
