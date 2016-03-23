@@ -208,7 +208,7 @@ class SGD(Optimizer):
         if self.momentum == 0.0:
             return None
         else:
-            return zeros(weight.shape, weight.context)
+            return zeros(weight.shape, weight.context, dtype=weight.dtype)
 
     def update(self, index, weight, grad, state):
         """Update the parameters.
@@ -485,8 +485,8 @@ class Adam(Optimizer):
 
         """
         self.time_first_index = None  # time is incremented only on the first index
-        return (zeros(weight.shape, weight.context),  # mean
-                zeros(weight.shape, weight.context))  # variance
+        return (zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
+                zeros(weight.shape, weight.context, dtype=weight.dtype))  # variance
 
     def update(self, index, weight, grad, state):
         """Update the parameters.

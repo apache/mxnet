@@ -633,7 +633,7 @@ class Symbol(object):
         if grad_req != 'null':
             grad_ndarrays = {}
             for name, shape, dtype in zip(self.list_arguments(), arg_shapes, arg_types):
-                if not (name.endswith('data') or name.endswith('label')):
+                if not isinstance(grad_req, dict) or grad_req[name] != 'null':
                     grad_ndarrays[name] = zeros(shape, ctx, dtype=dtype)
         else:
             grad_ndarrays = None
