@@ -113,6 +113,9 @@ class CuDNNPoolingOp : public Operator {
                    const std::vector<TBlob> &in_data,
                    const std::vector<TBlob> &out_data) {
     using namespace mshadow;
+    #if CUDNN_MAJOR == 5
+    nan_prop_ = CUDNN_NOT_PROPAGATE_NAN;
+    #endif
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     if (!init_cudnn_) {
@@ -138,6 +141,9 @@ class CuDNNPoolingOp : public Operator {
                                           out.shape_[3]), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetPooling2dDescriptor(pooling_desc_,
                                            mode_,
+                                           #if CUDNN_MAJOR == 5
+                                           nan_prop_,
+                                           #endif
                                            param_.kernel[0],
                                            param_.kernel[1],
                                            param_.pad[0],
@@ -153,6 +159,9 @@ class CuDNNPoolingOp : public Operator {
   cudnnTensorDescriptor_t in_desc_;
   cudnnTensorDescriptor_t out_desc_;
   cudnnPoolingDescriptor_t pooling_desc_;
+  #if CUDNN_MAJOR == 5
+  cudnnNanPropagation_t nan_prop_;
+  #endif
   PoolingParam param_;
 };  // class CuDNNPoolingOp
 }  // namespace op

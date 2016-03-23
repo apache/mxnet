@@ -77,6 +77,20 @@ struct xelu_grad {
   }
 };
 
+struct test_act {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(a >= -b ? a : b * a + b * b - b);
+  }
+};
+
+struct test_act_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(a >= -b ? 1.0f : b);
+  }
+};
+
 /*! \brief Exponential Linear Unit */
 struct elu {
   template<typename DType>

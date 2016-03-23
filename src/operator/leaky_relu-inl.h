@@ -24,7 +24,7 @@ namespace op {
 namespace leakyrelu {
 enum LeakyReLUOpInputs {kData, kGamma};
 enum LeakyReLUOpOutputs {kOut, kMask};
-enum LeakyReLUOpType {kLeakyReLU, kPReLU, kRReLU, kELU};
+enum LeakyReLUOpType {kLeakyReLU, kPReLU, kRReLU, kELU, kTest};
 enum LeakyReLUOpResource {kRandom};
 }  // namespace leakyrelu
 
@@ -40,6 +40,7 @@ struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
     .add_enum("leaky", leakyrelu::kLeakyReLU)
     .add_enum("prelu", leakyrelu::kPReLU)
     .add_enum("elu", leakyrelu::kELU)
+    .add_enum("test", leakyrelu::kTest)
     .describe("Activation function to be applied.");
     DMLC_DECLARE_FIELD(slope).set_default(0.25f)
     .describe("Init slope for the activation. (For leaky and elu only)");
@@ -119,6 +120,10 @@ class LeakyReLUOp : public Operator {
         Assign(out, req[leakyrelu::kOut], F<mshadow_op::elu>(data, param_.slope));
         break;
       }
+      case leakyrelu::kTest: {
+        Assign(out, req[leakyrelu::kOut], F<mshadow_op::test_act>(data, param_.slope));
+        break;
+      }
       default:
         LOG(FATAL) << "Not implmented";
     }
@@ -154,7 +159,7 @@ class LeakyReLUOp : public Operator {
       if (param_.act_type == leakyrelu::kRReLU) {
         mask = out_data[leakyrelu::kMask].get_with_shape<xpu, 4, real_t>(dshape, s);
       }
-      if (param_.act_type == leakyrelu::kPReLU) {
+      if (param_.act_type == leakyrelu::kPReLU || param_.act_type == leakyrelu::kTest) {
         data = in_data[leakyrelu::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       }
     } else {
@@ -164,7 +169,7 @@ class LeakyReLUOp : public Operator {
       if (param_.act_type == leakyrelu::kRReLU) {
         mask = out_data[leakyrelu::kMask].get<xpu, 4, real_t>(s);
       }
-      if (param_.act_type == leakyrelu::kPReLU) {
+      if (param_.act_type == leakyrelu::kPReLU || param_.act_type == leakyrelu::kTest) {
         data = in_data[leakyrelu::kData].get<xpu, 4, real_t>(s);
       }
     }
@@ -186,6 +191,10 @@ class LeakyReLUOp : public Operator {
       }
       case leakyrelu::kELU: {
         Assign(gdata, req[leakyrelu::kData], F<mshadow_op::elu_grad>(output, param_.slope) * grad);
+        break;
+      }
+      case leakyrelu::kTest: {
+        Assign(gdata, req[leakyrelu::kData], F<mshadow_op::test_act_grad>(data, param_.slope) * grad);
         break;
       }
       default:
@@ -255,6 +264,8 @@ class LeakyReLUProp : public OperatorProperty {
               in_data[leakyrelu::kGamma]};
     } else if (param_.act_type == leakyrelu::kRReLU) {
       return {out_grad[leakyrelu::kOut], out_data[leakyrelu::kMask], out_data[leakyrelu::kOut]};
+    } else if (param_.act_type == leakyrelu::kTest) {
+      return {out_grad[leakyrelu::kOut], out_data[leakyrelu::kData], in_data[leakyrelu::kData]};
     } else {
       return {out_grad[leakyrelu::kOut], out_data[leakyrelu::kData]};
     }
