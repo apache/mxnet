@@ -76,8 +76,9 @@ class MAE extends EvalMetric("mae") {
       val labelArr = label.toArray
       val predArr = pred.toArray
       require(labelArr.length == predArr.length)
-      this.sumMetric += (labelArr zip predArr).map { case (l, p) => Math.abs(l - p) }.sum
-      this.numInst += labelArr.length
+      this.sumMetric +=
+        (labelArr zip predArr).map { case (l, p) => Math.abs(l - p) }.sum / labelArr.length
+      this.numInst += 1
     }
   }
 }
@@ -93,7 +94,7 @@ class MSE extends EvalMetric("mse") {
       require(labelArr.length == predArr.length)
       this.sumMetric +=
         (labelArr zip predArr).map { case (l, p) => (l - p) * (l - p) }.sum / labelArr.length
-      this.numInst += labelArr.length
+      this.numInst += 1
     }
   }
 }
