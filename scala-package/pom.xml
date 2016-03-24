@@ -1,9 +1,51 @@
-<project>
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>ml.dmlc.mxnet</groupId>
-  <artifactId>mxnet-scala-parent_2.10</artifactId>
-  <version>0.1-SNAPSHOT</version>
+  <artifactId>mxnet-parent_2.10</artifactId>
+  <version>0.1.1</version>
   <name>MXNet Scala Package - Parent</name>
+  <url>https://github.com/dmlc/mxnet/tree/master/scala-package</url>
+  <description>MXNet Scala Package</description>
+  <organization>
+    <name>Distributed (Deep) Machine Learning Community</name>
+    <url>http://dmlc.ml</url>
+  </organization>
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+  <scm>
+    <connection>scm:git:git@github.com:dmlc/mxnet.git</connection>
+    <developerConnection>scm:git:git@github.com:dmlc/mxnet.git</developerConnection>
+    <url>https://github.com/dmlc/mxnet</url>
+  </scm>
+
+  <developers>
+    <developer>
+      <name>Yizhi Liu</name>
+      <id>javelinjs</id>
+      <email>javelinjs@gmail.com</email>
+      <organization>DMLC</organization>
+      <organizationUrl>http://dmlc.ml</organizationUrl>
+    </developer>
+    <developer>
+      <name>Zixuan Huang</name>
+      <email>toofooltosay@gmail.com</email>
+      <organization>DMLC</organization>
+      <organizationUrl>http://dmlc.ml</organizationUrl>
+    </developer>
+    <developer>
+      <name>Yuan Tang</name>
+      <email>terrytangyuan@gmail.com</email>
+      <organization>DMLC</organization>
+      <organizationUrl>http://dmlc.ml</organizationUrl>
+    </developer>
+  </developers>
 
   <properties>
     <scala.version>2.10.4</scala.version>
@@ -17,6 +59,83 @@
     <module>examples</module>
     <module>assembly</module>
   </modules>
+
+  <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+                <configuration>
+                  <includePom>true</includePom>>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+                <configuration>
+                  <includeDependencySources>true</includeDependencySources>
+                  <dependencySourceExcludes>
+                    <dependencySourceExclude>commons-codec:*</dependencySourceExclude>
+                    <dependencySourceExclude>org.scala-lang:*</dependencySourceExclude>
+                    <dependencySourceExclude>log4j:*</dependencySourceExclude>
+                    <dependencySourceExclude>org.slf4j:*</dependencySourceExclude>
+                  </dependencySourceExcludes>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <extensions>true</extensions>
+            <configuration>
+              <serverId>ossrh</serverId>
+              <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+              <autoReleaseAfterClose>true</autoReleaseAfterClose>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <distributionManagement>
+    <snapshotRepository>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
+
   <build>
     <pluginManagement>
       <plugins>
@@ -28,6 +147,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.3</version>
           <configuration>
             <source>1.6</source>
             <target>1.6</target>
@@ -176,6 +296,27 @@
               <version>20020829</version>
             </dependency>
           </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>2.2.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>2.9.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-gpg-plugin</artifactId>
+          <version>1.5</version>
+        </plugin>
+        <!-- OSSRH Repo -->
+        <plugin>
+          <groupId>org.sonatype.plugins</groupId>
+          <artifactId>nexus-staging-maven-plugin</artifactId>
+          <version>1.6.3</version>
         </plugin>
       </plugins>
     </pluginManagement>
