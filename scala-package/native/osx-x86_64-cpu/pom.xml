@@ -1,27 +1,31 @@
-<project>
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>ml.dmlc.mxnet</groupId>
     <artifactId>mxnet-scala-native-parent</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.1.1</version>
+    <relativePath>../pom.xml</relativePath>
   </parent>
 
   <groupId>ml.dmlc.mxnet</groupId>
-  <artifactId>libmxnet-scala</artifactId>
-  <version>0.1-SNAPSHOT</version>
-  <name>MXNet Scala Package - Native Linux-x86_64</name>
+  <artifactId>libmxnet-scala-osx-x86_64-cpu</artifactId>
+  <version>0.1.1</version>
+  <name>MXNet Scala Package - Native OSX-x86_64 CPU-only</name>
   <url>http://maven.apache.org</url>
 
-  <packaging>so</packaging>
+  <packaging>jnilib</packaging>
 
   <dependencies>
     <dependency>
       <groupId>ml.dmlc.mxnet</groupId>
-      <artifactId>mxnet-scala-core_${scala.binary.version}</artifactId>
-      <version>0.1-SNAPSHOT</version>
+      <artifactId>mxnet-core_${scala.binary.version}</artifactId>
+      <version>${project.version}</version>
       <type>jar</type>
       <scope>compile</scope>
-    </dependency>   
+    </dependency>
   </dependencies>
 
   <build>
@@ -29,7 +33,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-      </plugin>     
+      </plugin>
 
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -37,7 +41,7 @@
         <extensions>true</extensions>
         <configuration>
           <!--  trigger javah -->
-          <javahOS>linux</javahOS>
+          <javahOS>darwin</javahOS>
           <compilerProvider>generic-classic</compilerProvider>
           <compilerExecutable>${cxx}</compilerExecutable>
           <linkerExecutable>${cxx}</linkerExecutable>
@@ -60,14 +64,14 @@
             <linkerStartOption>-shared</linkerStartOption>
           </linkerStartOptions>
           <linkerMiddleOptions>
-            <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
-            <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption>
+            <linkerMiddleOption>-framework JavaVM</linkerMiddleOption>
+            <linkerMiddleOption>-Wl,-exported_symbol,_Java_*</linkerMiddleOption>
+            <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
             <linkerMiddleOption>../../../dmlc-core/libdmlc.a</linkerMiddleOption>
-            <linkerMiddleOption>-Wl,--no-whole-archive</linkerMiddleOption>
+            <linkerMiddleOption>-force_load ../../../lib/libmxnet.a</linkerMiddleOption>
           </linkerMiddleOptions>
           <linkerEndOptions>
             <linkerEndOption>${ldflags}</linkerEndOption>
-            <linkerEndOption>-fopenmp</linkerEndOption>
           </linkerEndOptions>
         </configuration>
 
@@ -76,7 +80,7 @@
             <id>javah</id>
             <phase>generate-sources</phase>
             <configuration>
-              <javahOS>linux</javahOS>
+              <javahOS>darwin</javahOS>
               <javahProvider>default</javahProvider>
               <javahOutputDirectory>${project.build.directory}/custom-javah</javahOutputDirectory>
               <workingDirectory>${basedir}</workingDirectory>
