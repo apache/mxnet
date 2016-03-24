@@ -536,6 +536,16 @@ MXNET_DLL int MXSymbolCopy(SymbolHandle symbol, SymbolHandle *out);
  */
 MXNET_DLL int MXSymbolPrint(SymbolHandle symbol, const char **out_str);
 /*!
+ * \brief Get string name from symbol
+ * \param symbol the source symbol
+ * \param out The result name.
+ * \param success Whether the result is contained in out.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolGetName(SymbolHandle symbol,
+                              const char** out,
+                              int *success);
+/*!
  * \brief Get string attribute from symbol
  * \param symbol the source symbol
  * \param key The key of the symbol.
@@ -566,6 +576,16 @@ MXNET_DLL int MXSymbolGetAttr(SymbolHandle symbol,
 MXNET_DLL int MXSymbolSetAttr(SymbolHandle symbol,
                               const char* key,
                               const char* value);
+/*!
+ * \brief Get all attributes from symbol
+ * \param symbol the source symbol
+ * \param out_size The number of output attributes
+ * \param out 2*out_size strings representing key value pairs.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolListAttr(SymbolHandle symbol,
+                               mx_uint *out_size,
+                               const char*** out);
 /*!
  * \brief List arguments in the symbol.
  * \param symbol the symbol
