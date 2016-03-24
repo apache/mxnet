@@ -15,7 +15,7 @@ It brings flexible and efficient GPU/CPU computing and state-of-art deep learnin
 Install
 ------------
  
-Technically, all you need is the `mxnet-full_2.10-{arch}-{xpu}-0.1.0.jar` in your classpath.
+Technically, all you need is the `mxnet-full_2.10-{arch}-{xpu}-0.1.1.jar` in your classpath.
 It will automatically extract the native library to a tempfile and load it.
 
 Currently we provide `linux-x86_64-gpu`, `linux-x86_64-cpu` and `osx-x86_64-cpu`. Support for Windows will come soon.
@@ -25,17 +25,17 @@ Use the following dependency in maven, change the artifactId according to your o
 <dependency>
   <groupId>ml.dmlc.mxnet</groupId>
   <artifactId>mxnet-full_2.10-linux-x86_64-gpu</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
 </dependency>
 ```
 
-You can also use `mxnet-core_2.10-0.1.0.jar` and put the compiled native library somewhere in your load path.
+You can also use `mxnet-core_2.10-0.1.1.jar` and put the compiled native library somewhere in your load path.
 
 ```HTML
 <dependency>
   <groupId>ml.dmlc.mxnet</groupId>
   <artifactId>mxnet-core_2.10</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
 </dependency>
 ```
 
@@ -154,6 +154,12 @@ println(s"Final accuracy = $acc")
 
 You can refer to [MXNet Scala Package Examples](https://github.com/javelinjs/mxnet-scala-example)
 for more information about how to integrate MXNet Scala Package into your own project.
+
+Release
+-------
+- Version 0.1.1, March 24, 2016.
+  - Bug fix for MAE & MSE metrics.
+- Version 0.1.0, March 22, 2016.
 
 License
 -------
