@@ -29,8 +29,6 @@
   padding: 9px 20px;
 }
 
-
-/* feature section */
 .section-tout{
     padding:3em 0 3em;
     border-bottom:1px solid rgba(0,0,0,.05);
@@ -44,12 +42,29 @@
     font-size:26px;
 
 }
-.section-tout p{
+.section-tout p {
     margin-bottom:2em
 }
 
+.section-inst{
+    padding:3em 0 3em;
+    border-bottom:1px solid rgba(0,0,0,.05);
 
-/* footer */
+    text-align:center
+}
+
+.section-inst p {
+    margin-bottom:2em
+}
+.section-inst img {
+    -webkit-filter: grayscale(90%); /* Chrome, Safari, Opera */
+    filter: grayscale(90%);
+    margin-bottom:2em
+}
+.section-inst img:hover {
+    -webkit-filter: grayscale(0%); /* Chrome, Safari, Opera */
+    filter: grayscale(0%);
+}
 
 .footer{
     padding-top: 40px;
