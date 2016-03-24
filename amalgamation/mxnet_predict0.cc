@@ -23,6 +23,7 @@
 #include "src/engine/engine.cc"
 #include "src/engine/naive_engine.cc"
 #include "src/symbol/graph_executor.cc"
+#include "src/symbol/graph_memory_allocator.cc"
 #include "src/symbol/static_graph.cc"
 #include "src/symbol/symbol.cc"
 #include "src/operator/operator.cc"
