@@ -129,6 +129,11 @@ pre {
     border: 1px solid transparent;
     height: 65px;
 }
+.navbar-right li {
+    display:inline-block;
+    vertical-align:top;
+    padding: 22px 4px;
+}
 
 .navbar-left li {
     display:inline-block;
@@ -145,6 +150,33 @@ pre {
 .navbar-left > li > a:hover{
     color:#fff;
 }
+.flag-icon {
+  background-size: contain;
+  background-position: 50%;
+  background-repeat: no-repeat;
+  position: relative;
+  display: inline-block;
+  width: 1.33333333em;
+  line-height: 1em;
+}
+
+.flag-icon:before {
+  content: "\00a0";
+}
+
+
+.flag-icon-cn {
+  background-image: url(./cn.svg);
+}
+
+.flag-icon-us {
+  background-image: url(./us.svg);
+}
+
+
+/* .flags { */
+/*    padding: 10px; */
+/* } */
 
 .navbar-brand >img {
     width: 110px;
@@ -152,6 +184,7 @@ pre {
 
 .dropdown-menu li  {
     padding: 0px 0px;
+    width: 120px;
 }
 .dropdown-menu li a {
     color: #0079b2;
