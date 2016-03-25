@@ -11,6 +11,7 @@
 #include <dmlc/base.h>
 #include <dmlc/json.h>
 #include <dmlc/type_traits.h>
+#include <dmlc/parameter.h>
 #include <string>
 #include <memory>
 #include <algorithm>
@@ -143,6 +144,21 @@ class StaticGraph {
       addto_index = std::move(another.addto_index);
       return *this;
     }
+
+    template<typename ValueType>
+    inline ValueType get_attr(const std::string& key, ValueType default_value) const {
+      auto it = attr.find(key);
+      if (it == attr.end()) {
+        return default_value;
+      } else {
+        ValueType ret;
+        dmlc::parameter::FieldEntry<ValueType> e;
+        e.Init(key, &ret, ret);
+        e.Set(&ret, it->second);
+        return ret;
+      }
+    }
+
     /*! \return whether the node is forward op node */
     inline bool is_forward() const {
       return op != nullptr;
