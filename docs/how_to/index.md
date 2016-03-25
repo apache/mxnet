@@ -24,6 +24,8 @@ Install and run MXNet on smart devices such as mobile phones
 
 Run MXNet on a clound such as Amazon AWS
 
+### [Pretrained Models](./pretrained.html)
+
 ## Develope with MXNet
 
 ### [Create New Operators](./new_op.html)
@@ -33,3 +35,5 @@ Run MXNet on a clound such as Amazon AWS
 ### [Make a Contribution](./contribute.html)
 
 ### [Buckeing](./bucketing.html)
+
+### [FAQ](./faq.html)
