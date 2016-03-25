@@ -134,7 +134,7 @@ pre {
     display:inline-block;
     vertical-align:top;
     padding: 17px 10px;
-    margin: 0 5px;
+    /* margin: 0 5px; */
 }
 
 .navbar-left li a {
@@ -156,4 +156,20 @@ pre {
 .dropdown-menu li a {
     color: #0079b2;
     font-size: 20px;
+}
+
+.section h1 {
+    padding: 0px 0 20px;
+}
+
+.section h2 {
+    padding: 16px 0 16px;
+}
+
+.section h3 {
+    padding: 12px 0 12px;
+}
+
+.section h4 {
+    padding: 12px 0 12px;
 }
