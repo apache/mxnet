@@ -117,12 +117,28 @@ PLUGIN_OBJ =
 PLUGIN_CUOBJ =
 include $(MXNET_PLUGINS)
 
+# scala package profile
+ifeq ($(OS),Windows_NT)
+	# TODO(yizhi) currently scala package does not support windows
+	SCALA_PKG_PROFILE := windows
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S), Darwin)
+		SCALA_PKG_PROFILE := osx-x86_64
+	else     
+		SCALA_PKG_PROFILE := linux-x86_64
+	endif
+endif
+
 # all dep
 LIB_DEP += $(DMLC_CORE)/libdmlc.a
 ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
 	LDFLAGS += -lcuda
+	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu
+else
+	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-cpu
 endif
 
 ifeq ($(USE_NVRTC), 1)
@@ -131,7 +147,6 @@ ifeq ($(USE_NVRTC), 1)
 else
 	CFLAGS += -DMXNET_USE_NVRTC=0
 endif
-
 
 build/src/%.o: src/%.cc
 	@mkdir -p $(@D)
@@ -220,10 +235,16 @@ rpkg:	roxygen
 	R CMD build --no-build-vignettes R-package
 
 scalapkg:
-	(cd $(ROOTDIR)/scala-package; mvn clean package -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)")
+	(cd $(ROOTDIR)/scala-package; mvn clean package -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)")
 
 scalatest:
-	(cd $(ROOTDIR)/scala-package; mvn verify -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" $(SCALA_TEST_ARGS))
+	(cd $(ROOTDIR)/scala-package; mvn verify -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" $(SCALA_TEST_ARGS))
+
+scalainstall:
+	(cd $(ROOTDIR)/scala-package; mvn install -P$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)")
+
+scaladeploy:
+	(cd $(ROOTDIR)/scala-package; mvn deploy -Prelease,$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)")
 
 jnilint:
 	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
