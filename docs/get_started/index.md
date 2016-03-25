@@ -15,11 +15,11 @@ height="36" >
 and its label, which is an integer between 0 and 9. Denote by *x* and *y* the
 784-length vector of the image pixels and the label, respectively.
 
-MLP with no hidden layer predicts the label by
+MLP with no hidden layer predicts the label probabilities by
 
 ```eval_rst
 .. math ::
-  \textrm{argmax}\ \textrm{softmax}(W x + b)
+  \textrm{softmax}(W x + b)
 ```
 
 here *W* is a 784-by-10 weight matrix, *b* is a 10-length bias vector. The
