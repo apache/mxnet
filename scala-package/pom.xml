@@ -80,24 +80,63 @@
               </execution>
             </executions>
           </plugin>
+          <!-- generate Scala docs -->
+          <plugin>
+            <groupId>net.alchim31.maven</groupId>
+            <artifactId>scala-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>doc</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>compile</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <args>
+                <arg>-P:genjavadoc:out=${project.build.directory}/genjavadoc</arg>
+              </args>
+              <compilerPlugins>
+                <compilerPlugin>
+                  <groupId>com.typesafe.genjavadoc</groupId>
+                  <artifactId>genjavadoc-plugin_${scala.version}</artifactId>
+                  <version>0.9</version>
+                </compilerPlugin>
+              </compilerPlugins>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>add-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${project.build.directory}/genjavadoc</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <!-- generate Java docs -->
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+              <detectLinks>true</detectLinks>
+            </configuration>
             <executions>
               <execution>
                 <phase>package</phase>
                 <goals>
                   <goal>jar</goal>
                 </goals>
-                <configuration>
-                  <includeDependencySources>true</includeDependencySources>
-                  <dependencySourceExcludes>
-                    <dependencySourceExclude>commons-codec:*</dependencySourceExclude>
-                    <dependencySourceExclude>org.scala-lang:*</dependencySourceExclude>
-                    <dependencySourceExclude>log4j:*</dependencySourceExclude>
-                    <dependencySourceExclude>org.slf4j:*</dependencySourceExclude>
-                  </dependencySourceExcludes>
-                </configuration>
               </execution>
             </executions>
           </plugin>
@@ -285,6 +324,11 @@
               </goals>
             </execution>
           </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>build-helper-maven-plugin</artifactId>
+          <version>1.10</version>
         </plugin>
         <plugin>
           <artifactId>maven-antrun-plugin</artifactId>
