@@ -252,6 +252,45 @@ Pkg.add("MXNet")
 
 in a Julia console. For more details, please refer to the [full documentation of MXNet.jl](http://mxnetjl.readthedocs.org/en/latest/user-guide/install.html).
 
+## Scala Package Installation
+
+For Linux/Mac users, we provide pre-built binary packages, with GPU or CPU-only supported.
+You can use the following dependency in maven, change the artifactId according to your own architecture, e.g., `mxnet-full_2.10-osx-x86_64-cpu` for OSX (and cpu-only).
+
+```HTML
+<dependency>
+  <groupId>ml.dmlc.mxnet</groupId>
+  <artifactId>mxnet-full_2.10-linux-x86_64-gpu</artifactId>
+  <version>0.1.1</version>
+</dependency>
+```
+
+In case your native environment is slightly different from which the assembly package provides, e.g., you use `openblas` instead of `atlas`, a more recommended way is to use `mxnet-core` and put the compiled Java native library somewhere in your load path.
+
+```HTML
+<dependency>
+  <groupId>ml.dmlc.mxnet</groupId>
+  <artifactId>mxnet-core_2.10</artifactId>
+  <version>0.1.1</version>
+</dependency>
+```
+
+To build with your own environment. First finish the [Build MXNet Library](#build-mxnet-library) step.
+Then run following command from the root directory.
+
+```bash
+make scalapkg
+```
+
+Now you will find jars for `assembly`, `core` and `example` modules.
+Also it produces the native library in `native/{your-architecture}/target`, which you can use to cooperate with the `core` module.
+
+To install the scala package into your local maven repository, run
+
+```bash
+make scalainstall
+```
+
 ## Docker Images
 
 Builds of MXNet are available as [Docker](https://www.docker.com/whatisdocker) images:
