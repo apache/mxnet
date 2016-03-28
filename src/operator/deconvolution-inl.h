@@ -49,7 +49,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
     .describe("number of groups partition");
     DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 4096)
     .describe("Tmp workspace for deconvolution (MB)");
-    DMLC_DECLARE_FIELD(no_bias).set_default(false)
+    DMLC_DECLARE_FIELD(no_bias).set_default(true)
     .describe("Whether to disable bias parameter.");
   }
 };
