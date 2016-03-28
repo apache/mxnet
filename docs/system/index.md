@@ -38,6 +38,7 @@ other. The modules are
 	- Introduces how we can reduce memory consumption of deep nets
 * [Efficient Data Loading Module for Deep Learning](note_data_loading.html)
 	- Push the efficiency offline data preparation and online data loading.
+* [Survay of RNN Interface](rnn_interface.html)
 
 ## How to Read the Code
 - All the module interface are listed in [include](../../include), these

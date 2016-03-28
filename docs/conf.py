@@ -36,9 +36,6 @@ for mod_name in MOCK_MODULES:
 # If your documentation needs a minimal Sphinx version, state it here.
 needs_sphinx = '1.2'
 
-if os.environ.get('READTHEDOCS', None) == 'True':
-  subprocess.call('doxygen')
-
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.ifconfig', 'breathe']
@@ -307,7 +304,6 @@ def run_doxygen(folder):
     """Run the doxygen make command in the designated folder."""
     try:
         retcode = subprocess.call("cd %s; make doxygen" % folder, shell=True)
-        retcode = subprocess.call("cp -rf doxygen/html _build/html/doxygen", shell=True)
         if retcode < 0:
             sys.stderr.write("doxygen terminated by signal %s" % (-retcode))
     except OSError as e:
@@ -315,9 +311,8 @@ def run_doxygen(folder):
 
 
 def generate_doxygen_xml(app):
-    """Run the doxygen make commands if we're on the ReadTheDocs server"""
+    """Run the doxygen make commands"""
     run_doxygen('..')
-    sys.stderr.write('The Lib path: %s\n' % str(os.listdir('../lib')))
 
 def setup(app):
     # Add hook for building doxygen xml when needed
