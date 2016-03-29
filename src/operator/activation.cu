@@ -20,6 +20,7 @@ Operator *CreateOp<gpu>(ActivationParam param, int dtype) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       op = new ActivationOp<gpu, mshadow_op::softrelu, mshadow_op::softrelu_grad, DType>();
     })
+    return op;
   }
 
 #if MXNET_USE_CUDNN == 1
