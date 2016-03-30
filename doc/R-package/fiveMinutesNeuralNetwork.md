@@ -34,14 +34,14 @@ require(mxnet)
 ```
 
 ```r
-data(Sonar, package="mlbench")
+data(Sonar, package = "mlbench")
 
-Sonar[,61] = as.numeric(Sonar[,61])-1
-train.ind = c(1:50, 100:150)
-train.x = data.matrix(Sonar[train.ind, 1:60])
-train.y = Sonar[train.ind, 61]
-test.x = data.matrix(Sonar[-train.ind, 1:60])
-test.y = Sonar[-train.ind, 61]
+Sonar[,61] <- as.numeric(Sonar[,61])-1
+train.ind <- c(1:50, 100:150)
+train.x <- data.matrix(Sonar[train.ind, 1:60])
+train.y <- Sonar[train.ind, 61]
+test.x <- data.matrix(Sonar[-train.ind, 1:60])
+test.y <- Sonar[-train.ind, 61]
 ```
 
 Next we are going to use a multi-layer perceptron as our classifier. In `mxnet`, we have a function called `mx.mlp` so that users can build a general multi-layer neural network to do classification or regression.
@@ -102,7 +102,7 @@ graph.viz(model$symbol$as.json())
 [<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/knitr/graph.computation.png">](https://github.com/dmlc/mxnet)
 
 ```r
-preds = predict(model, test.x)
+preds <- predict(model, test.x)
 ```
 
 ```
@@ -110,7 +110,7 @@ preds = predict(model, test.x)
 ```
 
 ```r
-pred.label = max.col(t(preds))-1
+pred.label <- max.col(t(preds)) - 1
 table(pred.label, test.y)
 ```
 
@@ -131,11 +131,11 @@ Again, let us preprocess the data first.
 ```r
 data(BostonHousing, package="mlbench")
 
-train.ind = seq(1, 506, 3)
-train.x = data.matrix(BostonHousing[train.ind, -14])
-train.y = BostonHousing[train.ind, 14]
-test.x = data.matrix(BostonHousing[-train.ind, -14])
-test.y = BostonHousing[-train.ind, 14]
+train.ind <- seq(1, 506, 3)
+train.x <- data.matrix(BostonHousing[train.ind, -14])
+train.y <- BostonHousing[train.ind, 14]
+test.x <- data.matrix(BostonHousing[-train.ind, -14])
+test.y <- BostonHousing[-train.ind, 14]
 ```
 
 Although we can use `mx.mlp` again to do regression by changing the `out_activation`, this time we are going to introduce a flexible way to configure neural networks in `mxnet`. The configuration is done by the "Symbol" system in `mxnet`, which takes care of the links among nodes, the activation, dropout ratio, etc. To configure a multi-layer neural network, we can do it in the following way:
@@ -224,7 +224,7 @@ It is also easy to make prediction and evaluate
 
 
 ```r
-preds = predict(model, test.x)
+preds <- predict(model, test.x)
 ```
 
 ```
