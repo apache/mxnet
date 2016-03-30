@@ -131,7 +131,7 @@ class ActivationProp : public OperatorProperty {
     CHECK_NE(dtype, -1) << "First input must have specified type";
     for (index_t i = 0; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
-        (*in_type)[i] = dtype;
+          (*in_type)[i] = dtype;
       } else {
         CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
                                        << "Expected " << dtype << " v.s. given "

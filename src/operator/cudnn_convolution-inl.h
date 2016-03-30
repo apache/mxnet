@@ -54,9 +54,8 @@ class CuDNNConvolutionOp : public Operator {
     if (!init_cudnn_) {
       Init(s, in_data, out_data);
     }
-    Tensor<gpu, 1, DType> workspace =
-        ctx.requested[conv::kTempSpace].get_space_typed<gpu, 1, DType>(
-            mshadow::Shape1(forward_workspace_), s);
+    Tensor<gpu, 1> workspace = ctx.requested[conv::kTempSpace].get_space<gpu>(
+                                 mshadow::Shape1(forward_workspace_), s);
     for (uint32_t g = 0; g < param_.num_group; ++g) {
       typename DataType<DType>::ScaleType alpha = 1.0f;
       typename DataType<DType>::ScaleType beta = 0.0f;
@@ -76,7 +75,7 @@ class CuDNNConvolutionOp : public Operator {
       if (!param_.no_bias) {
         beta = 1.0f;
         Tensor<gpu, 1, DType> bias = in_data[conv::kBias].get<gpu, 1, DType>(s);
-#if CUDNN_MAJOR == 4
+#if CUDNN_MAJOR >= 4
         CHECK_EQ(cudnnAddTensor(s->dnn_handle_,
                                 &alpha,
                                 bias_desc_,
@@ -120,8 +119,8 @@ class CuDNNConvolutionOp : public Operator {
     Tensor<gpu, 4, DType> data = in_data[conv::kData].get<gpu, 4, DType>(s);
     Tensor<gpu, 4, DType> gdata = in_grad[conv::kData].get<gpu, 4, DType>(s);
     Tensor<gpu, 1, DType> workspace =
-        ctx.requested[conv::kTempSpace].get_space_typed<gpu, 1, DType>(
-            mshadow::Shape1(backward_workspace_), s);
+      ctx.requested[conv::kTempSpace].get_space_typed<gpu, 1, DType>(
+      mshadow::Shape1(backward_workspace_), s);
     for (uint32_t g = 0; g < param_.num_group; ++g) {
       typename DataType<DType>::ScaleType alpha = 1.0f;
       typename DataType<DType>::ScaleType beta = 0.0f;
@@ -136,7 +135,12 @@ class CuDNNConvolutionOp : public Operator {
                                               gbias.dptr_ + bias_offset_ * g),
                  CUDNN_STATUS_SUCCESS);
       }
+      #if CUDNN_MAJOR <= 4
       CHECK_EQ(cudnnConvolutionBackwardFilter_v3(s->dnn_handle_,
+      #endif
+      #if CUDNN_MAJOR == 5
+      CHECK_EQ(cudnnConvolutionBackwardFilter(s->dnn_handle_,
+      #endif
                &alpha,
                in_desc_,
                data.dptr_ + data_offset_ * g,
@@ -149,7 +153,12 @@ class CuDNNConvolutionOp : public Operator {
                &beta,
                filter_desc_,
                gwmat.dptr_ + weight_offset_ * g), CUDNN_STATUS_SUCCESS);
+      #if CUDNN_MAJOR <= 4
       CHECK_EQ(cudnnConvolutionBackwardData_v3(s->dnn_handle_,
+      #endif
+      #if CUDNN_MAJOR == 5
+      CHECK_EQ(cudnnConvolutionBackwardData(s->dnn_handle_,
+      #endif
                &alpha,
                filter_desc_,
                wmat.dptr_ + weight_offset_ * g,
@@ -171,6 +180,9 @@ class CuDNNConvolutionOp : public Operator {
                    const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     size_t expected = param_.no_bias ? 2 : 3;
+    #if CUDNN_MAJOR == 5
+    format_ = CUDNN_TENSOR_NCHW;
+    #endif
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1);
     if (!init_cudnn_) {
@@ -191,6 +203,9 @@ class CuDNNConvolutionOp : public Operator {
       CHECK_EQ(cudnnCreateConvolutionDescriptor(&conv_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetFilter4dDescriptor(filter_desc_,
                                           dtype_,
+                                          #if CUDNN_MAJOR == 5
+                                          format_,
+                                          #endif
                                           param_.num_filter / param_.num_group,
                                           data.shape_[1] / param_.num_group,
                                           param_.kernel[0],
@@ -304,6 +319,9 @@ class CuDNNConvolutionOp : public Operator {
   cudnnConvolutionFwdAlgo_t algo_;
   cudnnConvolutionBwdDataAlgo_t back_algo_;
   cudnnConvolutionBwdFilterAlgo_t back_algo_w_;
+  #if CUDNN_MAJOR == 5
+  cudnnTensorFormat_t format_;
+  #endif
   ConvolutionParam param_;
 };
 #endif  // __CUDACC__ && CUDNN
