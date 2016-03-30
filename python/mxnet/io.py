@@ -359,7 +359,7 @@ class NDArrayIter(DataIter):
             self.label = label_dict.items()
         self.num_data = self.data_list[0].shape[0]
         assert self.num_data >= batch_size, \
-            "batch_size need to be smaller than data size when not padding."
+            "batch_size need to be smaller than data size."
         self.cursor = -batch_size
         self.batch_size = batch_size
         self.last_batch_handle = last_batch_handle
