@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import ctypes
 import warnings
 import sys
-import functools
+import functools, itertools
 import operator
 import numpy as np
 from .base import _LIB, string_types, numeric_types
@@ -702,12 +702,13 @@ def broadcast_to(a, shape):
     cur_shape = a.shape
     err_str = 'operands could not be broadcast together with remapped shapes'\
             '[original->remapped]: {} and requested shape {}'.format(cur_shape, shape)
-    if len(shape) != len(cur_shape):
+    if len(shape) < len(cur_shape):
         raise ValueError(err_str)
+    cur_shape = (1,) * (len(shape) - len(cur_shape)) + cur_shape
     for i, j in zip(cur_shape, shape):
         if i != 1 and i != j:
             raise ValueError(err_str)
-    ret = a
+    ret = a.reshape(cur_shape)
     for axis, (i, j) in enumerate(zip(cur_shape, shape)):
         if i != j:
             ret = NDArray._broadcast(ret, axis, j)
