@@ -481,8 +481,8 @@ def add(lhs, rhs):
     elif isinstance(rhs, numeric_types):
         return NDArray._plus_scalar(lhs, float(rhs))
     elif isinstance(rhs, NDArray):
-        lsize = reduce(operator.mul, lhs.shape)
-        rsize = reduce(operator.mul, rhs.shape)
+        lsize = functools.reduce(operator.mul, lhs.shape)
+        rsize = functools.reduce(operator.mul, rhs.shape)
         if lsize < rsize:
             lhs = broadcast_to(lhs, rhs.shape)
         elif lsize > rsize:
@@ -517,8 +517,8 @@ def subtract(lhs, rhs):
     elif isinstance(rhs, numeric_types):
         return NDArray._minus_scalar(lhs, float(rhs))
     elif isinstance(rhs, NDArray):
-        lsize = reduce(operator.mul, lhs.shape)
-        rsize = reduce(operator.mul, rhs.shape)
+        lsize = functools.reduce(operator.mul, lhs.shape)
+        rsize = functools.reduce(operator.mul, rhs.shape)
         if lsize < rsize:
             lhs = broadcast_to(lhs, rhs.shape)
         elif lsize > rsize:
@@ -551,8 +551,8 @@ def multiply(lhs, rhs):
     elif isinstance(rhs, numeric_types):
         return NDArray._mul_scalar(lhs, float(rhs))
     elif isinstance(rhs, NDArray):
-        lsize = reduce(operator.mul, lhs.shape)
-        rsize = reduce(operator.mul, rhs.shape)
+        lsize = functools.reduce(operator.mul, lhs.shape)
+        rsize = functools.reduce(operator.mul, rhs.shape)
         if lsize < rsize:
             lhs = broadcast_to(lhs, rhs.shape)
         elif lsize > rsize:
@@ -587,8 +587,8 @@ def divide(lhs, rhs):
     elif isinstance(rhs, numeric_types):
         return NDArray._div_scalar(lhs, float(rhs))
     elif isinstance(rhs, NDArray):
-        lsize = reduce(operator.mul, lhs.shape)
-        rsize = reduce(operator.mul, rhs.shape)
+        lsize = functools.reduce(operator.mul, lhs.shape)
+        rsize = functools.reduce(operator.mul, rhs.shape)
         if lsize < rsize:
             lhs = broadcast_to(lhs, rhs.shape)
         elif lsize > rsize:
