@@ -5,8 +5,6 @@ sys.path.insert(0, "../../python")
 import numpy as np
 import mxnet as mx
 
-from lstm import LSTMState, LSTMParam, lstm
-
 # The interface of a data iter that works for bucketing
 #
 # DataIter
@@ -17,13 +15,13 @@ from lstm import LSTMState, LSTMParam, lstm
 #   - provide_label: same as DataIter, but specific to this batch
 #   - bucket_key: the key for the bucket that should be used for this batch
 
-def read_content(path):
+def default_read_content(path):
     with open(path) as ins:
         content = ins.read()
         content = content.replace('\n', ' <eos> ').replace('. ', ' <eos> ')
         return content
 
-def build_vocab(path):
+def default_build_vocab(path):
     content = read_content(path)
     content = content.split(' ')
     idx = 1 # 0 is left for zero-padding
@@ -36,7 +34,7 @@ def build_vocab(path):
             idx += 1
     return the_vocab
 
-def text2id(sentence, the_vocab):
+def default_text2id(sentence, the_vocab):
     words = sentence.split(' ')
     words = [the_vocab[w] for w in words if len(w) > 0]
     return words
@@ -81,10 +79,20 @@ class DummyIter(mx.io.DataIter):
 
 class BucketSentenceIter(mx.io.DataIter):
     def __init__(self, path, vocab, buckets, batch_size,
-                 init_states, data_name='data', label_name='label'):
+                 init_states, data_name='data', label_name='label',
+                 seperate_char=' <eos> ', text2id=None, read_content=None):
         super(BucketSentenceIter, self).__init__()
-        content = read_content(path)
-        sentences = content.split(' <eos> ')
+
+        if text2id == None:
+            self.text2id = default_text2id
+        else:
+            self.text2id = text2id
+        if read_content == None:
+            self.read_content = default_read_content
+        else:
+            self.read_content = read_content
+        content = self.read_content(path)
+        sentences = content.split(seperate_char)
 
         self.vocab_size = len(vocab)
         self.data_name = data_name
@@ -97,7 +105,7 @@ class BucketSentenceIter(mx.io.DataIter):
         self.default_bucket_key = buckets[0]
 
         for sentence in sentences:
-            sentence = text2id(sentence, vocab)
+            sentence = self.text2id(sentence, vocab)
             if len(sentence) == 0:
                 continue
             for i, bkt in enumerate(buckets):
@@ -140,7 +148,7 @@ class BucketSentenceIter(mx.io.DataIter):
         bucket_n_batches = []
         for i in range(len(self.data)):
             bucket_n_batches.append(len(self.data[i]) / self.batch_size)
-            self.data[i] = self.data[i][:bucket_n_batches[i]*self.batch_size]
+            self.data[i] = self.data[i][:int(bucket_n_batches[i]*self.batch_size)]
 
         bucket_plan = np.hstack([np.zeros(n, int)+i for i, n in enumerate(bucket_n_batches)])
         np.random.shuffle(bucket_plan)
@@ -186,127 +194,5 @@ class BucketSentenceIter(mx.io.DataIter):
                                      self.buckets[i_bucket])
             yield data_batch
 
-# we define a new unrolling function here because the original
-# one in lstm.py concats all the labels at the last layer together,
-# making the mini-batch size of the label different from the data.
-# I think the existing data-parallelization code need some modification
-# to allow this situation to work properly
-def lstm_unroll(num_lstm_layer, seq_len, input_size,
-                num_hidden, num_embed, num_label, dropout=0.):
-
-    embed_weight = mx.sym.Variable("embed_weight")
-    cls_weight = mx.sym.Variable("cls_weight")
-    cls_bias = mx.sym.Variable("cls_bias")
-    param_cells = []
-    last_states = []
-    for i in range(num_lstm_layer):
-        param_cells.append(LSTMParam(i2h_weight=mx.sym.Variable("l%d_i2h_weight" % i),
-                                     i2h_bias=mx.sym.Variable("l%d_i2h_bias" % i),
-                                     h2h_weight=mx.sym.Variable("l%d_h2h_weight" % i),
-                                     h2h_bias=mx.sym.Variable("l%d_h2h_bias" % i)))
-        state = LSTMState(c=mx.sym.Variable("l%d_init_c" % i),
-                          h=mx.sym.Variable("l%d_init_h" % i))
-        last_states.append(state)
-    assert(len(last_states) == num_lstm_layer)
-
-    loss_all = []
-    for seqidx in range(seq_len):
-        # embeding layer
-        data = mx.sym.Variable("data/%d" % seqidx)
-
-        hidden = mx.sym.Embedding(data=data, weight=embed_weight,
-                                  input_dim=input_size,
-                                  output_dim=num_embed,
-                                  name="t%d_embed" % seqidx)
-        # stack LSTM
-        for i in range(num_lstm_layer):
-            if i == 0:
-                dp_ratio = 0.
-            else:
-                dp_ratio = dropout
-            next_state = lstm(num_hidden, indata=hidden,
-                              prev_state=last_states[i],
-                              param=param_cells[i],
-                              seqidx=seqidx, layeridx=i, dropout=dp_ratio)
-            hidden = next_state.h
-            last_states[i] = next_state
-        # decoder
-        if dropout > 0.:
-            hidden = mx.sym.Dropout(data=hidden, p=dropout)
-        fc = mx.sym.FullyConnected(data=hidden, weight=cls_weight, bias=cls_bias,
-                                   num_hidden=num_label)
-        sm = mx.sym.SoftmaxOutput(data=fc, label=mx.sym.Variable('label/%d' % seqidx),
-                                  name='t%d_sm' % seqidx)
-        loss_all.append(sm)
-
-    # for i in range(num_lstm_layer):
-    #     state = last_states[i]
-    #     state = LSTMState(c=mx.sym.BlockGrad(state.c, name="l%d_last_c" % i),
-    #                       h=mx.sym.BlockGrad(state.h, name="l%d_last_h" % i))
-    #     last_states[i] = state
-    #
-    # unpack_c = [state.c for state in last_states]
-    # unpack_h = [state.h for state in last_states]
-    #
-    # return mx.sym.Group(loss_all + unpack_c + unpack_h)
-    return mx.sym.Group(loss_all)
-
-
-if __name__ == '__main__':
-    batch_size = 32
-    buckets = [10, 20, 30, 40]
-    #buckets = [32]
-    num_hidden = 200
-    num_embed = 200
-    num_lstm_layer = 2
-
-    num_epoch = 25
-    learning_rate = 0.1
-    momentum = 0.0
-
-    # dummy data is used to test speed without IO
-    dummy_data = False
-
-    contexts = [mx.context.gpu(i) for i in range(1)]
-
-    vocab = build_vocab("./data/ptb.train.txt")
-
-    def sym_gen(seq_len):
-        return lstm_unroll(num_lstm_layer, seq_len, len(vocab),
-                           num_hidden=num_hidden, num_embed=num_embed,
-                           num_label=len(vocab))
-
-    init_c = [('l%d_init_c'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
-    init_h = [('l%d_init_h'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
-    init_states = init_c + init_h
-
-    data_train = BucketSentenceIter("./data/ptb.train.txt", vocab,
-                                    buckets, batch_size, init_states)
-    data_val = BucketSentenceIter("./data/ptb.valid.txt", vocab,
-                                  buckets, batch_size, init_states)
-
-    if dummy_data:
-        data_train = DummyIter(data_train)
-        data_val = DummyIter(data_val)
-
-    if len(buckets) == 1:
-        # only 1 bucket, disable bucketing
-        symbol = sym_gen(buckets[0])
-    else:
-        symbol = sym_gen
-
-    model = mx.model.FeedForward(ctx=contexts,
-                                 symbol=symbol,
-                                 num_epoch=num_epoch,
-                                 learning_rate=learning_rate,
-                                 momentum=momentum,
-                                 wd=0.00001,
-                                 initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
-
-    import logging
-    head = '%(asctime)-15s %(message)s'
-    logging.basicConfig(level=logging.DEBUG, format=head)
-
-    model.fit(X=data_train, eval_data=data_val,
-              batch_end_callback=mx.callback.Speedometer(batch_size, 50),)
-
+    def reset(self):
+        self.bucket_curr_idx = [0 for x in self.data]
