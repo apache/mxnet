@@ -98,19 +98,25 @@ class CuDNNActivationOp : public Operator {
                                           data.shape_[2],
                                           data.shape_[3]), CUDNN_STATUS_SUCCESS);
     }
+    #if CUDNN_MAJOR <= 4
     CHECK_EQ(cudnnActivationForward(s->dnn_handle_,
-                                    #if CUDNN_MAJOR <= 4
                                      mode_,
-                                    #endif
-                                    #if CUDNN_MAJOR == 5
-                                     desc_,
-                                    #endif
                                     &alpha,
                                     shape_desc_,
                                     data.dptr_,
                                     &beta,
                                     shape_desc_,
                                     out.dptr_), CUDNN_STATUS_SUCCESS);
+    #elif CUDNN_MAJOR == 5
+    CHECK_EQ(cudnnActivationForward(s->dnn_handle_,
+                                     desc_,
+                                    &alpha,
+                                    shape_desc_,
+                                    data.dptr_,
+                                    &beta,
+                                    shape_desc_,
+                                    out.dptr_), CUDNN_STATUS_SUCCESS);
+    #endif
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -159,13 +165,9 @@ class CuDNNActivationOp : public Operator {
       input_grad = in_grad[activation::kData].get_with_shape<gpu, 4, DType>(dshape, s);
     }
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
+    #if CUDNN_MAJOR <= 4
     CHECK_EQ(cudnnActivationBackward(s->dnn_handle_,
-                                     #if CUDNN_MAJOR <= 4
                                      mode_,
-                                     #endif
-                                     #if CUDNN_MAJOR == 5
-                                     desc_,
-                                     #endif
                                      &alpha,
                                      shape_desc_,
                                      output_data.dptr_,
@@ -176,6 +178,20 @@ class CuDNNActivationOp : public Operator {
                                      &beta,
                                      shape_desc_,
                                      input_grad.dptr_), CUDNN_STATUS_SUCCESS);
+    #elif CUDNN_MAJOR == 5
+    CHECK_EQ(cudnnActivationBackward(s->dnn_handle_,
+                                     desc_,
+                                     &alpha,
+                                     shape_desc_,
+                                     output_data.dptr_,
+                                     shape_desc_,
+                                     grad.dptr_,
+                                     shape_desc_,
+                                     data.dptr_,
+                                     &beta,
+                                     shape_desc_,
+                                     input_grad.dptr_), CUDNN_STATUS_SUCCESS);
+    #endif
   }
 
  private:

@@ -139,17 +139,26 @@ class CuDNNPoolingOp : public Operator {
                                           out.shape_[1],
                                           out.shape_[2],
                                           out.shape_[3]), CUDNN_STATUS_SUCCESS);
+      #if CUDNN_MAJOR == 5
       CHECK_EQ(cudnnSetPooling2dDescriptor(pooling_desc_,
                                            mode_,
-                                           #if CUDNN_MAJOR == 5
                                            nan_prop_,
-                                           #endif
                                            param_.kernel[0],
                                            param_.kernel[1],
                                            param_.pad[0],
                                            param_.pad[1],
                                            param_.stride[0],
                                            param_.stride[1]), CUDNN_STATUS_SUCCESS);
+      #else
+      CHECK_EQ(cudnnSetPooling2dDescriptor(pooling_desc_,
+                                           mode_,
+                                           param_.kernel[0],
+                                           param_.kernel[1],
+                                           param_.pad[0],
+                                           param_.pad[1],
+                                           param_.stride[0],
+                                           param_.stride[1]), CUDNN_STATUS_SUCCESS);
+      #endif
     }
   }
   bool init_cudnn_;
