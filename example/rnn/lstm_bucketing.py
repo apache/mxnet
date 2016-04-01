@@ -6,7 +6,7 @@ import numpy as np
 import mxnet as mx
 
 from lstm import lstm_unroll
-from bucket_io import BucketSentenceIter, build_vocab
+from bucket_io import BucketSentenceIter, default_build_vocab
 
 def Perplexity(label, pred):
     loss = 0.
@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     contexts = [mx.context.gpu(i) for i in range(1)]
 
-    vocab = build_vocab("./data/ptb.train.txt")
+    vocab = default_build_vocab("./data/ptb.train.txt")
 
     def sym_gen(seq_len):
         return lstm_unroll(num_lstm_layer, seq_len, len(vocab),
