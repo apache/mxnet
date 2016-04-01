@@ -6,7 +6,10 @@ import numpy as np
 import mxnet as mx
 
 from lstm import lstm_unroll
-from bucket_io import BucketSentenceIter, build_vocab
+from bucket_io import BucketSentenceIter, default_build_vocab
+
+build_vocab = default_build_vocab
+
 
 def Perplexity(label, pred):
     loss = 0.
