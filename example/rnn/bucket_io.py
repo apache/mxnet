@@ -22,7 +22,7 @@ def default_read_content(path):
         return content
 
 def default_build_vocab(path):
-    content = read_content(path)
+    content = default_read_content(path)
     content = content.split(' ')
     idx = 1 # 0 is left for zero-padding
     the_vocab = {}
