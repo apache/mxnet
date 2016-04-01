@@ -21,8 +21,9 @@ def check_label_shapes(labels, preds, shape=0):
 class EvalMetric(object):
     """Base class of all evaluation metrics."""
 
-    def __init__(self, name):
+    def __init__(self, name, num=None):
         self.name = name
+        self.num = num
         self.reset()
 
     def update(self, label, pred):
@@ -40,8 +41,12 @@ class EvalMetric(object):
 
     def reset(self):
         """Clear the internal statistics to initial state."""
-        self.num_inst = 0
-        self.sum_metric = 0.0
+        if self.num == None:
+            self.num_inst = 0
+            self.sum_metric = 0.0
+        else:
+            self.num_inst = [0] * self.num
+            self.sum_metric = [0.0] * self.num
 
     def get(self):
         """Get the current evaluation result.
@@ -53,10 +58,16 @@ class EvalMetric(object):
         value : float
            Value of the evaluation.
         """
-        if self.num_inst == 0:
-            return (self.name, float('nan'))
+        if self.num == None:
+            if self.num_inst == 0:
+                return (self.name, float('nan'))
+            else:
+                return (self.name, self.sum_metric / self.num_inst)
         else:
-            return (self.name, self.sum_metric / self.num_inst)
+            names = ['%s_%d'%(self.name, i) for i in range(self.num)]
+            values = [x / y if y != 0 else float('nan') \
+                for x, y in zip(self.sum_metric, self.num_inst)]
+            return (names, values)
 
     def get_name_value(self):
         """Get zipped name and value pairs"""
