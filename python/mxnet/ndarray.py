@@ -1097,8 +1097,8 @@ def _init_ndarray_module():
             setattr(NDArray, function.__name__, staticmethod(function))
         else:
             fname = function.__name__
-            fn = getattr(module_obj, fname, None)
-            if fn is None:
+            fn_obj = getattr(module_obj, fname, None)
+            if fn_obj is None:
                 setattr(module_obj, fname, function)
             else:
                 setattr(module_obj, fname + '_internal', function)
