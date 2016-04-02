@@ -48,9 +48,9 @@ def replicate_data(x, batch_size):
 
 batch_size = 20
 seq_len = 35
-num_hidden = 200
+num_hidden = 400
 num_embed = 200
-num_lstm_layer = 2
+num_lstm_layer = 8
 num_round = 25
 learning_rate= 0.1
 wd=0.
@@ -68,8 +68,19 @@ print("Vocab=%d" %vocab)
 X_train_batch = drop_tail(X_train_batch, seq_len)
 X_val_batch = drop_tail(X_val_batch, seq_len)
 
+ngpu = 1
+# A simple two GPU placement plan
+group2ctx = {'embed': mx.gpu(0),
+             'decode': mx.gpu(ngpu - 1)}
 
-model = lstm.setup_rnn_model(mx.gpu(),
+for i in range(num_lstm_layer):
+    group2ctx['layer%d' % i] = mx.gpu(i * ngpu // num_lstm_layer)
+
+# whether do group-wise concat
+concat_decode = True
+
+model = lstm.setup_rnn_model(mx.gpu(), group2ctx=group2ctx,
+                             concat_decode=concat_decode,
                              num_lstm_layer=num_lstm_layer,
                              seq_len=seq_len,
                              num_hidden=num_hidden,
@@ -81,9 +92,9 @@ model = lstm.setup_rnn_model(mx.gpu(),
 
 lstm.train_lstm(model, X_train_batch, X_val_batch,
                 num_round=num_round,
+                concat_decode=concat_decode,
                 half_life=2,
                 max_grad_norm = max_grad_norm,
                 update_period=update_period,
                 learning_rate=learning_rate,
                 wd=wd)
-#               momentum=momentum)
