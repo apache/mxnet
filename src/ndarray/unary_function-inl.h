@@ -256,7 +256,7 @@ MXNET_REGISTER_TBLOB_FUN(min, XPU)
 .describe("Take min of the src."
           "The result will be ndarray of shape (1,) on the same device.");
 // Sum
-MXNET_REGISTER_TBLOB_FUN(sum_internal, XPU)
+MXNET_REGISTER_TBLOB_FUN(sum, XPU)
 .set_function(XPU::kDevMask, Reduce<XPU, mshadow::red::sum>, false, false)
 .set_shape_infer(ScalarShape)
 .describe("Take sum of the src."

@@ -1096,7 +1096,12 @@ def _init_ndarray_module():
         if function.__name__.startswith('_'):
             setattr(NDArray, function.__name__, staticmethod(function))
         else:
-            setattr(module_obj, function.__name__, function)
+            fname = function.__name__
+            fn = getattr(module_obj, fname, None)
+            if fn is None:
+                setattr(module_obj, fname, function)
+            else:
+                setattr(module_obj, fname + '_internal', function)
 
 # Initialize the NDArray module
 _init_ndarray_module()
