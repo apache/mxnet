@@ -86,7 +86,14 @@ class EmbeddingOp : public Operator {
     Tensor<xpu, 1> data = in_data[embedding::kData].get<xpu, 1, real_t>(s);
     Tensor<xpu, 2> grad_out = out_grad[embedding::kOut].get<xpu, 2, real_t>(s);
     Tensor<xpu, 2> grad_in = in_grad[embedding::kWeight].get<xpu, 2, real_t>(s);
-    Assign(grad_in, req[embedding::kWeight], take_grad(data, grad_out, param_.input_dim));
+    if (req[embedding::kWeight] == kWriteTo) {
+      grad_in = 0.0f;
+      AddTakeGrad(grad_in, data, grad_out);
+    } else if (req[embedding::kWeight] == kAddTo) {
+      AddTakeGrad(grad_in, data, grad_out);
+    } else {
+      LOG(FATAL) << "wrong req";
+    }
   }
 
  private:
