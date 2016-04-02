@@ -112,6 +112,25 @@ void Reduce(const TBlob &src,
   out = mshadow::expr::reduce_except_dim<0, Reducer>(in);
 }
 
+template <typename xpu, typename Reducer>
+void ReduceMid(TBlob const& src,
+               TBlob* ret,
+               OpReqType,
+               RunContext ctx) {
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  mshadow::Tensor<xpu, 2> out = ret->get<xpu, 2, real_t>(s);
+  mshadow::Tensor<xpu, 3> in = src.get<xpu, 3, real_t>(s);
+  out = mshadow::expr::reduce_with_axis<Reducer, false>(in, 1);
+}
+
+inline TShape ReduceMidShape(TShape const& ishape) {
+  CHECK_EQ(ishape.ndim(), 3) << "Input shape must be 3 dimensional.";
+  std::vector<mshadow::index_t> shape;
+  shape.push_back(ishape[0]);
+  shape.push_back(ishape[2]);
+  return TShape(shape.begin(), shape.end());
+}
+
 template<typename xpu, typename Reducer, bool get_mask>
 void ReduceChannel(const TBlob &src,
                    TBlob *ret,
@@ -138,6 +157,24 @@ inline TShape ReduceChannelShape(const TShape& ishape) {
     shape.push_back(ishape[i]);
   }
   return TShape(shape.begin(), shape.end());
+}
+
+
+template<typename xpu>
+void Transpose(const TBlob &src,
+            TBlob *ret,
+            OpReqType req,
+            RunContext ctx) {
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  mshadow::Tensor<xpu, 2> out = ret->FlatTo2D<xpu, real_t>(s);
+  mshadow::Tensor<xpu, 2> in = src.FlatTo2D<xpu, real_t>(s);
+  out = in.T();
+}
+inline TShape TransposeShape(const TShape& shp) {
+  std::vector<mshadow::index_t> ret;
+  ret.push_back(shp[1]);
+  ret.push_back(shp[0]);
+  return TShape(ret.begin(), ret.end());
 }
 
 // Register all unary operations here
@@ -224,12 +261,24 @@ MXNET_REGISTER_TBLOB_FUN(sum, XPU)
 .set_shape_infer(ScalarShape)
 .describe("Take sum of the src."
           "The result will be ndarray of shape (1,) on the same device.");
+
+// sum_mid
+MXNET_REGISTER_TBLOB_FUN(sum_mid_internal, XPU)
+.set_function(XPU::kDevMask, ReduceMid<XPU, mshadow::red::sum>, false, false)
+.set_shape_infer(ReduceMidShape)
+.describe("Take sum on medium dimension of the 3D src.");
+
 // argmax channel
 MXNET_REGISTER_TBLOB_FUN(argmax_channel, XPU)
 .set_function(XPU::kDevMask, ReduceChannel<XPU, mshadow::red::maximum, true>, false, false)
 .set_shape_infer(ReduceChannelShape)
 .describe("Take argmax indices of each channel of the src."
           "The result will be ndarray of shape (num_channel,) on the same device.");
+// transpose
+MXNET_REGISTER_TBLOB_FUN(transpose, XPU)
+.set_function(XPU::kDevMask, Transpose<XPU>, false, false)
+.set_shape_infer(TransposeShape)
+.describe("Transpose the input matrix and return a new one");
 }  // namespace ndarray
 }  // namespace mxnet
 #endif  // MXNET_NDARRAY_UNARY_FUNCTION_INL_H_
