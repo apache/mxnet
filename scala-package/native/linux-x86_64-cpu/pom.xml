@@ -67,6 +67,7 @@
             <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
             <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption>
             <linkerMiddleOption>../../../dmlc-core/libdmlc.a</linkerMiddleOption>
+            <linkerMiddleOption>../../../ps-lite/build/libps.a</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--no-whole-archive</linkerMiddleOption>
           </linkerMiddleOptions>
           <linkerEndOptions>

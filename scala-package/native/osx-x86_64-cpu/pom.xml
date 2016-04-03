@@ -68,6 +68,7 @@
             <linkerMiddleOption>-Wl,-exported_symbol,_Java_*</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
             <linkerMiddleOption>../../../dmlc-core/libdmlc.a</linkerMiddleOption>
+            <linkerMiddleOption>../../../ps-lite/build/libps.a</linkerMiddleOption>
             <linkerMiddleOption>-force_load ../../../lib/libmxnet.a</linkerMiddleOption>
           </linkerMiddleOptions>
           <linkerEndOptions>

@@ -28,7 +28,7 @@ object KVStore {
 }
 
 // scalastyle:off finalize
-class KVStore(private val handle: KVStoreHandle) {
+class KVStore(private[mxnet] val handle: KVStoreHandle) {
   private var updaterFunc: MXKVStoreUpdater = null
   private var disposed = false
 
