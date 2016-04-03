@@ -113,6 +113,7 @@ if [ ${TASK} == "scala_test" ]; then
         LIB_GOMP_PATH=`find /usr/local/lib -name libgomp.dylib | grep -v i386 | head -n1`
         ln -sf $LIB_GOMP_PATH /usr/local/lib/libgomp.dylib
     fi
+    echo "USE_DIST_KVSTORE=1" >> config.mk
     make all || exit -1
     # use cached dir for storing data
     rm -rf ${PWD}/data
