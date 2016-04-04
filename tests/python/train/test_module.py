@@ -22,7 +22,7 @@ mod = mx.mod.Module(softmax, ['data', 'sm_label'])
 mod.bind(data_shapes=train_dataiter.provide_data, label_shapes=train_dataiter.provide_label)
 mod.init_params()
 
-mod.init_optimizer()
+mod.init_optimizer(optimizer_params={'learning_rate':0.01, 'momentum': 0.9})
 
 metric = mx.metric.create('acc')
 
