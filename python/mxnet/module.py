@@ -75,6 +75,25 @@ class DataParallelExecutorGroup(object):
         for texec in self.execs:
             texec.copy_params_from(arg_params, aux_params)
 
+    def get_params(self, arg_params, aux_params):
+        """ Copy data from each executor to `arg_params` and `aux_params`
+        Parameters
+        ----------
+        arg_params : list of NDArray
+            target parameter arrays
+        aux_params : list of NDArray
+            target aux arrays
+        Notes
+        -----
+        - This function will inplace update the NDArrays in arg_params and aux_params.
+        """
+        for name, block in zip(self.param_names, self.param_arrays):
+            weight = sum(w.copyto(cpu()) for w in block) / len(block)
+            weight.astype(arg_params[name].dtype).copyto(arg_params[name])
+        for name, block in zip(self.aux_names, self.aux_arrays):
+            weight = sum(w.copyto(cpu()) for w in block) / len(block)
+            weight.astype(aux_params[name].dtype).copyto(aux_params[name])
+
     def forward(self, data_batch):
         _load_data(data_batch, self.data_arrays)
         if self.for_training:
@@ -354,3 +373,9 @@ class Module(BaseModule):
 
     def update_metric(self, metric, labels):
         self.exec_group.update_metric(metric, labels)
+
+    def sync_params_from_devices(self):
+        self.exec_group.get_params(self.arg_params, self.aux_params)
+
+
+
