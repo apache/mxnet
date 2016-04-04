@@ -17,6 +17,7 @@ from .initializer import Uniform
 from collections import namedtuple
 import logging
 import time
+import numpy as np
 
 class DataParallelExecutorGroup(object):
     def __init__(self, symbol, context, workload, data_shapes, label_shapes, param_names,
@@ -154,7 +155,7 @@ class DataParallelExecutorGroup(object):
                 else:
                     grad_req[name] = 'null'
             else:
-                grad_req[name] == 'null'
+                grad_req[name] = 'null'
 
         # create or borrow arguments and gradients
         for j in range(len(self.arg_names)):
@@ -167,14 +168,14 @@ class DataParallelExecutorGroup(object):
                         grad_arrays[name] = grad_arr
                 else:
                     arg_arr = shared_exec.arg_dict[name]
-                    assert arg_arr.shape == arg_shape[j]
+                    assert arg_arr.shape == arg_shapes[j]
                     assert arg_arr.dtype == arg_types[j]
                     if grad_req[name] != 'null':
                         grad_arrays[name] = shared_exec.grad_dict[name]
             else: # data or label
                 if name in shared_data_arrays:
                     arg_arr = shared_data_arrays[name]
-                    assert arg_arr.shape == arg_shape[j]
+                    assert arg_arr.shape == arg_shapes[j]
                     assert arg_arr.dtype == arg_types[j]
                 else:
                     arg_arr = nd.zeros(arg_shapes[j], context, dtype=arg_types[j])
@@ -184,7 +185,7 @@ class DataParallelExecutorGroup(object):
 
         # create or borrow aux variables
         if shared_exec is None:
-            aux_arrays = [nd.zeros(s, ctx, dtype=t) for s, t in zip(aux_shapes, aux_types)]
+            aux_arrays = [nd.zeros(s, context, dtype=t) for s, t in zip(aux_shapes, aux_types)]
         else:
             for j, a in enumerate(shared_exec.aux_arrays):
                 assert aux_shapes[j] == a.shape
@@ -213,8 +214,15 @@ class BaseModule(object):
         self.params_initialized = False
         self.optimizer_initialized = False
 
-    def score(self, eval_data, eval_metric, num_batch=None, batch_end_callback=None):
+    def forward_backward(self, data_batch, is_train=None):
+        self.forward(data_batch, is_train=is_train)
+        self.backward()
+
+    def score(self, eval_data, eval_metric, num_batch=None, batch_end_callback=None, reset=True):
         assert self.binded and self.params_initialized
+
+        if reset:
+            eval_data.reset()
 
         if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
@@ -234,6 +242,31 @@ class BaseModule(object):
                                                  locals=locals())
                 for cb in _as_list(eval_batch_end_callback):
                     cb(batch_end_params)
+
+    def predict(self, eval_data, num_batch=None, return_data=False,
+                merge_batches=True, reset=True, always_output_list=False):
+        assert self.binded and self.params_initialized
+
+        if reset:
+            eval_data.reset()
+
+        output_list = [[] for _ in range(self.num_outputs)]
+
+        for nbatch, eval_batch in enumerate(eval_data):
+            if num_batch is not None and nbatch == num_batch:
+                break
+            self.forward(eval_batch, is_train=False)
+            pad = eval_batch.pad
+            for o_list, o_nd in zip(output_list, self.get_outputs()):
+                o_list.append(o_nd[:o_nd.shape[0]-pad])
+
+        if merge_batches:
+            output_list = [np.concatenate(x) for x in output_list]
+
+        if len(output_list) == 1 and not always_output_list:
+            return output_list[0]
+        return output_list
+
 
     def fit(self, train_data, eval_data=None, eval_metric='acc',
             epoch_end_callback=None, batch_end_callback=None, kvstore='local',
@@ -259,8 +292,7 @@ class BaseModule(object):
             tic = time.time()
             eval_metric.reset()
             for nbatch, data_batch in enumerate(train_data):
-                self.forward(data_batch, is_train=True)
-                self.backward()
+                self.forward_backward(data_batch, is_train=True)
                 self.update()
                 self.update_metric(eval_metric, data_batch.label)
 
@@ -291,15 +323,9 @@ class BaseModule(object):
                 self.score(eval_data, eval_metric, batch_end_callback=eval_batch_end_callback)
                 for name, val in eval_metric.get_name_value():
                     self.logger.info('Epoch[%02d] Validation-%s=%f', epoch, name, val)
-                eval_data.reset()
 
             # end of 1 epoch, reset the data-iter for another epoch
             train_data.reset()
-
-
-
-
-
 
 
 class Module(BaseModule):
@@ -414,7 +440,21 @@ class Module(BaseModule):
         self.exec_group.forward(data_batch, is_train)
 
     def backward(self):
+        assert self.binded and self.params_initialized
         self.exec_group.backward()
+
+    @property
+    def num_outputs(self):
+        assert self.binded and self.params_initialized
+        return len(self.exec_group.execs[0].outputs)
+
+    def get_outputs(self, merge_multi_context=True):
+        assert self.binded and self.params_initialized
+        outputs = [[e.outputs[i].asnumpy() for e in self.exec_group.execs]
+                   for i in range(len(self.exec_group.execs[0].outputs))]
+        if merge_multi_context:
+            outputs = [np.concatenate(x) for x in outputs]
+        return outputs
 
     def init_optimizer(self, kvstore='local', optimizer='sgd', optimizer_params={},
                        force_init=False):
