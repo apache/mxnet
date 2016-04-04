@@ -4,8 +4,10 @@
 from . import context as ctx
 from . import symbol as sym
 from . import ndarray as nd
+from . import optimizer as opt
 
 from .executor_manager import _split_input_slice, _load_data, _load_label
+from .model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
 from .base import mx_real_t
 from .initializer import Uniform
 
@@ -170,11 +172,20 @@ class DataParallelExecutorGroup(object):
 
 
 class BaseModule(object):
-    pass
+    def __init__(self):
+        self.binded = False
+        self.params_initialized = False
+        self.optimizer_initialized = False
+
+    def train(self, train_data, valid_data):
+        # TODO
+        pass
 
 
 class SymbolModule(BaseModule):
     def __init__(self, symbol, input_names, context=ctx.cpu(), work_load_list=None):
+        super(SymbolModule, self).__init__()
+
         if isinstance(context, ctx.Context):
             context = [context]
         self.context = context
@@ -190,7 +201,6 @@ class SymbolModule(BaseModule):
         self.aux_names = symbol.list_auxiliary_states()
 
         self._reset_bind()
-        self.param_initialized = False
 
     def _reset_bind(self):
         self.binded = False
@@ -222,7 +232,7 @@ class SymbolModule(BaseModule):
         self.exec_group = DataParallelExecutorGroup(self.symbol, self.context, self.work_load_list,
                                                     data_shapes, label_shapes, self.param_names,
                                                     for_training, inputs_need_grad, shared_group)
-        if self.param_initialized:
+        if self.params_initialized:
             # if the parameters are already initialized, we are re-binding
             # so automatically copy the already initialized params
             self.exec_group.set_params(self.arg_params, self.aux_params)
@@ -248,7 +258,7 @@ class SymbolModule(BaseModule):
         force_init : bool
             If true, will force re-initialize even if already initialized.
         """
-        if self.param_initialized and not force_init:
+        if self.params_initialized and not force_init:
             return
         assert self.binded, 'call bind before initializing the parameters'
 
@@ -274,13 +284,66 @@ class SymbolModule(BaseModule):
         for name, arr in self.aux_params.iteritems():
             _impl(name, arr, aux_params)
 
-        self.param_initialized = True
+        self.params_initialized = True
 
         # copy the initialized parameters to devices
         self.exec_group.set_params(self.arg_params, self.aux_params)
 
+    def forward(self, data_batch):
+        assert self.binded and self.params_initialized
+        self.exec_group.forward(data_batch)
 
+    def backward(self):
+        self.exec_group.backward()
 
+    def init_optimizer(self, kvstore='local', optimizer='sgd', optimizer_params={},
+                        force_init=False):
+        assert self.binded and self.params_initialized
 
+        if self.optimizer_initialized and not force_init:
+            logging.warning('optimizer already initialized, ignoring...')
+            return
 
+        (kvstore, update_on_kvstore) = _create_kvstore(
+                kvstore, len(self.context), self.arg_params)
 
+        if isinstance(optimizer, str):
+            batch_size = self.exec_group.batch_size
+            if kvstore and kvstore.type == 'dist_sync':
+                batch_size *= kvstore.num_workers
+            optimizer = opt.create(optimizer,
+                                   rescale_grad=(1.0/batch_size), **optimizer_params)
+        else:
+            assert isinstance(optimizer, opt.Optimizer)
+
+        self.optimizer = optimizer
+        self.kvstore = kvstore
+        self.update_on_kvstore = update_on_kvstore
+
+        if not update_on_kvstore:
+            self.updater = opt.get_updater(optimizer)
+        if kvstore:
+            # copy initialized local parameters to kvstore
+            _initialize_kvstore(kvstore=kvstore,
+                                param_arrays=self.exec_group.param_arrays,
+                                arg_params=self.arg_params,
+                                param_names=self.param_names,
+                                update_on_kvstore=update_on_kvstore)
+        if update_on_kvstore:
+            kvstore.set_optimizer(self.optimizer)
+
+        self.optimizer_initialized = True
+
+    def update(self):
+        assert self.binded and self.params_initialized and self.optimizer_initialized
+
+        if self.update_on_kvstore:
+            _update_params_on_kvstore(self.exec_group.param_arrays,
+                                      self.exec_group.grad_arrays,
+                                      self.kvstore)
+        else:
+            _update_params(self.exec_group.param_arrays,
+                           self.exec_group.grad_arrays,
+                           updater=self.updater,
+                           num_device=len(self.context),
+                           kvstore=self.kvstore)
