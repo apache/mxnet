@@ -1153,10 +1153,10 @@ MXNET_DLL int MXKVStoreBarrier(KVStoreHandle handle);
  * \brief the prototype of a server controller
  * \param head the head of the command
  * \param body the body of the command
- * \param helper handle for implementing controller, e.g., a Java object for scala-package
+ * \param controller_handle helper handle for implementing controller
  */
 typedef void (MXKVStoreServerController)(int head,
-                                         const char* body,
+                                         const char *body,
                                          void *controller_handle);
 
 /**
@@ -1164,7 +1164,7 @@ typedef void (MXKVStoreServerController)(int head,
  *
  * \param handle handle to the KVStore
  * \param controller the user-defined server controller
- * \param helper handle for implementing controller, e.g., a Java object for scala-package
+ * \param controller_handle helper handle for implementing controller
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreRunServer(KVStoreHandle handle,
