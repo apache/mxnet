@@ -151,7 +151,7 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
 
     # create or borrow aux variables
     if base_exec is None:
-        aux_arrays = [nd.zeros(s, ctx, dtype=t) for s, t in zip(aux_shape, arg_types)]
+        aux_arrays = [nd.zeros(s, ctx, dtype=t) for s, t in zip(aux_shape, aux_types)]
     else:
         for i, a in enumerate(base_exec.aux_arrays):
             assert aux_shape[i] == a.shape
