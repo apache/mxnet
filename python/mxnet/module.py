@@ -200,6 +200,11 @@ class DataParallelExecutorGroup(object):
         return [(k, tuple([self.slices[i].stop-self.slices[i].start] + list(v[1:])))
                 for k, v in shapes]
 
+def _as_list(obj):
+    if isinstance(obj, list):
+        return obj
+    else:
+        return [obj]
 
 class BaseModule(object):
     def __init__(self, logger=logging):
@@ -207,6 +212,28 @@ class BaseModule(object):
         self.binded = False
         self.params_initialized = False
         self.optimizer_initialized = False
+
+    def score(self, eval_data, eval_metric, num_batch=None, batch_end_callback=None):
+        assert self.binded and self.params_initialized
+
+        if not isinstance(eval_metric, metric.EvalMetric):
+            eval_metric = metric.create(eval_metric)
+
+        eval_metric.reset()
+        for nbatch, eval_batch in enumerate(eval_data):
+            if num_batch is not None and nbatch == num_batch:
+                break
+
+            self.forward(eval_batch, is_train=False)
+            self.update_metric(eval_metric, eval_batch.label)
+
+            if batch_end_callback is not None:
+                batch_end_params = BatchEndParam(epoch=epoch,
+                                                 nbatch=nbatch,
+                                                 eval_metric=eval_metric,
+                                                 locals=locals())
+                for cb in _as_list(eval_batch_end_callback):
+                    cb(batch_end_params)
 
     def fit(self, train_data, eval_data=None, eval_metric='acc',
             epoch_end_callback=None, batch_end_callback=None, kvstore='local',
@@ -224,12 +251,6 @@ class BaseModule(object):
 
         if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
-
-        def _as_list(obj):
-            if isinstance(obj, list):
-                return obj
-            else:
-                return [obj]
 
         ################################################################################
         # training loop
@@ -267,18 +288,7 @@ class BaseModule(object):
             #----------------------------------------
             # evaluation on validation set
             if eval_data:
-                eval_metric.reset()
-                for nbatch, eval_batch in enumerate(eval_data):
-                    self.forward(eval_batch, is_train=False)
-                    self.update_metric(eval_metric, eval_batch.label)
-
-                    if eval_batch_end_callback is not None:
-                        batch_end_params = BatchEndParam(epoch=epoch,
-                                                         nbatch=nbatch,
-                                                         eval_metric=eval_metric,
-                                                         locals=locals())
-                        for cb in _as_list(eval_batch_end_callback):
-                            cb(batch_end_params)
+                self.score(eval_data, eval_metric, batch_end_callback=eval_batch_end_callback)
                 for name, val in eval_metric.get_name_value():
                     self.logger.info('Epoch[%02d] Validation-%s=%f', epoch, name, val)
                 eval_data.reset()
