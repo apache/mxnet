@@ -159,8 +159,10 @@ class FullyConnectedProp : public OperatorProperty {
     if (dshape.ndim() ==  0) return false;
 
     index_t num_input = 0;
-    mshadow::Shape<2> ishape = dshape.FlatTo2D();
-    num_input = ishape[1];
+    num_input = 1;
+    for (int i = 1; i < dshape.ndim(); ++i)
+      num_input *= dshape[i];
+
     SHAPE_ASSIGN_CHECK(*in_shape, fullc::kWeight, Shape2(param_.num_hidden, num_input));
     if (!param_.no_bias) {
       SHAPE_ASSIGN_CHECK(*in_shape, fullc::kBias, Shape1(param_.num_hidden));
