@@ -6,13 +6,17 @@ from . import symbol as sym
 from . import ndarray as nd
 from . import optimizer as opt
 
+from . import metric
+
 from .executor_manager import _split_input_slice, _load_data, _load_label
 from .model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
+from .model import BatchEndParam
 from .base import mx_real_t
 from .initializer import Uniform
 
 from collections import namedtuple
 import logging
+import time
 
 class DataParallelExecutorGroup(object):
     def __init__(self, symbol, context, workload, data_shapes, label_shapes, param_names,
@@ -88,28 +92,31 @@ class DataParallelExecutorGroup(object):
         - This function will inplace update the NDArrays in arg_params and aux_params.
         """
         for name, block in zip(self.param_names, self.param_arrays):
-            weight = sum(w.copyto(cpu()) for w in block) / len(block)
+            weight = sum(w.copyto(ctx.cpu()) for w in block) / len(block)
             weight.astype(arg_params[name].dtype).copyto(arg_params[name])
         for name, block in zip(self.aux_names, self.aux_arrays):
-            weight = sum(w.copyto(cpu()) for w in block) / len(block)
+            weight = sum(w.copyto(ctx.cpu()) for w in block) / len(block)
             weight.astype(aux_params[name].dtype).copyto(aux_params[name])
 
-    def forward(self, data_batch):
+    def forward(self, data_batch, is_train=None):
         _load_data(data_batch, self.data_arrays)
-        if self.for_training:
+        if is_train is None:
+            is_train = self.for_training
+
+        if is_train:
             _load_label(data_batch, self.label_arrays)
         for texec in self.execs:
-            texec.forward(is_train=self.for_training)
+            texec.forward(is_train=is_train)
 
     def backward(self):
         assert self.for_training, 're-bind with for_training=True to run backward'
         for texec in self.execs:
             texec.backward()
 
-    def update_metric(self, metric, labels):
+    def update_metric(self, eval_metric, labels):
         for texec, islice in zip(self.execs, self.slices):
             labels_slice = [label[islice] for label in labels]
-            metric.update(labels_slice, texec.outputs)
+            eval_metric.update(labels_slice, texec.outputs)
 
     def _bind_ith_exec(self, i, data_shapes, label_shapes, shared_group):
         data_shapes = self._sliced_shape(data_shapes, i)
@@ -195,19 +202,99 @@ class DataParallelExecutorGroup(object):
 
 
 class BaseModule(object):
-    def __init__(self):
+    def __init__(self, logger=logging):
+        self.logger = logger
         self.binded = False
         self.params_initialized = False
         self.optimizer_initialized = False
 
-    def train(self, train_data, valid_data):
-        # TODO
-        pass
+    def fit(self, train_data, eval_data=None, eval_metric='acc',
+            epoch_end_callback=None, batch_end_callback=None, kvstore='local',
+            optimizer='sgd', optimizer_params={}, eval_batch_end_callback=None,
+            initializer=Uniform(0.01), arg_params=None, aux_params=None,
+            allow_missing=False, force_init=False, begin_epoch=0, num_epoch=None):
+
+        assert num_epoch is not None, 'please specify number of epochs'
+
+        self.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label,
+                  for_training=True, force_rebind=True)
+        self.init_params(initializer=initializer, arg_params=arg_params, aux_params=aux_params,
+                         allow_missing=allow_missing, force_init=force_init)
+        self.init_optimizer(kvstore=kvstore, optimizer=optimizer, optimizer_params=optimizer_params)
+
+        if not isinstance(eval_metric, metric.EvalMetric):
+            eval_metric = metric.create(eval_metric)
+
+        def _as_list(obj):
+            if isinstance(obj, list):
+                return obj
+            else:
+                return [obj]
+
+        ################################################################################
+        # training loop
+        ################################################################################
+        for epoch in range(begin_epoch, num_epoch):
+            tic = time.time()
+            eval_metric.reset()
+            for nbatch, data_batch in enumerate(train_data):
+                self.forward(data_batch, is_train=True)
+                self.backward()
+                self.update()
+                self.update_metric(eval_metric, data_batch.label)
+
+                if batch_end_callback is not None:
+                    batch_end_params = BatchEndParam(epoch=epoch, nbatch=nbatch,
+                                                     eval_metric=eval_metric,
+                                                     locals=locals())
+                    for cb in _as_list(batch_end_callback):
+                        cb(batch_end_params)
+
+            # one epoch of training is finished
+            for name, val in eval_metric.get_name_value():
+                self.logger.info('Epoch[%02d] Train-%s=%f', epoch, name, val)
+            toc = time.time()
+            self.logger.info('Epoch[%02d] Time cost=%.3f', epoch, (toc-tic))
+
+            # sync parameters back to CPU
+            if epoch_end_callback or epoch+1 == num_epoch:
+                self.sync_params_from_devices()
+
+            if epoch_end_callback is not None:
+                for cb in _as_list(epoch_end_callback):
+                    cb(epoch, self.symbol, self.arg_params, self.aux_params)
+
+            #----------------------------------------
+            # evaluation on validation set
+            if eval_data:
+                eval_metric.reset()
+                for nbatch, eval_batch in enumerate(eval_data):
+                    self.forward(eval_batch, is_train=False)
+                    self.update_metric(eval_metric, eval_batch.label)
+
+                    if eval_batch_end_callback is not None:
+                        batch_end_params = BatchEndParam(epoch=epoch,
+                                                         nbatch=nbatch,
+                                                         eval_metric=eval_metric,
+                                                         locals=locals())
+                        for cb in _as_list(eval_batch_end_callback):
+                            cb(batch_end_params)
+                for name, val in eval_metric.get_name_value():
+                    self.logger.info('Epoch[%02d] Validation-%s=%f', epoch, name, val)
+                eval_data.reset()
+
+            # end of 1 epoch, reset the data-iter for another epoch
+            train_data.reset()
+
+
+
+
+
 
 
 class Module(BaseModule):
-    def __init__(self, symbol, input_names, context=ctx.cpu(), work_load_list=None):
-        super(Module, self).__init__()
+    def __init__(self, symbol, input_names, logger=logging, context=ctx.cpu(), work_load_list=None):
+        super(Module, self).__init__(logger=logger)
 
         if isinstance(context, ctx.Context):
             context = [context]
@@ -241,7 +328,7 @@ class Module(BaseModule):
             self._reset_bind()
 
         if self.binded:
-            logging.warning('Already binded, ignoring bind()')
+            self.logger.warning('Already binded, ignoring bind()')
             return
 
         self.for_training = for_training
@@ -312,19 +399,19 @@ class Module(BaseModule):
         # copy the initialized parameters to devices
         self.exec_group.set_params(self.arg_params, self.aux_params)
 
-    def forward(self, data_batch):
+    def forward(self, data_batch, is_train=None):
         assert self.binded and self.params_initialized
-        self.exec_group.forward(data_batch)
+        self.exec_group.forward(data_batch, is_train)
 
     def backward(self):
         self.exec_group.backward()
 
     def init_optimizer(self, kvstore='local', optimizer='sgd', optimizer_params={},
-                        force_init=False):
+                       force_init=False):
         assert self.binded and self.params_initialized
 
         if self.optimizer_initialized and not force_init:
-            logging.warning('optimizer already initialized, ignoring...')
+            self.logger.warning('optimizer already initialized, ignoring...')
             return
 
         (kvstore, update_on_kvstore) = _create_kvstore(
@@ -371,8 +458,8 @@ class Module(BaseModule):
                            num_device=len(self.context),
                            kvstore=self.kvstore)
 
-    def update_metric(self, metric, labels):
-        self.exec_group.update_metric(metric, labels)
+    def update_metric(self, eval_metric, labels):
+        self.exec_group.update_metric(eval_metric, labels)
 
     def sync_params_from_devices(self):
         self.exec_group.get_params(self.arg_params, self.aux_params)
