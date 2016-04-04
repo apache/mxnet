@@ -44,4 +44,6 @@ from . import monitor as mon
 from . import torch
 from . import torch as th
 
+from . import mod
+
 __version__ = base.__version__
