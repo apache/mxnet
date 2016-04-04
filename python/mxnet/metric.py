@@ -142,6 +142,27 @@ class Accuracy(EvalMetric):
             self.sum_metric += (pred_label.flat == label.flat).sum()
             self.num_inst += len(pred_label.flat)
 
+class Preplexity(EvalMetric):
+    """Calculate preplexity"""
+
+    def __init__(self):
+        super(Preplexity, self).__init__('preplexity')
+
+    def update(self, labels, preds):
+        check_label_shapes(labels, preds)
+
+        for i in range(len(labels)):
+            prob = preds[i].asnumpy()
+            label = labels[i].asnumpy().astype('int32')
+
+            check_label_shapes(label, pred_label)
+            for i in range(len(label)):
+                loss = -np.log(max(1e-10, pred[i][label[i]]))
+                self.sum_metric += np.exp(loss)
+
+            self.num_inst += len(label)
+
+
 class TopKAccuracy(EvalMetric):
     """Calculate top k predictions accuracy"""
 
