@@ -87,6 +87,10 @@ class DataParallelExecutorGroup(object):
         for texec in self.execs:
             texec.backward()
 
+    def update_metric(self, metric, labels):
+        for texec, islice in zip(self.execs, self.slices):
+            labels_slice = [label[islice] for label in labels]
+            metric.update(labels_slice, texec.outputs)
 
     def _bind_ith_exec(self, i, data_shapes, label_shapes, shared_group):
         data_shapes = self._sliced_shape(data_shapes, i)
@@ -182,9 +186,9 @@ class BaseModule(object):
         pass
 
 
-class SymbolModule(BaseModule):
+class Module(BaseModule):
     def __init__(self, symbol, input_names, context=ctx.cpu(), work_load_list=None):
-        super(SymbolModule, self).__init__()
+        super(Module, self).__init__()
 
         if isinstance(context, ctx.Context):
             context = [context]
@@ -347,3 +351,6 @@ class SymbolModule(BaseModule):
                            updater=self.updater,
                            num_device=len(self.context),
                            kvstore=self.kvstore)
+
+    def update_metric(self, metric, labels):
+        self.exec_group.update_metric(metric, labels)
