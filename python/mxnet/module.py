@@ -346,6 +346,9 @@ class Module(BaseModule):
         self.param_names = [x for x in arg_names if x not in input_names]
         self.aux_names = symbol.list_auxiliary_states()
 
+        self.arg_params = None
+        self.aux_params = None
+
         self._reset_bind()
 
     def _reset_bind(self):
@@ -357,7 +360,7 @@ class Module(BaseModule):
     # binding a module allocate the memory required to carry out the computation
     # on the specific devices (contexts) specified.
     def bind(self, data_shapes, label_shapes=None, for_training=True,
-             inputs_need_grad=False, force_rebind=False, shared_group=None):
+             inputs_need_grad=False, force_rebind=False, shared_module=None):
         # force rebinding is typically used when one want to switch from
         # training to prediction phase.
         if force_rebind:
@@ -375,13 +378,27 @@ class Module(BaseModule):
         else:
             assert label_shapes is not None
 
+        if shared_module is not None:
+            assert isinstance(shared_module, Module) and \
+                    shared_module.binded and shared_module.params_initialized
+            shared_group = shared_module.exec_group
+
         self.exec_group = DataParallelExecutorGroup(self.symbol, self.context, self.work_load_list,
                                                     data_shapes, label_shapes, self.param_names,
                                                     for_training, inputs_need_grad, shared_group)
+
+        if shared_module is not None:
+            self.params_initialized = True
+            self.arg_params = shared_module.arg_params
+            self.aux_params = shared_module.aux_params
+
         if self.params_initialized:
             # if the parameters are already initialized, we are re-binding
             # so automatically copy the already initialized params
             self.exec_group.set_params(self.arg_params, self.aux_params)
+
+        if shared_module is not None and shared_module.optimizer_initialized:
+            self.borrow_optimizer(shared_module)
 
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
@@ -408,11 +425,13 @@ class Module(BaseModule):
             return
         assert self.binded, 'call bind before initializing the parameters'
 
-        param_arrays = [nd.zeros(x[0].shape) for x in self.exec_group.param_arrays]
-        self.arg_params = {name:arr for name, arr in zip(self.param_names, param_arrays)}
+        if self.arg_params is None:
+            param_arrays = [nd.zeros(x[0].shape) for x in self.exec_group.param_arrays]
+            self.arg_params = {name:arr for name, arr in zip(self.param_names, param_arrays)}
 
-        aux_arrays = [nd.zeros(x[0].shape) for x in self.exec_group.aux_arrays]
-        self.aux_params = {name:arr for name, arr in zip(self.aux_names, aux_arrays)}
+        if self.aux_params is None:
+            aux_arrays = [nd.zeros(x[0].shape) for x in self.exec_group.aux_arrays]
+            self.aux_params = {name:arr for name, arr in zip(self.aux_names, aux_arrays)}
 
         def _impl(name, arr, cache):
             if cache is not None:
@@ -479,6 +498,7 @@ class Module(BaseModule):
         self.optimizer = optimizer
         self.kvstore = kvstore
         self.update_on_kvstore = update_on_kvstore
+        self.updater = None
 
         if not update_on_kvstore:
             self.updater = opt.get_updater(optimizer)
@@ -492,6 +512,14 @@ class Module(BaseModule):
         if update_on_kvstore:
             kvstore.set_optimizer(self.optimizer)
 
+        self.optimizer_initialized = True
+
+    def borrow_optimizer(self, shared_module):
+        assert shared_module.optimizer_initialized
+        self.optimizer = shared_module.optimizer
+        self.kvstore = shared_module.kvstore
+        self.update_on_kvstore = shared_module.update_on_kvstore
+        self.updater = shared_module.updater
         self.optimizer_initialized = True
 
     def update(self):
@@ -513,6 +541,124 @@ class Module(BaseModule):
 
     def sync_params_from_devices(self):
         self.exec_group.get_params(self.arg_params, self.aux_params)
+
+
+class BucketingModule(BaseModule):
+    def __init__(self, sym_gen, default_bucket_key=None, logger=logging,
+                 context=ctx.cpu(), work_load_list=None):
+        super(BucketModule, self).__init__(logger=logger)
+
+        assert default_bucket_key is not None
+        self.default_bucket_key = default_bucket_key
+
+        self.sym_gen = sym_gen
+        self.context = context
+        self.work_load_list = work_load_list
+
+        self._reset_bind()
+
+    def _reset_bind(self):
+        self.binded = False
+        self.buckets = {}
+        self.curr_module = None
+
+    def bind(self, data_shapes, label_shapes=None, for_training=True,
+             inputs_need_grad=False, force_rebind=False):
+        # force rebinding is typically used when one want to switch from
+        # training to prediction phase.
+        if force_rebind:
+            self._reset_bind()
+
+        if self.binded:
+            self.logger.warning('Already binded, ignoring bind()')
+            return
+
+        self.binded = True
+        symbol, input_names = self.sym_gen(self.default_bucket_key)
+        module = Module(symbol, input_names, logger=self.logger, context=self.context,
+                        work_load_list=self.work_load_list)
+        module.bind(data_shapes, label_shapes, for_training, inputs_need_grad,
+                    force_rebind=False, shared_module=None)
+        self.curr_module = module
+        self.buckets[self.default_bucket_key] = module
+
+    def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
+                    allow_missing=False, force_init=False):
+        if self.params_initialized and not force_init:
+            return
+        assert self.binded, 'call bind before initializing the parameters'
+        self.curr_module.init_params(initializer=initializer, arg_params=arg_params,
+                                     aux_params=aux_params, allow_missing=allow_missing,
+                                     force_init=force_init)
+        self.params_initialized = True
+
+    def switch_bucket(self, bucket_key, data_shapes, label_shapes=None):
+        assert self.binded, 'call bind before switching bucket'
+        if not self.buckets.has_key(bucket_key):
+            symbol, input_names = self.sym_gen(bucket_key)
+            module = Module(symbol, input_names, logger=self.logger, context=self.context,
+                            work_load_list=self.work_load_list)
+            module.bind(data_shapes, label_shapes, self.curr_module.for_training,
+                        self.curr_module.inputs_need_grad,
+                        force_rebind=False, shared_module=self.curr_module)
+            self.buckets[bucket_key] = module
+
+        self.curr_module = self.buckets[bucket_key]
+
+
+    def forward(self, data_batch, is_train=None):
+        assert self.binded and self.params_initialized
+        self.switch_bucket(data_batch.bucket_key, data_batch.provide_data,
+                           data_batch.provide_label)
+        self.curr_module.forward(data_batch, is_train=is_train)
+
+    def backward(self):
+        self.curr_module.backward()
+
+    def get_outputs(self, merge_multi_context=True):
+        return self.curr_module.get_outputs(merge_multi_context=merge_multi_context)
+
+    def init_optimizer(self, kvstore='local', optimizer='sgd', optimizer_params={},
+                       force_init=False):
+        assert self.binded and self.params_initialized
+        if self.optimizer_initialized and not force_init:
+            self.logger.warning('optimizer already initialized, ignoring.')
+            return
+
+        self.curr_module.init_optimizer(kvstore, optimizer, optimizer_params, force_init=force_init)
+        for mod in self.buckets.itervalues():
+            if mod is not self.curr_module:
+                mod.borrow_optimizer(self.curr_module)
+
+        self.optimizer_initialized
+
+    def update(self):
+        assert self.binded and self.params_initialized and self.optimizer_initialized
+        self.curr_module.update()
+
+    def update_metric(self, eval_metric, labels):
+        self.curr_module.update_metric(eval_metric, labels)
+
+    def sync_params_from_devices(self):
+        self.curr_module.sync_params_from_devices()
+
+    @property
+    def arg_params(self):
+        assert self.binded and self.params_initialized
+        return self.curr_module.arg_params
+
+    @property
+    def aux_params(self):
+        assert self.binded and self.params_initialized
+        return self.curr_module.aux_params
+
+    @property
+    def symbol(self):
+        assert self.binded
+        return self.curr_module.symbol
+
+
+
 
 
 
