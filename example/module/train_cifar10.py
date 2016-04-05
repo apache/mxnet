@@ -43,13 +43,14 @@ args = parser.parse_args()
 def _download(data_dir):
     if not os.path.isdir(data_dir):
         os.system("mkdir " + data_dir)
+    cwd = os.path.abspath(os.getcwd())
     os.chdir(data_dir)
     if (not os.path.exists('train.rec')) or \
        (not os.path.exists('test.rec')) :
         os.system("wget http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip")
         os.system("unzip -u cifar10.zip")
         os.system("mv cifar/* .; rm -rf cifar; rm cifar10.zip")
-    os.chdir("..")
+    os.chdir(cwd)
 
 # network
 import importlib
@@ -113,7 +114,9 @@ if args.load_epoch is not None:
     assert model_prefix is not None
     logging.info('loading model from %s-%d...' % (model_prefix, args.load_epoch))
     sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, args.load_epoch) 
-    mod.init_params(arg_params=arg_params, aux_params=aux_params)
+else:
+    arg_params = None
+    aux_params = None
 
 # save model
 save_model_prefix = args.save_model_prefix
@@ -135,8 +138,14 @@ eval_metrics = ['accuracy']
 for top_k in [5, 10, 20]:
     eval_metrics.append(mx.metric.create('top_k_accuracy', top_k = top_k))
 
+if args.load_epoch:
+    begin_epoch = args.load_epoch+1
+else:
+    begin_epoch = 0
+
 logging.info('start training for %d epochs...', args.num_epochs)
 mod.fit(train, eval_data=val, optimizer_params=optim_args,
         eval_metric=eval_metrics, num_epoch=args.num_epochs,
+        arg_params=arg_params, aux_params=aux_params, begin_epoch=begin_epoch,
         batch_end_callback=mx.callback.Speedometer(args.batch_size, 50),
         epoch_end_callback=checkpoint)
