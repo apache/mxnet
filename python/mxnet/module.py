@@ -329,7 +329,8 @@ class BaseModule(object):
 
 
 class Module(BaseModule):
-    def __init__(self, symbol, input_names, logger=logging, context=ctx.cpu(), work_load_list=None):
+    def __init__(self, symbol, input_names=['data', 'softmax_label'], logger=logging,
+                 context=ctx.cpu(), work_load_list=None):
         super(Module, self).__init__(logger=logger)
 
         if isinstance(context, ctx.Context):
@@ -544,12 +545,14 @@ class Module(BaseModule):
 
 
 class BucketingModule(BaseModule):
-    def __init__(self, sym_gen, default_bucket_key=None, logger=logging,
-                 context=ctx.cpu(), work_load_list=None):
+    def __init__(self, sym_gen, default_bucket_key=None, default_input_names=None,
+                 logger=logging, context=ctx.cpu(), work_load_list=None):
         super(BucketModule, self).__init__(logger=logger)
 
         assert default_bucket_key is not None
+        assert default_input_names is not None, 'please specify input names for the default bucket'
         self.default_bucket_key = default_bucket_key
+        self.default_input_names = default_input_names
 
         self.sym_gen = sym_gen
         self.context = context
@@ -561,6 +564,16 @@ class BucketingModule(BaseModule):
         self.binded = False
         self.buckets = {}
         self.curr_module = None
+
+    def _gen_symbol(self, key):
+        assert self.binded
+        symbol = self.sym_gen(self.default_bucket_key)
+        arg_names = symbol.list_arguments()
+
+        # we assume in the bucketing case, all symbols have the same set of parameters,
+        # and all the rest of the arguments are considered as input names
+        input_names = [x for x in arg_names if not x in self.curr_module.param_names]
+        return symbol, input_names
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False):
@@ -574,8 +587,8 @@ class BucketingModule(BaseModule):
             return
 
         self.binded = True
-        symbol, input_names = self.sym_gen(self.default_bucket_key)
-        module = Module(symbol, input_names, logger=self.logger, context=self.context,
+        symbol = self.sym_gen(self.default_bucket_key)
+        module = Module(symbol, self.default_input_names, logger=self.logger, context=self.context,
                         work_load_list=self.work_load_list)
         module.bind(data_shapes, label_shapes, for_training, inputs_need_grad,
                     force_rebind=False, shared_module=None)
@@ -595,7 +608,7 @@ class BucketingModule(BaseModule):
     def switch_bucket(self, bucket_key, data_shapes, label_shapes=None):
         assert self.binded, 'call bind before switching bucket'
         if not self.buckets.has_key(bucket_key):
-            symbol, input_names = self.sym_gen(bucket_key)
+            symbol, input_names = self._gen_symbol(bucket_key)
             module = Module(symbol, input_names, logger=self.logger, context=self.context,
                             work_load_list=self.work_load_list)
             module.bind(data_shapes, label_shapes, self.curr_module.for_training,
