@@ -250,23 +250,31 @@ class BaseModule(object):
         if reset:
             eval_data.reset()
 
-        output_list = [[] for _ in range(self.num_outputs)]
+        output_list = []
 
         for nbatch, eval_batch in enumerate(eval_data):
             if num_batch is not None and nbatch == num_batch:
                 break
             self.forward(eval_batch, is_train=False)
             pad = eval_batch.pad
-            for o_list, o_nd in zip(output_list, self.get_outputs()):
-                o_list.append(o_nd[:o_nd.shape[0]-pad])
+            output_list.append(self.get_outputs())
+
+        if len(output_list) == 0:
+            return output_list
 
         if merge_batches:
-            output_list = [np.concatenate(x) for x in output_list]
+            num_outputs = len(output_list[0])
+            for o in output_list:
+                assert(len(o) == num_outputs,
+                       'Cannot merge batches, as num of outputs is not the same in mini-batches. ' +
+                       'Maybe bucketing is used?')
+            output_list2 = [np.concatenate([o[i] for o in output_list]) for i in range(num_outputs)]
 
-        if len(output_list) == 1 and not always_output_list:
-            return output_list[0]
+            if num_outputs == 1:
+                return output_list2[0]
+            return output_list2
+
         return output_list
-
 
     def fit(self, train_data, eval_data=None, eval_metric='acc',
             epoch_end_callback=None, batch_end_callback=None, kvstore='local',
@@ -383,6 +391,8 @@ class Module(BaseModule):
             assert isinstance(shared_module, Module) and \
                     shared_module.binded and shared_module.params_initialized
             shared_group = shared_module.exec_group
+        else:
+            shared_group = None
 
         self.exec_group = DataParallelExecutorGroup(self.symbol, self.context, self.work_load_list,
                                                     data_shapes, label_shapes, self.param_names,
@@ -462,11 +472,6 @@ class Module(BaseModule):
     def backward(self):
         assert self.binded and self.params_initialized
         self.exec_group.backward()
-
-    @property
-    def num_outputs(self):
-        assert self.binded and self.params_initialized
-        return len(self.exec_group.execs[0].outputs)
 
     def get_outputs(self, merge_multi_context=True):
         assert self.binded and self.params_initialized
