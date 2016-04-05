@@ -9,6 +9,9 @@ import mxnet as mx
 from lstm import lstm_unroll
 from bucket_io import BucketSentenceIter, default_build_vocab
 
+import os.path
+data_dir = os.path.abspath(os.path.join(os.path.dirname(__FILE__), '..', 'rnn', 'data'))
+
 def Perplexity(label, pred):
     loss = 0.
     for i in range(pred.shape[0]):
@@ -32,7 +35,7 @@ if __name__ == '__main__':
 
     contexts = [mx.context.gpu(i) for i in range(1)]
 
-    vocab = default_build_vocab("./data/ptb.train.txt")
+    vocab = default_build_vocab(os.path.join(data_dir, "train.txt"))
 
     def sym_gen(seq_len):
         return lstm_unroll(num_lstm_layer, seq_len, len(vocab),
@@ -43,9 +46,9 @@ if __name__ == '__main__':
     init_h = [('l%d_init_h'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
     init_states = init_c + init_h
 
-    data_train = BucketSentenceIter("./data/ptb.train.txt", vocab,
+    data_train = BucketSentenceIter(os.path.join(data_dir, "ptb.train.txt"), vocab,
                                     buckets, batch_size, init_states)
-    data_val = BucketSentenceIter("./data/ptb.valid.txt", vocab,
+    data_val = BucketSentenceIter(os.path.join(data_dir, "ptb.valid.txt"), vocab,
                                   buckets, batch_size, init_states)
 
     if dummy_data:
