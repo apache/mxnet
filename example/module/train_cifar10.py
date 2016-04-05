@@ -1,11 +1,14 @@
+import logging
+import os, sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "image-classification")))
+
 import find_mxnet
 import mxnet as mx
 import argparse
-import os, sys
 import train_model
 
 default_data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
-                                                'image-classification', 'cifar10'))
+                                                'image-classification', 'cifar10')) + '/'
 
 parser = argparse.ArgumentParser(description='train an image classifer on cifar10')
 parser.add_argument('--network', type=str, default='inception-bn-28-small',
@@ -49,7 +52,6 @@ def _download(data_dir):
     os.chdir("..")
 
 # network
-sys.path.insert(0, "../image-classification")
 import importlib
 net = importlib.import_module('symbol_' + args.network).get_symbol(10)
 
@@ -99,7 +101,24 @@ logging.info('start with arguments %s', args)
 devs = mx.cpu() if args.gpus is None else [
     mx.gpu(int(i)) for i in args.gpus.split(',')]
 
-mod = mx.mod.Module(symbol, context=devs)
+mod = mx.mod.Module(net, context=devs)
+
+# load model
+model_prefix = args.model_prefix
+if model_prefix is not None:
+    model_prefix += "-%d" % (kv.rank)
+
+if args.load_epoch is not None:
+    assert model_prefix is not None
+    logging.info('loading model from %s-%d...' % (model_prefix, args.load_epoch))
+    sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, args.load_epoch) 
+    mod.init_params(arg_params=arg_params, aux_params=aux_params)
+
+# save model
+save_model_prefix = args.save_model_prefix
+if save_model_prefix is None:
+    save_model_prefix = model_prefix
+checkpoint = None if save_model_prefix is None else mx.callback.do_checkpoint(save_model_prefix)
 
 optim_args = {'learning_rate': args.lr, 'wd': 0.00001, 'momentum': 0.9}
 if 'lr_factor' in args and args.lr_factor < 1:
@@ -117,4 +136,5 @@ for top_k in [5, 10, 20]:
 
 mod.fit(train, eval_data=val, optimizer_params=optim_args,
         eval_metric=eval_metrics, num_epoch=args.num_epochs,
-        batch_end_callback=mx.callback.Speedometer(args.batch_size, 50))
+        batch_end_callback=mx.callback.Speedometer(args.batch_size, 50),
+        epoch_end_callback=checkpoint)
