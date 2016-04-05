@@ -10,7 +10,7 @@ from lstm import lstm_unroll
 from bucket_io import BucketSentenceIter, default_build_vocab
 
 import os.path
-data_dir = os.path.abspath(os.path.join(os.path.dirname(__FILE__), '..', 'rnn', 'data'))
+data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'rnn', 'data'))
 
 def Perplexity(label, pred):
     loss = 0.
@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
     contexts = [mx.context.gpu(i) for i in range(1)]
 
-    vocab = default_build_vocab(os.path.join(data_dir, "train.txt"))
+    vocab = default_build_vocab(os.path.join(data_dir, "ptb.train.txt"))
 
     def sym_gen(seq_len):
         return lstm_unroll(num_lstm_layer, seq_len, len(vocab),
@@ -60,18 +60,18 @@ if __name__ == '__main__':
         mod = mx.mod.Module(sym_gen(buckets[0]), input_names=default_input_names,
                             context=contexts)
     else:
-        mod = mx.mod.BucketModule(sym_gen, default_bucket_key=buckets[0],
-                                  default_input_names=default_input_names,
-                                  context=contexts)
+        mod = mx.mod.BucketingModule(sym_gen, default_bucket_key=buckets[0],
+                                     default_input_names=default_input_names,
+                                     context=contexts)
 
     import logging
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
 
-    mod.fit(data_train, eval_data=data_val,
+    mod.fit(data_train, eval_data=data_val, num_epoch=num_epoch,
             eval_metric=mx.metric.np(Perplexity),
             batch_end_callback=mx.callback.Speedometer(batch_size, 50),
             initializer=mx.init.Xavier(factor_type="in", magnitude=2.34),
             optimizer='sgd',
-            optimizer_params={'learning_rate':0.01, 'momentum', 0.9, 'wd': 0.00001})
+            optimizer_params={'learning_rate':0.01, 'momentum': 0.9, 'wd': 0.00001})
 
