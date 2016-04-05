@@ -96,17 +96,18 @@ head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
 logging.basicConfig(level=logging.DEBUG, format=head)
 logging.info('start with arguments %s', args)
 
+import platform
+logging.info('running on %s', platform.node())
+
 (train, val) = get_iterator(args, kv)
 
-devs = mx.cpu() if args.gpus is None else [
+devs = mx.cpu() if (args.gpus is None or args.gpus == '') else [
     mx.gpu(int(i)) for i in args.gpus.split(',')]
 
 mod = mx.mod.Module(net, context=devs)
 
 # load model
 model_prefix = args.model_prefix
-if model_prefix is not None:
-    model_prefix += "-%d" % (kv.rank)
 
 if args.load_epoch is not None:
     assert model_prefix is not None
@@ -134,6 +135,7 @@ eval_metrics = ['accuracy']
 for top_k in [5, 10, 20]:
     eval_metrics.append(mx.metric.create('top_k_accuracy', top_k = top_k))
 
+logging.info('start training for %d epochs...', args.num_epochs)
 mod.fit(train, eval_data=val, optimizer_params=optim_args,
         eval_metric=eval_metrics, num_epoch=args.num_epochs,
         batch_end_callback=mx.callback.Speedometer(args.batch_size, 50),

@@ -313,9 +313,9 @@ class BaseModule(object):
 
             # one epoch of training is finished
             for name, val in eval_metric.get_name_value():
-                self.logger.info('Epoch[%02d] Train-%s=%f', epoch, name, val)
+                self.logger.info('Epoch[%d] Train-%s=%f', epoch, name, val)
             toc = time.time()
-            self.logger.info('Epoch[%02d] Time cost=%.3f', epoch, (toc-tic))
+            self.logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc-tic))
 
             # sync parameters back to CPU
             if epoch_end_callback or epoch+1 == num_epoch:
@@ -330,7 +330,7 @@ class BaseModule(object):
             if eval_data:
                 self.score(eval_data, eval_metric, batch_end_callback=eval_batch_end_callback)
                 for name, val in eval_metric.get_name_value():
-                    self.logger.info('Epoch[%02d] Validation-%s=%f', epoch, name, val)
+                    self.logger.info('Epoch[%d] Validation-%s=%f', epoch, name, val)
 
             # end of 1 epoch, reset the data-iter for another epoch
             train_data.reset()
