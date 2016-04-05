@@ -448,7 +448,7 @@ class Module(BaseModule):
         def _impl(name, arr, cache):
             if cache is not None:
                 if cache.has_key(name):
-                    cache[name].copy_to(arr)
+                    cache[name].copyto(arr)
                 else:
                     assert allow_missing
                     initializer(name, arr)
