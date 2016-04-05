@@ -265,9 +265,9 @@ class BaseModule(object):
         if merge_batches:
             num_outputs = len(output_list[0])
             for o in output_list:
-                assert(len(o) == num_outputs,
-                       'Cannot merge batches, as num of outputs is not the same in mini-batches. ' +
-                       'Maybe bucketing is used?')
+                assert len(o) == num_outputs, \
+                       'Cannot merge batches, as num of outputs is not the same in mini-batches. ' + \
+                       'Maybe bucketing is used?'
             output_list2 = [np.concatenate([o[i] for o in output_list]) for i in range(num_outputs)]
 
             if num_outputs == 1:
@@ -380,6 +380,7 @@ class Module(BaseModule):
             return
 
         self.for_training = for_training
+        self.inputs_need_grad = inputs_need_grad
         self.binded = True
 
         if not for_training:
@@ -552,7 +553,7 @@ class Module(BaseModule):
 class BucketingModule(BaseModule):
     def __init__(self, sym_gen, default_bucket_key=None, default_input_names=None,
                  logger=logging, context=ctx.cpu(), work_load_list=None):
-        super(BucketModule, self).__init__(logger=logger)
+        super(BucketingModule, self).__init__(logger=logger)
 
         assert default_bucket_key is not None
         assert default_input_names is not None, 'please specify input names for the default bucket'
@@ -572,7 +573,7 @@ class BucketingModule(BaseModule):
 
     def _gen_symbol(self, key):
         assert self.binded
-        symbol = self.sym_gen(self.default_bucket_key)
+        symbol = self.sym_gen(key)
         arg_names = symbol.list_arguments()
 
         # we assume in the bucketing case, all symbols have the same set of parameters,
@@ -648,7 +649,7 @@ class BucketingModule(BaseModule):
             if mod is not self.curr_module:
                 mod.borrow_optimizer(self.curr_module)
 
-        self.optimizer_initialized
+        self.optimizer_initialized = True
 
     def update(self):
         assert self.binded and self.params_initialized and self.optimizer_initialized
