@@ -19,7 +19,45 @@ import logging
 import time
 import numpy as np
 
+
 class DataParallelExecutorGroup(object):
+    """DataParallelExecutorGroup is a group of executors that lives on a group of devices.
+    This is a helper class used to implement data parallelization. Each mini-batch will
+    be split and run on the devices.
+
+    Parameters
+    ----------
+    symbol : Symbol
+        The common symbolic computation graph for all executors.
+    context : list
+        A list of contexts.
+    workload : list
+        If not `None`, could be a list of numbers that specify the workload to be assigned
+        to different context. Larger number indicate heavier workload.
+    data_shapes : list
+        Should be a list of (name, shape) tuples, for the shapes of data. Note the order is
+        important and should be the same as the order that the `DataIter` provide the data.
+    label_shapes : list
+        Should be a list of (name, shape) tuples, for the shapes of label. Note the order is
+        important and should be the same as the order that the `DataIter` provide the label.
+    param_names : list
+        A list of strings, indicating the names of parameters (e.g. weights, filters, etc.)
+        in the computation graph.
+    for_training : bool
+        Indicate whether the executors should be bind for training. When not doing training,
+        the memory for gradients will not be allocated.
+    inputs_need_grad : bool
+        Indicate whether the gradients for the input data should be computed. This is currently
+        not used. It will be useful for implementing composition of modules.
+    shared_group : DataParallelExecutorGroup
+        Default is `None`. This is used in bucketing. When not `None`, it should be a executor
+        group corresponding to a different bucket. In other words, it will correspond to a different
+        symbol but with the same set of parameters (e.g. unrolled RNNs with different lengths).
+        In this case, many memory will be shared.
+    input_types : list
+        Default is `None`. When not `None`, can be used to specify the data type for each
+        of the data/label inputs.
+    """
     def __init__(self, symbol, context, workload, data_shapes, label_shapes, param_names,
                  for_training, inputs_need_grad, shared_group=None, input_types=None):
         self.param_names = param_names
@@ -40,10 +78,28 @@ class DataParallelExecutorGroup(object):
         else:
             self.shared_data_arrays = [{} for _ in context]
 
-        self.decide_slices(data_shapes, label_shapes)
+        # initialize some instance variables
+        self.batch_size = None
+        self.slices = None
+        self.execs = None
+        self.data_arrays = None
+        self.label_arrays = None
+        self.param_arrays = None
+        self.grad_arrays = None
+        self.aux_arrays = None
+
+        # calculate workload and bind executors
+        self.decide_slices(data_shapes)
         self.bind_exec(data_shapes, label_shapes, shared_group)
 
-    def decide_slices(self, data_shapes, label_shapes):
+    def decide_slices(self, data_shapes):
+        """Decide the slices for each context according to the workload.
+
+        Parameters
+        ----------
+        data_shapes : list
+            list of (name, shape) specifying the shapes for the input data.
+        """
         assert len(data_shapes) > 0
         self.batch_size = data_shapes[0][1][0]
         for s in data_shapes:
@@ -52,6 +108,14 @@ class DataParallelExecutorGroup(object):
         self.slices = _split_input_slice(self.batch_size, self.workload)
 
     def bind_exec(self, data_shapes, label_shapes, shared_group):
+        """Bind executors on their respective devices.
+
+        Parameters
+        ----------
+        data_shapes : list
+        label_shapes : list
+        shared_group : DataParallelExecutorGroup
+        """
         self.execs = []
         for i in range(len(self.context)):
             self.execs.append(self._bind_ith_exec(i, data_shapes, label_shapes, shared_group))
@@ -65,7 +129,6 @@ class DataParallelExecutorGroup(object):
         else:
             self.label_arrays = None
 
-
         self.param_arrays = [[e.arg_arrays[i] for e in self.execs]
                              for i, name in enumerate(self.arg_names)
                              if name in self.param_names]
@@ -77,17 +140,28 @@ class DataParallelExecutorGroup(object):
                            for i in range(len(self.aux_names))]
 
     def set_params(self, arg_params, aux_params):
-        for texec in self.execs:
-            texec.copy_params_from(arg_params, aux_params)
+        """Assign, i.e. copy parameters to all the executors.
+
+        Parameters
+        ----------
+        arg_params : dict
+            A dictionary of name to `NDArray` parameter mapping.
+        aux_params : dict
+            A dictionary of name to `NDArray` auxiliary variable mapping.
+        """
+        for e in self.execs:
+            e.copy_params_from(arg_params, aux_params)
 
     def get_params(self, arg_params, aux_params):
-        """ Copy data from each executor to `arg_params` and `aux_params`
+        """ Copy data from each executor to `arg_params` and `aux_params`.
+
         Parameters
         ----------
         arg_params : list of NDArray
             target parameter arrays
         aux_params : list of NDArray
             target aux arrays
+
         Notes
         -----
         - This function will inplace update the NDArrays in arg_params and aux_params.
@@ -100,26 +174,54 @@ class DataParallelExecutorGroup(object):
             weight.astype(aux_params[name].dtype).copyto(aux_params[name])
 
     def forward(self, data_batch, is_train=None):
+        """Split `data_batch` according to workload and run forward on each devices.
+
+        Parameters
+        ----------
+        data_batch : DataBatch
+            Or could be any object implementing similar interface.
+        is_train : bool
+            The hint for the backend, indicating whether we are during training phase.
+            Default is `None`, then the value `self.for_training` will be used.
+        Returns
+        -------
+
+        """
         _load_data(data_batch, self.data_arrays)
         if is_train is None:
             is_train = self.for_training
 
         if is_train:
             _load_label(data_batch, self.label_arrays)
-        for texec in self.execs:
-            texec.forward(is_train=is_train)
+        for e in self.execs:
+            e.forward(is_train=is_train)
 
     def backward(self):
+        """Run backward on all devices. A backward should be called after
+        a call to the forward function. Backward cannot be called unless
+        `self.for_training` is `True`.
+        """
         assert self.for_training, 're-bind with for_training=True to run backward'
-        for texec in self.execs:
-            texec.backward()
+        for e in self.execs:
+            e.backward()
 
     def update_metric(self, eval_metric, labels):
+        """Accumulate the performance according to `eval_metric` on all devices.
+
+        Parameters
+        ----------
+        eval_metric : EvalMetric
+            The metric used for evaluation.
+        labels : list of NDArray
+            Typically comes from `label` of a `DataBatch`.
+        """
         for texec, islice in zip(self.execs, self.slices):
             labels_slice = [label[islice] for label in labels]
             eval_metric.update(labels_slice, texec.outputs)
 
     def _bind_ith_exec(self, i, data_shapes, label_shapes, shared_group):
+        """Internal utility function to bind the i-th executor.
+        """
         data_shapes = self._sliced_shape(data_shapes, i)
         if label_shapes is not None:
             label_shapes = self._sliced_shape(label_shapes, i)
@@ -198,14 +300,35 @@ class DataParallelExecutorGroup(object):
         return executor
 
     def _sliced_shape(self, shapes, i):
+        """Get the sliced shapes for the i-th executor.
+
+        Parameters
+        ----------
+        shapes : list of (str, tuple)
+            The original (name, shape) pairs.
+        i : int
+            Which executor we are dealing with.
+        """
         return [(k, tuple([self.slices[i].stop-self.slices[i].start] + list(v[1:])))
                 for k, v in shapes]
 
+
 def _as_list(obj):
+    """A utility function that treat the argument as a list.
+
+    Parameters
+    ----------
+    obj : object
+
+    Returns
+    -------
+    If `obj` is a list, return it. Otherwise, return `[obj]` as a single-element list.
+    """
     if isinstance(obj, list):
         return obj
     else:
         return [obj]
+
 
 class BaseModule(object):
     def __init__(self, logger=logging):
@@ -218,7 +341,7 @@ class BaseModule(object):
         self.forward(data_batch, is_train=is_train)
         self.backward()
 
-    def score(self, eval_data, eval_metric, num_batch=None, batch_end_callback=None, reset=True):
+    def score(self, eval_data, eval_metric, num_batch=None, batch_end_callback=None, reset=True, epoch=0):
         assert self.binded and self.params_initialized
 
         if reset:
@@ -240,7 +363,7 @@ class BaseModule(object):
                                                  nbatch=nbatch,
                                                  eval_metric=eval_metric,
                                                  locals=locals())
-                for cb in _as_list(eval_batch_end_callback):
+                for cb in _as_list(batch_end_callback):
                     cb(batch_end_params)
 
     def predict(self, eval_data, num_batch=None, return_data=False,
@@ -328,7 +451,7 @@ class BaseModule(object):
             #----------------------------------------
             # evaluation on validation set
             if eval_data:
-                self.score(eval_data, eval_metric, batch_end_callback=eval_batch_end_callback)
+                self.score(eval_data, eval_metric, batch_end_callback=eval_batch_end_callback, epoch=epoch)
                 for name, val in eval_metric.get_name_value():
                     self.logger.info('Epoch[%d] Validation-%s=%f', epoch, name, val)
 
