@@ -331,6 +331,41 @@ def _as_list(obj):
 
 
 class BaseModule(object):
+    """The base class of a modules. A module represents a computation component. The users
+    could use imperative API to operate a module. Like calling `forward` with data, and collect
+    the outputs. The basic module simply encapsulates a symbolic computation graph and its
+    associated executors. More complicated modules might be composition of other modules.
+
+    A module should have the following properties
+
+    - `binded`: `bool`, indicating whether the memory buffers needed for computation has been allocated.
+    - `params_initialized`: `bool`, indicating whether the parameters of this modules has been initialized.
+    - `optimizer_initialized`: 'bool`, indicating whether an optimizer is defined and initialized.
+    - `symbol`: `Symbol`, the underlying symbolic computation graph, if exists. This property is not
+      necessarily constant. For example, for `BucketingModule`, this property is simply the *current*
+      symbol being used. For other modules, this value might not be well defined.
+    - `arg_params`: `dict` of name to `NDArray` mapping for module parameters.
+    - `aux_params`: `dict` of name to `NDArray` mapping for auxiliary variables.
+
+    A sub-class should implement the following intermediate-level APIs
+
+    - `bind`: allocate memory and prepare environments for computation
+    - `init_params`: initialize module parameters
+    - `init_optimizer`: install optimizer for parameter updating
+    - `forward`: forward computation
+    - `get_outputs`: get the outputs of the previous forward computation
+    - `backward`: backward computation
+    - `update`: update parameters according to installed optimizer
+    - `update_metric`: update evaluation metric
+
+    When those intermediate-level API are implemented properly, the following
+    high-level API will be automatically available for a module:
+
+    - `fit`: train the module parameters on a data set
+    - `predict`: run prediction on a data set and collect outputs
+    - `score`: run prediction on a data set and evaluate performance
+
+    """
     def __init__(self, logger=logging):
         self.logger = logger
         self.binded = False
@@ -338,10 +373,28 @@ class BaseModule(object):
         self.optimizer_initialized = False
 
     def forward_backward(self, data_batch, is_train=None):
+        """A convenient function that calls both `forward` and `backward`.
+        """
         self.forward(data_batch, is_train=is_train)
         self.backward()
 
     def score(self, eval_data, eval_metric, num_batch=None, batch_end_callback=None, reset=True, epoch=0):
+        """Run prediction on `eval_data` and evaluate the performance according to `eval_metric`.
+
+        Parameters
+        ----------
+        eval_data : DataIter
+        eval_metric : EvalMetric
+        num_batch : int
+            Number of batches to run. Default is `None`, indicating run until the `DataIter` finishes.
+        batch_end_callback : function
+            Could also be a list of functions.
+        reset : bool
+            Default `True`, indicating whether we should reset `eval_data` before starting evaluating.
+        epoch : int
+            Default 0. For compatibility, this will be passed to callbacks (if any). During training,
+            this will correspond to the training epoch number.
+        """
         assert self.binded and self.params_initialized
 
         if reset:
@@ -366,8 +419,33 @@ class BaseModule(object):
                 for cb in _as_list(batch_end_callback):
                     cb(batch_end_params)
 
-    def predict(self, eval_data, num_batch=None, return_data=False,
-                merge_batches=True, reset=True, always_output_list=False):
+    def predict(self, eval_data, num_batch=None, merge_batches=True, reset=True, always_output_list=False):
+        """Run prediction and collect the outputs.
+
+        Parameters
+        ----------
+        eval_data : DataIter
+        num_batch : int
+            Default is `None`, indicating run all the batches in the data iterator.
+        merge_batches : bool
+            Default is `True`, see the doc for return values.
+        reset : bool
+            Default is `True`, indicating whether we should reset the data iter before start doing prediction.
+        always_output_list : bool
+            Default is `False`, see the doc for return values.
+
+        Returns
+        -------
+        When `merge_batches` is `True` (by default), the return value will be a list `[out1, out2, out3]`.
+        Where each element is concatenation of the outputs for all the mini-batches. If further that
+        `always_output_list` is `False` (by default), then in the case of a single output, `out1` is returned
+        instead of `[out1]`.
+
+        When `merge_batches` is `False`, the return value will be a nested list like
+        `[[out1_batch1, out2_batch1], [out1_batch2], ...]`. This mode is useful because in some
+        cases (e.g. bucketing), the module does not necessarily produce the same number of outputs.
+
+        """
         assert self.binded and self.params_initialized
 
         if reset:
@@ -404,6 +482,48 @@ class BaseModule(object):
             optimizer='sgd', optimizer_params={}, eval_batch_end_callback=None,
             initializer=Uniform(0.01), arg_params=None, aux_params=None,
             allow_missing=False, force_init=False, begin_epoch=0, num_epoch=None):
+        """Train the module parameters.
+
+        Parameters
+        ----------
+        train_data : DataIter
+        eval_data : DataIter
+            If not `None`, will be used as validation set and evaluate the performance after each epoch.
+        eval_metric : str or EvalMetric
+            Default `'acc'`. The performance measure used to display during training.
+        epoch_end_callback : function or list of function
+            Each callback will be called with the current `epoch`, `symbol`, `arg_params` and `aux_params`.
+        batch_end_callback : function or list of function
+            Each callback will be called with a `BatchEndParam`.
+        kvstore : str or KVStore
+            Default `'local'`.
+        optimizer : str or Optimizer
+            Default `'sgd'`
+        optimizer_params : dict
+            Default `{}`. The parameters for the optimizer constructor.
+        eval_batch_end_callback : function or list of function
+        initializer : Initializer
+            Will be called to initialize the module parameters if not already initialized.
+        arg_params : dict
+            Default `None`, if not `None`, should be existing parameters from a trained model or loaded
+            from a checkpoint (previously saved model). In this case, the value here will be used to
+            initialize the module parameters, unless they are already initialized by the user via a
+            call to `init_params` or `fit`. `arg_params` has higher priority to `initializer`.
+        aux_params : dict
+            Default `None`. Similar to `arg_params`, except for auxiliary states.
+        allow_missing : bool
+            Default `False`. Indicate whether we allow missing parameters when `arg_params` and `aux_params`
+            are not `None`. If this is `True`, then the missing parameters will be initialized via the
+            `initializer`.
+        force_init : bool
+            Default `False`. Indicate whether we should force initialization even if the parameters are
+            already initialized.
+        begin_epoch : int
+            Default `0`. Indicate the starting epoch. Usually, if we are resuming from a checkpoint saved
+            at a previous training phase at epoch N, then we should specify this value as N+1.
+        num_epoch : int
+            Number of epochs to run training.
+        """
 
         assert num_epoch is not None, 'please specify number of epochs'
 
