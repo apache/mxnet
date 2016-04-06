@@ -339,6 +339,7 @@ class BaseModule(object):
     A module should have the following properties
 
     - `binded`: `bool`, indicating whether the memory buffers needed for computation has been allocated.
+    - `for_training`: whether the module is binded for training (if binded).
     - `params_initialized`: `bool`, indicating whether the parameters of this modules has been initialized.
     - `optimizer_initialized`: 'bool`, indicating whether an optimizer is defined and initialized.
     - `symbol`: `Symbol`, the underlying symbolic computation graph, if exists. This property is not
@@ -346,6 +347,8 @@ class BaseModule(object):
       symbol being used. For other modules, this value might not be well defined.
     - `arg_params`: `dict` of name to `NDArray` mapping for module parameters.
     - `aux_params`: `dict` of name to `NDArray` mapping for auxiliary variables.
+    - `inputs_need_grad`: `bool`, indicating whether gradients with respect to the input data is needed.
+      Might be useful when implementing composition of modules.
 
     A sub-class should implement the following intermediate-level APIs
 
@@ -369,6 +372,8 @@ class BaseModule(object):
     def __init__(self, logger=logging):
         self.logger = logger
         self.binded = False
+        self.for_training = False
+        self.inputs_need_grad = False
         self.params_initialized = False
         self.optimizer_initialized = False
 
@@ -580,6 +585,21 @@ class BaseModule(object):
 
 
 class Module(BaseModule):
+    """Module is a basic module that wrap a `Symbol`. It is functionally the same as the `FeedForward` model,
+    except under the module API.
+
+    Parameters
+    ----------
+    symbol : Symbol
+    input_names : list of string
+        Default is `['data', 'softmax_label']` for a typical model used in image classification.
+    logger : Logger
+        Default is `logging`.
+    context : Context or list of Context
+        Default is `cpu()`.
+    work_load_list : list of number
+        Default `None`, indicating uniform workload.
+    """
     def __init__(self, symbol, input_names=['data', 'softmax_label'], logger=logging,
                  context=ctx.cpu(), work_load_list=None):
         super(Module, self).__init__(logger=logger)
@@ -607,12 +627,31 @@ class Module(BaseModule):
         self.binded = False
         self.exec_group = None
 
-    ################################################################################
-    # === bind the module ===
-    # binding a module allocate the memory required to carry out the computation
-    # on the specific devices (contexts) specified.
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None):
+        """Bind the symbols to construct executors. This is necessary before one
+        can perform computation with the module.
+
+        Parameters
+        ----------
+        data_shapes : list of (str, tuple)
+            Typically is `data_iter.provide_data`.
+        label_shapes : list of (str, tuple)
+            Typically is `data_iter.provide_label`.
+        for_training : bool
+            Default is `True`. Whether the executors should be bind for training.
+        inputs_need_grad : bool
+            Default is `False`. Whether the gradients to the input data need to be computed.
+            Typically this is not needed. But this might be needed when implementing composition
+            of modules.
+        force_rebind : bool
+            Default is `False`. This function does nothing if the executors are already
+            binded. But with this `True`, the executors will be forced to rebind.
+        shared_module : Module
+            Default is `None`. This is used in bucketing. When not `None`, the shared module
+            essentially corresponds to a different bucket -- a module with different symbol
+            but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
+        """
         # force rebinding is typically used when one want to switch from
         # training to prediction phase.
         if force_rebind:
@@ -654,7 +693,6 @@ class Module(BaseModule):
 
         if shared_module is not None and shared_module.optimizer_initialized:
             self.borrow_optimizer(shared_module)
-
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
                     allow_missing=False, force_init=False):
@@ -710,14 +748,41 @@ class Module(BaseModule):
         self.exec_group.set_params(self.arg_params, self.aux_params)
 
     def forward(self, data_batch, is_train=None):
+        """Forward computation.
+
+        Parameters
+        ----------
+        data_batch : DataBatch
+            Could be anything with similar API implemented.
+        is_train : bool
+            Default is `None`, which means `is_train` takes the value of `self.for_training`.
+        """
         assert self.binded and self.params_initialized
         self.exec_group.forward(data_batch, is_train)
 
     def backward(self):
+        """Backward computation.
+        """
         assert self.binded and self.params_initialized
         self.exec_group.backward()
 
     def get_outputs(self, merge_multi_context=True):
+        """Get outputs of the previous forward computation.
+
+        Parameters
+        ----------
+        merge_multi_context : bool
+            Default is `True`. In the case when data-parallelism is used, the outputs
+            will be collected from multiple devices. A `True` value indicate that we
+            should merge the collected results so that they look like from a single
+            executor.
+
+        Returns
+        -------
+        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
+        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
+        elements are numpy arrays.
+        """
         assert self.binded and self.params_initialized
         outputs = [[e.outputs[i].asnumpy() for e in self.exec_group.execs]
                    for i in range(len(self.exec_group.execs[0].outputs))]
@@ -727,6 +792,20 @@ class Module(BaseModule):
 
     def init_optimizer(self, kvstore='local', optimizer='sgd', optimizer_params={},
                        force_init=False):
+        """Install and initialize optimizers.
+
+        Parameters
+        ----------
+        kvstore : str or KVStore
+            Default `'local'`.
+        optimizer : str or Optimizer
+            Default `'sgd'`
+        optimizer_params : dict
+            Default `{}`
+        force_init : bool
+            Default `False`, indicating whether we should force re-initializing the
+            optimizer in the case an optimizer is already installed.
+        """
         assert self.binded and self.params_initialized
 
         if self.optimizer_initialized and not force_init:
@@ -765,6 +844,13 @@ class Module(BaseModule):
         self.optimizer_initialized = True
 
     def borrow_optimizer(self, shared_module):
+        """Borrow optimizer from a shared module. Used in bucketing, where exactly the same
+        optimizer (esp. kvstore) is used.
+
+        Parameters
+        ----------
+        shared_module : Module
+        """
         assert shared_module.optimizer_initialized
         self.optimizer = shared_module.optimizer
         self.kvstore = shared_module.kvstore
@@ -773,6 +859,9 @@ class Module(BaseModule):
         self.optimizer_initialized = True
 
     def update(self):
+        """Update parameters according to the installed optimizer and the gradients computed
+        in the previous forward-backward batch.
+        """
         assert self.binded and self.params_initialized and self.optimizer_initialized
 
         if self.update_on_kvstore:
@@ -835,7 +924,10 @@ class BucketingModule(BaseModule):
             self.logger.warning('Already binded, ignoring bind()')
             return
 
+        self.for_training = for_training
+        self.inputs_need_grad = inputs_need_grad
         self.binded = True
+
         symbol = self.sym_gen(self.default_bucket_key)
         module = Module(symbol, self.default_input_names, logger=self.logger, context=self.context,
                         work_load_list=self.work_load_list)
