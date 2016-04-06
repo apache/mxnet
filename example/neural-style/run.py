@@ -17,6 +17,8 @@ parser.add_argument('--content-image', type=str, default='input/IMG_4343.jpg',
                     help='the content image')
 parser.add_argument('--style-image', type=str, default='input/starry_night.jpg',
                     help='the style image')
+parser.add_argument('--initial-image', type=str, default=None,
+                    help='the initial image to optimize')
 parser.add_argument('--stop-eps', type=float, default=.005,
                     help='stop if the relative chanage is less than eps')
 parser.add_argument('--content-weight', type=float, default=10,
@@ -57,7 +59,7 @@ def PreprocessContentImage(path, long_edge):
     logging.info("resize the content image to %s", new_size)
     return np.resize(sample, (1, 3, sample.shape[1], sample.shape[2]))
 
-def PreprocessStyleImage(path, shape):
+def PreprocessOtherImage(path, shape):
     img = io.imread(path)
     resized_img = transform.resize(img, (shape[2], shape[3]))
     sample = np.asarray(resized_img) * 256
@@ -88,7 +90,7 @@ def SaveImage(img, filename):
 # input
 dev = mx.gpu(args.gpu) if args.gpu >= 0 else mx.cpu()
 content_np = PreprocessContentImage(args.content_image, args.max_long_edge)
-style_np = PreprocessStyleImage(args.style_image, shape=content_np.shape)
+style_np = PreprocessOtherImage(args.style_image, shape=content_np.shape)
 size = content_np.shape[2:]
 
 # model
@@ -133,10 +135,14 @@ model_executor.data[:] = content_np
 model_executor.executor.forward()
 model_executor.content.copyto(content_array)
 
-# train
+#get initial image representation
 img = mx.nd.zeros(content_np.shape, ctx=dev)
-img[:] = mx.rnd.uniform(-0.1, 0.1, img.shape)
-
+if args.start_image == None:
+    img[:] = mx.rnd.uniform(-0.1, 0.1, img.shape)
+else:
+    img[:] = PreprocessOtherImage(args.start_image, shape=content_np.shape)
+    
+# train
 lr = mx.lr_scheduler.FactorScheduler(step=10, factor=.9)
 
 optimizer = mx.optimizer.SGD(
