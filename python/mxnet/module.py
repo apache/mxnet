@@ -97,10 +97,10 @@ class BaseModule(object):
         self.params_initialized = False
         self.optimizer_initialized = False
 
-    def forward_backward(self, data_batch, is_train=None):
+    def forward_backward(self, data_batch):
         """A convenient function that calls both `forward` and `backward`.
         """
-        self.forward(data_batch, is_train=is_train)
+        self.forward(data_batch, is_train=True)
         self.backward()
 
     def score(self, eval_data, eval_metric, num_batch=None, batch_end_callback=None,
@@ -280,7 +280,7 @@ class BaseModule(object):
             tic = time.time()
             eval_metric.reset()
             for nbatch, data_batch in enumerate(train_data):
-                self.forward_backward(data_batch, is_train=True)
+                self.forward_backward(data_batch)
                 self.update()
                 self.update_metric(eval_metric, data_batch.label)
 
@@ -494,11 +494,18 @@ class Module(BaseModule):
         assert self.binded and self.params_initialized
         self.exec_group.forward(data_batch, is_train)
 
-    def backward(self):
+    def backward(self, out_grads=None):
         """Backward computation.
+
+        Parameters
+        ----------
+        out_grads : NDArray or list of NDArray, optional
+            Gradient on the outputs to be propagated back.
+            This parameter is only needed when bind is called
+            on outputs that are not a loss function.
         """
         assert self.binded and self.params_initialized
-        self.exec_group.backward()
+        self.exec_group.backward(out_grads=out_grads)
 
     def get_outputs(self, merge_multi_context=True):
         """Get outputs of the previous forward computation.
@@ -515,14 +522,10 @@ class Module(BaseModule):
         -------
         If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
         is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
-        elements are numpy arrays.
+        elements are `NDArray`.
         """
         assert self.binded and self.params_initialized
-        outputs = [[exec_.outputs[i].asnumpy() for exec_ in self.exec_group.execs]
-                   for i in range(len(self.exec_group.execs[0].outputs))]
-        if merge_multi_context:
-            outputs = [np.concatenate(x) for x in outputs]
-        return outputs
+        return self.exec_group.get_outputs(merge_multi_context=merge_multi_context)
 
     def init_optimizer(self, kvstore='local', optimizer='sgd', optimizer_params={},
                        force_init=False):
@@ -782,9 +785,9 @@ class BucketingModule(BaseModule):
                            data_batch.provide_label)
         self.curr_module.forward(data_batch, is_train=is_train)
 
-    def backward(self):
+    def backward(self, out_grads=None):
         """Backward computation."""
-        self.curr_module.backward()
+        self.curr_module.backward(out_grads=out_grads)
 
     def get_outputs(self, merge_multi_context=True):
         """Get outputs from a previous forward computation.

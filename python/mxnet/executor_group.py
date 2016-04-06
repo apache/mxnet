@@ -185,14 +185,49 @@ class DataParallelExecutorGroup(object):
         for exec_ in self.execs:
             exec_.forward(is_train=is_train)
 
-    def backward(self):
+    def get_outputs(self, merge_multi_context=True):
+        """Get outputs of the previous forward computation.
+
+        Parameters
+        ----------
+        merge_multi_context : bool
+            Default is `True`. In the case when data-parallelism is used, the outputs
+            will be collected from multiple devices. A `True` value indicate that we
+            should merge the collected results so that they look like from a single
+            executor.
+
+        Returns
+        -------
+        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
+        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
+        elements are `NDArray`.
+        """
+        outputs = [[exec_.outputs[i] for exec_ in self.execs]
+                   for i in range(len(self.execs[0].outputs))]
+        if merge_multi_context:
+            outputs = [np.concatenate([y.asnumpy() for y in x]) for x in outputs]
+            outputs = [nd.array(x) for x in outputs]
+        return outputs
+
+    def backward(self, out_grads=None):
         """Run backward on all devices. A backward should be called after
         a call to the forward function. Backward cannot be called unless
         `self.for_training` is `True`.
+
+        Parameters
+        ----------
+        out_grads : NDArray or list of NDArray, optional
+            Gradient on the outputs to be propagated back.
+            This parameter is only needed when bind is called
+            on outputs that are not a loss function.
         """
         assert self.for_training, 're-bind with for_training=True to run backward'
-        for exec_ in self.execs:
-            exec_.backward()
+        if out_grads is None:
+            out_grads = []
+
+        for exec_, islice in zip(self.execs, self.slices):
+            out_grads_slice = [grad[islice] for grad in out_grads]
+            exec_.backward(out_grads=out_grads_slice)
 
     def update_metric(self, eval_metric, labels):
         """Accumulate the performance according to `eval_metric` on all devices.
