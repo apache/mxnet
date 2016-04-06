@@ -1,8 +1,8 @@
-# A module is like a FeedForward, but we would like to make it
-# easier to be composed. So it is more like the Torch modules.
+"""A module is like a FeedForward model. but we would like to make it
+easier to be composed. So it is more like the Torch modules.
+"""
 
 from . import context as ctx
-from . import symbol as sym
 from . import ndarray as nd
 from . import optimizer as opt
 
@@ -14,7 +14,6 @@ from .model import BatchEndParam
 from .base import mx_real_t
 from .initializer import Uniform
 
-from collections import namedtuple
 import logging
 import time
 import numpy as np
@@ -102,8 +101,8 @@ class DataParallelExecutorGroup(object):
         """
         assert len(data_shapes) > 0
         self.batch_size = data_shapes[0][1][0]
-        for s in data_shapes:
-            assert s[1][0] == self.batch_size, "all the data must have the same batch size"
+        for shape in data_shapes:
+            assert shape[1][0] == self.batch_size, "all the data must have the same batch size"
 
         self.slices = _split_input_slice(self.batch_size, self.workload)
 
@@ -124,19 +123,20 @@ class DataParallelExecutorGroup(object):
         self.data_arrays = [[(self.slices[i], e.arg_dict[name]) for i, e in enumerate(self.execs)]
                             for name, _ in data_shapes]
         if label_shapes is not None:
-            self.label_arrays = [[(self.slices[i], e.arg_dict[name]) for i, e in enumerate(self.execs)]
+            self.label_arrays = [[(self.slices[i], e.arg_dict[name])
+                                  for i, e in enumerate(self.execs)]
                                  for name, _ in label_shapes]
         else:
             self.label_arrays = None
 
-        self.param_arrays = [[e.arg_arrays[i] for e in self.execs]
+        self.param_arrays = [[exec_.arg_arrays[i] for exec_ in self.execs]
                              for i, name in enumerate(self.arg_names)
                              if name in self.param_names]
-        self.grad_arrays = [[e.grad_arrays[i] for e in self.execs]
-                             for i, name in enumerate(self.arg_names)
-                             if name in self.param_names]
+        self.grad_arrays = [[exec_.grad_arrays[i] for exec_ in self.execs]
+                            for i, name in enumerate(self.arg_names)
+                            if name in self.param_names]
 
-        self.aux_arrays = [[e.aux_arrays[i] for e in self.execs]
+        self.aux_arrays = [[exec_.aux_arrays[i] for exec_ in self.execs]
                            for i in range(len(self.aux_names))]
 
     def set_params(self, arg_params, aux_params):
@@ -149,8 +149,8 @@ class DataParallelExecutorGroup(object):
         aux_params : dict
             A dictionary of name to `NDArray` auxiliary variable mapping.
         """
-        for e in self.execs:
-            e.copy_params_from(arg_params, aux_params)
+        for exec_ in self.execs:
+            exec_.copy_params_from(arg_params, aux_params)
 
     def get_params(self, arg_params, aux_params):
         """ Copy data from each executor to `arg_params` and `aux_params`.
@@ -193,8 +193,8 @@ class DataParallelExecutorGroup(object):
 
         if is_train:
             _load_label(data_batch, self.label_arrays)
-        for e in self.execs:
-            e.forward(is_train=is_train)
+        for exec_ in self.execs:
+            exec_.forward(is_train=is_train)
 
     def backward(self):
         """Run backward on all devices. A backward should be called after
@@ -202,8 +202,8 @@ class DataParallelExecutorGroup(object):
         `self.for_training` is `True`.
         """
         assert self.for_training, 're-bind with for_training=True to run backward'
-        for e in self.execs:
-            e.backward()
+        for exec_ in self.execs:
+            exec_.backward()
 
     def update_metric(self, eval_metric, labels):
         """Accumulate the performance according to `eval_metric` on all devices.
@@ -338,17 +338,21 @@ class BaseModule(object):
 
     A module should have the following properties
 
-    - `binded`: `bool`, indicating whether the memory buffers needed for computation has been allocated.
+    - `binded`: `bool`, indicating whether the memory buffers needed for computation
+       has been allocated.
     - `for_training`: whether the module is binded for training (if binded).
-    - `params_initialized`: `bool`, indicating whether the parameters of this modules has been initialized.
-    - `optimizer_initialized`: 'bool`, indicating whether an optimizer is defined and initialized.
-    - `symbol`: `Symbol`, the underlying symbolic computation graph, if exists. This property is not
-      necessarily constant. For example, for `BucketingModule`, this property is simply the *current*
-      symbol being used. For other modules, this value might not be well defined.
+    - `params_initialized`: `bool`, indicating whether the parameters of this modules
+       has been initialized.
+    - `optimizer_initialized`: 'bool`, indicating whether an optimizer is defined
+       and initialized.
+    - `symbol`: `Symbol`, the underlying symbolic computation graph, if exists.
+      This property is not necessarily constant. For example, for `BucketingModule`,
+      this property is simply the *current* symbol being used. For other modules,
+      this value might not be well defined.
     - `arg_params`: `dict` of name to `NDArray` mapping for module parameters.
     - `aux_params`: `dict` of name to `NDArray` mapping for auxiliary variables.
-    - `inputs_need_grad`: `bool`, indicating whether gradients with respect to the input data is needed.
-      Might be useful when implementing composition of modules.
+    - `inputs_need_grad`: `bool`, indicating whether gradients with respect to the
+      input data is needed. Might be useful when implementing composition of modules.
 
     A sub-class should implement the following intermediate-level APIs
 
@@ -370,14 +374,16 @@ class BaseModule(object):
 
     Notes
     -----
-    If you want to read the module parameters, they could be accessed directly from `module.arg_params`.
-    Those are `NDArray` that lives on CPU, regardless of the actual computation devices used. So if you
-    updated the parameters on the devices using `module.update()` function, remember to call
-    `module.sync_params_from_devices()` to sync the parameters back before reading `module.arg_params`.
+    If you want to read the module parameters, they could be accessed directly from
+    `module.arg_params`.  Those are `NDArray` that lives on CPU, regardless of the
+    actual computation devices used. So if you updated the parameters on the devices
+    using `module.update()` function, remember to call `module.sync_params_from_devices()`
+    to sync the parameters back before reading `module.arg_params`.
 
-    If you need to set the parameters. Do **not** assign values directly to `module.arg_params`. As they
-    will not get propagated to the devices automatically. Instead, the function `init_params` should
-    always be used for this purpose, potentially with `force_init=True`.
+    If you need to set the parameters. Do **not** assign values directly to
+    `module.arg_params`. As they will not get propagated to the devices automatically.
+    Instead, the function `init_params` should always be used for this purpose,
+    potentially with `force_init=True`.
     """
     def __init__(self, logger=logging):
         self.logger = logger
@@ -393,22 +399,26 @@ class BaseModule(object):
         self.forward(data_batch, is_train=is_train)
         self.backward()
 
-    def score(self, eval_data, eval_metric, num_batch=None, batch_end_callback=None, reset=True, epoch=0):
-        """Run prediction on `eval_data` and evaluate the performance according to `eval_metric`.
+    def score(self, eval_data, eval_metric, num_batch=None, batch_end_callback=None,
+              reset=True, epoch=0):
+        """Run prediction on `eval_data` and evaluate the performance according to
+        `eval_metric`.
 
         Parameters
         ----------
         eval_data : DataIter
         eval_metric : EvalMetric
         num_batch : int
-            Number of batches to run. Default is `None`, indicating run until the `DataIter` finishes.
+            Number of batches to run. Default is `None`, indicating run until the `DataIter`
+            finishes.
         batch_end_callback : function
             Could also be a list of functions.
         reset : bool
-            Default `True`, indicating whether we should reset `eval_data` before starting evaluating.
+            Default `True`, indicating whether we should reset `eval_data` before starting
+            evaluating.
         epoch : int
-            Default 0. For compatibility, this will be passed to callbacks (if any). During training,
-            this will correspond to the training epoch number.
+            Default 0. For compatibility, this will be passed to callbacks (if any). During
+            training, this will correspond to the training epoch number.
         """
         assert self.binded and self.params_initialized
 
@@ -434,7 +444,8 @@ class BaseModule(object):
                 for cb in _as_list(batch_end_callback):
                     cb(batch_end_params)
 
-    def predict(self, eval_data, num_batch=None, merge_batches=True, reset=True, always_output_list=False):
+    def predict(self, eval_data, num_batch=None, merge_batches=True, reset=True,
+                always_output_list=False):
         """Run prediction and collect the outputs.
 
         Parameters
@@ -445,21 +456,22 @@ class BaseModule(object):
         merge_batches : bool
             Default is `True`, see the doc for return values.
         reset : bool
-            Default is `True`, indicating whether we should reset the data iter before start doing prediction.
+            Default is `True`, indicating whether we should reset the data iter before start
+            doing prediction.
         always_output_list : bool
             Default is `False`, see the doc for return values.
 
         Returns
         -------
-        When `merge_batches` is `True` (by default), the return value will be a list `[out1, out2, out3]`.
-        Where each element is concatenation of the outputs for all the mini-batches. If further that
-        `always_output_list` is `False` (by default), then in the case of a single output, `out1` is returned
-        instead of `[out1]`.
+        When `merge_batches` is `True` (by default), the return value will be a list
+        `[out1, out2, out3]`.  Where each element is concatenation of the outputs for
+        all the mini-batches. If further that `always_output_list` is `False` (by default),
+        then in the case of a single output, `out1` is returned instead of `[out1]`.
 
         When `merge_batches` is `False`, the return value will be a nested list like
-        `[[out1_batch1, out2_batch1], [out1_batch2], ...]`. This mode is useful because in some
-        cases (e.g. bucketing), the module does not necessarily produce the same number of outputs.
-
+        `[[out1_batch1, out2_batch1], [out1_batch2], ...]`. This mode is useful because
+        in some cases (e.g. bucketing), the module does not necessarily produce the same
+        number of outputs.
         """
         assert self.binded and self.params_initialized
 
@@ -482,9 +494,10 @@ class BaseModule(object):
             num_outputs = len(output_list[0])
             for o in output_list:
                 assert len(o) == num_outputs, \
-                       'Cannot merge batches, as num of outputs is not the same in mini-batches. ' + \
-                       'Maybe bucketing is used?'
-            output_list2 = [np.concatenate([o[i] for o in output_list]) for i in range(num_outputs)]
+                       'Cannot merge batches, as num of outputs is not the same ' + \
+                       'in mini-batches. Maybe bucketing is used?'
+            output_list2 = [np.concatenate([o[i] for o in output_list])
+                            for i in range(num_outputs)]
 
             if num_outputs == 1:
                 return output_list2[0]
@@ -503,11 +516,13 @@ class BaseModule(object):
         ----------
         train_data : DataIter
         eval_data : DataIter
-            If not `None`, will be used as validation set and evaluate the performance after each epoch.
+            If not `None`, will be used as validation set and evaluate the performance
+            after each epoch.
         eval_metric : str or EvalMetric
             Default `'acc'`. The performance measure used to display during training.
         epoch_end_callback : function or list of function
-            Each callback will be called with the current `epoch`, `symbol`, `arg_params` and `aux_params`.
+            Each callback will be called with the current `epoch`, `symbol`, `arg_params`
+            and `aux_params`.
         batch_end_callback : function or list of function
             Each callback will be called with a `BatchEndParam`.
         kvstore : str or KVStore
@@ -520,22 +535,24 @@ class BaseModule(object):
         initializer : Initializer
             Will be called to initialize the module parameters if not already initialized.
         arg_params : dict
-            Default `None`, if not `None`, should be existing parameters from a trained model or loaded
-            from a checkpoint (previously saved model). In this case, the value here will be used to
-            initialize the module parameters, unless they are already initialized by the user via a
-            call to `init_params` or `fit`. `arg_params` has higher priority to `initializer`.
+            Default `None`, if not `None`, should be existing parameters from a trained
+            model or loaded from a checkpoint (previously saved model). In this case,
+            the value here will be used to initialize the module parameters, unless they
+            are already initialized by the user via a call to `init_params` or `fit`.
+            `arg_params` has higher priority to `initializer`.
         aux_params : dict
             Default `None`. Similar to `arg_params`, except for auxiliary states.
         allow_missing : bool
-            Default `False`. Indicate whether we allow missing parameters when `arg_params` and `aux_params`
-            are not `None`. If this is `True`, then the missing parameters will be initialized via the
-            `initializer`.
+            Default `False`. Indicate whether we allow missing parameters when `arg_params`
+            and `aux_params` are not `None`. If this is `True`, then the missing parameters
+            will be initialized via the `initializer`.
         force_init : bool
-            Default `False`. Indicate whether we should force initialization even if the parameters are
-            already initialized.
+            Default `False`. Indicate whether we should force initialization even if the
+            parameters are already initialized.
         begin_epoch : int
-            Default `0`. Indicate the starting epoch. Usually, if we are resuming from a checkpoint saved
-            at a previous training phase at epoch N, then we should specify this value as N+1.
+            Default `0`. Indicate the starting epoch. Usually, if we are resuming from a
+            checkpoint saved at a previous training phase at epoch N, then we should specify
+            this value as N+1.
         num_epoch : int
             Number of epochs to run training.
         """
@@ -546,7 +563,8 @@ class BaseModule(object):
                   for_training=True, force_rebind=True)
         self.init_params(initializer=initializer, arg_params=arg_params, aux_params=aux_params,
                          allow_missing=allow_missing, force_init=force_init)
-        self.init_optimizer(kvstore=kvstore, optimizer=optimizer, optimizer_params=optimizer_params)
+        self.init_optimizer(kvstore=kvstore, optimizer=optimizer,
+                            optimizer_params=optimizer_params)
 
         if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
@@ -586,7 +604,8 @@ class BaseModule(object):
             #----------------------------------------
             # evaluation on validation set
             if eval_data:
-                self.score(eval_data, eval_metric, batch_end_callback=eval_batch_end_callback, epoch=epoch)
+                self.score(eval_data, eval_metric,
+                           batch_end_callback=eval_batch_end_callback, epoch=epoch)
                 for name, val in eval_metric.get_name_value():
                     self.logger.info('Epoch[%d] Validation-%s=%f', epoch, name, val)
 
@@ -595,14 +614,15 @@ class BaseModule(object):
 
 
 class Module(BaseModule):
-    """Module is a basic module that wrap a `Symbol`. It is functionally the same as the `FeedForward` model,
-    except under the module API.
+    """Module is a basic module that wrap a `Symbol`. It is functionally the same
+    as the `FeedForward` model, except under the module API.
 
     Parameters
     ----------
     symbol : Symbol
     input_names : list of string
-        Default is `['data', 'softmax_label']` for a typical model used in image classification.
+        Default is `['data', 'softmax_label']` for a typical model used in
+        image classification.
     logger : Logger
         Default is `logging`.
     context : Context or list of Context
@@ -794,7 +814,7 @@ class Module(BaseModule):
         elements are numpy arrays.
         """
         assert self.binded and self.params_initialized
-        outputs = [[e.outputs[i].asnumpy() for e in self.exec_group.execs]
+        outputs = [[exec_.outputs[i].asnumpy() for exec_ in self.exec_group.execs]
                    for i in range(len(self.exec_group.execs[0].outputs))]
         if merge_multi_context:
             outputs = [np.concatenate(x) for x in outputs]
@@ -822,8 +842,8 @@ class Module(BaseModule):
             self.logger.warning('optimizer already initialized, ignoring...')
             return
 
-        (kvstore, update_on_kvstore) = _create_kvstore(
-                kvstore, len(self.context), self.arg_params)
+        (kvstore, update_on_kvstore) = \
+                _create_kvstore(kvstore, len(self.context), self.arg_params)
 
         if isinstance(optimizer, str):
             batch_size = self.exec_group.batch_size
@@ -897,9 +917,9 @@ class Module(BaseModule):
         self.exec_group.update_metric(eval_metric, labels)
 
     def sync_params_from_devices(self):
-        """Synchronize parameters from devices to CPU. This function should be called after calling
-        `update` that updates the parameters on the devices, before one can read the latest parameters
-        from `self.arg_params` and `self.aux_params`.
+        """Synchronize parameters from devices to CPU. This function should be called after
+        calling `update` that updates the parameters on the devices, before one can read the
+        latest parameters from `self.arg_params` and `self.aux_params`.
         """
         self.exec_group.get_params(self.arg_params, self.aux_params)
 
@@ -938,11 +958,13 @@ class BucketingModule(BaseModule):
         self._reset_bind()
 
     def _reset_bind(self):
+        """Internal utility function to reset binding."""
         self.binded = False
         self.buckets = {}
         self.curr_module = None
 
     def _gen_symbol(self, key):
+        """Internal utility function to generate symbol and collect input names."""
         assert self.binded
         symbol = self.sym_gen(key)
         arg_names = symbol.list_arguments()
@@ -1079,7 +1101,7 @@ class BucketingModule(BaseModule):
         """
         return self.curr_module.get_outputs(merge_multi_context=merge_multi_context)
 
-    def init_optimizer(self, kvstore='local', optimizer='sgd', optimizer_params={},
+    def init_optimizer(self, kvstore='local', optimizer='sgd', optimizer_params=dict(),
                        force_init=False):
         """Install and initialize optimizers.
 
@@ -1126,9 +1148,9 @@ class BucketingModule(BaseModule):
         self.curr_module.update_metric(eval_metric, labels)
 
     def sync_params_from_devices(self):
-        """Synchronize parameters from devices to CPU. This function should be called after calling
-        `update` that updates the parameters on the devices, before one can read the latest parameters
-        from `self.arg_params` and `self.aux_params`.
+        """Synchronize parameters from devices to CPU. This function should be called after
+        calling `update` that updates the parameters on the devices, before one can read
+        the latest parameters from `self.arg_params` and `self.aux_params`.
         """
         self.curr_module.sync_params_from_devices()
 
@@ -1149,9 +1171,3 @@ class BucketingModule(BaseModule):
         """The symbol of the current bucket being used."""
         assert self.binded
         return self.curr_module.symbol
-
-
-
-
-
-
