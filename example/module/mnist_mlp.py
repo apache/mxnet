@@ -62,7 +62,7 @@ preds = mod.predict(val_dataiter, merge_batches=False)
 val_dataiter.reset()
 acc_sum = 0.0; acc_cnt = 0
 for i, batch in enumerate(val_dataiter):
-    pred_label = preds[i][0].argmax(axis=1)
+    pred_label = preds[i][0].asnumpy().argmax(axis=1)
     label = batch.label[0].asnumpy().astype('int32')
     acc_sum += (label == pred_label).sum()
     acc_cnt += len(pred_label)

@@ -2,6 +2,8 @@
 # pylint: disable=too-many-branches,too-many-statements,too-many-arguments
 """Executor group is a convenient tool for managing a group of executors."""
 
+import numpy as np
+
 from . import context as ctx
 from . import ndarray as nd
 
