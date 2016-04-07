@@ -82,7 +82,10 @@ class BaseModule(object):
         - `set_params(arg_params, aux_params)`: assign parameters to the devices
           doing the computation.
         - `init_params(...)`: a more flexible interface to assign or initialize the parameters.
-        - `init_optimizer`: install optimizer for parameter updating.
+
+    - setup
+        - `bind()`: prepare environment for computation.
+        - `init_optimizer()`: install optimizer for parameter updating.
 
     - computation
         - `forward(data_batch)`: forward operation.
@@ -333,6 +336,67 @@ class BaseModule(object):
 
             # end of 1 epoch, reset the data-iter for another epoch
             train_data.reset()
+
+    def forward(self, data_batch, is_train=None):
+        """Forward computation.
+
+        Parameters
+        ----------
+        data_batch : DataBatch
+            Could be anything with similar API implemented.
+        is_train : bool
+            Default is `None`, which means `is_train` takes the value of `self.for_training`.
+        """
+        raise NotImplementedError()
+
+    def backward(self, out_grads=None):
+        """Backward computation.
+
+        Parameters
+        ----------
+        out_grads : NDArray or list of NDArray, optional
+            Gradient on the outputs to be propagated back.
+            This parameter is only needed when bind is called
+            on outputs that are not a loss function.
+        """
+        raise NotImplementedError()
+
+    def get_outputs(self, merge_multi_context=True):
+        """Get outputs of the previous forward computation.
+
+        Parameters
+        ----------
+        merge_multi_context : bool
+            Default is `True`. In the case when data-parallelism is used, the outputs
+            will be collected from multiple devices. A `True` value indicate that we
+            should merge the collected results so that they look like from a single
+            executor.
+
+        Returns
+        -------
+        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
+        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
+        elements are `NDArray`. When `merge_multi_context` is `False`, those `NDArray`
+        might live on different devices.
+        """
+        raise NotImplementedError()
+
+    def update(self):
+        """Update parameters according to the installed optimizer and the gradients computed
+        in the previous forward-backward batch.
+        """
+        raise NotImplementedError()
+
+    def update_metric(self, eval_metric, labels):
+        """Evaluate and accumulate evaluation metric on outputs of the last forward computation.
+
+        Parameters
+        ----------
+        eval_metric : EvalMetric
+        labels : list of NDArray
+            Typically `data_batch.label`.
+        """
+        raise NotImplementedError()
 
 
 class Module(BaseModule):

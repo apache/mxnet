@@ -47,6 +47,10 @@ following information (after binded).
     - `init_params(...)`: a more flexible interface to assign or initialize the parameters.
     - `init_optimizer`: install optimizer for parameter updating.
 
+- setup
+    - `bind()`: prepare environment for computation.
+    - `init_optimizer()`: install optimizer for parameter updating.
+
 - computation
     - `forward(data_batch)`: forward operation.
     - `backward(out_grads=None)`: backward operation.
