@@ -7,6 +7,7 @@ import mxnet as mx
 
 from lstm import lstm_unroll
 from bucket_io import BucketSentenceIter, default_build_vocab
+from datetime import datetime
 
 def Perplexity(label, pred):
     label = label.T.reshape((-1,))
@@ -17,8 +18,9 @@ def Perplexity(label, pred):
 
 if __name__ == '__main__':
     batch_size = 32
-    buckets = [10, 20, 30, 40, 50, 60]
+    #buckets = [10, 20, 30, 40, 50, 60]
     #buckets = [32]
+    buckets = []
     num_hidden = 200
     num_embed = 200
     num_lstm_layer = 2
@@ -69,8 +71,9 @@ if __name__ == '__main__':
     import logging
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
-
+    
     model.fit(X=data_train, eval_data=data_val,
               eval_metric = mx.metric.np(Perplexity),
               batch_end_callback=mx.callback.Speedometer(batch_size, 50),)
+              
 
