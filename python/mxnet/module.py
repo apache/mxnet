@@ -35,39 +35,70 @@ def _as_list(obj):
 
 
 class BaseModule(object):
-    """The base class of a modules. A module represents a computation component. The users
-    could use imperative API to operate a module. Like calling `forward` with data, and collect
-    the outputs. The basic module simply encapsulates a symbolic computation graph and its
-    associated executors. More complicated modules might be composition of other modules.
+    """The base class of a modules. A module represents a computation component. The design
+    purpose of a module is that it abstract a computation "machine", that one can run forward,
+    backward, update parameters, etc. We aim to make the APIs easy to use, especially in the
+    case when we need to use imperative API to work with multiple modules (e.g. stochastic
+    depth network).
 
-    A module should have the following properties
+    A module has several states:
 
-    - `binded`: `bool`, indicating whether the memory buffers needed for computation
-       has been allocated.
-    - `for_training`: whether the module is binded for training (if binded).
-    - `params_initialized`: `bool`, indicating whether the parameters of this modules
-       has been initialized.
-    - `optimizer_initialized`: 'bool`, indicating whether an optimizer is defined
-       and initialized.
-    - `symbol`: `Symbol`, the underlying symbolic computation graph, if exists.
-      This property is not necessarily constant. For example, for `BucketingModule`,
-      this property is simply the *current* symbol being used. For other modules,
-      this value might not be well defined.
-    - `arg_params`: `dict` of name to `NDArray` mapping for module parameters.
-    - `aux_params`: `dict` of name to `NDArray` mapping for auxiliary variables.
-    - `inputs_need_grad`: `bool`, indicating whether gradients with respect to the
-      input data is needed. Might be useful when implementing composition of modules.
+    - Initial state. Memory is not allocated yet, not ready for computation yet.
+    - Binded. Shapes for inputs, outputs, and parameters are all known, memory allocated,
+      ready for computation.
+    - Parameter initialized. For modules with parameters, doing computation before initializing
+      the parameters might result in undefined outputs.
+    - Optimizer installed. An optimizer can be installed to a module. After this, the parameters
+      of the module can be updated according to the optimizer after gradients are computed
+      (forward-backward).
 
-    A sub-class should implement the following intermediate-level APIs
+    In order for a module to interactive with others, a module should be able to report the
+    following information (after binded).
 
-    - `bind`: allocate memory and prepare environments for computation
-    - `init_params`: initialize module parameters
-    - `init_optimizer`: install optimizer for parameter updating
-    - `forward`: forward computation
-    - `get_outputs`: get the outputs of the previous forward computation
-    - `backward`: backward computation
-    - `update`: update parameters according to installed optimizer
-    - `update_metric`: update evaluation metric
+    - state information
+        - `binded`: `bool`, indicating whether the memory buffers needed for computation
+           has been allocated.
+        - `for_training`: whether the module is binded for training (if binded).
+        - `params_initialized`: `bool`, indicating whether the parameters of this modules
+           has been initialized.
+        - `optimizer_initialized`: 'bool`, indicating whether an optimizer is defined
+           and initialized.
+        - `inputs_need_grad`: `bool`, indicating whether gradients with respect to the
+          input data is needed. Might be useful when implementing composition of modules.
+
+    - input/output information
+        - `data_shapes`: a list of `(name, shape)`. In theory, since the memory is allocated,
+          we could directly provide the data arrays. But in the case of data parallelization,
+          the data arrays might not be of the same shape as viewed from the external world.
+        - `label_shapes`: a list of `(name, shape)`. This might be `None` if the module does
+          not need labels (e.g. it does not contains a loss function at the top).
+        - `output_shapes`: a list of `(name, shape)` for outputs of the module.
+
+    - parameters (for modules with parameters)
+        - `get_params()`: return a tuple `(arg_params, aux_params)`. Each of those
+          is a dictionary of name to `NDArray` mapping. Those `NDArray` always lives on
+          CPU. The actual parameters used for computing might live on other devices (GPUs),
+          this function will retrieve (a copy of) the latest parameters. Therefore, modifying
+        - `set_params(arg_params, aux_params)`: assign parameters to the devices
+          doing the computation.
+        - `init_params(...)`: a more flexible interface to assign or initialize the parameters.
+        - `init_optimizer`: install optimizer for parameter updating.
+
+    - computation
+        - `forward(data_batch)`: forward operation.
+        - `backward(out_grads=None)`: backward operation.
+        - `update()`: update parameters according to installed optimizer.
+        - `get_outputs()`: get outputs of the previous forward operation.
+        - `get_input_grads()`: get the gradients with respect to the inputs computed
+          in the previous backward operation.
+        - `update_metric(metric)`: update performance metric for the previous forward
+           computed results.
+
+    - other properties (mostly for backward compatability)
+        - `symbol`: the underlying symbolic graph for this module (if any)
+          This property is not necessarily constant. For example, for `BucketingModule`,
+          this property is simply the *current* symbol being used. For other modules,
+          this value might not be well defined.
 
     When those intermediate-level API are implemented properly, the following
     high-level API will be automatically available for a module:
@@ -75,19 +106,6 @@ class BaseModule(object):
     - `fit`: train the module parameters on a data set
     - `predict`: run prediction on a data set and collect outputs
     - `score`: run prediction on a data set and evaluate performance
-
-    Notes
-    -----
-    If you want to read the module parameters, they could be accessed directly from
-    `module.arg_params`.  Those are `NDArray` that lives on CPU, regardless of the
-    actual computation devices used. So if you updated the parameters on the devices
-    using `module.update()` function, remember to call `module.sync_params_from_devices()`
-    to sync the parameters back before reading `module.arg_params`.
-
-    If you need to set the parameters. Do **not** assign values directly to
-    `module.arg_params`. As they will not get propagated to the devices automatically.
-    Instead, the function `init_params` should always be used for this purpose,
-    potentially with `force_init=True`.
     """
     def __init__(self, logger=logging):
         self.logger = logger
@@ -506,6 +524,11 @@ class Module(BaseModule):
         """
         assert self.binded and self.params_initialized
         self.exec_group.backward(out_grads=out_grads)
+
+    def get_output_shapes(self):
+        """Get the shapes of the outputs."""
+        assert self.binded
+        return self.exec_group.get_output_shapes()
 
     def get_outputs(self, merge_multi_context=True):
         """Get outputs of the previous forward computation.
