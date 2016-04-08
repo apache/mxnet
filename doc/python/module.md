@@ -45,7 +45,6 @@ following information (after binded).
     - `set_params(arg_params, aux_params)`: assign parameters to the devices
       doing the computation.
     - `init_params(...)`: a more flexible interface to assign or initialize the parameters.
-    - `init_optimizer`: install optimizer for parameter updating.
 
 - setup
     - `bind()`: prepare environment for computation.

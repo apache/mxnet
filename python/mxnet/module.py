@@ -119,6 +119,9 @@ class BaseModule(object):
         self.params_initialized = False
         self.optimizer_initialized = False
 
+    ################################################################################
+    # High Level API
+    ################################################################################
     def forward_backward(self, data_batch):
         """A convenient function that calls both `forward` and `backward`.
         """
@@ -320,13 +323,10 @@ class BaseModule(object):
             toc = time.time()
             self.logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc-tic))
 
-            # sync parameters back to CPU
-            if epoch_end_callback or epoch+1 == num_epoch:
-                self.sync_params_from_devices()
-
             if epoch_end_callback is not None:
+                arg_params, aux_params = self.get_params()
                 for callback in _as_list(epoch_end_callback):
-                    callback(epoch, self.symbol, self.arg_params, self.aux_params)
+                    callback(epoch, self.symbol, arg_params, aux_params)
 
             #----------------------------------------
             # evaluation on validation set
@@ -339,6 +339,79 @@ class BaseModule(object):
             # end of 1 epoch, reset the data-iter for another epoch
             train_data.reset()
 
+    ################################################################################
+    # Input/Output information
+    ################################################################################
+    @property
+    def data_shapes(self):
+        """A list of (name, shape) pairs specifying the data inputs to this module."""
+        raise NotImplementedError()
+
+    @property
+    def label_shapes(self):
+        """A list of (name, shape) pairs specifying the label inputs to this module.
+        If this module does not accept labels -- either it is a module without loss
+        function, or it is not binded for training, then this should return an empty
+        list `[]`.
+        """
+        raise NotImplementedError()
+
+    @property
+    def output_shapes(self):
+        """A list of (name, shape) pairs specifying the outputs of this module."""
+        raise NotImplementedError()
+
+    ################################################################################
+    # Parameters of a module
+    ################################################################################
+    def get_params(self):
+        """Get parameters, those are potentially copies of the the actual parameters used
+        to do computation on the device.
+
+        Returns
+        -------
+        `(arg_params, aux_params)`, a pair of dictionary of name to value mapping.
+        """
+        raise NotImplementedError()
+
+    def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
+                    allow_missing=False, force_init=False):
+        """Initialize the parameters and auxiliary states.
+
+        Parameters
+        ----------
+        initializer : Initializer
+            Called to initialize parameters if needed.
+        arg_params : dict
+            If not None, should be a dictionary of existing arg_params. Initialization
+            will be copied from that.
+        aux_params : dict
+            If not None, should be a dictionary of existing aux_params. Initialization
+            will be copied from that.
+        allow_missing : bool
+            If true, params could contain missing values, and the initializer will be
+            called to fill those missing params.
+        force_init : bool
+            If true, will force re-initialize even if already initialized.
+        """
+        raise NotImplementedError()
+
+    def set_params(self, arg_params, aux_params):
+        """Assign parameter and aux state values.
+
+        Parameters
+        ----------
+        arg_params : dict
+            Dictionary of name to value (`NDArray`) mapping.
+        aux_params : dict
+            Dictionary of name to value (`NDArray`) mapping.
+        """
+        self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,
+                         allow_missing=False, force_init=True)
+
+    ################################################################################
+    # Computations
+    ################################################################################
     def forward(self, data_batch, is_train=None):
         """Forward computation.
 
@@ -383,6 +456,26 @@ class BaseModule(object):
         """
         raise NotImplementedError()
 
+    def get_input_grads(self, merge_multi_context=True):
+        """Get the gradients to the inputs, computed in the previous backward computation.
+
+        Parameters
+        ----------
+        merge_multi_context : bool
+            Default is `True`. In the case when data-parallelism is used, the gradients
+            will be collected from multiple devices. A `True` value indicate that we
+            should merge the collected results so that they look like from a single
+            executor.
+
+        Returns
+        -------
+        If `merge_multi_context` is `True`, it is like `[grad1, grad2]`. Otherwise, it
+        is like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`. All the output
+        elements are `NDArray`. When `merge_multi_context` is `False`, those `NDArray`
+        might live on different devices.
+        """
+        raise NotImplementedError()
+
     def update(self):
         """Update parameters according to the installed optimizer and the gradients computed
         in the previous forward-backward batch.
@@ -400,6 +493,9 @@ class BaseModule(object):
         """
         raise NotImplementedError()
 
+    ################################################################################
+    # module setup
+    ################################################################################
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None):
         """Bind the symbols to construct executors. This is necessary before one
@@ -427,28 +523,6 @@ class BaseModule(object):
         """
         raise NotImplementedError()
 
-    def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
-                    allow_missing=False, force_init=False):
-        """Initialize the parameters and auxiliary states.
-
-        Parameters
-        ----------
-        initializer : Initializer
-            Called to initialize parameters if needed.
-        arg_params : dict
-            If not None, should be a dictionary of existing arg_params. Initialization
-            will be copied from that.
-        aux_params : dict
-            If not None, should be a dictionary of existing aux_params. Initialization
-            will be copied from that.
-        allow_missing : bool
-            If true, params could contain missing values, and the initializer will be
-            called to fill those missing params.
-        force_init : bool
-            If true, will force re-initialize even if already initialized.
-        """
-        raise NotImplementedError()
-
     def init_optimizer(self, kvstore='local', optimizer='sgd', optimizer_params={},
                        force_init=False):
         """Install and initialize optimizers.
@@ -464,6 +538,15 @@ class BaseModule(object):
         force_init : bool
             Default `False`, indicating whether we should force re-initializing the
             optimizer in the case an optimizer is already installed.
+        """
+        raise NotImplementedError()
+
+    ################################################################################
+    # misc
+    ################################################################################
+    @property
+    def symbol(self):
+        """Get the underlying symbolic graph (if any).
         """
         raise NotImplementedError()
 
