@@ -137,7 +137,7 @@ model_executor.content.copyto(content_array)
 
 #get initial image representation
 img = mx.nd.zeros(content_np.shape, ctx=dev)
-if args.start_image == None:
+if args.initial_image == None:
     img[:] = mx.rnd.uniform(-0.1, 0.1, img.shape)
 else:
     img[:] = PreprocessOtherImage(args.start_image, shape=content_np.shape)
