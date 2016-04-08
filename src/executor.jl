@@ -195,3 +195,22 @@ function copy_params_from(self::Executor, arg_params::Dict{Base.Symbol,NDArray},
     end
   end
 end
+
+
+"""
+Get a debug string about internal execution plan.
+
+Can be used to get an estimated about the memory cost.
+```julia
+  net = ... # Symbol
+  dProvider = ... # DataProvider
+  exec = mx.simple_bind(net, mx.cpu(), data=size(dProvider.data_batch[1]))
+  dbg_str = mx.debug_str(exec)
+  println(split(ref, ['\n'])[end-2])
+```
+"""
+function debug_str(self :: Executor)
+  s_ref = Ref{Cstring}()
+  @mxcall(:MXExecutorPrint, (MX_handle, Ptr{Cstring}), self.handle, s_ref)
+  bytestring(s_ref[])
+end
