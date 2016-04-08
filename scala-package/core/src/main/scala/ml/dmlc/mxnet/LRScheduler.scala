@@ -39,7 +39,7 @@ class FactorScheduler(protected var step: Int, protected var factor: Float) exte
   private val logger = LoggerFactory.getLogger(classOf[FactorScheduler])
 
   require(step >= 1, "Schedule step must be greater or equal than 1 round")
-  require(factor >= 1.0, "Factor must be less than 1 to make lr reduce")
+  require(factor < 1.0, "Factor must be less than 1 to make lr reduce")
 
   def apply(numUpdate: Int): Float = {
 
