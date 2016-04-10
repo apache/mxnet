@@ -32,7 +32,7 @@ struct CropParam : public dmlc::Parameter<CropParam> {
   DMLC_DECLARE_PARAMETER(CropParam) {
     DMLC_DECLARE_FIELD(num_args).set_range(1, 3)
     .describe("Number of inputs for crop, if equals one, then we will use the h_w"
-      "for crop heihgt and width, else if equals two, then we will use the height"
+      "for crop height and width, else if equals two, then we will use the height"
       "and width of the second input symbol, we name crop_like here");
     int shape[] = {0, 0};
     DMLC_DECLARE_FIELD(offset).set_default(TShape(shape, shape + 2))
@@ -59,7 +59,7 @@ class CropOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(static_cast<int>(in_data.size()), 2);
+    CHECK_EQ(static_cast<int>(in_data.size()), param_.num_args);
     CHECK_EQ(out_data.size(), 1);
     CHECK_EQ(req[crop_enum::kOut], kWriteTo);
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -81,13 +81,17 @@ class CropOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_grad.size(), 2) << in_grad.size();
+    CHECK_EQ(in_grad.size(), param_.num_args) << in_grad.size();
     CHECK_EQ(out_grad.size(), 1) << out_grad.size();
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> grad = out_grad[crop_enum::kOut].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> gdata = in_grad[crop_enum::kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> gcrop_like = in_grad[crop_enum::kCropLike].get<xpu, 4, real_t>(s);
-    gcrop_like = (real_t)0.0f;
+    if (param_.num_args > 1) {
+      // here backward grad is set to zero for crop_like
+      // however, this should only be done when num_args > 1, i.e., crop_like exists
+      Tensor<xpu, 4> gcrop_like = in_grad[crop_enum::kCropLike].get<xpu, 4, real_t>(s);
+      gcrop_like = (real_t)0.0f;
+    }
     offset_hw_ = InferCropOfferset(gdata.shape_, grad.shape_);
     gdata = (real_t)0.0f;
     slice<3>(slice<2>(gdata, offset_hw_[0], offset_hw_[0]+grad.size(2)),
