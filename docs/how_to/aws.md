@@ -129,7 +129,7 @@ directory of the root machine, such as `~/train`, and MXNet is built as `~/mxnet
 3. Assume there are 2 machines, then train the CNN using 2 workers:
 
   ```bash
-  ../../tools/launch.py -n 2 -H hosts --sync-dir /tmp/mxnet python train_mnist.py --kv-store dist_sync
+  ../../tools/launch.py -n 2 -H hosts --sync-dst-dir /tmp/mxnet python train_mnist.py --kv-store dist_sync
   ```
 
 Note: Sometimes the jobs lingers at the slave machines even we pressed `Ctrl-c`
