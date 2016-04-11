@@ -8,7 +8,6 @@ I borrowed many ideas from NeuralTalk2[2] by Karparthy.
 
 ##Usage
 1. Prepare input data using `preprocess.py`. The raw json file looks like
-
 >  raw.json
 > 
 >  {'captions': [u'A man with a red helmet on a small moped on a dirt road. ',
