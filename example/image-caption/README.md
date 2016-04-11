@@ -1,13 +1,13 @@
 #Image Caption Generation
 
-This is a simple implementaion of paper Neural Image Talk[1] based on mxnet.
-I borrowed many ideas from NeuralTalk2[2] by Karparthy.
+This is a simple implementaion of paper Neural Image Caption[1] based on mxnet.
+I borrowed many ideas from NeuralTalk2[2] by Karpathy.
 
 ##Requirement
 1. h5py
 
 ##Usage
-1. Prepare input data using `preprocess.py`. The raw json file looks like
+1. Prepare input data by `preprocess.py`. The raw json file looks like
 >  raw.json
 > 
 >  {'captions': [u'A man with a red helmet on a small moped on a dirt road. ',
