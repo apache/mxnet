@@ -91,6 +91,9 @@ object TrainMnist {
         else if (inst.cpus != null) inst.cpus.split(',').map(id => Context.cpu(id.trim.toInt))
         else Array(Context.cpu(0))
 
+      logger.info("Start KVStoreServer for scheduler & servers")
+      KVStoreServer.start()
+
       ModelTrain.fit(dataDir = inst.dataDir,
         batchSize = inst.batchSize, numExamples = inst.numExamples, devs = devs,
         network = net, dataLoader = getIterator(dataShape),

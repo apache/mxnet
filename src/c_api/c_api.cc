@@ -1247,11 +1247,13 @@ int MXKVStoreIsSchedulerNode(int *ret) {
 }
 
 int MXKVStoreRunServer(KVStoreHandle handle,
-                       MXKVStoreServerController controller) {
+                       MXKVStoreServerController controller,
+                       void *controller_handle) {
   API_BEGIN();
   MXKVStoreServerController *controller_temp = controller;
-  auto ctrl = [controller_temp](int head, const std::string& body) {
-      controller_temp(head, body.c_str());
+  void *controller_handle_temp = controller_handle;
+  auto ctrl = [controller_temp, controller_handle_temp](int head, const std::string& body) {
+      controller_temp(head, body.c_str(), controller_handle_temp);
   };
   static_cast<KVStore*>(handle)->RunServer(ctrl);
   API_END();
