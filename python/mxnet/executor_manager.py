@@ -129,9 +129,7 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
                 if np.prod(arg_arr.shape) >= np.prod(arg_shape[i]):
                     # good, we can share this memory
                     assert(arg_types[i] == arg_arr.dtype)
-
-                    if np.prod(arg_shape[i]) < np.prod(arg_arr.shape):
-                        arg_arr =  arg_arr.reshape(arg_shape[i])
+                    arg_arr =  arg_arr.reshape(arg_shape[i])
                 else:
                     logger.warning(('bucketing: data "%s" has a shape %s' % (name, arg_shape[i])) +
                                    (', which is larger than already allocated shape %s' % (arg_arr.shape,)) +
