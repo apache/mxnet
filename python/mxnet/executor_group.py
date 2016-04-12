@@ -344,4 +344,3 @@ class DataParallelExecutorGroup(object):
         """
         return [(k, tuple([self.slices[i].stop-self.slices[i].start] + list(v[1:])))
                 for k, v in shapes]
-

@@ -71,8 +71,9 @@ class BaseModule(object):
         - `data_shapes`: a list of `(name, shape)`. In theory, since the memory is allocated,
           we could directly provide the data arrays. But in the case of data parallelization,
           the data arrays might not be of the same shape as viewed from the external world.
-        - `label_shapes`: a list of `(name, shape)`. This might be `None` if the module does
-          not need labels (e.g. it does not contains a loss function at the top).
+        - `label_shapes`: a list of `(name, shape)`. This might be `[]` if the module does
+          not need labels (e.g. it does not contains a loss function at the top), or a module
+          is not binded for training.
         - `output_shapes`: a list of `(name, shape)` for outputs of the module.
 
     - parameters (for modules with parameters)
@@ -118,6 +119,7 @@ class BaseModule(object):
         self.inputs_need_grad = False
         self.params_initialized = False
         self.optimizer_initialized = False
+        self.symbol = None
 
     ################################################################################
     # High Level API
@@ -558,9 +560,11 @@ class Module(BaseModule):
     Parameters
     ----------
     symbol : Symbol
-    input_names : list of string
-        Default is `['data', 'softmax_label']` for a typical model used in
-        image classification.
+    data_names : list of str
+        Default is `['data']` for a typical model used in image classification.
+    label_names : list of str
+        Default is `['softmax_label']` for a typical model used in image
+        classification.
     logger : Logger
         Default is `logging`.
     context : Context or list of Context
@@ -568,37 +572,139 @@ class Module(BaseModule):
     work_load_list : list of number
         Default `None`, indicating uniform workload.
     """
-    def __init__(self, symbol, input_names=['data', 'softmax_label'], logger=logging,
-                 context=ctx.cpu(), work_load_list=None):
+    def __init__(self, symbol, data_names=['data'], label_names=['softmax_label'],
+                 logger=logging, context=ctx.cpu(), work_load_list=None):
         super(Module, self).__init__(logger=logger)
 
         if isinstance(context, ctx.Context):
             context = [context]
-        self.context = context
+        self._context = context
         if work_load_list is None:
             work_load_list = [1] * len(self.context)
         assert len(work_load_list) == len(self.context)
-        self.work_load_list = work_load_list
+        self._work_load_list = work_load_list
 
         self.symbol = symbol
 
         arg_names = symbol.list_arguments()
-        self.param_names = [x for x in arg_names if x not in input_names]
-        self.aux_names = symbol.list_auxiliary_states()
+        input_names = data_names + label_names
+        self._param_names = [x for x in arg_names if x not in input_names]
+        self._aux_names = symbol.list_auxiliary_states()
 
-        self.arg_params = None
-        self.aux_params = None
+        self._arg_params = None
+        self._aux_params = None
+        self._params_dirty = False
 
-        self.optimizer = None
-        self.kvstore = None
-        self.update_on_kvstore = None
-        self.updater = None
+        self._optimizer = None
+        self._kvstore = None
+        self._update_on_kvstore = None
+        self._updater = None
 
-        self._reset_bind()
+        self._exec_group = None
+        self._data_shapes = None
+        self._label_shapes = None
 
     def _reset_bind(self):
+        """Internal function to reset binded state."""
         self.binded = False
-        self.exec_group = None
+        self._exec_group = None
+        self._data_shapes = None
+        self._label_shapes = None
+
+    @property
+    def data_shapes(self):
+        """Get data shapes.
+        Returns
+        -------
+        A list of `(name, shape)` pairs.
+        """
+        assert self.binded
+        return self._data_shapes
+
+    @property
+    def label_shapes(self):
+        """Get label shapes.
+        Returns
+        -------
+        A list of `(name, shape)` pairs. The return value could be `None` if
+        the module does not need labels, or if the module is not binded for
+        training (in this case, label information is not available).
+        """
+        return self._label_shapes
+
+    @property
+    def output_shapes(self):
+        """Get output shapes.
+        Returns
+        -------
+        A list of `(name, shape)` pairs.
+        """
+        return self._exec_group.get_output_shapes()
+
+    def get_params(self):
+        """Get current parameters.
+        Returns
+        -------
+        `(arg_params, aux_params)`, each a dictionary of name to parameters (in
+        `NDArray`) mapping.
+        """
+        if self._params_dirty:
+            self._sync_params_from_devices()
+        return (self._arg_params, self._aux_params)
+
+    def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
+                    allow_missing=False, force_init=False):
+        """Initialize the parameters and auxiliary states.
+
+        Parameters
+        ----------
+        initializer : Initializer
+            Called to initialize parameters if needed.
+        arg_params : dict
+            If not None, should be a dictionary of existing arg_params. Initialization
+            will be copied from that.
+        aux_params : dict
+            If not None, should be a dictionary of existing aux_params. Initialization
+            will be copied from that.
+        allow_missing : bool
+            If true, params could contain missing values, and the initializer will be
+            called to fill those missing params.
+        force_init : bool
+            If true, will force re-initialize even if already initialized.
+        """
+        if self.params_initialized and not force_init:
+            return
+        assert self.binded, 'call bind before initializing the parameters'
+
+        if self._arg_params is None:
+            param_arrays = [nd.zeros(x[0].shape) for x in self._exec_group.param_arrays]
+            self._arg_params = {name:arr for name, arr in zip(self._param_names, param_arrays)}
+
+        if self._aux_params is None:
+            aux_arrays = [nd.zeros(x[0].shape) for x in self._exec_group.aux_arrays]
+            self._aux_params = {name:arr for name, arr in zip(self._aux_names, aux_arrays)}
+
+        def _impl(name, arr, cache):
+            if cache is not None:
+                if cache.has_key(name):
+                    cache[name].copyto(arr)
+                else:
+                    assert allow_missing
+                    initializer(name, arr)
+            else:
+                initializer(name, arr)
+
+        for name, arr in self._arg_params.iteritems():
+            _impl(name, arr, arg_params)
+
+        for name, arr in self._aux_params.iteritems():
+            _impl(name, arr, aux_params)
+
+        self.params_initialized = True
+        self._params_dirty = False
+
+        # copy the initialized parameters to devices
+        self.exec_group.set_params(self._arg_params, self._aux_params)
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None):
@@ -643,133 +749,34 @@ class Module(BaseModule):
         else:
             assert label_shapes is not None
 
+        self._data_shapes = data_shapes
+        self._label_shapes = label_shapes
+
         if shared_module is not None:
             assert isinstance(shared_module, Module) and \
                     shared_module.binded and shared_module.params_initialized
-            shared_group = shared_module.exec_group
+            shared_group = shared_module._exec_group
         else:
             shared_group = None
 
-        self.exec_group = DataParallelExecutorGroup(self.symbol, self.context, self.work_load_list,
-                                                    data_shapes, label_shapes, self.param_names,
-                                                    for_training, inputs_need_grad, shared_group)
+        self._exec_group = DataParallelExecutorGroup(self.symbol, self._context,
+                                                     self._work_load_list, data_shapes,
+                                                     label_shapes, self._param_names,
+                                                     for_training, inputs_need_grad,
+                                                     shared_group)
 
         if shared_module is not None:
             self.params_initialized = True
-            self.arg_params = shared_module.arg_params
-            self.aux_params = shared_module.aux_params
+            self._arg_params = shared_module.arg_params
+            self._aux_params = shared_module.aux_params
 
         if self.params_initialized:
             # if the parameters are already initialized, we are re-binding
             # so automatically copy the already initialized params
-            self.exec_group.set_params(self.arg_params, self.aux_params)
+            self._exec_group.set_params(self._arg_params, self._aux_params)
 
         if shared_module is not None and shared_module.optimizer_initialized:
-            self.borrow_optimizer(shared_module)
-
-    def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
-                    allow_missing=False, force_init=False):
-        """Initialize the parameters and auxiliary states.
-
-        Parameters
-        ----------
-        initializer : Initializer
-            Called to initialize parameters if needed.
-        arg_params : dict
-            If not None, should be a dictionary of existing arg_params. Initialization
-            will be copied from that.
-        aux_params : dict
-            If not None, should be a dictionary of existing aux_params. Initialization
-            will be copied from that.
-        allow_missing : bool
-            If true, params could contain missing values, and the initializer will be
-            called to fill those missing params.
-        force_init : bool
-            If true, will force re-initialize even if already initialized.
-        """
-        if self.params_initialized and not force_init:
-            return
-        assert self.binded, 'call bind before initializing the parameters'
-
-        if self.arg_params is None:
-            param_arrays = [nd.zeros(x[0].shape) for x in self.exec_group.param_arrays]
-            self.arg_params = {name:arr for name, arr in zip(self.param_names, param_arrays)}
-
-        if self.aux_params is None:
-            aux_arrays = [nd.zeros(x[0].shape) for x in self.exec_group.aux_arrays]
-            self.aux_params = {name:arr for name, arr in zip(self.aux_names, aux_arrays)}
-
-        def _impl(name, arr, cache):
-            if cache is not None:
-                if cache.has_key(name):
-                    cache[name].copyto(arr)
-                else:
-                    assert allow_missing
-                    initializer(name, arr)
-            else:
-                initializer(name, arr)
-
-        for name, arr in self.arg_params.iteritems():
-            _impl(name, arr, arg_params)
-
-        for name, arr in self.aux_params.iteritems():
-            _impl(name, arr, aux_params)
-
-        self.params_initialized = True
-
-        # copy the initialized parameters to devices
-        self.exec_group.set_params(self.arg_params, self.aux_params)
-
-    def forward(self, data_batch, is_train=None):
-        """Forward computation.
-
-        Parameters
-        ----------
-        data_batch : DataBatch
-            Could be anything with similar API implemented.
-        is_train : bool
-            Default is `None`, which means `is_train` takes the value of `self.for_training`.
-        """
-        assert self.binded and self.params_initialized
-        self.exec_group.forward(data_batch, is_train)
-
-    def backward(self, out_grads=None):
-        """Backward computation.
-
-        Parameters
-        ----------
-        out_grads : NDArray or list of NDArray, optional
-            Gradient on the outputs to be propagated back.
-            This parameter is only needed when bind is called
-            on outputs that are not a loss function.
-        """
-        assert self.binded and self.params_initialized
-        self.exec_group.backward(out_grads=out_grads)
-
-    def get_output_shapes(self):
-        """Get the shapes of the outputs."""
-        assert self.binded
-        return self.exec_group.get_output_shapes()
-
-    def get_outputs(self, merge_multi_context=True):
-        """Get outputs of the previous forward computation.
-
-        Parameters
-        ----------
-        merge_multi_context : bool
-            Default is `True`. In the case when data-parallelism is used, the outputs
-            will be collected from multiple devices. A `True` value indicate that we
-            should merge the collected results so that they look like from a single
-            executor.
-
-        Returns
-        -------
-        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
-        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
-        elements are `NDArray`.
-        """
-        assert self.binded and self.params_initialized
-        return self.exec_group.get_outputs(merge_multi_context=merge_multi_context)
+            self._borrow_optimizer(shared_module)
 
     def init_optimizer(self, kvstore='local', optimizer='sgd', optimizer_params={},
                        force_init=False):
@@ -794,10 +801,10 @@ class Module(BaseModule):
             return
 
         (kvstore, update_on_kvstore) = \
-                _create_kvstore(kvstore, len(self.context), self.arg_params)
+                _create_kvstore(kvstore, len(self._context), self._arg_params)
 
         if isinstance(optimizer, str):
-            batch_size = self.exec_group.batch_size
+            batch_size = self._exec_group.batch_size
             if kvstore and kvstore.type == 'dist_sync':
                 batch_size *= kvstore.num_workers
             optimizer = opt.create(optimizer,
@@ -805,26 +812,26 @@ class Module(BaseModule):
         else:
             assert isinstance(optimizer, opt.Optimizer)
 
-        self.optimizer = optimizer
-        self.kvstore = kvstore
-        self.update_on_kvstore = update_on_kvstore
-        self.updater = None
+        self._optimizer = optimizer
+        self._kvstore = kvstore
+        self._update_on_kvstore = update_on_kvstore
+        self._updater = None
 
         if not update_on_kvstore:
-            self.updater = opt.get_updater(optimizer)
+            self._updater = opt.get_updater(optimizer)
         if kvstore:
             # copy initialized local parameters to kvstore
             _initialize_kvstore(kvstore=kvstore,
-                                param_arrays=self.exec_group.param_arrays,
-                                arg_params=self.arg_params,
-                                param_names=self.param_names,
+                                param_arrays=self._exec_group.param_arrays,
+                                arg_params=self._arg_params,
+                                param_names=self._param_names,
                                 update_on_kvstore=update_on_kvstore)
         if update_on_kvstore:
-            kvstore.set_optimizer(self.optimizer)
+            kvstore.set_optimizer(self._optimizer)
 
         self.optimizer_initialized = True
 
-    def borrow_optimizer(self, shared_module):
+    def _borrow_optimizer(self, shared_module):
         """Borrow optimizer from a shared module. Used in bucketing, where exactly the same
         optimizer (esp. kvstore) is used.
 
@@ -839,12 +846,39 @@ class Module(BaseModule):
         self.updater = shared_module.updater
         self.optimizer_initialized = True
 
+    def forward(self, data_batch, is_train=None):
+        """Forward computation.
+
+        Parameters
+        ----------
+        data_batch : DataBatch
+            Could be anything with similar API implemented.
+        is_train : bool
+            Default is `None`, which means `is_train` takes the value of `self.for_training`.
+        """
+        assert self.binded and self.params_initialized
+        self._exec_group.forward(data_batch, is_train)
+
+    def backward(self, out_grads=None):
+        """Backward computation.
+
+        Parameters
+        ----------
+        out_grads : NDArray or list of NDArray, optional
+            Gradient on the outputs to be propagated back.
+            This parameter is only needed when bind is called
+            on outputs that are not a loss function.
+        """
+        assert self.binded and self.params_initialized
+        self._exec_group.backward(out_grads=out_grads)
+
     def update(self):
         """Update parameters according to the installed optimizer and the gradients computed
         in the previous forward-backward batch.
         """
         assert self.binded and self.params_initialized and self.optimizer_initialized
 
+        self._params_dirty = True
         if self.update_on_kvstore:
             _update_params_on_kvstore(self.exec_group.param_arrays,
                                       self.exec_group.grad_arrays,
@@ -856,6 +890,46 @@ class Module(BaseModule):
                            num_device=len(self.context),
                            kvstore=self.kvstore)
 
+    def get_outputs(self, merge_multi_context=True):
+        """Get outputs of the previous forward computation.
+
+        Parameters
+        ----------
+        merge_multi_context : bool
+            Default is `True`. In the case when data-parallelism is used, the outputs
+            will be collected from multiple devices. A `True` value indicate that we
+            should merge the collected results so that they look like from a single
+            executor.
+
+        Returns
+        -------
+        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
+        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
+        elements are `NDArray`.
+        """
+        assert self.binded and self.params_initialized
+        return self._exec_group.get_outputs(merge_multi_context=merge_multi_context)
+
+    def get_input_grads(self, merge_multi_context=True):
+        """Get the gradients with respect to the inputs of the module.
+
+        Parameters
+        ----------
+        merge_multi_context : bool
+            Default is `True`. In the case when data-parallelism is used, the outputs
+            will be collected from multiple devices. A `True` value indicate that we
+            should merge the collected results so that they look like from a single
+            executor.
+
+        Returns
+        -------
+        If `merge_multi_context` is `True`, it is like `[grad1, grad2]`. Otherwise, it
+        is like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`. All the output
+        elements are `NDArray`.
+        """
+        assert self.binded and self.params_initialized and self.inputs_need_grad
+        return self._exec_group.get_input_grads(merge_multi_context=merge_multi_context)
+
     def update_metric(self, eval_metric, labels):
         """Evaluate and accumulate evaluation metric on outputs of the last forward computation.
 
@@ -865,9 +939,9 @@ class Module(BaseModule):
         labels : list of NDArray
             Typically `data_batch.label`.
         """
-        self.exec_group.update_metric(eval_metric, labels)
+        self._exec_group.update_metric(eval_metric, labels)
 
-    def sync_params_from_devices(self):
+    def _sync_params_from_devices(self):
         """Synchronize parameters from devices to CPU. This function should be called after
         calling `update` that updates the parameters on the devices, before one can read the
         latest parameters from `self.arg_params` and `self.aux_params`.
@@ -1076,7 +1150,7 @@ class BucketingModule(BaseModule):
         self.curr_module.init_optimizer(kvstore, optimizer, optimizer_params, force_init=force_init)
         for mod in self.buckets.itervalues():
             if mod is not self.curr_module:
-                mod.borrow_optimizer(self.curr_module)
+                mod._borrow_optimizer(self.curr_module)
 
         self.optimizer_initialized = True
 
