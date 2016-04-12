@@ -543,16 +543,6 @@ class BaseModule(object):
         """
         raise NotImplementedError()
 
-    ################################################################################
-    # misc
-    ################################################################################
-    @property
-    def symbol(self):
-        """Get the underlying symbolic graph (if any).
-        """
-        raise NotImplementedError()
-
-
 class Module(BaseModule):
     """Module is a basic module that wrap a `Symbol`. It is functionally the same
     as the `FeedForward` model, except under the module API.
@@ -580,8 +570,8 @@ class Module(BaseModule):
             context = [context]
         self._context = context
         if work_load_list is None:
-            work_load_list = [1] * len(self.context)
-        assert len(work_load_list) == len(self.context)
+            work_load_list = [1] * len(self._context)
+        assert len(work_load_list) == len(self._context)
         self._work_load_list = work_load_list
 
         self.symbol = symbol
@@ -704,7 +694,7 @@ class Module(BaseModule):
         self._params_dirty = False
 
         # copy the initialized parameters to devices
-        self.exec_group.set_params(self._arg_params, self._aux_params)
+        self._exec_group.set_params(self._arg_params, self._aux_params)
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None):
@@ -840,10 +830,10 @@ class Module(BaseModule):
         shared_module : Module
         """
         assert shared_module.optimizer_initialized
-        self.optimizer = shared_module.optimizer
-        self.kvstore = shared_module.kvstore
-        self.update_on_kvstore = shared_module.update_on_kvstore
-        self.updater = shared_module.updater
+        self._optimizer = shared_module.optimizer
+        self._kvstore = shared_module.kvstore
+        self._update_on_kvstore = shared_module.update_on_kvstore
+        self._updater = shared_module.updater
         self.optimizer_initialized = True
 
     def forward(self, data_batch, is_train=None):
@@ -879,16 +869,16 @@ class Module(BaseModule):
         assert self.binded and self.params_initialized and self.optimizer_initialized
 
         self._params_dirty = True
-        if self.update_on_kvstore:
-            _update_params_on_kvstore(self.exec_group.param_arrays,
-                                      self.exec_group.grad_arrays,
-                                      self.kvstore)
+        if self._update_on_kvstore:
+            _update_params_on_kvstore(self._exec_group.param_arrays,
+                                      self._exec_group.grad_arrays,
+                                      self._kvstore)
         else:
-            _update_params(self.exec_group.param_arrays,
-                           self.exec_group.grad_arrays,
-                           updater=self.updater,
-                           num_device=len(self.context),
-                           kvstore=self.kvstore)
+            _update_params(self._exec_group.param_arrays,
+                           self._exec_group.grad_arrays,
+                           updater=self._updater,
+                           num_device=len(self._context),
+                           kvstore=self._kvstore)
 
     def get_outputs(self, merge_multi_context=True):
         """Get outputs of the previous forward computation.
@@ -944,9 +934,9 @@ class Module(BaseModule):
     def _sync_params_from_devices(self):
         """Synchronize parameters from devices to CPU. This function should be called after
         calling `update` that updates the parameters on the devices, before one can read the
-        latest parameters from `self.arg_params` and `self.aux_params`.
+        latest parameters from `self._arg_params` and `self._aux_params`.
         """
-        self.exec_group.get_params(self.arg_params, self.aux_params)
+        self.exec_group.get_params(self._arg_params, self._aux_params)
 
 
 class BucketingModule(BaseModule):

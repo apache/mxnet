@@ -10,6 +10,14 @@ from . import ndarray as nd
 from .base import mx_real_t
 from .executor_manager import _split_input_slice, _load_data, _load_label
 
+def _merge_multi_context(outputs):
+    """Merge outputs that lives on multiple context into one, so that they look
+    like living on one context.
+    """
+    outputs = [np.concatenate([y.asnumpy() for y in x]) for x in outputs]
+    outputs = [nd.array(x) for x in outputs]
+    return outputs
+
 class DataParallelExecutorGroup(object):
     """DataParallelExecutorGroup is a group of executors that lives on a group of devices.
     This is a helper class used to implement data parallelization. Each mini-batch will
@@ -127,6 +135,14 @@ class DataParallelExecutorGroup(object):
                             for i, name in enumerate(self.arg_names)
                             if name in self.param_names]
 
+        data_names = [x[0] for x in data_shapes]
+        if self.inputs_need_grad:
+            self.input_grad_arrays = [[exec_.grad_arrays[i] for exec_ in self.execs]
+                                      for i, name in enumerate(self.arg_names)
+                                      if name in data_names]
+        else:
+            self.input_grad_arrays = None
+
         self.aux_arrays = [[exec_.aux_arrays[i] for exec_ in self.execs]
                            for i in range(len(self.aux_names))]
 
@@ -214,9 +230,30 @@ class DataParallelExecutorGroup(object):
         outputs = [[exec_.outputs[i] for exec_ in self.execs]
                    for i in range(len(self.execs[0].outputs))]
         if merge_multi_context:
-            outputs = [np.concatenate([y.asnumpy() for y in x]) for x in outputs]
-            outputs = [nd.array(x) for x in outputs]
+            outputs = _merge_multi_context(outputs)
         return outputs
+
+    def get_input_grads(self, merge_multi_context=True):
+        """Get the gradients with respect to the inputs of the module.
+
+        Parameters
+        ----------
+        merge_multi_context : bool
+            Default is `True`. In the case when data-parallelism is used, the outputs
+            will be collected from multiple devices. A `True` value indicate that we
+            should merge the collected results so that they look like from a single
+            executor.
+
+        Returns
+        -------
+        If `merge_multi_context` is `True`, it is like `[grad1, grad2]`. Otherwise, it
+        is like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`. All the output
+        elements are `NDArray`.
+        """
+        assert self.inputs_need_grad
+        if merge_multi_context:
+            return _merge_multi_context(self.input_grad_arrays)
+        return self.input_grad_arrays
 
     def backward(self, out_grads=None):
         """Run backward on all devices. A backward should be called after
