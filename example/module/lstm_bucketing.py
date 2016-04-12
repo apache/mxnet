@@ -14,6 +14,7 @@ import os.path
 data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'rnn', 'data'))
 
 def Perplexity(label, pred):
+    label = label.T.reshape((-1,))
     loss = 0.
     for i in range(pred.shape[0]):
         loss += -np.log(max(1e-10, pred[i][int(label[i])]))
@@ -57,14 +58,14 @@ if __name__ == '__main__':
         sym = lstm_unroll(num_lstm_layer, seq_len, len(vocab),
                           num_hidden=num_hidden, num_embed=num_embed,
                           num_label=len(vocab))
-        data_names = ['data/%d' % t for t in range(seq_len)] + state_names
-        label_names = ['label/%d' % t for t in range(seq_len)]
+        data_names = ['data'] + state_names
+        label_names = ['softmax_label']
         return (sym, data_names, label_names)
 
     if len(buckets) == 1:
         mod = mx.mod.Module(*sym_gen(buckets[0]), context=contexts)
     else:
-        mod = mx.mod.BucketingModule(sym_gen, default_bucket_key=buckets[0], context=contexts)
+        mod = mx.mod.BucketingModule(sym_gen, default_bucket_key=data_train.default_bucket_key, context=contexts)
 
     import logging
     head = '%(asctime)-15s %(message)s'
