@@ -290,6 +290,35 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySave
   return ret;
 }
 
+extern "C" void KVStoreServerControllerFunc
+  (int head, const char *body, void *handle) {
+  jobject controllerObjGlb = static_cast<jobject>(handle);
+
+  JNIEnv *env;
+  _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+
+  // find java controller method
+  jclass ctrlClass = env->GetObjectClass(controllerObjGlb);
+  jmethodID ctrlFunc = env->GetMethodID(ctrlClass, "invoke", "(ILjava/lang/String;)V");
+
+  jstring jbody = env->NewStringUTF(body);
+  env->CallVoidMethod(controllerObjGlb, ctrlFunc, head, jbody);
+  env->DeleteLocalRef(jbody);
+
+  env->DeleteLocalRef(ctrlClass);
+  // FIXME(Yizhi): This function can be called multiple times,
+  // can we find a way to safely destroy this object ?
+  // env->DeleteGlobalRef(controllerObjGlb);
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreRunServer
+  (JNIEnv *env, jobject obj, jlong kvStorePtr, jobject controllerObj) {
+  jobject controllerObjGlb = env->NewGlobalRef(controllerObj);
+  return MXKVStoreRunServer(reinterpret_cast<KVStoreHandle>(kvStorePtr),
+                            KVStoreServerControllerFunc,
+                            reinterpret_cast<void *>(controllerObjGlb));
+}
+
 extern "C" void KVStoreUpdaterCallbackFunc
   (int key, NDArrayHandle recv, NDArrayHandle local, void *handle) {
   jobject updaterFuncObjGlb = static_cast<jobject>(handle);

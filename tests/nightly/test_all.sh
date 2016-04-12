@@ -26,7 +26,13 @@ make -C ../.. clean
 make -C ../.. -j8
 return $?
 }
-juLog -name=Build -error=Error build
+# juLog -name=Build -error=Error build
+
+# python: local kvstore
+juLog -name=Python.Local.KVStore -error=Error python test_kvstore.py
+
+# python: distributed kvstore
+juLog -name=Python.Distributed.KVStore -error=Error ../../tools/launch.py -n 4 python dist_sync_kvstore.py
 
 # download data
 juLog -name=DownloadData bash ./download.sh
@@ -42,8 +48,6 @@ check_val() {
     rm -f log
 }
 
-# python: distributed lenet + mnist
-juLog -name=Python.Distributed.KVStore -error=Error ../../tools/launch.py -n 4 python dist_sync_kvstore.py
 
 example_dir=../../example/image-classification
 # python: lenet + mnist
