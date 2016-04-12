@@ -12,8 +12,13 @@ import com.sksamuel.scrimage.nio.JpegWriter
 import ml.dmlc.mxnet.optimizer.SGD
 import ml.dmlc.mxnet.optimizer.Adam
 
+/**
+ * An Implementation of the paper A Neural Algorithm of Artistic Style
+ * by Leon A. Gatys, Alexander S. Ecker, and Matthias Bethge
+ * @author Depeng Liang
+ */
 object NeuralStyle {
-  case class Executor(executor: ml.dmlc.mxnet.Executor, data: NDArray, dataGrad: NDArray)
+  case class NSExecutor(executor: Executor, data: NDArray, dataGrad: NDArray)
 
   private val logger = LoggerFactory.getLogger(classOf[NeuralStyle])
 
@@ -81,7 +86,7 @@ object NeuralStyle {
     result.output(filename)(JpegWriter())
   }
 
-  def styleGramExecutor(inputShape: Shape, ctx: Context): Executor = {
+  def styleGramExecutor(inputShape: Shape, ctx: Context): NSExecutor = {
     // symbol
     val data = Symbol.Variable("conv")
     val rsData = Symbol.Reshape()(Map("data" -> data,
@@ -98,7 +103,7 @@ object NeuralStyle {
     val gradMap = Map("conv" -> grad)
     val reqs = Map("conv" -> "write", "weight" -> "null")
     val executor = fc.bind(ctx, args, gradMap, reqs, Nil, null)
-    Executor(executor, conv, grad)
+    NSExecutor(executor, conv, grad)
   }
 
   def twoNorm(array: Array[Float]): Float = {
@@ -110,6 +115,8 @@ object NeuralStyle {
     val parser: CmdLineParser = new CmdLineParser(alle)
     try {
       parser.parseArgument(args.toList.asJava)
+      assert(alle.contentImage != null && alle.styleImage != null
+        && alle.modelPath != null && alle.outputDir != null)
 
       val dev = if (alle.gpu >= 0) Context.gpu(alle.gpu) else Context.cpu(0)
       val contentNp = preprocessContentImage(alle.contentImage, alle.maxLongEdge, dev)
@@ -145,12 +152,7 @@ object NeuralStyle {
 
       saveImage(contentNp, s"${alle.outputDir}/input.jpg", alle.guassianRadius)
       saveImage(styleNp, s"${alle.outputDir}/style.jpg", alle.guassianRadius)
-//      val optimizer = new SGD(
-//          learningRate = alle.lr,
-//          momentum = 0.9f,
-//          wd = 0.005f,
-//          clipGradient = 10,
-//          lrScheduler = lr)
+
        val optimizer = new Adam(
           learningRate = alle.lr,
           wd = 0.005f,
@@ -165,12 +167,12 @@ object NeuralStyle {
       var eps = 0f
       var trainingDone = false
       var e = 0
-      while(e < alle.maxNumEpochs && !trainingDone) {
+      while (e < alle.maxNumEpochs && !trainingDone) {
         modelExecutor.data.set(img)
         modelExecutor.executor.forward()
 
         // style gradient
-        for(i <- 0 until modelExecutor.style.length) {
+        for (i <- 0 until modelExecutor.style.length) {
           val gram = gramExecutor(i)
           gram.data.set(modelExecutor.style(i))
           gram.executor.forward()
@@ -193,11 +195,11 @@ object NeuralStyle {
         oldImg.set(img)
         logger.info(s"epoch $e, relative change $eps")
 
-        if(eps < alle.stopEps) {
+        if (eps < alle.stopEps) {
           logger.info("eps < args.stop_eps, training finished")
           trainingDone = true
         }
-        if((e + 1) % alle.saveEpochs == 0) {
+        if ((e + 1) % alle.saveEpochs == 0) {
           saveImage(img, s"${alle.outputDir}/tmp_${e + 1}.jpg", alle.guassianRadius)
         }
         e = e + 1
@@ -218,11 +220,11 @@ class NeuralStyle {
   @Option(name = "--model", usage = "the pretrained model to use: ['vgg']")
   private val model: String = "vgg19"
   @Option(name = "--content-image", usage = "the content image")
-  private val contentImage: String = "input/IMG_4343.jpg"
+  private val contentImage: String = null
   @Option(name = "--style-image", usage = "the style image")
-  private val styleImage: String = "input/starry_night.jpg"
+  private val styleImage: String = null
   @Option(name = "--model-path", usage = "the model file path")
-  private val modelPath: String = "model/vgg19.params"
+  private val modelPath: String = null
   @Option(name = "--stop-eps", usage = "stop if the relative chanage is less than eps")
   private val stopEps: Float = 0.0005f
   @Option(name = "--content-weight", usage = "the weight for the content image")
@@ -238,7 +240,7 @@ class NeuralStyle {
   @Option(name = "--gpu", usage = "which gpu card to use, -1 means using cpu")
   private val gpu: Int = 0
   @Option(name = "--output-dir", usage = "the output directory")
-  private val outputDir: String = "output"
+  private val outputDir: String = null
   @Option(name = "--save-epochs", usage = "save the output every n epochs")
   private val saveEpochs: Int = 50
   @Option(name = "--guassian-radius", usage = "the gaussian blur filter radius")

@@ -6,6 +6,10 @@ import ml.dmlc.mxnet.NDArray
 import ml.dmlc.mxnet.Symbol
 import ml.dmlc.mxnet.Shape
 
+/**
+ * Definition for the neuralstyle network and initialize it with pretrained weight
+ * @author Depeng Liang
+ */
 object ModelVgg19 {
   case class ConvExecutor(executor: Executor, data: NDArray, dataGrad: NDArray,
                       style: Array[NDArray], content: NDArray)
