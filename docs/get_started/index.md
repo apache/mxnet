@@ -251,6 +251,6 @@ res3: ml.dmlc.mxnet.Shape = (2,3)
 
 ## Recommended Next Steps
 
-- [Build and Install](build.html)
-- [Step by Step Tutorials](../tutorials/index.html)
-- [How-Tos](../tutorials/index.html)
+- [Build and Install](build.md)
+- [Step by Step Tutorials](../tutorials/index.md)
+- [How-Tos](../tutorials/index.md)
