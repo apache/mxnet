@@ -103,9 +103,6 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
 def lstm_inference_symbol(num_lstm_layer, input_size,
                           num_hidden, num_embed, num_label, dropout=0.):
     seqidx = 0
-    embed_weight=mx.sym.Variable("embed_weight")
-    cls_weight = mx.sym.Variable("cls_weight")
-    cls_bias = mx.sym.Variable("cls_bias")
     param_cells = []
     last_states = []
     for i in range(num_lstm_layer):
@@ -117,12 +114,12 @@ def lstm_inference_symbol(num_lstm_layer, input_size,
                           h=mx.sym.Variable("l%d_init_h" % i))
         last_states.append(state)
     assert(len(last_states) == num_lstm_layer)
-    data = mx.sym.Variable("data/%d" % seqidx)
+    data = mx.sym.Variable("data")
 
-    hidden = mx.sym.Embedding(data=data, weight=embed_weight,
+    hidden = mx.sym.Embedding(data=data,
                               input_dim=input_size,
                               output_dim=num_embed,
-                              name="t%d_embed" % seqidx)
+                              name="embed")
     # stack LSTM
     for i in range(num_lstm_layer):
         if i==0:
@@ -138,10 +135,8 @@ def lstm_inference_symbol(num_lstm_layer, input_size,
     # decoder
     if dropout > 0.:
         hidden = mx.sym.Dropout(data=hidden, p=dropout)
-    fc = mx.sym.FullyConnected(data=hidden, weight=cls_weight, bias=cls_bias,
-                               num_hidden=num_label)
-    sm = mx.sym.SoftmaxOutput(data=fc, label=mx.sym.Variable('label/%d' % seqidx),
-                              name='t%d_sm' % seqidx)
+    fc = mx.sym.FullyConnected(data=hidden, num_hidden=num_label, name='pred')
+    sm = mx.sym.SoftmaxOutput(data=fc, name='softmax')
     output = [sm]
     for state in last_states:
         output.append(state.c)
