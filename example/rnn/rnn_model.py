@@ -30,7 +30,7 @@ class LSTMInferenceModel(object):
         batch_size = 1
         init_c = [('l%d_init_c'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
         init_h = [('l%d_init_h'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
-        data_shape = [("data/0", (batch_size,))]
+        data_shape = [("data", (batch_size,))]
 
         input_shapes = dict(init_c + init_h + data_shape)
         self.executor = self.sym.simple_bind(ctx=mx.cpu(), **input_shapes)
@@ -51,13 +51,9 @@ class LSTMInferenceModel(object):
         if new_seq == True:
             for key in self.states_dict.keys():
                 self.executor.arg_dict[key][:] = 0.
-        input_data.copyto(self.executor.arg_dict["data/0"])
+        input_data.copyto(self.executor.arg_dict["data"])
         self.executor.forward()
         for key in self.states_dict.keys():
             self.states_dict[key].copyto(self.executor.arg_dict[key])
         prob = self.executor.outputs[0].asnumpy()
         return prob
-
-
-
-
