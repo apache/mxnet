@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>ml.dmlc.mxnet</groupId>
   <artifactId>mxnet-parent_2.10</artifactId>
-  <version>0.1.1</version>
+  <version>0.1.2-SNAPSHOT</version>
   <name>MXNet Scala Package - Parent</name>
   <url>https://github.com/dmlc/mxnet/tree/master/scala-package</url>
   <description>MXNet Scala Package</description>
@@ -375,6 +375,11 @@
       <dependency>
         <groupId>org.scala-lang</groupId>
         <artifactId>scala-reflect</artifactId>
+        <version>${scala.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.scala-lang</groupId>
+        <artifactId>scala-actors</artifactId>
         <version>${scala.version}</version>
       </dependency>
       <dependency>

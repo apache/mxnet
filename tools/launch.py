@@ -19,8 +19,6 @@ def dmlc_opts(opts):
             '--host-file', opts.hostfile,
             '--sync-dst-dir', opts.sync_dst_dir]
     args += opts.command;
-
-    print args
     from dmlc_tracker import opts
     dmlc_opts = opts.get_opts(args)
     return dmlc_opts
@@ -52,7 +50,7 @@ def main():
 
     args = dmlc_opts(args)
 
-    if args.cluster == 'local' or args.host_file is None:
+    if args.cluster == 'local' or args.host_file is None or args.host_file == 'None':
         from dmlc_tracker import local
         local.submit(args)
     elif args.cluster == 'sge':

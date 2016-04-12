@@ -22,6 +22,7 @@ deep learning system, and interesting insights of DL systems for hackers.
 
 What's New
 ----------
+* [Tutorial for NVidia GTC 2016](https://github.com/dmlc/mxnet-gtc-tutorial)
 * [Embedding Torch layers and functions in MXNet](https://mxnet.readthedocs.org/en/latest/tutorial/torch_howto.html)
 * [MXNet.js: Javascript Package for Deep Learning in Browser (without server)
 ](https://github.com/dmlc/mxnet.js/)
@@ -54,8 +55,7 @@ Features
 
 Ask Questions
 -------------
-* Please use [DMLC/mxnet Forum](http://forum.dmlc.ml/c/mxnet) for any questions about how to use mxnet. 
-* For reporting bugs, please use the [mxnet/issues](https://github.com/dmlc/mxnet/issues) page.
+* Please use [mxnet/issues](https://github.com/dmlc/mxnet/issues) for how to use mxnet and reporting bugs 
 
 License
 -------
