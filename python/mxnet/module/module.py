@@ -151,6 +151,7 @@ class Module(BaseModule):
             self._aux_params = {name:arr for name, arr in zip(self._aux_names, aux_arrays)}
 
         def _impl(name, arr, cache):
+            """Internal helper for parameter initialization"""
             if cache is not None:
                 if cache.has_key(name):
                     cache[name].copyto(arr)
