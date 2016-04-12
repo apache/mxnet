@@ -4,11 +4,11 @@
 
 import numpy as np
 
-from . import context as ctx
-from . import ndarray as nd
+from .. import context as ctx
+from .. import ndarray as nd
 
-from .base import mx_real_t
-from .executor_manager import _split_input_slice, _load_data, _load_label
+from ..base import mx_real_t
+from ..executor_manager import _split_input_slice, _load_data, _load_label
 
 def _merge_multi_context(outputs):
     """Merge outputs that lives on multiple context into one, so that they look
