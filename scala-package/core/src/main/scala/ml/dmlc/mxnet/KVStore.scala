@@ -1,6 +1,7 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
+import org.slf4j.{LoggerFactory, Logger}
 
 /**
  * Key value store interface of MXNet for parameter synchronization.
@@ -28,7 +29,8 @@ object KVStore {
 }
 
 // scalastyle:off finalize
-class KVStore(private val handle: KVStoreHandle) {
+class KVStore(private[mxnet] val handle: KVStoreHandle) {
+  private val logger: Logger = LoggerFactory.getLogger(classOf[KVStore])
   private var updaterFunc: MXKVStoreUpdater = null
   private var disposed = false
 
@@ -175,9 +177,11 @@ class KVStore(private val handle: KVStoreHandle) {
   def setOptimizer(optimizer: Optimizer): Unit = {
     val isWorker = new RefInt
     checkCall(_LIB.mxKVStoreIsWorkerNode(isWorker))
-    if ("dist" == `type` && isWorker.value != 0) {
+    if (`type`.contains("dist") && isWorker.value != 0) {
       val optSerialized = Serializer.getSerializer.serialize(optimizer)
-      sendCommandToServers(0, Serializer.encodeBase64String(optSerialized))
+      val cmd = Serializer.encodeBase64String(optSerialized)
+      logger.debug("Send optimizer to server: {}", cmd)
+      sendCommandToServers(0, cmd)
     } else {
       setUpdater(Optimizer.getUpdater(optimizer))
     }
