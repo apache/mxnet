@@ -90,8 +90,12 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
     hidden_concat = mx.sym.Concat(*hidden_all, dim=0)
     pred = mx.sym.FullyConnected(data=hidden_concat, num_hidden=num_label, name='pred')
 
-    # reshape label to collapse the channel dimension
+    # TODO: add a Transpose operator and then we can Reshape
+    label_slice = mx.sym.SliceChannel(data=label, num_outputs=seq_len)
+    label = [label_slice[t] for t in range(seq_len)]
+    label = mx.sym.Concat(*label, dim=0)
     label = mx.sym.Reshape(data=label, target_shape=(0,))
+
     sm = mx.sym.SoftmaxOutput(data=pred, label=label, name='softmax')
 
     return sm
