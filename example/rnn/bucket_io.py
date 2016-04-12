@@ -102,7 +102,8 @@ class BucketSentenceIter(mx.io.DataIter):
         self.buckets = buckets
         self.data = [[] for _ in buckets]
 
-        self.default_bucket_key = buckets[0]
+        # pre-allocate with the largest bucket for better memory sharing
+        self.default_bucket_key = max(buckets)
 
         for sentence in sentences:
             sentence = self.text2id(sentence, vocab)
@@ -137,10 +138,8 @@ class BucketSentenceIter(mx.io.DataIter):
         self.init_states = init_states
         self.init_state_arrays = [mx.nd.zeros(x[1]) for x in init_states]
 
-        self.provide_data = [('%s/%d' % (self.data_name, t), (self.batch_size,))
-                             for t in range(self.default_bucket_key)] + init_states
-        self.provide_label = [('%s/%d' % (self.label_name, t), (self.batch_size,))
-                              for t in range(self.default_bucket_key)]
+        self.provide_data = [('data', (batch_size, self.default_bucket_key))] + init_states
+        self.provide_label = [('softmax_label', (self.batch_size, self.default_bucket_key))]
 
     def make_data_iter_plan(self):
         "make a random data iteration plan"
@@ -181,14 +180,10 @@ class BucketSentenceIter(mx.io.DataIter):
             label[:, :-1] = data[:, 1:]
             label[:, -1] = 0
 
-            data_all = [mx.nd.array(data[:, t])
-                        for t in range(self.buckets[i_bucket])] + self.init_state_arrays
-            label_all = [mx.nd.array(label[:, t])
-                         for t in range(self.buckets[i_bucket])]
-            data_names = ['%s/%d' % (self.data_name, t)
-                          for t in range(self.buckets[i_bucket])] + init_state_names
-            label_names = ['%s/%d' % (self.label_name, t)
-                           for t in range(self.buckets[i_bucket])]
+            data_all = [mx.nd.array(data)] + self.init_state_arrays
+            label_all = [mx.nd.array(label)]
+            data_names = ['data'] + init_state_names
+            label_names = ['softmax_label']
 
             data_batch = SimpleBatch(data_names, data_all, label_names, label_all,
                                      self.buckets[i_bucket])

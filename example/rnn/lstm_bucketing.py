@@ -9,6 +9,7 @@ from lstm import lstm_unroll
 from bucket_io import BucketSentenceIter, default_build_vocab
 
 def Perplexity(label, pred):
+    label = label.T.reshape((-1,))
     loss = 0.
     for i in range(pred.shape[0]):
         loss += -np.log(max(1e-10, pred[i][int(label[i])]))

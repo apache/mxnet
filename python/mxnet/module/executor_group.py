@@ -3,6 +3,7 @@
 """Executor group is a convenient tool for managing a group of executors."""
 
 import numpy as np
+import logging
 
 from .. import context as ctx
 from .. import ndarray as nd
@@ -55,9 +56,11 @@ class DataParallelExecutorGroup(object):
     input_types : list
         Default is `None`. When not `None`, can be used to specify the data type for each
         of the data/label inputs.
+    logger : Logger
+        Default is `logging`.
     """
     def __init__(self, symbol, context, workload, data_shapes, label_shapes, param_names,
-                 for_training, inputs_need_grad, shared_group=None, input_types=None):
+                 for_training, inputs_need_grad, shared_group=None, input_types=None, logger=logging):
         self.param_names = param_names
         self.arg_names = symbol.list_arguments()
         self.aux_names = symbol.list_auxiliary_states()
@@ -70,6 +73,7 @@ class DataParallelExecutorGroup(object):
         self.inputs_need_grad = inputs_need_grad
 
         self.input_types = input_types
+        self.logger = logger
 
         if shared_group is not None:
             self.shared_data_arrays = shared_group.shared_data_arrays
@@ -329,6 +333,30 @@ class DataParallelExecutorGroup(object):
             else:
                 grad_req[name] = 'null'
 
+        def _get_or_reshape(name, shared_data_arrays, arg_shape, arg_type, context, logger):
+            """Internal helper to get a memory block or re-use by re-shaping"""
+            if name in shared_data_arrays:
+                arg_arr = shared_data_arrays[name]
+
+                if np.prod(arg_arr.shape) >= np.prod(arg_shape):
+                    # nice, we can directly re-use this data blob
+                    assert arg_arr.dtype == arg_type
+                    arg_arr = arg_arr.reshape(arg_shape)
+                else:
+                    logger.warning(('bucketing: data "%s" has a shape %s' % (name, arg_shape)) +
+                                   (', which is larger than already allocated shape %s' % (arg_arr.shape,)) +
+                                   ('. Need to re-allocate. Consider putting default_bucket_key to') +
+                                   (' be the bucket taking the largest input for better memory sharing.'))
+                    arg_arr = nd.zeros(arg_shape, ctx, dtype=arg_type)
+
+                    # replace existing shared array because the new one is bigger
+                    shared_data_arrays[name] = arg_arr
+            else:
+                arg_arr = nd.zeros(arg_shape, context, dtype=arg_type)
+                shared_data_arrays[name] = arg_arr
+
+            return arg_arr
+
         # create or borrow arguments and gradients
         for j in range(len(self.arg_names)):
             name = self.arg_names[j]
@@ -345,13 +373,14 @@ class DataParallelExecutorGroup(object):
                     if grad_req[name] != 'null':
                         grad_arrays[name] = shared_exec.grad_dict[name]
             else: # data or label
-                if name in shared_data_arrays:
-                    arg_arr = shared_data_arrays[name]
-                    assert arg_arr.shape == arg_shapes[j]
-                    assert arg_arr.dtype == arg_types[j]
-                else:
-                    arg_arr = nd.zeros(arg_shapes[j], context, dtype=arg_types[j])
-                shared_data_arrays[name] = arg_arr
+                arg_arr = _get_or_reshape(name, shared_data_arrays, arg_shapes[j], arg_types[j], 
+                                          context, self.logger)
+
+                # data might also need grad if inputs_need_grad is True
+                if grad_req[name] != 'null':
+                    grad_arrays[name] = _get_or_reshape('grad of ' + name, shared_data_arrays,
+                                                        arg_shapes[j], arg_types[j], context, 
+                                                        self.logger)
 
             arg_arrays.append(arg_arr)
 
