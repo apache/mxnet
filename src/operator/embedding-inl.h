@@ -86,7 +86,7 @@ class EmbeddingOp : public Operator {
       << "Embedding layer doesn't support calculate data gradient";
 
     const TShape& ishape = in_data[embedding::kData].shape_;
-    const TShape& oshape = out_data[embedding::kOut].shape_;
+    const TShape& oshape = out_grad[embedding::kOut].shape_;
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 1> data = in_data[embedding::kData].get_with_shape<xpu, 1, real_t>(
