@@ -121,16 +121,18 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
         name = arg_names[i]
         if not name in param_names:
             # data or label
-            if shared_data_arrays is not None and \
-                    name in shared_data_arrays:
-                arg_arr = shared_data_arrays[name]
-
-                # in bucketing, we want to be strict here to avoid
-                # potential bugs
-                assert(arg_shape[i] == arg_arr.shape)
-                assert(arg_types[i] == arg_arr.dtype)
-            else:
-                arg_arr = nd.zeros(arg_shape[i], ctx, dtype=arg_types[i])
+            # if shared_data_arrays is not None and \
+            #         name in shared_data_arrays:
+            #     arg_arr = shared_data_arrays[name]
+            #
+            #     # in bucketing, we want to be strict here to avoid
+            #     # potential bugs
+            #     assert(arg_shape[i] == arg_arr.shape)
+            #     assert(arg_types[i] == arg_arr.dtype)
+            # else:
+            #     arg_arr = nd.zeros(arg_shape[i], ctx, dtype=arg_types[i])
+            arg_arr = nd.zeros(arg_shape[i], ctx, dtype=arg_types[i])
+            
             arg_arrays.append(arg_arr)
             if shared_data_arrays is not None:
                 shared_data_arrays[name] = arg_arr

@@ -48,9 +48,6 @@ def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
 def lstm_unroll(num_lstm_layer, seq_len, input_size,
                 num_hidden, num_embed, num_label, dropout=0.):
 
-    embed_weight = mx.sym.Variable("embed_weight")
-    cls_weight = mx.sym.Variable("cls_weight")
-    cls_bias = mx.sym.Variable("cls_bias")
     param_cells = []
     last_states = []
     for i in range(num_lstm_layer):
@@ -63,15 +60,16 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
         last_states.append(state)
     assert(len(last_states) == num_lstm_layer)
 
-    loss_all = []
-    for seqidx in range(seq_len):
-        # embeding layer
-        data = mx.sym.Variable("data/%d" % seqidx)
+    # embeding layer
+    data = mx.sym.Variable('data')
+    label = mx.sym.Variable('softmax_label')
+    embed = mx.sym.Embedding(data=data, input_dim=input_size, output_dim=num_embed, name='embed')
+    wordvec = mx.sym.SliceChannel(data=embed, num_outputs=seq_len, squeeze_axis=1)
 
-        hidden = mx.sym.Embedding(data=data, weight=embed_weight,
-                                  input_dim=input_size,
-                                  output_dim=num_embed,
-                                  name="t%d_embed" % seqidx)
+    hidden_all = []
+    for seqidx in range(seq_len):
+        hidden = wordvec[seqidx]
+
         # stack LSTM
         for i in range(num_lstm_layer):
             if i == 0:
@@ -87,14 +85,16 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
         # decoder
         if dropout > 0.:
             hidden = mx.sym.Dropout(data=hidden, p=dropout)
-        fc = mx.sym.FullyConnected(data=hidden, weight=cls_weight, bias=cls_bias,
-                                   num_hidden=num_label)
-        sm = mx.sym.SoftmaxOutput(data=fc, label=mx.sym.Variable('label/%d' % seqidx),
-                                  name='t%d_sm' % seqidx)
-        loss_all.append(sm)
+        hidden_all.append(hidden)
 
-    return mx.sym.Group(loss_all)
+    hidden_concat = mx.sym.Concat(*hidden_all, dim=0)
+    pred = mx.sym.FullyConnected(data=hidden_concat, num_hidden=num_label, name='pred')
 
+    # reshape label to collapse the channel dimension
+    label = mx.sym.Reshape(data=label, target_shape=(0,))
+    sm = mx.sym.SoftmaxOutput(data=pred, label=label, name='softmax')
+
+    return sm
 
 def lstm_inference_symbol(num_lstm_layer, input_size,
                           num_hidden, num_embed, num_label, dropout=0.):
@@ -143,5 +143,3 @@ def lstm_inference_symbol(num_lstm_layer, input_size,
         output.append(state.c)
         output.append(state.h)
     return mx.sym.Group(output)
-
-
