@@ -1,4 +1,4 @@
-# pylint: disable=too-many-instance-attributes, too-many-arguments
+# pylint: disable=too-many-instance-attributes, too-many-arguments, protected-access
 """A `Module` implement the `BaseModule` API by wrapping a `Symbol` and one or
 more `Executor` for data parallelization.
 """
@@ -46,7 +46,7 @@ class Module(BaseModule):
         assert len(work_load_list) == len(self._context)
         self._work_load_list = work_load_list
 
-        self.symbol = symbol
+        self._symbol = symbol
 
         arg_names = symbol.list_arguments()
         input_names = data_names + label_names
@@ -221,12 +221,11 @@ class Module(BaseModule):
         if shared_module is not None:
             assert isinstance(shared_module, Module) and \
                     shared_module.binded and shared_module.params_initialized
-            # pylint: disable=protected-access
             shared_group = shared_module._exec_group
         else:
             shared_group = None
 
-        self._exec_group = DataParallelExecutorGroup(self.symbol, self._context,
+        self._exec_group = DataParallelExecutorGroup(self._symbol, self._context,
                                                      self._work_load_list, data_shapes,
                                                      label_shapes, self._param_names,
                                                      for_training, inputs_need_grad,
@@ -234,8 +233,8 @@ class Module(BaseModule):
 
         if shared_module is not None:
             self.params_initialized = True
-            self._arg_params = shared_module.arg_params
-            self._aux_params = shared_module.aux_params
+            self._arg_params = shared_module._arg_params
+            self._aux_params = shared_module._aux_params
 
         if self.params_initialized:
             # if the parameters are already initialized, we are re-binding
@@ -308,10 +307,10 @@ class Module(BaseModule):
         shared_module : Module
         """
         assert shared_module.optimizer_initialized
-        self._optimizer = shared_module.optimizer
-        self._kvstore = shared_module.kvstore
-        self._update_on_kvstore = shared_module.update_on_kvstore
-        self._updater = shared_module.updater
+        self._optimizer = shared_module._optimizer
+        self._kvstore = shared_module._kvstore
+        self._update_on_kvstore = shared_module._update_on_kvstore
+        self._updater = shared_module._updater
         self.optimizer_initialized = True
 
     def forward(self, data_batch, is_train=None):

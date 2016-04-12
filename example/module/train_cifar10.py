@@ -7,8 +7,8 @@ import mxnet as mx
 import argparse
 import train_model
 
-default_data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
-                                                'image-classification', 'cifar10')) + '/'
+my_dir = os.path.dirname(__file__)
+default_data_dir = os.path.abspath(os.path.join(my_dir, '..', 'image-classification', 'cifar10')) + '/'
 
 parser = argparse.ArgumentParser(description='train an image classifer on cifar10')
 parser.add_argument('--network', type=str, default='inception-bn-28-small',
@@ -38,6 +38,11 @@ parser.add_argument('--load-epoch', type=int,
 parser.add_argument('--kv-store', type=str, default='local',
                     help='the kvstore type')
 args = parser.parse_args()
+
+if args.model_prefix is not None:
+    args.model_prefix = os.path.abspath(os.path.join(my_dir, args.model_prefix))
+if args.save_model_prefix is not None:
+    args.save_model_prefix = os.path.abspath(os.path.join(my_dir, args.save_model_prefix))
 
 # download data if necessary
 def _download(data_dir):

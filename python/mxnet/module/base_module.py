@@ -111,7 +111,7 @@ class BaseModule(object):
         self.inputs_need_grad = False
         self.params_initialized = False
         self.optimizer_initialized = False
-        self.symbol = None
+        self._symbol = None
 
     ################################################################################
     # High Level API
@@ -538,3 +538,16 @@ class BaseModule(object):
             optimizer in the case an optimizer is already installed.
         """
         raise NotImplementedError()
+
+    ################################################################################
+    # misc
+    ################################################################################
+    @property
+    def symbol(self):
+        """Get the symbol associated with this module.
+
+        Except for `Module`, for other types of modules (e.g. `BucketingModule`), this
+        property might not be a constant throughout its life time. Some modules might
+        not even be associated with any symbols.
+        """
+        return self._symbol

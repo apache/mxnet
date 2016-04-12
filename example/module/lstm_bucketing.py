@@ -1,8 +1,9 @@
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
 # pylint: disable=superfluous-parens, no-member, invalid-name
 import sys
-sys.path.insert(0, "../../python")
-sys.path.insert(0, "../rnn")
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "python")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "rnn")))
 import numpy as np
 import mxnet as mx
 
@@ -26,7 +27,8 @@ if __name__ == '__main__':
     num_embed = 200
     num_lstm_layer = 2
 
-    num_epoch = 25
+    #num_epoch = 25
+    num_epoch = 2
     learning_rate = 0.01
     momentum = 0.0
 
@@ -36,11 +38,6 @@ if __name__ == '__main__':
     contexts = [mx.context.gpu(i) for i in range(1)]
 
     vocab = default_build_vocab(os.path.join(data_dir, "ptb.train.txt"))
-
-    def sym_gen(seq_len):
-        return lstm_unroll(num_lstm_layer, seq_len, len(vocab),
-                           num_hidden=num_hidden, num_embed=num_embed,
-                           num_label=len(vocab))
 
     init_c = [('l%d_init_c'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
     init_h = [('l%d_init_h'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
@@ -55,14 +52,19 @@ if __name__ == '__main__':
         data_train = DummyIter(data_train)
         data_val = DummyIter(data_val)
 
-    default_input_names = [x[0] for x in (data_train.provide_data + data_train.provide_label)]
+    state_names = [x[0] for x in init_states]
+    def sym_gen(seq_len):
+        sym = lstm_unroll(num_lstm_layer, seq_len, len(vocab),
+                          num_hidden=num_hidden, num_embed=num_embed,
+                          num_label=len(vocab))
+        data_names = ['data/%d' % t for t in range(seq_len)] + state_names
+        label_names = ['label/%d' % t for t in range(seq_len)]
+        return (sym, data_names, label_names)
+
     if len(buckets) == 1:
-        mod = mx.mod.Module(sym_gen(buckets[0]), input_names=default_input_names,
-                            context=contexts)
+        mod = mx.mod.Module(*sym_gen(buckets[0]), context=contexts)
     else:
-        mod = mx.mod.BucketingModule(sym_gen, default_bucket_key=buckets[0],
-                                     default_input_names=default_input_names,
-                                     context=contexts)
+        mod = mx.mod.BucketingModule(sym_gen, default_bucket_key=buckets[0], context=contexts)
 
     import logging
     head = '%(asctime)-15s %(message)s'
@@ -74,4 +76,10 @@ if __name__ == '__main__':
             initializer=mx.init.Xavier(factor_type="in", magnitude=2.34),
             optimizer='sgd',
             optimizer_params={'learning_rate':0.01, 'momentum': 0.9, 'wd': 0.00001})
+
+    # Now it is very easy to use the bucketing to do scoring or collect prediction outputs
+    metric = mx.metric.np(Perplexity)
+    mod.score(data_val, metric)
+    for name, val in metric.get_name_value():
+        logging.info('Validation-%s=%f', name, val)
 
