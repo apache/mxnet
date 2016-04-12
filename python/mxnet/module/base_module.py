@@ -88,7 +88,7 @@ class BaseModule(object):
         - `get_outputs()`: get outputs of the previous forward operation.
         - `get_input_grads()`: get the gradients with respect to the inputs computed
           in the previous backward operation.
-        - `update_metric(metric)`: update performance metric for the previous forward
+        - `update_metric(metric, labels)`: update performance metric for the previous forward
            computed results.
 
     - other properties (mostly for backward compatability)
@@ -533,7 +533,6 @@ class BaseModule(object):
         optimizer_params : dict
             Default `(('learning_rate', 0.01),)`. The default value is not a dictionary,
             just to avoid pylint warning of dangerous default values.
-            Default `{}`
         force_init : bool
             Default `False`, indicating whether we should force re-initializing the
             optimizer in the case an optimizer is already installed.

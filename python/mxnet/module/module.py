@@ -92,6 +92,7 @@ class Module(BaseModule):
         the module does not need labels, or if the module is not binded for
         training (in this case, label information is not available).
         """
+        assert self.binded
         return self._label_shapes
 
     @property
@@ -101,6 +102,7 @@ class Module(BaseModule):
         -------
         A list of `(name, shape)` pairs.
         """
+        assert self.binded
         return self._exec_group.get_output_shapes()
 
     def get_params(self):
@@ -110,6 +112,8 @@ class Module(BaseModule):
         `(arg_params, aux_params)`, each a dictionary of name to parameters (in
         `NDArray`) mapping.
         """
+        assert self.binded and self.params_initialized
+
         if self._params_dirty:
             self._sync_params_from_devices()
         return (self._arg_params, self._aux_params)
@@ -239,7 +243,7 @@ class Module(BaseModule):
             self._exec_group.set_params(self._arg_params, self._aux_params)
 
         if shared_module is not None and shared_module.optimizer_initialized:
-            self._borrow_optimizer(shared_module)
+            self.borrow_optimizer(shared_module)
 
     def init_optimizer(self, kvstore='local', optimizer='sgd',
                        optimizer_params=(('learning_rate', 0.01),), force_init=False):
@@ -295,7 +299,7 @@ class Module(BaseModule):
 
         self.optimizer_initialized = True
 
-    def _borrow_optimizer(self, shared_module):
+    def borrow_optimizer(self, shared_module):
         """Borrow optimizer from a shared module. Used in bucketing, where exactly the same
         optimizer (esp. kvstore) is used.
 
