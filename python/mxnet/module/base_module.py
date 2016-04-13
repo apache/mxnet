@@ -1,4 +1,4 @@
-# pylint: disable=too-many-arguments, too-many-locals
+# pylint: disable=too-many-arguments, too-many-locals, too-many-public-methods
 """`BaseModule` defines an API for modules."""
 
 import logging

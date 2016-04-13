@@ -1,15 +1,19 @@
+# pylint: disable=too-many-arguments, too-many-locals
 """`SequentialModule` is a container module that chains a number of modules together."""
 
 import logging
 import copy
-
-from .. import context as ctx
 
 from ..initializer import Uniform
 
 from .base_module import BaseModule
 
 class SequentialModule(BaseModule):
+    """A SequentialModule is a container module that can chain multiple modules together.
+    Note building a computation graph with this kind of imperative container is less
+    flexible and less efficient than the symbolic graph. So this should be only used as a
+    handy utility.
+    """
 
     META_TAKE_LABELS = 'take_labels'
     META_AUTO_WIRING = 'auto_wiring'
@@ -73,7 +77,7 @@ class SequentialModule(BaseModule):
     @property
     def output_names(self):
         """A list of names for the outputs of this module."""
-        if len(self._module) > 0:
+        if len(self._modules) > 0:
             return self._modules[-1].output_names
         return []
 
@@ -181,7 +185,8 @@ class SequentialModule(BaseModule):
             self.logger.warning('Already binded, ignoring bind()')
             return
 
-        if inputs_need_grad: assert for_training is True
+        if inputs_need_grad:
+            assert for_training is True
         assert shared_module is None, 'Shared module is not supported'
         assert len(self._modules) > 0, 'Attempting to bind an empty SequentialModule'
 
@@ -209,7 +214,7 @@ class SequentialModule(BaseModule):
             if meta.get(SequentialModule.META_AUTO_WIRING, False):
                 data_names = module.data_names
                 assert len(data_names) == len(my_data_shapes)
-                my_data_shapes = [(new_name, shape) for (new_name, (old_name, shape))
+                my_data_shapes = [(new_name, shape) for (new_name, (_, shape))
                                   in zip(data_names, my_data_shapes)]
 
             module.bind(data_shapes=my_data_shapes, label_shapes=my_label_shapes,
