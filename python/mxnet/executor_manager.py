@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments
+# pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments, too-many-statements
 """Executor manager"""
 from __future__ import absolute_import
 
@@ -125,16 +125,18 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
             if shared_data_arrays is not None and \
                     name in shared_data_arrays:
                 arg_arr = shared_data_arrays[name]
-            
+
                 if np.prod(arg_arr.shape) >= np.prod(arg_shape[i]):
                     # good, we can share this memory
                     assert(arg_types[i] == arg_arr.dtype)
-                    arg_arr =  arg_arr.reshape(arg_shape[i])
+                    arg_arr = arg_arr.reshape(arg_shape[i])
                 else:
                     logger.warning(('bucketing: data "%s" has a shape %s' % (name, arg_shape[i])) +
-                                   (', which is larger than already allocated shape %s' % (arg_arr.shape,)) +
-                                   ('. Need to re-allocate. Consider putting default_bucket_key to') +
-                                   (' be the bucket taking the largest input for better memory sharing.'))
+                                   (', which is larger than already allocated ') +
+                                   ('shape %s' % (arg_arr.shape,)) +
+                                   ('. Need to re-allocate. Consider putting ') +
+                                   ('default_bucket_key to be the bucket taking the largest ') +
+                                   ('input for better memory sharing.'))
                     arg_arr = nd.zeros(arg_shape[i], ctx, dtype=arg_types[i])
 
                     # replace existing shared array because the new one is bigger
@@ -143,7 +145,7 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
                 arg_arr = nd.zeros(arg_shape[i], ctx, dtype=arg_types[i])
                 if shared_data_arrays is not None:
                     shared_data_arrays[name] = arg_arr
-            
+
             arg_arrays.append(arg_arr)
         else:
             # model parameter

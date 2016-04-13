@@ -71,7 +71,7 @@ def check_slice_channel(dim, num):
 
     # test slice channel with squeeze_axis
     op = mx.sym.SliceChannel(data=data, num_outputs=shape[1], squeeze_axis=1)
-    arg_shape, output_shape, aux_shape = op.infer_shape(data=e_nd.shape)
+    arg_shape, output_shape, aux_shape = op.infer_shape(data=shape)
     assert len(output_shape) == shape[1]
     for o_shape in output_shape:
         assert len(o_shape) == len(shape) - 1
