@@ -46,7 +46,18 @@ class BaseModule(object):
       (forward-backward).
 
     In order for a module to interactive with others, a module should be able to report the
-    following information (after binded).
+    following information in its raw stage (before binded)
+
+    - `data_names`: list of string indicating the names of required data.
+    - `label_names`: list of string indicating the names of required labels. Could be an
+      empty list if the module does not contain a loss function node.
+    - `param_names`: list of string indicating the names of parameters. Could be an empty
+      list if the module does not have any parameters.
+    - `aux_names`: list of string indicating the names of auxiliary states. Could be an
+      empty list if the module does not have any auxiliary states.
+    - `output_names`: list of string indicating the names of required outputs.
+
+    And also the following richer information after binded:
 
     - state information
         - `binded`: `bool`, indicating whether the memory buffers needed for computation
@@ -335,6 +346,42 @@ class BaseModule(object):
 
             # end of 1 epoch, reset the data-iter for another epoch
             train_data.reset()
+
+    ################################################################################
+    # Symbol information
+    ################################################################################
+    @property
+    def data_names(self):
+        """A list of names for data required by this module."""
+        raise NotImplementedError()
+
+    @property
+    def label_names(self):
+        """A list of names for label required by this module.
+
+        In some case, this property could be non-empty while `label_shapes` is an
+        empty list. This could happen, for example, when the module contains a
+        loss function, but is binded for `is_train=False`. So label information
+        is not used during computation.
+        """
+        raise NotImplementedError()
+
+    @property
+    def param_names(self):
+        """A list of names for the parameters of the module."""
+        raise NotImplementedError()
+
+    @property
+    def aux_names(self):
+        """A list of names for the auxiliary states of the module. Could be an empty
+        list.
+        """
+        raise NotImplementedError()
+
+    @property
+    def output_names(self):
+        """A list of names for the outputs of this module."""
+        raise NotImplementedError()
 
     ################################################################################
     # Input/Output information

@@ -12,6 +12,8 @@ from .base_module import BaseModule
 class SequentialModule(BaseModule):
 
     META_TAKE_LABELS = 'take_labels'
+    META_AUTO_WIRING = 'auto_wiring'
+    META_REWIRING = 'rewiring'
 
     def __init__(self, logger=logging):
         super(SequentialModule, self).__init__(logger=logger)
@@ -19,6 +21,7 @@ class SequentialModule(BaseModule):
         self._metas = []
 
         self._label_shapes = None
+        self._data_shapes = None
         self._meta_keys = set([getattr(SequentialModule, x)
                                for x in dir(SequentialModule)
                                if x.startswith('META_')])
@@ -60,6 +63,31 @@ class SequentialModule(BaseModule):
         self.optimizer_initialized = False
 
         return self # for easier chaining
+
+    @property
+    def data_names(self):
+        """A list of names for data required by this module."""
+        if len(self._modules) > 0:
+            return self._modules[0].data_names
+        return []
+
+
+    @property
+    def param_names(self):
+        """A list of names for the parameters of the module."""
+        raise NotImplementedError()
+
+    @property
+    def aux_names(self):
+        """A list of names for the auxiliary states of the module. Could be an empty
+        list.
+        """
+        raise NotImplementedError()
+
+    @property
+    def output_names(self):
+        """A list of names for the outputs of this module."""
+        raise NotImplementedError()
 
 
     @property

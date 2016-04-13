@@ -48,10 +48,16 @@ class Module(BaseModule):
 
         self._symbol = symbol
 
+        data_names = list(data_names)
+        label_names = list(label_names) if label_names is not None else []
+
         arg_names = symbol.list_arguments()
-        input_names = list(data_names) + list(label_names)
+        input_names = data_names + label_names
         self._param_names = [x for x in arg_names if x not in input_names]
         self._aux_names = symbol.list_auxiliary_states()
+        self._data_names = data_names
+        self._label_names = label_names
+        self._output_names = symbol.list_outputs()
 
         self._arg_params = None
         self._aux_params = None
@@ -72,6 +78,39 @@ class Module(BaseModule):
         self._exec_group = None
         self._data_shapes = None
         self._label_shapes = None
+
+    @property
+    def data_names(self):
+        """A list of names for data required by this module."""
+        return self._data_names
+
+    @property
+    def label_names(self):
+        """A list of names for label required by this module.
+
+        In some case, this property could be non-empty while `label_shapes` is an
+        empty list. This could happen, for example, when the module contains a
+        loss function, but is binded for `is_train=False`. So label information
+        is not used during computation.
+        """
+        return self._label_names
+
+    @property
+    def param_names(self):
+        """A list of names for the parameters of the module."""
+        return self._param_names
+
+    @property
+    def aux_names(self):
+        """A list of names for the auxiliary states of the module. Could be an empty
+        list.
+        """
+        return self._aux_names
+
+    @property
+    def output_names(self):
+        """A list of names for the outputs of this module."""
+        return self._output_names
 
     @property
     def data_shapes(self):
