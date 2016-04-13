@@ -13,7 +13,6 @@ class SequentialModule(BaseModule):
 
     META_TAKE_LABELS = 'take_labels'
     META_AUTO_WIRING = 'auto_wiring'
-    META_REWIRING = 'rewiring'
 
     def __init__(self, logger=logging):
         super(SequentialModule, self).__init__(logger=logger)
@@ -207,8 +206,6 @@ class SequentialModule(BaseModule):
             else:
                 my_inputs_need_grad = False
 
-            # TODO: in meta, allow the module to specify a re-wiring scheme of
-            # the inputs it takes (re-ordering, taking only a subset, etc.)
             if meta.get(SequentialModule.META_AUTO_WIRING, False):
                 data_names = module.data_names
                 assert len(data_names) == len(my_data_shapes)
