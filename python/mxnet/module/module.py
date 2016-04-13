@@ -49,7 +49,7 @@ class Module(BaseModule):
         self._symbol = symbol
 
         arg_names = symbol.list_arguments()
-        input_names = data_names + label_names
+        input_names = list(data_names) + list(label_names)
         self._param_names = [x for x in arg_names if x not in input_names]
         self._aux_names = symbol.list_auxiliary_states()
 
@@ -214,7 +214,10 @@ class Module(BaseModule):
         if not for_training:
             assert not inputs_need_grad
         else:
-            assert label_shapes is not None
+            pass
+            # this is not True, as some module might not contains a loss function
+            # that consumes the labels
+            # assert label_shapes is not None
 
         self._data_shapes = data_shapes
         self._label_shapes = label_shapes
