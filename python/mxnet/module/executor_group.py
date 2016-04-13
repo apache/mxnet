@@ -15,6 +15,8 @@ def _merge_multi_context(outputs):
     """Merge outputs that lives on multiple context into one, so that they look
     like living on one context.
     """
+    # TODO: when NDArray has concatenate operator, avoid converting into numpy
+    # for better performance (this is blocking the async execution engine)
     outputs = [np.concatenate([y.asnumpy() for y in x]) for x in outputs]
     outputs = [nd.array(x) for x in outputs]
     return outputs
