@@ -60,7 +60,8 @@ class DataParallelExecutorGroup(object):
         Default is `logging`.
     """
     def __init__(self, symbol, context, workload, data_shapes, label_shapes, param_names,
-                 for_training, inputs_need_grad, shared_group=None, input_types=None, logger=logging):
+                 for_training, inputs_need_grad, shared_group=None, input_types=None,
+                 logger=logging):
         self.param_names = param_names
         self.arg_names = symbol.list_arguments()
         self.aux_names = symbol.list_auxiliary_states()
@@ -344,9 +345,12 @@ class DataParallelExecutorGroup(object):
                     arg_arr = arg_arr.reshape(arg_shape)
                 else:
                     logger.warning(('bucketing: data "%s" has a shape %s' % (name, arg_shape)) +
-                                   (', which is larger than already allocated shape %s' % (arg_arr.shape,)) +
-                                   ('. Need to re-allocate. Consider putting default_bucket_key to') +
-                                   (' be the bucket taking the largest input for better memory sharing.'))
+                                   (', which is larger than already allocated ') +
+                                   ('shape %s' % (arg_arr.shape,)) +
+                                   ('. Need to re-allocate. Consider putting ') +
+                                   ('default_bucket_key to') +
+                                   (' be the bucket taking the largest input for better ') +
+                                   ('memory sharing.'))
                     arg_arr = nd.zeros(arg_shape, ctx, dtype=arg_type)
 
                     # replace existing shared array because the new one is bigger
@@ -373,13 +377,13 @@ class DataParallelExecutorGroup(object):
                     if grad_req[name] != 'null':
                         grad_arrays[name] = shared_exec.grad_dict[name]
             else: # data or label
-                arg_arr = _get_or_reshape(name, shared_data_arrays, arg_shapes[j], arg_types[j], 
+                arg_arr = _get_or_reshape(name, shared_data_arrays, arg_shapes[j], arg_types[j],
                                           context, self.logger)
 
                 # data might also need grad if inputs_need_grad is True
                 if grad_req[name] != 'null':
                     grad_arrays[name] = _get_or_reshape('grad of ' + name, shared_data_arrays,
-                                                        arg_shapes[j], arg_types[j], context, 
+                                                        arg_shapes[j], arg_types[j], context,
                                                         self.logger)
 
             arg_arrays.append(arg_arr)
