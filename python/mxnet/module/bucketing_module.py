@@ -232,6 +232,7 @@ class BucketingModule(BaseModule):
 
     def backward(self, out_grads=None):
         """Backward computation."""
+        assert self.binded and self.params_initialized
         self._curr_module.backward(out_grads=out_grads)
 
     def update(self):
@@ -290,6 +291,7 @@ class BucketingModule(BaseModule):
         labels : list of NDArray
             Typically `data_batch.label`.
         """
+        assert self.binded and self.params_initialized
         self._curr_module.update_metric(eval_metric, labels)
 
     @property
