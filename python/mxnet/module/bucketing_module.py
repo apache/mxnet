@@ -50,6 +50,62 @@ class BucketingModule(BaseModule):
         self._curr_module = None
 
     @property
+    def data_names(self):
+        """A list of names for data required by this module."""
+        if self.binded:
+            return self._curr_module.data_names
+        else:
+            _, data_names, _ = self._sym_gen(self._default_bucket_key)
+            return data_names
+
+    @property
+    def label_names(self):
+        """A list of names for label required by this module.
+
+        In some case, this property could be non-empty while `label_shapes` is an
+        empty list. This could happen, for example, when the module contains a
+        loss function, but is binded for `is_train=False`. So label information
+        is not used during computation.
+        """
+        if self.binded:
+            return self._curr_module.label_names
+        else:
+            _, _, label_names = self._sym_gen(self._default_bucket_key)
+            return label_names
+
+    @property
+    def param_names(self):
+        """A list of names for the parameters of the module."""
+        if self.binded:
+            return self._curr_module.param_names
+        else:
+            symbol, data_names, label_names = self._sym_gen(self._default_bucket_key)
+            arg_names = symbol.list_arguments()
+            input_names = set(data_names + label_names)
+            param_names = [x for x in arg_names if x not in input_names]
+            return param_names
+
+    @property
+    def aux_names(self):
+        """A list of names for the auxiliary states of the module. Could be an empty
+        list.
+        """
+        if self.binded:
+            return self._curr_module.label_names
+        else:
+            symbol, _, _ = self._sym_gen(self._default_bucket_key)
+            return symbol.list_auxiliary_states()
+
+    @property
+    def output_names(self):
+        """A list of names for the outputs of this module."""
+        if self.binded:
+            return self._curr_module.output_names
+        else:
+            symbol, _, _ = self._sym_gen(self._default_bucket_key)
+            return symbol.list_outputs()
+
+    @property
     def data_shapes(self):
         """Get data shapes.
         Returns
