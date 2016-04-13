@@ -151,5 +151,20 @@
       <groupId>org.scalacheck</groupId>
       <artifactId>scalacheck_${scala.binary.version}</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.sksamuel.scrimage</groupId>
+      <artifactId>scrimage-core_2.10</artifactId>
+      <version>2.1.5</version>
+    </dependency>
+    <dependency>
+      <groupId>com.sksamuel.scrimage</groupId>
+      <artifactId>scrimage-io-extra_2.10</artifactId>
+      <version>2.1.5</version>
+    </dependency>
+    <dependency>
+      <groupId>com.sksamuel.scrimage</groupId>
+      <artifactId>scrimage-filters_2.10</artifactId>
+      <version>2.1.5</version>
+    </dependency>
   </dependencies>
 </project>
