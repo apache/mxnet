@@ -522,7 +522,8 @@ NDArray &NDArray::operator/=(const real_t &src) {
  * \param size size after broadcasting
  */
 void Broadcast(const NDArray& src, int dim, int size, NDArray *out) {
-  CHECK(0 <= dim && dim < src.shape().ndim()) << "Broadcast dimension out of bound.";
+  CHECK(0 <= dim && dim < static_cast<int>(src.shape().ndim()))
+      << "Broadcast dimension out of bound.";
   CHECK(src.shape()[dim] == 1) << "Cannot broadcast a dimension that is not 1.";
   TShape new_shape = src.shape();
   new_shape[dim] = size;
@@ -535,14 +536,9 @@ void Broadcast(const NDArray& src, int dim, int size, NDArray *out) {
   }
   std::vector<Engine::VarHandle> const_vars;
   const_vars.push_back(src.var());
-  size_t before = 1;
-  size_t after = 1;
-  for (index_t i = 0; i < dim; ++i) {
-    before *= src.shape()[i];
-  }
-  for (index_t i = dim + 1; i < src.shape().ndim(); ++i) {
-    after *= src.shape()[i];
-  }
+  size_t before = src.shape().ProdShape(0, dim);
+  size_t after = src.shape().ProdShape(dim + 1, src.shape().ndim());
+
   // important: callback must always capture by value
   NDArray ret = *out;
   switch (src.ctx().dev_mask()) {
