@@ -71,24 +71,12 @@ class SequentialModule(BaseModule):
             return self._modules[0].data_names
         return []
 
-
-    @property
-    def param_names(self):
-        """A list of names for the parameters of the module."""
-        raise NotImplementedError()
-
-    @property
-    def aux_names(self):
-        """A list of names for the auxiliary states of the module. Could be an empty
-        list.
-        """
-        raise NotImplementedError()
-
     @property
     def output_names(self):
         """A list of names for the outputs of this module."""
-        raise NotImplementedError()
-
+        if len(self._module) > 0:
+            return self._modules[-1].output_names
+        return []
 
     @property
     def data_shapes(self):
@@ -221,6 +209,11 @@ class SequentialModule(BaseModule):
 
             # TODO: in meta, allow the module to specify a re-wiring scheme of
             # the inputs it takes (re-ordering, taking only a subset, etc.)
+            if meta.get(SequentialModule.META_AUTO_WIRING, False):
+                data_names = module.data_names
+                assert len(data_names) == len(my_data_shapes)
+                my_data_shapes = [(new_name, shape) for (new_name, (old_name, shape))
+                                  in zip(data_names, my_data_shapes)]
 
             module.bind(data_shapes=my_data_shapes, label_shapes=my_label_shapes,
                         for_training=for_training, inputs_need_grad=my_inputs_need_grad,

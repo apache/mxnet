@@ -85,29 +85,6 @@ class Module(BaseModule):
         return self._data_names
 
     @property
-    def label_names(self):
-        """A list of names for label required by this module.
-
-        In some case, this property could be non-empty while `label_shapes` is an
-        empty list. This could happen, for example, when the module contains a
-        loss function, but is binded for `is_train=False`. So label information
-        is not used during computation.
-        """
-        return self._label_names
-
-    @property
-    def param_names(self):
-        """A list of names for the parameters of the module."""
-        return self._param_names
-
-    @property
-    def aux_names(self):
-        """A list of names for the auxiliary states of the module. Could be an empty
-        list.
-        """
-        return self._aux_names
-
-    @property
     def output_names(self):
         """A list of names for the outputs of this module."""
         return self._output_names

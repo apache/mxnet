@@ -15,19 +15,19 @@ mod1 = mx.mod.Module(act1, label_names=[])
 #--------------------------------------------------------------------------------
 # module 2
 #--------------------------------------------------------------------------------
-data = mx.symbol.Variable('relu1_output')
+data = mx.symbol.Variable('data')
 fc2 = mx.symbol.FullyConnected(data, name = 'fc2', num_hidden = 64)
 act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
 fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=10)
 softmax = mx.symbol.SoftmaxOutput(fc3, name = 'softmax')
 
-mod2 = mx.mod.Module(softmax, data_names=['relu1_output'])
+mod2 = mx.mod.Module(softmax)
 
 #--------------------------------------------------------------------------------
 # Container module
 #--------------------------------------------------------------------------------
 mod_seq = mx.mod.SequentialModule()
-mod_seq.add(mod1).add(mod2, take_labels=True)
+mod_seq.add(mod1).add(mod2, take_labels=True, auto_wiring=True)
 
 
 #--------------------------------------------------------------------------------
