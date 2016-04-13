@@ -6,13 +6,13 @@
   <parent>
     <groupId>ml.dmlc.mxnet</groupId>
     <artifactId>mxnet-scala-native-parent</artifactId>
-    <version>0.1.1</version>
+    <version>0.1.2-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
   <groupId>ml.dmlc.mxnet</groupId>
   <artifactId>libmxnet-scala-osx-x86_64-cpu</artifactId>
-  <version>0.1.1</version>
+  <version>0.1.2-SNAPSHOT</version>
   <name>MXNet Scala Package - Native OSX-x86_64 CPU-only</name>
   <url>http://maven.apache.org</url>
 
@@ -67,7 +67,7 @@
             <linkerMiddleOption>-framework JavaVM</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-exported_symbol,_Java_*</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
-            <linkerMiddleOption>../../../dmlc-core/libdmlc.a</linkerMiddleOption>
+            <linkerMiddleOption>${lddeps}</linkerMiddleOption>
             <linkerMiddleOption>-force_load ../../../lib/libmxnet.a</linkerMiddleOption>
           </linkerMiddleOptions>
           <linkerEndOptions>
