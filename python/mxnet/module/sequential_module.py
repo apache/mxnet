@@ -19,6 +19,9 @@ class SequentialModule(BaseModule):
         self._metas = []
 
         self._label_shapes = None
+        self._meta_keys = set([getattr(SequentialModule, x)
+                               for x in dir(SequentialModule)
+                               if x.startswith('META_')])
 
     def add(self, module, **kwargs):
         """Add a module to the chain.
@@ -43,6 +46,11 @@ class SequentialModule(BaseModule):
         series of `add` calls.
         """
         self._modules.append(module)
+
+        # a sanity check to avoid typo
+        for key in kwargs.iterkeys():
+            assert key in self._meta_keys, ('Unknown meta "%s", a typo?' % key)
+
         self._metas.append(kwargs)
 
         # after adding new modules, we are reset back to raw states, needs
