@@ -30,7 +30,7 @@ class DataParallelExecutorGroup(object):
     ----------
     symbol : Symbol
         The common symbolic computation graph for all executors.
-    context : list
+    contexts : list
         A list of contexts.
     workload : list
         If not `None`, could be a list of numbers that specify the workload to be assigned
@@ -61,7 +61,7 @@ class DataParallelExecutorGroup(object):
     logger : Logger
         Default is `logging`.
     """
-    def __init__(self, symbol, context, workload, data_shapes, label_shapes, param_names,
+    def __init__(self, symbol, contexts, workload, data_shapes, label_shapes, param_names,
                  for_training, inputs_need_grad, shared_group=None, input_types=None,
                  logger=logging):
         self.param_names = param_names
@@ -69,7 +69,7 @@ class DataParallelExecutorGroup(object):
         self.aux_names = symbol.list_auxiliary_states()
 
         self.symbol = symbol
-        self.context = context
+        self.contexts = contexts
         self.workload = workload
 
         self.for_training = for_training
@@ -81,7 +81,7 @@ class DataParallelExecutorGroup(object):
         if shared_group is not None:
             self.shared_data_arrays = shared_group.shared_data_arrays
         else:
-            self.shared_data_arrays = [{} for _ in context]
+            self.shared_data_arrays = [{} for _ in contexts]
 
         # initialize some instance variables
         self.batch_size = None
@@ -122,7 +122,7 @@ class DataParallelExecutorGroup(object):
         shared_group : DataParallelExecutorGroup
         """
         self.execs = []
-        for i in range(len(self.context)):
+        for i in range(len(self.contexts)):
             self.execs.append(self._bind_ith_exec(i, data_shapes, label_shapes, shared_group))
 
         # convenient data structures
@@ -287,6 +287,8 @@ class DataParallelExecutorGroup(object):
 
         for exec_, islice in zip(self.execs, self.slices):
             out_grads_slice = [grad[islice] for grad in out_grads]
+            out_grads_slice = [x.as_in_context(self.contexts[i]) for i, x in
+                               enumerate(out_grads_slice)]
             exec_.backward(out_grads=out_grads_slice)
 
     def update_metric(self, eval_metric, labels):
@@ -310,7 +312,7 @@ class DataParallelExecutorGroup(object):
         if label_shapes is not None:
             label_shapes = self._sliced_shape(label_shapes, i)
         shared_exec = None if shared_group is None else shared_group.execs[i]
-        context = self.context[i]
+        context = self.contexts[i]
         shared_data_arrays = self.shared_data_arrays[i]
 
         input_shapes = dict(data_shapes)
