@@ -817,6 +817,35 @@ def array(source_array, ctx=None, dtype=mx_real_t):
     arr[:] = source_array
     return arr
 
+def concatenate(arrays):
+    """Concatenate a list of NDArrays along the first dimension.
+
+    Parameters
+    ----------
+    arrays : list of NDArray
+        Arrays to be concatenate. They must have identical shape except
+        the first dimension. They also must have the same data type.
+
+    Returns
+    -------
+    An `NDArray` that lives on the same context as `arrays[0].context`.
+    """
+    assert isinstance(arrays, list)
+    assert isinstance(arrays[0], NDArray)
+    shape0 = arrays[0].shape[0]
+    shape_rest = arrays[0].shape[1:]
+    dtype = arrays[0].dtype
+    for arr in arrays[1:]:
+        shape0 += arr.shape[0]
+        assert shape_rest == arr.shape[1:]
+        assert dtype == arr.dtype
+    ret = empty((shape0,) + shape_rest, ctx=arrays[0].context, dtype=dtype)
+    idx = 0
+    for arr in arrays:
+        ret[idx:idx+arr.shape[0]] = arr
+        idx += arr.shape[0]
+    
+    return ret
 
 def load(fname):
     """Load ndarray from binary file.
