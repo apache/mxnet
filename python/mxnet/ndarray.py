@@ -817,7 +817,7 @@ def array(source_array, ctx=None, dtype=mx_real_t):
     arr[:] = source_array
     return arr
 
-def concatenate(arrays):
+def concatenate(arrays, always_copy=True):
     """Concatenate a list of NDArrays along the first dimension.
 
     Parameters
@@ -825,13 +825,21 @@ def concatenate(arrays):
     arrays : list of NDArray
         Arrays to be concatenate. They must have identical shape except
         the first dimension. They also must have the same data type.
+    always_copy : bool
+        Default `True`. When not `True`, if the arrays only contain one
+        `NDArray`, that element will be returned directly, avoid copying.
 
     Returns
     -------
     An `NDArray` that lives on the same context as `arrays[0].context`.
     """
     assert isinstance(arrays, list)
+    assert len(arrays) > 0
     assert isinstance(arrays[0], NDArray)
+
+    if not always_copy and len(arrays) == 1:
+        return arrays[0]
+
     shape0 = arrays[0].shape[0]
     shape_rest = arrays[0].shape[1:]
     dtype = arrays[0].dtype
@@ -844,7 +852,7 @@ def concatenate(arrays):
     for arr in arrays:
         ret[idx:idx+arr.shape[0]] = arr
         idx += arr.shape[0]
-    
+
     return ret
 
 def load(fname):

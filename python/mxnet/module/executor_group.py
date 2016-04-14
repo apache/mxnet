@@ -15,7 +15,7 @@ def _merge_multi_context(outputs):
     """Merge outputs that lives on multiple context into one, so that they look
     like living on one context.
     """
-    outputs = [nd.concatenate(x) for x in outputs]
+    outputs = [nd.concatenate(x, always_copy=False) for x in outputs]
     return outputs
 
 class DataParallelExecutorGroup(object):
@@ -283,7 +283,7 @@ class DataParallelExecutorGroup(object):
             out_grads = []
 
         for i, (exec_, islice) in enumerate(zip(self.execs, self.slices)):
-            out_grads_slice = [grad[islice].as_in_context(self.contexts[i]) 
+            out_grads_slice = [grad[islice].as_in_context(self.contexts[i])
                                for grad in out_grads]
             exec_.backward(out_grads=out_grads_slice)
 
