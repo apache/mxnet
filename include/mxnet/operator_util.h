@@ -189,10 +189,15 @@ typedef void (*BinaryGradFunctionT1)(const OutputGrad& out_grad,
 
 /*! \brief options in the registry to set inplace of operator */
 enum SimpleOpInplaceOption {
+  /*! \brief do not allow inplace in arguments */
   kNoInplace,
+  /*! \brief in unary forward, allow inplace in with out */
   kInplaceInOut,
+  /*! \brief in unary backward, allow inplace out_grad with in_grad */
   kInplaceOutIn,
+  /*! \brief in binary forward, allow inplace left operand with out */
   kInplaceLhsOut,
+  /*! \brief in binary backward, allow inplace out_grad with lhs_grad */
   kInplaceOutLhs
 };
 
