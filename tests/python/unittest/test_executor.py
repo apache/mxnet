@@ -9,19 +9,21 @@ def reldiff(a, b):
     return reldiff
 
 
-def check_bind_with_uniform(uf, gf, dim):
+def check_bind_with_uniform(uf, gf, dim, sf=None):
     """check function consistency with uniform random numbers"""
     shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
     lhs = mx.symbol.Variable('lhs')
     rhs = mx.symbol.Variable('rhs')
-    ret = uf(lhs, rhs)
+    if sf is not None:
+        ret = sf(lhs, rhs)
+    else:
+        ret = uf(lhs, rhs)
+
     assert ret.list_arguments() == ['lhs', 'rhs']
-    lhs_arr = mx.nd.array(np.random.uniform(-10, 10, shape))
-    rhs_arr = mx.nd.array(np.random.uniform(-10, 10, shape))
+    lhs_arr = mx.nd.array(np.random.uniform(-1, 1, shape))
+    rhs_arr = mx.nd.array(np.random.uniform(-1, 1, shape))
     lhs_grad = mx.nd.empty(shape)
     rhs_grad = mx.nd.empty(shape)
-
-
     executor = ret.bind(mx.Context('cpu'),
                         args=[lhs_arr, rhs_arr],
                         args_grad=[lhs_grad, rhs_grad])
@@ -50,6 +52,7 @@ def check_bind_with_uniform(uf, gf, dim):
                               lhs_arr.asnumpy(),
                               rhs_arr.asnumpy())
     executor.backward([out_grad])
+
     assert reldiff(lhs_grad.asnumpy(), lhs_grad2) < 1e-6
     assert reldiff(rhs_grad.asnumpy(), rhs_grad2) < 1e-6
 
@@ -72,6 +75,15 @@ def test_bind():
             check_bind_with_uniform(lambda x, y: x / y,
                                     lambda g, x, y: (g / y, -x * g/ (y**2)),
                                     dim)
+
+            check_bind_with_uniform(lambda x, y: np.maximum(x, y),
+                                    lambda g, x, y: (g * (x>y), g * (y>x)),
+                                    dim,
+                                    sf=mx.symbol.maximum)
+            check_bind_with_uniform(lambda x, y: np.minimum(x, y),
+                                    lambda g, x, y: (g * (x<y), g * (y<x)),
+                                    dim,
+                                    sf=mx.symbol.minimum)
 
 def test_reshape():
     x = mx.sym.Variable('x')
