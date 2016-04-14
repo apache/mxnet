@@ -92,15 +92,15 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
 
     ################################################################################
     # Make label the same shape as our produced data path
-    # It seems using SwapAxis is not faster than directly using Slice+Concat
+    # I did not observe big speed difference between the following two ways
 
-    #label = mx.sym.SwapAxis(data=label, dim1=0, dim2=1)
-    #label = mx.sym.Reshape(data=label, target_shape=(0,))
-    
-    label_slice = mx.sym.SliceChannel(data=label, num_outputs=seq_len)
-    label = [label_slice[t] for t in range(seq_len)]
-    label = mx.sym.Concat(*label, dim=0)
+    label = mx.sym.transpose(data=label)
     label = mx.sym.Reshape(data=label, target_shape=(0,))
+    
+    #label_slice = mx.sym.SliceChannel(data=label, num_outputs=seq_len)
+    #label = [label_slice[t] for t in range(seq_len)]
+    #label = mx.sym.Concat(*label, dim=0)
+    #label = mx.sym.Reshape(data=label, target_shape=(0,))
     ################################################################################
 
     sm = mx.sym.SoftmaxOutput(data=pred, label=label, name='softmax')
