@@ -7,6 +7,8 @@
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
 [![todofy badge](https://todofy.org/b/dmlc/mxnet)](https://todofy.org/r/dmlc/mxnet)
 
+![banner](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/banner.png)
+
 MXNet is a deep learning framework designed for both *efficiency* and *flexibility*.
 It allows you to ***mix*** the [flavours](http://mxnet.readthedocs.org/en/latest/program_model.html) of symbolic
 programming and imperative programming to ***maximize*** efficiency and productivity.
