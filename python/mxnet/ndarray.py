@@ -439,6 +439,24 @@ class NDArray(object):
             raise TypeError('copyto do not support type ' + str(type(other)))
     # pylint: enable= no-member
 
+    def as_in_context(self, context):
+        """Return an `NDArray` that lives in the target context. If the array
+        is already in that context, `self` is returned. Otherwise, a copy is
+        made.
+
+        Parameters
+        ----------
+        context : Context
+            The target context we want the return value to live in.
+
+        Returns
+        -------
+        A copy or `self` as an `NDArray` that lives in the target context.
+        """
+        if self.context == context:
+            return self
+        return self.copyto(context)
+
 
 def onehot_encode(indices, out):
     """One hot encoding indices into matrix out.
