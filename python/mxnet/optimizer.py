@@ -87,26 +87,29 @@ class Optimizer(object):
             ctypes.byref(handle)))
         return handle
 
-    def __init__(self, rescale_grad=1., arg_names=None, wd=0., clip_gradient=None):
+    def __init__(self, rescale_grad=1., arg_idx2name=None, wd=0.,
+                 clip_gradient=None, learning_rate=0.01,
+                 lr_scheduler=None, sym=None):
         self.rescale_grad = rescale_grad
-        self.lr_scale = {}
+        self.lr = learning_rate
+        self.lr_scheduler = lr_scheduler
+        if lr_scheduler is not None:
+            self.lr_scheduler.base_lr = learning_rate
+
+        self.wd = wd
+        self.lr_mult = {}
+        self.wd_mult = {} 
         self.num_update = 0
         self._index_update_count = {}
-        self.wd = wd
-        self.specialized = False
-        self.weight_set = set([])
         self.clip_gradient = clip_gradient
-        if arg_names is not None:
-            self.specialized = True
-            index = 0
-            for name in arg_names:
-                if name.endswith('data') or name.endswith('label'):
-                    continue
-                elif name.endswith("weight"):
-                    self.weight_set.add(index)
-                index += 1
 
-
+        if arg_idx2name is None:
+            arg_idx2name = {}
+        assert isinstance(arg_idx2name, dict), \
+            'arg_idx2name should be a dict of param indexes to names.'
+        self.idx2name = arg_idx2name.copy()
+        self.sym = sym
+       
     def create_state(self, index, weight):
         """Create additional optimizer state such as momentum.
         override in implementations."""
@@ -115,14 +118,49 @@ class Optimizer(object):
         """Update the parameters. override in implementations"""
 
     def set_lr_scale(self, args_lrscale):
-        """Set individual learning rate scale for parameters
+        """set lr scale is deprecated. Use set_lr_mult instead."""
+        raise DeprecationWarning
+
+    def set_lr_mult(self, args_lr_mult):
+        """Set individual learning rate multipler for parameters
 
         Parameters
         ----------
-        args_lrscale : dict of index to float
-            set the lr multipler for index to float
+        args_lr_mult : dict of string/int to float
+            set the lr multipler for name/index to float.
+            setting multipler by index is supported for backward compatibility,
+            but we recommend using name and symbol.
         """
-        self.lr_scale = args_lrscale.copy()
+        self.lr_mult = {}
+        if self.sym is not None:
+            attr = self.sym.list_attr()
+            for k, v in attr.items():
+                if k.endswith('_lr_mult'):
+                    self.lr_mult[k[:-len('_lr_mult')]] = float(v)
+        self.lr_mult.update(args_lr_mult)
+
+    def set_wd_mult(self, args_wd_mult):
+        """Set individual weight decay multipler for parameters.
+        By default wd multipler is 0 for all params whose name doesn't
+        end with _weight, if arg_idx2name is provided.
+
+        Parameters
+        ----------
+        args_wd_mult : dict of string/int to float
+            set the wd multipler for name/index to float.
+            setting multipler by index is supported for backward compatibility,
+            but we recommend using name and symbol.
+        """
+        self.wd_mult = {}
+        for n in self.idx2name.values():
+            if not n.endswith('_weight'):
+                self.wd_mult[n] = 0.0
+        if self.sym is not None:
+            attr = sym.list_attr()
+            for k, v in attr.items():
+                if k.endswith('_wd_mult'):
+                    self.wd_mult[k[:-len('_wd_mult')]] = float(v)
+        self.wd_mult.update(args_wd_mult)
 
     def _update_count(self, index):
         """
@@ -136,6 +174,30 @@ class Optimizer(object):
             self._index_update_count[index] = 0
         self._index_update_count[index] += 1
         self.num_update = max(self._index_update_count[index], self.num_update)
+
+    def _get_lr(self, index):
+        """get learning rate for index.
+
+        Parameters
+        ----------
+        index : int
+            The index for weight
+
+        Returns
+        -------
+        lr : float
+            learning rate for this index
+        """
+        if self.lr_scheduler is not None:
+            lr = self.lr_scheduler(self.num_update)
+        else:
+            lr = self.lr
+
+        if index in self.lr_mult:
+            lr *= self.lr_mult[index]
+        elif index in self.idx2name:
+            lr *= self.lr_mult.get(self.idx2name[index], 1.0)
+        return lr
 
     def _get_wd(self, index):
         """get weight decay for index.
@@ -152,10 +214,10 @@ class Optimizer(object):
             weight decay for this index
         """
         wd = self.wd
-        if self.specialized == True:
-            wd = 0.
-            if index in self.weight_set:
-                wd = self.wd
+        if index in self.wd_mult:
+            wd *= self.wd_mult[index]
+        elif index in self.idx2name:
+            wd *= self.wd_mult.get(self.idx2name[index], 1.0)
         return wd
 
 #convenience wrapper for Optimizer.Register
@@ -185,16 +247,9 @@ class SGD(Optimizer):
     arg_names : list(str), optional
         special treat weight decay in parameter ends with bias, gamma, and beta
     """
-    def __init__(self, learning_rate=0.01, momentum=0.0,
-                 wd=0.0001, rescale_grad=1, clip_gradient=None,
-                 lr_scheduler=None, arg_names=None):
-        super(SGD, self).__init__(rescale_grad=rescale_grad, arg_names=arg_names, wd=wd,
-                                  clip_gradient=clip_gradient)
-        self.lr = learning_rate
+    def __init__(self, momentum=0.0, **kwargs):
+        super(SGD, self).__init__(**kwargs)
         self.momentum = momentum
-        self.lr_scheduler = lr_scheduler
-        if lr_scheduler is not None:
-            self.lr_scheduler.base_lr = learning_rate
 
     def create_state(self, index, weight):
         """Create additional optimizer state such as momentum.
@@ -229,14 +284,9 @@ class SGD(Optimizer):
         """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-        if self.lr_scheduler is not None:
-            lr = self.lr_scheduler(self.num_update)
-            self._update_count(index)
-        else:
-            lr = self.lr
-        lr *= self.lr_scale.get(index, 1.0)
-
+        lr = self._get_lr(index)
         wd = self._get_wd(index)
+        self._update_count(index)
 
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
@@ -272,15 +322,8 @@ class SGLD(Optimizer):
     arg_names : list(str), optional
         special treat weight decay in parameter ends with bias, gamma, and beta
     """
-    def __init__(self, learning_rate=0.01,
-                 wd=0.0001, rescale_grad=1, clip_gradient=None,
-                 lr_scheduler=None, arg_names=None):
-        super(SGLD, self).__init__(rescale_grad=rescale_grad, arg_names=arg_names, wd=wd,
-                                   clip_gradient=clip_gradient)
-        self.lr = learning_rate
-        self.lr_scheduler = lr_scheduler
-        if lr_scheduler is not None:
-            self.lr_scheduler.base_lr = learning_rate
+    def __init__(self, **kwargs):
+        super(SGLD, self).__init__(**kwargs)
 
     def create_state(self, index, weight):
         """Create additional optimizer state such as momentum.
@@ -312,18 +355,9 @@ class SGLD(Optimizer):
         """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-        if self.lr_scheduler is not None:
-            lr = self.lr_scheduler(self.num_update)
-            self._update_count(index)
-        else:
-            lr = self.lr
-        lr *= self.lr_scale.get(index, 1.0)
-
-        wd = self.wd
-        if self.specialized == True:
-            wd = 0.
-            if index in self.weight_set:
-                wd = self.wd
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        self._update_count(index)
 
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
@@ -354,16 +388,9 @@ class ccSGD(Optimizer):
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
     """
-    def __init__(self, learning_rate=0.01, momentum=0.0,
-                 wd=0.0001, rescale_grad=1, clip_gradient=-1,
-                 lr_scheduler=None, arg_names=None):
-        super(ccSGD, self).__init__(rescale_grad=rescale_grad, arg_names=arg_names, wd=wd,
-                                    clip_gradient=clip_gradient)
-        self.lr = learning_rate
+    def __init__(self, momentum=0.0, **kwargs):
+        super(ccSGD, self).__init__(**kwargs)
         self.momentum = momentum
-        self.lr_scheduler = lr_scheduler
-        if lr_scheduler is not None:
-            self.lr_scheduler.base_lr = learning_rate
 
         self.handle = Optimizer._init_cc_optimizer(
             'ccsgd',
@@ -407,13 +434,9 @@ class ccSGD(Optimizer):
         """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-        if self.lr_scheduler is not None:
-            lr = self.lr_scheduler(self.num_update)
-            self._update_count(index)
-        else:
-            lr = self.lr
-        lr *= self.lr_scale.get(index, 1.0)
+        lr = self._get_lr(index)
         wd = self._get_wd(index)
+        self._update_count(index)
         check_call(_LIB.MXOptimizerUpdate(self.handle,
                                           ctypes.c_int(index),
                                           weight.handle,
@@ -456,22 +479,13 @@ class Adam(Optimizer):
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
     """
-    def __init__(self, learning_rate=0.002,
-                 beta1=0.9, beta2=0.999, epsilon=1e-8,
-                 decay_factor=(1 - 1e-8),
-                 wd=0.,
-                 rescale_grad=1, clip_gradient=None,
-                 lr_scheduler=None, arg_names=None):
-        super(Adam, self).__init__(rescale_grad=rescale_grad, arg_names=arg_names, wd=wd,
-                                   clip_gradient=clip_gradient)
-        self.lr = learning_rate
+    def __init__(self, beta1=0.9, beta2=0.999, epsilon=1e-8,
+                 decay_factor=(1 - 1e-8), **kwargs):
+        super(Adam, self).__init__(**kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
         self.decay_factor = decay_factor
-        self.lr_scheduler = lr_scheduler
-        if lr_scheduler is not None:
-            self.lr_scheduler.base_lr = learning_rate
         self.time = 0
         self.time_first_index = None
 
@@ -507,12 +521,8 @@ class Adam(Optimizer):
         """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-        if self.lr_scheduler is not None:
-            lr = self.lr_scheduler(self.num_update)
-            self._update_count(index)
-        else:
-            lr = self.lr
-        lr *= self.lr_scale.get(index, 1.0)
+        lr = self._get_lr(index)
+        self._update_count(index)
 
         mean, variance = state
 
@@ -573,16 +583,9 @@ class AdaGrad(Optimizer):
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
     """
-    def __init__(self, learning_rate=0.05, wd=0., rescale_grad=1, eps=1e-7, clip_gradient=None,
-                 lr_scheduler=None, arg_names=None):
-        super(AdaGrad, self).__init__(rescale_grad=rescale_grad, arg_names=arg_names, wd=wd,
-                                      clip_gradient=clip_gradient)
-        self.lr = learning_rate
+    def __init__(self, eps=1e-7, **kwargs):
+        super(AdaGrad, self).__init__(**kwargs)
         self.float_stable_eps = eps
-        self.rescale_grad = rescale_grad
-        self.lr_scheduler = lr_scheduler
-        if lr_scheduler is not None:
-            self.lr_scheduler.base_lr = learning_rate
 
     def create_state(self, index, weight):
         return zeros(weight.shape, weight.context) # history
@@ -590,12 +593,9 @@ class AdaGrad(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-        if self.lr_scheduler is not None:
-            lr = self.lr_scheduler(self.num_update)
-            self._update_count(index)
-        else:
-            lr = self.lr
-        lr *= self.lr_scale.get(index, 1.0)
+        lr = self._get_lr(index)
+        self._update_count(index)
+
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
@@ -628,18 +628,10 @@ class RMSProp(Optimizer):
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
     """
-    def __init__(self, learning_rate=0.002, gamma1=0.95, gamma2=0.9,
-                 wd=0.,
-                 rescale_grad=1, clip_gradient=None,
-                 lr_scheduler=None, arg_names=None):
-        super(RMSProp, self).__init__(rescale_grad=rescale_grad, arg_names=arg_names, wd=wd,
-                                      clip_gradient=clip_gradient)
-        self.lr = learning_rate
+    def __init__(self, gamma1=0.95, gamma2=0.9, **kwargs):
+        super(RMSProp, self).__init__(**kwargs)
         self.gamma1 = gamma1
         self.gamma2 = gamma2
-        self.lr_scheduler = lr_scheduler
-        if lr_scheduler is not None:
-            self.lr_scheduler.base_lr = learning_rate
 
     def create_state(self, index, weight):
         """Create additional optimizer state: mean, variance
@@ -671,10 +663,11 @@ class RMSProp(Optimizer):
         """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-        lr = self.lr
-        lr *= self.lr_scale.get(index, 1.0)
-        n, g, delta = state
+        lr = self._get_lr(index)
         wd = self._get_wd(index)
+        self._update_count(index)
+
+        n, g, delta = state
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
@@ -705,10 +698,8 @@ class AdaDelta(Optimizer):
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
     """
-    def __init__(self, rho=0.90, epsilon=1e-5,
-                 wd=0.000001, rescale_grad=1., clip_gradient=None, arg_names=None):
-        super(AdaDelta, self).__init__(rescale_grad=rescale_grad, arg_names=arg_names, wd=wd,
-                                       clip_gradient=clip_gradient)
+    def __init__(self, rho=0.90, epsilon=1e-5, **kwargs):
+        super(AdaDelta, self).__init__(**kwargs)
         self.rho = rho
         self.epsilon = epsilon
 
@@ -719,6 +710,8 @@ class AdaDelta(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        wd = self._get_wd(index)
+        self._update_count(index)
 
         # preprocess grad
         grad *= self.rescale_grad
@@ -734,13 +727,13 @@ class AdaDelta(Optimizer):
         acc_delta[:] = self.rho * acc_delta + (1. - self.rho) * current_delta * current_delta
 
         # update weight
-        weight[:] -= current_delta + self.wd * weight
+        weight[:] -= current_delta + wd * weight
 
 @register
 class Test(Optimizer):
     """For test use"""
-    def __init__(self, rescale_grad=1):
-        super(Test, self).__init__(rescale_grad)
+    def __init__(self, **kwargs):
+        super(Test, self).__init__(**kwargs)
 
     # pylint: disable=no-self-use
     def create_state(self, index, weight):
