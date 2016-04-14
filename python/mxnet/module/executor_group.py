@@ -285,10 +285,9 @@ class DataParallelExecutorGroup(object):
         if out_grads is None:
             out_grads = []
 
-        for exec_, islice in zip(self.execs, self.slices):
-            out_grads_slice = [grad[islice] for grad in out_grads]
-            out_grads_slice = [x.as_in_context(self.contexts[i]) for i, x in
-                               enumerate(out_grads_slice)]
+        for i, (exec_, islice) in enumerate(zip(self.execs, self.slices)):
+            out_grads_slice = [grad[islice].as_in_context(self.contexts[i]) 
+                               for grad in out_grads]
             exec_.backward(out_grads=out_grads_slice)
 
     def update_metric(self, eval_metric, labels):
