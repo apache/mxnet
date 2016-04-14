@@ -56,3 +56,12 @@ set.
 
 
 
+
+.. class:: ACE
+
+   Averaged cross-entropy for classification. This also know als logloss.
+
+   Calculated the averaged cross entropy for multi-dimentions output.
+
+
+

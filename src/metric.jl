@@ -144,3 +144,59 @@ function reset!(metric :: MSE)
   metric.mse_sum  = 0.0
   metric.n_sample = 0
 end
+
+#=doc
+.. class:: ACE
+
+   Averaged cross-entropy for classification. This also know als logloss.
+
+   Calculated the averaged cross entropy for multi-dimentions output.
+=#
+type ACE <: AbstractEvalMetric
+  ace_sum  :: Float64
+  n_sample :: Int
+
+  ACE() = new(0.0, 0)
+end
+
+function get(metric :: ACE)
+  return [(:ACE, - metric.ace_sum / metric.n_sample)]
+end
+
+function reset!(metric :: ACE)
+  metric.ace_sum = 0.0
+  metric.n_sample = 0
+end
+
+function _update_single_output(metric :: ACE, label :: NDArray, pred :: NDArray)
+  @nd_as_jl ro=(label,pred) begin
+    # Samples are stored in the last dimension
+    @assert size(label, ndims(label)) == size(pred, ndims(pred))
+    @assert ndims(pred) == 4
+
+    labels = reshape(label, size(pred, 1, 2)..., 1, size(pred, 4))
+    for sample in 1:size(labels, 4)
+      for j in 1:size(labels, 2)
+        for i in 1:size(labels, 1)
+          label = labels[i, j, 1, sample]
+
+          # Cross-entropy reduces to -(ln(p_1)*0 + ln(p_2)*1) for classification
+          # Since we can only target labels right now this is the only thing we can do.
+          target = Int(label) + 1 # klasses are 0...k-1 => julia indexing
+          p_k = pred[i, j, target, sample]
+
+          metric.ace_sum += log(p_k)
+          metric.n_sample += 1
+        end
+      end
+    end
+  end
+end
+
+function update!(metric :: ACE, labels :: Vector{NDArray}, preds :: Vector{NDArray})
+  @assert length(labels) == length(preds)
+  for i = 1:length(labels)
+    _update_single_output(metric, labels[i], preds[i])
+  end
+end
+
