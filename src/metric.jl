@@ -51,47 +51,36 @@ type Accuracy <: AbstractEvalMetric
   Accuracy() = new(0.0, 0)
 end
 
-"""
-Implementation taken from findmax in Julia base.
-Searches for the maximum value in p_dim of a.
-I and n are values for the other dimensions.
-"""
-function _indmax(a, I, p_dim, n)
-  m = a[I..., 1, n]
-  mi = 1
-  for i in 2:size(a, p_dim)
-    ai = a[I..., i, n]
-    if ai > m || m!=m
-      m = ai
-      mi = i
-    end
-  end
-  return mi
-end
-
 function _update_single_output(metric :: Accuracy, label :: NDArray, pred :: NDArray)
   @nd_as_jl ro=(label,pred) begin
-    if ndims(pred) > 2 # Multidimensional case
-      # Construct cartesian index
-      p_dim = ndims(pred)-1
-      initial = tuple(fill(1,p_dim-1)...)
-      dims = size(pred, (1:p_dim-1)...)
-      crange = CartesianRange(CartesianIndex(initial), CartesianIndex(dims))
+    # Samples are stored in the last dimension
+    @assert size(label, ndims(label)) == size(pred, ndims(pred))
 
-      for sample in 1:size(label, ndims(label))
-        for i in crange
-          l_i = sub2ind(dims, i.I...)
-          klass = _indmax(pred, i.I, p_dim, sample)
-          metric.acc_sum += (klass-1) == label[l_i, sample]
-          metric.n_sample += 1
+    if ndims(pred) == 4 # Multidimensional case
+      # Reshape label to be of the same shape as pred.
+      # Except for the third dimension where the predictions are stored.
+      labels = reshape(label, size(pred, 1, 2)..., 1, size(pred, 4))
+
+      for sample in 1:size(labels, 4)
+        for j in 1:size(labels, 2)
+          for i in 1:size(labels, 1)
+            label = labels[i, j, 1, sample]
+            klasses = sub(pred, i, j, :, sample)
+            klass = indmax(klasses) - 1 # Classes start at 0...k-1
+
+            metric.acc_sum += klass == label
+            metric.n_sample += 1
+          end
         end
       end
-    else # 1-dimensional case
+    elseif ndims(pred) == 2 # 1-dimensional case
       for sample in 1:size(label, 1)
-        klass = indmax(pred[:, sample])
-        metric.acc_sum += (klass-1) == label[sample]
+        klass = indmax(sub(pred, :, sample)) - 1
+        metric.acc_sum += klass == label[sample]
         metric.n_sample += 1
       end
+    else
+      error("Can't handle prediction with dimensions $(ndims(pred)).")
     end
   end
 end
