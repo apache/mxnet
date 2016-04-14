@@ -181,6 +181,27 @@ class SequentialModule(BaseModule):
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None):
+        """Bind the symbols to construct executors. This is necessary before one
+        can perform computation with the module.
+
+        Parameters
+        ----------
+        data_shapes : list of (str, tuple)
+            Typically is `data_iter.provide_data`.
+        label_shapes : list of (str, tuple)
+            Typically is `data_iter.provide_label`.
+        for_training : bool
+            Default is `True`. Whether the executors should be bind for training.
+        inputs_need_grad : bool
+            Default is `False`. Whether the gradients to the input data need to be computed.
+            Typically this is not needed. But this might be needed when implementing composition
+            of modules.
+        force_rebind : bool
+            Default is `False`. This function does nothing if the executors are already
+            binded. But with this `True`, the executors will be forced to rebind.
+        shared_module : Module
+            Default is `None`. Currently shared module is not supported for `SequentialModule`.
+        """
         if self.binded and not force_rebind:
             self.logger.warning('Already binded, ignoring bind()')
             return
@@ -204,7 +225,7 @@ class SequentialModule(BaseModule):
                 my_label_shapes = label_shapes
                 anybody_ever_needs_label = True
             else:
-                my_label_shapes=None
+                my_label_shapes = None
 
             if inputs_need_grad or (for_training and i_layer > 0):
                 my_inputs_need_grad = True
