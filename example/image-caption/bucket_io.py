@@ -87,106 +87,53 @@ class DummyIter(mx.io.DataIter):
 
 
 class BucketImageSentenceIter(mx.io.DataIter):
-    def __init__(self, input_json, input_hdf5, vocab, buckets, batch_size,
-                 init_states, data_name='data', label_name='label',
-                 text2id=None, is_train=True):
+    def __init__(self, input_hdf5, batch_size, init_states, seq_per_img,
+                 img_name='image', seq_name='seq', label_name='label', is_train=True):
         super(BucketImageSentenceIter, self).__init__()
 
-        if text2id:
-            self.text2id = text2id
-        else:
-            self.text2id = default_cap2idx
-
-        self.vocab_size = vocab
-        self.data_name = data_name
+        self.img_name = img_name
+        self.seq_name = seq_name
         self.label_name = label_name
         self.vgg_mean = np.array([123.68, 116.779, 103.939]).reshape(1, 3, 1, 1)
         self.is_train = is_train
 
-        buckets.sort()
-        self.buckets = buckets
+        self.images, self.labels, self.label_start_ix, self.label_end_ix = \
+                self.load_h5(input_hdf5)
+        self.label_start_ix = np.array(self.label_start_ix)
+        self.label_end_ix = np.array(self.label_end_ix)
+        assert(self.images.shape[0] == self.label_start_ix.shape[0] == self.label_end_ix.shape[0])
 
-        self.caps = [[] for _ in buckets]
-        self.imgs_idx = [[] for _ in buckets] # img idx of hdf5 file
-        self.ids  = [[] for _ in buckets]
-        self.imgs = h5py.File(input_hdf5, 'r').get("images")
-
-
-        self.default_bucket_key = buckets[0]
-
-        raw_data = json.load(open(input_json, 'r'))
-        for img in raw_data:
-            img_idx = img['img_idx']
-            id = img['id']
-            captions = img['captions']
-            for cpt in captions:
-                cpt = self.text2id(cpt, vocab)
-                if len(cpt) == 0:
-                    continue
-                for i, bkt in enumerate(buckets):
-                    if bkt >= len(cpt):
-                        self.caps[i].append(cpt)
-                        self.imgs_idx[i].append(img_idx)
-                        self.ids[i].append(id)
-                        break
-
-        # data (int, int, array)
-        # convert data into ndarrays
-        caps = [np.zeros( (len(x), buckets[i]) ) for i, x in enumerate(self.caps)]
-        for i_bucket in range(len(self.buckets)):
-            for j in range(len(self.caps[i_bucket])):
-                cap = self.caps[i_bucket][j]
-                caps[i_bucket][j, :len(cap)] = cap
-        self.caps = caps
-        imgs_idx = [np.array(x) for x in self.imgs_idx]
-        self.imgs_idx = imgs_idx
-
-        bucket_size = [len(x) for x in self.caps]
-
-        print("Summary of dataset")
-        for bkt, size in zip(buckets, bucket_size):
-            print("bucket of len %3d : %d samples" % (bkt, size))
+        self.default_bucket_key = self.labels.shape[1] + 1
 
         self.batch_size = batch_size
-        self.make_data_iter_plan()
-
+        self.seq_per_img = seq_per_img
+        self.data_size = self.label_start_ix.shape[0] // self.batch_size * self.batch_size
         self.init_states = init_states
         self.init_state_arrays = [mx.nd.zeros(x[1]) for x in init_states]
 
-        self.provide_data = [('%s/%d' %(self.data_name, 0), (self.batch_size, 3, 224, 224))] \
-                              + [('%s/%d' % (self.data_name, t), (self.batch_size,))
-                             for t in range(1, self.default_bucket_key + 1)] + init_states  # the first data is img
-        self.provide_label = [('%s/%d' % (self.label_name, t), (self.batch_size, ))
-                              for t in range(1, self.default_bucket_key + 1)]  # label should start with 1
+        self.provide_data = [('image', (self.batch_size, 3, 224, 224)), \
+                             ('seq', (self.batch_size * self.seq_per_img, self.default_bucket_key))] \
+                             + init_states
+        self.provide_label = [('label', (self.batch_size * self.seq_per_img, self.default_bucket_key))]
+
+        self.image_buffer = np.zeros((batch_size, 3, 256, 256))
+        self.seq_buffer = np.zeros((batch_size * seq_per_img, self.default_bucket_key))
+        self.label_buffer = np.zeros((batch_size * seq_per_img, self.default_bucket_key - 1))
+
+        self.idx = np.random.permutation(self.data_size)
+
+    @property
+    def seq_length(self):
+        return self.default_bucket_key
 
 
-
-    def make_data_iter_plan(self):
-        bucket_n_batches = []
-        for i in range(len(self.caps)):
-            bucket_n_batches.append(len(self.caps[i]) / self.batch_size)
-            real_size = int(bucket_n_batches[i] * self.batch_size)
-            self.caps[i] = self.caps[i][:int(real_size)]
-            self.imgs_idx[i] = self.imgs_idx[i][:int(real_size)]
-            # TODO: ids?, for language evaluation
-
-        bucket_plan = np.hstack([np.zeros(n, int)+i for i, n in enumerate(bucket_n_batches)])
-        np.random.shuffle(bucket_plan)
-
-        bucket_idx_all = [np.random.permutation(len(x)) for x in self.caps]
-
-        self.bucket_plan = bucket_plan
-        self.bucket_idx_all = bucket_idx_all
-        self.bucket_curr_idx = [0 for x in self.caps]
-
-        self.img_buffer = np.zeros((self.batch_size, 3, 256, 256))
-        self.seq_buffer = []
-        self.label_buffer = []
-        for i_bucket in range(len(self.caps)):
-            seq = np.zeros((self.batch_size, self.buckets[i_bucket]))
-            label = np.zeros((self.batch_size, self.buckets[i_bucket]))
-            self.seq_buffer.append(seq)
-            self.label_buffer.append(label)
+    def load_h5(self, input_hdf5):
+        h5_file = h5py.File(input_hdf5, 'r')
+        images = h5_file.get("images")
+        labels = h5_file.get("labels")
+        label_start_ix = h5_file.get("label_start_ix")
+        label_end_ix = h5_file.get("label_end_ix")
+        return images, labels, label_start_ix, label_end_ix
 
 
     def data_augmentation(self, imgs, data_augment=True):
@@ -206,45 +153,35 @@ class BucketImageSentenceIter(mx.io.DataIter):
         return imgs - self.vgg_mean
 
 
-
-
     def __iter__(self):
         init_state_names = [x[0] for x in self.init_states]
 
-        for i_bucket in self.bucket_plan:
-            img = self.img_buffer
-            seq = self.seq_buffer[i_bucket]
-            label = self.label_buffer[i_bucket]
+        for curr_idx in xrange(0, self.data_size, self.batch_size):
 
-            i_idx = self.bucket_curr_idx[i_bucket]
-            idx = self.bucket_idx_all[i_bucket][i_idx:i_idx+self.batch_size]
-            self.bucket_curr_idx[i_bucket] += self.batch_size
+            image = self.image_buffer
+            seq = self.seq_buffer
+            label = self.label_buffer
+            for i in range(self.batch_size):
+                idx = self.idx[curr_idx+i]
+                ix1 = self.label_start_ix[idx]
+                ix2 = self.label_end_ix[idx]
+                image[i] = self.images[idx]
+                seq[i * self.seq_per_img:(i + 1) * self.seq_per_img,1:] = \
+                        self.labels[ix1:ix2+1]
+                label[i * self.seq_per_img:(i + 1) * self.seq_per_img] = \
+                        self.labels[ix1:ix2+1]
 
+            data = [mx.nd.array(self.data_augmentation(image, self.is_train))] \
+                    + [mx.nd.array(seq)] + self.init_state_arrays
+            label = [mx.nd.array(label)]
+            data_names = ['image', 'seq'] + init_state_names
+            label_names = ['label']
 
-            # TODO: remove loop
-            for i, img_idx in enumerate(self.imgs_idx[i_bucket][idx]):
-                img[i] = self.imgs[img_idx]
-
-            seq[:] = self.caps[i_bucket][idx]
-            label[:, :-1] = seq[:, 1:]
-            label[:, -1] = 0
-
-            data_all = [mx.nd.array(self.data_augmentation(img, self.is_train))] + [mx.nd.array(seq[:, t]) for t in range(self.buckets[i_bucket])] \
-                        + self.init_state_arrays
-            label_all = [mx.nd.array(label[:, t]) for t in range(self.buckets[i_bucket])]
-
-            data_names = ['%s/%d' % (self.data_name, t)
-                          for t in range(self.buckets[i_bucket] + 1)] + init_state_names
-            label_names = ['%s/%d' % (self.label_name, t)
-                           for t in range(1, self.buckets[i_bucket] + 1)]
-
-            data_batch = SimpltBatch(data_names, data_all, label_names, label_all,
-                                     self.buckets[i_bucket])
-
+            data_batch = SimpltBatch(data_names, data, label_names, label, self.default_bucket_key)
             yield data_batch
 
-
     def reset(self):
-        self.bucket_curr_idx = [0 for x in self.caps]
+        self.idx = np.random.permutation(self.data_size)
+
 
 

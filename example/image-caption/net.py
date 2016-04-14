@@ -8,7 +8,93 @@ LSTMState = namedtuple("LSTMState", ["c", "h"])
 LSTMParam = namedtuple("LSTMParam", ["i2h_weight", "i2h_bias",
                                      "h2h_weight", "h2h_bias"])
 
-def vgg16_fc2_symbol(input_name, num_embed):
+#TODO: ndarray expander
+class NDArrayExpander(mx.operator.NDArrayOp):
+    def __init__(self, n):
+        super(NDArrayExpander, self).__init__(True)
+        self.fwd_kernel = None
+        self.bwd_kernel = None
+        self.n = n
+
+    def list_arguments(self):
+        return ['data']
+
+    def list_outputs(self):
+        return ['output']
+
+    def infer_shape(self, in_shape):
+        data_shape = in_shape[0]
+        assert(len(data_shape) == 2), 'feature shape should be 2D'
+        output_shape = (self.n*data_shape[0], data_shape[1])
+        return [data_shape], [output_shape]
+
+    def forward(self, in_data, out_data):
+        x = in_data[0]
+        y = out_data[0]
+        if self.fwd_kernel is None:
+            self.fwd_kernel = mx.rtc('expander', [('x', x), ('y', y)], """
+int n = y_dims[0] / x_dims[0];
+int i = blockIdx.x;
+int j = threadIdx.x;
+for (int k = 0; k < n; ++k) {
+    y[(k+i*n)*x_dims[1]+j] = x[i*x_dims[1]+j];
+}
+            """)
+        self.fwd_kernel.push([x], [y], (y.shape[0], 1, 1), (y.shape[1], 1, 1))
+
+    def backward(self, out_grad, in_data, out_data, in_grad):
+        dy = out_grad[0]
+        dx = in_grad[0]
+        if self.bwd_kernel is None:
+            self.bwd_kernel = mx.rtc('expander_grad', [('dy', dy)], [('dx', dx)], """
+int n = y_dims[0] / dx_dims[0];
+int i = blockIdx.x;
+int j = threadIdx.x;
+for (int k = 0; k < n; ++k) {
+    dx[i*dx_dims[1]+j] += dy[(k+i*n)*dx_dims[1]+j];
+}
+dx[i*dx_dims[1]+j] /= static_cast<float>(n);
+            """)
+        self.bwd_kernel.push([dy], [dx], (dy.shape[0], 1, 1), (dy.shape[0], 1, 1))
+
+
+class NumpyExpander(mx.operator.NumpyOp):
+
+    """Docstring for NumpyExpander. """
+
+    def __init__(self, n):
+        super(NumpyExpander, self).__init__(True)
+        self.n = n
+
+    def list_arguments(self):
+        return ['data']
+
+    def lsit_outputs(self):
+        return ['output']
+
+    def infer_shape(self, in_shape):
+        data_shape = in_shape[0]
+        assert(len(data_shape) == 2), 'feature should be 2D'
+        output_shape = (self.n * data_shape[0], data_shape[1])
+        return [data_shape], [output_shape]
+
+    def forward(self, in_data, out_data):
+        x = in_data[0]
+        y = out_data[0]
+        for i in range(x.shape[0]):
+            y[self.n*i:self.n*(i+1)] = x[i]
+
+    def backward(self, out_grad, in_data, out_data, in_grad):
+        dy = out_grad[0]
+        dx = in_grad[0]
+        for i in range(dx.shape[0]):
+            dx[i] = np.mean(dy[self.n*i:self.n*(i+1)], axis=0)
+
+
+
+
+
+def vgg16_fc7_symbol(input_name, num_embed):
 
     data = mx.sym.Variable(name=input_name)
 
@@ -57,13 +143,12 @@ def vgg16_fc2_symbol(input_name, num_embed):
     flat6     = mx.sym.Flatten(data=pool5, name="flat6")
     fc6     = mx.sym.FullyConnected(data=flat6, num_hidden=4096, name="fc6")
     relu6   = mx.sym.Activation(data=fc6, act_type="relu", name="relu6")
-
-    """
     drop6   = mx.sym.Dropout(data=relu6, p=0.5, name="drop6")
 
     # fc7
     fc7     = mx.sym.FullyConnected(data=drop6, num_hidden=4096, name="fc7")
     relu7   = mx.sym.Activation(data=fc7, act_type="relu", name="relu7")
+    """
     drop7   = mx.sym.Dropout(data=relu7, p=0.5, name="drop7")
 
     # fc8
@@ -72,7 +157,7 @@ def vgg16_fc2_symbol(input_name, num_embed):
     """
 
     # embedding
-    embedding = mx.sym.FullyConnected(data=relu6, num_hidden=num_embed, name="t0_embed")
+    embedding = mx.sym.FullyConnected(data=relu7, num_hidden=num_embed, name="t0_embed")
     embed_relu = mx.sym.Activation(data=embedding, act_type="relu", name="embed_relu")
 
     return embed_relu
@@ -117,7 +202,7 @@ def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
 
 
 def network_unroll(num_lstm_layer, seq_len, vocab_size, num_hidden,
-                   num_embed, dropout=0.):
+                   num_embed, num_seq, dropout=0.):
     """
 
     :param num_lstm_layer:
@@ -128,13 +213,11 @@ def network_unroll(num_lstm_layer, seq_len, vocab_size, num_hidden,
     :param dropout:
     :return:
     """
-    embed_weight = mx.sym.Variable("embed_weight")
-    cls_weight = mx.sym.Variable("cls_weight")
-    cls_bias = mx.sym.Variable("cls_bias")
-    params_cells = []
+    # init lstm param variable and state variable
+    param_cells = []
     last_states = []
     for i in range(num_lstm_layer):
-        params_cells.append(LSTMParam(i2h_weight=mx.sym.Variable("l%d_i2h_weight" %i),
+        param_cells.append(LSTMParam(i2h_weight=mx.sym.Variable("l%d_i2h_weight" %i),
                                       i2h_bias=mx.sym.Variable("l%d_i2h_bias" %i),
                                       h2h_weight=mx.sym.Variable("l%d_h2h_weight" %i),
                                       h2h_bias=mx.sym.Variable("l%d_h2h_bias" %i)))
@@ -142,37 +225,53 @@ def network_unroll(num_lstm_layer, seq_len, vocab_size, num_hidden,
                                      h=mx.sym.Variable("l%d_init_h" %i)))
     assert(len(last_states) == num_lstm_layer)
 
-    loss_all = []
+    # seq embedding layer
+    seq = mx.sym.Variable('seq')
+    label = mx.sym.Variable('label')
+    embed = mx.sym.Embedding(data=seq, input_dim=vocab_size, output_dim=num_embed,
+                             name='seq_embed')
+    print seq_len
+    wordvec = mx.sym.SliceChannel(data=embed, num_outputs=seq_len, axis=1)
+
+    hidden_all = []
     for seqidx in range(seq_len+1):
         if seqidx == 0:
-            hidden = vgg16_fc2_symbol("data/%d" % seqidx, num_embed)
+            data = vgg16_fc7_symbol('image', num_embed)
+            expander = NumpyExpander(num_seq)
+            hidden = expander(data=data, name="expand")
         else:
-            data = mx.sym.Variable("data/%d" % seqidx)
-            hidden = mx.sym.Embedding(data=data, weight=embed_weight, input_dim=vocab_size,
-                                      output_dim=num_embed, name="t%d_embed" % seqidx)
-        # stack LSTM if necessary
+            hidden = wordvec[seqidx-1]
+        # stack LSTM
         for i in range(num_lstm_layer):
             if i == 0:
                 dp_ratio = 0.
             else:
                 dp_ratio = dropout
-            next_state = lstm(num_hidden, indata=hidden, prev_state=last_states[i],
-                              param=params_cells[i], seqidx=seqidx, layeridx=i, dropout=dp_ratio)
+            next_state = lstm(num_hidden, indata=hidden,
+                              prev_state=last_states[i],
+                              param=param_cells[i],
+                              seqidx=seqidx, layeridx=i,
+                              dropout=dp_ratio)
             hidden = next_state.h
             last_states[i] = next_state
-
         # decoder
-        # there is no output if seqidx is 0
-        if  seqidx > 0:
+        if seqidx > 0:
             if dropout > 0.:
                 hidden = mx.sym.Dropout(data=hidden, p=dropout)
-            fc = mx.sym.FullyConnected(data=hidden, weight=cls_weight, bias=cls_bias,
-                                       num_hidden=vocab_size)
-            sm = mx.sym.SoftmaxOutput(data=fc, label=mx.sym.Variable('label/%d' % seqidx),
-                                      name='t%d_sm' % seqidx)
-            loss_all.append(sm)
+            hidden_all.append(hidden)
 
-    return mx.sym.Group(loss_all)
+    hidden_concat = mx.sym.Concat(*hidden_all, dim=0)
+    pred = mx.sym.FullyConnected(data=hidden_concat, num_hidden=vocab_size, name='pred')
+
+    label_slice = mx.sym.SliceChannel(data=label, num_outputs=seq_len)
+    label = [label_slice[t] for t in range(seq_len)]
+    label = mx.sym.Concat(*label, dim=0)
+    label = mx.sym.Reshape(data=label, target_shape=(0,))
+
+    sm = mx.sym.SoftmaxOutput(data=pred, label=label, name='softmax')
+
+    return sm
+
 
 
 
@@ -239,7 +338,7 @@ def cnn_lstm_symbol(num_lstm_layer, num_hidden, num_embed, dropout=0.):
         init_states.append(state)
 
     # CNN and one timestep LSTM
-    cnn = vgg16_fc2_symbol("data/0", num_embed)
+    cnn = vgg16_fc7_symbol("data/0", num_embed)
     for i in range(num_lstm_layer):
         if i == 0:
             dp = 0.
