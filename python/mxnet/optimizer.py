@@ -87,7 +87,7 @@ class Optimizer(object):
             ctypes.byref(handle)))
         return handle
 
-    def __init__(self, rescale_grad=1., arg_idx2name=None, wd=0.,
+    def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
                  lr_scheduler=None, sym=None):
         self.rescale_grad = rescale_grad
@@ -98,18 +98,21 @@ class Optimizer(object):
 
         self.wd = wd
         self.lr_mult = {}
-        self.wd_mult = {} 
+        self.wd_mult = {}
         self.num_update = 0
         self._index_update_count = {}
         self.clip_gradient = clip_gradient
 
-        if arg_idx2name is None:
-            arg_idx2name = {}
-        assert isinstance(arg_idx2name, dict), \
-            'arg_idx2name should be a dict of param indexes to names.'
-        self.idx2name = arg_idx2name.copy()
+        if param_idx2name is None:
+            param_idx2name = {}
+        assert isinstance(param_idx2name, dict), \
+            'param_idx2name should be a dict of param indexes to names.'
+        self.idx2name = param_idx2name.copy()
         self.sym = sym
-       
+
+        self.set_lr_mult({})
+        self.set_wd_mult({})
+
     def create_state(self, index, weight):
         """Create additional optimizer state such as momentum.
         override in implementations."""
@@ -117,6 +120,7 @@ class Optimizer(object):
     def update(self, index, weight, grad, state):
         """Update the parameters. override in implementations"""
 
+    # pylint: disable=no-self-use
     def set_lr_scale(self, args_lrscale):
         """set lr scale is deprecated. Use set_lr_mult instead."""
         raise DeprecationWarning
@@ -142,7 +146,7 @@ class Optimizer(object):
     def set_wd_mult(self, args_wd_mult):
         """Set individual weight decay multipler for parameters.
         By default wd multipler is 0 for all params whose name doesn't
-        end with _weight, if arg_idx2name is provided.
+        end with _weight, if param_idx2name is provided.
 
         Parameters
         ----------
@@ -156,7 +160,7 @@ class Optimizer(object):
             if not n.endswith('_weight'):
                 self.wd_mult[n] = 0.0
         if self.sym is not None:
-            attr = sym.list_attr()
+            attr = self.sym.list_attr()
             for k, v in attr.items():
                 if k.endswith('_wd_mult'):
                     self.wd_mult[k[:-len('_wd_mult')]] = float(v)
@@ -244,7 +248,7 @@ class SGD(Optimizer):
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
 
-    arg_names : list(str), optional
+    param_idx2name : dict of string/int to float, optional
         special treat weight decay in parameter ends with bias, gamma, and beta
     """
     def __init__(self, momentum=0.0, **kwargs):
@@ -319,7 +323,7 @@ class SGLD(Optimizer):
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
 
-    arg_names : list(str), optional
+    param_idx2name : dict of string/int to float, optional
         special treat weight decay in parameter ends with bias, gamma, and beta
     """
     def __init__(self, **kwargs):
@@ -395,7 +399,7 @@ class ccSGD(Optimizer):
         self.handle = Optimizer._init_cc_optimizer(
             'ccsgd',
             ['momentum', 'rescale_grad', 'clip_gradient'],
-            [momentum, rescale_grad, clip_gradient])
+            [momentum, kwargs['rescale_grad'], kwargs['clip_gradient']])
 
     def __getstate__(self):
         this = self.__dict__.copy()
