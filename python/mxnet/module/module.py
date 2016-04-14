@@ -230,7 +230,7 @@ class Module(BaseModule):
                                                      self._work_load_list, data_shapes,
                                                      label_shapes, self._param_names,
                                                      for_training, inputs_need_grad,
-                                                     shared_group)
+                                                     shared_group, logger=self.logger)
 
         if shared_module is not None:
             self.params_initialized = True
