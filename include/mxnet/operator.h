@@ -516,9 +516,10 @@ struct OperatorPropertyReg
   std::string key_var_num_args;
 };
 
-//--------------------------------------------------------------
+//---------------------------------------------------------------------------------
 // The following part are API Registration of Operators
-//--------------------------------------------------------------
+// See also MXNET_REGISTER_SIMPLE_OP in operator_util.h for registering simple ops.
+//---------------------------------------------------------------------------------
 /*!
  * \brief Macro to register OperatorProperty
  *

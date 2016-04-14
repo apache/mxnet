@@ -336,6 +336,8 @@ class ThreadedEngine : public Engine {
   std::atomic<bool> shutdown_phase_{false};
   /*!\brief show more information from engine actions */
   bool engine_info_{false};
+  /*! \brief debug information about wait for var. */
+  std::atomic<ThreadedVar*> debug_wait_var_{nullptr};
   /*!
    * \brief Mutex and condition_variable,
    *  used to Notify waits for single or all variables.
