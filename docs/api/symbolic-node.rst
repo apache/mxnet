@@ -346,11 +346,15 @@ Public APIs
 
 .. function:: Crop(...)
 
-   Crop the 2nd and 3rd dim of input data, with the corresponding size of w_h or with width and height of the second input symbol
+   Crop the 2nd and 3rd dim of input data, with the corresponding size of h_w or with width and height of the second input symbol, i.e., with one input, we need h_w to specify the crop height and width, otherwise the second input symbol's size will be used
    
    This function support variable length positional :class:`SymbolicNode` inputs.
    
-   :param num_args: Number of inputs for crop, if equals one, then we will use the h_wfor crop heihgt and width, else if equals two, then we will use the heightand width of the second input symbol, we name crop_like here
+   :param data: Tensor or List of Tensors, the second input will be used as crop_like shape reference
+   :type data: SymbolicNode or SymbolicNode[]
+   
+   
+   :param num_args: Number of inputs for crop, if equals one, then we will use the h_wfor crop height and width, else if equals two, then we will use the heightand width of the second input symbol, we name crop_like here
    :type num_args: int, required
    
    
@@ -364,6 +368,34 @@ Public APIs
    
    :param center_crop: If set to true, then it will use be the center_crop,or it will crop using the shape of crop_like
    :type center_crop: boolean, optional, default=False
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: SymbolicNode.
+   
+
+
+
+
+.. function:: CuDNNBatchNorm(...)
+
+   Apply batch normalization to input.
+   
+   :param data: Input data to batch normalization
+   :type data: SymbolicNode
+   
+   
+   :param eps: Epsilon to prevent div 0
+   :type eps: float, optional, default=0.001
+   
+   
+   :param momentum: Momentum for moving average
+   :type momentum: float, optional, default=0.9
+   
+   
+   :param fix_gamma: Fix gamma while training
+   :type fix_gamma: boolean, optional, default=False
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -759,10 +791,14 @@ Public APIs
 
 .. function:: SliceChannel(...)
 
-   Slice channel into many outputs with equally divided channel
+   Slice input equally along specified axis
    
    :param num_outputs: Number of outputs to be sliced.
    :type num_outputs: int, required
+   
+   
+   :param axis: Dimension along which to slice.
+   :type axis: int, optional, default='1'
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.

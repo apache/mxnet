@@ -687,12 +687,53 @@ Public APIs
 
 
 
+
+.. function:: sum_mid_internal(...)
+
+   Take sum on medium dimension of the 3D src.
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
+
+.. function:: transpose(...)
+
+   Transpose the input matrix and return a new one
+   
+   :param src: Source input to the function
+   :type src: NDArray
+   
+
+
+
 Internal APIs
 ^^^^^^^^^^^^^
 
 .. note::
 
    Document and signatures for internal API functions might be incomplete.
+
+.. function:: _broadcast(...)
+
+   Broadcast array in the given axis to the given size
+   
+   :param src: source ndarray
+   :type src: NDArray
+   
+   
+   :param axis: axis to broadcast
+   :type axis: int
+   
+   
+   :param size: size of broadcast
+   :type size: int
+   
+
+
+
 
 .. function:: _copyto(...)
 
