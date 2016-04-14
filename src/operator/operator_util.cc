@@ -20,6 +20,13 @@ class SimpleBinaryOpProp;
 
 class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
  public:
+  TSelf& set_symbol_op_name(const std::string& symbol_name) override {
+    CHECK(op_reg_ == nullptr)
+        << "need to call set_symbol_op_name before all other calls";
+    symbol_name_ = symbol_name;
+    return *this;
+  }
+
   TSelf& set_enable_scalar(
       bool enable_scalar,
       SimpleOpScalarOption type_mask) override {
@@ -74,7 +81,7 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
                       SimpleOpRegOption register_symbolic) override {
     std::lock_guard<std::mutex> lock(mutex_);
     SetFunction(&fbinary_, dev_mask, fbinary, "BinaryFunction");
-    binary_forward_inplace_lhs_out_ = (inplace_lhs_out == kInplaceInOut);
+    binary_forward_inplace_lhs_out_ = (inplace_lhs_out == kInplaceLhsOut);
     if (++reg_counter_ == 1) {
       this->RegisterBinaryImperative();
       register_symbolic_ = (register_symbolic == kRegisterSymbolic);
@@ -161,6 +168,8 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
   int reg_counter_{0};
   // whether register symbolic function.
   bool register_symbolic_{true};
+  // name of symbolic operator.
+  std::string symbol_name_;
   // number of scalar arguments
   bool enable_scalar_{false};
   // type mask of scalar arguments in imperative API.
@@ -228,8 +237,11 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
   // internal function to register NDArray function.
   inline OperatorPropertyReg &OpReg() {
     if (op_reg_ == nullptr) {
+      if (symbol_name_.length() == 0) {
+        symbol_name_ = this->name;
+      }
       OperatorPropertyReg &reg =
-          ::dmlc::Registry<OperatorPropertyReg>::Get()->__REGISTER__(this->name);
+          ::dmlc::Registry<OperatorPropertyReg>::Get()->__REGISTER__(symbol_name_);
       op_reg_ = &reg;
     }
     return *op_reg_;
@@ -440,7 +452,7 @@ class SimpleOpPropBase : public OperatorProperty {
       env.scalar = param.scalar;
     } else {
       CHECK_EQ(kwargs.size(), 0)
-          << "Operator " << source->name << " donot accept any keyword arguments";
+          << "Operator " << source->symbol_name_ << " donot accept any keyword arguments";
     }
   }
 
@@ -549,7 +561,7 @@ void SimpleOpRegEntryImpl::RegisterUnarySymbolic() {
   // register the operator
   auto op_factory = [this]() {
     SimpleUnaryOpProp *prop = new SimpleUnaryOpProp();
-    prop->name = this->name;
+    prop->name = this->symbol_name_;
     prop->source = this;
     return prop;
   };
@@ -738,7 +750,7 @@ class SimpleBinaryOpProp : public SimpleOpPropBase {
     out_shape->clear();
     if (source->binary_shape_ == nullptr) {
       if (in_shape->at(0).ndim() != 0) {
-        SHAPE_ASSIGN_CHECK(*in_shape, 1, in_shape->at(9));
+        SHAPE_ASSIGN_CHECK(*in_shape, 1, in_shape->at(0));
       } else if (in_shape->at(1).ndim() != 0) {
         in_shape->at(0) = in_shape->at(1);
       } else {
@@ -751,6 +763,10 @@ class SimpleBinaryOpProp : public SimpleOpPropBase {
       out_shape->push_back((*(source->binary_shape_))(lshape, rshape, env));
     }
     return true;
+  }
+
+  std::vector<std::string> ListArguments() const override {
+    return {"lhs", "rhs"};
   }
 
   OperatorProperty* Copy() const override {
@@ -817,7 +833,7 @@ void SimpleOpRegEntryImpl::RegisterBinarySymbolic() {
   // register the operator
   auto op_factory = [this]() {
     SimpleBinaryOpProp *prop = new SimpleBinaryOpProp();
-    prop->name = this->name;
+    prop->name = symbol_name_;
     prop->source = this;
     return prop;
   };
