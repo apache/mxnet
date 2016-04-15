@@ -285,9 +285,20 @@ class ThreadedEngine : public Engine {
     ThreadedOpr* threaded_opr = opr_block->opr;
     CallbackOnComplete callback = this->CreateCallback(
         ThreadedEngine::OnCompleteStatic, threaded_opr);
+    bool debug_info = (engine_info_ && debug_push_opr_ == opr_block);
+    if (debug_info) {
+      LOG(INFO) << "ExecuteOprBlock " << opr_block
+                << "shutdown_phase=" << shutdown_phase_;
+    }
     if (!shutdown_phase_) {
       try {
+        if (debug_info) {
+          LOG(INFO) << "ExecuteOprFn ";
+        }
         threaded_opr->fn(run_ctx, callback);
+        if (debug_info) {
+          LOG(INFO) << "Fin ExecuteOprFn ";
+        }
       } catch(dmlc::Error &e) {
         std::string what = e.what();
         if (what.find("driver shutting down") == std::string::npos &&
@@ -338,6 +349,8 @@ class ThreadedEngine : public Engine {
   bool engine_info_{false};
   /*! \brief debug information about wait for var. */
   std::atomic<ThreadedVar*> debug_wait_var_{nullptr};
+  /*! \brief debug information about wait for var. */
+  std::atomic<OprBlock*> debug_push_opr_{nullptr};
   /*!
    * \brief Mutex and condition_variable,
    *  used to Notify waits for single or all variables.

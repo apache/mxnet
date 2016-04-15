@@ -350,6 +350,7 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
         [this, debug_info](OprBlock* opr) {
           if (debug_info) {
             LOG(INFO) << "PushToExecute " << opr;
+            debug_push_opr_ = opr;
           }
           this->PushToExecute(opr, false);
           if (debug_info) {
