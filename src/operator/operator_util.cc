@@ -544,6 +544,7 @@ class SimpleUnaryOpProp : public SimpleOpPropBase {
     SimpleUnaryOperator *op = new SimpleUnaryOperator();
     CHECK(dev_mask < source->funary_.size() && source->funary_[dev_mask] != nullptr);
     op->forward = source->funary_[dev_mask];
+    op->env = this->env;
     if (dev_mask < source->funary_grad_t0_.size()) {
       op->backward0 = source->funary_grad_t0_[dev_mask];
     }
@@ -819,6 +820,7 @@ class SimpleBinaryOpProp : public SimpleOpPropBase {
     SimpleBinaryOperator *op = new SimpleBinaryOperator();
     CHECK(dev_mask < source->fbinary_.size() && source->fbinary_[dev_mask] != nullptr);
     op->forward = source->fbinary_[dev_mask];
+    op->env = this->env;    
     if (dev_mask < source->fbinary_grad_t0_.size()) {
       op->backward0 = source->fbinary_grad_t0_[dev_mask];
     }
