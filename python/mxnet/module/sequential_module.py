@@ -1,4 +1,4 @@
-# pylint: disable=too-many-arguments, too-many-locals
+# pylint: disable=too-many-arguments, too-many-locals, too-many-instance-attributes
 """`SequentialModule` is a container module that chains a number of modules together."""
 
 import logging
@@ -228,10 +228,8 @@ class SequentialModule(BaseModule):
             else:
                 my_label_shapes = None
 
-            if inputs_need_grad or (for_training and i_layer > 0):
-                my_inputs_need_grad = True
-            else:
-                my_inputs_need_grad = False
+            my_inputs_need_grad = bool(inputs_need_grad or
+                                       (for_training and i_layer > 0))
 
             if meta.get(SequentialModule.META_AUTO_WIRING, False):
                 data_names = module.data_names
