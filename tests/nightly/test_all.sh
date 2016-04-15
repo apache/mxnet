@@ -15,6 +15,11 @@ gpus=`seq 0 $((num_gpus-1)) | paste -sd ","`
 
 # build
 build() {
+make -C ../.. clean
+make -C ../.. -j8
+return $?
+}
+
 cp ../../make/config.mk ../..
 cat >>../../config.mk <<EOF
 USE_CUDA=1
@@ -22,11 +27,8 @@ USE_CUDA_PATH=/usr/local/cuda
 USE_CUDNN=1
 USE_DIST_KVSTORE=1
 EOF
-make -C ../.. clean
-make -C ../.. -j8
-return $?
-}
-# juLog -name=Build -error=Error build
+
+juLog -name=Build -error=Error build
 
 # python: local kvstore
 juLog -name=Python.Local.KVStore -error=Error python test_kvstore.py
@@ -78,5 +80,14 @@ test_inception_cifar10() {
     check_val 0.82
 }
 juLog -name=Python.Inception.Cifar10 -error=Fail test_inception_cifar10
+
+# build without CUDNN
+cat >>../../config.mk <<EOF
+USE_CUDNN=0
+EOF
+juLog -name=BuildWithoutCUDNN -error=Error build
+
+# python: multi gpus lenet + mnist
+juLog -name=Python.Multi.Lenet.Mnist -error=Error python multi_lenet.py
 
 exit $errors

@@ -720,11 +720,6 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
 MXNET_REGISTER_NDARRAY_FUN(_set_value).set_function(SetValueOp);
 
 
-MXNET_REGISTER_NDARRAY_FUN(_plus).set_function(BinaryOp<ndarray::Plus>);
-MXNET_REGISTER_NDARRAY_FUN(_minus).set_function(BinaryOp<ndarray::Minus>);
-MXNET_REGISTER_NDARRAY_FUN(_mul).set_function(BinaryOp<ndarray::Mul>);
-MXNET_REGISTER_NDARRAY_FUN(_div).set_function(BinaryOp<ndarray::Div>);
-
 MXNET_REGISTER_NDARRAY_FUN(dot).set_function(BinaryOp<ndarray::Dot>)
 .describe("Calculate 2D matrix multiplication");
 
