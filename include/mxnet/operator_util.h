@@ -221,6 +221,13 @@ class SimpleOpRegEntry {
   /*! \brief name of the operator */
   std::string name;
   /*!
+   * \brief set a seperate name for symbol
+   *  This must be called before set_function.
+   *  Default: this is set to be same as the name of operator.
+   * \param symbol_name the name of symbolic operator.
+   */
+  virtual TSelf& set_symbol_op_name(const std::string& symbol_name) = 0;
+  /*!
    * \brief set number of scalar arguments needed to be passed in env
    *  A function cannot have both kwargs and scalar arguments.
    *  Default: this is set to false

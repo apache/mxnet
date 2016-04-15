@@ -194,7 +194,7 @@ struct threshold {
 struct abs {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(fabsf(a));
+    return DType(fabsf(float(a)));  // NOLINT(*)
   }
 };
 
