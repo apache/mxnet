@@ -48,10 +48,16 @@ class Module(BaseModule):
 
         self._symbol = symbol
 
+        data_names = list(data_names)
+        label_names = list(label_names) if label_names is not None else []
+
         arg_names = symbol.list_arguments()
         input_names = data_names + label_names
         self._param_names = [x for x in arg_names if x not in input_names]
         self._aux_names = symbol.list_auxiliary_states()
+        self._data_names = data_names
+        self._label_names = label_names
+        self._output_names = symbol.list_outputs()
 
         self._arg_params = None
         self._aux_params = None
@@ -72,6 +78,16 @@ class Module(BaseModule):
         self._exec_group = None
         self._data_shapes = None
         self._label_shapes = None
+
+    @property
+    def data_names(self):
+        """A list of names for data required by this module."""
+        return self._data_names
+
+    @property
+    def output_names(self):
+        """A list of names for the outputs of this module."""
+        return self._output_names
 
     @property
     def data_shapes(self):
@@ -214,7 +230,10 @@ class Module(BaseModule):
         if not for_training:
             assert not inputs_need_grad
         else:
-            assert label_shapes is not None
+            pass
+            # this is not True, as some module might not contains a loss function
+            # that consumes the labels
+            # assert label_shapes is not None
 
         self._data_shapes = data_shapes
         self._label_shapes = label_shapes

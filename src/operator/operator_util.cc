@@ -820,7 +820,7 @@ class SimpleBinaryOpProp : public SimpleOpPropBase {
     SimpleBinaryOperator *op = new SimpleBinaryOperator();
     CHECK(dev_mask < source->fbinary_.size() && source->fbinary_[dev_mask] != nullptr);
     op->forward = source->fbinary_[dev_mask];
-    op->env = this->env;    
+    op->env = this->env;
     if (dev_mask < source->fbinary_grad_t0_.size()) {
       op->backward0 = source->fbinary_grad_t0_[dev_mask];
     }

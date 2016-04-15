@@ -50,6 +50,24 @@ class BucketingModule(BaseModule):
         self._curr_module = None
 
     @property
+    def data_names(self):
+        """A list of names for data required by this module."""
+        if self.binded:
+            return self._curr_module.data_names
+        else:
+            _, data_names, _ = self._sym_gen(self._default_bucket_key)
+            return data_names
+
+    @property
+    def output_names(self):
+        """A list of names for the outputs of this module."""
+        if self.binded:
+            return self._curr_module.output_names
+        else:
+            symbol, _, _ = self._sym_gen(self._default_bucket_key)
+            return symbol.list_outputs()
+
+    @property
     def data_shapes(self):
         """Get data shapes.
         Returns
@@ -232,6 +250,7 @@ class BucketingModule(BaseModule):
 
     def backward(self, out_grads=None):
         """Backward computation."""
+        assert self.binded and self.params_initialized
         self._curr_module.backward(out_grads=out_grads)
 
     def update(self):
@@ -290,6 +309,7 @@ class BucketingModule(BaseModule):
         labels : list of NDArray
             Typically `data_batch.label`.
         """
+        assert self.binded and self.params_initialized
         self._curr_module.update_metric(eval_metric, labels)
 
     @property

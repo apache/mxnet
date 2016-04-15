@@ -1,4 +1,4 @@
-# pylint: disable=too-many-arguments, too-many-locals
+# pylint: disable=too-many-arguments, too-many-locals, too-many-public-methods
 """`BaseModule` defines an API for modules."""
 
 import logging
@@ -46,7 +46,12 @@ class BaseModule(object):
       (forward-backward).
 
     In order for a module to interactive with others, a module should be able to report the
-    following information (after binded).
+    following information in its raw stage (before binded)
+
+    - `data_names`: list of string indicating the names of required data.
+    - `output_names`: list of string indicating the names of required outputs.
+
+    And also the following richer information after binded:
 
     - state information
         - `binded`: `bool`, indicating whether the memory buffers needed for computation
@@ -335,6 +340,19 @@ class BaseModule(object):
 
             # end of 1 epoch, reset the data-iter for another epoch
             train_data.reset()
+
+    ################################################################################
+    # Symbol information
+    ################################################################################
+    @property
+    def data_names(self):
+        """A list of names for data required by this module."""
+        raise NotImplementedError()
+
+    @property
+    def output_names(self):
+        """A list of names for the outputs of this module."""
+        raise NotImplementedError()
 
     ################################################################################
     # Input/Output information
