@@ -135,9 +135,12 @@ class DataParallelExecutorGroup(object):
         self.param_arrays = [[exec_.arg_arrays[i] for exec_ in self.execs]
                              for i, name in enumerate(self.arg_names)
                              if name in self.param_names]
-        self.grad_arrays = [[exec_.grad_arrays[i] for exec_ in self.execs]
-                            for i, name in enumerate(self.arg_names)
-                            if name in self.param_names]
+        if self.for_training:
+            self.grad_arrays = [[exec_.grad_arrays[i] for exec_ in self.execs]
+                                for i, name in enumerate(self.arg_names)
+                                if name in self.param_names]
+        else:
+            self.grad_arrays = None
 
         data_names = [x[0] for x in data_shapes]
         if self.inputs_need_grad:
