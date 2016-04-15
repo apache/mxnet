@@ -167,7 +167,8 @@ class SequentialModule(BaseModule):
             for name in new_names:
                 assert not known_names.has_key(name), "Duplicated parameter names: " + \
                     ('name "%s" in layer %d (%s) is already ' % (name, i, type(modules[i]))) + \
-                    ('used in layer %d (%s).' % (known_names[name], type(modules[known_names[name]])))
+                    ('used in layer %d (%s).' % (known_names[name],
+                                                 type(modules[known_names[name]])))
                 known_names[name] = i
 
         arg_names = dict()
