@@ -21,8 +21,11 @@ class SimpleBinaryOpProp;
 class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
  public:
   TSelf& set_symbol_op_name(const std::string& symbol_name) override {
+    std::lock_guard<std::mutex> lock(mutex_);
     CHECK(op_reg_ == nullptr || symbol_name == symbol_name_)
-        << "need to call set_symbol_op_name before all other calls";
+        << " operator " << this->name
+        << " need to call set_symbol_op_name "
+        << symbol_name << "before all other calls";
     symbol_name_ = symbol_name;
     return *this;
   }
@@ -820,7 +823,7 @@ class SimpleBinaryOpProp : public SimpleOpPropBase {
     SimpleBinaryOperator *op = new SimpleBinaryOperator();
     CHECK(dev_mask < source->fbinary_.size() && source->fbinary_[dev_mask] != nullptr);
     op->forward = source->fbinary_[dev_mask];
-    op->env = this->env;    
+    op->env = this->env;
     if (dev_mask < source->fbinary_grad_t0_.size()) {
       op->backward0 = source->fbinary_grad_t0_[dev_mask];
     }
