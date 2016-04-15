@@ -155,9 +155,8 @@ class Preplexity(EvalMetric):
             prob = preds[i].asnumpy()
             label = labels[i].asnumpy().astype('int32')
 
-            check_label_shapes(label, pred_label)
             for i in range(len(label)):
-                loss = -np.log(max(1e-10, pred[i][label[i]]))
+                loss = -np.log(max(1e-10, prob[i][label[i]]))
                 self.sum_metric += np.exp(loss)
 
             self.num_inst += len(label)

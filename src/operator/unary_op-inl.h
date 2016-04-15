@@ -105,7 +105,7 @@ inline TShape PadShape(const TShape& shp,
   PadParam param;
   param.Init(env.kwargs);
   std::vector<mshadow::index_t> ret;
-  CHECK_GE(shp.ndim(), 2);
+  CHECK_EQ(shp.ndim(), 4) << "Only support 4D crop for now";
   mshadow::index_t srcdim = shp.ndim();
   for (index_t i = 0; i < srcdim; ++i) {
     ret.push_back(shp[i]);

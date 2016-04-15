@@ -80,7 +80,7 @@ class BatchLoader : public IIterator<TBlobBatch> {
         this->InitData(d);
       }
       for (size_t i = 0; i < d.data.size(); ++i) {
-        CHECK_EQ(unit_size_[i], d.data[i].Size());
+        CHECK_EQ(unit_size_[i], d.data[i].Size()) << unit_size_[i] << " vs " << d.data[i].Size();
         mshadow::Copy(data_[i].Slice(top * unit_size_[i], (top + 1) * unit_size_[i]),
                       d.data[i].get_with_shape<cpu, 1, real_t>(mshadow::Shape1(unit_size_[i])));
       }
