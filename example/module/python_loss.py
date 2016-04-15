@@ -76,6 +76,7 @@ class MulticlassHingeOutput(mx.mod.PythonModule):
         """
         return [self._scores_grad]
 
+# We use numba.jit to implement the loss gradient.
 @numba.jit
 def mc_hinge_grad(scores, labels):
     n, _ = scores.shape
@@ -91,9 +92,10 @@ def mc_hinge_grad(scores, labels):
     return grad
 
 if __name__ == '__main__':
-    n_epoch = 2
+    n_epoch = 10
     batch_size = 100
-    contexts = [mx.context.cpu()]
+    num_gpu = 2
+    contexts = mx.context.cpu() if num_gpu < 1 else [mx.context.gpu(i) for i in range(num_gpu)]
 
     # build a MLP module
     data = mx.symbol.Variable('data')
