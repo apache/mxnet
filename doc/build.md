@@ -222,7 +222,14 @@ drat:::addRepo("dmlc")
 install.packages("mxnet")
 ```
 
-To install the R package. First finish the [Build the Shared Library](#build-the-shared-library) step.
+To install the R package. First finish the [Build the Shared Library](#build-the-shared-library) step. 
+Ubuntu/Debian user should make sure that the developer versions of the curl library are installed by running:
+
+```bash
++sudo apt-get -y build-dep libcurl4-gnutls-dev
++sudo apt-get -y install libcurl4-gnutls-dev
+```
+
 Then use the following command to install dependencies and build the package at root folder
 
 ```bash
