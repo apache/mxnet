@@ -228,7 +228,7 @@ class PythonLossModule(PythonModule):
     def __init__(self, name='pyloss', data_names=('data'), label_names=('softmax_label'),
                  logger=logging, grad_func=None):
         super(PythonLossModule, self).__init__(data_names, label_names,
-                                                [name + '_output'], logger=logger)
+                                               [name + '_output'], logger=logger)
         self._name = name
         assert len(data_names) == 1
         assert len(label_names) == 1
