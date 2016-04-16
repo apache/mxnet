@@ -6,3 +6,5 @@ from .base_module import BaseModule
 from .module import Module
 from .bucketing_module import BucketingModule
 from .sequential_module import SequentialModule
+
+from .python_module import PythonModule, PythonLossModule
