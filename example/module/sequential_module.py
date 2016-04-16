@@ -4,7 +4,7 @@ import numpy as np
 import logging
 
 # whether to demo model-parallelism + data parallelism
-demo_data_model_parallelism = True
+demo_data_model_parallelism = False
 
 if demo_data_model_parallelism:
     contexts = [[mx.context.gpu(0), mx.context.gpu(1)], [mx.context.gpu(2), mx.context.gpu(3)]]
