@@ -218,6 +218,8 @@ To install the R package. First finish the [Build MXNet Library](#build-mxnet-li
 Then use the following command to install dependencies and build the package at root folder
 
 ```bash
+sudo apt-get -y build-dep libcurl4-gnutls-dev
+sudo apt-get -y install libcurl4-gnutls-dev
 Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
 cd R-package
 Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
