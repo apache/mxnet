@@ -108,12 +108,22 @@ mxnet.base.MXNetError: [13:29:12] src/ndarray/ndarray.cc:33: Check failed: lhs.c
 >>> z = x + cpu_y
 ```
 
+```eval_rst
+.. raw:: html
+
+    <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+```
+
 NDArray API Reference
 ---------------------
 
 ```eval_rst
 .. automodule:: mxnet.ndarray
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.ndarray");</script>
 ```
 
 NDArray Random API Reference
