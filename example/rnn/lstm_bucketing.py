@@ -17,8 +17,9 @@ def Perplexity(label, pred):
 
 if __name__ == '__main__':
     batch_size = 32
-    buckets = [10, 20, 30, 40, 50, 60]
+    #buckets = [10, 20, 30, 40, 50, 60]
     #buckets = [32]
+    buckets = []
     num_hidden = 200
     num_embed = 200
     num_lstm_layer = 2
