@@ -6,10 +6,7 @@ import logging
 
 from .base_module import BaseModule
 from ..initializer import Uniform
-<<<<<<< HEAD
-=======
 from .. import ndarray as nd
->>>>>>> d14cf84ed354866bedafc289c1078da05c3ed0e8
 
 class PythonModule(BaseModule):
     """A convenient module class that implements many of the module APIs as
@@ -176,10 +173,7 @@ class PythonModule(BaseModule):
         if label_shapes is not None:
             assert self._label_names is not None
             assert len(self._label_names) == len(label_shapes)
-<<<<<<< HEAD
-=======
             assert [x[0] for x in label_shapes] == self._label_names
->>>>>>> d14cf84ed354866bedafc289c1078da05c3ed0e8
 
         self._output_shapes = self._compute_output_shapes()
 
@@ -209,8 +203,6 @@ class PythonModule(BaseModule):
             optimizer in the case an optimizer is already installed.
         """
         pass
-<<<<<<< HEAD
-=======
 
 
 class PythonLossModule(PythonModule):
@@ -331,4 +323,3 @@ class PythonLossModule(PythonModule):
         """
         assert merge_multi_context == True
         return [self._scores_grad]
->>>>>>> d14cf84ed354866bedafc289c1078da05c3ed0e8
