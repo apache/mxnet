@@ -98,6 +98,10 @@ Initializer API Reference
 ```eval_rst
 .. automodule:: mxnet.initializer
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.initializer");</script>
 ```
 
 Evaluation Metric API Reference
@@ -106,6 +110,10 @@ Evaluation Metric API Reference
 ```eval_rst
 .. automodule:: mxnet.metric
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.metric");</script>
 ```
 
 Optimizer API Reference
@@ -114,6 +122,10 @@ Optimizer API Reference
 ```eval_rst
 .. automodule:: mxnet.optimizer
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.optimizer");</script>
 ```
 
 Model API Reference
@@ -122,4 +134,8 @@ Model API Reference
 ```eval_rst
 .. automodule:: mxnet.model
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.model");</script>
 ```

@@ -166,4 +166,8 @@ IO API Reference
 ```eval_rst
 .. automodule:: mxnet.io
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.io");</script>
 ```

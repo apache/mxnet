@@ -123,4 +123,8 @@ update on key: 9
 ```eval_rst
 .. automodule:: mxnet.kvstore
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.kvstore");</script>
 ```

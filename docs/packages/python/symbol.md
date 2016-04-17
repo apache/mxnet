@@ -84,6 +84,10 @@ This section contains the reference to all API functions.
 ```eval_rst
 .. automodule:: mxnet.symbol
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.symbol");</script>
 ```
 
 
@@ -93,4 +97,8 @@ Execution API Reference
 ```eval_rst
 .. automodule:: mxnet.executor
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.executor");</script>
 ```

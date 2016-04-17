@@ -132,6 +132,10 @@ NDArray Random API Reference
 ```eval_rst
 .. automodule:: mxnet.random
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.random");</script>
 ```
 
 
@@ -141,4 +145,8 @@ Context API Reference
 ```eval_rst
 .. automodule:: mxnet.context
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.context");</script>
 ```
