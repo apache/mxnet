@@ -1,11 +1,12 @@
 # System Design Note
 
-This page contains resources you need to understand how mxnet works and how to
-work on mxnet codebase.  We believe that it is important to make the system
-modularized and understandable by general audience.
+This design document contains notes that are relevant to the MXNet system design and deep learning
+libraries in general. We believe that open sourcing this system design note can help general audiences understand the  motivations, benefits and drawbacks of our design choices. This will help deep learning practitioners as well as builders of other deep learning systems.
 
+## Deep Learning Design Notes
 
-## Design Notes
+This section will be updated with self-contained design notes on various aspect of deep learning systems,
+in terms of abstraction, optimization and trade-offs.
 
 * [Programming Models for Deep Learning](program_model.md)
 * [Dependency Engine for Deep Learning](note_engine.md)
@@ -13,6 +14,7 @@ modularized and understandable by general audience.
 * [Efficient Data Loading Module for Deep Learning](note_data_loading.md)
 * [Survay of RNN Interface](rnn_interface.md)
 
+The next parts will be specific to MXNet
 
 ## Overview of the Design
 
