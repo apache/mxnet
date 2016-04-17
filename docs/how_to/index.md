@@ -1,39 +1,23 @@
-# How To
+# MXNet How To
 
-## Run MXNet
+This page contains guidelines to use and develop mxnets.
 
-### [Reduce memory footprint](./memory.html)
+## Installation
+- [How to Install MXNet](build.md)
 
-Learn how to reduce the memory footprint in order to run bigger and deeper neural
-networks with larger batch size on the same hardward.
+## Use MXNet on Specific Tasks
+- [Train with multiple CPU/GPUs in data parallelism](multi_devices.md)
+- [Run MXNet on smart devices](smart_device.md)
+- [Run MXNet on cloud](cloud.md)
+- [Use pretrained models](pretrained.md)
+- [Use mxnet on variable input length/size](bucketing.md)
+- [Improve performance tips](perf.md)
 
-### [Improve performance](./perf.html)
+## Develop and Hack MXNet
+- [Create new operators](new_op.md)
+- [Use Torch from MXNet](torch.md)
+- [Contribute to MXNet](contribute.md)
+- [Set environment variables of MXNet](env_var.md)
 
-Learn the factors that affect MXNet's performance.
-
-### [Train with multiple CPU/GPUs](./multi_devices.html)
-
-Learn how to train a task using mutliple GPUs within a single machine or with
-mutliple CPU/GPU machines
-
-### [Run on smart devices](./smart_device.html)
-
-Install and run MXNet on smart devices such as mobile phones
-
-### [Run on cloud](./cloud.html)
-
-Run MXNet on a clound such as Amazon AWS
-
-### [Pretrained Models](./pretrained.html)
-
-## Develope with MXNet
-
-### [Create New Operators](./new_op.html)
-
-### [Use Torch](./torch.html)
-
-### [Make a Contribution](./contribute.html)
-
-### [Buckeing](./bucketing.html)
-
-### [FAQ](./faq.html)
+## Frequently Ask Questions
+- [FAQ](faq.md)

@@ -1,5 +1,4 @@
-MXNet Python Symbolic API
-=========================
+# MXNet Python Symbolic API
 * [How to Commpose Symbols](#overloaded-operators) introduces operator overloading of symbols
 * [Serialization](#serialization) introduces how to save and load symbols.
 * [Multiple Outputs](#multiple-outputs) introduces how to configure multiple outputs
@@ -80,30 +79,7 @@ and the resulting executor will have two outputs, one for fc1_output and one for
 Symbol Creation API Reference
 -----------------------------
 This section contains the reference to all API functions.
-Before you get started, you can check the list of functions in the following table.
 
-```eval_rst
-.. autosummary::
-   :nosignatures:
-
-   mxnet.symbol.load
-   mxnet.symbol.load_json
-   mxnet.symbol.Group
-   mxnet.symbol.Variable
-   mxnet.symbol.Activation
-   mxnet.symbol.BatchNorm
-   mxnet.symbol.Concat
-   mxnet.symbol.Convolution
-   mxnet.symbol.Dropout
-   mxnet.symbol.ElementWiseSum
-   mxnet.symbol.Flatten
-   mxnet.symbol.FullyConnected
-   mxnet.symbol.LRN
-   mxnet.symbol.LeakyReLU
-   mxnet.symbol.Pooling
-   mxnet.symbol.Reshape
-   mxnet.symbol.SoftmaxOutput
-```
 
 ```eval_rst
 .. automodule:: mxnet.symbol

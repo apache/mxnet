@@ -222,7 +222,7 @@ As a light touch on how the engine internals works with the tags, we could consi
     C = A + 2
     A = C * 2
     D = A + 3
-    
+
 The first line reads variable `A` and mutates variable `B`. The second line reads variable `A` and mutates variable `C`. And so on.
 
 The engine is going to maintain a queue for each variable, as the following animation shows for each of the four lines. Green blocks represents a read action, while a red one represents a mutation.
@@ -311,7 +311,7 @@ But it also makes things like random number generation easier as the operation i
 
 Contribution to this Note
 -------------------------
-This note is part of our effort to [open-source system design notes](http://mxnet.readthedocs.org/en/latest/#open-source-design-notes)
+This note is part of our effort to [open-source system design notes](index.md)
  for deep learning libraries. You are more welcomed to contribute to this Note, by submitting a pull request.
 
 ### Source Code of the Generic Dependency Engine

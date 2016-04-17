@@ -1,10 +1,17 @@
-# Introduction
+# Getting Started
 
-Let's start with training a simple
+This is a getting started tutorial of MXNet.
+We will train a
 [multi-layer perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron)
 (MLP) on
 the [MNIST handwritten digit dataset](http://yann.lecun.com/exdb/mnist/) to get
 the basic idea of how to use MXNet.
+
+## Links to Other Resources
+Here are some other resources that can also be helpful
+- See [Installation Guide](../how_to/build.md) on how to install mxnet.
+- See [How to pages](../how_to/index.md) on various tips on using mxnet.
+- See [Tutorials](../tutorials/index.md) on tutorials on specific tasks.
 
 ## Train MLP on MNIST
 
@@ -248,9 +255,3 @@ res3: ml.dmlc.mxnet.Shape = (2,3)
 ```
 
 ### Julia
-
-## Recommended Next Steps
-
-- [Build and Install](build.html)
-- [Step by Step Tutorials](../tutorials/index.html)
-- [How-Tos](../tutorials/index.html)
