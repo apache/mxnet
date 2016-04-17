@@ -37,12 +37,16 @@ object KVStoreServer {
   def start(): Unit = {
     val isWorker = new RefInt
     checkCall(_LIB.mxKVStoreIsWorkerNode(isWorker))
-    if (isWorker.value == 0) {
-      val kvStore = KVStore.create("dist")
-      val server = new KVStoreServer(kvStore)
-      server.run()
-      sys.exit()
-    }
+    require(isWorker.value == 0, "cannot start kv-store server on worker node")
+    val kvStore = KVStore.create("dist")
+    val server = new KVStoreServer(kvStore)
+    server.run()
+  }
+
+  def init(env: Map[String, String]): Unit = {
+    val keys = env.keys.toArray
+    val vals = env.values.toArray
+    checkCall(_LIB.mxInitPSEnv(keys, vals))
   }
 }
 

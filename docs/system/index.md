@@ -1,9 +1,20 @@
 # System Design Note
 
-This page contains resources you need to understand how mxnet works and how to
-work on mxnet codebase.  We believe that it is important to make the system
-modularized and understandable by general audience.
+This design document contains notes that are relevant to the MXNet system design and deep learning
+libraries in general. We believe that open sourcing this system design note can help general audiences understand the  motivations, benefits and drawbacks of our design choices. This will help deep learning practitioners as well as builders of other deep learning systems.
 
+## Deep Learning Design Notes
+
+This section will be updated with self-contained design notes on various aspect of deep learning systems,
+in terms of abstraction, optimization and trade-offs.
+
+* [Programming Models for Deep Learning](program_model.md)
+* [Dependency Engine for Deep Learning](note_engine.md)
+* [Squeeze the Memory Consumption of Deep Learning](note_memory.md)
+* [Efficient Data Loading Module for Deep Learning](note_data_loading.md)
+* [Survay of RNN Interface](rnn_interface.md)
+
+The next parts will be specific to MXNet
 
 ## Overview of the Design
 
@@ -11,7 +22,7 @@ modularized and understandable by general audience.
 
 The above shows major modules of mxnet, and how do they interact with each
 other. The modules are
-- [Runtime Dependency Engine](engine.html): Schedules and executes the
+- [Runtime Dependency Engine](engine.md): Schedules and executes the
   operations according to their read/write dependency.
 - Storage Allocator: Efficiently allocate and recycles memory blocks for GPU and
   CPU.
@@ -20,25 +31,13 @@ other. The modules are
   imperative programs for MXNet.
 - Symbolic Execution: Static symbolic graph executor, provide efficient symbolic
   graph execution and optimization.
-- [Operator](operator.html): Operators that defines static forward and gradient
+- [Operator](operator.md): Operators that defines static forward and gradient
   calculation(backprop).
 - Symbol Construction: Symbolic construction, provide a way to construct
   computation graph(net configuration)
-- [KVStore](multi_node.html): Key-value store interface for easy parameter synchronizations.
+- [KVStore](multi_node.md): Key-value store interface for easy parameter synchronizations.
 - Data Loading(IO): Efficient distributed data loading and augmentation.
 
-## Design Note
-
-* [Programming Models for Deep Learning](program_model.html)
-	- Compares various programming models, which motivates the current design.
-* [Dependency Engine for Deep Learning](note_engine.html)
-	- Introduces the dependency tracking and scheduling component for general deep learning,
-	  this motivates the design of Engine module.
-* [Squeeze the Memory Consumption of Deep Learning](note_memory.html)
-	- Introduces how we can reduce memory consumption of deep nets
-* [Efficient Data Loading Module for Deep Learning](note_data_loading.html)
-	- Push the efficiency offline data preparation and online data loading.
-* [Survay of RNN Interface](rnn_interface.html)
 
 ## How to Read the Code
 - All the module interface are listed in [include](../../include), these
@@ -76,10 +75,9 @@ Documents of Each Module
 ------------------------
 * [Runtime Dependency Engine](engine.md)
 * [Operators](operator.md)
-
-
+-
 
 List of Other Resources
 -----------------------
 * [Doxygen Version of C++ API](https://mxnet.readthedocs.org/en/latest/doxygen) gives a comprehensive document of C++ API.
-* [Contributor Guide](../contribute.md) gives guidelines on how to push changes to the project.
+* [Contributor Guide](../how_to/contribute.md) gives guidelines on how to push changes to the project.
