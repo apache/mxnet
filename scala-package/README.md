@@ -45,7 +45,7 @@ Refer to the next section for how to build it from the very source.
 Build
 ------------
 
-Checkout the [Installation Guide](http://mxnet.readthedocs.org/en/latest/build.html) contains instructions to install mxnet.
+Checkout the [Installation Guide](http://mxnet.readthedocs.org/en/latest/how_to/build.html) contains instructions to install mxnet.
 Then you can compile the Scala Package by
 
 ```bash
