@@ -11,20 +11,20 @@ Sounds exciting? This page contains links to all the related documents on R pack
 
 Get Started
 -----------
-Checkout the [Installation Guide](../get_started/build.html) contains instructions to install mxnet, and [Tutorials](#tutorials) for examples on how to use mxnet for various tasks.
+Checkout the [Installation Guide](../get_started/build.md) contains instructions to install mxnet, and [Tutorials](#tutorials) for examples on how to use mxnet for various tasks.
 
 Tutorials
 ---------
-* [Neural Network with MXNet in Five Minutes](fiveMinutesNeuralNetwork.html)
-* [Classify Realworld Images with Pretrained Model](classifyRealImageWithPretrainedModel.html)
-* [Handwritten Digits Classification Competition](mnistCompetition.html)
-* [Tutorial on NDArray and Symbol](ndarrayAndSymbolTutorial.html)
-* [Tutorial on Callback Functions](CallbackFunctionTutorial.html)
+* [Neural Network with MXNet in Five Minutes](fiveMinutesNeuralNetwork.md)
+* [Classify Realworld Images with Pretrained Model](classifyRealImageWithPretrainedModel.md)
+* [Handwritten Digits Classification Competition](mnistCompetition.md)
+* [Tutorial on NDArray and Symbol](ndarrayAndSymbolTutorial.md)
+* [Tutorial on Callback Functions](CallbackFunctionTutorial.md)
 
 Resources
 ---------
 There are several information to get you started
-* [Installation Guide](../get_started/build.html) contains instructions to install mxnet.
+* [Installation Guide](../get_started/build.md) contains instructions to install mxnet.
 * [Contributor Guide](http://mxnet.readthedocs.org/en/latest/contribute.html#r-package)
   - The R package section gives various guidelines on how to contribute code, tutorial, rmarkdown examples to mxnet.
   - Your contribution is always welcomed!

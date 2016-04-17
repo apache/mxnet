@@ -2,8 +2,10 @@
 
 This page contains guidelines to use and develop mxnets.
 
-## Use MXNet on Specific Tasks
+## Installation
+- [How to Install MXNet](build.md)
 
+## Use MXNet on Specific Tasks
 - [Train with multiple CPU/GPUs in data parallelism](multi_devices.md)
 - [Run MXNet on smart devices](smart_devices.md)
 - [Run MXNet on cloud](cloud.md)
@@ -15,6 +17,7 @@ This page contains guidelines to use and develop mxnets.
 - [Create new operators](new_op.md)
 - [Use Torch from MXNet](torch.md)
 - [Contribute to MXNet](contribute.md)
+- [Set environment variables of MXNet](env_var.md)
 
 ## Frequently Ask Questions
 - [FAQ](faq.md)
