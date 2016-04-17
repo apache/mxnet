@@ -39,6 +39,34 @@ def default_text2id(sentence, the_vocab):
     words = [the_vocab[w] for w in words if len(w) > 0]
     return words
 
+def default_gen_buckets(sentences, batch_size, the_vocab):
+    len_dict = {}
+    max_len = -1
+    for sentence in sentences:
+        words = default_text2id(sentence, the_vocab)
+        if len(words) == 0:
+            continue
+        if len(words) > max_len:
+            max_len = len(words)
+        if len(words) in len_dict:
+            len_dict[len(words)] += 1
+        else:
+            len_dict[len(words)] = 1
+    print(len_dict)
+
+    tl = 0
+    buckets = []
+    for l, n in len_dict.iteritems(): # TODO: There are better heuristic ways to do this    
+        if n + tl >= batch_size:
+            buckets.append(l)
+            tl = 0
+        else:
+            tl += n
+    if tl > 0:
+        buckets.append(max_len)
+    return buckets
+
+
 class SimpleBatch(object):
     def __init__(self, data_names, data, label_names, label, bucket_key):
         self.data = data
@@ -79,8 +107,8 @@ class DummyIter(mx.io.DataIter):
 
 class BucketSentenceIter(mx.io.DataIter):
     def __init__(self, path, vocab, buckets, batch_size,
-                 init_states, data_name='data', label_name='label',
-                 seperate_char=' <eos> ', text2id=None, read_content=None):
+            init_states, data_name='data', label_name='label',
+            seperate_char=' <eos> ', text2id=None, read_content=None):
         super(BucketSentenceIter, self).__init__()
 
         if text2id == None:
@@ -93,6 +121,9 @@ class BucketSentenceIter(mx.io.DataIter):
             self.read_content = read_content
         content = self.read_content(path)
         sentences = content.split(seperate_char)
+
+        if len(buckets) == 0:
+            buckets = default_gen_buckets(sentences, batch_size, vocab)
 
         self.vocab_size = len(vocab)
         self.data_name = data_name
@@ -186,7 +217,7 @@ class BucketSentenceIter(mx.io.DataIter):
             label_names = ['softmax_label']
 
             data_batch = SimpleBatch(data_names, data_all, label_names, label_all,
-                                     self.buckets[i_bucket])
+                    self.buckets[i_bucket])
             yield data_batch
 
     def reset(self):
