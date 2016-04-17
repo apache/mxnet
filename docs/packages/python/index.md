@@ -10,15 +10,14 @@ There are three types of documents you can find about mxnet.
 
 Tutorials
 ---------
-* [Python Overview Tutorial](./tutorial.html)
-* [Symbolic Configuration and Execution in Pictures](./symbol_in_pictures.html)
+* [Python Overview Tutorial](tutorial.md)
+* [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md)
 * [How to Create New Operations (Layers)](../how_to/new_op.html)
-
 
 Python API Documents
 --------------------
-* [High Level Model Training Related API](./model.html)
-* [NDArray API](./ndarray.html)
-* [Symbolic API](./symbol.html)
-* [KVStore API](./kvstore.html)
-* [Data Loading API](./io.html)
+* [High Level Model Training Related API](model.md)
+* [NDArray API](ndarray.md)
+* [Symbolic API](symbol.md)
+* [KVStore API](kvstore.md)
+* [Data Loading API](io.md)

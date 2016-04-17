@@ -38,10 +38,10 @@ needs_sphinx = '1.2'
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.ifconfig', 'breathe']
+extensions = ['sphinx.ext.ifconfig']
 
 # breathe_default_project = "format"
-breathe_domain_by_extension = {"h" : "cpp"}
+#breathe_domain_by_extension = {"h" : "cpp"}
 
 
 # General information about the project.
@@ -319,6 +319,6 @@ def setup(app):
     # no c++ API for now
     app.connect("builder-inited", generate_doxygen_xml)
     app.add_config_value('recommonmark_config', {
-            'url_resolver': lambda url: doc_root + url,
+            'url_resolver': lambda url: github_doc_root + url,
             }, True)
     app.add_transform(AutoStructify)
