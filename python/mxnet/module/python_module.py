@@ -225,7 +225,7 @@ class PythonLossModule(PythonModule):
         respect to the scores according to this loss function. The return
         value could be a numpy array or an `NDArray`.
     """
-    def __init__(self, name='pyloss', data_names=('data'), label_names=('softmax_label'),
+    def __init__(self, name='pyloss', data_names=('data',), label_names=('softmax_label',),
                  logger=logging, grad_func=None):
         super(PythonLossModule, self).__init__(data_names, label_names,
                                                [name + '_output'], logger=logger)
