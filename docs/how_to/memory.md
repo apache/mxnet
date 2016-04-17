@@ -1,1 +1,0 @@
-# Reduce Memory Footprint
