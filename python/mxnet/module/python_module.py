@@ -25,6 +25,11 @@ class PythonModule(BaseModule):
     def __init__(self, data_names, label_names, output_names, logger=logging):
         super(PythonModule, self).__init__(logger=logger)
 
+        if isinstance(data_names, tuple):
+            data_names = list(data_names)
+        if isinstance(label_names, tuple):
+            label_names = list(label_names)
+
         self._data_names = data_names
         self._label_names = label_names
         self._output_names = output_names
@@ -232,8 +237,6 @@ class PythonLossModule(PythonModule):
         self._name = name
         assert len(data_names) == 1
         assert len(label_names) == 1
-        data_names = list(data_names)
-        label_names = list(label_names)
 
         self._scores = None
         self._labels = None
