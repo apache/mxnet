@@ -160,6 +160,13 @@ dataiter = mx.io.ImageRecordIter(
 
 Then you're all set for a multi-label image iterator.
 
+```eval_rst
+.. raw:: html
+
+    <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+```
+
+
 IO API Reference
 ----------------
 
