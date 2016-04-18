@@ -25,7 +25,7 @@ def mc_hinge_grad(scores, labels):
 if __name__ == '__main__':
     n_epoch = 10
     batch_size = 100
-    num_gpu = 0
+    num_gpu = 2
     contexts = mx.context.cpu() if num_gpu < 1 else [mx.context.gpu(i) for i in range(num_gpu)]
 
     # build a MLP module
