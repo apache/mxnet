@@ -1,98 +1,93 @@
-# -*- coding:utf-8 -*-
-# @author: Yuanqin Lu
+# coding: utf-8
 
-from net import network_unroll
-from bucket_io import BucketImageSentenceIter, build_vocab, DummyIter
+from dataloader import ImageCaptionIter
 import mxnet as mx
 import numpy as np
+from net import vgg16_fc7_symbol, network_unroll
 import json
 
+
 def Perplexity(label, pred):
+    label = label.T.reshape((-1,))
     loss = 0.
     for i in range(pred.shape[0]):
         loss += -np.log(max(1e-10, pred[i][int(label[i])]))
     return np.exp(loss / label.size)
 
-def train(args):
-    batch_size = args.batch_size
-    num_lstm_layer = args.num_lstm_layer
-    num_hidden = args.num_hidden
-    num_seq = args.num_seq
-    num_embed = args.num_embed
-    num_epoch = args.num_epoch
-    dummy_data = args.dummy_data
-    device = mx.gpu(args.gpuid) if args.gpuid >= 0 else mx.cpu()
+batch_size = 8
+num_hidden = 256
+num_embed = 256
+num_lstm_layer = 1
+ctx = mx.gpu(0)
 
+init_states = [('l%d_init_c' % t, (batch_size, num_hidden))
+               for t in range(num_lstm_layer)] + \
+              [('l%d_init_h' % t, (batch_size, num_hidden))
+               for t in range(num_lstm_layer)]
 
-    init_c = [('l%d_init_c' %l, (batch_size, num_hidden))
-              for l in range(num_lstm_layer)]
-    init_h = [('l%d_init_h' %l, (batch_size, num_hidden))
-              for l in range(num_lstm_layer)]
-    init_states = init_c + init_h
-    data_train = BucketImageSentenceIter(input_hdf5=args.train_hdf5,
-                                         batch_size=batch_size,
-                                         init_states=init_states,
-                                         seq_per_img=num_seq)
-    info = json.load(open(args.train_json))
-    vocab_size = len(info['ix_to_word']) + 1
+info = json.load(open('./flickr8k.json'))
+vocab_size = len(info['ix_to_word'])
 
-    net = network_unroll(num_lstm_layer=num_lstm_layer,
-                         seq_len=data_train.seq_length,
-                         vocab_size=vocab_size,
-                         num_hidden=num_hidden,
-                         num_embed=num_embed,
-                         num_seq=num_seq)
-    net.infer_shape()
+train_data = ImageCaptionIter('./flickr8k.h5', batch_size, init_states, vocab_size)
 
-    optimizer = mx.optimizer.create(args.optimizer)
+vgg_params = mx.nd.load('./vgg-0001.params')
 
+cnn_in_shapes = dict(train_data.provide_data[:1])
 
+lm_in_shapes = {'image_feature': (batch_size, 4096)}
+lm_in_shapes.update(dict(train_data.provide_data[1:] + train_data.provide_label))
 
-    if dummy_data:
-        print "Using dummy data for speed test"
-        data_train = DummyIter(data_train)
+cnn = vgg16_fc7_symbol('image')
+lm = network_unroll(num_lstm_layer, train_data.seq_length, len(info['ix_to_word'])+2,
+                   num_hidden, num_embed,)
 
+cnn_exec = cnn.simple_bind(ctx=ctx, is_train=False, **cnn_in_shapes)
+lm_exec = lm.simple_bind(ctx=ctx, grad_req='add', **lm_in_shapes)
 
-    model = mx.model.FeedForward(ctx=device,
-                                 symbol=net,
-                                 num_epoch=num_epoch,
-                                 optimizer=optimizer,
-                                 #arg_params=vgg_params,
-                                 allow_extra_params=True,
-                                 )
-    import logging
-    head = '%(asctime)-15s %(message)s'
-    logging.basicConfig(level=logging.DEBUG, format=head)
+def init_lm(lm):
+    for key, arr in lm.arg_dict.items():
+        if 'weight' in key:
+            arr[:] = mx.random.uniform(-0.07, 0.07, arr.shape)
+        elif 'bias' in key:
+            arr[:] = 0.
+        else:
+            arr[:] = mx.random.uniform(-0.07, 0.07, arr.shape)
 
-    model.fit(X=data_train,
-              eval_metric=mx.metric.np(Perplexity),
-              batch_end_callback=mx.callback.Speedometer(batch_size, 50))
+def init_cnn(cnn, pretrained_cnn):
+    for key, arr in cnn.arg_dict.items():
+        if key == 'image':
+            continue
+        arr[:] = pretrained_cnn['arg:' + key]
 
+init_lm(lm_exec)
+init_cnn(cnn_exec, vgg_params)
 
-if __name__ == '__main__':
-    import argparse
-    import os
+opt = mx.optimizer.create('sgd')
+opt.lr = 0.01
+updater = mx.optimizer.get_updater(opt)
 
+for epoch in range(1, 10):
+    for i, batch in enumerate(train_data):
+        cnn_input = dict(zip(map(lambda x: x[0], batch.provide_data), batch.data)[:1])
+        lm_input = dict(zip(map(lambda x: x[0], batch.provide_data), batch.data)[1:])
+        # cnn forward
+        # update cnn input
+        cnn_exec.arg_dict['image'][:] = cnn_input['image']
+        cnn_exec.forward()
+        image_feature = cnn_exec.outputs[0]
+        # lm forward
+        # updata lm input
+        lm_input['image_feature'] = image_feature
+        for key, arr in lm_input.items():
+            lm_exec.arg_dict[key][:] = arr
+        # update lm grag
+        for key, arr in lm_exec.grad_dict.items():
+            arr[:] = 0.
+        lm_exec.forward()
+        print Perplexity(batch._label, lm_exec.outputs[0].asnumpy())
+        lm_exec.backward()
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=16, help='batch size')
-    parser.add_argument('--num_hidden', type=int, default=512, help='size of hidden layer of LSTM')
-    parser.add_argument('--num_embed', type=int, default=512, help='embedding size')
-    parser.add_argument('--num_epoch', type=int, default=50, help='max epoch')
-    parser.add_argument('--num_lstm_layer',type=int, default=1, help='number of LSTM layer')
-    parser.add_argument('--num_seq', type=int, default=5, help='')
-    parser.add_argument('--gpuid', type=int, default=-1, help='index of gpu, -1 for cpu')
-    parser.add_argument('--vgg_params', default='vgg16.params', help='path for VGG16 params')
-    parser.add_argument('--dummy_data', type=bool, default=False, help='whether to use dummy data')
-    parser.add_argument('--train_hdf5', help='path for train json')
-    parser.add_argument('--train_json', help='path for train hdf5')
-    parser.add_argument('--num_eval', type=int, default=3200, help='number of validation samples to use')
-    parser.add_argument('--save_name', type=str, default='nic', help='name to save checkpoint')
-    parser.add_argument('--optimizer', default='sgd', help='optimizer: sgd | adam | rmsprop')
-    parser.add_argument('--learning_rate', type=float, default=0.1, help='learning rate')
-    parser.add_argument('--count_threshold', type=int, default=5, help='appear number is less than threshold will not'
-                                                                       'be counted in vocab')
-
-    args = parser.parse_args()
-    train(args)
-
+        for j, name in enumerate(lm.list_arguments()):
+            if name in lm_in_shapes.keys():
+                continue
+            updater(j, lm_exec.grad_dict[name], lm_exec.arg_dict[name])
