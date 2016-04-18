@@ -51,6 +51,7 @@ if !libmxnet_detected
           `cp make/config.mk config.mk`
           @osx_only `cp make/osx.mk config.mk`
           `sed -i -s 's/USE_OPENCV = 1/USE_OPENCV = 0/' config.mk`
+          `cp ../../cblas.h include/cblas.h`
           `make USE_BLAS=openblas MSHADOW_LDFLAGS="$openblas_path" -j`
           `cp lib/libmxnet.so $_libdir`
         end)
