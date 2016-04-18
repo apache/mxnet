@@ -46,8 +46,8 @@ typedef int blasint;
 #define cblas_dgemm cblas_dgemm64_
 #define cblas_dgemv cblas_dgemv64_
 #define cblas_dger  cblas_dger64_
-#define dblas_sdot  cblas_sdot64_
-#define dblas_ddot  cblas_ddot64_
+#define cblas_sdot  cblas_sdot64_
+#define cblas_ddot  cblas_ddot64_
 #endif
 
 
