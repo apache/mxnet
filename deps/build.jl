@@ -30,6 +30,11 @@ if !libmxnet_detected
 
   openblas_path = Libdl.dlpath(Libdl.dlopen(Base.libblas_name))
 
+  ilp64 = ""
+  if Base.blas_vendor() == :openblas64
+    ilp64 = "-DINTERFACE64"
+  end
+
   #--------------------------------------------------------------------------------
   # Build libmxnet
   mxnet = library_dependency("mxnet", aliases=["libmxnet", "libmxnet.so"])
@@ -51,6 +56,7 @@ if !libmxnet_detected
           `cp make/config.mk config.mk`
           @osx_only `cp make/osx.mk config.mk`
           `sed -i -s 's/USE_OPENCV = 1/USE_OPENCV = 0/' config.mk`
+          `sed -i -s "s/MSHADOW_CFLAGS = \(.*\)/MSHADOW_CFLAGS = \1 $ilp64/" mshadow/make/mshadow.mk`
           `cp ../../cblas.h include/cblas.h`
           `make USE_BLAS=openblas MSHADOW_LDFLAGS="$openblas_path" -j`
           `cp lib/libmxnet.so $_libdir`
