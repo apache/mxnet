@@ -118,9 +118,20 @@ update on key: 9
  [ 11.  11.  11.]]
 ```
 
+```eval_rst
+.. raw:: html
+
+    <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+```
+
+
 ## API Reference
 
 ```eval_rst
 .. automodule:: mxnet.kvstore
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.kvstore");</script>
 ```

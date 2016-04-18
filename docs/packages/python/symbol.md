@@ -76,14 +76,22 @@ You can use [mxnet.symbol.Group](#mxnet.symbol.Group) function to group the symb
 After you get the ```group```, you can go ahead and bind on ```group``` instead,
 and the resulting executor will have two outputs, one for fc1_output and one for softmax_output.
 
+```eval_rst
+.. raw:: html
+
+    <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+```
+
 Symbol Creation API Reference
 -----------------------------
-This section contains the reference to all API functions.
-
 
 ```eval_rst
 .. automodule:: mxnet.symbol
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.symbol");</script>
 ```
 
 
@@ -93,4 +101,8 @@ Execution API Reference
 ```eval_rst
 .. automodule:: mxnet.executor
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.executor");</script>
 ```
