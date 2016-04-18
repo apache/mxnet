@@ -380,8 +380,6 @@ StaticGraph::Node StaticGraph::CreateGradSumNode(
   if (grad_source.size() < inplace_sum_cap) {
     gsource = grad_source;
   } else {
-    LOG(INFO) << "Memory efficient gradient aggregation on..."
-              << " to disable, set MXNET_EXEC_INPLACE_GRAD_SUM_CAP to big number";
     for (size_t i = 1; i < grad_source.size(); ++i) {
       nodes[grad_source[i].source_id]
           .addto_index.push_back(grad_source[i].index);
