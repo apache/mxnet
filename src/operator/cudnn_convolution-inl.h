@@ -110,8 +110,6 @@ class CuDNNConvolutionOp : public Operator {
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK_EQ(out_grad.size(), 1);
     CHECK(in_data.size() == expected && in_grad.size() == expected);
-    // TODO(bing): think about how to support add to
-    CHECK_EQ(req[conv::kWeight], kWriteTo);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     Tensor<gpu, 4, DType> grad = out_grad[conv::kOut].get<gpu, 4, DType>(s);
     Tensor<gpu, 4, DType> wmat = in_data[conv::kWeight].get<gpu, 4, DType>(s);
@@ -124,13 +122,14 @@ class CuDNNConvolutionOp : public Operator {
     for (uint32_t g = 0; g < param_.num_group; ++g) {
       typename DataType<DType>::ScaleType alpha = 1.0f;
       typename DataType<DType>::ScaleType beta = 0.0f;
+      typename DataType<DType>::ScaleType beta_add = 1.0f;
       if (!param_.no_bias) {
         Tensor<gpu, 1, DType> gbias = in_grad[conv::kBias].get<gpu, 1, DType>(s);
         CHECK_EQ(cudnnConvolutionBackwardBias(s->dnn_handle_,
                                               &alpha,
                                               out_desc_,
                                               grad.dptr_ + out_offset_ * g,
-                                              &beta,
+                                              req[conv::kBias] == kWriteTo ? &beta : &beta_add,
                                               bias_desc_,
                                               gbias.dptr_ + bias_offset_ * g),
                  CUDNN_STATUS_SUCCESS);
@@ -146,7 +145,7 @@ class CuDNNConvolutionOp : public Operator {
                back_algo_w_,
                workspace.dptr_,
                backward_workspace_byte_,
-               &beta,
+               req[conv::kWeight] == kWriteTo? &beta : &beta_add,
                filter_desc_,
                gwmat.dptr_ + weight_offset_ * g), CUDNN_STATUS_SUCCESS);
       #elif CUDNN_MAJOR == 5
@@ -160,7 +159,7 @@ class CuDNNConvolutionOp : public Operator {
                back_algo_w_,
                workspace.dptr_,
                backward_workspace_byte_,
-               &beta,
+               req[conv::kWeight] == kWriteTo? &beta : &beta_add,
                filter_desc_,
                gwmat.dptr_ + weight_offset_ * g), CUDNN_STATUS_SUCCESS);
       #endif

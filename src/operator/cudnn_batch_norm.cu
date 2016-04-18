@@ -154,7 +154,9 @@ class CuDNNBatchNormOp : public Operator {
       out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
     Tensor<gpu, 1> save_inv_var =
       out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    float a = 1.0f, b = 0.0f;
+    float a = 1.0f;
+    float b = 0.0f;
+    float b_add = 1.0f;
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
 #if CUDNN_VERSION >= 4007
     CHECK_EQ(cudnnBatchNormalizationBackward(s->dnn_handle_,
@@ -162,7 +164,7 @@ class CuDNNBatchNormOp : public Operator {
                                              &a,
                                              &b,
                                              &a,
-                                             &b,
+                                             req[cudnnbatchnorm::kGamma] == kWriteTo ? &b: &b_add,
                                              io_desc_,
                                              x.dptr_,
                                              io_desc_,
