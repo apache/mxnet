@@ -6,7 +6,7 @@ libmxnet_detected = false
 if haskey(ENV, "MXNET_HOME")
   info("MXNET_HOME environment detected: $(ENV["MXNET_HOME"])")
   info("Trying to load existing libmxnet...")
-  lib = Libdl.find_library(["libmxnet"], ["$(ENV["MXNET_HOME"])/lib"])
+  lib = Libdl.find_library(["libmxnet", "libmxnet.so"], ["$(ENV["MXNET_HOME"])/lib"])
   if !isempty(lib)
     info("Existing libmxnet detected at $lib, skip building...")
     libmxnet_detected = true
@@ -32,7 +32,7 @@ if !libmxnet_detected
 
   #--------------------------------------------------------------------------------
   # Build libmxnet
-  mxnet = library_dependency("mxnet", aliases=["libmxnet"])
+  mxnet = library_dependency("mxnet", aliases=["libmxnet", "libmxnet.so"])
 
   _prefix = joinpath(BinDeps.depsdir(mxnet), "usr")
   _srcdir = joinpath(BinDeps.depsdir(mxnet),"src")
