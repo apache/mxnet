@@ -336,4 +336,4 @@ submission <- data.frame(ImageId=1:ncol(test), Label=pred.label)
 write.csv(submission, file='submission.csv', row.names=FALSE, quote=FALSE)
 ```
 
-![](../web-data/mxnet/knitr/mnistCompetition-kaggle-submission.png)
+![](../../web-data/mxnet/knitr/mnistCompetition-kaggle-submission.png)

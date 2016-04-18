@@ -290,6 +290,46 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySave
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxInitPSEnv
+  (JNIEnv *env, jobject obj, jobjectArray jkeys, jobjectArray jvals) {
+  // keys and values
+  int paramSize = env->GetArrayLength(jkeys);
+  const char** keys = new const char*[paramSize];
+  const char** vals = new const char*[paramSize];
+  jstring jkey, jval;
+  // use strcpy and release char* created by JNI inplace
+  for (size_t i = 0; i < paramSize; i++) {
+    jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
+    const char* ckey = env->GetStringUTFChars(jkey, 0);
+    keys[i] = ckey;
+    env->DeleteLocalRef(jkey);
+
+    jval = reinterpret_cast<jstring>(env->GetObjectArrayElement(jvals, i));
+    const char* cval = env->GetStringUTFChars(jval, 0);
+    vals[i] = cval;
+    env->DeleteLocalRef(jval);
+  }
+
+  int ret = MXInitPSEnv(static_cast<mx_uint>(paramSize),
+                        static_cast<const char**>(keys),
+                        static_cast<const char**>(vals));
+
+  // release keys and vals
+  for (size_t i = 0; i < paramSize; i++) {
+    jstring key = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
+    env->ReleaseStringUTFChars(key, keys[i]);
+    env->DeleteLocalRef(key);
+
+    jstring value = reinterpret_cast<jstring>(env->GetObjectArrayElement(jvals, i));
+    env->ReleaseStringUTFChars(value, vals[i]);
+    env->DeleteLocalRef(value);
+  }
+  delete[] keys;
+  delete[] vals;
+
+  return ret;
+}
+
 extern "C" void KVStoreServerControllerFunc
   (int head, const char *body, void *handle) {
   jobject controllerObjGlb = static_cast<jobject>(handle);

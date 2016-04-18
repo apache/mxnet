@@ -1227,6 +1227,17 @@ int MXKVStoreBarrier(KVStoreHandle handle) {
   API_END();
 }
 
+int MXInitPSEnv(mx_uint num_vars,
+                const char **keys,
+                const char **vals) {
+  API_BEGIN();
+  std::unordered_map<std::string, std::string> kwargs;
+  for (mx_uint i = 0; i < num_vars; ++i) {
+    kwargs[std::string(keys[i])] = std::string(vals[i]);
+  }
+  KVStore::InitPSEnv(kwargs);
+  API_END();
+}
 
 int MXKVStoreIsWorkerNode(int *ret) {
   API_BEGIN();

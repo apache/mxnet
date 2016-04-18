@@ -13,7 +13,7 @@ applications. There are two major concepts introduced in this tutorial.
 
 ## NDArray: Vectorized tensor computations on CPUs and GPUs
 
-`NDArray` is the basic vectorized operation unit in MXNet for matrix and tensor computations. 
+`NDArray` is the basic vectorized operation unit in MXNet for matrix and tensor computations.
 Users can perform usual calculations as on R"s array, but with two additional features:
 
 1.  **multiple devices**: all operations can be run on various devices including
@@ -125,7 +125,7 @@ as.array(d)
 ## [2,] -3.9375 -3.9375 -3.9375 -3.9375
 ```
 
-If two `NDArray`s sit on different divices, we need to explicitly move them 
+If two `NDArray`s sit on different divices, we need to explicitly move them
 into the same one. For instance:
 
 
@@ -160,7 +160,7 @@ as.array(a[[1]])
 ## [2,]    1    1    1
 ```
 
-In case you want to save data to the distributed file system such as S3 and HDFS, 
+In case you want to save data to the distributed file system such as S3 and HDFS,
 we can directly save to and load from them. For example:
 
 
@@ -250,7 +250,7 @@ arguments(net)
 ```
 
 ```
-## [1] "data"       "fc1_weight" "fc1_bias"   "fc2_weight" "fc2_bias"  
+## [1] "data"       "fc1_weight" "fc1_bias"   "fc2_weight" "fc2_bias"
 ## [6] "out_label"
 ```
 
@@ -317,7 +317,7 @@ In the above example, *net* is used a function to apply to an existing symbol
 
 ### Training a Neural Net.
 
-The [model API](../../R-package/R/model.R) is a thin wrapper around the symbolic executors to support neural net training.
+The [model API](../../../R-package/R/model.R) is a thin wrapper around the symbolic executors to support neural net training.
 
 You are also highly encouraged to read [Symbolic Configuration and Execution in Pictures for python package](../python/symbol_in_pictures.md),
 which provides a detailed explanation of concepts in pictures.
