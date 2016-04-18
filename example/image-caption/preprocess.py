@@ -21,6 +21,12 @@ The json file has a dict that contains:
 - an 'ix_to_word' field storing the vocab in form {ix:'word'}, where ix is 1-indexed
 - an 'images' field that is a list holding auxiliary information for each image,
   such as in particular the 'split' it was assigned to.
+
+
+BSD2
+LISENCE BSD
+Author: Karpathy
+https://github.com/karpathy/neuraltalk2
 """
 
 import os
