@@ -70,9 +70,14 @@ class FullyConnectedOp : public Operator {
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
-    Tensor<xpu, 2, DType> data = in_data[fullc::kData].FlatTo2D<xpu, DType>(s);
+    const TShape& ishape = in_data[fullc::kData].shape_;
+    const TShape& oshape = out_data[fullc::kOut].shape_;
+
+    Tensor<xpu, 2, DType> data = in_data[fullc::kData].get_with_shape<xpu, 2, DType>(
+        Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())), s);
     Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(s);
-    Tensor<xpu, 2, DType> out = out_data[fullc::kOut].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> out = out_data[fullc::kOut].get_with_shape<xpu, 2, DType>(
+        Shape2(oshape[0], oshape.ProdShape(1, oshape.ndim())), s);
     out = dot(data, wmat.T());
     if (!param_.no_bias) {
       Tensor<xpu, 1, DType> bias = in_data[fullc::kBias].get<xpu, 1, DType>(s);
@@ -96,9 +101,15 @@ class FullyConnectedOp : public Operator {
     // TODO(bing): check the BLAS Handle, be careful
     //  maybe need blas handle from context
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2, DType> data = in_data[fullc::kData].FlatTo2D<xpu, DType>(s);
+    const TShape& ishape = in_data[fullc::kData].shape_;
+    const TShape& oshape = out_grad[fullc::kOut].shape_;
+
+    Tensor<xpu, 2, DType> data = in_data[fullc::kData].get_with_shape<xpu, 2, DType>(
+        Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())), s);
     Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(s);
-    Tensor<xpu, 2, DType> grad = out_grad[fullc::kOut].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> grad = out_grad[fullc::kOut].get_with_shape<xpu, 2, DType>(
+        Shape2(oshape[0], oshape.ProdShape(1, oshape.ndim())), s);
+
 #if defined(__CUDACC__)
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
@@ -114,7 +125,8 @@ class FullyConnectedOp : public Operator {
       Assign(gbias, req[fullc::kBias], sum_rows(grad));
     }
     // gradient of data
-    Tensor<xpu, 2, DType> gdata = in_grad[fullc::kData].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> gdata = in_grad[fullc::kData].get_with_shape<xpu, 2, DType>(
+        Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())), s);
     Assign(gdata, req[fullc::kData], dot(grad, wmat));
   }
 
@@ -158,9 +170,7 @@ class FullyConnectedProp : public OperatorProperty {
     // require data to be known
     if (dshape.ndim() ==  0) return false;
 
-    index_t num_input = 0;
-    mshadow::Shape<2> ishape = dshape.FlatTo2D();
-    num_input = ishape[1];
+    index_t num_input = dshape.ProdShape(1, dshape.ndim());
     SHAPE_ASSIGN_CHECK(*in_shape, fullc::kWeight, Shape2(param_.num_hidden, num_input));
     if (!param_.no_bias) {
       SHAPE_ASSIGN_CHECK(*in_shape, fullc::kBias, Shape1(param_.num_hidden));

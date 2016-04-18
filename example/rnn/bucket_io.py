@@ -22,7 +22,7 @@ def default_read_content(path):
         return content
 
 def default_build_vocab(path):
-    content = read_content(path)
+    content = default_read_content(path)
     content = content.split(' ')
     idx = 1 # 0 is left for zero-padding
     the_vocab = {}
@@ -38,6 +38,34 @@ def default_text2id(sentence, the_vocab):
     words = sentence.split(' ')
     words = [the_vocab[w] for w in words if len(w) > 0]
     return words
+
+def default_gen_buckets(sentences, batch_size, the_vocab):
+    len_dict = {}
+    max_len = -1
+    for sentence in sentences:
+        words = default_text2id(sentence, the_vocab)
+        if len(words) == 0:
+            continue
+        if len(words) > max_len:
+            max_len = len(words)
+        if len(words) in len_dict:
+            len_dict[len(words)] += 1
+        else:
+            len_dict[len(words)] = 1
+    print(len_dict)
+
+    tl = 0
+    buckets = []
+    for l, n in len_dict.iteritems(): # TODO: There are better heuristic ways to do this    
+        if n + tl >= batch_size:
+            buckets.append(l)
+            tl = 0
+        else:
+            tl += n
+    if tl > 0:
+        buckets.append(max_len)
+    return buckets
+
 
 class SimpleBatch(object):
     def __init__(self, data_names, data, label_names, label, bucket_key):
@@ -94,6 +122,9 @@ class BucketSentenceIter(mx.io.DataIter):
         content = self.read_content(path)
         sentences = content.split(seperate_char)
 
+        if len(buckets) == 0:
+            buckets = default_gen_buckets(sentences, batch_size, vocab)
+
         self.vocab_size = len(vocab)
         self.data_name = data_name
         self.label_name = label_name
@@ -102,7 +133,8 @@ class BucketSentenceIter(mx.io.DataIter):
         self.buckets = buckets
         self.data = [[] for _ in buckets]
 
-        self.default_bucket_key = buckets[0]
+        # pre-allocate with the largest bucket for better memory sharing
+        self.default_bucket_key = max(buckets)
 
         for sentence in sentences:
             sentence = self.text2id(sentence, vocab)
@@ -137,10 +169,8 @@ class BucketSentenceIter(mx.io.DataIter):
         self.init_states = init_states
         self.init_state_arrays = [mx.nd.zeros(x[1]) for x in init_states]
 
-        self.provide_data = [('%s/%d' % (self.data_name, t), (self.batch_size,))
-                             for t in range(self.default_bucket_key)] + init_states
-        self.provide_label = [('%s/%d' % (self.label_name, t), (self.batch_size,))
-                              for t in range(self.default_bucket_key)]
+        self.provide_data = [('data', (batch_size, self.default_bucket_key))] + init_states
+        self.provide_label = [('softmax_label', (self.batch_size, self.default_bucket_key))]
 
     def make_data_iter_plan(self):
         "make a random data iteration plan"
@@ -181,14 +211,10 @@ class BucketSentenceIter(mx.io.DataIter):
             label[:, :-1] = data[:, 1:]
             label[:, -1] = 0
 
-            data_all = [mx.nd.array(data[:, t])
-                        for t in range(self.buckets[i_bucket])] + self.init_state_arrays
-            label_all = [mx.nd.array(label[:, t])
-                         for t in range(self.buckets[i_bucket])]
-            data_names = ['%s/%d' % (self.data_name, t)
-                          for t in range(self.buckets[i_bucket])] + init_state_names
-            label_names = ['%s/%d' % (self.label_name, t)
-                           for t in range(self.buckets[i_bucket])]
+            data_all = [mx.nd.array(data)] + self.init_state_arrays
+            label_all = [mx.nd.array(label)]
+            data_names = ['data'] + init_state_names
+            label_names = ['softmax_label']
 
             data_batch = SimpleBatch(data_names, data_all, label_names, label_all,
                                      self.buckets[i_bucket])

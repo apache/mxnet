@@ -21,7 +21,7 @@ The following figure gives two examples of computation graph.
 The idea of computation graph is deeply rooted in the packages such as Theano, CGT. Actually they also exists implicitly
 in most libraries as the network configuration. The major difference in these library comes to how do they calculate gradient.
 There are mainly two ways, doing back-propagation on the same graph, or have an explicit backward path that calculates
-the gradient needed. 
+the gradient needed.
 
 ![Backward Graph](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/back_graph.png)
 
@@ -33,7 +33,7 @@ However, we should emphasize that choosing the explicit backward path way for ex
 to scope of symbolic libraries such as Theano, CGT. We can also use the explicit backward path for gradient calculation of
 layer-based(which ties forward, backward together) libraries. The following graph shows how this can be done.
 Basically, we can introduce a backward node that links to the forward node of the graph, and calls the ```layer.backward```
-in the backward operations. 
+in the backward operations.
 
 ![Backward Layer](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/explicit_back_layer.png)
 
@@ -43,7 +43,7 @@ So this discussion applies to almost all deep learning libraries that exists
 Why explicit backward path is better? Let us explain it with two examples. The first reason is that the explicit backward path
 clearly describes the dependency between the computation. Consider the following case, where we want to get
 the gradient of A and B. As we can see clearly from the graph, that computation of ```d(C)``` gradient do not depend on F.
-This means we can free the memory of ```F``` right after the the forward computation is done, similarly the memory 
+This means we can free the memory of ```F``` right after the the forward computation is done, similarly the memory
 of ```C``` can be recycled.
 
 ![Backward Prune](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/back_dep_prune.png)
@@ -77,7 +77,7 @@ what optimization we can do, and what is the baseline.
 Asumme we want to build a neural net with ```n``` layers. A typical implementation of neural net will
 need to allocate node space for output of each layer, as well as gradient values for back-propagation.
 This means we need roughly ```2 n``` memory cells. This is the same in the explicit backward graph case, as
-the number of nodes in backward pass in roughly the same as forward pass. 
+the number of nodes in backward pass in roughly the same as forward pass.
 
 ### Inplace Operations
 One of the very first thing that we can do is inplace memory sharing of operations. This is usually done for
@@ -99,7 +99,7 @@ So an algorithm that simply do inplace optimization for every sigmoid operation 
 and we need to be careful on when we can do it.
 
 ### Normal Memory Sharing
-Memories can also be shared besides the inplace operation. Consider the following case, because the 
+Memories can also be shared besides the inplace operation. Consider the following case, because the
 value of B is no longer needed when we compute E, we can reuse the memory to hold the result of E.
 
 ![Normal Sharing](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/alloc_normal.png)
@@ -137,7 +137,7 @@ In the multilayer perception case, the ```life time``` of ```fc1``` ends after `
 The principle is ***to only allow memory sharing between the variables whose lifetime do not overlap***. There are multiple
 ways to solve this problem. One possible way is to construct the conflicting graph of with each variable as node and link edge
 between variables with overlapping lifespan, and run a graph-coloring algorithm. This will likely require ```$O(n^2)$```
-complexity where ```n``` is number of nodes in the graph, which could be an reasonable price to pay. 
+complexity where ```n``` is number of nodes in the graph, which could be an reasonable price to pay.
 
 We will introduce another simple heuristic here. The idea is to simulate the procedure of traversing the graph,
 and keep a counter of future operations that depends on the node.
@@ -155,7 +155,7 @@ and allocate the maximum of the shared parts in the final memory plan.
 
 If you think carefully, you will find the above strategy exactly simulates the dynamic memory allocation procedure in imperative
 languages such as python. The counter is the reference counter of each memory object, and the object get garbage collected when
-the reference counter goes to zero. In that sense, we are simulating the dynamic memory allocation once to create a static allocation plan. 
+the reference counter goes to zero. In that sense, we are simulating the dynamic memory allocation once to create a static allocation plan.
 Now the question is, can we simply use an imperative language that dynamically allocates and de-allocates memories?
 
 The major difference is that the static allocation is only done once, so we can afford to use more complicated algorithms
@@ -230,6 +230,5 @@ the article, this is simply because more memory re-use if we only run the forwar
 
 Contribution to this Note
 -------------------------
-This note is part of our effort to [open-source system design notes](http://mxnet.readthedocs.org/en/latest/#open-source-design-notes)
+This note is part of our effort to [open-source system design notes](index.md)
  for deep learning libraries. You are more welcomed to contribute to this Note, by submitting a pull request.
-

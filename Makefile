@@ -11,7 +11,7 @@ endif
 endif
 
 ifndef DMLC_CORE
-	DMLC_CORE = dmlc-core
+	DMLC_CORE = $(ROOTDIR)/dmlc-core
 endif
 
 ifneq ($(USE_OPENMP), 1)
@@ -81,7 +81,7 @@ ifneq ($(USE_CUDA_PATH), NONE)
 endif
 
 # ps-lite
-PS_PATH=./ps-lite
+PS_PATH=$(ROOTDIR)/ps-lite
 DEPS_PATH=$(shell pwd)/deps
 include $(PS_PATH)/make/ps.mk
 ifeq ($(USE_DIST_KVSTORE), 1)
@@ -235,16 +235,28 @@ rpkg:	roxygen
 	R CMD build --no-build-vignettes R-package
 
 scalapkg:
-	(cd $(ROOTDIR)/scala-package; mvn clean package -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)")
+	(cd $(ROOTDIR)/scala-package; \
+		mvn clean package -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
+											-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+											-Dlddeps="$(LIB_DEP)")
 
 scalatest:
-	(cd $(ROOTDIR)/scala-package; mvn verify -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" $(SCALA_TEST_ARGS))
+	(cd $(ROOTDIR)/scala-package; \
+		mvn verify -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
+							 -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+							 -Dlddeps="$(LIB_DEP)" $(SCALA_TEST_ARGS))
 
 scalainstall:
-	(cd $(ROOTDIR)/scala-package; mvn install -P$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)")
+	(cd $(ROOTDIR)/scala-package; \
+		mvn install -P$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" \
+							  -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+								-Dlddeps="$(LIB_DEP)")
 
 scaladeploy:
-	(cd $(ROOTDIR)/scala-package; mvn deploy -Prelease,$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)")
+	(cd $(ROOTDIR)/scala-package; \
+		mvn deploy -Prelease,$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" \
+							 -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+							 -Dlddeps="$(LIB_DEP)")
 
 jnilint:
 	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src

@@ -405,5 +405,5 @@ more interesting and intelligent deep learning libraries.
 
 Contribution to this Note
 -------------------------
-This note is part of our effort to [open-source system design notes](http://mxnet.readthedocs.org/en/latest/#open-source-design-notes)
+This note is part of our effort to [open-source system design notes](index.md)
 for deep learning libraries. You are more welcomed to contribute to this Note, by submitting a pull request.

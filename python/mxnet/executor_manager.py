@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments
+# pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments, too-many-statements
 """Executor manager"""
 from __future__ import absolute_import
 
@@ -8,6 +8,7 @@ from . import ndarray as nd
 from .context import cpu
 
 import logging
+import numpy as np
 
 def _split_input_slice(batch_size, work_load_list):
     """Get input slice from the input shape.
@@ -91,7 +92,7 @@ def _load_label(batch, targets):
 
 # pylint: disable=too-many-branches
 def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
-               base_exec=None, shared_data_arrays=None, input_types=None):
+               base_exec=None, shared_data_arrays=None, input_types=None, logger=logging):
     """bind executor for bucketing, potentially sharing data with an existing executor."""
     arg_shape, _, aux_shape = sym.infer_shape(**input_shapes)
     assert(arg_shape is not None)
@@ -125,15 +126,27 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
                     name in shared_data_arrays:
                 arg_arr = shared_data_arrays[name]
 
-                # in bucketing, we want to be strict here to avoid
-                # potential bugs
-                assert(arg_shape[i] == arg_arr.shape)
-                assert(arg_types[i] == arg_arr.dtype)
+                if np.prod(arg_arr.shape) >= np.prod(arg_shape[i]):
+                    # good, we can share this memory
+                    assert(arg_types[i] == arg_arr.dtype)
+                    arg_arr = arg_arr.reshape(arg_shape[i])
+                else:
+                    logger.warning(('bucketing: data "%s" has a shape %s' % (name, arg_shape[i])) +
+                                   (', which is larger than already allocated ') +
+                                   ('shape %s' % (arg_arr.shape,)) +
+                                   ('. Need to re-allocate. Consider putting ') +
+                                   ('default_bucket_key to be the bucket taking the largest ') +
+                                   ('input for better memory sharing.'))
+                    arg_arr = nd.zeros(arg_shape[i], ctx, dtype=arg_types[i])
+
+                    # replace existing shared array because the new one is bigger
+                    shared_data_arrays[name] = arg_arr
             else:
                 arg_arr = nd.zeros(arg_shape[i], ctx, dtype=arg_types[i])
+                if shared_data_arrays is not None:
+                    shared_data_arrays[name] = arg_arr
+
             arg_arrays.append(arg_arr)
-            if shared_data_arrays is not None:
-                shared_data_arrays[name] = arg_arr
         else:
             # model parameter
             if base_exec is None:
@@ -151,7 +164,7 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
 
     # create or borrow aux variables
     if base_exec is None:
-        aux_arrays = [nd.zeros(s, ctx, dtype=t) for s, t in zip(aux_shape, arg_types)]
+        aux_arrays = [nd.zeros(s, ctx, dtype=t) for s, t in zip(aux_shape, aux_types)]
     else:
         for i, a in enumerate(base_exec.aux_arrays):
             assert aux_shape[i] == a.shape

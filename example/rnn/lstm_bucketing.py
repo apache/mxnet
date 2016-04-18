@@ -6,9 +6,10 @@ import numpy as np
 import mxnet as mx
 
 from lstm import lstm_unroll
-from bucket_io import BucketSentenceIter, build_vocab
+from bucket_io import BucketSentenceIter, default_build_vocab
 
 def Perplexity(label, pred):
+    label = label.T.reshape((-1,))
     loss = 0.
     for i in range(pred.shape[0]):
         loss += -np.log(max(1e-10, pred[i][int(label[i])]))
@@ -16,8 +17,9 @@ def Perplexity(label, pred):
 
 if __name__ == '__main__':
     batch_size = 32
-    buckets = [10, 20, 30, 40, 50, 60]
+    #buckets = [10, 20, 30, 40, 50, 60]
     #buckets = [32]
+    buckets = []
     num_hidden = 200
     num_embed = 200
     num_lstm_layer = 2
@@ -31,7 +33,7 @@ if __name__ == '__main__':
 
     contexts = [mx.context.gpu(i) for i in range(1)]
 
-    vocab = build_vocab("./data/ptb.train.txt")
+    vocab = default_build_vocab("./data/ptb.train.txt")
 
     def sym_gen(seq_len):
         return lstm_unroll(num_lstm_layer, seq_len, len(vocab),

@@ -45,7 +45,7 @@ Refer to the next section for how to build it from the very source.
 Build
 ------------
 
-Checkout the [Installation Guide](http://mxnet.readthedocs.org/en/latest/build.html) contains instructions to install mxnet.
+Checkout the [Installation Guide](http://mxnet.readthedocs.org/en/latest/how_to/build.html) contains instructions to install mxnet.
 Then you can compile the Scala Package by
 
 ```bash
@@ -64,7 +64,28 @@ Also it produces the native library in `native/{your-architecture}/target`, whic
 Once you've downloaded and unpacked MNIST dataset to `./data/`, run the training example by
 
 ```bash
-java -Xmx4m -cp scala-package/assembly/target/*:scala-package/examples/target/* ml.dmlc.mxnet.examples.imclassification.TrainMnist --data-dir=./data/ --num-epochs=10 --network=mlp --cpus=0,1,2,3
+java -Xmx4m -cp \
+  scala-package/assembly/{your-architecture}/target/*:scala-package/examples/target/*:scala-package/examples/target/classes/lib/* \
+  ml.dmlc.mxnet.examples.imclassification.TrainMnist \
+  --data-dir=./data/ \
+  --num-epochs=10 \
+  --network=mlp \
+  --cpus=0,1,2,3
+```
+
+If you've compiled with `USE_DIST_KVSTORE` enabled, the python tools in `mxnet/tracker` can be used to launch distributed training.
+The following command runs the above example using 2 worker nodes (and 2 server nodes) in local. Refer to [Distributed Training](http://mxnet.readthedocs.org/en/latest/distributed_training.html) for more details.
+
+```bash
+tracker/dmlc_local.py -n 2 -s 2 \
+  java -Xmx4m -cp \
+  scala-package/assembly/{your-architecture}/target/*:scala-package/examples/target/*:scala-package/examples/target/classes/lib/* \
+  ml.dmlc.mxnet.examples.imclassification.TrainMnist \
+  --data-dir=./data/ \
+  --num-epochs=10 \
+  --network=mlp \
+  --cpus=0 \
+  --kv-store=dist_sync
 ```
 
 Change the arguments and have fun!

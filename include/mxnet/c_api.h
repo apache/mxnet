@@ -1005,8 +1005,17 @@ MXNET_DLL int MXDataIterGetPadNum(DataIterHandle handle,
 MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
                                  NDArrayHandle *out);
 //--------------------------------------------
-// Part 5: basic KVStore interface
+// Part 6: basic KVStore interface
 //--------------------------------------------
+/*!
+ * \brief Initialized ps-lite environment variables
+ * \param num_vars number of variables to initialize
+ * \param keys environment keys
+ * \param vals environment values
+ */
+MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
+                          const char **keys,
+                          const char **vals);
 /*!
  * \brief Create a kvstore
  * \param type the type of KVStore
@@ -1153,19 +1162,23 @@ MXNET_DLL int MXKVStoreBarrier(KVStoreHandle handle);
  * \brief the prototype of a server controller
  * \param head the head of the command
  * \param body the body of the command
+ * \param controller_handle helper handle for implementing controller
  */
 typedef void (MXKVStoreServerController)(int head,
-                                         const char* body);
+                                         const char *body,
+                                         void *controller_handle);
 
 /**
  * \return Run as server (or scheduler)
  *
  * \param handle handle to the KVStore
  * \param controller the user-defined server controller
+ * \param controller_handle helper handle for implementing controller
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreRunServer(KVStoreHandle handle,
-                                 MXKVStoreServerController controller);
+                                 MXKVStoreServerController controller,
+                                 void *controller_handle);
 
 /**
  * \return Send a command to all server nodes
