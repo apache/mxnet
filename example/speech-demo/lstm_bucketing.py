@@ -140,10 +140,7 @@ class BucketSentenceIter(mx.io.DataIter):
             print("bucket of len %3d : %d samples" % (bkt, sz))
 
         bucket_size_tot = float(sum(bucket_sizes))
-        bucket_ratio_cum = [sum(bucket_sizes[:i+1]) / bucket_size_tot
-                for i in range(len(bucket_sizes))]
 
-        self.bucket_ratio_cum = bucket_ratio_cum
         self.bucket_sizes = bucket_sizes
         self.batch_size = batch_size
         if n_batch is None:
@@ -161,7 +158,6 @@ class BucketSentenceIter(mx.io.DataIter):
     def __iter__(self):
         init_state_names = [x[0] for x in self.init_states]
         idx_bucket = np.arange(len(self.buckets))
-        np.random.shuffle(self.bucket_ratio_cum)
         i = 0
         for i_bucket in idx_bucket:
             idx_list = np.arange(self.bucket_sizes[i_bucket], dtype="int32")
@@ -264,7 +260,7 @@ if __name__ == '__main__':
     learning_rate = 0.002
     momentum = 0.9
 
-    contexts = [mx.context.gpu(i) for i in range(0,1)]
+    contexts = [mx.context.gpu(i) for i in range(3,4)]
 
     
     feat_dim = 40
