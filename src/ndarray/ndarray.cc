@@ -799,7 +799,7 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
     y0 = 0;
     y1 = res.rows;
   }
-  CHECK(x0 >= 0 && y0 >= 0 && x1 <= static_cast<size_t>(res.cols) &&
+  CHECK(x1 <= static_cast<size_t>(res.cols) &&
         y1 <= static_cast<size_t>(res.rows));
 
   if (ret->is_none()) {

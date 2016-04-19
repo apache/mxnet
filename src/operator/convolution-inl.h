@@ -336,11 +336,11 @@ class ConvolutionProp : public OperatorProperty {
         << "input num_filter must divide group size";
     CHECK_EQ(param_.num_filter % param_.num_group, 0) \
         << "output num_filter must divide group size";
-    CHECK_GE(param_.kernel.Size(), 0) \
+    CHECK_GT(param_.kernel.Size(), 0) \
         << "incorrect kernel size: " << param_.kernel;
-    CHECK_GE(param_.stride.Size(), 0) \
+    CHECK_GT(param_.stride.Size(), 0) \
         << "incorrect stride size: " << param_.stride;
-    CHECK_GE(param_.dilate.Size(), 0) \
+    CHECK_GT(param_.dilate.Size(), 0) \
         << "incorrect dilate size: " << param_.dilate;
     CHECK(ksize_x <= dshape[3] && ksize_y <= dshape[2])
         << "kernel size exceed input";
