@@ -754,8 +754,7 @@ object Symbol {
   }
 
   def pow[@specialized(Int, Float, Double) V](number: V, sym: Symbol): Symbol = {
-    Symbol.createFromListedSymbols("_PowerScalar")(Array(sym),
-      Map("scalar" -> number.toString, "scalar_on_left" -> "True"))
+    Symbol.createFromListedSymbols("_RPowerScalar")(Array(sym), Map("scalar" -> number.toString))
   }
 
   /**
@@ -863,8 +862,7 @@ object Symbol {
   }
 
   def max[@specialized(Int, Float, Double) V](left: V, right: Symbol): Symbol = {
-    createFromListedSymbols("_MaximumScalar")(Array(right),
-      Map("scalar" -> left.toString, "scalar_on_left" -> "True"))
+    createFromListedSymbols("_MaximumScalar")(Array(right), Map("scalar" -> left.toString))
   }
 
   def min(left: Symbol, right: Symbol): Symbol = {
@@ -876,8 +874,7 @@ object Symbol {
   }
 
   def min[@specialized(Int, Float, Double) V](left: V, right: Symbol): Symbol = {
-    createFromListedSymbols("_MinimumScalar")(Array(right),
-      Map("scalar" -> left.toString, "scalar_on_left" -> "True"))
+    createFromListedSymbols("_MinimumScalar")(Array(right), Map("scalar" -> left.toString))
   }
 
   /**
@@ -1528,8 +1525,8 @@ class SymbolConversions[@specialized(Int, Float, Double) V](val value: V) {
   }
 
   def -(other: Symbol): Symbol = {
-    Symbol.createFromListedSymbols("_MinusScalar")(Array(other),
-      Map("scalar" -> value.toString, "scalar_on_left" -> "True"))
+    Symbol.createFromListedSymbols("_RMinusScalar")(
+      Array(other), Map("scalar" -> value.toString))
   }
 
   def *(other: Symbol): Symbol = {
@@ -1537,7 +1534,7 @@ class SymbolConversions[@specialized(Int, Float, Double) V](val value: V) {
   }
 
   def /(other: Symbol): Symbol = {
-    Symbol.createFromListedSymbols("_DivScalar")(Array(other),
-      Map("scalar" -> value.toString, "scalar_on_left" -> "True"))
+    Symbol.createFromListedSymbols("_RDivScalar")(
+      Array(other), Map("scalar" -> value.toString))
   }
 }
