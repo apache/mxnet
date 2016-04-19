@@ -153,7 +153,7 @@ class SliceChannelProp : public OperatorProperty {
       << param_.axis << " (" << dshape[param_.axis] << ").";
     dshape[param_.axis] /= param_.num_outputs;
     if (param_.squeeze_axis && dshape[param_.axis] == 1) {
-      for (int d = param_.axis; d < dshape.ndim()-1; ++d) {
+      for (int d = param_.axis; d < static_cast<int>(dshape.ndim()) - 1; ++d) {
         dshape[d] = dshape[d+1];
       }
       dshape = TShape(&dshape[0], &dshape[dshape.ndim()-1]);
