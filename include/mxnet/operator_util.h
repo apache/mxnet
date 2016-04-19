@@ -52,6 +52,8 @@ struct EnvArguments {
   real_t scalar;
   /*! \brief keyword arguments */
   std::vector<std::pair<std::string, std::string> > kwargs;
+  /*! \brief pointer to the resources requested */
+  std::vector<Resource> resource;
 };
 
 /*!
@@ -244,6 +246,21 @@ class SimpleOpRegEntry {
    * \param enable_kwargs whether to enable kwargs
    */
   virtual TSelf& set_enable_kwargs(bool enable_kwargs) = 0;
+  /*!
+   * \brief set resource request
+   *  By default there is no resource request.
+   *  The resource will be presented in both forward and backward.
+   * \param reqs the request.
+   */
+  virtual TSelf& set_resource_request(
+      const std::vector<ResourceRequest>& reqs) = 0;
+  /*!
+   * \brief set resource request
+   *  By default there is no resource request.
+   *  The resource will be presented in both forward and backward.
+   * \param req the request.
+   */
+  virtual TSelf& set_resource_request(ResourceRequest req) = 0;
   /*!
    * \brief set shape inference function.
    *  Default: out_shape = in_shape
