@@ -25,25 +25,25 @@ deep learning system, and interesting insights of DL systems for hackers.
 What's New
 ----------
 * [Tutorial for NVidia GTC 2016](https://github.com/dmlc/mxnet-gtc-tutorial)
-* [Embedding Torch layers and functions in MXNet](https://mxnet.readthedocs.org/en/latest/tutorial/torch_howto.html)
+* [Embedding Torch layers and functions in MXNet](http://mxnet.readthedocs.org/en/latest/how_to/torch.html)
 * [MXNet.js: Javascript Package for Deep Learning in Browser (without server)
 ](https://github.com/dmlc/mxnet.js/)
-* [Design Note: Design Efficient Deep Learning Data Loading Module](http://mxnet.readthedocs.org/en/latest/developer-guide/note_data_loading.html)
-* [MXNet on Mobile Device](https://mxnet.readthedocs.org/en/latest/tutorial/smart_device.html)
-* [Distributed Training](https://mxnet.readthedocs.org/en/latest/distributed_training.html)
-* [Guide to Creating New Operators (Layers)](https://mxnet.readthedocs.org/en/latest/tutorial/new_op_howto.html)
+* [Design Note: Design Efficient Deep Learning Data Loading Module](http://mxnet.readthedocs.org/en/latest/system/note_data_loading.htmll)
+* [MXNet on Mobile Device](http://mxnet.readthedocs.org/en/latest/how_to/smart_device.html)
+* [Distributed Training](http://mxnet.readthedocs.org/en/latest/how_to/multi_devices.html)
+* [Guide to Creating New Operators (Layers)](http://mxnet.readthedocs.org/en/latest/how_to/new_op.html)
 * [Amalgamation and Go Binding for Predictors](https://github.com/jdeng/gomxnet/)
-* [Training Deep Net on 14 Million Images on A Single Machine](https://mxnet.readthedocs.org/en/latest/tutorial/imagenet_full.html)
+* [Training Deep Net on 14 Million Images on A Single Machine](http://mxnet.readthedocs.org/en/latest/tutorials/imagenet_full.html)
 
 Contents
 --------
 * [Documentation and Tutorials](http://mxnet.readthedocs.org/en/latest/)
-* [Design Notes](http://mxnet.readthedocs.org/en/latest/#open-source-design-notes)
+* [Design Notes](http://mxnet.readthedocs.org/en/latest/system/index.html)
 * [Code Examples](example)
-* [Installation](http://mxnet.readthedocs.org/en/latest/build.html)
+* [Installation](http://mxnet.readthedocs.org/en/latest/how_to/build.html)
 * [Pretrained Models](https://github.com/dmlc/mxnet-model-gallery)
-* [Contribute to MXNet](http://mxnet.readthedocs.org/en/latest/contribute.html)
-* [Frequent Asked Questions](http://mxnet.readthedocs.org/en/latest/faq.html)
+* [Contribute to MXNet](http://mxnet.readthedocs.org/en/latest/how_to/contribute.html)
+* [Frequent Asked Questions](http://mxnet.readthedocs.org/en/latest/how_to/faq.html)
 
 Features
 --------
