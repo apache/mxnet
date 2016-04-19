@@ -743,10 +743,15 @@ class FeedForward(BASE_ESTIMATOR):
         if self.sym_gen:
             self.symbol = self.sym_gen(data.default_bucket_key) # pylint: disable=no-member
             self._check_arguments()
+        self.kwargs["sym"] = self.symbol
 
         arg_names, param_names, aux_names = \
                 self._init_params(dict(data.provide_data+data.provide_label))
-        self.kwargs["arg_names"] = arg_names
+        param_idx2name = {}
+        for i, n in enumerate(param_names):
+            for k in range(len(self.ctx)):
+                param_idx2name[i*len(self.ctx)+k] = n
+        self.kwargs["param_idx2name"] = param_idx2name
 
         # setup metric
         if not isinstance(eval_metric, metric.EvalMetric):

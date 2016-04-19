@@ -602,6 +602,22 @@ int MXSymbolPrint(SymbolHandle symbol, const char **out_str) {
   API_END();
 }
 
+int MXSymbolGetName(SymbolHandle symbol,
+                    const char** out,
+                    int* success) {
+  Symbol *s = static_cast<Symbol*>(symbol);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  if (s->GetName(&(ret->ret_str))) {
+    *out = (ret->ret_str).c_str();
+    *success = 1;
+  } else {
+    *out = nullptr;
+    *success = 0;
+  }
+  API_END();
+}
+
 int MXSymbolGetAttr(SymbolHandle symbol,
                     const char* key,
                     const char** out,
@@ -627,6 +643,25 @@ int MXSymbolSetAttr(SymbolHandle symbol,
   s->SetAttr(key, value);
   API_END();
 }
+
+int MXSymbolListAttr(SymbolHandle symbol,
+                     mx_uint *out_size,
+                     const char*** out) {
+  Symbol *s = static_cast<Symbol*>(symbol);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  std::map<std::string, std::string> attr = std::move(s->ListAttr());
+  ret->ret_vec_charp.clear();
+  *out_size = 0;
+  for (auto it : attr) {
+    ret->ret_vec_charp.push_back(it.first.c_str());
+    ret->ret_vec_charp.push_back(it.second.c_str());
+    (*out_size)++;
+  }
+  *out = dmlc::BeginPtr(ret->ret_vec_charp);
+  API_END();
+}
+
 
 int MXSymbolListArguments(SymbolHandle symbol,
                           mx_uint *out_size,

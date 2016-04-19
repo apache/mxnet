@@ -294,7 +294,12 @@ class Module(BaseModule):
             batch_size = self._exec_group.batch_size
             if kvstore and kvstore.type == 'dist_sync':
                 batch_size *= kvstore.num_workers
+            idx2name = {}
+            for k in range(len(self._context)):
+                idx2name.update({i*len(self._context)+k: n
+                                 for i, n in enumerate(self._exec_group.param_names)})
             optimizer = opt.create(optimizer, rescale_grad=(1.0/batch_size),
+                                   sym=self.symbol, param_idx2name=idx2name,
                                    **dict(optimizer_params))
         else:
             assert isinstance(optimizer, opt.Optimizer)
