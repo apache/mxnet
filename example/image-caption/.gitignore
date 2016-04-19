@@ -1,0 +1,8 @@
+*.pyc
+*.swp
+*.hdf5
+*.h5
+*.params
+*.json
+.ipynb_checkpoints/
+*.bk
