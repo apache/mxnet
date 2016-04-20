@@ -8,6 +8,7 @@ import ctypes
 from numbers import Number
 import sys
 import numpy
+import re
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str, string_types, mx_real_t
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle
@@ -17,7 +18,7 @@ from .attribute import AttrScope
 from .context import Context
 from .ndarray import NDArray, zeros, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .executor import Executor
-
+from .symbol_doc import *
 
 class Symbol(object):
     """Symbol is symbolic graph of the mxnet."""
@@ -933,7 +934,8 @@ def _make_atomic_symbol_function(handle):
     param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
     key_var_num_args = py_str(key_var_num_args.value)
     func_name = py_str(name.value)
-
+    extra_doc = "\n" + '\n'.join([x.__doc__ for x in type.__subclasses__(SymbolDoc)
+                                  if x.__name__ == '%sDoc' % func_name])
     desc = py_str(desc.value)
     if key_var_num_args:
         desc += '\nThis function support variable length of positional input.'
@@ -946,7 +948,8 @@ def _make_atomic_symbol_function(handle):
                'symbol: Symbol\n'+
                '    The result symbol.')
     doc_str = doc_str % (desc, param_str)
-
+    head_whitespace = re.compile("    ")
+    doc_str += re.sub(head_whitespace, "", extra_doc)
     def creator(*args, **kwargs):
         """Activation Operator of Neural Net.
         The parameters listed below can be passed in as keyword arguments.
@@ -1103,4 +1106,3 @@ def minimum(left, right):
         return left if left > right else right
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
-
