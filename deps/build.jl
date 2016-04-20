@@ -6,7 +6,7 @@ libmxnet_detected = false
 if haskey(ENV, "MXNET_HOME")
   info("MXNET_HOME environment detected: $(ENV["MXNET_HOME"])")
   info("Trying to load existing libmxnet...")
-  lib = Libdl.find_library(["libmxnet.so","libmxnet.dll"], ["$(ENV["MXNET_HOME"])/lib"])
+  lib = Libdl.find_library(["libmxnet", "libmxnet.so"], ["$(ENV["MXNET_HOME"])/lib"])
   if !isempty(lib)
     info("Existing libmxnet detected at $lib, skip building...")
     libmxnet_detected = true
@@ -28,20 +28,16 @@ if !libmxnet_detected
     error("Automatic building libxmnet on Windows is currently not supported yet.")
   end
 
-  #--------------------------------------------------------------------------------
-  # Install dependencies, blas
-  @linux_only begin
-    blas = library_dependency("cblas", aliases=["libcblas"])
-    provides(AptGet, "libatlas-base-dev", blas)
-    provides(Pacman, "blas", blas)
-    provides(Yum, "blas-devel", blas)
+  openblas_path = Libdl.dlpath(Libdl.dlopen(Base.libblas_name))
 
-    @BinDeps.install Dict(:blas => :blas)
+  ilp64 = ""
+  if Base.blas_vendor() == :openblas64
+    ilp64 = "-DINTERFACE64"
   end
 
   #--------------------------------------------------------------------------------
   # Build libmxnet
-  mxnet = library_dependency("mxnet", aliases=["libmxnet.so"])
+  mxnet = library_dependency("mxnet", aliases=["libmxnet", "libmxnet.so"])
 
   _prefix = joinpath(BinDeps.depsdir(mxnet), "usr")
   _srcdir = joinpath(BinDeps.depsdir(mxnet),"src")
@@ -60,7 +56,9 @@ if !libmxnet_detected
           `cp make/config.mk config.mk`
           @osx_only `cp make/osx.mk config.mk`
           `sed -i -s 's/USE_OPENCV = 1/USE_OPENCV = 0/' config.mk`
-          `make`
+          `sed -i -s "s/MSHADOW_CFLAGS = \(.*\)/MSHADOW_CFLAGS = \1 $ilp64/" mshadow/make/mshadow.mk`
+          `cp ../../cblas.h include/cblas.h`
+          `make USE_BLAS=openblas MSHADOW_LDFLAGS="$openblas_path"`
           `cp lib/libmxnet.so $_libdir`
         end)
       end
