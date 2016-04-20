@@ -499,7 +499,8 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
       if (i >= nvisible) continue;
       // get out_grad
       auto it = grad_map.find(okey);
-      CHECK(it != grad_map.end()) << "bad graph";
+      CHECK(it != grad_map.end()) << "bad graph: Cannot find node "
+                                  << nodes[nid].name << "'s " << i << "-th output";
       std::vector<DataEntry> &gnodes = it->second;
       if (gnodes.size() == 1) {
         out_grad.push_back(gnodes[0]);
