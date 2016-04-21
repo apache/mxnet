@@ -24,8 +24,9 @@ def default_read_content(path):
 def default_build_vocab(path):
     content = default_read_content(path)
     content = content.split(' ')
-    idx = 1 # 0 is left for zero-padding
     the_vocab = {}
+    idx = 1 # 0 is left for zero-padding
+    the_vocab[' '] = 0 # put a dummy element here so that len(vocab) is correct
     for word in content:
         if len(word) == 0:
             continue
