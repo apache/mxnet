@@ -65,3 +65,13 @@ set.
 
 
 
+
+.. class:: MultiACE
+
+   Averaged cross-entropy for classification. This also know als logloss.
+   This variant keeps track of the different losses per class.
+
+   Calculated the averaged cross entropy for multi-dimentions output.
+
+
+

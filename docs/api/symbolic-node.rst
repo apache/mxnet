@@ -498,7 +498,7 @@ Public APIs
 
 .. function:: Embedding(...)
 
-   Get embedding for one-hot input
+   Get embedding for one-hot input. A n-dimensional input tensor will be trainsformed into a (n+1)-dimensional tensor, where a new dimension is added for the embedding results.
    
    :param data: Input data to the EmbeddingOp.
    :type data: SymbolicNode
@@ -800,6 +800,10 @@ Public APIs
    :param axis: Dimension along which to slice.
    :type axis: int, optional, default='1'
    
+   
+   :param squeeze_axis: If true AND the sliced dimension becomes 1, squeeze that dimension.
+   :type squeeze_axis: boolean, optional, default=False
+   
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
@@ -963,8 +967,12 @@ Public APIs
 
    Take absolute value of the src
    
-   :param src: Source symbolic input to the function
-   :type src: SymbolicNode
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -979,8 +987,12 @@ Public APIs
 
    Take ceil value of the src
    
-   :param src: Source symbolic input to the function
-   :type src: SymbolicNode
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -995,8 +1007,12 @@ Public APIs
 
    Take cos of the src
    
-   :param src: Source symbolic input to the function
-   :type src: SymbolicNode
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -1011,8 +1027,12 @@ Public APIs
 
    Take exp of the src
    
-   :param src: Source symbolic input to the function
-   :type src: SymbolicNode
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -1027,8 +1047,12 @@ Public APIs
 
    Take floor value of the src
    
-   :param src: Source symbolic input to the function
-   :type src: SymbolicNode
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -1043,8 +1067,12 @@ Public APIs
 
    Take log of the src
    
-   :param src: Source symbolic input to the function
-   :type src: SymbolicNode
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -1059,8 +1087,12 @@ Public APIs
 
    Take round value of the src
    
-   :param src: Source symbolic input to the function
-   :type src: SymbolicNode
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -1075,8 +1107,12 @@ Public APIs
 
    Take rsqrt of the src
    
-   :param src: Source symbolic input to the function
-   :type src: SymbolicNode
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -1091,8 +1127,12 @@ Public APIs
 
    Take sign value of the src
    
-   :param src: Source symbolic input to the function
-   :type src: SymbolicNode
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -1107,8 +1147,12 @@ Public APIs
 
    Take sin of the src
    
-   :param src: Source symbolic input to the function
-   :type src: SymbolicNode
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -1123,8 +1167,12 @@ Public APIs
 
    Take sqrt of the src
    
-   :param src: Source symbolic input to the function
-   :type src: SymbolicNode
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -1139,8 +1187,32 @@ Public APIs
 
    Take square of the src
    
-   :param src: Source symbolic input to the function
-   :type src: SymbolicNode
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
+   
+   :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
+   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
+   
+   :return: .
+   
+
+
+
+
+.. function:: transpose(...)
+
+   Transpose the input matrix and return a new one
+   
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
@@ -1172,12 +1244,19 @@ Internal APIs
 
 .. function:: _Div(...)
 
-   Perform an elementwise div.
+   Multiply lhs by rhs
+   
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
-   :return: SymbolicNode.
+   :return: .
    
 
 
@@ -1209,12 +1288,19 @@ Internal APIs
 
 .. function:: _Maximum(...)
 
-   Perform an elementwise power.
+   Elementwise max of lhs by rhs
+   
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
-   :return: SymbolicNode.
+   :return: .
    
 
 
@@ -1246,12 +1332,19 @@ Internal APIs
 
 .. function:: _Minimum(...)
 
-   Perform an elementwise power.
+   Elementwise min of lhs by rhs
+   
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
-   :return: SymbolicNode.
+   :return: .
    
 
 
@@ -1283,12 +1376,19 @@ Internal APIs
 
 .. function:: _Minus(...)
 
-   Perform an elementwise minus.
+   Minus lhs and rhs
+   
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
-   :return: SymbolicNode.
+   :return: .
    
 
 
@@ -1320,12 +1420,19 @@ Internal APIs
 
 .. function:: _Mul(...)
 
-   Perform an elementwise mul.
+   Multiply lhs and rhs
+   
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
-   :return: SymbolicNode.
+   :return: .
    
 
 
@@ -1393,12 +1500,19 @@ Internal APIs
 
 .. function:: _Plus(...)
 
-   Perform an elementwise plus.
+   Add lhs and rhs
+   
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
-   :return: SymbolicNode.
+   :return: .
    
 
 
@@ -1430,12 +1544,19 @@ Internal APIs
 
 .. function:: _Power(...)
 
-   Perform an elementwise power.
+   Elementwise power(lhs, rhs)
+   
+   :param lhs: Left symbolic input to the function
+   :type lhs: SymbolicNode
+   
+   
+   :param rhs: Left symbolic input to the function
+   :type rhs: SymbolicNode
    
    :param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.
    :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.
    
-   :return: SymbolicNode.
+   :return: .
    
 
 

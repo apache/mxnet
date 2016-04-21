@@ -351,7 +351,7 @@ libmxnet data providers
    
    
    :param prefetch_buffer: Backend Param: Number of prefetched parameters
-   :type prefetch_buffer: long (non-negative), optional, default=4
+   :type prefetch_buffer: , optional, default=4
    
    
    :param rand_crop: Augmentation Param: Whether to random crop on the image
@@ -514,7 +514,7 @@ libmxnet data providers
    
    
    :param prefetch_buffer: Backend Param: Number of prefetched parameters
-   :type prefetch_buffer: long (non-negative), optional, default=4
+   :type prefetch_buffer: , optional, default=4
    
    :return: the constructed :class:`MXDataProvider`.
 

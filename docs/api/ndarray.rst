@@ -748,13 +748,13 @@ Internal APIs
 
 .. function:: _div(...)
 
+   Multiply lhs by rhs
    
-   
-   :param lhs: Left operand to the function.
+   :param lhs: Left operand  to the function
    :type lhs: NDArray
    
    
-   :param rhs: Right operand to the function.
+   :param rhs: Right operand to the function
    :type rhs: NDArray
    
 
@@ -815,15 +815,45 @@ Internal APIs
 
 
 
-.. function:: _minus(...)
+.. function:: _maximum(...)
 
+   Elementwise max of lhs by rhs
    
-   
-   :param lhs: Left operand to the function.
+   :param lhs: Left operand  to the function
    :type lhs: NDArray
    
    
-   :param rhs: Right operand to the function.
+   :param rhs: Right operand to the function
+   :type rhs: NDArray
+   
+
+
+
+
+.. function:: _minimum(...)
+
+   Elementwise min of lhs by rhs
+   
+   :param lhs: Left operand  to the function
+   :type lhs: NDArray
+   
+   
+   :param rhs: Right operand to the function
+   :type rhs: NDArray
+   
+
+
+
+
+.. function:: _minus(...)
+
+   Minus lhs and rhs
+   
+   :param lhs: Left operand  to the function
+   :type lhs: NDArray
+   
+   
+   :param rhs: Right operand to the function
    :type rhs: NDArray
    
 
@@ -847,13 +877,13 @@ Internal APIs
 
 .. function:: _mul(...)
 
+   Multiply lhs and rhs
    
-   
-   :param lhs: Left operand to the function.
+   :param lhs: Left operand  to the function
    :type lhs: NDArray
    
    
-   :param rhs: Right operand to the function.
+   :param rhs: Right operand to the function
    :type rhs: NDArray
    
 
@@ -892,13 +922,13 @@ Internal APIs
 
 .. function:: _plus(...)
 
+   Add lhs and rhs
    
-   
-   :param lhs: Left operand to the function.
+   :param lhs: Left operand  to the function
    :type lhs: NDArray
    
    
-   :param rhs: Right operand to the function.
+   :param rhs: Right operand to the function
    :type rhs: NDArray
    
 
@@ -915,6 +945,21 @@ Internal APIs
    
    :param rhs: Right operand to the function.
    :type rhs: real_t
+   
+
+
+
+
+.. function:: _power(...)
+
+   Elementwise power(lhs, rhs)
+   
+   :param lhs: Left operand  to the function
+   :type lhs: NDArray
+   
+   
+   :param rhs: Right operand to the function
+   :type rhs: NDArray
    
 
 
