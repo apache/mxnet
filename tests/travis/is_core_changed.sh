@@ -6,9 +6,12 @@
 # components to mxnet
 
 # DEBUG
-git status
-git branch
+echo "Files changed in this PR includes:"
+echo "**********************************"
+git diff --name-only HEAD^
+echo "**********************************"
 
+# we ignore examples, and docs
 core_patterns=(
   '^dmlc-core'
   '^matlab'
@@ -25,13 +28,12 @@ core_patterns=(
   '^tests'
 )
 
-git --no-pager diff --name-only FETCH_HEAD $(git merge-base FETCH_HEAD master) > changed_names.txt
-
 for pat in ${core_patterns[@]}; do
-  if grep "$pat" changed_names.txt
+  if git diff --name-only HEAD^ | grep "$pat"
   then
     exit
   fi
 done
 
+echo "I think we are good to skip this travis ci run now"
 exit 1 # means nothing has changed

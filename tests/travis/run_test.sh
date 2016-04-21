@@ -1,6 +1,9 @@
 #!/bin/bash
 
-tests/travis/is_core_changed.sh
+if ! tests/travis/is_core_changed.sh
+then
+  exit 0
+fi
 
 if [ ${TASK} == "lint" ]; then
     make lint || exit -1
