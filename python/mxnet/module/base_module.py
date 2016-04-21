@@ -55,12 +55,12 @@ class BaseModule(object):
 
     - state information
         - `binded`: `bool`, indicating whether the memory buffers needed for computation
-           has been allocated.
+          has been allocated.
         - `for_training`: whether the module is binded for training (if binded).
         - `params_initialized`: `bool`, indicating whether the parameters of this modules
-           has been initialized.
+          has been initialized.
         - `optimizer_initialized`: 'bool`, indicating whether an optimizer is defined
-           and initialized.
+          and initialized.
         - `inputs_need_grad`: `bool`, indicating whether gradients with respect to the
           input data is needed. Might be useful when implementing composition of modules.
 
