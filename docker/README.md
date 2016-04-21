@@ -3,10 +3,12 @@
 ## How to use
 
 1. First pull the pre-built image
+
    ```bash
    docker pull dmlc/mxnet:cpu
    ```
 2. Then we can run the python shell in the docker
+
    ```bash
    docker run -ti mxnet:cpu python
    ```
@@ -26,6 +28,7 @@
    libdc1394`, which is due to opencv and can be ignored.
 
 3. Train a model on MNIST to check everything works
+
    ```
    docker run mxnet:cpu python /mxnet/example/image-classification/train_mnist.py
    ```
@@ -34,11 +37,13 @@ If the host machine has Nvidia CPUs, we can use `dmlc/mxnet:gpu`, which has both
 To launch the docker, we need to install [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) first.
 
 1. Pull the image
+
    ```bash
    docker pull dmlc/mxnet:cuda
    ```
 
 2. Train MNIST on CPU 0
+
    ```bash
    nvidia-docker run dmlc/mxnet:cuda python /mxnet/example/image-classification/train_mnist.py --gpus 0
    ```
