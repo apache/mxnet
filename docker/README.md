@@ -1,20 +1,22 @@
 # Docker images for MXNET
 
+Pre-built docker images are available at https://hub.docker.com/r/dmlc/mxnet/
+
 ## How to use
 
 1. First pull the pre-built image
 
    ```bash
-   docker pull dmlc/mxnet:cpu
+   docker pull dmlc/mxnet
    ```
 2. Then we can run the python shell in the docker
 
    ```bash
-   docker run -ti mxnet:cpu python
+   docker run -ti dmlc/mxnet python
    ```
    For example
    ```bash
-   $ docker run -ti mxnet:cpu python
+   $ docker run -ti dmlc/mxnet python
    Python 2.7.6 (default, Jun 22 2015, 17:58:13)
    [GCC 4.8.2] on linux2
    Type "help", "copyright", "credits" or "license" for more information.
@@ -30,7 +32,7 @@
 3. Train a model on MNIST to check everything works
 
    ```
-   docker run mxnet:cpu python /mxnet/example/image-classification/train_mnist.py
+   docker run dmlc/mxnet python /mxnet/example/image-classification/train_mnist.py
    ```
 
 If the host machine has Nvidia CPUs, we can use `dmlc/mxnet:gpu`, which has both CUDA and CUDNN installed.
