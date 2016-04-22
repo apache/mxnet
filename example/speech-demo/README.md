@@ -62,7 +62,6 @@ bucket of len 500 : 41 samples
 bucket of len 600 : 6 samples
 bucket of len 700 : 3 samples
 bucket of len 800 : 0 samples
-2016-04-18 17:34:58,703 Epoch[1] Validation-Accuracy=0.466534
 2016-04-21 20:02:40,904 Epoch[0] Train-Acc_exlude_padding=0.154763
 2016-04-21 20:02:40,904 Epoch[0] Time cost=91.574
 2016-04-21 20:02:44,419 Epoch[0] Validation-Acc_exlude_padding=0.353552
@@ -73,3 +72,5 @@ bucket of len 800 : 0 samples
 2016-04-21 20:05:53,128 Epoch[2] Time cost=92.390
 2016-04-21 20:05:56,568 Epoch[2] Validation-Acc_exlude_padding=0.548100
 ```
+
+The final frame accuracy was around 62%.

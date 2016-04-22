@@ -289,7 +289,7 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
 
 
 if __name__ == '__main__':
-    batch_size = 60
+    batch_size = 40
     buckets = [100, 200, 300, 400, 500, 600, 700, 800]
     num_hidden = 1024
     num_lstm_layer = 3
@@ -356,7 +356,7 @@ if __name__ == '__main__':
               batch_end_callback = mx.callback.Speedometer(batch_size, 100), 
               initializer = mx.init.Xavier(factor_type="in", magnitude=2.34),
               optimizer = "adam",
-              optimizer_params={'wd': 0.00001})
+              optimizer_params={'learning_rate':0.002, 'wd': 0.0})
               #optimizer='sgd',
               #optimizer_params={'learning_rate':0.002, 'momentum': 0.9, 'wd': 0.00001})
 
