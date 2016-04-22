@@ -425,7 +425,7 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
     if (do_mirror == 0) return false;
     if (!nodes[nid].is_forward()) return false;
     std::string type = nodes[nid].op->TypeString();
-    if (type == "Dropout") return false;    
+    if (type == "Dropout") return false;
     if (nodes[nid].get_attr("force_mirroring", false)) return true;
     if (type == "Convolution") return false;
     if (type == "FullyConnected") return false;
