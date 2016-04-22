@@ -172,15 +172,46 @@ class BaseModule(object):
                 for callback in _as_list(batch_end_callback):
                     callback(batch_end_params)
 
+    def iter_predict(self, eval_data, num_batch=None, reset=True):
+        """Iterate over predictions.
+
+            for pred, i_batch, batch in module.iter_predict(eval_data):
+                # pred is a list of outputs from the module
+                # i_batch is a integer
+                # batch is the data batch from the data iterator
+
+        Parameters
+        ----------
+        eval_data : DataIter
+        num_batch : int
+            Default is `None`, indicating running all the batches in the data iterator.
+        reset : bool
+            Default is `True`, indicating whether we should reset the data iter before start
+            doing prediction.
+        """
+        assert self.binded and self.params_initialized
+
+        if reset:
+            eval_data.reset()
+
+        for nbatch, eval_batch in enumerate(eval_data):
+            if num_batch is not None and nbatch == num_batch:
+                break
+            self.forward(eval_batch, is_train=False)
+            pad = eval_batch.pad
+            outputs = [out[0:out.shape[0]-pad] for out in self.get_outputs()]
+
+            yield (outputs, nbatch, eval_batch)
+
     def predict(self, eval_data, num_batch=None, merge_batches=True, reset=True,
-                always_output_list=False):
+                always_output_list=False, as_iterator=False):
         """Run prediction and collect the outputs.
 
         Parameters
         ----------
         eval_data : DataIter
         num_batch : int
-            Default is `None`, indicating run all the batches in the data iterator.
+            Default is `None`, indicating running all the batches in the data iterator.
         merge_batches : bool
             Default is `True`, see the doc for return values.
         reset : bool
@@ -188,6 +219,13 @@ class BaseModule(object):
             doing prediction.
         always_output_list : bool
             Default is `False`, see the doc for return values.
+        as_iterator : bool
+            If true, the prediction results of each batch is yielded using Python generator
+            syntax. So the function results can be used as an iterator to iterate over each
+            batch of prediction. `merge_batches` and `always_output_list` will be ignored.
+            On each batch, a tuple `(outputs, nbatch, batch)` will be yielded. Note if you want to
+            save the yielded value for future use, you might want to make a deep copy as
+            they might be modified from batch to batch.
 
         Returns
         -------
@@ -214,6 +252,7 @@ class BaseModule(object):
             self.forward(eval_batch, is_train=False)
             pad = eval_batch.pad
             outputs = [out[0:out.shape[0]-pad] for out in self.get_outputs()]
+
             output_list.append(outputs)
 
         if len(output_list) == 0:
