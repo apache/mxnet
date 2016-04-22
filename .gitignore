@@ -32,6 +32,7 @@
 doc/html
 doc/latex
 doc/doc
+docs/web-data
 
 #dmlc
 config.mk
@@ -103,3 +104,4 @@ scala-package/*/*/target/
 *.classpath
 *.project
 *.settings
+
