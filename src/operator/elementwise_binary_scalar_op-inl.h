@@ -196,7 +196,7 @@ MXNET_REGISTER_SIMPLE_OP(_minus_scalar, XPU)
 
 MXNET_REGISTER_SIMPLE_OP(_rminus_scalar, XPU)
 .set_symbol_op_name("_RMinusScalar")
-.set_enable_scalar(true, kScalarBeforeArray)
+.set_enable_scalar(true, kArrayBeforeScalar)
 .set_function(XPU::kDevMask,
               BinaryScalarRForward_<XPU, mshadow::op::minus>, kInplaceInOut)
 .set_gradient(XPU::kDevMask,
@@ -220,7 +220,7 @@ MXNET_REGISTER_SIMPLE_OP(_div_scalar, XPU)
 
 MXNET_REGISTER_SIMPLE_OP(_rdiv_scalar, XPU)
 .set_symbol_op_name("_RDivScalar")
-.set_enable_scalar(true, kScalarBeforeArray)
+.set_enable_scalar(true, kArrayBeforeScalar)
 .set_function(XPU::kDevMask,
               BinaryScalarRForward_<XPU, mshadow::op::div>, kInplaceInOut)
 .set_gradient(XPU::kDevMask, DivRBackward_<XPU>, kInplaceOutIn);
@@ -252,7 +252,7 @@ MXNET_REGISTER_SIMPLE_OP(_power_scalar, XPU)
 
 MXNET_REGISTER_SIMPLE_OP(_rpower_scalar, XPU)
 .set_symbol_op_name("_RPowerScalar")
-.set_enable_scalar(true, kScalarBeforeArray)
+.set_enable_scalar(true, kArrayBeforeScalar)
 .set_function(XPU::kDevMask,
               BinaryScalarRForward_<XPU, mshadow_op::power>, kInplaceInOut)
 .set_gradient(XPU::kDevMask,

@@ -922,7 +922,7 @@ class NDArrayConversions(val value: Float) {
   }
 
   def -(other: NDArray): NDArray = {
-    NDArray.invokeGenericFunc("_rminus_scalar", Array[Any](value, other))(0)
+    NDArray.invokeGenericFunc("_rminus_scalar", Array[Any](other, value))(0)
   }
 
   def *(other: NDArray): NDArray = {
@@ -930,7 +930,7 @@ class NDArrayConversions(val value: Float) {
   }
 
   def /(other: NDArray): NDArray = {
-    NDArray.invokeGenericFunc("_rdiv_scalar", Array[Any](value, other))(0)
+    NDArray.invokeGenericFunc("_rdiv_scalar", Array[Any](other, value))(0)
   }
 }
 
