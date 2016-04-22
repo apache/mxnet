@@ -204,7 +204,7 @@ class BaseModule(object):
             yield (outputs, nbatch, eval_batch)
 
     def predict(self, eval_data, num_batch=None, merge_batches=True, reset=True,
-                always_output_list=False, as_iterator=False):
+                always_output_list=False):
         """Run prediction and collect the outputs.
 
         Parameters
@@ -219,13 +219,6 @@ class BaseModule(object):
             doing prediction.
         always_output_list : bool
             Default is `False`, see the doc for return values.
-        as_iterator : bool
-            If true, the prediction results of each batch is yielded using Python generator
-            syntax. So the function results can be used as an iterator to iterate over each
-            batch of prediction. `merge_batches` and `always_output_list` will be ignored.
-            On each batch, a tuple `(outputs, nbatch, batch)` will be yielded. Note if you want to
-            save the yielded value for future use, you might want to make a deep copy as
-            they might be modified from batch to batch.
 
         Returns
         -------
