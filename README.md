@@ -24,6 +24,7 @@ deep learning system, and interesting insights of DL systems for hackers.
 
 What's New
 ----------
+* [MXNet Memory Monger, Training Deeper Nets with Sublinear Memory Cost](https://github.com/dmlc/mxnet-memonger)
 * [Tutorial for NVidia GTC 2016](https://github.com/dmlc/mxnet-gtc-tutorial)
 * [Embedding Torch layers and functions in MXNet](http://mxnet.readthedocs.org/en/latest/how_to/torch.html)
 * [MXNet.js: Javascript Package for Deep Learning in Browser (without server)
