@@ -14,13 +14,13 @@ softmax = mx.symbol.SoftmaxOutput(fc3, name = 'softmax')
 n_epoch = 2
 batch_size = 100
 train_dataiter = mx.io.MNISTIter(
-        image="data/train-images-idx3-ubyte",
-        label="data/train-labels-idx1-ubyte",
+        image="../image-classification/mnist/train-images-idx3-ubyte",
+        label="../image-classification/mnist/train-labels-idx1-ubyte",
         data_shape=(784,),
         batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
 val_dataiter = mx.io.MNISTIter(
-        image="data/t10k-images-idx3-ubyte",
-        label="data/t10k-labels-idx1-ubyte",
+        image="../image-classification/mnist/t10k-images-idx3-ubyte",
+        label="../image-classification/mnist/t10k-labels-idx1-ubyte",
         data_shape=(784,),
         batch_size=batch_size, shuffle=True, flat=True, silent=False)
 
@@ -57,6 +57,13 @@ mod = mx.mod.Module(softmax)
 mod.fit(train_dataiter, eval_data=val_dataiter,
         optimizer_params={'learning_rate':0.01, 'momentum': 0.9}, num_epoch=n_epoch)
 
+# prediction iterator API
+for preds, i_batch, batch in mod.iter_predict(val_dataiter):
+    pred_label = preds[0].asnumpy().argmax(axis=1)
+    label = batch.label[0].asnumpy().astype('int32')
+    if i_batch % 20 == 0:
+        print('batch %03d acc: %.3f' % (i_batch, (label == pred_label).sum() / float(len(pred_label))))
+
 # perform prediction and calculate accuracy manually
 preds = mod.predict(val_dataiter, merge_batches=False)
 val_dataiter.reset()
@@ -72,3 +79,4 @@ print('validation Accuracy: %.3f' % (acc_sum / acc_cnt))
 mod.score(val_dataiter, metric)
 for name, val in metric.get_name_value():
     print('%s=%f' % (name, val))
+
