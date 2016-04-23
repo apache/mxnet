@@ -57,6 +57,7 @@
     <module>core</module>
     <module>native</module>
     <module>examples</module>
+    <module>spark</module>
     <module>assembly</module>
   </modules>
 
