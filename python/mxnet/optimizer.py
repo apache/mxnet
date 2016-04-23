@@ -483,9 +483,9 @@ class Adam(Optimizer):
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
     """
-    def __init__(self, beta1=0.9, beta2=0.999, epsilon=1e-8,
+    def __init__(self, learning_rate=0.002, beta1=0.9, beta2=0.999, epsilon=1e-8,
                  decay_factor=(1 - 1e-8), **kwargs):
-        super(Adam, self).__init__(**kwargs)
+        super(Adam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon

@@ -42,6 +42,7 @@ export LD_LIBRARY_PATH=../../lib:$LD_LIBRARY_PATH
 python lstm_bucketing.py TIMIT
 ```
 
+```
 Example output for TIMIT:
 Summary of dataset ==================
 bucket of len 100 : 3 samples
@@ -49,18 +50,27 @@ bucket of len 200 : 346 samples
 bucket of len 300 : 1496 samples
 bucket of len 400 : 974 samples
 bucket of len 500 : 420 samples
+bucket of len 600 : 90 samples
+bucket of len 700 : 11 samples
+bucket of len 800 : 2 samples
 Summary of dataset ==================
 bucket of len 100 : 0 samples
 bucket of len 200 : 28 samples
 bucket of len 300 : 169 samples
 bucket of len 400 : 107 samples
 bucket of len 500 : 41 samples
-2016-04-18 17:32:52,060 Start training with [gpu(3)]
-2016-04-18 17:33:50,466 Epoch[0] Resetting Data Iterator
-2016-04-18 17:33:50,466 Epoch[0] Train-Accuracy=0.262495
-2016-04-18 17:33:50,466 Epoch[0] Time cost=57.966
-2016-04-18 17:33:56,911 Epoch[0] Validation-Accuracy=0.389623
-2016-04-18 17:34:52,226 Epoch[1] Resetting Data Iterator
-2016-04-18 17:34:52,226 Epoch[1] Train-Accuracy=0.460667
-2016-04-18 17:34:52,226 Epoch[1] Time cost=55.315
-2016-04-18 17:34:58,703 Epoch[1] Validation-Accuracy=0.466534
+bucket of len 600 : 6 samples
+bucket of len 700 : 3 samples
+bucket of len 800 : 0 samples
+2016-04-21 20:02:40,904 Epoch[0] Train-Acc_exlude_padding=0.154763
+2016-04-21 20:02:40,904 Epoch[0] Time cost=91.574
+2016-04-21 20:02:44,419 Epoch[0] Validation-Acc_exlude_padding=0.353552
+2016-04-21 20:04:17,290 Epoch[1] Train-Acc_exlude_padding=0.447318
+2016-04-21 20:04:17,290 Epoch[1] Time cost=92.870
+2016-04-21 20:04:20,738 Epoch[1] Validation-Acc_exlude_padding=0.506458
+2016-04-21 20:05:53,127 Epoch[2] Train-Acc_exlude_padding=0.557543
+2016-04-21 20:05:53,128 Epoch[2] Time cost=92.390
+2016-04-21 20:05:56,568 Epoch[2] Validation-Acc_exlude_padding=0.548100
+```
+
+The final frame accuracy was around 62%.
