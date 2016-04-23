@@ -238,7 +238,7 @@ class SimpleOpRegEntry {
    */
   virtual TSelf& set_enable_scalar(
       bool enable_scalar,
-      SimpleOpScalarOption type_mask = kScalarBeforeArray) = 0;
+      SimpleOpScalarOption type_mask = kArrayBeforeScalar) = 0;
   /*!
    * \brief set whether to enable kwargs
    *  A function cannot have both kwargs and scalar arguments.
