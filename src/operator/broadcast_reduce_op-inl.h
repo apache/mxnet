@@ -104,39 +104,6 @@ inline TShape ReduceChannelShape(const TShape& ishape,
 }
 
 
-template<typename xpu>
-void Transpose(const TBlob &src,
-               const EnvArguments& env,
-               TBlob *ret,
-               OpReqType req,
-               RunContext ctx) {
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  mshadow::Tensor<xpu, 2> out = ret->FlatTo2D<xpu, real_t>(s);
-  mshadow::Tensor<xpu, 2> in = src.FlatTo2D<xpu, real_t>(s);
-  out = in.T();
-}
-
-template<typename xpu>
-void TransposeGrad(const OutputGrad& src,
-                   const EnvArguments& env,
-                   TBlob *ret,
-                   OpReqType req,
-                   RunContext ctx) {
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  mshadow::Tensor<xpu, 2> out = ret->FlatTo2D<xpu, real_t>(s);
-  mshadow::Tensor<xpu, 2> in = src.data.FlatTo2D<xpu, real_t>(s);
-  out = in.T();
-}
-
-inline TShape TransposeShape(const TShape& shp,
-                             const EnvArguments& env) {
-  CHECK(shp.ndim() == 2)
-      << "transpose only accept two dimensional input";
-  std::vector<mshadow::index_t> ret;
-  ret.push_back(shp[1]);
-  ret.push_back(shp[0]);
-  return TShape(ret.begin(), ret.end());
-}
 
 
 // L2 norm
@@ -177,12 +144,6 @@ MXNET_REGISTER_SIMPLE_OP(argmax_channel, XPU)
 .set_shape_function(ReduceChannelShape)
 .describe("Take argmax indices of each channel of the src."
           "The result will be ndarray of shape (num_channel,) on the same device.");
-// transpose
-MXNET_REGISTER_SIMPLE_OP(transpose, XPU)
-.set_function(XPU::kDevMask, Transpose<XPU>, kNoInplace, kRegisterSymbolic)
-.set_shape_function(TransposeShape)
-.set_gradient(XPU::kDevMask, TransposeGrad<XPU>, kNoInplace)
-.describe("Transpose the input matrix and return a new one");
 
 }  // namespace op
 }  // namespace mxnet
