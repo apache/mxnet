@@ -1,7 +1,9 @@
 package ml.dmlc.mxnet.spark
 
 import ml.dmlc.mxnet.optimizer.SGD
+import ml.dmlc.mxnet.spark.io.LabeledPointIter
 import ml.dmlc.mxnet.{Optimizer, KVStore, KVStoreServer}
+import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
@@ -30,9 +32,20 @@ object MXNet {
       PSLauncher.launch("server", spawn = true)
     }
 
-    val input = sc.textFile("/Users/lewis/Workspace/source-codes/forks/mxnet/config.mk")
-    println("Partition #: " + input.partitions.length)
-    input.foreachPartition { partition =>
+    val trainRaw = sc.textFile("/Users/lewis/Workspace/source-codes/forks/mxnet/data/spark/val.txt")
+    val trainData = trainRaw.map { s =>
+      val parts = s.split(' ')
+      val label = java.lang.Double.parseDouble(parts(0))
+      val features = Vectors.dense(parts(1).trim().split(',').map(java.lang.Double.parseDouble))
+      LabeledPoint(label, features)
+    }.repartition(1)
+    val dimension = trainData.first().features.size
+    println(s"Dimension: $dimension")
+
+    println("Partition #: " + trainData.partitions.length)
+    trainData.foreachPartition { partition =>
+      val dataIter = new LabeledPointIter(partition, dimension, 100)
+
       println("PSLauncher launching worker ...")
       //PSLauncher.launch("worker", spawn = false)
       val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
@@ -48,7 +61,13 @@ object MXNet {
         momentum = 0.9f, wd = 0.00001f)
       println("Set optimizer")
       kv.setOptimizer(optimizer)
-      Thread.sleep(5000)
+
+      while (dataIter.hasNext) {
+        val dataBatch = dataIter.next()
+        println(s"Data: ${dataBatch.label.head.toArray.mkString(",")}, " +
+          s"dim = ${dataBatch.data.head.shape}")
+      }
+
       println("PSWorker finished")
       kv.dispose()
     }
