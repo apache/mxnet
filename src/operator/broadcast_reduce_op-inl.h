@@ -52,6 +52,26 @@ void Reduce(const TBlob &src,
   out = mshadow::expr::reduce_except_dim<0, Reducer>(in);
 }
 
+// backward function that takes input value of the op
+template<typename xpu>
+void SumBackward_(const OutputGrad& scale,
+                  const EnvArguments& env,
+                  TBlob *in_grad,
+                  OpReqType req,
+                  RunContext ctx) {
+  using namespace mxnet::op;
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(in_grad->type_flag_, scale.data.type_flag_)
+    << "Unary function only support input/output with the same type";
+  MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
+      mshadow::Tensor<xpu, 1, DType> mscale = scale.data.get<xpu, 1, DType>(s);
+      mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
+      ASSIGN_DISPATCH(igrad, req,
+                      broadcast_scalar(mscale, igrad.shape_));
+  });
+}
+
 template <typename xpu, typename Reducer>
 void ReduceMid(TBlob const& src,
                const EnvArguments& env,
@@ -104,39 +124,6 @@ inline TShape ReduceChannelShape(const TShape& ishape,
 }
 
 
-template<typename xpu>
-void Transpose(const TBlob &src,
-               const EnvArguments& env,
-               TBlob *ret,
-               OpReqType req,
-               RunContext ctx) {
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  mshadow::Tensor<xpu, 2> out = ret->FlatTo2D<xpu, real_t>(s);
-  mshadow::Tensor<xpu, 2> in = src.FlatTo2D<xpu, real_t>(s);
-  out = in.T();
-}
-
-template<typename xpu>
-void TransposeGrad(const OutputGrad& src,
-                   const EnvArguments& env,
-                   TBlob *ret,
-                   OpReqType req,
-                   RunContext ctx) {
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  mshadow::Tensor<xpu, 2> out = ret->FlatTo2D<xpu, real_t>(s);
-  mshadow::Tensor<xpu, 2> in = src.data.FlatTo2D<xpu, real_t>(s);
-  out = in.T();
-}
-
-inline TShape TransposeShape(const TShape& shp,
-                             const EnvArguments& env) {
-  CHECK(shp.ndim() == 2)
-      << "transpose only accept two dimensional input";
-  std::vector<mshadow::index_t> ret;
-  ret.push_back(shp[1]);
-  ret.push_back(shp[0]);
-  return TShape(ret.begin(), ret.end());
-}
 
 
 // L2 norm
@@ -159,8 +146,9 @@ MXNET_REGISTER_SIMPLE_OP(min, XPU)
           "The result will be ndarray of shape (1,) on the same device.");
 // Sum
 MXNET_REGISTER_SIMPLE_OP(sum, XPU)
-.set_function(XPU::kDevMask, Reduce<XPU, mshadow::red::sum>, kNoInplace, kNotRegisterSymbolic)
+.set_function(XPU::kDevMask, Reduce<XPU, mshadow::red::sum>, kNoInplace, kRegisterSymbolic)
 .set_shape_function(ScalarShape)
+.set_gradient(XPU::kDevMask, SumBackward_<XPU>, kNoInplace)
 .describe("Take sum of the src."
           "The result will be ndarray of shape (1,) on the same device.");
 
@@ -177,12 +165,6 @@ MXNET_REGISTER_SIMPLE_OP(argmax_channel, XPU)
 .set_shape_function(ReduceChannelShape)
 .describe("Take argmax indices of each channel of the src."
           "The result will be ndarray of shape (num_channel,) on the same device.");
-// transpose
-MXNET_REGISTER_SIMPLE_OP(transpose, XPU)
-.set_function(XPU::kDevMask, Transpose<XPU>, kNoInplace, kRegisterSymbolic)
-.set_shape_function(TransposeShape)
-.set_gradient(XPU::kDevMask, TransposeGrad<XPU>, kNoInplace)
-.describe("Transpose the input matrix and return a new one");
 
 }  // namespace op
 }  // namespace mxnet
