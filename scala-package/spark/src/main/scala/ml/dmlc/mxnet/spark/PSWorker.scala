@@ -11,8 +11,8 @@ object PSWorker {
     val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
     envs.put("DMLC_ROLE", "worker")
     envs.put("DMLC_PS_ROOT_URI", "127.0.0.1")
-    envs.put("DMLC_PS_ROOT_PORT", "9291")
-    envs.put("DMLC_NUM_WORKER", "2")
+    envs.put("DMLC_PS_ROOT_PORT", "9293")
+    envs.put("DMLC_NUM_WORKER", "1")
     envs.put("DMLC_NUM_SERVER", "1")
     KVStoreServer.init(envs.toMap)
 
@@ -21,6 +21,7 @@ object PSWorker {
       momentum = 0.9f, wd = 0.00001f)
     println("Set optimizer")
     kv.setOptimizer(optimizer)
+    Thread.sleep(5000)
     println("PSWorker finished")
     kv.dispose()
   }

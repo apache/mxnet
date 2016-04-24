@@ -22,73 +22,36 @@ object MXNet {
     val conf = new SparkConf().setAppName("MXNet")
     val sc = new SparkContext(conf)
 
-    val schedulerThread = new Thread(new Runnable {
-      override def run(): Unit = {
-        println("Starting scheduler ...")
-        PSLauncher.launch("scheduler", spawn = true)
-        println("Scheduler started")
-      }
-    })
-    schedulerThread.setDaemon(true)
-    schedulerThread.start()
+    println("Starting scheduler ...")
+    PSLauncher.launch("scheduler", spawn = true)
 
+    sc.parallelize(1 to 1, 1).foreachPartition { p =>
+      println("PSLauncher launching server ...")
+      PSLauncher.launch("server", spawn = true)
+    }
 
     val input = sc.textFile("/Users/lewis/Workspace/source-codes/forks/mxnet/config.mk")
     println("Partition #: " + input.partitions.length)
-    val serverThread = new Thread(new Runnable {
-      override def run(): Unit = {
-        sc.parallelize(1 to 1, 1).foreachPartition { p =>
-          println("PSLauncher launching server ...")
-          PSLauncher.launch("server", spawn = true)
-        }
-      }
-    })
-    serverThread.start()
-    println("server launch thread done")
-    val workerThread = new Thread(new Runnable {
-      override def run(): Unit = {
-        input.foreachPartition { partition =>
-          new Thread(new Runnable {
-            override def run(): Unit = {
-              println("PSLauncher launching worker ...")
-              PSLauncher.launch("worker", spawn = false)
-            }
-          }).start()
-          /*
-          val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
-          envs.put("DMLC_ROLE", "worker")
-          envs.put("DMLC_PS_ROOT_URI", "127.0.0.1")
-          envs.put("DMLC_PS_ROOT_PORT", "9291")
-          envs.put("DMLC_NUM_WORKER", "2")
-          envs.put("DMLC_NUM_SERVER", "1")
-          KVStoreServer.init(envs.toMap)
+    input.foreachPartition { partition =>
+      println("PSLauncher launching worker ...")
+      //PSLauncher.launch("worker", spawn = false)
+      val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
+      envs.put("DMLC_ROLE", "worker")
+      envs.put("DMLC_PS_ROOT_URI", "127.0.0.1")
+      envs.put("DMLC_PS_ROOT_PORT", "9293")
+      envs.put("DMLC_NUM_WORKER", "1")
+      envs.put("DMLC_NUM_SERVER", "1")
+      KVStoreServer.init(envs.toMap)
 
-          val kv = KVStore.create("dist_sync")
-          val optimizer: Optimizer = new SGD(learningRate = 0.01f,
-            momentum = 0.9f, wd = 0.00001f)
-          println("Set optimizer")
-          kv.setOptimizer(optimizer)
-          println("PSWorker finished")
-          kv.dispose()
-          */
-        }
-      }
-    })
-    workerThread.start()
-    println("worker launch thread done")
-    /*
-    val sparkJobThread = new Thread() {
-      override def run() {
-        // force the job
-        boosters.foreachPartition(() => _)
-      }
+      val kv = KVStore.create("dist_sync")
+      val optimizer: Optimizer = new SGD(learningRate = 0.01f,
+        momentum = 0.9f, wd = 0.00001f)
+      println("Set optimizer")
+      kv.setOptimizer(optimizer)
+      Thread.sleep(5000)
+      println("PSWorker finished")
+      kv.dispose()
     }
-    sparkJobThread.start()
-    */
-
-    schedulerThread.join()
-    serverThread.join()
-    workerThread.join()
     sc.stop()
   }
 }
