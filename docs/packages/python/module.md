@@ -1,7 +1,10 @@
+Module Interface HowTo
+======================
+
 The module API provide intermediate-level and high-level interface for computation with neural networks in MXNet. A "module" is an instance of subclasses of `BaseModule`. The most widely used module class is simply called `Module`, which wraps a `Symbol` and one or more `Executor`s. Please refer to the API doc for `BaseModule` below for a full list of functions available. Each specific subclass of modules might have some extra interface functions. We provide here some examples of common use cases. All the module APIs live in the namespace of `mxnet.module` or simply `mxnet.mod`.
 
 Preparing a module for computation
-==================================
+----------------------------------
 
 To construct a module, refer to the constructors of the specific module class. For example, the `Module` class takes a `Symbol` as input,
 
@@ -34,7 +37,7 @@ mod.init_params()
 Now you can compute with the module via functions like `forward()`, `backward()`, etc. If you simply want to fit a module, you do not need to call `bind()` and `init_params()` explicitly, as the `fit()` function will call them automatically if needed.
 
 Training, Predicting, and Evaluating
-====================================
+------------------------------------
 
 Modules provide high-level APIs for training, predicting and evaluating. To fit a module, simply call the `fit()` function with some `DataIter`s:
 
@@ -69,7 +72,7 @@ mod.score(val_dataiter, metric)
 It will run predictions on each batch in the provided `DataIter` and compute the evaluation score using the provided `EvalMetric`. The evaluation results will be stored in `metric` so that you can query later on.
 
 Saving and Loading Module Parameters
-====================================
+------------------------------------
 
 You can save the module parameters in each training epoch by using a `checkpoint` callback.
 
@@ -100,8 +103,8 @@ mod.fit(..., arg_params=arg_params, aux_params=aux_params,
 Note we also pass in `begin_epoch` so that `fit()` knows we are resuming from a previous saved epoch.
 
 
-MXNet Python Module API
-=======================
+Module Interface API
+====================
 
 ```eval_rst
 .. raw:: html
