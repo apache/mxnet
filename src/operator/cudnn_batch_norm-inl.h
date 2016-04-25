@@ -115,7 +115,7 @@ class CuDNNBatchNormOp : public Operator {
                                                       mean_desc_,
                                                       gamma.dptr_,
                                                       beta.dptr_,
-                                                      param_.momentum,
+                                                      1 - param_.momentum,
                                                       moving_mean.dptr_,
                                                       moving_inv_var.dptr_,
                                                       param_.eps,
