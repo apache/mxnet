@@ -10,9 +10,10 @@
 
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
-#include <vector>
-#include <utility>
-#include <string>
+#include <vector>  // NOLINT(*)
+#include <utility> // NOLINT(*)
+#include <string> // NOLINT(*)
+
 #include "../common/utils.h"
 
 namespace mxnet {
