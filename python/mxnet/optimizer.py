@@ -157,7 +157,7 @@ class Optimizer(object):
         """
         self.wd_mult = {}
         for n in self.idx2name.values():
-            if not n.endswith('_weight'):
+            if not (n.endswith('_weight') or n.endswith('_gamma')):
                 self.wd_mult[n] = 0.0
         if self.sym is not None:
             attr = self.sym.list_attr()
