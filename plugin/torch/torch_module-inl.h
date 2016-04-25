@@ -336,9 +336,6 @@ class TorchModuleProp : public OperatorProperty {
     lua_rawgeti(L, LUA_REGISTRYINDEX, lua_reference_);
     CHECK_EQ(in_shape->size(), param_.num_data + param_.num_params);
     CHECK_EQ(out_shape->size(), param_.num_outputs);
-    while (out_shape->size() < param_.num_outputs) {
-      out_shape->push_back(TShape());
-    }
     CHECK_EQ(aux_shape->size(), 0);
     lua_getfield(L, -1, "updateOutput");
     lua_pushvalue(L, -2);  // self
