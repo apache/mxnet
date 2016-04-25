@@ -57,7 +57,6 @@ class L2NormalizationOp : public Operator {
     CHECK_EQ(req[l2_normalization::kOut], kWriteTo);
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 2);
-   
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2> data = in_data[l2_normalization::kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> out = out_data[l2_normalization::kOut].FlatTo2D<xpu, real_t>(s);
