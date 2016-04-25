@@ -107,20 +107,28 @@ function init_model(self :: FeedForward, initializer :: AbstractInitializer; ove
 
   for (name, shape) in filter(x -> in(x[1],param_names), zip(arg_names, arg_shapes))
     if haskey(self.arg_params, name)
-      shape == size(self.arg_params[name]) || error("Shape mismatch for $name.")
-      arg_params[name] = self.arg_params[name]
-    else
-      arg_params[name] = empty(shape)
+      if shape == size(self.arg_params[name])
+        arg_params[name] = self.arg_params[name]
+        continue
+      else
+        warn("Shape mismatch for $name. Overwriting with new one.")
+        delete!(self.arg_params, name)
+      end
     end
+    arg_params[name] = empty(shape)
   end
 
   for (name, shape) in zip(aux_names, aux_shapes)
     if haskey(self.aux_params, name)
-      shape == size(self.arg_params[name]) || error("Shape mismatch for $name.")
-      aux_params[name] = self.aux_params[name]
-    else
-      aux_params[name] = empty(shape)
+      if shape == size(self.auxg_params[name])
+        aux_params[name] = self.aux_params[name]
+        continue
+      else
+        warn("Shape mismatch for $name. Overwriting with new one.")
+        delete!(self.aux_params, name)
+      end
     end
+    aux_params[name] = empty(shape)
   end
 
   for (k,v) in arg_params
