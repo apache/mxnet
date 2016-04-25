@@ -2,7 +2,7 @@
 #' with information from input shapes.
 #'
 #' @export
-mx.simple.bind <- function(symbol, ctx, grad.req=FALSE, ...) {
+mx.simple.bind <- function(symbol, ctx, grad.req = "null", ...) {
   if (!is.MXSymbol(symbol)) stop("symbol need to be MXSymbol")
   slist <- symbol$infer.shape(list(...))
 
@@ -16,9 +16,11 @@ mx.simple.bind <- function(symbol, ctx, grad.req=FALSE, ...) {
     mx.nd.zeros(shape, ctx)
   }, simplify = FALSE, USE.NAMES = TRUE)
   grad.reqs <- lapply(names(slist$arg.shapes), function(nm) {
-    grad.req &&
-    !mx.util.str.endswith(nm, "label") &&
-    !mx.util.str.endswith(nm, "data")
+    if (!mx.util.str.endswith(nm, "label") && !mx.util.str.endswith(nm, "data")) {
+      grad.req
+    } else {
+      "null"
+    }
   })
   mx.symbol.bind(symbol, ctx,
                  arg.arrays=arg.arrays,
@@ -41,6 +43,15 @@ mx.exec.update.arg.arrays <- function(exec, arg.arrays, match.name=FALSE, skip.n
 mx.exec.update.aux.arrays <- function(exec, arg.arrays, match.name=FALSE, skip.null=FALSE) {
   exec$update.aux.arrays(arg.arrays, match.name, skip.null)
 }
+
+#' Update the executors with new arrays
+#' This function will MUTATE the state of exec
+#'
+#' @export
+mx.exec.update.grad.arrays <- function(exec, arg.arrays, match.name=FALSE, skip.null=FALSE) {
+  exec$update.grad.arrays(arg.arrays, match.name, skip.null)
+}
+
 
 #' Peform an forward on the executors
 #' This function will MUTATE the state of exec

@@ -22,6 +22,6 @@ Operator *CreateOp<gpu>(SoftmaxActivationParam param) {
   return new SoftmaxActivationOp<gpu>(param);
 #endif  // MXNET_USE_CUDNN
 }
-}  // op
+}  // namespace op
 }  // namespace mxnet
 

@@ -52,28 +52,28 @@ def CRPS(label, pred):
 def encode_label(label_data):
     """Run encoding to encode the label into the CDF target.
     """
-    stytole = label_data[:, 1]
+    systole = label_data[:, 1]
     diastole = label_data[:, 2]
-    stytole_encode = np.array([
-            (x < np.arange(600)) for x in stytole
+    systole_encode = np.array([
+            (x < np.arange(600)) for x in systole
         ], dtype=np.uint8)
     diastole_encode = np.array([
             (x < np.arange(600)) for x in diastole
         ], dtype=np.uint8)
-    return stytole_encode, diastole_encode
+    return systole_encode, diastole_encode
 
-def encode_csv(label_csv, stytole_csv, diastole_csv):
-    stytole_encode, diastole_encode = encode_label(np.loadtxt(label_csv, delimiter=","))
-    np.savetxt(stytole_csv, stytole_encode, delimiter=",", fmt="%g")
+def encode_csv(label_csv, systole_csv, diastole_csv):
+    systole_encode, diastole_encode = encode_label(np.loadtxt(label_csv, delimiter=","))
+    np.savetxt(systole_csv, systole_encode, delimiter=",", fmt="%g")
     np.savetxt(diastole_csv, diastole_encode, delimiter=",", fmt="%g")
 
 # Write encoded label into the target csv
 # We use CSV so that not all data need to sit into memory
 # You can also use inmemory numpy array if your machine is large enough
-encode_csv("./train-label.csv", "./train-stytole.csv", "./train-diastole.csv")
+encode_csv("./train-label.csv", "./train-systole.csv", "./train-diastole.csv")
 
 
-# # Training the stytole net
+# # Training the systole net
 
 # In[4]:
 
@@ -81,27 +81,27 @@ network = get_lenet()
 batch_size = 32
 devs = [mx.gpu(0)]
 data_train = mx.io.CSVIter(data_csv="./train-64x64-data.csv", data_shape=(30, 64, 64),
-                           label_csv="./train-stytole.csv", label_shape=(600,),
+                           label_csv="./train-systole.csv", label_shape=(600,),
                            batch_size=batch_size)
 
 data_validate = mx.io.CSVIter(data_csv="./validate-64x64-data.csv", data_shape=(30, 64, 64),
                               batch_size=1)
 
-stytole_model = mx.model.FeedForward(ctx=devs,
+systole_model = mx.model.FeedForward(ctx=devs,
         symbol             = network,
         num_epoch          = 65,
         learning_rate      = 0.001,
         wd                 = 0.00001,
         momentum           = 0.9)
 
-stytole_model.fit(X=data_train, eval_metric = mx.metric.np(CRPS))
+systole_model.fit(X=data_train, eval_metric = mx.metric.np(CRPS))
 
 
-# # Predict stytole
+# # Predict systole
 
 # In[5]:
 
-stytole_prob = stytole_model.predict(data_validate)
+systole_prob = systole_model.predict(data_validate)
 
 
 # # Training the diastole net
@@ -156,7 +156,7 @@ def accumulate_result(validate_lst, prob):
 
 # In[9]:
 
-stytole_result = accumulate_result("./validate-label.csv", stytole_prob)
+systole_result = accumulate_result("./validate-label.csv", systole_prob)
 diastole_result = accumulate_result("./validate-label.csv", diastole_prob)
 
 
@@ -196,17 +196,17 @@ def submission_helper(pred):
 fi = csv.reader(open("data/sample_submission_validate.csv"))
 f = open("submission.csv", "w")
 fo = csv.writer(f, lineterminator='\n')
-fo.writerow(fi.__next__())
+fo.writerow(fi.__next__()) # Python2: fo.writerow(fi.next())
 for line in fi:
     idx = line[0]
     key, target = idx.split('_')
     key = int(key)
     out = [idx]
-    if key in stytole_result:
+    if key in systole_result:
         if target == 'Diastole':
             out.extend(list(submission_helper(diastole_result[key])))
         else:
-            out.extend(list(submission_helper(stytole_result[key])))
+            out.extend(list(submission_helper(systole_result[key])))
     else:
         print("Miss: %s" % idx)
         if target == 'Diastole':

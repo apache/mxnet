@@ -157,7 +157,6 @@ class Predictor(object):
             ctypes.byref(pdata),
             ctypes.byref(ndim)))
         shape = tuple(pdata[:ndim.value])
-        print shape
         data = np.empty(shape, dtype=np.float32)
         _check_call(_LIB.MXPredGetOutput(
             self.handle, mx_uint(index),

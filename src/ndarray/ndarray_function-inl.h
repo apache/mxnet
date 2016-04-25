@@ -10,6 +10,16 @@
 #include "./ndarray_function.h"
 // this file will be included twice by CPU and GPU
 // macro to help specialize evaluation function
+
+#ifndef DECL_TERNARY
+#define DECL_TERNARY(XPU, OP, FUN)                                       \
+  template<>                                                            \
+  void Eval<XPU, OP>(const TBlob &lhs, const TBlob &mhs, \
+                                       const TBlob &rhs, TBlob *ret, RunContext ctx) { \
+    FUN<XPU, OP>(lhs, mhs, rhs, ret, ctx);                                   \
+  }
+#endif
+
 #ifndef DECL_BINARY
 #define DECL_BINARY(XPU, OP, FUN)                                       \
   template<>                                                            \
@@ -51,20 +61,6 @@ inline void EvalBinary_(const TBlob &lhs, const TBlob &rhs,
   });
 }
 
-template<typename xpu, typename OP>
-inline void EvalDot_(const TBlob &lhs, const TBlob &rhs,
-                     TBlob *ret, RunContext ctx) {
-  using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  CHECK_EQ(ret->type_flag_, lhs.type_flag_)
-    << "Only support input/output with the same data type";
-  CHECK_EQ(ret->type_flag_, rhs.type_flag_)
-    << "Only support input/output with the same data type";
-  MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
-    ret->FlatTo2D<xpu, DType>(s) = dot(lhs.FlatTo2D<xpu, DType>(s),
-                                       rhs.FlatTo2D<xpu, DType>(s));
-  });
-}
 
 template<typename xpu, typename OP>
 inline void EvalOneHot_(const TBlob &index, const TBlob &rhs,
@@ -98,6 +94,17 @@ inline void EvalMatChooseRowElem_(const TBlob &lhs, const TBlob &rhs,
   ret->get<xpu, 1, real_t>(s)
       = mat_choose_row_element(lhs.get<xpu, 2, real_t>(s),
                                rhs.get<xpu, 1, real_t>(s));
+}
+
+template<typename xpu, typename OP>
+inline void EvalMatFillRowElem_(const TBlob &lhs, const TBlob &mhs, const TBlob &rhs,
+                                  TBlob *ret, RunContext ctx) {
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  ret->get<xpu, 2, real_t>(s)
+          = mat_fill_row_element(lhs.get<xpu, 2, real_t>(s),
+                                 mhs.get<xpu, 1, real_t>(s),
+                                 rhs.get<xpu, 1, real_t>(s));
 }
 
 template<typename xpu, typename OP, bool reverse>
@@ -251,9 +258,18 @@ void ElementwiseSum<DEVICE>(const std::vector<TBlob> source,
   });
 }
 
+template <>
+void EvalBroadcast<DEVICE>(TBlob const& src, TBlob* ret, int size, RunContext ctx) {
+  typedef DEVICE xpu;
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  mshadow::Tensor<xpu, 3> out = ret->get<xpu, 3, real_t>(s);
+  mshadow::Tensor<xpu, 2> in = src.get<xpu, 2, real_t>(s);
+  out = mshadow::expr::broadcast_with_axis(in, 0, size);
+}
+
 // declarations
 DECL_BINARY(DEVICE, MatChooseRowElem, EvalMatChooseRowElem_)
-DECL_BINARY(DEVICE, Dot, EvalDot_)
+DECL_TERNARY(DEVICE, MatFillRowElem, EvalMatFillRowElem_)
 DECL_BINARY(DEVICE, OneHotEncode, EvalOneHot_)
 DECL_BINARY(DEVICE, Plus, EvalBinary_)
 DECL_BINARY(DEVICE, Minus, EvalBinary_)

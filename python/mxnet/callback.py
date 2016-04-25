@@ -27,13 +27,15 @@ def do_checkpoint(prefix):
     return _callback
 
 
-def log_train_metric(period):
+def log_train_metric(period, auto_reset=False):
     """Callback to log the training evaluation result every period.
 
     Parameters
     ----------
     period : int
         The number of batch to log the training evaluation metric.
+    auto_reset : bool
+        Reset the metric after each log
 
     Returns
     -------
@@ -42,10 +44,13 @@ def log_train_metric(period):
     """
     def _callback(param):
         """The checkpoint function."""
-        if param.nbatch % period == 0:
-            name, value = param.eval_metric.get()
-            logging.info('Iter[%d] Batch[%d] Train-%s=%f',
-                         param.epoch, param.nbatch, name, value)
+        if param.nbatch % period == 0 and param.eval_metric is not None:
+            name_value = param.eval_metric.get_name_value()
+            for name, value in name_value:
+                logging.info('Iter[%d] Batch[%d] Train-%s=%f',
+                             param.epoch, param.nbatch, name, value)
+            if auto_reset:
+                param.eval_metric.reset()
     return _callback
 
 
@@ -57,7 +62,7 @@ class Speedometer(object):
     batch_size: int
         batch_size of data
     frequent: int
-        calcutaion frequent
+        calculation frequent
     """
     def __init__(self, batch_size, frequent=50):
         self.batch_size = batch_size
@@ -77,9 +82,10 @@ class Speedometer(object):
             if count % self.frequent == 0:
                 speed = self.frequent * self.batch_size / (time.time() - self.tic)
                 if param.eval_metric is not None:
-                    name, value = param.eval_metric.get()
-                    logging.info("Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%f",
-                                 param.epoch, count, speed, name, value)
+                    name_value = param.eval_metric.get_name_value()
+                    for name, value in name_value:
+                        logging.info('Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%f',
+                                     param.epoch, count, speed, name, value)
                 else:
                     logging.info("Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
                                  param.epoch, count, speed)

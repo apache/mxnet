@@ -73,14 +73,14 @@ loading function to load the model into R.
 
 
 ```r
-model = mx.model.load("Inception/Inception_BN", iteration=39)
+model <- mx.model.load("Inception/Inception_BN", iteration=39)
 ```
 
 We also need to load in the mean image, which is used for preprocessing using ```mx.nd.load```.
 
 
 ```r
-mean.img = as.array(mx.nd.load("Inception/mean_224.nd")[["mean_img"]])
+mean.img <- as.array(mx.nd.load("Inception/mean_224.nd")[["mean_img"]])
 ```
 
 Load and Preprocess the Image
@@ -92,7 +92,7 @@ Load and plot the image:
 
 
 ```r
-im <- load.image(system.file("extdata/parrots.png", package="imager"))
+im <- load.image(system.file("extdata/parrots.png", package = "imager"))
 plot(im)
 ```
 
@@ -107,7 +107,7 @@ The preprocessing function:
 
 
 ```r
-preproc.image <-function(im, mean.image) {
+preproc.image <- function(im, mean.image) {
   # crop the image
   shape <- dim(im)
   short.edge <- min(shape[1:2])
@@ -120,7 +120,7 @@ preproc.image <-function(im, mean.image) {
   resized <- resize(croped, 224, 224)
   # convert to array (x, y, channel)
   arr <- as.array(resized)
-  dim(arr) = c(224, 224, 3)
+  dim(arr) <- c(224, 224, 3)
   # substract the mean
   normed <- arr - mean.img
   # Reshape to format needed by mxnet (width, height, channel, num)
@@ -143,7 +143,7 @@ to get the probability over classes.
 
 
 ```r
-prob <- predict(model, X=normed)
+prob <- predict(model, X = normed)
 dim(prob)
 ```
 

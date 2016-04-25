@@ -43,8 +43,16 @@ class GraphExecutor : public Executor {
                    const std::vector<NDArray> &in_args,
                    const std::vector<NDArray> &arg_grad_store,
                    const std::vector<OpReqType> &grad_req_type,
-                   const std::vector<NDArray> &aux_states) {
+                   const std::vector<NDArray> &aux_states,
+                   Executor* shared_exec = nullptr) {
     enable_inplace_allocation_ = dmlc::GetEnv("MXNET_EXEC_ENABLE_INPLACE", true);
+    if (shared_exec != NULL) {
+      GraphExecutor* gexec = dynamic_cast<GraphExecutor*>(shared_exec);
+      CHECK(gexec) << "Input executor for sharing memory must have GraphExecutor type.";
+      shared_mem_ = gexec->shared_mem_;
+    } else {
+      shared_mem_ = std::make_shared<GraphStoragePool>();
+    }
 
     CHECK_EQ(grad_req_type.size(), arg_grad_store.size());
     bool need_backward = false;
@@ -65,9 +73,9 @@ class GraphExecutor : public Executor {
   class BackwardOpWrapper;
   // type of data entry
   enum DataEntryType {
-    // memory is binded by external NDArray in Bind
+    // memory is bound by external NDArray in Bind
     kBindByExternal,
-    // to be binded by external NDArray in Forward and Backward
+    // to be bound by external NDArray in Forward and Backward
     kTobeBindByExternal,
     // internal memory, allocated
     kInternalAllocated,
@@ -234,6 +242,8 @@ class GraphExecutor : public Executor {
   std::vector<OpNode> op_nodes_;
   // head NDArrays
   std::vector<NDArray> heads_ndarray_;
+  // shared NDArrays
+  std::shared_ptr<GraphStoragePool> shared_mem_;
   // monitor call back
   std::function<void(const char*, void*)> monitor_callback_;
 };  // class GraphExecutor

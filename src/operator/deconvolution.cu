@@ -8,7 +8,7 @@
 #include "./deconvolution-inl.h"
 #if MXNET_USE_CUDNN == 1
 #include "./cudnn_deconvolution-inl.h"
-#endif // MXNET_USE_CUDNN
+#endif  // MXNET_USE_CUDNN
 
 namespace mxnet {
 namespace op {
@@ -18,7 +18,7 @@ Operator* CreateOp<gpu>(DeconvolutionParam param) {
   return new CuDNNDeconvolutionOp(param);
 #else
   return new DeconvolutionOp<gpu>(param);
-#endif // MXNET_USE_CUDNN
+#endif  // MXNET_USE_CUDNN
 }
 
 }  // namespace op

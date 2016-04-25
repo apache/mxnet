@@ -1,3 +1,9 @@
+/*!
+ *  Copyright (c) 2015 by Contributors
+ * \file ndarray_function_cpu.cc
+ * \brief GPU Implementation of ndarray function.
+ */
+
 // this will be invoked by nvcc and compile GPU version
 #include <dmlc/logging.h>
 #include "./ndarray_function.h"

@@ -98,7 +98,7 @@ program on this [tutorial](http://mxnet.readthedocs.org/en/latest/distributed_tr
 ### Predict
 
 - [predict with pre-trained model](../notebooks/predict-with-pretrained-model.ipynb)
-- more pre-trained models are provided on the [model gallery](https://github.com/dmlc/mxnet-model-gallerya).
+- more pre-trained models are provided on the [model gallery](https://github.com/dmlc/mxnet-model-gallery).
 - We can also easily to run the prediction on various devices, such as
 [Android/iOS](http://dmlc.ml/mxnet/2015/11/10/deep-learning-in-a-single-file-for-smart-device.html)
 

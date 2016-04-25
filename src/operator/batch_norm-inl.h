@@ -22,7 +22,7 @@ namespace op {
 
 namespace batchnorm {
 enum BatchNormOpInputs {kData, kGamma, kBeta};
-enum BatchNormOpOutputs {kOut, kMean, kVar, kOutNoAffine};
+enum BatchNormOpOutputs {kOut, kMean, kVar};
 enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};
 enum BatchNormBackResource {kTempSpace};
 }  // namespace batchnorm
@@ -55,12 +55,11 @@ class BatchNormOp : public Operator {
                        const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    const size_t expected_out = this->param_.fix_gamma ? 3 : 4;
     CHECK_EQ(in_data.size(), 3);
     CHECK_EQ(aux_states.size(), 2);
     if (ctx.is_train) {
-      CHECK_EQ(out_data.size(), expected_out);
-      CHECK_EQ(req.size(), expected_out);
+      CHECK_EQ(out_data.size(), 3);
+      CHECK_EQ(req.size(), 3);
     } else {
       CHECK_GE(out_data.size(), 1);
       CHECK_GE(req.size(), 1);
@@ -71,22 +70,15 @@ class BatchNormOp : public Operator {
     const real_t scale = static_cast<real_t>(in_data[batchnorm::kData].shape_[1]) /
                          static_cast<real_t>(in_data[batchnorm::kData].shape_.Size());
     Tensor<xpu, 4> data;
-    Tensor<xpu, 4> out, out_no_affine;
+    Tensor<xpu, 4> out;
     if (in_data[batchnorm::kData].ndim() == 2) {
       Shape<4> dshape = Shape4(in_data[batchnorm::kData].shape_[0],
                                in_data[batchnorm::kData].shape_[1], 1, 1);
       data = in_data[batchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       out = out_data[batchnorm::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
-      if (ctx.is_train && !param_.fix_gamma) {
-        out_no_affine = out_data[batchnorm::kOutNoAffine].get_with_shape<xpu, 4, real_t>(dshape,
-                                                                                         s);
-      }
     } else {
       data = in_data[batchnorm::kData].get<xpu, 4, real_t>(s);
       out = out_data[batchnorm::kOut].get<xpu, 4, real_t>(s);
-      if (ctx.is_train && !param_.fix_gamma) {
-        out_no_affine = out_data[batchnorm::kOutNoAffine].get<xpu, 4, real_t>(s);
-      }
     }
     Tensor<xpu, 1> slope = in_data[batchnorm::kGamma].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> bias = in_data[batchnorm::kBeta].get<xpu, 1, real_t>(s);
@@ -107,11 +99,10 @@ class BatchNormOp : public Operator {
                F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
                broadcast<1>(bias, out.shape_));
       } else {
-        CHECK(req[batchnorm::kOutNoAffine] == kNullOp || req[batchnorm::kOutNoAffine] == kWriteTo);
-        out_no_affine = (data - broadcast<1>(mean, data.shape_)) /
-                       F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_));
-        Assign(out, req[batchnorm::kOut], out_no_affine * broadcast<1>(slope, out.shape_) +
-              broadcast<1>(bias, out.shape_));
+        Assign(out, req[batchnorm::kOut], broadcast<1>(slope, out.shape_) *
+               (data - broadcast<1>(mean, data.shape_)) /
+               F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
+               broadcast<1>(bias, out.shape_));
       }
     } else {
       Assign(out, req[batchnorm::kOut], broadcast<1>(slope /
@@ -131,14 +122,12 @@ class BatchNormOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    const size_t expected_out = param_.fix_gamma ? 3 : 4;
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(in_data.size(), 3);
-    CHECK_EQ(out_data.size(), expected_out);
+    CHECK_EQ(out_data.size(), 3);
     CHECK_EQ(in_grad.size(), 3);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data, grad, grad_in;
-    Tensor<xpu, 4> out_no_affine;
     const real_t scale = static_cast<real_t>(out_grad[batchnorm::kOut].shape_[1]) /
                          static_cast<real_t>(out_grad[batchnorm::kOut].shape_.Size());
     if (in_data[batchnorm::kData].ndim() == 2) {
@@ -147,17 +136,10 @@ class BatchNormOp : public Operator {
       data = in_data[batchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       grad = out_grad[batchnorm::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
       grad_in = in_grad[batchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
-      if (!param_.fix_gamma) {
-        out_no_affine = out_data[batchnorm::kOutNoAffine].get_with_shape<xpu, 4, real_t>(dshape,
-                                                                                         s);
-      }
     } else {
       data = in_data[batchnorm::kData].get<xpu, 4, real_t>(s);
       grad = out_grad[batchnorm::kOut].get<xpu, 4, real_t>(s);
       grad_in = in_grad[batchnorm::kData].get<xpu, 4, real_t>(s);
-      if (!param_.fix_gamma) {
-        out_no_affine = out_data[batchnorm::kOutNoAffine].get<xpu, 4, real_t>(s);
-      }
     }
 
     Tensor<xpu, 1> mean = out_data[batchnorm::kMean].get<xpu, 1, real_t>(s);
@@ -191,7 +173,9 @@ class BatchNormOp : public Operator {
     gmean += tmp;
     // assign
     if (!param_.fix_gamma) {
-      Assign(gslope, req[batchnorm::kGamma], sumall_except_dim<1>(grad * out_no_affine));
+      Assign(gslope, req[batchnorm::kGamma],
+           sumall_except_dim<1>(grad * (data - broadcast<1>(mean, data.shape_)) /
+           F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_))));
       Assign(grad_in, req[batchnorm::kData], (grad * broadcast<1>(slope, data.shape_)) *
            broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps), data.shape_) +
            broadcast<1>(gvar, data.shape_) * scale * 2.0f * (data - broadcast<1>(mean,
@@ -239,9 +223,7 @@ class BatchNormProp : public OperatorProperty {
     out_shape->push_back(dshape);
     out_shape->push_back(Shape1(dshape[1]));
     out_shape->push_back(Shape1(dshape[1]));
-    if (!param_.fix_gamma) {
-      out_shape->push_back(dshape);
-    }
+
     aux_shape->clear();
     aux_shape->push_back(Shape1(dshape[1]));
     aux_shape->push_back(Shape1(dshape[1]));
@@ -262,32 +244,13 @@ class BatchNormProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    if (param_.fix_gamma) {
-      return {out_grad[batchnorm::kOut],
-              out_data[batchnorm::kMean],
-              out_data[batchnorm::kVar],
-              in_data[batchnorm::kData],
-              in_data[batchnorm::kGamma],
-              in_data[batchnorm::kBeta]
-            };
-    } else {
-      return {out_grad[batchnorm::kOut],
-              out_data[batchnorm::kOutNoAffine],
-              out_data[batchnorm::kMean],
-              out_data[batchnorm::kVar],
-              in_data[batchnorm::kData],
-              in_data[batchnorm::kGamma],
-              in_data[batchnorm::kBeta]
-            };
-    }
-  }
-
-  std::vector<std::pair<int, void*> > BackwardInplaceOption(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data,
-    const std::vector<void*> &in_grad) const override {
-    return {{out_grad[batchnorm::kOut], in_grad[batchnorm::kData]}};
+    return {out_grad[batchnorm::kOut],
+            out_data[batchnorm::kMean],
+            out_data[batchnorm::kVar],
+            in_data[batchnorm::kData],
+            in_data[batchnorm::kGamma],
+            in_data[batchnorm::kBeta]
+           };
   }
 
   std::vector<ResourceRequest> BackwardResource(
@@ -300,7 +263,7 @@ class BatchNormProp : public OperatorProperty {
   }
 
   int NumOutputs() const override {
-    return param_.fix_gamma ? 3 : 4;
+    return 3;
   }
 
   std::vector<std::string> ListArguments() const override {
@@ -308,11 +271,7 @@ class BatchNormProp : public OperatorProperty {
   }
 
   std::vector<std::string> ListOutputs() const override {
-    if (param_.fix_gamma) {
-      return {"output", "mean", "var"};
-    } else {
-      return {"output", "mean", "var", "output_no_affine"};
-    }
+    return {"output", "mean", "var"};
   }
 
   std::vector<std::string> ListAuxiliaryStates() const override {

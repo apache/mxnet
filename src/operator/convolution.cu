@@ -8,17 +8,23 @@
 #include "./convolution-inl.h"
 #if MXNET_USE_CUDNN == 1
 #include "./cudnn_convolution-inl.h"
-#endif // MXNET_USE_CUDNN
+#endif  // MXNET_USE_CUDNN
 
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateOp<gpu>(ConvolutionParam param) {
+Operator* CreateOp<gpu>(ConvolutionParam param, int dtype) {
+  Operator *op = NULL;
 #if MXNET_USE_CUDNN == 1
-  return new CuDNNConvolutionOp(param);
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op = new CuDNNConvolutionOp<DType>(param);
+  })
 #else
-  return new ConvolutionOp<gpu>(param);
-#endif // MXNET_USE_CUDNN
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op = new ConvolutionOp<gpu, DType>(param);
+  })
+#endif  // MXNET_USE_CUDNN
+  return op;
 }
 
 }  // namespace op

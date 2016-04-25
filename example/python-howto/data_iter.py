@@ -7,15 +7,15 @@ All you need to do is to set some parameters.
 import mxnet as mx
 
 dataiter = mx.io.ImageRecordIter(
-        # Dataset Paramter
+        # Dataset Parameter
         # Impulsary
         # indicating the data file, please check the data is already there
         path_imgrec="data/cifar/train.rec",
-        # Dataset/Augment Paramter
+        # Dataset/Augment Parameter
         # Impulsary
         # indicating the image size after preprocessing
         data_shape=(3,28,28),
-        # Batch Paramter
+        # Batch Parameter
         # Impulsary
         # tells how many images in a batch
         batch_size=100,
@@ -29,7 +29,7 @@ dataiter = mx.io.ImageRecordIter(
         rand_crop=True,
         # Augmentation Parameter
         # Optional
-        # randly mirror the image horizontally
+        # randomly mirror the image horizontally
         rand_mirror=True,
         # Augmentation Parameter
         # Optional

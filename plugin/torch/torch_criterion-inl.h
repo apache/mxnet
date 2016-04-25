@@ -46,14 +46,14 @@ template<typename xpu>
 class TorchCriterionOp : public Operator {
  private:
   TorchCriterionParam param_;
-
- protected:
-  THCharStorage* chunk_;
+  TorchState* torchState_;
+  int lua_reference_;
 
  public:
-  explicit TorchCriterionOp(TorchCriterionParam p) : chunk_(NULL) {
+  explicit TorchCriterionOp(TorchCriterionParam p) {
     this->param_ = p;
-    lua_State* L = TorchState::LuaState();
+    this->torchState_ = new TorchState();
+    lua_State *L = torchState_->L;
     CHECK_EQ(lua_gettop(L), 0);
     std::string exec = std::string("return ") + p.lua_string
       + TorchTensor::ModuleType(xpu::kDevMask);
@@ -61,22 +61,26 @@ class TorchCriterionOp : public Operator {
     int err = lua_pcall(L, 0, 1, 0);
     CHECK_EQ(err, 0) << lua_tostring(L, -1);
     // serialize
-    TorchState::Serialize(&chunk_);
+    this->lua_reference_ = lua_ref(L, LUA_REGISTRYINDEX);
   }
+
+  ~TorchCriterionOp() {
+    delete this->torchState_;
+  }
+
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
-    lua_State* L = TorchState::LuaState();
+    lua_State *L = torchState_->L;
     CHECK_EQ(lua_gettop(L), 0);
     CHECK_EQ(in_data.size(), 2);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    TorchState::SetStream(s);
-    // Deserialize self table
-    TorchState::Deserialize(chunk_);
+    torchState_->SetStream(s);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, lua_reference_);
     // call forward
     // | self
     lua_getfield(L, -1, "forward");
@@ -84,7 +88,7 @@ class TorchCriterionOp : public Operator {
     lua_pushvalue(L, -2);
     // | self | forward | self
     for (index_t i = 0; i < in_data.size(); ++i) {
-      THGeneralTensor th = TorchTensor::TBlobToTHTensor(in_data[i]);
+      THGeneralTensor th = TorchTensor::TBlobToTHTensor(torchState_, in_data[i]);
       luaT_pushudata(L, th, TorchTensor::TensorType(in_data[i]));
     }
     // | self | forward | self | pred | label
@@ -95,7 +99,7 @@ class TorchCriterionOp : public Operator {
     lua_pop(L, 1);
     Tensor<xpu, 2> out = out_data[0].FlatTo2D<xpu, real_t>(s);
     Assign(out, req[0], loss*param_.grad_scale);
-    TorchState::Serialize(&chunk_);
+    lua_pop(L, 1);
     CHECK_EQ(lua_gettop(L), 0);
   }
 
@@ -107,16 +111,16 @@ class TorchCriterionOp : public Operator {
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
-    lua_State* L = TorchState::LuaState();
+    lua_State *L = torchState_->L;
     CHECK_EQ(lua_gettop(L), 0);
     CHECK_EQ(in_data.size(), 2);
     CHECK_EQ(out_data.size(), 1);
     CHECK_EQ(req[0], kWriteTo) << "Torch Criterion only supports write to in_grad";
     CHECK_EQ(req[1], kNullOp) << "Torch Criterion cannot back prop to label";
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    TorchState::SetStream(s);
-    TorchState::Deserialize(chunk_);
-    THGeneralTensor th = TorchTensor::TBlobToTHTensor(in_grad[0]);
+    torchState_->SetStream(s);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, lua_reference_);
+    THGeneralTensor th = TorchTensor::TBlobToTHTensor(torchState_, in_grad[0]);
     luaT_pushudata(L, th, TorchTensor::TensorType(in_grad[0]));
     lua_setfield(L, -2, "gradInput");
     lua_getfield(L, -1, "backward");
@@ -124,7 +128,7 @@ class TorchCriterionOp : public Operator {
     lua_pushvalue(L, -2);
     // | self | backward | self
     for (index_t i = 0; i < in_data.size(); ++i) {
-      th = TorchTensor::TBlobToTHTensor(in_data[i]);
+      th = TorchTensor::TBlobToTHTensor(torchState_, in_data[i]);
       luaT_pushudata(L, th, TorchTensor::TensorType(in_data[i]));
     }
     // | self | forward | self | pred | label
@@ -132,7 +136,7 @@ class TorchCriterionOp : public Operator {
     CHECK_EQ(err, 0) << lua_tostring(L, -1);
     Tensor<xpu, 2> grad = in_grad[0].FlatTo2D<xpu, real_t>(s);
     grad *= param_.grad_scale * in_grad[0].shape_[0];
-    TorchState::Serialize(&chunk_);
+    lua_pop(L, 1);
     CHECK_EQ(lua_gettop(L), 0);
   }
 };  // class TorchCriterionOp
@@ -195,6 +199,8 @@ class TorchCriterionProp : public OperatorProperty {
     const std::vector<int> &out_data) const override {
     std::vector<int> dep;
     dep.insert(dep.end(), in_data.begin(), in_data.end());
+    // Ensure that the backward and forward cannot be called at the same time
+    dep.insert(dep.end(), out_data.begin(), out_data.end());
     return dep;
   }
 

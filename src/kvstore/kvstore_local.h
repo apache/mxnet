@@ -211,7 +211,7 @@ class KVStoreLocal : public KVStore {
   // reduce sum into val[0]
   // this is performance critical
   inline void ReduceSumCPU(const std::vector<NDArray> &in_data) {
-    const size_t step = 4 << 10;
+    const size_t step = std::min(bigarray_bound_, static_cast<size_t>(4 << 10));
     // ge ptr out
     std::vector<real_t*> dptr(in_data.size());
     for (size_t i = 0; i < in_data.size(); ++i) {
@@ -220,7 +220,7 @@ class KVStoreLocal : public KVStore {
       dptr[i] = data.FlatTo2D<cpu, real_t>().dptr_;
     }
     size_t total = in_data[0].shape().Size();
-    long ntask = (total + 1 - step) / step; // NOLINT(*)
+    long ntask = (total + step - 1) / step; // NOLINT(*)
     if (total < bigarray_bound_ || nthread_reduction_ <= 1) {
       ReduceSumCPU(dptr, 0, total);
     } else {
@@ -229,6 +229,7 @@ class KVStoreLocal : public KVStore {
         size_t k = static_cast<size_t>(j);
         size_t begin = std::min(k * step, total);
         size_t end = std::min((k + 1) * step, total);
+        if (j == ntask - 1) CHECK_EQ(end, total);
         ReduceSumCPU(dptr, begin, static_cast<index_t>(end - begin));
       }
     }
