@@ -92,31 +92,50 @@ function init_model(self :: FeedForward, initializer :: AbstractInitializer; ove
   param_names = setdiff(arg_names, input_names)
   aux_names   = list_auxiliary_states(self.arch)
 
-  arg_defined = true
-  aux_defined = true
-
   arg_shapes, out_shapes, aux_shapes = infer_shape(self.arch; input_shapes...)
+
+  # If target dict is not yet defined set a temporary one
   if !isdefined(self, :arg_params)
-    param_name_shapes = filter(x -> in(x[1],param_names), zip(arg_names, arg_shapes))
-    self.arg_params = Dict([name => empty(shape) for (name,shape) in param_name_shapes])
-    arg_defined = false
+    self.arg_params = Dict{Symbol, NDArray}()
   end
   if !isdefined(self, :aux_params)
-    self.aux_params = Dict([name => empty(shape) for (name,shape) in zip(aux_names,aux_shapes)])
-    aux_defined = false
+    self.aux_params = Dict{Symbol, NDArray}()
   end
 
-  # initialize the contents of the parameters
-  if !arg_defined || overwrite
-    for (k,v) in self.arg_params
+  arg_params = Dict{Symbol, NDArray}()
+  aux_params = Dict{Symbol, NDArray}()
+
+  for (name, shape) in filter(x -> in(x[1],param_names), zip(arg_names, arg_shapes))
+    if haskey(self.arg_params, name)
+      shape == size(self.arg_params[name]) || error("Shape mismatch for $name.")
+      arg_params[name] = self.arg_params[name]
+    else
+      arg_params[name] = empty(shape)
+    end
+  end
+
+  for (name, shape) in zip(aux_names, aux_shapes)
+    if haskey(self.aux_params, name)
+      shape == size(self.arg_params[name]) || error("Shape mismatch for $name.")
+      aux_params[name] = self.aux_params[name]
+    else
+      aux_params[name] = empty(shape)
+    end
+  end
+
+  for (k,v) in arg_params
+    if overwrite || !haskey(self.arg_params, k)
       init(initializer, k, v)
     end
   end
-  if !aux_defined || overwrite
-    for (k,v) in self.aux_params
+  for (k,v) in aux_params
+    if overwrite || !haskey(self.aux_params, k)
       init(initializer, k, v)
     end
   end
+
+  self.arg_params = arg_params
+  self.aux_params = aux_params
 
   return (arg_names, param_names, aux_names)
 end
