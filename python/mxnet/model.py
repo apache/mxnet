@@ -270,10 +270,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
             if epoch_size is None or nbatch >= epoch_size:
                 break
 
-        name_value = eval_metric.get_name_value()
-        for name, value in name_value:
-            logger.info('Epoch[%d] Train-%s=%f', epoch, name, value)
-
         toc = time.time()
         logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc - tic))
 
