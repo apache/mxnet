@@ -35,6 +35,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
                   auxParams: Map[String, NDArray] = null,
                   allowExtraParams: Boolean = false,
                   val beginEpoch: Int = 0) {
+  val logger: Logger = LoggerFactory.getLogger(classOf[FeedForward])
   // check if symbol contain duplicated names.
   Executor.checkArguments(symbol)
 
@@ -81,6 +82,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
   // Initialize weight parameters and auxiliary states
   private def initParams(inputShapes: Map[String, Shape], overwrite: Boolean = false)
   : (Seq[String], Seq[String], Seq[String]) = {
+    logger.debug("Init params")
     val (argShapes, _, auxShapes) = symbol.inferShape(inputShapes)
     val argNames = symbol.listArguments()
     val inputNames = inputShapes.keys
@@ -97,6 +99,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
       (name, NDArray.zeros(shape))
     }.toMap
 
+    logger.debug("Initialize argParams")
     for ((k, v) <- argParams) {
       if (_argParams != null && _argParams.contains(k) && (!overwrite)) {
         argParams(k).set(_argParams(k))
@@ -105,6 +108,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
       }
     }
 
+    logger.debug("Initialize auxParams")
     for ((k, v) <- auxParams) {
       if (_auxParams != null && _auxParams.contains(k) && (!overwrite)) {
         auxParams(k).set(_auxParams(k))
@@ -270,6 +274,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
                   epochEndCallback: EpochEndCallback = null,
                   batchEndCallback: BatchEndCallback = null, logger: Logger = FeedForward.logger,
                   workLoadList: Seq[Float] = null): Unit = {
+    logger.debug("Fitting ...")
     require(evalMetric != null, "evalMetric cannot be null")
     val (argNames, paramNames, auxNames) =
       initParams(trainData.provideData ++ trainData.provideLabel)
@@ -286,6 +291,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
     this.optimizer.setArgNames(argNames)
     this.optimizer.setRescaleGrad(1f / batchSize)
 
+    logger.debug("Start training on multi-device")
     Model.trainMultiDevice(
       symbol, ctx, argNames, paramNames, auxNames,
       _argParams, _auxParams,

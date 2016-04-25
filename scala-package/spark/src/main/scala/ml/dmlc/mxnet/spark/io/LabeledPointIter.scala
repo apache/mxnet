@@ -8,7 +8,9 @@ import scala.collection.mutable.ArrayBuffer
 class LabeledPointIter(
   private val points: Iterator[LabeledPoint],
   private val dimension: Int,
-  private val _batchSize: Int) extends DataIter {
+  private val _batchSize: Int,
+  private val dataName: String = "data",
+  private val labelName: String = "label") extends DataIter {
 
   private val cache: ArrayBuffer[DataBatch] = ArrayBuffer.empty[DataBatch]
   private var index: Int = -1
@@ -30,7 +32,7 @@ class LabeledPointIter(
       cache(index)
     } else {
       val dataBuilder = NDArray.empty(_batchSize, dimension)
-      val labelBuilder = NDArray.empty(_batchSize, 1)
+      val labelBuilder = NDArray.empty(_batchSize)
       var instNum = 0
       while (instNum < batchSize && points.hasNext) {
         val point = points.next()
@@ -86,10 +88,14 @@ class LabeledPointIter(
   }
 
   // The name and shape of label provided by this iterator
-  override def provideLabel: Map[String, Shape] = ???
+  override def provideLabel: Map[String, Shape] = {
+    Map(labelName -> Shape(_batchSize))
+  }
 
   // The name and shape of data provided by this iterator
-  override def provideData: Map[String, Shape] = ???
+  override def provideData: Map[String, Shape] = {
+    Map(dataName -> Shape(_batchSize, dimension))
+  }
 
   /**
    * Get the number of padding examples

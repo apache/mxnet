@@ -1,8 +1,9 @@
 package ml.dmlc.mxnet.spark
 
+import ml.dmlc.mxnet.Callback.Speedometer
 import ml.dmlc.mxnet.optimizer.SGD
 import ml.dmlc.mxnet.spark.io.LabeledPointIter
-import ml.dmlc.mxnet.{Optimizer, KVStore, KVStoreServer}
+import ml.dmlc.mxnet._
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.mllib.regression.LabeledPoint
@@ -39,12 +40,16 @@ object MXNet {
       val features = Vectors.dense(parts(1).trim().split(',').map(java.lang.Double.parseDouble))
       LabeledPoint(label, features)
     }.repartition(1)
+    val batchSize = 128
     val dimension = trainData.first().features.size
     println(s"Dimension: $dimension")
+    val numExamples = trainData.count().toInt
+    println(s"numExamples: $numExamples")
 
     println("Partition #: " + trainData.partitions.length)
     trainData.foreachPartition { partition =>
-      val dataIter = new LabeledPointIter(partition, dimension, 100)
+      val dataIter = new LabeledPointIter(
+        partition, dimension, batchSize, labelName = "softmax_label")
 
       println("PSLauncher launching worker ...")
       //PSLauncher.launch("worker", spawn = false)
@@ -56,21 +61,50 @@ object MXNet {
       envs.put("DMLC_NUM_SERVER", "1")
       KVStoreServer.init(envs.toMap)
 
-      val kv = KVStore.create("dist_sync")
+      val kv = KVStore.create("dist_async")
       val optimizer: Optimizer = new SGD(learningRate = 0.01f,
         momentum = 0.9f, wd = 0.00001f)
-      println("Set optimizer")
-      kv.setOptimizer(optimizer)
+      //println("Set optimizer")
+      //kv.setOptimizer(optimizer)
 
+      println("Define model")
+      val model = new FeedForward(ctx = Context.cpu(),
+        symbol = getMlp,
+        numEpoch = 10,
+        optimizer = optimizer,
+        initializer = new Xavier(factorType = "in", magnitude = 2.34f),
+        argParams = null,
+        auxParams = null,
+        beginEpoch = 0,
+        epochSize = numExamples / batchSize / kv.numWorkers)
+      println("Start fit")
+      model.fit(trainData = dataIter,
+        evalData = null,
+        evalMetric = new Accuracy(),
+        kvStore = kv)
+
+      /*
       while (dataIter.hasNext) {
         val dataBatch = dataIter.next()
         println(s"Data: ${dataBatch.label.head.toArray.mkString(",")}, " +
           s"dim = ${dataBatch.data.head.shape}")
       }
+      */
 
       println("PSWorker finished")
       kv.dispose()
     }
     sc.stop()
+  }
+
+  def getMlp: Symbol = {
+    val data = Symbol.Variable("data")
+    val fc1 = Symbol.FullyConnected(name = "fc1")(Map("data" -> data, "num_hidden" -> 128))
+    val act1 = Symbol.Activation(name = "relu1")(Map("data" -> fc1, "act_type" -> "relu"))
+    val fc2 = Symbol.FullyConnected(name = "fc2")(Map("data" -> act1, "num_hidden" -> 64))
+    val act2 = Symbol.Activation(name = "relu2")(Map("data" -> fc2, "act_type" -> "relu"))
+    val fc3 = Symbol.FullyConnected(name = "fc3")(Map("data" -> act2, "num_hidden" -> 10))
+    val mlp = Symbol.SoftmaxOutput(name = "softmax")(Map("data" -> fc3))
+    mlp
   }
 }
