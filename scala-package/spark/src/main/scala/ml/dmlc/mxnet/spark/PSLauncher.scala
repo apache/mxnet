@@ -7,7 +7,8 @@ import org.apache.tools.ant.types.{FileSet, Path}
 import org.apache.tools.ant.{DemuxOutputStream, Project, DefaultLogger}
 
 object PSLauncher {
-  def launch(role: String, spawn: Boolean = false): Unit = {
+  def launch(role: String, numWorker: Int = 1, spawn: Boolean = false,
+    classpath: String = "/Users/lewis/Workspace/source-codes/forks/mxnet/scala-package"): Unit = {
     // global ant project settings
     val project = new Project()
     project.setBaseDir(new File(System.getProperty("user.dir")))
@@ -43,12 +44,11 @@ object PSLauncher {
 
     // added some args for to class to launch
     val taskArgs = javaTask.createArg()
-    taskArgs.setLine("bla path=/tmp/")
+    taskArgs.setLine(numWorker.toString)
 
     /** set the class path */
     //val classDir = new File(System.getProperty("user.dir"), "classes")
-    val classDir = new File(
-      "/Users/lewis/Workspace/source-codes/forks/mxnet/scala-package")
+    val classDir = new File(classpath)
     val classPath = new Path(project)
     classPath.setPath(classDir.getPath)
     val fileSet = new FileSet()

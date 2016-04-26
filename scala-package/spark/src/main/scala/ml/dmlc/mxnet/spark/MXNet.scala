@@ -22,32 +22,38 @@ object MXNet {
   }
 
   def main(args: Array[String]): Unit = {
+    val numWorker = args(1).toInt
+    println(s"numWorker: $numWorker")
+    val classpath = args(2)
+
     val conf = new SparkConf().setAppName("MXNet")
     val sc = new SparkContext(conf)
 
-    println("Starting scheduler ...")
-    PSLauncher.launch("scheduler", spawn = true)
-
-    sc.parallelize(1 to 1, 1).foreachPartition { p =>
-      println("PSLauncher launching server ...")
-      PSLauncher.launch("server", spawn = true)
-    }
-
-    val trainRaw = sc.textFile("/Users/lewis/Workspace/source-codes/forks/mxnet/data/spark/val.txt")
+    val trainRaw = sc.textFile(args(0))
     val trainData = trainRaw.map { s =>
       val parts = s.split(' ')
       val label = java.lang.Double.parseDouble(parts(0))
       val features = Vectors.dense(parts(1).trim().split(',').map(java.lang.Double.parseDouble))
       LabeledPoint(label, features)
-    }.repartition(1)
+    }.repartition(numWorker)
+
+    require(trainData.getNumPartitions == numWorker)
+
     val batchSize = 128
     val dimension = trainData.first().features.size
     println(s"Dimension: $dimension")
     val numExamples = trainData.count().toInt
     println(s"numExamples: $numExamples")
 
-    println("Partition #: " + trainData.partitions.length)
-    trainData.foreachPartition { partition =>
+    println("Starting scheduler ...")
+    PSLauncher.launch("scheduler", numWorker = numWorker, spawn = true, classpath)
+
+    sc.parallelize(1 to 1, 1).foreachPartition { p =>
+      println("PSLauncher launching server ...")
+      PSLauncher.launch("server", numWorker = numWorker, spawn = true, classpath)
+    }
+
+    val job = trainData.mapPartitions { partition =>
       val dataIter = new LabeledPointIter(
         partition, dimension, batchSize, labelName = "softmax_label")
 
@@ -57,7 +63,7 @@ object MXNet {
       envs.put("DMLC_ROLE", "worker")
       envs.put("DMLC_PS_ROOT_URI", "127.0.0.1")
       envs.put("DMLC_PS_ROOT_PORT", "9293")
-      envs.put("DMLC_NUM_WORKER", "1")
+      envs.put("DMLC_NUM_WORKER", numWorker.toString)
       envs.put("DMLC_NUM_SERVER", "1")
       KVStoreServer.init(envs.toMap)
 
@@ -92,8 +98,13 @@ object MXNet {
       */
 
       println("PSWorker finished")
-      kv.dispose()
-    }
+      //kv.dispose()
+      Iterator(new MXNetModel(model))
+    }.cache()
+
+    job.foreachPartition(() => _)
+    Thread.sleep(60000) // one minute
+
     sc.stop()
   }
 
