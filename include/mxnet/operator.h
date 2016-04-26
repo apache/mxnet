@@ -297,6 +297,10 @@ class OperatorProperty {
                                      std::vector<int> *in_type) const {
     std::vector<int> out_type, aux_type;
     std::vector<TShape> out_shape, aux_shape;
+    out_type.resize(this->ListOutputs().size());
+    out_shape.resize(this->ListOutputs().size());
+    aux_type.resize(this->ListAuxiliaryStates().size());
+    aux_shape.resize(this->ListAuxiliaryStates().size());
     CHECK(InferType(in_type, &out_type, &aux_type));
     CHECK(InferShape(in_shape, &out_shape, &aux_shape));
     return CreateOperator(ctx);
