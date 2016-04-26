@@ -335,8 +335,14 @@ class CustomMetric(EvalMetric):
             if pred.shape[1] == 2:
                 pred = pred[:, 1]
 
-            self.sum_metric += self._feval(label, pred)
-            self.num_inst += 1
+            reval = self._feval(label, pred)
+            if isinstance(reval, tuple):
+                (sum_metric, num_inst) = reval
+                self.sum_metric += sum_metric
+                self.num_inst += num_inst
+            else:
+                self.sum_metric += reval
+                self.num_inst += 1
 
 # pylint: disable=invalid-name
 def np(numpy_feval, name=None):

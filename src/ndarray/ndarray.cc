@@ -720,9 +720,6 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
 MXNET_REGISTER_NDARRAY_FUN(_set_value).set_function(SetValueOp);
 
 
-MXNET_REGISTER_NDARRAY_FUN(dot).set_function(BinaryOp<ndarray::Dot>)
-.describe("Calculate 2D matrix multiplication");
-
 MXNET_REGISTER_NDARRAY_FUN(_onehot_encode).set_function(BinaryOp<ndarray::OneHotEncode>);
 
 MXNET_REGISTER_NDARRAY_FUN(choose_element_0index)
@@ -739,14 +736,7 @@ MXNET_REGISTER_NDARRAY_FUN(fill_element_0index)
 
 // register API function
 // those with underscore will be registered at NDArray
-MXNET_REGISTER_NDARRAY_FUN(_plus_scalar).set_function(ScalarOp<ndarray::Plus, false>);
-MXNET_REGISTER_NDARRAY_FUN(_minus_scalar).set_function(ScalarOp<ndarray::Minus, false>);
-MXNET_REGISTER_NDARRAY_FUN(_mul_scalar).set_function(ScalarOp<ndarray::Mul, false>);
-MXNET_REGISTER_NDARRAY_FUN(_div_scalar).set_function(ScalarOp<ndarray::Div, false>);
-// register API function
-// scalar, reverse scalar
-MXNET_REGISTER_NDARRAY_FUN(_rminus_scalar).set_function(ScalarOp<ndarray::Minus, true>);
-MXNET_REGISTER_NDARRAY_FUN(_rdiv_scalar).set_function(ScalarOp<ndarray::Div, true>);
+
 
 // copy function is special
 // that we need to remove kAcceptEmptyMutateTarget from it
@@ -799,7 +789,7 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
     y0 = 0;
     y1 = res.rows;
   }
-  CHECK(x0 >= 0 && y0 >= 0 && x1 <= static_cast<size_t>(res.cols) &&
+  CHECK(x1 <= static_cast<size_t>(res.cols) &&
         y1 <= static_cast<size_t>(res.rows));
 
   if (ret->is_none()) {

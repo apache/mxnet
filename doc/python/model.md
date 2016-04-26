@@ -14,8 +14,8 @@ modules to make neural network training easy.
 Train a Model
 -------------
 To train a model, you can follow two steps, first a configuration using symbol,
-then call ```model.Feedforward.create``` to create a model for you.
-The following example creates a two layer neural networks.
+then call ```model.FeedForward.create``` to create a model for you.
+The following example creates a two layer neural network.
 
 ```python
 # configure a two layer neuralnetwork
@@ -46,7 +46,7 @@ For more information, you can refer to [Model API Reference](#model-api-referenc
 Save the Model
 --------------
 It is important to save your work after the job done.
-To save the model, you can directly pickle it if you like the pythonic way.
+To save the model, you can directly pickle it in a pythonic way.
 We also provide a save and load function.
 
 ```python
@@ -76,7 +76,7 @@ model = mx.model.FeedForward.create(
      iter_end_callback=mx.callback.do_checkpoint(prefix),
      ...)
 ```
-You can load the model checkpoint later using ```Feedforward.load```.
+You can load the model checkpoint later using ```FeedForward.load```.
 
 Use Multiple Devices
 --------------------

@@ -17,6 +17,7 @@ Tutorials
 Python API Documents
 --------------------
 * [High Level Model Training Related API](model.md)
+* [The Module API](module.md)
 * [NDArray API](ndarray.md)
 * [Symbolic API](symbol.md)
 * [KVStore API](kvstore.md)

@@ -21,8 +21,11 @@ class SimpleBinaryOpProp;
 class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
  public:
   TSelf& set_symbol_op_name(const std::string& symbol_name) override {
+    std::lock_guard<std::mutex> lock(mutex_);
     CHECK(op_reg_ == nullptr || symbol_name == symbol_name_)
-        << "need to call set_symbol_op_name before all other calls";
+        << " operator " << this->name
+        << " need to call set_symbol_op_name "
+        << symbol_name << "before all other calls";
     symbol_name_ = symbol_name;
     return *this;
   }
@@ -43,6 +46,20 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
     enable_kwargs_ = enable_kwargs;
     CHECK(!enable_kwargs_ || !enable_scalar_)
         << "Cannot have both kwargs and scalar arguments";
+    return *this;
+  }
+
+  TSelf& set_resource_request(
+      const std::vector<ResourceRequest>& reqs) override {
+    std::lock_guard<std::mutex> lock(mutex_);
+    resource_requests_ = reqs;
+    return *this;
+  }
+
+  TSelf& set_resource_request(
+      ResourceRequest req) override {
+    std::lock_guard<std::mutex> lock(mutex_);
+    resource_requests_ = {req};
     return *this;
   }
 
@@ -176,6 +193,8 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
   SimpleOpScalarOption scalar_type_mask_{kArrayBeforeScalar};
   // whether kwargs is enabled in the function.
   bool enable_kwargs_{false};
+  // resource requirements
+  std::vector<ResourceRequest> resource_requests_;
   // ------ unary functions -----
   // unary shape inference information.
   UnaryShapeFunction unary_shape_{nullptr};
@@ -323,6 +342,14 @@ void SimpleOpRegEntryImpl::RegisterUnaryImperative() {
     if (src.var() != ret.var()) {
       const_vars.push_back(src.var());
     }
+
+    // request resources.
+    std::vector<Engine::VarHandle> write_vars = {ret.var()};
+    for (ResourceRequest req : resource_requests_) {
+      env.resource.push_back(ResourceManager::Get()->Request(src.ctx(), req));
+      write_vars.push_back(env.resource.back().var);
+    }
+
     // check if the function exist
     int dev_mask = src.ctx().dev_mask();
     // error message
@@ -352,7 +379,7 @@ void SimpleOpRegEntryImpl::RegisterUnaryImperative() {
           ctx.get_stream<gpu>()->Wait();
         }
 #endif
-      }, src.ctx(), const_vars, {ret.var()});
+      }, src.ctx(), const_vars, write_vars);
   };
   // register the function.
   NDArrayReg()
@@ -393,6 +420,7 @@ struct SimpleUnaryOperator : public Operator {
                const std::vector<OpReqType> &req,
                const std::vector<TBlob> &out_data,
                const std::vector<TBlob> &aux_args) override {
+    if (ctx.requested.size() != 0) env.resource = ctx.requested;
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     TBlob out = out_data[0];
@@ -406,6 +434,7 @@ struct SimpleUnaryOperator : public Operator {
                 const std::vector<OpReqType> &req,
                 const std::vector<TBlob> &in_grad,
                 const std::vector<TBlob> &aux_args) override {
+    if (ctx.requested.size() != 0) env.resource = ctx.requested;
     CHECK_EQ(out_grad.size(), 1);
     CHECK(in_data.size() == 1 && in_grad.size() == 1);
     CHECK_EQ(req.size(), 1);
@@ -467,6 +496,16 @@ class SimpleOpPropBase : public OperatorProperty {
     } else {
       return std::map<std::string, std::string>();
     }
+  }
+
+  std::vector<ResourceRequest> ForwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    return source->resource_requests_;
+  }
+
+  std::vector<ResourceRequest> BackwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    return source->resource_requests_;
   }
 
   std::string TypeString() const override {
@@ -600,6 +639,7 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
       CHECK_EQ(num_params, 0)
         << "operator " << this->name << " do not take keyword arguments";
     }
+
     // shape inference.
     TShape dshape;
     if (binary_shape_ != nullptr) {
@@ -608,9 +648,14 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
       CHECK_EQ(lhs.shape(), rhs.shape()) << "operands shape mismatch";
       dshape = lhs.shape();
     }
-    CHECK_EQ(lhs.ctx(), lhs.ctx())
-      << "operands context mismatch " << lhs.shape() << " vs. " << rhs.shape();
-    CHECK_EQ(lhs.dtype(), lhs.dtype()) << "operands type mismatch";
+
+    // no check if all of them are on cpu
+    if (lhs.ctx().dev_mask() != cpu::kDevMask || rhs.ctx().dev_mask() != cpu::kDevMask) {
+      CHECK_EQ(lhs.ctx(), rhs.ctx())
+        << "operands context mismatch " << lhs.ctx().dev_type << " " << lhs.ctx().dev_id << \
+        " vs. " << rhs.ctx().dev_type << " " << rhs.ctx().dev_id;
+    }
+    CHECK_EQ(lhs.dtype(), rhs.dtype()) << "operands type mismatch";
 
     // check output shape.
     if (out->is_none()) {
@@ -627,6 +672,13 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
     std::vector<Engine::VarHandle> const_vars;
     if (lhs.var() != ret.var()) const_vars.push_back(lhs.var());
     if (rhs.var() != ret.var()) const_vars.push_back(rhs.var());
+
+    // request resources.
+    std::vector<Engine::VarHandle> write_vars = {ret.var()};
+    for (ResourceRequest req : resource_requests_) {
+      env.resource.push_back(ResourceManager::Get()->Request(lhs.ctx(), req));
+      write_vars.push_back(env.resource.back().var);
+    }
 
     // check if the function exist
     int dev_mask = lhs.ctx().dev_mask();
@@ -656,12 +708,12 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
         ret.CheckAndAlloc();
         TBlob tmp = ret.data();
         (*fun)(lhs.data(), rhs.data(), env, &tmp, req, ctx);
-#if MXNET_USE_CUDA
+        #if MXNET_USE_CUDA
         if (dev_mask == gpu::kDevMask) {
           ctx.get_stream<gpu>()->Wait();
         }
-#endif
-      }, lhs.ctx(), const_vars, {ret.var()});
+        #endif
+      }, lhs.ctx(), const_vars, write_vars);
   };
   // register the function.
   NDArrayReg()
@@ -705,6 +757,7 @@ struct SimpleBinaryOperator : public Operator {
                const std::vector<OpReqType> &req,
                const std::vector<TBlob> &out_data,
                const std::vector<TBlob> &aux_args) override {
+    if (ctx.requested.size() != 0) env.resource = ctx.requested;
     CHECK_EQ(in_data.size(), 2);
     CHECK_EQ(out_data.size(), 1);
     TBlob out = out_data[0];
@@ -718,6 +771,7 @@ struct SimpleBinaryOperator : public Operator {
                 const std::vector<OpReqType> &req,
                 const std::vector<TBlob> &in_grad,
                 const std::vector<TBlob> &aux_args) override {
+    if (ctx.requested.size() != 0) env.resource = ctx.requested;
     CHECK_EQ(out_grad.size(), 1);
     CHECK(in_data.size() == 2 && in_grad.size() == 2);
     CHECK_EQ(req.size(), 2);

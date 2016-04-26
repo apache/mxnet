@@ -192,17 +192,34 @@ pre {
 }
 
 .section h1 {
-    padding: 0px 0 20px;
+    padding-top: 90px;
+    margin-top: -60px;
+    padding-bottom: 10px;
 }
 
 .section h2 {
-    padding: 16px 0 16px;
+    padding-top: 80px;
+    margin-top: -60px;
+    padding-bottom: 10px;
 }
 
 .section h3 {
-    padding: 12px 0 12px;
+    padding-top: 80px;
+    margin-top: -64px;
+    padding-bottom: 8px;
 }
 
 .section h4 {
-    padding: 12px 0 12px;
+    padding-top: 80px;
+    margin-top: -64px;
+    padding-bottom: 8px;
+}
+
+dt {
+    margin-top: -76px;
+    padding-top: 76px;
+}
+
+dt:target, .highlighted {
+    background-color: #fff;
 }

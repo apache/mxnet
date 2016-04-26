@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if ! tests/travis/is_core_changed.sh
+then
+  exit 0
+fi
+
 if [ ${TASK} == "lint" ]; then
     make lint || exit -1
     echo "Check documentations of c++ code..."
@@ -123,6 +128,6 @@ if [ ${TASK} == "scala_test" ]; then
 
     make scalapkg || exit -1
     make scalatest || exit -1
-    
+
     exit 0
 fi

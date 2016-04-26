@@ -200,13 +200,45 @@ def test_regression():
                      lambda x: x,
                      lambda x, y : x - y)
 
+def check_softmax_with_ignore_label(xpu):
+    X = mx.symbol.Variable('X')
+    L = mx.symbol.Variable('L')
+    Y = mx.symbol.SoftmaxOutput(data=X, label=L, ignore_label=0, use_ignore=True)
+
+    shape = (20, 10)
+    x = mx.nd.empty(shape, ctx = xpu)
+    l = mx.nd.empty((shape[0],), ctx = xpu)
+    x_np = np.random.rand(*shape)
+    l_np = np.random.randint(0, shape[1]-1, (shape[0],))
+    x[:] = x_np
+    l[:] = l_np
+
+    grad = mx.nd.empty(shape, ctx = xpu)
+
+    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
+    exec1.forward()
+    exec1.backward()
+
+    grad0 = grad.asnumpy()
+
+    for i in range(shape[0]/2):
+        l_np[i] = 0
+    l[:] = l_np
+
+    exec1.forward()
+    exec1.backward()
+    grad1 = grad.asnumpy()
+
+    assert abs(np.sum(grad1[:shape[0]/2])) < 1e-5
+    assert reldiff(grad0[shape[0]/2:], grad1[shape[0]/2:]) < 1e-5
+
 def check_softmax_with_shape(shape, xpu):
     X = mx.symbol.Variable('X')
     L = mx.symbol.Variable('L')
-    Y = mx.symbol.Softmax(data=X, label=L)
+    Y = mx.symbol.SoftmaxOutput(data=X, label=L)
     x = mx.random.uniform(-1, 1, shape, ctx = xpu)
     l = mx.nd.empty((shape[0],), ctx = xpu)
-    l[:] = np.random.randint(0, shape[0]-1, (shape[0],))
+    l[:] = np.random.randint(0, shape[1]-1, (shape[0],))
     grad = mx.nd.empty(shape, ctx = xpu)
 
     exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
@@ -219,7 +251,7 @@ def check_softmax_with_shape(shape, xpu):
 def check_multi_softmax_with_shape(shape, xpu):
     X = mx.symbol.Variable('X')
     L = mx.symbol.Variable('L')
-    Y = mx.symbol.Softmax(data=X, label=L, multi_output=True)
+    Y = mx.symbol.SoftmaxOutput(data=X, label=L, multi_output=True)
     x = mx.random.uniform(-1, 1, shape, ctx = xpu)
     l = mx.nd.empty((shape[0], shape[2]), ctx = xpu)
     l[:] = np.random.randint(0, shape[1]-1, (shape[0], shape[2]))
@@ -720,5 +752,6 @@ if __name__ == '__main__':
     test_round_ceil_floor()
     test_deconvolution()
     test_batchnorm_training()
+    check_softmax_with_ignore_label(mx.cpu())
     #check_softmax_with_shape((3,4), mx.cpu())
     #check_multi_softmax_with_shape((3,4,5), mx.cpu())

@@ -380,8 +380,6 @@ StaticGraph::Node StaticGraph::CreateGradSumNode(
   if (grad_source.size() < inplace_sum_cap) {
     gsource = grad_source;
   } else {
-    LOG(INFO) << "Memory efficient gradient aggregation on..."
-              << " to disable, set MXNET_EXEC_INPLACE_GRAD_SUM_CAP to big number";
     for (size_t i = 1; i < grad_source.size(); ++i) {
       nodes[grad_source[i].source_id]
           .addto_index.push_back(grad_source[i].index);
@@ -424,13 +422,13 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
 
   auto need_mirror = [this, do_mirror, pcounter, mirror_step](uint32_t nid) {
     if (nodes[nid].is_variable()) return false;
-    if (nodes[nid].get_attr("force_mirroring", false)) return true;
     if (do_mirror == 0) return false;
     if (!nodes[nid].is_forward()) return false;
     std::string type = nodes[nid].op->TypeString();
+    if (type == "Dropout") return false;
+    if (nodes[nid].get_attr("force_mirroring", false)) return true;
     if (type == "Convolution") return false;
     if (type == "FullyConnected") return false;
-    if (type == "Dropout") return false;
     if (type == "Concat") return false;
     if (type == "SoftmaxOutput") return false;
     if (type == "CuDNNBatchNorm") return false;
@@ -501,7 +499,8 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
       if (i >= nvisible) continue;
       // get out_grad
       auto it = grad_map.find(okey);
-      CHECK(it != grad_map.end()) << "bad graph";
+      CHECK(it != grad_map.end()) << "bad graph: Cannot find node "
+                                  << nodes[nid].name << "'s " << i << "-th output";
       std::vector<DataEntry> &gnodes = it->second;
       if (gnodes.size() == 1) {
         out_grad.push_back(gnodes[0]);

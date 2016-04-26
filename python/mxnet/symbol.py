@@ -54,7 +54,7 @@ class Symbol(object):
 
     def __rsub__(self, other):
         if isinstance(other, Number):
-            return Symbol._MinusScalar(self, scalar=other, scalar_on_left=True)
+            return Symbol._RMinusScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -79,7 +79,7 @@ class Symbol(object):
 
     def __rdiv__(self, other):
         if isinstance(other, Number):
-            return Symbol._DivScalar(self, scalar=other, scalar_on_left=True)
+            return Symbol._RDivScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -202,6 +202,24 @@ class Symbol(object):
             self.handle, mx_uint(index), ctypes.byref(handle)))
         return Symbol(handle=handle)
 
+    @property
+    def name(self):
+        """Get name string from the symbol, this function only works for non-grouped symbol.
+
+        Returns
+        -------
+        value : str
+            The name of this symbol, returns None for grouped symbol.
+        """
+        ret = ctypes.c_char_p()
+        success = ctypes.c_int()
+        check_call(_LIB.MXSymbolGetName(
+            self.handle, ctypes.byref(ret), ctypes.byref(success)))
+        if success.value != 0:
+            return py_str(ret.value)
+        else:
+            return None
+
     def attr(self, key):
         """Get attribute string from the symbol, this function only works for non-grouped symbol.
 
@@ -223,6 +241,14 @@ class Symbol(object):
             return py_str(ret.value)
         else:
             return None
+
+    def list_attr(self):
+        """Get all attributes from the symbol"""
+        size = mx_uint()
+        pairs = ctypes.POINTER(ctypes.c_char_p)()
+        check_call(_LIB.MXSymbolListAttr(
+            self.handle, ctypes.byref(size), ctypes.byref(pairs)))
+        return {py_str(pairs[i*2]): py_str(pairs[i*2+1]) for i in range(size.value)}
 
     def _set_attr(self, **kwargs):
         """Set the attribute of the symbol.
@@ -1047,7 +1073,7 @@ def pow(base, exp):
     if  isinstance(base, Symbol) and isinstance(exp, Number):
         return Symbol._PowerScalar(base, scalar=exp)
     if  isinstance(base, Number) and isinstance(exp, Symbol):
-        return Symbol._PowerScalar(exp, scalar=base, scalar_on_left=True)
+        return Symbol._RPowerScalar(exp, scalar=base)
     if  isinstance(base, Number) and isinstance(exp, Number):
         return base**exp
     else:
@@ -1073,7 +1099,7 @@ def maximum(left, right):
     if  isinstance(left, Symbol) and isinstance(right, Number):
         return Symbol._MaximumScalar(left, scalar=right)
     if  isinstance(left, Number) and isinstance(right, Symbol):
-        return Symbol._MaximumScalar(right, scalar=left, scalar_on_left=True)
+        return Symbol._MaximumScalar(right, scalar=left)
     if  isinstance(left, Number) and isinstance(right, Number):
         return left if left > right else right
     else:
@@ -1098,9 +1124,8 @@ def minimum(left, right):
     if  isinstance(left, Symbol) and isinstance(right, Number):
         return Symbol._MinimumScalar(left, scalar=right)
     if  isinstance(left, Number) and isinstance(right, Symbol):
-        return Symbol._MinimumScalar(right, scalar=left, scalar_on_left=True)
+        return Symbol._MinimumScalar(right, scalar=left)
     if  isinstance(left, Number) and isinstance(right, Number):
         return left if left > right else right
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
-

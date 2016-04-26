@@ -17,7 +17,7 @@ data = [[[np.random.random(s)*2-1 for i in range(nworker)] for s in shapes] for 
 
 ## individual key interface
 def test_kvstore(kv_type):
-    print kv_type
+    print(kv_type)
     kv = mx.kv.create(kv_type)
     kv.set_optimizer(mx.optimizer.create('test', lr))
     for k, s in zip(keys, shapes):
@@ -43,7 +43,7 @@ test_kvstore('local_allreduce_device')
 
 ## group keys interface
 def test_group_kvstore(kv_type):
-    print kv_type
+    print(kv_type)
     kv = mx.kv.create(kv_type)
     kv.set_optimizer(mx.optimizer.create('test', lr))
     kv.init(keys, [mx.nd.zeros(s) for s in shapes])

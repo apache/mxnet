@@ -356,7 +356,7 @@ NDArrayFunction::NDArrayFunction(FunctionHandle handle)
       begin_use_vars_ = 0;
       begin_scalars_ = num_use_vars_;
     } else {
-      begin_scalars_ = num_scalars_;
+      begin_use_vars_ = num_scalars_;
       begin_scalars_ = 0;
     }
     begin_mutate_vars_ = num_use_vars_ + num_scalars_;
@@ -507,6 +507,7 @@ inline bool ParseNDArrayArg(SEXP sexp, NDArrayHandle *handle, float *value) {
 
 // dispatch the binary ops of MXNDArray
 NDArray::RObjectType DispatchOps(SEXP op, SEXP lhs, SEXP rhs) {
+  RLOG_INFO << "Why";
   // function handles
   static FunctionHandle plus = NDArrayFunction::FindHandle("_plus");
   static FunctionHandle plus_scalar = NDArrayFunction::FindHandle("_plus_scalar");

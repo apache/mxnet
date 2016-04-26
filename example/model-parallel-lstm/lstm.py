@@ -42,7 +42,7 @@ def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
 
 def lstm_unroll(num_lstm_layer, seq_len, input_size,
                 num_hidden, num_embed, num_label, dropout=0.,
-                concat_decode=True):
+                concat_decode=True, use_loss=False):
     """unrolled lstm network"""
     # initialize the parameter symbols
     with mx.AttrScope(ctx_group='embed'):
@@ -103,7 +103,10 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
                                            num_hidden=num_label,
                                            name="t%d_cls" % seqidx)
                 label = mx.sym.Variable("t%d_label" % seqidx)
-                sm = mx.sym.SoftmaxOutput(data=fc, label=label, name="t%d_sm" % seqidx)
+                if use_loss:
+                    sm = mx.sym.softmax_cross_entropy(fc, label, name="t%d_sm" % seqidx)
+                else:
+                    sm = mx.sym.SoftmaxOutput(data=fc, label=label, name="t%d_sm" % seqidx)
                 out_prob.append(sm)
     else:
         with mx.AttrScope(ctx_group='decode'):
@@ -113,7 +116,10 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
                                        bias=cls_bias,
                                        num_hidden=num_label)
             label = mx.sym.Variable("label")
-            sm = mx.sym.SoftmaxOutput(data=fc, label=label, name="sm")
+            if use_loss:
+                sm = mx.sym.softmax_cross_entropy(fc, label, name="sm")
+            else:
+                sm = mx.sym.SoftmaxOutput(data=fc, label=label, name="sm")
             out_prob = [sm]
 
     for i in range(num_lstm_layer):
@@ -138,7 +144,8 @@ def setup_rnn_model(default_ctx,
                     num_hidden, num_embed, num_label,
                     batch_size, input_size,
                     initializer, dropout=0.,
-                    group2ctx=None, concat_decode=True):
+                    group2ctx=None, concat_decode=True,
+                    use_loss=False):
     """set up rnn model with lstm cells"""
     rnn_sym = lstm_unroll(num_lstm_layer=num_lstm_layer,
                           num_hidden=num_hidden,
@@ -147,7 +154,8 @@ def setup_rnn_model(default_ctx,
                           num_embed=num_embed,
                           num_label=num_label,
                           dropout=dropout,
-                          concat_decode=concat_decode)
+                          concat_decode=concat_decode,
+                          use_loss=use_loss)
     arg_names = rnn_sym.list_arguments()
     internals = rnn_sym.get_internals()
 
@@ -156,6 +164,10 @@ def setup_rnn_model(default_ctx,
         if name.endswith("init_c") or name.endswith("init_h"):
             input_shapes[name] = (batch_size, num_hidden)
         elif name.endswith("data"):
+            input_shapes[name] = (batch_size, )
+        elif name == "label":
+            input_shapes[name] = (batch_size * seq_len, )
+        elif name.endswith("label"):
             input_shapes[name] = (batch_size, )
         else:
             pass
@@ -181,7 +193,6 @@ def setup_rnn_model(default_ctx,
     for i, name in enumerate(arg_names):
         if is_param_name(name):
             initializer(name, arg_dict[name])
-
             param_blocks.append((i, arg_dict[name], args_grad[name], name))
         else:
             assert name not in args_grad
@@ -238,7 +249,7 @@ def calc_nll(seq_label_probs, X, begin):
     return nll
 
 def train_lstm(model, X_train_batch, X_val_batch,
-               num_round, update_period, concat_decode,
+               num_round, update_period, concat_decode, use_loss,
                optimizer='sgd', half_life=2,max_grad_norm = 5.0, **kwargs):
     print("Training with train.shape=%s" % str(X_train_batch.shape))
     print("Training with val.shape=%s" % str(X_val_batch.shape))
@@ -255,6 +266,12 @@ def train_lstm(model, X_train_batch, X_val_batch,
     epoch_counter = 0
     log_period = max(1000 / seq_len, 1)
     last_perp = 10000000.0
+
+    head_grad = []
+    if use_loss:
+        ctx = m.seq_outputs[0].context
+        head_grad = [mx.nd.ones((1,), ctx) for x in m.seq_outputs]
+
     for iteration in range(num_round):
         nbatch = 0
         train_nll = 0
@@ -270,12 +287,17 @@ def train_lstm(model, X_train_batch, X_val_batch,
             m.rnn_exec.forward(is_train=True)
             # probability of each label class, used to evaluate nll
             # Change back to individual ops to see if fine grained scheduling helps.
-            if concat_decode:
-                seq_label_probs = mx.nd.choose_element_0index(m.seq_outputs[0], m.seq_labels[0])
+            if not use_loss:
+                if concat_decode:
+                    seq_label_probs = mx.nd.choose_element_0index(m.seq_outputs[0], m.seq_labels[0])
+                else:
+                    seq_label_probs = [mx.nd.choose_element_0index(out, label).copyto(mx.cpu())
+                                       for out, label in zip(m.seq_outputs, m.seq_labels)]
+                m.rnn_exec.backward()
             else:
-                seq_label_probs = [mx.nd.choose_element_0index(out, label).copyto(mx.cpu())
-                                   for out, label in zip(m.seq_outputs, m.seq_labels)]
-            m.rnn_exec.backward()
+                seq_loss = [x.copyto(mx.cpu()) for x in m.seq_outputs]
+                m.rnn_exec.backward(head_grad)
+
             # transfer the states
             for init, last in zip(m.init_states, m.last_states):
                 last.c.copyto(init.c)
@@ -296,10 +318,13 @@ def train_lstm(model, X_train_batch, X_val_batch,
                     updater(idx, grad, weight)
                     # reset gradient to zero
                     grad[:] = 0.0
-            if concat_decode:
-                train_nll += calc_nll_concat(seq_label_probs, X_val_batch, begin=begin)
+            if not use_loss:
+                if concat_decode:
+                    train_nll += calc_nll_concat(seq_label_probs, X_val_batch, begin=begin)
+                else:
+                    train_nll += calc_nll(seq_label_probs, X_val_batch, begin=begin)
             else:
-                train_nll += calc_nll(seq_label_probs, X_val_batch, begin=begin)
+                train_nll += sum([x.asscalar() for x in seq_loss]) / batch_size
 
             nbatch = begin + seq_len
             toc = time.time()
@@ -320,19 +345,28 @@ def train_lstm(model, X_train_batch, X_val_batch,
             set_rnn_inputs(m, X_val_batch, begin=begin)
             m.rnn_exec.forward(is_train=False)
             # probability of each label class, used to evaluate nll
-            if concat_decode:
-                seq_label_probs = mx.nd.choose_element_0index(m.seq_outputs[0], m.seq_labels[0])
+
+            if not use_loss:
+                if concat_decode:
+                    seq_label_probs = mx.nd.choose_element_0index(m.seq_outputs[0], m.seq_labels[0])
+                else:
+                    seq_label_probs = [mx.nd.choose_element_0index(out, label).copyto(mx.cpu())
+                                       for out, label in zip(m.seq_outputs, m.seq_labels)]
             else:
-                seq_label_probs = [mx.nd.choose_element_0index(out, label).copyto(mx.cpu())
-                                   for out, label in zip(m.seq_outputs, m.seq_labels)]
+                seq_loss = [x.copyto(mx.cpu()) for x in m.seq_outputs]
+
             # transfer the states
             for init, last in zip(m.init_states, m.last_states):
                 last.c.copyto(init.c)
                 last.h.copyto(init.h)
-            if concat_decode:
-                val_nll += calc_nll_concat(seq_label_probs, X_val_batch, begin=begin)
+            if not use_loss:
+                if concat_decode:
+                    val_nll += calc_nll_concat(seq_label_probs, X_val_batch, begin=begin)
+                else:
+                    val_nll += calc_nll(seq_label_probs, X_val_batch, begin=begin)
             else:
-                val_nll += calc_nll(seq_label_probs, X_val_batch, begin=begin)
+                val_nll += sum([x.asscalar() for x in seq_loss]) / batch_size
+
         nbatch = X_val_batch.shape[0]
         perp = np.exp(val_nll / nbatch)
         print("Iter [%d] Val: NLL=%.3f, Perp=%.3f" % (

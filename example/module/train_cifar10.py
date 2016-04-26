@@ -118,7 +118,7 @@ model_prefix = args.model_prefix
 if args.load_epoch is not None:
     assert model_prefix is not None
     logging.info('loading model from %s-%d...' % (model_prefix, args.load_epoch))
-    sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, args.load_epoch) 
+    sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, args.load_epoch)
 else:
     arg_params = None
     aux_params = None

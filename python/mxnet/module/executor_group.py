@@ -361,7 +361,7 @@ class DataParallelExecutorGroup(object):
                                    ('default_bucket_key to') +
                                    (' be the bucket taking the largest input for better ') +
                                    ('memory sharing.'))
-                    arg_arr = nd.zeros(arg_shape, ctx, dtype=arg_type)
+                    arg_arr = nd.zeros(arg_shape, context, dtype=arg_type)
 
                     # replace existing shared array because the new one is bigger
                     shared_data_arrays[name] = arg_arr
