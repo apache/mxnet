@@ -377,7 +377,8 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
       push!(freeze_names, symbol(sattr[1:end-5]))
     end
   end
-  freeze_idx = filter(i -> in(arg_names[i], freeze_names), 1:length(arg_names))
+  # Needs to correspond to the correct id in the update loop layer idx=1:length(param_names).
+  freeze_idx = filter(i -> in(param_names[i], freeze_names), 1:length(param_names))
 
   # Setup grad_req as a dictionary
   grad_req = Dict{Symbol, GRAD_REQ}()
