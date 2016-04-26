@@ -196,7 +196,7 @@ can write a program as if it were only a single thread, and MXNet will
 automatically dispatch it to multiple devices such as multiple GPU cards or multiple
 machines.
 
-This is achieved by lazy evaluation. Any operation we write down is issued to a
+This is achieved by lazy evaluation. Any operation we write down is issued to an
 internal engine, and then returned. For example, if we run `a += 1`, it
 returns immediately after pushing the plus operation to the engine. This
 asynchronicity allows us to push more operations to the engine, so it can determine
@@ -239,7 +239,7 @@ and may accept other hyperparameters such as the number of hidden neurons (*num_
 or the activation type (*act_type*).
 
 The symbol can be viewed simply as a function taking several arguments whose
-names are automatically generated and can be got by
+names are automatically generated and can be obtained by
 
 ```python
 >>> net.list_arguments()
@@ -480,7 +480,7 @@ update on key: 9
 ```
 
 ### Multiple machines
-Base on parameter server. The `updater` will runs on the server nodes.
+Based on parameter server. The `updater` will run on the server nodes.
 This section will be updated when the distributed version is ready.
 
 
