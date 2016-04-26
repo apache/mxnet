@@ -430,6 +430,16 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   # invoke callbacks on epoch 0
   _invoke_callbacks(self, opts.callbacks, op_state, AbstractEpochCallback)
 
+  # get grad attribute to allow for freezing
+  freeze_names = Symbol[]
+  for (attr, value) in list_attr(self.arch)
+    sattr = string(attr)
+    if endswith(sattr, "grad") && value == "freeze"
+      push!(freeze_names, symbol(sattr[1:end-5]))
+    end
+  end
+  freeze_idx = filter(i -> in(arg_names[i], freeze_names), 1:length(arg_names))
+
   info("Start training...")
   for i_epoch = 1:opts.n_epoch
     time_start = time()
