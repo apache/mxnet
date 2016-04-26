@@ -369,11 +369,32 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
     kvstore, update_on_kvstore = _create_kvstore(kvstore, length(self.ctx), self.arg_params)
   end
 
+  # get grad attribute to allow for freezing
+  freeze_names = Symbol[]
+  for (attr, value) in list_attr(self.arch)
+    sattr = string(attr)
+    if endswith(sattr, "grad") && value == "freeze"
+      push!(freeze_names, symbol(sattr[1:end-5]))
+    end
+  end
+  # Needs to correspond to the correct id in the update loop layer idx=1:length(param_names).
+  freeze_idx = filter(i -> in(param_names[i], freeze_names), 1:length(param_names))
+
+  # Setup grad_req as a dictionary
+  grad_req = Dict{Symbol, GRAD_REQ}()
+  for param in param_names
+    if in(param, freeze_names)
+      grad_req[param] = GRAD_NOP
+    else
+      grad_req[param] = GRAD_WRITE
+    end
+  end
+
   train_execs = Array(Executor, num_dev)
   for i = 1:num_dev
     data_shapes = [k => tuple(v[1:end-1]...,length(slices[i])) for (k,v) in provide_data(data)]
     label_shapes = [k => tuple(v[1:end-1]...,length(slices[i])) for (k,v) in provide_label(data)]
-    train_execs[i] = simple_bind(self.arch, self.ctx[i]; grad_req=GRAD_WRITE, data_shapes..., label_shapes...)
+    train_execs[i] = simple_bind(self.arch, self.ctx[i]; grad_req=grad_req, data_shapes..., label_shapes...)
     dbg_str = mx.debug_str(train_execs[i])
     info(string("TempSpace: ", split(dbg_str, ['\n'])[end-2]..., " on ", self.ctx[i]))
 
@@ -463,6 +484,10 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
       # update parameters
       for idx = 1:length(param_names)
+        if in(idx, freeze_idx)
+          continue # Skip parameter update entirely
+        end
+
         # gradient synchronization
         if !isa(kvstore, Void)
           # push gradient, priority is negative index

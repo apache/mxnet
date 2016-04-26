@@ -132,12 +132,35 @@ function get_attr(self :: SymbolicNode, key :: Symbol)
   key_s = bytestring(string(key))
   ref_out = Ref{Cstring}()
   ref_success = Ref{Cint}(-1)
-  @mxcall(:MXSymbolGetAttr, (MX_handle, Cstring, Ref{Cstring}, Ref{Cint}), self, key_s, ref_out, ref_success)
+  @mxcall(:MXSymbolGetAttr, (MX_handle, Cstring, Ref{Cstring}, Ref{Cint}),
+          self, key_s, ref_out, ref_success)
   if ref_success[] == 1
     return Nullable{ByteString}(bytestring(ref_out[]))
   else
     return Nullable{ByteString}()
   end
+end
+
+#=doc
+.. function: list_attr(self :: SymbolicNode)
+
+   Get all attributes from symbol.
+   :return: Dictionary of attributes.
+=#
+function list_attr(self :: SymbolicNode)
+  ref_sz    = Ref{MX_uint}(0)
+  ref_strings = Ref{char_pp}(0)
+  @mxcall(:MXSymbolListAttr, (MX_handle, Ref{MX_uint}, Ref{char_pp}),
+            self, ref_sz, ref_strings)
+  narg = 2*ref_sz[]
+  strings = pointer_to_array(ref_strings[], narg)
+  out = Dict{Symbol, ByteString}()
+  for i in 1:2:narg
+    key = symbol(bytestring(strings[i]))
+    value = bytestring(strings[i+1])
+    out[key] = value
+  end
+  return out
 end
 
 #=doc

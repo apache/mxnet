@@ -128,22 +128,31 @@ function bind(self :: SymbolicNode; kwargs...)
   bind(self, context, args; kwargs...)
 end
 
-function simple_bind(self :: SymbolicNode, ctx :: Context; grad_req :: GRAD_REQ=GRAD_WRITE, kwargs...)
+function simple_bind(self :: SymbolicNode, ctx :: Context;
+                     grad_req :: Union{GRAD_REQ, Dict{Symbol, GRAD_REQ}}=GRAD_WRITE,
+                     kwargs...)
   arg_shapes, out_shapes, aux_shapes = infer_shape(self; kwargs...)
   @assert(!isa(arg_shapes, Void), "Information not enough to perform complete shape inference")
 
   arg_arrays = NDArray[zeros(shape, ctx) for shape in arg_shapes]
   arg_names  = list_arguments(self)
-  if grad_req == GRAD_NOP
-    grad_arrays = Dict{Base.Symbol,NDArray}()
-  else
+
+  grad_arrays = Dict{Symbol,NDArray}()
+
+  if grad_req != GRAD_NOP
+    shapes = zip(arg_names, arg_shapes)
+
+    # if not in provided data, should be parameters
     provided_data_names = [x[1] for x in kwargs]
-    grad_arrays = Dict{Base.Symbol,NDArray}()
-    for (name, shape) in zip(arg_names, arg_shapes)
-      # if not in provided data, should be parameters
-      if !in(name, provided_data_names)
-        grad_arrays[name] = zeros(shape, ctx)
-      end
+    shapes = filter(x -> !in(x[1], provided_data_names), shapes)
+
+    # Remove all gradients for nop params
+    # if isa(grad_req, Dict{Symbol, GRAD_REQ})
+    #  shapes = filter(x -> grad_req[x[1]] != GRAD_NOP,shapes)
+    # end
+
+    for (name, shape) in shapes
+      grad_arrays[name] = zeros(shape, ctx)
     end
   end
 
