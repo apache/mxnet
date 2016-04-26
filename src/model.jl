@@ -473,6 +473,10 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
       # update parameters
       for idx = 1:length(param_names)
+        if in(idx, freeze_idx)
+          continue # Skip parameter update entirely
+        end
+
         # gradient synchronization
         if !isa(kvstore, Void)
           # push gradient, priority is negative index
