@@ -37,6 +37,7 @@ class DataIter(object):
 
     def __init__(self):
         self.batch_size = 0
+        self.batch_size_of_label = None
 
     def __iter__(self):
         return self

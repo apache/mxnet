@@ -199,7 +199,7 @@ class DataParallelExecutorGroup(object):
     shared_grop: DataParallelExecutorGroup
         An existing executor group, if to share parameters with it.
     """
-    def __init__(self, sym, arg_names, param_names, ctx, slices, train_data, shared_group=None):
+    def __init__(self, sym, arg_names, param_names, ctx, slices, train_data, shared_group=None, slices_of_label=None):
         # make sure the architecture is valid
         _check_arguments(sym)
 
@@ -216,8 +216,15 @@ class DataParallelExecutorGroup(object):
 
         self.train_execs = []
         for i in range(len(ctx)):
-            data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
-                           for k, v in train_data.provide_data + train_data.provide_label}
+            if slices_of_label is not None:
+                data_shapes = dict(
+                                [(k, tuple([slices[i].stop-slices[i].start] + list(v[1:])))
+                                for k, v in train_data.provide_data] +
+                                [(k, tuple([slices_of_label[i].stop-slices_of_label[i].start] + list(v[1:])))
+                                for k, v in train_data.provide_label])
+            else:
+                data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
+                               for k, v in train_data.provide_data + train_data.provide_label}
             shared_exec = None if shared_group is None else shared_group.train_execs[i]
             train_exec = _bind_exec(sym, ctx[i], data_shapes, self.param_names,
                                     need_grad=True, base_exec=shared_exec,
@@ -227,8 +234,12 @@ class DataParallelExecutorGroup(object):
         # data structure
         self.data_arrays = [[(slices[i], e.arg_dict[name]) for i, e in enumerate(self.train_execs)]
                             for name in self.data_names]
-        self.label_arrays = [[(slices[i], e.arg_dict[name]) for i, e in enumerate(self.train_execs)]
-                             for name in self.label_names]
+        if slices_of_label is not None:
+            self.label_arrays = [[(slices_of_label[i], e.arg_dict[name]) for i, e in enumerate(self.train_execs)]
+                     for name in self.label_names]
+        else:
+            self.label_arrays = [[(slices[i], e.arg_dict[name]) for i, e in enumerate(self.train_execs)]
+                                 for name in self.label_names]
 
         self.param_arrays = [[e.arg_arrays[i] for e in self.train_execs]
                              for i in self.param_idx]
@@ -238,7 +249,10 @@ class DataParallelExecutorGroup(object):
         self.aux_arrays = [[e.aux_arrays[i] for e in self.train_execs]
                            for i in range(len(self.aux_names))]
 
-        self.slices = slices
+        if slices_of_label is not None:
+            self.slices = slices_of_label
+        else:
+            self.slices = slices
 
     def load_data_batch(self, data_batch):
         """ load data and labels into arrays """
@@ -299,8 +313,12 @@ class DataParallelExecutorManager(object):
         assert isinstance(work_load_list, list) and len(work_load_list) == num_device, \
             "Invalid settings for work load. "
 
-        slices = _split_input_slice(train_data.batch_size, work_load_list)
-        self.slices = slices
+        if train_data.batch_size_of_label is not None and train_data.batch_size_of_label != train_data.batch_size:
+            self.slices = _split_input_slice(train_data.batch_size, work_load_list)
+            self.slices_of_label = _split_input_slice(train_data.batch_size_of_label, work_load_list)
+        else:
+            self.slices = _split_input_slice(train_data.batch_size, work_load_list)
+            self.slices_of_label = None
 
         self.arg_names = arg_names
         self.param_names = param_names
@@ -308,7 +326,7 @@ class DataParallelExecutorManager(object):
         self.ctx = ctx
 
         self.execgrp = DataParallelExecutorGroup(symbol, self.arg_names, self.param_names, self.ctx,
-                                                 self.slices, train_data)
+                                                 self.slices, train_data, slices_of_label=self.slices_of_label)
         self.symbol = symbol
 
         self.sym_gen = sym_gen
@@ -384,7 +402,8 @@ class DataParallelExecutorManager(object):
                 execgrp = DataParallelExecutorGroup(symbol, self.arg_names,
                                                     self.param_names, self.ctx,
                                                     self.slices, data_batch,
-                                                    shared_group=self.execgrp)
+                                                    shared_group=self.execgrp,
+                                                    slices_of_label=self.slices_of_label)
                 self.execgrp_bucket[key] = execgrp
 
             self.curr_execgrp = self.execgrp_bucket[key]
