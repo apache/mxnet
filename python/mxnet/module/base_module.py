@@ -3,7 +3,6 @@
 
 import logging
 import time
-import numpy as np
 
 from .. import metric
 from .. import ndarray
