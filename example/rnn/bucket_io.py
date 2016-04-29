@@ -57,7 +57,7 @@ def default_gen_buckets(sentences, batch_size, the_vocab):
 
     tl = 0
     buckets = []
-    for l, n in len_dict.iteritems(): # TODO: There are better heuristic ways to do this    
+    for l, n in len_dict.items(): # TODO: There are better heuristic ways to do this    
         if n + tl >= batch_size:
             buckets.append(l)
             tl = 0
