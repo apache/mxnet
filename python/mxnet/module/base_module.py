@@ -354,11 +354,6 @@ class BaseModule(object):
                     for callback in _as_list(batch_end_callback):
                         callback(batch_end_params)
 
-                # we reset eval_metric after each batch so that the reported
-                # eval metric on the training set is for that particular batch,
-                # instead of the accumulated epoch
-                eval_metric.reset()
-
             # one epoch of training is finished
             for name, val in eval_metric.get_name_value():
                 self.logger.info('Epoch[%d] Train-%s=%f', epoch, name, val)
