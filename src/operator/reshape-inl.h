@@ -27,10 +27,15 @@ enum ReshapeOpOutputs {kOut};
 
 struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
   TShape target_shape;
+  bool keep_highest;
   DMLC_DECLARE_PARAMETER(ReshapeParam) {
     DMLC_DECLARE_FIELD(target_shape)
     .describe("Target new shape. One and only one dim can be 0, "
               "in which case it will be inferred from the rest of dims");
+    DMLC_DECLARE_FIELD(keep_highest).set_default(false)
+    .describe("Whether keep the highest dim unchanged."
+              "If set to yes, than the first dim in target_shape is ignored,"
+              "and always fixed as input");
   }
 };
 
@@ -109,7 +114,11 @@ class ReshapeProp : public OperatorProperty {
     TShape oshape = param_.target_shape;
     int neg_count = 0;
     index_t neg_idx = 0;
-    for (index_t i = 0; i < oshape.ndim(); ++i) {
+    index_t start_idx = param_.keep_highest ? 1 : 0;
+    if (param_.keep_highest) {
+      oshape[0] = dshape[0];
+    }
+    for (index_t i = start_idx; i < oshape.ndim(); ++i) {
       if (oshape[i] == 0) {
         neg_count++;
         neg_idx = i;
@@ -119,6 +128,7 @@ class ReshapeProp : public OperatorProperty {
       oshape[neg_idx] = 1;
       oshape[neg_idx] = dshape.Size()/oshape.Size();
     }
+
     CHECK(oshape.Size() == dshape.Size())
         << "Target shape size is different to source. "
         << "Target: " << param_.target_shape.Size()
