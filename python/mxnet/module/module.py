@@ -177,10 +177,10 @@ class Module(BaseModule):
             else:
                 initializer(name, arr)
 
-        for name, arr in self._arg_params.iteritems():
+        for name, arr in self._arg_params.items():
             _impl(name, arr, arg_params)
 
-        for name, arr in self._aux_params.iteritems():
+        for name, arr in self._aux_params.items():
             _impl(name, arr, aux_params)
 
         self.params_initialized = True
