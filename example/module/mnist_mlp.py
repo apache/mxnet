@@ -64,6 +64,9 @@ for preds, i_batch, batch in mod.iter_predict(val_dataiter):
     if i_batch % 20 == 0:
         print('batch %03d acc: %.3f' % (i_batch, (label == pred_label).sum() / float(len(pred_label))))
 
+# a dummy call just to test if the API works for merge_batches=True
+preds = mod.predict(val_dataiter)
+
 # perform prediction and calculate accuracy manually
 preds = mod.predict(val_dataiter, merge_batches=False)
 val_dataiter.reset()
