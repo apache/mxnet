@@ -77,8 +77,6 @@ object MXNet {
       val kv = KVStore.create("dist_async")
       val optimizer: Optimizer = new SGD(learningRate = 0.01f,
         momentum = 0.9f, wd = 0.00001f)
-      //println("Set optimizer")
-      //kv.setOptimizer(optimizer)
 
       println("Define model")
       val model = new FeedForward(ctx = Context.cpu(),
@@ -105,12 +103,15 @@ object MXNet {
       */
 
       println("PSWorker finished")
-      //kv.dispose()
+      kv.dispose()
       Iterator(new MXNetModel(model))
     }.cache()
 
     job.foreachPartition(() => _)
 
+
+    println("Waiting for scheduler ...")
+    scheduler.waitFor()
     sc.stop()
   }
 

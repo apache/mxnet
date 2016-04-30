@@ -70,6 +70,21 @@ class ParameterServer(private val classpath: String,
     }
   }
 
+  def waitFor(): Int = {
+    try {
+      trackerProcess.get.waitFor()
+      val returnVal: Int = trackerProcess.get.exitValue
+      logger.info("Process ends with exit code " + returnVal)
+      stop()
+      returnVal
+    } catch {
+      case e: InterruptedException =>
+        e.printStackTrace()
+        logger.error("Process terminated unexpectedly")
+        1
+    }
+  }
+
   private def runningClass: String = {
     // trick to remove the last '$'
     classOf[ParameterServer].getName.replace("$", "")
