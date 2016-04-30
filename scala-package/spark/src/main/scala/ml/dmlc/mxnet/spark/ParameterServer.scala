@@ -4,21 +4,19 @@ import java.io.IOException
 import java.util.concurrent.atomic.AtomicReference
 
 import ml.dmlc.mxnet.KVStoreServer
-import org.kohsuke.args4j.{CmdLineParser, Option}
-import org.slf4j.{Logger, LoggerFactory}
+import org.kohsuke.args4j.{Option, CmdLineParser}
+import org.slf4j.{LoggerFactory, Logger}
 
 import scala.collection.mutable
 import scala.collection.JavaConverters._
 
 /**
- * Start parameter scheduler on spark driver
+ * Start ps scheduler/server in a new process
  * @author Yizhi Liu
  */
-object PSScheduler {
-  private val logger: Logger = LoggerFactory.getLogger(classOf[PSScheduler])
-
+object ParameterServer {
+  private val logger: Logger = LoggerFactory.getLogger(classOf[ParameterServer])
   def main(args: Array[String]): Unit = {
-    println("Start scheduler in object PSScheduler")
     val cmdLine = new CommandLine
     val parser: CmdLineParser = new CmdLineParser(cmdLine)
     try {
@@ -40,27 +38,26 @@ object PSScheduler {
   }
 }
 
-class PSScheduler(private val classpath: String,
-                  private val rootUri: String,
-                  private val rootPort: Int,
-                  private val numServer: Int = 1,
-                  private val numWorker: Int = 1,
-                  private val java: String = "java",
-                  private val jvmOpts: String = "") {
+class ParameterServer(private val classpath: String,
+                      private val role: String,
+                      private val rootUri: String,
+                      private val rootPort: Int,
+                      private val numServer: Int = 1,
+                      private val numWorker: Int = 1,
+                      private val java: String = "java",
+                      private val jvmOpts: String = "") {
+  private val logger: Logger = LoggerFactory.getLogger(classOf[ParameterServer])
   private val trackerProcess: AtomicReference[Process] = new AtomicReference[Process]
-  private val role = "scheduler"
-  private val proj = runningClass(classOf[PSScheduler].getName)
 
   def startProcess(): Boolean = {
-    val cmd = s"$java $jvmOpts -cp $classpath $proj " +
+    val cmd = s"$java $jvmOpts -cp $classpath $runningClass " +
       s"--role=$role --root-uri=$rootUri --root-port=$rootPort " +
       s"--num-server=$numServer --num-worker=$numWorker"
-    PSScheduler.logger.info(s"Start process: $cmd")
+    logger.info(s"Start process: $cmd")
     try {
       trackerProcess.set(Runtime.getRuntime.exec(cmd))
       true
-    }
-    catch {
+    } catch {
       case ioe: IOException =>
         ioe.printStackTrace()
         false
@@ -73,9 +70,9 @@ class PSScheduler(private val classpath: String,
     }
   }
 
-  private def runningClass(cls: String): String = {
+  private def runningClass: String = {
     // trick to remove the last '$'
-    cls.replace("$", "")
+    classOf[ParameterServer].getName.replace("$", "")
   }
 }
 
@@ -96,6 +93,6 @@ class CommandLine {
     require(rootUri != null, "Undefined root uri")
     require(rootPort > 0, s"Invalid root port $rootPort")
     require(numServer > 0, s"Invalid number of servers: $numServer")
-    require(numWorker > 0, s"Invalid number of worders: $numWorker")
+    require(numWorker > 0, s"Invalid number of workers: $numWorker")
   }
 }

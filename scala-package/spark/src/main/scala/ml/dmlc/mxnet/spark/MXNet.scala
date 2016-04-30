@@ -24,7 +24,6 @@ object MXNet {
   def main(args: Array[String]): Unit = {
     val numWorker = args(1).toInt
     println(s"numWorker: $numWorker")
-    val classpath = args(2)
 
     val conf = new SparkConf().setAppName("MXNet")
     val sc = new SparkContext(conf)
@@ -49,13 +48,16 @@ object MXNet {
     val tmp = "/mnt/hgfs/lewis/Workspace/source-codes/forks/mxnet/scala-package/assembly/linux-x86_64-cpu/target/*" +
       ":/mnt/hgfs/lewis/Workspace/source-codes/forks/mxnet/scala-package/spark/target/classes/lib/*" +
       ":/mnt/hgfs/lewis/Workspace/source-codes/forks/mxnet/scala-package/spark/target/*"
-    //PSLauncher.launch("scheduler", numWorker = numWorker, spawn = true, classpath)
-    val scheduler = new PSScheduler(tmp, "127.0.0.1", 9293, numServer = 1, numWorker = numWorker)
+    val scheduler = new ParameterServer(tmp, role = "scheduler",
+      rootUri = "127.0.0.1", rootPort = 9293, numServer = 1, numWorker = numWorker)
     require(scheduler.startProcess(), "Failed to start ps scheduler process")
 
     sc.parallelize(1 to 1, 1).foreachPartition { p =>
       println("PSLauncher launching server ...")
-      PSLauncher.launch("server", numWorker = numWorker, spawn = true, classpath)
+      val server = new ParameterServer(tmp, role = "server",
+        rootUri = "127.0.0.1", rootPort = 9293, numServer = 1, numWorker = numWorker,
+        java = "/usr/local/jdk1.8.0_60/bin/java")
+      require(server.startProcess(), "Failed to start ps server process")
     }
 
     val job = trainData.mapPartitions { partition =>
@@ -108,7 +110,6 @@ object MXNet {
     }.cache()
 
     job.foreachPartition(() => _)
-    //Thread.sleep(60000) // one minute
 
     sc.stop()
   }
