@@ -154,6 +154,10 @@
       <version>1.8.2</version>
     </dependency>
     <dependency>
+      <groupId>args4j</groupId>
+      <artifactId>args4j</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.scalacheck</groupId>
       <artifactId>scalacheck_${scala.binary.version}</artifactId>
     </dependency>

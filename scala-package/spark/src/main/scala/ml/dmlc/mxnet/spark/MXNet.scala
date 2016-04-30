@@ -46,7 +46,12 @@ object MXNet {
     println(s"numExamples: $numExamples")
 
     println("Starting scheduler ...")
-    PSLauncher.launch("scheduler", numWorker = numWorker, spawn = true, classpath)
+    val tmp = "/mnt/hgfs/lewis/Workspace/source-codes/forks/mxnet/scala-package/assembly/linux-x86_64-cpu/target/*" +
+      ":/mnt/hgfs/lewis/Workspace/source-codes/forks/mxnet/scala-package/spark/target/classes/lib/*" +
+      ":/mnt/hgfs/lewis/Workspace/source-codes/forks/mxnet/scala-package/spark/target/*"
+    //PSLauncher.launch("scheduler", numWorker = numWorker, spawn = true, classpath)
+    val scheduler = new PSScheduler(tmp, "127.0.0.1", 9293, numServer = 1, numWorker = numWorker)
+    require(scheduler.startProcess(), "Failed to start ps scheduler process")
 
     sc.parallelize(1 to 1, 1).foreachPartition { p =>
       println("PSLauncher launching server ...")
@@ -103,7 +108,7 @@ object MXNet {
     }.cache()
 
     job.foreachPartition(() => _)
-    Thread.sleep(60000) // one minute
+    //Thread.sleep(60000) // one minute
 
     sc.stop()
   }
