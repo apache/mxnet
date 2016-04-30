@@ -21,10 +21,10 @@ Operator *CreateOp<gpu>(PoolingParam param) {
     case pool_enum::kAvgPooling:
       return new CuDNNPoolingOp(param);
     case pool_enum::kSumPooling:
-      LOG(WARNING)<<"Sum Pooling is not supported by cudnn, MxNet Sum Pooling is applied.";
+      LOG(WARNING)<<"Sum pooling is not supported by cudnn, MxNet sum pooling is applied.";
       return new PoolingOp<gpu, mshadow::red::sum>(param);
     default:
-      LOG(FATAL) << "unknown activation type";
+      LOG(FATAL) << "unknown pooling type";
       return NULL;
   }
 #else
@@ -36,7 +36,7 @@ Operator *CreateOp<gpu>(PoolingParam param) {
     case pool_enum::kSumPooling:
       return new PoolingOp<gpu, mshadow::red::sum>(param);
     default:
-      LOG(FATAL) << "unknown activation type";
+      LOG(FATAL) << "unknown pooling type";
       return NULL;
   }
 #endif  // MXNET_USE_CUDNN
