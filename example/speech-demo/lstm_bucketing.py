@@ -393,7 +393,7 @@ if __name__ == '__main__':
         assert name_vals[0][0] == 'Acc_exlude_padding'
         curr_acc = name_vals[0][1]
 
-        if n_epoch > 0 and curr_acc < last_acc:
+        if n_epoch > 0 and lr_scheduler.base_lr > lower_bnd and curr_acc < last_acc:
             logging.info('*** Reducing Learning Rate %g => %g ***' % \
                     (lr_scheduler.base_lr, lr_scheduler.base_lr / float(factor)))
             # reduce learning rate
