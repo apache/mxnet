@@ -2,6 +2,8 @@
 
 This page contains a curated list of awesome MXnet examples, tutorials and blogs. It is inspired by [awesome-php](https://github.com/ziadoz/awesome-php) and [awesome-machine-learning](https://github.com/josephmisiti/awesome-machine-learning).
 
+[TOC]
+
 ## Contributing
 
 If you want to contribute to this list and the examples, please open a new pull request.
@@ -30,7 +32,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [Kaggle 1st national data science bowl](https://github.com/dmlc/mxnet/tree/master/example/kaggle-ndsb1) - a MXnet example for Kaggle Nation Data Science Bowl 1
 * [Kaggle 2nd national data science bowl](https://github.com/dmlc/mxnet/tree/master/example/kaggle-ndsb2) - a tutorial for Kaggle Second Nation Data Science Bowl
 * [CNN for Text Classification](cnn_text_classification) - a MXnet example for text classification
-
+* [Chinese plate recognition](https://github.com/imistyrain/mxnet-mr) - Recognize Chinese vehicle plate, by [liuruoze](https://github.com/liuruoze)
 
 ###IPython Notebooks
 -----------------
@@ -49,20 +51,40 @@ If you want to contribute to this list and the examples, please open a new pull 
 ###Web Predictive Services
 -----------------------
 * [MXNet Shinny](https://github.com/thirdwing/mxnet_shiny) - Source code for quickly creating a Shiny R app to host online image classification.
-* [Machine Eye] (http://rupeshs.github.io/machineye/)- Web service for local image file/image URL classification without uploading.
+* [Machine Eye] (http://rupeshs.github.io/machineye/) - Web service for local image file/image URL classification without uploading.
+
 ## List of tutorials
+
+### GPU Technology Conference 2016 Hands-on session
+
+* [Video on GTC 2016 site] (http://on-demand.gputechconf.com/gtc/2016/video/L6143.html) 
+* [Video backup in Mainland China](http://pan.baidu.com/s/1eS58Gue) 
+* [iPython Notebook](https://github.com/dmlc/mxnet-gtc-tutorial) 
 
 ### Deep learning for hackers with MXnet
 
 * Deep learning for hackers with MXnet (1) GPU installation and MNIST [English](https://no2147483647.wordpress.com/2015/12/07/deep-learning-for-hackers-with-mxnet-1/) [Chinese](http://phunter.farbox.com/post/mxnet-tutorial1) - a tutorial of installing MXnet with GPU and introduction to deep learning by MNIST example.
 * Deep learning for hackers with MXnet (2): Neural art [English](https://no2147483647.wordpress.com/2015/12/21/deep-learning-for-hackers-with-mxnet-2/) [Chinese](http://phunter.farbox.com/post/mxnet-tutorial2) - a tutorial of generating Van Gogh style cat paintings.
 
-### Setup AWS instance with MXnet
+### MXnet setup on AWS
 * [Setup Amazon AWS GPU instance with MXnet](https://no2147483647.wordpress.com/2016/01/16/setup-amazon-aws-gpu-instance-with-mxnet/) - AWS GPU instance setup with GPU (CUDA with latest cuDNN and S3 support)
+* [Intro Guide to AWS (MXnet with Julia)](http://www.datasciencebowl.com/aws_guide/) - A step-by-step guide of using spot instances with Amazon Web Services (AWS) to help you save money when training DSB models on Mxnet by [Mike Kim](http://www.datasciencebowl.com/author/mikekim/)
 
 ### Kaggle tutorials
 * [Kaggle 2nd Annual Data Science Bowl End-to-End Deep Learning Tutorial (Python)](https://www.kaggle.com/c/second-annual-data-science-bowl/forums/t/18079/end-to-end-deep-learning-tutorial-0-0392) - an end-to-end python tutorial for Kaggle heart disease diagnose competition (public leaderboard score 0.0392)
 * [Kaggle 2nd Annual Data Science Bowl End-to-End Deep Learning Tutorial (R)](https://www.kaggle.com/c/second-annual-data-science-bowl/forums/t/18122/deep-learning-model-in-r) - an end-to-end R tutorial for Kaggle heart disease diagnose competition
 
 ###Learning Note
-* [Learning Note in Chinese](https://github.com/zhubuntu/MXNet-Learning-Note) - Mxnet learning note in chinese.
+* [Learning Note in Chinese](https://github.com/zhubuntu/MXNet-Learning-Note) - Mxnet learning note in Chinese.
+* [Getting Started with MXNet](https://indico.io/blog/getting-started-with-mxnet/) by [indico.io](https://indico.io) (Chinese Translation [MXnet实践](http://www.infoq.com/cn/articles/practise-of-mxnet) by [侠天](http://www.infoq.com/cn/author/%E4%BE%A0%E5%A4%A9) )
+* [{mxnet} R package from MXnet, an intuitive Deep Learning framework including CNN & RNN] (http://tjo-en.hatenablog.com/entry/2016/03/30/233848) by [TJO](http://tjo-en.hatenablog.com/)
+* [MXnet with R: combined power of deep learning](http://cos.name/2016/04/mxnet-r/) in Chinese by Tong He
+
+## Machine Learning Challenge Winning Solutions
+
+* Dmitrii Tsybulevskii, 1st place of the [Yelp Restaurant Photo Classification](https://www.kaggle.com/c/yelp-restaurant-photo-classification). Link to [the Kaggle interview](http://blog.kaggle.com/2016/04/28/yelp-restaurant-photo-classification-winners-interview-1st-place-dmitrii-tsybulevskii/).
+
+## Tools with MXnet
+* [TensorFuse](https://github.com/dementrock/tensorfuse) - Common interface for Theano, CGT, TensorFlow, and mxnet (experimental) by [dementrock](https://github.com/dementrock)
+* [MXnet-face](https://github.com/tornadomeet/mxnet-face) - Using mxnet for face-related algorithm by [tornadomeet](https://github.com/tornadomeet) where the single model get 97.13%+-0.88% accuracy on LFW, and with only 20MB size.
+* [MinPy](https://github.com/dmlc/minpy) - Pure numpy practice with third party operator Integration and MXnet as backend for GPU computing
