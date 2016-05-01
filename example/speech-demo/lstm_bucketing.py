@@ -19,21 +19,28 @@ from utils.main_runner import run_main
 DATASETS = {}
 
 DATASETS["AMI_train"] = {
-        "lst_file": "/data/sls/scratch/yzhang87/AMI/ami_sdm_baseline/exp_cntk/sdm1/cntk_train_mxnet.feats",
+        "lst_file": "/home/chiyuan/download/kaldi/egs/ami/s5/exp/sdm1/data-for-mxnet/train.feats",
         "format": "kaldi",
-        "in": 80
+        "in": 40
+        }
+
+DATASETS["AMI_dev"] = {
+        "lst_file": "/home/chiyuan/download/kaldi/egs/ami/s5/exp/sdm1/data-for-mxnet/dev.feats",
+        "format": "kaldi",
+        "in": 40
         }
 
 DATASETS["TIMIT_train"] = {
-        "lst_file": "/data/scratch/yzhang87/speech/timit/cntk_train_mxnet.feats",
+        #"lst_file": "/data/scratch/yzhang87/speech/timit/cntk_train_mxnet.feats",
+        "lst_file": "/home/chiyuan/download/kaldi/egs/timit/s5/exp/data-for-mxnet/train.feats",
         "format": "kaldi",
-        "in": 40
+        "in": 13
         }
 
 DATASETS["TIMIT_dev"] = {
-        "lst_file": "/data/scratch/yzhang87/speech/timit/cntk_dev_mxnet.feats",
+        "lst_file": "/home/chiyuan/download/kaldi/egs/timit/s5/exp/data-for-mxnet/fake-dev.feats",
         "format": "kaldi",
-        "in": 40
+        "in": 13
         }
 
 
@@ -113,8 +120,10 @@ class BucketSentenceIter(mx.io.DataIter):
         n = 0
         while True:
             (feats, tgts, utt_id) = self.train_sets.load_next_seq();
-            if utt_id == None:
+            if utt_id is None:
                 break
+            if tgts is None:
+                continue
             if feats.shape[0] == 0:
                 continue
             for i, bkt in enumerate(buckets):
@@ -289,20 +298,20 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
 
 
 if __name__ == '__main__':
-    batch_size = 40
+    batch_size = 10
     buckets = [100, 200, 300, 400, 500, 600, 700, 800]
     num_hidden = 1024
     num_lstm_layer = 3
 
     num_epoch = 20
     learning_rate = 0.002
-    momentum = 0.9
 
-    contexts = [mx.context.gpu(i) for i in range(3,4)]
+    contexts = [mx.context.gpu(i) for i in range(0,1)]
 
     
     feat_dim = 40
-    label_dim = 1955 + 1
+    #label_dim = 1955 + 1
+    label_dim = 3921 - 2 + 1
 
     init_c = [('l%d_init_c'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
     init_h = [('l%d_init_h'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
@@ -342,23 +351,64 @@ if __name__ == '__main__':
 
 
     data_train = BucketSentenceIter(train_sets,
-                                    buckets, batch_size, init_states)
+                                    buckets, batch_size, init_states, feat_dim=train_data["in"])
     data_val   = BucketSentenceIter(dev_sets,
-                                    buckets, batch_size, init_states)
+                                    buckets, batch_size, init_states, feat_dim=dev_data["in"])
 
     model = mx.mod.BucketingModule(sym_gen, default_bucket_key=data_train.default_bucket_key, context=contexts)
     
     import logging
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
-    model.fit(data_train, eval_data=data_val, num_epoch=num_epoch,
-              eval_metric=mx.metric.np(Acc_exlude_padding),
-              batch_end_callback = mx.callback.Speedometer(batch_size, 100), 
-              initializer = mx.init.Xavier(factor_type="in", magnitude=2.34),
-              optimizer = "adam",
-              optimizer_params={'learning_rate':0.002, 'wd': 0.0})
-              #optimizer='sgd',
-              #optimizer_params={'learning_rate':0.002, 'momentum': 0.9, 'wd': 0.00001})
+
+    class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
+        def __init__(self, base_lr):
+            self.base_lr = base_lr
+
+        def __call__(self, num_update):
+            return self.base_lr
+
+    lr_scheduler = SimpleLRScheduler(learning_rate)
+    eval_metric  = mx.metric.np(Acc_exlude_padding)
+
+    n_epoch = 0
+
+    last_acc = -float("Inf")
+    last_arg = None
+    last_aux = None
+    factor   = 5
+    lower_bnd= 1e-6
+
+    while True:
+        model.fit(data_train, num_epoch=n_epoch+1, begin_epoch=n_epoch,
+                  eval_metric=eval_metric,
+                  batch_end_callback = mx.callback.Speedometer(batch_size, 100),
+                  initializer = mx.init.Xavier(factor_type="in", magnitude=2.34),
+                  optimizer = "adam",
+                  optimizer_params={'lr_scheduler': lr_scheduler, 'wd': 0.0})
+
+        model.score(data_val, eval_metric, epoch=n_epoch)
+        name_vals = eval_metric.get_name_value()
+        assert len(name_vals) == 1
+        assert name_vals[0][0] == 'Acc_exlude_padding'
+        curr_acc = name_vals[0][1]
+
+        if n_epoch > 0 and curr_acc < last_acc:
+            logging.info('*** Reducing Learning Rate %g => %g ***' % \
+                    (lr_scheduler.base_lr, lr_scheduler.base_lr / float(factor)))
+            # reduce learning rate
+            lr_scheduler.base_lr /= float(factor)
+
+            logging.info('*** Reverting back to epoch %d ***' % n_epoch)
+            # revert to the last epoch
+            model.set_params(last_arg, last_aux)
+        else:
+            last_arg, last_aux = model.get_params()
+            last_acc = curr_acc
+            n_epoch += 1
+
+        if n_epoch == num_epoch:
+            break
 
 
     #model.score(data_val, eval_metric)
