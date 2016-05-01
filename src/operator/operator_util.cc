@@ -648,9 +648,13 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
       CHECK_EQ(lhs.shape(), rhs.shape()) << "operands shape mismatch";
       dshape = lhs.shape();
     }
-    CHECK_EQ(lhs.ctx(), rhs.ctx())
-      << "operands context mismatch " << lhs.ctx().dev_type << " " << lhs.ctx().dev_id << \
-      " vs. " << rhs.ctx().dev_type << " " << rhs.ctx().dev_id;
+
+    // no check if all of them are on cpu
+    if (lhs.ctx().dev_mask() != cpu::kDevMask || rhs.ctx().dev_mask() != cpu::kDevMask) {
+      CHECK_EQ(lhs.ctx(), rhs.ctx())
+        << "operands context mismatch " << lhs.ctx().dev_type << " " << lhs.ctx().dev_id << \
+        " vs. " << rhs.ctx().dev_type << " " << rhs.ctx().dev_id;
+    }
     CHECK_EQ(lhs.dtype(), rhs.dtype()) << "operands type mismatch";
 
     // check output shape.

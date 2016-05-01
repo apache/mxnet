@@ -3,9 +3,9 @@
 
 import logging
 import time
-import numpy as np
 
 from .. import metric
+from .. import ndarray
 
 from ..model import BatchEndParam
 from ..initializer import Uniform
@@ -231,6 +231,9 @@ class BaseModule(object):
         `[[out1_batch1, out2_batch1], [out1_batch2], ...]`. This mode is useful because
         in some cases (e.g. bucketing), the module does not necessarily produce the same
         number of outputs.
+
+        The objects in the results are `NDArray`s. If you need to work with numpy array,
+        just call `.asnumpy()` on each of the `NDArray`.
         """
         assert self.binded and self.params_initialized
 
@@ -257,7 +260,7 @@ class BaseModule(object):
                 assert len(out) == num_outputs, \
                        'Cannot merge batches, as num of outputs is not the same ' + \
                        'in mini-batches. Maybe bucketing is used?'
-            output_list2 = [np.concatenate([out[i] for out in output_list])
+            output_list2 = [ndarray.concatenate([out[i] for out in output_list])
                             for i in range(num_outputs)]
 
             if num_outputs == 1 and not always_output_list:
