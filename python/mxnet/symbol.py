@@ -18,7 +18,7 @@ from .attribute import AttrScope
 from .context import Context
 from .ndarray import NDArray, zeros, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .executor import Executor
-from .symbol_doc import *
+from .symbol_doc import SymbolDoc
 
 class Symbol(object):
     """Symbol is symbolic graph of the mxnet."""
