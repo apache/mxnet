@@ -8,111 +8,117 @@ import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
+import org.kohsuke.args4j.{CmdLineParser, Option}
+import org.slf4j.{LoggerFactory, Logger}
 
 import scala.collection.mutable
+import scala.collection.JavaConverters._
 
 /**
  * MXNet Training On Spark
  * @author Yizhi Liu
  */
 object MXNet {
+  private val logger: Logger = LoggerFactory.getLogger(classOf[MXNet])
+  // TODO: make it configurable
+  private val batchSize = 128
+
   def train(data: RDD[LabeledPoint]): Unit = {
     data.foreachPartition { partition =>
     }
   }
 
   def main(args: Array[String]): Unit = {
-    val numWorker = args(1).toInt
-    println(s"numWorker: $numWorker")
+    val cmdLine = new CommandLine
+    val parser: CmdLineParser = new CmdLineParser(cmdLine)
+    try {
+      parser.parseArgument(args.toList.asJava)
+      cmdLine.checkArguments()
 
-    val conf = new SparkConf().setAppName("MXNet")
-    val sc = new SparkContext(conf)
+      val numWorker = cmdLine.numWorker
+      val numServer = cmdLine.numServer
+      val classpaths = cmdLine.classpaths
+      val javabin = cmdLine.java
+      val schedulerIP = utils.Network.ipAddress
+      val schedulerPort = utils.Network.availablePort
 
-    val trainRaw = sc.textFile(args(0))
-    val trainData = trainRaw.map { s =>
-      val parts = s.split(' ')
-      val label = java.lang.Double.parseDouble(parts(0))
-      val features = Vectors.dense(parts(1).trim().split(',').map(java.lang.Double.parseDouble))
-      LabeledPoint(label, features)
-    }.repartition(numWorker)
+      val conf = new SparkConf().setAppName("MXNet")
+      val sc = new SparkContext(conf)
 
-    require(trainData.getNumPartitions == numWorker)
+      val trainRaw = sc.textFile(cmdLine.input)
+      val trainData = trainRaw.map { s =>
+        val parts = s.split(' ')
+        val label = java.lang.Double.parseDouble(parts(0))
+        val features = Vectors.dense(parts(1).trim().split(',').map(java.lang.Double.parseDouble))
+        LabeledPoint(label, features)
+      }.repartition(numWorker)
 
-    val batchSize = 128
-    val dimension = trainData.first().features.size
-    println(s"Dimension: $dimension")
-    val numExamples = trainData.count().toInt
-    println(s"numExamples: $numExamples")
+      require(trainData.getNumPartitions == numWorker)
 
-    println("Starting scheduler ...")
-    val tmp = "/mnt/hgfs/lewis/Workspace/source-codes/forks/mxnet/scala-package/assembly/linux-x86_64-cpu/target/*" +
-      ":/mnt/hgfs/lewis/Workspace/source-codes/forks/mxnet/scala-package/spark/target/classes/lib/*" +
-      ":/mnt/hgfs/lewis/Workspace/source-codes/forks/mxnet/scala-package/spark/target/*"
-    val scheduler = new ParameterServer(tmp, role = "scheduler",
-      rootUri = "127.0.0.1", rootPort = 9293, numServer = 1, numWorker = numWorker)
-    require(scheduler.startProcess(), "Failed to start ps scheduler process")
+      val dimension = trainData.first().features.size
+      logger.debug("Dimension: {}", dimension)
+      val numExamples = trainData.count().toInt
+      logger.debug("numExamples: {}", numExamples)
 
-    sc.parallelize(1 to 1, 1).foreachPartition { p =>
-      println("PSLauncher launching server ...")
-      val server = new ParameterServer(tmp, role = "server",
-        rootUri = "127.0.0.1", rootPort = 9293, numServer = 1, numWorker = numWorker,
-        java = "/usr/local/jdk1.8.0_60/bin/java")
-      require(server.startProcess(), "Failed to start ps server process")
-    }
+      logger.info("Starting scheduler on {}:{}", schedulerIP, schedulerPort)
+      val scheduler = new ParameterServer(classpaths, role = "scheduler",
+        rootUri = schedulerIP, rootPort = schedulerPort,
+        numServer = numServer, numWorker = numWorker, java = javabin)
+      require(scheduler.startProcess(), "Failed to start ps scheduler process")
 
-    val job = trainData.mapPartitions { partition =>
-      val dataIter = new LabeledPointIter(
-        partition, dimension, batchSize, labelName = "softmax_label")
-
-      println("PSLauncher launching worker ...")
-      //PSLauncher.launch("worker", spawn = false)
-      val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
-      envs.put("DMLC_ROLE", "worker")
-      envs.put("DMLC_PS_ROOT_URI", "127.0.0.1")
-      envs.put("DMLC_PS_ROOT_PORT", "9293")
-      envs.put("DMLC_NUM_WORKER", numWorker.toString)
-      envs.put("DMLC_NUM_SERVER", "1")
-      KVStoreServer.init(envs.toMap)
-
-      val kv = KVStore.create("dist_async")
-      val optimizer: Optimizer = new SGD(learningRate = 0.01f,
-        momentum = 0.9f, wd = 0.00001f)
-
-      println("Define model")
-      val model = new FeedForward(ctx = Context.cpu(),
-        symbol = getMlp,
-        numEpoch = 10,
-        optimizer = optimizer,
-        initializer = new Xavier(factorType = "in", magnitude = 2.34f),
-        argParams = null,
-        auxParams = null,
-        beginEpoch = 0,
-        epochSize = numExamples / batchSize / kv.numWorkers)
-      println("Start fit")
-      model.fit(trainData = dataIter,
-        evalData = null,
-        evalMetric = new Accuracy(),
-        kvStore = kv)
-
-      /*
-      while (dataIter.hasNext) {
-        val dataBatch = dataIter.next()
-        println(s"Data: ${dataBatch.label.head.toArray.mkString(",")}, " +
-          s"dim = ${dataBatch.data.head.shape}")
+      sc.parallelize(1 to numServer, numServer).foreachPartition { p =>
+        logger.info("Starting server ...")
+        val server = new ParameterServer(classpaths, role = "server",
+          rootUri = schedulerIP, rootPort = schedulerPort,
+          numServer = numServer, numWorker = numWorker, java = javabin)
+        require(server.startProcess(), "Failed to start ps server process")
       }
-      */
 
-      println("PSWorker finished")
-      kv.dispose()
-      Iterator(new MXNetModel(model))
-    }.cache()
+      val job = trainData.mapPartitions { partition =>
+        val dataIter = new LabeledPointIter(
+          partition, dimension, batchSize, labelName = "softmax_label")
 
-    job.foreachPartition(() => _)
+        logger.info("Launching worker ...")
+        KVStoreServer.init(ParameterServer.buildEnv(role = "worker",
+          rootUri = schedulerIP, rootPort = schedulerPort,
+          numServer = numServer, numWorker = numWorker))
+        val kv = KVStore.create("dist_async")
+
+        val optimizer: Optimizer = new SGD(learningRate = 0.01f,
+          momentum = 0.9f, wd = 0.00001f)
+
+        logger.debug("Define model")
+        val model = new FeedForward(ctx = Context.cpu(),
+          symbol = getMlp,
+          numEpoch = 10,
+          optimizer = optimizer,
+          initializer = new Xavier(factorType = "in", magnitude = 2.34f),
+          argParams = null,
+          auxParams = null,
+          beginEpoch = 0,
+          epochSize = numExamples / batchSize / kv.numWorkers)
+        logger.info("Start training ...")
+        model.fit(trainData = dataIter,
+          evalData = null,
+          evalMetric = new Accuracy(),
+          kvStore = kv)
+
+        logger.info("Training finished")
+        kv.dispose()
+        Iterator(new MXNetModel(model))
+      }.cache()
+
+      job.foreachPartition(() => _)
 
 
-    println("Waiting for scheduler ...")
-    scheduler.waitFor()
-    sc.stop()
+      logger.info("Waiting for scheduler ...")
+      scheduler.waitFor()
+      sc.stop()
+    } catch {
+      case e: Throwable =>
+        logger.error(e.getMessage, e)
+        sys.exit(-1)
+    }
   }
 
   def getMlp: Symbol = {
@@ -125,4 +131,30 @@ object MXNet {
     val mlp = Symbol.SoftmaxOutput(name = "softmax")(Map("data" -> fc3))
     mlp
   }
+
+  private class CommandLine {
+    @Option(name = "--input", usage = "Input training file.")
+    val input: String = null
+    @Option(name = "--jars", usage = "Jars for running MXNet on other nodes.")
+    val jars: String = null
+    @Option(name = "--num-server", usage = "PS server number")
+    val numServer: Int = 1
+    @Option(name = "--num-worker", usage = "PS worker number")
+    val numWorker: Int = 1
+    @Option(name = "--java", usage = "Java bin")
+    val java: String = "java"
+
+    def checkArguments(): Unit = {
+      require(input != null, "Undefined input path")
+      require(numServer > 0, s"Invalid number of servers: $numServer")
+      require(numWorker > 0, s"Invalid number of workers: $numWorker")
+    }
+
+    def classpaths = {
+      if (jars == null) null
+      else jars.replace(",", ":")
+    }
+  }
 }
+
+class MXNet
