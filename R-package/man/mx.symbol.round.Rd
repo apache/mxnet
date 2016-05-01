@@ -7,8 +7,11 @@
 mx.symbol.round(...)
 }
 \arguments{
-\item{src}{Symbol
-Source symbolic input to the function}
+\item{lhs}{Symbol
+Left symbolic input to the function}
+
+\item{rhs}{Symbol
+Left symbolic input to the function}
 
 \item{name}{string, optional
 Name of the resulting symbol.}

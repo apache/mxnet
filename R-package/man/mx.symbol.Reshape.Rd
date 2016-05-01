@@ -13,6 +13,9 @@ Input data to  reshape.}
 \item{target.shape}{Shape(tuple), required
 Target new shape. One and only one dim can be 0, in which case it will be inferred from the rest of dims}
 
+\item{keep.highest}{boolean, optional, default=False
+Whether keep the highest dim unchanged.If set to yes, than the first dim in target_shape is ignored,and always fixed as input}
+
 \item{name}{string, optional
 Name of the resulting symbol.}
 }

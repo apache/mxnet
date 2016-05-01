@@ -34,7 +34,7 @@ number of groups partition}
 \item{workspace}{long (non-negative), optional, default=512
 Tmp workspace for deconvolution (MB)}
 
-\item{no.bias}{boolean, optional, default=False
+\item{no.bias}{boolean, optional, default=True
 Whether to disable bias parameter.}
 
 \item{name}{string, optional
