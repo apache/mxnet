@@ -388,7 +388,7 @@ if __name__ == '__main__':
     last_acc = -float("Inf")
     last_arg = None
     last_aux = None
-    factor   = 5
+    factor   = 2
     lower_bnd= 1e-6
 
     while True:
@@ -401,6 +401,9 @@ if __name__ == '__main__':
 
         model.score(data_val, eval_metric, epoch=n_epoch)
         name_vals = eval_metric.get_name_value()
+        for name, val in name_vals:
+            logging.info("%s:%s", name, val)
+
         assert len(name_vals) == 1
         assert name_vals[0][0] == 'Acc_exlude_padding'
         curr_acc = name_vals[0][1]
