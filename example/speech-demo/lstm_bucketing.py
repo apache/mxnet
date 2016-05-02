@@ -134,9 +134,22 @@ class BucketSentenceIter(mx.io.DataIter):
                         # we just ignore the sentence it is longer than the maximum
             # bucket size here
 
+        # Get the size of each bucket, so that we could sample
+        # uniformly from the bucket
+        bucket_sizes = [len(x) for x in self.data]
+
+
+        self.batch_size = batch_size
         # convert data into ndarrays for better speed during training
-        data = [np.zeros((len(x), buckets[i], self.feat_dim)) for i, x in enumerate(self.data)]
-        label = [np.zeros((len(x), buckets[i])) for i, x in enumerate(self.data)]
+        data = [np.zeros((len(x), buckets[i], self.feat_dim)) if len(x) % self.batch_size == 0  else np.zeros(((len(x)/self.batch_size + 1) *self.batch_size, buckets[i], self.feat_dim)) for i, x in enumerate(self.data)]
+        
+        label = [np.zeros((len(x), buckets[i])) if len(x) % self.batch_size == 0  else np.zeros(((len(x)/self.batch_size + 1) *self.batch_size, buckets[i])) for i, x in enumerate(self.data)]
+        
+        utt_id = [[] for k in buckets]
+        for i, x in enumerate(data):
+            utt_id[i] = ["GAP_UTT"] * len(x)
+        #print utt_id
+        #label = [np.zeros((len(x), buckets[i])) for i, x in enumerate(self.data)]
         for i_bucket in range(len(self.buckets)):
             for j in range(len(self.data[i_bucket])):
                 sentence = self.data[i_bucket][j]
@@ -146,7 +159,6 @@ class BucketSentenceIter(mx.io.DataIter):
                 label[i_bucket][j, :len(sentence[1])] = sentence[1]
         self.data = data
         self.label = label
-
 
         # Get the size of each bucket, so that we could sample
         # uniformly from the bucket
@@ -159,7 +171,6 @@ class BucketSentenceIter(mx.io.DataIter):
         bucket_size_tot = float(sum(bucket_sizes))
 
         self.bucket_sizes = bucket_sizes
-        self.batch_size = batch_size
         self.make_data_iter_plan()
 
         if n_batch is None:
@@ -291,8 +302,8 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
     #label = mx.sym.Reshape(data=label, target_shape=(0,))
     ################################################################################
 
-    sm = mx.sym.SoftmaxOutput(data=pred, label=label, name='softmax')
-
+    sm = mx.sym.SoftmaxOutput(data=pred, label=label, ignore_label=0, use_ignore=True, name='softmax')
+    
     return sm
 
 
@@ -303,7 +314,7 @@ if __name__ == '__main__':
     num_hidden = 1024
     num_lstm_layer = 3
 
-    num_epoch = 20
+    num_epoch = 50
     learning_rate = 0.002
 
     contexts = [mx.context.gpu(i) for i in range(0,1)]
@@ -355,6 +366,7 @@ if __name__ == '__main__':
     data_val   = BucketSentenceIter(dev_sets,
                                     buckets, batch_size, init_states, feat_dim=dev_data["in"])
 
+    checkpoint=mx.callback.do_checkpoint("haha_3L.mdl")
     model = mx.mod.BucketingModule(sym_gen, default_bucket_key=data_train.default_bucket_key, context=contexts)
     
     import logging
@@ -376,7 +388,7 @@ if __name__ == '__main__':
     last_acc = -float("Inf")
     last_arg = None
     last_aux = None
-    factor   = 5
+    factor   = 2
     lower_bnd= 1e-6
 
     while True:
@@ -389,6 +401,9 @@ if __name__ == '__main__':
 
         model.score(data_val, eval_metric, epoch=n_epoch)
         name_vals = eval_metric.get_name_value()
+        for name, val in name_vals:
+            logging.info("%s:%s", name, val)
+
         assert len(name_vals) == 1
         assert name_vals[0][0] == 'Acc_exlude_padding'
         curr_acc = name_vals[0][1]
