@@ -14,7 +14,7 @@ Input data to softmax.}
 Scale the gradient by a float factor}
 
 \item{ignore.label}{float, optional, default=-1
-the ignore_label will not work in backward, and this only be used when multi_output=true}
+the label value will be ignored during backward (only works if use_ignore is set to be true).}
 
 \item{multi.output}{boolean, optional, default=False
 If set to true, for a (n,k,x_1,..,x_n) dimensional input tensor, softmax will generate n*x_1*...*x_n output, each has k classes}

@@ -2,7 +2,7 @@
 % Please edit documentation in R/mxnet_generated.R
 \name{mx.symbol.Embedding}
 \alias{mx.symbol.Embedding}
-\title{Get embedding for one-hot input}
+\title{Get embedding for one-hot input. A n-dimensional input tensor will be trainsformed into a (n+1)-dimensional tensor, where a new dimension is added for the embedding results.}
 \usage{
 mx.symbol.Embedding(...)
 }
@@ -26,6 +26,6 @@ Name of the resulting symbol.}
 out The result mx.symbol
 }
 \description{
-Get embedding for one-hot input
+Get embedding for one-hot input. A n-dimensional input tensor will be trainsformed into a (n+1)-dimensional tensor, where a new dimension is added for the embedding results.
 }
 
