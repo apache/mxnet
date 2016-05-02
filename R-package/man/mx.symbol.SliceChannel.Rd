@@ -13,6 +13,9 @@ Number of outputs to be sliced.}
 \item{axis}{int, optional, default='1'
 Dimension along which to slice.}
 
+\item{squeeze.axis}{boolean, optional, default=False
+If true AND the sliced dimension becomes 1, squeeze that dimension.}
+
 \item{name}{string, optional
 Name of the resulting symbol.}
 }

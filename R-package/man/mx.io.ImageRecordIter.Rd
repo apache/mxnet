@@ -13,6 +13,9 @@ Dataset Param: Path to image list.}
 \item{path.imgrec}{string, optional, default='./data/imgrec.rec'
 Dataset Param: Path to image record file.}
 
+\item{aug.seq}{string, optional, default='aug_default'
+Augmentation Param: the augmenter names to represent sequence of augmenters to be applied, seperated by comma. Additional keyword parameters will be seen by these augmenters.}
+
 \item{label.width}{int, optional, default='1'
 Dataset Param: How many labels for an image.}
 
@@ -43,7 +46,7 @@ Batch Param: Batch size.}
 \item{round.batch}{boolean, optional, default=True
 Batch Param: Use round robin to handle overflow batch.}
 
-\item{prefetch.buffer}{, optional, default=4
+\item{prefetch.buffer}{long (non-negative), optional, default=4
 Backend Param: Number of prefetched parameters}
 
 \item{rand.crop}{boolean, optional, default=False
