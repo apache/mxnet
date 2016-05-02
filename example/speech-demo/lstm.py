@@ -69,6 +69,7 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
                                   input_dim=input_size,
                                   output_dim=num_embed,
                                   name="t%d_embed" % seqidx)
+
         # stack LSTM
         for i in range(num_lstm_layer):
             if i==0:
