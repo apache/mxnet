@@ -46,13 +46,13 @@ def parse_args():
         for name, _ in default_cfg.items(sec):
             arg_name = ('%s_%s' % (sec, name)).replace('-', '_')
             if hasattr(args, arg_name) and getattr(args, arg_name) is not None:
-                print('!! CMDLine overwriting %s.%s:' % (sec, name))
+                print('!! CMDLine overwriting %s.%s:' % (sec, name), file=sys.stderr)
                 print("    '%s' => '%s'" % (default_cfg.get(sec, name),
-                                            getattr(args, arg_name)))
+                                            getattr(args, arg_name)), file=sys.stderr)
                 default_cfg.set(sec, name, getattr(args, arg_name))
 
     args.config = default_cfg
-    print("="*80)
+    print("="*80, file=sys.stderr)
     return args
 
 def prepare_data(args):
