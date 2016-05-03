@@ -2,15 +2,14 @@ import sys, subprocess, pickle, os, json, logging, socket
 import logging.config
 import datetime
 
-
-import info
+from . import info
 
 def getRunDir():
     return os.path.dirname(os.path.realpath(sys.argv[0]))
 
 def setup_logger(logging_ini):
     if logging_ini is not None:
-        print "Using custom logger"
+        print("Using custom logger")
     else:
         logging_ini = os.path.join(info.CONFIGS, 'logging.ini')
 
@@ -86,7 +85,7 @@ def _linear(x):
     return x * 1.0
 
 def parse_activation(act_str):
-    print "***", act_str
+    print("***", act_str)
     if act_str == 'sigmoid':
         return T.nnet.sigmoid
     elif act_str == 'tanh':
@@ -128,10 +127,10 @@ def pickle_load(filename):
     f = open(filename, "rb")
     try:
         obj = pickle.load(f)
-    except Exception, e:
+    except Exception:
         f.close()
         f = open(filename, "rb")
-        print "Not a pickled file... try to load as text format: " + filename
+        print("Not a pickled file... try to load as text format: " + filename)
         obj = json.load(f)
     f.close()
     return obj

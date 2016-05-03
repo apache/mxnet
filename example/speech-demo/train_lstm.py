@@ -22,13 +22,37 @@ METHOD_BUCKETING = 'bucketing'
 METHOD_TBPTT = 'truncated-bptt'
 
 def parse_args():
+    default_cfg = configparser.ConfigParser()
+    default_cfg.read(os.path.join(os.path.dirname(__file__), 'default.cfg'))
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("configfile", help="config file for training parameters")
+    parser.add_argument("--configfile", help="config file for training parameters")
+
+    # those allow us to overwrite the configs through command line
+    for sec in default_cfg.sections():
+        for name, _ in default_cfg.items(sec):
+            arg_name = '--%s_%s' % (sec, name)
+            doc = 'Overwrite %s in section [%s] of config file' % (name, sec)
+            parser.add_argument(arg_name, help=doc)
+
     args = parser.parse_args()
 
-    cfg = configparser.ConfigParser()
-    cfg.read(args.configfile)
-    args.config = cfg
+    if args.configfile is not None:
+        # now read the user supplied config file to overwrite some values
+        default_cfg.read(args.configfile)
+
+    # now overwrite config from command line options
+    for sec in default_cfg.sections():
+        for name, _ in default_cfg.items(sec):
+            arg_name = ('%s_%s' % (sec, name)).replace('-', '_')
+            if hasattr(args, arg_name) and getattr(args, arg_name) is not None:
+                print('!! CMDLine overwriting %s.%s:' % (sec, name))
+                print("    '%s' => '%s'" % (default_cfg.get(sec, name),
+                                            getattr(args, arg_name)))
+                default_cfg.set(sec, name, getattr(args, arg_name))
+
+    args.config = default_cfg
+    print("="*80)
     return args
 
 def prepare_data(args):
@@ -81,7 +105,6 @@ def Acc_exclude_padding(labels, preds):
 
         ind = np.nonzero(label.flat)
         pred_label_real = pred_label.flat[ind]
-        #print label, pred_label, ind
         label_real = label.flat[ind]
         sum_metric += (pred_label_real == label_real).sum()
         num_inst += len(pred_label_real)
@@ -106,7 +129,7 @@ def do_training(training_method, args, module, data_train, data_val):
     batch_size = data_train.batch_size
     batch_end_callbacks = [mx.callback.Speedometer(batch_size, 100)]
     eval_allow_extra = True if training_method == METHOD_TBPTT else False
-    eval_metric = mx.metric.np(Acc_exclude_padding, 
+    eval_metric = mx.metric.np(Acc_exclude_padding,
                                allow_extra_outputs=eval_allow_extra)
 
     momentum = args.config.getfloat('train', 'momentum')
