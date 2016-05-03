@@ -14,6 +14,7 @@ from .ndarray import NDArray, _new_empty_handle
 try:
     _LUAJIT = ctypes.CDLL("libluajit.so", mode=ctypes.RTLD_GLOBAL)
 except OSError:
+    _LUAJIT = None
     pass
 
 # pylint: disable=too-many-locals, invalid-name
