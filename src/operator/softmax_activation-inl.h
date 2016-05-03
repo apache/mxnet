@@ -29,9 +29,9 @@ enum SoftmaxActivationOpType {kInstance, kChannel};
 
 struct SoftmaxActivationParam : public dmlc::Parameter<SoftmaxActivationParam> {
   // use int for enumeration
-  int act_type;
+  int mode;
   DMLC_DECLARE_PARAMETER(SoftmaxActivationParam) {
-    DMLC_DECLARE_FIELD(act_type)
+    DMLC_DECLARE_FIELD(mode)
     .add_enum("instance", softmax_activation::kInstance)
     .add_enum("channel", softmax_activation::kChannel)
     .set_default(softmax_activation::kInstance)
@@ -64,7 +64,7 @@ class SoftmaxActivationOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    if (param_.act_type == softmax_activation::kInstance) {
+    if (param_.mode == softmax_activation::kInstance) {
       Tensor<xpu, 2> data = in_data[softmax_activation::kData].FlatTo2D<xpu, real_t>(s);
       Tensor<xpu, 2> out = out_data[softmax_activation::kOut].FlatTo2D<xpu, real_t>(s);
       Softmax(out, data);
