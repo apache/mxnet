@@ -1,3 +1,6 @@
+import mxnet as mx
+import numpy as np
+
 from io_func.feat_io import DataReadStream
 
 # The interface of a data iter that works for bucketing
@@ -79,9 +82,11 @@ class BucketSentenceIter(mx.io.DataIter):
 
         self.batch_size = batch_size
         # convert data into ndarrays for better speed during training
-        data = [np.zeros((len(x), buckets[i], self.feat_dim)) if len(x) % self.batch_size == 0  else np.zeros(((len(x)/self.batch_size + 1) *self.batch_size, buckets[i], self.feat_dim)) for i, x in enumerate(self.data)]
+        data = [np.zeros((len(x), buckets[i], self.feat_dim)) 
+                if len(x) % self.batch_size == 0  else np.zeros(((len(x)/self.batch_size + 1) *self.batch_size, buckets[i], self.feat_dim)) for i, x in enumerate(self.data)]
 
-        label = [np.zeros((len(x), buckets[i])) if len(x) % self.batch_size == 0  else np.zeros(((len(x)/self.batch_size + 1) *self.batch_size, buckets[i])) for i, x in enumerate(self.data)]
+        label = [np.zeros((len(x), buckets[i])) 
+                if len(x) % self.batch_size == 0  else np.zeros(((len(x)/self.batch_size + 1) *self.batch_size, buckets[i])) for i, x in enumerate(self.data)]
 
         utt_id = [[] for k in buckets]
         for i, x in enumerate(data):

@@ -4,11 +4,17 @@ import time
 import logging
 import os.path
 import argparse
-import configparser
+
+if sys.version_info >= (3, 0):
+    import configparser
+else:
+    import ConfigParser as configparser
 
 import mxnet as mx
+import numpy as np
 
-from io_util import BucketSentenceIter
+from lstm import lstm_unroll
+from io_util import BucketSentenceIter, DataReadStream
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -21,9 +27,9 @@ def parse_args():
     return args
 
 def prepare_data(args):
-    batch_size = int(args.config.get('train', 'batch_size'))
-    num_hidden = int(args.config.get('arch', 'num_hidden'))
-    num_lstm_layer = int(args.config.get('arch', 'num_lstm_layer'))
+    batch_size = args.config.getint('train', 'batch_size')
+    num_hidden = args.config.getint('arch', 'num_hidden')
+    num_lstm_layer = args.config.getint('arch', 'num_lstm_layer')
 
     init_c = [('l%d_init_c'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
     init_h = [('l%d_init_h'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
@@ -33,7 +39,7 @@ def prepare_data(args):
     file_train = args.config.get('data', 'train')
     file_dev = args.config.get('data', 'dev')
     file_format = args.config.get('data', 'format')
-    feat_dim = int(args.config.get('data', 'xdim'))
+    feat_dim = args.config.getint('data', 'xdim')
 
     train_data_args = {
             "gpu_chunk": 32768,
@@ -80,26 +86,28 @@ class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
     """A simple lr schedule that simply return `base_lr`. We will set `base_lr`
     dynamically based on performance on the validation set.
     """
-    def __init__(self, base_lr):
+    def __init__(self, base_lr, batch_size, seq_len=1):
         self.base_lr = base_lr
+        self.batch_size = batch_size
+        self.seq_len = seq_len
 
     def __call__(self, num_update):
-        return self.base_lr
+        return self.base_lr / self.batch_size / self.seq_len
 
-def do_training(args, module, data_train, data_val):
-    momentum = float(args.config.get('train', 'momentum', fallback=0.0))
-    learning_rate = float(args.config.get('train', 'learning_rate'))
-    lr_scheduler = SimpleLRScheduler(learning_rate)
+def do_training(training_method, args, module, data_train, data_val):
+    batch_size = data_train.batch_size
+    batch_end_callbacks = [mx.callback.Speedometer(batch_size, 2)]
+
+    momentum = args.config.getfloat('train', 'momentum')
+    learning_rate = args.config.getfloat('train', 'learning_rate')
+    lr_scheduler = SimpleLRScheduler(learning_rate, batch_size)
     eval_metric  = mx.metric.np(Acc_exlude_padding)
 
-    batch_size = data_train.batch_size
-    batch_end_callbacks = [mx.callback.Speedometer(batch_size, 100)]
-
     n_epoch = 0
-    num_epoch = int(args.config.get('train', 'num_epoch'))
-    learning_rate = float(args.config.get('train', 'learning_rate'))
-    decay_factor = float(args.config.get('train', 'decay_factor'))
-    decay_bound = float(args.config.get('train', 'decay_lower_bound'))
+    num_epoch = args.config.getint('train', 'num_epoch')
+    learning_rate = args.config.getfloat('train', 'learning_rate')
+    decay_factor = args.config.getfloat('train', 'decay_factor')
+    decay_bound = args.config.getfloat('train', 'decay_lower_bound')
 
     last_acc = -float("Inf")
     last_params = None
@@ -117,14 +125,18 @@ def do_training(args, module, data_train, data_val):
         tic = time.time()
         eval_metric.reset()
 
-        for nbatch, data_batch in enumerate(train_data):
+        for nbatch, data_batch in enumerate(data_train):
+            if training_method == 'bucketing':
+                # set the seq_len so that lr is divided by seq_len
+                lr_scheduler.seq_len = data_batch.bucket_key
+
             module.forward_backward(data_batch)
             module.update()
             module.update_metric(eval_metric, data_batch.label)
 
-            batch_end_params = BatchEndParam(epoch=epoch, nbatch=nbatch,
-                                             eval_metric=eval_metric,
-                                             locals=locals())
+            batch_end_params = mx.model.BatchEndParam(epoch=n_epoch, nbatch=nbatch,
+                                                      eval_metric=eval_metric,
+                                                      locals=None)
             for callback in batch_end_callbacks:
                 callback(batch_end_params)
 
@@ -133,7 +145,7 @@ def do_training(args, module, data_train, data_val):
         toc = time.time()
         logging.info('Epoch[%d] Time cost=%.3f', n_epoch, toc-tic)
 
-        train_data.reset()
+        data_train.reset()
 
         # test on eval data
         module.score(data_val, eval_metric, epoch=n_epoch)
@@ -170,10 +182,10 @@ if __name__ == '__main__':
     args = parse_args()
     args.config.write(sys.stdout)
 
-    training_method = args.config.get('train', 'method', fallback='bucketing')
+    training_method = args.config.get('train', 'method')
 
     # parse context into Context objects
-    contexts = re.split(r'\W+', args.config.get('train', 'context', fallback='gpu0'))
+    contexts = re.split(r'\W+', args.config.get('train', 'context'))
     for i, ctx in enumerate(contexts):
         if ctx[:3] == 'gpu':
             contexts[i] = mx.context.gpu(int(ctx[3:]))
@@ -183,11 +195,11 @@ if __name__ == '__main__':
     init_states, train_sets, dev_sets = prepare_data(args)
     state_names = [x[0] for x in init_states]
 
-    batch_size = int(args.config.get('train', 'batch_size'))
-    num_hidden = int(args.config.get('arch', 'num_hidden'))
-    num_lstm_layer = int(args.config.get('arch', 'num_lstm_layer'))
-    feat_dim = int(args.config.get('data', 'xdim'))
-    label_dim = int(args.config.get('data', 'ydim'))
+    batch_size = args.config.getint('train', 'batch_size')
+    num_hidden = args.config.getint('arch', 'num_hidden')
+    num_lstm_layer = args.config.getint('arch', 'num_lstm_layer')
+    feat_dim = args.config.getint('data', 'xdim')
+    label_dim = args.config.getint('data', 'ydim')
 
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)-15s %(message)s')
 
@@ -207,7 +219,12 @@ if __name__ == '__main__':
         module = mx.mod.BucketingModule(sym_gen,
                                         default_bucket_key=data_train.default_bucket_key,
                                         context=contexts)
-        do_training(args, module, data_train, data_val)
+        do_training(training_method, args, module, data_train, data_val)
     else:
         raise RuntimeError('Unknown training method: %s' % training_method)
+
+    print("="*80)
+    print("Finished Training")
+    print("="*80)
+    args.config.write(sys.stdout)
 
