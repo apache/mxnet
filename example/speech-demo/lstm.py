@@ -98,4 +98,10 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
 
     sm = mx.sym.SoftmaxOutput(data=pred, label=label, ignore_label=0, use_ignore=True, name='softmax')
 
+    if output_states:
+        # also output states, used in truncated-bptt to copy over states
+        unpack_c = [state.c for state in last_states]
+        unpack_h = [state.h for state in last_states]
+        sm = mx.sym.Group([sm] + unpack_c + unpack_h)
+
     return sm

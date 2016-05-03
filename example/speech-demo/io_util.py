@@ -121,6 +121,7 @@ class TruncatedSentenceIter(mx.io.DataIter):
         utt_inside_idx = [0] * self.batch_size
 
         next_utt_idx = self.batch_size
+        is_pad = [False] * self.batch_size
         pad = 0
 
         np_data_buffer = np.zeros((self.batch_size, self.truncate_len, self.feat_dim))
@@ -137,13 +138,19 @@ class TruncatedSentenceIter(mx.io.DataIter):
                     # we have consumed this sentence
 
                     # reset the states
-                    # TODO: implement it here
+                    for state in self.init_state_arrays:
+                        state[i] = 0
 
                     # load new sentence
-                    if next_utt_idx >= len(self.features):
+                    if is_pad[i]:
+                        # I am already a padded sentence, just rewind to the
+                        # beginning of the sentece
+                        utt_inside_idx[i] = 0
+                    elif next_utt_idx >= len(self.features):
                         # we consumed the whole dataset, simply repeat this sentence
                         # and set pad
                         pad += 1
+                        is_pad[i] = True
                         utt_inside_idx[i] = 0
                     else:
                         # move to the next sentence

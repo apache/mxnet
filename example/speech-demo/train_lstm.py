@@ -17,6 +17,10 @@ import numpy as np
 from lstm import lstm_unroll
 from io_util import BucketSentenceIter, TruncatedSentenceIter, DataReadStream
 
+# some constants
+METHOD_BUCKETING = 'bucketing'
+METHOD_TBPTT = 'truncated-bptt'
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("configfile", help="config file for training parameters")
@@ -98,11 +102,14 @@ class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
 def do_training(training_method, args, module, data_train, data_val):
     batch_size = data_train.batch_size
     batch_end_callbacks = [mx.callback.Speedometer(batch_size, 100)]
+    eval_metric  = mx.metric.np(Acc_exclude_padding)
 
     momentum = args.config.getfloat('train', 'momentum')
     learning_rate = args.config.getfloat('train', 'learning_rate')
     lr_scheduler = SimpleLRScheduler(learning_rate, batch_size)
-    eval_metric  = mx.metric.np(Acc_exclude_padding)
+
+    if training_method == METHOD_TBPTT:
+        lr_scheduler.seq_len = data_train.truncate_len
 
     n_epoch = 0
     num_epoch = args.config.getint('train', 'num_epoch')
@@ -127,7 +134,7 @@ def do_training(training_method, args, module, data_train, data_val):
         eval_metric.reset()
 
         for nbatch, data_batch in enumerate(data_train):
-            if training_method == 'bucketing':
+            if training_method == METHOD_BUCKETING:
                 # set the seq_len so that lr is divided by seq_len
                 lr_scheduler.seq_len = data_batch.bucket_key
 
@@ -140,6 +147,13 @@ def do_training(training_method, args, module, data_train, data_val):
                                                       locals=None)
             for callback in batch_end_callbacks:
                 callback(batch_end_params)
+
+            if training_method == METHOD_TBPTT:
+                # copy over states
+                outputs = module.get_outputs()
+                # outputs[0] is softmax, 1:end are states
+                for i in range(1, len(outputs)):
+                    outputs[i].copyto(data_train.init_state_arrays[i-1])
 
         for name, val in eval_metric.get_name_value():
             logging.info('Epoch[%d] Train-%s=%f', n_epoch, name, val)
@@ -204,7 +218,7 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)-15s %(message)s')
 
-    if training_method == 'bucketing':
+    if training_method == METHOD_BUCKETING:
         buckets = args.config.get('train', 'buckets')
         buckets = list(map(int, re.split(r'\W+', buckets)))
         data_train = BucketSentenceIter(train_sets, buckets, batch_size, init_states, feat_dim=feat_dim)
@@ -221,7 +235,7 @@ if __name__ == '__main__':
                                         default_bucket_key=data_train.default_bucket_key,
                                         context=contexts)
         do_training(training_method, args, module, data_train, data_val)
-    elif training_method == 'truncated-bptt':
+    elif training_method == METHOD_TBPTT:
         truncate_len = args.config.getint('train', 'truncate_len')
         data_train = TruncatedSentenceIter(train_sets, batch_size, init_states,
                                            truncate_len=truncate_len, feat_dim=feat_dim)
