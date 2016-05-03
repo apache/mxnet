@@ -22,6 +22,7 @@ object MXNet {
   private val logger: Logger = LoggerFactory.getLogger(classOf[MXNet])
   // TODO: make it configurable
   private val batchSize = 128
+  private val dimension = Shape(1, 28, 28) // trainData.first().features.size
 
   def train(data: RDD[LabeledPoint]): Unit = {
     data.foreachPartition { partition =>
@@ -55,7 +56,7 @@ object MXNet {
 
       require(trainData.getNumPartitions == numWorker)
 
-      val dimension = trainData.first().features.size
+      // TODO
       logger.debug("Dimension: {}", dimension)
       val numExamples = trainData.count().toInt
       logger.debug("numExamples: {}", numExamples)
@@ -82,14 +83,15 @@ object MXNet {
         KVStoreServer.init(ParameterServer.buildEnv(role = "worker",
           rootUri = schedulerIP, rootPort = schedulerPort,
           numServer = numServer, numWorker = numWorker))
-        val kv = KVStore.create("dist_async")
+        val kv = KVStore.create("dist_sync")
 
         val optimizer: Optimizer = new SGD(learningRate = 0.01f,
           momentum = 0.9f, wd = 0.00001f)
 
         logger.debug("Define model")
         val model = new FeedForward(ctx = Context.cpu(),
-          symbol = getMlp,
+          //symbol = getMlp,
+          symbol = getLenet, // TODO
           numEpoch = 10,
           optimizer = optimizer,
           initializer = new Xavier(factorType = "in", magnitude = 2.34f),
@@ -130,6 +132,32 @@ object MXNet {
     val fc3 = Symbol.FullyConnected(name = "fc3")(Map("data" -> act2, "num_hidden" -> 10))
     val mlp = Symbol.SoftmaxOutput(name = "softmax")(Map("data" -> fc3))
     mlp
+  }
+
+  // LeCun, Yann, Leon Bottou, Yoshua Bengio, and Patrick
+  // Haffner. "Gradient-based learning applied to document recognition."
+  // Proceedings of the IEEE (1998)
+  def getLenet: Symbol = {
+    val data = Symbol.Variable("data")
+    // first conv
+    val conv1 = Symbol.Convolution()(Map("data" -> data, "kernel" -> "(5, 5)", "num_filter" -> 20))
+    val tanh1 = Symbol.Activation()(Map("data" -> conv1, "act_type" -> "tanh"))
+    val pool1 = Symbol.Pooling()(Map("data" -> tanh1, "pool_type" -> "max",
+      "kernel" -> "(2, 2)", "stride" -> "(2, 2)"))
+    // second conv
+    val conv2 = Symbol.Convolution()(Map("data" -> pool1, "kernel" -> "(5, 5)", "num_filter" -> 50))
+    val tanh2 = Symbol.Activation()(Map("data" -> conv2, "act_type" -> "tanh"))
+    val pool2 = Symbol.Pooling()(Map("data" -> tanh2, "pool_type" -> "max",
+      "kernel" -> "(2, 2)", "stride" -> "(2, 2)"))
+    // first fullc
+    val flatten = Symbol.Flatten()(Map("data" -> pool2))
+    val fc1 = Symbol.FullyConnected()(Map("data" -> flatten, "num_hidden" -> 500))
+    val tanh3 = Symbol.Activation()(Map("data" -> fc1, "act_type" -> "tanh"))
+    // second fullc
+    val fc2 = Symbol.FullyConnected()(Map("data" -> tanh3, "num_hidden" -> 10))
+    // loss
+    val lenet = Symbol.SoftmaxOutput(name = "softmax")(Map("data" -> fc2))
+    lenet
   }
 
   private class CommandLine {

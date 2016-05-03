@@ -7,13 +7,14 @@ import scala.collection.mutable.ArrayBuffer
 
 class LabeledPointIter(
   private val points: Iterator[LabeledPoint],
-  private val dimension: Int,
+  private val dimension: Shape,
   private val _batchSize: Int,
   private val dataName: String = "data",
   private val labelName: String = "label") extends DataIter {
 
   private val cache: ArrayBuffer[DataBatch] = ArrayBuffer.empty[DataBatch]
   private var index: Int = -1
+  private val dataShape = Shape(_batchSize) ++ dimension
 
   /**
    * reset the iterator
@@ -31,13 +32,14 @@ class LabeledPointIter(
     if (index >= 0 && index < cache.size) {
       cache(index)
     } else {
-      val dataBuilder = NDArray.empty(_batchSize, dimension)
+      val dataBuilder = NDArray.empty(dataShape)
       val labelBuilder = NDArray.empty(_batchSize)
       var instNum = 0
       while (instNum < batchSize && points.hasNext) {
         val point = points.next()
         val features = point.features.toArray.map(_.toFloat)
-        require(features.length == dimension, s"Dimension mismatch: ${features.length} != $dimension")
+        require(features.length == dimension.product,
+          s"Dimension mismatch: ${features.length} != $dimension")
         dataBuilder.slice(instNum).set(features)
         labelBuilder.slice(instNum).set(Array(point.label.toFloat))
         instNum += 1
@@ -94,7 +96,7 @@ class LabeledPointIter(
 
   // The name and shape of data provided by this iterator
   override def provideData: Map[String, Shape] = {
-    Map(dataName -> Shape(_batchSize, dimension))
+    Map(dataName -> dataShape)
   }
 
   /**
