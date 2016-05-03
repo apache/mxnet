@@ -42,12 +42,10 @@ class SimpleBatch(object):
 class BucketSentenceIter(mx.io.DataIter):
     def __init__(self, train_sets, buckets, batch_size,
             init_states, delay=5, feat_dim=40,  n_batch=None,
-            data_name='data', label_name='label', has_label='True'):
+            data_name='data', label_name='label', has_label=True):
 
         self.train_sets=train_sets
         self.train_sets.initialize_read()
-
-
 
         self.data_name = data_name
         self.label_name = label_name
@@ -88,10 +86,10 @@ class BucketSentenceIter(mx.io.DataIter):
 
         self.batch_size = batch_size
         # convert data into ndarrays for better speed during training
-        data = [np.zeros((len(x), buckets[i], self.feat_dim)) 
+        data = [np.zeros((len(x), buckets[i], self.feat_dim))
                 if len(x) % self.batch_size == 0  else np.zeros(((len(x)/self.batch_size + 1) *self.batch_size, buckets[i], self.feat_dim)) for i, x in enumerate(self.data)]
 
-        label = [np.zeros((len(x), buckets[i])) 
+        label = [np.zeros((len(x), buckets[i]))
                 if len(x) % self.batch_size == 0  else np.zeros(((len(x)/self.batch_size + 1) *self.batch_size, buckets[i])) for i, x in enumerate(self.data)]
 
         utt_id = [[] for k in buckets]
@@ -104,7 +102,7 @@ class BucketSentenceIter(mx.io.DataIter):
                 sentence = self.data[i_bucket][j]
                 if self.has_label:
                     sentence[1][delay:] = sentence[1][:-delay]
-                    sentence[1][:delay] = [sentence[1][0]]*delay 
+                    sentence[1][:delay] = [sentence[1][0]]*delay
                     data[i_bucket][j, :len(sentence[0])] = sentence[0]
                     label[i_bucket][j, :len(sentence[1])] = sentence[1]
                 else:

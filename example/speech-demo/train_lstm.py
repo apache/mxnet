@@ -154,10 +154,9 @@ def do_training(training_method, args, module, data_train, data_val):
         # test whether we should decay learning rate
         curr_acc = None
         for name, val in eval_metric.get_name_value():
-            logging.info("%s:%s", name, val)
+            logging.info("Epoch[%d] Dev-%s=%f", n_epoch, name, val)
             if name == 'Acc_exclude_padding':
                 curr_acc = val
-                break
         assert curr_acc is not None, 'cannot find Acc_exclude_padding in eval metric'
 
         if n_epoch > 0 and lr_scheduler.base_lr > decay_bound and curr_acc < last_acc:
