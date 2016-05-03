@@ -1,5 +1,6 @@
 import re
 import sys
+sys.path.insert(0, "../../python")
 import time
 import logging
 import os.path
@@ -66,7 +67,7 @@ def get_checkpoint_path(args):
         return prefix
     return os.path.abspath(os.path.join(os.path.dirname(__file__), 'checkpoints', prefix))
 
-def Acc_exlude_padding(labels, preds):
+def Acc_exclude_padding(labels, preds):
     labels = labels.T.reshape((-1,))
     sum_metric = 0
     num_inst = 0
@@ -96,12 +97,12 @@ class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
 
 def do_training(training_method, args, module, data_train, data_val):
     batch_size = data_train.batch_size
-    batch_end_callbacks = [mx.callback.Speedometer(batch_size, 2)]
+    batch_end_callbacks = [mx.callback.Speedometer(batch_size, 100)]
 
     momentum = args.config.getfloat('train', 'momentum')
     learning_rate = args.config.getfloat('train', 'learning_rate')
     lr_scheduler = SimpleLRScheduler(learning_rate, batch_size)
-    eval_metric  = mx.metric.np(Acc_exlude_padding)
+    eval_metric  = mx.metric.np(Acc_exclude_padding)
 
     n_epoch = 0
     num_epoch = args.config.getint('train', 'num_epoch')
@@ -141,7 +142,7 @@ def do_training(training_method, args, module, data_train, data_val):
                 callback(batch_end_params)
 
         for name, val in eval_metric.get_name_value():
-            self.logger.info('Epoch[%d] Train-%s=%f', n_epoch, name, val)
+            logging.info('Epoch[%d] Train-%s=%f', n_epoch, name, val)
         toc = time.time()
         logging.info('Epoch[%d] Time cost=%.3f', n_epoch, toc-tic)
 
@@ -153,6 +154,7 @@ def do_training(training_method, args, module, data_train, data_val):
         # test whether we should decay learning rate
         curr_acc = None
         for name, val in eval_metric.get_name_value():
+            logging.info("%s:%s", name, val)
             if name == 'Acc_exclude_padding':
                 curr_acc = val
                 break
@@ -167,7 +169,7 @@ def do_training(training_method, args, module, data_train, data_val):
             lr_scheduler.base_lr /= decay_factor
             module.set_params(*last_params)
         else:
-            last_params = model.get_params
+            last_params = module.get_params()
             last_acc = curr_acc
             n_epoch += 1
 
