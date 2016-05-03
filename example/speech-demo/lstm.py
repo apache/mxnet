@@ -37,7 +37,7 @@ def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
     return LSTMState(c=next_c, h=next_h)
 
 def lstm_unroll(num_lstm_layer, seq_len, input_size,
-                num_hidden, num_label, dropout=0.):
+                num_hidden, num_label, dropout=0., output_states=False):
 
     cls_weight = mx.sym.Variable("cls_weight")
     cls_bias = mx.sym.Variable("cls_bias")
@@ -97,5 +97,18 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
     ################################################################################
 
     sm = mx.sym.SoftmaxOutput(data=pred, label=label, ignore_label=0, use_ignore=True, name='softmax')
+
+    if output_states:
+        # block the gradients of output states
+        for i in range(num_lstm_layer):
+            state = last_states[i]
+            state = LSTMState(c=mx.sym.BlockGrad(state.c, name="l%d_last_c" % i),
+                              h=mx.sym.BlockGrad(state.h, name="l%d_last_h" % i))
+            last_states[i] = state
+
+        # also output states, used in truncated-bptt to copy over states
+        unpack_c = [state.c for state in last_states]
+        unpack_h = [state.h for state in last_states]
+        sm = mx.sym.Group([sm] + unpack_c + unpack_h)
 
     return sm

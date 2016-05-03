@@ -136,9 +136,9 @@ if __name__ == '__main__':
     featureStats.Load(args.filename)
 
     numpy.set_printoptions(threshold='nan')
-    print "THIS IS THE MEAN: "
-    print featureStats.GetMean()
-    print "THIS IS THE INVERSE STD: "
-    print featureStats.GetInvStd()
+    print("THIS IS THE MEAN: ")
+    print(featureStats.GetMean())
+    print("THIS IS THE INVERSE STD: ")
+    print(featureStats.GetInvStd())
 
 

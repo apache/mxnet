@@ -15,16 +15,44 @@ import mxnet as mx
 import numpy as np
 
 from lstm import lstm_unroll
-from io_util import BucketSentenceIter, DataReadStream
+from io_util import BucketSentenceIter, TruncatedSentenceIter, DataReadStream
+
+# some constants
+METHOD_BUCKETING = 'bucketing'
+METHOD_TBPTT = 'truncated-bptt'
 
 def parse_args():
+    default_cfg = configparser.ConfigParser()
+    default_cfg.read(os.path.join(os.path.dirname(__file__), 'default.cfg'))
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("configfile", help="config file for training parameters")
+    parser.add_argument("--configfile", help="config file for training parameters")
+
+    # those allow us to overwrite the configs through command line
+    for sec in default_cfg.sections():
+        for name, _ in default_cfg.items(sec):
+            arg_name = '--%s_%s' % (sec, name)
+            doc = 'Overwrite %s in section [%s] of config file' % (name, sec)
+            parser.add_argument(arg_name, help=doc)
+
     args = parser.parse_args()
 
-    cfg = configparser.ConfigParser()
-    cfg.read(args.configfile)
-    args.config = cfg
+    if args.configfile is not None:
+        # now read the user supplied config file to overwrite some values
+        default_cfg.read(args.configfile)
+
+    # now overwrite config from command line options
+    for sec in default_cfg.sections():
+        for name, _ in default_cfg.items(sec):
+            arg_name = ('%s_%s' % (sec, name)).replace('-', '_')
+            if hasattr(args, arg_name) and getattr(args, arg_name) is not None:
+                print('!! CMDLine overwriting %s.%s:' % (sec, name), file=sys.stderr)
+                print("    '%s' => '%s'" % (default_cfg.get(sec, name),
+                                            getattr(args, arg_name)), file=sys.stderr)
+                default_cfg.set(sec, name, getattr(args, arg_name))
+
+    args.config = default_cfg
+    print("="*80, file=sys.stderr)
     return args
 
 def prepare_data(args):
@@ -77,7 +105,6 @@ def Acc_exclude_padding(labels, preds):
 
         ind = np.nonzero(label.flat)
         pred_label_real = pred_label.flat[ind]
-        #print label, pred_label, ind
         label_real = label.flat[ind]
         sum_metric += (pred_label_real == label_real).sum()
         num_inst += len(pred_label_real)
@@ -96,13 +123,21 @@ class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
         return self.base_lr / self.batch_size / self.seq_len
 
 def do_training(training_method, args, module, data_train, data_val):
+    from distutils.dir_util import mkpath
+    mkpath(os.path.dirname(get_checkpoint_path(args)))
+
     batch_size = data_train.batch_size
     batch_end_callbacks = [mx.callback.Speedometer(batch_size, 100)]
+    eval_allow_extra = True if training_method == METHOD_TBPTT else False
+    eval_metric = mx.metric.np(Acc_exclude_padding,
+                               allow_extra_outputs=eval_allow_extra)
 
     momentum = args.config.getfloat('train', 'momentum')
     learning_rate = args.config.getfloat('train', 'learning_rate')
     lr_scheduler = SimpleLRScheduler(learning_rate, batch_size)
-    eval_metric  = mx.metric.np(Acc_exclude_padding)
+
+    if training_method == METHOD_TBPTT:
+        lr_scheduler.seq_len = data_train.truncate_len
 
     n_epoch = 0
     num_epoch = args.config.getint('train', 'num_epoch')
@@ -127,7 +162,7 @@ def do_training(training_method, args, module, data_train, data_val):
         eval_metric.reset()
 
         for nbatch, data_batch in enumerate(data_train):
-            if training_method == 'bucketing':
+            if training_method == METHOD_BUCKETING:
                 # set the seq_len so that lr is divided by seq_len
                 lr_scheduler.seq_len = data_batch.bucket_key
 
@@ -140,6 +175,13 @@ def do_training(training_method, args, module, data_train, data_val):
                                                       locals=None)
             for callback in batch_end_callbacks:
                 callback(batch_end_params)
+
+            if training_method == METHOD_TBPTT:
+                # copy over states
+                outputs = module.get_outputs()
+                # outputs[0] is softmax, 1:end are states
+                for i in range(1, len(outputs)):
+                    outputs[i].copyto(data_train.init_state_arrays[i-1])
 
         for name, val in eval_metric.get_name_value():
             logging.info('Epoch[%d] Train-%s=%f', n_epoch, name, val)
@@ -154,10 +196,9 @@ def do_training(training_method, args, module, data_train, data_val):
         # test whether we should decay learning rate
         curr_acc = None
         for name, val in eval_metric.get_name_value():
-            logging.info("%s:%s", name, val)
+            logging.info("Epoch[%d] Dev-%s=%f", n_epoch, name, val)
             if name == 'Acc_exclude_padding':
                 curr_acc = val
-                break
         assert curr_acc is not None, 'cannot find Acc_exclude_padding in eval metric'
 
         if n_epoch > 0 and lr_scheduler.base_lr > decay_bound and curr_acc < last_acc:
@@ -205,7 +246,7 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)-15s %(message)s')
 
-    if training_method == 'bucketing':
+    if training_method == METHOD_BUCKETING:
         buckets = args.config.get('train', 'buckets')
         buckets = list(map(int, re.split(r'\W+', buckets)))
         data_train = BucketSentenceIter(train_sets, buckets, batch_size, init_states, feat_dim=feat_dim)
@@ -221,6 +262,20 @@ if __name__ == '__main__':
         module = mx.mod.BucketingModule(sym_gen,
                                         default_bucket_key=data_train.default_bucket_key,
                                         context=contexts)
+        do_training(training_method, args, module, data_train, data_val)
+    elif training_method == METHOD_TBPTT:
+        truncate_len = args.config.getint('train', 'truncate_len')
+        data_train = TruncatedSentenceIter(train_sets, batch_size, init_states,
+                                           truncate_len=truncate_len, feat_dim=feat_dim)
+        data_val = TruncatedSentenceIter(dev_sets, batch_size, init_states,
+                                         truncate_len=truncate_len, feat_dim=feat_dim,
+                                         do_shuffling=False)
+        sym = lstm_unroll(num_lstm_layer, truncate_len, feat_dim, num_hidden=num_hidden,
+                          num_label=label_dim, output_states=True)
+        data_names = [x[0] for x in data_train.provide_data]
+        label_names = [x[0] for x in data_train.provide_label]
+        module = mx.mod.Module(sym, context=contexts, data_names=data_names,
+                               label_names=label_names)
         do_training(training_method, args, module, data_train, data_val)
     else:
         raise RuntimeError('Unknown training method: %s' % training_method)
