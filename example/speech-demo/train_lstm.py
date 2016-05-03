@@ -15,7 +15,7 @@ import mxnet as mx
 import numpy as np
 
 from lstm import lstm_unroll
-from io_util import BucketSentenceIter, DataReadStream
+from io_util import BucketSentenceIter, TruncatedSentenceIter, DataReadStream
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -220,6 +220,16 @@ if __name__ == '__main__':
         module = mx.mod.BucketingModule(sym_gen,
                                         default_bucket_key=data_train.default_bucket_key,
                                         context=contexts)
+        do_training(training_method, args, module, data_train, data_val)
+    elif training_method == 'truncated-bptt':
+        truncate_len = args.config.getint('train', 'truncate_len')
+        data_train = TruncatedSentenceIter(train_sets, batch_size, init_states,
+                                           truncate_len=truncate_len, feat_dim=feat_dim)
+        data_val = TruncatedSentenceIter(dev_sets, batch_size, init_states,
+                                         truncate_len=truncate_len, feat_dim=feat_dim)
+        sym = lstm_unroll(num_lstm_layer, truncate_len, feat_dim, num_hidden=num_hidden,
+                          num_label=label_dim, output_states=True)
+        module = mx.mod.Module(sym, context=contexts)
         do_training(training_method, args, module, data_train, data_val)
     else:
         raise RuntimeError('Unknown training method: %s' % training_method)
