@@ -160,7 +160,8 @@ class TruncatedSentenceIter(mx.io.DataIter):
                         utt_inside_idx[i] = 0
                         next_utt_idx += 1
 
-                idx_take = utt_inside_idx[i]:min(utt_inside_idx[i]+self.truncate_len, fea_utt.shape[0])
+                idx_take = slice(utt_inside_idx[i],
+                                 min(utt_inside_idx[i]+self.truncate_len, fea_utt.shape[0]))
                 np_data_buffer[i][:len(idx_take)] = fea_utt[idx_take]
                 np_label_buffer[i][:len(idx_take)] = self.labels[idx][idx_take]
                 if len(idx_take) < self.truncate_len:
@@ -180,6 +181,13 @@ class TruncatedSentenceIter(mx.io.DataIter):
             data_batch = SimpleBatch(data_names, self.data + self.init_state_arrays,
                                      label_names, self.label, bucket_key=None,
                                      utt_id=utt_id_buffer)
+
+            # Instead of using the 'pad' property, we use an array 'is_pad'. Because
+            # our padded sentence could be in the middle of a batch. A sample is pad
+            # if we are running out of the data set and they are just some previously
+            # seen data to be filled for a whole batch. In prediction, those data
+            # should be ignored
+            data_batch.is_pad = is_pad
 
             yield data_batch
 
