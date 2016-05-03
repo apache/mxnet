@@ -48,7 +48,7 @@ class TruncatedSentenceIter(mx.io.DataIter):
     avoid gradient exploding problems in very long sequences.
     """
     def __init__(self, train_sets, batch_size, init_states, truncate_len=20, delay=5,
-                 feat_dim=40, data_name='data', label_name='label',
+                 feat_dim=40, data_name='data', label_name='softmax_label',
                  has_label=True, do_shuffling=True):
 
         self.train_sets = train_sets
@@ -65,10 +65,10 @@ class TruncatedSentenceIter(mx.io.DataIter):
 
         self.do_shuffling = do_shuffling
 
-        self.data = [mx.nd.zeros(batch_size, truncate_len, feat_dim)]
+        self.data = [mx.nd.zeros((batch_size, truncate_len, feat_dim))]
         self.label = None
         if has_label:
-            self.label = [mx.nd.zeros(batch_size, truncate_len)]
+            self.label = [mx.nd.zeros((batch_size, truncate_len))]
 
         self.init_state_names = [x[0] for x in init_states]
         self.init_state_arrays = [mx.nd.zeros(x[1]) for x in init_states]
@@ -86,6 +86,8 @@ class TruncatedSentenceIter(mx.io.DataIter):
         self.features = []
         self.labels = []
         self.utt_ids = []
+        
+        seq_len_tot = 0.0
         while True:
             (feats, tgs, utt_id) = self.train_sets.load_next_seq()
             if utt_id is None:
@@ -97,17 +99,20 @@ class TruncatedSentenceIter(mx.io.DataIter):
 
             if self.has_label and self.delay > 0:
                 # delay the labels
-                tgs[delay:] = tgs[:-delay]
-                tgs[:delay] = tgs[0] # boradcast assign
+                tgs[self.delay:] = tgs[:-self.delay]
+                tgs[:self.delay] = tgs[0] # boradcast assign
 
             self.features.append(feats)
             if self.has_label:
                 self.labels.append(tgs+1)
             self.utt_ids.append(utt_id)
-        sys.stderr.write('%d utterances loaded...\n' % len(self.utt_ids))
+            seq_len_tot += feats.shape[0]
+
+        sys.stderr.write('    %d utterances loaded...\n' % len(self.utt_ids))
+        sys.stderr.write('    avg-sequence-len = %.0f\n' % (seq_len_tot/len(self.utt_ids)))
 
     def _make_data_plan(self):
-        if do_shuffling:
+        if self.do_shuffling:
             # TODO: should we group utterances of similar length together?
             self._data_plan = np.random.permutation(len(self.features))
         else:
@@ -139,7 +144,7 @@ class TruncatedSentenceIter(mx.io.DataIter):
 
                     # reset the states
                     for state in self.init_state_arrays:
-                        state[i] = 0
+                        state[i:i+1] = 0
 
                     # load new sentence
                     if is_pad[i]:
@@ -162,13 +167,14 @@ class TruncatedSentenceIter(mx.io.DataIter):
 
                 idx_take = slice(utt_inside_idx[i],
                                  min(utt_inside_idx[i]+self.truncate_len, fea_utt.shape[0]))
-                np_data_buffer[i][:len(idx_take)] = fea_utt[idx_take]
-                np_label_buffer[i][:len(idx_take)] = self.labels[idx][idx_take]
-                if len(idx_take) < self.truncate_len:
-                    np_data_buffer[i][len(idx_take)] = 0
-                    np_label_buffer[i][len(idx_take)] = 0
+                n_take = idx_take.stop - idx_take.start
+                np_data_buffer[i][:n_take] = fea_utt[idx_take]
+                np_label_buffer[i][:n_take] = self.labels[idx][idx_take]
+                if n_take < self.truncate_len:
+                    np_data_buffer[i][n_take] = 0
+                    np_label_buffer[i][n_take] = 0
 
-                utt_inside_idx[i] += len(idx_take)
+                utt_inside_idx[i] += n_take
                 utt_id_buffer[i] = self.utt_ids[idx]
 
             if pad == self.batch_size:

@@ -100,9 +100,14 @@ class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
         return self.base_lr / self.batch_size / self.seq_len
 
 def do_training(training_method, args, module, data_train, data_val):
+    from distutils.dir_util import mkpath
+    mkpath(os.path.dirname(get_checkpoint_path(args)))
+
     batch_size = data_train.batch_size
     batch_end_callbacks = [mx.callback.Speedometer(batch_size, 100)]
-    eval_metric  = mx.metric.np(Acc_exclude_padding)
+    eval_allow_extra = True if training_method == METHOD_TBPTT else False
+    eval_metric = mx.metric.np(Acc_exclude_padding, 
+                               allow_extra_outputs=eval_allow_extra)
 
     momentum = args.config.getfloat('train', 'momentum')
     learning_rate = args.config.getfloat('train', 'learning_rate')
@@ -240,10 +245,14 @@ if __name__ == '__main__':
         data_train = TruncatedSentenceIter(train_sets, batch_size, init_states,
                                            truncate_len=truncate_len, feat_dim=feat_dim)
         data_val = TruncatedSentenceIter(dev_sets, batch_size, init_states,
-                                         truncate_len=truncate_len, feat_dim=feat_dim)
+                                         truncate_len=truncate_len, feat_dim=feat_dim,
+                                         do_shuffling=False)
         sym = lstm_unroll(num_lstm_layer, truncate_len, feat_dim, num_hidden=num_hidden,
                           num_label=label_dim, output_states=True)
-        module = mx.mod.Module(sym, context=contexts)
+        data_names = [x[0] for x in data_train.provide_data]
+        label_names = [x[0] for x in data_train.provide_label]
+        module = mx.mod.Module(sym, context=contexts, data_names=data_names,
+                               label_names=label_names)
         do_training(training_method, args, module, data_train, data_val)
     else:
         raise RuntimeError('Unknown training method: %s' % training_method)
