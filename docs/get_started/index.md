@@ -102,6 +102,70 @@ model.predict(X = test)
 
 ### R
 
+First we `require` the `mxnet` package
+
+```r
+require(mxnet)
+```
+
+Then we declare the data iterators to the training and validation datasets
+
+```r
+train <- mx.io.MNISTIter(
+  image       = "train-images-idx3-ubyte",
+  label       = "train-labels-idx1-ubyte",
+  input_shape = c(28, 28, 1),
+  batch_size  = 100,
+  shuffle     = TRUE,
+  flat        = TRUE
+)
+
+val <- mx.io.MNISTIter(
+  image       = "t10k-images-idx3-ubyte",
+  label       = "t10k-labels-idx1-ubyte",
+  input_shape = c(28, 28, 1),
+  batch_size  = 100,
+  flat        = TRUE)
+```
+
+and a two-layer MLP
+
+```r
+data <- mx.symbol.Variable('data')
+fc1  <- mx.symbol.FullyConnected(data = data, name = 'fc1', num_hidden = 128)
+act1 <- mx.symbol.Activation(data = fc1, name = 'relu1', act_type = "relu")
+fc2  <- mx.symbol.FullyConnected(data = act1, name = 'fc2', num_hidden = 64)
+act2 <- mx.symbol.Activation(data = fc2, name = 'relu2', act_type = "relu")
+fc3  <- mx.symbol.FullyConnected(data = act2, name = 'fc3', num_hidden = 10)
+mlp  <- mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
+```
+
+Next let's train the model
+
+```r
+model <- mx.model.FeedForward.create(
+  X                  = train,
+  eval.data          = val,
+  ctx                = mx.cpu(),
+  symbol             = mlp,
+  eval.metric        = mx.metric.accuracy,
+  num.round          = 5,
+  learning.rate      = 0.1,
+  momentum           = 0.9,
+  wd                 = 0.0001,
+  array.batch.size   = 100,
+  epoch.end.callback = mx.callback.save.checkpoint("mnist"),
+  batch.end.callback = mx.callback.log.train.metric(50)
+)
+```
+
+Finally we can read a new dataset and predict
+
+```r
+test <- mx.io.MNISTIter(...)
+preds <- predict(model, test)
+```
+
 ### Scala
 
 We first import MXNet
@@ -232,6 +296,20 @@ The python inferface is similar to `numpy.NDArray`.
 ```
 
 ### R
+
+```r
+> require(mxnet)
+Loading required package: mxnet
+> a <- mx.nd.ones(c(2,3))
+> a
+     [,1] [,2] [,3]
+[1,]    1    1    1
+[2,]    1    1    1
+> a + 1
+     [,1] [,2] [,3]
+[1,]    2    2    2
+[2,]    2    2    2
+```
 
 ### Scala
 
