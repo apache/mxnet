@@ -5,7 +5,7 @@ import shlex
 import time
 import re
 
-from utils.utils import to_bool
+from utils import to_bool
 from feat_readers.common import *
 from feat_readers import stats
 
