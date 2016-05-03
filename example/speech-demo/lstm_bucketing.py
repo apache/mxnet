@@ -87,7 +87,7 @@ def Acc_exlude_padding(labels, preds):
     for i in range(preds.shape[0]):
         pred_label = np.argmax(preds[i], axis=0)
         label = labels[i]
-            
+
         ind = np.nonzero(label.flat)
         pred_label_real = pred_label.flat[ind]
         #print label, pred_label, ind
@@ -104,7 +104,7 @@ class BucketSentenceIter(mx.io.DataIter):
 
         self.train_sets=train_sets
         self.train_sets.initialize_read()
-           
+
 
 
         self.data_name = data_name
@@ -142,9 +142,9 @@ class BucketSentenceIter(mx.io.DataIter):
         self.batch_size = batch_size
         # convert data into ndarrays for better speed during training
         data = [np.zeros((len(x), buckets[i], self.feat_dim)) if len(x) % self.batch_size == 0  else np.zeros(((len(x)/self.batch_size + 1) *self.batch_size, buckets[i], self.feat_dim)) for i, x in enumerate(self.data)]
-        
+
         label = [np.zeros((len(x), buckets[i])) if len(x) % self.batch_size == 0  else np.zeros(((len(x)/self.batch_size + 1) *self.batch_size, buckets[i])) for i, x in enumerate(self.data)]
-        
+
         utt_id = [[] for k in buckets]
         for i, x in enumerate(data):
             utt_id[i] = ["GAP_UTT"] * len(x)
@@ -154,7 +154,7 @@ class BucketSentenceIter(mx.io.DataIter):
             for j in range(len(self.data[i_bucket])):
                 sentence = self.data[i_bucket][j]
                 sentence[1][delay:] = sentence[1][:-delay]
-                sentence[1][:delay] = [sentence[1][0]]*delay 
+                sentence[1][:delay] = [sentence[1][0]]*delay
                 data[i_bucket][j, :len(sentence[0])] = sentence[0]
                 label[i_bucket][j, :len(sentence[1])] = sentence[1]
         self.data = data
@@ -225,7 +225,7 @@ class BucketSentenceIter(mx.io.DataIter):
             idx = self.bucket_idx_all[i_bucket][i_idx:i_idx+self.batch_size]
             self.bucket_curr_idx[i_bucket] += self.batch_size
             data[:] = self.data[i_bucket][idx]
-            label[:] = self.label[i_bucket][idx] 
+            label[:] = self.label[i_bucket][idx]
             data_all = [mx.nd.array(data[:,:,:])] + self.init_state_arrays
             label_all = [mx.nd.array(label)]
             data_names = ['data'] + init_state_names
@@ -237,74 +237,6 @@ class BucketSentenceIter(mx.io.DataIter):
 
     def reset(self):
         self.bucket_curr_idx = [0 for x in self.data]
-# we define a new unrolling function here because the original
-# one in lstm.py concats all the labels at the last layer together,
-# making the mini-batch size of the label different from the data.
-# I think the existing data-parallelization code need some modification
-# to allow this situation to work properly
-def lstm_unroll(num_lstm_layer, seq_len, input_size,
-                num_hidden, num_label, dropout=0.):
-
-    cls_weight = mx.sym.Variable("cls_weight")
-    cls_bias = mx.sym.Variable("cls_bias")
-    param_cells = []
-    last_states = []
-    for i in range(num_lstm_layer):
-        param_cells.append(LSTMParam(i2h_weight = mx.sym.Variable("l%d_i2h_weight" % i),
-                                      i2h_bias = mx.sym.Variable("l%d_i2h_bias" % i),
-                                      h2h_weight = mx.sym.Variable("l%d_h2h_weight" % i),
-                                      h2h_bias = mx.sym.Variable("l%d_h2h_bias" % i)))
-        state = LSTMState(c=mx.sym.Variable("l%d_init_c" % i),
-                          h=mx.sym.Variable("l%d_init_h" % i))
-        last_states.append(state)
-    assert(len(last_states) == num_lstm_layer)
-
-    data = mx.sym.Variable('data')
-    label = mx.sym.Variable('softmax_label')
-    
-    dataSlice = mx.sym.SliceChannel(data=data, num_outputs=seq_len, squeeze_axis=1)
-
-    hidden_all = []
-    for seqidx in range(seq_len):
-        hidden = dataSlice[seqidx]
-
-        # stack LSTM
-        for i in range(num_lstm_layer):
-            if i==0:
-                dp=0.
-            else:
-                dp = dropout
-            next_state = lstm(num_hidden, indata=hidden,
-                              prev_state=last_states[i],
-                              param=param_cells[i],
-                              seqidx=seqidx, layeridx=i, dropout=dp)
-            hidden = next_state.h
-            last_states[i] = next_state
-        # decoder
-        if dropout > 0.:
-            hidden = mx.sym.Dropout(data=hidden, p=dropout)
-        hidden_all.append(hidden)
-
-    hidden_concat = mx.sym.Concat(*hidden_all, dim=0)
-    pred = mx.sym.FullyConnected(data=hidden_concat, num_hidden=num_label,
-                                 weight=cls_weight, bias=cls_bias, name='pred')
-
-    ################################################################################
-    # Make label the same shape as our produced data path
-    # I did not observe big speed difference between the following two ways
-
-    label = mx.sym.transpose(data=label)
-    label = mx.sym.Reshape(data=label, target_shape=(0,))
-
-    #label_slice = mx.sym.SliceChannel(data=label, num_outputs=seq_len)
-    #label = [label_slice[t] for t in range(seq_len)]
-    #label = mx.sym.Concat(*label, dim=0)
-    #label = mx.sym.Reshape(data=label, target_shape=(0,))
-    ################################################################################
-
-    sm = mx.sym.SoftmaxOutput(data=pred, label=label, ignore_label=0, use_ignore=True, name='softmax')
-    
-    return sm
 
 
 
@@ -319,7 +251,7 @@ if __name__ == '__main__':
 
     contexts = [mx.context.gpu(i) for i in range(0,1)]
 
-    
+
     feat_dim = 40
     #label_dim = 1955 + 1
     label_dim = 3921 - 2 + 1
@@ -327,7 +259,7 @@ if __name__ == '__main__':
     init_c = [('l%d_init_c'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
     init_h = [('l%d_init_h'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
     init_states = init_c + init_h
-    
+
     state_names = [x[0] for x in init_states]
     def sym_gen(seq_len):
         sym = lstm_unroll(num_lstm_layer, seq_len, feat_dim,
@@ -337,7 +269,7 @@ if __name__ == '__main__':
         label_names = ['softmax_label']
         return (sym, data_names, label_names)
 
-   
+
 
     train_data = DATASETS[sys.argv[1] + "_train"]
     dev_data = DATASETS[sys.argv[1] + "_dev"]
@@ -368,7 +300,7 @@ if __name__ == '__main__':
 
     checkpoint=mx.callback.do_checkpoint("haha_3L.mdl")
     model = mx.mod.BucketingModule(sym_gen, default_bucket_key=data_train.default_bucket_key, context=contexts)
-    
+
     import logging
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
