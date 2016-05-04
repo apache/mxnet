@@ -485,12 +485,12 @@ class BaseModule(object):
         save_dict = ndarray.load(fname)
         arg_params = {}
         aux_params = {}
-        for k, v in save_dict.items():
-            tp, name = k.split(':', 1)
-            if tp == 'arg':
-                arg_params[name] = v
-            elif tp == 'aux':
-                aux_params[name] = v
+        for k, value in save_dict.items():
+            t, name = k.split(':', 1)
+            if t == 'arg':
+                arg_params[name] = value
+            elif t == 'aux':
+                aux_params[name] = value
             else:
                 raise ValueError("Invalid param file " + fname)
         self.set_params(arg_params, aux_params)
