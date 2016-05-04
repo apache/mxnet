@@ -46,13 +46,13 @@ def parse_args():
         for name, _ in default_cfg.items(sec):
             arg_name = ('%s_%s' % (sec, name)).replace('-', '_')
             if hasattr(args, arg_name) and getattr(args, arg_name) is not None:
-                print('!! CMDLine overwriting %s.%s:' % (sec, name), file=sys.stderr)
-                print("    '%s' => '%s'" % (default_cfg.get(sec, name),
-                                            getattr(args, arg_name)), file=sys.stderr)
+                sys.stderr.write('!! CMDLine overwriting %s.%s:\n' % (sec, name))
+                sys.stderr.write("    '%s' => '%s'\n" % (default_cfg.get(sec, name),
+                                            getattr(args, arg_name)))
                 default_cfg.set(sec, name, getattr(args, arg_name))
 
     args.config = default_cfg
-    print("="*80, file=sys.stderr)
+    sys.stderr.write("="*80+"\n")
     return args
 
 def prepare_data(args):
@@ -165,7 +165,7 @@ def do_training(training_method, args, module, data_train, data_val):
     module.bind(data_shapes=data_train.provide_data,
                 label_shapes=data_train.provide_label,
                 for_training=True)
-    module.init_params(initializer=mx.initializer.Uniform(0.01))
+    module.init_params(initializer=mx.initializer.Uniform(0.1))
     module.init_optimizer(kvstore='local',
                           optimizer=args.config.get('train', 'optimizer'),
                           optimizer_params={'lr_scheduler': lr_scheduler,
