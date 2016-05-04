@@ -122,6 +122,20 @@ class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
     def __call__(self, num_update):
         return self.base_lr / self.batch_size / self.seq_len
 
+def score_with_state_forwarding(module, eval_data, eval_metric):
+    eval_data.reset()
+    eval_metric.reset()
+
+    for eval_batch in eval_batch:
+        module.forward(eval_batch, is_train=False)
+        module.update_metric(eval_metric, eval_batch.label)
+
+        # copy over states
+        outputs = module.get_outputs()
+        # outputs[0] is softmax, 1:end are states
+        for i in range(1, len(outputs)):
+            outputs[i].copyto(eval_data.init_state_arrays[i-1])
+
 def do_training(training_method, args, module, data_train, data_val):
     from distutils.dir_util import mkpath
     mkpath(os.path.dirname(get_checkpoint_path(args)))
@@ -191,7 +205,7 @@ def do_training(training_method, args, module, data_train, data_val):
         data_train.reset()
 
         # test on eval data
-        module.score(data_val, eval_metric, epoch=n_epoch)
+        score_with_state_forwarding(module, data_val, eval_metric)
 
         # test whether we should decay learning rate
         curr_acc = None

@@ -86,7 +86,7 @@ class TruncatedSentenceIter(mx.io.DataIter):
         self.features = []
         self.labels = []
         self.utt_ids = []
-        
+
         seq_len_tot = 0.0
         while True:
             (feats, tgs, utt_id) = self.train_sets.load_next_seq()
@@ -135,6 +135,10 @@ class TruncatedSentenceIter(mx.io.DataIter):
 
         data_names = [self.data_name] + self.init_state_names
         label_names = [self.label_name]
+
+        # reset states
+        for state in self.init_state_arrays:
+            state[:] = 0
 
         while True:
             for i, idx in enumerate(utt_idx):
