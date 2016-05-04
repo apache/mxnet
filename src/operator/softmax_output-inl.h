@@ -153,7 +153,10 @@ class SoftmaxOutputProp : public OperatorProperty {
       SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel,
                          Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]));
     } else {
-      SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel, Shape1(dshape[0]));
+      TShape label_shape(dshape.ndim() - 1);
+      for (int i = 0; i < dshape.ndim() - 1; ++i)
+        label_shape[i] = dshape[i];
+      SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel, label_shape);
     }
     out_shape->clear();
     out_shape->push_back(dshape);

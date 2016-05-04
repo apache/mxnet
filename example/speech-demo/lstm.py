@@ -85,6 +85,7 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
     hidden_final = mx.sym.Reshape(hidden_concat, target_shape=(0, num_hidden))
     pred = mx.sym.FullyConnected(data=hidden_final, num_hidden=num_label,
                                  weight=cls_weight, bias=cls_bias, name='pred')
+    pred = mx.sym.Reshape(pred, target_shape=(0, seq_len, num_label)
 
     ################################################################################
     # Make label the same shape as our produced data path
