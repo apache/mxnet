@@ -233,6 +233,9 @@ class BucketSentenceIter(mx.io.DataIter):
         self.label_name = label_name
 
         buckets.sort()
+        i_max_bucket = len(buckets)-1
+        max_bucket = buckets[i_max_bucket]
+
         self.buckets = buckets
         self.data = [[] for k in buckets]
         #self.label = [[] for k in buckets]
@@ -242,6 +245,7 @@ class BucketSentenceIter(mx.io.DataIter):
         self.has_label = has_label
 
         sys.stderr.write("Loading data...\n")
+        T_OVERLAP = buckets[0]/2
         n = 0
         while True:
             (feats, tgts, utt_id) = self.train_sets.load_next_seq()
@@ -251,16 +255,33 @@ class BucketSentenceIter(mx.io.DataIter):
                 continue
             if feats.shape[0] == 0:
                 continue
-            for i, bkt in enumerate(buckets):
-                if bkt >= feats.shape[0]:
-                    n = n + 1
-                    if self.has_label:
-                        self.data[i].append((feats,tgts+1))
-                    else:
-                        self.data[i].append((feats))
-                    self.utt_id[i].append(utt_id);
+
+            # we split sentence into overlapping segments if it is
+            # longer than the largest bucket
+            t_start = 0; t_end = feats.shape[0]
+            while t_start < t_end:
+                if t_end - t_start > max_bucket:
+                    t_take = max_bucket
+                    i_bucket = i_max_bucket
+                else:
+                    for i, bkt in enumerate(buckets):
+                        if bkt >= t_end-t_start:
+                            t_take = t_end-t_start
+                            i_bucket = i
+                            break
+
+                n += 1
+                if self.has_label:
+                    self.data[i].append((feats[t_start:t_start+t_take],
+                                         tgs[t_start:t_start+t_take]+1))
+                else:
+                    self.data[i].append(feats[t_start:t_start+t_take])
+
+                t_start += t_take
+                if t_start >= t_end:
+                    # this sentence is consumed
                     break
-                    # we just ignore the sentence it is longer than the maximum bucket size here
+                t_start -= T_OVERLAP
 
         # Get the size of each bucket, so that we could sample
         # uniformly from the bucket
@@ -268,6 +289,7 @@ class BucketSentenceIter(mx.io.DataIter):
 
         self.batch_size = batch_size
         # convert data into ndarrays for better speed during training
+
         data = [np.zeros((len(x), buckets[i], self.feat_dim))
                 if len(x) % self.batch_size == 0 
                 else np.zeros(((len(x)/self.batch_size + 1) * self.batch_size, buckets[i], self.feat_dim)) 
@@ -292,6 +314,7 @@ class BucketSentenceIter(mx.io.DataIter):
                     label[i_bucket][j, :len(sentence[1])] = sentence[1]
                 else:
                     data[i_bucket][j, :len(sentence)] = sentence
+                    # borrow this place to pass in sentence length. TODO: use a less hacky way.
                     label[i_bucket][j, :len(sentence)] += len(sentence)
                 utt_id[i_bucket][j] = self.utt_id[i_bucket][j]
 
