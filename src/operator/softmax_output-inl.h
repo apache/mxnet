@@ -107,7 +107,9 @@ class SoftmaxOutputOp : public Operator {
       }
       grad *= DType(param_.grad_scale/s3[2]);
     } else {
-      Tensor<xpu, 1, DType> label = in_data[softmaxout_enum::kLabel].get<xpu, 1, DType>(s);
+      const TShape& label_shape = in_data[softmaxout_enum::kLabel].shape_;
+      Tensor<xpu, 1, DType> label = in_data[softmaxout_enum::kLabel].get_with_shape<xpu, 1, DType>(
+          Shape1(label_shape.ProdShape(0, label_shape.ndim())), s);
       Tensor<xpu, 2, DType> out = out_data[softmaxout_enum::kOut].FlatTo2D<xpu, DType>(s);
       Tensor<xpu, 2, DType> grad = in_grad[softmaxout_enum::kData].FlatTo2D<xpu, DType>(s);
       if (param_.use_ignore) {
@@ -154,7 +156,7 @@ class SoftmaxOutputProp : public OperatorProperty {
                          Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]));
     } else {
       TShape label_shape(dshape.ndim() - 1);
-      for (int i = 0; i < dshape.ndim() - 1; ++i)
+      for (int i = 0; i + 1 < dshape.ndim(); ++i)
         label_shape[i] = dshape[i];
       SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel, label_shape);
     }
