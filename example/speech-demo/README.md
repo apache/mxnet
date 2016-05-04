@@ -108,8 +108,8 @@ echo scp:$dir/post.scp >> $dir/dev.feats
 
 ### Run MXNet Acoustic Model Training
 
-1. Go back to this speech demo directory in MXNet. Make a copy of your own `ami.cfg` and edit necessary items like the path to the dataset you just prepared.
-2. Run `python train_lstm.py ami.cfg`.
+1. Go back to this speech demo directory in MXNet. Make a copy of `default.cfg` and edit necessary items like the path to the dataset you just prepared.
+2. Run `python train_lstm.py --configfile=your-config.cfg`. You can do `python train_lstm.py --help` to see the helps. All the configuration parameters can be set in `default.cfg`, customized config file, and through command line (e.g. `--train_batch_size=50`), and the latter values overwrite the former ones.
 
 Here are some example outputs that we got from training on the TIMIT dataset.
 
