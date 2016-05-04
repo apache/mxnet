@@ -136,6 +136,13 @@ def score_with_state_forwarding(module, eval_data, eval_metric):
         for i in range(1, len(outputs)):
             outputs[i].copyto(eval_data.init_state_arrays[i-1])
 
+def get_initializer(args):
+    init_type = getattr(mx.initializer, args.config.get('training', 'initializer'))
+    init_scale = args.config.getfloat('training', 'init_scale')
+    if init_type is mx.initializer.Xavier:
+        return mx.initializer.Xavier(magnitude=init_scale)
+    return init_type(init_scale)
+
 def do_training(training_method, args, module, data_train, data_val):
     from distutils.dir_util import mkpath
     mkpath(os.path.dirname(get_checkpoint_path(args)))
@@ -158,6 +165,9 @@ def do_training(training_method, args, module, data_train, data_val):
     learning_rate = args.config.getfloat('train', 'learning_rate')
     decay_factor = args.config.getfloat('train', 'decay_factor')
     decay_bound = args.config.getfloat('train', 'decay_lower_bound')
+    clip_gradient = args.config.getfloat('train', 'clip_gradient')
+    if clip_gradient == 0:
+        clip_gradient = None
 
     last_acc = -float("Inf")
     last_params = None
@@ -165,11 +175,13 @@ def do_training(training_method, args, module, data_train, data_val):
     module.bind(data_shapes=data_train.provide_data,
                 label_shapes=data_train.provide_label,
                 for_training=True)
-    module.init_params(initializer=mx.initializer.Uniform(0.1))
+    module.init_params(initializer=get_initializer(args))
+
     module.init_optimizer(kvstore='local',
                           optimizer=args.config.get('train', 'optimizer'),
                           optimizer_params={'lr_scheduler': lr_scheduler,
-                                            'momentum': momentum})
+                                            'momentum': momentum,
+                                            'clip_gradient': clip_gradient})
 
     while True:
         tic = time.time()
