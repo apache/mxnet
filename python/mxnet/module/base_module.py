@@ -274,7 +274,7 @@ class BaseModule(object):
             optimizer='sgd', optimizer_params=(('learning_rate', 0.01),),
             eval_batch_end_callback=None, initializer=Uniform(0.01),
             arg_params=None, aux_params=None, allow_missing=False,
-            force_init=False, begin_epoch=0, num_epoch=None):
+            force_rebind=False, force_init=False, begin_epoch=0, num_epoch=None):
         """Train the module parameters.
 
         Parameters
@@ -313,6 +313,8 @@ class BaseModule(object):
             Default `False`. Indicate whether we allow missing parameters when `arg_params`
             and `aux_params` are not `None`. If this is `True`, then the missing parameters
             will be initialized via the `initializer`.
+        force_rebind : bool
+            Default `False`. Whether to force rebinding the executors if already binded.
         force_init : bool
             Default `False`. Indicate whether we should force initialization even if the
             parameters are already initialized.
@@ -327,7 +329,7 @@ class BaseModule(object):
         assert num_epoch is not None, 'please specify number of epochs'
 
         self.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label,
-                  for_training=True, force_rebind=True)
+                  for_training=True, force_rebind=force_rebind)
         self.init_params(initializer=initializer, arg_params=arg_params, aux_params=aux_params,
                          allow_missing=allow_missing, force_init=force_init)
         self.init_optimizer(kvstore=kvstore, optimizer=optimizer,
