@@ -272,11 +272,12 @@ class BucketSentenceIter(mx.io.DataIter):
 
                 n += 1
                 if self.has_label:
-                    self.data[i].append((feats[t_start:t_start+t_take],
-                                         tgs[t_start:t_start+t_take]+1))
+                    self.data[i_bucket].append((feats[t_start:t_start+t_take],
+                                                tgts[t_start:t_start+t_take]+1))
                 else:
-                    self.data[i].append(feats[t_start:t_start+t_take])
+                    self.data[i_bucket].append(feats[t_start:t_start+t_take])
 
+                self.utt_id[i_bucket].append(utt_id)
                 t_start += t_take
                 if t_start >= t_end:
                     # this sentence is consumed
@@ -309,13 +310,14 @@ class BucketSentenceIter(mx.io.DataIter):
                 sentence = self.data[i_bucket][j]
                 if self.has_label:
                     sentence[1][delay:] = sentence[1][:-delay]
-                    sentence[1][:delay] = [sentence[1][0]]*delay
+                    sentence[1][:delay] = sentence[1][0] # broadcast assignment
                     data[i_bucket][j, :len(sentence[0])] = sentence[0]
                     label[i_bucket][j, :len(sentence[1])] = sentence[1]
                 else:
                     data[i_bucket][j, :len(sentence)] = sentence
                     # borrow this place to pass in sentence length. TODO: use a less hacky way.
                     label[i_bucket][j, :len(sentence)] += len(sentence)
+
                 utt_id[i_bucket][j] = self.utt_id[i_bucket][j]
 
         self.data = data
