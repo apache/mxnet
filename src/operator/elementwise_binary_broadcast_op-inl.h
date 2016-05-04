@@ -42,7 +42,6 @@
 
 #include <mxnet/operator_util.h>
 #include "./mshadow_op.h"
-#include "./elementwise_binary_op-inl.h"
 
 #if defined(__CUDACC__)
 #define XPU gpu
@@ -101,9 +100,9 @@ inline TShape BinaryBroadcastShape_(const TShape& lhs,
       if (inp[i] == ret[i]) {
         if (i == 0 || inp[i-1] != ret[i-1]) ++contdim;
       }
-      CHECK_EQ(contdim, 1) << "broadcast dimensions are not continuous. "
-                           << "lhs = " << lhs << "; rhs = " << rhs;
     }
+    CHECK_LE(contdim, 1) << "broadcast dimensions are not continuous. "
+                         << "lhs = " << lhs << "; rhs = " << rhs;
   }
   return TShape(ret.begin(), ret.end());
 }
@@ -118,57 +117,69 @@ inline void GetBroadcastShape_(const TShape& lhs,
   std::vector<index_t> ret;
   GetAlignedShape_(lhs, rhs, &aligned[0], &aligned[1], &ret);
 
-  std::vector<std::vector<int> > pos(2);
   int n = static_cast<int>(aligned[0].size());
+  int pos[4] = {0, n, n, n};
   for (int h = 0; h < 2; ++h) {
     for (int i = 0; i < n; ++i) {
-      if (aligned[h][i] != ret[i]) {
-        pos[h].push_back(i); break;
+      if (aligned[h][i] == ret[i]) {
+        pos[h*2] = i; break;
       }
     }
-    for (int i = n; i > 1; --i) {
-      if (aligned[h][i-1] != ret[i-1]) {
-        pos[h].push_back(i); break;
+    for (int i = n; i > 0; --i) {
+      if (aligned[h][i-1] == ret[i-1]) {
+        pos[h*2+1] = i; break;
       }
     }
   }
-  if (pos[0].size() && pos[1].size()) {
-    // broadcast both lhs and rhs
-    if (pos[0][0] <= pos[1][0]) {
-      CHECK(pos[0][0] == 0 && pos[0][1] == pos[1][0] && pos[1][1] == n)
-          << "broadcast shape error: lhs = " << lhs << "; rhs = " << rhs;
-      *lhs_broadcast_axis = 0;
-      *rhs_broadcast_axis = 1;
+  bool no_broadcast_lhs = pos[0] == 0 && pos[1] == n;
+  bool no_broadcast_rhs = pos[2] == 0 && pos[3] == n;
+  int pos_ordered[4] = {0, -1, -1, n};
+  if (no_broadcast_lhs) {
+    // no broadcast for lhs
+    *lhs_broadcast_axis = -1;
+    if (no_broadcast_rhs) {
+      LOG(FATAL) << "no broadcast is needed";
     } else {
-      CHECK(pos[1][0] == 0 && pos[1][1] == pos[0][0] && pos[0][1] == n)
-          << "broadcast shape error: lhs = " << lhs << "; rhs = " << rhs;
-      *lhs_broadcast_axis = 1;
-      *rhs_broadcast_axis = 0;
+      *rhs_broadcast_axis = 1;
+      pos_ordered[1] = pos[2];
+      pos_ordered[2] = pos[3];
     }
-    std::vector<index_t> dim(2, 1);
-    for (int i = 0; i < pos[0][1]; ++i) dim[0] *= ret[i];
-    for (int i = pos[0][1]; i < n; ++i) dim[1] *= ret[i];
-    *ret_reshaped = TShape(dim.begin(), dim.end());
   } else {
-    // if or not broadcast lhs
-    bool b_lhs = !pos[0].empty();
-    int pos_new[4] = {0, b_lhs ? pos[0][0] : pos[1][0],
-                      b_lhs ? pos[0][1] : pos[1][1], n};
-    std::vector<index_t> dim(3, 1);
-    for (int i = 0; i < 3; ++i) {
-      for (int j = pos_new[i]; j < pos_new[i+1]; ++j) {
-        dim[i] *= ret[j];
-      }
-    }
-    *ret_reshaped = TShape(dim.begin(), dim.end());
-    if (b_lhs) {
-      *lhs_broadcast_axis = 1;
+    if (no_broadcast_rhs) {
       *rhs_broadcast_axis = -1;
+      *lhs_broadcast_axis = 1;
+      pos_ordered[1] = pos[0];
+      pos_ordered[2] = pos[1];
     } else {
-      *rhs_broadcast_axis = 1;
-      *lhs_broadcast_axis = -1;
+      // broadcast both lhs and rhs
+      int p;
+      if (pos[0] <= pos[2]) {
+        CHECK(pos[0] == 0 && pos[1] == pos[2] && pos[3] == n)
+            << "broadcast shape error: lhs = " << lhs << "; rhs = " << rhs;
+        *lhs_broadcast_axis = 0;
+        *rhs_broadcast_axis = 1;
+        p = pos[1];
+      } else {
+        CHECK(pos[2] == 0 && pos[3] == pos[0] && pos[1] == n)
+            << "broadcast shape error: lhs = " << lhs << "; rhs = " << rhs;
+        *lhs_broadcast_axis = 1;
+        *rhs_broadcast_axis = 0;
+        p = pos[0];
+      }
+      std::vector<index_t> dim(2, 1);
+      for (int i = 0; i < p; ++i) dim[0] *= ret[i];
+      for (int i = p; i < n; ++i) dim[1] *= ret[i];
+      *ret_reshaped = TShape(dim.begin(), dim.end());
+      return;
     }
   }
+  std::vector<index_t> dim(3, 1);
+  for (int i = 0; i < 3; ++i) {
+    for (int j = pos_ordered[i]; j < pos_ordered[i+1]; ++j) {
+      dim[i] *= ret[j];
+    }
+  }
+  *ret_reshaped = TShape(dim.begin(), dim.end());
 }
 
 
@@ -179,16 +190,22 @@ void BinaryBroadcastForward_(const TBlob& lhs,
                              TBlob *ret,
                              OpReqType req,
                              RunContext ctx) {
-  if (!IsBroadcastNeeded_(lhs.shape_, rhs.shape_)) {
-    BinaryForward_<xpu, OP>(lhs, rhs, env, ret, req, ctx);
-    return;
-  }
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(ret->type_flag_, lhs.type_flag_)
     << "Binary function only support input/output with the same type";
   CHECK_EQ(ret->type_flag_, rhs.type_flag_)
     << "Binary function only support input/output with the same type";
+
+  if (!IsBroadcastNeeded_(lhs.shape_, rhs.shape_)) {
+    MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+        mshadow::Tensor<xpu, 2, DType> out = ret->FlatTo2D<xpu, DType>(s);
+        ASSIGN_DISPATCH(out, req,
+                        F<OP>(lhs.FlatTo2D<xpu, DType>(s),
+                              rhs.FlatTo2D<xpu, DType>(s)));
+      });
+    return;
+  }
 
   TShape ret_reshaped;
   int lhs_broadcast_axis;
@@ -224,8 +241,13 @@ void BinaryBroadcastForward_(const TBlob& lhs,
               ret->get_with_shape<xpu, 3, DType>(ret_mshape, s);
           mshadow::Tensor<xpu, 3, DType> mrhs =
               rhs.get_with_shape<xpu, 3, DType>(ret_mshape, s);
-          ASSIGN_DISPATCH(out, req,
-                          F<OP>(broadcast<1>(mlhs, ret_mshape), mrhs));
+          if (lhs.shape_.Size() == 1) {
+            ASSIGN_DISPATCH(out, req,
+                            F<OP>(broadcast_scalar(mlhs, ret_mshape), mrhs));
+          } else {
+            ASSIGN_DISPATCH(out, req,
+                            F<OP>(broadcast<1>(mlhs, ret_mshape), mrhs));
+          }
         }
       } else {
         mshadow::Tensor<xpu, 1, DType> mrhs =
@@ -237,8 +259,13 @@ void BinaryBroadcastForward_(const TBlob& lhs,
               ret->get_with_shape<xpu, 3, DType>(ret_mshape, s);
           mshadow::Tensor<xpu, 3, DType> mlhs =
               lhs.get_with_shape<xpu, 3, DType>(ret_mshape, s);
-          ASSIGN_DISPATCH(out, req,
-                          F<OP>(mlhs, broadcast<1>(mrhs, ret_mshape)));
+          if (lhs.shape_.Size() == 1) {
+            ASSIGN_DISPATCH(out, req,
+                            F<OP>(mlhs, broadcast_scalar(mrhs, ret_mshape)));
+          } else {
+            ASSIGN_DISPATCH(out, req,
+                            F<OP>(mlhs, broadcast<1>(mrhs, ret_mshape)));
+          }
         } else {
           LOG(FATAL) << "should not reached";
         }
@@ -254,19 +281,20 @@ void PlusBroadcastBackward_(const OutputGrad& out_grad,
                             OpReqType req_lhs_grad,
                             OpReqType req_rhs_grad,
                             RunContext ctx) {
-  using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(lhs_grad->type_flag_, DType, {
-      mshadow::Tensor<xpu, 2, DType> mout_grad = out_grad.data.FlatTo2D<xpu, DType>(s);
-      mshadow::Tensor<xpu, 2, DType> mlhs_grad = lhs_grad->FlatTo2D<xpu, DType>(s);
-      mshadow::Tensor<xpu, 2, DType> mrhs_grad = rhs_grad->FlatTo2D<xpu, DType>(s);
-      ASSIGN_DISPATCH(mlhs_grad, req_lhs_grad, F<mshadow_op::identity>(mout_grad));
-      ASSIGN_DISPATCH(mrhs_grad, req_rhs_grad, F<mshadow_op::identity>(mout_grad));
-    });
+  // using namespace mshadow::expr;
+  // mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  // MSHADOW_TYPE_SWITCH(lhs_grad->type_flag_, DType, {
+  //     mshadow::Tensor<xpu, 2, DType> mout_grad = out_grad.data.FlatTo2D<xpu, DType>(s);
+  //     mshadow::Tensor<xpu, 2, DType> mlhs_grad = lhs_grad->FlatTo2D<xpu, DType>(s);
+  //     mshadow::Tensor<xpu, 2, DType> mrhs_grad = rhs_grad->FlatTo2D<xpu, DType>(s);
+  //     ASSIGN_DISPATCH(mlhs_grad, req_lhs_grad, F<mshadow_op::identity>(mout_grad));
+  //     ASSIGN_DISPATCH(mrhs_grad, req_rhs_grad, F<mshadow_op::identity>(mout_grad));
+  //   });
 }
 
-MXNET_REGISTER_SIMPLE_OP(_plus_broadcast, XPU)
-.set_symbol_op_name("_PlusBroadcast")
+MXNET_REGISTER_SIMPLE_OP(_broadcast_plus, XPU)
+.set_symbol_op_name("_BroadcastPlus")
+.set_shape_function(BinaryBroadcastShape_)
 .set_function(XPU::kDevMask, BinaryBroadcastForward_<XPU, mshadow::op::plus>, kInplaceLhsOut)
 .set_gradient(XPU::kDevMask, PlusBroadcastBackward_<XPU>, kInplaceOutLhs)
 .describe("Add lhs and rhs with broadcast");
