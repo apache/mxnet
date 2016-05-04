@@ -79,16 +79,19 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
             hidden = mx.sym.Dropout(data=hidden, p=dropout)
         hidden_all.append(hidden)
 
-    hidden_concat = mx.sym.Concat(*hidden_all, dim=0)
-    pred = mx.sym.FullyConnected(data=hidden_concat, num_hidden=num_label,
+    hidden_all = [mx.sym.Reshape(x, target_shape=(0, 1, num_hidden))
+                  for x in hidden_all]
+    hidden_concat = mx.sym.Concat(*hidden_all, dim=1)
+    hidden_final = mx.sym.Reshape(hidden_concat, target_shape=(0, num_hidden))
+    pred = mx.sym.FullyConnected(data=hidden_final, num_hidden=num_label,
                                  weight=cls_weight, bias=cls_bias, name='pred')
 
     ################################################################################
     # Make label the same shape as our produced data path
     # I did not observe big speed difference between the following two ways
 
-    label = mx.sym.transpose(data=label)
-    label = mx.sym.Reshape(data=label, target_shape=(0,))
+    #label = mx.sym.transpose(data=label)
+    #label = mx.sym.Reshape(data=label, target_shape=(0,))
 
     #label_slice = mx.sym.SliceChannel(data=label, num_outputs=seq_len)
     #label = [label_slice[t] for t in range(seq_len)]
