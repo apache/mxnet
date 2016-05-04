@@ -507,7 +507,6 @@ inline bool ParseNDArrayArg(SEXP sexp, NDArrayHandle *handle, float *value) {
 
 // dispatch the binary ops of MXNDArray
 NDArray::RObjectType DispatchOps(SEXP op, SEXP lhs, SEXP rhs) {
-  RLOG_INFO << "Why";
   // function handles
   static FunctionHandle plus = NDArrayFunction::FindHandle("_plus");
   static FunctionHandle plus_scalar = NDArrayFunction::FindHandle("_plus_scalar");
