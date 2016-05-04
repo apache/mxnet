@@ -40,7 +40,7 @@ class CuDNNSoftmaxActivationOp : public Operator {
     Tensor<gpu, 4> data;
     Tensor<gpu, 4> out;
     cudnnSoftmaxMode_t softmax_mode;
-    if (param_.type == softmax_activation::kInstance) {
+    if (param_.mode == softmax_activation::kInstance) {
       CHECK_EQ(in_data[softmax_activation::kData].ndim(), 2)
         << "Input need to have 2 dimensions when type=instance.";
       Shape<4> dshape = Shape4(in_data[softmax_activation::kData].shape_[0],
@@ -112,7 +112,7 @@ class CuDNNSoftmaxActivationOp : public Operator {
     Tensor<gpu, 4> output_data;
     Tensor<gpu, 4> input_grad;
     cudnnSoftmaxMode_t softmax_mode;
-    if (param_.type == softmax_activation::kInstance) {
+    if (param_.mode == softmax_activation::kInstance) {
       CHECK_EQ(in_grad[softmax_activation::kData].ndim(), 2)
         << "Input need to have 2 dimensions when type=instance.";
       Shape<4> dshape = Shape4(in_grad[softmax_activation::kData].shape_[0],
