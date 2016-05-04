@@ -126,7 +126,7 @@ def score_with_state_forwarding(module, eval_data, eval_metric):
     eval_data.reset()
     eval_metric.reset()
 
-    for eval_batch in eval_batch:
+    for eval_batch in eval_data:
         module.forward(eval_batch, is_train=False)
         module.update_metric(eval_metric, eval_batch.label)
 
@@ -137,8 +137,8 @@ def score_with_state_forwarding(module, eval_data, eval_metric):
             outputs[i].copyto(eval_data.init_state_arrays[i-1])
 
 def get_initializer(args):
-    init_type = getattr(mx.initializer, args.config.get('training', 'initializer'))
-    init_scale = args.config.getfloat('training', 'init_scale')
+    init_type = getattr(mx.initializer, args.config.get('train', 'initializer'))
+    init_scale = args.config.getfloat('train', 'init_scale')
     if init_type is mx.initializer.Xavier:
         return mx.initializer.Xavier(magnitude=init_scale)
     return init_type(init_scale)
