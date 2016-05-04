@@ -295,7 +295,7 @@ if __name__ == '__main__':
                                            truncate_len=truncate_len, feat_dim=feat_dim)
         data_val = TruncatedSentenceIter(dev_sets, batch_size, init_states,
                                          truncate_len=truncate_len, feat_dim=feat_dim,
-                                         do_shuffling=False)
+                                         do_shuffling=False, pad_zeros=True)
         sym = lstm_unroll(num_lstm_layer, truncate_len, feat_dim, num_hidden=num_hidden,
                           num_label=label_dim, output_states=True)
         data_names = [x[0] for x in data_train.provide_data]

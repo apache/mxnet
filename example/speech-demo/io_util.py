@@ -46,10 +46,20 @@ class TruncatedSentenceIter(mx.io.DataIter):
     forwarded during forward, but the backward is only computed within
     chunks. This mechanism does not require bucketing, and it sometimes
     avoid gradient exploding problems in very long sequences.
+
+    Parameters
+    ----------
+    pad_zeros : bool
+        Default `False`. Control the behavior of padding when we run
+        out of the whole dataset. When true, we will pad with all-zeros.
+        When false, will pad with a random sentence in the dataset.
+        Usually, for training we would like to use `False`, but
+        for testing use `True` so that the evaluation metric can
+        choose to ignore the padding by detecting the zero-labels.
     """
     def __init__(self, train_sets, batch_size, init_states, truncate_len=20, delay=5,
                  feat_dim=40, data_name='data', label_name='softmax_label',
-                 has_label=True, do_shuffling=True):
+                 has_label=True, do_shuffling=True, pad_zeros=False):
 
         self.train_sets = train_sets
         self.train_sets.initialize_read()
@@ -64,6 +74,7 @@ class TruncatedSentenceIter(mx.io.DataIter):
         self.delay = delay
 
         self.do_shuffling = do_shuffling
+        self.pad_zeros = pad_zeros
 
         self.data = [mx.nd.zeros((batch_size, truncate_len, feat_dim))]
         self.label = None
@@ -169,16 +180,21 @@ class TruncatedSentenceIter(mx.io.DataIter):
                         utt_inside_idx[i] = 0
                         next_utt_idx += 1
 
-                idx_take = slice(utt_inside_idx[i],
-                                 min(utt_inside_idx[i]+self.truncate_len, fea_utt.shape[0]))
-                n_take = idx_take.stop - idx_take.start
-                np_data_buffer[i][:n_take] = fea_utt[idx_take]
-                np_label_buffer[i][:n_take] = self.labels[idx][idx_take]
-                if n_take < self.truncate_len:
-                    np_data_buffer[i][n_take] = 0
-                    np_label_buffer[i][n_take] = 0
+                if is_pad[i] and self.pad_zeros:
+                    np_data_buffer[i] = 0
+                    np_label_buffer[i] = 0
+                else:
+                    idx_take = slice(utt_inside_idx[i],
+                                     min(utt_inside_idx[i]+self.truncate_len, fea_utt.shape[0]))
+                    n_take = idx_take.stop - idx_take.start
+                    np_data_buffer[i][:n_take] = fea_utt[idx_take]
+                    np_label_buffer[i][:n_take] = self.labels[idx][idx_take]
+                    if n_take < self.truncate_len:
+                        np_data_buffer[i][n_take] = 0
+                        np_label_buffer[i][n_take] = 0
 
-                utt_inside_idx[i] += n_take
+                    utt_inside_idx[i] += n_take
+
                 utt_id_buffer[i] = self.utt_ids[idx]
 
             if pad == self.batch_size:
@@ -207,7 +223,7 @@ class TruncatedSentenceIter(mx.io.DataIter):
 
 class BucketSentenceIter(mx.io.DataIter):
     def __init__(self, train_sets, buckets, batch_size,
-            init_states, delay=5, feat_dim=40,  n_batch=None,
+            init_states, delay=5, feat_dim=40,
             data_name='data', label_name='softmax_label', has_label=True):
 
         self.train_sets=train_sets
@@ -253,16 +269,19 @@ class BucketSentenceIter(mx.io.DataIter):
         self.batch_size = batch_size
         # convert data into ndarrays for better speed during training
         data = [np.zeros((len(x), buckets[i], self.feat_dim))
-                if len(x) % self.batch_size == 0  else np.zeros(((len(x)/self.batch_size + 1) *self.batch_size, buckets[i], self.feat_dim)) for i, x in enumerate(self.data)]
+                if len(x) % self.batch_size == 0 
+                else np.zeros(((len(x)/self.batch_size + 1) * self.batch_size, buckets[i], self.feat_dim)) 
+                for i, x in enumerate(self.data)]
 
         label = [np.zeros((len(x), buckets[i]))
-                if len(x) % self.batch_size == 0  else np.zeros(((len(x)/self.batch_size + 1) *self.batch_size, buckets[i])) for i, x in enumerate(self.data)]
+                 if len(x) % self.batch_size == 0 
+                 else np.zeros(((len(x)/self.batch_size + 1) * self.batch_size, buckets[i])) 
+                 for i, x in enumerate(self.data)]
 
         utt_id = [[] for k in buckets]
         for i, x in enumerate(data):
             utt_id[i] = ["GAP_UTT"] * len(x)
-        #print utt_id
-        #label = [np.zeros((len(x), buckets[i])) for i, x in enumerate(self.data)]
+
         for i_bucket in range(len(self.buckets)):
             for j in range(len(self.data[i_bucket])):
                 sentence = self.data[i_bucket][j]
@@ -292,10 +311,6 @@ class BucketSentenceIter(mx.io.DataIter):
 
         self.bucket_sizes = bucket_sizes
         self.make_data_iter_plan()
-
-        if n_batch is None:
-            n_batch = int(bucket_size_tot / batch_size)
-        self.n_batch = n_batch
 
         self.init_states = init_states
         self.init_state_arrays = [mx.nd.zeros(x[1]) for x in init_states]
