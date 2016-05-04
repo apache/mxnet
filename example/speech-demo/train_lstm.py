@@ -230,7 +230,7 @@ def do_training(training_method, args, module, data_train, data_val):
         if n_epoch > 0 and lr_scheduler.base_lr > decay_bound and curr_acc < last_acc:
             logging.info('Epoch[%d] !!! Dev set performance drops, reverting this epoch',
                          n_epoch)
-            logging.info('Epoch[%d] !!! LR decay: %g => %g',
+            logging.info('Epoch[%d] !!! LR decay: %g => %g', n_epoch,
                          lr_scheduler.base_lr, lr_scheduler.base_lr / float(decay_factor))
 
             lr_scheduler.base_lr /= decay_factor
