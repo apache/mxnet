@@ -49,29 +49,29 @@ class Symbol(object):
         >>> print x.outputs[0].asnumpy()
         [[ 2.  2.]
          [ 2.  2.]]
-        >>> x = c.bind(dev, args={'a': mx.nd.ones((2,2)), 'b' : mx.nd.ones((1,))})
+        >>> x = c.bind(dev, args={'a': mx.nd.ones((2,2)), 'b' : mx.nd.ones((1,1))})
         >>> x.forward()
         >>> print x.outputs[0].asnumpy()
         [[ 2.  2.]
          [ 2.  2.]]
-        >>> x = c.bind(dev, args={'a': mx.nd.ones((2,)), 'b' : mx.nd.ones((1,2))})
+        >>> x = c.bind(dev, args={'a': mx.nd.ones((2,1)), 'b' : mx.nd.ones((1,2))})
         >>> x.forward()
         >>> print x.outputs[0].asnumpy()
         [[ 2.  2.]
          [ 2.  2.]]
-        >>> x = c.bind(dev, args={'a': mx.nd.ones((1,2)), 'b' : mx.nd.ones((2,))})
+        >>> x = c.bind(dev, args={'a': mx.nd.ones((1,2)), 'b' : mx.nd.ones((2,1))})
         >>> x.forward()
         >>> print x.outputs[0].asnumpy()
         [[ 2.  2.]
          [ 2.  2.]]
-        >>> x = c.bind(dev, args={'a': mx.nd.ones((2,2,2)), 'b' : mx.nd.ones((2,1))}
+        >>> x = c.bind(dev, args={'a': mx.nd.ones((2,2,2)), 'b' : mx.nd.ones((1,2,1))}
         >>> x.forward()
         >>> print x.outputs[0].asnumpy()
         [[[ 2.  2.]
           [ 2.  2.]]
          [[ 2.  2.]
           [ 2.  2.]]]
-        >>> x = c.bind(dev, args={'a': mx.nd.ones((2,)), 'b' : mx.nd.ones((2,2,2))})
+        >>> x = c.bind(dev, args={'a': mx.nd.ones((2,1,1)), 'b' : mx.nd.ones((2,2,2))})
         >>> x.forward()
         >>> print x.outputs[0].asnumpy()
         [[[ 2.  2.]

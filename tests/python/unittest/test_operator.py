@@ -747,11 +747,8 @@ def _gen_broadcast_data():
     shape_pairs += [(v, u) for (u, v) in shape_pairs]
     return [(np.random.random(u), np.random.random(v)) for (u,v) in shape_pairs]
 
-
-def _check_broadcast_op(symbol, baseline):
-    data = _gen_broadcast_data()
-    len(data)
-    for d in data:
+def _check_broadcast_op_forward(symbol, baseline):
+    for d in _gen_broadcast_data():
         x = baseline(d[0], d[1])
         y = symbol.bind(mx.cpu(), args={'a': mx.nd.array(d[0]), 'b' : mx.nd.array(d[1])})
         y.forward()
@@ -759,12 +756,36 @@ def _check_broadcast_op(symbol, baseline):
         assert err < 1e-6, 'error %f, shapes are %s, %s' % (
             err, d[0].shape, d[1].shape)
 
+def _check_broadcast_op_backward(symbol, baseline):
+    for d in _gen_broadcast_data():
+        out = d[0] + d[1]
+        def reduce_op(shape, x):
+            if shape == x.shape:
+                return x
+            axis = [i for i in range(len(shape)) if x.shape[i] != shape[i]]
+            return np.sum(x, keepdims=1, axis=tuple(axis))
+
+        x_1 = reduce_op(d[0].shape, baseline(out, d[0], d[1]))
+        x_2 = reduce_op(d[1].shape, baseline(out, d[1], d[0]))
+        for u, v in zip([(d[0], d[1]), (d[1], d[0])], [(x_1, x_2), (x_2, x_1)]):
+            y_1 = mx.nd.empty(u[0].shape)
+            y_2 = mx.nd.empty(u[1].shape)
+            y = symbol.bind(mx.cpu(), args={'a': mx.nd.array(u[0]), 'b' : mx.nd.array(u[1])},
+                            args_grad=[y_1, y_2])
+            y.forward()
+            y.backward([mx.nd.array(out)])
+            err = lambda x, y: np.sum(np.abs(x-y)) / np.sum(np.abs(x))
+            err_1 = err(v[0], y_1.asnumpy())
+            err_2 = err(v[1], y_2.asnumpy())
+            assert err_1 < 1e-6 and err_2, 'lhs error %f, rhs error %f, shapes are %s %s' % (
+                err_1, err_2, u[0].shape, u[1].shape)
 
 def test_broadcast_plus():
     a = mx.sym.Variable('a')
     b = mx.sym.Variable('b')
     c = a + b
-    _check_broadcast_op(c, lambda a, b: a + b)
+    _check_broadcast_op_forward(c, lambda a, b: a + b)
+    _check_broadcast_op_backward(c, lambda g_out, a, b: g_out)
 
 if __name__ == '__main__':
     test_broadcast_plus()
@@ -790,5 +811,5 @@ if __name__ == '__main__':
     test_deconvolution()
     test_batchnorm_training()
     check_softmax_with_ignore_label(mx.cpu())
-    #check_softmax_with_shape((3,4), mx.cpu())
-    #check_multi_softmax_with_shape((3,4,5), mx.cpu())
+    # check_softmax_with_shape((3,4), mx.cpu())
+    # check_multi_softmax_with_shape((3,4,5), mx.cpu())
