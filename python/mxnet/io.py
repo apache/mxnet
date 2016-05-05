@@ -20,7 +20,7 @@ from .ndarray import array
 
 class DataBatch(object):
     """Default object for holding a mini-batch of data and related information."""
-    def __init__(self, data, label, pad, index,
+    def __init__(self, data, label, pad=None, index=None,
                  bucket_key=None, provide_data=None, provide_label=None):
         self.data = data
         self.label = label

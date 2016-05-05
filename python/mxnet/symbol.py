@@ -98,6 +98,9 @@ class Symbol(object):
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
+    def __neg__(self):
+        return self.__mul__(-1.0)
+
     def __del__(self):
         check_call(_LIB.MXSymbolFree(self.handle))
 
