@@ -310,12 +310,16 @@ class TorchModuleProp : public OperatorProperty {
   }
 
   virtual std::vector<std::string> ListOutputs() const {
-    std::vector<std::string> ret;
-    std::string output = "output";
-    for (uint32_t i = 0; i < param_.num_outputs; ++i) {
-      ret.push_back(output + "_" + std::to_string(i));
+    if (param_.num_outputs > 1) {
+      std::vector<std::string> ret;
+      std::string output = "output";
+      for (uint32_t i = 0; i < param_.num_outputs; ++i) {
+        ret.push_back(output + std::to_string(i));
+      }
+      return ret;
+    } else {
+      return {"output"};
     }
-    return ret;
   }
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);

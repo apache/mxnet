@@ -164,6 +164,10 @@ class BucketingModule(BaseModule):
             self.logger.warning('Already binded, ignoring bind()')
             return
 
+        # in case we already initialized params, keep it
+        if self.params_initialized:
+            arg_params, aux_params = self.get_params()
+
         assert shared_module is None, 'shared_module for BucketingModule is not supported'
 
         self.for_training = for_training
@@ -177,6 +181,10 @@ class BucketingModule(BaseModule):
                     force_rebind=False, shared_module=None)
         self._curr_module = module
         self._buckets[self._default_bucket_key] = module
+
+        # copy back saved params, if already initialized
+        if self.params_initialized:
+            self.set_params(arg_params, aux_params)
 
     def switch_bucket(self, bucket_key, data_shapes, label_shapes=None):
         """Switch to a different bucket. This will change `self.curr_module`.
