@@ -201,7 +201,6 @@ object NeuralStyle {
       var oldImg = img.copyTo(dev)
       val clipNorm = img.shape.toVector.reduce(_ * _)
       val tvGradExecutor = getTvGradExecutor(img, dev, alle.tvWeight)
-//      var gradArray: Array[NDArray] = null
       var eps = 0f
       var trainingDone = false
       var e = 0
