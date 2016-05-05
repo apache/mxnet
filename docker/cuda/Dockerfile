@@ -10,7 +10,7 @@ RUN git clone --recursive https://github.com/dmlc/mxnet/ && cd mxnet && \
     echo "USE_CUDNN=1" >>config.mk && \
     echo "USE_BLAS=openblas" >>config.mk && \
     make -j8 ADD_LDFLAGS=-L/usr/local/cuda/lib64/stubs
-ENV LD_LIBRARY_PATH /usr/local/cuda/lib64
+ENV LD_LIBRARY_PATH /usr/local/cuda/lib64:$LD_LIBRARY_PATH 
 
 # python pakcage
 RUN apt-get install -y python-numpy wget unzip
