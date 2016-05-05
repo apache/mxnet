@@ -139,6 +139,7 @@ def do_training(training_method, args, module, data_train, data_val):
                           optimizer=args.config.get('train', 'optimizer'),
                           optimizer_params={'lr_scheduler': lr_scheduler,
                                             'momentum': momentum,
+                                            'rescale_grad': 1.0,
                                             'clip_gradient': clip_gradient})
 
     while True:
