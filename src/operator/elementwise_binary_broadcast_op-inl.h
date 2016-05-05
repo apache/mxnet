@@ -41,6 +41,8 @@
 #define MXNET_OPERATOR_ELEMENTWISE_BINARY_BROADCAST_OP_INL_H_
 
 #include <mxnet/operator_util.h>
+#include <algorithm>
+#include <vector>
 #include "./mshadow_op.h"
 
 #if defined(__CUDACC__)
