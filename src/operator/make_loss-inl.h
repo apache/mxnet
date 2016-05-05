@@ -48,10 +48,12 @@ class MakeLossOp : public Operator {
     CHECK_EQ(out_data.size(), 1);
     CHECK_EQ(in_data[make_loss_enum::kData].ndim(), 2)
     << "MakeLoss applies to all unary and binary operator with 2 dimension input";
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[make_loss_enum::kData].get<xpu, 2, real_t>(s);
-    Tensor<xpu, 2> out = out_data[make_loss_enum::kOut].get<xpu, 2, real_t>(s);
-    Assign(out, req[make_loss_enum::kData], F<mshadow_op::identity>(data));
+    if (req[make_loss_enum::kOut] != kWriteInplace) {
+      Stream<xpu> *s = ctx.get_stream<xpu>();
+      Tensor<xpu, 2> data = in_data[make_loss_enum::kData].get<xpu, 2, real_t>(s);
+      Tensor<xpu, 2> out = out_data[make_loss_enum::kOut].get<xpu, 2, real_t>(s);
+      Assign(out, req[make_loss_enum::kOut], data);
+    }
   }
 
   virtual void Backward(const OpContext &ctx,
