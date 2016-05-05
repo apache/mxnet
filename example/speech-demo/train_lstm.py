@@ -111,16 +111,16 @@ def Acc_exclude_padding(labels, preds):
     return sum_metric, num_inst
 
 class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
-    """A simple lr schedule that simply return `base_lr`. We will set `base_lr`
+    """A simple lr schedule that simply return `dynamic_lr`. We will set `dynamic_lr`
     dynamically based on performance on the validation set.
     """
-    def __init__(self, base_lr, batch_size, seq_len=1):
-        self.base_lr = base_lr
-        self.batch_size = batch_size
-        self.seq_len = seq_len
+    def __init__(self, dynamic_lr, effective_sample_count=1):
+        super(SimpleLRScheduler, self).__init__()
+        self.dynamic_lr = dynamic_lr
+        self.effective_sample_count = effective_sample_count
 
     def __call__(self, num_update):
-        return self.base_lr / self.batch_size / self.seq_len
+        return self.dynamic_lr / self.effective_sample_count
 
 def score_with_state_forwarding(module, eval_data, eval_metric):
     eval_data.reset()
@@ -155,7 +155,7 @@ def do_training(training_method, args, module, data_train, data_val):
 
     momentum = args.config.getfloat('train', 'momentum')
     learning_rate = args.config.getfloat('train', 'learning_rate')
-    lr_scheduler = SimpleLRScheduler(learning_rate, batch_size)
+    lr_scheduler = SimpleLRScheduler(learning_rate)
 
     if training_method == METHOD_TBPTT:
         lr_scheduler.seq_len = data_train.truncate_len
@@ -188,9 +188,8 @@ def do_training(training_method, args, module, data_train, data_val):
         eval_metric.reset()
 
         for nbatch, data_batch in enumerate(data_train):
-            if training_method == METHOD_BUCKETING:
-                # set the seq_len so that lr is divided by seq_len
-                lr_scheduler.seq_len = data_batch.bucket_key
+            if data_batch.effective_sample_count is not None:
+                lr_scheduler.effective_sample_count = data_batch.effective_sample_count
 
             module.forward_backward(data_batch)
             module.update()
@@ -227,13 +226,13 @@ def do_training(training_method, args, module, data_train, data_val):
                 curr_acc = val
         assert curr_acc is not None, 'cannot find Acc_exclude_padding in eval metric'
 
-        if n_epoch > 0 and lr_scheduler.base_lr > decay_bound and curr_acc < last_acc:
+        if n_epoch > 0 and lr_scheduler.dynamic_lr > decay_bound and curr_acc < last_acc:
             logging.info('Epoch[%d] !!! Dev set performance drops, reverting this epoch',
                          n_epoch)
             logging.info('Epoch[%d] !!! LR decay: %g => %g', n_epoch,
-                         lr_scheduler.base_lr, lr_scheduler.base_lr / float(decay_factor))
+                         lr_scheduler.dynamic_lr, lr_scheduler.dynamic_lr / float(decay_factor))
 
-            lr_scheduler.base_lr /= decay_factor
+            lr_scheduler.dynamic_lr /= decay_factor
             module.set_params(*last_params)
         else:
             last_params = module.get_params()
@@ -310,4 +309,3 @@ if __name__ == '__main__':
     print("Finished Training")
     print("="*80)
     args.config.write(sys.stdout)
-

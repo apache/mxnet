@@ -20,13 +20,15 @@ def read_content(path):
         return content
 
 class SimpleBatch(object):
-    def __init__(self, data_names, data, label_names, label, bucket_key, utt_id=None):
+    def __init__(self, data_names, data, label_names, label, bucket_key,
+                 utt_id=None, effective_sample_count=None):
         self.data = data
         self.label = label
         self.data_names = data_names
         self.label_names = label_names
         self.bucket_key = bucket_key
         self.utt_id = utt_id
+        self.effective_sample_count = effective_sample_count
 
         self.pad = 0
         self.index = None # TODO: what is index?
@@ -152,6 +154,7 @@ class TruncatedSentenceIter(mx.io.DataIter):
             state[:] = 0
 
         while True:
+            effective_sample_count = self.batch_size * self.truncate_len
             for i, idx in enumerate(utt_idx):
                 fea_utt = self.features[idx]
                 if utt_inside_idx[i] >= fea_utt.shape[0]:
@@ -183,15 +186,18 @@ class TruncatedSentenceIter(mx.io.DataIter):
                 if is_pad[i] and self.pad_zeros:
                     np_data_buffer[i] = 0
                     np_label_buffer[i] = 0
+                    effective_sample_count -= self.truncate_len
                 else:
                     idx_take = slice(utt_inside_idx[i],
-                                     min(utt_inside_idx[i]+self.truncate_len, fea_utt.shape[0]))
+                                     min(utt_inside_idx[i]+self.truncate_len,
+                                         fea_utt.shape[0]))
                     n_take = idx_take.stop - idx_take.start
                     np_data_buffer[i][:n_take] = fea_utt[idx_take]
                     np_label_buffer[i][:n_take] = self.labels[idx][idx_take]
                     if n_take < self.truncate_len:
-                        np_data_buffer[i][n_take] = 0
-                        np_label_buffer[i][n_take] = 0
+                        np_data_buffer[i][n_take:] = 0
+                        np_label_buffer[i][n_take:] = 0
+                        effective_sample_count -= self.truncate_len - n_take
 
                     utt_inside_idx[i] += n_take
 
@@ -206,7 +212,8 @@ class TruncatedSentenceIter(mx.io.DataIter):
 
             data_batch = SimpleBatch(data_names, self.data + self.init_state_arrays,
                                      label_names, self.label, bucket_key=None,
-                                     utt_id=utt_id_buffer)
+                                     utt_id=utt_id_buffer,
+                                     effective_sample_count=effective_sample_count)
 
             # Instead of using the 'pad' property, we use an array 'is_pad'. Because
             # our padded sentence could be in the middle of a batch. A sample is pad
@@ -292,13 +299,13 @@ class BucketSentenceIter(mx.io.DataIter):
         # convert data into ndarrays for better speed during training
 
         data = [np.zeros((len(x), buckets[i], self.feat_dim))
-                if len(x) % self.batch_size == 0 
-                else np.zeros(((len(x)/self.batch_size + 1) * self.batch_size, buckets[i], self.feat_dim)) 
+                if len(x) % self.batch_size == 0
+                else np.zeros(((len(x)/self.batch_size + 1) * self.batch_size, buckets[i], self.feat_dim))
                 for i, x in enumerate(self.data)]
 
         label = [np.zeros((len(x), buckets[i]))
-                 if len(x) % self.batch_size == 0 
-                 else np.zeros(((len(x)/self.batch_size + 1) * self.batch_size, buckets[i])) 
+                 if len(x) % self.batch_size == 0
+                 else np.zeros(((len(x)/self.batch_size + 1) * self.batch_size, buckets[i]))
                  for i, x in enumerate(self.data)]
 
         utt_id = [[] for k in buckets]
@@ -386,10 +393,11 @@ class BucketSentenceIter(mx.io.DataIter):
             data_all = [data] + self.init_state_arrays
             label_all = [label]
             utt_id = np.array(self.utt_id[i_bucket])[idx]
+            effective_sample_count = mx.nd.sum(label)
             data_batch = SimpleBatch(data_names, data_all, label_names, label_all,
-                                     self.buckets[i_bucket], utt_id)
+                                     self.buckets[i_bucket], utt_id,
+                                     effective_sample_count=effective_sample_count)
             yield data_batch
 
     def reset(self):
         self.bucket_curr_idx = [0 for x in self.data]
-
