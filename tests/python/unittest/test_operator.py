@@ -730,7 +730,44 @@ def test_convolution_grouping():
     for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
         np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3)
 
+def _gen_broadcast_data():
+    n = 10
+    m = 8
+    k = 6
+    shape_pairs = [((1,), (1,)),
+                   ((n,), (n,)),
+                   ((n,m), (n,m)),
+                   ((n,m,k), (n,m,k)),
+                   ((n,1), (1,n)),
+                   ((n,m,k), (n,1,1)),
+                   ((n,m,k), (1,m,1)),
+                   ((n,m,k), (1,m,k)),
+                   ((n,m,k), (n,m,1)),
+                   ((n,m,k), (1,1,k))]
+    shape_pairs += [(v, u) for (u, v) in shape_pairs]
+    return [(np.random.random(u), np.random.random(v)) for (u,v) in shape_pairs]
+
+
+def _check_broadcast_op(symbol, baseline):
+    data = _gen_broadcast_data()
+    len(data)
+    for d in data:
+        x = baseline(d[0], d[1])
+        y = symbol.bind(mx.cpu(), args={'a': mx.nd.array(d[0]), 'b' : mx.nd.array(d[1])})
+        y.forward()
+        err = np.sum(np.abs(x - y.outputs[0].asnumpy())) / np.sum(np.abs(x))
+        assert err < 1e-6, 'error %f, shapes are %s, %s' % (
+            err, d[0].shape, d[1].shape)
+
+
+def test_broadcast_plus():
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+    c = a + b
+    _check_broadcast_op(c, lambda a, b: a + b)
+
 if __name__ == '__main__':
+    test_broadcast_plus()
     test_convolution_grouping()
     test_nearest_upsampling()
     test_binary_op_duplicate_input()
