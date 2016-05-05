@@ -34,7 +34,13 @@ object Network {
   def availablePort: Int = {
     try {
       val serverSocket = new ServerSocket(0)
-      serverSocket.getLocalPort
+      val port = serverSocket.getLocalPort
+      try {
+        serverSocket.close()
+      } catch {
+        case _: IOException => // do nothing
+      }
+      port
     } catch {
       case ex: Throwable => throw new IOException("Cannot find an available port")
     }
