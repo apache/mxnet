@@ -108,7 +108,7 @@ class Load(object):
         self.verbose = verbose
 
     def __call__(self, name, arr):
-        if self.param.has_key(name):
+        if name in self.param:
             assert arr.shape == self.param[name].shape, \
                 'Parameter %s cannot be initialized from loading. '%name + \
                 'Shape mismatch, target %s vs loaded %s'%(str(arr.shape),
