@@ -112,7 +112,6 @@ class TruncatedSentenceIter(mx.io.DataIter):
                 # delay the labels
                 tgs[self.delay:] = tgs[:-self.delay]
                 tgs[:self.delay] = tgs[0] # boradcast assign
-
             self.features.append(feats)
             if self.has_label:
                 self.labels.append(tgs+1)
@@ -149,7 +148,7 @@ class TruncatedSentenceIter(mx.io.DataIter):
 
         # reset states
         for state in self.init_state_arrays:
-            state[:] = 0
+            state[:] = 0.1
 
         while True:
             for i, idx in enumerate(utt_idx):
@@ -159,8 +158,7 @@ class TruncatedSentenceIter(mx.io.DataIter):
 
                     # reset the states
                     for state in self.init_state_arrays:
-                        state[i:i+1] = 0
-
+                        state[i:i+1] = 0.1
                     # load new sentence
                     if is_pad[i]:
                         # I am already a padded sentence, just rewind to the
@@ -190,9 +188,8 @@ class TruncatedSentenceIter(mx.io.DataIter):
                     np_data_buffer[i][:n_take] = fea_utt[idx_take]
                     np_label_buffer[i][:n_take] = self.labels[idx][idx_take]
                     if n_take < self.truncate_len:
-                        np_data_buffer[i][n_take] = 0
-                        np_label_buffer[i][n_take] = 0
-
+                        np_data_buffer[i][n_take:] = 0
+                        np_label_buffer[i][n_take:] = 0
                     utt_inside_idx[i] += n_take
 
                 utt_id_buffer[i] = self.utt_ids[idx]
@@ -203,7 +200,6 @@ class TruncatedSentenceIter(mx.io.DataIter):
 
             self.data[0][:] = np_data_buffer
             self.label[0][:] = np_label_buffer
-
             data_batch = SimpleBatch(data_names, self.data + self.init_state_arrays,
                                      label_names, self.label, bucket_key=None,
                                      utt_id=utt_id_buffer)
