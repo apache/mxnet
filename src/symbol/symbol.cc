@@ -12,6 +12,11 @@
 #include "./static_graph.h"
 
 namespace mxnet {
+
+namespace symbol_constants {
+const char *kShapeKey = "__shape__";
+}  // namespace symbol_constants
+
 /*!
  * \brief Node is represents node of an operator in the symbolic graph.
  *
@@ -581,6 +586,8 @@ bool Symbol::InferShape(const std::unordered_map<std::string, TShape>& known_arg
     if (it != known_arg_shapes.end()) {
       arg_shapes->at(i) = it->second;
       ++nmatched;
+    } else if (g.nodes[g.arg_nodes[i]].is_variable()) {
+      arg_shapes->at(i) = g.nodes[g.arg_nodes[i]].get_attr(symbol_constants::kShapeKey, TShape());
     }
   }
   if (nmatched != known_arg_shapes.size()) {

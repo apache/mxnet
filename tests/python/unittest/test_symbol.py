@@ -110,7 +110,20 @@ def test_symbol_infer_shape():
     assert arg_shapes['h2h_weight'] == (num_hidden, num_hidden)
 
 
+def test_symbol_infer_shape_var():
+    "Test specifying shape information when constructing a variable"
+    shape = (2, 3)
+    a = mx.symbol.Variable('a', shape=shape)
+    b = mx.symbol.Variable('b')
+    c = a+b
+    arg_shapes, out_shapes, aux_shapes = c.infer_shape()
+    assert arg_shapes[0] == shape
+    assert arg_shapes[1] == shape
+    assert out_shapes[0] == shape
+
+
 if __name__ == '__main__':
+    test_symbol_infer_shape_var()
     test_symbol_infer_shape()
     test_symbol_infer_type()
     test_symbol_internal()
@@ -118,4 +131,3 @@ if __name__ == '__main__':
     test_symbol_compose()
     test_symbol_saveload()
     test_symbol_pickle()
-
