@@ -1,6 +1,9 @@
+import re
 import os
 import sys
 import argparse
+
+import mxnet as mx
 
 if sys.version_info >= (3, 0):
     import configparser

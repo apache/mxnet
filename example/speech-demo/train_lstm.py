@@ -135,12 +135,15 @@ def do_training(training_method, args, module, data_train, data_val):
                 for_training=True)
     module.init_params(initializer=get_initializer(args))
 
-    module.init_optimizer(kvstore='local',
-                          optimizer=args.config.get('train', 'optimizer'),
-                          optimizer_params={'lr_scheduler': lr_scheduler,
-                                            'momentum': momentum,
-                                            'rescale_grad': 1.0,
-                                            'clip_gradient': clip_gradient})
+    def reset_optimizer():
+        module.init_optimizer(kvstore='local',
+                              optimizer=args.config.get('train', 'optimizer'),
+                              optimizer_params={'lr_scheduler': lr_scheduler,
+                                                'momentum': momentum,
+                                                'rescale_grad': 1.0,
+                                                'clip_gradient': clip_gradient},
+                              force_init=True)
+    reset_optimizer()
 
     while True:
         tic = time.time()
@@ -192,6 +195,9 @@ def do_training(training_method, args, module, data_train, data_val):
                          lr_scheduler.dynamic_lr, lr_scheduler.dynamic_lr / float(decay_factor))
 
             lr_scheduler.dynamic_lr /= decay_factor
+            # we reset the optimizer because the internal states (e.g. momentum)
+            # might already be exploded, so we want to start from fresh
+            reset_optimizer()
             module.set_params(*last_params)
         else:
             last_params = module.get_params()
