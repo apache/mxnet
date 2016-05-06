@@ -260,14 +260,15 @@ void BinaryBroadcastForward_(const TBlob& lhs,
     });
 }
 
-template<typename xpu>
-void PlusBroadcastBackward_(const OutputGrad& out_grad,
-                            const EnvArguments& env,
-                            TBlob* lhs_grad,
-                            TBlob* rhs_grad,
-                            OpReqType req_lhs_grad,
-                            OpReqType req_rhs_grad,
-                            RunContext ctx) {
+
+template<typename xpu, typename LHS_OP, typename RHS_OP>
+void BinaryBroadcastBackward_(const OutputGrad& out_grad,
+                              const EnvArguments& env,
+                              TBlob* lhs_grad,
+                              TBlob* rhs_grad,
+                              OpReqType req_lhs_grad,
+                              OpReqType req_rhs_grad,
+                              RunContext ctx) {
   using namespace mshadow::expr;
   using mshadow::Shape;
   using mshadow::Shape1;
@@ -281,8 +282,8 @@ void PlusBroadcastBackward_(const OutputGrad& out_grad,
         Tensor<xpu, 2, DType> mout_grad = out_grad.data.FlatTo2D<xpu, DType>(s);
         Tensor<xpu, 2, DType> mlhs_grad = lhs_grad->FlatTo2D<xpu, DType>(s);
         Tensor<xpu, 2, DType> mrhs_grad = rhs_grad->FlatTo2D<xpu, DType>(s);
-        ASSIGN_DISPATCH(mlhs_grad, req_lhs_grad, F<mshadow_op::identity>(mout_grad));
-        ASSIGN_DISPATCH(mrhs_grad, req_rhs_grad, F<mshadow_op::identity>(mout_grad));
+        ASSIGN_DISPATCH(mlhs_grad, req_lhs_grad, F<LHS_OP>(mout_grad));
+        ASSIGN_DISPATCH(mrhs_grad, req_rhs_grad, F<RHS_OP>(mout_grad));
       });
     return;
   }
@@ -306,11 +307,15 @@ void PlusBroadcastBackward_(const OutputGrad& out_grad,
           Tensor<xpu, 1, DType> mrhs_grad =
               rhs_grad->get_with_shape<xpu, 1, DType>(Shape1(rhs_size), s);
           if (lhs_broadcast_axis == 0) {
-            ASSIGN_DISPATCH(mlhs_grad, req_lhs_grad, sumall_except_dim<0>(mout_grad));
-            ASSIGN_DISPATCH(mrhs_grad, req_rhs_grad, sumall_except_dim<1>(mout_grad));
+            ASSIGN_DISPATCH(
+                mlhs_grad, req_lhs_grad, sumall_except_dim<0>(F<LHS_OP>(mout_grad)));
+            ASSIGN_DISPATCH(
+                mrhs_grad, req_rhs_grad, sumall_except_dim<1>(F<RHS_OP>(mout_grad)));
           } else {
-            ASSIGN_DISPATCH(mlhs_grad, req_lhs_grad, sumall_except_dim<1>(mout_grad));
-            ASSIGN_DISPATCH(mrhs_grad, req_rhs_grad, sumall_except_dim<0>(mout_grad));
+            ASSIGN_DISPATCH(
+                mlhs_grad, req_lhs_grad, sumall_except_dim<1>(F<LHS_OP>(mout_grad)));
+            ASSIGN_DISPATCH(
+                mrhs_grad, req_rhs_grad, sumall_except_dim<0>(F<RHS_OP>(mout_grad)));
           }
         } else {
           // only broadcast lhs
@@ -318,8 +323,9 @@ void PlusBroadcastBackward_(const OutputGrad& out_grad,
               out_grad.data.get_with_shape<xpu, 3, DType>(ret_reshaped.get<3>(), s);
           Tensor<xpu, 3, DType> mrhs_grad =
               rhs_grad->get_with_shape<xpu, 3, DType>(ret_reshaped.get<3>(), s);
-          ASSIGN_DISPATCH(mlhs_grad, req_lhs_grad, sumall_except_dim<1>(mout_grad));
-          ASSIGN_DISPATCH(mrhs_grad, req_rhs_grad, F<mshadow_op::identity>(mout_grad));
+          ASSIGN_DISPATCH(
+              mlhs_grad, req_lhs_grad, sumall_except_dim<1>(F<LHS_OP>(mout_grad)));
+          ASSIGN_DISPATCH(mrhs_grad, req_rhs_grad, F<RHS_OP>(mout_grad));
         }
       } else {
         if (rhs_broadcast_axis >= 0) {
@@ -330,8 +336,9 @@ void PlusBroadcastBackward_(const OutputGrad& out_grad,
               rhs_grad->get_with_shape<xpu, 1, DType>(Shape1(rhs_size), s);
           Tensor<xpu, 3, DType> mout_grad =
               out_grad.data.get_with_shape<xpu, 3, DType>(ret_reshaped.get<3>(), s);
-          ASSIGN_DISPATCH(mlhs_grad, req_lhs_grad, F<mshadow_op::identity>(mout_grad));
-          ASSIGN_DISPATCH(mrhs_grad, req_rhs_grad, sumall_except_dim<1>(mout_grad));
+          ASSIGN_DISPATCH(mlhs_grad, req_lhs_grad, F<LHS_OP>(mout_grad));
+          ASSIGN_DISPATCH(
+              mrhs_grad, req_rhs_grad, sumall_except_dim<1>(F<RHS_OP>(mout_grad)));
         } else {
           LOG(FATAL) << "no broadcast is needed";
         }
@@ -339,12 +346,147 @@ void PlusBroadcastBackward_(const OutputGrad& out_grad,
     });
 }
 
+template<typename xpu>
+void BroadcastMulBackward_(const OutputGrad& out_grad,
+                            const Input0& lhs,
+                            const Input1& rhs,
+                            const EnvArguments& env,
+                            TBlob* lhs_grad,
+                            TBlob* rhs_grad,
+                            OpReqType req_lhs_grad,
+                            OpReqType req_rhs_grad,
+                            RunContext ctx) {
+  using namespace mshadow::expr;
+  using mshadow::Shape;
+  using mshadow::Shape1;
+  using mshadow::Shape2;
+  using mshadow::Tensor;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+
+  if (!IsBroadcastNeeded_(lhs_grad->shape_, rhs_grad->shape_)) {
+    MSHADOW_TYPE_SWITCH(lhs_grad->type_flag_, DType, {
+        Tensor<xpu, 2, DType> mout_grad = out_grad.data.FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 2, DType> mlhs_data = lhs.data.FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 2, DType> mrhs_data = rhs.data.FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 2, DType> mlhs_grad = lhs_grad->FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 2, DType> mrhs_grad = rhs_grad->FlatTo2D<xpu, DType>(s);
+        CHECK_NE(req_rhs_grad, kWriteInplace);
+        ASSIGN_DISPATCH(mrhs_grad, req_rhs_grad, mlhs_data * mout_grad);
+        ASSIGN_DISPATCH(mlhs_grad, req_lhs_grad, mrhs_data * mout_grad);
+      });
+    return;
+  }
+
+  TShape ret_reshaped;
+  int lhs_broadcast_axis;
+  int rhs_broadcast_axis;
+  GetBroadcastShape_(lhs_grad->shape_, rhs_grad->shape_, &ret_reshaped,
+                     &lhs_broadcast_axis, &rhs_broadcast_axis);
+  index_t lhs_size = lhs_grad->shape_.Size();
+  index_t rhs_size = rhs_grad->shape_.Size();
+
+  MSHADOW_REAL_TYPE_SWITCH(lhs_grad->type_flag_, DType, {
+      if (lhs_broadcast_axis >= 0) {
+        Tensor<xpu, 1, DType> mlhs_data =
+            lhs.data.get_with_shape<xpu, 1, DType>(Shape1(lhs_size), s);
+        Tensor<xpu, 1, DType> mlhs_grad =
+            lhs_grad->get_with_shape<xpu, 1, DType>(Shape1(lhs_size), s);
+
+        if (rhs_broadcast_axis >= 0) {
+          // broadcast both
+          Tensor<xpu, 2, DType> mout_grad =
+              out_grad.data.get_with_shape<xpu, 2, DType>(ret_reshaped.get<2>(), s);
+          Tensor<xpu, 1, DType> mrhs_grad =
+              rhs_grad->get_with_shape<xpu, 1, DType>(Shape1(rhs_size), s);
+          Tensor<xpu, 1, DType> mrhs_data =
+              rhs.data.get_with_shape<xpu, 1, DType>(Shape1(rhs_size), s);
+          if (lhs_broadcast_axis == 0) {
+            ASSIGN_DISPATCH(
+                mlhs_grad, req_lhs_grad, sumall_except_dim<0>(
+                    mout_grad * broadcast<1>(mrhs_data, ret_reshaped.get<2>())));
+            ASSIGN_DISPATCH(
+                mrhs_grad, req_rhs_grad, sumall_except_dim<1>(
+                    mout_grad * broadcast<0>(mlhs_data, ret_reshaped.get<2>())));
+          } else {
+            ASSIGN_DISPATCH(
+                mlhs_grad, req_lhs_grad, sumall_except_dim<1>(
+                    mout_grad * broadcast<0>(mrhs_data, ret_reshaped.get<2>())));
+            ASSIGN_DISPATCH(
+                mrhs_grad, req_rhs_grad, sumall_except_dim<0>(
+                    mout_grad * broadcast<1>(mlhs_data, ret_reshaped.get<2>())));
+          }
+        } else {
+          // only broadcast lhs
+          Tensor<xpu, 3, DType> mout_grad =
+              out_grad.data.get_with_shape<xpu, 3, DType>(ret_reshaped.get<3>(), s);
+          Tensor<xpu, 3, DType> mrhs_grad =
+              rhs_grad->get_with_shape<xpu, 3, DType>(ret_reshaped.get<3>(), s);
+          Tensor<xpu, 3, DType> mrhs_data =
+              rhs.data.get_with_shape<xpu, 3, DType>(ret_reshaped.get<3>(), s);
+
+          ASSIGN_DISPATCH(
+              mlhs_grad, req_lhs_grad, sumall_except_dim<1>(mout_grad * mrhs_data));
+          if (lhs_size == 1) {
+            ASSIGN_DISPATCH(mrhs_grad, req_rhs_grad,
+                            mout_grad * broadcast_scalar(mlhs_data, ret_reshaped.get<3>()));
+          } else {
+            ASSIGN_DISPATCH(mrhs_grad, req_rhs_grad,
+                            mout_grad * broadcast<1>(mlhs_data, ret_reshaped.get<3>()));
+          }
+        }
+      } else {
+        if (rhs_broadcast_axis >= 0) {
+          // only broadcast rhs
+          Tensor<xpu, 3, DType> mlhs_grad =
+              lhs_grad->get_with_shape<xpu, 3, DType>(ret_reshaped.get<3>(), s);
+          Tensor<xpu, 3, DType> mlhs_data =
+              lhs.data.get_with_shape<xpu, 3, DType>(ret_reshaped.get<3>(), s);
+          Tensor<xpu, 1, DType> mrhs_grad =
+              rhs_grad->get_with_shape<xpu, 1, DType>(Shape1(rhs_size), s);
+          Tensor<xpu, 1, DType> mrhs_data =
+              rhs.data.get_with_shape<xpu, 1, DType>(Shape1(rhs_size), s);
+          Tensor<xpu, 3, DType> mout_grad =
+              out_grad.data.get_with_shape<xpu, 3, DType>(ret_reshaped.get<3>(), s);
+
+          if (rhs_size == 1) {
+            ASSIGN_DISPATCH(mlhs_grad, req_lhs_grad,
+                            mout_grad * broadcast_scalar(mrhs_data, ret_reshaped.get<3>()));
+          } else {
+            ASSIGN_DISPATCH(mlhs_grad, req_lhs_grad,
+                            mout_grad * broadcast<1>(mrhs_data, ret_reshaped.get<3>()));
+          }
+          ASSIGN_DISPATCH(
+              mrhs_grad, req_rhs_grad, sumall_except_dim<1>(mout_grad * mlhs_data));
+        } else {
+          LOG(FATAL) << "no broadcast is needed";
+        }
+      }
+    });
+}
+
+
 MXNET_REGISTER_SIMPLE_OP(_broadcast_plus, XPU)
-.set_symbol_op_name("_BroadcastPlus")
+.set_symbol_op_name("BroadcastPlus")
 .set_shape_function(BinaryBroadcastShape_)
 .set_function(XPU::kDevMask, BinaryBroadcastForward_<XPU, mshadow::op::plus>, kInplaceLhsOut)
-.set_gradient(XPU::kDevMask, PlusBroadcastBackward_<XPU>, kInplaceOutLhs)
-.describe("Add lhs and rhs with broadcast");
+.set_gradient(XPU::kDevMask, BinaryBroadcastBackward_<
+              XPU, mshadow_op::identity, mshadow_op::identity>, kInplaceOutLhs)
+.describe("lhs add rhs with broadcast");
+
+MXNET_REGISTER_SIMPLE_OP(_broadcast_minus, XPU)
+.set_symbol_op_name("BroadcastMinus")
+.set_shape_function(BinaryBroadcastShape_)
+.set_function(XPU::kDevMask, BinaryBroadcastForward_<XPU, mshadow::op::minus>, kInplaceLhsOut)
+.set_gradient(XPU::kDevMask, BinaryBroadcastBackward_<
+              XPU, mshadow_op::identity, mshadow_op::negation>, kInplaceOutLhs)
+.describe("lhs minus rhs with broadcast");
+
+MXNET_REGISTER_SIMPLE_OP(_broadcast_mul, XPU)
+.set_symbol_op_name("BroadcastMul")
+.set_shape_function(BinaryBroadcastShape_)
+.set_function(XPU::kDevMask, BinaryBroadcastForward_<XPU, mshadow::op::mul>, kInplaceLhsOut)
+.set_gradient(XPU::kDevMask, BroadcastMulBackward_<XPU>, kInplaceOutLhs)
+.describe("lhs multiple rhs with broadcast");
 
 
 }  // namespace op

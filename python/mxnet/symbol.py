@@ -35,52 +35,8 @@ class Symbol(object):
         self.handle = handle
 
     def __add__(self, other):
-        """add with broadcast
-
-        Examples
-        --------
-        >>> a = mx.sym.Variable('a')
-        >>> b = mx.sym.Variable('b')
-        >>> c = a + b
-
-        >>> dev = mx.cpu();
-        >>> x = c.bind(dev, args={'a': mx.nd.ones((2,2)), 'b' : mx.nd.ones((2,2))})
-        >>> x.forward()
-        >>> print x.outputs[0].asnumpy()
-        [[ 2.  2.]
-         [ 2.  2.]]
-        >>> x = c.bind(dev, args={'a': mx.nd.ones((2,2)), 'b' : mx.nd.ones((1,1))})
-        >>> x.forward()
-        >>> print x.outputs[0].asnumpy()
-        [[ 2.  2.]
-         [ 2.  2.]]
-        >>> x = c.bind(dev, args={'a': mx.nd.ones((2,1)), 'b' : mx.nd.ones((1,2))})
-        >>> x.forward()
-        >>> print x.outputs[0].asnumpy()
-        [[ 2.  2.]
-         [ 2.  2.]]
-        >>> x = c.bind(dev, args={'a': mx.nd.ones((1,2)), 'b' : mx.nd.ones((2,1))})
-        >>> x.forward()
-        >>> print x.outputs[0].asnumpy()
-        [[ 2.  2.]
-         [ 2.  2.]]
-        >>> x = c.bind(dev, args={'a': mx.nd.ones((2,2,2)), 'b' : mx.nd.ones((1,2,1))}
-        >>> x.forward()
-        >>> print x.outputs[0].asnumpy()
-        [[[ 2.  2.]
-          [ 2.  2.]]
-         [[ 2.  2.]
-          [ 2.  2.]]]
-        >>> x = c.bind(dev, args={'a': mx.nd.ones((2,1,1)), 'b' : mx.nd.ones((2,2,2))})
-        >>> x.forward()
-        >>> print x.outputs[0].asnumpy()
-        [[[ 2.  2.]
-          [ 2.  2.]]
-         [[ 2.  2.]
-          [ 2.  2.]]]
-        """
         if isinstance(other, Symbol):
-            return Symbol._BroadcastPlus(self, other)
+            return Symbol._Plus(self, other)
         if isinstance(other, Number):
             return Symbol._PlusScalar(self, scalar=other)
         else:

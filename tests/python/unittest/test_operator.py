@@ -783,7 +783,7 @@ def _check_broadcast_op_backward(symbol, baseline):
 def test_broadcast_plus():
     a = mx.sym.Variable('a')
     b = mx.sym.Variable('b')
-    c = a + b
+    c = mx.sym.BroadcastPlus(a, b)
     _check_broadcast_op_forward(c, lambda a, b: a + b)
     _check_broadcast_op_backward(c, lambda g_out, a, b: g_out)
 
