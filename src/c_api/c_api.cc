@@ -26,6 +26,7 @@
 #include <utility>
 #include "./c_api_error.h"
 #include "../common/thread_local.h"
+#include "../operator/custom-inl.h"
 
 using namespace mxnet;
 
@@ -1509,5 +1510,11 @@ int MXOptimizerUpdate(OptimizerHandle handle,
               static_cast<NDArray*>(weight),
               static_cast<NDArray*>(grad),
               lr, wd);
+  API_END();
+}
+
+int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creator) {
+  API_BEGIN();
+  mxnet::op::CustomOpProp::Register(op_type, creator);
   API_END();
 }

@@ -92,6 +92,27 @@ struct NDArrayOpInfo {
   void* p_list_arguments;
   void* p_declare_backward_dependency;
 };
+
+struct CustomOpInfo {
+  bool (*forward)(int /*size*/, void** /*ptrs*/, int* /*tags*/, const int* /*reqs*/, const bool /*is_train*/);
+  bool (*backward)(int /*size*/, void** /*ptrs*/, int* /*tags*/, const int* /*reqs*/, const bool /*is_train*/);
+};
+
+struct CustomOpPropInfo {
+  bool (*list_arguments)(char*** /*args*/);
+  bool (*list_outputs)(char*** /*outputs*/);
+  bool (*infer_shape)(int /*num_input*/, int* /*ndims*/, unsigned** /*shapes*/);
+  bool (*declare_backward_dependency)(const int* /*out_grad*/, const int* /*in_data*/,
+                                      const int* /*out_data*/, int* /*num_deps*/,
+                                      int** /*rdeps*/);
+  bool (*create_operator)(const char* /*ctx*/, int /*num_inputs*/, unsigned** /*shapes*/,
+                                   int* /*ndims*/, int* /*dtypes*/, CustomOpInfo* /*ret*/);
+};
+
+typedef bool (*CustomOpPropCreator)(const char* /*op_type*/, const int /*num_kwargs*/,
+                                    const char** /*keys*/, const char** /*values*/,
+                                    CustomOpPropInfo* /*ret*/);
+
 }
 /*!
  * \brief return str message of the last error
@@ -1304,5 +1325,7 @@ MXNET_DLL int MXOptimizerUpdate(OptimizerHandle handle,
                                 NDArrayHandle grad,
                                 mx_float lr,
                                 mx_float wd);
+
+MXNET_DLL int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creator);
 
 #endif  // MXNET_C_API_H_
