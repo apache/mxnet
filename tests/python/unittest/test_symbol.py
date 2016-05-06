@@ -121,6 +121,13 @@ def test_symbol_infer_shape_var():
     assert arg_shapes[1] == shape
     assert out_shapes[0] == shape
 
+    overwrite_shape = (5, 6)
+    arg_shapes, out_shapes, aux_shapes = c.infer_shape(a=overwrite_shape)
+    assert arg_shapes[0] == overwrite_shape
+    assert arg_shapes[1] == overwrite_shape
+    assert out_shapes[0] == overwrite_shape
+
+
 
 if __name__ == '__main__':
     test_symbol_infer_shape_var()
