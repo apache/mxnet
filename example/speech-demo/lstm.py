@@ -79,15 +79,14 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
             hidden = mx.sym.Dropout(data=hidden, p=dropout)
         hidden_all.append(hidden)
 
-    hidden_all = [mx.sym.Reshape(x, target_shape=(0, 1, num_hidden))
-                  for x in hidden_all]
     hidden_concat = mx.sym.Concat(*hidden_all, dim=1)
     hidden_final = mx.sym.Reshape(hidden_concat, target_shape=(0, num_hidden))
     pred = mx.sym.FullyConnected(data=hidden_final, num_hidden=num_label,
                                  weight=cls_weight, bias=cls_bias, name='pred')
     pred = mx.sym.Reshape(pred, target_shape=(0, seq_len, num_label))
 
-    sm = mx.sym.SoftmaxOutput(data=pred, label=label, ignore_label=0, use_ignore=True, name='softmax')
+    sm = mx.sym.SoftmaxOutput(data=pred, label=label, ignore_label=0, 
+                              use_ignore=True, name='softmax')
 
     if output_states:
         # block the gradients of output states

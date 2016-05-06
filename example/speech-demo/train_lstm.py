@@ -51,8 +51,17 @@ def prepare_data(args):
 
     return (init_states, train_sets, dev_sets)
 
+def CrossEntropy(label, preds):
+    label = label.reshape((-1,))
+    preds = preds.reshape((-1, preds.shape[2]))
+    loss = 0.
+    for i in range(preds.shape[0]):
+        loss += -np.log(max(1e-10, preds[i][int(label[i])]))
+    return exp(loss / label.size)
+
 def Acc_exclude_padding(labels, preds):
-    labels = labels.T.reshape((-1,))
+    labels = labels.reshape((-1,))
+    preds = preds.reshape((-1, preds.shape[2]))
     sum_metric = 0
     num_inst = 0
     for i in range(preds.shape[0]):
@@ -106,10 +115,12 @@ def do_training(training_method, args, module, data_train, data_val):
     mkpath(os.path.dirname(get_checkpoint_path(args)))
 
     batch_size = data_train.batch_size
-    batch_end_callbacks = [mx.callback.Speedometer(batch_size, 100)]
+    batch_end_callbacks = [mx.callback.Speedometer(batch_size, 
+                                                   args.config.getint('train', 'show_every'))]
     eval_allow_extra = True if training_method == METHOD_TBPTT else False
-    eval_metric = mx.metric.np(Acc_exclude_padding,
-                               allow_extra_outputs=eval_allow_extra)
+    eval_metric = [mx.metric.np(Acc_exclude_padding, allow_extra_outputs=eval_allow_extra),
+                   mx.metric.np(CrossEntropy, allow_extra_outputs=eval_allow_extra)]
+    eval_metric = mx.metric.create(eval_metric)
 
     momentum = args.config.getfloat('train', 'momentum')
     learning_rate = args.config.getfloat('train', 'learning_rate')
