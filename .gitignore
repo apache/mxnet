@@ -74,6 +74,8 @@ deps
 .Rproj.user
 R-package/inst/*
 *.tar.gz
+*.tgz
+R-package/man/*.Rd
 
 # data
 *.rec

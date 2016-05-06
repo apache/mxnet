@@ -40,9 +40,9 @@ class CuDNNSoftmaxActivationOp : public Operator {
     Tensor<gpu, 4> data;
     Tensor<gpu, 4> out;
     cudnnSoftmaxMode_t softmax_mode;
-    if (param_.type == softmax_activation::kInstance) {
+    if (param_.mode == softmax_activation::kInstance) {
       CHECK_EQ(in_data[softmax_activation::kData].ndim(), 2)
-        << "Input need to have 2 dimensions when type=instance.";
+        << "Input need to have 2 dimensions when mode=instance.";
       Shape<4> dshape = Shape4(in_data[softmax_activation::kData].shape_[0],
                                in_data[softmax_activation::kData].shape_[1], 1, 1);
       data = in_data[softmax_activation::kData].get_with_shape<gpu, 4, real_t>(dshape, s);
@@ -50,7 +50,7 @@ class CuDNNSoftmaxActivationOp : public Operator {
       softmax_mode = CUDNN_SOFTMAX_MODE_INSTANCE;
     } else {
       CHECK_GE(in_data[softmax_activation::kData].ndim(), 3)
-        << "Input need to have a least 3 dimensions when type=channel";
+        << "Input need to have a least 3 dimensions when mode=channel";
       Shape<4> dshape;
       index_t size_left = in_data[softmax_activation::kData].Size();
       for (int i = 0; i < 3; ++i) {
@@ -112,9 +112,9 @@ class CuDNNSoftmaxActivationOp : public Operator {
     Tensor<gpu, 4> output_data;
     Tensor<gpu, 4> input_grad;
     cudnnSoftmaxMode_t softmax_mode;
-    if (param_.type == softmax_activation::kInstance) {
+    if (param_.mode == softmax_activation::kInstance) {
       CHECK_EQ(in_grad[softmax_activation::kData].ndim(), 2)
-        << "Input need to have 2 dimensions when type=instance.";
+        << "Input need to have 2 dimensions when mode=instance.";
       Shape<4> dshape = Shape4(in_grad[softmax_activation::kData].shape_[0],
                                in_grad[softmax_activation::kData].shape_[1], 1, 1);
       grad = out_grad[softmax_activation::kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
@@ -123,7 +123,7 @@ class CuDNNSoftmaxActivationOp : public Operator {
       softmax_mode = CUDNN_SOFTMAX_MODE_INSTANCE;
     } else {
       CHECK_GE(in_grad[softmax_activation::kData].ndim(), 3)
-        << "Input need to have a least 3 dimensions when type=channel";
+        << "Input need to have a least 3 dimensions when mode=channel";
       Shape<4> dshape;
       index_t size_left = in_grad[softmax_activation::kData].Size();
       for (int i = 0; i < 3; ++i) {

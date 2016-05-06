@@ -170,7 +170,11 @@ class Module(BaseModule):
             """Internal helper for parameter initialization"""
             if cache is not None:
                 if cache.has_key(name):
-                    cache[name].copyto(arr)
+                    cache_arr = cache[name]
+
+                    # just in case the cached array is just the target itself
+                    if cache_arr is not arr:
+                        cache_arr.copyto(arr)
                 else:
                     assert allow_missing
                     initializer(name, arr)
