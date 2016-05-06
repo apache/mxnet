@@ -177,6 +177,7 @@ class LibInfo {
                                  complete: RefInt): Int
   @native def mxSymbolGetOutput(handle: SymbolHandle, index: Int, out: SymbolHandleRef): Int
   @native def mxSymbolSaveToJSON(handle: SymbolHandle, out: RefString): Int
+  @native def mxSymbolCreateFromJSON(json: String, handle: SymbolHandleRef): Int
   // scalastyle:off parameterNum
   @native def mxExecutorBindX(handle: SymbolHandle,
                               deviceTypeId: Int,

@@ -1520,6 +1520,18 @@ object Symbol {
     checkCall(_LIB.mxSymbolCreateFromFile(fname, handle))
     new Symbol(handle.value)
   }
+
+  /**
+   * Load symbol from json string.
+   * @param json A json string.
+   * @return The loaded symbol.
+   * @see Symbol.tojson : Used to save symbol into json string.
+   */
+  def loadJson(json: String): Symbol = {
+    val handle = new SymbolHandleRef
+    checkCall(_LIB.mxSymbolCreateFromJSON(json, handle))
+    new Symbol(handle.value)
+  }
 }
 
 private case class SymbolFunction(handle: SymbolHandle, keyVarNumArgs: String)

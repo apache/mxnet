@@ -1113,6 +1113,16 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolSaveToJSON
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolCreateFromJSON
+  (JNIEnv *env, jobject obj, jstring json, jobject jhandleRef) {
+  const char *str = env->GetStringUTFChars(json, 0);
+  SymbolHandle out;
+  int ret = MXSymbolCreateFromJSON(str, &out);
+  SetLongField(env, jhandleRef, reinterpret_cast<jlong>(out));
+  env->ReleaseStringUTFChars(json, str);
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolSaveToFile
   (JNIEnv *env, jobject obj, jlong symbolPtr, jstring jfname) {
   const char *fname = env->GetStringUTFChars(jfname, 0);

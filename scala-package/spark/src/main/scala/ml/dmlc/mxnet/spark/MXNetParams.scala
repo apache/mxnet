@@ -11,8 +11,20 @@ private[mxnet] class MXNetParams extends Serializable {
   var batchSize: Int = 128
   // dimension of input data
   var dimension: Shape = null
+
   // network architecture
-  //TODO var network: Symbol = null
+  private var network: String = null
+  def setNetwork(net: Symbol): Unit = {
+    network = net.toJson
+  }
+  def getNetwork: Symbol = {
+    if (network == null) {
+      null
+    } else {
+      Symbol.loadJson(network)
+    }
+  }
+
   // executor running context
   var context: Context = Context.cpu()
 

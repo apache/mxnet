@@ -33,7 +33,7 @@ class MXNet extends Serializable {
   }
 
   def setNetwork(network: Symbol): this.type = {
-    // TODO: params.network = network
+    params.setNetwork(network)
     this
   }
 
@@ -125,8 +125,7 @@ class MXNet extends Serializable {
 
       logger.debug("Define model")
       val model = new FeedForward(ctx = Context.cpu(),
-        // TODO: symbol = params.network,
-        symbol = MXNet.getMlp,
+        symbol = params.getNetwork,
         numEpoch = 10,
         optimizer = optimizer,
         initializer = new Xavier(factorType = "in", magnitude = 2.34f),
