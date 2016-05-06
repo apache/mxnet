@@ -80,8 +80,6 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
             hidden = mx.sym.Dropout(data=hidden, p=dropout)
         hidden_all.append(hidden)
 
-    hidden_all = [mx.sym.Reshape(x, target_shape=(0, 1, num_hidden))
-                  for x in hidden_all]
     hidden_concat = mx.sym.Concat(*hidden_all, dim=1)
     hidden_final = mx.sym.Reshape(hidden_concat, target_shape=(0, num_hidden))
     pred = mx.sym.FullyConnected(data=hidden_final, num_hidden=num_label,
@@ -100,8 +98,8 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
             last_states[i] = state
 
         # also output states, used in truncated-bptt to copy over states
-        unpack_c = [state.c for state in last_states]
-        unpack_h = [state.h for state in last_states]
+        unpack_c = [st.c for st in last_states]
+        unpack_h = [st.h for st in last_states]
         sm = mx.sym.Group([sm] + unpack_c + unpack_h)
 
     return sm
