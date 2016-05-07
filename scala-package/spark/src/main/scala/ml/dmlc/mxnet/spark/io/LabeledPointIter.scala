@@ -16,6 +16,10 @@ class LabeledPointIter(
   private var index: Int = -1
   private val dataShape = Shape(_batchSize) ++ dimension
 
+  def dispose(): Unit = {
+    cache.foreach(_.dispose())
+  }
+
   /**
    * reset the iterator
    */

@@ -141,6 +141,7 @@ class MXNet extends Serializable {
 
       logger.info("Training finished")
       kv.dispose()
+      dataIter.dispose()
       Iterator(new MXNetModel(model))
     }.cache()
 
