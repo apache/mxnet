@@ -806,6 +806,14 @@ object Symbol {
   }
 
   /**
+   * Take sum of the src
+   * @param src Source symbolic input to the function
+   */
+  def sum(src: Symbol): Symbol = {
+    createFromListedSymbols("sum")(Array(src))
+  }
+
+  /**
    * Take sqrt of the src
    * src Source symbolic input to the function
    */
