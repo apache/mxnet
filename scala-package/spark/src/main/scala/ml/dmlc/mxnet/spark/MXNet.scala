@@ -37,7 +37,7 @@ class MXNet extends Serializable {
     this
   }
 
-  def setContext(ctx: Context): this.type = {
+  def setContext(ctx: Array[Context]): this.type = {
     params.context = ctx
     this
   }
@@ -94,7 +94,6 @@ class MXNet extends Serializable {
       numServer = params.numServer, numWorker = params.numWorker, java = params.javabin)
     require(scheduler.startProcess(), "Failed to start ps scheduler process")
 
-    //val broadcastParams = sc.broadcast(params)
     sc.parallelize(1 to params.numServer, params.numServer).foreachPartition { p =>
       logger.info("Starting server ...")
       val server = new ParameterServer(params.classpath,
@@ -124,7 +123,7 @@ class MXNet extends Serializable {
         momentum = 0.9f, wd = 0.00001f)
 
       logger.debug("Define model")
-      val model = new FeedForward(ctx = Context.cpu(),
+      val model = new FeedForward(ctx = params.context,
         symbol = params.getNetwork,
         numEpoch = 10,
         optimizer = optimizer,
@@ -174,11 +173,15 @@ object MXNet {
 
       val network = if (cmdLine.model == "mlp") getMlp else getLenet
       val dimension = if (cmdLine.model == "mlp") Shape(784) else Shape(1, 28, 28)
+      val devs =
+        if (cmdLine.gpus != null) cmdLine.gpus.split(',').map(id => Context.gpu(id.trim.toInt))
+        else if (cmdLine.cpus != null) cmdLine.cpus.split(',').map(id => Context.cpu(id.trim.toInt))
+        else Array(Context.cpu(0))
 
       val mxnet = new MXNet()
         .setBatchSize(128)
         .setLabelName("softmax_label")
-        .setContext(Context.cpu())
+        .setContext(devs)
         .setDimension(dimension)
         .setNetwork(network)
         .setNumServer(cmdLine.numServer)
@@ -211,6 +214,10 @@ object MXNet {
     val java: String = "java"
     @Option(name = "--model", usage = "Model definition")
     val model: String = "mlp"
+    @Option(name = "--gpus", usage = "the gpus will be used, e.g. '0,1,2,3'")
+    val gpus: String = null
+    @Option(name = "--cpus", usage = "the cpus will be used, e.g. '0,1,2,3'")
+    val cpus: String = null
 
     def checkArguments(): Unit = {
       require(input != null, "Undefined input path")

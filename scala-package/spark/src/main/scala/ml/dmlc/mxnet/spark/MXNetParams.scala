@@ -26,7 +26,7 @@ private[mxnet] class MXNetParams extends Serializable {
   }
 
   // executor running context
-  var context: Context = Context.cpu()
+  var context: Array[Context] = Context.cpu()
 
   var numWorker: Int = 1
   var numServer: Int = 1
