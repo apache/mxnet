@@ -171,18 +171,23 @@ object MXNet {
         LabeledPoint(label, features)
       }
 
+      val network = if (cmdLine.model == "mlp") getMlp else getLenet
+      val dimension = if (cmdLine.model == "mlp") Shape(784) else Shape(1, 28, 28)
+
       val mxnet = new MXNet()
         .setBatchSize(128)
         .setLabelName("softmax_label")
         .setContext(Context.cpu())
-        //.setDimension(Shape(1, 28, 28))
-        .setDimension(Shape(784))
-        .setNetwork(getMlp)
+        .setDimension(dimension)
+        .setNetwork(network)
         .setNumServer(cmdLine.numServer)
         .setNumWorker(cmdLine.numWorker)
         .setExecutorClasspath(cmdLine.classpaths)
         .setJava(cmdLine.java)
+      val start = System.currentTimeMillis
       mxnet.train(sc, trainData)
+      val timeCost = System.currentTimeMillis - start
+      logger.info("Training cost {} milli seconds", timeCost)
 
       sc.stop()
     } catch {
@@ -203,6 +208,8 @@ object MXNet {
     val numWorker: Int = 1
     @Option(name = "--java", usage = "Java bin")
     val java: String = "java"
+    @Option(name = "--model", usage = "Model definition")
+    val model: String = "mlp"
 
     def checkArguments(): Unit = {
       require(input != null, "Undefined input path")
