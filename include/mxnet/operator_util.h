@@ -228,7 +228,7 @@ class SimpleOpRegEntry {
    *  Default: this is set to be same as the name of operator.
    * \param symbol_name the name of symbolic operator.
    */
-  virtual TSelf& set_symbol_op_name(const std::string& symbol_name) = 0;
+  virtual TSelf& set_symbol_op_name(char const* symbol_name) = 0;
   /*!
    * \brief set number of scalar arguments needed to be passed in env
    *  A function cannot have both kwargs and scalar arguments.
