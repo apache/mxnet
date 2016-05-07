@@ -82,7 +82,7 @@ act1 = mx.symbol.Activation(data = fc1, act_type="relu")
 fc2  = mx.symbol.FullyConnected(data = act1, num_hidden = 64)
 act2 = mx.symbol.Activation(data = fc2, act_type="relu")
 fc3  = mx.symbol.FullyConnected(data = act2, num_hidden=10)
-mlp  = mx.symbol.SoftmaxOutput(data = fc3)
+mlp  = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
 ```
 
 Next we train a model on the data
