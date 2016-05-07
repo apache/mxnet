@@ -12,9 +12,9 @@ import ml.dmlc.mxnet.Shape
  */
 object ModelVgg19 {
   case class ConvExecutor(executor: Executor, data: NDArray, dataGrad: NDArray,
-                      style: Array[NDArray], content: NDArray)
+                      style: Array[NDArray], content: NDArray, argDict: Map[String, NDArray])
 
-  def getModel(modelPath: String, inputSize: (Int, Int), ctx: Context): ConvExecutor = {
+  def getSymbol(): (Symbol, Symbol) = {
     // declare symbol
     val data = Symbol.Variable("data")
     val conv1_1 = Symbol.Convolution("conv1_1")(Map("data" -> data , "num_filter" -> 64,
@@ -81,18 +81,23 @@ object ModelVgg19 {
     // style and content layers
     val style = Symbol.Group(relu1_1, relu2_1, relu3_1, relu4_1, relu5_1)
     val content = Symbol.Group(relu4_2)
-    val out = Symbol.Group(style, content)
+    (style, content)
+  }
 
+  def getExecutor(style: Symbol, content: Symbol, modelPath: String,
+      inputSize: (Int, Int), ctx: Context): ConvExecutor = {
+    val out = Symbol.Group(style, content)
     // make executor
     val (argShapes, outputShapes, auxShapes) = out.inferShape(
       Map("data" -> Shape(1, 3, inputSize._1, inputSize._2)))
     val argNames = out.listArguments()
     val argDict = argNames.zip(argShapes.map(NDArray.zeros(_, ctx))).toMap
-    val gradDict = argNames.zip(argShapes.map(NDArray.zeros(_, ctx))).toMap
+    val gradDict = Map("data" -> argDict("data").copyTo(ctx))
     // init with pretrained weight
     val pretrained = NDArray.load2Map(modelPath)
     argNames.filter(_ != "data").foreach { name =>
-      argDict(name).set(pretrained(s"arg:$name"))
+      val key = s"arg:$name"
+      if (pretrained.contains(key)) argDict(name).set(pretrained(key))
     }
     val executor = out.bind(ctx, argDict, gradDict)
     val outArray = executor.outputs
@@ -100,6 +105,12 @@ object ModelVgg19 {
                               data = argDict("data"),
                               dataGrad = gradDict("data"),
                               style = outArray.take(outArray.length - 1),
-                              content = outArray(outArray.length - 1))
+                              content = outArray(outArray.length - 1),
+                              argDict = argDict)
+    }
+
+  def getModel(modelPath: String, inputSize: (Int, Int), ctx: Context): ConvExecutor = {
+    val (style, content) = getSymbol()
+    getExecutor(style, content, modelPath, inputSize, ctx)
   }
 }
