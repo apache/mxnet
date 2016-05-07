@@ -367,7 +367,7 @@ class SimpleOpRegistry {
    * \param name name of the function
    * \return ref to the registered entry, used to set properties
    */
-  SimpleOpRegEntry &__REGISTER_OR_FIND__(const std::string& name);
+  SimpleOpRegEntry &__REGISTER_OR_FIND__(char const* name);
   /*!
    * \brief Find the entry with corresponding name.
    * \param name name of the function

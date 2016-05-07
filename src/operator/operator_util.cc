@@ -275,7 +275,8 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
   void RegisterBinarySymbolic();
 };
 
-SimpleOpRegEntry& SimpleOpRegistry::__REGISTER_OR_FIND__(const std::string &name) {
+SimpleOpRegEntry& SimpleOpRegistry::__REGISTER_OR_FIND__(char const* name_str) {
+  std::string name(name_str);
   if (fmap_.count(name) != 0) return *fmap_.at(name);
   SimpleOpRegEntry *e = new SimpleOpRegEntryImpl();
   e->name = name;
