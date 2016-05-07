@@ -20,8 +20,9 @@ class SimpleBinaryOpProp;
 
 class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
  public:
-  TSelf& set_symbol_op_name(const std::string& symbol_name) override {
+  TSelf& set_symbol_op_name(char const* symbol_name_str) override {
     std::lock_guard<std::mutex> lock(mutex_);
+    std::string symbol_name(symbol_name_str);
     CHECK(op_reg_ == nullptr || symbol_name == symbol_name_)
         << " operator " << this->name
         << " need to call set_symbol_op_name "
@@ -275,7 +276,8 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
   void RegisterBinarySymbolic();
 };
 
-SimpleOpRegEntry& SimpleOpRegistry::__REGISTER_OR_FIND__(const std::string &name) {
+SimpleOpRegEntry& SimpleOpRegistry::__REGISTER_OR_FIND__(char const* name_str) {
+  std::string name(name_str);
   if (fmap_.count(name) != 0) return *fmap_.at(name);
   SimpleOpRegEntry *e = new SimpleOpRegEntryImpl();
   e->name = name;
