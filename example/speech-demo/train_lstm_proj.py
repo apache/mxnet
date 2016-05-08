@@ -8,7 +8,7 @@ import os.path
 import mxnet as mx
 import numpy as np
 
-from lstm import lstm_unroll
+from lstm_proj import lstm_unroll
 from io_util import BucketSentenceIter, TruncatedSentenceIter, DataReadStream
 from config_util import parse_args, get_checkpoint_path, parse_contexts
 
@@ -17,14 +17,13 @@ from config_util import parse_args, get_checkpoint_path, parse_contexts
 METHOD_BUCKETING = 'bucketing'
 METHOD_TBPTT = 'truncated-bptt'
 
-
 def prepare_data(args):
     batch_size = args.config.getint('train', 'batch_size')
     num_hidden = args.config.getint('arch', 'num_hidden')
     num_lstm_layer = args.config.getint('arch', 'num_lstm_layer')
 
-    init_c = [('l%d_init_c' % l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
-    init_h = [('l%d_init_h' % l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
+    init_c = [('l%d_init_c'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
+    init_h = [('l%d_init_h'%l, (batch_size, num_hidden/2)) for l in range(num_lstm_layer)]
 
     init_states = init_c + init_h
 
@@ -63,7 +62,7 @@ def CrossEntropy(labels, preds):
         if label > 0:
             loss += -np.log(max(1e-10, preds[i][int(label)]))
             num_inst += 1
-    return loss / num_inst
+    return loss , num_inst
 
 def Acc_exclude_padding(labels, preds):
     labels = labels.reshape((-1,))
@@ -81,7 +80,6 @@ def Acc_exclude_padding(labels, preds):
         num_inst += len(pred_label_real)
     return sum_metric, num_inst
 
-
 class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
     """A simple lr schedule that simply return `dynamic_lr`. We will set `dynamic_lr`
     dynamically based on performance on the validation set.
@@ -93,7 +91,6 @@ class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
 
     def __call__(self, num_update):
         return self.dynamic_lr / self.effective_sample_count
-
 
 def score_with_state_forwarding(module, eval_data, eval_metric):
     eval_data.reset()
@@ -123,11 +120,11 @@ def do_training(training_method, args, module, data_train, data_val):
     mkpath(os.path.dirname(get_checkpoint_path(args)))
 
     batch_size = data_train.batch_size
-    batch_end_callbacks = [mx.callback.Speedometer(batch_size,
+    batch_end_callbacks = [mx.callback.Speedometer(batch_size, 
                                                    args.config.getint('train', 'show_every'))]
     eval_allow_extra = True if training_method == METHOD_TBPTT else False
-    eval_metric = [mx.metric.np(Acc_exclude_padding, allow_extra_outputs=eval_allow_extra),
-                   mx.metric.np(CrossEntropy, allow_extra_outputs=eval_allow_extra)]
+    eval_metric = [mx.metric.np(CrossEntropy, allow_extra_outputs=eval_allow_extra),
+                   mx.metric.np(Acc_exclude_padding, allow_extra_outputs=eval_allow_extra)]
     eval_metric = mx.metric.create(eval_metric)
 
     momentum = args.config.getfloat('train', 'momentum')
@@ -144,6 +141,7 @@ def do_training(training_method, args, module, data_train, data_val):
     decay_bound = args.config.getfloat('train', 'decay_lower_bound')
     clip_gradient = args.config.getfloat('train', 'clip_gradient')
     weight_decay = args.config.getfloat('train', 'weight_decay')
+    optimizer = args.config.get('train', 'optimizer')
     if clip_gradient == 0:
         clip_gradient = None
 
@@ -156,10 +154,19 @@ def do_training(training_method, args, module, data_train, data_val):
     module.init_params(initializer=get_initializer(args))
 
     def reset_optimizer():
-        module.init_optimizer(kvstore='local',
+        if optimizer == "sgd":
+            module.init_optimizer(kvstore='local',
                               optimizer=args.config.get('train', 'optimizer'),
                               optimizer_params={'lr_scheduler': lr_scheduler,
                                                 'momentum': momentum,
+                                                'rescale_grad': 1.0,
+                                                'clip_gradient': clip_gradient,
+                                                'wd': weight_decay},
+                              force_init=True)
+        else:
+            module.init_optimizer(kvstore='local',
+                              optimizer=args.config.get('train', 'optimizer'),
+                              optimizer_params={'lr_scheduler': lr_scheduler,
                                                 'rescale_grad': 1.0,
                                                 'clip_gradient': clip_gradient,
                                                 'wd': weight_decay},
@@ -171,8 +178,11 @@ def do_training(training_method, args, module, data_train, data_val):
         eval_metric.reset()
 
         for nbatch, data_batch in enumerate(data_train):
-            if data_batch.effective_sample_count is not None:
-                lr_scheduler.effective_sample_count = 800
+            if training_method == METHOD_TBPTT:
+                lr_scheduler.effective_sample_count = data_train.batch_size * truncate_len
+            else:
+                if data_batch.effective_sample_count is not None:
+                    lr_scheduler.effective_sample_count = data_batch.effective_sample_count
 
             module.forward_backward(data_batch)
             module.update()
@@ -205,11 +215,11 @@ def do_training(training_method, args, module, data_train, data_val):
         curr_acc = None
         for name, val in eval_metric.get_name_value():
             logging.info("Epoch[%d] Dev-%s=%f", n_epoch, name, val)
-            if name == 'Acc_exclude_padding':
+            if name == 'CrossEntropy':
                 curr_acc = val
         assert curr_acc is not None, 'cannot find Acc_exclude_padding in eval metric'
 
-        if n_epoch > 0 and lr_scheduler.dynamic_lr > decay_bound and curr_acc < last_acc:
+        if n_epoch > 0 and lr_scheduler.dynamic_lr > decay_bound and curr_acc > last_acc:
             logging.info('Epoch[%d] !!! Dev set performance drops, reverting this epoch',
                          n_epoch)
             logging.info('Epoch[%d] !!! LR decay: %g => %g', n_epoch,
@@ -218,7 +228,7 @@ def do_training(training_method, args, module, data_train, data_val):
             lr_scheduler.dynamic_lr /= decay_factor
             # we reset the optimizer because the internal states (e.g. momentum)
             # might already be exploded, so we want to start from fresh
-            #reset_optimizer()
+            reset_optimizer()
             module.set_params(*last_params)
         else:
             last_params = module.get_params()
@@ -253,10 +263,8 @@ if __name__ == '__main__':
     if training_method == METHOD_BUCKETING:
         buckets = args.config.get('train', 'buckets')
         buckets = list(map(int, re.split(r'\W+', buckets)))
-        data_train = BucketSentenceIter(train_sets, buckets, batch_size, init_states,
-                                        feat_dim=feat_dim)
-        data_val = BucketSentenceIter(dev_sets, buckets, batch_size, init_states,
-                                      feat_dim=feat_dim)
+        data_train = BucketSentenceIter(train_sets, buckets, batch_size, init_states, feat_dim=feat_dim)
+        data_val   = BucketSentenceIter(dev_sets, buckets, batch_size, init_states, feat_dim=feat_dim)
 
         def sym_gen(seq_len):
             sym = lstm_unroll(num_lstm_layer, seq_len, feat_dim, num_hidden=num_hidden,

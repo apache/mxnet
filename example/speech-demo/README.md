@@ -3,10 +3,19 @@ Speech Acoustic Modeling Example
 This folder contains examples for speech recognition.
 
 - [lstm.py](lstm.py): Functions for building a LSTM Network.
+- [lstm_proj.py](lstm.py): Functions for building a LSTM Network with projection layer.
 - [io_util.py](io_util.py): Wrapper functions for `DataIter` over speech data.
 - [train_lstm.py](train_lstm.py): Script for training LSTM acoustic model.
-- [ami.cfg](ami.cfg): Configuration for training on the `AMI` SDM1 dataset. Can be used as a template for writing other configuration files.
+- [train_lstm_proj.py](train_lstm_proj.py): Script for training LSTM acoustic model.
+- [decode_mxnet.py](decode_mxnet.py]: Script for decoding LSTMP acoustic model.
+- [default.cfg](default.cfg): Configuration for training on the `AMI` SDM1 dataset. Can be used as a template for writing other configuration files.
 - [python_wrap](python_wrap): C wrappers for Kaldi C++ code, this is built into a .so. Python code that loads the .so and calls the C wrapper functions in `io_func/feat_readers/reader_kaldi.py`.
+
+Connect to Kaldi:
+- [decode_mxnet.sh](decode_mxnet.sh): calling by Kaldi to decode a acoustic model trained by mxnet.
+
+A full receipt:
+- [run_ami.sh](run_ami.sh): a full receipt to train and decode acoustic model on AMI.
 
 To reproduce the results, use the following steps.
 
@@ -98,7 +107,7 @@ mkdir -p $dir
 ali-to-pdf exp/$mic/tri3a_ali/final.mdl "ark:gunzip -c exp/$mic/tri3a_ali/ali.*.gz |" \
   ark:- | ali-to-post ark:- ark,scp:$dir/post.ark,$dir/post.scp
 
-# generate dataset list
+# generate dataset list, if the feature were unnomalized, make sure apply mean-variance normalization first (e.g. apply-cmvn in kaldi)
 echo NO_FEATURE_TRANSFORM scp:$PWD/data/$mic/train_tr90/feats.scp > $dir/train.feats
 echo scp:$dir/post.scp >> $dir/train.feats
 
@@ -108,8 +117,8 @@ echo scp:$dir/post.scp >> $dir/dev.feats
 
 ### Run MXNet Acoustic Model Training
 
-1. Go back to this speech demo directory in MXNet. Make a copy of your own `ami.cfg` and edit necessary items like the path to the dataset you just prepared.
-2. Run `python train_lstm.py ami.cfg`.
+1. Go back to this speech demo directory in MXNet. Make a copy of `default.cfg` and edit necessary items like the path to the dataset you just prepared.
+2. Run `python train_lstm.py --configfile=your-config.cfg`. You can do `python train_lstm.py --help` to see the helps. All the configuration parameters can be set in `default.cfg`, customized config file, and through command line (e.g. `--train_batch_size=50`), and the latter values overwrite the former ones.
 
 Here are some example outputs that we got from training on the TIMIT dataset.
 
@@ -145,3 +154,18 @@ bucket of len 800 : 0 samples
 ```
 
 The final frame accuracy was around 62%.
+
+### Run decode on the trained acoustic model
+
+1. Estimate senone priors by run `python make_stats.py --configfile=your-config.cfg | copy-feats ark:- ark:label_mean.ark` (edit necessary items like the path to the training dataset). It will generate the label counts in `label_mean.ark`. 
+2. Link to necessary Kaldi decode setup e.g. `local/` and `utils/` and Run `./run_ami.sh --model prefix model --num_epoch num`. 
+
+Here are the results on TIMIT and AMI test set (using all default setup, 3 layer LSTM with projection layers):
+
+| Corpus | WER |
+|--------|-----|
+|TIMIT   | 18.9|
+|AMI     | 42.8|
+
+Note that AMI was evaluated only on the non-overlapped speech.
+
