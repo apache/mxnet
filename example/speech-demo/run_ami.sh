@@ -114,6 +114,7 @@ if [ $stage -le 3 ] ; then
     python train_lstm_proj.py --config $config --data_train $dir/train.feats --data_dev $dir/dev.feats --train_prefix $PWD/$expdir/$prefix --train_context $deviceNumber --train_weight_decay 0.008 --train_show_every 1000 
 fi
 
+# decoding
 if [ $stage -le 4 ] ; then
   cp $ali_src/final.mdl $expdir
   mxnet_string="OMP_NUM_THREADS=1 python decode_mxnet.py --config $config --data_test $dir/test.feats --data_label_mean $dir/label_mean.feats --train_method $method --train_prefix $PWD/$expdir/$prefix --train_num_epoch $num_epoch"

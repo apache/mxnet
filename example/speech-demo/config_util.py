@@ -38,7 +38,7 @@ def parse_args():
             if hasattr(args, arg_name) and getattr(args, arg_name) is not None:
                 sys.stderr.write('!! CMDLine overwriting %s.%s:\n' % (sec, name))
                 sys.stderr.write("    '%s' => '%s'\n" % (default_cfg.get(sec, name),
-                                            getattr(args, arg_name)))
+                                 getattr(args, arg_name)))
                 default_cfg.set(sec, name, getattr(args, arg_name))
 
     args.config = default_cfg
@@ -51,6 +51,7 @@ def get_checkpoint_path(args):
     if os.path.isabs(prefix):
         return prefix
     return os.path.abspath(os.path.join(os.path.dirname(__file__), 'checkpoints', prefix))
+
 
 def parse_contexts(args):
     # parse context into Context objects

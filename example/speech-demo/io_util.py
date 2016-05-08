@@ -1,7 +1,6 @@
 import mxnet as mx
 import numpy as np
 import sys
-from io_func.feat_io import DataReadStream
 
 # The interface of a data iter that works for bucketing
 #
@@ -13,11 +12,13 @@ from io_func.feat_io import DataReadStream
 #   - provide_label: same as DataIter, but specific to this batch
 #   - bucket_key: the key for the bucket that should be used for this batch
 
+
 def read_content(path):
     with open(path) as input:
         content = input.read()
         content = content.replace('\n', ' <eos> ').replace('. ', ' <eos> ')
         return content
+
 
 class SimpleBatch(object):
     def __init__(self, data_names, data, label_names, label, bucket_key,
@@ -32,7 +33,7 @@ class SimpleBatch(object):
         self.effective_sample_count = effective_sample_count
 
         self.pad = 0
-        self.index = None # TODO: what is index?
+        self.index = None  # TODO: what is index?
 
     @property
     def provide_data(self):
@@ -43,7 +44,7 @@ class SimpleBatch(object):
         return [(n, x.shape) for n, x in zip(self.label_names, self.label)]
 
 class SimpleIter(mx.io.DataIter):
-    """DataIter used in Calculate Statistics.
+    """DataIter used in Calculate Statistics (in progress).
 
     Parameters
     ----------
@@ -256,7 +257,6 @@ class SimpleIter(mx.io.DataIter):
     def reset(self):
         self.bucket_curr_idx = [0 for x in self.data]
 
-
 class TruncatedSentenceIter(mx.io.DataIter):
     """DataIter used in Truncated-BPTT.
 
@@ -329,7 +329,7 @@ class TruncatedSentenceIter(mx.io.DataIter):
             if self.has_label and self.delay > 0:
                 # delay the labels
                 tgs[self.delay:] = tgs[:-self.delay]
-                tgs[:self.delay] = tgs[0] # boradcast assign
+                tgs[:self.delay] = tgs[0]  # boradcast assign
             self.features.append(feats)
             if self.has_label:
                 self.labels.append(tgs+1)
@@ -443,10 +443,10 @@ class TruncatedSentenceIter(mx.io.DataIter):
 
 class BucketSentenceIter(mx.io.DataIter):
     def __init__(self, train_sets, buckets, batch_size,
-            init_states, delay=5, feat_dim=40,
-            data_name='data', label_name='softmax_label', has_label=True):
+                 init_states, delay=5, feat_dim=40,
+                 data_name='data', label_name='softmax_label', has_label=True):
 
-        self.train_sets=train_sets
+        self.train_sets = train_sets
         self.train_sets.initialize_read()
 
         self.data_name = data_name
@@ -463,7 +463,6 @@ class BucketSentenceIter(mx.io.DataIter):
 
         self.buckets = buckets
         self.data = [[] for k in buckets]
-        #self.label = [[] for k in buckets]
         self.utt_id = [[] for k in buckets]
         self.feat_dim = feat_dim
         self.default_bucket_key = max(buckets)
@@ -483,7 +482,8 @@ class BucketSentenceIter(mx.io.DataIter):
 
             # we split sentence into overlapping segments if it is
             # longer than the largest bucket
-            t_start = 0; t_end = feats.shape[0]
+            t_start = 0
+            t_end = feats.shape[0]
             while t_start < t_end:
                 if t_end - t_start > max_bucket:
                     t_take = max_bucket
@@ -518,7 +518,8 @@ class BucketSentenceIter(mx.io.DataIter):
 
         data = [np.zeros((len(x), buckets[i], self.feat_dim))
                 if len(x) % self.batch_size == 0
-                else np.zeros(((len(x)/self.batch_size + 1) * self.batch_size, buckets[i], self.feat_dim))
+                else np.zeros(((len(x)/self.batch_size + 1) * self.batch_size, buckets[i],
+                               self.feat_dim))
                 for i, x in enumerate(self.data)]
 
         label = [np.zeros((len(x), buckets[i]))
@@ -535,7 +536,7 @@ class BucketSentenceIter(mx.io.DataIter):
                 sentence = self.data[i_bucket][j]
                 if self.has_label:
                     sentence[1][delay:] = sentence[1][:-delay]
-                    sentence[1][:delay] = sentence[1][0] # broadcast assignment
+                    sentence[1][:delay] = sentence[1][0]  # broadcast assignment
                     data[i_bucket][j, :len(sentence[0])] = sentence[0]
                     label[i_bucket][j, :len(sentence[1])] = sentence[1]
                 else:
@@ -557,15 +558,14 @@ class BucketSentenceIter(mx.io.DataIter):
         for bkt, sz in zip(buckets, bucket_sizes):
             sys.stderr.write("bucket of len %3d : %d samples\n" % (bkt, sz))
 
-        bucket_size_tot = float(sum(bucket_sizes))
-
         self.bucket_sizes = bucket_sizes
         self.make_data_iter_plan()
 
         self.init_states = init_states
         self.init_state_arrays = [mx.nd.zeros(x[1]) for x in init_states]
 
-        self.provide_data = [(data_name, (batch_size, self.default_bucket_key, self.feat_dim))] + init_states
+        self.provide_data = [(data_name, (batch_size, self.default_bucket_key, self.feat_dim))] + \
+            init_states
         self.provide_label = [(label_name, (self.batch_size, self.default_bucket_key))]
 
     def make_data_iter_plan(self):
@@ -574,7 +574,7 @@ class BucketSentenceIter(mx.io.DataIter):
         bucket_n_batches = []
         for i in range(len(self.data)):
             bucket_n_batches.append(len(self.data[i]) / self.batch_size)
-            self.data[i] = self.data[i][:int(bucket_n_batches[i]*self.batch_size),:]
+            self.data[i] = self.data[i][:int(bucket_n_batches[i]*self.batch_size), :]
             self.label[i] = self.label[i][:int(bucket_n_batches[i]*self.batch_size)]
 
         bucket_plan = np.hstack([np.zeros(n, int)+i for i, n in enumerate(bucket_n_batches)])

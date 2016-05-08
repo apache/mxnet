@@ -1,6 +1,5 @@
 # pylint:skip-file
 import mxnet as mx
-import numpy as np
 from collections import namedtuple
 
 LSTMState = namedtuple("LSTMState", ["c", "h"])
@@ -10,6 +9,7 @@ LSTMModel = namedtuple("LSTMModel", ["rnn_exec", "symbol",
                                      "init_states", "last_states",
                                      "seq_data", "seq_labels", "seq_outputs",
                                      "param_blocks"])
+
 
 def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
     """LSTM Cell symbol"""
@@ -36,6 +36,7 @@ def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
     next_h = out_gate * mx.sym.Activation(next_c, act_type="tanh")
     return LSTMState(c=next_c, h=next_h)
 
+
 def lstm_unroll(num_lstm_layer, seq_len, input_size,
                 num_hidden, num_label, dropout=0., output_states=False, take_softmax=True):
 
@@ -44,10 +45,10 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
     param_cells = []
     last_states = []
     for i in range(num_lstm_layer):
-        param_cells.append(LSTMParam(i2h_weight = mx.sym.Variable("l%d_i2h_weight" % i),
-                                     i2h_bias = mx.sym.Variable("l%d_i2h_bias" % i),
-                                     h2h_weight = mx.sym.Variable("l%d_h2h_weight" % i),
-                                     h2h_bias = mx.sym.Variable("l%d_h2h_bias" % i)))
+        param_cells.append(LSTMParam(i2h_weight=mx.sym.Variable("l%d_i2h_weight" % i),
+                                     i2h_bias=mx.sym.Variable("l%d_i2h_bias" % i),
+                                     h2h_weight=mx.sym.Variable("l%d_h2h_weight" % i),
+                                     h2h_bias=mx.sym.Variable("l%d_h2h_bias" % i)))
         state = LSTMState(c=mx.sym.Variable("l%d_init_c" % i),
                           h=mx.sym.Variable("l%d_init_h" % i))
         last_states.append(state)
@@ -64,8 +65,8 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
 
         # stack LSTM
         for i in range(num_lstm_layer):
-            if i==0:
-                dp=0.
+            if i == 0:
+                dp = 0.
             else:
                 dp = dropout
             next_state = lstm(num_hidden, indata=hidden,
@@ -100,8 +101,8 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
             last_states[i] = state
 
         # also output states, used in truncated-bptt to copy over states
-        unpack_c = [state.c for state in last_states]
-        unpack_h = [state.h for state in last_states]
+        unpack_c = [st.c for st in last_states]
+        unpack_h = [st.h for st in last_states]
         sm = mx.sym.Group([sm] + unpack_c + unpack_h)
 
     return sm

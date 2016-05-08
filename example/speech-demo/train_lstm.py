@@ -17,13 +17,14 @@ from config_util import parse_args, get_checkpoint_path, parse_contexts
 METHOD_BUCKETING = 'bucketing'
 METHOD_TBPTT = 'truncated-bptt'
 
+
 def prepare_data(args):
     batch_size = args.config.getint('train', 'batch_size')
     num_hidden = args.config.getint('arch', 'num_hidden')
     num_lstm_layer = args.config.getint('arch', 'num_lstm_layer')
 
-    init_c = [('l%d_init_c'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
-    init_h = [('l%d_init_h'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
+    init_c = [('l%d_init_c' % l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
+    init_h = [('l%d_init_h' % l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
 
     init_states = init_c + init_h
 
@@ -80,6 +81,7 @@ def Acc_exclude_padding(labels, preds):
         num_inst += len(pred_label_real)
     return sum_metric, num_inst
 
+
 class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
     """A simple lr schedule that simply return `dynamic_lr`. We will set `dynamic_lr`
     dynamically based on performance on the validation set.
@@ -91,6 +93,7 @@ class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
 
     def __call__(self, num_update):
         return self.dynamic_lr / self.effective_sample_count
+
 
 def score_with_state_forwarding(module, eval_data, eval_metric):
     eval_data.reset()
@@ -120,7 +123,7 @@ def do_training(training_method, args, module, data_train, data_val):
     mkpath(os.path.dirname(get_checkpoint_path(args)))
 
     batch_size = data_train.batch_size
-    batch_end_callbacks = [mx.callback.Speedometer(batch_size, 
+    batch_end_callbacks = [mx.callback.Speedometer(batch_size,
                                                    args.config.getint('train', 'show_every'))]
     eval_allow_extra = True if training_method == METHOD_TBPTT else False
     eval_metric = [mx.metric.np(Acc_exclude_padding, allow_extra_outputs=eval_allow_extra),
@@ -250,8 +253,10 @@ if __name__ == '__main__':
     if training_method == METHOD_BUCKETING:
         buckets = args.config.get('train', 'buckets')
         buckets = list(map(int, re.split(r'\W+', buckets)))
-        data_train = BucketSentenceIter(train_sets, buckets, batch_size, init_states, feat_dim=feat_dim)
-        data_val   = BucketSentenceIter(dev_sets, buckets, batch_size, init_states, feat_dim=feat_dim)
+        data_train = BucketSentenceIter(train_sets, buckets, batch_size, init_states,
+                                        feat_dim=feat_dim)
+        data_val = BucketSentenceIter(dev_sets, buckets, batch_size, init_states,
+                                      feat_dim=feat_dim)
 
         def sym_gen(seq_len):
             sym = lstm_unroll(num_lstm_layer, seq_len, feat_dim, num_hidden=num_hidden,
