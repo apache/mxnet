@@ -51,8 +51,22 @@ def prepare_data(args):
 
     return (init_states, train_sets, dev_sets)
 
+def CrossEntropy(labels, preds):
+    labels = labels.reshape((-1,))
+    preds = preds.reshape((-1, preds.shape[2]))
+    loss = 0.
+    num_inst = 0
+    for i in range(preds.shape[0]):
+        label = labels[i]
+
+        if label > 0:
+            loss += -np.log(max(1e-10, preds[i][int(label)]))
+            num_inst += 1
+    return loss / num_inst
+
 def Acc_exclude_padding(labels, preds):
-    labels = labels.T.reshape((-1,))
+    labels = labels.reshape((-1,))
+    preds = preds.reshape((-1, preds.shape[2]))
     sum_metric = 0
     num_inst = 0
     for i in range(preds.shape[0]):
@@ -106,10 +120,12 @@ def do_training(training_method, args, module, data_train, data_val):
     mkpath(os.path.dirname(get_checkpoint_path(args)))
 
     batch_size = data_train.batch_size
-    batch_end_callbacks = [mx.callback.Speedometer(batch_size, 100)]
+    batch_end_callbacks = [mx.callback.Speedometer(batch_size, 
+                                                   args.config.getint('train', 'show_every'))]
     eval_allow_extra = True if training_method == METHOD_TBPTT else False
-    eval_metric = mx.metric.np(Acc_exclude_padding,
-                               allow_extra_outputs=eval_allow_extra)
+    eval_metric = [mx.metric.np(Acc_exclude_padding, allow_extra_outputs=eval_allow_extra),
+                   mx.metric.np(CrossEntropy, allow_extra_outputs=eval_allow_extra)]
+    eval_metric = mx.metric.create(eval_metric)
 
     momentum = args.config.getfloat('train', 'momentum')
     learning_rate = args.config.getfloat('train', 'learning_rate')
@@ -124,6 +140,7 @@ def do_training(training_method, args, module, data_train, data_val):
     decay_factor = args.config.getfloat('train', 'decay_factor')
     decay_bound = args.config.getfloat('train', 'decay_lower_bound')
     clip_gradient = args.config.getfloat('train', 'clip_gradient')
+    weight_decay = args.config.getfloat('train', 'weight_decay')
     if clip_gradient == 0:
         clip_gradient = None
 
@@ -135,12 +152,16 @@ def do_training(training_method, args, module, data_train, data_val):
                 for_training=True)
     module.init_params(initializer=get_initializer(args))
 
-    module.init_optimizer(kvstore='local',
-                          optimizer=args.config.get('train', 'optimizer'),
-                          optimizer_params={'lr_scheduler': lr_scheduler,
-                                            'momentum': momentum,
-                                            'rescale_grad': 1.0,
-                                            'clip_gradient': clip_gradient})
+    def reset_optimizer():
+        module.init_optimizer(kvstore='local',
+                              optimizer=args.config.get('train', 'optimizer'),
+                              optimizer_params={'lr_scheduler': lr_scheduler,
+                                                'momentum': momentum,
+                                                'rescale_grad': 1.0,
+                                                'clip_gradient': clip_gradient,
+                                                'wd': weight_decay},
+                              force_init=True)
+    reset_optimizer()
 
     while True:
         tic = time.time()
@@ -148,7 +169,7 @@ def do_training(training_method, args, module, data_train, data_val):
 
         for nbatch, data_batch in enumerate(data_train):
             if data_batch.effective_sample_count is not None:
-                lr_scheduler.effective_sample_count = data_batch.effective_sample_count
+                lr_scheduler.effective_sample_count = 800
 
             module.forward_backward(data_batch)
             module.update()
@@ -192,6 +213,9 @@ def do_training(training_method, args, module, data_train, data_val):
                          lr_scheduler.dynamic_lr, lr_scheduler.dynamic_lr / float(decay_factor))
 
             lr_scheduler.dynamic_lr /= decay_factor
+            # we reset the optimizer because the internal states (e.g. momentum)
+            # might already be exploded, so we want to start from fresh
+            #reset_optimizer()
             module.set_params(*last_params)
         else:
             last_params = module.get_params()

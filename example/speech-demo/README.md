@@ -98,7 +98,7 @@ mkdir -p $dir
 ali-to-pdf exp/$mic/tri3a_ali/final.mdl "ark:gunzip -c exp/$mic/tri3a_ali/ali.*.gz |" \
   ark:- | ali-to-post ark:- ark,scp:$dir/post.ark,$dir/post.scp
 
-# generate dataset list
+# generate dataset list, if the feature were unnomalized, make sure apply mean-variance normalization first (e.g. apply-cmvn in kaldi)
 echo NO_FEATURE_TRANSFORM scp:$PWD/data/$mic/train_tr90/feats.scp > $dir/train.feats
 echo scp:$dir/post.scp >> $dir/train.feats
 
@@ -145,3 +145,18 @@ bucket of len 800 : 0 samples
 ```
 
 The final frame accuracy was around 62%.
+
+### Run decode on the trained acoustic model
+
+1. Estimate senone priors by run `python make_stats.py --configfile=your-config.cfg | copy-feats ark:- ark:label_mean.ark` (edit necessary items like the path to the training dataset). It will generate the label counts in `label_mean.ark`. 
+2. Link to necessary Kaldi decode setup e.g. `local/` and `utils/` and Run `./run_ami.sh --model prefix model --num_epoch num`. 
+
+Here are the results on TIMIT and AMI test set (using all default setup, 3 layer LSTM with projection layers):
+
+| Corpus | WER |
+|--------|-----|
+|TIMIT   | 18.9|
+|AMI     | 42.8|
+
+Note that AMI was evaluated only on the non-overlapped speech.
+

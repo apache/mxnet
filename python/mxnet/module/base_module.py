@@ -461,6 +461,40 @@ class BaseModule(object):
         self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,
                          allow_missing=False, force_init=True)
 
+    def save_params(self, fname):
+        """Save model parameters to file.
+
+        Parameters
+        ----------
+        fname : str
+            Path to output param file.
+        """
+        arg_params, aux_params = self.get_params()
+        save_dict = {('arg:%s' % k) : v for k, v in arg_params.items()}
+        save_dict.update({('aux:%s' % k) : v for k, v in aux_params.items()})
+        ndarray.save(fname, save_dict)
+
+    def load_params(self, fname):
+        """Load model parameters from file.
+
+        Parameters
+        ----------
+        fname : str
+            Path to input param file.
+        """
+        save_dict = ndarray.load(fname)
+        arg_params = {}
+        aux_params = {}
+        for k, value in save_dict.items():
+            arg_type, name = k.split(':', 1)
+            if arg_type == 'arg':
+                arg_params[name] = value
+            elif arg_type == 'aux':
+                aux_params[name] = value
+            else:
+                raise ValueError("Invalid param file " + fname)
+        self.set_params(arg_params, aux_params)
+
     ################################################################################
     # Computations
     ################################################################################
