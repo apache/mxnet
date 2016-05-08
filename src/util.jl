@@ -19,7 +19,15 @@ function get_mnist_ubyte()
   if !all(isfile, values(filenames))
     cd(mnist_dir) do
       mnist_dir = download("http://webdocs.cs.ualberta.ca/~bx3/data/mnist.zip", "mnist.zip")
-      run(`unzip -u $mnist_dir`)
+        try
+          run(`unzip -u $mnist_dir`)
+        catch
+          try
+            run(pipe(`7z x $mnist_dir`,stdout=DevNull))
+          catch
+            error("Extraction Failed:No extraction program found in path")
+          end
+      end
     end
   end
   return filenames
@@ -34,7 +42,15 @@ function get_cifar10()
   if !all(isfile, values(filenames))
     cd(cifar10_dir) do
       run(`wget http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip`)
-      run(`unzip -u cifar10.zip`)
+        try
+          run(`unzip -u cifar10.zip`)
+        catch
+          try
+            run(pipe(`7z x cifar10.zip`,stdout=DevNull))
+          catch
+            error("Extraction Failed:No extraction program found in path")
+          end
+      end
     end
   end
 
