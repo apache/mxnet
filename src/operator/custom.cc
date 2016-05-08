@@ -61,6 +61,13 @@ void CustomOp<xpu>::Forward(const OpContext &ctx,
     ndvar.push_back(nd->var());
     tags.push_back(1);
   }
+  for (auto& blob : aux_args) {
+    NDArray* nd = new NDArray(blob, ndctx.dev_id);
+    ptrs.push_back(reinterpret_cast<void*>(nd));
+    ndcpy.push_back(*nd);
+    ndvar.push_back(nd->var());
+    tags.push_back(4);
+  }
   std::sort(ndvar.begin(), ndvar.end());
   ndvar.resize(std::unique(ndvar.begin(), ndvar.end()) - ndvar.begin());
 
@@ -102,6 +109,13 @@ void CustomOp<xpu>::Backward(const OpContext &ctx,
     ndcpy.push_back(*nd);
     ndvar.push_back(nd->var());
     tags.push_back(2);
+  }
+  for (auto& blob : aux_args) {
+    NDArray* nd = new NDArray(blob, ndctx.dev_id);
+    ptrs.push_back(reinterpret_cast<void*>(nd));
+    ndcpy.push_back(*nd);
+    ndvar.push_back(nd->var());
+    tags.push_back(4);
   }
   std::sort(ndvar.begin(), ndvar.end());
   ndvar.resize(std::unique(ndvar.begin(), ndvar.end()) - ndvar.begin());

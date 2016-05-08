@@ -94,8 +94,10 @@ struct NDArrayOpInfo {
 };
 
 struct CustomOpInfo {
-  bool (*forward)(int /*size*/, void** /*ptrs*/, int* /*tags*/, const int* /*reqs*/, const bool /*is_train*/);
-  bool (*backward)(int /*size*/, void** /*ptrs*/, int* /*tags*/, const int* /*reqs*/, const bool /*is_train*/);
+  bool (*forward)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
+                  const int* /*reqs*/, const bool /*is_train*/);
+  bool (*backward)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
+                   const int* /*reqs*/, const bool /*is_train*/);
 };
 
 struct CustomOpPropInfo {
@@ -107,12 +109,12 @@ struct CustomOpPropInfo {
                                       int** /*rdeps*/);
   bool (*create_operator)(const char* /*ctx*/, int /*num_inputs*/, unsigned** /*shapes*/,
                                    int* /*ndims*/, int* /*dtypes*/, CustomOpInfo* /*ret*/);
+  bool (*list_auxiliary_states)(char*** /*aux*/);
 };
 
 typedef bool (*CustomOpPropCreator)(const char* /*op_type*/, const int /*num_kwargs*/,
                                     const char** /*keys*/, const char** /*values*/,
                                     CustomOpPropInfo* /*ret*/);
-
 }
 /*!
  * \brief return str message of the last error

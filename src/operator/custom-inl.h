@@ -5,8 +5,8 @@
  * \author Junyuan Xie
 */
 
-#ifndef MXNET_OPERATOR_CUSTOM_OP_INL_H_
-#define MXNET_OPERATOR_CUSTOM_OP_INL_H_
+#ifndef MXNET_OPERATOR_CUSTOM_INL_H_
+#define MXNET_OPERATOR_CUSTOM_INL_H_
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
@@ -88,6 +88,7 @@ class CustomOpProp : public OperatorProperty {
     CHECK(creator(param_.op_type.c_str(), keys.size(), keys.data(), vals.data(), &info_));
     num_inputs_ = ListArguments().size();
     num_outputs_ = ListOutputs().size();
+    num_auxs_ = ListAuxiliaryStates().size();
   }
 
   std::vector<std::string> ListArguments() const override {
@@ -103,6 +104,16 @@ class CustomOpProp : public OperatorProperty {
   std::vector<std::string> ListOutputs() const override {
     char ** args = NULL;
     CHECK(info_.list_outputs(&args));
+    std::vector<std::string> ret;
+    for (int i = 0; args[i] != NULL; ++i) {
+      ret.push_back(args[i]);
+    }
+    return ret;
+  }
+
+  std::vector<std::string> ListAuxiliaryStates() const override {
+    char ** args = NULL;
+    CHECK(info_.list_auxiliary_states(&args));
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
       ret.push_back(args[i]);
@@ -128,15 +139,19 @@ class CustomOpProp : public OperatorProperty {
       shapes.push_back(iter->data());
       ndims.push_back(iter->ndim());
     }
-    shapes.resize(num_inputs_+num_outputs_);
-    ndims.resize(num_inputs_+num_outputs_);
+    shapes.resize(num_inputs_+num_outputs_+num_auxs_);
+    ndims.resize(num_inputs_+num_outputs_+num_auxs_);
     CHECK(info_.infer_shape(shapes.size(), ndims.data(), shapes.data()));
     for (unsigned i = 0; i < in_shape->size(); ++i) {
       SHAPE_ASSIGN_CHECK(*in_shape, i, TShape(shapes[i], shapes[i]+ndims[i]));
     }
     out_shape->clear();
-    for (unsigned i = num_inputs_; i < shapes.size(); ++i) {
+    for (unsigned i = num_inputs_; i < num_inputs_+num_outputs_; ++i) {
       out_shape->push_back(TShape(shapes[i], shapes[i]+ndims[i]));
+    }
+    aux_shape->clear();
+    for (unsigned i = num_inputs_+num_outputs_; i < shapes.size(); ++i) {
+      aux_shape->push_back(TShape(shapes[i], shapes[i]+ndims[i]));
     }
     return true;
   }
@@ -186,10 +201,9 @@ class CustomOpProp : public OperatorProperty {
   CustomOpPropInfo info_;
   CustomOpParam param_;
   std::vector<std::pair<std::string, std::string> > kwargs_;
-  int num_inputs_, num_outputs_;
-
-};  // class PythonProp
+  unsigned num_inputs_, num_outputs_, num_auxs_;
+};  // class CustomOpProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_CUSTOM_OP_INL_H_
+#endif  // MXNET_OPERATOR_CUSTOM_INL_H_
