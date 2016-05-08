@@ -15,7 +15,11 @@ namespace op {
 template<>
 Operator* CreateOp<gpu>(ConvolutionParam param) {
 #if MXNET_USE_CUDNN == 1
-  return new CuDNNConvolutionOp(param);
+  if (param.dilate[0]==1 && param.dilate[1]==1) {
+	  return new CuDNNConvolutionOp(param);
+  } else {
+	  return new ConvolutionOp<gpu>(param);
+  }
 #else
   return new ConvolutionOp<gpu>(param);
 #endif // MXNET_USE_CUDNN
