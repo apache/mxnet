@@ -57,7 +57,6 @@ use_one_sil=true
 stage=0
 . utils/parse_options.sh || exit 1;
 
-echo $method
 
 ###############################################
 # Training
@@ -117,7 +116,7 @@ fi
 # decoding
 if [ $stage -le 4 ] ; then
   cp $ali_src/final.mdl $expdir
-  mxnet_string="OMP_NUM_THREADS=1 python decode_mxnet.py --config $config --data_test $dir/test.feats --data_label_mean $dir/label_mean.feats --train_method $method --train_prefix $PWD/$expdir/$prefix --train_num_epoch $num_epoch"
+  mxnet_string="OMP_NUM_THREADS=1 python decode_mxnet.py --config $config --data_test $dir/test.feats --data_label_mean $dir/label_mean.feats --train_method $method --train_prefix $PWD/$expdir/$prefix --train_num_epoch $num_epoch --train_context cpu0 --train_batch_size 1"
   ./decode_mxnet.sh --nj $njdec --cmd $decode_cmd --acwt $acwt --scoring-opts "$scoring" \
     $graph_src $dev_src $expdir/decode_${prefix}_$(basename $dev_src) "$mxnet_string" || exit 1;
 

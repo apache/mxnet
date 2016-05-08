@@ -1,6 +1,7 @@
 import mxnet as mx
 import numpy as np
 import sys
+from io_func.feat_io import DataReadStream
 
 # The interface of a data iter that works for bucketing
 #
