@@ -40,7 +40,7 @@ class Initializer(object):
         elif name.endswith("moving_mean"):
             self._init_zero(name, arr)
         elif name.endswith("moving_var"):
-            self._init_zero(name, arr)
+            self._init_one(name, arr)
         elif name.endswith("moving_inv_var"):
             self._init_zero(name, arr)
         elif name.endswith("moving_avg"):
@@ -61,6 +61,9 @@ class Initializer(object):
 
     def _init_zero(self, _, arr):
         arr[:] = 0.0
+
+    def _init_one(self, _, arr):
+        arr[:] = 1.0
 
     def _init_bias(self, _, arr):
         arr[:] = 0.0
@@ -105,7 +108,7 @@ class Load(object):
         self.verbose = verbose
 
     def __call__(self, name, arr):
-        if self.param.has_key(name):
+        if name in self.param:
             assert arr.shape == self.param[name].shape, \
                 'Parameter %s cannot be initialized from loading. '%name + \
                 'Shape mismatch, target %s vs loaded %s'%(str(arr.shape),

@@ -536,6 +536,16 @@ MXNET_DLL int MXSymbolCopy(SymbolHandle symbol, SymbolHandle *out);
  */
 MXNET_DLL int MXSymbolPrint(SymbolHandle symbol, const char **out_str);
 /*!
+ * \brief Get string name from symbol
+ * \param symbol the source symbol
+ * \param out The result name.
+ * \param success Whether the result is contained in out.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolGetName(SymbolHandle symbol,
+                              const char** out,
+                              int *success);
+/*!
  * \brief Get string attribute from symbol
  * \param symbol the source symbol
  * \param key The key of the symbol.
@@ -566,6 +576,16 @@ MXNET_DLL int MXSymbolGetAttr(SymbolHandle symbol,
 MXNET_DLL int MXSymbolSetAttr(SymbolHandle symbol,
                               const char* key,
                               const char* value);
+/*!
+ * \brief Get all attributes from symbol
+ * \param symbol the source symbol
+ * \param out_size The number of output attributes
+ * \param out 2*out_size strings representing key value pairs.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolListAttr(SymbolHandle symbol,
+                               mx_uint *out_size,
+                               const char*** out);
 /*!
  * \brief List arguments in the symbol.
  * \param symbol the symbol
@@ -1005,8 +1025,17 @@ MXNET_DLL int MXDataIterGetPadNum(DataIterHandle handle,
 MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
                                  NDArrayHandle *out);
 //--------------------------------------------
-// Part 5: basic KVStore interface
+// Part 6: basic KVStore interface
 //--------------------------------------------
+/*!
+ * \brief Initialized ps-lite environment variables
+ * \param num_vars number of variables to initialize
+ * \param keys environment keys
+ * \param vals environment values
+ */
+MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
+                          const char **keys,
+                          const char **vals);
 /*!
  * \brief Create a kvstore
  * \param type the type of KVStore
@@ -1153,19 +1182,23 @@ MXNET_DLL int MXKVStoreBarrier(KVStoreHandle handle);
  * \brief the prototype of a server controller
  * \param head the head of the command
  * \param body the body of the command
+ * \param controller_handle helper handle for implementing controller
  */
 typedef void (MXKVStoreServerController)(int head,
-                                         const char* body);
+                                         const char *body,
+                                         void *controller_handle);
 
 /**
  * \return Run as server (or scheduler)
  *
  * \param handle handle to the KVStore
  * \param controller the user-defined server controller
+ * \param controller_handle helper handle for implementing controller
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreRunServer(KVStoreHandle handle,
-                                 MXKVStoreServerController controller);
+                                 MXKVStoreServerController controller,
+                                 void *controller_handle);
 
 /**
  * \return Send a command to all server nodes

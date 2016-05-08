@@ -26,6 +26,12 @@ void Executor::UpdateAuxArray(const Rcpp::List& array,
   UpdateArray("aux.arrays", array, aux_arrays_, match_name, skip_null);
 }
 
+void Executor::UpdateGradArray(const Rcpp::List& array,
+                               bool match_name,
+                               bool skip_null) {
+  UpdateArray("grad.arrays", array, grad_arrays_, match_name, skip_null);
+}
+
 void Executor::UpdateArray(const char* array_name,
                            const Rcpp::List& from,
                            Rcpp::List* to,
@@ -234,6 +240,9 @@ void Executor::InitRcppModule() {
       .method("update.arg.arrays",
               &Executor::UpdateArgArray,
               "Update arguments array of executor, this will mutate the executor")
+      .method("update.grad.arrays",
+              &Executor::UpdateGradArray,
+              "Update gradient array of executor, this will mutate the executor")
       .method("forward",
               &Executor::Forward,
               "Peform a forward operation on exec, this will set the outputs.")

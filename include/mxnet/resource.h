@@ -83,13 +83,32 @@ struct Resource {
   template<typename xpu, int ndim>
   inline mshadow::Tensor<xpu, ndim, real_t> get_space(
       mshadow::Shape<ndim> shape, mshadow::Stream<xpu> *stream) const {
-    CHECK_EQ(req.type, ResourceRequest::kTempSpace);
-    mshadow::TensorContainer<xpu, 1, real_t> *space =
-        static_cast<mshadow::TensorContainer<xpu, 1, real_t>*>(ptr_);
-    space->Resize(mshadow::Shape1(shape.Size()));
-    return mshadow::Tensor<xpu, ndim, real_t>(
-        space->dptr_, shape, shape[ndim - 1], stream);
+    return get_space_typed<xpu, ndim, real_t>(shape, stream);
   }
+  /*!
+   * \brief Get space requested as mshadow Tensor in specified type.
+   *  The caller can request arbitrary size.
+   *
+   * \param shape the Shape of returning tensor.
+   * \param stream the stream of retruning tensor.
+   * \return the mshadow tensor requested.
+   * \tparam xpu the device type of random number generator.
+   * \tparam ndim the number of dimension of the tensor requested.
+   */
+  template<typename xpu, int ndim, typename DType>
+  inline mshadow::Tensor<xpu, ndim, DType> get_space_typed(
+      mshadow::Shape<ndim> shape, mshadow::Stream<xpu> *stream) const {
+    CHECK_EQ(req.type, ResourceRequest::kTempSpace);
+    return mshadow::Tensor<xpu, ndim, DType>(
+        reinterpret_cast<DType*>(get_space_internal(shape.Size() * sizeof(DType))),
+        shape, shape[ndim - 1], stream);
+  }
+  /*!
+   * \brief internal function to get space from resources.
+   * \param size The size of the space.
+   * \return The allocated space.
+   */
+  void* get_space_internal(size_t size) const;
 };
 
 /*! \brief Global resource manager */
