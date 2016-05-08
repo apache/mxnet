@@ -681,7 +681,7 @@ def register(reg_name):
                                     tensors[tags[i]].append(NDArray(cast(ndarraies[i],
                                                                          NDArrayHandle),
                                                                     writable=False))
-                            reqs = [req_enum[reqs[i]] for i in range(len(tensors[0]))]
+                            reqs = [req_enum[reqs[i]] for i in range(len(tensors[1]))]
                             op.forward(is_train=is_train, req=reqs,
                                        in_data=tensors[0], out_data=tensors[1],
                                        aux=tensors[4])
@@ -716,6 +716,7 @@ def register(reg_name):
 
                     ret[0] = CustomOpInfo(fb_functype(forward_entry), fb_functype(backward_entry))
                     op._ref_holder = [ret]
+                    op_prop._ref_holder.append(op)
                 except Exception as e:
                     print('Error in %s.create_operator: '%reg_name, str(e))
                     return False
@@ -736,6 +737,7 @@ def register(reg_name):
         creator_func = creator_functype(creator)
         check_call(_LIB.MXCustomOpRegister(c_str(reg_name), creator_func))
         _registry_ref_holder.append(creator_func)
+        return prop_cls
     return do_register
 
 register("custom_op")(CustomOpProp)
