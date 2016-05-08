@@ -8,7 +8,7 @@ We try to do our best to provide high speed operators for most common use cases.
 
 * ~~(Deprecated) Use native language, mxnet.rtc and mxnet.ndarray. This gives you most of the performance of 3) and most of the convenience of 1), but requires more knowledge of MXNet. You can write CUDA kernels in python and compile with during runtime.~~
 
-* 1) Use CustomOp to write new operators that runs on cpu or gpu. Depending on your implementation, this can range from very fast to very slow.
+* 1) Use CustomOp to write new operators in frontend language (i.e. Python) that runs on cpu or gpu. Depending on your implementation, this can range from very fast to very slow.
 
 * 2) Use C++/MShadow(CUDA). This can be difficult if you are not familiar with MXNet, mashadow or Cuda, but it will give you the best performance.
 
