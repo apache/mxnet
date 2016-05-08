@@ -3,10 +3,19 @@ Speech Acoustic Modeling Example
 This folder contains examples for speech recognition.
 
 - [lstm.py](lstm.py): Functions for building a LSTM Network.
+- [lstm_proj.py](lstm.py): Functions for building a LSTM Network with projection layer.
 - [io_util.py](io_util.py): Wrapper functions for `DataIter` over speech data.
 - [train_lstm.py](train_lstm.py): Script for training LSTM acoustic model.
-- [ami.cfg](ami.cfg): Configuration for training on the `AMI` SDM1 dataset. Can be used as a template for writing other configuration files.
+- [train_lstm_proj.py](train_lstm_proj.py): Script for training LSTM acoustic model.
+- [decode_mxnet.py](decode_mxnet.py]: Script for decoding LSTMP acoustic model.
+- [default.cfg](default.cfg): Configuration for training on the `AMI` SDM1 dataset. Can be used as a template for writing other configuration files.
 - [python_wrap](python_wrap): C wrappers for Kaldi C++ code, this is built into a .so. Python code that loads the .so and calls the C wrapper functions in `io_func/feat_readers/reader_kaldi.py`.
+
+Connect to Kaldi:
+- [decode_mxnet.sh](decode_mxnet.sh): calling by Kaldi to decode a acoustic model trained by mxnet.
+
+A full receipt:
+- [run_ami.sh](run_ami.sh): a full receipt to train and decode acoustic model on AMI.
 
 To reproduce the results, use the following steps.
 
