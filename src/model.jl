@@ -371,7 +371,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
   # get grad attribute to allow for freezing
   freeze_names = Symbol[]
-  for (attr, value) in list_attr(self.arch)
+  for (attr, value) in list_all_attr(self.arch)
     sattr = string(attr)
     if endswith(sattr, "grad") && value == "freeze"
       push!(freeze_names, symbol(sattr[1:end-5]))
