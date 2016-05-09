@@ -110,7 +110,7 @@ fi
 
 # training, note that weight decay is for the whole batch (0.00001 * 20 (minibatch) * 40 (batch_size))
 if [ $stage -le 3 ] ; then
-    python train_lstm_proj.py --config $config --data_train $dir/train.feats --data_dev $dir/dev.feats --train_prefix $PWD/$expdir/$prefix --train_context $deviceNumber --train_weight_decay 0.008 --train_show_every 1000 
+    python train_lstm_proj.py --config $config --data_train $dir/train.feats --data_dev $dir/dev.feats --train_prefix $PWD/$expdir/$prefix --train_optimizer speechSGD --train_learning_rate 1 --train_context $deviceNumber --train_weight_decay 0.008 --train_show_every 1000 
 fi
 
 # decoding

@@ -20,10 +20,14 @@ METHOD_TBPTT = 'truncated-bptt'
 def prepare_data(args):
     batch_size = args.config.getint('train', 'batch_size')
     num_hidden = args.config.getint('arch', 'num_hidden')
+    num_hidden_proj = args.config.getint('arch', 'num_hidden_proj')
     num_lstm_layer = args.config.getint('arch', 'num_lstm_layer')
 
     init_c = [('l%d_init_c'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
-    init_h = [('l%d_init_h'%l, (batch_size, num_hidden/2)) for l in range(num_lstm_layer)]
+    if num_hidden_proj > 0:
+        init_h = [('l%d_init_h'%l, (batch_size, num_hidden_proj)) for l in range(num_lstm_layer)]
+    else:
+        init_h = [('l%d_init_h'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
 
     init_states = init_c + init_h
 
@@ -84,13 +88,18 @@ class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
     """A simple lr schedule that simply return `dynamic_lr`. We will set `dynamic_lr`
     dynamically based on performance on the validation set.
     """
-    def __init__(self, dynamic_lr, effective_sample_count=1):
+    def __init__(self, dynamic_lr, effective_sample_count=1, momentum=0.9, optimizer="sgd"):
         super(SimpleLRScheduler, self).__init__()
         self.dynamic_lr = dynamic_lr
         self.effective_sample_count = effective_sample_count
+        self.momentum = momentum
+        self.optimizer = optimizer
 
     def __call__(self, num_update):
-        return self.dynamic_lr / self.effective_sample_count
+        if self.optimizer == "speechSGD":
+            return self.dynamic_lr / self.effective_sample_count, self.momentum
+        else:
+            return self.dynamic_lr / self.effective_sample_count
 
 def score_with_state_forwarding(module, eval_data, eval_metric):
     eval_data.reset()
@@ -126,10 +135,10 @@ def do_training(training_method, args, module, data_train, data_val):
     eval_metric = [mx.metric.np(CrossEntropy, allow_extra_outputs=eval_allow_extra),
                    mx.metric.np(Acc_exclude_padding, allow_extra_outputs=eval_allow_extra)]
     eval_metric = mx.metric.create(eval_metric)
-
+    optimizer = args.config.get('train', 'optimizer')
     momentum = args.config.getfloat('train', 'momentum')
     learning_rate = args.config.getfloat('train', 'learning_rate')
-    lr_scheduler = SimpleLRScheduler(learning_rate)
+    lr_scheduler = SimpleLRScheduler(learning_rate, momentum=momentum, optimizer=optimizer)
 
     if training_method == METHOD_TBPTT:
         lr_scheduler.seq_len = data_train.truncate_len
@@ -141,7 +150,6 @@ def do_training(training_method, args, module, data_train, data_val):
     decay_bound = args.config.getfloat('train', 'decay_lower_bound')
     clip_gradient = args.config.getfloat('train', 'clip_gradient')
     weight_decay = args.config.getfloat('train', 'weight_decay')
-    optimizer = args.config.get('train', 'optimizer')
     if clip_gradient == 0:
         clip_gradient = None
 
@@ -154,7 +162,7 @@ def do_training(training_method, args, module, data_train, data_val):
     module.init_params(initializer=get_initializer(args))
 
     def reset_optimizer():
-        if optimizer == "sgd":
+        if optimizer == "sgd" or optimizer == "speechSGD":
             module.init_optimizer(kvstore='local',
                               optimizer=args.config.get('train', 'optimizer'),
                               optimizer_params={'lr_scheduler': lr_scheduler,
@@ -180,6 +188,7 @@ def do_training(training_method, args, module, data_train, data_val):
         for nbatch, data_batch in enumerate(data_train):
             if training_method == METHOD_TBPTT:
                 lr_scheduler.effective_sample_count = data_train.batch_size * truncate_len
+                lr_scheduler.momentum = np.power(np.power(momentum, 1.0/800), data_batch.effective_sample_count)
             else:
                 if data_batch.effective_sample_count is not None:
                     lr_scheduler.effective_sample_count = data_batch.effective_sample_count
@@ -254,6 +263,7 @@ if __name__ == '__main__':
 
     batch_size = args.config.getint('train', 'batch_size')
     num_hidden = args.config.getint('arch', 'num_hidden')
+    num_hidden_proj = args.config.getint('arch', 'num_hidden_proj')
     num_lstm_layer = args.config.getint('arch', 'num_lstm_layer')
     feat_dim = args.config.getint('data', 'xdim')
     label_dim = args.config.getint('data', 'ydim')
@@ -268,7 +278,7 @@ if __name__ == '__main__':
 
         def sym_gen(seq_len):
             sym = lstm_unroll(num_lstm_layer, seq_len, feat_dim, num_hidden=num_hidden,
-                              num_label=label_dim)
+                              num_label=label_dim, num_hidden_proj=num_hidden_proj)
             data_names = ['data'] + state_names
             label_names = ['softmax_label']
             return (sym, data_names, label_names)
@@ -285,7 +295,7 @@ if __name__ == '__main__':
                                          truncate_len=truncate_len, feat_dim=feat_dim,
                                          do_shuffling=False, pad_zeros=True)
         sym = lstm_unroll(num_lstm_layer, truncate_len, feat_dim, num_hidden=num_hidden,
-                          num_label=label_dim, output_states=True)
+                          num_label=label_dim, output_states=True, num_hidden_proj=num_hidden_proj)
         data_names = [x[0] for x in data_train.provide_data]
         label_names = [x[0] for x in data_train.provide_label]
         module = mx.mod.Module(sym, context=contexts, data_names=data_names,

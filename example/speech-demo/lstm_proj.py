@@ -13,10 +13,11 @@ LSTMModel = namedtuple("LSTMModel", ["rnn_exec", "symbol",
                                      "seq_data", "seq_labels", "seq_outputs",
                                      "param_blocks"])
 
-def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
+def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0., num_hidden_proj=0):
     """LSTM Cell symbol"""
     if dropout > 0.:
         indata = mx.sym.Dropout(data=indata, p=dropout)
+    
     i2h = mx.sym.FullyConnected(data=indata,
                                 weight=param.i2h_weight,
                                 bias=param.i2h_bias,
@@ -37,16 +38,20 @@ def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
     out_gate = mx.sym.Activation(slice_gates[3], act_type="sigmoid")
     next_c = (forget_gate * prev_state.c) + (in_gate * in_transform)
     next_h = out_gate * mx.sym.Activation(next_c, act_type="tanh")
-    proj_next_h = mx.sym.FullyConnected(data=next_h,
-                                        weight=param.ph2h_weight,
-                                        no_bias=True,
-                                        num_hidden=num_hidden/2,
-                                        name="t%d_l%d_ph2h" % (seqidx, layeridx))
 
-    return LSTMState(c=next_c, h=proj_next_h)
+    if num_hidden_proj > 0:
+        proj_next_h = mx.sym.FullyConnected(data=next_h,
+                                            weight=param.ph2h_weight,
+                                            no_bias=True,
+                                            num_hidden=num_hidden_proj,
+                                            name="t%d_l%d_ph2h" % (seqidx, layeridx))
+
+        return LSTMState(c=next_c, h=proj_next_h)
+    else:
+        return LSTMState(c=next_c, h=next_h)
 
 def lstm_unroll(num_lstm_layer, seq_len, input_size,
-                num_hidden, num_label, dropout=0., output_states=False, take_softmax=True):
+                num_hidden, num_label, dropout=0., output_states=False, take_softmax=True, num_hidden_proj=0):
 
     cls_weight = mx.sym.Variable("cls_weight")
     cls_bias = mx.sym.Variable("cls_bias")
@@ -75,14 +80,14 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
 
         # stack LSTM
         for i in range(num_lstm_layer):
-            if i==0:
-                dp=0.
+            if i == 0:
+                dp = 0.
             else:
                 dp = dropout
             next_state = lstm(num_hidden, indata=hidden,
                               prev_state=last_states[i],
                               param=param_cells[i],
-                              seqidx=seqidx, layeridx=i, dropout=dp)
+                              seqidx=seqidx, layeridx=i, dropout=dp, num_hidden_proj=num_hidden_proj)
             hidden = next_state.h
             last_states[i] = next_state
         # decoder
@@ -91,7 +96,10 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
         hidden_all.append(hidden)
 
     hidden_concat = mx.sym.Concat(*hidden_all, dim=1)
-    hidden_final = mx.sym.Reshape(hidden_concat, target_shape=(0, num_hidden/2))
+    if num_hidden_proj > 0:
+        hidden_final = mx.sym.Reshape(hidden_concat, target_shape=(0, num_hidden_proj))
+    else:
+        hidden_final = mx.sym.Reshape(hidden_concat, target_shape=(0, num_hidden))
     pred = mx.sym.FullyConnected(data=hidden_final, num_hidden=num_label,
                                  weight=cls_weight, bias=cls_bias, name='pred')
     pred = mx.sym.Reshape(pred, target_shape=(0, seq_len, num_label))
