@@ -144,10 +144,32 @@ end
 #=doc
 .. function: list_attr(self :: SymbolicNode)
 
-   Get all attributes from symbol.
+   Get all attributes from a symbol.
    :return: Dictionary of attributes.
 =#
 function list_attr(self :: SymbolicNode)
+  ref_sz    = Ref{MX_uint}(0)
+  ref_strings = Ref{char_pp}(0)
+  @mxcall(:MXSymbolListAttrShallow, (MX_handle, Ref{MX_uint}, Ref{char_pp}),
+            self, ref_sz, ref_strings)
+  narg = 2*ref_sz[]
+  strings = pointer_to_array(ref_strings[], narg)
+  out = Dict{Symbol, ByteString}()
+  for i in 1:2:narg
+    key = symbol(bytestring(strings[i]))
+    value = bytestring(strings[i+1])
+    out[key] = value
+  end
+  return out
+end
+
+#=doc
+.. function: list_all_attr(self :: SymbolicNode)
+
+   Get all attributes from the symbol graph.
+   :return: Dictionary of attributes.
+=#
+function list_all_attr(self :: SymbolicNode)
   ref_sz    = Ref{MX_uint}(0)
   ref_strings = Ref{char_pp}(0)
   @mxcall(:MXSymbolListAttr, (MX_handle, Ref{MX_uint}, Ref{char_pp}),
