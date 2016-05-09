@@ -761,19 +761,6 @@ def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3),
     assert(np.sum(out)==np.prod(kernel_shape))
     assert(np.sum(vgrad)==np.prod(kernel_shape))
 
-    if (verbose):
-	    print "Output Shape = %d,%d" % (be.outputs[0].shape[2],be.outputs[0].shape[3] )
-	    print "Impulse Response for convolution with kernel shape %d, %d, dilate=%d,%d - Output Size: %d, %d" % (kernel_shape[0],kernel_shape[1], dil[0], dil[1], out.shape[0], out.shape[1])
-	    for i in range(len(nzx)):
-        	print "(%d,%d)=%f" % (nzx[i],nzy[i], out[nzx[i], nzy[i]])
-    if (verbose):
-	    np.set_printoptions(threshold=1000000)
-	    print "Input Inverse Impulse Response for convolution with kernel shape %d, %d, dilate=%d,%d - Output Size: %d, %d" % (kernel_shape[0],kernel_shape[1], dil[0], dil[1], vgrad.shape[2], vgrad.shape[3])
-	    for i in range(vgrad.shape[2]):
-		for j in range(vgrad.shape[3]):
-			if (vgrad[0,0,i,j]!=0.0):
-				print "(%d,%d)=%f" % (i,j,vgrad[0,0,i,j] )
-
     # Now check whether the input gradient was computed correctly
     input_grad = mx.nd.array(vgrad)
 
