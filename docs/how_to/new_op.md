@@ -139,4 +139,4 @@ extern "C" __global__ mykernel(float *x, float *y) {
 Finally, we launch the kernel with `self.fwd_kernel.push([x], [y], (1, 1, 1), (x.shape[0], 1, 1))`, where `(1, 1, 1)` and  `(x.shape[0], 1, 1)` are the grid and block dimensions.
 
 ## C++/MShadow(CUDA)
-Please refer to [Developer Guide - Operators](https://mxnet.readthedocs.org/en/latest/developer-guide/operator.html) for detail.
+Please refer to [Developer Guide - Operators](https://mxnet.readthedocs.org/en/latest/system/operator.html) for detail.
