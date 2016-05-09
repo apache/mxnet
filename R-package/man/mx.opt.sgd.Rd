@@ -5,7 +5,8 @@
 \title{Create an SGD optimizer with respective parameters.
 Perform SGD with momentum update}
 \usage{
-mx.opt.sgd(learning.rate, momentum = 0, wd = 0, rescale.grad = 1)
+mx.opt.sgd(learning.rate, momentum = 0, wd = 0, rescale.grad = 1,
+  clip_gradient = NULL, lr_scheduler = NULL)
 }
 \description{
 Create an SGD optimizer with respective parameters.

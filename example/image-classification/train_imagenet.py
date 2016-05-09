@@ -13,7 +13,9 @@ parser.add_argument('--network', type=str, default='inception-bn',
 parser.add_argument('--data-dir', type=str, required=True,
                     help='the input data directory')
 parser.add_argument('--model-prefix', type=str,
-                    help='the prefix of the model to load/save')
+                    help='the prefix of the model to load')
+parser.add_argument('--save-model-prefix', type=str,
+                    help='the prefix of the model to save')
 parser.add_argument('--lr', type=float, default=.01,
                     help='the initial learning rate')
 parser.add_argument('--lr-factor', type=float, default=1,

@@ -102,6 +102,8 @@ def parse_args():
                         help='the initial learning rate')
     parser.add_argument('--model-prefix', type=str,
                         help='the prefix of the model to load/save')
+    parser.add_argument('--save-model-prefix', type=str,
+                        help='the prefix of the model to save')
     parser.add_argument('--num-epochs', type=int, default=10,
                         help='the number of training epochs')
     parser.add_argument('--load-epoch', type=int,

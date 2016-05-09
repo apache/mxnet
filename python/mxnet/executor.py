@@ -170,6 +170,20 @@ class Executor(object):
         return self._arg_dict
 
     @property
+    def grad_dict(self):
+        """Get dictionary representation of gradient arrays.
+
+        Returns
+        -------
+        grad_dict : dict of str to NDArray
+            The dictionary that maps name of arguments to gradient arrays.
+        """
+        if self._grad_dict is None:
+            self._grad_dict = Executor._get_dict(
+                self._symbol.list_arguments(), self.grad_arrays)
+        return self._grad_dict
+
+    @property
     def aux_dict(self):
         """Get dictionary representation of auxiliary states arrays.
 
@@ -210,7 +224,8 @@ class Executor(object):
         """
         for name, array in arg_params.items():
             if name in self.arg_dict:
-                array.copyto(self.arg_dict[name])
+                dst = self.arg_dict[name]
+                array.astype(dst.dtype).copyto(dst)
             else:
                 if not allow_extra_params:
                     raise ValueError('Find name \"%s\" that is not in the arguments' % name)
@@ -218,7 +233,8 @@ class Executor(object):
             aux_params = {}
         for name, array in aux_params.items():
             if name in self.aux_dict:
-                array.copyto(self.aux_dict[name])
+                dst = self.aux_dict[name]
+                array.astype(dst.dtype).copyto(dst)
             else:
                 if not allow_extra_params:
                     raise ValueError('Find name %s that is not in the auxiliary states' % name)

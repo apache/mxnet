@@ -1,341 +1,262 @@
 /*!
- * Copyright (c) 2015 by Contributors
- * \file elementwise_binary_op-inl.h
- * \brief Elementwise binary operation, plus, minus, mul, div
-*/
+ *  Copyright (c) 2015 by Contributors
+ * \file elementwise_binary_scalar_op-inl.h
+ * \brief Function defintion of elementwise binary operators
+ */
 #ifndef MXNET_OPERATOR_ELEMENTWISE_BINARY_SCALAR_OP_INL_H_
 #define MXNET_OPERATOR_ELEMENTWISE_BINARY_SCALAR_OP_INL_H_
 
-#include <dmlc/logging.h>
-#include <mxnet/operator.h>
-#include <mshadow/tensor.h>
-#include <utility>
-#include <string>
-#include <vector>
-#include <map>
-#include "./operator_common.h"
+#include <mxnet/operator_util.h>
 #include "./mshadow_op.h"
+
+#if defined(__CUDACC__)
+#define XPU gpu
+#else
+#define XPU cpu
+#endif
 
 namespace mxnet {
 namespace op {
 
-namespace elembinary {
-enum ElementwiseBinaryScalarOpInputs {kLhs};
-enum ElementwiseBinaryScalarOpOutputs {kOut};
-enum ElementwiseBinaryScalarOpType {kPlus, kMinus, kMul, kDiv, kPower, kMaximum, kMinimum};
-enum ElementWiseBinaryOpResource { kTempSpace };
-}  // elembinary
-
-struct ScalarOpParam : public dmlc::Parameter<ScalarOpParam> {
-  // use int for enumeration
-  float scalar;
-  bool scalar_on_left;
-  DMLC_DECLARE_PARAMETER(ScalarOpParam) {
-    DMLC_DECLARE_FIELD(scalar)
-    .describe("scalar value.");
-    DMLC_DECLARE_FIELD(scalar_on_left)
-    .set_default(false)
-    .describe("scalar operand is on the left.");
-  }
-};
-
-template<typename Op>
-inline elembinary::ElementwiseBinaryScalarOpType GetOpType();
-
-template<typename Op>
-inline const char* GetScalarOpTypeString();
-
-template<>
-inline elembinary::ElementwiseBinaryScalarOpType GetOpType<mshadow::op::plus>() {
-  return elembinary::kPlus;
-}
-template<>
-inline elembinary::ElementwiseBinaryScalarOpType GetOpType<mshadow::op::minus>() {
-  return elembinary::kMinus;
-}
-template<>
-inline elembinary::ElementwiseBinaryScalarOpType GetOpType<mshadow::op::mul>() {
-  return elembinary::kMul;
-}
-template<>
-inline elembinary::ElementwiseBinaryScalarOpType GetOpType<mshadow::op::div>() {
-  return elembinary::kDiv;
-}
-template<>
-inline elembinary::ElementwiseBinaryScalarOpType GetOpType<mshadow_op::power>() {
-  return elembinary::kPower;
-}
-template<>
-inline elembinary::ElementwiseBinaryScalarOpType GetOpType<mshadow_op::maximum>() {
-  return elembinary::kMaximum;
-}
-template<>
-inline elembinary::ElementwiseBinaryScalarOpType GetOpType<mshadow_op::minimum>() {
-  return elembinary::kMinimum;
+template<typename xpu, typename OP>
+void BinaryScalarLForward_(const TBlob& lhs,
+                           const EnvArguments& env,
+                           TBlob *ret,
+                           OpReqType req,
+                           RunContext ctx) {
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(ret->type_flag_, lhs.type_flag_)
+    << "Binary function only support input/output with the same type";
+  MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+    mshadow::Tensor<xpu, 2, DType> out = ret->FlatTo2D<xpu, DType>(s);
+    ASSIGN_DISPATCH(out, req,
+                    F<OP>(lhs.FlatTo2D<xpu, DType>(s),
+                          scalar<DType>(env.scalar)));
+  });
 }
 
-template<>
-inline const char* GetScalarOpTypeString<mshadow::op::plus>() {
-  return "_PlusScalar";
-}
-template<>
-inline const char* GetScalarOpTypeString<mshadow::op::minus>() {
-  return "_MinusScalar";
-}
-
-template<>
-inline const char* GetScalarOpTypeString<mshadow::op::mul>() {
-  return "_MulScalar";
-}
-
-template<>
-inline const char* GetScalarOpTypeString<mshadow::op::div>() {
-  return "_DivScalar";
-}
-
-template<>
-inline const char* GetScalarOpTypeString<mshadow_op::power>() {
-  return "_PowerScalar";
-}
-template<>
-inline const char* GetScalarOpTypeString<mshadow_op::maximum>() {
-  return "_MaximumScalar";
-}
-template<>
-inline const char* GetScalarOpTypeString<mshadow_op::minimum>() {
-  return "_MinimumScalar";
+template<typename xpu, typename OP>
+void BinaryScalarRForward_(const TBlob& rhs,
+                           const EnvArguments& env,
+                           TBlob *ret,
+                           OpReqType req,
+                           RunContext ctx) {
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(ret->type_flag_, rhs.type_flag_)
+    << "Binary function only support input/output with the same type";
+  MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+    mshadow::Tensor<xpu, 2, DType> out = ret->FlatTo2D<xpu, DType>(s);
+    ASSIGN_DISPATCH(out, req,
+                    F<OP>(scalar<DType>(env.scalar),
+                          rhs.FlatTo2D<xpu, DType>(s)));
+  });
 }
 
-template<typename xpu, typename ForwardOp>
-class ElementwiseBinaryScalarOp : public Operator {
- public:
-  explicit ElementwiseBinaryScalarOp(ScalarOpParam param)
-    : scalar_(param.scalar), scalar_on_left_(param.scalar_on_left) {}
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> lhs = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> out = out_data[elembinary::kOut].FlatTo2D<xpu, real_t>(s);
-    if (scalar_on_left_) {
-      Assign(out, req[elembinary::kOut], F<ForwardOp>(scalar_, lhs));
-    } else {
-      Assign(out, req[elembinary::kOut], F<ForwardOp>(lhs, scalar_));
-    }
-  }
+template<typename xpu, typename BackwardOp>
+void BinaryScalarBackwardT0_(const OutputGrad& out_grad,
+                             const EnvArguments& env,
+                             TBlob *in_grad,
+                             OpReqType req,
+                             RunContext ctx) {
+  using namespace mxnet::op;
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(in_grad->type_flag_, out_grad.data.type_flag_)
+    << "Unary function only support input/output with the same type";
+  MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
+    mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
+    ASSIGN_DISPATCH(igrad, req,
+                    F<BackwardOp>(out_grad.data.FlatTo2D<xpu, DType>()));
+    });
+}
 
-  virtual void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_args) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK(in_data.size() == 1 && in_grad.size() == 1);
-    CHECK_EQ(req.size(), 1);
+template<typename xpu, typename BackwardOp>
+void BinaryScalarBackwardT1_(const OutputGrad& out_grad,
+                             const EnvArguments& env,
+                             TBlob *in_grad,
+                             OpReqType req,
+                             RunContext ctx) {
+  using namespace mxnet::op;
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(in_grad->type_flag_, out_grad.data.type_flag_)
+    << "Unary function only support input/output with the same type";
+  MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
+    mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
+    ASSIGN_DISPATCH(igrad, req,
+                    F<BackwardOp>(out_grad.data.FlatTo2D<xpu, DType>(),
+                                  scalar<DType>(env.scalar)));
+  });
+}
 
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> m_out_grad = out_grad[elembinary::kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> lhs_grad = in_grad[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
-    switch (GetOpType<ForwardOp>()) {
-    case elembinary::kPlus: {
-      Assign(lhs_grad, req[elembinary::kLhs], F<mshadow_op::identity>(m_out_grad));
-      break;
-    }
-    case elembinary::kMinus: {
-      if (scalar_on_left_) {
-        Assign(lhs_grad, req[elembinary::kLhs], F<mshadow_op::negation>(m_out_grad));
-      } else {
-        Assign(lhs_grad, req[elembinary::kLhs], F<mshadow_op::identity>(m_out_grad));
-      }
-      break;
-    }
-    case elembinary::kMul: {
-      Assign(lhs_grad, req[elembinary::kLhs], scalar_ * m_out_grad);
-      break;
-    }
-    case elembinary::kDiv: {
-      Tensor<xpu, 2> lhs_data = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
-      if (scalar_on_left_) {
-        Assign(lhs_grad, req[elembinary::kLhs],
-               F<mshadow_op::negation>(m_out_grad * scalar_) / F<mshadow_op::square>(lhs_data));
-      } else {
-        Assign(lhs_grad, req[elembinary::kLhs], m_out_grad / scalar_);
-      }
-      break;
-    }
-    case elembinary::kPower: {
-      Tensor<xpu, 2> lhs_data = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
-      Tensor<xpu, 2> m_out_data = out_data[elembinary::kOut].FlatTo2D<xpu, real_t>(s);
-      if (scalar_on_left_) {
-        Assign(lhs_grad, req[elembinary::kLhs],
-               log(scalar_) * m_out_data * m_out_grad);
-      } else {
-        Assign(lhs_grad, req[elembinary::kLhs],
-               F<mshadow_op::power>(lhs_data, scalar_ - 1) * m_out_grad * scalar_);
-      }
-      break;
-    }
-    case elembinary::kMaximum: {
-      Tensor<xpu, 2> lhs_data = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
-      if (scalar_on_left_) {
-        Assign(lhs_grad, req[elembinary::kLhs],
-               m_out_grad *  F<mshadow_op::minimum_grad>(lhs_data, scalar_));
-      } else {
-        Assign(lhs_grad, req[elembinary::kLhs],
-               m_out_grad *  F<mshadow_op::maximum_grad>(lhs_data, scalar_));
-      }
-      break;
-    }
-    case elembinary::kMinimum: {
-      Tensor<xpu, 2> lhs_data = in_data[elembinary::kLhs].FlatTo2D<xpu, real_t>(s);
-      if (scalar_on_left_) {
-        Assign(lhs_grad, req[elembinary::kLhs],
-               m_out_grad *  F<mshadow_op::maximum_grad>(lhs_data, scalar_));
-      } else {
-        Assign(lhs_grad, req[elembinary::kLhs],
-               m_out_grad *  F<mshadow_op::minimum_grad>(lhs_data, scalar_));
-      }
-      break;
-    }
-    }
-  }
+template<typename xpu, typename BackwardOp>
+void BinaryScalarBackwardT2_(const OutputGrad& out_grad,
+                             const Input0& lhs,
+                             const EnvArguments& env,
+                             TBlob *in_grad,
+                             OpReqType req,
+                             RunContext ctx) {
+  using namespace mxnet::op;
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(in_grad->type_flag_, out_grad.data.type_flag_)
+    << "Unary function only support input/output with the same type";
+  MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
+    mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
+    ASSIGN_DISPATCH(igrad, req,
+                    (F<BackwardOp>(lhs.data.FlatTo2D<xpu, DType>(),
+                                   scalar<DType>(env.scalar)) *
+                     out_grad.data.FlatTo2D<xpu, DType>()));
+    });
+}
 
- private:
-  float scalar_;
-  bool scalar_on_left_;
-};  // class ElementwiseBinaryScalarOp
+template<typename xpu>
+void DivRBackward_(const OutputGrad& out_grad,
+                   const Input0& in_data,
+                   const EnvArguments& env,
+                   TBlob *in_grad,
+                   OpReqType req,
+                   RunContext ctx) {
+  using namespace mxnet::op;
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(in_grad->type_flag_, out_grad.data.type_flag_)
+    << "Unary function only support input/output with the same type";
+  MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
+    mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
+    ASSIGN_DISPATCH(igrad, req,
+                    (scalar<DType>(-env.scalar) /
+                     F<mshadow_op::square>(in_data.data.FlatTo2D<xpu, DType>()) *
+                     out_grad.data.FlatTo2D<xpu, DType>()));
+  });
+}
 
 
 template<typename xpu>
-inline Operator* CreateElementwiseBinaryScalarOp_(elembinary::ElementwiseBinaryScalarOpType type,
-    ScalarOpParam param) {
-  switch (type) {
-  case elembinary::kPlus:
-    return new ElementwiseBinaryScalarOp<xpu, mshadow::op::plus>(param);
-  case elembinary::kMinus:
-    return new ElementwiseBinaryScalarOp<xpu, mshadow::op::minus>(param);
-  case elembinary::kMul:
-    return new ElementwiseBinaryScalarOp<xpu, mshadow::op::mul>(param);
-  case elembinary::kDiv:
-    return new ElementwiseBinaryScalarOp<xpu, mshadow::op::div>(param);
-  case elembinary::kPower:
-    return new ElementwiseBinaryScalarOp<xpu, mshadow_op::power>(param);
-  case elembinary::kMaximum:
-    return new ElementwiseBinaryScalarOp<xpu, mshadow_op::maximum>(param);
-  case elembinary::kMinimum:
-    return new ElementwiseBinaryScalarOp<xpu, mshadow_op::minimum>(param);
-  }
-  LOG(FATAL) << "uknown op type";
-  return NULL;
+void PowerLBackward_(const OutputGrad& out_grad,
+                     const Input0& lhs,
+                     const EnvArguments& env,
+                     TBlob *in_grad,
+                     OpReqType req,
+                     RunContext ctx) {
+  using namespace mxnet::op;
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(in_grad->type_flag_, out_grad.data.type_flag_)
+    << "Unary function only support input/output with the same type";
+  MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
+    mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
+    ASSIGN_DISPATCH(igrad, req,
+                    (F<mshadow_op::power>(lhs.data.FlatTo2D<xpu, DType>(),
+                                          scalar<DType>(env.scalar - 1.0f)) *
+                     scalar<DType>(env.scalar) *
+                     out_grad.data.FlatTo2D<xpu, DType>()));
+  });
 }
 
-// Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateElementwiseBinaryScalarOp(elembinary::ElementwiseBinaryScalarOpType type,
-    ScalarOpParam param);
+void PowerRBackward_(const OutputGrad& out_grad,
+                     const OutputValue& out_data,
+                     const EnvArguments& env,
+                     TBlob *in_grad,
+                     OpReqType req,
+                     RunContext ctx) {
+  using namespace mxnet::op;
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(in_grad->type_flag_, out_grad.data.type_flag_)
+    << "Unary function only support input/output with the same type";
+  MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
+    mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
+    ASSIGN_DISPATCH(igrad, req,
+                    (scalar<DType>(logf(env.scalar)) *
+                     out_data.data.FlatTo2D<xpu, DType>() *
+                     out_grad.data.FlatTo2D<xpu, DType>()));
+  });
+}
 
-#if DMLC_USE_CXX11
-template<typename ForwardOp>
-class ElementwiseBinaryScalarOpProp : public OperatorProperty {
- public:
-  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
-    param_.Init(kwargs);
-  }
-  std::map<std::string, std::string> GetParams() const override {
-    return param_.__DICT__();
-  }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
-    using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1) << "Input:[lhs]";
-    const TShape &dshape = in_shape->at(elembinary::kLhs);
-    if (dshape.ndim() == 0) return false;
-    out_shape->clear();
-    out_shape->push_back(dshape);
-    return true;
-  }
+MXNET_REGISTER_SIMPLE_OP(_plus_scalar, XPU)
+.set_symbol_op_name("_PlusScalar")
+.set_enable_scalar(true, kArrayBeforeScalar)
+.set_function(XPU::kDevMask,
+              BinaryScalarLForward_<XPU, mshadow::op::plus>, kInplaceInOut)
+.set_gradient(XPU::kDevMask,
+              BinaryScalarBackwardT0_<XPU, mshadow_op::identity>, kInplaceOutIn);
 
-  std::vector<std::string> ListArguments() const override {
-    return {"lhs"};
-  }
+MXNET_REGISTER_SIMPLE_OP(_minus_scalar, XPU)
+.set_symbol_op_name("_MinusScalar")
+.set_enable_scalar(true, kArrayBeforeScalar)
+.set_function(XPU::kDevMask,
+              BinaryScalarLForward_<XPU, mshadow::op::minus>, kInplaceInOut)
+.set_gradient(XPU::kDevMask,
+              BinaryScalarBackwardT0_<XPU, mshadow_op::identity>, kInplaceOutIn);
 
-  OperatorProperty* Copy() const override {
-    auto ptr = new ElementwiseBinaryScalarOpProp<ForwardOp>();
-    ptr->param_ = param_;
-    return ptr;
-  }
+MXNET_REGISTER_SIMPLE_OP(_rminus_scalar, XPU)
+.set_symbol_op_name("_RMinusScalar")
+.set_enable_scalar(true, kArrayBeforeScalar)
+.set_function(XPU::kDevMask,
+              BinaryScalarRForward_<XPU, mshadow::op::minus>, kInplaceInOut)
+.set_gradient(XPU::kDevMask,
+              BinaryScalarBackwardT0_<XPU, mshadow_op::negation>, kInplaceOutIn);
 
-  std::string TypeString() const override {
-    return GetScalarOpTypeString<ForwardOp>();
-  }
+MXNET_REGISTER_SIMPLE_OP(_mul_scalar, XPU)
+.set_symbol_op_name("_MulScalar")
+.set_enable_scalar(true, kArrayBeforeScalar)
+.set_function(XPU::kDevMask,
+              BinaryScalarLForward_<XPU, mshadow::op::mul>, kInplaceInOut)
+.set_gradient(XPU::kDevMask,
+              BinaryScalarBackwardT1_<XPU, mshadow::op::mul>, kInplaceOutIn);
 
-  // decalre dependency and inplace optimization options
-  std::vector<int> DeclareBackwardDependency(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override {
-    switch (GetOpType<ForwardOp>()) {
-    case elembinary::kPlus:
-    case elembinary::kMinus:
-      return {out_grad[elembinary::kOut]};
-    case elembinary::kMul:
-    case elembinary::kDiv:
-    case elembinary::kMaximum:
-    case elembinary::kMinimum:
-      return {out_grad[elembinary::kOut], in_data[elembinary::kLhs]};
-    case elembinary::kPower:
-      return {out_grad[elembinary::kOut], in_data[elembinary::kLhs],
-              out_data[elembinary::kOut]};
-    }
-    LOG(FATAL) << "not reached";
-    return {};
-  }
+MXNET_REGISTER_SIMPLE_OP(_div_scalar, XPU)
+.set_symbol_op_name("_DivScalar")
+.set_enable_scalar(true, kArrayBeforeScalar)
+.set_function(XPU::kDevMask,
+              BinaryScalarLForward_<XPU, mshadow::op::div>, kInplaceInOut)
+.set_gradient(XPU::kDevMask,
+              BinaryScalarBackwardT1_<XPU, mshadow::op::div>, kInplaceOutIn);
 
-  std::vector<std::pair<int, void*> > BackwardInplaceOption(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data,
-    const std::vector<void*> &in_grad) const override {
-    switch (GetOpType<ForwardOp>()) {
-    case elembinary::kPlus:
-    case elembinary::kMinus:
-    case elembinary::kMaximum:
-    case elembinary::kMinimum:
-      return {};
-    case elembinary::kMul:
-    case elembinary::kDiv:
-      return {{out_grad[elembinary::kOut], in_grad[elembinary::kLhs]}};
-    case elembinary::kPower:
-      return {};
-    }
-    LOG(FATAL) << "not reached";
-    return {};
-  }
+MXNET_REGISTER_SIMPLE_OP(_rdiv_scalar, XPU)
+.set_symbol_op_name("_RDivScalar")
+.set_enable_scalar(true, kArrayBeforeScalar)
+.set_function(XPU::kDevMask,
+              BinaryScalarRForward_<XPU, mshadow::op::div>, kInplaceInOut)
+.set_gradient(XPU::kDevMask, DivRBackward_<XPU>, kInplaceOutIn);
 
-  std::vector<std::pair<int, void*> > ForwardInplaceOption(
-    const std::vector<int> &in_data,
-    const std::vector<void*> &out_data) const override {
-    return {{in_data[elembinary::kLhs], out_data[elembinary::kOut]}};
-  }
 
-  Operator* CreateOperator(Context ctx) const override;
+MXNET_REGISTER_SIMPLE_OP(_maximum_scalar, XPU)
+.set_symbol_op_name("_MaximumScalar")
+.set_enable_scalar(true, kArrayBeforeScalar)
+.set_function(XPU::kDevMask,
+              BinaryScalarLForward_<XPU, mshadow_op::maximum>, kInplaceInOut)
+.set_gradient(XPU::kDevMask,
+              BinaryScalarBackwardT2_<XPU, mshadow_op::maximum_grad>, kInplaceOutIn);
 
- private:
-  ScalarOpParam param_;
-};
-#endif  // DMLC_USE_CXX11
+MXNET_REGISTER_SIMPLE_OP(_minimum_scalar, XPU)
+.set_symbol_op_name("_MinimumScalar")
+.set_enable_scalar(true, kArrayBeforeScalar)
+.set_function(XPU::kDevMask,
+              BinaryScalarLForward_<XPU, mshadow_op::minimum>, kInplaceInOut)
+.set_gradient(XPU::kDevMask,
+              BinaryScalarBackwardT2_<XPU, mshadow_op::minimum_grad>, kInplaceOutIn);
+
+MXNET_REGISTER_SIMPLE_OP(_power_scalar, XPU)
+.set_symbol_op_name("_PowerScalar")
+.set_enable_scalar(true, kArrayBeforeScalar)
+.set_function(XPU::kDevMask,
+              BinaryScalarLForward_<XPU, mshadow_op::power>, kInplaceInOut)
+.set_gradient(XPU::kDevMask,
+              PowerLBackward_<XPU>, kInplaceOutIn);
+
+MXNET_REGISTER_SIMPLE_OP(_rpower_scalar, XPU)
+.set_symbol_op_name("_RPowerScalar")
+.set_enable_scalar(true, kArrayBeforeScalar)
+.set_function(XPU::kDevMask,
+              BinaryScalarRForward_<XPU, mshadow_op::power>, kInplaceInOut)
+.set_gradient(XPU::kDevMask,
+              PowerRBackward_<XPU>, kInplaceOutIn);
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_ELEMENTWISE_BINARY_SCALAR_OP_INL_H_
+#endif   // MXNET_OPERATOR_ELEMENTWISE_BINARY_SCALAR_OP_INL_H_

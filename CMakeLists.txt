@@ -11,6 +11,7 @@ mxnet_option(USE_CUDNN   "Build with cudnn support"  ON) # one could set CUDNN_R
 mxnet_option(USE_CUDA    "Build with CUDA support"   ON)
 mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support"   OFF)
 
+SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
 
 include(mshadow/cmake/mshadow.cmake)
@@ -77,11 +78,57 @@ if(USE_DIST_KVSTORE)
 	add_subdirectory("ps-lite")
 endif()
 
-mxnet_source_group("Source"   GLOB_RECURSE "src/*.cc")
-mxnet_source_group("Source\\Cuda" GLOB_RECURSE "src/*.cu")
+mxnet_source_group("Include\\common"   GLOB "src/common/*.h")
+mxnet_source_group("Include\\c_api"   GLOB "src/c_api/*.h")
+mxnet_source_group("Include\\engine"   GLOB "src/engine/*.h")
+mxnet_source_group("Include\\io"   GLOB "src/io/*.h")
+mxnet_source_group("Include\\kvstore"   GLOB "src/kvstore/*.h")
+mxnet_source_group("Include\\ndarray"   GLOB "src/ndarray/*.h")
+mxnet_source_group("Include\\operator"   GLOB "src/operator/*.h")
+mxnet_source_group("Include\\optimizer"   GLOB "src/optimizer/*.h")
+mxnet_source_group("Include\\resource.cc"   GLOB "src/resource.cc/*.h")
+mxnet_source_group("Include\\storage"   GLOB "src/storage/*.h")
+mxnet_source_group("Include\\symbol"   GLOB "src/symbol/*.h")
 
-FILE(GLOB_RECURSE SOURCE "src/*.cc")
+mxnet_source_group("Cuda\\common"   GLOB "src/common/*.cu")
+mxnet_source_group("Cuda\\c_api"   GLOB "src/c_api/*.cu")
+mxnet_source_group("Cuda\\engine"   GLOB "src/engine/*.cu")
+mxnet_source_group("Cuda\\io"   GLOB "src/io/*.cu")
+mxnet_source_group("Cuda\\kvstore"   GLOB "src/kvstore/*.cu")
+mxnet_source_group("Cuda\\ndarray"   GLOB "src/ndarray/*.cu")
+mxnet_source_group("Cuda\\operator"   GLOB "src/operator/*.cu")
+mxnet_source_group("Cuda\\optimizer"   GLOB "src/optimizer/*.cu")
+mxnet_source_group("Cuda\\resource.cc"   GLOB "src/resource.cc/*.cu")
+mxnet_source_group("Cuda\\storage"   GLOB "src/storage/*.cu")
+mxnet_source_group("Cuda\\symbol"   GLOB "src/symbol/*.cu")
+
+mxnet_source_group("Source"   GLOB "src/*.cc")
+mxnet_source_group("Source\\common"   GLOB "src/common/*.cc")
+mxnet_source_group("Source\\c_api"   GLOB "src/c_api/*.cc")
+mxnet_source_group("Source\\engine"   GLOB "src/engine/*.cc")
+mxnet_source_group("Source\\io"   GLOB "src/io/*.cc")
+mxnet_source_group("Source\\kvstore"   GLOB "src/kvstore/*.cc")
+mxnet_source_group("Source\\ndarray"   GLOB "src/ndarray/*.cc")
+mxnet_source_group("Source\\operator"   GLOB "src/operator/*.cc")
+mxnet_source_group("Source\\optimizer"   GLOB "src/optimizer/*.cc")
+mxnet_source_group("Source\\resource.cc"   GLOB "src/resource.cc/*.cc")
+mxnet_source_group("Source\\storage"   GLOB "src/storage/*.cc")
+mxnet_source_group("Source\\symbol"   GLOB "src/symbol/*.cc")
+
+
+
+
+
+FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h")
 FILE(GLOB_RECURSE cuda "src/*.cu")
+
+if (NOT (EXTRA_OPERATORS STREQUAL ""))
+	mxnet_source_group("Extra"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cc")
+	mxnet_source_group("Extra\\Cuda"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cu")
+	FILE(GLOB_RECURSE EXTRA_SRC "${EXTRA_OPERATORS}/*.cc")
+	FILE(GLOB_RECURSE EXTRA_CUSRC "${EXTRA_OPERATORS}/*.cu")
+	list(APPEND SOURCE ${EXTRA_SRC} ${EXTRA_CUSRC})
+endif()
 
 if(MSVC)
   foreach(flag_var
@@ -114,6 +161,8 @@ if(NOT MSVC)
   add_definitions(-DMSHADOW_IN_CXX11)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c++0x")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
 endif()
 
 add_library(mxnet SHARED ${SOURCE})

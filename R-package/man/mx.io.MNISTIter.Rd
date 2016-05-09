@@ -34,7 +34,7 @@ partition the data into multiple parts}
 \item{part.index}{int, optional, default='0'
 the index of the part will read}
 
-\item{prefetch.buffer}{long (non-negative), optional, default=4
+\item{prefetch.buffer}{, optional, default=4
 Backend Param: Number of prefetched parameters}
 }
 \value{

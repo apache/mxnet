@@ -49,7 +49,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
     .describe("number of groups partition");
     DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 4096)
     .describe("Tmp workspace for deconvolution (MB)");
-    DMLC_DECLARE_FIELD(no_bias).set_default(false)
+    DMLC_DECLARE_FIELD(no_bias).set_default(true)
     .describe("Whether to disable bias parameter.");
   }
 };
@@ -319,9 +319,9 @@ class DeconvolutionProp : public OperatorProperty {
         << "input num_filter must divide group size";
     CHECK_EQ(param_.num_filter % param_.num_group, 0) \
         << "output num_filter must divide group size";
-    CHECK_GE(param_.kernel.Size(), 0) \
+    CHECK_GT(param_.kernel.Size(), 0) \
         << "incorrect kernel size: " << param_.kernel;
-    CHECK_GE(param_.stride.Size(), 0) \
+    CHECK_GT(param_.stride.Size(), 0) \
         << "incorrect stride size: " << param_.stride;
     (*out_shape)[deconv::kOut][1] = param_.num_filter;
     (*out_shape)[deconv::kOut][2] = param_.stride[0] * (dshape[2] - 1) +

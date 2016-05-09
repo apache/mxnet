@@ -1,12 +1,14 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments
+# pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments, too-many-statements
 """Executor manager"""
 from __future__ import absolute_import
 
+from .base import mx_real_t
 from . import ndarray as nd
 from .context import cpu
 
 import logging
+import numpy as np
 
 def _split_input_slice(batch_size, work_load_list):
     """Get input slice from the input shape.
@@ -90,13 +92,30 @@ def _load_label(batch, targets):
 
 # pylint: disable=too-many-branches
 def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
-               base_exec=None, shared_data_arrays=None):
+               base_exec=None, shared_data_arrays=None, input_types=None, logger=logging):
     """bind executor for bucketing, potentially sharing data with an existing executor."""
     arg_shape, _, aux_shape = sym.infer_shape(**input_shapes)
+    assert(arg_shape is not None)
+    if input_types is None:
+        input_types = {k: mx_real_t for k in input_shapes.keys()}
+    arg_types, _, aux_types = sym.infer_type(**input_types)
+    assert(arg_types is not None)
+
     arg_arrays = []
-    grad_arrays = {} if need_grad else None
+    grad_arrays = {} if need_grad != False else None
 
     arg_names = sym.list_arguments()
+
+    if need_grad == False:
+        need_grad = set()
+    elif need_grad == True:
+        need_grad = set(arg_names) - set(input_shapes.keys())
+    elif need_grad is set:
+        pass
+    else:
+        raise AssertionError("need_grad must be boolean or set.")
+    grad_req = {name:('write' if name in need_grad else 'null') for name in arg_names}
+
 
     # create or borrow arguments and gradients
     for i in range(len(arg_names)):
@@ -107,40 +126,55 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
                     name in shared_data_arrays:
                 arg_arr = shared_data_arrays[name]
 
-                # in bucketing, we want to be strict here to avoid
-                # potential bugs
-                assert(arg_shape[i] == arg_arr.shape)
+                if np.prod(arg_arr.shape) >= np.prod(arg_shape[i]):
+                    # good, we can share this memory
+                    assert(arg_types[i] == arg_arr.dtype)
+                    arg_arr = arg_arr.reshape(arg_shape[i])
+                else:
+                    logger.warning(('bucketing: data "%s" has a shape %s' % (name, arg_shape[i])) +
+                                   (', which is larger than already allocated ') +
+                                   ('shape %s' % (arg_arr.shape,)) +
+                                   ('. Need to re-allocate. Consider putting ') +
+                                   ('default_bucket_key to be the bucket taking the largest ') +
+                                   ('input for better memory sharing.'))
+                    arg_arr = nd.zeros(arg_shape[i], ctx, dtype=arg_types[i])
+
+                    # replace existing shared array because the new one is bigger
+                    shared_data_arrays[name] = arg_arr
             else:
-                arg_arr = nd.zeros(arg_shape[i], ctx)
+                arg_arr = nd.zeros(arg_shape[i], ctx, dtype=arg_types[i])
+                if shared_data_arrays is not None:
+                    shared_data_arrays[name] = arg_arr
+
             arg_arrays.append(arg_arr)
-            if shared_data_arrays is not None:
-                shared_data_arrays[name] = arg_arr
         else:
             # model parameter
             if base_exec is None:
-                arg_arr = nd.zeros(arg_shape[i], ctx)
-                if need_grad:
-                    grad_arr = nd.zeros(arg_shape[i], ctx)
+                arg_arr = nd.zeros(arg_shape[i], ctx, dtype=arg_types[i])
+                if name in need_grad:
+                    grad_arr = nd.zeros(arg_shape[i], ctx, dtype=arg_types[i])
                     grad_arrays[name] = grad_arr
             else:
-                arg_arr = base_exec.arg_arrays[i]
+                arg_arr = base_exec.arg_dict[name]
                 assert arg_arr.shape == arg_shape[i]
-                if need_grad:
-                    grad_arrays[name] = base_exec.grad_arrays[i]
+                assert arg_arr.dtype == arg_types[i]
+                if name in need_grad:
+                    grad_arrays[name] = base_exec.grad_dict[name]
             arg_arrays.append(arg_arr)
 
     # create or borrow aux variables
     if base_exec is None:
-        aux_arrays = [nd.zeros(s, ctx) for s in aux_shape]
+        aux_arrays = [nd.zeros(s, ctx, dtype=t) for s, t in zip(aux_shape, aux_types)]
     else:
         for i, a in enumerate(base_exec.aux_arrays):
             assert aux_shape[i] == a.shape
+            assert aux_types[i] == a.dtype
 
         aux_arrays = [a for a in base_exec.aux_arrays]
 
     executor = sym.bind(ctx=ctx, args=arg_arrays, args_grad=grad_arrays,
                         aux_states=aux_arrays,
-                        grad_req='write' if need_grad else 'null', shared_exec=base_exec)
+                        grad_req=grad_req, shared_exec=base_exec)
     return executor
 
 class DataParallelExecutorGroup(object):
@@ -318,10 +352,10 @@ class DataParallelExecutorManager(object):
         """
         for name, block in zip(self.param_names, self.param_arrays):
             weight = sum(w.copyto(cpu()) for w in block) / len(block)
-            weight.copyto(arg_params[name])
+            weight.astype(arg_params[name].dtype).copyto(arg_params[name])
         for name, block in zip(self.aux_names, self.aux_arrays):
             weight = sum(w.copyto(cpu()) for w in block) / len(block)
-            weight.copyto(aux_params[name])
+            weight.astype(aux_params[name].dtype).copyto(aux_params[name])
 
     @property
     def param_arrays(self):

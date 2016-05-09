@@ -78,7 +78,7 @@ class Solver(object):
         update_dict = {name: nd for name, nd in zip(sym.list_arguments(), exe.grad_arrays) if nd}
         batch_size = input_buffs[0].shape[0]
         self.optimizer.rescale_grad = 1.0/batch_size
-        self.optimizer.set_lr_scale(args_lrmult)
+        self.optimizer.set_lr_mult(args_lrmult)
 
         output_dict = {}
         output_buff = {}
@@ -113,8 +113,8 @@ class Solver(object):
                 self.updater(key, arr, args[key])
 
             if self.metric is not None:
-                self.metric.update([input_buffs[-1].asnumpy()],
-                                   [output_buff[output_names[0]].asnumpy()])
+                self.metric.update([input_buffs[-1]],
+                                   [output_buff[output_names[0]]])
 
             if self.monitor is not None:
                 self.monitor.backward_end(i, args, update_dict, self.metric)

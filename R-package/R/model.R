@@ -72,7 +72,7 @@ mx.model.extract.model <- function(symbol, train.execs) {
 }
 
 # decide what type of kvstore to use
-mx.model.create.kvstore <- function(kvstore, arg.params, ndevice) {
+mx.model.create.kvstore <- function(kvstore, arg.params, ndevice, verbose=TRUE) {
   if (is.MXKVStore(kvstore)) return (kvstore)
   if (!is.character(kvstore)) {
     stop("kvstore msut be either MXKVStore or a string")
@@ -85,7 +85,7 @@ mx.model.create.kvstore <- function(kvstore, arg.params, ndevice) {
     } else {
       kvstore <- 'local_allreduce_cpu'
     }
-    cat(paste0("Auto-select kvstore type = ", kvstore, "\n"))
+    if(verbose) cat(paste0("Auto-select kvstore type = ", kvstore, "\n"))
   }
   return(mx.kv.create(kvstore))
 }
@@ -98,9 +98,10 @@ mx.model.train <- function(symbol, ctx, input.shape,
                            metric,
                            epoch.end.callback,
                            batch.end.callback,
-                           kvstore) {
+                           kvstore,
+                           verbose=TRUE) {
   ndevice <- length(ctx)
-  cat(paste0("Start training with ", ndevice, " devices\n"))
+  if(verbose) cat(paste0("Start training with ", ndevice, " devices\n"))
   # create the executors
   sliceinfo <- mx.model.slice.shape(input.shape, ndevice)
   train.execs <- lapply(1:ndevice, function(i) {
@@ -203,7 +204,7 @@ mx.model.train <- function(symbol, ctx, input.shape,
     train.data$reset()
     if (!is.null(metric)) {
       result <- metric$get(train.metric)
-      cat(paste0("[", iteration, "] Train-", result$name, "=", result$value, "\n"))
+      if(verbose) cat(paste0("[", iteration, "] Train-", result$name, "=", result$value, "\n"))
     }
     if (!is.null(eval.data)) {
       if (!is.null(metric)) {
@@ -237,7 +238,7 @@ mx.model.train <- function(symbol, ctx, input.shape,
       eval.data$reset()
       if (!is.null(metric)) {
         result <- metric$get(eval.metric)
-        cat(paste0("[", iteration, "] Validation-", result$name, "=", result$value, "\n"))
+        if(verbose) cat(paste0("[", iteration, "] Validation-", result$name, "=", result$value, "\n"))
       }
     } else {
       eval.metric <- NULL
@@ -247,7 +248,7 @@ mx.model.train <- function(symbol, ctx, input.shape,
 
     epoch_continue <- TRUE
     if (!is.null(epoch.end.callback)) {
-      epoch_continue <- epoch.end.callback(iteration, 0, environment())
+      epoch_continue <- epoch.end.callback(iteration, 0, environment(), verbose = verbose)
     }
 
     if (!epoch_continue) {
@@ -295,10 +296,10 @@ mx.model.select.layout.train <- function(X, y) {
     stop("Cannot auto select array.layout, please specify this parameter")
   }
   if (rowmajor == 1) {
-    cat("Auto detect layout of input matrix, use rowmajor..\n")
+    warning("Auto detect layout of input matrix, use rowmajor..\n")
     return("rowmajor")
   } else{
-    cat("Auto detect layout input matrix, use colmajor..\n")
+    warning("Auto detect layout input matrix, use colmajor..\n")
     return("colmajor")
   }
 }
@@ -333,10 +334,10 @@ mx.model.select.layout.predict <- function(X, model) {
     stop("Cannot auto select array.layout, please specify this parameter")
   }
   if (rowmajor == 1) {
-    cat("Auto detect layout of input matrix, use rowmajor..\n")
+    warning("Auto detect layout of input matrix, use rowmajor..\n")
     return("rowmajor")
   } else{
-    cat("Auto detect layout input matrix, use colmajor..\n")
+    warning("Auto detect layout input matrix, use colmajor..\n")
     return("colmajor")
   }
 }
@@ -375,9 +376,16 @@ mx.model.select.layout.predict <- function(X, model) {
 #'      and will report error when X is a square matrix to ask user to explicitly specify layout.
 #' @param kvstore string (default="local")
 #'     The parameter synchronization scheme in multiple devices.
+#' @param verbose logical (default=TRUE)
+#'     Specifies whether to print information on the iterations during training.     
+#' @param arg.params list, optional
+#'     Model parameter, list of name to NDArray of net's weights.
+#' @param aux.params list, optional
+#'     Model parameter, list of name to NDArray of net's auxiliary states.
 #' @return model A trained mxnet model.
 #'
 #' @export
+
 mx.model.FeedForward.create <-
 function(symbol, X, y=NULL, ctx=NULL,
          num.round=10, optimizer="sgd",
@@ -386,6 +394,8 @@ function(symbol, X, y=NULL, ctx=NULL,
          epoch.end.callback=NULL, batch.end.callback=NULL,
          array.batch.size=128, array.layout="auto",
          kvstore="local",
+         verbose=TRUE,
+         arg.params=NULL, aux.params=NULL,
          ...) {
   if (is.array(X) || is.matrix(X)) {
     if (array.layout == "auto") {
@@ -397,11 +407,13 @@ function(symbol, X, y=NULL, ctx=NULL,
   }
   X <- mx.model.init.iter(X, y, batch.size=array.batch.size, is.train=TRUE)
   if (!X$iter.next()) {
-    x$reset()
+    X$reset()
     if (!X$iter.next()) stop("Empty input")
   }
   input.shape <- dim((X$value())$data)
   params <- mx.model.init.params(symbol, input.shape, initializer, mx.cpu())
+  if (!is.null(arg.params)) params$arg.params <- arg.params
+  if (!is.null(aux.params)) params$aux.params <- aux.params
   if (is.null(ctx)) ctx <- mx.ctx.default()
   if (is.mx.context(ctx)) {
     ctx <- list(ctx)
@@ -429,7 +441,7 @@ function(symbol, X, y=NULL, ctx=NULL,
     }
     eval.data <- mx.model.init.iter(eval.data$data, eval.data$label, batch.size=array.batch.size, is.train = TRUE)
   }
-  kvstore <- mx.model.create.kvstore(kvstore, params$arg.params, length(ctx))
+  kvstore <- mx.model.create.kvstore(kvstore, params$arg.params, length(ctx), verbose=verbose)
   model <- mx.model.train(symbol, ctx, input.shape,
                           params$arg.params, params$aux.params,
                           1, num.round, optimizer=optimizer,
@@ -437,7 +449,8 @@ function(symbol, X, y=NULL, ctx=NULL,
                           metric=eval.metric,
                           epoch.end.callback=epoch.end.callback,
                           batch.end.callback=batch.end.callback,
-                          kvstore=kvstore)
+                          kvstore=kvstore, 
+                          verbose=verbose)
   return (model)
 }
 
