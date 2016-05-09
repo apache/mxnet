@@ -613,15 +613,15 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
     hint = lowercase($func_name_s)
     name = get!(DEFAULT_NAME_MANAGER, name, hint)
 
+    # set attrs
+    for (k, v) in attrs
+      set_attr(node, k, v)
+    end
+
     if length(args) != 0
       _compose!(node, name, args...)
     else
       _compose!(node; name=name, symbol_kws...)
-    end
-
-    # set attrs
-    for (k, v) in attrs
-      set_attr(node, k, v)
     end
 
     return node
