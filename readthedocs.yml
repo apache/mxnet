@@ -1,0 +1,3 @@
+formats:
+        - none
+requirements_file: docs/requirements.txt

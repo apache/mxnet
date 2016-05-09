@@ -47,7 +47,8 @@ class ModelParallelSuite extends FunSuite with BeforeAndAfterAll {
 
     exec1.forward()
     exec2.forward()
-    assert(reldiff(exec1.outputs(0), exec2.outputs(0)) < 1e-6f)
+    assert(reldiff(exec1.outputs(0).copyTo(Context.cpu()),
+        exec2.outputs(0).copyTo(Context.cpu())) < 1e-6f)
 
     val outGrad = NDArray.ones(shape, Context.cpu(1))
     exec1.backward(Array(outGrad))

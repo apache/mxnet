@@ -20,7 +20,7 @@ from .ndarray import array
 
 class DataBatch(object):
     """Default object for holding a mini-batch of data and related information."""
-    def __init__(self, data, label, pad, index,
+    def __init__(self, data, label, pad=None, index=None,
                  bucket_key=None, provide_data=None, provide_label=None):
         self.data = data
         self.label = label
@@ -49,6 +49,7 @@ class DataIter(object):
         """Get next data batch from iterator. Equivalent to
         self.iter_next()
         DataBatch(self.getdata(), self.getlabel(), self.getpad(), None)
+
         Returns
         -------
         data : DataBatch
@@ -65,6 +66,7 @@ class DataIter(object):
 
     def iter_next(self):
         """Iterate to next batch.
+
         Returns
         -------
         has_next : boolean
@@ -84,6 +86,7 @@ class DataIter(object):
 
     def getlabel(self):
         """Get label of current batch.
+
         Returns
         -------
         label : NDArray
@@ -92,8 +95,9 @@ class DataIter(object):
         pass
 
     def getindex(self):
-        """
-        Retures
+        """Get index of the current batch.
+
+        Returns
         -------
         index : numpy.array
             The index of current batch
@@ -102,6 +106,7 @@ class DataIter(object):
 
     def getpad(self):
         """Get the number of padding examples in current batch.
+
         Returns
         -------
         pad : int
@@ -167,8 +172,6 @@ class PrefetchingIter(DataIter):
     """Base class for prefetching iterators. Takes one or more DataIters (
     or any class with "reset" and "read" methods) and combine them with
     prefetching. For example:
-    iter = PrefetchingIter([NDArrayIter({'data': X1}), NDArrayIter({'data': X2})],
-                           rename_data=[{'data': 'data1'}, {'data': 'data2'}])
 
     Parameters
     ----------
@@ -180,6 +183,11 @@ class PrefetchingIter(DataIter):
         in iter[i].provide_data
     rename_label : None or list of dict
         Similar to rename_data
+
+    Examples
+    --------
+    iter = PrefetchingIter([NDArrayIter({'data': X1}), NDArrayIter({'data': X2})],
+                           rename_data=[{'data': 'data1'}, {'data': 'data2'}])
     """
     def __init__(self, iters, rename_data=None, rename_label=None):
         super(PrefetchingIter, self).__init__()
@@ -359,7 +367,7 @@ class NDArrayIter(DataIter):
             self.label = label_dict.items()
         self.num_data = self.data_list[0].shape[0]
         assert self.num_data >= batch_size, \
-            "batch_size need to be smaller than data size when not padding."
+            "batch_size need to be smaller than data size."
         self.cursor = -batch_size
         self.batch_size = batch_size
         self.last_batch_handle = last_batch_handle

@@ -5,9 +5,6 @@
  * \author Bing Xu
 */
 
-#include <unity/lib/image_util.hpp>
-#include <unity/lib/gl_sframe.hpp>
-#include <unity/lib/gl_sarray.hpp>
 #include <mxnet/io.h>
 #include <dmlc/base.h>
 #include <dmlc/io.h>
@@ -16,6 +13,9 @@
 #include <dmlc/parameter.h>
 #include <string>
 #include <memory>
+#include <unity/lib/image_util.hpp>
+#include <unity/lib/gl_sframe.hpp>
+#include <unity/lib/gl_sarray.hpp>
 #include "../../src/io/inst_vector.h"
 #include "../../src/io/image_recordio.h"
 #include "../../src/io/image_augmenter.h"

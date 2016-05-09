@@ -32,6 +32,7 @@
 doc/html
 doc/latex
 doc/doc
+docs/web-data
 
 #dmlc
 config.mk
@@ -73,6 +74,8 @@ deps
 .Rproj.user
 R-package/inst/*
 *.tar.gz
+*.tgz
+R-package/man/*.Rd
 
 # data
 *.rec
@@ -103,3 +106,4 @@ scala-package/*/*/target/
 *.classpath
 *.project
 *.settings
+

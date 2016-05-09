@@ -356,7 +356,7 @@ NDArrayFunction::NDArrayFunction(FunctionHandle handle)
       begin_use_vars_ = 0;
       begin_scalars_ = num_use_vars_;
     } else {
-      begin_scalars_ = num_scalars_;
+      begin_use_vars_ = num_scalars_;
       begin_scalars_ = 0;
     }
     begin_mutate_vars_ = num_use_vars_ + num_scalars_;

@@ -25,9 +25,16 @@ def test_operator():
     assert fc2copy.tojson() == fc2.tojson()
     fc2weight = fc2.get_internals()['fc2_weight']
 
+def test_list_attr():
+    data = mx.sym.Variable('data', attr={'mood': 'angry'})
+    op = mx.sym.Convolution(data=data, name='conv', kernel=(1, 1),
+                            num_filter=1, attr={'mood': 'so so'})
+    assert op.list_attr() == {'data_mood': 'angry', 'conv_mood': 'so so',
+                              'conv_weight_mood': 'so so', 'conv_bias_mood': 'so so'}
+    assert op.list_attr(shallow=True) == {'mood': 'so so'}
+
 
 if __name__ == '__main__':
     test_attr_basic()
     test_operator()
-
-
+    test_list_attr()

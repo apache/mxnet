@@ -61,6 +61,11 @@ class LibInfo {
                             handles: Array[NDArrayHandle],
                             keys: Array[String]): Int
   @native def mxNDArrayGetContext(handle: NDArrayHandle, devTypeId: RefInt, devId: RefInt): Int
+
+  // KVStore Server
+  @native def mxInitPSEnv(keys: Array[String], values: Array[String]): Int
+  @native def mxKVStoreRunServer(handle: KVStoreHandle, controller: KVServerControllerCallback): Int
+
   // KVStore
   @native def mxKVStoreCreate(name: String, handle: KVStoreHandleRef): Int
   @native def mxKVStoreInit(handle: KVStoreHandle,

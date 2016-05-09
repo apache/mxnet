@@ -319,4 +319,44 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     assert(arr2.shape === Shape(2, 2))
     assert(arr2.toArray === Array(3f, 4f, 5f, 6f))
   }
+
+  test("dispose deps") {
+    val arr1 = NDArray.ones(1, 2)
+    val arr2 = NDArray.ones(1, 2)
+    val arr3 = NDArray.ones(1, 2)
+
+    val arrWithDeps = (arr1 + arr2) + arr3
+    assert(arrWithDeps.dependencies.size === 4) // arr1 + arr2
+    assert(arrWithDeps.dependencies.contains(arr1.handle))
+    assert(arrWithDeps.dependencies.contains(arr2.handle))
+    assert(arrWithDeps.dependencies.contains(arr3.handle))
+    assert(!arr1.isDisposed)
+    assert(!arr2.isDisposed)
+    assert(!arr3.isDisposed)
+
+    val arrNoDeps = (arr1 + arr2 + arr3).disposeDeps()
+    assert(arrNoDeps.dependencies.isEmpty)
+    assert(arr1.isDisposed)
+    assert(arr2.isDisposed)
+    assert(arr3.isDisposed)
+  }
+
+  test("dispose deps except") {
+    val arr1 = NDArray.ones(1, 2)
+    val arr2 = NDArray.ones(1, 2)
+    val arr3 = NDArray.ones(1, 2)
+    val arr1_2 = arr1 + arr2
+
+    val arr = (arr1 + arr2 + arr1_2 + arr3).disposeDepsExcept(arr1_2)
+    // since arr1_2 depends on arr1 & arr2
+    // arr1 & arr2 will not be disposed either
+    assert(arr.dependencies.size === 3)
+    assert(arr.dependencies.contains(arr1.handle))
+    assert(arr.dependencies.contains(arr2.handle))
+    assert(arr.dependencies.contains(arr1_2.handle))
+    assert(!arr1.isDisposed)
+    assert(!arr2.isDisposed)
+    assert(!arr1_2.isDisposed)
+    assert(arr3.isDisposed)
+  }
 }
