@@ -247,12 +247,22 @@ class Symbol(object):
         else:
             return None
 
-    def list_attr(self):
-        """Get all attributes from the symbol"""
+    def list_attr(self, shallow=False):
+        """Get all attributes from the symbol and its descendents.
+
+        Parameters
+        ----------
+        shallow : bool
+            Default `False`. When `shallow` is `False`, list recursively all the
+            attributes in the descendents. The attribute names are pre-pended with
+            the symbol names to avoid conflicts. If `True`, then only attributes
+            that belongs to this symbol is returned, and the attribute names will
+            **not** be pre-pended with the symbol name.
+        """
         size = mx_uint()
         pairs = ctypes.POINTER(ctypes.c_char_p)()
-        check_call(_LIB.MXSymbolListAttr(
-            self.handle, ctypes.byref(size), ctypes.byref(pairs)))
+        f_handle = _LIB.MXSymbolListAttrShallow if shallow else _LIB.MXSymbolListAttr
+        check_call(f_handle(self.handle, ctypes.byref(size), ctypes.byref(pairs)))
         return {py_str(pairs[i*2]): py_str(pairs[i*2+1]) for i in range(size.value)}
 
     def _set_attr(self, **kwargs):

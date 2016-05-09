@@ -644,13 +644,13 @@ int MXSymbolSetAttr(SymbolHandle symbol,
   API_END();
 }
 
-int MXSymbolListAttr(SymbolHandle symbol,
-                     mx_uint *out_size,
-                     const char*** out) {
+int _MXSymbolListAttrImpl(SymbolHandle symbol, bool shalow,
+                          mx_uint *out_size, const char*** out) {
   Symbol *s = static_cast<Symbol*>(symbol);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
-  std::map<std::string, std::string> attr = std::move(s->ListAttr());
+  std::map<std::string, std::string> attr =
+      std::move(shalow ? s->ListAttrShallow() : s->ListAttr());
   std::vector<std::string> attrList;
   *out_size = 0;
   for (auto it : attr) {
@@ -668,6 +668,17 @@ int MXSymbolListAttr(SymbolHandle symbol,
   API_END();
 }
 
+int MXSymbolListAttr(SymbolHandle symbol,
+                     mx_uint *out_size,
+                     const char*** out) {
+  return _MXSymbolListAttrImpl(symbol, false, out_size, out);
+}
+
+int MXSymbolListAttrShallow(SymbolHandle symbol,
+                            mx_uint *out_size,
+                            const char*** out) {
+  return _MXSymbolListAttrImpl(symbol, true, out_size, out);
+}
 
 int MXSymbolListArguments(SymbolHandle symbol,
                           mx_uint *out_size,

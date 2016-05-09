@@ -577,7 +577,7 @@ MXNET_DLL int MXSymbolSetAttr(SymbolHandle symbol,
                               const char* key,
                               const char* value);
 /*!
- * \brief Get all attributes from symbol
+ * \brief Get all attributes from symbol, including all descendents.
  * \param symbol the source symbol
  * \param out_size The number of output attributes
  * \param out 2*out_size strings representing key value pairs.
@@ -586,6 +586,16 @@ MXNET_DLL int MXSymbolSetAttr(SymbolHandle symbol,
 MXNET_DLL int MXSymbolListAttr(SymbolHandle symbol,
                                mx_uint *out_size,
                                const char*** out);
+/*!
+ * \brief Get all attributes from symbol, excluding descendents.
+ * \param symbol the source symbol
+ * \param out_size The number of output attributes
+ * \param out 2*out_size strings representing key value pairs.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolListAttrShallow(SymbolHandle symbol,
+                                      mx_uint *out_size,
+                                      const char*** out);
 /*!
  * \brief List arguments in the symbol.
  * \param symbol the symbol
