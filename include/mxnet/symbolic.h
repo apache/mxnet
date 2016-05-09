@@ -112,12 +112,19 @@ class Symbol {
    */
   bool GetAttr(const std::string& key, std::string* out);
   /*!
+   * \brief Get attribute dictionary from the symbol and all children. Each
+   *  attribute name is pre-pended with the symbol name.
+   *  For grouped sybmbol, an error will be raised.
+   * \return a dictionary.
+   */
+  std::map<std::string, std::string> ListAttr();
+  /*!
    * \brief Get attribute dictionary from the symbol.
    *  This only works for symbol with outputs from single operators.
    *  For grouped sybmbol, an error will be raised.
    * \return a dictionary.
    */
-  std::map<std::string, std::string> ListAttr();
+  std::map<std::string, std::string> ListAttrShallow();
   /*!
    * \brief Apply the symbol as a function, compose with arguments
    * \param args positional arguments for the symbol
