@@ -2,10 +2,8 @@ Speech Acoustic Modeling Example
 ================================
 This folder contains examples for speech recognition.
 
-- [lstm.py](lstm.py): Functions for building a LSTM Network.
-- [lstm_proj.py](lstm.py): Functions for building a LSTM Network with projection layer.
+- [lstm_proj.py](lstm.py): Functions for building a LSTM Network with/without projection layer.
 - [io_util.py](io_util.py): Wrapper functions for `DataIter` over speech data.
-- [train_lstm.py](train_lstm.py): Script for training LSTM acoustic model.
 - [train_lstm_proj.py](train_lstm_proj.py): Script for training LSTM acoustic model.
 - [decode_mxnet.py](decode_mxnet.py]: Script for decoding LSTMP acoustic model.
 - [default.cfg](default.cfg): Configuration for training on the `AMI` SDM1 dataset. Can be used as a template for writing other configuration files.
