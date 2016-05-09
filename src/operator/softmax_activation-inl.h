@@ -94,23 +94,26 @@ class SoftmaxActivationOp : public Operator {
     CHECK_EQ(out_grad.size(), 1);
     CHECK(in_data.size() == 1 && in_grad.size() == 1);
     CHECK_EQ(req.size(), 1);
-		// Use 3d tensor for both mode -> {instance, channel}. Get shapes
-		int total_size = in_grad[softmax_activation::kData].Size();
-		int batch_size = in_grad[softmax_activation::kData].shape_[0];
-		int channel_num = in_grad[softmax_activation::kData].shape_[1];
-		int rest_size = total_size / (batch_size * channel_num);
-		const Shape<3> data_shape = Shape3(batch_size, channel_num, rest_size);
-		// Get tensors
-		Stream<xpu> *s = ctx.get_stream<xpu>();
-		Tensor<xpu, 3> m_out_grad = out_grad[softmax_activation::kOut].get_with_shape<xpu, 3, real_t>(data_shape, s);
-		Tensor<xpu, 3> m_out_data = out_data[softmax_activation::kOut].get_with_shape<xpu, 3, real_t>(data_shape, s);
-		Tensor<xpu, 3> m_in_grad = in_grad[softmax_activation::kData].get_with_shape<xpu, 3, real_t>(data_shape, s);
-		// get requested temp space
-		Tensor<xpu, 2> workspace = ctx.requested[softmax_activation::kTempSpace].get_space<xpu>(
-				Shape2(batch_size, rest_size), s);
-		workspace = reduce_with_axis<red::sum, false>(m_out_grad * m_out_data, 1);
+    // Use 3d tensor for both mode -> {instance, channel}. Get shapes
+    int total_size = in_grad[softmax_activation::kData].Size();
+    int batch_size = in_grad[softmax_activation::kData].shape_[0];
+    int channel_num = in_grad[softmax_activation::kData].shape_[1];
+    int rest_size = total_size / (batch_size * channel_num);
+    const Shape<3> data_shape = Shape3(batch_size, channel_num, rest_size);
+    // Get tensors
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Tensor<xpu, 3> m_out_grad =
+      out_grad[softmax_activation::kOut].get_with_shape<xpu, 3, real_t>(data_shape, s);
+    Tensor<xpu, 3> m_out_data =
+      out_data[softmax_activation::kOut].get_with_shape<xpu, 3, real_t>(data_shape, s);
+    Tensor<xpu, 3> m_in_grad =
+      in_grad[softmax_activation::kData].get_with_shape<xpu, 3, real_t>(data_shape, s);
+    // get requested temp space
+    Tensor<xpu, 2> workspace = ctx.requested[softmax_activation::kTempSpace].get_space<xpu>(
+        Shape2(batch_size, rest_size), s);
+    workspace = reduce_with_axis<red::sum, false>(m_out_grad * m_out_data, 1);
     Assign(m_in_grad, req[softmax_activation::kData],
-           m_out_data * (m_out_grad - broadcast_with_axis(workspace, 0, channel_num)));
+        m_out_data * (m_out_grad - broadcast_with_axis(workspace, 0, channel_num)));
   }
 
  private:
@@ -162,7 +165,7 @@ class SoftmaxActivationProp : public OperatorProperty {
     return {out_grad[softmax_activation::kOut], out_data[softmax_activation::kOut]};
   }
 
-	std::vector<ResourceRequest> BackwardResource(
+  std::vector<ResourceRequest> BackwardResource(
       const std::vector<TShape> &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
