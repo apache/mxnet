@@ -157,7 +157,7 @@ class Optimizer(object):
         """
         self.wd_mult = {}
         for n in self.idx2name.values():
-            if not n.endswith('_weight'):
+            if not (n.endswith('_weight') or n.endswith('_gamma')):
                 self.wd_mult[n] = 0.0
         if self.sym is not None:
             attr = self.sym.list_attr()
@@ -301,6 +301,53 @@ class SGD(Optimizer):
             mom[:] *= self.momentum
             mom[:] += -lr * (grad + wd * weight)
             weight[:] += mom
+        else:
+            assert self.momentum == 0.0
+            weight[:] += -lr * (grad + self.wd * weight)
+
+@register
+class NAG(SGD):
+    """SGD with nesterov
+    It is implemented according to
+    https://github.com/torch/optim/blob/master/sgd.lua
+    """
+    def __init__(self, **kwargs):
+        super(NAG, self).__init__(**kwargs)
+
+    def update(self, index, weight, grad, state):
+        """Update the parameters.
+
+        Parameters
+        ----------
+        index : int
+            An unique integer key used to index the parameters
+
+        weight : NDArray
+            weight ndarray
+
+        grad : NDArray
+            grad ndarray
+
+        state : NDArray or other objects returned by init_state
+            The auxiliary state used in optimization.
+        """
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        self._update_count(index)
+
+        grad = grad * self.rescale_grad
+        if self.clip_gradient is not None:
+            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+
+        if state:
+            mom = state
+            mom[:] *= self.momentum
+            grad += wd * weight
+            mom[:] += grad
+            grad[:] += self.momentum * mom
+            weight[:] += -lr * grad
         else:
             assert self.momentum == 0.0
             weight[:] += -lr * (grad + self.wd * weight)
@@ -483,15 +530,13 @@ class Adam(Optimizer):
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
     """
-    def __init__(self, learning_rate=0.002, beta1=0.9, beta2=0.999, epsilon=1e-8,
+    def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
                  decay_factor=(1 - 1e-8), **kwargs):
         super(Adam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
         self.decay_factor = decay_factor
-        self.time = 0
-        self.time_first_index = None
 
     def create_state(self, index, weight):
         """Create additional optimizer state: mean, variance
@@ -502,7 +547,6 @@ class Adam(Optimizer):
             The weight data
 
         """
-        self.time_first_index = None  # time is incremented only on the first index
         return (zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
                 zeros(weight.shape, weight.context, dtype=weight.dtype))  # variance
 
@@ -528,37 +572,25 @@ class Adam(Optimizer):
         lr = self._get_lr(index)
         self._update_count(index)
 
+        t = self._index_update_count[index]
         mean, variance = state
 
-        # increment time only when the first parameters is called
-        if self.time_first_index is None:
-            self.time_first_index = index
-            self.time = 0  # all parameters share the same time
-        elif self.time_first_index == index:
-            self.time += 1
-
-        t1 = self.time + 1
-        learning_rate = (lr *
-                         math.sqrt(1. - self.beta2**t1) /
-                         (1. - self.beta1**t1))
-        beta_1t = self.beta1 * self.decay_factor ** (t1 - 1)
-
-        grad = grad * self.rescale_grad
+        grad *= self.rescale_grad
         if self.clip_gradient is not None:
-            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+            clip(grad, -self.clip_gradient, self.clip_gradient, out=grad)
 
-        mean_t = beta_1t * mean + (1. - beta_1t) * grad
-        variance_t = (self.beta2 * variance +
-                      (1. - self.beta2) * grad * grad)
-        step = (learning_rate * mean_t /
-                (sqrt(variance_t) + self.epsilon))
+        mean[:] = self.beta1 * mean + (1. - self.beta1) * grad
+        variance[:] = self.beta2 * variance + (1. - self.beta2) * grad * grad
+
+        coef1 = 1. - self.beta1**t
+        coef2 = 1. - self.beta2**t
+        lr *= math.sqrt(coef2)/coef1
+
+        weight[:] -= lr*mean/(sqrt(variance) + self.epsilon)
+
         wd = self._get_wd(index)
         if wd > 0.:
-            step += lr * wd * weight
-
-        weight[:] += -step
-        mean[:] = mean_t
-        variance[:] = variance_t
+            weight[:] -= (lr * wd) * weight
 
 @register
 class AdaGrad(Optimizer):
