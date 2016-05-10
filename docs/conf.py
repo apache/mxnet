@@ -40,10 +40,6 @@ needs_sphinx = '1.2'
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.ifconfig']
 
-# breathe_default_project = "format"
-#breathe_domain_by_extension = {"h" : "cpp"}
-
-
 # General information about the project.
 project = u'mxnet'
 author = u'%s developers' % project
@@ -301,6 +297,7 @@ def run_doxygen(folder):
     """Run the doxygen make command in the designated folder."""
     try:
         retcode = subprocess.call("cd %s; make doxygen" % folder, shell=True)
+        retcode = subprocess.call("cp -rf doxygen/html _build/html/doxygen", shell=True)
         if retcode < 0:
             sys.stderr.write("doxygen terminated by signal %s" % (-retcode))
     except OSError as e:

@@ -213,7 +213,7 @@ lint: rcpplint jnilint
 doc: doxygen
 
 doxygen:
-	doxygen doc/Doxyfile
+	doxygen docs/Doxyfile
 
 # R related shortcuts
 rcpplint:

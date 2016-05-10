@@ -6,9 +6,9 @@ from __future__ import absolute_import
 import copy
 import ctypes
 from numbers import Number
+import re
 import sys
 import numpy
-import re
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str, string_types, mx_real_t
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle
@@ -19,6 +19,7 @@ from .context import Context
 from .ndarray import NDArray, zeros, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .executor import Executor
 from .symbol_doc import SymbolDoc
+
 
 class Symbol(object):
     """Symbol is symbolic graph of the mxnet."""
@@ -246,12 +247,22 @@ class Symbol(object):
         else:
             return None
 
-    def list_attr(self):
-        """Get all attributes from the symbol"""
+    def list_attr(self, shallow=False):
+        """Get all attributes from the symbol and its descendents.
+
+        Parameters
+        ----------
+        shallow : bool
+            Default `False`. When `shallow` is `False`, list recursively all the
+            attributes in the descendents. The attribute names are pre-pended with
+            the symbol names to avoid conflicts. If `True`, then only attributes
+            that belongs to this symbol is returned, and the attribute names will
+            **not** be pre-pended with the symbol name.
+        """
         size = mx_uint()
         pairs = ctypes.POINTER(ctypes.c_char_p)()
-        check_call(_LIB.MXSymbolListAttr(
-            self.handle, ctypes.byref(size), ctypes.byref(pairs)))
+        f_handle = _LIB.MXSymbolListAttrShallow if shallow else _LIB.MXSymbolListAttr
+        check_call(f_handle(self.handle, ctypes.byref(size), ctypes.byref(pairs)))
         return {py_str(pairs[i*2]): py_str(pairs[i*2+1]) for i in range(size.value)}
 
     def _set_attr(self, **kwargs):
@@ -654,7 +665,7 @@ class Symbol(object):
             type_dict = {k: mx_real_t for k in self.list_arguments()}
         arg_shapes, _, aux_shapes = self.infer_shape(**kwargs)
         arg_types, _, aux_types = self.infer_type(**type_dict)
-        if arg_shapes == None or arg_types == None:
+        if arg_shapes is None or arg_types is None:
             raise ValueError("Input node is not complete")
         # alloc space
         arg_ndarrays = [zeros(shape, ctx, dtype=dtype)for dtype, shape in zip(arg_types,
@@ -759,7 +770,7 @@ class Symbol(object):
             'aux_states', aux_states, self.list_auxiliary_states(), False)
 
         # setup requirements
-        req_map = {'null' : 0, 'write' : 1, 'add' : 3}
+        req_map = {'null': 0, 'write': 1, 'add': 3}
         if isinstance(grad_req, string_types):
             if grad_req not in req_map:
                 raise ValueError('grad_req must be in %s' % str(req_map))
@@ -833,15 +844,19 @@ class Symbol(object):
     # pylint: enable= no-member
 
 
-def Variable(name, attr=None):
+def Variable(name, attr=None, shape=None):
     """Create a symbolic variable with specified name.
 
     Parameters
     ----------
     name : str
-       Name of the variable.
+        Name of the variable.
     attr : dict of string -> string
-       Additional attributes to set on the variable.
+        Additional attributes to set on the variable.
+    shape : tuple
+        Optionally, one can specify the shape of a variable. This will be used during
+        shape inference. If user specified a different shape for this variable using
+        keyword argument when calling shape inference, this shape information will be ignored.
 
     Returns
     -------
@@ -854,6 +869,9 @@ def Variable(name, attr=None):
     check_call(_LIB.MXSymbolCreateVariable(c_str(name), ctypes.byref(handle)))
     ret = Symbol(handle)
     attr = AttrScope.current.get(attr)
+    if shape is not None:
+        attr = {} if attr is None else attr
+        attr['__shape__'] = str(shape)
     if attr:
         ret._set_attr(**attr)
     return ret
