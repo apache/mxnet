@@ -318,7 +318,7 @@ class CustomMetric(EvalMetric):
         The name of the metric
     allow_extra_outputs : bool
         If true, the prediction outputs can have extra outputs.
-        This is useful in RNN, where the states are also produced 
+        This is useful in RNN, where the states are also produced
         in outputs for forwarding.
     """
     def __init__(self, feval, name=None, allow_extra_outputs=False):
@@ -362,7 +362,7 @@ def np(numpy_feval, name=None, allow_extra_outputs=False):
         The name of the metric.
     allow_extra_outputs : bool
         If true, the prediction outputs can have extra outputs.
-        This is useful in RNN, where the states are also produced 
+        This is useful in RNN, where the states are also produced
         in outputs for forwarding.
     """
     def feval(label, pred):

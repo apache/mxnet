@@ -268,7 +268,7 @@ class SGD(Optimizer):
             return None
         else:
             return zeros(weight.shape, weight.context, dtype=weight.dtype)
-    
+
     def update(self, index, weight, grad, state):
         """Update the parameters.
 
