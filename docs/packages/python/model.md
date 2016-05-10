@@ -39,7 +39,7 @@ model = mx.model.FeedForward(
      num_epoch=num_epoch,
      learning_rate=0.01)
 
-mode.fit(X=data_set)
+model.fit(X=data_set)
 ```
 For more information, you can refer to [Model API Reference](#model-api-reference).
 
