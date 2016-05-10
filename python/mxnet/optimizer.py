@@ -268,7 +268,7 @@ class SGD(Optimizer):
             return None
         else:
             return zeros(weight.shape, weight.context, dtype=weight.dtype)
-
+    
     def update(self, index, weight, grad, state):
         """Update the parameters.
 
@@ -304,6 +304,7 @@ class SGD(Optimizer):
         else:
             assert self.momentum == 0.0
             weight[:] += -lr * (grad + self.wd * weight)
+
 
 @register
 class NAG(SGD):

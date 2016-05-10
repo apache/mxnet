@@ -2,17 +2,15 @@ Speech Acoustic Modeling Example
 ================================
 This folder contains examples for speech recognition.
 
-- [lstm.py](lstm.py): Functions for building a LSTM Network.
-- [lstm_proj.py](lstm.py): Functions for building a LSTM Network with projection layer.
+- [lstm_proj.py](lstm.py): Functions for building a LSTM Network with/without projection layer.
 - [io_util.py](io_util.py): Wrapper functions for `DataIter` over speech data.
-- [train_lstm.py](train_lstm.py): Script for training LSTM acoustic model.
 - [train_lstm_proj.py](train_lstm_proj.py): Script for training LSTM acoustic model.
 - [decode_mxnet.py](decode_mxnet.py]: Script for decoding LSTMP acoustic model.
 - [default.cfg](default.cfg): Configuration for training on the `AMI` SDM1 dataset. Can be used as a template for writing other configuration files.
 - [python_wrap](python_wrap): C wrappers for Kaldi C++ code, this is built into a .so. Python code that loads the .so and calls the C wrapper functions in `io_func/feat_readers/reader_kaldi.py`.
 
 Connect to Kaldi:
-- [decode_mxnet.sh](decode_mxnet.sh): calling by Kaldi to decode a acoustic model trained by mxnet.
+- [decode_mxnet.sh](decode_mxnet.sh): calling by Kaldi to decode a acoustic model trained by mxnet (please select the `simple` method for decoding).
 
 A full receipt:
 - [run_ami.sh](run_ami.sh): a full receipt to train and decode acoustic model on AMI.
@@ -165,7 +163,7 @@ Here are the results on TIMIT and AMI test set (using all default setup, 3 layer
 | Corpus | WER |
 |--------|-----|
 |TIMIT   | 18.9|
-|AMI     | 42.8|
+|AMI     | 51.7 (42.2) |
 
-Note that AMI was evaluated only on the non-overlapped speech.
+Note that for AMI 42.2 was evaluated non-overlapped speech. Kaldi-HMM baseline was 67.2% and DNN was 57.5%.
 
