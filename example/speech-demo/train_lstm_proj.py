@@ -7,7 +7,7 @@ import os.path
 
 import mxnet as mx
 import numpy as np
-
+from speechSGD import speechSGD
 from lstm_proj import lstm_unroll
 from io_util import BucketSentenceIter, TruncatedSentenceIter, DataReadStream
 from config_util import parse_args, get_checkpoint_path, parse_contexts
@@ -188,7 +188,7 @@ def do_training(training_method, args, module, data_train, data_val):
         for nbatch, data_batch in enumerate(data_train):
             if training_method == METHOD_TBPTT:
                 lr_scheduler.effective_sample_count = data_train.batch_size * truncate_len
-                lr_scheduler.momentum = np.power(np.power(momentum, 1.0/800), data_batch.effective_sample_count)
+                lr_scheduler.momentum = np.power(np.power(momentum, 1.0/(data_train.batch_size * truncate_len)), data_batch.effective_sample_count)
             else:
                 if data_batch.effective_sample_count is not None:
                     lr_scheduler.effective_sample_count = data_batch.effective_sample_count
