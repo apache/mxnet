@@ -5,7 +5,7 @@ This folder contains examples for speech recognition.
 - [lstm_proj.py](lstm.py): Functions for building a LSTM Network with/without projection layer.
 - [io_util.py](io_util.py): Wrapper functions for `DataIter` over speech data.
 - [train_lstm_proj.py](train_lstm_proj.py): Script for training LSTM acoustic model.
-- [decode_mxnet.py](decode_mxnet.py]: Script for decoding LSTMP acoustic model.
+- [decode_mxnet.py](decode_mxnet.py): Script for decoding LSTMP acoustic model.
 - [default.cfg](default.cfg): Configuration for training on the `AMI` SDM1 dataset. Can be used as a template for writing other configuration files.
 - [python_wrap](python_wrap): C wrappers for Kaldi C++ code, this is built into a .so. Python code that loads the .so and calls the C wrapper functions in `io_func/feat_readers/reader_kaldi.py`.
 
@@ -13,7 +13,7 @@ Connect to Kaldi:
 - [decode_mxnet.sh](decode_mxnet.sh): calling by Kaldi to decode a acoustic model trained by mxnet (please select the `simple` method for decoding).
 
 A full receipt:
-- [run_ami.sh](run_ami.sh): a full receipt to train and decode acoustic model on AMI.
+- [run_ami.sh](run_ami.sh): a full receipt to train and decode acoustic model on AMI. It takes features and alignment from Kaldi to train an acoustic model and decode it.
 
 To reproduce the results, use the following steps.
 
@@ -76,6 +76,12 @@ for dset in train dev eval; do
   mv $data_dir/$dset/feats-cmvn.scp $data_dir/$dset/feats.scp
 done
 ```
+Here `apply-cmvn` was for mean-variance normalization. The default setup was applied per speaker. A more common was doing mean-variance normalization for the whole corpus and then feed to the neural networks:
+```
+ compute-cmvn-stats scp:data/sdm1/train_fbank/feats.scp data/sdm1/train_fbank/cmvn_g.ark
+ apply-cmvn --norm-vars=true data/sdm1/train_fbank/cmvn_g.ark scp:data/sdm1/train_fbank/feats.scp ark,scp:data/sdm1/train_fbank_gcmvn/feats.ark,data/sdm1/train_fbank_gcmvn/feats.scp
+```
+Note that kaldi always try to find features in `feats.scp`. So make sure the normalized features organized as Kaldi way during decoding.
 
 Finally, you need to put the features and labels together in a file so that MXNet can find them. More specifically, for each data set (train, dev, eval), you will need to create a file like `train_mxnet.feats`, will the following contents:
 
