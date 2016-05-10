@@ -2,11 +2,11 @@
 
 # This script trains and evaluate LSTM models. There is no
 # discriminative training yet.
-# In this recipe, CNTK directly read Kaldi features and labels,
+# In this recipe, MXNet directly read Kaldi features and labels,
 # which makes the whole pipline much simpler.
 
 set -e           #Exit on non-zero return code from any command
-set -o pipefail  #Exit if any of the commands in the pipeline will 
+set -o pipefail  #Exit if any of the commands in the pipeline will
                  #return non-zero return code
 set -u           #Fail on an undefined variable
 
@@ -83,7 +83,7 @@ if [ $stage -le 0 ] ; then
 
     for n in $(seq $njdec); do
         cat $dir/rawpost/post.${n}.scp || exit 1;
-    done > $dir/post.scp   
+    done > $dir/post.scp
 fi
 
 if [ $stage -le 1 ] ; then
@@ -103,14 +103,14 @@ fi
 # generate label counts
 if [ $stage -le 2 ] ; then
     $cmd JOB=1:1 $dir/log/gen_label_mean.JOB.log \
-        python make_stats.py --config $config --data_train $dir/train.feats \| copy-feats ark:- ark:$dir/label_mean.ark
+        python make_stats.py --configfile $config --data_train $dir/train.feats \| copy-feats ark:- ark:$dir/label_mean.ark
     echo NO_FEATURE_TRANSFORM ark:$dir/label_mean.ark > $dir/label_mean.feats
 fi
 
 
 # training, note that weight decay is for the whole batch (0.00001 * 20 (minibatch) * 40 (batch_size))
 if [ $stage -le 3 ] ; then
-    python train_lstm_proj.py --config $config --data_train $dir/train.feats --data_dev $dir/dev.feats --train_prefix $PWD/$expdir/$prefix --train_optimizer speechSGD --train_learning_rate 1 --train_context $deviceNumber --train_weight_decay 0.008 --train_show_every 1000 
+    python train_lstm_proj.py --configfile $config --data_train $dir/train.feats --data_dev $dir/dev.feats --train_prefix $PWD/$expdir/$prefix --train_optimizer speechSGD --train_learning_rate 1 --train_context $deviceNumber --train_weight_decay 0.008 --train_show_every 1000
 fi
 
 # decoding
@@ -121,4 +121,3 @@ if [ $stage -le 4 ] ; then
     $graph_src $dev_src $expdir/decode_${prefix}_$(basename $dev_src) "$mxnet_string" || exit 1;
 
 fi
-

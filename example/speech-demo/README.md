@@ -90,34 +90,7 @@ TRANSFORM scp:feat.scp
 scp:label.scp
 ```
 
-Here the `TRANSFORM` is the transformation you want to apply to the features. By default we use `NO_FEATURE_TRANSFORM`. The `scp:` syntax is from Kaldi. The `feat.scp` is typically the file from `data/sdm1/train/feats.scp`, and the `label.scp` is converted from the force-aligned labels located in `exp/sdm1/tri3a_ali`. We use a script like below to prepare the feature files. Because the force-alignments are only generated on the training data, we simply split the training set into 90/10 parts, and use the 1/10 hold-out as the dev set (validation set).
-
-```bash
-#!/bin/bash
-
-# SDM - Signle Distant Microphone
-micid=1 #which mic from array should be used?
-mic=sdm$micid
-
-# split the data : 90% train 10% cross-validation (held-out),
-dir=$PWD/data/$mic/train
-[ ! -e ${dir}_tr90 ] && utils/subset_data_dir_tr_cv.sh $dir ${dir}_tr90 ${dir}_cv10
-
-# prepare listing data
-dir=$PWD/exp/$mic/data-for-mxnet
-mkdir -p $dir
-
-# make post.scp, post.ark
-ali-to-pdf exp/$mic/tri3a_ali/final.mdl "ark:gunzip -c exp/$mic/tri3a_ali/ali.*.gz |" \
-  ark:- | ali-to-post ark:- ark,scp:$dir/post.ark,$dir/post.scp
-
-# generate dataset list, if the feature were unnomalized, make sure apply mean-variance normalization first (e.g. apply-cmvn in kaldi)
-echo NO_FEATURE_TRANSFORM scp:$PWD/data/$mic/train_tr90/feats.scp > $dir/train.feats
-echo scp:$dir/post.scp >> $dir/train.feats
-
-echo NO_FEATURE_TRANSFORM scp:$PWD/data/$mic/train_cv10/feats.scp > $dir/dev.feats
-echo scp:$dir/post.scp >> $dir/dev.feats
-```
+Here the `TRANSFORM` is the transformation you want to apply to the features. By default we use `NO_FEATURE_TRANSFORM`. The `scp:` syntax is from Kaldi. The `feat.scp` is typically the file from `data/sdm1/train/feats.scp`, and the `label.scp` is converted from the force-aligned labels located in `exp/sdm1/tri3a_ali`. Because the force-alignments are only generated on the training data, we split the training set into 90/10 parts, and use the 1/10 hold-out as the dev set (validation set). The script [run_ami.sh](run_ami.sh) will automatically do the spliting and format the file for MXNet. Please set the path in that script correctly before running. The [run_ami.sh](run_ami.sh) script will actually run the full pipeline including training the acoustic model and decoding. So you can skip the following steps if that scripts successfully runs.
 
 ### Run MXNet Acoustic Model Training
 
@@ -161,8 +134,8 @@ The final frame accuracy was around 62%.
 
 ### Run decode on the trained acoustic model
 
-1. Estimate senone priors by run `python make_stats.py --configfile=your-config.cfg | copy-feats ark:- ark:label_mean.ark` (edit necessary items like the path to the training dataset). It will generate the label counts in `label_mean.ark`. 
-2. Link to necessary Kaldi decode setup e.g. `local/` and `utils/` and Run `./run_ami.sh --model prefix model --num_epoch num`. 
+1. Estimate senone priors by run `python make_stats.py --configfile=your-config.cfg | copy-feats ark:- ark:label_mean.ark` (edit necessary items like the path to the training dataset). It will generate the label counts in `label_mean.ark`.
+2. Link to necessary Kaldi decode setup e.g. `local/` and `utils/` and Run `./run_ami.sh --model prefix model --num_epoch num`.
 
 Here are the results on TIMIT and AMI test set (using all default setup, 3 layer LSTM with projection layers):
 
@@ -172,4 +145,3 @@ Here are the results on TIMIT and AMI test set (using all default setup, 3 layer
 |AMI     | 51.7 (42.2) |
 
 Note that for AMI 42.2 was evaluated non-overlapped speech. Kaldi-HMM baseline was 67.2% and DNN was 57.5%.
-
