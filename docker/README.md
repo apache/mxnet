@@ -44,7 +44,7 @@ To launch the docker, we need to install [nvidia-docker](https://github.com/NVID
    docker pull dmlc/mxnet:cuda
    ```
 
-2. Train MNIST on CPU 0
+2. Train MNIST on GPU 0
 
    ```bash
    nvidia-docker run dmlc/mxnet:cuda python /mxnet/example/image-classification/train_mnist.py --gpus 0
