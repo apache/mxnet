@@ -28,7 +28,6 @@ if __name__ == '__main__':
     contexts = [mx.context.gpu(i) for i in range(1)]
 
     vocab = default_build_vocab("./data/sort.train.txt")
-    print len(vocab)
     rvocab = {}
     for k, v in vocab.items():
         rvocab[v] = k
@@ -43,7 +42,7 @@ if __name__ == '__main__':
     data = np.zeros((1, len(tks)))
     for k in range(len(tks)):
         data[0][k] = vocab[tks[k]]
-    print "data shape", data.shape
+    
     data = mx.nd.array(data)
     prob = model.forward(data)
     for k in range(len(tks)):        

@@ -22,7 +22,6 @@ class BiLSTMInferenceModel(object):
                                             num_embed,
                                             num_label,
                                             dropout)
-        print "input size: ", input_size
         batch_size = 1
         init_c = [('l%d_init_c'%l, (batch_size, num_hidden)) for l in range(2)]
         init_h = [('l%d_init_h'%l, (batch_size, num_hidden)) for l in range(2)]
