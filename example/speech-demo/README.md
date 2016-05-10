@@ -10,7 +10,7 @@ This folder contains examples for speech recognition.
 - [python_wrap](python_wrap): C wrappers for Kaldi C++ code, this is built into a .so. Python code that loads the .so and calls the C wrapper functions in `io_func/feat_readers/reader_kaldi.py`.
 
 Connect to Kaldi:
-- [decode_mxnet.sh](decode_mxnet.sh): calling by Kaldi to decode a acoustic model trained by mxnet (please select the `simple` method for decoding).
+- [decode_mxnet.sh](decode_mxnet.sh): called by Kaldi to decode a acoustic model trained by mxnet (please select the `simple` method for decoding).
 
 A full receipt:
 - [run_ami.sh](run_ami.sh): a full receipt to train and decode acoustic model on AMI. It takes features and alignment from Kaldi to train an acoustic model and decode it.
