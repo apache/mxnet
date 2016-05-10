@@ -949,7 +949,7 @@ MXNET_DLL int MXExecutorBindEX(SymbolHandle symbol_handle,
                                mx_uint *grad_req_type,
                                mx_uint aux_states_len,
                                NDArrayHandle *aux_states,
-                               ExecutorHandle *shared_exec,
+                               ExecutorHandle shared_exec,
                                ExecutorHandle *out);
 /*!
  * \brief set a call back to notify the completion of operation
