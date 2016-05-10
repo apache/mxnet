@@ -314,20 +314,26 @@ class CustomMetric(EvalMetric):
     ----------
     feval : callable(label, pred)
         Customized evaluation function.
-
     name : str, optional
         The name of the metric
+    allow_extra_outputs : bool
+        If true, the prediction outputs can have extra outputs.
+        This is useful in RNN, where the states are also produced
+        in outputs for forwarding.
     """
-    def __init__(self, feval, name=None):
+    def __init__(self, feval, name=None, allow_extra_outputs=False):
         if name is None:
             name = feval.__name__
             if name.find('<') != -1:
                 name = 'custom(%s)' % name
         super(CustomMetric, self).__init__(name)
         self._feval = feval
+        self._allow_extra_outputs = allow_extra_outputs
 
     def update(self, labels, preds):
-        check_label_shapes(labels, preds)
+        if not self._allow_extra_outputs:
+            check_label_shapes(labels, preds)
+
         for pred, label in zip(preds, labels):
             label = label.asnumpy()
             pred = pred.asnumpy()
@@ -345,22 +351,25 @@ class CustomMetric(EvalMetric):
                 self.num_inst += 1
 
 # pylint: disable=invalid-name
-def np(numpy_feval, name=None):
+def np(numpy_feval, name=None, allow_extra_outputs=False):
     """Create a customized metric from numpy function.
 
     Parameters
     ----------
     numpy_feval : callable(label, pred)
         Customized evaluation function.
-
     name : str, optional
         The name of the metric.
+    allow_extra_outputs : bool
+        If true, the prediction outputs can have extra outputs.
+        This is useful in RNN, where the states are also produced
+        in outputs for forwarding.
     """
     def feval(label, pred):
         """Internal eval function."""
         return numpy_feval(label, pred)
     feval.__name__ = numpy_feval.__name__
-    return CustomMetric(feval, name)
+    return CustomMetric(feval, name, allow_extra_outputs)
 # pylint: enable=invalid-name
 
 def create(metric, **kwargs):
