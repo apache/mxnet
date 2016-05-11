@@ -15,6 +15,7 @@ namespace mxnet {
 
 namespace symbol_constants {
 const char *kShapeKey = "__shape__";
+const char *kNamespaceSeparator = "_";
 }  // namespace symbol_constants
 
 /*!
@@ -494,7 +495,7 @@ std::map<std::string, std::string> Symbol::ListAttr() {
   this->DFSVisit([&ret](const std::shared_ptr<Node> &n) {
       if (n->attr.get() == nullptr) return;
       for (const auto &it : *(n->attr.get())) {
-        ret[n->name+"_"+it.first] = it.second;
+        ret[n->name+symbol_constants::kNamespaceSeparator+it.first] = it.second;
       }
     });
   return ret;

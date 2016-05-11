@@ -259,7 +259,7 @@ mlp = @mx.chain mx.Variable(:data)  =>
   mx.FullyConnected(num_hidden=64)  =>
   mx.Activation(act_type=:relu)     =>
   mx.FullyConnected(num_hidden=10)  =>
-  mx.SoftmaxOutput()
+  mx.SoftmaxOutput(name=:softmax)
 ```
 
 The model can be trained by
