@@ -67,7 +67,12 @@ class ROIPoolingOp : public Operator {
     Tensor<xpu, 3> bbox = in_data[roipool::kBox].get<xpu, 3, real_t>(s);
     Tensor<xpu, 4> out = out_data[roipool::kOut].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> max_idx = out_data[roipool::kMaxIdx].get<xpu, 4, real_t>(s);
-
+    CHECK_EQ(data.CheckContiguous(), true);
+    CHECK_EQ(bbox.CheckContiguous(), true);
+    CHECK_EQ(out.CheckContiguous(), true);
+    CHECK_EQ(max_idx.CheckContiguous(), true);
+    out = -FLT_MAX;
+    max_idx = -1.0f;
     ROIPoolForward(out, data, bbox, max_idx, param_.spatial_scale);
   }
 
@@ -92,7 +97,10 @@ class ROIPoolingOp : public Operator {
     Tensor<xpu, 3> bbox = in_data[roipool::kBox].get<xpu, 3, real_t>(s);
     Tensor<xpu, 4> max_idx = out_data[roipool::kMaxIdx].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> grad_in = in_grad[roipool::kData].get<xpu, 4, real_t>(s);
-
+    CHECK_EQ(grad_out.CheckContiguous(), true);
+    CHECK_EQ(bbox.CheckContiguous(), true);
+    CHECK_EQ(max_idx.CheckContiguous(), true);
+    CHECK_EQ(grad_in.CheckContiguous(), true);
     ROIPoolBackward(grad_in, grad_out, bbox, max_idx, param_.spatial_scale);
   }
 
