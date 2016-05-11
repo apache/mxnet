@@ -28,10 +28,10 @@ export NVCC = nvcc
 DEBUG = 0
 
 # the additional link flags you want to add
-ADD_LDFLAGS = 
+ADD_LDFLAGS =
 
 # the additional compile flags you want to add
-ADD_CFLAGS = 
+ADD_CFLAGS =
 
 #---------------------------------------------
 # matrix computation libraries for CPU/GPU
@@ -43,18 +43,18 @@ USE_CUDA = 0
 # add the path to CUDA library to link and compile flag
 # if you have already add them to environment variable, leave it as NONE
 # USE_CUDA_PATH = /usr/local/cuda
-USE_CUDA_PATH = /usr/local/cuda-7.5
+USE_CUDA_PATH = NONE
 
 # whether use CuDNN R3 library
-USE_CUDNN = 1
+USE_CUDNN = 0
 
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
-USE_NVRTC = 1
+USE_NVRTC = 0
 
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
 # imbin iterator
-USE_OPENCV = 0
+USE_OPENCV = 1
 
 # use openmp for parallelization
 USE_OPENMP = 1
@@ -66,7 +66,7 @@ UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S), Darwin)
 USE_BLAS = apple
 else
-USE_BLAS = openblas
+USE_BLAS = atlas
 endif
 
 # add path to intel library, you may need it for MKL, if you did not add the path
@@ -112,6 +112,7 @@ EXTRA_OPERATORS =
 #----------------------------
 
 # whether to use torch integration. This requires installing torch.
+# You also need to add TORCH_PATH/install/lib to your LD_LIBRARY_PATH
 # TORCH_PATH = $(HOME)/torch
 # MXNET_PLUGINS += plugin/torch/torch.mk
 
