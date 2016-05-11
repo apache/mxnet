@@ -18,7 +18,7 @@ if __name__ == '__main__':
     batch_size = 1
     buckets = []
     num_hidden = 300
-    num_embed = 160
+    num_embed = 512
     num_lstm_layer = 2
 
     num_epoch = 1

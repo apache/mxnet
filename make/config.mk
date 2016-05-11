@@ -28,17 +28,17 @@ export NVCC = nvcc
 DEBUG = 0
 
 # the additional link flags you want to add
-ADD_LDFLAGS = -L/disk1/deeplearning/local_install/lib
+ADD_LDFLAGS = 
 
 # the additional compile flags you want to add
-ADD_CFLAGS = -I/disk1/deeplearning/local_install/include
+ADD_CFLAGS = 
 
 #---------------------------------------------
 # matrix computation libraries for CPU/GPU
 #---------------------------------------------
 
 # whether use CUDA during compile
-USE_CUDA = 1
+USE_CUDA = 0
 
 # add the path to CUDA library to link and compile flag
 # if you have already add them to environment variable, leave it as NONE
