@@ -83,6 +83,7 @@ R-package/man/*.Rd
 *.zip
 *ubyte
 *.bin
+*.txt
 
 # ipython notebook
 *_pb2.py
