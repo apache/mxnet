@@ -92,10 +92,10 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
   DMLC_DECLARE_PARAMETER(ReshapeParam) {
     DMLC_DECLARE_FIELD(target_shape)
     .set_default(TShape())
-    .describe("(Deprecated!) Target new shape. One and only one dim can be 0, "
+    .describe("(Deprecated! Use shape instead.) Target new shape. One and only one dim can be 0, "
               "in which case it will be inferred from the rest of dims");
     DMLC_DECLARE_FIELD(keep_highest).set_default(false)
-    .describe("(Deprecated!) Whether keep the highest dim unchanged."
+    .describe("(Deprecated! Use shape instead.) Whether keep the highest dim unchanged."
               "If set to yes, than the first dim in target_shape is ignored,"
               "and always fixed as input");
     DMLC_DECLARE_FIELD(shape)
