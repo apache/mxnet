@@ -191,7 +191,7 @@ def do_training(training_method, args, module, data_train, data_val):
                 lr_scheduler.momentum = np.power(np.power(momentum, 1.0/(data_train.batch_size * truncate_len)), data_batch.effective_sample_count)
             else:
                 if data_batch.effective_sample_count is not None:
-                    lr_scheduler.effective_sample_count = data_batch.effective_sample_count
+                    lr_scheduler.effective_sample_count = 1#data_batch.effective_sample_count
 
             module.forward_backward(data_batch)
             module.update()
