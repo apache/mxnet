@@ -5,16 +5,19 @@ from collections import namedtuple
 
 LSTMState = namedtuple("LSTMState", ["c", "h"])
 LSTMParam = namedtuple("LSTMParam", ["i2h_weight", "i2h_bias",
-                                     "h2h_weight", "h2h_bias"])
+                                     "h2h_weight", "h2h_bias",
+                                     "ph2h_weight"
+                                     ])
 LSTMModel = namedtuple("LSTMModel", ["rnn_exec", "symbol",
                                      "init_states", "last_states",
                                      "seq_data", "seq_labels", "seq_outputs",
                                      "param_blocks"])
 
-def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
+def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0., num_hidden_proj=0):
     """LSTM Cell symbol"""
     if dropout > 0.:
         indata = mx.sym.Dropout(data=indata, p=dropout)
+    
     i2h = mx.sym.FullyConnected(data=indata,
                                 weight=param.i2h_weight,
                                 bias=param.i2h_bias,
@@ -22,7 +25,8 @@ def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
                                 name="t%d_l%d_i2h" % (seqidx, layeridx))
     h2h = mx.sym.FullyConnected(data=prev_state.h,
                                 weight=param.h2h_weight,
-                                bias=param.h2h_bias,
+                                #bias=param.h2h_bias,
+                                no_bias=True,
                                 num_hidden=num_hidden * 4,
                                 name="t%d_l%d_h2h" % (seqidx, layeridx))
     gates = i2h + h2h
@@ -34,10 +38,20 @@ def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
     out_gate = mx.sym.Activation(slice_gates[3], act_type="sigmoid")
     next_c = (forget_gate * prev_state.c) + (in_gate * in_transform)
     next_h = out_gate * mx.sym.Activation(next_c, act_type="tanh")
-    return LSTMState(c=next_c, h=next_h)
+
+    if num_hidden_proj > 0:
+        proj_next_h = mx.sym.FullyConnected(data=next_h,
+                                            weight=param.ph2h_weight,
+                                            no_bias=True,
+                                            num_hidden=num_hidden_proj,
+                                            name="t%d_l%d_ph2h" % (seqidx, layeridx))
+
+        return LSTMState(c=next_c, h=proj_next_h)
+    else:
+        return LSTMState(c=next_c, h=next_h)
 
 def lstm_unroll(num_lstm_layer, seq_len, input_size,
-                num_hidden, num_label, dropout=0.):
+                num_hidden, num_label, dropout=0., output_states=False, take_softmax=True, num_hidden_proj=0):
 
     cls_weight = mx.sym.Variable("cls_weight")
     cls_bias = mx.sym.Variable("cls_bias")
@@ -47,7 +61,9 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
         param_cells.append(LSTMParam(i2h_weight = mx.sym.Variable("l%d_i2h_weight" % i),
                                      i2h_bias = mx.sym.Variable("l%d_i2h_bias" % i),
                                      h2h_weight = mx.sym.Variable("l%d_h2h_weight" % i),
-                                     h2h_bias = mx.sym.Variable("l%d_h2h_bias" % i)))
+                                     h2h_bias = mx.sym.Variable("l%d_h2h_bias" % i),
+                                     ph2h_weight = mx.sym.Variable("l%d_ph2h_weight" % i)
+                                     ))
         state = LSTMState(c=mx.sym.Variable("l%d_init_c" % i),
                           h=mx.sym.Variable("l%d_init_h" % i))
         last_states.append(state)
@@ -64,14 +80,14 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
 
         # stack LSTM
         for i in range(num_lstm_layer):
-            if i==0:
-                dp=0.
+            if i == 0:
+                dp = 0.
             else:
                 dp = dropout
             next_state = lstm(num_hidden, indata=hidden,
                               prev_state=last_states[i],
                               param=param_cells[i],
-                              seqidx=seqidx, layeridx=i, dropout=dp)
+                              seqidx=seqidx, layeridx=i, dropout=dp, num_hidden_proj=num_hidden_proj)
             hidden = next_state.h
             last_states[i] = next_state
         # decoder
@@ -79,23 +95,32 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
             hidden = mx.sym.Dropout(data=hidden, p=dropout)
         hidden_all.append(hidden)
 
-    hidden_concat = mx.sym.Concat(*hidden_all, dim=0)
-    pred = mx.sym.FullyConnected(data=hidden_concat, num_hidden=num_label,
+    hidden_concat = mx.sym.Concat(*hidden_all, dim=1)
+    if num_hidden_proj > 0:
+        hidden_final = mx.sym.Reshape(hidden_concat, target_shape=(0, num_hidden_proj))
+    else:
+        hidden_final = mx.sym.Reshape(hidden_concat, target_shape=(0, num_hidden))
+    pred = mx.sym.FullyConnected(data=hidden_final, num_hidden=num_label,
                                  weight=cls_weight, bias=cls_bias, name='pred')
+    pred = mx.sym.Reshape(pred, target_shape=(0, seq_len, num_label))
+    
+    if take_softmax:
+        sm = mx.sym.SoftmaxOutput(data=pred, label=label, ignore_label=0, 
+                                  use_ignore=True, name='softmax')
+    else:
+        sm = pred
 
-    ################################################################################
-    # Make label the same shape as our produced data path
-    # I did not observe big speed difference between the following two ways
+    if output_states:
+        # block the gradients of output states
+        for i in range(num_lstm_layer):
+            state = last_states[i]
+            state = LSTMState(c=mx.sym.BlockGrad(state.c, name="l%d_last_c" % i),
+                              h=mx.sym.BlockGrad(state.h, name="l%d_last_h" % i))
+            last_states[i] = state
 
-    label = mx.sym.transpose(data=label)
-    label = mx.sym.Reshape(data=label, target_shape=(0,))
-
-    #label_slice = mx.sym.SliceChannel(data=label, num_outputs=seq_len)
-    #label = [label_slice[t] for t in range(seq_len)]
-    #label = mx.sym.Concat(*label, dim=0)
-    #label = mx.sym.Reshape(data=label, target_shape=(0,))
-    ################################################################################
-
-    sm = mx.sym.SoftmaxOutput(data=pred, label=label, ignore_label=0, use_ignore=True, name='softmax')
+        # also output states, used in truncated-bptt to copy over states
+        unpack_c = [state.c for state in last_states]
+        unpack_h = [state.h for state in last_states]
+        sm = mx.sym.Group([sm] + unpack_c + unpack_h)
 
     return sm

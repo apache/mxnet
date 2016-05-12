@@ -5,9 +5,9 @@ import shlex
 import time
 import re
 
-from utils.utils import to_bool
-from feat_readers.common import *
-from feat_readers import stats
+from utils import to_bool
+from .feat_readers.common import *
+from .feat_readers import stats
 
 class DataReadStream(object):
 
@@ -71,7 +71,7 @@ class DataReadStream(object):
         if self.has_labels:
             if separate_lines:
                 if len(lines) % 2 != 0:
-                    print "List has mis-matched number of feature files and label files"
+                    print("List has mis-matched number of feature files and label files")
                     sys.exit(1)
                 self.orig_file_lst = []
                 for i in xrange(0, len(lines), 2):
@@ -81,8 +81,8 @@ class DataReadStream(object):
                 for i in xrange(len(lines)):
                     pair = re.compile("\s+").split(lines[i])
                     if len(pair) != 2:
-                        print lines[i]
-                        print "Each line in the train and eval lists must contain feature file and label file separated by space character"
+                        print(lines[i])
+                        print("Each line in the train and eval lists must contain feature file and label file separated by space character")
                         sys.exit(1)
                     self.orig_file_lst.append(pair)
         else:
@@ -90,7 +90,7 @@ class DataReadStream(object):
             self.orig_file_lst = []
             for i in xrange(0, len(lines), 1):
                 self.orig_file_lst.append((lines[i], None))
-                
+
         # save arguments
 
         self.n_ins = n_ins
@@ -151,7 +151,7 @@ class DataReadStream(object):
     def read_by_matrix(self):
         self.by_matrix = True
 
-       
+
     def get_shared(self):
         return self.shared_x, self.shared_y
 
@@ -251,7 +251,7 @@ class DataReadStream(object):
         feats, tgts = self._queue_excess(at_most, feats, tgts)
 
         return feats, tgts
-    
+
     def current_utt_id(self):
         assert(self.by_matrix or self.split_parts)
         return self.utt_id

@@ -305,6 +305,7 @@ class SGD(Optimizer):
             assert self.momentum == 0.0
             weight[:] += -lr * (grad + self.wd * weight)
 
+
 @register
 class NAG(SGD):
     """SGD with nesterov

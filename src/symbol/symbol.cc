@@ -500,6 +500,16 @@ std::map<std::string, std::string> Symbol::ListAttr() {
   return ret;
 }
 
+std::map<std::string, std::string> Symbol::ListAttrShallow() {
+  Node* node = heads_[0].source.get();
+  for (const DataEntry& e : heads_) {
+    CHECK(node == e.source.get())
+        << "Symbol.ListAttrShallow only works for non-grouped symbol";
+  }
+  if (node->attr.get() == nullptr) return std::map<std::string, std::string>();
+  return *node->attr.get();
+}
+
 
 Symbol Symbol::operator () (const std::vector<Symbol>& args,
                             const std::string& name) const {
