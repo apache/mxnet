@@ -1032,7 +1032,7 @@ int MXExecutorBindEX(SymbolHandle symbol_handle,
                      mx_uint *grad_req_type,
                      mx_uint aux_states_len,
                      NDArrayHandle *aux_states,
-                     ExecutorHandle *shared_exec,
+                     ExecutorHandle shared_exec,
                      ExecutorHandle *out) {
   API_BEGIN();
   Symbol *symb = static_cast<Symbol*>(symbol_handle);
