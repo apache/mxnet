@@ -221,7 +221,7 @@ def check_softmax_with_ignore_label(xpu):
 
     grad0 = grad.asnumpy()
 
-    for i in range(shape[0]/2):
+    for i in range(int(shape[0]/2)):
         l_np[i] = 0
     l[:] = l_np
 
@@ -229,8 +229,8 @@ def check_softmax_with_ignore_label(xpu):
     exec1.backward()
     grad1 = grad.asnumpy()
 
-    assert abs(np.sum(grad1[:shape[0]/2])) < 1e-5
-    assert reldiff(grad0[shape[0]/2:], grad1[shape[0]/2:]) < 1e-5
+    assert(abs(np.sum(grad1[:int(shape[0]/2)])) < 1e-5)
+    assert(reldiff(grad0[int(shape[0]/2):], grad1[int(shape[0]/2):]) < 1e-5)
 
 def check_softmax_with_shape(shape, xpu):
     X = mx.symbol.Variable('X')
@@ -750,7 +750,7 @@ def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3),
     be.forward(True)
     out_o = be.outputs[0].asnumpy()
     ndo = be.outputs[0]
-    
+
     out_grads = np.zeros(shape=be.outputs[0].shape, dtype=np.float32)
     out_grads[0,0, 16,16] = 1.0
     out_grad = mx.nd.array(out_grads)
@@ -784,7 +784,7 @@ def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3),
     be.backward([impulse_error])
     out_orig = be.outputs[0].asnumpy()
     kernel_gradient = be.grad_arrays[1].asnumpy()
-    
+
     dkernel = mx.nd.array(rnd_kernel_s + kernel_gradient)
 
     be = net.bind(mx.cpu(), args={ 'input' : white_in, 'test_convolution_weight' : dkernel})
@@ -798,7 +798,35 @@ def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3),
 def test_convolution_dilated_impulse_response():
     for dil in [ (1,1), (2,2), (3,3) ]:
         for ks in [ (3,3), (4,4), (2,3), (3,2), (1,1) ]:
-            test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks) 
+            test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
+
+def test_reshape():
+    # case 1:
+    net = mx.sym.Variable("data")
+    net = mx.sym.Reshape(net, shape=(0, -1))
+    _, output_shape, __ = net.infer_shape(data=(2, 3, 5, 5))
+    assert(output_shape[0] == (2, 75))
+    # case 2:
+    net = mx.sym.Variable("data")
+    net = mx.sym.Reshape(net, shape=(0, 0, -1))
+    _, output_shape, __ = net.infer_shape(data=(2, 3, 5, 5))
+    assert(output_shape[0] == (2, 3, 25))
+    # case 3:
+    net = mx.sym.Variable("data")
+    net = mx.sym.Reshape(net, shape=(5, 3, 0, -1))
+    _, output_shape, __ = net.infer_shape(data=(2, 3, 5, 5))
+    assert(output_shape[0] == (5, 3, 5, 2))
+    # case 4:
+    net = mx.sym.Variable("data")
+    net = mx.sym.Reshape(net, shape=(0, 0, 0, 0))
+    _, output_shape, __ = net.infer_shape(data=(2, 3, 5, 5))
+    assert(output_shape[0] == (2, 3, 5, 5))
+    # case 5: test old api
+    net = mx.sym.Variable("data")
+    net = mx.sym.Reshape(net, target_shape=(2, 0))
+    _, output_shape, __ = net.infer_shape(data=(2, 3, 5, 5))
+    assert(output_shape[0] == (2, 75))
+
 
 if __name__ == '__main__':
     test_convolution_grouping()
@@ -824,5 +852,6 @@ if __name__ == '__main__':
     test_batchnorm_training()
     check_softmax_with_ignore_label(mx.cpu())
     test_convolution_dilated_impulse_response()
+    test_reshape()
     #check_softmax_with_shape((3,4), mx.cpu())
     #check_multi_softmax_with_shape((3,4,5), mx.cpu())
