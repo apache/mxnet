@@ -17,7 +17,6 @@
 #define MXNET_PREDICT_ONLY 	1
 #define DISABLE_OPENMP 1
 
-#include "src/ndarray/unary_function.cc"
 #include "src/ndarray/ndarray_function.cc"
 #include "src/ndarray/ndarray.cc"
 #include "src/engine/engine.cc"
@@ -44,8 +43,10 @@
 #include "src/operator/slice_channel.cc"
 #include "src/operator/softmax_output.cc"
 #include "src/operator/deconvolution.cc"
+#include "src/operator/elementwise_binary_scalar_op.cc"
+#include "src/operator/elementwise_unary_op.cc"
+#include "src/operator/embedding.cc"
 #include "src/storage/storage.cc"
-#include "src/common/tblob_op_registry.cc"
 
 #include "src/resource.cc"
 
