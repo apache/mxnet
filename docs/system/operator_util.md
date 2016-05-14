@@ -19,8 +19,21 @@ Before we continue on the operator interface, it is recommend to take a look at 
 library guide](https://github.com/dmlc/mshadow/tree/master/guide) since actual calculations 
 will be done in `mshadow::TBlob` structure.
 
-# Unified Operator API
-## Define Shapes
+In this example, we will create a operator functioning as smooth l1 loss, which is a mixture 
+of l1 loss and l2 loss. The loss itself can be written as:
+```
+loss = outside_weight .* f(inside_weight .* (data - label))
+grad = outside_weight .* inside_weight .* f'(inside_weight .* (data - label))
+```
+where `.*` stands for elementwise multiplication and `f`, `f'` is the smooth l1 loss function, 
+which we suppose we have in `mshadow` for now. At first glance, it is impossible to implement 
+this particular loss as an unary or binary operator. But we have automatic differentiation in 
+the symbolic execution. That would simplify the loss to `f` and `f'` directly. In this way, this 
+loss is no more complex than a `sin` or a `abs` function and can certainly be implemented as a 
+unary operator.
+
+## Unified Operator API
+### Define Shapes
 `mshadow` library require explicit memory allocation. As a consequence, all data shape
 must be provided before any calculation. Before we proceed to define functions and gradient, 
 we would like to check input data shape consistency and provide output shape.
@@ -36,9 +49,29 @@ When this function is not defined, the default output shape will be the same as 
 In the case of binary operator, the shape of `lhs` and `rhs` is checked to be the same by default.
 
 Shape functions can also be used to check if any additional arguments and resources are present.
-Please refer to additional usages.
+Please refer to additional usages on `EnvArguments` to achieve this aim.
 
-## Define Functions
+Before we start on our smooth l1 loss example, we define a `XPU` to `cpu` or `gpu` in the header 
+`smooth_l1_unary-inl.h` implementation so that we reuse the same code in `smooth_l1_unary.cc` and 
+`smooth_l1_unary.cu`.
+```cpp
+#include <mxnet/operator_util.h>
+#if defined(__CUDACC__)
+#define XPU gpu
+#else
+#define XPU cpu
+#endif
+```
+
+In our smooth l1 loss example, it is okay for the default behavior of same output shape as source. 
+Written explicitly, it is 
+```cpp
+inline TShape SmoothL1Shape_(const TShape& src,
+                             const EnvArguments& env) {
+  return TShape(src);
+```
+
+### Define Functions
 Create an unary or binary function with one output `mshadow::TBlob`.
 ```cpp
 typedef void (*UnaryFunction)(const TBlob& src,
@@ -76,7 +109,32 @@ typedef void (*BinaryFunction)(const TBlob& lhs,
   There is a macro defined in `operator_util.h` for a simplified use of `OpReqType`. 
   `ASSIGN_DISPATCH(out, req, exp)` will check `req` and perform an assignment.
 
-## Define Gradients (optional)
+In our smooth l1 loss example, we use `UnaryFunction` to define the function of this operator.
+```cpp
+template<typename xpu>
+void SmoothL1Forward_(const TBlob& src,
+                      const EnvArguments& env,
+                      TBlob *ret,
+                      OpReqType req,
+                      RunContext ctx) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  real_t sigma2 = env.scalar * env.scalar;
+  MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+    mshadow::Tensor<xpu, 2, DType> out = ret->get<xpu, 2, DType>(s);
+    mshadow::Tensor<xpu, 2, DType> in = src.get<xpu, 2, DType>(s);
+    ASSIGN_DISPATCH(out, req,
+                    F<mshadow_op::smooth_l1_loss>(in, ScalarExp<DType>(sigma2)));
+  });
+}
+```
+After obtaining `mshadow::Stream` from `RunContext`, we get `mshadow::Tensor` from `mshadow::TBlob`. 
+`mshadow::F` is a shortcut to initiate a `mshadow` expression. The macro `MSHADOW_TYPE_SWITCH(type, DType, ...)` 
+handles details on different types and the macro `ASSIGN_DISPATCH(out, req, exp)` checks `OpReqType` and 
+performs actions accordingly. `sigma2` is a special parameter in this loss, which we will cover in addtional usages. 
+
+### Define Gradients (optional)
 Create a gradient function with various types of inputs.
 ```cpp
 // depending only on out_grad
@@ -111,7 +169,32 @@ are doubled.
   }
   ```
 
-## Register Operator
+In our smooth l1 loss example, note that it is a `f'(x)`, which utilize input for gradient calculation, 
+so the `UnaryGradFunctionT2` is suitable. To enable chain rule of gradient, we also need to multiply 
+`out_grad` from top to the result of `in_grad`. 
+```cpp
+template<typename xpu>
+void SmoothL1BackwardUseIn_(const OutputGrad& out_grad,
+                            const Input0& in_data0,
+                            const EnvArguments& env,
+                            TBlob *in_grad,
+                            OpReqType req,
+                            RunContext ctx) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  real_t sigma2 = env.scalar * env.scalar;
+  MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
+    mshadow::Tensor<xpu, 2, DType> src = in_data0.data.get<xpu, 2, DType>(s);
+    mshadow::Tensor<xpu, 2, DType> ograd = out_grad.data.get<xpu, 2, DType>(s);
+    mshadow::Tensor<xpu, 2, DType> igrad = in_grad->get<xpu, 2, DType>(s);
+    ASSIGN_DISPATCH(igrad, req,
+                    ograd * F<mshadow_op::smooth_l1_gradient>(src, ScalarExp<DType>(sigma2)));
+  });
+}
+```
+
+### Register Operator
 After creating shape, function and gradient, it is sufficient to restore them into both NDArray operator and 
 Symbolic operator. There is a registration macro defined in `operator_util.h` to simplify this process.
 ```cpp
@@ -132,14 +215,27 @@ enum SimpleOpInplaceOption {
 };
 ```
 
-## All in a list
+In our example, we have a gradient function that relies on input data, so the function can not be written in 
+place. The output gradient is useless after gradient computation, so the gradient can be written inplace. 
+```cpp
+MXNET_REGISTER_SIMPLE_OP(smooth_l1, XPU)
+.set_function(XPU::kDevMask, SmoothL1Forward_<XPU>, kNoInplace)
+.set_gradient(XPU::kDevMask, SmoothL1BackwardUseIn_<XPU>, kInplaceOutIn)
+.set_enable_scalar(true)
+.describe("Calculate Smooth L1 Loss(lhs, scalar)");
+```
+Remember from shape functions that a default behavior without `set_shape_function` will be forcing the inputs 
+(if binary) to be of the same shape and yield the same shape for output. The `set_enable_scalar` will be 
+discussed in addtional information.
+
+### All in a List
 * Create a shape function for determining the output shape
 * Create a function as the forward routine by choosing a suitable function type
 * Create a gradient as the backward routine by choosing a suitable gradient type
 * Register the operator using registration process
 
-# Additional Information on the Unified Operator API
-## Usage on `EnvArguments`
+## Additional Information on the Unified Operator API
+### Usage on `EnvArguments`
 Some operations may need a scalar as input, such as gradient scale, a set of keyword arguments 
 controlling behavior or a temporary space to speed up calculations.
 `EnvArguments` provide additional arguments and resources to make calculations more scalable 
@@ -182,3 +278,41 @@ auto tmp_space_res = env.resources[0].get_space(some_shape, some_stream);
 auto rand_res = env.resources[0].get_random(some_stream);
 ```
 Refer to `src/operator/loss_binary_op-inl.h` for a concrete example.
+
+In our smooth l1 loss example, a scalar input is needed to mark the turning point of loss function. Therefore 
+in the registration process, we use `set_enable_scalar(true)` and use `env.scalar` in function and gradient 
+declarations. 
+
+### Crafting a Tensor Operation
+Since actual computation utilize `mshadow` library and sometimes we don't have functions readily available, it is 
+possible to craft such tensor operations in operator implementations. If such functions are elementwise defined, we 
+can implement them as a `mxnet::op::mshadow_op`. `src/operator/mshadow_op.h` contains a lot of `mshadow_op`, serving 
+as a good example. `mshadow_op` are expression mappers and deal with the scalar case of desired functions. Refer to 
+[mshadow expression API guide](https://github.com/dmlc/mshadow/tree/master/doc) for details.
+
+It could also be possible that the operation cannot be done in an elementwise way, like the softmax loss and gradient. 
+Then there is a need to create a new tensor operation. Then we need to create a `mshadow` function and a `mshadow::cuda`
+function directly. Please refer to `mshadow` library for details or `src/operator/roi_pooling.cc` for an example.
+
+In our smooth l1 loss example, we create two mappers, namely the scalar cases of smooth l1 loss and gradient.
+```cpp
+namespace mshadow_op {
+struct smooth_l1_loss {
+  // a is x, b is sigma2
+  MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
+    if (a > 1.0f / b) {
+      return a - 0.5f / b;
+    } else if (a < -1.0f / b) {
+      return -a - 0.5f / b;
+    } else {
+      return 0.5f * a * a * b;
+    }
+  }
+};
+}
+```
+The gradient is similar, which can be found in `src/operator/smooth_l1_unary-inl.h`.
+
+### Beyond Two Operands
+This new unified API is designed to fulfill the fundamentals of an operation. For operators with more than two inputs, 
+more than one outputs, or in need of more features, please refer to the original [Operator API](operator.md).
