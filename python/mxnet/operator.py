@@ -7,7 +7,7 @@ from ctypes import CFUNCTYPE, POINTER, Structure, pointer
 from ctypes import c_void_p, cast, c_int, c_char, c_char_p, cast, c_bool
 c_int_p = POINTER(c_int)
 from .base import _LIB, check_call
-from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle
+from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol
 from .ndarray import NDArray
 
@@ -336,9 +336,9 @@ class NDArrayOp(PythonOp):
         def declare_backward_dependency(out_grad, in_data, out_data, num_dep, deps, _):
             """C Callback for NDArrayOpProp::DeclareBacwardDependency"""
             try:
-                out_grad = [out_grad[i] for i in xrange(len(self.list_outputs()))]
-                in_data = [in_data[i] for i in xrange(len(self.list_arguments()))]
-                out_data = [out_data[i] for i in xrange(len(self.list_outputs()))]
+                out_grad = [out_grad[i] for i in range(len(self.list_outputs()))]
+                in_data = [in_data[i] for i in range(len(self.list_arguments()))]
+                out_data = [out_data[i] for i in range(len(self.list_outputs()))]
                 rdeps = self.declare_backward_dependency(out_grad, in_data, out_data)
                 num_dep[0] = len(rdeps)
                 rdeps = cast(c_array(c_int, rdeps), c_int_p)
@@ -564,7 +564,7 @@ def register(reg_name):
 
         def creator(op_type, argc, keys, vals, ret):
             """internal function"""
-            assert op_type == reg_name
+            assert py_str(op_type) == reg_name
             kwargs = dict([(keys[i], vals[i]) for i in range(argc)])
             op_prop = prop_cls(**kwargs)
 
@@ -646,9 +646,9 @@ def register(reg_name):
             def declare_backward_dependency_entry(out_grad, in_data, out_data, num_dep, deps):
                 """C Callback for CustomOpProp::DeclareBacwardDependency"""
                 try:
-                    out_grad = [out_grad[i] for i in xrange(len(op_prop.list_outputs()))]
-                    in_data = [in_data[i] for i in xrange(len(op_prop.list_arguments()))]
-                    out_data = [out_data[i] for i in xrange(len(op_prop.list_outputs()))]
+                    out_grad = [out_grad[i] for i in range(len(op_prop.list_outputs()))]
+                    in_data = [in_data[i] for i in range(len(op_prop.list_arguments()))]
+                    out_data = [out_data[i] for i in range(len(op_prop.list_outputs()))]
                     rdeps = op_prop.declare_backward_dependency(out_grad, in_data, out_data)
                     num_dep[0] = len(rdeps)
                     rdeps = cast(c_array(c_int, rdeps), c_int_p)
