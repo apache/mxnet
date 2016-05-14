@@ -84,6 +84,26 @@ void ReduceMid(TBlob const& src,
   out = mshadow::expr::reduce_with_axis<Reducer, false>(in, 1);
 }
 
+// backward function that takes input value of the op
+template<typename xpu>
+void SumMidBackward_(const OutputGrad& out_grad,
+  const EnvArguments& env,
+  TBlob *in_grad,
+  OpReqType req,
+  RunContext ctx) {
+  using namespace mxnet::op;
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(in_grad->type_flag_, out_grad.data.type_flag_)
+    << "Unary function only support input/output with the same type";
+  MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
+    mshadow::Tensor<xpu, 2, DType> ograd = out_grad.data.get<xpu, 2, DType>(s);
+    mshadow::Tensor<xpu, 3, DType> igrad = in_grad->get<xpu, 3, DType>(s);
+    ASSIGN_DISPATCH(igrad, req,
+      broadcast_with_axis(ograd, 0, igrad.shape_[1]));
+  });
+}
+
 inline TShape ReduceMidShape(const TShape& ishape,
                              const EnvArguments& env)  {
   CHECK_EQ(ishape.ndim(), 3) << "Input shape must be 3 dimensional.";
@@ -154,8 +174,9 @@ MXNET_REGISTER_SIMPLE_OP(sum, XPU)
 
 // sum_mid
 MXNET_REGISTER_SIMPLE_OP(sum_mid_internal, XPU)
-.set_function(XPU::kDevMask, ReduceMid<XPU, mshadow::red::sum>, kNoInplace, kNotRegisterSymbolic)
+.set_function(XPU::kDevMask, ReduceMid<XPU, mshadow::red::sum>, kNoInplace, kRegisterSymbolic)
 .set_shape_function(ReduceMidShape)
+.set_gradient(XPU::kDevMask, SumMidBackward_<XPU>, kNoInplace)
 .describe("Take sum on medium dimension of the 3D src.");
 
 // argmax channel
