@@ -3,7 +3,7 @@ NDArray operations are similar to symbolic operations except the fact that somet
 cannot write in place to the operands without a complete dependency graph. However, the 
 logics underlying NDArray and Symbolic operation are almost the same. Unifying different 
 invoking process and returning to the fundamental elements of operators are the purpose of 
-this new unified operator API. Because most mathematical operators attend to one or two 
+**SimpleOp**, a new unified operator API. Because most mathematical operators attend to one or two 
 operands and more operands make dependency-related optimization useful, the unified operator 
 are specially designed for unary and binary operations.
 
@@ -15,7 +15,7 @@ complex. Whether output value, input data or neither are needed alongside head g
 crucial to construct a dependency graph. Gradient functions in the unified API is thus 
 differentiated through the types of operands it takes for calculation.
 
-Before we continue on the operator interface, it is recommend to take a look at the [mshadow
+Before we continue on the SimpleOp interface, it is recommend to take a look at the [mshadow
 library guide](https://github.com/dmlc/mshadow/tree/master/guide) since actual calculations 
 will be done in `mshadow::TBlob` structure.
 
@@ -32,7 +32,7 @@ the symbolic execution. That would simplify the loss to `f` and `f'` directly. I
 loss is no more complex than a `sin` or a `abs` function and can certainly be implemented as a 
 unary operator.
 
-## Unified Operator API
+## SimpleOp: the Unified Operator API
 ### Define Shapes
 `mshadow` library require explicit memory allocation. As a consequence, all data shape
 must be provided before any calculation. Before we proceed to define functions and gradient, 
@@ -194,7 +194,7 @@ void SmoothL1BackwardUseIn_(const OutputGrad& out_grad,
 }
 ```
 
-### Register Operator
+### Register SimpleOp to MXNet
 After creating shape, function and gradient, it is sufficient to restore them into both NDArray operator and 
 Symbolic operator. There is a registration macro defined in `operator_util.h` to simplify this process.
 ```cpp
@@ -234,7 +234,7 @@ discussed in addtional information.
 * Create a gradient as the backward routine by choosing a suitable gradient type
 * Register the operator using registration process
 
-## Additional Information on the Unified Operator API
+## Additional Information on SimpleOp
 ### Usage on `EnvArguments`
 Some operations may need a scalar as input, such as gradient scale, a set of keyword arguments 
 controlling behavior or a temporary space to speed up calculations.
