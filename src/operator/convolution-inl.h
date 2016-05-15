@@ -52,7 +52,7 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     .describe("Number of groups partition. "
               "This option is not supported by CuDNN, you can use SliceChannel to num_group,"
               "apply convolution and concat instead to achieve the same need.");
-    DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 4096)
+    DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 8192)
     .describe("Tmp workspace for convolution (MB).");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
@@ -265,8 +265,9 @@ class ConvolutionOp : public Operator {
     // if param_.workspace is set to zero the nstep_ equals ishape[0] (batch)
     nstep_ = std::max(
         std::min(
-          static_cast<index_t>(param_.workspace / (shape_colunit_.Size() + shape_dstunit_.Size())),
-          ishape[0]),
+            static_cast<index_t>(
+                param_.workspace / (shape_colunit_.Size() + shape_dstunit_.Size())),
+            ishape[0]),
         1U);
 
     mshadow::Shape<2> scol = mshadow::Shape2(shape_colunit_[0],
