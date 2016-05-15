@@ -247,21 +247,21 @@ class Symbol(object):
         else:
             return None
 
-    def list_attr(self, shallow=False):
-        """Get all attributes from the symbol and its descendents.
+    def list_attr(self, recursive=False):
+        """Get all attributes from the symbol.
 
         Parameters
         ----------
-        shallow : bool
-            Default `False`. When `shallow` is `False`, list recursively all the
+        recursive : bool
+            Default `False`. When `recursive` is `True`, list recursively all the
             attributes in the descendents. The attribute names are pre-pended with
-            the symbol names to avoid conflicts. If `True`, then only attributes
+            the symbol names to avoid conflicts. If `False`, then only attributes
             that belongs to this symbol is returned, and the attribute names will
             **not** be pre-pended with the symbol name.
         """
         size = mx_uint()
         pairs = ctypes.POINTER(ctypes.c_char_p)()
-        f_handle = _LIB.MXSymbolListAttrShallow if shallow else _LIB.MXSymbolListAttr
+        f_handle = _LIB.MXSymbolListAttr if recursive else _LIB.MXSymbolListAttrShallow
         check_call(f_handle(self.handle, ctypes.byref(size), ctypes.byref(pairs)))
         return {py_str(pairs[i*2]): py_str(pairs[i*2+1]) for i in range(size.value)}
 
@@ -535,7 +535,6 @@ class Symbol(object):
         check_call(_LIB.MXSymbolPrint(
             self.handle, ctypes.byref(debug_str)))
         return py_str(debug_str.value)
-
 
     def save(self, fname):
         """Save symbol into file.
@@ -990,12 +989,13 @@ def _make_atomic_symbol_function(handle):
                '    Name of the resulting symbol.\n\n' +
                'Returns\n' +
                '-------\n' +
-               'symbol: Symbol\n'+
+               'symbol: Symbol\n' +
                '    The result symbol.')
     doc_str = doc_str % (desc, param_str)
     extra_doc = "\n" + '\n'.join([x.__doc__ for x in type.__subclasses__(SymbolDoc)
                                   if x.__name__ == '%sDoc' % func_name])
     doc_str += re.sub(re.compile("    "), "", extra_doc)
+
     def creator(*args, **kwargs):
         """Activation Operator of Neural Net.
         The parameters listed below can be passed in as keyword arguments.
@@ -1077,6 +1077,7 @@ def _init_symbol_module():
 # Initialize the atomic symbo in startups
 _init_symbol_module()
 
+
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def pow(base, exp):
@@ -1093,11 +1094,11 @@ def pow(base, exp):
     """
     if isinstance(base, Symbol) and isinstance(exp, Symbol):
         return Symbol._Power(base, exp)
-    if  isinstance(base, Symbol) and isinstance(exp, Number):
+    if isinstance(base, Symbol) and isinstance(exp, Number):
         return Symbol._PowerScalar(base, scalar=exp)
-    if  isinstance(base, Number) and isinstance(exp, Symbol):
+    if isinstance(base, Number) and isinstance(exp, Symbol):
         return Symbol._RPowerScalar(exp, scalar=base)
-    if  isinstance(base, Number) and isinstance(exp, Number):
+    if isinstance(base, Number) and isinstance(exp, Number):
         return base**exp
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(base)), str(type(exp))))
@@ -1119,14 +1120,15 @@ def maximum(left, right):
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
         return Symbol._Maximum(left, right)
-    if  isinstance(left, Symbol) and isinstance(right, Number):
+    if isinstance(left, Symbol) and isinstance(right, Number):
         return Symbol._MaximumScalar(left, scalar=right)
-    if  isinstance(left, Number) and isinstance(right, Symbol):
+    if isinstance(left, Number) and isinstance(right, Symbol):
         return Symbol._MaximumScalar(right, scalar=left)
-    if  isinstance(left, Number) and isinstance(right, Number):
+    if isinstance(left, Number) and isinstance(right, Number):
         return left if left > right else right
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
+
 
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
@@ -1144,11 +1146,11 @@ def minimum(left, right):
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
         return Symbol._Minimum(left, right)
-    if  isinstance(left, Symbol) and isinstance(right, Number):
+    if isinstance(left, Symbol) and isinstance(right, Number):
         return Symbol._MinimumScalar(left, scalar=right)
-    if  isinstance(left, Number) and isinstance(right, Symbol):
+    if isinstance(left, Number) and isinstance(right, Symbol):
         return Symbol._MinimumScalar(right, scalar=left)
-    if  isinstance(left, Number) and isinstance(right, Number):
+    if isinstance(left, Number) and isinstance(right, Number):
         return left if left > right else right
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))

@@ -46,7 +46,7 @@ mlp = @mx.chain mx.Variable(:data) =>
   mx.FullyConnected(num_hidden=64) =>
   mx.Activation(act_type=:relu)    =>
   mx.FullyConnected(num_hidden=10) =>
-  mx.Softmax()
+  mx.Softmax(name=:softmax)
 ```
 
 在执行一个符号表达式前，我们需要对所有的自由变量进行赋值。上例中，我们需要给定数据，和各个层里隐式定义的输入，例如全连接层的权重和偏值。我们同时要申明所需要的输出，例如softmax的输出。
