@@ -23,11 +23,11 @@ DMLC_REGISTER_PARAMETER(ReshapeParam);
 
 MXNET_REGISTER_OP_PROPERTY(Reshape, ReshapeProp)
 .describe("Reshape input to target shape")
-.add_argument("data", "Symbol", "Input data to  reshape.")
+.add_argument("data", "Symbol", "Input data to reshape.")
 .add_arguments(ReshapeParam::__FIELDS__());
 
 MXNET_REGISTER_OP_PROPERTY(Flatten, FlattenProp)
 .describe("Flatten input")
-.add_argument("data", "Symbol", "Input data to  flatten.");
+.add_argument("data", "Symbol", "Input data to flatten.");
 }  // namespace op
 }  // namespace mxnet
