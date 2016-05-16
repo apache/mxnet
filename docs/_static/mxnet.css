@@ -10,7 +10,8 @@
 }
 
 .splash h1{
-    font-size:46px;
+    font-size: 40px;
+    margin-bottom: 20px;
 }
 .splash .social{
     margin:2em 0
@@ -39,9 +40,9 @@
 }
 
 .section-tout h3{
-    font-size:26px;
-
+    font-size:20px;
 }
+
 .section-tout p {
     margin-bottom:2em
 }
@@ -116,17 +117,17 @@ body>.container {
 }
 
 body {
-    font-size: 20px;
+    font-size: 16px;
 }
 
 pre {
-    font-size: 18px;
+    font-size: 14px;
 }
 
 /* navbar */
 .navbar {
     background-color:#0079b2;
-    border: 1px solid transparent;
+    border: 0px;
     height: 65px;
 }
 .navbar-right li {
@@ -143,7 +144,7 @@ pre {
 }
 
 .navbar-left li a {
-    font-size: 24px;
+    font-size: 22px;
     color: #fff;
 }
 
@@ -195,12 +196,14 @@ pre {
     padding-top: 90px;
     margin-top: -60px;
     padding-bottom: 10px;
+    font-size: 28px;
 }
 
 .section h2 {
     padding-top: 80px;
     margin-top: -60px;
     padding-bottom: 10px;
+    font-size: 22px;
 }
 
 .section h3 {
@@ -222,4 +225,8 @@ dt {
 
 dt:target, .highlighted {
     background-color: #fff;
+}
+
+.section code.descname {
+  font-size: 1em;
 }

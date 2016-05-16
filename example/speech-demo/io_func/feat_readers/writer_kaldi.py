@@ -35,7 +35,7 @@ class KaldiWriteOut(object):
         if self.out_scp != None:
             start_offset = self.out_ark.tell()
 
-        # write out ark 
+        # write out ark
         num_row, num_col = data.shape
         self.out_ark.write('\0B')
         self.out_ark.write('FM ')
