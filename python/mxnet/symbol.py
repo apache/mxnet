@@ -627,7 +627,11 @@ class Symbol(object):
             raise TypeError('Only Accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays
 
-    def simple_bind(self, ctx, grad_req='write', type_dict=None, **kwargs):
+    def simple_bind(self, ctx,
+                    grad_req='write',
+                    type_dict=None,
+                    group2ctx=None,
+                    **kwargs):
         """Bind current symbol to get an executor, allocate all the ndarrays needed.
         Allows specifying data types.
 
@@ -639,14 +643,20 @@ class Symbol(object):
         ----------
         ctx : Context
             The device context the generated executor to run on.
+
         grad_req: string
             {'write', 'add', 'null'}, or list of str or dict of str to str, optional
             Specifies how we should update the gradient to the args_grad.
             - 'write' means everytime gradient is write to specified args_grad NDArray.
             - 'add' means everytime gradient is add to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
+
         type_dict  : dict of str->numpy.dtype
             Input type dictionary, name->dtype
+
+        group2ctx : dict of string to mx.Context
+            The dict mapping the ``ctx_group`` attribute to the context assignment.
+
         kwargs : dict of str->shape
             Input shape dictionary, name->shape
 
@@ -660,23 +670,42 @@ class Symbol(object):
             type_dict = {k: mx_real_t for k in self.list_arguments()}
         arg_shapes, _, aux_shapes = self.infer_shape(**kwargs)
         arg_types, _, aux_types = self.infer_type(**type_dict)
+
         if arg_shapes is None or arg_types is None:
             raise ValueError("Input node is not complete")
-        # alloc space
-        arg_ndarrays = [zeros(shape, ctx, dtype=dtype)for dtype, shape in zip(arg_types,
-                                                                              arg_shapes)]
 
+        if group2ctx is not None:
+            attr_dict = {
+                k : group2ctx.get(v, ctx)
+                for k, v in self.list_attr(recursive=True).items()
+                if k.endswith('ctx_group')
+            } if group2ctx is not None else {}
+            arg_ctx = [attr_dict.get(name + '_ctx_group', ctx)
+                       for name in self.list_arguments()]
+            aux_ctx = [attr_dict.get(name + '_ctx_group', ctx)
+                       for name in self.list_auxiliary_states()]
+        else:
+            arg_ctx = [ctx] * len(arg_shapes)
+            aux_ctx = [ctx] * len(aux_shapes)
+
+        # alloc space
+        arg_ndarrays = [
+            zeros(shape, dev, dtype=dtype)
+            for dtype, dev, shape in zip(arg_types, arg_ctx, arg_shapes)]
         if grad_req != 'null':
             grad_ndarrays = {}
-            for name, shape, dtype in zip(self.list_arguments(), arg_shapes, arg_types):
+            for name, shape, dev, dtype in zip(
+                    self.list_arguments(), arg_shapes, arg_ctx, arg_types):
                 if not isinstance(grad_req, dict) or grad_req[name] != 'null':
-                    grad_ndarrays[name] = zeros(shape, ctx, dtype=dtype)
+                    grad_ndarrays[name] = zeros(shape, dev, dtype=dtype)
         else:
             grad_ndarrays = None
 
-        aux_ndarrays = [zeros(shape, ctx, dtype=dtype) for shape, dtype in zip(aux_shapes,
-                                                                               aux_types)]
-        executor = self.bind(ctx, arg_ndarrays, grad_ndarrays, grad_req, aux_ndarrays)
+        aux_ndarrays = [zeros(shape, dev, dtype=dtype)
+                        for shape, dev, dtype in zip(aux_shapes, aux_ctx, aux_types)]
+        executor = self.bind(ctx, arg_ndarrays,
+                             grad_ndarrays, grad_req, aux_ndarrays,
+                             group2ctx=group2ctx)
         return executor
 
     def bind(self, ctx, args, args_grad=None, grad_req='write',
