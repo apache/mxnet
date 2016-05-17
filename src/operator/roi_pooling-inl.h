@@ -88,7 +88,6 @@ class ROIPoolingOp : public Operator {
     CHECK_EQ(out_grad[roipool::kOut].shape_[0], in_data[roipool::kBox].shape_[0]);
     CHECK_EQ(out_data[roipool::kMaxIdx].shape_[0], in_data[roipool::kBox].shape_[0]);
     CHECK_EQ(req[roipool::kOut], kWriteTo);
-    CHECK_EQ(req[roipool::kMaxIdx], kWriteTo);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     Tensor<xpu, 4> grad_out = out_grad[roipool::kOut].get<xpu, 4, real_t>(s);

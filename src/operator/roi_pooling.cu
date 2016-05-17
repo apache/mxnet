@@ -10,15 +10,12 @@
 #include <algorithm>
 #include <vector>
 
-#define FRCNN_CUDA_CHECK(condition) \
+#define ROIPOOLING_CUDA_CHECK(condition) \
   /* Code block avoids redefinition of cudaError_t error */ \
   do { \
     cudaError_t error = condition; \
     CHECK_EQ(error, cudaSuccess) << " " << cudaGetErrorString(error); \
   } while (0)
-
-#define FRCNN_DIVUP(m, n) ((m) / (n) + ((m) % (n) > 0))
-#define FRCNN_NUM_THREADS 1024
 
 namespace mshadow {
 namespace cuda {
@@ -30,9 +27,9 @@ __global__ void ROIPoolForwardKernel(const int count, const Dtype* bottom_data,
                                      const int pooled_height, const int pooled_width,
                                      const Dtype* bottom_rois, Dtype* top_data,
                                      Dtype* argmax_data) {
-  for (int index = blockIdx.x * blockDim.x + threadIdx.x;
+  for (int index = (int(blockIdx.x) + int(blockIdx.y) * int(gridDim.x)) * blockDim.x + threadIdx.x;
        index < count;
-       index += blockDim.x * gridDim.x) {
+       index += int(blockDim.x) * int(gridDim.x) * int(gridDim.y)) {
     // (n, c, ph, pw) is an element in the pooled output
     int pw = index % pooled_width;
     int ph = (index / pooled_width) % pooled_height;
@@ -112,14 +109,15 @@ inline void ROIPoolForward(const Tensor<gpu, 4, Dtype> &out,
   const int width = data.size(3);
   const int pooled_height = out.size(2);
   const int pooled_width = out.size(3);
-  dim3 dimGrid((count + FRCNN_NUM_THREADS - 1) / FRCNN_NUM_THREADS);
-  dim3 dimBlock(FRCNN_NUM_THREADS);
+  const int gridSize = (count + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
+  dim3 dimGrid(kMaxGridNum, (gridSize + kMaxGridNum - 1) / kMaxGridNum);
+  dim3 dimBlock(kMaxThreadsPerBlock);
   CheckLaunchParam(dimGrid, dimBlock, "ROIPooling Forward");
   cudaStream_t stream = Stream<gpu>::GetStream(out.stream_);
   ROIPoolForwardKernel<Dtype><<<dimGrid, dimBlock, 0, stream>>>(
       count, bottom_data, spatial_scale, channels, height, width,
       pooled_height, pooled_width, bottom_rois, top_data, argmax_data);
-  FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+  ROIPOOLING_CUDA_CHECK(cudaPeekAtLastError());
 }
 
 template<typename Dtype>
@@ -129,9 +127,9 @@ __global__ void ROIPoolBackwardKernel(const int count, const Dtype* top_diff,
                                       const int height, const int width,
                                       const int pooled_height, const int pooled_width,
                                       Dtype* bottom_diff, const Dtype* bottom_rois) {
-  for (int index = blockIdx.x * blockDim.x + threadIdx.x;
+  for (int index = (int(blockIdx.x) + int(blockIdx.y) * int(gridDim.x)) * blockDim.x + threadIdx.x;
        index < count;
-       index += blockDim.x * gridDim.x) {
+       index += int(blockDim.x) * int(gridDim.x) * int(gridDim.y)) {
     // (n, c, h, w) coords in bottom data
     int w = index % width;
     int h = (index / width) % height;
@@ -215,14 +213,15 @@ inline void ROIPoolBackward(const Tensor<gpu, 4, Dtype> &in_grad,
   const int width = in_grad.size(3);
   const int pooled_height = out_grad.size(2);
   const int pooled_width = out_grad.size(3);
-  dim3 dimGrid((count + FRCNN_NUM_THREADS - 1) / FRCNN_NUM_THREADS);
-  dim3 dimBlock(FRCNN_NUM_THREADS);
+  const int gridSize = (count + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
+  dim3 dimGrid(kMaxGridNum, (gridSize + kMaxGridNum - 1) / kMaxGridNum);
+  dim3 dimBlock(kMaxThreadsPerBlock);
   CheckLaunchParam(dimGrid, dimBlock, "ROIPooling Backward");
   cudaStream_t stream = Stream<gpu>::GetStream(in_grad.stream_);
   ROIPoolBackwardKernel<Dtype><<<dimGrid, dimBlock, 0, stream>>>(
       count, top_diff, argmax_data, num_rois, spatial_scale, channels, height, width,
       pooled_height, pooled_width, bottom_diff, bottom_rois);
-  FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+  ROIPOOLING_CUDA_CHECK(cudaPeekAtLastError());
 }
 
 }  // namespace cuda

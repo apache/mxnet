@@ -11,8 +11,6 @@
 #include <mshadow/dot_engine-inl.h>
 #include <cassert>
 
-#define DIVUP(m, n) ((m) / (n) + ((m) % (n) > 0))
-
 using std::max;
 using std::min;
 using std::floor;
@@ -202,6 +200,8 @@ inline void ROIPoolBackward(const Tensor<cpu, 4, Dtype> &in_grad,
       }
     }
   }
+
+  return;
 }
 }  // namespace mshadow
 
