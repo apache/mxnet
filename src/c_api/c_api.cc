@@ -645,8 +645,10 @@ int MXSymbolSetAttr(SymbolHandle symbol,
   API_END();
 }
 
-int _MXSymbolListAttrImpl(SymbolHandle symbol, bool shalow,
-                          mx_uint *out_size, const char*** out) {
+int _MXSymbolListAttrImpl(SymbolHandle symbol,
+                          bool shalow,
+                          mx_uint *out_size,
+                          const char*** out) {
   Symbol *s = static_cast<Symbol*>(symbol);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();

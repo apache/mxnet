@@ -84,7 +84,7 @@ assert fc2.attr('data') == 'great'
 assert fc2.attr('init_bias') == '0.0'
 ```
 
-**Naming convention**: it is recommended to choose the attribute names to be valid variable names. Names with double underscope (e.g. `__shape__`) are reserved for internal use. The slash `'_'` is the character used to separate a symbol name and its attributes, so should *not* be used in names of attributes.
+**Naming convention**: it is recommended to choose the attribute names to be valid variable names. Names with double underscope (e.g. `__shape__`) are reserved for internal use. The slash `'_'` is the character used to separate a symbol name and its attributes, as well as the separator between a symbol and a variable that is automatically created by that symbol. For example, the `weight` variable created automatically by a ```Convolution``` operator named `conv1` will be called `conv1_weight`.
 
 **Components that uses attributes**: more and more components are using symbol attributes to collect useful annotations for the computational graph. Here is a (probably incomplete) list:
 
