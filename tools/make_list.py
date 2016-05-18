@@ -27,7 +27,7 @@ def list_image(root, recursive, exts):
 def write_list(path_out, image_list):
     with open(path_out, 'w') as fout:
         for i in xrange(len(image_list)):
-            fout.write('%d \t %d \t %s\n'%(i, image_list[i][1], image_list[i][0]))
+            fout.write('%d\t%d\t%s\n'%(i, image_list[i][1], image_list[i][0]))
 
 
 def make_list(prefix_out, root, recursive, exts, num_chunks, train_ratio):
@@ -55,7 +55,7 @@ def main():
         required by im2rec')
     parser.add_argument('root', help='path to folder that contain images.')
     parser.add_argument('prefix', help='prefix of output list files.')
-    parser.add_argument('--exts', type=list, default=['.jpeg','.jpg'],
+    parser.add_argument('--exts', type=str, nargs='+', default=['.jpeg','.jpg'],
         help='list of acceptable image extensions.')
     parser.add_argument('--chunks', type=int, default=1, help='number of chunks.')
     parser.add_argument('--train_ratio', type=float, default=1.0,
