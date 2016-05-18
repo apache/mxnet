@@ -1,17 +1,15 @@
 package ml.dmlc.mxnet.spark
 
-import ml.dmlc.mxnet.Callback.Speedometer
+import ml.dmlc.mxnet._
 import ml.dmlc.mxnet.optimizer.SGD
 import ml.dmlc.mxnet.spark.io.LabeledPointIter
-import ml.dmlc.mxnet._
 import org.apache.spark.mllib.linalg.Vectors
-import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{SparkConf, SparkContext}
 import org.kohsuke.args4j.{CmdLineParser, Option}
-import org.slf4j.{LoggerFactory, Logger}
+import org.slf4j.{Logger, LoggerFactory}
 
-import scala.collection.mutable
 import scala.collection.JavaConverters._
 
 /**
@@ -24,6 +22,11 @@ class MXNet extends Serializable {
 
   def setBatchSize(batchSize: Int): this.type = {
     params.batchSize = batchSize
+    this
+  }
+
+  def setNumEpoch(numEpoch: Int): this.type = {
+    params.numEpoch = numEpoch
     this
   }
 
@@ -81,10 +84,6 @@ class MXNet extends Serializable {
       }
     }
 
-    logger.debug("Dimension: {}", params.dimension)
-    val numExamples = trainData.count().toInt
-    logger.debug("numExamples: {}", numExamples)
-
     val schedulerIP = utils.Network.ipAddress
     val schedulerPort = utils.Network.availablePort
     // TODO: check ip & port available
@@ -111,13 +110,22 @@ class MXNet extends Serializable {
         params.batchSize,
         labelName = params.labelName)
 
+      // TODO: more nature way to get the # of examples?
+      var numExamples = 0
+      while (dataIter.hasNext) {
+        val dataBatch = dataIter.next()
+        numExamples += dataBatch.label.head.shape(0)
+      }
+      logger.debug("Number of samples: {}", numExamples)
+      dataIter.reset()
+
       logger.info("Launching worker ...")
       logger.info("Batch {}", params.batchSize)
       KVStoreServer.init(ParameterServer.buildEnv(role = "worker",
         rootUri = schedulerIP, rootPort = schedulerPort,
         numServer = params.numServer,
         numWorker = params.numWorker))
-      val kv = KVStore.create("dist_sync")
+      val kv = KVStore.create("dist_async")
 
       val optimizer: Optimizer = new SGD(learningRate = 0.01f,
         momentum = 0.9f, wd = 0.00001f)
@@ -125,7 +133,7 @@ class MXNet extends Serializable {
       logger.debug("Define model")
       val model = new FeedForward(ctx = params.context,
         symbol = params.getNetwork,
-        numEpoch = 10,
+        numEpoch = params.numEpoch,
         optimizer = optimizer,
         initializer = new Xavier(factorType = "in", magnitude = 2.34f),
         argParams = null,
@@ -138,9 +146,10 @@ class MXNet extends Serializable {
         evalMetric = new Accuracy(),
         kvStore = kv)
 
-      logger.info("Training finished")
-      kv.dispose()
+      logger.info("Training finished, waiting for other workers ...")
       dataIter.dispose()
+      kv.barrier()
+      kv.dispose()
       Iterator(new MXNetModel(model))
     }.cache()
 
@@ -184,6 +193,7 @@ object MXNet {
         .setContext(devs)
         .setDimension(dimension)
         .setNetwork(network)
+        .setNumEpoch(cmdLine.numEpoch)
         .setNumServer(cmdLine.numServer)
         .setNumWorker(cmdLine.numWorker)
         .setExecutorClasspath(cmdLine.classpaths)
@@ -210,6 +220,8 @@ object MXNet {
     val numServer: Int = 1
     @Option(name = "--num-worker", usage = "PS worker number")
     val numWorker: Int = 1
+    @Option(name = "--num-epoch", usage = "Number of epochs")
+    val numEpoch: Int = 10
     @Option(name = "--java", usage = "Java bin")
     val java: String = "java"
     @Option(name = "--model", usage = "Model definition")

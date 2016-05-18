@@ -241,38 +241,33 @@ object Model {
         var doReset = true
         while (doReset && trainData.hasNext) {
           val dataBatch = trainData.next()
-          try {
-            executorManager.loadDataBatch(dataBatch)
-            monitor.foreach(_.tic())
-            executorManager.forward(isTrain = true)
-            executorManager.backward()
-            if (updateOnKVStore) {
-              updateParamsOnKVStore(executorManager.paramArrays,
-                executorManager.gradArrays,
-                kvStore)
-            } else {
-              updateParams(executorManager.paramArrays,
-                executorManager.gradArrays,
-                updaterLocal, ctx.length,
-                kvStore)
-            }
-            monitor.foreach(_.tocPrint())
-            // evaluate at end, so out_cpu_array can lazy copy
-            evalMetric.update(dataBatch.label, executorManager.cpuOutputArrays)
-
-            nBatch += 1
-            batchEndCallback.foreach(_.invoke(epoch, nBatch, evalMetric))
-
-            // this epoch is done possibly earlier
-            if (epochSize != -1 && nBatch >= epochSize) {
-              doReset = false
-            }
-            // FIXME
-            // dataBatch.dispose()
-          } catch {
-            // FIXME: due to small size of dataBatch, this epoch is done possibly earlier
-            case _: Throwable => doReset = false
+          executorManager.loadDataBatch(dataBatch)
+          monitor.foreach(_.tic())
+          executorManager.forward(isTrain = true)
+          executorManager.backward()
+          if (updateOnKVStore) {
+            updateParamsOnKVStore(executorManager.paramArrays,
+              executorManager.gradArrays,
+              kvStore)
+          } else {
+            updateParams(executorManager.paramArrays,
+              executorManager.gradArrays,
+              updaterLocal, ctx.length,
+              kvStore)
           }
+          monitor.foreach(_.tocPrint())
+          // evaluate at end, so out_cpu_array can lazy copy
+          evalMetric.update(dataBatch.label, executorManager.cpuOutputArrays)
+
+          nBatch += 1
+          batchEndCallback.foreach(_.invoke(epoch, nBatch, evalMetric))
+
+          // this epoch is done possibly earlier
+          if (epochSize != -1 && nBatch >= epochSize) {
+            doReset = false
+          }
+          // FIXME
+          // dataBatch.dispose()
         }
         if (doReset) {
           trainData.reset()

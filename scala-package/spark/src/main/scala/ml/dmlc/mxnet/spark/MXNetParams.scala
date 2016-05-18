@@ -11,6 +11,8 @@ private[mxnet] class MXNetParams extends Serializable {
   var batchSize: Int = 128
   // dimension of input data
   var dimension: Shape = null
+  // number of training epochs
+  var numEpoch: Int = 10
 
   // network architecture
   private var network: String = null
