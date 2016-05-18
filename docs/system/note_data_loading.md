@@ -49,7 +49,7 @@ Here's an example of Image binary recordIO:
 ![baserecordio](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/io/ImageRecordIO.jpg)
 We first resize the image into 256 * 256, then compact it into JPEG format, after that we save the header which indicates the index and label for that image to construct the Data field of a record. Then pack several images together into a file.
 
-### Accuess Arbitrary Parts Of Data
+### Access Arbitrary Parts Of Data
 
 The desired behavior of data loading could be: the packed data can be logically sliced into arbitrary numbers of partitions, no matter how many physical packed data files there are.
 
