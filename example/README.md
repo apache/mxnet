@@ -27,7 +27,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 ###<a name="language-binding-examples"></a>Langauges Binding Examples
 ------------------
 * [C++ examples](https://github.com/dmlc/mxnet/tree/master/example/cpp) - Example code for using C++ interface, including NDArray, symbolic layer and models.
-* [MXNet Python](http://mxnet.readthedocs.org/en/latest/python/index.html) - Python libary
+* [MXNet Python](http://mxnet.readthedocs.org/en/latest/python/index.html) - Python library
 * [MXNetR](http://mxnet.readthedocs.org/en/latest/R-package/index.html) - R library
 * [MXNet.jl](http://mxnetjl.readthedocs.org/en/latest/) - Julia library
 * [gomxnet](https://github.com/jdeng/gomxnet) - Go binding
