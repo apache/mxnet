@@ -1,4 +1,7 @@
 # pylint: skip-file
+import os
+# MXNET_CPU_WORKER_NTHREADS must be greater than 1 for custom op to work on CPU
+os.environ["MXNET_CPU_WORKER_NTHREADS"] = "2"
 from data import mnist_iterator
 import mxnet as mx
 import numpy as np
@@ -57,9 +60,11 @@ train, val = mnist_iterator(batch_size=100, input_shape = (784,))
 
 logging.basicConfig(level=logging.DEBUG)
 
+# MXNET_CPU_WORKER_NTHREADS must be greater than 1 for custom op to work on CPU
 model = mx.model.FeedForward(
-    ctx = mx.gpu(0), symbol = mlp, num_epoch = 20,
+    ctx = mx.cpu(0), symbol = mlp, num_epoch = 20,
     learning_rate = 0.1, momentum = 0.9, wd = 0.00001)
 
-model.fit(X=train, eval_data=val)
+model.fit(X=train, eval_data=val,
+          batch_end_callback=mx.callback.Speedometer(100,100))
 

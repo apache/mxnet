@@ -435,7 +435,8 @@ class CustomOp(object):
             dst[:] += src
 
 class CustomOpProp(object):
-    """Base class for operator property class implemented in python
+    """Base class for operator property class implemented in python.
+    MXNET_CPU_WORKER_NTHREADS must be greater than 1 for custom op to work on CPU
 
     Parameters
     ----------
