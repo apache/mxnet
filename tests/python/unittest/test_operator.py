@@ -801,27 +801,38 @@ def test_convolution_dilated_impulse_response():
             test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
 
 def test_reshape():
-    # case 1:
-    net = mx.sym.Variable("data")
-    net = mx.sym.Reshape(net, shape=(0, -1))
-    _, output_shape, __ = net.infer_shape(data=(2, 3, 5, 5))
-    assert(output_shape[0] == (2, 75))
-    # case 2:
-    net = mx.sym.Variable("data")
-    net = mx.sym.Reshape(net, shape=(0, 0, -1))
-    _, output_shape, __ = net.infer_shape(data=(2, 3, 5, 5))
-    assert(output_shape[0] == (2, 3, 25))
-    # case 3:
-    net = mx.sym.Variable("data")
-    net = mx.sym.Reshape(net, shape=(5, 3, 0, -1))
-    _, output_shape, __ = net.infer_shape(data=(2, 3, 5, 5))
-    assert(output_shape[0] == (5, 3, 5, 2))
-    # case 4:
-    net = mx.sym.Variable("data")
-    net = mx.sym.Reshape(net, shape=(0, 0, 0, 0))
-    _, output_shape, __ = net.infer_shape(data=(2, 3, 5, 5))
-    assert(output_shape[0] == (2, 3, 5, 5))
-    # case 5: test old api
+
+    def test_reshape_new(src_shape, shape_args, dst_shape):
+        net = mx.sym.Variable("data")
+        net = mx.sym.Reshape(net, shape=shape_args)
+        _, output_shape, __ = net.infer_shape(data=src_shape)
+        assert output_shape[0] == dst_shape, \
+            'Src Shape = %s, Shape Arguments = %s, Dst Shape = %s, Output Shape = %s' \
+            %(str(src_shape), str(shape_args), str(dst_shape), str(output_shape[0]))
+        dat_npy = np.random.rand(*src_shape)
+        grad_npy = np.random.rand(*dst_shape)
+        exe = net.simple_bind(mx.cpu(), data=src_shape)
+        exe.arg_dict['data'][:] = dat_npy
+        exe.forward(is_train=True)
+        assert np.square(exe.outputs[0].asnumpy() - dat_npy.reshape(dst_shape)).mean() < 1E-7, \
+            'Src Shape = %s, Shape Arguments = %s, Dst Shape = %s' %(str(src_shape),
+                                                                     str(shape_args), str(dst_shape))
+        exe.backward(out_grads=mx.nd.array(grad_npy))
+        assert np.square(exe.grad_dict['data'].asnumpy() - grad_npy.reshape(src_shape)).mean() < 1E-7, \
+            'Src Shape = %s, Shape Arguments = %s, Dst Shape = %s' %(str(src_shape),
+                                                                     str(shape_args), str(dst_shape))
+    # Test new api (Using shape)
+    test_cases = [[(2, 3, 5, 5), (0, -1), (2, 75)],
+                  [(2, 3, 5, 5), (0, 0, -1), (2, 3, 25)],
+                  [(5, 3, 4, 5), (0, -1, 0), (5, 15, 4)],
+                  [(2, 3, 5, 4), (-1, 0, 0), (8, 3, 5),
+                  [(2, 3, 4, 5), (3, -1, 0), (3, 10, 4)],
+                  [(2, 3, 5, 5), (5, 3, 0, -1), (5, 3, 5, 2)],
+                  [(2, 3, 5, 5), (0, 0, 0, 0), (2, 3, 5, 5)],
+                  [(2, 4, 5, 3), (-1, 2, 2, 1), (30, 2, 2, 1)]]]
+    for test_case in test_cases:
+        test_reshape_new(test_case[0], test_case[1], test_case[2])
+    # Test old api
     net = mx.sym.Variable("data")
     net = mx.sym.Reshape(net, target_shape=(2, 0))
     _, output_shape, __ = net.infer_shape(data=(2, 3, 5, 5))
