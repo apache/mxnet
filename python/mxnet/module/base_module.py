@@ -3,9 +3,9 @@
 
 import logging
 import time
-import numpy as np
 
 from .. import metric
+from .. import ndarray
 
 from ..model import BatchEndParam
 from ..initializer import Uniform
@@ -231,6 +231,9 @@ class BaseModule(object):
         `[[out1_batch1, out2_batch1], [out1_batch2], ...]`. This mode is useful because
         in some cases (e.g. bucketing), the module does not necessarily produce the same
         number of outputs.
+
+        The objects in the results are `NDArray`s. If you need to work with numpy array,
+        just call `.asnumpy()` on each of the `NDArray`.
         """
         assert self.binded and self.params_initialized
 
@@ -257,7 +260,7 @@ class BaseModule(object):
                 assert len(out) == num_outputs, \
                        'Cannot merge batches, as num of outputs is not the same ' + \
                        'in mini-batches. Maybe bucketing is used?'
-            output_list2 = [np.concatenate([out[i] for out in output_list])
+            output_list2 = [ndarray.concatenate([out[i] for out in output_list])
                             for i in range(num_outputs)]
 
             if num_outputs == 1 and not always_output_list:
@@ -271,7 +274,7 @@ class BaseModule(object):
             optimizer='sgd', optimizer_params=(('learning_rate', 0.01),),
             eval_batch_end_callback=None, initializer=Uniform(0.01),
             arg_params=None, aux_params=None, allow_missing=False,
-            force_init=False, begin_epoch=0, num_epoch=None):
+            force_rebind=False, force_init=False, begin_epoch=0, num_epoch=None):
         """Train the module parameters.
 
         Parameters
@@ -310,6 +313,8 @@ class BaseModule(object):
             Default `False`. Indicate whether we allow missing parameters when `arg_params`
             and `aux_params` are not `None`. If this is `True`, then the missing parameters
             will be initialized via the `initializer`.
+        force_rebind : bool
+            Default `False`. Whether to force rebinding the executors if already binded.
         force_init : bool
             Default `False`. Indicate whether we should force initialization even if the
             parameters are already initialized.
@@ -324,7 +329,7 @@ class BaseModule(object):
         assert num_epoch is not None, 'please specify number of epochs'
 
         self.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label,
-                  for_training=True, force_rebind=True)
+                  for_training=True, force_rebind=force_rebind)
         self.init_params(initializer=initializer, arg_params=arg_params, aux_params=aux_params,
                          allow_missing=allow_missing, force_init=force_init)
         self.init_optimizer(kvstore=kvstore, optimizer=optimizer,
@@ -455,6 +460,40 @@ class BaseModule(object):
         """
         self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,
                          allow_missing=False, force_init=True)
+
+    def save_params(self, fname):
+        """Save model parameters to file.
+
+        Parameters
+        ----------
+        fname : str
+            Path to output param file.
+        """
+        arg_params, aux_params = self.get_params()
+        save_dict = {('arg:%s' % k) : v for k, v in arg_params.items()}
+        save_dict.update({('aux:%s' % k) : v for k, v in aux_params.items()})
+        ndarray.save(fname, save_dict)
+
+    def load_params(self, fname):
+        """Load model parameters from file.
+
+        Parameters
+        ----------
+        fname : str
+            Path to input param file.
+        """
+        save_dict = ndarray.load(fname)
+        arg_params = {}
+        aux_params = {}
+        for k, value in save_dict.items():
+            arg_type, name = k.split(':', 1)
+            if arg_type == 'arg':
+                arg_params[name] = value
+            elif arg_type == 'aux':
+                aux_params[name] = value
+            else:
+                raise ValueError("Invalid param file " + fname)
+        self.set_params(arg_params, aux_params)
 
     ################################################################################
     # Computations

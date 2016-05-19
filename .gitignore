@@ -74,6 +74,8 @@ deps
 .Rproj.user
 R-package/inst/*
 *.tar.gz
+*.tgz
+R-package/man/*.Rd
 
 # data
 *.rec
@@ -81,6 +83,7 @@ R-package/inst/*
 *.zip
 *ubyte
 *.bin
+*.txt
 
 # ipython notebook
 *_pb2.py

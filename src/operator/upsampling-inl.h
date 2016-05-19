@@ -33,6 +33,7 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
   int sample_type;
   int num_args;
   int multi_input_mode;
+  uint64_t workspace;
   DMLC_DECLARE_PARAMETER(UpSamplingParam) {
     DMLC_DECLARE_FIELD(scale)
     .set_range(1, 1000)
@@ -56,6 +57,8 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
     "upsampling, this can be 1-N; the size of output will be"
     "(scale*h_0,scale*w_0) and all other inputs will be upsampled to the"
     "same size. For bilinear upsampling this must be 2; 1 input and 1 weight.");
+    DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 8192)
+    .describe("Tmp workspace for deconvolution (MB)");
   }
 };  // struct UpSamplingParam
 

@@ -108,7 +108,7 @@ class Load(object):
         self.verbose = verbose
 
     def __call__(self, name, arr):
-        if self.param.has_key(name):
+        if name in self.param:
             assert arr.shape == self.param[name].shape, \
                 'Parameter %s cannot be initialized from loading. '%name + \
                 'Shape mismatch, target %s vs loaded %s'%(str(arr.shape),
@@ -235,8 +235,11 @@ class Xavier(Initializer):
 
     def _init_weight(self, _, arr):
         shape = arr.shape
-        fan_in, fan_out = np.prod(shape[1:]), shape[0]
-        factor = 1
+        hw_scale = 1.
+        if len(shape) > 2:
+            hw_scale = np.prod(shape[2:])
+        fan_in, fan_out = shape[1] * hw_scale, shape[0] * hw_scale
+        factor = 1.
         if self.factor_type == "avg":
             factor = (fan_in + fan_out) / 2.0
         elif self.factor_type == "in":

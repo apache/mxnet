@@ -1,5 +1,6 @@
 # MXNet Python Symbolic API
 * [How to Commpose Symbols](#overloaded-operators) introduces operator overloading of symbols
+* [Symbol Attributes](#symbol-attributes) introduces how to attach attributes to symbols
 * [Serialization](#serialization) introduces how to save and load symbols.
 * [Multiple Outputs](#multiple-outputs) introduces how to configure multiple outputs
 * [Symbol Creation API Reference](#symbol-creationapi-reference) gives reference to all functions.
@@ -37,6 +38,59 @@ The following code gives an example of computation graph that add two inputs tog
 >>> b = mx.symbol.Variable('b')
 >>> c = a + b
 ````
+
+Symbol Attributes
+-----------------
+Attributes can be attached to symbols, by providing an attribute dictionary when creating a symbol.
+```python
+data = mx.sym.Variable('data', attr={'mood': 'angry'})
+op   = mx.sym.Convolution(data=data, name='conv', kernel=(1, 1),
+                          num_filter=1, attr={'mood': 'so so'})
+```
+Both key and values of the attribute dictionary should be strings, in order to properly communicate with the C++ backend. The attributes can be retrived via `attr(key)` or `list_attr()`:
+```
+assert data.attr('mood') == 'angry'
+assert op.list_attr() == {'mood': 'so so'}
+```
+In the case of a composite symbol, you can also retrieve all the attributes associated with that symbol *and its descendents* via `list_attr(recursive=True)`. Note in the returned dictionary, all the attribute names are with a prefix `'symbol_name' + '_'` in order to avoid naming conflicts.
+```python
+assert op.list_attr(recursive=True) == {'data_mood': 'angry', 'conv_mood': 'so so',
+                                        'conv_weight_mood': 'so so', 'conv_bias_mood': 'so so'}
+```
+Here you may noticed that the `mood` attribute we set for the ```Convolution``` operator is copied to `conv_weight` and `conv_bias`. Those are symbols automatically created by the ```Convolution``` operator, and the attributes are also automatically copied for them. This is intentional and is especially useful for annotation of context groups in model parallelism. However, if the weight or bias symbol are explicitly created by the user, then the attributes for the host operator will *not* be copied to them:
+```python
+weight = mx.sym.Variable('crazy_weight', attr={'size': '5'})
+data = mx.sym.Variable('data', attr={'mood': 'angry'})
+op = mx.sym.Convolution(data=data, weight=weight, name='conv', kernel=(1, 1),
+                              num_filter=1, attr={'mood': 'so so'})
+op.list_attr(recursive=True)
+# =>
+# {'conv_mood': 'so so',
+#  'conv_bias_mood': 'so so',
+#  'crazy_weight_size': '5',
+#  'data_mood': 'angry'}
+```
+As you can see, the `mood` attribute is copied to the automatically created symbol `conv_bias`, but not to the manually created weight symbol `crazy_weight`.
+
+Another way of attaching attributes is to use ```AttrScope```. An ```AttrScope``` will automatically add the specified attributes to all the symbols created within that scope. For example:
+```python
+data = mx.symbol.Variable('data')
+with mx.AttrScope(group='4', data='great'):
+    fc1 = mx.symbol.Activation(data, act_type='relu')
+    with mx.AttrScope(init_bias='0.0'):
+        fc2 = mx.symbol.FullyConnected(fc1, num_hidden=10, name='fc2')
+assert fc1.attr('data') == 'great'
+assert fc2.attr('data') == 'great'
+assert fc2.attr('init_bias') == '0.0'
+```
+
+**Naming convention**: it is recommended to choose the attribute names to be valid variable names. Names with double underscope (e.g. `__shape__`) are reserved for internal use. The slash `'_'` is the character used to separate a symbol name and its attributes, as well as the separator between a symbol and a variable that is automatically created by that symbol. For example, the `weight` variable created automatically by a ```Convolution``` operator named `conv1` will be called `conv1_weight`.
+
+**Components that uses attributes**: more and more components are using symbol attributes to collect useful annotations for the computational graph. Here is a (probably incomplete) list:
+
+- ```Variable``` use attributes to store (optional) shape information for a variable.
+- Optimizers will read `lr_mult` and `wd_mult` attributes for each symbol in a computational graph. This is useful to control per-layer learning rate and decay.
+- The model parallelism LSTM example uses `ctx_group` attribute to divide the operators into different groups corresponding to different GPU devices.
 
 Serialization
 -------------

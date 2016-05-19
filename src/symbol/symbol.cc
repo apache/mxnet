@@ -12,6 +12,12 @@
 #include "./static_graph.h"
 
 namespace mxnet {
+
+namespace symbol_constants {
+const char *kShapeKey = "__shape__";
+const char *kNamespaceSeparator = "_";
+}  // namespace symbol_constants
+
 /*!
  * \brief Node is represents node of an operator in the symbolic graph.
  *
@@ -489,10 +495,32 @@ std::map<std::string, std::string> Symbol::ListAttr() {
   this->DFSVisit([&ret](const std::shared_ptr<Node> &n) {
       if (n->attr.get() == nullptr) return;
       for (const auto &it : *(n->attr.get())) {
-        ret[n->name+"_"+it.first] = it.second;
+        ret[n->name + symbol_constants::kNamespaceSeparator + it.first] = it.second;
+      }
+      // Also propagate attributes of each node to its auxiliary states.
+      // this is a hack to enable correct allocation of auxiliary state
+      // easily in multiple devices. This behavior should be helpful in current setting,
+      // but can be changed when needed in future.
+      if (n->op.get() != nullptr) {
+        for (const auto& aux : n->op->ListAuxiliaryStates()) {
+          for (const auto &it : *(n->attr.get())) {
+            ret[n->name + '_'  + aux +
+                symbol_constants::kNamespaceSeparator + it.first] = it.second;
+          }
+        }
       }
     });
   return ret;
+}
+
+std::map<std::string, std::string> Symbol::ListAttrShallow() {
+  Node* node = heads_[0].source.get();
+  for (const DataEntry& e : heads_) {
+    CHECK(node == e.source.get())
+        << "Symbol.ListAttrShallow only works for non-grouped symbol";
+  }
+  if (node->attr.get() == nullptr) return std::map<std::string, std::string>();
+  return *node->attr.get();
 }
 
 
@@ -581,6 +609,8 @@ bool Symbol::InferShape(const std::unordered_map<std::string, TShape>& known_arg
     if (it != known_arg_shapes.end()) {
       arg_shapes->at(i) = it->second;
       ++nmatched;
+    } else if (g.nodes[g.arg_nodes[i]].is_variable()) {
+      arg_shapes->at(i) = g.nodes[g.arg_nodes[i]].get_attr(symbol_constants::kShapeKey, TShape());
     }
   }
   if (nmatched != known_arg_shapes.size()) {

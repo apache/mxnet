@@ -52,7 +52,7 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     .describe("Number of groups partition. "
               "This option is not supported by CuDNN, you can use SliceChannel to num_group,"
               "apply convolution and concat instead to achieve the same need.");
-    DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 4096)
+    DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 8192)
     .describe("Tmp workspace for convolution (MB).");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
@@ -116,7 +116,7 @@ class ConvolutionOp : public Operator {
                                     param_.dilate[1]);
       } else {
         temp_col = unpack_patch2col(pad(data.Slice(i, i + step),
-                                        param_.pad[0], param_.pad[1]),
+                                    param_.pad[0], param_.pad[1]),
                                     param_.kernel[0],
                                     param_.kernel[1],
                                     param_.stride[0],
@@ -124,6 +124,7 @@ class ConvolutionOp : public Operator {
                                     param_.dilate[0],
                                     param_.dilate[1]);
       }
+
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
         mshadow::Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid,
@@ -264,8 +265,9 @@ class ConvolutionOp : public Operator {
     // if param_.workspace is set to zero the nstep_ equals ishape[0] (batch)
     nstep_ = std::max(
         std::min(
-          static_cast<index_t>(param_.workspace / (shape_colunit_.Size() + shape_dstunit_.Size())),
-          ishape[0]),
+            static_cast<index_t>(
+                param_.workspace / (shape_colunit_.Size() + shape_dstunit_.Size())),
+            ishape[0]),
         1U);
 
     mshadow::Shape<2> scol = mshadow::Shape2(shape_colunit_[0],
@@ -346,9 +348,9 @@ class ConvolutionProp : public OperatorProperty {
         << "kernel size exceed input";
     (*out_shape)[conv::kOut][1] = param_.num_filter;
     (*out_shape)[conv::kOut][2] = (dshape[2] + 2 * param_.pad[0] -
-        (param_.dilate[0] == 1 ? ksize_y : ksize_y * param_.dilate[0] - 1)) / param_.stride[0] + 1;
+        (param_.dilate[0] * (ksize_y - 1) + 1)) / param_.stride[0] + 1;
     (*out_shape)[conv::kOut][3] = (dshape[3] + 2 * param_.pad[1] -
-        (param_.dilate[1] == 1 ? ksize_x : ksize_x * param_.dilate[1] - 1)) / param_.stride[1] + 1;
+        (param_.dilate[1] * (ksize_x - 1) + 1)) / param_.stride[1] + 1;
     return true;
   }
 

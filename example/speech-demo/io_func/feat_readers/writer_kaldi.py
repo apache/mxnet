@@ -1,6 +1,8 @@
 import sys
 import numpy
 import struct
+import subprocess
+import os
 
 # Functions to read and write Kaldi binary-formatted .scp and .ark
 
@@ -19,13 +21,21 @@ class KaldiWriteOut(object):
         self.out_ark = open(self.ark_path,"w")
         self.out_scp = open(self.scp_path,"w")
 
+    def open_or_fd(self):
+        offset = None
+        if self.ark_path[0] == '|':
+            #self.out_ark = os.popen(sys.stdout, 'wb')
+            self.out_ark = sys.stdout
+        else:
+            self.out_ark = open(self.ark_path,"w")
     def write(self, uttID, data):
         assert data.dtype == numpy.float32
 
         self.out_ark.write(uttID + ' ')
-        start_offset = self.out_ark.tell()
+        if self.out_scp != None:
+            start_offset = self.out_ark.tell()
 
-        # write out ark 
+        # write out ark
         num_row, num_col = data.shape
         self.out_ark.write('\0B')
         self.out_ark.write('FM ')
@@ -34,11 +44,14 @@ class KaldiWriteOut(object):
         self.out_ark.write(chr(4))
         self.out_ark.write(struct.pack('i', num_col))
         data.tofile(self.out_ark)
+        self.out_ark.flush()
 
         # write out scp
-        scp_out = uttID + ' ' + self.ark_path + ':' + str(start_offset)
-        self.out_scp.write(scp_out + '\n')
+        if self.out_scp != None:
+            scp_out = uttID + ' ' + self.ark_path + ':' + str(start_offset)
+            self.out_scp.write(scp_out + '\n')
 
     def close(self):
         self.out_ark.close()
-        self.out_scp.close()
+        if self.out_scp != None:
+            self.out_scp.close()

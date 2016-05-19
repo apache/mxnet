@@ -32,13 +32,12 @@ struct ROIPoolingParam : public dmlc::Parameter<ROIPoolingParam> {
   TShape pooled_size;
   float spatial_scale;
   DMLC_DECLARE_PARAMETER(ROIPoolingParam) {
-    // TODO(bing) change to only set lower bound
-    // add support for boolean
     DMLC_DECLARE_FIELD(pooled_size)
     .set_expect_ndim(2).enforce_nonzero()
-    .describe("target size: (h, w)");
+    .describe("fix pooled size: (h, w)");
     DMLC_DECLARE_FIELD(spatial_scale).set_range(0.0, 1.0)
-    .describe("Ratio of input plane height (or w) to raw image height (or w).");
+    .describe("Ratio of input feature map height (or w) to raw image height (or w). "
+    "Equals the reciprocal of total stride in convolutional layers");
   }
 };
 
@@ -55,19 +54,23 @@ class ROIPoolingOp : public Operator {
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
-    // if (req[roipool::kOut] == kNullOp || req[roipool::kMaxIdx] == kNullOp) return;
-    CHECK_EQ(req[roipool::kOut], kWriteTo);
-    // CHECK_EQ(req[roipool::kMaxIdx], kWriteTo);
     size_t expected = 2;
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), expected);
+    CHECK_EQ(out_data[roipool::kOut].shape_[0], in_data[roipool::kBox].shape_[0]);
+    CHECK_EQ(out_data[roipool::kMaxIdx].shape_[0], in_data[roipool::kBox].shape_[0]);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     Tensor<xpu, 4> data = in_data[roipool::kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 3> bbox = in_data[roipool::kBox].get<xpu, 3, real_t>(s);
+    Tensor<xpu, 2> bbox = in_data[roipool::kBox].get<xpu, 2, real_t>(s);
     Tensor<xpu, 4> out = out_data[roipool::kOut].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> max_idx = out_data[roipool::kMaxIdx].get<xpu, 4, real_t>(s);
-
+    CHECK_EQ(data.CheckContiguous(), true);
+    CHECK_EQ(bbox.CheckContiguous(), true);
+    CHECK_EQ(out.CheckContiguous(), true);
+    CHECK_EQ(max_idx.CheckContiguous(), true);
+    out = -FLT_MAX;
+    max_idx = -1.0f;
     ROIPoolForward(out, data, bbox, max_idx, param_.spatial_scale);
   }
 
@@ -82,17 +85,20 @@ class ROIPoolingOp : public Operator {
     size_t expected = 2;
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), expected);
-    CHECK_EQ(out_grad[roipool::kOut].shape_[0], \
-        in_data[roipool::kBox].shape_[0] * in_data[roipool::kBox].shape_[1]);
-    CHECK_EQ(out_data[roipool::kMaxIdx].shape_[0], \
-        in_data[roipool::kBox].shape_[0] * in_data[roipool::kBox].shape_[1]);
+    CHECK_EQ(out_grad[roipool::kOut].shape_[0], in_data[roipool::kBox].shape_[0]);
+    CHECK_EQ(out_data[roipool::kMaxIdx].shape_[0], in_data[roipool::kBox].shape_[0]);
+    CHECK_EQ(req[roipool::kOut], kWriteTo);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     Tensor<xpu, 4> grad_out = out_grad[roipool::kOut].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 3> bbox = in_data[roipool::kBox].get<xpu, 3, real_t>(s);
+    Tensor<xpu, 2> bbox = in_data[roipool::kBox].get<xpu, 2, real_t>(s);
     Tensor<xpu, 4> max_idx = out_data[roipool::kMaxIdx].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> grad_in = in_grad[roipool::kData].get<xpu, 4, real_t>(s);
-
+    CHECK_EQ(grad_out.CheckContiguous(), true);
+    CHECK_EQ(bbox.CheckContiguous(), true);
+    CHECK_EQ(max_idx.CheckContiguous(), true);
+    CHECK_EQ(grad_in.CheckContiguous(), true);
+    grad_in = 0.0f;
     ROIPoolBackward(grad_in, grad_out, bbox, max_idx, param_.spatial_scale);
   }
 
@@ -143,16 +149,16 @@ class ROIPoolingProp : public OperatorProperty {
 
     // bbox: [num_rois, 5]
     TShape bshape = in_shape->at(roipool::kBox);
-    CHECK_EQ(bshape.ndim(), 3) << "bbox should be a 3D tensor of shape [batch, rois, 5]";
-    CHECK_EQ(bshape[2], 5) << "bbox should be a 3D tensor of shape [batch, rois, 5]";
+    CHECK_EQ(bshape.ndim(), 2) << "bbox should be a 2D tensor of shape [batch, 5]";
+    CHECK_EQ(bshape[1], 5) << "bbox should be a 2D tensor of shape [batch, 5]";
 
     // out: [num_rois, c, pooled_h, pooled_w]
     // max_idx: [num_rois, c, pooled_h, pooled_w]
     out_shape->clear();
     out_shape->push_back(
-         Shape4(bshape[0] * bshape[1], dshape[1], param_.pooled_size[0], param_.pooled_size[1]));
+         Shape4(bshape[0], dshape[1], param_.pooled_size[0], param_.pooled_size[1]));
     out_shape->push_back(
-         Shape4(bshape[0] * bshape[1], dshape[1], param_.pooled_size[0], param_.pooled_size[1]));
+         Shape4(bshape[0], dshape[1], param_.pooled_size[0], param_.pooled_size[1]));
     return true;
   }
 

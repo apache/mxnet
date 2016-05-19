@@ -16,9 +16,15 @@ template<>
 Operator* CreateOp<gpu>(ConvolutionParam param, int dtype) {
   Operator *op = NULL;
 #if MXNET_USE_CUDNN == 1
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new CuDNNConvolutionOp<DType>(param);
-  })
+  if (param.dilate[0] == 1 && param.dilate[1] == 1) {
+    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+      op = new CuDNNConvolutionOp<DType>(param);
+    })
+  } else {
+    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+      op = new ConvolutionOp<gpu, DType>(param);
+    })
+  }
 #else
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new ConvolutionOp<gpu, DType>(param);
