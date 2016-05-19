@@ -730,6 +730,81 @@ def test_convolution_grouping():
     for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
         np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3)
 
+def _gen_broadcast_data():
+    testing_shapes = [(2, 3, 4), (3, 5, 7), (4, 2, 6)]
+    shape_pairs = []
+    for n, m, k in testing_shapes:
+        shape_pairs += [((1,), (1,)),
+                       ((n,), (n,)),
+                       ((n,m), (n,m)),
+                       ((n,m,k), (n,m,k)),
+                       ((n,1), (1,n)),
+                       ((n,m,k), (n,1,1)),
+                       ((n,m,k), (1,m,1)),
+                       ((n,m,k), (1,m,k)),
+                       ((n,m,k), (n,m,1)),
+                       ((n,m,k), (1,1,k))]
+    shape_pairs += [(v, u) for (u, v) in shape_pairs]
+    return [(np.random.random(u), np.random.random(v)) for (u,v) in shape_pairs]
+
+def _check_broadcast_op_forward(symbol, baseline):
+    for d in _gen_broadcast_data():
+        x = baseline(d[0], d[1])
+        y = symbol.bind(mx.cpu(), args={'a': mx.nd.array(d[0]), 'b' : mx.nd.array(d[1])})
+        y.forward()
+        err = np.sum(np.abs(x - y.outputs[0].asnumpy())) / np.sum(np.abs(x))
+        assert err < 1e-4, 'error %f, shapes are %s, %s' % (
+            err, d[0].shape, d[1].shape)
+
+def _check_broadcast_op_backward(symbol, baseline):
+    for d in _gen_broadcast_data():
+        out = d[0] + d[1]
+        def reduce_op(shape, x):
+            if shape == x.shape:
+                return x
+            keepdims_shape = list(x.shape)
+            for i in range(len(shape)):
+                if x.shape[i] != shape[i]:
+                    keepdims_shape[i] = 1
+                    x = np.sum(x, axis=i).reshape(keepdims_shape)
+            return x
+        baseline_grad1, baseline_grad2 = baseline(out, d[0], d[1])
+        x_1 = reduce_op(d[0].shape, baseline_grad1)
+        x_2 = reduce_op(d[1].shape, baseline_grad2)
+        y_1 = mx.nd.empty(d[0].shape)
+        y_2 = mx.nd.empty(d[1].shape)
+        y = symbol.bind(mx.cpu(), args={'a': mx.nd.array(d[0]), 'b' : mx.nd.array(d[1])},
+                        args_grad=[y_1, y_2])
+        y.forward()
+        y.backward([mx.nd.array(out)])
+        err = lambda x, y: np.sum(np.abs(x-y)) / np.sum(np.abs(x))
+        err_1 = err(x_1, y_1.asnumpy())
+        err_2 = err(x_2, y_2.asnumpy())
+        assert err_1 < 1e-6 and err_2 < 1e-6, 'lhs error %f, rhs error %f, shapes are %s %s' % (
+            err_1, err_2, d[0].shape, d[1].shape)
+
+def test_broadcast_binary_op():
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+
+    def test_bplus(a, b):
+        c = mx.sym.broadcast_plus(a, b)
+        _check_broadcast_op_forward(c, lambda a, b: a + b)
+        _check_broadcast_op_backward(c, lambda g_out, a, b: (g_out, g_out))
+
+    def test_bminus(a, b):
+        c = mx.sym.broadcast_minus(a, b)
+        _check_broadcast_op_forward(c, lambda a, b: a - b)
+        _check_broadcast_op_backward(c, lambda g_out, a, b: (g_out, - g_out))
+
+    def test_bmul(a, b):
+        c = mx.sym.broadcast_mul(a, b)
+        _check_broadcast_op_forward(c, lambda a, b: a * b)
+        _check_broadcast_op_backward(c, lambda g_out, a, b: (g_out * b, g_out * a))
+    test_bplus(a, b)
+    test_bminus(a, b)
+    test_bmul(a, b)
+
 def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3), verbose=False):
     # Input for spike response
     spike_imgs = np.zeros(shape=(1,1,33,33), dtype=np.float32)
@@ -859,6 +934,7 @@ def test_sum_mid_internal():
 
 
 if __name__ == '__main__':
+    test_broadcast_binary_op()
     test_convolution_grouping()
     test_nearest_upsampling()
     test_binary_op_duplicate_input()
