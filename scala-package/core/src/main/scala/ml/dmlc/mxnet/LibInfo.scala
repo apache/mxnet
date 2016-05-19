@@ -61,6 +61,8 @@ class LibInfo {
                             handles: Array[NDArrayHandle],
                             keys: Array[String]): Int
   @native def mxNDArrayGetContext(handle: NDArrayHandle, devTypeId: RefInt, devId: RefInt): Int
+  @native def mxNDArraySaveRawBytes(handle: NDArrayHandle, buf: ArrayBuffer[Byte]): Int
+  @native def mxNDArrayLoadFromRawBytes(bytes: Array[Byte], handle: NDArrayHandleRef): Int
 
   // KVStore Server
   @native def mxInitPSEnv(keys: Array[String], values: Array[String]): Int
