@@ -651,12 +651,18 @@ int MXSymbolListAttr(SymbolHandle symbol,
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
   std::map<std::string, std::string> attr = std::move(s->ListAttr());
-  ret->ret_vec_charp.clear();
+  std::vector<std::string> attrList;
   *out_size = 0;
   for (auto it : attr) {
-    ret->ret_vec_charp.push_back(it.first.c_str());
-    ret->ret_vec_charp.push_back(it.second.c_str());
+    attrList.push_back(it.first);
+    attrList.push_back(it.second);
     (*out_size)++;
+  }
+
+  ret->ret_vec_str = std::move(attrList);
+  ret->ret_vec_charp.clear();
+  for (size_t i = 0; i < ret->ret_vec_str.size(); ++i) {
+    ret->ret_vec_charp.push_back(ret->ret_vec_str[i].c_str());
   }
   *out = dmlc::BeginPtr(ret->ret_vec_charp);
   API_END();
