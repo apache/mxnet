@@ -801,9 +801,16 @@ def test_broadcast_binary_op():
         c = mx.sym.broadcast_mul(a, b)
         _check_broadcast_op_forward(c, lambda a, b: a * b)
         _check_broadcast_op_backward(c, lambda g_out, a, b: (g_out * b, g_out * a))
+
+    def test_bdiv(a, b):
+        c = mx.sym.broadcast_div(a, b)
+        _check_broadcast_op_forward(c, lambda a, b: a / b)
+        _check_broadcast_op_backward(c, lambda g_out, a, b: (g_out / b, - g_out * a / (b * b)))
+
     test_bplus(a, b)
     test_bminus(a, b)
     test_bmul(a, b)
+    test_bdiv(a, b)
 
 def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3), verbose=False):
     # Input for spike response
@@ -944,7 +951,7 @@ if __name__ == '__main__':
     test_regression()
     test_python_op()
     test_swapaxes()
-    test_scalarop();
+    test_scalarop()
     test_scalar_pow()
     test_symbol_pow()
     test_pow_fn()
