@@ -15,6 +15,12 @@ We try to do our best to provide high speed operators for most common use cases.
 ## CustomOp
 Implementing an operator in Python is similar to creating one in C++ but simpler. Let's create a softmax operator for example. We start by subclassing `mxnet.operator.CustomOp` and then override a few methods:
 ```python
+import os
+# MXNET_CPU_WORKER_NTHREADS must be greater than 1 for custom op to work on CPU
+os.environ["MXNET_CPU_WORKER_NTHREADS"] = "2"
+import mxnet as mx
+import numpy as np
+
 class Softmax(mx.operator.CustomOp):
     def forward(self, is_train, req, in_data, out_data, aux):
         x = in_data[0].asnumpy()

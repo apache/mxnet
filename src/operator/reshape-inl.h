@@ -213,7 +213,7 @@ class ReshapeProp : public OperatorProperty {
         }
       }
 
-      if (neg_idx > 0) {
+      if (neg_idx >= 0) {
         tmp[neg_idx] = new_size;
       }
       TShape oshape(tmp.begin(), tmp.end());
