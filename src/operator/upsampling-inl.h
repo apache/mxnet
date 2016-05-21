@@ -132,14 +132,16 @@ class UpSamplingNearestOp : public Operator {
                                          in_shape,
                                          scale,
                                          scale,
-                                         scale));
+                                         scale,
+										 scale));
         } else {
           Assign(input_grad, req[i],
                  pool<mshadow::red::sum>(slice<1>(grad, begin, end),
                                          in_shape,
                                          scale,
                                          scale,
-                                         scale));
+                                         scale,
+										 scale));
         }
         begin = end;
       }
@@ -151,7 +153,8 @@ class UpSamplingNearestOp : public Operator {
                                      in_shape,
                                      param_.scale,
                                      param_.scale,
-                                     param_.scale));
+                                     param_.scale,
+									 param_.scale));
     }
   }
 
