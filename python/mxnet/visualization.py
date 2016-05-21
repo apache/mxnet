@@ -68,7 +68,7 @@ def plot_network(symbol, title="plot", shape=None, node_attrs={}):
     # default attributes of node
     node_attr = {"shape": "box", "fixedsize": "true",
                  "width": "1.3", "height": "0.8034", "style": "filled"}
-    # merge the dcit provided by user and the default one
+    # merge the dict provided by user and the default one
     node_attr.update(node_attrs)
     dot = Digraph(name=title)
     # color map
