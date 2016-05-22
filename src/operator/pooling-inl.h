@@ -76,9 +76,6 @@ class PoolingOp : public Operator {
     Tensor<xpu, 4> data = in_data[pool_enum::kData].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> out = out_data[pool_enum::kOut].get<xpu, 4, real_t>(s);
     mshadow::Shape<2> out_shape = Shape2(out.shape_[2], out.shape_[3]);
-    // TODO(bing): dual stride in mshadow
-    CHECK_EQ(param_.stride[0], param_.stride[1])
-        << "Only same stride is supported now";
     if (param_.pool_type == pool_enum::kMaxPooling || param_.pool_type == pool_enum::kSumPooling) {
       Assign(out,
              req[pool_enum::kOut],
@@ -86,7 +83,8 @@ class PoolingOp : public Operator {
                            out_shape,
                            param_.kernel[0],
                            param_.kernel[1],
-                           param_.stride[0]));
+                           param_.stride[0],
+                           param_.stride[1]));
     } else if (param_.pool_type == pool_enum::kAvgPooling) {
       Assign(out,
              req[pool_enum::kOut],
@@ -95,7 +93,8 @@ class PoolingOp : public Operator {
                            out_shape,
                            param_.kernel[0],
                            param_.kernel[1],
-                           param_.stride[0]));
+                           param_.stride[0],
+                           param_.stride[1]));
     }
   }
 
@@ -129,7 +128,8 @@ class PoolingOp : public Operator {
                                   pad(grad, 0, 0),
                                   param_.kernel[0],
                                   param_.kernel[1],
-                                  param_.stride[0]),
+                                  param_.stride[0],
+                                  param_.stride[1]),
                   in_shape,
                   param_.pad[0],
                   param_.pad[1]));
@@ -141,7 +141,8 @@ class PoolingOp : public Operator {
                                   pad(grad, 0, 0),
                                   param_.kernel[0],
                                   param_.kernel[1],
-                                  param_.stride[0]),
+                                  param_.stride[0],
+                                  param_.stride[1]),
                   in_shape,
                   param_.pad[0],
                   param_.pad[1]));
