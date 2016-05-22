@@ -3,14 +3,10 @@ package ml.dmlc.mxnet.spark
 import ml.dmlc.mxnet._
 import ml.dmlc.mxnet.optimizer.SGD
 import ml.dmlc.mxnet.spark.io.LabeledPointIter
-import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.SparkContext
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{SparkConf, SparkContext}
-import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.{Logger, LoggerFactory}
-
-import scala.collection.JavaConverters._
 
 /**
  * MXNet Training On Spark
@@ -55,8 +51,13 @@ class MXNet extends Serializable {
     this
   }
 
-  def setLabelName(labelName: String): this.type = {
-    params.labelName = labelName
+  def setDataName(name: String): this.type = {
+    params.dataName = name
+    this
+  }
+
+  def setLabelName(name: String): this.type = {
+    params.labelName = name
     this
   }
 
@@ -71,7 +72,7 @@ class MXNet extends Serializable {
     this
   }
 
-  def train(sc: SparkContext, data: RDD[LabeledPoint]): Unit = {
+  def fit(sc: SparkContext, data: RDD[LabeledPoint]): MXNetModel = {
     val trainData = {
       if (params.numWorker > data.partitions.length) {
         logger.info("repartitioning training set to {} partitions", params.numWorker)
@@ -108,6 +109,7 @@ class MXNet extends Serializable {
       val dataIter = new LabeledPointIter(
         partition, params.dimension,
         params.batchSize,
+        dataName = params.dataName,
         labelName = params.labelName)
 
       // TODO: more nature way to get the # of examples?
@@ -150,133 +152,18 @@ class MXNet extends Serializable {
       dataIter.dispose()
       kv.barrier()
       kv.dispose()
-      Iterator(new MXNetModel(model))
+      Iterator(new MXNetModel(
+        model, params.dimension, params.batchSize,
+        dataName = params.dataName, labelName = params.labelName))
     }.cache()
 
+    // force job to run
     job.foreachPartition(() => _)
+    // simply the first model
+    val mxModel = job.first()
 
     logger.info("Waiting for scheduler ...")
     scheduler.waitFor()
-  }
-}
-
-object MXNet {
-  private val logger: Logger = LoggerFactory.getLogger(classOf[MXNet])
-  def main(args: Array[String]): Unit = {
-    val cmdLine = new CommandLine
-    val parser: CmdLineParser = new CmdLineParser(cmdLine)
-    try {
-      parser.parseArgument(args.toList.asJava)
-      cmdLine.checkArguments()
-
-      val conf = new SparkConf().setAppName("MXNet")
-      val sc = new SparkContext(conf)
-
-      val trainRaw = sc.textFile(cmdLine.input)
-      val trainData = trainRaw.map { s =>
-        val parts = s.split(' ')
-        val label = java.lang.Double.parseDouble(parts(0))
-        val features = Vectors.dense(parts(1).trim().split(',').map(java.lang.Double.parseDouble))
-        LabeledPoint(label, features)
-      }
-
-      val network = if (cmdLine.model == "mlp") getMlp else getLenet
-      val dimension = if (cmdLine.model == "mlp") Shape(784) else Shape(1, 28, 28)
-      val devs =
-        if (cmdLine.gpus != null) cmdLine.gpus.split(',').map(id => Context.gpu(id.trim.toInt))
-        else if (cmdLine.cpus != null) cmdLine.cpus.split(',').map(id => Context.cpu(id.trim.toInt))
-        else Array(Context.cpu(0))
-
-      val mxnet = new MXNet()
-        .setBatchSize(128)
-        .setLabelName("softmax_label")
-        .setContext(devs)
-        .setDimension(dimension)
-        .setNetwork(network)
-        .setNumEpoch(cmdLine.numEpoch)
-        .setNumServer(cmdLine.numServer)
-        .setNumWorker(cmdLine.numWorker)
-        .setExecutorClasspath(cmdLine.classpaths)
-        .setJava(cmdLine.java)
-      val start = System.currentTimeMillis
-      mxnet.train(sc, trainData)
-      val timeCost = System.currentTimeMillis - start
-      logger.info("Training cost {} milli seconds", timeCost)
-
-      sc.stop()
-    } catch {
-      case e: Throwable =>
-        logger.error(e.getMessage, e)
-        sys.exit(-1)
-    }
-  }
-
-  private class CommandLine {
-    @Option(name = "--input", usage = "Input training file.")
-    val input: String = null
-    @Option(name = "--jars", usage = "Jars for running MXNet on other nodes.")
-    val jars: String = null
-    @Option(name = "--num-server", usage = "PS server number")
-    val numServer: Int = 1
-    @Option(name = "--num-worker", usage = "PS worker number")
-    val numWorker: Int = 1
-    @Option(name = "--num-epoch", usage = "Number of epochs")
-    val numEpoch: Int = 10
-    @Option(name = "--java", usage = "Java bin")
-    val java: String = "java"
-    @Option(name = "--model", usage = "Model definition")
-    val model: String = "mlp"
-    @Option(name = "--gpus", usage = "the gpus will be used, e.g. '0,1,2,3'")
-    val gpus: String = null
-    @Option(name = "--cpus", usage = "the cpus will be used, e.g. '0,1,2,3'")
-    val cpus: String = null
-
-    def checkArguments(): Unit = {
-      require(input != null, "Undefined input path")
-      require(numServer > 0, s"Invalid number of servers: $numServer")
-      require(numWorker > 0, s"Invalid number of workers: $numWorker")
-    }
-
-    def classpaths = {
-      if (jars == null) null
-      else jars.replace(",", ":")
-    }
-  }
-
-  def getMlp: Symbol = {
-    val data = Symbol.Variable("data")
-    val fc1 = Symbol.FullyConnected(name = "fc1")(Map("data" -> data, "num_hidden" -> 128))
-    val act1 = Symbol.Activation(name = "relu1")(Map("data" -> fc1, "act_type" -> "relu"))
-    val fc2 = Symbol.FullyConnected(name = "fc2")(Map("data" -> act1, "num_hidden" -> 64))
-    val act2 = Symbol.Activation(name = "relu2")(Map("data" -> fc2, "act_type" -> "relu"))
-    val fc3 = Symbol.FullyConnected(name = "fc3")(Map("data" -> act2, "num_hidden" -> 10))
-    val mlp = Symbol.SoftmaxOutput(name = "softmax")(Map("data" -> fc3))
-    mlp
-  }
-
-  // LeCun, Yann, Leon Bottou, Yoshua Bengio, and Patrick
-  // Haffner. "Gradient-based learning applied to document recognition."
-  // Proceedings of the IEEE (1998)
-  def getLenet: Symbol = {
-    val data = Symbol.Variable("data")
-    // first conv
-    val conv1 = Symbol.Convolution()(Map("data" -> data, "kernel" -> "(5, 5)", "num_filter" -> 20))
-    val tanh1 = Symbol.Activation()(Map("data" -> conv1, "act_type" -> "tanh"))
-    val pool1 = Symbol.Pooling()(Map("data" -> tanh1, "pool_type" -> "max",
-      "kernel" -> "(2, 2)", "stride" -> "(2, 2)"))
-    // second conv
-    val conv2 = Symbol.Convolution()(Map("data" -> pool1, "kernel" -> "(5, 5)", "num_filter" -> 50))
-    val tanh2 = Symbol.Activation()(Map("data" -> conv2, "act_type" -> "tanh"))
-    val pool2 = Symbol.Pooling()(Map("data" -> tanh2, "pool_type" -> "max",
-      "kernel" -> "(2, 2)", "stride" -> "(2, 2)"))
-    // first fullc
-    val flatten = Symbol.Flatten()(Map("data" -> pool2))
-    val fc1 = Symbol.FullyConnected()(Map("data" -> flatten, "num_hidden" -> 500))
-    val tanh3 = Symbol.Activation()(Map("data" -> fc1, "act_type" -> "tanh"))
-    // second fullc
-    val fc2 = Symbol.FullyConnected()(Map("data" -> tanh3, "num_hidden" -> 10))
-    // loss
-    val lenet = Symbol.SoftmaxOutput(name = "softmax")(Map("data" -> fc2))
-    lenet
+    mxModel
   }
 }

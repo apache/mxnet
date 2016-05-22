@@ -33,6 +33,7 @@ private[mxnet] class MXNetParams extends Serializable {
   var numWorker: Int = 1
   var numServer: Int = 1
 
+  var dataName: String = "data"
   var labelName: String = "label"
 
   // java classpath on executors for running mxnet application
