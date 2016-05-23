@@ -11,6 +11,7 @@
 #include <dmlc/base.h>
 #include <dmlc/json.h>
 #include <dmlc/type_traits.h>
+#include <dmlc/parameter.h>
 #include <string>
 #include <memory>
 #include <algorithm>
@@ -112,6 +113,17 @@ class StaticGraph {
     int32_t backward_source_id;
     /*! \brief additional attributes about the node */
     std::map<std::string, std::string> attr;
+    /*!
+     * \brief Data structure to enable add-to operations in the node.
+     *  Use to enable memory efficient gradient sum aggregation.
+     *  Normally this array is empty.
+     *
+     *  Let n = inputs.size() - addto_index_.size();
+     *    the output of the node is defined as:
+     *  - out[j] = op(input[0:n]) for j not in addto_index_
+     *  - out[addto_index_[i]] = op(input[0:n]) + inputs[n + i]
+     */
+    std::vector<uint32_t> addto_index;
     /*! \brief default constructor */
     Node() : backward_source_id(-1) {}
     /*! \brief copy constructor in favor of serialization. */
@@ -120,7 +132,8 @@ class StaticGraph {
           name(another.name),
           inputs(another.inputs),
           backward_source_id(another.backward_source_id),
-          attr(another.attr) {}
+          attr(another.attr),
+          addto_index(another.addto_index) {}
 
     inline Node& operator=(Node another) {
       op = std::move(another.op);
@@ -128,8 +141,24 @@ class StaticGraph {
       inputs = std::move(another.inputs);
       backward_source_id = std::move(another.backward_source_id);
       attr = std::move(another.attr);
+      addto_index = std::move(another.addto_index);
       return *this;
     }
+
+    template<typename ValueType>
+    inline ValueType get_attr(const std::string& key, ValueType default_value) const {
+      auto it = attr.find(key);
+      if (it == attr.end()) {
+        return default_value;
+      } else {
+        ValueType ret;
+        dmlc::parameter::FieldEntry<ValueType> e;
+        e.Init(key, &ret, ret);
+        e.Set(&ret, it->second);
+        return ret;
+      }
+    }
+
     /*! \return whether the node is forward op node */
     inline bool is_forward() const {
       return op != nullptr;
@@ -194,11 +223,13 @@ class StaticGraph {
    * \param topo_order The topological order of node index, as created by TopoSort.
    * \param node_out_shapes The shapes of the each outputs of nodes in the graph.
    * \param node_aux_shapes The shapes of the each auxiliary states of nodes in the graph.
+   * \param partial_infer Whether return partially inferred results.
    * \return if the shape inference is successful, return true, else return false.
    */
   bool InferNodeShapes(const std::vector<uint32_t> &topo_order,
                        std::vector<std::vector<TShape> > *node_out_shapes,
-                       std::vector<std::vector<TShape> > *node_aux_shapes) const;
+                       std::vector<std::vector<TShape> > *node_aux_shapes,
+                       bool partial_infer = false) const;
   /*!
    * \brief infer the node types in the computation graph.
    *
@@ -221,17 +252,19 @@ class StaticGraph {
    *     For unknown shapes, InferShape will try to fill in the correct Shape in in_shape
    *     For known shapes, InferShape will check shape consistency
    *
-   *     common practice: set the shape of data input, and usually weight's shape can be infered
+   *     common practice: set the shape of data input, and usually weight's shape can be inferred
    *
    * \param out_shape the shape of outputs of the operator
    *     InferShape will modify the vector to fill output TShape
    * \param aux_shape the shape of auxiliary states of the operator
    *     InferShape will modify the vector to fill output TShape
+   * \param partial_infer Whether return partially inferred results.
    * \return if the shape inference is successful, return true, else return false.
    */
   bool InferShape(std::vector<TShape>* in_shape,
                   std::vector<TShape>* out_shape,
-                  std::vector<TShape>* aux_shape) const;
+                  std::vector<TShape>* aux_shape,
+                  bool partial_infer = false) const;
 
   /*!
    * \brief infer the types of outputs and unknown input arguments
@@ -241,7 +274,7 @@ class StaticGraph {
    *     For unknown types, Infertype will try to fill in the correct type in in_type
    *     For known types, Infertype will check type consistency
    *
-   *     common practice: set the type of data input, and usually weight's type can be infered
+   *     common practice: set the type of data input, and usually weight's type can be inferred
    *
    * \param out_type the type of outputs of the operator
    *     Infertype will modify the vector to fill output int
@@ -280,7 +313,7 @@ class StaticGraph {
    * \param grad_source the source of the inputs.
    * \return a created ElementWiseSum node
    */
-  static Node CreateSumNode(const std::vector<DataEntry> &grad_source);
+  Node CreateGradSumNode(const std::vector<DataEntry> &grad_source);
   /*!
    * \brief create a copy node.
    * \param source the Source data

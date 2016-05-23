@@ -18,7 +18,7 @@ namespace mxnet {
 Optimizer *Optimizer::Create(const char* type_name) {
   auto *creator = dmlc::Registry<OptimizerReg>::Find(type_name);
   if (creator == nullptr) {
-    LOG(FATAL) << "Cannot find Operator " << type_name << " in registry";
+    LOG(FATAL) << "Cannot find Optimizer " << type_name << " in registry";
   }
   return creator->body();
 }

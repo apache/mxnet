@@ -323,8 +323,10 @@ NDArrayFunction::NDArrayFunction(FunctionHandle handle)
     const char **arg_names;
     const char **arg_type_infos;
     const char **arg_descriptions;
+    const char *ret_type;
     MX_CALL(MXFuncGetInfo(handle, &name, &description, &num_args,
-                          &arg_names, &arg_type_infos, &arg_descriptions));
+                          &arg_names, &arg_type_infos, &arg_descriptions,
+                          &ret_type));
     if (name[0] == '_') {
       name_ = std::string("mx.nd.internal.") + (name + 1);
     } else {
@@ -354,7 +356,7 @@ NDArrayFunction::NDArrayFunction(FunctionHandle handle)
       begin_use_vars_ = 0;
       begin_scalars_ = num_use_vars_;
     } else {
-      begin_scalars_ = num_scalars_;
+      begin_use_vars_ = num_scalars_;
       begin_scalars_ = 0;
     }
     begin_mutate_vars_ = num_use_vars_ + num_scalars_;
@@ -455,8 +457,10 @@ FunctionHandle NDArrayFunction::FindHandle(const std::string& hname) {
     const char **arg_names;
     const char **arg_type_infos;
     const char **arg_descriptions;
+    const char *ret_type;
     MX_CALL(MXFuncGetInfo(handle, &name, &description, &num_args,
-                          &arg_names, &arg_type_infos, &arg_descriptions));
+                          &arg_names, &arg_type_infos, &arg_descriptions,
+                          &ret_type));
     if (name == hname) return handle;
   }
   RLOG_FATAL << "FindHandle: cannot find function " << hname;

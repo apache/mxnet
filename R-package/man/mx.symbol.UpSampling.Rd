@@ -7,6 +7,9 @@
 mx.symbol.UpSampling(...)
 }
 \arguments{
+\item{data}{Symbol[]
+Array of tensors to upsample}
+
 \item{scale}{int (non-negative), required
 Up sampling scale}
 

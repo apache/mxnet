@@ -17,6 +17,13 @@
 
 namespace mxnet {
 /*!
+ * \brief Memory pool holding a list of NDArrays for sharing between executors.
+ */
+struct GraphStoragePool {
+  std::vector<NDArray> pool;
+};
+
+/*!
  * \brief Memory allocators for the GraphExecutor.
  *  This class is intended to be used by GraphExecutor
  *  to allocate the memory for each DataEntryInfo.
@@ -36,10 +43,13 @@ class GraphStorageAllocator {
   typedef int64_t StorageID;
   /*! \brief bad storage id */
   static const StorageID kBadStorageID = -1;
+  /*! \brief dummy color for shared mem */
+  static const uint32_t kDummyColor;
   /*! \brief constructor to the graph memory allocator */
   explicit GraphStorageAllocator(
       StaticGraph *graph,
-      const std::vector<uint32_t>& topo_order) noexcept(false);
+      const std::vector<uint32_t>& topo_order,
+      std::shared_ptr<GraphStoragePool> shared_mem) noexcept(false);
   /*!
    * \brief Request a memory.
    * \param ctx the context of the graph
@@ -110,106 +120,8 @@ class GraphStorageAllocator {
   std::vector<uint32_t> node_color_;
   /*! \brief whether use color based match algorithm */
   uint32_t num_match_color_;
+  /*! \brief shared memory pool */
+  std::shared_ptr<GraphStoragePool> shared_mem_;
 };
-
-// put implementation in header files for now
-GraphStorageAllocator::GraphStorageAllocator(
-    StaticGraph *graph,
-    const std::vector<uint32_t>& topo_order) noexcept(false)
-    : graph_(graph) , num_match_color_(0) {
-  match_range_ = dmlc::GetEnv("MXNET_EXEC_MATCH_RANGE", 16);
-  // if we set this to 1, this means no color based match.
-  // color based match will cost a bit more memory usually
-  // but also enables more parallelization.
-  num_match_color_ = static_cast<uint32_t>(common::GetExecNumMatchColor());
-  this->InitColor(topo_order);
-}
-
-void GraphStorageAllocator::InitColor(const std::vector<uint32_t>& topo_order) {
-  std::vector<uint32_t> importance(graph_->nodes.size(), 0);
-  for (size_t i = 0; i < topo_order.size(); ++i) {
-    uint32_t nid = topo_order[i];
-    if (graph_->nodes[nid].is_variable()) continue;
-    importance[nid] = 1;
-  }
-  num_match_color_ = graph::ColorNodeGroup(
-      *graph_, topo_order,
-      importance, num_match_color_,
-      &node_color_);
-}
-
-GraphStorageAllocator::StorageID
-GraphStorageAllocator::Alloc(Context ctx, int type_flag, size_t size) {
-  StorageID id = static_cast<StorageID>(data_.size());
-  std::unique_ptr<StorageEntry> ptr(new StorageEntry());
-  ptr->id = id;
-  ptr->ctx = ctx;
-  ptr->type_flag = type_flag;
-  ptr->max_size = size;
-  data_.push_back(std::move(ptr));
-  return id;
-}
-
-GraphStorageAllocator::StorageID
-GraphStorageAllocator::Request(Context ctx, int type_flag, TShape shape, uint32_t node_id) {
-  // search memory block in [size / match_range_, size * match_range_)
-  size_t size = shape.Size();
-  if (match_range_ == 0) return this->Alloc(ctx, type_flag, size);
-  auto begin = free_.lower_bound(size / match_range_);
-  auto mid = free_.lower_bound(size);
-  auto end = free_.upper_bound(size * match_range_);
-  // TODO(bing, min) consider better strategy
-  // search for memory blocks larger than requested
-  for (auto it = mid; it != end; ++it) {
-    StorageEntry *e = it->second;
-    if (e->ctx != ctx) continue;
-    if (e->type_flag != type_flag) continue;
-    if (node_color_[e->released_by_node] != node_color_[node_id]) continue;
-    // Use exect matching strategy
-    e->max_size = std::max(size, e->max_size);
-    // find a exact match, erase from map and return
-    free_.erase(it);
-    return e->id;
-  }
-  // then search for memory blocks smaller than requested space
-  for (auto it = mid; it != begin;) {
-    --it;
-    StorageEntry *e = it->second;
-    if (e->ctx != ctx) continue;
-    if (e->type_flag != type_flag) continue;
-    if (node_color_[e->released_by_node] != node_color_[node_id]) continue;
-    // Use exect matching strategy
-    e->max_size = std::max(size, e->max_size);
-    // find a exact match, erase from map and return
-    free_.erase(it);
-    return e->id;
-  }
-  // cannot find anything return a new one.
-  return this->Alloc(ctx, type_flag, size);
-}
-
-void GraphStorageAllocator::Release(StorageID id, uint32_t node_id) {
-  CHECK_NE(id, kBadStorageID);
-  StorageEntry *e = data_[id].get();
-  e->released_by_node = node_id;
-  free_.insert({e->max_size, e});
-}
-
-size_t GraphStorageAllocator::InitStorages() {
-  size_t total = 0;
-  for (size_t i = 0; i < data_.size(); ++i) {
-    StorageEntry *e = data_[i].get();
-    TShape shape = mshadow::Shape1(e->max_size);
-    e->data = NDArray(shape, e->ctx, false, e->type_flag);
-    total += e->max_size * mshadow::mshadow_sizeof(e->type_flag);
-  }
-  return total;
-}
-
-NDArray GraphStorageAllocator::Get(StorageID id, TShape shape) {
-  CHECK_NE(id, kBadStorageID);
-  StorageEntry *e = data_[id].get();
-  return e->data.Slice(0, shape.Size()).Reshape(shape);
-}
 }  // namespace mxnet
 #endif  // MXNET_SYMBOL_GRAPH_MEMORY_ALLOCATOR_H_

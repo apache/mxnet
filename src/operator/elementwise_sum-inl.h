@@ -30,7 +30,7 @@ struct ElementWiseSumParam : public dmlc::Parameter<ElementWiseSumParam> {
   int num_args;
   DMLC_DECLARE_PARAMETER(ElementWiseSumParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
-    .describe("Number of inputs to be sumed.");
+    .describe("Number of inputs to be summed.");
   }
 };
 

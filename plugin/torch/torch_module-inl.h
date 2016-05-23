@@ -46,14 +46,13 @@ template<typename xpu>
 class TorchModuleOp : public Operator {
  private:
   TorchModuleParam param_;
-
- protected:
-  THCharStorage* chunk_;
+  TorchState* torchState_;
+  int lua_reference_;
 
  public:
-  explicit TorchModuleOp(TorchModuleParam p) : chunk_(NULL) {
+  explicit TorchModuleOp(TorchModuleParam p, TorchState* torchState) : torchState_(torchState) {
     this->param_ = p;
-    lua_State* L = TorchState::LuaState();
+    lua_State* L = torchState_->L;
     CHECK_EQ(lua_gettop(L), 0);
     std::string exec = std::string("return ") + p.lua_string
       + TorchTensor::ModuleType(xpu::kDevMask);
@@ -85,29 +84,33 @@ class TorchModuleOp : public Operator {
       while (lua_next(L, -2)) {
         CHECK(luaT_isudata(L, -1, TorchTensor::TensorType(xpu::kDevMask)));
         void* udata = luaT_toudata(L, -1, TorchTensor::TensorType(xpu::kDevMask));
-        TorchTensor::FreeInternal(static_cast<THGeneralTensor>(udata), xpu::kDevMask);
+        TorchTensor::FreeInternal(torchState_, static_cast<THGeneralTensor>(udata), xpu::kDevMask);
         lua_pop(L, 1);
       }
       lua_pop(L, 1);  // pop the parameter table
     }
-    // serialize
-    TorchState::Serialize(&chunk_);
+    this->lua_reference_ = luaL_ref(L, LUA_REGISTRYINDEX);
   }
+
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
-    lua_State* L = TorchState::LuaState();
+    lua_State* L = torchState_->L;
+
     CHECK_EQ(lua_gettop(L), 0);
     CHECK_EQ(in_data.size(), param_.num_params + param_.num_data);
     CHECK_EQ(out_data.size(), param_.num_outputs);
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    TorchState::SetStream(s);
+    torchState_->SetStream(s);
     // Deserialize self table
-    TorchState::Deserialize(chunk_);
+
+    lua_rawgeti(L, LUA_REGISTRYINDEX, lua_reference_);
+
     std::vector<THGeneralTensor> th_output =
-      TorchTensor::TBlobVectorAsTable(out_data.begin(), out_data.begin() + param_.num_outputs);
+      TorchTensor::TBlobVectorAsTable(torchState_, out_data.begin(),
+                                      out_data.begin() + param_.num_outputs);
     // set the output field
     lua_setfield(L, -2, "output");
     // set the parameters
@@ -123,7 +126,7 @@ class TorchModuleOp : public Operator {
       while (lua_next(L, -2)) {
         CHECK(luaT_isudata(L, -1, TorchTensor::TensorType(*it)));
         void* udata = luaT_toudata(L, -1, TorchTensor::TensorType(*it));
-        TorchTensor::SetInternal(static_cast<THGeneralTensor>(udata), *(it));
+        TorchTensor::SetInternal(torchState_, static_cast<THGeneralTensor>(udata), *(it));
         it++;
         lua_pop(L, 1);
       }
@@ -135,14 +138,14 @@ class TorchModuleOp : public Operator {
     // | self | updateOutput
     lua_pushvalue(L, -2);
     // | self | updateOutput | self
-    TorchTensor::TBlobVectorAsTable(in_data.begin(), in_data.begin() + param_.num_data);
+    TorchTensor::TBlobVectorAsTable(torchState_, in_data.begin(),
+                                    in_data.begin() + param_.num_data);
     // | self | updateOutput | self | inputs
     int err = lua_pcall(L, 2, 1, 0);  // doesn't need the output
     CHECK_EQ(err, 0) << lua_tostring(L, -1);
-    TorchTensor::CheckOutput(out_data.begin(), out_data.begin() + param_.num_outputs,
+    TorchTensor::CheckOutput(torchState_, out_data.begin(), out_data.begin() + param_.num_outputs,
                              th_output.begin(), th_output.end());
-    lua_pop(L, 1);
-    TorchState::Serialize(&chunk_);
+    lua_pop(L, 2);
     CHECK_EQ(lua_gettop(L), 0);
   }
 
@@ -153,19 +156,20 @@ class TorchModuleOp : public Operator {
                         const std::vector<OpReqType> &req,
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_args) {
-    lua_State* L = TorchState::LuaState();
+    lua_State* L = torchState_->L;
     CHECK_EQ(lua_gettop(L), 0);
     CHECK_EQ(in_data.size(), param_.num_params + param_.num_data);
     CHECK_EQ(out_data.size(), param_.num_outputs);
     CHECK_EQ(out_grad.size(), param_.num_outputs);
     CHECK_EQ(in_grad.size(), param_.num_params + param_.num_data);
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    TorchState::SetStream(s);
-    TorchState::Deserialize(chunk_);
-    TorchTensor::TBlobVectorAsTable(out_data.begin(), out_data.end());
+    torchState_->SetStream(s);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, lua_reference_);
+    TorchTensor::TBlobVectorAsTable(torchState_, out_data.begin(), out_data.end());
     lua_setfield(L, -2, "output");
     std::vector<THGeneralTensor> th_grad =
-      TorchTensor::TBlobVectorAsTable(in_grad.begin(), in_grad.begin() + param_.num_data);
+      TorchTensor::TBlobVectorAsTable(torchState_, in_grad.begin(),
+                                      in_grad.begin() + param_.num_data);
     lua_setfield(L, -2, "gradInput");
     if (param_.num_params != 0) {
       // get the parameters into the stack
@@ -178,6 +182,7 @@ class TorchModuleOp : public Operator {
       std::vector<TBlob>::const_iterator it = in_data.begin() + param_.num_data;
       while (lua_next(L, -3)) {
         TorchTensor::SetInternal(
+          torchState_,
           static_cast<THGeneralTensor>(luaT_toudata(L, -1, TorchTensor::TensorType(*it))),
           *it);
         it++;
@@ -188,6 +193,7 @@ class TorchModuleOp : public Operator {
       it = in_grad.begin() + param_.num_data;;
       while (lua_next(L, -2)) {
         TorchTensor::SetInternal(
+          torchState_,
           static_cast<THGeneralTensor>(luaT_toudata(L, -1, TorchTensor::TensorType(*it))),
           *it);
         it++;
@@ -198,8 +204,9 @@ class TorchModuleOp : public Operator {
     lua_getfield(L, -1, "zeroGradParameters");
     lua_pushvalue(L, -2);
     CHECK_EQ(lua_pcall(L, 1, 0, 0), 0);
-    TorchTensor::TBlobVectorAsTable(in_data.begin(), in_data.begin() + param_.num_data);
-    TorchTensor::TBlobVectorAsTable(out_grad.begin(), out_grad.end());
+    TorchTensor::TBlobVectorAsTable(torchState_, in_data.begin(),
+                                    in_data.begin() + param_.num_data);
+    TorchTensor::TBlobVectorAsTable(torchState_, out_grad.begin(), out_grad.end());
     // call
     lua_getfield(L, -3, "accGradParameters");
     lua_pushvalue(L, -4);
@@ -214,26 +221,27 @@ class TorchModuleOp : public Operator {
     lua_pushvalue(L, -4);
     err = lua_pcall(L, 3, 1, 0);  // doesn't need the output
     CHECK_EQ(err, 0) << lua_tostring(L, -1);
-    TorchTensor::CheckOutput(in_grad.begin(), in_grad.begin() + param_.num_data,
+    TorchTensor::CheckOutput(torchState_, in_grad.begin(), in_grad.begin() + param_.num_data,
                              th_grad.begin(), th_grad.end());
-    lua_pop(L, 3);
-    TorchState::Serialize(&chunk_);
+    lua_pop(L, 4);
     CHECK_EQ(lua_gettop(L), 0);
   }
 };  // class TorchModuleOp
 
-// Decalre Factory function, used for dispatch specialization
+// Declare Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(TorchModuleParam type);
+Operator* CreateOp(TorchModuleParam type, TorchState* torchState);
 
 #if DMLC_USE_CXX11
 class TorchModuleProp : public OperatorProperty {
  protected:
-  mutable THCharStorage* chunk_;
   mutable std::vector<std::string> arguments_;
+  mutable TorchState* torchState_;
+  mutable int lua_reference_;
 
-  void InitChunk_() const {
-    lua_State* L = TorchState::LuaState();
+  void InitTorchState() const {
+    this->torchState_ = new TorchState();
+    lua_State* L = torchState_->L;
     std::string exec = std::string("return ") + param_.lua_string;
     CHECK_EQ(luaL_loadstring(L, exec.c_str()), 0);
     int err = lua_pcall(L, 0, LUA_MULTRET, 0);
@@ -243,17 +251,23 @@ class TorchModuleProp : public OperatorProperty {
     lua_pushvalue(L, -2);
     err = lua_pcall(L, 1, 1, 0);
     CHECK_EQ(err, 0);
-    TorchState::Serialize(&chunk_);
+    lua_reference_ = lua_ref(L, LUA_REGISTRYINDEX);
     lua_pop(L, 1);
+
     CHECK_EQ(lua_gettop(L), 0);
   }
 
  public:
+  TorchModuleProp() : OperatorProperty(), torchState_(NULL), lua_reference_(-1) {
+  }
+
   std::vector<std::string> ListArguments() const override {
+    if (!torchState_) {
+      InitTorchState();
+    }
+    lua_State* L = torchState_->L;
+
     if (arguments_.size() == 0) {
-      if (!chunk_) {
-        InitChunk_();
-      }
       for (uint32_t i = 0; i < param_.num_data; ++i) {
         std::string data = "data_" + std::to_string(i);
         arguments_.push_back(data);
@@ -279,11 +293,10 @@ class TorchModuleProp : public OperatorProperty {
           "          end\n"
           "          return ret\n"
           "end\n";
-      lua_State* L = TorchState::LuaState();
       luaL_loadstring(L, lua_code.c_str());
       int err = lua_pcall(L, 0, 1, 0);  // return the function
       CHECK_EQ(err, 0) << lua_tostring(L, -1);
-      TorchState::Deserialize(chunk_);
+      lua_rawgeti(L, LUA_REGISTRYINDEX, lua_reference_);
       err = lua_pcall(L, 1, 1, 0);  // call the function
       CHECK_EQ(err, 0) << lua_tostring(L, -1);
       lua_pushnil(L);
@@ -297,12 +310,16 @@ class TorchModuleProp : public OperatorProperty {
   }
 
   virtual std::vector<std::string> ListOutputs() const {
-    std::vector<std::string> ret;
-    std::string output = "output";
-    for (uint32_t i = 0; i < param_.num_outputs; ++i) {
-      ret.push_back(output + "_" + std::to_string(i));
+    if (param_.num_outputs > 1) {
+      std::vector<std::string> ret;
+      std::string output = "output";
+      for (uint32_t i = 0; i < param_.num_outputs; ++i) {
+        ret.push_back(output + std::to_string(i));
+      }
+      return ret;
+    } else {
+      return {"output"};
     }
-    return ret;
   }
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -314,12 +331,13 @@ class TorchModuleProp : public OperatorProperty {
   bool InferShape(std::vector<TShape> *in_shape,
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
-    if (chunk_ == nullptr) {
-      this->InitChunk_();
+    if (torchState_ == nullptr) {
+      this->InitTorchState();
     }
-    lua_State* L = TorchState::LuaState();
+    lua_State* L = torchState_->L;
+
     CHECK_EQ(lua_gettop(L), 0);
-    TorchState::Deserialize(chunk_);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, lua_reference_);
     CHECK_EQ(in_shape->size(), param_.num_data + param_.num_params);
     CHECK_EQ(out_shape->size(), param_.num_outputs);
     CHECK_EQ(aux_shape->size(), 0);

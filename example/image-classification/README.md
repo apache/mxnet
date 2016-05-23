@@ -8,7 +8,7 @@ width=400/>
 
 ## How to use
 
-First build mxnet by following the [guide](http://mxnet.readthedocs.org/en/latest/build.html)
+First build mxnet by following the [guide](http://mxnet.readthedocs.io/en/latest/how_to/build.html)
 
 ### Train
 
@@ -98,7 +98,7 @@ program on this [tutorial](http://mxnet.readthedocs.org/en/latest/distributed_tr
 ### Predict
 
 - [predict with pre-trained model](../notebooks/predict-with-pretrained-model.ipynb)
-- more pre-trained models are provided on the [model gallery](https://github.com/dmlc/mxnet-model-gallerya).
+- more pre-trained models are provided on the [model gallery](https://github.com/dmlc/mxnet-model-gallery).
 - We can also easily to run the prediction on various devices, such as
 [Android/iOS](http://dmlc.ml/mxnet/2015/11/10/deep-learning-in-a-single-file-for-smart-device.html)
 
@@ -109,9 +109,9 @@ There are two commonly used way to feed data into MXNet.
 
 The first is packing all example into one or several compact `recordio`
 files. See a step-by-step
-[tutorial](https://mxnet.readthedocs.org/en/latest/python/io.html#create-dataset-using-recordio)
+[tutorial](http://mxnet.readthedocs.io/en/latest/packages/python/io.html#create-dataset-using-recordio)
 and the
-[document](http://mxnet.readthedocs.org/en/latest/developer-guide/note_data_loading.html)
+[document](http://mxnet.readthedocs.io/en/latest/system/note_data_loading.html)
 describing how it works.
 
 *Note: A commonly mistake is forgetting shuffle the image list during packing. This will lead fail of training, eg. ```accuracy``` keeps 0.001 for several rounds.*

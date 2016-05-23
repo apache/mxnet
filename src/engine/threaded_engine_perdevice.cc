@@ -21,7 +21,7 @@ namespace engine {
  *  - Execute Async operation immediately if pushed from Pusher.
  *  - Use fixed amount of threads for each device.
  *  - Use special threads for copy operations.
- *  - Each stream is allocated and binded to each of the thread.
+ *  - Each stream is allocated and bound to each of the thread.
  */
 class ThreadedEnginePerDevice : public ThreadedEngine {
  public:

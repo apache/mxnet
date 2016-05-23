@@ -300,6 +300,10 @@ void ThreadedEngine::DeleteVariable(SyncFn delete_fn,
 void ThreadedEngine::WaitForVar(VarHandle var) {
   ThreadedVar* threaded_var = ThreadedVar::CastFromBase(var);
   if (threaded_var->ready_to_read()) return;
+  if (engine_info_) {
+    LOG(INFO) << "Wait for " << threaded_var;
+    debug_wait_var_ = threaded_var;
+  }
   std::atomic<bool> done{false};
   this->PushSync([this, &done](RunContext) {
       if (engine_info_) {
@@ -338,9 +342,20 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   }
   // Mark complete for write variables.
   for (auto&& i : threaded_opr->mutable_vars) {
+    bool debug_info = (engine_info_ && debug_wait_var_ == i);
+    if (debug_info) {
+      LOG(INFO) << "Complete write dep for " << i;
+    }
     bool to_delete = i->CompleteWriteDependency(
-        [this](OprBlock* opr) {
+        [this, debug_info](OprBlock* opr) {
+          if (debug_info) {
+            LOG(INFO) << "PushToExecute " << opr;
+            debug_push_opr_ = opr;
+          }
           this->PushToExecute(opr, false);
+          if (debug_info) {
+            LOG(INFO) << "Fin PushToExecute " << opr;
+          }
         });
     if (to_delete) {
       ThreadedVar::Delete(i);
