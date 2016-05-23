@@ -91,8 +91,8 @@ class SoftmaxOutputOp : public Operator {
     CHECK_GE(in_grad.size(), 1);
     CHECK_GE(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
+    int n = out_data[softmaxout_enum::kOut].size(0);
     if (param_.multi_output) {
-      int n = out_data[softmaxout_enum::kOut].size(0);
       int k = out_data[softmaxout_enum::kOut].size(1);
       Shape<3> s3 = Shape3(n, k, static_cast<int>(out_data[softmaxout_enum::kOut].Size()/n/k));
       Tensor<xpu, 2, DType> label = in_data[softmaxout_enum::kLabel].FlatTo2D<xpu, DType>(s);
@@ -117,7 +117,7 @@ class SoftmaxOutputOp : public Operator {
       } else {
         SoftmaxGrad(grad, out, label);
       }
-      grad *= DType(param_.grad_scale);
+      grad *= DType(param_.grad_scale / n);
     }
   }
 
