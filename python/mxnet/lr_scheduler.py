@@ -74,6 +74,8 @@ class FactorScheduler(LRScheduler):
             self.base_lr *= self.factor
             if self.base_lr < self.stop_factor_lr:
                 self.base_lr = self.stop_factor_lr
+                logging.info("Update[%d]: now learning rate arrived at %0.5e, will not "
+                             "change in the future", num_update, self.base_lr)
             else:
                 logging.info("Update[%d]: Change learning rate to %0.5e",
                              num_update, self.base_lr)
