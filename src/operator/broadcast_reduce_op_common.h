@@ -43,7 +43,7 @@ inline std::vector<index_t> ParseAxes_(const TShape& param_axis, index_t max_ndi
 * \param src_shape shape of the source tensor
 */
 inline void CheckContiguousAxes_(bool *is_contiguous_axes, index_t *reducing_size,
-  const mshadow::TShape &axes, const mshadow::TShape &src_shape) {
+  const TShape &axes, const TShape &src_shape) {
   *is_contiguous_axes = true;
   *reducing_size = 1;
   for (index_t i = 0; i < axes.ndim(); ++i) {
@@ -57,13 +57,13 @@ inline void CheckContiguousAxes_(bool *is_contiguous_axes, index_t *reducing_siz
 
 template<int dimsrc>
 inline void CheckContiguousAxes_(bool *is_contiguous_axes, index_t *reducing_size,
-  const mshadow::TShape &axes, const mshadow::Shape<dimsrc> &src_shape) {
+  const TShape &axes, const mshadow::Shape<dimsrc> &src_shape) {
   CheckContiguousAxes_(is_contiguous_axes, reducing_size, axes,
     TShape(src_shape.shape_, src_shape.shape_ + dimsrc));
 }
 
-inline TShape GetBroadcastingAxes_(const mshadow::TShape &src_shape,
-  const mshadow::TShape &target_shape) {
+inline TShape GetBroadcastingAxes_(const TShape &src_shape,
+  const TShape &target_shape) {
   std::vector<index_t> axes_vec;
   CHECK_EQ(target_shape.ndim(), src_shape.ndim());
   for (index_t i = 0; i < src_shape.ndim(); ++i) {
