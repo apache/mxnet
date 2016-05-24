@@ -23,6 +23,8 @@ namespace op {
 namespace softmaxout_enum {
 enum SoftmaxOutputOpInputs {kData, kLabel};
 enum SoftmaxOutputOpOutputs {kOut};
+enum SoftmaxOutputNormType {kNull, kBatch, kValid};
+enum SoftmaxOutputOpResource {kTempSpace};
 }  // namespace softmaxout_enum
 
 struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
@@ -30,6 +32,7 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
   float ignore_label;
   bool multi_output;
   bool use_ignore;
+  int normalization;
   DMLC_DECLARE_PARAMETER(SoftmaxOutputParam) {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
     .describe("Scale the gradient by a float factor");
@@ -43,6 +46,14 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
     DMLC_DECLARE_FIELD(use_ignore).set_default(false)
     .describe("If set to true, the ignore_label value will not contribute "
       "to the backward gradient");
+    DMLC_DECLARE_FIELD(normalization)
+    .add_enum("null", softmaxout_enum::kNull)
+    .add_enum("batch", softmaxout_enum::kBatch)
+    .add_enum("valid", softmaxout_enum::kValid)
+    .set_default(softmaxout_enum::kNull)
+    .describe("If set to null, op will do nothing on output gradient."
+              "If set to batch, op will normalize gradient by divide batch size"
+              "If set to valid, op will normalize gradient by divide sample not ignored");
   };
 };
 
@@ -91,6 +102,7 @@ class SoftmaxOutputOp : public Operator {
     CHECK_GE(in_grad.size(), 1);
     CHECK_GE(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
+    int64_t valid_cnt = 0;
     if (param_.multi_output) {
       int n = out_data[softmaxout_enum::kOut].size(0);
       int k = out_data[softmaxout_enum::kOut].size(1);
@@ -105,7 +117,12 @@ class SoftmaxOutputOp : public Operator {
       } else {
           SoftmaxGrad(grad, out, label);
       }
-      grad *= DType(param_.grad_scale/s3[2]);
+      if (param_.normalization == softmaxout_enum::kBatch) {
+        valid_cnt = label.size(0);
+      } else if (param_.normalization == softmaxout_enum::kValid) {
+        //
+      }
+      grad *= DType(param_.grad_scale / s3[2]) / DType(valid_cnt);
     } else {
       const TShape& label_shape = in_data[softmaxout_enum::kLabel].shape_;
       Tensor<xpu, 1, DType> label = in_data[softmaxout_enum::kLabel].get_with_shape<xpu, 1, DType>(
@@ -117,7 +134,12 @@ class SoftmaxOutputOp : public Operator {
       } else {
         SoftmaxGrad(grad, out, label);
       }
-      grad *= DType(param_.grad_scale);
+      if (param_.normalization == softmaxout_enum::kBatch) {
+        valid_cnt = label.size(0);
+      } else if (param_.normalization == softmaxout_enum::kValid) {
+        //
+      }
+      grad *= DType(param_.grad_scale) / DType(valid_cnt);
     }
   }
 
@@ -214,6 +236,11 @@ class SoftmaxOutputProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<void*> &out_data) const override {
     return {{in_data[softmaxout_enum::kData], out_data[softmaxout_enum::kOut]}};
+  }
+
+  std::vector<ResourceRequest> BackwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    return {ResourceRequest::kTempSpace};
   }
 
   Operator* CreateOperator(Context ctx) const override {
