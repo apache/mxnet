@@ -3,12 +3,59 @@ NDArray API
 ===========
 =#
 
+# All the types supported by mshadow.
+typealias DType Union{Float32, Float64, Float16, UInt8, Int32}
+@enum TypeFlag kFloat32 kFloat64 kFloat16 kUint8 kInt32
+
+function toTypeFlag{T <: DType}(:: Type{T})
+  if T == Float32
+    return kFloat32
+  elseif T == Float64
+    return kFloat64
+  elseif T == Float16
+    return kFloat16
+  elseif T == UInt8
+    return kUint8
+  elseif T == Int32
+    return kInt32
+  else
+    throw(ArgumentError("Can't convert $T to Dtype."))
+  end
+end
+
+function fromTypeFlag(T :: TypeFlag)
+  if T == kFloat32
+    return Float32
+  elseif T == kFloat64
+    return Float64
+  elseif T == kFloat16
+    return Float16
+  elseif T == kUint8
+    return UInt8
+  elseif T == kInt32
+    return Int32
+  else
+    throw(ArgumentError("Can't convert Dtype $T."))
+  end
+end
+
 # create a NDArray handle of specific shape
 function _ndarray_alloc{N}(shape :: NTuple{N, Int}, ctx :: Context, delay_alloc :: Bool)
   h_ref  = Ref{MX_handle}(0)
   shape  = flipdim(MX_uint[shape...],1)
   @mxcall(:MXNDArrayCreate, (Ptr{MX_uint}, MX_uint, Cint, Cint, Cint, Ref{MX_handle}),
       shape, length(shape), ctx.device_type, ctx.device_id, delay_alloc, h_ref)
+  handle = MX_NDArrayHandle(h_ref[])
+  return handle
+end
+
+# create a NDArray handle of specific shape type
+function _ndarray_alloc{T <: DType,N}(:: Type{T}, shape :: NTuple{N, Int}, ctx :: Context, delay_alloc :: Bool)
+  h_ref  = Ref{MX_handle}(0)
+  shape  = flipdim(MX_uint[shape...],1)
+  dtype  = toTypeFlag(T)
+  @mxcall(:MXNDArrayCreateEx, (Ptr{MX_uint}, MX_uint, Cint, Cint, Cint, Cint, Ref{MX_handle}),
+      shape, length(shape), ctx.device_type, ctx.device_id, delay_alloc, dtype, h_ref)
   handle = MX_NDArrayHandle(h_ref[])
   return handle
 end
@@ -51,7 +98,7 @@ type NDArray
 end
 
 function Base.show(io :: IO, arr :: NDArray)
-  print(io, "mx.NDArray$(size(arr))")
+  print(io, "mx.NDArray{$(eltype(arr))}$(size(arr))")
 end
 
 function NDArray{T<:Real}(data :: Array{T})
@@ -185,10 +232,20 @@ end
 #=doc
 .. function:: eltype(arr :: NDArray)
 
-   Get the element type of an :class:`NDArray`. Currently the element type is always ``mx.MX_float``.
+   Get the element type of an :class:`NDArray`.
 =#
-function eltype(arr :: NDArray)
-  MX_float
+function eltype{T <: Union{NDArray, MX_NDArrayHandle}}(arr :: T)
+  dtype_ref = Ref{Cint}(0)
+  @mxcall(:MXNDArrayGetDType, (MX_handle, Ptr{Cint}), arr, dtype_ref)
+
+  if dtype_ref[] == -1 # arr->is_none()
+    warn("Eltype of $arr is not defined")
+    Base.show_backtrace(STDOUT,backtrace())
+    println()
+    return Float32
+  else
+    return fromTypeFlag(TypeFlag(dtype_ref[]))
+  end
 end
 
 
@@ -499,7 +556,7 @@ function .-(arg0 :: Real, arg1 :: NDArray)
 end
 
 function -(arg0 :: NDArray)
-  _mul_scalar(arg0, -1.0)
+  _mul_scalar(arg0, -one(eltype(arg0)))
 end
 
 #=doc
