@@ -104,7 +104,7 @@ void SmoothL1BackwardUseIn_(const OutputGrad& out_grad,
 }
 
 MXNET_REGISTER_SIMPLE_OP(smooth_l1, XPU)
-.set_function(XPU::kDevMask, SmoothL1Forward_<XPU>, kInplaceInOut)
+.set_function(XPU::kDevMask, SmoothL1Forward_<XPU>, kNoInplace)
 .set_gradient(XPU::kDevMask, SmoothL1BackwardUseIn_<XPU>, kInplaceOutIn)
 .set_enable_scalar(true)
 .describe("Calculate Smooth L1 Loss(lhs, scalar)");

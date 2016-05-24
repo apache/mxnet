@@ -165,13 +165,18 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
 endif()
 
-add_library(mxnet SHARED ${SOURCE})
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+  add_library(mxnet MODULE ${SOURCE})
+else()
+  add_library(mxnet SHARED ${SOURCE})
+endif()
 target_link_libraries(mxnet ${mshadow_LINKER_LIBS})
 target_link_libraries(mxnet dmlccore)
 
 
-
-set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
+if(MSVC)
+  set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
+endif()
 
 if(USE_DIST_KVSTORE)
 	add_definitions(-DMXNET_USE_DIST_KVSTORE)

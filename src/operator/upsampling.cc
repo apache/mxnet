@@ -15,10 +15,11 @@ Operator *CreateOp<cpu>(UpSamplingParam param) {
   if (param.sample_type == up_enum::kNearest) {
     return new UpSamplingNearestOp<cpu>(param);
   } else if (param.sample_type == up_enum::kBilinear) {
-    DeconvolutionParam p;
+    DeconvolutionParam p = DeconvolutionParam();
     int kernel = 2 * param.scale - param.scale % 2;
     int stride = param.scale;
     int pad = static_cast<int>(ceil((param.scale - 1) / 2.));
+    p.workspace = param.workspace;
     p.num_group = param.num_filter;
     p.num_filter = param.num_filter;
     p.no_bias =  true;

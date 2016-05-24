@@ -15,6 +15,7 @@ namespace mxnet {
 
 namespace symbol_constants {
 const char *kShapeKey = "__shape__";
+const char *kNamespaceSeparator = "_";
 }  // namespace symbol_constants
 
 /*!
@@ -494,7 +495,19 @@ std::map<std::string, std::string> Symbol::ListAttr() {
   this->DFSVisit([&ret](const std::shared_ptr<Node> &n) {
       if (n->attr.get() == nullptr) return;
       for (const auto &it : *(n->attr.get())) {
-        ret[n->name+"_"+it.first] = it.second;
+        ret[n->name + symbol_constants::kNamespaceSeparator + it.first] = it.second;
+      }
+      // Also propagate attributes of each node to its auxiliary states.
+      // this is a hack to enable correct allocation of auxiliary state
+      // easily in multiple devices. This behavior should be helpful in current setting,
+      // but can be changed when needed in future.
+      if (n->op.get() != nullptr) {
+        for (const auto& aux : n->op->ListAuxiliaryStates()) {
+          for (const auto &it : *(n->attr.get())) {
+            ret[n->name + '_'  + aux +
+                symbol_constants::kNamespaceSeparator + it.first] = it.second;
+          }
+        }
       }
     });
   return ret;
