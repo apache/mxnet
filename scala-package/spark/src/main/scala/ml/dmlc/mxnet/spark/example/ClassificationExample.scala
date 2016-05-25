@@ -70,11 +70,16 @@ object ClassificationExample {
         val probArrays = brModel.value.predict(points.toIterator)
         require(probArrays.length == 1)
         val prob = probArrays(0)
-        val py = NDArray.argmaxChannel(prob)
+        val py = NDArray.argmaxChannel(prob.get)
         require(y.length == py.size, s"${y.length} mismatch ${py.size}")
 
         // I'm too lazy to calculate the accuracy
-        Iterator((y.toArray zip py.toArray).map{ case (y1, py1) => y1 + "," + py1 }.mkString("\n"))
+        val res =Iterator((y.toArray zip py.toArray).map {
+          case (y1, py1) => y1 + "," + py1 }.mkString("\n"))
+
+        py.dispose()
+        prob.get.dispose()
+        res
       }
       res.saveAsTextFile(cmdLine.output + "/data")
 

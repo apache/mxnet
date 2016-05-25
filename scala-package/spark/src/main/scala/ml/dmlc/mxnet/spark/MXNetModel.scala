@@ -36,12 +36,13 @@ class MXNetModel private[mxnet](
    * @param dataset points
    * @return predicted results.
    */
-  def predict(dataset: Iterator[Vector]): Array[NDArray] = {
+  def predict(dataset: Iterator[Vector]): Array[MXNDArray] = {
     val dt = new PointIter(dataset, dimension, batchSize, dataName, labelName)
-    innerModel.predict(dt)
+    val results = innerModel.predict(dt)
+    results.map(arr => MXNDArray(arr))
   }
 
-  def predict(data: Vector): Array[NDArray] = {
+  def predict(data: Vector): Array[MXNDArray] = {
     predict(Iterator(data))
   }
 

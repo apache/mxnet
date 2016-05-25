@@ -298,8 +298,7 @@ object Model {
           if (epochSize != -1 && nBatch >= epochSize) {
             doReset = false
           }
-          // FIXME
-          // dataBatch.dispose()
+          dataBatch.dispose()
         }
         if (doReset) {
           trainData.reset()

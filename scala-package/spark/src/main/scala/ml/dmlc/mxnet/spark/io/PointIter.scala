@@ -52,7 +52,8 @@ class PointIter private[mxnet](
         instNum += 1
       }
       val pad = batchSize - instNum
-      val dataBatch = new DataBatch(IndexedSeq(dataBuilder), IndexedSeq(labelBuilder), null, pad)
+      val dataBatch = new LongLivingDataBatch(
+        IndexedSeq(dataBuilder), IndexedSeq(labelBuilder), null, pad)
       cache += dataBatch
       dataBatch
     }
