@@ -138,12 +138,6 @@ function _init_weight(self :: XavierInitializer, name :: Base.Symbol, array :: N
   fan_in  = prod(dims[2:end])
   fan_out = dims[1]
 
-  if self.distribution == xv_uniform
-    func(σ, data) = rand!(-σ, σ, data)
-  elseif self.distribution == xv_normal
-    func(σ, data) = randn!(0.0, σ, data)
-  end
-
   if self.regularization == xv_avg
     factor = (fan_in + fan_out) / 2
   elseif self.regularization == xv_in
@@ -154,5 +148,9 @@ function _init_weight(self :: XavierInitializer, name :: Base.Symbol, array :: N
 
   σ = √(self.magnitude / factor)
 
-  func(σ, array)
+  if self.distribution == xv_uniform
+    rand!(-σ, σ, array)
+  elseif self.distribution == xv_normal
+    randn!(0.0, σ, array)
+  end
 end
