@@ -135,9 +135,9 @@ function get_attr(self :: SymbolicNode, key :: Symbol)
   @mxcall(:MXSymbolGetAttr, (MX_handle, Cstring, Ref{Cstring}, Ref{Cint}),
           self, key_s, ref_out, ref_success)
   if ref_success[] == 1
-    return Nullable{ByteString}(@compat String(ref_out[]))
+    return Nullable{String}(@compat String(ref_out[]))
   else
-    return Nullable{ByteString}()
+    return Nullable{String}()
   end
 end
 
@@ -154,7 +154,7 @@ function list_attr(self :: SymbolicNode)
             self, ref_sz, ref_strings)
   narg = 2*ref_sz[]
   strings = pointer_to_array(ref_strings[], narg)
-  out = Dict{Symbol, ByteString}()
+  out = Dict{Symbol, String}()
   for i in 1:2:narg
     key = Symbol(@compat String(strings[i]))
     value = @compat String(strings[i+1])
@@ -176,7 +176,7 @@ function list_all_attr(self :: SymbolicNode)
             self, ref_sz, ref_strings)
   narg = 2*ref_sz[]
   strings = pointer_to_array(ref_strings[], narg)
-  out = Dict{Symbol, ByteString}()
+  out = Dict{Symbol, String}()
   for i in 1:2:narg
     key = Symbol(@compat String(strings[i]))
     value = @compat String(strings[i+1])

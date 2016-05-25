@@ -8,6 +8,7 @@ export mx
 module mx
 
 using Compat
+import Compat.String
 
 using Formatting
 
