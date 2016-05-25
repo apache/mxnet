@@ -93,7 +93,7 @@ class CustomOpProp : public OperatorProperty {
 
   std::vector<std::string> ListArguments() const override {
     char ** args = NULL;
-    CHECK(info_.list_arguments(&args));
+    CHECK(info_.list_arguments(&args, info_.p_list_arguments));
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
       ret.push_back(args[i]);
@@ -103,7 +103,7 @@ class CustomOpProp : public OperatorProperty {
 
   std::vector<std::string> ListOutputs() const override {
     char ** args = NULL;
-    CHECK(info_.list_outputs(&args));
+    CHECK(info_.list_outputs(&args, info_.p_list_outputs));
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
       ret.push_back(args[i]);
@@ -113,7 +113,7 @@ class CustomOpProp : public OperatorProperty {
 
   std::vector<std::string> ListAuxiliaryStates() const override {
     char ** args = NULL;
-    CHECK(info_.list_auxiliary_states(&args));
+    CHECK(info_.list_auxiliary_states(&args, info_.p_list_auxiliary_states));
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
       ret.push_back(args[i]);
@@ -141,7 +141,7 @@ class CustomOpProp : public OperatorProperty {
     }
     shapes.resize(num_inputs_+num_outputs_+num_auxs_);
     ndims.resize(num_inputs_+num_outputs_+num_auxs_);
-    CHECK(info_.infer_shape(shapes.size(), ndims.data(), shapes.data()));
+    CHECK(info_.infer_shape(shapes.size(), ndims.data(), shapes.data(), info_.p_infer_shape));
     for (unsigned i = 0; i < in_shape->size(); ++i) {
       SHAPE_ASSIGN_CHECK(*in_shape, i, TShape(shapes[i], shapes[i]+ndims[i]));
     }
@@ -173,7 +173,8 @@ class CustomOpProp : public OperatorProperty {
     int num_dep;
     int *rdeps;
     CHECK(info_.declare_backward_dependency(out_grad.data(), in_data.data(),
-                                            out_data.data(), &num_dep, &rdeps));
+                                            out_data.data(), &num_dep, &rdeps,
+                                            info_.p_declare_backward_dependency));
     std::vector<int> deps;
     deps.insert(deps.end(), rdeps, rdeps+num_dep);
     return deps;
