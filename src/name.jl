@@ -9,14 +9,14 @@ import Base: get!
 # is automatically generated based on the hint string.
 function _default_get_name!(counter :: NameCounter, name :: NameType, hint :: NameType)
   if isa(name, Base.Symbol) || !isempty(name)
-    return symbol(name)
+    return Symbol(name)
   end
 
-  hint = symbol(hint)
+  hint = Symbol(hint)
   if !haskey(counter, hint)
     counter[hint] = 0
   end
-  name = symbol("$hint$(counter[hint])")
+  name = Symbol("$hint$(counter[hint])")
   counter[hint] += 1
   return name
 end
@@ -34,11 +34,11 @@ type PrefixNameManager <: AbstractNameManager
   prefix  :: Base.Symbol
   counter :: NameCounter
 end
-PrefixNameManager(prefix :: NameType) = PrefixNameManager(symbol(prefix), NameCounter())
+PrefixNameManager(prefix :: NameType) = PrefixNameManager(Symbol(prefix), NameCounter())
 
 function get!(manager :: PrefixNameManager, name :: NameType, hint :: NameType)
   name = _default_get_name!(manager.counter, name, hint)
-  return symbol("$(manager.prefix)$name")
+  return Symbol("$(manager.prefix)$name")
 end
 
 DEFAULT_NAME_MANAGER = BasicNameManager()

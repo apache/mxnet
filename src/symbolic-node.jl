@@ -62,7 +62,7 @@ macro _list_symbol_info(self, func_name)
             $self, ref_sz, ref_names)
     narg = ref_sz[]
     names = pointer_to_array(ref_names[], narg)
-    names = [symbol(bytestring(x)) for x in names]
+    names = [Symbol(@compat String(x)) for x in names]
     return names
   end
 end
@@ -129,13 +129,13 @@ end
    :return: The value belonging to key as a :class:`Nullable`.
 =#
 function get_attr(self :: SymbolicNode, key :: Symbol)
-  key_s = bytestring(string(key))
+  key_s = @compat String(string(key))
   ref_out = Ref{Cstring}()
   ref_success = Ref{Cint}(-1)
   @mxcall(:MXSymbolGetAttr, (MX_handle, Cstring, Ref{Cstring}, Ref{Cint}),
           self, key_s, ref_out, ref_success)
   if ref_success[] == 1
-    return Nullable{ByteString}(bytestring(ref_out[]))
+    return Nullable{ByteString}(@compat String(ref_out[]))
   else
     return Nullable{ByteString}()
   end
@@ -156,8 +156,8 @@ function list_attr(self :: SymbolicNode)
   strings = pointer_to_array(ref_strings[], narg)
   out = Dict{Symbol, ByteString}()
   for i in 1:2:narg
-    key = symbol(bytestring(strings[i]))
-    value = bytestring(strings[i+1])
+    key = Symbol(@compat String(strings[i]))
+    value = @compat String(strings[i+1])
     out[key] = value
   end
   return out
@@ -178,8 +178,8 @@ function list_all_attr(self :: SymbolicNode)
   strings = pointer_to_array(ref_strings[], narg)
   out = Dict{Symbol, ByteString}()
   for i in 1:2:narg
-    key = symbol(bytestring(strings[i]))
-    value = bytestring(strings[i+1])
+    key = Symbol(@compat String(strings[i]))
+    value = @compat String(strings[i+1])
     out[key] = value
   end
   return out
@@ -198,8 +198,8 @@ end
       cause unexpected behavior and inconsistency.
 =#
 function set_attr(self :: SymbolicNode, key :: Symbol, value :: AbstractString)
-  key_s = bytestring(string(key))
-  value_s = bytestring(value)
+  key_s = @compat String(string(key))
+  value_s = @compat String(value)
 
   @mxcall(:MXSymbolSetAttr, (MX_handle, Cstring, Cstring), self, key_s, value_s)
 end
@@ -325,7 +325,7 @@ end
    indicating the index, as in the list of :func:`list_outputs`.
 =#
 function Base.getindex(self :: SymbolicNode, idx :: Union{Base.Symbol, AbstractString})
-  idx   = symbol(idx)
+  idx   = Symbol(idx)
   i_idx = find(idx .== list_outputs(self))
   @assert(length(i_idx) > 0, "Cannot find output with name '$idx'")
   @assert(length(i_idx) < 2, "Found duplicated output with name '$idx'")
@@ -474,7 +474,7 @@ end
 function to_json(self :: SymbolicNode)
   ref_json = Ref{char_p}(0)
   @mxcall(:MXSymbolSaveToJSON, (MX_handle, Ref{char_p}), self, ref_json)
-  return bytestring(ref_json[])
+  return @compat String(ref_json[])
 end
 
 #=doc
@@ -533,20 +533,20 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
           hdr, ref_name, ref_desc, ref_nargs, ref_arg_names, ref_arg_types, ref_arg_descs,
           ref_kv_nargs, ref_ret_type)
 
-  func_name_s= bytestring(ref_name[])
-  func_name  = symbol(func_name_s)
-  kv_nargs_s = bytestring(ref_kv_nargs[])
-  kv_nargs   = symbol(kv_nargs_s)
+  func_name_s= @compat String(ref_name[])
+  func_name  = Symbol(func_name_s)
+  kv_nargs_s = @compat String(ref_kv_nargs[])
+  kv_nargs   = Symbol(kv_nargs_s)
 
   if gen_docs
-    f_desc = bytestring(ref_desc[]) * "\n\n"
+    f_desc = @compat String(ref_desc[]) * "\n\n"
     if !isempty(kv_nargs_s)
       f_desc *= "This function support variable length positional :class:`SymbolicNode` inputs.\n\n"
     end
     f_desc *= _format_docstring(Int(ref_nargs[]), ref_arg_names, ref_arg_types, ref_arg_descs)
     f_desc *= ":param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.\n"
     f_desc *= ":param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.\n\n"
-    f_desc *= ":return: $(_format_typestring(bytestring(ref_ret_type[]))).\n\n"
+    f_desc *= ":return: $(_format_typestring(@compat String(ref_ret_type[]))).\n\n"
     return (func_name, f_desc)
   end
 
@@ -565,7 +565,7 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
     symbol_kws = Dict{Symbol, SymbolicNode}()
     attrs = Dict{Symbol, AbstractString}()
 
-    $(if kv_nargs != symbol("")
+    $(if kv_nargs != Symbol("")
       quote
         if !in($kv_nargs_s, param_keys)
           push!(param_keys, $kv_nargs_s)
@@ -593,7 +593,7 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
     if length(args) != 0 && length(symbol_kws) != 0
       @assert(false, $func_name_s * " only accepts Symbols either as positional or keyword arguments, not both.")
     end
-    $(if kv_nargs != symbol("")
+    $(if kv_nargs != Symbol("")
       quote
         if length(symbol_kws) > 0
           @assert(false, $func_name_s * " takes variable number of SymbolicNode arguments, " *

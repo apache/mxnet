@@ -39,10 +39,10 @@ function MLP(input, spec; hidden_activation::Base.Symbol=:relu, prefix=gensym())
       n_unit = s
       act_type = hidden_activation
     end
-    input = FullyConnected(input, name=symbol(prefix, "fc$i"), num_hidden=n_unit)
+    input = FullyConnected(input, name=Symbol(prefix, "fc$i"), num_hidden=n_unit)
     if i < n_layer || isa(s, Tuple)
       # will not add activation unless the user explicitly specified
-      input = Activation(input, name=symbol(prefix, "$act_type$i"), act_type=act_type)
+      input = Activation(input, name=Symbol(prefix, "$act_type$i"), act_type=act_type)
     end
   end
 

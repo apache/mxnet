@@ -584,7 +584,7 @@ function _define_data_iter_creator(hdr :: MX_handle; gen_docs::Bool=false)
           (MX_handle, Ref{char_p}, Ref{char_p}, Ref{MX_uint}, Ref{char_pp}, Ref{char_pp}, Ref{char_pp}),
           hdr, ref_name, ref_desc, ref_narg, ref_arg_names, ref_arg_types, ref_arg_descs)
 
-  iter_name = symbol(bytestring(ref_name[]))
+  iter_name = Symbol(String(ref_name[]))
 
   if gen_docs
     if endswith(string(iter_name), "Iter")
@@ -592,7 +592,7 @@ function _define_data_iter_creator(hdr :: MX_handle; gen_docs::Bool=false)
     else
       f_desc = ""
     end
-    f_desc *= bytestring(ref_desc[]) * "\n\n"
+    f_desc *= String(ref_desc[]) * "\n\n"
     f_desc *= ":param Base.Symbol data_name: keyword argument, default ``:data``. The name of the data.\n"
     f_desc *= ":param Base.Symbol label_name: keyword argument, default ``:softmax_label``. " *
               "The name of the label. Could be ``nothing`` if no label is presented in this dataset.\n\n"
@@ -617,7 +617,7 @@ function _define_data_iter_creator(hdr :: MX_handle; gen_docs::Bool=false)
 
   # add an alias XXXProvider => XXXIter
   if endswith(string(iter_name), "Iter")
-    alias_name = symbol(string(iter_name)[1:end-4] * "Provider")
+    alias_name = Symbol(string(iter_name)[1:end-4] * "Provider")
     eval(:($alias_name = $iter_name))
   end
 end

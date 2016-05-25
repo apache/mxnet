@@ -87,7 +87,7 @@ end
 function get_type(self :: KVStore)
   type_ref = Ref{char_p}(0)
   @mxcall(:MXKVStoreGetType, (MX_handle, Ref{char_p}), self, type_ref)
-  return symbol(bytestring(type_ref[]))
+  return Symbol(@compat String(type_ref[]))
 end
 
 function get_num_workers(self :: KVStore)

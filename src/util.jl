@@ -75,14 +75,14 @@ function _format_docstring(narg::Int, arg_names::Ref{char_pp}, arg_types::Ref{ch
   docstrings = AbstractString[]
 
   for i = 1:narg
-    arg_name = bytestring(arg_names[i])
+    arg_name = @compat String(arg_names[i])
     if arg_name ∈ param_keys && remove_dup
       continue
     end
     push!(param_keys, arg_name)
 
-    arg_type = _format_typestring(bytestring(arg_types[i]))
-    arg_desc = bytestring(arg_descs[i])
+    arg_type = _format_typestring(@compat String(arg_types[i]))
+    arg_desc = @compat String(arg_descs[i])
     push!(docstrings, ":param $arg_name: $arg_desc\n:type $arg_name: $arg_type\n\n")
   end
   return join(docstrings, "\n")

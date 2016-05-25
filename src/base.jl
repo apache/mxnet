@@ -42,7 +42,7 @@ function mx_get_last_error()
   if msg == C_NULL
     throw(MXError("Failed to get last error message"))
   end
-  return bytestring(msg)
+  return @compat String(msg)
 end
 
 "Utility macro to call MXNet API functions"

@@ -374,7 +374,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   for (attr, value) in list_all_attr(self.arch)
     sattr = string(attr)
     if endswith(sattr, "grad") && value == "freeze"
-      push!(freeze_names, symbol(sattr[1:end-5]))
+      push!(freeze_names, Symbol(sattr[1:end-5]))
     end
   end
   # Needs to correspond to the correct id in the update loop layer idx=1:length(param_names).
@@ -582,8 +582,8 @@ end
 function save_checkpoint(sym :: SymbolicNode, arg_params :: Dict{Base.Symbol, NDArray},
                          aux_params :: Dict{Base.Symbol, NDArray}, prefix :: AbstractString, epoch :: Int)
   save("$prefix-symbol.json", sym)
-  save_dict = merge(Dict([symbol("arg:$k") => v for (k,v) in arg_params]),
-                    Dict([symbol("aux:$k") => v for (k,v) in aux_params]))
+  save_dict = merge(Dict([Symbol("arg:$k") => v for (k,v) in arg_params]),
+                    Dict([Symbol("aux:$k") => v for (k,v) in aux_params]))
   save_filename = format("{1}-{2:04d}.params", prefix, epoch)
   save(save_filename, save_dict)
   info("Saved checkpoint to '$save_filename'")
@@ -596,7 +596,7 @@ function load_checkpoint(prefix :: AbstractString, epoch :: Int)
   aux_params = Dict{Base.Symbol, NDArray}()
   for (k,v) in saved_dict
     tp, name = split(string(k), ':')
-    name = symbol(name)
+    name = Symbol(name)
     if tp == "arg"
       arg_params[name] = v
     else
