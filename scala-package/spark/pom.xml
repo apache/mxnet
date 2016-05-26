@@ -15,6 +15,10 @@
   <name>MXNet Scala Package - Spark ML</name>
   <packaging>pom</packaging>
 
+  <properties>
+    <spark.version>1.6.1</spark.version>
+  </properties>
+
   <profiles>
     <profile>
       <id>release</id>
@@ -127,10 +131,6 @@
       <artifactId>scala-library</artifactId>
     </dependency>
     <dependency>
-      <groupId>commons-codec</groupId>
-      <artifactId>commons-codec</artifactId>
-    </dependency>
-    <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
     </dependency>
@@ -145,13 +145,7 @@
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-mllib_${scala.binary.version}</artifactId>
-      <!-- TODO: make it configurable -->
-      <version>1.6.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.ant</groupId>
-      <artifactId>ant</artifactId>
-      <version>1.8.2</version>
+      <version>${spark.version}</version>
     </dependency>
     <dependency>
       <groupId>args4j</groupId>
