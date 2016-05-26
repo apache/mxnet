@@ -107,4 +107,4 @@ scala-package/*/*/target/
 *.classpath
 *.project
 *.settings
-
+!scala-package/*/bin

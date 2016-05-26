@@ -46,7 +46,7 @@ object ClassificationExample {
 
       val trainData = parseRawData(sc, cmdLine.input)
       val start = System.currentTimeMillis
-      val model = mxnet.fit(sc, trainData)
+      val model = mxnet.fit(trainData)
       val timeCost = System.currentTimeMillis - start
       logger.info("Training cost {} milli seconds", timeCost)
       model.save(sc, cmdLine.output + "/model")
@@ -74,7 +74,7 @@ object ClassificationExample {
         require(y.length == py.size, s"${y.length} mismatch ${py.size}")
 
         // I'm too lazy to calculate the accuracy
-        val res =Iterator((y.toArray zip py.toArray).map {
+        val res = Iterator((y.toArray zip py.toArray).map {
           case (y1, py1) => y1 + "," + py1 }.mkString("\n"))
 
         py.dispose()

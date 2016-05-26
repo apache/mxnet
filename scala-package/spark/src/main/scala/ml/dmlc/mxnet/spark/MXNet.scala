@@ -72,7 +72,8 @@ class MXNet extends Serializable {
     this
   }
 
-  def fit(sc: SparkContext, data: RDD[LabeledPoint]): MXNetModel = {
+  def fit(data: RDD[LabeledPoint]): MXNetModel = {
+    val sc = data.context
     val trainData = {
       if (params.numWorker > data.partitions.length) {
         logger.info("repartitioning training set to {} partitions", params.numWorker)
