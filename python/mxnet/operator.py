@@ -552,7 +552,8 @@ def register(reg_name):
         deps_functype = CFUNCTYPE(c_bool, c_int_p, c_int_p, c_int_p,
                                   c_int_p, POINTER(c_int_p), c_void_p)
         createop_functype = CFUNCTYPE(c_bool, c_char_p, c_int, POINTER(POINTER(mx_uint)),
-                                      POINTER(c_int), POINTER(c_int), POINTER(CustomOpInfo), c_void_p)
+                                      POINTER(c_int), POINTER(c_int),
+                                      POINTER(CustomOpInfo), c_void_p)
         class CustomOpPropInfo(Structure):
             """Structure that holds Callback information. Passed to CustomOpProp"""
             _fields_ = [
@@ -723,7 +724,8 @@ def register(reg_name):
                             return False
                         return True
 
-                    ret[0] = CustomOpInfo(fb_functype(forward_entry), fb_functype(backward_entry), None, None)
+                    ret[0] = CustomOpInfo(fb_functype(forward_entry),
+                                          fb_functype(backward_entry), None, None)
                     op._ref_holder = [ret]
                     op_prop._ref_holder.append(op)
                 except Exception as e:
