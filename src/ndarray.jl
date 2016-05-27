@@ -6,6 +6,7 @@ NDArray API
 # All the types supported by mshadow.
 typealias DType Union{Float32, Float64, Float16, UInt8, Int32}
 @enum TypeFlag kFloat32 kFloat64 kFloat16 kUint8 kInt32
+typealias DEFAULT_DTYPE Float32
 
 function toTypeFlag{T <: DType}(:: Type{T})
   if T == Float32
@@ -127,13 +128,32 @@ function context(arr :: NDArray)
   return Context(ref_typeid[], ref_devid[])
 end
 
+
+#=doc
+.. function::
+   empty(DType, shape :: Tuple, ctx :: Context)
+   empty(DType, shape :: Tuple)
+   empty(DType, dim1, dim2, ...)
+
+   Allocate memory for an uninitialized :class:`NDArray` with a specified type.
+=#
+function empty{N,T<:DType}(::Type{T}, shape :: NTuple{N, Int})
+  empty(T, shape, cpu())
+end
+function empty{N,T<:DType}(:: Type{T}, shape :: NTuple{N, Int}, ctx :: Context)
+  NDArray(_ndarray_alloc(T, shape, ctx, false))
+end
+function empty{T<:DType}(:: Type{T}, shape :: Int...)
+  empty(T, shape)
+end
+
 #=doc
 .. function::
    empty(shape :: Tuple, ctx :: Context)
    empty(shape :: Tuple)
    empty(dim1, dim2, ...)
 
-   Allocate memory for an uninitialized :class:`NDArray` with specific shape.
+   Allocate memory for an uninitialized :class:`NDArray` with specific shape of type Float32.
 =#
 function empty{N}(shape :: NTuple{N, Int})
   empty(shape, cpu())
@@ -149,6 +169,26 @@ end
 Interface functions similar to Julia Arrays
 -------------------------------------------
 =#
+
+#=doc
+.. function::
+   zeros(DType, shape :: Tuple, ctx :: Context)
+   zeros(DType, shape :: Tuple)
+   zeros(DType, dim1, dim2, ...)
+
+   Create zero-ed :class:`NDArray` with specific shape and type
+=#
+function zeros{N,T<:DType}(:: Type{T}, shape :: NTuple{N, Int})
+  zeros(T, shape, cpu())
+end
+function zeros{N,T<:DType}(:: Type{T}, shape :: NTuple{N, Int}, ctx :: Context)
+  arr = empty(T, shape, ctx)
+  arr[:] = zero(T)
+  return arr
+end
+function zeros{T<:DType}(:: Type{T}, shape :: Int...)
+  zeros(T, shape)
+end
 
 #=doc
 .. function::
@@ -168,6 +208,26 @@ function zeros{N}(shape :: NTuple{N, Int}, ctx :: Context)
 end
 function zeros(shape :: Int...)
   zeros(shape)
+end
+
+#=doc
+.. function::
+   ones(DType, shape :: Tuple, ctx :: Context)
+   ones(DType, shape :: Tuple)
+   ones(DType, dim1, dim2, ...)
+
+   Create an :class:`NDArray` with specific shape & type, and initialize with 1.
+=#
+function ones{N,T<:DType}(:: Type{T}, shape :: NTuple{N, Int})
+  ones(T, shape, cpu())
+end
+function ones{N,T<:DType}(:: Type{T}, shape :: NTuple{N, Int}, ctx :: Context)
+  arr = empty(T, shape, ctx)
+  arr[:] = one(T)
+  return arr
+end
+function ones{T<:DType}(:: Type{T}, shape :: Int...)
+  ones(T, shape)
 end
 
 #=doc

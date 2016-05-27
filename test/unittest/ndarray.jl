@@ -271,6 +271,19 @@ function test_dot()
   @test size(z) == (2, 8)
 end
 
+function test_eltype()
+  info("NDArray::eltype")
+  dims1 = (3,3)
+
+  x = mx.empty(dims1)
+  @test eltype(x) == mx.DEFAULT_DTYPE
+
+  for TF in instances(mx.TypeFlag)
+    T = mx.fromTypeFlag(TF)
+    x = mx.empty(T, dims1)
+    @test eltype(x) == T
+  end
+end
 
 ################################################################################
 # Run tests
@@ -286,6 +299,7 @@ test_gd()
 test_saveload()
 test_clip()
 test_sqrt()
+test_eltype()
 test_nd_as_jl()
 test_dot()
 
