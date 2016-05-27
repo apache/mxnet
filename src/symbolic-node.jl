@@ -315,6 +315,70 @@ function infer_shape(self :: SymbolicNode, args :: Union{Tuple, Void}...)
   _infer_shape(self, keys, indptr, sdata)
 end
 
+function _infer_type(self, keys, arg_type_data)
+  ref_in_type_size  = Ref{MX_uint}()
+  ref_in_type_data  = Ref{Ptr{Cint}}()
+  ref_out_type_size = Ref{MX_uint}()
+  ref_out_type_data = Ref{Ptr{Cint}}()
+  ref_aux_type_size = Ref{MX_uint}()
+  ref_aux_type_data = Ref{Ptr{Cint}}()
+  ref_complete      = Ref{Cint}()
+
+  @mxcall(:MXSymbolInferType,
+          (MX_handle, MX_uint, char_pp, Ptr{Cint},
+           Ref{MX_uint}, Ref{Ptr{Cint}},
+           Ref{MX_uint}, Ref{Ptr{Cint}},
+           Ref{MX_uint}, Ref{Ptr{Cint}},
+           Ref{Cint}),
+          self, length(arg_type_data)-1, keys, arg_type_data,
+          ref_in_type_size, ref_in_type_data,
+          ref_out_type_size, ref_out_type_data,
+          ref_aux_type_size, ref_aux_type_data,
+          ref_complete)
+
+  if ref_complete[] == 0
+    return (nothing, nothing, nothing)
+  else
+    in_type = pointer_to_array(ref_in_type_data[], ref_in_type_size[])
+    out_type = pointer_to_array(ref_out_type_data[], ref_out_type_size[])
+    aux_type = pointer_to_array(ref_aux_type_data[], ref_aux_type_size[])
+    return ([fromTypeFlag(TypeFlag(t)) for t in in_type],
+            [fromTypeFlag(TypeFlag(t)) for t in out_type],
+            [fromTypeFlag(TypeFlag(t)) for t in aux_type])
+  end
+end
+
+#=doc
+.. function::
+   infer_type(self :: SymbolicNode; kwargs...)
+   infer_type(self :: SymbolicNode, args...)
+
+   Do type inference according to the input types. The input types could be provided
+   as a list of types, which should specify the types of inputs in the same order as
+   the arguments returned by :func:`list_arguments`. Alternatively, the type information
+   could be specified via keyword arguments.
+
+   :return: A 3-tuple containing types of all the arguments, types of all the outputs and
+            types of all the auxiliary variables. If type inference failed due to incomplete
+            or incompatible inputs, the return value will be ``(nothing, nothing, nothing)``.
+=#
+function infer_type(self :: SymbolicNode; kwargs...)
+  types = Cint[toTypeFlag(x[2]) for x in kwargs]
+  keys = AbstractString[string(x[1]) for x in kwargs]
+  _infer_type(self, keys, types)
+end
+
+function infer_type(self :: SymbolicNode, args :: Union{Tuple, Void}...)
+  types = Cint[]
+  keys = Ptr{char_p}(0)
+
+  for arg in args
+    if isa(arg, Void); continue; end
+    push!(types, toTypeFlag(arg))
+  end
+  _infer_type(self, keys, types)
+end
+
 #=doc
 .. function::
    getindex(self :: SymbolicNode, idx :: Union{Int, Base.Symbol, AbstractString})
