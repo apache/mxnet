@@ -247,7 +247,7 @@ class BaseModule(object):
                 break
             self.forward(eval_batch, is_train=False)
             pad = eval_batch.pad
-            outputs = [out[0:out.shape[0]-pad] for out in self.get_outputs()]
+            outputs = [out[0:out.shape[0]-pad].copy() for out in self.get_outputs()]
 
             output_list.append(outputs)
 
