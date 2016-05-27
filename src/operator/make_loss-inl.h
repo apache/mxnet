@@ -52,7 +52,7 @@ class MakeLossOp : public Operator {
       Stream<xpu> *s = ctx.get_stream<xpu>();
       Tensor<xpu, 2> data = in_data[make_loss_enum::kData].get<xpu, 2, real_t>(s);
       Tensor<xpu, 2> out = out_data[make_loss_enum::kOut].get<xpu, 2, real_t>(s);
-      Assign(out, req[make_loss_enum::kOut], data);
+      Assign(out, req[make_loss_enum::kOut], F<mshadow_op::identity>(data));
     }
   }
 
