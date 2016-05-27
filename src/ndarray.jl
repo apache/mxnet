@@ -20,7 +20,7 @@ function toTypeFlag{T <: DType}(:: Type{T})
   elseif T == Int32
     return kInt32
   else
-    throw(ArgumentError("Can't convert $T to Dtype."))
+    throw(ArgumentError("Can't convert $T to DType."))
   end
 end
 
@@ -36,7 +36,7 @@ function fromTypeFlag(T :: TypeFlag)
   elseif T == kInt32
     return Int32
   else
-    throw(ArgumentError("Can't convert Dtype $T."))
+    throw(ArgumentError("Can't convert DType $T."))
   end
 end
 
@@ -353,7 +353,7 @@ import Base: setindex!
 =#
 function setindex!(arr :: NDArray, val :: Real, ::Colon)
   @assert(arr.writable)
-  _set_value(val, arr)
+  _set_value(convert(eltype(arr), val), arr)
   return arr
 end
 function setindex!{T<:Real}(arr :: NDArray, val :: Array{T}, ::Colon)
@@ -426,9 +426,10 @@ function copy!(dst :: NDArray, src :: NDArray)
   return dst
 end
 
-function copy!(dst :: Array{MX_float}, src :: NDArray)
+function copy!{T<:DType}(dst :: Array{T}, src :: NDArray)
+  @assert T == eltype(src)
   @assert size(dst) == size(src)
-  @mxcall(:MXNDArraySyncCopyToCPU, (MX_handle, Ptr{MX_float}, Csize_t),
+  @mxcall(:MXNDArraySyncCopyToCPU, (MX_handle, Ptr{Void}, Csize_t),
           src, pointer(dst), length(dst))
   return dst
 end
@@ -439,8 +440,8 @@ end
 function copy!{T<:Real}(dst :: NDArray, src :: Array{T})
   @assert dst.writable
   @assert size(dst) == size(src)
-  src = convert(Array{MX_float}, src) # this might involve copying
-  @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{MX_float}, Csize_t),
+  src = convert(Array{eltype(dst)}, src) # this might involve copying
+  @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{Void}, Csize_t),
           dst.handle, pointer(src), length(src))
   return dst
 end
@@ -448,8 +449,8 @@ end
 function copy_ignore_shape!{T<:Real}(dst :: NDArray, src :: Array{T})
   @assert dst.writable
   @assert length(dst) == length(src)
-  src = convert(Array{MX_float}, src) # this might involve copying
-  @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{MX_float}, Csize_t),
+  src = convert(Array{eltype(dst)}, src) # this might involve copying
+  @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{Void}, Csize_t),
           dst.handle, pointer(src), length(src))
   return dst
 end
@@ -466,19 +467,19 @@ end
 =#
 # Create copy: NDArray -> Julia Array
 function copy(arr :: NDArray)
-  j_arr = Array(MX_float, size(arr))
+  j_arr = Array{eltype(arr)}(size(arr))
   copy!(j_arr, arr)
 end
 
 # Create copy: NDArray -> NDArray in a given context
 function copy(arr :: NDArray, ctx :: Context)
-  dst = NDArray(_ndarray_alloc(size(arr), ctx, true))
+  dst = NDArray(_ndarray_alloc(eltype(arr), size(arr), ctx, true))
   copy!(dst, arr)
 end
 
 # Create copy: Julia Array -> NDArray in a given context
-function copy{T<:Real}(arr :: Array{T}, ctx :: Context)
-  dst = empty(size(arr), ctx)
+function copy{T<:DType}(arr :: Array{T}, ctx :: Context)
+  dst = empty(T, size(arr), ctx)
   copy!(dst, arr)
 end
 
@@ -543,7 +544,7 @@ function add_to!(dst :: NDArray, args :: Union{Real, NDArray}...)
   @assert dst.writable
   for arg in args
     if isa(arg, Real)
-      _plus_scalar(dst, arg, dst)
+      _plus_scalar(dst, convert(eltype(dst), arg), dst)
     else
       _plus(dst, arg, dst)
     end
@@ -583,7 +584,7 @@ end
 function sub_from!(dst :: NDArray, arg :: Union{Real, NDArray})
   @assert dst.writable
   if isa(arg, Real)
-    _minus_scalar(dst, arg, dst)
+    _minus_scalar(dst, convert(eltype(dst), arg), dst)
   else
     _minus(dst, arg, dst)
   end
@@ -628,7 +629,7 @@ end
 function mul_to!(dst :: NDArray, arg :: Union{Real, NDArray})
   @assert dst.writable
   if isa(arg, Real)
-    _mul_scalar(dst, arg, dst)
+    _mul_scalar(dst, convert(eltype(dst), arg), dst)
   else
     _mul(dst, arg, dst)
   end
@@ -673,7 +674,7 @@ end
 function div_from!(dst :: NDArray, arg :: Union{Real, NDArray})
   @assert dst.writable
   if isa(arg, Real)
-    _div_scalar(dst, arg, dst)
+    _div_scalar(dst, convert(eltype(dst), arg), dst)
   else
     _div(dst, arg, dst)
   end
@@ -821,7 +822,7 @@ import Base.pointer
 function pointer(arr :: NDArray)
   pdata = Ref{Ptr{MX_float}}(0)
   @mxcall(:MXNDArrayGetData, (MX_handle, Ref{Ptr{MX_float}}), arr, pdata)
-  return pdata[]
+  return convert(Ptr{eltype(arr)}, pdata[])
 end
 function _wait_to_read(arr :: NDArray)
   @mxcall(:MXNDArrayWaitToRead, (MX_handle,), arr)
@@ -861,10 +862,10 @@ end
    :param Array j_arr: the Julia Array.
    :param NDArray arr: the :class:`NDArray`.
 =#
-function is_shared{T}(j_arr :: Array{T}, arr :: NDArray)
+function is_shared(j_arr :: Array, arr :: NDArray)
   false
 end
-function is_shared(j_arr :: Array{MX_float}, arr :: NDArray)
+function is_shared{T<:DType}(j_arr :: Array{T}, arr :: NDArray)
   if length(j_arr) != length(arr)
     return false
   end

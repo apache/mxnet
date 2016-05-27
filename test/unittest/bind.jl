@@ -7,19 +7,19 @@ using ..Main: rand_dims, reldiff
 ################################################################################
 # Test Implementations
 ################################################################################
-function test_arithmetic(uf, gf)
+function test_arithmetic{T <: mx.DType}(::Type{T}, uf, gf)
   shape = rand_dims()
-  info("Bind::arithmetic::$uf::dims = $shape")
+  info("Bind::arithmetic::$T::$uf::dims = $shape")
 
   lhs = mx.Variable(:lhs)
   rhs = mx.Variable(:rhs)
   ret = uf(lhs, rhs)
   @test mx.list_arguments(ret) == [:lhs, :rhs]
 
-  lhs_arr  = mx.NDArray(rand(shape))
-  rhs_arr  = mx.NDArray(rand(shape))
-  lhs_grad = mx.empty(shape)
-  rhs_grad = mx.empty(shape)
+  lhs_arr  = mx.NDArray(rand(T, shape))
+  rhs_arr  = mx.NDArray(rand(T, shape))
+  lhs_grad = mx.empty(T, shape)
+  rhs_grad = mx.empty(T, shape)
 
   exec2 = mx.bind(ret, mx.Context(mx.CPU), [lhs_arr, rhs_arr], args_grad=[lhs_grad, rhs_grad])
   exec3 = mx.bind(ret, mx.Context(mx.CPU), [lhs_arr, rhs_arr])
@@ -39,7 +39,7 @@ function test_arithmetic(uf, gf)
   @test reldiff(out1, out4) < 1e-6
 
   # test gradients
-  out_grad = mx.NDArray(ones(shape))
+  out_grad = mx.NDArray(ones(T, shape))
   lhs_grad2, rhs_grad2 = gf(copy(out_grad), copy(lhs_arr), copy(rhs_arr))
   mx.backward(exec2, out_grad)
   @test reldiff(copy(lhs_grad), lhs_grad2) < 1e-6
@@ -55,10 +55,12 @@ function test_arithmetic(uf, gf)
 end
 
 function test_arithmetic()
-  test_arithmetic(.+, (g,x,y) -> (g,g))
-  test_arithmetic(.-, (g,x,y) -> (g,-g))
-  test_arithmetic(.*, (g,x,y) -> (y.*g, x.*g))
-  test_arithmetic(./, (g,x,y) -> (g ./ y, -x .* g ./ (y.^2)))
+  for T in [mx.fromTypeFlag(TF) for TF in instances(mx.TypeFlag)]
+    test_arithmetic(T, .+, (g,x,y) -> (g,g))
+    test_arithmetic(T, .-, (g,x,y) -> (g,-g))
+    test_arithmetic(T, .*, (g,x,y) -> (y.*g, x.*g))
+    test_arithmetic(T, ./, (g,x,y) -> (g ./ y, -x .* g ./ (y.^2)))
+  end
 end
 
 ################################################################################

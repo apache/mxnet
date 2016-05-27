@@ -44,10 +44,23 @@ function test_assign()
   array2  = mx.zeros(size(tensor))
   @test reldiff(zeros(size(tensor)), copy(array2)) < 1e-6
 
+  array3 = mx.zeros(Float16, size(tensor))
+  @test reldiff(zeros(Float16, size(tensor)), copy(array2)) < 1e-6
+
   # scalar -> NDArray assignment
   scalar    = rand()
   array2[:] = scalar
   @test reldiff(zeros(size(tensor))+scalar, copy(array2)) < 1e-6
+
+  scalar = rand(Float16)
+  array2[:] = scalar
+  @test reldiff(zeros(size(tensor))+scalar, copy(array2)) < 1e-6
+
+  scalar = rand(Float64)
+  array2[:] = scalar
+  array3[:] = scalar
+  @test reldiff(zeros(size(tensor))+scalar, copy(array2)) < 1e-6
+  @test reldiff(zeros(Float16,size(tensor))+scalar, copy(array3)) < 1e-6
 
   # NDArray -> NDArray assignment
   array[:]  = array2
