@@ -230,7 +230,6 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    * auxShapes List of shapes of outputs. The order is in the same order as list_auxiliary()
    */
   def inferShape(kwargs: Map[String, Shape]): (Seq[Shape], Seq[Shape], Seq[Shape]) = {
-    logger.debug(s"infer shape kwargs: $kwargs")
     val keys = ArrayBuffer.empty[String]
     val indPtr = ArrayBuffer(0)
     val sdata = ArrayBuffer.empty[Int]
@@ -249,7 +248,6 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
     val auxShapeData = ListBuffer.empty[Array[Int]]
     val complete = new RefInt
 
-    logger.debug("infer shape ...")
     checkCall(_LIB.mxSymbolInferShape(handle, indPtr.size - 1, keys, indPtr, values,
       argShapeData, outShapeData, auxShapeData, complete))
     if (complete.value != 0) {
