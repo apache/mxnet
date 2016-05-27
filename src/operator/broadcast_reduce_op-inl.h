@@ -81,7 +81,7 @@ void ReduceMid(TBlob const& src,
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   mshadow::Tensor<xpu, 2> out = ret->get<xpu, 2, real_t>(s);
   mshadow::Tensor<xpu, 3> in = src.get<xpu, 3, real_t>(s);
-  out = mshadow::expr::reduce_with_axis<Reducer, false>(in, 1);
+  out = mshadow::expr::reduce_with_axis<Reducer, false, 0>(in, 1);
 }
 
 // backward function that takes input value of the op
@@ -100,7 +100,7 @@ void SumMidBackward_(const OutputGrad& out_grad,
     mshadow::Tensor<xpu, 2, DType> ograd = out_grad.data.get<xpu, 2, DType>(s);
     mshadow::Tensor<xpu, 3, DType> igrad = in_grad->get<xpu, 3, DType>(s);
     ASSIGN_DISPATCH(igrad, req,
-      broadcast_with_axis(ograd, 0, igrad.shape_[1]));
+      broadcast_with_axis<0>(ograd, 0, igrad.shape_[1]));
   });
 }
 
@@ -129,7 +129,7 @@ void ReduceChannel(const TBlob &src,
   Tensor<xpu, 3> in = src.get_with_shape<xpu, 3, real_t>(
     Shape3(src.shape_[0], src.shape_[1], src.Size()/src.shape_[0]/src.shape_[1]),
     s);
-  out = reduce_with_axis<Reducer, get_mask>(in, 1);
+  out = reduce_with_axis<Reducer, get_mask, 0>(in, 1);
 }
 
 // return a shape of ReduceChannel output

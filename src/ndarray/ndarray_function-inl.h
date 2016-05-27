@@ -264,7 +264,7 @@ void EvalBroadcast<DEVICE>(TBlob const& src, TBlob* ret, int size, RunContext ct
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   mshadow::Tensor<xpu, 3> out = ret->get<xpu, 3, real_t>(s);
   mshadow::Tensor<xpu, 2> in = src.get<xpu, 2, real_t>(s);
-  out = mshadow::expr::broadcast_with_axis(in, 0, size);
+  out = mshadow::expr::broadcast_with_axis<0>(in, 0, size);
 }
 
 // declarations
