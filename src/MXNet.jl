@@ -6,6 +6,10 @@ module MXNet
 # functions with the same names as built-in utilities like "zeros", etc.
 export mx
 module mx
+
+using Compat
+import Compat.String
+
 using Formatting
 
 # Functions from base that we can safely extend and that are defined by libmxnet.

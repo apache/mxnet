@@ -788,7 +788,7 @@ function load(filename::AbstractString, ::Type{NDArray})
     return [NDArray(MX_NDArrayHandle(hdr)) for hdr in pointer_to_array(out_hdrs[], out_size)]
   else
     @assert out_size == out_name_size
-    return Dict([(symbol(bytestring(k)), NDArray(MX_NDArrayHandle(hdr))) for (k,hdr) in
+    return Dict([(Symbol(@compat String(k)), NDArray(MX_NDArrayHandle(hdr))) for (k,hdr) in
                  zip(pointer_to_array(out_names[], out_size), pointer_to_array(out_hdrs[], out_size))])
   end
 end
@@ -903,11 +903,11 @@ function _import_ndarray_functions(;gen_docs=false)
             func_handle, ref_name, ref_desc, ref_narg, ref_arg_names,
             ref_arg_types, ref_arg_descs, ref_ret_type)
 
-    func_name = symbol(bytestring(ref_name[]))
+    func_name = Symbol(@compat String(ref_name[]))
 
     if gen_docs
       # generate document only
-      f_desc = bytestring(ref_desc[]) * "\n\n"
+      f_desc = @compat String(ref_desc[]) * "\n\n"
       f_desc *= _format_docstring(Int(ref_narg[]), ref_arg_names, ref_arg_types, ref_arg_descs)
       docs[func_name] = f_desc
     else
@@ -932,18 +932,18 @@ function _import_ndarray_functions(;gen_docs=false)
 
       # general ndarray function
       if arg_before_scalar
-        args = vcat([Expr(:(::), symbol("in$i"), NDArray) for i=1:n_used_vars],
-                    [Expr(:(::), symbol("sca$i"), Real) for i=1:n_scalars],
-                    [Expr(:(::), symbol("out$i"), NDArray) for i=1:n_mutate_vars])
+        args = vcat([Expr(:(::), Symbol("in$i"), NDArray) for i=1:n_used_vars],
+                    [Expr(:(::), Symbol("sca$i"), Real) for i=1:n_scalars],
+                    [Expr(:(::), Symbol("out$i"), NDArray) for i=1:n_mutate_vars])
       else
-        args = vcat([Expr(:(::), symbol("sca$i"), Real) for i=1:n_scalars],
-                    [Expr(:(::), symbol("in$i"), NDArray) for i=1:n_used_vars],
-                    [Expr(:(::), symbol("out$i"), NDArray) for i=1:n_mutate_vars])
+        args = vcat([Expr(:(::), Symbol("sca$i"), Real) for i=1:n_scalars],
+                    [Expr(:(::), Symbol("in$i"), NDArray) for i=1:n_used_vars],
+                    [Expr(:(::), Symbol("out$i"), NDArray) for i=1:n_mutate_vars])
       end
 
-      _use_vars = Expr(:ref, :MX_handle, [symbol("in$i") for i=1:n_used_vars]...)
-      _scalars  = Expr(:ref, :MX_float, [symbol("sca$i") for i=1:n_scalars]...)
-      _mut_vars = Expr(:ref, :MX_handle, [symbol("out$i") for i=1:n_mutate_vars]...)
+      _use_vars = Expr(:ref, :MX_handle, [Symbol("in$i") for i=1:n_used_vars]...)
+      _scalars  = Expr(:ref, :MX_float, [Symbol("sca$i") for i=1:n_scalars]...)
+      _mut_vars = Expr(:ref, :MX_handle, [Symbol("out$i") for i=1:n_mutate_vars]...)
 
       # XXX: hacky way of solving the problem that the arguments of `dot` should be swapped
       # See https://github.com/dmlc/MXNet.jl/issues/55
@@ -955,7 +955,7 @@ function _import_ndarray_functions(;gen_docs=false)
       if n_mutate_vars == 1
         stmt_ret = :(return out1)
       else
-        stmt_ret = Expr(:return, Expr(:tuple, [symbol("out$i") for i=1:n_mutate_vars]...))
+        stmt_ret = Expr(:return, Expr(:tuple, [Symbol("out$i") for i=1:n_mutate_vars]...))
       end
 
       func_body = Expr(:block, stmt_call, stmt_ret)

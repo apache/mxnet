@@ -221,5 +221,5 @@ Can be used to get an estimated about the memory cost.
 function debug_str(self :: Executor)
   s_ref = Ref{Cstring}()
   @mxcall(:MXExecutorPrint, (MX_handle, Ptr{Cstring}), self.handle, s_ref)
-  bytestring(s_ref[])
+  @compat String(s_ref[])
 end

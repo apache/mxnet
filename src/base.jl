@@ -42,7 +42,7 @@ function mx_get_last_error()
   if msg == C_NULL
     throw(MXError("Failed to get last error message"))
   end
-  return bytestring(msg)
+  return @compat String(msg)
 end
 
 "Utility macro to call MXNet API functions"
@@ -189,10 +189,19 @@ function _defstruct_impl(is_immutable, name, fields)
   if isa(name, Symbol)
     name       = esc(name)
     super_name = :Any
-  else
-    @assert(isa(name, Expr) && name.head == :comparison && length(name.args) == 3 && name.args[2] == :(<:),
+  elseif VERSION >= v"0.5-"
+    @assert(isa(name, Expr) && name.head == :(<:) && length(name.args) == 2 &&
+            isa(name.args[1], Symbol) && isa(name.args[2], Symbol),
             "name must be of form 'Name <: SuperType'")
-    @assert(isa(name.args[1], Symbol) && isa(name.args[3], Symbol))
+
+    super_name = esc(name.args[2])
+    name       = esc(name.args[1])
+  else
+    @assert(isa(name, Expr) && name.head == :comparison &&
+            length(name.args) == 3 && name.args[2] == :(<:) &&
+            isa(name.args[1], Symbol) && isa(name.args[3], Symbol),
+            "name must be of form 'Name <: SuperType'")
+
     super_name = esc(name.args[3])
     name       = esc(name.args[1])
   end

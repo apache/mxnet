@@ -6,7 +6,7 @@ os:
   - osx
 julia:
   - 0.4
-  #- nightly
+  - nightly
 
 # dependent apt packages
 addons:

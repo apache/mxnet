@@ -10,8 +10,8 @@ function test_default()
   @test get!(mx.DEFAULT_NAME_MANAGER, string(name), "") == name
 
   hint = name
-  @test get!(mx.DEFAULT_NAME_MANAGER, "", hint) == symbol("$(hint)0")
-  @test get!(mx.DEFAULT_NAME_MANAGER, "", string(hint)) == symbol("$(hint)1")
+  @test get!(mx.DEFAULT_NAME_MANAGER, "", hint) == Symbol("$(hint)0")
+  @test get!(mx.DEFAULT_NAME_MANAGER, "", string(hint)) == Symbol("$(hint)1")
 end
 
 function test_prefix()
@@ -21,8 +21,8 @@ function test_prefix()
   prefix = :_____foobar_____
 
   prefix_manager = mx.PrefixNameManager(prefix)
-  @test get!(prefix_manager, name, "") == symbol("$prefix$name")
-  @test get!(prefix_manager, "", name) == symbol("$prefix$(name)0")
+  @test get!(prefix_manager, name, "") == Symbol("$prefix$name")
+  @test get!(prefix_manager, "", name) == Symbol("$prefix$(name)0")
 end
 
 test_default()

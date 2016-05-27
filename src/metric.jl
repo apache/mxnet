@@ -208,7 +208,7 @@ type MultiACE <: AbstractEvalMetric
 end
 
 function get(metric :: MultiACE)
-  aces = [(symbol("ACE_$(i-0)"), - metric.aces[i] / metric.counts[i]) for i in 1:length(metric.aces)]
+  aces = [(Symbol("ACE_$(i-0)"), - metric.aces[i] / metric.counts[i]) for i in 1:length(metric.aces)]
   push!(aces, (:ACE, - Base.sum(metric.aces) / Base.sum(metric.counts)))
   return aces
 end

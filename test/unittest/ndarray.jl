@@ -202,7 +202,7 @@ function test_saveload()
   end
 
   # save and load dictionary of ndarrays
-  names = [symbol("array$i") for i = 1:n_arrays]
+  names = [Symbol("array$i") for i = 1:n_arrays]
   dict = Dict([n => v for (n,v) in zip(names, nd_arrays)])
   mx.save(fname, dict)
   data = mx.load(fname, mx.NDArray)

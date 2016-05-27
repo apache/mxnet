@@ -1,4 +1,5 @@
-julia 0.4
+julia 0.4+
+Compat
 Formatting
 BinDeps
 JSON

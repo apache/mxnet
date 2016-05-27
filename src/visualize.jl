@@ -117,10 +117,10 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
         attr = Dict(:dir => :back, :arrowtail => :open, :color => "#737373")
         if draw_shape
           if input_node["op"] != "null"
-            key   = symbol(input_name, "_output")
+            key   = Symbol(input_name, "_output")
             shape = shape_dict[key][1:end-1]
           else
-            key   = symbol(input_name)
+            key   = Symbol(input_name)
             shape = shape_dict[key][1:end-1]
           end
           label = "(" * join([string(x) for x in shape], ",") * ")"
