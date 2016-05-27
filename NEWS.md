@@ -1,7 +1,9 @@
 MXNet Change Log
 ================
+## in progress version
 
-## next release candidate
+## v0.7
+-  0.6 is skipped because there are a lot of improvements since initial release
 - More math operators
   - elementwise ops and binary ops
 - Attribute support in computation graph
@@ -29,6 +31,7 @@ MXNet Change Log
   - [Detection](https://github.com/dmlc/mxnet/tree/master/example/rcnn), RCNN bt @precedenceguo
   - [Segmentation](https://github.com/dmlc/mxnet/tree/master/example/fcn-xs), FCN by @tornadomeet
   - [Face identification](https://github.com/tornadomeet/mxnet-face) by @tornadomeet
+  - More on the example
 
 ## v0.5 (initial release)
 - All basic modules ready
