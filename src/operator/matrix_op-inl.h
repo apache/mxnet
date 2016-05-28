@@ -18,6 +18,69 @@
 
 namespace mxnet {
 namespace op {
+
+struct TransposeParam : public dmlc::Parameter<TransposeParam> {
+  TShape axes;
+  DMLC_DECLARE_PARAMETER(TransposeParam) {
+    DMLC_DECLARE_FIELD(axes).set_default(TShape())
+    .describe("Target axis order. By default the axes will be inverted.");
+  }
+};
+
+template<typename xpu>
+void TransposeImpl(const TBlob &src,
+              TBlob *ret,
+              RunContext ctx,
+              const TShape &axes) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  CHECK_EQ(src.type_flag_, ret->type_flag_);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+    switch (axes.ndim()) {
+     case 0:
+      break;
+     case 1: {
+      Tensor<xpu, 1, DType> in = src.get<xpu, 1, DType>(s);
+      Tensor<xpu, 1, DType> out = ret->get<xpu, 1, DType>(s);
+      Copy(out, in, s);
+      break;
+     }
+     case 2: {
+      mshadow::Tensor<xpu, 2, DType> in = src.FlatTo2D<xpu, DType>(s);
+      mshadow::Tensor<xpu, 2, DType> out = ret->FlatTo2D<xpu, DType>(s);
+      if (axes[0] == 1 && axes[1] == 0) {
+        out = in.T();
+      } else {
+        Copy(out, in, s);
+      }
+      break;
+     }
+     case 3: {
+      Tensor<xpu, 3, DType> in = src.get<xpu, 3, DType>(s);
+      Tensor<xpu, 3, DType> out = ret->get<xpu, 3, DType>(s);
+      out = transpose(in, axes.get<3>());
+      break;
+     }
+     case 4: {
+      Tensor<xpu, 4, DType> in = src.get<xpu, 4, DType>(s);
+      Tensor<xpu, 4, DType> out = ret->get<xpu, 4, DType>(s);
+      out = transpose(in, axes.get<4>());
+      break;
+     }
+     case 5: {
+      Tensor<xpu, 5, DType> in = src.get<xpu, 5, DType>(s);
+      Tensor<xpu, 5, DType> out = ret->get<xpu, 5, DType>(s);
+      out = transpose(in, axes.get<5>());
+      break;
+     }
+     default:
+      LOG(FATAL) << "Transpose support at most 5 dimensions";
+      break;
+    }
+  });
+}
+
 // matrix transpose
 template<typename xpu>
 void Transpose(const TBlob &src,
@@ -25,10 +88,16 @@ void Transpose(const TBlob &src,
                TBlob *ret,
                OpReqType req,
                RunContext ctx) {
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  mshadow::Tensor<xpu, 2> out = ret->FlatTo2D<xpu, real_t>(s);
-  mshadow::Tensor<xpu, 2> in = src.FlatTo2D<xpu, real_t>(s);
-  out = in.T();
+  
+  TransposeParam param;
+  param.Init(env.kwargs);
+  if (param.axes.ndim() == 0) {
+    param.axes = TShape(src.shape_.ndim());
+    for (index_t i = 0; i < param.axes.ndim(); ++i) {
+      param.axes[i] = param.axes.ndim() - 1 - i;
+    }
+  }
+  TransposeImpl<xpu>(src, ret, ctx, param.axes);
 }
 
 template<typename xpu>
@@ -37,20 +106,39 @@ void TransposeGrad(const OutputGrad& src,
                    TBlob *ret,
                    OpReqType req,
                    RunContext ctx) {
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  mshadow::Tensor<xpu, 2> out = ret->FlatTo2D<xpu, real_t>(s);
-  mshadow::Tensor<xpu, 2> in = src.data.FlatTo2D<xpu, real_t>(s);
-  out = in.T();
+  TransposeParam param;
+  param.Init(env.kwargs);
+  TShape axes = TShape(src.data.shape_.ndim());
+  if (param.axes.ndim() == 0) {
+    for (index_t i = 0; i < axes.ndim(); ++i) {
+      axes[i] = axes.ndim() - 1 - i;
+    }
+  } else {
+    for (index_t i = 0; i < axes.ndim(); ++i) {
+      axes[param.axes[i]] = i;
+    }
+  }
+  TransposeImpl<xpu>(src.data, ret, ctx, axes);
 }
 
 inline TShape TransposeShape(const TShape& shp,
                              const EnvArguments& env) {
-  CHECK(shp.ndim() == 2)
-      << "Transpose only accept two dimensional input";
-  std::vector<mshadow::index_t> ret;
-  ret.push_back(shp[1]);
-  ret.push_back(shp[0]);
-  return TShape(ret.begin(), ret.end());
+  TransposeParam param;
+  param.Init(env.kwargs);
+  CHECK(shp.ndim() <= 5) << "Transpose support at most 5 dimensions";
+  TShape ret(shp.ndim());
+  if (param.axes.ndim() == 0) {
+    for (index_t i = 0; i < shp.ndim(); ++i) {
+      ret[i] = shp[shp.ndim()-1-i];
+    }
+  } else {
+    CHECK_EQ(shp.ndim(), param.axes.ndim());
+    for (index_t i = 0; i < shp.ndim(); ++i) {
+      CHECK(param.axes[i] < shp.ndim());
+      ret[i] = shp[param.axes[i]];
+    }
+  }
+  return ret;
 }
 
 
@@ -144,13 +232,180 @@ inline TShape DotShape(const TShape& lshape,
 }
 
 
+struct SimpleCropParam : public dmlc::Parameter<SimpleCropParam> {
+  TShape begin, end;
+  DMLC_DECLARE_PARAMETER(SimpleCropParam) {
+    DMLC_DECLARE_FIELD(begin)
+    .describe("starting coordinates");
+    DMLC_DECLARE_FIELD(end)
+    .describe("ending coordinates");
+  }
+};
+
+// matrix crop
+template<typename xpu>
+void Crop(const TBlob &src,
+          const EnvArguments& env,
+          TBlob *ret,
+          OpReqType req,
+          RunContext ctx) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  SimpleCropParam param;
+  param.Init(env.kwargs);
+  CHECK_EQ(src.type_flag_, ret->type_flag_);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+    switch (src.shape_.ndim()) {
+     case 0:
+      break;
+     case 1: {
+      Tensor<xpu, 1, DType> in = src.get<xpu, 1, DType>(s); 
+      Tensor<xpu, 1, DType> out = ret->get<xpu, 1, DType>(s);
+      out = slice(in, param.begin.get<1>(), param.end.get<1>());
+      break;
+     }
+     case 2: {
+      Tensor<xpu, 2, DType> in = src.get<xpu, 2, DType>(s); 
+      Tensor<xpu, 2, DType> out = ret->get<xpu, 2, DType>(s);
+      out = slice(in, param.begin.get<2>(), param.end.get<2>());
+      break;
+     }
+     case 3: {
+      Tensor<xpu, 3, DType> in = src.get<xpu, 3, DType>(s); 
+      Tensor<xpu, 3, DType> out = ret->get<xpu, 3, DType>(s);
+      out = slice(in, param.begin.get<3>(), param.end.get<3>());
+      break;
+     }
+     case 4: {
+      Tensor<xpu, 4, DType> in = src.get<xpu, 4, DType>(s); 
+      Tensor<xpu, 4, DType> out = ret->get<xpu, 4, DType>(s);
+      out = slice(in, param.begin.get<4>(), param.end.get<4>());
+      break;
+     }
+     case 5: {
+      Tensor<xpu, 5, DType> in = src.get<xpu, 5, DType>(s); 
+      Tensor<xpu, 5, DType> out = ret->get<xpu, 5, DType>(s);
+      out = slice(in, param.begin.get<5>(), param.end.get<5>());
+      break;
+     }
+     default:
+      LOG(FATAL) << "crop supports at most 5 dimensions";
+      break;
+    }
+  });
+
+}
+
+inline TShape CropShape(const TShape& shp,
+                        const EnvArguments& env) {
+  SimpleCropParam param;
+  param.Init(env.kwargs);
+  CHECK_EQ(shp.ndim(), param.begin.ndim());
+  CHECK_EQ(shp.ndim(), param.end.ndim());
+  TShape ret(shp.ndim());
+  for (index_t i = 0; i < shp.ndim(); ++i) {
+    CHECK(param.begin[i] <= shp[i] && param.end[i] <= shp[i]);
+    ret[i] = param.end[i] - param.begin[i];
+  }
+  return ret;
+}
+
+
+struct FlipParam : public dmlc::Parameter<FlipParam> {
+  int axis;
+  DMLC_DECLARE_PARAMETER(FlipParam) {
+    DMLC_DECLARE_FIELD(axis)
+    .describe("The dimension to flip");
+  }
+};
+
+// matrix crop
+template<typename xpu>
+void Flip(const TBlob &src,
+          const EnvArguments& env,
+          TBlob *ret,
+          OpReqType req,
+          RunContext ctx) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  FlipParam param;
+  param.Init(env.kwargs);
+  CHECK_EQ(src.type_flag_, ret->type_flag_);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+    switch (src.shape_.ndim()) {
+     case 0:
+      break;
+     case 1: {
+      Tensor<xpu, 1, DType> in = src.get<xpu, 1, DType>(s); 
+      Tensor<xpu, 1, DType> out = ret->get<xpu, 1, DType>(s);
+      out = flip(in, param.axis);
+      break;
+     }
+     case 2: {
+      Tensor<xpu, 2, DType> in = src.get<xpu, 2, DType>(s); 
+      Tensor<xpu, 2, DType> out = ret->get<xpu, 2, DType>(s);
+      out = flip(in, param.axis);
+      break;
+     }
+     case 3: {
+      Tensor<xpu, 3, DType> in = src.get<xpu, 3, DType>(s); 
+      Tensor<xpu, 3, DType> out = ret->get<xpu, 3, DType>(s);
+      out = flip(in, param.axis);
+      break;
+     }
+     case 4: {
+      Tensor<xpu, 4, DType> in = src.get<xpu, 4, DType>(s); 
+      Tensor<xpu, 4, DType> out = ret->get<xpu, 4, DType>(s);
+      out = flip(in, param.axis);
+      break;
+     }
+     case 5: {
+      Tensor<xpu, 5, DType> in = src.get<xpu, 5, DType>(s); 
+      Tensor<xpu, 5, DType> out = ret->get<xpu, 5, DType>(s);
+      out = flip(in, param.axis);
+      break;
+     }
+     default:
+      LOG(FATAL) << "flip supports at most 5 dimensions";
+      break;
+    }
+  });
+
+}
+
+inline TShape FlipShape(const TShape& shp,
+                        const EnvArguments& env) {
+  FlipParam param;
+  param.Init(env.kwargs);
+  CHECK(param.axis < shp.ndim() && param.axis >= 0);
+  return shp;
+}
+
 
 // transpose
 MXNET_REGISTER_SIMPLE_OP(transpose, XPU)
+.set_enable_kwargs(true)
 .set_function(XPU::kDevMask, Transpose<XPU>, kNoInplace, kRegisterSymbolic)
 .set_shape_function(TransposeShape)
 .set_gradient(XPU::kDevMask, TransposeGrad<XPU>, kNoInplace)
 .describe("Transpose the input matrix and return a new one");
+
+// crop
+MXNET_REGISTER_SIMPLE_OP(crop, XPU)
+.set_enable_kwargs(true)
+.set_function(XPU::kDevMask, Crop<XPU>, kNoInplace, kNotRegisterSymbolic)
+.set_shape_function(CropShape)
+.describe("Crop the input matrix and return a new one");
+
+// flip
+MXNET_REGISTER_SIMPLE_OP(flip, XPU)
+.set_enable_kwargs(true)
+.set_function(XPU::kDevMask, Flip<XPU>, kNoInplace, kNotRegisterSymbolic)
+.set_shape_function(FlipShape)
+.describe("Flip the input matrix along axis and return a new one");
+
 
 // dot
 MXNET_REGISTER_SIMPLE_OP(dot, XPU)

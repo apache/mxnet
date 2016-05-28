@@ -6,11 +6,11 @@ from test_operator import *
 import mxnet as mx
 import numpy as np
 from numpy.testing import assert_allclose
+import time
 
-
-def check_type_consistency(sym, ctx_list):
+def check_consistency(sym, ctx_list, scale=1.0):
     tol = {np.dtype(np.float16): 1e-1,
-           np.dtype(np.float32): 1e-4,
+           np.dtype(np.float32): 1e-3,
            np.dtype(np.float64): 1e-5,
            np.dtype(np.uint8): 0,
            np.dtype(np.int32): 0}
@@ -21,7 +21,7 @@ def check_type_consistency(sym, ctx_list):
         assert(len(exe.arg_arrays) == len(exe_list[0].arg_arrays))
         assert(len(exe.grad_arrays) == len(exe_list[0].grad_arrays))
 
-    init = [np.random.normal(size=arr.shape, scale=1.0) for arr in exe_list[0].arg_arrays]
+    init = [np.random.normal(size=arr.shape, scale=scale) for arr in exe_list[0].arg_arrays]
     for exe in exe_list:
         for arr, iarr in zip(exe.arg_arrays, init):
             arr[:] = iarr.astype(arr.dtype)
@@ -41,7 +41,31 @@ def check_type_consistency(sym, ctx_list):
             continue
         for arr1, arr2 in zip([outputs[i]]+grads[i], [outputs[max_idx]]+grads[max_idx]):
             arr2 = arr2.astype(dtypes[i])
-            assert_allclose(arr1, arr2, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
+            try:
+                assert_allclose(arr1, arr2, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
+            except Exception, e:
+                print e
+
+def check_speed(sym, ctx, scale=1.0, N=100):
+    exe = sym.simple_bind(grad_req='write', **ctx)
+    init = [np.random.normal(size=arr.shape, scale=scale) for arr in exe.arg_arrays]
+    for arr, iarr in zip(exe.arg_arrays, init):
+        arr[:] = iarr.astype(arr.dtype)
+
+    # warm up
+    exe.forward(is_train=True)
+    exe.backward(exe.outputs[0])
+    exe.outputs[0].wait_to_read()
+
+    tic = time.time()
+    for i in range(N):
+        exe.forward(is_train=True)
+        exe.backward(exe.outputs[0])
+        exe.outputs[0].wait_to_read()
+    return (time.time() - tic)*1.0/N
+
+
+
 
 def test_convolution_with_type():
     sym = mx.sym.Convolution(num_filter=3, kernel=(3,3), name='conv')
@@ -50,7 +74,7 @@ def test_convolution_with_type():
                 {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float16}},
                 {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float64}},
                 {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float32}}]
-    check_type_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list)
 
 def test_fullyconnected_with_type():
     sym = mx.sym.FullyConnected(num_hidden=3, name='inner')
@@ -59,7 +83,7 @@ def test_fullyconnected_with_type():
                 {'ctx': mx.gpu(0), 'inner_data': (2, 10), 'type_dict': {'inner_data': np.float16}},
                 {'ctx': mx.cpu(0), 'inner_data': (2, 10), 'type_dict': {'inner_data': np.float64}},
                 {'ctx': mx.cpu(0), 'inner_data': (2, 10), 'type_dict': {'inner_data': np.float32}}]
-    check_type_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list)
 
 def test_activation_with_type():
     sym = mx.sym.Activation(name='act', act_type='sigmoid')
@@ -69,7 +93,7 @@ def test_activation_with_type():
                 {'ctx': mx.cpu(0), 'act_data': (2, 2, 10, 10), 'type_dict': {'act_data': np.float64}},
                 {'ctx': mx.cpu(0), 'act_data': (2, 2, 10, 10), 'type_dict': {'act_data': np.float32}},
                 {'ctx': mx.cpu(0), 'act_data': (2, 2, 10, 10), 'type_dict': {'act_data': np.float16}}]
-    check_type_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list)
 
 if __name__ == '__main__':
     test_convolution_with_type()
