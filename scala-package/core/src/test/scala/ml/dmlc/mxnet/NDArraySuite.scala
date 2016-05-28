@@ -359,4 +359,11 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     assert(!arr1_2.isDisposed)
     assert(arr3.isDisposed)
   }
+
+  test("serialize and deserialize") {
+    val arr = NDArray.ones(1, 2) * 3
+    val bytes = arr.serialize()
+    val arrCopy = NDArray.deserialize(bytes)
+    assert(arr === arrCopy)
+  }
 }
