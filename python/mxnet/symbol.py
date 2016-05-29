@@ -247,21 +247,21 @@ class Symbol(object):
         else:
             return None
 
-    def list_attr(self, shallow=False):
-        """Get all attributes from the symbol and its descendents.
+    def list_attr(self, recursive=False):
+        """Get all attributes from the symbol.
 
         Parameters
         ----------
-        shallow : bool
-            Default `False`. When `shallow` is `False`, list recursively all the
+        recursive : bool
+            Default `False`. When `recursive` is `True`, list recursively all the
             attributes in the descendents. The attribute names are pre-pended with
-            the symbol names to avoid conflicts. If `True`, then only attributes
+            the symbol names to avoid conflicts. If `False`, then only attributes
             that belongs to this symbol is returned, and the attribute names will
             **not** be pre-pended with the symbol name.
         """
         size = mx_uint()
         pairs = ctypes.POINTER(ctypes.c_char_p)()
-        f_handle = _LIB.MXSymbolListAttrShallow if shallow else _LIB.MXSymbolListAttr
+        f_handle = _LIB.MXSymbolListAttr if recursive else _LIB.MXSymbolListAttrShallow
         check_call(f_handle(self.handle, ctypes.byref(size), ctypes.byref(pairs)))
         return {py_str(pairs[i*2]): py_str(pairs[i*2+1]) for i in range(size.value)}
 
@@ -536,7 +536,6 @@ class Symbol(object):
             self.handle, ctypes.byref(debug_str)))
         return py_str(debug_str.value)
 
-
     def save(self, fname):
         """Save symbol into file.
 
@@ -628,7 +627,11 @@ class Symbol(object):
             raise TypeError('Only Accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays
 
-    def simple_bind(self, ctx, grad_req='write', type_dict=None, **kwargs):
+    def simple_bind(self, ctx,
+                    grad_req='write',
+                    type_dict=None,
+                    group2ctx=None,
+                    **kwargs):
         """Bind current symbol to get an executor, allocate all the ndarrays needed.
         Allows specifying data types.
 
@@ -640,18 +643,20 @@ class Symbol(object):
         ----------
         ctx : Context
             The device context the generated executor to run on.
+
         grad_req: string
             {'write', 'add', 'null'}, or list of str or dict of str to str, optional
             Specifies how we should update the gradient to the args_grad.
             - 'write' means everytime gradient is write to specified args_grad NDArray.
             - 'add' means everytime gradient is add to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
+
         type_dict  : dict of str->numpy.dtype
             Input type dictionary, name->dtype
-        kwargs : dict of str->shape
-            Input shape dictionary, name->shape
-        type_dict  : dict of str->numpy.dtype
-            Input type dictionary, name->dtype
+
+        group2ctx : dict of string to mx.Context
+            The dict mapping the ``ctx_group`` attribute to the context assignment.
+
         kwargs : dict of str->shape
             Input shape dictionary, name->shape
 
@@ -665,23 +670,42 @@ class Symbol(object):
             type_dict = {k: mx_real_t for k in self.list_arguments()}
         arg_shapes, _, aux_shapes = self.infer_shape(**kwargs)
         arg_types, _, aux_types = self.infer_type(**type_dict)
+
         if arg_shapes is None or arg_types is None:
             raise ValueError("Input node is not complete")
-        # alloc space
-        arg_ndarrays = [zeros(shape, ctx, dtype=dtype)for dtype, shape in zip(arg_types,
-                                                                              arg_shapes)]
 
+        if group2ctx is not None:
+            attr_dict = {
+                k : group2ctx.get(v, ctx)
+                for k, v in self.list_attr(recursive=True).items()
+                if k.endswith('ctx_group')
+            } if group2ctx is not None else {}
+            arg_ctx = [attr_dict.get(name + '_ctx_group', ctx)
+                       for name in self.list_arguments()]
+            aux_ctx = [attr_dict.get(name + '_ctx_group', ctx)
+                       for name in self.list_auxiliary_states()]
+        else:
+            arg_ctx = [ctx] * len(arg_shapes)
+            aux_ctx = [ctx] * len(aux_shapes)
+
+        # alloc space
+        arg_ndarrays = [
+            zeros(shape, dev, dtype=dtype)
+            for dtype, dev, shape in zip(arg_types, arg_ctx, arg_shapes)]
         if grad_req != 'null':
             grad_ndarrays = {}
-            for name, shape, dtype in zip(self.list_arguments(), arg_shapes, arg_types):
+            for name, shape, dev, dtype in zip(
+                    self.list_arguments(), arg_shapes, arg_ctx, arg_types):
                 if not isinstance(grad_req, dict) or grad_req[name] != 'null':
-                    grad_ndarrays[name] = zeros(shape, ctx, dtype=dtype)
+                    grad_ndarrays[name] = zeros(shape, dev, dtype=dtype)
         else:
             grad_ndarrays = None
 
-        aux_ndarrays = [zeros(shape, ctx, dtype=dtype) for shape, dtype in zip(aux_shapes,
-                                                                               aux_types)]
-        executor = self.bind(ctx, arg_ndarrays, grad_ndarrays, grad_req, aux_ndarrays)
+        aux_ndarrays = [zeros(shape, dev, dtype=dtype)
+                        for shape, dev, dtype in zip(aux_shapes, aux_ctx, aux_types)]
+        executor = self.bind(ctx, arg_ndarrays,
+                             grad_ndarrays, grad_req, aux_ndarrays,
+                             group2ctx=group2ctx)
         return executor
 
     def bind(self, ctx, args, args_grad=None, grad_req='write',
@@ -990,12 +1014,13 @@ def _make_atomic_symbol_function(handle):
                '    Name of the resulting symbol.\n\n' +
                'Returns\n' +
                '-------\n' +
-               'symbol: Symbol\n'+
+               'symbol: Symbol\n' +
                '    The result symbol.')
     doc_str = doc_str % (desc, param_str)
     extra_doc = "\n" + '\n'.join([x.__doc__ for x in type.__subclasses__(SymbolDoc)
                                   if x.__name__ == '%sDoc' % func_name])
     doc_str += re.sub(re.compile("    "), "", extra_doc)
+
     def creator(*args, **kwargs):
         """Activation Operator of Neural Net.
         The parameters listed below can be passed in as keyword arguments.
@@ -1077,6 +1102,7 @@ def _init_symbol_module():
 # Initialize the atomic symbo in startups
 _init_symbol_module()
 
+
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def pow(base, exp):
@@ -1093,11 +1119,11 @@ def pow(base, exp):
     """
     if isinstance(base, Symbol) and isinstance(exp, Symbol):
         return Symbol._Power(base, exp)
-    if  isinstance(base, Symbol) and isinstance(exp, Number):
+    if isinstance(base, Symbol) and isinstance(exp, Number):
         return Symbol._PowerScalar(base, scalar=exp)
-    if  isinstance(base, Number) and isinstance(exp, Symbol):
+    if isinstance(base, Number) and isinstance(exp, Symbol):
         return Symbol._RPowerScalar(exp, scalar=base)
-    if  isinstance(base, Number) and isinstance(exp, Number):
+    if isinstance(base, Number) and isinstance(exp, Number):
         return base**exp
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(base)), str(type(exp))))
@@ -1119,14 +1145,15 @@ def maximum(left, right):
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
         return Symbol._Maximum(left, right)
-    if  isinstance(left, Symbol) and isinstance(right, Number):
+    if isinstance(left, Symbol) and isinstance(right, Number):
         return Symbol._MaximumScalar(left, scalar=right)
-    if  isinstance(left, Number) and isinstance(right, Symbol):
+    if isinstance(left, Number) and isinstance(right, Symbol):
         return Symbol._MaximumScalar(right, scalar=left)
-    if  isinstance(left, Number) and isinstance(right, Number):
+    if isinstance(left, Number) and isinstance(right, Number):
         return left if left > right else right
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
+
 
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
@@ -1144,11 +1171,11 @@ def minimum(left, right):
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
         return Symbol._Minimum(left, right)
-    if  isinstance(left, Symbol) and isinstance(right, Number):
+    if isinstance(left, Symbol) and isinstance(right, Number):
         return Symbol._MinimumScalar(left, scalar=right)
-    if  isinstance(left, Number) and isinstance(right, Symbol):
+    if isinstance(left, Number) and isinstance(right, Symbol):
         return Symbol._MinimumScalar(right, scalar=left)
-    if  isinstance(left, Number) and isinstance(right, Number):
+    if isinstance(left, Number) and isinstance(right, Number):
         return left if left > right else right
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))

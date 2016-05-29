@@ -437,6 +437,17 @@ class NDArray(object):
             return NDArray._copyto(self, out=hret)
         else:
             raise TypeError('copyto do not support type ' + str(type(other)))
+
+    def copy(self):
+        """Make a copy of the current ndarray on the same context
+
+        Return
+        ------
+        cpy : NDArray
+            The copy
+        """
+        return self.copyto(self.context)
+
     # pylint: enable= no-member
 
     def as_in_context(self, context):

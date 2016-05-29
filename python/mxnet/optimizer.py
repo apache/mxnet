@@ -8,6 +8,7 @@ from .base import OptimizerHandle, OptimizerCreator
 from .ndarray import NDArray, zeros, clip, sqrt
 from .random import normal
 
+
 class Optimizer(object):
     """Base class of all optimizers."""
     opt_registry = {}
@@ -18,8 +19,8 @@ class Optimizer(object):
         assert(isinstance(klass, type))
         name = klass.__name__.lower()
         if name in Optimizer.opt_registry:
-            print('WARNING: New optimizer %s.%s is overriding ' \
-                  'existing optimizer %s.%s'%(
+            print('WARNING: New optimizer %s.%s is overriding '
+                  'existing optimizer %s.%s' % (
                       klass.__module__, klass.__name__,
                       Optimizer.opt_registry[name].__module__,
                       Optimizer.opt_registry[name].__name__))
@@ -137,7 +138,7 @@ class Optimizer(object):
         """
         self.lr_mult = {}
         if self.sym is not None:
-            attr = self.sym.list_attr()
+            attr = self.sym.list_attr(recursive=True)
             for k, v in attr.items():
                 if k.endswith('_lr_mult'):
                     self.lr_mult[k[:-len('_lr_mult')]] = float(v)
@@ -160,7 +161,7 @@ class Optimizer(object):
             if not (n.endswith('_weight') or n.endswith('_gamma')):
                 self.wd_mult[n] = 0.0
         if self.sym is not None:
-            attr = self.sym.list_attr()
+            attr = self.sym.list_attr(recursive=True)
             for k, v in attr.items():
                 if k.endswith('_wd_mult'):
                     self.wd_mult[k[:-len('_wd_mult')]] = float(v)
@@ -224,8 +225,9 @@ class Optimizer(object):
             wd *= self.wd_mult.get(self.idx2name[index], 1.0)
         return wd
 
-#convenience wrapper for Optimizer.Register
+# convenience wrapper for Optimizer.Register
 register = Optimizer.register
+
 
 @register
 class SGD(Optimizer):
@@ -353,6 +355,7 @@ class NAG(SGD):
             assert self.momentum == 0.0
             weight[:] += -lr * (grad + self.wd * weight)
 
+
 @register
 class SGLD(Optimizer):
     """Stochastic Langevin Dynamics Updater to sample from a distribution.
@@ -414,8 +417,8 @@ class SGLD(Optimizer):
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
-        weight[:] += - lr/2 * (grad + wd * weight) \
-                     + normal(0, math.sqrt(lr), weight.shape, weight.context)
+        weight[:] += - lr/2 * (grad + wd * weight) + normal(0, math.sqrt(lr),
+                                                            weight.shape, weight.context)
 
 
 @register
@@ -495,6 +498,7 @@ class ccSGD(Optimizer):
                                           grad.handle,
                                           mx_float(lr),
                                           mx_float(wd)))
+
 
 @register
 class Adam(Optimizer):
@@ -593,6 +597,7 @@ class Adam(Optimizer):
         if wd > 0.:
             weight[:] -= (lr * wd) * weight
 
+
 @register
 class AdaGrad(Optimizer):
     """AdaGrad optimizer of Duchi et al., 2011,
@@ -625,7 +630,7 @@ class AdaGrad(Optimizer):
         self.float_stable_eps = eps
 
     def create_state(self, index, weight):
-        return zeros(weight.shape, weight.context) # history
+        return zeros(weight.shape, weight.context)  # history
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
@@ -639,6 +644,7 @@ class AdaGrad(Optimizer):
         history = state
         history[:] += (grad * grad)
         weight[:] += -lr * (grad / sqrt(history + self.float_stable_eps) + self.wd * weight)
+
 
 @register
 class RMSProp(Optimizer):
@@ -713,6 +719,7 @@ class RMSProp(Optimizer):
         delta[:] = (self.gamma2) * delta - lr * (grad/sqrt(n - g*g + 1e-4) + wd * weight)
         weight[:] += delta
 
+
 @register
 class AdaDelta(Optimizer):
     """
@@ -741,8 +748,8 @@ class AdaDelta(Optimizer):
         self.epsilon = epsilon
 
     def create_state(self, index, weight):
-        return (zeros(weight.shape, weight.context), # accumulated g
-                zeros(weight.shape, weight.context)) # accumulated delta
+        return (zeros(weight.shape, weight.context),  # accumulated g
+                zeros(weight.shape, weight.context))  # accumulated delta
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
@@ -760,11 +767,12 @@ class AdaDelta(Optimizer):
 
         # update g, delta
         acc_g[:] = self.rho * acc_g + (1. - self.rho) * grad * grad
-        current_delta = sqrt(acc_delta + self.epsilon) / sqrt(acc_g + self.epsilon)  * grad
+        current_delta = sqrt(acc_delta + self.epsilon) / sqrt(acc_g + self.epsilon) * grad
         acc_delta[:] = self.rho * acc_delta + (1. - self.rho) * current_delta * current_delta
 
         # update weight
         weight[:] -= current_delta + wd * weight
+
 
 @register
 class Test(Optimizer):
@@ -782,8 +790,9 @@ class Test(Optimizer):
         weight[:] += grad * self.rescale_grad
         state[:] = weight
 
-#backward compatibility wrapper for Optimizer.CreateOptimizer
+# backward compatibility wrapper for Optimizer.CreateOptimizer
 create = Optimizer.create_optimizer
+
 
 def get_updater(optimizer):
     """Return a clossure of the updater needed for kvstore
@@ -799,6 +808,7 @@ def get_updater(optimizer):
          The clossure of the updater
     """
     states = dict()
+
     def updater(index, grad, weight):
         """updater for kvstore"""
         if index not in states:

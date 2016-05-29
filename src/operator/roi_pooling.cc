@@ -11,8 +11,6 @@
 #include <mshadow/dot_engine-inl.h>
 #include <cassert>
 
-#define DIVUP(m, n) ((m) / (n) + ((m) % (n) > 0))
-
 using std::max;
 using std::min;
 using std::floor;
@@ -22,7 +20,7 @@ namespace mshadow {
 template<typename Dtype>
 inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
                            const Tensor<cpu, 4, Dtype> &data,
-                           const Tensor<cpu, 3, Dtype> &bbox,
+                           const Tensor<cpu, 2, Dtype> &bbox,
                            const Tensor<cpu, 4, Dtype> &max_idx,
                            const float spatial_scale_) {
   const Dtype *bottom_data = data.dptr_;
@@ -35,7 +33,7 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
   const int pooled_height_ = out.size(2);
   const int pooled_width_ = out.size(3);
 
-  const int num_rois = bbox.size(0) * bbox.size(1);
+  const int num_rois = bbox.size(0);
   const int batch_size = data.size(0);
   const int data_size = data.size(1) * data.size(2) * data.size(3);
   // For each ROI R = [batch_index x1 y1 x2 y2]: max pool over R
@@ -103,7 +101,7 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
       argmax_data += max_idx.size(2) * max_idx.size(3);
     }
     // Increment ROI data pointer
-    bottom_rois += bbox.size(2);
+    bottom_rois += bbox.size(1);
   }
 
   return;
@@ -112,7 +110,7 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
 template<typename Dtype>
 inline void ROIPoolBackward(const Tensor<cpu, 4, Dtype> &in_grad,
                             const Tensor<cpu, 4, Dtype> &out_grad,
-                            const Tensor<cpu, 3, Dtype> &bbox,
+                            const Tensor<cpu, 2, Dtype> &bbox,
                             const Tensor<cpu, 4, Dtype> &max_idx,
                             const float spatial_scale_) {
   const Dtype *top_diff = out_grad.dptr_;
@@ -127,7 +125,7 @@ inline void ROIPoolBackward(const Tensor<cpu, 4, Dtype> &in_grad,
   const int pooled_height_ = out_grad.size(2);
   const int pooled_width_ = out_grad.size(3);
 
-  const int num_rois = bbox.size(0) * bbox.size(1);
+  const int num_rois = bbox.size(0);
 
   for (int b = 0; b < batch_size_; ++b) {
     for (int c = 0; c < channels_; ++c) {
@@ -167,13 +165,13 @@ inline void ROIPoolBackward(const Tensor<cpu, 4, Dtype> &in_grad,
 
             // compute pooled regions correspond to original (h, w) point
             int phstart = static_cast<int>(floor(static_cast<Dtype>(h - roi_start_h)
-                                                 * bin_size_h));
+                                                 / bin_size_h));
             int pwstart = static_cast<int>(floor(static_cast<Dtype>(w - roi_start_w)
-                                                 * bin_size_w));
+                                                 / bin_size_w));
             int phend = static_cast<int>(ceil(static_cast<Dtype>(h - roi_start_h + 1)
-                                              * bin_size_h));
+                                              / bin_size_h));
             int pwend = static_cast<int>(ceil(static_cast<Dtype>(w - roi_start_w + 1)
-                                              * bin_size_w));
+                                              / bin_size_w));
 
             // clip to boundaries of pooled region
             phstart = min(max(phstart, 0), pooled_height_);
@@ -188,20 +186,22 @@ inline void ROIPoolBackward(const Tensor<cpu, 4, Dtype> &in_grad,
             for (int ph = phstart; ph < phend; ++ph) {
               for (int pw = pwstart; pw < pwend; ++pw) {
                 const int pooled_index = ph * pooled_width_ + pw;
-                if (h * width_ + w == round(offset_argmax_data[pooled_index])) {
+                if (static_cast<int>(offset_argmax_data[pooled_index]) == h * width_ + w) {
                   gradient += offset_top_diff[pooled_index];
                 }
               }
             }
 
             // Increment ROI data pointer
-            bottom_rois += bbox.size(2);
+            bottom_rois += bbox.size(1);
           }
           bottom_diff[offset_bottom_diff] = gradient;
         }
       }
     }
   }
+
+  return;
 }
 }  // namespace mshadow
 
@@ -221,8 +221,15 @@ Operator* ROIPoolingProp::CreateOperator(Context ctx) const {
 DMLC_REGISTER_PARAMETER(ROIPoolingParam);
 
 MXNET_REGISTER_OP_PROPERTY(ROIPooling, ROIPoolingProp)
-.describe("Resize regions of interest in an input plane to a fixed size by MAX pooling.")
-.add_argument("data", "Symbol[]", "[input tensor, regions of interest]")
+.describe("Performs region-of-interest pooling on inputs. Resize bounding box coordinates by "
+"spatial_scale and crop input feature maps accordingly. The cropped feature maps are pooled "
+"by max pooling to a fixed size output indicated by pooled_size. batch_size will change to "
+"the number of region bounding boxes after ROIPooling")
+.add_argument("data", "Symbol", "Input data to the pooling operator, a 4D Feature maps")
+.add_argument("rois", "Symbol", "Bounding box coordinates, a 2D array of "
+"[[batch_index, x1, y1, x2, y2]]. (x1, y1) and (x2, y2) are top left and down right corners "
+"of designated region of interest. batch_index indicates the index of corresponding image "
+"in the input data")
 .add_arguments(ROIPoolingParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet

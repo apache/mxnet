@@ -579,6 +579,12 @@ object NDArray {
   private def save(fname: String, keys: Array[String], handles: Array[NDArrayHandle]): Unit = {
     checkCall(_LIB.mxNDArraySave(fname, handles, keys))
   }
+
+  def deserialize(bytes: Array[Byte]): NDArray = {
+    val handleRef = new NDArrayHandleRef
+    checkCall(_LIB.mxNDArrayLoadFromRawBytes(bytes, handleRef))
+    new NDArray(handleRef.value)
+  }
 }
 
 /**
@@ -599,6 +605,12 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   def isDisposed: Boolean = disposed
   override protected def finalize(): Unit = {
     dispose()
+  }
+
+  def serialize(): Array[Byte] = {
+    val buf = ArrayBuffer.empty[Byte]
+    checkCall(_LIB.mxNDArraySaveRawBytes(handle, buf))
+    buf.toArray
   }
 
   /**

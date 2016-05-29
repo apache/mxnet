@@ -27,7 +27,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 ###<a name="language-binding-examples"></a>Langauges Binding Examples
 ------------------
 * [C++ examples](https://github.com/dmlc/mxnet/tree/master/example/cpp) - Example code for using C++ interface, including NDArray, symbolic layer and models.
-* [MXNet Python](http://mxnet.readthedocs.org/en/latest/python/index.html) - Python libary
+* [MXNet Python](http://mxnet.readthedocs.org/en/latest/python/index.html) - Python library
 * [MXNetR](http://mxnet.readthedocs.org/en/latest/R-package/index.html) - R library
 * [MXNet.jl](http://mxnetjl.readthedocs.org/en/latest/) - Julia library
 * [gomxnet](https://github.com/jdeng/gomxnet) - Go binding
@@ -55,6 +55,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [cifar-10 recipe](notebooks/cifar10-recipe.ipynb) - A step by step demo of how to use MXNet
 * [cifar-100](notebooks/cifar-100.ipynb) - A demo of how to train a 75.68% accuracy CIFAR-100 model
 * [simple bind](notebooks/simple_bind.ipynb) - A demo of low level training API.
+* [multi task tutorial](https://github.com/haria/mxnet-multi-task-example/blob/master/multi-task.ipynb) - A demo of how to train and predict multi-task network on both MNIST and your own dataset.
 
 ###<a name="mobile-apps-examples"></a>Mobile App Examples
 -------------------

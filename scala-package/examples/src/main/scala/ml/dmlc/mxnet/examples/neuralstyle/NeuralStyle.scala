@@ -9,7 +9,6 @@ import java.io.File
 import com.sksamuel.scrimage.Pixel
 import com.sksamuel.scrimage.filter.GaussianBlurFilter
 import com.sksamuel.scrimage.nio.JpegWriter
-import ml.dmlc.mxnet.optimizer.SGD
 import ml.dmlc.mxnet.optimizer.Adam
 
 /**
@@ -86,24 +85,54 @@ object NeuralStyle {
     result.output(filename)(JpegWriter())
   }
 
-  def styleGramExecutor(inputShape: Shape, ctx: Context): NSExecutor = {
-    // symbol
-    val data = Symbol.Variable("conv")
-    val rsData = Symbol.Reshape()(Map("data" -> data,
-      "target_shape" -> s"(${inputShape(1)},${inputShape(2) * inputShape(3)})"))
-    val weight = Symbol.Variable("weight")
-    val rsWeight = Symbol.Reshape()(Map("data" -> weight,
-      "target_shape" -> s"(${inputShape(1)},${inputShape(2) * inputShape(3)})"))
-    val fc = Symbol.FullyConnected()(Map("data" -> rsData, "weight" -> rsWeight,
-      "no_bias" -> true, "num_hidden" -> inputShape(1)))
-    // executor
-    val conv = NDArray.zeros(inputShape, ctx)
-    val grad = NDArray.zeros(inputShape, ctx)
-    val args = Map("conv" -> conv, "weight" -> conv)
-    val gradMap = Map("conv" -> grad)
-    val reqs = Map("conv" -> "write", "weight" -> "null")
-    val executor = fc.bind(ctx, args, gradMap, reqs, Nil, null)
-    NSExecutor(executor, conv, grad)
+  def styleGramSymbol(inputSize: (Int, Int), style: Symbol): (Symbol, List[Int]) = {
+    val (_, outputShape, _) = style.inferShape(
+      Map("data" -> Shape(1, 3, inputSize._1, inputSize._2)))
+    var gramList = List[Symbol]()
+    var gradScale = List[Int]()
+    for (i <- 0 until style.listOutputs().length) {
+      val shape = outputShape(i)
+      val x = Symbol.Reshape()(Map("data" -> style.get(i),
+          "target_shape" -> Shape(shape(1), shape(2) * shape(3))))
+      // use fully connected to quickly do dot(x, x^T)
+      val gram = Symbol.FullyConnected()(Map("data" -> x, "weight" -> x,
+          "no_bias" -> true, "num_hidden" -> shape(1)))
+      gramList = gramList :+ gram
+      gradScale = gradScale :+ (shape(1) * shape(2) * shape(3) * shape(1))
+    }
+    (Symbol.Group(gramList: _*), gradScale)
+  }
+
+  def getLoss(gram: Symbol, content: Symbol): (Symbol, Symbol) = {
+    var gramLoss = List[Symbol]()
+    for (i <- 0 until gram.listOutputs().length) {
+      val gvar = Symbol.Variable(s"target_gram_$i")
+      gramLoss = gramLoss :+ Symbol.sum(Symbol.square(gvar - gram.get(i)))
+    }
+    val cvar = Symbol.Variable("target_content")
+    val contentLoss = Symbol.sum(Symbol.square(cvar - content))
+    (Symbol.Group(gramLoss: _*), contentLoss)
+  }
+
+  def getTvGradExecutor(img: NDArray, ctx: Context, tvWeight: Float): scala.Option[Executor] = {
+    // create TV gradient executor with input binded on img
+    if (tvWeight <= 0.0f) None
+
+    val nChannel = img.shape(1)
+    val sImg = Symbol.Variable("img")
+    val sKernel = Symbol.Variable("kernel")
+    val channels = Symbol.SliceChannel()(Array(sImg), Map("num_outputs" -> nChannel))
+    val out = Symbol.Concat()((0 until nChannel).map { i =>
+      Symbol.Convolution()(Map("data" -> channels.get(i), "weight" -> sKernel,
+                    "num_filter" -> 1, "kernel" -> "(3,3)", "pad" -> "(1,1)",
+                    "no_bias" -> true, "stride" -> "(1,1)"))
+    }.toArray) * tvWeight
+    val kernel = {
+      val tmp = NDArray.empty(Shape(1, 1, 3, 3), ctx)
+      tmp.set(Array[Float](0, -1, 0, -1, 4, -1, 0, -1, 0))
+      tmp / 0.8f
+    }
+    Some(out.bind(ctx, Map("img" -> img, "kernel" -> kernel)))
   }
 
   def twoNorm(array: Array[Float]): Float = {
@@ -123,28 +152,35 @@ object NeuralStyle {
       val styleNp = preprocessStyleImage(alle.styleImage, contentNp.shape, dev)
       val size = (contentNp.shape(2), contentNp.shape(3))
 
-      val modelExecutor = ModelVgg19.getModel(alle.modelPath, size, dev)
-      val gramExecutor = modelExecutor.style.map(arr => styleGramExecutor(arr.shape, dev))
+      val (style, content) = ModelVgg19.getSymbol()
+      val (gram, gScale) = styleGramSymbol(size, style)
+      var modelExecutor = ModelVgg19.getExecutor(gram, content, alle.modelPath, size, dev)
 
-      // get style representation
-      val styleArray = gramExecutor.map { gram =>
-        NDArray.zeros(gram.executor.outputs(0).shape, dev)
-      }
       modelExecutor.data.set(styleNp)
       modelExecutor.executor.forward()
 
-      for(i <- 0 until modelExecutor.style.length) {
-        modelExecutor.style(i).copyTo(gramExecutor(i).data)
-        gramExecutor(i).executor.forward()
-        gramExecutor(i).executor.outputs(0).copyTo(styleArray(i))
-      }
-
-      // get content representation
-      val contentArray = NDArray.zeros(modelExecutor.content.shape, dev)
-      val contentGrad = NDArray.zeros(modelExecutor.content.shape, dev)
+      val styleArray = modelExecutor.style.map(_.copyTo(Context.cpu()))
       modelExecutor.data.set(contentNp)
       modelExecutor.executor.forward()
-      modelExecutor.content.copyTo(contentArray)
+      val contentArray = modelExecutor.content.copyTo(Context.cpu())
+
+      // delete the executor
+      modelExecutor = null
+
+      val (styleLoss, contentLoss) = getLoss(gram, content)
+      modelExecutor = ModelVgg19.getExecutor(
+          styleLoss, contentLoss, alle.modelPath, size, dev)
+
+      val gradArray = {
+        var tmpGA = Array[NDArray]()
+        for (i <- 0 until styleArray.length) {
+          modelExecutor.argDict(s"target_gram_$i").set(styleArray(i))
+          tmpGA = tmpGA :+ NDArray.ones(Shape(1), dev) * (alle.styleWeight / gScale(i))
+        }
+        tmpGA :+ NDArray.ones(Shape(1), dev) * alle.contentWeight
+      }
+
+      modelExecutor.argDict("target_content").set(contentArray)
 
       // train
       val img = Random.uniform(-0.1f, 0.1f, contentNp.shape, dev)
@@ -153,45 +189,40 @@ object NeuralStyle {
       saveImage(contentNp, s"${alle.outputDir}/input.jpg", alle.guassianRadius)
       saveImage(styleNp, s"${alle.outputDir}/style.jpg", alle.guassianRadius)
 
-       val optimizer = new Adam(
+      val optimizer = new Adam(
           learningRate = alle.lr,
           wd = 0.005f,
-          clipGradient = 10,
           lrScheduler = lr)
       val optimState = optimizer.createState(0, img)
 
       logger.info(s"start training arguments $alle")
 
-      var oldImg = img.copy()
-      var gradArray: Array[NDArray] = null
+      var oldImg = img.copyTo(dev)
+      val clipNorm = img.shape.toVector.reduce(_ * _)
+      val tvGradExecutor = getTvGradExecutor(img, dev, alle.tvWeight)
       var eps = 0f
       var trainingDone = false
       var e = 0
       while (e < alle.maxNumEpochs && !trainingDone) {
         modelExecutor.data.set(img)
         modelExecutor.executor.forward()
-
-        // style gradient
-        for (i <- 0 until modelExecutor.style.length) {
-          val gram = gramExecutor(i)
-          gram.data.set(modelExecutor.style(i))
-          gram.executor.forward()
-          gram.executor.backward(gram.executor.outputs(0) - styleArray(i))
-          val tmp = gram.data.shape(1) * gram.data.shape(1) *
-            gram.data.shape(2) * gram.data.shape(3)
-          gram.dataGrad.set(gram.dataGrad / tmp.toFloat)
-          gram.dataGrad.set(gram.dataGrad * alle.styleWeight)
-        }
-
-        // content gradient
-        contentGrad.set((modelExecutor.content - contentArray) * alle.contentWeight)
-
-        // image gradient
-        gradArray = gramExecutor.map(_.dataGrad) :+ contentGrad
         modelExecutor.executor.backward(gradArray)
 
-        optimizer.update(0, img, modelExecutor.dataGrad, optimState)
-        eps = twoNorm((oldImg - img).toArray) / twoNorm(img.toArray)
+        val gNorm = NDArray.norm(modelExecutor.dataGrad).toScalar
+        if (gNorm > clipNorm) {
+          modelExecutor.dataGrad.set(modelExecutor.dataGrad * (clipNorm / gNorm))
+        }
+        tvGradExecutor match {
+          case Some(executor) => {
+            executor.forward()
+            optimizer.update(0, img,
+                modelExecutor.dataGrad + executor.outputs(0),
+                optimState)
+          }
+          case None =>
+            optimizer.update(0, img, modelExecutor.dataGrad, optimState)
+        }
+        eps = (NDArray.norm(oldImg - img) / NDArray.norm(img)).toScalar
         oldImg.set(img)
         logger.info(s"epoch $e, relative change $eps")
 
@@ -231,6 +262,8 @@ class NeuralStyle {
   private val contentWeight: Float = 20f
   @Option(name = "--style-weight", usage = "the weight for the style image")
   private val styleWeight: Float = 1f
+  @Option(name = "--tv-weight", usage = "the magtitute on TV loss")
+  private val tvWeight: Float = 0.01f
   @Option(name = "--max-num-epochs", usage = "the maximal number of training epochs")
   private val maxNumEpochs: Int = 1000
   @Option(name = "--max-long-edge", usage = "resize the content image")

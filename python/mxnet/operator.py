@@ -7,7 +7,7 @@ from ctypes import CFUNCTYPE, POINTER, Structure, pointer
 from ctypes import c_void_p, cast, c_int, c_char, c_char_p, cast, c_bool
 c_int_p = POINTER(c_int)
 from .base import _LIB, check_call
-from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle
+from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol
 from .ndarray import NDArray
 
@@ -336,9 +336,9 @@ class NDArrayOp(PythonOp):
         def declare_backward_dependency(out_grad, in_data, out_data, num_dep, deps, _):
             """C Callback for NDArrayOpProp::DeclareBacwardDependency"""
             try:
-                out_grad = [out_grad[i] for i in xrange(len(self.list_outputs()))]
-                in_data = [in_data[i] for i in xrange(len(self.list_arguments()))]
-                out_data = [out_data[i] for i in xrange(len(self.list_outputs()))]
+                out_grad = [out_grad[i] for i in range(len(self.list_outputs()))]
+                in_data = [in_data[i] for i in range(len(self.list_arguments()))]
+                out_data = [out_data[i] for i in range(len(self.list_outputs()))]
                 rdeps = self.declare_backward_dependency(out_grad, in_data, out_data)
                 num_dep[0] = len(rdeps)
                 rdeps = cast(c_array(c_int, rdeps), c_int_p)
@@ -435,7 +435,8 @@ class CustomOp(object):
             dst[:] += src
 
 class CustomOpProp(object):
-    """Base class for operator property class implemented in python
+    """Base class for operator property class implemented in python.
+    MXNET_CPU_WORKER_NTHREADS must be greater than 1 for custom op to work on CPU
 
     Parameters
     ----------
@@ -535,21 +536,24 @@ def register(reg_name):
     def do_register(prop_cls):
         """Register a subclass of CustomOpProp to the registry."""
         fb_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_void_p), POINTER(c_int),
-                                POINTER(c_int), c_bool)
+                                POINTER(c_int), c_bool, c_void_p)
         class CustomOpInfo(Structure):
             """Structure that holds Callback information. Passed to CustomOpProp"""
             _fields_ = [
                 ('forward', fb_functype),
                 ('backward', fb_functype),
+                ('p_forward', c_void_p),
+                ('p_backward', c_void_p)
                 ]
 
         infer_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_int),
-                                   POINTER(POINTER(mx_uint)))
-        list_functype = CFUNCTYPE(c_bool, POINTER(POINTER(POINTER(c_char))))
+                                   POINTER(POINTER(mx_uint)), c_void_p)
+        list_functype = CFUNCTYPE(c_bool, POINTER(POINTER(POINTER(c_char))), c_void_p)
         deps_functype = CFUNCTYPE(c_bool, c_int_p, c_int_p, c_int_p,
-                                  c_int_p, POINTER(c_int_p))
+                                  c_int_p, POINTER(c_int_p), c_void_p)
         createop_functype = CFUNCTYPE(c_bool, c_char_p, c_int, POINTER(POINTER(mx_uint)),
-                                      POINTER(c_int), POINTER(c_int), POINTER(CustomOpInfo))
+                                      POINTER(c_int), POINTER(c_int),
+                                      POINTER(CustomOpInfo), c_void_p)
         class CustomOpPropInfo(Structure):
             """Structure that holds Callback information. Passed to CustomOpProp"""
             _fields_ = [
@@ -558,18 +562,24 @@ def register(reg_name):
                 ('infer_shape', infer_functype),
                 ('declare_backward_dependency', deps_functype),
                 ('create_operator', createop_functype),
-                ('list_auxiliary_states', list_functype)
+                ('list_auxiliary_states', list_functype),
+                ('p_list_arguments', c_void_p),
+                ('p_list_outputs', c_void_p),
+                ('p_infer_shape', c_void_p),
+                ('p_declare_backward_dependency', c_void_p),
+                ('p_create_operator', c_void_p),
+                ('p_list_auxiliary_states', c_void_p)
                 ]
         req_enum = ['null', 'write', 'inplace', 'add']
 
         def creator(op_type, argc, keys, vals, ret):
             """internal function"""
-            assert op_type == reg_name
+            assert py_str(op_type) == reg_name
             kwargs = dict([(keys[i], vals[i]) for i in range(argc)])
             op_prop = prop_cls(**kwargs)
 
             def infer_shape_entry(num_tensor, tensor_dims,
-                                  tensor_shapes):
+                                  tensor_shapes, _):
                 """C Callback for CustomOpProp::InferShape"""
                 try:
                     n_in = len(op_prop.list_arguments())
@@ -601,7 +611,7 @@ def register(reg_name):
                     return False
                 return True
 
-            def list_outputs_entry(out):
+            def list_outputs_entry(out, _):
                 """C Callback for CustomOpProp::ListOutputs"""
                 try:
                     ret = op_prop.list_outputs()
@@ -615,7 +625,7 @@ def register(reg_name):
                     return False
                 return True
 
-            def list_arguments_entry(out):
+            def list_arguments_entry(out, _):
                 """C Callback for CustomOpProp::ListArguments"""
                 try:
                     ret = op_prop.list_arguments()
@@ -629,7 +639,7 @@ def register(reg_name):
                     return False
                 return True
 
-            def list_auxiliary_states_entry(out):
+            def list_auxiliary_states_entry(out, _):
                 """C Callback for CustomOpProp::ListAuxiliaryStates"""
                 try:
                     ret = op_prop.list_auxiliary_states()
@@ -643,12 +653,12 @@ def register(reg_name):
                     return False
                 return True
 
-            def declare_backward_dependency_entry(out_grad, in_data, out_data, num_dep, deps):
+            def declare_backward_dependency_entry(out_grad, in_data, out_data, num_dep, deps, _):
                 """C Callback for CustomOpProp::DeclareBacwardDependency"""
                 try:
-                    out_grad = [out_grad[i] for i in xrange(len(op_prop.list_outputs()))]
-                    in_data = [in_data[i] for i in xrange(len(op_prop.list_arguments()))]
-                    out_data = [out_data[i] for i in xrange(len(op_prop.list_outputs()))]
+                    out_grad = [out_grad[i] for i in range(len(op_prop.list_outputs()))]
+                    in_data = [in_data[i] for i in range(len(op_prop.list_arguments()))]
+                    out_data = [out_data[i] for i in range(len(op_prop.list_outputs()))]
                     rdeps = op_prop.declare_backward_dependency(out_grad, in_data, out_data)
                     num_dep[0] = len(rdeps)
                     rdeps = cast(c_array(c_int, rdeps), c_int_p)
@@ -660,7 +670,7 @@ def register(reg_name):
                     return False
                 return True
 
-            def create_operator_entry(ctx, num_inputs, shapes, ndims, dtypes, ret):
+            def create_operator_entry(ctx, num_inputs, shapes, ndims, dtypes, ret, _):
                 """C Callback for CustomOpProp::CreateOperator"""
                 try:
                     ndims = [ndims[i] for i in range(num_inputs)]
@@ -668,7 +678,7 @@ def register(reg_name):
                     dtypes = [dtypes[i] for i in range(num_inputs)]
                     op = op_prop.create_operator(ctx, shapes, dtypes)
 
-                    def forward_entry(num_ndarray, ndarraies, tags, reqs, is_train):
+                    def forward_entry(num_ndarray, ndarraies, tags, reqs, is_train, _):
                         """C Callback for CustomOp::Forward"""
                         try:
                             tensors = [[] for i in range(5)]
@@ -690,7 +700,7 @@ def register(reg_name):
                             return False
                         return True
 
-                    def backward_entry(num_ndarray, ndarraies, tags, reqs, is_train):
+                    def backward_entry(num_ndarray, ndarraies, tags, reqs, is_train, _):
                         """C Callback for CustomOp::Backward"""
                         # pylint: disable=W0613
                         try:
@@ -714,7 +724,8 @@ def register(reg_name):
                             return False
                         return True
 
-                    ret[0] = CustomOpInfo(fb_functype(forward_entry), fb_functype(backward_entry))
+                    ret[0] = CustomOpInfo(fb_functype(forward_entry),
+                                          fb_functype(backward_entry), None, None)
                     op._ref_holder = [ret]
                     op_prop._ref_holder.append(op)
                 except Exception as e:
@@ -727,7 +738,8 @@ def register(reg_name):
                                       infer_functype(infer_shape_entry),
                                       deps_functype(declare_backward_dependency_entry),
                                       createop_functype(create_operator_entry),
-                                      list_functype(list_auxiliary_states_entry))
+                                      list_functype(list_auxiliary_states_entry),
+                                      None, None, None, None, None, None)
             op_prop._ref_holder = [ret]
             _registry_ref_holder.append(op_prop)
             return True

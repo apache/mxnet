@@ -68,7 +68,7 @@ def plot_network(symbol, title="plot", shape=None, node_attrs={}):
     # default attributes of node
     node_attr = {"shape": "box", "fixedsize": "true",
                  "width": "1.3", "height": "0.8034", "style": "filled"}
-    # merge the dcit provided by user and the default one
+    # merge the dict provided by user and the default one
     node_attr.update(node_attrs)
     dot = Digraph(name=title)
     # color map
@@ -91,24 +91,24 @@ def plot_network(symbol, title="plot", shape=None, node_attrs={}):
             else:
                 continue
         elif op == "Convolution":
-            label = "Convolution\n%sx%s/%s, %s" % (_str2tuple(node["param"]["kernel"])[0],
-                                                   _str2tuple(node["param"]["kernel"])[1],
-                                                   _str2tuple(node["param"]["stride"])[0],
-                                                   node["param"]["num_filter"])
+            label = r"Convolution\n%sx%s/%s, %s" % (_str2tuple(node["param"]["kernel"])[0],
+                                                    _str2tuple(node["param"]["kernel"])[1],
+                                                    _str2tuple(node["param"]["stride"])[0],
+                                                    node["param"]["num_filter"])
             attr["fillcolor"] = cm[1]
         elif op == "FullyConnected":
-            label = "FullyConnected\n%s" % node["param"]["num_hidden"]
+            label = r"FullyConnected\n%s" % node["param"]["num_hidden"]
             attr["fillcolor"] = cm[1]
         elif op == "BatchNorm":
             attr["fillcolor"] = cm[3]
         elif op == "Activation" or op == "LeakyReLU":
-            label = "%s\n%s" % (op, node["param"]["act_type"])
+            label = r"%s\n%s" % (op, node["param"]["act_type"])
             attr["fillcolor"] = cm[2]
         elif op == "Pooling":
-            label = "Pooling\n%s, %sx%s/%s" % (node["param"]["pool_type"],
-                                               _str2tuple(node["param"]["kernel"])[0],
-                                               _str2tuple(node["param"]["kernel"])[1],
-                                               _str2tuple(node["param"]["stride"])[0])
+            label = r"Pooling\n%s, %sx%s/%s" % (node["param"]["pool_type"],
+                                                _str2tuple(node["param"]["kernel"])[0],
+                                                _str2tuple(node["param"]["kernel"])[1],
+                                                _str2tuple(node["param"]["stride"])[0])
             attr["fillcolor"] = cm[4]
         elif op == "Concat" or op == "Flatten" or op == "Reshape":
             attr["fillcolor"] = cm[5]

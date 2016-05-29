@@ -224,7 +224,7 @@ class Nesterov(mx.optimizer.SGD):
             ) or 'proj' in n or 'zscore' in n:
                 self.wd_mult[n] = 0.0
         if self.sym is not None:
-            attr = self.sym.list_attr()
+            attr = self.sym.list_attr(recursive=True)
             for k, v in attr.items():
                 if k.endswith('_wd_mult'):
                     self.wd_mult[k[:-len('_wd_mult')]] = float(v)
@@ -245,7 +245,7 @@ class Nesterov(mx.optimizer.SGD):
             if 'proj' in n or 'zscore' in n:
                 self.lr_mult[n] = 0.0
         if self.sym is not None:
-            attr = self.sym.list_attr()
+            attr = self.sym.list_attr(recursive=True)
             for k, v in attr.items():
                 if k.endswith('_lr_mult'):
                     self.lr_mult[k[:-len('_lr_mult')]] = float(v)

@@ -46,3 +46,49 @@ class ConcatDoc(SymbolDoc):
      [[ 3.  4.  5.  3.  4.  5.]]]
     """
     pass
+
+class BroadcastPlusDoc(SymbolDoc):
+    """add with broadcast
+
+    Examples
+    --------
+    >>> a = mx.sym.Variable('a')
+    >>> b = mx.sym.Variable('b')
+    >>> c = mx.sym.BroadcastPlus(a, b)
+
+    >>> dev = mx.cpu();
+    >>> x = c.bind(dev, args={'a': mx.nd.ones((2,2)), 'b' : mx.nd.ones((2,2))})
+    >>> x.forward()
+    >>> print x.outputs[0].asnumpy()
+    [[ 2.  2.]
+     [ 2.  2.]]
+    >>> x = c.bind(dev, args={'a': mx.nd.ones((2,2)), 'b' : mx.nd.ones((1,1))})
+    >>> x.forward()
+    >>> print x.outputs[0].asnumpy()
+    [[ 2.  2.]
+     [ 2.  2.]]
+    >>> x = c.bind(dev, args={'a': mx.nd.ones((2,1)), 'b' : mx.nd.ones((1,2))})
+    >>> x.forward()
+    >>> print x.outputs[0].asnumpy()
+    [[ 2.  2.]
+     [ 2.  2.]]
+    >>> x = c.bind(dev, args={'a': mx.nd.ones((1,2)), 'b' : mx.nd.ones((2,1))})
+    >>> x.forward()
+    >>> print x.outputs[0].asnumpy()
+    [[ 2.  2.]
+     [ 2.  2.]]
+    >>> x = c.bind(dev, args={'a': mx.nd.ones((2,2,2)), 'b' : mx.nd.ones((1,2,1))}
+    >>> x.forward()
+    >>> print x.outputs[0].asnumpy()
+    [[[ 2.  2.]
+      [ 2.  2.]]
+     [[ 2.  2.]
+      [ 2.  2.]]]
+    >>> x = c.bind(dev, args={'a': mx.nd.ones((2,1,1)), 'b' : mx.nd.ones((2,2,2))})
+    >>> x.forward()
+    >>> print x.outputs[0].asnumpy()
+    [[[ 2.  2.]
+      [ 2.  2.]]
+     [[ 2.  2.]
+      [ 2.  2.]]]
+    """

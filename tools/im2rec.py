@@ -41,6 +41,7 @@ def write_list(path_out, image_list):
 
 def make_list(prefix_out, root, recursive, exts, num_chunks, train_ratio):
     image_list = list_image(root, recursive, exts)
+    random.seed(100)
     random.shuffle(image_list)
     N = len(image_list)
     chunk_size = (N+num_chunks-1)/num_chunks
