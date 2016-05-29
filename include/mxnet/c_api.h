@@ -98,9 +98,11 @@ struct CustomOpInfo {
                   const int* /*reqs*/, const bool /*is_train*/, void* /*state*/);
   bool (*backward)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
                    const int* /*reqs*/, const bool /*is_train*/, void* /*state*/);
+  bool (*del)(void* /*state*/);
   // all functions also pass a payload void* pointer
   void* p_forward;
   void* p_backward;
+  void* p_del;
 };
 
 struct CustomOpPropInfo {
@@ -115,6 +117,7 @@ struct CustomOpPropInfo {
                           int* /*ndims*/, int* /*dtypes*/,
                           CustomOpInfo* /*ret*/, void* /*state*/);
   bool (*list_auxiliary_states)(char*** /*aux*/, void* /*state*/);
+  bool (*del)(void* /*state*/);
   // all functions also pass a payload void* pointer
   void* p_list_arguments;
   void* p_list_outputs;
@@ -122,6 +125,7 @@ struct CustomOpPropInfo {
   void* p_declare_backward_dependency;
   void* p_create_operator;
   void* p_list_auxiliary_states;
+  void* p_del;
 };
 
 typedef bool (*CustomOpPropCreator)(const char* /*op_type*/, const int /*num_kwargs*/,
@@ -316,6 +320,16 @@ MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
                              mx_uint slice_begin,
                              mx_uint slice_end,
                              NDArrayHandle *out);
+/*!
+ * \brief Index the NDArray along axis 0.
+ * \param handle the handle to the narraya
+ * \param idx the index
+ * \param out The NDArrayHandle of sliced NDArray
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayAt(NDArrayHandle handle,
+                          mx_uint idx,
+                          NDArrayHandle *out);
 /*!
  * \brief Reshape the NDArray.
  * \param handle the handle to the narray

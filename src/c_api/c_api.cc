@@ -282,6 +282,16 @@ int MXNDArraySlice(NDArrayHandle handle,
   API_END_HANDLE_ERROR(delete ptr);
 }
 
+int MXNDArrayAt(NDArrayHandle handle,
+                mx_uint idx,
+                NDArrayHandle *out) {
+  NDArray *ptr = new NDArray();
+  API_BEGIN();
+  *ptr = static_cast<NDArray*>(handle)->At(idx);
+  *out = ptr;
+  API_END_HANDLE_ERROR(delete ptr);
+}
+
 MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
                                int ndim,
                                int *dims,
