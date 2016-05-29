@@ -11,7 +11,9 @@
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <mxnet/c_api.h>
+#include <map>
 #include <vector>
+#include <string>
 #include <utility>
 #include "./operator_common.h"
 
@@ -41,7 +43,6 @@ struct NativeOpParam : public dmlc::Parameter<NativeOpParam> {
 template<typename xpu>
 class NativeOpBase : public Operator {
  protected:
-
   inline uint64_t _CalculateSpace(const std::vector<TBlob> &tblob_vec) {
     uint64_t size = 0;
     for (size_t i = 0; i < tblob_vec.size(); ++i) {
@@ -106,7 +107,7 @@ class NativeOpBase : public Operator {
     _InitDataVector(in_data, &in_data_ptr_, buf.dptr_, &buf_size);
     _InitDataVector(out_data, &out_data_ptr_, buf.dptr_, &buf_size);
     _InitDataVector(in_grad, &in_grad_ptr_, buf.dptr_, &buf_size);
-    _InitDataVector(aux_args, &aux_args_ptr_, buf._dptr_, &buf_size);
+    _InitDataVector(aux_args, &aux_args_ptr_, buf.dptr_, &buf_size);
   }
 
   inline void _SyncData(const std::vector<TBlob> &data,
@@ -117,7 +118,7 @@ class NativeOpBase : public Operator {
     for (size_t i = 0; i < data.size(); ++i) {
       Tensor<xpu, 2> tensor_data = data[i].FlatTo2D<xpu, real_t>(s);
       Tensor<cpu, 2> vector_data = Tensor<cpu, 2>(vec[i], tensor_data.shape_);
-      switch(dir) {
+      switch (dir) {
       case nativeop::kTensorToData:
         Copy(vector_data, tensor_data, s);
         break;
@@ -141,7 +142,7 @@ class NativeOpBase : public Operator {
 
 
 template<typename xpu>
-class NativeOp : public NativeOpBase {
+class NativeOp : public NativeOpBase<xpu> {
  public:
   explicit NativeOp(NativeOpParam p) {
     this->param_ = p;
@@ -155,15 +156,15 @@ class NativeOp : public NativeOpBase {
     using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Parent::_InitForward(ctx, in_data, out_data, aux_args);
-    Parent::_SyncData(in_data, in_data_ptr_, nativeop::kTensorToData, s);
-    Parent::_SyncData(aux_args, aux_args_ptr_, nativeop::kTensorToData, s);
+    Parent::_SyncData(in_data, Parent::in_data_ptr_, s, nativeop::kTensorToData);
+    Parent::_SyncData(aux_args, Parent::aux_args_ptr_, s,  nativeop::kTensorToData);
     this->_InitNativeForward(in_data, out_data, aux_args);
     s->Wait();
     param_.pinfo->forward(ptrs_.size(), ptrs_.data(),
                           ndims_.data(), shapes_.data(),
                           tags_.data(),
                           param_.pinfo->p_forward);
-    Parent::_SyncData(out_data, out_data_ptr_, nativeop::kDataToTensor, s);
+    Parent::_SyncData(out_data, Parent::out_data_ptr_, s, nativeop::kDataToTensor);
     // _SyncData(aux_args, aux_args_ptr_, nativeop::kDataToTensor, s);
     s->Wait();
   }
@@ -177,19 +178,19 @@ class NativeOp : public NativeOpBase {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Parent::_InitBackward(ctx, out_grad, in_data, out_data, in_grad, aux_args, s);
+    Parent::_InitBackward(ctx, out_grad, in_data, out_data, in_grad, aux_args);
     if (param_.need_top_grad) {
-      Parent::_SyncData(out_grad, out_grad_ptr_, nativeop::kTensorToData, s);
+      Parent::_SyncData(out_grad, Parent::out_grad_ptr_, s, nativeop::kTensorToData);
     }
-    Parent::_SyncData(in_data, in_data_ptr_, nativeop::kTensorToData, s);
-    Parent::_SyncData(out_data, out_data_ptr_, nativeop::kTensorToData, s);
+    Parent::_SyncData(in_data, Parent::in_data_ptr_, s, nativeop::kTensorToData);
+    Parent::_SyncData(out_data, Parent::out_data_ptr_, s, nativeop::kTensorToData);
     this->_InitNativeBackward(out_grad, in_data, out_data, in_grad, aux_args);
     s->Wait();
     param_.pinfo->backward(ptrs_.size(), ptrs_.data(),
                            ndims_.data(), shapes_.data(),
                            tags_.data(),
                            param_.pinfo->p_backward);
-    Parent::_SyncData(in_grad, in_grad_ptr_, nativeop::kDataToTensor, s);
+    Parent::_SyncData(in_grad, Parent::in_grad_ptr_, s, nativeop::kDataToTensor);
     // _SyncData(aux_args, aux_args_ptr_, nativeop::kDataToTensor, s);
     s->Wait();
   }
@@ -211,14 +212,14 @@ class NativeOp : public NativeOpBase {
   inline void _InitNativeForward(const std::vector<TBlob> &in_data,
                                  const std::vector<TBlob> &out_data,
                                  const std::vector<TBlob> &aux_args) {
-    uint64_t size = in_data_ptr_.size() + out_data_ptr_.size();
+    uint64_t size = in_data.size() + out_data.size();
     ptrs_.resize(size);
-    ndims_.clear(size);
-    shapes_.clear(size);
-    tags_.clear(size);
+    ndims_.resize(size);
+    shapes_.resize(size);
+    tags_.resize(size);
     uint64_t idx = 0;
-    _InitNativeEntry(in_data, in_data_ptr_, 0, &idx);
-    _InitNativeEntry(out_data, out_data_ptr_, 1, &idx);
+    _InitNativeEntry(in_data, Parent::in_data_ptr_, 0, &idx);
+    _InitNativeEntry(out_data, Parent::out_data_ptr_, 1, &idx);
     // _InitNativeEntry(aux_args, aux_args_ptr_, 4, &idx);
   }
 
@@ -227,21 +228,21 @@ class NativeOp : public NativeOpBase {
                                   const std::vector<TBlob> &out_data,
                                   const std::vector<TBlob> &in_grad,
                                   const std::vector<TBlob> &aux_args) {
-    uint64_t size = (param_.need_top_grad ? out_grad_ptr_.size() : 0) +
-                    in_data_ptr_.size() +
-                    out_data_ptr_.size() +
-                    in_grad_ptr_.size();
+    uint64_t size = (param_.need_top_grad ? out_grad.size() : 0) +
+                    in_data.size() +
+                    out_data.size() +
+                    in_grad.size();
                     // aux_args_ptr_.size();
     ptrs_.resize(size);
     ndims_.resize(size);
     shapes_.resize(size);
     tags_.resize(size);
     uint64_t idx = 0;
-    _InitNativeEntry(in_data, in_data_ptr_, 0, &idx);
-    _InitNativeEntry(out_data, out_data_ptr_, 1, &idx);
-    _InitNativeEntry(in_grad, in_grad_ptr_, 2, &idx);
+    _InitNativeEntry(in_data, Parent::in_data_ptr_, 0, &idx);
+    _InitNativeEntry(out_data, Parent::out_data_ptr_, 1, &idx);
+    _InitNativeEntry(in_grad, Parent::in_grad_ptr_, 2, &idx);
     if (param_.need_top_grad) {
-      _InitNativeEntry(out_grad, out_grad_ptr_, 3, &idx);
+      _InitNativeEntry(out_grad, Parent::out_grad_ptr_, 3, &idx);
     }
     // _InitNativeEntry(aux_args, aux_args_ptr_, 4, &idx);
   }
@@ -356,12 +357,12 @@ class NativeOpProp : public OperatorProperty {
 
   std::vector<ResourceRequest> BackwardResource(
     const std::vector<TShape> &in_shape) const override {
-
+    return {ResourceRequest::kTempSpace};
   }
 
   std::vector<ResourceRequest> ForwardResource(
     const std::vector<TShape> &in_shape) const override {
-
+    return {ResourceRequest::kTempSpace};
   }
 
   Operator* CreateOperator(Context ctx) const override;
