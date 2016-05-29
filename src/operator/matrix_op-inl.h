@@ -88,7 +88,6 @@ void Transpose(const TBlob &src,
                TBlob *ret,
                OpReqType req,
                RunContext ctx) {
-  
   TransposeParam param;
   param.Init(env.kwargs);
   if (param.axes.ndim() == 0) {
@@ -260,31 +259,31 @@ void Crop(const TBlob &src,
      case 0:
       break;
      case 1: {
-      Tensor<xpu, 1, DType> in = src.get<xpu, 1, DType>(s); 
+      Tensor<xpu, 1, DType> in = src.get<xpu, 1, DType>(s);
       Tensor<xpu, 1, DType> out = ret->get<xpu, 1, DType>(s);
       out = slice(in, param.begin.get<1>(), param.end.get<1>());
       break;
      }
      case 2: {
-      Tensor<xpu, 2, DType> in = src.get<xpu, 2, DType>(s); 
+      Tensor<xpu, 2, DType> in = src.get<xpu, 2, DType>(s);
       Tensor<xpu, 2, DType> out = ret->get<xpu, 2, DType>(s);
       out = slice(in, param.begin.get<2>(), param.end.get<2>());
       break;
      }
      case 3: {
-      Tensor<xpu, 3, DType> in = src.get<xpu, 3, DType>(s); 
+      Tensor<xpu, 3, DType> in = src.get<xpu, 3, DType>(s);
       Tensor<xpu, 3, DType> out = ret->get<xpu, 3, DType>(s);
       out = slice(in, param.begin.get<3>(), param.end.get<3>());
       break;
      }
      case 4: {
-      Tensor<xpu, 4, DType> in = src.get<xpu, 4, DType>(s); 
+      Tensor<xpu, 4, DType> in = src.get<xpu, 4, DType>(s);
       Tensor<xpu, 4, DType> out = ret->get<xpu, 4, DType>(s);
       out = slice(in, param.begin.get<4>(), param.end.get<4>());
       break;
      }
      case 5: {
-      Tensor<xpu, 5, DType> in = src.get<xpu, 5, DType>(s); 
+      Tensor<xpu, 5, DType> in = src.get<xpu, 5, DType>(s);
       Tensor<xpu, 5, DType> out = ret->get<xpu, 5, DType>(s);
       out = slice(in, param.begin.get<5>(), param.end.get<5>());
       break;
@@ -294,7 +293,6 @@ void Crop(const TBlob &src,
       break;
     }
   });
-
 }
 
 inline TShape CropShape(const TShape& shp,
@@ -338,31 +336,31 @@ void Flip(const TBlob &src,
      case 0:
       break;
      case 1: {
-      Tensor<xpu, 1, DType> in = src.get<xpu, 1, DType>(s); 
+      Tensor<xpu, 1, DType> in = src.get<xpu, 1, DType>(s);
       Tensor<xpu, 1, DType> out = ret->get<xpu, 1, DType>(s);
       out = flip(in, param.axis);
       break;
      }
      case 2: {
-      Tensor<xpu, 2, DType> in = src.get<xpu, 2, DType>(s); 
+      Tensor<xpu, 2, DType> in = src.get<xpu, 2, DType>(s);
       Tensor<xpu, 2, DType> out = ret->get<xpu, 2, DType>(s);
       out = flip(in, param.axis);
       break;
      }
      case 3: {
-      Tensor<xpu, 3, DType> in = src.get<xpu, 3, DType>(s); 
+      Tensor<xpu, 3, DType> in = src.get<xpu, 3, DType>(s);
       Tensor<xpu, 3, DType> out = ret->get<xpu, 3, DType>(s);
       out = flip(in, param.axis);
       break;
      }
      case 4: {
-      Tensor<xpu, 4, DType> in = src.get<xpu, 4, DType>(s); 
+      Tensor<xpu, 4, DType> in = src.get<xpu, 4, DType>(s);
       Tensor<xpu, 4, DType> out = ret->get<xpu, 4, DType>(s);
       out = flip(in, param.axis);
       break;
      }
      case 5: {
-      Tensor<xpu, 5, DType> in = src.get<xpu, 5, DType>(s); 
+      Tensor<xpu, 5, DType> in = src.get<xpu, 5, DType>(s);
       Tensor<xpu, 5, DType> out = ret->get<xpu, 5, DType>(s);
       out = flip(in, param.axis);
       break;

@@ -531,12 +531,14 @@ class CustomOpProp(object):
         return CustomOp()
 
 class _Registry(object):
+    """CustomOp registry"""
     def __init__(self):
         self.ref_holder = {}
         self.counter = 0
         self.lock = Lock()
 
     def inc(self):
+        """Get index for new entry"""
         self.lock.acquire()
         cur = self.counter
         self.counter += 1
@@ -746,6 +748,7 @@ def register(reg_name):
                     cur = _registry.inc()
 
                     def delete_entry(_):
+                        """C Callback for CustomOp::del"""
                         try:
                             del _registry.ref_holder[cur]
                         except Exception as e:
@@ -767,6 +770,7 @@ def register(reg_name):
             cur = _registry.inc()
 
             def delete_entry(_):
+                """C Callback for CustomOpProp::del"""
                 try:
                     del _registry.ref_holder[cur]
                 except Exception as e:
