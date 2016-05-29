@@ -2,7 +2,7 @@
  * Copyright (c) 2015 by Contributors
  * \file native_op-inl.h
  * \brief
- * \author Junyuan Xie
+ * \author Junyuan Xie, Bing Xu
 */
 
 #ifndef MXNET_OPERATOR_NATIVE_OP_INL_H_
@@ -11,15 +11,18 @@
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <mxnet/c_api.h>
-#include <map>
 #include <vector>
-#include <string>
 #include <utility>
-#include <sstream>
 #include "./operator_common.h"
 
 namespace mxnet {
 namespace op {
+
+namespace nativeop {
+enum NativeOpSyncDirection {kTensorToData, kDataToTensor};
+enum NativeOpResource {kTempSpace};
+}
+
 
 struct NativeOpParam : public dmlc::Parameter<NativeOpParam> {
   void *info;
@@ -36,7 +39,109 @@ struct NativeOpParam : public dmlc::Parameter<NativeOpParam> {
 };
 
 template<typename xpu>
-class NativeOp : public Operator {
+class NativeOpBase : public Operator {
+ protected:
+
+  inline uint64_t _CalculateSpace(const std::vector<TBlob> &tblob_vec) {
+    uint64_t size = 0;
+    for (size_t i = 0; i < tblob_vec.size(); ++i) {
+      size += tblob_vec[i].shape_.Size();
+    }
+    return size;
+  }
+
+  inline void _InitDataVector(const std::vector<TBlob> &tblob_vec,
+                              std::vector<real_t*> *vec,
+                              real_t *buf,
+                              uint64_t *buf_size) {
+    for (size_t i = 0; i < tblob_vec.size(); ++i) {
+      vec->at(i) = buf + (*buf_size);
+      (*buf_size) += tblob_vec[i].shape_.Size();
+    }
+  }
+
+
+  inline void _InitForward(const OpContext &ctx,
+                           const std::vector<TBlob> &in_data,
+                           const std::vector<TBlob> &out_data,
+                           const std::vector<TBlob> &aux_args) {
+    using namespace mshadow;
+    in_data_ptr_.resize(in_data.size());
+    out_data_ptr_.resize(out_data.size());
+    aux_args_ptr_.resize(aux_args.size());
+    uint64_t buf_size = 0;
+    buf_size += _CalculateSpace(in_data);
+    buf_size += _CalculateSpace(out_data);
+    buf_size += _CalculateSpace(aux_args);
+    Tensor<cpu, 1> buf = ctx.requested[nativeop::kTempSpace].get_host_space_typed<1, real_t>(
+      Shape1(buf_size));
+    buf_size = 0;
+    _InitDataVector(in_data, &in_data_ptr_, buf.dptr_, &buf_size);
+    _InitDataVector(out_data, &out_data_ptr_, buf.dptr_, &buf_size);
+    _InitDataVector(aux_args, &aux_args_ptr_, buf.dptr_, &buf_size);
+  }
+
+  inline void _InitBackward(const OpContext &ctx,
+                            const std::vector<TBlob> &out_grad,
+                            const std::vector<TBlob> &in_data,
+                            const std::vector<TBlob> &out_data,
+                            const std::vector<TBlob> &in_grad,
+                            const std::vector<TBlob> &aux_args) {
+    using namespace mshadow;
+    out_grad_ptr_.resize(out_grad.size());
+    in_data_ptr_.resize(in_data.size());
+    out_data_ptr_.resize(out_data.size());
+    in_grad_ptr_.resize(in_grad.size());
+    aux_args_ptr_.resize(aux_args.size());
+    uint64_t buf_size = 0;
+    buf_size += _CalculateSpace(out_grad);
+    buf_size += _CalculateSpace(in_data);
+    buf_size += _CalculateSpace(out_data);
+    buf_size += _CalculateSpace(in_grad);
+    buf_size += _CalculateSpace(aux_args);
+    Tensor<cpu, 1> buf = ctx.requested[nativeop::kTempSpace].get_host_space_typed<1, real_t>(
+      Shape1(buf_size));
+    buf_size = 0;
+    _InitDataVector(out_grad, &out_grad_ptr_, buf.dptr_, &buf_size);
+    _InitDataVector(in_data, &in_data_ptr_, buf.dptr_, &buf_size);
+    _InitDataVector(out_data, &out_data_ptr_, buf.dptr_, &buf_size);
+    _InitDataVector(in_grad, &in_grad_ptr_, buf.dptr_, &buf_size);
+    _InitDataVector(aux_args, &aux_args_ptr_, buf._dptr_, &buf_size);
+  }
+
+  inline void _SyncData(const std::vector<TBlob> &data,
+                        const std::vector<real_t*> &vec,
+                        mshadow::Stream<xpu> *s,
+                        nativeop::NativeOpSyncDirection dir) {
+    using namespace mshadow;
+    for (size_t i = 0; i < data.size(); ++i) {
+      Tensor<xpu, 2> tensor_data = data[i].FlatTo2D<xpu, real_t>(s);
+      Tensor<cpu, 2> vector_data = Tensor<cpu, 2>(vec[i], tensor_data.shape_);
+      switch(dir) {
+      case nativeop::kTensorToData:
+        Copy(vector_data, tensor_data, s);
+        break;
+      case nativeop::kDataToTensor:
+        Copy(tensor_data, vector_data, s);
+        break;
+      default:
+        LOG(FATAL) << "Not reach";
+      }
+    }
+    // s->Wait();
+  }
+
+ protected:
+  std::vector<real_t*> in_data_ptr_;
+  std::vector<real_t*> out_data_ptr_;
+  std::vector<real_t*> aux_args_ptr_;
+  std::vector<real_t*> out_grad_ptr_;
+  std::vector<real_t*> in_grad_ptr_;
+};  // NativeOpBase
+
+
+template<typename xpu>
+class NativeOp : public NativeOpBase {
  public:
   explicit NativeOp(NativeOpParam p) {
     this->param_ = p;
@@ -49,24 +154,17 @@ class NativeOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    ptrs.clear();
-    ndims.clear();
-    shapes.clear();
-    tags.clear();
-    SyncVec(in_data, "in_data", s, 0);
-    SyncVec(out_data, "out_data", s, 1);
+    Parent::_InitForward(ctx, in_data, out_data, aux_args);
+    Parent::_SyncData(in_data, in_data_ptr_, nativeop::kTensorToData, s);
+    Parent::_SyncData(aux_args, aux_args_ptr_, nativeop::kTensorToData, s);
+    this->_InitNativeForward(in_data, out_data, aux_args);
     s->Wait();
-    param_.pinfo->forward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(),
-        tags.data(), param_.pinfo->p_forward);
-    for (index_t i = 0; i < out_data.size(); ++i) {
-      CHECK_NE(req[i], kAddTo) << "NativeOp doesn't support AddTo for output";
-      if (req[i] != kNullOp) {
-        std::stringstream ss;
-        ss << std::string("out_data") << i;
-        Copy(out_data[i].FlatTo2D<xpu, real_t>(s),
-             buffer_map[ss.str()].second, s);
-      }
-    }
+    param_.pinfo->forward(ptrs_.size(), ptrs_.data(),
+                          ndims_.data(), shapes_.data(),
+                          tags_.data(),
+                          param_.pinfo->p_forward);
+    Parent::_SyncData(out_data, out_data_ptr_, nativeop::kDataToTensor, s);
+    // _SyncData(aux_args, aux_args_ptr_, nativeop::kDataToTensor, s);
     s->Wait();
   }
 
@@ -79,74 +177,81 @@ class NativeOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    ptrs.clear();
-    ndims.clear();
-    shapes.clear();
-    tags.clear();
-    SyncVec(in_data, "in_data", s, 0);
-    SyncVec(out_data, "out_data", s, 1);
-    SyncVec(in_grad, "in_grad", s, 2);
+    Parent::_InitBackward(ctx, out_grad, in_data, out_data, in_grad, aux_args, s);
     if (param_.need_top_grad) {
-      SyncVec(out_grad, "out_grad", s, 3);
+      Parent::_SyncData(out_grad, out_grad_ptr_, nativeop::kTensorToData, s);
     }
+    Parent::_SyncData(in_data, in_data_ptr_, nativeop::kTensorToData, s);
+    Parent::_SyncData(out_data, out_data_ptr_, nativeop::kTensorToData, s);
+    this->_InitNativeBackward(out_grad, in_data, out_data, in_grad, aux_args);
     s->Wait();
-    param_.pinfo->backward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(),
-        tags.data(), param_.pinfo->p_backward);
-    for (index_t i = 0; i < in_grad.size(); ++i) {
-      CHECK_NE(req[i], kAddTo) << "NativeOp doesn't support AddTo for output";
-      if (req[i] != kNullOp) {
-        std::stringstream ss;
-        ss << std::string("in_grad") << i;
-        Copy(in_grad[i].FlatTo2D<xpu, real_t>(s),
-             buffer_map[ss.str()].second, s);
-      }
-    }
+    param_.pinfo->backward(ptrs_.size(), ptrs_.data(),
+                           ndims_.data(), shapes_.data(),
+                           tags_.data(),
+                           param_.pinfo->p_backward);
+    Parent::_SyncData(in_grad, in_grad_ptr_, nativeop::kDataToTensor, s);
+    // _SyncData(aux_args, aux_args_ptr_, nativeop::kDataToTensor, s);
     s->Wait();
   }
 
  private:
-  NativeOpParam param_;
-  std::vector<real_t*> ptrs;
-  std::vector<int> ndims;
-  std::vector<unsigned*> shapes;
-  std::vector<int> tags;
-  std::map<std::string, std::pair<TShape, mshadow::Tensor<cpu, 2> > > buffer_map;
-
-  virtual void SyncBuffer(const TBlob &tblob,
-                          const std::string &name,
-                          mshadow::Stream<xpu> *stream) {
-    using namespace mshadow;
-    std::map<std::string, std::pair<TShape, mshadow::Tensor<cpu, 2> > >::iterator buffer =
-      buffer_map.find(name);
-    if (buffer == buffer_map.end() || buffer->second.first != tblob.shape_) {
-      if (buffer != buffer_map.end()) {
-        FreeSpace<2, real_t>(&(buffer->second.second));
-        buffer_map.erase(buffer);
-      }
-      buffer_map[name] =
-        std::pair<TShape, Tensor<cpu, 2> >(tblob.shape_,
-                                         NewTensor<cpu>(tblob.shape_.FlatTo2D(),
-                                                        0.0f,
-                                                        false));
-      buffer = buffer_map.find(name);
-    }
-    Copy(buffer->second.second, tblob.FlatTo2D<xpu, real_t>(stream), stream);
-  }
-
-  virtual void SyncVec(const std::vector<TBlob> &vec,
-                       const std::string &prefix,
-                       mshadow::Stream<xpu> *stream,
-                       int tag) {
+  typedef NativeOpBase<xpu> Parent;
+  inline void _InitNativeEntry(const std::vector<TBlob> &tblob_vec,
+                               const std::vector<real_t*> &vec,
+                               int tag,
+                               uint64_t *idx) {
     for (size_t i = 0; i < vec.size(); ++i) {
-      std::stringstream name;
-      name << prefix << i;
-      SyncBuffer(vec[i], name.str(), stream);
-      ptrs.push_back(buffer_map[name.str()].second.dptr_);
-      ndims.push_back(vec[i].ndim());
-      shapes.push_back(const_cast<index_t*>(vec[i].shape_.data()));
-      tags.push_back(tag);
+      ptrs_[*idx] = vec[i];
+      ndims_[*idx] = tblob_vec[i].ndim();
+      shapes_[*idx] = const_cast<index_t*>(tblob_vec[i].shape_.data());
+      tags_[*idx] = tag;
+      ++(*idx);
     }
   }
+  inline void _InitNativeForward(const std::vector<TBlob> &in_data,
+                                 const std::vector<TBlob> &out_data,
+                                 const std::vector<TBlob> &aux_args) {
+    uint64_t size = in_data_ptr_.size() + out_data_ptr_.size();
+    ptrs_.resize(size);
+    ndims_.clear(size);
+    shapes_.clear(size);
+    tags_.clear(size);
+    uint64_t idx = 0;
+    _InitNativeEntry(in_data, in_data_ptr_, 0, &idx);
+    _InitNativeEntry(out_data, out_data_ptr_, 1, &idx);
+    // _InitNativeEntry(aux_args, aux_args_ptr_, 4, &idx);
+  }
+
+  inline void _InitNativeBackward(const std::vector<TBlob> &out_grad,
+                                  const std::vector<TBlob> &in_data,
+                                  const std::vector<TBlob> &out_data,
+                                  const std::vector<TBlob> &in_grad,
+                                  const std::vector<TBlob> &aux_args) {
+    uint64_t size = (param_.need_top_grad ? out_grad_ptr_.size() : 0) +
+                    in_data_ptr_.size() +
+                    out_data_ptr_.size() +
+                    in_grad_ptr_.size();
+                    // aux_args_ptr_.size();
+    ptrs_.resize(size);
+    ndims_.resize(size);
+    shapes_.resize(size);
+    tags_.resize(size);
+    uint64_t idx = 0;
+    _InitNativeEntry(in_data, in_data_ptr_, 0, &idx);
+    _InitNativeEntry(out_data, out_data_ptr_, 1, &idx);
+    _InitNativeEntry(in_grad, in_grad_ptr_, 2, &idx);
+    if (param_.need_top_grad) {
+      _InitNativeEntry(out_grad, out_grad_ptr_, 3, &idx);
+    }
+    // _InitNativeEntry(aux_args, aux_args_ptr_, 4, &idx);
+  }
+
+ private:
+  NativeOpParam param_;
+  std::vector<real_t*> ptrs_;
+  std::vector<int> ndims_;
+  std::vector<unsigned*> shapes_;
+  std::vector<int> tags_;
 };  // NativeOp
 
 template<typename xpu>
@@ -247,6 +352,16 @@ class NativeOpProp : public OperatorProperty {
     const std::vector<int> &out_data,
     const std::vector<void*> &in_grad) const override {
     return {};
+  }
+
+  std::vector<ResourceRequest> BackwardResource(
+    const std::vector<TShape> &in_shape) const override {
+
+  }
+
+  std::vector<ResourceRequest> ForwardResource(
+    const std::vector<TShape> &in_shape) const override {
+
   }
 
   Operator* CreateOperator(Context ctx) const override;
