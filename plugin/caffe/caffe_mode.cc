@@ -1,4 +1,10 @@
-#include"caffe_init.h"
+/*!
+ * Copyright (c) 2016 by Contributors
+ * \file caffe_inl.h
+ * \brief Caffe
+ * \author Haoran Wang 
+*/
+#include"caffe_mode.h"
 #include<iostream>
 
 namespace mxnet{

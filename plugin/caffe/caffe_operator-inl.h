@@ -22,7 +22,7 @@
 #include <iostream>
 #include <exception>
 
-#include "caffe_init.h"
+#include "caffe_mode.h"
 #include "layerparameter_stream.h"
 #include "dmlc_parameter.h"
 #include "tensor_to_blob.h"
