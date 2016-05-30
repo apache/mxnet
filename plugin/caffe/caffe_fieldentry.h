@@ -1,12 +1,21 @@
 /*!
- * Copyright (c) 2015 by Contributors
- * \file dmlc_parameter.h
- * \brief Provide FieldEntry<LayerParameter>
+ * Copyright (c) 2016 by Contributors
+ * \file caffe_fieldentry.h
+ * \brief FieldEntry<caffe::LayerParameter>
+ * \author Haoran Wang 
  */
-#ifndef DMLC_FIELD_ENTRY_LAYER_PARAMETER_SPECIALIZATION_H_
-#define DMLC_FIELD_ENTRY_LAYER_PARAMETER_SPECIALIZATION_H_ 
-#include <caffe/proto/caffe.pb.h> 
-#include <caffe/util/io.hpp> 
+#ifndef PLUGIN_CAFFE_CAFFE_FIELDENTRY_H_
+#define PLUGIN_CAFFE_CAFFE_FIELDENTRY_H_
+
+#include <caffe/proto/caffe.pb.h>
+#include <caffe/util/io.hpp>
+#include <dmlc/parameter.h>
+#include <dmlc/base.h>
+#include <dmlc/json.h>
+#include <dmlc/logging.h>
+#include <dmlc/type_traits.h>
+#include <google/protobuf/message.h>
+#include <google/protobuf/text_format.h>
 #include <cstddef>
 #include <cstdlib>
 #include <sstream>
@@ -19,15 +28,6 @@
 #include <algorithm>
 #include <utility>
 #include <iostream>
-#include <dmlc/parameter.h>
-#include <dmlc/base.h>
-#include <dmlc/json.h>
-#include <dmlc/logging.h>
-#include <dmlc/type_traits.h>
-
-
-#include <google/protobuf/message.h>
-#include <google/protobuf/text_format.h>
 
 namespace dmlc {
 namespace parameter {
@@ -60,18 +60,18 @@ class FieldEntry<LayerParameter>
 			CHECK(false);
 		}
     */
-		std::cout << "Caffe Content is: " << value << std::endl;
-    if (!ReadProtoFromTextContent(value, &net_param)){
-		  std::cout << "Caffe Net Content Failed" << value << std::endl;
-			CHECK(false);
-		}
+    std::cout << "Caffe Content is: " << value << std::endl;
+    if (!ReadProtoFromTextContent(value, &net_param)) {
+      std::cout << "Caffe Net Content Failed" << value << std::endl;
+      CHECK(false);
+    }
 
-    //CHECK_GE(net_param.layers_size(), 1);
+    // CHECK_GE(net_param.layers_size(), 1);
     CHECK_GE(net_param.layer_size(), 1);
-    //::caffe::V1LayerParameter *layer_param = new ::caffe::V1LayerParameter(net_param.layers(0));
+    // ::caffe::V1LayerParameter *layer_param = new ::caffe::V1LayerParameter(net_param.layers(0));
     LayerParameter *layer_param = new LayerParameter(net_param.layer(0));
     this->Get(head) = (*layer_param);
-	}
+  }
 
   virtual void PrintValue(std::ostream &os, LayerParameter value) const { // NOLINT(*)
   }
@@ -83,8 +83,6 @@ class FieldEntry<LayerParameter>
 };
 
 }  // namespace parameter
-//! \endcond
-
 }  // namespace dmlc
 
-#endif  // DMLC_FIELD_ENTRY_LAYER_PARAMETER_SPECIALIZATION_H_
+#endif  // PLUGIN_CAFFE_CAFFE_FIELDENTRY_H_

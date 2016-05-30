@@ -1,7 +1,8 @@
 /*!
  * Copyright (c) 2016 by Contributors
- * \file caffe_op.cc
+ * \file caffe_operator.cc
  * \brief caffe operator
+ * \author Haoran Wang 
 */
 #include "./caffe_operator-inl.h"
 #include <caffe/layers/conv_layer.hpp>
@@ -16,11 +17,13 @@ Operator* CreateOp<cpu>(CaffeOperatorParam param) {
   return new CaffeOperator<cpu>(param);
 }
 
-template<> void CaffeOperator<cpu>::CaffeForward(std::vector<::caffe::Blob<float>*> bottom, std::vector<::caffe::Blob<float>*> top){
+template<> void CaffeOperator<cpu>::CaffeForward(std::vector<::caffe::Blob<float>*> bottom, \
+    std::vector<::caffe::Blob<float>*> top) {
   caffeOp_->Forward(bottom, top);
 }
 
-template<> void CaffeOperator<cpu>::CaffeBackward(std::vector<::caffe::Blob<float>*> top, std::vector<bool> bp_flags, std::vector<::caffe::Blob<float>*> bottom){
+template<> void CaffeOperator<cpu>::CaffeBackward(std::vector<::caffe::Blob<float>*> top, \
+    std::vector<bool> bp_flags, std::vector<::caffe::Blob<float>*> bottom) {
   caffeOp_->Backward(top, bp_flags, bottom);
 }
 
@@ -40,7 +43,7 @@ MXNET_REGISTER_OP_PROPERTY(CaffeOperator, CaffeOperatorProp)
 
 
 #define DEFINE_CAFFE_LAYER_FN(fn_name, layer_class) \
-  static ::caffe::Layer<float>* fn_name(::caffe::LayerParameter layer_para){\
+  static ::caffe::Layer<float>* fn_name(::caffe::LayerParameter layer_para) {\
     return new layer_class(layer_para);\
   }
 
@@ -52,10 +55,9 @@ DEFINE_CAFFE_LAYER_FN(GenFnCaffeConvLayer, ::caffe::ConvolutionLayer<float>)
 bool CaffeTypeNameMap::init = false;
 std::map<std::string, pFunc> CaffeTypeNameMap::to_gen_func;
 std::map<std::string, int> CaffeTypeNameMap::to_type_value;
-//std::map<std::string, int> CaffeTypeNameMap::to_input_num;
 
-void CaffeTypeNameMap::DoInit(){
-  init = true; 
+void CaffeTypeNameMap::DoInit() {
+  init = true;
   to_gen_func["fullyconnected"] = GenFnCaffeInnerProductLayer;
   to_gen_func["tanh"] = GenFnCaffeTanhLayer;
   to_gen_func["relu"] = GenFnCaffeReluLayer;
@@ -67,17 +69,17 @@ void CaffeTypeNameMap::DoInit(){
   to_type_value["conv"] = caffeEnum::conv;
 }
 
-pFunc CaffeTypeNameMap::toFn(std::string name){
+pFunc CaffeTypeNameMap::toFn(std::string name) {
   if (!init)
     DoInit();
-  CHECK(to_gen_func.count(name)>0)<<"Cannot find Caffe Type Name:" << name;
+  CHECK(to_gen_func.count(name) > 0) << "Cannot find Caffe Type Name:" << name;
   return to_gen_func[name];
 }
 
-int CaffeTypeNameMap::toVal(std::string name){
+int CaffeTypeNameMap::toVal(std::string name) {
   if (!init)
     DoInit();
-  CHECK(to_type_value.count(name)>0)<<"Cannot find Caffe Type Name:" << name;
+  CHECK(to_type_value.count(name) > 0) << "Cannot find Caffe Type Name:" << name;
   return to_type_value[name];
 }
 
