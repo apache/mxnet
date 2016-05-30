@@ -1,7 +1,7 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
@@ -15,6 +15,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  */
 // scalastyle:off finalize
 class Symbol private(private[mxnet] val handle: SymbolHandle) {
+  private val logger: Logger = LoggerFactory.getLogger(classOf[Symbol])
   private var disposed = false
 
   override protected def finalize(): Unit = {
@@ -1515,6 +1516,18 @@ object Symbol {
   def load(fname: String): Symbol = {
     val handle = new SymbolHandleRef
     checkCall(_LIB.mxSymbolCreateFromFile(fname, handle))
+    new Symbol(handle.value)
+  }
+
+  /**
+   * Load symbol from json string.
+   * @param json A json string.
+   * @return The loaded symbol.
+   * @see Symbol.tojson : Used to save symbol into json string.
+   */
+  def loadJson(json: String): Symbol = {
+    val handle = new SymbolHandleRef
+    checkCall(_LIB.mxSymbolCreateFromJSON(json, handle))
     new Symbol(handle.value)
   }
 }

@@ -106,13 +106,13 @@ struct CustomOpInfo {
 struct CustomOpPropInfo {
   bool (*list_arguments)(char*** /*args*/, void* /*state*/);
   bool (*list_outputs)(char*** /*outputs*/, void* /*state*/);
-  bool (*infer_shape)(int /*num_input*/, int* /*ndims*/, unsigned** /*shapes*/, 
+  bool (*infer_shape)(int /*num_input*/, int* /*ndims*/, unsigned** /*shapes*/,
                       void* /*state*/);
   bool (*declare_backward_dependency)(const int* /*out_grad*/, const int* /*in_data*/,
                                       const int* /*out_data*/, int* /*num_deps*/,
                                       int** /*rdeps*/, void* /*state*/);
   bool (*create_operator)(const char* /*ctx*/, int /*num_inputs*/, unsigned** /*shapes*/,
-                          int* /*ndims*/, int* /*dtypes*/, 
+                          int* /*ndims*/, int* /*dtypes*/,
                           CustomOpInfo* /*ret*/, void* /*state*/);
   bool (*list_auxiliary_states)(char*** /*aux*/, void* /*state*/);
   // all functions also pass a payload void* pointer
