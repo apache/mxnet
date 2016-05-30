@@ -1,7 +1,7 @@
 /*!
  * Copyright (c) 2016 by Contributors
  * \file caffe_blob.cc
- * \brief convert mshadow/tensor to caffe/blob 
+ * \brief Implementations of SetDataGradToBlob given various device/dimension
  * \author Haoran Wang 
 */
 #include "caffe_blob.h"
@@ -10,6 +10,7 @@ namespace op {
 
 typedef ::mshadow::cpu Mcpu;
 typedef ::mshadow::gpu Mgpu;
+
 
 template<>
 void SetDataGradToBlob<Mgpu, 1>(Blob<float> *blob,

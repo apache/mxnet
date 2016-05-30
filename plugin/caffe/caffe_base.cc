@@ -10,11 +10,13 @@
 
 namespace mxnet {
 
+// Cpu implementation of set_mode
 template<>
 void CaffeMode::SetMode<mshadow::cpu>() {
   ::caffe::Caffe::set_mode(::caffe::Caffe::CPU);
 }
 
+// Gpu implementation of set_mode
 template<>
 void CaffeMode::SetMode<mshadow::gpu>() {
   ::caffe::Caffe::set_mode(::caffe::Caffe::GPU);

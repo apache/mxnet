@@ -1,7 +1,7 @@
 /*!
  * Copyright (c) 2016 by Contributors
  * \file caffe_fieldentry.h
- * \brief FieldEntry<caffe::LayerParameter>
+ * \brief Implement FieldEntry<caffe::LayerParameter>
  * \author Haoran Wang 
  */
 #ifndef PLUGIN_CAFFE_CAFFE_FIELDENTRY_H_
@@ -49,26 +49,20 @@ class FieldEntry<LayerParameter>
     bool success = google::protobuf::TextFormat::ParseFromString(text, proto);
     return success;
   }
-  // override set
-  // value is file position
+
+  /**
+   * /brief Customize set method for LayerParameter
+   * /tparam value string of caffe's layer configuration
+   * */
   virtual void Set(void *head, const std::string &value) const {
     NetParameter net_param;
-    /*
-		std::cout << "Caffe File Name is: " << value << std::endl;
-    if (!::caffe::ReadProtoFromTextFile(value, &net_param)){
-		  std::cout << "Read Caffe Net Failed" << value << std::endl;
-			CHECK(false);
-		}
-    */
-    std::cout << "Caffe Content is: " << value << std::endl;
     if (!ReadProtoFromTextContent(value, &net_param)) {
+      // TODO(Haoran): Replace output error
       std::cout << "Caffe Net Content Failed" << value << std::endl;
       CHECK(false);
     }
 
-    // CHECK_GE(net_param.layers_size(), 1);
     CHECK_GE(net_param.layer_size(), 1);
-    // ::caffe::V1LayerParameter *layer_param = new ::caffe::V1LayerParameter(net_param.layers(0));
     LayerParameter *layer_param = new LayerParameter(net_param.layer(0));
     this->Get(head) = (*layer_param);
   }
@@ -76,7 +70,6 @@ class FieldEntry<LayerParameter>
   virtual void PrintValue(std::ostream &os, LayerParameter value) const { // NOLINT(*)
   }
 
-  // override print default
   virtual void PrintDefaultValueString(std::ostream &os) const {  // NOLINT(*)
     os << '\'' << default_value_.name().c_str() << '\'';
   }

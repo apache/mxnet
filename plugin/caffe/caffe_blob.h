@@ -10,6 +10,7 @@
 #include<caffe/blob.hpp>
 #include<mshadow/tensor.h>
 #include<vector>
+
 namespace mxnet {
 namespace op {
 
@@ -19,11 +20,16 @@ namespace caffememtype {
 enum caffeMemoryTypes {Data, Grad, Non};
 }  // caffememtype
 
+// implementation of tensor to blob, called by TensorToBlob
 template<typename Device, int dimension>
 void SetDataGradToBlob(Blob<float> *blob,
                        caffememtype::caffeMemoryTypes memType,
                        ::mshadow::Tensor<Device, dimension> *tensor);
 
+/**
+ * \brief The interface to convert mxnet's tensor to caffe's blob
+ * \brief called in caffe_operator_inl.h
+ */
 template<typename Device, int dimension>
 void TensorToBlob(Blob<float> *blob,
                   caffememtype::caffeMemoryTypes memType0,

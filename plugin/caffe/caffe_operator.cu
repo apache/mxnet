@@ -4,7 +4,7 @@
  * \brief caffe operator
 */
 #include "./caffe_operator-inl.h"
-#include<caffe/common.hpp>
+#include <caffe/common.hpp>
 namespace mxnet {
 namespace op {
 
