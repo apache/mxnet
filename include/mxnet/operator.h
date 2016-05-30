@@ -273,6 +273,11 @@ class OperatorProperty {
       }
     }
 
+    if (dtype == -1) {
+      LOG(FATAL) << "At least one input type needs to be specified.";
+      return false;
+    }
+
     in_type->clear();
     for (int i = 0; i < n_in; ++i) in_type->push_back(dtype);
 
