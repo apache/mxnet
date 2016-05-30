@@ -34,24 +34,24 @@ function test_arithmetic{T <: mx.DType}(::Type{T}, uf, gf)
   out2 = copy(exec2.outputs[1])
   out3 = copy(exec3.outputs[1])
   out4 = copy(exec4.outputs[1])
-  @test reldiff(out1, out2) < 1e-6
-  @test reldiff(out1, out3) < 1e-6
-  @test reldiff(out1, out4) < 1e-6
+  @test isapprox(out1, out2)
+  @test isapprox(out1, out3)
+  @test isapprox(out1, out4)
 
   # test gradients
   out_grad = mx.NDArray(ones(T, shape))
   lhs_grad2, rhs_grad2 = gf(copy(out_grad), copy(lhs_arr), copy(rhs_arr))
   mx.backward(exec2, out_grad)
-  @test reldiff(copy(lhs_grad), lhs_grad2) < 1e-6
-  @test reldiff(copy(rhs_grad), rhs_grad2) < 1e-6
+  @test isapprox(copy(lhs_grad), lhs_grad2)
+  @test isapprox(copy(rhs_grad), rhs_grad2)
 
   # reset grads
   lhs_grad[:] = 0
   rhs_grad[:] = 0
   # compute using another binding
   mx.backward(exec4, out_grad)
-  @test reldiff(copy(lhs_grad), lhs_grad2) < 1e-6
-  @test reldiff(copy(rhs_grad), rhs_grad2) < 1e-6
+  @test isapprox(copy(lhs_grad), lhs_grad2)
+  @test isapprox(copy(rhs_grad), rhs_grad2)
 end
 
 function test_arithmetic()
@@ -59,7 +59,7 @@ function test_arithmetic()
     test_arithmetic(T, .+, (g,x,y) -> (g,g))
     test_arithmetic(T, .-, (g,x,y) -> (g,-g))
     test_arithmetic(T, .*, (g,x,y) -> (y.*g, x.*g))
-    test_arithmetic(T, ./, (g,x,y) -> (g ./ y, -x .* g ./ (y.^2)))
+    T <: Integer || test_arithmetic(T, ./, (g,x,y) -> (g ./ y, -x .* g ./ (y.^2)))
   end
 end
 
