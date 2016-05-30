@@ -139,6 +139,39 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxFuncInvoke
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySaveRawBytes
+  (JNIEnv *env, jobject obj, jlong ndArrayPtr, jobject dataBuf) {
+  size_t length;
+  const char *pdata;
+  int ret = MXNDArraySaveRawBytes(reinterpret_cast<NDArrayHandle>(ndArrayPtr), &length, &pdata);
+
+  // fill dataBuf
+  jclass byteClass = env->FindClass("java/lang/Byte");
+  jmethodID newByte = env->GetMethodID(byteClass, "<init>", "(B)V");
+  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jmethodID arrayAppend = env->GetMethodID(arrayClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+  for (size_t i = 0; i < length; ++i) {
+    jobject data = env->NewObject(byteClass, newByte, static_cast<jbyte>(pdata[i]));
+    env->CallObjectMethod(dataBuf, arrayAppend, data);
+    env->DeleteLocalRef(data);
+  }
+
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayLoadFromRawBytes
+  (JNIEnv *env, jobject obj, jbyteArray bytes, jobject handleRef) {
+  int size = env->GetArrayLength(bytes);
+  jbyte *byteArr = env->GetByteArrayElements(bytes, NULL);
+  NDArrayHandle out;
+  int ret = MXNDArrayLoadFromRawBytes(reinterpret_cast<const void *>(byteArr),
+                                      static_cast<size_t>(size), &out);
+  env->ReleaseByteArrayElements(bytes, byteArr, 0);
+  SetLongField(env, handleRef, reinterpret_cast<jlong>(out));
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayGetShape
   (JNIEnv *env, jobject obj, jlong ndArrayPtr, jobject ndimRef, jobject dataBuf) {
   mx_uint ndim;
@@ -1110,6 +1143,16 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolSaveToJSON
   const char *out;
   int ret = MXSymbolSaveToJSON(reinterpret_cast<SymbolHandle>(symbolPtr), &out);
   SetStringField(env, jout, out);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolCreateFromJSON
+  (JNIEnv *env, jobject obj, jstring json, jobject jhandleRef) {
+  const char *str = env->GetStringUTFChars(json, 0);
+  SymbolHandle out;
+  int ret = MXSymbolCreateFromJSON(str, &out);
+  SetLongField(env, jhandleRef, reinterpret_cast<jlong>(out));
+  env->ReleaseStringUTFChars(json, str);
   return ret;
 }
 

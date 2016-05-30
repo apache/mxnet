@@ -1,5 +1,7 @@
 package ml.dmlc.mxnet
 
+import java.nio.ByteBuffer
+
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable
@@ -64,6 +66,36 @@ object Model {
       }
     }
     (symbol, argParams.toMap, auxParams.toMap)
+  }
+
+  // a helper class for serializing model
+  class SerializedModel private[mxnet] (
+    val symbol: String,
+    val argParams: Map[String, Array[Byte]],
+    val auxParams: Map[String, Array[Byte]]) extends Serializable
+
+  private[mxnet] def serialize(symbol: Symbol,
+                               argParams: Map[String, NDArray],
+                               auxParams: Map[String, NDArray]): Array[Byte] = {
+    val serializedModel = new SerializedModel(
+      symbol.toJson,
+      argParams.map { case (k, v) => (k, v.serialize()) },
+      auxParams.map { case (k, v) => (k, v.serialize()) }
+    )
+    Serializer.getSerializer.serialize(serializedModel).array()
+  }
+
+  private[mxnet] def deserialize(bytes: Array[Byte]):
+    (Symbol, Map[String, NDArray], Map[String, NDArray]) = {
+    val model = Serializer.getSerializer.deserialize[SerializedModel](ByteBuffer.wrap(bytes))
+    val symbol = Symbol.loadJson(model.symbol)
+    val argParams = model.argParams.map { case (k, v) =>
+      (k, NDArray.deserialize(v))
+    }
+    val auxParams = model.auxParams.map { case (k, v) =>
+      (k, NDArray.deserialize(v))
+    }
+    (symbol, argParams, auxParams)
   }
 
   /**
@@ -247,13 +279,13 @@ object Model {
           executorManager.backward()
           if (updateOnKVStore) {
             updateParamsOnKVStore(executorManager.paramArrays,
-                                  executorManager.gradArrays,
-                                  kvStore)
+              executorManager.gradArrays,
+              kvStore)
           } else {
             updateParams(executorManager.paramArrays,
-                         executorManager.gradArrays,
-                         updaterLocal, ctx.length,
-                         kvStore)
+              executorManager.gradArrays,
+              updaterLocal, ctx.length,
+              kvStore)
           }
           monitor.foreach(_.tocPrint())
           // evaluate at end, so out_cpu_array can lazy copy

@@ -111,10 +111,10 @@ object IO {
 /**
  * class batch of data
  */
-case class DataBatch(data: IndexedSeq[NDArray],
-                     label: IndexedSeq[NDArray],
-                     index: IndexedSeq[Long],
-                     pad: Int) {
+class DataBatch(val data: IndexedSeq[NDArray],
+                val label: IndexedSeq[NDArray],
+                val index: IndexedSeq[Long],
+                val pad: Int) {
   /**
    * Dispose its data and labels
    * The object shall never be used after it is disposed.
