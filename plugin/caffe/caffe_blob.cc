@@ -5,7 +5,9 @@
  * \author Haoran Wang 
 */
 #include "caffe_blob.h"
-namespace caffe {
+namespace mxnet {
+namespace op {
+
 typedef ::mshadow::cpu Mcpu;
 typedef ::mshadow::gpu Mgpu;
 
@@ -96,4 +98,6 @@ void SetDataGradToBlob<Mcpu, 4>(::caffe::Blob<float> *blob,
   else
     blob->set_cpu_diff(data_ptr);
 }
-}  // namespace caffe
+
+}  // namespace op
+}  // namespace mxnet

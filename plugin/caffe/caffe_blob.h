@@ -10,8 +10,10 @@
 #include<caffe/blob.hpp>
 #include<mshadow/tensor.h>
 #include<vector>
-namespace caffe {
+namespace mxnet {
+namespace op {
 
+using caffe::Blob;
 // Declare Memory Type for Caffe blob
 namespace caffememtype {
 enum caffeMemoryTypes {Data, Grad, Non};
@@ -41,6 +43,8 @@ void TensorToBlob(Blob<float> *blob,
   if ((memType1 != caffememtype::Non) && (tensor1 != NULL))
     SetDataGradToBlob<Device, dimension>(blob, memType1, tensor1);
 }
-}  // namespace caffe
+
+}  // namespace op
+}  // namespace mxnet
 
 #endif  // PLUGIN_CAFFE_CAFFE_BLOB_H_

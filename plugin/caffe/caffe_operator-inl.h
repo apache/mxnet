@@ -130,8 +130,8 @@ class CaffeOperator : public Operator {
 
     ::caffe::Blob<float> *bottomBlobPtr = new ::caffe::Blob<float>(), \
                                           *topBlobPtr = new ::caffe::Blob<float>();
-    ::caffe::TensorToBlob<xpu, input_dim>(bottomBlobPtr, ::caffe::caffememtype::Data, &data);
-    ::caffe::TensorToBlob<xpu, out_dim>(topBlobPtr, ::caffe::caffememtype::Data, &out);
+    TensorToBlob<xpu, input_dim>(bottomBlobPtr, caffememtype::Data, &data);
+    TensorToBlob<xpu, out_dim>(topBlobPtr, caffememtype::Data, &out);
 
     // weight has to be pointer. Caffe will free old weights when new ones come.
     // You want to keep content before caffe frees
@@ -215,10 +215,10 @@ class CaffeOperator : public Operator {
 
     caffe::Blob<float> *bottomBlobPtr = new ::caffe::Blob<float>(), \
                                         *topBlobPtr = new ::caffe::Blob<float>();
-    caffe::TensorToBlob<xpu, input_dim>(bottomBlobPtr, caffe::caffememtype::Data, \
-        &data, caffe::caffememtype::Grad, &gdata);
-    caffe::TensorToBlob<xpu, out_dim>(topBlobPtr, caffe::caffememtype::Data, \
-        &out, caffe::caffememtype::Grad, &gout);
+    TensorToBlob<xpu, input_dim>(bottomBlobPtr, caffememtype::Data, \
+        &data, caffememtype::Grad, &gdata);
+    TensorToBlob<xpu, out_dim>(topBlobPtr, caffememtype::Data, \
+        &out, caffememtype::Grad, &gout);
     if (!initWeightDelta_) {
       initWeightDelta_ = true;
       weightDeltaRecord_ForDebug = new std::vector<void*>();
@@ -267,7 +267,7 @@ class CaffeOperator : public Operator {
   void ConvWeiFor(mshadow::Stream<xpu>*s,
                             const TBlob* in_data, caffe::Blob<float>* weight_blob) {
     mshadow::Tensor<xpu, dim> w = in_data->get<xpu, dim, real_t>(s);
-    caffe::TensorToBlob<xpu, dim>(weight_blob, caffe::caffememtype::Data, &w);
+    TensorToBlob<xpu, dim>(weight_blob, caffememtype::Data, &w);
   }
 
 
@@ -303,7 +303,7 @@ class CaffeOperator : public Operator {
   void ConvWeiBac(mshadow::Stream<xpu>*s, OpReqType req,
                   const TBlob* in_grad, caffe::Blob<float>* weight_blob) {
     mshadow::Tensor<xpu, dim> w_g = in_grad->get<xpu, dim, real_t>(s);
-    caffe::TensorToBlob<xpu, dim>(weight_blob, caffe::caffememtype::Grad, &w_g);
+    TensorToBlob<xpu, dim>(weight_blob, caffememtype::Grad, &w_g);
   }
 
  private:
