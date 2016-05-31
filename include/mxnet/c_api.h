@@ -10,8 +10,6 @@
 #define MXNET_EXTERN_C extern "C"
 #endif
 
-#include <stdint.h>
-
 /*! \brief MXNET_DLL prefix for windows */
 #ifdef _WIN32
 #ifdef MXNET_EXPORTS
@@ -25,7 +23,9 @@
 
 /*! \brief manually define unsigned int */
 typedef unsigned int mx_uint;
-/*! \brief manually define unsigned int */
+/*! \brief manually define unsigned long long */
+typedef unsigned long long mx_ulonglong;
+/*! \brief manually define float */
 typedef float mx_float;
 // all the handles are simply void *
 // will be casted internally to specific pointers types
@@ -1050,8 +1050,8 @@ MXNET_DLL int MXDataIterGetData(DataIterHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDataIterGetIndex(DataIterHandle handle,
-                                 uint64_t **out_index,
-                                 uint64_t *out_size);
+                                 mx_ulonglong **out_index,
+                                 mx_ulonglong *out_size);
 /*!
  * \brief Get the padding number in current data batch
  * \param handle the handle pointer to the data iterator
