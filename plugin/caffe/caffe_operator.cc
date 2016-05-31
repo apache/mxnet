@@ -47,15 +47,18 @@ MXNET_REGISTER_OP_PROPERTY(CaffeOperator, CaffeOperatorProp)
     return new layer_class(layer_para);\
   }
 
+// Wrap caffe's layer_class to layer-generator function
 DEFINE_CAFFE_LAYER_FN(GenFnCaffeInnerProductLayer, ::caffe::InnerProductLayer<float>)
 DEFINE_CAFFE_LAYER_FN(GenFnCaffeTanhLayer, ::caffe::TanHLayer<float>)
 DEFINE_CAFFE_LAYER_FN(GenFnCaffeReluLayer, ::caffe::ReLULayer<float>)
 DEFINE_CAFFE_LAYER_FN(GenFnCaffeConvLayer, ::caffe::ConvolutionLayer<float>)
 
+// Set init flag
 bool CaffeTypeNameMap::init = false;
 std::map<std::string, pFunc> CaffeTypeNameMap::to_gen_func;
 std::map<std::string, int> CaffeTypeNameMap::to_type_value;
 
+// Add layer generate-function to dictionary
 void CaffeTypeNameMap::DoInit() {
   init = true;
   to_gen_func["fullyconnected"] = GenFnCaffeInnerProductLayer;

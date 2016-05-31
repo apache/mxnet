@@ -22,7 +22,6 @@
 #include <iostream>
 #include <exception>
 
-#include <stdio.h>
 #include "../../src/operator/operator_common.h"
 
 #include "caffe_base.h"
@@ -335,8 +334,8 @@ class CaffeOperatorProp : public OperatorProperty {
   std::vector<std::string> ListArguments() const override {
     std::vector<std::string> res = {"data"};
 
-    int blobs_size = param_.caffe_op->GetWeightsNumber();
-    for (int i = 0; i < blobs_size; ++i) {
+    int blob_cnt = param_.caffe_op->GetWeightsNumber();
+    for (int i = 0; i < blob_cnt; ++i) {
       // TODO(Haoran): needs to assign by name
       if (i == 0)
         res.push_back("caffe_" + std::to_string(i) + "_weight");
@@ -380,9 +379,13 @@ class CaffeOperatorProp : public OperatorProperty {
     using namespace mshadow;
     CHECK_GE(in_shape->size(), 1);
     const TShape &dshape = (*in_shape)[caffeEnum::kData];
-    // require data to be known
     if (dshape.ndim() ==  0) return false;
 
+    /*
+     * \brief Set up caffe_op to infer shape
+     * \brief Dimensions of bottomBlob & topBlob should align with real input&output blobs
+     */
+    // TODO(Haoran): Support multiple inputs & outputs
     ::caffe::Blob<float> bottomBlob, topBlob;
     auto bottom_shape = this->TShapeToVector(dshape);
     bottomBlob.Reshape(bottom_shape);
@@ -393,8 +396,7 @@ class CaffeOperatorProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), param_.caffe_op->blobs().size() + 1);
     out_shape->clear();
 
-    // Set Weight & Bias Shape
-    // Keep the same order to weight blobs
+    // Set weight shape
     TShape shp;
     for (unsigned int i = 0; i < param_.caffe_op->blobs().size(); ++i) {
       shp = this->ToTShape(param_.caffe_op->blobs()[i]->shape());
