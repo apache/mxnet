@@ -22,6 +22,7 @@
 #include <iostream>
 #include <exception>
 
+#include <stdio.h>
 #include "../../src/operator/operator_common.h"
 
 #include "caffe_base.h"
@@ -331,12 +332,10 @@ Operator* CreateOp(CaffeOperatorParam param);
 #if DMLC_USE_CXX11
 class CaffeOperatorProp : public OperatorProperty {
  public:
-  // TODO(Haoran): when to delete caffe op.
   std::vector<std::string> ListArguments() const override {
-    ::caffe::Layer<float> *tmp_op = CaffeTypeNameMap::toFn(param_.op_type_name)(this->param_.para);
     std::vector<std::string> res = {"data"};
 
-    int blobs_size = tmp_op->GetWeightsNumber();
+    int blobs_size = param_.caffe_op->GetWeightsNumber();
     for (int i = 0; i < blobs_size; ++i) {
       // TODO(Haoran): needs to assign by name
       if (i == 0)
