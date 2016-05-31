@@ -411,6 +411,50 @@ class SimpleOpRegistry {
     }                                   \
   }
 
+/*!
+* \brief cast dynamic range variable into static variable
+* \param var the source value, constrained to be between 1 and 5
+* \param NDIM the const NDIM that can be used in the template
+*/
+#define MXNET_RANGE_SWITCH(var, NDIM, ...)         \
+  {                                                \
+    switch (var) {                                 \
+      case 1:                                      \
+        {                                          \
+          static const int NDIM = 1;               \
+          {__VA_ARGS__}                            \
+        }                                          \
+        break;                                     \
+      case 2:                                      \
+        {                                          \
+          static const int NDIM = 2;               \
+          {__VA_ARGS__}                            \
+        }                                          \
+        break;                                     \
+      case 3:                                      \
+        {                                          \
+          static const int NDIM = 3;               \
+          {__VA_ARGS__}                            \
+        }                                          \
+        break;                                     \
+      case 4:                                      \
+        {                                          \
+          static const int NDIM = 4;               \
+          {__VA_ARGS__}                            \
+        }                                          \
+        break;                                     \
+      case 5:                                      \
+        {                                          \
+          static const int NDIM = 5;               \
+          {__VA_ARGS__}                            \
+        }                                          \
+        break;                                     \
+      default:                                     \
+        LOG(FATAL) << "Only support ndim=1 to 5."; \
+    }                                              \
+  }
+
+
 //--------------------------------------------------------------
 // The following part are API Registration of Simple Operators
 //--------------------------------------------------------------
