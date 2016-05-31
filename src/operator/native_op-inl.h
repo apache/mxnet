@@ -42,6 +42,11 @@ struct NativeOpParam : public dmlc::Parameter<NativeOpParam> {
 
 template<typename xpu>
 class NativeOpBase : public Operator {
+ public:
+  virtual ExecType exec_type() const {
+    return kAsync;
+  }
+
  protected:
   inline uint64_t _CalculateSpace(const std::vector<TBlob> &tblob_vec) {
     uint64_t size = 0;
@@ -159,14 +164,15 @@ class NativeOp : public NativeOpBase<xpu> {
     Parent::_SyncData(in_data, Parent::in_data_ptr_, s, nativeop::kTensorToData);
     Parent::_SyncData(aux_args, Parent::aux_args_ptr_, s,  nativeop::kTensorToData);
     this->_InitNativeForward(in_data, out_data, aux_args);
-    s->Wait();
+    if (s!= NULL) s->Wait();
     param_.pinfo->forward(ptrs_.size(), ptrs_.data(),
                           ndims_.data(), shapes_.data(),
                           tags_.data(),
                           param_.pinfo->p_forward);
     Parent::_SyncData(out_data, Parent::out_data_ptr_, s, nativeop::kDataToTensor);
     // _SyncData(aux_args, aux_args_ptr_, nativeop::kDataToTensor, s);
-    s->Wait();
+    if (s != NULL) s->Wait();
+    ctx.async_on_complete();
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -185,14 +191,15 @@ class NativeOp : public NativeOpBase<xpu> {
     Parent::_SyncData(in_data, Parent::in_data_ptr_, s, nativeop::kTensorToData);
     Parent::_SyncData(out_data, Parent::out_data_ptr_, s, nativeop::kTensorToData);
     this->_InitNativeBackward(out_grad, in_data, out_data, in_grad, aux_args);
-    s->Wait();
+    if (s != NULL) s->Wait();
     param_.pinfo->backward(ptrs_.size(), ptrs_.data(),
                            ndims_.data(), shapes_.data(),
                            tags_.data(),
                            param_.pinfo->p_backward);
     Parent::_SyncData(in_grad, Parent::in_grad_ptr_, s, nativeop::kDataToTensor);
     // _SyncData(aux_args, aux_args_ptr_, nativeop::kDataToTensor, s);
-    s->Wait();
+    if (s != NULL) s->Wait();
+    ctx.async_on_complete();
   }
 
  private:
