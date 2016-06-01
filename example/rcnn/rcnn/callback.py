@@ -22,10 +22,8 @@ class Speedometer(object):
                 speed = self.frequent * self.batch_size / (time.time() - self.tic)
                 if param.eval_metric is not None:
                     name, value = param.eval_metric.get()
-                    cls, cls_value = param.cls_metric.get()
-                    bbox, bbox_value = param.bbox_metric.get()
                     logging.info("Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%f,\t%s=%f,\t%s=%f",
-                                 param.epoch, count, speed, name, value, cls, cls_value, bbox, bbox_value)
+                                 param.epoch, count, speed, name[0], value[0], name[1], value[1], name[2], value[2])
                 else:
                     logging.info("Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
                                  param.epoch, count, speed)
