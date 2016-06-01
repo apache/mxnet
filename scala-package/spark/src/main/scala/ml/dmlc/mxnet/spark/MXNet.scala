@@ -61,8 +61,12 @@ class MXNet extends Serializable {
     this
   }
 
-  // TODO: upload to a shared storage from driver
-  def setExecutorClasspath(jars: String): this.type = {
+  /**
+   * These jars are required by the KVStores at runtime.
+   * They will be uploaded and distributed to each node automatically
+   * @param jars jars required by the KVStore at runtime.
+   */
+  def setExecutorJars(jars: String): this.type = {
     params.jars = jars.split(",|:")
     this
   }
