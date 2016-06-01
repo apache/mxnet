@@ -90,12 +90,12 @@ class PoolingOp : public Operator {
                            param_.global_pool ? 1 : param_.stride[0],
                            param_.global_pool ? 1 : param_.stride[1]));
     } else if (param_.pool_type == pool_enum::kAvgPooling) {
+      ScalarExp<DType> x = ScalarExp<DType>(1.0f / (param_.global_pool ?
+                                            data.shape_[2] * data.shape_[3] :
+                                            param_.kernel[0] * param_.kernel[1]));
       Assign(out,
              req[pool_enum::kOut],
-             (1.0f / (param_.global_pool ?
-                      data.shape_[2] * data.shape_[3] :
-                      param_.kernel[0] * param_.kernel[1])) * \
-             pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
+             x * pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                            out_shape,
                            param_.global_pool ? data.shape_[2] : param_.kernel[0],
                            param_.global_pool ? data.shape_[3] : param_.kernel[1],
@@ -140,9 +140,9 @@ class PoolingOp : public Operator {
                   param_.pad[0],
                   param_.pad[1]));
     } else if (param_.pool_type == pool_enum::kAvgPooling) {
+      ScalarExp<DType> x = ScalarExp<DType>(1.0f / param_.kernel[0] / param_.kernel[1]);
       Assign(input_grad, req[pool_enum::kData],
-             (1.0f / param_.kernel[0] / param_.kernel[1]) *\
-             crop(unpool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
+             x * crop(unpool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                                   pad(output_data, 0, 0),
                                   pad(grad, 0, 0),
                                   param_.global_pool ? in_shape[0] : param_.kernel[0],
