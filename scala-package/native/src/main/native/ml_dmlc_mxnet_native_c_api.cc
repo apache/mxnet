@@ -223,6 +223,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayReshape
   int ret = MXNDArrayReshape(reinterpret_cast<NDArrayHandle>(ndArrayPtr), ndim,
                                     reinterpret_cast<int *>(pdims), &out);
   SetLongField(env, reshapedHandle, reinterpret_cast<jlong>(out));
+  env->ReleaseIntArrayElements(dims, pdims, 0);
   return ret;
 }
 
