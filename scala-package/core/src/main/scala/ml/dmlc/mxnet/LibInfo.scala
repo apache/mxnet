@@ -49,6 +49,10 @@ class LibInfo {
                              start: MXUint,
                              end: MXUint,
                              sliceHandle: NDArrayHandleRef): Int
+  @native def mxNDArrayReshape(handle: NDArrayHandle,
+                               nDim: Int,
+                               dims: Array[Int],
+                               reshapeHandle: NDArrayHandleRef): Int
   @native def mxNDArraySyncCopyFromCPU(handle: NDArrayHandle,
                                        source: Array[MXFloat],
                                        size: Int): Int

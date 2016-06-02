@@ -18,7 +18,7 @@ Operator *CreateOp<cpu>(PoolingParam param) {
     case pool_enum::kSumPooling:
       return new PoolingOp<cpu, mshadow::red::sum>(param);
     default:
-      LOG(FATAL) << "unknown activation type";
+      LOG(FATAL) << "unknown pooling type";
       return NULL;
   }
 }

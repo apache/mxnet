@@ -216,6 +216,17 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySlice
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayReshape
+  (JNIEnv *env, jobject obj, jlong ndArrayPtr, jint ndim, jintArray dims, jobject reshapedHandle) {
+  NDArrayHandle out;
+  jint *pdims = env->GetIntArrayElements(dims, NULL);
+  int ret = MXNDArrayReshape(reinterpret_cast<NDArrayHandle>(ndArrayPtr), ndim,
+                                    reinterpret_cast<int *>(pdims), &out);
+  SetLongField(env, reshapedHandle, reinterpret_cast<jlong>(out));
+  env->ReleaseIntArrayElements(dims, pdims, 0);
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySyncCopyFromCPU
   (JNIEnv *env, jobject obj, jlong arrayPtr, jfloatArray sourceArr, jint arrSize) {
   jfloat *sourcePtr = env->GetFloatArrayElements(sourceArr, NULL);

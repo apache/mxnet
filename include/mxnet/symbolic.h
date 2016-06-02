@@ -260,7 +260,7 @@ class Symbol {
   static Symbol CreateVariable(const std::string &name);
 
  protected:
-  // Decalre node, internal data structure.
+  // Declare node, internal data structure.
   struct Node;
   /*! \brief an entry that represents output data from a node */
   struct DataEntry {
