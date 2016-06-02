@@ -3,6 +3,21 @@ from mxnet.operator import NumpyOp
 
 import numpy as np
 
+def _np_reduce(dat, axis, keepdims, numpy_reduce_func):
+    if isinstance(axis, int):
+        axis = [axis]
+    else:
+        axis = list(axis) if axis is not None else range(len(dat.shape))
+    ret = dat
+    for i in reversed(sorted(axis)):
+        ret = numpy_reduce_func(ret, axis=i)
+    if keepdims:
+        keepdims_shape = list(dat.shape)
+        for i in axis:
+            keepdims_shape[i] = 1
+        ret = ret.reshape(tuple(keepdims_shape))
+    return ret
+
 def reldiff(a, b):
     diff = np.sum(np.abs(a - b))
     norm = np.sum(np.abs(a))
