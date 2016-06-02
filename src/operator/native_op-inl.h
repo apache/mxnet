@@ -59,12 +59,7 @@ class NativeOpBase : public Operator {
   inline void _InitDataVector(const std::vector<TBlob> &tblob_vec,
                               std::vector<real_t*> *vec,
                               real_t *buf,
-                              uint64_t *buf_size) {
-    for (size_t i = 0; i < tblob_vec.size(); ++i) {
-      vec->at(i) = buf + (*buf_size);
-      (*buf_size) += tblob_vec[i].shape_.Size();
-    }
-  }
+                              uint64_t *buf_size);
 
 
   inline void _InitForward(const OpContext &ctx,
@@ -123,6 +118,9 @@ class NativeOpBase : public Operator {
     for (size_t i = 0; i < data.size(); ++i) {
       Tensor<xpu, 2> tensor_data = data[i].FlatTo2D<xpu, real_t>(s);
       Tensor<cpu, 2> vector_data = Tensor<cpu, 2>(vec[i], tensor_data.shape_);
+      if (tensor_data.dptr_ == vector_data.dptr_) {
+        continue;
+      }
       switch (dir) {
       case nativeop::kTensorToData:
         Copy(vector_data, tensor_data, s);
@@ -144,6 +142,27 @@ class NativeOpBase : public Operator {
   std::vector<real_t*> out_grad_ptr_;
   std::vector<real_t*> in_grad_ptr_;
 };  // NativeOpBase
+
+template<>
+inline void NativeOpBase<gpu>::_InitDataVector(const std::vector<TBlob> &tblob_vec,
+                                               std::vector<real_t*> *vec,
+                                               real_t *buf,
+                                               uint64_t *buf_size) {
+  for (size_t i = 0; i < tblob_vec.size(); ++i) {
+    vec->at(i) = buf + (*buf_size);
+    (*buf_size) += tblob_vec[i].shape_.Size();
+  }
+}
+
+template<>
+inline void NativeOpBase<cpu>::_InitDataVector(const std::vector<TBlob> &tblob_vec,
+                                               std::vector<real_t*> *vec,
+                                               real_t *buf,
+                                               uint64_t *buf_size) {
+  for (size_t i = 0; i < tblob_vec.size(); ++i) {
+    vec->at(i) = static_cast<real_t*>(tblob_vec[i].dptr_);
+  }
+}
 
 
 template<typename xpu>
@@ -170,7 +189,7 @@ class NativeOp : public NativeOpBase<xpu> {
                           tags_.data(),
                           param_.pinfo->p_forward);
     Parent::_SyncData(out_data, Parent::out_data_ptr_, s, nativeop::kDataToTensor);
-    // _SyncData(aux_args, aux_args_ptr_, nativeop::kDataToTensor, s);
+    Parent::_SyncData(aux_args, Parent::aux_args_ptr_, s, nativeop::kDataToTensor);
     if (s != NULL) s->Wait();
     ctx.async_on_complete();
   }
@@ -197,7 +216,7 @@ class NativeOp : public NativeOpBase<xpu> {
                            tags_.data(),
                            param_.pinfo->p_backward);
     Parent::_SyncData(in_grad, Parent::in_grad_ptr_, s, nativeop::kDataToTensor);
-    // _SyncData(aux_args, aux_args_ptr_, nativeop::kDataToTensor, s);
+    Parent::_SyncData(aux_args, Parent::aux_args_ptr_, s, nativeop::kDataToTensor);
     if (s != NULL) s->Wait();
     ctx.async_on_complete();
   }
