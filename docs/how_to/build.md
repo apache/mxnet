@@ -37,7 +37,7 @@ Optional libraries
 
 - `CUDA Toolkit >= v7.0` to run on nvidia GPUs
   - Requires GPU with support for `Compute Capability >= 2.0`
-- CUDNN to accelerate the GPU computation (only CUDNN 3 is supported)
+- CUDNN to accelerate the GPU computation
 - opencv for image augmentation
 
 We can edit `make/config.mk` to change the compile options, and then build by
@@ -109,7 +109,7 @@ Secondly, fetch the third-party libraries, including [OpenCV](http://sourceforge
 
  - NOTICE: You need to register as a NVIDIA community user to get the download link of CuDNN.
 
-Finally, use CMake to create a Visual Studio solution in `./build/`. During configuration, you may need to set the path of each third-party library, until no error is reported. Open the solution and compile, you will get a `mxnet.dll` in `./build/Release` or `./build/Debug`.
+Finally, use CMake to create a Visual Studio solution in `./build/`. During configuration, you may need to set the path of each third-party library, until no error is reported. (Set environmental variable OpenBLAS_HOME to the OpenBLAS directory containing `include` and `lib`; set OpenCV_DIR to the `build` directory after unpacking the OpenCV package.) Open the solution and compile, you will get a `mxnet.dll` in `./build/Release` or `./build/Debug`.
 
 ### Installing pre-built packages on Windows
 
