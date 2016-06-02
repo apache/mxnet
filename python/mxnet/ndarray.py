@@ -269,6 +269,7 @@ class NDArray(object):
                                          ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
+    # pylint: disable= undefined-variable
     def broadcast_to(self, shape):
         """ Broadcasting the current NDArray into the given shape. The semantics is
         the same with `numpy`'s broadcasting
@@ -276,7 +277,7 @@ class NDArray(object):
         Parameters
         ---------
         shape : the shape to broadcast
-            the braodcast shape
+            the broadcast shape
         """
         cur_shape = self.shape
         err_str = 'operands could not be broadcast together with remapped shapes'\
@@ -284,14 +285,16 @@ class NDArray(object):
         if len(shape) < len(cur_shape):
             raise ValueError(err_str)
         cur_shape = (1,) * (len(shape) - len(cur_shape)) + cur_shape
-        for i, j in zip(cur_shape, shape):
-            if i != 1 and i != j:
-                raise ValueError(err_str)
-        ret = self.reshape(cur_shape)
-        for axis, (i, j) in enumerate(zip(cur_shape, shape)):
-            if i != j:
-                ret = NDArray._broadcast(ret, axis, j)
+        cur_shape = np.array(cur_shape)
+        shape = np.array(shape)
+        broadcasting_axes = np.nonzero(cur_shape != shape)
+        if (cur_shape[broadcasting_axes] != 1).any():
+            raise ValueError(err_str)
+        ret = self.reshape(tuple(cur_shape))
+        for axis in broadcasting_axes[0]:
+            ret = broadcast_axis(ret, axis=axis, size=shape[axis])
         return ret
+    # pylint: enable= undefined-variable
 
     def wait_to_read(self):
         """Block until all pending writes operations on current NDArray are finished.
@@ -709,7 +712,8 @@ def ones(shape, ctx=None, dtype=mx_real_t):
     return arr
 
 # pylint: disable=too-many-locals, invalid-name, no-member, protected-access, undefined-variable
-def sum(arr, axis=None, keepdims=False):
+# pylint: disable=too-many-branches
+def _reduce(arr, axis=None, keepdims=False, typ='sum'):
     """ Reduce the array along given axises. The semantic strictly follows numpy's document.
 
     Parameters
@@ -726,16 +730,30 @@ def sum(arr, axis=None, keepdims=False):
     out: Array
         The reduced NDArray.
     """
-    # Sanity checks.
+    if 'sum' == typ:
+        reduce_func = sum_axis
+    elif 'max' == typ:
+        reduce_func = max_axis
+    elif 'min' == typ:
+        reduce_func = min_axis
+    else:
+        raise TypeError('typ=\'%s\' is not supported.' % typ)
     ndim = len(arr.shape)
     if axis is None:
         axis = list(range(ndim))
     elif isinstance(axis, int):
         axis = [axis]
-    elif isinstance(axis, tuple):
+    elif isinstance(axis, tuple) or isinstance(axis, list):
         axis = list(axis)
     else:
-        raise TypeError('\'%s\' object cannot be interpreted as an integer' % type(axis).__name__)
+        raise TypeError('\'%s\' object is not supported as axis.' % type(axis).__name__)
+
+    if list(range(ndim)) == axis:
+        ret = reduce_func(arr, axis=-1, keepdims=keepdims)
+        if not keepdims:
+            return ret.asnumpy()[0]
+        else:
+            return ret
     for i in axis:
         if not isinstance(i, int):
             raise TypeError('\'%s\' object cannot be interpreted as an integer' % type(i).__name__)
@@ -746,40 +764,71 @@ def sum(arr, axis=None, keepdims=False):
     if len(set(axis)) != len(axis):
         raise ValueError('duplicate value in \'axis\'')
     assert(len(axis) != 0)
-
-    def get_ranges(lst):
-        """ Get consecutive ranges. """
-        i = 0
-        j = 0
-        ret = []
-        while j < len(lst) - 1:
-            if lst[j] + 1 != lst[j + 1]:
-                ret.append((lst[i], lst[j]))
-                i = j + 1
-            j += 1
-        ret.append((lst[i], lst[j]))
-        return ret
-
-    # Reduction.
-    shape = arr.shape
     ret = arr
-    for i in reversed(get_ranges(axis)):
-        after_dim = shape[i[1] + 1:]
-        after = functools.reduce(operator.mul, after_dim, 1)
-        before_dim = shape[:i[0]]
-        before = functools.reduce(operator.mul, before_dim, 1)
-        between = functools.reduce(operator.mul, shape[i[0]:i[1] + 1], 1)
-        interval = i[1] - i[0] + 1
-        shape = before_dim + tuple([1] * (interval if keepdims else 0)) + after_dim
-        reduction_shape = (before, between, after)
-        ret = ret.reshape(reduction_shape)
-        ret = sum_mid_internal(ret)
-        if len(shape) == 0:
-            ret = ret.reshape((1,)).asnumpy()[0]
-        else:
-            ret = ret.reshape(shape)
+    for i in reversed(axis):
+        ret = reduce_func(ret, axis=i, keepdims=keepdims)
     return ret
 # pylint: enable=too-many-locals, invalid-name, no-member, protected-access, undefined-variable
+# pylint: enable=too-many-branches
+
+def sum(arr, axis=None, keepdims=False):
+    """ Sum the array along given axises. The semantic strictly follows numpy's document.
+
+    Parameters
+    ----------
+    arr : Array
+        the array to be reduced
+    axis : int or list(int), optional
+        along which axis to do reduction
+    keepdims : bool
+        whether the reduced axis should be kept in the final shape
+
+    Returns
+    -------
+    out: Array
+        The reduced NDArray.
+    """
+    return _reduce(arr=arr, axis=axis, keepdims=keepdims, typ='sum')
+
+def max(arr, axis=None, keepdims=False):
+    """ Take the maximum of the array along given axises.
+    The semantic strictly follows numpy's document.
+
+    Parameters
+    ----------
+    arr : Array
+        the array to be reduced
+    axis : int or list(int), optional
+        along which axis to do reduction
+    keepdims : bool
+        whether the reduced axis should be kept in the final shape
+
+    Returns
+    -------
+    out: Array
+        The reduced NDArray.
+    """
+    return _reduce(arr=arr, axis=axis, keepdims=keepdims, typ='max')
+
+def min(arr, axis=None, keepdims=False):
+    """ Take the minimum of the array along given axises.
+    The semantic strictly follows numpy's document.
+
+    Parameters
+    ----------
+    arr : Array
+        the array to be reduced
+    axis : int or list(int), optional
+        along which axis to do reduction
+    keepdims : bool
+        whether the reduced axis should be kept in the final shape
+
+    Returns
+    -------
+    out: Array
+        The reduced NDArray.
+    """
+    return _reduce(arr=arr, axis=axis, keepdims=keepdims, typ='min')
 
 def full(shape, val, ctx=None):
     """Create a new NDArray filled with given value, with specified shape.
@@ -1071,7 +1120,7 @@ def _make_ndarray_function(handle):
                                        c_array(ctypes.c_char_p, [])))
         return out
 
-    def unary_ndarray_function(src, out=None):
+    def unary_ndarray_function(src, out=None, *args, **kwargs):
         """internal NDArray function"""
         if out:
             if isinstance(out, NDArray) == False:
@@ -1085,11 +1134,11 @@ def _make_ndarray_function(handle):
         check_call(_LIB.MXFuncInvokeEx( \
                 handle, \
                 c_array(NDArrayHandle, (src.handle,)), \
-                c_array(mx_float, ()), \
+                c_array(mx_float, [args[i] for i in scalar_range]), \
                 c_array(NDArrayHandle, (out.handle,)), \
-                ctypes.c_int(0), \
-                c_array(ctypes.c_char_p, []), \
-                c_array(ctypes.c_char_p, [])))
+                ctypes.c_int(len(kwargs)), \
+                c_array(ctypes.c_char_p, [key.encode('ascii') for key in kwargs.keys()]), \
+                c_array(ctypes.c_char_p, [str(i).encode('ascii') for i in kwargs.values()])))
         return out
 
     def generic_ndarray_function(*args, **kwargs):
@@ -1126,8 +1175,8 @@ def _make_ndarray_function(handle):
                 c_array(mx_float, [args[i] for i in scalar_range]), \
                 c_array(NDArrayHandle, [v.handle for v in mutate_vars]), \
                 ctypes.c_int(len(kwargs)), \
-                c_array(ctypes.c_char_p, kwargs.keys()), \
-                c_array(ctypes.c_char_p, [str(i) for i in kwargs.values()])))
+                c_array(ctypes.c_char_p, [key.encode('ascii') for key in kwargs.keys()]), \
+                c_array(ctypes.c_char_p, [str(i).encode('ascii') for i in kwargs.values()])))
         if n_mutate_vars == 1:
             return mutate_vars[0]
         else:

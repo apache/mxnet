@@ -1,6 +1,9 @@
 package ml.dmlc.mxnet.spark
 
+import java.io.File
+
 import ml.dmlc.mxnet.{Context, Shape, Symbol}
+import org.apache.spark.SparkFiles
 
 /**
  * MXNet on Spark training arguments
@@ -36,9 +39,12 @@ private[mxnet] class MXNetParams extends Serializable {
   var dataName: String = "data"
   var labelName: String = "label"
 
-  // java classpath on executors for running mxnet application
-  // TODO: upload to a shared storage from driver
-  var classpath: String = null
+  // jars on executors for running mxnet application
+  var jars: Array[String] = null
+  def runtimeClasspath: String = {
+    jars.map(jar => SparkFiles.get(new File(jar).getName)).mkString(":")
+  }
+
   // java binary
   var javabin: String = "java"
 }
