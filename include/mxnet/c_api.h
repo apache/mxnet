@@ -24,7 +24,7 @@
 /*! \brief manually define unsigned int */
 typedef unsigned int mx_uint;
 /*! \brief manually define unsigned long long */
-typedef unsigned long long mx_ulonglong;
+typedef unsigned long long mx_ulonglong;  // NOLINT (runtime/int)
 /*! \brief manually define float */
 typedef float mx_float;
 // all the handles are simply void *
