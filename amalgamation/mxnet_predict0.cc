@@ -1,9 +1,15 @@
 // mexnet.cc
 
 #define MSHADOW_FORCE_STREAM
+
 #ifndef MSHADOW_USE_CBLAS
+#if (__MIN__ == 1)
+#define MSHADOW_USE_CBLAS 	0
+#else
 #define MSHADOW_USE_CBLAS 	1
 #endif
+#endif
+
 #define MSHADOW_USE_CUDA 	0
 #define MSHADOW_USE_MKL 	0
 #define MSHADOW_RABIT_PS 	0
@@ -26,12 +32,14 @@
 #include "src/symbol/static_graph.cc"
 #include "src/symbol/symbol.cc"
 #include "src/operator/operator.cc"
+#include "src/operator/operator_util.cc"
 #include "src/operator/activation.cc"
 #include "src/operator/batch_norm.cc"
 #include "src/operator/block_grad.cc"
 #include "src/operator/concat.cc"
 #include "src/operator/convolution.cc"
 #include "src/operator/dropout.cc"
+#include "src/operator/elementwise_unary_op.cc"
 #include "src/operator/elementwise_binary_op.cc"
 #include "src/operator/elementwise_sum.cc"
 #include "src/operator/fully_connected.cc"
