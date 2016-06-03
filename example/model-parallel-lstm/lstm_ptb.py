@@ -4,6 +4,9 @@ import sys
 sys.path.insert(0, "../../python")
 import mxnet as mx
 import numpy as np
+# reuse the bucket_io library 
+sys.path.insert(0, "../rnn")
+from bucket_io import BucketSentenceIter, default_build_vocab
 
 """
 PennTreeBank Language Model
@@ -50,7 +53,7 @@ batch_size = 20
 seq_len = 35
 num_hidden = 400
 num_embed = 200
-num_lstm_layer = 2
+num_lstm_layer = 8
 num_round = 25
 learning_rate= 0.1
 wd=0.
@@ -58,17 +61,22 @@ momentum=0.0
 max_grad_norm = 5.0
 update_period = 1
 
-X_train, dic = load_data("./data/ptb.train.txt")
-X_val, _ = load_data("./data/ptb.valid.txt", dic)
-X_train_batch = replicate_data(X_train, batch_size)
-X_val_batch = replicate_data(X_val, batch_size)
+dic = default_build_vocab("./data/ptb.train.txt")
 vocab = len(dic)
-print("Vocab=%d" %vocab)
 
-X_train_batch = drop_tail(X_train_batch, seq_len)
-X_val_batch = drop_tail(X_val_batch, seq_len)
-ngpu=1
-ngpu = 1
+# static buckets
+buckets = [8, 16, 24, 32, 60]
+
+init_c = [('l%d_init_c'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
+init_h = [('l%d_init_h'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
+init_states = init_c + init_h
+
+X_train_batch = BucketSentenceIter("./data/ptb.train.txt", dic,
+                                        buckets, batch_size, init_states, model_parallel=True)
+X_val_batch = BucketSentenceIter("./data/ptb.valid.txt", dic,
+                                      buckets, batch_size, init_states, model_parallel=True)
+
+ngpu = 2
 # A simple two GPU placement plan
 group2ctx = {'embed': mx.gpu(0),
              'decode': mx.gpu(ngpu - 1)}
@@ -79,18 +87,17 @@ for i in range(num_lstm_layer):
 # whether do group-wise concat
 concat_decode = False
 use_loss=True
-
 model = lstm.setup_rnn_model(mx.gpu(), group2ctx=group2ctx,
                              concat_decode=concat_decode,
                              use_loss=use_loss,
                              num_lstm_layer=num_lstm_layer,
-                             seq_len=seq_len,
+                             seq_len=X_train_batch.default_bucket_key,
                              num_hidden=num_hidden,
                              num_embed=num_embed,
                              num_label=vocab,
                              batch_size=batch_size,
                              input_size=vocab,
-                             initializer=mx.initializer.Uniform(0.1),dropout=0.5)
+                             initializer=mx.initializer.Uniform(0.1),dropout=0.5, buckets=buckets)
 
 lstm.train_lstm(model, X_train_batch, X_val_batch,
                 num_round=num_round,
@@ -100,4 +107,5 @@ lstm.train_lstm(model, X_train_batch, X_val_batch,
                 max_grad_norm = max_grad_norm,
                 update_period=update_period,
                 learning_rate=learning_rate,
+                batch_size = batch_size,
                 wd=wd)
