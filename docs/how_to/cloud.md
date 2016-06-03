@@ -72,7 +72,7 @@ echo "USE_CUDNN=1" >>config.mk
 echo "USE_BLAS=atlas" >> config.mk
 echo "USE_DIST_KVSTORE = 1" >>config.mk
 echo "USE_S3=1" >>config.mk
-make -j8
+make -j$(nproc)
 ```
 
 To test whether everything is installed properly, we train a Convolutional neural network on MNIST using a GPU:

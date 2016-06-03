@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y build-essential git libopenblas-dev lib
 RUN git clone --recursive https://github.com/dmlc/mxnet/ && cd mxnet && \
     cp make/config.mk . && \
     echo "USE_BLAS=openblas" >>config.mk && \
-    make -j8
+    make -j$(nproc)
 
 # python pakcage
 RUN apt-get install -y python-numpy wget unzip

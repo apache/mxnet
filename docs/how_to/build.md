@@ -59,7 +59,7 @@ sudo apt-get install -y build-essential git libatlas-base-dev libopencv-dev
 Then build mxnet
 ```bash
 git clone --recursive https://github.com/dmlc/mxnet
-cd mxnet; make -j4
+cd mxnet; make -j$(nproc)
 ```
 
 ### Building on OSX
@@ -77,7 +77,7 @@ Then build mxnet
 
 ```bash
 git clone --recursive https://github.com/dmlc/mxnet
-cd mxnet; cp make/osx.mk ./config.mk; make -j4
+cd mxnet; cp make/osx.mk ./config.mk; make -j$(sysctl -n hw.ncpu)
 ```
 
 Troubleshooting:
@@ -95,7 +95,7 @@ ln -s path1 /usr/local/lib/libgomp.dylib
 
 ```
 
-then run `make -j4` again.
+then run `make -j$(sysctl -n hw.ncpu)` again.
 
 
 ### Building on Windows
