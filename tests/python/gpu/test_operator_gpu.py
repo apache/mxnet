@@ -76,6 +76,15 @@ def test_convolution_with_type():
                 {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float32}}]
     check_consistency(sym, ctx_list)
 
+def test_deconvolution_with_type():
+    sym = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), name='conv')
+    ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float64}},
+                {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float32}},
+                {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float16}},
+                {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float64}},
+                {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float32}}]
+    check_type_consistency(sym, ctx_list)
+
 def test_fullyconnected_with_type():
     sym = mx.sym.FullyConnected(num_hidden=3, name='inner')
     ctx_list = [{'ctx': mx.gpu(0), 'inner_data': (2, 10), 'type_dict': {'inner_data': np.float64}},
@@ -97,6 +106,7 @@ def test_activation_with_type():
 
 if __name__ == '__main__':
     test_convolution_with_type()
+    test_deconvolution_with_type()
     test_fullyconnected_with_type()
     test_activation_with_type()
 	#test_softmax_with_shape((3,4), mx.gpu())

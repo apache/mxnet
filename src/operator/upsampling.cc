@@ -30,7 +30,7 @@ Operator *CreateOp<cpu>(UpSamplingParam param) {
     p.stride = TShape(shape, shape + 2);
     shape[0] = shape[1] = pad;
     p.pad = TShape(shape, shape + 2);
-    return new DeconvolutionOp<cpu>(p);
+    return new DeconvolutionOp<cpu, real_t>(p);
   } else {
     LOG(FATAL) << "Unknown sample type";
     return NULL;
