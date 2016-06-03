@@ -370,7 +370,6 @@ void Flip(const TBlob &src,
       break;
     }
   });
-
 }
 
 inline TShape FlipShape(const TShape& shp,
