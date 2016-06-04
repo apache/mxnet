@@ -36,7 +36,7 @@ MXNET中有一个依赖引擎，这个引擎是用来分析计算过程的依赖
 
 Op实际上是用来代表计算过程以及它依赖的var，先来看看它的uml类图。
 
-![img](static/img/opr-class-uml.png)
+![img](http://yuyang0.github.io/articles/static/img/opr-class-uml.png)
 
 上面一些比较重要的属性如下：
 
@@ -53,7 +53,7 @@ var可以看做是一个tag，用来标示每一个对象的，这样Op对对象
 
 ## 类图<a id="orgheadline3"></a>
 
-![img](static/img/threaded-var-class-uml.png)
+![img](http://yuyang0.github.io/articles/static/img/threaded-var-class-uml.png)
 
 **声明：下文说到执行时，意思是Op的当前var的依赖已经就绪，因为一个op可以依赖多个
 var，如果其他的Var没有就绪，那么这时op可能并没有实际运行**
@@ -81,19 +81,19 @@ var的队列是依赖引擎的核心，下面我们来分析下各种情况下�
 3.  读依赖完成
 4.  写依赖完成
 
-![img](static/img/threaded-var-queue1.png)
+![img](http://yuyang0.github.io/articles/static/img/threaded-var-queue1.png)
 
 上图中w1写依赖正在执行。
 
-![img](static/img/threaded-var-queue2.png)
+![img](http://yuyang0.github.io/articles/static/img/threaded-var-queue2.png)
 写依赖w1完成将自己移出队列，并执行写依赖w2
 
-![img](static/img/threaded-var-queue3.png)
+![img](http://yuyang0.github.io/articles/static/img/threaded-var-queue3.png)
 
 写依赖w2完成后将自己移出队列，接着并行的执行读依赖r1，r2，记住正在执行的读依赖是被移出队列的，
 它们的数目使用 `num_pending_reads_` 跟踪的
 
-![img](static/img/threaded-var-queue4.png)
+![img](http://yuyang0.github.io/articles/static/img/threaded-var-queue4.png)
 
 每一个读依赖完成都会将 `num_pending_reads_` 减一，如果减为了0，那么就意味着所有
 的读依赖都完成了，当r1，r2都完成后，接着执行w3写依赖。
