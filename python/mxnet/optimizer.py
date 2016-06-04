@@ -443,14 +443,16 @@ class ccSGD(Optimizer):
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
     """
-    def __init__(self, momentum=0.0, **kwargs):
-        super(ccSGD, self).__init__(**kwargs)
+    def __init__(self, momentum=0.0, rescale_grad=1., clip_gradient=-1., **kwargs):
+        super(ccSGD, self).__init__(rescale_grad=rescale_grad,
+                                    clip_gradient=clip_gradient,
+                                    **kwargs)
         self.momentum = momentum
 
         self.handle = Optimizer._init_cc_optimizer(
             'ccsgd',
             ['momentum', 'rescale_grad', 'clip_gradient'],
-            [momentum, kwargs['rescale_grad'], kwargs['clip_gradient']])
+            [momentum, rescale_grad, clip_gradient])
 
     def __getstate__(self):
         this = self.__dict__.copy()

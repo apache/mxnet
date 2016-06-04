@@ -1131,11 +1131,11 @@ def _make_ndarray_function(handle):
             if not accept_empty_mutate:
                 raise TypeError('argument out is required to call %s' % func_name)
             out = NDArray(_new_empty_handle())
-        check_call(_LIB.MXFuncInvokeEx(
-                handle,
-                c_array(NDArrayHandle, (lhs.handle, rhs.handle)),
-                c_array(mx_float, ()),
-                c_array(NDArrayHandle, (out.handle,)),
+        check_call(_LIB.MXFuncInvokeEx( \
+                handle, \
+                c_array(NDArrayHandle, (lhs.handle, rhs.handle)), \
+                c_array(mx_float, ()), \
+                c_array(NDArrayHandle, (out.handle,)), \
                 ctypes.c_int(len(kwargs)), \
                 c_array(ctypes.c_char_p, [key.encode('ascii') for key in kwargs.keys()]), \
                 c_array(ctypes.c_char_p, [str(i).encode('ascii') for i in kwargs.values()])))

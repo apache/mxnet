@@ -171,6 +171,7 @@ class BaseModule(object):
                                                  locals=locals())
                 for callback in _as_list(batch_end_callback):
                     callback(batch_end_params)
+        return eval_metric.get_name_value()
 
     def iter_predict(self, eval_data, num_batch=None, reset=True):
         """Iterate over predictions.
@@ -274,7 +275,8 @@ class BaseModule(object):
             optimizer='sgd', optimizer_params=(('learning_rate', 0.01),),
             eval_batch_end_callback=None, initializer=Uniform(0.01),
             arg_params=None, aux_params=None, allow_missing=False,
-            force_rebind=False, force_init=False, begin_epoch=0, num_epoch=None):
+            force_rebind=False, force_init=False, begin_epoch=0, num_epoch=None,
+            validation_metric=None):
         """Train the module parameters.
 
         Parameters
@@ -335,6 +337,8 @@ class BaseModule(object):
         self.init_optimizer(kvstore=kvstore, optimizer=optimizer,
                             optimizer_params=optimizer_params)
 
+        if validation_metric is None:
+            validation_metric = eval_metric
         if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
 
@@ -370,9 +374,9 @@ class BaseModule(object):
             #----------------------------------------
             # evaluation on validation set
             if eval_data:
-                self.score(eval_data, eval_metric,
-                           batch_end_callback=eval_batch_end_callback, epoch=epoch)
-                for name, val in eval_metric.get_name_value():
+                res = self.score(eval_data, validation_metric,
+                                 batch_end_callback=eval_batch_end_callback, epoch=epoch)
+                for name, val in res:
                     self.logger.info('Epoch[%d] Validation-%s=%f', epoch, name, val)
 
             # end of 1 epoch, reset the data-iter for another epoch
