@@ -299,9 +299,12 @@ class Module(BaseModule):
             if kvstore and kvstore.type == 'dist_sync':
                 batch_size *= kvstore.num_workers
             idx2name = {}
-            for k in range(len(self._context)):
-                idx2name.update({i*len(self._context)+k: n
-                                 for i, n in enumerate(self._exec_group.param_names)})
+            if update_on_kvstore:
+                idx2name.update(enumerate(self._exec_group.param_names))
+            else:
+                for k in range(len(self._context)):
+                    idx2name.update({i*len(self._context)+k: n
+                                     for i, n in enumerate(self._exec_group.param_names)})
             optimizer_params = dict(optimizer_params)
             if 'rescale_grad' not in optimizer_params:
                 optimizer_params['rescale_grad'] = 1.0/batch_size
