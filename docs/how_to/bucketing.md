@@ -41,7 +41,7 @@ However, to achieve training, we still need to add some extra bits to our `DataI
 
 Now the `DataIter` is responsible for grouping the data into different buckets. Assuming randomization is enabled, in each mini-batch, it choose a random bucket (according to a distribution balanced by the bucket sizes), and then randomly choose sequences from that bucket to form a mini-batch. And do some proper *padding* for sequences of different length *within* the mini-batch if necessary.
 
-Please refer to [example/rnn/lstm_ptb_bucketing.py](https://github.com/dmlc/mxnet/blob/master/example/rnn/lstm_ptb_bucketing.py) for the full implementation of a `DataIter` that read text sequences implement the API shown above.
+Please refer to [example/rnn/lstm_ptb_bucketing.py](https://github.com/dmlc/mxnet/blob/master/example/rnn/lstm_bucketing.py) for the full implementation of a `DataIter` that read text sequences implement the API shown above. In this example, bucketing can be used with a static configuration (e.g. `buckets = [10, 20, 30, 40, 50, 60]`), or let MXnet to generate bucketing automatically according to dataset(`buckets = []`). The latter approach is implemented with greedily adding a bucket as long as the number of input for the bucket is large enough(see [default_gen_buckets()](https://github.com/dmlc/mxnet/blob/master/example/rnn/bucket_io.py#L43)). 
 
 ## Beyond Sequence Training
 

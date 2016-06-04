@@ -1,4 +1,4 @@
-# Run MXNet on Multiple CPU/GPUs
+# Run MXNet on Multiple CPU/GPUs with Data Parallel
 
 MXNet supports trainig with multiple CPUs and GPUs since the very
 beginning. Almost any program using MXNet's provided training modules, such as
