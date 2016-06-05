@@ -1335,6 +1335,61 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBindX
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBindEX
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jint deviceTypeId, jint deviceID, jint numCtx,
+    jobjectArray jctxMapKeys, jintArray jctxMapDevTypes, jintArray jctxMapDevIDs, jint numArgs,
+    jlongArray jargsHandle, jlongArray jargsGradHandle, jintArray jreqsArray,
+    jlongArray jauxArgsHandle, jlong jsharedExec, jobject jexecOut) {
+  ExecutorHandle out;
+  int auxStatesLen = env->GetArrayLength(jauxArgsHandle);
+  ExecutorHandle sharedExec = nullptr;
+  if ((int32_t)jsharedExec != 0) sharedExec = reinterpret_cast<ExecutorHandle>(jsharedExec);
+
+  const char **mapKeys = new const char *[numCtx];
+  for (size_t i = 0; i < numCtx; i++) {
+    jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jctxMapKeys, i));
+    const char *key = env->GetStringUTFChars(jkey, 0);
+    mapKeys[i] = key;
+    env->DeleteLocalRef(jkey);
+  }
+  jlong *auxStates = env->GetLongArrayElements(jauxArgsHandle, NULL);
+  jint *gradReqType = env->GetIntArrayElements(jreqsArray, NULL);
+  jlong *inArgs = env->GetLongArrayElements(jargsHandle, NULL);
+  jlong *argGradStore = env->GetLongArrayElements(jargsGradHandle, NULL);
+  jint *mapDevTypes = env->GetIntArrayElements(jctxMapDevTypes, NULL);
+  jint *mapDevIDs = env->GetIntArrayElements(jctxMapDevIDs, NULL);
+  int ret = MXExecutorBindEX(reinterpret_cast<SymbolHandle>(symbolPtr),
+                            deviceTypeId,
+                            deviceID,
+                            static_cast<mx_uint>(numCtx),
+                            mapKeys,
+                            mapDevTypes,
+                            mapDevIDs,
+                            static_cast<mx_uint>(numArgs),
+                            reinterpret_cast<NDArrayHandle *>(inArgs),
+                            reinterpret_cast<NDArrayHandle *>(argGradStore),
+                            reinterpret_cast<mx_uint *>(gradReqType),
+                            static_cast<mx_uint>(auxStatesLen),
+                            reinterpret_cast<NDArrayHandle *>(auxStates),
+                            sharedExec,
+                            &out);
+  env->ReleaseIntArrayElements(jctxMapDevIDs, mapDevIDs, 0);
+  env->ReleaseIntArrayElements(jctxMapDevTypes, mapDevTypes, 0);
+  env->ReleaseLongArrayElements(jargsGradHandle, argGradStore, 0);
+  env->ReleaseLongArrayElements(jargsHandle, inArgs, 0);
+  env->ReleaseIntArrayElements(jreqsArray, gradReqType, 0);
+  env->ReleaseLongArrayElements(jauxArgsHandle, auxStates, 0);
+  for (size_t i = 0; i < numCtx; i++) {
+    jstring jkey = (jstring) env->GetObjectArrayElement(jctxMapKeys, i);
+    env->ReleaseStringUTFChars(jkey, mapKeys[i]);
+    env->DeleteLocalRef(jkey);
+  }
+  delete[] mapKeys;
+
+  SetLongField(env, jexecOut, reinterpret_cast<jlong>(out));
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRandomSeed
   (JNIEnv *env, jobject obj, jint seed) {
   return MXRandomSeed(seed);
