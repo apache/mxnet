@@ -1343,7 +1343,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBindEX
   ExecutorHandle out;
   int auxStatesLen = env->GetArrayLength(jauxArgsHandle);
   ExecutorHandle sharedExec = nullptr;
-  if ((long)jsharedExec != 0L) sharedExec = reinterpret_cast<ExecutorHandle>(jsharedExec);
+  if ((int32_t)jsharedExec != 0) sharedExec = reinterpret_cast<ExecutorHandle>(jsharedExec);
 
   const char **mapKeys = new const char *[numCtx];
   for (size_t i = 0; i < numCtx; i++) {
