@@ -889,6 +889,8 @@ def test_reshape():
     def test_reshape_new(src_shape, shape_args, dst_shape):
         net = mx.sym.Variable("data")
         net = mx.sym.Reshape(net, shape=shape_args)
+        js = net.tojson()
+        net = mx.sym.load_json(js)
         _, output_shape, __ = net.infer_shape(data=src_shape)
         assert output_shape[0] == dst_shape, \
             'Src Shape = %s, Shape Arguments = %s, Dst Shape = %s, Output Shape = %s' \
@@ -919,6 +921,8 @@ def test_reshape():
     # Test old api
     net = mx.sym.Variable("data")
     net = mx.sym.Reshape(net, target_shape=(2, 0))
+    js = net.tojson()
+    net = mx.sym.load_json(js)
     _, output_shape, __ = net.infer_shape(data=(2, 3, 5, 5))
     assert(output_shape[0] == (2, 75))
 
