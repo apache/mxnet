@@ -147,7 +147,7 @@ In `mxnet`, we have a function called `mx.lstm` so that users can build a genera
 
 ```{r}
 model <- mx.lstm(X.train, X.val, 
-                 ctx=mx.gpu(0),
+                 ctx=mx.cpu(),
                  num.round=num.round, 
                  update.period=update.period,
                  num.lstm.layer=num.lstm.layer, 
@@ -250,7 +250,7 @@ infer.model <- mx.lstm.inference(num.lstm.layer=num.lstm.layer,
                                  num.embed=num.embed,
                                  num.label=vocab,
                                  arg.params=model$arg.params,
-                                 ctx=mx.gpu(0))
+                                 ctx=mx.cpu())
 ```
 generate a sequence of 75 chars using function `mx.lstm.forward`.
 ```

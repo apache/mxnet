@@ -1,5 +1,3 @@
-require(mxnet)
-
 # lstm cell symbol
 lstm <- function(num.hidden, indata, prev.state, param, seqidx, layeridx, dropout=0) {
     if (dropout > 0)
@@ -35,18 +33,19 @@ lstm.unroll <- function(num.lstm.layer, seq.len, input.size,
     embed.weight <- mx.symbol.Variable("embed.weight")
     cls.weight <- mx.symbol.Variable("cls.weight")
     cls.bias <- mx.symbol.Variable("cls.bias")
-    param.cells <- list()
-    last.states <- list()
-    for (i in 1:num.lstm.layer) {
-        param.cells[[i]] <- list(i2h.weight = mx.symbol.Variable(paste0("l", i, ".i2h.weight")),
-                                 i2h.bias = mx.symbol.Variable(paste0("l", i, ".i2h.bias")),
-                                 h2h.weight = mx.symbol.Variable(paste0("l", i, ".h2h.weight")),
-                                 h2h.bias = mx.symbol.Variable(paste0("l", i, ".h2h.bias")))
+
+    param.cells <- lapply(1:num.lstm.layer, function(i) {
+        cell <- list(i2h.weight = mx.symbol.Variable(paste0("l", i, ".i2h.weight")),
+                     i2h.bias = mx.symbol.Variable(paste0("l", i, ".i2h.bias")),
+                     h2h.weight = mx.symbol.Variable(paste0("l", i, ".h2h.weight")),
+                     h2h.bias = mx.symbol.Variable(paste0("l", i, ".h2h.bias")))
+        return (cell)
+    })
+    last.states <- lapply(1:num.lstm.layer, function(i) {
         state <- list(c=mx.symbol.Variable(paste0("l", i, ".init.c")),
                       h=mx.symbol.Variable(paste0("l", i, ".init.h")))
-        last.states[[i]] <- state
-    }
-
+        return (state)
+    })
 
     # embeding layer
     label <- mx.symbol.Variable("label")
@@ -62,12 +61,7 @@ lstm.unroll <- function(num.lstm.layer, seq.len, input.size,
 
         # stack lstm
         for (i in 1:num.lstm.layer) {
-            if (i == 1) {
-                dp <- 0
-            }
-            else {
-                dp <- dropout
-            }
+            dp <- ifelse(i==1, 0, dropout)
             next.state <- lstm(num.hidden, indata=hidden,
                                prev.state=last.states[[i]],
                                param=param.cells[[i]],
@@ -102,17 +96,19 @@ lstm.inference.symbol <- function(num.lstm.layer, input.size,
     embed.weight <- mx.symbol.Variable("embed.weight")
     cls.weight <- mx.symbol.Variable("cls.weight")
     cls.bias <- mx.symbol.Variable("cls.bias")
-    param.cells <- list()
-    last.states <- list()
-    for (i in 1:num.lstm.layer) {
-        param.cells[[i]] <- list(i2h.weight = mx.symbol.Variable(paste0("l", i, ".i2h.weight")),
+
+    param.cells <- lapply(1:num.lstm.layer, function(i) {
+        cell <- list(i2h.weight = mx.symbol.Variable(paste0("l", i, ".i2h.weight")),
                                  i2h.bias = mx.symbol.Variable(paste0("l", i, ".i2h.bias")),
                                  h2h.weight = mx.symbol.Variable(paste0("l", i, ".h2h.weight")),
                                  h2h.bias = mx.symbol.Variable(paste0("l", i, ".h2h.bias")))
+        return (cell)
+    })
+    last.states <- lapply(1:num.lstm.layer, function(i) {
         state <- list(c=mx.symbol.Variable(paste0("l", i, ".init.c")),
                       h=mx.symbol.Variable(paste0("l", i, ".init.h")))
-        last.states[[i]] <- state
-    }
+        return (state)
+    })
 
     # embeding layer
     data <- mx.symbol.Variable("data")
@@ -121,12 +117,7 @@ lstm.inference.symbol <- function(num.lstm.layer, input.size,
 
     # stack lstm
     for (i in 1:num.lstm.layer) {
-        if (i == 1) {
-            dp <- 0
-        }
-        else {
-            dp <- dropout
-        }
+        dp <- ifelse(i==1, 0, dropout)
         next.state <- lstm(num.hidden, indata=hidden,
                            prev.state=last.states[[i]],
                            param=param.cells[[i]],
@@ -142,17 +133,19 @@ lstm.inference.symbol <- function(num.lstm.layer, input.size,
     fc <- mx.symbol.FullyConnected(data=hidden, num_hidden=num.label,
                                    weight=cls.weight, bias=cls.bias, name='pred')
     sm <- mx.symbol.SoftmaxOutput(data=fc, name='sm')
-    output <- list()
-    output <- c(output, sm)
-    for (i in 1:num.lstm.layer) {
+    unpack.c <- lapply(1:num.lstm.layer, function(i) {
         state <- last.states[[i]]
-        state <- list(c=mx.symbol.BlockGrad(state$c, name=paste0("l", i, ".last.c")),
-                      h=mx.symbol.BlockGrad(state$h, name=paste0("l", i, ".last.h" )))
-        last.states[[i]] <- state
-        output <- c(output, state$c)
-        output <- c(output, state$h)
-    }
-    return (mx.symbol.Group(output))
+        state.c <- mx.symbol.BlockGrad(state$c, name=paste0("l", i, ".last.c"))
+        return (state.c)
+    })
+    unpack.h <- lapply(1:num.lstm.layer, function(i) {
+        state <- last.states[[i]]
+        state.h <- mx.symbol.BlockGrad(state$h, name=paste0("l", i, ".last.h"))
+        return (state.h)
+    })
+
+    list.all <- c(sm, unpack.c, unpack.h)
+    return (mx.symbol.Group(list.all))
 }
 
 is.param.name <- function(name) {
