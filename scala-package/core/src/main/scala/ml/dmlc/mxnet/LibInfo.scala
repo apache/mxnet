@@ -198,6 +198,20 @@ class LibInfo {
                               reqsArray: Array[Int],
                               auxArgsHandle: Array[NDArrayHandle],
                               out: ExecutorHandleRef): Int
+  @native def mxExecutorBindEX(handle: SymbolHandle,
+                              deviceTypeId: Int,
+                              deviceID: Int,
+                              numCtx: Int,
+                              ctxMapKeys: Array[String],
+                              ctxMapDevTypes: Array[Int],
+                              ctxMapDevIDs: Array[Int],
+                              numArgs: Int,
+                              argsHandle: Array[NDArrayHandle],
+                              argsGradHandle: Array[NDArrayHandle],
+                              reqsArray: Array[Int],
+                              auxArgsHandle: Array[NDArrayHandle],
+                              sharedExec: ExecutorHandle,
+                              out: ExecutorHandleRef): Int
   // scalastyle:on parameterNum
   @native def mxSymbolSaveToFile(handle: SymbolHandle, fname: String): Int
   @native def mxSymbolCreateFromFile(fname: String, handle: SymbolHandleRef): Int
