@@ -190,6 +190,10 @@ class NDArray(object):
         """Set ndarray value"""
         if not self.writable:
             raise ValueError('trying to assign to a readonly NDArray')
+        if isinstance(in_slice, int):
+            sliced_arr = self._at(in_slice)
+            sliced_arr[:] = value
+            return
         if not isinstance(in_slice, slice) or in_slice.step is not None:
             raise ValueError('NDArray only support continuous slicing on axis 0')
         if in_slice.start is not None or in_slice.stop is not None:
@@ -208,6 +212,8 @@ class NDArray(object):
 
     def __getitem__(self, in_slice):
         """Get ndarray"""
+        if isinstance(in_slice, int):
+            return self._at(in_slice)
         if not isinstance(in_slice, slice) or in_slice.step is not None:
             raise ValueError('NDArray only support continuous slicing on axis 0')
         if in_slice.start is not None or in_slice.stop is not None:
@@ -252,6 +258,20 @@ class NDArray(object):
         stop = mx_uint(stop) if stop else mx_uint(self.shape[0])
         check_call(_LIB.MXNDArraySlice(
             self.handle, start, stop, ctypes.byref(handle)))
+        return NDArray(handle=handle, writable=self.writable)
+
+    def _at(self, idx):
+        """Return a sub NDArray that shares memory with current one.
+
+        Parameters
+        ----------
+        idx : int
+            index of sub array.
+        """
+        handle = NDArrayHandle()
+        idx = mx_uint(idx)
+        check_call(_LIB.MXNDArrayAt(
+            self.handle, idx, ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
     def reshape(self, new_shape):
@@ -1099,7 +1119,7 @@ def _make_ndarray_function(handle):
     doc_str = doc_str % (py_str(desc.value), param_str)
 
     # Definition of internal functions.
-    def binary_ndarray_function(lhs, rhs, out=None):
+    def binary_ndarray_function(lhs, rhs, out=None, **kwargs):
         """Internal binary function
         """
         if out:
@@ -1111,13 +1131,14 @@ def _make_ndarray_function(handle):
             if not accept_empty_mutate:
                 raise TypeError('argument out is required to call %s' % func_name)
             out = NDArray(_new_empty_handle())
-        check_call(_LIB.MXFuncInvokeEx(handle,
-                                       c_array(NDArrayHandle, (lhs.handle, rhs.handle)),
-                                       c_array(mx_float, ()),
-                                       c_array(NDArrayHandle, (out.handle,)),
-                                       ctypes.c_int(0),
-                                       c_array(ctypes.c_char_p, []),
-                                       c_array(ctypes.c_char_p, [])))
+        check_call(_LIB.MXFuncInvokeEx( \
+                handle, \
+                c_array(NDArrayHandle, (lhs.handle, rhs.handle)), \
+                c_array(mx_float, ()), \
+                c_array(NDArrayHandle, (out.handle,)), \
+                ctypes.c_int(len(kwargs)), \
+                c_array(ctypes.c_char_p, [key.encode('ascii') for key in kwargs.keys()]), \
+                c_array(ctypes.c_char_p, [str(i).encode('ascii') for i in kwargs.values()])))
         return out
 
     def unary_ndarray_function(src, out=None, *args, **kwargs):
