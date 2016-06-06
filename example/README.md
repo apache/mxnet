@@ -4,7 +4,7 @@ This page contains a curated list of awesome MXnet examples, tutorials and blogs
 
   - [Contributing](#contributing)
   - [List of examples](#list-of-examples)
-    - [Langauges Binding Examples](#language-binding-examples)
+    - [Languages Binding Examples](#language-binding-examples)
     - [Deep Learning Examples](#deep-learning-examples)
     - [IPython Notebooks](#ipython-notebooks)
     - [Mobile App Examples](#mobile-apps-examples)
@@ -24,7 +24,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 
 ##<a name="list-of-examples"></a>List of examples
 
-###<a name="language-binding-examples"></a>Langauges Binding Examples
+###<a name="language-binding-examples"></a>Languages Binding Examples
 ------------------
 * [C++ examples](https://github.com/dmlc/mxnet/tree/master/example/cpp) - Example code for using C++ interface, including NDArray, symbolic layer and models.
 * [MXNet Python](http://mxnet.readthedocs.org/en/latest/python/index.html) - Python library
