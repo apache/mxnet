@@ -305,7 +305,7 @@ class SGD(Optimizer):
             weight[:] += mom
         else:
             assert self.momentum == 0.0
-            weight[:] += -lr * (grad + self.wd * weight)
+            weight[:] += -lr * (grad + wd * weight)
 
 
 @register
@@ -353,7 +353,7 @@ class NAG(SGD):
             weight[:] += -lr * grad
         else:
             assert self.momentum == 0.0
-            weight[:] += -lr * (grad + self.wd * weight)
+            weight[:] += -lr * (grad + wd * weight)
 
 
 @register
@@ -638,6 +638,7 @@ class AdaGrad(Optimizer):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         lr = self._get_lr(index)
+        wd = self._get_wd(index)
         self._update_count(index)
 
         grad = grad * self.rescale_grad
@@ -645,7 +646,7 @@ class AdaGrad(Optimizer):
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
         history = state
         history[:] += (grad * grad)
-        weight[:] += -lr * (grad / sqrt(history + self.float_stable_eps) + self.wd * weight)
+        weight[:] += -lr * (grad / sqrt(history + self.float_stable_eps) + wd * weight)
 
 
 @register
