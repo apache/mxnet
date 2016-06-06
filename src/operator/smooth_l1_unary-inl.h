@@ -72,8 +72,8 @@ void SmoothL1Forward_(const TBlob& src,
     << "Unary function only support input/output with the same type";
   real_t sigma2 = env.scalar * env.scalar;
   MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
-    mshadow::Tensor<xpu, 2, DType> out = ret->get<xpu, 2, DType>(s);
-    mshadow::Tensor<xpu, 2, DType> in = src.get<xpu, 2, DType>(s);
+    mshadow::Tensor<xpu, 2, DType> out = ret->FlatTo2D<xpu, DType>(s);
+    mshadow::Tensor<xpu, 2, DType> in = src.FlatTo2D<xpu, DType>(s);
     ASSIGN_DISPATCH(out, req,
                     F<mshadow_op::smooth_l1_loss>(in, ScalarExp<DType>(sigma2)));
   });
@@ -95,9 +95,9 @@ void SmoothL1BackwardUseIn_(const OutputGrad& out_grad,
     << "Unary function only support input/output with the same type";
   real_t sigma2 = env.scalar * env.scalar;
   MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
-    mshadow::Tensor<xpu, 2, DType> src = in_data0.data.get<xpu, 2, DType>(s);
-    mshadow::Tensor<xpu, 2, DType> ograd = out_grad.data.get<xpu, 2, DType>(s);
-    mshadow::Tensor<xpu, 2, DType> igrad = in_grad->get<xpu, 2, DType>(s);
+    mshadow::Tensor<xpu, 2, DType> src = in_data0.data.FlatTo2D<xpu, DType>(s);
+    mshadow::Tensor<xpu, 2, DType> ograd = out_grad.data.FlatTo2D<xpu, DType>(s);
+    mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
     ASSIGN_DISPATCH(igrad, req,
                     ograd * F<mshadow_op::smooth_l1_gradient>(src, ScalarExp<DType>(sigma2)));
   });
