@@ -39,7 +39,14 @@ To achieve the goals described in insight, we need to pack binary data into a sp
 ### Binary Record
 
 ![baserecordio](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/io/baserecordio.jpg)
-In binary recordIO, each data instance is stored as a record. **kMagic** is a Magic Number indicating the start of a record. **Lrecord** encodes length and continue flat. In lrecord, if cflag == 0: this is a complete record; cflag == 1: start of a multiple-rec; cflag == 2: middle of multiple-rec; cflag == 3: end of multiple-rec. **Data** is the space to save data content. **Pad** is simply a padding space to make record align to 4 bytes.
+In binary recordIO, each data instance is stored as a record. **kMagic** is a Magic Number indicating the start of a record. **Lrecord** encodes length and continue flat. 
+In lrecord,  
+- cflag == 0: this is a complete record; 
+- cflag == 1: start of a multiple-rec; 
+- cflag == 2: middle of multiple-rec; 
+- cflag == 3: end of multiple-rec. 
+
+**Data** is the space to save data content. **Pad** is simply a padding space to make record align to 4 bytes.
 
 After packing, each file contains multiple records. Loading can be continues. This avoids the low performance of random reading from disk.
 
@@ -81,7 +88,7 @@ Since logical partition doesn't rely on the number of physical data files, we ca
 
 ## Data Loading and Preprocessing
 
-When the speed of loading and preprocessing can't cache up with the speed of training or evaluation, IO will become the bottleneck of the whole system. In this section, we will introduce our tricks to pursuit the ultimate efficiency to load and preprocess data packed in binary recordIO format. In our ImageNet practice, we can achieve the IO speed of **3000** images/s **with normal HDD**.
+When the speed of loading and preprocessing can't catch up with the speed of training or evaluation, IO will become the bottleneck of the whole system. In this section, we will introduce our tricks to pursuit the ultimate efficiency to load and preprocess data packed in binary recordIO format. In our ImageNet practice, we can achieve the IO speed of **3000** images/s **with normal HDD**.
 
 ### Loading and preprocessing on the fly
 

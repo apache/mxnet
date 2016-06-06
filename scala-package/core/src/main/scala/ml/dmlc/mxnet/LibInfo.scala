@@ -49,6 +49,10 @@ class LibInfo {
                              start: MXUint,
                              end: MXUint,
                              sliceHandle: NDArrayHandleRef): Int
+  @native def mxNDArrayReshape(handle: NDArrayHandle,
+                               nDim: Int,
+                               dims: Array[Int],
+                               reshapeHandle: NDArrayHandleRef): Int
   @native def mxNDArraySyncCopyFromCPU(handle: NDArrayHandle,
                                        source: Array[MXFloat],
                                        size: Int): Int
@@ -193,6 +197,20 @@ class LibInfo {
                               argsGradHandle: Array[NDArrayHandle],
                               reqsArray: Array[Int],
                               auxArgsHandle: Array[NDArrayHandle],
+                              out: ExecutorHandleRef): Int
+  @native def mxExecutorBindEX(handle: SymbolHandle,
+                              deviceTypeId: Int,
+                              deviceID: Int,
+                              numCtx: Int,
+                              ctxMapKeys: Array[String],
+                              ctxMapDevTypes: Array[Int],
+                              ctxMapDevIDs: Array[Int],
+                              numArgs: Int,
+                              argsHandle: Array[NDArrayHandle],
+                              argsGradHandle: Array[NDArrayHandle],
+                              reqsArray: Array[Int],
+                              auxArgsHandle: Array[NDArrayHandle],
+                              sharedExec: ExecutorHandle,
                               out: ExecutorHandleRef): Int
   // scalastyle:on parameterNum
   @native def mxSymbolSaveToFile(handle: SymbolHandle, fname: String): Int

@@ -22,10 +22,10 @@ std::vector<uint32_t> StaticGraph::PostDFSOrder(
       head_nodes,
       [&](uint32_t n) { ret.push_back(n); },  // FVisit
       [](uint32_t n)->uint32_t { return n; },  // HashFunc
-      [=](uint32_t n)->uint32_t {  // InDegree
+      [&](uint32_t n)->uint32_t {  // InDegree
         return nodes[n].inputs.size() + static_cast<uint32_t>(nodes[n].is_backward());
       },
-      [=](uint32_t n, uint32_t index)->uint32_t {  // GetInput
+      [&](uint32_t n, uint32_t index)->uint32_t {  // GetInput
         const Node& node = nodes[n];
         if (index < node.inputs.size()) {
           return node.inputs.at(index).source_id;

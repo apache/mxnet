@@ -355,12 +355,12 @@ void GraphExecutor::InitGraph(const Symbol &symbol,
           pass.push_back(n);
         }},  // FVisit
       [](uint32_t n)->uint32_t { return n; },  // HashFunc
-      [=](uint32_t n)->uint32_t {  // InDegree
+      [&](uint32_t n)->uint32_t {  // InDegree
         if (finished.count(n) == 1) { return 0; }
         const StaticGraph::Node& node = graph_.nodes[n];
         return node.inputs.size() + static_cast<uint32_t>(node.is_backward());
       },
-      [=](uint32_t n, uint32_t index)->uint32_t {  // GetInput
+      [&](uint32_t n, uint32_t index)->uint32_t {  // GetInput
         const StaticGraph::Node& node = graph_.nodes[n];
         if (index < node.inputs.size()) {
           return node.inputs.at(index).source_id;

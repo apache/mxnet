@@ -236,16 +236,6 @@ NULL
 #' @name mx.nd.sum
 NULL
 
-#' Take sum on medium dimension of the 3D src.
-#' 
-#' @param src  NDArray
-#'     Source input to the function
-#' @return out The result mx.ndarray
-#' 
-#' @export
-#' @name mx.nd.sum.mid.internal
-NULL
-
 #' Transpose the input matrix and return a new one
 #' 
 #' @param src  NDArray

@@ -42,7 +42,9 @@ val mxnet = new MXNet()
   .setNumEpoch(10)
   .setNumServer(2)
   .setNumWorker(4)
-  .setExecutorClasspath(cmdLine.jars)
+  // These jars are required by the KVStores at runtime.
+  // They will be uploaded and distributed to each node automatically
+  .setExecutorJars(cmdLine.jars)
 ```
 
 Now load data and do distributed training,
@@ -81,8 +83,8 @@ res.saveAsTextFile(cmdLine.output + "/data")
 Pitfalls
 ------------
 
-- Currently, the `assembly` jar (or the `core` jar with `libmxnet-scala`) have to be deployed to every node in the Spark cluster beforehand, and specify the local `classpath` in the submit command. We will make it able to upload those jars and distribute to all the worker nodes automatically in next version.
 - Sometime you have to specify the `java` argument, to help MXNet find the right java binary on worker nodes.
 - MXNet and [ps-lite](https://github.com/dmlc/ps-lite) currently do NOT support multiple instances in one process, (we will fix this issue in the future, but with lower priority.) thus you must run Spark job in cluster mode (standalone, yarn-client, yarn-cluster). Local mode is NOT supported because it runs tasks in multiples threads with one process, which will block the initialization of KVStore.
 (Hint: If you only have one physical node and want to test the Spark package, you can start N workers on one node by setting `export SPARK_WORKER_INSTANCES=N` in `spark-env.sh`.)
 Also, remember to set `--executor-cores 1` to ensure there's only one task run in one Spark executor.
+- Fault tolerance is not fully supported. If some of your tasks fail, please restart the whole application. We will solve it soon.

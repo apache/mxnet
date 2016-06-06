@@ -155,6 +155,10 @@ class BucketingModule(BaseModule):
         shared_module : BucketingModule
             Default is `None`. This value is currently not used.
         """
+        # in case we already initialized params, keep it
+        if self.params_initialized:
+            arg_params, aux_params = self.get_params()
+
         # force rebinding is typically used when one want to switch from
         # training to prediction phase.
         if force_rebind:
@@ -163,10 +167,6 @@ class BucketingModule(BaseModule):
         if self.binded:
             self.logger.warning('Already binded, ignoring bind()')
             return
-
-        # in case we already initialized params, keep it
-        if self.params_initialized:
-            arg_params, aux_params = self.get_params()
 
         assert shared_module is None, 'shared_module for BucketingModule is not supported'
 

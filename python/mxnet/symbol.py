@@ -1129,6 +1129,80 @@ def pow(base, exp):
         raise TypeError('types (%s, %s) not supported' % (str(type(base)), str(type(exp))))
 
 
+# pylint: disable= undefined-variable, too-many-branches
+def _reduce(data, axis=None, keepdims=False, name=None, typ='sum'):
+    """ Reduce the array along given axis. The semantic strictly follows numpy's document.
+
+    Parameters
+    ----------
+    data : Symbol
+        the array to be reduced
+    axis : int or list(int), optional
+        along which axis to do reduction
+    keepdims : bool
+        whether the reduced axis should be kept in the final shape
+
+    Returns
+    -------
+    out: Symbol
+        Symbol represents the reduced Array.
+    """
+    if 'sum' == typ:
+        reduce_func = sum_axis
+    else:
+        raise TypeError('typ=\'%s\' is not supported.' % typ)
+    if axis is None:
+        ret = reduce_func(data, axis=-1, keepdims=keepdims, name=name)
+        return ret
+    elif isinstance(axis, int):
+        axis = [axis]
+    elif isinstance(axis, tuple) or isinstance(axis, list):
+        axis = list(axis)
+    else:
+        raise TypeError('\'%s\' object is not supported as axis.' % type(axis).__name__)
+
+    for i in axis:
+        if not isinstance(i, int):
+            raise TypeError('\'%s\' object cannot be interpreted as an integer' % type(i).__name__)
+    axis = sorted(axis)
+    for i in axis:
+        if i < 0:
+            raise ValueError('\'axis\' entry is out of bounds')
+    if len(set(axis)) != len(axis):
+        raise ValueError('duplicate value in \'axis\'')
+    assert (len(axis) != 0)
+    ret = data
+    for (i, ele) in enumerate(reversed(axis)):
+        if i == (len(axis) - 1):
+            ret = reduce_func(ret, axis=ele, keepdims=keepdims, name=name)
+        else:
+            ret = reduce_func(ret, axis=ele, keepdims=keepdims)
+    return ret
+# pylint: enable= undefined-variable, too-many-branches
+
+
+def sum(data, axis=None, keepdims=False, name=None):
+    """ Calculate the sum of the array along given axis.
+    The semantic strictly follows numpy's document.
+
+    Parameters
+    ----------
+    data : Symbol
+        the array to be reduced
+    axis : int or list(int), optional
+        along which axis to do reduction
+    keepdims : bool
+        whether the reduced axis should be kept in the final shape
+
+    Returns
+    -------
+    out: Symbol
+        Symbol represents the reduced Array.
+    """
+    return _reduce(data=data, axis=axis, keepdims=keepdims, name=name, typ='sum')
+
+
+
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def maximum(left, right):
