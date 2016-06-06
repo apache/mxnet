@@ -63,7 +63,7 @@ def main():
         if layer_type == 'Convolution' or layer_type == 'InnerProduct' or layer_type == 4 or layer_type == 14:
             assert(len(layer_blobs) == 2)
             wmat_dim = []
-            if len(layer_blobs[0].shape) > 0:
+            if len(layer_blobs[0].shape.dim) > 0:
                 wmat_dim = layer_blobs[0].shape.dim
             else:
                 wmat_dim = [layer_blobs[0].num, layer_blobs[0].channels, layer_blobs[0].height, layer_blobs[0].width]
