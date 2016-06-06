@@ -3,6 +3,7 @@
 """numpy interface for operators."""
 from __future__ import absolute_import
 
+from threading import Lock
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer
 from ctypes import c_void_p, cast, c_int, c_char, c_char_p, cast, c_bool
 c_int_p = POINTER(c_int)
@@ -529,7 +530,22 @@ class CustomOpProp(object):
         # pylint: disable=W0613
         return CustomOp()
 
-_registry_ref_holder = []
+class _Registry(object):
+    """CustomOp registry"""
+    def __init__(self):
+        self.ref_holder = {}
+        self.counter = 0
+        self.lock = Lock()
+
+    def inc(self):
+        """Get index for new entry"""
+        self.lock.acquire()
+        cur = self.counter
+        self.counter += 1
+        self.lock.release()
+        return cur
+
+_registry = _Registry()
 
 def register(reg_name):
     """Register a subclass of CustomOpProp to the registry with name reg_name."""
@@ -537,13 +553,16 @@ def register(reg_name):
         """Register a subclass of CustomOpProp to the registry."""
         fb_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_void_p), POINTER(c_int),
                                 POINTER(c_int), c_bool, c_void_p)
+        del_functype = CFUNCTYPE(c_bool, c_void_p)
         class CustomOpInfo(Structure):
             """Structure that holds Callback information. Passed to CustomOpProp"""
             _fields_ = [
                 ('forward', fb_functype),
                 ('backward', fb_functype),
+                ('delete', del_functype),
                 ('p_forward', c_void_p),
-                ('p_backward', c_void_p)
+                ('p_backward', c_void_p),
+                ('p_delete', c_void_p)
                 ]
 
         infer_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_int),
@@ -563,12 +582,14 @@ def register(reg_name):
                 ('declare_backward_dependency', deps_functype),
                 ('create_operator', createop_functype),
                 ('list_auxiliary_states', list_functype),
+                ('delete', del_functype),
                 ('p_list_arguments', c_void_p),
                 ('p_list_outputs', c_void_p),
                 ('p_infer_shape', c_void_p),
                 ('p_declare_backward_dependency', c_void_p),
                 ('p_create_operator', c_void_p),
-                ('p_list_auxiliary_states', c_void_p)
+                ('p_list_auxiliary_states', c_void_p),
+                ('p_delete', c_void_p)
                 ]
         req_enum = ['null', 'write', 'inplace', 'add']
 
@@ -724,12 +745,36 @@ def register(reg_name):
                             return False
                         return True
 
+                    cur = _registry.inc()
+
+                    def delete_entry(_):
+                        """C Callback for CustomOp::del"""
+                        try:
+                            del _registry.ref_holder[cur]
+                        except Exception as e:
+                            print('Error in CustomOp.delete: ', str(e))
+                            return False
+                        return True
+
                     ret[0] = CustomOpInfo(fb_functype(forward_entry),
-                                          fb_functype(backward_entry), None, None)
+                                          fb_functype(backward_entry),
+                                          del_functype(delete_entry),
+                                          None, None, None)
                     op._ref_holder = [ret]
-                    op_prop._ref_holder.append(op)
+                    _registry.ref_holder[cur] = op
                 except Exception as e:
                     print('Error in %s.create_operator: '%reg_name, str(e))
+                    return False
+                return True
+
+            cur = _registry.inc()
+
+            def delete_entry(_):
+                """C Callback for CustomOpProp::del"""
+                try:
+                    del _registry.ref_holder[cur]
+                except Exception as e:
+                    print('Error in CustomOpProp.delete: ', str(e))
                     return False
                 return True
 
@@ -739,16 +784,18 @@ def register(reg_name):
                                       deps_functype(declare_backward_dependency_entry),
                                       createop_functype(create_operator_entry),
                                       list_functype(list_auxiliary_states_entry),
-                                      None, None, None, None, None, None)
+                                      del_functype(delete_entry),
+                                      None, None, None, None, None, None, None)
             op_prop._ref_holder = [ret]
-            _registry_ref_holder.append(op_prop)
+            _registry.ref_holder[cur] = op_prop
             return True
 
         creator_functype = CFUNCTYPE(c_bool, c_char_p, c_int, POINTER(c_char_p),
                                      POINTER(c_char_p), POINTER(CustomOpPropInfo))
         creator_func = creator_functype(creator)
         check_call(_LIB.MXCustomOpRegister(c_str(reg_name), creator_func))
-        _registry_ref_holder.append(creator_func)
+        cur = _registry.inc()
+        _registry.ref_holder[cur] = creator_func
         return prop_cls
     return do_register
 
