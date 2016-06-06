@@ -1,9 +1,11 @@
 # pylint: skip-file
 import numpy as np
 import mxnet as mx
+import random
 from numpy.testing import assert_allclose
 from check_utils import (check_numeric_gradient, check_symbolic_backward,
-                         check_symbolic_forward, reldiff)
+                         check_symbolic_forward, reldiff, _np_reduce)
+
 
 def same(a, b):
     return np.sum(a != b) == 0
@@ -887,6 +889,8 @@ def test_reshape():
     def test_reshape_new(src_shape, shape_args, dst_shape):
         net = mx.sym.Variable("data")
         net = mx.sym.Reshape(net, shape=shape_args)
+        js = net.tojson()
+        net = mx.sym.load_json(js)
         _, output_shape, __ = net.infer_shape(data=src_shape)
         assert output_shape[0] == dst_shape, \
             'Src Shape = %s, Shape Arguments = %s, Dst Shape = %s, Output Shape = %s' \
@@ -917,31 +921,131 @@ def test_reshape():
     # Test old api
     net = mx.sym.Variable("data")
     net = mx.sym.Reshape(net, target_shape=(2, 0))
+    js = net.tojson()
+    net = mx.sym.load_json(js)
     _, output_shape, __ = net.infer_shape(data=(2, 3, 5, 5))
     assert(output_shape[0] == (2, 75))
 
+def test_reduce():
+    sample_num = 1000
+    def test_reduce_inner(numpy_reduce_func, numpy_reduce_grad_func, mx_reduce_sym):
+        for i in range(sample_num):
+            # Generate random data that has ndim between 1-7 and all the shape dims between 1-10
+            ndim = np.random.randint(1, 8)
+            shape = np.random.randint(1, 11, size=(ndim,))
+            axis_num = np.random.randint(0, ndim, size=1)
+            axis_flags = np.random.randint(0, 2, size=ndim)
+            axes = []
+            for (axis, flag) in enumerate(axis_flags):
+                if flag:
+                    axes.append(axis)
+            if 0 == len(axes):
+                axes = None
+            else:
+                axes = tuple(axes)
+            keepdims = np.random.randint(0, 2)
+            a = mx.symbol.Variable('a')
+            b = mx_reduce_sym(a, axis=axes, keepdims=keepdims)
+            dat_npy = np.random.rand(*shape)
+            sum_groundtruth = np.array(numpy_reduce_func(dat_npy, axis=axes, keepdims=keepdims))
+            if sum_groundtruth.shape == ():
+                sum_groundtruth = np.array([sum_groundtruth])
+            grad_nd = mx.nd.empty(shape)
+            outgrad_npy = np.array(np.random.rand(*sum_groundtruth.shape))
+            grad_groundtruth = numpy_reduce_grad_func(outgrad=outgrad_npy, data=dat_npy,
+                                                      axis=axes, keepdims=keepdims)
+            net = b.bind(mx.cpu(), args={'a': mx.nd.array(dat_npy)},
+                         args_grad={'a': grad_nd})
+            net.forward(is_train=True)
 
-def test_sum_mid_internal():
-    a = mx.symbol.Variable('a')
-    b = mx.symbol.sum_mid_internal(a)
+            err_forward = np.square(net.outputs[0].asnumpy() - sum_groundtruth).sum()/np.prod(shape)
+            assert err_forward < 1E-6
+            net.backward(out_grads=mx.nd.array(outgrad_npy))
+            err_backward = np.square(grad_nd.asnumpy() - grad_groundtruth).sum()
+            assert err_backward < 1E-6
+    test_reduce_inner(lambda data, axis, keepdims:_np_reduce(data, axis, keepdims, np.sum),
+                      lambda outgrad, data, axis, keepdims:
+                        outgrad.reshape(_np_reduce(data, axis, 1, np.sum).shape),
+                      mx.symbol.sum)
 
-    for i in range(1, 10):
-        for j in range(1, 10):
-            for k in range(1, 10):
-                a_npy = np.random.rand(i, j, k)
-                a_grad = mx.nd.empty((i, j, k))
-                b_grad_npy = np.random.rand(i, k)
-                net = b.bind(mx.cpu(), args={'a': mx.nd.array(a_npy)},
-                             args_grad={'a': a_grad})
-                net.forward(is_train=True)
-                assert np.square(net.outputs[0].asnumpy() - a_npy.sum(axis=1)).mean() < 1E-6,\
-                    np.square(net.outputs[0].asnumpy() - a_npy.sum(axis=1)).mean()
-                net.backward(out_grads=mx.nd.array(b_grad_npy))
-                assert np.square(a_grad.asnumpy() - b_grad_npy.reshape((i, 1, k))).mean() < 1E-6
+def test_broadcast():
+    sample_num = 1000
+    def test_broadcast_axis():
+        for i in range(sample_num):
+            # Generate random data that has ndim between 1-7 and all the shape dims between 1-10
+            ndim = np.random.randint(1, 8)
+            target_shape = np.random.randint(1, 11, size=(ndim,))
+            axis = np.random.randint(0, ndim)
+            shape = target_shape.copy()
+            size = shape[axis]
+            shape[axis] = 1
+            a = mx.symbol.Variable('a')
+            b = mx.symbol.broadcast_axis(a, axis=axis, size=size)
+            dat_npy = np.random.rand(*shape)
+            groundtruth = dat_npy
+            grad_nd = mx.nd.empty(shape)
+            outgrad_npy = np.random.rand(*target_shape)
+            grad_groundtruth = _np_reduce(outgrad_npy, axis=axis, keepdims=True,
+                                          numpy_reduce_func=np.sum)
+            net = b.bind(mx.cpu(), args={'a': mx.nd.array(dat_npy)},
+                         args_grad={'a': grad_nd})
+            net.forward(is_train=True)
+            assert (net.outputs[0].shape == target_shape).all()
+            err_forward = np.square(net.outputs[0].asnumpy() - groundtruth).mean()
+            assert err_forward < 1E-8
+            net.backward(out_grads=mx.nd.array(outgrad_npy))
+            err_backward = np.square(grad_nd.asnumpy() - grad_groundtruth).mean()
+            assert err_backward < 1E-8
+    test_broadcast_axis()
 
+def test_transpose():
+    for ndim in range(1, 6):
+        for t in range(5):
+            dims = list(np.random.randint(1, 10, size=ndim))
+            axes = list(range(ndim))
+            random.shuffle(axes)
+            axes = tuple(axes)
+            x = mx.nd.array(np.random.normal(size=dims))
+            y = mx.nd.transpose(x, axes=axes)
+            assert_allclose(np.transpose(x.asnumpy(), axes=axes), y.asnumpy())
+
+            y = mx.nd.transpose(x)
+            assert_allclose(np.transpose(x.asnumpy()), y.asnumpy())
+
+def test_crop():
+    for ndim in range(1, 6):
+        for t in range(5):
+            dims = []
+            begin = []
+            end = []
+            idx = []
+            for i in range(ndim):
+                d = random.randint(1, 10)
+                b = random.randint(0, d-1)
+                e = random.randint(b+1, d)
+                dims.append(d)
+                begin.append(b)
+                end.append(e)
+                idx.append(slice(b, e))
+            x = mx.nd.array(np.random.normal(size=dims))
+            y = mx.nd.crop(x, begin=tuple(begin), end=tuple(end))
+            assert_allclose(x.asnumpy()[idx], y.asnumpy())
+
+def test_flip():
+    for ndim in range(1, 6):
+        for t in range(5):
+            dims = [random.randint(1,10) for i in range(ndim)]
+            axis = random.randint(0, ndim-1)
+            idx = [slice(None, None, -1) if i == axis else slice(None, None) for i in range(ndim)]
+            x = mx.nd.array(np.random.normal(size=dims))
+            y = mx.nd.flip(x, axis=axis)
+            assert_allclose(x.asnumpy()[idx], y.asnumpy())
 
 if __name__ == '__main__':
     test_broadcast_binary_op()
+    test_flip()
+    test_crop()
+    test_transpose()
     test_convolution_grouping()
     test_nearest_upsampling()
     test_binary_op_duplicate_input()
@@ -966,6 +1070,7 @@ if __name__ == '__main__':
     check_softmax_with_ignore_label(mx.cpu())
     test_convolution_dilated_impulse_response()
     test_reshape()
-    test_sum_mid_internal()
+    test_reduce()
+    test_broadcast()
     #check_softmax_with_shape((3,4), mx.cpu())
     #check_multi_softmax_with_shape((3,4,5), mx.cpu())

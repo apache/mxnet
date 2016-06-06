@@ -3,7 +3,7 @@ package ml.dmlc.mxnet.spark
 import ml.dmlc.mxnet._
 import ml.dmlc.mxnet.optimizer.SGD
 import ml.dmlc.mxnet.spark.io.LabeledPointIter
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkFiles, SparkContext}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 import org.slf4j.{Logger, LoggerFactory}
@@ -61,9 +61,13 @@ class MXNet extends Serializable {
     this
   }
 
-  // TODO: upload to a shared storage from driver
-  def setExecutorClasspath(classpath: String): this.type = {
-    params.classpath = classpath
+  /**
+   * These jars are required by the KVStores at runtime.
+   * They will be uploaded and distributed to each node automatically
+   * @param jars jars required by the KVStore at runtime.
+   */
+  def setExecutorJars(jars: String): this.type = {
+    params.jars = jars.split(",|:")
     this
   }
 
@@ -74,6 +78,9 @@ class MXNet extends Serializable {
 
   def fit(data: RDD[LabeledPoint]): MXNetModel = {
     val sc = data.context
+    // distribute native jars
+    params.jars.foreach(jar => sc.addFile(jar))
+
     val trainData = {
       if (params.numWorker > data.partitions.length) {
         logger.info("repartitioning training set to {} partitions", params.numWorker)
@@ -90,14 +97,14 @@ class MXNet extends Serializable {
     val schedulerPort = utils.Network.availablePort
     // TODO: check ip & port available
     logger.info("Starting scheduler on {}:{}", schedulerIP, schedulerPort)
-    val scheduler = new ParameterServer(params.classpath, role = "scheduler",
+    val scheduler = new ParameterServer(params.runtimeClasspath, role = "scheduler",
       rootUri = schedulerIP, rootPort = schedulerPort,
       numServer = params.numServer, numWorker = params.numWorker, java = params.javabin)
     require(scheduler.startProcess(), "Failed to start ps scheduler process")
 
     sc.parallelize(1 to params.numServer, params.numServer).foreachPartition { p =>
       logger.info("Starting server ...")
-      val server = new ParameterServer(params.classpath,
+      val server = new ParameterServer(params.runtimeClasspath,
         role = "server",
         rootUri = schedulerIP, rootPort = schedulerPort,
         numServer = params.numServer,

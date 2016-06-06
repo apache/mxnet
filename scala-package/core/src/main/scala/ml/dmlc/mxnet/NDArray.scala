@@ -703,6 +703,19 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   }
 
   /**
+   * Return a reshaped NDArray that shares memory with current one.
+   *
+   * @param dims New shape.
+   *
+   * @return a reshaped NDArray that shares memory with current one.
+   */
+  def reshape(dims: Array[Int]): NDArray = {
+    val reshapeHandle = new NDArrayHandleRef
+    checkCall(_LIB.mxNDArrayReshape(handle, dims.length, dims, reshapeHandle))
+    new NDArray(handle = reshapeHandle.value, writable = this.writable)
+  }
+
+  /**
    * Block until all pending writes operations on current NDArray are finished.
    * This function will return when all the pending writes to the current
    * NDArray finishes. There can still be pending read going on when the

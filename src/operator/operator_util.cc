@@ -510,6 +510,41 @@ class SimpleOpPropBase : public OperatorProperty {
     return source->resource_requests_;
   }
 
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    CHECK_LE(in_type->size(), this->ListArguments().size());
+    int dtype = -1;
+    // reduce dtype to a common one.
+    for (unsigned i = 0; i < in_type->size(); ++i) {
+      if (dtype == -1) {
+        dtype = in_type->at(i);
+      } else {
+        CHECK(in_type->at(i) == -1 ||
+              in_type->at(i) == dtype) <<
+          "Non-uniform input data type. Expected " << dtype << "got " << in_type->at(i);
+      }
+    }
+
+    if (dtype == -1) {
+      LOG(FATAL) << "At least one input type needs to be specified.";
+      return false;
+    }
+
+    int n_in = this->ListArguments().size();
+    in_type->clear();
+    for (int i = 0; i < n_in; ++i) in_type->push_back(dtype);
+
+    int n_out = this->ListOutputs().size();
+    out_type->clear();
+    for (int i = 0; i < n_out; ++i) out_type->push_back(dtype);
+
+    int n_aux = this->ListAuxiliaryStates().size();
+    aux_type->clear();
+    for (int i = 0; i < n_aux; ++i) aux_type->push_back(dtype);
+    return true;
+  }
+
   std::string TypeString() const override {
     return name;
   }

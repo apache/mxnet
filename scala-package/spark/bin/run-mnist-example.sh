@@ -4,13 +4,11 @@ MODULE_DIR=$(cd $CURR_DIR/../; pwd)
 ROOT_DIR=$(cd $CURR_DIR/../../; pwd)
 
 
-LIB_DIR=${MODULE_DIR}/target/classes/lib/
+LIB_DIR=${MODULE_DIR}/target/classes/lib
 JAR=${MODULE_DIR}/target/mxnet-spark_2.10-0.1.2-SNAPSHOT.jar
+
 LIBS=${ROOT_DIR}/assembly/linux-x86_64-cpu/target/mxnet-full_2.10-linux-x86_64-cpu-0.1.2-SNAPSHOT.jar
-for jar in `ls ${LIB_DIR}/*.jar`; do
-  [ ! -z ${LIBS} ] && LIBS="${LIBS},"
-  LIBS="${LIBS}$jar";
-done
+LIBS="${LIBS},${LIB_DIR}/args4j-2.0.29.jar,${LIB_DIR}/scala-library-2.10.4.jar,${JAR}"
 
 SPARK_OPTS+=" --name mxnet"
 SPARK_OPTS+=" --driver-memory 1g"
@@ -26,11 +24,12 @@ SPARK_OPTS+=" --jars ${LIBS}"
 # https://s3-us-west-2.amazonaws.com/mxnet.liuyz/data/mnist/val.txt
 
 # running opts
-RUN_JARS="${MXNET}/scala-package/assembly/linux-x86_64-cpu/target/*:${MXNET}/scala-package/spark/target/classes/lib/*:${MXNET}/scala-package/spark/target/*"
 RUN_OPTS+=" --input ${INPUT_TRAIN}"
 RUN_OPTS+=" --input-val ${INPUT_VAL}"
 RUN_OPTS+=" --output ${OUTPUT}"
-RUN_OPTS+=" --jars ${RUN_JARS}"
+# These jars are required by the KVStores at runtime.
+# They will be uploaded and distributed to each node automatically.
+RUN_OPTS+=" --jars ${LIBS}"
 RUN_OPTS+=" --num-server 1"
 RUN_OPTS+=" --num-worker 2"
 RUN_OPTS+=" --java /usr/local/jdk1.8.0_60/bin/java"

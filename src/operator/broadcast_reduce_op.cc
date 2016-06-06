@@ -5,3 +5,9 @@
  */
 // this will be invoked by gcc and compile CPU version
 #include "./broadcast_reduce_op-inl.h"
+namespace mxnet {
+namespace op {
+  DMLC_REGISTER_PARAMETER(ReduceAxisParam);
+  DMLC_REGISTER_PARAMETER(BroadcastAxisParam);
+}  // namespace op
+}  // namespace mxnet

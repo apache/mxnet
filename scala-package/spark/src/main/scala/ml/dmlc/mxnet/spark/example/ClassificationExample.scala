@@ -41,7 +41,7 @@ object ClassificationExample {
         .setNumEpoch(cmdLine.numEpoch)
         .setNumServer(cmdLine.numServer)
         .setNumWorker(cmdLine.numWorker)
-        .setExecutorClasspath(cmdLine.jars)
+        .setExecutorJars(cmdLine.jars)
         .setJava(cmdLine.java)
 
       val trainData = parseRawData(sc, cmdLine.input)
