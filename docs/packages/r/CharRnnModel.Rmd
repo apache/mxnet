@@ -34,12 +34,10 @@ download the data.
 ```{r}
 download.data <- function(data_dir) {
     dir.create(data_dir, showWarnings = FALSE)
-    setwd(data_dir)
-    if (!file.exists('input.txt')) {
+    if (!file.exists(paste0(data_dir,'input.txt'))) {
         download.file(url='https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tinyshakespeare/input.txt',
-                      destfile='input.txt', method='wget')
+                      destfile=paste0(data_dir,'input.txt'), method='wget')
     }
-    setwd("..")
 }
 ```
 Make dictionary from text.
