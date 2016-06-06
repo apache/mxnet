@@ -621,7 +621,7 @@ class FeedForward(BASE_ESTIMATOR):
                     data_list[j].append(x[0:real_size].asnumpy())
                 for j, x in enumerate(batch.label):
                     label_list[j].append(x[0:real_size].asnumpy())
-            i += 1            
+            i += 1
             if num_batch is not None and i == num_batch:
                 break
 
