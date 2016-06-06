@@ -376,7 +376,7 @@ inline TShape FlipShape(const TShape& shp,
                         const EnvArguments& env) {
   FlipParam param;
   param.Init(env.kwargs);
-  CHECK(param.axis < shp.ndim() && param.axis >= 0);
+  CHECK(param.axis < static_cast<int>(shp.ndim()) && param.axis >= static_cast<int>(0));
   return shp;
 }
 
