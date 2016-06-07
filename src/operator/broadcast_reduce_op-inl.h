@@ -46,7 +46,7 @@ inline TShape ReduceAxisShape(const TShape& ishape,
   const EnvArguments& env) {
   ReduceAxisParam param;
   param.Init(env.kwargs);
-  CHECK(param.axis < ishape.ndim() || -1 == param.axis) <<
+  CHECK(param.axis < static_cast<int>(ishape.ndim()) || -1 == param.axis) <<
     "axis must be smaller than the source ndim or equal to -1! Received axis=" <<
     param.axis << ", src_ndim=" << ishape.ndim();
   if (param.axis == -1 || (1 == ishape.ndim())) {
@@ -58,7 +58,7 @@ inline TShape ReduceAxisShape(const TShape& ishape,
   }
   std::vector<mshadow::index_t> shape;
   for (index_t i = 0; i < ishape.ndim(); ++i) {
-    if (i == param.axis) {
+    if (static_cast<int>(i) == param.axis) {
       if (param.keepdims) {
         shape.push_back(1);
       }
@@ -73,14 +73,14 @@ inline TShape BroadcastAxisShape(const TShape& ishape,
   const EnvArguments& env) {
   BroadcastAxisParam param;
   param.Init(env.kwargs);
-  CHECK(param.axis < ishape.ndim()) <<
+  CHECK(param.axis < static_cast<int>(ishape.ndim())) <<
     "axis must be smaller than the source ndim" << param.axis << ", src_ndim=" << ishape.ndim();
   CHECK_EQ(ishape[param.axis], 1) <<
     "Size of the broadcasting axis in the source must be 1, axis=" << param.axis
     << ", size=" << ishape[param.axis];
   std::vector<mshadow::index_t> shape;
   for (index_t i = 0; i < ishape.ndim(); ++i) {
-    if (i != param.axis) {
+    if (static_cast<int>(i) != param.axis) {
       shape.push_back(ishape[i]);
     } else {
       shape.push_back(param.size);
@@ -315,7 +315,6 @@ void BroadcastAxisGrad_(const OutputGrad& out_grad,
   RunContext ctx) {
   using namespace mxnet::op;
   using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   BroadcastAxisParam param;
   param.Init(env.kwargs);
   CHECK(param.axis < in_grad->shape_.ndim()) <<
