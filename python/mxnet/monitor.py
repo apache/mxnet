@@ -3,7 +3,7 @@
 """Monitor outputs, weights, and gradients for debugging."""
 import ctypes
 from .ndarray import NDArray
-from .base import NDArrayHandle
+from .base import NDArrayHandle, py_str
 from . import ndarray
 import logging
 from math import sqrt
@@ -43,11 +43,11 @@ class Monitor(object):
         self.sort = sort
         def stat_helper(name, array):
             """wrapper for executor callback"""
-            if not self.activated or not self.re_prog.match(name):
+            if not self.activated or not self.re_prog.match(py_str(name)):
                 return
             array = ctypes.cast(array, NDArrayHandle)
             array = NDArray(array, writable=False)
-            self.queue.append((self.step, name, self.stat_func(array)))
+            self.queue.append((self.step, py_str(name), self.stat_func(array)))
         self.stat_helper = stat_helper
 
     def install(self, exe):
