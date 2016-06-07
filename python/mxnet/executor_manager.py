@@ -239,7 +239,7 @@ class DataParallelExecutorGroup(object):
                     else:
                         data_shapes[k] = tuple([slices[i].stop - slices[i].start] + list(v[1:]))
                 else:
-                    data_shapes[k] = tuple([(slices[i].stop - slices[i].start) * v[0] / batch_size]
+                    data_shapes[k] = tuple([int((slices[i].stop - slices[i].start) * v[0] / batch_size)]
                                            + list(v[1:]))
 
             shared_exec = None if shared_group is None else shared_group.train_execs[i]
@@ -282,7 +282,7 @@ class DataParallelExecutorGroup(object):
     def update_metric(self, metric, labels):
         """ Update evaluation metric with label and current outputs """
         for texec, islice in zip(self.train_execs, self.slices):
-            n = texec.outputs[0].shape[0] / (islice.stop - islice.start)
+            n = int(texec.outputs[0].shape[0] / (islice.stop - islice.start))
             new_slice = slice(islice.start * n, islice.stop * n)
             labels_slice = [label[new_slice] for label in labels]
             metric.update(labels_slice, texec.outputs)
