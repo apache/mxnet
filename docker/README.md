@@ -35,7 +35,7 @@ Pre-built docker images are available at https://hub.docker.com/r/dmlc/mxnet/
    docker run dmlc/mxnet python /mxnet/example/image-classification/train_mnist.py
    ```
 
-If the host machine has Nvidia CPUs, we can use `dmlc/mxnet:gpu`, which has both CUDA and CUDNN installed.
+If the host machine has Nvidia GPUs, we can use `dmlc/mxnet:gpu`, which has both CUDA and CUDNN installed.
 To launch the docker, we need to install [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) first.
 
 1. Pull the image
