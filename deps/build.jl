@@ -30,8 +30,14 @@ if !libmxnet_detected
 
   openblas_path = Libdl.dlpath(Libdl.dlopen(Base.libblas_name))
 
+  if VERSION >= v"0.5.0-dev+4338"
+    blas_vendor = Base.BLAS.vendor()
+  else
+    blas_vendor = Base.blas_vendor()
+  end
+
   ilp64 = ""
-  if Base.blas_vendor() == :openblas64
+  if blas_vendor == :openblas64
     ilp64 = "-DINTERFACE64"
   end
 
