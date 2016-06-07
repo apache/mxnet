@@ -239,8 +239,8 @@ class DataParallelExecutorGroup(object):
                     else:
                         data_shapes[k] = tuple([slices[i].stop - slices[i].start] + list(v[1:]))
                 else:
-                    data_shapes[k] = tuple([int((slices[i].stop - slices[i].start) * v[0] / batch_size)]
-                                           + list(v[1:]))
+                    data_shapes[k] = tuple([int((slices[i].stop - slices[i].start) * v[0]
+                                           / batch_size)] + list(v[1:]))
 
             shared_exec = None if shared_group is None else shared_group.train_execs[i]
             train_exec = _bind_exec(sym, ctx[i], data_shapes, self.param_names,
