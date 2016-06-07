@@ -17,7 +17,7 @@ Model parallelism has been under heated discussion in applied machine learning r
 
 In the figure above, we assign different lstm model to different GPUs. After GPU1 finish computing layer 1 with first sentence. The output will be given to GPU 2. At the same time, GPU 1 will fetch the next sentence and start training. This is significantly different from data parallelism that there's no contention to update the shared model at the end of each iteration, and most of the communication happens during pipelining intermediate results between GPU's. 
 
-In the current implementation, the layers are defined in [lstm_unroll()](https://github.com/eric-haibin-lin/mxnet/blob/master/example/model-parallel-lstm/lstm.py#L187). 
+In the current implementation, the layers are defined in [lstm_unroll()](https://github.com/dmlc/mxnet/blob/master/example/model-parallel-lstm/lstm.py). 
 
 ## Workload Partitioning
 
