@@ -59,7 +59,11 @@ function test_arithmetic()
     test_arithmetic(T, .+, (g,x,y) -> (g,g))
     test_arithmetic(T, .-, (g,x,y) -> (g,-g))
     test_arithmetic(T, .*, (g,x,y) -> (y.*g, x.*g))
-    T <: Integer || test_arithmetic(T, ./, (g,x,y) -> (g ./ y, -x .* g ./ (y.^2)))
+    if T <: Integer || T == Float16
+      warn("Not running division test for $T")
+    else
+      test_arithmetic(T, ./, (g,x,y) -> (g ./ y, -x .* g ./ (y.^2)))
+    end
   end
 end
 
