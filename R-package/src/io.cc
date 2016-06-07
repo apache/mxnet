@@ -126,7 +126,7 @@ bool ArrayDataIter::Next() {
 }
 
 int ArrayDataIter::NumPad() const {
-  if (counter_ == num_data) {
+  if (counter_ == label_.size()) {
     return static_cast<int>(num_pad_);
   } else {
     return 0;
