@@ -230,7 +230,9 @@ class ConvolutionOp : public Operator {
                               param_.kernel[0],
                               param_.kernel[1],
                               param_.stride[0],
-                              param_.dilate[0]));
+                              param_.stride[1],
+                              param_.dilate[0],
+                              param_.dilate[1]));
       } else {
         Shape<4> pshape = data.Slice(i, i + step).shape_;
         pshape[2] += 2 * param_.pad[0];
@@ -241,7 +243,9 @@ class ConvolutionOp : public Operator {
                                    param_.kernel[0],
                                    param_.kernel[1],
                                    param_.stride[0],
-                                   param_.dilate[0]),
+                                   param_.stride[1],
+                                   param_.dilate[0],
+                                   param_.dilate[1]),
                     gdata[i][0].shape_));
       }
     }
