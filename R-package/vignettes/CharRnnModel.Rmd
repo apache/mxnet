@@ -24,7 +24,7 @@ seq.len = 32
 num.hidden = 256
 num.embed = 256
 num.lstm.layer = 2
-num.round = 5
+num.round = 3
 learning.rate= 0.1
 wd=0.00001
 clip_gradient=1
@@ -161,6 +161,7 @@ model <- mx.lstm(X.train, X.val,
                  clip_gradient=clip_gradient)
 
 ```
+Setting the parameters ctx=mx.gpu(0) and num.round=5 can get the following result.
 ```
 Epoch [31] Train: NLL=3.47213018872144, Perp=32.2052727363657
 ...
