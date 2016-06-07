@@ -9,7 +9,7 @@ function test_scalar_op()
   shape = rand_dims()
   info("Operator::scalar_op::dims = $shape")
 
-  data_jl  = 5ones(shape)
+  data_jl  = 5ones(Float32, shape)
   arr_data = mx.copy(data_jl, mx.cpu())
   arr_grad = mx.zeros(shape)
 

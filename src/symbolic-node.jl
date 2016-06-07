@@ -236,53 +236,52 @@ function Group(nodes :: SymbolicNode...)
   SymbolicNode(MX_SymbolHandle(ref_hdr[]))
 end
 
-macro _infer_shape(self, keys, indptr, sdata)
-  quote
-    ref_arg_shape_size = Ref{MX_uint}(0)
-    ref_arg_shape_ndim = Ref{Ptr{MX_uint}}(0)
-    ref_arg_shape_data = Ref{Ptr{Ptr{MX_uint}}}(0)
-    ref_out_shape_size = Ref{MX_uint}(0)
-    ref_out_shape_ndim = Ref{Ptr{MX_uint}}(0)
-    ref_out_shape_data = Ref{Ptr{Ptr{MX_uint}}}(0)
-    ref_aux_shape_size = Ref{MX_uint}(0)
-    ref_aux_shape_ndim = Ref{Ptr{MX_uint}}(0)
-    ref_aux_shape_data = Ref{Ptr{Ptr{MX_uint}}}(0)
-    ref_complete       = Ref{Cint}(0)
-    @mxcall(:MXSymbolInferShape,
-            (MX_handle, MX_uint, char_pp, Ptr{MX_uint}, Ptr{MX_uint},
-             Ref{MX_uint}, Ref{Ptr{MX_uint}}, Ref{Ptr{Ptr{MX_uint}}},
-             Ref{MX_uint}, Ref{Ptr{MX_uint}}, Ref{Ptr{Ptr{MX_uint}}},
-             Ref{MX_uint}, Ref{Ptr{MX_uint}}, Ref{Ptr{Ptr{MX_uint}}},
-             Ref{Cint}),
-            self, length(indptr)-1, keys, indptr, sdata,
-            ref_arg_shape_size, ref_arg_shape_ndim, ref_arg_shape_data,
-            ref_out_shape_size, ref_out_shape_ndim, ref_out_shape_data,
-            ref_aux_shape_size, ref_aux_shape_ndim, ref_aux_shape_data,
-            ref_complete)
-    if ref_complete[] == 0
-      return (nothing, nothing, nothing)
-    else
-      function build_shapes(shape_size::MX_uint, shape_ndim::Ptr{MX_uint}, shape_data::Ptr{Ptr{MX_uint}})
-        shape_ndim = pointer_to_array(shape_ndim, shape_size)
-        shape_data = pointer_to_array(shape_data, shape_size)
-        shapes = map(1:shape_size) do i
-          my_shape = pointer_to_array(shape_data[i], shape_ndim[i])
-          tuple(flipdim(Int[my_shape...],1)...)
-        end
-        convert(Vector{Tuple}, shapes)
-      end
-      return (
-        build_shapes(ref_arg_shape_size[], ref_arg_shape_ndim[], ref_arg_shape_data[]),
-        build_shapes(ref_out_shape_size[], ref_out_shape_ndim[], ref_out_shape_data[]),
-        build_shapes(ref_aux_shape_size[], ref_aux_shape_ndim[], ref_aux_shape_data[])
-      )
-    end
+function _build_shapes(shape_size::MX_uint, shape_ndim::Ptr{MX_uint}, shape_data::Ptr{Ptr{MX_uint}})
+  shape_ndim = pointer_to_array(shape_ndim, shape_size)
+  shape_data = pointer_to_array(shape_data, shape_size)
+  shapes = map(1:shape_size) do i
+    my_shape = pointer_to_array(shape_data[i], shape_ndim[i])
+    tuple(flipdim(Int[my_shape...],1)...)
+  end
+  convert(Vector{Tuple}, shapes)
+end
+
+function _infer_shape(self, keys, indptr, sdata)
+  ref_arg_shape_size = Ref{MX_uint}(0)
+  ref_arg_shape_ndim = Ref{Ptr{MX_uint}}(0)
+  ref_arg_shape_data = Ref{Ptr{Ptr{MX_uint}}}(0)
+  ref_out_shape_size = Ref{MX_uint}(0)
+  ref_out_shape_ndim = Ref{Ptr{MX_uint}}(0)
+  ref_out_shape_data = Ref{Ptr{Ptr{MX_uint}}}(0)
+  ref_aux_shape_size = Ref{MX_uint}(0)
+  ref_aux_shape_ndim = Ref{Ptr{MX_uint}}(0)
+  ref_aux_shape_data = Ref{Ptr{Ptr{MX_uint}}}(0)
+  ref_complete       = Ref{Cint}(0)
+  @mxcall(:MXSymbolInferShape,
+          (MX_handle, MX_uint, char_pp, Ptr{MX_uint}, Ptr{MX_uint},
+           Ref{MX_uint}, Ref{Ptr{MX_uint}}, Ref{Ptr{Ptr{MX_uint}}},
+           Ref{MX_uint}, Ref{Ptr{MX_uint}}, Ref{Ptr{Ptr{MX_uint}}},
+           Ref{MX_uint}, Ref{Ptr{MX_uint}}, Ref{Ptr{Ptr{MX_uint}}},
+           Ref{Cint}),
+          self, length(indptr)-1, keys, indptr, sdata,
+          ref_arg_shape_size, ref_arg_shape_ndim, ref_arg_shape_data,
+          ref_out_shape_size, ref_out_shape_ndim, ref_out_shape_data,
+          ref_aux_shape_size, ref_aux_shape_ndim, ref_aux_shape_data,
+          ref_complete)
+  if ref_complete[] == 0
+    return (nothing, nothing, nothing)
+  else
+    return (
+      _build_shapes(ref_arg_shape_size[], ref_arg_shape_ndim[], ref_arg_shape_data[]),
+      _build_shapes(ref_out_shape_size[], ref_out_shape_ndim[], ref_out_shape_data[]),
+      _build_shapes(ref_aux_shape_size[], ref_aux_shape_ndim[], ref_aux_shape_data[])
+    )
   end
 end
 
 #=doc
 .. function::
-   infer_shape(self :: SymbolicNode; args...)
+   infer_shape(self :: SymbolicNode, args...)
    infer_shape(self :: SymbolicNode; kwargs...)
 
    Do shape inference according to the input shapes. The input shapes could be provided
@@ -302,7 +301,7 @@ function infer_shape(self :: SymbolicNode; kwargs...)
     push!(indptr, length(sdata))
   end
   keys = AbstractString[string(x[1]) for x in kwargs]
-  @_infer_shape(self, keys, indptr, sdata)
+  _infer_shape(self, keys, indptr, sdata)
 end
 function infer_shape(self :: SymbolicNode, args :: Union{Tuple, Void}...)
   sdata  = MX_uint[]
@@ -313,7 +312,71 @@ function infer_shape(self :: SymbolicNode, args :: Union{Tuple, Void}...)
     push!(indptr, length(sdata))
   end
   keys = Ptr{char_p}(0)
-  @_infer_shape(self, keys, indptr, sdata)
+  _infer_shape(self, keys, indptr, sdata)
+end
+
+function _infer_type(self, keys, arg_type_data)
+  ref_in_type_size  = Ref{MX_uint}()
+  ref_in_type_data  = Ref{Ptr{Cint}}()
+  ref_out_type_size = Ref{MX_uint}()
+  ref_out_type_data = Ref{Ptr{Cint}}()
+  ref_aux_type_size = Ref{MX_uint}()
+  ref_aux_type_data = Ref{Ptr{Cint}}()
+  ref_complete      = Ref{Cint}()
+
+  @mxcall(:MXSymbolInferType,
+          (MX_handle, MX_uint, char_pp, Ptr{Cint},
+           Ref{MX_uint}, Ref{Ptr{Cint}},
+           Ref{MX_uint}, Ref{Ptr{Cint}},
+           Ref{MX_uint}, Ref{Ptr{Cint}},
+           Ref{Cint}),
+          self, length(arg_type_data)-1, keys, arg_type_data,
+          ref_in_type_size, ref_in_type_data,
+          ref_out_type_size, ref_out_type_data,
+          ref_aux_type_size, ref_aux_type_data,
+          ref_complete)
+
+  if ref_complete[] == 0
+    return (nothing, nothing, nothing)
+  else
+    in_type = pointer_to_array(ref_in_type_data[], ref_in_type_size[])
+    out_type = pointer_to_array(ref_out_type_data[], ref_out_type_size[])
+    aux_type = pointer_to_array(ref_aux_type_data[], ref_aux_type_size[])
+    return ([fromTypeFlag(TypeFlag(t)) for t in in_type],
+            [fromTypeFlag(TypeFlag(t)) for t in out_type],
+            [fromTypeFlag(TypeFlag(t)) for t in aux_type])
+  end
+end
+
+#=doc
+.. function::
+   infer_type(self :: SymbolicNode; kwargs...)
+   infer_type(self :: SymbolicNode, args...)
+
+   Do type inference according to the input types. The input types could be provided
+   as a list of types, which should specify the types of inputs in the same order as
+   the arguments returned by :func:`list_arguments`. Alternatively, the type information
+   could be specified via keyword arguments.
+
+   :return: A 3-tuple containing types of all the arguments, types of all the outputs and
+            types of all the auxiliary variables. If type inference failed due to incomplete
+            or incompatible inputs, the return value will be ``(nothing, nothing, nothing)``.
+=#
+function infer_type(self :: SymbolicNode; kwargs...)
+  types = Cint[toTypeFlag(x[2]) for x in kwargs]
+  keys = AbstractString[string(x[1]) for x in kwargs]
+  _infer_type(self, keys, types)
+end
+
+function infer_type(self :: SymbolicNode, args :: Union{Tuple, Void}...)
+  types = Cint[]
+  keys = Ptr{char_p}(0)
+
+  for arg in args
+    if isa(arg, Void); continue; end
+    push!(types, toTypeFlag(arg))
+  end
+  _infer_type(self, keys, types)
 end
 
 #=doc
