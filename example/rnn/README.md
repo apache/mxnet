@@ -5,7 +5,9 @@ This folder contains RNN examples using low level symbol interface.
 ## Python
 
 - [lstm.py](lstm.py) Functions for building a LSTM Network
+- [gru.py](gru.py) Functions for building a GRU Network
 - [lstm_bucketing.py](lstm_bucketing.py) PennTreeBank language model by using LSTM
+- [gru_bucketing.py](gru_bucketing.py) PennTreeBank language model by using GRU
 - [char-rnn.ipynb](char-rnn.ipynb) Notebook to demo how to train a character LSTM by using ```lstm.py```
 
 ## R
