@@ -166,7 +166,7 @@ def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         description='Create an image list or \
-	make a record database by reading from an image list')
+    	make a record database by reading from an image list')
     parser.add_argument('prefix', help='prefix of input/output files.')
     parser.add_argument('root', help='path to folder containing images.')
 
@@ -213,8 +213,17 @@ def main():
         make_list(args.prefix, args.root, args.recursive,
                   args.exts, args.chunks, args.train_ratio, args.test_ratio)
     else:
-        image_list = read_list(args.prefix+'.lst')
-        write_record(args, image_list)
-
+        files = [f for f in os.listdir('.') if os.path.isfile(f)]
+        for f in files:
+        # do something
+            #print 'path: ', path
+            #print 'subdirs: ', subdirs
+            print 'current file: ', f
+            if f.startswith(args.prefix) is True:
+                print 'OK'
+                image_list = read_list(f)
+                write_record(args, image_list)
+            else:
+                print 'not OK'
 if __name__ == '__main__':
     main()
