@@ -368,6 +368,29 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     assert(reldiff(out.toArray, expected) < 1e-6)
   }
 
+  test("transpose") {
+    val data = Symbol.Variable("data")
+    val test = Symbol.transpose(data)
+
+    val shape = Shape(3, 4)
+    val ctx = Context.cpu()
+    val arrData = Random.uniform(0, 100, shape, ctx)
+
+    val trans: Array[Float] = {
+      val tmp = arrData.toArray.toList.grouped(4).toList
+      for (i <- 0 until 4) yield {
+        List(tmp(0)(i), tmp(1)(i), tmp(2)(i))
+      }
+    }.flatten.toArray
+
+    val exeTest = test.bind(ctx, args = Map("data" -> arrData))
+    exeTest.forward(isTrain = false)
+    val out = exeTest.outputs.head
+
+    assert(out.shape == Shape(4, 3))
+    assert(reldiff(out.toArray, trans) < 1e-6)
+  }
+
   test("maximum minimum scalar") {
     val data = Symbol.Variable("data")
     val shape = Shape(3, 4)

@@ -891,6 +891,14 @@ object Symbol {
     createFromListedSymbols("sin")(Array(src))
   }
 
+  /**
+   * Return transpose of the src
+   * @param src Source symbolic input to the function
+   */
+  def transpose(src: Symbol): Symbol = {
+    createFromListedSymbols("transpose")(Array(src))
+  }
+
   def max(left: Symbol, right: Symbol): Symbol = {
     createFromListedSymbols("_Maximum")(Array(left, right))
   }
