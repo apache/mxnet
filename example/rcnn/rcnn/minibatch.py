@@ -22,9 +22,9 @@ import numpy.random as npr
 from helper.processing import image_processing
 from helper.processing.bbox_regression import expand_bbox_regression_targets
 from rcnn.config import config
+from mxnet.executor_manager import _split_input_slice
 
-
-def get_minibatch(roidb, num_classes):
+def get_minibatch(roidb, num_classes, ctx, work_load_list=None):
     """
     return minibatch of images in roidb
     :param roidb: subset of main database
@@ -40,20 +40,30 @@ def get_minibatch(roidb, num_classes):
 
     # im_array: [num_images, c, h, w]
     im_array, im_scales = get_image_array(roidb, config.TRAIN.SCALES, random_scale_indexes)
-
     rois_array = list()
     labels_array = list()
     bbox_targets_array = list()
     bbox_inside_array = list()
 
-    for im_i in range(num_images):
+    if work_load_list is None:
+        work_load_list = [1] * len(ctx)
+    assert isinstance(work_load_list, list) and len(work_load_list) == len(ctx), \
+        "Invalid settings for work load. "
+    slices = _split_input_slice(num_images, work_load_list)
+
+    idx_in_slice = []
+    for islice in slices:
+        num_im = islice.stop - islice.start
+        for i in range(num_im):
+            idx_in_slice.append(i)
+    for im_i, idx in enumerate(idx_in_slice):
         im_rois, labels, bbox_targets, bbox_inside_weights, overlaps = \
             sample_rois(roidb[im_i], fg_rois_per_image, rois_per_image, num_classes)
 
         # project im_rois
         # do not round roi
         rois = im_rois * im_scales[im_i]
-        batch_index = im_i * np.ones((rois.shape[0], 1))
+        batch_index = idx * np.ones((rois.shape[0], 1))
         rois_array_this_image = np.hstack((batch_index, rois))
         rois_array.append(rois_array_this_image)
 
