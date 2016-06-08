@@ -123,7 +123,8 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         train_data, eval_data=None, eval_metric=None,
                         epoch_end_callback=None, batch_end_callback=None,
                         logger=None, work_load_list=None, monitor=None,
-                        eval_batch_end_callback=None, sym_gen=None):
+                        eval_batch_end_callback=None, sym_gen=None,
+                        mutable_data_shape=False, max_data_shape=None):
     """Internal training function on multiple devices.
     This function will also work for single device as well.
     Parameters
@@ -175,6 +176,11 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     monitor : Monitor, optional
         Monitor installed to executor,
         for monitoring outputs, weights, and gradients for debugging.
+    mutable_data_shape: bool, optional
+        Whether input data have different shapes or not.
+        It is set to False in default.
+    max_data_shape: list of float or int, optional
+        The maximum shape of input data
     Notes
     -----
     - This function will inplace update the NDArrays in arg_params and aux_states.
@@ -189,7 +195,9 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                                                    arg_names=arg_names,
                                                    aux_names=aux_names,
                                                    work_load_list=work_load_list,
-                                                   logger=logger)
+                                                   logger=logger,
+                                                   mutable_data_shape=mutable_data_shape,
+                                                   max_data_shape=max_data_shape)
     if monitor:
         executor_manager.install_monitor(monitor)
 
@@ -262,7 +270,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                     do_reset = False
                     break
 
-            if do_reset == True:
+            if do_reset is True:
                 logger.info('Epoch[%d] Resetting Data Iterator', epoch)
                 train_data.reset()
 
@@ -607,9 +615,6 @@ class FeedForward(BASE_ESTIMATOR):
 
         i = 0
         for batch in X:
-            if num_batch is not None and i == num_batch:
-                break
-            i += 1
 
             _load_data(batch, data_arrays)
             self._pred_exec.forward(is_train=False)
@@ -624,6 +629,9 @@ class FeedForward(BASE_ESTIMATOR):
                     data_list[j].append(x[0:real_size].asnumpy())
                 for j, x in enumerate(batch.label):
                     label_list[j].append(x[0:real_size].asnumpy())
+            i += 1
+            if num_batch is not None and i == num_batch:
+                break
 
         outputs = [np.concatenate(x) for x in output_list]
         if len(outputs) == 1:
@@ -743,11 +751,6 @@ class FeedForward(BASE_ESTIMATOR):
 
         arg_names, param_names, aux_names = \
                 self._init_params(dict(data.provide_data+data.provide_label))
-        param_idx2name = {}
-        for i, n in enumerate(param_names):
-            for k in range(len(self.ctx)):
-                param_idx2name[i*len(self.ctx)+k] = n
-        self.kwargs["param_idx2name"] = param_idx2name
 
         # setup metric
         if not isinstance(eval_metric, metric.EvalMetric):
@@ -756,6 +759,15 @@ class FeedForward(BASE_ESTIMATOR):
         # create kvstore
         (kvstore, update_on_kvstore) = _create_kvstore(
             kvstore, len(self.ctx), self.arg_params)
+
+        param_idx2name = {}
+        if update_on_kvstore:
+            param_idx2name.update(enumerate(param_names))
+        else:
+            for i, n in enumerate(param_names):
+                for k in range(len(self.ctx)):
+                    param_idx2name[i*len(self.ctx)+k] = n
+        self.kwargs["param_idx2name"] = param_idx2name
 
         # init optmizer
         if isinstance(self.optimizer, str):
