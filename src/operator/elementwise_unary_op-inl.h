@@ -54,7 +54,7 @@ void UnaryBackwardUseIn_(const OutputGrad& out_grad,
     mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
     ASSIGN_DISPATCH(igrad, req,
                     (F<OP>(in_data0.data.FlatTo2D<xpu, DType>(s)) *
-                     out_grad.data.FlatTo2D<xpu, DType>()));
+                     out_grad.data.FlatTo2D<xpu, DType>(s)));
   });
 }
 
@@ -77,7 +77,7 @@ void UnaryBackwardUseOut_(const OutputGrad& out_grad,
     mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
     ASSIGN_DISPATCH(igrad, req,
                     (F<OP>(out_value.data.FlatTo2D<xpu, DType>(s)) *
-                     out_grad.data.FlatTo2D<xpu, DType>()));
+                     out_grad.data.FlatTo2D<xpu, DType>(s)));
     });
 }
 
