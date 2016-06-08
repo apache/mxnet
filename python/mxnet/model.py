@@ -607,9 +607,6 @@ class FeedForward(BASE_ESTIMATOR):
 
         i = 0
         for batch in X:
-            if num_batch is not None and i == num_batch:
-                break
-            i += 1
 
             _load_data(batch, data_arrays)
             self._pred_exec.forward(is_train=False)
@@ -624,6 +621,9 @@ class FeedForward(BASE_ESTIMATOR):
                     data_list[j].append(x[0:real_size].asnumpy())
                 for j, x in enumerate(batch.label):
                     label_list[j].append(x[0:real_size].asnumpy())
+            i += 1
+            if num_batch is not None and i == num_batch:
+                break
 
         outputs = [np.concatenate(x) for x in output_list]
         if len(outputs) == 1:
