@@ -81,7 +81,7 @@ def write_record(args, image_list):
         except:
             print 'imread error:', item[1]
             return
-        if img == None:
+        if img is None:
             print 'read none error:', item[1]
             return
         if args.center_crop:
@@ -206,6 +206,9 @@ def main():
         -1:Loads image as such including alpha channel.')
     rgroup.add_argument('--encoding', type=str, default='.jpg', choices=['.jpg', '.png'],
         help='specify the encoding of the images.')
+    rgroup.add_argument('--shuffle', action='store_true',
+        help='If this is set and --list is not, im2rec will randomize the image order\
+        in <prefix>.lst and <prefix>.rec.')
 
     args = parser.parse_args()
     
@@ -222,6 +225,8 @@ def main():
             if f.startswith(args.prefix) is True:
                 print 'OK'
                 image_list = read_list(f)
+                if args.shuffle:
+                    random.shuffle(image_list)
                 write_record(args, image_list)
             else:
                 print 'not OK'
