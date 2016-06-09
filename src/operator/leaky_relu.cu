@@ -10,8 +10,12 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<gpu>(LeakyReLUParam param) {
-  return new LeakyReLUOp<gpu>(param);
+Operator *CreateOp<gpu>(LeakyReLUParam param, int dtype) {
+  Operator *op = NULL;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op =  new LeakyReLUOp<gpu, DType>(param);
+  });
+  return op;
 }
 
 }  // namespace op
