@@ -95,7 +95,8 @@ class LeakyReLUOp : public Operator {
     }
     switch (param_.act_type) {
       case leakyrelu::kLeakyReLU: {
-        Assign(out, req[leakyrelu::kOut], F<mshadow_op::xelu>(data, param_.slope));
+        ScalarExp<DType> slope = ScalarExp<DType>(param_.slope);
+        Assign(out, req[leakyrelu::kOut], F<mshadow_op::xelu>(data, slope));
         break;
       }
       case leakyrelu::kPReLU: {
@@ -106,18 +107,23 @@ class LeakyReLUOp : public Operator {
       }
       case leakyrelu::kRReLU: {
         if (ctx.is_train) {
-          Random<xpu, DType>* prnd = ctx.requested[leakyrelu::kRandom].get_random<xpu, DType>(s);
-          mask = prnd->uniform(mask.shape_);
-          mask = mask * (param_.upper_bound - param_.lower_bound) + param_.lower_bound;
+          // TODO(vchuravy): Random doesn't work with Float16, this will lead to a reduced
+          // entropy for Float64.
+          Random<xpu>* prnd = ctx.requested[leakyrelu::kRandom].get_random<xpu, real_t>(s);
+          mask = tcast<DType>(prnd->uniform(mask.shape_));
+          mask = mask *  ScalarExp<DType>(param_.upper_bound - param_.lower_bound)
+               + ScalarExp<DType>(param_.lower_bound);
           Assign(out, req[leakyrelu::kOut], F<mshadow_op::xelu>(data, mask));
         } else {
-          const float slope = (param_.lower_bound + param_.upper_bound) / 2.0f;
+          ScalarExp<DType> slope =
+            ScalarExp<DType>((param_.lower_bound + param_.upper_bound) / 2.0f);
           Assign(out, req[leakyrelu::kOut], F<mshadow_op::xelu>(data, slope));
         }
         break;
       }
       case leakyrelu::kELU: {
-        Assign(out, req[leakyrelu::kOut], F<mshadow_op::elu>(data, param_.slope));
+        ScalarExp<DType> slope = ScalarExp<DType>(param_.slope);
+        Assign(out, req[leakyrelu::kOut], F<mshadow_op::elu>(data, slope));
         break;
       }
       default:
@@ -171,7 +177,8 @@ class LeakyReLUOp : public Operator {
     }
     switch (param_.act_type) {
       case leakyrelu::kLeakyReLU: {
-        Assign(gdata, req[leakyrelu::kData], F<mshadow_op::xelu_grad>(output, param_.slope) * grad);
+        ScalarExp<DType> slope = ScalarExp<DType>(param_.slope);
+        Assign(gdata, req[leakyrelu::kData], F<mshadow_op::xelu_grad>(output, slope) * grad);
         break;
       }
       case leakyrelu::kPReLU: {
@@ -186,7 +193,8 @@ class LeakyReLUOp : public Operator {
         break;
       }
       case leakyrelu::kELU: {
-        Assign(gdata, req[leakyrelu::kData], F<mshadow_op::elu_grad>(output, param_.slope) * grad);
+        ScalarExp<DType> slope = ScalarExp<DType>(param_.slope);
+        Assign(gdata, req[leakyrelu::kData], F<mshadow_op::elu_grad>(output, slope) * grad);
         break;
       }
       default:
