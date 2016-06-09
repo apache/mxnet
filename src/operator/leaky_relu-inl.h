@@ -51,12 +51,13 @@ struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
 };
 
 struct prelu_grad {
-  MSHADOW_XINLINE static real_t Map(real_t a) {
-    return a > 0.0f ? 0.0f : a;
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(a > DType(0.0f) ? DType(0.0f) : a);
   }
 };
 
-template<typename xpu>
+template<typename xpu, typename DType>
 class LeakyReLUOp : public Operator {
  public:
   explicit LeakyReLUOp(LeakyReLUParam param) {
@@ -73,23 +74,23 @@ class LeakyReLUOp : public Operator {
     size_t expected = param_.act_type == leakyrelu::kPReLU ? 2 : 1;
     CHECK_EQ(in_data.size(), expected);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> data;
-    Tensor<xpu, 4> out;
-    Tensor<xpu, 4> mask;
-    Tensor<xpu, 1> weight;
+    Tensor<xpu, 4, DType> data;
+    Tensor<xpu, 4, DType> out;
+    Tensor<xpu, 4, DType> mask;
+    Tensor<xpu, 1, DType> weight;
     if (in_data[leakyrelu::kData].ndim() == 2) {
       Shape<4> dshape = Shape4(in_data[leakyrelu::kData].shape_[0],
                                in_data[leakyrelu::kData].shape_[1], 1, 1);
-      data = in_data[leakyrelu::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
-      out = out_data[leakyrelu::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
+      data = in_data[leakyrelu::kData].get_with_shape<xpu, 4, DType>(dshape, s);
+      out = out_data[leakyrelu::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
       if (param_.act_type == leakyrelu::kRReLU) {
-        mask = out_data[leakyrelu::kMask].get_with_shape<xpu, 4, real_t>(dshape, s);
+        mask = out_data[leakyrelu::kMask].get_with_shape<xpu, 4, DType>(dshape, s);
       }
     } else {
-      data = in_data[leakyrelu::kData].get<xpu, 4, real_t>(s);
-      out = out_data[leakyrelu::kOut].get<xpu, 4, real_t>(s);
+      data = in_data[leakyrelu::kData].get<xpu, 4, DType>(s);
+      out = out_data[leakyrelu::kOut].get<xpu, 4, DType>(s);
       if (param_.act_type == leakyrelu::kRReLU) {
-        mask = out_data[leakyrelu::kMask].get<xpu, 4, real_t>(s);
+        mask = out_data[leakyrelu::kMask].get<xpu, 4, DType>(s);
       }
     }
     switch (param_.act_type) {
@@ -98,14 +99,14 @@ class LeakyReLUOp : public Operator {
         break;
       }
       case leakyrelu::kPReLU: {
-        weight = in_data[leakyrelu::kGamma].get<xpu, 1, real_t>(s);
+        weight = in_data[leakyrelu::kGamma].get<xpu, 1, DType>(s);
         Assign(out, req[leakyrelu::kOut],
                F<mshadow_op::xelu>(data, broadcast<1>(weight, out.shape_)));
         break;
       }
       case leakyrelu::kRReLU: {
         if (ctx.is_train) {
-          Random<xpu>* prnd = ctx.requested[leakyrelu::kRandom].get_random<xpu, real_t>(s);
+          Random<xpu, DType>* prnd = ctx.requested[leakyrelu::kRandom].get_random<xpu, DType>(s);
           mask = prnd->uniform(mask.shape_);
           mask = mask * (param_.upper_bound - param_.lower_bound) + param_.lower_bound;
           Assign(out, req[leakyrelu::kOut], F<mshadow_op::xelu>(data, mask));
@@ -138,34 +139,34 @@ class LeakyReLUOp : public Operator {
     CHECK_EQ(req.size(), expected);
     CHECK_EQ(in_data.size(), expected);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> output;
-    Tensor<xpu, 4> data;
-    Tensor<xpu, 4> gdata;
-    Tensor<xpu, 4> grad;
-    Tensor<xpu, 4> mask;
-    Tensor<xpu, 1> weight;
-    Tensor<xpu, 1> grad_weight;
+    Tensor<xpu, 4, DType> output;
+    Tensor<xpu, 4, DType> data;
+    Tensor<xpu, 4, DType> gdata;
+    Tensor<xpu, 4, DType> grad;
+    Tensor<xpu, 4, DType> mask;
+    Tensor<xpu, 1, DType> weight;
+    Tensor<xpu, 1, DType> grad_weight;
     if (out_grad[leakyrelu::kOut].ndim() == 2) {
       Shape<4> dshape = Shape4(out_grad[leakyrelu::kOut].shape_[0],
                                out_grad[leakyrelu::kOut].shape_[1], 1, 1);
-      grad = out_grad[leakyrelu::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
-      gdata = in_grad[leakyrelu::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
-      output = out_data[leakyrelu::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
+      grad = out_grad[leakyrelu::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
+      gdata = in_grad[leakyrelu::kData].get_with_shape<xpu, 4, DType>(dshape, s);
+      output = out_data[leakyrelu::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
       if (param_.act_type == leakyrelu::kRReLU) {
-        mask = out_data[leakyrelu::kMask].get_with_shape<xpu, 4, real_t>(dshape, s);
+        mask = out_data[leakyrelu::kMask].get_with_shape<xpu, 4, DType>(dshape, s);
       }
       if (param_.act_type == leakyrelu::kPReLU) {
-        data = in_data[leakyrelu::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
+        data = in_data[leakyrelu::kData].get_with_shape<xpu, 4, DType>(dshape, s);
       }
     } else {
-      grad = out_grad[leakyrelu::kOut].get<xpu, 4, real_t>(s);
-      gdata = in_grad[leakyrelu::kData].get<xpu, 4, real_t>(s);
-      output = out_data[leakyrelu::kOut].get<xpu, 4, real_t>(s);
+      grad = out_grad[leakyrelu::kOut].get<xpu, 4, DType>(s);
+      gdata = in_grad[leakyrelu::kData].get<xpu, 4, DType>(s);
+      output = out_data[leakyrelu::kOut].get<xpu, 4, DType>(s);
       if (param_.act_type == leakyrelu::kRReLU) {
-        mask = out_data[leakyrelu::kMask].get<xpu, 4, real_t>(s);
+        mask = out_data[leakyrelu::kMask].get<xpu, 4, DType>(s);
       }
       if (param_.act_type == leakyrelu::kPReLU) {
-        data = in_data[leakyrelu::kData].get<xpu, 4, real_t>(s);
+        data = in_data[leakyrelu::kData].get<xpu, 4, DType>(s);
       }
     }
     switch (param_.act_type) {
@@ -174,8 +175,8 @@ class LeakyReLUOp : public Operator {
         break;
       }
       case leakyrelu::kPReLU: {
-        weight = in_data[leakyrelu::kGamma].get<xpu, 1, real_t>(s);
-        grad_weight = in_grad[leakyrelu::kGamma].get<xpu, 1, real_t>(s);
+        weight = in_data[leakyrelu::kGamma].get<xpu, 1, DType>(s);
+        grad_weight = in_grad[leakyrelu::kGamma].get<xpu, 1, DType>(s);
         grad_weight = sumall_except_dim<1>(F<prelu_grad>(data) * grad);
         gdata = F<mshadow_op::xelu_grad>(output, broadcast<1>(weight, data.shape_)) * grad;
         break;
@@ -198,7 +199,7 @@ class LeakyReLUOp : public Operator {
 };  // class LeakyReLUOp
 
 template<typename xpu>
-Operator* CreateOp(LeakyReLUParam type);
+Operator* CreateOp(LeakyReLUParam type, int dtype);
 
 #if DMLC_USE_CXX11
 class LeakyReLUProp : public OperatorProperty {
@@ -315,7 +316,13 @@ class LeakyReLUProp : public OperatorProperty {
     }
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   LeakyReLUParam param_;
