@@ -64,9 +64,6 @@ def check_speed(sym, ctx, scale=1.0, N=100):
         exe.outputs[0].wait_to_read()
     return (time.time() - tic)*1.0/N
 
-
-
-
 def test_convolution_with_type():
     sym = mx.sym.Convolution(num_filter=3, kernel=(3,3), name='conv')
     ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float64}},
@@ -77,13 +74,36 @@ def test_convolution_with_type():
     check_consistency(sym, ctx_list)
 
 def test_deconvolution_with_type():
-    sym = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), name='conv')
-    ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float64}},
-                {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float32}},
-                {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float16}},
-                {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float64}},
-                {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float32}}]
-    check_type_consistency(sym, ctx_list)
+    sym = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), name='deconv')
+    ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float64}},
+                {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float32}},
+                {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float16}},
+                {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float64}},
+                {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float32}}]
+    check_consistency(sym, ctx_list)
+
+def test_upsampling_with_type():
+    sym = mx.sym.UpSampling(scale=2, num_filter=2, name='up', sample_type = 'nearest', num_args=1)
+    ctx_list = [{'ctx': mx.gpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float64}},
+                {'ctx': mx.gpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float32}},
+                {'ctx': mx.gpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float16}},
+                {'ctx': mx.cpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float64}},
+                {'ctx': mx.cpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float32}}]
+    check_consistency(sym, ctx_list)
+
+def test_concat_with_type():
+    sym = mx.sym.Concat(name='concat', num_args=2)
+    ctx_list = [{'ctx': mx.gpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),
+                 'type_dict': {'concat_arg0': np.float64, 'concat_arg1': np.float64}},
+                {'ctx': mx.gpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),
+                 'type_dict': {'concat_arg0': np.float32, 'concat_arg1': np.float32}},
+                {'ctx': mx.gpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),
+                 'type_dict': {'concat_arg0': np.float16, 'concat_arg1': np.float16}},
+                {'ctx': mx.cpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),
+                 'type_dict': {'concat_arg0': np.float64, 'concat_arg1': np.float64}},
+                {'ctx': mx.cpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),
+                 'type_dict': {'concat_arg0': np.float32, 'concat_arg1': np.float32}}]
+    check_consistency(sym, ctx_list)
 
 def test_fullyconnected_with_type():
     sym = mx.sym.FullyConnected(num_hidden=3, name='inner')
@@ -107,7 +127,10 @@ def test_activation_with_type():
 if __name__ == '__main__':
     test_convolution_with_type()
     test_deconvolution_with_type()
+    test_upsampling_with_type()
+    test_concat_with_type()
     test_fullyconnected_with_type()
     test_activation_with_type()
-	#test_softmax_with_shape((3,4), mx.gpu())
+    #test_softmax_with_shape((3,4), mx.gpu())
     #test_multi_softmax_with_shape((3,4,5), mx.gpu())
+
