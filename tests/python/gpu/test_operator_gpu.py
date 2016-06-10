@@ -114,6 +114,15 @@ def test_reshape_with_type():
                 {'ctx': mx.cpu(0), 'reshape_data': (2, 2, 2, 10), 'type_dict': {'reshape_data': np.float32}}]
     check_consistency(sym, ctx_list)
 
+def test_blockgrad_with_type():
+    sym = mx.sym.BlockGrad(name='bg')
+    ctx_list = [{'ctx': mx.gpu(0), 'bg_data': (2, 2, 2, 10), 'type_dict': {'bg_data': np.float64}},
+                {'ctx': mx.gpu(0), 'bg_data': (2, 2, 2, 10), 'type_dict': {'bg_data': np.float32}},
+                {'ctx': mx.gpu(0), 'bg_data': (2, 2, 2, 10), 'type_dict': {'bg_data': np.float16}},
+                {'ctx': mx.cpu(0), 'bg_data': (2, 2, 2, 10), 'type_dict': {'bg_data': np.float64}},
+                {'ctx': mx.cpu(0), 'bg_data': (2, 2, 2, 10), 'type_dict': {'bg_data': np.float32}}]
+    check_consistency(sym, ctx_list)
+
 def test_fullyconnected_with_type():
     sym = mx.sym.FullyConnected(num_hidden=3, name='inner')
     ctx_list = [{'ctx': mx.gpu(0), 'inner_data': (2, 10), 'type_dict': {'inner_data': np.float64}},
@@ -139,6 +148,7 @@ if __name__ == '__main__':
     test_upsampling_with_type()
     test_concat_with_type()
     test_reshape_with_type()
+    test_blockgrad_with_type()
     test_fullyconnected_with_type()
     test_activation_with_type()
     #test_softmax_with_shape((3,4), mx.gpu())
