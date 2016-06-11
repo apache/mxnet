@@ -4,32 +4,12 @@ This tutorial demonstrates how to use MXNet as front-end to two of Torch's major
 
 * 1) Compile MXNet with Caffe support.
 
-* 2) Call Torch's tensor mathematical functions with MXNet.NDArray.
+* 2) Embed Caffe's neural network functions (layers) into MXNet's symbolic graph.
 
-* 3) Embed Torch's neural network modules (layers) into MXNet's symbolic graph.
-
-## Compile with Torch
-* First install Torch following [official guide](http://torch.ch/docs/getting-started.html).
-* Then, in `config.mk` (if you haven't already, copy `make/config.mk` (Linux) or `make/osx.mk` (Mac) into MXNet root folder as `config.mk`) uncomment the lines `TORCH_PATH = $(HOME)/torch` and `MXNET_PLUGINS += plugin/torch/torch.mk`. By default Torch should be installed in your home folder (so `TORCH_PATH = $(HOME)/torch`). Modify TORCH_PATH to point to your torch installation if necessary. 
-* Run `make clean && make` to build with torch support.
-
-## Tensor Mathematics
-mxnet.th module supports calling Torch's tensor mathematical functions with mxnet.nd.NDArray. For example ([full code](https://github.com/dmlc/mxnet/blob/master/example/torch/torch_function.py)):
-```Python
-import mxnet as mx
-x = mx.th.randn(2, 2, ctx=mx.cpu(0))
-print x.asnumpy()
-y = mx.th.abs(x)
-print y.asnumpy()
-
-x = mx.th.randn(2, 2, ctx=mx.cpu(0))
-print x.asnumpy()
-mx.th.abs(x, x) # in-place
-print x.asnumpy()
-```
-Help can be found with `help(mx.th)`. 
-We already added support for most common functions listed on [Torch's doc page](https://github.com/torch/torch7/blob/master/doc/maths.md). 
-If you find that the function you need is not supported, you can easily register it in `mxnet_root/plugin/torch/torch_function.cc` following existing registrations.
+## Compile with Caffe
+* First download DMLC's forked Caffe [DMLC/Caffe](http://github.com/dmlc/caffe).
+* Then, in `config.mk` (if you haven't already, copy `make/config.mk` (Linux) or `make/osx.mk` (Mac) into MXNet root folder as `config.mk`) uncomment the lines `CAFFE_PATH = $(HOME)/caffe` and `MXNET_PLUGINS += plugin/caffe/caffe.mk. Modify CAFFE_PATH to point to your caffe package if necessary. 
+* Run `make clean && make` to build with caffe support.
 
 ## Torch Modules (Layers)
 Torch's neural network modules is also supported by MXNet through `mxnet.symbol.TorchModule` symbol.
