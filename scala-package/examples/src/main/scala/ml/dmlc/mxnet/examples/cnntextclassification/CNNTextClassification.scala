@@ -93,6 +93,7 @@ object CNNTextClassification {
       var start = 0L
       var end = 0L
       var numCorrect = 0f
+      var numTotal = 0f
       var factor = 0.5f
       var maxAccuracy = -1f
       var updateRate = 0
@@ -108,6 +109,7 @@ object CNNTextClassification {
       for (iter <- 0 until epoch) {
         start = System.currentTimeMillis()
         numCorrect = 0f
+        numTotal = 0f
         updateRate = 0
 
         for (begin <- 0 until trainBatches.length by batchSize) {
@@ -124,7 +126,7 @@ object CNNTextClassification {
               (datas, labels)
             }
           }
-
+          numTotal += batchSize
           model.data.set(batchD.flatten.flatten)
           model.label.set(batchL)
 
@@ -167,39 +169,36 @@ object CNNTextClassification {
         // end of training loop
         end = System.currentTimeMillis()
         logger.info(s"Iter $iter Train: Time: ${(end - start) / 1000}," +
-          "Training Accuracy: ${numCorrect / trainBatches.length * 100}%")
+          s"Training Accuracy: ${numCorrect / numTotal * 100}%")
 
         // eval on dev set
         numCorrect = 0f
+        numTotal = 0f
         for (begin <- 0 until devBatches.length by batchSize) {
-          val (batchD, batchL) = {
-            if (begin + batchSize <= devBatches.length) {
+          if (begin + batchSize <= devBatches.length) {
+            numTotal += batchSize
+            val (batchD, batchL) = {
               val datas = devBatches.drop(begin).take(batchSize)
               val labels = devLabels.drop(begin).take(batchSize)
               (datas, labels)
-            } else {
-              val right = (begin + batchSize) - devBatches.length
-              val left = devBatches.length - begin
-              val datas = devBatches.drop(begin).take(left) ++ devBatches.take(right)
-              val labels = devLabels.drop(begin).take(left) ++ devLabels.take(right)
-              (datas, labels)
             }
-          }
-          model.data.set(batchD.flatten.flatten)
-          model.label.set(batchL)
 
-          model.cnnExec.forward(isTrain = false)
+            model.data.set(batchD.flatten.flatten)
+            model.label.set(batchL)
 
-          val tmpCorrect = {
-            val predLabel = NDArray.argmaxChannel(model.cnnExec.outputs(0))
-            predLabel.toArray.zip(batchL).map { predLabel =>
-              if (predLabel._1 == predLabel._2) 1
-              else 0
-            }.sum.toFloat
+            model.cnnExec.forward(isTrain = false)
+
+            val tmpCorrect = {
+              val predLabel = NDArray.argmaxChannel(model.cnnExec.outputs(0))
+              predLabel.toArray.zip(batchL).map { predLabel =>
+                if (predLabel._1 == predLabel._2) 1
+                else 0
+              }.sum.toFloat
+            }
+            numCorrect = numCorrect + tmpCorrect
           }
-          numCorrect = numCorrect + tmpCorrect
         }
-        val tmpAcc = numCorrect / devBatches.length
+        val tmpAcc = numCorrect / numTotal
         logger.info(s"Dev Accuracy so far: ${tmpAcc * 100}%")
         if (tmpAcc > maxAccuracy) {
           maxAccuracy = tmpAcc
