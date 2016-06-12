@@ -733,24 +733,27 @@ def test_convolution_grouping():
         np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3)
 
 def _gen_broadcast_data():
-    testing_shapes = [(2, 3, 4), (3, 5, 7), (4, 2, 6)]
-    shape_pairs = []
-    for n, m, k in testing_shapes:
-        shape_pairs += [((1,), (1,)),
-                       ((n,), (n,)),
-                       ((n,m), (n,m)),
-                       ((n,m,k), (n,m,k)),
-                       ((n,1), (1,n)),
-                       ((n,m,k), (n,1,1)),
-                       ((n,m,k), (1,m,1)),
-                       ((n,m,k), (1,m,k)),
-                       ((n,m,k), (n,m,1)),
-                       ((n,m,k), (1,1,k))]
-    shape_pairs += [(v, u) for (u, v) in shape_pairs]
-    return [(np.random.random(u), np.random.random(v)) for (u,v) in shape_pairs]
+    # Generate random data that has ndim between 1-7 and all the shape dims between 1-10
+    ndim = np.random.randint(1, 8)
+    shape = np.random.randint(1, 11, size=(ndim,))
+    l_same_dim = np.random.randint(0, 5)
+    r_same_dim = np.random.randint(0, 5)
+    l_axis_flags = np.random.randint(0, 2, size=ndim)
+    r_axis_flags = np.random.randint(0, 2, size=ndim)
+    if l_same_dim == 4:
+        l_axis_flags = np.ones(ndim)
+    if r_same_dim == 4:
+        r_axis_flags = np.ones(ndim)
+    l_shape = shape.copy()
+    r_shape = shape.copy()
+    l_shape[np.where(l_axis_flags == 0)] = 1
+    r_shape[np.where(r_axis_flags == 0)] = 1
+    return [np.random.random(l_shape), np.random.random(r_shape)]
 
 def _check_broadcast_op_forward(symbol, baseline):
-    for d in _gen_broadcast_data():
+    sample_num = 200
+    for i in range(sample_num):
+        d = _gen_broadcast_data()
         x = baseline(d[0], d[1])
         y = symbol.bind(mx.cpu(), args={'a': mx.nd.array(d[0]), 'b' : mx.nd.array(d[1])})
         y.forward()
@@ -759,8 +762,10 @@ def _check_broadcast_op_forward(symbol, baseline):
             err, d[0].shape, d[1].shape)
 
 def _check_broadcast_op_backward(symbol, baseline):
-    for d in _gen_broadcast_data():
-        out = d[0] + d[1]
+    sample_num = 200
+    for i in range(sample_num):
+        d = _gen_broadcast_data()
+        out = np.random.random((d[0] + d[1]).shape)
         def reduce_op(shape, x):
             if shape == x.shape:
                 return x
@@ -782,7 +787,7 @@ def _check_broadcast_op_backward(symbol, baseline):
         err = lambda x, y: np.sum(np.abs(x-y)) / np.sum(np.abs(x))
         err_1 = err(x_1, y_1.asnumpy())
         err_2 = err(x_2, y_2.asnumpy())
-        assert err_1 < 1e-6 and err_2 < 1e-6, 'lhs error %f, rhs error %f, shapes are %s %s' % (
+        assert err_1 < 1e-5 and err_2 < 1e-5, 'lhs error %f, rhs error %f, shapes are %s %s' % (
             err_1, err_2, d[0].shape, d[1].shape)
 
 def test_broadcast_binary_op():
@@ -927,7 +932,7 @@ def test_reshape():
     assert(output_shape[0] == (2, 75))
 
 def test_reduce():
-    sample_num = 1000
+    sample_num = 200
     def test_reduce_inner(numpy_reduce_func, numpy_reduce_grad_func, mx_reduce_sym):
         for i in range(sample_num):
             # Generate random data that has ndim between 1-7 and all the shape dims between 1-10
@@ -969,7 +974,7 @@ def test_reduce():
                       mx.symbol.sum)
 
 def test_broadcast():
-    sample_num = 1000
+    sample_num = 200
     def test_broadcast_axis():
         for i in range(sample_num):
             # Generate random data that has ndim between 1-7 and all the shape dims between 1-10
