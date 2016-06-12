@@ -36,7 +36,8 @@ def get_conv(
         fix_gamma=False,
         momentum=bn_momentum,
         # Same with https://github.com/soumith/cudnn.torch/blob/master/BatchNormalization.lua
-        eps=1e-5
+        # cuDNN v5 don't allow a small eps of 1e-5
+        eps=2e-5
     )
     return (
         # It's better to remove ReLU here

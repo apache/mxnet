@@ -54,7 +54,8 @@ class CuDNNConvolutionOp : public Operator {
     if (!init_cudnn_) {
       Init(s, in_data, out_data);
     }
-    Tensor<gpu, 1> workspace = ctx.requested[conv::kTempSpace].get_space<gpu>(
+    Tensor<gpu, 1, DType> workspace =
+        ctx.requested[conv::kTempSpace].get_space_typed<gpu, 1, DType>(
                                  mshadow::Shape1(forward_workspace_), s);
     for (uint32_t g = 0; g < param_.num_group; ++g) {
       typename DataType<DType>::ScaleType alpha = 1.0f;

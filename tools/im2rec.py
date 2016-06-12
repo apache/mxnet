@@ -13,7 +13,8 @@ def list_image(root, recursive, exts):
     image_list = []
     if recursive:
         cat = {}
-        for path, subdirs, files in os.walk(root):
+        for path, subdirs, files in os.walk(root, followlinks=True):
+	    subdirs.sort()
             print(len(cat), path)
             for fname in files:
                 fpath = os.path.join(path, fname)
@@ -39,7 +40,7 @@ def write_list(path_out, image_list):
             line += '%s\n'%image_list[i][1]
             fout.write(line)
 
-def make_list(prefix_out, root, recursive, exts, num_chunks, train_ratio):
+def make_list(prefix_out, root, recursive, exts, num_chunks, train_ratio, test_ratio):
     image_list = list_image(root, recursive, exts)
     random.seed(100)
     random.shuffle(image_list)
@@ -51,12 +52,11 @@ def make_list(prefix_out, root, recursive, exts, num_chunks, train_ratio):
             str_chunk = '_%d'%i
         else:
             str_chunk = ''
-        if train_ratio < 1:
-            sep = int(chunk_size*train_ratio)
-            write_list(prefix_out+str_chunk+'_train.lst', chunk[:sep])
-            write_list(prefix_out+str_chunk+'_val.lst', chunk[sep:])
-        else:
-            write_list(prefix_out+str_chunk+'.lst', chunk)
+        sep = int(chunk_size*train_ratio)
+	sep_test=int(chunk_size*test_ratio)
+        write_list(prefix_out+str_chunk+'_test.lst', chunk[:sep_test])
+        write_list(prefix_out+str_chunk+'_train.lst', chunk[sep_test:sep_test+sep])
+        write_list(prefix_out+str_chunk+'_val.lst', chunk[sep_test+sep:])
 
 def read_list(path_in):
     image_list = []
@@ -81,7 +81,7 @@ def write_record(args, image_list):
         except:
             print 'imread error:', item[1]
             return
-        if img == None:
+        if img is None:
             print 'read none error:', item[1]
             return
         if args.center_crop:
@@ -114,7 +114,7 @@ def write_record(args, image_list):
     def write_worker(q_out, prefix):
         pre_time = time.time()
         sink = []
-        record = mx.recordio.MXRecordIO(prefix+'.rec', 'w')
+	record = mx.recordio.MXRecordIO(prefix+'.rec', 'w')
         while True:
             stat, s, item = q_out.get()
             if stat == 'finish':
@@ -147,7 +147,7 @@ def write_record(args, image_list):
         print('multiprocessing not available, fall back to single threaded encoding')
         import Queue
         q_out = Queue.Queue()
-        record = mx.recordio.MXRecordIO(args.prefix+'.rec', 'w')
+	record = mx.recordio.MXRecordIO(args.prefix+'.rec', 'w')
         cnt = 0
         pre_time = time.time()
         for item in image_list:
@@ -165,8 +165,8 @@ def write_record(args, image_list):
 def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        description='Make an image record database by reading from\
-        an image list or creating one')
+        description='Create an image list or \
+    	make a record database by reading from an image list')
     parser.add_argument('prefix', help='prefix of input/output files.')
     parser.add_argument('root', help='path to folder containing images.')
 
@@ -180,6 +180,8 @@ def main():
     cgroup.add_argument('--chunks', type=int, default=1, help='number of chunks.')
     cgroup.add_argument('--train_ratio', type=float, default=1.0,
         help='Ratio of images to use for training.')
+    cgroup.add_argument('--test_ratio', type=float, default=0,
+	help='Ratio of images to use for testing.')
     cgroup.add_argument('--recursive', type=bool, default=False,
         help='If true recursively walk through subdirs and assign an unique label\
         to images in each folder. Otherwise only include images in the root folder\
@@ -204,15 +206,29 @@ def main():
         -1:Loads image as such including alpha channel.')
     rgroup.add_argument('--encoding', type=str, default='.jpg', choices=['.jpg', '.png'],
         help='specify the encoding of the images.')
-        
+    rgroup.add_argument('--shuffle', action='store_true',
+        help='If this is set and --list is not, im2rec will randomize the image order\
+        in <prefix>.lst and <prefix>.rec.')
+
     args = parser.parse_args()
     
     if args.list:
         make_list(args.prefix, args.root, args.recursive,
-                  args.exts, args.chunks, args.train_ratio)
+                  args.exts, args.chunks, args.train_ratio, args.test_ratio)
     else:
-        image_list = read_list(args.prefix+'.lst')
-        write_record(args, image_list)
-
+        files = [f for f in os.listdir('.') if os.path.isfile(f)]
+        for f in files:
+        # do something
+            #print 'path: ', path
+            #print 'subdirs: ', subdirs
+            print 'current file: ', f
+            if f.startswith(args.prefix) is True:
+                print 'OK'
+                image_list = read_list(f)
+                if args.shuffle:
+                    random.shuffle(image_list)
+                write_record(args, image_list)
+            else:
+                print 'not OK'
 if __name__ == '__main__':
     main()
