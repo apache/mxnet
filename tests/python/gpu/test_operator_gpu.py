@@ -105,6 +105,21 @@ def test_concat_with_type():
                  'type_dict': {'concat_arg0': np.float32, 'concat_arg1': np.float32}}]
     check_consistency(sym, ctx_list)
 
+def test_elementwisesum_with_type():
+    sym = mx.sym.ElementWiseSum(name='ews', num_args=2)
+    ctx_list = [{'ctx': mx.gpu(0), 'ews_arg1': (2, 10), 'ews_arg0': (2, 10),
+                 'type_dict': {'ews_arg0': np.float64, 'ews_arg1': np.float64}},
+                {'ctx': mx.gpu(0), 'ews_arg1': (2, 10), 'ews_arg0': (2, 10),
+                 'type_dict': {'ews_arg0': np.float32, 'ews_arg1': np.float32}},
+                {'ctx': mx.gpu(0), 'ews_arg1': (2, 10), 'ews_arg0': (2, 10),
+                 'type_dict': {'ews_arg0': np.float16, 'ews_arg1': np.float16}},
+                {'ctx': mx.cpu(0), 'ews_arg1': (2, 10), 'ews_arg0': (2, 10),
+                 'type_dict': {'ews_arg0': np.float64, 'ews_arg1': np.float64}},
+                {'ctx': mx.cpu(0), 'ews_arg1': (2, 10), 'ews_arg0': (2, 10),
+                 'type_dict': {'ews_arg0': np.float32, 'ews_arg1': np.float32}}]
+    check_consistency(sym, ctx_list)
+
+
 def test_reshape_with_type():
     sym = mx.sym.Reshape(name='reshape', shape=(-1,1,1,0))
     ctx_list = [{'ctx': mx.gpu(0), 'reshape_data': (2, 2, 2, 10), 'type_dict': {'reshape_data': np.float64}},
@@ -156,6 +171,7 @@ if __name__ == '__main__':
     test_deconvolution_with_type()
     test_upsampling_with_type()
     test_concat_with_type()
+    test_elementwisesum_with_type()
     test_reshape_with_type()
     test_blockgrad_with_type()
     test_swapaxis_with_type()
