@@ -107,3 +107,4 @@ List of Contributors
 * [Yuqi Li](https://github.com/ziyeqinghan)
 * [Depeng Liang](https://github.com/Ldpe2G)
 * [Kiko Qiu](https://github.com/kikoqiu)
+* [Yang Bo](https://github.com/Atry)
