@@ -160,6 +160,12 @@ class NDArray(object):
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
+    def __pow__(self, other):
+        return power(self, other)
+
+    def __rpow__(self, other):
+        return power(other, self)
+
     def __truediv__(self, other):
         return self.__div__(other)
 
@@ -679,6 +685,44 @@ def divide(lhs, rhs):
         elif lsize > rsize:
             rhs = rhs.broadcast_to(lhs.shape)
         return NDArray._div(lhs, rhs)
+    else:
+        raise TypeError('type %s not supported' % str(type(rhs)))
+    # pylint: enable= no-member, protected-access
+
+def power(lhs, rhs):
+    """ Perform power operator
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    # pylint: disable= no-member, protected-access
+    if isinstance(lhs, numeric_types):
+        if isinstance(rhs, numeric_types):
+            return lhs ** rhs
+        elif isinstance(rhs, NDArray):
+            return NDArray._rpower_scalar(rhs, float(lhs))
+        else:
+            raise TypeError('type %s not supported' % str(type(rhs)))
+    elif isinstance(rhs, numeric_types):
+        return NDArray._power_scalar(lhs, float(rhs))
+    elif isinstance(rhs, NDArray):
+        lsize = functools.reduce(operator.mul, lhs.shape)
+        rsize = functools.reduce(operator.mul, rhs.shape)
+        if lsize < rsize:
+            lhs = lhs.broadcast_to(rhs.shape)
+        elif lsize > rsize:
+            rhs = rhs.broadcast_to(lhs.shape)
+        return NDArray._power(lhs, rhs)
     else:
         raise TypeError('type %s not supported' % str(type(rhs)))
     # pylint: enable= no-member, protected-access
