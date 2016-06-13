@@ -8,14 +8,14 @@
 namespace mxnet {
 namespace op {
 
-typedef ::mshadow::cpu Mcpu;
-typedef ::mshadow::gpu Mgpu;
+using ::mshadow::cpu;
+using ::mshadow::gpu;
 
 
 template<>
-void SetDataGradToBlob<Mgpu, 1>(Blob<float> *blob,
+void SetDataGradToBlob<gpu, 1>(Blob<float> *blob,
                        caffememtype::caffeMemoryTypes memType,
-                       ::mshadow::Tensor<Mgpu, 1> *tensor) {
+                       ::mshadow::Tensor<gpu, 1> *tensor) {
   float *data_ptr = tensor->dptr_;
   if (memType == caffememtype::Data)
     blob->set_gpu_data(data_ptr);
@@ -24,9 +24,9 @@ void SetDataGradToBlob<Mgpu, 1>(Blob<float> *blob,
 }
 
 template<>
-void SetDataGradToBlob<Mgpu, 2>(::caffe::Blob<float> *blob,
+void SetDataGradToBlob<gpu, 2>(::caffe::Blob<float> *blob,
                        caffememtype::caffeMemoryTypes memType,
-                       ::mshadow::Tensor<Mgpu, 2> *tensor) {
+                       ::mshadow::Tensor<gpu, 2> *tensor) {
   float *data_ptr = tensor->dptr_;
   if (memType == caffememtype::Data)
     blob->set_gpu_data(data_ptr);
@@ -35,9 +35,9 @@ void SetDataGradToBlob<Mgpu, 2>(::caffe::Blob<float> *blob,
 }
 
 template<>
-void SetDataGradToBlob<Mgpu, 3>(Blob<float> *blob,
+void SetDataGradToBlob<gpu, 3>(Blob<float> *blob,
                        caffememtype::caffeMemoryTypes memType,
-                       ::mshadow::Tensor<Mgpu, 3> *tensor) {
+                       ::mshadow::Tensor<gpu, 3> *tensor) {
   float *data_ptr = tensor->dptr_;
   if (memType == caffememtype::Data)
     blob->set_gpu_data(data_ptr);
@@ -46,9 +46,9 @@ void SetDataGradToBlob<Mgpu, 3>(Blob<float> *blob,
 }
 
 template<>
-void SetDataGradToBlob<Mgpu, 4>(::caffe::Blob<float> *blob,
+void SetDataGradToBlob<gpu, 4>(::caffe::Blob<float> *blob,
                        caffememtype::caffeMemoryTypes memType,
-                       ::mshadow::Tensor<Mgpu, 4> *tensor) {
+                       ::mshadow::Tensor<gpu, 4> *tensor) {
   float *data_ptr = tensor->dptr_;
   if (memType == caffememtype::Data)
     blob->set_gpu_data(data_ptr);
@@ -57,9 +57,9 @@ void SetDataGradToBlob<Mgpu, 4>(::caffe::Blob<float> *blob,
 }
 
 template<>
-void SetDataGradToBlob<Mcpu, 1>(::caffe::Blob<float> *blob,
+void SetDataGradToBlob<cpu, 1>(::caffe::Blob<float> *blob,
                        caffememtype::caffeMemoryTypes memType,
-                       ::mshadow::Tensor<Mcpu, 1> *tensor) {
+                       ::mshadow::Tensor<cpu, 1> *tensor) {
   float *data_ptr = tensor->dptr_;
   if (memType == caffememtype::Data)
     blob->set_cpu_data(data_ptr);
@@ -68,9 +68,9 @@ void SetDataGradToBlob<Mcpu, 1>(::caffe::Blob<float> *blob,
 }
 
 template<>
-void SetDataGradToBlob<Mcpu, 2>(::caffe::Blob<float> *blob,
+void SetDataGradToBlob<cpu, 2>(::caffe::Blob<float> *blob,
                        caffememtype::caffeMemoryTypes memType,
-                       ::mshadow::Tensor<Mcpu, 2> *tensor) {
+                       ::mshadow::Tensor<cpu, 2> *tensor) {
   float *data_ptr = tensor->dptr_;
   if (memType == caffememtype::Data)
     blob->set_cpu_data(data_ptr);
@@ -79,9 +79,9 @@ void SetDataGradToBlob<Mcpu, 2>(::caffe::Blob<float> *blob,
 }
 
 template<>
-void SetDataGradToBlob<Mcpu, 3>(::caffe::Blob<float> *blob,
+void SetDataGradToBlob<cpu, 3>(::caffe::Blob<float> *blob,
                        caffememtype::caffeMemoryTypes memType,
-                       ::mshadow::Tensor<Mcpu, 3> *tensor) {
+                       ::mshadow::Tensor<cpu, 3> *tensor) {
   float *data_ptr = tensor->dptr_;
   if (memType == caffememtype::Data)
     blob->set_cpu_data(data_ptr);
@@ -90,9 +90,9 @@ void SetDataGradToBlob<Mcpu, 3>(::caffe::Blob<float> *blob,
 }
 
 template<>
-void SetDataGradToBlob<Mcpu, 4>(::caffe::Blob<float> *blob,
+void SetDataGradToBlob<cpu, 4>(::caffe::Blob<float> *blob,
                        caffememtype::caffeMemoryTypes memType,
-                       ::mshadow::Tensor<Mcpu, 4> *tensor) {
+                       ::mshadow::Tensor<cpu, 4> *tensor) {
   float *data_ptr = tensor->dptr_;
   if (memType == caffememtype::Data)
     blob->set_cpu_data(data_ptr);
