@@ -113,7 +113,7 @@ InputSplit 需要下面的几个参数:
 
 ### Hide IO Cost Using Threadediter
 
-掩藏 IO 开销的一种方式是主线程在做 feed-forward 和 backward 的时候, 使用一个独立的现成做数据预取操作. 为了支持更加复杂的训练方案, MXNet 提供了基于 dmlc-core 的 threadediter 更加通用的 IO 处理流水线.
+掩藏 IO 开销的一种方式是主线程在做 feed-forward 和 backward 的时候, 使用一个独立的线程做数据预取操作. 为了支持更加复杂的训练方案, MXNet 提供了基于 dmlc-core 的 threadediter 更加通用的 IO 处理流水线.
 
 Threadediter 的重点是使用一个独立的线程作为数据提供者, 主线程作为数据消费者, 图示如下.
 
