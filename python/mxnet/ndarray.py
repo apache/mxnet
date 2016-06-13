@@ -714,6 +714,31 @@ def power(lhs, rhs):
             NDArray._power_scalar,
             NDArray._rpower_scalar)
 
+def maximum(lhs, rhs):
+    """ Perform maximum operator
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    return _ufunc_helper(
+            lhs,
+            rhs,
+            NDArray._maximum,
+            lambda x, y: x if x > y else y,
+            NDArray._maximum_scalar,
+            None)
+
+
 def true_divide(lhs, rhs):
     """ Same as numpy's true_divide. It adjusts the output type to present the best answer,
     regardless of input types.
