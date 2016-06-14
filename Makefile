@@ -22,7 +22,6 @@ endif
 include $(config)
 include mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
-unexport NO_OPENMP
 
 # all tge possible warning tread
 WARNFLAGS= -Wall
@@ -37,9 +36,9 @@ endif
 CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
-	NVCCFLAGS = -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS = -Xcompiler -std=c++98 -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else
-	NVCCFLAGS = -D_FORCE_INLINES -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS = -Xcompiler -std=c++98 -D_FORCE_INLINES -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
 
 ifndef LINT_LANG
