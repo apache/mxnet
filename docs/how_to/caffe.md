@@ -30,6 +30,7 @@ Then it's fed through Caffe's operators with `fc1  = mx.symbol.CaffeOperator(dat
 Argument `para` is the prototxt, i.e. configuration string, and used to initialize Caffe::LayerParameter. For Caffe's built-in layer, the symbol definition simply creates an instance through `caffe::layer_name<float_type>(layerparameter)`.
 
 ## Add customized operators
+TODO: How to look for layers (Add network example, i.e. alex-net, vgg-net)
 Follow steps below to add new or customized caffe operators:
 
 * 1) Add new enum element to `CaffeEnum::CaffeOpType` in file `caffe_operatoer-inl.h`.
