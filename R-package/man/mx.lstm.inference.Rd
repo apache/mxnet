@@ -23,7 +23,7 @@ The output dim of embedding.}
 \item{num.label}{integer
 The number of labels.}
 
-\item{batch.size}{integer
+\item{batch.size}{integer, default=1
 The batch size used for R array training.}
 
 \item{arg.params}{list
@@ -36,7 +36,8 @@ Model parameter, list of name to NDArray of net's weights.}
 A number in [0,1) containing the dropout ratio from the last hidden layer to the output layer.}
 }
 \value{
-model a lstm inference model.
+model list(rnn.exec=integer, symbol=mxnet symbol, num.rnn.layer=integer, num.hidden=integer, seq.len=integer, batch.size=integer, num.embed=integer) 
+     A lstm inference model.
 }
 \description{
 Create a LSTM Inference Model
