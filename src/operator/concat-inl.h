@@ -36,7 +36,7 @@ struct ConcatParam : public dmlc::Parameter<ConcatParam> {
   }
 };  // struct ConcatParam
 
-template<typename xpu>
+template<typename xpu, typename DType>
 class ConcatOp : public Operator {
  public:
   explicit ConcatOp(ConcatParam param)
@@ -53,8 +53,8 @@ class ConcatOp : public Operator {
     CHECK_EQ(out_data.size(), 1);
     CHECK_LT(dimension_, in_data[concat_enum::kData0].ndim());
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    std::vector<Tensor<xpu, 3> > data(size_);
-    Tensor<xpu, 3> out;
+    std::vector<Tensor<xpu, 3, DType> > data(size_);
+    Tensor<xpu, 3, DType> out;
     size_t leading = 1, trailing = 1;
     for (int i = 0; i < dimension_; ++i) {
       leading *= out_data[concat_enum::kOut].shape_[i];
@@ -64,11 +64,11 @@ class ConcatOp : public Operator {
     }
     size_t mid = out_data[concat_enum::kOut].shape_[dimension_];
     Shape<3> oshape = Shape3(leading, mid, trailing);
-    out = out_data[concat_enum::kOut].get_with_shape<xpu, 3, real_t>(oshape, s);
+    out = out_data[concat_enum::kOut].get_with_shape<xpu, 3, DType>(oshape, s);
 
     for (int i = 0; i < size_; ++i) {
       Shape<3> dshape = Shape3(leading, in_data[i].shape_[dimension_], trailing);
-      data[i] = in_data[i].get_with_shape<xpu, 3, real_t>(dshape, s);
+      data[i] = in_data[i].get_with_shape<xpu, 3, DType>(dshape, s);
     }
     Concatenate(data, &out, 1, req[concat_enum::kOut]);
   }
@@ -85,8 +85,8 @@ class ConcatOp : public Operator {
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(in_grad.size(), static_cast<size_t>(size_));
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    std::vector<Tensor<xpu, 3> > grad_in(size_);
-    Tensor<xpu, 3> grad;
+    std::vector<Tensor<xpu, 3, DType> > grad_in(size_);
+    Tensor<xpu, 3, DType> grad;
     size_t leading = 1, trailing = 1;
     for (int i = 0; i < dimension_; ++i) {
       leading *= out_grad[concat_enum::kOut].shape_[i];
@@ -96,11 +96,11 @@ class ConcatOp : public Operator {
     }
     size_t mid = out_grad[concat_enum::kOut].shape_[dimension_];
     Shape<3> oshape = Shape3(leading, mid, trailing);
-    grad = out_grad[concat_enum::kOut].get_with_shape<xpu, 3, real_t>(oshape, s);
+    grad = out_grad[concat_enum::kOut].get_with_shape<xpu, 3, DType>(oshape, s);
 
     for (int i = 0; i < size_; ++i) {
       Shape<3> dshape = Shape3(leading, in_grad[i].shape_[dimension_], trailing);
-      grad_in[i] = in_grad[i].get_with_shape<xpu, 3, real_t>(dshape, s);
+      grad_in[i] = in_grad[i].get_with_shape<xpu, 3, DType>(dshape, s);
     }
     Split(grad, &grad_in, 1, req);
   }
@@ -111,7 +111,7 @@ class ConcatOp : public Operator {
 };  // class ConcatOp
 
 template<typename xpu>
-Operator *CreateOp(ConcatParam param);
+Operator *CreateOp(ConcatParam param, int dtype);
 
 #if DMLC_USE_CXX11
 class ConcatProp : public OperatorProperty {
@@ -162,6 +162,41 @@ class ConcatProp : public OperatorProperty {
     return true;
   }
 
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    int dtype = -1;
+
+    for (size_t i = 0; i < in_type->size(); ++i) {
+      if (dtype == -1) {
+        dtype = in_type->at(i);
+      } else {
+        CHECK(in_type->at(i) == dtype ||
+              in_type->at(i) == -1) <<
+              "Non-uniform data type in Concat";
+      }
+    }
+
+    if (dtype == -1) {
+      LOG(FATAL) << "Not enough information to infer type in Concat.";
+      return false;
+    }
+
+    size_t nin = this->ListArguments().size();
+    in_type->clear();
+    for (size_t i = 0; i < nin; ++i) in_type->push_back(dtype);
+
+    size_t naux = this->ListAuxiliaryStates().size();
+    aux_type->clear();
+    for (size_t i = 0; i < naux; ++i) aux_type->push_back(dtype);
+
+    size_t nout = this->ListOutputs().size();
+    out_type->clear();
+    for (size_t i = 0; i < nout; ++i) out_type->push_back(dtype);
+
+    return true;
+  }
+
   OperatorProperty* Copy() const override {
     auto ptr = new ConcatProp();
     ptr->param_ = param_;
@@ -179,7 +214,13 @@ class ConcatProp : public OperatorProperty {
     return out_grad;
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not implemented";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   ConcatParam param_;
