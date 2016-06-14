@@ -21,11 +21,11 @@ def get_mlp():
     multi-layer perceptron
     """
     data = mx.symbol.Variable('data')
-    fc1  = mx.symbol.CaffeOperator(data = data, name='fc1', para="layer{ inner_product_param{num_output: 128}}", op_type_name="fullyconnected")
-    act1 = mx.symbol.CaffeOperator(data = fc1, para="layer{}", op_type_name="tanh")
-    fc2  = mx.symbol.CaffeOperator(data = act1, name='fc2', para="layer{ inner_product_param{num_output: 64}}", op_type_name="fullyconnected")
-    act2 = mx.symbol.CaffeOperator(data = fc2, para="layer{}", op_type_name="tanh")
-    fc3 = mx.symbol.CaffeOperator(data = act2, name='fc3', para="layer{ inner_product_param{num_output: 10}}", op_type_name="fullyconnected")
+    fc1  = mx.symbol.CaffeOperator(arg0 = data, name='fc1', para="layer{ inner_product_param{num_output: 128}}", op_type_name="fullyconnected")
+    act1 = mx.symbol.CaffeOperator(arg0 = fc1, para="layer{}", op_type_name="tanh")
+    fc2  = mx.symbol.CaffeOperator(arg0 = act1, name='fc2', para="layer{ inner_product_param{num_output: 64}}", op_type_name="fullyconnected")
+    act2 = mx.symbol.CaffeOperator(arg0 = fc2, para="layer{}", op_type_name="tanh")
+    fc3 = mx.symbol.CaffeOperator(arg0 = act2, name='fc3', para="layer{ inner_product_param{num_output: 10}}", op_type_name="fullyconnected")
     mlp  = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
     return mlp
 
@@ -38,25 +38,25 @@ def get_lenet():
     data = mx.symbol.Variable('data')
 
     # first conv
-    conv1 = mx.symbol.CaffeOperator(data=data, para="layer { convolution_param { num_output: 20 kernel_size: 5 stride: 1} }", op_type_name="conv")
+    conv1 = mx.symbol.CaffeOperator(arg0=data, para="layer { convolution_param { num_output: 20 kernel_size: 5 stride: 1} }", op_type_name="conv")
     # TODO(Haoran): Tanh does not work!!
     #tanh1 = mx.symbol.CaffeOperator(data = conv1, para="layer{}", op_type_name="tanh")
-    act1 = mx.symbol.CaffeOperator(data=conv1, para="layer{}", op_type_name="tanh")
+    act1 = mx.symbol.CaffeOperator(arg0=conv1, para="layer{}", op_type_name="tanh")
     pool1 = mx.symbol.Pooling(data=act1, pool_type="max",
                               kernel=(2,2), stride=(2,2))
 
-    conv2 = mx.symbol.CaffeOperator(data=pool1, para="layer { convolution_param { num_output: 50 kernel_size: 5 stride: 1} }", op_type_name="conv")
-    act2 = mx.symbol.CaffeOperator(data = conv2, para="layer{}", op_type_name="tanh")
+    conv2 = mx.symbol.CaffeOperator(arg0=pool1, para="layer { convolution_param { num_output: 50 kernel_size: 5 stride: 1} }", op_type_name="conv")
+    act2 = mx.symbol.CaffeOperator(arg0=conv2, para="layer{}", op_type_name="tanh")
     pool2 = mx.symbol.Pooling(data=act2, pool_type="max",
                               kernel=(2,2), stride=(2,2))
 
     # first fullc
     flatten = mx.symbol.Flatten(data=pool2)
-    fc1 = mx.symbol.CaffeOperator(data=flatten, para="layer{ inner_product_param{num_output: 500} }", op_type_name="fullyconnected")
-    act3 = mx.symbol.CaffeOperator(data=fc1, para="layer{}", op_type_name="tanh")
+    fc1 = mx.symbol.CaffeOperator(arg0=flatten, para="layer{ inner_product_param{num_output: 500} }", op_type_name="fullyconnected")
+    act3 = mx.symbol.CaffeOperator(arg0=fc1, para="layer{}", op_type_name="tanh")
 
     # second fullc
-    fc2 = mx.symbol.CaffeOperator(data=act3, para="layer{ inner_product_param{num_output: 10} }", op_type_name="fullyconnected")
+    fc2 = mx.symbol.CaffeOperator(arg0=act3, para="layer{ inner_product_param{num_output: 10} }", op_type_name="fullyconnected")
     lenet = mx.symbol.SoftmaxOutput(data=fc2, name='softmax')
     return lenet
 

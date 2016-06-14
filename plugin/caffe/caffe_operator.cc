@@ -36,9 +36,7 @@ DMLC_REGISTER_PARAMETER(CaffeOperatorParam);
 
 MXNET_REGISTER_OP_PROPERTY(CaffeOperator, CaffeOperatorProp)
 .describe("Apply caffe operator")
-.add_argument("data", "Symbol", "Input data to the Caffe Op.")
-.add_argument("weight", "Symbol", "Weight matrix.")
-.add_argument("bias", "Symbol", "Bias parameter.")
+.add_argument("data", "Symbol[]", "List of tensors")
 .add_arguments(CaffeOperatorParam::__FIELDS__());
 
 
@@ -55,37 +53,62 @@ DEFINE_CAFFE_LAYER_FN(GenFnCaffeConvLayer, ::caffe::ConvolutionLayer<float>)
 
 // Set init flag
 bool CaffeTypeNameMap::init = false;
-std::map<std::string, pFunc> CaffeTypeNameMap::to_gen_func;
-std::map<std::string, int> CaffeTypeNameMap::to_type_value;
+std::map<std::string, pFunc> CaffeTypeNameMap::gen_func_map;
+std::map<std::string, int> CaffeTypeNameMap::enum_map,
+                           CaffeTypeNameMap::in_num_map,
+                           CaffeTypeNameMap::out_num_map;
 
 // Add layer generate-function to dictionary
 void CaffeTypeNameMap::DoInit() {
   init = true;
-  to_gen_func["fullyconnected"] = GenFnCaffeInnerProductLayer;
-  to_gen_func["tanh"] = GenFnCaffeTanhLayer;
-  to_gen_func["relu"] = GenFnCaffeReluLayer;
-  to_gen_func["conv"] = GenFnCaffeConvLayer;
+  gen_func_map["fullyconnected"] = GenFnCaffeInnerProductLayer;
+  gen_func_map["tanh"] = GenFnCaffeTanhLayer;
+  gen_func_map["relu"] = GenFnCaffeReluLayer;
+  gen_func_map["conv"] = GenFnCaffeConvLayer;
 
-  to_type_value["fullyconnected"] = caffeEnum::fullyconnected;
-  to_type_value["tanh"] = caffeEnum::tanh;
-  to_type_value["relu"] = caffeEnum::relu;
-  to_type_value["conv"] = caffeEnum::conv;
+  enum_map["fullyconnected"] = caffeEnum::fullyconnected;
+  enum_map["tanh"] = caffeEnum::tanh;
+  enum_map["relu"] = caffeEnum::relu;
+  enum_map["conv"] = caffeEnum::conv;
+
+  in_num_map["fullyconnected"] = 1;
+  in_num_map["tanh"] = 1;
+  in_num_map["relu"] = 1;
+  in_num_map["conv"] = 1;
+
+  out_num_map["fullyconnected"] = 1;
+  out_num_map["tanh"] = 1;
+  out_num_map["relu"] = 1;
+  out_num_map["conv"] = 1;
 }
 
-pFunc CaffeTypeNameMap::toFn(std::string name) {
+pFunc CaffeTypeNameMap::GetInitFunc(std::string name) {
   if (!init)
     DoInit();
-  CHECK(to_gen_func.count(name) > 0) << "Cannot find Caffe Type Name:" << name;
-  return to_gen_func[name];
+  CHECK(gen_func_map.count(name) > 0) << "Cannot find Caffe Type Name:" << name;
+  return gen_func_map[name];
 }
 
-int CaffeTypeNameMap::toVal(std::string name) {
+int CaffeTypeNameMap::GetType(std::string name) {
   if (!init)
     DoInit();
-  CHECK(to_type_value.count(name) > 0) << "Cannot find Caffe Type Name:" << name;
-  return to_type_value[name];
+  CHECK(enum_map.count(name) > 0) << "Cannot find Caffe Type Name:" << name;
+  return enum_map[name];
 }
 
+int CaffeTypeNameMap::GetInputNum(std::string name) {
+  if (!init)
+    DoInit();
+  CHECK(in_num_map.count(name) > 0) << "Cannot find Caffe Type Name:" << name;
+  return in_num_map[name];
+}
+
+int CaffeTypeNameMap::GetOutputNum(std::string name) {
+  if (!init)
+    DoInit();
+  CHECK(out_num_map.count(name) > 0) << "Cannot find Caffe Type Name:" << name;
+  return out_num_map[name];
+}
 
 }  // namespace op
 }  // namespace mxnet

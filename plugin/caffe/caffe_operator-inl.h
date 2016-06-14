@@ -34,8 +34,7 @@ namespace op {
 
 // Enumeration for inputs, outputs and caffe type
 namespace caffeEnum {
-enum CaffeOpInputs {kData};
-enum CaffeOpOutputs {kOut};
+enum FetchType {DataOnly, GradOnly, DataWithGrad};
 enum CaffeOpType {fullyconnected, tanh, relu, conv};
 }  // namespace caffeEnum
 
@@ -43,8 +42,9 @@ enum CaffeOpType {fullyconnected, tanh, relu, conv};
 struct CaffeOperatorParam : public dmlc::Parameter<CaffeOperatorParam> {
   caffe::LayerParameter para;
   std::string op_type_name;
+  std::vector<int> in_dims, w_dims, out_dims;
   caffe::Layer<float> *caffe_op;
-  int input_dim, out_dim, op_type_value;
+  int op_type_value;
 
   DMLC_DECLARE_PARAMETER(CaffeOperatorParam) {
     DMLC_DECLARE_FIELD(para)
@@ -54,7 +54,6 @@ struct CaffeOperatorParam : public dmlc::Parameter<CaffeOperatorParam> {
   }
 };
 
-
 typedef caffe::Layer<float>* (*pFunc) (caffe::LayerParameter);
 
 // This is mapping from layer_type_name to layer init funciton & enum
@@ -62,13 +61,16 @@ class CaffeTypeNameMap{
  public:
   static void DoInit();
   // Returns init function of layer in correpsonding type
-  static pFunc toFn(std::string layer_type_name);
+  static pFunc GetInitFunc(std::string layer_type_name);
   // Returns caffeEnum::CaffeOpType of layer in in correpsonding type
-  static int toVal(std::string layer_type_name);
+  static int GetType(std::string layer_type_name);
+  // Returns caffeEnum::Input Dim of layer
+  static int GetInputNum(std::string layer_type_name);
+  static int GetOutputNum(std::string layer_type_name);
  private:
   static bool init;
-  static std::map<std::string, pFunc> to_gen_func;
-  static std::map<std::string, int> to_type_value;
+  static std::map<std::string, pFunc> gen_func_map;
+  static std::map<std::string, int> enum_map, in_num_map, out_num_map;
 };
 
 
@@ -81,14 +83,10 @@ class CaffeOperator : public Operator {
  public:
   explicit CaffeOperator(CaffeOperatorParam p):param_(p),
                                                caffeOp_(p.caffe_op),
-                                               inputDim_(p.input_dim),
-                                               outDim_(p.out_dim),
                                                initWeight_(false),
                                                initWeightDelta_(false) {
   }
-
   void CaffeForward(std::vector<caffe::Blob<float>*> bottom, std::vector<caffe::Blob<float>*> top);
-
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
@@ -96,75 +94,58 @@ class CaffeOperator : public Operator {
                        const std::vector<TBlob> &aux_args) {
     // Set mode before forward
     ::mxnet::CaffeMode::SetMode<xpu>();
-    if ((inputDim_ == 2) && (outDim_ == 2))
-      DoForward<2, 2>(ctx, in_data, req, out_data, aux_args);
-    else if ((inputDim_ == 4) && (outDim_ == 2))
-      DoForward<4, 2>(ctx, in_data, req, out_data, aux_args);
-    else if ((inputDim_ == 4) && (outDim_ == 4))
-      DoForward<4, 4>(ctx, in_data, req, out_data, aux_args);
-    else
-      LOG(FATAL) << "unexpected input dim " << inputDim_ <<" output dim" << outDim_;
-  }
 
-  template<size_t input_dim, size_t out_dim>
-  void DoForward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
+    using ::caffe::Blob;
+    using std::vector;
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(req[caffeEnum::kOut], kWriteTo);
-
-    // Input num cannot be accessed directly from caffe layer without doing layer set-up
-    size_t expected_in_num = caffeOp_->blobs().size() + 1;
+    for (size_t i = 0; i < req.size(); ++i)
+      CHECK_EQ(req[i], kWriteTo);
+    size_t expected_in_num = param_.w_dims.size() + param_.in_dims.size();
     CHECK_EQ(in_data.size(), expected_in_num);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), param_.out_dims.size());
     // TODO(bing): check the BLAS Handle, be careful
     // maybe need blas handle from context
     // TODO(bing): judge shape to remove flatten op
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
+    // TODO(Haoran): when need cublas handle in stream?
     if ( param_.op_type_value == caffeEnum::fullyconnected)
       CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
 
-    Tensor<xpu, input_dim> data = in_data[caffeEnum::kData].get<xpu, input_dim, real_t>(s);
-    Tensor<xpu, out_dim> out = out_data[caffeEnum::kOut].get<xpu, out_dim, real_t>(s);
-
-    ::caffe::Blob<float> *bottomBlobPtr = new ::caffe::Blob<float>(),
-                            *topBlobPtr = new ::caffe::Blob<float>();
-    TensorToBlob<xpu, input_dim>(bottomBlobPtr, caffememtype::Data, &data);
-    TensorToBlob<xpu, out_dim>(topBlobPtr, caffememtype::Data, &out);
-
+    vector<Blob<float> *> bot_blobs, top_blobs;
+    vector<TBlob> empty_tblobs;
+    this->BuildOrModifyBlobs(s, caffeEnum::DataOnly, param_.in_dims,
+                             false, bot_blobs, 0, in_data, empty_tblobs);
+    this->BuildOrModifyBlobs(s, caffeEnum::DataOnly, param_.out_dims,
+                             false, top_blobs, 0, out_data, empty_tblobs);
 
     if (!initWeight_) {
       // Init caffe's weight pointer
       initWeight_ = true;
       weightDataList_ = new std::vector<void*>();
-      for (int i = 1; i < expected_in_num; ++i)
+      for (int i = param_.in_dims.size(); i < expected_in_num; ++i)
         weightDataList_->push_back(in_data[i].dptr_);
-
-      std::vector<caffe::Blob<float>*> weightBlobPtrs;
-      for (int i = 1; i < expected_in_num; ++i) {
-        int shape_dim = caffeOp_->blobs()[i-1]->shape().size();
-        weightBlobPtrs.push_back(new ::caffe::Blob<float>());
-      ConvertToCaffeBlobInForward(s, shape_dim, &in_data[i], weightBlobPtrs[i-1]);
-    }
-      caffeOp_->SetLearnableWeights(weightBlobPtrs);
+      vector<Blob<float>*> w_blobs;
+      this->BuildOrModifyBlobs(s, caffeEnum::DataOnly, param_.w_dims,
+                               false, w_blobs, param_.in_dims.size(), in_data, empty_tblobs);
+      caffeOp_->SetLearnableWeights(w_blobs);
     } else {
       // pointer of weights should align with the weights passed in
-      for (int i = 1; i < expected_in_num; ++i)
-        CHECK_EQ(weightDataList_->at(i-1), in_data[i].dptr_);
+      for (int i = param_.in_dims.size(); i < expected_in_num; ++i)
+        CHECK_EQ(weightDataList_->at(i-param_.in_dims.size()), in_data[i].dptr_);
     }
 
-    std::vector<caffe::Blob<float>*> botVec, topVec;
-    botVec.push_back(bottomBlobPtr);
-    topVec.push_back(topBlobPtr);
-
     // Set caffe's input & output blobs and forward
-    this->CaffeForward(botVec, topVec);
+    this->CaffeForward(bot_blobs, top_blobs);
+
+    // Free caffe in & out blobs
+    for (size_t i = 0; i < bot_blobs.size(); ++i)
+      delete bot_blobs[i];
+    for (size_t i = 0; i < top_blobs.size(); ++i)
+      delete top_blobs[i];
   }
 
   void CaffeBackward(std::vector<caffe::Blob<float>*> top, \
@@ -179,30 +160,15 @@ class CaffeOperator : public Operator {
                         const std::vector<TBlob> &aux_args) {
     // Set mode before backward
     ::mxnet::CaffeMode::SetMode<xpu>();
-    if ((inputDim_ == 2) && (outDim_ == 2))
-      DoBackward<2, 2>(ctx, out_grad, in_data, out_data, req, in_grad, aux_args);
-    else if ((inputDim_ == 4) && (outDim_ == 2))
-      DoBackward<4, 2>(ctx, out_grad, in_data, out_data, req, in_grad, aux_args);
-    else if ((inputDim_ == 4) && (outDim_ == 4))
-      DoBackward<4, 4>(ctx, out_grad, in_data, out_data, req, in_grad, aux_args);
-    else
-      LOG(FATAL) << "unexpected input dim " << inputDim_ <<" output dim" << outDim_;
-  }
-
-  template<size_t input_dim, size_t out_dim>
-  void DoBackward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_args) {
+    using std::vector;
+    using ::caffe::Blob;
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK(req[caffeEnum::kData] != kAddTo) << "caffe not support  write add to";
+    CHECK_EQ(out_grad.size(), param_.out_dims.size());
+    for (size_t i = 0; i < param_.in_dims.size(); ++i)
+      CHECK(req[i] != kAddTo) << "caffe not support write as kAddTo";
 
-    size_t expected_in_num = caffeOp_->blobs().size() + 1;
+    size_t expected_in_num = param_.w_dims.size() + param_.in_dims.size();
     CHECK(in_data.size() == expected_in_num && in_grad.size() == expected_in_num);
     CHECK_EQ(req.size(), expected_in_num);
     // TODO(bing): check the BLAS Handle, be careful
@@ -213,73 +179,125 @@ class CaffeOperator : public Operator {
       CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
-
-    Tensor<xpu, input_dim> data = in_data[caffeEnum::kData].get<xpu, input_dim, real_t>(s),
-                          gdata = in_grad[caffeEnum::kData].get<xpu, input_dim, real_t>(s);
-    Tensor<xpu, out_dim> out = out_data[caffeEnum::kOut].get<xpu, out_dim, real_t>(s),
-                        gout = out_grad[caffeEnum::kOut].get<xpu, out_dim, real_t>(s);
-
-    caffe::Blob<float> *bottomBlobPtr = new ::caffe::Blob<float>(),
-                          *topBlobPtr = new ::caffe::Blob<float>();
-    TensorToBlob<xpu, input_dim>(bottomBlobPtr, caffememtype::Data, \
-        &data, caffememtype::Grad, &gdata);
-    TensorToBlob<xpu, out_dim>(topBlobPtr, caffememtype::Data, \
-        &out, caffememtype::Grad, &gout);
+    vector<Blob<float>*> top_blobs, bot_blobs;
+    vector<TBlob> empty_tblobs;
+    this->BuildOrModifyBlobs(s, caffeEnum::DataWithGrad, param_.in_dims,
+                             false, bot_blobs, 0, in_data, in_grad);
+    this->BuildOrModifyBlobs(s, caffeEnum::DataWithGrad, param_.out_dims,
+                             false, top_blobs, 0, out_data, out_grad);
 
     if (!initWeightDelta_) {
       // Init caffe's gradient pointer
       initWeightDelta_ = true;
-      weightDeltaList_ = new std::vector<void*>();
-      for (int i = 1; i < expected_in_num; ++i)
+      weightDeltaList_ = new vector<void*>();
+      for (int i = param_.in_dims.size(); i < expected_in_num; ++i)
         weightDeltaList_->push_back(in_grad[i].dptr_);
 
-      std::vector<caffe::Blob<float>*> weightBlobPtrs = caffeOp_->GetLearnableWeights();
-      for (int i = 1; i < expected_in_num; ++i) {
-        int shape_dim = caffeOp_->blobs()[i-1]->shape().size();
-        this->ConvertToCaffeBlobInBackward(s, req[i], shape_dim, &in_grad[i], weightBlobPtrs[i-1]);
-      }
+      vector<Blob<float>*> w_blobs = caffeOp_->GetLearnableWeights();
+      this->BuildOrModifyBlobs(s, caffeEnum::GradOnly, param_.w_dims,
+                               true, w_blobs, param_.in_dims.size(), in_grad, empty_tblobs);
     } else {
       // pointer of gradient should align with the gradient passed in
-      for (int i = 1; i < expected_in_num; ++i) {
-        CHECK_EQ(weightDeltaList_->at(i-1), in_grad[i].dptr_);
-        CHECK_EQ(weightDataList_->at(i-1), in_data[i].dptr_);
+      for (int i = param_.in_dims.size(); i < expected_in_num; ++i) {
+        CHECK_EQ(weightDeltaList_->at(i-param_.in_dims.size()), in_grad[i].dptr_);
+        CHECK_EQ(weightDataList_->at(i-param_.in_dims.size()), in_data[i].dptr_);
       }
     }
 
-    for (int i = 1; i < expected_in_num; ++i) {
-        int shape_dim = caffeOp_->blobs()[i-1]->shape().size();
-        this->HandleOpReqType(s, req[i], shape_dim, &in_grad[i]);
+    // Set grad to zero
+    for (size_t i = param_.in_dims.size(); i < expected_in_num; ++i) {
+        int dim = param_.w_dims[i - param_.in_dims.size()];
+        this->HandleOpReqType(s, req[i], dim, &in_grad[i]);
     }
-    std::vector<caffe::Blob<float>*> topVec, botVec;
-    std::vector<bool> flagVec;
 
+    std::vector<bool> flags;
     // deal with OpReqType
-    flagVec.push_back(req[caffeEnum::kData] != kNullOp);
-    topVec.push_back(topBlobPtr);
-    botVec.push_back(bottomBlobPtr);
+    for (size_t i = 0; i < param_.in_dims.size(); ++i)
+      flags.push_back(req[i] != kNullOp);
 
     // Set caffe's data and gradient blobs of input/output and do backward
-    CaffeBackward(topVec, flagVec, botVec);
-  }
+    CaffeBackward(top_blobs, flags, bot_blobs);
 
-  void ConvertToCaffeBlobInForward(mshadow::Stream<xpu>*s, int shape_dim,
-                            const TBlob* in, caffe::Blob<float>* w) {
-    switch (shape_dim) {
-      case 1: this->ConvWeiFor<1>(s, in, w); break;
-      case 2: this->ConvWeiFor<2>(s, in, w); break;
-      case 3: this->ConvWeiFor<3>(s, in, w); break;
-      case 4: this->ConvWeiFor<4>(s, in, w); break;
-      default: LOG(FATAL) << "unknown expected weight dim" << shape_dim; break;
-    }
+    // Free caffe in & out blobs
+    for (size_t i = 0; i < bot_blobs.size(); ++i)
+      delete bot_blobs[i];
+    for (size_t i = 0; i < top_blobs.size(); ++i)
+      delete top_blobs[i];
   }
 
   template<size_t dim>
-  void ConvWeiFor(mshadow::Stream<xpu>*s,
-                            const TBlob* in_data, caffe::Blob<float>* weight_blob) {
-    mshadow::Tensor<xpu, dim> w = in_data->get<xpu, dim, real_t>(s);
-    TensorToBlob<xpu, dim>(weight_blob, caffememtype::Data, &w);
+  void ConvertTBlob2Blob(mshadow::Stream<xpu>* s,
+                    int fetch_type,
+                    ::caffe::Blob<float>* blob_ptr,
+                    const TBlob *tblob_0,
+                    const TBlob *tblob_1 = NULL) {
+    using mshadow::Tensor;
+    switch (fetch_type) {
+      case caffeEnum::DataOnly: {
+        Tensor<xpu, dim> data = tblob_0->get<xpu, dim, real_t>(s);
+        TensorToBlob<xpu, dim>(blob_ptr, caffememtype::Data, &data);
+        break;
+      }
+      case caffeEnum::GradOnly: {
+        Tensor<xpu, dim> grad = tblob_0->get<xpu, dim, real_t>(s);
+        TensorToBlob<xpu, dim>(blob_ptr, caffememtype::Grad, &grad);
+        break;
+      }
+      case caffeEnum::DataWithGrad: {
+        CHECK(tblob_1 != NULL);
+        Tensor<xpu, dim> data = tblob_0->get<xpu, dim, real_t>(s);
+        Tensor<xpu, dim> grad = tblob_1->get<xpu, dim, real_t>(s);
+        TensorToBlob<xpu, dim>(blob_ptr, caffememtype::Data, \
+          &data, caffememtype::Grad, &grad);
+        break;
+      }
+      default: {
+        LOG(FATAL) << "unexpected fetch type " << fetch_type;
+      }
+    }
   }
 
+  void BuildOrModifyBlobs(mshadow::Stream<xpu> *s, int fetch_type, const std::vector<int>& dims,
+                          bool blobs_inited, std::vector<caffe::Blob<float> *>& blobs,
+                          int tblob_start_dim, const std::vector<TBlob>& tblobs_0,
+                          const std::vector<TBlob>& tblobs_1) {
+    for (size_t i = 0; i < dims.size(); ++i) {
+      int dim = dims[i];
+      const TBlob* tblob_0 = &tblobs_0[tblob_start_dim + i];
+      const TBlob* tblob_1 = NULL;
+      if (fetch_type == caffeEnum::DataWithGrad)
+        tblob_1 = &tblobs_1[tblob_start_dim + i];
+      ::caffe::Blob<float>* blob_ptr;
+      if (blobs_inited)
+        blob_ptr = blobs[i];
+      else
+        blob_ptr = new ::caffe::Blob<float>();
+      switch (dim) {
+        case 1: {
+          ConvertTBlob2Blob<1>(s, fetch_type, blob_ptr, tblob_0, tblob_1);
+          break;
+        }
+        case 2: {
+          ConvertTBlob2Blob<2>(s, fetch_type, blob_ptr, tblob_0, tblob_1);
+          break;
+        }
+        case 3: {
+          ConvertTBlob2Blob<3>(s, fetch_type, blob_ptr, tblob_0, tblob_1);
+          break;
+        }
+        case 4: {
+          ConvertTBlob2Blob<4>(s, fetch_type, blob_ptr, tblob_0, tblob_1);
+          break;
+        }
+        default: {
+          LOG(FATAL) << "unexpected dim " << dim;
+          break;
+        }
+      }
+      if (!blobs_inited)
+        blobs.push_back(blob_ptr);
+    }
+  }
 
   void HandleOpReqType(mshadow::Stream<xpu>*s, OpReqType req, int shape_dim, const TBlob* in_g) {
     switch (shape_dim) {
@@ -291,17 +309,6 @@ class CaffeOperator : public Operator {
     }
   }
 
-  void ConvertToCaffeBlobInBackward(mshadow::Stream<xpu>*s, OpReqType req, int shape_dim,
-                                    const TBlob* in_g,  caffe::Blob<float>* w) {
-    switch (shape_dim) {
-      case 1: this->ConvWeiBac<1>(s, req, in_g, w); break;
-      case 2: this->ConvWeiBac<2>(s, req, in_g, w); break;
-      case 3: this->ConvWeiBac<3>(s, req, in_g, w); break;
-      case 4: this->ConvWeiBac<4>(s, req, in_g, w); break;
-      default: LOG(FATAL) << "unknown expected weight dim" << shape_dim; break;
-    }
-  }
-
   template<size_t dim>
   void HandleOpReq(mshadow::Stream<xpu>*s, OpReqType req, const TBlob* in_grad) {
     mshadow::Tensor<xpu, dim> w_g = in_grad->get<xpu, dim, real_t>(s);
@@ -309,18 +316,10 @@ class CaffeOperator : public Operator {
       w_g = 0;
   }
 
-  template<size_t dim>
-  void ConvWeiBac(mshadow::Stream<xpu>*s, OpReqType req,
-                  const TBlob* in_grad, caffe::Blob<float>* weight_blob) {
-    mshadow::Tensor<xpu, dim> w_g = in_grad->get<xpu, dim, real_t>(s);
-    TensorToBlob<xpu, dim>(weight_blob, caffememtype::Grad, &w_g);
-  }
-
  private:
   CaffeOperatorParam param_;
   ::caffe::Layer<float> *caffeOp_;
   ::std::vector<void*> *weightDataList_, *weightDeltaList_;
-  int inputDim_, outDim_;
   bool initWeight_, initWeightDelta_;
 };  // class CaffeOperator
 
@@ -332,8 +331,11 @@ Operator* CreateOp(CaffeOperatorParam param);
 class CaffeOperatorProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
-    std::vector<std::string> res = {"data"};
+    std::vector<std::string> res;
+    for (size_t i = 0; i < param_.in_dims.size(); ++i)
+      res.push_back(std::string("arg") + static_cast<char>('0' + i));
 
+    // TODO(Haoran): Replace by param_.w_dims.size()
     int blob_cnt = param_.caffe_op->GetWeightsNumber();
     for (int i = 0; i < blob_cnt; ++i) {
       // TODO(Haoran): needs to assign by name
@@ -347,64 +349,83 @@ class CaffeOperatorProp : public OperatorProperty {
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
-    param_.op_type_value = CaffeTypeNameMap::toVal(param_.op_type_name);
-    param_.caffe_op = CaffeTypeNameMap::toFn(param_.op_type_name)(this->param_.para);
+    param_.op_type_value = CaffeTypeNameMap::GetType(param_.op_type_name);
+    param_.caffe_op = CaffeTypeNameMap::GetInitFunc(param_.op_type_name)(this->param_.para);
+    param_.in_dims.resize(CaffeTypeNameMap::GetInputNum(param_.op_type_name));
+    param_.out_dims.resize(CaffeTypeNameMap::GetOutputNum(param_.op_type_name));
   }
 
   std::map<std::string, std::string> GetParams() const override {
     return param_.__DICT__();
   }
 
-  std::vector<int> TShapeToVector(const TShape &dshape) const {
+  std::vector<int> TShape2Vector(const TShape &tshape) const {
     std::vector<int> s;
-    for (unsigned int i =0 ; i < dshape.ndim(); ++i)
-      s.push_back(dshape[i]);
+    for (unsigned int i =0 ; i < tshape.ndim(); ++i)
+      s.push_back(tshape[i]);
     return s;
   }
 
-  TShape ToTShape(const std::vector<int> &vec_int) const {
+  TShape Vector2TShape(const std::vector<int> &vec_int) const {
     TShape shp;
     std::vector<index_t> vec_indx;
-
-    for (auto v : vec_int)
-      vec_indx.push_back(v);
-
+    for (size_t i = 0; i < vec_int.size(); ++i)
+      vec_indx.push_back(vec_int[i]);
     shp = vec_indx;
     return shp;
   }
 
+  /*
+   * \brief Set up caffe_op to infer weights & output shape
+   * \brief Initialize param_'s in & out dims
+   */
   bool InferShape(std::vector<TShape> *in_shape,
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_GE(in_shape->size(), 1);
-    const TShape &dshape = (*in_shape)[caffeEnum::kData];
-    if (dshape.ndim() ==  0) return false;
-
-    /*
-     * \brief Set up caffe_op to infer shape
-     * \brief Dimensions of bottomBlob & topBlob should align with real input&output blobs
-     */
-    // TODO(Haoran): Support multiple inputs & outputs
-    ::caffe::Blob<float> bottomBlob, topBlob;
-    auto bottom_shape = this->TShapeToVector(dshape);
-    bottomBlob.Reshape(bottom_shape);
-    param_.caffe_op->SetUp({&bottomBlob}, {&topBlob});
-
-    param_.input_dim = dshape.ndim();
-
-    CHECK_EQ(in_shape->size(), param_.caffe_op->blobs().size() + 1);
-    out_shape->clear();
-
-    // Set weight shape
-    TShape shp;
-    for (unsigned int i = 0; i < param_.caffe_op->blobs().size(); ++i) {
-      shp = this->ToTShape(param_.caffe_op->blobs()[i]->shape());
-      SHAPE_ASSIGN_CHECK(*in_shape, i + 1, shp);
+    using caffe::Blob;
+    using std::vector;
+    CHECK_GE(in_shape->size(), param_.in_dims.size());
+    // Initialize bottom & top blobs for caffe_op setup
+    size_t in_dims_cnt = param_.in_dims.size();
+    param_.in_dims.clear();
+    vector<Blob<float> *> bot_blobs, top_blobs;
+    // Set OperatorParam input dims & caffe op input blobs
+    for (size_t i = 0; i < in_dims_cnt; ++i) {
+      TShape tshape = (*in_shape)[i];
+      if (tshape.ndim() == 0) return false;
+      param_.in_dims.push_back(tshape.ndim());
+      auto blob_ptr = new Blob<float>();
+      blob_ptr->Reshape(this->TShape2Vector(tshape));
+      bot_blobs.push_back(blob_ptr);
+    }
+    // Set caffe op output blobs
+    for (size_t i = 0; i < param_.out_dims.size(); ++i) {
+      top_blobs.push_back(new Blob<float>());
     }
 
-    out_shape->push_back(this->ToTShape(topBlob.shape()));
-    param_.out_dim = (*out_shape)[0].ndim();
+    param_.caffe_op->SetUp(bot_blobs, top_blobs);
+    CHECK_EQ(in_shape->size(), param_.caffe_op->blobs().size() + param_.in_dims.size());
+    // Set weight shape
+    param_.w_dims.clear();
+    for (size_t i = 0; i < param_.caffe_op->blobs().size(); ++i) {
+      auto tshape = this->Vector2TShape(param_.caffe_op->blobs()[i]->shape());
+      param_.w_dims.push_back(tshape.ndim());
+      SHAPE_ASSIGN_CHECK(*in_shape, i + param_.in_dims.size(), tshape);
+    }
+    // Initialize out dims & out shapes
+    param_.out_dims.clear();
+    out_shape->clear();
+    for (auto blob : top_blobs) {
+      auto tshape = this->Vector2TShape(blob->shape());
+      param_.out_dims.push_back(tshape.ndim());
+      out_shape->push_back(tshape);
+    }
+    // Free caffe in & out blobs
+    for (auto blob_ptr : bot_blobs)
+      delete blob_ptr;
+    for (auto blob_ptr : top_blobs)
+      delete blob_ptr;
     return true;
   }
 
