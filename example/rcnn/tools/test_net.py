@@ -25,7 +25,7 @@ def test_net(imageset, year, root_path, devkit_path, prefix, epoch, ctx):
 
     # load testing data
     voc, roidb = load_test_roidb(imageset, year, root_path, devkit_path)
-    test_data = ROIIter(roidb, ctx=ctx, batch_size=1, shuffle=False, mode='test')
+    test_data = ROIIter(roidb, batch_size=1, shuffle=False, mode='test')
 
     # load model
     args, auxs = load_param(prefix, epoch, convert=True, ctx=ctx)

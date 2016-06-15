@@ -45,12 +45,11 @@ https://github.com/rbgirshick/fast-rcnn/tree/master/data/demo
 * Start training by run `python train.py`. Variable args can be found by run
 `python train.py --help`.
 * Training can be done in cpu, modify `train.py` accordingly.
-* Training can be done in multiple gpus.
 ```
 usage: train.py [-h] [--image_set IMAGE_SET] [--year YEAR]
                 [--root_path ROOT_PATH] [--devkit_path DEVKIT_PATH]
                 [--pretrained PRETRAINED] [--epoch EPOCH] [--prefix PREFIX]
-                [--gpus GPU_ID] [--begin_epoch BEGIN_EPOCH]
+                [--gpu GPU_ID] [--begin_epoch BEGIN_EPOCH]
                 [--end_epoch END_EPOCH] [--frequent FREQUENT]
 
 Train a Fast R-CNN network
@@ -68,24 +67,13 @@ optional arguments:
                         pretrained model prefix
   --epoch EPOCH         epoch of pretrained model
   --prefix PREFIX       new model prefix
-  --gpus GPU_ID         GPU devices to train with
+  --gpu GPU_ID          GPU device to train with
   --begin_epoch BEGIN_EPOCH
                         begin epoch of training
   --end_epoch END_EPOCH
                         end epoch of training
   --frequent FREQUENT   frequency of logging
-  --kv_store KV_STORE   kv_store type used in multi-device training
-  --work_load_list WORK_LOAD_LIST
-                        list of work load for different devices
 ```
-- Performance in terms of training speed
-
- | GPUs | batch size | samples per second |
- | --- | --- | --- |
- | 1 | 2 | 3.02 |
- | 2 | 4 | 3.80 |
- | 4 | 8 | 5.96 |
-
 
 ## Testing
 * Start testing by run `python test.py`. Variable args can be found by run

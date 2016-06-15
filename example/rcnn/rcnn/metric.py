@@ -24,20 +24,8 @@ class SmoothL1LossMetric(mx.metric.EvalMetric):
         super(SmoothL1LossMetric, self).__init__('SmoothL1Loss')
 
     def update(self, labels, preds):
-        bbox_loss = preds[1].asnumpy()
-        label = labels[1].asnumpy()
+        bbox_loss = preds[0].asnumpy()
+        label = labels[0].asnumpy()
         bbox_loss = np.sum(bbox_loss)
         self.sum_metric += bbox_loss
         self.num_inst += label.shape[0]
-
-
-class Accuracy(mx.metric.EvalMetric):
-    def __init__(self):
-        super(Accuracy, self).__init__('accuracy')
-
-    def update(self, labels, preds):
-        pred_label = mx.ndarray.argmax_channel(preds[0]).asnumpy().astype('int32')
-        label = labels[0].asnumpy().astype('int32')
-
-        self.sum_metric += (pred_label.flat == label.flat).sum()
-        self.num_inst += len(pred_label.flat)
