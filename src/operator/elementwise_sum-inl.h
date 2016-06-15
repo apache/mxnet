@@ -34,7 +34,7 @@ struct ElementWiseSumParam : public dmlc::Parameter<ElementWiseSumParam> {
   }
 };
 
-template<typename xpu>
+template<typename xpu, typename DType>
 class ElementWiseSumOp : public Operator {
  public:
   explicit ElementWiseSumOp(ElementWiseSumParam param)
@@ -52,34 +52,34 @@ class ElementWiseSumOp : public Operator {
     if (req[elemsum::kOut] == kNullOp) return;
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> out = out_data[elemsum::kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2, DType> out = out_data[elemsum::kOut].FlatTo2D<xpu, DType>(s);
     switch (size_) {
       case 2: {
-        Tensor<xpu, 2> in_0 = in_data[elemsum::kData0].FlatTo2D<xpu, real_t>(s);
-        Tensor<xpu, 2> in_1 = in_data[elemsum::kData1].FlatTo2D<xpu, real_t>(s);
+        Tensor<xpu, 2, DType> in_0 = in_data[elemsum::kData0].FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 2, DType> in_1 = in_data[elemsum::kData1].FlatTo2D<xpu, DType>(s);
         Assign(out, req[elemsum::kOut], in_0 + in_1);
         break;
       }
       case 3: {
-        Tensor<xpu, 2> in_0 = in_data[elemsum::kData0].FlatTo2D<xpu, real_t>(s);
-        Tensor<xpu, 2> in_1 = in_data[elemsum::kData1].FlatTo2D<xpu, real_t>(s);
-        Tensor<xpu, 2> in_2 = in_data[elemsum::kData2].FlatTo2D<xpu, real_t>(s);
+        Tensor<xpu, 2, DType> in_0 = in_data[elemsum::kData0].FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 2, DType> in_1 = in_data[elemsum::kData1].FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 2, DType> in_2 = in_data[elemsum::kData2].FlatTo2D<xpu, DType>(s);
         Assign(out, req[elemsum::kOut], in_0 + in_1 + in_2);
         break;
       }
       case 4: {
-        Tensor<xpu, 2> in_0 = in_data[elemsum::kData0].FlatTo2D<xpu, real_t>(s);
-        Tensor<xpu, 2> in_1 = in_data[elemsum::kData1].FlatTo2D<xpu, real_t>(s);
-        Tensor<xpu, 2> in_2 = in_data[elemsum::kData2].FlatTo2D<xpu, real_t>(s);
-        Tensor<xpu, 2> in_3 = in_data[elemsum::kData3].FlatTo2D<xpu, real_t>(s);
+        Tensor<xpu, 2, DType> in_0 = in_data[elemsum::kData0].FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 2, DType> in_1 = in_data[elemsum::kData1].FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 2, DType> in_2 = in_data[elemsum::kData2].FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 2, DType> in_3 = in_data[elemsum::kData3].FlatTo2D<xpu, DType>(s);
         Assign(out, req[elemsum::kOut], in_0 + in_1 + in_2 + in_3);
         break;
       }
       default: {
-        Tensor<xpu, 2> in_0 = in_data[elemsum::kData0].FlatTo2D<xpu, real_t>(s);
+        Tensor<xpu, 2, DType> in_0 = in_data[elemsum::kData0].FlatTo2D<xpu, DType>(s);
         Assign(out, req[elemsum::kOut], F<mshadow_op::identity>(in_0));
         for (int i = 1; i < size_; ++i) {
-          out += in_data[i].FlatTo2D<xpu, real_t>(s);
+          out += in_data[i].FlatTo2D<xpu, DType>(s);
         }
         break;
       }
@@ -97,10 +97,10 @@ class ElementWiseSumOp : public Operator {
     using namespace mshadow::expr;
     CHECK_EQ(in_grad.size(), static_cast<size_t>(size_));
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> ograd = out_grad[elemsum::kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2, DType> ograd = out_grad[elemsum::kOut].FlatTo2D<xpu, DType>(s);
     for (int i = 0; i < size_; ++i) {
       if (req[i] == kNullOp || req[i] == kWriteInplace) continue;
-      Tensor<xpu, 2> igrad = in_grad[i].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2, DType> igrad = in_grad[i].FlatTo2D<xpu, DType>(s);
       Assign(igrad, req[i], F<mshadow_op::identity>(ograd));
     }
   }
@@ -120,7 +120,7 @@ class ElementWiseSumOp : public Operator {
 };  // class ElementWiseSumOp
 
 template<typename xpu>
-Operator* CreateOp(ElementWiseSumParam param);
+Operator* CreateOp(ElementWiseSumParam param, int dtype);
 
 #if DMLC_USE_CXX11
 class ElementWiseSumProp : public OperatorProperty {
@@ -152,6 +152,36 @@ class ElementWiseSumProp : public OperatorProperty {
     }
     out_shape->clear();
     out_shape->push_back(in_shape->at(sidx));
+    return true;
+  }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    size_t nin = in_type->size();
+    CHECK_EQ(nin, static_cast<size_t>(param_.num_args));
+
+    int dtype = -1;
+    for (size_t i = 0; i < nin; ++i) {
+      if (dtype == -1) {
+        dtype = in_type->at(i);
+      } else {
+        CHECK(in_type->at(i) == dtype ||
+              in_type->at(i) == -1) <<
+              "This operator requires uniform type";
+      }
+    }
+
+    if (dtype == -1) {
+      LOG(FATAL) << "At least one input type needs to be known";
+      return false;
+    }
+
+    in_type->clear();
+    for (size_t i = 0; i < nin; ++i) in_type->push_back(dtype);
+
+    out_type->clear();
+    out_type->push_back(dtype);
     return true;
   }
 
@@ -194,7 +224,13 @@ class ElementWiseSumProp : public OperatorProperty {
     return {{in_data[0], out_data[0]}};
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   ElementWiseSumParam param_;

@@ -24,7 +24,7 @@ enum BlockGradientOpInputs {kData};
 enum BlockGradientOpOutputs {kOut};
 }  // namespace blockgrad
 
-template<typename xpu>
+template<typename xpu, typename DType>
 class BlockGradientOp : public Operator {
  public:
   virtual void Forward(const OpContext &ctx,
@@ -37,8 +37,8 @@ class BlockGradientOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[blockgrad::kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> out = out_data[blockgrad::kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2, DType> data = in_data[blockgrad::kData].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> out = out_data[blockgrad::kOut].FlatTo2D<xpu, DType>(s);
     out = F<mshadow_op::identity>(data);
   }
 
@@ -52,13 +52,13 @@ class BlockGradientOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> grad = in_grad[blockgrad::kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2, DType> grad = in_grad[blockgrad::kData].FlatTo2D<xpu, DType>(s);
     grad = 0.f;
   }
 };  // class BlockGradientOp
 
 template<typename xpu>
-Operator *CreateOp();
+Operator *CreateOp(int dtype);
 
 #if DMLC_USE_CXX11
 class BlockGradientProp : public OperatorProperty {
@@ -78,6 +78,17 @@ class BlockGradientProp : public OperatorProperty {
     if (dshape.ndim() == 0) return false;
     out_shape->clear();
     out_shape->push_back(dshape);
+    return true;
+  }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    CHECK_EQ(in_type->size(), 1);
+    int dtype = (*in_type)[0];
+    CHECK_NE(dtype, -1) << "Input must have specified type";
+    out_type->clear();
+    out_type->push_back(dtype);
     return true;
   }
 
@@ -102,7 +113,13 @@ class BlockGradientProp : public OperatorProperty {
     return {{in_data[blockgrad::kData], out_data[blockgrad::kOut]}};
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 };  // class BlockGradientProperty
 
 #endif  // DMLC_USE_CXX11
