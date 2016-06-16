@@ -45,9 +45,6 @@ setup.rnn.model <- function(rnn.sym, ctx,
     arg.names <- rnn.sym$arguments
     input.shapes <- list()
     for (name in arg.names) {
-        # if (grepl('init.c$', name) || grepl('init.h$', name)) {
-        #     input.shapes[[name]] <- c(num.hidden, batch.size)
-        # }
         if (name %in% init.states.name) {
             input.shapes[[name]] <- c(num.hidden, batch.size)
         }
@@ -127,10 +124,7 @@ train.rnn <- function (model, train.data, eval.data,
         for (name in init.states.name) {
             init.states[[name]] <- m$rnn.exec$ref.arg.arrays[[name]]*0
         }
-        # for (i in 1:num.lstm.layer) {
-        #     init.states[[paste0("l", i, ".init.c")]] <- mx.nd.zeros(c(num.hidden, batch.size))
-        #     init.states[[paste0("l", i, ".init.h")]] <- mx.nd.zeros(c(num.hidden, batch.size))
-        # }
+
         mx.exec.update.arg.arrays(m$rnn.exec, init.states, match.name=TRUE)
 
         tic <- Sys.time()
@@ -150,10 +144,7 @@ train.rnn <- function (model, train.data, eval.data,
             for (name in init.states.name) {
                 init.states[[name]] <- m$rnn.exec$ref.arg.arrays[[name]]*0
             }
-            # for (i in 1:num.lstm.layer) {
-            #     init.states[[paste0("l", i, ".init.c")]] <- m$rnn.exec$ref.arg.arrays[[paste0("l", i, ".init.c")]]*0
-            #     init.states[[paste0("l", i, ".init.h")]] <- m$rnn.exec$ref.arg.arrays[[paste0("l", i, ".init.h")]]*0
-            # }
+
             mx.exec.update.arg.arrays(m$rnn.exec, init.states, match.name=TRUE)
             # update epoch counter
             epoch.counter <- epoch.counter + 1
@@ -163,10 +154,7 @@ train.rnn <- function (model, train.data, eval.data,
                 for (name in init.states.name) {
                     init.grad[[name]] <- m$rnn.exec$ref.arg.arrays[[name]]*0
                 }
-                # for (i in 1:num.lstm.layer) {
-                #     init.grad[[paste0("l", i, ".init.c")]] <- m$rnn.exec$ref.arg.arrays[[paste0("l", i, ".init.c")]]*0
-                #     init.grad[[paste0("l", i, ".init.h")]] <- m$rnn.exec$ref.arg.arrays[[paste0("l", i, ".init.h")]]*0
-                # }
+
                 mx.exec.update.grad.arrays(m$rnn.exec, init.grad, match.name=TRUE)
 
                 arg.blocks <- updater(m$rnn.exec$ref.arg.arrays, m$rnn.exec$ref.grad.arrays)
@@ -206,10 +194,6 @@ train.rnn <- function (model, train.data, eval.data,
             for (name in init.states.name) {
                 init.states[[name]] <- m$rnn.exec$ref.arg.arrays[[name]]*0
             }
-            # for (i in 1:num.lstm.layer) {
-            #     init.states[[paste0("l", i, ".init.c")]] <- m$rnn.exec$ref.arg.arrays[[paste0("l", i, ".init.c")]]*0
-            #     init.states[[paste0("l", i, ".init.h")]] <- m$rnn.exec$ref.arg.arrays[[paste0("l", i, ".init.h")]]*0
-            # }
             mx.exec.update.arg.arrays(m$rnn.exec, init.states, match.name=TRUE)
 
             eval.data$reset()
@@ -226,10 +210,6 @@ train.rnn <- function (model, train.data, eval.data,
                 for (name in init.states.name) {
                     init.states[[name]] <- m$rnn.exec$ref.arg.arrays[[name]]*0
                 }
-                # for (i in 1:num.lstm.layer) {
-                #     init.states[[paste0("l", i, ".init.c")]] <- m$rnn.exec$ref.arg.arrays[[paste0("l", i, ".init.c")]]*0
-                #     init.states[[paste0("l", i, ".init.h")]] <- m$rnn.exec$ref.arg.arrays[[paste0("l", i, ".init.h")]]*0
-                # }
                 mx.exec.update.arg.arrays(m$rnn.exec, init.states, match.name=TRUE)
                 val.nll <- val.nll + calc.nll(as.array(seq.label.probs), batch.size)
                 nbatch <- nbatch + seq.len

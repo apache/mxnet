@@ -215,10 +215,6 @@ mx.lstm <- function(train.data, eval.data=NULL,
         return (state.h)
     })
     init.states.name <- c(init.states.c, init.states.h)
-    # for (i in 1:num.lstm.layer) {
-    #      <- c(init.states.name, paste0("l", i, ".init.c"))
-    #     init.states.name <- c(init.states.name, paste0("l", i, ".init.h"))
-    # }
 
     # set up lstm model
     model <- setup.rnn.model(rnn.sym=rnn.sym,
@@ -286,11 +282,7 @@ mx.lstm.inference <- function(num.lstm.layer,
                                  num.embed=num.embed,
                                  num.label=num.label,
                                  dropout=dropout)
-    # init.states.name <- c()
-    # for (i in 1:num.lstm.layer) {
-    #     init.states.name <- c(init.states.name, paste0("l", i, ".init.c"))
-    #     init.states.name <- c(init.states.name, paste0("l", i, ".init.h"))
-    # }
+
     init.states.c <- lapply(1:num.lstm.layer, function(i) {
         state.c <- paste0("l", i, ".init.c")
         return (state.c)
