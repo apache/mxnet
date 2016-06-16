@@ -871,6 +871,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
 
 void GraphExecutor::Print(std::ostream &os) const {
   os << "num_forward_nodes=" << num_forward_nodes_ << '\n';
+  size_t memory_used = 0;
   for (size_t i = 0; i < topo_order_.size(); ++i) {
     uint32_t nid = topo_order_[i];
     if (!op_nodes_[nid].activated) continue;
@@ -883,6 +884,8 @@ void GraphExecutor::Print(std::ostream &os) const {
       os << "\toutput[" << j << "]: shape=" << info.shape;
       if (info.storage_id != GraphStorageAllocator::kBadStorageID) {
         os << ", storage_id=" << info.storage_id;
+      } else {
+        memory_used += mshadow::mshadow_sizeof(info.data.dtype()) * info.shape.Size();
       }
       if (info.inplace_op_id != -1) {
         os << ", inplace_consumer=" << graph_.nodes[info.inplace_op_id].name;
@@ -900,6 +903,7 @@ void GraphExecutor::Print(std::ostream &os) const {
       os << '\n';
     }
   }
+  os << (memory_used >> 20UL) <<" MB Memory used by pre-allocated resource\n";
   os << "Total " << (total_allocated_bytes_ >> 20UL) <<" MB allocated\n";
   os << "Total " << total_allocated_temp_ <<" TempSpace resource requested\n";
 }
