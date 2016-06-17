@@ -205,7 +205,7 @@ def test_dot():
     assert reldiff(c, C.asnumpy()) < 1e-5
 
 def test_reduce():
-    sample_num = 1000
+    sample_num = 200
     def test_reduce_inner(numpy_reduce_func, nd_reduce_func):
         for i in range(sample_num):
             ndim = np.random.randint(1, 8)
