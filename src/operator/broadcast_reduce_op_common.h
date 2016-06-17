@@ -18,7 +18,7 @@ namespace op {
 * \brief Check if the axes are continuous + get reducing size. E.g (1, 3) -> false, (1,2,3) -> true
 * \param is_contiguous_axes whether the axes is contiguous
 * \param reducing_size product of source shape in the given axes
-* \param axes 
+* \param axes
 * \param src_shape shape of the source tensor
 */
 inline void CheckContiguousAxes_(bool *is_contiguous_axes, index_t *reducing_size,
@@ -45,7 +45,7 @@ inline TShape GetBroadcastingAxes_(const mshadow::TShape &src_shape,
   const mshadow::TShape &target_shape) {
   std::vector<index_t> axes_vec;
   CHECK_EQ(target_shape.ndim(), src_shape.ndim());
-  for (int i = 0; i < src_shape.ndim(); ++i) {
+  for (index_t i = 0; i < src_shape.ndim(); ++i) {
     if (src_shape[i] != target_shape[i]) {
       CHECK_EQ(src_shape[i], 1) << "broadcastsing axis must have size 1, received src_shape="
         << src_shape << " target_shape=" << target_shape;

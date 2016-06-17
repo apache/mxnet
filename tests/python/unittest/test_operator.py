@@ -10,6 +10,13 @@ from check_utils import (check_numeric_gradient, check_symbolic_backward,
 def same(a, b):
     return np.sum(a != b) == 0
 
+def np_softmax(x):
+    x = x - np.max(x, axis=1).reshape(x.shape[0], 1)
+    x = np.exp(x)
+    x /= np.sum(x, axis=1).reshape(x.shape[0], 1)
+    return x
+
+
 def check_elementwise_sum_with_shape(shape, n):
     # forward
     inputs = [mx.symbol.Variable('arg%d' % i) for i in range(n)]
@@ -235,20 +242,23 @@ def check_softmax_with_ignore_label(xpu):
     assert(reldiff(grad0[int(shape[0]/2):], grad1[int(shape[0]/2):]) < 1e-5)
 
 def check_softmax_with_shape(shape, xpu):
+    # bind with label
     X = mx.symbol.Variable('X')
     L = mx.symbol.Variable('L')
     Y = mx.symbol.SoftmaxOutput(data=X, label=L)
     x = mx.random.uniform(-1, 1, shape, ctx = xpu)
-    l = mx.nd.empty((shape[0],), ctx = xpu)
-    l[:] = np.random.randint(0, shape[1]-1, (shape[0],))
+    l = mx.random.uniform(-1, 1, shape, ctx = xpu)
+    l[:] = np_softmax(l.asnumpy())
     grad = mx.nd.empty(shape, ctx = xpu)
-
     exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
-    print('foward')
     exec1.forward()
-    print(exec1.outputs[0].asnumpy())
+    out = exec1.outputs[0].asnumpy()
+    assert_allclose(out, np_softmax(x.asnumpy()))
     exec1.backward()
-    print(grad.asnumpy())
+    assert_allclose(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy())
+
+def test_softmax():
+    check_softmax_with_shape((3, 4), mx.cpu())
 
 def check_multi_softmax_with_shape(shape, xpu):
     X = mx.symbol.Variable('X')
@@ -1047,6 +1057,7 @@ def test_flip():
             assert_allclose(x.asnumpy()[idx], y.asnumpy())
 
 if __name__ == '__main__':
+    test_softmax()
     test_broadcast_binary_op()
     test_flip()
     test_crop()
@@ -1077,5 +1088,3 @@ if __name__ == '__main__':
     test_reshape()
     test_reduce()
     test_broadcast()
-    #check_softmax_with_shape((3,4), mx.cpu())
-    #check_multi_softmax_with_shape((3,4,5), mx.cpu())
