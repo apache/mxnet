@@ -120,3 +120,7 @@ EXTRA_OPERATORS =
 # git@github.com:dato-code/SFrame.git
 # SFRAME_PATH = $(HOME)/SFrame
 # MXNET_PLUGINS += plugin/sframe/plugin.mk
+
+# whether to use warp-ctc integration. This requires build warp-ctc
+# WARPCTC_PATH = $(HOME)/warpctc
+# MXNET_PLUGINS += plugin/warpctc/warpctc.mk
