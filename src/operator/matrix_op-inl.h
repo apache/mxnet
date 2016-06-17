@@ -356,7 +356,6 @@ void Slice(const TBlob &src,
   using namespace mshadow::expr;
   SliceParam param;
   param.Init(env.kwargs);
-
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   int ndim = static_cast<int>(ret->shape_.ndim());
 

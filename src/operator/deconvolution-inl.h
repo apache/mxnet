@@ -41,25 +41,51 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
     int shape[] = {1, 1};
     DMLC_DECLARE_FIELD(kernel).describe("deconvolution kernel size: (y, x)");
     DMLC_DECLARE_FIELD(stride).set_default(TShape(shape, shape + 2))
-    .describe("deconvolution stride: (y, x)");
+        .describe("deconvolution stride: (y, x)");
     shape[0] = shape[1] = 0;
     DMLC_DECLARE_FIELD(pad).set_default(TShape(shape, shape + 2))
-    .describe("pad for deconvolution: (y, x), a good number is : (kernel-1)/2, "
-              "if target_shape set, pad will be ignored and will be computed "
-              "automatically");
+        .describe("pad for deconvolution: (y, x), a good number is : (kernel-1)/2, "
+                  "if target_shape set, pad will be ignored and will be computed "
+                  "automatically");
     DMLC_DECLARE_FIELD(adj).set_default(TShape(shape, shape + 2))
-    .describe("adjustment for output shape: (y, x), if target_shape set, adj "
-               "will be ignored and will be computed automatically");
+        .describe("adjustment for output shape: (y, x), if target_shape set, adj "
+                  "will be ignored and will be computed automatically");
     DMLC_DECLARE_FIELD(target_shape).set_default(TShape(shape, shape + 2))
-    .describe("output shape with targe shape : (y, x)");
+        .describe("output shape with targe shape : (y, x)");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
-    .describe("deconvolution filter(channel) number");
+        .describe("deconvolution filter(channel) number");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
-    .describe("number of groups partition");
+        .describe("number of groups partition");
     DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 8192)
-    .describe("Tmp workspace for deconvolution (MB)");
+        .describe("Tmp workspace for deconvolution (MB)");
     DMLC_DECLARE_FIELD(no_bias).set_default(true)
-    .describe("Whether to disable bias parameter.");
+        .describe("Whether to disable bias parameter.");
+  }
+
+  inline void InferPad(index_t input_y, index_t input_x,
+                       index_t* o_pad_y, index_t* o_pad_x,
+                       index_t* o_adj_y, index_t* o_adj_x) const {
+    index_t& pad_y = *o_pad_y;
+    index_t& pad_x = *o_pad_x;
+    index_t& adj_y = *o_adj_y;
+    index_t& adj_x = *o_adj_x;
+    if (target_shape[0] != 0 || target_shape[1] != 0) {
+      pad_y = stride[0] * (input_y - 1) + kernel[0];
+      pad_x = stride[1] * (input_x - 1) + kernel[1];
+      CHECK_GE(pad_y, target_shape[0])
+          << "too big target shape";
+      CHECK_GE(pad_x, target_shape[1])
+          << "too big target shape";
+      pad_y -= target_shape[0];
+      pad_x -= target_shape[1];
+      adj_y = pad_y % 2; pad_y = (pad_y + 1) / 2;
+      adj_x = pad_x % 2; pad_x = (pad_x + 1) / 2;
+    } else {
+      pad_y = pad[0];
+      pad_x = pad[1];
+      adj_y = adj[0];
+      adj_x = adj[1];
+    }
   }
 };
 
@@ -86,6 +112,10 @@ class DeconvolutionOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> data = in_data[deconv::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> out = out_data[deconv::kOut].get<xpu, 4, DType>(s);
+
+    index_t pad_y, pad_x, adj_y, adj_x;
+    param_.InferPad(data.size(2), data.size(3), &pad_y, &pad_x, &adj_y, &adj_x);
+
     Shape<3> wmat_shape =
         Shape3(param_.num_group,
                data.shape_[1] / param_.num_group,
@@ -112,7 +142,7 @@ class DeconvolutionOp : public Operator {
                                            shape_dstunit_[1],
                                            shape_dstunit_[2] * step), s);
       temp_dst = reshape(swapaxis<1, 0>(data.Slice(i, i + step)), temp_dst.shape_);
-      if (param_.pad[0] == 0 && param_.pad[1] == 0) {
+      if (pad_y == 0 && pad_x == 0) {
         temp_col = unpack_patch2col(out.Slice(i, i + step),
                                     param_.kernel[0],
                                     param_.kernel[1],
@@ -121,7 +151,7 @@ class DeconvolutionOp : public Operator {
                                     1, 1);  // Deconvolution only support dilate equals 1
       } else {
         temp_col = unpack_patch2col(pad(out.Slice(i, i + step),
-                                        param_.pad[0], param_.pad[1]),
+                                        pad_y, pad_x),
                                     param_.kernel[0],
                                     param_.kernel[1],
                                     param_.stride[0],
@@ -134,7 +164,7 @@ class DeconvolutionOp : public Operator {
                                               gstride * (gid + 1));
         tmpc = dot(wmat[gid].T(), temp_dst[gid]);
       }
-      if (param_.pad[0] == 0 && param_.pad[1] == 0) {
+      if (pad_y == 0 && pad_x == 0) {
         out.Slice(i, i + step) = pack_col2patch(temp_col,
                                    out.Slice(i, i + step).shape_,
                                    param_.kernel[0],
@@ -143,8 +173,8 @@ class DeconvolutionOp : public Operator {
                                    1);  // Deconvolution only support dilate equals 1
       } else {
         Shape<4> pshape = out.Slice(i, i + step).shape_;
-        pshape[2] += 2 * param_.pad[0];
-        pshape[3] += 2 * param_.pad[1];
+        pshape[2] += 2 * pad_y;
+        pshape[3] += 2 * pad_x;
         out.Slice(i, i + step) = crop(pack_col2patch(temp_col,
                                         pshape,
                                         param_.kernel[0],
@@ -193,6 +223,9 @@ class DeconvolutionOp : public Operator {
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
 #endif
+    index_t pad_y, pad_x, adj_y, adj_x;
+    param_.InferPad(data.size(2), data.size(3), &pad_y, &pad_x, &adj_y, &adj_x);
+
     const index_t nbatch = data.size(0);
     Tensor<xpu, 1, DType> workspace =
         ctx.requested[deconv::kTempSpace].get_space_typed<xpu, 1, DType>(
@@ -209,7 +242,7 @@ class DeconvolutionOp : public Operator {
                                            shape_dstunit_[1],
                                            shape_dstunit_[2] * step), s);
       temp_dst = reshape(swapaxis<1, 0>(data.Slice(i, i + step)), temp_dst.shape_);
-      if (param_.pad[0] == 0 && param_.pad[1] == 0) {
+      if (pad_y == 0 && pad_x == 0) {
         temp_col = unpack_patch2col(grad.Slice(i, i + step),
                                      param_.kernel[0],
                                      param_.kernel[1],
@@ -217,7 +250,7 @@ class DeconvolutionOp : public Operator {
                                      param_.stride[1],
                                      1, 1);  // Deconvolution only support dilate equals 1
       } else {
-        temp_col = unpack_patch2col(pad(grad.Slice(i, i + step), param_.pad[0], param_.pad[1]),
+        temp_col = unpack_patch2col(pad(grad.Slice(i, i + step), pad_y, pad_x),
                                      param_.kernel[0],
                                      param_.kernel[1],
                                      param_.stride[0],
@@ -332,18 +365,11 @@ class DeconvolutionProp : public OperatorProperty {
     }
     out_shape->clear();
     out_shape->push_back(dshape);
+    // osize = stride * (isize - 1) + ksize - 2 * pad + adj
     const index_t ksize_y = static_cast<index_t>(param_.kernel[0]);
     const index_t ksize_x = static_cast<index_t>(param_.kernel[1]);
-    const index_t pad_y = static_cast<index_t>(param_.target_shape[0] > 0 ?
-        (ksize_y - 1) / 2 : param_.pad[0]);
-    const index_t pad_x = static_cast<index_t>(param_.target_shape[1] > 0 ?
-        (ksize_x - 1) / 2 : param_.pad[1]);
-    const index_t adj_y = static_cast<index_t>(param_.target_shape[0] > 0 ?
-        (param_.target_shape[0] + 2 * pad_y - ksize_y) %
-        param_.stride[0] : param_.adj[0]);
-    const index_t adj_x = static_cast<index_t>(param_.target_shape[1] > 0 ?
-        (param_.target_shape[1] + 2 * pad_x - ksize_x) %
-        param_.stride[1] : param_.adj[1]);
+    index_t pad_y, pad_x, adj_y, adj_x;
+    param_.InferPad(dshape[2], dshape[3], &pad_y, &pad_x, &adj_y, &adj_x);
     CHECK_EQ(dshape[1] % param_.num_group, 0) \
         << "input num_filter must divide group size";
     CHECK_EQ(param_.num_filter % param_.num_group, 0) \
