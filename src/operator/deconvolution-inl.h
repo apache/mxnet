@@ -31,6 +31,8 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   TShape kernel;
   TShape stride;
   TShape pad;
+  TShape adj;
+  TShape target_shape;
   uint32_t num_filter;
   uint32_t num_group;
   uint64_t workspace;
@@ -42,7 +44,14 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
     .describe("deconvolution stride: (y, x)");
     shape[0] = shape[1] = 0;
     DMLC_DECLARE_FIELD(pad).set_default(TShape(shape, shape + 2))
-    .describe("pad for deconvolution: (y, x)");
+    .describe("pad for deconvolution: (y, x), a good number is : (kernel-1)/2, "
+              "if target_shape set, pad will be ignored and will be computed "
+              "automatically");
+    DMLC_DECLARE_FIELD(adj).set_default(TShape(shape, shape + 2))
+    .describe("adjustment for output shape: (y, x), if target_shape set, adj "
+               "will be ignored and will be computed automatically");
+    DMLC_DECLARE_FIELD(target_shape).set_default(TShape(shape, shape + 2))
+    .describe("output shape with targe shape : (y, x)");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
     .describe("deconvolution filter(channel) number");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
@@ -325,6 +334,16 @@ class DeconvolutionProp : public OperatorProperty {
     out_shape->push_back(dshape);
     const index_t ksize_y = static_cast<index_t>(param_.kernel[0]);
     const index_t ksize_x = static_cast<index_t>(param_.kernel[1]);
+    const index_t pad_y = static_cast<index_t>(param_.target_shape[0] > 0 ?
+        (ksize_y - 1) / 2 : param_.pad[0]);
+    const index_t pad_x = static_cast<index_t>(param_.target_shape[1] > 0 ?
+        (ksize_x - 1) / 2 : param_.pad[1]);
+    const index_t adj_y = static_cast<index_t>(param_.target_shape[0] > 0 ?
+        (param_.target_shape[0] + 2 * pad_y - ksize_y) %
+        param_.stride[0] : param_.adj[0]);
+    const index_t adj_x = static_cast<index_t>(param_.target_shape[1] > 0 ?
+        (param_.target_shape[1] + 2 * pad_x - ksize_x) %
+        param_.stride[1] : param_.adj[1]);
     CHECK_EQ(dshape[1] % param_.num_group, 0) \
         << "input num_filter must divide group size";
     CHECK_EQ(param_.num_filter % param_.num_group, 0) \
@@ -333,11 +352,21 @@ class DeconvolutionProp : public OperatorProperty {
         << "incorrect kernel size: " << param_.kernel;
     CHECK_GT(param_.stride.Size(), 0) \
         << "incorrect stride size: " << param_.stride;
+    CHECK_GE(ksize_y-1, adj_y) << "daj(y) must be samller than kernel(h)";
+    CHECK_GE(ksize_x-1, adj_x) << "daj(x) must be samller than kernel(w)";
     (*out_shape)[deconv::kOut][1] = param_.num_filter;
     (*out_shape)[deconv::kOut][2] = param_.stride[0] * (dshape[2] - 1) +
-        ksize_y - 2 * param_.pad[0];
+        ksize_y - 2 * pad_y + adj_y;
     (*out_shape)[deconv::kOut][3] = param_.stride[1] * (dshape[3] - 1) +
-        ksize_x - 2 * param_.pad[1];
+        ksize_x - 2 * pad_x + adj_x;
+    if (param_.target_shape[0] > 0) {
+      CHECK_EQ(param_.target_shape[0], (*out_shape)[deconv::kOut][2]) \
+          << "param_.target_shape[0] was not reasonable, pelase set it carefully";
+    }
+    if (param_.target_shape[1] > 0) {
+      CHECK_EQ(param_.target_shape[1], (*out_shape)[deconv::kOut][3]) \
+          << "param_.target_shape[1] was not reasonable, pelase set it carefully";
+    }
     return true;
   }
 
