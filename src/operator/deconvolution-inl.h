@@ -352,8 +352,8 @@ class DeconvolutionProp : public OperatorProperty {
         << "incorrect kernel size: " << param_.kernel;
     CHECK_GT(param_.stride.Size(), 0) \
         << "incorrect stride size: " << param_.stride;
-    CHECK_GE(ksize_y-1, adj_y) << "daj(y) must be samller than kernel(h)";
-    CHECK_GE(ksize_x-1, adj_x) << "daj(x) must be samller than kernel(w)";
+    CHECK_GE(ksize_y-1, adj_y) << "adj(y) must be samller than kernel(h)";
+    CHECK_GE(ksize_x-1, adj_x) << "adj(x) must be samller than kernel(w)";
     (*out_shape)[deconv::kOut][1] = param_.num_filter;
     (*out_shape)[deconv::kOut][2] = param_.stride[0] * (dshape[2] - 1) +
         ksize_y - 2 * pad_y + adj_y;
