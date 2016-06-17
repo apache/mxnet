@@ -358,14 +358,25 @@ void Slice(const TBlob &src,
   param.Init(env.kwargs);
 
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  int ndim = static_cast<int>(ret->shape_.ndim());
 
-  MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
-    mshadow::Tensor<xpu, 3, DType> in =
-        src.FlatTo3D<xpu, DType>(param.axis, s);
-    mshadow::Tensor<xpu, 3, DType> out =
-        ret->FlatTo3D<xpu, DType>(param.axis, s);
-    ASSIGN_DISPATCH(out, req, slice<1>(in, param.begin, param.end));
-  });
+  if (param.axis + 1 == ndim) {
+    MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+        mshadow::Tensor<xpu, 2, DType> in =
+            src.FlatTo2D<xpu, DType>(s);
+        mshadow::Tensor<xpu, 2, DType> out =
+            ret->FlatTo2D<xpu, DType>(s);
+        ASSIGN_DISPATCH(out, req, slice<1>(in, param.begin, param.end));
+      });
+  } else {
+    MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+        mshadow::Tensor<xpu, 3, DType> in =
+            src.FlatTo3D<xpu, DType>(param.axis, s);
+        mshadow::Tensor<xpu, 3, DType> out =
+            ret->FlatTo3D<xpu, DType>(param.axis, s);
+        ASSIGN_DISPATCH(out, req, slice<1>(in, param.begin, param.end));
+      });
+  }
 }
 
 // Backward pass of broadcast over the given axis
@@ -380,21 +391,39 @@ void SliceGrad_(const OutputGrad& out_grad,
   SliceParam param;
   param.Init(env.kwargs);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  int ndim = static_cast<int>(in_grad->shape_.ndim());
 
-  MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
-      mshadow::Tensor<xpu, 3, DType> ograd =
-          out_grad.data.FlatTo3D<xpu, DType>(param.axis, s);
-      mshadow::Tensor<xpu, 3, DType> igrad =
-          in_grad->FlatTo3D<xpu, DType>(param.axis, s);
-      if (req == kAddTo) {
-        slice<1>(igrad, param.begin, param.end) += F<identity>(ograd);
-      } else if (req == kWriteTo) {
-        igrad = 0.0f;
-        slice<1>(igrad, param.begin, param.end) = F<identity>(ograd);
-      } else {
-        CHECK_EQ(req, kNullOp);
-      }
-    });
+  if (param.axis + 1 == ndim) {
+    MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
+        mshadow::Tensor<xpu, 2, DType> ograd =
+            out_grad.data.FlatTo2D<xpu, DType>(s);
+        mshadow::Tensor<xpu, 2, DType> igrad =
+            in_grad->FlatTo2D<xpu, DType>(s);
+        if (req == kAddTo) {
+          slice<1>(igrad, param.begin, param.end) += F<identity>(ograd);
+        } else if (req == kWriteTo) {
+          igrad = 0.0f;
+          slice<1>(igrad, param.begin, param.end) = F<identity>(ograd);
+        } else {
+          CHECK_EQ(req, kNullOp);
+        }
+      });
+  } else {
+    MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
+        mshadow::Tensor<xpu, 3, DType> ograd =
+            out_grad.data.FlatTo3D<xpu, DType>(param.axis, s);
+        mshadow::Tensor<xpu, 3, DType> igrad =
+            in_grad->FlatTo3D<xpu, DType>(param.axis, s);
+        if (req == kAddTo) {
+          slice<1>(igrad, param.begin, param.end) += F<identity>(ograd);
+        } else if (req == kWriteTo) {
+          igrad = 0.0f;
+          slice<1>(igrad, param.begin, param.end) = F<identity>(ograd);
+        } else {
+          CHECK_EQ(req, kNullOp);
+        }
+      });
+  }
 }
 
 struct FlipParam : public dmlc::Parameter<FlipParam> {
