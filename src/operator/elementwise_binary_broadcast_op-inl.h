@@ -116,7 +116,7 @@ inline void InferBroadcastNewShapes_(bool *do_opt,
     *new_lhs_shape = TShape(MXNET_SPECIAL_MAX_NDIM);
     *new_rhs_shape = TShape(MXNET_SPECIAL_MAX_NDIM);
     *new_out_shape = TShape(MXNET_SPECIAL_MAX_NDIM);
-    for (int i = 0; i < lhs_shape.ndim(); i++) {
+    for (index_t i = 0; i < lhs_shape.ndim(); i++) {
       (*new_lhs_shape)[i] = lhs_shape[i];
       (*new_rhs_shape)[i] = rhs_shape[i];
       (*new_out_shape)[i] = out_shape[i];

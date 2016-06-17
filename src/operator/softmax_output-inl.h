@@ -103,7 +103,14 @@ class SoftmaxOutputOp : public Operator {
     CHECK_GE(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
-    if (param_.multi_output) {
+    if (out_data[softmaxout_enum::kOut].shape_ ==
+        in_data[softmaxout_enum::kLabel].shape_) {
+      // use probability as label
+      Tensor<xpu, 2, DType> label = in_data[softmaxout_enum::kLabel].FlatTo2D<xpu, DType>(s);
+      Tensor<xpu, 2, DType> out = out_data[softmaxout_enum::kOut].FlatTo2D<xpu, DType>(s);
+      Tensor<xpu, 2, DType> grad = in_grad[softmaxout_enum::kData].FlatTo2D<xpu, DType>(s);
+      grad = (out - label) * scalar<DType>(param_.grad_scale);
+    } else if (param_.multi_output) {
       int n = out_data[softmaxout_enum::kOut].size(0);
       int k = out_data[softmaxout_enum::kOut].size(1);
       Shape<3> s3 = Shape3(n, k, static_cast<int>(out_data[softmaxout_enum::kOut].Size()/n/k));
@@ -204,14 +211,18 @@ class SoftmaxOutputProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 2) << "Input:[data, label]";
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
-    if (param_.multi_output) {
-      SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel,
-                         Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]));
-    } else {
-      TShape label_shape(dshape.ndim() - 1);
-      for (index_t i = 0; i + 1 < dshape.ndim(); ++i)
-        label_shape[i] = dshape[i];
-      SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel, label_shape);
+
+    // label.shape == data.shape: use probability as label
+    if (dshape != (*in_shape)[softmaxout_enum::kLabel]) {
+      if (param_.multi_output) {
+        SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel,
+                           Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]));
+      } else {
+        TShape label_shape(dshape.ndim() - 1);
+        for (index_t i = 0; i + 1 < dshape.ndim(); ++i)
+          label_shape[i] = dshape[i];
+        SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel, label_shape);
+      }
     }
     out_shape->clear();
     out_shape->push_back(dshape);
