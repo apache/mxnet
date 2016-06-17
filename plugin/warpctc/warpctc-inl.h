@@ -125,7 +125,9 @@ class WarpCTCOp : public Operator {
                    "Error: get_workspace_size in inf_test");
     void* ctc_workspace;
 
+#if MXNET_USE_CUDA
     cudaError_t cuda_status;
+#endif
     float* activations = static_cast<float*>(data.dptr_);
     int* flat_labels = static_cast<int*>(label.dptr_);
     int* cpu_labels = flat_labels;
