@@ -170,6 +170,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 else()
   add_library(mxnet SHARED ${SOURCE})
 endif()
+install(TARGETS mxnet LIBRARY DESTINATION lib)
 target_link_libraries(mxnet ${mshadow_LINKER_LIBS})
 target_link_libraries(mxnet dmlccore)
 
