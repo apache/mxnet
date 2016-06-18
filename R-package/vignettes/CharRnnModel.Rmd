@@ -3,12 +3,12 @@ Char RNN Example
 
 This example aims to show how to use lstm model to build a char level language model, and generate text from it. We use a tiny shakespeare text for demo purpose.
 
-Data can be found at https://github.com/dmlc/web-data/tree/master/mxnet/tinyshakespeare. 
+Data can be found at [here](https://github.com/dmlc/web-data/tree/master/mxnet/tinyshakespeare)
 
 Preface
 -------
 This tutorial is written in Rmarkdown.
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.org/en/latest/package/r/CharRnnModel.html)
+- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.io/en/latest/packages/r/CharRnnModel.html)
 - You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/CharRnnModel.Rmd)
 
 Load Data 
@@ -21,10 +21,10 @@ Set basic network parameters.
 ```{r}
 batch.size = 32
 seq.len = 32
-num.hidden = 256
-num.embed = 256
-num.lstm.layer = 2
-num.round = 3
+num.hidden = 16
+num.embed = 16
+num.lstm.layer = 1
+num.round = 1
 learning.rate= 0.1
 wd=0.00001
 clip_gradient=1
@@ -161,33 +161,7 @@ model <- mx.lstm(X.train, X.val,
                  clip_gradient=clip_gradient)
 
 ```
-Setting the parameters ctx=mx.gpu(0) and num.round=5 can get the following result.
-```
-Epoch [31] Train: NLL=3.47213018872144, Perp=32.2052727363657
-...
-Epoch [961] Train: NLL=2.32060007657895, Perp=10.181782322355
-Iter [1] Train: Time: 186.397065639496 sec, NLL=2.31135356537961, Perp=10.0880702804858
-Iter [1] Val: NLL=1.94184484060012, Perp=6.97160060607419
-Epoch [992] Train: NLL=1.84784553299322, Perp=6.34613225095329
-...
-Epoch [1953] Train: NLL=1.70175791172558, Perp=5.48357857093351
-Iter [2] Train: Time: 188.929051160812 sec, NLL=1.70103940328978, Perp=5.47963998859367
-Iter [2] Val: NLL=1.74979316010449, Perp=5.75341251767988
-...
-Epoch [2914] Train: NLL=1.54738185300295, Perp=4.69915099483974
-Iter [3] Train: Time: 185.425321578979 sec, NLL=1.54604189517013, Perp=4.69285854740519
-Iter [3] Val: NLL=1.67780240235925, Perp=5.35377758479576
-Epoch [2945] Train: NLL=1.48868466087876, Perp=4.43126307034767
-...
-Iter [4] Train: Time: 185.487086296082 sec, NLL=1.4744973925858, Perp=4.36883940994296
-Iter [4] Val: NLL=1.64488167325603, Perp=5.18039689118454
-Epoch [3937] Train: NLL=1.46355541021581, Perp=4.32129622881604
-...
-Epoch [4898] Train: NLL=1.42900458455642, Perp=4.17454171976281
-Iter [5] Train: Time: 185.070136785507 sec, NLL=1.42909226256273, Perp=4.17490775130428
-Iter [5] Val: NLL=1.62716655804022, Perp=5.08943365437187
 
-```
 Inference from model
 --------------------
 helper function for random sample.
@@ -225,15 +199,12 @@ choice <- function(weights) {
 ```
 we can use random output or fixed output by choosing largest probability.
 ```{r}
-make.output <- function(prob, sample=FALSE, temperature=1.) {
+make.output <- function(prob, sample=FALSE) {
     if (!sample) {
         idx <- which.max(as.array(prob))
     }
     else {
-        scale_prob <- mx.nd.clip(prob, 1e-6, 1 - 1e-6)
-        rescale <- mx.nd.exp(mx.nd.log(scale_prob) / temperature)
-        rescale <- rescale / (as.array(mx.nd.sum(rescale))[1])
-        idx <- choice(rescale)
+        idx <- choice(prob)
     }
     return (idx)
 
@@ -252,7 +223,7 @@ infer.model <- mx.lstm.inference(num.lstm.layer=num.lstm.layer,
                                  ctx=mx.cpu())
 ```
 generate a sequence of 75 chars using function `mx.lstm.forward`.
-```
+```{r}
 start <- 'a'
 seq.len <- 75
 random.sample <- TRUE
@@ -274,3 +245,8 @@ The result:
 ah not a drobl greens
 Settled asing lately sistering sounted to their hight
 ```
+
+Other RNN models
+----------------
+In `mxnet`, other RNN models like custom RNN is also provided.
+- For **custom RNN model**, you can replace `mx.lstm` with `mx.rnn` to train rnn model. Also, you can replace `mx.lstm.inference` and `mx.lstm.forward` with `mx.rnn.inference` and `mx.rnn.forward` to inference from rnn model and get forward result from the inference model.
