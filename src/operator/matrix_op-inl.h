@@ -241,7 +241,7 @@ struct SimpleCropParam : public dmlc::Parameter<SimpleCropParam> {
   }
 };
 
-// matrix crop
+// matrix crop for multi dimensional cropping: see also slice
 template<typename xpu>
 void Crop(const TBlob &src,
           const EnvArguments& env,
@@ -309,6 +309,122 @@ inline TShape CropShape(const TShape& shp,
   return ret;
 }
 
+
+struct SliceParam : public dmlc::Parameter<SliceParam> {
+  int axis;
+  int begin;
+  int end;
+  DMLC_DECLARE_PARAMETER(SliceParam) {
+    DMLC_DECLARE_FIELD(axis).set_lower_bound(0)
+      .describe("The axis to be sliced");
+    DMLC_DECLARE_FIELD(begin).set_lower_bound(0)
+      .describe("The beginning index to be sliced");
+    DMLC_DECLARE_FIELD(end).set_lower_bound(0)
+      .describe("The end index to be sliced");
+  }
+};
+
+inline TShape SliceShape(const TShape& ishape,
+                         const EnvArguments& env) {
+  SliceParam param;
+  param.Init(env.kwargs);
+  CHECK(param.axis < static_cast<int>(ishape.ndim())) <<
+    "axis must be smaller than the source ndim! Recieved axis=" <<
+      param.axis << ", src_ndim=" << ishape.ndim();
+  int axis_size = static_cast<int>(ishape[param.axis]);
+  CHECK_LE(param.end, axis_size);
+  CHECK_LT(param.begin, param.end);
+
+  std::vector<mshadow::index_t> shape;
+  for (index_t i = 0; i < ishape.ndim(); ++i) {
+    if (static_cast<int>(i) == param.axis) {
+      shape.push_back(static_cast<index_t>(param.end - param.begin));
+    } else {
+      shape.push_back(ishape[i]);
+    }
+  }
+  return TShape(shape.begin(), shape.end());
+}
+
+
+template<typename xpu>
+void Slice(const TBlob &src,
+           const EnvArguments& env,
+           TBlob *ret,
+           OpReqType req,
+           RunContext ctx) {
+  using namespace mshadow::expr;
+  SliceParam param;
+  param.Init(env.kwargs);
+
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  int ndim = static_cast<int>(ret->shape_.ndim());
+
+  if (param.axis + 1 == ndim) {
+    MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+        mshadow::Tensor<xpu, 2, DType> in =
+            src.FlatTo2D<xpu, DType>(s);
+        mshadow::Tensor<xpu, 2, DType> out =
+            ret->FlatTo2D<xpu, DType>(s);
+        ASSIGN_DISPATCH(out, req, slice<1>(in, param.begin, param.end));
+      });
+  } else {
+    MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+        mshadow::Tensor<xpu, 3, DType> in =
+            src.FlatTo3D<xpu, DType>(param.axis, s);
+        mshadow::Tensor<xpu, 3, DType> out =
+            ret->FlatTo3D<xpu, DType>(param.axis, s);
+        ASSIGN_DISPATCH(out, req, slice<1>(in, param.begin, param.end));
+      });
+  }
+}
+
+// Backward pass of broadcast over the given axis
+template<typename xpu>
+void SliceGrad_(const OutputGrad& out_grad,
+                const EnvArguments& env,
+                TBlob *in_grad,
+                OpReqType req,
+                RunContext ctx) {
+  using namespace mshadow::op;
+  using namespace mshadow::expr;
+  SliceParam param;
+  param.Init(env.kwargs);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  int ndim = static_cast<int>(in_grad->shape_.ndim());
+
+  if (param.axis + 1 == ndim) {
+    MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
+        mshadow::Tensor<xpu, 2, DType> ograd =
+            out_grad.data.FlatTo2D<xpu, DType>(s);
+        mshadow::Tensor<xpu, 2, DType> igrad =
+            in_grad->FlatTo2D<xpu, DType>(s);
+        if (req == kAddTo) {
+          slice<1>(igrad, param.begin, param.end) += F<identity>(ograd);
+        } else if (req == kWriteTo) {
+          igrad = 0.0f;
+          slice<1>(igrad, param.begin, param.end) = F<identity>(ograd);
+        } else {
+          CHECK_EQ(req, kNullOp);
+        }
+      });
+  } else {
+    MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
+        mshadow::Tensor<xpu, 3, DType> ograd =
+            out_grad.data.FlatTo3D<xpu, DType>(param.axis, s);
+        mshadow::Tensor<xpu, 3, DType> igrad =
+            in_grad->FlatTo3D<xpu, DType>(param.axis, s);
+        if (req == kAddTo) {
+          slice<1>(igrad, param.begin, param.end) += F<identity>(ograd);
+        } else if (req == kWriteTo) {
+          igrad = 0.0f;
+          slice<1>(igrad, param.begin, param.end) = F<identity>(ograd);
+        } else {
+          CHECK_EQ(req, kNullOp);
+        }
+      });
+  }
+}
 
 struct FlipParam : public dmlc::Parameter<FlipParam> {
   int axis;
@@ -395,6 +511,15 @@ MXNET_REGISTER_SIMPLE_OP(crop, XPU)
 .set_function(XPU::kDevMask, Crop<XPU>, kNoInplace, kNotRegisterSymbolic)
 .set_shape_function(CropShape)
 .describe("Crop the input matrix and return a new one");
+
+// slice_axis
+MXNET_REGISTER_SIMPLE_OP(slice_axis, XPU)
+.set_enable_kwargs(true)
+.set_function(XPU::kDevMask, Slice<XPU>,
+              kNoInplace, kRegisterSymbolic)
+.set_gradient(XPU::kDevMask, SliceGrad_<XPU>, kNoInplace)
+.set_shape_function(SliceShape)
+.describe("Slice the input along certain axis and return a sliced array.");
 
 // flip
 MXNET_REGISTER_SIMPLE_OP(flip, XPU)
