@@ -635,7 +635,31 @@ def check_deconvolution_gradient(input_shape, num_filter, pad):
     exe_deconv.backward(deconv_out_grad)
     assert reldiff(conv_args_grad[1].asnumpy(), deconv_args_grad[1].asnumpy()) < 1e-6
 
+def check_deconvolution_target_shape(input_shape, kernel, stride, pad, adj, target_shape=None):
+    data = mx.sym.Variable(name="data")
+    deconv = mx.sym.Deconvolution(
+        data=data, kernel=kernel, stride=stride, pad=pad, adj=adj, num_filter=5,
+        target_shape = target_shape if target_shape is not None else (0, 0))
+    arg_names = deconv.list_arguments()
+    arg_shapes, out_shapes, _ = deconv.infer_shape(data=input_shape)
+    assert out_shapes[0] == (input_shape[0], 5, 8, 8)
+
 def test_deconvolution():
+    check_deconvolution_target_shape(
+        input_shape         = (2,3,4,4),
+        kernel              = (3,3),
+        stride              = (2,2),
+        target_shape        = (8,8),
+        pad                 = (99,99),  # will be ignored
+        adj                 = (101,101),  # will be ignored
+    )
+    check_deconvolution_target_shape(
+        input_shape         = (2,3,4,4),
+        kernel              = (3,3),
+        stride              = (2,2),
+        pad                 = (1,1),
+        adj                 = (1,1),
+    )
     check_deconvolution_forward_backward(
         input_shape         = (1,1,5,5),
         num_filter          = 1,
