@@ -1046,6 +1046,35 @@ def test_crop():
             y = mx.nd.crop(x, begin=tuple(begin), end=tuple(end))
             assert_allclose(x.asnumpy()[idx], y.asnumpy())
 
+
+def test_slice_axis():
+    for ndim in range(1, 6):
+        shape = np.random.randint(1, 11, size=(ndim,))
+        for t in range(ndim):
+            d = shape[t]
+            b = random.randint(0, d-1)
+            e = random.randint(b+1, d)
+            idx = []
+            for i in range(ndim):
+                idx.append(slice(0, shape[i]))
+            idx[t] = slice(b, e)
+
+            X = mx.symbol.Variable('X')
+            x = mx.nd.array(np.random.normal(size=shape))
+            Y = mx.symbol.slice_axis(data=X, axis=t, begin=b, end=e)
+
+            xgrad = mx.nd.empty(x.shape)
+            exec1 = Y.bind(mx.cpu(), args = [x], args_grad = {'X': xgrad})
+            exec1.forward()
+            y = exec1.outputs[0]
+            assert_allclose(x.asnumpy()[idx], y.asnumpy())
+            exec1.backward([y])
+            xx = x.asnumpy()
+            xx[:] = 0.0
+            xx[idx] = x.asnumpy()[idx]
+            assert_allclose(xx, xgrad.asnumpy())
+
+
 def test_flip():
     for ndim in range(1, 6):
         for t in range(5):
@@ -1057,6 +1086,7 @@ def test_flip():
             assert_allclose(x.asnumpy()[idx], y.asnumpy())
 
 if __name__ == '__main__':
+    test_slice_axis()
     test_softmax()
     test_broadcast_binary_op()
     test_flip()
