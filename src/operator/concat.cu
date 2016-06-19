@@ -10,8 +10,12 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateOp<gpu>(ConcatParam param) {
-  return new ConcatOp<gpu>(param);
+Operator* CreateOp<gpu>(ConcatParam param, int dtype) {
+  Operator *op = NULL;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op = new ConcatOp<gpu, DType>(param);
+  });
+  return op;
 }
 
 }  // namespace op

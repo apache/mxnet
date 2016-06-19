@@ -1,6 +1,6 @@
 
 #' @export
-FactorScheduler <- function(step, factor_val) {
+FactorScheduler <- function(step, factor_val, verbose=TRUE) {
   function(optimizerEnv){
     num_update <- optimizerEnv$num_update
     count      <- optimizerEnv$count
@@ -9,10 +9,9 @@ FactorScheduler <- function(step, factor_val) {
     if (num_update > count + step){
       count = count + step
       lr = lr * factor_val
-      cat(paste0("Update[", num_update, "]: learning rate is changed to ", lr, "\n"))
+      if(verbose) cat(paste0("Update[", num_update, "]: learning rate is changed to ", lr, "\n"))
       optimizerEnv$lr <- lr
       optimizerEnv$count <- count
     }
-    # return(optimizerEnv)
   }
 }

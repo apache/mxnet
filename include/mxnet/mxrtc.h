@@ -18,8 +18,6 @@
 #include <unordered_map>
 #include "./ndarray.h"
 
-
-
 namespace mxnet {
 
 /*!
@@ -29,7 +27,7 @@ class MXRtc {
  public:
   /*!
    * \brief Build a new kernel.
-   * 
+   *
    * If the same kernel has been compiled before it will be load from
    * cache instead of compile again.
    * \param name name of the kernel function.

@@ -10,8 +10,15 @@
 #include <unordered_map>
 #include <unordered_set>
 #include "./static_graph.h"
+#include "./graph_algorithm.h"
 
 namespace mxnet {
+
+namespace symbol_constants {
+const char *kShapeKey = "__shape__";
+const char *kNamespaceSeparator = "_";
+}  // namespace symbol_constants
+
 /*!
  * \brief Node is represents node of an operator in the symbolic graph.
  *
@@ -77,31 +84,25 @@ inline bool Symbol::is_atomic() const {
 // implementation of template functions
 template<typename FVisit>
 inline void Symbol::DFSVisit(FVisit fvisit) const {
-  std::vector<std::pair<const std::shared_ptr<Node>*, uint32_t> > stack;
-  std::unordered_set<Node*> visited;
-  // put the head into the graph
-  for (auto &head : heads_) {
-    Node* ptr = head.source.get();
-    if (visited.count(ptr) == 0) {
-      stack.push_back(std::make_pair(&head.source, 0));
-      visited.insert(ptr);
-    }
-    while (!stack.empty()) {
-      std::pair<const std::shared_ptr<Node> *, uint32_t>& back = stack.back();
-      if (back.second == back.first->get()->inputs.size()) {
-        fvisit(*(back.first));
-        stack.pop_back();
-      } else {
-        std::vector<Symbol::DataEntry>& inputs = back.first->get()->inputs;
-        Symbol::DataEntry& input = inputs.at(back.second++);
-        Node* ptr = input.source.get();
-        if (visited.count(ptr) == 0) {
-          stack.push_back(std::make_pair(&input.source, 0));
-          visited.insert(ptr);
+  typedef const std::shared_ptr<Node>* GNode;
+  std::vector<GNode> head_nodes(heads_.size());
+  std::transform(heads_.begin(), heads_.end(), head_nodes.begin(),
+                 [](const DataEntry& e)->GNode {
+                   return &e.source;
+                 });
+  graph::PostOrderDFSVisit<GNode, Node*>(
+      head_nodes,
+      [fvisit](GNode n) { fvisit(*n); },  // FVisit
+      [](GNode n)->Node* { return n->get(); },  // HashFunc
+      [](GNode n)->uint32_t { return (*n)->inputs.size() +
+            static_cast<int>((*n)->is_backward()); },  // InDegree
+      [](GNode n, uint32_t index)->GNode {  // GetInput
+        if (index < (*n)->inputs.size()) {
+          return &(*n)->inputs.at(index).source;
+        } else {
+          return &(*n)->backward_source_node;
         }
-      }
-    }
-  }
+      });
 }
 
 // helper function to handle keyword argument mismatch
@@ -449,6 +450,16 @@ void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
   }
 }
 
+bool Symbol::GetName(std::string* out) {
+  Node* node = heads_[0].source.get();
+  for (const DataEntry& e : heads_) {
+    CHECK(node == e.source.get())
+        << "Symbol.GetName only works for non-grouped symbol";
+  }
+  *out = node->name;
+  return true;
+}
+
 void Symbol::SetAttr(const std::string &key, const std::string& value) {
   Node* node = heads_[0].source.get();
   for (const DataEntry& e : heads_) {
@@ -473,6 +484,40 @@ bool Symbol::GetAttr(const std::string& key, std::string* out) {
   *out = it->second;
   return true;
 }
+
+std::map<std::string, std::string> Symbol::ListAttr() {
+  std::map<std::string, std::string> ret;
+  this->DFSVisit([&ret](const std::shared_ptr<Node> &n) {
+      if (n->attr.get() == nullptr) return;
+      for (const auto &it : *(n->attr.get())) {
+        ret[n->name + symbol_constants::kNamespaceSeparator + it.first] = it.second;
+      }
+      // Also propagate attributes of each node to its auxiliary states.
+      // this is a hack to enable correct allocation of auxiliary state
+      // easily in multiple devices. This behavior should be helpful in current setting,
+      // but can be changed when needed in future.
+      if (n->op.get() != nullptr) {
+        for (const auto& aux : n->op->ListAuxiliaryStates()) {
+          for (const auto &it : *(n->attr.get())) {
+            ret[n->name + '_'  + aux +
+                symbol_constants::kNamespaceSeparator + it.first] = it.second;
+          }
+        }
+      }
+    });
+  return ret;
+}
+
+std::map<std::string, std::string> Symbol::ListAttrShallow() {
+  Node* node = heads_[0].source.get();
+  for (const DataEntry& e : heads_) {
+    CHECK(node == e.source.get())
+        << "Symbol.ListAttrShallow only works for non-grouped symbol";
+  }
+  if (node->attr.get() == nullptr) return std::map<std::string, std::string>();
+  return *node->attr.get();
+}
+
 
 Symbol Symbol::operator () (const std::vector<Symbol>& args,
                             const std::string& name) const {
@@ -559,6 +604,8 @@ bool Symbol::InferShape(const std::unordered_map<std::string, TShape>& known_arg
     if (it != known_arg_shapes.end()) {
       arg_shapes->at(i) = it->second;
       ++nmatched;
+    } else if (g.nodes[g.arg_nodes[i]].is_variable()) {
+      arg_shapes->at(i) = g.nodes[g.arg_nodes[i]].get_attr(symbol_constants::kShapeKey, TShape());
     }
   }
   if (nmatched != known_arg_shapes.size()) {

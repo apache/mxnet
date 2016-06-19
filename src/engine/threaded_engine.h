@@ -285,9 +285,20 @@ class ThreadedEngine : public Engine {
     ThreadedOpr* threaded_opr = opr_block->opr;
     CallbackOnComplete callback = this->CreateCallback(
         ThreadedEngine::OnCompleteStatic, threaded_opr);
+    bool debug_info = (engine_info_ && debug_push_opr_ == opr_block);
+    if (debug_info) {
+      LOG(INFO) << "ExecuteOprBlock " << opr_block
+                << "shutdown_phase=" << shutdown_phase_;
+    }
     if (!shutdown_phase_) {
       try {
+        if (debug_info) {
+          LOG(INFO) << "ExecuteOprFn ";
+        }
         threaded_opr->fn(run_ctx, callback);
+        if (debug_info) {
+          LOG(INFO) << "Fin ExecuteOprFn ";
+        }
       } catch(dmlc::Error &e) {
         std::string what = e.what();
         if (what.find("driver shutting down") == std::string::npos &&
@@ -295,7 +306,7 @@ class ThreadedEngine : public Engine {
           LOG(FATAL) << e.what() << "\n" <<
             "An fatal error occurred in asynchronous engine operation. "
             "If you do not know what caused this error, "
-            "you can try set environment variable MXNET_ENGINE_TYPE"
+            "you can try set environment variable MXNET_ENGINE_TYPE "
             "to NaiveEngine and run with debugger (i.e. gdb). "
             "This will force all operations to be synchronous and "
             "backtrace will give you the series of calls that lead "
@@ -336,6 +347,10 @@ class ThreadedEngine : public Engine {
   std::atomic<bool> shutdown_phase_{false};
   /*!\brief show more information from engine actions */
   bool engine_info_{false};
+  /*! \brief debug information about wait for var. */
+  std::atomic<ThreadedVar*> debug_wait_var_{nullptr};
+  /*! \brief debug information about wait for var. */
+  std::atomic<OprBlock*> debug_push_opr_{nullptr};
   /*!
    * \brief Mutex and condition_variable,
    *  used to Notify waits for single or all variables.

@@ -4,6 +4,7 @@ import ml.dmlc.mxnet._
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
 
+import scala.collection.mutable
 import scala.collection.JavaConverters._
 
 object TrainMnist {
@@ -91,14 +92,33 @@ object TrainMnist {
         else if (inst.cpus != null) inst.cpus.split(',').map(id => Context.cpu(id.trim.toInt))
         else Array(Context.cpu(0))
 
-      ModelTrain.fit(dataDir = inst.dataDir,
-        batchSize = inst.batchSize, numExamples = inst.numExamples, devs = devs,
-        network = net, dataLoader = getIterator(dataShape),
-        kvStore = inst.kvStore, numEpochs = inst.numEpochs,
-        modelPrefix = inst.modelPrefix, loadEpoch = inst.loadEpoch,
-        lr = inst.lr, lrFactor = inst.lrFactor, lrFactorEpoch = inst.lrFactorEpoch,
-        monitorSize = inst.monitor)
-      logger.info("Finish fit ...")
+      val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
+      envs.put("DMLC_ROLE", inst.role)
+      if (inst.schedulerHost != null) {
+        require(inst.schedulerPort > 0, "scheduler port not specified")
+        envs.put("DMLC_PS_ROOT_URI", inst.schedulerHost)
+        envs.put("DMLC_PS_ROOT_PORT", inst.schedulerPort.toString)
+        require(inst.numWorker > 0, "Num of workers must > 0")
+        envs.put("DMLC_NUM_WORKER", inst.numWorker.toString)
+        require(inst.numServer > 0, "Num of servers must > 0")
+        envs.put("DMLC_NUM_SERVER", inst.numServer.toString)
+      }
+      logger.info("Init PS environments")
+      KVStoreServer.init(envs.toMap)
+
+      if (inst.role != "worker") {
+        logger.info("Start KVStoreServer for scheduler & servers")
+        KVStoreServer.start()
+      } else {
+        ModelTrain.fit(dataDir = inst.dataDir,
+          batchSize = inst.batchSize, numExamples = inst.numExamples, devs = devs,
+          network = net, dataLoader = getIterator(dataShape),
+          kvStore = inst.kvStore, numEpochs = inst.numEpochs,
+          modelPrefix = inst.modelPrefix, loadEpoch = inst.loadEpoch,
+          lr = inst.lr, lrFactor = inst.lrFactor, lrFactorEpoch = inst.lrFactorEpoch,
+          monitorSize = inst.monitor)
+        logger.info("Finish fit ...")
+      }
     } catch {
       case ex: Exception => {
         logger.error(ex.getMessage, ex)
@@ -139,4 +159,15 @@ class TrainMnist {
   private val lrFactorEpoch: Float = 1f
   @Option(name = "--monitor", usage = "monitor the training process every N batch")
   private val monitor: Int = -1
+
+  @Option(name = "--role", usage = "scheduler/server/worker")
+  private val role: String = "worker"
+  @Option(name = "--scheduler-host", usage = "Scheduler hostname / ip address")
+  private val schedulerHost: String = null
+  @Option(name = "--scheduler-port", usage = "Scheduler port")
+  private val schedulerPort: Int = 0
+  @Option(name = "--num-worker", usage = "# of workers")
+  private val numWorker: Int = 1
+  @Option(name = "--num-server", usage = "# of servers")
+  private val numServer: Int = 1
 }

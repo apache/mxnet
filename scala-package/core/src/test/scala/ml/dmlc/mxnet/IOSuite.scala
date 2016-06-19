@@ -1,5 +1,6 @@
 package ml.dmlc.mxnet
 
+import ml.dmlc.mxnet.io.{NDArrayIter, ResizeIter}
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import scala.sys.process._
 
@@ -63,8 +64,8 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
 
 
   /**
-    * default skip this test for saving time
-    */
+   * default skip this test for saving time
+   */
   test("test ImageRecordIter") {
     // get data
     "./scripts/get_cifar_data.sh" !
@@ -110,5 +111,82 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     val data1 = imgRecIter.getData().head.toArray
     assert(label0 === label1)
     assert(data0 === data1)
+  }
+
+  test("test ResizeIter") {
+    // get data
+    "./scripts/get_mnist_data.sh" !
+
+    val params = Map(
+      "image" -> "data/train-images-idx3-ubyte",
+      "label" -> "data/train-labels-idx1-ubyte",
+      "data_shape" -> "(784,)",
+      "batch_size" -> "100",
+      "shuffle" -> "1",
+      "flat" -> "1",
+      "silent" -> "0",
+      "seed" -> "10"
+    )
+
+    val mnistIter = IO.MNISTIter(params)
+    val nBatch = 400
+    var batchCount = 0
+    val resizeIter = new ResizeIter(mnistIter, nBatch, false)
+
+    while(resizeIter.hasNext) {
+      resizeIter.next()
+      batchCount += 1
+    }
+
+    assert(batchCount === nBatch)
+
+    batchCount = 0
+    resizeIter.reset()
+    while(resizeIter.hasNext) {
+      resizeIter.next()
+      batchCount += 1
+    }
+
+    assert(batchCount === nBatch)
+  }
+
+  test("test NDArrayIter") {
+    val shape0 = Shape(Array(1000, 2, 2))
+    val data = IndexedSeq(NDArray.ones(shape0), NDArray.zeros(shape0))
+    val shape1 = Shape(Array(1000, 1))
+    val label = IndexedSeq(NDArray.ones(shape1))
+    val batchData0 = NDArray.ones(Shape(Array(128, 2, 2)))
+    val batchData1 = NDArray.zeros(Shape(Array(128, 2, 2)))
+    val batchLabel = NDArray.ones(Shape(Array(128, 1)))
+
+    // test pad
+    val dataIter0 = new NDArrayIter(data, label, 128, false, "pad")
+    var batchCount = 0
+    val nBatch0 = 8
+    while(dataIter0.hasNext) {
+      val tBatch = dataIter0.next()
+      batchCount += 1
+
+      assert(tBatch.data(0).toArray === batchData0.toArray)
+      assert(tBatch.data(1).toArray === batchData1.toArray)
+      assert(tBatch.label(0).toArray === batchLabel.toArray)
+    }
+
+    assert(batchCount === nBatch0)
+
+    // test discard
+    val dataIter1 = new NDArrayIter(data, label, 128, false, "discard")
+    val nBatch1 = 7
+    batchCount = 0
+    while(dataIter1.hasNext) {
+      val tBatch = dataIter1.next()
+      batchCount += 1
+
+      assert(tBatch.data(0).toArray === batchData0.toArray)
+      assert(tBatch.data(1).toArray === batchData1.toArray)
+      assert(tBatch.label(0).toArray === batchLabel.toArray)
+    }
+
+    assert(batchCount === nBatch1)
   }
 }

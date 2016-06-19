@@ -8,7 +8,7 @@ We will show you how to do classification and regression tasks respectively. The
 Preface
 -------
 This tutorial is written in Rmarkdown.
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.org/en/latest/R-package/fiveMinutesNeuralNetwork.html)
+- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.io/en/latest/packages/r/fiveMinutesNeuralNetwork.html)
 - You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/fiveMinutesNeuralNetwork.Rmd)
 
 ## Classification
@@ -19,14 +19,14 @@ First of all, let us load in the data and preprocess it:
 require(mlbench)
 require(mxnet)
 
-data(Sonar, package="mlbench")
+data(Sonar, package = "mlbench")
 
-Sonar[,61] = as.numeric(Sonar[,61])-1
-train.ind = c(1:50, 100:150)
-train.x = data.matrix(Sonar[train.ind, 1:60])
-train.y = Sonar[train.ind, 61]
-test.x = data.matrix(Sonar[-train.ind, 1:60])
-test.y = Sonar[-train.ind, 61]
+Sonar[,61] <- as.numeric(Sonar[,61])-1
+train.ind <- c(1:50, 100:150)
+train.x <- data.matrix(Sonar[train.ind, 1:60])
+train.y <- Sonar[train.ind, 61]
+test.x <- data.matrix(Sonar[-train.ind, 1:60])
+test.y <- Sonar[-train.ind, 61]
 ```
 
 Next we are going to use a multi-layer perceptron as our classifier. In `mxnet`, we have a function called `mx.mlp` so that users can build a general multi-layer neural network to do classification or regression.
@@ -59,8 +59,8 @@ graph.viz(model$symbol$as.json())
 ```
 
 ```{r}
-preds = predict(model, test.x)
-pred.label = max.col(t(preds))-1
+preds <- predict(model, test.x)
+pred.label <- max.col(t(preds)) - 1
 table(pred.label, test.y)
 ```
 
@@ -73,11 +73,11 @@ Again, let us preprocess the data first.
 ```{r}
 data(BostonHousing, package="mlbench")
 
-train.ind = seq(1, 506, 3)
-train.x = data.matrix(BostonHousing[train.ind, -14])
-train.y = BostonHousing[train.ind, 14]
-test.x = data.matrix(BostonHousing[-train.ind, -14])
-test.y = BostonHousing[-train.ind, 14]
+train.ind <- seq(1, 506, 3)
+train.x <- data.matrix(BostonHousing[train.ind, -14])
+train.y <- BostonHousing[train.ind, 14]
+test.x <- data.matrix(BostonHousing[-train.ind, -14])
+test.y <- BostonHousing[-train.ind, 14]
 ```
 
 Although we can use `mx.mlp` again to do regression by changing the `out_activation`, this time we are going to introduce a flexible way to configure neural networks in `mxnet`. The configuration is done by the "Symbol" system in `mxnet`, which takes care of the links among nodes, the activation, dropout ratio, etc. To configure a multi-layer neural network, we can do it in the following way:
@@ -108,7 +108,7 @@ model <- mx.model.FeedForward.create(lro, X=train.x, y=train.y,
 It is also easy to make prediction and evaluate
 
 ```{r}
-preds = predict(model, test.x)
+preds <- predict(model, test.x)
 sqrt(mean((preds-test.y)^2))
 ```
 

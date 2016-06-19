@@ -11,7 +11,7 @@ endif
 endif
 
 ifndef DMLC_CORE
-	DMLC_CORE = dmlc-core
+	DMLC_CORE = $(ROOTDIR)/dmlc-core
 endif
 
 ifneq ($(USE_OPENMP), 1)
@@ -22,7 +22,6 @@ endif
 include $(config)
 include mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
-unexport NO_OPENMP
 
 # all tge possible warning tread
 WARNFLAGS= -Wall
@@ -37,9 +36,9 @@ endif
 CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
-	NVCCFLAGS = -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS = -Xcompiler -std=c++98 -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else
-	NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS = -Xcompiler -std=c++98 -D_FORCE_INLINES -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
 
 ifndef LINT_LANG
@@ -81,7 +80,7 @@ ifneq ($(USE_CUDA_PATH), NONE)
 endif
 
 # ps-lite
-PS_PATH=./ps-lite
+PS_PATH=$(ROOTDIR)/ps-lite
 DEPS_PATH=$(shell pwd)/deps
 include $(PS_PATH)/make/ps.mk
 ifeq ($(USE_DIST_KVSTORE), 1)
@@ -117,12 +116,28 @@ PLUGIN_OBJ =
 PLUGIN_CUOBJ =
 include $(MXNET_PLUGINS)
 
+# scala package profile
+ifeq ($(OS),Windows_NT)
+	# TODO(yizhi) currently scala package does not support windows
+	SCALA_PKG_PROFILE := windows
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S), Darwin)
+		SCALA_PKG_PROFILE := osx-x86_64
+	else
+		SCALA_PKG_PROFILE := linux-x86_64
+	endif
+endif
+
 # all dep
 LIB_DEP += $(DMLC_CORE)/libdmlc.a
 ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
 	LDFLAGS += -lcuda
+	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu
+else
+	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-cpu
 endif
 
 ifeq ($(USE_NVRTC), 1)
@@ -131,7 +146,6 @@ ifeq ($(USE_NVRTC), 1)
 else
 	CFLAGS += -DMXNET_USE_NVRTC=0
 endif
-
 
 build/src/%.o: src/%.cc
 	@mkdir -p $(@D)
@@ -198,7 +212,7 @@ lint: rcpplint jnilint
 doc: doxygen
 
 doxygen:
-	doxygen doc/Doxyfile
+	doxygen docs/Doxyfile
 
 # R related shortcuts
 rcpplint:
@@ -220,10 +234,28 @@ rpkg:	roxygen
 	R CMD build --no-build-vignettes R-package
 
 scalapkg:
-	(cd $(ROOTDIR)/scala-package; mvn clean package -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)")
+	(cd $(ROOTDIR)/scala-package; \
+		mvn clean package -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
+											-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+											-Dlddeps="$(LIB_DEP)")
 
 scalatest:
-	(cd $(ROOTDIR)/scala-package; mvn verify -Dcxx="$(CXX)" -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" $(SCALA_TEST_ARGS))
+	(cd $(ROOTDIR)/scala-package; \
+		mvn verify -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
+							 -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+							 -Dlddeps="$(LIB_DEP)" $(SCALA_TEST_ARGS))
+
+scalainstall:
+	(cd $(ROOTDIR)/scala-package; \
+		mvn install -P$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" \
+							  -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+								-Dlddeps="$(LIB_DEP)")
+
+scaladeploy:
+	(cd $(ROOTDIR)/scala-package; \
+		mvn deploy -Prelease,$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" \
+							 -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+							 -Dlddeps="$(LIB_DEP)")
 
 jnilint:
 	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src

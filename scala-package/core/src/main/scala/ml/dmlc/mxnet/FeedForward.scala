@@ -35,6 +35,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
                   auxParams: Map[String, NDArray] = null,
                   allowExtraParams: Boolean = false,
                   val beginEpoch: Int = 0) {
+  val logger: Logger = LoggerFactory.getLogger(classOf[FeedForward])
   // check if symbol contain duplicated names.
   Executor.checkArguments(symbol)
 
@@ -135,9 +136,10 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
     require(label.shape.length == 1, "Label must be 1D")
     require(X.shape(0) == label.shape(0), "The numbers of data points and labels not equal")
     if (isTrain) {
-      new NDArrayIter(X, label, batchSize, shuffle = isTrain, lastBatchHandle = "roll_over")
+      new NDArrayIter(IndexedSeq(X), IndexedSeq(label), batchSize,
+        shuffle = isTrain, lastBatchHandle = "roll_over")
     } else {
-      new NDArrayIter(X, label, batchSize, shuffle = false)
+      new NDArrayIter(IndexedSeq(X), IndexedSeq(label), batchSize, shuffle = false)
     }
   }
 
@@ -285,6 +287,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
     this.optimizer.setArgNames(argNames)
     this.optimizer.setRescaleGrad(1f / batchSize)
 
+    logger.debug("Start training on multi-device")
     Model.trainMultiDevice(
       symbol, ctx, argNames, paramNames, auxNames,
       _argParams, _auxParams,
@@ -313,7 +316,15 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
    */
   def save(prefix: String, epoch: Int = this.numEpoch): Unit = {
     require(epoch >= 0)
-    Model.saveCheckpoint(prefix, epoch, this.symbol, this.argParams, this.auxParams)
+    Model.saveCheckpoint(prefix, epoch, this.symbol, getArgParams, getAuxParams)
+  }
+
+  /**
+   * Serialize the model to Java byte array
+   * @return serialized model bytes
+   */
+  def serialize(): Array[Byte] = {
+    Model.serialize(this.symbol, getArgParams, getAuxParams)
   }
 }
 
@@ -342,6 +353,28 @@ object FeedForward {
            batchSize: Int = 128,
            allowExtraParams: Boolean = false): FeedForward = {
     val (symbol, argParams, auxParams) = Model.loadCheckpoint(prefix, epoch)
+    new FeedForward(symbol, ctx = ctx,
+      argParams = argParams, auxParams = auxParams,
+      beginEpoch = epoch, numEpoch = numEpoch,
+      epochSize = epochSize, optimizer = optimizer,
+      initializer = initializer, batchSize = batchSize,
+      allowExtraParams = allowExtraParams)
+  }
+
+  /**
+   * Deserialize bytes to model.
+   * @param bytes serialized model bytes.
+   * @return The loaded model that can be used for prediction.
+   */
+  def deserialize(bytes: Array[Byte], epoch: Int = 0,
+                  ctx: Array[Context] = Array(Context.cpu()),
+                  numEpoch: Int = -1,
+                  epochSize: Int = -1,
+                  optimizer: Optimizer = new SGD(),
+                  initializer: Initializer = new Uniform(0.01f),
+                  batchSize: Int = 128,
+                  allowExtraParams: Boolean = false): FeedForward = {
+    val (symbol, argParams, auxParams) = Model.deserialize(bytes)
     new FeedForward(symbol, ctx = ctx,
       argParams = argParams, auxParams = auxParams,
       beginEpoch = epoch, numEpoch = numEpoch,

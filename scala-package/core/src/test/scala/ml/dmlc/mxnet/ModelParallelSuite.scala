@@ -31,7 +31,8 @@ class ModelParallelSuite extends FunSuite with BeforeAndAfterAll {
       argsGrad = arrGrad,
       gradReq = "write",
       auxStates = Nil,
-      group2ctx = Map("dev1" -> Context.cpu(0), "dev2" -> Context.cpu(1)))
+      group2ctx = Map("dev1" -> Context.cpu(0), "dev2" -> Context.cpu(1)),
+      sharedExec = null)
 
     arr(0).set(1f)
     arr(1).set(2f)
@@ -47,7 +48,8 @@ class ModelParallelSuite extends FunSuite with BeforeAndAfterAll {
 
     exec1.forward()
     exec2.forward()
-    assert(reldiff(exec1.outputs(0), exec2.outputs(0)) < 1e-6f)
+    assert(reldiff(exec1.outputs(0).copyTo(Context.cpu()),
+        exec2.outputs(0).copyTo(Context.cpu())) < 1e-6f)
 
     val outGrad = NDArray.ones(shape, Context.cpu(1))
     exec1.backward(Array(outGrad))

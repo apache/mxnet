@@ -6,7 +6,7 @@ which can very useful in model training.
 
 This tutorial is written in Rmarkdown.
 
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.org/en/latest/R-package/CallbackFunctionTutorial.html)
+- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.io/en/latest/packages/r/CallbackFunctionTutorial.html)
 
 - You can find the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/CallbackFunctionTutorial.Rmd)
 
@@ -88,7 +88,7 @@ Basically, all callback functions follow the structure below:
 
 ```{r, eval=FALSE}
 mx.callback.fun <- function() {
-  function(iteration, nbatch, env) {
+  function(iteration, nbatch, env, verbose) {
   }
 }
 ```
@@ -97,10 +97,10 @@ The `mx.callback.save.checkpoint` function below is stateless. It just get the m
 
 ```{r, eval=FALSE}
 mx.callback.save.checkpoint <- function(prefix, period=1) {
-  function(iteration, nbatch, env) {
+  function(iteration, nbatch, env, verbose) {
     if (iteration %% period == 0) {
       mx.model.save(env$model, prefix, iteration)
-      cat(sprintf("Model checkpoint saved to %s-%04d.params\n", prefix, iteration))
+      if(verbose) cat(sprintf("Model checkpoint saved to %s-%04d.params\n", prefix, iteration))
     }
     return(TRUE)
   }
@@ -112,11 +112,11 @@ process.
 
 ```{r, eval=FALSE}
 mx.callback.log.train.metric <- function(period, logger=NULL) {
-  function(iteration, nbatch, env) {
+  function(iteration, nbatch, env, verbose) {
     if (nbatch %% period == 0 && !is.null(env$metric)) {
       result <- env$metric$get(env$train.metric)
       if (nbatch != 0)
-        cat(paste0("Batch [", nbatch, "] Train-", result$name, "=", result$value, "\n"))
+        if(verbose) cat(paste0("Batch [", nbatch, "] Train-", result$name, "=", result$value, "\n"))
       if (!is.null(logger)) {
         if (class(logger) != "mx.metric.logger") {
           stop("Invalid mx.metric.logger.")
@@ -142,7 +142,7 @@ Yes! You can stop the training early by `return(FALSE)`. See the examples below.
 
 ```{r}
 mx.callback.early.stop <- function(eval.metric) {
-  function(iteration, nbatch, env) {
+  function(iteration, nbatch, env, verbose) {
     if (!is.null(env$metric)) {
       if (!is.null(eval.metric)) {
         result <- env$metric$get(env$eval.metric)

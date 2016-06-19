@@ -85,7 +85,7 @@ void GetMeanFile(const std::string image_file, mx_float* image_data,
     // Better to be read from a mean.nb file
     float mean = 117.0;
 
-    int size = im.rows * im.cols * 3;
+    int size = im.rows * im.cols * channels;
 
     mx_float* ptr_image_r = image_data;
     mx_float* ptr_image_g = image_data + size / 3;
@@ -95,13 +95,17 @@ void GetMeanFile(const std::string image_file, mx_float* image_data,
         uchar* data = im.ptr<uchar>(i);
 
         for (int j = 0; j < im.cols; j++) {
-            mx_float b = static_cast<mx_float>(*data++) - mean;
-            mx_float g = static_cast<mx_float>(*data++) - mean;
-            mx_float r = static_cast<mx_float>(*data++) - mean;
+            if (channels > 1)
+            {
+                mx_float b = static_cast<mx_float>(*data++) - mean;
+                mx_float g = static_cast<mx_float>(*data++) - mean;
+                *ptr_image_g++ = g;
+                *ptr_image_b++ = b;
+            }
 
+            mx_float r = static_cast<mx_float>(*data++) - mean;
             *ptr_image_r++ = r;
-            *ptr_image_g++ = g;
-            *ptr_image_b++ = b;
+
         }
     }
 }

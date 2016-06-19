@@ -7,6 +7,7 @@
 #include <dmlc/base.h>
 #include <dmlc/io.h>
 #include <dmlc/omp.h>
+#include <dmlc/common.h>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <dmlc/recordio.h>
@@ -93,6 +94,8 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   std::string path_imglist;
   /*! \brief path to image recordio */
   std::string path_imgrec;
+  /*! \brief a sequence of names of image augmenters, seperated by , */
+  std::string aug_seq;
   /*! \brief label-width */
   int label_width;
   /*! \brief input shape */
@@ -112,6 +115,10 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
         .describe("Dataset Param: Path to image list.");
     DMLC_DECLARE_FIELD(path_imgrec).set_default("./data/imgrec.rec")
         .describe("Dataset Param: Path to image record file.");
+    DMLC_DECLARE_FIELD(aug_seq).set_default("aug_default")
+        .describe("Augmentation Param: the augmenter names to represent"\
+                  " sequence of augmenters to be applied, seperated by comma." \
+                  " Additional keyword parameters will be seen by these augmenters.");
     DMLC_DECLARE_FIELD(label_width).set_lower_bound(1).set_default(1)
         .describe("Dataset Param: How many labels for an image.");
     DMLC_DECLARE_FIELD(data_shape)
@@ -131,21 +138,6 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
 // parser to parse image recordio
 class ImageRecordIOParser {
  public:
-  ImageRecordIOParser(void)
-      : source_(nullptr),
-        label_map_(nullptr) {
-  }
-  ~ImageRecordIOParser(void) {
-    // can be nullptr
-    delete label_map_;
-    delete source_;
-    for (size_t i = 0; i < augmenters_.size(); ++i) {
-      delete augmenters_[i];
-    }
-    for (size_t i = 0; i < prnds_.size(); ++i) {
-      delete prnds_[i];
-    }
-  }
   // initialize the parser
   inline void Init(const std::vector<std::pair<std::string, std::string> >& kwargs);
 
@@ -162,20 +154,22 @@ class ImageRecordIOParser {
   static const int kRandMagic = 111;
   /*! \brief parameters */
   ImageRecParserParam param_;
+  #if MXNET_USE_OPENCV
   /*! \brief augmenters */
-  std::vector<ImageAugmenter*> augmenters_;
+  std::vector<std::vector<std::unique_ptr<ImageAugmenter> > > augmenters_;
+  #endif
   /*! \brief random samplers */
-  std::vector<common::RANDOM_ENGINE*> prnds_;
+  std::vector<std::unique_ptr<common::RANDOM_ENGINE> > prnds_;
   /*! \brief data source */
-  dmlc::InputSplit *source_;
+  std::unique_ptr<dmlc::InputSplit> source_;
   /*! \brief label information, if any */
-  ImageLabelMap *label_map_;
+  std::unique_ptr<ImageLabelMap> label_map_;
   /*! \brief temp space */
   mshadow::TensorContainer<cpu, 3> img_;
 };
 
 inline void ImageRecordIOParser::Init(
-        const std::vector<std::pair<std::string, std::string> >& kwargs) {
+    const std::vector<std::pair<std::string, std::string> >& kwargs) {
 #if MXNET_USE_OPENCV
   // initialize parameter
   // init image rec param
@@ -193,15 +187,20 @@ inline void ImageRecordIOParser::Init(
   }
   param_.preprocess_threads = threadget;
 
+  std::vector<std::string> aug_names = dmlc::Split(param_.aug_seq, ',');
+  augmenters_.clear();
+  augmenters_.resize(threadget);
   // setup decoders
   for (int i = 0; i < threadget; ++i) {
-    augmenters_.push_back(new ImageAugmenter());
-    augmenters_[i]->Init(kwargs);
-    prnds_.push_back(new common::RANDOM_ENGINE((i + 1) * kRandMagic));
+    for (const auto& aug_name : aug_names) {
+      augmenters_[i].emplace_back(ImageAugmenter::Create(aug_name));
+      augmenters_[i].back()->Init(kwargs);
+    }
+    prnds_.emplace_back(new common::RANDOM_ENGINE((i + 1) * kRandMagic));
   }
   if (param_.path_imglist.length() != 0) {
-    label_map_ = new ImageLabelMap(param_.path_imglist.c_str(),
-                                   param_.label_width, !param_.verbose);
+    label_map_.reset(new ImageLabelMap(param_.path_imglist.c_str(),
+      param_.label_width, !param_.verbose));
   } else {
     param_.label_width = 1;
   }
@@ -212,9 +211,9 @@ inline void ImageRecordIOParser::Init(
     LOG(INFO) << "ImageRecordIOParser: " << param_.path_imgrec
               << ", use " << threadget << " threads for decoding..";
   }
-  source_ = dmlc::InputSplit::Create(
+  source_.reset(dmlc::InputSplit::Create(
       param_.path_imgrec.c_str(), param_.part_index,
-      param_.num_parts, "recordio");
+      param_.num_parts, "recordio"));
   // use 64 MB chunk when possible
   source_->HintChunkSize(8 << 20UL);
 #else
@@ -248,7 +247,9 @@ ParseNext(std::vector<InstVector> *out_vec) {
       // -1 to keep the number of channel of the encoded image, and not force gray or color.
       res = cv::imdecode(buf, -1);
       const int n_channels = res.channels();
-      res = augmenters_[tid]->Process(res, prnds_[tid]);
+      for (auto& aug : augmenters_[tid]) {
+        res = aug->Process(res, prnds_[tid].get());
+      }
       out.Push(static_cast<unsigned>(rec.image_index()),
                mshadow::Shape3(n_channels, res.rows, res.cols),
                mshadow::Shape1(param_.label_width));
@@ -401,7 +402,7 @@ MXNET_REGISTER_IO_ITER(ImageRecordIter)
 .add_arguments(ImageRecordParam::__FIELDS__())
 .add_arguments(BatchParam::__FIELDS__())
 .add_arguments(PrefetcherParam::__FIELDS__())
-.add_arguments(ImageAugmentParam::__FIELDS__())
+.add_arguments(ListDefaultAugParams())
 .add_arguments(ImageNormalizeParam::__FIELDS__())
 .set_body([]() {
     return new PrefetcherIter(

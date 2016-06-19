@@ -41,7 +41,7 @@ def sym_factory(node, data):
   name = node['name']
   params = {}
   if 'param' in node:    
-    for k, v in node['param'].iteritems():
+    for k, v in node['param'].items():
       try:
         params[k] = ast.literal_eval(v)
       except ValueError, e:

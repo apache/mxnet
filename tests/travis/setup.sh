@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if ! tests/travis/is_core_changed.sh
+then
+  exit 0
+fi
+
 if [ ${TRAVIS_OS_NAME} == "osx" ]; then
     brew update
     brew tap homebrew/science
@@ -7,6 +12,7 @@ if [ ${TRAVIS_OS_NAME} == "osx" ]; then
     brew install opencv
     brew install python3
     brew install fftw
+    brew install libpng
     brew install ImageMagick
     if [ ${TASK} == "python_test" ]; then
         python -m pip install nose numpy --user `whoami`

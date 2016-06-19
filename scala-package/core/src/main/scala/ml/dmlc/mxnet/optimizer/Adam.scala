@@ -21,7 +21,7 @@ import ml.dmlc.mxnet.NDArrayConversions._
  * @param clipGradient Float, clip gradient in range [-clip_gradient, clip_gradient]
  * @param lrScheduler The learning rate scheduler
  */
-class Adam(var learningRate: Float = 0.002f, val beta1: Float = 0.9f, val beta2: Float = 0.999f,
+class Adam(val learningRate: Float = 0.002f, val beta1: Float = 0.9f, val beta2: Float = 0.999f,
            val epsilon: Float = 1e-8f, val decayFactor: Float = 1-1e-8f, val wd: Float = 0.0f,
            val clipGradient: Float = 0f, val lrScheduler: LRScheduler = null) extends Optimizer {
 
@@ -53,15 +53,18 @@ class Adam(var learningRate: Float = 0.002f, val beta1: Float = 0.9f, val beta2:
     val (mean, variance) = state.asInstanceOf[(NDArray, NDArray)]
 
     // increment time only when the first parameters is called
-    if (timeFirstIndex == None) {
-      timeFirstIndex = Option(index)
-      time = 0
-    } else if (timeFirstIndex.get == index) {
-      time += 1
+    timeFirstIndex match {
+      case Some(idx) =>
+        if (idx == index) time += 1
+      case None =>
+        timeFirstIndex = Option(index)
+        time = 0 // all parameters share the same time
     }
 
     val t1: Int = time + 1
-    learningRate = (lr * math.sqrt(1.0 - math.pow(beta2, t1)) / (1.0 - math.pow(beta1, t1))).toFloat
+    val learningRate = (lr *
+      math.sqrt(1.0 - math.pow(beta2, t1)) /
+      (1.0 - math.pow(beta1, t1))).toFloat
     val beta1t = beta1 * math.pow(decayFactor, t1 - 1).toFloat
 
     var resdGrad = grad * rescaleGrad
@@ -71,16 +74,22 @@ class Adam(var learningRate: Float = 0.002f, val beta1: Float = 0.9f, val beta2:
       oldResdGrad.dispose()
     }
 
-    val meanT = beta1t * mean + (1.0 - beta1t) * resdGrad
-    val varianceT = beta2 * variance + (1.0f - beta2) * resdGrad * resdGrad
+    val meanT = (beta1t * mean + (1.0 - beta1t) * resdGrad)
+      .disposeDepsExcept(mean, resdGrad)
+    val varianceT = (beta2 * variance + (1.0f - beta2) * resdGrad * resdGrad)
+      .disposeDepsExcept(variance, resdGrad)
 
-    var step = learningRate * meanT / (NDArray.sqrt(varianceT) + epsilon)
+    val step = (learningRate * meanT / (NDArray.sqrt(varianceT) + epsilon))
+      .disposeDepsExcept(meanT, varianceT)
 
+    val wd = this.getWd(index, this.wd)
     if (wd > 0.0f) {
-      step += lr * wd * weight
+      val stepDelta = lr * wd * weight
+      step += stepDelta
+      stepDelta.dispose()
     }
 
-    weight += -step
+    weight -= step
     mean.set(meanT)
     variance.set(varianceT)
 
@@ -95,5 +104,14 @@ class Adam(var learningRate: Float = 0.002f, val beta1: Float = 0.9f, val beta2:
     timeFirstIndex = None // time is incremented only on the first index
     (NDArray.zeros(weight.shape, weight.context), // mean
       NDArray.zeros(weight.shape, weight.context)) // variance
+  }
+
+  // Dispose the state it created
+  override def disposeState(state: AnyRef): Unit = {
+    if (state != null) {
+      val (mean, variance) = state.asInstanceOf[(NDArray, NDArray)]
+      mean.dispose()
+      variance.dispose()
+    }
   }
 }

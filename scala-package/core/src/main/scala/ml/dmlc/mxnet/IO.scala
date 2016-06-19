@@ -18,11 +18,15 @@ object IO {
   private val iterCreateFuncs: Map[String, IterCreateFunc] = initIOModule()
 
   def MNISTIter: IterCreateFunc = iterCreateFuncs("MNISTIter")
+
   def ImageRecordIter: IterCreateFunc = iterCreateFuncs("ImageRecordIter")
+
   def CSVIter: IterCreateFunc = iterCreateFuncs("CSVIter")
 
   def MNISTPack: PackCreateFunc = createMXDataPack("MNISTIter")
+
   def ImageRecodePack: PackCreateFunc = createMXDataPack("ImageRecordIter")
+
   def CSVPack: PackCreateFunc = createMXDataPack("CSVIter")
 
 
@@ -37,11 +41,11 @@ object IO {
   }
 
   /**
-    * create dataPack for iterator via itername and params
-    * @param iterName name of iterator: "MNISTIter" or "ImageRecordIter"
-    * @param params parameters for create iterator
-    * @return created dataPack
-    */
+   * create dataPack for iterator via itername and params
+   * @param iterName name of iterator: "MNISTIter" or "ImageRecordIter"
+   * @param params parameters for create iterator
+   * @return created dataPack
+   */
   def createMXDataPack(iterName: String)(params: Map[String, String]): DataPack = {
     new MXDataPack(iterName, params)
   }
@@ -76,7 +80,7 @@ object IO {
    * @return created DataIter
    */
   private def creator(handle: DataIterCreator)(
-                      params: Map[String, String]): DataIter = {
+    params: Map[String, String]): DataIter = {
     val out = new DataIterHandleRef
     val keys = params.keys.toArray
     val vals = params.values.toArray
@@ -87,9 +91,19 @@ object IO {
   }
 
   // Convert data into canonical form.
-  private def initData(data: List[NDArray], allowEmpty: Boolean, defaultName: String) = {
+  private[mxnet] def initData(data: IndexedSeq[NDArray],
+                              allowEmpty: Boolean,
+                              defaultName: String): IndexedSeq[(String, NDArray)] = {
     require(data != null || allowEmpty)
-    // TODO
+    if (data == null) {
+      IndexedSeq()
+    } else if (data.length == 1) {
+      IndexedSeq((defaultName, data(0)))
+    } else {
+      data.zipWithIndex.map(item => {
+        (defaultName + "_" + item._2, item._1)
+      }).toIndexedSeq
+    }
   }
 }
 
@@ -97,10 +111,10 @@ object IO {
 /**
  * class batch of data
  */
-case class DataBatch(data: IndexedSeq[NDArray],
-                     label: IndexedSeq[NDArray],
-                     index: IndexedSeq[Long],
-                     pad: Int) {
+class DataBatch(val data: IndexedSeq[NDArray],
+                val label: IndexedSeq[NDArray],
+                val index: IndexedSeq[Long],
+                val pad: Int) {
   /**
    * Dispose its data and labels
    * The object shall never be used after it is disposed.

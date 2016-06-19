@@ -90,6 +90,16 @@ class Executor : public MXNetMovable<Executor> {
                       bool match_name,
                       bool allow_null);
   /*!
+   * \brief Update the grad_arrays of executor, based on name-matching.
+   * \param array The array to update
+   * \param match_name whether to use name to match the input, instead of index.
+   * \param skip_null Whether null is allowed, when there is NULL in the array, simply ignore.
+   * \return a result executor, moved from exec.
+   */
+  void UpdateGradArray(const Rcpp::List& array,
+                      bool match_name,
+                      bool allow_null);
+  /*!
    * \brief Peform a forward operation on exec, this will set the out_arrays.
    * \param is_train whether it is training phase.
    * \param kwargs additional parameters.

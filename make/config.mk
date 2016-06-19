@@ -112,8 +112,12 @@ EXTRA_OPERATORS =
 #----------------------------
 
 # whether to use torch integration. This requires installing torch.
+# You also need to add TORCH_PATH/install/lib to your LD_LIBRARY_PATH
 # TORCH_PATH = $(HOME)/torch
 # MXNET_PLUGINS += plugin/torch/torch.mk
+
+# WARPCTC_PATH = $(HOME)/warp-ctc
+# MXNET_PLUGINS += plugin/warpctc/warpctc.mk
 
 # whether to use sframe integration. This requires build sframe
 # git@github.com:dato-code/SFrame.git

@@ -224,7 +224,8 @@ class Executor(object):
         """
         for name, array in arg_params.items():
             if name in self.arg_dict:
-                array.copyto(self.arg_dict[name])
+                dst = self.arg_dict[name]
+                array.astype(dst.dtype).copyto(dst)
             else:
                 if not allow_extra_params:
                     raise ValueError('Find name \"%s\" that is not in the arguments' % name)
@@ -232,7 +233,8 @@ class Executor(object):
             aux_params = {}
         for name, array in aux_params.items():
             if name in self.aux_dict:
-                array.copyto(self.aux_dict[name])
+                dst = self.aux_dict[name]
+                array.astype(dst.dtype).copyto(dst)
             else:
                 if not allow_extra_params:
                     raise ValueError('Find name %s that is not in the auxiliary states' % name)

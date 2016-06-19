@@ -23,7 +23,7 @@ struct identity {
 struct identity_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(1.0f);
+    return DType(DType(1.0f));
   }
 };
 
@@ -39,26 +39,26 @@ struct negation {
 struct sigmoid {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(1.0f / (1.0f + expf(-a)));
+    return DType(DType(1.0f) / (DType(1.0f) + expf(-a)));
   }
 };
 struct sigmoid_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(a * (1.0f - a));
+    return DType(a * (DType(1.0f) - a));
   }
 };
 /*! \brief Rectified Linear Operation */
 struct relu {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(a > 0.0f ? a : 0.0f);
+    return DType(a > DType(0.0f) ? a : DType(0.0f));
   }
 };
 struct relu_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(a > 0.0f ? 1.0f : 0.0f);
+    return DType(a > DType(0.0f) ? DType(1.0f) : DType(0.0f));
   }
 };
 
@@ -66,14 +66,14 @@ struct relu_grad {
 struct xelu {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a > 0.0f ? a : a * b);
+    return DType(a > DType(0.0f) ? a : a * b);
   }
 };
 
 struct xelu_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a > 0.0f ? 1.0f : b);
+    return DType(a > DType(0.0f) ? DType(1.0f) : b);
   }
 };
 
@@ -81,14 +81,14 @@ struct xelu_grad {
 struct elu {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType x, DType a) {
-    return DType(x > 0.0f ? x : a * (expf(x) - 1.0f));
+    return DType(x > DType(0.0f) ? x : a * (expf(x) - DType(1.0f)));
   }
 };
 
 struct elu_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType x, DType a) {
-    return DType(x > 0.0f ? 1.0f : a + x);
+    return DType(x > DType(0.0f) ? DType(1.0f) : a + x);
   }
 };
 
@@ -102,7 +102,7 @@ struct tanh {
 struct tanh_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(1.0f - a * a);
+    return DType(DType(1.0f) - a * a);
   }
 };
 
@@ -116,7 +116,7 @@ struct softrelu {
 struct softrelu_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(1.0f - expf(-a));
+    return DType(DType(1.0f) - expf(-a));
   }
 };
 
@@ -137,7 +137,7 @@ struct log {
 struct log_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(1.0f / a);
+    return DType(DType(1.0f) / a);
   }
 };
 
@@ -178,7 +178,7 @@ struct square {
 struct square_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(2.0f * a);
+    return DType(DType(2.0f) * a);
   }
 };
 
@@ -186,7 +186,7 @@ struct square_grad {
 struct threshold {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a < b ? 1.0f : 0.0f);
+    return DType(a < b ? DType(1.0f) : DType(0.0f));
   }
 };
 
@@ -194,7 +194,7 @@ struct threshold {
 struct abs {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(fabsf(a));
+    return DType(fabsf(float(a)));  // NOLINT(*)
   }
 };
 
@@ -202,15 +202,15 @@ struct abs {
 struct sign {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    if (a < 0.0f) return DType(-1.0f);
-    if (a > 0.0f) return DType(1.0f);
-    return DType(0.0f);
+    if (a < 0.0f) return DType(-DType(1.0f));
+    if (a > 0.0f) return DType(DType(1.0f));
+    return DType(DType(0.0f));
   }
 };
 struct sign_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(0.0f);
+    return DType(DType(0.0f));
   }
 };
 /*! \brief used for generate element of power */
@@ -232,7 +232,7 @@ struct maximum {
 struct maximum_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a > b ? 1 : 0);
+    return DType(a > b ? DType(1) : DType(0));
   }
 };
 
@@ -246,7 +246,7 @@ struct minimum {
 struct minimum_grad  {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a < b ? 1 : 0);
+    return DType(a < b ? DType(1) : DType(0));
   }
 };
 
@@ -261,7 +261,7 @@ struct square_root {
 struct square_root_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(0.5f / a);
+    return DType(DType(0.5f) / a);
   }
 };
 
@@ -269,14 +269,14 @@ struct square_root_grad {
 struct reciprocal_square_root {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(1.0/sqrtf(a));
+    return DType(DType(1.0f)/sqrtf(a));
   }
 };
 
 struct reciprocal_square_root_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(-(1.0 / (2.0 * a * sqrtf(a))));
+    return DType(-(DType(1.0f) / (DType(2.0f) * a * sqrtf(a))));
   }
 };
 
@@ -308,7 +308,7 @@ struct floor {
 struct minus_sign {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a-b > 0.0f ? 1.0f : -1.0f);
+    return DType(a-b > DType(0.0f) ? DType(1.0f) : -DType(1.0f));
   }
 };
 

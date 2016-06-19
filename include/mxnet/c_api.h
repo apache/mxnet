@@ -25,7 +25,7 @@
 
 /*! \brief manually define unsigned int */
 typedef unsigned int mx_uint;
-/*! \brief manually define unsigned int */
+/*! \brief manually define float */
 typedef float mx_float;
 // all the handles are simply void *
 // will be casted internally to specific pointers types
@@ -92,6 +92,45 @@ struct NDArrayOpInfo {
   void* p_list_arguments;
   void* p_declare_backward_dependency;
 };
+
+struct CustomOpInfo {
+  bool (*forward)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
+                  const int* /*reqs*/, const bool /*is_train*/, void* /*state*/);
+  bool (*backward)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
+                   const int* /*reqs*/, const bool /*is_train*/, void* /*state*/);
+  bool (*del)(void* /*state*/);
+  // all functions also pass a payload void* pointer
+  void* p_forward;
+  void* p_backward;
+  void* p_del;
+};
+
+struct CustomOpPropInfo {
+  bool (*list_arguments)(char*** /*args*/, void* /*state*/);
+  bool (*list_outputs)(char*** /*outputs*/, void* /*state*/);
+  bool (*infer_shape)(int /*num_input*/, int* /*ndims*/, unsigned** /*shapes*/,
+                      void* /*state*/);
+  bool (*declare_backward_dependency)(const int* /*out_grad*/, const int* /*in_data*/,
+                                      const int* /*out_data*/, int* /*num_deps*/,
+                                      int** /*rdeps*/, void* /*state*/);
+  bool (*create_operator)(const char* /*ctx*/, int /*num_inputs*/, unsigned** /*shapes*/,
+                          int* /*ndims*/, int* /*dtypes*/,
+                          CustomOpInfo* /*ret*/, void* /*state*/);
+  bool (*list_auxiliary_states)(char*** /*aux*/, void* /*state*/);
+  bool (*del)(void* /*state*/);
+  // all functions also pass a payload void* pointer
+  void* p_list_arguments;
+  void* p_list_outputs;
+  void* p_infer_shape;
+  void* p_declare_backward_dependency;
+  void* p_create_operator;
+  void* p_list_auxiliary_states;
+  void* p_del;
+};
+
+typedef bool (*CustomOpPropCreator)(const char* /*op_type*/, const int /*num_kwargs*/,
+                                    const char** /*keys*/, const char** /*values*/,
+                                    CustomOpPropInfo* /*ret*/);
 }
 /*!
  * \brief return str message of the last error
@@ -281,6 +320,16 @@ MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
                              mx_uint slice_begin,
                              mx_uint slice_end,
                              NDArrayHandle *out);
+/*!
+ * \brief Index the NDArray along axis 0.
+ * \param handle the handle to the narraya
+ * \param idx the index
+ * \param out The NDArrayHandle of sliced NDArray
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayAt(NDArrayHandle handle,
+                          mx_uint idx,
+                          NDArrayHandle *out);
 /*!
  * \brief Reshape the NDArray.
  * \param handle the handle to the narray
@@ -536,6 +585,16 @@ MXNET_DLL int MXSymbolCopy(SymbolHandle symbol, SymbolHandle *out);
  */
 MXNET_DLL int MXSymbolPrint(SymbolHandle symbol, const char **out_str);
 /*!
+ * \brief Get string name from symbol
+ * \param symbol the source symbol
+ * \param out The result name.
+ * \param success Whether the result is contained in out.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolGetName(SymbolHandle symbol,
+                              const char** out,
+                              int *success);
+/*!
  * \brief Get string attribute from symbol
  * \param symbol the source symbol
  * \param key The key of the symbol.
@@ -566,6 +625,26 @@ MXNET_DLL int MXSymbolGetAttr(SymbolHandle symbol,
 MXNET_DLL int MXSymbolSetAttr(SymbolHandle symbol,
                               const char* key,
                               const char* value);
+/*!
+ * \brief Get all attributes from symbol, including all descendents.
+ * \param symbol the source symbol
+ * \param out_size The number of output attributes
+ * \param out 2*out_size strings representing key value pairs.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolListAttr(SymbolHandle symbol,
+                               mx_uint *out_size,
+                               const char*** out);
+/*!
+ * \brief Get all attributes from symbol, excluding descendents.
+ * \param symbol the source symbol
+ * \param out_size The number of output attributes
+ * \param out 2*out_size strings representing key value pairs.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolListAttrShallow(SymbolHandle symbol,
+                                      mx_uint *out_size,
+                                      const char*** out);
 /*!
  * \brief List arguments in the symbol.
  * \param symbol the symbol
@@ -896,7 +975,7 @@ MXNET_DLL int MXExecutorBindEX(SymbolHandle symbol_handle,
                                mx_uint *grad_req_type,
                                mx_uint aux_states_len,
                                NDArrayHandle *aux_states,
-                               ExecutorHandle *shared_exec,
+                               ExecutorHandle shared_exec,
                                ExecutorHandle *out);
 /*!
  * \brief set a call back to notify the completion of operation
@@ -1005,8 +1084,17 @@ MXNET_DLL int MXDataIterGetPadNum(DataIterHandle handle,
 MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
                                  NDArrayHandle *out);
 //--------------------------------------------
-// Part 5: basic KVStore interface
+// Part 6: basic KVStore interface
 //--------------------------------------------
+/*!
+ * \brief Initialized ps-lite environment variables
+ * \param num_vars number of variables to initialize
+ * \param keys environment keys
+ * \param vals environment values
+ */
+MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
+                          const char **keys,
+                          const char **vals);
 /*!
  * \brief Create a kvstore
  * \param type the type of KVStore
@@ -1153,19 +1241,23 @@ MXNET_DLL int MXKVStoreBarrier(KVStoreHandle handle);
  * \brief the prototype of a server controller
  * \param head the head of the command
  * \param body the body of the command
+ * \param controller_handle helper handle for implementing controller
  */
 typedef void (MXKVStoreServerController)(int head,
-                                         const char* body);
+                                         const char *body,
+                                         void *controller_handle);
 
 /**
  * \return Run as server (or scheduler)
  *
  * \param handle handle to the KVStore
  * \param controller the user-defined server controller
+ * \param controller_handle helper handle for implementing controller
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreRunServer(KVStoreHandle handle,
-                                 MXKVStoreServerController controller);
+                                 MXKVStoreServerController controller,
+                                 void *controller_handle);
 
 /**
  * \return Send a command to all server nodes
@@ -1271,5 +1363,7 @@ MXNET_DLL int MXOptimizerUpdate(OptimizerHandle handle,
                                 NDArrayHandle grad,
                                 mx_float lr,
                                 mx_float wd);
+
+MXNET_DLL int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creator);
 
 #endif  // MXNET_C_API_H_

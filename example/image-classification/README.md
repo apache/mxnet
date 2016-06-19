@@ -8,7 +8,7 @@ width=400/>
 
 ## How to use
 
-First build mxnet by following the [guide](http://mxnet.readthedocs.org/en/latest/build.html)
+First build mxnet by following the [guide](http://mxnet.readthedocs.io/en/latest/how_to/build.html)
 
 ### Train
 
@@ -109,9 +109,9 @@ There are two commonly used way to feed data into MXNet.
 
 The first is packing all example into one or several compact `recordio`
 files. See a step-by-step
-[tutorial](https://mxnet.readthedocs.org/en/latest/python/io.html#create-dataset-using-recordio)
+[tutorial](http://mxnet.readthedocs.io/en/latest/packages/python/io.html#create-dataset-using-recordio)
 and the
-[document](http://mxnet.readthedocs.org/en/latest/developer-guide/note_data_loading.html)
+[document](http://mxnet.readthedocs.io/en/latest/system/note_data_loading.html)
 describing how it works.
 
 *Note: A commonly mistake is forgetting shuffle the image list during packing. This will lead fail of training, eg. ```accuracy``` keeps 0.001 for several rounds.*
@@ -140,7 +140,7 @@ batch_size = 100
 train_iter = mx.io.NDArrayIter(train_data, train_label, batch_size=batch_size, shuffle=True)
 val_iter = mx.io.NDArrayIter(val_data, val_label, batch_size=batch_size)
 # create model as usual: model = mx.model.FeedForward(...)
-model.fit(X=train_data, y=train_label)
+model.fit(X = train_iter, eval_data = val_iter)
 ```
 
 ## Note on Performance

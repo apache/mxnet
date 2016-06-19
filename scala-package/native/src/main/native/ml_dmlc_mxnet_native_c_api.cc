@@ -139,6 +139,39 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxFuncInvoke
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySaveRawBytes
+  (JNIEnv *env, jobject obj, jlong ndArrayPtr, jobject dataBuf) {
+  size_t length;
+  const char *pdata;
+  int ret = MXNDArraySaveRawBytes(reinterpret_cast<NDArrayHandle>(ndArrayPtr), &length, &pdata);
+
+  // fill dataBuf
+  jclass byteClass = env->FindClass("java/lang/Byte");
+  jmethodID newByte = env->GetMethodID(byteClass, "<init>", "(B)V");
+  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jmethodID arrayAppend = env->GetMethodID(arrayClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+  for (size_t i = 0; i < length; ++i) {
+    jobject data = env->NewObject(byteClass, newByte, static_cast<jbyte>(pdata[i]));
+    env->CallObjectMethod(dataBuf, arrayAppend, data);
+    env->DeleteLocalRef(data);
+  }
+
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayLoadFromRawBytes
+  (JNIEnv *env, jobject obj, jbyteArray bytes, jobject handleRef) {
+  int size = env->GetArrayLength(bytes);
+  jbyte *byteArr = env->GetByteArrayElements(bytes, NULL);
+  NDArrayHandle out;
+  int ret = MXNDArrayLoadFromRawBytes(reinterpret_cast<const void *>(byteArr),
+                                      static_cast<size_t>(size), &out);
+  env->ReleaseByteArrayElements(bytes, byteArr, 0);
+  SetLongField(env, handleRef, reinterpret_cast<jlong>(out));
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayGetShape
   (JNIEnv *env, jobject obj, jlong ndArrayPtr, jobject ndimRef, jobject dataBuf) {
   mx_uint ndim;
@@ -180,6 +213,17 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySlice
   NDArrayHandle out;
   int ret = MXNDArraySlice(reinterpret_cast<NDArrayHandle>(ndArrayPtr), start, end, &out);
   SetLongField(env, slicedHandle, reinterpret_cast<jlong>(out));
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayReshape
+  (JNIEnv *env, jobject obj, jlong ndArrayPtr, jint ndim, jintArray dims, jobject reshapedHandle) {
+  NDArrayHandle out;
+  jint *pdims = env->GetIntArrayElements(dims, NULL);
+  int ret = MXNDArrayReshape(reinterpret_cast<NDArrayHandle>(ndArrayPtr), ndim,
+                                    reinterpret_cast<int *>(pdims), &out);
+  SetLongField(env, reshapedHandle, reinterpret_cast<jlong>(out));
+  env->ReleaseIntArrayElements(dims, pdims, 0);
   return ret;
 }
 
@@ -288,6 +332,75 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySave
   }
 
   return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxInitPSEnv
+  (JNIEnv *env, jobject obj, jobjectArray jkeys, jobjectArray jvals) {
+  // keys and values
+  int paramSize = env->GetArrayLength(jkeys);
+  const char** keys = new const char*[paramSize];
+  const char** vals = new const char*[paramSize];
+  jstring jkey, jval;
+  // use strcpy and release char* created by JNI inplace
+  for (size_t i = 0; i < paramSize; i++) {
+    jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
+    const char* ckey = env->GetStringUTFChars(jkey, 0);
+    keys[i] = ckey;
+    env->DeleteLocalRef(jkey);
+
+    jval = reinterpret_cast<jstring>(env->GetObjectArrayElement(jvals, i));
+    const char* cval = env->GetStringUTFChars(jval, 0);
+    vals[i] = cval;
+    env->DeleteLocalRef(jval);
+  }
+
+  int ret = MXInitPSEnv(static_cast<mx_uint>(paramSize),
+                        static_cast<const char**>(keys),
+                        static_cast<const char**>(vals));
+
+  // release keys and vals
+  for (size_t i = 0; i < paramSize; i++) {
+    jstring key = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
+    env->ReleaseStringUTFChars(key, keys[i]);
+    env->DeleteLocalRef(key);
+
+    jstring value = reinterpret_cast<jstring>(env->GetObjectArrayElement(jvals, i));
+    env->ReleaseStringUTFChars(value, vals[i]);
+    env->DeleteLocalRef(value);
+  }
+  delete[] keys;
+  delete[] vals;
+
+  return ret;
+}
+
+extern "C" void KVStoreServerControllerFunc
+  (int head, const char *body, void *handle) {
+  jobject controllerObjGlb = static_cast<jobject>(handle);
+
+  JNIEnv *env;
+  _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+
+  // find java controller method
+  jclass ctrlClass = env->GetObjectClass(controllerObjGlb);
+  jmethodID ctrlFunc = env->GetMethodID(ctrlClass, "invoke", "(ILjava/lang/String;)V");
+
+  jstring jbody = env->NewStringUTF(body);
+  env->CallVoidMethod(controllerObjGlb, ctrlFunc, head, jbody);
+  env->DeleteLocalRef(jbody);
+
+  env->DeleteLocalRef(ctrlClass);
+  // FIXME(Yizhi): This function can be called multiple times,
+  // can we find a way to safely destroy this object ?
+  // env->DeleteGlobalRef(controllerObjGlb);
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreRunServer
+  (JNIEnv *env, jobject obj, jlong kvStorePtr, jobject controllerObj) {
+  jobject controllerObjGlb = env->NewGlobalRef(controllerObj);
+  return MXKVStoreRunServer(reinterpret_cast<KVStoreHandle>(kvStorePtr),
+                            KVStoreServerControllerFunc,
+                            reinterpret_cast<void *>(controllerObjGlb));
 }
 
 extern "C" void KVStoreUpdaterCallbackFunc
@@ -1044,6 +1157,16 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolSaveToJSON
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolCreateFromJSON
+  (JNIEnv *env, jobject obj, jstring json, jobject jhandleRef) {
+  const char *str = env->GetStringUTFChars(json, 0);
+  SymbolHandle out;
+  int ret = MXSymbolCreateFromJSON(str, &out);
+  SetLongField(env, jhandleRef, reinterpret_cast<jlong>(out));
+  env->ReleaseStringUTFChars(json, str);
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolSaveToFile
   (JNIEnv *env, jobject obj, jlong symbolPtr, jstring jfname) {
   const char *fname = env->GetStringUTFChars(jfname, 0);
@@ -1194,6 +1317,61 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBindX
                             reinterpret_cast<mx_uint *>(gradReqType),
                             static_cast<mx_uint>(auxStatesLen),
                             reinterpret_cast<NDArrayHandle *>(auxStates),
+                            &out);
+  env->ReleaseIntArrayElements(jctxMapDevIDs, mapDevIDs, 0);
+  env->ReleaseIntArrayElements(jctxMapDevTypes, mapDevTypes, 0);
+  env->ReleaseLongArrayElements(jargsGradHandle, argGradStore, 0);
+  env->ReleaseLongArrayElements(jargsHandle, inArgs, 0);
+  env->ReleaseIntArrayElements(jreqsArray, gradReqType, 0);
+  env->ReleaseLongArrayElements(jauxArgsHandle, auxStates, 0);
+  for (size_t i = 0; i < numCtx; i++) {
+    jstring jkey = (jstring) env->GetObjectArrayElement(jctxMapKeys, i);
+    env->ReleaseStringUTFChars(jkey, mapKeys[i]);
+    env->DeleteLocalRef(jkey);
+  }
+  delete[] mapKeys;
+
+  SetLongField(env, jexecOut, reinterpret_cast<jlong>(out));
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBindEX
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jint deviceTypeId, jint deviceID, jint numCtx,
+    jobjectArray jctxMapKeys, jintArray jctxMapDevTypes, jintArray jctxMapDevIDs, jint numArgs,
+    jlongArray jargsHandle, jlongArray jargsGradHandle, jintArray jreqsArray,
+    jlongArray jauxArgsHandle, jlong jsharedExec, jobject jexecOut) {
+  ExecutorHandle out;
+  int auxStatesLen = env->GetArrayLength(jauxArgsHandle);
+  ExecutorHandle sharedExec = nullptr;
+  if ((int32_t)jsharedExec != 0) sharedExec = reinterpret_cast<ExecutorHandle>(jsharedExec);
+
+  const char **mapKeys = new const char *[numCtx];
+  for (size_t i = 0; i < numCtx; i++) {
+    jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jctxMapKeys, i));
+    const char *key = env->GetStringUTFChars(jkey, 0);
+    mapKeys[i] = key;
+    env->DeleteLocalRef(jkey);
+  }
+  jlong *auxStates = env->GetLongArrayElements(jauxArgsHandle, NULL);
+  jint *gradReqType = env->GetIntArrayElements(jreqsArray, NULL);
+  jlong *inArgs = env->GetLongArrayElements(jargsHandle, NULL);
+  jlong *argGradStore = env->GetLongArrayElements(jargsGradHandle, NULL);
+  jint *mapDevTypes = env->GetIntArrayElements(jctxMapDevTypes, NULL);
+  jint *mapDevIDs = env->GetIntArrayElements(jctxMapDevIDs, NULL);
+  int ret = MXExecutorBindEX(reinterpret_cast<SymbolHandle>(symbolPtr),
+                            deviceTypeId,
+                            deviceID,
+                            static_cast<mx_uint>(numCtx),
+                            mapKeys,
+                            mapDevTypes,
+                            mapDevIDs,
+                            static_cast<mx_uint>(numArgs),
+                            reinterpret_cast<NDArrayHandle *>(inArgs),
+                            reinterpret_cast<NDArrayHandle *>(argGradStore),
+                            reinterpret_cast<mx_uint *>(gradReqType),
+                            static_cast<mx_uint>(auxStatesLen),
+                            reinterpret_cast<NDArrayHandle *>(auxStates),
+                            sharedExec,
                             &out);
   env->ReleaseIntArrayElements(jctxMapDevIDs, mapDevIDs, 0);
   env->ReleaseIntArrayElements(jctxMapDevTypes, mapDevTypes, 0);

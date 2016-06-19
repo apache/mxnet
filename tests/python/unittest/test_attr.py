@@ -21,13 +21,23 @@ def test_operator():
         with mx.AttrScope(init_bias='0.0'):
             fc2 = mx.symbol.FullyConnected(fc1, num_hidden=10, name='fc2')
     assert fc1.attr('data') == 'great'
+    assert fc2.attr('data') == 'great'
+    assert fc2.attr('init_bias') == '0.0'
     fc2copy = pkl.loads(pkl.dumps(fc2))
     assert fc2copy.tojson() == fc2.tojson()
     fc2weight = fc2.get_internals()['fc2_weight']
 
 
+def test_list_attr():
+    data = mx.sym.Variable('data', attr={'mood': 'angry'})
+    op = mx.sym.Convolution(data=data, name='conv', kernel=(1, 1),
+                            num_filter=1, attr={'mood': 'so so'})
+    assert op.list_attr(recursive=True) == {'data_mood': 'angry', 'conv_mood': 'so so',
+                                            'conv_weight_mood': 'so so', 'conv_bias_mood': 'so so'}
+    assert op.list_attr() == {'mood': 'so so'}
+
+
 if __name__ == '__main__':
     test_attr_basic()
     test_operator()
-
-
+    test_list_attr()

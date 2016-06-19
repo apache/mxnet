@@ -1,9 +1,51 @@
-<project>
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>ml.dmlc.mxnet</groupId>
-  <artifactId>mxnet-scala-parent_2.10</artifactId>
-  <version>0.1-SNAPSHOT</version>
+  <artifactId>mxnet-parent_2.10</artifactId>
+  <version>0.1.2-SNAPSHOT</version>
   <name>MXNet Scala Package - Parent</name>
+  <url>https://github.com/dmlc/mxnet/tree/master/scala-package</url>
+  <description>MXNet Scala Package</description>
+  <organization>
+    <name>Distributed (Deep) Machine Learning Community</name>
+    <url>http://dmlc.ml</url>
+  </organization>
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+  <scm>
+    <connection>scm:git:git@github.com:dmlc/mxnet.git</connection>
+    <developerConnection>scm:git:git@github.com:dmlc/mxnet.git</developerConnection>
+    <url>https://github.com/dmlc/mxnet</url>
+  </scm>
+
+  <developers>
+    <developer>
+      <name>Yizhi Liu</name>
+      <id>javelinjs</id>
+      <email>javelinjs@gmail.com</email>
+      <organization>DMLC</organization>
+      <organizationUrl>http://dmlc.ml</organizationUrl>
+    </developer>
+    <developer>
+      <name>Zixuan Huang</name>
+      <email>toofooltosay@gmail.com</email>
+      <organization>DMLC</organization>
+      <organizationUrl>http://dmlc.ml</organizationUrl>
+    </developer>
+    <developer>
+      <name>Yuan Tang</name>
+      <email>terrytangyuan@gmail.com</email>
+      <organization>DMLC</organization>
+      <organizationUrl>http://dmlc.ml</organizationUrl>
+    </developer>
+  </developers>
 
   <properties>
     <scala.version>2.10.4</scala.version>
@@ -15,8 +57,125 @@
     <module>core</module>
     <module>native</module>
     <module>examples</module>
+    <module>spark</module>
     <module>assembly</module>
   </modules>
+
+  <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+                <configuration>
+                  <includePom>true</includePom>>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <!-- generate Scala docs -->
+          <plugin>
+            <groupId>net.alchim31.maven</groupId>
+            <artifactId>scala-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>doc</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>compile</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <args>
+                <arg>-P:genjavadoc:out=${project.build.directory}/genjavadoc</arg>
+              </args>
+              <compilerPlugins>
+                <compilerPlugin>
+                  <groupId>com.typesafe.genjavadoc</groupId>
+                  <artifactId>genjavadoc-plugin_${scala.version}</artifactId>
+                  <version>0.9</version>
+                </compilerPlugin>
+              </compilerPlugins>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>add-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${project.build.directory}/genjavadoc</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <!-- generate Java docs -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+              <detectLinks>true</detectLinks>
+            </configuration>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <extensions>true</extensions>
+            <configuration>
+              <serverId>ossrh</serverId>
+              <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+              <autoReleaseAfterClose>true</autoReleaseAfterClose>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <distributionManagement>
+    <snapshotRepository>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
+
   <build>
     <pluginManagement>
       <plugins>
@@ -28,6 +187,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.3</version>
           <configuration>
             <source>1.6</source>
             <target>1.6</target>
@@ -167,6 +327,11 @@
           </executions>
         </plugin>
         <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>build-helper-maven-plugin</artifactId>
+          <version>1.10</version>
+        </plugin>
+        <plugin>
           <artifactId>maven-antrun-plugin</artifactId>
           <version>1.7</version>
           <dependencies>
@@ -176,6 +341,27 @@
               <version>20020829</version>
             </dependency>
           </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>2.2.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>2.9.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-gpg-plugin</artifactId>
+          <version>1.5</version>
+        </plugin>
+        <!-- OSSRH Repo -->
+        <plugin>
+          <groupId>org.sonatype.plugins</groupId>
+          <artifactId>nexus-staging-maven-plugin</artifactId>
+          <version>1.6.3</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -190,6 +376,11 @@
       <dependency>
         <groupId>org.scala-lang</groupId>
         <artifactId>scala-reflect</artifactId>
+        <version>${scala.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.scala-lang</groupId>
+        <artifactId>scala-actors</artifactId>
         <version>${scala.version}</version>
       </dependency>
       <dependency>
@@ -217,6 +408,11 @@
         <artifactId>scalatest_${scala.binary.version}</artifactId>
         <version>2.2.4</version>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>args4j</groupId>
+        <artifactId>args4j</artifactId>
+        <version>2.0.29</version>
       </dependency>
       <dependency>
         <groupId>org.scalacheck</groupId>

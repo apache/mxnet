@@ -3,7 +3,9 @@ package ml.dmlc.mxnet
 import ml.dmlc.mxnet.Base._
 import org.slf4j.LoggerFactory
 
+import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.ref.WeakReference
 
 /**
  * NDArray API of mxnet
@@ -28,6 +30,17 @@ object NDArray {
 
   private val functions: Map[String, NDArrayFunction] = initNDArrayModule()
 
+  private def addDependency(froms: Array[NDArray], tos: Array[NDArray]): Unit = {
+    froms.foreach { from =>
+      val weakRef = new WeakReference(from)
+      tos.foreach { to =>
+        to.dependencies.put(from.handle, weakRef)
+        // we add all dep's dep to prevent (recursively) recomputing at runtime.
+        to.dependencies ++= from.dependencies
+      }
+    }
+  }
+
   // Definition of internal functions.
   // Internal binary function
   def invokeBinaryFunc(funcName: String,
@@ -47,6 +60,7 @@ object NDArray {
           Array(lhs.handle, rhs.handle),
           Array[MXFloat](),
           Array(output.handle)))
+        addDependency(Array(lhs, rhs), Array(output))
       case _ => throw new IllegalArgumentException(s"call $funcName as binary function")
     }
     output
@@ -67,6 +81,7 @@ object NDArray {
           Array(src.handle),
           Array[MXFloat](),
           Array(output.handle)))
+        addDependency(Array(src), Array(output))
       case _ => throw new IllegalArgumentException(s"call $funcName as unary function")
     }
     output
@@ -98,10 +113,13 @@ object NDArray {
           require(acceptEmptyMutate, s"argument out is required to call $funcName")
           mutateVars = Array.fill[NDArray](nMutateVars)(new NDArray(newEmptyHandle()))
         }
+        val useVars = useVarsRange.map(args(_).asInstanceOf[NDArray]).toArray
+        val scalarVars = scalarRange.map(args(_).asInstanceOf[MXFloat]).toArray
         checkCall(_LIB.mxFuncInvoke(handle,
-          useVarsRange.map(args(_).asInstanceOf[NDArray].handle).toArray,
-          scalarRange.map(args(_).asInstanceOf[MXFloat]).toArray,
+          useVars.map(_.handle),
+          scalarVars,
           mutateVars.map(_.handle).array))
+        addDependency(useVars, mutateVars)
       case _ => throw new IllegalArgumentException(s"call $funcName as generic function")
     }
     mutateVars
@@ -561,6 +579,12 @@ object NDArray {
   private def save(fname: String, keys: Array[String], handles: Array[NDArrayHandle]): Unit = {
     checkCall(_LIB.mxNDArraySave(fname, handles, keys))
   }
+
+  def deserialize(bytes: Array[Byte]): NDArray = {
+    val handleRef = new NDArrayHandleRef
+    checkCall(_LIB.mxNDArrayLoadFromRawBytes(bytes, handleRef))
+    new NDArray(handleRef.value)
+  }
 }
 
 /**
@@ -574,20 +598,70 @@ object NDArray {
 // scalastyle:off finalize
 class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
                              val writable: Boolean = true) {
+  // record arrays who construct this array instance
+  // we use weak reference to prevent gc blocking
+  private[mxnet] val dependencies = mutable.HashMap.empty[Long, WeakReference[NDArray]]
   private var disposed = false
+  def isDisposed: Boolean = disposed
   override protected def finalize(): Unit = {
     dispose()
   }
 
+  def serialize(): Array[Byte] = {
+    val buf = ArrayBuffer.empty[Byte]
+    checkCall(_LIB.mxNDArraySaveRawBytes(handle, buf))
+    buf.toArray
+  }
+
   /**
-   * Release the native memory.
+   * Release the native memory. <br />
+   * The NDArrays it depends on will NOT be disposed. <br />
    * The object shall never be used after it is disposed.
    */
   def dispose(): Unit = {
     if (!disposed) {
       _LIB.mxNDArrayFree(handle)
+      dependencies.clear()
       disposed = true
     }
+  }
+
+  /**
+   * Dispose all NDArrays who help to construct this array. <br />
+   * e.g. (a * b + c).disposeDeps() will dispose a, b, c (including their deps) and a * b
+   * @return this array
+   */
+  def disposeDeps(): NDArray = {
+    disposeDepsExcept()
+  }
+
+  /**
+   * Dispose all NDArrays who help to construct this array, excepts those in the arguments. <br />
+   * e.g. (a * b + c).disposeDepsExcept(a, b)
+   * will dispose c and a * b.
+   * Note that a, b's dependencies will not be disposed either.
+   * @return this array
+   */
+  def disposeDepsExcept(arrs: NDArray*): NDArray = {
+    if (dependencies != null) {
+      val excepts = mutable.HashSet.empty[Long]
+      arrs.foreach { arr =>
+        excepts += arr.handle
+        excepts ++= arr.dependencies.keys
+      }
+      dependencies.retain { case (addr, weak) =>
+        if (excepts.contains(addr)) {
+          true
+        } else {
+          weak.get match {
+            case Some(arr) => arr.dispose()
+            case None =>
+          }
+          false
+        }
+      }
+    }
+    this
   }
 
   /**
@@ -626,6 +700,19 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    */
   def slice(i: Int): NDArray = {
     slice(i, i + 1)
+  }
+
+  /**
+   * Return a reshaped NDArray that shares memory with current one.
+   *
+   * @param dims New shape.
+   *
+   * @return a reshaped NDArray that shares memory with current one.
+   */
+  def reshape(dims: Array[Int]): NDArray = {
+    val reshapeHandle = new NDArrayHandleRef
+    checkCall(_LIB.mxNDArrayReshape(handle, dims.length, dims, reshapeHandle))
+    new NDArray(handle = reshapeHandle.value, writable = this.writable)
   }
 
   /**
