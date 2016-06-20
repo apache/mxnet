@@ -452,7 +452,7 @@ class BaseModule(object):
         """
         raise NotImplementedError()
 
-    def set_params(self, arg_params, aux_params):
+    def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True):
         """Assign parameter and aux state values.
 
         Parameters
@@ -461,9 +461,15 @@ class BaseModule(object):
             Dictionary of name to value (`NDArray`) mapping.
         aux_params : dict
             Dictionary of name to value (`NDArray`) mapping.
+        allow_missing : bool
+            If true, params could contain missing values, and the initializer will be
+            called to fill those missing params.
+        force_init : bool
+            If true, will force re-initialize even if already initialized.
+
         """
         self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,
-                         allow_missing=False, force_init=True)
+                         allow_missing=allow_missing, force_init=force_init)
 
     def save_params(self, fname):
         """Save model parameters to file.

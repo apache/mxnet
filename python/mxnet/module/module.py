@@ -169,7 +169,7 @@ class Module(BaseModule):
         def _impl(name, arr, cache):
             """Internal helper for parameter initialization"""
             if cache is not None:
-                if cache.has_key(name):
+                if name in cache:
                     cache_arr = cache[name]
 
                     # just in case the cached array is just the target itself
@@ -177,7 +177,8 @@ class Module(BaseModule):
                         cache_arr.copyto(arr)
                 else:
                     assert allow_missing
-                    initializer(name, arr)
+                    if initializer != None:
+                        initializer(name, arr)
             else:
                 initializer(name, arr)
 
