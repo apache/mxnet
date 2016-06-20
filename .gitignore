@@ -108,3 +108,5 @@ scala-package/*/*/target/
 *.project
 *.settings
 !scala-package/*/bin
+*.bak
+*/node_modules/

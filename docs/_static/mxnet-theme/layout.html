@@ -56,7 +56,7 @@
       };
     </script>
 
-    {% for name in ['jquery.js', 'underscore.js', 'doctools.js', 'searchtools.js'] %}
+    {% for name in ['jquery.js', 'underscore.js', 'doctools.js', 'searchtools.js', 'selectlang.js'] %}
     <script type="text/javascript" src="{{ pathto('_static/' + name, 1) }}"></script>
     {% endfor %}
 
@@ -76,7 +76,7 @@
     <link rel="stylesheet" href="{{ pathto('_static/pygments.css', 1) }}" type="text/css" />
     {%- endif %}
 
-    <link rel="stylesheet" href="{{ pathto('_static/mxnet.css', 1) }}">
+    <link rel="stylesheet" href="{{ pathto('_static/mxnet.css', 1) }}" type="text/css">
 {%- endmacro %}
 
 <html lang="en">

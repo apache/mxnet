@@ -190,9 +190,9 @@ def main():
     cgroup.add_argument('--exts', type=list, default=['.jpeg', '.jpg'],
                         help='list of acceptable image extensions.')
     cgroup.add_argument('--chunks', type=int, default=1, help='number of chunks.')
-    cgroup.add_argument('--train_ratio', type=float, default=1.0,
+    cgroup.add_argument('--train-ratio', type=float, default=1.0,
                         help='Ratio of images to use for training.')
-    cgroup.add_argument('--test_ratio', type=float, default=0,
+    cgroup.add_argument('--test-ratio', type=float, default=0,
                         help='Ratio of images to use for testing.')
     cgroup.add_argument('--recursive', type=bool, default=False,
                         help='If true recursively walk through subdirs and assign an unique label\
@@ -203,7 +203,7 @@ def main():
     rgroup.add_argument('--resize', type=int, default=0,
                         help='resize the shorter edge of image to the newsize, original images will\
         be packed by default.')
-    rgroup.add_argument('--center_crop', type=bool, default=False,
+    rgroup.add_argument('--center-crop', type=bool, default=False,
                         help='specify whether to crop the center image to make it rectangular.')
     rgroup.add_argument('--quality', type=int, default=80,
                         help='JPEG quality for encoding, 1-100; or PNG compression for encoding, 1-9')
@@ -218,7 +218,7 @@ def main():
         -1:Loads image as such including alpha channel.')
     rgroup.add_argument('--encoding', type=str, default='.jpg', choices=['.jpg', '.png'],
                         help='specify the encoding of the images.')
-    rgroup.add_argument('--saving_folder', type=str, default='.',
+    rgroup.add_argument('--saving-folder', type=str, default='.',
                         help='folder in which .rec files will be saved.')
     rgroup.add_argument('--shuffle', default=True, help='If this is set as True, \
         im2rec will randomize the image order in <prefix>.lst')

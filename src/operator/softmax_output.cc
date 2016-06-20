@@ -32,7 +32,8 @@ DMLC_REGISTER_PARAMETER(SoftmaxOutputParam);
 MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
 .describe("Perform a softmax transformation on input, backprop with logloss.")
 .add_argument("data", "Symbol", "Input data to softmax.")
-.add_argument("label", "Symbol", "Label data.")
+.add_argument("label", "Symbol", "Label data, can also be "\
+              "probability value with same shape as data")
 .add_arguments(SoftmaxOutputParam::__FIELDS__());
 
 MXNET_REGISTER_OP_PROPERTY(Softmax, DeprecatedSoftmaxProp)
@@ -42,4 +43,3 @@ MXNET_REGISTER_OP_PROPERTY(Softmax, DeprecatedSoftmaxProp)
 
 }  // namespace op
 }  // namespace mxnet
-

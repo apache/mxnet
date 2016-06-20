@@ -761,6 +761,32 @@ def maximum(lhs, rhs):
         None)
     # pylint: enable= no-member, protected-access
 
+def minimum(lhs, rhs):
+    """ Perform minimum operator
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        NDArray._minimum,
+        lambda x, y: x if x < y else y,
+        NDArray._minimum_scalar,
+        None)
+    # pylint: enable= no-member, protected-access
+
 def true_divide(lhs, rhs):
     """ Same as numpy's true_divide. It adjusts the output type to present the best answer,
     regardless of input types.

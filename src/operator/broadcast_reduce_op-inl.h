@@ -186,12 +186,12 @@ inline TShape ReduceChannelShape(const TShape& ishape,
 // Reduce the given axis
 template<typename xpu, typename Reducer, bool get_mask>
 void ReduceAxisImpl_(const TBlob &src,
-  const EnvArguments& env,
-  TBlob *ret,
-  OpReqType req,
-  RunContext ctx,
-  int axis,
-  bool keepdims) {
+                     const EnvArguments& env,
+                     TBlob *ret,
+                     OpReqType req,
+                     RunContext ctx,
+                     int axis,
+                     bool keepdims) {
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(src.type_flag_, ret->type_flag_);

@@ -37,6 +37,7 @@ class KVStoreDist : public KVStoreLocal {
   virtual ~KVStoreDist() {
     Engine::Get()->WaitForAll();
     if (IsWorkerNode()) {
+      ps::Postoffice::Get()->Barrier(ps::kWorkerGroup);
       if (get_rank() == 0) {
         // stop the executor at servers
         SendCommandToServers(kStopServer, "");

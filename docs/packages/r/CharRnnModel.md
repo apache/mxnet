@@ -3,35 +3,46 @@ Char RNN Example
 
 This example aims to show how to use lstm model to build a char level language model, and generate text from it. We use a tiny shakespeare text for demo purpose.
 
-Data can be found at https://github.com/dmlc/web-data/tree/master/mxnet/tinyshakespeare. 
+Data can be found at [here](https://github.com/dmlc/web-data/tree/master/mxnet/tinyshakespeare) 
 
 Preface
 -------
 This tutorial is written in Rmarkdown.
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.org/en/latest/package/r/CharRnnModel.html)
+- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.org/en/latest/packages/r/CharRnnModel.html)
 - You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/CharRnnModel.Rmd)
 
 Load Data 
 ---------
 First of all, load in the data and preprocess it.
-```{r}
+
+```r
 require(mxnet)
 ```
+
+```
+## Loading required package: mxnet
+```
+
+```
+## Loading required package: methods
+```
 Set basic network parameters.
-```{r}
+
+```r
 batch.size = 32
 seq.len = 32
-num.hidden = 256
-num.embed = 256
-num.lstm.layer = 2
-num.round = 3
+num.hidden = 16
+num.embed = 16
+num.lstm.layer = 1
+num.round = 1
 learning.rate= 0.1
 wd=0.00001
 clip_gradient=1
 update.period = 1
 ```
 download the data.
-```{r}
+
+```r
 download.data <- function(data_dir) {
     dir.create(data_dir, showWarnings = FALSE)
     if (!file.exists(paste0(data_dir,'input.txt'))) {
@@ -41,7 +52,8 @@ download.data <- function(data_dir) {
 }
 ```
 Make dictionary from text.
-```{r}
+
+```r
 make.dict <- function(text, max.vocab=10000) {
     text <- strsplit(text, '')
     dic <- list()
@@ -59,7 +71,8 @@ make.dict <- function(text, max.vocab=10000) {
 }
 ```
 Transfer text into data feature.
-```{r}
+
+```r
 make.data <- function(file.path, seq.len=32, max.vocab=10000, dic=NULL) {
     fi <- file(file.path, "r")
     text <- paste(readLines(fi), collapse="\n")
@@ -92,7 +105,8 @@ make.data <- function(file.path, seq.len=32, max.vocab=10000, dic=NULL) {
 }
 ```
 Move tail text.
-```{r}
+
+```r
 drop.tail <- function(X, batch.size) {
     shape <- dim(X)
     nstep <- as.integer(shape[2] / batch.size)
@@ -100,7 +114,8 @@ drop.tail <- function(X, batch.size) {
 }
 ```
 get the label of X
-```{r}
+
+```r
 get.label <- function(X) {
     label <- array(0, dim=dim(X))
     d <- dim(X)[1]
@@ -114,9 +129,17 @@ get.label <- function(X) {
 }
 ```
 get training data and eval data
-```{r}
+
+```r
 download.data("./data/")
 ret <- make.data("./data/input.txt", seq.len=seq.len)
+```
+
+```
+## Total unique char: 65
+```
+
+```r
 X <- ret$data
 dic <- ret$dic
 lookup.table <- ret$lookup.table
@@ -143,7 +166,8 @@ Training Model
 --------------
 In `mxnet`, we have a function called `mx.lstm` so that users can build a general lstm model. 
 
-```{r}
+
+```r
 model <- mx.lstm(X.train, X.val, 
                  ctx=mx.cpu(),
                  num.round=num.round, 
@@ -159,39 +183,49 @@ model <- mx.lstm(X.train, X.val,
                  learning.rate=learning.rate,
                  wd=wd,
                  clip_gradient=clip_gradient)
+```
 
 ```
-Setting the parameters ctx=mx.gpu(0) and num.round=5 can get the following result.
+## Epoch [31] Train: NLL=3.53787130224343, Perp=34.3936275728271
+## Epoch [62] Train: NLL=3.43087958036949, Perp=30.903813186055
+## Epoch [93] Train: NLL=3.39771238228587, Perp=29.8956319855751
+## Epoch [124] Train: NLL=3.37581711716687, Perp=29.2481732041015
+## Epoch [155] Train: NLL=3.34523331338447, Perp=28.3671933405139
+## Epoch [186] Train: NLL=3.30756356274787, Perp=27.31848454823
+## Epoch [217] Train: NLL=3.25642968403829, Perp=25.9566978956055
+## Epoch [248] Train: NLL=3.19825967486207, Perp=24.4898727477925
+## Epoch [279] Train: NLL=3.14013971549828, Perp=23.1070950525017
+## Epoch [310] Train: NLL=3.08747601837462, Perp=21.9216781782189
+## Epoch [341] Train: NLL=3.04015595674863, Perp=20.9085038031042
+## Epoch [372] Train: NLL=2.99839339255659, Perp=20.0532932584534
+## Epoch [403] Train: NLL=2.95940091012609, Perp=19.2864139984503
+## Epoch [434] Train: NLL=2.92603311380224, Perp=18.6534872738302
+## Epoch [465] Train: NLL=2.89482756896395, Perp=18.0803835531869
+## Epoch [496] Train: NLL=2.86668230478397, Perp=17.5786009078994
+## Epoch [527] Train: NLL=2.84089368534943, Perp=17.1310684830416
+## Epoch [558] Train: NLL=2.81725862932279, Perp=16.7309220880514
+## Epoch [589] Train: NLL=2.79518870141492, Perp=16.3657166956952
+## Epoch [620] Train: NLL=2.77445683225304, Perp=16.0299176962855
+## Epoch [651] Train: NLL=2.75490970113174, Perp=15.719621374694
+## Epoch [682] Train: NLL=2.73697900634351, Perp=15.4402696117257
+## Epoch [713] Train: NLL=2.72059739336781, Perp=15.1893935780915
+## Epoch [744] Train: NLL=2.70462837571585, Perp=14.948760335793
+## Epoch [775] Train: NLL=2.68909904683828, Perp=14.7184093476224
+## Epoch [806] Train: NLL=2.67460054451836, Perp=14.5065539595711
+## Epoch [837] Train: NLL=2.66078997776751, Perp=14.3075873113043
+## Epoch [868] Train: NLL=2.6476781639279, Perp=14.1212134100373
+## Epoch [899] Train: NLL=2.63529039846876, Perp=13.9473621677371
+## Epoch [930] Train: NLL=2.62367693518974, Perp=13.7863219168709
+## Epoch [961] Train: NLL=2.61238282674384, Perp=13.6314936713501
+## Iter [1] Train: Time: 10301.6818172932 sec, NLL=2.60536539345356, Perp=13.5361704272949
+## Iter [1] Val: NLL=2.26093848746227, Perp=9.59208699731232
 ```
-Epoch [31] Train: NLL=3.47213018872144, Perp=32.2052727363657
-...
-Epoch [961] Train: NLL=2.32060007657895, Perp=10.181782322355
-Iter [1] Train: Time: 186.397065639496 sec, NLL=2.31135356537961, Perp=10.0880702804858
-Iter [1] Val: NLL=1.94184484060012, Perp=6.97160060607419
-Epoch [992] Train: NLL=1.84784553299322, Perp=6.34613225095329
-...
-Epoch [1953] Train: NLL=1.70175791172558, Perp=5.48357857093351
-Iter [2] Train: Time: 188.929051160812 sec, NLL=1.70103940328978, Perp=5.47963998859367
-Iter [2] Val: NLL=1.74979316010449, Perp=5.75341251767988
-...
-Epoch [2914] Train: NLL=1.54738185300295, Perp=4.69915099483974
-Iter [3] Train: Time: 185.425321578979 sec, NLL=1.54604189517013, Perp=4.69285854740519
-Iter [3] Val: NLL=1.67780240235925, Perp=5.35377758479576
-Epoch [2945] Train: NLL=1.48868466087876, Perp=4.43126307034767
-...
-Iter [4] Train: Time: 185.487086296082 sec, NLL=1.4744973925858, Perp=4.36883940994296
-Iter [4] Val: NLL=1.64488167325603, Perp=5.18039689118454
-Epoch [3937] Train: NLL=1.46355541021581, Perp=4.32129622881604
-...
-Epoch [4898] Train: NLL=1.42900458455642, Perp=4.17454171976281
-Iter [5] Train: Time: 185.070136785507 sec, NLL=1.42909226256273, Perp=4.17490775130428
-Iter [5] Val: NLL=1.62716655804022, Perp=5.08943365437187
 
-```
 Inference from model
 --------------------
 helper function for random sample.
-```{r}
+
+```r
 cdf <- function(weights) {
     total <- sum(weights)
     result <- c()
@@ -224,16 +258,14 @@ choice <- function(weights) {
 }
 ```
 we can use random output or fixed output by choosing largest probability.
-```{r}
-make.output <- function(prob, sample=FALSE, temperature=1.) {
+
+```r
+make.output <- function(prob, sample=FALSE) {
     if (!sample) {
         idx <- which.max(as.array(prob))
     }
     else {
-        scale_prob <- mx.nd.clip(prob, 1e-6, 1 - 1e-6)
-        rescale <- mx.nd.exp(mx.nd.log(scale_prob) / temperature)
-        rescale <- rescale / (as.array(mx.nd.sum(rescale))[1])
-        idx <- choice(rescale)
+        idx <- choice(prob)
     }
     return (idx)
 
@@ -242,7 +274,8 @@ make.output <- function(prob, sample=FALSE, temperature=1.) {
 
 In `mxnet`, we have a function called `mx.lstm.inference` so that users can build a inference from lstm model and then use function `mx.lstm.forward` to get forward output from the inference.
 Build inference from model.
-```{r}
+
+```r
 infer.model <- mx.lstm.inference(num.lstm.layer=num.lstm.layer,
                                  input.size=vocab,
                                  num.hidden=num.hidden,
@@ -252,7 +285,7 @@ infer.model <- mx.lstm.inference(num.lstm.layer=num.lstm.layer,
                                  ctx=mx.cpu())
 ```
 generate a sequence of 75 chars using function `mx.lstm.forward`.
-```
+```r
 start <- 'a'
 seq.len <- 75
 random.sample <- TRUE
@@ -274,3 +307,8 @@ The result:
 ah not a drobl greens
 Settled asing lately sistering sounted to their hight
 ```
+
+Other RNN models
+----------------
+In `mxnet`, other RNN models like custom RNN is also provided.
+- For **custom RNN model**, you can replace `mx.lstm` with `mx.rnn` to train rnn model. Also, you can replace `mx.lstm.inference` and `mx.lstm.forward` with `mx.rnn.inference` and `mx.rnn.forward` to inference from rnn model and get forward result from the inference model.
