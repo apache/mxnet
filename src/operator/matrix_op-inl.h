@@ -27,6 +27,7 @@ struct TransposeParam : public dmlc::Parameter<TransposeParam> {
   }
 };
 
+
 template<typename xpu>
 void TransposeImpl(const TBlob &src,
               TBlob *ret,
@@ -138,6 +139,58 @@ inline TShape TransposeShape(const TShape& shp,
     }
   }
   return ret;
+}
+
+
+struct ExpandDimParam : public dmlc::Parameter<ExpandDimParam> {
+  index_t axis;
+  DMLC_DECLARE_PARAMETER(ExpandDimParam) {
+    DMLC_DECLARE_FIELD(axis)
+    .describe("Position (amongst axes) where new axis is to be inserted.");
+  }
+};
+
+
+inline TShape ExpandDimShape(const TShape& shp,
+                             const EnvArguments& env) {
+  ExpandDimParam param;
+  param.Init(env.kwargs);
+  CHECK_LE(param.axis, shp.ndim())
+      << "axis must be smaller equal to the dimension of the array";
+  std::vector<index_t> idx(shp.data(), shp.data() + shp.ndim());
+  idx.insert(idx.begin() + param.axis, 1);
+  return TShape(idx.begin(), idx.end());
+}
+
+
+template<typename xpu>
+void ReshapeImpl(const TBlob &src,
+                 const EnvArguments& env,
+                 TBlob *ret,
+                 OpReqType req,
+                 RunContext ctx) {
+  if (req == kNullOp) return;
+  if (req == kWriteInplace) {
+    CHECK(ret->CheckContiguous() && src.CheckContiguous());
+  }
+  CHECK_EQ(src.type_flag_, ret->type_flag_);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+      using namespace mshadow::expr;
+      mshadow::Tensor<xpu, 2, DType> out = ret->FlatTo2D<xpu, DType>(s);
+      mshadow::Tensor<xpu, 2, DType> mout = src.get_with_shape<xpu, 2, DType>(out.shape_, s);
+      ASSIGN_DISPATCH(out, req, F<mshadow::op::identity>(mout));
+    });
+}
+
+template<typename xpu>
+void ReshapeGrad_(const OutputGrad& out_grad,
+                  const EnvArguments& env,
+                  TBlob *in_grad,
+                  OpReqType req,
+                  RunContext ctx) {
+  ReshapeImpl<xpu>(
+      out_grad.data, env, in_grad, req, ctx);
 }
 
 
@@ -503,6 +556,14 @@ MXNET_REGISTER_SIMPLE_OP(transpose, XPU)
 .set_shape_function(TransposeShape)
 .set_gradient(XPU::kDevMask, TransposeGrad<XPU>, kNoInplace)
 .describe("Transpose the input matrix and return a new one");
+
+// expand_dim
+MXNET_REGISTER_SIMPLE_OP(expand_dims, XPU)
+.set_enable_kwargs(true)
+.set_function(XPU::kDevMask, ReshapeImpl<XPU>, kInplaceInOut)
+.set_shape_function(ExpandDimShape)
+.set_gradient(XPU::kDevMask, ReshapeGrad_<XPU>, kInplaceOutIn)
+.describe("Expand the shape of array by inserting a new axis.");
 
 // crop
 MXNET_REGISTER_SIMPLE_OP(crop, XPU)
