@@ -49,6 +49,7 @@ class CuDNNDeconvolutionOp : public Operator {
     Tensor<gpu, 4, DType> data = in_data[deconv::kData].get<gpu, 4, DType>(s);
     Tensor<gpu, 4, DType> wmat = in_data[deconv::kWeight].get<gpu, 4, DType>(s);
     Tensor<gpu, 4, DType> out = out_data[deconv::kOut].get<gpu, 4, DType>(s);
+
     CHECK_EQ(data.CheckContiguous(), true);
     CHECK_EQ(wmat.CheckContiguous(), true);
     CHECK_EQ(out.CheckContiguous(), true);
@@ -216,6 +217,8 @@ class CuDNNDeconvolutionOp : public Operator {
       size_t back_size_w = 0;
       Tensor<gpu, 4, DType> data = in_data[deconv::kData].get<gpu, 4, DType>(s);
       Tensor<gpu, 4, DType> out = out_data[deconv::kOut].get<gpu, 4, DType>(s);
+      index_t pad_y, pad_x, adj_y, adj_x;
+      param_.InferPad(data.size(2), data.size(3), &pad_y, &pad_x, &adj_y, &adj_x);
       data_offset_ = data.shape_[1] / param_.num_group * data.shape_[2] * data.shape_[3];
       out_offset_ = out.shape_[1] /param_.num_group * out.shape_[2] * out.shape_[3];
       weight_offset_ = data.shape_[1] / param_.num_group * param_.num_filter / param_.num_group
@@ -242,8 +245,8 @@ class CuDNNDeconvolutionOp : public Operator {
                                           param_.kernel[1]), CUDNN_STATUS_SUCCESS);
       #endif
       CHECK_EQ(cudnnSetConvolution2dDescriptor(conv_desc_,
-                                               param_.pad[0],
-                                               param_.pad[1],
+                                               pad_y,
+                                               pad_x,
                                                param_.stride[0],
                                                param_.stride[1],
                                                1,
