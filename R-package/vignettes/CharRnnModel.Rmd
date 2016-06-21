@@ -248,5 +248,6 @@ Settled asing lately sistering sounted to their hight
 
 Other RNN models
 ----------------
-In `mxnet`, other RNN models like custom RNN is also provided.
+In `mxnet`, other RNN models like custom RNN and gru is also provided.
 - For **custom RNN model**, you can replace `mx.lstm` with `mx.rnn` to train rnn model. Also, you can replace `mx.lstm.inference` and `mx.lstm.forward` with `mx.rnn.inference` and `mx.rnn.forward` to inference from rnn model and get forward result from the inference model.
+- For **GRU model**, you can replace `mx.lstm` with `mx.gru` to train gru model. Also, you can replace `mx.lstm.inference` and `mx.lstm.forward` with `mx.gru.inference` and `mx.gru.forward` to inference from gru model and get forward result from the inference model.
