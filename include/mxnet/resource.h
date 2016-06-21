@@ -74,6 +74,10 @@ struct Resource {
    * \brief Get space requested as mshadow Tensor.
    *  The caller can request arbitrary size.
    *
+   *  This space can be shared with other calls to this->get_space.
+   *  So the caller need to serialize the calls when using the conflicted space.
+   *  The temp space will remain valid until release is called.
+   *
    * \param shape the Shape of returning tensor.
    * \param stream the stream of retruning tensor.
    * \return the mshadow tensor requested.
@@ -132,6 +136,16 @@ struct Resource {
         reinterpret_cast<DType*>(get_host_space_internal(shape.Size() * sizeof(DType))),
         shape, shape[ndim - 1], NULL);
   }
+  /*!
+   * \brief Release the all existing allocated space.
+   *  The existing allocated address will remain valdd
+   *  until release is called.
+   *
+   *  Even if user do not call release, the space occupation
+   *  of the resource will remain at most two times of maximum
+   *  requested space.
+   */
+  void release() const;
   /*!
    * \brief internal function to get space from resources.
    * \param size The size of the space.
