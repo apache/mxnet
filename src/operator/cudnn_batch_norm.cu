@@ -12,8 +12,12 @@ namespace mxnet {
 namespace op {
 #if CUDNN_MAJOR == 4
 template<>
-Operator *CreateOp_CuDNNv4<gpu>(BatchNormParam param) {
-  return new CuDNNBatchNormOp(param);
+Operator *CreateOp_CuDNNv4<gpu>(BatchNormParam param, int dtype) {
+  Operator *op = NULL;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op = new CuDNNBatchNormOp<DType>(param);
+  })
+  return op;
 }
 #endif  // CUDNN_MAJOR == 4
 }  // namespace op
