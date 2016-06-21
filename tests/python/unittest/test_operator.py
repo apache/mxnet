@@ -1037,6 +1037,7 @@ def test_broadcast():
             assert err_backward < 1E-8
     test_broadcast_axis()
 
+
 def test_transpose():
     for ndim in range(1, 6):
         for t in range(5):
@@ -1050,6 +1051,17 @@ def test_transpose():
 
             y = mx.nd.transpose(x)
             assert_allclose(np.transpose(x.asnumpy()), y.asnumpy())
+
+
+def test_expand_dims():
+    for ndim in range(1, 6):
+        for t in range(5):
+            dims = list(np.random.randint(1, 10, size=ndim))
+            axis = np.random.randint(1, ndim+1)
+            x = mx.nd.array(np.random.normal(size=dims))
+            y = mx.nd.expand_dims(x, axis=axis)
+            assert_allclose(np.expand_dims(x.asnumpy(), axis=axis), y.asnumpy())
+
 
 def test_crop():
     for ndim in range(1, 6):
@@ -1110,6 +1122,7 @@ def test_flip():
             assert_allclose(x.asnumpy()[idx], y.asnumpy())
 
 if __name__ == '__main__':
+    test_expand_dims()
     test_slice_axis()
     test_softmax()
     test_broadcast_binary_op()
