@@ -133,6 +133,7 @@ class CaffeOperator : public Operator {
                                false, w_blobs, param_.in_dims.size(), in_data, empty_tblobs);
       caffeOp_->SetLearnableWeights(w_blobs);
     } else {
+      // TODO(Haoran): Delete this chekcer
       // pointer of weights should align with the weights passed in
       for (int i = param_.in_dims.size(); i < expected_in_num; ++i)
         CHECK_EQ(weightDataList_->at(i-param_.in_dims.size()), in_data[i].dptr_);
@@ -197,6 +198,7 @@ class CaffeOperator : public Operator {
       this->BuildOrModifyBlobs(s, caffeEnum::GradOnly, param_.w_dims,
                                true, w_blobs, param_.in_dims.size(), in_grad, empty_tblobs);
     } else {
+      // TODO(Haoran): Delete this chekcer
       // pointer of gradient should align with the gradient passed in
       for (int i = param_.in_dims.size(); i < expected_in_num; ++i) {
         CHECK_EQ(weightDeltaList_->at(i-param_.in_dims.size()), in_grad[i].dptr_);
