@@ -24,6 +24,11 @@ struct SpaceAllocator {
   Storage::Handle handle;
   // internal CPU handle
   Storage::Handle host_handle;
+  // The old handles that need to be kept valid
+  // until release is called.
+  // This API allows several CUDA calls using
+  // temp space to get valid space until all the calls finished.
+  std::vector<Storage::Handle> old_handles;
 
   SpaceAllocator() {
     handle.dptr = nullptr;
@@ -33,30 +38,35 @@ struct SpaceAllocator {
   }
 
   inline void Release() {
-    if (handle.size != 0) {
-      Storage::Get()->Free(handle);
-      handle.size = 0;
+    for (const Storage::Handle& handle : old_handles) {
+      if (handle.size != 0) {
+        Storage::Get()->Free(handle);
+      }
     }
+    old_handles.clear();
   }
 
-  inline void ReleaseHost() {
-    if (host_handle.size != 0) {
-      Storage::Get()->Free(host_handle);
-      host_handle.size = 0;
-    }
+  inline void ReleaseAll() {
+    old_handles.push_back(handle);
+    old_handles.push_back(host_handle);
+    this->Release();
+    handle.size = 0;
+    host_handle.size = 0;
   }
 
   inline void* GetSpace(size_t size) {
     if (handle.size >= size) return handle.dptr;
-    this->Release();
-    handle = Storage::Get()->Alloc(size, ctx);
+    old_handles.push_back(handle);
+    handle = Storage::Get()->Alloc(
+        std::max(size, handle.size * 2), ctx);
     return handle.dptr;
   }
 
   inline void* GetHostSpace(size_t size) {
     if (host_handle.size >= size) return host_handle.dptr;
-    this->ReleaseHost();
-    host_handle = Storage::Get()->Alloc(size, Context());
+    old_handles.push_back(host_handle);
+    host_handle = Storage::Get()->Alloc(
+        std::max(size, handle.size * 2), Context());
     return host_handle.dptr;
   }
 };
@@ -203,8 +213,7 @@ class ResourceManagerImpl : public ResourceManager {
         Engine::Get()->DeleteVariable(
             [r](RunContext rctx){
               SpaceAllocator rcpy = r;
-              MSHADOW_CATCH_ERROR(rcpy.Release());
-              MSHADOW_CATCH_ERROR(rcpy.ReleaseHost());
+              MSHADOW_CATCH_ERROR(rcpy.ReleaseAll());
             }, ctx, resource[i].var);
       }
     }
@@ -249,6 +258,10 @@ void* Resource::get_space_internal(size_t size) const {
 
 void* Resource::get_host_space_internal(size_t size) const {
   return static_cast<resource::SpaceAllocator*>(ptr_)->GetHostSpace(size);
+}
+
+void Resource::release() const {
+  return static_cast<resource::SpaceAllocator*>(ptr_)->Release();
 }
 
 ResourceManager* ResourceManager::Get() {
