@@ -102,9 +102,9 @@ object TrainMnist {
         envs.put("DMLC_NUM_WORKER", inst.numWorker.toString)
         require(inst.numServer > 0, "Num of servers must > 0")
         envs.put("DMLC_NUM_SERVER", inst.numServer.toString)
+        logger.info("Init PS environments")
+        KVStoreServer.init(envs.toMap)
       }
-      logger.info("Init PS environments")
-      KVStoreServer.init(envs.toMap)
 
       if (inst.role != "worker") {
         logger.info("Start KVStoreServer for scheduler & servers")
