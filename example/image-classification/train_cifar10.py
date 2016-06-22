@@ -36,13 +36,28 @@ args = parser.parse_args()
 # download data if necessary
 def _download(data_dir):
     if not os.path.isdir(data_dir):
-        os.system("mkdir " + data_dir)
+        os.makedirs(data_dir)  # Recursive directory creation
     os.chdir(data_dir)
     if (not os.path.exists('train.rec')) or \
        (not os.path.exists('test.rec')) :
-        os.system("wget http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip")
-        os.system("unzip -u cifar10.zip")
-        os.system("mv cifar/* .; rm -rf cifar; rm cifar10.zip")
+        url = 'http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip'
+        if sys.version_info.major == 2:
+            from urllib import urlretrieve
+        elif sys.version_info.major == 3:
+            from urllib.request import urlretrieve
+        urlretrieve(url, 'cifar10.zip')
+        import zipfile
+        with zipfile.ZipFile('cifar10.zip') as f:  # using with, so no need to close f explicitly
+            f.extractall()  # extract all files in current path
+        import shutil
+        files = os.listdir('cifar')
+        for filename in files:
+            if os.path.isfile(os.path.join('cifar', filename)):
+                shutil.move(os.path.join('cifar', filename), '.')
+            else:
+                shutil.copytree(os.path.join('cifar', filename), filename)
+        shutil.rmtree('cifar')
+        os.remove('cifar10.zip')
     os.chdir("..")
 
 # network
@@ -56,8 +71,8 @@ def get_iterator(args, kv):
         _download(args.data_dir)
 
     train = mx.io.ImageRecordIter(
-        path_imgrec = args.data_dir + "train.rec",
-        mean_img    = args.data_dir + "mean.bin",
+        path_imgrec = os.path.join(args.data_dir, "train.rec"),
+        mean_img    = os.path.join(args.data_dir, "mean.bin"),
         data_shape  = data_shape,
         batch_size  = args.batch_size,
         rand_crop   = True,
@@ -66,8 +81,8 @@ def get_iterator(args, kv):
         part_index  = kv.rank)
 
     val = mx.io.ImageRecordIter(
-        path_imgrec = args.data_dir + "test.rec",
-        mean_img    = args.data_dir + "mean.bin",
+        path_imgrec = os.path.join(args.data_dir, "test.rec"),
+        mean_img    = os.path.join(args.data_dir, "mean.bin"),
         rand_crop   = False,
         rand_mirror = False,
         data_shape  = data_shape,
