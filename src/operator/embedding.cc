@@ -11,19 +11,9 @@ namespace op {
 template<>
 Operator* CreateOp<cpu>(EmbeddingParam param, int dtype) {
   Operator *op = NULL;
-  switch (dtype) {
-  case mshadow::kFloat32:
-    op = new EmbeddingOp<cpu, float>(param);
-    break;
-  case mshadow::kFloat64:
-    op = new EmbeddingOp<cpu, double>(param);
-    break;
-  case mshadow::kFloat16:
-    op = new EmbeddingOp<cpu, mshadow::half::half_t>(param);
-    break;
-  default:
-    LOG(FATAL) << "Unsupported type " << dtype;
-  }
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op = new EmbeddingOp<cpu, DType>(param);
+  });
   return op;
 }
 
