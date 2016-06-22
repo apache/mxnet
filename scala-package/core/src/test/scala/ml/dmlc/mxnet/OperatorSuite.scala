@@ -130,6 +130,20 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
       (x: Float, y: Float) => x - y)
   }
 
+  test("sum axis") {
+    val data = Symbol.Variable("data")
+    val shape = Shape(6, 5)
+    val arrData = NDArray.ones(shape)
+
+    val sum = Symbol.sumAxis()(Map("data" -> data, "axis" -> 1))
+    val exec = sum.bind(Context.cpu(), args = Array(arrData))
+    exec.forward()
+    val out = exec.outputs(0)
+
+    assert(Shape(6).equals(out.shape))
+    assert(CheckUtils.reldiff(out.toArray, Array(5f, 5f, 5f, 5f, 5f, 5f)) < 1e-6f)
+  }
+
   // TODO: test softmax
 
   test("swap axes") {

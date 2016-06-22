@@ -1327,6 +1327,18 @@ object Symbol {
   }
 
   /**
+   * Take sum of the src in the given axis
+   *
+   * Parameters
+   * ----------
+   * data : Symbol. Input data to sum.
+   * axis : int, default=-1, means to reduce all the dimensions.
+   */
+  def sumAxis(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("sum_axis", name, attr)
+  }
+
+  /**
    * Apply swapaxis to input.
    *
    * Parameters
