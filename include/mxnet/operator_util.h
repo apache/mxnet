@@ -61,6 +61,26 @@ struct EnvArguments {
 };
 
 /*!
+ * \brief source function that generate output based on env
+ *  The result container is pre-allocated with the correct shape.
+ * \param env The Environment arguments.
+ * \param ret The containter to store return value.
+ * \param req The requirement to stroe the ret.
+ * \param ctx Runtime context to execute the function.
+ */
+typedef void (*SourceFunction)(const EnvArguments& env,
+                               TBlob* ret,
+                               OpReqType req,
+                               RunContext ctx);
+
+/*!
+ * \brief Shape inference function to get the correct shape.
+ * \param env The Environment arguments.
+ * \return The inferred result shape.
+ */
+typedef TShape (*SourceShapeFunction)(const EnvArguments& env);
+
+/*!
  * \brief Unary function that takes a src and save result to ret.
  *  The result container is pre-allocated with the correct shape.
  * \param src The source data.
@@ -266,6 +286,11 @@ class SimpleOpRegEntry {
    */
   virtual TSelf& set_resource_request(ResourceRequest req) = 0;
   /*!
+   * \brief set source inference function.
+   * \param fshapeinfer The source function that peforms the operation.
+   */
+  virtual TSelf& set_shape_function(SourceShapeFunction fshapeinfer) = 0;
+  /*!
    * \brief set shape inference function.
    *  Default: out_shape = in_shape
    * \param fshapeinfer The unary function that peforms the operation.
@@ -277,6 +302,16 @@ class SimpleOpRegEntry {
    * \param fshapeinfer The binary function that peforms the operation.
    */
   virtual TSelf& set_shape_function(BinaryShapeFunction fshapeinfer) = 0;
+  /*!
+   * \brief set function of the function to be fsource
+   * \param dev_mask The device mask of the function can act on.
+   * \param fsource The unary function that peforms the operation.
+   * \param register_symbolic Whether register a symbolic operator as well.
+   */
+  virtual TSelf& set_function(
+      int dev_mask,
+      SourceFunction fsource,
+      SimpleOpRegOption register_symbolic = kRegisterSymbolic) = 0;
   /*!
    * \brief set function of the function to be funary
    * \param dev_mask The device mask of the function can act on.
