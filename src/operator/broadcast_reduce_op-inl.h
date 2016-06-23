@@ -356,8 +356,8 @@ MXNET_REGISTER_SIMPLE_OP(max, XPU)
 kNoInplace, kNotRegisterSymbolic)
 .set_shape_function(ReduceAxisShape)
 .describe("Take max of the src in the given axis. Params: `axis` and `keepdims`."
-" axis: tuple or integer of axes to reduce, global reduce will be performed if left empty."
-" keepdims: the same meaning as Numpy.");
+          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
+          " keepdims: the same meaning as Numpy.");
 
 // Min
 MXNET_REGISTER_SIMPLE_OP(min, XPU)
@@ -366,8 +366,8 @@ MXNET_REGISTER_SIMPLE_OP(min, XPU)
 kNoInplace, kNotRegisterSymbolic)
 .set_shape_function(ReduceAxisShape)
 .describe("Take min of the src in the given axis. Params: `axis` and `keepdims`."
-" axis: tuple or integer of axes to reduce, global reduce will be performed if left empty."
-" keepdims: the same meaning as Numpy.");
+          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
+          " keepdims: the same meaning as Numpy.");
 
 // Sum
 MXNET_REGISTER_SIMPLE_OP(sum, XPU)
@@ -377,8 +377,8 @@ kNoInplace, kRegisterSymbolic)
 .set_shape_function(ReduceAxisShape)
 .set_gradient(XPU::kDevMask, SumAxisGrad_<XPU>, kNoInplace)
 .describe("Take sum of the src in the given axis. Params: `axis` and `keepdims`."
-" axis: tuple or integer of axes to reduce, global reduce will be performed if left empty."
-" keepdims: the same meaning as Numpy.");
+          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
+          " keepdims: the same meaning as Numpy.");
 
 // max_axis
 MXNET_REGISTER_SIMPLE_OP(max_axis, XPU)
@@ -386,8 +386,9 @@ MXNET_REGISTER_SIMPLE_OP(max_axis, XPU)
 .set_function(XPU::kDevMask, ReduceAxis<XPU, mshadow::red::maximum>,
               kNoInplace, kNotRegisterSymbolic)
 .set_shape_function(ReduceAxisShape)
-.describe("Take max of the src in the given axis. Params: `axis` and `keepdims`."
-          " axis: tuple or integer of axes to reduce, global reduce will be performed if left empty."
+.describe("(Depreciated! Use max instead!)"
+          " Take max of the src in the given axis. Params: `axis` and `keepdims`."
+          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
           " keepdims: the same meaning as Numpy.");
 
 // min_axis
@@ -396,8 +397,9 @@ MXNET_REGISTER_SIMPLE_OP(min_axis, XPU)
 .set_function(XPU::kDevMask, ReduceAxis<XPU, mshadow::red::minimum>,
               kNoInplace, kNotRegisterSymbolic)
 .set_shape_function(ReduceAxisShape)
-.describe("Take min of the src in the given axis. Params: `axis` and `keepdims`."
-          " axis: tuple or integer of axes to reduce, global reduce will be performed if left empty."
+.describe("(Depreciated! Use min instead!)"
+          " Take min of the src in the given axis. Params: `axis` and `keepdims`."
+          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
           " keepdims: the same meaning as Numpy.");
 
 // sum_axis
@@ -407,8 +409,9 @@ MXNET_REGISTER_SIMPLE_OP(sum_axis, XPU)
               kNoInplace, kRegisterSymbolic)
 .set_shape_function(ReduceAxisShape)
 .set_gradient(XPU::kDevMask, SumAxisGrad_<XPU>, kNoInplace)
-.describe("Take sum of the src in the given axis. Params: `axis` and `keepdims`."
-          " axis: tuple or integer of axes to reduce, global reduce will be performed if left empty."
+.describe("(Depreciated! Use sum instead!)"
+          " Take sum of the src in the given axis. Params: `axis` and `keepdims`."
+          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
           " keepdims: the same meaning as Numpy.");
 
 // argmax channel
