@@ -145,7 +145,7 @@ class EmbeddingProp : public OperatorProperty {
     out_shape->push_back(oshape);
     return true;
   }
-  
+
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
