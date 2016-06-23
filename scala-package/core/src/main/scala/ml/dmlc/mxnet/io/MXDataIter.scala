@@ -29,9 +29,11 @@ class MXDataIter private[mxnet](private[mxnet] val handle: DataIterHandle,
       iterNext()
       val data = currentBatch.data(0)
       val label = currentBatch.label(0)
-      reset()
       // properties
-      (Map(dataName -> data.shape), Map(labelName -> label.shape), data.shape(0))
+      val res = (Map(dataName -> data.shape), Map(labelName -> label.shape), data.shape(0))
+      currentBatch.dispose()
+      reset()
+      res
     } else {
       (null, null, 0)
     }
