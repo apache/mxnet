@@ -980,11 +980,16 @@ def test_reduce():
                     axes.append(axis)
             if 0 == len(axes):
                 axes = None
+            elif 1 == len(axes):
+                axes = axes[0]
             else:
                 axes = tuple(axes)
             keepdims = np.random.randint(0, 2)
             a = mx.symbol.Variable('a')
-            b = mx_reduce_sym(a, axis=axes, keepdims=keepdims)
+            if axes is None:
+                b = mx_reduce_sym(a, keepdims=keepdims)
+            else:
+                b = mx_reduce_sym(a, axis=axes, keepdims=keepdims)
             dat_npy = np.random.rand(*shape)
             sum_groundtruth = np.array(numpy_reduce_func(dat_npy, axis=axes, keepdims=keepdims))
             if sum_groundtruth.shape == ():
@@ -1014,10 +1019,11 @@ def test_broadcast():
             # Generate random data that has ndim between 1-7 and all the shape dims between 1-10
             ndim = np.random.randint(1, 8)
             target_shape = np.random.randint(1, 11, size=(ndim,))
-            axis = np.random.randint(0, ndim)
+            axis = tuple(set(np.random.randint(0, ndim, np.random.randint(1, ndim + 1))))
             shape = target_shape.copy()
-            size = shape[axis]
-            shape[axis] = 1
+            size = tuple([shape[ele] for ele in axis])
+            for ele in axis:
+                shape[ele] = 1
             a = mx.symbol.Variable('a')
             b = mx.symbol.broadcast_axis(a, axis=axis, size=size)
             dat_npy = np.random.rand(*shape)
@@ -1033,8 +1039,9 @@ def test_broadcast():
             err_forward = np.square(net.outputs[0].asnumpy() - groundtruth).mean()
             assert err_forward < 1E-8
             net.backward(out_grads=mx.nd.array(outgrad_npy))
-            err_backward = np.square(grad_nd.asnumpy() - grad_groundtruth).mean()
-            assert err_backward < 1E-8
+            err_backward = np.square(grad_nd.asnumpy() - grad_groundtruth).sum()\
+                           /np.prod(target_shape)
+            assert err_backward < 1E-6
     test_broadcast_axis()
 
 
