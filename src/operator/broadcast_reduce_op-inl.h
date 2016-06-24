@@ -9,6 +9,7 @@
 #include <mxnet/operator_util.h>
 #include <vector>
 #include "./mshadow_op.h"
+#include "./broadcast_reduce_op_common.h"
 
 #if defined(__CUDACC__)
 #define XPU gpu
@@ -21,10 +22,11 @@ namespace op {
 
 struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
   bool keepdims;
-  int axis;
+  TShape axis;
   DMLC_DECLARE_PARAMETER(ReduceAxisParam) {
-    DMLC_DECLARE_FIELD(axis).set_default(-1).set_lower_bound(-1)
-      .describe("The axis to perform the reduction. axis=-1 means to reduce all dimensions");
+    DMLC_DECLARE_FIELD(axis).set_default(TShape())
+      .describe("Same as Numpy. The axes to perform the reduction."
+                "If left empty, a global reduction will be performed.");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("Same as Numpy. If keepdims is set to true, "
       "the axis which is reduced is left in the result as dimension with size one.");
@@ -32,13 +34,13 @@ struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
 };
 
 struct BroadcastAxisParam : public dmlc::Parameter<BroadcastAxisParam> {
-  int axis;
-  int size;
+  TShape axis;
+  TShape size;
   DMLC_DECLARE_PARAMETER(BroadcastAxisParam) {
-    DMLC_DECLARE_FIELD(axis).set_default(0).set_lower_bound(0)
-      .describe("The target axis of broadcasting.");
-    DMLC_DECLARE_FIELD(size).set_default(0).set_lower_bound(1)
-      .describe("Size of the broadcasting axis.");
+    DMLC_DECLARE_FIELD(axis).set_default(TShape())
+      .describe("The axes to perform the broadcasting.");
+    DMLC_DECLARE_FIELD(size).set_default(TShape())
+      .describe("Target sizes of the broadcasting axes.");
   }
 };
 
@@ -46,25 +48,23 @@ inline TShape ReduceAxisShape(const TShape& ishape,
   const EnvArguments& env) {
   ReduceAxisParam param;
   param.Init(env.kwargs);
-  CHECK(param.axis < static_cast<int>(ishape.ndim()) || -1 == param.axis) <<
-    "axis must be smaller than the source ndim or equal to -1! Received axis=" <<
-    param.axis << ", src_ndim=" << ishape.ndim();
-  if (param.axis == -1 || (1 == ishape.ndim())) {
-    if (param.keepdims) {
-      return TShape(ishape.ndim());
-    } else {
-      return TShape(1);
+  std::vector<index_t> axes = ParseAxes_(param.axis, ishape.ndim());
+  if (axes.size() == 0) {
+    for (index_t i = 0; i < ishape.ndim(); ++i) {
+      axes.push_back(i);
     }
   }
   std::vector<mshadow::index_t> shape;
   for (index_t i = 0; i < ishape.ndim(); ++i) {
-    if (static_cast<int>(i) == param.axis) {
-      if (param.keepdims) {
-        shape.push_back(1);
-      }
-    } else {
+    if (!std::binary_search(axes.begin(), axes.end(), i)) {
       shape.push_back(ishape[i]);
+    } else if (param.keepdims) {
+      shape.push_back(1);
     }
+  }
+  // We need to treat the global reduction case specially to avoid an empty output TShape.
+  if (shape.size() == 0) {
+    shape.push_back(1);
   }
   return TShape(shape.begin(), shape.end());
 }
@@ -73,20 +73,15 @@ inline TShape BroadcastAxisShape(const TShape& ishape,
   const EnvArguments& env) {
   BroadcastAxisParam param;
   param.Init(env.kwargs);
-  CHECK(param.axis < static_cast<int>(ishape.ndim())) <<
-    "axis must be smaller than the source ndim" << param.axis << ", src_ndim=" << ishape.ndim();
-  CHECK_EQ(ishape[param.axis], 1) <<
-    "Size of the broadcasting axis in the source must be 1, axis=" << param.axis
-    << ", size=" << ishape[param.axis];
-  std::vector<mshadow::index_t> shape;
-  for (index_t i = 0; i < ishape.ndim(); ++i) {
-    if (static_cast<int>(i) != param.axis) {
-      shape.push_back(ishape[i]);
-    } else {
-      shape.push_back(param.size);
-    }
+  CHECK_EQ(param.axis.ndim(), param.size.ndim());
+  TShape ret = ishape;
+  for (index_t i = 0; i < param.axis.ndim(); i++) {
+    CHECK_EQ(ishape[param.axis[i]], 1) <<
+      "Size of the broadcasting axis in the source must be 1, axis=" << param.axis
+      << ", size=" << param.size;
+    ret[param.axis[i]] = param.size[i];
   }
-  return TShape(shape.begin(), shape.end());
+  return ret;
 }
 
 // return a shape of scalar
@@ -184,75 +179,38 @@ inline TShape ReduceChannelShape(const TShape& ishape,
 }
 
 // Reduce the given axis
-template<typename xpu, typename Reducer, bool get_mask>
+template<typename xpu, typename Reducer>
 void ReduceAxisImpl_(const TBlob &src,
                      const EnvArguments& env,
                      TBlob *ret,
                      OpReqType req,
                      RunContext ctx,
-                     int axis,
-                     bool keepdims) {
+                     TShape axes) {
+  using namespace mshadow;
   using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(src.type_flag_, ret->type_flag_);
-  if (-1 == axis) {
-    // Reduce all dimensions if axis == -1
+  bool is_contiguous_axes;
+  index_t reducing_size;
+  CheckContiguousAxes_(&is_contiguous_axes, &reducing_size, axes, src.shape_);
+  if (is_contiguous_axes) {
     MSHADOW_REAL_TYPE_SWITCH(src.type_flag_, DType, {
-      mshadow::Tensor<xpu, 2, DType> in =
-        src.get_with_shape<xpu, 2, DType>(mshadow::Shape2(src.shape_.Size(), 1), s);
-      mshadow::Tensor<xpu, 1, DType> out =
-        ret->get_with_shape<xpu, 1, DType>(mshadow::Shape1(ret->shape_.Size()), s);
-      ASSIGN_DISPATCH(out, req, (reduce_except_dim<1, Reducer>(in)));
-    });
-    return;
-  }
-  int trailing = 1;
-  int leading = 1;
-  for (int i = 0; i < src.shape_.ndim(); ++i) {
-    if (i < axis) {
-      leading *= src.shape_[i];
-    } else if (i > axis) {
-      trailing *= src.shape_[i];
-    }
-  }
-  if (get_mask) {
-    // If get_mask is on, we have to use the slower `reduce_with_axis`
-    // since reduce_except_dim does not support the flag.
-    MSHADOW_REAL_TYPE_SWITCH(src.type_flag_, DType, {
-      mshadow::Tensor<xpu, 3, DType> in =
-        src.get_with_shape<xpu, 3, DType>(mshadow::Shape3(leading, src.shape_[axis], trailing), s);
-      mshadow::Tensor<xpu, 2, DType> out =
-        ret->get_with_shape<xpu, 2, DType>(mshadow::Shape2(leading, trailing), s);
-      CHECK(req != kAddTo) << "AddTo is not supported for `get_mask = true`";
-      ASSIGN_DISPATCH(out, req, (reduce_with_axis<Reducer, true>(in, 1)));
-    });
-    return;
-  }
-  if (1 == leading) {
-    MSHADOW_REAL_TYPE_SWITCH(src.type_flag_, DType, {
-      mshadow::Tensor<xpu, 2, DType> in =
-        src.get_with_shape<xpu, 2, DType>(mshadow::Shape2(src.shape_[axis], trailing), s);
-      mshadow::Tensor<xpu, 1, DType> out =
-        ret->get_with_shape<xpu, 1, DType>(mshadow::Shape1(trailing), s);
-      ASSIGN_DISPATCH(out, req, (reduce_except_dim<1, Reducer>(in)));
-    });
-  } else if (1 == trailing) {
-    MSHADOW_REAL_TYPE_SWITCH(src.type_flag_, DType, {
-      mshadow::Tensor<xpu, 2, DType> in =
-        src.get_with_shape<xpu, 2, DType>(mshadow::Shape2(leading, src.shape_[axis]), s);
-      mshadow::Tensor<xpu, 1, DType> out =
-        ret->get_with_shape<xpu, 1, DType>(mshadow::Shape1(leading), s);
-      ASSIGN_DISPATCH(out, req, (reduce_except_dim<1, Reducer>(in.T())));
+      Tensor<xpu, 3, DType> in = src.FlatTo3D<xpu, DType>(axes[0], axes[axes.ndim() - 1], s);
+      Tensor<xpu, 1, DType> out =
+        ret->get_with_shape<xpu, 1, DType>(mshadow::Shape1(ret->Size()), s);
+      ReduceAxesAssign<Reducer>(out, req, TShape(1), in);
     });
   } else {
+    Shape<MXNET_SPECIAL_MAX_NDIM> padded_shape_;
+    for (index_t i = 0; i < MXNET_SPECIAL_MAX_NDIM; ++i) {
+      padded_shape_[i] = (i < src.ndim()) ? src.shape_[i] : 1;
+    }
     MSHADOW_REAL_TYPE_SWITCH(src.type_flag_, DType, {
-      mshadow::Tensor<xpu, 3, DType> in =
-        src.get_with_shape<xpu, 3, DType>(mshadow::Shape3(leading, src.shape_[axis], trailing), s);
-      mshadow::Tensor<xpu, 1, DType> out =
-        ret->get_with_shape<xpu, 1, DType>(mshadow::Shape1(leading * trailing), s);
-      ASSIGN_DISPATCH(out, req,
-        (reduce_except_dim<1, Reducer>(reshape(swapaxis<1, 0>(in),
-        mshadow::Shape2(src.shape_[axis], leading * trailing)))));
+      Tensor<xpu, MXNET_SPECIAL_MAX_NDIM, DType> in =
+        src.get_with_shape<xpu, MXNET_SPECIAL_MAX_NDIM, DType>(padded_shape_, s);
+      Tensor<xpu, 1, DType> out =
+        ret->get_with_shape<xpu, 1, DType>(mshadow::Shape1(ret->Size()), s);
+      ReduceAxesAssign<Reducer>(out, req, axes, in);
     });
   }
 }
@@ -264,41 +222,46 @@ void BroadcastAxisImpl_(const TBlob &src,
   TBlob *ret,
   OpReqType req,
   RunContext ctx,
-  int axis,
-  int bsize,
-  bool keepdims) {
+  const TShape &axes,
+  const TShape &bsizes) {
+  using namespace mshadow;
   using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  if (axis == -1) {
-    MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
-      mshadow::Tensor<xpu, 1, DType> in =
-        src.get_with_shape<xpu, 1, DType>(mshadow::Shape1(src.shape_.Size()), s);
-      mshadow::Tensor<xpu, 2, DType> out = ret->FlatTo2D<xpu, DType>(s);
-      ASSIGN_DISPATCH(out, req,
-        broadcast_scalar(in, out.shape_));
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(src.type_flag_, ret->type_flag_);
+  bool is_contiguous_axes;
+  index_t broadcasting_size;
+  CheckContiguousAxes_(&is_contiguous_axes, &broadcasting_size, axes, ret->shape_);
+  if (is_contiguous_axes) {
+    MSHADOW_REAL_TYPE_SWITCH(src.type_flag_, DType, {
+      Tensor<xpu, 3, DType> out = ret->FlatTo3D<xpu, DType>(axes[0], axes[axes.ndim() - 1], s);
+      Tensor<xpu, 3, DType> in =
+        src.get_with_shape<xpu, 3, DType>(Shape3(out.shape_[0], 1, out.shape_[2]), s);
+      ASSIGN_DISPATCH(out, req, broadcast_keepdim(in, 1, broadcasting_size));
     });
-    return;
-  }
-  int trailing = 1;
-  int leading = 1;
-  for (int i = 0; i < ret->shape_.ndim(); ++i) {
-    if (i < axis) {
-      leading *= ret->shape_[i];
-    } else if (i > axis) {
-      trailing *= ret->shape_[i];
+  } else {
+    CHECK(ret->ndim() <= MXNET_SPECIAL_MAX_NDIM) << "non-contiguous axis supports ndim up to "
+                                                 << MXNET_SPECIAL_MAX_NDIM;
+    Shape<MXNET_SPECIAL_MAX_NDIM> padded_src_shape_;
+    Shape<MXNET_SPECIAL_MAX_NDIM> padded_ret_shape_;
+    for (index_t i = 0; i < MXNET_SPECIAL_MAX_NDIM; ++i) {
+      padded_ret_shape_[i] = (i < ret->ndim()) ? ret->shape_[i] : 1;
     }
+    padded_src_shape_ = padded_ret_shape_;
+    for (index_t i = 0; i < axes.ndim(); ++i) {
+      padded_src_shape_[axes[i]] = 1;
+    }
+    MSHADOW_REAL_TYPE_SWITCH(src.type_flag_, DType, {
+      Tensor<xpu, MXNET_SPECIAL_MAX_NDIM, DType> in =
+        src.get_with_shape<xpu, MXNET_SPECIAL_MAX_NDIM, DType>(padded_src_shape_, s);
+      Tensor<xpu, MXNET_SPECIAL_MAX_NDIM, DType> out =
+        ret->get_with_shape<xpu, MXNET_SPECIAL_MAX_NDIM, DType>(padded_ret_shape_, s);
+      ASSIGN_DISPATCH(out, req, broadcast_multi_axes(in, axes, bsizes));
+    });
   }
-  MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
-    mshadow::Tensor<xpu, 2, DType> in =
-    src.get_with_shape<xpu, 2, DType>(mshadow::Shape2(leading, trailing), s);
-    mshadow::Tensor<xpu, 3, DType> out =
-      ret->get_with_shape<xpu, 3, DType>(mshadow::Shape3(leading, bsize, trailing), s);
-    ASSIGN_DISPATCH(out, req, broadcast_with_axis(in, 0, bsize));
-  });
 }
 
 // Forward pass of reduce over the given axis
-template<typename xpu, typename Reducer, bool get_mask>
+template<typename xpu, typename Reducer>
 void ReduceAxis(const TBlob &src,
   const EnvArguments& env,
   TBlob *ret,
@@ -307,10 +270,14 @@ void ReduceAxis(const TBlob &src,
   using namespace mshadow::expr;
   ReduceAxisParam param;
   param.Init(env.kwargs);
-  CHECK(param.axis < src.shape_.ndim() || -1 == param.axis) <<
-    "axis must be smaller than the source ndim or equals to -1!"
-    " Received axis=" << param.axis << ", src_ndim=" << src.shape_.ndim();
-  ReduceAxisImpl_<xpu, Reducer, get_mask>(src, env, ret, req, ctx, param.axis, param.keepdims);
+  std::vector<index_t> axes = ParseAxes_(param.axis, src.ndim());
+  if (axes.size() == 0) {
+    for (index_t i = 0; i < src.ndim(); i++) {
+      axes.push_back(i);
+    }
+  }
+  ReduceAxisImpl_<xpu, Reducer>(src, env, ret, req, ctx,
+                                TShape(axes.begin(), axes.end()));
 }
 
 // Backward pass of reduce over the given axis
@@ -324,17 +291,18 @@ void SumAxisGrad_(const OutputGrad& out_grad,
   using namespace mshadow::expr;
   ReduceAxisParam param;
   param.Init(env.kwargs);
-  CHECK(param.axis < in_grad->shape_.ndim() || param.axis == -1) <<
-    "axis must be smaller than the input grad ndim or equals to -1."
-    " Received axis=" << param.axis << ", igrad_ndim=" << in_grad->shape_.ndim();
-  CHECK_EQ(in_grad->type_flag_, out_grad.data.type_flag_)
-    << "Unary function only support input/output with the same type";
-  if (-1 == param.axis) {
-    BroadcastAxisImpl_<xpu>(out_grad.data, env, in_grad, req, ctx, param.axis, 0, param.keepdims);
-  } else {
-    BroadcastAxisImpl_<xpu>(out_grad.data, env, in_grad, req, ctx, param.axis,
-      in_grad->shape_[param.axis], param.keepdims);
+  std::vector<index_t> axes = ParseAxes_(param.axis, in_grad->ndim());
+  if (axes.size() == 0) {
+    for (index_t i = 0; i < in_grad->ndim(); i++) {
+      axes.push_back(i);
+    }
   }
+  std::vector<size_t> bsizes;
+  for (std::vector<index_t>::iterator it = axes.begin(); it != axes.end(); ++it) {
+    bsizes.push_back(in_grad->shape_[*it]);
+  }
+  BroadcastAxisImpl_<xpu>(out_grad.data, env, in_grad, req, ctx,
+                          TShape(axes.begin(), axes.end()), TShape(bsizes.begin(), bsizes.end()));
 }
 
 // Forward pass of broadcast over the given axis
@@ -347,13 +315,13 @@ void BroadcastAxis(const TBlob &src,
   using namespace mshadow::expr;
   BroadcastAxisParam param;
   param.Init(env.kwargs);
-  CHECK(param.axis < src.shape_.ndim()) <<
-    "axis must be smaller than the source ndim" << param.axis <<
-    ", src_ndim=" << src.shape_.ndim();
-  CHECK_EQ(src.shape_[param.axis], 1) <<
-    "Size of the broadcasting axis in the source must be 1, "
-    "axis=" << param.axis << ", size=" << src.shape_[param.axis];
-  BroadcastAxisImpl_<xpu>(src, env, ret, req, ctx, param.axis, param.size, true);
+  std::vector<index_t> axes = ParseAxes_(param.axis, src.ndim());
+  std::vector<size_t> bsizes;
+  for (std::vector<index_t>::iterator it = axes.begin(); it != axes.end(); ++it) {
+    bsizes.push_back(ret->shape_[*it]);
+  }
+  BroadcastAxisImpl_<xpu>(src, env, ret, req, ctx,
+                          TShape(axes.begin(), axes.end()), TShape(bsizes.begin(), bsizes.end()));
 }
 
 // Backward pass of broadcast over the given axis
@@ -367,18 +335,10 @@ void BroadcastAxisGrad_(const OutputGrad& out_grad,
   using namespace mshadow::expr;
   BroadcastAxisParam param;
   param.Init(env.kwargs);
-  CHECK(param.axis < in_grad->shape_.ndim()) <<
-    "axis must be smaller than the source ndim" << param.axis <<
-    ", src_ndim=" << in_grad->shape_.ndim();
-  CHECK_EQ(in_grad->shape_[param.axis], 1) <<
-    "Size of the broadcasting axis in the source must be 1, "
-    "axis=" << param.axis << ", size=" << in_grad->shape_[param.axis];
-  CHECK_EQ(in_grad->type_flag_, out_grad.data.type_flag_)
-    << "Unary function only support input/output with the same type";
-  ReduceAxisImpl_<xpu, mshadow::red::sum, false>(out_grad.data, env, in_grad, req, ctx,
-                                                 param.axis, true);
+  std::vector<index_t> axes = ParseAxes_(param.axis, in_grad->ndim());
+  ReduceAxisImpl_<xpu, mshadow::red::sum>(out_grad.data, env, in_grad, req, ctx,
+                                                 TShape(axes.begin(), axes.end()));
 }
-
 
 
 // L2 norm
@@ -387,52 +347,71 @@ MXNET_REGISTER_SIMPLE_OP(norm, XPU)
 .set_shape_function(ScalarShape)
 .describe("Take L2 norm of the src."
           "The result will be ndarray of shape (1,) on the same device.");
+
 // Max
 MXNET_REGISTER_SIMPLE_OP(max, XPU)
-.set_function(XPU::kDevMask, Reduce<XPU, mshadow::red::maximum>, kNoInplace, kNotRegisterSymbolic)
-.set_shape_function(ScalarShape)
-.describe("(Deprecated! Use max_axis instead.) Take max of the src."
-          "The result will be ndarray of shape (1,) on the same device.");
+.set_enable_kwargs(true)
+.set_function(XPU::kDevMask, ReduceAxis<XPU, mshadow::red::maximum>,
+kNoInplace, kNotRegisterSymbolic)
+.set_shape_function(ReduceAxisShape)
+.describe("Take max of the src in the given axis. Params: `axis` and `keepdims`."
+          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
+          " keepdims: the same meaning as Numpy.");
+
 // Min
 MXNET_REGISTER_SIMPLE_OP(min, XPU)
-.set_function(XPU::kDevMask, Reduce<XPU, mshadow::red::minimum>, kNoInplace, kNotRegisterSymbolic)
-.set_shape_function(ScalarShape)
-.describe("(Deprecated! Use min_axis instead.) Take min of the src."
-          "The result will be ndarray of shape (1,) on the same device.");
+.set_enable_kwargs(true)
+.set_function(XPU::kDevMask, ReduceAxis<XPU, mshadow::red::minimum>,
+kNoInplace, kNotRegisterSymbolic)
+.set_shape_function(ReduceAxisShape)
+.describe("Take min of the src in the given axis. Params: `axis` and `keepdims`."
+          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
+          " keepdims: the same meaning as Numpy.");
+
 // Sum
 MXNET_REGISTER_SIMPLE_OP(sum, XPU)
-.set_function(XPU::kDevMask, Reduce<XPU, mshadow::red::sum>, kNoInplace, kRegisterSymbolic)
-.set_shape_function(ScalarShape)
-.set_gradient(XPU::kDevMask, SumBackward_<XPU>, kNoInplace)
-.describe("(Deprecated! Use sum_axis instead.) Take sum of the src."
-          "The result will be ndarray of shape (1,) on the same device.");
+.set_enable_kwargs(true)
+.set_function(XPU::kDevMask, ReduceAxis<XPU, mshadow::red::sum>,
+kNoInplace, kRegisterSymbolic)
+.set_shape_function(ReduceAxisShape)
+.set_gradient(XPU::kDevMask, SumAxisGrad_<XPU>, kNoInplace)
+.describe("Take sum of the src in the given axis. Params: `axis` and `keepdims`."
+          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
+          " keepdims: the same meaning as Numpy.");
+
 // max_axis
 MXNET_REGISTER_SIMPLE_OP(max_axis, XPU)
 .set_enable_kwargs(true)
-.set_function(XPU::kDevMask, ReduceAxis<XPU, mshadow::red::maximum, false>,
+.set_function(XPU::kDevMask, ReduceAxis<XPU, mshadow::red::maximum>,
               kNoInplace, kNotRegisterSymbolic)
 .set_shape_function(ReduceAxisShape)
-.describe("Take max of the src in the given axis. axis=-1 means to reduce all the dimensions."
-"The keepdims option has the same meaning as Numpy.");
+.describe("(Depreciated! Use max instead!)"
+          " Take max of the src in the given axis. Params: `axis` and `keepdims`."
+          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
+          " keepdims: the same meaning as Numpy.");
 
 // min_axis
 MXNET_REGISTER_SIMPLE_OP(min_axis, XPU)
 .set_enable_kwargs(true)
-.set_function(XPU::kDevMask, ReduceAxis<XPU, mshadow::red::minimum, false>,
+.set_function(XPU::kDevMask, ReduceAxis<XPU, mshadow::red::minimum>,
               kNoInplace, kNotRegisterSymbolic)
 .set_shape_function(ReduceAxisShape)
-.describe("Take min of the src in the given axis. axis=-1 means to reduce all the dimensions."
-"The keepdims option has the same meaning as Numpy.");
+.describe("(Depreciated! Use min instead!)"
+          " Take min of the src in the given axis. Params: `axis` and `keepdims`."
+          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
+          " keepdims: the same meaning as Numpy.");
 
 // sum_axis
 MXNET_REGISTER_SIMPLE_OP(sum_axis, XPU)
 .set_enable_kwargs(true)
-.set_function(XPU::kDevMask, ReduceAxis<XPU, mshadow::red::sum, false>,
+.set_function(XPU::kDevMask, ReduceAxis<XPU, mshadow::red::sum>,
               kNoInplace, kRegisterSymbolic)
 .set_shape_function(ReduceAxisShape)
 .set_gradient(XPU::kDevMask, SumAxisGrad_<XPU>, kNoInplace)
-.describe("Take sum of the src in the given axis. axis=-1 means to reduce all the dimensions."
-"The keepdims option has the same meaning as Numpy.");
+.describe("(Depreciated! Use sum instead!)"
+          " Take sum of the src in the given axis. Params: `axis` and `keepdims`."
+          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
+          " keepdims: the same meaning as Numpy.");
 
 // argmax channel
 MXNET_REGISTER_SIMPLE_OP(argmax_channel, XPU)
@@ -450,7 +429,7 @@ MXNET_REGISTER_SIMPLE_OP(broadcast_axis, XPU)
 .set_shape_function(BroadcastAxisShape)
 .set_gradient(XPU::kDevMask, BroadcastAxisGrad_<XPU>, kNoInplace)
 .describe("Broadcast data in the given axis to the given size. "
-"The original size of the broadcasting axis must be 1.");
+          "The original size of the broadcasting axis must be 1.");
 
 }  // namespace op
 }  // namespace mxnet

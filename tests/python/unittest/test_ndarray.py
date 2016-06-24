@@ -34,7 +34,7 @@ def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=
             out2 = uf(*numpy_arg).astype(dtype)
         else:
             out2 = npuf(*numpy_arg).astype(dtype)
-            
+
         assert out1.shape == out2.shape
         if isinstance(out1, mx.nd.NDArray):
             out1 = out1.asnumpy()
@@ -223,10 +223,12 @@ def test_reduce():
                 axes = tuple(axes)
             numpy_ret = numpy_reduce_func(dat, axis=axes, keepdims=keepdims)
 
-            ndarray_ret = nd_reduce_func(arr=mx.nd.array(dat), axis=axes, keepdims=keepdims)
+            ndarray_ret = nd_reduce_func(mx.nd.array(dat), axis=axes, keepdims=keepdims)
             if type(ndarray_ret) is mx.ndarray.NDArray:
                 ndarray_ret = ndarray_ret.asnumpy()
-            assert ndarray_ret.shape == numpy_ret.shape
+            assert (ndarray_ret.shape == numpy_ret.shape) or \
+                   (ndarray_ret.shape == (1,) and numpy_ret.shape == ()), "nd:%s, numpy:%s" \
+                                                         %(ndarray_ret.shape, numpy_ret.shape)
             err = np.square(ndarray_ret - numpy_ret).mean()
             assert err < 1E-4
     test_reduce_inner(lambda data, axis, keepdims:_np_reduce(data, axis, keepdims, np.sum),

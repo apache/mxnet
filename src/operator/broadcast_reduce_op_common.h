@@ -10,9 +10,30 @@
 #include <mxnet/operator.h>
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <set>
 
 namespace mxnet {
 namespace op {
+/*!
+* \brief Sort the given axes and removes the duplicate keys to get a vector
+* \param param_axis the input axis
+* \param max_ndim the maximum ndim
+*/
+inline std::vector<index_t> ParseAxes_(const TShape& param_axis, index_t max_ndim) {
+  std::set<index_t> axes_set_;
+  std::vector<index_t> axes;
+  for (index_t i = 0; i < param_axis.ndim(); i++) {
+    CHECK(param_axis[i] < max_ndim) << "axes must be within the range, ndim of the source="
+      << max_ndim << "axis=" << param_axis;
+    CHECK_EQ(axes_set_.find(param_axis[i]), axes_set_.end())
+      << "Duplicate value in 'axis', received:" << param_axis;
+    axes_set_.insert(param_axis[i]);
+  }
+  for (std::set<index_t>::iterator it = axes_set_.begin(); it != axes_set_.end(); ++it) {
+    axes.push_back(*it);
+  }
+  return axes;
+}
 
 /*!
 * \brief Check if the axes are continuous + get reducing size. E.g (1, 3) -> false, (1,2,3) -> true
@@ -68,7 +89,7 @@ inline TShape GetBroadcastingAxes_(const mshadow::TShape &src_shape,
 */
 template<typename Reducer, typename xpu, typename SrcExp, typename DType>
 void ReduceAxesAssign(mshadow::Tensor<xpu, 1, DType> out, const OpReqType req,
-  const SrcExp &src_, const TShape &axes) {
+  const TShape &axes, const SrcExp &src_) {
   using namespace mshadow;
   using namespace mshadow::expr;
   static const int dimsrc = ExpInfo<SrcExp>::kDim;
@@ -158,7 +179,7 @@ void ReduceToAssign(mshadow::Tensor<xpu, 1, DType> out, const OpReqType req,
   Shape<dimsrc> src_shape = ShapeCheck<dimsrc, SrcExp>::Check(src_);
   TShape axes = GetBroadcastingAxes_(target_shape,
     TShape(src_shape.shape_, src_shape.shape_ + dimsrc));
-  ReduceAxesAssign<Reducer>(out, req, src_, axes);
+  ReduceAxesAssign<Reducer>(out, req, axes, src_);
 }
 }  // namespace op
 }  // namespace mxnet
