@@ -8,7 +8,6 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
-#include <set>
 #include "./mshadow_op.h"
 #include "./broadcast_reduce_op_common.h"
 
@@ -199,7 +198,7 @@ void ReduceAxisImpl_(const TBlob &src,
       Tensor<xpu, 3, DType> in = src.FlatTo3D<xpu, DType>(axes[0], axes[axes.ndim() - 1], s);
       Tensor<xpu, 1, DType> out =
         ret->get_with_shape<xpu, 1, DType>(mshadow::Shape1(ret->Size()), s);
-      ReduceAxesAssign<Reducer>(out, req, Shape1(1), in);
+      ReduceAxesAssign<Reducer>(out, req, TShape(1), in);
     });
   } else {
     Shape<MXNET_SPECIAL_MAX_NDIM> padded_shape_;
@@ -299,8 +298,8 @@ void SumAxisGrad_(const OutputGrad& out_grad,
     }
   }
   std::vector<size_t> bsizes;
-  for (const index_t &axis : axes) {
-    bsizes.push_back(in_grad->shape_[axis]);
+  for (std::vector<index_t>::iterator it = axes.begin(); it != axes.end(); ++it) {
+    bsizes.push_back(in_grad->shape_[*it]);
   }
   BroadcastAxisImpl_<xpu>(out_grad.data, env, in_grad, req, ctx,
                           TShape(axes.begin(), axes.end()), TShape(bsizes.begin(), bsizes.end()));
@@ -318,8 +317,8 @@ void BroadcastAxis(const TBlob &src,
   param.Init(env.kwargs);
   std::vector<index_t> axes = ParseAxes_(param.axis, src.ndim());
   std::vector<size_t> bsizes;
-  for (const index_t &axis: axes) {
-    bsizes.push_back(ret->shape_[axis]);
+  for (std::vector<index_t>::iterator it = axes.begin(); it != axes.end(); ++it) {
+    bsizes.push_back(ret->shape_[*it]);
   }
   BroadcastAxisImpl_<xpu>(src, env, ret, req, ctx,
                           TShape(axes.begin(), axes.end()), TShape(bsizes.begin(), bsizes.end()));

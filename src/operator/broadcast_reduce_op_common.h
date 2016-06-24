@@ -10,6 +10,7 @@
 #include <mxnet/operator.h>
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <set>
 
 namespace mxnet {
 namespace op {
@@ -28,8 +29,8 @@ inline std::vector<index_t> ParseAxes_(const TShape& param_axis, index_t max_ndi
       << "Duplicate value in 'axis', received:" << param_axis;
     axes_set_.insert(param_axis[i]);
   }
-  for (const index_t &axis : axes_set_) {
-    axes.push_back(axis);
+  for (std::set<index_t>::iterator it = axes_set_.begin(); it != axes_set_.end(); ++it) {
+    axes.push_back(*it);
   }
   return axes;
 }
