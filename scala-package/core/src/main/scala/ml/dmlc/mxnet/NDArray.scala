@@ -55,12 +55,12 @@ object NDArray {
         if (output == null) {
           require(acceptEmptyMutate, s"argument out is required to call $funcName")
           output = new NDArray(newEmptyHandle())
+          addDependency(Array(lhs, rhs), Array(output))
         }
         checkCall(_LIB.mxFuncInvoke(handle,
           Array(lhs.handle, rhs.handle),
           Array[MXFloat](),
           Array(output.handle)))
-        addDependency(Array(lhs, rhs), Array(output))
       case _ => throw new IllegalArgumentException(s"call $funcName as binary function")
     }
     output
@@ -76,12 +76,12 @@ object NDArray {
         if (output == null) {
           require(acceptEmptyMutate, s"argument out is required to call $funcName")
           output = new NDArray(newEmptyHandle())
+          addDependency(Array(src), Array(output))
         }
         checkCall(_LIB.mxFuncInvoke(handle,
           Array(src.handle),
           Array[MXFloat](),
           Array(output.handle)))
-        addDependency(Array(src), Array(output))
       case _ => throw new IllegalArgumentException(s"call $funcName as unary function")
     }
     output
@@ -109,17 +109,17 @@ object NDArray {
                                   scalarRange: Range) =>
         require(mutateVars == null || nMutateVars == mutateVars.length,
           s"expect $nMutateVars in $funcName")
+        val useVars = useVarsRange.map(args(_).asInstanceOf[NDArray]).toArray
+        val scalarVars = scalarRange.map(args(_).asInstanceOf[MXFloat]).toArray
         if (mutateVars == null) {
           require(acceptEmptyMutate, s"argument out is required to call $funcName")
           mutateVars = Array.fill[NDArray](nMutateVars)(new NDArray(newEmptyHandle()))
+          addDependency(useVars, mutateVars)
         }
-        val useVars = useVarsRange.map(args(_).asInstanceOf[NDArray]).toArray
-        val scalarVars = scalarRange.map(args(_).asInstanceOf[MXFloat]).toArray
         checkCall(_LIB.mxFuncInvoke(handle,
           useVars.map(_.handle),
           scalarVars,
           mutateVars.map(_.handle).array))
-        addDependency(useVars, mutateVars)
       case _ => throw new IllegalArgumentException(s"call $funcName as generic function")
     }
     mutateVars
