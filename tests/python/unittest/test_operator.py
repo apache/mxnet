@@ -1002,11 +1002,11 @@ def test_reduce():
                          args_grad={'a': grad_nd})
             net.forward(is_train=True)
 
-            err_forward = np.square(net.outputs[0].asnumpy() - sum_groundtruth).sum()/np.prod(shape)
-            assert err_forward < 1E-6
+            err_forward = reldiff(net.outputs[0].asnumpy(), sum_groundtruth)
+            assert err_forward < 1E-4
             net.backward(out_grads=mx.nd.array(outgrad_npy))
-            err_backward = np.square(grad_nd.asnumpy() - grad_groundtruth).sum()
-            assert err_backward < 1E-6
+            err_backward = reldiff(grad_nd.asnumpy(), grad_groundtruth)
+            assert err_backward < 1E-4
     test_reduce_inner(lambda data, axis, keepdims:_np_reduce(data, axis, keepdims, np.sum),
                       lambda outgrad, data, axis, keepdims:
                         outgrad.reshape(_np_reduce(data, axis, 1, np.sum).shape),
@@ -1014,36 +1014,38 @@ def test_reduce():
 
 def test_broadcast():
     sample_num = 200
-    def test_broadcast_axis():
-        for i in range(sample_num):
-            # Generate random data that has ndim between 1-7 and all the shape dims between 1-10
-            ndim = np.random.randint(1, 8)
-            target_shape = np.random.randint(1, 11, size=(ndim,))
-            axis = tuple(set(np.random.randint(0, ndim, np.random.randint(1, ndim + 1))))
-            shape = target_shape.copy()
-            size = tuple([shape[ele] for ele in axis])
-            for ele in axis:
-                shape[ele] = 1
-            a = mx.symbol.Variable('a')
-            b = mx.symbol.broadcast_axis(a, axis=axis, size=size)
+    for i in range(sample_num):
+        # Generate random data that has ndim between 1-7 and all the shape dims between 1-10
+        ndim = np.random.randint(1, 8)
+        target_shape = np.random.randint(1, 11, size=(ndim,))
+        axis = tuple(set(np.random.randint(0, ndim, np.random.randint(1, ndim + 1))))
+        shape = target_shape.copy()
+        size = tuple([shape[ele] for ele in axis])
+        for ele in axis:
+            shape[ele] = 1
+        a = mx.symbol.Variable('a')
+        sym_bcast_axis = mx.symbol.broadcast_axis(a, axis=axis, size=size)
+        sym_bcast_to = mx.symbol.broadcast_to(a, shape=tuple(target_shape))
+        def test_broadcasting_ele(sym_bcast):
             dat_npy = np.random.rand(*shape)
             groundtruth = dat_npy
             grad_nd = mx.nd.empty(shape)
             outgrad_npy = np.random.rand(*target_shape)
             grad_groundtruth = _np_reduce(outgrad_npy, axis=axis, keepdims=True,
                                           numpy_reduce_func=np.sum)
-            net = b.bind(mx.cpu(), args={'a': mx.nd.array(dat_npy)},
-                         args_grad={'a': grad_nd})
+            net = sym_bcast.bind(mx.cpu(), args={'a': mx.nd.array(dat_npy)},
+                                                 args_grad={'a': grad_nd})
+            net_bcast_to = sym_bcast_to.bind(mx.cpu(), args={'a': mx.nd.array(dat_npy)},
+                                             args_grad={'a': grad_nd})
             net.forward(is_train=True)
             assert (net.outputs[0].shape == target_shape).all()
-            err_forward = np.square(net.outputs[0].asnumpy() - groundtruth).mean()
-            assert err_forward < 1E-8
+            err_forward = reldiff(net.outputs[0].asnumpy(), groundtruth)
+            assert err_forward < 1E-4
             net.backward(out_grads=mx.nd.array(outgrad_npy))
-            err_backward = np.square(grad_nd.asnumpy() - grad_groundtruth).sum()\
-                           /np.prod(target_shape)
-            assert err_backward < 1E-6
-    test_broadcast_axis()
-
+            err_backward = reldiff(grad_nd.asnumpy(), grad_groundtruth)
+            assert err_backward < 1E-4
+        test_broadcasting_ele(sym_bcast_axis)
+        test_broadcasting_ele(sym_bcast_to)
 
 def test_transpose():
     for ndim in range(1, 6):

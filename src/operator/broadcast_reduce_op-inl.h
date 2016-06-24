@@ -44,6 +44,17 @@ struct BroadcastAxisParam : public dmlc::Parameter<BroadcastAxisParam> {
   }
 };
 
+struct BroadcastToParam : public dmlc::Parameter<BroadcastToParam> {
+  TShape shape;
+  DMLC_DECLARE_PARAMETER(BroadcastToParam) {
+    DMLC_DECLARE_FIELD(shape).set_default(TShape())
+      .describe("The shape of the desired array."
+                " We can set the dim to zero if it's same as the original."
+                " E.g `A = broadcast_to(B, shape=(10, 0, 0))` "
+                "has the same meaning as `A = broadcast_axis(B, axis=0, size=10)`.");
+  }
+};
+
 inline TShape ReduceAxisShape(const TShape& ishape,
   const EnvArguments& env) {
   ReduceAxisParam param;
@@ -84,6 +95,23 @@ inline TShape BroadcastAxisShape(const TShape& ishape,
   return ret;
 }
 
+inline TShape BroadcastToShape(const TShape& ishape,
+  const EnvArguments& env) {
+  BroadcastToParam param;
+  param.Init(env.kwargs);
+  CHECK_EQ(param.shape.ndim(), ishape.ndim());
+  TShape ret = ishape;
+  for (index_t i = 0; i < param.shape.ndim(); i++) {
+    if (param.shape[i] > 0 && (param.shape[i] != ishape[i])) {
+      CHECK_EQ(ishape[i], 1) <<
+        "Size of the broadcasting axis in the source must be 1, src_shape=" << ishape
+        << ", broadcast_to=" << param.shape;
+      ret[i] = param.shape[i];
+    }
+  }
+  return ret;
+}
+
 // return a shape of scalar
 inline TShape ScalarShape(const TShape& ishape,
                           const EnvArguments& env) {
@@ -105,42 +133,6 @@ void L2Norm(const TBlob &src,
       src.get_with_shape<xpu, 1, DType>(mshadow::Shape1(src.shape_.Size()), s);
     mshadow::VectorDot(out, in, in);
     ASSIGN_DISPATCH(out, req, mshadow::expr::F<mxnet::op::mshadow_op::square_root>(out));
-  });
-}
-
-template<typename xpu, typename Reducer>
-void Reduce(const TBlob &src,
-            const EnvArguments& env,
-            TBlob *ret,
-            OpReqType req,
-            RunContext ctx) {
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  CHECK_EQ(src.type_flag_, ret->type_flag_);
-  MSHADOW_REAL_TYPE_SWITCH(src.type_flag_, DType, {
-    mshadow::Tensor<xpu, 1, DType> out = ret->get<xpu, 1, DType>(s);
-    mshadow::Tensor<xpu, 2, DType> in =
-      src.get_with_shape<xpu, 2, DType>(mshadow::Shape2(1, src.shape_.Size()), s);
-    ASSIGN_DISPATCH(out, req, (mshadow::expr::reduce_except_dim<0, Reducer>(in)));
-  });
-}
-
-// backward function that takes input value of the op
-template<typename xpu>
-void SumBackward_(const OutputGrad& scale,
-                  const EnvArguments& env,
-                  TBlob *in_grad,
-                  OpReqType req,
-                  RunContext ctx) {
-  using namespace mxnet::op;
-  using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  CHECK_EQ(in_grad->type_flag_, scale.data.type_flag_)
-    << "Unary function only support input/output with the same type";
-  MSHADOW_REAL_TYPE_SWITCH(in_grad->type_flag_, DType, {
-      mshadow::Tensor<xpu, 1, DType> mscale = scale.data.get<xpu, 1, DType>(s);
-      mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
-      ASSIGN_DISPATCH(igrad, req,
-                      broadcast_scalar(mscale, igrad.shape_));
   });
 }
 
@@ -190,6 +182,15 @@ void ReduceAxisImpl_(const TBlob &src,
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(src.type_flag_, ret->type_flag_);
+  // If the axes is empty, we just need to give an identity mapping.
+  if (axes.ndim() == 0) {
+    MSHADOW_REAL_TYPE_SWITCH(src.type_flag_, DType, {
+      Tensor<xpu, 2, DType> in = src.FlatTo2D<xpu, DType>(s);
+      Tensor<xpu, 2, DType> out = ret->FlatTo2D<xpu, DType>(s);
+      ASSIGN_DISPATCH(out, req, F<mshadow_op::identity>(in));
+    });
+    return;
+  }
   bool is_contiguous_axes;
   index_t reducing_size;
   CheckContiguousAxes_(&is_contiguous_axes, &reducing_size, axes, src.shape_);
@@ -228,6 +229,15 @@ void BroadcastAxisImpl_(const TBlob &src,
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(src.type_flag_, ret->type_flag_);
+  // If the axes is empty, we just need to give an identity mapping.
+  if (axes.ndim() == 0) {
+    MSHADOW_REAL_TYPE_SWITCH(src.type_flag_, DType, {
+      Tensor<xpu, 2, DType> in = src.FlatTo2D<xpu, DType>(s);
+      Tensor<xpu, 2, DType> out = ret->FlatTo2D<xpu, DType>(s);
+      ASSIGN_DISPATCH(out, req, F<mshadow_op::identity>(in));
+    });
+    return;
+  }
   bool is_contiguous_axes;
   index_t broadcasting_size;
   CheckContiguousAxes_(&is_contiguous_axes, &broadcasting_size, axes, ret->shape_);
@@ -337,7 +347,46 @@ void BroadcastAxisGrad_(const OutputGrad& out_grad,
   param.Init(env.kwargs);
   std::vector<index_t> axes = ParseAxes_(param.axis, in_grad->ndim());
   ReduceAxisImpl_<xpu, mshadow::red::sum>(out_grad.data, env, in_grad, req, ctx,
-                                                 TShape(axes.begin(), axes.end()));
+                                          TShape(axes.begin(), axes.end()));
+}
+
+// Forward pass of broadcast_to
+template<typename xpu>
+void BroadcastTo(const TBlob &src,
+  const EnvArguments& env,
+  TBlob *ret,
+  OpReqType req,
+  RunContext ctx) {
+  using namespace mshadow::expr;
+  std::vector<index_t> axes;
+  std::vector<size_t> bsizes;
+  for (index_t i = 0; i < src.shape_.ndim(); ++i) {
+    if (src.shape_[i] != ret->shape_[i]) {
+      axes.push_back(i);
+      bsizes.push_back(ret->shape_[i]);
+    }
+  }
+  BroadcastAxisImpl_<xpu>(src, env, ret, req, ctx,
+                          TShape(axes.begin(), axes.end()), TShape(bsizes.begin(), bsizes.end()));
+}
+
+// Backward pass of broadcast_to
+template<typename xpu>
+void BroadcastToGrad_(const OutputGrad& out_grad,
+  const EnvArguments& env,
+  TBlob *in_grad,
+  OpReqType req,
+  RunContext ctx) {
+  using namespace mxnet::op;
+  using namespace mshadow::expr;
+  std::vector<index_t> axes;
+  for (index_t i = 0; i < in_grad->shape_.ndim(); ++i) {
+    if (out_grad.data.shape_[i] != in_grad->shape_[i]) {
+      axes.push_back(i);
+    }
+  }
+  ReduceAxisImpl_<xpu, mshadow::red::sum>(out_grad.data, env, in_grad, req, ctx,
+                                          TShape(axes.begin(), axes.end()));
 }
 
 
@@ -354,9 +403,8 @@ MXNET_REGISTER_SIMPLE_OP(max, XPU)
 .set_function(XPU::kDevMask, ReduceAxis<XPU, mshadow::red::maximum>,
 kNoInplace, kNotRegisterSymbolic)
 .set_shape_function(ReduceAxisShape)
-.describe("Take max of the src in the given axis. Params: `axis` and `keepdims`."
-          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
-          " keepdims: the same meaning as Numpy.");
+.describe("Take max of the src in the given axis and returns a NDArray. Follows numpy semantics.")
+.add_arguments(ReduceAxisParam::__FIELDS__());
 
 // Min
 MXNET_REGISTER_SIMPLE_OP(min, XPU)
@@ -364,9 +412,8 @@ MXNET_REGISTER_SIMPLE_OP(min, XPU)
 .set_function(XPU::kDevMask, ReduceAxis<XPU, mshadow::red::minimum>,
 kNoInplace, kNotRegisterSymbolic)
 .set_shape_function(ReduceAxisShape)
-.describe("Take min of the src in the given axis. Params: `axis` and `keepdims`."
-          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
-          " keepdims: the same meaning as Numpy.");
+.describe("Take min of the src in the given axis and returns a NDArray. Follows numpy semantics.")
+.add_arguments(ReduceAxisParam::__FIELDS__());
 
 // Sum
 MXNET_REGISTER_SIMPLE_OP(sum, XPU)
@@ -375,9 +422,8 @@ MXNET_REGISTER_SIMPLE_OP(sum, XPU)
 kNoInplace, kRegisterSymbolic)
 .set_shape_function(ReduceAxisShape)
 .set_gradient(XPU::kDevMask, SumAxisGrad_<XPU>, kNoInplace)
-.describe("Take sum of the src in the given axis. Params: `axis` and `keepdims`."
-          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
-          " keepdims: the same meaning as Numpy.");
+.describe("Take sum of the src in the given axis and returns a NDArray. Follows numpy semantics.")
+.add_arguments(ReduceAxisParam::__FIELDS__());
 
 // max_axis
 MXNET_REGISTER_SIMPLE_OP(max_axis, XPU)
@@ -386,9 +432,8 @@ MXNET_REGISTER_SIMPLE_OP(max_axis, XPU)
               kNoInplace, kNotRegisterSymbolic)
 .set_shape_function(ReduceAxisShape)
 .describe("(Depreciated! Use max instead!)"
-          " Take max of the src in the given axis. Params: `axis` and `keepdims`."
-          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
-          " keepdims: the same meaning as Numpy.");
+          " Take max of the src in the given axis and returns a NDArray. Follows numpy semantics.")
+.add_arguments(ReduceAxisParam::__FIELDS__());
 
 // min_axis
 MXNET_REGISTER_SIMPLE_OP(min_axis, XPU)
@@ -397,9 +442,8 @@ MXNET_REGISTER_SIMPLE_OP(min_axis, XPU)
               kNoInplace, kNotRegisterSymbolic)
 .set_shape_function(ReduceAxisShape)
 .describe("(Depreciated! Use min instead!)"
-          " Take min of the src in the given axis. Params: `axis` and `keepdims`."
-          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
-          " keepdims: the same meaning as Numpy.");
+          " Take min of the src in the given axis and returns a NDArray. Follows numpy semantics.")
+.add_arguments(ReduceAxisParam::__FIELDS__());
 
 // sum_axis
 MXNET_REGISTER_SIMPLE_OP(sum_axis, XPU)
@@ -409,9 +453,8 @@ MXNET_REGISTER_SIMPLE_OP(sum_axis, XPU)
 .set_shape_function(ReduceAxisShape)
 .set_gradient(XPU::kDevMask, SumAxisGrad_<XPU>, kNoInplace)
 .describe("(Depreciated! Use sum instead!)"
-          " Take sum of the src in the given axis. Params: `axis` and `keepdims`."
-          " axis: tuple or integer of axes to reduce, global reduce will be performed if not set."
-          " keepdims: the same meaning as Numpy.");
+          " Take sum of the src in the given axis and returns a NDArray. Follows numpy semantics.")
+.add_arguments(ReduceAxisParam::__FIELDS__());
 
 // argmax channel
 MXNET_REGISTER_SIMPLE_OP(argmax_channel, XPU)
@@ -429,7 +472,19 @@ MXNET_REGISTER_SIMPLE_OP(broadcast_axis, XPU)
 .set_shape_function(BroadcastAxisShape)
 .set_gradient(XPU::kDevMask, BroadcastAxisGrad_<XPU>, kNoInplace)
 .describe("Broadcast data in the given axis to the given size. "
-          "The original size of the broadcasting axis must be 1.");
+          "The original size of the broadcasting axis must be 1.")
+.add_arguments(BroadcastAxisParam::__FIELDS__());
+
+// broadcast_to
+MXNET_REGISTER_SIMPLE_OP(broadcast_to, XPU)
+.set_enable_kwargs(true)
+.set_function(XPU::kDevMask, BroadcastTo<XPU>,
+kNoInplace, kRegisterSymbolic)
+.set_shape_function(BroadcastToShape)
+.set_gradient(XPU::kDevMask, BroadcastToGrad_<XPU>, kNoInplace)
+.describe("Broadcast data to the target shape. "
+          "The original size of the broadcasting axis must be 1.")
+.add_arguments(BroadcastToParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
