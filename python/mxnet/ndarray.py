@@ -314,21 +314,7 @@ class NDArray(object):
         shape : the shape to broadcast
             the broadcast shape
         """
-        cur_shape = self.shape
-        err_str = 'operands could not be broadcast together with remapped shapes'\
-                '[original->remapped]: {} and requested shape {}'.format(cur_shape, shape)
-        if len(shape) < len(cur_shape):
-            raise ValueError(err_str)
-        cur_shape = (1,) * (len(shape) - len(cur_shape)) + cur_shape
-        cur_shape_arr = np.array(cur_shape)
-        shape = np.array(shape)
-        broadcasting_axes = np.nonzero(cur_shape_arr != shape)
-        if (cur_shape_arr[broadcasting_axes] != 1).any():
-            raise ValueError(err_str)
-        ret = self.reshape(tuple(cur_shape_arr))
-        for axis in broadcasting_axes[0]:
-            ret = broadcast_axis(ret, axis=axis, size=shape[axis])
-        return ret
+        return broadcast_to(self, shape=tuple(shape))
     # pylint: enable= undefined-variable
 
     def wait_to_read(self):
