@@ -71,7 +71,7 @@ class BatchNormOp : public Operator {
     }
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    const ScalarExp<DType> scale = scalar<DType>(
+    const DType scale = DType(
         static_cast<real_t>(in_data[batchnorm::kData].shape_[1]) /
         static_cast<real_t>(in_data[batchnorm::kData].shape_.Size()));
     const ScalarExp<DType> eps = scalar<DType>(param_.eps);
@@ -134,7 +134,7 @@ class BatchNormOp : public Operator {
     CHECK_EQ(in_grad.size(), 3);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> data, grad, grad_in;
-    const ScalarExp<DType> scale = scalar<DType>(
+    const DType scale = DType(
         out_grad[batchnorm::kOut].shape_[1] / out_grad[batchnorm::kOut].shape_.Size());
     const ScalarExp<DType> eps = scalar<DType>(param_.eps);
     if (in_data[batchnorm::kData].ndim() == 2) {
@@ -171,8 +171,8 @@ class BatchNormOp : public Operator {
       const ScalarExp<DType> momentum = scalar<DType>(param_.momentum);
 
       // TODO(vchuravy) work around ambiguous ScalarExp - ScalarExp
-      moving_mean = moving_mean * momentum + mean * (tcast<DType>(scalar(1)) - momentum);
-      moving_var = moving_var * momentum + var * (tcast<DType>(scalar(1)) - momentum);
+      moving_mean = moving_mean * momentum + mean * (scalar<DType>(1) - momentum);
+      moving_var = moving_var * momentum + var * (scalar<DType>(1) - momentum);
       // cal
       gvar = sumall_except_dim<1>((grad * broadcast<1>(slope, data.shape_)) *
                                   (data - broadcast<1>(mean, data.shape_)) *
@@ -194,13 +194,13 @@ class BatchNormOp : public Operator {
         Assign(grad_in, req[batchnorm::kData],
                (grad * broadcast<1>(slope, data.shape_)) * broadcast<1>(scalar<DType>(1.0f) /
                F<mshadow_op::square_root>(var + eps), data.shape_) +
-               broadcast<1>(gvar, data.shape_) * scale * scalar<DType>(2.0f) *
-               (data - broadcast<1>(mean, data.shape_)) + broadcast<1>(gmean, data.shape_) * scale);
+               broadcast<1>(gvar, data.shape_) * scalar(scale) * scalar<DType>(2.0f) *
+               (data - broadcast<1>(mean, data.shape_)) + broadcast<1>(gmean, data.shape_) * scalar(scale));
       } else {
         Assign(grad_in, req[batchnorm::kData], grad * broadcast<1>(scalar<DType>(1.0f) /
                F<mshadow_op::square_root>(var + eps), data.shape_) +
-               broadcast<1>(gvar, data.shape_) * scale * scalar<DType>(2.0f) *
-               (data - broadcast<1>(mean, data.shape_)) + broadcast<1>(gmean, data.shape_) * scale);
+               broadcast<1>(gvar, data.shape_) * scalar(scale) * scalar<DType>(2.0f) *
+               (data - broadcast<1>(mean, data.shape_)) + broadcast<1>(gmean, data.shape_) * scalar(scale));
       }
       Assign(gbias, req[batchnorm::kBeta], sumall_except_dim<1>(grad));
     } else {
