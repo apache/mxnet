@@ -80,6 +80,18 @@ git clone --recursive https://github.com/dmlc/mxnet
 cd mxnet; cp make/osx.mk ./config.mk; make -j$(sysctl -n hw.ncpu)
 ```
 
+Or use cmake command and Xcode
+
+```bash
+mkdir build; cd build
+cmake -G Xcode -DCMAKE_BUILD_TYPE=Release -DCMAKE_CONFIGURATION_TYPES="Release" -DUSE_OPENMP="OFF" -DUSE_CUDNN="OFF" -DUSE_CUDA="OFF" -DBLAS=MKL ..
+```
+
+Then open `mxnet.xcodeproj` by xcode and change two flags in `Build Settings` before building:
+(1) Link-Time Optimization = Yes
+(2) Optimisation Level = Fasteset[-O3]
+
+
 Troubleshooting:
 
 Some of the users might meet the link error `ld: library not found for -lgomp`, indicating that the GNU implementation of OpenMP is not in the library path of operating system.
