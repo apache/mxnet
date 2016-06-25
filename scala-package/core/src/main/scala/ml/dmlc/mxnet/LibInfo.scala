@@ -39,6 +39,13 @@ class LibInfo {
                            useVars: Array[NDArrayHandle],
                            scalarArgs: Array[MXFloat],
                            mutateVars: Array[NDArrayHandle]): Int
+  @native def mxFuncInvokeEx(function: FunctionHandle,
+                             useVars: Array[NDArrayHandle],
+                             scalarArgs: Array[MXFloat],
+                             mutateVars: Array[NDArrayHandle],
+                             numParams: Int,
+                             paramKeys: Array[Array[Byte]],
+                             paramVals: Array[Array[Byte]]): Int
   @native def mxNDArrayGetShape(handle: NDArrayHandle,
                                 ndim: MXUintRef,
                                 data: ArrayBuffer[Int]): Int
