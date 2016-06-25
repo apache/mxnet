@@ -1,6 +1,6 @@
 package ml.dmlc.mxnet
 
-import ml.dmlc.mxnet.io.{NDArrayIter, ResizeIter}
+import ml.dmlc.mxnet.io.{NDArrayIter, ResizeIter, PrefetchingIter}
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import scala.sys.process._
 
@@ -148,6 +148,39 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     }
 
     assert(batchCount === nBatch)
+  }
+
+  test("test PrefetchIter") {
+    // get data
+    "./scripts/get_mnist_data.sh" !
+
+    val params = Map(
+      "image" -> "data/train-images-idx3-ubyte",
+      "label" -> "data/train-labels-idx1-ubyte",
+      "data_shape" -> "(784,)",
+      "batch_size" -> "100",
+      "shuffle" -> "1",
+      "flat" -> "1",
+      "silent" -> "0",
+      "seed" -> "10"
+    )
+
+    val mnistIter = IO.MNISTIter(params)
+    val mnistIter2 = IO.MNISTIter(params)
+    var prefetchIter = new PrefetchingIter(IndexedSeq(mnistIter, mnistIter2))
+
+    while(prefetchIter.hasNext) {
+      prefetchIter.next()
+    }
+
+    prefetchIter.reset()
+    while(prefetchIter.hasNext) {
+      prefetchIter.next()
+    }
+
+    prefetchIter.dispose()
+
+    assert(true)
   }
 
   test("test NDArrayIter") {
