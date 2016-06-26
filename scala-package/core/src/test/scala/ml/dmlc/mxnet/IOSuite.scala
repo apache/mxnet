@@ -154,7 +154,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     // get data
     "./scripts/get_mnist_data.sh" !
 
-     val params = Map(
+    val params = Map(
       "image" -> "data/train-images-idx3-ubyte",
       "label" -> "data/train-labels-idx1-ubyte",
       "data_shape" -> "(784,)",
