@@ -1135,6 +1135,65 @@ def test_flip():
             y = mx.nd.flip(x, axis=axis)
             assert_allclose(x.asnumpy()[idx], y.asnumpy())
 
+
+def test_support_vector_machine_l1_svm():
+    xpu = mx.cpu()
+    shape = (20, 10)
+
+    X = mx.symbol.Variable('X')
+    L = mx.symbol.Variable('L')
+    Y = mx.symbol.SupportVectorMachine(data=X, label=L, use_linear=True)
+    x = mx.nd.empty(shape, ctx = xpu)
+    l = mx.nd.empty((shape[0],), ctx = xpu)
+    x_np = np.random.randint(0, 2, shape)*2.0
+    l_np = np.random.randint(0, shape[1]-1, (shape[0],))
+    x[:] = x_np
+    l[:] = l_np
+
+    l_mask = np.equal(l_np.reshape(shape[0],1),range(shape[1]))
+    l_mask = np.array(l_mask, dtype=int)*2 -1
+
+    grad_np = (-1)*l_mask*np.greater(1,l_mask*x_np)
+
+    grad = mx.nd.empty(shape, ctx = xpu)
+    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
+
+    exec1.forward()
+    exec1.backward()
+
+    # print grad_np
+    # print grad.asnumpy()
+    assert_allclose(grad_np, grad.asnumpy())
+
+def test_support_vector_machine_l2_svm():
+    xpu = mx.cpu()
+    shape = (20, 10)
+
+    X = mx.symbol.Variable('X')
+    L = mx.symbol.Variable('L')
+    Y = mx.symbol.SupportVectorMachine(data=X, label=L)
+    x = mx.nd.empty(shape, ctx = xpu)
+    l = mx.nd.empty((shape[0],), ctx = xpu)
+    x_np = np.random.randint(0, 2, shape)*2.0
+    l_np = np.random.randint(0, shape[1]-1, (shape[0],))
+    x[:] = x_np
+    l[:] = l_np
+
+    grad = mx.nd.empty(shape, ctx = xpu)
+    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
+
+    exec1.forward()
+    exec1.backward()
+    
+    l_mask = np.equal(l_np.reshape(shape[0],1),range(shape[1]))
+    l_mask = np.array(l_mask, dtype=int)*2 -1
+
+    grad_np = (-2)*l_mask*np.maximum(1-l_mask*x_np,0)
+
+    print grad_np
+    print grad.asnumpy()
+    assert_allclose(grad_np, grad.asnumpy())
+
 if __name__ == '__main__':
     test_expand_dims()
     test_slice_axis()
