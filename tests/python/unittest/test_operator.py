@@ -1161,8 +1161,6 @@ def test_support_vector_machine_l1_svm():
     exec1.forward()
     exec1.backward()
 
-    # print grad_np
-    # print grad.asnumpy()
     assert_allclose(grad_np, grad.asnumpy())
 
 def test_support_vector_machine_l2_svm():
@@ -1190,8 +1188,6 @@ def test_support_vector_machine_l2_svm():
 
     grad_np = (-2)*l_mask*np.maximum(1-l_mask*x_np,0)
 
-    print grad_np
-    print grad.asnumpy()
     assert_allclose(grad_np, grad.asnumpy())
 
 if __name__ == '__main__':
