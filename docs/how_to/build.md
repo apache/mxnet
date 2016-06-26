@@ -37,7 +37,7 @@ Optional libraries
 
 - `CUDA Toolkit >= v7.0` to run on nvidia GPUs
   - Requires GPU with support for `Compute Capability >= 2.0`
-- CUDNN to accelerate the GPU computation (only CUDNN 3 is supported)
+- CUDNN to accelerate the GPU computation
 - opencv for image augmentation
 
 We can edit `make/config.mk` to change the compile options, and then build by
@@ -59,7 +59,7 @@ sudo apt-get install -y build-essential git libatlas-base-dev libopencv-dev
 Then build mxnet
 ```bash
 git clone --recursive https://github.com/dmlc/mxnet
-cd mxnet; make -j4
+cd mxnet; make -j$(nproc)
 ```
 
 ### Building on OSX
@@ -77,8 +77,20 @@ Then build mxnet
 
 ```bash
 git clone --recursive https://github.com/dmlc/mxnet
-cd mxnet; cp make/osx.mk ./config.mk; make -j4
+cd mxnet; cp make/osx.mk ./config.mk; make -j$(sysctl -n hw.ncpu)
 ```
+
+Or use cmake command and Xcode
+
+```bash
+mkdir build; cd build
+cmake -G Xcode -DCMAKE_BUILD_TYPE=Release -DCMAKE_CONFIGURATION_TYPES="Release" -DUSE_OPENMP="OFF" -DUSE_CUDNN="OFF" -DUSE_CUDA="OFF" -DBLAS=MKL ..
+```
+
+Then open `mxnet.xcodeproj` by xcode and change two flags in `Build Settings` before building:
+(1) Link-Time Optimization = Yes
+(2) Optimisation Level = Fasteset[-O3]
+
 
 Troubleshooting:
 
@@ -95,7 +107,7 @@ ln -s path1 /usr/local/lib/libgomp.dylib
 
 ```
 
-then run `make -j4` again.
+then run `make -j$(sysctl -n hw.ncpu)` again.
 
 
 ### Building on Windows
@@ -109,7 +121,7 @@ Secondly, fetch the third-party libraries, including [OpenCV](http://sourceforge
 
  - NOTICE: You need to register as a NVIDIA community user to get the download link of CuDNN.
 
-Finally, use CMake to create a Visual Studio solution in `./build/`. During configuration, you may need to set the path of each third-party library, until no error is reported. Open the solution and compile, you will get a `mxnet.dll` in `./build/Release` or `./build/Debug`.
+Finally, use CMake to create a Visual Studio solution in `./build/`. During configuration, you may need to set the path of each third-party library, until no error is reported. (Set environmental variable OpenBLAS_HOME to the OpenBLAS directory containing `include` and `lib`; set OpenCV_DIR to the `build` directory after unpacking the OpenCV package.) Open the solution and compile, you will get a `mxnet.dll` in `./build/Release` or `./build/Debug`.
 
 ### Installing pre-built packages on Windows
 
@@ -231,6 +243,37 @@ Now you should have the R package as a tar.gz file and you can install it as a n
 R CMD INSTALL mxnet_0.5.tar.gz
 ```
 
+If you can't load `mxnet` after enabling CUDA during the installation. Please add following lines into `$RHOME/etc/ldpaths`. You can find your `$RHOME` by using `R.home()` inside R.
+
+```bash
+export CUDA_HOME=/usr/local/cuda 
+export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+```
+
+To install the package using GPU on Windows without building the package from scratch. Note that you need a couple of programs installed already:  
+- You'll need the [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit). This depends on Visual Studio, and a free compatible version would be [Visual Studio Community 2013](https://www.visualstudio.com/en-us/news/vs2013-community-vs.aspx). For instructions and compatibility checks, read http://docs.nvidia.com/cuda/cuda-getting-started-guide-for-microsoft-windows/ .
+
+- You will also need to register as a developer at nvidia and download CUDNN V3, https://developer.nvidia.com/cudnn . 
+
+
+1. Download the mxnet package as a ZIP from the Github repository https://github.com/dmlc/mxnet and unpack it. You will be editing the `/mxnet/R-package` folder.
+
+2. Download the most recent GPU-enabled package from the [Releases tab](https://github.com/dmlc/mxnet/releases). Unzip this file so you have a folder `/nocudnn`. Note that this file and the folder you'll save it in will be used for future reference and not directly for installing the package. Only some files will be copied from it into the `R-package` folder.
+
+(Note: you now have 2 folders we're working with, possibly in different locations, that we'll reference with `R-package/` and `nocudnn/`.)
+
+3. Download CUDNN V3 from https://developer.nvidia.com/cudnn. Unpack the .zip file and you'll see 3 folders, `/bin`, `/include`, `/lib`. Copy and replace these 3 folders into `nocudnn/3rdparty/cudnn/`, or unpack the .zip file there directly.
+
+4. Create the folder `R-package/inst/libs/x64`. We only support 64-bit operating system now, so you need the x64 folder;
+
+5. Put dll files in `R-package/inst/libs/x64`. 
+
+The first dll file you need is `nocudnn/lib/libmxnet.dll`. The other dll files you need are the ones in all 4 subfolders of `nocudnn/3rdparty/`, for the `cudnn` and `openblas` you'll need to look in the `/bin` folders. There should be 11 dll files now in `R-package/inst/libs/x64`.
+
+6. Copy the folder `nocudnn/include/` to `R-package/inst/`. So now you should have a folder `R-package/inst/include/` with 3 subfolders.
+
+7. Run `R CMD INSTALL --no-multiarch R-package`. Make sure that R is added to your PATH in Environment Variables. Running the command `Where R` in Command Prompt should return the location.
+
 Note on Library Build:
 
 We isolate the library build with Rcpp end to maximize the portability
@@ -293,15 +336,18 @@ make scalainstall
 
 ## Docker Images
 
-Builds of MXNet are available as [Docker](https://www.docker.com/whatisdocker) images:
-[MXNet Docker (CPU)](https://hub.docker.com/r/kaixhin/mxnet/) or [MXNet Docker (CUDA)](https://hub.docker.com/r/kaixhin/cuda-mxnet/).
-These are updated on a weekly basis with the latest builds of MXNet. Examples of running bash in a Docker container
-are as follows:
+Builds of MXNet are available as [Docker](https://www.docker.com) images:
+[MXNet Docker (CPU)](https://hub.docker.com/r/kaixhin/mxnet/) or
+[MXNet Docker (CUDA)](https://hub.docker.com/r/kaixhin/cuda-mxnet/).
+These are updated on a weekly basis with the latest builds of MXNet.
+Examples of running bash in a Docker container are as follows:
 
 ```bash
 sudo docker run -it kaixhin/mxnet
-sudo docker run -it --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia0 kaixhin/cuda-mxnet:7.0
+sudo nvidia-docker run -it kaixhin/cuda-mxnet:7.0
 ```
 
-For a guide to Docker, see the [official docs](https://docs.docker.com/userguide/). For more details on how to use the
-MXNet Docker images, including requirements for CUDA support, consult the [source project](https://github.com/Kaixhin/dockerfiles).
+For a guide to Docker, see the [official docs](https://docs.docker.com).
+CUDA support requires [NVIDIA Docker](https://github.com/NVIDIA/nvidia-docker).
+For more details on how to use the MXNet Docker images,
+consult the [source project](https://github.com/Kaixhin/dockerfiles).

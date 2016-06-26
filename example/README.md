@@ -4,7 +4,7 @@ This page contains a curated list of awesome MXnet examples, tutorials and blogs
 
   - [Contributing](#contributing)
   - [List of examples](#list-of-examples)
-    - [Langauges Binding Examples](#language-binding-examples)
+    - [Languages Binding Examples](#language-binding-examples)
     - [Deep Learning Examples](#deep-learning-examples)
     - [IPython Notebooks](#ipython-notebooks)
     - [Mobile App Examples](#mobile-apps-examples)
@@ -24,7 +24,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 
 ##<a name="list-of-examples"></a>List of examples
 
-###<a name="language-binding-examples"></a>Langauges Binding Examples
+###<a name="language-binding-examples"></a>Languages Binding Examples
 ------------------
 * [C++ examples](https://github.com/dmlc/mxnet/tree/master/example/cpp) - Example code for using C++ interface, including NDArray, symbolic layer and models.
 * [MXNet Python](http://mxnet.readthedocs.org/en/latest/python/index.html) - Python library
@@ -47,6 +47,11 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [Kaggle 2nd national data science bowl](https://github.com/dmlc/mxnet/tree/master/example/kaggle-ndsb2) - a tutorial for Kaggle Second Nation Data Science Bowl
 * [CNN for Text Classification](cnn_text_classification) - a MXnet example for text classification
 * [Chinese plate recognition](https://github.com/imistyrain/mxnet-mr) - Recognize Chinese vehicle plate, by [liuruoze](https://github.com/liuruoze)
+* [Fast R-CNN](https://github.com/precedenceguo/mx-rcnn) by [Jian Guo](https://github.com/precedenceguo)
+* "End2End Captcha Recognition (OCR)" by [xlvector](https://github.com/xlvector) [github link](https://github.com/xlvector/learning-dl/tree/master/mxnet/ocr) [Blog in Chinese](http://blog.xlvector.net/2016-05/mxnet-ocr-cnn/)
+* "Solving classificiation + regression with MXnet in Multi Input + Multi Obj" by [xlvector](https://github.com/xlvector) [github link](https://gist.github.com/xlvector/c304d74f9dd6a3b68a3387985482baac) [Blog in Chinese](http://blog.xlvector.net/2016-05/mxnet-regression-classification-for-concret-continuous-features/)
+* "Learn to sort by LSTM" by [xlvector](https://github.com/xlvector) [github link](https://github.com/xlvector/learning-dl/tree/master/mxnet/lstm_sort) [Blog in Chinese](http://blog.xlvector.net/2016-05/mxnet-lstm-example/)
+* [Neural Art using extremely lightweight (<500K) neural network](https://github.com/pavelgonchar/neural-art-mini) Lightweight version of mxnet neural art implementation by [Pavel Gonchar](https://github.com/pavelgonchar)
 
 ###<a name="ipython-notebooks"></a>IPython Notebooks
 -----------------
@@ -55,7 +60,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [cifar-10 recipe](notebooks/cifar10-recipe.ipynb) - A step by step demo of how to use MXNet
 * [cifar-100](notebooks/cifar-100.ipynb) - A demo of how to train a 75.68% accuracy CIFAR-100 model
 * [simple bind](notebooks/simple_bind.ipynb) - A demo of low level training API.
-* [multi task tutorial](https://github.com/haria/mxnet-multi-task-example/blob/master/multi-task.ipynb) - A demo of how to train and predict multi-task network on both MNIST and your own dataset.
+* [Multi task tutorial](https://github.com/haria/mxnet-multi-task-example/blob/master/multi-task.ipynb) - A demo of how to train and predict multi-task network on both MNIST and your own dataset.
 
 ###<a name="mobile-apps-examples"></a>Mobile App Examples
 -------------------
@@ -94,6 +99,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [Getting Started with MXNet](https://indico.io/blog/getting-started-with-mxnet/) by [indico.io](https://indico.io) (Chinese Translation [MXnet实践](http://www.infoq.com/cn/articles/practise-of-mxnet) by [侠天](http://www.infoq.com/cn/author/%E4%BE%A0%E5%A4%A9) )
 * [{mxnet} R package from MXnet, an intuitive Deep Learning framework including CNN & RNN] (http://tjo-en.hatenablog.com/entry/2016/03/30/233848) by [TJO](http://tjo-en.hatenablog.com/)
 * [MXnet with R: combined power of deep learning](http://cos.name/2016/04/mxnet-r/) in Chinese by Tong He
+* [Understand MXNet dependency engine](http://yuyang0.github.io/articles/mxnet-engine.html) in Chinese by [Yu Yang](https://github.com/yuyang0)
 
 ## <a name="winning-solutions"></a>Machine Learning Challenge Winning Solutions
 

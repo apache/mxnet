@@ -1,6 +1,7 @@
 import mxnet as mx
 import numpy as np
 import argparse
+import re
 from convert_symbol import proto2symbol
 
 caffe_flag = True
@@ -12,14 +13,14 @@ except ImportError:
 
 def get_caffe_iter(layer_names, layers):
     for layer_idx, layer in enumerate(layers):
-        layer_name = layer_names[layer_idx].replace('/', '_')
+        layer_name = re.sub('[-/]', '_', layer_names[layer_idx])
         layer_type = layer.type
         layer_blobs = layer.blobs
         yield (layer_name, layer_type, layer_blobs)
 
 def get_iter(layers):
     for layer in layers:
-        layer_name = layer.name.replace('/', '_')
+        layer_name = re.sub('[-/]', '_', layer.name)
         layer_type = layer.type
         layer_blobs = layer.blobs
         yield (layer_name, layer_type, layer_blobs)
@@ -33,7 +34,7 @@ def main():
     parser.add_argument('save_model_name', help='The name of the output model prefix')
     args = parser.parse_args()
 
-    prob = proto2symbol(args.caffe_prototxt)
+    prob, input_dim = proto2symbol(args.caffe_prototxt)
 
     layers = ''
     layer_names = ''
@@ -46,7 +47,7 @@ def main():
     else:
         layers = parse.parse_caffemodel(args.caffe_model)
     
-    arg_shapes, output_shapes, aux_shapes = prob.infer_shape(data=(1,3,224,224))
+    arg_shapes, output_shapes, aux_shapes = prob.infer_shape(data=tuple(input_dim))
     arg_names = prob.list_arguments()
     arg_shape_dic = dict(zip(arg_names, arg_shapes))
     arg_params = {}
@@ -61,7 +62,12 @@ def main():
     for layer_name, layer_type, layer_blobs in iter:
         if layer_type == 'Convolution' or layer_type == 'InnerProduct' or layer_type == 4 or layer_type == 14:
             assert(len(layer_blobs) == 2)
-            wmat = np.array(layer_blobs[0].data).reshape(layer_blobs[0].num, layer_blobs[0].channels, layer_blobs[0].height, layer_blobs[0].width)
+            wmat_dim = []
+            if len(layer_blobs[0].shape.dim) > 0:
+                wmat_dim = layer_blobs[0].shape.dim
+            else:
+                wmat_dim = [layer_blobs[0].num, layer_blobs[0].channels, layer_blobs[0].height, layer_blobs[0].width]
+            wmat = np.array(layer_blobs[0].data).reshape(wmat_dim)
             bias = np.array(layer_blobs[1].data)
             if first_conv:
                 print 'Swapping BGR of caffe into RGB in mxnet'

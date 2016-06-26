@@ -46,13 +46,11 @@ class MakeLossOp : public Operator {
     using namespace mshadow::expr;
     CHECK_EQ(in_data.size(), 1) << "MakeLoss can only be used to one input";
     CHECK_EQ(out_data.size(), 1);
-    CHECK_EQ(in_data[make_loss_enum::kData].ndim(), 2)
-    << "MakeLoss applies to all unary and binary operator with 2 dimension input";
     if (req[make_loss_enum::kOut] != kWriteInplace) {
       Stream<xpu> *s = ctx.get_stream<xpu>();
-      Tensor<xpu, 2> data = in_data[make_loss_enum::kData].get<xpu, 2, real_t>(s);
-      Tensor<xpu, 2> out = out_data[make_loss_enum::kOut].get<xpu, 2, real_t>(s);
-      Assign(out, req[make_loss_enum::kOut], data);
+      Tensor<xpu, 2> data = in_data[make_loss_enum::kData].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2> out = out_data[make_loss_enum::kOut].FlatTo2D<xpu, real_t>(s);
+      Assign(out, req[make_loss_enum::kOut], F<mshadow_op::identity>(data));
     }
   }
 
@@ -66,7 +64,7 @@ class MakeLossOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> grad = in_grad[make_loss_enum::kData].get<xpu, 2, real_t>(s);
+    Tensor<xpu, 2> grad = in_grad[make_loss_enum::kData].FlatTo2D<xpu, real_t>(s);
     Assign(grad, req[make_loss_enum::kData], ScalarExp<real_t>(param_.grad_scale));
   }
 

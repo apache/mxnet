@@ -57,6 +57,9 @@ class CuDNNPoolingOp : public Operator {
     if (!init_cudnn_) {
       this->Init(s, in_data, out_data);
     }
+    if (param_.global_pool) {
+      this->InitGlobalPool(data.shape_);
+    }
     float alpha = 1.0f;
     float beta = 0.0f;
     CHECK_EQ(data.CheckContiguous(), true);
@@ -109,6 +112,31 @@ class CuDNNPoolingOp : public Operator {
   }
 
  private:
+  inline void InitGlobalPool(const mshadow::Shape<4> &dshape) {
+    #if CUDNN_MAJOR == 5
+      CHECK_EQ(cudnnSetPooling2dDescriptor(pooling_desc_,
+                                           mode_,
+                                           nan_prop_,
+                                           param_.global_pool ? dshape[2] : param_.kernel[0],
+                                           param_.global_pool ? dshape[3] : param_.kernel[1],
+                                           param_.pad[0],
+                                           param_.pad[1],
+                                           param_.global_pool ? 1 : param_.stride[0],
+                                           param_.global_pool ? 1 :param_.stride[1]),
+               CUDNN_STATUS_SUCCESS);
+      #else
+      CHECK_EQ(cudnnSetPooling2dDescriptor(pooling_desc_,
+                                           mode_,
+                                           param_.global_pool ? dshape[2] : param_.kernel[0],
+                                           param_.global_pool ? dshape[3] : param_.kernel[1],
+                                           param_.pad[0],
+                                           param_.pad[1],
+                                           param_.global_pool ? 1 : param_.stride[0],
+                                           param_.global_pool ? 1 : param_.stride[1]),
+               CUDNN_STATUS_SUCCESS);
+      #endif
+  }
+
   inline void Init(mshadow::Stream<gpu> *s,
                    const std::vector<TBlob> &in_data,
                    const std::vector<TBlob> &out_data) {

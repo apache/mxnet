@@ -24,7 +24,7 @@ object Context {
  * @param deviceTypeName {'cpu', 'gpu'} String representing the device type
  * @param deviceId (default=0) The device id of the device, needed for GPU
  */
-class Context(deviceTypeName: String, val deviceId: Int = 0) {
+class Context(deviceTypeName: String, val deviceId: Int = 0) extends Serializable {
   val deviceTypeid: Int = Context.devstr2type(deviceTypeName)
 
   def this(context: Context) = {

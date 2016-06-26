@@ -106,3 +106,5 @@ List of Contributors
 * [Max Kuhn](https://github.com/topepo)
 * [Yuqi Li](https://github.com/ziyeqinghan)
 * [Depeng Liang](https://github.com/Ldpe2G)
+* [Kiko Qiu](https://github.com/kikoqiu)
+* [Yang Bo](https://github.com/Atry)

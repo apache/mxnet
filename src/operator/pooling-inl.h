@@ -32,8 +32,12 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   TShape stride;
   TShape pad;
   int pool_type;
+  bool global_pool;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
-    // TODO(bing) change to only set lower bound
+    DMLC_DECLARE_FIELD(global_pool).set_default(false)
+    .describe("Ignore kernel size, do global pooling based on current input feature map. "
+              "This is useful for input with different shape");
+
     DMLC_DECLARE_FIELD(kernel)
     .set_expect_ndim(2).enforce_nonzero()
     .describe("pooling kernel size: (y, x)");
@@ -81,20 +85,22 @@ class PoolingOp : public Operator {
              req[pool_enum::kOut],
              pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                            out_shape,
-                           param_.kernel[0],
-                           param_.kernel[1],
-                           param_.stride[0],
-                           param_.stride[1]));
+                           param_.global_pool ? data.shape_[2] : param_.kernel[0],
+                           param_.global_pool ? data.shape_[3] : param_.kernel[1],
+                           param_.global_pool ? 1 : param_.stride[0],
+                           param_.global_pool ? 1 : param_.stride[1]));
     } else if (param_.pool_type == pool_enum::kAvgPooling) {
       Assign(out,
              req[pool_enum::kOut],
-             (1.0f / (param_.kernel[0] * param_.kernel[1])) * \
+             (1.0f / (param_.global_pool ?
+                      data.shape_[2] * data.shape_[3] :
+                      param_.kernel[0] * param_.kernel[1])) * \
              pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                            out_shape,
-                           param_.kernel[0],
-                           param_.kernel[1],
-                           param_.stride[0],
-                           param_.stride[1]));
+                           param_.global_pool ? data.shape_[2] : param_.kernel[0],
+                           param_.global_pool ? data.shape_[3] : param_.kernel[1],
+                           param_.global_pool ? 1 : param_.stride[0],
+                           param_.global_pool ? 1 : param_.stride[1]));
     }
   }
 
@@ -126,10 +132,10 @@ class PoolingOp : public Operator {
              crop(unpool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                                   pad(output_data, 0, 0),
                                   pad(grad, 0, 0),
-                                  param_.kernel[0],
-                                  param_.kernel[1],
-                                  param_.stride[0],
-                                  param_.stride[1]),
+                                  param_.global_pool ? in_shape[0] : param_.kernel[0],
+                                  param_.global_pool ? in_shape[1] : param_.kernel[1],
+                                  param_.global_pool ? 1 : param_.stride[0],
+                                  param_.global_pool ? 1 : param_.stride[1]),
                   in_shape,
                   param_.pad[0],
                   param_.pad[1]));
@@ -139,10 +145,10 @@ class PoolingOp : public Operator {
              crop(unpool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                                   pad(output_data, 0, 0),
                                   pad(grad, 0, 0),
-                                  param_.kernel[0],
-                                  param_.kernel[1],
-                                  param_.stride[0],
-                                  param_.stride[1]),
+                                  param_.global_pool ? in_shape[0] : param_.kernel[0],
+                                  param_.global_pool ? in_shape[1] : param_.kernel[1],
+                                  param_.global_pool ? 1 : param_.stride[0],
+                                  param_.global_pool ? 1 : param_.stride[1]),
                   in_shape,
                   param_.pad[0],
                   param_.pad[1]));
@@ -177,10 +183,15 @@ class PoolingProp : public OperatorProperty {
                                "Pooling: Input data should be 4D in (batch, channel, y, x)";
     TShape oshape = dshape;
     if (dshape.ndim() ==  0) return false;
-    oshape[2] = std::min(dshape[2] + 2 * param_.pad[0] - param_.kernel[0] + param_.stride[0] - 1,
-                         dshape[2] + 2 * param_.pad[0] - 1) / param_.stride[0] + 1;
-    oshape[3] = std::min(dshape[3] + 2 * param_.pad[1] - param_.kernel[1] + param_.stride[1] - 1,
-                         dshape[3] + 2 * param_.pad[1] - 1) / param_.stride[1] + 1;
+    if (param_.global_pool) {
+      oshape[2] = 1;
+      oshape[3] = 1;
+    } else {
+      oshape[2] = std::min(dshape[2] + 2 * param_.pad[0] - param_.kernel[0] + param_.stride[0] - 1,
+                          dshape[2] + 2 * param_.pad[0] - 1) / param_.stride[0] + 1;
+      oshape[3] = std::min(dshape[3] + 2 * param_.pad[1] - param_.kernel[1] + param_.stride[1] - 1,
+                          dshape[3] + 2 * param_.pad[1] - 1) / param_.stride[1] + 1;
+    }
     CHECK(oshape[2] > 0 && oshape[3] > 0) << "Pooling: kernel size exceed input";
     out_shape->clear();
     out_shape->push_back(oshape);

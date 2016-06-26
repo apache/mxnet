@@ -140,7 +140,7 @@ batch_size = 100
 train_iter = mx.io.NDArrayIter(train_data, train_label, batch_size=batch_size, shuffle=True)
 val_iter = mx.io.NDArrayIter(val_data, val_label, batch_size=batch_size)
 # create model as usual: model = mx.model.FeedForward(...)
-model.fit(X=train_data, y=train_label)
+model.fit(X = train_iter, eval_data = val_iter)
 ```
 
 ## Note on Performance

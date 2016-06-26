@@ -548,7 +548,6 @@ void Broadcast(const NDArray& src, int dim, int size, NDArray *out) {
           NDArray inter_in = src.Reshape(mshadow::Shape2(before, after));
           NDArray inter_out = ret.Reshape(mshadow::Shape3(before, size, after));
           TBlob tmp = inter_out.data();
-          LOG(INFO) << "out: " << ret.var();
           ndarray::EvalBroadcast<cpu>(inter_in.data(), &tmp, size, ctx);
       }, src.ctx(), const_vars, {ret.var()});
       break;

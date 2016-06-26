@@ -27,6 +27,18 @@ enum ReshapeOpOutputs {kOut};
 
 
 struct ShapeInfo {
+  inline size_t ndim() const {
+    return info.size();
+  }
+
+  inline size_t Size() const {
+    size_t sz = 1;
+    for (size_t i = 0; i < info.size(); ++i) {
+      sz *= info[i];
+    }
+    return sz;
+  }
+
   std::vector<int> info;
 };
 
@@ -40,9 +52,18 @@ inline std::istream &operator>>(std::istream &is, ShapeInfo &shape) {
       return is;
     }
   }
-
   int idx;
   std::vector<int> tmp;
+  // deal with empty case
+  // safe to remove after stop using target_shape
+  size_t pos = is.tellg();
+  char ch = is.get();
+  if (ch == ')') {
+    shape.info = tmp;
+    return is;
+  }
+  is.seekg(pos);
+  // finish deal
   while (is >> idx) {
     tmp.push_back(idx);
     char ch;
@@ -90,8 +111,9 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
   bool keep_highest;
   ShapeInfo shape;
   DMLC_DECLARE_PARAMETER(ReshapeParam) {
+    int tmp[] = {0, 0};
     DMLC_DECLARE_FIELD(target_shape)
-    .set_default(TShape())
+    .set_default(TShape(tmp, tmp + 2))
     .describe("(Deprecated! Use shape instead.) Target new shape. One and only one dim can be 0, "
               "in which case it will be inferred from the rest of dims");
     DMLC_DECLARE_FIELD(keep_highest).set_default(false)
@@ -106,7 +128,7 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
   }
 };
 
-template<typename xpu>
+template<typename xpu, typename DType>
 class ReshapeOp : public Operator {
  public:
   explicit ReshapeOp(ReshapeParam param) {}  // Do nothing
@@ -123,8 +145,8 @@ class ReshapeOp : public Operator {
     CHECK_EQ(out_data.size(), 1);
     if (req[reshape_enum::kOut] == kNullOp) return;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[reshape_enum::kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> out = out_data[reshape_enum::kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2, DType> data = in_data[reshape_enum::kData].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> out = out_data[reshape_enum::kOut].FlatTo2D<xpu, DType>(s);
     CHECK_EQ(data.CheckContiguous(), true);
     CHECK_EQ(out.CheckContiguous(), true);
     if (data.dptr_ == out.dptr_) return;
@@ -146,8 +168,8 @@ class ReshapeOp : public Operator {
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(in_grad.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> grad_in = in_grad[reshape_enum::kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> grad_out = out_grad[reshape_enum::kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2, DType> grad_in = in_grad[reshape_enum::kOut].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> grad_out = out_grad[reshape_enum::kData].FlatTo2D<xpu, DType>(s);
     CHECK_EQ(grad_out.CheckContiguous(), true);
     CHECK_EQ(grad_in.CheckContiguous(), true);
     if (grad_out.dptr_ == grad_in.dptr_) return;
@@ -157,7 +179,7 @@ class ReshapeOp : public Operator {
 };  // class ReshapeOp
 
 template<typename xpu>
-Operator* CreateOp(ReshapeParam);
+Operator* CreateOp(ReshapeParam, int dtype);
 
 #if DMLC_USE_CXX11
 class ReshapeProp : public OperatorProperty {
@@ -180,7 +202,7 @@ class ReshapeProp : public OperatorProperty {
              param_.shape.info.size() > 0, true) << "targe_shape or shape must be present.";
     const TShape &dshape = in_shape->at(reshape_enum::kData);
     if (dshape.ndim() == 0) return false;
-    if (param_.target_shape.ndim() == 0) {
+    if (param_.shape.ndim() != 0) {
       std::vector<int> tmp;
       int src_idx = 0;
       int neg_idx = -1;
@@ -253,6 +275,18 @@ class ReshapeProp : public OperatorProperty {
     return true;
   }
 
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    CHECK_EQ(in_type->size(), 1);
+    int dtype = (*in_type)[0];
+    CHECK_NE(dtype, -1) << "First input must have specified type";
+
+    out_type->clear();
+    out_type->push_back(dtype);
+    return true;
+  }
+
   OperatorProperty* Copy() const override {
     auto ptr = new ReshapeProp();
     ptr->param_ = param_;
@@ -284,7 +318,13 @@ class ReshapeProp : public OperatorProperty {
     return {{out_grad[reshape_enum::kOut], in_grad[reshape_enum::kData]}};
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not implemented";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  protected:
   ReshapeParam param_;

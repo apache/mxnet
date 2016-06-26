@@ -1,7 +1,9 @@
 MXNet Change Log
 ================
+## in progress version
 
-## next release candidate
+## v0.7
+-  0.6 is skipped because there are a lot of improvements since initial release
 - More math operators
   - elementwise ops and binary ops
 - Attribute support in computation graph
@@ -17,6 +19,8 @@ MXNet Change Log
 - Support Torch Module by @piiswrong
   - MXNet now can use any of the modules from Torch.
 - Support custom native operator by @piiswrong
+- Support data types including fp16, fp32, fp64, int32, and uint8 by @piiswrong
+- Support monitor for easy printing and debugging by @piiswrong
 - Support new module API by @pluskid
   - Module API is a middle level API that can be used in imperative manner like Torch-Module
 - Support bucketing API for variable length input by @pluskid
@@ -27,6 +31,7 @@ MXNet Change Log
   - [Detection](https://github.com/dmlc/mxnet/tree/master/example/rcnn), RCNN bt @precedenceguo
   - [Segmentation](https://github.com/dmlc/mxnet/tree/master/example/fcn-xs), FCN by @tornadomeet
   - [Face identification](https://github.com/tornadomeet/mxnet-face) by @tornadomeet
+  - More on the example
 
 ## v0.5 (initial release)
 - All basic modules ready

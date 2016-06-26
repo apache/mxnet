@@ -305,7 +305,7 @@ class SGD(Optimizer):
             weight[:] += mom
         else:
             assert self.momentum == 0.0
-            weight[:] += -lr * (grad + self.wd * weight)
+            weight[:] += -lr * (grad + wd * weight)
 
 
 @register
@@ -353,7 +353,7 @@ class NAG(SGD):
             weight[:] += -lr * grad
         else:
             assert self.momentum == 0.0
-            weight[:] += -lr * (grad + self.wd * weight)
+            weight[:] += -lr * (grad + wd * weight)
 
 
 @register
@@ -443,14 +443,16 @@ class ccSGD(Optimizer):
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
     """
-    def __init__(self, momentum=0.0, **kwargs):
-        super(ccSGD, self).__init__(**kwargs)
+    def __init__(self, momentum=0.0, rescale_grad=1., clip_gradient=-1., **kwargs):
+        super(ccSGD, self).__init__(rescale_grad=rescale_grad,
+                                    clip_gradient=clip_gradient,
+                                    **kwargs)
         self.momentum = momentum
 
         self.handle = Optimizer._init_cc_optimizer(
             'ccsgd',
             ['momentum', 'rescale_grad', 'clip_gradient'],
-            [momentum, kwargs['rescale_grad'], kwargs['clip_gradient']])
+            [momentum, rescale_grad, clip_gradient])
 
     def __getstate__(self):
         this = self.__dict__.copy()
@@ -636,6 +638,7 @@ class AdaGrad(Optimizer):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         lr = self._get_lr(index)
+        wd = self._get_wd(index)
         self._update_count(index)
 
         grad = grad * self.rescale_grad
@@ -643,7 +646,7 @@ class AdaGrad(Optimizer):
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
         history = state
         history[:] += (grad * grad)
-        weight[:] += -lr * (grad / sqrt(history + self.float_stable_eps) + self.wd * weight)
+        weight[:] += -lr * (grad / sqrt(history + self.float_stable_eps) + wd * weight)
 
 
 @register

@@ -40,7 +40,7 @@ struct SwapAxisParam : public dmlc::Parameter<SwapAxisParam> {
 };
 
 
-template<typename xpu>
+template<typename xpu, typename DType>
 class SwapAxisOp : public Operator {
  public:
   explicit SwapAxisOp(SwapAxisParam p) {
@@ -99,12 +99,12 @@ class SwapAxisOp : public Operator {
 
     Reshape2Five(&inter_shape, shape_in, dim1, dim2);
 
-    Tensor<xpu, 5> inter_data_in = data_in.get_with_shape<xpu, 5, real_t>(inter_shape, s);
+    Tensor<xpu, 5, DType> inter_data_in = data_in.get_with_shape<xpu, 5, DType>(inter_shape, s);
 
     Shape<5> inter_shape2 = inter_shape;
     std::swap(inter_shape2[1], inter_shape2[3]);
 
-    Tensor<xpu, 5> inter_data_out = data_out.get_with_shape<xpu, 5, real_t>(inter_shape2, s);
+    Tensor<xpu, 5, DType> inter_data_out = data_out.get_with_shape<xpu, 5, DType>(inter_shape2, s);
 
     inter_data_out = swapaxis<3, 1>(inter_data_in);
   }
@@ -138,7 +138,7 @@ class SwapAxisOp : public Operator {
 
 
 template<typename xpu>
-Operator* CreateOp(SwapAxisParam param);
+Operator* CreateOp(SwapAxisParam param, int dtype);
 
 
 #if DMLC_USE_CXX11
@@ -171,6 +171,17 @@ class SwapAxisProp : public OperatorProperty {
     return true;
   }
 
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    CHECK_EQ(in_type->size(), 1);
+    int dtype = (*in_type)[0];
+    CHECK_NE(dtype, -1) << "Input must have specified type";
+    out_type->clear();
+    out_type->push_back(dtype);
+    return true;
+  }
+
   OperatorProperty* Copy() const override {
     auto ptr = new SwapAxisProp();
     ptr->param_ = param_;
@@ -188,7 +199,13 @@ class SwapAxisProp : public OperatorProperty {
     return {out_grad[swapaxisenum::kOut]};
   };
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   SwapAxisParam param_;

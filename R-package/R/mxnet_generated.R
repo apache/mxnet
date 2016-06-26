@@ -22,6 +22,64 @@ NULL
 #' @name mx.nd.argmax.channel
 NULL
 
+#' Broadcast data in the given axis to the given size. The original size of the broadcasting axis must be 1.
+#' 
+#' @param src  NDArray
+#'     Source input to the function
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.broadcast.axis
+NULL
+
+#' lhs divide rhs with broadcast
+#' 
+#' @param lhs  NDArray
+#'     Left operand  to the function
+#' @param rhs  NDArray
+#'     Right operand to the function
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.broadcast.div
+NULL
+
+#' lhs minus rhs with broadcast
+#' 
+#' @param lhs  NDArray
+#'     Left operand  to the function
+#' @param rhs  NDArray
+#'     Right operand to the function
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.broadcast.minus
+NULL
+
+#' lhs multiple rhs with broadcast
+#' 
+#' @param lhs  NDArray
+#'     Left operand  to the function
+#' @param rhs  NDArray
+#'     Right operand to the function
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.broadcast.mul
+NULL
+
+#' lhs add rhs with broadcast
+#' 
+#' @param lhs  NDArray
+#'     Left operand  to the function
+#' @param rhs  NDArray
+#'     Right operand to the function
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.broadcast.plus
+NULL
+
 #' Take ceil value of the src
 #' 
 #' @param src  NDArray
@@ -68,6 +126,16 @@ NULL
 #' @name mx.nd.cos
 NULL
 
+#' Crop the input matrix and return a new one
+#' 
+#' @param src  NDArray
+#'     Source input to the function
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.crop
+NULL
+
 #' Calculate dot product of two matrices or two vectors
 #' 
 #' @param lhs  NDArray
@@ -90,6 +158,16 @@ NULL
 #' @name mx.nd.exp
 NULL
 
+#' Expand the shape of array by inserting a new axis.
+#' 
+#' @param src  NDArray
+#'     Source input to the function
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.expand.dims
+NULL
+
 #' Fill one element of each line(row for python, column for R/Julia) in lhs according to index indicated by rhs and values indicated by mhs. This function assume rhs uses 0-based index.
 #' 
 #' @param lhs  NDArray
@@ -102,6 +180,16 @@ NULL
 #' 
 #' @export
 #' @name mx.nd.fill.element.0index
+NULL
+
+#' Flip the input matrix along axis and return a new one
+#' 
+#' @param src  NDArray
+#'     Source input to the function
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.flip
 NULL
 
 #' Take floor value of the src
@@ -124,7 +212,7 @@ NULL
 #' @name mx.nd.log
 NULL
 
-#' Take max of the src.The result will be ndarray of shape (1,) on the same device.
+#' Take max of the src in the given axis. Params: `axis` and `keepdims`. axis: tuple or integer of axes to reduce, global reduce will be performed if not set. keepdims: the same meaning as Numpy.
 #' 
 #' @param src  NDArray
 #'     Source input to the function
@@ -134,7 +222,17 @@ NULL
 #' @name mx.nd.max
 NULL
 
-#' Take min of the src.The result will be ndarray of shape (1,) on the same device.
+#' (Depreciated! Use max instead!) Take max of the src in the given axis. Params: `axis` and `keepdims`. axis: tuple or integer of axes to reduce, global reduce will be performed if not set. keepdims: the same meaning as Numpy.
+#' 
+#' @param src  NDArray
+#'     Source input to the function
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.max.axis
+NULL
+
+#' Take min of the src in the given axis. Params: `axis` and `keepdims`. axis: tuple or integer of axes to reduce, global reduce will be performed if not set. keepdims: the same meaning as Numpy.
 #' 
 #' @param src  NDArray
 #'     Source input to the function
@@ -142,6 +240,16 @@ NULL
 #' 
 #' @export
 #' @name mx.nd.min
+NULL
+
+#' (Depreciated! Use min instead!) Take min of the src in the given axis. Params: `axis` and `keepdims`. axis: tuple or integer of axes to reduce, global reduce will be performed if not set. keepdims: the same meaning as Numpy.
+#' 
+#' @param src  NDArray
+#'     Source input to the function
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.min.axis
 NULL
 
 #' Take L2 norm of the src.The result will be ndarray of shape (1,) on the same device.
@@ -194,6 +302,26 @@ NULL
 #' @name mx.nd.sin
 NULL
 
+#' Slice the input along certain axis and return a sliced array.
+#' 
+#' @param src  NDArray
+#'     Source input to the function
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.slice.axis
+NULL
+
+#' Calculate Smooth L1 Loss(lhs, scalar)
+#' 
+#' @param src  NDArray
+#'     Source input to the function
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.smooth.l1
+NULL
+
 #' Calculate cross_entropy(lhs, one_hot(rhs))
 #' 
 #' @param lhs  NDArray
@@ -226,7 +354,7 @@ NULL
 #' @name mx.nd.square
 NULL
 
-#' Take sum of the src.The result will be ndarray of shape (1,) on the same device.
+#' Take sum of the src in the given axis. Params: `axis` and `keepdims`. axis: tuple or integer of axes to reduce, global reduce will be performed if not set. keepdims: the same meaning as Numpy.
 #' 
 #' @param src  NDArray
 #'     Source input to the function
@@ -236,14 +364,14 @@ NULL
 #' @name mx.nd.sum
 NULL
 
-#' Take sum on medium dimension of the 3D src.
+#' (Depreciated! Use sum instead!) Take sum of the src in the given axis. Params: `axis` and `keepdims`. axis: tuple or integer of axes to reduce, global reduce will be performed if not set. keepdims: the same meaning as Numpy.
 #' 
 #' @param src  NDArray
 #'     Source input to the function
 #' @return out The result mx.ndarray
 #' 
 #' @export
-#' @name mx.nd.sum.mid.internal
+#' @name mx.nd.sum.axis
 NULL
 
 #' Transpose the input matrix and return a new one
@@ -341,6 +469,8 @@ mx.io.CSVIter <- function(...) {
 #'     Dataset Param: Shape of each instance generated by the DataIter.
 #' @param inter.method  int, optional, default='1'
 #'     Augmentation Param: 0-NN 1-bilinear 2-cubic 3-area 4-lanczos4 9-auto 10-rand.
+#' @param pad  int, optional, default='0'
+#'     Augmentation Param: Padding size.
 #' @param mirror  boolean, optional, default=False
 #'     Augmentation Param: Whether to mirror the image.
 #' @param rand.mirror  boolean, optional, default=False
@@ -515,6 +645,19 @@ mx.symbol.Crop <- function(...) {
   mx.varg.symbol.Crop(list(...))
 }
 
+#' Custom operator implemented in frontend.
+#' 
+#' @param op.type  string
+#'     Type of custom operator. Must be registered first.
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.Custom <- function(...) {
+  mx.varg.symbol.Custom(list(...))
+}
+
 #' Apply deconvolution to input then add a bias.
 #' 
 #' @param data  Symbol
@@ -528,7 +671,11 @@ mx.symbol.Crop <- function(...) {
 #' @param stride  Shape(tuple), optional, default=(1,1)
 #'     deconvolution stride: (y, x)
 #' @param pad  Shape(tuple), optional, default=(0,0)
-#'     pad for deconvolution: (y, x)
+#'     pad for deconvolution: (y, x), a good number is : (kernel-1)/2, if target_shape set, pad will be ignored and will be computed automatically
+#' @param adj  Shape(tuple), optional, default=(0,0)
+#'     adjustment for output shape: (y, x), if target_shape set, adj will be ignored and will be computed automatically
+#' @param target.shape  Shape(tuple), optional, default=(0,0)
+#'     output shape with targe shape : (y, x)
 #' @param num.filter  int (non-negative), required
 #'     deconvolution filter(channel) number
 #' @param num.group  int (non-negative), optional, default=1
@@ -596,7 +743,7 @@ mx.symbol.Embedding <- function(...) {
 #' Flatten input
 #' 
 #' @param data  Symbol
-#'     Input data to  flatten.
+#'     Input data to flatten.
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -755,10 +902,27 @@ mx.symbol.MAERegressionOutput <- function(...) {
   mx.varg.symbol.MAERegressionOutput(list(...))
 }
 
+#' Get output from a symbol and pass 1 gradient back. This is used as a terminal loss if unary and binary operator are used to composite a loss with no declaration of backward dependency
+#' 
+#' @param data  Symbol
+#'     Input data.
+#' @param grad.scale  float, optional, default=1
+#'     gradient scale as a supplement to unary and binary operators
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.MakeLoss <- function(...) {
+  mx.varg.symbol.MakeLoss(list(...))
+}
+
 #' Perform spatial pooling on inputs.
 #' 
 #' @param data  Symbol
 #'     Input data to the pooling operator.
+#' @param global.pool  boolean, optional, default=False
+#'     Ignore kernel size, do global pooling based on current input feature map. This is useful for input with different shape
 #' @param kernel  Shape(tuple), required
 #'     pooling kernel size: (y, x)
 #' @param pool.type  {'avg', 'max', 'sum'}, required
@@ -776,14 +940,16 @@ mx.symbol.Pooling <- function(...) {
   mx.varg.symbol.Pooling(list(...))
 }
 
-#' Resize regions of interest in an input plane to a fixed size by MAX pooling.
+#' Performs region-of-interest pooling on inputs. Resize bounding box coordinates by spatial_scale and crop input feature maps accordingly. The cropped feature maps are pooled by max pooling to a fixed size output indicated by pooled_size. batch_size will change to the number of region bounding boxes after ROIPooling
 #' 
-#' @param data  Symbol[]
-#'     [input tensor, regions of interest]
+#' @param data  Symbol
+#'     Input data to the pooling operator, a 4D Feature maps
+#' @param rois  Symbol
+#'     Bounding box coordinates, a 2D array of [[batch_index, x1, y1, x2, y2]]. (x1, y1) and (x2, y2) are top left and down right corners of designated region of interest. batch_index indicates the index of corresponding image in the input data
 #' @param pooled.size  Shape(tuple), required
-#'     target size: (h, w)
+#'     fix pooled size: (h, w)
 #' @param spatial.scale  float, required
-#'     Ratio of input plane height (or w) to raw image height (or w).
+#'     Ratio of input feature map height (or w) to raw image height (or w). Equals the reciprocal of total stride in convolutional layers
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -796,11 +962,13 @@ mx.symbol.ROIPooling <- function(...) {
 #' Reshape input to target shape
 #' 
 #' @param data  Symbol
-#'     Input data to  reshape.
-#' @param target.shape  Shape(tuple), required
-#'     Target new shape. One and only one dim can be 0, in which case it will be inferred from the rest of dims
+#'     Input data to reshape.
+#' @param target.shape  Shape(tuple), optional, default=(0,0)
+#'     (Deprecated! Use shape instead.) Target new shape. One and only one dim can be 0, in which case it will be inferred from the rest of dims
 #' @param keep.highest  boolean, optional, default=False
-#'     Whether keep the highest dim unchanged.If set to yes, than the first dim in target_shape is ignored,and always fixed as input
+#'     (Deprecated! Use shape instead.) Whether keep the highest dim unchanged.If set to yes, than the first dim in target_shape is ignored,and always fixed as input
+#' @param shape  , optional, default=()
+#'     Target new shape. If the dim is same, set it to 0. If the dim is set to be -1, it will be inferred from the rest of dims. One and only one dim can be -1
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -839,6 +1007,8 @@ mx.symbol.SliceChannel <- function(...) {
 #'     If set to true, for a (n,k,x_1,..,x_n) dimensional input tensor, softmax will generate n*x_1*...*x_n output, each has k classes
 #' @param use.ignore  boolean, optional, default=False
 #'     If set to true, the ignore_label value will not contribute to the backward gradient
+#' @param normalization  {'batch', 'null', 'valid'},optional, default='null'
+#'     If set to null, op will do nothing on output gradient.If set to batch, op will normalize gradient by divide batch sizeIf set to valid, op will normalize gradient by divide sample not ignored
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -868,7 +1038,7 @@ mx.symbol.SoftmaxActivation <- function(...) {
 #' @param data  Symbol
 #'     Input data to softmax.
 #' @param label  Symbol
-#'     Label data.
+#'     Label data, can also be probability value with same shape as data
 #' @param grad.scale  float, optional, default=1
 #'     Scale the gradient by a float factor
 #' @param ignore.label  float, optional, default=-1
@@ -877,6 +1047,8 @@ mx.symbol.SoftmaxActivation <- function(...) {
 #'     If set to true, for a (n,k,x_1,..,x_n) dimensional input tensor, softmax will generate n*x_1*...*x_n output, each has k classes
 #' @param use.ignore  boolean, optional, default=False
 #'     If set to true, the ignore_label value will not contribute to the backward gradient
+#' @param normalization  {'batch', 'null', 'valid'},optional, default='null'
+#'     If set to null, op will do nothing on output gradient.If set to batch, op will normalize gradient by divide batch sizeIf set to valid, op will normalize gradient by divide sample not ignored
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -917,6 +1089,8 @@ mx.symbol.SwapAxis <- function(...) {
 #'     How to handle multiple input. concat means concatenate upsampled images along the channel dimension. sum means add all images together, only available for nearest neighbor upsampling.
 #' @param num.args  int, required
 #'     Number of inputs to be upsampled. For nearest neighbor upsampling, this can be 1-N; the size of output will be(scale*h_0,scale*w_0) and all other inputs will be upsampled to thesame size. For bilinear upsampling this must be 2; 1 input and 1 weight.
+#' @param workspace  long (non-negative), optional, default=512
+#'     Tmp workspace for deconvolution (MB)
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -928,9 +1102,7 @@ mx.symbol.UpSampling <- function(...) {
 
 #' Take absolute value of the src
 #' 
-#' @param lhs  Symbol
-#'     Left symbolic input to the function
-#' @param rhs  Symbol
+#' @param src  Symbol
 #'     Left symbolic input to the function
 #' @param name  string, optional
 #'     Name of the resulting symbol.
@@ -941,11 +1113,82 @@ mx.symbol.abs <- function(...) {
   mx.varg.symbol.abs(list(...))
 }
 
-#' Take ceil value of the src
+#' Broadcast data in the given axis to the given size. The original size of the broadcasting axis must be 1.
+#' 
+#' @param src  Symbol
+#'     Left symbolic input to the function
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.broadcast_axis <- function(...) {
+  mx.varg.symbol.broadcast_axis(list(...))
+}
+
+#' lhs divide rhs with broadcast
 #' 
 #' @param lhs  Symbol
 #'     Left symbolic input to the function
 #' @param rhs  Symbol
+#'     Right symbolic input to the function
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.broadcast_div <- function(...) {
+  mx.varg.symbol.broadcast_div(list(...))
+}
+
+#' lhs minus rhs with broadcast
+#' 
+#' @param lhs  Symbol
+#'     Left symbolic input to the function
+#' @param rhs  Symbol
+#'     Right symbolic input to the function
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.broadcast_minus <- function(...) {
+  mx.varg.symbol.broadcast_minus(list(...))
+}
+
+#' lhs multiple rhs with broadcast
+#' 
+#' @param lhs  Symbol
+#'     Left symbolic input to the function
+#' @param rhs  Symbol
+#'     Right symbolic input to the function
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.broadcast_mul <- function(...) {
+  mx.varg.symbol.broadcast_mul(list(...))
+}
+
+#' lhs add rhs with broadcast
+#' 
+#' @param lhs  Symbol
+#'     Left symbolic input to the function
+#' @param rhs  Symbol
+#'     Right symbolic input to the function
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.broadcast_plus <- function(...) {
+  mx.varg.symbol.broadcast_plus(list(...))
+}
+
+#' Take ceil value of the src
+#' 
+#' @param src  Symbol
 #'     Left symbolic input to the function
 #' @param name  string, optional
 #'     Name of the resulting symbol.
@@ -958,9 +1201,7 @@ mx.symbol.ceil <- function(...) {
 
 #' Take cos of the src
 #' 
-#' @param lhs  Symbol
-#'     Left symbolic input to the function
-#' @param rhs  Symbol
+#' @param src  Symbol
 #'     Left symbolic input to the function
 #' @param name  string, optional
 #'     Name of the resulting symbol.
@@ -976,7 +1217,7 @@ mx.symbol.cos <- function(...) {
 #' @param lhs  Symbol
 #'     Left symbolic input to the function
 #' @param rhs  Symbol
-#'     Left symbolic input to the function
+#'     Right symbolic input to the function
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -988,9 +1229,7 @@ mx.symbol.dot <- function(...) {
 
 #' Take exp of the src
 #' 
-#' @param lhs  Symbol
-#'     Left symbolic input to the function
-#' @param rhs  Symbol
+#' @param src  Symbol
 #'     Left symbolic input to the function
 #' @param name  string, optional
 #'     Name of the resulting symbol.
@@ -1001,11 +1240,22 @@ mx.symbol.exp <- function(...) {
   mx.varg.symbol.exp(list(...))
 }
 
+#' Expand the shape of array by inserting a new axis.
+#' 
+#' @param src  Symbol
+#'     Left symbolic input to the function
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.expand_dims <- function(...) {
+  mx.varg.symbol.expand_dims(list(...))
+}
+
 #' Take floor value of the src
 #' 
-#' @param lhs  Symbol
-#'     Left symbolic input to the function
-#' @param rhs  Symbol
+#' @param src  Symbol
 #'     Left symbolic input to the function
 #' @param name  string, optional
 #'     Name of the resulting symbol.
@@ -1018,9 +1268,7 @@ mx.symbol.floor <- function(...) {
 
 #' Take log of the src
 #' 
-#' @param lhs  Symbol
-#'     Left symbolic input to the function
-#' @param rhs  Symbol
+#' @param src  Symbol
 #'     Left symbolic input to the function
 #' @param name  string, optional
 #'     Name of the resulting symbol.
@@ -1031,11 +1279,26 @@ mx.symbol.log <- function(...) {
   mx.varg.symbol.log(list(...))
 }
 
+#' Sample a normal distribution
+#' 
+#' @param loc  float, optional, default=0
+#'     Mean of the distribution.
+#' @param scale  float, optional, default=1
+#'     Standard deviation of the distribution.
+#' @param shape  Shape(tuple), required
+#'     The shape of the output
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.normal <- function(...) {
+  mx.varg.symbol.normal(list(...))
+}
+
 #' Take round value of the src
 #' 
-#' @param lhs  Symbol
-#'     Left symbolic input to the function
-#' @param rhs  Symbol
+#' @param src  Symbol
 #'     Left symbolic input to the function
 #' @param name  string, optional
 #'     Name of the resulting symbol.
@@ -1048,9 +1311,7 @@ mx.symbol.round <- function(...) {
 
 #' Take rsqrt of the src
 #' 
-#' @param lhs  Symbol
-#'     Left symbolic input to the function
-#' @param rhs  Symbol
+#' @param src  Symbol
 #'     Left symbolic input to the function
 #' @param name  string, optional
 #'     Name of the resulting symbol.
@@ -1063,9 +1324,7 @@ mx.symbol.rsqrt <- function(...) {
 
 #' Take sign value of the src
 #' 
-#' @param lhs  Symbol
-#'     Left symbolic input to the function
-#' @param rhs  Symbol
+#' @param src  Symbol
 #'     Left symbolic input to the function
 #' @param name  string, optional
 #'     Name of the resulting symbol.
@@ -1078,9 +1337,7 @@ mx.symbol.sign <- function(...) {
 
 #' Take sin of the src
 #' 
-#' @param lhs  Symbol
-#'     Left symbolic input to the function
-#' @param rhs  Symbol
+#' @param src  Symbol
 #'     Left symbolic input to the function
 #' @param name  string, optional
 #'     Name of the resulting symbol.
@@ -1091,12 +1348,38 @@ mx.symbol.sin <- function(...) {
   mx.varg.symbol.sin(list(...))
 }
 
+#' Slice the input along certain axis and return a sliced array.
+#' 
+#' @param src  Symbol
+#'     Left symbolic input to the function
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.slice_axis <- function(...) {
+  mx.varg.symbol.slice_axis(list(...))
+}
+
+#' Calculate Smooth L1 Loss(lhs, scalar)
+#' 
+#' @param src  Symbol
+#'     Left symbolic input to the function
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.smooth_l1 <- function(...) {
+  mx.varg.symbol.smooth_l1(list(...))
+}
+
 #' Calculate cross_entropy(lhs, one_hot(rhs))
 #' 
 #' @param lhs  Symbol
 #'     Left symbolic input to the function
 #' @param rhs  Symbol
-#'     Left symbolic input to the function
+#'     Right symbolic input to the function
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -1108,9 +1391,7 @@ mx.symbol.softmax_cross_entropy <- function(...) {
 
 #' Take sqrt of the src
 #' 
-#' @param lhs  Symbol
-#'     Left symbolic input to the function
-#' @param rhs  Symbol
+#' @param src  Symbol
 #'     Left symbolic input to the function
 #' @param name  string, optional
 #'     Name of the resulting symbol.
@@ -1123,9 +1404,7 @@ mx.symbol.sqrt <- function(...) {
 
 #' Take square of the src
 #' 
-#' @param lhs  Symbol
-#'     Left symbolic input to the function
-#' @param rhs  Symbol
+#' @param src  Symbol
 #'     Left symbolic input to the function
 #' @param name  string, optional
 #'     Name of the resulting symbol.
@@ -1136,11 +1415,9 @@ mx.symbol.square <- function(...) {
   mx.varg.symbol.square(list(...))
 }
 
-#' Take sum of the src.The result will be ndarray of shape (1,) on the same device.
+#' Take sum of the src in the given axis. Params: `axis` and `keepdims`. axis: tuple or integer of axes to reduce, global reduce will be performed if not set. keepdims: the same meaning as Numpy.
 #' 
-#' @param lhs  Symbol
-#'     Left symbolic input to the function
-#' @param rhs  Symbol
+#' @param src  Symbol
 #'     Left symbolic input to the function
 #' @param name  string, optional
 #'     Name of the resulting symbol.
@@ -1151,11 +1428,22 @@ mx.symbol.sum <- function(...) {
   mx.varg.symbol.sum(list(...))
 }
 
+#' (Depreciated! Use sum instead!) Take sum of the src in the given axis. Params: `axis` and `keepdims`. axis: tuple or integer of axes to reduce, global reduce will be performed if not set. keepdims: the same meaning as Numpy.
+#' 
+#' @param src  Symbol
+#'     Left symbolic input to the function
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.sum_axis <- function(...) {
+  mx.varg.symbol.sum_axis(list(...))
+}
+
 #' Transpose the input matrix and return a new one
 #' 
-#' @param lhs  Symbol
-#'     Left symbolic input to the function
-#' @param rhs  Symbol
+#' @param src  Symbol
 #'     Left symbolic input to the function
 #' @param name  string, optional
 #'     Name of the resulting symbol.
@@ -1164,4 +1452,21 @@ mx.symbol.sum <- function(...) {
 #' @export
 mx.symbol.transpose <- function(...) {
   mx.varg.symbol.transpose(list(...))
+}
+
+#' Sample a uniform distribution
+#' 
+#' @param low  float, optional, default=0
+#'     The lower bound of distribution
+#' @param high  float, optional, default=1
+#'     The upper bound of distribution
+#' @param shape  Shape(tuple), required
+#'     The shape of the output
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.uniform <- function(...) {
+  mx.varg.symbol.uniform(list(...))
 }

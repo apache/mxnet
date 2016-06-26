@@ -56,12 +56,12 @@
       };
     </script>
 
-    {% for name in ['jquery.js', 'underscore.js', 'doctools.js', 'searchtools.js'] %}
+    {% for name in ['jquery.js', 'underscore.js', 'doctools.js', 'searchtools.js', 'selectlang.js'] %}
     <script type="text/javascript" src="{{ pathto('_static/' + name, 1) }}"></script>
     {% endfor %}
 
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
+    <script type="text/javascript"> jQuery(function() { Search.loadIndex("searchindex.js"); Search.init();}); </script>
     <!-- {%- for scriptfile in script_files %} -->
     <!-- <script type="text/javascript" src="{{ pathto(scriptfile, 1) }}"></script> -->
     <!-- {%- endfor %} -->
@@ -76,7 +76,7 @@
     <link rel="stylesheet" href="{{ pathto('_static/pygments.css', 1) }}" type="text/css" />
     {%- endif %}
 
-    <link rel="stylesheet" href="{{ pathto('_static/mxnet.css', 1) }}">
+    <link rel="stylesheet" href="{{ pathto('_static/mxnet.css', 1) }}" type="text/css">
 {%- endmacro %}
 
 <html lang="en">

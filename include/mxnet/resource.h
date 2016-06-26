@@ -74,6 +74,10 @@ struct Resource {
    * \brief Get space requested as mshadow Tensor.
    *  The caller can request arbitrary size.
    *
+   *  This space can be shared with other calls to this->get_space.
+   *  So the caller need to serialize the calls when using the conflicted space.
+   *  The temp space will remain valid until release is called.
+   *
    * \param shape the Shape of returning tensor.
    * \param stream the stream of retruning tensor.
    * \return the mshadow tensor requested.
@@ -84,6 +88,19 @@ struct Resource {
   inline mshadow::Tensor<xpu, ndim, real_t> get_space(
       mshadow::Shape<ndim> shape, mshadow::Stream<xpu> *stream) const {
     return get_space_typed<xpu, ndim, real_t>(shape, stream);
+  }
+  /*!
+   * \brief Get cpu space requested as mshadow Tensor.
+   *  The caller can request arbitrary size.
+   *
+   * \param shape the Shape of returning tensor.
+   * \return the mshadow tensor requested.
+   * \tparam ndim the number of dimension of the tensor requested.
+   */
+  template<int ndim>
+  inline mshadow::Tensor<cpu, ndim, real_t> get_host_space(
+      mshadow::Shape<ndim> shape) const {
+    return get_host_space_typed<cpu, ndim, real_t>(shape);
   }
   /*!
    * \brief Get space requested as mshadow Tensor in specified type.
@@ -104,11 +121,43 @@ struct Resource {
         shape, shape[ndim - 1], stream);
   }
   /*!
+   * \brief Get CPU space as mshadow Tensor in specified type.
+   * The caller can request arbitrary size.
+   *
+   * \param shape the Shape of returning tensor
+   * \return the mshadow tensor requested
+   * \tparam ndim the number of dimnesion of tensor requested
+   * \tparam DType request data type
+   */
+  template<int ndim, typename DType>
+  inline mshadow::Tensor<cpu, ndim, DType> get_host_space_typed(
+    mshadow::Shape<ndim> shape) const {
+      return mshadow::Tensor<cpu, ndim, DType>(
+        reinterpret_cast<DType*>(get_host_space_internal(shape.Size() * sizeof(DType))),
+        shape, shape[ndim - 1], NULL);
+  }
+  /*!
+   * \brief Release the all existing allocated space.
+   *  The existing allocated address will remain valdd
+   *  until release is called.
+   *
+   *  Even if user do not call release, the space occupation
+   *  of the resource will remain at most two times of maximum
+   *  requested space.
+   */
+  void release() const;
+  /*!
    * \brief internal function to get space from resources.
    * \param size The size of the space.
    * \return The allocated space.
    */
   void* get_space_internal(size_t size) const;
+  /*!
+   * \brief internal function to get cpu space from resources.
+   * \param size The size of space.
+   * \return The allocated space
+   */
+  void *get_host_space_internal(size_t size) const;
 };
 
 /*! \brief Global resource manager */
