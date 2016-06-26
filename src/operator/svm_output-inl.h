@@ -1,11 +1,11 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file support_vector_machine-inl.h
+ * \file svm_output-inl.h
  * \brief
  * \author Jonas Amaro
 */
-#ifndef MXNET_OPERATOR_SUPPORT_VECTOR_MACHINE_INL_H_
-#define MXNET_OPERATOR_SUPPORT_VECTOR_MACHINE_INL_H_
+#ifndef MXNET_OPERATOR_SVM_OUTPUT_INL_H_
+#define MXNET_OPERATOR_SVM_OUTPUT_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -21,20 +21,20 @@ namespace mxnet {
 namespace op {
 
 namespace svm_enum {
-enum SupportVectorMachineOpInputs {kData, kLabel};
-enum SupportVectorMachineOpOutputs {kOut};
-enum SupportVectorMachineNormType {kNull, kBatch, kValid};
-enum SupportVectorMachineOpResource {kTempSpace};
+enum SVMOutputOpInputs {kData, kLabel};
+enum SVMOutputOpOutputs {kOut};
+enum SVMOutputNormType {kNull, kBatch, kValid};
+enum SVMOutputOpResource {kTempSpace};
 }  // namespace svm_enum
 
 
-struct SupportVectorMachineParam : public dmlc::Parameter<SupportVectorMachineParam> {
+struct SVMOutputParam : public dmlc::Parameter<SVMOutputParam> {
   float margin;
   float regularization_coefficient;
   bool use_linear;
-  DMLC_DECLARE_PARAMETER(SupportVectorMachineParam) {
+  DMLC_DECLARE_PARAMETER(SVMOutputParam) {
     DMLC_DECLARE_FIELD(margin).set_default(1.0f)
-    .describe("Scale the margin for activation size");
+    .describe("Scale the DType(param_.margin) for activation size");
     DMLC_DECLARE_FIELD(regularization_coefficient).set_default(1.0f)
     .describe("Scale the coefficient responsible for balacing coefficient size and error tradeoff");
     DMLC_DECLARE_FIELD(use_linear).set_default(false)
@@ -43,9 +43,9 @@ struct SupportVectorMachineParam : public dmlc::Parameter<SupportVectorMachinePa
 };
 
 template<typename xpu, typename DType>
-class SupportVectorMachineOp : public Operator {
+class SVMOutputOp : public Operator {
  public:
-  explicit SupportVectorMachineOp(SupportVectorMachineParam param) : param_(param) {}
+  explicit SVMOutputOp(SVMOutputParam param) : param_(param) {}
 
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
@@ -85,22 +85,48 @@ class SupportVectorMachineOp : public Operator {
     Tensor<xpu, 2, DType> grad = in_grad[svm_enum::kData].FlatTo2D<xpu, DType>(s);
 
     if (param_.use_linear) {
-      L1_SVM(DType(param_.margin), DType(param_.regularization_coefficient), grad, label, out);
+      CHECK_EQ(grad.shape_, out.shape_) << "L1_SVM: shape mismatch";
+      for (index_t y = 0; y < grad.size(0); y++) {
+        const index_t k = static_cast<int>(label[y]);
+        for (index_t x = 0; x < grad.size(1); x++) {
+          if (x == k) {
+            grad[y][k] = -DType(DType(param_.margin) > out[y][k])
+            * DType(param_.regularization_coefficient);
+          } else {
+            grad[y][x] = DType(DType(param_.margin) > -out[y][x])
+            * DType(param_.regularization_coefficient);
+          }
+        }
+      }
     } else {
-      L2_SVM(DType(param_.margin), DType(param_.regularization_coefficient), grad, label, out);
+      CHECK_EQ(grad.shape_, out.shape_) << "L2_SVM: shape mismatch";
+      for (index_t y = 0; y < grad.size(0); y++) {
+        const index_t k = static_cast<int>(label[y]);
+        for (index_t x = 0; x < grad.size(1); x++) {
+          if (x == k) {
+            grad[y][k] = DType(param_.margin) > out[y][k] ?
+            2*(DType(param_.margin) - out[y][k]) : DType(0.0f);
+            grad[y][k] *= -DType(param_.regularization_coefficient);
+          } else {
+            grad[y][x] = DType(param_.margin) > -out[y][x] ?
+            (-2)*(DType(param_.margin) + out[y][x]) : DType(0.0f);
+            grad[y][x] *= -DType(param_.regularization_coefficient);
+          }
+        }
+      }
     }
   }
 
  private:
-  SupportVectorMachineParam param_;
-};  // class SupportVectorMachineOp
+  SVMOutputParam param_;
+};  // class SVMOutputOp
 
 // Declare Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(SupportVectorMachineParam param, int dtype);
+Operator* CreateOp(SVMOutputParam param, int dtype);
 
 #if DMLC_USE_CXX11
-class SupportVectorMachineProp : public OperatorProperty {
+class SVMOutputProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     return {"data", "label"};
@@ -151,13 +177,13 @@ class SupportVectorMachineProp : public OperatorProperty {
   }
 
   OperatorProperty* Copy() const override {
-    auto ptr = new SupportVectorMachineProp();
+    auto ptr = new SVMOutputProp();
     ptr->param_ = param_;
     return ptr;
   }
 
   std::string TypeString() const override {
-    return "SupportVectorMachine";
+    return "SVMOutput";
   }
 
   std::vector<int> DeclareBackwardDependency(
@@ -195,10 +221,10 @@ class SupportVectorMachineProp : public OperatorProperty {
                              std::vector<int> *in_type) const override;
 
  protected:
-  SupportVectorMachineParam param_;
-};  // class SupportVectorMachineProp
+  SVMOutputParam param_;
+};  // class SVMOutputProp
 #endif  // DMLC_USE_CXX11
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_SUPPORT_VECTOR_MACHINE_INL_H_
+#endif  // MXNET_OPERATOR_SVM_OUTPUT_INL_H_

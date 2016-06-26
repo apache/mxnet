@@ -24,7 +24,7 @@ act2 = mx.symbol.Activation(data = fc2, name='relu2', act_type="relu")
 fc3  = mx.symbol.FullyConnected(data = act2, name='fc3', num_hidden=10)
 
 # Here we add the ultimate layer based on L2-SVM objective
-mlp = mx.symbol.SupportVectorMachine(data=fc3, name='svm')
+mlp = mx.symbol.SVMOutput(data=fc3, name='svm')
 
 # To use L1-SVM objective, comment the line above and uncomment the line below
 # mlp = mx.symbol.SupportVectorMachine(data=fc3, name='svm', use_linear=True)

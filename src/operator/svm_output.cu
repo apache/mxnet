@@ -1,19 +1,19 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file support_vector_machine.cu
+ * \file svm_output.cu
  * \brief
  * \author Jonas Amaro
 */
 
-#include "./support_vector_machine-inl.h"
+#include "./svm_output-inl.h"
 
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<gpu>(SupportVectorMachineParam param, int dtype) {
+Operator *CreateOp<gpu>(SVMOutputParam param, int dtype) {
   Operator *op = NULL;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new SupportVectorMachineOp<gpu, DType>(param);
+    op = new SVMOutputOp<gpu, DType>(param);
   })
   return op;
 }
