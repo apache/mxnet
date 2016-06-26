@@ -848,10 +848,17 @@ def test_broadcast_binary_op():
         _check_broadcast_op_forward(c, lambda a, b: a / b)
         _check_broadcast_op_backward(c, lambda g_out, a, b: (g_out / b, - g_out * a / (b * b)))
 
+    def test_bpow(a, b):
+        c = mx.sym.broadcast_power(a, b)
+        _check_broadcast_op_forward(c, lambda a, b: a ** b)
+        _check_broadcast_op_backward(c, lambda g_out, a, b: (g_out * a **(b - 1) * b,
+                                                             g_out * a ** b * np.log(a)))
+
     test_bplus(a, b)
     test_bminus(a, b)
     test_bmul(a, b)
     test_bdiv(a, b)
+    test_bpow(a, b)
 
 def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3), verbose=False):
     # Input for spike response
@@ -1035,8 +1042,6 @@ def test_broadcast():
                                           numpy_reduce_func=np.sum)
             net = sym_bcast.bind(mx.cpu(), args={'a': mx.nd.array(dat_npy)},
                                                  args_grad={'a': grad_nd})
-            net_bcast_to = sym_bcast_to.bind(mx.cpu(), args={'a': mx.nd.array(dat_npy)},
-                                             args_grad={'a': grad_nd})
             net.forward(is_train=True)
             assert (net.outputs[0].shape == target_shape).all()
             err_forward = reldiff(net.outputs[0].asnumpy(), groundtruth)
