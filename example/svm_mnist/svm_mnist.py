@@ -49,15 +49,15 @@ X_test = X[60000:]
 X_show = X_show[60000:]
 Y_train = Y[:60000]
 Y_test = Y[60000:]
+
+# Article's suggestion on batch size
+batch_size = 200
 train_iter = mx.io.NDArrayIter(X_train, Y_train, batch_size=batch_size)
 test_iter = mx.io.NDArrayIter(X_test, Y_test, batch_size=batch_size)
 
 # A quick work around to prevent mxnet complaining the lack of a softmax_label
 train_iter.label =  mx.io._init_data(Y_train, allow_empty=True, default_name='svm_label')
 test_iter.label =  mx.io._init_data(Y_test, allow_empty=True, default_name='svm_label')
-
-# Article suggestion on batch size
-batch_size = 200
 
 # Here we instatiate and fit the model for our data
 # The article actually suggests using 400 epochs,
