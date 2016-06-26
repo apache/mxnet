@@ -16,8 +16,8 @@ import java.util.concurrent.Semaphore
  * @param labelNames
  */
 class PrefetchingIter(val iters: IndexedSeq[DataIter],
-                      val dataNames: Map[String, String] = null,
-                      val labelNames: Map[String, String] = null) extends DataIter {
+                      val dataNames: IndexedSeq[Map[String, String]] = null,
+                      val labelNames: IndexedSeq[Map[String, String]] = null) extends DataIter {
   private val logger = LoggerFactory.getLogger(classOf[PrefetchingIter])
 
   require(iters.length > 0, "Iters length must be greater than 0")
@@ -28,7 +28,8 @@ class PrefetchingIter(val iters: IndexedSeq[DataIter],
         acc ++ elem
       }
     } else {
-      iters.map(_.provideData).map(m => m.map(t => (dataNames(t._1), t._2)))
+      iters.zipWithIndex.map(tu => (tu._1.provideData, tu._2))
+             .map(m => m._1.map(t => (dataNames(m._2)(t._1), t._2)))
              .foldLeft(Map[String, Shape]()) { (acc, elem) =>
         acc ++ elem
       }
@@ -41,7 +42,8 @@ class PrefetchingIter(val iters: IndexedSeq[DataIter],
         acc ++ elem
       }
     } else {
-      iters.map(_.provideLabel).map(m => m.map(t => (labelNames(t._1), t._2)))
+      iters.zipWithIndex.map(tu => (tu._1.provideLabel, tu._2))
+             .map(m => m._1.map(t => (labelNames(m._2)(t._1), t._2)))
              .foldLeft(Map[String, Shape]()) { (acc, elem) =>
         acc ++ elem
       }
