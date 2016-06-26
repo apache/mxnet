@@ -110,6 +110,3 @@ scala-package/*/*/target/
 !scala-package/*/bin
 *.bak
 */node_modules/
-
-# Jonas's virtualenv, if you are seeing this I'm sorry
-.env/*
