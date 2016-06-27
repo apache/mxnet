@@ -62,7 +62,7 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     .add_enum("off", conv::kOff)
     .add_enum("limited_workspace", conv::kLimited)
     .add_enum("fastest", conv::kFastest)
-    .set_default(0)
+    .set_default(conv::kLimited)
     .describe("Whether to find convolution algo by running performance test."
               "Leads to higher startup time but may give better speed");
   }

@@ -119,9 +119,9 @@ void TuneCudnnConvolution(ConvolutionParam param,
              fwd_algo), CUDNN_STATUS_SUCCESS);
     i = 0;
     while (i < nalgo
-           && fwd_algo[i].status != CUDNN_STATUS_SUCCESS
-           && param.cudnn_tune == conv::kLimited
-           && fwd_algo[i].memory > workspace_byte) ++i;
+           && (fwd_algo[i].status != CUDNN_STATUS_SUCCESS
+           || (param.cudnn_tune == conv::kLimited
+           && fwd_algo[i].memory > workspace_byte))) ++i;
     if (i == nalgo) {
       LOG(FATAL) << "Failed to find an convolution algorithm.";
     } else {
@@ -140,9 +140,9 @@ void TuneCudnnConvolution(ConvolutionParam param,
              bwd_filter_algo), CUDNN_STATUS_SUCCESS);
     i = 0;
     while (i < nalgo
-           && bwd_filter_algo[i].status != CUDNN_STATUS_SUCCESS
-           && param.cudnn_tune == conv::kLimited
-           && bwd_filter_algo[i].memory > workspace_byte) ++i;
+           && (bwd_filter_algo[i].status != CUDNN_STATUS_SUCCESS
+           || (param.cudnn_tune == conv::kLimited
+           && bwd_filter_algo[i].memory > workspace_byte))) ++i;
     if (i == nalgo) {
       LOG(FATAL) << "Failed to find an convolution algorithm.";
     } else {
@@ -161,9 +161,9 @@ void TuneCudnnConvolution(ConvolutionParam param,
              bwd_data_algo), CUDNN_STATUS_SUCCESS);
     i = 0;
     while (i < nalgo
-           && bwd_data_algo[i].status != CUDNN_STATUS_SUCCESS
-           && param.cudnn_tune == conv::kLimited
-           && bwd_data_algo[i].memory > workspace_byte) ++i;
+           && (bwd_data_algo[i].status != CUDNN_STATUS_SUCCESS
+           || (param.cudnn_tune == conv::kLimited
+           && bwd_data_algo[i].memory > workspace_byte))) ++i;
     if (i == nalgo) {
       LOG(FATAL) << "Failed to find an convolution algorithm.";
     } else {
