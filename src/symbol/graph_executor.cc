@@ -791,7 +791,7 @@ void GraphExecutor::InitResources() {
   }
 }
 
-void GraphExecutor::InitOpNodes() {
+void GraphExecutor::InitOperators() {
   for (size_t i = 0; i < topo_order_.size(); ++i) {
     uint32_t nid = topo_order_[i];
     if (!op_nodes_[nid].activated) continue;
@@ -811,6 +811,15 @@ void GraphExecutor::InitOpNodes() {
           graph_.nodes[graph_.nodes[nid].backward_source_id].op.get(),
           op_nodes_[graph_.nodes[nid].backward_source_id].op));
     }
+  }
+}
+
+void GraphExecutor::InitCachedOps() {
+  for (size_t i = 0; i < topo_order_.size(); ++i) {
+    uint32_t nid = topo_order_[i];
+    if (!op_nodes_[nid].activated) continue;
+    if (graph_.nodes[nid].is_variable()) continue;
+    OpNode& op_node = op_nodes_[nid];
     bool allow_cache = true;
     for (StaticGraph::DataEntry e : graph_.nodes[nid].inputs) {
       DataEntryInfo& info = op_nodes_[e.source_id].outputs[e.index];
