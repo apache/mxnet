@@ -104,17 +104,17 @@ void TuneCudnnConvolution(ConvolutionParam param,
   Engine::Get()->PushSync([=](RunContext rctx) {
     Stream<gpu> *s = rctx.get_stream<gpu>();
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
-    const int max_nalgo = 10;
-    int nalgo = max_nalgo;
+    const int kMaxAlgos = 10;
+    int nalgo = kMaxAlgos;
     int i;
 
-    cudnnConvolutionFwdAlgoPerf_t fwd_algo[max_nalgo];
+    cudnnConvolutionFwdAlgoPerf_t fwd_algo[kMaxAlgos];
     CHECK_EQ(cudnnFindConvolutionForwardAlgorithm(s->dnn_handle_,
              in_desc,
              filter_desc,
              conv_desc,
              out_desc,
-             max_nalgo,
+             kMaxAlgos,
              &nalgo,
              fwd_algo), CUDNN_STATUS_SUCCESS);
     i = 0;
@@ -129,13 +129,13 @@ void TuneCudnnConvolution(ConvolutionParam param,
       *algo = fwd_algo[i].algo;
     }
 
-    cudnnConvolutionBwdFilterAlgoPerf_t bwd_filter_algo[max_nalgo];
+    cudnnConvolutionBwdFilterAlgoPerf_t bwd_filter_algo[kMaxAlgos];
     CHECK_EQ(cudnnFindConvolutionBackwardFilterAlgorithm(s->dnn_handle_,
              in_desc,
              out_desc,
              conv_desc,
              filter_desc,
-             max_nalgo,
+             kMaxAlgos,
              &nalgo,
              bwd_filter_algo), CUDNN_STATUS_SUCCESS);
     i = 0;
@@ -150,13 +150,13 @@ void TuneCudnnConvolution(ConvolutionParam param,
       *back_algo_w = bwd_filter_algo[i].algo;
     }
 
-    cudnnConvolutionBwdDataAlgoPerf_t bwd_data_algo[max_nalgo];
+    cudnnConvolutionBwdDataAlgoPerf_t bwd_data_algo[kMaxAlgos];
     CHECK_EQ(cudnnFindConvolutionBackwardDataAlgorithm(s->dnn_handle_,
              filter_desc,
              out_desc,
              conv_desc,
              in_desc,
-             max_nalgo,
+             kMaxAlgos,
              &nalgo,
              bwd_data_algo), CUDNN_STATUS_SUCCESS);
     i = 0;
