@@ -1145,8 +1145,8 @@ def test_support_vector_machine_l1_svm():
     Y = mx.symbol.SVMOutput(data=X, label=L, use_linear=True)
     x = mx.nd.empty(shape, ctx = xpu)
     l = mx.nd.empty((shape[0],), ctx = xpu)
-    x_np = np.random.randint(0, 2, shape)*2.0
-    l_np = np.random.randint(0, shape[1]-1, (shape[0],))
+    x_np = np.random.rand(*shape)
+    l_np = np.random.randint(0, shape[1], (shape[0],))
     x[:] = x_np
     l[:] = l_np
 
@@ -1159,6 +1159,9 @@ def test_support_vector_machine_l1_svm():
     exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
 
     exec1.forward()
+
+    assert_allclose(x_np, exec1.outputs[0].asnumpy())
+    
     exec1.backward()
 
     assert_allclose(grad_np, grad.asnumpy())
@@ -1172,8 +1175,8 @@ def test_support_vector_machine_l2_svm():
     Y = mx.symbol.SVMOutput(data=X, label=L)
     x = mx.nd.empty(shape, ctx = xpu)
     l = mx.nd.empty((shape[0],), ctx = xpu)
-    x_np = np.random.randint(0, 2, shape)*2.0
-    l_np = np.random.randint(0, shape[1]-1, (shape[0],))
+    x_np = np.random.rand(*shape)
+    l_np = np.random.randint(0, shape[1], (shape[0],))
     x[:] = x_np
     l[:] = l_np
 
@@ -1181,6 +1184,9 @@ def test_support_vector_machine_l2_svm():
     exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
 
     exec1.forward()
+
+    assert_allclose(x_np, exec1.outputs[0].asnumpy())
+    
     exec1.backward()
     
     l_mask = np.equal(l_np.reshape(shape[0],1),range(shape[1]))
