@@ -18,20 +18,13 @@
 namespace mxnet {
 namespace op {
 
-// Enumeration for operator type
-namespace caffeEnum {
-enum CaffeOpType {fullyconnected, tanh, relu, conv};
-}  // namespace caffeEnum
-
 typedef caffe::Layer<float>* (*pFunc) (caffe::LayerParameter);
 
 class CaffeOpInitEntry {
  public:
   CaffeOpInitEntry(std::string name,
-                   int op_enum,
                    pFunc f) :
                    name_(std::string(name)),
-                   op_enum_(op_enum),
                    gen_f_(f),
                    in_num_(1),
                    out_num_(1) {}
@@ -41,7 +34,7 @@ class CaffeOpInitEntry {
 
   pFunc GetInNum();
 
-  int in_num_, out_num_, op_enum_;
+  int in_num_, out_num_;
   pFunc gen_f_;
   std::string name_;
 };
@@ -53,7 +46,7 @@ class CaffeOpInitRegistry {
    * \param name name of the operator 
    * \return ref to the registered entry, used to set properties
    */
-  CaffeOpInitEntry& __REGISTER__(const char*, int, pFunc);
+  CaffeOpInitEntry& __REGISTER__(const char*, pFunc);
   /*!
    * \brief Register the entry with corresponding name.
    * \param name name of the operator 
@@ -101,7 +94,7 @@ class CaffeOpInitRegistry {
 #define MXNET_REGISTER_PLUGIN_CAFFE_INIT(Name, GenFunc) \
   static ::mxnet::op::CaffeOpInitEntry & \
   __make_ ## CaffeOpInitEntry ## _ ## Name ##__ = \
-      ::mxnet::op::CaffeOpInitRegistry::Get()->__REGISTER__(#Name, caffeEnum::Name, GenFunc)
+      ::mxnet::op::CaffeOpInitRegistry::Get()->__REGISTER__(#Name, GenFunc)
 
 }  // namespace op
 }  // namespace mxnet

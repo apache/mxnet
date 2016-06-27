@@ -43,7 +43,6 @@ struct CaffeOperatorParam : public dmlc::Parameter<CaffeOperatorParam> {
   std::string op_type_name;
   std::vector<int> in_dims, w_dims, out_dims;
   caffe::Layer<float> *caffe_op;
-  int op_type_value;
 
   DMLC_DECLARE_PARAMETER(CaffeOperatorParam) {
     DMLC_DECLARE_FIELD(para)
@@ -90,7 +89,7 @@ class CaffeOperator : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
     // TODO(Haoran): when need cublas handle in stream?
-    if ( param_.op_type_value == caffeEnum::fullyConnected)
+    if (!param_.op_type_name.compare("fullyConnected"))
       CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
@@ -156,7 +155,7 @@ class CaffeOperator : public Operator {
     //  maybe need blas handle from context
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
-    if (param_.op_type_value == caffeEnum::fullyconnected)
+    if (!param_.op_type_name.compare("fullyConnected"))
       CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
@@ -332,7 +331,6 @@ class CaffeOperatorProp : public OperatorProperty {
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
     CaffeOpInitEntry* e = CaffeOpInitRegistry::Get()->Find(param_.op_type_name);
-    param_.op_type_value = e->op_enum_;
     param_.caffe_op = e->gen_f_(this->param_.para);
     param_.in_dims.resize(e->in_num_);
     param_.out_dims.resize(e->out_num_);

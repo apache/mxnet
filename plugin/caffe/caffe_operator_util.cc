@@ -20,11 +20,10 @@ CaffeOpInitEntry& CaffeOpInitEntry::SetOutNum(int out_num) {
 }
 
 CaffeOpInitEntry& CaffeOpInitRegistry::__REGISTER__(const char* name_str,
-                                                    int op_enum,
                                                     pFunc f) {
   std::string name(name_str);
   CHECK(fmap_.count(name) == 0) << "Caffe initial param of " << name << " already existed";
-  CaffeOpInitEntry *e = new CaffeOpInitEntry(name, op_enum, f);
+  CaffeOpInitEntry *e = new CaffeOpInitEntry(name, f);
   fmap_[name] = e;
   return *e;
 }
