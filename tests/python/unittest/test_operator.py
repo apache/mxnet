@@ -1150,19 +1150,17 @@ def test_support_vector_machine_l1_svm():
     x[:] = x_np
     l[:] = l_np
 
-    l_mask = np.equal(l_np.reshape(shape[0],1),range(shape[1]))
-    l_mask = np.array(l_mask, dtype=int)*2 -1
-
-    grad_np = (-1)*l_mask*np.greater(1 - l_mask*x_np, 0)
-
     grad = mx.nd.empty(shape, ctx = xpu)
     exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
-
     exec1.forward()
 
     assert_allclose(x_np, exec1.outputs[0].asnumpy())
     
     exec1.backward()
+
+    l_mask = np.equal(l_np.reshape(shape[0],1),range(shape[1]))
+    l_mask = np.array(l_mask, dtype=np.float32)*2 -1
+    grad_np = (-1) * l_mask * np.greater(1 - l_mask * x_np, 0)
 
     assert_allclose(grad_np, grad.asnumpy())
 
@@ -1176,13 +1174,13 @@ def test_support_vector_machine_l2_svm():
     x = mx.nd.empty(shape, ctx = xpu)
     l = mx.nd.empty((shape[0],), ctx = xpu)
     x_np = np.random.rand(*shape)
+    x_np = x_np.astype(np.float32)
     l_np = np.random.randint(0, shape[1], (shape[0],))
     x[:] = x_np
     l[:] = l_np
 
     grad = mx.nd.empty(shape, ctx = xpu)
     exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
-
     exec1.forward()
 
     assert_allclose(x_np, exec1.outputs[0].asnumpy())
@@ -1190,10 +1188,9 @@ def test_support_vector_machine_l2_svm():
     exec1.backward()
     
     l_mask = np.equal(l_np.reshape(shape[0],1),range(shape[1]))
-    l_mask = np.array(l_mask, dtype=int)*2 -1
-
+    l_mask = np.array(l_mask, dtype=np.float32)*2 -1
     grad_np = (-2)*l_mask*np.maximum(1-l_mask*x_np,0)
-
+    grad_np = grad_np.astype(np.float32)
     assert_allclose(grad_np, grad.asnumpy())
 
 if __name__ == '__main__':
