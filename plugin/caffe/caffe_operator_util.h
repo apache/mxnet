@@ -80,18 +80,12 @@ class CaffeOpInitRegistry {
 //--------------------------------------------------------------
 /*!
  * \brief Macro to register caffe init entry including generate function and params.
- *
- * see plugin/caffe/caffe_operator.cc for example
+ * \brief Firstly it builds layer init function
+ * \brief Then register the entry with name and generated function
  *
  * \code
- * // example of registering a sigmoid operator on GPU
- * // MySigmoid is of type UnaryFunction,
- * // MySigmoidGrad is of type UnaryGradFunctionT2
- *
- * MXNET_REGISTER_SIMPLE_OP(sigmoid, cpu)
- * .set(MySigmoid<gpu>, true)
- * .set_gradient(MySigmoidGrad<gpu>, true)
- * .describe("Sigmoid function");
+ * // example of registering init entry of fullyconnected caffe-op
+ * MXNET_REGISTER_PLUGIN_CAFFE_INIT(fullyconnected, ::caffe::InnerProductLayer<float>);
  *
  * \endcode
  */
