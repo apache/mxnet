@@ -223,6 +223,18 @@ class KVStore {
   }
 
   /*!
+   * \return the number of dead node(s) specified by {node_id}
+   * \param node_id can be a node group or a single node
+   * \param timeout a node fails to send heartbeart in {timeout} seconds
+   *        will be presumed as 'dead'
+   *
+   * Always return 0 when type == "local"
+   */
+  virtual int get_dead_num(int node_id, int timeout = 60) const {
+    return 0;
+  }
+
+  /*!
    * \brief global barrier among all worker machines
    *
    * But note that, this functions only blocks the main thread of workers until

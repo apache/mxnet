@@ -164,6 +164,17 @@ class KVStoreDist : public KVStoreDevice {
 
   int get_rank() const override { return ps::MyRank(); }
 
+  int get_dead_num(int node_id, int timeout) const override {
+    int number = 0;
+    auto dead_nodes = ps::Postoffice::Get()->GetDeadNodes(timeout);
+    const auto& watch_nodes = ps::Postoffice::Get()->GetNodeIDs(node_id);
+    std::unordered_set<int> watch_set(watch_nodes.begin(), watch_nodes.end());
+    for (int r : dead_nodes) {
+      if (watch_set.find(r) != watch_set.end()) number++;
+    }
+    return number;
+  }
+
   void RunServer(const Controller& controller) override {
     CHECK(!IsWorkerNode());
     if (IsServerNode()) {
