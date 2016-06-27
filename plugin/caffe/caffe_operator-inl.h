@@ -25,6 +25,7 @@
 #include "../../src/operator/operator_common.h"
 
 #include "caffe_base.h"
+#include "caffe_operator_util.h"
 #include "caffe_stream.h"
 #include "caffe_fieldentry.h"
 #include "caffe_blob.h"
@@ -32,12 +33,10 @@
 namespace mxnet {
 namespace op {
 
-// Enumeration for inputs, outputs and caffe type
+// Enumeration for inputs, outputs
 namespace caffeEnum {
 enum FetchType {DataOnly, GradOnly, DataWithGrad};
-enum CaffeOpType {fullyconnected, tanh, relu, conv};
 }  // namespace caffeEnum
-
 
 struct CaffeOperatorParam : public dmlc::Parameter<CaffeOperatorParam> {
   caffe::LayerParameter para;
@@ -52,25 +51,6 @@ struct CaffeOperatorParam : public dmlc::Parameter<CaffeOperatorParam> {
     DMLC_DECLARE_FIELD(op_type_name)
     .describe("Operator type name");
   }
-};
-
-typedef caffe::Layer<float>* (*pFunc) (caffe::LayerParameter);
-
-// This is mapping from layer_type_name to layer init funciton & enum
-class CaffeTypeNameMap{
- public:
-  static void DoInit();
-  // Returns init function of layer in correpsonding type
-  static pFunc GetInitFunc(std::string layer_type_name);
-  // Returns caffeEnum::CaffeOpType of layer in in correpsonding type
-  static int GetType(std::string layer_type_name);
-  // Returns caffeEnum::Input Dim of layer
-  static int GetInputNum(std::string layer_type_name);
-  static int GetOutputNum(std::string layer_type_name);
- private:
-  static bool init;
-  static std::map<std::string, pFunc> gen_func_map;
-  static std::map<std::string, int> enum_map, in_num_map, out_num_map;
 };
 
 
@@ -110,7 +90,7 @@ class CaffeOperator : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
     // TODO(Haoran): when need cublas handle in stream?
-    if ( param_.op_type_value == caffeEnum::fullyconnected)
+    if ( param_.op_type_value == caffeEnum::fullyConnected)
       CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
@@ -351,10 +331,11 @@ class CaffeOperatorProp : public OperatorProperty {
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
-    param_.op_type_value = CaffeTypeNameMap::GetType(param_.op_type_name);
-    param_.caffe_op = CaffeTypeNameMap::GetInitFunc(param_.op_type_name)(this->param_.para);
-    param_.in_dims.resize(CaffeTypeNameMap::GetInputNum(param_.op_type_name));
-    param_.out_dims.resize(CaffeTypeNameMap::GetOutputNum(param_.op_type_name));
+    CaffeOpInitEntry* e = CaffeOpInitRegistry::Get()->Find(param_.op_type_name);
+    param_.op_type_value = e->op_enum_;
+    param_.caffe_op = e->gen_f_(this->param_.para);
+    param_.in_dims.resize(e->in_num_);
+    param_.out_dims.resize(e->out_num_);
   }
 
   std::map<std::string, std::string> GetParams() const override {
