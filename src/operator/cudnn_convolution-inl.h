@@ -351,9 +351,9 @@ class CuDNNConvolutionOp : public Operator {
                  out_desc_,
                  algo_,
                  &forward_workspace_byte_), CUDNN_STATUS_SUCCESS);
-        forward_workspace_ = forward_workspace_byte_ / sizeof(DType) + 1;
-        backward_workspace_ = backward_workspace_byte_ / sizeof(DType) + 1;
       }
+      forward_workspace_ = forward_workspace_byte_ / sizeof(DType) + 1;
+      backward_workspace_ = backward_workspace_byte_ / sizeof(DType) + 1;
     }
   }
 
