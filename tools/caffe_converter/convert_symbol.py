@@ -43,6 +43,9 @@ def convParamToString(param):
         kernel_size = param.kernel_size
     else:
         kernel_size = param.kernel_size[0]
+    num_group = 1
+    if isinstance(param.group, int):
+        num_group = param.group
     dilate = 1
     if isinstance(param.dilation, int):
         dilate = param.dilation
@@ -52,6 +55,8 @@ def convParamToString(param):
     param_string = "num_filter=%d, pad=(%d,%d), kernel=(%d,%d), stride=(%d,%d), no_bias=%s" %\
         (param.num_output, pad, pad, kernel_size,\
         kernel_size, stride, stride, not param.bias_term)
+    if num_group > 1:
+        param_string += ", num_group=%d" % num_group
     # deal with dilation. Won't be in deconvolution
     if dilate > 1:
         param_string += ", dilate=(%d, %d)" % (dilate, dilate)
@@ -70,12 +75,12 @@ def proto2script(proto_file):
     elif len(proto.layers):
         layer = proto.layers
     else:
-        raise Exception('Invalid proto file.')   
+        raise Exception('Invalid proto file.')
     # Get input size to network
     input_dim = [1, 3, 224, 224] # default
     if len(proto.input_dim) > 0:
         input_dim = proto.input_dim
-    elif len(proto.input_shape) > 0: 
+    elif len(proto.input_shape) > 0:
         input_dim = proto.input_shape[0].dim
     # We assume the first bottom blob of first layer is the output from data layer
     input_name = layer[0].bottom[0]
@@ -156,7 +161,7 @@ def proto2script(proto_file):
                     need_flatten[flatten_name] = False
                     bottom[0] = flatten_name
                     mapping[bottom[0]] = bottom[0]
-                symbol_string += "%s = %s(name='%s', data=%s %s)\n" %\
+                symbol_string += "%s = %s(name='%s', data=%s%s)\n" %\
                     (name, type_string, name, mapping[bottom[0]], param_string)
             else:
                 symbol_string += "%s = %s(name='%s', *[%s] %s)\n" %\
@@ -175,7 +180,7 @@ def proto2symbol(proto_file):
     return ret, input_dim
 
 def main():
-    symbol_string, output_name = proto2script(sys.argv[1])
+    symbol_string, output_name, input_dim = proto2script(sys.argv[1])
     if len(sys.argv) > 2:
         with open(sys.argv[2], 'w') as fout:
             fout.write(symbol_string)
