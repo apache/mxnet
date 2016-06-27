@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.Semaphore
 
 /**
- * TODO
  * Base class for prefetching iterators. Takes one or more DataIters
  * and combine them with prefetching.
  *
@@ -56,7 +55,7 @@ class PrefetchingIter(val iters: IndexedSeq[DataIter],
   private val dataTaken: IndexedSeq[Semaphore] =
                                         (0 until iters.length).map(i => new Semaphore(1))
 
-  private var started: Boolean = true
+  @volatile private var started: Boolean = true
   private var currentBatch: DataBatch = null
   private var nextBatch: Array[DataBatch] = (0 until iters.length).map { i =>
     new DataBatch(null, null, null, 0)
@@ -73,8 +72,8 @@ class PrefetchingIter(val iters: IndexedSeq[DataIter],
           } catch {
             case ex: NoSuchElementException => nextBatch(i) = null
           }
-          dataReady(i).release()
         }
+        dataReady(i).release()
       }
     }
   }
