@@ -60,7 +60,8 @@ class SVMOutputOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2, DType> data = in_data[svm_enum::kData].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = out_data[svm_enum::kOut].FlatTo2D<xpu, DType>(s);
-    Assign(out, req[svm_enum::kData], data);
+    out = DType(0.0f);
+    out += data;
   }
 
   virtual void Backward(const OpContext &ctx,
