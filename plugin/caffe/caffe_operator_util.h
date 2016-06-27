@@ -9,9 +9,13 @@
 #include <caffe/proto/caffe.pb.h>
 #include <caffe/layer.hpp>
 
+#include <caffe/layers/conv_layer.hpp>
+#include <caffe/layers/relu_layer.hpp>
+#include <caffe/layers/tanh_layer.hpp>
+#include <caffe/layers/inner_product_layer.hpp>
+
 #include <string>
 #include <map>
-
 
 #ifndef PLUGIN_CAFFE_CAFFE_OPERATOR_UTIL_H_
 #define PLUGIN_CAFFE_CAFFE_OPERATOR_UTIL_H_
@@ -75,9 +79,9 @@ class CaffeOpInitRegistry {
 // The following part are API Registration of Caffe Plugin Init Entry
 //--------------------------------------------------------------
 /*!
- * \brief Macro to register simple operator to both imperative and symbolic API.
+ * \brief Macro to register caffe init entry including generate function and params.
  *
- * see src/operator/elementwise_unary_op-inl.h for example
+ * see plugin/caffe/caffe_operator.cc for example
  *
  * \code
  * // example of registering a sigmoid operator on GPU
@@ -85,16 +89,22 @@ class CaffeOpInitRegistry {
  * // MySigmoidGrad is of type UnaryGradFunctionT2
  *
  * MXNET_REGISTER_SIMPLE_OP(sigmoid, cpu)
- * .set_function(MySigmoid<gpu>, true)
+ * .set(MySigmoid<gpu>, true)
  * .set_gradient(MySigmoidGrad<gpu>, true)
  * .describe("Sigmoid function");
  *
  * \endcode
  */
-#define MXNET_REGISTER_PLUGIN_CAFFE_INIT(Name, GenFunc) \
+#define MXNET_REGISTER_PLUGIN_CAFFE_INIT(Name, LayerClass) \
+  static ::caffe::Layer<float>* __make_ ## CaffeOpGenFunc ## _ ## Name ##__\
+                            (::caffe::LayerParameter layer_para) {\
+    return new LayerClass(layer_para);\
+  }\
+\
   static ::mxnet::op::CaffeOpInitEntry & \
   __make_ ## CaffeOpInitEntry ## _ ## Name ##__ = \
-      ::mxnet::op::CaffeOpInitRegistry::Get()->__REGISTER__(#Name, GenFunc)
+      ::mxnet::op::CaffeOpInitRegistry::Get()->__REGISTER__(#Name, \
+                        __make_ ## CaffeOpGenFunc ## _ ## Name ##__)
 
 }  // namespace op
 }  // namespace mxnet

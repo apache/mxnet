@@ -6,10 +6,6 @@
 */
 #include "./caffe_operator-inl.h"
 #include "./caffe_operator_util.h"
-#include <caffe/layers/conv_layer.hpp>
-#include <caffe/layers/relu_layer.hpp>
-#include <caffe/layers/tanh_layer.hpp>
-#include <caffe/layers/inner_product_layer.hpp>
 namespace mxnet {
 namespace op {
 
@@ -40,22 +36,11 @@ MXNET_REGISTER_OP_PROPERTY(CaffeOperator, CaffeOperatorProp)
 .add_argument("data", "Symbol[]", "List of tensors")
 .add_arguments(CaffeOperatorParam::__FIELDS__());
 
-
-#define DEFINE_CAFFE_LAYER_FN(fn_name, layer_class) \
-  static ::caffe::Layer<float>* fn_name(::caffe::LayerParameter layer_para) {\
-    return new layer_class(layer_para);\
-  }
-
 // Wrap caffe's layer_class to layer-generator function
-DEFINE_CAFFE_LAYER_FN(CaffeInnerProductFunc, ::caffe::InnerProductLayer<float>)
-DEFINE_CAFFE_LAYER_FN(CaffeTanhFunc, ::caffe::TanHLayer<float>)
-DEFINE_CAFFE_LAYER_FN(CaffeReluFunc, ::caffe::ReLULayer<float>)
-DEFINE_CAFFE_LAYER_FN(CaffeConvFunc, ::caffe::ConvolutionLayer<float>)
-
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(fullyconnected, CaffeInnerProductFunc);
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(tanh, CaffeTanhFunc);
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(relu, CaffeReluFunc);
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(conv, CaffeConvFunc);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(fullyconnected, ::caffe::InnerProductLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(tanh, ::caffe::TanHLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(relu, ::caffe::ReLULayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(conv, ::caffe::ConvolutionLayer<float>);
 
 }  // namespace op
 }  // namespace mxnet
