@@ -77,7 +77,7 @@ def normal(loc, scale, shape=None, ctx=None, out=None):
         if isinstance(shape, int):
             shape = (shape,)
         out = empty(shape, ctx)
-    if out.dtype == np.float32 or out.dtype == np.float64:        
+    if out.dtype == np.float32 or out.dtype == np.float64:
         return NDArray._sample_normal(loc=loc, scale=scale, shape=out.shape, out=out)
     else:
         tmp = empty(out.shape, out.ctx)
