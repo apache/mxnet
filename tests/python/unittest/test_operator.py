@@ -1170,11 +1170,11 @@ def test_stn():
                     exe.forward(is_train=True)
                     out = exe.outputs[0].asnumpy()
                     # check forward
-                    reldiff(out, args['data'].asnumpy()[:, :, h/4:h-h/4, w/4:w-w/4]) < 1e-6
+                    reldiff(out, args['data'].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4]) < 1e-6
                     out_grad = mx.nd.ones(out.shape, ctx=dev)
                     exe.backward([out_grad])
                     # check backward
-                    reldiff(out_grad.asnumpy(), grad_grad[0].asnumpy()[:, :, h/4:h-h/4, w/4:w-w/4]) < 1e-6
+                    reldiff(out_grad.asnumpy(), grad_grad[0].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4]) < 1e-6
 
 if __name__ == '__main__':
     test_expand_dims()
