@@ -79,6 +79,7 @@ def normal(loc, scale, shape=None, ctx=None, out=None):
         out = empty(shape, ctx)
     if out.dtype == np.float32 or out.dtype ==np.float64:        
         return NDArray._sample_normal(loc=loc, scale=scale, shape=out.shape, out=out)
+    else:
         tmp = empty(out.shape, out.ctx)
         tmp = NDArray._sample_normal(loc=loc, scale=scale, shape=out.shape, out=tmp)
         out[:] = tmp
