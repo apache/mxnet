@@ -70,7 +70,7 @@ void SampleUniform_(const EnvArguments& env,
     }
     break;
     default:
-    FATAL(INFO) << "only support float32 and float 64 rnd so far";
+    LOG(FATAL) << "only support float32 and float 64 rnd so far";
   }
 }
 
@@ -98,7 +98,7 @@ void SampleNormal_(const EnvArguments& env,
     }
     break;
     default:
-    FATAL(INFO) << "only support float32 and float 64 rnd so far";
+    LOG(FATAL) << "only support float32 and float 64 rnd so far";
   }
 }
 
