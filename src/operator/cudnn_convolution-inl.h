@@ -43,9 +43,6 @@ class CuDNNConvolutionOp : public Operator {
       TuneCudnnConvolution(param, in_shape, out_shape, ctx, dtype_,
                            &algo_, &back_algo_, &back_algo_w_,
                            &forward_workspace_byte_, &backward_workspace_byte_);
-      LOG(INFO) << "Selecting " << static_cast<int>(algo_) << " for forward.";
-      LOG(INFO) << "Selecting " << static_cast<int>(back_algo_) << " for backward data.";
-      LOG(INFO) << "Selecting " << static_cast<int>(back_algo_w_) << " for backward filter.";
     }
   }
 
