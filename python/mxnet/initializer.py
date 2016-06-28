@@ -1,4 +1,5 @@
 # coding: utf-8
+# pylint: disable=too-many-branches
 """Initialization helper for mxnet"""
 from __future__ import absolute_import
 

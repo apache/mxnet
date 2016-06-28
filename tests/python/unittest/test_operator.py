@@ -1157,8 +1157,8 @@ def test_stn():
                     arg_shapes, out_shapes, _ = stn.infer_shape(data=data_shape)
                     # check shape
                     assert out_shapes[0] == (data_shape[0], data_shape[1], target_shape[0], target_shape[1])
-                    # dev = mx.cpu()
-                    dev = mx.gpu(0)
+                    dev = mx.cpu()
+                    #dev = mx.gpu(0)
                     args = {}
                     args['data'] = mx.random.normal(0, 1, data_shape, dev)
                     args['loc_conv_weight'] = mx.nd.zeros((num_filter, data_shape[1], kernel[0], kernel[1]), ctx=dev)
