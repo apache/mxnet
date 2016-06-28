@@ -68,6 +68,7 @@ class GraphExecutor : public Executor {
     this->InitDataEntryMemory();
     this->InitResources();
     this->InitCachedOps();
+    this->InitOpSegs();
   }
 
  protected:
@@ -158,6 +159,17 @@ class GraphExecutor : public Executor {
       }
     }
   };
+  // a cached segment operator that executes a segment
+  struct CachedSegOpr {
+    // context of the operator
+    Context ctx;
+    // begin in topo order
+    size_t topo_begin;
+    // end in topo order
+    size_t topo_end;
+    // the cached operator
+    Engine::OprHandle opr;
+  };
   /*!
    * \brief Get input option of a node.
    *  This function is overriden for both Forward and Backward node.
@@ -198,9 +210,9 @@ class GraphExecutor : public Executor {
    * \param topo_start beginning of segment
    * \param topo_end end of segment
    * \return the cached operator.
-   *  Can be nullptr if cached operator cannot be created.
+   * The ret.opr can be nullptr if tyhe creation failed
    */
-  Engine::OprHandle CreateCachedOpr(size_t topo_start, size_t topo_end);
+  CachedSegOpr CreateCachedSegOpr(size_t topo_start, size_t topo_end);
   // initialize the internal graph structure
   void InitGraph(const Symbol &symbol,
                  const Context& default_ctx,
@@ -222,6 +234,8 @@ class GraphExecutor : public Executor {
   void InitOperators();
   // initialize OpNode data structure
   void InitCachedOps();
+  // initialize segments of code to run together as a group.
+  void InitOpSegs();
   // assign context to the graph, this will mutate the graph.
   void AssignContext(const Context default_ctx,
                      const std::map<std::string, Context>& ctx_map,
@@ -261,7 +275,7 @@ class GraphExecutor : public Executor {
   // monitor call back
   std::function<void(const char*, void*)> monitor_callback_;
   // cached segment operator
-  std::unordered_map<size_t, Engine::OprHandle> cached_seg_opr_;
+  std::vector<CachedSegOpr> cached_seg_opr_;
 };  // class GraphExecutor
 }  // namespace mxnet
 #endif  // MXNET_SYMBOL_GRAPH_EXECUTOR_H_

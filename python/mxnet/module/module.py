@@ -176,7 +176,8 @@ class Module(BaseModule):
                     if cache_arr is not arr:
                         cache_arr.copyto(arr)
                 else:
-                    assert allow_missing
+                    if not allow_missing:
+                        raise RuntimeError("%s is not presented" % name)
                     if initializer != None:
                         initializer(name, arr)
             else:

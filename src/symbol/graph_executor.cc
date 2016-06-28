@@ -289,9 +289,9 @@ GraphExecutor::GetOpExecEntry(uint32_t nid) {
 
 GraphExecutor::~GraphExecutor() {
   Engine::Get()->WaitForAll();
-  for (auto &kv : cached_seg_opr_) {
-    if (kv.second != nullptr) {
-      Engine::Get()->DeleteOperator(kv.second);
+  for (auto item : cached_seg_opr_) {
+    if (item.opr != nullptr) {
+      Engine::Get()->DeleteOperator(item.opr);
     }
   }
   // need to delete the operators before delete the NDArray they referenced.
@@ -839,38 +839,76 @@ void GraphExecutor::InitCachedOps() {
   }
 }
 
-void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
-  // heurestic, only enable bulk on forward only
-  bool bulk_exec = prefer_bulk_execution_ && !monitor_callback_
-      && topo_start == 0 && num_forward_nodes_ == topo_order_.size();
+void GraphExecutor::InitOpSegs() {
+  // heurestic to enable bulk execution.
+  cached_seg_opr_.clear();
+  CachedSegOpr p;
+  p.opr = nullptr;
+  cached_seg_opr_.resize(topo_order_.size(), p);
 
-  if (bulk_exec) {
-    // encode things into a key
-    size_t key = topo_start * op_nodes_.size() + topo_end;
-    if (cached_seg_opr_.count(key) == 0) {
-      cached_seg_opr_[key] = this->CreateCachedOpr(topo_start, topo_end);
-      if (cached_seg_opr_.at(key) != nullptr) {
-        LOG(INFO) << "Created bulk execution on segment ["
-                  << topo_start << ", " << topo_end << ")";
+  if (!prefer_bulk_execution_) return;
+  if (monitor_callback_) return;
+  if (num_forward_nodes_ == topo_order_.size()) {
+    cached_seg_opr_[0] = this->CreateCachedSegOpr(0, topo_order_.size());
+    return;
+  }
+  int num_cseg = 0;
+  // normal procedure
+  for (size_t i = 0; i < topo_order_.size(); ++i) {
+    size_t j = i;
+    int hit_count = 0;
+    for (; j < topo_order_.size(); ++j) {
+      if (j == num_forward_nodes_) break;
+      uint32_t nid = topo_order_[j];
+      const OpNode& op_node = op_nodes_[nid];
+      const StaticGraph::Node& gnode = graph_.nodes[nid];
+      if (!op_node.activated) continue;
+      if (graph_.nodes[nid].is_variable()) continue;
+      if (op_node.op->exec_type() != Operator::kSync) break;
+      bool hit = false, tobind = false;
+
+      for (const DataEntryInfo& out : op_node.outputs) {
+        if (out.type == kBindByExternal) hit = true;
       }
-    }
-    auto cached_op = cached_seg_opr_.at(key);
-    if (cached_op != nullptr) {
-      Context* pctx = nullptr;
-      for (size_t i = topo_start; i < topo_end; ++i) {
-        uint32_t nid = topo_order_[i];
-        if (!op_nodes_[nid].activated) continue;
-        if (graph_.nodes[nid].is_variable()) continue;
-        OpNode& opnode = op_nodes_[nid];
-        opnode.op_ctx.is_train = is_train;
-        pctx = &(opnode.ctx);
+      const size_t ninput = gnode.inputs.size() - gnode.addto_index.size();
+      for (size_t i = 0; i < ninput; ++i) {
+        const StaticGraph::DataEntry& e = graph_.nodes[nid].inputs[i];
+        const DataEntryInfo &info = op_nodes_[e.source_id].outputs[e.index];
+        if (info.type == kBindByExternal) hit = true;
+        if (info.type == kTobeBindByExternal) tobind = true;
       }
-      Engine::Get()->Push(cached_op, *pctx);
-      return;
+      if (hit) ++hit_count;
+      if (tobind) break;
+      // if encounter consecutive 3 blocks containing parameters, use as segment.
+      // this usually means conv-relu-bn
+      const int kHitMaxMagic = 2;
+      if (hit_count > kHitMaxMagic) break;
     }
+    if (j > i + 1) {
+      cached_seg_opr_[i] = CreateCachedSegOpr(i, j);
+      ++num_cseg;
+      i = j - 1;
+    }
+  }
+}
+
+void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
+  for (size_t i = topo_start; i < topo_end; ++i) {
+    uint32_t nid = topo_order_[i];
+    if (!op_nodes_[nid].activated) continue;
+    if (graph_.nodes[nid].is_variable()) continue;
+    OpNode& opnode = op_nodes_[nid];
+    opnode.op_ctx.is_train = is_train;
   }
 
   for (size_t i = topo_start; i < topo_end; ++i) {
+    auto seg_op = cached_seg_opr_[i];
+    if (seg_op.opr != nullptr && seg_op.topo_end <= topo_end) {
+      Engine::Get()->Push(seg_op.opr, seg_op.ctx);
+      i = seg_op.topo_end - 1;
+      continue;
+    }
+
     uint32_t nid = topo_order_[i];
     if (!op_nodes_[nid].activated) continue;
     if (graph_.nodes[nid].is_variable()) continue;
@@ -884,7 +922,6 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
                  &(opnode.outputs[0].data));
       continue;
     }
-    opnode.op_ctx.is_train = is_train;
     if (opnode.cached_opr != nullptr) {
       Engine::Get()->Push(opnode.cached_opr, opnode.ctx);
     } else {
@@ -988,49 +1025,50 @@ void GraphExecutor::Backward(const std::vector<NDArray> &head_grads) {
   RunOps(true, num_forward_nodes_, topo_order_.size());
 }
 
-Engine::OprHandle GraphExecutor::CreateCachedOpr(size_t topo_start, size_t topo_end) {
+GraphExecutor::CachedSegOpr
+GraphExecutor::CreateCachedSegOpr(size_t topo_start, size_t topo_end) {
   std::vector<Engine::VarHandle> read_vars;
   std::vector<Engine::VarHandle> write_vars;
   Context *pctx = nullptr;
-
+  CachedSegOpr ret;
+  ret.topo_begin = topo_start;
+  ret.topo_end = topo_end;
+  ret.opr = nullptr;
   for (size_t k = topo_start; k < topo_end; ++k) {
     uint32_t nid = topo_order_[k];
     OpNode& op_node = op_nodes_[nid];
+    const StaticGraph::Node& gnode = graph_.nodes[nid];
     if (!op_nodes_[nid].activated) continue;
     if (graph_.nodes[nid].is_variable()) continue;
-    if (op_node.op->exec_type() != Operator::kSync) {
-      return nullptr;
-    }
+    if (op_node.op->exec_type() != Operator::kSync) return ret;
     if (pctx == nullptr) pctx = &(op_node.ctx);
     if (*pctx != op_node.ctx) {
-      return nullptr;
+      return ret;
     }
-    const StaticGraph::Node& gnode = graph_.nodes[nid];
     // AddTO: index is used to store in-place add resources.
     const size_t ninput = gnode.inputs.size() - gnode.addto_index.size();
 
     for (const DataEntryInfo& out : op_node.outputs) {
+      if (out.type == kTobeBindByExternal) return ret;
       write_vars.push_back(out.data.var());
-      if (out.type == kTobeBindByExternal) return nullptr;
     }
 
     for (const DataEntryInfo& aux : op_node.aux_states) {
+      if (aux.type == kTobeBindByExternal) return ret;
       write_vars.push_back(aux.data.var());
-      if (aux.type == kTobeBindByExternal) return nullptr;
     }
-
     for (size_t i = 0; i < ninput; ++i) {
-      const StaticGraph::DataEntry& e = graph_.nodes[nid].inputs[i];
+      const StaticGraph::DataEntry& e = gnode.inputs[i];
       const DataEntryInfo &info = op_nodes_[e.source_id].outputs[e.index];
+      if (info.type == kTobeBindByExternal) return ret;
       read_vars.push_back(info.data.var());
-      if (info.type == kTobeBindByExternal) return nullptr;
     }
-
     for (const Resource& r : op_node.op_ctx.requested) {
       write_vars.push_back(r.var);
     }
   }
-  if (pctx == nullptr) return nullptr;
+  if (pctx == nullptr) return ret;
+  ret.ctx = *pctx;
   // deduplication
   std::sort(write_vars.begin(), write_vars.end());
   write_vars.resize(std::unique(write_vars.begin(), write_vars.end()) -
@@ -1048,7 +1086,6 @@ Engine::OprHandle GraphExecutor::CreateCachedOpr(size_t topo_start, size_t topo_
     }
   }
   read_vars.resize(rtop - read_vars.begin());
-
   bool is_gpu = pctx->dev_mask() == gpu::kDevMask;
   auto exec_fun = [this, topo_start, topo_end, is_gpu]
       (RunContext ctx, Engine::CallbackOnComplete on_complete) {
@@ -1105,8 +1142,9 @@ Engine::OprHandle GraphExecutor::CreateCachedOpr(size_t topo_start, size_t topo_
     }
     on_complete();
   };
-  return Engine::Get()->NewOperator(
+  ret.opr =  Engine::Get()->NewOperator(
       exec_fun, read_vars, write_vars, FnProperty::kNormal);
+  return ret;
 }
 
 Executor *Executor::Bind(Symbol symbol,
