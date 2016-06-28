@@ -14,13 +14,14 @@
 namespace mxnet {
 namespace op {
 
+template<typename DType>
 class CuDNNPoolingOp : public Operator {
  public:
   explicit CuDNNPoolingOp(PoolingParam p) {
     param_ = p;
     init_cudnn_ = false;
     // TODO(xxx): fp16
-    dtype_ = CUDNN_DATA_FLOAT;
+    dtype_ = mshadow::DataType<DType>::kCudnnFlag;
     switch (param_.pool_type) {
       case pool_enum::kMaxPooling:
         mode_ = CUDNN_POOLING_MAX;
@@ -51,8 +52,8 @@ class CuDNNPoolingOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<gpu> *s = ctx.get_stream<gpu>();
-    Tensor<gpu, 4> data = in_data[pool_enum::kData].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> out = out_data[pool_enum::kOut].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4, DType> data = in_data[pool_enum::kData].get<gpu, 4, DType>(s);
+    Tensor<gpu, 4, DType> out = out_data[pool_enum::kOut].get<gpu, 4, DType>(s);
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
     if (!init_cudnn_) {
       this->Init(s, in_data, out_data);
@@ -90,10 +91,10 @@ class CuDNNPoolingOp : public Operator {
     CHECK_EQ(in_grad.size(), 1);
 
     Stream<gpu> *s = ctx.get_stream<gpu>();
-    Tensor<gpu, 4> m_out_grad = out_grad[pool_enum::kOut].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> m_in_data = in_data[pool_enum::kData].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> m_out_data = out_data[pool_enum::kOut].get<gpu, 4, real_t>(s);
-    Tensor<gpu, 4> m_in_grad = in_grad[pool_enum::kData].get<gpu, 4, real_t>(s);
+    Tensor<gpu, 4, DType> m_out_grad = out_grad[pool_enum::kOut].get<gpu, 4, DType>(s);
+    Tensor<gpu, 4, DType> m_in_data = in_data[pool_enum::kData].get<gpu, 4, DType>(s);
+    Tensor<gpu, 4, DType> m_out_data = out_data[pool_enum::kOut].get<gpu, 4, DType>(s);
+    Tensor<gpu, 4, DType> m_in_grad = in_grad[pool_enum::kData].get<gpu, 4, DType>(s);
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
     float alpha = 1.0f;
     float beta = 0.0f;
@@ -148,8 +149,8 @@ class CuDNNPoolingOp : public Operator {
     CHECK_EQ(out_data.size(), 1);
     if (!init_cudnn_) {
       init_cudnn_ = true;
-      Tensor<gpu, 4> data = in_data[pool_enum::kData].get<gpu, 4, real_t>(s);
-      Tensor<gpu, 4> out = out_data[pool_enum::kOut].get<gpu, 4, real_t>(s);
+      Tensor<gpu, 4, DType> data = in_data[pool_enum::kData].get<gpu, 4, DType>(s);
+      Tensor<gpu, 4, DType> out = out_data[pool_enum::kOut].get<gpu, 4, DType>(s);
       CHECK_EQ(cudnnCreatePoolingDescriptor(&pooling_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateTensorDescriptor(&in_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateTensorDescriptor(&out_desc_), CUDNN_STATUS_SUCCESS);
