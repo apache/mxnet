@@ -25,6 +25,7 @@ namespace conv {
 enum ConvolutionOpInputs {kData, kWeight, kBias};
 enum ConvolutionOpOutputs {kOut};
 enum ConvolutionOpResource {kTempSpace};
+enum ConvolutionOpCudnnTune {kOff, kLimited, kFastest};
 }
 
 struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
@@ -36,6 +37,7 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   uint32_t num_group;
   uint64_t workspace;
   bool no_bias;
+  int cudnn_tune;
   DMLC_DECLARE_PARAMETER(ConvolutionParam) {
     int shape[] = {1, 1};
     DMLC_DECLARE_FIELD(kernel).describe("convolution kernel size: (y, x)");
@@ -56,6 +58,13 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     .describe("Tmp workspace for convolution (MB).");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
+    DMLC_DECLARE_FIELD(cudnn_tune)
+    .add_enum("off", conv::kOff)
+    .add_enum("limited_workspace", conv::kLimited)
+    .add_enum("fastest", conv::kFastest)
+    .set_default(conv::kLimited)
+    .describe("Whether to find convolution algo by running performance test."
+              "Leads to higher startup time but may give better speed");
   }
 };
 
@@ -289,7 +298,10 @@ class ConvolutionOp : public Operator {
 };  // class ConvolutionOp
 
 template<typename xpu>
-Operator* CreateOp(ConvolutionParam param, int dtype);
+Operator* CreateOp(ConvolutionParam param, int dtype,
+                   std::vector<TShape> *in_shape,
+                   std::vector<TShape> *out_shape,
+                   Context ctx);
 
 #if DMLC_USE_CXX11
 class ConvolutionProp : public OperatorProperty {

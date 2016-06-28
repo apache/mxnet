@@ -64,9 +64,10 @@ class GraphExecutor : public Executor {
                     in_args, arg_grad_store, grad_req_type,
                     need_backward);
     this->InitDataEntryInfo(in_args, arg_grad_store, grad_req_type, aux_states);
+    this->InitOperators();
     this->InitDataEntryMemory();
     this->InitResources();
-    this->InitOpNodes();
+    this->InitCachedOps();
   }
 
  protected:
@@ -218,7 +219,9 @@ class GraphExecutor : public Executor {
   // initialize the internal resources for each op
   void InitResources();
   // initialize OpNode data structure
-  void InitOpNodes();
+  void InitOperators();
+  // initialize OpNode data structure
+  void InitCachedOps();
   // assign context to the graph, this will mutate the graph.
   void AssignContext(const Context default_ctx,
                      const std::map<std::string, Context>& ctx_map,
