@@ -23,12 +23,13 @@ enum CuDNNBatchNormOpAuxiliary {kMovingMean, kMovingInvVar};
 }  // namespace cudnnbatchnorm
 
 #if defined(__CUDACC__)
+template<typename DType>
 class CuDNNBatchNormOp : public Operator {
  public:
   explicit CuDNNBatchNormOp(BatchNormParam param) {
     this->param_ = param;
     init_cudnn_ = false;
-    dtype_ = CUDNN_DATA_FLOAT;
+    dtype_ = mshadow::DataType<DType>::kCudnnFlag;
   }
 
   ~CuDNNBatchNormOp() {
@@ -86,24 +87,27 @@ class CuDNNBatchNormOp : public Operator {
     }
 
     Stream<gpu> *s = ctx.get_stream<gpu>();
-    Tensor<gpu, 4> x = in_data[cudnnbatchnorm::kData].get_with_shape<gpu, 4, real_t>(shape_, s);
-    Tensor<gpu, 1> gamma =
-      in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
+    Tensor<gpu, 4, DType> x =
+      in_data[cudnnbatchnorm::kData].get_with_shape<gpu, 4, DType>(shape_, s);
+    Tensor<gpu, 1, DType> gamma =
+      in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DType>(Shape1(shape_[1]), s);
     if (param_.fix_gamma) gamma = 1.0f;
-    Tensor<gpu, 1> beta =
-      in_data[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 4> y = out_data[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, real_t>(shape_, s);
-    Tensor<gpu, 1> moving_mean =
-      aux_states[cudnnbatchnorm::kMovingMean].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> moving_inv_var =
+    Tensor<gpu, 1, DType> beta =
+      in_data[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, DType>(Shape1(shape_[1]), s);
+    Tensor<gpu, 4, DType> y =
+      out_data[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, DType>(shape_, s);
+    Tensor<gpu, 1, DType> moving_mean =
+      aux_states[cudnnbatchnorm::kMovingMean].get_with_shape<gpu, 1, DType>(Shape1(shape_[1]), s);
+    Tensor<gpu, 1, DType> moving_inv_var =
       aux_states[cudnnbatchnorm::kMovingInvVar]
-      .get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    float a = 1.0f, b = 0.0f;
+      .get_with_shape<gpu, 1, DType>(Shape1(shape_[1]), s);
+    typename DataType<DType>::ScaleType a = 1.0f;
+    typename DataType<DType>::ScaleType b = 0.0f;
     if (ctx.is_train) {
-      Tensor<gpu, 1> save_mean =
-        out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-      Tensor<gpu, 1> save_inv_var =
-        out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DType> save_mean =
+        out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, DType>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DType> save_inv_var =
+        out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, DType>(Shape1(shape_[1]), s);
       CHECK_EQ(cudnnBatchNormalizationForwardTraining(s->dnn_handle_,
                                                       CUDNN_BATCHNORM_SPATIAL,
                                                       &a,
@@ -156,22 +160,25 @@ class CuDNNBatchNormOp : public Operator {
         << "use global statistics is not yet supported in CuDNNBatchNorm";
 
     Stream<gpu> *s = ctx.get_stream<gpu>();
-    Tensor<gpu, 4> x = in_data[cudnnbatchnorm::kData].get_with_shape<gpu, 4, real_t>(shape_, s);
-    Tensor<gpu, 4> dx = in_grad[cudnnbatchnorm::kData].get_with_shape<gpu, 4, real_t>(shape_, s);
-    Tensor<gpu, 4> dy = out_grad[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, real_t>(shape_, s);
-    Tensor<gpu, 1> gamma =
-      in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> dbeta =
-      in_grad[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> dgamma =
-      in_grad[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> save_mean =
-      out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> save_inv_var =
-      out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    float a = 1.0f;
-    float b = 0.0f;
-    float b_add = 1.0f;
+    Tensor<gpu, 4, DType> x =
+      in_data[cudnnbatchnorm::kData].get_with_shape<gpu, 4, DType>(shape_, s);
+    Tensor<gpu, 4, DType> dx =
+      in_grad[cudnnbatchnorm::kData].get_with_shape<gpu, 4, DType>(shape_, s);
+    Tensor<gpu, 4, DType> dy =
+      out_grad[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, DType>(shape_, s);
+    Tensor<gpu, 1, DType> gamma =
+      in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DType>(Shape1(shape_[1]), s);
+    Tensor<gpu, 1, DType> dbeta =
+      in_grad[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, DType>(Shape1(shape_[1]), s);
+    Tensor<gpu, 1, DType> dgamma =
+      in_grad[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DType>(Shape1(shape_[1]), s);
+    Tensor<gpu, 1, DType> save_mean =
+      out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, DType>(Shape1(shape_[1]), s);
+    Tensor<gpu, 1, DType> save_inv_var =
+      out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, DType>(Shape1(shape_[1]), s);
+    typename DataType<DType>::ScaleType a = 1.0f;
+    typename DataType<DType>::ScaleType b = 0.0f;
+    typename DataType<DType>::ScaleType b_add = 1.0f;
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
 #if CUDNN_VERSION >= 4007
     CHECK_EQ(cudnnBatchNormalizationBackward(s->dnn_handle_,
@@ -225,7 +232,7 @@ class CuDNNBatchNormOp : public Operator {
 #endif  // defined(__CUDACC__)
 
 template<typename xpu>
-Operator *CreateOp_CuDNNv4(BatchNormParam param);
+Operator *CreateOp_CuDNNv4(BatchNormParam param, int dtype);
 
 
 #if DMLC_USE_CXX11
@@ -257,6 +264,41 @@ class CuDNNBatchNormProp : public OperatorProperty {
     aux_shape->clear();
     aux_shape->push_back(Shape1(dshape[1]));
     aux_shape->push_back(Shape1(dshape[1]));
+    return true;
+  }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    size_t nin = in_type->size();
+    CHECK_EQ(nin, this->ListArguments().size());
+    CHECK_GE(nin, 3);
+    int dtype = -1;
+    for (size_t i = 0; i < nin; ++i) {
+      if (dtype == -1) {
+        dtype = in_type->at(i);
+      } else {
+        CHECK(in_type->at(i) == dtype ||
+              in_type->at(i) == -1) << "All inputs need to have the same type";
+      }
+    }
+
+    if (dtype == -1) {
+      LOG(FATAL) << "Not enough information to infer type.";
+      return false;
+    }
+
+    in_type->clear();
+    for (size_t i = 0; i < nin; ++i) in_type->push_back(dtype);
+
+    size_t naux = this->ListAuxiliaryStates().size();
+    aux_type->clear();
+    for (size_t i = 0; i < naux; ++i) aux_type->push_back(dtype);
+
+    size_t nout = this->ListOutputs().size();
+    out_type->clear();
+    for (size_t i = 0; i < nout; ++i) out_type->push_back(dtype);
+
     return true;
   }
 
@@ -303,7 +345,13 @@ class CuDNNBatchNormProp : public OperatorProperty {
     return {"moving_mean", "moving_inv_var"};
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented.";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   BatchNormParam param_;
