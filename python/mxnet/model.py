@@ -17,6 +17,7 @@ from .initializer import Uniform
 from collections import namedtuple
 from .optimizer import get_updater
 from .executor_manager import DataParallelExecutorManager, _check_arguments, _load_data
+from .base import mx_real_t
 
 BASE_ESTIMATOR = object
 
@@ -480,19 +481,25 @@ class FeedForward(BASE_ESTIMATOR):
         """Check if name is a data argument."""
         return name.endswith('data') or name.endswith('label')
 
-    def _init_params(self, input_shapes, overwrite=False):
+    def _init_params(self, input_shapes, input_types=None, overwrite=False):
         """Initialize weight parameters and auxiliary states"""
         arg_shapes, _, aux_shapes = self.symbol.infer_shape(**input_shapes)
         assert(arg_shapes is not None)
+
+        # currently, input_types is not passed in
+        if input_types is None:
+            input_types = {k : mx_real_t for k in input_shapes.keys()}
+        arg_types, _, aux_types = self.symbol.infer_type(**input_types)
 
         arg_names = self.symbol.list_arguments()
         input_names = input_shapes.keys()
         param_names = [key for key in arg_names if key not in input_names]
         aux_names = self.symbol.list_auxiliary_states()
 
-        param_name_shapes = [x for x in zip(arg_names, arg_shapes) if x[0] in param_names]
-        arg_params = {k : nd.zeros(s) for k, s in param_name_shapes}
-        aux_params = {k : nd.zeros(s) for k, s in zip(aux_names, aux_shapes)}
+        param_name_shapes_types = \
+            [x for x in zip(arg_names, arg_shapes, arg_types) if x[0] in param_names]
+        arg_params = {k : nd.zeros(s, dtype=t) for k, s, t in param_name_shapes_types}
+        aux_params = {k : nd.zeros(s, dtype=t) for k, s, t in zip(aux_names, aux_shapes, aux_types)}
 
         for k, v in arg_params.items():
             if self.arg_params and k in self.arg_params and (not overwrite):
