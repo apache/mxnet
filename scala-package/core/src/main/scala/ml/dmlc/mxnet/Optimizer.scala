@@ -7,11 +7,19 @@ object Optimizer {
     new MXKVStoreUpdater {
       val states = new scala.collection.mutable.HashMap[Int, AnyRef]
       override def update(index: Int, grad: NDArray, weight: NDArray): Unit = {
-        val state = states.getOrElseUpdate(index, optimizer.createState(index, weight))
+        val state =
+          if (states.contains(index)) {
+            states.get(index).get
+          } else {
+            val newState = optimizer.createState(index, weight)
+            states.put(index, newState)
+            newState
+          }
         optimizer.update(index, weight, grad, state)
       }
       override def dispose(): Unit = {
         states.values.foreach(optimizer.disposeState)
+        states.clear()
       }
     }
   }

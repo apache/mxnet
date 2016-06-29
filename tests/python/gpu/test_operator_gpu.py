@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
@@ -8,20 +8,23 @@ import numpy as np
 from numpy.testing import assert_allclose
 import time
 
-def check_consistency(sym, ctx_list, scale=1.0):
+def check_consistency(sym, ctx_list, scale=1.0, grad_req='write'):
     tol = {np.dtype(np.float16): 1e-1,
            np.dtype(np.float32): 1e-3,
            np.dtype(np.float64): 1e-5,
            np.dtype(np.uint8): 0,
            np.dtype(np.int32): 0}
     assert(len(ctx_list) > 1)
-    exe_list = [sym.simple_bind(grad_req='write', **ctx) for ctx in ctx_list]
+    exe_list = [sym.simple_bind(grad_req=grad_req, **ctx) for ctx in ctx_list]
     for exe in exe_list:
         assert(len(exe.outputs) == 1)
         assert(len(exe.arg_arrays) == len(exe_list[0].arg_arrays))
         assert(len(exe.grad_arrays) == len(exe_list[0].grad_arrays))
 
     init = [np.random.normal(size=arr.shape, scale=scale) for arr in exe_list[0].arg_arrays]
+    if sym.name == 'embedding':
+        init[0] = np.random.randint(low=0, high=10, size=exe_list[0].arg_arrays[0].shape)
+
     for exe in exe_list:
         for arr, iarr in zip(exe.arg_arrays, init):
             arr[:] = iarr.astype(arr.dtype)
@@ -32,7 +35,8 @@ def check_consistency(sym, ctx_list, scale=1.0):
         exe.backward(exe.outputs[0])
 
     outputs = [exe.outputs[0].asnumpy() for exe in exe_list]
-    grads = [[grad.asnumpy() for grad in exe.grad_arrays] for exe in exe_list]
+    # lazy solution handling None grad
+    grads = [[grad.asnumpy() if grad is not None else np.zeros(1) for grad in exe.grad_arrays] for exe in exe_list]
     dtypes = [arr.dtype for arr in outputs]
     max_idx = np.argmax(dtypes)
 
@@ -46,8 +50,8 @@ def check_consistency(sym, ctx_list, scale=1.0):
             except Exception, e:
                 print e
 
-def check_speed(sym, ctx, scale=1.0, N=100):
-    exe = sym.simple_bind(grad_req='write', **ctx)
+def check_speed(sym, ctx, scale=1.0, N=100, grad_req='write'):
+    exe = sym.simple_bind(grad_req=grad_req, **ctx)
     init = [np.random.normal(size=arr.shape, scale=scale) for arr in exe.arg_arrays]
     for arr, iarr in zip(exe.arg_arrays, init):
         arr[:] = iarr.astype(arr.dtype)
@@ -166,6 +170,16 @@ def test_activation_with_type():
                 {'ctx': mx.cpu(0), 'act_data': (2, 2, 10, 10), 'type_dict': {'act_data': np.float16}}]
     check_consistency(sym, ctx_list)
 
+def test_embedding_with_type():
+    sym = mx.sym.Embedding(name='embedding', input_dim=10, output_dim=20)
+    ctx_list = [{'ctx': mx.gpu(0), 'embedding_data': (2, 10), 'type_dict': {'embedding_data': np.float64}},
+                {'ctx': mx.gpu(0), 'embedding_data': (2, 10), 'type_dict': {'embedding_data': np.float32}},
+                {'ctx': mx.gpu(0), 'embedding_data': (2, 10), 'type_dict': {'embedding_data': np.float16}},
+                {'ctx': mx.cpu(0), 'embedding_data': (2, 10), 'type_dict': {'embedding_data': np.float64}},
+                {'ctx': mx.cpu(0), 'embedding_data': (2, 10), 'type_dict': {'embedding_data': np.float32}},
+                {'ctx': mx.cpu(0), 'embedding_data': (2, 10), 'type_dict': {'embedding_data': np.float16}}]
+    check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null','embedding_weight': 'write'})
+
 if __name__ == '__main__':
     test_convolution_with_type()
     test_deconvolution_with_type()
@@ -177,6 +191,7 @@ if __name__ == '__main__':
     test_swapaxis_with_type()
     test_fullyconnected_with_type()
     test_activation_with_type()
+    test_embedding_with_type()
     #test_softmax_with_shape((3,4), mx.gpu())
     #test_multi_softmax_with_shape((3,4,5), mx.gpu())
 

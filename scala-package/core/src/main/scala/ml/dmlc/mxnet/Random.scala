@@ -37,15 +37,15 @@ object Random {
   /**
    * Generate normal(Gaussian) distribution N(mean, stdvar^^2) with shape.
    *
-   * @param mean The mean of the normal distribution.
-   * @param stdvar The standard deviation of normal distribution.
+   * @param loc The mean of the normal distribution.
+   * @param scale The standard deviation of normal distribution.
    * @param shape Output shape of the NDArray generated.
    * @param ctx Context of output NDArray, will use default context if not specified.
    * @param out Output place holder
    * @return The result NDArray with generated result.
    */
-  def normal(mean: Float,
-             stdvar: Float,
+  def normal(loc: Float,
+             scale: Float,
              shape: Shape = null,
              ctx: Context = null,
              out: NDArray = null): NDArray = {
@@ -56,7 +56,7 @@ object Random {
       require(shape != null, "shape is required when out is not specified")
       outCopy = empty(shape, ctx)
     }
-    randomGaussian(mean, stdvar, outCopy)
+    randomGaussian(loc, scale, outCopy)
   }
 
 

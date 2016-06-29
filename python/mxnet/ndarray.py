@@ -314,21 +314,7 @@ class NDArray(object):
         shape : the shape to broadcast
             the broadcast shape
         """
-        cur_shape = self.shape
-        err_str = 'operands could not be broadcast together with remapped shapes'\
-                '[original->remapped]: {} and requested shape {}'.format(cur_shape, shape)
-        if len(shape) < len(cur_shape):
-            raise ValueError(err_str)
-        cur_shape = (1,) * (len(shape) - len(cur_shape)) + cur_shape
-        cur_shape_arr = np.array(cur_shape)
-        shape = np.array(shape)
-        broadcasting_axes = np.nonzero(cur_shape_arr != shape)
-        if (cur_shape_arr[broadcasting_axes] != 1).any():
-            raise ValueError(err_str)
-        ret = self.reshape(tuple(cur_shape_arr))
-        for axis in broadcasting_axes[0]:
-            ret = broadcast_axis(ret, axis=axis, size=shape[axis])
-        return ret
+        return broadcast_to(self, shape=tuple(shape))
     # pylint: enable= undefined-variable
 
     def wait_to_read(self):
@@ -834,125 +820,6 @@ def ones(shape, ctx=None, dtype=mx_real_t):
     arr = empty(shape, ctx, dtype)
     arr[:] = 1.0
     return arr
-
-# pylint: disable=too-many-locals, invalid-name, no-member, protected-access, undefined-variable
-# pylint: disable=too-many-branches
-def _reduce(arr, axis=None, keepdims=False, typ='sum'):
-    """ Reduce the array along given axises. The semantic strictly follows numpy's document.
-
-    Parameters
-    ----------
-    arr : Array
-        the array to be reduced
-    axis : int or list(int), optional
-        along which axis to do reduction
-    keepdims : bool
-        whether the reduced axis should be kept in the final shape
-
-    Returns
-    -------
-    out: Array
-        The reduced NDArray.
-    """
-    if typ == 'sum':
-        reduce_func = sum_axis
-    elif typ == 'max':
-        reduce_func = max_axis
-    elif typ == 'min':
-        reduce_func = min_axis
-    else:
-        raise TypeError('typ=\'%s\' is not supported.' % typ)
-    ndim = len(arr.shape)
-    if axis is None:
-        axis = list(range(ndim))
-    elif isinstance(axis, int):
-        axis = [axis]
-    elif isinstance(axis, tuple) or isinstance(axis, list):
-        axis = list(axis)
-    else:
-        raise TypeError('\'%s\' object is not supported as axis.' % type(axis).__name__)
-
-    if list(range(ndim)) == axis:
-        ret = reduce_func(arr, axis=-1, keepdims=keepdims)
-        if not keepdims:
-            return ret.asnumpy()[0]
-        else:
-            return ret
-    for i in axis:
-        if not isinstance(i, int):
-            raise TypeError('\'%s\' object cannot be interpreted as an integer' % type(i).__name__)
-    axis = sorted([x if x >= 0 else x + ndim for x in axis])
-    for i in axis:
-        if i < 0 or ndim <= i:
-            raise ValueError('\'axis\' entry is out of bounds')
-    if len(set(axis)) != len(axis):
-        raise ValueError('duplicate value in \'axis\'')
-    assert(len(axis) != 0)
-    ret = arr
-    for i in reversed(axis):
-        ret = reduce_func(ret, axis=i, keepdims=keepdims)
-    return ret
-# pylint: enable=too-many-locals, invalid-name, no-member, protected-access, undefined-variable
-# pylint: enable=too-many-branches
-
-def sum(arr, axis=None, keepdims=False):
-    """ Sum the array along given axises. The semantic strictly follows numpy's document.
-
-    Parameters
-    ----------
-    arr : Array
-        the array to be reduced
-    axis : int or list(int), optional
-        along which axis to do reduction
-    keepdims : bool
-        whether the reduced axis should be kept in the final shape
-
-    Returns
-    -------
-    out: Array
-        The reduced NDArray.
-    """
-    return _reduce(arr=arr, axis=axis, keepdims=keepdims, typ='sum')
-
-def max(arr, axis=None, keepdims=False):
-    """ Take the maximum of the array along given axises.
-    The semantic strictly follows numpy's document.
-
-    Parameters
-    ----------
-    arr : Array
-        the array to be reduced
-    axis : int or list(int), optional
-        along which axis to do reduction
-    keepdims : bool
-        whether the reduced axis should be kept in the final shape
-
-    Returns
-    -------
-    out: Array
-        The reduced NDArray.
-    """
-    return _reduce(arr=arr, axis=axis, keepdims=keepdims, typ='max')
-
-def min(arr, axis=None, keepdims=False):
-    """ Take the minimum of the array along given axises.
-    The semantic strictly follows numpy's document.
-
-    Parameters
-    ----------
-    arr : Array
-        the array to be reduced
-    axis : int or list(int), optional
-        along which axis to do reduction
-    keepdims : bool
-        whether the reduced axis should be kept in the final shape
-
-    Returns
-    -------
-    out: Array
-        The reduced NDArray.
-    """
-    return _reduce(arr=arr, axis=axis, keepdims=keepdims, typ='min')
 
 def full(shape, val, ctx=None):
     """Create a new NDArray filled with given value, with specified shape.

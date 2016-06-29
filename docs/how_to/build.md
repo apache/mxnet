@@ -80,6 +80,18 @@ git clone --recursive https://github.com/dmlc/mxnet
 cd mxnet; cp make/osx.mk ./config.mk; make -j$(sysctl -n hw.ncpu)
 ```
 
+Or use cmake command and Xcode
+
+```bash
+mkdir build; cd build
+cmake -G Xcode -DCMAKE_BUILD_TYPE=Release -DCMAKE_CONFIGURATION_TYPES="Release" -DUSE_OPENMP="OFF" -DUSE_CUDNN="OFF" -DUSE_CUDA="OFF" -DBLAS=MKL ..
+```
+
+Then open `mxnet.xcodeproj` by xcode and change two flags in `Build Settings` before building:
+(1) Link-Time Optimization = Yes
+(2) Optimisation Level = Fasteset[-O3]
+
+
 Troubleshooting:
 
 Some of the users might meet the link error `ld: library not found for -lgomp`, indicating that the GNU implementation of OpenMP is not in the library path of operating system.
@@ -230,6 +242,37 @@ Now you should have the R package as a tar.gz file and you can install it as a n
 ```bash
 R CMD INSTALL mxnet_0.5.tar.gz
 ```
+
+If you can't load `mxnet` after enabling CUDA during the installation. Please add following lines into `$RHOME/etc/ldpaths`. You can find your `$RHOME` by using `R.home()` inside R.
+
+```bash
+export CUDA_HOME=/usr/local/cuda 
+export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+```
+
+To install the package using GPU on Windows without building the package from scratch. Note that you need a couple of programs installed already:  
+- You'll need the [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit). This depends on Visual Studio, and a free compatible version would be [Visual Studio Community 2013](https://www.visualstudio.com/en-us/news/vs2013-community-vs.aspx). For instructions and compatibility checks, read http://docs.nvidia.com/cuda/cuda-getting-started-guide-for-microsoft-windows/ .
+
+- You will also need to register as a developer at nvidia and download CUDNN V3, https://developer.nvidia.com/cudnn . 
+
+
+1. Download the mxnet package as a ZIP from the Github repository https://github.com/dmlc/mxnet and unpack it. You will be editing the `/mxnet/R-package` folder.
+
+2. Download the most recent GPU-enabled package from the [Releases tab](https://github.com/dmlc/mxnet/releases). Unzip this file so you have a folder `/nocudnn`. Note that this file and the folder you'll save it in will be used for future reference and not directly for installing the package. Only some files will be copied from it into the `R-package` folder.
+
+(Note: you now have 2 folders we're working with, possibly in different locations, that we'll reference with `R-package/` and `nocudnn/`.)
+
+3. Download CUDNN V3 from https://developer.nvidia.com/cudnn. Unpack the .zip file and you'll see 3 folders, `/bin`, `/include`, `/lib`. Copy and replace these 3 folders into `nocudnn/3rdparty/cudnn/`, or unpack the .zip file there directly.
+
+4. Create the folder `R-package/inst/libs/x64`. We only support 64-bit operating system now, so you need the x64 folder;
+
+5. Put dll files in `R-package/inst/libs/x64`. 
+
+The first dll file you need is `nocudnn/lib/libmxnet.dll`. The other dll files you need are the ones in all 4 subfolders of `nocudnn/3rdparty/`, for the `cudnn` and `openblas` you'll need to look in the `/bin` folders. There should be 11 dll files now in `R-package/inst/libs/x64`.
+
+6. Copy the folder `nocudnn/include/` to `R-package/inst/`. So now you should have a folder `R-package/inst/include/` with 3 subfolders.
+
+7. Run `R CMD INSTALL --no-multiarch R-package`. Make sure that R is added to your PATH in Environment Variables. Running the command `Where R` in Command Prompt should return the location.
 
 Note on Library Build:
 

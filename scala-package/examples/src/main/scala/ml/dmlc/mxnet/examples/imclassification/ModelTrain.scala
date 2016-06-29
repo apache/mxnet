@@ -15,8 +15,7 @@ object ModelTrain {
           lr: Float = 0.1f, lrFactor: Float = 1f, lrFactorEpoch: Float = 1f,
           clipGradient: Float = 0f, monitorSize: Int = -1): Unit = {
     // kvstore
-    // TODO: if local mode and no gpu is used, set kv = null
-    val kv = KVStore.create(kvStore)
+    var kv = KVStore.create(kvStore)
 
     // load model
     val modelPrefixWithRank =
@@ -62,6 +61,12 @@ object ModelTrain {
         lrScheduler = lrScheduler, clipGradient = clipGradient,
         momentum = 0.9f, wd = 0.00001f)
 
+    // disable kvstore for single device
+    if (kv.`type`.contains("local") && (devs.length == 1 || devs(0).deviceType != "gpu")) {
+      kv.dispose()
+      kv = null
+    }
+
     val model = new FeedForward(ctx = devs,
                                 symbol = network,
                                 numEpoch = numEpochs,
@@ -80,7 +85,9 @@ object ModelTrain {
               kvStore = kv,
               batchEndCallback = new Speedometer(batchSize, 50),
               epochEndCallback = checkpoint)
-    kv.dispose()
+    if (kv != null) {
+      kv.dispose()
+    }
   }
   // scalastyle:on parameterNum
 }

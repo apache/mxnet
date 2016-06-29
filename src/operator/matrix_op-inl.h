@@ -555,7 +555,8 @@ MXNET_REGISTER_SIMPLE_OP(transpose, XPU)
 .set_function(XPU::kDevMask, Transpose<XPU>, kNoInplace, kRegisterSymbolic)
 .set_shape_function(TransposeShape)
 .set_gradient(XPU::kDevMask, TransposeGrad<XPU>, kNoInplace)
-.describe("Transpose the input matrix and return a new one");
+.describe("Transpose the input matrix and return a new one")
+.add_arguments(TransposeParam::__FIELDS__());
 
 // expand_dim
 MXNET_REGISTER_SIMPLE_OP(expand_dims, XPU)
@@ -563,14 +564,16 @@ MXNET_REGISTER_SIMPLE_OP(expand_dims, XPU)
 .set_function(XPU::kDevMask, ReshapeImpl<XPU>, kInplaceInOut)
 .set_shape_function(ExpandDimShape)
 .set_gradient(XPU::kDevMask, ReshapeGrad_<XPU>, kInplaceOutIn)
-.describe("Expand the shape of array by inserting a new axis.");
+.describe("Expand the shape of array by inserting a new axis.")
+.add_arguments(ExpandDimParam::__FIELDS__());
 
 // crop
 MXNET_REGISTER_SIMPLE_OP(crop, XPU)
 .set_enable_kwargs(true)
 .set_function(XPU::kDevMask, Crop<XPU>, kNoInplace, kNotRegisterSymbolic)
 .set_shape_function(CropShape)
-.describe("Crop the input matrix and return a new one");
+.describe("Crop the input matrix and return a new one")
+.add_arguments(SimpleCropParam::__FIELDS__());
 
 // slice_axis
 MXNET_REGISTER_SIMPLE_OP(slice_axis, XPU)
@@ -579,15 +582,16 @@ MXNET_REGISTER_SIMPLE_OP(slice_axis, XPU)
               kNoInplace, kRegisterSymbolic)
 .set_gradient(XPU::kDevMask, SliceGrad_<XPU>, kNoInplace)
 .set_shape_function(SliceShape)
-.describe("Slice the input along certain axis and return a sliced array.");
+.describe("Slice the input along certain axis and return a sliced array.")
+.add_arguments(SliceParam::__FIELDS__());
 
 // flip
 MXNET_REGISTER_SIMPLE_OP(flip, XPU)
 .set_enable_kwargs(true)
 .set_function(XPU::kDevMask, Flip<XPU>, kNoInplace, kNotRegisterSymbolic)
 .set_shape_function(FlipShape)
-.describe("Flip the input matrix along axis and return a new one");
-
+.describe("Flip the input matrix along axis and return a new one")
+.add_arguments(FlipParam::__FIELDS__());
 
 // dot
 MXNET_REGISTER_SIMPLE_OP(dot, XPU)

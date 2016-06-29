@@ -848,10 +848,17 @@ def test_broadcast_binary_op():
         _check_broadcast_op_forward(c, lambda a, b: a / b)
         _check_broadcast_op_backward(c, lambda g_out, a, b: (g_out / b, - g_out * a / (b * b)))
 
+    def test_bpow(a, b):
+        c = mx.sym.broadcast_power(a, b)
+        _check_broadcast_op_forward(c, lambda a, b: a ** b)
+        _check_broadcast_op_backward(c, lambda g_out, a, b: (g_out * a **(b - 1) * b,
+                                                             g_out * a ** b * np.log(a)))
+
     test_bplus(a, b)
     test_bminus(a, b)
     test_bmul(a, b)
     test_bdiv(a, b)
+    test_bpow(a, b)
 
 def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3), verbose=False):
     # Input for spike response
@@ -980,11 +987,16 @@ def test_reduce():
                     axes.append(axis)
             if 0 == len(axes):
                 axes = None
+            elif 1 == len(axes):
+                axes = axes[0]
             else:
                 axes = tuple(axes)
             keepdims = np.random.randint(0, 2)
             a = mx.symbol.Variable('a')
-            b = mx_reduce_sym(a, axis=axes, keepdims=keepdims)
+            if axes is None:
+                b = mx_reduce_sym(a, keepdims=keepdims)
+            else:
+                b = mx_reduce_sym(a, axis=axes, keepdims=keepdims)
             dat_npy = np.random.rand(*shape)
             sum_groundtruth = np.array(numpy_reduce_func(dat_npy, axis=axes, keepdims=keepdims))
             if sum_groundtruth.shape == ():
@@ -997,11 +1009,11 @@ def test_reduce():
                          args_grad={'a': grad_nd})
             net.forward(is_train=True)
 
-            err_forward = np.square(net.outputs[0].asnumpy() - sum_groundtruth).sum()/np.prod(shape)
-            assert err_forward < 1E-6
+            err_forward = reldiff(net.outputs[0].asnumpy(), sum_groundtruth)
+            assert err_forward < 1E-4
             net.backward(out_grads=mx.nd.array(outgrad_npy))
-            err_backward = np.square(grad_nd.asnumpy() - grad_groundtruth).sum()
-            assert err_backward < 1E-6
+            err_backward = reldiff(grad_nd.asnumpy(), grad_groundtruth)
+            assert err_backward < 1E-4
     test_reduce_inner(lambda data, axis, keepdims:_np_reduce(data, axis, keepdims, np.sum),
                       lambda outgrad, data, axis, keepdims:
                         outgrad.reshape(_np_reduce(data, axis, 1, np.sum).shape),
@@ -1009,34 +1021,36 @@ def test_reduce():
 
 def test_broadcast():
     sample_num = 200
-    def test_broadcast_axis():
-        for i in range(sample_num):
-            # Generate random data that has ndim between 1-7 and all the shape dims between 1-10
-            ndim = np.random.randint(1, 8)
-            target_shape = np.random.randint(1, 11, size=(ndim,))
-            axis = np.random.randint(0, ndim)
-            shape = target_shape.copy()
-            size = shape[axis]
-            shape[axis] = 1
-            a = mx.symbol.Variable('a')
-            b = mx.symbol.broadcast_axis(a, axis=axis, size=size)
+    for i in range(sample_num):
+        # Generate random data that has ndim between 1-7 and all the shape dims between 1-10
+        ndim = np.random.randint(1, 8)
+        target_shape = np.random.randint(1, 11, size=(ndim,))
+        axis = tuple(set(np.random.randint(0, ndim, np.random.randint(1, ndim + 1))))
+        shape = target_shape.copy()
+        size = tuple([shape[ele] for ele in axis])
+        for ele in axis:
+            shape[ele] = 1
+        a = mx.symbol.Variable('a')
+        sym_bcast_axis = mx.symbol.broadcast_axis(a, axis=axis, size=size)
+        sym_bcast_to = mx.symbol.broadcast_to(a, shape=tuple(target_shape))
+        def test_broadcasting_ele(sym_bcast):
             dat_npy = np.random.rand(*shape)
             groundtruth = dat_npy
             grad_nd = mx.nd.empty(shape)
             outgrad_npy = np.random.rand(*target_shape)
             grad_groundtruth = _np_reduce(outgrad_npy, axis=axis, keepdims=True,
                                           numpy_reduce_func=np.sum)
-            net = b.bind(mx.cpu(), args={'a': mx.nd.array(dat_npy)},
-                         args_grad={'a': grad_nd})
+            net = sym_bcast.bind(mx.cpu(), args={'a': mx.nd.array(dat_npy)},
+                                                 args_grad={'a': grad_nd})
             net.forward(is_train=True)
             assert (net.outputs[0].shape == target_shape).all()
-            err_forward = np.square(net.outputs[0].asnumpy() - groundtruth).mean()
-            assert err_forward < 1E-8
+            err_forward = reldiff(net.outputs[0].asnumpy(), groundtruth)
+            assert err_forward < 1E-4
             net.backward(out_grads=mx.nd.array(outgrad_npy))
-            err_backward = np.square(grad_nd.asnumpy() - grad_groundtruth).mean()
-            assert err_backward < 1E-8
-    test_broadcast_axis()
-
+            err_backward = reldiff(grad_nd.asnumpy(), grad_groundtruth)
+            assert err_backward < 1E-4
+        test_broadcasting_ele(sym_bcast_axis)
+        test_broadcasting_ele(sym_bcast_to)
 
 def test_transpose():
     for ndim in range(1, 6):
@@ -1121,6 +1135,47 @@ def test_flip():
             y = mx.nd.flip(x, axis=axis)
             assert_allclose(x.asnumpy()[idx], y.asnumpy())
 
+def test_stn():
+    import pdb
+    np.set_printoptions(threshold=np.nan)
+    num_filter = 2  # conv of loc net
+    kernel = (3, 3)  # conv of loc net
+    num_hidden = 6  # fc of loc net
+    for n in [1, 2, 3, 4]:
+        for c in [1, 2, 3, 4]:
+            for h in [5, 9, 13, 17]:  # for convenience test, this third and forth input dim should be 4x + 1
+                for w in [5, 9, 13, 17]:
+                    data_shape = (n, c, h, w)
+                    target_shape = (int((data_shape[2]+1)/2), int((data_shape[3]+1)/2))
+                    data = mx.sym.Variable(name="data")
+                    loc = mx.sym.Convolution(data=data, kernel=kernel, pad=(1, 1), num_filter=num_filter, name="loc_conv")
+                    loc = mx.sym.Flatten(data=loc)
+                    loc = mx.sym.FullyConnected(data=loc, num_hidden=num_hidden, name="loc_fc")
+                    stn = mx.sym.SpatialTransformer(data=data, loc=loc, target_shape=target_shape,
+                                                    transform_type="affine", sampler_type="bilinear")
+                    arg_names = stn.list_arguments()
+                    arg_shapes, out_shapes, _ = stn.infer_shape(data=data_shape)
+                    # check shape
+                    assert out_shapes[0] == (data_shape[0], data_shape[1], target_shape[0], target_shape[1])
+                    dev = mx.cpu()
+                    #dev = mx.gpu(0)
+                    args = {}
+                    args['data'] = mx.random.normal(0, 1, data_shape, dev)
+                    args['loc_conv_weight'] = mx.nd.zeros((num_filter, data_shape[1], kernel[0], kernel[1]), ctx=dev)
+                    args['loc_conv_bias'] = mx.nd.zeros((num_filter,), ctx=dev)
+                    args['loc_fc_weight'] = mx.nd.zeros((6, num_filter*data_shape[2]*data_shape[3]), ctx=dev)
+                    args['loc_fc_bias'] = mx.nd.array([0.5, 0, 0, 0, 0.5, 0], ctx=dev)
+                    grad_grad = [mx.nd.zeros(shape, ctx=dev) for shape in arg_shapes]
+                    exe = stn.bind(dev, args=args, args_grad=grad_grad)
+                    exe.forward(is_train=True)
+                    out = exe.outputs[0].asnumpy()
+                    # check forward
+                    reldiff(out, args['data'].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4]) < 1e-6
+                    out_grad = mx.nd.ones(out.shape, ctx=dev)
+                    exe.backward([out_grad])
+                    # check backward
+                    reldiff(out_grad.asnumpy(), grad_grad[0].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4]) < 1e-6
+
 if __name__ == '__main__':
     test_expand_dims()
     test_slice_axis()
@@ -1155,3 +1210,4 @@ if __name__ == '__main__':
     test_reshape()
     test_reduce()
     test_broadcast()
+    test_stn()

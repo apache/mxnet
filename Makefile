@@ -236,26 +236,26 @@ rpkg:	roxygen
 scalapkg:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn clean package -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
-											-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-											-Dlddeps="$(LIB_DEP)")
+			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+			-Dlddeps="$(LIB_DEP)")
 
 scalatest:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn verify -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
-							 -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-							 -Dlddeps="$(LIB_DEP)" $(SCALA_TEST_ARGS))
+			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+			-Dlddeps="$(LIB_DEP)" $(SCALA_TEST_ARGS))
 
 scalainstall:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn install -P$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" \
-							  -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-								-Dlddeps="$(LIB_DEP)")
+			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+			-Dlddeps="$(LIB_DEP)")
 
 scaladeploy:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn deploy -Prelease,$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" \
-							 -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-							 -Dlddeps="$(LIB_DEP)")
+			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+			-Dlddeps="$(LIB_DEP)")
 
 jnilint:
 	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
