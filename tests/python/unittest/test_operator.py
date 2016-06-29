@@ -1135,6 +1135,47 @@ def test_flip():
             y = mx.nd.flip(x, axis=axis)
             assert_allclose(x.asnumpy()[idx], y.asnumpy())
 
+def test_stn():
+    import pdb
+    np.set_printoptions(threshold=np.nan)
+    num_filter = 2  # conv of loc net
+    kernel = (3, 3)  # conv of loc net
+    num_hidden = 6  # fc of loc net
+    for n in [1, 2, 3, 4]:
+        for c in [1, 2, 3, 4]:
+            for h in [5, 9, 13, 17]:  # for convenience test, this third and forth input dim should be 4x + 1
+                for w in [5, 9, 13, 17]:
+                    data_shape = (n, c, h, w)
+                    target_shape = (int((data_shape[2]+1)/2), int((data_shape[3]+1)/2))
+                    data = mx.sym.Variable(name="data")
+                    loc = mx.sym.Convolution(data=data, kernel=kernel, pad=(1, 1), num_filter=num_filter, name="loc_conv")
+                    loc = mx.sym.Flatten(data=loc)
+                    loc = mx.sym.FullyConnected(data=loc, num_hidden=num_hidden, name="loc_fc")
+                    stn = mx.sym.SpatialTransformer(data=data, loc=loc, target_shape=target_shape,
+                                                    transform_type="affine", sampler_type="bilinear")
+                    arg_names = stn.list_arguments()
+                    arg_shapes, out_shapes, _ = stn.infer_shape(data=data_shape)
+                    # check shape
+                    assert out_shapes[0] == (data_shape[0], data_shape[1], target_shape[0], target_shape[1])
+                    dev = mx.cpu()
+                    #dev = mx.gpu(0)
+                    args = {}
+                    args['data'] = mx.random.normal(0, 1, data_shape, dev)
+                    args['loc_conv_weight'] = mx.nd.zeros((num_filter, data_shape[1], kernel[0], kernel[1]), ctx=dev)
+                    args['loc_conv_bias'] = mx.nd.zeros((num_filter,), ctx=dev)
+                    args['loc_fc_weight'] = mx.nd.zeros((6, num_filter*data_shape[2]*data_shape[3]), ctx=dev)
+                    args['loc_fc_bias'] = mx.nd.array([0.5, 0, 0, 0, 0.5, 0], ctx=dev)
+                    grad_grad = [mx.nd.zeros(shape, ctx=dev) for shape in arg_shapes]
+                    exe = stn.bind(dev, args=args, args_grad=grad_grad)
+                    exe.forward(is_train=True)
+                    out = exe.outputs[0].asnumpy()
+                    # check forward
+                    reldiff(out, args['data'].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4]) < 1e-6
+                    out_grad = mx.nd.ones(out.shape, ctx=dev)
+                    exe.backward([out_grad])
+                    # check backward
+                    reldiff(out_grad.asnumpy(), grad_grad[0].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4]) < 1e-6
+
 if __name__ == '__main__':
     test_expand_dims()
     test_slice_axis()
@@ -1169,3 +1210,4 @@ if __name__ == '__main__':
     test_reshape()
     test_reduce()
     test_broadcast()
+    test_stn()
