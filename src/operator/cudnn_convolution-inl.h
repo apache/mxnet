@@ -21,7 +21,6 @@ class CuDNNConvolutionOp : public Operator {
     // convert MB to words
     param_.workspace = (param_.workspace << 20) / sizeof(DType);
     init_cudnn_ = false;
-    // TODO(xxx): fp16
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
   }
 
@@ -212,71 +211,158 @@ class CuDNNConvolutionOp : public Operator {
       size_t workspace_byte = static_cast<size_t>(param_.workspace * sizeof(DType));
       size_t back_size = 0;
       size_t back_size_w = 0;
-      Tensor<gpu, 4, DType> data = in_data[conv::kData].get<gpu, 4, DType>(s);
-      Tensor<gpu, 4, DType> out = out_data[conv::kOut].get<gpu, 4, DType>(s);
-      data_offset_ = data.shape_[1] / param_.num_group * data.shape_[2] * data.shape_[3];
-      out_offset_ = out.shape_[1] /param_.num_group * out.shape_[2] * out.shape_[3];
-      weight_offset_ = param_.num_filter / param_.num_group * data.shape_[1] / param_.num_group
-                       * param_.kernel[0] * param_.kernel[1];
       CHECK_EQ(cudnnCreateTensorDescriptor(&in_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateTensorDescriptor(&out_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateTensorDescriptor(&bias_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateFilterDescriptor(&filter_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateConvolutionDescriptor(&conv_desc_), CUDNN_STATUS_SUCCESS);
-      #if CUDNN_MAJOR == 5
-      CHECK_EQ(cudnnSetFilter4dDescriptor(filter_desc_,
-                                          dtype_,
-                                          format_,
-                                          param_.num_filter / param_.num_group,
-                                          data.shape_[1] / param_.num_group,
-                                          param_.kernel[0],
-                                          param_.kernel[1]), CUDNN_STATUS_SUCCESS);
-      #else
-      CHECK_EQ(cudnnSetFilter4dDescriptor(filter_desc_,
-                                          dtype_,
-                                          param_.num_filter / param_.num_group,
-                                          data.shape_[1] / param_.num_group,
-                                          param_.kernel[0],
-                                          param_.kernel[1]), CUDNN_STATUS_SUCCESS);
-      #endif
-      CHECK_EQ(cudnnSetConvolution2dDescriptor(conv_desc_,
-                                               param_.pad[0],
-                                               param_.pad[1],
-                                               param_.stride[0],
-                                               param_.stride[1],
-                                               1,
-                                               1,
-                                               CUDNN_CROSS_CORRELATION), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensor4dDescriptorEx(in_desc_,
+      if (param_.kernel.ndim() == 2) {
+        // 2d conv
+        Tensor<gpu, 4, DType> data = in_data[conv::kData].get<gpu, 4, DType>(s);
+        Tensor<gpu, 4, DType> out = out_data[conv::kOut].get<gpu, 4, DType>(s);
+        data_offset_ = data.shape_[1] / param_.num_group * data.shape_[2] * data.shape_[3];
+        out_offset_ = out.shape_[1] /param_.num_group * out.shape_[2] * out.shape_[3];
+        weight_offset_ = param_.num_filter / param_.num_group * data.shape_[1] / param_.num_group
+                        * param_.kernel[0] * param_.kernel[1];
+        #if CUDNN_MAJOR == 5
+        CHECK_EQ(cudnnSetFilter4dDescriptor(filter_desc_,
                                             dtype_,
-                                            data.shape_[0],
+                                            format_,
+                                            param_.num_filter / param_.num_group,
                                             data.shape_[1] / param_.num_group,
-                                            data.shape_[2],
-                                            data.shape_[3],
-                                            data.shape_[1] * data.shape_[2] * data.shape_[3],
-                                            data.shape_[2] * data.shape_[3],
-                                            data.shape_[3],
-                                            1), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensor4dDescriptorEx(out_desc_,
+                                            param_.kernel[0],
+                                            param_.kernel[1]), CUDNN_STATUS_SUCCESS);
+        #else
+        CHECK_EQ(cudnnSetFilter4dDescriptor(filter_desc_,
                                             dtype_,
-                                            out.shape_[0],
-                                            out.shape_[1] / param_.num_group,
-                                            out.shape_[2],
-                                            out.shape_[3],
-                                            out.shape_[1] * out.shape_[2] * out.shape_[3],
-                                            out.shape_[2] * out.shape_[3],
-                                            out.shape_[3],
-                                            1), CUDNN_STATUS_SUCCESS);
+                                            param_.num_filter / param_.num_group,
+                                            data.shape_[1] / param_.num_group,
+                                            param_.kernel[0],
+                                            param_.kernel[1]), CUDNN_STATUS_SUCCESS);
+        #endif
+        CHECK_EQ(cudnnSetConvolution2dDescriptor(conv_desc_,
+                                                param_.pad[0],
+                                                param_.pad[1],
+                                                param_.stride[0],
+                                                param_.stride[1],
+                                                1,
+                                                1,
+                                                CUDNN_CROSS_CORRELATION), CUDNN_STATUS_SUCCESS);
+        CHECK_EQ(cudnnSetTensor4dDescriptorEx(in_desc_,
+                                              dtype_,
+                                              data.shape_[0],
+                                              data.shape_[1] / param_.num_group,
+                                              data.shape_[2],
+                                              data.shape_[3],
+                                              data.shape_[1] * data.shape_[2] * data.shape_[3],
+                                              data.shape_[2] * data.shape_[3],
+                                              data.shape_[3],
+                                              1), CUDNN_STATUS_SUCCESS);
+        CHECK_EQ(cudnnSetTensor4dDescriptorEx(out_desc_,
+                                              dtype_,
+                                              out.shape_[0],
+                                              out.shape_[1] / param_.num_group,
+                                              out.shape_[2],
+                                              out.shape_[3],
+                                              out.shape_[1] * out.shape_[2] * out.shape_[3],
+                                              out.shape_[2] * out.shape_[3],
+                                              out.shape_[3],
+                                              1), CUDNN_STATUS_SUCCESS);
+      } else if (param_.kernel.ndim() == 3) {
+        // 3d conv
+        Tensor<gpu, 5, DType> data = in_data[conv::kData].get<gpu, 5, DType>(s);
+        Tensor<gpu, 5, DType> out = out_data[conv::kOut].get<gpu, 5, DType>(s);
+        data_offset_ = data.shape_[1] / param_.num_group * data.shape_[2] * \
+                                                           data.shape_[3] * \
+                                                           data.shape_[4];
+        out_offset_ = out.shape_[1] / param_.num_group * out.shape_[2] * \
+                                                         out.shape_[3] * \
+                                                         out.shape_[4];
+        weight_offset_ = param_.num_filter / param_.num_group * data.shape_[1] / param_.num_group
+                        * param_.kernel[0] * param_.kernel[1] * param_.kernel[2];
+        std::vector<int> filter_vec = {static_cast<int>(param_.num_filter / param_.num_group),
+                                       static_cast<int>(data.shape_[1] / param_.num_group),
+                                       static_cast<int>(param_.kernel[0]),
+                                       static_cast<int>(param_.kernel[1]),
+                                       static_cast<int>(param_.kernel[2])};
+
+        std::vector<int> pad_vec = {static_cast<int>(param_.pad[0]),
+                                    static_cast<int>(param_.pad[1]),
+                                    static_cast<int>(param_.pad[2])};
+
+        std::vector<int> stride_vec = {static_cast<int>(param_.stride[0]),
+                                       static_cast<int>(param_.stride[1]),
+                                       static_cast<int>(param_.stride[2])};
+
+        std::vector<int> upscale_vec = {1, 1, 1};
+
+        std::vector<int> ishape = {static_cast<int>(data.shape_[0]),
+                                   static_cast<int>(data.shape_[1]),
+                                   static_cast<int>(data.shape_[2]),
+                                   static_cast<int>(data.shape_[3]),
+                                   static_cast<int>(data.shape_[4])};
+
+        std::vector<int> istride = {static_cast<int>(ishape[1] * ishape[2] * ishape[3] * ishape[4]),
+                                    static_cast<int>(ishape[2] * ishape[3] * ishape[4]),
+                                    static_cast<int>(ishape[3] * ishape[4]),
+                                    static_cast<int>(ishape[4]),
+                                    1};
+
+        std::vector<int> oshape = {static_cast<int>(out.shape_[0]),
+                                   static_cast<int>(out.shape_[1]),
+                                   static_cast<int>(out.shape_[2]),
+                                   static_cast<int>(out.shape_[3]),
+                                   static_cast<int>(out.shape_[4])};
+
+        std::vector<int> ostride = {static_cast<int>(oshape[1] * oshape[2] * oshape[3] * oshape[4]),
+                                    static_cast<int>(oshape[2] * oshape[3] * oshape[4]),
+                                    static_cast<int>(oshape[3] * oshape[4]),
+                                    static_cast<int>(oshape[4]),
+                                    1};
+
+        #if CUDNN_MAJOR == 5
+        CHECK_EQ(cudnnSetFilterNdDescriptor(filter_desc_,
+                                            dtype_,
+                                            format_,
+                                            static_cast<int>(filter_vec.size()),
+                                            &filter_vec[0]), CUDNN_STATUS_SUCCESS);
+        #else
+        LOG(FATAL) << "Only support CUDNN V5 for 3D convolution";
+        #endif
+        CHECK_EQ(cudnnSetConvolutionNdDescriptor(conv_desc_,
+                                                 3,
+                                                 &pad_vec[0],
+                                                 &stride_vec[0],
+                                                 &upscale_vec[0],
+                                                 CUDNN_CROSS_CORRELATION,
+                                                 dtype_), CUDNN_STATUS_SUCCESS);
+        CHECK_EQ(cudnnSetTensorNdDescriptor(in_desc_,
+                                              dtype_,
+                                              static_cast<int>(ishape.size()),
+                                              &ishape[0],
+                                              &istride[0]), CUDNN_STATUS_SUCCESS);
+        CHECK_EQ(cudnnSetTensorNdDescriptor(out_desc_,
+                                              dtype_,
+                                              static_cast<int>(oshape.size()),
+                                              &oshape[0],
+                                              &ostride[0]), CUDNN_STATUS_SUCCESS);
+      }
       if (!param_.no_bias) {
         Tensor<gpu, 1, DType> bias = in_data[conv::kBias].get<gpu, 1, DType>(s);
         bias_offset_ = bias.shape_[0] / param_.num_group;
-        CHECK_EQ(cudnnSetTensor4dDescriptor(bias_desc_,
-                                            CUDNN_TENSOR_NCHW,
+        std::vector<int> bias_shape = {1,
+                                       static_cast<int>(bias.shape_[0] / param_.num_group),
+                                       1, 1};
+        std::vector<int> bias_stride = {1, static_cast<int>(bias_offset_), 1, 1};
+        if (param_.kernel.ndim() == 3) {
+          bias_shape.push_back(1);
+          bias_stride.push_back(1);
+        }
+        CHECK_EQ(cudnnSetTensorNdDescriptor(bias_desc_,
                                             dtype_,
-                                            1,
-                                            bias.shape_[0] / param_.num_group,
-                                            1,
-                                            1), CUDNN_STATUS_SUCCESS);
+                                            static_cast<int>(bias_shape.size()),
+                                            &bias_shape[0],
+                                            &bias_stride[0]), CUDNN_STATUS_SUCCESS);
       }
       CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
       CHECK_EQ(cudnnGetConvolutionForwardAlgorithm(s->dnn_handle_,
