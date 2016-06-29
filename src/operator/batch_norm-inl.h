@@ -38,7 +38,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     DMLC_DECLARE_FIELD(momentum).set_default(0.9f)
     .describe("Momentum for moving average");
     DMLC_DECLARE_FIELD(fix_gamma).set_default(true)
-    .describe("Fix gamma while training");
+    .describe("Fix gamma to 1");
     DMLC_DECLARE_FIELD(use_global_stats).set_default(false)
     .describe("Whether use global moving statistics instead of local batch-norm. "
               "This will force change batch-norm into a scale shift operator.");
@@ -88,6 +88,8 @@ class BatchNormOp : public Operator {
     Tensor<xpu, 1> bias = in_data[batchnorm::kBeta].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> moving_mean = aux_states[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> moving_var = aux_states[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
+
+    if (param_.fix_gamma) slope = 1.0f;
     // whether use global statistics
     if (ctx.is_train && !param_.use_global_stats) {
       Tensor<xpu, 1> mean = out_data[batchnorm::kMean].get<xpu, 1, real_t>(s);
@@ -190,6 +192,7 @@ class BatchNormOp : public Operator {
                                                                                      data.shape_)) +
                broadcast<1>(gmean, data.shape_) * scale);
       } else {
+        Assign(gslope, req[batchnorm::kGamma], 0.0f);
         Assign(grad_in, req[batchnorm::kData], grad *
                broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps), data.shape_) +
                broadcast<1>(gvar, data.shape_) * scale * 2.0f * (data - broadcast<1>(mean,
@@ -208,6 +211,7 @@ class BatchNormOp : public Operator {
                broadcast<1>(
                    1.0f / F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
       } else {
+        Assign(gslope, req[batchnorm::kGamma], 0.0f);
         Assign(grad_in, req[batchnorm::kData], grad *
                broadcast<1>(
                    1.0f / F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));

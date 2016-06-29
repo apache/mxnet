@@ -16,6 +16,21 @@ def _download(data_dir):
         os.system("unzip -u mnist.zip; rm mnist.zip")
     os.chdir("..")
 
+def get_loc(data, attr={'lr_mult':'0.01'}):
+    """
+    the localisation network in lenet-stn, it will increase acc about more than 1%,
+    when num-epoch >=15
+    """
+    loc = mx.symbol.Convolution(data=data, num_filter=30, kernel=(5, 5), stride=(2,2))
+    loc = mx.symbol.Activation(data = loc, act_type='relu')
+    loc = mx.symbol.Pooling(data=loc, kernel=(2, 2), stride=(2, 2), pool_type='max')
+    loc = mx.symbol.Convolution(data=loc, num_filter=60, kernel=(3, 3), stride=(1,1), pad=(1, 1))
+    loc = mx.symbol.Activation(data = loc, act_type='relu')
+    loc = mx.symbol.Pooling(data=loc, global_pool=True, kernel=(2, 2), pool_type='avg')
+    loc = mx.symbol.Flatten(data=loc)
+    loc = mx.symbol.FullyConnected(data=loc, num_hidden=6, name="stn_loc", attr=attr)
+    return loc
+
 def get_mlp():
     """
     multi-layer perceptron
@@ -29,13 +44,16 @@ def get_mlp():
     mlp  = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
     return mlp
 
-def get_lenet():
+def get_lenet(add_stn=False):
     """
     LeCun, Yann, Leon Bottou, Yoshua Bengio, and Patrick
     Haffner. "Gradient-based learning applied to document recognition."
     Proceedings of the IEEE (1998)
     """
     data = mx.symbol.Variable('data')
+    if(add_stn):
+        data = mx.sym.SpatialTransformer(data=data, loc=get_loc(data), target_shape = (28,28),
+                                         transform_type="affine", sampler_type="bilinear")
     # first conv
     conv1 = mx.symbol.Convolution(data=data, kernel=(5,5), num_filter=20)
     tanh1 = mx.symbol.Activation(data=conv1, act_type="tanh")
@@ -88,7 +106,7 @@ def get_iterator(data_shape):
 def parse_args():
     parser = argparse.ArgumentParser(description='train an image classifer on mnist')
     parser.add_argument('--network', type=str, default='mlp',
-                        choices = ['mlp', 'lenet'],
+                        choices = ['mlp', 'lenet', 'lenet-stn'],
                         help = 'the cnn to use')
     parser.add_argument('--data-dir', type=str, default='mnist/',
                         help='the input data directory')
@@ -124,6 +142,9 @@ if __name__ == '__main__':
     if args.network == 'mlp':
         data_shape = (784, )
         net = get_mlp()
+    elif args.network == 'lenet-stn':
+        data_shape = (1, 28, 28)
+        net = get_lenet(True)
     else:
         data_shape = (1, 28, 28)
         net = get_lenet()

@@ -68,15 +68,11 @@ class KVStoreLocal : public KVStore {
       if (updater_ != nullptr || it == merge_buf_.end()) {
         auto it = local_.find(key);
         CHECK(it != local_.end()) << "key " << key << " has not been inited";
-        const NDArray& src = it->second;
-        for (auto* vptr : grouped_vals[i]) {
-          CopyFromTo(src, vptr, priority);
-        }
+        ScatterPullValue(
+            key, it->second, grouped_vals[i], priority);
       } else {
-        auto& src = it->second.merged;
-        for (auto* vptr : grouped_vals[i]) {
-          CopyFromTo(src, vptr, priority);
-        }
+        ScatterPullValue(
+            key, it->second.merged, grouped_vals[i], priority);
       }
     }
   }
@@ -88,6 +84,8 @@ class KVStoreLocal : public KVStore {
     Context ctx;
     // the merged value
     NDArray merged;
+    // the merged value on device
+    NDArray merged_device;
     /// \brief the cpu buffer for gpu data
     std::vector<NDArray> copy_buf;
     // allocate copy buffer, if it has not been allocated
@@ -167,6 +165,16 @@ class KVStoreLocal : public KVStore {
       }, Context::CPU(), const_vars, {reduce[0].var()},
       FnProperty::kCPUPrioritized, priority);
     return buf.merged;
+  }
+
+  virtual void ScatterPullValue(
+      int key,
+      const NDArray& src,
+      const std::vector<NDArray*>& vals,
+      int priority) {
+    for (auto* vptr : vals) {
+      CopyFromTo(src, vptr, priority);
+    }
   }
 
   /// \brief buffer for merging push value

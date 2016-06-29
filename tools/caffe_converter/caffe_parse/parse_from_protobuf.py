@@ -10,7 +10,7 @@ def parse_caffemodel(filepath):
 
     returns: layers
     '''
-    f = open(filepath)
+    f = open(filepath, 'rb')
     contents = f.read()
 
     netparam = caffe_pb2.NetParameter()

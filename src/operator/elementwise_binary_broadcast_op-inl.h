@@ -414,6 +414,98 @@ void BroadcastDivBackward_(const OutputGrad& out_grad,
   });
 }
 
+template<typename xpu>
+void BroadcastPowerBackward_(const OutputGrad& out_grad,
+  const Input0& lhs,
+  const Input1& rhs,
+  const EnvArguments& env,
+  TBlob* lhs_grad,
+  TBlob* rhs_grad,
+  OpReqType req_lhs_grad,
+  OpReqType req_rhs_grad,
+  RunContext ctx) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  if (!IsBroadcastNeeded_(lhs_grad->shape_, rhs_grad->shape_)) {
+    MSHADOW_TYPE_SWITCH(lhs_grad->type_flag_, DType, {
+      mshadow::Tensor<xpu, 2, DType> mout_grad = out_grad.data.FlatTo2D<xpu, DType>(s);
+      mshadow::Tensor<xpu, 2, DType> mlhs_data = lhs.data.FlatTo2D<xpu, DType>(s);
+      mshadow::Tensor<xpu, 2, DType> mrhs_data = rhs.data.FlatTo2D<xpu, DType>(s);
+      mshadow::Tensor<xpu, 2, DType> mlhs_grad = lhs_grad->FlatTo2D<xpu, DType>(s);
+      mshadow::Tensor<xpu, 2, DType> mrhs_grad = rhs_grad->FlatTo2D<xpu, DType>(s);
+      CHECK_NE(req_rhs_grad, kWriteInplace);
+      ASSIGN_DISPATCH(mrhs_grad, req_rhs_grad,
+        F<mshadow_op::log>(mlhs_data) *
+        F<mshadow_op::power>(mlhs_data, mrhs_data) * mout_grad);
+      ASSIGN_DISPATCH(mlhs_grad, req_lhs_grad,
+        mrhs_data *
+        F<mshadow_op::power>(mlhs_data, mrhs_data - scalar<DType>(1)) *
+        mout_grad);
+    });
+    return;
+  }
+  bool do_opt;
+  TShape lhs_new_shape_, rhs_new_shape_, out_new_shape_;
+  InferBroadcastNewShapes_(&do_opt, &lhs_new_shape_, &rhs_new_shape_, &out_new_shape_,
+    lhs_grad->shape_, rhs_grad->shape_, out_grad.data.shape_);
+  MSHADOW_REAL_TYPE_SWITCH(lhs_grad->type_flag_, DType, {
+    if (do_opt) {
+      Shape<3> lhs_new_shape, rhs_new_shape, out_new_shape;
+      for (index_t i = 0; i < 3; i++) {
+        lhs_new_shape[i] = lhs_new_shape_[i];
+        rhs_new_shape[i] = rhs_new_shape_[i];
+        out_new_shape[i] = out_new_shape_[i];
+      }
+      mshadow::Tensor<xpu, 3, DType> mout_grad =
+        out_grad.data.get_with_shape<xpu, 3, DType>(out_new_shape, s);
+      mshadow::Tensor<xpu, 3, DType> mlhs_data =
+        lhs.data.get_with_shape<xpu, 3, DType>(lhs_new_shape, s);
+      mshadow::Tensor<xpu, 3, DType> mrhs_data =
+        rhs.data.get_with_shape<xpu, 3, DType>(rhs_new_shape, s);
+      mshadow::Tensor<xpu, 1, DType> mlhs_grad =
+        lhs_grad->get_with_shape<xpu, 1, DType>(Shape1(lhs_grad->Size()), s);
+      mshadow::Tensor<xpu, 1, DType> mrhs_grad =
+        rhs_grad->get_with_shape<xpu, 1, DType>(Shape1(rhs_grad->Size()), s);
+      ReduceToAssign<red::sum>(mrhs_grad, req_rhs_grad, rhs_new_shape_,
+        F<mshadow_op::log>(broadcast_to(mlhs_data, out_new_shape_)) *
+        F<mshadow_op::power>(broadcast_to(mlhs_data, out_new_shape_),
+                             broadcast_to(mrhs_data, out_new_shape_)) * mout_grad);
+      ReduceToAssign<red::sum>(mlhs_grad, req_lhs_grad, lhs_new_shape_,
+        broadcast_to(mrhs_data, out_new_shape_) *
+        F<mshadow_op::power>(broadcast_to(mlhs_data, out_new_shape_),
+                             broadcast_to(mrhs_data, out_new_shape_) - scalar<DType>(1)) *
+        mout_grad);
+    } else {
+      Shape<MXNET_SPECIAL_MAX_NDIM> lhs_new_shape, rhs_new_shape, out_new_shape;
+      for (index_t i = 0; i < MXNET_SPECIAL_MAX_NDIM; i++) {
+        lhs_new_shape[i] = lhs_new_shape_[i];
+        rhs_new_shape[i] = rhs_new_shape_[i];
+        out_new_shape[i] = out_new_shape_[i];
+      }
+      mshadow::Tensor<xpu, MXNET_SPECIAL_MAX_NDIM, DType> mout_grad =
+        out_grad.data.get_with_shape<xpu, MXNET_SPECIAL_MAX_NDIM, DType>(out_new_shape, s);
+      mshadow::Tensor<xpu, MXNET_SPECIAL_MAX_NDIM, DType> mlhs_data =
+        lhs.data.get_with_shape<xpu, MXNET_SPECIAL_MAX_NDIM, DType>(lhs_new_shape, s);
+      mshadow::Tensor<xpu, MXNET_SPECIAL_MAX_NDIM, DType> mrhs_data =
+        rhs.data.get_with_shape<xpu, MXNET_SPECIAL_MAX_NDIM, DType>(rhs_new_shape, s);
+      mshadow::Tensor<xpu, 1, DType> mlhs_grad =
+        lhs_grad->get_with_shape<xpu, 1, DType>(Shape1(lhs_grad->Size()), s);
+      mshadow::Tensor<xpu, 1, DType> mrhs_grad =
+        rhs_grad->get_with_shape<xpu, 1, DType>(Shape1(rhs_grad->Size()), s);
+      ReduceToAssign<red::sum>(mrhs_grad, req_rhs_grad, rhs_new_shape_,
+        F<mshadow_op::log>(broadcast_to(mlhs_data, out_new_shape_)) *
+        F<mshadow_op::power>(broadcast_to(mlhs_data, out_new_shape_),
+        broadcast_to(mrhs_data, out_new_shape_)) * mout_grad);
+      ReduceToAssign<red::sum>(mlhs_grad, req_lhs_grad, lhs_new_shape_,
+        broadcast_to(mrhs_data, out_new_shape_) *
+        F<mshadow_op::power>(broadcast_to(mlhs_data, out_new_shape_),
+        broadcast_to(mrhs_data, out_new_shape_) - scalar<DType>(1)) *
+        mout_grad);
+    }
+  });
+}
+
 
 MXNET_REGISTER_SIMPLE_OP(broadcast_plus, XPU)
 .set_shape_function(BinaryBroadcastShape_)
@@ -444,6 +536,13 @@ MXNET_REGISTER_SIMPLE_OP(broadcast_div, XPU)
               XPU, mshadow::op::div>, kNoInplace, kRegisterSymbolic)
 .set_gradient(XPU::kDevMask, BroadcastDivBackward_<XPU>, kNoInplace)
 .describe("lhs divide rhs with broadcast");
+
+MXNET_REGISTER_SIMPLE_OP(broadcast_power, XPU)
+.set_shape_function(BinaryBroadcastShape_)
+.set_function(XPU::kDevMask, BinaryBroadcastForward_<
+              XPU, mshadow_op::power>, kNoInplace, kRegisterSymbolic)
+.set_gradient(XPU::kDevMask, BroadcastPowerBackward_<XPU>, kNoInplace)
+.describe("lhs power rhs with broadcast");
 
 }  // namespace op
 }  // namespace mxnet
