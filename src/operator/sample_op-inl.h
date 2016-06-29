@@ -54,13 +54,24 @@ void SampleUniform_(const EnvArguments& env,
   using namespace mxnet::op;
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  CHECK_EQ(ret->type_flag_, mshadow::kFloat32)
-      << "only support float32 rnd so far";
   SampleUniformParam param;
   param.Init(env.kwargs);
-  mshadow::Random<xpu, float> *prnd = env.resource[0].get_random<xpu, float>(s);
-  mshadow::Tensor<xpu, 2, float> tmp = ret->FlatTo2D<xpu, float>(s);
-  prnd->SampleUniform(&tmp, float(param.low), float(param.high));  // NOLINT(*)
+  switch(ret->type_flag_) {
+    case mshadow::kFloat32: {
+      mshadow::Random<xpu, float> *prnd = env.resource[0].get_random<xpu, float>(s);
+      mshadow::Tensor<xpu, 2, float> tmp = ret->FlatTo2D<xpu, float>(s);
+      prnd->SampleUniform(&tmp, float(param.low), float(param.high));  // NOLINT(*)
+    }
+    break;
+    case mshadow::kFloat64: {
+      mshadow::Random<xpu, double> *prnd = env.resource[0].get_random<xpu, double>(s);
+      mshadow::Tensor<xpu, 2, double> tmp = ret->FlatTo2D<xpu, double>(s);
+      prnd->SampleUniform(&tmp, double(param.low), double(param.high));  // NOLINT(*)
+    }
+    break;
+    default:
+    LOG(FATAL) << "only support float32 and float 64 rnd so far";
+  }
 }
 
 template<typename xpu>
@@ -71,13 +82,24 @@ void SampleNormal_(const EnvArguments& env,
   using namespace mxnet::op;
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  CHECK_EQ(ret->type_flag_, mshadow::kFloat32)
-      << "only support float32 rnd so far";
   SampleNormalParam param;
   param.Init(env.kwargs);
-  mshadow::Random<xpu, float> *prnd = env.resource[0].get_random<xpu, float>(s);
-  mshadow::Tensor<xpu, 2, float> tmp = ret->FlatTo2D<xpu, float>(s);
-  prnd->SampleGaussian(&tmp, float(param.loc), float(param.scale));  // NOLINT(*)
+  switch(ret->type_flag_) {
+    case mshadow::kFloat32: {  
+      mshadow::Random<xpu, float> *prnd = env.resource[0].get_random<xpu, float>(s);
+      mshadow::Tensor<xpu, 2, float> tmp = ret->FlatTo2D<xpu, float>(s);
+      prnd->SampleGaussian(&tmp, float(param.loc), float(param.scale));  // NOLINT(*)
+    }
+    break;
+    case mshadow::kFloat64: {
+      mshadow::Random<xpu, double> *prnd = env.resource[0].get_random<xpu, double>(s);
+      mshadow::Tensor<xpu, 2, double> tmp = ret->FlatTo2D<xpu, double>(s);
+      prnd->SampleGaussian(&tmp, double(param.loc), double(param.scale));  // NOLINT(*)
+    }
+    break;
+    default:
+    LOG(FATAL) << "only support float32 and float 64 rnd so far";
+  }
 }
 
 template<typename ParamType>
