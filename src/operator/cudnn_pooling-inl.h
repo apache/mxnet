@@ -154,7 +154,6 @@ class CuDNNPoolingOp : public Operator {
   }
 
  private:
-
   inline void Init(mshadow::Stream<gpu> *s,
                    const std::vector<TBlob> &in_data,
                    const std::vector<TBlob> &out_data) {
@@ -270,13 +269,12 @@ class CuDNNPoolingOp : public Operator {
                                              mode_,
                                              nan_prop_,
                                              static_cast<int>(kernel_vec.size()),
-                                             &kernel_vec[0],
-                                             &pad_vec[0],
-                                             &stride_vec[0]), CUDNN_STATUS_SUCCESS);
+                                             &(kernel_vec[0]),
+                                             &(pad_vec[0]),
+                                             &(stride_vec[0])), CUDNN_STATUS_SUCCESS);
         #else
         LOG(FATAL) << "3D pooling only support CUDNN v5 and abouve";
         #endif
-
       }
     }
   }

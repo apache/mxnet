@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <vector>
 #include "./convolution-inl.h"
+
 namespace mxnet {
 namespace op {
 #if MXNET_USE_CUDNN == 1
@@ -117,12 +118,12 @@ class CuDNNConvolutionOp : public Operator {
         Tensor<gpu, 1, DType> bias = in_data[conv::kBias].get<gpu, 1, DType>(s);
         #if CUDNN_MAJOR >= 4
         CHECK_EQ(cudnnAddTensor(s->dnn_handle_,
-                                &alpha,
-                                bias_desc_,
-                                bias.dptr_ + bias_offset_ * g,
-                                &beta,
-                                out_desc_,
-                                out_ptr + out_offset_ * g), CUDNN_STATUS_SUCCESS);
+                                  &alpha,
+                                  bias_desc_,
+                                  bias.dptr_ + bias_offset_ * g,
+                                  &beta,
+                                  out_desc_,
+                                  out_ptr + out_offset_ * g), CUDNN_STATUS_SUCCESS);
         #endif
         #if CUDNN_MAJOR == 3
         CHECK_EQ(cudnnAddTensor(s->dnn_handle_,
@@ -416,7 +417,7 @@ class CuDNNConvolutionOp : public Operator {
         std::vector<int> bias_shape = {1,
                                        static_cast<int>(bias.shape_[0] / param_.num_group),
                                        1, 1};
-        std::vector<int> bias_stride = {1, static_cast<int>(bias_offset_), 1, 1};
+        std::vector<int> bias_stride = {static_cast<int>(bias_offset_), 1, 1, 1};
         if (param_.kernel.ndim() == 3) {
           bias_shape.push_back(1);
           bias_stride.push_back(1);
