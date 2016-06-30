@@ -1,20 +1,10 @@
-import find_mxnet
-import mxnet as mx
-import argparse
 import os, sys
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.append(os.path.join(curr_path, "../image-classification/"))
+import mxnet as mx
+from data import get_iterator 
+import argparse
 import train_model
-
-def _download(data_dir):
-    if not os.path.isdir(data_dir):
-        os.system("mkdir " + data_dir)
-    os.chdir(data_dir)
-    if (not os.path.exists('train-images-idx3-ubyte')) or \
-       (not os.path.exists('train-labels-idx1-ubyte')) or \
-       (not os.path.exists('t10k-images-idx3-ubyte')) or \
-       (not os.path.exists('t10k-labels-idx1-ubyte')):
-        os.system("wget http://webdocs.cs.ualberta.ca/~bx3/data/mnist.zip")
-        os.system("unzip -u mnist.zip; rm mnist.zip")
-    os.chdir("..")
 
 def get_mlp():
     """
@@ -39,8 +29,6 @@ def get_lenet():
 
     # first conv
     conv1 = mx.symbol.CaffeOperator(arg0=data, para="layer { convolution_param { num_output: 20 kernel_size: 5 stride: 1} }", op_type_name="conv")
-    # TODO(Haoran): Tanh does not work!!
-    #tanh1 = mx.symbol.CaffeOperator(data = conv1, para="layer{}", op_type_name="tanh")
     act1 = mx.symbol.CaffeOperator(arg0=conv1, para="layer{}", op_type_name="tanh")
     pool1 = mx.symbol.Pooling(data=act1, pool_type="max",
                               kernel=(2,2), stride=(2,2))
@@ -59,35 +47,6 @@ def get_lenet():
     fc2 = mx.symbol.CaffeOperator(arg0=act3, para="layer{ inner_product_param{num_output: 10} }", op_type_name="fullyconnected")
     lenet = mx.symbol.SoftmaxOutput(data=fc2, name='softmax')
     return lenet
-
-def get_iterator(data_shape):
-    def get_iterator_impl(args, kv):
-        data_dir = args.data_dir
-        if '://' not in args.data_dir:
-            _download(args.data_dir)
-        flat = False if len(data_shape) == 3 else True
-
-        train           = mx.io.MNISTIter(
-            image       = data_dir + "train-images-idx3-ubyte",
-            label       = data_dir + "train-labels-idx1-ubyte",
-            input_shape = data_shape,
-            batch_size  = args.batch_size,
-            shuffle     = True,
-            flat        = flat,
-            num_parts   = kv.num_workers,
-            part_index  = kv.rank)
-
-        val = mx.io.MNISTIter(
-            image       = data_dir + "t10k-images-idx3-ubyte",
-            label       = data_dir + "t10k-labels-idx1-ubyte",
-            input_shape = data_shape,
-            batch_size  = args.batch_size,
-            flat        = flat,
-            num_parts   = kv.num_workers,
-            part_index  = kv.rank)
-
-        return (train, val)
-    return get_iterator_impl
 
 def parse_args():
     parser = argparse.ArgumentParser(description='train an image classifer on mnist')
