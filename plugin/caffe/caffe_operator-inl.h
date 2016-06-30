@@ -39,15 +39,15 @@ enum FetchType {DataOnly, GradOnly, DataWithGrad};
 }  // namespace caffeEnum
 
 struct CaffeOperatorParam : public dmlc::Parameter<CaffeOperatorParam> {
-  caffe::LayerParameter para;
-  std::string op_type_name;
+  caffe::LayerParameter prototxt;
+  std::string op_type_string;
   std::vector<int> in_dims, w_dims, out_dims;
   caffe::Layer<float> *caffe_op;
 
   DMLC_DECLARE_PARAMETER(CaffeOperatorParam) {
-    DMLC_DECLARE_FIELD(para)
+    DMLC_DECLARE_FIELD(prototxt)
     .describe("Caffe's layer parameter");
-    DMLC_DECLARE_FIELD(op_type_name)
+    DMLC_DECLARE_FIELD(op_type_string)
     .describe("Operator type name");
   }
 };
@@ -89,7 +89,7 @@ class CaffeOperator : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
     // TODO(Haoran): when need cublas handle in stream?
-    if (!param_.op_type_name.compare("fullyConnected"))
+    if (!param_.op_type_string.compare("fullyConnected"))
       CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
@@ -155,7 +155,7 @@ class CaffeOperator : public Operator {
     //  maybe need blas handle from context
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
-    if (!param_.op_type_name.compare("fullyConnected"))
+    if (!param_.op_type_string.compare("fullyConnected"))
       CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
@@ -314,7 +314,7 @@ class CaffeOperatorProp : public OperatorProperty {
   std::vector<std::string> ListArguments() const override {
     std::vector<std::string> res;
     for (size_t i = 0; i < param_.in_dims.size(); ++i)
-      res.push_back(std::string("arg") + static_cast<char>('0' + i));
+      res.push_back(std::string("data_") + static_cast<char>('0' + i));
 
     // TODO(Haoran): Replace by param_.w_dims.size()
     int blob_cnt = param_.caffe_op->GetWeightsNumber();
@@ -330,8 +330,8 @@ class CaffeOperatorProp : public OperatorProperty {
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
-    CaffeOpInitEntry* e = CaffeOpInitRegistry::Get()->Find(param_.op_type_name);
-    param_.caffe_op = e->gen_f_(this->param_.para);
+    CaffeOpInitEntry* e = CaffeOpInitRegistry::Get()->Find(param_.op_type_string);
+    param_.caffe_op = e->gen_f_(this->param_.prototxt);
     param_.in_dims.resize(e->in_num_);
     param_.out_dims.resize(e->out_num_);
   }
