@@ -37,10 +37,10 @@ MXNET_REGISTER_OP_PROPERTY(CaffeOperator, CaffeOperatorProp)
 .add_arguments(CaffeOperatorParam::__FIELDS__());
 
 // Wrap caffe's layer_class to layer-generator function
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(fullyconnected, ::caffe::InnerProductLayer<float>);
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(tanh, ::caffe::TanHLayer<float>);
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(relu, ::caffe::ReLULayer<float>);
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(conv, ::caffe::ConvolutionLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(InnerProduct, ::caffe::InnerProductLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(Tanh, ::caffe::TanHLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(Relu, ::caffe::ReLULayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(Conv, ::caffe::ConvolutionLayer<float>);
 
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(AbsVal, ::caffe::AbsValLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Accuracy, ::caffe::AccuracyLayer<float>);
